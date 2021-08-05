@@ -243,8 +243,8 @@ class UFRMTests(unittest.TestCase):
         """UFRM: test validate function."""
         from natcap.invest import urban_flood_risk_mitigation
         args = self._make_args()
-        self.assertEqual(
-            len(urban_flood_risk_mitigation.validate(args)), 0)
+        validation_warnings = urban_flood_risk_mitigation.validate(args)
+        self.assertEqual(len(validation_warnings), 0)
 
         del args['workspace_dir']
         validation_warnings = urban_flood_risk_mitigation.validate(args)

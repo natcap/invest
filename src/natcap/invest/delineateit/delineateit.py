@@ -2,7 +2,6 @@
 import os
 import logging
 import time
-import math
 
 from osgeo import gdal
 from osgeo import ogr
@@ -16,6 +15,8 @@ import pygeoprocessing.routing
 import taskgraph
 
 from .. import utils
+from .. import spec_utils
+from ..spec_utils import u
 from .. import validation
 from . import delineateit_core
 
@@ -31,19 +32,12 @@ ARGS_SPEC = {
         "different_projections_ok": True,
     },
     "args": {
-        "workspace_dir": validation.WORKSPACE_SPEC,
-        "results_suffix": validation.SUFFIX_SPEC,
-        "n_workers": validation.N_WORKERS_SPEC,
+        "workspace_dir": spec_utils.WORKSPACE,
+        "results_suffix": spec_utils.SUFFIX,
+        "n_workers": spec_utils.N_WORKERS,
         "dem_path": {
-            "validation_options": {
-                "projected": True,
-            },
-            "type": "raster",
-            "required": True,
-            "about": (
-                "A GDAL-supported raster file with an elevation value for "
-                "each cell."),
-            "name": "Digital Elevation Model"
+            **spec_utils.DEM,
+            "projected": True
         },
         "detect_pour_points": {
             "type": "boolean",
@@ -55,10 +49,12 @@ ARGS_SPEC = {
         },
         "outlet_vector_path": {
             "type": "vector",
+            "fields": {},
+            "geometries": spec_utils.ALL_GEOMS,
             "required": "not detect_pour_points",
             "about": (
-                "This is a layer of geometries representing watershed "
-                "outlets such as municipal water intakes or lakes."),
+                "This is a layer of geometries representing watershed outlets "
+                "such as municipal water intakes or lakes."),
             "name": "Outlet Features"
         },
         "snap_points": {
@@ -71,41 +67,39 @@ ARGS_SPEC = {
             "name": "Snap points to the nearest stream"
         },
         "flow_threshold": {
-            "validation_options": {
-                "expression": "value > 0",
-            },
+            "expression": "value > 0",
             "type": "number",
+            "units": u.pixel,
             "required": "snap_points",
             "about": (
                 "The number of upstream cells that must flow into a cell "
                 "before it's considered part of a stream such that retention "
-                "stops and the remaining export is exported to the stream.  "
+                "stops and the remaining export is exported to the stream. "
                 "Used to define streams from the DEM."),
             "name": "Threshold Flow Accumulation"
         },
         "snap_distance": {
-            "validation_options": {
-                "expression": "value > 0",
-            },
+            "expression": "value > 0",
             "type": "number",
+            "units": u.pixels,
             "required": "snap_points",
             "about": (
-                "If provided, the maximum search radius in pixels to look "
-                "for stream pixels.  If a stream pixel is found within the "
-                "snap distance, the outflow point will be snapped to the "
-                "center of the nearest stream pixel.  Geometries that are "
-                "not points (such as Lines and Polygons) will not be "
-                "snapped.  MultiPoint geoemtries will also not be snapped."),
+                "If provided, the maximum search radius in pixels to look for "
+                "stream pixels.  If a stream pixel is found within the snap "
+                "distance, the outflow point will be snapped to the center of "
+                "the nearest stream pixel.  Geometries that are not points "
+                "(such as Lines and Polygons) will not be snapped. MultiPoint "
+                "geoemtries will also not be snapped."),
             "name": "Pixel Distance to Snap Outlet Points"
         },
         "skip_invalid_geometry": {
             "type": "boolean",
             "required": False,
             "about": (
-                "If ``True``, any invalid geometries encountered "
-                "in the outlet vector will not be included in the "
-                "delineation.  If ``False``, an invalid geometry "
-                "will cause DelineateIt to crash."),
+                "If ``True``, any invalid geometries encountered in the "
+                "outlet vector will not be included in the delineation.  If "
+                "``False``, an invalid geometry will cause DelineateIt to "
+                "crash."),
             "name": "Crash on invalid geometries"
         }
     }

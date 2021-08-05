@@ -539,7 +539,7 @@ class HraUnitTests(unittest.TestCase):
         shutil.copyfile(criteria_excel_path, copied_criteria_excel_path)
         out_df = _get_criteria_dataframe(
                     copied_criteria_excel_path).astype(str)
-        
+
         self.assertTrue(
             out_df.equals(expected_df),
             'The dataframes from criteria CSV and excel files are different.')
@@ -1179,7 +1179,7 @@ class HraRegressionTests(unittest.TestCase):
         _make_aoi_vector(args['aoi_vector_path'])
 
         validation_warnings = natcap.invest.hra.validate(args)
-        self.assertTrue([] == validation_warnings)
+        self.assertEqual(validation_warnings, [])
 
     def test_validate_max_rating_value(self):
         """HRA: testing validation with max_rating less than 1 in args."""

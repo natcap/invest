@@ -164,7 +164,7 @@ class FisheriesSampleDataTests(unittest.TestCase):
 
     def test_validation_invalid_aoi_fields(self):
         """Fisheries: Validate AOI fields."""
-        from natcap.invest.fisheries import fisheries
+        from natcap.invest import fisheries, validation
 
         args = {
             'aoi_vector_path': os.path.join(self.workspace_dir, 'aoi.gpkg')}
@@ -177,11 +177,12 @@ class FisheriesSampleDataTests(unittest.TestCase):
         layer = None
         vector = None
 
-        validation_warnings = fisheries.validate(
+        validation_warnings = fisheries.fisheries.validate(
             args, limit_to='aoi_vector_path')
-        self.assertEqual(len(validation_warnings), 1)
-        self.assertTrue('Fields are missing from the first layer' in
-                        validation_warnings[0][1])
+        expected = [(
+            ['aoi_vector_path'],
+            validation.MATCHED_NO_HEADERS_MSG % ('field', 'name'))]
+        self.assertEqual(validation_warnings, expected)
 
     def test_validation_invalid_init_recruits(self):
         """Fisheries: Validate negative initial recruits value."""

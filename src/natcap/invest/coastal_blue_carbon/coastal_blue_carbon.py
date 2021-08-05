@@ -103,6 +103,8 @@ import taskgraph
 from osgeo import gdal
 
 from .. import utils
+from .. import spec_utils
+from ..spec_utils import u
 from .. import validation
 
 LOGGER = logging.getLogger(__name__)
@@ -152,92 +154,160 @@ ARGS_SPEC = {
     "module": __name__,
     "userguide_html": "coastal_blue_carbon.html",
     "args": {
-        "workspace_dir": validation.WORKSPACE_SPEC,
-        "results_suffix": validation.SUFFIX_SPEC,
-        "n_workers": validation.N_WORKERS_SPEC,
+        "workspace_dir": spec_utils.WORKSPACE,
+        "results_suffix": spec_utils.SUFFIX,
+        "n_workers": spec_utils.N_WORKERS,
         "landcover_snapshot_csv": {
-            "validation_options": {
-                "required_fields": ["snapshot_year", "raster_path"],
-            },
             "type": "csv",
             "required": False,
+            "columns": {
+                "snapshot_year": {"type": "number", "units": u.year},
+                "raster_path": {
+                    "type": "raster",
+                    "bands": {1: {"type": "integer"}}
+                }
+            },
             "about": (
-                "A CSV table where each row represents the year and path "
-                "to a raster file on disk representing the landcover raster "
+                "A CSV table where each row represents the year and path to a "
+                "raster file on disk representing the landcover raster "
                 "representing the state of the landscape in that year. "
                 "Landcover codes match those in the biophysical table and in "
-                "the landcover transitions table."
-            ),
+                "the landcover transitions table."),
             "name": "Landcover Snapshots Table",
         },
         "analysis_year": {
             "type": "number",
+            "units": u.year,
             "required": False,
             "name": "Analysis Year",
             "about": (
-                "An analysis year extends the transient analysis "
-                "beyond the transition years. If not provided, the "
-                "analysis will halt at the final transition year."
-            ),
+                "An analysis year extends the transient analysis beyond the "
+                "transition years. If not provided, the analysis will halt at "
+                "the final transition year."),
         },
         "biophysical_table_path": {
             "name": "Biophysical Table",
             "type": "csv",
-            "required": True,
-            "validation_options": {
-                "required_fields": [
-                    "code",
-                    "lulc-class",
-                    "biomass-initial",
-                    "soil-initial",
-                    "litter-initial",
-                    "biomass-half-life",
-                    "biomass-low-impact-disturb",
-                    "biomass-med-impact-disturb",
-                    "biomass-high-impact-disturb",
-                    "biomass-yearly-accumulation",
-                    "soil-half-life",
-                    "soil-low-impact-disturb",
-                    "soil-med-impact-disturb",
-                    "soil-high-impact-disturb",
-                    "soil-yearly-accumulation",
-                    "litter-yearly-accumulation",
-                ],
+            "columns": {
+                "code": {
+                    "type": "freestyle_string",
+                    "about": "Textual description of the landcover class."},
+                "lulc-class": {
+                    "type": "integer",
+                    "about": (
+                        "The landcover code used in the LULC snapshot rasters "
+                        "to represent this landcover class.")},
+                "biomass-initial": {
+                    "type": "number",
+                    "units": u.megatonne/u.hectare,
+                    "about": (
+                        "the initial carbon stocks in the biomass pool for "
+                        "this landcover classification")},
+                "soil-initial": {
+                    "type": "number",
+                    "units": u.megatonne/u.hectare,
+                    "about": (
+                        "the initial carbon stocks in the soil pool for this "
+                        "landcover classification")},
+                "litter-initial": {
+                    "type": "number",
+                    "units": u.megatonne/u.hectare,
+                    "about": (
+                        "the initial carbon stocks in the litter pool for "
+                        "this landcover classification")},
+                "biomass-half-life": {
+                    "type": "number",
+                    "units": u.year,
+                    "about": "the half-life of carbon in the biomass pool."},
+                "biomass-low-impact-disturb": {
+                    "type": "ratio",
+                    "about": (
+                        "ratio of carbon stock in the biomass pool that is "
+                        "disturbed when a cell transitions away from this "
+                        "landcover class in a low-impact disturbance.")},
+                "biomass-med-impact-disturb": {
+                    "type": "ratio",
+                    "about": (
+                        "ratio of carbon stock in the biomass pool that is "
+                        "disturbed when a cell transitions away from this "
+                        "landcover class in a medium-impact disturbance.")},
+                "biomass-high-impact-disturb": {
+                    "type": "ratio",
+                    "about": (
+                        "ratio of carbon stock in the biomass pool that is "
+                        "disturbed when a cell transitions away from this "
+                        "landcover class in a high-impact disturbance.")},
+                "biomass-yearly-accumulation": {
+                    "type": "number",
+                    "units": u.megatonne/u.hectare/u.year,
+                    "about": (
+                        "the annual rate of CO2E accumulation in the biomass "
+                        "pool.")},
+                "soil-half-life": {
+                    "type": "number",
+                    "units": u.year,
+                    "about": "the half-life of carbon in the soil pool."},
+                "soil-low-impact-disturb": {
+                    "type": "ratio",
+                    "about": (
+                        "ratio of carbon stock in the soil pool that is "
+                        "disturbed when a cell transitions away from this "
+                        "landcover class in a low-impact disturbance.")},
+                "soil-med-impact-disturb": {
+                    "type": "ratio",
+                    "about": (
+                        "ratio of carbon stock in the soil pool that is "
+                        "disturbed when a cell transitions away from this "
+                        "landcover class in a medium-impact disturbance.")},
+                "soil-high-impact-disturb": {
+                    "type": "ratio",
+                    "about": (
+                        "ratio of carbon stock in the soil pool that is "
+                        "disturbed when a cell transitions away from this "
+                        "landcover class in a high-impact disturbance.")},
+                "soil-yearly-accumulation": {
+                    "type": "number",
+                    "units": u.megatonne/u.hectare/u.year,
+                    "about": (
+                        "Annual rate of CO2E accumulation in the soil pool.")},
+                "litter-yearly-accumulation": {
+                    "type": "number",
+                    "units": u.megatonne/u.hectare/u.year,
+                    "about": (
+                        "Annual rate of CO2E accumulation in the litter pool.")}
             },
-            "about": (
-                "A table defining initial carbon stock values, low, medium "
-                "and high-impact disturbance magnitudes (values between 0-1), "
-                "and accumulation rates.  Initial values and accumulation "
-                "rates are defined for soil, biomass and litter. "
-                "Disturbance magnitudes are defined for soil and biomass only."
-            ),
+            "about": "Table of biophysical properties for each LULC class"
         },
         "landcover_transitions_table": {
             "name": "Landcover Transitions Table",
             "type": "csv",
-            "validation_options": {
-                "required_fields": ['lulc-class'],
+            "columns": {
+                "lulc-class": {
+                    "type": "integer",
+                    "about": (
+                        "LULC codes matching the codes in the biophysical "
+                        "table")},
+                "[LULC CODE]": {
+                    "type": "option_string",
+                    "options": {
+                        "accum": "a state of carbon accumulation",
+                        "high-impact-disturb": "high carbon disturbance rate",
+                        "med-impact-disturb": "medium carbon disturbance rate",
+                        "low-impact-disturb": "low carbon disturbance rate",
+                        "NCC": "no change in carbon",
+                        "": "cell may be empty if the transition never occurs"
+                    },
+                    "about": (
+                        "Field values within the "
+                        "transition matrix describe the change in carbon when "
+                        "transitioning from the LULC class along the x axis "
+                        "to the LULC class along the y axis")}
             },
             "about": (
                 "A transition matrix mapping the type of carbon action "
                 "undergone when one landcover type transitions to another. "
-                "The first column must have the fieldname 'lulc-class', and "
-                "the field values of this must match the landcover class "
-                "names in the biophysical table.  The remaining column "
-                "headers must also match the landcover class names in the "
-                "biophysical table.  The classes on the y axis represent "
-                "the class we're transitioning from, the classes on the x "
-                "axis represent the classes we're transitioning to. "
-                "Field values within the transition matrix must have one "
-                "of the following values: 'accum', representing a state of "
-                "carbon accumulation, 'high-impact-disturb', "
-                "'med-impact-disturb', 'low_impact_disturb', representing "
-                "appropriate states of carbon disturbance rates, or 'NCC', "
-                "representing no change to carbon.  Cells may also be empty, "
-                "but only if this transition never takes place. "
                 "The Coastal Blue Carbon preprocessor exists to help create "
-                "this table for you."
-            ),
+                "this table for you."),
         },
         "do_economic_analysis": {
             "name": "Calculate Net Present Value of Sequestered Carbon",
@@ -259,37 +329,42 @@ ARGS_SPEC = {
         "price": {
             "name": "Price",
             "type": "number",
+            "units": u.currency/u.megatonne,
             "required": "do_economic_analysis and (not use_price_table)",
-            "about": "The price per Megatonne CO2e at the base year.",
+            "about": "The price of CO2E at the base year.",
         },
         "inflation_rate": {
-            "name": "Interest Rate (%)",
-            "type": "number",
+            "name": "Interest Rate",
+            "type": "percent",
             "required": "do_economic_analysis and (not use_price_table)",
-            "about": (
-                "Annual change in the price per unit of carbon. A value of "
-                "5 would represent a 5% inflation rate."),
+            "about": "Annual change in the price per unit of carbon.",
         },
         "price_table_path": {
             "name": "Price Table",
             "type": "csv",
             "required": "use_price_table",
+            "columns": {
+                "year": {
+                    "type": "number",
+                    "units": u.year,
+                    "about": (
+                        "Each year from the snapshot year to analysis year")},
+                "price": {
+                    "type": "number",
+                    "units": u.currency/u.megatonne,
+                    "about": "Price of CO2E in that year"}
+            },
             "about": (
-                "Can be used in place of price and interest rate "
-                "inputs.  The provided CSV table contains the price "
-                "per Megatonne CO2e sequestered for a given year, for "
-                "all years from the original snapshot to the analysis "
-                "year, if provided."),
+                "Table of annual CO2E prices. Can be used in place of price "
+                "and interest rate inputs."),
         },
         "discount_rate": {
-            "name": "Discount Rate (%)",
-            "type": "number",
+            "name": "Discount Rate",
+            "type": "percent",
             "required": "do_economic_analysis",
             "about": (
-                "The discount rate on future valuations of "
-                "sequestered carbon, compounded yearly.  A "
-                "value of 5 would represent a 5% discount, and -10 "
-                "would represent a -10% discount."),
+                "The discount rate on future valuations of sequestered "
+                "carbon, compounded yearly."),
         },
     }
 }
@@ -596,7 +671,7 @@ def execute(args):
             yearly_accum_rasters[current_transition_year][pool] = os.path.join(
                 intermediate_dir, ACCUMULATION_RASTER_PATTERN.format(
                     pool=pool, year=current_transition_year, suffix=suffix))
-            yearly_accum_tasks[current_transition_year][pool]= task_graph.add_task(
+            yearly_accum_tasks[current_transition_year][pool] = task_graph.add_task(
                 func=_reclassify_accumulation_transition,
                 args=(aligned_lulc_paths[prior_transition_year],
                       aligned_lulc_paths[current_transition_year],
@@ -669,16 +744,16 @@ def execute(args):
         total_accumulation_tasks[current_transition_year] = task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
             args=([(yearly_accum_rasters[
-                        prior_transition_year][POOL_BIOMASS], 1),
-                   (yearly_accum_rasters[
-                       prior_transition_year][POOL_SOIL], 1),
-                   (yearly_accum_rasters[
-                       prior_transition_year][POOL_LITTER], 1),
-                   (current_transition_year - prior_transition_year, 'raw')],
-                  _calculate_accumulation_over_time,
-                  total_accumulation_rasters[current_transition_year],
-                  gdal.GDT_Float32,
-                  NODATA_FLOAT32_MIN),
+                prior_transition_year][POOL_BIOMASS], 1),
+                (yearly_accum_rasters[
+                    prior_transition_year][POOL_SOIL], 1),
+                (yearly_accum_rasters[
+                    prior_transition_year][POOL_LITTER], 1),
+                (current_transition_year - prior_transition_year, 'raw')],
+                _calculate_accumulation_over_time,
+                total_accumulation_rasters[current_transition_year],
+                gdal.GDT_Float32,
+                NODATA_FLOAT32_MIN),
             target_path_list=[
                 total_accumulation_rasters[current_transition_year],
             ],
@@ -785,7 +860,7 @@ def execute(args):
         # directory.
         stocks_at_end_of_baseline_period = os.path.join(
             output_dir, CARBON_STOCK_AT_YEAR_RASTER_PATTERN.format(
-                    year=end_of_baseline_period, suffix=suffix))
+                year=end_of_baseline_period, suffix=suffix))
         _ = task_graph.add_task(
             func=shutil.copyfile,
             args=(total_stock_rasters[end_of_baseline_period],
@@ -1096,7 +1171,7 @@ def execute_transition_analysis(args):
                     [(disturbance_vol_rasters[
                         current_transition_year][pool], 1),
                      (year_of_disturbance_rasters[
-                          current_transition_year][pool], 1),
+                         current_transition_year][pool], 1),
                      (half_life_rasters[current_transition_year][pool], 1),
                      (year, 'raw')],
                     _calculate_emissions,
@@ -1226,7 +1301,7 @@ def execute_transition_analysis(args):
         dependent_task_list=summary_net_sequestration_tasks,
         target_path_list=[total_net_sequestration_raster_path],
         task_name=(
-             'Calculate total net carbon sequestration across all years'))
+            'Calculate total net carbon sequestration across all years'))
 
     if do_economic_analysis:
         # Calculate Net Present Value for each of the transition years, relative to
@@ -1453,12 +1528,14 @@ def _track_disturbance(
     target_disturbance_volume_raster = gdal.OpenEx(
         target_disturbance_volume_raster_path,
         gdal.OF_RASTER | gdal.GA_Update)
-    target_disturbance_volume_band = target_disturbance_volume_raster.GetRasterBand(1)
+    target_disturbance_volume_band = target_disturbance_volume_raster.GetRasterBand(
+        1)
 
     target_year_of_disturbance_raster = gdal.OpenEx(
         target_year_of_disturbance_raster_path,
         gdal.OF_RASTER | gdal.GA_Update)
-    target_year_of_disturbance_band = target_year_of_disturbance_raster.GetRasterBand(1)
+    target_year_of_disturbance_band = target_year_of_disturbance_raster.GetRasterBand(
+        1)
 
     stock_raster = gdal.OpenEx(stock_raster_path, gdal.OF_RASTER)
     stock_band = stock_raster.GetRasterBand(1)
@@ -1474,7 +1551,6 @@ def _track_disturbance(
             prior_disturbance_volume_raster_path, gdal.OF_RASTER)
         prior_disturbance_volume_band = (
             prior_disturbance_volume_raster.GetRasterBand(1))
-
 
     for block_info, disturbance_magnitude_matrix in pygeoprocessing.iterblocks(
             (disturbance_magnitude_raster_path, 1)):
@@ -1907,8 +1983,8 @@ def _reclassify_accumulation_transition(
             valid_pixels &= (landuse_transition_to_matrix != to_nodata)
 
         output_matrix[valid_pixels] = accumulation_rate_matrix[
-                landuse_transition_from_matrix[valid_pixels],
-                landuse_transition_to_matrix[valid_pixels]].toarray().flatten()
+            landuse_transition_from_matrix[valid_pixels],
+            landuse_transition_to_matrix[valid_pixels]].toarray().flatten()
         return output_matrix
 
     pygeoprocessing.raster_calculator(

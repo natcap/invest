@@ -129,7 +129,7 @@ class SDRTests(unittest.TestCase):
 
     def test_sdr_validation_watershed_missing_ws_id(self):
         """SDR test validation notices missing `ws_id` field on watershed."""
-        from natcap.invest.sdr import sdr
+        from natcap.invest import sdr, validation
 
         vector_driver = ogr.GetDriverByName("ESRI Shapefile")
         test_watershed_path = os.path.join(
@@ -152,12 +152,14 @@ class SDRTests(unittest.TestCase):
         args = SDRTests.generate_base_args(
             self.workspace_dir)
         args['watersheds_path'] = test_watershed_path
-        validate_result = sdr.validate(args, limit_to=None)
+        validate_result = sdr.sdr.validate(args, limit_to=None)
         self.assertTrue(
             validate_result,
             'expected a validation error but didn\'t get one')
-        self.assertTrue(
-            'Fields are missing from the first layer' in validate_result[0][1])
+        expected = [(
+            ['watersheds_path'],
+            validation.MATCHED_NO_HEADERS_MSG % ('field', 'ws_id'))]
+        self.assertEqual(validate_result, expected)
 
     def test_sdr_validation_watershed_missing_ws_id_value(self):
         """SDR test validation notices bad value in `ws_id` watershed."""

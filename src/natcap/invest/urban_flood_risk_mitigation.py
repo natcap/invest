@@ -13,8 +13,10 @@ import rtree
 import shapely.wkb
 import shapely.prepared
 
-from . import validation
 from . import utils
+from . import spec_utils
+from .spec_utils import u
+from . import validation
 
 LOGGER = logging.getLogger(__name__)
 
@@ -29,83 +31,66 @@ ARGS_SPEC = {
         "different_projections_ok": True,
     },
     "args": {
-        "workspace_dir": validation.WORKSPACE_SPEC,
-        "results_suffix": validation.SUFFIX_SPEC,
-        "n_workers": validation.N_WORKERS_SPEC,
-        "aoi_watersheds_path": {
-            "type": "vector",
-            "required": True,
-            "about": (
-                "Path to a vector of (sub)watersheds or sewersheds used to "
-                "indicate spatial area of interest."),
-            "name": "Watershed Vector"
-        },
+        "workspace_dir": spec_utils.WORKSPACE,
+        "results_suffix": spec_utils.SUFFIX,
+        "n_workers": spec_utils.N_WORKERS,
+        "aoi_watersheds_path": spec_utils.AOI,
         "rainfall_depth": {
-            "validation_options": {
-                "expression": "value > 0",
-            },
+            "expression": "value > 0",
             "type": "number",
-            "required": True,
-            "about": "Depth of rainfall in mm.",
-            "name": "Depth of rainfall in mm"
+            "units": u.millimeter,
+            "about": "Depth of rainfall",
+            "name": "Depth of rainfall"
         },
         "lulc_path": {
-            "type": "raster",
-            "validation_options": {
-                "projected": True,
-            },
-            "required": True,
-            "about": "Path to a landcover raster",
-            "name": "Landcover Raster"
+            **spec_utils.LULC,
+            "projected": True
         },
         "soils_hydrological_group_raster_path": {
-            "type": "raster",
-            "required": True,
-            "validation_options": {
-                "projected": True,
-            },
-            "about": (
-                "Raster with values equal to 1, 2, 3, 4, corresponding to "
-                "soil hydrologic group A, B, C, or D, respectively (used to "
-                "derive the CN number)"),
-            "name": "Soils Hydrological Group Raster"
+            **spec_utils.SOIL_GROUP,
+            "projected": True
         },
         "curve_number_table_path": {
-            "validation_options": {
-                "required_fields": ["lucode", "CN_A", "CN_B", "CN_C", "CN_D"],
-            },
             "type": "csv",
-            "required": True,
+            "columns": {
+                "lucode": {"type": "integer"},
+                "cn_[SOIL_GROUP]": {
+                    "type": "number",
+                    "units": u.none,
+                    "about": (
+                        "Curve number values for each LULC type and each "
+                        "hydrologic soil group.")
+                }
+            },
             "about": (
                 "Path to a CSV table that to map landcover codes to curve "
-                "numbers and contains at least the headers 'lucode', "
-                "'CN_A', 'CN_B', 'CN_C', 'CN_D'"),
+                "numbers"),
             "name": "Biophysical Table"
         },
         "built_infrastructure_vector_path": {
-            "validation_options": {
-                "required_fields": ["type"],
-            },
             "type": "vector",
+            "fields": {"type": {"type": "integer"}},
+            "geometries": spec_utils.POLYGONS,
             "required": False,
             "about": (
                 "Path to a vector with built infrastructure footprints. "
-                "Attribute table contains a column 'Type' with integers "
-                "(e.g. 1=residential, 2=office, etc.)."),
+                "Attribute table contains a column 'Type' with integers (e.g. "
+                "1=residential, 2=office, etc.)."),
             "name": "Built Infrastructure Vector"
         },
         "infrastructure_damage_loss_table_path": {
-            "validation_options": {
-                "required_fields": ["type", "damage"],
-            },
             "type": "csv",
+            "columns": {
+                "type": {"type": "integer"},
+                "damage": {"type": "number", "units": u.currency/(u.meter**2)}
+            },
             "required": "built_infrastructure_vector_path",
             "about": (
                 "Path to a a CSV table with columns 'Type' and 'Damage' with "
-                "values of built infrastructure type from the 'Type' field "
-                "in the 'Built Infrastructure Vector' and potential damage "
-                "loss (in $/m^2). Required if the built infrastructure vector "
-                "is provided."),
+                "values of built infrastructure type from the 'Type' field in "
+                "the 'Built Infrastructure Vector' and potential damage loss "
+                "(in currency/m^2). Required if the built infrastructure "
+                "vector is provided."),
             "name": "Built Infrastructure Damage Loss Table"
         }
     }
@@ -142,7 +127,7 @@ def execute(args):
             path to a CSV table with columns 'Type' and 'Damage' with values
             of built infrastructure type from the 'Type' field in
             ``args['built_infrastructure_vector_path']`` and potential damage
-            loss (in $/m^2).
+            loss (in currency/m^2).
         args['n_workers'] (int): (optional) if present, indicates how many
             worker processes should be used in parallel processing. -1
             indicates single process mode, 0 is single process but
@@ -315,7 +300,7 @@ def execute(args):
         task_name='calculate service built raster')
 
     reprojected_aoi_path = os.path.join(
-            intermediate_dir, 'reprojected_aoi.gpkg')
+        intermediate_dir, 'reprojected_aoi.gpkg')
     reprojected_aoi_task = task_graph.add_task(
         func=pygeoprocessing.reproject_vector,
         args=(
@@ -357,14 +342,14 @@ def execute(args):
     damage_per_aoi_stats = None
     flood_volume_stats = flood_volume_in_aoi_task.get()
     summary_tasks = [
-            flood_volume_in_aoi_task,
-            runoff_retention_stats_task,
-            runoff_retention_volume_stats_task]
+        flood_volume_in_aoi_task,
+        runoff_retention_stats_task,
+        runoff_retention_volume_stats_task]
     if 'built_infrastructure_vector_path' in args and (
             args['built_infrastructure_vector_path'] not in ('', None)):
         # Reproject the built infrastructure vector to the target SRS.
         reprojected_structures_path = os.path.join(
-                intermediate_dir, 'structures_reprojected.gpkg')
+            intermediate_dir, 'structures_reprojected.gpkg')
         reproject_built_infrastructure_task = task_graph.add_task(
             func=pygeoprocessing.reproject_vector,
             args=(args['built_infrastructure_vector_path'],
@@ -429,8 +414,8 @@ def _write_summary_vector(
     If ``damage_per_aoi_stats`` is provided, then these additional columns will
     be written to the vector::
 
-        * ``'aff_bld'``: Potential damage to built infrastructure in $,
-          per watershed.
+        * ``'aff_bld'``: Potential damage to built infrastructure in currency
+          units, per watershed.
         * ``'serv_blt'``: Spatial indicator of the importance of the runoff
           retention service
 

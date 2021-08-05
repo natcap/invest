@@ -5,12 +5,12 @@ change and the dependencies that particular classes of the given species
 have on particular habitats.
 """
 import logging
-import csv
 
 import numpy as np
 
 from . import fisheries_hst_io as io
 from .. import validation
+from .. import spec_utils
 
 LOGGER = logging.getLogger(__name__)
 
@@ -19,75 +19,71 @@ ARGS_SPEC = {
     "module": __name__,
     "userguide_html": "fisheries.html",
     "args": {
-        "workspace_dir": validation.WORKSPACE_SPEC,
-        "results_suffix": validation.SUFFIX_SPEC,
+        "workspace_dir": spec_utils.WORKSPACE,
+        "results_suffix": spec_utils.SUFFIX,
         "sexsp": {
             "name": "Population Classes are Sex-Specific",
             "type": "option_string",
-            "required": True,
-            "validation_options": {
-                "options": ["No", "Yes"],
-            },
+            "options": {"No", "Yes"},
             "about": (
-                "Specifies whether or not the population classes "
-                "provided in the Population Parameters CSV file are "
-                "distinguished by sex."),
+                "Specifies whether or not the population classes provided in "
+                "the Population Parameters CSV file are distinguished by sex."),
         },
         "population_csv_path": {
             "name": "Population Parameters File",
             "type": "csv",
-            "required": True,
             "about": (
                 "A CSV file containing all necessary attributes for "
-                "population classes based on age/stage, sex, and area "
-                "- excluding possible migration "
-                "information.<br><br>See the 'Running the Model >> "
-                "Core Model >> Population Parameters' section in the "
-                "model's documentation for help on how to format this "
-                "file."),
+                "population classes based on age/stage, sex, and area - "
+                "excluding possible migration information.<br><br>See the "
+                "'Running the Model >> Core Model >> Population Parameters' "
+                "section in the model's documentation for help on how to "
+                "format this file."),
         },
         "habitat_dep_csv_path": {
             "name": "Habitat Dependency Parameters File",
             "type": "csv",
-            "required": True,
+            "columns": {
+                "habitats": {"type": "freestyle_string"},
+                "[LIFE STAGE OR AGE]": {
+                    "type": "ratio",
+                    "about": (
+                        "One column for each life stage or age in the habitat "
+                        "change CSV")
+                }
+            },
             "about": (
-                "A CSV file containing the habitat dependencies (0-1) "
-                "for each life stage or age and for each habitat type "
-                "included in the Habitat Change CSV File.<br><br>See "
-                "the 'Running the Model >> Habitat Scenario Tool >> "
-                "Habitat Parameters' section in the model's "
-                "documentation for help on how to format this file."),
+                "A CSV file containing the habitat dependencies (0-1) for "
+                "each life stage or age and for each habitat type included in "
+                "the Habitat Change CSV File."),
         },
         "habitat_chg_csv_path": {
             "name": "Habitat Area Change File",
             "type": "csv",
-            "required": True,
+            "columns": {
+                "habitats": {"type": "freestyle_string"},
+                "[SUBREGION]": {
+                    "type": "ratio",
+                    "about": (
+                        "For each subregion, the proportion of habitat area "
+                        "gain/loss of each habitat")
+                }
+            },
             "about": (
-                "A CSV file containing the percent changes in habitat "
-                "area by subregion (if applicable). The habitats "
-                "included should be those which the population depends "
-                "on at any life stage. See the 'Running the "
-                "Model >> Habitat Scenario Tool >> Habitat Parameters' "
-                "section in the model's documentation for help on how "
-                "to format this file."),
+                "A CSV file containing the percent changes in habitat area by "
+                "subregion (if applicable). The habitats included should be "
+                "those which the population depends on at any life stage."),
         },
         "gamma": {
             "name": "Gamma",
-            "type": "number",
-            "required": True,
-            "validation_options": {
-                "expression": "(value >= 0) & (value <= 1)",
-            },
+            "type": "ratio",
             "about": (
-                "Gamma describes the relationship between a change in "
-                "habitat area and a change in survival of life stages "
-                "dependent on that habitat.  Specify a value between 0 "
-                "and 1. See the documentation for advice on "
-                "selecting a gamma value."),
+                "Gamma describes the relationship between a change in habitat "
+                "area and a change in survival of life stages dependent on "
+                "that habitat."),
         }
     }
 }
-
 
 
 def execute(args):
@@ -216,7 +212,7 @@ def convert_survival_matrix(vars_dict):
     # Divide by number of habitats and cancel non-class-transition elements
     # numpy.where may do the math on all elements regardless of the condition
     # replace 0s with -1s so that we don't divide by zero
-    n_a[n_a == 0] = -1  
+    n_a[n_a == 0] = -1
     H_xa_weighted = np.where(n_a < 0, 0, (H_xa * t_a) / n_a)
 
     # Add unchanged elements back in to matrix

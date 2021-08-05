@@ -1262,7 +1262,6 @@ class HabitatQualityTests(unittest.TestCase):
             args['access_vector_path'], args['lulc_cur_path'])
 
         validate_result = habitat_quality.validate(args, limit_to=None)
-        print(validate_result)
         self.assertTrue(
             validate_result,
             "expected failed validations instead didn't get any")
@@ -1272,7 +1271,7 @@ class HabitatQualityTests(unittest.TestCase):
 
     def test_habtitat_quality_validation_missing_sens_header(self):
         """Habitat Quality: test validation for sens threat header."""
-        from natcap.invest import habitat_quality
+        from natcap.invest import habitat_quality, validation
 
         args = {
             'half_saturation_constant': '0.5',
@@ -1316,12 +1315,12 @@ class HabitatQualityTests(unittest.TestCase):
                 '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
                 'threat_2_f.tif\n')
 
+        # At least one threat header is expected, so there should be a message
         validate_result = habitat_quality.validate(args, limit_to=None)
-        self.assertTrue(
-            validate_result,
-            "expected failed validations instead didn't get any.")
-        self.assertTrue(
-            'any column in the sensitivity table' in validate_result[0][1])
+        self.assertEqual(len(validate_result), 1)
+        self.assertEqual(validate_result[0][0], ['sensitivity_table_path'])
+        expected_msg = 'does not match any column in the sensitivity table'
+        self.assertTrue(expected_msg in validate_result[0][1])
 
     def test_habtitat_quality_validation_bad_threat_path(self):
         """Habitat Quality: test validation for bad threat paths."""
@@ -2000,7 +1999,7 @@ class HabitatQualityTests(unittest.TestCase):
 
     def test_habitat_quality_argspec_missing_threat_header(self):
         """Habitat Quality: test validate for a threat header."""
-        from natcap.invest import habitat_quality
+        from natcap.invest import habitat_quality, validation
 
         args = {
             'half_saturation_constant': '0.5',
@@ -2042,12 +2041,10 @@ class HabitatQualityTests(unittest.TestCase):
                 '0.07,1.0,threat_2,threat_2_c.tif,threat_2_f.tif\n')
 
         validate_result = habitat_quality.validate(args, limit_to=None)
-        self.assertTrue(
-            validate_result,
-            "expected failed validations instead didn't get any.")
-        self.assertTrue(
-            "Fields are missing from this table: ['DECAY']" in
-            validate_result[0][1], validate_result[0][1])
+        expected = [(
+            ['threats_table_path'],
+            validation.MATCHED_NO_HEADERS_MSG % ('column', 'decay'))]
+        self.assertEqual(validate_result, expected)
 
     def test_habitat_quality_validate_missing_base_column(self):
         """Habitat Quality: test validate for a missing base column."""
@@ -2094,12 +2091,11 @@ class HabitatQualityTests(unittest.TestCase):
                 'threat_2_f.tif\n')
 
         validate_result = habitat_quality.validate(args, limit_to=None)
-        self.assertTrue(
-            validate_result,
-            "expected failed validations instead didn't get any.")
-        self.assertTrue(
-            "The column 'base_path' was not found" in
-            validate_result[0][1], validate_result[0][1])
+        expected = [(
+            ['threats_table_path'],
+            ("The column 'base_path' was not found in the Threat Data table "
+             "for the corresponding input LULC scenario."))]
+        self.assertEqual(validate_result, expected)
 
     def test_habitat_quality_validate_missing_fut_column(self):
         """Habitat Quality: test validate for a missing fut column."""
@@ -2145,9 +2141,8 @@ class HabitatQualityTests(unittest.TestCase):
                 '0.07,1.0,threat_2,exponential,,threat_2_c.tif')
 
         validate_result = habitat_quality.validate(args, limit_to=None)
-        self.assertTrue(
-            validate_result,
-            "expected failed validations instead didn't get any.")
-        self.assertTrue(
-            "The column 'fut_path' was not found" in
-            validate_result[0][1], validate_result[0][1])
+        expected = [(
+            ['threats_table_path'],
+            ("The column 'fut_path' was not found in the Threat Data table "
+             "for the corresponding input LULC scenario."))]
+        self.assertEqual(validate_result, expected)
