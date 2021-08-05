@@ -37,7 +37,7 @@ ARGS_SPEC = {
             "type": "directory",
             "required": True,
             "about": "Select the folder that has the packaged Wave Energy Data.",
-            "name": "base data"
+            "name": "Wave Base Data Folder"
         },
         "analysis_area_path": {
             "validation_options": {
@@ -56,7 +56,7 @@ ARGS_SPEC = {
                 "A list of analysis areas for which the model can currently "
                 "be run.  All the wave energy data needed for these areas "
                 "are pre-packaged in the WaveData folder."),
-            "name": "analysis area"
+            "name": "Analysis Area"
         },
         "aoi_path": {
             "validation_options": {
@@ -71,7 +71,7 @@ ARGS_SPEC = {
                 "for computing valuation and is recommended for biophysical "
                 "runs as well.  The AOI should be projected in linear units "
                 "of meters."),
-            "name": utils.AOI_ARG_NAME
+            "name": "Area of Interest"
         },
         "machine_perf_path": {
             "type": "csv",
@@ -79,7 +79,7 @@ ARGS_SPEC = {
             "about": (
                 "A CSV Table that has the performance of a particular wave "
                 "energy machine at certain sea state conditions."),
-            "name": "machine performance"
+            "name": "Machine Performance Table"
         },
         "machine_param_path": {
             "validation_options": {
@@ -92,7 +92,7 @@ ARGS_SPEC = {
                 "machine.  This includes information on the maximum "
                 "capacity of the device and the upper limits for wave height "
                 "and period."),
-            "name": "machine parameters"
+            "name": "Machine Parameter Table"
         },
         "dem_path": {
             "type": "raster",
@@ -101,13 +101,13 @@ ARGS_SPEC = {
                 "A GDAL-supported raster file containing a digital elevation "
                 "model dataset that has elevation values in meters.  Used to "
                 "get the cable distance for wave energy transmission."),
-            "name": utils.DEM_ARG_NAME
+            "name": "Global Digital Elevation Model"
         },
         "valuation_container": {
             "type": "boolean",
             "required": False,
             "about": "Indicates whether the model includes valuation",
-            "name": "do valuation"
+            "name": "Valuation"
         },
         "land_gridPts_path": {
             "validation_options": {
@@ -118,7 +118,7 @@ ARGS_SPEC = {
             "about": (
                 "A CSV Table that has the landing points and grid points "
                 "locations for computing cable distances."),
-            "name": "grid connection points"
+            "name": "Grid Connection Points Table"
         },
         "machine_econ_path": {
             "validation_options": {
@@ -129,7 +129,7 @@ ARGS_SPEC = {
             "about": (
                 "A CSV Table that has the economic parameters for the wave "
                 "energy machine."),
-            "name": "economic parameters"
+            "name": "Machine Economic Table"
         },
         "number_of_machines": {
             "validation_options": {
@@ -140,7 +140,7 @@ ARGS_SPEC = {
             "about": (
                 "An integer for how many wave energy machines will be in the "
                 "wave farm."),
-            "name": "number of machines"
+            "name": "Number of Machines"
         }
     }
 }

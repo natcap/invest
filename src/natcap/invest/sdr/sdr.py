@@ -49,7 +49,7 @@ ARGS_SPEC = {
                 "the elevation model (recommended when unusual streams are "
                 "observed.) See the 'Working with the DEM' section of the "
                 "InVEST User's Guide for more information."),
-            "name": utils.DEM_ARG_NAME
+            "name": "Digital Elevation Model"
         },
         "erosivity_path": {
             "type": "raster",
@@ -66,7 +66,7 @@ ARGS_SPEC = {
                 "but in case of its absence, there are methods and equations "
                 "to help generate a grid using climatic data.  The units are "
                 "MJ*mm/(ha*h*yr)."),
-            "name": "rainfall erosivity index"
+            "name": "Rainfall Erosivity Index (R)"
         },
         "erodibility_path": {
             "type": "raster",
@@ -79,7 +79,7 @@ ARGS_SPEC = {
                 "for each cell which is a measure of the susceptibility of "
                 "soil particles to detachment and transport by rainfall and "
                 "runoff.  Units are in T*ha*h/(ha*MJ*mm)."),
-            "name": "soil erodibility"
+            "name": "Soil Erodibility"
         },
         "lulc_path": {
             "type": "raster",
@@ -90,7 +90,7 @@ ARGS_SPEC = {
             "about": (
                 "A GDAL-supported raster file, with an integer LULC code "
                 "for each cell."),
-            "name": utils.LULC_ARG_NAME
+            "name": "Land-Use/Land-Cover"
         },
         "watersheds_path": {
             "validation_options": {
@@ -105,7 +105,7 @@ ARGS_SPEC = {
                 "where water quality will be analyzed.  It must have the "
                 "integer field 'ws_id' where the values uniquely identify "
                 "each watershed."),
-            "name": "watersheds"
+            "name": "Watersheds"
         },
         "biophysical_table_path": {
             "validation_options": {
@@ -119,7 +119,7 @@ ARGS_SPEC = {
                 "must contain the fields 'lucode', 'usle_c', and 'usle_p'.  "
                 "See the InVEST Sediment User's Guide for more information "
                 "about these fields."),
-            "name": "biophysical table"
+            "name": "Biophysical Table"
         },
         "threshold_flow_accumulation": {
             "validation_options": {
@@ -132,7 +132,7 @@ ARGS_SPEC = {
                 "before it's considered part of a stream such that retention "
                 "stops and the remaining export is exported to the stream.  "
                 "Used to define streams from the DEM."),
-            "name": "threshold flow accumulation"
+            "name": "Threshold Flow Accumulation"
         },
         "k_param": {
             "type": "number",
@@ -144,13 +144,13 @@ ARGS_SPEC = {
             "type": "number",
             "required": True,
             "about": "Maximum SDR value.",
-            "name": "max SDR value"
+            "name": "Max SDR Value"
         },
         "ic_0_param": {
             "type": "number",
             "required": True,
             "about": "Borselli IC0 parameter.",
-            "name": "Borselli IC0 parameter"
+            "name": "Borselli IC0 Parameter"
         },
         "l_max": {
             "type": "number",
@@ -176,7 +176,7 @@ ARGS_SPEC = {
                 "indicate drainage areas and 0's or nodata indicate areas "
                 "with no additional drainage.  This model is most accurate "
                 "when the drainage raster aligns with the DEM."),
-            "name": "drainages"
+            "name": "Drainages"
         }
     }
 }

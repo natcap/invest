@@ -51,7 +51,7 @@ ARGS_SPEC = {
                 "is linearly weighted by distance such that the biomass in "
                 "the pixel is a function of each of these points with the "
                 "closest point having the highest effect."),
-            "name": "number of points to average"
+            "name": "Number of nearest model points to average"
         },
         "aoi_vector_path": {
             "validation_options": {
@@ -62,7 +62,7 @@ ARGS_SPEC = {
             "about": (
                 "This is a set of polygons that will be used to aggregate "
                 "carbon values at the end of the run if provided."),
-            "name": "areas of interest"
+            "name": "Service areas of interest"
         },
         "biophysical_table_path": {
             "validation_options": {
@@ -79,7 +79,7 @@ ARGS_SPEC = {
                 "table must also contain entries for 'c_below', 'c_soil', "
                 "and 'c_dead'.  See the InVEST Forest Carbon User's Guide "
                 "for more information about these fields."),
-            "name": "biophysical table"
+            "name": "Biophysical Table"
         },
         "lulc_raster_path": {
             "type": "raster",
@@ -90,7 +90,7 @@ ARGS_SPEC = {
             "about": (
                 "A GDAL-supported raster file, with an integer LULC code for "
                 "each cell."),
-            "name": utils.LULC_ARG_NAME
+            "name": "Land-Use/Land-Cover Map"
         },
         "pools_to_calculate": {
             "validation_options": {
@@ -103,7 +103,7 @@ ARGS_SPEC = {
                 "'c_above', 'c_below', 'c_dead', 'c_soil' are used in the "
                 "carbon pool calculation.  Otherwise only 'c_above' is "
                 "considered."),
-            "name": "carbon pools"
+            "name": "Carbon Pools to Calculate"
         },
         "compute_forest_edge_effects": {
             "type": "boolean",
@@ -113,7 +113,7 @@ ARGS_SPEC = {
                 "account for above ground carbon stocks in tropical forest "
                 "types indicated by a '1' in the 'is_tropical_forest' field "
                 "in the biophysical table."),
-            "name": "compute forest edge effects"
+            "name": "Compute forest edge effects"
         },
         "tropical_forest_edge_carbon_model_vector_path": {
             "validation_options": {
@@ -125,19 +125,18 @@ ARGS_SPEC = {
                 "A vector with fields 'method', 'theta1', 'theta2', "
                 "'theta3' describing the global forest carbon edge models.  "
                 "Provided as default data for the model."),
-            "name": "global regression models"
+            "name": "Global forest carbon edge regression models"
         },
         "biomass_to_carbon_conversion_factor": {
             "type": "number",
             "required": "compute_forest_edge_effects",
             "about": (
-                "Forest edge biomass-to-carbon conversion factor: a number by "
-                "which to scale forest edge biomass to convert to "
+                "Number by which to scale forest edge biomass to convert to "
                 "carbon.  Default value is 0.47 (according to IPCC 2006). "
                 "This pertains to forest classes only; values in the "
                 "biophysical table for non-forest classes should already be "
                 "in terms of carbon, not biomass."),
-            "name": "biomass-carbon conversion factor"
+            "name": "Forest Edge Biomass to Carbon Conversion Factor"
         }
     }
 }

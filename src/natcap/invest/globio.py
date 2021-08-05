@@ -39,7 +39,7 @@ ARGS_SPEC = {
             "type": "boolean",
             "required": False,
             "about": 'if True then "mode (b)" else "mode (a)"',
-            "name": "use predefined LULC"
+            "name": "Predefined land use map for GLOBIO"
         },
         "lulc_path": {
             "type": "raster",
@@ -50,7 +50,7 @@ ARGS_SPEC = {
             "about": (
                 'used in "mode (a)" path to a base landcover map with'
                 ' integer codes'),
-            "name": utils.LULC_ARG_NAME
+            "name": "Land Use/Cover (Raster)"
         },
         "lulc_to_globio_table_path": {
             "validation_options": {
@@ -64,7 +64,7 @@ ARGS_SPEC = {
                 "must contain the fields 'lucode', 'globio_lucode'.  "
                 "See the InVEST User's Guide for more information "
                 "about these fields."),
-            "name": "LULC to GLOBIO LULC table"
+            "name": "Landcover to GLOBIO Landcover Table"
         },
         "infrastructure_dir": {
             "validation_options": {
@@ -77,7 +77,7 @@ ARGS_SPEC = {
                 'maps of either GDAL compatible rasters or vectors. '
                 'These data will be used in the infrastructure '
                 'to calculation of MSA.'),
-            "name": "infrastructure"
+            "name": "Infrastructure Directory"
         },
         "pasture_path": {
             "type": "raster",
@@ -86,7 +86,7 @@ ARGS_SPEC = {
             },
             "required": "not predefined_globio",
             "about": 'used in "mode (a)" path to pasture raster',
-            "name": "pasture"
+            "name": "Pasture (Raster)"
         },
         "potential_vegetation_path": {
             "type": "raster",
@@ -96,7 +96,7 @@ ARGS_SPEC = {
             "required": "not predefined_globio",
             "about": (
                 'used in "mode (a)" path to potential vegetation raster'),
-            "name": "potential vegetation"
+            "name": "Potential Vegetation (Raster)"
         },
         "pasture_threshold": {
             "validation_options": {
@@ -105,7 +105,7 @@ ARGS_SPEC = {
             "type": "number",
             "required": "not predefined_globio",
             "about": 'used in "mode (a)"',
-            "name": "pasture threshold"
+            "name": "Pasture Threshold"
         },
         "intensification_fraction": {
             "validation_options": {
@@ -116,7 +116,7 @@ ARGS_SPEC = {
             "about": (
                 "A value between 0 and 1 denoting proportion of total "
                 "agriculture that should be classified as 'high input'."),
-            "name": "intensification fraction"
+            "name": "Proportion of of Agriculture Intensified"
         },
         "primary_threshold": {
             "validation_options": {
@@ -125,7 +125,7 @@ ARGS_SPEC = {
             "type": "number",
             "required": "not predefined_globio",
             "about": 'used in "mode (a)"',
-            "name": "primary threshold"
+            "name": "Primary Threshold"
         },
         "msa_parameters_path": {
             "validation_options": {
@@ -138,7 +138,7 @@ ARGS_SPEC = {
                 "A CSV table containing MSA threshold values as defined in "
                 "the user's guide.  Provided for advanced users that may "
                 "wish to change those values."),
-            "name": "MSA parameter table"
+            "name": "MSA Parameter Table"
         },
         "aoi_path": {
             "type": "vector",
@@ -149,7 +149,7 @@ ARGS_SPEC = {
             "about": (
                 "This is a set of polygons that can be used to aggregate MSA "
                 "sum and mean to a polygon."),
-            "name": utils.AOI_ARG_NAME
+            "name": "AOI",
         },
         "globio_lulc_path": {
             "validation_options": {
@@ -158,7 +158,7 @@ ARGS_SPEC = {
             "type": "raster",
             "required": "predefined_globio",
             "about": 'used in "mode (b)" path to predefined globio raster.',
-            "name": "GLOBIO LULC"
+            "name": "GLOBIO Classified Land Use"
         }
     }
 }

@@ -18,7 +18,7 @@ ARGS_SPEC = {
         "workspace_dir": validation.WORKSPACE_SPEC,
         "results_suffix": validation.SUFFIX_SPEC,
         "ff_farm_loc": {
-            "name": "finfish farm location",
+            "name": "Finfish Farm Location",
             "about": (
                 "A GDAL-supported vector file containing polygon or "
                 "point geometries, with a latitude and longitude value and a "
@@ -28,7 +28,7 @@ ARGS_SPEC = {
             "required": True,
         },
         "farm_ID": {
-            "name": "farm identifier name",
+            "name": "Farm Identifier Name",
             "about": (
                 "The name of a column heading used to identify each "
                 "farm and link the spatial information from the "
@@ -44,9 +44,9 @@ ARGS_SPEC = {
             }
         },
         "g_param_a": {
-            "name": "α growth parameter",
+            "name": "Fish Growth Parameter (a)",
             "about": (
-                "Default α = (0.038 g/day). If the user chooses to "
+                "Default a = (0.038 g/day). If the user chooses to "
                 "adjust these parameters, we recommend using them in "
                 "the simple growth model to determine if the time "
                 "taken for a fish to reach a target harvest weight "
@@ -55,9 +55,9 @@ ARGS_SPEC = {
             "required": True,
         },
         "g_param_b": {
-            "name": "β growth parameter",
+            "name": "Fish Growth Parameter (b)",
             "about": (
-                "Default β = (0.6667 g/day). If the user chooses to "
+                "Default b = (0.6667 g/day). If the user chooses to "
                 "adjust these parameters, we recommend using them in "
                 "the simple growth model to determine if the time "
                 "taken for a fish to reach a target harvest weight "
@@ -66,9 +66,9 @@ ARGS_SPEC = {
             "required": True,
         },
         "g_param_tau": {
-            "name": "τ growth parameter",
+            "name": "Fish Growth Parameter (tau)",
             "about": (
-                "Default τ = (0.08 C^-1).  Specifies how sensitive "
+                "Default tau = (0.08 C^-1).  Specifies how sensitive "
                 "finfish growth is to temperature.  If the user "
                 "chooses to adjust these parameters, we recommend "
                 "using them in the simple growth model to determine if "
@@ -79,31 +79,31 @@ ARGS_SPEC = {
             "required": True,
         },
         "use_uncertainty": {
-            "name": "do uncertainty analysis",
+            "name": "Enable uncertainty analysis",
             "about": "Enable uncertainty analysis.",
             "type": "boolean",
             "required": True,
         },
         "g_param_a_sd": {
-            "name": "α standard deviation",
+            "name": "Standard Deviation for Parameter (a)",
             "about": (
-                "Standard deviation for fish growth parameter α. "
+                "Standard deviation for fish growth parameter a. "
                 "This indicates the level of uncertainty in the "
-                "estimate for parameter α."),
+                "estimate for parameter a."),
             "type": "number",
             "required": "use_uncertainty",
         },
         "g_param_b_sd": {
-            "name": "β standard deviation",
+            "name": "Standard Deviation for Parameter (b)",
             "about": (
-                "Standard deviation for fish growth parameter β. "
+                "Standard deviation for fish growth parameter b. "
                 "This indicates the level of uncertainty in the "
-                "estimate for parameter β."),
+                "estimate for parameter b."),
             "type": "number",
             "required": "use_uncertainty",
         },
         "num_monte_carlo_runs": {
-            "name": "number of Monte Carlo runs",
+            "name": "Number of Monte Carlo Simulation Runs",
             "about": (
                 "Number of runs of the model to perform as part of a "
                 "Monte Carlo simulation.  A larger number will tend to "
@@ -113,7 +113,7 @@ ARGS_SPEC = {
             "required": "use_uncertainty",
         },
         "water_temp_tbl": {
-            "name": "daily water temperature",
+            "name": "Table of Daily Water Temperature at Farm",
             "type": "csv",
             "required": True,
             "about": (
@@ -132,7 +132,7 @@ ARGS_SPEC = {
                 "the netpens."),
         },
         "farm_op_tbl": {
-            "name": "farm operations table",
+            "name": "Farm Operations Table",
             "type": "csv",
             "required": True,
             "about": (
@@ -151,7 +151,7 @@ ARGS_SPEC = {
                 "Columbia are also included in the sample data table."),
         },
         "outplant_buffer": {
-            "name": "outplant date buffer",
+            "name": "Outplant Date Buffer",
             "type": "number",
             "required": True,
             "about": (
@@ -160,22 +160,21 @@ ARGS_SPEC = {
                 "here."),
         },
         "do_valuation": {
-            "name": "do valuation",
+            "name": "Run valuation model",
             "about": "Run valuation model",
             "type": "boolean",
             "required": True,
         },
         "p_per_kg": {
-            "name": "processed fish price",
+            "name": "Market Price per Kilogram of Processed Fish",
             "about": (
-                "Market price per kilogram of processed fish. Default "
-                "value comes from Urner-Berry monthly fresh sheet "
-                "reports on price of farmed Atlantic salmon."),
+                "Default value comes from Urner-Berry monthly fresh "
+                "sheet reports on price of farmed Atlantic salmon."),
             "type": "number",
             "required": "do_valuation",
         },
         "frac_p": {
-            "name": "cost fraction",
+            "name": "Fraction of Price that Accounts to Costs",
             "about": (
                 "Fraction of market price that accounts for costs "
                 "rather than profit.  Default value is 0.3 (30%)."),
@@ -186,7 +185,7 @@ ARGS_SPEC = {
             }
         },
         "discount": {
-            "name": "daily market discount rate",
+            "name": "Daily Market Discount Rate",
             "about": (
                 "We use a 7% annual discount rate, adjusted to a "
                 "daily rate of 0.000192 for 0.0192% (7%/365 days)."),

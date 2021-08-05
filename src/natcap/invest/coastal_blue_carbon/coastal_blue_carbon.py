@@ -168,12 +168,12 @@ ARGS_SPEC = {
                 "Landcover codes match those in the biophysical table and in "
                 "the landcover transitions table."
             ),
-            "name": "LULC snapshots table",
+            "name": "Landcover Snapshots Table",
         },
         "analysis_year": {
             "type": "number",
             "required": False,
-            "name": "analysis year",
+            "name": "Analysis Year",
             "about": (
                 "An analysis year extends the transient analysis "
                 "beyond the transition years. If not provided, the "
@@ -181,7 +181,7 @@ ARGS_SPEC = {
             ),
         },
         "biophysical_table_path": {
-            "name": "biophysical table",
+            "name": "Biophysical Table",
             "type": "csv",
             "required": True,
             "validation_options": {
@@ -213,7 +213,7 @@ ARGS_SPEC = {
             ),
         },
         "landcover_transitions_table": {
-            "name": "LULC transitions table",
+            "name": "Landcover Transitions Table",
             "type": "csv",
             "validation_options": {
                 "required_fields": ['lulc-class'],
@@ -240,16 +240,15 @@ ARGS_SPEC = {
             ),
         },
         "do_economic_analysis": {
-            "name": "do valuation",
+            "name": "Calculate Net Present Value of Sequestered Carbon",
             "type": "boolean",
             "required": False,
             "about": (
                 "A boolean value indicating whether the model should run an "
-                "economic analysis calculating the net present value of "
-                "sequestered carbon."),
+                "economic analysis."),
         },
         "use_price_table": {
-            "name": "use price table",
+            "name": "Use Price Table",
             "type": "boolean",
             "required": False,
             "about": (
@@ -258,13 +257,13 @@ ARGS_SPEC = {
                 "is provided and to be used instead."),
         },
         "price": {
-            "name": "price",
+            "name": "Price",
             "type": "number",
             "required": "do_economic_analysis and (not use_price_table)",
             "about": "The price per Megatonne CO2e at the base year.",
         },
         "inflation_rate": {
-            "name": "interest rate",
+            "name": "Interest Rate (%)",
             "type": "number",
             "required": "do_economic_analysis and (not use_price_table)",
             "about": (
@@ -272,7 +271,7 @@ ARGS_SPEC = {
                 "5 would represent a 5% inflation rate."),
         },
         "price_table_path": {
-            "name": "price table",
+            "name": "Price Table",
             "type": "csv",
             "required": "use_price_table",
             "about": (
@@ -283,7 +282,7 @@ ARGS_SPEC = {
                 "year, if provided."),
         },
         "discount_rate": {
-            "name": "discount rate",
+            "name": "Discount Rate (%)",
             "type": "number",
             "required": "do_economic_analysis",
             "about": (

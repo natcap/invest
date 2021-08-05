@@ -38,7 +38,7 @@ ARGS_SPEC = {
             "about": (
                 "Path to a vector of (sub)watersheds or sewersheds used to "
                 "indicate spatial area of interest."),
-            "name": "watersheds"
+            "name": "Watershed Vector"
         },
         "rainfall_depth": {
             "validation_options": {
@@ -47,7 +47,7 @@ ARGS_SPEC = {
             "type": "number",
             "required": True,
             "about": "Depth of rainfall in mm.",
-            "name": "rainfall depth"
+            "name": "Depth of rainfall in mm"
         },
         "lulc_path": {
             "type": "raster",
@@ -56,7 +56,7 @@ ARGS_SPEC = {
             },
             "required": True,
             "about": "Path to a landcover raster",
-            "name": utils.LULC_ARG_NAME
+            "name": "Landcover Raster"
         },
         "soils_hydrological_group_raster_path": {
             "type": "raster",
@@ -68,7 +68,7 @@ ARGS_SPEC = {
                 "Raster with values equal to 1, 2, 3, 4, corresponding to "
                 "soil hydrologic group A, B, C, or D, respectively (used to "
                 "derive the CN number)"),
-            "name": "soils hydrological groups"
+            "name": "Soils Hydrological Group Raster"
         },
         "curve_number_table_path": {
             "validation_options": {
@@ -80,7 +80,7 @@ ARGS_SPEC = {
                 "Path to a CSV table that to map landcover codes to curve "
                 "numbers and contains at least the headers 'lucode', "
                 "'CN_A', 'CN_B', 'CN_C', 'CN_D'"),
-            "name": "biophysical table"
+            "name": "Biophysical Table"
         },
         "built_infrastructure_vector_path": {
             "validation_options": {
@@ -92,7 +92,7 @@ ARGS_SPEC = {
                 "Path to a vector with built infrastructure footprints. "
                 "Attribute table contains a column 'Type' with integers "
                 "(e.g. 1=residential, 2=office, etc.)."),
-            "name": "built infrastructure"
+            "name": "Built Infrastructure Vector"
         },
         "infrastructure_damage_loss_table_path": {
             "validation_options": {
@@ -106,7 +106,7 @@ ARGS_SPEC = {
                 "in the 'Built Infrastructure Vector' and potential damage "
                 "loss (in $/m^2). Required if the built infrastructure vector "
                 "is provided."),
-            "name": "damage loss table"
+            "name": "Built Infrastructure Damage Loss Table"
         }
     }
 }

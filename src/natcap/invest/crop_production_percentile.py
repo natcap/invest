@@ -44,7 +44,7 @@ ARGS_SPEC = {
                 "coordinate system with units of meters (e.g. UTM) because "
                 "pixel areas are divided by 10000 in order to report some "
                 "results in hectares."),
-            "name": utils.LULC_ARG_NAME
+            "name": "Land-Use/Land-Cover Map"
         },
         "landcover_to_crop_table_path": {
             "validation_options": {
@@ -84,7 +84,7 @@ ARGS_SPEC = {
                 "tobacco, tomato, triticale, tropicalnes, tung, turnipfor, "
                 "vanilla, vegetablenes, vegfor, vetch, walnut, watermelon, "
                 "wheat, yam, and yautia."),
-            "name": "LULC to crop table"
+            "name": "Landcover to Crop Table"
         },
         "aggregate_polygon_path": {
             "type": "vector",
@@ -96,7 +96,7 @@ ARGS_SPEC = {
                 "A polygon vector containing features with which to "
                 "aggregate/summarize final results. It is fine to have "
                 "overlapping polygons."),
-            "name": "aggregate results polygon"
+            "name": "Aggregate results polygon"
         },
         "model_data_path": {
             "type": "directory",
@@ -110,7 +110,7 @@ ARGS_SPEC = {
                 "selected, or can be manually downloaded from "
                 "http://releases.naturalcapitalproject.org/.  If downloaded "
                 "with InVEST, the default value should be used."),
-            "name": "model data"
+            "name": "Directory to model data"
         }
     }
 }

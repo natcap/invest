@@ -28,7 +28,7 @@ ARGS_SPEC = {
                 "A GDAL-supported raster file containing a base Digital "
                 "Elevation Model to execute the routing functionality "
                 "across."),
-            "name": "digital elevation model"
+            "name": "Digital Elevation Model"
         },
         "dem_band_index": {
             "validation_options": {
@@ -39,7 +39,7 @@ ARGS_SPEC = {
             "about": (
                 "The band index to use from the raster. This positive "
                 "integer is 1-based. Default: 1"),
-            "name": "band index"
+            "name": "Band Index"
         },
         "algorithm": {
             "validation_options": {
@@ -53,26 +53,26 @@ ARGS_SPEC = {
                 "of each of the 8 neighbors of a cell.</li>"
                 "<li>MFD: Multiple Flow Direction. Fractional flow is "
                 "modeled between pixels.</li></ul>"),
-            "name": "routing algorithm"
+            "name": "Routing Algorithm"
         },
         "calculate_flow_direction": {
             "type": "boolean",
             "required": False,
             "about": "Select to calculate flow direction",
-            "name": "calculate flow direction"
+            "name": "Calculate Flow Direction"
         },
         "calculate_flow_accumulation": {
             "validation_options": {},
             "type": "boolean",
             "required": False,
             "about": "Select to calculate flow accumulation.",
-            "name": "calculate flow accumulation"
+            "name": "Calculate Flow Accumulation"
         },
         "calculate_stream_threshold": {
             "type": "boolean",
             "required": False,
             "about": "Select to calculate a stream threshold to flow accumulation.",
-            "name": "calculate stream thresholds"
+            "name": "Calculate Stream Thresholds"
         },
         "threshold_flow_accumulation": {
             "validation_options": {},
@@ -81,7 +81,7 @@ ARGS_SPEC = {
             "about": (
                 "The number of upstream cells that must flow into a cell "
                 "before it's classified as a stream."),
-            "name": "threshold flow accumulation limit"
+            "name": "Threshold Flow Accumulation Limit"
         },
         "calculate_downstream_distance": {
             "type": "boolean",
@@ -90,13 +90,13 @@ ARGS_SPEC = {
                 "If selected, creates a downstream distance raster based "
                 "on the thresholded flow accumulation stream "
                 "classification."),
-            "name": "calculate distance to stream"
+            "name": "Calculate Distance to stream"
         },
         "calculate_slope": {
             "type": "boolean",
             "required": False,
             "about": "If selected, calculates slope from the provided DEM.",
-            "name": "calculate slope"
+            "name": "Calculate Slope"
         }
     }
 }

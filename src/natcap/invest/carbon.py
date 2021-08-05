@@ -36,7 +36,7 @@ ARGS_SPEC = {
             "about": (
                 "A GDAL-supported raster representing the land-cover of the"
                 "current scenario."),
-            "name": "current LULC"
+            "name": "Current Land Use/Land Cover"
         },
         "calc_sequestration": {
             "type": "boolean",
@@ -45,7 +45,7 @@ ARGS_SPEC = {
                 "Check to enable sequestration analysis. This requires "
                 "inputs of Land Use/Land Cover maps for both current and "
                 "future scenarios."),
-            "name": "calculate sequestration"
+            "name": "Calculate Sequestration"
         },
         "lulc_fut_path": {
             "type": "raster",
@@ -59,7 +59,7 @@ ARGS_SPEC = {
                 "enabled, this should be the reference, or baseline, future "
                 "scenario against which to compare the REDD policy "
                 "scenario."),
-            "name": "future LULC"
+            "name": "Future Landcover"
         },
         "do_redd": {
             "type": "boolean",
@@ -69,7 +69,7 @@ ARGS_SPEC = {
                 "three Land Use/Land Cover maps: one for the current "
                 "scenario, one for the future baseline scenario, and one for "
                 "the future REDD policy scenario."),
-            "name": "REDD scenario analysis"
+            "name": "REDD Scenario Analysis"
         },
         "lulc_redd_path": {
             "type": "raster",
@@ -81,7 +81,7 @@ ARGS_SPEC = {
                 "A GDAL-supported raster representing the land-cover of "
                 "the REDD policy future scenario.  This scenario will be "
                 "compared to the baseline future scenario."),
-            "name": "REDD LULC"
+            "name": "REDD Policy)"
         },
         "carbon_pools_path": {
             "validation_options": {
@@ -91,12 +91,12 @@ ARGS_SPEC = {
             "type": "csv",
             "required": True,
             "about": (
-                "A table that maps each land cover class to its respective "
-                "carbon pools. The table must contain columns of 'lucode', "
-                "'C_above', 'C_below', 'C_soil', 'C_dead' as described in the "
-                "User's Guide. The 'lucode' column must include all the pixel "
-                "values present in the land cover maps."),
-            "name": "carbon pools"
+                "A table that maps the land-cover IDs to carbon pools.  "
+                "The table must contain columns of 'LULC', 'C_above', "
+                "'C_Below', 'C_Soil', 'C_Dead' as described in the User's "
+                "Guide.  The values in LULC must at least include the LULC "
+                "IDs in the land cover maps."),
+            "name": "Carbon Pools"
         },
         "lulc_cur_year": {
             "validation_options": {
@@ -133,10 +133,8 @@ ARGS_SPEC = {
         "discount_rate": {
             "type": "number",
             "required": "do_valuation",
-            "about": (
-                "The discount rate in the price of carbon as a floating "
-                "point percent."),
-            "name": "market discount rate"
+            "about": "The discount rate as a floating point percent.",
+            "name": "Market Discount in Price of Carbon (%)"
         },
         "rate_change": {
             "type": "number",
@@ -144,7 +142,7 @@ ARGS_SPEC = {
             "about": (
                 "The floating point percent increase of the price of "
                 "carbon per year."),
-            "name": "carbon price change"
+            "name": "Annual Rate of Change in Price of Carbon (%)"
         }
     }
 }

@@ -57,7 +57,7 @@ ARGS_SPEC = {
             "about": (
                 "A GDAL-supported vector file representing the area of "
                 "interest where the model will run the analysis."),
-            "name": utils.AOI_ARG_NAME
+            "name": "Area of Interest (Vector)"
         },
         "hostname": {
             "type": "freestyle_string",
@@ -83,9 +83,9 @@ ARGS_SPEC = {
             "type": "number",
             "required": True,
             "about": (
-                "Year to start PUD calculations, inclusive (date starts on Jan "
-                "1st). Must be >= 2005."),
-            "name": "start year"
+                "Year to start PUD calculations, date starts on Jan "
+                "1st."),
+            "name": "Start Year (inclusive, must be >= 2005)"
         },
         "end_year": {
             "validation_options": {
@@ -94,9 +94,9 @@ ARGS_SPEC = {
             "type": "number",
             "required": True,
             "about": (
-                "Year to end PUD calculations, inclusive (date goes through Dec "
-                "31st). Must be <= 2017"),
-            "name": "end year"
+                "Year to end PUD calculations, date ends and includes Dec "
+                "31st."),
+            "name": "End Year (inclusive, must be <= 2017)"
         },
         "grid_aoi": {
             "type": "boolean",
@@ -105,7 +105,7 @@ ARGS_SPEC = {
                 "If true the polygon vector in ``args['aoi_path']`` should be "
                 "gridded into a new vector and the recreation model should "
                 "be executed on that"),
-            "name": "grid AOI"
+            "name": "Grid the AOI"
         },
         "grid_type": {
             "validation_options": {
@@ -120,7 +120,7 @@ ARGS_SPEC = {
                 "Optional, but must exist if args['grid_aoi'] is True.  Is "
                 "one of 'hexagon' or 'square' and\nindicates the style of "
                 "gridding."),
-            "name": "grid type"
+            "name": "Grid Type"
         },
         "cell_size": {
             "validation_options": {
@@ -132,7 +132,7 @@ ARGS_SPEC = {
                 "The size of the grid units measured in the projection "
                 "units of the AOI. For example, UTM projections use "
                 "meters."),
-            "name": "cell size"
+            "name": "Cell Size"
         },
         "compute_regression": {
             "type": "boolean",
@@ -140,7 +140,7 @@ ARGS_SPEC = {
             "about": (
                 "If True, then process the predictor table and scenario "
                 "table (if present)."),
-            "name": "compute regression"
+            "name": "Compute Regression"
         },
         "predictor_table_path": {
             "validation_options": {
@@ -152,7 +152,7 @@ ARGS_SPEC = {
                 "A table that maps predictor IDs to files and their types "
                 "with required headers of 'id', 'path', and 'type'.  The "
                 "file paths can be absolute, or relative to the table."),
-            "name": "predictor table"
+            "name": "Predictor Table"
         },
         "scenario_predictor_table_path": {
             "validation_options": {
@@ -164,7 +164,7 @@ ARGS_SPEC = {
                 "A table that maps predictor IDs to files and their types "
                 "with required headers of 'id', 'path', and 'type'.  The "
                 "file paths can be absolute, or relative to the table."),
-            "name": "scenario predictor table"
+            "name": "Scenario Predictor Table"
         }
     }
 }

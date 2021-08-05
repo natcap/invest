@@ -38,7 +38,7 @@ ARGS_SPEC = {
         "results_suffix": validation.SUFFIX_SPEC,
         "n_workers": validation.N_WORKERS_SPEC,
         "lulc_raster_path": {
-            "name": utils.LULC_ARG_NAME,
+            "name": "Land Use / Land Cover Raster",
             "type": "raster",
             "required": True,
             "validation_options": {
@@ -57,17 +57,17 @@ ARGS_SPEC = {
             )
         },
         "ref_eto_raster_path": {
-            "name": "evapotranspiration",
+            "name": "Reference Evapotranspiration Raster",
             "type": "raster",
             "required": True,
             "about": (
                 "A GDAL-supported raster file containing numeric values "
-                "representing the reference evapotranspiration (in mm) for "
-                "the period of interest."
+                "representing the evapotranspiration (in mm) for the period "
+                "of interest."
             )
         },
         "aoi_vector_path": {
-            "name": utils.AOI_ARG_NAME,
+            "name": "Area of Interest Vector",
             "type": "vector",
             "required": True,
             "about": (
@@ -77,7 +77,7 @@ ARGS_SPEC = {
             )
         },
         "biophysical_table_path": {
-            "name": "biophysical table",
+            "name": "Biophysical Table",
             "type": "csv",
             "required": True,
             "validation_options": {
@@ -91,7 +91,7 @@ ARGS_SPEC = {
             ),
         },
         "green_area_cooling_distance": {
-            "name": "max cooling distance",
+            "name": "Green area max cooling distance effect (m)",
             "type": "number",
             "required": True,
             "validation_options": {
@@ -103,19 +103,18 @@ ARGS_SPEC = {
             ),
         },
         "t_air_average_radius": {
-            "name": "maximum blending distance",
+            "name": "T_air moving average radius (m)",
             "type": "number",
             "required": True,
             "validation_options": {
                 "expression": "value > 0"
             },
             "about": (
-                "Radius in meters of the moving average filter that accounts "
-                "for air temperature mixing."
-            )
+                "Radius of the averaging filter for turning T_air_nomix "
+                "into T_air")
         },
         "t_ref": {
-            "name": "reference air temperature",
+            "name": "Reference Air Temperature",
             "type": "number",
             "required": True,
             "about": (
@@ -126,7 +125,7 @@ ARGS_SPEC = {
                 "given for the same period of interest)"),
         },
         "uhi_max": {
-            "name": "magnitude of UHI effect",
+            "name": "Magnitude of the UHI effect",
             "type": "number",
             "required": True,
             "about": (
@@ -137,19 +136,19 @@ ARGS_SPEC = {
             ),
         },
         "do_energy_valuation": {
-            "name": "do energy savings valuation",
+            "name": "Run Energy Savings Valuation Model",
             "type": "boolean",
             "required": True,
             "about": "Select to run the energy savings valuation model."
         },
         "do_productivity_valuation": {
-            "name": "do work productivity valuation",
+            "name": "Run Work Productivity Valuation Model",
             "type": "boolean",
             "required": True,
             "about": "Select to run the work productivity valuation model."
         },
         "avg_rel_humidity": {
-            "name": "average relative humidity",
+            "name": "Average relative humidity (0-100%)",
             "type": "number",
             "required": "do_productivity_valuation",
             "validation_options": {
@@ -161,7 +160,7 @@ ARGS_SPEC = {
             ),
         },
         "building_vector_path": {
-            "name": "buildings",
+            "name": "Buildings vector",
             "type": "vector",
             "required": "do_energy_valuation",
             "validation_options": {
@@ -176,7 +175,7 @@ ARGS_SPEC = {
             ),
         },
         "energy_consumption_table_path": {
-            "name": "energy consumption",
+            "name": "Energy consumption table",
             "type": "csv",
             "required": "do_energy_valuation",
             "validation_options": {
@@ -188,7 +187,7 @@ ARGS_SPEC = {
             ),
         },
         "cc_method": {
-            "name": "cooling capacity method",
+            "name": "Cooling capacity calculation method",
             "type": "option_string",
             "required": True,
             "validation_options": {
@@ -206,7 +205,7 @@ ARGS_SPEC = {
             ),
         },
         "cc_weight_shade": {
-            "name": "adjust shade weight",
+            "name": "Cooling capacity: adjust shade weight",
             "type": "number",
             "required": False,
             "validation_options": {
@@ -218,7 +217,7 @@ ARGS_SPEC = {
             ),
         },
         "cc_weight_albedo": {
-            "name": "adjust albedo weight",
+            "name": "Cooling capacity: adjust albedo weight",
             "type": "number",
             "required": False,
             "validation_options": {
@@ -230,7 +229,7 @@ ARGS_SPEC = {
             ),
         },
         "cc_weight_eti": {
-            "name": "adjust evapotranspiration weight",
+            "name": "Cooling capacity: adjust evapotranspiration weight",
             "type": "number",
             "required": False,
             "validation_options": {

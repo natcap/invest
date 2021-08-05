@@ -43,7 +43,7 @@ ARGS_SPEC = {
             "about": (
                 "A GDAL-supported raster file with an elevation value for "
                 "each cell."),
-            "name": utils.DEM_ARG_NAME
+            "name": "Digital Elevation Model"
         },
         "detect_pour_points": {
             "type": "boolean",
@@ -51,7 +51,7 @@ ARGS_SPEC = {
             "about": (
                 "If ``True``, the pour point detection algorithm will run, "
                 "creating a point vector file pour_points.gpkg."),
-            "name": "detect pour points"
+            "name": "Detect pour points"
         },
         "outlet_vector_path": {
             "type": "vector",
@@ -59,7 +59,7 @@ ARGS_SPEC = {
             "about": (
                 "This is a layer of geometries representing watershed "
                 "outlets such as municipal water intakes or lakes."),
-            "name": "outlet features"
+            "name": "Outlet Features"
         },
         "snap_points": {
             "type": "boolean",
@@ -68,7 +68,7 @@ ARGS_SPEC = {
                 "Whether to snap point geometries to the nearest stream "
                 "pixel.  If ``True``, ``args['flow_threshold']`` and "
                 "``args['snap_distance']`` must also be defined."),
-            "name": "snap points to stream"
+            "name": "Snap points to the nearest stream"
         },
         "flow_threshold": {
             "validation_options": {
@@ -81,7 +81,7 @@ ARGS_SPEC = {
                 "before it's considered part of a stream such that retention "
                 "stops and the remaining export is exported to the stream.  "
                 "Used to define streams from the DEM."),
-            "name": "threshold flow accumulation"
+            "name": "Threshold Flow Accumulation"
         },
         "snap_distance": {
             "validation_options": {
@@ -96,7 +96,7 @@ ARGS_SPEC = {
                 "center of the nearest stream pixel.  Geometries that are "
                 "not points (such as Lines and Polygons) will not be "
                 "snapped.  MultiPoint geoemtries will also not be snapped."),
-            "name": "snap distance"
+            "name": "Pixel Distance to Snap Outlet Points"
         },
         "skip_invalid_geometry": {
             "type": "boolean",
@@ -106,7 +106,7 @@ ARGS_SPEC = {
                 "in the outlet vector will not be included in the "
                 "delineation.  If ``False``, an invalid geometry "
                 "will cause DelineateIt to crash."),
-            "name": "skip invalid geometries"
+            "name": "Crash on invalid geometries"
         }
     }
 }

@@ -72,7 +72,7 @@ ARGS_SPEC = {
         "results_suffix": validation.SUFFIX_SPEC,
         "n_workers": validation.N_WORKERS_SPEC,
         "info_table_path": {
-            "name": "habitat stressor table",
+            "name": "Habitat Stressor Information CSV or Excel File",
             "about": (
                 "A CSV or Excel file that contains the name of the habitat "
                 "(H) or stressor (s) on the `NAME` column that matches the "
@@ -88,7 +88,7 @@ ARGS_SPEC = {
             }
         },
         "criteria_table_path": {
-            "name": "criteria scores table",
+            "name": "Criteria Scores Table",
             "about": (
                 "A CSV or Excel file that contains the set of criteria "
                 "ranking  (rating, DQ and weight) of each stressor on each "
@@ -100,11 +100,11 @@ ARGS_SPEC = {
             "required": True,
         },
         "resolution": {
-            "name": "resolution of analysis",
+            "name": "Resolution of Analysis (meters)",
             "about": (
                 "The size that should be used to grid the given habitat and "
                 "stressor files into rasters. This value will be the pixel "
-                "size (meters) of the completed raster files."),
+                "size of the completed raster files."),
             "type": "number",
             "required": True,
             "validation_options": {
@@ -112,7 +112,7 @@ ARGS_SPEC = {
             }
         },
         "max_rating": {
-            "name": "maximum criteria score",
+            "name": "Maximum Criteria Score",
             "about": (
                 "This is the highest score that is used to rate a criteria "
                 "within this model run. This value would be used to compare "
@@ -125,7 +125,7 @@ ARGS_SPEC = {
             }
         },
         "risk_eq": {
-            "name": "risk equation",
+            "name": "Risk Equation",
             "about": (
                 "Each of these represents an option of a risk calculation "
                 "equation. This will determine the numeric output of risk "
@@ -137,7 +137,7 @@ ARGS_SPEC = {
             }
         },
         "decay_eq": {
-            "name": "decay equation",
+            "name": "Decay Equation",
             "about": (
                 "Each of these represents an option of a decay equation "
                 "for the buffered stressors. If stressor buffering is "
@@ -150,7 +150,7 @@ ARGS_SPEC = {
             }
         },
         "aoi_vector_path": {
-            "name": utils.AOI_ARG_NAME,
+            "name": "Area of Interest",
             "about": (
                 "A GDAL-supported vector file containing feature containing "
                 "one or more planning regions. subregions. An optional field "
@@ -164,11 +164,11 @@ ARGS_SPEC = {
             }
         },
         "visualize_outputs": {
-            "name": "generate geoJSONs",
+            "name": "Generate GeoJSONs for Web Visualization",
             "help": (
-                "Check to enable the generation of GeoJSON outputs for web "
-                "visualization. This could be used to visualize the risk "
-                "scores on a map in the HRA visualization web application."),
+                "Check to enable the generation of GeoJSON outputs. This "
+                "could be used to visualize the risk scores on a map in the "
+                "HRA visualization web application."),
             "type": "boolean",
             "required": True,
         }

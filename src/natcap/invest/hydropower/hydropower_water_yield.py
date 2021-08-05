@@ -41,7 +41,7 @@ ARGS_SPEC = {
             "about": (
                 "A GDAL-supported raster file containing LULC code "
                 "(expressed as integers) for each cell."),
-            "name": utils.LULC_ARG_NAME
+            "name": "Land Use"
         },
         "depth_to_root_rest_layer_path": {
             "type": "raster",
@@ -54,7 +54,7 @@ ARGS_SPEC = {
                 "restricting layer depth value for each cell. The root "
                 "restricting layer depth value should be in "
                 "millimeters (mm)."),
-            "name": "depth to root restricting layer"
+            "name": "Depth To Root Restricting Layer"
         },
         "precipitation_path": {
             "type": "raster",
@@ -67,7 +67,7 @@ ARGS_SPEC = {
                 "annual precipitation values for each cell. The "
                 "precipitation values should be in millimeters "
                 "(mm)."),
-            "name": "precipitation"
+            "name": "Precipitation"
         },
         "pawc_path": {
             "type": "raster",
@@ -80,7 +80,7 @@ ARGS_SPEC = {
                 "water content values for each cell.  The plant available "
                 "water content fraction should be a value between 0 "
                 "and 1."),
-            "name": "plant available water fraction"
+            "name": "Plant Available Water Fraction"
         },
         "eto_path": {
             "type": "raster",
@@ -93,7 +93,7 @@ ARGS_SPEC = {
                 "reference evapotranspiration values for each cell.  The "
                 "reference evapotranspiration values should be in "
                 "millimeters (mm)."),
-            "name": "reference evapotranspiration"
+            "name": "Reference Evapotranspiration"
         },
         "watersheds_path": {
             "validation_options": {
@@ -107,7 +107,7 @@ ARGS_SPEC = {
                 "watershed.  Each polygon that represents a watershed is "
                 "required to have a field 'ws_id' that is a unique integer "
                 "which identifies that watershed."),
-            "name": "watersheds"
+            "name": "Watersheds"
         },
         "sub_watersheds_path": {
             "validation_options": {
@@ -122,7 +122,7 @@ ARGS_SPEC = {
                 "Watersheds shapefile.  Each polygon that represents a "
                 "sub-watershed is required to have a field 'subws_id' that "
                 "is a unique integer which identifies that sub-watershed."),
-            "name": "sub-watersheds"
+            "name": "Sub-Watersheds"
         },
         "biophysical_table_path": {
             "validation_options": {
@@ -135,7 +135,7 @@ ARGS_SPEC = {
                 "containing data on biophysical coefficients used in this "
                 "model.  The following columns are required: "
                 "'lucode' (integer), 'root_depth' (mm), 'Kc' (coefficient)."),
-            "name": "biophysical table"
+            "name": "Biophysical Table"
         },
         "seasonality_constant": {
             "validation_options": {
@@ -147,7 +147,7 @@ ARGS_SPEC = {
                 "Floating point value on the order of 1 to 30 "
                 "corresponding to the seasonal distribution of "
                 "precipitation."),
-            "name": "z parameter"
+            "name": "Z parameter"
         },
         "demand_table_path": {
             "validation_options": {
@@ -165,7 +165,7 @@ ARGS_SPEC = {
                 "land-use/land-cover map.  NOTE: the accounting for pixel "
                 "area is important since larger areas will consume more "
                 "water for the same land-cover type."),
-            "name": "water demand table"
+            "name": "Water Demand Table"
         },
         "valuation_table_path": {
             "validation_options": {
@@ -180,7 +180,7 @@ ARGS_SPEC = {
                 "values.  The table should have the following column "
                 "fields: 'ws_id', 'efficiency', 'fraction', 'height', "
                 "'kw_price', 'cost', 'time_span', and 'discount'."),
-            "name": "hydropower valuation table"
+            "name": "Hydropower Valuation Table"
         }
     }
 }

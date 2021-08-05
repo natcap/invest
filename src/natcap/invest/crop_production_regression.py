@@ -40,7 +40,7 @@ ARGS_SPEC = {
                 "coordinate system with units of meters (e.g. UTM) because "
                 "pixel areas are divided by 10000 in order to report some "
                 "results in hectares."),
-            "name": utils.LULC_ARG_NAME
+            "name": "Land-Use/Land-Cover Map"
         },
         "landcover_to_crop_table_path": {
             "validation_options": {
@@ -53,7 +53,7 @@ ARGS_SPEC = {
                 "contained in the landcover/use raster.   The allowed crop "
                 "names are barley, maize, oilpalm, potato, rice, soybean, "
                 "sugarbeet, sugarcane, sunflower, and wheat."),
-            "name": "LULC to crop table"
+            "name": "Landcover to Crop Table"
         },
         "fertilization_rate_table_path": {
             "validation_options": {
@@ -69,7 +69,7 @@ ARGS_SPEC = {
                 "simulation.  Must include the headers 'crop_name', "
                 "'nitrogen_rate',  'phosphorous_rate', and "
                 "'potassium_rate'."),
-            "name": "fertilization rate table"
+            "name": "Fertilization Rate Table Path"
         },
         "aggregate_polygon_path": {
             "type": "vector",
@@ -78,7 +78,7 @@ ARGS_SPEC = {
                 "A polygon vector containing features with which to "
                 "aggregate/summarize final results. It is fine to have "
                 "overlapping polygons."),
-            "name": "aggregate results polygon"
+            "name": "Aggregate results polygon"
         },
         "model_data_path": {
             "validation_options": {
@@ -93,7 +93,7 @@ ARGS_SPEC = {
                 "http://releases.naturalcapitalproject.org/invest. "
                 "If downloaded with InVEST, the default value should be "
                 "used."),
-            "name": "model data"
+            "name": "Directory to model data"
         }
     }
 }
