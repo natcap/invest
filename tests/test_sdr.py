@@ -207,13 +207,14 @@ class SDRTests(unittest.TestCase):
         args = SDRTests.generate_base_args(
             'sdr_test_workspace')  # self.workspace_dir)
         # make args explicit that this is a base run of SWY
+        args['workspace_dir'] = '/Users/emily/Documents/test-sdr2'
 
         sdr.execute(args)
         expected_results = {
             'usle_tot': 14.25030517578,
             'sed_retent': 314043.6875,
             'sed_export': 0.62383842468,
-            'sed_dep': 9.32623577118,
+            'sed_dep': 9.07589912415
         }
 
         vector_path = os.path.join(
