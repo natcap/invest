@@ -383,19 +383,20 @@ def check_freestyle_string(value, regexp=None, **kwargs):
 
 
 def check_option_string(value, options, **kwargs):
-    """Validate that a string is in a list of options.
+    """Validate that a string is in a set of options.
 
     Args:
         value (string): The string value to test.
-        options (list): A list of strings to test against.
+        options (set | dict): strings to test against.
+            If a dict, test against the keys.
 
     Returns:
         A string error message if ``value`` is not in ``options``.  ``None``
         otherwise.
 
     """
-    # if options is an empty list, that means it's dynamically populated
-    # so no need to validate
+    # if options is an empty set, that means it's dynamically populated
+    # so validation should be left to the model's validate function.
     if options and value not in options:
         return "Value must be one of: %s" % sorted(options)
 
