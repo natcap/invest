@@ -374,7 +374,7 @@ def calculate_sediment_deposition(
 
     """
     LOGGER.info('Calculate sediment deposition')
-    cdef float sediment_deposition_nodata = -1.0
+    cdef float sediment_deposition_nodata = -1
     pygeoprocessing.new_raster_from_base(
         mfd_flow_direction_path, target_sediment_deposition_path,
         gdal.GDT_Float32, [sediment_deposition_nodata])
@@ -419,7 +419,7 @@ def calculate_sediment_deposition(
         xoff = offset_dict['xoff']
         yoff = offset_dict['yoff']
 
-        LOGGER.info('Sediment deposition %.2f%% complete', 100.0 * (
+        LOGGER.info('Sediment deposition %.2f%% complete', 100 * (
             (xoff * yoff) / float(n_cols*n_rows)))
 
         for row_index in range(win_ysize):
@@ -447,9 +447,8 @@ def calculate_sediment_deposition(
                         # neighbor flows in, not a seed
                         seed_pixel = 0
                         break
-                if seed_pixel and (
-                        sediment_deposition_raster.get(
-                            seed_col, seed_row) ==
+                if seed_pixel and numpy.isclose(
+                        sediment_deposition_raster.get(seed_col, seed_row),
                         sediment_deposition_nodata):
                     processing_stack.push(seed_row * n_cols + seed_col)
 
@@ -479,6 +478,8 @@ def calculate_sediment_deposition(
                             neighbor_flow_val >> (inflow_offsets[j]*4)) & 0xF
                         if neighbor_flow_weight > 0:
                             f_j = f_raster.get(neighbor_col, neighbor_row)
+                            if numpy.isclose(f_j, sediment_deposition_nodata):
+                                continue
                             neighbor_flow_sum = 0
                             for k in range(8):
                                 neighbor_flow_sum += (
@@ -488,10 +489,10 @@ def calculate_sediment_deposition(
 
                     # calculate the differential downstream change in sdr
                     # from this pixel
-                    downstream_sdr_weighted_sum = 0.0
+                    downstream_sdr_weighted_sum = 0
                     flow_val = <int>mfd_flow_direction_raster.get(
                         global_col, global_row)
-                    flow_sum = 0.0
+                    flow_sum = 0
                     for k in range(8):
                         flow_sum += (flow_val >> (k*4)) & 0xF
 
@@ -506,13 +507,13 @@ def calculate_sediment_deposition(
                         flow_weight = (flow_val >> (j*4)) & 0xF
                         if flow_weight > 0:
                             sdr_j = sdr_raster.get(neighbor_col, neighbor_row)
-                            if sdr_j == 0.0:
+                            if numpy.isclose(sdr_j, sdr_nodata):
+                                continue
+                            if sdr_j == 0:
                                 # this means it's a stream, for SDR deposition
                                 # purposes, we set sdr to 1 to indicate this
                                 # is the last step on which to retain sediment
-                                sdr_j = 1.0
-                            if sdr_j == sdr_nodata:
-                                sdr_j = 0.0
+                                sdr_j = 1
                             p_j = flow_weight / flow_sum
                             downstream_sdr_weighted_sum += sdr_j * p_j
 
@@ -540,10 +541,10 @@ def calculate_sediment_deposition(
                                         ds_neighbor_col, ds_neighbor_row))
                                 if (ds_neighbor_flow_val >> (
                                         inflow_offsets[k]*4)) & 0xF > 0:
-                                    if sediment_deposition_raster.get(
-                                            ds_neighbor_col,
-                                            ds_neighbor_row) == (
-                                                sediment_deposition_nodata):
+                                    if numpy.isclose(
+                                            sediment_deposition_raster.get(
+                                                ds_neighbor_col, ds_neighbor_row),
+                                            sediment_deposition_nodata):
                                         # can't push it because not
                                         # processed yet
                                         upstream_neighbors_processed = 0
@@ -554,21 +555,21 @@ def calculate_sediment_deposition(
                                     neighbor_col)
 
                     sdr_i = sdr_raster.get(global_col, global_row)
-                    if sdr_i == sdr_nodata:
-                        sdr_i = 0.0
                     e_prime_i = e_prime_raster.get(global_col, global_row)
-                    if e_prime_i == e_prime_nodata:
-                        e_prime_i = 0.0
+                    # nodata pixels should propagate to the results
+                    if (numpy.isclose(e_prime_i, e_prime_nodata) or
+                            numpy.isclose(sdr_i, sdr_nodata)):
+                        continue
 
                     if downstream_sdr_weighted_sum < sdr_i:
                         # i think this happens because of our low resolution
                         # flow direction, it's okay to zero out.
                         downstream_sdr_weighted_sum = sdr_i
+
                     d_ri = (downstream_sdr_weighted_sum - sdr_i) / (1 - sdr_i)
                     r_i = d_ri * (e_prime_i + f_j_weighted_sum)
                     f_i = (1-d_ri) * (e_prime_i + f_j_weighted_sum)
-                    sediment_deposition_raster.set(
-                        global_col, global_row, r_i)
+                    sediment_deposition_raster.set(global_col, global_row, r_i)
                     f_raster.set(global_col, global_row, f_i)
 
     LOGGER.info('Sediment deposition 100% complete')
@@ -576,7 +577,7 @@ def calculate_sediment_deposition(
 
 
 def calculate_average_aspect(
-    mfd_flow_direction_path, target_average_aspect_path):
+        mfd_flow_direction_path, target_average_aspect_path):
     """Calculate the Weighted Average Aspect Ratio from MFD.
 
     Calculates the average aspect ratio weighted by proportional flow
@@ -594,7 +595,7 @@ def calculate_average_aspect(
     """
     LOGGER.info('Calculating average aspect')
 
-    cdef float average_aspect_nodata = -1.0
+    cdef float average_aspect_nodata = -1
     pygeoprocessing.new_raster_from_base(
         mfd_flow_direction_path, target_average_aspect_path,
         gdal.GDT_Float32, [average_aspect_nodata], [average_aspect_nodata])
@@ -623,11 +624,11 @@ def calculate_average_aspect(
 
     # the flow_lengths array is the functional equivalent
     # of calculating |sin(alpha)| + |cos(alpha)|.
-    cdef float* flow_lengths = [
-        1.0, <float>SQRT2,
-        1.0, <float>SQRT2,
-        1.0, <float>SQRT2,
-        1.0, <float>SQRT2
+    cdef float * flow_lengths = [
+        1, < float > SQRT2,
+        1, < float > SQRT2,
+        1, < float > SQRT2,
+        1, < float > SQRT2
     ]
 
     # Loop over iterblocks to maintain cache locality
@@ -641,7 +642,7 @@ def calculate_average_aspect(
         xoff = offset_dict['xoff']
         yoff = offset_dict['yoff']
 
-        LOGGER.info('Average aspect %.2f%% complete', 100.0 * (
+        LOGGER.info('Average aspect %.2f%% complete', 100 * (
             n_pixels_visited / float(n_cols * n_rows)))
 
         for row_index in range(win_ysize):
