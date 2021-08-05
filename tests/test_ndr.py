@@ -62,8 +62,8 @@ class NDRTests(unittest.TestCase):
         """
         from natcap.invest.ndr import ndr
 
-        raster_xsize = 1124 
-        raster_ysize = 512 
+        raster_xsize = 1124
+        raster_ysize = 512
         float64_raster_path = os.path.join(
             self.workspace_dir, 'float64_raster.tif')
         driver = gdal.GetDriverByName('GTiff')
@@ -146,10 +146,10 @@ class NDRTests(unittest.TestCase):
 
         surf_p_ld = 41.921
         sub_p_ld = 0
-        p_exp_tot = 7.666
+        p_exp_tot = 5.73487
         surf_n_ld = 2978.520
         sub_n_ld = 28.614
-        n_exp_tot = 339.839
+        n_exp_tot = 305.36367
         feature = result_layer.GetFeature(0)
         if not feature:
             raise AssertionError("No features were output.")
@@ -233,10 +233,10 @@ class NDRTests(unittest.TestCase):
         # results
         for field, expected_value in [
                 ('surf_p_ld', 41.921860),
-                ('p_exp_tot', 8.598053),
+                ('p_exp_tot', 6.065146),
                 ('surf_n_ld', 2978.519775),
                 ('sub_n_ld', 28.614094),
-                ('n_exp_tot', 339.839386)]:
+                ('n_exp_tot', 305.363678)]:
             val = result_feature.GetField(field)
             if not numpy.isclose(val, expected_value):
                 mismatch_list.append(
@@ -352,13 +352,13 @@ class NDRTests(unittest.TestCase):
                 if not feature:
                     raise AssertionError("The fid %s is missing." % fid)
                 for field, value in [
-                                    ('ws_id', fid),
-                                    ('surf_p_ld', surf_p_ld),
-                                    ('sub_p_ld', sub_p_ld),
-                                    ('p_exp_tot', p_exp_tot),
-                                    ('surf_n_ld', surf_n_ld),
-                                    ('sub_n_ld', sub_n_ld),
-                                    ('n_exp_tot', n_exp_tot)]:
+                    ('ws_id', fid),
+                    ('surf_p_ld', surf_p_ld),
+                    ('sub_p_ld', sub_p_ld),
+                    ('p_exp_tot', p_exp_tot),
+                    ('surf_n_ld', surf_n_ld),
+                    ('sub_n_ld', sub_n_ld),
+                        ('n_exp_tot', n_exp_tot)]:
                     if not numpy.isclose(feature.GetField(field), value):
                         error_results[fid][field] = (
                             feature.GetField(field), value)
