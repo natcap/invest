@@ -33,19 +33,13 @@
 
 .. :changelog:
 
-workbench-alpha
+Unreleased Changes (3.10)
 ---------------
 * General:
     * Added ``invest serve`` entry-point to the CLI. This launches a Flask app
       and server on the localhost, to support the workbench.
-    * Add ``/colnames`` POST endpoint to the server API. This endpoint accepts
-      a vector filepath and returns a list of the vector's column names (used
-      to determine options for a dropdown menu input).
-    * Rename finfish ARGS_SPEC ``module_name`` to ``model_name`` to be
-      consistent with all other models.
-    * Minor rephrasing of some ``ARGS_SPEC.args.arg.name`` values.
-    * Dynamically populated dropdown inputs' arg specs now have a ``type`` of
-      ``option_string`` and ``validation_options['options']`` is an empty list.
+    * Major updates to each model's ``ARGS_SPEC`` (and some related validation)
+      to facilitate re-use & display in the Workbench and User's Guide.
 
 Unreleased Changes (3.9.1)
 --------------------------
