@@ -54,6 +54,10 @@ echo "# binary to run on OSX Big Sur." >> $new_command_file
 echo "#" >> $new_command_file
 echo "# Taken from https://stackoverflow.com/a/246128/299084" >> $new_command_file
 echo 'DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"' >> $new_command_file
-echo 'QT_MAC_WANTS_LAYER=1 "$DIR/invest_dist/invest" launch' >> $new_command_file
+# QT_MAC_WANTS_LAYER is to address a hanging issue in Qt 5.13 with launching Qt
+# on OS 11 Big Sur.
+# QT_QPA_PLATFORM_PLUGIN_PATH addresses an issue where sometimes Qt can't find
+# the plugins where they are expected to be.
+echo 'QT_MAC_WANTS_LAYER=1 QT_QPA_PLATFORM_PLUGIN_PATH=$DIR/invest_dist/PySide2/Qt/plugins "$DIR/invest_dist/invest" launch' >> $new_command_file
 chmod a+x $new_command_file
 

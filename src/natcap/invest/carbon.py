@@ -80,7 +80,7 @@ ARGS_SPEC = {
         "carbon_pools_path": {
             "type": "csv",
             "columns": {
-                "lucode": {"type": "code"},
+                "lucode": {"type": "integer"},
                 "c_above": {"type": "number", "units": u.metric_ton/u.hectare},
                 "c_below": {"type": "number", "units": u.metric_ton/u.hectare},
                 "c_soil": {"type": "number", "units": u.metric_ton/u.hectare},

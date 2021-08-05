@@ -1365,8 +1365,8 @@ class TestValidationFromSpec(unittest.TestCase):
         for warning in actual_warnings:
             self.assertTrue(warning in expected_warnings)
 
-    def test_check_code(self):
-        """Validation: test code type validation."""
+    def test_check_integer(self):
+        """Validation: test integer type validation."""
         from natcap.invest import validation
         args = {
             'a': 'xyz',    # not a number
@@ -1374,7 +1374,7 @@ class TestValidationFromSpec(unittest.TestCase):
             'c': '-1',     # negative integers are ok
             'd': '0'
         }
-        spec = {name: {'type': 'code'} for name in args}
+        spec = {name: {'type': 'integer'} for name in args}
 
         expected_warnings = [
             (['a'], 'Value "xyz" could not be interpreted as a number'),

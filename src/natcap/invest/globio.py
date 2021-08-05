@@ -51,8 +51,8 @@ ARGS_SPEC = {
         "lulc_to_globio_table_path": {
             "type": "csv",
             "columns": {
-                "lucode": {"type": "code"},
-                "globio_lucode": {"type": "code"}
+                "lucode": {"type": "integer"},
+                "globio_lucode": {"type": "integer"}
             },
             "required": "not predefined_globio",
             "about": (
@@ -91,7 +91,7 @@ ARGS_SPEC = {
         "potential_vegetation_path": {
             "name": "Potential Vegetation",
             "type": "raster",
-            "bands": {1: {"type": "code"}},
+            "bands": {1: {"type": "integer"}},
             "projected": True,
             "required": "not predefined_globio",
             "about": (

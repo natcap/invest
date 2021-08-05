@@ -59,7 +59,7 @@ ARGS_SPEC = {
             "name": "Biophysical Table",
             "type": "csv",
             "columns": {
-                "lucode": {"type": "code"},
+                "lucode": {"type": "integer"},
                 "kc": {"type": "number", "units": u.none, "about": (
                     "Crop coefficient")},
                 "green_area": {
@@ -153,7 +153,7 @@ ARGS_SPEC = {
         "building_vector_path": {
             "name": "Buildings vector",
             "type": "vector",
-            "fields": {"type": {"type": "code"}},
+            "fields": {"type": {"type": "integer"}},
             "geometries": spec_utils.POLYGONS,
             "required": "do_energy_valuation",
             "about": (
@@ -168,7 +168,7 @@ ARGS_SPEC = {
             "type": "csv",
             "columns": {
                 "type": {
-                    "type": "code",
+                    "type": "integer",
                     "about": (
                         "building type codes matching those in the building "
                         "vector")

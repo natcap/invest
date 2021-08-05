@@ -53,7 +53,7 @@ ARGS_SPEC = {
         "curve_number_table_path": {
             "type": "csv",
             "columns": {
-                "lucode": {"type": "code"},
+                "lucode": {"type": "integer"},
                 "cn_[SOIL_GROUP]": {
                     "type": "number",
                     "units": u.none,
@@ -69,7 +69,7 @@ ARGS_SPEC = {
         },
         "built_infrastructure_vector_path": {
             "type": "vector",
-            "fields": {"type": {"type": "code"}},
+            "fields": {"type": {"type": "integer"}},
             "geometries": spec_utils.POLYGONS,
             "required": False,
             "about": (
@@ -81,7 +81,7 @@ ARGS_SPEC = {
         "infrastructure_damage_loss_table_path": {
             "type": "csv",
             "columns": {
-                "type": {"type": "code"},
+                "type": {"type": "integer"},
                 "damage": {"type": "number", "units": u.currency/(u.meter**2)}
             },
             "required": "built_infrastructure_vector_path",
@@ -590,7 +590,7 @@ def _calculate_damage_to_infrastructure_in_aoi(
             if aoi_geometry_prep.intersects(infrastructure_geometry):
                 intersection_geometry = aoi_geometry_shapely.intersection(
                     infrastructure_geometry)
-                damage_type = infrastructure_feature.GetField(type_index)
+                damage_type = int(infrastructure_feature.GetField(type_index))
                 damage = damage_type_map[damage_type]['damage']
                 total_damage += intersection_geometry.area * damage
 

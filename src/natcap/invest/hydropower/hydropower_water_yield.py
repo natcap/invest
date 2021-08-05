@@ -71,7 +71,7 @@ ARGS_SPEC = {
         "watersheds_path": {
             "projected": True,
             "type": "vector",
-            "fields": {"ws_id": {"type": "code"}},
+            "fields": {"ws_id": {"type": "integer"}},
             "geometries": spec_utils.POLYGONS,
             "about": (
                 "A GDAL-supported vector file containing one polygon per "
@@ -83,7 +83,7 @@ ARGS_SPEC = {
         "sub_watersheds_path": {
             "projected": True,
             "type": "vector",
-            "fields": {"subws_id": {"type": "code"}},
+            "fields": {"subws_id": {"type": "integer"}},
             "geometries": spec_utils.POLYGONS,
             "required": False,
             "about": (
@@ -97,7 +97,7 @@ ARGS_SPEC = {
         "biophysical_table_path": {
             "type": "csv",
             "columns": {
-                "lucode": {"type": "code"},
+                "lucode": {"type": "integer"},
                 "root_depth": {"type": "number", "units": u.millimeter},
                 "kc": {"type": "number", "units": u.none}
             },
@@ -122,7 +122,7 @@ ARGS_SPEC = {
             "columns": {
                 "lucode": {
                     "about": "LULC code corresponding to the LULC raster",
-                    "type": "code"
+                    "type": "integer"
                 },
                 "demand": {
                     "about": ("Estimated average consumptive water use for "
@@ -145,7 +145,7 @@ ARGS_SPEC = {
             "type": "csv",
             "columns": {
                 "ws_id": {
-                    "type": "code",
+                    "type": "integer",
                     "about": (
                         "Watershed ID corresponding to a watershed in the "
                         "watersheds vector file")
