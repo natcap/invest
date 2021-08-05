@@ -342,6 +342,26 @@ class CLIHeadlessTests(unittest.TestCase):
         # are warnings.
         self.assertEqual(exit_cm.exception.code, 0)
 
+    def test_serve(self):
+        """CLI: serve entry-point exists; flask app can import."""
+        from natcap.invest import cli
+
+        with unittest.mock.patch('natcap.invest.ui_server.app.run',
+                                 return_value=None) as patched_app:
+            with self.assertRaises(SystemExit) as exit_cm:
+                cli.main(['serve'])
+        self.assertEqual(exit_cm.exception.code, 0)
+
+    def test_serve_port_argument(self):
+        """CLI: serve entry-point parses port subargument."""
+        from natcap.invest import cli
+
+        with unittest.mock.patch('natcap.invest.ui_server.app.run',
+                                 return_value=None) as patched_app:
+            with self.assertRaises(SystemExit) as exit_cm:
+                cli.main(['serve', '--port', '12345'])
+        self.assertEqual(exit_cm.exception.code, 0)
+
     def test_export_python(self):
         """CLI: Export a python script for a given model."""
         from natcap.invest import cli

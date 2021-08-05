@@ -46,7 +46,8 @@ ARGS_SPEC = {
                 "at farm tables). Additionally, the numbers underneath this "
                 "farm identifier name must be unique integers for all the "
                 "inputs."),
-            "type": "freestyle_string",
+            "type": "option_string",
+            "options": {},
         },
         "g_param_a": {
             "name": "Fish Growth Parameter (a)",
