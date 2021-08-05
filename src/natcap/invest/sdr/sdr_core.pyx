@@ -447,9 +447,8 @@ def calculate_sediment_deposition(
                         # neighbor flows in, not a seed
                         seed_pixel = 0
                         break
-                if seed_pixel and numpy.isclose(
-                        sediment_deposition_raster.get(seed_col, seed_row),
-                        sediment_deposition_nodata):
+                if seed_pixel and sediment_deposition_raster.get(
+                        seed_col, seed_row) == sediment_deposition_nodata:
                     processing_stack.push(seed_row * n_cols + seed_col)
 
                 while processing_stack.size() > 0:
@@ -478,7 +477,7 @@ def calculate_sediment_deposition(
                             neighbor_flow_val >> (inflow_offsets[j]*4)) & 0xF
                         if neighbor_flow_weight > 0:
                             f_j = f_raster.get(neighbor_col, neighbor_row)
-                            if numpy.isclose(f_j, sediment_deposition_nodata):
+                            if f_j == sediment_deposition_nodata:
                                 continue
                             neighbor_flow_sum = 0
                             for k in range(8):
@@ -507,7 +506,7 @@ def calculate_sediment_deposition(
                         flow_weight = (flow_val >> (j*4)) & 0xF
                         if flow_weight > 0:
                             sdr_j = sdr_raster.get(neighbor_col, neighbor_row)
-                            if numpy.isclose(sdr_j, sdr_nodata):
+                            if sdr_j == sdr_nodata:
                                 continue
                             if sdr_j == 0:
                                 # this means it's a stream, for SDR deposition
@@ -541,9 +540,8 @@ def calculate_sediment_deposition(
                                         ds_neighbor_col, ds_neighbor_row))
                                 if (ds_neighbor_flow_val >> (
                                         inflow_offsets[k]*4)) & 0xF > 0:
-                                    if numpy.isclose(
-                                            sediment_deposition_raster.get(
-                                                ds_neighbor_col, ds_neighbor_row),
+                                    if (sediment_deposition_raster.get(
+                                            ds_neighbor_col, ds_neighbor_row) ==
                                             sediment_deposition_nodata):
                                         # can't push it because not
                                         # processed yet
@@ -557,8 +555,7 @@ def calculate_sediment_deposition(
                     sdr_i = sdr_raster.get(global_col, global_row)
                     e_prime_i = e_prime_raster.get(global_col, global_row)
                     # nodata pixels should propagate to the results
-                    if (numpy.isclose(e_prime_i, e_prime_nodata) or
-                            numpy.isclose(sdr_i, sdr_nodata)):
+                    if e_prime_i == e_prime_nodata or sdr_i == sdr_nodata:
                         continue
 
                     if downstream_sdr_weighted_sum < sdr_i:
