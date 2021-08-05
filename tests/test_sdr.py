@@ -204,39 +204,15 @@ class SDRTests(unittest.TestCase):
         from natcap.invest.sdr import sdr
 
         # use predefined directory so test can clean up files during teardown
-        args = SDRTests.generate_base_args(
-            'sdr_test_workspace')  # self.workspace_dir)
+        args = SDRTests.generate_base_args('sdr_test_workspace') #self.workspace_dir)
         # make args explicit that this is a base run of SWY
+
         sdr.execute(args)
-
-        # check that pour point stream pixels were added where expected
-        stream_path = os.path.join(
-            args['workspace_dir'], sdr.INTERMEDIATE_DIR_NAME,
-            sdr._INTERMEDIATE_BASE_FILES['stream_path'])
-        stream_array = pygeoprocessing.raster_to_numpy_array(stream_path)
-        stream_with_outlets_path = os.path.join(
-            args['workspace_dir'],
-            sdr._OUTPUT_BASE_FILES['stream_with_outlets_path'])
-        stream_with_outlets_array = pygeoprocessing.raster_to_numpy_array(
-            stream_with_outlets_path)
-        expected_stream_path = os.path.join(
-            REGRESSION_DATA, 'expected_stream.tif')
-        expected_stream_array = pygeoprocessing.raster_to_numpy_array(
-            expected_stream_path)
-        expected_stream_with_outlets_path = os.path.join(
-            REGRESSION_DATA, 'expected_stream_with_outlets.tif')
-        expected_stream_with_outlets_array = pygeoprocessing.raster_to_numpy_array(
-            expected_stream_with_outlets_path)
-
-        numpy.testing.assert_equal(stream_array, expected_stream_array)
-        numpy.testing.assert_equal(stream_with_outlets_array,
-                                   expected_stream_with_outlets_array)
-
         expected_results = {
-            'usle_tot': 14.24922370911,
+            'usle_tot': 14.25030517578,
             'sed_retent': 443994.1875,
             'sed_export': 0.87300693989,
-            'sed_dep': 13.1583738327,
+            'sed_dep': 9.32623577118,
         }
 
         vector_path = os.path.join(
@@ -286,7 +262,7 @@ class SDRTests(unittest.TestCase):
         expected_results = {
             'sed_retent': 443994.1875,
             'sed_export': 0.87300693989,
-            'usle_tot': 14.24922370911,
+            'usle_tot': 14.25030517578,
         }
 
         vector_path = os.path.join(
@@ -310,7 +286,7 @@ class SDRTests(unittest.TestCase):
         expected_results = {
             'sed_retent': 376752.75,
             'sed_export': 0.6872266531,
-            'usle_tot': 12.69501590729,
+            'usle_tot': 12.6965303421,
         }
 
         vector_path = os.path.join(
@@ -335,7 +311,7 @@ class SDRTests(unittest.TestCase):
         expected_results = {
             'sed_retent': 479059.4375,
             'sed_export': 1.03590250015,
-            'usle_tot': 12.97103309631,
+            'usle_tot': 12.97211265564,
         }
 
         vector_path = os.path.join(
