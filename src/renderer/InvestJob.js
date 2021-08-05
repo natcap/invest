@@ -20,8 +20,8 @@ export default class InvestJob {
 
   /* If none exists, init an empty array for the sorted workspace hashes */
   static async initDB() {
-    const keys = await investJobStore.getItem(HASH_ARRAY_KEY);
-    if (!keys) {
+    const workspaceHashes = await investJobStore.getItem(HASH_ARRAY_KEY);
+    if (!workspaceHashes) {
       investJobStore.setItem(HASH_ARRAY_KEY, []);
     }
   }
@@ -29,9 +29,9 @@ export default class InvestJob {
   /* Return an array of job metadata objects, ordered by most recently saved */
   static async getJobStore() {
     let jobArray = [];
-    const sortedKeys = await investJobStore.getItem(HASH_ARRAY_KEY);
-    if (sortedKeys) {
-      jobArray = await Promise.all(sortedKeys.map(
+    const sortedWorkspaceHashes = await investJobStore.getItem(HASH_ARRAY_KEY);
+    if (sortedWorkspaceHashes) {
+      jobArray = await Promise.all(sortedWorkspaceHashes.map(
         (key) => investJobStore.getItem(key)
       ));
     }
