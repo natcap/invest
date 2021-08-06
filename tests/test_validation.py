@@ -545,17 +545,30 @@ class FreestyleStringValidation(unittest.TestCase):
 class OptionStringValidation(unittest.TestCase):
     """Test Option String Validation."""
 
-    def test_valid_option(self):
-        """Validation: test that a string is a valid option."""
+    def test_valid_option_set(self):
+        """Validation: test that a string is a valid option in a set."""
         from natcap.invest import validation
         self.assertEqual(None, validation.check_option_string(
-            'foo', options=['foo', 'bar', 'Baz']))
+            'foo', options={'foo', 'bar', 'Baz'}))
 
-    def test_invalid_option(self):
-        """Validation: test when a string is not a valid option."""
+    def test_invalid_option_set(self):
+        """Validation: test when a string is not a valid option in a set."""
         from natcap.invest import validation
         error_msg = validation.check_option_string(
-            'FOO', options=['foo', 'bar', 'Baz'])
+            'FOO', options={'foo', 'bar', 'Baz'})
+        self.assertTrue('must be one of' in error_msg)
+
+    def test_valid_option_dict(self):
+        """Validation: test that a string is a valid option in a dict."""
+        from natcap.invest import validation
+        self.assertEqual(None, validation.check_option_string(
+            'foo', options={'foo': 'desc', 'bar': 'desc', 'Baz': 'desc'}))
+
+    def test_invalid_option_dict(self):
+        """Validation: test when a string is not a valid option in a dict."""
+        from natcap.invest import validation
+        error_msg = validation.check_option_string(
+            'FOO', options={'foo': 'desc', 'bar': 'desc', 'Baz': 'desc'})
         self.assertTrue('must be one of' in error_msg)
 
 
