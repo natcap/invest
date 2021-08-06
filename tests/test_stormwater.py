@@ -439,7 +439,6 @@ class StormwaterTests(unittest.TestCase):
     def test_aggregate(self):
         """Stormwater: full model run with aggregate results."""
         from natcap.invest import stormwater
-        wdir = '/Users/emily/Documents/test-aggregate'
         (biophysical_table,
          biophysical_table_path,
          lulc_array,
@@ -452,7 +451,7 @@ class StormwaterTests(unittest.TestCase):
          pixel_area) = self.basic_setup(self.workspace_dir)
 
         args = {
-            'workspace_dir': wdir,
+            'workspace_dir': self.workspace_dir,
             'lulc_path': lulc_path,
             'soil_group_path': soil_group_path,
             'precipitation_path': precipitation_path,
@@ -490,7 +489,7 @@ class StormwaterTests(unittest.TestCase):
         }
 
         aggregate_data_path = os.path.join(
-            wdir,
+            self.workspace_dir,
             stormwater.FINAL_OUTPUTS['reprojected_aggregate_areas_path'])
         aggregate_vector = gdal.OpenEx(aggregate_data_path, gdal.OF_VECTOR)
         aggregate_layer = aggregate_vector.GetLayer()
