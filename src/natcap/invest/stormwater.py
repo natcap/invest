@@ -47,7 +47,7 @@ ARGS_SPEC = {
                     "type": "integer",
                     "about": "LULC code corresponding to the LULC raster"
                 },
-                "EMC_[POLLUTANT]": {
+                "emc_[POLLUTANT]": {
                     "type": "number",
                     "units": u.milligram/u.liter,
                     "about": (
@@ -56,19 +56,19 @@ ARGS_SPEC = {
                         "columns for different pollutants, or none at all.")
                 },
                 **{
-                    f"RC_{soil_group}": {
+                    f"rc_{soil_group}": {
                         "type": "ratio",
                         "about": ("Stormwater runoff coefficient for soil "
                                   f"group {soil_group}")
-                    } for soil_group in ["A", "B", "C", "D"]
+                    } for soil_group in ["a", "b", "c", "d"]
                 },
                 **{
-                    f"IR_{soil_group}": {
+                    f"ir_{soil_group}": {
                         "type": "ratio",
                         "about": ("Stormwater infiltration coefficient for "
                                   f"soil group {soil_group}"),
                         "required": False
-                    } for soil_group in ["A", "B", "C", "D"]
+                    } for soil_group in ["a", "b", "c", "d"]
                 },
                 "is_impervious": {
                     "type": "boolean",
