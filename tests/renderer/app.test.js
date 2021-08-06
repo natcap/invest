@@ -610,7 +610,7 @@ describe('InVEST subprocess testing', () => {
     unmount();
   });
 
-  test('exit with error - expect log display', async () => {
+  test('exit with error - expect log & alert display', async () => {
     const {
       findByText,
       findByLabelText,
@@ -629,10 +629,13 @@ describe('InVEST subprocess testing', () => {
     const execute = await findByRole('button', { name: /Run/ });
     fireEvent.click(execute);
 
-    const errorMessage = 'fail';
-    // Emit some stdout, some stderr, then pause and exit with error
+    const someStdErr = 'something went wrong';
+    const finalTraceback = 'ValueError';
+    // To test that we can parse the finalTraceback even after extra data
+    const allStdErr = `someStdErr\n${finalTraceback}\n\n`;
+
     mockInvestProc.stdout.push('hello from stdout');
-    mockInvestProc.stderr.push(errorMessage);
+    mockInvestProc.stderr.push(allStdErr);
     const logTab = await findByText('Log');
     expect(logTab.classList.contains('active'))
       .toBeTruthy();
@@ -644,10 +647,12 @@ describe('InVEST subprocess testing', () => {
     await new Promise((resolve) => setTimeout(resolve, 2000));
     mockInvestProc.emit('exit', 1); // 1 - exit w/ error
 
-    // stderr text should be rendered in a red alert
-    expect(await findByText(errorMessage))
-      .toHaveClass('alert-danger');
-    expect(await findByText('Open Workspace'))
+    // Only finalTraceback text should be rendered in a red alert
+    const alert = await findByRole('alert');
+    expect(alert).toHaveTextContent(new RegExp(`^${finalTraceback}`));
+    expect(alert).not.toHaveTextContent(someStdErr);
+    expect(alert).toHaveClass('alert-danger');
+    expect(await findByRole('button', { name: 'Open Workspace' }))
       .toBeEnabled();
 
     // A recent job card should be rendered
