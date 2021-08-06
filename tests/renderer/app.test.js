@@ -595,14 +595,13 @@ describe('InVEST subprocess testing', () => {
     expect(await findByText('Open Workspace')).toBeEnabled();
     expect(execute).toBeEnabled();
 
-    // A recent job card should be rendered w/ updated status
+    // A recent job card should be rendered
     await getByRole('button', { name: 'InVEST' }).click();
     const homeTab = await getByRole('tabpanel', { name: /Home/ });
     const cardText = await within(homeTab)
       .findByText(`${path.resolve(fakeWorkspace)}`);
     expect(cardText).toBeInTheDocument();
-    expect(within(homeTab).queryByText('running'))
-      .toBeNull();
+
     // Normally we don't explicitly unmount the rendered components,
     // but in this case we're 'watching' a file that the afterEach()
     // wants to remove. Unmounting triggers an 'unwatch' of the logfile
