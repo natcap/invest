@@ -354,7 +354,7 @@ class SelectModelAction(argparse.Action):
 
 
 def main(user_args=None):
-    """CLI entry point for launching InVEST runs.
+    """CLI entry point for launching InVEST runs and other useful utilities.
 
     This command-line interface supports two methods of launching InVEST models
     from the command-line:
@@ -457,6 +457,12 @@ def main(user_args=None):
         help=('The model for which the spec should be fetched.  Use "invest '
               'list" to list the available models.'))
 
+    serve_subparser = subparsers.add_parser(
+        'serve', help=('Start the flask app on the localhost.'))
+    serve_subparser.add_argument(
+        '--port', type=int, default=56789,
+        help='Port number for the Flask server')
+
     export_py_subparser = subparsers.add_parser(
         'export-py', help=('Save a python script that executes a model.'))
     export_py_subparser.add_argument(
@@ -516,8 +522,7 @@ def main(user_args=None):
             name=parsed_datastack.model_name)
 
         try:
-            validation_result = getattr(
-                model_module, 'validate')(parsed_datastack.args)
+            validation_result = model_module.validate(parsed_datastack.args)
         except KeyError as missing_keys_error:
             if args.json:
                 message = json.dumps(
@@ -593,7 +598,7 @@ def main(user_args=None):
             # We're deliberately not validating here because the user
             # can just call ``invest validate <datastack>`` to validate.
             try:
-                getattr(model_module, 'execute')(parsed_datastack.args)
+                model_module.execute(parsed_datastack.args)
             # Graceful exit from this program, otherwise the pyinstaller-made
             # executeable will exit with 'Failed to execute script cli' on an
             # uncaught exception. And that only adds unhelpful noise to stderr.
@@ -612,7 +617,7 @@ def main(user_args=None):
         # Creating this warning for future us to alert us to potential issues
         # if/when we forget to define QT_MAC_WANTS_LAYER at runtime.
         if (platform.system() == "Darwin" and
-                "QT_MAC_WANTS_LAYER"  not in os.environ):
+                "QT_MAC_WANTS_LAYER" not in os.environ):
             warnings.warn(
                 "Mac OS X Big Sur may require the 'QT_MAC_WANTS_LAYER' "
                 "environment variable to be defined in order to run.  If "
@@ -661,6 +666,11 @@ def main(user_args=None):
         if app_exitcode != 0:
             parser.exit(app_exitcode,
                         'App terminated with exit code %s\n' % app_exitcode)
+
+    if args.subcommand == 'serve':
+        import natcap.invest.ui_server
+        natcap.invest.ui_server.app.run(port=args.port)
+        parser.exit(0)
 
     if args.subcommand == 'export-py':
         target_filepath = args.filepath
