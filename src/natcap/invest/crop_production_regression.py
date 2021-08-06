@@ -17,6 +17,9 @@ from . import validation
 
 LOGGER = logging.getLogger(__name__)
 
+CROPS = {
+    "barley", "maize", "oilpalm", "potato", "rice", "rye", "soybean",
+    "sugarbeet", "sugarcane", "sunflower", "wheat"}
 
 ARGS_SPEC = {
     "model_name": "Crop Production Regression Model",
@@ -33,52 +36,39 @@ ARGS_SPEC = {
         "landcover_raster_path": {
             **spec_utils.LULC,
             "projected": True,
-            "projection_units": u.meter,
-            "about": (
-                "A raster file, representing integer land use/land code "
-                "covers for each cell. This raster should have a projected "
-                "coordinate system with units of meters (e.g. UTM) because "
-                "pixel areas are divided by 10000 in order to report some "
-                "results in hectares."),
+            "projection_units": u.meter
         },
         "landcover_to_crop_table_path": {
             "type": "csv",
             "columns": {
                 "crop_name": {
                     "type": "option_string",
-                    "options": {
-                        "barley", "maize", "oilpalm", "potato", "rice",
-                        "rye", "soybean", "sugarbeet", "sugarcane",
-                        "sunflower", "wheat"
-                    }
+                    "options": CROPS
                 },
                 "lucode": {"type": "integer"}
             },
             "about": (
-                "A CSV table mapping canonical crop names to land use codes "
-                "contained in the landcover/use raster."),
+                "A table that maps each LULC code from the LULC map to one of "
+                "the 12 canonical crop names representing the crop grown in "
+                "that land cover class."),
             "name": "Landcover to Crop Table"
         },
         "fertilization_rate_table_path": {
             "type": "csv",
             "columns": {
-                "crop_name": {"type": "freestyle_string"},
-                "nitrogen_rate": {
-                    "type": "number",
-                    "units": u.kilogram/u.hectare
+                "crop_name": {
+                    "type": "option_string",
+                    "options": CROPS,
+                    "about": "One of the supported crop types."
                 },
-                "phosphorus_rate": {
+                **{f"{nutrient}_rate": {
                     "type": "number",
-                    "units": u.kilogram/u.hectare
-                },
-                "potassium_rate": {
-                    "type": "number",
-                    "units": u.kilogram/u.hectare
-                }
+                    "units": u.kilogram/u.hectare,
+                    "about": f"Rate of {nutrient} application for the crop."
+                } for nutrient in ["nitrogen", "phosphorus", "potassium"]}
             },
             "about": (
-                "A table that maps crops to fertilization rates for nitrogen, "
-                "phosphorus, and potassium."),
+                "A table that maps crops to fertilizer application rates."),
             "name": "Fertilization Rate Table Path"
         },
         "aggregate_polygon_path": {

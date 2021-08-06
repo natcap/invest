@@ -37,13 +37,7 @@ ARGS_SPEC = {
         "landcover_raster_path": {
             **spec_utils.LULC,
             "projected": True,
-            "projection_units": u.meter,
-            "about": (
-                "A raster file, representing integer land use/land code "
-                "covers for each cell. This raster should have a projected "
-                "coordinate system with units of meters (e.g. UTM) because "
-                "pixel areas are divided by 10000 in order to report some "
-                "results in hectares."),
+            "projection_units": u.meter
         },
         "landcover_to_crop_table_path": {
             "type": "csv",
@@ -95,8 +89,9 @@ ARGS_SPEC = {
                 }
             },
             "about": (
-                "A CSV table mapping canonical crop names to the land use "
-                "codes in the landcover/use raster."),
+                "A table that maps each LULC code from the LULC map to one of "
+                "the 175 canonical crop names representing the crop grown in "
+                "that land cover class."),
             "name": "Landcover to Crop Table"
         },
         "aggregate_polygon_path": {

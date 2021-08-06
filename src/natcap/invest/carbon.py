@@ -59,7 +59,7 @@ ARGS_SPEC = {
                 "carbon pools table. "
                 "If run valuation model is selected, this "
                 "should be the reference, or baseline, future scenario "
-                "against which to compare the REDD policy scenario."
+                "against which to compare the REDD policy scenario. "
                 f"{REQUIRED_IF_SELECTED % 'calculate sequestration'}"),
             "name": "future land use/land cover"
         },
@@ -80,7 +80,7 @@ ARGS_SPEC = {
             "about": (
                 "A map of land cover for the REDD policy scenario. All values "
                 "in this raster must have corresponding entries in the "
-                "carbon pools."
+                "carbon pools. "
                 f"{REQUIRED_IF_SELECTED % 'REDD scenario analysis'}"),
             "name": "REDD land use/land cover"
         },
@@ -122,7 +122,7 @@ ARGS_SPEC = {
             "required": "do_valuation",
             "about": (
                 "The calendar year of the current scenario depicted in the "
-                "current land use/land cover."
+                "current land use/land cover. "
                 f"{REQUIRED_IF_SELECTED % 'run valuation model'}"),
             "name": "current land cover year"
         },
@@ -133,7 +133,7 @@ ARGS_SPEC = {
             "required": "do_valuation",
             "about": (
                 "The calendar year of the future scenario depicted in the "
-                "future land use/land cover map."
+                "future land use/land cover map. "
                 f"{REQUIRED_IF_SELECTED % 'run valuation model'}"),
             "name": "future land cover year"
         },
@@ -161,7 +161,7 @@ ARGS_SPEC = {
             "about": (
                 "The annual market discount rate in the price of carbon, "
                 "which reflects society's preference for immediate benefits "
-                "over future benefits."
+                "over future benefits. "
                 f"{REQUIRED_IF_SELECTED % 'run valuation model'}"),
             "name": "Annual Market Discount Rate"
         },
