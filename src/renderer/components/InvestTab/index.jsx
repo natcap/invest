@@ -134,13 +134,13 @@ export default class InvestTab extends React.Component {
       // Windows taskkill yields exit code 1
       // Non-windows process.kill yields exit code null
       const status = (code === 0) ? 'success' : 'error';
+      const { logStdErr } = this.state;
       let finalTraceback = '';
-      if (this.state.logStdErr) {
-        let i = 1;
+      if (logStdErr) {
+        // get the last meaningful line of stderr
+        const stdErrLines = logStdErr.split(/\r\n|\r|\n/);
         while (!finalTraceback) {
-          [finalTraceback] = `${this.state.logStdErr}`
-            .split(/\r\n|\r|\n/).splice(-1 * i);
-          i += 1;
+          finalTraceback = stdErrLines.pop();
         }
       }
       updateJobProperties(jobID, {
