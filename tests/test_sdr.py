@@ -207,7 +207,6 @@ class SDRTests(unittest.TestCase):
         args = SDRTests.generate_base_args(
             'sdr_test_workspace')  # self.workspace_dir)
         # make args explicit that this is a base run of SWY
-        args['workspace_dir'] = '/Users/emily/Documents/test-sdr2'
 
         sdr.execute(args)
         expected_results = {
