@@ -1,7 +1,7 @@
 import path from 'path';
 import React from 'react';
 import PropTypes from 'prop-types';
-import { ipcRenderer } from 'electron';
+import { ipcRenderer, shell } from 'electron';
 
 import TabPane from 'react-bootstrap/TabPane';
 import TabContent from 'react-bootstrap/TabContent';
@@ -9,8 +9,8 @@ import TabContainer from 'react-bootstrap/TabContainer';
 import Nav from 'react-bootstrap/Nav';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
-import Spinner from 'react-bootstrap/Spinner';
 
+import ModelStatusAlert from './ModelStatusAlert';
 import SetupTab from '../SetupTab';
 import LogTab from '../LogTab';
 import ResourcesLinks from '../ResourcesLinks';
@@ -41,6 +41,10 @@ async function investGetSpec(modelName) {
   return undefined;
 }
 
+function handleOpenWorkspace(logfile) {
+  shell.showItemInFolder(logfile);
+}
+
 /**
  * Render an invest model setup form, log display, etc.
  * Manage launching of an invest model in a child process.
@@ -49,18 +53,14 @@ async function investGetSpec(modelName) {
 export default class InvestTab extends React.Component {
   constructor(props) {
     super(props);
-
     this.state = {
       activeTab: 'setup',
       modelSpec: null, // ARGS_SPEC dict with all keys except ARGS_SPEC.args
       argsSpec: null, // ARGS_SPEC.args, the immutable args stuff
+      uiSpec: null,
       logStdErr: null, // stderr data from the invest subprocess
-      jobStatus: null, // 'running', 'error', 'success'
-      workspaceDir: null,
-      logfile: null,
     };
 
-    this.ipcSuffix = window.crypto.getRandomValues(new Uint16Array(1))[0];
     this.investExecute = this.investExecute.bind(this);
     this.switchTabs = this.switchTabs.bind(this);
     this.terminateInvestProcess = this.terminateInvestProcess.bind(this);
@@ -70,20 +70,18 @@ export default class InvestTab extends React.Component {
     const { job } = this.props;
     const {
       modelSpec, argsSpec, uiSpec
-    } = await investGetSpec(job.metadata.modelRunName);
+    } = await investGetSpec(job.modelRunName);
     this.setState({
       modelSpec: modelSpec,
       argsSpec: argsSpec,
       uiSpec: uiSpec,
-      jobStatus: job.metadata.status,
-      logfile: job.metadata.logfile
     }, () => { this.switchTabs('setup'); });
   }
 
   componentWillUnmount() {
-    ipcRenderer.removeAllListeners(`invest-logging-${this.ipcSuffix}`);
-    ipcRenderer.removeAllListeners(`invest-stderr-${this.ipcSuffix}`);
-    ipcRenderer.removeAllListeners(`invest-exit-${this.ipcSuffix}`);
+    ipcRenderer.removeAllListeners(`invest-logging-${this.props.jobID}`);
+    ipcRenderer.removeAllListeners(`invest-stderr-${this.props.jobID}`);
+    ipcRenderer.removeAllListeners(`invest-exit-${this.props.jobID}`);
   }
 
   /** Spawn a child process to run an invest model via the invest CLI.
@@ -100,8 +98,10 @@ export default class InvestTab extends React.Component {
   async investExecute(argsValues) {
     const {
       job,
+      jobID,
       investSettings,
       saveJob,
+      updateJobProperties,
     } = this.props;
     const args = { ...argsValues };
     // Not strictly necessary, but resolving to a complete path
@@ -110,58 +110,66 @@ export default class InvestTab extends React.Component {
     // in part by it's workspace directory.
     args.workspace_dir = path.resolve(argsValues.workspace_dir);
 
-    job.setProperty('argsValues', args);
-    job.setProperty('status', 'running');
-
-    // Setting this very early in the click handler so the Execute button
+    // Setting status very early in the click handler so the Execute button
     // can display an appropriate visual cue when it's clicked
-    this.setState({
-      jobStatus: job.metadata.status,
-      workspaceDir: args.workspace_dir
+    updateJobProperties(jobID, {
+      argsValues: args,
+      status: 'running',
     });
-    ipcRenderer.on(`invest-logging-${this.ipcSuffix}`, (event, logfile) => {
-      this.setState({
-        logfile: logfile
-      }, () => {
-        this.switchTabs('log');
-      });
-      job.setProperty('logfile', logfile);
-      saveJob(job);
+
+    ipcRenderer.on(`invest-logging-${jobID}`, (event, logfile) => {
+      updateJobProperties(jobID, { logfile: logfile });
+      this.switchTabs('log');
     });
-    ipcRenderer.on(`invest-stderr-${this.ipcSuffix}`, (event, data) => {
+    ipcRenderer.on(`invest-stderr-${jobID}`, (event, data) => {
       let stderr = Object.assign('', this.state.logStdErr);
       stderr += data;
       this.setState({
         logStdErr: stderr,
       });
     });
-    ipcRenderer.on(`invest-exit-${this.ipcSuffix}`, (event, code) => {
+    ipcRenderer.on(`invest-exit-${jobID}`, (event, code) => {
       // Invest CLI exits w/ code 1 when it catches errors,
       // Models exit w/ code 255 (on all OS?) when errors raise from execute()
       // Windows taskkill yields exit code 1
       // Non-windows process.kill yields exit code null
       const status = (code === 0) ? 'success' : 'error';
-      this.setState({
-        jobStatus: status
+      const { logStdErr } = this.state;
+      let finalTraceback = '';
+      if (logStdErr) {
+        // get the last meaningful line of stderr
+        const stdErrLines = logStdErr.split(/\r\n|\r|\n/);
+        while (!finalTraceback) {
+          finalTraceback = stdErrLines.pop();
+        }
+      }
+      updateJobProperties(jobID, {
+        status: status,
+        finalTraceback: finalTraceback,
       });
-      job.setProperty('status', status);
-      saveJob(job);
+      saveJob(jobID);
     });
 
     ipcRenderer.send(
       ipcMainChannels.INVEST_RUN,
-      job.metadata.modelRunName,
+      job.modelRunName,
       this.state.modelSpec.module,
       args,
       investSettings.loggingLevel,
-      this.ipcSuffix
+      jobID
     );
   }
 
   terminateInvestProcess() {
-    ipcRenderer.send(ipcMainChannels.INVEST_KILL, this.state.workspaceDir);
+    // For the benefit of displaying user-feedback, mock some stdErr
+    // here before sending the kill signal. This way the exit listener will
+    // have some stderr data to work with.
     this.setState({
       logStdErr: 'Run Canceled'
+    }, () => {
+      ipcRenderer.send(
+        ipcMainChannels.INVEST_KILL, this.props.job.argsValues.workspace_dir
+      );
     });
   }
 
@@ -181,25 +189,25 @@ export default class InvestTab extends React.Component {
       modelSpec,
       argsSpec,
       uiSpec,
-      jobStatus,
-      logStdErr,
-      logfile,
     } = this.state;
     const {
-      navID,
+      status,
       modelRunName,
       argsValues,
-    } = this.props.job.metadata;
+      logfile,
+      finalTraceback,
+    } = this.props.job;
+    const { jobID } = this.props;
 
     // Don't render the model setup & log until data has been fetched.
     if (!modelSpec) {
       return (<div />);
     }
 
-    const isRunning = jobStatus === 'running';
+    const isRunning = status === 'running';
     const logDisabled = !logfile;
-    const sidebarSetupElementId = `sidebar-setup-${navID}`;
-    const sidebarFooterElementId = `sidebar-footer-${navID}`;
+    const sidebarSetupElementId = `sidebar-setup-${jobID}`;
+    const sidebarFooterElementId = `sidebar-footer-${jobID}`;
 
     return (
       <TabContainer activeKey={activeTab} id="invest-tab">
@@ -227,15 +235,6 @@ export default class InvestTab extends React.Component {
               <Nav.Item>
                 <Nav.Link eventKey="log" disabled={logDisabled}>
                   Log
-                  { isRunning
-                  && (
-                    <Spinner
-                      animation="border"
-                      size="sm"
-                      role="status"
-                      aria-hidden="true"
-                    />
-                  )}
                 </Nav.Link>
               </Nav.Item>
             </Nav>
@@ -248,7 +247,20 @@ export default class InvestTab extends React.Component {
             <div
               className="sidebar-row sidebar-footer"
               id={sidebarFooterElementId}
-            />
+            >
+              {
+                status
+                  ? (
+                    <ModelStatusAlert
+                      status={status}
+                      finalTraceback={finalTraceback}
+                      handleOpenWorkspace={() => handleOpenWorkspace(logfile)}
+                      terminateInvestProcess={this.terminateInvestProcess}
+                    />
+                  )
+                  : null
+              }
+            </div>
           </Col>
           <Col className="invest-main-col">
             <TabContent>
@@ -268,12 +280,9 @@ export default class InvestTab extends React.Component {
               </TabPane>
               <TabPane eventKey="log" title="Log">
                 <LogTab
-                  jobStatus={jobStatus}
+                  jobStatus={status}
                   logfile={logfile}
-                  logStdErr={logStdErr}
-                  terminateInvestProcess={this.terminateInvestProcess}
                   pyModuleName={modelSpec.module}
-                  sidebarFooterElementId={sidebarFooterElementId}
                 />
               </TabPane>
             </TabContent>
@@ -286,20 +295,18 @@ export default class InvestTab extends React.Component {
 
 InvestTab.propTypes = {
   job: PropTypes.shape({
-    metadata: PropTypes.shape({
-      modelRunName: PropTypes.string.isRequired,
-      modelHumanName: PropTypes.string.isRequired,
-      navID: PropTypes.string.isRequired,
-      argsValues: PropTypes.object,
-      logfile: PropTypes.string,
-      status: PropTypes.string,
-    }),
-    save: PropTypes.func.isRequired,
-    setProperty: PropTypes.func.isRequired,
+    modelRunName: PropTypes.string.isRequired,
+    modelHumanName: PropTypes.string.isRequired,
+    argsValues: PropTypes.object,
+    logfile: PropTypes.string,
+    status: PropTypes.string,
+    finalTraceback: PropTypes.string,
   }).isRequired,
+  jobID: PropTypes.string.isRequired,
   investSettings: PropTypes.shape({
     nWorkers: PropTypes.string,
     loggingLevel: PropTypes.string,
   }).isRequired,
   saveJob: PropTypes.func.isRequired,
+  updateJobProperties: PropTypes.func.isRequired,
 };

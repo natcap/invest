@@ -1,5 +1,5 @@
 import React from 'react';
-import { ipcRenderer } from 'electron';
+import { ipcRenderer, shell } from 'electron';
 import { fireEvent, render, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import userEvent from '@testing-library/user-event';
@@ -19,22 +19,137 @@ jest.mock('../../src/renderer/server_requests');
 
 const UI_CONFIG_PATH = '../../src/renderer/ui_config';
 
-function renderInvestTab() {
-  const job = new InvestJob({
-    modelRunName: 'carbon',
-    modelHumanName: 'Carbon Model',
-  });
-  job.setProperty('navID', 'carbon456asdf');
+const DEFAULT_JOB = new InvestJob({
+  modelRunName: 'carbon',
+  modelHumanName: 'Carbon Model',
+});
+
+function mockUISpec(spec) {
+  return {
+    [spec.model_name]: { order: [Object.keys(spec.args)] }
+  };
+}
+
+function renderInvestTab(job = DEFAULT_JOB) {
   const { ...utils } = render(
     <InvestTab
       job={job}
-      investExe="foo"
+      jobID="carbon456asdf"
       investSettings={{ nWorkers: '-1', loggingLevel: 'INFO' }}
       saveJob={() => {}}
+      updateJobProperties={() => {}}
     />
   );
   return utils;
 }
+
+describe('Sidebar Alert renders with data from a recent run', () => {
+  const spec = {
+    module: 'natcap.invest.foo',
+    model_name: 'FooModel',
+    args: {
+      workspace: {
+        name: 'Workspace',
+        type: 'directory',
+        about: 'this is a workspace',
+      },
+    },
+  };
+
+  beforeAll(() => {
+    getSpec.mockResolvedValue(spec);
+    fetchValidation.mockResolvedValue([]);
+    const mockSpec = spec; // jest.mock not allowed to ref out-of-scope var
+    jest.mock(UI_CONFIG_PATH, () => mockUISpec(mockSpec));
+  });
+
+  afterEach(() => {
+    // Since we're testing for number of times called
+    jest.clearAllMocks();
+  });
+
+  afterAll(() => {
+    jest.resetModules();
+    jest.resetAllMocks();
+  });
+
+  test('final Traceback displays', async () => {
+    const job = new InvestJob({
+      modelRunName: 'carbon',
+      modelHumanName: 'Carbon Model',
+      status: 'error',
+      argsValues: {},
+      logfile: 'foo.txt',
+      finalTraceback: 'ValueError:',
+    });
+
+    const { findByRole } = renderInvestTab(job);
+    expect(await findByRole('alert'))
+      .toHaveTextContent(job.finalTraceback);
+  });
+
+  test('Model Complete displays if status was success', async () => {
+    const job = new InvestJob({
+      modelRunName: 'carbon',
+      modelHumanName: 'Carbon Model',
+      status: 'success',
+      argsValues: {},
+      logfile: 'foo.txt',
+      finalTraceback: '',
+    });
+
+    const { findByRole } = renderInvestTab(job);
+    expect(await findByRole('alert'))
+      .toHaveTextContent('Model Complete');
+  });
+
+  test('Model Complete displays even with non-fatal stderr', async () => {
+    const job = new InvestJob({
+      modelRunName: 'carbon',
+      modelHumanName: 'Carbon Model',
+      status: 'success',
+      argsValues: {},
+      logfile: 'foo.txt',
+      finalTraceback: 'Error that did not actually raise an exception',
+    });
+
+    const { findByRole, queryByText } = renderInvestTab(job);
+    expect(await findByRole('alert'))
+      .toHaveTextContent('Model Complete');
+    expect(queryByText(job.finalTraceback))
+      .toBeNull();
+  });
+
+  test('Open Workspace button is available on success', async () => {
+    const job = new InvestJob({
+      modelRunName: 'carbon',
+      modelHumanName: 'Carbon Model',
+      status: 'success',
+      argsValues: {},
+      logfile: 'foo.txt',
+    });
+
+    const { findByRole } = renderInvestTab(job);
+    const openWorkspace = await findByRole('button', { name: 'Open Workspace' })
+    openWorkspace.click();
+    expect(shell.showItemInFolder).toHaveBeenCalledTimes(1);
+  });
+
+  test('Open Workspace button is available on error', async () => {
+    const job = new InvestJob({
+      modelRunName: 'carbon',
+      modelHumanName: 'Carbon Model',
+      status: 'error',
+      argsValues: {},
+      logfile: 'foo.txt',
+    });
+
+    const { findByRole } = renderInvestTab(job);
+    const openWorkspace = await findByRole('button', { name: 'Open Workspace' })
+    openWorkspace.click();
+    expect(shell.showItemInFolder).toHaveBeenCalledTimes(1);
+  });
+});
 
 describe('Save InVEST Model Setup Buttons', () => {
   const spec = {

@@ -143,11 +143,16 @@ export function setupInvestRunHandlers(investExe) {
     // in which case it's useful to logger.debug too.
     investRun.stderr.on('data', (data) => {
       logger.debug(`${data}`);
-      event.reply(`invest-stderr-${channel}`, `${data}${os.EOL}`);
+      // The PyInstaller exe will always emit a final 'Failed ...' message
+      // after an uncaught exception. It is not helpful to display to users
+      // so we filter it out here.
+      const dat = `${data}`
+        .split(os.EOL)
+        .filter((line) => !line.match(/\[[0-9]+\] Failed to execute script/))
+        .join(os.EOL);
+      event.reply(`invest-stderr-${channel}`, `${dat}${os.EOL}`);
     });
 
-    // Set some state when the invest process exits and update the app's
-    // persistent database by calling saveJob.
     investRun.on('exit', (code) => {
       delete runningJobs[args.workspace_dir];
       event.reply(`invest-exit-${channel}`, code);

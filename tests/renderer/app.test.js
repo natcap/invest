@@ -55,7 +55,7 @@ describe('Various ways to open and close InVEST models', () => {
   });
   afterEach(async () => {
     jest.clearAllMocks(); // clears usage data, does not reset/restore
-    await InvestJob.clearStore(); // should call because a test calls job.save()
+    await InvestJob.clearStore(); // because a test calls InvestJob.saveJob()
   });
 
   test('Clicking an invest model button renders SetupTab', async () => {
@@ -82,9 +82,8 @@ describe('Various ways to open and close InVEST models', () => {
       modelHumanName: 'Carbon Sequestration',
       argsValues: argsValues,
       status: 'success',
-      humanTime: '3/5/2020, 10:43:14 AM',
     });
-    await mockJob.save();
+    await InvestJob.saveJob(mockJob);
 
     const { findByText, findByLabelText, findByRole } = render(
       <App />
@@ -238,7 +237,7 @@ describe('Various ways to open and close InVEST models', () => {
   });
 });
 
-describe('Display recently executed InVEST jobs', () => {
+describe('Display recently executed InVEST jobs on Home tab', () => {
   beforeEach(() => {
     getInvestModelNames.mockResolvedValue({});
   });
@@ -254,26 +253,46 @@ describe('Display recently executed InVEST jobs', () => {
         workspace_dir: 'work1',
       },
       status: 'success',
-      humanTime: '3/5/2020, 10:43:14 AM',
     });
-    let recentJobs = await job1.save();
+    await InvestJob.saveJob(job1);
     const job2 = new InvestJob({
-      modelRunName: 'carbon',
-      modelHumanName: 'Carbon Sequestration',
+      modelRunName: 'sdr',
+      modelHumanName: 'Sediment Ratio Delivery',
       argsValues: {
         workspace_dir: 'work2',
+        results_suffix: 'suffix',
       },
-      status: 'success',
-      humanTime: '3/5/2020, 10:43:14 AM',
+      status: 'error',
+      finalTraceback: 'ValueError ...',
     });
-    recentJobs = await job2.save();
+    const recentJobs = await InvestJob.saveJob(job2);
+    const initialJobs = [job1, job2];
 
     const { getByText } = render(<App />);
 
     await waitFor(() => {
-      recentJobs.forEach((job) => {
-        expect(getByText(job.argsValues.workspace_dir))
-          .toBeTruthy();
+      initialJobs.forEach((job, idx) => {
+        const recent = recentJobs[idx];
+        const card = getByText(job.modelHumanName)
+          .closest('button');
+        expect(within(card).getByText(job.argsValues.workspace_dir))
+          .toBeInTheDocument();
+        if (job.status === 'success') {
+          expect(getByText('\u{2705}'))
+            .toBeInTheDocument();
+        }
+        if (job.status === 'error' && job.finalTraceback) {
+          expect(getByText(job.finalTraceback))
+            .toBeInTheDocument();
+        }
+        if (job.argsValues.results_suffix) {
+          expect(getByText(job.argsValues.results_suffix))
+            .toBeInTheDocument();
+        }
+        // The timestamp is not part of the initial object, but should
+        // in the saved object
+        expect(within(card).getByText(recent.humanTime))
+          .toBeInTheDocument();
       });
     });
   });
@@ -295,9 +314,8 @@ describe('Display recently executed InVEST jobs', () => {
         workspace_dir: 'work1',
       },
       status: 'success',
-      humanTime: '3/5/2020, 10:43:14 AM',
     });
-    const recentJobs = await job1.save();
+    const recentJobs = await InvestJob.saveJob(job1);
 
     const { getByText, findByText, getByTitle } = render(<App />);
 
@@ -571,23 +589,19 @@ describe('InVEST subprocess testing', () => {
       .toBeInTheDocument();
     expect(queryByText('Model Complete')).toBeNull();
     expect(queryByText('Open Workspace')).toBeNull();
-    // Job should already be saved to recent jobs database w/ status:
-    await getByRole('button', { name: 'InVEST' }).click();
-    const homeTab = await getByRole('tabpanel', { name: /Home/ });
-    expect(await within(homeTab).findByText('running'))
-      .toBeInTheDocument();
 
     mockInvestProc.emit('exit', 0); // 0 - exit w/o error
     expect(await findByText('Model Complete')).toBeInTheDocument();
     expect(await findByText('Open Workspace')).toBeEnabled();
     expect(execute).toBeEnabled();
 
-    // A recent job card should be rendered w/ updated status
+    // A recent job card should be rendered
+    await getByRole('button', { name: 'InVEST' }).click();
+    const homeTab = await getByRole('tabpanel', { name: /Home/ });
     const cardText = await within(homeTab)
       .findByText(`${path.resolve(fakeWorkspace)}`);
     expect(cardText).toBeInTheDocument();
-    expect(within(homeTab).queryByText('running'))
-      .toBeNull();
+
     // Normally we don't explicitly unmount the rendered components,
     // but in this case we're 'watching' a file that the afterEach()
     // wants to remove. Unmounting triggers an 'unwatch' of the logfile
@@ -595,7 +609,7 @@ describe('InVEST subprocess testing', () => {
     unmount();
   });
 
-  test('exit with error - expect log display', async () => {
+  test('exit with error - expect log & alert display', async () => {
     const {
       findByText,
       findByLabelText,
@@ -614,10 +628,13 @@ describe('InVEST subprocess testing', () => {
     const execute = await findByRole('button', { name: /Run/ });
     fireEvent.click(execute);
 
-    const errorMessage = 'fail';
-    // Emit some stdout, some stderr, then pause and exit with error
+    const someStdErr = 'something went wrong';
+    const finalTraceback = 'ValueError';
+    // To test that we can parse the finalTraceback even after extra data
+    const allStdErr = `someStdErr\n${finalTraceback}\n\n`;
+
     mockInvestProc.stdout.push('hello from stdout');
-    mockInvestProc.stderr.push(errorMessage);
+    mockInvestProc.stderr.push(allStdErr);
     const logTab = await findByText('Log');
     expect(logTab.classList.contains('active'))
       .toBeTruthy();
@@ -629,10 +646,12 @@ describe('InVEST subprocess testing', () => {
     await new Promise((resolve) => setTimeout(resolve, 2000));
     mockInvestProc.emit('exit', 1); // 1 - exit w/ error
 
-    // stderr text should be rendered in a red alert
-    expect(await findByText(errorMessage))
-      .toHaveClass('alert-danger');
-    expect(await findByText('Open Workspace'))
+    // Only finalTraceback text should be rendered in a red alert
+    const alert = await findByRole('alert');
+    expect(alert).toHaveTextContent(new RegExp(`^${finalTraceback}`));
+    expect(alert).not.toHaveTextContent(someStdErr);
+    expect(alert).toHaveClass('alert-danger');
+    expect(await findByRole('button', { name: 'Open Workspace' }))
       .toBeEnabled();
 
     // A recent job card should be rendered
@@ -676,8 +695,8 @@ describe('InVEST subprocess testing', () => {
     fireEvent.click(cancelButton);
     expect(await findByText('Open Workspace'))
       .toBeEnabled();
-    expect(await findByText('Run Canceled'))
-      .toBeInTheDocument();
+    expect(await findByRole('alert'))
+      .toHaveTextContent('Run Canceled');
 
     // A recent job card should be rendered
     await getByRole('button', { name: 'InVEST' }).click();

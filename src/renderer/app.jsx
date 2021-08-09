@@ -11,6 +11,7 @@ import Nav from 'react-bootstrap/Nav';
 import Button from 'react-bootstrap/Button';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
+import Spinner from 'react-bootstrap/Spinner';
 
 import HomeTab from './components/HomeTab';
 import InvestTab from './components/InvestTab';
@@ -36,7 +37,8 @@ export default class App extends React.Component {
 
     this.state = {
       activeTab: 'home',
-      openJobs: [],
+      openNavIDs: [],
+      openJobs: {},
       investList: {},
       recentJobs: [],
       investSettings: null,
@@ -47,6 +49,7 @@ export default class App extends React.Component {
     this.switchTabs = this.switchTabs.bind(this);
     this.openInvestModel = this.openInvestModel.bind(this);
     this.closeInvestModel = this.closeInvestModel.bind(this);
+    this.updateJobProperties = this.updateJobProperties.bind(this);
     this.saveJob = this.saveJob.bind(this);
     this.clearRecentJobs = this.clearRecentJobs.bind(this);
     this.storeDownloadDir = this.storeDownloadDir.bind(this);
@@ -117,10 +120,13 @@ export default class App extends React.Component {
    */
   openInvestModel(job) {
     const navID = crypto.randomBytes(16).toString('hex');
-    job.setProperty('navID', navID);
-    this.setState((state) => ({
-      openJobs: [...state.openJobs, job],
-    }), () => this.switchTabs(navID));
+    const { openJobs, openNavIDs } = this.state;
+    openNavIDs.push(navID);
+    openJobs[navID] = job;
+    this.setState({
+      openNavIDs: openNavIDs,
+      openJobs: openJobs,
+    }, () => this.switchTabs(navID));
   }
 
   /**
@@ -131,23 +137,38 @@ export default class App extends React.Component {
    */
   closeInvestModel(navID) {
     let index;
-    const { openJobs } = this.state;
-    openJobs.forEach((job) => {
-      if (job.metadata.navID === navID) {
-        index = openJobs.indexOf(job);
-        openJobs.splice(index, 1);
+    const { openNavIDs, openJobs } = this.state;
+    delete openJobs[navID];
+    openNavIDs.forEach((id) => {
+      if (id === navID) {
+        index = openNavIDs.indexOf(navID);
+        openNavIDs.splice(index, 1);
       }
     });
     // Switch to the next tab if there is one, or the previous, or home.
     let switchTo = 'home';
-    if (openJobs[index]) {
-      switchTo = openJobs[index].metadata.navID;
-    } else if (openJobs[index - 1]) {
-      switchTo = openJobs[index - 1].metadata.navID;
+    if (openNavIDs[index]) {
+      switchTo = openNavIDs[index];
+    } else if (openNavIDs[index - 1]) {
+      switchTo = openNavIDs[index - 1];
     }
     this.switchTabs(switchTo);
     this.setState({
+      openNavIDs: openNavIDs,
       openJobs: openJobs,
+    });
+  }
+
+  /** Update properties of an open Invest job.
+   *
+   * @param {string} id - the unique identifier of an open job
+   * @param {obj} jobObj - key-value pairs of any job properties to be updated
+   */
+  updateJobProperties(id, jobObj) {
+    const { openJobs } = this.state;
+    openJobs[id] = { ...openJobs[id], ...jobObj };
+    this.setState({
+      openJobs: openJobs
     });
   }
 
@@ -155,10 +176,11 @@ export default class App extends React.Component {
    *
    * And update the app's view of that store.
    *
-   * @param {object} job - an instance of InvestJob.
+   * @param {string} jobID - the unique identifier of an open job.
    */
-  async saveJob(job) {
-    const recentJobs = await job.save();
+  async saveJob(jobID) {
+    const job = this.state.openJobs[jobID];
+    const recentJobs = await InvestJob.saveJob(job);
     this.setState({
       recentJobs: recentJobs,
     });
@@ -177,6 +199,7 @@ export default class App extends React.Component {
       investSettings,
       recentJobs,
       openJobs,
+      openNavIDs,
       activeTab,
       showDownloadModal,
       downloadedNofN,
@@ -184,21 +207,45 @@ export default class App extends React.Component {
 
     const investNavItems = [];
     const investTabPanes = [];
-    openJobs.forEach((job) => {
+    openNavIDs.forEach((id) => {
+      const job = openJobs[id];
+      let statusSymbol;
+      switch (job.status) {
+        case 'success':
+          statusSymbol = '\u{2705}'; // green check
+          break;
+        case 'error':
+          statusSymbol = '\u{1F6AB}'; // red do-not-enter
+          break;
+        case 'running':
+          statusSymbol = (
+            <Spinner
+              className="mb-1"
+              animation="border"
+              size="sm"
+              role="status"
+              aria-hidden="true"
+            />
+          );
+          break;
+        default:
+          statusSymbol = '';
+      }
       investNavItems.push(
         <Nav.Item
-          key={job.metadata.navID}
-          className={job.metadata.navID === activeTab ? 'active' : ''}
+          key={id}
+          className={id === activeTab ? 'active' : ''}
         >
-          <Nav.Link eventKey={job.metadata.navID}>
-            {job.metadata.modelHumanName}
+          <Nav.Link eventKey={id}>
+            {statusSymbol}
+            {` ${job.modelHumanName}`}
           </Nav.Link>
           <Button
             className="close-tab"
             variant="outline-dark"
             onClick={(event) => {
               event.stopPropagation();
-              this.closeInvestModel(job.metadata.navID);
+              this.closeInvestModel(id);
             }}
             onDragOver={dragOverHandlerNone}
           >
@@ -208,14 +255,16 @@ export default class App extends React.Component {
       );
       investTabPanes.push(
         <TabPane
-          key={job.metadata.navID}
-          eventKey={job.metadata.navID}
-          title={job.metadata.modelHumanName}
+          key={id}
+          eventKey={id}
+          title={job.modelHumanName}
         >
           <InvestTab
             job={job}
+            jobID={id}
             investSettings={investSettings}
             saveJob={this.saveJob}
+            updateJobProperties={this.updateJobProperties}
           />
         </TabPane>
       );

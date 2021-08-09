@@ -8,12 +8,8 @@ import sanitizeHtml from 'sanitize-html';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import Container from 'react-bootstrap/Container';
-import Alert from 'react-bootstrap/Alert';
-import Button from 'react-bootstrap/Button';
 
-import Portal from '../Portal';
-
-const logger = window.Workbench.getLogger(__filename.split('/').slice(-2).join('/'));
+const logger = window.Workbench.getLogger('LogTab');
 
 const LOG_TEXT_TAG = 'span';
 const ALLOWED_HTML_OPTIONS = {
@@ -84,7 +80,6 @@ export default class LogTab extends React.Component {
       'invest-log-primary': new RegExp(this.props.pyModuleName),
     };
 
-    this.handleOpenWorkspace = this.handleOpenWorkspace.bind(this);
     this.tailLogfile = this.tailLogfile.bind(this);
     this.unwatchLogfile = this.unwatchLogfile.bind(this);
   }
@@ -99,23 +94,17 @@ export default class LogTab extends React.Component {
   componentDidUpdate(prevProps) {
     // Re-executing a model will generate a new logfile
     // so need to update to tail the new file.
-    const { logfile, jobStatus } = this.props;
+    const { logfile } = this.props;
     if (logfile && (prevProps.logfile !== logfile)) {
       this.tailLogfile(logfile);
-    }
-    if ((jobStatus !== 'running') && (prevProps.jobStatus !== jobStatus)) {
-      // status changed from running to anything else
-      this.unwatchLogfile();
     }
   }
 
   componentWillUnmount() {
     // This does not trigger on browser window close
-    this.unwatchLogfile();
-  }
-
-  handleOpenWorkspace() {
-    shell.showItemInFolder(this.props.logfile);
+    if (this.tail) {
+      this.unwatchLogfile();
+    }
   }
 
   tailLogfile(logfile) {
@@ -167,85 +156,20 @@ export default class LogTab extends React.Component {
   }
 
   unwatchLogfile() {
-    if (this.tail) {
-      try {
-        logger.debug(`unwatching file: ${this.tail.filename}`);
-        this.tail.unwatch();
-      } catch (error) {
-        logger.error(error.stack);
-      }
+    try {
+      logger.debug(`unwatching file: ${this.tail.filename}`);
+      this.tail.unwatch();
+    } catch (error) {
+      logger.error(error.stack);
     }
   }
 
   render() {
-    const {
-      jobStatus,
-      logStdErr,
-      terminateInvestProcess,
-      sidebarFooterElementId,
-    } = this.props;
-    let ModelStatusAlert;
-    const WorkspaceButton = (
-      <Button
-        variant="outline-dark"
-        onClick={this.handleOpenWorkspace}
-        disabled={jobStatus === 'running'}
-      >
-        Open Workspace
-      </Button>
-    );
-
-    const CancelButton = (
-      <Button
-        variant="outline-dark"
-        onClick={terminateInvestProcess}
-      >
-        Cancel Run
-      </Button>
-    );
-
-    if (jobStatus === 'running') {
-      ModelStatusAlert = (
-        <Alert variant="secondary">
-          {CancelButton}
-        </Alert>
-      );
-    } else if (jobStatus === 'error') {
-      let lastCall = '';
-      if (logStdErr) {
-        let i = 1;
-        while (!lastCall) {
-          [lastCall] = `${logStdErr}`
-            .split(`${os.EOL}`).splice(-1 * i);
-          i += 1;
-        }
-      } else {
-        // Placeholder for a recent job re-loaded, logStdErr data doesn't persist.
-        lastCall = 'Model ended with error - see Log for details';
-      }
-
-      ModelStatusAlert = (
-        <Alert variant="danger">
-          {lastCall}
-          {WorkspaceButton}
-        </Alert>
-      );
-    } else if (jobStatus === 'success') {
-      ModelStatusAlert = (
-        <Alert variant="success">
-          Model Complete
-          {WorkspaceButton}
-        </Alert>
-      );
-    }
     return (
       <Container fluid>
         <Row>
           <LogDisplay logdata={this.state.logdata} />
         </Row>
-        <Portal id="log-alert" elId={sidebarFooterElementId}>
-          {ModelStatusAlert}
-        </Portal>
       </Container>
     );
   }
@@ -254,8 +178,5 @@ export default class LogTab extends React.Component {
 LogTab.propTypes = {
   jobStatus: PropTypes.string,
   logfile: PropTypes.string,
-  logStdErr: PropTypes.string,
   pyModuleName: PropTypes.string.isRequired,
-  terminateInvestProcess: PropTypes.func.isRequired,
-  sidebarFooterElementId: PropTypes.string.isRequired,
 };

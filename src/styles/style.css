@@ -55,8 +55,9 @@ body {
 	flex: 1; /*size by available space, not by content*/
 	min-width: 0; /*and allow it to shrink to fit container*/
 	background-color: transparent;
-	border: 1px solid #999999;
+	border: 2px solid #999999;
   border-bottom: 0;
+  border-radius: 5px 5px 0 0;
 }
 
 .navbar-nav .nav-item.active {
@@ -192,6 +193,22 @@ body {
 	padding-left: 1.25rem;
 }
 
+.card-footer {
+	display: flex;
+	justify-content: space-between;
+	white-space: nowrap;
+}
+
+.card-footer .status-traceback {
+	color: red;
+	overflow: hidden;
+	text-overflow: ellipsis;	
+}
+
+.card-footer .timestamp {
+	padding-right:  2rem;
+}
+
 /* InVEST Model Tab */
 
 .invest-sidebar-col {
@@ -253,6 +270,11 @@ body {
 	font-size: 1.5rem;
 	font-weight: 600;
 	letter-spacing: 0.1rem;
+}
+
+.sidebar-footer .btn-primary .spinner-border {
+	margin-left: 1rem;
+	margin-bottom: 0.25rem;
 }
 
 .invest-main-col {
@@ -369,12 +391,6 @@ input[type=text]::placeholder {
 	margin-top: 1rem;
 	font-size: 1.1rem;
 	letter-spacing: 0.03rem;
-}
-
-/* Misc */
-.spinner-border {
-	margin-left: 1rem;
-	margin-bottom: 0.25rem;
 }
 
 /* Download Data Modal */
