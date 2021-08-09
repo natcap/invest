@@ -1,5 +1,3 @@
-import re
-
 import pint
 
 
@@ -29,7 +27,9 @@ u.define('international_unit = [biologic_amount] = iu = IU')
 # overwrite the default use of the symbol 'h' for henries
 u.define('henry = weber / ampere')
 u.define('hour = 60 * minute = h = hr')
-# overwrite the year definition to use 'yr' rather than 'a' as default symbol
+# overwrite the year definitionto use 'yr' rather than 'a' as default symbol
+# the symbol 'yr' is english-specific and the international symbol 'a' may
+# not be well-known, so we will need to translate this
 u.define('year = 365.25 * day = yr = a = julian_year')
 # Use u.none for unitless measurements
 u.define('none = []')
@@ -182,7 +182,13 @@ def format_unit(unit):
     Returns:
         String describing the unit.
     """
+    # Optionally use a pre-set format for a particular unit
     custom_formats = {
+        # For soil erodibility (t*h*ha/(ha*MJ*mm)), by convention the ha's
+        # are left on top and bottom and don't cancel out
+        # pint always cancels units where it can, so add them back in here
+        # this isn't a perfect solution
+        # see https://github.com/hgrecco/pint/issues/1364
         u.t * u.hr / (u.MJ * u.mm): 't · h · ha / (ha · MJ · mm)'
     }
     if unit in custom_formats:

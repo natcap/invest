@@ -1464,8 +1464,10 @@ class ReclassifyRasterOpTests(unittest.TestCase):
 
 
 class SpecUtilsTests(unittest.TestCase):
+    """Tests for natcap.invest.spec_utils."""
 
     def test_format_unit(self):
+        """spec_utils: test converting units to strings with format_unit."""
         from natcap.invest import spec_utils
         for unit_name, expected in [
                 ('meter', 'm'),
