@@ -48,3 +48,21 @@ class EndpointFunctionTests(unittest.TestCase):
         spec = json.loads(response.get_data(as_text=True))
         self.assertEqual(
             list(spec), ['model_name', 'module', 'userguide_html', 'args'])
+
+    def test_get_invest_validate(self):
+        """UI server: get_invest_validate endpoint."""
+        from natcap.invest import ui_server, carbon
+        test_client = ui_server.app.test_client()
+        args = {
+            'workspace_dir': 'foo'
+        }
+        payload = {
+            'model_module': carbon.ARGS_SPEC['module'],
+            'args': json.dumps(args)
+        }
+        response = test_client.post('/validate', json=payload)
+        results = json.loads(response.get_data(as_text=True))
+        expected = carbon.validate(args)
+        # These differ only because a tuple was transformed to a list during
+        # the json (de)serializing, so do the same with expected data
+        self.assertEqual(results, json.loads(json.dumps(expected)))
