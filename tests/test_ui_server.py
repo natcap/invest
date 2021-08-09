@@ -7,14 +7,10 @@ TEST_DATA_PATH = os.path.join(
 
 
 class EndpointFunctionTests(unittest.TestCase):
-    """Tests for some UI server endpoint functions.
-
-    Other endpoints have tests in the workbench repo. These ones need
-    vector/raster test data so it makes more sense to have them here.
-    """
+    """Tests for UI server endpoint functions."""
 
     def test_get_vector_colnames(self):
-        """UI server: getVectorColnames endpoint"""
+        """UI server: get_vector_colnames endpoint"""
         from natcap.invest import ui_server
         test_client = ui_server.app.test_client()
         # an empty path
@@ -34,3 +30,13 @@ class EndpointFunctionTests(unittest.TestCase):
         colnames = json.loads(response.get_data(as_text=True))
         self.assertEqual(response.status_code, 422)
         self.assertEqual(colnames, [])
+
+    def test_get_invest_models(self):
+        """UI server: get_invest_models endpoint"""
+        from natcap.invest import ui_server
+        test_client = ui_server.app.test_client()
+        response = test_client.get('/models')
+        models_dict = json.loads(response.get_data(as_text=True))
+        for model in models_dict.values():
+            self.assertEqual(list(model), ['internal_name', 'aliases'])
+
