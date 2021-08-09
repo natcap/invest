@@ -43,11 +43,13 @@ class EndpointFunctionTests(unittest.TestCase):
     def test_get_invest_spec(self):
         """UI server: get_invest_spec endpoint."""
         from natcap.invest import ui_server
+        from natcap.invest.carbon import ARGS_SPEC
         test_client = ui_server.app.test_client()
         response = test_client.post('/getspec', json={'carbon'})
         spec = json.loads(response.get_data(as_text=True))
-        self.assertEqual(
-            list(spec), ['model_name', 'module', 'userguide_html', 'args'])
+        self.assertEqual(spec, ARGS_SPEC)
+        # self.assertEqual(
+        #     list(spec), ['model_name', 'module', 'userguide_html', 'args'])
 
     def test_get_invest_validate(self):
         """UI server: get_invest_validate endpoint."""
