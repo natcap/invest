@@ -211,6 +211,7 @@ class ExponentialDecayUtilsTests(unittest.TestCase):
 
 class SandboxTempdirTests(unittest.TestCase):
     """Test Sandbox Tempdir."""
+
     def setUp(self):
         """Setup workspace."""
         self.workspace_dir = tempfile.mkdtemp()
@@ -237,6 +238,7 @@ class SandboxTempdirTests(unittest.TestCase):
 
 class TimeFormattingTests(unittest.TestCase):
     """Test Time Formatting."""
+
     def test_format_time_hours(self):
         """Test format time hours."""
         from natcap.invest.utils import _format_time
@@ -261,6 +263,7 @@ class TimeFormattingTests(unittest.TestCase):
 
 class LogToFileTests(unittest.TestCase):
     """Test Log To File."""
+
     def setUp(self):
         """Create a temporary workspace."""
         self.workspace = tempfile.mkdtemp()
@@ -332,6 +335,7 @@ class LogToFileTests(unittest.TestCase):
 
 class ThreadFilterTests(unittest.TestCase):
     """Test Thread Filter."""
+
     def test_thread_filter_same_thread(self):
         """Test threat filter same thread."""
         from natcap.invest.utils import ThreadFilter
@@ -420,6 +424,7 @@ class MakeDirectoryTests(unittest.TestCase):
 
 class GDALWarningsLoggingTests(unittest.TestCase):
     """Test GDAL Warnings Logging."""
+
     def setUp(self):
         """Create a temporary workspace."""
         self.workspace = tempfile.mkdtemp()
@@ -455,6 +460,7 @@ class GDALWarningsLoggingTests(unittest.TestCase):
 
 class PrepareWorkspaceTests(unittest.TestCase):
     """Test Prepare Workspace."""
+
     def setUp(self):
         """Create a temporary workspace."""
         self.workspace = tempfile.mkdtemp()
@@ -494,6 +500,7 @@ class PrepareWorkspaceTests(unittest.TestCase):
 
 class BuildLookupFromCSVTests(unittest.TestCase):
     """Tests for natcap.invest.utils.build_lookup_from_csv."""
+
     def setUp(self):
         """Make temporary directory for workspace."""
         self.workspace_dir = tempfile.mkdtemp()
@@ -518,8 +525,8 @@ class BuildLookupFromCSVTests(unittest.TestCase):
                 'foo': -1.0,
                 'bar': 'bar',
                 '_': 'apple'
-                },
-            }
+            },
+        }
         self.assertDictEqual(result, expected_dict)
 
     def test_unique_key_not_first_column(self):
@@ -537,10 +544,10 @@ class BuildLookupFromCSVTests(unittest.TestCase):
         result = utils.build_lookup_from_csv(
             table_path, 'lucode', to_lower=True)
         expected_result = {
-                1: {'desc': 'corn', 'val1': 0.5, 'val2': 2, 'lucode': 1},
-                2: {'desc': 'bread', 'val1': 1, 'val2': 4, 'lucode': 2},
-                3: {'desc': 'beans', 'val1': 0.5, 'val2': 4, 'lucode': 3},
-                4: {'desc': 'butter', 'val1': 9, 'val2': 1, 'lucode': 4}}
+            1: {'desc': 'corn', 'val1': 0.5, 'val2': 2, 'lucode': 1},
+            2: {'desc': 'bread', 'val1': 1, 'val2': 4, 'lucode': 2},
+            3: {'desc': 'beans', 'val1': 0.5, 'val2': 4, 'lucode': 3},
+            4: {'desc': 'butter', 'val1': 9, 'val2': 1, 'lucode': 4}}
 
         self.assertDictEqual(result, expected_result)
 
@@ -589,10 +596,10 @@ class BuildLookupFromCSVTests(unittest.TestCase):
         result = utils.build_lookup_from_csv(
             table_path, 'lucode', to_lower=True)
         expected_result = {
-                1: {'desc': 'corn', 'val1': 0.5, 'val2': 2, 'lucode': 1},
-                2: {'desc': '', 'val1': 1, 'val2': 4, 'lucode': 2},
-                3: {'desc': 'beans', 'val1': 0.5, 'val2': 4, 'lucode': 3},
-                4: {'desc': 'butter', 'val1': '', 'val2': 1, 'lucode': 4}}
+            1: {'desc': 'corn', 'val1': 0.5, 'val2': 2, 'lucode': 1},
+            2: {'desc': '', 'val1': 1, 'val2': 4, 'lucode': 2},
+            3: {'desc': 'beans', 'val1': 0.5, 'val2': 4, 'lucode': 3},
+            4: {'desc': 'butter', 'val1': '', 'val2': 1, 'lucode': 4}}
 
         self.assertDictEqual(result, expected_result)
 
@@ -611,9 +618,9 @@ class BuildLookupFromCSVTests(unittest.TestCase):
         result = utils.build_lookup_from_csv(
             table_path, 'lucode', to_lower=True)
         expected_result = {
-                1.0: {'desc': 'corn', 'val1': 0.5, 'val2': 2, 'lucode': 1.0},
-                3.0: {'desc': 'beans', 'val1': 0.5, 'val2': 4, 'lucode': 3.0},
-                4.0: {'desc': 'butter', 'val1': 9, 'val2': 1, 'lucode': 4.0}}
+            1.0: {'desc': 'corn', 'val1': 0.5, 'val2': 2, 'lucode': 1.0},
+            3.0: {'desc': 'beans', 'val1': 0.5, 'val2': 4, 'lucode': 3.0},
+            4.0: {'desc': 'butter', 'val1': 9, 'val2': 1, 'lucode': 4.0}}
 
         self.assertDictEqual(result, expected_result)
 
@@ -633,10 +640,10 @@ class BuildLookupFromCSVTests(unittest.TestCase):
             table_path, 'lucode', to_lower=True, column_list=['val1', 'val2'])
 
         expected_result = {
-                1: {'val1': 0.5, 'val2': 2, 'lucode': 1},
-                2: {'val1': 1, 'val2': 4, 'lucode': 2},
-                3: {'val1': 0.5, 'val2': 4, 'lucode': 3},
-                4: {'val1': 9, 'val2': 1, 'lucode': 4}}
+            1: {'val1': 0.5, 'val2': 2, 'lucode': 1},
+            2: {'val1': 1, 'val2': 4, 'lucode': 2},
+            3: {'val1': 0.5, 'val2': 4, 'lucode': 3},
+            4: {'val1': 9, 'val2': 1, 'lucode': 4}}
 
         self.assertDictEqual(result, expected_result)
 
@@ -656,10 +663,10 @@ class BuildLookupFromCSVTests(unittest.TestCase):
             table_path, 'lucode', to_lower=True)
 
         expected_result = {
-                1: {'desc': 'corn', 'val1': 0.5, 'val2': 2, 'lucode': 1},
-                2: {'desc': 'bread', 'val1': 1, 'val2': 4, 'lucode': 2},
-                3: {'desc': 'beans', 'val1': 0.5, 'val2': 4, 'lucode': 3},
-                4: {'desc': 'butter', 'val1': 9, 'val2': 1, 'lucode': 4}}
+            1: {'desc': 'corn', 'val1': 0.5, 'val2': 2, 'lucode': 1},
+            2: {'desc': 'bread', 'val1': 1, 'val2': 4, 'lucode': 2},
+            3: {'desc': 'beans', 'val1': 0.5, 'val2': 4, 'lucode': 3},
+            4: {'desc': 'butter', 'val1': 9, 'val2': 1, 'lucode': 4}}
 
         self.assertDictEqual(result, expected_result)
 
@@ -679,10 +686,10 @@ class BuildLookupFromCSVTests(unittest.TestCase):
             table_path, 'lucode', to_lower=True)
 
         expected_result = {
-                1: {'desc': 'corn', 'val1': 0.5, 'val2': 2, 'lucode': 1},
-                2: {'desc': 'bread', 'val1': 1, 'val2': 4, 'lucode': 2},
-                3: {'desc': 'beans', 'val1': 0.5, 'val2': 4, 'lucode': 3},
-                4: {'desc': 'butter', 'val1': 9, 'val2': 1, 'lucode': 4}}
+            1: {'desc': 'corn', 'val1': 0.5, 'val2': 2, 'lucode': 1},
+            2: {'desc': 'bread', 'val1': 1, 'val2': 4, 'lucode': 2},
+            3: {'desc': 'beans', 'val1': 0.5, 'val2': 4, 'lucode': 3},
+            4: {'desc': 'butter', 'val1': 9, 'val2': 1, 'lucode': 4}}
 
         self.assertDictEqual(result, expected_result)
 
@@ -914,7 +921,7 @@ class ReadCSVToDataframeTests(unittest.TestCase):
     def test_csv_with_integer_headers(self):
         """
         utils: CSV with integer headers should be read into strings.
-        
+
         This shouldn't matter for any of the models, but if a user inputs a CSV
         with extra columns that are labeled with numbers, it should still work.
         """
@@ -1034,6 +1041,7 @@ class CreateCoordinateTransformationTests(unittest.TestCase):
 
 class AssertVectorsEqualTests(unittest.TestCase):
     """Tests for natcap.invest.utils._assert_vectors_equal."""
+
     def setUp(self):
         """Setup workspace."""
         self.workspace_dir = tempfile.mkdtemp()
@@ -1406,9 +1414,10 @@ class AssertVectorsEqualTests(unittest.TestCase):
 
         self.assertTrue("Vector geometry assertion fail." in str(cm.exception))
 
+
 class ReclassifyRasterOpTests(unittest.TestCase):
     """Tests for natcap.invest.utils.reclassify_raster."""
-    
+
     def setUp(self):
         """Setup workspace."""
         self.workspace_dir = tempfile.mkdtemp()
@@ -1426,8 +1435,9 @@ class ReclassifyRasterOpTests(unittest.TestCase):
         projection_wkt = srs_copy.ExportToWkt()
         origin = (1180000, 690000)
         raster_path = os.path.join(self.workspace_dir, 'tmp_raster.tif')
-        
-        array = numpy.array([[1,1,1], [2,2,2], [3,3,3]], dtype=numpy.int32)
+
+        array = numpy.array(
+            [[1, 1, 1], [2, 2, 2], [3, 3, 3]], dtype=numpy.int32)
 
         pygeoprocessing.numpy_array_to_raster(
             array, -1, (1, -1), origin, projection_wkt, raster_path)
@@ -1437,17 +1447,35 @@ class ReclassifyRasterOpTests(unittest.TestCase):
             self.workspace_dir, 'tmp_raster_out.tif')
 
         message_details = {
-            'raster_name': 'LULC', 'column_name': 'lucode', 
+            'raster_name': 'LULC', 'column_name': 'lucode',
             'table_name': 'Biophysical'}
 
         with self.assertRaises(ValueError) as context:
             utils.reclassify_raster(
-                (raster_path, 1), value_map, target_raster_path, 
+                (raster_path, 1), value_map, target_raster_path,
                 gdal.GDT_Int32, -1, error_details=message_details)
         expected_message = (
-                "Values in the LULC raster were found that are"
-                " not represented under the 'lucode' column"
-                " of the Biophysical table. The missing values found in"
-                " the LULC raster but not the table are: [3].")
+            "Values in the LULC raster were found that are"
+            " not represented under the 'lucode' column"
+            " of the Biophysical table. The missing values found in"
+            " the LULC raster but not the table are: [3].")
         self.assertTrue(
             expected_message in str(context.exception), str(context.exception))
+
+
+class SpecUtilsTests(unittest.TestCase):
+    """Tests for natcap.invest.spec_utils."""
+
+    def test_format_unit(self):
+        """spec_utils: test converting units to strings with format_unit."""
+        from natcap.invest import spec_utils
+        for unit_name, expected in [
+                ('meter', 'm'),
+                ('meter / second', 'm/s'),
+                ('foot * mm', 'ft · mm'),
+                ('t * hr * ha / ha / MJ / mm', 't · h · ha / (ha · MJ · mm)'),
+                ('mm^3 / year', 'mm³/yr')
+        ]:
+            unit = spec_utils.u.Unit(unit_name)
+            actual = spec_utils.format_unit(unit)
+            self.assertEqual(expected, actual)
