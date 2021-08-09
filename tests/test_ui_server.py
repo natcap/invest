@@ -10,7 +10,7 @@ class EndpointFunctionTests(unittest.TestCase):
     """Tests for UI server endpoint functions."""
 
     def test_get_vector_colnames(self):
-        """UI server: get_vector_colnames endpoint"""
+        """UI server: get_vector_colnames endpoint."""
         from natcap.invest import ui_server
         test_client = ui_server.app.test_client()
         # an empty path
@@ -32,7 +32,7 @@ class EndpointFunctionTests(unittest.TestCase):
         self.assertEqual(colnames, [])
 
     def test_get_invest_models(self):
-        """UI server: get_invest_models endpoint"""
+        """UI server: get_invest_models endpoint."""
         from natcap.invest import ui_server
         test_client = ui_server.app.test_client()
         response = test_client.get('/models')
@@ -40,3 +40,11 @@ class EndpointFunctionTests(unittest.TestCase):
         for model in models_dict.values():
             self.assertEqual(list(model), ['internal_name', 'aliases'])
 
+    def test_get_invest_spec(self):
+        """UI server: get_invest_spec endpoint."""
+        from natcap.invest import ui_server
+        test_client = ui_server.app.test_client()
+        response = test_client.post('/getspec', json={'carbon'})
+        spec = json.loads(response.get_data(as_text=True))
+        self.assertEqual(
+            list(spec), ['model_name', 'module', 'userguide_html', 'args'])
