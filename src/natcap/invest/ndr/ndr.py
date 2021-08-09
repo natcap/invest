@@ -1279,7 +1279,7 @@ def _calculate_sub_ndr(
 
     def _sub_ndr_op(dist_to_channel_array):
         """Calculate subsurface NDR."""
-        # nodata value from this ntermediate output should always be
+        # nodata value from this intermediate output should always be
         # defined by pygeoprocessing, not None
         valid_mask = ~numpy.isclose(
             dist_to_channel_array, dist_to_channel_nodata)
