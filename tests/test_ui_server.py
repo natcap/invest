@@ -1,5 +1,7 @@
-import os
 import json
+import os
+import shutil
+import tempfile
 import unittest
 
 TEST_DATA_PATH = os.path.join(
@@ -8,6 +10,16 @@ TEST_DATA_PATH = os.path.join(
 
 class EndpointFunctionTests(unittest.TestCase):
     """Tests for UI server endpoint functions."""
+
+    def setUp(self):
+        """Override setUp function to create temp workspace directory."""
+        # this lets us delete the workspace after its done no matter the
+        # the rest result
+        self.workspace_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        """Override tearDown function to remove temporary directory."""
+        shutil.rmtree(self.workspace_dir)
 
     def test_get_vector_colnames(self):
         """UI server: get_vector_colnames endpoint."""
@@ -45,7 +57,7 @@ class EndpointFunctionTests(unittest.TestCase):
         from natcap.invest import ui_server
         from natcap.invest.carbon import ARGS_SPEC
         test_client = ui_server.app.test_client()
-        response = test_client.post('/getspec', json={'carbon'})
+        response = test_client.post('/getspec', json='carbon')
         spec = json.loads(response.get_data(as_text=True))
         self.assertEqual(spec, ARGS_SPEC)
         # self.assertEqual(
@@ -68,3 +80,63 @@ class EndpointFunctionTests(unittest.TestCase):
         # These differ only because a tuple was transformed to a list during
         # the json (de)serializing, so do the same with expected data
         self.assertEqual(results, json.loads(json.dumps(expected)))
+
+    def test_post_datastack_file(self):
+        """UI server: post_datastack_file endpoint."""
+        from natcap.invest import ui_server
+        test_client = ui_server.app.test_client()
+        self.workspace_dir = tempfile.mkdtemp()
+        expected_datastack = {
+            'args': {
+                'workspace_dir': 'foo'
+            },
+            'invest_version': '3.10.0',
+            'model_name': 'natcap.invest.carbon'
+        }
+        filepath = os.path.join(self.workspace_dir, 'datastack.json')
+        with open(filepath, 'w') as file:
+            file.write(json.dumps(expected_datastack))
+        response = test_client.post('/post_datastack_file', json=filepath)
+        response_data = json.loads(response.get_data(as_text=True))
+        self.assertEqual(
+            list(response_data),
+            ['type', 'args', 'module_name', 'model_run_name',
+             'model_human_name', 'invest_version'])
+
+    def test_write_parameter_set_file(self):
+        """UI server: write_parameter_set_file endpoint."""
+        from natcap.invest import ui_server
+        test_client = ui_server.app.test_client()
+        self.workspace_dir = tempfile.mkdtemp()
+        filepath = os.path.join(self.workspace_dir, 'datastack.json')
+        payload = {
+            'parameterSetPath': filepath,
+            'moduleName': 'natcap.invest.carbon',
+            'args': json.dumps({
+                'workspace_dir': 'foo'
+            }),
+            'relativePaths': True,
+        }
+        _ = test_client.post('/write_parameter_set_file', json=payload)
+        with open(filepath, 'r') as file:
+            actual_data = json.loads(file.read())
+        self.assertEqual(
+            list(actual_data),
+            ['args', 'invest_version', 'model_name'])
+
+    def test_save_to_python(self):
+        """UI server: save_to_python endpoint."""
+        from natcap.invest import ui_server
+        test_client = ui_server.app.test_client()
+        self.workspace_dir = tempfile.mkdtemp()
+        filepath = os.path.join(self.workspace_dir, 'script.py')
+        payload = {
+            'filepath': filepath,
+            'modelname': 'carbon',
+            'args': json.dumps({
+                'workspace_dir': 'foo'
+            }),
+        }
+        _ = test_client.post('/save_to_python', json=payload)
+        # test_cli.py asserts the actual contents of the file
+        self.assertTrue(os.path.exists(filepath))
