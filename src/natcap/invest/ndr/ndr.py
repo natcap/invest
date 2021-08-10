@@ -1313,10 +1313,11 @@ def _calculate_export(
         """Combine NDR and subsurface NDR."""
         # these intermediate outputs should always have defined nodata
         # values assigned by pygeoprocessing
-        valid_mask = ~(numpy.isclose(modified_load_array, load_nodata) |
-                       numpy.isclose(ndr_array, ndr_nodata) |
-                       numpy.isclose(modified_sub_load_array, subsurface_load_nodata) |
-                       numpy.isclose(sub_ndr_array, sub_ndr_nodata))
+        valid_mask = ~(
+            numpy.isclose(modified_load_array, load_nodata) |
+            numpy.isclose(ndr_array, ndr_nodata) |
+            numpy.isclose(modified_sub_load_array, subsurface_load_nodata) |
+            numpy.isclose(sub_ndr_array, sub_ndr_nodata))
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         result[:] = _TARGET_NODATA
         result[valid_mask] = (

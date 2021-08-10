@@ -2584,8 +2584,9 @@ def _get_criteria_dataframe(base_criteria_table_path):
     file_ext = os.path.splitext(base_criteria_table_path)[1].lower()
     if file_ext == '.csv':
         # use sep=None, engine='python' to infer what the separator is
-        criteria_df = pandas.read_csv(base_criteria_table_path,
-                                      index_col=0, header=None, sep=None, engine='python')
+        criteria_df = pandas.read_csv(
+            base_criteria_table_path, index_col=0, header=None, sep=None,
+            engine='python')
     elif file_ext in ['.xlsx', '.xls']:
         criteria_df = pandas.read_excel(base_criteria_table_path,
                                         index_col=0, header=None)

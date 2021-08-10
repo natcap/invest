@@ -10,14 +10,8 @@ The SDR method in this model is based on:
 import os
 import logging
 
-from osgeo import gdal
-from osgeo import ogr
+from osgeo import gdal, ogr
 import numpy
-import shutil
-import tempfile
-
-from pygeoprocessing.geoprocessing_core import \
-    DEFAULT_GTIFF_CREATION_TUPLE_OPTIONS
 import pygeoprocessing
 import pygeoprocessing.routing
 import taskgraph

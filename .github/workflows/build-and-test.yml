@@ -54,7 +54,7 @@ jobs:
                       gdal: "gdal==3.2.0"
                     - python-version: 3.9
                       numpy: "numpy=1.20"
-                      gdal: "gdal==3.3.0"
+                      gdal: "gdal==3.3.1"
         steps:
             - uses: actions/checkout@v2
               with:

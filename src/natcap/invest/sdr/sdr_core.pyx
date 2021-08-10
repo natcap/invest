@@ -399,13 +399,13 @@ def calculate_sediment_deposition(
 
     """
     LOGGER.info('Calculate sediment deposition')
-    cdef float sediment_deposition_nodata = -1
+    cdef float target_nodata = -1
     pygeoprocessing.new_raster_from_base(
         mfd_flow_direction_path, target_sediment_deposition_path,
-        gdal.GDT_Float32, [sediment_deposition_nodata])
+        gdal.GDT_Float32, [target_nodata])
     pygeoprocessing.new_raster_from_base(
         mfd_flow_direction_path, f_path,
-        gdal.GDT_Float32, [sediment_deposition_nodata])
+        gdal.GDT_Float32, [target_nodata])
 
     cdef _ManagedRaster mfd_flow_direction_raster = _ManagedRaster(
         mfd_flow_direction_path, 1, False)
@@ -489,7 +489,7 @@ def calculate_sediment_deposition(
                 # if this can be a seed pixel and hasn't already been
                 # calculated, put it on the stack
                 if seed_pixel and sediment_deposition_raster.get(
-                        seed_col, seed_row) == sediment_deposition_nodata:
+                        seed_col, seed_row) == target_nodata:
                     processing_stack.push(seed_row * n_cols + seed_col)
 
                 while processing_stack.size() > 0:
@@ -503,7 +503,8 @@ def calculate_sediment_deposition(
 
                     # (sum over j ∈ J of f_j * p(i,j) in the equation for r_i)
                     # calculate the upstream f_j contribution to this pixel,
-                    # the sum of flux flowing onto this pixel from all neighbors
+                    # the weighted sum of flux flowing onto this pixel from
+                    # all neighbors
                     f_j_weighted_sum = 0
                     for j in range(8):
                         neighbor_row = global_row + ROW_OFFSETS[j]
@@ -521,7 +522,7 @@ def calculate_sediment_deposition(
                             neighbor_flow_val >> (inflow_offsets[j]*4)) & 0xF
                         if neighbor_flow_weight > 0:
                             f_j = f_raster.get(neighbor_col, neighbor_row)
-                            if f_j == sediment_deposition_nodata:
+                            if f_j == target_nodata:
                                 continue
                             # sum up the neighbor's flow dir values in each direction
                             # flow dir values are relative to the total
@@ -600,7 +601,7 @@ def calculate_sediment_deposition(
                                         inflow_offsets[k]*4)) & 0xF > 0:
                                     if (sediment_deposition_raster.get(
                                             ds_neighbor_col, ds_neighbor_row) ==
-                                            sediment_deposition_nodata):
+                                            target_nodata):
                                         upstream_neighbors_processed = 0
                                         break
                             # if all upstream neighbors of neighbor j are processed,
@@ -683,10 +684,10 @@ def calculate_average_aspect(
     # the flow_lengths array is the functional equivalent
     # of calculating |sin(alpha)| + |cos(alpha)|.
     cdef float * flow_lengths = [
-        1, < float > SQRT2,
-        1, < float > SQRT2,
-        1, < float > SQRT2,
-        1, < float > SQRT2
+        1, <float> SQRT2,
+        1, <float> SQRT2,
+        1, <float> SQRT2,
+        1, <float> SQRT2
     ]
 
     # Loop over iterblocks to maintain cache locality
