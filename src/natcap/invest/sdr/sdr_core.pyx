@@ -370,12 +370,12 @@ def calculate_sediment_deposition(
                           (1 - SDR_i)
 
     where:
-    - p(i,j) is the proportion of flow from pixel i into pixel j
-    - J is the set of pixels that are immediate upstream neighbors of pixel i
-    - K is the set of pixels that are immediate downstream neighbors of pixel i
-    - E' is USLE * (1 - SDR), the amount of sediment loss from pixel i that
+    p(i,j) is the proportion of flow from pixel i into pixel j
+    J is the set of pixels that are immediate upstream neighbors of pixel i
+    K is the set of pixels that are immediate downstream neighbors of pixel i
+    E' is USLE * (1 - SDR), the amount of sediment loss from pixel i that
       doesn't reach a stream (`e_prime_path`)
-    - SDR is the sediment delivery ratio (`sdr_path`)
+    SDR is the sediment delivery ratio (`sdr_path`)
 
     f_i is recursively defined in terms of all of i's upstream neighbors.
     The algorithm begins from seed pixels that are local high points and so
