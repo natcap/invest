@@ -614,10 +614,12 @@ def calculate_sediment_deposition(
                                     neighbor_row * n_cols +
                                     neighbor_col)
 
-                    sdr_i = sdr_raster.get(global_col, global_row)
-                    e_prime_i = e_prime_raster.get(global_col, global_row)
                     # nodata pixels should propagate to the results
-                    if e_prime_i == e_prime_nodata or sdr_i == sdr_nodata:
+                    sdr_i = sdr_raster.get(global_col, global_row)
+                    if sdr_i == sdr_nodata:
+                        continue
+                    e_prime_i = e_prime_raster.get(global_col, global_row)
+                    if e_prime_i == e_prime_nodata:
                         continue
 
                     if downstream_sdr_weighted_sum < sdr_i:
