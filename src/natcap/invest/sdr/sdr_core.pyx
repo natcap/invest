@@ -358,26 +358,29 @@ def calculate_sediment_deposition(
         target_sediment_deposition_path):
     """Calculate sediment deposition layer.
 
-    This algorithm outputs both sediment deposition (r_i) and flux (f_i):
+    This algorithm outputs both sediment deposition (r_i) and flux (f_i)::
 
-    r_i  =      dr_i  * (sum over j ∈ J of f_j * p(i,j)) + E'_i
+        r_i  =      dr_i  * (sum over j ∈ J of f_j * p(i,j)) + E'_i
 
-    f_i  = (1 - dr_i) * (sum over j ∈ J of f_j * p(i,j)) + E'_i
+        f_i  = (1 - dr_i) * (sum over j ∈ J of f_j * p(i,j)) + E'_i
 
 
-            (sum over k ∈ K of SDR_k * p(i,k)) - SDR_i
-    dr_i = --------------------------------------------
-                          (1 - SDR_i)
+                (sum over k ∈ K of SDR_k * p(i,k)) - SDR_i
+        dr_i = --------------------------------------------
+                              (1 - SDR_i)
 
     where:
-    p(i,j) is the proportion of flow from pixel i into pixel j
-    J is the set of pixels that are immediate upstream neighbors of pixel i
-    K is the set of pixels that are immediate downstream neighbors of pixel i
-    E' is USLE * (1 - SDR), the amount of sediment loss from pixel i that
-      doesn't reach a stream (`e_prime_path`)
-    SDR is the sediment delivery ratio (`sdr_path`)
 
-    f_i is recursively defined in terms of all of i's upstream neighbors.
+    - ``p(i,j)`` is the proportion of flow from pixel ``i`` into pixel ``j``
+    - ``J`` is the set of pixels that are immediate upstream neighbors of
+      pixel ``i``
+    - ``K`` is the set of pixels that are immediate downstream neighbors of
+      pixel ``i``
+    - ``E'`` is ``USLE * (1 - SDR)``, the amount of sediment loss from pixel
+      ``i`` that doesn't reach a stream (``e_prime_path``)
+    - ``SDR`` is the sediment delivery ratio (``sdr_path``)
+
+    ``f_i`` is recursively defined in terms of ``i``'s upstream neighbors.
     The algorithm begins from seed pixels that are local high points and so
     have no upstream neighbors. It works downstream from each seed pixel,
     only adding a pixel to the stack when all its upstream neighbors are
