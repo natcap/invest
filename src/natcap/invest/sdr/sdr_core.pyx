@@ -683,11 +683,11 @@ def calculate_average_aspect(
 
     # the flow_lengths array is the functional equivalent
     # of calculating |sin(alpha)| + |cos(alpha)|.
-    cdef float * flow_lengths = [
-        1, <float> SQRT2,
-        1, <float> SQRT2,
-        1, <float> SQRT2,
-        1, <float> SQRT2
+    cdef float* flow_lengths = [
+        1, <float>SQRT2,
+        1, <float>SQRT2,
+        1, <float>SQRT2,
+        1, <float>SQRT2
     ]
 
     # Loop over iterblocks to maintain cache locality
