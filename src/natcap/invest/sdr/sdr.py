@@ -186,6 +186,7 @@ _OUTPUT_BASE_FILES = {
     'sed_retention_path': 'sed_retention.tif',
     'sed_deposition_path': 'sed_deposition.tif',
     'stream_and_drainage_path': 'stream_and_drainage.tif',
+    'stream_path': 'stream.tif',
     'usle_path': 'usle.tif',
     'watershed_results_sdr_path': 'watershed_results_sdr.shp',
 }
@@ -211,7 +212,6 @@ _INTERMEDIATE_BASE_FILES = {
     'sdr_bare_soil_path': 'sdr_bare_soil.tif',
     'sdr_path': 'sdr_factor.tif',
     'slope_path': 'slope.tif',
-    'stream_path': 'stream.tif',
     'thresholded_slope_path': 'slope_threshold.tif',
     'thresholded_w_path': 'w_threshold.tif',
     'w_accumulation_path': 'w_accumulation.tif',
