@@ -179,9 +179,17 @@ def format_unit(unit):
     Args:
         unit (pint.Unit): the unit to format
 
+    Raises:
+        TypeError if unit is not an instance of pint.Unit.
+
     Returns:
         String describing the unit.
     """
+    if not isinstance(unit, pint.Unit):
+        raise TypeError(
+            f'{unit} is of type {type(unit)}. '
+            f'It should be an instance of pint.Unit')
+
     # Optionally use a pre-set format for a particular unit
     custom_formats = {
         # For soil erodibility (t*h*ha/(ha*MJ*mm)), by convention the ha's

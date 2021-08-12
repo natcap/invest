@@ -1479,3 +1479,9 @@ class SpecUtilsTests(unittest.TestCase):
             unit = spec_utils.u.Unit(unit_name)
             actual = spec_utils.format_unit(unit)
             self.assertEqual(expected, actual)
+
+    def test_format_unit_raises_error(self):
+        """spec_utils: format_unit raises TypeError if not a pint.Unit."""
+        from natcap.invest import spec_utils
+        with self.assertRaises(TypeError):
+            spec_utils.format_unit({})
