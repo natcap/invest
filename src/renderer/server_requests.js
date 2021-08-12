@@ -104,7 +104,6 @@ export function getVectorColumnNames(payload) {
  * @param  {object} payload {
  *   filepath: string
  *   modelname: string (e.g. carbon)
- *   pyname: string (e.g. natcap.invest.carbon)
  *   args_dict: JSON string of InVEST model args keys and values
  * }
  * @returns {Promise} resolves undefined
