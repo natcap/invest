@@ -592,14 +592,7 @@ def main(user_args=None):
 
             # We're deliberately not validating here because the user
             # can just call ``invest validate <datastack>`` to validate.
-            try:
-                model_module.execute(parsed_datastack.args)
-            # Graceful exit from this program, otherwise the pyinstaller-made
-            # executeable will exit with 'Failed to execute script cli' on an
-            # uncaught exception. And that only adds unhelpful noise to stderr.
-            except Exception as error:
-                LOGGER.exception(error)
-                parser.exit(DEFAULT_EXIT_CODE)
+            model_module.execute(parsed_datastack.args)
 
     # If we're running in a GUI (either through ``invest run`` or
     # ``invest quickrun``), we'll need to load the Model's GUI class,
