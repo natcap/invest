@@ -1,18 +1,15 @@
 """A Flask app with HTTP endpoints used by the InVEST Workbench."""
-import codecs
 import collections
-from datetime import datetime
 import importlib
 import json
 import logging
-from osgeo import gdal
-import pprint
-import textwrap
 
+from osgeo import gdal
 from flask import Flask
 from flask import request
-import natcap.invest.cli
-import natcap.invest.datastack
+from natcap.invest import cli
+from natcap.invest import datastack
+from natcap.invest import spec_utils
 
 logging.basicConfig(level=logging.DEBUG)
 LOGGER = logging.getLogger(__name__)
@@ -25,7 +22,7 @@ MODULE_MODELRUN_MAP = {
     v.pyname: _UI_META(
         run_name=k,
         human_name=v.humanname)
-    for k, v in natcap.invest.cli._MODEL_UIS.items()}
+    for k, v in cli._MODEL_UIS.items()}
 
 
 def shutdown_server():
@@ -57,7 +54,7 @@ def get_invest_models():
         A JSON string
     """
     LOGGER.debug('get model list')
-    return natcap.invest.cli.build_model_list_json()
+    return cli.build_model_list_json()
 
 
 @app.route('/getspec', methods=['POST'])
@@ -70,11 +67,10 @@ def get_invest_getspec():
         A JSON string.
     """
     target_model = request.get_json()
-    target_module = natcap.invest.cli._MODEL_UIS[target_model].pyname
+    target_module = cli._MODEL_UIS[target_model].pyname
     model_module = importlib.import_module(name=target_module)
-    LOGGER.debug(model_module.__file__)
     spec = model_module.ARGS_SPEC
-    return json.dumps(spec)
+    return json.dumps(spec, default=spec_utils.format_unit)
 
 
 @app.route('/validate', methods=['POST'])
@@ -145,7 +141,7 @@ def post_datastack_file():
         A JSON string.
     """
     filepath = request.get_json()
-    stack_type, stack_info = natcap.invest.datastack.get_datastack_info(
+    stack_type, stack_info = datastack.get_datastack_info(
         filepath)
     run_name, human_name = MODULE_MODELRUN_MAP[stack_info.model_name]
     result_dict = {
@@ -178,7 +174,7 @@ def write_parameter_set_file():
     args = json.loads(payload['args'])
     relative_paths = payload['relativePaths']
 
-    natcap.invest.datastack.build_parameter_set(
+    datastack.build_parameter_set(
         args, modulename, filepath, relative=relative_paths)
     return 'parameter set saved'
 
@@ -200,7 +196,7 @@ def save_to_python():
     modelname = payload['modelname']
     args_dict = json.loads(payload['args'])
 
-    natcap.invest.cli.export_to_python(
+    cli.export_to_python(
         save_filepath, modelname, args_dict)
 
     return 'python script saved'
