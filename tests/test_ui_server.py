@@ -56,7 +56,7 @@ class EndpointFunctionTests(unittest.TestCase):
         """UI server: get_invest_spec endpoint."""
         from natcap.invest import ui_server
         test_client = ui_server.app.test_client()
-        response = test_client.post('/getspec', json='carbon')
+        response = test_client.post('/getspec', json='sdr')
         spec = json.loads(response.get_data(as_text=True))
         self.assertEqual(
             list(spec),

@@ -1,4 +1,5 @@
 import importlib
+import json
 import re
 import unittest
 
@@ -45,11 +46,25 @@ valid_nested_types = {
 
 class ValidateArgsSpecs(unittest.TestCase):
 
-    def test_model_specs(self):
+    def test_model_specs_serialize(self):
+        """ARGS_SPEC: test each ARGS_SPEC can serialize to JSON."""
+        from natcap.invest import spec_utils
 
-        for model_name, val in cli._MODEL_UIS.items():
-            # val is a collections.namedtuple, fields accessible by name
-            model = importlib.import_module(val.pyname)
+        for model_name, metadata in cli._MODEL_UIS.items():
+            model = importlib.import_module(metadata.pyname)
+            try:
+                _ = spec_utils.serialize_args_spec(model.ARGS_SPEC)
+            except TypeError:
+                self.fail(
+                    f'Failed to avoid TypeError when serializing '
+                    f'{metadata.pyname}.ARGS_SPEC')
+
+    def test_model_specs_are_valid(self):
+        """ARGS_SPEC: test each arg meets the expected pattern."""
+
+        for model_name, metadata in cli._MODEL_UIS.items():
+            # metadata is a collections.namedtuple, fields accessible by name
+            model = importlib.import_module(metadata.pyname)
 
             # validate that each arg meets the expected pattern
             # save up errors to report at the end

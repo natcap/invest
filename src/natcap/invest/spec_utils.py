@@ -1,3 +1,5 @@
+import json
+
 import pint
 
 
@@ -215,3 +217,28 @@ def format_unit(unit):
         power_fmt="{}{}",
         parentheses_fmt="({})",
         exp_call=pint.formatting._pretty_fmt_exponent)
+
+
+def serialize_args_spec(spec):
+    """Serialize an ARGS_SPEC dict to a JSON string.
+
+    Args:
+        spec (dict): An invest model's ARGS_SPEC.
+
+    Raises:
+        TypeError if any object type within the spec is not handled by
+        json.dumps or by the fallback serializer.
+
+    Returns:
+        JSON String
+    """
+
+    def fallback_serializer(obj):
+        """Serialize objects that are otherwise not JSON serializeable."""
+        if isinstance(obj, pint.Unit):
+            return format_unit(obj)
+        elif isinstance(obj, set):
+            return str(obj)
+        raise TypeError(f'fallback serializer is missing for {type(obj)}')
+
+    return json.dumps(spec, default=fallback_serializer)
