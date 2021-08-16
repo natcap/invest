@@ -48,11 +48,23 @@ class ValidateArgsSpecs(unittest.TestCase):
     """Validate the contract for patterns and types in ARGS_SPEC."""
 
     def test_model_specs_are_valid(self):
-        """ARGS_SPEC: test each arg meets the expected pattern."""
+        """ARGS_SPEC: test each spec meets the expected pattern."""
 
+        required_keys = {'model_name', 'module', 'userguide_html', 'args'}
+        optional_spatial_key = 'args_with_spatial_overlap'
         for model_name, metadata in cli._MODEL_UIS.items():
             # metadata is a collections.namedtuple, fields accessible by name
             model = importlib.import_module(metadata.pyname)
+
+            # Validate top-level keys are correct
+            with self.subTest(metadata.pyname):
+                self.assertTrue(required_keys.issubset(model.ARGS_SPEC))
+                extra_keys = set(model.ARGS_SPEC).difference(required_keys)
+                if (extra_keys):
+                    self.assertEqual(extra_keys, set([optional_spatial_key]))
+                    self.assertTrue(
+                        set(model.ARGS_SPEC[optional_spatial_key]).issubset(
+                            {'spatial_keys', 'different_projections_ok'}))
 
             # validate that each arg meets the expected pattern
             # save up errors to report at the end
