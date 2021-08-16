@@ -67,11 +67,8 @@ def get_invest_getspec():
         A JSON string.
     """
     target_model = request.get_json()
-    LOGGER.debug(target_model)
     target_module = cli._MODEL_UIS[target_model].pyname
-    LOGGER.debug(target_module)
     model_module = importlib.import_module(name=target_module)
-    LOGGER.debug(model_module.ARGS_SPEC)
     return spec_utils.serialize_args_spec(model_module.ARGS_SPEC)
 
 
