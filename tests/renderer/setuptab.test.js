@@ -69,6 +69,7 @@ describe('Arguments form input types', () => {
     ['csv'],
     ['vector'],
     ['raster'],
+    ['file'],
   ])('render a text input & browse button for a %s', async (type) => {
     const spec = { ...baseSpec };
     spec.args.arg.type = type;
@@ -81,6 +82,9 @@ describe('Arguments form input types', () => {
   test.each([
     ['freestyle_string'],
     ['number'],
+    ['ratio'],
+    ['percent'],
+    ['integer'],
   ])('render a text input for a %s', async (type) => {
     const spec = { ...baseSpec };
     spec.args.arg.type = type;

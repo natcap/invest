@@ -127,8 +127,8 @@ export default class ArgInput extends React.PureComponent {
     // These types need a text input, and some also need a file browse button
     if (
       [
-        'csv', 'vector', 'raster', 'directory',
-        'freestyle_string', 'number',
+        'csv', 'vector', 'raster', 'directory', 'file',
+        'freestyle_string', 'number', 'integer', 'percent', 'ratio'
       ].includes(argSpec.type)
     ) {
       const typeLabel = argSpec.type === 'freestyle_string'
@@ -168,8 +168,9 @@ export default class ArgInput extends React.PureComponent {
                   onDragLeave={dragLeavingHandler}
                 />
                 {
-                  ['csv', 'vector', 'raster', 'directory'].includes(argSpec.type)
-                    ? (  // add a file selector button for path input types
+                  ['csv', 'vector', 'raster', 'directory', 'file']
+                    .includes(argSpec.type)
+                    ? ( // add a file selector button for path input types
                       <InputGroup.Append>
                         <Button
                           id={argkey}
