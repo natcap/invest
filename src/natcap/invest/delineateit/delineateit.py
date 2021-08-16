@@ -89,7 +89,7 @@ ARGS_SPEC = {
                 "distance, the outflow point will be snapped to the center of "
                 "the nearest stream pixel.  Geometries that are not points "
                 "(such as Lines and Polygons) will not be snapped. MultiPoint "
-                "geoemtries will also not be snapped."),
+                "geometries will also not be snapped."),
             "name": "Pixel Distance to Snap Outlet Points"
         },
         "skip_invalid_geometry": {
