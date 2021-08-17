@@ -423,9 +423,9 @@ def calculate_sediment_deposition(
     #  3 2 1
     #  4 x 0
     #  5 6 7
-    # for a pixel's neighbor in position `i`,
-    # that neighbor's neighbor in position `inflow_offsets[i]`
-    # is the original pixel
+    # if a pixel `x` has a neighbor `n` in position `i`,
+    # then `n`'s neighbor in position `inflow_offsets[i]`
+    # is the original pixel `x`
     cdef int *inflow_offsets = [4, 5, 6, 7, 0, 1, 2, 3]
 
     cdef int n_cols, n_rows
@@ -462,8 +462,7 @@ def calculate_sediment_deposition(
             seed_row = yoff + row_index
             for col_index in range(win_xsize):
                 seed_col = xoff + col_index
-                # check if this is a good seed
-                # a good seed pixel is a local high point
+                # check if this is a good seed pixel ( a local high point)
                 if mfd_flow_direction_raster.get(seed_col, seed_row) == mfd_nodata:
                     continue
                 seed_pixel = 1
