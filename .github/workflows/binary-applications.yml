@@ -130,16 +130,23 @@ jobs:
 
             - name: Upload installer artifact
               if: always()
-              uses: actions/upload-artifact@v2-preview
+              uses: actions/upload-artifact@v2
               with:
                   name: InVEST-windows-installer
                   path: dist/*.exe
 
             - name: Upload user's guide artifact
-              uses: actions/upload-artifact@v2-preview
+              uses: actions/upload-artifact@v2
               with:
                   name: InVEST-user-guide
                   path: dist/InVEST_*_userguide.zip
+
+            - name: Upload workspace on failure
+              if: ${{ failure() }}
+              uses: actions/upload-artifact@v2
+              with:
+                  name: InVEST-failed-windows-workspace
+                  path: ${{ github.workspace }}
 
     build-mac-binaries:
         name: "Build mac binaries"
@@ -219,16 +226,28 @@ jobs:
               run: make deploy
 
             - name: Upload binaries artifact
-              uses: actions/upload-artifact@v2-preview
+              uses: actions/upload-artifact@v2
               with:
                   name: InVEST-mac-binaries
                   path: dist/InVEST-*-mac.zip
 
             - name: Upload DMG artifact
-              uses: actions/upload-artifact@v2-preview
+              uses: actions/upload-artifact@v2
               with:
                   name: InVEST-dmg
                   path: dist/InVEST*.dmg
+
+            - name: Tar the workspace to preserve permissions
+              if: ${{ failure() }}
+              shell: bash -l {0}
+              run: tar -cvf InVEST-failed-mac-workspace.tar ${{ github.workspace }}
+
+            - name: Upload workspace on failure
+              if: ${{ failure() }}
+              uses: actions/upload-artifact@v2
+              with:
+                  name: InVEST-failed-mac-workspace
+                  path: InVEST-failed-mac-workspace.tar
 
     build-sampledata:
         name: Build sampledata archives
@@ -264,7 +283,7 @@ jobs:
               run: make deploy
 
             - name: Upload sample data artifact
-              uses: actions/upload-artifact@v2-preview
+              uses: actions/upload-artifact@v2
               with:
                   name: InVEST-sample-data
                   path: dist/*.zip
