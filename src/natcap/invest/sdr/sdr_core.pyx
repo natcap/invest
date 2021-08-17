@@ -517,7 +517,8 @@ def calculate_sediment_deposition(
                         if neighbor_col < 0 or neighbor_col >= n_cols:
                             continue
 
-                        # see if there's an inflow from the neighbor to the pixel
+                        # see if there's an inflow from the neighbor to the
+                        # pixel
                         neighbor_flow_val = (
                             <int>mfd_flow_direction_raster.get(
                                 neighbor_col, neighbor_row))
@@ -527,7 +528,8 @@ def calculate_sediment_deposition(
                             f_j = f_raster.get(neighbor_col, neighbor_row)
                             if f_j == target_nodata:
                                 continue
-                            # sum up the neighbor's flow dir values in each direction
+                            # sum up the neighbor's flow dir values in each
+                            # direction.
                             # flow dir values are relative to the total
                             neighbor_flow_sum = 0
                             for k in range(8):
@@ -536,11 +538,13 @@ def calculate_sediment_deposition(
                             # get the proportion of the neighbor's flow that
                             # flows into the original pixel
                             p_val = neighbor_flow_weight / neighbor_flow_sum
-                            # add the neighbor's flux value, weighted by the flow proportion
+                            # add the neighbor's flux value, weighted by the 
+                            # flow proportion
                             f_j_weighted_sum += p_val * f_j
 
-                    # calculate sum of SDR values of immediate downstream neighbors,
-                    # weighted by proportion of flow into each neighbor
+                    # calculate sum of SDR values of immediate downstream 
+                    # neighbors, weighted by proportion of flow into each
+                    # neighbor
                     # (sum over k ∈ K of SDR_k * p(i,k) in the equation above)
                     downstream_sdr_weighted_sum = 0
                     flow_val = <int>mfd_flow_direction_raster.get(
@@ -582,11 +586,12 @@ def calculate_sediment_deposition(
                             upstream_neighbors_processed = 1
                             # iterate over each neighbor-of-neighbor
                             for k in range(8):
-                                # no need to push the one we're currently calculating
-                                # back onto the stack
+                                # no need to push the one we're currently
+                                # calculating back onto the stack
                                 if inflow_offsets[k] == j:
                                     continue
-                                # skip if neighbor-of-neighbor is outside raster bounds
+                                # skip if neighbor-of-neighbor is outside
+                                # raster bounds
                                 ds_neighbor_row = (
                                     neighbor_row + ROW_OFFSETS[k])
                                 if ds_neighbor_row < 0 or ds_neighbor_row >= n_rows:
@@ -595,8 +600,9 @@ def calculate_sediment_deposition(
                                     neighbor_col + COL_OFFSETS[k])
                                 if ds_neighbor_col < 0 or ds_neighbor_col >= n_cols:
                                     continue
-                                # if any upstream neighbor of j hasn't been calculated,
-                                # we can't push j onto the stack yet
+                                # if any upstream neighbor of j hasn't been
+                                # calculated, we can't push j onto the stack
+                                # yet
                                 ds_neighbor_flow_val = (
                                     <int>mfd_flow_direction_raster.get(
                                         ds_neighbor_col, ds_neighbor_row))
@@ -607,8 +613,8 @@ def calculate_sediment_deposition(
                                             target_nodata):
                                         upstream_neighbors_processed = 0
                                         break
-                            # if all upstream neighbors of neighbor j are processed,
-                            # we can push j onto the stack.
+                            # if all upstream neighbors of neighbor j are
+                            # processed, we can push j onto the stack.
                             if upstream_neighbors_processed:
                                 processing_stack.push(
                                     neighbor_row * n_cols +
