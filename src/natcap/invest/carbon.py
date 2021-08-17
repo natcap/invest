@@ -14,7 +14,7 @@ import taskgraph
 from . import validation
 from . import utils
 from . import spec_utils
-from .spec_utils import u, REQUIRED_IF_SELECTED
+from .spec_utils import u, REQUIRED_IF_SELECTED, RASTER_VALUES
 
 LOGGER = logging.getLogger(__name__)
 
@@ -34,9 +34,8 @@ ARGS_SPEC = {
             **spec_utils.LULC,
             "projected": True,
             "about": (
-                "A map of land cover for the current scenario. All values in "
-                "this raster must have corresponding entries in the "
-                "Carbon Pools table."),
+                "A map of land cover for the current scenario. "
+                f"{RASTER_VALUES % 'Carbon Pools'}"),
             "name": "current land use/land cover"
         },
         "calc_sequestration": {
@@ -45,7 +44,7 @@ ARGS_SPEC = {
             "about": (
                 "Check to enable sequestration analysis. This requires inputs "
                 "of land use/land cover maps for both current and future "
-                "scenarios. ") + spec_utils.REQUIRED_IF_SELECTED % (
+                "scenarios. ") + REQUIRED_IF_SELECTED % (
                 'REDD scenario analysis or run valuation model'),
             "name": "calculate sequestration"
         },
@@ -54,12 +53,10 @@ ARGS_SPEC = {
             "projected": True,
             "required": "calc_sequestration",
             "about": (
-                "A map of land cover for the future scenario. All values in "
-                "this raster must have corresponding entries in the "
-                "carbon pools table. "
-                "If run valuation model is selected, this "
-                "should be the reference, or baseline, future scenario "
-                "against which to compare the REDD policy scenario. "
+                "A map of land cover for the future scenario. "
+                f"{RASTER_VALUES % 'Carbon Pools'} If run valuation model is "
+                "selected, this should be the reference, or baseline, future "
+                "scenario against which to compare the REDD policy scenario. "
                 f"{REQUIRED_IF_SELECTED % 'calculate sequestration'}"),
             "name": "future land use/land cover"
         },
@@ -78,9 +75,8 @@ ARGS_SPEC = {
             "projected": True,
             "required": "do_redd",
             "about": (
-                "A map of land cover for the REDD policy scenario. All values "
-                "in this raster must have corresponding entries in the "
-                "carbon pools. "
+                "A map of land cover for the REDD policy scenario. "
+                f"{RASTER_VALUES % 'Carbon Pools'} "
                 f"{REQUIRED_IF_SELECTED % 'REDD scenario analysis'}"),
             "name": "REDD land use/land cover"
         },
@@ -163,7 +159,7 @@ ARGS_SPEC = {
                 "which reflects society's preference for immediate benefits "
                 "over future benefits. "
                 f"{REQUIRED_IF_SELECTED % 'run valuation model'}"),
-            "name": "Annual Market Discount Rate"
+            "name": "annual market discount rate"
         },
         "rate_change": {
             "type": "ratio",
@@ -171,7 +167,7 @@ ARGS_SPEC = {
             "about": (
                 "The annual increase of the price of carbon. "
                 f"{REQUIRED_IF_SELECTED % 'run valuation model'}"),
-            "name": "Annual Price Change"
+            "name": "annual price change"
         }
     }
 }

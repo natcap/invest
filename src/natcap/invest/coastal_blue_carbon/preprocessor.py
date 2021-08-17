@@ -10,7 +10,7 @@ import taskgraph
 
 from .. import utils
 from .. import spec_utils
-from ..spec_utils import u
+from ..spec_utils import u, RASTER_VALUES
 from .. import validation
 from . import coastal_blue_carbon
 
@@ -25,7 +25,7 @@ ARGS_SPEC = {
         "results_suffix": spec_utils.SUFFIX,
         "n_workers": spec_utils.N_WORKERS,
         "lulc_lookup_table_path": {
-            "name": "LULC Lookup Table",
+            "name": "LULC lookup table",
             "type": "csv",
             "about": (
                 "A table mapping LULC codes from the snapshot rasters to the "
@@ -59,15 +59,14 @@ ARGS_SPEC = {
                     "type": "raster",
                     "bands": {1: {"type": "integer"}},
                     "about": (
-                        "Map of land use/land cover in the snapshot year. All "
-                        "values in this raster must have corresponding "
-                        "entries in the LULC Lookup table.")
+                        "Map of land use/land cover in the snapshot year. "
+                        f"{RASTER_VALUES % 'LULC Lookup'}")
                 }
             },
             "about": (
                 "A table mapping snapshot years to corresponding LULC maps "
                 "for each year."),
-            "name": "LULC Snapshots Table",
+            "name": "LULC snapshots table",
         },
     }
 }

@@ -70,10 +70,8 @@ ARGS_SPEC = {
             **spec_utils.THRESHOLD_FLOW_ACCUMULATION,
             "required": "snap_points",
             "about": (
-                "The number of upstream cells that must flow into a cell "
-                "before it's considered part of a stream such that retention "
-                "stops and the remaining export is exported to the stream. "
-                "Used to define streams from the DEM."),
+                spec_utils.THRESHOLD_FLOW_ACCUMULATION["about"] +
+                f" {REQUIRED_IF_SELECTED % 'Snap Points'}"),
         },
         "snap_distance": {
             "expression": "value > 0",
@@ -90,9 +88,9 @@ ARGS_SPEC = {
             "type": "boolean",
             "required": False,
             "about": (
-                "If selected, skip delineation for any invalid geometries "
-                "found in the Outlet Features. Otherwise, an invalid geometry "
-                "will cause the model to crash."
+                "Skip delineation for any invalid geometries found in the "
+                "Outlet Features. Otherwise, an invalid geometry will cause "
+                "the model to crash."
             ),
             "name": "skip invalid geometries"
         }

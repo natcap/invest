@@ -48,6 +48,8 @@ class ValidateArgsSpecs(unittest.TestCase):
     def test_model_specs(self):
 
         for model_name, val in cli._MODEL_UIS.items():
+            print('\n')
+            print(model_name)
             # val is a collections.namedtuple, fields accessible by name
             model = importlib.import_module(val.pyname)
 
@@ -266,6 +268,8 @@ class ValidateArgsSpecs(unittest.TestCase):
             # type-specific ones have been removed by this point
             if 'name' in attrs:
                 self.assertTrue(isinstance(arg['name'], str))
+                if any(l.isupper() for l in arg['name']):
+                    print(arg['name'])
                 attrs.remove('name')
             if 'about' in attrs:
                 self.assertTrue(isinstance(arg['about'], str))

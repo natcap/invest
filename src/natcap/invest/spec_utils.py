@@ -49,7 +49,7 @@ SUFFIX = {
 }
 
 N_WORKERS = {
-    "name": "Taskgraph n_workers parameter",
+    "name": "taskgraph n_workers parameter",
     "about": (
         "The n_workers parameter to provide to taskgraph. "
         "-1 will cause all jobs to run synchronously. "
@@ -138,6 +138,9 @@ THRESHOLD_FLOW_ACCUMULATION = {
     "name": "threshold flow accumulation"
 }
 
+REQUIRED_IF_SELECTED = 'Required if %s is selected.'
+REQUIRED_IF_PROVIDED = 'Required if %s is provided.'
+RASTER_VALUES = 'All values in this raster must have corresponding entries in the %s table.'
 
 # geometry types ##############################################################
 # the full list of ogr geometry types is in an enum in
