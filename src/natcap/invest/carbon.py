@@ -15,11 +15,12 @@ from . import validation
 from . import utils
 from . import spec_utils
 from .spec_utils import u
+from .cli import _MODEL_PYNAMES
 
 LOGGER = logging.getLogger(__name__)
 
 ARGS_SPEC = {
-    "model_name": "InVEST Carbon Model",
+    "model_name": _MODEL_PYNAMES[__name__],
     "module": __name__,
     "userguide_html": "carbonstorage.html",
     "args_with_spatial_overlap": {
