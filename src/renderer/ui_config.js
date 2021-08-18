@@ -40,7 +40,7 @@ function isNotSufficient(argkey, state) {
 
 
 const uiSpec = {
-    'InVEST Carbon Model': {
+    'Carbon Storage and Sequestration': {
         order: [
             ["workspace_dir", "results_suffix"],
             ["lulc_cur_path", "carbon_pools_path"],

@@ -2,15 +2,18 @@ import fs from 'fs';
 
 import readline from 'readline';
 import fetch from 'node-fetch';
+import React from 'react';
+import { render } from '@testing-library/react';
 
 import * as server_requests from '../../src/renderer/server_requests';
+import { argsDictFromObject } from '../../src/renderer/utils';
+import SetupTab from '../../src/renderer/components/SetupTab';
 import {
   createPythonFlaskProcess,
   shutdownPythonProcess,
   getFlaskIsReady,
 } from '../../src/main/createPythonFlaskProcess';
 import findInvestBinaries from '../../src/main/findInvestBinaries';
-import { argsDictFromObject } from '../../src/renderer/utils';
 
 // This could be optionally configured already in '.env'
 if (!process.env.PORT) {
@@ -143,6 +146,8 @@ test('validate the UI spec', async () => {
     // make sure that we actually got an args spec
     expect(spec.model_name).toBeDefined();
     let hasOrderProperty = false;
+    // expect the model's spec has an entry in the UI spec.
+    expect(Object.keys(uiSpec)).toContain(spec.model_name);
     // expect each arg in the UI spec to exist in the args spec
     for (const property in uiSpec[spec.model_name]) {
       if (property === 'order') {
@@ -153,7 +158,7 @@ test('validate the UI spec', async () => {
         // expect there to be no duplicated args in the order
         expect(orderArray).toHaveLength(orderSet.size);
         orderArray.forEach((arg) => {
-            expect(spec.args[arg]).toBeDefined();
+          expect(spec.args[arg]).toBeDefined();
         });
       } else {
         // for other properties, each key is an arg
