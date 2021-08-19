@@ -142,18 +142,19 @@ test('validate the UI spec', async () => {
     (model) => server_requests.getSpec(model)
   ));
 
-  argsSpecs.forEach((spec) => {
+  argsSpecs.forEach((spec, idx) => {
+    const modelName = modelInternalNames[idx];
     // make sure that we actually got an args spec
     expect(spec.model_name).toBeDefined();
     let hasOrderProperty = false;
     // expect the model's spec has an entry in the UI spec.
-    expect(Object.keys(uiSpec)).toContain(spec.model_name);
+    expect(Object.keys(uiSpec)).toContain(modelName);
     // expect each arg in the UI spec to exist in the args spec
-    for (const property in uiSpec[spec.model_name]) {
+    for (const property in uiSpec[modelName]) {
       if (property === 'order') {
         hasOrderProperty = true;
         // 'order' is a 2D array of arg names
-        const orderArray = uiSpec[spec.model_name].order.flat();
+        const orderArray = uiSpec[modelName].order.flat();
         const orderSet = new Set(orderArray);
         // expect there to be no duplicated args in the order
         expect(orderArray).toHaveLength(orderSet.size);
@@ -162,11 +163,43 @@ test('validate the UI spec', async () => {
         });
       } else {
         // for other properties, each key is an arg
-        Object.keys(uiSpec[spec.model_name][property]).forEach((arg) => {
+        Object.keys(uiSpec[modelName][property]).forEach((arg) => {
           expect(spec.args[arg]).toBeDefined();
         });
       }
     }
     expect(hasOrderProperty).toBe(true);
+  });
+});
+
+describe.skip('Build each model UI from ARGS_SPEC', () => {
+  const uiSpec = require('../../src/renderer/ui_config');
+  // let modelInternalNames;
+
+  // beforeAll(async () => {
+  //   const models = await server_requests.getInvestModelNames();
+  //   modelInternalNames = Object.keys(models)
+  //     .map((key) => models[key].internal_name);
+  //   console.log(modelInternalNames)
+  // });
+
+  test.each(MODEL_INTERNAL_NAMES)('Build a UI for %s', async (model) => {
+    const spec = await server_requests.getSpec(model);
+
+    const { findByLabelText } = render(
+      <SetupTab
+        pyModuleName={spec.module}
+        modelName={spec.modelName}
+        argsSpec={spec.args}
+        uiSpec={uiSpec}
+        argsInitValues={undefined}
+        investExecute={() => {}}
+        nWorkers="-1"
+        sidebarSetupElementId="foo"
+        sidebarFooterElementId="foo"
+        isRunning={false}
+      />
+    );
+    expect(await findByLabelText('Workspace')).toBeInTheDocument();
   });
 });

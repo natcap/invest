@@ -478,6 +478,7 @@ describe('InVEST subprocess testing', () => {
     model_name: 'EcoModel',
     module: 'natcap.invest.dot',
   };
+  const modelName = 'carbon';
 
   const dummyTextToLog = JSON.stringify(spec.args);
   let fakeWorkspace;
@@ -495,8 +496,12 @@ describe('InVEST subprocess testing', () => {
     getSpec.mockResolvedValue(spec);
     fetchValidation.mockResolvedValue([]);
     getInvestModelNames.mockResolvedValue(
-      { Carbon: { internal_name: 'carbon' } }
+      { Carbon: { internal_name: modelName } }
     );
+    const mockUISpec = {
+      [modelName]: { order: [Object.keys(spec.args)] }
+    };
+    jest.mock('../../src/renderer/ui_config', () => mockUISpec);
 
     // Need to reset these streams since mockInvestProc is shared by tests
     // and the streams apparently receive the EOF signal in each test.
@@ -533,10 +538,6 @@ describe('InVEST subprocess testing', () => {
       });
     }
 
-    // mock out the whole UI config module
-    // brackets around spec.model_name turns it into a valid literal key
-    const mockUISpec = { [spec.model_name]: { order: [Object.keys(spec.args)] } };
-    jest.mock('../../src/renderer/ui_config', () => mockUISpec);
   });
 
   afterAll(() => {
