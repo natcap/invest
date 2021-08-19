@@ -237,6 +237,9 @@ def serialize_args_spec(spec):
         """Serialize objects that are otherwise not JSON serializeable."""
         if isinstance(obj, pint.Unit):
             return format_unit(obj)
+        # Sets are present in 'geometries' attributes of some args
+        # We don't need to worry about deserializing back to a set/array
+        # so casting to string is okay.
         elif isinstance(obj, set):
             return str(obj)
         raise TypeError(f'fallback serializer is missing for {type(obj)}')

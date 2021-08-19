@@ -112,11 +112,11 @@ class ValidateArgsSpecs(unittest.TestCase):
                     # option_string type should have an options property that
                     # describes the valid options
                     self.assertTrue('options' in arg)
-                    # May be a set or dict because some option sets are self
+                    # May be a list or dict because some option sets are self
                     # explanatory and others need a description
                     self.assertTrue(isinstance(arg['options'], dict) or
-                                    isinstance(arg['options'], set))
-                    if isinstance(arg['options'], set):
+                                    isinstance(arg['options'], list))
+                    if isinstance(arg['options'], list):
                         for item in arg['options']:
                             self.assertTrue(isinstance(item, str))
                     else:
