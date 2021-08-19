@@ -23,11 +23,19 @@ u.define('survey_foot = 1200 / 3937 * meter = sft = us_survey_foot')
 # May be converted to weight or volume, but conversion factors are specific
 # to the substance. I couldn't find a definition of its dimensionality.
 u.define('international_unit = [biologic_amount] = iu = IU')
+# use 'h' not 'hr' as the symbol for hour, as per SI guidelines
+# overwrite the default use of the symbol 'h' for henries
+u.define('henry = weber / ampere')
+u.define('hour = 60 * minute = h = hr')
+# overwrite the year definitionto use 'yr' rather than 'a' as default symbol
+# the symbol 'yr' is english-specific and the international symbol 'a' may
+# not be well-known, so we will need to translate this
+u.define('year = 365.25 * day = yr = a = julian_year')
 # Use u.none for unitless measurements
 u.define('none = []')
 
-# Specs for common arg types ##################################################
 
+# Specs for common arg types ##################################################
 WORKSPACE = {
     "name": "workspace",
     "about": (
@@ -157,3 +165,46 @@ LINES = LINESTRING | MULTILINESTRING
 POLYGONS = POLYGON | MULTIPOLYGON
 POINTS = POINT | MULTIPOINT
 ALL_GEOMS = LINES | POLYGONS | POINTS
+
+
+def format_unit(unit):
+    """Represent a pint Unit as user-friendly unicode text.
+
+    This attempts to follow the style guidelines from the NIST
+    Guide to the SI (https://www.nist.gov/pml/special-publication-811):
+    - Use standard symbols rather than spelling out
+    - Use '/' to represent division
+    - Use the center dot ' · ' to represent multiplication
+    - Combine denominators into one, surrounded by parentheses
+
+    Args:
+        unit (pint.Unit): the unit to format
+
+    Returns:
+        String describing the unit.
+    """
+    # Optionally use a pre-set format for a particular unit
+    custom_formats = {
+        # For soil erodibility (t*h*ha/(ha*MJ*mm)), by convention the ha's
+        # are left on top and bottom and don't cancel out
+        # pint always cancels units where it can, so add them back in here
+        # this isn't a perfect solution
+        # see https://github.com/hgrecco/pint/issues/1364
+        u.t * u.hr / (u.MJ * u.mm): 't · h · ha / (ha · MJ · mm)'
+    }
+    if unit in custom_formats:
+        return custom_formats[unit]
+
+    # look up the abbreviated symbol for each unit
+    # `formatter` expects an iterable of (unit, exponent) pairs, which lives in
+    # the pint.Unit's `_units` attribute.
+    unit_items = [(u.get_symbol(key), val) for key, val in unit._units.items()]
+    return pint.formatting.formatter(
+        unit_items,
+        as_ratio=True,
+        single_denominator=True,
+        product_fmt=" · ",
+        division_fmt='/',
+        power_fmt="{}{}",
+        parentheses_fmt="({})",
+        exp_call=pint.formatting._pretty_fmt_exponent)
