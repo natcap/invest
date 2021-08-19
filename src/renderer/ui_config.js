@@ -36,7 +36,7 @@ function isNotSufficient(argkey, state) {
 }
 
 const uiSpec = {
-  'Carbon Storage and Sequestration': {
+  carbon: {
     order: [
       ["workspace_dir", "results_suffix"],
       ["lulc_cur_path", "carbon_pools_path"],
@@ -58,7 +58,7 @@ const uiSpec = {
       rate_change: isSufficient.bind(null, 'do_valuation'),
     }
   },
-  'Coastal Blue Carbon': {
+  coastal_blue_carbon: {
     order: [
       ["workspace_dir", "results_suffix"],
       ["landcover_snapshot_csv", "biophysical_table_path", "landcover_transitions_table", "analysis_year"],
@@ -74,13 +74,13 @@ const uiSpec = {
       discount_rate: isSufficient.bind(null, 'do_economic_analysis'),
     }
   },
-  'Coastal Blue Carbon Preprocessor': {
+  coastal_blue_carbon_preprocessor: {
     order: [
       ["workspace_dir", "results_suffix"],
       ["lulc_lookup_table_path", "landcover_snapshot_csv"]
     ]
   },
-  'Coastal Vulnerability': {
+  coastal_vulnerability: {
     order: [
       ["workspace_dir", "results_suffix"],
       ["aoi_vector_path", "model_resolution"],
@@ -100,19 +100,19 @@ const uiSpec = {
       population_radius: isSufficient.bind(null, 'population_raster_path'),
     }
   },
-  'Crop Production Percentile Model': {
+  crop_production_percentile: {
     order: [
       ["workspace_dir", "results_suffix"],
       ["model_data_path", "landcover_raster_path", "landcover_to_crop_table_path", "aggregate_polygon_path"]
     ]
   },
-  'Crop Production Regression Model': {
+  crop_production_regression: {
     order: [
       ["workspace_dir", "results_suffix"],
       ["model_data_path", "landcover_raster_path", "landcover_to_crop_table_path", "fertilization_rate_table_path", "aggregate_polygon_path"]
     ]
   },
-  'DelineateIt: Watershed Delineation': {
+  delineateit: {
     order: [
       ["workspace_dir", "results_suffix"],
       ["dem_path", "detect_pour_points", "outlet_vector_path", "skip_invalid_geometry"],
@@ -125,7 +125,7 @@ const uiSpec = {
       snap_distance: isSufficient.bind(null, 'snap_points')
     }
   },
-  'Finfish Aquaculture': {
+  finfish_aquaculture: {
     order: [
       ["workspace_dir", "results_suffix"],
       ["ff_farm_loc", "farm_ID"],
@@ -147,7 +147,7 @@ const uiSpec = {
       discount: isSufficient.bind(null, 'do_valuation')
     }
   },
-  'Fisheries': {
+  fisheries: {
     order: [
       ["workspace_dir", "results_suffix"],
       ["aoi_vector_path", "total_timesteps"],
@@ -174,14 +174,14 @@ const uiSpec = {
       unit_price: isSufficient.bind(null, 'val_cont'),
     }
   },
-  'Fisheries Habitat Scenario Tool': {
+  fisheries_hst: {
     order: [
       ["workspace_dir", "results_suffix"],
       ["population_csv_path", "sexsp"],
       ["habitat_dep_csv_path", "habitat_chg_csv_path", "gamma"]
     ]
   },
-  'Forest Carbon Edge Effect Model': {
+  forest_carbon_edge_effect: {
     order: [
       ["workspace_dir", "results_suffix"],
       ["lulc_raster_path", "biophysical_table_path", "pools_to_calculate"],
@@ -194,7 +194,7 @@ const uiSpec = {
       biomass_to_carbon_conversion_factor: isSufficient.bind(null, 'compute_forest_edge_effects')
     }
   },
-  'GLOBIO': {
+  globio: {
     order: [
       ["workspace_dir", "results_suffix"],
       ["predefined_globio", "globio_lulc_path"],
@@ -211,14 +211,14 @@ const uiSpec = {
       pasture_threshold: isNotSufficient.bind(null, 'predefined_globio')
     }
   },
-  'Habitat Quality': {
+  habitat_quality: {
     order: [
       ["workspace_dir", "results_suffix"],
       ["lulc_cur_path", "lulc_fut_path", "lulc_bas_path"],
       ["threats_table_path", "access_vector_path", "sensitivity_table_path", "half_saturation_constant"]
     ]
   },
-  'Habitat Risk Assessment': {
+  habitat_risk_assessment: {
     order: [
       ["workspace_dir", "results_suffix"],
       ["info_table_path", "criteria_table_path"],
@@ -228,7 +228,7 @@ const uiSpec = {
       ["visualize_outputs"]
     ]
   },
-  'Hydropower Water Yield': {
+  hydropower_water_yield: {
     order: [
       ["workspace_dir", "results_suffix"],
       ["precipitation_path", "eto_path", "depth_to_root_rest_layer_path", "pawc_path"],
@@ -237,7 +237,7 @@ const uiSpec = {
       ["demand_table_path", "valuation_table_path"]
     ]
   },
-  'Nutrient Delivery Ratio Model (NDR)': {
+  ndr: {
     order: [
       ["workspace_dir", "results_suffix"],
       ["dem_path", "lulc_path", "runoff_proxy_path", "watersheds_path", "biophysical_table_path"],
@@ -252,14 +252,14 @@ const uiSpec = {
       subsurface_eff_n: isSufficient.bind(null, 'calc_n')
     }
   },
-  'Crop Pollination': {
+  pollination: {
     order: [
       ["workspace_dir", "results_suffix"],
       ["landcover_raster_path", "landcover_biophysical_table_path"],
       ["guild_table_path", "farm_vector_path"]
     ],
   },
-  'Recreation Model': {
+  recreation: {
     order: [
       ["workspace_dir", "results_suffix"],
       ["aoi_path", "start_year", "end_year"],
@@ -273,7 +273,7 @@ const uiSpec = {
       cell_size: isSufficient.bind(null, 'grid_aoi')
     }
   },
-  'RouteDEM': {
+  routedem: {
     order: [
       ["workspace_dir", "results_suffix"],
       ["dem_path", "dem_band_index"],
@@ -290,7 +290,7 @@ const uiSpec = {
       calculate_downstream_distance: isSufficient.bind(null, 'calculate_stream_threshold')
     }
   },
-  'Scenario Generator: Proximity Based': {
+  scenario_generator_proximity: {
     order: [
       ["workspace_dir", "results_suffix"],
       ["base_lulc_path", "aoi_path"],
@@ -298,7 +298,7 @@ const uiSpec = {
       ["convert_farthest_from_edge", "convert_nearest_to_edge", "n_fragmentation_steps"]
     ]
   },
-  'Unobstructed Views: Scenic Quality Provision': {
+  scenic_quality: {
     order: [
       ["workspace_dir", "results_suffix"],
       ["aoi_path", "structure_path", "dem_path", "refraction"],
@@ -311,7 +311,7 @@ const uiSpec = {
       max_valuation_radius: isSufficient.bind(null, 'do_valuation')
     }
   },
-  'Sediment Delivery Ratio Model (SDR)': {
+  sdr: {
     order: [
       ["workspace_dir", "results_suffix"],
       ["dem_path", "erosivity_path", "erodibility_path"],
@@ -320,7 +320,7 @@ const uiSpec = {
       ["threshold_flow_accumulation", "k_param", "sdr_max", "ic_0_param"]
     ]
   },
-  'Seasonal Water Yield': {
+  seasonal_water_yield: {
     order: [
       ["workspace_dir", "results_suffix"],
       ["lulc_raster_path", "biophysical_table_path"],
@@ -342,7 +342,7 @@ const uiSpec = {
       alpha_m: isNotSufficient.bind(null, 'monthly_alpha')
     }
   },
-  'Urban Cooling Model': {
+  urban_cooling_model: {
     order: [
       ["workspace_dir", "results_suffix"],
       ["lulc_raster_path", "ref_eto_raster_path", "aoi_vector_path", "biophysical_table_path"],
@@ -357,7 +357,7 @@ const uiSpec = {
       avg_rel_humidity: isSufficient.bind(null, 'do_productivity_valuation')
     }
   },
-  'Urban Flood Risk Mitigation': {
+  urban_flood_risk_mitigation: {
     order: [
       ["workspace_dir", "results_suffix"],
       ["aoi_watersheds_path", "rainfall_depth"],
@@ -365,7 +365,7 @@ const uiSpec = {
       ["built_infrastructure_vector_path", "infrastructure_damage_loss_table_path"]
     ]
   },
-  'Wave Energy': {
+  wave_energy: {
     order: [
       ["workspace_dir", "results_suffix"],
       ["wave_base_data_path", "analysis_area_path", "aoi_path", "dem_path"],
@@ -378,7 +378,7 @@ const uiSpec = {
       number_of_machines: isSufficient.bind(null, 'valuation_container')
     }
   },
-  'Wind Energy': {
+  wind_energy: {
     order: [
       ["workspace_dir", "results_suffix"],
       ["wind_data_path", "aoi_vector_path", "bathymetry_path", "land_polygon_vector_path", "global_wind_parameters_path"],
