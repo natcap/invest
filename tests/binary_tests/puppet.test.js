@@ -153,13 +153,13 @@ test('Run a real invest model', async () => {
   await page.screenshot({ path: `${SCREENSHOT_PREFIX}3-model-tab.png` });
 
   const typeDelay = 10;
-  const workspace = await findByLabelText(doc, /Workspace/);
+  const workspace = await findByLabelText(doc, /Workspace/i);
   await workspace.type(TMP_DIR, { delay: typeDelay });
-  const aoi = await findByLabelText(doc, /area of interest/);
+  const aoi = await findByLabelText(doc, /area of interest/i);
   await aoi.type(TMP_AOI_PATH, { delay: typeDelay });
-  const startYear = await findByLabelText(doc, /start year/);
+  const startYear = await findByLabelText(doc, /start year/i);
   await startYear.type('2008', { delay: typeDelay });
-  const endYear = await findByLabelText(doc, /end year/);
+  const endYear = await findByLabelText(doc, /end year/i);
   await endYear.type('2012', { delay: typeDelay });
   await page.screenshot({ path: `${SCREENSHOT_PREFIX}4-complete-setup-form.png` });
 
