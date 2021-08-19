@@ -168,16 +168,15 @@ _MODEL_UIS = {
         aliases=('ucm',)),
 }
 
-# Build up indices keyed by aliases & pynames, for convenience.
+# Build up an index mapping aliases to modelname.
+# ``modelname`` is the key to the _MODEL_UIS dict, above.
 _MODEL_ALIASES = {}
-_MODEL_PYNAMES = {}  # used in ARGS_SPECs to get the humanname
 for _modelname, _meta in _MODEL_UIS.items():
     for _alias in _meta.aliases:
         assert _alias not in _MODEL_ALIASES, (
             'Alias %s already defined for model %s') % (
                 _alias, _MODEL_ALIASES[_alias])
         _MODEL_ALIASES[_alias] = _modelname
-    _MODEL_PYNAMES[_meta.pyname] = _meta.humanname
 
 
 def build_model_list_table():
