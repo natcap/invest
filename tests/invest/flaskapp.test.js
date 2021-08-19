@@ -4,6 +4,7 @@ import readline from 'readline';
 import fetch from 'node-fetch';
 import React from 'react';
 import { render } from '@testing-library/react';
+import '@testing-library/jest-dom';
 
 import * as server_requests from '../../src/renderer/server_requests';
 import { argsDictFromObject } from '../../src/renderer/utils';
@@ -172,8 +173,8 @@ test('validate the UI spec', async () => {
   });
 });
 
-describe.skip('Build each model UI from ARGS_SPEC', () => {
-  const uiSpec = require('../../src/renderer/ui_config');
+describe('Build each model UI from ARGS_SPEC', () => {
+  const uiConfig = require('../../src/renderer/ui_config');
   // let modelInternalNames;
 
   // beforeAll(async () => {
@@ -183,14 +184,15 @@ describe.skip('Build each model UI from ARGS_SPEC', () => {
   //   console.log(modelInternalNames)
   // });
 
-  test.each(MODEL_INTERNAL_NAMES)('Build a UI for %s', async (model) => {
-    const spec = await server_requests.getSpec(model);
+  test.each(Object.keys(uiConfig))('Build a UI for %s', async (model) => {
+    const argsSpec = await server_requests.getSpec(model);
+    const uiSpec = uiConfig[model];
 
     const { findByLabelText } = render(
       <SetupTab
-        pyModuleName={spec.module}
-        modelName={spec.modelName}
-        argsSpec={spec.args}
+        pyModuleName={argsSpec.module}
+        modelName={argsSpec.modelName}
+        argsSpec={argsSpec.args}
         uiSpec={uiSpec}
         argsInitValues={undefined}
         investExecute={() => {}}
