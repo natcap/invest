@@ -105,8 +105,9 @@ describe('Arguments form input types', () => {
   test('render a select input for an option_string', async () => {
     const spec = { ...baseSpec };
     spec.args.arg.type = 'option_string';
-    spec.args.arg.validation_options = {
-      options: ['a', 'b']
+    spec.args.arg.options = {
+      a: 'about a',
+      b: 'about b',
     };
     const { findByLabelText } = renderSetupFromSpec(spec, uiSpec);
     const input = await findByLabelText(RegExp(`${spec.args.arg.name}`));

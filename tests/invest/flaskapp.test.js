@@ -184,14 +184,14 @@ describe('Build each model UI from ARGS_SPEC', () => {
   //   console.log(modelInternalNames)
   // });
 
-  test.each(Object.keys(uiConfig))('Build a UI for %s', async (model) => {
+  test.each(Object.keys(uiConfig))('%s', async (model) => {
     const argsSpec = await server_requests.getSpec(model);
     const uiSpec = uiConfig[model];
 
     const { findByLabelText } = render(
       <SetupTab
         pyModuleName={argsSpec.module}
-        modelName={argsSpec.modelName}
+        modelName={argsSpec.model_name}
         argsSpec={argsSpec.args}
         uiSpec={uiSpec}
         argsInitValues={undefined}

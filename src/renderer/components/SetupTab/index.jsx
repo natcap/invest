@@ -51,8 +51,8 @@ function initializeArgValues(argsSpec, uiSpec, argsDict) {
       value = argsDict[argkey] || false;
     } else if (argsSpec[argkey].type === 'option_string') {
       value = argsDict[argkey]
-        || argsSpec[argkey].validation_options.options[0]; // default to first
-      argsDropdownOptions[argkey] = argsSpec[argkey].validation_options.options;
+        || Object.keys(argsSpec[argkey].options)[0]; // default to first
+      argsDropdownOptions[argkey] = Object.keys(argsSpec[argkey].options);
     } else {
       value = argsDict[argkey] || '';
     }
