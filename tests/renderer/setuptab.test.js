@@ -102,13 +102,23 @@ describe('Arguments form input types', () => {
     expect(input).not.toBeChecked();
   });
 
-  test('render a select input for an option_string', async () => {
+  test('render a select input for an option_string dict', async () => {
     const spec = { ...baseSpec };
     spec.args.arg.type = 'option_string';
     spec.args.arg.options = {
       a: 'about a',
       b: 'about b',
     };
+    const { findByLabelText } = renderSetupFromSpec(spec, uiSpec);
+    const input = await findByLabelText(RegExp(`${spec.args.arg.name}`));
+    expect(input).toHaveValue('a');
+    expect(input).not.toHaveValue('b');
+  });
+
+  test('render a select input for an option_string list', async () => {
+    const spec = { ...baseSpec };
+    spec.args.arg.type = 'option_string';
+    spec.args.arg.options = ['a', 'b'];
     const { findByLabelText } = renderSetupFromSpec(spec, uiSpec);
     const input = await findByLabelText(RegExp(`${spec.args.arg.name}`));
     expect(input).toHaveValue('a');
@@ -338,9 +348,7 @@ describe('UI spec functionality', () => {
         arg2: {
           name: 'bfoo',
           type: 'option_string',
-          validation_options: {
-            options: [],
-          },
+          options: {},
         },
       },
     };
