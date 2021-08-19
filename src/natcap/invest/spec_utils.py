@@ -27,10 +27,10 @@ u.define('international_unit = [biologic_amount] = iu = IU')
 # overwrite the default use of the symbol 'h' for henries
 u.define('henry = weber / ampere')
 u.define('hour = 60 * minute = h = hr')
-# overwrite the year definitionto use 'yr' rather than 'a' as default symbol
+# overwrite the year definition to use 'year' rather than 'a' as default symbol
 # the symbol 'yr' is english-specific and the international symbol 'a' may
 # not be well-known, so we will need to translate this
-u.define('year = 365.25 * day = yr = a = julian_year')
+u.define('year = 365.25 * day = _ = yr = a = julian_year')
 # Use u.none for unitless measurements
 u.define('none = []')
 

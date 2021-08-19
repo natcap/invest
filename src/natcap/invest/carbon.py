@@ -42,7 +42,7 @@ ARGS_SPEC = {
             "type": "boolean",
             "required": "do_valuation | do_redd",
             "about": (
-                "Check to enable sequestration analysis. This requires inputs "
+                "Enable sequestration analysis. This requires inputs "
                 "of land use/land cover maps for both current and future "
                 "scenarios. ") + REQUIRED_IF_SELECTED % (
                 'REDD scenario analysis or run valuation model'),
@@ -64,7 +64,7 @@ ARGS_SPEC = {
             "type": "boolean",
             "required": False,
             "about": (
-                "Check to enable REDD scenario analysis.  This requires three "
+                "Enable REDD scenario analysis. This requires three "
                 "land use/land cover maps: one for the current scenario, one "
                 "for the future baseline scenario, and one for the future "
                 "REDD policy scenario."),
