@@ -71,7 +71,6 @@ export default class InvestTab extends React.Component {
     const {
       modelSpec, argsSpec, uiSpec
     } = await investGetSpec(job.modelRunName);
-    console.log(argsSpec)
     this.setState({
       modelSpec: modelSpec,
       argsSpec: argsSpec,

@@ -175,14 +175,6 @@ test('validate the UI spec', async () => {
 
 describe('Build each model UI from ARGS_SPEC', () => {
   const uiConfig = require('../../src/renderer/ui_config');
-  // let modelInternalNames;
-
-  // beforeAll(async () => {
-  //   const models = await server_requests.getInvestModelNames();
-  //   modelInternalNames = Object.keys(models)
-  //     .map((key) => models[key].internal_name);
-  //   console.log(modelInternalNames)
-  // });
 
   test.each(Object.keys(uiConfig))('%s', async (model) => {
     const argsSpec = await server_requests.getSpec(model);
