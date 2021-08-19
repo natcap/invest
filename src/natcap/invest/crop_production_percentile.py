@@ -106,7 +106,7 @@ ARGS_SPEC = {
                     "type": "directory",
                     "about": (
                         "Table mapping each climate bin to yield percentiles "
-                        "for each crop"),
+                        "for each crop."),
                     "contents": {
                         "[CROP]_percentile_yield_table.csv": {
                             "type": "csv",
@@ -134,7 +134,7 @@ ARGS_SPEC = {
                 },
                 "extended_climate_bin_maps": {
                     "type": "directory",
-                    "about": "Maps of climate bins for each crop",
+                    "about": "Maps of climate bins for each crop.",
                     "contents": {
                         "extendedclimatebins[CROP]": {
                             "type": "raster",
@@ -144,7 +144,7 @@ ARGS_SPEC = {
                 },
                 "observed_yield": {
                     "type": "directory",
-                    "about": "Maps of actual observed yield for each crop",
+                    "about": "Maps of actual observed yield for each crop.",
                     "contents": {
                         "[CROP]_observed_yield.tif": {
                             "type": "raster",
@@ -199,7 +199,7 @@ ARGS_SPEC = {
                     }
                 }
             },
-            "about": "Path to the InVEST Crop Production Data directory",
+            "about": "Path to the InVEST Crop Production Data directory.",
             "name": "model data directory"
         }
     }

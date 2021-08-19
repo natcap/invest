@@ -211,20 +211,20 @@ ARGS_SPEC = {
                     "type": "number",
                     "units": u.megatonne/u.hectare,
                     "about": (
-                        "the initial carbon stocks in the biomass pool for "
-                        "this landcover classification")},
+                        "The initial carbon stocks in the biomass pool for "
+                        "this landcover class.")},
                 "soil-initial": {
                     "type": "number",
                     "units": u.megatonne/u.hectare,
                     "about": (
-                        "the initial carbon stocks in the soil pool for this "
-                        "landcover classification")},
+                        "The initial carbon stocks in the soil pool for this "
+                        "landcover class.")},
                 "litter-initial": {
                     "type": "number",
                     "units": u.megatonne/u.hectare,
                     "about": (
-                        "the initial carbon stocks in the litter pool for "
-                        "this landcover classification")},
+                        "The initial carbon stocks in the litter pool for "
+                        "this landcover class.")},
                 "biomass-half-life": {
                     "type": "number",
                     "units": u.year,
@@ -288,7 +288,7 @@ ARGS_SPEC = {
                     "about": (
                         "Annual rate of CO2E accumulation in the litter pool.")}
             },
-            "about": "Table of biophysical properties for each LULC class"
+            "about": "Table of biophysical properties for each LULC class."
         },
         "landcover_transitions_table": {
             "name": "Landcover Transitions Table",
@@ -298,7 +298,7 @@ ARGS_SPEC = {
                     "type": "integer",
                     "about": (
                         "LULC codes matching the codes in the biophysical "
-                        "table")},
+                        "table.")},
                 "[LULC CODE]": {
                     "type": "option_string",
                     "options": {
@@ -307,7 +307,6 @@ ARGS_SPEC = {
                         "med-impact-disturb": "medium carbon disturbance rate",
                         "low-impact-disturb": "low carbon disturbance rate",
                         "NCC": "no change in carbon",
-                        "": "cell may be empty if the transition never occurs"
                     },
                     "about": (
                         "A transition matrix describing the type of carbon "
@@ -321,20 +320,19 @@ ARGS_SPEC = {
                         "cell's row's LULC class to that cell's column's LULC "
                         "class. The classes represented in this table must "
                         "exactly match the classes in the biophysical table "
-                        "``lulc-class`` column.")}
+                        "``lulc-class`` column. A cell may be left empty if "
+                        "the transition never occurs.")}
             },
             "about": (
                 "A transition matrix mapping the type of carbon action "
-                "undergone when one landcover type transitions to another. "
-                "The Coastal Blue Carbon preprocessor exists to help create "
-                "this table for you. "),
+                "undergone when one landcover type transitions to another."),
         },
         "do_economic_analysis": {
             "name": "Do Valuation",
             "type": "boolean",
             "required": False,
             "about": (
-                "Check to enable net present valuation analysis based on "
+                "Enable net present valuation analysis based on "
                 "carbon prices from either a yearly price table, or an "
                 "initial price and yearly interest rate."),
         },
@@ -343,7 +341,7 @@ ARGS_SPEC = {
             "type": "boolean",
             "required": False,
             "about": (
-                "Check to use a yearly price table, rather than an initial "
+                "Use a yearly price table, rather than an initial "
                 "price and interest rate, to indicate carbon value over time."),
         },
         "price": {

@@ -45,7 +45,7 @@ ARGS_SPEC = {
                     "type": "boolean",
                     "about": (
                         "Enter TRUE if this LULC class is a coastal blue "
-                        "carbon habitat, FALSE if not")}
+                        "carbon habitat, FALSE if not.")}
             }
         },
         "landcover_snapshot_csv": {
@@ -54,7 +54,7 @@ ARGS_SPEC = {
                 "snapshot_year": {
                     "type": "number",
                     "units": u.year,
-                    "about": "Year to snapshot"},
+                    "about": "Year to snapshot."},
                 "raster_path": {
                     "type": "raster",
                     "bands": {1: {"type": "integer"}},
