@@ -140,14 +140,14 @@ ARGS_SPEC = {
         },
         "analysis_area_path": {
             "type": "option_string",
-            "options": {
+            "options": [
                 "West Coast of North America and Hawaii",
                 "East Coast of North America and Puerto Rico",
                 "North Sea 4 meter resolution",
                 "North Sea 10 meter resolution",
                 "Australia",
                 "Global"
-            },
+            ],
             "about": (
                 "A list of analysis areas for which the model can currently "
                 "be run.  All the wave energy data needed for these areas are "
