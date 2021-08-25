@@ -12,7 +12,7 @@ if platform.system() == 'Darwin':
     # See https://bugreports.qt.io/browse/QTBUG-87014
     # and https://github.com/natcap/invest/issues/384
     os.environ['QT_MAC_WANTS_LAYER'] = '1'
-    
+
     # Rtree will look in this directory first for libspatialindex_c.dylib.
     # In response to issues with github mac binary builds:
     # https://github.com/natcap/invest/issues/594
