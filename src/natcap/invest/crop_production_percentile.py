@@ -1,3 +1,4 @@
+
 """InVEST Crop Production Percentile Model."""
 import collections
 import logging
@@ -11,6 +12,8 @@ import pygeoprocessing
 import taskgraph
 
 from . import utils
+from . import spec_utils
+from .spec_utils import u
 from . import validation
 
 
@@ -28,89 +31,181 @@ ARGS_SPEC = {
         "different_projections_ok": True,
     },
     "args": {
-        "workspace_dir": validation.WORKSPACE_SPEC,
-        "results_suffix": validation.SUFFIX_SPEC,
-        "n_workers": validation.N_WORKERS_SPEC,
+        "workspace_dir": spec_utils.WORKSPACE,
+        "results_suffix": spec_utils.SUFFIX,
+        "n_workers": spec_utils.N_WORKERS,
         "landcover_raster_path": {
-            "validation_options": {
-                "projected": True,
-                "projection_units": "meters",
-            },
-            "type": "raster",
-            "required": True,
+            **spec_utils.LULC,
+            "projected": True,
+            "projection_units": u.meter,
             "about": (
                 "A raster file, representing integer land use/land code "
                 "covers for each cell. This raster should have a projected "
                 "coordinate system with units of meters (e.g. UTM) because "
                 "pixel areas are divided by 10000 in order to report some "
                 "results in hectares."),
-            "name": "Land-Use/Land-Cover Map"
         },
         "landcover_to_crop_table_path": {
-            "validation_options": {
-                "required_fields": ["crop_name", "lucode"],
-            },
             "type": "csv",
-            "required": True,
+            "columns": {
+                "lucode": {"type": "integer"},
+                "crop_name": {
+                    "type": "option_string",
+                    "options": {
+                        "abaca", "agave", "alfalfa", "almond", "aniseetc",
+                        "apple", "apricot", "areca", "artichoke", "asparagus",
+                        "avocado", "bambara", "banana", "barley", "bean",
+                        "beetfor", "berrynes", "blueberry", "brazil",
+                        "canaryseed", "carob", "carrot", "carrotfor", "cashew",
+                        "broadbean", "buckwheat", "cabbage", "cabbagefor",
+                        "cashewapple", "cassava", "castor", "cauliflower",
+                        "cerealnes", "cherry", "chestnut", "chickpea",
+                        "chicory", "chilleetc", "cinnamon", "citrusnes",
+                        "clove", "clover", "cocoa", "coconut", "coffee",
+                        "cotton", "cowpea", "cranberry", "cucumberetc",
+                        "currant", "date", "eggplant", "fibrenes", "fig",
+                        "flax", "fonio", "fornes", "fruitnes", "garlic",
+                        "ginger", "gooseberry", "grape", "grapefruitetc",
+                        "grassnes", "greenbean", "greenbroadbean", "greencorn",
+                        "greenonion", "greenpea", "groundnut", "hazelnut",
+                        "hemp", "hempseed", "hop", "jute", "jutelikefiber",
+                        "kapokfiber", "kapokseed", "karite", "kiwi", "kolanut",
+                        "legumenes", "lemonlime", "lentil", "lettuce",
+                        "linseed", "lupin", "maize", "maizefor", "mango",
+                        "mate", "melonetc", "melonseed", "millet",
+                        "mixedgrain", "mixedgrass", "mushroom", "mustard",
+                        "nutmeg", "nutnes", "oats", "oilpalm", "oilseedfor",
+                        "oilseednes", "okra", "olive", "onion", "orange",
+                        "papaya", "pea", "peachetc", "pear", "pepper",
+                        "peppermint", "persimmon", "pigeonpea", "pimento",
+                        "pineapple", "pistachio", "plantain", "plum", "poppy",
+                        "potato", "pulsenes", "pumpkinetc", "pyrethrum",
+                        "quince", "quinoa", "ramie", "rapeseed", "rasberry",
+                        "rice", "rootnes", "rubber", "rye", "ryefor",
+                        "safflower", "sesame", "sisal", "sorghum",
+                        "sorghumfor", "sourcherry, soybean", "spicenes",
+                        "spinach", "stonefruitnes", "strawberry", "stringbean",
+                        "sugarbeet", "sugarcane", "sugarnes", "sunflower",
+                        "swedefor", "sweetpotato", "tangetc", "taro", "tea",
+                        "tobacco", "tomato", "triticale", "tropicalnes",
+                        "tung", "turnipfor", "vanilla", "vegetablenes",
+                        "vegfor", "vetch", "walnut", "watermelon", "wheat",
+                        "yam", "yautia"
+                    }
+                }
+            },
             "about": (
-                "A CSV table mapping canonical crop names to land use codes "
-                "contained in the landcover/use raster.   The allowed crop "
-                "names are abaca, agave, alfalfa, almond, aniseetc, apple, "
-                "apricot, areca, artichoke, asparagus, avocado, bambara, "
-                "banana, barley, bean, beetfor, berrynes, blueberry, brazil, "
-                "broadbean, buckwheat, cabbage, cabbagefor, canaryseed, "
-                "carob, carrot, carrotfor, cashew, cashewapple, cassava, "
-                "castor, cauliflower, cerealnes, cherry, chestnut, chickpea, "
-                "chicory, chilleetc, cinnamon, citrusnes, clove, clover, "
-                "cocoa, coconut, coffee, cotton, cowpea, cranberry, "
-                "cucumberetc, currant, date, eggplant, fibrenes, fig, flax, "
-                "fonio, fornes, fruitnes, garlic, ginger, gooseberry, grape, "
-                "grapefruitetc, grassnes, greenbean, greenbroadbean, "
-                "greencorn, greenonion, greenpea, groundnut, hazelnut, hemp, "
-                "hempseed, hop, jute, jutelikefiber, kapokfiber, kapokseed, "
-                "karite, kiwi, kolanut, legumenes, lemonlime, lentil, "
-                "lettuce, linseed, lupin, maize, maizefor, mango, mate, "
-                "melonetc, melonseed, millet, mixedgrain, mixedgrass, "
-                "mushroom, mustard, nutmeg, nutnes, oats, oilpalm, "
-                "oilseedfor, oilseednes, okra, olive, onion, orange, papaya, "
-                "pea, peachetc, pear, pepper, peppermint, persimmon, "
-                "pigeonpea, pimento, pineapple, pistachio, plantain, plum, "
-                "poppy, potato, pulsenes, pumpkinetc, pyrethrum, quince, "
-                "quinoa, ramie, rapeseed, rasberry, rice, rootnes, rubber, "
-                "rye, ryefor, safflower, sesame, sisal, sorghum, sorghumfor, "
-                "sourcherry, soybean, spicenes, spinach, stonefruitnes, "
-                "strawberry, stringbean, sugarbeet, sugarcane, sugarnes, "
-                "sunflower, swedefor, sweetpotato, tangetc, taro, tea, "
-                "tobacco, tomato, triticale, tropicalnes, tung, turnipfor, "
-                "vanilla, vegetablenes, vegfor, vetch, walnut, watermelon, "
-                "wheat, yam, and yautia."),
+                "A CSV table mapping canonical crop names to the land use "
+                "codes in the landcover/use raster."),
             "name": "Landcover to Crop Table"
         },
         "aggregate_polygon_path": {
-            "type": "vector",
-            "required": False,
-            "validation_options": {
-                "projected": True,
-            },
-            "about": (
-                "A polygon vector containing features with which to "
-                "aggregate/summarize final results. It is fine to have "
-                "overlapping polygons."),
-            "name": "Aggregate results polygon"
+            **spec_utils.AOI,
+            "projected": True,
+            "required": False
         },
         "model_data_path": {
             "type": "directory",
-            "required": True,
-            "validation_options": {
-                "exists": True,
+            "contents": {
+                "climate_percentile_yield_tables": {
+                    "type": "directory",
+                    "about": (
+                        "Table mapping each climate bin to yield percentiles "
+                        "for each crop"),
+                    "contents": {
+                        "[CROP]_percentile_yield_table.csv": {
+                            "type": "csv",
+                            "columns": {
+                                "climate_bin": {"type": "integer"},
+                                "yield_25th": {
+                                    "type": "number",
+                                    "units": u.metric_ton/u.hectare
+                                },
+                                "yield_50th": {
+                                    "type": "number",
+                                    "units": u.metric_ton/u.hectare
+                                },
+                                "yield_75th": {
+                                    "type": "number",
+                                    "units": u.metric_ton/u.hectare
+                                },
+                                "yield_95th": {
+                                    "type": "number",
+                                    "units": u.metric_ton/u.hectare
+                                }
+                            }
+                        },
+                    }
+                },
+                "extended_climate_bin_maps": {
+                    "type": "directory",
+                    "about": "Maps of climate bins for each crop",
+                    "contents": {
+                        "extendedclimatebins[CROP]": {
+                            "type": "raster",
+                            "bands": {1: {"type": "integer"}},
+                        }
+                    }
+                },
+                "observed_yield": {
+                    "type": "directory",
+                    "about": "Maps of actual observed yield for each crop",
+                    "contents": {
+                        "[CROP]_observed_yield.tif": {
+                            "type": "raster",
+                            "bands": {1: {
+                                "type": "number",
+                                "units": u.metric_ton/u.hectare
+                            }}
+                        }
+                    }
+                },
+                "crop_nutrient.csv": {
+                    "type": "csv",
+                    "columns": {
+                        nutrient: {
+                            "type": "number",
+                            "units": units
+                        } for nutrient, units in {
+                            "protein":     u.gram/u.hectogram,
+                            "lipid":       u.gram/u.hectogram,       # total lipid
+                            "energy":      u.kilojoule/u.hectogram,
+                            "ca":          u.milligram/u.hectogram,  # calcium
+                            "fe":          u.milligram/u.hectogram,  # iron
+                            "mg":          u.milligram/u.hectogram,  # magnesium
+                            "ph":          u.milligram/u.hectogram,  # phosphorus
+                            "k":           u.milligram/u.hectogram,  # potassium
+                            "na":          u.milligram/u.hectogram,  # sodium
+                            "zn":          u.milligram/u.hectogram,  # zinc
+                            "cu":          u.milligram/u.hectogram,  # copper
+                            "fl":          u.microgram/u.hectogram,  # fluoride
+                            "mn":          u.milligram/u.hectogram,  # manganese
+                            "se":          u.microgram/u.hectogram,  # selenium
+                            "vita":        u.IU/u.hectogram,         # vitamin A
+                            "betac":       u.microgram/u.hectogram,  # beta carotene
+                            "alphac":      u.microgram/u.hectogram,  # alpha carotene
+                            "vite":        u.milligram/u.hectogram,  # vitamin e
+                            "crypto":      u.microgram/u.hectogram,  # cryptoxanthin
+                            "lycopene":    u.microgram/u.hectogram,  # lycopene
+                            "lutein":      u.microgram/u.hectogram,  # lutein + zeaxanthin
+                            "betaT":       u.milligram/u.hectogram,  # beta tocopherol
+                            "gammaT":      u.milligram/u.hectogram,  # gamma tocopherol
+                            "deltaT":      u.milligram/u.hectogram,  # delta tocopherol
+                            "vitc":        u.milligram/u.hectogram,  # vitamin C
+                            "thiamin":     u.milligram/u.hectogram,
+                            "riboflavin":  u.milligram/u.hectogram,
+                            "niacin":      u.milligram/u.hectogram,
+                            "pantothenic": u.milligram/u.hectogram,  # pantothenic acid
+                            "vitb6":       u.milligram/u.hectogram,  # vitamin B6
+                            "folate":      u.microgram/u.hectogram,
+                            "vitb12":      u.microgram/u.hectogram,  # vitamin B12
+                            "vitk":        u.microgram/u.hectogram,  # vitamin K
+                        }.items()
+                    }
+                }
             },
-            "about": (
-                "A path to the InVEST Crop Production Data directory. These "
-                "data would have been included with the InVEST installer if "
-                "selected, or can be manually downloaded from "
-                "http://releases.naturalcapitalproject.org/.  If downloaded "
-                "with InVEST, the default value should be used."),
-            "name": "Directory to model data"
+            "about": "Path to the InVEST Crop Production Data directory",
+            "name": "model data directory"
         }
     }
 }
@@ -174,7 +269,7 @@ _EXPECTED_NUTRIENT_TABLE_HEADERS = [
     'Riboflavin', 'Niacin', 'Pantothenic', 'VitB6', 'Folate', 'VitB12',
     'VitK']
 _EXPECTED_LUCODE_TABLE_HEADER = 'lucode'
-_NODATA_YIELD = -1.0
+_NODATA_YIELD = -1
 
 
 def execute(args):
@@ -209,7 +304,7 @@ def execute(args):
             * climate_bin_maps (contains [cropname]_climate_bin.tif files)
             * climate_percentile_yield (contains
               [cropname]_percentile_yield_table.csv files)
-              
+
             Please see the InVEST user's guide chapter on crop production for
             details about how to download these data.
         args['n_workers'] (int): (optional) The number of worker processes to
@@ -243,7 +338,7 @@ def execute(args):
     landcover_raster_info = pygeoprocessing.get_raster_info(
         args['landcover_raster_path'])
     pixel_area_ha = numpy.product([
-        abs(x) for x in landcover_raster_info['pixel_size']]) / 10000.0
+        abs(x) for x in landcover_raster_info['pixel_size']]) / 10000
     landcover_nodata = landcover_raster_info['nodata'][0]
     if landcover_nodata is None:
         LOGGER.warning(
@@ -323,7 +418,7 @@ def execute(args):
                  crop_climate_percentile_table[bin_id][yield_percentile_id])
                 for bin_id in crop_climate_percentile_table])
             bin_to_percentile_yield[
-                crop_climate_bin_raster_info['nodata'][0]] = 0.0
+                crop_climate_bin_raster_info['nodata'][0]] = 0
             coarse_yield_percentile_raster_path = os.path.join(
                 output_dir,
                 _COARSE_YIELD_PERCENTILE_FILE_PATTERN % (
@@ -366,14 +461,13 @@ def execute(args):
                     crop_name, yield_percentile_id, file_suffix))
 
             create_percentile_production_task = task_graph.add_task(
-                func=pygeoprocessing.raster_calculator,
-                args=([(args['landcover_raster_path'], 1),
-                       (interpolated_yield_percentile_raster_path, 1),
-                       (landcover_nodata, 'raw'), (crop_lucode, 'raw'),
-                       (pixel_area_ha, 'raw')],
-                      _crop_production_op,
-                      percentile_crop_production_raster_path,
-                      gdal.GDT_Float32, _NODATA_YIELD),
+                func=calculate_crop_production,
+                args=(
+                    args['landcover_raster_path'],
+                    interpolated_yield_percentile_raster_path,
+                    crop_lucode,
+                    pixel_area_ha,
+                    percentile_crop_production_raster_path),
                 target_path_list=[percentile_crop_production_raster_path],
                 dependent_task_list=[
                     create_interpolated_yield_percentile_task],
@@ -497,32 +591,63 @@ def execute(args):
     task_graph.join()
 
 
-def _crop_production_op(
-        lulc_array, yield_array, landcover_nodata, crop_lucode, pixel_area_ha):
-    """Mask in yields that overlap with `crop_lucode`.
+def calculate_crop_production(lulc_path, yield_path, crop_lucode,
+                              pixel_area_ha, target_path):
+    """Calculate crop production for a particular crop.
+
+    The resulting production value is:
+
+    - nodata, where either the LULC or yield input has nodata
+    - 0, where the LULC does not match the given LULC code
+    - yield * pixel area, where the given LULC code exists
 
     Args:
-        lulc_array (numpy.ndarray): landcover raster values
-        yield_array (numpy.ndarray): interpolated yield raster values
-        landcover_nodata (float): extracted from landcover raster values
-        crop_lucode (int): code used to mask in the current crop
-        pixel_area_ha (float): area of lulc raster cells (hectares)
+        lulc_path (str): path to a raster of LULC codes
+        yield_path (str): path of a raster of yields for the crop identified
+            by ``crop_lucode``, in units per hectare
+        crop_lucode (int): LULC code that identifies the crop of interest in
+            the ``lulc_path`` raster.
+        pixel_area_ha (number): Pixel area in hectares for both input rasters
+        target_path (str): Path to write the output crop production raster
 
     Returns:
-        numpy.ndarray with float values of yields for the current crop
-
+        None
     """
-    result = numpy.empty(lulc_array.shape, dtype=numpy.float32)
-    if landcover_nodata is not None:
-        result[:] = _NODATA_YIELD
-        valid_mask = ~numpy.isclose(lulc_array, landcover_nodata)
-        result[valid_mask] = 0.0
-    else:
-        result[:] = 0.0
-    lulc_mask = lulc_array == crop_lucode
-    result[lulc_mask] = (
-        yield_array[lulc_mask] * pixel_area_ha)
-    return result
+
+    lulc_nodata = pygeoprocessing.get_raster_info(lulc_path)['nodata'][0]
+    yield_nodata = pygeoprocessing.get_raster_info(yield_path)['nodata'][0]
+
+    def _crop_production_op(lulc_array, yield_array):
+        """Mask in yields that overlap with `crop_lucode`.
+
+        Args:
+            lulc_array (numpy.ndarray): landcover raster values
+            yield_array (numpy.ndarray): interpolated yield raster values
+
+        Returns:
+            numpy.ndarray with float values of yields for the current crop
+
+        """
+        result = numpy.full(lulc_array.shape, _NODATA_YIELD,
+                            dtype=numpy.float32)
+
+        valid_mask = numpy.full(lulc_array.shape, True)
+        if lulc_nodata is not None:
+            valid_mask &= ~numpy.isclose(lulc_array, lulc_nodata)
+        if yield_nodata is not None:
+            valid_mask &= ~numpy.isclose(yield_array, yield_nodata)
+        result[valid_mask] = 0
+
+        lulc_mask = lulc_array == crop_lucode
+        result[valid_mask & lulc_mask] = (
+            yield_array[valid_mask & lulc_mask] * pixel_area_ha)
+        return result
+
+    pygeoprocessing.raster_calculator(
+        [(lulc_path, 1), (yield_path, 1)],
+        _crop_production_op,
+        target_path,
+        gdal.GDT_Float32, _NODATA_YIELD),
 
 
 def _zero_observed_yield_op(observed_yield_array, observed_yield_nodata):
@@ -538,7 +663,7 @@ def _zero_observed_yield_op(observed_yield_array, observed_yield_nodata):
     """
     result = numpy.empty(
         observed_yield_array.shape, dtype=numpy.float32)
-    result[:] = 0.0
+    result[:] = 0
     valid_mask = slice(None)
     if observed_yield_nodata is not None:
         valid_mask = ~numpy.isclose(
@@ -568,9 +693,9 @@ def _mask_observed_yield_op(
     if landcover_nodata is not None:
         result[:] = observed_yield_nodata
         valid_mask = ~numpy.isclose(lulc_array, landcover_nodata)
-        result[valid_mask] = 0.0
+        result[valid_mask] = 0
     else:
-        result[:] = 0.0
+        result[:] = 0
     lulc_mask = lulc_array == crop_lucode
     result[lulc_mask] = (
         observed_yield_array[lulc_mask] * pixel_area_ha)
@@ -625,7 +750,7 @@ def tabulate_results(
             result_table.write(crop_name)
             production_lookup = {}
             production_pixel_count = 0
-            yield_sum = 0.0
+            yield_sum = 0
             observed_production_raster_path = os.path.join(
                 output_dir,
                 _OBSERVED_PRODUCTION_FILE_PATTERN % (
@@ -645,7 +770,7 @@ def tabulate_results(
                     valid_mask = ~numpy.isclose(
                         yield_block, observed_yield_nodata)
                 production_pixel_count += numpy.count_nonzero(
-                    valid_mask & (yield_block > 0.0))
+                    valid_mask & (yield_block > 0))
                 yield_sum += numpy.sum(yield_block[valid_mask])
             production_area = production_pixel_count * pixel_area_ha
             production_lookup['observed'] = yield_sum
@@ -657,7 +782,7 @@ def tabulate_results(
                     output_dir,
                     _PERCENTILE_CROP_PRODUCTION_FILE_PATTERN % (
                         crop_name, yield_percentile_id, file_suffix))
-                yield_sum = 0.0
+                yield_sum = 0
                 for _, yield_block in pygeoprocessing.iterblocks(
                         (yield_percentile_raster_path, 1)):
                     # _NODATA_YIELD will always have a value (defined above)
@@ -669,7 +794,7 @@ def tabulate_results(
 
             # convert 100g to Mg and fraction left over from refuse
             nutrient_factor = 1e4 * (
-                1.0 - nutrient_table[crop_name]['Percentrefuse'] / 100.0)
+                1 - nutrient_table[crop_name]['Percentrefuse'] / 100)
             for nutrient_id in _EXPECTED_NUTRIENT_TABLE_HEADERS:
                 for yield_percentile_id in sorted(yield_percentile_headers):
                     total_nutrient = (
@@ -684,7 +809,7 @@ def tabulate_results(
                         nutrient_table[crop_name][nutrient_id]))
             result_table.write('\n')
 
-        total_area = 0.0
+        total_area = 0
         for _, band_values in pygeoprocessing.iterblocks(
                 (landcover_raster_path, 1)):
             if landcover_nodata is not None:
@@ -742,7 +867,7 @@ def aggregate_to_polygons(
     for crop_name in crop_to_landcover_table:
         # convert 100g to Mg and fraction left over from refuse
         nutrient_factor = 1e4 * (
-            1.0 - nutrient_table[crop_name]['Percentrefuse'] / 100.0)
+            1 - nutrient_table[crop_name]['Percentrefuse'] / 100)
         # loop over percentiles
         for yield_percentile_id in yield_percentile_headers:
             percentile_crop_production_raster_path = os.path.join(
