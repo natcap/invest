@@ -50,7 +50,7 @@ class EndpointFunctionTests(unittest.TestCase):
         response = test_client.get('/models')
         models_dict = json.loads(response.get_data(as_text=True))
         for model in models_dict.values():
-            self.assertEqual(list(model), ['internal_name', 'aliases'])
+            self.assertEqual(set(model), {'internal_name', 'aliases'})
 
     def test_get_invest_spec(self):
         """UI server: get_invest_spec endpoint."""
@@ -59,9 +59,9 @@ class EndpointFunctionTests(unittest.TestCase):
         response = test_client.post('/getspec', json='sdr')
         spec = json.loads(response.get_data(as_text=True))
         self.assertEqual(
-            list(spec),
-            ['model_name', 'module', 'userguide_html',
-             'args_with_spatial_overlap', 'args'])
+            set(spec),
+            {'model_name', 'module', 'userguide_html',
+             'args_with_spatial_overlap', 'args'})
 
     def test_get_invest_validate(self):
         """UI server: get_invest_validate endpoint."""
@@ -99,9 +99,9 @@ class EndpointFunctionTests(unittest.TestCase):
         response = test_client.post('/post_datastack_file', json=filepath)
         response_data = json.loads(response.get_data(as_text=True))
         self.assertEqual(
-            list(response_data),
-            ['type', 'args', 'module_name', 'model_run_name',
-             'model_human_name', 'invest_version'])
+            set(response_data),
+            {'type', 'args', 'module_name', 'model_run_name',
+             'model_human_name', 'invest_version'})
 
     def test_write_parameter_set_file(self):
         """UI server: write_parameter_set_file endpoint."""
@@ -121,8 +121,8 @@ class EndpointFunctionTests(unittest.TestCase):
         with open(filepath, 'r') as file:
             actual_data = json.loads(file.read())
         self.assertEqual(
-            list(actual_data),
-            ['args', 'invest_version', 'model_name'])
+            set(actual_data),
+            {'args', 'invest_version', 'model_name'})
 
     def test_save_to_python(self):
         """UI server: save_to_python endpoint."""
