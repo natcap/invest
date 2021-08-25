@@ -1,4 +1,3 @@
-
 """InVEST Crop Production Percentile Model."""
 import collections
 import logging
@@ -12,8 +11,6 @@ import pygeoprocessing
 import taskgraph
 
 from . import utils
-from . import spec_utils
-from .spec_utils import u
 from . import validation
 
 
@@ -31,181 +28,89 @@ ARGS_SPEC = {
         "different_projections_ok": True,
     },
     "args": {
-        "workspace_dir": spec_utils.WORKSPACE,
-        "results_suffix": spec_utils.SUFFIX,
-        "n_workers": spec_utils.N_WORKERS,
+        "workspace_dir": validation.WORKSPACE_SPEC,
+        "results_suffix": validation.SUFFIX_SPEC,
+        "n_workers": validation.N_WORKERS_SPEC,
         "landcover_raster_path": {
-            **spec_utils.LULC,
-            "projected": True,
-            "projection_units": u.meter,
+            "validation_options": {
+                "projected": True,
+                "projection_units": "meters",
+            },
+            "type": "raster",
+            "required": True,
             "about": (
                 "A raster file, representing integer land use/land code "
                 "covers for each cell. This raster should have a projected "
                 "coordinate system with units of meters (e.g. UTM) because "
                 "pixel areas are divided by 10000 in order to report some "
                 "results in hectares."),
+            "name": "Land-Use/Land-Cover Map"
         },
         "landcover_to_crop_table_path": {
-            "type": "csv",
-            "columns": {
-                "lucode": {"type": "integer"},
-                "crop_name": {
-                    "type": "option_string",
-                    "options": {
-                        "abaca", "agave", "alfalfa", "almond", "aniseetc",
-                        "apple", "apricot", "areca", "artichoke", "asparagus",
-                        "avocado", "bambara", "banana", "barley", "bean",
-                        "beetfor", "berrynes", "blueberry", "brazil",
-                        "canaryseed", "carob", "carrot", "carrotfor", "cashew",
-                        "broadbean", "buckwheat", "cabbage", "cabbagefor",
-                        "cashewapple", "cassava", "castor", "cauliflower",
-                        "cerealnes", "cherry", "chestnut", "chickpea",
-                        "chicory", "chilleetc", "cinnamon", "citrusnes",
-                        "clove", "clover", "cocoa", "coconut", "coffee",
-                        "cotton", "cowpea", "cranberry", "cucumberetc",
-                        "currant", "date", "eggplant", "fibrenes", "fig",
-                        "flax", "fonio", "fornes", "fruitnes", "garlic",
-                        "ginger", "gooseberry", "grape", "grapefruitetc",
-                        "grassnes", "greenbean", "greenbroadbean", "greencorn",
-                        "greenonion", "greenpea", "groundnut", "hazelnut",
-                        "hemp", "hempseed", "hop", "jute", "jutelikefiber",
-                        "kapokfiber", "kapokseed", "karite", "kiwi", "kolanut",
-                        "legumenes", "lemonlime", "lentil", "lettuce",
-                        "linseed", "lupin", "maize", "maizefor", "mango",
-                        "mate", "melonetc", "melonseed", "millet",
-                        "mixedgrain", "mixedgrass", "mushroom", "mustard",
-                        "nutmeg", "nutnes", "oats", "oilpalm", "oilseedfor",
-                        "oilseednes", "okra", "olive", "onion", "orange",
-                        "papaya", "pea", "peachetc", "pear", "pepper",
-                        "peppermint", "persimmon", "pigeonpea", "pimento",
-                        "pineapple", "pistachio", "plantain", "plum", "poppy",
-                        "potato", "pulsenes", "pumpkinetc", "pyrethrum",
-                        "quince", "quinoa", "ramie", "rapeseed", "rasberry",
-                        "rice", "rootnes", "rubber", "rye", "ryefor",
-                        "safflower", "sesame", "sisal", "sorghum",
-                        "sorghumfor", "sourcherry, soybean", "spicenes",
-                        "spinach", "stonefruitnes", "strawberry", "stringbean",
-                        "sugarbeet", "sugarcane", "sugarnes", "sunflower",
-                        "swedefor", "sweetpotato", "tangetc", "taro", "tea",
-                        "tobacco", "tomato", "triticale", "tropicalnes",
-                        "tung", "turnipfor", "vanilla", "vegetablenes",
-                        "vegfor", "vetch", "walnut", "watermelon", "wheat",
-                        "yam", "yautia"
-                    }
-                }
+            "validation_options": {
+                "required_fields": ["crop_name", "lucode"],
             },
+            "type": "csv",
+            "required": True,
             "about": (
-                "A CSV table mapping canonical crop names to the land use "
-                "codes in the landcover/use raster."),
+                "A CSV table mapping canonical crop names to land use codes "
+                "contained in the landcover/use raster.   The allowed crop "
+                "names are abaca, agave, alfalfa, almond, aniseetc, apple, "
+                "apricot, areca, artichoke, asparagus, avocado, bambara, "
+                "banana, barley, bean, beetfor, berrynes, blueberry, brazil, "
+                "broadbean, buckwheat, cabbage, cabbagefor, canaryseed, "
+                "carob, carrot, carrotfor, cashew, cashewapple, cassava, "
+                "castor, cauliflower, cerealnes, cherry, chestnut, chickpea, "
+                "chicory, chilleetc, cinnamon, citrusnes, clove, clover, "
+                "cocoa, coconut, coffee, cotton, cowpea, cranberry, "
+                "cucumberetc, currant, date, eggplant, fibrenes, fig, flax, "
+                "fonio, fornes, fruitnes, garlic, ginger, gooseberry, grape, "
+                "grapefruitetc, grassnes, greenbean, greenbroadbean, "
+                "greencorn, greenonion, greenpea, groundnut, hazelnut, hemp, "
+                "hempseed, hop, jute, jutelikefiber, kapokfiber, kapokseed, "
+                "karite, kiwi, kolanut, legumenes, lemonlime, lentil, "
+                "lettuce, linseed, lupin, maize, maizefor, mango, mate, "
+                "melonetc, melonseed, millet, mixedgrain, mixedgrass, "
+                "mushroom, mustard, nutmeg, nutnes, oats, oilpalm, "
+                "oilseedfor, oilseednes, okra, olive, onion, orange, papaya, "
+                "pea, peachetc, pear, pepper, peppermint, persimmon, "
+                "pigeonpea, pimento, pineapple, pistachio, plantain, plum, "
+                "poppy, potato, pulsenes, pumpkinetc, pyrethrum, quince, "
+                "quinoa, ramie, rapeseed, rasberry, rice, rootnes, rubber, "
+                "rye, ryefor, safflower, sesame, sisal, sorghum, sorghumfor, "
+                "sourcherry, soybean, spicenes, spinach, stonefruitnes, "
+                "strawberry, stringbean, sugarbeet, sugarcane, sugarnes, "
+                "sunflower, swedefor, sweetpotato, tangetc, taro, tea, "
+                "tobacco, tomato, triticale, tropicalnes, tung, turnipfor, "
+                "vanilla, vegetablenes, vegfor, vetch, walnut, watermelon, "
+                "wheat, yam, and yautia."),
             "name": "Landcover to Crop Table"
         },
         "aggregate_polygon_path": {
-            **spec_utils.AOI,
-            "projected": True,
-            "required": False
+            "type": "vector",
+            "required": False,
+            "validation_options": {
+                "projected": True,
+            },
+            "about": (
+                "A polygon vector containing features with which to "
+                "aggregate/summarize final results. It is fine to have "
+                "overlapping polygons."),
+            "name": "Aggregate results polygon"
         },
         "model_data_path": {
             "type": "directory",
-            "contents": {
-                "climate_percentile_yield_tables": {
-                    "type": "directory",
-                    "about": (
-                        "Table mapping each climate bin to yield percentiles "
-                        "for each crop"),
-                    "contents": {
-                        "[CROP]_percentile_yield_table.csv": {
-                            "type": "csv",
-                            "columns": {
-                                "climate_bin": {"type": "integer"},
-                                "yield_25th": {
-                                    "type": "number",
-                                    "units": u.metric_ton/u.hectare
-                                },
-                                "yield_50th": {
-                                    "type": "number",
-                                    "units": u.metric_ton/u.hectare
-                                },
-                                "yield_75th": {
-                                    "type": "number",
-                                    "units": u.metric_ton/u.hectare
-                                },
-                                "yield_95th": {
-                                    "type": "number",
-                                    "units": u.metric_ton/u.hectare
-                                }
-                            }
-                        },
-                    }
-                },
-                "extended_climate_bin_maps": {
-                    "type": "directory",
-                    "about": "Maps of climate bins for each crop",
-                    "contents": {
-                        "extendedclimatebins[CROP]": {
-                            "type": "raster",
-                            "bands": {1: {"type": "integer"}},
-                        }
-                    }
-                },
-                "observed_yield": {
-                    "type": "directory",
-                    "about": "Maps of actual observed yield for each crop",
-                    "contents": {
-                        "[CROP]_observed_yield.tif": {
-                            "type": "raster",
-                            "bands": {1: {
-                                "type": "number",
-                                "units": u.metric_ton/u.hectare
-                            }}
-                        }
-                    }
-                },
-                "crop_nutrient.csv": {
-                    "type": "csv",
-                    "columns": {
-                        nutrient: {
-                            "type": "number",
-                            "units": units
-                        } for nutrient, units in {
-                            "protein":     u.gram/u.hectogram,
-                            "lipid":       u.gram/u.hectogram,       # total lipid
-                            "energy":      u.kilojoule/u.hectogram,
-                            "ca":          u.milligram/u.hectogram,  # calcium
-                            "fe":          u.milligram/u.hectogram,  # iron
-                            "mg":          u.milligram/u.hectogram,  # magnesium
-                            "ph":          u.milligram/u.hectogram,  # phosphorus
-                            "k":           u.milligram/u.hectogram,  # potassium
-                            "na":          u.milligram/u.hectogram,  # sodium
-                            "zn":          u.milligram/u.hectogram,  # zinc
-                            "cu":          u.milligram/u.hectogram,  # copper
-                            "fl":          u.microgram/u.hectogram,  # fluoride
-                            "mn":          u.milligram/u.hectogram,  # manganese
-                            "se":          u.microgram/u.hectogram,  # selenium
-                            "vita":        u.IU/u.hectogram,         # vitamin A
-                            "betac":       u.microgram/u.hectogram,  # beta carotene
-                            "alphac":      u.microgram/u.hectogram,  # alpha carotene
-                            "vite":        u.milligram/u.hectogram,  # vitamin e
-                            "crypto":      u.microgram/u.hectogram,  # cryptoxanthin
-                            "lycopene":    u.microgram/u.hectogram,  # lycopene
-                            "lutein":      u.microgram/u.hectogram,  # lutein + zeaxanthin
-                            "betaT":       u.milligram/u.hectogram,  # beta tocopherol
-                            "gammaT":      u.milligram/u.hectogram,  # gamma tocopherol
-                            "deltaT":      u.milligram/u.hectogram,  # delta tocopherol
-                            "vitc":        u.milligram/u.hectogram,  # vitamin C
-                            "thiamin":     u.milligram/u.hectogram,
-                            "riboflavin":  u.milligram/u.hectogram,
-                            "niacin":      u.milligram/u.hectogram,
-                            "pantothenic": u.milligram/u.hectogram,  # pantothenic acid
-                            "vitb6":       u.milligram/u.hectogram,  # vitamin B6
-                            "folate":      u.microgram/u.hectogram,
-                            "vitb12":      u.microgram/u.hectogram,  # vitamin B12
-                            "vitk":        u.microgram/u.hectogram,  # vitamin K
-                        }.items()
-                    }
-                }
+            "required": True,
+            "validation_options": {
+                "exists": True,
             },
-            "about": "Path to the InVEST Crop Production Data directory",
-            "name": "model data directory"
+            "about": (
+                "A path to the InVEST Crop Production Data directory. These "
+                "data would have been included with the InVEST installer if "
+                "selected, or can be manually downloaded from "
+                "http://releases.naturalcapitalproject.org/.  If downloaded "
+                "with InVEST, the default value should be used."),
+            "name": "Directory to model data"
         }
     }
 }
@@ -304,7 +209,7 @@ def execute(args):
             * climate_bin_maps (contains [cropname]_climate_bin.tif files)
             * climate_percentile_yield (contains
               [cropname]_percentile_yield_table.csv files)
-
+              
             Please see the InVEST user's guide chapter on crop production for
             details about how to download these data.
         args['n_workers'] (int): (optional) The number of worker processes to

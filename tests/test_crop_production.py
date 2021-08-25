@@ -38,7 +38,7 @@ class CropProductionTests(unittest.TestCase):
         from natcap.invest import crop_production_percentile
 
         args = {
-            'workspace_dir': '/Users/emily/Documents/test-cpp-310',
+            'workspace_dir': self.workspace_dir,
             'results_suffix': '',
             'landcover_raster_path': os.path.join(
                 SAMPLE_DATA_PATH, 'landcover.tif'),
