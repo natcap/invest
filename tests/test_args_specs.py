@@ -333,10 +333,11 @@ class ValidateArgsSpecs(unittest.TestCase):
             model = importlib.import_module(metadata.pyname)
             try:
                 _ = spec_utils.serialize_args_spec(model.ARGS_SPEC)
-            except TypeError:
+            except TypeError as error:
                 self.fail(
                     f'Failed to avoid TypeError when serializing '
-                    f'{metadata.pyname}.ARGS_SPEC')
+                    f'{metadata.pyname}.ARGS_SPEC: \n'
+                    f'{error}')
 
 
 class SpecUtilsTests(unittest.TestCase):
