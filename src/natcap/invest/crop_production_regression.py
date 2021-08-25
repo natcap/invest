@@ -41,11 +41,11 @@ ARGS_SPEC = {
         "landcover_to_crop_table_path": {
             "type": "csv",
             "columns": {
+                "lucode": {"type": "integer"}
                 "crop_name": {
                     "type": "option_string",
                     "options": CROPS
-                },
-                "lucode": {"type": "integer"}
+                }
             },
             "about": (
                 "A table that maps each LULC code from the LULC map to one of "

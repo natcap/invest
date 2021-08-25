@@ -33,6 +33,7 @@ ARGS_SPEC = {
         "lulc_cur_path": {
             **spec_utils.LULC,
             "projected": True,
+            "projection_units": u.meter,
             "about": (
                 "A map of land cover for the current scenario. "
                 f"{RASTER_VALUES % 'Carbon Pools'}"),
@@ -51,6 +52,7 @@ ARGS_SPEC = {
         "lulc_fut_path": {
             **spec_utils.LULC,
             "projected": True,
+            "projection_units": u.meter,
             "required": "calc_sequestration",
             "about": (
                 "A map of land cover for the future scenario. "
@@ -73,6 +75,7 @@ ARGS_SPEC = {
         "lulc_redd_path": {
             **spec_utils.LULC,
             "projected": True,
+            "projection_units": u.meter,
             "required": "do_redd",
             "about": (
                 "A map of land cover for the REDD policy scenario. "
@@ -196,12 +199,6 @@ _INTERMEDIATE_BASE_FILES = {
     'c_below_redd': 'c_below_redd.tif',
     'c_soil_redd': 'c_soil_redd.tif',
     'c_dead_redd': 'c_dead_redd.tif',
-}
-
-_TMP_BASE_FILES = {
-    'aligned_lulc_cur_path': 'aligned_lulc_cur.tif',
-    'aligned_lulc_fut_path': 'aligned_lulc_fut.tif',
-    'aligned_lulc_redd_path': 'aligned_lulc_redd.tif',
 }
 
 # -1.0 since carbon stocks are 0 or greater

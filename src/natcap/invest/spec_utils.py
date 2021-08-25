@@ -50,7 +50,9 @@ WORKSPACE = {
 
 SUFFIX = {
     "name": "file suffix",
-    "about": "Text to append to all file names written to the workspace.",
+    "about": (
+        "Suffix that will be appended to all output file names. Use this to "
+        "differentiate between model runs."),
     "type": "freestyle_string",
     "required": False,
     "regexp": "[a-zA-Z0-9_-]*"
