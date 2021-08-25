@@ -106,7 +106,7 @@ ARGS_SPEC = {
                 },
                 "decay": {
                     "type": "option_string",
-                    "options": {"linear", "exponential"},
+                    "options": ["linear", "exponential"],
                     "about": "The type of decay over space for each threat."
                 },
                 "cur_path": {

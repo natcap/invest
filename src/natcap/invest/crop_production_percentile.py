@@ -51,7 +51,7 @@ ARGS_SPEC = {
                 "lucode": {"type": "integer"},
                 "crop_name": {
                     "type": "option_string",
-                    "options": {
+                    "options": [
                         "abaca", "agave", "alfalfa", "almond", "aniseetc",
                         "apple", "apricot", "areca", "artichoke", "asparagus",
                         "avocado", "bambara", "banana", "barley", "bean",
@@ -91,7 +91,7 @@ ARGS_SPEC = {
                         "tung", "turnipfor", "vanilla", "vegetablenes",
                         "vegfor", "vetch", "walnut", "watermelon", "wheat",
                         "yam", "yautia"
-                    }
+                    ]
                 }
             },
             "about": (
