@@ -19,10 +19,10 @@ app = Flask(__name__)
 # Lookup names to pass to `invest run` based on python module names
 _UI_META = collections.namedtuple('UIMeta', ['run_name', 'human_name'])
 MODULE_MODELRUN_MAP = {
-    v.pyname: _UI_META(
-        run_name=k,
-        human_name=v.humanname)
-    for k, v in cli._MODEL_UIS.items()}
+    value.pyname: _UI_META(
+        run_name=key,
+        human_name=value.humanname)
+    for key, value in cli._MODEL_UIS.items()}
 
 
 def shutdown_server():
