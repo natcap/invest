@@ -13,7 +13,7 @@ import taskgraph
 
 from . import utils
 from . import spec_utils
-from .spec_utils import u
+from .spec_utils import u, LANDUSE
 from . import validation
 
 
@@ -91,8 +91,8 @@ ARGS_SPEC = {
             "about": (
                 "A table that maps each LULC code from the LULC map to one of "
                 "the 175 canonical crop names representing the crop grown in "
-                "that land cover class."),
-            "name": "Landcover to Crop Table"
+                f"that {LANDUSE} class."),
+            "name": f"{LANDUSE} to Crop Table"
         },
         "aggregate_polygon_path": {
             **spec_utils.AOI,

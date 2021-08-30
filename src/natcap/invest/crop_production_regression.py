@@ -9,7 +9,7 @@ from osgeo import osr
 import pygeoprocessing
 import taskgraph
 
-from .spec_utils import u
+from .spec_utils import u, LANDUSE
 from . import spec_utils
 from . import utils
 from . import validation
@@ -41,7 +41,7 @@ ARGS_SPEC = {
         "landcover_to_crop_table_path": {
             "type": "csv",
             "columns": {
-                "lucode": {"type": "integer"}
+                "lucode": {"type": "integer"},
                 "crop_name": {
                     "type": "option_string",
                     "options": CROPS
@@ -50,8 +50,8 @@ ARGS_SPEC = {
             "about": (
                 "A table that maps each LULC code from the LULC map to one of "
                 "the 12 canonical crop names representing the crop grown in "
-                "that land cover class."),
-            "name": "Landcover to Crop Table"
+                f"that {LANDUSE} class."),
+            "name": f"{LANDUSE} to Crop Table"
         },
         "fertilization_rate_table_path": {
             "type": "csv",

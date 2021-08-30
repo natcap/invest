@@ -14,7 +14,7 @@ import taskgraph
 from . import validation
 from . import utils
 from . import spec_utils
-from .spec_utils import u, REQUIRED_IF_SELECTED, RASTER_VALUES
+from .spec_utils import u, REQUIRED_IF_SELECTED, RASTER_VALUES, LANDUSE
 
 LOGGER = logging.getLogger(__name__)
 
@@ -35,16 +35,16 @@ ARGS_SPEC = {
             "projected": True,
             "projection_units": u.meter,
             "about": (
-                "A map of land cover for the current scenario. "
+                f"A map of {LANDUSE} for the current scenario. "
                 f"{RASTER_VALUES % 'Carbon Pools'}"),
-            "name": "current land use/land cover"
+            "name": f"current {LANDUSE}"
         },
         "calc_sequestration": {
             "type": "boolean",
             "required": "do_valuation | do_redd",
             "about": (
                 "Enable sequestration analysis. This requires inputs "
-                "of land use/land cover maps for both current and future "
+                f"of {LANDUSE} maps for both current and future "
                 "scenarios. ") + REQUIRED_IF_SELECTED % (
                 'REDD scenario analysis or run valuation model'),
             "name": "calculate sequestration"
@@ -55,19 +55,19 @@ ARGS_SPEC = {
             "projection_units": u.meter,
             "required": "calc_sequestration",
             "about": (
-                "A map of land cover for the future scenario. "
+                f"A map of {LANDUSE} for the future scenario. "
                 f"{RASTER_VALUES % 'Carbon Pools'} If run valuation model is "
                 "selected, this should be the reference, or baseline, future "
                 "scenario against which to compare the REDD policy scenario. "
                 f"{REQUIRED_IF_SELECTED % 'calculate sequestration'}"),
-            "name": "future land use/land cover"
+            "name": f"future {LANDUSE}"
         },
         "do_redd": {
             "type": "boolean",
             "required": False,
             "about": (
                 "Enable REDD scenario analysis. This requires three "
-                "land use/land cover maps: one for the current scenario, one "
+                f"{LANDUSE} maps: one for the current scenario, one "
                 "for the future baseline scenario, and one for the future "
                 "REDD policy scenario."),
             "name": "REDD scenario analysis"
@@ -78,10 +78,10 @@ ARGS_SPEC = {
             "projection_units": u.meter,
             "required": "do_redd",
             "about": (
-                "A map of land cover for the REDD policy scenario. "
+                f"A map of {LANDUSE} for the REDD policy scenario. "
                 f"{RASTER_VALUES % 'Carbon Pools'} "
                 f"{REQUIRED_IF_SELECTED % 'REDD scenario analysis'}"),
-            "name": "REDD land use/land cover"
+            "name": f"REDD {LANDUSE}"
         },
         "carbon_pools_path": {
             "type": "csv",
@@ -89,8 +89,9 @@ ARGS_SPEC = {
                 "lucode": {
                     "type": "integer",
                     "about": (
-                        "Land use/land cover code. Every value in the LULC "
-                        "maps must have a corresponding entry in this column.")
+                        f"{LANDUSE.capitalize()} code. Every value in the "
+                        f"{LANDUSE} maps must have a corresponding entry in "
+                        "this column.")
                 },
                 "c_above": {
                     "type": "number",
@@ -121,9 +122,9 @@ ARGS_SPEC = {
             "required": "do_valuation",
             "about": (
                 "The calendar year of the current scenario depicted in the "
-                "current land use/land cover. "
+                f"current {LANDUSE} map. "
                 f"{REQUIRED_IF_SELECTED % 'run valuation model'}"),
-            "name": "current land cover year"
+            "name": f"current {LANDUSE} year"
         },
         "lulc_fut_year": {
             "expression": "float(value).is_integer()",
@@ -132,9 +133,9 @@ ARGS_SPEC = {
             "required": "do_valuation",
             "about": (
                 "The calendar year of the future scenario depicted in the "
-                "future land use/land cover map. "
+                f"future {LANDUSE} map. "
                 f"{REQUIRED_IF_SELECTED % 'run valuation model'}"),
-            "name": "future land cover year"
+            "name": f"future {LANDUSE} year"
         },
         "do_valuation": {
             "type": "boolean",
@@ -168,7 +169,7 @@ ARGS_SPEC = {
             "type": "ratio",
             "required": "do_valuation",
             "about": (
-                "The annual increase of the price of carbon. "
+                "The relative annual increase of the price of carbon. "
                 f"{REQUIRED_IF_SELECTED % 'run valuation model'}"),
             "name": "annual price change"
         }

@@ -104,7 +104,7 @@ from osgeo import gdal
 
 from .. import utils
 from .. import spec_utils
-from ..spec_utils import u, REQUIRED_IF_SELECTED
+from ..spec_utils import u, REQUIRED_IF_SELECTED, LANDUSE
 from .. import validation
 
 LOGGER = logging.getLogger(__name__)
@@ -164,67 +164,67 @@ ARGS_SPEC = {
                     "type": "number",
                     "units": u.year,
                     "about": (
-                        "The snapshot year that this row's LULC raster "
+                        f"The snapshot year that this row's {LANDUSE} raster "
                         "represents. Each year in this table must be unique.")
                 },
                 "raster_path": {
                     "type": "raster",
                     "bands": {1: {"type": "integer"}},
                     "about": (
-                        "Map of land use/land cover in the given snapshot "
+                        f"Map of {LANDUSE} in the given snapshot "
                         "year. All values in this raster must have "
                         "corresponding entries in the Biophysical Table and "
                         "Landcover Transitions Table.")
                 }
             },
             "about": (
-                "A table mapping snapshot years to corresponding LULC maps."),
-            "name": "Landcover Snapshots Table",
+                f"A table mapping snapshot years to corresponding {LANDUSE} maps."),
+            "name": "landcover snapshots table",
         },
         "analysis_year": {
             "type": "number",
             "units": u.year,
             "required": False,
-            "name": "Analysis Year",
+            "name": "analysis year",
             "about": (
                 "A year that may be used to extend the analysis beyond the "
                 "last snapshot year. If used, the model assumes that carbon "
                 "will continue to accumulate or emit after the last snapshot "
                 "year until the analysis year. This value must be greater "
-                "than the final LULC snapshot year."),
+                "than the final snapshot year."),
         },
         "biophysical_table_path": {
-            "name": "Biophysical Table",
+            "name": "biophysical table",
             "type": "csv",
             "columns": {
                 "code": {
                     "type": "integer",
                     "about": (
-                        "The landcover code used in the LULC snapshot rasters "
-                        "to represent this landcover class.")},
+                        f"The {LANDUSE} code that represents this {LANDUSE} "
+                        f"class in the {LANDUSE} snapshot rasters.")},
                 "lulc-class": {
                     "type": "freestyle_string",
                     "about": (
-                        "Name of the landcover class. This label must be "
-                        "unique among the all the land cover classes.")},
+                        f"Name of the {LANDUSE} class. This label must be "
+                        f"unique among the all the {LANDUSE} classes.")},
                 "biomass-initial": {
                     "type": "number",
                     "units": u.megatonne/u.hectare,
                     "about": (
                         "The initial carbon stocks in the biomass pool for "
-                        "this landcover class.")},
+                        f"this {LANDUSE} class.")},
                 "soil-initial": {
                     "type": "number",
                     "units": u.megatonne/u.hectare,
                     "about": (
                         "The initial carbon stocks in the soil pool for this "
-                        "landcover class.")},
+                        f"{LANDUSE} class.")},
                 "litter-initial": {
                     "type": "number",
                     "units": u.megatonne/u.hectare,
                     "about": (
                         "The initial carbon stocks in the litter pool for "
-                        "this landcover class.")},
+                        f"this {LANDUSE} class.")},
                 "biomass-half-life": {
                     "type": "number",
                     "units": u.year,
@@ -235,19 +235,19 @@ ARGS_SPEC = {
                     "about": (
                         "Proportion of carbon stock in the biomass pool that "
                         "is disturbed when a cell transitions away from this "
-                        "landcover class in a low-impact disturbance.")},
+                        f"{LANDUSE} class in a low-impact disturbance.")},
                 "biomass-med-impact-disturb": {
                     "type": "ratio",
                     "about": (
                         "Proportion of carbon stock in the biomass pool that "
                         "is disturbed when a cell transitions away from this "
-                        "landcover class in a medium-impact disturbance.")},
+                        f"{LANDUSE} class in a medium-impact disturbance.")},
                 "biomass-high-impact-disturb": {
                     "type": "ratio",
                     "about": (
                         "Proportion of carbon stock in the biomass pool that "
                         "is disturbed when a cell transitions away from this "
-                        "landcover class in a high-impact disturbance.")},
+                        f"{LANDUSE} class in a high-impact disturbance.")},
                 "biomass-yearly-accumulation": {
                     "type": "number",
                     "units": u.megatonne/u.hectare/u.year,
@@ -264,19 +264,19 @@ ARGS_SPEC = {
                     "about": (
                         "Proportion of carbon stock in the soil pool that "
                         "is disturbed when a cell transitions away from this "
-                        "landcover class in a low-impact disturbance.")},
+                        f"{LANDUSE} class in a low-impact disturbance.")},
                 "soil-med-impact-disturb": {
                     "type": "ratio",
                     "about": (
                         "Proportion of carbon stock in the soil pool that "
                         "is disturbed when a cell transitions away from this "
-                        "landcover class in a medium-impact disturbance.")},
+                        f"{LANDUSE} class in a medium-impact disturbance.")},
                 "soil-high-impact-disturb": {
                     "type": "ratio",
                     "about": (
                         "Proportion of carbon stock in the soil pool that "
                         "is disturbed when a cell transitions away from this "
-                        "landcover class in a high-impact disturbance.")},
+                        f"{LANDUSE} class in a high-impact disturbance.")},
                 "soil-yearly-accumulation": {
                     "type": "number",
                     "units": u.megatonne/u.hectare/u.year,
@@ -288,16 +288,16 @@ ARGS_SPEC = {
                     "about": (
                         "Annual rate of CO2E accumulation in the litter pool.")}
             },
-            "about": "Table of biophysical properties for each LULC class."
+            "about": f"Table of biophysical properties for each {LANDUSE} class."
         },
         "landcover_transitions_table": {
-            "name": "Landcover Transitions Table",
+            "name": "landcover transitions table",
             "type": "csv",
             "columns": {
                 "lulc-class": {
                     "type": "integer",
                     "about": (
-                        "LULC codes matching the codes in the biophysical "
+                        f"{LANDUSE} codes matching the codes in the biophysical "
                         "table.")},
                 "[LULC CODE]": {
                     "type": "option_string",
@@ -310,7 +310,7 @@ ARGS_SPEC = {
                     },
                     "about": (
                         "A transition matrix describing the type of carbon "
-                        "action that occurs when each landcover type "
+                        f"action that occurs when each {LANDUSE} type "
                         "transitions to another type. The first column "
                         "(*lulc-class*) represents the initial LULC class, "
                         "and the first row (<lulc1>, <lulc2>...) represents "
@@ -325,10 +325,10 @@ ARGS_SPEC = {
             },
             "about": (
                 "A transition matrix mapping the type of carbon action "
-                "undergone when one landcover type transitions to another."),
+                f"undergone when one {LANDUSE} type transitions to another."),
         },
         "do_economic_analysis": {
-            "name": "Do Valuation",
+            "name": "run valuation",
             "type": "boolean",
             "required": False,
             "about": (
@@ -337,7 +337,7 @@ ARGS_SPEC = {
                 "initial price and yearly interest rate."),
         },
         "use_price_table": {
-            "name": "Use Price Table",
+            "name": "use price table",
             "type": "boolean",
             "required": False,
             "about": (
@@ -345,7 +345,7 @@ ARGS_SPEC = {
                 "price and interest rate, to indicate carbon value over time."),
         },
         "price": {
-            "name": "Price",
+            "name": "price",
             "type": "number",
             "units": u.currency/u.megatonne,
             "required": "do_economic_analysis and (not use_price_table)",
@@ -354,7 +354,7 @@ ARGS_SPEC = {
                 "Valuation is selected and Use Price Table is not selected."),
         },
         "inflation_rate": {
-            "name": "Interest Rate",
+            "name": "interest rate",
             "type": "percent",
             "required": "do_economic_analysis and (not use_price_table)",
             "about": (
@@ -362,7 +362,7 @@ ARGS_SPEC = {
                 "Valuation is selected and Use Price Table is not selected.")
         },
         "price_table_path": {
-            "name": "Price Table",
+            "name": "price table",
             "type": "csv",
             "required": "use_price_table",
             "columns": {
@@ -382,7 +382,7 @@ ARGS_SPEC = {
                 "Valuation is selected and Use Price Table is selected."),
         },
         "discount_rate": {
-            "name": "Discount Rate",
+            "name": "discount rate",
             "type": "percent",
             "required": "do_economic_analysis",
             "about": (

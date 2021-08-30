@@ -151,6 +151,7 @@ THRESHOLD_FLOW_ACCUMULATION = {
 REQUIRED_IF_SELECTED = 'Required if %s is selected.'
 REQUIRED_IF_PROVIDED = 'Required if %s is provided.'
 RASTER_VALUES = 'All values in this raster must have corresponding entries in the %s table.'
+LANDUSE = 'land use/land cover'
 
 # geometry types ##############################################################
 # the full list of ogr geometry types is in an enum in
