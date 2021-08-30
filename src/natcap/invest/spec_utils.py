@@ -51,7 +51,7 @@ WORKSPACE = {
 SUFFIX = {
     "name": "file suffix",
     "about": (
-        "Suffix that will be appended to all output file names. Use this to "
+        "Suffix that will be appended to all output file names. Useful to "
         "differentiate between model runs."),
     "type": "freestyle_string",
     "required": False,
