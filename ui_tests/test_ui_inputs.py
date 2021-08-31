@@ -2872,6 +2872,7 @@ class ModelTests(_QtTest):
             try:
                 spec = importlib.util.spec_from_file_location(module_name, python_file)
                 module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(module)
                 self.assertEqual(module.args, model_ui.assemble_args())
             finally:
                 del sys.modules[module_name]

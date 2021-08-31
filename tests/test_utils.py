@@ -870,28 +870,6 @@ class ReadCSVToDataframeTests(unittest.TestCase):
         self.assertEqual(df.columns[0], 'header1')
         self.assertEqual(df['HEADER2'][1], 5)
 
-    def test_non_utf8_encoding(self):
-        """utils: test that non-UTF8 encoding doesn't raise an error"""
-        from natcap.invest import utils
-
-        csv_file = os.path.join(self.workspace_dir, 'csv.csv')
-
-        # encode with ISO Cyrillic, include a non-ASCII character
-        with open(csv_file, 'w', encoding='iso8859_5') as file_obj:
-            file_obj.write(textwrap.dedent(
-                """
-                header,
-                fЮЮ,
-                bar
-                """
-            ).strip())
-        df = utils.read_csv_to_dataframe(csv_file)
-        # the default engine='python' should replace the unknown characters
-        # different encodings of replacement character depending on the system
-        self.assertTrue(df['header'][0] in ['f\xce\xce', 
-            'f\N{REPLACEMENT CHARACTER}\N{REPLACEMENT CHARACTER}'])
-        self.assertEqual(df['header'][1], 'bar')
-
     def test_override_default_encoding(self):
         """utils: test that you can override the default encoding kwarg"""
         from natcap.invest import utils

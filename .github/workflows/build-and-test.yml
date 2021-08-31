@@ -19,10 +19,10 @@ jobs:
                   # Fetch complete history for accurate versioning
                   fetch-depth: 0
 
-            - name: Set up python 3.7
+            - name: Set up python 3.8
               uses: actions/setup-python@v1
               with:
-                  python-version: 3.7
+                  python-version: 3.8
 
             - name: Set up environment
               run: python -m pip install --upgrade pip setuptools setuptools_scm flake8
@@ -103,23 +103,51 @@ jobs:
                     requirements-gui.txt > requirements-all.yml
                   conda env update --file requirements-all.yml
 
+            - name: Conda Environment Listing
+              shell: bash -l {0}
+              run: |
+                  conda list
+                  conda list --export > conda-env.txt
+
+            - name: Download Conda Env Artifact
+              continue-on-error: true
+              # Using 'dawidd6' since 'download-artifact' GH action doesn't
+              # support downloading artifacts from prior workflow runs
+              uses: dawidd6/action-download-artifact@v2
+              with:
+                  workflow: build-and-test.yml
+                  # Get frozen conda env artifact from last successful workflow
+                  workflow_conclusion: success
+                  name: Conda Env for ${{ matrix.os }} ${{ matrix.python-version }} ${{ matrix.python-architecture }}
+                  path: ./conda-env-artifact
+
+            - name: Compare Conda Environments
+              continue-on-error: true
+              shell: bash -l {0}
+              run: |
+                  diff ./conda-env.txt ./conda-env-artifact/conda-env.txt
+
             - name: Run model tests
               shell: bash -l {0}
               run: |
                   pip install $(find dist -name "natcap.invest*.whl")
                   make test
 
-            - uses: actions/upload-artifact@v1
+            - uses: actions/upload-artifact@v2
               with:
                   name: Wheel for ${{ matrix.os }} ${{ matrix.python-version }} ${{ matrix.python-architecture }}
                   path: dist
+
+            - uses: actions/upload-artifact@v2
+              with:
+                  name: Conda Env for ${{ matrix.os }} ${{ matrix.python-version }} ${{ matrix.python-architecture }}
+                  path: ./conda-env.txt
 
             - name: Set up GCP
               # Secrets not available in PR so don't use GCP.
               if: github.event_name != 'pull_request'
               uses: google-github-actions/setup-gcloud@master
               with:
-                  version: '281.0.0'
                   service_account_key: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
 
             - name: Deploy artifacts to GCS
@@ -191,7 +219,7 @@ jobs:
                   # natcap.invest from source and that it imports.
                   python -c "from natcap.invest import *"
 
-            - uses: actions/upload-artifact@v1
+            - uses: actions/upload-artifact@v2
               with:
                   name: Source distribution
                   path: dist
@@ -201,7 +229,6 @@ jobs:
               if: github.event_name != 'pull_request'
               uses: google-github-actions/setup-gcloud@master
               with:
-                  version: '281.0.0'
                   service_account_key: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
 
             - name: Deploy artifacts to GCS
@@ -241,7 +268,7 @@ jobs:
               with:
                   activate-environment: validate-env
                   auto-update-conda: true
-                  python-version: 3.7
+                  python-version: 3.8
                   channels: conda-forge
 
             - name: Install dependencies

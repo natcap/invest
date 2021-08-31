@@ -85,17 +85,17 @@ ARGS_SPEC = {
         },
         "carbon_pools_path": {
             "validation_options": {
-                "required_fields": ["LUCODE", "C_above", "C_below", "C_soil",
+                "required_fields": ["lucode", "C_above", "C_below", "C_soil",
                                     "C_dead"],
             },
             "type": "csv",
             "required": True,
             "about": (
-                "A table that maps the land-cover IDs to carbon pools.  "
-                "The table must contain columns of 'LULC', 'C_above', "
-                "'C_Below', 'C_Soil', 'C_Dead' as described in the User's "
-                "Guide.  The values in LULC must at least include the LULC "
-                "IDs in the land cover maps."),
+                "A table that maps each land cover class to its respective "
+                "carbon pools. The table must contain columns of 'lucode', "
+                "'C_above', 'C_below', 'C_soil', 'C_dead' as described in the "
+                "User's Guide. The 'lucode' column must include all the pixel "
+                "values present in the land cover maps."),
             "name": "Carbon Pools"
         },
         "lulc_cur_year": {
@@ -103,36 +103,31 @@ ARGS_SPEC = {
                 "expression": "int(value)"
             },
             "type": "number",
-            "required": "calc_sequestration",
+            "required": "do_valuation",
             "about": "The calendar year of the current scenario.",
-            "name": "Current Landcover Calendar Year"
+            "name": "Current Land Cover Calendar Year"
         },
         "lulc_fut_year": {
             "validation_options": {
                 "expression": "int(value)"
             },
             "type": "number",
-            "required": "calc_sequestration",
+            "required": "do_valuation",
             "about": "The calendar year of the future scenario.",
-            "name": "Future Landcover Calendar Year"
+            "name": "Future Land Cover Calendar Year"
         },
         "do_valuation": {
             "type": "boolean",
             "required": False,
             "about": (
-                "if true then run the valuation model on available outputs.  "
-                "At a minimum will run on carbon stocks, if sequestration "
-                "with a future scenario is done and/or a REDD scenario "
-                "calculate NPV for either and report in final HTML "
-                "document."),
+                "Calculate NPV for a future or REDD scenario "
+                "and report in final HTML document."),
             "name": "Run Valuation Model"
         },
         "price_per_metric_ton_of_c": {
             "type": "number",
             "required": "do_valuation",
-            "about": (
-                "Is the present value of carbon per metric ton. Used if "
-                "``args['do_valuation']`` is present and True."),
+            "about": "The present value of carbon per metric ton.",
             "name": "Price/Metric ton of carbon"
         },
         "discount_rate": {
@@ -191,7 +186,7 @@ _VALUE_NODATA = float(numpy.finfo(numpy.float32).min)
 
 
 def execute(args):
-    """InVEST Carbon Model.
+    """Carbon.
 
     Calculate the amount of carbon stocks given a landscape, or the difference
     due to a future change, and/or the tradeoffs between that and a REDD
@@ -220,17 +215,15 @@ def execute(args):
             storage density to lulc codes. (required if 'do_uncertainty' is
             false)
         args['lulc_cur_year'] (int/string): an integer representing the year
-            of `args['lulc_cur_path']` used if `args['calc_sequestration']`
+            of `args['lulc_cur_path']` used if `args['do_valuation']`
             is True.
         args['lulc_fut_year'](int/string): an integer representing the year
             of `args['lulc_fut_path']` used in valuation if it exists.
             Required if  `args['do_valuation']` is True and
             `args['lulc_fut_path']` is present and well defined.
         args['do_valuation'] (bool): if true then run the valuation model on
-            available outputs.  At a minimum will run on carbon stocks, if
-            sequestration with a future scenario is done and/or a REDD
-            scenario calculate NPV for either and report in final HTML
-            document.
+            available outputs. Calculate NPV for a future scenario or a REDD
+            scenario and report in final HTML document.
         args['price_per_metric_ton_of_c'] (float): Is the present value of
             carbon per metric ton. Used if `args['do_valuation']` is present
             and True.
@@ -413,7 +406,11 @@ def _accumulate_totals(raster_path):
     nodata = pygeoprocessing.get_raster_info(raster_path)['nodata'][0]
     raster_sum = 0.0
     for _, block in pygeoprocessing.iterblocks((raster_path, 1)):
-        raster_sum += numpy.sum(block[block != nodata])
+        # The float64 dtype in the sum is needed to reduce numerical error in
+        # the sum.  Users calculated the sum with ArcGIS zonal statistics,
+        # noticed a difference and wrote to us about it on the forum.
+        raster_sum += numpy.sum(
+            block[~numpy.isclose(block, nodata)], dtype=numpy.float64)
     return raster_sum
 
 
@@ -497,15 +494,21 @@ def _calculate_valuation_constant(
         a floating point number that can be used to multiply a delta carbon
         storage value by to calculate NPV.
     """
-    n_years = int(lulc_fut_year) - int(lulc_cur_year) - 1
+    n_years = lulc_fut_year - lulc_cur_year
     ratio = (
-        1.0 / ((1 + float(discount_rate) / 100.0) *
-               (1 + float(rate_change) / 100.0)))
-    valuation_constant = (
-        float(price_per_metric_ton_of_c) /
-        (float(lulc_fut_year) - float(lulc_cur_year)))
-    if ratio != 1.0:
-        valuation_constant *= (1.0 - ratio ** (n_years + 1)) / (1.0 - ratio)
+        1 / ((1 + discount_rate / 100) *
+             (1 + rate_change / 100)))
+    valuation_constant = (price_per_metric_ton_of_c / n_years)
+    # note: the valuation formula in the user's guide uses sum notation.
+    # here it's been simplified to remove the sum using the general rule
+    # sum(r^k) from k=0 to N  ==  (r^(N+1) - 1) / (r - 1)
+    # where N = n_years-1 and r = ratio
+    if ratio == 1:
+        # if ratio == 1, we would divide by zero in the equation below
+        # so use the limit as ratio goes to 1, which is n_years
+        valuation_constant *= n_years
+    else:
+        valuation_constant *= (1 - ratio ** n_years) / (1 - ratio)
     return valuation_constant
 
 

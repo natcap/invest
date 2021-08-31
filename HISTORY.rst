@@ -6,7 +6,7 @@
   - Coastal Blue Carbon
   - Coastal Vulnerability
   - Crop Production
-  - Delineateit
+  - DelineateIt
   - Finfish
   - Fisheries
   - Forest Carbon Edge Effects
@@ -32,6 +32,92 @@
 
 
 .. :changelog:
+
+Unreleased Changes (3.9.1)
+--------------------------
+* General:
+    * Added error-handling for when ``pandas`` fails to decode a non-utf8
+      encoded CSV.
+    * Moved the sample data JSON files out of the root sample_data folder and
+      into their respective model folders.
+    * Updated documentation on installing InVEST from source.
+    * Restructured API reference docs and removed outdated and redundant pages.
+    * Include logger name in the logging format. This is helpful for the cython
+      modules, which can't log module, function, or line number info.
+    * Fixed a bug in makefile that prevented ``make env`` from working properly.
+    * Fixed an issue with the InVEST application launching on Mac OS X 11
+      "Big Sur".  When launching the InVEST ``.app`` bundle, the environment
+      variable ``QT_MAC_WANTS_LAYER`` is defined.  If running InVEST through
+      python, this environment variable may need to be defined by hand like
+      so: ``QT_MAC_WANTS_LAYER=1 python -m natcap.invest``.  A warning will
+      be raised if this environment variable is not present on mac.
+    * Fixing an issue on Mac OS X where saving the InVEST application to a
+      filepath containing spaces would prevent the application from launching.
+    * Fixed an issue on Mac OS when certain models would loop indefinitely and
+      never complete.  This was addressed by bumping the ``taskgraph``
+      requirement version to ``0.10.3``
+    * Allow Windows users to install for all users or current user. This allows
+      non-admin users to install InVEST locally.
+    * Fixed a bug where saving a datastack parameter set with relative paths
+      would not convert Windows separators to linux style.
+    * Provide a better validation error message when an overview '.ovr' file
+      is input instead of a valid raster.
+    * Removed internal references to ``TaskGraph``
+      ``copy_duplicate_artifact`` calls in anticipation from that feature
+      being removed from ``TaskGraph``. User facing changes include
+      slightly faster initial runtimes for the Coastal Vulnerability,
+      Coastal Blue Carbon, SDR, DelineateIt, and Seasonal Water Yield models.
+      These models will no longer attempt to copy intermediate artifacts that
+      could have been computed by previous runs.
+    * Validation now returns a more helpful message when a spatial input has
+      no projection defined.
+* Carbon
+    * Fixed a bug where, if rate change and discount rate were set to 0, the
+      valuation results were in $/year rather than $, too small by a factor of
+      ``lulc_fut_year - lulc_cur_year``.
+    * Improved UI to indicate that Calendar Year inputs are only required for
+      valuation, not also for sequestration.
+    * Increasing the precision of ``numpy.sum`` from Float32 to Float64 when
+      aggregating raster values for the HTML report.
+* DelineateIt:
+    * The DelineateIt UI has been updated so that the point-snapping options
+      will always be interactive.
+    * DelineateIt's point-snapping routine has been updated to snap
+      ``MULTIPOINT`` geometries with 1 component point as well as primitive
+      ``POINT`` geometries.  All other geometric types will not be snapped.
+      When a geometry cannot be snapped, a log message is now recorded with the
+      feature ID, the geometry type and the number of component geometries.
+      Features with empty geometries are now also skipped.
+* Fisheries Habitat Scenario Tool
+    * Fixed divide-by-zero bug that was causing a RuntimeWarning in the logs.
+      This bug did not affect the output.
+* HRA
+    * Fixed bugs that allowed zeros in DQ & Weight columns of criteria
+      table to raise DivideByZero errors.
+* Pollination
+    * Updated so that the ``total_pollinator_abundance_[season].tif`` outputs
+      are always created. Before, they weren't created if a farm vector was
+      not supplied, even though they are independent.
+* Recreation
+    * Fixed some incorrectly formatted log and error messages
+* Seasonal Water Yield
+    * Fixed a bug where ``qf.tif`` outputs weren't properly masking nodata
+      values and could show negative numbers.
+* SDR
+    * Fixed a bug in validation that did not warn against different coordinate
+      systems (all SDR inputs must share a common coordinate system).
+    * Fixed a bug that was incorrectly using a factor of 0.0986 rather than
+      0.0896. This would have a minor effect on end-user results.
+    * Changed how SDR thresholds its L factor to allow direct thresholding
+      rather than based off of upstream area. Exposed this parameter as
+      ``l_max`` in the ``args`` input and in the user interface.
+* Urban Flood Risk
+    * Fixed a bug where a String ``Type`` column in the infrastructure vector
+      would cause the aggregation step of the model to crash, even with the
+      correct integer value in the column.
+* Wind Energy
+    * Raising ValueError when AOI does not intersect Wind Data points.
+
 3.9.0 (2020-12-11)
 ------------------
 * General:
@@ -40,7 +126,7 @@
     * Making InVEST compatible with Pygeoprocessing 2.0 by updating:
         * ``convolve_2d()`` keyword ``ignore_nodata`` to
           ``ignore_nodata_and_edges``.
-        * ``get_raster_info()`` / ``get_vector_info()`` keyword ``projection`` 
+        * ``get_raster_info()`` / ``get_vector_info()`` keyword ``projection``
           to ``projection_wkt``.
     * Improve consistency and context for error messages related to raster
       reclassification across models by using ``utils.reclassify_raster``.
@@ -112,7 +198,7 @@
     * Fixed a bug where the suffix input was not being used for output paths.
 * Forest Carbon Edge Effect
     * Fixed a broken link to the local User's Guide
-    * Fixed bug that was causing overflow errors to appear in the logs when 
+    * Fixed bug that was causing overflow errors to appear in the logs when
       running with the sample data.
     * Mask out nodata areas of the carbon map output. Now there should be no
       output data outside of the input LULC rasater area.
@@ -125,7 +211,7 @@
       required columns: ``BASE_PATH``, ``CUR_PATH``, ``FUT_PATH``.
     * Threat and Sensitivity column names are now case-insensitive.
     * Sensitivity threat columns now match threat names from Threat Table
-      exactly, without the need for "L_". "L_" prefix is deprecated.
+      exactly, without the need for ``L_``. ``L_`` prefix is deprecated.
     * Threat raster input folder has been removed.
     * Validation enhancements that check whether threat raster paths are valid.
     * HQ update to User's Guide.
@@ -158,7 +244,7 @@
       separate UI options.
 * Urban Flood Risk
     * Changed output field names ``aff.bld`` and ``serv.blt`` to ``aff_bld``
-      and ``serv_blt`` respectively to fix an issue where ArcGIS would not 
+      and ``serv_blt`` respectively to fix an issue where ArcGIS would not
       display properly.
 
 3.8.9 (2020-09-15)
@@ -286,10 +372,10 @@
 
 3.8.3 (2020-05-29)
 ------------------
-* sdr
-  * SDR's compiled core now defines its own ``SQRT2`` instead of relying on an
-    available standard C library definition. This new definition helps to avoid
-    some compiler issues on Windows.
+* SDR
+    * SDR's compiled core now defines its own ``SQRT2`` instead of relying on an
+      available standard C library definition. This new definition helps to avoid
+      some compiler issues on Windows.
 
 3.8.2 (2020-05-15)
 ------------------

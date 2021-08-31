@@ -116,7 +116,7 @@ class WaveEnergyUnitTests(unittest.TestCase):
 
         # Compare
         for res, exp in zip(result, expected_res):
-            self.assertAlmostEqual(res, exp, places=5)
+            self.assertAlmostEqual(res, exp, places=2)
 
     def test_count_pixels_groups(self):
         """WaveEnergy: testing '_count_pixels_groups' function."""
@@ -172,21 +172,59 @@ class WaveEnergyUnitTests(unittest.TestCase):
     def test_clip_vector_by_vector_polygons(self):
         """WaveEnergy: testing clipping polygons from polygons."""
         from natcap.invest import wave_energy
+        from natcap.invest.utils import _assert_vectors_equal
 
-        aoi_path = os.path.join(REGRESSION_DATA, 'aoi_proj_to_extract.shp')
-        extract_path = os.path.join(
-            SAMPLE_DATA, 'WaveData', 'Global_extract.shp')
+        projection_wkt = osr.SRS_WKT_WGS84_LAT_LONG
+        origin = (-62.00, 44.00)
+        pos_x = origin[0]
+        pos_y = origin[1]
 
-        result_path = os.path.join(self.workspace_dir, 'aoi_proj_clipped.shp')
-        target_projection = pygeoprocessing.get_vector_info(
-            extract_path)['projection_wkt']
+        fields_aoi = {'id': ogr.OFTInteger}
+        attrs_aoi = [{'id': 1}]
+        # Create polygon for the aoi
+        aoi_polygon = [
+            Polygon([(pos_x, pos_y), (pos_x + 2, pos_y),
+                     (pos_x + 2, pos_y - 2), (pos_x, pos_y - 2),
+                     (pos_x, pos_y)])
+        ]
+
+        aoi_path = os.path.join(self.workspace_dir, 'aoi.shp')
+        # Create the polygon shapefile
+        pygeoprocessing.shapely_geometry_to_vector(
+            aoi_polygon, aoi_path, projection_wkt, 'ESRI Shapefile',
+            fields=fields_aoi, attribute_list=attrs_aoi)
+
+        fields_data = {'id': ogr.OFTInteger, 'myattr': ogr.OFTString}
+        attrs_data = [{'id': 1, 'myattr': 'hello'}]
+        # Create polygon to clip with the aoi
+        data_polygon = [
+            Polygon([(pos_x - 2, pos_y + 2), (pos_x + 6, pos_y - 2),
+                     (pos_x + 6, pos_y - 4), (pos_x - 2, pos_y - 6),
+                     (pos_x - 2, pos_y + 2)])
+        ]
+
+        data_path = os.path.join(self.workspace_dir, 'data.shp')
+        # Create the polygon shapefile
+        pygeoprocessing.shapely_geometry_to_vector(
+            data_polygon, data_path, projection_wkt, 'ESRI Shapefile',
+            fields=fields_data, attribute_list=attrs_data)
+
+        result_path = os.path.join(self.workspace_dir, 'aoi_clipped.shp')
         wave_energy._clip_vector_by_vector(
-            aoi_path, extract_path, result_path, target_projection,
+            data_path, aoi_path, result_path, projection_wkt,
             self.workspace_dir)
 
-        expected_path = os.path.join(REGRESSION_DATA, 'aoi_proj_clipped.shp')
-        WaveEnergyRegressionTests._assert_point_vectors_equal(
-            result_path, expected_path)
+        fields_expected = {'id': ogr.OFTInteger, 'myattr': ogr.OFTString}
+        attrs_expected = [{'id': 1, 'myattr': 'hello'}]
+        # Create polygon to clip with the aoi
+        expected_polygon = aoi_polygon
+        expected_path = os.path.join(self.workspace_dir, 'expected.shp')
+        # Create the polygon shapefile
+        pygeoprocessing.shapely_geometry_to_vector(
+            expected_polygon, expected_path, projection_wkt, 'ESRI Shapefile',
+            fields=fields_expected, attribute_list=attrs_expected)
+
+        _assert_vectors_equal(expected_path, result_path)
 
     def test_clip_vector_by_vector_points(self):
         """WaveEnergy: testing clipping points from polygons."""

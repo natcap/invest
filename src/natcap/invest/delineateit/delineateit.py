@@ -155,7 +155,7 @@ def execute(args):
             'Working with the DEM' section of the InVEST User's Guide for more
             information. (required)
         args['outlet_vector_path'] (string):  This is a vector representing
-            geometries that the watersheds should be built around. Required if 
+            geometries that the watersheds should be built around. Required if
             ``args['detect_pour_points']`` is False; not used otherwise.
         args['snap_points'] (bool): Whether to snap point geometries to the
             nearest stream pixel.  If ``True``, ``args['flow_threshold']``
@@ -172,7 +172,7 @@ def execute(args):
             found.  If ``True``, invalid geometries will be left out of
             the vector to be delineated.  Default: True
         args['detect_pour_points'] (bool): Whether to run the pour point
-            detection algorithm. If True, detected pour points are used instead 
+            detection algorithm. If True, detected pour points are used instead
             of outlet_vector_path geometries. Default: False
         args['n_workers'] (int): The number of worker processes to use with
             taskgraph. Defaults to -1 (no parallelism).
@@ -207,9 +207,7 @@ def execute(args):
               file_registry['filled_dem']),
         kwargs={'working_dir': output_directory},
         target_path_list=[file_registry['filled_dem']],
-        task_name='fill_pits',
-        hash_algorithm='md5',
-        copy_duplicate_artifact=True)
+        task_name='fill_pits')
 
     flow_dir_task = graph.add_task(
         pygeoprocessing.routing.flow_dir_d8,
@@ -218,9 +216,7 @@ def execute(args):
         kwargs={'working_dir': output_directory},
         target_path_list=[file_registry['flow_dir_d8']],
         dependent_task_list=[fill_pits_task],
-        task_name='flow_direction',
-        hash_algorithm='md5',
-        copy_duplicate_artifact=True)
+        task_name='flow_direction')
 
     if 'detect_pour_points' in args and args['detect_pour_points']:
         # Detect pour points automatically and use them instead of
@@ -231,9 +227,7 @@ def execute(args):
                   file_registry['pour_points']),
             dependent_task_list=[flow_dir_task],
             target_path_list=[file_registry['pour_points']],
-            task_name='detect_pour_points',
-            hash_algorithm='md5',
-            copy_duplicate_artifact=True)
+            task_name='detect_pour_points')
         outlet_vector_path = file_registry['pour_points']
         geometry_task = pour_points_task
     else:
@@ -245,9 +239,7 @@ def execute(args):
                   args.get('skip_invalid_geometry', True)),
             dependent_task_list=[fill_pits_task],
             target_path_list=[file_registry['preprocessed_geometries']],
-            task_name='check_geometries',
-            hash_algorithm='md5',
-            copy_duplicate_artifact=True)
+            task_name='check_geometries')
         outlet_vector_path = file_registry['preprocessed_geometries']
         geometry_task = check_geometries_task
 
@@ -281,9 +273,7 @@ def execute(args):
                   out_nodata),
             target_path_list=[file_registry['streams']],
             dependent_task_list=[flow_accumulation_task],
-            task_name='threshold_streams',
-            hash_algorithm='md5',
-            copy_duplicate_artifact=True)
+            task_name='threshold_streams')
 
         snapped_outflow_points_task = graph.add_task(
             snap_points_to_nearest_stream,
@@ -293,9 +283,7 @@ def execute(args):
                   file_registry['snapped_outlets']),
             target_path_list=[file_registry['snapped_outlets']],
             dependent_task_list=[streams_task, geometry_task],
-            task_name='snapped_outflow_points',
-            hash_algorithm='md5',
-            copy_duplicate_artifact=True)
+            task_name='snapped_outflow_points')
         delineation_dependent_tasks.append(snapped_outflow_points_task)
         outlet_vector_path = file_registry['snapped_outlets']
 
@@ -310,39 +298,10 @@ def execute(args):
                         os.path.basename(file_registry['watersheds']))[0]},
         target_path_list=[file_registry['watersheds']],
         dependent_task_list=delineation_dependent_tasks,
-        task_name='delineate_watersheds_single_worker',
-        hash_algorithm='md5',
-        copy_duplicate_artifact=True)
+        task_name='delineate_watersheds_single_worker')
 
     graph.close()
     graph.join()
-
-
-def _vector_may_contain_points(vector_path, layer_id=0):
-    """Test if a vector layer may contain points.
-
-    This function is intended to be used by the InVEST UI only.
-
-    Args:
-        vector_path (string): The path to a vector on disk.
-        layer_id=0 (int or string): The ID or name of the layer to check.
-
-    Returns:
-        A ``bool`` indicating whether a vector contains points.  ``False`` if
-        the vector cannot be opened at all or if the layer is invalid.
-
-    """
-    vector = gdal.OpenEx(vector_path, gdal.OF_VECTOR)
-    if vector is None:
-        return False
-
-    layer = vector.GetLayer(layer_id)
-    if layer is None:
-        return False
-
-    if layer.GetGeomType() in (ogr.wkbPoint, ogr.wkbUnknown):
-        return True
-    return False
 
 
 def _threshold_streams(flow_accum, src_nodata, out_nodata, threshold):
@@ -469,13 +428,14 @@ def check_geometries(outlet_vector_path, dem_path, target_vector_path,
                 continue
 
         if shapely_geom.is_empty:
-            LOGGER.warning('Feature %s has no geometry. Skipping', feature.GetFID())
+            LOGGER.warning(
+                'Feature %s has no geometry. Skipping', feature.GetFID())
             continue
 
         shapely_bbox = shapely.geometry.box(*shapely_geom.bounds)
         if not dem_bbox.intersects(shapely_bbox):
             LOGGER.warning('Feature %s does not intersect the DEM. Skipping.',
-                         feature.GetFID())
+                           feature.GetFID())
             continue
 
         simplified_geometry = shapely_geom.simplify(nyquist_limit)
@@ -559,10 +519,25 @@ def snap_points_to_nearest_stream(points_vector_path, stream_raster_path_band,
             last_time = time.time()
 
         source_geometry = point_feature.GetGeometryRef()
+        geom_name = source_geometry.GetGeometryName()
+        geom_count = source_geometry.GetGeometryCount()
+
+        if source_geometry.IsEmpty():
+            LOGGER.warning(
+                f"FID {point_feature.GetFID()} is missing a defined geometry. "
+                "Skipping.")
+            continue
 
         # If the geometry is not a primitive point, just create the new feature
-        # as it is now in the new vector.
-        if source_geometry.GetGeometryName() != 'POINT':
+        # as it is now in the new vector. MULTIPOINT geometries with a single
+        # component point count as primitive points.
+        # OGR's wkbMultiPoint, wkbMultiPointM, wkbMultiPointZM and
+        # wkbMultiPoint25D all use the MULTIPOINT geometry name.
+        if ((geom_name not in ('POINT', 'MULTIPOINT')) or
+                (geom_name == 'MULTIPOINT' and geom_count > 1)):
+            LOGGER.warning(
+                f"FID {point_feature.GetFID()} ({geom_name}, n={geom_count}) "
+                "Geometry cannot be snapped.")
             new_feature = ogr.Feature(snapped_layer.GetLayerDefn())
             new_feature.SetGeometry(source_geometry)
             for field_name, field_value in point_feature.items().items():
@@ -571,13 +546,17 @@ def snap_points_to_nearest_stream(points_vector_path, stream_raster_path_band,
             continue
 
         point = shapely.wkb.loads(source_geometry.ExportToWkb())
+        if geom_name == 'MULTIPOINT':
+            # We already checked (above) that there's only one component point
+            point = point.geoms[0]
+
         x_index = (point.x - geotransform[0]) // geotransform[1]
         y_index = (point.y - geotransform[3]) // geotransform[5]
         if (x_index < 0 or x_index > n_cols or
                 y_index < 0 or y_index > n_rows):
-            LOGGER.warning('Encountered a point that was outside the bounds of '
-                        'the stream raster.  FID:%s at %s',
-                        point_feature.GetFID(), point)
+            LOGGER.warning(
+                'Encountered a point that was outside the bounds of the '
+                f'stream raster.  FID:{point_feature.GetFID()} at {point}')
             continue
 
         x_center = x_index
@@ -643,9 +622,11 @@ def detect_pour_points(flow_dir_raster_path_band, target_vector_path):
         flow_dir_raster_path_band (tuple): tuple of (raster path, band index)
             indicating the flow direction raster to use. Pixel values are D8
             values [0 - 7] in this order:
+
                 321
                 4x0
                 567
+
         target_vector_path (string): path to save pour point vector to.
 
     Returns:
@@ -690,7 +671,7 @@ def detect_pour_points(flow_dir_raster_path_band, target_vector_path):
 def _find_raster_pour_points(flow_dir_raster_path_band):
     """
     Memory-safe pour point calculation from a flow direction raster.
-    
+
     Args:
         flow_dir_raster_path_band (tuple): tuple of (raster path, band index)
             indicating the flow direction raster to use.
@@ -703,18 +684,15 @@ def _find_raster_pour_points(flow_dir_raster_path_band):
     raster_info = pygeoprocessing.get_raster_info(flow_dir_raster_path)
     # Open the flow direction raster band
     raster = gdal.OpenEx(flow_dir_raster_path, gdal.OF_RASTER)
-    if raster is None:
-        raise ValueError(
-            "Raster at %s could not be opened." % flow_dir_raster_path)
     band = raster.GetRasterBand(band_index)
     width, height = raster_info['raster_size']
 
     pour_points = set()
     # Read in flow direction data and find pour points one block at a time
-    for offsets in pygeoprocessing.iterblocks((flow_dir_raster_path, band_index),
-                                               offset_only=True): 
-        # Expand each block by a one-pixel-wide margin, if possible. 
-        # This way the blocks will overlap so the watershed 
+    for offsets in pygeoprocessing.iterblocks(
+            (flow_dir_raster_path, band_index), offset_only=True):
+        # Expand each block by a one-pixel-wide margin, if possible.
+        # This way the blocks will overlap so the watershed
         # calculation will be continuous.
         if offsets['xoff'] > 0:
             offsets['xoff'] -= 1
@@ -738,17 +716,17 @@ def _find_raster_pour_points(flow_dir_raster_path_band):
         flow_dir_block = band.ReadAsArray(**offsets)
         pour_points = pour_points.union(
             delineateit_core.calculate_pour_point_array(
-                # numpy.intc is equivalent to an int in C (normally int32 or 
-                # int64). This way it can be passed directly into a memoryview 
+                # numpy.intc is equivalent to an int in C (normally int32 or
+                # int64). This way it can be passed directly into a memoryview
                 # (int[:, :]) in the Cython function.
-                flow_dir_block.astype(numpy.intc), 
-                edges, 
+                flow_dir_block.astype(numpy.intc),
+                edges,
                 nodata=raster_info['nodata'][band_index - 1],
                 offset=(offsets['xoff'], offsets['yoff']),
-                origin=(raster_info['geotransform'][0], 
+                origin=(raster_info['geotransform'][0],
                         raster_info['geotransform'][3]),
                 pixel_size=raster_info['pixel_size']))
-            
+
     raster = None
     band = None
 

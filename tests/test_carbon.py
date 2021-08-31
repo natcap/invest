@@ -8,6 +8,9 @@ import os
 from osgeo import gdal
 from osgeo import osr
 import numpy
+import numpy.random
+import numpy.testing
+import pygeoprocessing
 
 
 def make_simple_raster(base_raster_path, fill_val, nodata_val):
@@ -80,7 +83,9 @@ def make_pools_csv(pools_csv_path):
     with open(pools_csv_path, 'w') as open_table:
         open_table.write('C_above,C_below,C_soil,C_dead,lucode,LULC_Name\n')
         open_table.write('15,10,60,1,1,"lulc code 1"\n')
+        # total change from 1 -> 2: -58 metric tons per hectare
         open_table.write('5,3,20,0,2,"lulc code 2"\n')
+        # total change from 1 -> 3: -78 metric tons per hectare
         open_table.write('2,1,5,0,3,"lulc code 3"\n')
 
 
@@ -161,11 +166,14 @@ class CarbonTests(unittest.TestCase):
         carbon.execute(args)
 
         # Add assertions for npv for future and REDD scenarios.
-        # The npv was calculated based on _calculate_npv in carbon.py.
+        # carbon change from cur to fut:
+        # -58 Mg/ha * .0001 ha/pixel * 43 $/Mg = -0.2494 $/pixel
         assert_raster_equal_value(
-            os.path.join(args['workspace_dir'], 'npv_fut.tif'), -0.0178143)
+            os.path.join(args['workspace_dir'], 'npv_fut.tif'), -0.2494)
+        # carbon change from cur to redd:
+        # -78 Mg/ha * .0001 ha/pixel * 43 $/Mg = -0.3354 $/pixel
         assert_raster_equal_value(
-            os.path.join(args['workspace_dir'], 'npv_redd.tif'), -0.0239571)
+            os.path.join(args['workspace_dir'], 'npv_redd.tif'), -0.3354)
 
     def test_carbon_future(self):
         """Carbon: regression testing future scenario."""
@@ -296,9 +304,7 @@ class CarbonValidationTests(unittest.TestCase):
         invalid_keys = validation.get_invalid_keys(validation_errors)
         expected_missing_keys = set(
             self.base_required_keys +
-            ['lulc_cur_year',
-             'lulc_fut_year',
-             'lulc_fut_path'])
+            ['lulc_fut_path'])
         self.assertEqual(invalid_keys, expected_missing_keys)
 
     def test_missing_keys_redd(self):
@@ -328,5 +334,33 @@ class CarbonValidationTests(unittest.TestCase):
             ['calc_sequestration',
              'price_per_metric_ton_of_c',
              'discount_rate',
-             'rate_change'])
+             'rate_change',
+             'lulc_cur_year',
+             'lulc_fut_year'])
         self.assertEqual(invalid_keys, expected_missing_keys)
+
+    def test_carbon_totals_precision(self):
+        """Carbon: check float64 precision in pixel value summation."""
+        from natcap.invest import carbon
+
+        big_float32_array = numpy.random.default_rng(seed=1).random(
+            (1000, 1000), dtype=numpy.float32)
+
+        # Throw in some nodata values for good measure.
+        nodata = numpy.finfo(numpy.float32).min
+        big_float32_array[1:15] = nodata
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(32731)  # WGS84/UTM zone 31s
+        wkt = srs.ExportToWkt()
+        raster_path = os.path.join(self.workspace_dir, 'raster.tif')
+        pygeoprocessing.numpy_array_to_raster(
+            big_float32_array, float(nodata), (2, -2), (2, -2), wkt,
+            raster_path)
+
+        # Verify better-than-float32 precision on raster summation.
+        # Using a numpy float32 in numpy.sum will pass up to rtol=1e-9.
+        numpy.testing.assert_allclose(
+            carbon._accumulate_totals(raster_path),
+            492919.73994,
+            rtol=1e-12)  # Note better precision
