@@ -20,45 +20,7 @@ const LOGLEVELMAP = {
   ERROR: '-v',
 };
 const TEMP_DIR = path.join(app.getPath('userData'), 'tmp');
-const LOGFILE_REGEX = /InVEST-natcap\.invest\.[a-zA-Z._]+-log-[0-9]{4}-[0-9]{2}-[0-9]{2}--[0-9]{2}_[0-9]{2}_[0-9]{2}.txt/g;
 const HOSTNAME = 'http://localhost';
-
-/**
- * Given an invest workspace, find the most recently modified invest log.
- *
- * This function is used in order to associate a logfile with an active
- * InVEST run, so the log can be tailed to a UI component.
- *
- * @param {string} directory - the path to an invest workspace directory
- * @returns {Promise} - resolves string path to an invest logfile
- */
-export function findMostRecentLogfile(directory) {
-  return new Promise((resolve) => {
-    const files = glob.sync(path.join(directory, '*.txt'));
-    const logfiles = [];
-    files.forEach((file) => {
-      const match = file.match(LOGFILE_REGEX);
-      if (match) {
-        logfiles.push(path.join(directory, match[0]));
-      }
-    });
-    if (logfiles.length === 1) {
-      // This is the most likely path
-      resolve(logfiles[0]);
-      return;
-    }
-    if (logfiles.length > 1) {
-      // reverse sort (b - a) based on last-modified time
-      const sortedFiles = logfiles.sort(
-        (a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs
-      );
-      resolve(sortedFiles[0]);
-    } else {
-      logger.error(`No invest logfile found in ${directory}`);
-      resolve(undefined);
-    }
-  });
-}
 
 export function setupInvestRunHandlers(investExe) {
   const runningJobs = {};
@@ -112,6 +74,7 @@ export function setupInvestRunHandlers(investExe) {
     ];
     logger.debug(`set to run ${cmdArgs}`);
     let investRun;
+    let investLogfile;
     if (process.platform !== 'win32') {
       investRun = spawn(path.basename(investExe), cmdArgs, {
         env: { PATH: path.dirname(investExe) },
@@ -127,31 +90,38 @@ export function setupInvestRunHandlers(investExe) {
 
     // There's no general way to know that a spawned process started,
     // so this logic to listen once on stdout seems like the way.
-    investRun.stdout.once('data', async (data) => {
-      const logfile = await findMostRecentLogfile(args.workspace_dir);
-      // TODO: handle case when logfile is still undefined?
-      // Could be if some stdout is emitted before a logfile exists.
-      logger.debug(`invest logging to: ${logfile}`);
-      runningJobs[args.workspace_dir] = investRun.pid;
-      event.reply(`invest-logging-${channel}`, logfile);
-    });
+    // We need to store the PID to enable killing the task.
+    // And need to parse the logfile path from stdout.
+    const stdOutCallback = async (data) => {
+      if (!investLogfile) {
+        if (`${data}`.match('Writing log messages to')) {
+          investLogfile = `${data}`.split(' ').pop();
+          runningJobs[args.workspace_dir] = investRun.pid;
+          event.reply(`invest-logging-${channel}`, investLogfile);
+        }
+      }
+      event.reply(`invest-stdout-${channel}`, `${data}`);
+    };
+    investRun.stdout.on('data', stdOutCallback);
 
     // Capture stderr to a string separate from the invest log
     // so that it can be displayed separately when invest exits.
     // And because it could actually be stderr emitted from the
     // invest CLI or even the shell, rather than the invest model,
     // in which case it's useful to logger.debug too.
-    investRun.stderr.on('data', (data) => {
+    const stdErrCallback = (data) => {
       logger.debug(`${data}`);
       // The PyInstaller exe will always emit a final 'Failed ...' message
       // after an uncaught exception. It is not helpful to display to users
-      // so we filter it out here.
-      const dat = `${data}`
-        .split(os.EOL)
-        .filter((line) => !line.match(/\[[0-9]+\] Failed to execute script/))
-        .join(os.EOL);
+      // so we filter it out and stop listening to stderr when we find it.
+      const dataArray = `${data}`.split(/\[[0-9]+\] Failed to execute/);
+      if (dataArray.length > 1) {
+        investRun.stderr.removeListener('data', stdErrCallback);
+      }
+      const dat = dataArray[0];
       event.reply(`invest-stderr-${channel}`, `${dat}${os.EOL}`);
-    });
+    };
+    investRun.stderr.on('data', stdErrCallback);
 
     investRun.on('exit', (code) => {
       delete runningJobs[args.workspace_dir];

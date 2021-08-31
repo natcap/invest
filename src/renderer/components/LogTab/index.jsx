@@ -2,7 +2,7 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import { Tail } from 'tail';
 import os from 'os';
-import { shell } from 'electron'; // eslint-disable-line import/no-extraneous-dependencies
+import { ipcRenderer } from 'electron'; // eslint-disable-line import/no-extraneous-dependencies
 import sanitizeHtml from 'sanitize-html';
 
 import Row from 'react-bootstrap/Row';
@@ -85,18 +85,25 @@ export default class LogTab extends React.Component {
   }
 
   componentDidMount() {
-    const { logfile } = this.props;
-    if (logfile) {
+    const { logfile, isRunning, jobID } = this.props;
+    if (!isRunning && logfile) {
       this.tailLogfile(logfile);
     }
+    // The component may mount from a Recent Run, in which case we're
+    // tailing the logfile. But we still want this listener active
+    // in case the model is re-run.
+    ipcRenderer.on(`invest-stdout-${jobID}`, (event, data) => {
+      let { logdata } = this.state;
+      logdata += markupLine(data, this.logPatterns);
+      this.setState({ logdata: logdata });
+    });
   }
 
   componentDidUpdate(prevProps) {
-    // Re-executing a model will generate a new logfile
-    // so need to update to tail the new file.
-    const { logfile } = this.props;
-    if (logfile && (prevProps.logfile !== logfile)) {
-      this.tailLogfile(logfile);
+    // If we're re-running a model after loading a recent run,
+    // we should clear out the logdata when the new run is launched.
+    if (this.props.isRunning && !prevProps.isRunning) {
+      this.setState({ logdata: '' });
     }
   }
 
@@ -105,6 +112,7 @@ export default class LogTab extends React.Component {
     if (this.tail) {
       this.unwatchLogfile();
     }
+    ipcRenderer.removeAllListeners(`invest-stdout-${this.props.jobID}`);
   }
 
   tailLogfile(logfile) {
@@ -176,7 +184,8 @@ export default class LogTab extends React.Component {
 }
 
 LogTab.propTypes = {
-  jobStatus: PropTypes.string,
   logfile: PropTypes.string,
+  isRunning: PropTypes.bool.isRequired,
+  jobID: PropTypes.string.isRequired,
   pyModuleName: PropTypes.string.isRequired,
 };

@@ -122,10 +122,16 @@ export default class InvestTab extends React.Component {
       this.switchTabs('log');
     });
     ipcRenderer.on(`invest-stderr-${jobID}`, (event, data) => {
+      // It's convenient to have stderr in it's own object to display
+      // it an Alert. But it's also convenient to append it to the
+      // the data from stdout, so it all displays inline in the UI log.
       let stderr = Object.assign('', this.state.logStdErr);
       stderr += data;
+      let stdout = Object.assign('', this.state.logStdOut);
+      stdout += data;
       this.setState({
         logStdErr: stderr,
+        logStdOut: stdout,
       });
     });
     ipcRenderer.on(`invest-exit-${jobID}`, (event, code) => {
@@ -189,6 +195,7 @@ export default class InvestTab extends React.Component {
       modelSpec,
       argsSpec,
       uiSpec,
+      logStdOut,
     } = this.state;
     const {
       status,
@@ -280,8 +287,9 @@ export default class InvestTab extends React.Component {
               </TabPane>
               <TabPane eventKey="log" title="Log">
                 <LogTab
-                  jobStatus={status}
                   logfile={logfile}
+                  isRunning={isRunning}
+                  jobID={jobID}
                   pyModuleName={modelSpec.module}
                 />
               </TabPane>
