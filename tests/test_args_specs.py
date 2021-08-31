@@ -44,14 +44,26 @@ valid_nested_types = {
 
 
 class ValidateArgsSpecs(unittest.TestCase):
+    """Validate the contract for patterns and types in ARGS_SPEC."""
 
-    def test_model_specs(self):
+    def test_model_specs_are_valid(self):
+        """ARGS_SPEC: test each spec meets the expected pattern."""
 
-        for model_name, val in cli._MODEL_UIS.items():
-            print('\n')
-            print(model_name)
-            # val is a collections.namedtuple, fields accessible by name
-            model = importlib.import_module(val.pyname)
+        required_keys = {'model_name', 'module', 'userguide_html', 'args'}
+        optional_spatial_key = 'args_with_spatial_overlap'
+        for model_name, metadata in cli._MODEL_UIS.items():
+            # metadata is a collections.namedtuple, fields accessible by name
+            model = importlib.import_module(metadata.pyname)
+
+            # Validate top-level keys are correct
+            with self.subTest(metadata.pyname):
+                self.assertTrue(required_keys.issubset(model.ARGS_SPEC))
+                extra_keys = set(model.ARGS_SPEC).difference(required_keys)
+                if (extra_keys):
+                    self.assertEqual(extra_keys, set([optional_spatial_key]))
+                    self.assertTrue(
+                        set(model.ARGS_SPEC[optional_spatial_key]).issubset(
+                            {'spatial_keys', 'different_projections_ok'}))
 
             # validate that each arg meets the expected pattern
             # save up errors to report at the end
@@ -100,11 +112,11 @@ class ValidateArgsSpecs(unittest.TestCase):
                     # option_string type should have an options property that
                     # describes the valid options
                     self.assertTrue('options' in arg)
-                    # May be a set or dict because some option sets are self
+                    # May be a list or dict because some option sets are self
                     # explanatory and others need a description
                     self.assertTrue(isinstance(arg['options'], dict) or
-                                    isinstance(arg['options'], set))
-                    if isinstance(arg['options'], set):
+                                    isinstance(arg['options'], list))
+                    if isinstance(arg['options'], list):
                         for item in arg['options']:
                             self.assertTrue(isinstance(item, str))
                     else:
@@ -314,6 +326,44 @@ class ValidateArgsSpecs(unittest.TestCase):
             self.assertTrue(letter in valid_letters)
             # should only have a letter once
             valid_letters.remove(letter)
+
+    def test_model_specs_serialize(self):
+        """ARGS_SPEC: test each ARGS_SPEC can serialize to JSON."""
+        from natcap.invest import spec_utils
+
+        for model_name, metadata in cli._MODEL_UIS.items():
+            model = importlib.import_module(metadata.pyname)
+            try:
+                _ = spec_utils.serialize_args_spec(model.ARGS_SPEC)
+            except TypeError as error:
+                self.fail(
+                    f'Failed to avoid TypeError when serializing '
+                    f'{metadata.pyname}.ARGS_SPEC: \n'
+                    f'{error}')
+
+
+class SpecUtilsTests(unittest.TestCase):
+    """Tests for natcap.invest.spec_utils."""
+
+    def test_format_unit(self):
+        """spec_utils: test converting units to strings with format_unit."""
+        from natcap.invest import spec_utils
+        for unit_name, expected in [
+                ('meter', 'm'),
+                ('meter / second', 'm/s'),
+                ('foot * mm', 'ft · mm'),
+                ('t * hr * ha / ha / MJ / mm', 't · h · ha / (ha · MJ · mm)'),
+                ('mm^3 / year', 'mm³/yr')
+        ]:
+            unit = spec_utils.u.Unit(unit_name)
+            actual = spec_utils.format_unit(unit)
+            self.assertEqual(expected, actual)
+
+    def test_format_unit_raises_error(self):
+        """spec_utils: format_unit raises TypeError if not a pint.Unit."""
+        from natcap.invest import spec_utils
+        with self.assertRaises(TypeError):
+            spec_utils.format_unit({})
 
 
 if __name__ == '__main__':

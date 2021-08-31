@@ -1461,21 +1461,3 @@ class ReclassifyRasterOpTests(unittest.TestCase):
             " the LULC raster but not the table are: [3].")
         self.assertTrue(
             expected_message in str(context.exception), str(context.exception))
-
-
-class SpecUtilsTests(unittest.TestCase):
-    """Tests for natcap.invest.spec_utils."""
-
-    def test_format_unit(self):
-        """spec_utils: test converting units to strings with format_unit."""
-        from natcap.invest import spec_utils
-        for unit_name, expected in [
-                ('meter', 'm'),
-                ('meter / second', 'm/s'),
-                ('foot * mm', 'ft · mm'),
-                ('t * hr * ha / ha / MJ / mm', 't · h · ha / (ha · MJ · mm)'),
-                ('mm^3 / year', 'mm³/yr')
-        ]:
-            unit = spec_utils.u.Unit(unit_name)
-            actual = spec_utils.format_unit(unit)
-            self.assertEqual(expected, actual)

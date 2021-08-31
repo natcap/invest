@@ -1,3 +1,5 @@
+import json
+
 import pint
 
 
@@ -182,9 +184,17 @@ def format_unit(unit):
     Args:
         unit (pint.Unit): the unit to format
 
+    Raises:
+        TypeError if unit is not an instance of pint.Unit.
+
     Returns:
         String describing the unit.
     """
+    if not isinstance(unit, pint.Unit):
+        raise TypeError(
+            f'{unit} is of type {type(unit)}. '
+            f'It should be an instance of pint.Unit')
+
     # Optionally use a pre-set format for a particular unit
     custom_formats = {
         # For soil erodibility (t*h*ha/(ha*MJ*mm)), by convention the ha's
@@ -210,3 +220,31 @@ def format_unit(unit):
         power_fmt="{}{}",
         parentheses_fmt="({})",
         exp_call=pint.formatting._pretty_fmt_exponent)
+
+
+def serialize_args_spec(spec):
+    """Serialize an ARGS_SPEC dict to a JSON string.
+
+    Args:
+        spec (dict): An invest model's ARGS_SPEC.
+
+    Raises:
+        TypeError if any object type within the spec is not handled by
+        json.dumps or by the fallback serializer.
+
+    Returns:
+        JSON String
+    """
+
+    def fallback_serializer(obj):
+        """Serialize objects that are otherwise not JSON serializeable."""
+        if isinstance(obj, pint.Unit):
+            return format_unit(obj)
+        # Sets are present in 'geometries' attributes of some args
+        # We don't need to worry about deserializing back to a set/array
+        # so casting to string is okay.
+        elif isinstance(obj, set):
+            return str(obj)
+        raise TypeError(f'fallback serializer is missing for {type(obj)}')
+
+    return json.dumps(spec, default=fallback_serializer)

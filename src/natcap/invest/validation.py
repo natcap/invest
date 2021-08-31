@@ -387,7 +387,7 @@ def check_option_string(value, options, **kwargs):
 
     Args:
         value (string): The string value to test.
-        options (set | dict): strings to test against.
+        options (list | dict): strings to test against.
             If a dict, test against the keys.
 
     Returns:
