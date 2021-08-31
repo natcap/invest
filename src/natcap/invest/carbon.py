@@ -202,6 +202,12 @@ _INTERMEDIATE_BASE_FILES = {
     'c_dead_redd': 'c_dead_redd.tif',
 }
 
+_TMP_BASE_FILES = {
+    'aligned_lulc_cur_path': 'aligned_lulc_cur.tif',
+    'aligned_lulc_fut_path': 'aligned_lulc_fut.tif',
+    'aligned_lulc_redd_path': 'aligned_lulc_redd.tif',
+}
+
 # -1.0 since carbon stocks are 0 or greater
 _CARBON_NODATA = -1.0
 # use min float32 which is unlikely value to see in a NPV raster
