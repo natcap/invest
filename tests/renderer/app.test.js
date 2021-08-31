@@ -479,20 +479,24 @@ describe('InVEST subprocess testing', () => {
     module: 'natcap.invest.dot',
   };
   const modelName = 'carbon';
-
-  const dummyTextToLog = JSON.stringify(spec.args);
-  let fakeWorkspace;
-  let logfilePath;
+  // nothing is written to the fake workspace in these tests,
+  // and we mock validation, so this dir need not exist.
+  const fakeWorkspace = 'foo_dir';
+  const logfilePath = path.join(fakeWorkspace, 'invest-log.txt');
+  // invest always emits this message, and the workbench always
+  // listens for it:
+  const stdOutLogfileSignal = `Writing log messages to ${logfilePath}`;
+  // TODO: can we do something to confirm the renderer intercepted this message? - a spy
+  const stdOutText = 'hello from invest';
+  const investExe = 'foo';
   let mockInvestProc;
   let spyKill;
-  const investExe = 'foo';
 
   beforeAll(() => {
     setupInvestRunHandlers(investExe);
   });
 
   beforeEach(() => {
-    fakeWorkspace = fs.mkdtempSync(path.join('tests/data', 'data-'));
     getSpec.mockResolvedValue(spec);
     fetchValidation.mockResolvedValue([]);
     getInvestModelNames.mockResolvedValue(
@@ -514,18 +518,7 @@ describe('InVEST subprocess testing', () => {
       read: () => {},
     });
 
-    spawn.mockImplementation(() => {
-      // To simulate an invest model run, write a logfile to the workspace
-      // with an expected filename pattern.
-      const timestamp = new Date().toLocaleTimeString(
-        'en-US', { hour12: false }
-      ).replace(/:/g, '_');
-      const logfileName = `InVEST-natcap.invest.model-log-9999-99-99--${timestamp}.txt`;
-      logfilePath = path.join(fakeWorkspace, logfileName);
-      // line-ending is critical; the log is read with `tail.on('line'...)`
-      fs.writeFileSync(logfilePath, dummyTextToLog + os.EOL);
-      return mockInvestProc;
-    });
+    spawn.mockImplementation(() => mockInvestProc);
 
     if (process.platform !== 'win32') {
       spyKill = jest.spyOn(process, 'kill')
@@ -537,7 +530,6 @@ describe('InVEST subprocess testing', () => {
         mockInvestProc.emit('exit', null);
       });
     }
-
   });
 
   afterAll(() => {
@@ -548,10 +540,6 @@ describe('InVEST subprocess testing', () => {
 
   afterEach(async () => {
     mockInvestProc = null;
-    // being extra careful with recursive rm
-    if (fakeWorkspace.startsWith(path.join('tests', 'data'))) {
-      rimraf(fakeWorkspace, (error) => { if (error) { throw error; } });
-    }
     await InvestJob.clearStore();
     jest.resetAllMocks();
     jest.resetModules();
@@ -564,7 +552,6 @@ describe('InVEST subprocess testing', () => {
       findByRole,
       getByRole,
       queryByText,
-      unmount,
     } = render(<App />);
 
     const carbon = await findByRole('button', { name: MOCK_MODEL_LIST_KEY });
@@ -580,13 +567,13 @@ describe('InVEST subprocess testing', () => {
     });
 
     // stdout listener is how the app knows the process started
-    mockInvestProc.stdout.push('hello from stdout');
+    mockInvestProc.stdout.push(stdOutText);
+    mockInvestProc.stdout.push(stdOutLogfileSignal);
     const logTab = await findByText('Log');
     await waitFor(() => {
       expect(logTab.classList.contains('active')).toBeTruthy();
     });
-    // some text from the logfile should be rendered:
-    expect(await findByText(dummyTextToLog, { exact: false }))
+    expect(await findByText(stdOutText, { exact: false }))
       .toBeInTheDocument();
     expect(queryByText('Model Complete')).toBeNull();
     expect(queryByText('Open Workspace')).toBeNull();
@@ -602,12 +589,6 @@ describe('InVEST subprocess testing', () => {
     const cardText = await within(homeTab)
       .findByText(`${path.resolve(fakeWorkspace)}`);
     expect(cardText).toBeInTheDocument();
-
-    // Normally we don't explicitly unmount the rendered components,
-    // but in this case we're 'watching' a file that the afterEach()
-    // wants to remove. Unmounting triggers an 'unwatch' of the logfile
-    // before afterEach cleanup, avoiding an error.
-    unmount();
   });
 
   test('exit with error - expect log & alert display', async () => {
@@ -616,7 +597,6 @@ describe('InVEST subprocess testing', () => {
       findByLabelText,
       findByRole,
       getByRole,
-      unmount,
     } = render(<App />);
 
     const carbon = await findByRole('button', { name: MOCK_MODEL_LIST_KEY });
@@ -632,16 +612,15 @@ describe('InVEST subprocess testing', () => {
     const someStdErr = 'something went wrong';
     const finalTraceback = 'ValueError';
     // To test that we can parse the finalTraceback even after extra data
-    const allStdErr = `someStdErr\n${finalTraceback}\n\n`;
+    const allStdErr = `${someStdErr}\n${finalTraceback}\n\n`;
 
-    mockInvestProc.stdout.push('hello from stdout');
+    mockInvestProc.stdout.push(stdOutText);
+    mockInvestProc.stdout.push(stdOutLogfileSignal);
     mockInvestProc.stderr.push(allStdErr);
     const logTab = await findByText('Log');
     expect(logTab.classList.contains('active'))
       .toBeTruthy();
-
-    // some text from the logfile should be rendered:
-    expect(await findByText(dummyTextToLog, { exact: false }))
+    expect(await findByText(stdOutText, { exact: false }))
       .toBeInTheDocument();
 
     await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -661,7 +640,6 @@ describe('InVEST subprocess testing', () => {
     const cardText = await within(homeTab)
       .findByText(`${path.resolve(fakeWorkspace)}`);
     expect(cardText).toBeInTheDocument();
-    unmount();
   });
 
   test('user terminates process - expect log display', async () => {
@@ -670,7 +648,6 @@ describe('InVEST subprocess testing', () => {
       findByLabelText,
       findByRole,
       getByRole,
-      unmount,
     } = render(<App />);
 
     const carbon = await findByRole('button', { name: MOCK_MODEL_LIST_KEY });
@@ -684,12 +661,11 @@ describe('InVEST subprocess testing', () => {
     fireEvent.click(execute);
 
     // stdout listener is how the app knows the process started
-    mockInvestProc.stdout.push('hello from stdout');
+    mockInvestProc.stdout.push(stdOutText);
+    mockInvestProc.stdout.push(stdOutLogfileSignal);
     const logTab = await findByText('Log');
     expect(logTab.classList.contains('active')).toBeTruthy();
-
-    // some text from the logfile should be rendered:
-    expect(await findByText(dummyTextToLog, { exact: false }))
+    expect(await findByText(stdOutText, { exact: false }))
       .toBeInTheDocument();
 
     const cancelButton = await findByText('Cancel Run');
@@ -705,7 +681,6 @@ describe('InVEST subprocess testing', () => {
     const cardText = await within(homeTab)
       .findByText(`${path.resolve(fakeWorkspace)}`);
     expect(cardText).toBeInTheDocument();
-    unmount();
   });
 
   test('re-run a job - expect new log display', async () => {
@@ -713,7 +688,6 @@ describe('InVEST subprocess testing', () => {
       findByText,
       findByLabelText,
       findByRole,
-      unmount,
     } = render(<App />);
 
     const carbon = await findByRole('button', { name: MOCK_MODEL_LIST_KEY });
@@ -727,12 +701,11 @@ describe('InVEST subprocess testing', () => {
     fireEvent.click(execute);
 
     // stdout listener is how the app knows the process started
-    mockInvestProc.stdout.push('hello from stdout');
+    mockInvestProc.stdout.push(stdOutText);
+    mockInvestProc.stdout.push(stdOutLogfileSignal);
     let logTab = await findByText('Log');
     expect(logTab.classList.contains('active')).toBeTruthy();
-
-    // some text from the logfile should be rendered:
-    expect(await findByText(dummyTextToLog, { exact: false }))
+    expect(await findByText(stdOutText, { exact: false }))
       .toBeInTheDocument();
 
     const cancelButton = await findByText('Cancel Run');
@@ -750,7 +723,9 @@ describe('InVEST subprocess testing', () => {
     // Since the production code cannot 'await spawn()',
     // we do this manual timeout instead.
     await new Promise((resolve) => setTimeout(resolve, 500));
-    mockInvestProc.stdout.push('hello from stdout');
+    const newStdOutText = 'this is new stdout text';
+    mockInvestProc.stdout.push(newStdOutText);
+    mockInvestProc.stdout.push(stdOutLogfileSignal);
     logTab = await findByText('Log');
     await waitFor(() => {
       expect(logTab.classList.contains('active')).toBeTruthy();
@@ -758,6 +733,5 @@ describe('InVEST subprocess testing', () => {
     mockInvestProc.emit('exit', 0);
     // Give it time to run the listener before unmounting.
     await new Promise((resolve) => setTimeout(resolve, 300));
-    unmount();
   });
 });

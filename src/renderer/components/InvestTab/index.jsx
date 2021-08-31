@@ -116,10 +116,10 @@ export default class InvestTab extends React.Component {
       argsValues: args,
       status: 'running',
     });
+    this.switchTabs('log');
 
     ipcRenderer.on(`invest-logging-${jobID}`, (event, logfile) => {
       updateJobProperties(jobID, { logfile: logfile });
-      this.switchTabs('log');
     });
     ipcRenderer.on(`invest-stderr-${jobID}`, (event, data) => {
       // It's convenient to have stderr in it's own object to display
@@ -195,7 +195,6 @@ export default class InvestTab extends React.Component {
       modelSpec,
       argsSpec,
       uiSpec,
-      logStdOut,
     } = this.state;
     const {
       status,
