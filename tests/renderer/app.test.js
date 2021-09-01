@@ -642,7 +642,7 @@ describe('InVEST subprocess testing', () => {
     expect(cardText).toBeInTheDocument();
   });
 
-  test('user terminates process - expect log display', async () => {
+  test('user terminates process - expect log & alert display', async () => {
     const {
       findByText,
       findByLabelText,
@@ -683,7 +683,7 @@ describe('InVEST subprocess testing', () => {
     expect(cardText).toBeInTheDocument();
   });
 
-  test('re-run a job - expect new log display', async () => {
+  test('Run & re-run a job - expect new log display', async () => {
     const {
       findByText,
       findByLabelText,
@@ -730,6 +730,61 @@ describe('InVEST subprocess testing', () => {
     await waitFor(() => {
       expect(logTab.classList.contains('active')).toBeTruthy();
     });
+    expect(await findByText(newStdOutText, { exact: false }))
+      .toBeInTheDocument();
+    mockInvestProc.emit('exit', 0);
+    // Give it time to run the listener before unmounting.
+    await new Promise((resolve) => setTimeout(resolve, 300));
+  });
+
+  test('Load Recent run & re-run it - expect new log display', async () => {
+    const argsValues = {
+      workspace_dir: fakeWorkspace,
+    };
+    const mockJob = new InvestJob({
+      modelRunName: 'carbon',
+      modelHumanName: 'Carbon Sequestration',
+      argsValues: argsValues,
+      status: 'success',
+      logfile: logfilePath
+    });
+    await InvestJob.saveJob(mockJob);
+
+    const {
+      findByText,
+      findByRole,
+      queryByText,
+    } = render(<App />);
+
+    const recentJobCard = await findByText(
+      argsValues.workspace_dir
+    );
+    fireEvent.click(recentJobCard);
+    fireEvent.click(await findByText('Log'));
+    // We don't need to have a real logfile in order to test that LogTab
+    // is trying to read from a file instead of from stdout
+    expect(await findByText(/Logfile is missing/)).toBeInTheDocument();
+
+    // Now re-run from the same InvestTab component and expect
+    // LogTab is displaying the new invest process stdout
+    const setupTab = await findByText('Setup');
+    fireEvent.click(setupTab);
+    const execute = await findByRole('button', { name: /Run/ });
+    fireEvent.click(execute);
+    // firing execute re-assigns mockInvestProc via the spawn mock,
+    // but we need to wait for that before pushing to it's stdout.
+    // Since the production code cannot 'await spawn()',
+    // we do this manual timeout instead.
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    mockInvestProc.stdout.push(stdOutText);
+    mockInvestProc.stdout.push(stdOutLogfileSignal);
+    const logTab = await findByText('Log');
+    await waitFor(() => {
+      expect(logTab.classList.contains('active')).toBeTruthy();
+    });
+    expect(await findByText(stdOutText, { exact: false }))
+      .toBeInTheDocument();
+    expect(queryByText('Logfile is missing')).toBeNull();
     mockInvestProc.emit('exit', 0);
     // Give it time to run the listener before unmounting.
     await new Promise((resolve) => setTimeout(resolve, 300));

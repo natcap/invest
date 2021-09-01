@@ -13,7 +13,8 @@ import LogTab from '../../src/renderer/components/LogTab';
 function renderLogTab(logfilePath, primaryPythonLogger) {
   const { ...utils } = render(
     <LogTab
-      jobStatus="success"
+      isRunning={false}
+      jobID="foo"
       logfile={logfilePath}
       pyModuleName={primaryPythonLogger}
     />
