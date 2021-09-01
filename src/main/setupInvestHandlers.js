@@ -146,6 +146,7 @@ export function setupInvestLogReaderHandler() {
         `Logfile is missing or unreadable: ${os.EOL}${logfile}`
       );
     });
+
     const rl = readline.createInterface({
       input: fileStream,
       crlfDelay: Infinity,

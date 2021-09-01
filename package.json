@@ -47,7 +47,6 @@
     "react-bootstrap": "^1.5.2",
     "react-dom": "^17.0.1",
     "sanitize-html": "^2.2.0",
-    "tail": "^2.2.0",
     "yauzl": "^2.10.0"
   },
   "devDependencies": {

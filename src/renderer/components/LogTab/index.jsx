@@ -1,7 +1,5 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import { Tail } from 'tail';
-import os from 'os';
 import { ipcRenderer } from 'electron'; // eslint-disable-line import/no-extraneous-dependencies
 import sanitizeHtml from 'sanitize-html';
 
@@ -76,14 +74,10 @@ export default class LogTab extends React.Component {
     this.state = {
       logdata: null,
     };
-    this.tail = null;
     this.logPatterns = {
       'invest-log-error': LOG_ERROR_REGEX,
       'invest-log-primary': new RegExp(this.props.pyModuleName),
     };
-
-    this.tailLogfile = this.tailLogfile.bind(this);
-    this.unwatchLogfile = this.unwatchLogfile.bind(this);
   }
 
   componentDidMount() {
@@ -96,12 +90,7 @@ export default class LogTab extends React.Component {
       this.setState({ logdata: logdata });
     });
     if (!isRunning && logfile) {
-      // this.tailLogfile(logfile);
-      // const readLogChannel = `invest-read-log-${jobID}`;
       ipcRenderer.send(ipcMainChannels.INVEST_READ_LOG, logfile, jobID);
-      // ipcRenderer.on(readLogChannel, (event, data) => {
-      //   this.markupLogStream(data);
-      // });
     }
   }
 
@@ -114,68 +103,7 @@ export default class LogTab extends React.Component {
   }
 
   componentWillUnmount() {
-    // This does not trigger on browser window close
-    if (this.tail) {
-      this.unwatchLogfile();
-    }
     ipcRenderer.removeAllListeners(`invest-stdout-${this.props.jobID}`);
-  }
-
-  tailLogfile(logfile) {
-    try {
-      if (process.platform === 'win32') {
-        /* On Windows, node's `fs.watch` only reports back to node about the
-         * logfile changing when the file is closed.  Python's FileHandler,
-         * however, only closes the file when the logfile is closed at model
-         * completion.  The workaround here is to use node's `fs.watchFile`,
-         * which polls the modification times.  The interval here may need to
-         * be tweaked.
-         *
-         * See experiment at
-         * https://github.com/phargogh/experiment-windows-node-fs-watch
-         * */
-        this.tail = new Tail(logfile, {
-          fromBeginning: true,
-          useWatchFile: true,
-          fsWatchOptions: {
-            persistent: true,
-            interval: 250, // .25s
-          },
-          logger: logger,
-        });
-      } else {
-        /* All other OSes seem to report back as expected, so use `fs.watch` is
-         * easier and cheaper. */
-        this.tail = new Tail(logfile, {
-          fromBeginning: true,
-          logger: logger,
-        });
-      }
-      let markup = Object.assign('', this.state.logdata);
-      this.tail.on('line', (data) => {
-        const line = `${data}${os.EOL}`;
-        markup += markupLine(line, this.logPatterns);
-        this.setState({ logdata: markup });
-      });
-      this.tail.on('error', (error) => {
-        logger.error(error);
-      });
-    } catch (error) {
-      this.setState({
-        logdata: `Logfile is missing: ${os.EOL}${logfile}`
-      });
-      logger.error(`Not able to read ${logfile}`);
-      logger.error(error.stack);
-    }
-  }
-
-  unwatchLogfile() {
-    try {
-      logger.debug(`unwatching file: ${this.tail.filename}`);
-      this.tail.unwatch();
-    } catch (error) {
-      logger.error(error.stack);
-    }
   }
 
   render() {
