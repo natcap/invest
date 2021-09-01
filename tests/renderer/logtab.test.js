@@ -9,6 +9,8 @@ import { render } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
 import LogTab from '../../src/renderer/components/LogTab';
+import { setupInvestLogReaderHandler } from '../../src/main/setupInvestHandlers';
+import { removeIpcMainListeners } from '../../src/main/main';
 
 function renderLogTab(logfilePath, primaryPythonLogger) {
   const { ...utils } = render(
@@ -70,30 +72,36 @@ ValueError: Values in the LULC raster were found that are not represented under 
 2021-01-19 14:08:32,780 (natcap.invest.utils) utils.prepare_workspace(130) INFO Elapsed time: 3.5s
 `;
 
+  let logfilePath;
+  beforeAll(() => {
+    logfilePath = makeLogFile(logText);
+    setupInvestLogReaderHandler();
+  });
+
+  afterAll(() => {
+    removeIpcMainListeners();
+    cleanupLogFile(logfilePath);
+  });
+
   test('Text in logfile is rendered', async () => {
-    const logfilePath = makeLogFile(logText);
     const { findByText } = renderLogTab(
       logfilePath, primaryPythonLogger
     );
 
     const log = await findByText(new RegExp(uniqueText));
     expect(log).toBeInTheDocument();
-    cleanupLogFile(logfilePath);
   });
 
   test('message from non-primary invest logger is plain', async () => {
-    const logfilePath = makeLogFile(logText);
     const { findByText } = renderLogTab(
       logfilePath, primaryPythonLogger
     );
 
     const log = await findByText(new RegExp(uniqueText));
     expect(log).not.toHaveClass();
-    cleanupLogFile(logfilePath);
   });
 
   test('messages from primary invest logger are highlighted', async () => {
-    const logfilePath = makeLogFile(logText);
     const { findAllByText } = renderLogTab(
       logfilePath, primaryPythonLogger
     );
@@ -102,11 +110,9 @@ ValueError: Values in the LULC raster were found that are not represented under 
     messages.forEach((msg) => {
       expect(msg).toHaveClass('invest-log-primary');
     });
-    cleanupLogFile(logfilePath);
   });
 
   test('error messages are highlighted', async () => {
-    const logfilePath = makeLogFile(logText);
     const { findAllByText } = renderLogTab(
       logfilePath, primaryPythonLogger
     );
@@ -140,6 +146,5 @@ ValueError: Values in the LULC raster were found that are not represented under 
     errorMessages.forEach((msg) => {
       expect(msg).toHaveClass('invest-log-error');
     });
-    cleanupLogFile(logfilePath);
   });
 });

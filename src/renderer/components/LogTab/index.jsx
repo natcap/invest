@@ -9,6 +9,8 @@ import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import Container from 'react-bootstrap/Container';
 
+import { ipcMainChannels } from '../../../main/ipcMainChannels';
+
 const logger = window.Workbench.getLogger('LogTab');
 
 const LOG_TEXT_TAG = 'span';
@@ -86,17 +88,21 @@ export default class LogTab extends React.Component {
 
   componentDidMount() {
     const { logfile, isRunning, jobID } = this.props;
-    if (!isRunning && logfile) {
-      this.tailLogfile(logfile);
-    }
-    // The component may mount from a Recent Run, in which case we're
-    // tailing the logfile. But we still want this listener active
-    // in case the model is re-run.
+    // This channel is replied to by the invest process stdout listener
+    // And by the logfile reader.
     ipcRenderer.on(`invest-stdout-${jobID}`, (event, data) => {
       let { logdata } = this.state;
       logdata += markupLine(data, this.logPatterns);
       this.setState({ logdata: logdata });
     });
+    if (!isRunning && logfile) {
+      // this.tailLogfile(logfile);
+      // const readLogChannel = `invest-read-log-${jobID}`;
+      ipcRenderer.send(ipcMainChannels.INVEST_READ_LOG, logfile, jobID);
+      // ipcRenderer.on(readLogChannel, (event, data) => {
+      //   this.markupLogStream(data);
+      // });
+    }
   }
 
   componentDidUpdate(prevProps) {

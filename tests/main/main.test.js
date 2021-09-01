@@ -181,6 +181,7 @@ describe('createWindow', () => {
       ipcMainChannels.DOWNLOAD_URL,
       ipcMainChannels.INVEST_RUN,
       ipcMainChannels.INVEST_KILL,
+      ipcMainChannels.INVEST_READ_LOG,
       ipcMainChannels.SHOW_CONTEXT_MENU,
     ];
     createWindow();

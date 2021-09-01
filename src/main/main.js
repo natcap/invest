@@ -19,7 +19,10 @@ import setupDownloadHandlers from './setupDownloadHandlers';
 import setupDialogs from './setupDialogs';
 import setupContextMenu from './setupContextMenu';
 import { setupCheckFirstRun } from './setupCheckFirstRun';
-import { setupInvestRunHandlers } from './setupInvestHandlers';
+import {
+  setupInvestRunHandlers,
+  setupInvestLogReaderHandler
+} from './setupInvestHandlers';
 import { ipcMainChannels } from './ipcMainChannels';
 import { getLogger } from '../logger';
 import { menuTemplate } from './menubar';
@@ -121,6 +124,7 @@ export const createWindow = async () => {
 
   setupDownloadHandlers(mainWindow);
   setupInvestRunHandlers(investExe);
+  setupInvestLogReaderHandler();
 };
 
 export function removeIpcMainListeners() {
@@ -152,7 +156,7 @@ export function main(argv) {
       } = require('electron-devtools-installer');
       await installExtension(REACT_DEVELOPER_TOOLS, {
         loadExtensionOptions: { allowFileAccess: true }
-      })
+      });
     }
     createWindow();
   });

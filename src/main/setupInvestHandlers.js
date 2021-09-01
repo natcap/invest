@@ -1,10 +1,10 @@
 import path from 'path';
 import fs from 'fs';
+import readline from 'readline';
 import os from 'os';
 import { spawn, exec } from 'child_process';
 
 import { app, ipcMain } from 'electron';
-import glob from 'glob';
 import fetch from 'node-fetch';
 
 import { getLogger } from '../logger';
@@ -134,5 +134,29 @@ export function setupInvestRunHandlers(investExe) {
         });
       });
     });
+  });
+}
+
+export function setupInvestLogReaderHandler() {
+  ipcMain.on(ipcMainChannels.INVEST_READ_LOG, async (event, logfile, channel) => {    
+    try {
+      console.log('trying read stream')
+      const fileStream = fs.createReadStream(logfile);
+      const rl = readline.createInterface({
+        input: fileStream,
+        crlfDelay: Infinity,
+      });
+
+      for await (const line of rl) {
+        // event.reply(channel, line);
+        event.reply(`invest-stdout-${channel}`, `${line}`);
+      }
+    } catch {
+      console.log('caught read error')
+      event.reply(
+        `invest-stdout-${channel}`,
+        `Logfile is missing or unreadable: ${os.EOL}${logfile}`
+      );
+    }
   });
 }

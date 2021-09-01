@@ -23,7 +23,11 @@ import SAMPLE_SPEC from '../data/carbon_args_spec.json';
 import {
   getSettingsValue, saveSettingsStore
 } from '../../src/renderer/components/SettingsModal/SettingsStorage';
-import { setupInvestRunHandlers } from '../../src/main/setupInvestHandlers';
+import {
+  setupInvestRunHandlers,
+  setupInvestLogReaderHandler,
+} from '../../src/main/setupInvestHandlers';
+import { removeIpcMainListeners } from '../../src/main/main';
 
 jest.mock('child_process');
 jest.mock('../../src/renderer/server_requests');
@@ -494,6 +498,7 @@ describe('InVEST subprocess testing', () => {
 
   beforeAll(() => {
     setupInvestRunHandlers(investExe);
+    setupInvestLogReaderHandler();
   });
 
   beforeEach(() => {
@@ -536,6 +541,7 @@ describe('InVEST subprocess testing', () => {
     if (spyKill) {
       spyKill.mockRestore();
     }
+    removeIpcMainListeners();
   });
 
   afterEach(async () => {
