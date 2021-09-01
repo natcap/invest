@@ -38,57 +38,41 @@ ARGS_SPEC = {
             **spec_utils.LULC,
             "projected": True,
             "about": (
-                "A GDAL-supported raster file.  The current LULC must have "
-                "its' own threat rasters, where each threat raster file path "
-                "is defined in the <b>Threats Data</b> CSV.<br/><br/> Each "
-                "cell should represent a LULC code as an Integer. The dataset "
-                "should be in a projection where the units are in meters and "
-                "the projection used should be defined.  The LULC codes must "
-                "match the codes in the Sensitivity table."),
-            "name": "Current Land Cover"
+                "Map of LULC at present. Every LULC code in this raster must "
+                "have a corresponding entry in the Sensitivity table."),
+            "name": "current land cover"
         },
         "lulc_fut_path": {
             **spec_utils.LULC,
             "projected": True,
             "required": False,
             "about": (
-                "Optional.  A GDAL-supported raster file.  Inputting a future "
-                "LULC will generate degradation, habitat quality, and habitat "
-                "rarity (If baseline is input) outputs.  The future LULC must "
-                "have it's own threat rasters, where each threat raster file "
-                "path is defined in the <b>Threats Data</b> CSV. "
-                "<br/><br/>Each cell should represent a LULC code as an "
-                "Integer.  The dataset should be in a projection where the "
-                "units are in meters and the projection used should be "
-                "defined. The LULC codes must match the codes in the "
-                "Sensitivity table."),
-            "name": "Future Land Cover"
+                "Map of LULC in a future scenario. Every LULC code in this "
+                "raster must have a corresponding entry in the Sensitivity "
+                "table. Must use the same classification scheme and codes as "
+                "in the Current LULC map."),
+            "name": "future land cover"
         },
         "lulc_bas_path": {
             **spec_utils.LULC,
             "projected": True,
             "required": False,
             "about": (
-                "Optional.  A GDAL-supported raster file.  If the baseline "
-                "LULC is provided, rarity outputs will be created for the "
-                "current and future LULC. The baseline LULC can have it's own "
-                "threat rasters (optional), where each threat raster file "
-                "path is defined in the <b>Threats Data</b> CSV. If there are "
-                "no threat rasters and the threat paths are left blank in the "
-                "CSV column, degradation and habitat quality outputs will not "
-                "be generated for the baseline LULC.<br/><br/> Each cell "
-                "should represent a LULC code as an Integer.  The dataset "
-                "should be in a projection where the units are in meters and "
-                "the projection used should be defined. The LULC codes must "
-                "match the codes in the Sensitivity table.  If possible the "
-                "baseline map should refer to a time when intensive "
-                "management of the landscape was relatively rare."),
-            "name": "Baseline Land Cover"
+                "Map of LULC in a baseline scenario, when intensive landscape "
+                "management was relatively rare. Every LULC code in this "
+                "raster must have a corresponding entry in the Sensitivity "
+                "table. Must use the same classification scheme and codes as "
+                "in the Current LULC map."),
+            "name": "baseline land cover"
         },
         "threats_table_path": {
             "type": "csv",
             "columns": {
-                "threat": {"type": "freestyle_string"},
+                "threat": {
+                    "type": "freestyle_string",
+                    "about": (
+                        "Name of the threat. Each threat name must have a "
+                        "corresponding column in the Sensitivity table.")},
                 "max_dist": {
                     "type": "number",
                     "units": u.kilometer,
@@ -96,7 +80,8 @@ ARGS_SPEC = {
                         "The maximum distance over which each threat affects "
                         "habitat quality. The impact of each degradation "
                         "source will decline to zero at this maximum "
-                        "distance.")
+                        "distance. This value must be greater than or equal "
+                        "to the pixel size of your LULC raster(s).")
                 },
                 "weight": {
                     "type": "ratio",
@@ -111,25 +96,38 @@ ARGS_SPEC = {
                 },
                 "cur_path": {
                     "type": "raster",
-                    "bands": {1: {"type": "ratio"}}
-                },
-                "base_path": {
-                    "required": "lulc_bas_path",
-                    "type": "raster",
                     "bands": {1: {"type": "ratio"}},
+                    "about": (
+                        "Map of the threat's distribution in the current "
+                        "scenario. Each pixel value is the relative intensity "
+                        "of the threat at that location. ")
                 },
                 "fut_path": {
                     "required": "lulc_fut_path",
                     "type": "raster",
                     "bands": {1: {"type": "ratio"}},
+                    "about": (
+                        "Map of the threat's distribution in the future "
+                        "scenario. Each pixel value is the relative intensity "
+                        "of the threat at that location. "
+                        f"{REQUIRED_IF_PROVIDED % 'Future LULC'}.")
+                },
+                "base_path": {
+                    "required": "lulc_bas_path",
+                    "type": "raster",
+                    "bands": {1: {"type": "ratio"}},
+                    "about": (
+                        "Map of the threat's distribution in the baseline "
+                        "scenario. Each pixel value is the relative intensity "
+                        "of the threat at that location. "
+                        f"{REQUIRED_IF_PROVIDED % 'Baseline LULC'}.")
                 }
             },
             "about": (
                 "Table mapping each threat of interest to its properties and "
-                "maps of its distribution. The raster columns give filepaths "
-                "to maps of the relative intensity of each threat, ranging "
-                "from 0 to 1. Paths are relative to the threats table path."),
-            "name": "Threats Table"
+                "distribution maps. Paths are relative to the threats "
+                "table path."),
+            "name": "threats table"
         },
         "access_vector_path": {
             "type": "vector",
@@ -149,7 +147,7 @@ ARGS_SPEC = {
                 "Map of the relative protection that legal, institutional, "
                 "social, and physical barriers provide against threats. Any "
                 "cells not covered by a polygon will be set to 1."),
-            "name": "Accessibility to Threats"
+            "name": "accessibility to threats"
         },
         "sensitivity_table_path": {
             "type": "csv",
@@ -169,30 +167,25 @@ ARGS_SPEC = {
                     "type": "ratio",
                     "about": (
                         "The relative sensitivity of each LULC class to each "
-                        "type of threat.")
+                        "type of threat, where 1 represents high sensitivity "
+                        "and 0 represents that it is unaffected. There must "
+                        "be one threat column for each threat name in the "
+                        "'threats' column of the Threats Table.")
                 }
             },
             "about": (
                 "Table mapping each LULC class to data about the species' "
                 "habitat preference and threat sensitivity in areas with that "
                 "LULC."),
-            "name": "Sensitivity of Land Cover Types to Each Threat"
+            "name": "sensitivity table"
         },
         "half_saturation_constant": {
             "expression": "value > 0",
             "type": "number",
             "units": u.none,
             "about": (
-                "A positive floating point value that is defaulted at 0.05. "
-                "This is the value of the parameter k in equation (4). In "
-                "general, set k to half of the highest grid cell degradation "
-                "value on the landscape.  To perform this model calibration "
-                "the model must be run once in order to find the highest "
-                "degradation value and set k for the provided landscape. "
-                "Note that the choice of k only determines the spread and "
-                "central tendency of habitat quality cores and does not "
-                "affect the rank."),
-            "name": "Half-Saturation Constant"
+                "Half-saturation constant used in the degradation equation."),
+            "name": "half-saturation constant"
         },
     }
 }

@@ -40,34 +40,46 @@ ARGS_SPEC = {
         "predefined_globio": {
             "type": "boolean",
             "required": False,
-            "about": "if True then mode (b) else mode (a)",
-            "name": "Predefined land use map for GLOBIO"
+            "about": (
+                "Use the predefined GLOBIO LULC map instead of providing "
+                "the LULC map."),
+            "name": "use predefined LULC"
         },
         "lulc_path": {
             **spec_utils.LULC,
             "projected": True,
-            "required": "not predefined_globio"
+            "required": "not predefined_globio",
+            "about": (
+                f"{spec_utils.LULC['about']} Each LULC code must have a "
+                "corresponding entry in the biophysical table. "
+                f"{REQUIRED_IF_SELECTED % 'Use Predefined LULC'}")
         },
         "lulc_to_globio_table_path": {
             "type": "csv",
             "columns": {
-                "lucode": {"type": "integer"},
-                "globio_lucode": {"type": "integer"}
+                "lucode": {
+                    "type": "integer",
+                    "about": "LULC code from the LULC map input."},
+                "globio_lucode": {
+                    "type": "integer",
+                    "about": "Corresponding GLOBIO LULC code."}
             },
             "required": "not predefined_globio",
             "about": (
                 "A table mapping each LULC code in the LULC raster input to "
-                "the corresponding GLOBIO LULC code."),
-            "name": "Landcover to GLOBIO Landcover Table"
+                "the corresponding GLOBIO LULC code for the class. "
+                f"{REQUIRED_IF_NOT_SELECTED % 'Predefined GLOBIO'}"),
+            "name": "LULC to GLOBIO LULC Table"
         },
         "infrastructure_dir": {
             "type": "directory",
             "contents": {
                 "[INFRASTRUCTURE_MAP]": {  # may be named anything
                     "about": (
-                        "Raster(s) and/or vector(s) of any forms of "
-                        "infrastructure you want to consider in the MSA "
-                        "calculation."),
+                        "Maps of the location of infrastructure. For rasters, "
+                        "any valid value greater than zero indicates the "
+                        "presence of infrastrucutre. For vectors, any "
+                        "geometries indicate the presence of infrastructure."),
                     "type": {"raster", "vector"},
                     "bands": {1: {"type": "number", "units": u.none}},
                     "fields": {},
@@ -75,56 +87,59 @@ ARGS_SPEC = {
                 }
             },
             "about": (
-                "Used in mode (a) and (b) a path to a folder containing maps "
-                "of either GDAL compatible rasters or vectors. These data "
-                "will be used in the infrastructure to calculation of MSA."),
-            "name": "Infrastructure Directory"
+                "Directory containing raster and/or vector map(s) any forms "
+                "of infrastructure to consider in the MSA calculation."),
+            "name": "infrastructure directory"
         },
         "pasture_path": {
             "type": "raster",
             "bands": {1: {"type": "ratio"}},
             "projected": True,
             "required": "not predefined_globio",
-            "about": "Map of the proportion of each pixel that is pasture",
-            "name": "Pasture"
+            "about": (
+                "Map of the proportion of each pixel that is pasture. "
+                f"{REQUIRED_IF_NOT_SELECTED % 'Predefined GLOBIO'}"),
+            "name": "pasture"
         },
         "potential_vegetation_path": {
-            "name": "Potential Vegetation",
+            "name": "potential vegetation",
             "type": "raster",
             "bands": {1: {"type": "integer"}},
             "projected": True,
             "required": "not predefined_globio",
             "about": (
-                "This should be the potential vegetation map from Ramankutty "
-                "and Foley (1999), or if a different map, it must have the "
-                "same LULC codes.")
+                "Map of potential vegetation classes from Ramankutty "
+                "and Foley (1999). "
+                f"{REQUIRED_IF_NOT_SELECTED % 'Predefined GLOBIO'}")
         },
         "pasture_threshold": {
             "type": "ratio",
             "required": "not predefined_globio",
             "about": (
-                "Areas with a pasture proportion greater than or equal to "
-                "this threshold are considered grassland or livestock "
-                "grazing. Can be adjusted such that the aggregate land-use "
-                "matches regional statistics."),
-            "name": "Pasture Threshold"
+                "Areas in the Pasture map with a pasture proportion greater "
+                "than or equal to this threshold are considered grassland or "
+                "livestock grazing areas. "
+                f"{REQUIRED_IF_NOT_SELECTED % 'Predefined GLOBIO'}"),
+            "name": "pasture threshold"
         },
         "intensification_fraction": {
             "type": "ratio",
+            "required": "not predefined_globio",
             "about": (
-                "A value between 0 and 1 denoting proportion of total "
-                "agriculture that should be classified as 'high input'."),
-            "name": "Proportion of of Agriculture Intensified"
+                "Proportion of total agriculture that is intensive. "
+                f"{REQUIRED_IF_NOT_SELECTED % 'Predefined GLOBIO'}"),
+            "name": "proportion of intensified agriculture"
         },
         "primary_threshold": {
             "type": "ratio",
             "required": "not predefined_globio",
             "about": (
-                "Areas with FFQI (forest fragmentation quality index) greater "
-                "than or equal to this threshold are classified as primary "
-                "forest. The rest is classified as secondary forest. Can be "
-                "adjusted to match regional statistics."),
-            "name": "Primary Threshold"
+                "Forest Fragmentation quality index threshold below which an "
+                "area is classified as secondary forest. Areas with FFQI "
+                "greater than or equal to this threshold are classified as "
+                "primary forest. "
+                f"{REQUIRED_IF_NOT_SELECTED % 'Predefined GLOBIO'}"),
+            "name": "primary threshold"
         },
         "msa_parameters_path": {
             "type": "csv",
@@ -147,7 +162,8 @@ ARGS_SPEC = {
                             "This MSA value represents land-use impacts. The "
                             "value in the 'value' column is one of the GLOBIO-"
                             "recognized LULC codes."),
-                    }
+                    },
+                    "about": "The type of MSA value in this row."
                 },
                 "value": {
                     "type": "freestyle_string",
@@ -157,12 +173,16 @@ ARGS_SPEC = {
                         "separated by a hyphen e.g. 1000-2000), or an upper "
                         "or lower bound (a number preceded by > or < e.g. <5")
                 },
-                "msa_x": {"type": "ratio"}
+                "msa_x": {
+                    "type": "ratio",
+                    "about": (
+                        "MSA value for the MSA type specified in the "
+                        "'msa_type' column, when the impact value is within "
+                        "the range given in the 'value' column.")}
             },
             "about": (
-                "A CSV table containing MSA threshold values as defined in "
-                "the user's guide.  Provided for advanced users that may wish "
-                "to change those values."),
+                "Table that sets the MSA values for each impact driver and "
+                "each range of impact values."),
             "name": "MSA Parameter Table"
         },
         "aoi_path": {
@@ -174,7 +194,10 @@ ARGS_SPEC = {
             **spec_utils.LULC,
             "projected": True,
             "required": "predefined_globio",
-            "about": "used in mode (b) path to predefined globio raster.",
+            "about": (
+                "Predefined GLOBIO LULC map using the standard GLOBIO "
+                "classification scheme and codes. "
+                f"{REQUIRED_IF_SELECTED % 'Predefined GLOBIO'}"),
             "name": "GLOBIO Classified Land Use"
         }
     }
