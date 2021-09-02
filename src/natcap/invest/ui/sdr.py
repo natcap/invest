@@ -149,6 +149,7 @@ class SDR(model.InVESTModel):
             self.k_param.args_key: self.k_param.value(),
             self.ic_0_param.args_key: self.ic_0_param.value(),
             self.sdr_max.args_key: self.sdr_max.value(),
+            self.l_max.args_key: self.l_max.value(),
         }
 
         return args
