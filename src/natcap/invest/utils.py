@@ -66,6 +66,15 @@ def capture_gdal_logging():
         All error messages are logged with reasonable ``logging`` levels based
         on the GDAL error level.
 
+        Note:
+            This function is designed to accept any number of positional and
+            keyword arguments because of some odd forums questions where this
+            function was being called with an unexpected number of arguments.
+            With this catch-all function signature, we can at least guarantee
+            that in the off chance this function is called with the wrong
+            parameters, we can at least log what happened.  See the issue at
+            https://github.com/natcap/invest/issues/630 for details.
+
         Args:
             err_level (int): The GDAL error level (e.g. ``gdal.CE_Failure``)
             err_no (int): The GDAL error number.  For a full listing of error
@@ -75,22 +84,34 @@ def capture_gdal_logging():
         Returns:
             ``None``
         """
-        LOGGER.warning(
-            f'_log_gdal_errors called with args: {args}, kwargs: {kwargs}')
-        try:
-            err_level = args[0]
-        except IndexError:
-            err_level = kwargs['err_level']
+        if len(args) + len(kwargs) != 3:
+            LOGGER.error(
+                '_log_gdal_errors was called with an incorrect number of '
+                f'arguments.  args: {args}, kwargs: {kwargs}')
 
         try:
-            err_no = args[1]
-        except IndexError:
-            err_no = kwargs['err_no']
+            try:
+                err_level = args[0]
+            except IndexError:
+                err_level = kwargs['err_level']
 
-        try:
-            err_msg = args[2]
-        except IndexError:
-            err_msg = kwargs['err_msg']
+            try:
+                err_no = args[1]
+            except IndexError:
+                err_no = kwargs['err_no']
+
+            try:
+                err_msg = args[2]
+            except IndexError:
+                err_msg = kwargs['err_msg']
+        except KeyError as missing_key:
+            LOGGER.Exception(
+                f'_log_gdal_errors called without the argument {missing_key}. '
+                f'Called with args: {args}, kwargs: {kwargs}')
+
+            # Returning from the function because we don't have enough
+            # information to call the ``osgeo_logger`` in the way we intended.
+            return
 
         osgeo_logger.log(
             level=GDAL_ERROR_LEVELS[err_level],
@@ -487,7 +508,7 @@ def build_lookup_from_csv(
             string values. default=True.
 
     Returns:
-        lookup_dict (dict): a dictionary of the form 
+        lookup_dict (dict): a dictionary of the form
         {key_field_0: {csv_header_0: value0, csv_header_1: value1...},
         key_field_1: {csv_header_0: valuea, csv_header_1: valueb...}}
 
@@ -863,7 +884,7 @@ def reclassify_raster(
             each key represent:
 
                 'raster_name' - string for the raster name being reclassified
-                'column_name' - name of the table column that ``value_map`` 
+                'column_name' - name of the table column that ``value_map``
                 dictionary keys came from.
                 'table_name' - table name that ``value_map`` came from.
 
