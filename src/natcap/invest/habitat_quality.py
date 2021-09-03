@@ -110,7 +110,7 @@ ARGS_SPEC = {
                         "Map of the threat's distribution in the future "
                         "scenario. Each pixel value is the relative intensity "
                         "of the threat at that location. "
-                        f"{REQUIRED_IF_PROVIDED % 'Future LULC'}.")
+                        "Required if Future LULC is provided.")
                 },
                 "base_path": {
                     "required": "lulc_bas_path",
@@ -120,7 +120,7 @@ ARGS_SPEC = {
                         "Map of the threat's distribution in the baseline "
                         "scenario. Each pixel value is the relative intensity "
                         "of the threat at that location. "
-                        f"{REQUIRED_IF_PROVIDED % 'Baseline LULC'}.")
+                        "Required if Baseline LULC is provided.")
                 }
             },
             "about": (

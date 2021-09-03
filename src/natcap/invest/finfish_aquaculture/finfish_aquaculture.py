@@ -72,7 +72,7 @@ ARGS_SPEC = {
             "about": (
                 "Standard deviation for fish growth parameter α. This "
                 "indicates the level of uncertainty in the value of α. "
-                f"{REQUIRED_IF_SELECTED % 'Enable uncertainty analysis'}"),
+                "Required if Enable Uncertainty Analysis is selected."),
             "type": "number",
             "units": u.gram/u.day,
             "required": "use_uncertainty",
@@ -82,7 +82,7 @@ ARGS_SPEC = {
             "about": (
                 "Standard deviation for fish growth parameter β. This "
                 "indicates the level of uncertainty in the value of β."
-                f"{REQUIRED_IF_SELECTED % 'Enable uncertainty analysis'}"),
+                "Required if Enable Uncertainty Analysis is selected."),
             "type": "number",
             "units": u.gram/u.day,
             "required": "use_uncertainty",
@@ -92,7 +92,7 @@ ARGS_SPEC = {
             "about": (
                 "Number of times to run the model for the Monte Carlo "
                 "simulation. "
-                f"{REQUIRED_IF_SELECTED % 'Enable uncertainty analysis'}"),
+                "Required if Enable Uncertainty Analysis is selected."),
             "type": "number",
             "units": u.count,
             "required": "use_uncertainty",
@@ -132,7 +132,7 @@ ARGS_SPEC = {
             "name": "price",
             "about": (
                 "Market price of processed fish. "
-                f"{REQUIRED_IF_SELECTED % 'Run Valuation'}"),
+                "Required if Run Valuation is selected."),
             "type": "number",
             "units": u.currency/u.kilogram,
             "required": "do_valuation",
@@ -142,7 +142,7 @@ ARGS_SPEC = {
             "about": (
                 "Fraction of the market price that accounts for business "
                 "expenses, rather than profit. "
-                f"{REQUIRED_IF_SELECTED % 'Run Valuation'}"),
+                "Required if Run Valuation is selected."),
             "required": "do_valuation",
             "type": "ratio"
         },
@@ -151,7 +151,7 @@ ARGS_SPEC = {
             "about": (
                 "Daily market discount rate that reflects the preference for "
                 "immediate benefits vs. future benefits. "
-                f"{REQUIRED_IF_SELECTED % 'Run Valuation'}"),
+                "Required if Run Valuation is selected."),
             "required": "do_valuation",
             "type": "ratio"
         }

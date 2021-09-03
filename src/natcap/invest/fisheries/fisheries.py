@@ -90,7 +90,7 @@ ARGS_SPEC = {
                 "The provided CSV file should contain all necessary "
                 "attributes for the sub-populations based on lifecycle class, "
                 "sex, and area - excluding possible migration information. "
-                f"{REQUIRED_IF_NOT_SELECTED % 'Batch Processing'}"),
+                "Required if Batch Processing is not selected."),
             "name": "population parameters table"
         },
         "population_csv_dir": {
@@ -106,7 +106,7 @@ ARGS_SPEC = {
                 "excluding possible migration information. The name of each "
                 "file will serve as the prefix of the outputs created by the "
                 "model run. "
-                f"{REQUIRED_IF_SELECTED % 'Batch Processing'}"),
+                "Required if Batch Processing is selected."),
             "name": "population parameters directory"
         },
         "spawn_units": {

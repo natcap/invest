@@ -74,40 +74,34 @@ ARGS_SPEC = {
         "results_suffix": spec_utils.SUFFIX,
         "n_workers": spec_utils.N_WORKERS,
         "info_table_path": {
-            "name": "Habitat Stressor Information CSV or Excel File",
-            "about": (
-                "A CSV or Excel file that contains the name of the habitat "
-                "(H) or stressor (s) on the `NAME` column that matches the "
-                "names in `criteria_table_path`. Each H/S has its "
-                "corresponding vector or raster path on the `PATH` column. "
-                "The `STRESSOR BUFFER (meters)` column should have a buffer "
-                "value if the `TYPE` column is a stressor."),
+            "name": "habitat stressor table",
+            "about": "A table describing each habitat and stressor.",
             "type": "csv",
             "columns": {
                 "name": {
                     "type": "freestyle_string",
-                    "about": "A unique name for each habitat/stressor input"
+                    "about": (
+                        "A unique name for each habitat or stressor. These "
+                        "names must match the habitat and stressor names in "
+                        "the Criteria Scores Table.")
                 },
                 "path": {
                     "type": {"vector", "raster"},
-                    "bands": {1: {
-                        "type": "number",
-                        "units": u.none,
-                        "about": (
-                            "Pixel values are 1, indicating presence of the "
-                            "habitat/stressor, or 0 indicating absence. Any "
-                            "values besides 0 or 1 will be treated as 0.")
-                    }
-                    },
+                    "bands": {1: {"type": "number", "units": u.none}},
                     "fields": {},
-                    "geometries": spec_utils.POLYGONS
+                    "geometries": spec_utils.POLYGONS,
+                    "about": (
+                        "Map of where the habitat or stressor exists. "
+                        "May be a raster or vector. For rasters, a pixel value "
+                        "of 1 indicates presence of the habitat or stressor. "
+                        "0 (or any other value) indicates absence of the "
+                        "habitat or stressor. For vectors, a polygon indicates "
+                        "an area where the habitat or stressor is present.")
                 },
                 "type": {
                     "type": "option_string",
-                    "options": {
-                        "habitat": "This row is a habitat layer",
-                        "stressor": "This row is a stressor layer"
-                    }
+                    "options": ["habitat", "stressor"],
+                    "about": "Whether this row is for a habitat or a stressor."
                 },
                 "stressor buffer (meters)": {
                     "type": "number",
@@ -115,7 +109,7 @@ ARGS_SPEC = {
                     "about": (
                         "The desired buffer distance used to expand a given "
                         "stressor’s influence or footprint. This should be "
-                        "left blank for habitats, but must not be blank for "
+                        "left blank for habitats, but must be filled in for "
                         "stressors. Enter 0 if no buffering is desired for a "
                         "given stressor. The model will round down this "
                         "buffer distance to the nearest cell unit. e.g., a "
@@ -127,11 +121,9 @@ ARGS_SPEC = {
             "excel_ok": True
         },
         "criteria_table_path": {
-            "name": "Criteria Scores Table",
+            "name": "criteria scores table",
             "about": (
-                "A CSV or Excel file that contains the set of criteria "
-                "ranking  (rating, DQ and weight) of each stressor on each "
-                "habitat, as well as the habitat resilience attributes."),
+                "A table of criteria scores for all habitats and stressors."),
             "type": "csv",
             "excel_ok": True,
         },

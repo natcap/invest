@@ -52,7 +52,7 @@ ARGS_SPEC = {
             "about": (
                 f"{spec_utils.LULC['about']} Each LULC code must have a "
                 "corresponding entry in the biophysical table. "
-                f"{REQUIRED_IF_SELECTED % 'Use Predefined LULC'}")
+                "Required if Use Predefined GLOBIO LULC is selected.")
         },
         "lulc_to_globio_table_path": {
             "type": "csv",
@@ -68,7 +68,7 @@ ARGS_SPEC = {
             "about": (
                 "A table mapping each LULC code in the LULC raster input to "
                 "the corresponding GLOBIO LULC code for the class. "
-                f"{REQUIRED_IF_NOT_SELECTED % 'Predefined GLOBIO'}"),
+                "Required if Use Predefined GLOBIO LULC is not selected."),
             "name": "LULC to GLOBIO LULC Table"
         },
         "infrastructure_dir": {
@@ -98,7 +98,7 @@ ARGS_SPEC = {
             "required": "not predefined_globio",
             "about": (
                 "Map of the proportion of each pixel that is pasture. "
-                f"{REQUIRED_IF_NOT_SELECTED % 'Predefined GLOBIO'}"),
+                "Required if Use Predefined GLOBIO LULC is not selected."),
             "name": "pasture"
         },
         "potential_vegetation_path": {
@@ -110,7 +110,7 @@ ARGS_SPEC = {
             "about": (
                 "Map of potential vegetation classes from Ramankutty "
                 "and Foley (1999). "
-                f"{REQUIRED_IF_NOT_SELECTED % 'Predefined GLOBIO'}")
+                "Required if Use Predefined GLOBIO LULC is not selected.")
         },
         "pasture_threshold": {
             "type": "ratio",
@@ -119,7 +119,7 @@ ARGS_SPEC = {
                 "Areas in the Pasture map with a pasture proportion greater "
                 "than or equal to this threshold are considered grassland or "
                 "livestock grazing areas. "
-                f"{REQUIRED_IF_NOT_SELECTED % 'Predefined GLOBIO'}"),
+                "Required if Use Predefined GLOBIO LULC is not selected."),
             "name": "pasture threshold"
         },
         "intensification_fraction": {
@@ -127,7 +127,7 @@ ARGS_SPEC = {
             "required": "not predefined_globio",
             "about": (
                 "Proportion of total agriculture that is intensive. "
-                f"{REQUIRED_IF_NOT_SELECTED % 'Predefined GLOBIO'}"),
+                "Required if Use Predefined GLOBIO LULC is not selected."),
             "name": "proportion of intensified agriculture"
         },
         "primary_threshold": {
@@ -138,7 +138,7 @@ ARGS_SPEC = {
                 "area is classified as secondary forest. Areas with FFQI "
                 "greater than or equal to this threshold are classified as "
                 "primary forest. "
-                f"{REQUIRED_IF_NOT_SELECTED % 'Predefined GLOBIO'}"),
+                "Required if Use Predefined GLOBIO LULC is not selected."),
             "name": "primary threshold"
         },
         "msa_parameters_path": {
@@ -197,7 +197,7 @@ ARGS_SPEC = {
             "about": (
                 "Predefined GLOBIO LULC map using the standard GLOBIO "
                 "classification scheme and codes. "
-                f"{REQUIRED_IF_SELECTED % 'Predefined GLOBIO'}"),
+                "Required if Use Predefined GLOBIO LULC is selected."),
             "name": "GLOBIO Classified Land Use"
         }
     }
