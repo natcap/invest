@@ -6,7 +6,7 @@ import logging
 from natcap.invest.finfish_aquaculture import finfish_aquaculture_core
 from .. import utils
 from .. import spec_utils
-from ..spec_utils import u, REQUIRED_IF_SELECTED
+from ..spec_utils import u
 from .. import validation
 
 
