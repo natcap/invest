@@ -124,10 +124,8 @@ ARGS_SPEC = {
         },
         "intensification_fraction": {
             "type": "ratio",
-            "required": "not predefined_globio",
             "about": (
-                "Proportion of total agriculture that is intensive. "
-                "Required if Use Predefined GLOBIO LULC is not selected."),
+                "Proportion of total agriculture that is intensive. "),
             "name": "proportion of intensified agriculture"
         },
         "primary_threshold": {
@@ -245,9 +243,9 @@ def execute(args):
         args['potential_vegetation_path'] (string): used in "mode (a)" path to
             potential vegetation raster
         args['pasture_threshold'] (float): used in "mode (a)"
-        args['intensification_fraction'] (float): used in "mode (a)"; a value
-            between 0 and 1 denoting proportion of total agriculture that
-            should be classified as 'high input'
+        args['intensification_fraction'] (float): a value between 0 and 1
+            denoting proportion of total agriculture that should be classified
+            as 'high input'
         args['primary_threshold'] (float): used in "mode (a)"
         args['msa_parameters_path'] (string): path to MSA classification
             parameters

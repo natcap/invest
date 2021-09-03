@@ -128,44 +128,45 @@ ARGS_SPEC = {
             "excel_ok": True,
         },
         "resolution": {
-            "name": "Resolution of Analysis (meters)",
+            "name": "resolution of analysis",
             "about": (
-                "The size that should be used to grid the given habitat and "
-                "stressor files into rasters. This value will be the pixel "
-                "size of the completed raster files."),
+                "The resolution at which to run the analysis. The model "
+                "outputs will have this resolution."),
             "type": "number",
             "units": u.meter,
             "expression": "value > 0",
         },
         "max_rating": {
-            "name": "Maximum Criteria Score",
+            "name": "maximum criteria score",
             "about": (
-                "This is the highest score that is used to rate a criteria "
-                "within this model run. This value would be used to compare "
-                "with the values within Rating column of the Criteria Scores "
-                "table."),
+                "The highest possible criteria score in the scoring system."),
             "type": "number",
             "units": u.none,
             "expression": "value > 0"
         },
         "risk_eq": {
-            "name": "Risk Equation",
+            "name": "risk equation",
             "about": (
-                "Each of these represents an option of a risk calculation "
-                "equation. This will determine the numeric output of risk for "
-                "every habitat and stressor overlap area."),
+                "The equation to use to calculate risk from exposure and "
+                "consequence."),
             "type": "option_string",
-            "options": ["Multiplicative", "Euclidean"]
+            "options": ["multiplicative", "Euclidean"]
         },
         "decay_eq": {
-            "name": "Decay Equation",
+            "name": "decay equation",
             "about": (
-                "Each of these represents an option of a decay equation for "
-                "the buffered stressors. If stressor buffering is desired, "
-                "this equation will determine the rate at which stressor data "
-                "is reduced."),
+                "The equation to model effects of stressors in buffer areas."),
             "type": "option_string",
-            "options": ["None", "Linear", "Exponential"]
+            "options": {
+                "none": (
+                    "No decay. Stressor has full effect in the buffer area."),
+                "linear": (
+                    "Stressor effects in the buffer area decay linearly with "
+                    "distance from the stressor."),
+                "exponential": (
+                    "Stressor effects in the buffer area decay exponentially "
+                    "with distance from the stressor.")
+            }
         },
         "aoi_vector_path": {
             **spec_utils.AOI,
@@ -190,7 +191,7 @@ ARGS_SPEC = {
                 "Check to enable the generation of GeoJSON outputs. This "
                 "could be used to visualize the risk scores on a map in the "
                 "HRA visualization web application."),
-            "type": "boolean",
+            "type": "boolean"
         }
     }
 }
