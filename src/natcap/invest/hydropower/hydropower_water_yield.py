@@ -36,7 +36,10 @@ ARGS_SPEC = {
         "n_workers": spec_utils.N_WORKERS,
         "lulc_path": {
             **spec_utils.LULC,
-            "projected": True
+            "projected": True,
+            "about": (
+                f"{spec_utils.LULC['about']} All values in this raster "
+                "must have corresponding entries in the Biophysical Table.")
         },
         "depth_to_root_rest_layer_path": {
             "type": "raster",
@@ -46,9 +49,10 @@ ARGS_SPEC = {
             }},
             "projected": True,
             "about": (
-                "A GDAL-supported raster file containing an average root "
-                "restricting layer depth value for each cell."),
-            "name": "Depth To Root Restricting Layer"
+                "Map of root restricting layer depth value, the soil depth at "
+                "which root penetration is strongly inhibited because of "
+                "physical or chemical characteristics."),
+            "name": "root restricting layer depth"
         },
         "precipitation_path": {
             **spec_utils.PRECIP,
@@ -59,10 +63,10 @@ ARGS_SPEC = {
             "bands": {1: {"type": "ratio"}},
             "projected": True,
             "about": (
-                "A GDAL-supported raster file containing plant available "
-                "water content values for each cell.  The plant available "
-                "water content fraction should be a value between 0 and 1."),
-            "name": "Plant Available Water Fraction"
+                "Map of plant available water content value, the fraction of "
+                "water that can be stored in the soil profile that is "
+                "available to plants."),
+            "name": "plant available water content"
         },
         "eto_path": {
             **spec_utils.ETO,
@@ -71,42 +75,66 @@ ARGS_SPEC = {
         "watersheds_path": {
             "projected": True,
             "type": "vector",
-            "fields": {"ws_id": {"type": "integer"}},
-            "geometries": spec_utils.POLYGONS,
+            "fields": {
+                "ws_id": {
+                    "type": "integer",
+                    "about": "Unique identifier for each watershed."
+                }
+            },
+            "geometries": spec_utils.POLYGON,
             "about": (
-                "A GDAL-supported vector file containing one polygon per "
-                "watershed.  Each polygon that represents a watershed is "
-                "required to have a field 'ws_id' that is a unique integer "
-                "which identifies that watershed."),
-            "name": "Watersheds"
+                "Map of watershed boundaries, such that each watershed drains "
+                "to a point of interest where hydropower production will be "
+                "analyzed."),
+            "name": "watersheds"
         },
         "sub_watersheds_path": {
             "projected": True,
             "type": "vector",
-            "fields": {"subws_id": {"type": "integer"}},
+            "fields": {
+                "subws_id": {
+                    "type": "integer",
+                    "about": "Unique identifier for each subwatershed."
+                }
+            },
             "geometries": spec_utils.POLYGONS,
             "required": False,
             "about": (
-                "A GDAL-supported vector file with one polygon per sub- "
-                "watershed within the main watersheds specified in the "
-                "Watersheds shapefile.  Each polygon that represents a sub- "
-                "watershed is required to have a field 'subws_id' that is a "
-                "unique integer which identifies that sub-watershed."),
-            "name": "Sub-Watersheds"
+                "Map of subwatershed boundaries within each watershed in "
+                "the Watersheds map."),
+            "name": "sub-watersheds"
         },
         "biophysical_table_path": {
             "type": "csv",
             "columns": {
-                "lucode": {"type": "integer"},
-                "root_depth": {"type": "number", "units": u.millimeter},
-                "kc": {"type": "number", "units": u.none}
+                "lucode": {
+                    "type": "integer",
+                    "about": (
+                        "LULC code corresponding to values in the LULC map.")
+                },
+                "lulc_veg": {
+                    "type": "integer",
+                    "about": (
+                        "Code indicating whether the the LULC class is "
+                        "vegetated for the purpose of AET. Enter 1 for all "
+                        "vegetated classes except wetlands, and 0 for all "
+                        "other classes, including wetlands, urban areas, "
+                        "water bodies, etc.")
+                },
+                "root_depth": {
+                    "type": "number",
+                    "units": u.millimeter,
+                    "about": (
+                        "Maximum root depth for plants in this LULC class. "
+                        "Only used for classes with a 'lulc_veg' value of 1.")
+                },
+                "kc": {
+                    "type": "number",
+                    "units": u.none,
+                    "about": "Crop coefficient for this LULC class."}
             },
-            "about": (
-                "A CSV table of land use/land cover (LULC) classes, "
-                "containing data on biophysical coefficients used in this "
-                "model.  The following columns are required: 'lucode' "
-                "(integer), 'root_depth' (mm), 'Kc' (coefficient)."),
-            "name": "Biophysical Table"
+            "about": "Table of biophysical parameters for each LULC class.",
+            "name": "biophysical table"
         },
         "seasonality_constant": {
             "expression": "value > 0",

@@ -186,11 +186,8 @@ ARGS_SPEC = {
                 "one or more planning regions or subregions."),
         },
         "visualize_outputs": {
-            "name": "Generate GeoJSONs for Web Visualization",
-            "about": (
-                "Check to enable the generation of GeoJSON outputs. This "
-                "could be used to visualize the risk scores on a map in the "
-                "HRA visualization web application."),
+            "name": "Generate GeoJSONs",
+            "about": "Generate GeoJSON outputs for web visualization.",
             "type": "boolean"
         }
     }
