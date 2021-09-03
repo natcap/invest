@@ -72,7 +72,7 @@ export default class LogTab extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      logdata: null,
+      logdata: '',
     };
     this.logPatterns = {
       'invest-log-error': LOG_ERROR_REGEX,

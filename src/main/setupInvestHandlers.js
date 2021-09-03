@@ -95,7 +95,7 @@ export function setupInvestRunHandlers(investExe) {
     const stdOutCallback = async (data) => {
       if (!investLogfile) {
         if (`${data}`.match('Writing log messages to')) {
-          investLogfile = `${data}`.split(' ').pop();
+          investLogfile = `${data}`.split(' ').pop().trim();
           runningJobs[args.workspace_dir] = investRun.pid;
           event.reply(`invest-logging-${channel}`, investLogfile);
         }
@@ -139,8 +139,10 @@ export function setupInvestRunHandlers(investExe) {
 
 export function setupInvestLogReaderHandler() {
   ipcMain.on(ipcMainChannels.INVEST_READ_LOG, async (event, logfile, channel) => {
+    console.log(logfile);
     const fileStream = fs.createReadStream(logfile);
-    fileStream.on('error', () => {
+    fileStream.on('error', (err) => {
+      logger.error(err);
       event.reply(
         `invest-stdout-${channel}`,
         `Logfile is missing or unreadable: ${os.EOL}${logfile}`
@@ -153,7 +155,7 @@ export function setupInvestLogReaderHandler() {
     });
 
     for await (const line of rl) {
-      event.reply(`invest-stdout-${channel}`, `${line}`);
+      event.reply(`invest-stdout-${channel}`, `${line}${os.EOL}`);
     }
   });
 }
