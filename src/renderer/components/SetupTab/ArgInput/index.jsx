@@ -133,7 +133,7 @@ export default class ArgInput extends React.PureComponent {
       let placeholderText;
       switch (argSpec.type) {
         case 'freestyle_string':
-          placeholderText = 'string';
+          placeholderText = 'text';
           break;
         case 'percent':
           placeholderText = 'percent: a number from 0 - 100';
