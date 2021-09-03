@@ -18,7 +18,6 @@ from .spec_utils import u
 
 LOGGER = logging.getLogger(__name__)
 
-
 ARGS_SPEC = {
     "model_name": "InVEST Carbon Model",
     "module": __name__,
@@ -44,7 +43,7 @@ ARGS_SPEC = {
             "type": "boolean",
             "required": "do_valuation | do_redd",
             "about": (
-                "Enable sequestration analysis. This requires inputs "
+                "Run sequestration analysis. This requires inputs "
                 "of LULC maps for both current and future "
                 "scenarios. Required if REDD scenario analysis or "
                 "run valuation model is selected."),
@@ -69,7 +68,7 @@ ARGS_SPEC = {
             "type": "boolean",
             "required": False,
             "about": (
-                "Enable REDD scenario analysis. This requires three "
+                "Run REDD scenario analysis. This requires three "
                 "LULC maps: one for the current scenario, one "
                 "for the future baseline scenario, and one for the future "
                 "REDD policy scenario."),
@@ -163,8 +162,8 @@ ARGS_SPEC = {
             "about": (
                 "The annual market discount rate in the price of carbon, "
                 "which reflects society's preference for immediate benefits "
-                "over future benefits. "
-                "Required if Run Valuation model is selected."),
+                "over future benefits. Required if Run Valuation model is "
+                "selected."),
             "name": "annual market discount rate"
         },
         "rate_change": {

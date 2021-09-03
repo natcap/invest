@@ -9,7 +9,7 @@ from osgeo import osr
 import pygeoprocessing
 import taskgraph
 
-from .spec_utils import u, LANDUSE
+from .spec_utils import u
 from . import spec_utils
 from . import utils
 from . import validation
@@ -17,9 +17,9 @@ from . import validation
 
 LOGGER = logging.getLogger(__name__)
 
-CROPS = {
-    "barley", "maize", "oilpalm", "potato", "rice", "rye", "soybean",
-    "sugarbeet", "sugarcane", "sunflower", "wheat"}
+CROPS = [
+    "barley", "maize", "oilpalm", "potato", "rice", "soybean",
+    "sugarbeet", "sugarcane", "sunflower", "wheat"]
 
 ARGS_SPEC = {
     "model_name": "Crop Production Regression Model",
@@ -49,9 +49,9 @@ ARGS_SPEC = {
             },
             "about": (
                 "A table that maps each LULC code from the LULC map to one of "
-                "the 12 canonical crop names representing the crop grown in "
+                "the 10 canonical crop names representing the crop grown in "
                 "that LULC class."),
-            "name": "LULC to Crop Table"
+            "name": "LULC to crop table"
         },
         "fertilization_rate_table_path": {
             "type": "csv",
@@ -69,7 +69,7 @@ ARGS_SPEC = {
             },
             "about": (
                 "A table that maps crops to fertilizer application rates."),
-            "name": "Fertilization Rate Table Path"
+            "name": "fertilization rate table"
         },
         "aggregate_polygon_path": {
             **spec_utils.AOI,
@@ -142,13 +142,8 @@ ARGS_SPEC = {
                     }
                 }
             },
-            "about": (
-                "A path to the InVEST Crop Production Data directory. These "
-                "data would have been included with the InVEST installer if "
-                "selected, or can be manually downloaded from "
-                "http://releases.naturalcapitalproject.org/invest. If "
-                "downloaded with InVEST, the default value should be used."),
-            "name": "Directory to model data"
+            "about": "The Crop Production datasets provided with the model.",
+            "name": "model data"
         }
     }
 }
