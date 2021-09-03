@@ -59,6 +59,7 @@ export default class InvestTab extends React.Component {
       argsSpec: null, // ARGS_SPEC.args, the immutable args stuff
       uiSpec: null,
       logStdErr: null, // stderr data from the invest subprocess
+      executeClicked: false,
     };
 
     this.investExecute = this.investExecute.bind(this);
@@ -96,6 +97,8 @@ export default class InvestTab extends React.Component {
    *   as a javascript object
    */
   async investExecute(argsValues) {
+    // This will disable the button until invest exits
+    this.setState({ executeClicked: true });
     const {
       job,
       jobID,
@@ -110,16 +113,17 @@ export default class InvestTab extends React.Component {
     // in part by it's workspace directory.
     args.workspace_dir = path.resolve(argsValues.workspace_dir);
 
-    // Setting status very early in the click handler so the Execute button
-    // can display an appropriate visual cue when it's clicked
     updateJobProperties(jobID, {
       argsValues: args,
-      status: 'running',
+      status: undefined // in case of re-run, clear an old status
     });
-    this.switchTabs('log');
 
     ipcRenderer.on(`invest-logging-${jobID}`, (event, logfile) => {
-      updateJobProperties(jobID, { logfile: logfile });
+      // Only now do we know for sure the process is running
+      updateJobProperties(jobID, {
+        logfile: logfile,
+        status: 'running',
+      });
     });
     ipcRenderer.on(`invest-stderr-${jobID}`, (event, data) => {
       // It's convenient to have stderr in it's own object to display
@@ -154,6 +158,9 @@ export default class InvestTab extends React.Component {
         finalTraceback: finalTraceback,
       });
       saveJob(jobID);
+      this.setState({
+        executeClicked: false
+      });
     });
 
     ipcRenderer.send(
@@ -164,6 +171,7 @@ export default class InvestTab extends React.Component {
       investSettings.loggingLevel,
       jobID
     );
+    this.switchTabs('log');
   }
 
   terminateInvestProcess() {
@@ -195,6 +203,7 @@ export default class InvestTab extends React.Component {
       modelSpec,
       argsSpec,
       uiSpec,
+      executeClicked,
     } = this.state;
     const {
       status,
@@ -210,7 +219,7 @@ export default class InvestTab extends React.Component {
       return (<div />);
     }
 
-    const isRunning = status === 'running';
+    // const isRunning = status === 'running';
     const logDisabled = !logfile;
     const sidebarSetupElementId = `sidebar-setup-${jobID}`;
     const sidebarFooterElementId = `sidebar-footer-${jobID}`;
@@ -281,13 +290,13 @@ export default class InvestTab extends React.Component {
                   nWorkers={this.props.investSettings.nWorkers}
                   sidebarSetupElementId={sidebarSetupElementId}
                   sidebarFooterElementId={sidebarFooterElementId}
-                  isRunning={isRunning}
+                  executeClicked={this.state.executeClicked}
                 />
               </TabPane>
               <TabPane eventKey="log" title="Log">
                 <LogTab
                   logfile={logfile}
-                  isRunning={isRunning}
+                  executeClicked={executeClicked}
                   jobID={jobID}
                   pyModuleName={modelSpec.module}
                 />

@@ -81,7 +81,7 @@ export default class LogTab extends React.Component {
   }
 
   componentDidMount() {
-    const { logfile, isRunning, jobID } = this.props;
+    const { logfile, executeClicked, jobID } = this.props;
     // This channel is replied to by the invest process stdout listener
     // And by the logfile reader.
     ipcRenderer.on(`invest-stdout-${jobID}`, (event, data) => {
@@ -89,7 +89,7 @@ export default class LogTab extends React.Component {
       logdata += markupLine(data, this.logPatterns);
       this.setState({ logdata: logdata });
     });
-    if (!isRunning && logfile) {
+    if (!executeClicked && logfile) {
       ipcRenderer.send(ipcMainChannels.INVEST_READ_LOG, logfile, jobID);
     }
   }
@@ -97,7 +97,7 @@ export default class LogTab extends React.Component {
   componentDidUpdate(prevProps) {
     // If we're re-running a model after loading a recent run,
     // we should clear out the logdata when the new run is launched.
-    if (this.props.isRunning && !prevProps.isRunning) {
+    if (this.props.executeClicked && !prevProps.executeClicked) {
       this.setState({ logdata: '' });
     }
   }
@@ -119,7 +119,7 @@ export default class LogTab extends React.Component {
 
 LogTab.propTypes = {
   logfile: PropTypes.string,
-  isRunning: PropTypes.bool.isRequired,
+  executeClicked: PropTypes.bool.isRequired,
   jobID: PropTypes.string.isRequired,
   pyModuleName: PropTypes.string.isRequired,
 };

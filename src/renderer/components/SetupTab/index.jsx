@@ -354,12 +354,12 @@ export default class SetupTab extends React.Component {
         argsSpec,
         sidebarSetupElementId,
         sidebarFooterElementId,
-        isRunning,
+        executeClicked,
         uiSpec,
       } = this.props;
 
       const buttonText = (
-        isRunning
+        executeClicked
           ? (
             <span>
               Running
@@ -411,7 +411,7 @@ export default class SetupTab extends React.Component {
           </Portal>
           <Portal elId={sidebarFooterElementId}>
             <RunButton
-              disabled={!argsValid || isRunning}
+              disabled={!argsValid || executeClicked}
               wrapInvestExecute={this.wrapInvestExecute}
               buttonText={buttonText}
             />
@@ -440,5 +440,5 @@ SetupTab.propTypes = {
   nWorkers: PropTypes.string.isRequired,
   sidebarSetupElementId: PropTypes.string.isRequired,
   sidebarFooterElementId: PropTypes.string.isRequired,
-  isRunning: PropTypes.bool.isRequired,
+  executeClicked: PropTypes.bool.isRequired,
 };
