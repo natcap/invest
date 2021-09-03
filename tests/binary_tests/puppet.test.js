@@ -183,7 +183,9 @@ test('Run a real invest model', async () => {
   });
   await page.screenshot({ path: `${SCREENSHOT_PREFIX}5-active-log-tab.png` });
 
-  const cancelButton = await findByText(doc, 'Cancel Run');
+  // pptr-testing-library queries are failing to find the Cancel Button
+  // and I can't explain why. Native pptr selector works as expected.
+  const cancelButton = await page.waitForSelector('.alert .btn');
   await cancelButton.click();
   await waitFor(async () => {
     expect(await findByText(doc, 'Run Canceled'));
