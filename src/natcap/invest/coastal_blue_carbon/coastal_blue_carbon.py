@@ -104,7 +104,7 @@ from osgeo import gdal
 
 from .. import utils
 from .. import spec_utils
-from ..spec_utils import u, REQUIRED_IF_SELECTED, LANDUSE
+from ..spec_utils import u
 from .. import validation
 
 LOGGER = logging.getLogger(__name__)
@@ -164,21 +164,21 @@ ARGS_SPEC = {
                     "type": "number",
                     "units": u.year,
                     "about": (
-                        f"The snapshot year that this row's {LANDUSE} raster "
+                        "The snapshot year that this row's LULC raster "
                         "represents. Each year in this table must be unique.")
                 },
                 "raster_path": {
                     "type": "raster",
                     "bands": {1: {"type": "integer"}},
                     "about": (
-                        f"Map of {LANDUSE} in the given snapshot "
+                        "Map of LULC in the given snapshot "
                         "year. All values in this raster must have "
                         "corresponding entries in the Biophysical Table and "
                         "Landcover Transitions Table.")
                 }
             },
             "about": (
-                f"A table mapping snapshot years to corresponding {LANDUSE} maps."),
+                "A table mapping snapshot years to corresponding LULC maps."),
             "name": "landcover snapshots table",
         },
         "analysis_year": {
@@ -200,31 +200,31 @@ ARGS_SPEC = {
                 "code": {
                     "type": "integer",
                     "about": (
-                        f"The {LANDUSE} code that represents this {LANDUSE} "
-                        f"class in the {LANDUSE} snapshot rasters.")},
+                        "The LULC code that represents this LULC "
+                        "class in the LULC snapshot rasters.")},
                 "lulc-class": {
                     "type": "freestyle_string",
                     "about": (
-                        f"Name of the {LANDUSE} class. This label must be "
-                        f"unique among the all the {LANDUSE} classes.")},
+                        "Name of the LULC class. This label must be "
+                        "unique among the all the LULC classes.")},
                 "biomass-initial": {
                     "type": "number",
                     "units": u.megatonne/u.hectare,
                     "about": (
                         "The initial carbon stocks in the biomass pool for "
-                        f"this {LANDUSE} class.")},
+                        "this LULC class.")},
                 "soil-initial": {
                     "type": "number",
                     "units": u.megatonne/u.hectare,
                     "about": (
                         "The initial carbon stocks in the soil pool for this "
-                        f"{LANDUSE} class.")},
+                        "LULC class.")},
                 "litter-initial": {
                     "type": "number",
                     "units": u.megatonne/u.hectare,
                     "about": (
                         "The initial carbon stocks in the litter pool for "
-                        f"this {LANDUSE} class.")},
+                        "this LULC class.")},
                 "biomass-half-life": {
                     "type": "number",
                     "units": u.year,
@@ -235,19 +235,19 @@ ARGS_SPEC = {
                     "about": (
                         "Proportion of carbon stock in the biomass pool that "
                         "is disturbed when a cell transitions away from this "
-                        f"{LANDUSE} class in a low-impact disturbance.")},
+                        " LULC class in a low-impact disturbance.")},
                 "biomass-med-impact-disturb": {
                     "type": "ratio",
                     "about": (
                         "Proportion of carbon stock in the biomass pool that "
                         "is disturbed when a cell transitions away from this "
-                        f"{LANDUSE} class in a medium-impact disturbance.")},
+                        "LULC class in a medium-impact disturbance.")},
                 "biomass-high-impact-disturb": {
                     "type": "ratio",
                     "about": (
                         "Proportion of carbon stock in the biomass pool that "
                         "is disturbed when a cell transitions away from this "
-                        f"{LANDUSE} class in a high-impact disturbance.")},
+                        "LULC class in a high-impact disturbance.")},
                 "biomass-yearly-accumulation": {
                     "type": "number",
                     "units": u.megatonne/u.hectare/u.year,
@@ -264,19 +264,19 @@ ARGS_SPEC = {
                     "about": (
                         "Proportion of carbon stock in the soil pool that "
                         "is disturbed when a cell transitions away from this "
-                        f"{LANDUSE} class in a low-impact disturbance.")},
+                        "LULC class in a low-impact disturbance.")},
                 "soil-med-impact-disturb": {
                     "type": "ratio",
                     "about": (
                         "Proportion of carbon stock in the soil pool that "
                         "is disturbed when a cell transitions away from this "
-                        f"{LANDUSE} class in a medium-impact disturbance.")},
+                        "LULC class in a medium-impact disturbance.")},
                 "soil-high-impact-disturb": {
                     "type": "ratio",
                     "about": (
                         "Proportion of carbon stock in the soil pool that "
                         "is disturbed when a cell transitions away from this "
-                        f"{LANDUSE} class in a high-impact disturbance.")},
+                        "LULC class in a high-impact disturbance.")},
                 "soil-yearly-accumulation": {
                     "type": "number",
                     "units": u.megatonne/u.hectare/u.year,
@@ -288,7 +288,7 @@ ARGS_SPEC = {
                     "about": (
                         "Annual rate of CO2E accumulation in the litter pool.")}
             },
-            "about": f"Table of biophysical properties for each {LANDUSE} class."
+            "about": "Table of biophysical properties for each LULC class."
         },
         "landcover_transitions_table": {
             "name": "landcover transitions table",
@@ -297,7 +297,7 @@ ARGS_SPEC = {
                 "lulc-class": {
                     "type": "integer",
                     "about": (
-                        f"{LANDUSE} codes matching the codes in the biophysical "
+                        "LULC codes matching the codes in the biophysical "
                         "table.")},
                 "[LULC CODE]": {
                     "type": "option_string",
@@ -310,7 +310,7 @@ ARGS_SPEC = {
                     },
                     "about": (
                         "A transition matrix describing the type of carbon "
-                        f"action that occurs when each {LANDUSE} type "
+                        "action that occurs when each LULC type "
                         "transitions to another type. The first column "
                         "(*lulc-class*) represents the initial LULC class, "
                         "and the first row (<lulc1>, <lulc2>...) represents "
@@ -325,7 +325,7 @@ ARGS_SPEC = {
             },
             "about": (
                 "A transition matrix mapping the type of carbon action "
-                f"undergone when one {LANDUSE} type transitions to another."),
+                "undergone when one LULC type transitions to another."),
         },
         "do_economic_analysis": {
             "name": "run valuation",
@@ -388,7 +388,7 @@ ARGS_SPEC = {
             "about": (
                 "Annual discount rate on the price of carbon. This is "
                 "compounded each year after the baseline year. "
-                f"{REQUIRED_IF_SELECTED % 'Do Valuation'}"),
+                "Required if Run Valuation is selected."),
         },
     }
 }

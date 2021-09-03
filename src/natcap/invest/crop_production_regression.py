@@ -50,8 +50,8 @@ ARGS_SPEC = {
             "about": (
                 "A table that maps each LULC code from the LULC map to one of "
                 "the 12 canonical crop names representing the crop grown in "
-                f"that {LANDUSE} class."),
-            "name": f"{LANDUSE} to Crop Table"
+                "that LULC class."),
+            "name": "LULC to Crop Table"
         },
         "fertilization_rate_table_path": {
             "type": "csv",

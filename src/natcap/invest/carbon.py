@@ -14,7 +14,7 @@ import taskgraph
 from . import validation
 from . import utils
 from . import spec_utils
-from .spec_utils import u, REQUIRED_IF_SELECTED, RASTER_VALUES, LANDUSE
+from .spec_utils import u
 
 LOGGER = logging.getLogger(__name__)
 
@@ -35,18 +35,19 @@ ARGS_SPEC = {
             "projected": True,
             "projection_units": u.meter,
             "about": (
-                f"A map of {LANDUSE} for the current scenario. "
-                f"{RASTER_VALUES % 'Carbon Pools'}"),
-            "name": f"current {LANDUSE}"
+                "A map of LULC for the current scenario. "
+                "All values in this raster must have corresponding "
+                "entries in the Carbon Pools table."),
+            "name": "current LULC"
         },
         "calc_sequestration": {
             "type": "boolean",
             "required": "do_valuation | do_redd",
             "about": (
                 "Enable sequestration analysis. This requires inputs "
-                f"of {LANDUSE} maps for both current and future "
-                "scenarios. ") + REQUIRED_IF_SELECTED % (
-                'REDD scenario analysis or run valuation model'),
+                "of LULC maps for both current and future "
+                "scenarios. Required if REDD scenario analysis or "
+                "run valuation model is selected."),
             "name": "calculate sequestration"
         },
         "lulc_fut_path": {
@@ -55,19 +56,21 @@ ARGS_SPEC = {
             "projection_units": u.meter,
             "required": "calc_sequestration",
             "about": (
-                f"A map of {LANDUSE} for the future scenario. "
-                f"{RASTER_VALUES % 'Carbon Pools'} If run valuation model is "
+                "A map of LULC for the future scenario. "
+                "If run valuation model is "
                 "selected, this should be the reference, or baseline, future "
                 "scenario against which to compare the REDD policy scenario. "
-                f"{REQUIRED_IF_SELECTED % 'calculate sequestration'}"),
-            "name": f"future {LANDUSE}"
+                "All values in this raster must have corresponding entries in "
+                "the Carbon Pools table. Required if Calculate Sequestration "
+                "is selected."),
+            "name": "future LULC"
         },
         "do_redd": {
             "type": "boolean",
             "required": False,
             "about": (
                 "Enable REDD scenario analysis. This requires three "
-                f"{LANDUSE} maps: one for the current scenario, one "
+                "LULC maps: one for the current scenario, one "
                 "for the future baseline scenario, and one for the future "
                 "REDD policy scenario."),
             "name": "REDD scenario analysis"
@@ -78,10 +81,11 @@ ARGS_SPEC = {
             "projection_units": u.meter,
             "required": "do_redd",
             "about": (
-                f"A map of {LANDUSE} for the REDD policy scenario. "
-                f"{RASTER_VALUES % 'Carbon Pools'} "
-                f"{REQUIRED_IF_SELECTED % 'REDD scenario analysis'}"),
-            "name": f"REDD {LANDUSE}"
+                "A map of LULC for the REDD policy scenario. "
+                "All values in this raster must have corresponding entries in "
+                "the Carbon Pools table. Required if REDD Scenario Analysis "
+                "is selected."),
+            "name": "REDD LULC"
         },
         "carbon_pools_path": {
             "type": "csv",
@@ -89,8 +93,8 @@ ARGS_SPEC = {
                 "lucode": {
                     "type": "integer",
                     "about": (
-                        f"{LANDUSE.capitalize()} code. Every value in the "
-                        f"{LANDUSE} maps must have a corresponding entry in "
+                        "LULC code. Every value in the "
+                        "LULC maps must have a corresponding entry in "
                         "this column.")
                 },
                 "c_above": {
@@ -122,9 +126,8 @@ ARGS_SPEC = {
             "required": "do_valuation",
             "about": (
                 "The calendar year of the current scenario depicted in the "
-                f"current {LANDUSE} map. "
-                f"{REQUIRED_IF_SELECTED % 'run valuation model'}"),
-            "name": f"current {LANDUSE} year"
+                "current LULC map. Required if Run Valuation model is selected."),
+            "name": "current LULC year"
         },
         "lulc_fut_year": {
             "expression": "float(value).is_integer()",
@@ -133,9 +136,8 @@ ARGS_SPEC = {
             "required": "do_valuation",
             "about": (
                 "The calendar year of the future scenario depicted in the "
-                f"future {LANDUSE} map. "
-                f"{REQUIRED_IF_SELECTED % 'run valuation model'}"),
-            "name": f"future {LANDUSE} year"
+                "future LULC map. Required if Run Valuation model is selected."),
+            "name": f"future LULC year"
         },
         "do_valuation": {
             "type": "boolean",
@@ -152,7 +154,7 @@ ARGS_SPEC = {
             "required": "do_valuation",
             "about": (
                 "The present value of carbon. "
-                f"{REQUIRED_IF_SELECTED % 'run valuation model'}"),
+                "Required if Run Valuation model is selected."),
             "name": "price of carbon"
         },
         "discount_rate": {
@@ -162,7 +164,7 @@ ARGS_SPEC = {
                 "The annual market discount rate in the price of carbon, "
                 "which reflects society's preference for immediate benefits "
                 "over future benefits. "
-                f"{REQUIRED_IF_SELECTED % 'run valuation model'}"),
+                "Required if Run Valuation model is selected."),
             "name": "annual market discount rate"
         },
         "rate_change": {
@@ -170,7 +172,7 @@ ARGS_SPEC = {
             "required": "do_valuation",
             "about": (
                 "The relative annual increase of the price of carbon. "
-                f"{REQUIRED_IF_SELECTED % 'run valuation model'}"),
+                "Required if Run Valuation model is selected."),
             "name": "annual price change"
         }
     }

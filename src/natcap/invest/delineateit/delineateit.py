@@ -16,7 +16,7 @@ import taskgraph
 
 from .. import utils
 from .. import spec_utils
-from ..spec_utils import u, REQUIRED_IF_SELECTED
+from ..spec_utils import u
 from .. import validation
 from . import delineateit_core
 
@@ -71,7 +71,7 @@ ARGS_SPEC = {
             "required": "snap_points",
             "about": (
                 spec_utils.THRESHOLD_FLOW_ACCUMULATION["about"] +
-                f" {REQUIRED_IF_SELECTED % 'Snap Points'}"),
+                " Required if Snap Points is selected."),
         },
         "snap_distance": {
             "expression": "value > 0",
@@ -80,8 +80,8 @@ ARGS_SPEC = {
             "required": "snap_points",
             "about": (
                 "Maximum distance to relocate watershed outlet points in "
-                "order to snap them to a stream. "
-                f"{REQUIRED_IF_SELECTED % 'Snap Points'}"),
+                "order to snap them to a stream. Required if Snap Points "
+                "is selected."),
             "name": "snap distance"
         },
         "skip_invalid_geometry": {

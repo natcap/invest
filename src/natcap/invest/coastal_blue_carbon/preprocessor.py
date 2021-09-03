@@ -10,7 +10,7 @@ import taskgraph
 
 from .. import utils
 from .. import spec_utils
-from ..spec_utils import u, RASTER_VALUES, LANDUSE
+from ..spec_utils import u
 from .. import validation
 from . import coastal_blue_carbon
 
@@ -28,23 +28,23 @@ ARGS_SPEC = {
             "name": "LULC lookup table",
             "type": "csv",
             "about": (
-                f"A table mapping {LANDUSE} codes from the snapshot rasters to the "
-                f"corresponding {LANDUSE} class names, and whether or not the "
+                "A table mapping LULC codes from the snapshot rasters to the "
+                "corresponding LULC class names, and whether or not the "
                 "class is a coastal blue carbon habitat."),
             "columns": {
                 "code": {
                     "type": "integer",
                     "about": (
-                        f"{LANDUSE} code. Every value in the "
-                        f"snapshot {LANDUSE} maps must have a corresponding entry "
+                        "LULC code. Every value in the "
+                        "snapshot LULC maps must have a corresponding entry "
                         "in this column.")},
                 "lulc-class": {
                     "type": "freestyle_string",
-                    "about": f"Name of the {LANDUSE} class."},
+                    "about": "Name of the LULC class."},
                 "is_coastal_blue_carbon_habitat": {
                     "type": "boolean",
                     "about": (
-                        f"Enter TRUE if this {LANDUSE} class is a coastal blue "
+                        "Enter TRUE if this LULC class is a coastal blue "
                         "carbon habitat, FALSE if not.")}
             }
         },
@@ -59,12 +59,13 @@ ARGS_SPEC = {
                     "type": "raster",
                     "bands": {1: {"type": "integer"}},
                     "about": (
-                        f"Map of {LANDUSE} in the snapshot year. "
-                        f"{RASTER_VALUES % 'LULC Lookup'}")
+                        "Map of LULC in the snapshot year. "
+                        "All values in this raster must have corresponding "
+                        "entries in the LULC Lookup table.")
                 }
             },
             "about": (
-                f"A table mapping snapshot years to corresponding {LANDUSE} maps "
+                "A table mapping snapshot years to corresponding LULC maps "
                 "for each year."),
             "name": "LULC snapshots table",
         },
