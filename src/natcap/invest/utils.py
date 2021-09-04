@@ -75,20 +75,13 @@ def _log_gdal_errors(*args, **kwargs):
             f'arguments.  args: {args}, kwargs: {kwargs}')
 
     try:
-        try:
-            err_level = args[0]
-        except IndexError:
-            err_level = kwargs['err_level']
-
-        try:
-            err_no = args[1]
-        except IndexError:
-            err_no = kwargs['err_no']
-
-        try:
-            err_msg = args[2]
-        except IndexError:
-            err_msg = kwargs['err_msg']
+        gdal_args = {}
+        for index, key in enumerate(('err_level', 'err_no', 'err_msg')):
+            try:
+                parameter = args[index]
+            except IndexError:
+                parameter = kwargs[key]
+            gdal_args[key] = parameter
     except KeyError as missing_key:
         LOGGER.exception(
             f'_log_gdal_errors called without the argument {missing_key}. '
@@ -98,10 +91,12 @@ def _log_gdal_errors(*args, **kwargs):
         # information to call the ``osgeo_logger`` in the way we intended.
         return
 
+    err_level = gdal_args['err_level']
+    err_no = gdal_args['err_no']
+    err_msg = gdal_args['err_msg'].replace('\n', '')
     _OSGEO_LOGGER.log(
         level=GDAL_ERROR_LEVELS[err_level],
-        msg='[errno {err}] {msg}'.format(
-            err=err_no, msg=err_msg.replace('\n', ' ')))
+        msg=f'[errno {err_no}] {err_msg}')
 
 
 @contextlib.contextmanager
