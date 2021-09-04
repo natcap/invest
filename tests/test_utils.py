@@ -5,11 +5,13 @@ import os
 import tempfile
 import shutil
 import logging
+import logging.handlers
 import threading
 import warnings
 import re
 import glob
 import textwrap
+import queue
 
 import numpy
 from osgeo import gdal
@@ -451,6 +453,48 @@ class GDALWarningsLoggingTests(unittest.TestCase):
                         if msg if msg]
 
         self.assertEqual(len(messages), 1)
+
+    def test_log_gdal_errors_bad_n_args(self):
+        from natcap.invest import utils
+
+        log_queue = queue.Queue()
+        log_queue_handler = logging.handlers.QueueHandler(log_queue)
+        utils.LOGGER.addHandler(log_queue_handler)
+
+        try:
+            # 1 parameter, expected 3
+            utils._log_gdal_errors('foo')
+        finally:
+            utils.LOGGER.removeHandler(log_queue_handler)
+
+        record = log_queue.get()
+        self.assertEqual(record.name, 'natcap.invest.utils')
+        self.assertEqual(record.levelno, logging.ERROR)
+        self.assertIn(
+            '_log_gdal_errors was called with an incorrect number',
+            record.msg)
+
+    def test_log_gdal_errors_missing_param(self):
+        from natcap.invest import utils
+
+        log_queue = queue.Queue()
+        log_queue_handler = logging.handlers.QueueHandler(log_queue)
+        utils.LOGGER.addHandler(log_queue_handler)
+
+        try:
+            # Missing third parameter 2, "err_message"
+            utils._log_gdal_errors(
+                gdal.CE_Failure, 123,
+                bad_param='bad param')  # param obviously bad
+        finally:
+            utils.LOGGER.removeHandler(log_queue_handler)
+
+        record = log_queue.get()
+        self.assertEqual(record.name, 'natcap.invest.utils')
+        self.assertEqual(record.levelno, logging.ERROR)
+        self.assertIn(
+            "_log_gdal_errors called without the argument 'err_msg'",
+            record.msg)
 
 
 class PrepareWorkspaceTests(unittest.TestCase):
@@ -914,7 +958,7 @@ class ReadCSVToDataframeTests(unittest.TestCase):
     def test_csv_with_integer_headers(self):
         """
         utils: CSV with integer headers should be read into strings.
-        
+
         This shouldn't matter for any of the models, but if a user inputs a CSV
         with extra columns that are labeled with numbers, it should still work.
         """
@@ -1408,7 +1452,7 @@ class AssertVectorsEqualTests(unittest.TestCase):
 
 class ReclassifyRasterOpTests(unittest.TestCase):
     """Tests for natcap.invest.utils.reclassify_raster."""
-    
+
     def setUp(self):
         """Setup workspace."""
         self.workspace_dir = tempfile.mkdtemp()
@@ -1426,7 +1470,7 @@ class ReclassifyRasterOpTests(unittest.TestCase):
         projection_wkt = srs_copy.ExportToWkt()
         origin = (1180000, 690000)
         raster_path = os.path.join(self.workspace_dir, 'tmp_raster.tif')
-        
+
         array = numpy.array([[1,1,1], [2,2,2], [3,3,3]], dtype=numpy.int32)
 
         pygeoprocessing.numpy_array_to_raster(
@@ -1437,12 +1481,12 @@ class ReclassifyRasterOpTests(unittest.TestCase):
             self.workspace_dir, 'tmp_raster_out.tif')
 
         message_details = {
-            'raster_name': 'LULC', 'column_name': 'lucode', 
+            'raster_name': 'LULC', 'column_name': 'lucode',
             'table_name': 'Biophysical'}
 
         with self.assertRaises(ValueError) as context:
             utils.reclassify_raster(
-                (raster_path, 1), value_map, target_raster_path, 
+                (raster_path, 1), value_map, target_raster_path,
                 gdal.GDT_Int32, -1, error_details=message_details)
         expected_message = (
                 "Values in the LULC raster were found that are"
