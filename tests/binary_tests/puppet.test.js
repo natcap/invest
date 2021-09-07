@@ -92,6 +92,11 @@ beforeAll(async () => {
   });
   // set up test data
   makeAOI();
+
+  // clear old screenshots
+  glob.glob(`${SCREENSHOT_PREFIX}*.png`, (err, files) => {
+    files.forEach((file) => fs.unlinkSync(file));
+  });
 });
 
 afterAll(async () => {
@@ -152,19 +157,21 @@ test('Run a real invest model', async () => {
   await modelButton.click();
   await page.screenshot({ path: `${SCREENSHOT_PREFIX}3-model-tab.png` });
 
+  const argsForm = await page.$('.args-form');
   const typeDelay = 10;
-  const workspace = await findByLabelText(doc, /Workspace/i);
+  const workspace = await findByLabelText(argsForm, /Workspace/i);
   await workspace.type(TMP_DIR, { delay: typeDelay });
-  const aoi = await findByLabelText(doc, /area of interest/i);
+  const aoi = await findByLabelText(argsForm, /area of interest/i);
   await aoi.type(TMP_AOI_PATH, { delay: typeDelay });
-  const startYear = await findByLabelText(doc, /start year/i);
+  const startYear = await findByLabelText(argsForm, /start year/i);
   await startYear.type('2008', { delay: typeDelay });
-  const endYear = await findByLabelText(doc, /end year/i);
+  const endYear = await findByLabelText(argsForm, /end year/i);
   await endYear.type('2012', { delay: typeDelay });
   await page.screenshot({ path: `${SCREENSHOT_PREFIX}4-complete-setup-form.png` });
 
   // Button is disabled until validation completes
-  const runButton = await findByRole(doc, 'button', { name: 'Run' });
+  const sidebar = await page.$('.invest-sidebar-col');
+  const runButton = await findByRole(sidebar, 'button', { name: 'Run' });
   await waitFor(async () => {
     const isEnabled = await page.evaluate(
       (btn) => !btn.disabled,
@@ -183,14 +190,13 @@ test('Run a real invest model', async () => {
   });
   await page.screenshot({ path: `${SCREENSHOT_PREFIX}5-active-log-tab.png` });
 
-  // pptr-testing-library queries are failing to find the Cancel Button
-  // and I can't explain why. Native pptr selector works as expected.
-  const cancelButton = await page.waitForSelector('.alert .btn');
+  // Cancel button does not appear until after invest has confirmed
+  // it is running. So extra timeout on the query:
+  const cancelButton = await findByRole(sidebar,
+    'button', { name: 'Cancel Run' }, { timeout: 5000 });
   await cancelButton.click();
-  await waitFor(async () => {
-    expect(await findByText(doc, 'Run Canceled'));
-    expect(await findByText(doc, 'Open Workspace'));
-  });
+  expect(await findByText(sidebar, 'Run Canceled'));
+  expect(await findByText(sidebar, 'Open Workspace'));
   await page.screenshot({ path: `${SCREENSHOT_PREFIX}6-run-canceled.png` });
 }, 50000); // 10x default timeout: sometimes expires in GHA
 
