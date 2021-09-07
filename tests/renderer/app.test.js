@@ -537,7 +537,6 @@ describe('InVEST subprocess testing', () => {
         mockInvestProc.emit('exit', null);
       });
     }
-
   });
 
   afterAll(() => {
@@ -637,8 +636,9 @@ describe('InVEST subprocess testing', () => {
     mockInvestProc.stdout.push('hello from stdout');
     mockInvestProc.stderr.push(allStdErr);
     const logTab = await findByText('Log');
-    expect(logTab.classList.contains('active'))
-      .toBeTruthy();
+    await waitFor(() => {
+      expect(logTab.classList.contains('active')).toBeTruthy();
+    });
 
     // some text from the logfile should be rendered:
     expect(await findByText(dummyTextToLog, { exact: false }))
@@ -686,7 +686,9 @@ describe('InVEST subprocess testing', () => {
     // stdout listener is how the app knows the process started
     mockInvestProc.stdout.push('hello from stdout');
     const logTab = await findByText('Log');
-    expect(logTab.classList.contains('active')).toBeTruthy();
+    await waitFor(() => {
+      expect(logTab.classList.contains('active')).toBeTruthy();
+    });
 
     // some text from the logfile should be rendered:
     expect(await findByText(dummyTextToLog, { exact: false }))
@@ -729,7 +731,9 @@ describe('InVEST subprocess testing', () => {
     // stdout listener is how the app knows the process started
     mockInvestProc.stdout.push('hello from stdout');
     let logTab = await findByText('Log');
-    expect(logTab.classList.contains('active')).toBeTruthy();
+    await waitFor(() => {
+      expect(logTab.classList.contains('active')).toBeTruthy();
+    });
 
     // some text from the logfile should be rendered:
     expect(await findByText(dummyTextToLog, { exact: false }))
