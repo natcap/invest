@@ -118,10 +118,14 @@ class ValidateArgsSpecs(unittest.TestCase):
                                     isinstance(arg['options'], list))
                     if isinstance(arg['options'], list):
                         for item in arg['options']:
-                            self.assertTrue(isinstance(item, str))
+                            self.assertTrue(
+                                isinstance(item, str) or
+                                isinstance(item, int))
                     else:
                         for key, val in arg['options'].items():
-                            self.assertTrue(isinstance(key, str))
+                            self.assertTrue(
+                                isinstance(key, str) or
+                                isinstance(key, int))
                             self.assertTrue(isinstance(val, str))
                     attrs.remove('options')
 
@@ -351,7 +355,7 @@ class SpecUtilsTests(unittest.TestCase):
                 ('meter / second', 'm/s'),
                 ('foot * mm', 'ft · mm'),
                 ('t * hr * ha / ha / MJ / mm', 't · h · ha / (ha · MJ · mm)'),
-                ('mm^3 / year', 'mm³/yr')
+                ('mm^3 / year', 'mm³/year')
         ]:
             unit = spec_utils.u.Unit(unit_name)
             actual = spec_utils.format_unit(unit)
