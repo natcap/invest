@@ -19,11 +19,7 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
     - name: install environment
-      # Verify before install to try to avoid an intermittent error
-      # https://stackoverflow.com/questions/15393821/npm-err-cb-never-called
-      run: |
-        npm cache verify
-        npm install
+      run: npm install
 
     - name: Fetch InVEST Binaries
       run: npm run fetch-invest
