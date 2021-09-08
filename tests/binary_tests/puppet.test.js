@@ -81,7 +81,7 @@ function makeAOI() {
 // errors are not thrown from an async beforeAll
 // https://github.com/facebook/jest/issues/8688
 beforeAll(async () => {
-  fs.unlinkSync(APP_HAS_RUN_TOKEN_PATH);
+  try { fs.unlinkSync(APP_HAS_RUN_TOKEN_PATH); } catch {}
   // start the invest app and forward stderr to console
   ELECTRON_PROCESS = spawn(
     `"${BINARY_PATH}"`,
