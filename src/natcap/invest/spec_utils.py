@@ -39,7 +39,7 @@ u.define('none = []')
 
 # Specs for common arg types ##################################################
 WORKSPACE = {
-    "name": "Workspace",
+    "name": "workspace",
     "about": (
         "The folder where all intermediate and output files of the model "
         "will be written.  If this folder does not exist, it will be "
@@ -51,7 +51,7 @@ WORKSPACE = {
 }
 
 SUFFIX = {
-    "name": "File suffix",
+    "name": "file suffix",
     "about": (
         'A string that will be added to the end of all files '
         'written to the workspace.'),
@@ -61,7 +61,7 @@ SUFFIX = {
 }
 
 N_WORKERS = {
-    "name": "Taskgraph n_workers parameter",
+    "name": "taskgraph n_workers parameter",
     "about": (
         "The n_workers parameter to provide to taskgraph. "
         "-1 will cause all jobs to run synchronously. "
@@ -118,10 +118,10 @@ PRECIP = {
         }
     },
     "about": "Map of average annual precipitation.",
-    "name": "Precipitation"
+    "name": "precipitation"
 }
 ETO = {
-    "name": "Evapotranspiration",
+    "name": "evapotranspiration",
     "type": "raster",
     "bands": {
         1: {
@@ -147,7 +147,7 @@ THRESHOLD_FLOW_ACCUMULATION = {
     "about": (
         "The number of upstream cells that must flow into a cell "
         "before it is classified as a stream."),
-    "name": "Threshold Flow Accumulation Limit"
+    "name": "threshold flow accumulation"
 }
 
 
