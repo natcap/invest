@@ -38,11 +38,6 @@ const MOCK_INVEST_LIST = {
 };
 const MOCK_VALIDATION_VALUE = [[['workspace_dir'], 'invalid because']];
 
-afterAll(async () => {
-  await InvestJob.clearStore();
-  jest.resetAllMocks();
-});
-
 describe('Various ways to open and close InVEST models', () => {
   beforeAll(async () => {
     getInvestModelNames.mockResolvedValue(MOCK_INVEST_LIST);
@@ -50,8 +45,7 @@ describe('Various ways to open and close InVEST models', () => {
     fetchValidation.mockResolvedValue(MOCK_VALIDATION_VALUE);
   });
   afterAll(async () => {
-    // await clearSettingsStore();
-    // TODO reset the beforeAll mocks?
+    jest.resetAllMocks();
   });
   afterEach(async () => {
     jest.clearAllMocks(); // clears usage data, does not reset/restore
