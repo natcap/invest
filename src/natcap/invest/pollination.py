@@ -32,90 +32,90 @@ ARGS_SPEC = {
             **spec_utils.LULC,
             "projected": True,
             "about": (
-                "This is the landcover map that's used to map biophysical "
-                "properties about habitat and floral resources of landcover "
-                "types to a spatial layout.")
+                "Map of LULC codes. All values in this raster must have "
+                "corresponding entries in the Biophysical Table.")
         },
         "guild_table_path": {
             "type": "csv",
             "columns": {
                 "species": {
                     "type": "freestyle_string",
-                    "about": "unique pollinator species or guild name"
+                    "about": (
+                        "Unique name or identifier for each pollinator "
+                        "species or guild of interest.")
                 },
                 "nesting_suitability_[SUBSTRATE]_index": {
                     "type": "ratio",
                     "about": (
-                        "Utilization of this substrate by this species, with "
-                        "1 indicating a nesting substrate that is fully "
-                        "utilized and 0 indicating a nest substrate that is "
-                        "not utilized at all. Substrates are user defined, "
-                        "but might include ground nests, tree cavities, etc. "
-                        "The SUBSTRATE string must match a "
-                        "nesting_[SUBSTRATE]_availability_index in the "
-                        "biophysical table.")
+                        "Utilization of the substrate by this species, where "
+                        "1 indicates the nesting substrate is fully utilized "
+                        "and 0 indicates it is not utilized at all. Replace "
+                        "[SUBSTRATE] with substrate names matching those in "
+                        "the Biophysical Table. There must be a column for "
+                        "each substrate.")
                 },
                 "foraging_activity_[SEASON]_index": {
                     "type": "ratio",
                     "about": (
-                        "Pollinator activity by floral season (i.e., flight "
-                        "season), with 1 indicating the season of greatest "
-                        "activity for the species/guild, and 0 indicating a "
-                        "season of no activity. Seasons are user defined but "
-                        "might include spring, summer, fall; wet, dry, etc. "
-                        "The SEASON string must match a "
-                        "floral_resources_[SEASON]_index column in the "
-                        "biophysical table.")
+                        "Pollinator activity for this species/guild in each "
+                        "season. 1 indicates maximum activity for the "
+                        "species/guild, and 0 indicates no activity. Replace "
+                        "[SEASON] with season names matching those in the "
+                        "biophysical table, such that there is one column for "
+                        "each season.")
                 },
                 "alpha": {
                     "type": "number",
                     "units": u.meters,
                     "about": (
-                        "Average distance each species or guild travels to "
-                        "forage on flowers. The model uses this distance to "
-                        "define the neighborhood of available flowers around "
-                        "a given cell, and to weight the sums of floral "
-                        "resources and pollinator abundances on farms. This "
-                        "value can be determined by typical foraging distance "
-                        "of a bee species based on an allometric relationship "
-                        "(see Greenleaf et al. 2007).")
+                        "Average distance that this species or guild travels "
+                        "to forage on flowers.")
                 },
                 "relative_abundance": {
                     "type": "ratio",
                     "about": (
                         "The proportion of total pollinator abundance that "
-                        "consists of this species/guild. Using the same value "
-                        "for each species will result in each species being "
-                        "weighted equally.")
+                        "consists of this species/guild.")
                 }
             },
             "about": (
-                "A table mapping each pollinator species/guild of interest to "
-                "its pollination-related parameters."),
+                "A table mapping each pollinator species or guild of interest "
+                "to its pollination-related parameters."),
             "name": "Guild Table"
         },
         "landcover_biophysical_table_path": {
             "type": "csv",
             "columns": {
-                "lucode": {"type": "integer"},
+                "lucode": {
+                    "type": "integer",
+                    "about": (
+                        "LULC code representing this class in the LULC raster."
+                    )
+                },
                 "nesting_[SUBSTRATE]_availability_index": {
                     "type": "ratio",
                     "about": (
-                        "Availability of the given nesting type within each "
-                        "LULC type. The SUBSTRATE name must exactly match a "
-                        "substrate given in the Guild Table.")},
+                        "Index of availability of the given substrate in this "
+                        "LULC class. Replace [SUBSTRATE] with substrate names "
+                        "matching those in the Guild Table. There must be one "
+                        "column for each substrate.")},
                 "floral_resources_[SEASON]_index": {
                     "type": "ratio",
                     "about": (
-                        "Abundance of flowers in each LULC class for the "
-                        "given season (floral coverage x proportion of the "
-                        "season for which there is that coverage).")}
+                        "Abundance of flowers during the given season in this "
+                        "LULC class. This is the proportion of land area "
+                        "covered by flowers, multiplied by the proportion of "
+                        "the season for which there is that coverage. Replace "
+                        "[SEASON] with season names matching those in the "
+                        "Guild Table. There must be one column for each "
+                        "season.")}
             },
             "about": (
                 "A table mapping each LULC class to nesting availability and "
                 "floral abundance data for each substrate and season in that "
-                "LULC class."),
-            "name": "Land Cover Biophysical Table"
+                "LULC class. All values in the LULC raster must have "
+                "corresponding entries in this table."),
+            "name": "biophysical table"
         },
         "farm_vector_path": {
             "type": "vector",
@@ -124,59 +124,53 @@ ARGS_SPEC = {
                     "type": "freestyle_string",
                     "about": (
                         "Name of the crop grown on each polygon, e.g. "
-                        "'blueberries', 'almonds', etc. For farms growing "
-                        "multiple overlapping crops, or crops in multiple "
-                        "seasons, a separate overlapping polygon must be "
-                        "included for each crop.")},
+                        "'blueberries', 'almonds', etc.")},
                 "half_sat": {
                     "type": "ratio",
                     "about": (
                         "The half saturation coefficient for the crop grown "
-                        "on each farm. This represents the proportion of wild "
-                        "pollinators that results in 50% of pollinator- "
-                        "dependent crop yield being attained. This is a "
-                        "tunable parameter that may be most useful to adjust "
-                        "following an initial run of the model and an "
-                        "examination of the results.")},
+                        "in this area. This is the wild pollinator abundance "
+                        "(i.e. the proportion of all pollinators that are "
+                        "wild) needed to reach half of the total potential "
+                        "pollinator-dependent yield.")},
                 "season": {
                     "type": "freestyle_string",
                     "about": (
-                        "The season in which the crop is pollinated. This "
-                        "season must match a season in the guild table.")},
+                        "The season in which the crop is pollinated. Season "
+                        "names must match those in the Guild Table and "
+                        "Biophysical Table.")},
                 "fr_[SEASON]": {  # floral resources for each season
                     "type": "ratio",
                     "about": (
                         "The floral resources available at this farm for the "
-                        "given season. The SEASON string must exactly match "
-                        "one of the seasons provided in the guild table")},
+                        "given season. Replace [SEASON] with season names "
+                        "matching those in the Guild Table and Biophysical "
+                        "Table, such that there is one field for each season.")
+                },
                 "n_[SUBSTRATE]": {  # nesting availabilities for each substrate
                     "type": "ratio",
                     "about": (
-                        "The nesting substrate suitability for the farm for "
-                        "the given substrate. The SUBSTRATE string must match "
-                        "one of the substrates in the guild table.")},
+                        "The nesting suitability for the given substrate at "
+                        "this farm. given substrate. Replace [SUBSTRATE] with "
+                        "substrate names matching those in the Guild Table "
+                        "and Biophysical Table, such that there is one field "
+                        "for each substrate.")},
                 "p_dep": {
                     "type": "ratio",
-                    "about": (
-                        "The proportion of crop dependent on pollinators. See "
-                        "Klein et al. (2007) for estimates for common crops.")},
+                    "about": "The proportion of crop dependent on pollinators."
+                },
                 "p_managed": {
                     "type": "ratio",
                     "about": (
                         "The proportion of pollination required on the farm "
-                        "provided by managed pollinators. This can be "
-                        "estimated as the proportion of the recommended hive "
-                        "density or stocking rate. See Delaplane & Mayer "
-                        "(2000) for recommended stocking rates in the United "
-                        "States. Agricultural extension offices are also a "
-                        "good source of this information.")}
+                        "that is provided by managed pollinators.")}
             },
             "geometries": spec_utils.POLYGONS,
             "required": False,
             "about": (
                 "Map of farm sites to be analyzed, with pollination data "
                 "specific to each farm."),
-            "name": "Farm Vector"
+            "name": "farms map"
         }
     }
 }
