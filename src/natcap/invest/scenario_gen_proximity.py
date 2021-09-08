@@ -34,74 +34,76 @@ ARGS_SPEC = {
         "base_lulc_path": {
             **spec_utils.LULC,
             "projected": True,
-            "about": "Path to the base landcover map",
-            "name": "Base Land Use/Cover"
+            "about": "Base map from which to generate scenarios.",
+            "name": "base LULC map"
         },
-        "replacment_lucode": {
+        "replacement_lucode": {
             "type": "integer",
-            "about": "Code to replace when converting pixels",
-            "name": "Replacement Landcover Code"
+            "about": "The LULC code to which habitat will be converted.",
+            "name": "replacement lulc code"
         },
         "area_to_convert": {
             "expression": "value > 0",
             "type": "number",
             "units": u.hectare,
-            "about": "Max area to convert",
-            "name": "Max area to convert"
+            "about": "Maximum area to be converted to agriculture.",
+            "name": "max area to convert"
         },
         "focal_landcover_codes": {
             "type": "freestyle_string",
             "regexp": "[0-9 ]+",
             "about": (
-                "A space separated string of landcover codes that are used to "
+                "A space-separated list of LULC codes that are used to "
                 "determine the proximity when referring to 'towards' or "
                 "'away' from the base landcover codes"),
-            "name": "Focal Landcover Codes"
+            "name": "focal landcover codes"
         },
         "convertible_landcover_codes": {
             "type": "freestyle_string",
             "regexp": "[0-9 ]+",
             "about": (
-                "A space separated string of landcover codes that can be "
-                "converted in the generation phase found in "
-                "`args['base_lulc_path']`."),
-            "name": "Convertible Landcover Codes"
+                "A space-separated list of LULC codes that can be "
+                "converted to be converted to agriculture."),
+            "name": "convertible landcover codes"
         },
         "n_fragmentation_steps": {
             "expression": "value > 0",
             "type": "number",
             "units": u.count,
             "about": (
-                "This parameter is used to divide the conversion simulation "
-                "into equal subareas of the requested max area. During each "
-                "sub-step the distance transform is recalculated from the "
-                "base landcover codes.  This can affect the final result if "
-                "the base types are also convertible types."),
-            "name": "Number of Steps in Conversion"
+                "The number of steps that the simulation should take to "
+                "fragment the habitat of interest in the fragmentation "
+                "scenario. This parameter is used to divide the conversion "
+                "simulation into equal subareas of the requested max area. "
+                "During each sub-step the distance transform is recalculated "
+                "from the base landcover codes.  This can affect the final "
+                "result if the base types are also convertible types."),
+            "name": "number of conversion steps"
         },
         "aoi_path": {
             **spec_utils.AOI,
-            "projected": True,
             "required": False,
             "about": (
-                "This is a set of polygons that will be used to aggregate "
-                "carbon values at the end of the run if provided."),
+                "Area over which to run the conversion. Provide this input if "
+                "change is only desired in a subregion of the Base LULC map."),
         },
         "convert_farthest_from_edge": {
             "type": "boolean",
+            "required": False,
             "about": (
-                "This scenario converts the convertible landcover codes "
-                "starting at the furthest pixel from the closest base "
-                "landcover codes and moves inward."),
-            "name": "Convert farthest from edge"
+                "Convert the 'convertible' landcover codes starting at the "
+                "furthest pixel from the 'focal' land cover areas "
+                "and working inwards."),
+            "name": "convert farthest from edge"
         },
         "convert_nearest_to_edge": {
             "type": "boolean",
+            "required": False,
             "about": (
-                "This scenario converts the convertible landcover codes "
-                "starting at the closest pixel in the base landcover codes "
-                "and moves outward."),
-            "name": "Convert nearest to edge"
+                "Convert the 'convertible' landcover codes starting at the "
+                "nearest pixels to the 'focal' land cover areas "
+                "and working outwards."),
+            "name": "convert nearest to edge"
         }
     }
 }
@@ -128,7 +130,7 @@ def execute(args):
         args['results_suffix'] (string): (optional) string to append to any
             output files
         args['base_lulc_path'] (string): path to the base landcover map
-        args['replacment_lucode'] (string or int): code to replace when
+        args['replacement_lucode'] (string or int): code to replace when
             converting pixels
         args['area_to_convert'] (string or float): max area (Ha) to convert
         args['focal_landcover_codes'] (string): a space separated string of
@@ -187,7 +189,7 @@ def execute(args):
     task_graph = taskgraph.TaskGraph(work_token_dir, n_workers)
 
     area_to_convert = float(args['area_to_convert'])
-    replacement_lucode = int(args['replacment_lucode'])
+    replacement_lucode = int(args['replacement_lucode'])
 
     # convert all the input strings to lists of ints
     convertible_type_list = numpy.array([
