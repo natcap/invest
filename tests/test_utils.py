@@ -455,6 +455,7 @@ class GDALWarningsLoggingTests(unittest.TestCase):
         self.assertEqual(len(messages), 1)
 
     def test_log_gdal_errors_bad_n_args(self):
+        """utils: test error capture when number of args != 3."""
         from natcap.invest import utils
 
         log_queue = queue.Queue()
@@ -475,6 +476,7 @@ class GDALWarningsLoggingTests(unittest.TestCase):
             record.msg)
 
     def test_log_gdal_errors_missing_param(self):
+        """utils: test error when specific parameters missing."""
         from natcap.invest import utils
 
         log_queue = queue.Queue()
@@ -482,7 +484,7 @@ class GDALWarningsLoggingTests(unittest.TestCase):
         utils.LOGGER.addHandler(log_queue_handler)
 
         try:
-            # Missing third parameter 2, "err_message"
+            # Missing third parameter, "err_msg"
             utils._log_gdal_errors(
                 gdal.CE_Failure, 123,
                 bad_param='bad param')  # param obviously bad
