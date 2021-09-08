@@ -62,82 +62,62 @@ ARGS_SPEC = {
             **spec_utils.AOI,
         },
         "structure_path": {
-            "name": "Features Impacting Scenic Quality",
+            "name": "features impacting scenic quality",
             "type": "vector",
             "geometries": spec_utils.POINT,
             "fields": {
-                "RADIUS": {
+                "radius": {
                     "type": "number",
                     "units": u.meter,
                     "required": False,
                     "about": (
-                        "Maximum length of the line "
-                        "of sight originating from a viewpoint. The value can "
-                        "either be positive (preferred) or negative (kept for "
-                        "backwards compatibility), but is converted to a "
-                        "positive number. If the field doesn’t exist, the "
-                        "model will include all pixels in the DEM in the "
-                        "visibility analysis. RADIUS preferred, but may also "
-                        "be called RADIUS2 for backwards compatibility.")},
+                        "Maximum length of the line of sight originating from "
+                        "a viewpoint. The value can either be positive "
+                        "(preferred) or negative (kept for backwards "
+                        "compatibility), but is converted to a positive "
+                        "number. If this field is not provided, the model "
+                        "will include all pixels in the DEM in the visibility "
+                        "analysis. RADIUS preferred, but may also be called "
+                        "RADIUS2 for backwards compatibility.")},
                 "weight": {
                     "type": "number",
                     "units": u.none,
                     "required": False,
                     "about": (
-                        "Viewshed importance coefficient: The user can assign "
-                        "an importance to each viewshed by scaling them with "
-                        "a real number (either positive or negative) stored "
-                        "in the field “WEIGHT”. The model assumes a weight of "
-                        "1.0 if the field doesn’t exist.")},
+                        "Viewshed importance coefficient. If this field is "
+                        "provided, the values are used to weight each "
+                        "feature's viewshed impacts. If not provided, all "
+                        "viewsheds are equally weighted with a weight of 1.")},
                 "height": {
                     "type": "number",
                     "units": u.meter,
                     "required": False,
                     "about": (
-                        "Viewpoint height: Each feature's elevation above the "
-                        "ground can be specified as a positive real number. "
-                        "The default value is 0 if the field doesn’t exist.")}
+                        "Viewpoint height, the elevation above the ground of "
+                        "each feature. If this field is not provided, "
+                        "defaults to 0.")}
             },
             "about": (
-                "A GDAL-supported vector file.  The user must specify a point "
-                "feature layer that indicates locations of objects that "
-                "contribute to negative scenic quality, such as aquaculture "
-                "netpens or wave energy facilities.  In order for the "
-                "viewshed analysis to run correctly, the projection of this "
-                "input must be consistent with the projection of the DEM "
-                "input."),
+                "Map of locations of objects that negatively affect scenic "
+                "quality. This must have the same projection as the DEM.")
         },
         "dem_path": {
             **spec_utils.DEM,
             "projected": True,
-            "projection_units": u.meter,
-            "about": (
-                "A GDAL-supported raster file.  An elevation raster layer is "
-                "required to conduct viewshed analysis. Elevation data allows "
-                "the model to determine areas within the AOI's land-seascape "
-                "where point features contributing to negative scenic quality "
-                "are visible."),
+            "projection_units": u.meter
         },
         "refraction": {
-            "name": "Refractivity Coefficient",
+            "name": "refractivity coefficient",
             "type": "ratio",
             "about": (
-                "The earth curvature correction option corrects for the "
-                "curvature of the earth and refraction of visible light in "
-                "air.  Changes in air density curve the light downward "
-                "causing an observer to see further and the earth to appear "
-                "less curved.  While the magnitude of this effect varies with "
-                "atmospheric conditions, a standard rule of thumb is that "
-                "refraction of visible light reduces the apparent curvature "
-                "of the earth by one-seventh.  By default, this model "
-                "corrects for the curvature of the earth and sets the "
-                "refractivity coefficient to 0.13."),
+                "The refractivity coefficient corrects for the curvature of "
+                "the earth and refraction of visible light in air.")
         },
         "do_valuation": {
-            "name": "Valuation",
+            "name": "run valuation",
             "type": "boolean",
             "required": False,
-            "about": "Enable or disable valuation."
+            "about": "Run the valuation model."
         },
         "valuation_function": {
             "name": "Valuation function",
@@ -149,33 +129,33 @@ ARGS_SPEC = {
                 "exponential: a * e^(-bx)"
             ],
             "about": (
-                "This field indicates the functional form f(x) the model will "
-                "use to value the visual impact for each viewpoint."),
+                "Valuation function used to calculate the visual impact of "
+                "each feature, given distance from the feature 'x' and "
+                "parameters 'a' and 'b'."),
         },
         "a_coef": {
-            "name": "'a' Coefficient",
+            "name": "coefficient a",
             "type": "number",
             "units": u.none,
             "required": "do_valuation",
-            "about": "First coefficient used by the valuation function",
+            "about": "First coefficient ('a') used by the valuation function",
         },
         "b_coef": {
-            "name": "'a' Coefficient",
+            "name": "coefficient b",
             "type": "number",
             "units": u.none,
             "required": "do_valuation",
-            "about": "Second coefficient used by the valuation function",
+            "about": "Second coefficient ('b') used by the valuation function",
         },
         "max_valuation_radius": {
-            "name": "Maximum Valuation Radius",
+            "name": "maximum valuation radius",
             "type": "number",
             "units": u.meter,
             "required": False,
             "expression": "value > 0",
             "about": (
-                "Radius beyond which the valuation is set to zero. The "
-                "valuation function 'f' cannot be negative at the radius 'r' "
-                "(f(r)>=0)."),
+                "Valuation will only be computed for cells that fall within "
+                "this radius of a feature impacting scenic quality."),
         },
     }
 }
@@ -199,22 +179,22 @@ def execute(args):
         args['refraction'] (float): (required) number indicating the refraction
             coefficient to use for calculating curvature of the earth.
         args['do_valuation'] (bool): (optional) indicates whether to compute
-            valuation.  If ``False``, per-viewpoint value will not be computed,
+            valuation. If ``False``, per-viewpoint value will not be computed,
             and the summation of valuation rasters (vshed_value.tif) will not
-            be created.  Additionally, the Viewshed Quality raster will
+            be created. Additionally, the Viewshed Quality raster will
             represent the weighted sum of viewsheds. Default: ``False``.
         args['valuation_function'] (string): The type of economic
-            function to use for valuation.  One of "linear", "logarithmic",
+            function to use for valuation. One of "linear", "logarithmic",
             or "exponential".
-        args['a_coef'] (float): The "a" coefficient for valuation.  Required
+        args['a_coef'] (float): The "a" coefficient for valuation. Required
             if ``args['do_valuation']`` is ``True``.
-        args['b_coef'] (float): The "b" coefficient for valuation.  Required
+        args['b_coef'] (float): The "b" coefficient for valuation. Required
             if ``args['do_valuation']`` is ``True``.
         args['max_valuation_radius'] (float): Past this distance
             from the viewpoint, the valuation raster's pixel values will be set
-            to 0.  Required if ``args['do_valuation']`` is ``True``.
+            to 0. Required if ``args['do_valuation']`` is ``True``.
         args['n_workers'] (int): (optional) The number of worker processes to
-            use for processing this model.  If omitted, computation will take
+            use for processing this model. If omitted, computation will take
             place in the current process.
 
     Returns:
@@ -327,7 +307,7 @@ def execute(args):
                          'viewpoints are beyond the edge of the DEM or are '
                          'over nodata pixels.')
 
-    # These are sorted outside the vector to ensure consistent ordering.  This
+    # These are sorted outside the vector to ensure consistent ordering. This
     # helps avoid unnecessary recomputation in taskgraph for when an ESRI
     # Shapefile, for example, returns a different order of points because
     # someone decided to repack it.
@@ -438,7 +418,7 @@ def _determine_valid_viewpoints(dem_path, structures_path):
 
     Args:
         dem_path (str): The path to a GDAL-compatible digital elevation model
-            raster on disk.  The projection must match the projection of the
+            raster on disk. The projection must match the projection of the
             ``structures_path`` vector.
         structures_path (str): The path to a GDAL-compatible vector containing
             point geometries and, optionally, a few fields describing
@@ -452,7 +432,7 @@ def _determine_valid_viewpoints(dem_path, structures_path):
                     assigned when calculating visual quality. Default: 1.0
 
     Returns:
-        An unsorted list of the valid viewpoints and their metadata.  The
+        An unsorted list of the valid viewpoints and their metadata. The
         tuples themselves are in the order::
 
             (viewpoint, radius, weight, height)
@@ -654,13 +634,13 @@ def _sum_valuation_rasters(dem_path, valuation_filepaths, target_path):
     """Sum up all valuation rasters.
 
     Args:
-        dem_path (string): A path to the DEM.  Must perfectly overlap all of
+        dem_path (string): A path to the DEM. Must perfectly overlap all of
             the rasters in ``valuation_filepaths``.
         valuation_filepaths (list of strings): A list of paths to individual
-            valuation rasters.  All rasters in this list must overlap
+            valuation rasters. All rasters in this list must overlap
             perfectly.
         target_path (string): The path on disk where the output raster will be
-            written.  If a file exists at this path, it will be overwritten.
+            written. If a file exists at this path, it will be overwritten.
 
     Returns:
         ``None``
@@ -694,7 +674,7 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
 
     Args:
         visibility_path (string): The path to a visibility raster for a single
-            point.  The visibility raster has pixel values of 0, 1, or nodata.
+            point. The visibility raster has pixel values of 0, 1, or nodata.
             This raster must be projected in meters.
         viewpoint (tuple): The viewpoint in projected coordinates (x, y) of the
             visibility raster.
@@ -702,7 +682,7 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
         valuation_method (string): The valuation method to use, one of
             ('linear', 'logarithmic', 'exponential').
         valuation_coefficients (dict): A dictionary mapping string coefficient
-            letters to numeric coefficient values.  Keys 'a' and 'b' are
+            letters to numeric coefficient values. Keys 'a' and 'b' are
             required.
         max_valuation_radius (number): Past this distance (in meters),
             valuation values will be set to 0.
@@ -827,18 +807,18 @@ def _clip_and_mask_dem(dem_path, aoi_path, target_path, working_dir):
     """Clip and mask the DEM to the AOI.
 
     Args:
-        dem_path (string): The path to the DEM to use.  Must have the same
+        dem_path (string): The path to the DEM to use. Must have the same
             projection as the AOI.
-        aoi_path (string): The path to the AOI to use.  Must have the same
+        aoi_path (string): The path to the AOI to use. Must have the same
             projection as the DEM.
         target_path (string): The path on disk to where the clipped and masked
-            raster will be saved.  If a file exists at this location it will be
-            overwritten.  The raster will have a bounding box matching the
+            raster will be saved. If a file exists at this location it will be
+            overwritten. The raster will have a bounding box matching the
             intersection of the AOI and the DEM's bounding box and a spatial
             reference matching the AOI and the DEM.
-        working_dir (string): A path to a directory on disk.  A new temporary
+        working_dir (string): A path to a directory on disk. A new temporary
             directory will be created within this directory for the storage of
-            several working files.  This temporary directory will be removed at
+            several working files. This temporary directory will be removed at
             the end of this function.
 
     Returns:
@@ -900,7 +880,7 @@ def _count_and_weight_visible_structures(visibility_raster_path_list, weights,
         visibility_raster_path_list (list of strings): A list of strings to
             perfectly overlapping visibility rasters.
         weights (list of numbers): A list of numeric weights to apply to each
-            visibility raster.  There must be the same number of weights in
+            visibility raster. There must be the same number of weights in
             this list as there are elements in visibility_rasters.
         clipped_dem_path (string): String path to the DEM.
         target_path (string): The path to where the output raster is stored.
@@ -983,10 +963,10 @@ def _calculate_visual_quality(source_raster_path, working_dir, target_path):
 
     Args:
         source_raster_path (string): The path to a raster from which
-            percentiles should be calculated.  Nodata values and pixel values
+            percentiles should be calculated. Nodata values and pixel values
             of 0 are ignored.
         working_dir (string): A directory where working files can be saved.
-            A new temporary directory will be created within.  This new
+            A new temporary directory will be created within. This new
             temporary directory will be removed at the end of the function.
         target_path (string): The path to where the output raster will be
             written.
