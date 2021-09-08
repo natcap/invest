@@ -141,9 +141,10 @@ ARGS_SPEC = {
             "type": "number",
             "units": u.none,
             "about": (
-                "Floating point value on the order of 1 to 30 corresponding "
-                "to the seasonal distribution of precipitation."),
-            "name": "Z parameter"
+                "The seasonality factor, representing hydrogeological "
+                "characterisitics and the seasonal distribution of "
+                "precipitation. Values typically range from 1 - 30."),
+            "name": "z parameter"
         },
         "demand_table_path": {
             "type": "csv",
@@ -153,21 +154,18 @@ ARGS_SPEC = {
                     "type": "integer"
                 },
                 "demand": {
-                    "about": ("Estimated average consumptive water use for "
-                              "a pixel in each LULC type"),
+                    "about": (
+                        "Average consumptive water use in this LULC class."),
                     "type": "number",
                     "units": u.meter**3/u.year/u.pixel
                 }
             },
             "required": False,
             "about": (
-                "A table mapping each LULC class to the estimated average "
-                "consumptive water use for that class. Each LULC code in the "
-                "LULC raster must have a corresponding row in this table. "
-                "NOTE: It is important that the demand values account for "
-                "pixel area is important since larger areas will consume "
-                "more water for the same land-cover type."),
-            "name": "Water Demand Table"
+                "A table of water demand for each LULC class. Each LULC code "
+                "in the LULC raster must have a corresponding row in this "
+                "table."),
+            "name": "water demand table"
         },
         "valuation_table_path": {
             "type": "csv",
@@ -175,24 +173,24 @@ ARGS_SPEC = {
                 "ws_id": {
                     "type": "integer",
                     "about": (
-                        "Watershed ID corresponding to a watershed in the "
-                        "watersheds vector file")
+                        "Unique identifier for the hydropower station. This "
+                        "must match the 'ws_id' value for the corresponding "
+                        "watershed in the Watersheds vector. Each watershed "
+                        "in the Watersheds vector must have its 'ws_id' "
+                        "entered in this column.")
                 },
                 "efficiency": {
                     "type": "ratio",
                     "about": (
                         "Turbine efficiency, the proportion of potential "
-                        "energy captured by the turbine. May be obtained from "
-                        "the hydropower plant manager. Generally 0.7 to 0.9.")
+                        "energy captured and converted to electricity by the "
+                        "turbine.")
                 },
                 "fraction": {
                     "type": "ratio",
                     "about": (
-                        "The fraction of inflow water volume that is used to "
-                        "generate energy, obtained from the hydropower plant "
-                        "manager. Managers can release water without "
-                        "generating electricity to satisfy irrigation, "
-                        "drinking water or environmental demands.")
+                        "The proportion of inflow water volume that is used "
+                        "to generate energy.")
                 },
                 "height": {
                     "type": "number",
@@ -206,37 +204,38 @@ ARGS_SPEC = {
                     "type": "number",
                     "units": u.currency/u.kilowatt_hour,
                     "about": (
-                        "The price of power produced by the station, in the "
-                        "same currency used for the cost column.")
+                        "The price of power produced by the station. Must be "
+                        "in the same currency used in the 'cost' column.")
                 },
                 "cost": {
                     "type": "number",
                     "units": u.currency/u.year,
                     "about": (
-                        "Annual cost of running the hydropower station "
-                        "(maintenance and operations costs), in the same "
-                        "currency used for the kw_price column.")
+                        "Annual maintenance and operations cost of running "
+                        "the hydropower station. Must be in the same currency "
+                        "used in the 'kw_price' column.")
                 },
                 "time_span": {
                     "type": "number",
                     "units": u.year,
                     "about": (
-                        "Either the expected lifespan of the hydropower "
-                        "station or the duration of the land use scenario of "
-                        "interest. Used in net present value calculations.")
+                        "Number of years over which to value the "
+                        "hydropower station. This is either the station's "
+                        "expected lifespan or the duration of the land use "
+                        "scenario of interest.")
                 },
                 "discount": {
                     "type": "percent",
                     "about": (
-                        "The discount rate over the time span, used in net "
-                        "present value calculations.")
+                        "The annual discount rate, applied for each year in "
+                        "the time span.")
                 }
             },
             "required": False,
             "about": (
-                "A table mapping each watershed's hydropower station to its "
-                "associated valuation parameters"),
-            "name": "Hydropower Valuation Table"
+                "A table mapping each watershed to the associated valuation "
+                "parameters for its hydropower station."),
+            "name": "hydropower valuation table"
         }
     }
 }
