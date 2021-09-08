@@ -310,17 +310,17 @@ ARGS_SPEC = {
                     },
                     "about": (
                         "A transition matrix describing the type of carbon "
-                        "action that occurs when each LULC type "
-                        "transitions to another type. The first column "
-                        "(*lulc-class*) represents the initial LULC class, "
-                        "and the first row (<lulc1>, <lulc2>...) represents "
-                        "the LULC classes that it transitions to. Each cell "
-                        "in the matrix is filled with an option indicating "
-                        "the effect on carbon when transitioning from that "
-                        "cell's row's LULC class to that cell's column's LULC "
-                        "class. The classes represented in this table must "
-                        "exactly match the classes in the biophysical table "
-                        "``lulc-class`` column. A cell may be left empty if "
+                        "action that occurs when each LULC type transitions "
+                        "to each other type. Values in the first column, "
+                        "'lulc-class', represents the original LULC class "
+                        "that is transitioned away from. Values in the first "
+                        "row represents the LULC class that is transitioned "
+                        "to. Each cell in the matrix is filled with an option "
+                        "indicating the effect on carbon when transitioning "
+                        "from that cell's row's LULC class to that cell's "
+                        "column's LULC class. The classes in this table must "
+                        "exactly match the classes in the Biophysical Table "
+                        "'lulc-class' column. A cell may be left empty if "
                         "the transition never occurs.")}
             },
             "about": (
