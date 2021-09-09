@@ -42,11 +42,6 @@ const MOCK_INVEST_LIST = {
 };
 const MOCK_VALIDATION_VALUE = [[['workspace_dir'], 'invalid because']];
 
-afterAll(async () => {
-  await InvestJob.clearStore();
-  jest.resetAllMocks();
-});
-
 describe('Various ways to open and close InVEST models', () => {
   beforeAll(async () => {
     getInvestModelNames.mockResolvedValue(MOCK_INVEST_LIST);
@@ -54,8 +49,7 @@ describe('Various ways to open and close InVEST models', () => {
     fetchValidation.mockResolvedValue(MOCK_VALIDATION_VALUE);
   });
   afterAll(async () => {
-    // await clearSettingsStore();
-    // TODO reset the beforeAll mocks?
+    jest.resetAllMocks();
   });
   afterEach(async () => {
     jest.clearAllMocks(); // clears usage data, does not reset/restore
@@ -624,8 +618,10 @@ describe('InVEST subprocess testing', () => {
     mockInvestProc.stdout.push(stdOutLogfileSignal);
     mockInvestProc.stderr.push(allStdErr);
     const logTab = await findByText('Log');
-    expect(logTab.classList.contains('active'))
-      .toBeTruthy();
+    await waitFor(() => {
+      expect(logTab.classList.contains('active')).toBeTruthy();
+    });
+
     expect(await findByText(stdOutText, { exact: false }))
       .toBeInTheDocument();
 
@@ -670,7 +666,9 @@ describe('InVEST subprocess testing', () => {
     mockInvestProc.stdout.push(stdOutText);
     mockInvestProc.stdout.push(stdOutLogfileSignal);
     const logTab = await findByText('Log');
-    expect(logTab.classList.contains('active')).toBeTruthy();
+    await waitFor(() => {
+      expect(logTab.classList.contains('active')).toBeTruthy();
+    });
     expect(await findByText(stdOutText, { exact: false }))
       .toBeInTheDocument();
 
@@ -710,7 +708,9 @@ describe('InVEST subprocess testing', () => {
     mockInvestProc.stdout.push(stdOutText);
     mockInvestProc.stdout.push(stdOutLogfileSignal);
     let logTab = await findByText('Log');
-    expect(logTab.classList.contains('active')).toBeTruthy();
+    await waitFor(() => {
+      expect(logTab.classList.contains('active')).toBeTruthy();
+    });
     expect(await findByText(stdOutText, { exact: false }))
       .toBeInTheDocument();
 

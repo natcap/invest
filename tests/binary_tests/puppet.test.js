@@ -9,6 +9,9 @@ import fetch from 'node-fetch';
 import puppeteer from 'puppeteer-core';
 import { getDocument, queries, waitFor } from 'pptr-testing-library';
 
+import pkg from '../../package.json';
+import { APP_HAS_RUN_TOKEN } from '../../src/main/setupCheckFirstRun';
+
 jest.setTimeout(120000); // This test takes ~15 seconds, but longer in CI
 const PORT = 9009;
 const TMP_DIR = fs.mkdtempSync('tests/data/_');
@@ -22,16 +25,25 @@ let BINARY_PATH;
 // append to this prefix and the image will be uploaded to github artifacts
 // E.g. page.screenshot({ path: `${SCREENSHOT_PREFIX}screenshot.png` })
 let SCREENSHOT_PREFIX;
+// We'll clear this token before launching the app so we can have a
+// predictable startup page.
+let APP_HAS_RUN_TOKEN_PATH;
 if (process.platform === 'darwin') {
   // https://github.com/electron-userland/electron-builder/issues/2724#issuecomment-375850150
   [BINARY_PATH] = glob.sync('./dist/mac/*.app/Contents/MacOS/InVEST*');
   SCREENSHOT_PREFIX = path.join(
-    os.homedir(), 'Library/Logs/invest-workbench/invest-workbench-'
+    os.homedir(), 'Library/Logs', pkg.name, 'invest-workbench-'
+  );
+  APP_HAS_RUN_TOKEN_PATH = path.join(
+    os.homedir(), 'Library/Application Support', pkg.name, APP_HAS_RUN_TOKEN
   );
 } else if (process.platform === 'win32') {
   [BINARY_PATH] = glob.sync('./dist/win-unpacked/InVEST*.exe');
   SCREENSHOT_PREFIX = path.join(
     os.homedir(), 'AppData/Roaming/invest-workbench/logs/invest-workbench-'
+  );
+  APP_HAS_RUN_TOKEN_PATH = path.join(
+    os.homedir(), 'AppData/Roaming', pkg.name, APP_HAS_RUN_TOKEN
   );
 }
 
@@ -69,6 +81,7 @@ function makeAOI() {
 // errors are not thrown from an async beforeAll
 // https://github.com/facebook/jest/issues/8688
 beforeAll(async () => {
+  try { fs.unlinkSync(APP_HAS_RUN_TOKEN_PATH); } catch {}
   // start the invest app and forward stderr to console
   ELECTRON_PROCESS = spawn(
     `"${BINARY_PATH}"`,
@@ -128,22 +141,11 @@ test('Run a real invest model', async () => {
   const doc = await getDocument(page);
   await page.screenshot({ path: `${SCREENSHOT_PREFIX}1-page-load.png` });
 
-  const extraTime = 5000; // long timeouts finding the first elements, just in case
-  try {
-    // On a fresh install, we'll encounter this Modal.
-    // But on a machine that has run this app before, we may not.
-    // Even in GHA, sometimes we encounter this and sometimes we don't.
-    const downloadModalCancel = await findByRole(
-      doc, 'button', { name: 'Cancel' }, { timeout: extraTime }
-    );
-    await downloadModalCancel.click();
-  } catch (error) {
-    if (!error.message.startsWith(
-      'Evaluation failed: Error: Unable to find'
-    )) {
-      throw error;
-    }
-  }
+  const extraTime = 5000; // long timeouts finding the first elements
+  const downloadModalCancel = await findByRole(
+    doc, 'button', { name: 'Cancel' }, { timeout: extraTime }
+  );
+  await downloadModalCancel.click();
   // Resorting to a class selector because we have two tables to differentiate
   // Also, need to get the modelButton from w/in this table because there are
   // buttons with the same name in the Recent Jobs container.
