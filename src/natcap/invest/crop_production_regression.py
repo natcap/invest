@@ -387,6 +387,10 @@ def execute(args):
                 (bin_id,
                  crop_regression_table[bin_id][yield_regression_id])
                 for bin_id in crop_regression_table])
+            # reclassify nodata to a valid value of 0
+            # we're assuming that the crop doesn't exist where there is no data
+            # this is more likely than assuming the crop does exist, esp.
+            # in the context of the provided climate bins map
             bin_to_regression_value[
                 crop_climate_bin_raster_info['nodata'][0]] = 0
             coarse_regression_parameter_raster_path = os.path.join(

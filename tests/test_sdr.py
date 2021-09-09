@@ -213,7 +213,7 @@ class SDRTests(unittest.TestCase):
             'usle_tot': 14.25030517578,
             'sed_retent': 308382.125,
             'sed_export': 0.60502111912,
-            'sed_dep': 1.02959537506
+            'sed_dep': 9.05251502991
         }
 
         vector_path = os.path.join(

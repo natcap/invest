@@ -322,6 +322,10 @@ def execute(args):
                 (bin_id,
                  crop_climate_percentile_table[bin_id][yield_percentile_id])
                 for bin_id in crop_climate_percentile_table])
+            # reclassify nodata to a valid value of 0
+            # we're assuming that the crop doesn't exist where there is no data
+            # this is more likely than assuming the crop does exist, esp.
+            # in the context of the provided climate bins map
             bin_to_percentile_yield[
                 crop_climate_bin_raster_info['nodata'][0]] = 0
             coarse_yield_percentile_raster_path = os.path.join(
