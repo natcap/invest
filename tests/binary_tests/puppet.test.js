@@ -80,7 +80,7 @@ function makeAOI() {
 
 // errors are not thrown from an async beforeAll
 // https://github.com/facebook/jest/issues/8688
-beforeAll(async () => {
+beforeAll(() => {
   try { fs.unlinkSync(APP_HAS_RUN_TOKEN_PATH); } catch {}
   // start the invest app and forward stderr to console
   ELECTRON_PROCESS = spawn(
@@ -92,17 +92,22 @@ beforeAll(async () => {
   ELECTRON_PROCESS.stderr.on('data', (data) => {
     console.log(`${data}`);
   });
+  const stdOutCallback = async (data) => {
+    // Here's how we know the electron window is ready to connect to
+    if (`${data}`.match('main window loaded')) {
+      try {
+        BROWSER = await puppeteer.connect({
+          browserURL: `http://localhost:${PORT}`,
+          defaultViewport: null
+        });
+      } catch(e) {
+        console.log(e);
+      }
+      ELECTRON_PROCESS.stdout.removeListener('data', stdOutCallback);
+    }
+  };
+  ELECTRON_PROCESS.stdout.on('data', stdOutCallback);
 
-  // get data about the remote debugging endpoint
-  // so we don't make the next fetch too early
-  await new Promise((resolve) => setTimeout(resolve, 20000));
-  const res = await fetch(`http://localhost:${PORT}/json/version`);
-  const data = JSON.parse(await res.text());
-  BROWSER = await puppeteer.connect({
-    browserWSEndpoint: data.webSocketDebuggerUrl, // this works
-    // browserURL: `http://localhost:${PORT}`,    // this also works
-    defaultViewport: null
-  });
   // set up test data
   makeAOI();
 
@@ -132,7 +137,7 @@ test('Run a real invest model', async () => {
   const { findByText, findByLabelText, findByRole } = queries;
   await waitFor(() => {
     expect(BROWSER.isConnected()).toBeTruthy();
-  });
+  }, { timeout: 10000 });
   // find the mainWindow's index.html, not the splashScreen's splash.html
   const target = await BROWSER.waitForTarget(
     (target) => target.url().endsWith('index.html')
