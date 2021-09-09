@@ -154,7 +154,7 @@ ARGS_SPEC = {
                 "user_defined_climate_zones)"),
             "about": (
                 "A table containing the number of rain events for each month. "
-                "Required if neither User-Defined Local Recharge or User-"
+                "Required if neither User-Defined Local Recharge nor User-"
                 "Defined Climate Zones is selected."),
             "name": "rain events table"
         },
@@ -163,8 +163,8 @@ ARGS_SPEC = {
             "required": "not monthly_alpha",
             "about": (
                 "The proportion of upslope annual available local recharge "
-                "that is available in each month. Required if the Monthly "
-                "Alpha Table is not provided."),
+                "that is available in each month. Required if Use Monthly "
+                "Alpha Table is not selected."),
             "name": "alpha_m parameter"
         },
         "beta_i": {
@@ -184,8 +184,8 @@ ARGS_SPEC = {
         "user_defined_local_recharge": {
             "type": "boolean",
             "about": (
-                "If True, indicates user will provide pre-defined local "
-                "recharge raster layer"),
+                "Use user-defined local recharge data instead of calculating "
+                "local recharge from the other provided data."),
             "name": "user-defined recharge layer (advanced)"
         },
         "l_path": {
@@ -197,17 +197,15 @@ ARGS_SPEC = {
             "required": "user_defined_local_recharge",
             "projected": True,
             "about": (
-                "A path to a GDAL-compatible raster map of local recharge "
-                "values. Required if args['user_defined_local_recharge'] is "
-                "True."),
+                "Map of local recharge data. Required if User-Defined Local "
+                "Recharge is selected."),
             "name": "local recharge"
         },
         "user_defined_climate_zones": {
             "type": "boolean",
             "about": (
-                "If True, user provides a climate zone rain events table and "
-                "a climate zone raster map in lieu of a global rain events "
-                "table."),
+                "Use user-defined climate zone data in lieu of a global rain "
+                "events table."),
             "name": "climate zones (advanced)"
         },
         "climate_zone_table_path": {
@@ -216,19 +214,22 @@ ARGS_SPEC = {
                 "cz_id": {
                     "type": "integer",
                     "about": (
-                        "Climate zone numbers, integers which correspond to "
-                        "values found in the Climate zone raster")},
+                        "Climate zone ID numbers, corresponding to the values "
+                        "in the Climate Zones map.")},
                 "[MONTH]": {  # jan, feb, mar, etc.
                     "type": "number",
                     "units": u.none,
                     "about": (
                         "The number of rain events that occur in each month "
-                        "in that climate zone")}
+                        "in this climate zone. Replace [MONTH] with the month "
+                        "abbreviations: jan, feb, mar, apr, may, jun, jul, "
+                        "aug, sep, oct, nov, dec, so that there is a column "
+                        "for each month.")}
             },
             "required": "user_defined_climate_zones",
             "about": (
-                "Required if args['user_defined_climate_zones'] is True. "
-                "Contains monthly precipitation events per climate zone."),
+                "Table of monthly precipitation events for each climate zone. "
+                "Required if User-Defined Climate Zones is selected."),
             "name": "climate zone table"
         },
         "climate_zone_raster_path": {
@@ -237,14 +238,15 @@ ARGS_SPEC = {
             "required": "user_defined_climate_zones",
             "projected": True,
             "about": (
-                "Map of climate zones that are found in the Climate Zone "
-                "Table input.  Pixel values correspond to values in the cz_id "
-                "column."),
-            "name": "climate zone"
+                "Map of climate zones. All values in this raster must have "
+                "corresponding entries in the Climate Zone Table."),
+            "name": "climate zone map"
         },
         "monthly_alpha": {
             "type": "boolean",
-            "about": "If True, use the monthly alpha table.",
+            "about": (
+                "Use montly alpha values instead of a single value for the "
+                "whole year."),
             "name": "use monthly alpha table (advanced)"
         },
         "monthly_alpha_path": {
@@ -260,11 +262,13 @@ ARGS_SPEC = {
                 "events": {
                     "type": "number",
                     "units": u.none,
-                    "about": "The alpha value for that month"
+                    "about": "The alpha value for that month."
                 }
             },
             "required": "monthly_alpha",
-            "about": "Required if args['monthly_alpha'] is True.",
+            "about": (
+                "Table of alpha values for each month. "
+                "Required if Use Monthly Alpha Table is selected."),
             "name": "monthly alpha table"
         }
     }
