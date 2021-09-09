@@ -51,17 +51,17 @@ ARGS_SPEC = {
                 # monthly et0 maps, each file ending in a number 1-12
                 "[MONTH]": {
                     "about": (
-                        "Twelve files, one for each month. File names must "
-                        "end with the month number (1-12)."),
+                        "Map of reference evapotranspiration for each month. "
+                        "File names must end with the month number (1-12)."),
                     **spec_utils.ETO
                 }
             },
             "required": "not user_defined_local_recharge",
             "about": (
-                "The selected folder has a list of ET0 files with a specified "
-                "format. Only .tif files should be in this folder (no .tfw, "
-                ".xml, etc files)."),
-            "name": "ET0 Directory"
+                "Directory containing maps of reference evapotranspiration "
+                "for each month. Only .tif files should be in this folder "
+                "(no .tfw, .xml, etc files)."),
+            "name": "ET0 directory"
         },
         "precip_dir": {
             "type": "directory",
@@ -69,17 +69,17 @@ ARGS_SPEC = {
                 # monthly precipitation maps, each file ending in a number 1-12
                 "[MONTH]": {
                     "about": (
-                        "Twelve files, one for each month. File names must end "
-                        "with the month number (1-12)."),
+                        "Map of monthly precipitation for each month. File "
+                        "names must end with the month number (1-12)."),
                     **spec_utils.PRECIP
                 }
             },
             "required": "not user_defined_local_recharge",
             "about": (
-                "The selected folder has a list of monthly precipitation "
-                "files with a specified format. Only .tif files should be in "
-                "this folder (no .tfw, .xml, etc files)"),
-            "name": "Precipitation Directory"
+                "Directory containing maps of monthly precipitation for each "
+                "month. Only .tif files should be in this folder (no .tfw, "
+                ".xml, etc files)."),
+            "name": "precipitation directory"
         },
         "dem_raster_path": {
             **spec_utils.DEM,
@@ -87,7 +87,10 @@ ARGS_SPEC = {
         },
         "lulc_raster_path": {
             **spec_utils.LULC,
-            "projected": True
+            "projected": True,
+            "about": (
+                f"{**spec_utils.LULC['about']} All values in this raster MUST "
+                "have corresponding entries in the Biophysical Table.")
         },
         "soil_group_path": {
             **spec_utils.SOIL_GROUP,
@@ -101,26 +104,34 @@ ARGS_SPEC = {
         "biophysical_table_path": {
             "type": "csv",
             "columns": {
-                "lucode": {"type": "integer"},
+                "lucode": {
+                    "type": "integer",
+                    "about": "LULC code matching those in the LULC raster."},
                 "cn_[SOIL_GROUP]": {
                     "type": "number",
                     "units": u.none,
                     "about": (
                         "Curve number values for each combination of soil "
-                        "type and LULC class. No 0s are allowed.")
+                        "group and LULC class. Replace [SOIL_GROUP] with each "
+                        "soil group code A, B, C, D so that there is one "
+                        "column for each soil group. Curve number values must "
+                        "be greater than 0.")
                 },
                 "kc_[MONTH]": {
                     "type": "number",
                     "units": u.none,
                     "about": (
-                        "Monthly crop/vegetation coefficient (Kc) values for "
-                        "each LULC class.")
+                        "Crop/vegetation coefficient (Kc) values for this "
+                        "LULC class in each month. Replace [MONTH] with the "
+                        "numbers 1 to 12 so that there is one column for each "
+                        "month.")
                 }
             },
             "about": (
-                "A CSV table containing model information corresponding to "
-                "each of the land use classes in the LULC raster input."),
-            "name": "Biophysical Table"
+                "A table mapping each LULC code to biophysical properties of "
+                "the corresponding LULC class. All values in the LULC raster "
+                "must have corresponding entries in this table."),
+            "name": "biophysical table"
         },
         "rain_events_table_path": {
             "type": "csv",
@@ -130,51 +141,52 @@ ARGS_SPEC = {
                     "units": u.none,
                     "about": (
                         "Values are the numbers 1-12 corresponding to each "
-                        "month.")
+                        "month, January (1) through December (12).")
                 },
                 "events": {
                     "type": "number",
-                    "units": u.count,
-                    "about": "The number of rain events in that month"
+                    "units": u.none,
+                    "about": "The number of rain events in this month."
                 }
             },
             "required": (
                 "(not user_defined_local_recharge) & (not "
                 "user_defined_climate_zones)"),
             "about": (
-                "Not required if args['user_defined_local_recharge'] is True "
-                "or args['user_defined_climate_zones'] is True."),
-            "name": "Rain Events Table"
+                "A table containing the number of rain events for each month. "
+                "Required if neither User-Defined Local Recharge or User-"
+                "Defined Climate Zones is selected."),
+            "name": "rain events table"
         },
         "alpha_m": {
             "type": "freestyle_string",
             "required": "not monthly_alpha",
             "about": (
-                "Required if args['monthly_alpha'] is false.  Is the "
-                "proportion of upslope annual available local recharge that "
-                "is available in month m. Units: unitless"),
-            "name": "alpha_m Parameter"
+                "The proportion of upslope annual available local recharge "
+                "that is available in each month. Required if the Monthly "
+                "Alpha Table is not provided."),
+            "name": "alpha_m parameter"
         },
         "beta_i": {
             "type": "ratio",
             "about": (
-                "Is the fraction of the upgradient subsidy that is available "
+                "The proportion of the upgradient subsidy that is available "
                 "for downgradient evapotranspiration."),
-            "name": "beta_i Parameter"
+            "name": "beta_i parameter"
         },
         "gamma": {
             "type": "ratio",
             "about": (
-                "The fraction of pixel local recharge that is available to "
+                "The proportion of pixel local recharge that is available to "
                 "downgradient pixels."),
-            "name": "gamma Parameter"
+            "name": "gamma parameter"
         },
         "user_defined_local_recharge": {
             "type": "boolean",
             "about": (
                 "If True, indicates user will provide pre-defined local "
                 "recharge raster layer"),
-            "name": "User Defined Recharge Layer (Advanced)"
+            "name": "user-defined recharge layer (advanced)"
         },
         "l_path": {
             "type": "raster",
@@ -188,7 +200,7 @@ ARGS_SPEC = {
                 "A path to a GDAL-compatible raster map of local recharge "
                 "values. Required if args['user_defined_local_recharge'] is "
                 "True."),
-            "name": "Local Recharge ("
+            "name": "local recharge"
         },
         "user_defined_climate_zones": {
             "type": "boolean",
@@ -196,7 +208,7 @@ ARGS_SPEC = {
                 "If True, user provides a climate zone rain events table and "
                 "a climate zone raster map in lieu of a global rain events "
                 "table."),
-            "name": "Climate Zones (Advanced)"
+            "name": "climate zones (advanced)"
         },
         "climate_zone_table_path": {
             "type": "csv",
@@ -217,7 +229,7 @@ ARGS_SPEC = {
             "about": (
                 "Required if args['user_defined_climate_zones'] is True. "
                 "Contains monthly precipitation events per climate zone."),
-            "name": "Climate Zone Table"
+            "name": "climate zone table"
         },
         "climate_zone_raster_path": {
             "type": "raster",
@@ -228,12 +240,12 @@ ARGS_SPEC = {
                 "Map of climate zones that are found in the Climate Zone "
                 "Table input.  Pixel values correspond to values in the cz_id "
                 "column."),
-            "name": "Climate Zone"
+            "name": "climate zone"
         },
         "monthly_alpha": {
             "type": "boolean",
             "about": "If True, use the monthly alpha table.",
-            "name": "Use Monthly Alpha Table (Advanced)"
+            "name": "use monthly alpha table (advanced)"
         },
         "monthly_alpha_path": {
             "type": "csv",
@@ -253,7 +265,7 @@ ARGS_SPEC = {
             },
             "required": "monthly_alpha",
             "about": "Required if args['monthly_alpha'] is True.",
-            "name": "Monthly Alpha Table"
+            "name": "monthly alpha table"
         }
     }
 }
