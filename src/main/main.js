@@ -109,6 +109,8 @@ export const createWindow = async () => {
     if (ELECTRON_DEV_MODE) {
       mainWindow.webContents.openDevTools();
     }
+    // We use this stdout as a signal in a puppeteer test
+    process.stdout.write('main window loaded');
   });
 
   mainWindow.on('closed', async () => {
@@ -169,17 +171,22 @@ export function main(argv) {
     // On OS X it is common for applications and their menu bar
     // to stay active until the user quits explicitly with Cmd + Q
     if (process.platform !== 'darwin') {
-      removeIpcMainListeners();
-      await shutdownPythonProcess();
       app.quit();
     }
   });
-  app.on('will-quit', async () => {
-    if (process.platform === 'darwin') {
-      removeIpcMainListeners();
-      await shutdownPythonProcess();
+  let shuttingDown = false;
+  app.on('before-quit', async (event) => {
+    // prevent quitting until after we're done with cleanup,
+    // then programatically quit
+    if (!shuttingDown) {
+      event.preventDefault();
     }
-  });
+    console.log('before-quit')
+    removeIpcMainListeners();
+    await shutdownPythonProcess();
+    shuttingDown = true;
+    app.quit();
+  })
 }
 
 if (typeof require !== 'undefined' && require.main === module) {
