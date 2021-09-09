@@ -2,18 +2,20 @@ import fs from 'fs';
 
 import readline from 'readline';
 import fetch from 'node-fetch';
+import React from 'react';
+import { render } from '@testing-library/react';
+import '@testing-library/jest-dom';
 
 import * as server_requests from '../../src/renderer/server_requests';
+import { argsDictFromObject } from '../../src/renderer/utils';
+import SetupTab from '../../src/renderer/components/SetupTab';
 import {
   createPythonFlaskProcess,
   shutdownPythonProcess,
   getFlaskIsReady,
 } from '../../src/main/createPythonFlaskProcess';
 import findInvestBinaries from '../../src/main/findInvestBinaries';
-import { argsDictFromObject } from '../../src/renderer/utils';
 
-const dotenv = require('dotenv');
-dotenv.config();
 // This could be optionally configured already in '.env'
 if (!process.env.PORT) {
   process.env.PORT = 56788;
@@ -132,38 +134,66 @@ test('write parameters to python script', async () => {
 });
 
 test('validate the UI spec', async () => {
-  const models = await server_requests.getInvestModelNames();
-  const modelInternalNames = Object.keys(models).map(
-    key => models[key].internal_name);
   const uiSpec = require('../../src/renderer/ui_config');
+  const models = await server_requests.getInvestModelNames();
+  const modelInternalNames = Object.keys(models)
+    .map((key) => models[key].internal_name);
   // get the args spec for each model
   const argsSpecs = await Promise.all(modelInternalNames.map(
-    async model => await server_requests.getSpec(model)
+    (model) => server_requests.getSpec(model)
   ));
 
-  argsSpecs.forEach((argsSpec) => {
+  argsSpecs.forEach((spec, idx) => {
+    const modelName = modelInternalNames[idx];
     // make sure that we actually got an args spec
-    expect(argsSpec.model_name).toBeDefined();
-    let has_order_property = false;
+    expect(spec.model_name).toBeDefined();
+    let hasOrderProperty = false;
+    // expect the model's spec has an entry in the UI spec.
+    expect(Object.keys(uiSpec)).toContain(modelName);
     // expect each arg in the UI spec to exist in the args spec
-    for (const property in uiSpec[argsSpec.model_name]) {
+    for (const property in uiSpec[modelName]) {
       if (property === 'order') {
-        has_order_property = true;
+        hasOrderProperty = true;
         // 'order' is a 2D array of arg names
-        const order_array = uiSpec[argsSpec.model_name].order.flat();
-        const order_set = new Set(order_array);
+        const orderArray = uiSpec[modelName].order.flat();
+        const orderSet = new Set(orderArray);
         // expect there to be no duplicated args in the order
-        expect(order_array.length).toEqual(order_set.size);
-        order_array.forEach(arg => {
-            expect(argsSpec.args[arg]).toBeDefined();
+        expect(orderArray).toHaveLength(orderSet.size);
+        orderArray.forEach((arg) => {
+          expect(spec.args[arg]).toBeDefined();
         });
       } else {
         // for other properties, each key is an arg
-        Object.keys(uiSpec[argsSpec.model_name][property]).forEach(arg => {
-          expect(argsSpec.args[arg]).toBeDefined();
+        Object.keys(uiSpec[modelName][property]).forEach((arg) => {
+          expect(spec.args[arg]).toBeDefined();
         });
       }
     }
-    expect(has_order_property).toBe(true);
+    expect(hasOrderProperty).toBe(true);
+  });
+});
+
+describe('Build each model UI from ARGS_SPEC', () => {
+  const uiConfig = require('../../src/renderer/ui_config');
+
+  test.each(Object.keys(uiConfig))('%s', async (model) => {
+    const argsSpec = await server_requests.getSpec(model);
+    const uiSpec = uiConfig[model];
+
+    const { findByLabelText } = render(
+      <SetupTab
+        pyModuleName={argsSpec.module}
+        modelName={argsSpec.model_name}
+        argsSpec={argsSpec.args}
+        uiSpec={uiSpec}
+        argsInitValues={undefined}
+        investExecute={() => {}}
+        nWorkers="-1"
+        sidebarSetupElementId="foo"
+        sidebarFooterElementId="foo"
+        isRunning={false}
+      />
+    );
+    expect(await findByLabelText('Workspace')).toBeInTheDocument();
   });
 });

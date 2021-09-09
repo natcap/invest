@@ -125,15 +125,26 @@ export default class ArgInput extends React.PureComponent {
     const className = enabled ? null : 'arg-disable';
 
     // These types need a text input, and some also need a file browse button
-    if (
-      [
-        'csv', 'vector', 'raster', 'directory',
-        'freestyle_string', 'number',
-      ].includes(argSpec.type)
-    ) {
-      const typeLabel = argSpec.type === 'freestyle_string'
-        ? 'string'
-        : argSpec.type;
+    if ([
+      'csv', 'vector', 'raster', 'directory', 'file',
+      'freestyle_string', 'number', 'integer', 'percent', 'ratio'
+    ].includes(argSpec.type)) {
+      // These types benefit from more descriptive placeholder text.
+      let placeholderText;
+      switch (argSpec.type) {
+        case 'freestyle_string':
+          placeholderText = 'text';
+          break;
+        case 'percent':
+          placeholderText = 'percent: a number from 0 - 100';
+          break;
+        case 'ratio':
+          placeholderText = 'ratio: a decimal from 0 - 1';
+          break;
+        default:
+          placeholderText = argSpec.type;
+      }
+
       Input = (
         <Form.Group
           as={Row}
@@ -155,7 +166,7 @@ export default class ArgInput extends React.PureComponent {
                   id={argkey}
                   name={argkey}
                   type="text"
-                  placeholder={typeLabel}
+                  placeholder={placeholderText}
                   value={value || ''} // empty string is handled better than `undefined`
                   onChange={handleChange}
                   onFocus={handleChange}
@@ -168,8 +179,9 @@ export default class ArgInput extends React.PureComponent {
                   onDragLeave={dragLeavingHandler}
                 />
                 {
-                  ['csv', 'vector', 'raster', 'directory'].includes(argSpec.type)
-                    ? (  // add a file selector button for path input types
+                  ['csv', 'vector', 'raster', 'directory', 'file']
+                    .includes(argSpec.type)
+                    ? ( // add a file selector button
                       <InputGroup.Append>
                         <Button
                           id={argkey}

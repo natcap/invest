@@ -26,18 +26,18 @@ jobs:
       run: git fetch origin +refs/tags/*:refs/tags/*
 
     - name: Install Node.js
-      uses: actions/setup-node@v1
+      uses: actions/setup-node@v2
       with:
         node-version: ${{ matrix.node-version }}
 
-    - name: NPM Install
-      run: npm install
+    - name: Install Dependencies
+      run: yarn install
 
     - name: Fetch InVEST Binaries
-      run: npm run fetch-invest
+      run: yarn run fetch-invest
 
     - name: Run the build script
-      run: npm run build
+      run: yarn run build
 
     # Steps that use github secrets do not run in pull requests.
     # These include codesigning & GCS deploy-related things.
@@ -92,10 +92,10 @@ jobs:
       env:
         GH_TOKEN: env.GITHUB_TOKEN
         DEBUG: electron-builder
-      run: npm run dist
+      run: yarn run dist
 
     - name: Test electron app with puppeteer
-      run: npm run test-electron-app
+      run: yarn run test-electron-app
 
     - name: Upload app logging from puppeteer to github - MacOS
       uses: actions/upload-artifact@v2.2.4

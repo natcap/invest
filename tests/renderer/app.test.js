@@ -38,11 +38,6 @@ const MOCK_INVEST_LIST = {
 };
 const MOCK_VALIDATION_VALUE = [[['workspace_dir'], 'invalid because']];
 
-afterAll(async () => {
-  await InvestJob.clearStore();
-  jest.resetAllMocks();
-});
-
 describe('Various ways to open and close InVEST models', () => {
   beforeAll(async () => {
     getInvestModelNames.mockResolvedValue(MOCK_INVEST_LIST);
@@ -50,8 +45,7 @@ describe('Various ways to open and close InVEST models', () => {
     fetchValidation.mockResolvedValue(MOCK_VALIDATION_VALUE);
   });
   afterAll(async () => {
-    // await clearSettingsStore();
-    // TODO reset the beforeAll mocks?
+    jest.resetAllMocks();
   });
   afterEach(async () => {
     jest.clearAllMocks(); // clears usage data, does not reset/restore
@@ -478,6 +472,7 @@ describe('InVEST subprocess testing', () => {
     model_name: 'EcoModel',
     module: 'natcap.invest.dot',
   };
+  const modelName = 'carbon';
 
   const dummyTextToLog = JSON.stringify(spec.args);
   let fakeWorkspace;
@@ -495,8 +490,12 @@ describe('InVEST subprocess testing', () => {
     getSpec.mockResolvedValue(spec);
     fetchValidation.mockResolvedValue([]);
     getInvestModelNames.mockResolvedValue(
-      { Carbon: { internal_name: 'carbon' } }
+      { Carbon: { internal_name: modelName } }
     );
+    const mockUISpec = {
+      [modelName]: { order: [Object.keys(spec.args)] }
+    };
+    jest.mock('../../src/renderer/ui_config', () => mockUISpec);
 
     // Need to reset these streams since mockInvestProc is shared by tests
     // and the streams apparently receive the EOF signal in each test.
@@ -532,11 +531,6 @@ describe('InVEST subprocess testing', () => {
         mockInvestProc.emit('exit', null);
       });
     }
-
-    // mock out the whole UI config module
-    // brackets around spec.model_name turns it into a valid literal key
-    const mockUISpec = { [spec.model_name]: { order: [Object.keys(spec.args)] } };
-    jest.mock('../../src/renderer/ui_config', () => mockUISpec);
   });
 
   afterAll(() => {
@@ -636,8 +630,9 @@ describe('InVEST subprocess testing', () => {
     mockInvestProc.stdout.push('hello from stdout');
     mockInvestProc.stderr.push(allStdErr);
     const logTab = await findByText('Log');
-    expect(logTab.classList.contains('active'))
-      .toBeTruthy();
+    await waitFor(() => {
+      expect(logTab.classList.contains('active')).toBeTruthy();
+    });
 
     // some text from the logfile should be rendered:
     expect(await findByText(dummyTextToLog, { exact: false }))
@@ -685,7 +680,9 @@ describe('InVEST subprocess testing', () => {
     // stdout listener is how the app knows the process started
     mockInvestProc.stdout.push('hello from stdout');
     const logTab = await findByText('Log');
-    expect(logTab.classList.contains('active')).toBeTruthy();
+    await waitFor(() => {
+      expect(logTab.classList.contains('active')).toBeTruthy();
+    });
 
     // some text from the logfile should be rendered:
     expect(await findByText(dummyTextToLog, { exact: false }))
@@ -728,7 +725,9 @@ describe('InVEST subprocess testing', () => {
     // stdout listener is how the app knows the process started
     mockInvestProc.stdout.push('hello from stdout');
     let logTab = await findByText('Log');
-    expect(logTab.classList.contains('active')).toBeTruthy();
+    await waitFor(() => {
+      expect(logTab.classList.contains('active')).toBeTruthy();
+    });
 
     // some text from the logfile should be rendered:
     expect(await findByText(dummyTextToLog, { exact: false }))

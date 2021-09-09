@@ -26,7 +26,7 @@ const DEFAULT_JOB = new InvestJob({
 
 function mockUISpec(spec) {
   return {
-    [spec.model_name]: { order: [Object.keys(spec.args)] }
+    [DEFAULT_JOB.modelRunName]: { order: [Object.keys(spec.args)] }
   };
 }
 
@@ -174,10 +174,8 @@ describe('Save InVEST Model Setup Buttons', () => {
   beforeAll(() => {
     getSpec.mockResolvedValue(spec);
     fetchValidation.mockResolvedValue([]);
-    // mock out the whole UI config module
-    // brackets around spec.model_name turns it into a valid literal key
-    const mockUISpec = {[spec.model_name]: {order: [Object.keys(spec.args)]}}
-    jest.mock(UI_CONFIG_PATH, () => mockUISpec);
+    const mockSpec = spec;
+    jest.mock(UI_CONFIG_PATH, () => mockUISpec(mockSpec));
   });
 
   afterAll(() => {
@@ -378,10 +376,8 @@ describe('InVEST Run Button', () => {
 
   beforeAll(() => {
     getSpec.mockResolvedValue(spec);
-    // mock out the whole UI config module
-    // brackets around spec.model_name turns it into a valid literal key
-    let mockUISpec = {[spec.model_name]: {order: [Object.keys(spec.args)]}}
-    jest.mock(UI_CONFIG_PATH, () => mockUISpec);
+    const mockSpec = spec;
+    jest.mock(UI_CONFIG_PATH, () => mockUISpec(mockSpec));
   });
 
   afterAll(() => {

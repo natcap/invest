@@ -30,7 +30,7 @@ async function investGetSpec(modelName) {
   if (spec) {
     const { args, ...modelSpec } = spec;
     const uiSpecs = require('../../ui_config');
-    const uiSpec = uiSpecs[modelSpec.model_name];
+    const uiSpec = uiSpecs[modelName];
     if (uiSpec) {
       return { modelSpec: modelSpec, argsSpec: args, uiSpec: uiSpec };
     }
