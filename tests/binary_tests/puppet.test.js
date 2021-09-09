@@ -159,7 +159,7 @@ test('Run a real invest model', async () => {
   await modelButton.click();
   await page.screenshot({ path: `${SCREENSHOT_PREFIX}3-model-tab.png` });
 
-  const argsForm = await page.$('.args-form');
+  const argsForm = await page.waitForSelector('.args-form');
   const typeDelay = 10;
   const workspace = await findByLabelText(argsForm, /Workspace/i);
   await workspace.type(TMP_DIR, { delay: typeDelay });
