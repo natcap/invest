@@ -100,7 +100,7 @@ beforeAll(() => {
           browserURL: `http://localhost:${PORT}`,
           defaultViewport: null
         });
-      } catch(e) {
+      } catch (e) {
         console.log(e);
       }
       ELECTRON_PROCESS.stdout.removeListener('data', stdOutCallback);
@@ -137,7 +137,7 @@ test('Run a real invest model', async () => {
   const { findByText, findByLabelText, findByRole } = queries;
   await waitFor(() => {
     expect(BROWSER.isConnected()).toBeTruthy();
-  }, { timeout: 10000 });
+  }, { timeout: 30000 });
   // find the mainWindow's index.html, not the splashScreen's splash.html
   const target = await BROWSER.waitForTarget(
     (target) => target.url().endsWith('index.html')
