@@ -113,15 +113,13 @@ export const createWindow = async () => {
     process.stdout.write('main window loaded');
   });
 
+  mainWindow.webContents.on('render-process-gone', (event, details) => {
+    console.log('webContents-render-process-gone')
+    logger.error(details);
+  });
+
   mainWindow.on('closed', async () => {
     mainWindow = null;
-    // We shouldn't need to shutdown flask here, as it will be
-    // shutdown on the window-all-closed listener, but that one
-    // is not triggering in the puppeteer test on linux.
-    if (process.platform !== 'darwin') {
-      logger.debug('requesting flask shutdown on main window close');
-      await shutdownPythonProcess();
-    }
   });
 
   setupDownloadHandlers(mainWindow);
