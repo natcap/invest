@@ -71,6 +71,10 @@ Unreleased Changes (3.9.1)
       could have been computed by previous runs.
     * Validation now returns a more helpful message when a spatial input has
       no projection defined.
+    * Added some logging to ``natcap.invest.utils._log_gdal_errors`` to aid in
+      debugging some hard-to-reproduce GDAL logging errors that occasionally
+      cause InVEST models to crash.  If GDAL calls ``_log_gdal_errors`` with an
+      incorrect set of arguments, this is now logged.
 * Carbon
     * Fixed a bug where, if rate change and discount rate were set to 0, the
       valuation results were in $/year rather than $, too small by a factor of
