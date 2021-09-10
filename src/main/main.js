@@ -181,12 +181,11 @@ export function main(argv) {
     if (!shuttingDown) {
       event.preventDefault();
     }
-    console.log('before-quit')
     removeIpcMainListeners();
     await shutdownPythonProcess();
     shuttingDown = true;
     app.quit();
-  })
+  });
 }
 
 if (typeof require !== 'undefined' && require.main === module) {
