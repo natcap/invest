@@ -3,14 +3,10 @@ import itertools
 import logging
 import os
 import pickle
-import shutil
-import tempfile
 
 import numpy
 import pygeoprocessing
 import pygeoprocessing.routing
-from pygeoprocessing.geoprocessing_core import \
-    DEFAULT_GTIFF_CREATION_TUPLE_OPTIONS
 from osgeo import gdal, ogr
 import taskgraph
 
