@@ -139,7 +139,6 @@ export function setupInvestRunHandlers(investExe) {
 
 export function setupInvestLogReaderHandler() {
   ipcMain.on(ipcMainChannels.INVEST_READ_LOG, async (event, logfile, channel) => {
-    console.log(logfile);
     const fileStream = fs.createReadStream(logfile);
     fileStream.on('error', (err) => {
       logger.error(err);

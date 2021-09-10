@@ -219,7 +219,6 @@ export default class InvestTab extends React.Component {
       return (<div />);
     }
 
-    // const isRunning = status === 'running';
     const logDisabled = !logfile;
     const sidebarSetupElementId = `sidebar-setup-${jobID}`;
     const sidebarFooterElementId = `sidebar-footer-${jobID}`;
