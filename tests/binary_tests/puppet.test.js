@@ -143,6 +143,9 @@ test('Run a real invest model', async () => {
     (target) => target.url().endsWith('index.html')
   );
   const page = await target.page();
+  page.on('error', (err) => {
+    console.log(err);
+  });
   const doc = await getDocument(page);
   await page.screenshot({ path: `${SCREENSHOT_PREFIX}1-page-load.png` });
 
