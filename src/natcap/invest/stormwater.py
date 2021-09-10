@@ -70,17 +70,18 @@ ARGS_SPEC = {
                         "required": False
                     } for soil_group in ["a", "b", "c", "d"]
                 },
-                "is_impervious": {
+                "is_connected": {
                     "type": "boolean",
                     "required": False,
                     "about": (
-                        "Enter 1 if the LULC class is an impervious surface, "
-                        "0 if not. This column is only used if the 'adjust "
-                        "retention ratios' option is selected. If 'adjust "
-                        "retention ratios' is selected and this column exists, "
-                        "the adjustment algorithm takes into account the LULC "
-                        "as well as road centerlines. If this column does not "
-                        "exist, only the road centerlines are used.")
+                        "Enter 1 if the LULC class is a connected impervious "
+                        "surface, 0 if not. This column is only used if the "
+                        "'adjust retention ratios' option is selected. If "
+                        "'adjust retention ratios' is selected and this "
+                        "column exists, the adjustment algorithm takes into "
+                        "account the LULC as well as road centerlines. If "
+                        "this column does not exist, only the road "
+                        "centerlines are used.")
                 }
             },
             "about": (
@@ -97,7 +98,7 @@ ARGS_SPEC = {
                 "accounts for drainage effects of nearby impervious surfaces "
                 "which are directly connected to artifical urban drainage "
                 "channels (typically roads, parking lots, etc.) Connected "
-                "impervious surfaces are indicated by the is_impervious column"
+                "impervious surfaces are indicated by the is_connected column"
                 "in the biophysical table and/or the road centerlines vector."),
             "name": "Adjust retention ratios"
         },
@@ -149,11 +150,11 @@ INTERMEDIATE_OUTPUTS = {
     'precipitation_aligned_path': 'precipitation_aligned.tif',
     'reprojected_centerlines_path': 'reprojected_centerlines.gpkg',
     'rasterized_centerlines_path': 'rasterized_centerlines.tif',
-    'impervious_lulc_path': 'is_impervious_lulc.tif',
+    'connected_lulc_path': 'is_connected_lulc.tif',
     'road_distance_path': 'road_distance.tif',
     'search_kernel_path': 'search_kernel.tif',
-    'impervious_lulc_distance_path': 'impervious_lulc_distance.tif',
-    'near_impervious_lulc_path': 'near_impervious_lulc.tif',
+    'connected_lulc_distance_path': 'connected_lulc_distance.tif',
+    'near_connected_lulc_path': 'near_connected_lulc.tif',
     'near_road_path': 'near_road.tif',
     'ratio_average_path': 'ratio_average.tif'
 }
@@ -192,7 +193,7 @@ def execute(args):
             'lucode', 'EMC_x' (event mean concentration mg/L) for each
             pollutant x, 'RC_y' (retention coefficient) and 'IR_y'
             (infiltration coefficient) for each soil group y, and
-            'is_impervious' if args['adjust_retention_ratios'] is True
+            'is_connected' if args['adjust_retention_ratios'] is True
         args['adjust_retention_ratios'] (bool): If True, apply retention ratio
             adjustment algorithm.
         args['retention_radius'] (float): If args['adjust_retention_ratios']
@@ -295,9 +296,9 @@ def execute(args):
     if args['adjust_retention_ratios']:
         # in raster coord system units
         radius = float(args['retention_radius'])
-        # boolean mapping for each LULC code whether it's impervious
-        is_impervious_map = {
-            lucode: 1 if biophysical_dict[lucode]['is_impervious'] else 0
+        # boolean mapping for each LULC code whether it's connected
+        is_connected_map = {
+            lucode: 1 if biophysical_dict[lucode]['is_connected'] else 0
             for lucode in biophysical_dict}
 
         reproject_roads_task = task_graph.add_task(
@@ -360,33 +361,33 @@ def execute(args):
 
         # Make a boolean raster indicating which pixels are directly
         # connected impervious LULC type
-        impervious_lulc_task = task_graph.add_task(
+        connected_lulc_task = task_graph.add_task(
             func=pygeoprocessing.reclassify_raster,
             args=(
                 (files['lulc_aligned_path'], 1),
-                is_impervious_map,
-                files['impervious_lulc_path'],
+                is_connected_map,
+                files['connected_lulc_path'],
                 gdal.GDT_Byte,
                 UINT8_NODATA),
-            target_path_list=[files['impervious_lulc_path']],
-            task_name='calculate binary impervious lulc raster',
+            target_path_list=[files['connected_lulc_path']],
+            task_name='calculate binary connected lulc raster',
             dependent_task_list=[align_task]
         )
 
         # Make a boolean raster showing which pixels are within the given
-        # radius of impervious land cover
-        near_impervious_lulc_task = task_graph.add_task(
+        # radius of connected land cover
+        near_connected_lulc_task = task_graph.add_task(
             func=is_near,
             args=(
-                files['impervious_lulc_path'],
+                files['connected_lulc_path'],
                 radius / avg_pixel_size,  # convert the radius to pixels
-                files['impervious_lulc_distance_path'],
-                files['near_impervious_lulc_path']),
+                files['connected_lulc_distance_path'],
+                files['near_connected_lulc_path']),
             target_path_list=[
-                files['impervious_lulc_distance_path'],
-                files['near_impervious_lulc_path']],
-            task_name='find pixels within radius of impervious lulc',
-            dependent_task_list=[impervious_lulc_task])
+                files['connected_lulc_distance_path'],
+                files['near_connected_lulc_path']],
+            task_name='find pixels within radius of connected lulc',
+            dependent_task_list=[connected_lulc_task])
 
         average_ratios_task = task_graph.add_task(
             func=raster_average,
@@ -406,7 +407,7 @@ def execute(args):
             args=([
                 (files['retention_ratio_path'], 1),
                 (files['ratio_average_path'], 1),
-                (files['near_impervious_lulc_path'], 1),
+                (files['near_connected_lulc_path'], 1),
                 (files['near_road_path'], 1)],
                 adjust_op,
                 files['adjusted_retention_ratio_path'],
@@ -415,7 +416,7 @@ def execute(args):
             target_path_list=[files['adjusted_retention_ratio_path']],
             task_name='adjust stormwater retention ratio',
             dependent_task_list=[retention_ratio_task, average_ratios_task,
-                                 near_impervious_lulc_task, near_road_task])
+                                 near_connected_lulc_task, near_road_task])
 
         final_retention_ratio_path = files['adjusted_retention_ratio_path']
         final_retention_ratio_task = adjust_retention_ratio_task
@@ -786,7 +787,7 @@ def retention_value_op(retention_volume_array, replacement_cost):
     return value_array
 
 
-def adjust_op(ratio_array, avg_ratio_array, near_impervious_lulc_array,
+def adjust_op(ratio_array, avg_ratio_array, near_connected_lulc_array,
               near_road_array):
     """Apply the retention ratio adjustment algorithm to an array of ratios.
 
@@ -796,7 +797,7 @@ def adjust_op(ratio_array, avg_ratio_array, near_impervious_lulc_array,
     Args:
         ratio_array (numpy.ndarray): 2D array of stormwater retention ratios
         avg_ratio_array (numpy.ndarray): 2D array of averaged ratios
-        near_impervious_lulc_array (numpy.ndarray): 2D boolean array where 1
+        near_connected_lulc_array (numpy.ndarray): 2D boolean array where 1
             means this pixel is near a directly-connected LULC area
         near_road_array (numpy.ndarray): 2D boolean array where 1
             means this pixel is near a road centerline
@@ -812,21 +813,21 @@ def adjust_op(ratio_array, avg_ratio_array, near_impervious_lulc_array,
     valid_mask = (
         ~numpy.isclose(ratio_array, FLOAT_NODATA) &
         ~numpy.isclose(avg_ratio_array, FLOAT_NODATA) &
-        (near_impervious_lulc_array != UINT8_NODATA) &
+        (near_connected_lulc_array != UINT8_NODATA) &
         (near_road_array != UINT8_NODATA))
 
     # adjustment factor:
     # - 0 if any of the nearby pixels are impervious/connected;
     # - average of nearby pixels, otherwise
-    is_not_impervious = ~(
-        near_impervious_lulc_array[valid_mask] |
+    is_not_connected = ~(
+        near_connected_lulc_array[valid_mask] |
         near_road_array[valid_mask]).astype(bool)
     adjustment_factor_array[valid_mask] = (avg_ratio_array[valid_mask] *
-                                           is_not_impervious)
+                                           is_not_connected)
 
     adjustment_factor_array[valid_mask] = (
         avg_ratio_array[valid_mask] * ~(
-            near_impervious_lulc_array[valid_mask] |
+            near_connected_lulc_array[valid_mask] |
             near_road_array[valid_mask]
         ).astype(bool))
 
@@ -904,7 +905,7 @@ def is_near(input_path, radius, distance_path, out_path):
 
     Args:
         input_path (str): path to a binary raster where '1' pixels are what
-            we're measuring distance to, in this case roads/impervious areas
+            we're measuring distance to, in this case roads/connected areas
         radius (float): distance in pixels which is considered "near".
             pixels this distance or less from a '1' pixel are marked '1' in
             the output. Distances are measured centerpoint to centerpoint.

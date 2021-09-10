@@ -124,7 +124,7 @@ class StormwaterTests(unittest.TestCase):
             'RC_B': [0, 0.25, 0.2, 1],
             'RC_C': [0, 0.35, 0.3, 1],
             'RC_D': [0, 0.45, 0.4, 1],
-            'is_impervious': [0, 0, 0, 1]
+            'is_connected': [0, 0, 0, 1]
         }
         if ir:
             biophysical_dict.update({
@@ -629,7 +629,7 @@ class StormwaterTests(unittest.TestCase):
         avg_ratio_array = numpy.array([
             [0.5, 0.5, 0.5],
             [0.5, stormwater.FLOAT_NODATA, 0.5]], dtype=numpy.float32)
-        near_impervious_lulc_array = numpy.array([
+        near_connected_lulc_array = numpy.array([
             [0, 0, 1],
             [stormwater.UINT8_NODATA, 0, 1]], dtype=numpy.uint8)
         near_road_centerline_array = numpy.array([
@@ -639,13 +639,13 @@ class StormwaterTests(unittest.TestCase):
         out = stormwater.adjust_op(
             ratio_array,
             avg_ratio_array,
-            near_impervious_lulc_array,
+            near_connected_lulc_array,
             near_road_centerline_array)
         for y in range(ratio_array.shape[0]):
             for x in range(ratio_array.shape[1]):
                 if (ratio_array[y, x] == stormwater.FLOAT_NODATA or
                     avg_ratio_array[y, x] == stormwater.FLOAT_NODATA or
-                    near_impervious_lulc_array[y, x] == stormwater.UINT8_NODATA or
+                    near_connected_lulc_array[y, x] == stormwater.UINT8_NODATA or
                         near_road_centerline_array[y, x] == stormwater.UINT8_NODATA):
                     numpy.testing.assert_allclose(
                         out[y, x], stormwater.FLOAT_NODATA)
@@ -653,7 +653,7 @@ class StormwaterTests(unittest.TestCase):
                     # equation 2-4: Radj_ij = R_ij + (1 - R_ij) * C_ij
                     adjust_factor = (
                         0 if (
-                            near_impervious_lulc_array[y, x] or
+                            near_connected_lulc_array[y, x] or
                             near_road_centerline_array[y, x]
                         ) else avg_ratio_array[y, x])
                     adjusted = (ratio_array[y, x] +
