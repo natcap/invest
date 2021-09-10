@@ -85,7 +85,7 @@ beforeAll(() => {
   // start the invest app and forward stderr to console
   ELECTRON_PROCESS = spawn(
     `"${BINARY_PATH}"`,
-    // remote-debugging-port is a chromium arg
+    // these are chromium args
     [`--remote-debugging-port=${PORT}`],
     { shell: true }
   );
