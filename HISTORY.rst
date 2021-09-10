@@ -22,6 +22,7 @@
   - Scenic Quality
   - SDR
   - Seasonal Water Yield
+  - Stormwater
   - Urban Cooling
   - Urban Flood Risk
   - Wave Energy

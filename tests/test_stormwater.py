@@ -10,7 +10,8 @@ import numpy
 from osgeo import gdal, osr
 import pandas
 import pygeoprocessing
-from pygeoprocessing.geoprocessing_core import DEFAULT_GTIFF_CREATION_TUPLE_OPTIONS as opts_tuple  # noqa
+from pygeoprocessing.geoprocessing_core import (
+    DEFAULT_GTIFF_CREATION_TUPLE_OPTIONS as opts_tuple)
 
 
 TEST_DATA = os.path.join(os.path.dirname(
@@ -215,8 +216,6 @@ class StormwaterTests(unittest.TestCase):
 
         retention_volume_path = os.path.join(
             self.workspace_dir, 'retention_volume_suffix.tif')
-        runoff_volume_path = os.path.join(
-            self.workspace_dir, 'intermediate', 'runoff_volume.tif')
         infiltration_volume_path = os.path.join(
             self.workspace_dir, 'infiltration_volume_suffix.tif')
         pollutant_path = os.path.join(
@@ -252,8 +251,9 @@ class StormwaterTests(unittest.TestCase):
                 actual_retention_volume = retention_volume[row, col]
                 expected_retention_volume = (1 - rc_value) * \
                     precipitation * 0.001 * pixel_area
-                numpy.testing.assert_allclose(actual_retention_volume,
-                                              expected_retention_volume, rtol=1e-6)
+                numpy.testing.assert_allclose(
+                    actual_retention_volume,
+                    expected_retention_volume, rtol=1e-6)
 
                 # retention (m^3/yr) * cost ($/m^3) = value ($/yr)
                 actual_value = retention_value[row, col]
@@ -562,7 +562,7 @@ class StormwaterTests(unittest.TestCase):
                 else:
                     numpy.testing.assert_allclose(
                         out[y, x],
-                        precip_array[y, x] * ratio_array[y, x] * pixel_area / 1000)
+                        precip_array[y, x]*ratio_array[y, x]*pixel_area/1000)
 
     def test_pollutant_load_op(self):
         """Stormwater: test pollutant_load_op function."""
