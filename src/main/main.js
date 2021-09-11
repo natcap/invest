@@ -34,6 +34,7 @@ const logger = getLogger(__filename.split('/').slice(-1)[0]);
 crashReporter.start({
   uploadToServer: false,
 });
+console.log(app.getPath('crashDumps'));
 if (process.platform === 'darwin') {
   app.setPath('crashDumps', path.join(os.homedir(), 'Library/Logs', pkg.name));
 } else {
@@ -136,6 +137,7 @@ export const createWindow = async () => {
   setupDownloadHandlers(mainWindow);
   setupInvestRunHandlers(investExe);
   setupInvestLogReaderHandler();
+  process.crash();
 };
 
 export function removeIpcMainListeners() {
