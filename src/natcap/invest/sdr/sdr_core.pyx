@@ -386,6 +386,12 @@ def calculate_sediment_deposition(
     only adding a pixel to the stack when all its upstream neighbors are
     already calculated.
 
+    Note that this function is designed to be used in the context of the SDR
+    model. Because the algorithm is recursive upstream and downstream of each
+    pixel, nodata values in the SDR input would propagate along the flow path.
+    This case is not handled because we assume the SDR and flow dir inputs
+    will come from the SDR model and have nodata in the same places.
+
     Args:
         mfd_flow_direction_path (string): a path to a raster with
             pygeoprocessing.routing MFD flow direction values.
