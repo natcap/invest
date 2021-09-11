@@ -81,4 +81,8 @@ export const screen = {
 
 export const shell = {
   showItemInFolder: jest.fn()
-}
+};
+
+export const crashReporter {
+  start: jest.fn(),
+};
