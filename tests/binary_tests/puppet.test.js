@@ -40,7 +40,7 @@ if (process.platform === 'darwin') {
 } else if (process.platform === 'win32') {
   [BINARY_PATH] = glob.sync('./dist/win-unpacked/InVEST*.exe');
   SCREENSHOT_PREFIX = path.join(
-    os.homedir(), 'AppData/Roaming/invest-workbench/logs/invest-workbench-'
+    os.homedir(), 'AppData/Roaming', pkg.name, 'logs/invest-workbench-'
   );
   APP_HAS_RUN_TOKEN_PATH = path.join(
     os.homedir(), 'AppData/Roaming', pkg.name, APP_HAS_RUN_TOKEN

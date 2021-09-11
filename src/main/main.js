@@ -1,4 +1,5 @@
 import path from 'path';
+import os from 'os';
 
 import {
   app,
@@ -7,6 +8,7 @@ import {
   nativeTheme,
   Menu,
   ipcMain,
+  crashReporter,
 } from 'electron'; // eslint-disable-line import/no-extraneous-dependencies
 
 import {
@@ -29,6 +31,15 @@ import { menuTemplate } from './menubar';
 import pkg from '../../package.json';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
+crashReporter.start({
+  uploadToServer: false,
+});
+if (process.platform === 'darwin') {
+  app.setPath('crashDumps', path.join(os.homedir(), 'Library/Logs', pkg.name));
+} else {
+  app.setPath('crashDumps', path.join(os.homedir(), 'AppData/Roaming', pkg.name));
+}
+
 
 const ELECTRON_DEV_MODE = !!process.defaultApp; // a property added by electron.
 
