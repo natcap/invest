@@ -133,10 +133,14 @@ ARGS_SPEC = {
                         "of capex_arr")},
                 "miscellaneous_capex_cost": {
                     "type": "ratio",
-                    "about": "The miscellaneous costs as a proportion of capex_arr"},
+                    "about": (
+                        "The miscellaneous costs as a proportion of capex_arr")
+                },
                 "installation_cost": {
                     "type": "ratio",
-                    "about": },
+                    "about": (
+                        "The installation costs as a proportion of capex_arr")
+                },
                 "infield_cable_length": {
                     "type": "number",
                     "units": u.kilometer,
@@ -333,7 +337,7 @@ ARGS_SPEC = {
         },
         "price_table": {
             "type": "boolean",
-            "required": "valuation_container",
+            "required": False,
             "about": (
                 "Use a Wind Energy Price Table instead of calculating annual "
                 "prices from the intial Energy Price and Rate of Price Change "
