@@ -31,14 +31,17 @@ import { menuTemplate } from './menubar';
 import pkg from '../../package.json';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
-crashReporter.start({
-  uploadToServer: false,
-});
+
+// Setting these paths to match the logger's path makes it easy to upload
+// everything at once to debug GHA pptr script.
 if (process.platform === 'darwin') {
   app.setPath('crashDumps', path.join(os.homedir(), 'Library/Logs', pkg.name));
 } else {
   app.setPath('crashDumps', path.join(os.homedir(), 'AppData/Roaming', pkg.name, 'logs'));
 }
+crashReporter.start({
+  uploadToServer: false,
+});
 
 logger.debug(`crashReporter: ${app.getPath('crashDumps')}`);
 
@@ -196,6 +199,7 @@ export function main(argv) {
     shuttingDown = true;
     app.quit();
   });
+  process.crash();
 }
 
 if (typeof require !== 'undefined' && require.main === module) {
