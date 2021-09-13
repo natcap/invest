@@ -136,7 +136,16 @@ export const createWindow = async () => {
     logger.error(details);
   });
 
-  mainWindow.on('closed', async () => {
+  mainWindow.on('unresponsive', (event) => {
+    logger.debug('main window unresponsive')
+  });
+
+  mainWindow.on('close', (event) => {
+    logger.debug('main window will close')
+  });
+
+  mainWindow.on('closed', () => {
+    logger.debug('main window closed');
     mainWindow = null;
   });
 
