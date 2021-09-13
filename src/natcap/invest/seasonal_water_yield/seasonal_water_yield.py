@@ -89,7 +89,7 @@ ARGS_SPEC = {
             **spec_utils.LULC,
             "projected": True,
             "about": (
-                f"{**spec_utils.LULC['about']} All values in this raster MUST "
+                f"{spec_utils.LULC['about']} All values in this raster MUST "
                 "have corresponding entries in the Biophysical Table.")
         },
         "soil_group_path": {
