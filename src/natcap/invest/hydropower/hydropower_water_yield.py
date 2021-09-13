@@ -22,7 +22,8 @@ ARGS_SPEC = {
     "module": __name__,
     "userguide_html": "reservoirhydropowerproduction.html",
     "args_with_spatial_overlap": {
-        "spatial_keys": ["depth_to_root_rest_layer_path",
+        "spatial_keys": ["lulc_path",
+                         "depth_to_root_rest_layer_path",
                          "precipitation_path",
                          "pawc_path",
                          "eto_path",

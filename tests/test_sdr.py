@@ -206,7 +206,7 @@ class SDRTests(unittest.TestCase):
         from natcap.invest.sdr import sdr
 
         # use predefined directory so test can clean up files during teardown
-        args = SDRTests.generate_base_args('sdr_test_workspace') #self.workspace_dir)
+        args = SDRTests.generate_base_args(self.workspace_dir)
         # make args explicit that this is a base run of SWY
 
         sdr.execute(args)
@@ -231,8 +231,6 @@ class SDRTests(unittest.TestCase):
 
         # use predefined directory so test can clean up files during teardown
         args = SDRTests.generate_base_args(self.workspace_dir)
-        # args_copy = args.copy()
-        # args_copy['workspace_dir'] = 'sdr_test_workspace'
 
         # set all input rasters to have undefined nodata values
         tmp_dir = os.path.join(args['workspace_dir'], 'nodata_raster_dir')

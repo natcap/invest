@@ -43,9 +43,10 @@ ARGS_SPEC = {
             "type": "boolean",
             "required": False,
             "about": (
-                "If ``True``, the pour point detection algorithm will run, "
-                "creating a point vector file pour_points.gpkg."),
-            "name": "Detect pour points"
+                "Detect pour points (watershed outlets) based on "
+                "the DEM, and use these instead of a user-provided outlet "
+                "features vector."),
+            "name": "detect pour points"
         },
         "outlet_vector_path": {
             "type": "vector",
@@ -53,30 +54,24 @@ ARGS_SPEC = {
             "geometries": spec_utils.ALL_GEOMS,
             "required": "not detect_pour_points",
             "about": (
-                "This is a layer of geometries representing watershed outlets "
-                "such as municipal water intakes or lakes."),
-            "name": "Outlet Features"
+                "A map of watershed outlets from which to delineate the "
+                "watersheds. Required if Detect Pour Points is not checked."),
+            "name": "watershed outlets"
         },
         "snap_points": {
             "type": "boolean",
             "required": False,
             "about": (
-                "Whether to snap point geometries to the nearest stream "
-                "pixel.  If ``True``, ``args['flow_threshold']`` and "
-                "``args['snap_distance']`` must also be defined."),
-            "name": "Snap points to the nearest stream"
+                "Snap point geometries to the center of the nearest stream "
+                "pixel. This has no effect if Detect Pour Points is selected."),
+            "name": "snap points to nearest stream"
         },
         "flow_threshold": {
-            "expression": "value > 0",
-            "type": "number",
-            "units": u.pixel,
+            **spec_utils.THRESHOLD_FLOW_ACCUMULATION,
             "required": "snap_points",
             "about": (
-                "The number of upstream cells that must flow into a cell "
-                "before it's considered part of a stream such that retention "
-                "stops and the remaining export is exported to the stream. "
-                "Used to define streams from the DEM."),
-            "name": "Threshold Flow Accumulation"
+                spec_utils.THRESHOLD_FLOW_ACCUMULATION["about"] +
+                " Required if Snap Points is selected."),
         },
         "snap_distance": {
             "expression": "value > 0",
@@ -84,23 +79,20 @@ ARGS_SPEC = {
             "units": u.pixels,
             "required": "snap_points",
             "about": (
-                "If provided, the maximum search radius in pixels to look for "
-                "stream pixels.  If a stream pixel is found within the snap "
-                "distance, the outflow point will be snapped to the center of "
-                "the nearest stream pixel.  Geometries that are not points "
-                "(such as Lines and Polygons) will not be snapped. MultiPoint "
-                "geometries will also not be snapped."),
-            "name": "Pixel Distance to Snap Outlet Points"
+                "Maximum distance to relocate watershed outlet points in "
+                "order to snap them to a stream. Required if Snap Points "
+                "is selected."),
+            "name": "snap distance"
         },
         "skip_invalid_geometry": {
             "type": "boolean",
             "required": False,
             "about": (
-                "If ``True``, any invalid geometries encountered in the "
-                "outlet vector will not be included in the delineation.  If "
-                "``False``, an invalid geometry will cause DelineateIt to "
-                "crash."),
-            "name": "Crash on invalid geometries"
+                "Skip delineation for any invalid geometries found in the "
+                "Outlet Features. Otherwise, an invalid geometry will cause "
+                "the model to crash."
+            ),
+            "name": "skip invalid geometries"
         }
     }
 }

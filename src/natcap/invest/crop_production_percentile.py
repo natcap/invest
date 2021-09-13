@@ -37,13 +37,7 @@ ARGS_SPEC = {
         "landcover_raster_path": {
             **spec_utils.LULC,
             "projected": True,
-            "projection_units": u.meter,
-            "about": (
-                "A raster file, representing integer land use/land code "
-                "covers for each cell. This raster should have a projected "
-                "coordinate system with units of meters (e.g. UTM) because "
-                "pixel areas are divided by 10000 in order to report some "
-                "results in hectares."),
+            "projection_units": u.meter
         },
         "landcover_to_crop_table_path": {
             "type": "csv",
@@ -95,9 +89,10 @@ ARGS_SPEC = {
                 }
             },
             "about": (
-                "A CSV table mapping canonical crop names to the land use "
-                "codes in the landcover/use raster."),
-            "name": "Landcover to Crop Table"
+                "A table that maps each LULC code from the LULC map to one of "
+                "the 175 canonical crop names representing the crop grown in "
+                "that LULC class."),
+            "name": "LULC to Crop Table"
         },
         "aggregate_polygon_path": {
             **spec_utils.AOI,
@@ -111,7 +106,7 @@ ARGS_SPEC = {
                     "type": "directory",
                     "about": (
                         "Table mapping each climate bin to yield percentiles "
-                        "for each crop"),
+                        "for each crop."),
                     "contents": {
                         "[CROP]_percentile_yield_table.csv": {
                             "type": "csv",
@@ -139,7 +134,7 @@ ARGS_SPEC = {
                 },
                 "extended_climate_bin_maps": {
                     "type": "directory",
-                    "about": "Maps of climate bins for each crop",
+                    "about": "Maps of climate bins for each crop.",
                     "contents": {
                         "extendedclimatebins[CROP]": {
                             "type": "raster",
@@ -149,7 +144,7 @@ ARGS_SPEC = {
                 },
                 "observed_yield": {
                     "type": "directory",
-                    "about": "Maps of actual observed yield for each crop",
+                    "about": "Maps of actual observed yield for each crop.",
                     "contents": {
                         "[CROP]_observed_yield.tif": {
                             "type": "raster",
@@ -204,7 +199,7 @@ ARGS_SPEC = {
                     }
                 }
             },
-            "about": "Path to the InVEST Crop Production Data directory",
+            "about": "Path to the InVEST Crop Production Data directory.",
             "name": "model data directory"
         }
     }
