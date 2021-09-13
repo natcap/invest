@@ -31,7 +31,9 @@ jobs:
         node-version: ${{ matrix.node-version }}
 
     - name: Install Dependencies
-      run: yarn install
+      run: |
+        yarn config set network-timeout 600000 -g
+        yarn install --verbose
 
     - name: Fetch InVEST Binaries
       run: yarn run fetch-invest
