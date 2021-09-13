@@ -25,24 +25,27 @@ ARGS_SPEC = {
         "results_suffix": spec_utils.SUFFIX,
         "n_workers": spec_utils.N_WORKERS,
         "lulc_lookup_table_path": {
-            "name": "LULC Lookup Table",
+            "name": "LULC lookup table",
             "type": "csv",
             "about": (
-                "A CSV table used to map lulc classes to their values in a "
-                "raster, as well as to indicate whether or not the lulc class "
-                "is a coastal blue carbon habitat."),
+                "A table mapping LULC codes from the snapshot rasters to the "
+                "corresponding LULC class names, and whether or not the "
+                "class is a coastal blue carbon habitat."),
             "columns": {
                 "code": {
                     "type": "integer",
-                    "about": "LULC code"},
+                    "about": (
+                        "LULC code. Every value in the "
+                        "snapshot LULC maps must have a corresponding entry "
+                        "in this column.")},
                 "lulc-class": {
                     "type": "freestyle_string",
-                    "about": "Text description of the LULC class"},
+                    "about": "Name of the LULC class."},
                 "is_coastal_blue_carbon_habitat": {
                     "type": "boolean",
                     "about": (
                         "Enter TRUE if this LULC class is a coastal blue "
-                        "carbon habitat, FALSE if not")}
+                        "carbon habitat, FALSE if not.")}
             }
         },
         "landcover_snapshot_csv": {
@@ -51,23 +54,20 @@ ARGS_SPEC = {
                 "snapshot_year": {
                     "type": "number",
                     "units": u.year,
-                    "about": "Year to snapshot"},
+                    "about": "Year to snapshot."},
                 "raster_path": {
                     "type": "raster",
-                    "bands": {
-                        1: {
-                            "type": "integer",
-                            "about": "Map of LULC codes"
-                        }
-                    }
+                    "bands": {1: {"type": "integer"}},
+                    "about": (
+                        "Map of LULC in the snapshot year. "
+                        "All values in this raster must have corresponding "
+                        "entries in the LULC Lookup table.")
                 }
             },
             "about": (
-                "A CSV table where each row represents the year and path to a "
-                "raster file on disk representing the landcover raster "
-                "representing the state of the landscape in that year. "
-                "Landcover codes match those in the LULC lookup table."),
-            "name": "LULC Snapshots Table",
+                "A table mapping snapshot years to corresponding LULC maps "
+                "for each year."),
+            "name": "LULC snapshots table",
         },
     }
 }
