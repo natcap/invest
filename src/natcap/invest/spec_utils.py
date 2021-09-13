@@ -29,21 +29,21 @@ u.define('international_unit = [biologic_amount] = iu = IU')
 # overwrite the default use of the symbol 'h' for henries
 u.define('henry = weber / ampere')
 u.define('hour = 60 * minute = h = hr')
-# overwrite the year definitionto use 'yr' rather than 'a' as default symbol
+# overwrite the year definition to use 'year' rather than 'a' as default symbol
 # the symbol 'yr' is english-specific and the international symbol 'a' may
 # not be well-known, so we will need to translate this
-u.define('year = 365.25 * day = yr = a = julian_year')
+u.define('year = 365.25 * day = _ = yr = a = julian_year')
 # Use u.none for unitless measurements
 u.define('none = []')
 
 
 # Specs for common arg types ##################################################
 WORKSPACE = {
-    "name": "Workspace",
+    "name": "workspace",
     "about": (
-        "The folder where all intermediate and output files of the model "
-        "will be written.  If this folder does not exist, it will be "
-        "created."),
+        "The folder where all the model's output files will be written. If "
+        "this folder does not exist, it will be created. If data already "
+        "exists in the folder, it will be overwritten."),
     "type": "directory",
     "contents": {},
     "must_exist": False,
@@ -51,17 +51,17 @@ WORKSPACE = {
 }
 
 SUFFIX = {
-    "name": "File suffix",
+    "name": "file suffix",
     "about": (
-        'A string that will be added to the end of all files '
-        'written to the workspace.'),
+        "Suffix that will be appended to all output file names. Useful to "
+        "differentiate between model runs."),
     "type": "freestyle_string",
     "required": False,
     "regexp": "[a-zA-Z0-9_-]*"
 }
 
 N_WORKERS = {
-    "name": "Taskgraph n_workers parameter",
+    "name": "taskgraph n_workers parameter",
     "about": (
         "The n_workers parameter to provide to taskgraph. "
         "-1 will cause all jobs to run synchronously. "
@@ -118,10 +118,10 @@ PRECIP = {
         }
     },
     "about": "Map of average annual precipitation.",
-    "name": "Precipitation"
+    "name": "precipitation"
 }
 ETO = {
-    "name": "Evapotranspiration",
+    "name": "evapotranspiration",
     "type": "raster",
     "bands": {
         1: {
@@ -145,11 +145,10 @@ THRESHOLD_FLOW_ACCUMULATION = {
     "type": "number",
     "units": u.pixel,
     "about": (
-        "The number of upstream cells that must flow into a cell "
+        "The number of upstream pixels that must flow into a pixel "
         "before it is classified as a stream."),
-    "name": "Threshold Flow Accumulation Limit"
+    "name": "threshold flow accumulation"
 }
-
 
 # geometry types ##############################################################
 # the full list of ogr geometry types is in an enum in
