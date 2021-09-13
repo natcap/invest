@@ -34,13 +34,13 @@ const logger = getLogger(__filename.split('/').slice(-1)[0]);
 crashReporter.start({
   uploadToServer: false,
 });
-console.log(app.getPath('crashDumps'));
 if (process.platform === 'darwin') {
   app.setPath('crashDumps', path.join(os.homedir(), 'Library/Logs', pkg.name));
 } else {
-  app.setPath('crashDumps', path.join(os.homedir(), 'AppData/Roaming', pkg.name));
+  app.setPath('crashDumps', path.join(os.homedir(), 'AppData/Roaming', pkg.name, 'logs'));
 }
 
+logger.debug(`crashReporter: ${app.getPath('crashDumps')}`);
 
 const ELECTRON_DEV_MODE = !!process.defaultApp; // a property added by electron.
 
@@ -137,7 +137,6 @@ export const createWindow = async () => {
   setupDownloadHandlers(mainWindow);
   setupInvestRunHandlers(investExe);
   setupInvestLogReaderHandler();
-  process.crash();
 };
 
 export function removeIpcMainListeners() {
