@@ -6,7 +6,6 @@ import {
 import '@testing-library/jest-dom';
 
 import SetupTab from '../../src/renderer/components/SetupTab';
-import ArgInput from '../../src/renderer/components/SetupTab/ArgInput';
 import {
   fetchDatastackFromFile, fetchValidation,
 } from '../../src/renderer/server_requests';
@@ -32,7 +31,7 @@ function renderSetupFromSpec(baseSpec, uiSpec) {
       nWorkers="-1"
       sidebarSetupElementId="foo"
       sidebarFooterElementId="foo"
-      isRunning={false}
+      executeClicked={false}
     />
   );
   return utils;
@@ -58,7 +57,7 @@ describe('Arguments form input types', () => {
       },
     };
 
-    uiSpec = {order: [Object.keys(baseSpec.args)]}
+    uiSpec = { order: [Object.keys(baseSpec.args)] };
     fetchValidation.mockResolvedValue(
       [[Object.keys(baseSpec.args), validationMessage]]
     );
@@ -551,7 +550,7 @@ describe('Form drag-and-drop', () => {
         arg2: 'square',
       },
     };
-    const uiSpec = {order: [Object.keys(spec.args)]}
+    const uiSpec = { order: [Object.keys(spec.args)] };
     fetchDatastackFromFile.mockResolvedValue(mockDatastack);
 
     const { findByLabelText, findByTestId } = renderSetupFromSpec(spec, uiSpec);
@@ -600,7 +599,7 @@ describe('Form drag-and-drop', () => {
         },
       },
     };
-    const uiSpec = {order: [Object.keys(spec.args)]}
+    const uiSpec = { order: [Object.keys(spec.args)] };
     fetchValidation.mockResolvedValue(
       [[Object.keys(spec.args), 'invalid because']]
     );
@@ -631,7 +630,7 @@ describe('Form drag-and-drop', () => {
     });
     fireEvent(setupForm, fileDragEvent);
 
-    expect(setupForm).toHaveClass("dragging");
+    expect(setupForm).toHaveClass('dragging');
 
     const fileDropEvent = createEvent.drop(setupForm);
     Object.defineProperty(fileDropEvent, 'dataTransfer', {
@@ -643,7 +642,7 @@ describe('Form drag-and-drop', () => {
       .toHaveValue(mockDatastack.args.arg1);
     expect(await findByLabelText(RegExp(`${spec.args.arg2.name}`)))
       .toHaveValue(mockDatastack.args.arg2);
-    expect(setupForm).not.toHaveClass("dragging");
+    expect(setupForm).not.toHaveClass('dragging');
   });
 
   test('Drag enter/leave of a datastack sets .dragging class', async () => {
@@ -660,12 +659,12 @@ describe('Form drag-and-drop', () => {
         },
       },
     };
-    const uiSpec = {order: [Object.keys(spec.args)]}
+    const uiSpec = { order: [Object.keys(spec.args)] };
     fetchValidation.mockResolvedValue(
       [[Object.keys(spec.args), 'invalid because']]
     );
 
-    const { findByLabelText, findByTestId } = renderSetupFromSpec(spec, uiSpec);
+    const { findByTestId } = renderSetupFromSpec(spec, uiSpec);
     const setupForm = await findByTestId('setup-form');
 
     const fileDragEnterEvent = createEvent.dragEnter(setupForm);
@@ -682,12 +681,12 @@ describe('Form drag-and-drop', () => {
     });
     fireEvent(setupForm, fileDragEnterEvent);
 
-    expect(setupForm).toHaveClass("dragging");
+    expect(setupForm).toHaveClass('dragging');
 
     const fileDragLeaveEvent = createEvent.dragLeave(setupForm);
     fireEvent(setupForm, fileDragLeaveEvent);
 
-    expect(setupForm).not.toHaveClass("dragging");
+    expect(setupForm).not.toHaveClass('dragging');
   });
 
   test('Drag enter/drop of a file sets .input-dragging class on input', async () => {
@@ -704,7 +703,7 @@ describe('Form drag-and-drop', () => {
         },
       },
     };
-    const uiSpec = {order: [Object.keys(spec.args)]}
+    const uiSpec = { order: [Object.keys(spec.args)] };
     fetchValidation.mockResolvedValue(
       [[Object.keys(spec.args), 'invalid because']]
     );
@@ -727,8 +726,8 @@ describe('Form drag-and-drop', () => {
     });
     fireEvent(setupInput, fileDragEvent);
 
-    expect(setupForm).not.toHaveClass("dragging");
-    expect(setupInput).toHaveClass("input-dragging");
+    expect(setupForm).not.toHaveClass('dragging');
+    expect(setupInput).toHaveClass('input-dragging');
 
     const fileDropEvent = createEvent.drop(setupInput);
     Object.defineProperty(fileDropEvent, 'dataTransfer', {
@@ -736,9 +735,9 @@ describe('Form drag-and-drop', () => {
     });
     fireEvent(setupInput, fileDropEvent);
 
-    expect(setupInput).not.toHaveClass("input-dragging");
-    expect(setupForm).not.toHaveClass("dragging");
-    expect(setupInput).toHaveValue("foo.txt");
+    expect(setupInput).not.toHaveClass('input-dragging');
+    expect(setupForm).not.toHaveClass('dragging');
+    expect(setupInput).toHaveValue('foo.txt');
   });
 
   test('Drag enter/leave of a file sets .input-dragging class on input', async () => {
@@ -755,12 +754,12 @@ describe('Form drag-and-drop', () => {
         },
       },
     };
-    const uiSpec = {order: [Object.keys(spec.args)]}
+    const uiSpec = { order: [Object.keys(spec.args)] };
     fetchValidation.mockResolvedValue(
       [[Object.keys(spec.args), 'invalid because']]
     );
 
-    const { findByLabelText, findByTestId } = renderSetupFromSpec(spec, uiSpec);
+    const { findByLabelText } = renderSetupFromSpec(spec, uiSpec);
     const setupInput = await findByLabelText(RegExp(`${spec.args.arg1.name}`));
 
     const fileDragEnterEvent = createEvent.dragEnter(setupInput);
@@ -777,7 +776,7 @@ describe('Form drag-and-drop', () => {
     });
     fireEvent(setupInput, fileDragEnterEvent);
 
-    expect(setupInput).toHaveClass("input-dragging");
+    expect(setupInput).toHaveClass('input-dragging');
 
     const fileDragLeaveEvent = createEvent.dragLeave(setupInput);
     Object.defineProperty(fileDragLeaveEvent, 'dataTransfer', {
@@ -785,7 +784,7 @@ describe('Form drag-and-drop', () => {
     });
     fireEvent(setupInput, fileDragLeaveEvent);
 
-    expect(setupInput).not.toHaveClass("input-dragging");
+    expect(setupInput).not.toHaveClass('input-dragging');
   });
 
   test('Drag and drop on a disabled input element.', async () => {
@@ -805,7 +804,7 @@ describe('Form drag-and-drop', () => {
     const uiSpec = {
       order: [Object.keys(spec.args)],
       enabledFunctions: {
-        arg2: (state => false)  // make this arg always disabled
+        arg2: (state => false) // make this arg always disabled
       }
     };
 
@@ -813,7 +812,7 @@ describe('Form drag-and-drop', () => {
       [[Object.keys(spec.args), 'invalid because']]
     );
 
-    const { findByLabelText, findByTestId } = renderSetupFromSpec(spec, uiSpec);
+    const { findByLabelText } = renderSetupFromSpec(spec, uiSpec);
     const setupInput = await findByLabelText(RegExp(`${spec.args.arg2.name}`));
 
     const fileDragEnterEvent = createEvent.dragEnter(setupInput);
@@ -830,7 +829,7 @@ describe('Form drag-and-drop', () => {
     });
     fireEvent(setupInput, fileDragEnterEvent);
 
-    expect(setupInput).not.toHaveClass("input-dragging");
+    expect(setupInput).not.toHaveClass('input-dragging');
 
     const fileDropEvent = createEvent.drop(setupInput);
     Object.defineProperty(fileDropEvent, 'dataTransfer', {
@@ -838,8 +837,7 @@ describe('Form drag-and-drop', () => {
     });
     fireEvent(setupInput, fileDropEvent);
 
-    expect(setupInput).not.toHaveClass("input-dragging");
-    expect(setupInput).toHaveValue("");
+    expect(setupInput).not.toHaveClass('input-dragging');
+    expect(setupInput).toHaveValue('');
   });
-
 });
