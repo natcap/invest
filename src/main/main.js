@@ -8,7 +8,6 @@ import {
   nativeTheme,
   Menu,
   ipcMain,
-  crashReporter,
 } from 'electron'; // eslint-disable-line import/no-extraneous-dependencies
 
 import {
@@ -31,25 +30,7 @@ import { menuTemplate } from './menubar';
 import pkg from '../../package.json';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
-
-// Setting these paths to match the logger's path makes it easy to upload
-// everything at once to debug GHA pptr script.
-// if (process.platform === 'darwin') {
-//   app.setPath('crashDumps', path.join(os.homedir(), 'Library/Logs', pkg.name));
-// } else {
-//   app.setPath('crashDumps', path.join(os.homedir(), 'AppData/Roaming', pkg.name, 'logs'));
-// }
-crashReporter.start({
-  productName: 'invest-workbench',
-  companyName: 'naturalcapitalproject',
-  submitURL: 'https://submit.backtrace.io/naturalcapitalproject/ea1dee38e69c801b632262b8d64af40b230850d53151d3b9924def2a53b40f38/minidump',
-  uploadToServer: true,
-});
-
-logger.debug(`crashReporter: ${app.getPath('crashDumps')}`);
-
 const ELECTRON_DEV_MODE = !!process.defaultApp; // a property added by electron.
-
 process.env.PORT = '56789';
 
 // Keep a global reference of the window object, if you don't, the window will
