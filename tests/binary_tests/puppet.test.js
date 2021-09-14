@@ -118,19 +118,19 @@ beforeAll(() => {
 });
 
 afterAll(async () => {
-  try {
-    await BROWSER.close();
-  } catch (error) {
-    console.log(BINARY_PATH);
-    console.error(error);
-  }
+  // try {
+  //   await BROWSER.close();
+  // } catch (error) {
+  //   console.log(BINARY_PATH);
+  //   console.error(error);
+  // }
 
   // being extra careful with recursive rm
   if (TMP_DIR.startsWith('tests/data')) {
     rimraf(TMP_DIR, (error) => { if (error) { throw error; } });
   }
-  const wasKilled = ELECTRON_PROCESS.kill();
-  console.log(`electron process was killed: ${wasKilled}`);
+  // const wasKilled = ELECTRON_PROCESS.kill();
+  // console.log(`electron process was killed: ${wasKilled}`);
 });
 
 test('Run a real invest model', async () => {
