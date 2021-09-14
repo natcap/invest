@@ -98,7 +98,7 @@ beforeAll(() => {
       try {
         BROWSER = await puppeteer.connect({
           browserURL: `http://localhost:${PORT}`,
-          defaultViewport: null
+          defaultViewport: null,
         });
       } catch (e) {
         console.log(e);
@@ -188,7 +188,7 @@ test('Run a real invest model', async () => {
       runButton
     );
     expect(isEnabled).toBe(true);
-  });
+  }, { timeout: 10000 }); // waiting for validation
   await runButton.click();
 
   const logTab = await findByText(doc, 'Log');
