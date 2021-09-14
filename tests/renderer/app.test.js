@@ -609,9 +609,9 @@ describe('InVEST subprocess testing', () => {
     const execute = await findByRole('button', { name: /Run/ });
     fireEvent.click(execute);
 
+    // To test that we can parse the finalTraceback even after extra data
     const someStdErr = 'something went wrong';
     const finalTraceback = 'ValueError';
-    // To test that we can parse the finalTraceback even after extra data
     const allStdErr = `${someStdErr}\n${finalTraceback}\n\n`;
 
     mockInvestProc.stdout.push(stdOutText);
@@ -625,7 +625,6 @@ describe('InVEST subprocess testing', () => {
     expect(await findByText(stdOutText, { exact: false }))
       .toBeInTheDocument();
 
-    await new Promise((resolve) => setTimeout(resolve, 2000));
     mockInvestProc.emit('exit', 1); // 1 - exit w/ error
 
     // Only finalTraceback text should be rendered in a red alert
