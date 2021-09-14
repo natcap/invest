@@ -113,20 +113,11 @@ export const createWindow = async () => {
   });
 
   mainWindow.webContents.on('render-process-gone', (event, details) => {
-    console.log('webContents-render-process-gone')
+    logger.error('render-process-gone');
     logger.error(details);
   });
 
-  mainWindow.on('unresponsive', (event) => {
-    logger.debug('main window unresponsive')
-  });
-
-  mainWindow.on('close', (event) => {
-    logger.debug('main window will close')
-  });
-
   mainWindow.on('closed', () => {
-    logger.debug('main window closed');
     mainWindow = null;
   });
 
