@@ -144,7 +144,7 @@ ARGS_SPEC = {
             "about": "Run the work productivity valuation model."
         },
         "avg_rel_humidity": {
-            "name": "Average relative humidity",
+            "name": "average relative humidity",
             "type": "percent",
             "required": "do_productivity_valuation",
             "about": (
@@ -168,7 +168,7 @@ ARGS_SPEC = {
                 "Energy Savings Valuation is selected.")
         },
         "energy_consumption_table_path": {
-            "name": "Energy consumption table",
+            "name": "energy consumption table",
             "type": "csv",
             "columns": {
                 "type": {
@@ -201,7 +201,7 @@ ARGS_SPEC = {
                 "Required if Run Energy Savings Valuation is selected.")
         },
         "cc_method": {
-            "name": "Cooling capacity calculation method",
+            "name": "cooling capacity calculation method",
             "type": "option_string",
             "options": {
                 "factors": (
@@ -214,7 +214,7 @@ ARGS_SPEC = {
             "about": "The air temperature predictor method to use."
         },
         "cc_weight_shade": {
-            "name": "Cooling capacity: adjust shade weight",
+            "name": "shade weight",
             "type": "ratio",
             "required": False,
             "about": (
@@ -222,7 +222,7 @@ ARGS_SPEC = {
                 "cooling capacity index. If not provided, defaults to 0.6."),
         },
         "cc_weight_albedo": {
-            "name": "Cooling capacity: adjust albedo weight",
+            "name": "albedo weight",
             "type": "ratio",
             "required": False,
             "about": (
@@ -230,7 +230,7 @@ ARGS_SPEC = {
                 "cooling capacity index. If not provided, defaults to 0.2."),
         },
         "cc_weight_eti": {
-            "name": "Cooling capacity: adjust evapotranspiration weight",
+            "name": "evapotranspiration weight",
             "type": "ratio",
             "required": False,
             "about": (

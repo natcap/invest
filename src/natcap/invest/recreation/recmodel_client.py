@@ -138,7 +138,7 @@ ARGS_SPEC = {
                 "Year at which to end photo user-day calculations. "
                 "Calculations continue through the last day of the year. "
                 "Year must be in the range 2005 - 2017, and must be "
-                "greather than or equal to the Start Year."),
+                "greater than or equal to the Start Year."),
             "name": "end year"
         },
         "grid_aoi": {

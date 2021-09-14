@@ -40,14 +40,14 @@ ARGS_SPEC = {
         "replacement_lucode": {
             "type": "integer",
             "about": "The LULC code to which habitat will be converted.",
-            "name": "replacement lulc code"
+            "name": "replacement landcover code"
         },
         "area_to_convert": {
             "expression": "value > 0",
             "type": "number",
             "units": u.hectare,
             "about": "Maximum area to be converted to agriculture.",
-            "name": "max area to convert"
+            "name": "maximum area to convert"
         },
         "focal_landcover_codes": {
             "type": "freestyle_string",
@@ -69,7 +69,7 @@ ARGS_SPEC = {
         "n_fragmentation_steps": {
             "expression": "value > 0",
             "type": "number",
-            "units": u.count,
+            "units": u.none,
             "about": (
                 "The number of steps that the simulation should take to "
                 "fragment the habitat of interest in the fragmentation "

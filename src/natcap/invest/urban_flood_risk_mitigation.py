@@ -82,7 +82,7 @@ ARGS_SPEC = {
                     "type": "integer",
                     "about": (
                         "Code indicating the building type. These codes "
-                        "must match those in the Infrastructure Damage Table."
+                        "must match those in the Damage Loss Table."
                     )}},
             "geometries": spec_utils.POLYGONS,
             "required": False,
@@ -106,7 +106,7 @@ ARGS_SPEC = {
                 "All values in the Built Infrastructure vector 'type' field "
                 "must have corresponding entries in this table. Required if "
                 "the Built Infrastructure vector is provided."),
-            "name": "infrastructure damage table"
+            "name": "damage loss table"
         }
     }
 }

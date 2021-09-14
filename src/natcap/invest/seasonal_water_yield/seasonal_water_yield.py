@@ -50,10 +50,13 @@ ARGS_SPEC = {
             "contents": {
                 # monthly et0 maps, each file ending in a number 1-12
                 "[MONTH]": {
+                    "type": "raster",
+                    "bands": {1: {
+                        "type": "number",
+                        "units": u.millimeter}},
                     "about": (
                         "Map of reference evapotranspiration for each month. "
-                        "File names must end with the month number (1-12)."),
-                    **spec_utils.ETO
+                        "File names must end with the month number (1-12).")
                 }
             },
             "required": "not user_defined_local_recharge",
@@ -68,10 +71,13 @@ ARGS_SPEC = {
             "contents": {
                 # monthly precipitation maps, each file ending in a number 1-12
                 "[MONTH]": {
+                    "type": "raster",
+                    "bands": {1: {
+                        "type": "number",
+                        "units": u.millimeter/u.year}},
                     "about": (
                         "Map of monthly precipitation for each month. File "
-                        "names must end with the month number (1-12)."),
-                    **spec_utils.PRECIP
+                        "names must end with the month number (1-12).")
                 }
             },
             "required": "not user_defined_local_recharge",
