@@ -5,14 +5,13 @@ import glob from 'glob';
 import { spawn, spawnSync } from 'child_process';
 
 import rimraf from 'rimraf';
-import fetch from 'node-fetch';
 import puppeteer from 'puppeteer-core';
 import { getDocument, queries, waitFor } from 'pptr-testing-library';
 
 import pkg from '../../package.json';
 import { APP_HAS_RUN_TOKEN } from '../../src/main/setupCheckFirstRun';
 
-jest.setTimeout(120000); // This test takes ~15 seconds, but longer in CI
+jest.setTimeout(240000); // This test takes ~20 seconds, but sometimes longer
 const PORT = 9009;
 const TMP_DIR = fs.mkdtempSync('tests/data/_');
 const TMP_AOI_PATH = path.join(TMP_DIR, 'aoi.geojson');
@@ -118,19 +117,19 @@ beforeAll(() => {
 });
 
 afterAll(async () => {
-  // try {
-  //   await BROWSER.close();
-  // } catch (error) {
-  //   console.log(BINARY_PATH);
-  //   console.error(error);
-  // }
+  try {
+    await BROWSER.close();
+  } catch (error) {
+    console.log(BINARY_PATH);
+    console.error(error);
+  }
 
   // being extra careful with recursive rm
   if (TMP_DIR.startsWith('tests/data')) {
     rimraf(TMP_DIR, (error) => { if (error) { throw error; } });
   }
-  // const wasKilled = ELECTRON_PROCESS.kill();
-  // console.log(`electron process was killed: ${wasKilled}`);
+  const wasKilled = ELECTRON_PROCESS.kill();
+  console.log(`electron process was killed: ${wasKilled}`);
 });
 
 test('Run a real invest model', async () => {
@@ -192,7 +191,6 @@ test('Run a real invest model', async () => {
   await runButton.click();
 
   const logTab = await findByText(doc, 'Log');
-  // Log tab is not active until after the invest logfile is opened
   await waitFor(async () => {
     const prop = await logTab.getProperty('className');
     const vals = await prop.jsonValue();
@@ -208,7 +206,7 @@ test('Run a real invest model', async () => {
   expect(await findByText(sidebar, 'Run Canceled'));
   expect(await findByText(sidebar, 'Open Workspace'));
   await page.screenshot({ path: `${SCREENSHOT_PREFIX}6-run-canceled.png` });
-}, 50000); // 10x default timeout: sometimes expires in GHA
+}, 120000); // >2x the sum of all the max timeouts within this test
 
 // Test for duplicate application launch.
 // We have the binary path, so now let's launch a new subprocess with the same binary
