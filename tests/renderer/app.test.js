@@ -481,10 +481,8 @@ describe('InVEST subprocess testing', () => {
   // and we mock validation, so this dir need not exist.
   const fakeWorkspace = 'foo_dir';
   const logfilePath = path.join(fakeWorkspace, 'invest-log.txt');
-  // invest always emits this message, and the workbench always
-  // listens for it:
+  // invest always emits this message, and the workbench always listens for it:
   const stdOutLogfileSignal = `Writing log messages to ${logfilePath}`;
-  // TODO: can we do something to confirm the renderer intercepted this message? - a spy
   const stdOutText = 'hello from invest';
   const investExe = 'foo';
   let mockInvestProc;
@@ -566,7 +564,7 @@ describe('InVEST subprocess testing', () => {
       expect(execute).toBeDisabled();
     });
 
-    // stdout listener is how the app knows the process started
+    // logfile signal on stdout listener is how app knows the process started
     mockInvestProc.stdout.push(stdOutText);
     mockInvestProc.stdout.push(stdOutLogfileSignal);
     const logTab = await findByText('Log');
@@ -649,6 +647,7 @@ describe('InVEST subprocess testing', () => {
       findByLabelText,
       findByRole,
       getByRole,
+      queryByText,
     } = render(<App />);
 
     const carbon = await findByRole('button', { name: MOCK_MODEL_LIST_KEY });
@@ -662,7 +661,9 @@ describe('InVEST subprocess testing', () => {
     fireEvent.click(execute);
 
     // stdout listener is how the app knows the process started
+    // Canel button only appears after this signal.
     mockInvestProc.stdout.push(stdOutText);
+    expect(queryByText('Cancel Run')).toBeNull();
     mockInvestProc.stdout.push(stdOutLogfileSignal);
     const logTab = await findByText('Log');
     await waitFor(() => {
