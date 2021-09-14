@@ -15,7 +15,7 @@ import { removeIpcMainListeners } from '../../src/main/main';
 function renderLogTab(logfilePath, primaryPythonLogger) {
   const { ...utils } = render(
     <LogTab
-      isRunning={false}
+      executeClicked={false}
       jobID="foo"
       logfile={logfilePath}
       pyModuleName={primaryPythonLogger}

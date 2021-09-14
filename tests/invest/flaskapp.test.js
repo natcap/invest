@@ -191,7 +191,7 @@ describe('Build each model UI from ARGS_SPEC', () => {
         nWorkers="-1"
         sidebarSetupElementId="foo"
         sidebarFooterElementId="foo"
-        isRunning={false}
+        executeClicked={false}
       />
     );
     expect(await findByLabelText('Workspace')).toBeInTheDocument();
