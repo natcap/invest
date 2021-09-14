@@ -175,12 +175,11 @@ export function main(argv) {
   app.on('before-quit', async (event) => {
     // prevent quitting until after we're done with cleanup,
     // then programatically quit
-    if (!shuttingDown) {
-      event.preventDefault();
-    }
+    if (shuttingDown) { return; }
+    event.preventDefault();
+    shuttingDown = true;
     removeIpcMainListeners();
     await shutdownPythonProcess();
-    shuttingDown = true;
     app.quit();
   });
 }
