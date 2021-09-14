@@ -51,7 +51,7 @@ ARGS_SPEC = {
                         "1 indicates the nesting substrate is fully utilized "
                         "and 0 indicates it is not utilized at all. Replace "
                         "[SUBSTRATE] with substrate names matching those in "
-                        "the Biophysical Table. There must be a column for "
+                        "the Biophysical Table, so that there is a column for "
                         "each substrate.")
                 },
                 "foraging_activity_[SEASON]_index": {
@@ -61,7 +61,7 @@ ARGS_SPEC = {
                         "season. 1 indicates maximum activity for the "
                         "species/guild, and 0 indicates no activity. Replace "
                         "[SEASON] with season names matching those in the "
-                        "biophysical table, such that there is one column for "
+                        "biophysical table, so that there is a column for "
                         "each season.")
                 },
                 "alpha": {
@@ -97,8 +97,8 @@ ARGS_SPEC = {
                     "about": (
                         "Index of availability of the given substrate in this "
                         "LULC class. Replace [SUBSTRATE] with substrate names "
-                        "matching those in the Guild Table. There must be one "
-                        "column for each substrate.")},
+                        "matching those in the Guild Table, so that there is "
+                        "a column for each substrate.")},
                 "floral_resources_[SEASON]_index": {
                     "type": "ratio",
                     "about": (
@@ -107,7 +107,7 @@ ARGS_SPEC = {
                         "covered by flowers, multiplied by the proportion of "
                         "the season for which there is that coverage. Replace "
                         "[SEASON] with season names matching those in the "
-                        "Guild Table. There must be one column for each "
+                        "Guild Table, so that there is a column for each "
                         "season.")}
             },
             "about": (
@@ -145,7 +145,7 @@ ARGS_SPEC = {
                         "The floral resources available at this farm for the "
                         "given season. Replace [SEASON] with season names "
                         "matching those in the Guild Table and Biophysical "
-                        "Table, such that there is one field for each season.")
+                        "Table, so that there is one field for each season.")
                 },
                 "n_[SUBSTRATE]": {  # nesting availabilities for each substrate
                     "type": "ratio",
@@ -153,7 +153,7 @@ ARGS_SPEC = {
                         "The nesting suitability for the given substrate at "
                         "this farm. given substrate. Replace [SUBSTRATE] with "
                         "substrate names matching those in the Guild Table "
-                        "and Biophysical Table, such that there is one field "
+                        "and Biophysical Table, so that there is one field "
                         "for each substrate.")},
                 "p_dep": {
                     "type": "ratio",

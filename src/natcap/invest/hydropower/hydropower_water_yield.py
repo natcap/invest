@@ -50,7 +50,7 @@ ARGS_SPEC = {
             }},
             "projected": True,
             "about": (
-                "Map of root restricting layer depth value, the soil depth at "
+                "Map of root restricting layer depth, the soil depth at "
                 "which root penetration is strongly inhibited because of "
                 "physical or chemical characteristics."),
             "name": "root restricting layer depth"
@@ -64,7 +64,7 @@ ARGS_SPEC = {
             "bands": {1: {"type": "ratio"}},
             "projected": True,
             "about": (
-                "Map of plant available water content value, the fraction of "
+                "Map of plant available water content, the fraction of "
                 "water that can be stored in the soil profile that is "
                 "available to plants."),
             "name": "plant available water content"
@@ -134,7 +134,10 @@ ARGS_SPEC = {
                     "units": u.none,
                     "about": "Crop coefficient for this LULC class."}
             },
-            "about": "Table of biophysical parameters for each LULC class.",
+            "about": (
+                "Table of biophysical parameters for each LULC class. All "
+                "values in the LULC raster must have corresponding entries "
+                "in this table."),
             "name": "biophysical table"
         },
         "seasonality_constant": {

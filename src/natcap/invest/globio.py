@@ -52,7 +52,7 @@ ARGS_SPEC = {
             "about": (
                 f"{spec_utils.LULC['about']} Each LULC code must have a "
                 "corresponding entry in the biophysical table. "
-                "Required if Use Predefined GLOBIO LULC is selected.")
+                "Required if Use Predefined GLOBIO LULC is not selected.")
         },
         "lulc_to_globio_table_path": {
             "type": "csv",
@@ -132,7 +132,7 @@ ARGS_SPEC = {
             "type": "ratio",
             "required": "not predefined_globio",
             "about": (
-                "Forest Fragmentation quality index threshold below which an "
+                "Forest ragmentation quality index threshold below which an "
                 "area is classified as secondary forest. Areas with FFQI "
                 "greater than or equal to this threshold are classified as "
                 "primary forest. "

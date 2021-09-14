@@ -50,7 +50,8 @@ ARGS_SPEC = {
                 "calculating the total biomass. Each local model is linearly "
                 "weighted by distance such that the pixel's biomass is a "
                 "function of each of these points with the closest point "
-                "having the largest effect. Must be an integer greater than 0."
+                "having the largest effect. Must be an integer greater than "
+                "0. Required if Compute Forest Edge Effects is selected."
             ),
             "name": "number of points to average"
         },
@@ -113,8 +114,8 @@ ARGS_SPEC = {
         "lulc_raster_path": {
             **spec_utils.LULC,
             "about": (
-                f"{spec_utils.LULC['about']} Each code must have a "
-                "corresponding row in the Biophysical Table."),
+                f"{spec_utils.LULC['about']} All values in this raster must "
+                "have corresponding entries in the Biophysical Table."),
             "projected": True
         },
         "pools_to_calculate": {
@@ -127,7 +128,7 @@ ARGS_SPEC = {
                     "Only use the aboveground pool in the carbon pool "
                     "calculation.")
             },
-            "about": "Which carbon pools to use (all or c_above only)",
+            "about": "Which carbon pools to consider.",
             "name": "carbon pools to calculate"
         },
         "compute_forest_edge_effects": {
@@ -167,14 +168,16 @@ ARGS_SPEC = {
             "about": (
                 "Map storing the optimal regression model for each tropical "
                 "subregion and the corresponding theta parameters for that "
-                "regression equation. Default data is provided."),
+                "regression equation. Default data is provided. Required if "
+                "Compute Forest Edge Effects is selected."),
             "name": "global regression models"
         },
         "biomass_to_carbon_conversion_factor": {
             "type": "ratio",
             "required": "compute_forest_edge_effects",
             "about": (
-                "Proportion of forest edge biomass that is elemental carbon."),
+                "Proportion of forest edge biomass that is elemental carbon. "
+                "Required if Compute Forest Edge Effects is selected."),
             "name": "forest edge biomass to carbon conversion factor"
         }
     }

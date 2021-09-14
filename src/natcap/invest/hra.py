@@ -91,12 +91,12 @@ ARGS_SPEC = {
                     "fields": {},
                     "geometries": spec_utils.POLYGONS,
                     "about": (
-                        "Map of where the habitat or stressor exists. "
-                        "May be a raster or vector. For rasters, a pixel value "
-                        "of 1 indicates presence of the habitat or stressor. "
-                        "0 (or any other value) indicates absence of the "
-                        "habitat or stressor. For vectors, a polygon indicates "
-                        "an area where the habitat or stressor is present.")
+                        "Map of where the habitat or stressor exists. For "
+                        "rasters, a pixel value of 1 indicates presence of "
+                        "the habitat or stressor. 0 (or any other value) "
+                        "indicates absence of the habitat or stressor. For "
+                        "vectors, a polygon indicates an area where the "
+                        "habitat or stressor is present.")
                 },
                 "type": {
                     "type": "option_string",

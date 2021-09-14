@@ -38,8 +38,8 @@ ARGS_SPEC = {
             **spec_utils.LULC,
             "projected": True,
             "about": (
-                "Map of LULC at present. Every LULC code in this raster must "
-                "have a corresponding entry in the Sensitivity table."),
+                "Map of LULC at present. All values in this raster must "
+                "have corresponding entries in the Sensitivity table."),
             "name": "current land cover"
         },
         "lulc_fut_path": {
@@ -47,9 +47,9 @@ ARGS_SPEC = {
             "projected": True,
             "required": False,
             "about": (
-                "Map of LULC in a future scenario. Every LULC code in this "
-                "raster must have a corresponding entry in the Sensitivity "
-                "table. Must use the same classification scheme and codes as "
+                "Map of LULC in a future scenario. All values in this raster "
+                "must have corresponding entries in the Sensitivity "
+                "Table. Must use the same classification scheme and codes as "
                 "in the Current LULC map."),
             "name": "future land cover"
         },
@@ -59,8 +59,8 @@ ARGS_SPEC = {
             "required": False,
             "about": (
                 "Map of LULC in a baseline scenario, when intensive landscape "
-                "management was relatively rare. Every LULC code in this "
-                "raster must have a corresponding entry in the Sensitivity "
+                "management was relatively rare. All values in this raster "
+                "must have corresponding entries in the Sensitivity "
                 "table. Must use the same classification scheme and codes as "
                 "in the Current LULC map."),
             "name": "baseline land cover"
