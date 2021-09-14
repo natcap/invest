@@ -89,7 +89,6 @@ ARGS_SPEC = {
         },
         "convert_farthest_from_edge": {
             "type": "boolean",
-            "required": False,
             "about": (
                 "Convert the 'convertible' landcover codes starting at the "
                 "furthest pixel from the 'focal' land cover areas "
@@ -98,7 +97,6 @@ ARGS_SPEC = {
         },
         "convert_nearest_to_edge": {
             "type": "boolean",
-            "required": False,
             "about": (
                 "Convert the 'convertible' landcover codes starting at the "
                 "nearest pixels to the 'focal' land cover areas "
