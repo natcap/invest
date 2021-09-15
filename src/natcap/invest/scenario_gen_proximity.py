@@ -70,7 +70,7 @@ ARGS_SPEC = {
         "n_fragmentation_steps": {
             "expression": "value > 0",
             "type": "number",
-            "units": u.count,
+            "units": u.none,
             "about": (
                 "This parameter is used to divide the conversion simulation "
                 "into equal subareas of the requested max area. During each "

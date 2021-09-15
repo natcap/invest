@@ -25,6 +25,11 @@ mega- =  1e6   = M-
 giga- =  1e9   = G-
 
 
+#### CONSTANTS ####
+
+pi = 3.1415926535897932384626433832795028841971693993751 = π
+
+
 #### BASE UNITS ####
 
 meter = [length] = m = metre

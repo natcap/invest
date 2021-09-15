@@ -275,7 +275,7 @@ ARGS_SPEC = {
                 },
                 "cc": {
                     "type": "number",
-                    "units": u.currency/(u.count * u.kilowatt),
+                    "units": u.currency/u.kilowatt,
                     "about": (
                         "capital cost per kilowatt of capacity per device "
                         "installed")
@@ -311,7 +311,7 @@ ARGS_SPEC = {
                 },
                 "smlpm": {
                     "type": "number",
-                    "units": u.count,
+                    "units": u.none,
                     "about": "number of slack lines required per machine"
                 }
 
@@ -325,7 +325,7 @@ ARGS_SPEC = {
         "number_of_machines": {
             "expression": "value > 0",
             "type": "number",
-            "units": u.count,
+            "units": u.none,
             "required": "valuation_container",
             "about": (
                 "An integer for how many wave energy machines will be in the "

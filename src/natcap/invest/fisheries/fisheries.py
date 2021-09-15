@@ -35,7 +35,7 @@ ARGS_SPEC = {
         "total_timesteps": {
             "expression": "value > 0",
             "type": "number",
-            "units": u.count,
+            "units": u.none,
             "about": (
                 "The number of time steps the simulation shall execute before "
                 "completion. Must be a positive integer."),
@@ -136,7 +136,7 @@ ARGS_SPEC = {
         "total_init_recruits": {
             "expression": "value > 0",
             "type": "number",
-            "units": u.count,
+            "units": u.none,
             "about": (
                 "The initial number of recruits in the population model at "
                 "time equal to zero.<br><br>If the model contains multiple "
@@ -184,7 +184,7 @@ ARGS_SPEC = {
         },
         "total_recur_recruits": {
             "type": "number",
-            "units": u.count,
+            "units": u.none,
             "required": False,
             "about": (
                 "Specifies the total number of recruits that come into the "

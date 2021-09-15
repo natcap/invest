@@ -116,7 +116,7 @@ ARGS_SPEC = {
                 "consistent and reliable output, but will also take longer to "
                 "run."),
             "type": "number",
-            "units": u.count,
+            "units": u.none,
             "required": "use_uncertainty",
         },
         "water_temp_tbl": {
