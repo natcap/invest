@@ -150,7 +150,7 @@ ARGS_SPEC = {
                 "The equation to use to calculate risk from exposure and "
                 "consequence."),
             "type": "option_string",
-            "options": ["multiplicative", "Euclidean"]
+            "options": ["Multiplicative", "Euclidean"]
         },
         "decay_eq": {
             "name": "decay equation",
@@ -158,12 +158,12 @@ ARGS_SPEC = {
                 "The equation to model effects of stressors in buffer areas."),
             "type": "option_string",
             "options": {
-                "none": (
+                "None": (
                     "No decay. Stressor has full effect in the buffer area."),
-                "linear": (
+                "Linear": (
                     "Stressor effects in the buffer area decay linearly with "
                     "distance from the stressor."),
-                "exponential": (
+                "Exponential": (
                     "Stressor effects in the buffer area decay exponentially "
                     "with distance from the stressor.")
             }
