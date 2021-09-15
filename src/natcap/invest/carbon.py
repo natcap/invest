@@ -1,6 +1,7 @@
 # coding=UTF-8
 """Carbon Storage and Sequestration."""
 import codecs
+import gettext
 import logging
 import os
 import time
@@ -16,10 +17,20 @@ from . import utils
 from . import spec_utils
 from .spec_utils import u
 
+print(os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        'translations/locales'))
+es = gettext.translation(
+    'messages',
+    localedir=os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        'translations/locales'), languages=['es'])
+es.install()
+_ = es.gettext
 LOGGER = logging.getLogger(__name__)
 
 ARGS_SPEC = {
-    "model_name": "InVEST Carbon Model",
+    "model_name": _("InVEST Carbon Model"),
     "module": __name__,
     "userguide_html": "carbonstorage.html",
     "args_with_spatial_overlap": {

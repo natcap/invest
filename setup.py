@@ -156,7 +156,9 @@ setup(
     package_data={
         'natcap.invest.reporting': [
             'reporting_data/*.js',
-            'reporting_data/*.css',
         ],
+        'natcap.invest': [
+            'translations/locales/es/LC_MESSAGES/messages.mo'
+        ]
     },
 )
