@@ -7,7 +7,7 @@ import natcap.invest.carbon
 class Carbon(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(self,
-                                   label='InVEST Carbon Model',
+                                   label=_('InVEST Carbon Model'),
                                    target=natcap.invest.carbon.execute,
                                    validator=natcap.invest.carbon.validate,
                                    localdoc='carbonstorage.html')

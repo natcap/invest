@@ -4,6 +4,7 @@ import argparse
 import codecs
 import collections
 import datetime
+import gettext
 import importlib
 import json
 import logging
@@ -416,6 +417,10 @@ def main(user_args=None):
         help=('The workspace in which outputs will be saved. '
               'Required if using --headless'))
     run_subparser.add_argument(
+        '--language', default='en', choices=['en', 'es'],
+        help=('The language to use. Allowed options are en (English) or es '
+              '(Spanish).'))
+    run_subparser.add_argument(
         'model', action=SelectModelAction,  # Assert valid model name
         help=('The model to run.  Use "invest list" to list the available '
               'models.'))
@@ -613,6 +618,18 @@ def main(user_args=None):
                 "in the shell running this CLI.", RuntimeWarning)
 
         from natcap.invest.ui import inputs
+
+        # globally install the _() function for the requested language
+        gettext.install('messages', localedir=os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), 'translations/locales'))
+        print(os.path.join(
+                os.path.dirname(os.path.abspath(__file__)), 'translations/locales'))
+        language = gettext.translation(
+            'messages',
+            languages=[args.language],
+            localedir=os.path.join(
+                os.path.dirname(os.path.abspath(__file__)), 'translations/locales'))
+        language.install()
 
         gui_class = _MODEL_UIS[args.model].gui
         module_name, classname = gui_class.split('.')
