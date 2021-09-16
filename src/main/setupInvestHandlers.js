@@ -25,9 +25,9 @@ const HOSTNAME = 'http://localhost';
 export function setupInvestRunHandlers(investExe) {
   const runningJobs = {};
 
-  ipcMain.on(ipcMainChannels.INVEST_KILL, (event, workspaceDir) => {
-    if (runningJobs[workspaceDir]) {
-      const pid = runningJobs[workspaceDir];
+  ipcMain.on(ipcMainChannels.INVEST_KILL, (event, jobID) => {
+    if (runningJobs[jobID]) {
+      const pid = runningJobs[jobID];
       if (process.platform !== 'win32') {
         // the '-' prefix on pid sends signal to children as well
         process.kill(-pid, 'SIGTERM');
@@ -38,7 +38,7 @@ export function setupInvestRunHandlers(investExe) {
   });
 
   ipcMain.on(ipcMainChannels.INVEST_RUN, async (
-    event, modelRunName, pyModuleName, args, loggingLevel, channel
+    event, modelRunName, pyModuleName, args, loggingLevel, jobID
   ) => {
     // Write a temporary datastack json for passing to invest CLI
     try {
@@ -96,11 +96,11 @@ export function setupInvestRunHandlers(investExe) {
       if (!investLogfile) {
         if (`${data}`.match('Writing log messages to')) {
           investLogfile = `${data}`.split(' ').pop().trim();
-          runningJobs[args.workspace_dir] = investRun.pid;
-          event.reply(`invest-logging-${channel}`, investLogfile);
+          runningJobs[jobID] = investRun.pid;
+          event.reply(`invest-logging-${jobID}`, investLogfile);
         }
       }
-      event.reply(`invest-stdout-${channel}`, `${data}`);
+      event.reply(`invest-stdout-${jobID}`, `${data}`);
     };
     investRun.stdout.on('data', stdOutCallback);
 
@@ -119,13 +119,13 @@ export function setupInvestRunHandlers(investExe) {
         investRun.stderr.removeListener('data', stdErrCallback);
       }
       const dat = dataArray[0];
-      event.reply(`invest-stderr-${channel}`, `${dat}${os.EOL}`);
+      event.reply(`invest-stderr-${jobID}`, `${dat}${os.EOL}`);
     };
     investRun.stderr.on('data', stdErrCallback);
 
     investRun.on('exit', (code) => {
-      delete runningJobs[args.workspace_dir];
-      event.reply(`invest-exit-${channel}`, code);
+      delete runningJobs[jobID];
+      event.reply(`invest-exit-${jobID}`, code);
       logger.debug(code);
       fs.unlink(datastackPath, (err) => {
         if (err) { logger.error(err); }

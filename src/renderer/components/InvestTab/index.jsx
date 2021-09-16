@@ -182,7 +182,7 @@ export default class InvestTab extends React.Component {
       logStdErr: 'Run Canceled'
     }, () => {
       ipcRenderer.send(
-        ipcMainChannels.INVEST_KILL, this.props.job.argsValues.workspace_dir
+        ipcMainChannels.INVEST_KILL, this.props.jobID
       );
     });
   }
