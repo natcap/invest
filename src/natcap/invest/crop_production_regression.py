@@ -201,7 +201,7 @@ _EXPECTED_NUTRIENT_TABLE_HEADERS = [
     'Riboflavin', 'Niacin', 'Pantothenic', 'VitB6', 'Folate', 'VitB12',
     'VitK']
 _EXPECTED_LUCODE_TABLE_HEADER = 'lucode'
-_NODATA_YIELD = -1.0
+_NODATA_YIELD = -1
 
 
 def execute(args):
@@ -310,7 +310,7 @@ def execute(args):
     landcover_raster_info = pygeoprocessing.get_raster_info(
         args['landcover_raster_path'])
     pixel_area_ha = numpy.product([
-        abs(x) for x in landcover_raster_info['pixel_size']]) / 10000.0
+        abs(x) for x in landcover_raster_info['pixel_size']]) / 10000
     landcover_nodata = landcover_raster_info['nodata'][0]
     if landcover_nodata is None:
         LOGGER.warning(
@@ -362,7 +362,7 @@ def execute(args):
         for bin_id in crop_regression_table:
             for header in _EXPECTED_REGRESSION_TABLE_HEADERS:
                 if crop_regression_table[bin_id][header.lower()] == '':
-                    crop_regression_table[bin_id][header.lower()] = 0.0
+                    crop_regression_table[bin_id][header.lower()] = 0
 
         yield_regression_headers = [
             x for x in list(crop_regression_table.values())[0]
@@ -387,8 +387,12 @@ def execute(args):
                 (bin_id,
                  crop_regression_table[bin_id][yield_regression_id])
                 for bin_id in crop_regression_table])
+            # reclassify nodata to a valid value of 0
+            # we're assuming that the crop doesn't exist where there is no data
+            # this is more likely than assuming the crop does exist, esp.
+            # in the context of the provided climate bins map
             bin_to_regression_value[
-                crop_climate_bin_raster_info['nodata'][0]] = 0.0
+                crop_climate_bin_raster_info['nodata'][0]] = 0
             coarse_regression_parameter_raster_path = os.path.join(
                 output_dir,
                 _COARSE_YIELD_REGRESSION_PARAMETER_FILE_PATTERN % (
@@ -627,6 +631,7 @@ def _x_yield_op(
     result = numpy.empty(b_x.shape, dtype=numpy.float32)
     result[:] = _NODATA_YIELD
     valid_mask = (
+        (y_max != _NODATA_YIELD) &
         (b_x != _NODATA_YIELD) & (c_x != _NODATA_YIELD) &
         (lulc_array == crop_lucode))
     result[valid_mask] = pixel_area_ha * y_max[valid_mask] * (
@@ -663,7 +668,7 @@ def _zero_observed_yield_op(observed_yield_array, observed_yield_nodata):
     """
     result = numpy.empty(
         observed_yield_array.shape, dtype=numpy.float32)
-    result[:] = 0.0
+    result[:] = 0
     valid_mask = slice(None)
     if observed_yield_nodata is not None:
         valid_mask = ~numpy.isclose(
@@ -693,9 +698,9 @@ def _mask_observed_yield_op(
     if landcover_nodata is not None:
         result[:] = observed_yield_nodata
         valid_mask = ~numpy.isclose(lulc_array, landcover_nodata)
-        result[valid_mask] = 0.0
+        result[valid_mask] = 0
     else:
-        result[:] = 0.0
+        result[:] = 0
     lulc_mask = lulc_array == crop_lucode
     result[lulc_mask] = (
         observed_yield_array[lulc_mask] * pixel_area_ha)
@@ -738,7 +743,7 @@ def tabulate_regression_results(
             result_table.write(crop_name)
             production_lookup = {}
             production_pixel_count = 0
-            yield_sum = 0.0
+            yield_sum = 0
             observed_production_raster_path = os.path.join(
                 output_dir,
                 _OBSERVED_PRODUCTION_FILE_PATTERN % (
@@ -758,7 +763,7 @@ def tabulate_regression_results(
                     valid_mask = ~numpy.isclose(
                         yield_block, observed_yield_nodata)
                 production_pixel_count += numpy.count_nonzero(
-                                          valid_mask & (yield_block > 0.0))
+                                          valid_mask & (yield_block > 0))
                 yield_sum += numpy.sum(yield_block[valid_mask])
             production_area = production_pixel_count * pixel_area_ha
             production_lookup['observed'] = yield_sum
@@ -768,7 +773,7 @@ def tabulate_regression_results(
             crop_production_raster_path = os.path.join(
                 output_dir, _CROP_PRODUCTION_FILE_PATTERN % (
                     crop_name, file_suffix))
-            yield_sum = 0.0
+            yield_sum = 0
             for _, yield_block in pygeoprocessing.iterblocks(
                     (crop_production_raster_path, 1)):
                 yield_sum += numpy.sum(
@@ -779,7 +784,7 @@ def tabulate_regression_results(
 
             # convert 100g to Mg and fraction left over from refuse
             nutrient_factor = 1e4 * (
-                1.0 - nutrient_table[crop_name]['Percentrefuse'] / 100.0)
+                1 - nutrient_table[crop_name]['Percentrefuse'] / 100)
             for nutrient_id in _EXPECTED_NUTRIENT_TABLE_HEADERS:
                 total_nutrient = (
                     nutrient_factor *
@@ -793,7 +798,7 @@ def tabulate_regression_results(
                         nutrient_table[crop_name][nutrient_id]))
             result_table.write('\n')
 
-        total_area = 0.0
+        total_area = 0
         for _, band_values in pygeoprocessing.iterblocks(
                 (landcover_raster_path, 1)):
             if landcover_nodata is not None:
@@ -848,7 +853,7 @@ def aggregate_regression_results_to_polygons(
     for crop_name in crop_to_landcover_table:
         # convert 100g to Mg and fraction left over from refuse
         nutrient_factor = 1e4 * (
-            1.0 - nutrient_table[crop_name]['Percentrefuse'] / 100.0)
+            1 - nutrient_table[crop_name]['Percentrefuse'] / 100)
         LOGGER.info(
             "Calculating zonal stats for %s", crop_name)
         crop_production_raster_path = os.path.join(

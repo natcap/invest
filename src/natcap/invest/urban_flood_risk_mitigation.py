@@ -315,7 +315,7 @@ def execute(args):
         task_name='calculate service built raster')
 
     reprojected_aoi_path = os.path.join(
-            intermediate_dir, 'reprojected_aoi.gpkg')
+        intermediate_dir, 'reprojected_aoi.gpkg')
     reprojected_aoi_task = task_graph.add_task(
         func=pygeoprocessing.reproject_vector,
         args=(
@@ -357,14 +357,14 @@ def execute(args):
     damage_per_aoi_stats = None
     flood_volume_stats = flood_volume_in_aoi_task.get()
     summary_tasks = [
-            flood_volume_in_aoi_task,
-            runoff_retention_stats_task,
-            runoff_retention_volume_stats_task]
+        flood_volume_in_aoi_task,
+        runoff_retention_stats_task,
+        runoff_retention_volume_stats_task]
     if 'built_infrastructure_vector_path' in args and (
             args['built_infrastructure_vector_path'] not in ('', None)):
         # Reproject the built infrastructure vector to the target SRS.
         reprojected_structures_path = os.path.join(
-                intermediate_dir, 'structures_reprojected.gpkg')
+            intermediate_dir, 'structures_reprojected.gpkg')
         reproject_built_infrastructure_task = task_graph.add_task(
             func=pygeoprocessing.reproject_vector,
             args=(args['built_infrastructure_vector_path'],
@@ -581,7 +581,7 @@ def _calculate_damage_to_infrastructure_in_aoi(
             continue
 
         shapely_geometry = shapely.wkb.loads(
-            infrastructure_geometry.ExportToWkb())
+            bytes(infrastructure_geometry.ExportToWkb()))
 
         structures_index.insert(
             infrastructure_feature.GetFID(), shapely_geometry.bounds)
@@ -592,7 +592,8 @@ def _calculate_damage_to_infrastructure_in_aoi(
     aoi_damage = {}
     for aoi_feature in aoi_layer:
         aoi_geometry = aoi_feature.GetGeometryRef()
-        aoi_geometry_shapely = shapely.wkb.loads(aoi_geometry.ExportToWkb())
+        aoi_geometry_shapely = shapely.wkb.loads(
+            bytes(aoi_geometry.ExportToWkb()))
         aoi_geometry_prep = shapely.prepared.prep(aoi_geometry_shapely)
 
         total_damage = 0.0
@@ -601,7 +602,7 @@ def _calculate_damage_to_infrastructure_in_aoi(
             infrastructure_feature = infrastructure_layer.GetFeature(
                 infrastructure_fid)
             infrastructure_geometry = shapely.wkb.loads(
-                infrastructure_feature.GetGeometryRef().ExportToWkb())
+                bytes(infrastructure_feature.GetGeometryRef().ExportToWkb()))
             if aoi_geometry_prep.intersects(infrastructure_geometry):
                 intersection_geometry = aoi_geometry_shapely.intersection(
                     infrastructure_geometry)

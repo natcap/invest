@@ -186,7 +186,9 @@ _OUTPUT_BASE_FILES = {
     'n_export_path': 'n_export.tif',
     'p_export_path': 'p_export.tif',
     'watershed_results_ndr_path': 'watershed_results_ndr.shp',
-    }
+}
+
+INTERMEDIATE_DIR_NAME = 'intermediate_outputs'
 
 _INTERMEDIATE_BASE_FILES = {
     'ic_factor_path': 'ic_factor.tif',
@@ -225,7 +227,7 @@ _INTERMEDIATE_BASE_FILES = {
     'flow_direction_path': 'flow_direction.tif',
     'thresholded_slope_path': 'thresholded_slope.tif',
     'dist_to_channel_path': 'dist_to_channel.tif',
-    }
+}
 
 _CACHE_BASE_FILES = {
     'filled_dem_path': 'filled_dem.tif',
@@ -240,7 +242,7 @@ _CACHE_BASE_FILES = {
     'subsurface_load_p_pickle_path': 'subsurface_load_p.pickle',
     'export_n_pickle_path': 'export_n.pickle',
     'export_p_pickle_path': 'export_p.pickle',
-    }
+}
 
 _TARGET_NODATA = -1
 
@@ -368,8 +370,7 @@ def execute(args):
     # Load all the tables for preprocessing
     output_dir = os.path.join(args['workspace_dir'])
     intermediate_output_dir = os.path.join(
-        args['workspace_dir'], 'intermediate_outputs')
-    output_dir = os.path.join(args['workspace_dir'])
+        args['workspace_dir'], INTERMEDIATE_DIR_NAME)
     cache_dir = os.path.join(intermediate_output_dir, 'cache_dir')
     utils.make_directories([output_dir, intermediate_output_dir, cache_dir])
 
@@ -462,7 +463,8 @@ def execute(args):
         args=(
             (f_reg['flow_accumulation_path'], 1),
             (f_reg['flow_direction_path'], 1),
-            float(args['threshold_flow_accumulation']), f_reg['stream_path']),
+            float(args['threshold_flow_accumulation']),
+            f_reg['stream_path']),
         target_path_list=[f_reg['stream_path']],
         dependent_task_list=[flow_accum_task],
         task_name='stream extraction')
@@ -471,7 +473,7 @@ def execute(args):
         func=pygeoprocessing.calculate_slope,
         args=((f_reg['filled_dem_path'], 1), f_reg['slope_path']),
         target_path_list=[f_reg['slope_path']],
-        dependent_task_list=[stream_extraction_task],
+        dependent_task_list=[fill_pits_task],
         task_name='calculate slope')
 
     threshold_slope_task = task_graph.add_task(
@@ -524,7 +526,8 @@ def execute(args):
     d_dn_task = task_graph.add_task(
         func=pygeoprocessing.routing.distance_to_channel_mfd,
         args=(
-            (f_reg['flow_direction_path'], 1), (f_reg['stream_path'], 1),
+            (f_reg['flow_direction_path'], 1),
+            (f_reg['stream_path'], 1),
             f_reg['d_dn_path']),
         kwargs={'weight_raster_path_band': (
             f_reg['s_factor_inverse_path'], 1)},
@@ -535,7 +538,8 @@ def execute(args):
     dist_to_channel_task = task_graph.add_task(
         func=pygeoprocessing.routing.distance_to_channel_mfd,
         args=(
-            (f_reg['flow_direction_path'], 1), (f_reg['stream_path'], 1),
+            (f_reg['flow_direction_path'], 1),
+            (f_reg['stream_path'], 1),
             f_reg['dist_to_channel_path']),
         dependent_task_list=[stream_extraction_task],
         target_path_list=[f_reg['dist_to_channel_path']],
@@ -620,7 +624,8 @@ def execute(args):
         ndr_eff_task = task_graph.add_task(
             func=ndr_core.ndr_eff_calculation,
             args=(
-                f_reg['flow_direction_path'], f_reg['stream_path'], eff_path,
+                f_reg['flow_direction_path'],
+                f_reg['stream_path'], eff_path,
                 crit_len_path, effective_retention_path),
             target_path_list=[effective_retention_path],
             dependent_task_list=[
@@ -1270,7 +1275,7 @@ def _calculate_sub_ndr(
 
     def _sub_ndr_op(dist_to_channel_array):
         """Calculate subsurface NDR."""
-        # nodata value from this ntermediate output should always be 
+        # nodata value from this intermediate output should always be
         # defined by pygeoprocessing, not None
         valid_mask = ~numpy.isclose(
             dist_to_channel_array, dist_to_channel_nodata)
@@ -1304,7 +1309,8 @@ def _calculate_export(
         """Combine NDR and subsurface NDR."""
         # these intermediate outputs should always have defined nodata
         # values assigned by pygeoprocessing
-        valid_mask = ~(numpy.isclose(modified_load_array, load_nodata) |
+        valid_mask = ~(
+            numpy.isclose(modified_load_array, load_nodata) |
             numpy.isclose(ndr_array, ndr_nodata) |
             numpy.isclose(modified_sub_load_array, subsurface_load_nodata) |
             numpy.isclose(sub_ndr_array, sub_ndr_nodata))

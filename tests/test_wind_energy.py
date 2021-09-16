@@ -363,7 +363,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
             'min_depth': 3,
             'max_depth': 180,
             'n_workers': -1
-            }
+        }
 
         return args
 
@@ -486,7 +486,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         raster_results = [
             'carbon_emissions_tons.tif',
-            'levelized_cost_price_per_kWh.tif',	'npv_US_millions.tif']
+            'levelized_cost_price_per_kWh.tif', 'npv_US_millions.tif']
 
         for raster_path in raster_results:
             model_array = pygeoprocessing.raster_to_numpy_array(
@@ -565,7 +565,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         args['discount_rate'] = 0.07
         args['price_table'] = True
         args['wind_schedule'] = os.path.join(
-                SAMPLE_DATA, 'price_table_example.csv')
+            SAMPLE_DATA, 'price_table_example.csv')
         args['wind_price'] = 0.187
         args['rate_change'] = 0.2
         args['avg_grid_distance'] = 4
@@ -629,7 +629,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         self.assertRaises(ValueError, wind_energy.execute, args)
 
-    def test_time_period_exceptoin(self):
+    def test_time_period_exception(self):
         """WindEnergy: raise ValueError if 'time' and 'wind_sched' differ."""
         from natcap.invest import wind_energy
 
@@ -744,7 +744,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
             SAMPLE_DATA, 'New_England_US_Aoi.shp')
 
         # Make up some Wind Data points that live outside AOI
-        wind_data_csv = os.path.join(args['workspace_dir'], 'temp-wind-data.csv')
+        wind_data_csv = os.path.join(
+            args['workspace_dir'], 'temp-wind-data.csv')
         with open(wind_data_csv, 'w') as open_table:
             open_table.write('LONG,LATI,LAM,K,REF\n')
             open_table.write('-60.5,25.0,7.59,2.6,10\n')
@@ -756,7 +757,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         args['wind_data_path'] = wind_data_csv
 
-        # AOI and wind data should not overlap, leading to a ValueError in 
+        # AOI and wind data should not overlap, leading to a ValueError in
         # clip_vector_by_vector
         with self.assertRaises(ValueError) as cm:
             wind_energy.execute(args)

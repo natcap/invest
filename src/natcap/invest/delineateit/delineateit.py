@@ -402,7 +402,8 @@ def check_geometries(outlet_vector_path, dem_path, target_vector_path,
         original_geometry = feature.GetGeometryRef()
 
         try:
-            shapely_geom = shapely.wkb.loads(original_geometry.ExportToWkb())
+            shapely_geom = shapely.wkb.loads(
+                bytes(original_geometry.ExportToWkb()))
 
             # The classic bowtie polygons will load but require a separate
             # check for validity.
@@ -545,7 +546,7 @@ def snap_points_to_nearest_stream(points_vector_path, stream_raster_path_band,
             snapped_layer.CreateFeature(new_feature)
             continue
 
-        point = shapely.wkb.loads(source_geometry.ExportToWkb())
+        point = shapely.wkb.loads(bytes(source_geometry.ExportToWkb()))
         if geom_name == 'MULTIPOINT':
             # We already checked (above) that there's only one component point
             point = point.geoms[0]
