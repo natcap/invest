@@ -303,7 +303,7 @@ def _make_criteria_csv(
         missing_index=False, missing_layer_names=False,
         missing_criteria_header=False, unknown_criteria=False,
         wrong_criteria_type=False, wrong_weight=False, large_rating=False,
-        rel_path=False):
+        rel_path=False, extra_metadata=False):
     """Make a synthesized information CSV on the designated path.
 
     Args:
@@ -339,6 +339,10 @@ def _make_criteria_csv(
         rel_path (bool): if true, write relative raster and vector paths to
             the table. File locations are relative to the folder of the table.
 
+        extra_metadata (bool): if true, write extra data at the end of rows
+            because our sample data template CSV includes this metadata and
+            need to make sure it won't break the model.
+
     Returns:
         None
 
@@ -355,72 +359,76 @@ def _make_criteria_csv(
     abs_rating_vector_path = os.path.join(workspace_dir, 'hab_1_crit_3.shp')
     _make_rating_vector(abs_rating_vector_path)
 
+    em = ''
+    if extra_metadata:
+        em = 'Rating Instruction'
+
     with open(criteria_table_path, 'w') as table:
         if missing_index:
             table.write(
-                '"missing index",habitat_0,,,habitat_1,,,"CRITERIA TYPE",\n')
+                f'"missing index",habitat_0,,,habitat_1,,,"CRITERIA TYPE",{em}\n')
         elif missing_criteria_header:
             table.write(
-                '"HABITAT NAME",habitat_0,,,habitat_1,,,"missing type",\n')
+                f'"HABITAT NAME",habitat_0,,,habitat_1,,,"missing type",{em}\n')
         elif missing_layer_names:
             table.write(
-                '"HABITAT NAME",habitat,,,habitat_1,,,"CRITERIA TYPE",\n')
+                f'"HABITAT NAME",habitat,,,habitat_1,,,"CRITERIA TYPE",{em}\n')
         else:
             table.write(
-                '"HABITAT NAME",habitat_0,,,habitat_1,,,"CRITERIA TYPE",\n')
-        table.write('"HABITAT RESILIENCE ATTRIBUTES",Rating,DQ,Weight,Rating,'
-                    'DQ,Weight,E/C\n')
+                f'"HABITAT NAME",habitat_0,,,habitat_1,,,"CRITERIA TYPE",{em}\n')
+        table.write(f'"HABITAT RESILIENCE ATTRIBUTES",Rating,DQ,Weight,Rating,'
+                    f'DQ,Weight,E/C,{em}\n')
 
         # Write relative path to the table
         if rel_path:
             rel_rating_raster_path = os.path.relpath(
                 abs_rating_raster_path, workspace_dir)
             table.write(
-                '"criteria 1",'+rel_rating_raster_path+',2,2,3,2,2,C\n')
+                f'"criteria 1",{rel_rating_raster_path},2,2,3,2,2,C,{em}\n')
         else:
             table.write(
-                '"criteria 1",'+abs_rating_raster_path+',2,2,3,2,2,C\n')
-        table.write('"criteria 2",0,2,2,1,2,2,C\n')
+                f'"criteria 1",{abs_rating_raster_path},2,2,3,2,2,C,{em}\n')
+        table.write(f'"criteria 2",0,2,2,1,2,2,C,{em}\n')
 
         if missing_index:
-            table.write('missing index,,,,,,,\n')
+            table.write(f'missing index,,,,,,,,{em}\n')
         else:
-            table.write('HABITAT STRESSOR OVERLAP PROPERTIES,,,,,,,\n')
+            table.write(f'HABITAT STRESSOR OVERLAP PROPERTIES,,,,,,,,{em}\n')
 
         if unknown_criteria:
-            table.write('"extra criteria",1,2,2,0,2,2,E\n')
-        table.write('stressor_0,Rating,DQ,Weight,Rating,DQ,Weight,E/C\n')
+            table.write(f'"extra criteria",1,2,2,0,2,2,E,{em}\n')
+        table.write(f'stressor_0,Rating,DQ,Weight,Rating,DQ,Weight,E/C,{em}\n')
 
         if rel_path:
             rel_rating_vector_path = os.path.relpath(
                 abs_rating_vector_path, workspace_dir)
             table.write(
-                '"criteria 3",2,2,2,'+rel_rating_vector_path+',2,2,C\n')
+                f'"criteria 3",2,2,2,{rel_rating_vector_path},2,2,C,{em}\n')
         else:
             table.write(
-                '"criteria 3",2,2,2,'+abs_rating_vector_path+',2,2,C\n')
-        table.write('"criteria 4",1,2,2,0,2,2,E\n')
+                f'"criteria 3",2,2,2,{abs_rating_vector_path},2,2,C,{em}\n')
+        table.write(f'"criteria 4",1,2,2,0,2,2,E,{em}\n')
 
         if missing_layer_names:
-            table.write('stressor,Rating,DQ,Weight,Rating,DQ,Weight,E/C\n')
+            table.write(f'stressor,Rating,DQ,Weight,Rating,DQ,Weight,E/C,{em}\n')
         else:
-            table.write('stressor_1,Rating,DQ,Weight,Rating,DQ,Weight,E/C\n')
-        table.write('"criteria 5",3,2,2,3,2,2,C\n')
+            table.write(f'stressor_1,Rating,DQ,Weight,Rating,DQ,Weight,E/C,{em}\n')
+        table.write(f'"criteria 5",3,2,2,3,2,2,C,{em}\n')
 
         if missing_criteria:
             # Only write C criteria for stressor_1 to test exception
-            table.write('"criteria 6",3,2,2,3,2,2,C\n')
+            table.write(f'"criteria 6",3,2,2,3,2,2,C,{em}\n')
         elif wrong_criteria_type:
             # Produce a wrong criteria type "A"
-            table.write('"criteria 6",3,2,2,3,2,2,A\n')
+            table.write(f'"criteria 6",3,2,2,3,2,2,A,{em}\n')
         elif wrong_weight:
             # Produce a wrong weight score
-            table.write('"criteria 6",3,2,nan,3,2,2,E\n')
+            table.write(f'"criteria 6",3,2,nan,3,2,2,E,{em}\n')
         elif large_rating:
             # Make a large rating score
-            table.write('"criteria 6",99999,2,2,3,2,2,E\n')
+            table.write(f'"criteria 6",99999,2,2,3,2,2,E,{em}\n')
         else:
-            table.write('"criteria 6",3,2,2,3,2,2,E\n')
+            table.write(f'"criteria 6",3,2,2,3,2,2,E,{em}\n')
 
 
 class HraUnitTests(unittest.TestCase):
@@ -889,7 +897,9 @@ class HraRegressionTests(unittest.TestCase):
         # Also test relative file paths in Info CSV file
         _make_info_csv(
             args['info_table_path'], args['workspace_dir'], rel_path=True)
-        _make_criteria_csv(args['criteria_table_path'], args['workspace_dir'])
+        _make_criteria_csv(
+            args['criteria_table_path'], args['workspace_dir'],
+            extra_metadata=True)
         _make_aoi_vector(args['aoi_vector_path'])
         args['n_workers'] = ''  # tests empty string for ``n_workers``
 
@@ -1003,23 +1013,6 @@ class HraRegressionTests(unittest.TestCase):
         model_df = pandas.read_csv(output_csv_path)
         reg_df = pandas.read_csv(expected_csv_path)
         pandas.testing.assert_frame_equal(model_df, reg_df)
-
-    def test_get_overlap_dataframe(self):
-        import natcap.invest.hra
-
-        crit_path = 'data/invest-sample-data/HabitatRiskAssess/Input/exposure_consequence_criteria.csv'
-        info_path = 'data/invest-sample-data/HabitatRiskAssess/Input/habitat_stressor_info.csv'
-        max_rating = 3
-        file_suffix = ''
-        criteria_df = natcap.invest.hra._get_criteria_dataframe(crit_path)
-        info_df, habitat_names, stressor_names = natcap.invest.hra._get_info_dataframe(
-            info_path, self.workspace_dir, self.workspace_dir,
-            self.workspace_dir, file_suffix)
-        resilience_attributes, stressor_attributes = \
-            natcap.invest.hra._get_attributes_from_df(criteria_df, habitat_names, stressor_names)
-        overlap_df = natcap.invest.hra._get_overlap_dataframe(
-            criteria_df, habitat_names, stressor_attributes, max_rating,
-            self.workspace_dir, self.workspace_dir, file_suffix)
 
     def test_aoi_no_projection(self):
         """HRA: testing AOI vector without projection."""
