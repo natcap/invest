@@ -339,9 +339,9 @@ def _make_criteria_csv(
         rel_path (bool): if true, write relative raster and vector paths to
             the table. File locations are relative to the folder of the table.
 
-        extra_metadata (bool): if true, write extra data at the end of rows
-            because our sample data template CSV includes this metadata and
-            need to make sure it won't break the model.
+        extra_metadata (bool): if true, write extra data at the end of rows.
+            Our sample data template CSV includes this metadata so it's
+            important to test that we can handle it.
 
     Returns:
         None
