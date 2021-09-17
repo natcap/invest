@@ -2895,6 +2895,10 @@ def _get_overlap_dataframe(criteria_df, habitat_names, stressor_attributes,
             # Values are always grouped in threes (rating, dq, weight)
             for idx in range(0, row_data.size, 3):
                 habitat = row_data.keys()[idx]
+                if habitat not in habitat_names:
+                    # This is how we ignore extra columns in the csv
+                    # like we have in the sample data for "Rating Instruction".
+                    break
                 rating = row_data[idx]
                 dq = row_data[idx + 1]
                 weight = row_data[idx + 2]
