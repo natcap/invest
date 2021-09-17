@@ -1,7 +1,6 @@
 # coding=UTF-8
 """Carbon Storage and Sequestration."""
 import codecs
-# import gettext
 import logging
 import os
 import time
@@ -17,13 +16,7 @@ from . import utils
 from . import spec_utils
 from .spec_utils import u
 
-# es = gettext.translation(
-#     'messages',
-#     localedir=os.path.join(
-#         os.path.dirname(os.path.abspath(__file__)),
-#         'translations/locales'), languages=['es'])
-# es.install()
-# _ = es.gettext
+
 LOGGER = logging.getLogger(__name__)
 
 ARGS_SPEC = {

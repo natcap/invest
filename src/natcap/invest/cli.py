@@ -613,22 +613,20 @@ def main(user_args=None):
                 "QT_MAC_WANTS_LAYER" not in os.environ):
             warnings.warn(
                 "Mac OS X Big Sur may require the 'QT_MAC_WANTS_LAYER' "
-                "environment variable to be defined in order to run.  If "
+                "environment variable to be defined in order to run. If "
                 "the application hangs on startup, set 'QT_MAC_WANTS_LAYER=1' "
                 "in the shell running this CLI.", RuntimeWarning)
 
         from natcap.invest.ui import inputs
 
         # globally install the _() function for the requested language
-        gettext.install('messages', localedir=os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), 'translations/locales'))
-        print(os.path.join(
-                os.path.dirname(os.path.abspath(__file__)), 'translations/locales'))
+        # fall back to a NullTranslation, which returns the English messages
         language = gettext.translation(
             'messages',
             languages=[args.language],
             localedir=os.path.join(
-                os.path.dirname(os.path.abspath(__file__)), 'translations/locales'))
+                os.path.dirname(os.path.abspath(__file__)), 'translations/locales'),
+            fallback=True)
         language.install()
 
         gui_class = _MODEL_UIS[args.model].gui

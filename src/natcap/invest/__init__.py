@@ -1,11 +1,10 @@
 """init module for natcap.invest."""
-
+import builtins
 import os
 import sys
 import logging
 
 import pkg_resources
-import pygeoprocessing
 
 
 LOGGER = logging.getLogger('natcap.invest')
@@ -17,6 +16,16 @@ try:
 except pkg_resources.DistributionNotFound:
     # package is not installed.  Log the exception for debugging.
     LOGGER.exception('Could not load natcap.invest version information')
+
+# Check if the function _() is available
+# If not, define it as the identity function
+# _() is installed into builtins by gettext when we set up to translate
+# It wraps every string in every model that we want to translate
+# Make sure it's defined so that natcap.invest modules are importable whether
+# or not gettext has been installed in the importing namespace
+if not callable(getattr(builtins, '_', None)):
+    def identity(x): return x
+    builtins.__dict__['_'] = identity
 
 
 def local_dir(source_file):
