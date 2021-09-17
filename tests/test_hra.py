@@ -1004,6 +1004,23 @@ class HraRegressionTests(unittest.TestCase):
         reg_df = pandas.read_csv(expected_csv_path)
         pandas.testing.assert_frame_equal(model_df, reg_df)
 
+    def test_get_overlap_dataframe(self):
+        import natcap.invest.hra
+
+        crit_path = 'data/invest-sample-data/HabitatRiskAssess/Input/exposure_consequence_criteria.csv'
+        info_path = 'data/invest-sample-data/HabitatRiskAssess/Input/habitat_stressor_info.csv'
+        max_rating = 3
+        file_suffix = ''
+        criteria_df = natcap.invest.hra._get_criteria_dataframe(crit_path)
+        info_df, habitat_names, stressor_names = natcap.invest.hra._get_info_dataframe(
+            info_path, self.workspace_dir, self.workspace_dir,
+            self.workspace_dir, file_suffix)
+        resilience_attributes, stressor_attributes = \
+            natcap.invest.hra._get_attributes_from_df(criteria_df, habitat_names, stressor_names)
+        overlap_df = natcap.invest.hra._get_overlap_dataframe(
+            criteria_df, habitat_names, stressor_attributes, max_rating,
+            self.workspace_dir, self.workspace_dir, file_suffix)
+
     def test_aoi_no_projection(self):
         """HRA: testing AOI vector without projection."""
         import natcap.invest.hra
