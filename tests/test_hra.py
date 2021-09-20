@@ -359,9 +359,7 @@ def _make_criteria_csv(
     abs_rating_vector_path = os.path.join(workspace_dir, 'hab_1_crit_3.shp')
     _make_rating_vector(abs_rating_vector_path)
 
-    em = ''
-    if extra_metadata:
-        em = 'Rating Instruction'
+    em = 'Rating Instruction' if extra_metadata else ''
 
     with open(criteria_table_path, 'w') as table:
         if missing_index:
