@@ -1,7 +1,6 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import { ipcRenderer } from 'electron'; // eslint-disable-line import/no-extraneous-dependencies
-// import sanitizeHtml from 'sanitize-html';
 
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
@@ -10,15 +9,6 @@ import Container from 'react-bootstrap/Container';
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
 const logger = window.Workbench.getLogger('LogTab');
-
-// const LOG_TEXT_TAG = 'span';
-// const ALLOWED_HTML_OPTIONS = {
-//   allowedTags: [LOG_TEXT_TAG],
-//   allowedAttributes: { [LOG_TEXT_TAG]: ['class'] },
-// };
-// const LOG_ERROR_REGEX = /(Traceback)|(([A-Z]{1}[a-z]*){1,}Error)|(ERROR)|(^\s\s*)/;
-// const INVEST_LOG_PREFIX = '^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2},[0-9]{3}';
-// e.g. '2020-10-16 07:13:04,325 (natcap.invest.carbon) INFO ...'
 
 class LogDisplay extends React.Component {
   constructor(props) {
@@ -50,34 +40,12 @@ LogDisplay.propTypes = {
   logdata: PropTypes.string,
 };
 
-/**
- * Encapsulate text in html, assigning class based on text content.
- *
- * @param  {string} line - plaintext string
- * @param  {object} patterns - of shape {string: RegExp}
- * @returns {string} - sanitized html
- */
-// function markupLine(line, patterns) {
-//   // eslint-disable-next-line
-//   for (const [cls, pattern] of Object.entries(patterns)) {
-//     if (pattern.test(line)) {
-//       const markup = `<${LOG_TEXT_TAG} class="${cls}">${line}</${LOG_TEXT_TAG}>`;
-//       return sanitizeHtml(markup, ALLOWED_HTML_OPTIONS);
-//     }
-//   }
-//   return sanitizeHtml(line, ALLOWED_HTML_OPTIONS);
-// }
-
 export default class LogTab extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
       logdata: '',
     };
-    // this.logPatterns = {
-    //   'invest-log-error': LOG_ERROR_REGEX,
-    //   'invest-log-primary': new RegExp(this.props.pyModuleName),
-    // };
   }
 
   componentDidMount() {
@@ -87,7 +55,6 @@ export default class LogTab extends React.Component {
     ipcRenderer.on(`invest-stdout-${jobID}`, (event, data) => {
       let { logdata } = this.state;
       logdata += data;
-      // logdata += markupLine(data, this.logPatterns);
       this.setState({ logdata: logdata });
     });
     if (!executeClicked && logfile) {

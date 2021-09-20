@@ -1,6 +1,5 @@
 import path from 'path';
 import fs from 'fs';
-import readline from 'readline';
 import os from 'os';
 import { spawn, exec } from 'child_process';
 
@@ -28,9 +27,7 @@ const ALLOWED_HTML_OPTIONS = {
   allowedTags: [LOG_TEXT_TAG],
   allowedAttributes: { [LOG_TEXT_TAG]: ['class'] },
 };
-const LOG_ERROR_REGEX = /(Traceback)|(([A-Z]{1}[a-z]*){1,}Error)|(ERROR)|(^\s\s*)/;
-// TODO: Keeping this regex here in case we want to use it again someday
-// const INVEST_LOG_PREFIX = '^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2},[0-9]{3}';
+const LOG_ERROR_REGEX = /(Traceback)|(([A-Z]{1}[a-z]*){1,}Error)|(ERROR)/;
 const LOG_PATTERNS = {
   'invest-log-error': LOG_ERROR_REGEX,
   'invest-log-primary': /a^/, // default is regex that will never match
@@ -38,19 +35,19 @@ const LOG_PATTERNS = {
 /**
  * Encapsulate text in html, assigning class based on text content.
  *
- * @param  {string} line - plaintext string
+ * @param  {string} message - plaintext string
  * @param  {object} patterns - of shape {string: RegExp}
  * @returns {string} - sanitized html
  */
-function markupLine(line, patterns) {
+function markupMessage(message, patterns) {
   // eslint-disable-next-line
   for (const [cls, pattern] of Object.entries(patterns)) {
-    if (pattern.test(line)) {
-      const markup = `<${LOG_TEXT_TAG} class="${cls}">${line}</${LOG_TEXT_TAG}>`;
+    if (pattern.test(message)) {
+      const markup = `<${LOG_TEXT_TAG} class="${cls}">${message}</${LOG_TEXT_TAG}>`;
       return sanitizeHtml(markup, ALLOWED_HTML_OPTIONS);
     }
   }
-  return sanitizeHtml(line, ALLOWED_HTML_OPTIONS);
+  return sanitizeHtml(message, ALLOWED_HTML_OPTIONS);
 }
 
 export function setupInvestRunHandlers(investExe) {
@@ -106,15 +103,19 @@ export function setupInvestRunHandlers(investExe) {
     logger.debug(`set to run ${cmdArgs}`);
     let investRun;
     let investLogfile;
+    const env = {
+      PATH: path.dirname(investExe),
+      PYTHONUNBUFFERED: 'TRUE',
+    };
     if (process.platform !== 'win32') {
       investRun = spawn(path.basename(investExe), cmdArgs, {
-        env: { PATH: path.dirname(investExe) },
+        env: env,
         shell: true, // without shell, IOError when datastack.py loads json
         detached: true, // counter-intuitive, but w/ true: invest terminates when this shell terminates
       });
     } else { // windows
       investRun = spawn(path.basename(investExe), cmdArgs, {
-        env: { PATH: path.dirname(investExe) },
+        env: env,
         shell: true,
       });
     }
@@ -131,23 +132,20 @@ export function setupInvestRunHandlers(investExe) {
           event.reply(`invest-logging-${jobID}`, investLogfile);
         }
       }
-      // TODO: if the python stdout is unbuffered, then I expect
-      // each data chunk here to be a distinct logger message. If
-      // the python stdout is buffered, each chunk could be multiple messages
+      // we set python stdio to be unbuffered, so data here should
+      // only be one logger message at a time.
       event.reply(
         `invest-stdout-${jobID}`,
-        markupLine(`${data}`, LOG_PATTERNS)
+        markupMessage(`${data}`, LOG_PATTERNS)
       );
     };
     LOG_PATTERNS['invest-log-primary'] = new RegExp(pyModuleName);
     investRun.stdout.on('data', stdOutCallback);
 
-    // Capture stderr to a string separate from the invest log
-    // so that it can be displayed separately when invest exits.
-    // And because it could actually be stderr emitted from the
-    // invest CLI or even the shell, rather than the invest model,
-    // in which case it's useful to logger.debug too.
     const stdErrCallback = (data) => {
+      // The python Traceback for invest comes through stdout & stderr,
+      // So no need to merge those streams for the benefit of displaying
+      // a complete log.
       logger.debug(`${data}`);
       // The PyInstaller exe will always emit a final 'Failed ...' message
       // after an uncaught exception. It is not helpful to display to users
@@ -157,7 +155,7 @@ export function setupInvestRunHandlers(investExe) {
         investRun.stderr.removeListener('data', stdErrCallback);
       }
       const dat = dataArray[0];
-      event.reply(`invest-stderr-${jobID}`, `${dat}${os.EOL}`);
+      event.reply(`invest-stderr-${jobID}`, `${dat}`);
     };
     investRun.stderr.on('data', stdErrCallback);
 
@@ -188,16 +186,8 @@ export function setupInvestLogReaderHandler() {
         );
       });
 
-      const rl = readline.createInterface({
-        input: fileStream,
-        crlfDelay: Infinity,
-      });
-
-      rl.on('line', (line) => {
-        event.reply(
-          `invest-stdout-${channel}`,
-          `${markupLine(line, LOG_PATTERNS)}${os.EOL}`
-        );
+      fileStream.on('data', (data) => {
+        event.reply(`invest-stdout-${channel}`, `${data}`);
       });
     });
 }
