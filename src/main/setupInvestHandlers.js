@@ -6,6 +6,7 @@ import { spawn, exec } from 'child_process';
 
 import { app, ipcMain } from 'electron';
 import fetch from 'node-fetch';
+import sanitizeHtml from 'sanitize-html';
 
 import { getLogger } from '../logger';
 import { ipcMainChannels } from './ipcMainChannels';
@@ -21,6 +22,36 @@ const LOGLEVELMAP = {
 };
 const TEMP_DIR = path.join(app.getPath('userData'), 'tmp');
 const HOSTNAME = 'http://localhost';
+
+const LOG_TEXT_TAG = 'span';
+const ALLOWED_HTML_OPTIONS = {
+  allowedTags: [LOG_TEXT_TAG],
+  allowedAttributes: { [LOG_TEXT_TAG]: ['class'] },
+};
+const LOG_ERROR_REGEX = /(Traceback)|(([A-Z]{1}[a-z]*){1,}Error)|(ERROR)|(^\s\s*)/;
+// TODO: Keeping this regex here in case we want to use it again someday
+// const INVEST_LOG_PREFIX = '^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2},[0-9]{3}';
+const LOG_PATTERNS = {
+  'invest-log-error': LOG_ERROR_REGEX,
+  'invest-log-primary': /a^/, // default is regex that will never match
+};
+/**
+ * Encapsulate text in html, assigning class based on text content.
+ *
+ * @param  {string} line - plaintext string
+ * @param  {object} patterns - of shape {string: RegExp}
+ * @returns {string} - sanitized html
+ */
+function markupLine(line, patterns) {
+  // eslint-disable-next-line
+  for (const [cls, pattern] of Object.entries(patterns)) {
+    if (pattern.test(line)) {
+      const markup = `<${LOG_TEXT_TAG} class="${cls}">${line}</${LOG_TEXT_TAG}>`;
+      return sanitizeHtml(markup, ALLOWED_HTML_OPTIONS);
+    }
+  }
+  return sanitizeHtml(line, ALLOWED_HTML_OPTIONS);
+}
 
 export function setupInvestRunHandlers(investExe) {
   const runningJobs = {};
@@ -100,8 +131,15 @@ export function setupInvestRunHandlers(investExe) {
           event.reply(`invest-logging-${jobID}`, investLogfile);
         }
       }
-      event.reply(`invest-stdout-${jobID}`, `${data}`);
+      // TODO: if the python stdout is unbuffered, then I expect
+      // each data chunk here to be a distinct logger message. If
+      // the python stdout is buffered, each chunk could be multiple messages
+      event.reply(
+        `invest-stdout-${jobID}`,
+        markupLine(`${data}`, LOG_PATTERNS)
+      );
     };
+    LOG_PATTERNS['invest-log-primary'] = new RegExp(pyModuleName);
     investRun.stdout.on('data', stdOutCallback);
 
     // Capture stderr to a string separate from the invest log
@@ -138,23 +176,28 @@ export function setupInvestRunHandlers(investExe) {
 }
 
 export function setupInvestLogReaderHandler() {
-  ipcMain.on(ipcMainChannels.INVEST_READ_LOG, async (event, logfile, channel) => {
-    const fileStream = fs.createReadStream(logfile);
-    fileStream.on('error', (err) => {
-      logger.error(err);
-      event.reply(
-        `invest-stdout-${channel}`,
-        `Logfile is missing or unreadable: ${os.EOL}${logfile}`
-      );
-    });
+  ipcMain.on(ipcMainChannels.INVEST_READ_LOG,
+    (event, logfile, pyModuleName, channel) => {
+      LOG_PATTERNS['invest-log-primary'] = new RegExp(pyModuleName);
+      const fileStream = fs.createReadStream(logfile);
+      fileStream.on('error', (err) => {
+        logger.error(err);
+        event.reply(
+          `invest-stdout-${channel}`,
+          `Logfile is missing or unreadable: ${os.EOL}${logfile}`
+        );
+      });
 
-    const rl = readline.createInterface({
-      input: fileStream,
-      crlfDelay: Infinity,
-    });
+      const rl = readline.createInterface({
+        input: fileStream,
+        crlfDelay: Infinity,
+      });
 
-    for await (const line of rl) {
-      event.reply(`invest-stdout-${channel}`, `${line}${os.EOL}`);
-    }
-  });
+      rl.on('line', (line) => {
+        event.reply(
+          `invest-stdout-${channel}`,
+          `${markupLine(line, LOG_PATTERNS)}${os.EOL}`
+        );
+      });
+    });
 }

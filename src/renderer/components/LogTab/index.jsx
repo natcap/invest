@@ -1,7 +1,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import { ipcRenderer } from 'electron'; // eslint-disable-line import/no-extraneous-dependencies
-import sanitizeHtml from 'sanitize-html';
+// import sanitizeHtml from 'sanitize-html';
 
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
@@ -11,13 +11,13 @@ import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
 const logger = window.Workbench.getLogger('LogTab');
 
-const LOG_TEXT_TAG = 'span';
-const ALLOWED_HTML_OPTIONS = {
-  allowedTags: [LOG_TEXT_TAG],
-  allowedAttributes: { [LOG_TEXT_TAG]: ['class'] },
-};
-const LOG_ERROR_REGEX = /(Traceback)|(([A-Z]{1}[a-z]*){1,}Error)|(ERROR)|(^\s\s*)/;
-const INVEST_LOG_PREFIX = '^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2},[0-9]{3}';
+// const LOG_TEXT_TAG = 'span';
+// const ALLOWED_HTML_OPTIONS = {
+//   allowedTags: [LOG_TEXT_TAG],
+//   allowedAttributes: { [LOG_TEXT_TAG]: ['class'] },
+// };
+// const LOG_ERROR_REGEX = /(Traceback)|(([A-Z]{1}[a-z]*){1,}Error)|(ERROR)|(^\s\s*)/;
+// const INVEST_LOG_PREFIX = '^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2},[0-9]{3}';
 // e.g. '2020-10-16 07:13:04,325 (natcap.invest.carbon) INFO ...'
 
 class LogDisplay extends React.Component {
@@ -57,16 +57,16 @@ LogDisplay.propTypes = {
  * @param  {object} patterns - of shape {string: RegExp}
  * @returns {string} - sanitized html
  */
-function markupLine(line, patterns) {
-  // eslint-disable-next-line
-  for (const [cls, pattern] of Object.entries(patterns)) {
-    if (pattern.test(line)) {
-      const markup = `<${LOG_TEXT_TAG} class="${cls}">${line}</${LOG_TEXT_TAG}>`;
-      return sanitizeHtml(markup, ALLOWED_HTML_OPTIONS);
-    }
-  }
-  return sanitizeHtml(line, ALLOWED_HTML_OPTIONS);
-}
+// function markupLine(line, patterns) {
+//   // eslint-disable-next-line
+//   for (const [cls, pattern] of Object.entries(patterns)) {
+//     if (pattern.test(line)) {
+//       const markup = `<${LOG_TEXT_TAG} class="${cls}">${line}</${LOG_TEXT_TAG}>`;
+//       return sanitizeHtml(markup, ALLOWED_HTML_OPTIONS);
+//     }
+//   }
+//   return sanitizeHtml(line, ALLOWED_HTML_OPTIONS);
+// }
 
 export default class LogTab extends React.Component {
   constructor(props) {
@@ -74,10 +74,10 @@ export default class LogTab extends React.Component {
     this.state = {
       logdata: '',
     };
-    this.logPatterns = {
-      'invest-log-error': LOG_ERROR_REGEX,
-      'invest-log-primary': new RegExp(this.props.pyModuleName),
-    };
+    // this.logPatterns = {
+    //   'invest-log-error': LOG_ERROR_REGEX,
+    //   'invest-log-primary': new RegExp(this.props.pyModuleName),
+    // };
   }
 
   componentDidMount() {
@@ -86,11 +86,17 @@ export default class LogTab extends React.Component {
     // And by the logfile reader.
     ipcRenderer.on(`invest-stdout-${jobID}`, (event, data) => {
       let { logdata } = this.state;
-      logdata += markupLine(data, this.logPatterns);
+      logdata += data;
+      // logdata += markupLine(data, this.logPatterns);
       this.setState({ logdata: logdata });
     });
     if (!executeClicked && logfile) {
-      ipcRenderer.send(ipcMainChannels.INVEST_READ_LOG, logfile, jobID);
+      ipcRenderer.send(
+        ipcMainChannels.INVEST_READ_LOG,
+        logfile,
+        this.props.pyModuleName,
+        jobID,
+      );
     }
   }
 
