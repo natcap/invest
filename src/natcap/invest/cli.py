@@ -587,6 +587,10 @@ def main(user_args=None):
 
             # We're deliberately not validating here because the user
             # can just call ``invest validate <datastack>`` to validate.
+            #
+            # Exceptions will already be logged to the logfile but will ALSO be
+            # written to stdout if this exception is uncaught.  This is by
+            # design.
             getattr(model_module, 'execute')(parsed_datastack.args)
 
     # If we're running in a GUI (either through ``invest run`` or
