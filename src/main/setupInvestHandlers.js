@@ -28,7 +28,7 @@ const ALLOWED_HTML_OPTIONS = {
   allowedAttributes: { [LOG_TEXT_TAG]: ['class'] },
 };
 const LOG_ERROR_REGEX = /(Traceback)|(([A-Z]{1}[a-z]*){1,}Error)|(ERROR)/;
-const LOG_PATTERNS = {
+export const LOG_PATTERNS = {
   'invest-log-error': LOG_ERROR_REGEX,
   'invest-log-primary': /a^/, // default is regex that will never match
 };
@@ -39,7 +39,7 @@ const LOG_PATTERNS = {
  * @param  {object} patterns - of shape {string: RegExp}
  * @returns {string} - sanitized html
  */
-function markupMessage(message, patterns) {
+export function markupMessage(message, patterns) {
   // eslint-disable-next-line
   for (const [cls, pattern] of Object.entries(patterns)) {
     if (pattern.test(message)) {

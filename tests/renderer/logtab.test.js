@@ -9,7 +9,11 @@ import { render } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
 import LogTab from '../../src/renderer/components/LogTab';
-import { setupInvestLogReaderHandler } from '../../src/main/setupInvestHandlers';
+import {
+  setupInvestLogReaderHandler,
+  markupMessage,
+  LOG_PATTERNS,
+} from '../../src/main/setupInvestHandlers';
 import { removeIpcMainListeners } from '../../src/main/main';
 
 function renderLogTab(logfilePath, primaryPythonLogger) {
@@ -37,7 +41,7 @@ function cleanupLogFile(logfilePath) {
   });
 }
 
-describe('LogTab', () => {
+describe('LogTab displays log from a file', () => {
   const uniqueText = 'utils.prepare_workspace';
   const primaryPythonLogger = 'natcap.invest.hydropower.hydropower_water_yield';
 
@@ -101,6 +105,7 @@ ValueError: Values in the LULC raster were found that are not represented under 
     expect(log).not.toHaveClass();
   });
 
+  // Skip because https://github.com/natcap/invest-workbench/issues/169
   test.skip('messages from primary invest logger are highlighted', async () => {
     const { findAllByText } = renderLogTab(
       logfilePath, primaryPythonLogger
@@ -112,6 +117,7 @@ ValueError: Values in the LULC raster were found that are not represented under 
     });
   });
 
+  // Skip because https://github.com/natcap/invest-workbench/issues/169
   test.skip('error messages are highlighted', async () => {
     const { findAllByText } = renderLogTab(
       logfilePath, primaryPythonLogger
@@ -146,5 +152,47 @@ ValueError: Values in the LULC raster were found that are not represented under 
     errorMessages.forEach((msg) => {
       expect(msg).toHaveClass('invest-log-error');
     });
+  });
+});
+
+describe('Unit tests for invest logger message markup', () => {
+  const pyModuleName = 'natcap.invest.carbon';
+  const logPatterns = Object.assign({}, LOG_PATTERNS);
+
+  beforeAll(() => {
+    logPatterns['invest-log-primary'] = new RegExp(pyModuleName);
+  });
+
+  test('Message from the invest model gets primary class attribute', () => {
+    const message = `2021-01-15 07:14:37,148 (${pyModuleName}) ... INFO`;
+    const markup = markupMessage(message, logPatterns);
+    // Rendering and using DOM matchers adds confidence that we have valid html
+    // Render the same way we do in LogDisplay component:
+    const { getByText } = render(
+      <div dangerouslySetInnerHTML={{ __html: markup }} />
+    );
+    expect(getByText(message)).toHaveClass('invest-log-primary');
+  });
+
+  test.each([
+    `... (osgeo.gdal) ... ERROR`,
+    `... (foo.bar) ... SomeCustomError`,
+    `... (${pyModuleName}) ... ValueError`,
+    `Traceback...`,
+  ])('Message "%s" gets error class attribute', (message) => {
+    const markup = markupMessage(message, logPatterns);
+    const { getByText } = render(
+      <div dangerouslySetInnerHTML={{ __html: markup }} />
+    );
+    expect(getByText(message)).toHaveClass('invest-log-error');
+  });
+
+  test('All other messages do not get markup', () => {
+    const message = `2021-01-15 07:14:37,148 (foo.bar) ... INFO`;
+    const markup = markupMessage(message, logPatterns);
+    const { getByText } = render(
+      <div dangerouslySetInnerHTML={{ __html: markup }} />
+    );
+    expect(getByText(message)).not.toHaveClass();
   });
 });
