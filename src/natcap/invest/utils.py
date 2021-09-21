@@ -158,10 +158,14 @@ def prepare_workspace(
             start_time = time.time()
             try:
                 yield
+            except Exception:
+                LOGGER.exception(f'Exception while executing {modelname}')
+                raise
             finally:
                 LOGGER.info('Elapsed time: %s',
                             _format_time(round(time.time() - start_time, 2)))
                 logging.captureWarnings(False)
+                LOGGER.info('Execution finished')
 
 
 class ThreadFilter(logging.Filter):
