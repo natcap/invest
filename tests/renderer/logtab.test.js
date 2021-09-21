@@ -101,7 +101,7 @@ ValueError: Values in the LULC raster were found that are not represented under 
     expect(log).not.toHaveClass();
   });
 
-  test('messages from primary invest logger are highlighted', async () => {
+  test.skip('messages from primary invest logger are highlighted', async () => {
     const { findAllByText } = renderLogTab(
       logfilePath, primaryPythonLogger
     );
@@ -112,7 +112,7 @@ ValueError: Values in the LULC raster were found that are not represented under 
     });
   });
 
-  test('error messages are highlighted', async () => {
+  test.skip('error messages are highlighted', async () => {
     const { findAllByText } = renderLogTab(
       logfilePath, primaryPythonLogger
     );
