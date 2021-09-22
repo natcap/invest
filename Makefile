@@ -10,7 +10,7 @@ GIT_TEST_DATA_REPO_REV      := 912a0732340d706a17968aeb04dc525b139904f2
 
 GIT_UG_REPO                  := https://github.com/natcap/invest.users-guide
 GIT_UG_REPO_PATH             := doc/users-guide
-GIT_UG_REPO_REV              := c53f85cec40c830ddd5b18a61e97c48607dd0ef9
+GIT_UG_REPO_REV              := 4ae626c988a72523217aea679118903d8eb46287
 
 ENV = "./env"
 ifeq ($(OS),Windows_NT)
@@ -393,8 +393,8 @@ signcode:
 
 signcode_windows:
 	$(GSUTIL) cp 'gs://stanford_cert/$(P12_FILE)' '$(BUILD_DIR)/$(P12_FILE)'
-	powershell.exe "& '$(SIGNTOOL)' sign /f '$(BUILD_DIR)\$(P12_FILE)' /p '$(CERT_KEY_PASS)' '$(BIN_TO_SIGN)'"
-	powershell.exe "& '$(SIGNTOOL)' timestamp -t http://timestamp.sectigo.com '$(BIN_TO_SIGN)'"
+	powershell.exe "& '$(SIGNTOOL)' sign /fd SHA256 /f '$(BUILD_DIR)\$(P12_FILE)' /p '$(CERT_KEY_PASS)' '$(BIN_TO_SIGN)'"
+	powershell.exe "& '$(SIGNTOOL)' timestamp /tr http://timestamp.sectigo.com /td SHA256 '$(BIN_TO_SIGN)'"
 	-$(RM) $(BUILD_DIR)/$(P12_FILE)
 	@echo "Installer was signed with signtool"
 

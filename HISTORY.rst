@@ -79,6 +79,8 @@ Unreleased Changes (3.9.1)
       could have been computed by previous runs.
     * Validation now returns a more helpful message when a spatial input has
       no projection defined.
+    * Updated to pygeoprocessing 2.3.2
+    * Added support for GDAL 3.3.1 and above
     * Added some logging to ``natcap.invest.utils._log_gdal_errors`` to aid in
       debugging some hard-to-reproduce GDAL logging errors that occasionally
       cause InVEST models to crash.  If GDAL calls ``_log_gdal_errors`` with an
@@ -106,6 +108,13 @@ Unreleased Changes (3.9.1)
 * HRA
     * Fixed bugs that allowed zeros in DQ & Weight columns of criteria
       table to raise DivideByZero errors.
+* NDR
+    * Fixed a bug that allowed SDR to be calculated in areas that don't drain
+      to any stream. Now all outputs that depend on distance to stream (
+      ``d_dn``, ``dist_to_channel``, ``ic``, ``ndr_n``, ``ndr_p``,
+      ``sub_ndr_n``, ``sub_ndr_p``, ``n_export``, ``p_export``) are only
+      defined for pixels that drain to a stream. They have nodata everywhere
+      else.
 * Pollination
     * Updated so that the ``total_pollinator_abundance_[season].tif`` outputs
       are always created. Before, they weren't created if a farm vector was
@@ -123,6 +132,12 @@ Unreleased Changes (3.9.1)
     * Changed how SDR thresholds its L factor to allow direct thresholding
       rather than based off of upstream area. Exposed this parameter as
       ``l_max`` in the ``args`` input and in the user interface.
+    * Fixed a bug that allowed SDR to be calculated in areas that don't drain
+      to any stream. Now all outputs that depend on distance to stream (
+      ``d_dn``, ``d_dn_bare``, ``ic``, ``ic_bare``, ``sdr``, ``sdr_bare``,
+      ``e_prime``, ``sed_retention``, ``sed_retention_index``,
+      ``sed_deposition``, ``sed_export``) are only defined for pixels that
+      drain to a stream. They have nodata everywhere else.
 * Urban Flood Risk
     * Fixed a bug where a String ``Type`` column in the infrastructure vector
       would cause the aggregation step of the model to crash, even with the
