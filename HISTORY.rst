@@ -33,7 +33,11 @@
 
 .. :changelog:
 
-Unreleased Changes
+..
+  Unreleased Changes
+  ------------------
+
+3.9.1 (2021-09-22)
 ------------------
 * General:
     * Added error-handling for when ``pandas`` fails to decode a non-utf8
