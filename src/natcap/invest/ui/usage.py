@@ -115,12 +115,15 @@ def _calculate_args_bounding_box(args, args_spec):
         # Using gdal.OpenEx to check if an input is spatial caused the
         # model to hang sometimes (possible race condition), so only
         # get the bounding box of inputs that are known to be spatial.
+        # Also eliminate any string paths that are empty to prevent an
+        # exception.
         spatial_info = None
-        if args_spec['args'][key]['type'] == 'raster':
+        if args_spec['args'][key]['type'] == 'raster' and value.strip() != '':
             spatial_info = pygeoprocessing.get_raster_info(value)
-        elif args_spec['args'][key]['type'] == 'vector':
+        elif (args_spec['args'][key]['type'] == 'vector'
+                and value.strip() != ''):
             spatial_info = pygeoprocessing.get_vector_info(value)
-                    
+
         if spatial_info:
             local_bb = spatial_info['bounding_box']
             projection_wkt = spatial_info['projection_wkt']
@@ -181,7 +184,7 @@ def _log_exit_status(session_id, status):
         log_finish_url = json.loads(urlopen(
             _ENDPOINTS_INDEX_URL).read().strip())['FINISH']
 
-        # The data must be a python string of bytes. This will be ``bytes`` 
+        # The data must be a python string of bytes. This will be ``bytes``
         # in python3.
         urlopen(Request(log_finish_url, urlencode(payload).encode('utf-8')))
     except Exception as exception:
@@ -236,7 +239,7 @@ def _log_model(model_name, model_args, session_id=None):
         log_start_url = json.loads(urlopen(
             _ENDPOINTS_INDEX_URL).read().strip())['START']
 
-        # The data must be a python string of bytes. This will be ``bytes`` 
+        # The data must be a python string of bytes. This will be ``bytes``
         # in python3.
         urlopen(Request(log_start_url, urlencode(payload).encode('utf-8')))
     except Exception as exception:
