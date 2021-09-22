@@ -105,7 +105,7 @@ export function setupInvestRunHandlers(investExe) {
     let investLogfile;
     const env = {
       PATH: path.dirname(investExe),
-      PYTHONUNBUFFERED: 'TRUE',
+      PYTHONUNBUFFERED: 'TRUE', // stdio gets python log messages one at a time
     };
     if (process.platform !== 'win32') {
       investRun = spawn(path.basename(investExe), cmdArgs, {
@@ -120,6 +120,8 @@ export function setupInvestRunHandlers(investExe) {
       });
     }
 
+    const logPatterns = { ...LOG_PATTERNS };
+    logPatterns['invest-log-primary'] = new RegExp(pyModuleName);
     // There's no general way to know that a spawned process started,
     // so this logic to listen once on stdout seems like the way.
     // We need to store the PID to enable killing the task.
@@ -136,10 +138,9 @@ export function setupInvestRunHandlers(investExe) {
       // only be one logger message at a time.
       event.reply(
         `invest-stdout-${jobID}`,
-        markupMessage(`${data}`, LOG_PATTERNS)
+        markupMessage(`${data}`, logPatterns)
       );
     };
-    LOG_PATTERNS['invest-log-primary'] = new RegExp(pyModuleName);
     investRun.stdout.on('data', stdOutCallback);
 
     const stdErrCallback = (data) => {
@@ -176,7 +177,6 @@ export function setupInvestRunHandlers(investExe) {
 export function setupInvestLogReaderHandler() {
   ipcMain.on(ipcMainChannels.INVEST_READ_LOG,
     (event, logfile, pyModuleName, channel) => {
-      LOG_PATTERNS['invest-log-primary'] = new RegExp(pyModuleName);
       const fileStream = fs.createReadStream(logfile);
       fileStream.on('error', (err) => {
         logger.error(err);

@@ -127,7 +127,7 @@ export default class InvestTab extends React.Component {
     });
     ipcRenderer.on(`invest-stderr-${jobID}`, (event, data) => {
       // It's convenient to have stderr in it's own object to display
-      // it an Alert.
+      // in an Alert.
       let stderr = Object.assign('', this.state.logStdErr);
       stderr += data;
       this.setState({
