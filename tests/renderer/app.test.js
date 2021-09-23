@@ -1,14 +1,10 @@
 import path from 'path';
-import fs from 'fs';
 import events from 'events';
-import os from 'os';
 import { spawn, exec } from 'child_process';
 import Stream from 'stream';
 
 import React from 'react';
 import { ipcRenderer } from 'electron';
-import fetch from 'node-fetch';
-import rimraf from 'rimraf';
 import {
   fireEvent, render, waitFor, within
 } from '@testing-library/react';
