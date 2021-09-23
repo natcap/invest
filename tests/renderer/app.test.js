@@ -610,7 +610,8 @@ describe('InVEST subprocess testing', () => {
     // To test that we can parse the finalTraceback even after extra data
     const someStdErr = 'something went wrong';
     const finalTraceback = 'ValueError';
-    const allStdErr = `${someStdErr}\n${finalTraceback}\n\n`;
+    const pyInstallerErr = "[12345] Failed to execute script 'cli' due to unhandled exception!";
+    const allStdErr = `${someStdErr}\n${finalTraceback}\n${pyInstallerErr}\n`;
 
     mockInvestProc.stdout.push(stdOutText);
     mockInvestProc.stdout.push(stdOutLogfileSignal);
