@@ -116,7 +116,9 @@ def _calculate_args_bounding_box(args, args_spec):
         # model to hang sometimes (possible race condition), so only
         # get the bounding box of inputs that are known to be spatial.
         # Also eliminate any string paths that are empty to prevent an
-        # exception.
+        # exception. By the time we've made it to this function, all paths
+        # should already have been validated so the path is either valid or
+        # blank.
         spatial_info = None
         if args_spec['args'][key]['type'] == 'raster' and value.strip() != '':
             spatial_info = pygeoprocessing.get_raster_info(value)
