@@ -1620,30 +1620,42 @@ class OpenWorkspaceTest(_QtTest):
 
 
 @contextlib.contextmanager
-def _capture_logging_messages(logger, records):
+def _capture_logging_messages(logger):
     """Capture logging messages and return them as a list.
+
+    This context manager also sets the root logger's level to
+    ``logging.NOTSET`` and restores the former log level on completion of the
+    context being managed.
 
     Args:
         logger (logging.Logger): A logger instance from python's logging system
-            to which log records should be captured.
-        records (list): A list to which log records should be appended.
+            from which log records should be captured.
 
     Returns:
         ``None``."""
+    # The root logger has a default level of WARNING, but for tests we
+    # want to capture everything.
+    root_logger = logging.getLogger()
+    root_logger_prior_level = root_logger.level
+    root_logger.setLevel(logging.NOTSET)
+
     log_queue = queue.Queue()
     log_queue_handler = logging.handlers.QueueHandler(log_queue)
     log_queue_handler.setLevel(logging.NOTSET)  # capture all logging
     logger.addHandler(log_queue_handler)
-    yield
 
-    log_queue_handler.flush()
-    log_records = []
+    records = []
+    try:
+        yield records
+    finally:
+        # No matter what happens, always restore root logger level.
+        root_logger.setLevel(root_logger_prior_level)
+
     try:
         while True:
             records.append(log_queue.get_nowait())
     except queue.Empty:
         logger.removeHandler(log_queue_handler)
-        pass
 
 
 class ExecutionTest(_QtTest):
@@ -1674,16 +1686,17 @@ class ExecutionTest(_QtTest):
         # register the callback with the finished signal.
         executor.finished.connect(callback)
 
-        log_records = []
-        with _capture_logging_messages(execution_logger, log_records):
+        with _capture_logging_messages(execution_logger) as log_records:
             executor.start()
             thread_event.set()
             executor.join()
             if self.qt_app.hasPendingEvents():
                 self.qt_app.processEvents()
+
         callback.assert_called_once()
         target.assert_called_once()
         target.assert_called_with(*args, **kwargs)
+
         self.assertEqual(len(log_records), 0)
 
     def test_executor_exception(self):
@@ -1713,13 +1726,13 @@ class ExecutionTest(_QtTest):
         # register the callback with the finished signal.
         executor.finished.connect(callback)
 
-        log_records = []
-        with _capture_logging_messages(execution_logger, log_records):
+        with _capture_logging_messages(execution_logger) as log_records:
             executor.start()
             thread_event.set()
             executor.join()
             if self.qt_app.hasPendingEvents():
                 self.qt_app.processEvents()
+
         callback.assert_called_once()
         target.assert_called_once()
         target.assert_called_with(*args, **kwargs)
@@ -1729,11 +1742,9 @@ class ExecutionTest(_QtTest):
                          'Some demo exception')
         self.assertTrue(isinstance(executor.traceback, basestring))
 
-        print(log_records)
-        self.assertEqual(len(log_records), 1)
+        self.assertEqual(len(log_records), 2)
         self.assertIn('failed with exception', log_records[0].msg)
-        # There is supposed to be a second logger message here, but I can't
-        # figure out why it isn't being added to the queue.
+        self.assertIn('Execution finished', log_records[1].msg)
 
     def test_default_args(self):
         from natcap.invest.ui.execution import Executor
