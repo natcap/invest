@@ -5,14 +5,13 @@ import glob from 'glob';
 import { spawn, spawnSync } from 'child_process';
 
 import rimraf from 'rimraf';
-import fetch from 'node-fetch';
 import puppeteer from 'puppeteer-core';
 import { getDocument, queries, waitFor } from 'pptr-testing-library';
 
 import pkg from '../../package.json';
 import { APP_HAS_RUN_TOKEN } from '../../src/main/setupCheckFirstRun';
 
-jest.setTimeout(120000); // This test takes ~15 seconds, but longer in CI
+jest.setTimeout(240000); // This test takes ~20 seconds, but sometimes longer
 const PORT = 9009;
 const TMP_DIR = fs.mkdtempSync('tests/data/_');
 const TMP_AOI_PATH = path.join(TMP_DIR, 'aoi.geojson');
@@ -40,7 +39,7 @@ if (process.platform === 'darwin') {
 } else if (process.platform === 'win32') {
   [BINARY_PATH] = glob.sync('./dist/win-unpacked/InVEST*.exe');
   SCREENSHOT_PREFIX = path.join(
-    os.homedir(), 'AppData/Roaming/invest-workbench/logs/invest-workbench-'
+    os.homedir(), 'AppData/Roaming', pkg.name, 'logs/invest-workbench-'
   );
   APP_HAS_RUN_TOKEN_PATH = path.join(
     os.homedir(), 'AppData/Roaming', pkg.name, APP_HAS_RUN_TOKEN
@@ -80,29 +79,34 @@ function makeAOI() {
 
 // errors are not thrown from an async beforeAll
 // https://github.com/facebook/jest/issues/8688
-beforeAll(async () => {
+beforeAll(() => {
   try { fs.unlinkSync(APP_HAS_RUN_TOKEN_PATH); } catch {}
   // start the invest app and forward stderr to console
   ELECTRON_PROCESS = spawn(
     `"${BINARY_PATH}"`,
-    // remote-debugging-port is a chromium arg
+    // these are chromium args
     [`--remote-debugging-port=${PORT}`],
     { shell: true }
   );
   ELECTRON_PROCESS.stderr.on('data', (data) => {
     console.log(`${data}`);
   });
+  const stdOutCallback = async (data) => {
+    // Here's how we know the electron window is ready to connect to
+    if (`${data}`.match('main window loaded')) {
+      try {
+        BROWSER = await puppeteer.connect({
+          browserURL: `http://localhost:${PORT}`,
+          defaultViewport: null,
+        });
+      } catch (e) {
+        console.log(e);
+      }
+      ELECTRON_PROCESS.stdout.removeListener('data', stdOutCallback);
+    }
+  };
+  ELECTRON_PROCESS.stdout.on('data', stdOutCallback);
 
-  // get data about the remote debugging endpoint
-  // so we don't make the next fetch too early
-  await new Promise((resolve) => setTimeout(resolve, 20000));
-  const res = await fetch(`http://localhost:${PORT}/json/version`);
-  const data = JSON.parse(await res.text());
-  BROWSER = await puppeteer.connect({
-    browserWSEndpoint: data.webSocketDebuggerUrl, // this works
-    // browserURL: `http://localhost:${PORT}`,    // this also works
-    defaultViewport: null
-  });
   // set up test data
   makeAOI();
 
@@ -132,12 +136,15 @@ test('Run a real invest model', async () => {
   const { findByText, findByLabelText, findByRole } = queries;
   await waitFor(() => {
     expect(BROWSER.isConnected()).toBeTruthy();
-  });
+  }, { timeout: 30000 });
   // find the mainWindow's index.html, not the splashScreen's splash.html
   const target = await BROWSER.waitForTarget(
     (target) => target.url().endsWith('index.html')
   );
   const page = await target.page();
+  page.on('error', (err) => {
+    console.log(err);
+  });
   const doc = await getDocument(page);
   await page.screenshot({ path: `${SCREENSHOT_PREFIX}1-page-load.png` });
 
@@ -159,7 +166,7 @@ test('Run a real invest model', async () => {
   await modelButton.click();
   await page.screenshot({ path: `${SCREENSHOT_PREFIX}3-model-tab.png` });
 
-  const argsForm = await page.$('.args-form');
+  const argsForm = await page.waitForSelector('.args-form');
   const typeDelay = 10;
   const workspace = await findByLabelText(argsForm, /Workspace/i);
   await workspace.type(TMP_DIR, { delay: typeDelay });
@@ -180,11 +187,10 @@ test('Run a real invest model', async () => {
       runButton
     );
     expect(isEnabled).toBe(true);
-  });
+  }, { timeout: 10000 }); // waiting for validation
   await runButton.click();
 
   const logTab = await findByText(doc, 'Log');
-  // Log tab is not active until after the invest logfile is opened
   await waitFor(async () => {
     const prop = await logTab.getProperty('className');
     const vals = await prop.jsonValue();
@@ -200,7 +206,7 @@ test('Run a real invest model', async () => {
   expect(await findByText(sidebar, 'Run Canceled'));
   expect(await findByText(sidebar, 'Open Workspace'));
   await page.screenshot({ path: `${SCREENSHOT_PREFIX}6-run-canceled.png` });
-}, 50000); // 10x default timeout: sometimes expires in GHA
+}, 120000); // >2x the sum of all the max timeouts within this test
 
 // Test for duplicate application launch.
 // We have the binary path, so now let's launch a new subprocess with the same binary

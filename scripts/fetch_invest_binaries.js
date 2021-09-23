@@ -3,8 +3,11 @@ const fs = require('fs');
 const https = require('https');
 const path = require('path');
 const url = require('url');
-const fetch = require('node-fetch');
 const { exec, execFileSync } = require('child_process');
+
+const fetch = require('node-fetch');
+const fsExtra = require('fs-extra');
+
 const pkg = require('../package');
 
 let filePrefix;
@@ -30,19 +33,20 @@ const VERSION = pkg.invest.version;
 const DESTFILE = path.join(
   __dirname, `../build/version_${VERSION}_${binaryZipName}`
 );
+const INVEST_BINARIES_DIR = 'build/invest/';
 let DATA_PREFIX;
-let binaryZipPath;
+let binaryZipBucketPath;
 // forknames are only in the path on the dev-builds bucket
 if (bucket === 'releases.naturalcapitalproject.org') {
-  binaryZipPath = `${bucket}/${repo}/${VERSION}/${binaryZipName}`;
+  binaryZipBucketPath = `${bucket}/${repo}/${VERSION}/${binaryZipName}`;
   DATA_PREFIX = `${repo}/${VERSION}/data`;
 } else if (bucket === 'natcap-dev-build-artifacts') {
-  binaryZipPath = `${bucket}/${repo}/${fork}/${VERSION}/${binaryZipName}`;
+  binaryZipBucketPath = `${bucket}/${repo}/${fork}/${VERSION}/${binaryZipName}`;
   DATA_PREFIX = `${repo}/${fork}/${VERSION}/data`;
 }
 const SRC_BINARY_URL = url.resolve(
   'https://storage.googleapis.com',
-  binaryZipPath
+  binaryZipBucketPath
 );
 const DATA_QUERY_URL = url.resolve(
   'https://www.googleapis.com/storage/v1/b/',
@@ -75,7 +79,7 @@ function downloadAndUnzipBinaries(src, dest) {
     response.pipe(fileStream);
     fileStream.on('finish', () => {
       fileStream.close();
-      const unzip = exec(`unzip -o ${dest} -d build/invest/`);
+      const unzip = exec(`unzip -o ${dest} -d ${INVEST_BINARIES_DIR}`);
       unzip.stdout.on('data', (data) => {
         console.log(`${data}`);
       });
@@ -185,10 +189,11 @@ if (process.argv[2] && process.argv[2] === 'sampledata') {
       console.log(`will download for version ${VERSION}`);
     }
   } catch {
-    console.log('no local binaries in build/invest/');
+    console.log(`no local binaries in ${INVEST_BINARIES_DIR}`);
     console.log(`will download for version ${VERSION}`);
   } finally {
     if (willDownload) {
+      fsExtra.emptyDirSync(INVEST_BINARIES_DIR);
       downloadAndUnzipBinaries(SRC_BINARY_URL, DESTFILE);
     }
     updateSampledataRegistry();

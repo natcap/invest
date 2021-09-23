@@ -4,8 +4,8 @@ import os from 'os';
 import { spawn, exec } from 'child_process';
 
 import { app, ipcMain } from 'electron';
-import glob from 'glob';
 import fetch from 'node-fetch';
+import sanitizeHtml from 'sanitize-html';
 
 import { getLogger } from '../logger';
 import { ipcMainChannels } from './ipcMainChannels';
@@ -20,52 +20,45 @@ const LOGLEVELMAP = {
   ERROR: '-v',
 };
 const TEMP_DIR = path.join(app.getPath('userData'), 'tmp');
-const LOGFILE_REGEX = /InVEST-natcap\.invest\.[a-zA-Z._]+-log-[0-9]{4}-[0-9]{2}-[0-9]{2}--[0-9]{2}_[0-9]{2}_[0-9]{2}.txt/g;
 const HOSTNAME = 'http://localhost';
 
+const LOG_TEXT_TAG = 'span';
+const ALLOWED_HTML_OPTIONS = {
+  allowedTags: [LOG_TEXT_TAG],
+  allowedAttributes: { [LOG_TEXT_TAG]: ['class'] },
+};
+const LOG_ERROR_REGEX = /(Traceback)|(([A-Z]{1}[a-z]*){1,}Error)|(ERROR)/;
+export const LOG_PATTERNS = {
+  'invest-log-error': LOG_ERROR_REGEX,
+  'invest-log-primary': null,
+};
 /**
- * Given an invest workspace, find the most recently modified invest log.
+ * Encapsulate text in html, assigning class based on text content.
  *
- * This function is used in order to associate a logfile with an active
- * InVEST run, so the log can be tailed to a UI component.
- *
- * @param {string} directory - the path to an invest workspace directory
- * @returns {Promise} - resolves string path to an invest logfile
+ * @param  {string} message - plaintext string
+ * @param  {object} patterns - of shape {string: RegExp}
+ * @returns {string} - sanitized html
  */
-export function findMostRecentLogfile(directory) {
-  return new Promise((resolve) => {
-    const files = glob.sync(path.join(directory, '*.txt'));
-    const logfiles = [];
-    files.forEach((file) => {
-      const match = file.match(LOGFILE_REGEX);
-      if (match) {
-        logfiles.push(path.join(directory, match[0]));
+export function markupMessage(message, patterns) {
+  // eslint-disable-next-line
+  for (const [cls, pattern] of Object.entries(patterns)) {
+    // in case we somehow don't have a RegExp as the pattern
+    if (pattern && typeof pattern.test === 'function') {
+      if (pattern.test(message)) {
+        const markup = `<${LOG_TEXT_TAG} class="${cls}">${message}</${LOG_TEXT_TAG}>`;
+        return sanitizeHtml(markup, ALLOWED_HTML_OPTIONS);
       }
-    });
-    if (logfiles.length === 1) {
-      // This is the most likely path
-      resolve(logfiles[0]);
-      return;
     }
-    if (logfiles.length > 1) {
-      // reverse sort (b - a) based on last-modified time
-      const sortedFiles = logfiles.sort(
-        (a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs
-      );
-      resolve(sortedFiles[0]);
-    } else {
-      logger.error(`No invest logfile found in ${directory}`);
-      resolve(undefined);
-    }
-  });
+  }
+  return sanitizeHtml(message, ALLOWED_HTML_OPTIONS);
 }
 
 export function setupInvestRunHandlers(investExe) {
   const runningJobs = {};
 
-  ipcMain.on(ipcMainChannels.INVEST_KILL, (event, workspaceDir) => {
-    if (runningJobs[workspaceDir]) {
-      const pid = runningJobs[workspaceDir];
+  ipcMain.on(ipcMainChannels.INVEST_KILL, (event, jobID) => {
+    if (runningJobs[jobID]) {
+      const pid = runningJobs[jobID];
       if (process.platform !== 'win32') {
         // the '-' prefix on pid sends signal to children as well
         process.kill(-pid, 'SIGTERM');
@@ -76,7 +69,7 @@ export function setupInvestRunHandlers(investExe) {
   });
 
   ipcMain.on(ipcMainChannels.INVEST_RUN, async (
-    event, modelRunName, pyModuleName, args, loggingLevel, channel
+    event, modelRunName, pyModuleName, args, loggingLevel, jobID
   ) => {
     // Write a temporary datastack json for passing to invest CLI
     try {
@@ -112,50 +105,59 @@ export function setupInvestRunHandlers(investExe) {
     ];
     logger.debug(`set to run ${cmdArgs}`);
     let investRun;
+    let investLogfile;
+    const env = {
+      PATH: path.dirname(investExe),
+    };
     if (process.platform !== 'win32') {
       investRun = spawn(path.basename(investExe), cmdArgs, {
-        env: { PATH: path.dirname(investExe) },
+        env: env,
         shell: true, // without shell, IOError when datastack.py loads json
         detached: true, // counter-intuitive, but w/ true: invest terminates when this shell terminates
       });
     } else { // windows
       investRun = spawn(path.basename(investExe), cmdArgs, {
-        env: { PATH: path.dirname(investExe) },
+        env: env,
         shell: true,
       });
     }
 
+    const logPatterns = { ...LOG_PATTERNS };
+    logPatterns['invest-log-primary'] = new RegExp(pyModuleName);
     // There's no general way to know that a spawned process started,
     // so this logic to listen once on stdout seems like the way.
-    investRun.stdout.once('data', async (data) => {
-      const logfile = await findMostRecentLogfile(args.workspace_dir);
-      // TODO: handle case when logfile is still undefined?
-      // Could be if some stdout is emitted before a logfile exists.
-      logger.debug(`invest logging to: ${logfile}`);
-      runningJobs[args.workspace_dir] = investRun.pid;
-      event.reply(`invest-logging-${channel}`, logfile);
-    });
+    // We need to store the PID to enable killing the task.
+    // And need to parse the logfile path from stdout.
+    const stdOutCallback = async (data) => {
+      if (!investLogfile) {
+        if (`${data}`.match('Writing log messages to')) {
+          investLogfile = `${data}`.split(' ').pop().trim();
+          runningJobs[jobID] = investRun.pid;
+          event.reply(`invest-logging-${jobID}`, investLogfile);
+        }
+      }
+      // python logging flushes with each message, so data here should
+      // only be one logger message at a time.
+      event.reply(
+        `invest-stdout-${jobID}`,
+        markupMessage(`${data}`, logPatterns)
+      );
+    };
+    investRun.stdout.on('data', stdOutCallback);
 
-    // Capture stderr to a string separate from the invest log
-    // so that it can be displayed separately when invest exits.
-    // And because it could actually be stderr emitted from the
-    // invest CLI or even the shell, rather than the invest model,
-    // in which case it's useful to logger.debug too.
-    investRun.stderr.on('data', (data) => {
+    const stdErrCallback = (data) => {
       logger.debug(`${data}`);
-      // The PyInstaller exe will always emit a final 'Failed ...' message
-      // after an uncaught exception. It is not helpful to display to users
-      // so we filter it out here.
-      const dat = `${data}`
-        .split(os.EOL)
-        .filter((line) => !line.match(/\[[0-9]+\] Failed to execute script/))
-        .join(os.EOL);
-      event.reply(`invest-stderr-${channel}`, `${dat}${os.EOL}`);
+      event.reply(`invest-stderr-${jobID}`, `${data}`);
+    };
+    investRun.stderr.on('data', stdErrCallback);
+
+    investRun.on('close', (code) => {
+      logger.debug('invest subprocess stdio streams closed');
     });
 
     investRun.on('exit', (code) => {
-      delete runningJobs[args.workspace_dir];
-      event.reply(`invest-exit-${channel}`, code);
+      delete runningJobs[jobID];
+      event.reply(`invest-exit-${jobID}`, code);
       logger.debug(code);
       fs.unlink(datastackPath, (err) => {
         if (err) { logger.error(err); }
@@ -165,4 +167,22 @@ export function setupInvestRunHandlers(investExe) {
       });
     });
   });
+}
+
+export function setupInvestLogReaderHandler() {
+  ipcMain.on(ipcMainChannels.INVEST_READ_LOG,
+    (event, logfile, pyModuleName, channel) => {
+      const fileStream = fs.createReadStream(logfile);
+      fileStream.on('error', (err) => {
+        logger.error(err);
+        event.reply(
+          `invest-stdout-${channel}`,
+          `Logfile is missing or unreadable: ${os.EOL}${logfile}`
+        );
+      });
+
+      fileStream.on('data', (data) => {
+        event.reply(`invest-stdout-${channel}`, `${data}`);
+      });
+    });
 }

@@ -1,4 +1,5 @@
 import path from 'path';
+import os from 'os';
 
 import {
   app,
@@ -19,16 +20,17 @@ import setupDownloadHandlers from './setupDownloadHandlers';
 import setupDialogs from './setupDialogs';
 import setupContextMenu from './setupContextMenu';
 import { setupCheckFirstRun } from './setupCheckFirstRun';
-import { setupInvestRunHandlers } from './setupInvestHandlers';
+import {
+  setupInvestRunHandlers,
+  setupInvestLogReaderHandler
+} from './setupInvestHandlers';
 import { ipcMainChannels } from './ipcMainChannels';
 import { getLogger } from '../logger';
 import { menuTemplate } from './menubar';
 import pkg from '../../package.json';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
-
 const ELECTRON_DEV_MODE = !!process.defaultApp; // a property added by electron.
-
 process.env.PORT = '56789';
 
 // Keep a global reference of the window object, if you don't, the window will
@@ -106,21 +108,22 @@ export const createWindow = async () => {
     if (ELECTRON_DEV_MODE) {
       mainWindow.webContents.openDevTools();
     }
+    // We use this stdout as a signal in a puppeteer test
+    process.stdout.write('main window loaded');
   });
 
-  mainWindow.on('closed', async () => {
+  mainWindow.webContents.on('render-process-gone', (event, details) => {
+    logger.error('render-process-gone');
+    logger.error(details);
+  });
+
+  mainWindow.on('closed', () => {
     mainWindow = null;
-    // We shouldn't need to shutdown flask here, as it will be
-    // shutdown on the window-all-closed listener, but that one
-    // is not triggering in the puppeteer test on linux.
-    if (process.platform !== 'darwin') {
-      logger.debug('requesting flask shutdown on main window close');
-      await shutdownPythonProcess();
-    }
   });
 
   setupDownloadHandlers(mainWindow);
   setupInvestRunHandlers(investExe);
+  setupInvestLogReaderHandler();
 };
 
 export function removeIpcMainListeners() {
@@ -152,7 +155,7 @@ export function main(argv) {
       } = require('electron-devtools-installer');
       await installExtension(REACT_DEVELOPER_TOOLS, {
         loadExtensionOptions: { allowFileAccess: true }
-      })
+      });
     }
     createWindow();
   });
@@ -165,16 +168,19 @@ export function main(argv) {
     // On OS X it is common for applications and their menu bar
     // to stay active until the user quits explicitly with Cmd + Q
     if (process.platform !== 'darwin') {
-      removeIpcMainListeners();
-      await shutdownPythonProcess();
       app.quit();
     }
   });
-  app.on('will-quit', async () => {
-    if (process.platform === 'darwin') {
-      removeIpcMainListeners();
-      await shutdownPythonProcess();
-    }
+  let shuttingDown = false;
+  app.on('before-quit', async (event) => {
+    // prevent quitting until after we're done with cleanup,
+    // then programatically quit
+    if (shuttingDown) { return; }
+    event.preventDefault();
+    shuttingDown = true;
+    removeIpcMainListeners();
+    await shutdownPythonProcess();
+    app.quit();
   });
 }
 

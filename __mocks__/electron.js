@@ -39,6 +39,7 @@ class MockApp extends events.EventEmitter {
     this.getPath = jest.fn().mockImplementation(
       () => path.join('tests', 'data')
     );
+    this.setPath = jest.fn();
   }
 }
 export const app = new MockApp();
@@ -81,4 +82,4 @@ export const screen = {
 
 export const shell = {
   showItemInFolder: jest.fn()
-}
+};
