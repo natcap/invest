@@ -157,13 +157,10 @@ ValueError: Values in the LULC raster were found that are not represented under 
 
 describe('Unit tests for invest logger message markup', () => {
   const pyModuleName = 'natcap.invest.carbon';
-  const logPatterns = Object.assign({}, LOG_PATTERNS);
-
-  beforeAll(() => {
-    logPatterns['invest-log-primary'] = new RegExp(pyModuleName);
-  });
 
   test('Message from the invest model gets primary class attribute', () => {
+    const logPatterns = { ...LOG_PATTERNS };
+    logPatterns['invest-log-primary'] = new RegExp(pyModuleName);
     const message = `2021-01-15 07:14:37,148 (${pyModuleName}) ... INFO`;
     const markup = markupMessage(message, logPatterns);
     // Rendering and using DOM matchers adds confidence that we have valid html
@@ -175,11 +172,13 @@ describe('Unit tests for invest logger message markup', () => {
   });
 
   test.each([
-    `... (osgeo.gdal) ... ERROR`,
-    `... (foo.bar) ... SomeCustomError`,
+    '... (osgeo.gdal) ... ERROR',
+    '... (foo.bar) ... SomeCustomError',
     `... (${pyModuleName}) ... ValueError`,
-    `Traceback...`,
+    'Traceback...',
   ])('Message "%s" gets error class attribute', (message) => {
+    const logPatterns = { ...LOG_PATTERNS };
+    logPatterns['invest-log-primary'] = new RegExp(pyModuleName);
     const markup = markupMessage(message, logPatterns);
     const { getByText } = render(
       <div dangerouslySetInnerHTML={{ __html: markup }} />
@@ -188,8 +187,20 @@ describe('Unit tests for invest logger message markup', () => {
   });
 
   test('All other messages do not get markup', () => {
-    const message = `2021-01-15 07:14:37,148 (foo.bar) ... INFO`;
+    const logPatterns = { ...LOG_PATTERNS };
+    logPatterns['invest-log-primary'] = new RegExp(pyModuleName);
+    const message = '2021-01-15 07:14:37,148 (foo.bar) ... INFO';
     const markup = markupMessage(message, logPatterns);
+    const { getByText } = render(
+      <div dangerouslySetInnerHTML={{ __html: markup }} />
+    );
+    expect(getByText(message)).not.toHaveClass();
+  });
+
+  test('Messages pass through if pattern is not a RegExp', () => {
+    const message = `2021-01-15 07:14:37,148 (${pyModuleName}) ... INFO`;
+    expect(LOG_PATTERNS['invest-log-primary']).toBeNull();
+    const markup = markupMessage(message, LOG_PATTERNS);
     const { getByText } = render(
       <div dangerouslySetInnerHTML={{ __html: markup }} />
     );

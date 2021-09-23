@@ -30,7 +30,7 @@ const ALLOWED_HTML_OPTIONS = {
 const LOG_ERROR_REGEX = /(Traceback)|(([A-Z]{1}[a-z]*){1,}Error)|(ERROR)/;
 export const LOG_PATTERNS = {
   'invest-log-error': LOG_ERROR_REGEX,
-  'invest-log-primary': /a^/, // default is regex that will never match
+  'invest-log-primary': null,
 };
 /**
  * Encapsulate text in html, assigning class based on text content.
@@ -42,9 +42,12 @@ export const LOG_PATTERNS = {
 export function markupMessage(message, patterns) {
   // eslint-disable-next-line
   for (const [cls, pattern] of Object.entries(patterns)) {
-    if (pattern.test(message)) {
-      const markup = `<${LOG_TEXT_TAG} class="${cls}">${message}</${LOG_TEXT_TAG}>`;
-      return sanitizeHtml(markup, ALLOWED_HTML_OPTIONS);
+    // in case we somehow don't have a RegExp as the pattern
+    if (pattern && typeof pattern.test === 'function') {
+      if (pattern.test(message)) {
+        const markup = `<${LOG_TEXT_TAG} class="${cls}">${message}</${LOG_TEXT_TAG}>`;
+        return sanitizeHtml(markup, ALLOWED_HTML_OPTIONS);
+      }
     }
   }
   return sanitizeHtml(message, ALLOWED_HTML_OPTIONS);
