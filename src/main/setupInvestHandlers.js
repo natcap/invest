@@ -105,7 +105,6 @@ export function setupInvestRunHandlers(investExe) {
     let investLogfile;
     const env = {
       PATH: path.dirname(investExe),
-      PYTHONUNBUFFERED: 'TRUE', // stdio gets python log messages one at a time
     };
     if (process.platform !== 'win32') {
       investRun = spawn(path.basename(investExe), cmdArgs, {
@@ -134,7 +133,7 @@ export function setupInvestRunHandlers(investExe) {
           event.reply(`invest-logging-${jobID}`, investLogfile);
         }
       }
-      // we set python stdio to be unbuffered, so data here should
+      // python logging flushes with each message, so data here should
       // only be one logger message at a time.
       event.reply(
         `invest-stdout-${jobID}`,
@@ -144,21 +143,14 @@ export function setupInvestRunHandlers(investExe) {
     investRun.stdout.on('data', stdOutCallback);
 
     const stdErrCallback = (data) => {
-      // The python Traceback for invest comes through stdout & stderr,
-      // So no need to merge those streams for the benefit of displaying
-      // a complete log.
       logger.debug(`${data}`);
-      // The PyInstaller exe will always emit a final 'Failed ...' message
-      // after an uncaught exception. It is not helpful to display to users
-      // so we filter it out and stop listening to stderr when we find it.
-      const dataArray = `${data}`.split(/\[[0-9]+\] Failed to execute/);
-      if (dataArray.length > 1) {
-        investRun.stderr.removeListener('data', stdErrCallback);
-      }
-      const dat = dataArray[0];
-      event.reply(`invest-stderr-${jobID}`, `${dat}`);
+      event.reply(`invest-stderr-${jobID}`, `${data}`);
     };
     investRun.stderr.on('data', stdErrCallback);
+
+    investRun.on('close', (code) => {
+      logger.debug('invest subprocess stdio streams closed');
+    });
 
     investRun.on('exit', (code) => {
       delete runningJobs[jobID];

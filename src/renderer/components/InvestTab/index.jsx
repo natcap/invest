@@ -58,13 +58,16 @@ export default class InvestTab extends React.Component {
       modelSpec: null, // ARGS_SPEC dict with all keys except ARGS_SPEC.args
       argsSpec: null, // ARGS_SPEC.args, the immutable args stuff
       uiSpec: null,
-      logStdErr: null, // stderr data from the invest subprocess
+      logStdErr: '', // stderr data from the invest subprocess
       executeClicked: false,
     };
 
     this.investExecute = this.investExecute.bind(this);
     this.switchTabs = this.switchTabs.bind(this);
     this.terminateInvestProcess = this.terminateInvestProcess.bind(this);
+    this.investLogfileCallback = this.investLogfileCallback.bind(this);
+    this.investStdErrCallback = this.investStdErrCallback.bind(this);
+    this.investExitCallback = this.investExitCallback.bind(this);
   }
 
   async componentDidMount() {
@@ -77,12 +80,70 @@ export default class InvestTab extends React.Component {
       argsSpec: argsSpec,
       uiSpec: uiSpec,
     }, () => { this.switchTabs('setup'); });
+    const { jobID } = this.props;
+    ipcRenderer.on(`invest-logging-${jobID}`, this.investLogfileCallback);
+    ipcRenderer.on(`invest-stderr-${jobID}`, this.investStdErrCallback);
+    ipcRenderer.on(`invest-exit-${jobID}`, this.investExitCallback);
   }
 
   componentWillUnmount() {
-    ipcRenderer.removeAllListeners(`invest-logging-${this.props.jobID}`);
-    ipcRenderer.removeAllListeners(`invest-stderr-${this.props.jobID}`);
-    ipcRenderer.removeAllListeners(`invest-exit-${this.props.jobID}`);
+    ipcRenderer.removeListener(
+      `invest-logging-${this.props.jobID}`, this.investLogfileCallback
+    );
+    ipcRenderer.removeListener(
+      `invest-stderr-${this.props.jobID}`, this.investStdErrCallback
+    );
+    ipcRenderer.removeListener(
+      `invest-exit-${this.props.jobID}`, this.investExitCallback
+    );
+  }
+
+  investLogfileCallback(event, logfile) {
+    // Only now do we know for sure the process is running
+    this.props.updateJobProperties(this.props.jobID, {
+      logfile: logfile,
+      status: 'running',
+    });
+  }
+
+  investStdErrCallback(event, data) {
+    let { logStdErr } = this.state;
+    logStdErr += data;
+    this.setState({
+      logStdErr: logStdErr,
+    });
+  }
+
+  investExitCallback(event, code) {
+    const { logStdErr } = this.state;
+    const {
+      jobID,
+      updateJobProperties,
+      saveJob,
+    } = this.props;
+    const status = (code === 0) ? 'success' : 'error';
+    let finalTraceback = '';
+    if (logStdErr) {
+      // Get the last meaningful line of stderr for display in an Alert.
+      // The PyInstaller exe will always emit a final 'Failed ...' message
+      // after an uncaught exception.
+      const stdErrLines = logStdErr.split(/\r\n|\r|\n/);
+      while (
+        !finalTraceback || finalTraceback.includes(
+          "Failed to execute script 'cli' due to unhandled exception!"
+        )
+      ) {
+        finalTraceback = stdErrLines.pop();
+      }
+    }
+    updateJobProperties(jobID, {
+      status: status,
+      finalTraceback: finalTraceback,
+    });
+    saveJob(jobID);
+    this.setState({
+      executeClicked: false
+    });
   }
 
   /** Spawn a child process to run an invest model via the invest CLI.
@@ -97,13 +158,14 @@ export default class InvestTab extends React.Component {
    *   as a javascript object
    */
   async investExecute(argsValues) {
-    // This will disable the button until invest exits
-    this.setState({ executeClicked: true });
+    this.setState({
+      executeClicked: true, // disable the button until invest exits
+      logStdErr: '', // reset because we could be re-running a job
+    });
     const {
       job,
       jobID,
       investSettings,
-      saveJob,
       updateJobProperties,
     } = this.props;
     const args = { ...argsValues };
@@ -115,48 +177,7 @@ export default class InvestTab extends React.Component {
 
     updateJobProperties(jobID, {
       argsValues: args,
-      status: undefined // in case of re-run, clear an old status
-    });
-
-    ipcRenderer.on(`invest-logging-${jobID}`, (event, logfile) => {
-      // Only now do we know for sure the process is running
-      updateJobProperties(jobID, {
-        logfile: logfile,
-        status: 'running',
-      });
-    });
-    ipcRenderer.on(`invest-stderr-${jobID}`, (event, data) => {
-      // It's convenient to have stderr in it's own object to display
-      // in an Alert.
-      let stderr = Object.assign('', this.state.logStdErr);
-      stderr += data;
-      this.setState({
-        logStdErr: stderr,
-      });
-    });
-    ipcRenderer.on(`invest-exit-${jobID}`, (event, code) => {
-      // Invest CLI exits w/ code 1 when it catches errors,
-      // Models exit w/ code 255 (on all OS?) when errors raise from execute()
-      // Windows taskkill yields exit code 1
-      // Non-windows process.kill yields exit code null
-      const status = (code === 0) ? 'success' : 'error';
-      const { logStdErr } = this.state;
-      let finalTraceback = '';
-      if (logStdErr) {
-        // get the last meaningful line of stderr
-        const stdErrLines = logStdErr.split(/\r\n|\r|\n/);
-        while (!finalTraceback) {
-          finalTraceback = stdErrLines.pop();
-        }
-      }
-      updateJobProperties(jobID, {
-        status: status,
-        finalTraceback: finalTraceback,
-      });
-      saveJob(jobID);
-      this.setState({
-        executeClicked: false
-      });
+      status: undefined, // in case of re-run, clear an old status
     });
 
     ipcRenderer.send(
