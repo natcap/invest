@@ -85,6 +85,13 @@ Unreleased Changes (3.9.1)
       debugging some hard-to-reproduce GDAL logging errors that occasionally
       cause InVEST models to crash.  If GDAL calls ``_log_gdal_errors`` with an
       incorrect set of arguments, this is now logged.
+    * Improved the reliability and consistency of log messages across the
+      various ways that InVEST models can be run.  Running InVEST in
+      ``--headless`` mode, for example, will now have the same logging behavior,
+      including with exceptions, as the UI would produce.
+    * The default log level for the CLI has been lowered from
+      ``logging.CRITICAL`` to ``logging.ERROR``.  This ensures that exceptions
+      should always be written to the correct logging streams.
 * Carbon
     * Fixed a bug where, if rate change and discount rate were set to 0, the
       valuation results were in $/year rather than $, too small by a factor of
