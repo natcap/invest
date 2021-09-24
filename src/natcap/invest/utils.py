@@ -143,10 +143,11 @@ def prepare_workspace(
     if not os.path.exists(workspace):
         os.makedirs(workspace)
 
+    modelname = '-'.join(name.replace(':', '').split(' '))
     logfile = os.path.join(
         workspace,
         'InVEST-{modelname}-log-{timestamp}.txt'.format(
-            modelname='-'.join(name.replace(':', '').split(' ')),
+            modelname=modelname,
             timestamp=datetime.now().strftime("%Y-%m-%d--%H_%M_%S")))
 
     with capture_gdal_logging(), log_to_file(logfile,
@@ -158,10 +159,14 @@ def prepare_workspace(
             start_time = time.time()
             try:
                 yield
+            except Exception:
+                LOGGER.exception(f'Exception while executing {modelname}')
+                raise
             finally:
                 LOGGER.info('Elapsed time: %s',
                             _format_time(round(time.time() - start_time, 2)))
                 logging.captureWarnings(False)
+                LOGGER.info('Execution finished')
 
 
 class ThreadFilter(logging.Filter):

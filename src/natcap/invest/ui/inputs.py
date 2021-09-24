@@ -2497,9 +2497,13 @@ class Form(QtWidgets.QWidget):
         if not hasattr(target, '__call__'):
             raise ValueError('Target %s must be callable' % target)
 
+        # Don't need to log an exception or completion in the Executor thread
+        # in the case of a model run; those messages are handled by
+        # utils.prepare_workspace.
         self._thread = execution.Executor(target,
                                           args,
-                                          kwargs)
+                                          kwargs,
+                                          log_events=False)
         self._thread.finished.connect(self._run_finished)
 
         self.run_dialog.show()
