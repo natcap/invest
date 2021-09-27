@@ -274,10 +274,26 @@ body {
 	padding: inherit;
 }
 
+.invest-sidebar-col .alert {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	order: -1;
+	font-family: monospace;
+	font-weight: bold;
+}
+
+.invest-sidebar-col .alert .btn {
+	flex: 1;
+	margin-top: 1rem;
+	font-size: 1.1rem;
+	font-family: revert;
+	letter-spacing: 0.03rem;
+}
+
 .sidebar-footer {
     margin-top: auto;
-    padding-bottom: 2rem;
-    padding-right: 2rem;
+    padding-right: 1rem;
 }
 
 .sidebar-footer .btn-primary {
@@ -381,21 +397,6 @@ input[type=text]::placeholder {
 #log-text .invest-log-error {
 	color: #f13232;
 	font-weight: bold;
-}
-
-.invest-sidebar-col .alert {
-	display: flex;
-	flex-direction: column;
-	justify-content: center;
-	order: -1;
-	font-size: 1.2rem;
-}
-
-.invest-sidebar-col .alert .btn {
-	flex: 1;
-	margin-top: 1rem;
-	font-size: 1.1rem;
-	letter-spacing: 0.03rem;
 }
 
 /* Download Data Modal */
