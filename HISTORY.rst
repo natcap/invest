@@ -33,6 +33,10 @@
 
 .. :changelog:
 
+..
+  Unreleased Changes
+  ------------------
+
 Unreleased Changes (3.10)
 -------------------------
 * General:
@@ -41,8 +45,8 @@ Unreleased Changes (3.10)
     * Major updates to each model's ``ARGS_SPEC`` (and some related validation)
       to facilitate re-use & display in the Workbench and User's Guide.
 
-Unreleased Changes (3.9.1)
---------------------------
+3.9.1 (2021-09-22)
+------------------
 * General:
     * Added error-handling for when ``pandas`` fails to decode a non-utf8
       encoded CSV.
