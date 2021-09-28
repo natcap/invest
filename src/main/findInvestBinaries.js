@@ -25,8 +25,13 @@ export default function findInvestBinaries(isDevMode) {
     }
     // Checking that we have a functional invest exe by getting version
     const investVersion = execFileSync(investExe, ['--version']);
-    logger.info(`Found invest binaries ${investExe} for version ${investVersion}`);
-    return investExe;
+    logger.info(
+      `Found invest binaries ${investExe} for version ${investVersion}`
+    );
+    // It's likely the path includes spaces because it's composed of the
+    // app's Product Name, which a user-facing name given to electron-builder.
+    // Wrap in quotes to get around https://github.com/nodejs/node/issues/38490
+    return `"${investExe}"`;
   } catch (error) {
     logger.error(error.message);
     logger.error('InVEST binaries are probably missing.');
