@@ -106,18 +106,13 @@ export function setupInvestRunHandlers(investExe) {
     logger.debug(`set to run ${cmdArgs}`);
     let investRun;
     let investLogfile;
-    const env = {
-      PATH: path.dirname(investExe),
-    };
     if (process.platform !== 'win32') {
-      investRun = spawn(path.basename(investExe), cmdArgs, {
-        env: env,
+      investRun = spawn(investExe, cmdArgs, {
         shell: true, // without shell, IOError when datastack.py loads json
         detached: true, // counter-intuitive, but w/ true: invest terminates when this shell terminates
       });
     } else { // windows
-      investRun = spawn(path.basename(investExe), cmdArgs, {
-        env: env,
+      investRun = spawn(investExe, cmdArgs, {
         shell: true,
       });
     }

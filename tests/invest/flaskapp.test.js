@@ -194,6 +194,6 @@ describe('Build each model UI from ARGS_SPEC', () => {
         executeClicked={false}
       />
     );
-    expect(await findByLabelText('Workspace')).toBeInTheDocument();
+    expect(await findByLabelText(/workspace/i)).toBeInTheDocument();
   });
 });
