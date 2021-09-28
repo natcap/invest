@@ -92,7 +92,8 @@ describe('findInvestBinaries', () => {
     const isDevMode = false;
     const exePath = findInvestBinaries(isDevMode);
     expect(exePath)
-      .toBe(path.join(process.resourcesPath, 'invest', filename));
+      .toBe(path.join(process.resourcesPath, 'invest', filename)
+        .replace(/(\s+)/g, '\\$1'));
   });
   it('should throw if the invest exe is bad', async () => {
     execFileSync.mockImplementation(() => {

@@ -23,8 +23,8 @@ export default function findInvestBinaries(isDevMode) {
       const binaryPath = path.join(process.resourcesPath, 'invest');
       // It's likely the path includes spaces because it's composed of the
       // app's Product Name, a user-facing name given to electron-builder.
-      // Wrap in quotes because https://github.com/nodejs/node/issues/38490
-      investExe = `"${path.join(binaryPath, filename)}"`;
+      // escape spaces because https://github.com/nodejs/node/issues/38490
+      investExe = path.join(binaryPath, filename).replace(/(\s+)/g, '\\$1');
     }
     // Checking that we have a functional invest exe by getting version
     const investVersion = execFileSync(investExe, ['--version']);
