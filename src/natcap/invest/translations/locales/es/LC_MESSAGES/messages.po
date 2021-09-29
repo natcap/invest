@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2021-09-15 13:37-0700\n"
+"POT-Creation-Date: 2021-09-29 16:29-0700\n"
 "PO-Revision-Date: 2021-09-15 13:43-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -18,7 +18,127 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.9.1\n"
 
-#: src/natcap/invest/carbon.py:24
+#: src/natcap/invest/carbon.py:23
 msgid "InVEST Carbon Model"
 msgstr "Modelo de Carbono"
 
+#: src/natcap/invest/carbon.py:41
+msgid "current LULC"
+msgstr "LULC actual"
+
+#: src/natcap/invest/cli.py:199
+msgid "Available models:"
+msgstr "Modelos disponibles"
+
+#: src/natcap/invest/validation.py:30
+msgid "Parameter is required but is missing or has no value"
+msgstr "El parametro es obligatorio pero falta o no tiene valor"
+
+#: src/natcap/invest/validation.py:32
+msgid "Key is missing from the args dict"
+msgstr ""
+
+#: src/natcap/invest/validation.py:33
+#, fuzzy
+msgid "Input is required but has no value"
+msgstr "El parametro es obligatorio pero falta o no tiene valor"
+
+#: src/natcap/invest/validation.py:34
+msgid "Expected the {header} \"{header_name}\" but did not find it"
+msgstr ""
+
+#: src/natcap/invest/validation.py:36
+msgid ""
+"Expected the {header} \"{header_name}\" only once but found it {number} "
+"times"
+msgstr ""
+
+#: src/natcap/invest/validation.py:38
+msgid "Value \"{value}\" could not be interpreted as a number"
+msgstr ""
+
+#: src/natcap/invest/validation.py:39
+msgid ""
+"Layer must be projected in this unit: \"{unit_a}\" but found this unit: "
+"\"{unit_b}\""
+msgstr ""
+
+#: src/natcap/invest/validation.py:41
+msgid "An unexpected error occurred in validation"
+msgstr ""
+
+#: src/natcap/invest/validation.py:42
+msgid "Directory not found"
+msgstr ""
+
+#: src/natcap/invest/validation.py:43
+msgid "Path must be a directory"
+msgstr ""
+
+#: src/natcap/invest/validation.py:44
+msgid "File not found"
+msgstr ""
+
+#: src/natcap/invest/validation.py:45
+msgid "Dataset must have a valid projection."
+msgstr ""
+
+#: src/natcap/invest/validation.py:46
+msgid "Dataset must be projected in linear units."
+msgstr ""
+
+#: src/natcap/invest/validation.py:47
+msgid "File could not be opened as a GDAL raster"
+msgstr ""
+
+#: src/natcap/invest/validation.py:48
+msgid "File found to be an overview \".ovr\" file."
+msgstr ""
+
+#: src/natcap/invest/validation.py:49
+msgid "File could not be opened as a GDAL vector"
+msgstr ""
+
+#: src/natcap/invest/validation.py:50
+msgid "File could not be opened as a CSV or Excel file."
+msgstr ""
+
+#: src/natcap/invest/validation.py:51
+msgid "File could not be opened as a CSV. File must be encoded as a UTF-8 CSV."
+msgstr ""
+
+#: src/natcap/invest/validation.py:53
+msgid "Value did not match expected pattern {regexp}"
+msgstr ""
+
+#: src/natcap/invest/validation.py:54
+msgid "Value must be one of: {option_list}"
+msgstr ""
+
+#: src/natcap/invest/validation.py:55
+msgid "Value does not meet condition {condition}"
+msgstr ""
+
+#: src/natcap/invest/validation.py:56
+msgid "Value {value} is not in the range {range}"
+msgstr ""
+
+#: src/natcap/invest/validation.py:57
+msgid "Value \"{value}\" does not represent an integer"
+msgstr ""
+
+#: src/natcap/invest/validation.py:58
+msgid "Value must be either True or False, not {value}"
+msgstr ""
+
+#: src/natcap/invest/validation.py:59
+msgid "Spatial file {filepath} has no projection"
+msgstr ""
+
+#: src/natcap/invest/validation.py:60
+msgid "Bounding boxes do not intersect:"
+msgstr ""
+
+#: src/natcap/invest/validation.py:61
+msgid "You must have {permission} access to this file"
+msgstr ""

@@ -27,9 +27,12 @@ except pkg_resources.DistributionNotFound:
 # It wraps every string in every model that we want to translate
 # Make sure it's defined so that natcap.invest modules are importable whether
 # or not gettext has been installed in the importing namespace
-# if not callable(getattr(builtins, '_', None)):
-#     def identity(x): return x
-#     builtins.__dict__['_'] = identity
+if not callable(getattr(builtins, '_', None)):
+    print('_() not already defined; setting to identity')
+    def identity(x): return x
+    builtins.__dict__['_'] = identity
+else:
+    print('_() already defined')
 
 
 def install_language(language_code):
@@ -42,6 +45,7 @@ def install_language(language_code):
         fallback=True)
     language.install()
     LOGGER.debug(f'Installed language "{language_code}"')
+    print('installed language', language_code)
 
 
 def local_dir(source_file):

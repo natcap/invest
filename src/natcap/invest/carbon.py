@@ -38,7 +38,7 @@ ARGS_SPEC = {
                 "A map of LULC for the current scenario. "
                 "All values in this raster must have corresponding "
                 "entries in the Carbon Pools table."),
-            "name": "current LULC"
+            "name": _("current LULC")
         },
         "calc_sequestration": {
             "type": "boolean",

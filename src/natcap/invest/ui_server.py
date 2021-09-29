@@ -7,7 +7,6 @@ import logging
 from osgeo import gdal
 from flask import Flask
 from flask import request
-from natcap.invest import cli
 from natcap.invest import datastack
 from natcap.invest import spec_utils
 
@@ -53,6 +52,11 @@ def get_invest_models():
     Returns:
         A JSON string
     """
+    from natcap.invest import install_language
+    language = request.args['language']
+    install_language(language)
+    from natcap.invest import cli
+
     LOGGER.debug('get model list')
     return cli.build_model_list_json()
 
