@@ -187,6 +187,7 @@ export default class SetupTab extends React.Component {
     };
   }
 
+
   /** Save the current invest arguments to a python script via datastack.py API.
    *
    * @param {string} filepath - desired path to the python script
@@ -438,6 +439,7 @@ SetupTab.propTypes = {
   argsInitValues: PropTypes.object,
   investExecute: PropTypes.func.isRequired,
   nWorkers: PropTypes.string.isRequired,
+  language: PropTypes.string.isRequired,
   sidebarSetupElementId: PropTypes.string.isRequired,
   sidebarFooterElementId: PropTypes.string.isRequired,
   executeClicked: PropTypes.bool.isRequired,

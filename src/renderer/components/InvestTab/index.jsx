@@ -186,6 +186,7 @@ export default class InvestTab extends React.Component {
       this.state.modelSpec.module,
       args,
       investSettings.loggingLevel,
+      investSettings.language,
       jobID
     );
     this.switchTabs('log');
@@ -304,6 +305,7 @@ export default class InvestTab extends React.Component {
                   argsInitValues={argsValues}
                   investExecute={this.investExecute}
                   nWorkers={this.props.investSettings.nWorkers}
+                  language={this.props.investSettings.language}
                   sidebarSetupElementId={sidebarSetupElementId}
                   sidebarFooterElementId={sidebarFooterElementId}
                   executeClicked={this.state.executeClicked}
@@ -338,6 +340,7 @@ InvestTab.propTypes = {
   investSettings: PropTypes.shape({
     nWorkers: PropTypes.string,
     loggingLevel: PropTypes.string,
+    language: PropTypes.string,
   }).isRequired,
   saveJob: PropTypes.func.isRequired,
   updateJobProperties: PropTypes.func.isRequired,

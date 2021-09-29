@@ -87,6 +87,7 @@ export default class SettingsModal extends React.Component {
   }
 
   handleChange(event) {
+    console.log(event);
     const newSettings = Object.assign({}, this.state.localSettings);
     newSettings[event.target.name] = event.target.value;
     this.setState({
@@ -186,8 +187,11 @@ export default class SettingsModal extends React.Component {
                   value={this.state.localSettings.language}
                   onChange={this.handleChange}
                 >
-                  {languageOptions.keys().map(opt =>
-                    <option value={opt} key={opt}>{opt}</option>
+                  {Object.entries(languageOptions).map(entry => {
+                    const displayName = entry[0];
+                    const value = entry[1];
+                    return <option value={value} key={value}>{displayName}</option>;
+                  }
                   )}
                 </Form.Control>
               </Col>
@@ -257,6 +261,7 @@ SettingsModal.propTypes = {
     nWorkers: PropTypes.string,
     loggingLevel: PropTypes.string,
     sampleDataDir: PropTypes.string,
+    language: PropTypes.string,
   }),
   showDownloadModal: PropTypes.func,
 };
