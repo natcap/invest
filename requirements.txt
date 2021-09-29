@@ -20,7 +20,8 @@ Rtree>=0.8.2,!=0.9.1
 Shapely>=1.7.1,<2.0.0
 scipy>=1.6.0  # pip-only
 pygeoprocessing>=2.3.2  # pip-only
-taskgraph[niced_processes]>=0.10.3  # pip-only
+#taskgraph[niced_processes]>=0.10.3  # pip-only
+git+https://github.com/phargogh/taskgraph.git@bugfix/76-flaky-zerodivisionerror-on-linux-tests#egg=taskgraph
 psutil>=5.6.6
 chardet>=3.0.4
 openpyxl
