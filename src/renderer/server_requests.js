@@ -1,3 +1,5 @@
+import { getSettingsValue } from './components/SettingsModal/SettingsStorage';
+
 const logger = window.Workbench.getLogger(__filename.split('/').slice(-1)[0]);
 const HOSTNAME = 'http://localhost';
 
@@ -12,9 +14,11 @@ const HOSTNAME = 'http://localhost';
  *
  * @returns {Promise} resolves object
  */
-export function getInvestModelNames() {
+export async function getInvestModelNames() {
+  const language = await getSettingsValue('language');
+  console.log(language);
   return (
-    window.fetch(`${HOSTNAME}:${process.env.PORT}/models`, {
+    window.fetch(`${HOSTNAME}:${process.env.PORT}/models?language=${language}`, {
       method: 'get',
     })
       .then((response) => response.json())
