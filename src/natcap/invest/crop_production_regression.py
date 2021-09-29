@@ -17,6 +17,9 @@ from . import validation
 
 LOGGER = logging.getLogger(__name__)
 
+CROPS = [
+    "barley", "maize", "oilpalm", "potato", "rice", "soybean",
+    "sugarbeet", "sugarcane", "sunflower", "wheat"]
 
 ARGS_SPEC = {
     "model_name": "Crop Production Regression Model",
@@ -33,53 +36,40 @@ ARGS_SPEC = {
         "landcover_raster_path": {
             **spec_utils.LULC,
             "projected": True,
-            "projection_units": u.meter,
-            "about": (
-                "A raster file, representing integer land use/land code "
-                "covers for each cell. This raster should have a projected "
-                "coordinate system with units of meters (e.g. UTM) because "
-                "pixel areas are divided by 10000 in order to report some "
-                "results in hectares."),
+            "projection_units": u.meter
         },
         "landcover_to_crop_table_path": {
             "type": "csv",
             "columns": {
+                "lucode": {"type": "integer"},
                 "crop_name": {
                     "type": "option_string",
-                    "options": {
-                        "barley", "maize", "oilpalm", "potato", "rice",
-                        "rye", "soybean", "sugarbeet", "sugarcane",
-                        "sunflower", "wheat"
-                    }
-                },
-                "lucode": {"type": "integer"}
+                    "options": CROPS
+                }
             },
             "about": (
-                "A CSV table mapping canonical crop names to land use codes "
-                "contained in the landcover/use raster."),
-            "name": "Landcover to Crop Table"
+                "A table that maps each LULC code from the LULC map to one of "
+                "the 10 canonical crop names representing the crop grown in "
+                "that LULC class."),
+            "name": "LULC to crop table"
         },
         "fertilization_rate_table_path": {
             "type": "csv",
             "columns": {
-                "crop_name": {"type": "freestyle_string"},
-                "nitrogen_rate": {
-                    "type": "number",
-                    "units": u.kilogram/u.hectare
+                "crop_name": {
+                    "type": "option_string",
+                    "options": CROPS,
+                    "about": "One of the supported crop types."
                 },
-                "phosphorus_rate": {
+                **{f"{nutrient}_rate": {
                     "type": "number",
-                    "units": u.kilogram/u.hectare
-                },
-                "potassium_rate": {
-                    "type": "number",
-                    "units": u.kilogram/u.hectare
-                }
+                    "units": u.kilogram/u.hectare,
+                    "about": f"Rate of {nutrient} application for the crop."
+                } for nutrient in ["nitrogen", "phosphorus", "potassium"]}
             },
             "about": (
-                "A table that maps crops to fertilization rates for nitrogen, "
-                "phosphorus, and potassium."),
-            "name": "Fertilization Rate Table Path"
+                "A table that maps crops to fertilizer application rates."),
+            "name": "fertilization rate table"
         },
         "aggregate_polygon_path": {
             **spec_utils.AOI,
@@ -152,13 +142,8 @@ ARGS_SPEC = {
                     }
                 }
             },
-            "about": (
-                "A path to the InVEST Crop Production Data directory. These "
-                "data would have been included with the InVEST installer if "
-                "selected, or can be manually downloaded from "
-                "http://releases.naturalcapitalproject.org/invest. If "
-                "downloaded with InVEST, the default value should be used."),
-            "name": "Directory to model data"
+            "about": "The Crop Production datasets provided with the model.",
+            "name": "model data"
         }
     }
 }
@@ -265,7 +250,7 @@ _EXPECTED_NUTRIENT_TABLE_HEADERS = [
     'Riboflavin', 'Niacin', 'Pantothenic', 'VitB6', 'Folate', 'VitB12',
     'VitK']
 _EXPECTED_LUCODE_TABLE_HEADER = 'lucode'
-_NODATA_YIELD = -1.0
+_NODATA_YIELD = -1
 
 
 def execute(args):
@@ -374,7 +359,7 @@ def execute(args):
     landcover_raster_info = pygeoprocessing.get_raster_info(
         args['landcover_raster_path'])
     pixel_area_ha = numpy.product([
-        abs(x) for x in landcover_raster_info['pixel_size']]) / 10000.0
+        abs(x) for x in landcover_raster_info['pixel_size']]) / 10000
     landcover_nodata = landcover_raster_info['nodata'][0]
     if landcover_nodata is None:
         LOGGER.warning(
@@ -426,7 +411,7 @@ def execute(args):
         for bin_id in crop_regression_table:
             for header in _EXPECTED_REGRESSION_TABLE_HEADERS:
                 if crop_regression_table[bin_id][header.lower()] == '':
-                    crop_regression_table[bin_id][header.lower()] = 0.0
+                    crop_regression_table[bin_id][header.lower()] = 0
 
         yield_regression_headers = [
             x for x in list(crop_regression_table.values())[0]
@@ -451,8 +436,12 @@ def execute(args):
                 (bin_id,
                  crop_regression_table[bin_id][yield_regression_id])
                 for bin_id in crop_regression_table])
+            # reclassify nodata to a valid value of 0
+            # we're assuming that the crop doesn't exist where there is no data
+            # this is more likely than assuming the crop does exist, esp.
+            # in the context of the provided climate bins map
             bin_to_regression_value[
-                crop_climate_bin_raster_info['nodata'][0]] = 0.0
+                crop_climate_bin_raster_info['nodata'][0]] = 0
             coarse_regression_parameter_raster_path = os.path.join(
                 output_dir,
                 _COARSE_YIELD_REGRESSION_PARAMETER_FILE_PATTERN % (
@@ -695,6 +684,7 @@ def _x_yield_op(
     result = numpy.empty(b_x.shape, dtype=numpy.float32)
     result[:] = _NODATA_YIELD
     valid_mask = (
+        (y_max != _NODATA_YIELD) &
         (b_x != _NODATA_YIELD) & (c_x != _NODATA_YIELD) &
         (lulc_array == crop_lucode))
     result[valid_mask] = pixel_area_ha * y_max[valid_mask] * (
@@ -731,7 +721,7 @@ def _zero_observed_yield_op(observed_yield_array, observed_yield_nodata):
     """
     result = numpy.empty(
         observed_yield_array.shape, dtype=numpy.float32)
-    result[:] = 0.0
+    result[:] = 0
     valid_mask = slice(None)
     if observed_yield_nodata is not None:
         valid_mask = ~numpy.isclose(
@@ -761,9 +751,9 @@ def _mask_observed_yield_op(
     if landcover_nodata is not None:
         result[:] = observed_yield_nodata
         valid_mask = ~numpy.isclose(lulc_array, landcover_nodata)
-        result[valid_mask] = 0.0
+        result[valid_mask] = 0
     else:
-        result[:] = 0.0
+        result[:] = 0
     lulc_mask = lulc_array == crop_lucode
     result[lulc_mask] = (
         observed_yield_array[lulc_mask] * pixel_area_ha)
@@ -806,7 +796,7 @@ def tabulate_regression_results(
             result_table.write(crop_name)
             production_lookup = {}
             production_pixel_count = 0
-            yield_sum = 0.0
+            yield_sum = 0
             observed_production_raster_path = os.path.join(
                 output_dir,
                 _OBSERVED_PRODUCTION_FILE_PATTERN % (
@@ -836,7 +826,7 @@ def tabulate_regression_results(
             crop_production_raster_path = os.path.join(
                 output_dir, _CROP_PRODUCTION_FILE_PATTERN % (
                     crop_name, file_suffix))
-            yield_sum = 0.0
+            yield_sum = 0
             for _, yield_block in pygeoprocessing.iterblocks(
                     (crop_production_raster_path, 1)):
                 yield_sum += numpy.sum(
@@ -847,7 +837,7 @@ def tabulate_regression_results(
 
             # convert 100g to Mg and fraction left over from refuse
             nutrient_factor = 1e4 * (
-                1.0 - nutrient_table[crop_name]['Percentrefuse'] / 100.0)
+                1 - nutrient_table[crop_name]['Percentrefuse'] / 100)
             for nutrient_id in _EXPECTED_NUTRIENT_TABLE_HEADERS:
                 total_nutrient = (
                     nutrient_factor *
@@ -861,7 +851,7 @@ def tabulate_regression_results(
                         nutrient_table[crop_name][nutrient_id]))
             result_table.write('\n')
 
-        total_area = 0.0
+        total_area = 0
         for _, band_values in pygeoprocessing.iterblocks(
                 (landcover_raster_path, 1)):
             if landcover_nodata is not None:
@@ -916,7 +906,7 @@ def aggregate_regression_results_to_polygons(
     for crop_name in crop_to_landcover_table:
         # convert 100g to Mg and fraction left over from refuse
         nutrient_factor = 1e4 * (
-            1.0 - nutrient_table[crop_name]['Percentrefuse'] / 100.0)
+            1 - nutrient_table[crop_name]['Percentrefuse'] / 100)
         LOGGER.info(
             "Calculating zonal stats for %s", crop_name)
         crop_production_raster_path = os.path.join(

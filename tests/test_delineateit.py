@@ -160,7 +160,7 @@ class DelineateItTests(unittest.TestCase):
         self.assertEqual(
             validation_warnings,
             [(['dem_path'], 'File could not be opened as a GDAL raster'),
-             (['flow_threshold'], 'Value does not meet condition value > 0'),
+             (['flow_threshold'], 'Value does not meet condition value >= 0'),
              (['outlet_vector_path'], (
                  'File could not be opened as a GDAL vector')),
              (['snap_distance'], (
@@ -244,7 +244,7 @@ class DelineateItTests(unittest.TestCase):
         for feature, (expected_geom, expected_fields) in zip(
                 snapped_points_layer, expected_geometries_and_fields):
             shapely_feature = shapely.wkb.loads(
-                feature.GetGeometryRef().ExportToWkb())
+                bytes(feature.GetGeometryRef().ExportToWkb()))
 
             self.assertTrue(shapely_feature.equals(expected_geom))
             self.assertEqual(expected_fields, feature.items())
@@ -320,7 +320,7 @@ class DelineateItTests(unittest.TestCase):
             expected_feature = shapely.geometry.Point(5, -5)
             for feature in snapped_points_layer:
                 shapely_feature = shapely.wkb.loads(
-                    feature.GetGeometryRef().ExportToWkb())
+                    bytes(feature.GetGeometryRef().ExportToWkb()))
                 self.assertTrue(shapely_feature.equals(expected_feature))
         finally:
             snapped_points_layer = None

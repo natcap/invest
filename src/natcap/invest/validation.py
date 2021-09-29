@@ -386,8 +386,9 @@ def check_option_string(value, options, **kwargs):
     """Validate that a string is in a set of options.
 
     Args:
-        value (string): The string value to test.
-        options (set | dict): strings to test against.
+        value: The value to test. Will be cast to a string before comparing
+            against the allowed options.
+        options (list | dict): strings to test against.
             If a dict, test against the keys.
 
     Returns:
@@ -397,7 +398,7 @@ def check_option_string(value, options, **kwargs):
     """
     # if options is an empty set, that means it's dynamically populated
     # so validation should be left to the model's validate function.
-    if options and value not in options:
+    if options and str(value) not in options:
         return "Value must be one of: %s" % sorted(options)
 
 

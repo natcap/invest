@@ -5,11 +5,13 @@ import os
 import tempfile
 import shutil
 import logging
+import logging.handlers
 import threading
 import warnings
 import re
 import glob
 import textwrap
+import queue
 
 import numpy
 from osgeo import gdal
@@ -211,6 +213,7 @@ class ExponentialDecayUtilsTests(unittest.TestCase):
 
 class SandboxTempdirTests(unittest.TestCase):
     """Test Sandbox Tempdir."""
+
     def setUp(self):
         """Setup workspace."""
         self.workspace_dir = tempfile.mkdtemp()
@@ -237,6 +240,7 @@ class SandboxTempdirTests(unittest.TestCase):
 
 class TimeFormattingTests(unittest.TestCase):
     """Test Time Formatting."""
+
     def test_format_time_hours(self):
         """Test format time hours."""
         from natcap.invest.utils import _format_time
@@ -261,6 +265,7 @@ class TimeFormattingTests(unittest.TestCase):
 
 class LogToFileTests(unittest.TestCase):
     """Test Log To File."""
+
     def setUp(self):
         """Create a temporary workspace."""
         self.workspace = tempfile.mkdtemp()
@@ -332,6 +337,7 @@ class LogToFileTests(unittest.TestCase):
 
 class ThreadFilterTests(unittest.TestCase):
     """Test Thread Filter."""
+
     def test_thread_filter_same_thread(self):
         """Test threat filter same thread."""
         from natcap.invest.utils import ThreadFilter
@@ -420,6 +426,7 @@ class MakeDirectoryTests(unittest.TestCase):
 
 class GDALWarningsLoggingTests(unittest.TestCase):
     """Test GDAL Warnings Logging."""
+
     def setUp(self):
         """Create a temporary workspace."""
         self.workspace = tempfile.mkdtemp()
@@ -452,9 +459,54 @@ class GDALWarningsLoggingTests(unittest.TestCase):
 
         self.assertEqual(len(messages), 1)
 
+    def test_log_gdal_errors_bad_n_args(self):
+        """utils: test error capture when number of args != 3."""
+        from natcap.invest import utils
+
+        log_queue = queue.Queue()
+        log_queue_handler = logging.handlers.QueueHandler(log_queue)
+        utils.LOGGER.addHandler(log_queue_handler)
+
+        try:
+            # 1 parameter, expected 3
+            utils._log_gdal_errors('foo')
+        finally:
+            utils.LOGGER.removeHandler(log_queue_handler)
+
+        record = log_queue.get()
+        self.assertEqual(record.name, 'natcap.invest.utils')
+        self.assertEqual(record.levelno, logging.ERROR)
+        self.assertIn(
+            '_log_gdal_errors was called with an incorrect number',
+            record.msg)
+
+    def test_log_gdal_errors_missing_param(self):
+        """utils: test error when specific parameters missing."""
+        from natcap.invest import utils
+
+        log_queue = queue.Queue()
+        log_queue_handler = logging.handlers.QueueHandler(log_queue)
+        utils.LOGGER.addHandler(log_queue_handler)
+
+        try:
+            # Missing third parameter, "err_msg"
+            utils._log_gdal_errors(
+                gdal.CE_Failure, 123,
+                bad_param='bad param')  # param obviously bad
+        finally:
+            utils.LOGGER.removeHandler(log_queue_handler)
+
+        record = log_queue.get()
+        self.assertEqual(record.name, 'natcap.invest.utils')
+        self.assertEqual(record.levelno, logging.ERROR)
+        self.assertIn(
+            "_log_gdal_errors called without the argument 'err_msg'",
+            record.msg)
+
 
 class PrepareWorkspaceTests(unittest.TestCase):
     """Test Prepare Workspace."""
+
     def setUp(self):
         """Create a temporary workspace."""
         self.workspace = tempfile.mkdtemp()
@@ -494,6 +546,7 @@ class PrepareWorkspaceTests(unittest.TestCase):
 
 class BuildLookupFromCSVTests(unittest.TestCase):
     """Tests for natcap.invest.utils.build_lookup_from_csv."""
+
     def setUp(self):
         """Make temporary directory for workspace."""
         self.workspace_dir = tempfile.mkdtemp()
@@ -518,8 +571,8 @@ class BuildLookupFromCSVTests(unittest.TestCase):
                 'foo': -1.0,
                 'bar': 'bar',
                 '_': 'apple'
-                },
-            }
+            },
+        }
         self.assertDictEqual(result, expected_dict)
 
     def test_unique_key_not_first_column(self):
@@ -537,10 +590,10 @@ class BuildLookupFromCSVTests(unittest.TestCase):
         result = utils.build_lookup_from_csv(
             table_path, 'lucode', to_lower=True)
         expected_result = {
-                1: {'desc': 'corn', 'val1': 0.5, 'val2': 2, 'lucode': 1},
-                2: {'desc': 'bread', 'val1': 1, 'val2': 4, 'lucode': 2},
-                3: {'desc': 'beans', 'val1': 0.5, 'val2': 4, 'lucode': 3},
-                4: {'desc': 'butter', 'val1': 9, 'val2': 1, 'lucode': 4}}
+            1: {'desc': 'corn', 'val1': 0.5, 'val2': 2, 'lucode': 1},
+            2: {'desc': 'bread', 'val1': 1, 'val2': 4, 'lucode': 2},
+            3: {'desc': 'beans', 'val1': 0.5, 'val2': 4, 'lucode': 3},
+            4: {'desc': 'butter', 'val1': 9, 'val2': 1, 'lucode': 4}}
 
         self.assertDictEqual(result, expected_result)
 
@@ -589,10 +642,10 @@ class BuildLookupFromCSVTests(unittest.TestCase):
         result = utils.build_lookup_from_csv(
             table_path, 'lucode', to_lower=True)
         expected_result = {
-                1: {'desc': 'corn', 'val1': 0.5, 'val2': 2, 'lucode': 1},
-                2: {'desc': '', 'val1': 1, 'val2': 4, 'lucode': 2},
-                3: {'desc': 'beans', 'val1': 0.5, 'val2': 4, 'lucode': 3},
-                4: {'desc': 'butter', 'val1': '', 'val2': 1, 'lucode': 4}}
+            1: {'desc': 'corn', 'val1': 0.5, 'val2': 2, 'lucode': 1},
+            2: {'desc': '', 'val1': 1, 'val2': 4, 'lucode': 2},
+            3: {'desc': 'beans', 'val1': 0.5, 'val2': 4, 'lucode': 3},
+            4: {'desc': 'butter', 'val1': '', 'val2': 1, 'lucode': 4}}
 
         self.assertDictEqual(result, expected_result)
 
@@ -611,9 +664,9 @@ class BuildLookupFromCSVTests(unittest.TestCase):
         result = utils.build_lookup_from_csv(
             table_path, 'lucode', to_lower=True)
         expected_result = {
-                1.0: {'desc': 'corn', 'val1': 0.5, 'val2': 2, 'lucode': 1.0},
-                3.0: {'desc': 'beans', 'val1': 0.5, 'val2': 4, 'lucode': 3.0},
-                4.0: {'desc': 'butter', 'val1': 9, 'val2': 1, 'lucode': 4.0}}
+            1.0: {'desc': 'corn', 'val1': 0.5, 'val2': 2, 'lucode': 1.0},
+            3.0: {'desc': 'beans', 'val1': 0.5, 'val2': 4, 'lucode': 3.0},
+            4.0: {'desc': 'butter', 'val1': 9, 'val2': 1, 'lucode': 4.0}}
 
         self.assertDictEqual(result, expected_result)
 
@@ -633,10 +686,10 @@ class BuildLookupFromCSVTests(unittest.TestCase):
             table_path, 'lucode', to_lower=True, column_list=['val1', 'val2'])
 
         expected_result = {
-                1: {'val1': 0.5, 'val2': 2, 'lucode': 1},
-                2: {'val1': 1, 'val2': 4, 'lucode': 2},
-                3: {'val1': 0.5, 'val2': 4, 'lucode': 3},
-                4: {'val1': 9, 'val2': 1, 'lucode': 4}}
+            1: {'val1': 0.5, 'val2': 2, 'lucode': 1},
+            2: {'val1': 1, 'val2': 4, 'lucode': 2},
+            3: {'val1': 0.5, 'val2': 4, 'lucode': 3},
+            4: {'val1': 9, 'val2': 1, 'lucode': 4}}
 
         self.assertDictEqual(result, expected_result)
 
@@ -656,10 +709,10 @@ class BuildLookupFromCSVTests(unittest.TestCase):
             table_path, 'lucode', to_lower=True)
 
         expected_result = {
-                1: {'desc': 'corn', 'val1': 0.5, 'val2': 2, 'lucode': 1},
-                2: {'desc': 'bread', 'val1': 1, 'val2': 4, 'lucode': 2},
-                3: {'desc': 'beans', 'val1': 0.5, 'val2': 4, 'lucode': 3},
-                4: {'desc': 'butter', 'val1': 9, 'val2': 1, 'lucode': 4}}
+            1: {'desc': 'corn', 'val1': 0.5, 'val2': 2, 'lucode': 1},
+            2: {'desc': 'bread', 'val1': 1, 'val2': 4, 'lucode': 2},
+            3: {'desc': 'beans', 'val1': 0.5, 'val2': 4, 'lucode': 3},
+            4: {'desc': 'butter', 'val1': 9, 'val2': 1, 'lucode': 4}}
 
         self.assertDictEqual(result, expected_result)
 
@@ -679,10 +732,10 @@ class BuildLookupFromCSVTests(unittest.TestCase):
             table_path, 'lucode', to_lower=True)
 
         expected_result = {
-                1: {'desc': 'corn', 'val1': 0.5, 'val2': 2, 'lucode': 1},
-                2: {'desc': 'bread', 'val1': 1, 'val2': 4, 'lucode': 2},
-                3: {'desc': 'beans', 'val1': 0.5, 'val2': 4, 'lucode': 3},
-                4: {'desc': 'butter', 'val1': 9, 'val2': 1, 'lucode': 4}}
+            1: {'desc': 'corn', 'val1': 0.5, 'val2': 2, 'lucode': 1},
+            2: {'desc': 'bread', 'val1': 1, 'val2': 4, 'lucode': 2},
+            3: {'desc': 'beans', 'val1': 0.5, 'val2': 4, 'lucode': 3},
+            4: {'desc': 'butter', 'val1': 9, 'val2': 1, 'lucode': 4}}
 
         self.assertDictEqual(result, expected_result)
 
@@ -914,7 +967,7 @@ class ReadCSVToDataframeTests(unittest.TestCase):
     def test_csv_with_integer_headers(self):
         """
         utils: CSV with integer headers should be read into strings.
-        
+
         This shouldn't matter for any of the models, but if a user inputs a CSV
         with extra columns that are labeled with numbers, it should still work.
         """
@@ -1034,6 +1087,7 @@ class CreateCoordinateTransformationTests(unittest.TestCase):
 
 class AssertVectorsEqualTests(unittest.TestCase):
     """Tests for natcap.invest.utils._assert_vectors_equal."""
+
     def setUp(self):
         """Setup workspace."""
         self.workspace_dir = tempfile.mkdtemp()
@@ -1406,9 +1460,10 @@ class AssertVectorsEqualTests(unittest.TestCase):
 
         self.assertTrue("Vector geometry assertion fail." in str(cm.exception))
 
+
 class ReclassifyRasterOpTests(unittest.TestCase):
     """Tests for natcap.invest.utils.reclassify_raster."""
-    
+
     def setUp(self):
         """Setup workspace."""
         self.workspace_dir = tempfile.mkdtemp()
@@ -1426,7 +1481,7 @@ class ReclassifyRasterOpTests(unittest.TestCase):
         projection_wkt = srs_copy.ExportToWkt()
         origin = (1180000, 690000)
         raster_path = os.path.join(self.workspace_dir, 'tmp_raster.tif')
-        
+
         array = numpy.array([[1,1,1], [2,2,2], [3,3,3]], dtype=numpy.int32)
 
         pygeoprocessing.numpy_array_to_raster(
@@ -1437,17 +1492,17 @@ class ReclassifyRasterOpTests(unittest.TestCase):
             self.workspace_dir, 'tmp_raster_out.tif')
 
         message_details = {
-            'raster_name': 'LULC', 'column_name': 'lucode', 
+            'raster_name': 'LULC', 'column_name': 'lucode',
             'table_name': 'Biophysical'}
 
         with self.assertRaises(ValueError) as context:
             utils.reclassify_raster(
-                (raster_path, 1), value_map, target_raster_path, 
+                (raster_path, 1), value_map, target_raster_path,
                 gdal.GDT_Int32, -1, error_details=message_details)
         expected_message = (
-                "Values in the LULC raster were found that are"
-                " not represented under the 'lucode' column"
-                " of the Biophysical table. The missing values found in"
-                " the LULC raster but not the table are: [3].")
+            "Values in the LULC raster were found that are"
+            " not represented under the 'lucode' column"
+            " of the Biophysical table. The missing values found in"
+            " the LULC raster but not the table are: [3].")
         self.assertTrue(
             expected_message in str(context.exception), str(context.exception))

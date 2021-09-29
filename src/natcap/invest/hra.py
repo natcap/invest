@@ -163,7 +163,7 @@ ARGS_SPEC = {
                 "equation. This will determine the numeric output of risk for "
                 "every habitat and stressor overlap area."),
             "type": "option_string",
-            "options": {"Multiplicative", "Euclidean"}
+            "options": ["Multiplicative", "Euclidean"]
         },
         "decay_eq": {
             "name": "Decay Equation",
@@ -173,7 +173,7 @@ ARGS_SPEC = {
                 "this equation will determine the rate at which stressor data "
                 "is reduced."),
             "type": "option_string",
-            "options": {"None", "Linear", "Exponential"}
+            "options": ["None", "Linear", "Exponential"]
         },
         "aoi_vector_path": {
             **spec_utils.AOI,
@@ -1390,7 +1390,7 @@ def _get_vector_geometries_by_field(
     for feat in base_layer:
         field_value = feat.GetField(field_name)
         geom = feat.GetGeometryRef()
-        geom_wkb = shapely.wkb.loads(geom.ExportToWkb())
+        geom_wkb = shapely.wkb.loads(bytes(geom.ExportToWkb()))
         if field_value is None:
             base_vector = None
             base_layer = None
@@ -2612,8 +2612,9 @@ def _get_criteria_dataframe(base_criteria_table_path):
     file_ext = os.path.splitext(base_criteria_table_path)[1].lower()
     if file_ext == '.csv':
         # use sep=None, engine='python' to infer what the separator is
-        criteria_df = pandas.read_csv(base_criteria_table_path,
-                                      index_col=0, header=None, sep=None, engine='python')
+        criteria_df = pandas.read_csv(
+            base_criteria_table_path, index_col=0, header=None, sep=None,
+            engine='python')
     elif file_ext in ['.xlsx', '.xls']:
         criteria_df = pandas.read_excel(base_criteria_table_path,
                                         index_col=0, header=None)
@@ -2922,6 +2923,10 @@ def _get_overlap_dataframe(criteria_df, habitat_names, stressor_attributes,
             # Values are always grouped in threes (rating, dq, weight)
             for idx in range(0, row_data.size, 3):
                 habitat = row_data.keys()[idx]
+                if habitat not in habitat_names:
+                    # This is how we ignore extra columns in the csv
+                    # like we have in the sample data for "Rating Instruction".
+                    break
                 rating = row_data[idx]
                 dq = row_data[idx + 1]
                 weight = row_data[idx + 2]
