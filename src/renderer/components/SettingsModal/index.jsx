@@ -30,6 +30,7 @@ export default class SettingsModal extends React.Component {
         nWorkers: '',
         loggingLevel: '',
         sampleDataDir: null,
+        language: 'en'
       },
     };
 
@@ -102,6 +103,12 @@ export default class SettingsModal extends React.Component {
     const logLevelOptions = [
       'DEBUG', 'INFO', 'WARNING', 'ERROR'];
 
+    // map display names to standard language codes
+    const languageOptions = {
+      'English': 'en',
+      'Español': 'es'
+    }
+
     const nWorkersIsValid = validateNWorkers(
       this.state.localSettings.nWorkers
     );
@@ -167,6 +174,22 @@ export default class SettingsModal extends React.Component {
                   onChange={this.handleChange}
                   isInvalid={!nWorkersIsValid}
                 />
+              </Col>
+            </Form.Group>
+            <Form.Group as={Row}>
+              <Form.Label column sm="8" htmlFor="logging-select">Language</Form.Label>
+              <Col sm="4">
+                <Form.Control
+                  id="language-select"
+                  as="select"
+                  name="language"
+                  value={this.state.localSettings.language}
+                  onChange={this.handleChange}
+                >
+                  {languageOptions.keys().map(opt =>
+                    <option value={opt} key={opt}>{opt}</option>
+                  )}
+                </Form.Control>
               </Col>
             </Form.Group>
             <Form.Group as={Row}>
