@@ -652,32 +652,38 @@ class WaveEnergyValidateTests(unittest.TestCase):
 
     def test_incorrect_analysis_area_path_value(self):
         """WaveEnergy: testing incorrect analysis_area_path value."""
-        from natcap.invest import wave_energy
+        from natcap.invest import wave_energy, validation
 
         args = {}
         args['analysis_area_path'] = 'Incorrect Analysis Area'
         validation_error_list = wave_energy.validate(args)
-        expected_message = 'Value must be one of'  # Start of option error msg
+        expected_message = validation.MESSAGES['INVALID_OPTION'].format(
+            option_list=sorted([
+                "West Coast of North America and Hawaii",
+                "East Coast of North America and Puerto Rico",
+                "North Sea 4 meter resolution",
+                "North Sea 10 meter resolution",
+                "Australia",
+                "Global"]))
         actual_messages = ''
         for keys, error_strings in validation_error_list:
             actual_messages += error_strings
+        print(expected_message)
+        print(actual_messages)
         self.assertTrue(expected_message in actual_messages)
 
     def test_validate_keys_missing_values(self):
         """WaveEnergy: testing validate when keys are missing values."""
-        from natcap.invest import wave_energy
+        from natcap.invest import wave_energy, validation
 
         args = {}
         args['wave_base_data_path'] = None
         args['dem_path'] = None
 
         validation_error_list = wave_energy.validate(args)
-        expected_errors = [
-            (['dem_path', 'wave_base_data_path'],
-             'Input is required but has no value'),
-        ]
-        for expected_error in expected_errors:
-            self.assertTrue(expected_error in validation_error_list)
+        expected_error = (
+            ['dem_path', 'wave_base_data_path'], validation.MESSAGES['NO_VALUE'])
+        self.assertTrue(expected_error in validation_error_list)
 
     def test_validate_bad_aoi_incorrect_proj_units(self):
         """WaveEnergy: test validating AOI vector with incorrect units."""
@@ -690,7 +696,8 @@ class WaveEnergyValidateTests(unittest.TestCase):
         validation_error_list = wave_energy.validate(args)
         expected_error = (
             ['aoi_path'],
-            validation.WRONG_PROJECTION_UNIT_MSG % ('meter', 'us_survey_foot'))
+            validation.MESSAGES['WRONG_PROJECTION_UNIT'].format(
+                unit_a='meter', unit_b='us_survey_foot'))
         self.assertTrue(expected_error in validation_error_list)
 
     def test_validate_bad_aoi_unrecognized_proj_units(self):
@@ -705,5 +712,6 @@ class WaveEnergyValidateTests(unittest.TestCase):
         validation_error_list = wave_energy.validate(args)
         expected_error = (
             ['aoi_path'],
-            validation.WRONG_PROJECTION_UNIT_MSG % ('meter', 'not_a_unit'))
+            validation.MESSAGES['WRONG_PROJECTION_UNIT'].format(
+                unit_a='meter', unit_b='not_a_unit'))
         self.assertTrue(expected_error in validation_error_list)

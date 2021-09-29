@@ -4,7 +4,6 @@ import argparse
 import codecs
 import collections
 import datetime
-import gettext
 import importlib
 import json
 import logging
@@ -197,7 +196,7 @@ def build_model_list_table():
     max_alias_name_length = max(len(', '.join(meta.aliases))
                                 for meta in _MODEL_UIS.values()) + 3
     template_string = '    {modelname} {aliases} {humanname} {usage}'
-    strings = ['Available models:']
+    strings = [_('Available models:')]
     for model_name in sorted(_MODEL_UIS.keys()):
         usage_string = '(No GUI available)'
         if _MODEL_UIS[model_name].gui is not None:
@@ -392,6 +391,11 @@ def main(user_args=None):
         action='store_const', const=logging.DEBUG,
         help='Enable debug logging. Alias for -vvvvv')
 
+    parser.add_argument(
+        '-L', '--language', default='en', choices=['en', 'es'],
+        help=('The language to use. Allowed options are en (English) or es '
+              '(Spanish).'))
+
     subparsers = parser.add_subparsers(dest='subcommand')
 
     listmodels_subparser = subparsers.add_parser(
@@ -416,10 +420,6 @@ def main(user_args=None):
         '-w', '--workspace', default=None, nargs='?',
         help=('The workspace in which outputs will be saved. '
               'Required if using --headless'))
-    run_subparser.add_argument(
-        '--language', default='en', choices=['en', 'es'],
-        help=('The language to use. Allowed options are en (English) or es '
-              '(Spanish).'))
     run_subparser.add_argument(
         'model', action=SelectModelAction,  # Assert valid model name
         help=('The model to run.  Use "invest list" to list the available '
@@ -474,6 +474,9 @@ def main(user_args=None):
         help='Define a location for the saved .py file')
 
     args = parser.parse_args(user_args)
+
+    from natcap.invest import install_language
+    install_language(args.language)
 
     root_logger = logging.getLogger()
     handler = logging.StreamHandler(sys.stdout)
@@ -618,16 +621,6 @@ def main(user_args=None):
                 "in the shell running this CLI.", RuntimeWarning)
 
         from natcap.invest.ui import inputs
-
-        # globally install the _() function for the requested language
-        # fall back to a NullTranslation, which returns the English messages
-        language = gettext.translation(
-            'messages',
-            languages=[args.language],
-            localedir=os.path.join(
-                os.path.dirname(os.path.abspath(__file__)), 'translations/locales'),
-            fallback=True)
-        language.install()
 
         gui_class = _MODEL_UIS[args.model].gui
         module_name, classname = gui_class.split('.')

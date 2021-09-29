@@ -1,11 +1,15 @@
 """init module for natcap.invest."""
 import builtins
+import gettext
+import logging
 import os
 import sys
-import logging
 
 import pkg_resources
 
+# location of our translation message catalog directory
+LOCALE_DIR = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), 'translations/locales')
 
 LOGGER = logging.getLogger('natcap.invest')
 LOGGER.addHandler(logging.NullHandler())
@@ -23,9 +27,21 @@ except pkg_resources.DistributionNotFound:
 # It wraps every string in every model that we want to translate
 # Make sure it's defined so that natcap.invest modules are importable whether
 # or not gettext has been installed in the importing namespace
-if not callable(getattr(builtins, '_', None)):
-    def identity(x): return x
-    builtins.__dict__['_'] = identity
+# if not callable(getattr(builtins, '_', None)):
+#     def identity(x): return x
+#     builtins.__dict__['_'] = identity
+
+
+def install_language(language_code):
+    # globally install the _() function for the requested language
+    # fall back to a NullTranslation, which returns the English messages
+    language = gettext.translation(
+        'messages',
+        languages=[language_code],
+        localedir=LOCALE_DIR,
+        fallback=True)
+    language.install()
+    LOGGER.debug(f'Installed language "{language_code}"')
 
 
 def local_dir(source_file):

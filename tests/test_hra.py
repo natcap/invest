@@ -1183,24 +1183,26 @@ class HraRegressionTests(unittest.TestCase):
 
     def test_validate_max_rating_value(self):
         """HRA: testing validation with max_rating less than 1 in args."""
-        import natcap.invest.hra
+        from natcap.invest import hra, validation
 
         args = HraRegressionTests.generate_base_args(self.workspace_dir)
         args['max_rating'] = '-1'
 
-        validation_error_list = natcap.invest.hra.validate(args)
-        expected_error = (['max_rating'],
-                          'Value does not meet condition value > 0')
+        validation_error_list = hra.validate(args)
+        expected_error = (
+            ['max_rating'],
+            validation.MESSAGES['INVALID_VALUE'].format(condition='value > 0'))
         self.assertTrue(expected_error in validation_error_list)
 
     def test_validate_negative_resolution(self):
         """HRA: testing validation w/ negative value in resolution in args."""
-        import natcap.invest.hra
+        from natcap.invest import hra, validation
 
         args = HraRegressionTests.generate_base_args(self.workspace_dir)
         args['resolution'] = '-110'
 
-        validation_error_list = natcap.invest.hra.validate(args)
-        expected_error = (['resolution'],
-                          'Value does not meet condition value > 0')
+        validation_error_list = hra.validate(args)
+        expected_error = (
+            ['resolution'],
+            validation.MESSAGES['INVALID_VALUE'].format(condition='value > 0'))
         self.assertTrue(expected_error in validation_error_list)

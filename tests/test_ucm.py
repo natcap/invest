@@ -366,29 +366,32 @@ class UCMTests(unittest.TestCase):
 
         del args['t_ref']
         warnings = urban_cooling_model.validate(args)
-        expected_warning = (['t_ref'], 'Key is missing from the args dict')
+        expected_warning = (['t_ref'], validation.MESSAGES['MISSING_KEY'])
         self.assertTrue(expected_warning in warnings)
 
         args['t_ref'] = ''
         result = urban_cooling_model.validate(args)
-        self.assertEqual(result[0][1], "Input is required but has no value")
+        self.assertEqual(result[0][1], validation.MESSAGES['NO_VALUE'])
 
         args['t_ref'] = 35.0
         args['cc_weight_shade'] = -0.6
         result = urban_cooling_model.validate(args)
         self.assertEqual(
-            result[0][1], "Value -0.6 is not in the range [0, 1]")
+            result[0][1], validation.MESSAGES['NOT_WITHIN_RANGE'].format(
+                value=args['cc_weight_shade'], range='[0, 1]'))
 
         args['cc_weight_shade'] = "not a number"
         result = urban_cooling_model.validate(args)
-        self.assertEqual(result[0][1], ('Value "not a number" could not be '
-                                        'interpreted as a number'))
+        self.assertEqual(
+            result[0][1],
+            validation.MESSAGES['NOT_A_NUMBER'].format(value=args['cc_weight_shade']))
 
         args['cc_method'] = 'nope'
         result = urban_cooling_model.validate(args)
         self.assertEqual(
-            result[0][1], ("Value must be one of: ['factors', "
-                           "'intensity']"))
+            result[0][1],
+            validation.MESSAGES['INVALID_OPTION'].format(
+                option_list=['factors', 'intensity']))
 
         args['cc_method'] = 'intensity'
         args['cc_weight_shade'] = 0.2  # reset this arg
@@ -405,7 +408,8 @@ class UCMTests(unittest.TestCase):
         result = urban_cooling_model.validate(args)
         expected = [(
             ['biophysical_table_path'],
-            validation.MATCHED_NO_HEADERS_MSG % ('column', 'green_area'))]
+            validation.MESSAGES['MATCHED_NO_HEADERS'].format(
+                header='column', header_name='green_area'))]
         self.assertEqual(result, expected)
 
     def test_flat_disk_kernel(self):

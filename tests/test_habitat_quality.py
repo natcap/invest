@@ -1922,7 +1922,7 @@ class HabitatQualityTests(unittest.TestCase):
 
     def test_habitat_quality_argspec_missing_projection(self):
         """Habitat Quality: raise error on missing projection."""
-        from natcap.invest import habitat_quality
+        from natcap.invest import habitat_quality, validation
 
         args = {
             'half_saturation_constant': '0.5',
@@ -1993,8 +1993,7 @@ class HabitatQualityTests(unittest.TestCase):
                 'threat_2_f.tif\n')
 
         validate_result = habitat_quality.validate(args)
-        expected = [
-            (['lulc_cur_path'], 'Dataset must have a valid projection.')]
+        expected = [(['lulc_cur_path'], validation.MESSAGES['INVALID_PROJECTION'])]
         self.assertEqual(validate_result, expected)
 
     def test_habitat_quality_argspec_missing_threat_header(self):
@@ -2043,7 +2042,8 @@ class HabitatQualityTests(unittest.TestCase):
         validate_result = habitat_quality.validate(args, limit_to=None)
         expected = [(
             ['threats_table_path'],
-            validation.MATCHED_NO_HEADERS_MSG % ('column', 'decay'))]
+            validation.MESSAGES['MATCHED_NO_HEADERS'].format(
+                header='column', header_name='decay'))]
         self.assertEqual(validate_result, expected)
 
     def test_habitat_quality_validate_missing_base_column(self):

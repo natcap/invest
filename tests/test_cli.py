@@ -203,7 +203,7 @@ class CLIHeadlessTests(unittest.TestCase):
 
     def test_validate_fisheries(self):
         """CLI: Validate the fisheries model inputs through the cli."""
-        from natcap.invest import cli
+        from natcap.invest import cli, validation
         parameter_set_path = os.path.join(
             os.path.dirname(__file__), '..', 'data', 'invest-test-data',
             'fisheries', 'spiny_lobster_belize.invs.json')
@@ -229,11 +229,11 @@ class CLIHeadlessTests(unittest.TestCase):
         # the temporary test directory. do_batch is False so it doesn't check
         # the population_csv_dir path, which also wouldn't exist.
         expected_warnings = [
-            "(['aoi_vector_path'], 'File not found')",
-            "(['migration_dir'], 'Directory not found')",
-            "(['population_csv_path'], 'File not found')"]
+            (['aoi_vector_path'], validation.MESSAGES['FILE_NOT_FOUND']),
+            (['migration_dir'], validation.MESSAGES['DIR_NOT_FOUND']),
+            (['population_csv_path'], validation.MESSAGES['FILE_NOT_FOUND'])]
         for warning in expected_warnings:
-            self.assertTrue(warning in validation_output)
+            self.assertTrue(str(warning) in validation_output)
         # 3 lines = 3 warning messages
         self.assertEqual(len(validation_output.split('\n')), 3)
         self.assertEqual(exit_cm.exception.code, 0)

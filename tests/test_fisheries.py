@@ -71,6 +71,8 @@ class FisheriesSampleDataTests(unittest.TestCase):
     def test_validation(self):
         """Fisheries: Full validation."""
         from natcap.invest.fisheries import fisheries
+        from natcap.invest import validation
+
         args = {
             'alpha': 6050000.0,
             'aoi_vector_path': os.path.join(
@@ -95,8 +97,7 @@ class FisheriesSampleDataTests(unittest.TestCase):
         }
         validation_warnings = fisheries.validate(args)
         self.assertEqual(len(validation_warnings), 1)
-        self.assertTrue(
-            'required but has no value' in validation_warnings[0][1])
+        self.assertEqual(validation_warnings[0][1], validation.MESSAGES['NO_VALUE'])
 
     def test_validation_batch(self):
         """Fisheries: Batch parameters (full model validation)."""
@@ -133,34 +134,39 @@ class FisheriesSampleDataTests(unittest.TestCase):
     def test_validation_invalid_aoi(self):
         """Fisheries: Validate AOI vector."""
         from natcap.invest.fisheries import fisheries
+        from natcap.invest import validation
         args = {'aoi_vector_path': 'not a vector'}
 
         validation_warnings = fisheries.validate(
             args, limit_to='aoi_vector_path')
-        self.assertEqual(len(validation_warnings), 1)
-        self.assertTrue('File not found' in
-                        validation_warnings[0][1])
+        self.assertEqual(
+            validation_warnings,
+            [(['aoi_vector_path'], validation.MESSAGES['FILE_NOT_FOUND'])])
 
     def test_validation_invalid_batch(self):
         """Fisheries: Validate batch-processing option."""
         from natcap.invest.fisheries import fisheries
-        args = {'do_batch': 'foo'}
+        from natcap.invest import validation
+        value = 'foo'
+        args = {'do_batch': value}
 
         validation_warnings = fisheries.validate(args, limit_to='do_batch')
-        self.assertEqual(len(validation_warnings), 1)
-        self.assertTrue('Value must be either True or False' in
-                        validation_warnings[0][1])
+        self.assertEqual(
+            validation_warnings,
+            [(['do_batch'],
+                validation.MESSAGES['NOT_BOOLEAN'].format(value=value))])
 
     def test_validation_invalid_pop_csv(self):
         """Fisheries: Validate population CSV."""
         from natcap.invest.fisheries import fisheries
+        from natcap.invest import validation
         args = {'population_csv_path': 'foo'}
 
         validation_warnings = fisheries.validate(
             args, limit_to='population_csv_path')
-        self.assertEqual(len(validation_warnings), 1)
-        self.assertTrue('File not found' in
-                        validation_warnings[0][1])
+        self.assertEqual(
+            validation_warnings,
+            [(['population_csv_path'], validation.MESSAGES['FILE_NOT_FOUND'])])
 
     def test_validation_invalid_aoi_fields(self):
         """Fisheries: Validate AOI fields."""
@@ -181,19 +187,23 @@ class FisheriesSampleDataTests(unittest.TestCase):
             args, limit_to='aoi_vector_path')
         expected = [(
             ['aoi_vector_path'],
-            validation.MATCHED_NO_HEADERS_MSG % ('field', 'name'))]
+            validation.MESSAGES['MATCHED_NO_HEADERS'].format(
+                header='field', header_name='name'))]
         self.assertEqual(validation_warnings, expected)
 
     def test_validation_invalid_init_recruits(self):
         """Fisheries: Validate negative initial recruits value."""
         from natcap.invest.fisheries import fisheries
+        from natcap.invest import validation
         args = {'total_init_recruits': -100}
 
         validation_warnings = fisheries.validate(
             args, limit_to='total_init_recruits')
-        self.assertEqual(len(validation_warnings), 1)
-        self.assertTrue('Value does not meet condition' in
-                        validation_warnings[0][1])
+        self.assertEqual(
+            validation_warnings,
+            [(['total_init_recruits'],
+                validation.MESSAGES['INVALID_VALUE'].format(
+                    condition='value > 0'))])
 
     def test_sampledata_shrimp(self):
         """Fisheries: Verify run on Shrimp sample data."""

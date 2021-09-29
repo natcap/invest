@@ -233,12 +233,14 @@ class FinfishValidationTests(unittest.TestCase):
     def test_missing_field_in_farm_vector(self):
         """Finfish Validate: warning message on invalid fieldname."""
         from natcap.invest.finfish_aquaculture import finfish_aquaculture
+        from natcap.invest import validation
 
         farm_vector_path = os.path.join(SAMPLE_DATA, 'Finfish_Netpens.shp')
         validation_warnings = finfish_aquaculture.validate(
             {'ff_farm_loc': farm_vector_path,
              'farm_ID': 'foo'})
-        expected_message = "Value must be one of: ['FarmID']"
+        expected_message = validation.MESSAGES['INVALID_OPTION'].format(
+            option_list=['FarmID'])
         actual_messages = set()
         for keys, error_strings in validation_warnings:
             actual_messages.add(error_strings)

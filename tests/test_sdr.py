@@ -158,7 +158,8 @@ class SDRTests(unittest.TestCase):
             'expected a validation error but didn\'t get one')
         expected = [(
             ['watersheds_path'],
-            validation.MATCHED_NO_HEADERS_MSG % ('field', 'ws_id'))]
+            validation.MESSAGES['MATCHED_NO_HEADERS'].format(
+                header='field', header_name='ws_id'))]
         self.assertEqual(validate_result, expected)
 
     def test_sdr_validation_watershed_missing_ws_id_value(self):
