@@ -22,6 +22,7 @@
   - Scenic Quality
   - SDR
   - Seasonal Water Yield
+  - Stormwater
   - Urban Cooling
   - Urban Flood Risk
   - Wave Energy
@@ -149,6 +150,8 @@ Unreleased Changes (3.10)
       ``e_prime``, ``sed_retention``, ``sed_retention_index``,
       ``sed_deposition``, ``sed_export``) are only defined for pixels that
       drain to a stream. They have nodata everywhere else.
+* Stormwater
+    * Added this new model
 * Urban Flood Risk
     * Fixed a bug where a String ``Type`` column in the infrastructure vector
       would cause the aggregation step of the model to crash, even with the
