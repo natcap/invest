@@ -27,10 +27,8 @@ CHECK_ALL_KEYS = None
 LOGGER = logging.getLogger(__name__)
 
 MESSAGES = {
-    'MESSAGE_REQUIRED': _('Parameter is required but is missing or has no '
-                          'value'),
     'MISSING_KEY': _('Key is missing from the args dict'),
-    'NO_VALUE': _('Input is required but has no value'),
+    'MISSING_VALUE': _('Input is required but has no value'),
     'MATCHED_NO_HEADERS': _('Expected the {header} "{header_name}" but did '
                             'not find it'),
     'DUPLICATE_HEADER': _('Expected the {header} "{header_name}" only once '
@@ -838,7 +836,7 @@ def validate(args, spec, spatial_overlap_opts=None):
         validation_warnings.append((sorted(missing_keys), MESSAGES['MISSING_KEY']))
 
     if keys_with_no_value:
-        validation_warnings.append((sorted(keys_with_no_value), MESSAGES['NO_VALUE']))
+        validation_warnings.append((sorted(keys_with_no_value), MESSAGES['MISSING_VALUE']))
 
     # step 2: evaluate sufficiency of keys/inputs
     # Sufficiency: An input is sufficient when its key is present in args and
@@ -893,7 +891,7 @@ def validate(args, spec, spatial_overlap_opts=None):
                 validation_warnings.append(([key], MESSAGES['MISSING_KEY']))
             else:
                 if args[key] in ('', None):
-                    validation_warnings.append(([key], MESSAGES['NO_VALUE']))
+                    validation_warnings.append(([key], MESSAGES['MISSING_VALUE']))
         else:
             excluded_keys.add(key)
 

@@ -371,7 +371,7 @@ class UCMTests(unittest.TestCase):
 
         args['t_ref'] = ''
         result = urban_cooling_model.validate(args)
-        self.assertEqual(result[0][1], validation.MESSAGES['NO_VALUE'])
+        self.assertEqual(result[0][1], validation.MESSAGES['MISSING_VALUE'])
 
         args['t_ref'] = 35.0
         args['cc_weight_shade'] = -0.6

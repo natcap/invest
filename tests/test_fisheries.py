@@ -97,7 +97,7 @@ class FisheriesSampleDataTests(unittest.TestCase):
         }
         validation_warnings = fisheries.validate(args)
         self.assertEqual(len(validation_warnings), 1)
-        self.assertEqual(validation_warnings[0][1], validation.MESSAGES['NO_VALUE'])
+        self.assertEqual(validation_warnings[0][1], validation.MESSAGES['MISSING_VALUE'])
 
     def test_validation_batch(self):
         """Fisheries: Batch parameters (full model validation)."""

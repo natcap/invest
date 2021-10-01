@@ -253,7 +253,7 @@ class UFRMTests(unittest.TestCase):
         args['workspace_dir'] = ''
         result = urban_flood_risk_mitigation.validate(args)
         self.assertEqual(
-            result, [(['workspace_dir'], validation.MESSAGES['NO_VALUE'])])
+            result, [(['workspace_dir'], validation.MESSAGES['MISSING_VALUE'])])
 
         args = self._make_args()
         args['lulc_path'] = 'fake/path/notfound.tif'

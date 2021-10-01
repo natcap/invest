@@ -682,7 +682,7 @@ class WaveEnergyValidateTests(unittest.TestCase):
 
         validation_error_list = wave_energy.validate(args)
         expected_error = (
-            ['dem_path', 'wave_base_data_path'], validation.MESSAGES['NO_VALUE'])
+            ['dem_path', 'wave_base_data_path'], validation.MESSAGES['MISSING_VALUE'])
         self.assertTrue(expected_error in validation_error_list)
 
     def test_validate_bad_aoi_incorrect_proj_units(self):

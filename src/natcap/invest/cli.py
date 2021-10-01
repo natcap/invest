@@ -30,7 +30,6 @@ DEFAULT_EXIT_CODE = 1
 LOGGER = logging.getLogger(__name__)
 _UIMETA = collections.namedtuple('UIMeta', 'humanname pyname gui aliases')
 
-print('defining model uis...')
 _MODEL_UIS = {
     'carbon': _UIMETA(
         humanname=_('Carbon Storage and Sequestration'),

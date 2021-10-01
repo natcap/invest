@@ -1016,12 +1016,12 @@ class TestValidationFromSpec(unittest.TestCase):
 
         args = {'number_a': ''}
         self.assertEqual(
-            [(['number_a'], validation.MESSAGES['NO_VALUE'])],
+            [(['number_a'], validation.MESSAGES['MISSING_VALUE'])],
             validation.validate(args, spec))
 
         args = {'number_a': None}
         self.assertEqual(
-            [(['number_a'], validation.MESSAGES['NO_VALUE'])],
+            [(['number_a'], validation.MESSAGES['MISSING_VALUE'])],
             validation.validate(args, spec))
 
     def test_invalid_value(self):
@@ -1063,7 +1063,7 @@ class TestValidationFromSpec(unittest.TestCase):
         args = {'string_a': None, "number_a": 1}
 
         self.assertEqual(
-            [(['string_a'], validation.MESSAGES['NO_VALUE'])],
+            [(['string_a'], validation.MESSAGES['MISSING_VALUE'])],
             validation.validate(args, spec))
 
     def test_conditionally_required_invalid(self):

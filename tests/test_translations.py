@@ -8,7 +8,6 @@ import unittest.mock
 
 import babel
 import babel.messages.mofile
-import natcap.invest
 
 TEST_LANG = 'en'
 TEST_LOCALE_DIR = 'tests/test_translations/locales'
@@ -37,15 +36,6 @@ class TranslationTests(unittest.TestCase):
         with open(TEST_CATALOG, 'r+b') as catalog_file:
             cls.catalog = babel.messages.mofile.read_mo(catalog_file)
 
-    def test_get_invest_models(self):
-        """UI server: get_invest_models endpoint."""
-        from natcap.invest import ui_server
-        test_client = ui_server.app.test_client()
-        response = test_client.get('/models')
-        models_dict = json.loads(response.get_data(as_text=True))
-        for model in models_dict.values():
-            self.assertEqual(set(model), {'internal_name', 'aliases'})
-
     def test_invest_list(self):
         """Translation: test that CLI list output is translated."""
         from natcap.invest import cli
@@ -65,37 +55,31 @@ class TranslationTests(unittest.TestCase):
         from natcap.invest import ui_server
         test_client = ui_server.app.test_client()
         response = test_client.get('/models')
-        print(response.get_data())
         result = json.loads(response.get_data(as_text=True))
         self.assertTrue(self.catalog.get(
             'Carbon Storage and Sequestration').string in result)
 
-    # def test_server_get_invest_getspec(self):
-    #     """Translation: test that /getspec endpoint is translated."""
-    #     from natcap.invest import ui_server
-    #     test_client = ui_server.app.test_client()
-    #     response = test_client.post('/getspec', json='sdr')
-    #     spec = json.loads(response.get_data(as_text=True))
-    #     self.assertEqual(
-    #         set(spec),
-    #         {'model_name', 'module', 'userguide_html',
-    #          'args_with_spatial_overlap', 'args'})
+    def test_server_get_invest_getspec(self):
+        """Translation: test that /getspec endpoint is translated."""
+        from natcap.invest import ui_server
+        test_client = ui_server.app.test_client()
+        response = test_client.post('/getspec', json='carbon')
+        spec = json.loads(response.get_data(as_text=True))
+        self.assertEqual(
+            spec['args']['lulc_cur_path']['name'],
+            self.catalog.get('current LULC').string)
 
-    # def test_server_get_invest_validate(self):
-    #     """Translation: test that /validate endpoint is translated."""
-    #     from natcap.invest import ui_server, carbon
-    #     test_client = ui_server.app.test_client()
-    #     args = {
-    #         'workspace_dir': 'foo'
-    #     }
-    #     payload = {
-    #         'model_module': carbon.ARGS_SPEC['module'],
-    #         'args': json.dumps(args)
-    #     }
-    #     response = test_client.post('/validate', json=payload)
-    #     results = json.loads(response.get_data(as_text=True))
-    #     expected = carbon.validate(args)
-    #     # These differ only because a tuple was transformed to a list during
-    #     # the json (de)serializing, so do the same with expected data
-    #     self.assertEqual(results, json.loads(json.dumps(expected)))
-
+    def test_server_get_invest_validate(self):
+        """Translation: test that /validate endpoint is translated."""
+        from natcap.invest import ui_server, carbon
+        test_client = ui_server.app.test_client()
+        payload = {
+            'model_module': carbon.ARGS_SPEC['module'],
+            'args': json.dumps({})
+        }
+        response = test_client.post('/validate', json=payload)
+        results = json.loads(response.get_data(as_text=True))
+        messages = [item[1] for item in results]
+        print(messages)
+        self.assertTrue(self.catalog.get(
+            'Key is missing from the args dict').string in messages)

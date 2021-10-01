@@ -127,7 +127,7 @@ class DelineateItTests(unittest.TestCase):
         }
         validation_warnings = delineateit.validate(missing_values_args)
         self.assertEqual(len(validation_warnings), 1)
-        self.assertEqual(validation_warnings[0][1], validation.MESSAGES['NO_VALUE'])
+        self.assertEqual(validation_warnings[0][1], validation.MESSAGES['MISSING_VALUE'])
 
         file_not_found_args = {
             'workspace_dir': os.path.join(self.workspace_dir),
