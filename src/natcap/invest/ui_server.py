@@ -7,7 +7,9 @@ import logging
 from osgeo import gdal
 from flask import Flask
 from flask import request
+from natcap.invest import cli
 from natcap.invest import datastack
+from natcap.invest import install_language
 from natcap.invest import spec_utils
 
 logging.basicConfig(level=logging.DEBUG)
@@ -52,13 +54,12 @@ def get_invest_models():
     Returns:
         A JSON string
     """
-    from natcap.invest import install_language
-    language = request.args['language']
-    install_language(language)
-    from natcap.invest import cli
-
+    install_language(request.args['language'])
+    reloaded_cli = importlib.reload(cli)
     LOGGER.debug('get model list')
-    return cli.build_model_list_json()
+    a = reloaded_cli.build_model_list_json()
+    print(a)
+    return a
 
 
 @app.route('/getspec', methods=['POST'])
@@ -70,8 +71,10 @@ def get_invest_getspec():
     Returns:
         A JSON string.
     """
+    # this will be the model key name, not language specific
     target_model = request.get_json()
     target_module = cli._MODEL_UIS[target_model].pyname
+    install_language(request.args['language'])
     model_module = importlib.import_module(name=target_module)
     return spec_utils.serialize_args_spec(model_module.ARGS_SPEC)
 
@@ -87,6 +90,8 @@ def get_invest_validate():
     Returns:
         A JSON string.
     """
+    install_language(request.args['language'])
+
     payload = request.get_json()
     LOGGER.debug(payload)
     target_module = payload['model_module']

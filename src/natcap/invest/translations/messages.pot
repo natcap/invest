@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2021-09-29 16:29-0700\n"
+"POT-Creation-Date: 2021-09-30 10:47-0700\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,12 +17,120 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.9.1\n"
 
-#: src/natcap/invest/carbon.py:23
+#: src/natcap/invest/carbon.py:23 src/natcap/invest/ui/carbon.py:10
 msgid "InVEST Carbon Model"
 msgstr ""
 
 #: src/natcap/invest/carbon.py:41
 msgid "current LULC"
+msgstr ""
+
+#: src/natcap/invest/cli.py:35
+msgid "Carbon Storage and Sequestration"
+msgstr ""
+
+#: src/natcap/invest/cli.py:40
+msgid "Coastal Blue Carbon"
+msgstr ""
+
+#: src/natcap/invest/cli.py:45
+msgid "Coastal Blue Carbon: Preprocessor"
+msgstr ""
+
+#: src/natcap/invest/cli.py:50
+msgid "Coastal Vulnerability"
+msgstr ""
+
+#: src/natcap/invest/cli.py:55
+msgid "Crop Production: Percentile Model"
+msgstr ""
+
+#: src/natcap/invest/cli.py:60
+msgid "Crop Production: Regression Model"
+msgstr ""
+
+#: src/natcap/invest/cli.py:65
+msgid "DelineateIt"
+msgstr ""
+
+#: src/natcap/invest/cli.py:70
+msgid "Marine Finfish Aquaculture Production"
+msgstr ""
+
+#: src/natcap/invest/cli.py:75
+msgid "Fisheries"
+msgstr ""
+
+#: src/natcap/invest/cli.py:80
+msgid "Fisheries: Habitat Scenario Tool"
+msgstr ""
+
+#: src/natcap/invest/cli.py:85
+msgid "Forest Carbon Edge Effect"
+msgstr ""
+
+#: src/natcap/invest/cli.py:90
+msgid "GLOBIO"
+msgstr ""
+
+#: src/natcap/invest/cli.py:95
+msgid "Habitat Quality"
+msgstr ""
+
+#: src/natcap/invest/cli.py:100
+msgid "Habitat Risk Assessment"
+msgstr ""
+
+#: src/natcap/invest/cli.py:105
+msgid "Annual Water Yield"
+msgstr ""
+
+#: src/natcap/invest/cli.py:110
+msgid "NDR: Nutrient Delivery Ratio"
+msgstr ""
+
+#: src/natcap/invest/cli.py:115
+msgid "Pollinator Abundance: Crop Pollination"
+msgstr ""
+
+#: src/natcap/invest/cli.py:120
+msgid "Visitation: Recreation and Tourism"
+msgstr ""
+
+#: src/natcap/invest/cli.py:125
+msgid "RouteDEM"
+msgstr ""
+
+#: src/natcap/invest/cli.py:130
+msgid "Scenario Generator: Proximity Based"
+msgstr ""
+
+#: src/natcap/invest/cli.py:135
+msgid "Unobstructed Views: Scenic Quality Provision"
+msgstr ""
+
+#: src/natcap/invest/cli.py:140
+msgid "SDR: Sediment Delivery Ratio"
+msgstr ""
+
+#: src/natcap/invest/cli.py:145
+msgid "Seasonal Water Yield"
+msgstr ""
+
+#: src/natcap/invest/cli.py:150
+msgid "Offshore Wind Energy Production"
+msgstr ""
+
+#: src/natcap/invest/cli.py:155
+msgid "Wave Energy Production"
+msgstr ""
+
+#: src/natcap/invest/cli.py:160
+msgid "Urban Flood Risk Mitigation"
+msgstr ""
+
+#: src/natcap/invest/cli.py:165
+msgid "Urban Cooling"
 msgstr ""
 
 #: src/natcap/invest/cli.py:199
@@ -139,17 +247,5 @@ msgstr ""
 
 #: src/natcap/invest/validation.py:61
 msgid "You must have {permission} access to this file"
-msgstr ""
-
-#: src/natcap/invest/ui/carbon.py:20
-msgid "Current Land Use/Land Cover (Raster)"
-msgstr ""
-
-#: src/natcap/invest/ui/launcher.py:55
-msgid "InVEST Launcher"
-msgstr ""
-
-#: src/natcap/invest/ui/launcher.py:70
-msgid "Launch"
 msgstr ""
 

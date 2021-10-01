@@ -30,139 +30,140 @@ DEFAULT_EXIT_CODE = 1
 LOGGER = logging.getLogger(__name__)
 _UIMETA = collections.namedtuple('UIMeta', 'humanname pyname gui aliases')
 
+print('defining model uis...')
 _MODEL_UIS = {
     'carbon': _UIMETA(
-        humanname="Carbon Storage and Sequestration",
+        humanname=_('Carbon Storage and Sequestration'),
         pyname='natcap.invest.carbon',
         gui='carbon.Carbon',
         aliases=()),
     'coastal_blue_carbon': _UIMETA(
-        humanname="Coastal Blue Carbon",
+        humanname=_('Coastal Blue Carbon'),
         pyname='natcap.invest.coastal_blue_carbon.coastal_blue_carbon',
         gui='cbc.CoastalBlueCarbon',
         aliases=('cbc',)),
     'coastal_blue_carbon_preprocessor': _UIMETA(
-        humanname="Coastal Blue Carbon: Preprocessor",
+        humanname=_('Coastal Blue Carbon: Preprocessor'),
         pyname='natcap.invest.coastal_blue_carbon.preprocessor',
         gui='cbc.CoastalBlueCarbonPreprocessor',
         aliases=('cbc_pre',)),
     'coastal_vulnerability': _UIMETA(
-        humanname="Coastal Vulnerability",
+        humanname=_('Coastal Vulnerability'),
         pyname='natcap.invest.coastal_vulnerability',
         gui='coastal_vulnerability.CoastalVulnerability',
         aliases=('cv',)),
     'crop_production_percentile': _UIMETA(
-        humanname="Crop Production: Percentile Model",
+        humanname=_('Crop Production: Percentile Model'),
         pyname='natcap.invest.crop_production_percentile',
         gui='crop_production.CropProductionPercentile',
         aliases=('cpp',)),
     'crop_production_regression': _UIMETA(
-        humanname="Crop Production: Regression Model",
+        humanname=_('Crop Production: Regression Model'),
         pyname='natcap.invest.crop_production_regression',
         gui='crop_production.CropProductionRegression',
         aliases=('cpr',)),
     'delineateit': _UIMETA(
-        humanname="DelineateIt",
+        humanname=_('DelineateIt'),
         pyname='natcap.invest.delineateit.delineateit',
         gui='delineateit.Delineateit',
         aliases=()),
     'finfish_aquaculture': _UIMETA(
-        humanname="Marine Finfish Aquaculture Production",
+        humanname=_('Marine Finfish Aquaculture Production'),
         pyname='natcap.invest.finfish_aquaculture.finfish_aquaculture',
         gui='finfish.FinfishAquaculture',
         aliases=()),
     'fisheries': _UIMETA(
-        humanname="Fisheries",
+        humanname=_('Fisheries'),
         pyname='natcap.invest.fisheries.fisheries',
         gui='fisheries.Fisheries',
         aliases=()),
     'fisheries_hst': _UIMETA(
-        humanname="Fisheries: Habitat Scenario Tool",
+        humanname=_('Fisheries: Habitat Scenario Tool'),
         pyname='natcap.invest.fisheries.fisheries_hst',
         gui='fisheries.FisheriesHST',
         aliases=()),
     'forest_carbon_edge_effect': _UIMETA(
-        humanname="Forest Carbon Edge Effect",
+        humanname=_('Forest Carbon Edge Effect'),
         pyname='natcap.invest.forest_carbon_edge_effect',
         gui='forest_carbon.ForestCarbonEdgeEffect',
         aliases=('fc',)),
     'globio': _UIMETA(
-        humanname="GLOBIO",
+        humanname=_('GLOBIO'),
         pyname='natcap.invest.globio',
         gui='globio.GLOBIO',
         aliases=()),
     'habitat_quality': _UIMETA(
-        humanname="Habitat Quality",
+        humanname=_('Habitat Quality'),
         pyname='natcap.invest.habitat_quality',
         gui='habitat_quality.HabitatQuality',
         aliases=('hq',)),
     'habitat_risk_assessment': _UIMETA(
-        humanname="Habitat Risk Assessment",
+        humanname=_('Habitat Risk Assessment'),
         pyname='natcap.invest.hra',
         gui='hra.HabitatRiskAssessment',
         aliases=('hra',)),
     'hydropower_water_yield': _UIMETA(
-        humanname="Annual Water Yield",
+        humanname=_('Annual Water Yield'),
         pyname='natcap.invest.hydropower.hydropower_water_yield',
         gui='hydropower.HydropowerWaterYield',
         aliases=('hwy',)),
     'ndr': _UIMETA(
-        humanname="NDR: Nutrient Delivery Ratio",
+        humanname=_('NDR: Nutrient Delivery Ratio'),
         pyname='natcap.invest.ndr.ndr',
         gui='ndr.Nutrient',
         aliases=()),
     'pollination': _UIMETA(
-        humanname="Pollinator Abundance: Crop Pollination",
+        humanname=_('Pollinator Abundance: Crop Pollination'),
         pyname='natcap.invest.pollination',
         gui='pollination.Pollination',
         aliases=()),
     'recreation': _UIMETA(
-        humanname="Visitation: Recreation and Tourism",
+        humanname=_('Visitation: Recreation and Tourism'),
         pyname='natcap.invest.recreation.recmodel_client',
         gui='recreation.Recreation',
         aliases=()),
     'routedem': _UIMETA(
-        humanname="RouteDEM",
+        humanname=_('RouteDEM'),
         pyname='natcap.invest.routedem',
         gui='routedem.RouteDEM',
         aliases=()),
     'scenario_generator_proximity': _UIMETA(
-        humanname="Scenario Generator: Proximity Based",
+        humanname=_('Scenario Generator: Proximity Based'),
         pyname='natcap.invest.scenario_gen_proximity',
         gui='scenario_gen.ScenarioGenProximity',
         aliases=('sgp',)),
     'scenic_quality': _UIMETA(
-        humanname="Unobstructed Views: Scenic Quality Provision",
+        humanname=_('Unobstructed Views: Scenic Quality Provision'),
         pyname='natcap.invest.scenic_quality.scenic_quality',
         gui='scenic_quality.ScenicQuality',
         aliases=('sq',)),
     'sdr': _UIMETA(
-        humanname="SDR: Sediment Delivery Ratio",
+        humanname=_('SDR: Sediment Delivery Ratio'),
         pyname='natcap.invest.sdr.sdr',
         gui='sdr.SDR',
         aliases=()),
     'seasonal_water_yield': _UIMETA(
-        humanname="Seasonal Water Yield",
+        humanname=_('Seasonal Water Yield'),
         pyname='natcap.invest.seasonal_water_yield.seasonal_water_yield',
         gui='seasonal_water_yield.SeasonalWaterYield',
         aliases=('swy',)),
     'wind_energy': _UIMETA(
-        humanname="Offshore Wind Energy Production",
+        humanname=_('Offshore Wind Energy Production'),
         pyname='natcap.invest.wind_energy',
         gui='wind_energy.WindEnergy',
         aliases=()),
     'wave_energy': _UIMETA(
-        humanname="Wave Energy Production",
+        humanname=_('Wave Energy Production'),
         pyname='natcap.invest.wave_energy',
         gui='wave_energy.WaveEnergy',
         aliases=()),
     'urban_flood_risk_mitigation': _UIMETA(
-        humanname="Urban Flood Risk Mitigation",
+        humanname=_('Urban Flood Risk Mitigation'),
         pyname='natcap.invest.urban_flood_risk_mitigation',
         gui='urban_flood_risk_mitigation.UrbanFloodRiskMitigation',
         aliases=('ufrm',)),
     'urban_cooling_model': _UIMETA(
-        humanname='Urban Cooling',
+        humanname=_('Urban Cooling'),
         pyname='natcap.invest.urban_cooling_model',
         gui='urban_cooling_model.UrbanCoolingModel',
         aliases=('ucm',)),

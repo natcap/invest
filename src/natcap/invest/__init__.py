@@ -38,6 +38,7 @@ else:
 def install_language(language_code):
     # globally install the _() function for the requested language
     # fall back to a NullTranslation, which returns the English messages
+    print(LOCALE_DIR)
     language = gettext.translation(
         'messages',
         languages=[language_code],

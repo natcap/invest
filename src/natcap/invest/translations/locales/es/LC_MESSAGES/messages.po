@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2021-09-29 16:29-0700\n"
+"POT-Creation-Date: 2021-09-30 10:47-0700\n"
 "PO-Revision-Date: 2021-09-15 13:43-0700\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -18,13 +18,121 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.9.1\n"
 
-#: src/natcap/invest/carbon.py:23
+#: src/natcap/invest/carbon.py:23 src/natcap/invest/ui/carbon.py:10
 msgid "InVEST Carbon Model"
 msgstr "Modelo de Carbono"
 
 #: src/natcap/invest/carbon.py:41
 msgid "current LULC"
 msgstr "LULC actual"
+
+#: src/natcap/invest/cli.py:35
+msgid "Carbon Storage and Sequestration"
+msgstr "Español A"
+
+#: src/natcap/invest/cli.py:40
+msgid "Coastal Blue Carbon"
+msgstr "Español B"
+
+#: src/natcap/invest/cli.py:45
+msgid "Coastal Blue Carbon: Preprocessor"
+msgstr "Español C"
+
+#: src/natcap/invest/cli.py:50
+msgid "Coastal Vulnerability"
+msgstr "Español D"
+
+#: src/natcap/invest/cli.py:55
+msgid "Crop Production: Percentile Model"
+msgstr "Español E"
+
+#: src/natcap/invest/cli.py:60
+msgid "Crop Production: Regression Model"
+msgstr "Español F"
+
+#: src/natcap/invest/cli.py:65
+msgid "DelineateIt"
+msgstr "Español G"
+
+#: src/natcap/invest/cli.py:70
+msgid "Marine Finfish Aquaculture Production"
+msgstr "Español H"
+
+#: src/natcap/invest/cli.py:75
+msgid "Fisheries"
+msgstr "Español I"
+
+#: src/natcap/invest/cli.py:80
+msgid "Fisheries: Habitat Scenario Tool"
+msgstr "Español J"
+
+#: src/natcap/invest/cli.py:85
+msgid "Forest Carbon Edge Effect"
+msgstr "Español K"
+
+#: src/natcap/invest/cli.py:90
+msgid "GLOBIO"
+msgstr "Español L"
+
+#: src/natcap/invest/cli.py:95
+msgid "Habitat Quality"
+msgstr "Español M"
+
+#: src/natcap/invest/cli.py:100
+msgid "Habitat Risk Assessment"
+msgstr "Español N"
+
+#: src/natcap/invest/cli.py:105
+msgid "Annual Water Yield"
+msgstr "Español O"
+
+#: src/natcap/invest/cli.py:110
+msgid "NDR: Nutrient Delivery Ratio"
+msgstr "Español P"
+
+#: src/natcap/invest/cli.py:115
+msgid "Pollinator Abundance: Crop Pollination"
+msgstr "Español Q"
+
+#: src/natcap/invest/cli.py:120
+msgid "Visitation: Recreation and Tourism"
+msgstr "Español R"
+
+#: src/natcap/invest/cli.py:125
+msgid "RouteDEM"
+msgstr "Español S"
+
+#: src/natcap/invest/cli.py:130
+msgid "Scenario Generator: Proximity Based"
+msgstr "Español T"
+
+#: src/natcap/invest/cli.py:135
+msgid "Unobstructed Views: Scenic Quality Provision"
+msgstr "Español U"
+
+#: src/natcap/invest/cli.py:140
+msgid "SDR: Sediment Delivery Ratio"
+msgstr "Español V"
+
+#: src/natcap/invest/cli.py:145
+msgid "Seasonal Water Yield"
+msgstr "Español W"
+
+#: src/natcap/invest/cli.py:150
+msgid "Offshore Wind Energy Production"
+msgstr "Español X"
+
+#: src/natcap/invest/cli.py:155
+msgid "Wave Energy Production"
+msgstr "Español Y"
+
+#: src/natcap/invest/cli.py:160
+msgid "Urban Flood Risk Mitigation"
+msgstr "EspañolZ"
+
+#: src/natcap/invest/cli.py:165
+msgid "Urban Cooling"
+msgstr "Español Z"
 
 #: src/natcap/invest/cli.py:199
 msgid "Available models:"
@@ -142,3 +250,4 @@ msgstr ""
 #: src/natcap/invest/validation.py:61
 msgid "You must have {permission} access to this file"
 msgstr ""
+
