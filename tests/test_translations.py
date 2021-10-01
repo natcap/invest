@@ -37,6 +37,15 @@ class TranslationTests(unittest.TestCase):
         with open(TEST_CATALOG, 'r+b') as catalog_file:
             cls.catalog = babel.messages.mofile.read_mo(catalog_file)
 
+    def test_get_invest_models(self):
+        """UI server: get_invest_models endpoint."""
+        from natcap.invest import ui_server
+        test_client = ui_server.app.test_client()
+        response = test_client.get('/models')
+        models_dict = json.loads(response.get_data(as_text=True))
+        for model in models_dict.values():
+            self.assertEqual(set(model), {'internal_name', 'aliases'})
+
     def test_invest_list(self):
         """Translation: test that CLI list output is translated."""
         from natcap.invest import cli
@@ -48,21 +57,18 @@ class TranslationTests(unittest.TestCase):
         result = out.getvalue()
 
         self.assertTrue(self.catalog.get('Available models:').string in result)
-        self.assertTrue(
-            self.catalog.get('Carbon Storage and Sequestration').string in result)
-
+        self.assertTrue(self.catalog.get(
+            'Carbon Storage and Sequestration').string in result)
 
     def test_server_get_invest_models(self):
         """Translation: test that /models endpoint is translated."""
         from natcap.invest import ui_server
         test_client = ui_server.app.test_client()
         response = test_client.get('/models')
-        print(response.message)
-        models_dict = json.loads(response.get_data(as_text=True))
-        self.assertEqual(
-            models_dict['carbon'],
-            self.catalog.get('Carbon Storage and Sequestration').string)
-
+        print(response.get_data())
+        result = json.loads(response.get_data(as_text=True))
+        self.assertTrue(self.catalog.get(
+            'Carbon Storage and Sequestration').string in result)
 
     # def test_server_get_invest_getspec(self):
     #     """Translation: test that /getspec endpoint is translated."""

@@ -54,7 +54,7 @@ def get_invest_models():
     Returns:
         A JSON string
     """
-    install_language(request.args['language'])
+    install_language(request.args.get('language', 'en'))
     reloaded_cli = importlib.reload(cli)
     LOGGER.debug('get model list')
     a = reloaded_cli.build_model_list_json()
@@ -74,7 +74,7 @@ def get_invest_getspec():
     # this will be the model key name, not language specific
     target_model = request.get_json()
     target_module = cli._MODEL_UIS[target_model].pyname
-    install_language(request.args['language'])
+    install_language(request.args.get('language', 'en'))
     model_module = importlib.import_module(name=target_module)
     return spec_utils.serialize_args_spec(model_module.ARGS_SPEC)
 
@@ -90,7 +90,7 @@ def get_invest_validate():
     Returns:
         A JSON string.
     """
-    install_language(request.args['language'])
+    install_language(request.args.get('language', 'en'))
 
     payload = request.get_json()
     LOGGER.debug(payload)
