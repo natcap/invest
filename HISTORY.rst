@@ -33,9 +33,12 @@
 
 .. :changelog:
 
-..
-  Unreleased Changes
-  ------------------
+
+Unreleased Changes
+------------------
+* General:
+    * Update and expand on the instructions in the API docs for installing
+      the ``natcap.invest`` package.
 
 3.9.1 (2021-09-22)
 ------------------
