@@ -15,7 +15,6 @@ import importlib
 from urllib.request import urlopen, Request
 from urllib.parse import urlencode
 
-from osgeo import gdal
 from osgeo import osr
 import natcap.invest
 import pygeoprocessing
