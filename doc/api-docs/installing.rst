@@ -9,6 +9,13 @@ Installing the InVEST Python Package
      installer) from the `InVEST download page <https://naturalcapitalproject.stanford.edu/software/invest>`_.
      The instructions here are for more advanced use cases.
 
+.. note::
+    To install the `natcap.invest` package, you must have a C/C++ compiler
+    installed and configured for your system. MacOS and Linux users should
+    not need to do anything. Windows users should install Microsoft Visual
+    Studio, or at least the Build Tools for Visual Studio, if they have
+    not already. See the `python wiki page on compilation under Windows <https://wiki.python.org/moin/WindowsCompilers>`_ for more information.
+
 Suggested method
 ----------------
 This is not the only way to do it. There are other virtual environment tools and other ways to install GDAL.
@@ -83,6 +90,22 @@ Here is an explanation of what the commands are doing:
    The `[ui]` tells `pip` to also install all the dependencies needed for the UI.
 
 
+Python Dependencies
+-------------------
+
+Dependencies for ``natcap.invest`` are listed in ``requirements.txt``:
+
+.. include:: ../../requirements.txt
+    :literal:
+    :start-line: 15
+
+Additional dependencies for the UI are listed in ``requirements-gui.txt``:
+.. include:: ../../requirements-gui.txt
+    :literal:
+    :start-line: 10
+
+Please use ``conda`` and ``pip`` to install the correct versions of these dependencies automatically as described above. Do not try to individually install each dependency.
+
 .. _BinaryDependencies:
 
 Binary Dependencies
@@ -94,13 +117,7 @@ or have complex build processes. Precompiled
 binaries of all these dependencies are available through ``conda`` and/or ``pip``. We recommend using ``conda`` to manage all invest dependencies.
 However, some users may prefer to install them through a system package manager.
 
-.. note::
 
-    To install the `natcap.invest` package, you must have a C/C++ compiler
-    installed and configured for your system. MacOS and Linux users should
-    not need to do anything. Windows users should install Microsoft Visual
-    Studio, or at least the Build Tools for Visual Studio, if they have
-    not already. See the `python wiki page on compilation under Windows <https://wiki.python.org/moin/WindowsCompilers>`_ for more information.
 
 
 System Package Managers
@@ -153,15 +170,6 @@ http://www.lfd.uci.edu/~gohlke/pythonlibs/
 PyQt4 installers can also be downloaded from the `Riverbank Computing website <https://www.riverbankcomputing.com/software/pyqt/download>`_.
 
 
-
-Python Dependencies
--------------------
-
-Dependencies for ``natcap.invest`` are listed in ``requirements.txt``:
-
-.. include:: ../../requirements.txt
-    :literal:
-    :start-line: 9
 
 
 
