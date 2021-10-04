@@ -18,7 +18,6 @@ Installing the InVEST Python Package
 
 Suggested method
 ----------------
-This is not the only way to do it. There are other virtual environment tools and other ways to install GDAL.
 
 **Pattern:**
 ```
@@ -104,7 +103,7 @@ Additional dependencies for the UI are listed in ``requirements-gui.txt``:
     :literal:
     :start-line: 10
 
-Please use ``conda`` and ``pip`` to install the correct versions of these dependencies automatically as described above. Do not try to individually install each dependency.
+Please use ``conda`` and ``pip`` to install the correct versions of these dependencies automatically as described above.
 
 .. _BinaryDependencies:
 
@@ -113,48 +112,11 @@ Binary Dependencies
 
 InVEST itself depends only on python packages, but many of these package
 dependencies, such as numpy, scipy, and GDAL, depend on low-level libraries
-or have complex build processes. Precompiled
-binaries of all these dependencies are available through ``conda`` and/or ``pip``. We recommend using ``conda`` to manage all invest dependencies.
-However, some users may prefer to install them through a system package manager.
-
-
-
-
-System Package Managers
------------------------
-
-.. _InstallingOnLinux:
-
-Linux
-*****
-
-Linux users have it easy, as almost every package required to use
-natcap.invest is available in the package repositories. The provided
-commands will install only the libraries and binaries that are needed, allowing
-``pip`` to install the rest.
-
-
-Ubuntu & Debian
-^^^^^^^^^^^^^^^
-
-.. attention::
-    The package versions in the debian:stable repositories often lag far
-    behind the latest releases.  It may be necessary to install a later
-    version of a library from a different package repository, or else build
-    the library from source.
-
-
-::
-
-    $ sudo apt-get install python3-dev python3-setuptools python3-gdal python3-rtree python3-shapely
-
-
-Fedora
-^^^^^^
-
-::
-
-    $ sudo yum install python3-devel python3-setuptools python3-gdal python3-rtree python3-shapely
+or have complex build processes. Precompiled binaries of all these dependencies
+are now available through ``conda`` and/or ``pip``. We recommend using ``conda``
+to manage these dependencies because it simplifies the install process and
+helps ensure versions are compatible. However, they may also be available through
+a system package manager.
 
 
 .. _InstallingOnWindows:
@@ -168,10 +130,6 @@ Christogh Gohlke's unofficial build page:
 http://www.lfd.uci.edu/~gohlke/pythonlibs/
 
 PyQt4 installers can also be downloaded from the `Riverbank Computing website <https://www.riverbankcomputing.com/software/pyqt/download>`_.
-
-
-
-
 
 
 Optional Qt User Interface
