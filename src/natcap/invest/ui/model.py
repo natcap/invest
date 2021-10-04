@@ -27,11 +27,11 @@ import qtawesome
 import natcap.invest
 
 from . import inputs
-from . import usage
 from . import execution
 from .. import cli
-from .. import utils
 from .. import datastack
+from .. import usage
+from .. import utils
 from .. import validation
 
 LOGGER = logging.getLogger(__name__)

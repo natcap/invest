@@ -20,7 +20,7 @@ from osgeo import osr
 import natcap.invest
 import pygeoprocessing
 
-from .. import utils
+from . import utils
 
 ENCODING = sys.getfilesystemencoding()
 LOGGER = logging.getLogger(__name__)
