@@ -99,6 +99,7 @@ Dependencies for ``natcap.invest`` are listed in ``requirements.txt``:
     :start-line: 15
 
 Additional dependencies for the UI are listed in ``requirements-gui.txt``:
+
 .. include:: ../../requirements-gui.txt
     :literal:
     :start-line: 10
