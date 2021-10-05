@@ -8,7 +8,7 @@ class ScenicQuality(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(
             self,
-            label='Scenic Quality',
+            label=scenic_quality.ARGS_SPEC['model_title'],
             target=scenic_quality.execute,
             validator=scenic_quality.validate,
             localdoc='scenic_quality.html')

@@ -8,7 +8,7 @@ class UrbanFloodRiskMitigation(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(
             self,
-            label='UrbanFloodRiskMitigation',
+            label=natcap.invest.urban_flood_risk_mitigation.ARGS_SPEC['model_title'],
             target=natcap.invest.urban_flood_risk_mitigation.execute,
             validator=natcap.invest.urban_flood_risk_mitigation.validate,
             localdoc='urban_flood_mitigation.html')

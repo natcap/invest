@@ -8,7 +8,7 @@ class WindEnergy(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(
             self,
-            label='Wind Energy',
+            label=wind_energy.ARGS_SPEC['model_title'],
             target=wind_energy.execute,
             validator=wind_energy.validate,
             localdoc='wind_energy.html'

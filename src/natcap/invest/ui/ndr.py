@@ -8,7 +8,7 @@ class Nutrient(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(
             self,
-            label='Nutrient Delivery Ratio Model (NDR)',
+            label=natcap.invest.ndr.ndr.ARGS_SPEC['model_title'],
             target=natcap.invest.ndr.ndr.execute,
             validator=natcap.invest.ndr.ndr.validate,
             localdoc='ndr.html')

@@ -8,7 +8,7 @@ class SeasonalWaterYield(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(
             self,
-            label='Seasonal Water Yield',
+            label=seasonal_water_yield.ARGS_SPEC['model_title'],
             target=seasonal_water_yield.execute,
             validator=seasonal_water_yield.validate,
             localdoc='seasonal_water_yield.html')

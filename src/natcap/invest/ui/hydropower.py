@@ -8,7 +8,7 @@ class HydropowerWaterYield(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(
             self,
-            label='Hydropower Water Yield',
+            label=hydropower_water_yield.ARGS_SPEC['model_title'],
             target=hydropower_water_yield.execute,
             validator=hydropower_water_yield.validate,
             localdoc='reservoirhydropowerproduction.html')

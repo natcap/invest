@@ -8,7 +8,7 @@ class SDR(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(
             self,
-            label='Sediment Delivery Ratio Model (SDR)',
+            label=natcap.invest.sdr.sdr.ARGS_SPEC['model_title'],
             target=natcap.invest.sdr.sdr.execute,
             validator=natcap.invest.sdr.sdr.validate,
             localdoc='sdr.html')

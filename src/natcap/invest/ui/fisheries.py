@@ -8,7 +8,7 @@ class Fisheries(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(
             self,
-            label='Fisheries',
+            label=fisheries.ARGS_SPEC['model_title'],
             target=fisheries.execute,
             validator=fisheries.validate,
             localdoc='fisheries.html')
@@ -315,7 +315,7 @@ class FisheriesHST(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(
             self,
-            label='Fisheries Habitat Scenario Tool',
+            label=fisheries_hst.ARGS_SPEC['model_title'],
             target=fisheries_hst.execute,
             validator=fisheries_hst.validate,
             localdoc='fisheries.html')

@@ -8,7 +8,7 @@ class ForestCarbonEdgeEffect(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(
             self,
-            label='Forest Carbon Edge Effect Model',
+            label=natcap.invest.forest_carbon_edge_effect.ARGS_SPEC['model_title'],
             target=natcap.invest.forest_carbon_edge_effect.execute,
             validator=natcap.invest.forest_carbon_edge_effect.validate,
             localdoc=natcap.invest.forest_carbon_edge_effect.ARGS_SPEC['userguide_html'])

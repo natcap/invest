@@ -35,7 +35,7 @@ class CoastalBlueCarbonPreprocessor(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(
             self,
-            label='Coastal Blue Carbon Preprocessor',
+            label=preprocessor.ARGS_SPEC['model_title'],
             target=preprocessor.execute,
             validator=preprocessor.validate,
             localdoc='coastal_blue_carbon.html')
@@ -68,7 +68,7 @@ class CoastalBlueCarbon(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(
             self,
-            label='Coastal Blue Carbon',
+            label=coastal_blue_carbon.ARGS_SPEC['model_title'],
             target=coastal_blue_carbon.execute,
             validator=coastal_blue_carbon.validate,
             localdoc='coastal_blue_carbon.html')

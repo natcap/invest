@@ -8,7 +8,7 @@ class HabitatQuality(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(
             self,
-            label='Habitat Quality',
+            label=natcap.invest.habitat_quality.ARGS_SPEC['model_title'],
             target=natcap.invest.habitat_quality.execute,
             validator=natcap.invest.habitat_quality.validate,
             localdoc='habitat_quality.html')

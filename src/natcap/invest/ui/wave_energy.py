@@ -8,7 +8,7 @@ class WaveEnergy(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(
             self,
-            label='Wave Energy',
+            label=natcap.invest.wave_energy.ARGS_SPEC['model_title'],
             target=natcap.invest.wave_energy.execute,
             validator=natcap.invest.wave_energy.validate,
             localdoc='wave_energy.html')

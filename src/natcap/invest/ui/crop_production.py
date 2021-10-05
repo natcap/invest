@@ -9,7 +9,7 @@ class CropProductionPercentile(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(
             self,
-            label='Crop Production Percentile Model',
+            label=natcap.invest.crop_production_percentile.ARGS_SPEC['model_title'],
             target=natcap.invest.crop_production_percentile.execute,
             validator=natcap.invest.crop_production_percentile.validate,
             localdoc='crop_production.html')
@@ -107,7 +107,7 @@ class CropProductionRegression(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(
             self,
-            label='Crop Production Regression Model',
+            label=natcap.invest.crop_production_regression.ARGS_SPEC['model_title'],
             target=natcap.invest.crop_production_regression.execute,
             validator=natcap.invest.crop_production_regression.validate,
             localdoc='crop_production.html')

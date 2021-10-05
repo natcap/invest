@@ -6,11 +6,12 @@ import natcap.invest.carbon
 
 class Carbon(model.InVESTModel):
     def __init__(self):
-        model.InVESTModel.__init__(self,
-                                   label='InVEST Carbon Model',
-                                   target=natcap.invest.carbon.execute,
-                                   validator=natcap.invest.carbon.validate,
-                                   localdoc='carbonstorage.html')
+        model.InVESTModel.__init__(
+            self,
+            label=natcap.invest.carbon.ARGS_SPEC['model_title'],
+            target=natcap.invest.carbon.execute,
+            validator=natcap.invest.carbon.validate,
+            localdoc='carbonstorage.html')
 
         self.cur_lulc_raster = inputs.File(
             args_key='lulc_cur_path',

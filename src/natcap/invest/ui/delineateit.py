@@ -8,7 +8,7 @@ class Delineateit(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(
             self,
-            label='DelineateIt: Watershed Delineation',
+            label=delineateit.ARGS_SPEC['model_title'],
             target=delineateit.execute,
             validator=delineateit.validate,
             localdoc='delineateit.html')

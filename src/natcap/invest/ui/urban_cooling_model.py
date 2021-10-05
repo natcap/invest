@@ -8,7 +8,7 @@ class UrbanCoolingModel(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(
             self,
-            label='Urban Cooling Model',
+            label=natcap.invest.urban_cooling_model.ARGS_SPEC['model_title'],
             target=natcap.invest.urban_cooling_model.execute,
             validator=natcap.invest.urban_cooling_model.validate,
             localdoc='urban_cooling_model.html')

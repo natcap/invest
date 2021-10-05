@@ -7,7 +7,7 @@ class RouteDEM(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(
             self,
-            label='RouteDEM',
+            label=routedem.ARGS_SPEC['model_title'],
             target=routedem.execute,
             validator=routedem.validate,
             localdoc='routedem.html')

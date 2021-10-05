@@ -10,7 +10,7 @@ class FinfishAquaculture(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(
             self,
-            label='Marine Aquaculture: Finfish',
+            label=finfish_aquaculture.ARGS_SPEC['model_title'],
             target=finfish_aquaculture.execute,
             validator=finfish_aquaculture.validate,
             localdoc='marine_fish.html')

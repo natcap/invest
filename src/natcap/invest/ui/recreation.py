@@ -8,7 +8,7 @@ class Recreation(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(
             self,
-            label='Recreation Model',
+            label=recmodel_client.ARGS_SPEC['model_title'],
             target=recmodel_client.execute,
             validator=recmodel_client.validate,
             localdoc='recreation.html')

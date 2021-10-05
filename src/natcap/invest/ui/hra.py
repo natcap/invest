@@ -7,7 +7,7 @@ class HabitatRiskAssessment(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(
             self,
-            label='Habitat Risk Assessment',
+            label=hra.ARGS_SPEC['model_title'],
             target=hra.execute,
             validator=hra.validate,
             localdoc='habitat_risk_assessment.html')

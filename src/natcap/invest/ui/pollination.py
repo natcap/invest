@@ -12,7 +12,7 @@ class Pollination(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(
             self,
-            label='Crop Pollination',
+            label=pollination.ARGS_SPEC['model_title'],
             target=pollination.execute,
             validator=pollination.validate,
             localdoc='croppollination.html')

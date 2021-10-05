@@ -8,7 +8,7 @@ class GLOBIO(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(
             self,
-            label='GLOBIO',
+            label=natcap.invest.globio.ARGS_SPEC['model_title'],
             target=natcap.invest.globio.execute,
             validator=natcap.invest.globio.validate,
             localdoc='globio.html')
