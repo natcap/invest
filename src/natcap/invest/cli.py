@@ -28,7 +28,7 @@ except (ValueError, ImportError):
 
 DEFAULT_EXIT_CODE = 1
 LOGGER = logging.getLogger(__name__)
-_UIMETA = collections.namedtuple('UIMeta', 'humanname pyname gui aliases')
+_UIMETA = collections.namedtuple('UIMeta', 'model_title pyname gui aliases')
 
 # this is used only to build up the MODEL_UIS dictionary.
 # use MODEL_UIS for everything else.
@@ -90,14 +90,14 @@ _MODELS = {
         ('ucm',)),
 }
 
-MODEL_UIS = {
-    model_name: _UIMETA(
-        model_title=importlib.import_module(
-            f'natcap.invest.{pyname}').ARGS_SPEC['model_title'],
-        pyname=f'natcap.invest.{pyname}',
+MODEL_UIS = {}
+for (model_name, (pyname, gui, aliases)) in _MODELS.items():
+    module = f'natcap.invest.{pyname}'
+    MODEL_UIS[model_name] = _UIMETA(
+        model_title=importlib.import_module(module).ARGS_SPEC['model_title'],
+        pyname=module,
         gui=gui,
-        aliases=aliases
-    ) for (model_name, (pyname, gui, aliases)) in _MODELS.items()}
+        aliases=aliases)
 
 # Build up an index mapping aliases to modelname.
 # ``modelname`` is the key to the MODEL_UIS dict, above.
@@ -158,7 +158,7 @@ def build_model_list_json():
     """
     json_object = {}
     for internal_model_name, model_data in MODEL_UIS.items():
-        json_object[model_data.humanname] = {
+        json_object[model_data.model_title] = {
             'internal_name': internal_model_name,
             'aliases': model_data.aliases
         }
@@ -216,7 +216,7 @@ def export_to_python(target_filepath, model, args_dict=None):
         py_file.write(script_template.format(
             invest_version=__version__,
             today=datetime.datetime.now().strftime('%c'),
-            modelname=MODEL_UIS[model].humanname,
+            modelname=MODEL_UIS[model].model_title,
             py_model=target_model,
             model_args=args))
 

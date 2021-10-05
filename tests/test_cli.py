@@ -386,7 +386,7 @@ class CLIUnitTests(unittest.TestCase):
 
         self.assertTrue(os.path.exists(target_filepath))
 
-        target_model = cli._MODEL_UIS[target_model].pyname
+        target_model = cli.MODEL_UIS[target_model].pyname
         model_module = importlib.import_module(name=target_model)
         spec = model_module.ARGS_SPEC
         expected_args = {key: '' for key in spec['args'].keys()}
