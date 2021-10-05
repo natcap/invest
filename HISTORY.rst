@@ -33,9 +33,11 @@
 
 .. :changelog:
 
-..
-  Unreleased Changes
-  ------------------
+
+Unreleased Changes
+------------------
+* General:
+    * Minor changes to some models' display names
 
 3.9.1 (2021-09-22)
 ------------------
