@@ -49,7 +49,7 @@ export const createWindow = async () => {
     height: 500,
     transparent: true,
     frame: false,
-    alwaysOnTop: true,
+    alwaysOnTop: false,
   });
   splashScreen.loadURL(`file://${__dirname}/../static/splash.html`);
 

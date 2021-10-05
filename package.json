@@ -25,7 +25,7 @@
   "invest": {
     "bucket": "releases.naturalcapitalproject.org",
     "fork": "natcap",
-    "version": "3.9.0.post721+g0f8cc295",
+    "version": "3.9.1.post321+gf8ee8ff7",
     "target": {
       "macos": "mac_invest_binaries.zip",
       "windows": "windows_invest_binaries.zip"
@@ -35,6 +35,7 @@
   "author": "Natural Capital Project",
   "license": "MIT",
   "dependencies": {
+    "bootstrap": "4.3.1",
     "cross-env": "^5.2.1",
     "electron-log": "^4.3.5",
     "esm": "^3.2.25",

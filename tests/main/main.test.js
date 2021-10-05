@@ -91,8 +91,7 @@ describe('findInvestBinaries', () => {
   it('should point to resourcesPath in production', async () => {
     const isDevMode = false;
     const exePath = findInvestBinaries(isDevMode);
-    expect(exePath)
-      .toBe(path.join(process.resourcesPath, 'invest', filename));
+    expect(exePath).toBe(path.join(process.resourcesPath, 'invest', filename));
   });
   it('should throw if the invest exe is bad', async () => {
     execFileSync.mockImplementation(() => {

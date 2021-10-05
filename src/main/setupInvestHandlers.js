@@ -106,18 +106,17 @@ export function setupInvestRunHandlers(investExe) {
     logger.debug(`set to run ${cmdArgs}`);
     let investRun;
     let investLogfile;
-    const env = {
-      PATH: path.dirname(investExe),
-    };
     if (process.platform !== 'win32') {
-      investRun = spawn(path.basename(investExe), cmdArgs, {
-        env: env,
+      // It's likely the exe path includes spaces because it's composed of the
+      // app's Product Name, a user-facing name given to electron-builder.
+      // extra quotes because https://github.com/nodejs/node/issues/38490
+      // Seems quotes only needed when shell is /usr/bin/sh
+      investRun = spawn(`"${investExe}"`, cmdArgs, {
         shell: true, // without shell, IOError when datastack.py loads json
         detached: true, // counter-intuitive, but w/ true: invest terminates when this shell terminates
       });
     } else { // windows
-      investRun = spawn(path.basename(investExe), cmdArgs, {
-        env: env,
+      investRun = spawn(investExe, cmdArgs, {
         shell: true,
       });
     }

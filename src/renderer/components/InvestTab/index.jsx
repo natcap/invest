@@ -244,7 +244,6 @@ export default class InvestTab extends React.Component {
       <TabContainer activeKey={activeTab} id="invest-tab">
         <Row className="flex-nowrap">
           <Col
-            md={3}
             className="invest-sidebar-col"
           >
             <Nav
@@ -254,20 +253,16 @@ export default class InvestTab extends React.Component {
               activeKey={activeTab}
               onSelect={this.switchTabs}
             >
-              <Nav.Item>
-                <Nav.Link eventKey="setup">
-                  Setup
-                </Nav.Link>
-              </Nav.Item>
+              <Nav.Link eventKey="setup">
+                Setup
+              </Nav.Link>
               <div
                 className="sidebar-setup"
                 id={sidebarSetupElementId}
               />
-              <Nav.Item>
-                <Nav.Link eventKey="log" disabled={logDisabled}>
-                  Log
-                </Nav.Link>
-              </Nav.Item>
+              <Nav.Link eventKey="log" disabled={logDisabled}>
+                Log
+              </Nav.Link>
             </Nav>
             <div className="sidebar-row">
               <ResourcesLinks
