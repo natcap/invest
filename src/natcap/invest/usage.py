@@ -45,9 +45,10 @@ def log_run(module, args):
     Returns:
         ``None``
     """
+    invest_interface = 'Qt'  # this cm is only used by the Qt interface
     session_id = str(uuid.uuid4())
     log_thread = threading.Thread(
-        target=_log_model, args=(module, args, session_id),
+        target=_log_model, args=(module, args, invest_interface, session_id),
         name=_USAGE_LOGGING_THREAD_NAME)
     log_thread.start()
 
@@ -195,12 +196,14 @@ def _log_exit_status(session_id, status):
             str(exception))
 
 
-def _log_model(model_name, model_args, session_id=None):
+def _log_model(model_name, model_args, invest_interface, session_id=None):
     """Log information about a model run to a remote server.
 
     Args:
         model_name (string): a python string of the package version.
         model_args (dict): the traditional InVEST argument dictionary.
+        invest_interface (string): a string identifying the calling UI,
+            e.g. `Qt` or 'Workbench'.
 
     Returns:
         None
@@ -229,6 +232,7 @@ def _log_model(model_name, model_args, session_id=None):
         payload = {
             'model_name': model_name,
             'invest_release': natcap.invest.__version__,
+            'invest_interface': invest_interface,
             'node_hash': _node_hash(),
             'system_full_platform_string': platform.platform(),
             'system_preferred_encoding': locale.getdefaultlocale()[1],
