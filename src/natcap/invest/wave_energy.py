@@ -25,7 +25,7 @@ from . import validation
 LOGGER = logging.getLogger(__name__)
 
 ARGS_SPEC = {
-    "model_name": "Wave Energy",
+    "model_name": "Wave Energy Production",
     "module": __name__,
     "userguide_html": "wave_energy.html",
     "args": {

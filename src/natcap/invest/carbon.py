@@ -19,7 +19,7 @@ from .spec_utils import u
 LOGGER = logging.getLogger(__name__)
 
 ARGS_SPEC = {
-    "model_name": "InVEST Carbon Model",
+    "model_name": "Carbon Storage and Sequestration",
     "module": __name__,
     "userguide_html": "carbonstorage.html",
     "args_with_spatial_overlap": {

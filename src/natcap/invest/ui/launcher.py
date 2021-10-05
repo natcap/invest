@@ -61,7 +61,7 @@ def main():
     scroll_area.setWidget(main_widget)
 
     labels_and_buttons = []
-    for model, model_data in sorted(cli._MODEL_UIS.items()):
+    for model, model_data in sorted(cli.MODEL_UIS.items()):
         row = layout.rowCount()
         label = QtWidgets.QLabel()
         button = ModelLaunchButton('Launch', model)

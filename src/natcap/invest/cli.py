@@ -30,153 +30,54 @@ DEFAULT_EXIT_CODE = 1
 LOGGER = logging.getLogger(__name__)
 _UIMETA = collections.namedtuple('UIMeta', 'humanname pyname gui aliases')
 
-_MODEL_UIS = {
-    'carbon': _UIMETA(
-        humanname="Carbon Storage and Sequestration",
-        pyname='natcap.invest.carbon',
-        gui='carbon.Carbon',
-        aliases=()),
-    'coastal_blue_carbon': _UIMETA(
-        humanname="Coastal Blue Carbon",
-        pyname='natcap.invest.coastal_blue_carbon.coastal_blue_carbon',
-        gui='cbc.CoastalBlueCarbon',
-        aliases=('cbc',)),
-    'coastal_blue_carbon_preprocessor': _UIMETA(
-        humanname="Coastal Blue Carbon: Preprocessor",
-        pyname='natcap.invest.coastal_blue_carbon.preprocessor',
-        gui='cbc.CoastalBlueCarbonPreprocessor',
-        aliases=('cbc_pre',)),
-    'coastal_vulnerability': _UIMETA(
-        humanname="Coastal Vulnerability",
-        pyname='natcap.invest.coastal_vulnerability',
-        gui='coastal_vulnerability.CoastalVulnerability',
-        aliases=('cv',)),
-    'crop_production_percentile': _UIMETA(
-        humanname="Crop Production: Percentile Model",
-        pyname='natcap.invest.crop_production_percentile',
-        gui='crop_production.CropProductionPercentile',
-        aliases=('cpp',)),
-    'crop_production_regression': _UIMETA(
-        humanname="Crop Production: Regression Model",
-        pyname='natcap.invest.crop_production_regression',
-        gui='crop_production.CropProductionRegression',
-        aliases=('cpr',)),
-    'delineateit': _UIMETA(
-        humanname="DelineateIt",
-        pyname='natcap.invest.delineateit.delineateit',
-        gui='delineateit.Delineateit',
-        aliases=()),
-    'finfish_aquaculture': _UIMETA(
-        humanname="Marine Finfish Aquaculture Production",
-        pyname='natcap.invest.finfish_aquaculture.finfish_aquaculture',
-        gui='finfish.FinfishAquaculture',
-        aliases=()),
-    'fisheries': _UIMETA(
-        humanname="Fisheries",
-        pyname='natcap.invest.fisheries.fisheries',
-        gui='fisheries.Fisheries',
-        aliases=()),
-    'fisheries_hst': _UIMETA(
-        humanname="Fisheries: Habitat Scenario Tool",
-        pyname='natcap.invest.fisheries.fisheries_hst',
-        gui='fisheries.FisheriesHST',
-        aliases=()),
-    'forest_carbon_edge_effect': _UIMETA(
-        humanname="Forest Carbon Edge Effect",
-        pyname='natcap.invest.forest_carbon_edge_effect',
-        gui='forest_carbon.ForestCarbonEdgeEffect',
-        aliases=('fc',)),
-    'globio': _UIMETA(
-        humanname="GLOBIO",
-        pyname='natcap.invest.globio',
-        gui='globio.GLOBIO',
-        aliases=()),
-    'habitat_quality': _UIMETA(
-        humanname="Habitat Quality",
-        pyname='natcap.invest.habitat_quality',
-        gui='habitat_quality.HabitatQuality',
-        aliases=('hq',)),
-    'habitat_risk_assessment': _UIMETA(
-        humanname="Habitat Risk Assessment",
-        pyname='natcap.invest.hra',
-        gui='hra.HabitatRiskAssessment',
-        aliases=('hra',)),
-    'hydropower_water_yield': _UIMETA(
-        humanname="Annual Water Yield",
-        pyname='natcap.invest.hydropower.hydropower_water_yield',
-        gui='hydropower.HydropowerWaterYield',
-        aliases=('hwy',)),
-    'ndr': _UIMETA(
-        humanname="NDR: Nutrient Delivery Ratio",
-        pyname='natcap.invest.ndr.ndr',
-        gui='ndr.Nutrient',
-        aliases=()),
-    'pollination': _UIMETA(
-        humanname="Pollinator Abundance: Crop Pollination",
-        pyname='natcap.invest.pollination',
-        gui='pollination.Pollination',
-        aliases=()),
-    'recreation': _UIMETA(
-        humanname="Visitation: Recreation and Tourism",
-        pyname='natcap.invest.recreation.recmodel_client',
-        gui='recreation.Recreation',
-        aliases=()),
-    'routedem': _UIMETA(
-        humanname="RouteDEM",
-        pyname='natcap.invest.routedem',
-        gui='routedem.RouteDEM',
-        aliases=()),
-    'scenario_generator_proximity': _UIMETA(
-        humanname="Scenario Generator: Proximity Based",
-        pyname='natcap.invest.scenario_gen_proximity',
-        gui='scenario_gen.ScenarioGenProximity',
-        aliases=('sgp',)),
-    'scenic_quality': _UIMETA(
-        humanname="Unobstructed Views: Scenic Quality Provision",
-        pyname='natcap.invest.scenic_quality.scenic_quality',
-        gui='scenic_quality.ScenicQuality',
-        aliases=('sq',)),
-    'sdr': _UIMETA(
-        humanname="SDR: Sediment Delivery Ratio",
-        pyname='natcap.invest.sdr.sdr',
-        gui='sdr.SDR',
-        aliases=()),
-    'seasonal_water_yield': _UIMETA(
-        humanname="Seasonal Water Yield",
-        pyname='natcap.invest.seasonal_water_yield.seasonal_water_yield',
-        gui='seasonal_water_yield.SeasonalWaterYield',
-        aliases=('swy',)),
-    'stormwater': _UIMETA(
-        humanname="Stormwater Retention",
-        pyname='natcap.invest.stormwater',
-        gui='stormwater.Stormwater',
-        aliases=()),
-    'wind_energy': _UIMETA(
-        humanname="Offshore Wind Energy Production",
-        pyname='natcap.invest.wind_energy',
-        gui='wind_energy.WindEnergy',
-        aliases=()),
-    'wave_energy': _UIMETA(
-        humanname="Wave Energy Production",
-        pyname='natcap.invest.wave_energy',
-        gui='wave_energy.WaveEnergy',
-        aliases=()),
-    'urban_flood_risk_mitigation': _UIMETA(
-        humanname="Urban Flood Risk Mitigation",
-        pyname='natcap.invest.urban_flood_risk_mitigation',
-        gui='urban_flood_risk_mitigation.UrbanFloodRiskMitigation',
-        aliases=('ufrm',)),
-    'urban_cooling_model': _UIMETA(
-        humanname='Urban Cooling',
-        pyname='natcap.invest.urban_cooling_model',
-        gui='urban_cooling_model.UrbanCoolingModel',
-        aliases=('ucm',)),
+# this is used only to build up the MODEL_UIS dictionary.
+# use MODEL_UIS for everything else.
+_MODELS = {
+    # model name: python module name, gui, aliases
+    'carbon': ('carbon', 'carbon.Carbon', ()),
+    'coastal_blue_carbon': ('coastal_blue_carbon.coastal_blue_carbon',
+        'cbc.CoastalBlueCarbon', ('cbc',)),
+    'coastal_blue_carbon_preprocessor': ('coastal_blue_carbon.preprocessor', 'cbc.CoastalBlueCarbonPreprocessor', ('cbc_pre',)),
+    'coastal_vulnerability': ('coastal_vulnerability', 'coastal_vulnerability.CoastalVulnerability', ('cv',)),
+    'crop_production_percentile': ('crop_production_percentile', 'crop_production.CropProductionPercentile', ('cpp',)),
+    'crop_production_regression': ('crop_production_regression', 'crop_production.CropProductionRegression', ('cpr',)),
+    'delineateit': ('delineateit.delineateit', 'delineateit.Delineateit', ()),
+    'finfish_aquaculture': ('finfish_aquaculture.finfish_aquaculture', 'finfish.FinfishAquaculture', ()),
+    'fisheries': ('fisheries.fisheries', 'fisheries.Fisheries', ()),
+    'fisheries_hst': ('fisheries.fisheries_hst', 'fisheries.FisheriesHST', ()),
+    'forest_carbon_edge_effect': ('forest_carbon_edge_effect', 'forest_carbon.ForestCarbonEdgeEffect', ('fc',)),
+    'globio': ('globio', 'globio.GLOBIO', ()),
+    'habitat_quality': ('habitat_quality', 'habitat_quality.HabitatQuality', ('hq',)),
+    'habitat_risk_assessment': ('hra', 'hra.HabitatRiskAssessment', ('hra',)),
+    'hydropower_water_yield': ('hydropower.hydropower_water_yield', 'hydropower.HydropowerWaterYield', ('hwy',)),
+    'ndr': ('ndr.ndr', 'ndr.Nutrient', ()),
+    'pollination': ('pollination', 'pollination.Pollination', ()),
+    'recreation': ('recreation.recmodel_client', 'recreation.Recreation', ()),
+    'routedem': ('routedem', 'routedem.RouteDEM', ()),
+    'scenario_generator_proximity': ('scenario_gen_proximity', 'scenario_gen.ScenarioGenProximity', ('sgp',)),
+    'scenic_quality': ('scenic_quality.scenic_quality', 'scenic_quality.ScenicQuality', ('sq',)),
+    'sdr': ('sdr.sdr', 'sdr.SDR', ()),
+    'seasonal_water_yield': ('seasonal_water_yield.seasonal_water_yield', 'seasonal_water_yield.SeasonalWaterYield', ('swy',)),
+    'wind_energy': ('wind_energy', 'wind_energy.WindEnergy', ()),
+    'wave_energy': ('wave_energy', 'wave_energy.WaveEnergy', ()),
+    'urban_flood_risk_mitigation': ('urban_flood_risk_mitigation', 'urban_flood_risk_mitigation.UrbanFloodRiskMitigation', ('ufrm',)),
+    'urban_cooling_model': ('urban_cooling_model', 'urban_cooling_model.UrbanCoolingModel', ('ucm',)),
+
 }
 
+MODEL_UIS = {
+    model_name: _UIMETA(
+        humanname=importlib.import_module(
+            f'natcap.invest.{pyname}').ARGS_SPEC['model_name'],
+        pyname=f'natcap.invest.{pyname}',
+        gui=gui,
+        aliases=aliases
+    ) for (model_name, (pyname, gui, aliases)) in _MODELS.items()}
+
 # Build up an index mapping aliases to modelname.
-# ``modelname`` is the key to the _MODEL_UIS dict, above.
+# ``modelname`` is the key to the MODEL_UIS dict, above.
 _MODEL_ALIASES = {}
-for _modelname, _meta in _MODEL_UIS.items():
+for _modelname, _meta in MODEL_UIS.items():
     for _alias in _meta.aliases:
         assert _alias not in _MODEL_ALIASES, (
             'Alias %s already defined for model %s') % (
@@ -194,27 +95,27 @@ def build_model_list_table():
     Returns:
         A string representation of the formatted table.
     """
-    model_names = sorted(_MODEL_UIS.keys())
+    model_names = sorted(MODEL_UIS.keys())
     max_model_name_length = max(len(name) for name in model_names)
 
     # Adding 3 to max alias name length for the parentheses plus some padding.
     max_alias_name_length = max(len(', '.join(meta.aliases))
-                                for meta in _MODEL_UIS.values()) + 3
+                                for meta in MODEL_UIS.values()) + 3
     template_string = '    {modelname} {aliases} {humanname} {usage}'
     strings = ['Available models:']
-    for model_name in sorted(_MODEL_UIS.keys()):
+    for model_name in sorted(MODEL_UIS.keys()):
         usage_string = '(No GUI available)'
-        if _MODEL_UIS[model_name].gui is not None:
+        if MODEL_UIS[model_name].gui is not None:
             usage_string = ''
 
-        alias_string = ', '.join(_MODEL_UIS[model_name].aliases)
+        alias_string = ', '.join(MODEL_UIS[model_name].aliases)
         if alias_string:
             alias_string = '(%s)' % alias_string
 
         strings.append(template_string.format(
             modelname=model_name.ljust(max_model_name_length),
             aliases=alias_string.ljust(max_alias_name_length),
-            humanname=_MODEL_UIS[model_name].humanname,
+            humanname=MODEL_UIS[model_name].humanname,
             usage=usage_string))
     return '\n'.join(strings) + '\n'
 
@@ -231,7 +132,7 @@ def build_model_list_json():
 
     """
     json_object = {}
-    for internal_model_name, model_data in _MODEL_UIS.items():
+    for internal_model_name, model_data in MODEL_UIS.items():
         json_object[model_data.humanname] = {
             'internal_name': internal_model_name,
             'aliases': model_data.aliases
@@ -269,7 +170,7 @@ def export_to_python(target_filepath, model, args_dict=None):
         {py_model}.execute(args)
     """)
 
-    target_model = _MODEL_UIS[model].pyname
+    target_model = MODEL_UIS[model].pyname
     if args_dict is None:
         model_module = importlib.import_module(name=target_model)
         spec = model_module.ARGS_SPEC
@@ -290,7 +191,7 @@ def export_to_python(target_filepath, model, args_dict=None):
         py_file.write(script_template.format(
             invest_version=__version__,
             today=datetime.datetime.now().strftime('%c'),
-            modelname=_MODEL_UIS[model].humanname,
+            modelname=MODEL_UIS[model].humanname,
             py_model=target_model,
             model_args=args))
 
@@ -310,11 +211,11 @@ class SelectModelAction(argparse.Action):
 
         Identifiable model names are:
 
-            * the model name (verbatim) as identified in the keys of _MODEL_UIS
+            * the model name (verbatim) as identified in the keys of MODEL_UIS
             * a uniquely identifiable prefix for the model name (e.g. "d"
               matches "delineateit", but "fi" matches both "fisheries" and
               "finfish"
-            * a known model alias, as registered in _MODEL_UIS
+            * a known model alias, as registered in MODEL_UIS
 
         If no single model can be identified based on these rules, an error
         message is printed and the parser exits with a nonzero exit code.
@@ -325,7 +226,7 @@ class SelectModelAction(argparse.Action):
 
         Overridden from argparse.Action.__call__.
         """
-        known_models = sorted(list(_MODEL_UIS.keys()))
+        known_models = sorted(list(MODEL_UIS.keys()))
 
         matching_models = [model for model in known_models if
                            model.startswith(values)]
@@ -552,7 +453,7 @@ def main(user_args=None):
         parser.exit(0)
 
     if args.subcommand == 'getspec':
-        target_model = _MODEL_UIS[args.model].pyname
+        target_model = MODEL_UIS[args.model].pyname
         model_module = importlib.import_module(name=target_model)
         spec = model_module.ARGS_SPEC
 
@@ -582,7 +483,7 @@ def main(user_args=None):
         else:
             parsed_datastack.args['workspace_dir'] = args.workspace
 
-        target_model = _MODEL_UIS[args.model].pyname
+        target_model = MODEL_UIS[args.model].pyname
         model_module = importlib.import_module(name=target_model)
         LOGGER.info('Imported target %s from %s',
                     model_module.__name__, model_module)
@@ -623,7 +524,7 @@ def main(user_args=None):
 
         from natcap.invest.ui import inputs
 
-        gui_class = _MODEL_UIS[args.model].gui
+        gui_class = MODEL_UIS[args.model].gui
         module_name, classname = gui_class.split('.')
         module = importlib.import_module(
             name='.ui.%s' % module_name,

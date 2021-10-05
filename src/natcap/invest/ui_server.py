@@ -22,7 +22,7 @@ MODULE_MODELRUN_MAP = {
     value.pyname: _UI_META(
         run_name=key,
         human_name=value.humanname)
-    for key, value in cli._MODEL_UIS.items()}
+    for key, value in cli.MODEL_UIS.items()}
 
 
 def shutdown_server():
@@ -67,7 +67,7 @@ def get_invest_getspec():
         A JSON string.
     """
     target_model = request.get_json()
-    target_module = cli._MODEL_UIS[target_model].pyname
+    target_module = cli.MODEL_UIS[target_model].pyname
     model_module = importlib.import_module(name=target_module)
     return spec_utils.serialize_args_spec(model_module.ARGS_SPEC)
 
