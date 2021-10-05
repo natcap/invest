@@ -8,10 +8,6 @@ from qtpy import QtWidgets
 from qtpy import QtCore
 from qtpy import QtGui
 
-try:
-    from .. import cli
-except ImportError:
-    import natcap.invest.cli as cli
 
 import natcap.invest
 
@@ -61,7 +57,7 @@ def main():
     scroll_area.setWidget(main_widget)
 
     labels_and_buttons = []
-    for model, model_data in sorted(cli._MODEL_UIS.items()):
+    for model, model_data in sorted(natcap.invest.MODEL_UIS.items()):
         row = layout.rowCount()
         label = QtWidgets.QLabel()
         button = ModelLaunchButton('Launch', model)

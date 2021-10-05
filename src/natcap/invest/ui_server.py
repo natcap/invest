@@ -7,7 +7,7 @@ import logging
 from osgeo import gdal
 from flask import Flask
 from flask import request
-from natcap.invest import cli
+from natcap.invest import cli, MODEL_UIS
 from natcap.invest import datastack
 from natcap.invest import install_language
 from natcap.invest import spec_utils
@@ -23,7 +23,7 @@ MODULE_MODELRUN_MAP = {
     value.pyname: _UI_META(
         run_name=key,
         human_name=value.humanname)
-    for key, value in cli._MODEL_UIS.items()}
+    for key, value in MODEL_UIS.items()}
 
 
 def shutdown_server():
@@ -73,7 +73,7 @@ def get_invest_getspec():
     """
     # this will be the model key name, not language specific
     target_model = request.get_json()
-    target_module = cli._MODEL_UIS[target_model].pyname
+    target_module = MODEL_UIS[target_model].pyname
     install_language(request.args.get('language', 'en'))
     model_module = importlib.import_module(name=target_module)
     return spec_utils.serialize_args_spec(model_module.ARGS_SPEC)
