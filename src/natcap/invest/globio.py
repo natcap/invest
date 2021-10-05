@@ -23,7 +23,7 @@ LOGGER = logging.getLogger(__name__)
 SIGMA = 9.0
 
 ARGS_SPEC = {
-    "model_name": "GLOBIO",
+    "model_title": "GLOBIO",
     "module": __name__,
     "userguide_html": "../documentation/globio.html",
     "args_with_spatial_overlap": {

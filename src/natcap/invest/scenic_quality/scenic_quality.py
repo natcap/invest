@@ -45,7 +45,7 @@ _INTERMEDIATE_BASE_FILES = {
 
 
 ARGS_SPEC = {
-    "model_name": "Unobstructed Views: Scenic Quality Provision",
+    "model_title": "Unobstructed Views: Scenic Quality Provision",
     "module": __name__,
     "userguide_html": "scenic_quality.html",
     "args_with_spatial_overlap": {

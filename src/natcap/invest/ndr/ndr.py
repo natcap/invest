@@ -16,7 +16,7 @@ from . import ndr_core
 LOGGER = logging.getLogger(__name__)
 
 ARGS_SPEC = {
-    "model_name": "Nutrient Delivery Ratio",
+    "model_title": "Nutrient Delivery Ratio",
     "module": __name__,
     "userguide_html": "ndr.html",
     "args_with_spatial_overlap": {

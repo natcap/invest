@@ -92,8 +92,8 @@ _MODELS = {
 
 MODEL_UIS = {
     model_name: _UIMETA(
-        humanname=importlib.import_module(
-            f'natcap.invest.{pyname}').ARGS_SPEC['model_name'],
+        model_title=importlib.import_module(
+            f'natcap.invest.{pyname}').ARGS_SPEC['model_title'],
         pyname=f'natcap.invest.{pyname}',
         gui=gui,
         aliases=aliases
@@ -126,7 +126,7 @@ def build_model_list_table():
     # Adding 3 to max alias name length for the parentheses plus some padding.
     max_alias_name_length = max(len(', '.join(meta.aliases))
                                 for meta in MODEL_UIS.values()) + 3
-    template_string = '    {modelname} {aliases} {humanname} {usage}'
+    template_string = '    {modelname} {aliases} {modeltitle} {usage}'
     strings = ['Available models:']
     for model_name in sorted(MODEL_UIS.keys()):
         usage_string = '(No GUI available)'
@@ -140,7 +140,7 @@ def build_model_list_table():
         strings.append(template_string.format(
             modelname=model_name.ljust(max_model_name_length),
             aliases=alias_string.ljust(max_alias_name_length),
-            humanname=MODEL_UIS[model_name].humanname,
+            modeltitle=MODEL_UIS[model_name].model_title,
             usage=usage_string))
     return '\n'.join(strings) + '\n'
 

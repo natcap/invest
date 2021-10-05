@@ -25,7 +25,7 @@ TARGET_NODATA = -1
 _LOGGING_PERIOD = 5.0
 
 ARGS_SPEC = {
-    "model_name": "Urban Cooling",
+    "model_title": "Urban Cooling",
     'module': __name__,
     'userguide_html': 'urban_cooling_model.html',
     "args_with_spatial_overlap": {

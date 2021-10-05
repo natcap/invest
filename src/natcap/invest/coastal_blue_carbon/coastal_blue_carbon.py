@@ -148,7 +148,7 @@ TASKGRAPH_CACHE_DIR_NAME = 'task_cache'
 OUTPUT_DIR_NAME = 'output'
 
 ARGS_SPEC = {
-    "model_name": "Coastal Blue Carbon",
+    "model_title": "Coastal Blue Carbon",
     "module": __name__,
     "userguide_html": "coastal_blue_carbon.html",
     "args": {

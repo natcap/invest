@@ -15,7 +15,7 @@ from . import coastal_blue_carbon
 
 LOGGER = logging.getLogger(__name__)
 ARGS_SPEC = {
-    "model_name": "Coastal Blue Carbon Preprocessor",
+    "model_title": "Coastal Blue Carbon Preprocessor",
     "module": __name__,
     "userguide_html": "coastal_blue_carbon.html",
     "args": {

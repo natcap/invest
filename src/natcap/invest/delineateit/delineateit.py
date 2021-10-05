@@ -23,7 +23,7 @@ from . import delineateit_core
 LOGGER = logging.getLogger(__name__)
 
 ARGS_SPEC = {
-    "model_name": "DelineateIt",
+    "model_title": "DelineateIt",
     "module": __name__,
     "userguide_html": "delineateit.html",
     "args_with_spatial_overlap": {

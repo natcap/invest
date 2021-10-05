@@ -14,7 +14,7 @@ LOGGER = logging.getLogger(__name__)
 LABEL = 'Fisheries'
 
 ARGS_SPEC = {
-    "model_name": "Fisheries",
+    "model_title": "Fisheries",
     "module": __name__,
     "userguide_html": "fisheries.html",
     "args": {

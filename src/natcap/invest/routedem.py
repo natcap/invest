@@ -14,7 +14,7 @@ from . import validation
 LOGGER = logging.getLogger(__name__)
 
 ARGS_SPEC = {
-    "model_name": "RouteDEM",
+    "model_title": "RouteDEM",
     "module": __name__,
     "userguide_html": "routedem.html",
     "args": {

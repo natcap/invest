@@ -16,7 +16,7 @@ from . import validation
 LOGGER = logging.getLogger(__name__)
 
 ARGS_SPEC = {
-    "model_name": "Habitat Quality",
+    "model_title": "Habitat Quality",
     "module": __name__,
     "userguide_html": "habitat_quality.html",
     "args_with_spatial_overlap": {

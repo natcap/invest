@@ -17,7 +17,7 @@ from . import validation
 LOGGER = logging.getLogger(__name__)
 
 ARGS_SPEC = {
-    "model_name": "Crop Production: Percentile",
+    "model_title": "Crop Production: Percentile",
     "module": __name__,
     "userguide_html": "crop_production.html",
     "args_with_spatial_overlap": {
