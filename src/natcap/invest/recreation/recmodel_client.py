@@ -44,7 +44,7 @@ Pyro4.config.SERIALIZER = 'marshal'
 
 
 ARGS_SPEC = {
-    "model_name": "Recreation Model",
+    "model_name": "Visitation: Recreation and Tourism",
     "module": __name__,
     "userguide_html": "recreation.html",
     "args": {
