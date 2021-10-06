@@ -35,11 +35,11 @@ _USAGE_LOGGING_THREAD_NAME = 'usage-logging-thread'
 
 
 @contextlib.contextmanager
-def log_run(module, args):
+def log_run(model_pyname, args):
     """Context manager to log an InVEST model run and exit status.
 
     Args:
-        module (string): The string module name that identifies the model.
+        model_pyname (string): The string module name that identifies the model.
         args (dict): The full args dictionary.
 
     Returns:
@@ -48,7 +48,8 @@ def log_run(module, args):
     invest_interface = 'Qt'  # this cm is only used by the Qt interface
     session_id = str(uuid.uuid4())
     log_thread = threading.Thread(
-        target=_log_model, args=(module, args, invest_interface, session_id),
+        target=_log_model,
+        args=(model_pyname, args, invest_interface, session_id),
         name=_USAGE_LOGGING_THREAD_NAME)
     log_thread.start()
 
@@ -196,11 +197,11 @@ def _log_exit_status(session_id, status):
             str(exception))
 
 
-def _log_model(model_name, model_args, invest_interface, session_id=None):
+def _log_model(model_pyname, model_args, invest_interface, session_id=None):
     """Log information about a model run to a remote server.
 
     Args:
-        model_name (string): a python string of the package version.
+        model_pyname (string): The string module name that identifies the model.
         model_args (dict): the traditional InVEST argument dictionary.
         invest_interface (string): a string identifying the calling UI,
             e.g. `Qt` or 'Workbench'.
@@ -223,14 +224,14 @@ def _log_model(model_name, model_args, invest_interface, session_id=None):
         md5.update(json.dumps(data).encode('utf-8'))
         return md5.hexdigest()
 
-    args_spec = importlib.import_module(model_name).ARGS_SPEC
+    args_spec = importlib.import_module(model_pyname).ARGS_SPEC
 
     try:
         bounding_box_intersection, bounding_box_union = (
             _calculate_args_bounding_box(model_args, args_spec))
 
         payload = {
-            'model_name': model_name,
+            'model_name': model_pyname,
             'invest_release': natcap.invest.__version__,
             'invest_interface': invest_interface,
             'node_hash': _node_hash(),
