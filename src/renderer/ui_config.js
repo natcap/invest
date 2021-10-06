@@ -342,6 +342,22 @@ const uiSpec = {
       alpha_m: isNotSufficient.bind(null, 'monthly_alpha')
     }
   },
+  stormwater: {
+    order: [
+      ['workspace_dir', 'results_suffix'],
+      [
+        'adjust_retention_ratios',
+        'aggregate_areas_path',
+        'biophysical_table',
+        'lulc_path',
+        'precipitation_path',
+        'replacement_cost',
+        'retention_radius',
+        'road_centerlines_path',
+        'soil_group_path',
+      ]
+    ]
+  },
   urban_cooling_model: {
     order: [
       ["workspace_dir", "results_suffix"],
