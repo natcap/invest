@@ -207,7 +207,7 @@ def log_model_start():
     payload = request.get_json()
     usage._log_model(
         payload['model_pyname'],
-        payload['model_args'],
+        json.loads(payload['model_args']),
         payload['invest_interface'],
         payload['session_id'])
     return 'OK'
