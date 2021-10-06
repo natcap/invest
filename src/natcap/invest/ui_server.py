@@ -210,6 +210,7 @@ def log_model_start():
         payload['model_args'],
         payload['invest_interface'],
         payload['session_id'])
+    return 'OK'
 
 
 @app.route('/log_model_exit', methods=['POST'])
@@ -218,4 +219,4 @@ def log_model_exit():
     usage._log_exit_status(
         payload['session_id'],
         payload['status'])
-
+    return 'OK'
