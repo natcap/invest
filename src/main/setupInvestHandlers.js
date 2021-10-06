@@ -10,9 +10,11 @@ import sanitizeHtml from 'sanitize-html';
 
 import { getLogger } from '../logger';
 import { ipcMainChannels } from './ipcMainChannels';
+import pkg from '../../package.json';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
+const WORKBENCH_VERSION = pkg.version;
 // to translate to the invest CLI's verbosity flag:
 const LOGLEVELMAP = {
   DEBUG: '--debug',
@@ -145,7 +147,7 @@ export function setupInvestRunHandlers(investExe) {
               body: JSON.stringify({
                 model_pyname: pyModuleName,
                 model_args: JSON.stringify(args),
-                invest_interface: 'Workbench', // TODO: include wb version
+                invest_interface: `Workbench ${WORKBENCH_VERSION}`,
                 session_id: usageSessionId,
               }),
               headers: { 'Content-Type': 'application/json' },
