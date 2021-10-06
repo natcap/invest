@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
@@ -71,6 +72,13 @@ export function setupInvestRunHandlers(investExe) {
   ipcMain.on(ipcMainChannels.INVEST_RUN, async (
     event, modelRunName, pyModuleName, args, loggingLevel, jobID
   ) => {
+    let investRun;
+    let investLogfile;
+    let investStdErr = '';
+    const usageSessionId = crypto.randomUUID();
+    const logPatterns = { ...LOG_PATTERNS };
+    logPatterns['invest-log-primary'] = new RegExp(pyModuleName);
+
     // Write a temporary datastack json for passing to invest CLI
     try {
       fs.mkdirSync(TEMP_DIR);
@@ -104,8 +112,6 @@ export function setupInvestRunHandlers(investExe) {
       `-d "${datastackPath}"`,
     ];
     logger.debug(`set to run ${cmdArgs}`);
-    let investRun;
-    let investLogfile;
     if (process.platform !== 'win32') {
       // It's likely the exe path includes spaces because it's composed of the
       // app's Product Name, a user-facing name given to electron-builder.
@@ -121,18 +127,32 @@ export function setupInvestRunHandlers(investExe) {
       });
     }
 
-    const logPatterns = { ...LOG_PATTERNS };
-    logPatterns['invest-log-primary'] = new RegExp(pyModuleName);
     // There's no general way to know that a spawned process started,
     // so this logic to listen once on stdout seems like the way.
-    // We need to store the PID to enable killing the task.
-    // And need to parse the logfile path from stdout.
+    // We need to do the following only once after the process started:
+    // 1. store the PID to enable killing the task.
+    // 2. parse the logfile path from stdout.
+    // 3. log the model run for invest usage stats.
     const stdOutCallback = async (data) => {
       if (!investLogfile) {
         if (`${data}`.match('Writing log messages to')) {
           investLogfile = `${data}`.split(' ').pop().trim();
           runningJobs[jobID] = investRun.pid;
           event.reply(`invest-logging-${jobID}`, investLogfile);
+          try {
+            fetch(`${HOSTNAME}:${process.env.PORT}/log_model_start`, {
+              method: 'post',
+              body: JSON.stringify({
+                model_pyname: pyModuleName,
+                model_args: JSON.stringify(args),
+                invest_interface: 'Workbench', // TODO: include wb version
+                session_id: usageSessionId,
+              }),
+              headers: { 'Content-Type': 'application/json' },
+            });
+          } catch (error) {
+            logger.error(error.stack);
+          }
         }
       }
       // python logging flushes with each message, so data here should
@@ -146,7 +166,7 @@ export function setupInvestRunHandlers(investExe) {
 
     const stdErrCallback = (data) => {
       logger.debug(`${data}`);
-      event.reply(`invest-stderr-${jobID}`, `${data}`);
+      investStdErr += `${data}`;
     };
     investRun.stderr.on('data', stdErrCallback);
 
@@ -156,7 +176,10 @@ export function setupInvestRunHandlers(investExe) {
 
     investRun.on('exit', (code) => {
       delete runningJobs[jobID];
-      event.reply(`invest-exit-${jobID}`, code);
+      event.reply(`invest-exit-${jobID}`, {
+        code: code,
+        stdErr: investStdErr,
+      });
       logger.debug(code);
       fs.unlink(datastackPath, (err) => {
         if (err) { logger.error(err); }
@@ -164,6 +187,18 @@ export function setupInvestRunHandlers(investExe) {
           if (e) { logger.error(e); }
         });
       });
+      try {
+        fetch(`${HOSTNAME}:${process.env.PORT}/log_model_exit`, {
+          method: 'post',
+          body: JSON.stringify({
+            session_id: usageSessionId,
+            status: investStdErr,
+          }),
+          headers: { 'Content-Type': 'application/json' },
+        });
+      } catch (error) {
+        logger.error(error.stack);
+      }
     });
   });
 }
