@@ -32,6 +32,7 @@ import {
 import findInvestBinaries from '../../src/main/findInvestBinaries';
 import extractZipInplace from '../../src/main/extractZipInplace';
 import { ipcMainChannels } from '../../src/main/ipcMainChannels';
+import investUsageLogger from '../../src/main/investUsageLogger';
 import { getInvestModelNames } from '../../src/renderer/server_requests';
 import App from '../../src/renderer/app';
 import {
@@ -280,5 +281,11 @@ describe('Integration tests for Download Sample Data Modal', () => {
       const value = await getSettingsValue('sampleDataDir');
       expect(value).toBe(existingValue);
     });
+  });
+});
+
+describe('investUsageLogger', () => {
+  test('sends requests with correct payload', () => {
+
   });
 });

@@ -1,4 +1,3 @@
-import crypto from 'crypto';
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
@@ -11,11 +10,10 @@ import sanitizeHtml from 'sanitize-html';
 import { getLogger } from '../logger';
 import { ipcMainChannels } from './ipcMainChannels';
 import ELECTRON_DEV_MODE from './isDevMode';
-import pkg from '../../package.json';
+import investUsageLogger from './investUsageLogger';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
-const WORKBENCH_VERSION = pkg.version;
 // to translate to the invest CLI's verbosity flag:
 const LOGLEVELMAP = {
   DEBUG: '--debug',
@@ -78,9 +76,9 @@ export function setupInvestRunHandlers(investExe) {
     let investRun;
     let investLogfile;
     let investStdErr = '';
-    const usageSessionId = crypto.randomUUID();
     const logPatterns = { ...LOG_PATTERNS };
     logPatterns['invest-log-primary'] = new RegExp(pyModuleName);
+    const usageLogger = investUsageLogger();
 
     // Write a temporary datastack json for passing to invest CLI
     try {
@@ -140,25 +138,11 @@ export function setupInvestRunHandlers(investExe) {
       if (!investLogfile) {
         // TODO: this match is a janky way of making sure things only once
         if (`${data}`.match('Writing log messages to')) {
-          investLogfile = `${data}`.split(' ').pop().trim();
           runningJobs[jobID] = investRun.pid;
+          investLogfile = `${data}`.split(' ').pop().trim();
           event.reply(`invest-logging-${jobID}`, investLogfile);
           if (!ELECTRON_DEV_MODE) {
-            try {
-              logger.debug('logging model start');
-              fetch(`${HOSTNAME}:${process.env.PORT}/log_model_start`, {
-                method: 'post',
-                body: JSON.stringify({
-                  model_pyname: pyModuleName,
-                  model_args: JSON.stringify(args),
-                  invest_interface: `Workbench ${WORKBENCH_VERSION}`,
-                  session_id: usageSessionId,
-                }),
-                headers: { 'Content-Type': 'application/json' },
-              });
-            } catch (error) {
-              logger.error(error.stack);
-            }
+            usageLogger.start(pyModuleName, args);
           }
         }
       }
@@ -195,19 +179,7 @@ export function setupInvestRunHandlers(investExe) {
         });
       });
       if (!ELECTRON_DEV_MODE) {
-        try {
-          logger.debug('logging model exit');
-          fetch(`${HOSTNAME}:${process.env.PORT}/log_model_exit`, {
-            method: 'post',
-            body: JSON.stringify({
-              session_id: usageSessionId,
-              status: investStdErr,
-            }),
-            headers: { 'Content-Type': 'application/json' },
-          });
-        } catch (error) {
-          logger.error(error.stack);
-        }
+        usageLogger.exit(investStdErr);
       }
     });
   });
