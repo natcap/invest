@@ -25,12 +25,12 @@ import {
   setupInvestLogReaderHandler
 } from './setupInvestHandlers';
 import { ipcMainChannels } from './ipcMainChannels';
-import { getLogger } from '../logger';
 import { menuTemplate } from './menubar';
+import ELECTRON_DEV_MODE from './isDevMode';
+import { getLogger } from '../logger';
 import pkg from '../../package.json';
-
+console.log(ELECTRON_DEV_MODE)
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
-const ELECTRON_DEV_MODE = !!process.defaultApp; // a property added by electron.
 process.env.PORT = '56789';
 
 // Keep a global reference of the window object, if you don't, the window will

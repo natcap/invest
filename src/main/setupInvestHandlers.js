@@ -10,6 +10,7 @@ import sanitizeHtml from 'sanitize-html';
 
 import { getLogger } from '../logger';
 import { ipcMainChannels } from './ipcMainChannels';
+import ELECTRON_DEV_MODE from './isDevMode';
 import pkg from '../../package.json';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
@@ -137,23 +138,27 @@ export function setupInvestRunHandlers(investExe) {
     // 3. log the model run for invest usage stats.
     const stdOutCallback = async (data) => {
       if (!investLogfile) {
+        // TODO: this match is a janky way of making sure things only once
         if (`${data}`.match('Writing log messages to')) {
           investLogfile = `${data}`.split(' ').pop().trim();
           runningJobs[jobID] = investRun.pid;
           event.reply(`invest-logging-${jobID}`, investLogfile);
-          try {
-            fetch(`${HOSTNAME}:${process.env.PORT}/log_model_start`, {
-              method: 'post',
-              body: JSON.stringify({
-                model_pyname: pyModuleName,
-                model_args: JSON.stringify(args),
-                invest_interface: `Workbench ${WORKBENCH_VERSION}`,
-                session_id: usageSessionId,
-              }),
-              headers: { 'Content-Type': 'application/json' },
-            });
-          } catch (error) {
-            logger.error(error.stack);
+          if (!ELECTRON_DEV_MODE) {
+            try {
+              logger.debug('logging model start');
+              fetch(`${HOSTNAME}:${process.env.PORT}/log_model_start`, {
+                method: 'post',
+                body: JSON.stringify({
+                  model_pyname: pyModuleName,
+                  model_args: JSON.stringify(args),
+                  invest_interface: `Workbench ${WORKBENCH_VERSION}`,
+                  session_id: usageSessionId,
+                }),
+                headers: { 'Content-Type': 'application/json' },
+              });
+            } catch (error) {
+              logger.error(error.stack);
+            }
           }
         }
       }
@@ -189,17 +194,20 @@ export function setupInvestRunHandlers(investExe) {
           if (e) { logger.error(e); }
         });
       });
-      try {
-        fetch(`${HOSTNAME}:${process.env.PORT}/log_model_exit`, {
-          method: 'post',
-          body: JSON.stringify({
-            session_id: usageSessionId,
-            status: investStdErr,
-          }),
-          headers: { 'Content-Type': 'application/json' },
-        });
-      } catch (error) {
-        logger.error(error.stack);
+      if (!ELECTRON_DEV_MODE) {
+        try {
+          logger.debug('logging model exit');
+          fetch(`${HOSTNAME}:${process.env.PORT}/log_model_exit`, {
+            method: 'post',
+            body: JSON.stringify({
+              session_id: usageSessionId,
+              status: investStdErr,
+            }),
+            headers: { 'Content-Type': 'application/json' },
+          });
+        } catch (error) {
+          logger.error(error.stack);
+        }
       }
     });
   });
