@@ -140,3 +140,29 @@ class EndpointFunctionTests(unittest.TestCase):
         _ = test_client.post('/save_to_python', json=payload)
         # test_cli.py asserts the actual contents of the file
         self.assertTrue(os.path.exists(filepath))
+
+    def test_log_model_start(self):
+        """UI server: log_model_start endpoint."""
+        from natcap.invest import ui_server
+        test_client = ui_server.app.test_client()
+        payload = {
+            'model_pyname': 'natcap.invest.carbon',
+            'model_args': json.dumps({
+                'workspace_dir': 'foo'
+            }),
+            'invest_interface': 'Workbench',
+            'session_id': '12345'
+        }
+        response = test_client.post('/log_model_start', json=payload)
+        self.assertEqual(response.get_data(as_text=True), 'OK')
+
+    def test_log_model_exit(self):
+        """UI server: log_model_start endpoint."""
+        from natcap.invest import ui_server
+        test_client = ui_server.app.test_client()
+        payload = {
+            'session_id': '12345',
+            'status': ''
+        }
+        response = test_client.post('/log_model_exit', json=payload)
+        self.assertEqual(response.get_data(as_text=True), 'OK')
