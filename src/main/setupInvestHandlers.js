@@ -123,7 +123,7 @@ export function setupInvestRunHandlers(investExe) {
         detached: true, // counter-intuitive, but w/ true: invest terminates when this shell terminates
       });
     } else { // windows
-      investRun = spawn(investExe, cmdArgs, {
+      investRun = spawn(`"${investExe}"`, cmdArgs, {
         shell: true,
       });
     }
@@ -141,7 +141,7 @@ export function setupInvestRunHandlers(investExe) {
           runningJobs[jobID] = investRun.pid;
           investLogfile = `${data}`.split(' ').pop().trim();
           event.reply(`invest-logging-${jobID}`, investLogfile);
-          if (!ELECTRON_DEV_MODE) {
+          if (!ELECTRON_DEV_MODE && !process.env.PUPPETEER) {
             usageLogger.start(pyModuleName, args);
           }
         }
@@ -178,7 +178,7 @@ export function setupInvestRunHandlers(investExe) {
           if (e) { logger.error(e); }
         });
       });
-      if (!ELECTRON_DEV_MODE) {
+      if (!ELECTRON_DEV_MODE && !process.env.PUPPETEER) {
         usageLogger.exit(investStdErr);
       }
     });

@@ -86,7 +86,10 @@ beforeAll(() => {
     `"${BINARY_PATH}"`,
     // these are chromium args
     [`--remote-debugging-port=${PORT}`],
-    { shell: true }
+    {
+      shell: true,
+      env: { ...process.env, PUPPETEER: true }
+    }
   );
   ELECTRON_PROCESS.stderr.on('data', (data) => {
     console.log(`${data}`);
