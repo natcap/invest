@@ -74,7 +74,7 @@ export function setupInvestRunHandlers(investExe) {
     event, modelRunName, pyModuleName, args, loggingLevel, jobID
   ) => {
     let investRun;
-    let investLogfile;
+    let investStarted = false;
     let investStdErr = '';
     const logPatterns = { ...LOG_PATTERNS };
     logPatterns['invest-log-primary'] = new RegExp(pyModuleName);
@@ -135,11 +135,11 @@ export function setupInvestRunHandlers(investExe) {
     // 2. parse the logfile path from stdout.
     // 3. log the model run for invest usage stats.
     const stdOutCallback = async (data) => {
-      if (!investLogfile) {
-        // TODO: this match is a janky way of making sure things only once
+      if (!investStarted) {
         if (`${data}`.match('Writing log messages to')) {
+          investStarted = true;
           runningJobs[jobID] = investRun.pid;
-          investLogfile = `${data}`.split(' ').pop().trim();
+          const investLogfile = `${data}`.split(' ').pop().trim();
           event.reply(`invest-logging-${jobID}`, investLogfile);
           if (!ELECTRON_DEV_MODE && !process.env.PUPPETEER) {
             usageLogger.start(pyModuleName, args);
