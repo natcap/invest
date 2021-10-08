@@ -3,16 +3,17 @@ from natcap.invest.ui import model, inputs
 
 import natcap.invest.crop_production_percentile
 import natcap.invest.crop_production_regression
+from natcap.invest import MODEL_UIS
 
 
 class CropProductionPercentile(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(
             self,
-            label=natcap.invest.crop_production_percentile.ARGS_SPEC['model_title'],
+            label=MODEL_UIS['crop_production_percentile'].model_title,
             target=natcap.invest.crop_production_percentile.execute,
             validator=natcap.invest.crop_production_percentile.validate,
-            localdoc='crop_production.html')
+            localdoc=MODEL_UIS['crop_production_percentile'].userguide)
 
         self.model_data_path = inputs.Folder(
             args_key='model_data_path',
@@ -107,10 +108,10 @@ class CropProductionRegression(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(
             self,
-            label=natcap.invest.crop_production_regression.ARGS_SPEC['model_title'],
+            label=MODEL_UIS['crop_production_regression'].model_title,
             target=natcap.invest.crop_production_regression.execute,
             validator=natcap.invest.crop_production_regression.validate,
-            localdoc='crop_production.html')
+            localdoc=MODEL_UIS['crop_production_regression'].userguide)
 
         self.model_data_path = inputs.Folder(
             args_key='model_data_path',

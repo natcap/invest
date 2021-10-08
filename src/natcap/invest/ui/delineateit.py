@@ -2,16 +2,17 @@
 
 from natcap.invest.ui import model, inputs
 from natcap.invest.delineateit import delineateit
+from natcap.invest import MODEL_UIS
 
 
 class Delineateit(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(
             self,
-            label=delineateit.ARGS_SPEC['model_title'],
+            label=MODEL_UIS['delineateit'].model_title,
             target=delineateit.execute,
             validator=delineateit.validate,
-            localdoc='delineateit.html')
+            localdoc=MODEL_UIS['delineateit'].userguide)
 
         self.dem_path = inputs.File(
             label='Digital Elevation Model (Raster)',

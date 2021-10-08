@@ -22,9 +22,6 @@ from . import sdr_core
 LOGGER = logging.getLogger(__name__)
 
 ARGS_SPEC = {
-    "model_title": "Sediment Delivery Ratio",
-    "module": __name__,
-    "userguide_html": "sdr.html",
     "args_with_spatial_overlap": {
         "spatial_keys": ["dem_path", "erosivity_path", "erodibility_path",
                          "lulc_path", "drainage_path", "watersheds_path", ],

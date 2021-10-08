@@ -2,6 +2,7 @@
 
 from natcap.invest.ui import model, inputs
 from natcap.invest.finfish_aquaculture import finfish_aquaculture
+from natcap.invest import MODEL_UIS
 
 from osgeo import gdal
 
@@ -10,10 +11,10 @@ class FinfishAquaculture(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(
             self,
-            label=finfish_aquaculture.ARGS_SPEC['model_title'],
+            label=MODEL_UIS['finfish_aquaculture'].model_title,
             target=finfish_aquaculture.execute,
             validator=finfish_aquaculture.validate,
-            localdoc='marine_fish.html')
+            localdoc=MODEL_UIS['finfish_aquaculture'].userguide)
 
         self.farm_location = inputs.File(
             args_key='ff_farm_loc',

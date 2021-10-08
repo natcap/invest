@@ -64,9 +64,6 @@ _DEFAULT_GTIFF_CREATION_OPTIONS = (
     'BLOCKXSIZE=256', 'BLOCKYSIZE=256')
 
 ARGS_SPEC = {
-    "model_title": "Habitat Risk Assessment",
-    "module": __name__,
-    "userguide_html": "habitat_risk_assessment.html",
     "args": {
         "workspace_dir": validation.WORKSPACE_SPEC,
         "results_suffix": validation.SUFFIX_SPEC,

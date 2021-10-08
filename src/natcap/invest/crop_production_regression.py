@@ -16,9 +16,6 @@ from . import validation
 LOGGER = logging.getLogger(__name__)
 
 ARGS_SPEC = {
-    "model_title": "Crop Production: Regression",
-    "module": __name__,
-    "userguide_html": "crop_production.html",
     "args_with_spatial_overlap": {
         "spatial_keys": ["landcover_raster_path", "aggregate_polygon_path"],
         "different_projections_ok": True,

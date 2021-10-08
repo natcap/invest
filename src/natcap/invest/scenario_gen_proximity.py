@@ -22,9 +22,6 @@ from . import utils
 LOGGER = logging.getLogger(__name__)
 
 ARGS_SPEC = {
-    "model_title": "Scenario Generator: Proximity Based",
-    "module": __name__,
-    "userguide_html": "scenario_gen_proximity.html",
     "args": {
         "workspace_dir": validation.WORKSPACE_SPEC,
         "results_suffix": validation.SUFFIX_SPEC,

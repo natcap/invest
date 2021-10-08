@@ -30,9 +30,6 @@ LOGGER = logging.getLogger(__name__)
 speedups.enable()
 
 ARGS_SPEC = {
-    "model_title": "Wind Energy Production",
-    "module": __name__,
-    "userguide_html": "wind_energy.html",
     "args_with_spatial_overlap": {
         "spatial_keys": ['aoi_vector_path', 'bathymetry_path',
                          'land_polygon_vector_path'],

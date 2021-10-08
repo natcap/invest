@@ -1,17 +1,17 @@
 # coding=UTF-8
 
 from natcap.invest.ui import model, inputs
-import natcap.invest.urban_flood_risk_mitigation
+from natcap.invest import urban_flood_risk_mitigation, MODEL_UIS
 
 
 class UrbanFloodRiskMitigation(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(
             self,
-            label=natcap.invest.urban_flood_risk_mitigation.ARGS_SPEC['model_title'],
-            target=natcap.invest.urban_flood_risk_mitigation.execute,
-            validator=natcap.invest.urban_flood_risk_mitigation.validate,
-            localdoc='urban_flood_mitigation.html')
+            label=MODEL_UIS['urban_flood_risk_mitigation'].model_title,
+            target=urban_flood_risk_mitigation.execute,
+            validator=urban_flood_risk_mitigation.validate,
+            localdoc=MODEL_UIS['urban_flood_risk_mitigation'].userguide)
 
         self.aoi_watersheds_path = inputs.File(
             args_key='aoi_watersheds_path',

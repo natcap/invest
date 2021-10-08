@@ -1,9 +1,7 @@
-#TODO: all the other UI modules have a # coding=UTF-8 here, does this one need it too?
 import logging
 
-from . import inputs
-from . import model
-from .. import pollination
+from natcap.invest.ui import inputs, model
+from natcap.invest import pollination, MODEL_UIS
 
 LOGGER = logging.getLogger(__name__)
 
@@ -12,10 +10,10 @@ class Pollination(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(
             self,
-            label=pollination.ARGS_SPEC['model_title'],
+            label=MODEL_UIS['pollination'].model_title,
             target=pollination.execute,
             validator=pollination.validate,
-            localdoc='croppollination.html')
+            localdoc=MODEL_UIS['pollination'].userguide)
 
         self.landcover_raster_path = inputs.File(
             args_key='landcover_raster_path',

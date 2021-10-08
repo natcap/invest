@@ -25,9 +25,6 @@ TARGET_NODATA = -1
 _LOGGING_PERIOD = 5.0
 
 ARGS_SPEC = {
-    "model_title": "Urban Cooling",
-    'module': __name__,
-    'userguide_html': 'urban_cooling_model.html',
     "args_with_spatial_overlap": {
         "spatial_keys": ["lulc_raster_path", "ref_eto_raster_path",
                          "aoi_vector_path", "building_vector_path"],

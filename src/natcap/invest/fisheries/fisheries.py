@@ -14,9 +14,6 @@ LOGGER = logging.getLogger(__name__)
 LABEL = 'Fisheries'
 
 ARGS_SPEC = {
-    "model_title": "Fisheries",
-    "module": __name__,
-    "userguide_html": "fisheries.html",
     "args": {
         "workspace_dir": validation.WORKSPACE_SPEC,
         "results_suffix": validation.SUFFIX_SPEC,

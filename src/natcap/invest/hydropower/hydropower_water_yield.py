@@ -16,9 +16,6 @@ from .. import utils
 LOGGER = logging.getLogger(__name__)
 
 ARGS_SPEC = {
-    "model_title": "Annual Water Yield",
-    "module": __name__,
-    "userguide_html": "reservoirhydropowerproduction.html",
     "args_with_spatial_overlap": {
         "spatial_keys": ["depth_to_root_rest_layer_path",
                          "precipitation_path",

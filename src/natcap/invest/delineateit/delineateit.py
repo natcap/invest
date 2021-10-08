@@ -2,7 +2,6 @@
 import os
 import logging
 import time
-import math
 
 from osgeo import gdal
 from osgeo import ogr
@@ -23,9 +22,6 @@ from . import delineateit_core
 LOGGER = logging.getLogger(__name__)
 
 ARGS_SPEC = {
-    "model_title": "DelineateIt",
-    "module": __name__,
-    "userguide_html": "delineateit.html",
     "args_with_spatial_overlap": {
         "spatial_keys": ["dem_path", "outlet_vector_path"],
         "different_projections_ok": True,

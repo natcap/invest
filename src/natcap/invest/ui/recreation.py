@@ -2,16 +2,17 @@
 
 from natcap.invest.ui import model, inputs
 from natcap.invest.recreation import recmodel_client
+from natcap.invest import MODEL_UIS
 
 
 class Recreation(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(
             self,
-            label=recmodel_client.ARGS_SPEC['model_title'],
+            label=MODEL_UIS['recreation'].model_title,
             target=recmodel_client.execute,
             validator=recmodel_client.validate,
-            localdoc='recreation.html')
+            localdoc=MODEL_UIS['recreation'].userguide)
 
         self.internet_warning = inputs.Label(
             text=(

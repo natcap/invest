@@ -16,9 +16,6 @@ from . import ndr_core
 LOGGER = logging.getLogger(__name__)
 
 ARGS_SPEC = {
-    "model_title": "Nutrient Delivery Ratio",
-    "module": __name__,
-    "userguide_html": "ndr.html",
     "args_with_spatial_overlap": {
         "spatial_keys": ["dem_path", "lulc_path", "runoff_proxy_path",
                          "watersheds_path"],

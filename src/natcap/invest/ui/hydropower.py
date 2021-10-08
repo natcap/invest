@@ -2,16 +2,17 @@
 
 from natcap.invest.ui import model, inputs
 from natcap.invest.hydropower import hydropower_water_yield
+from natcap.invest import MODEL_UIS
 
 
 class HydropowerWaterYield(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(
             self,
-            label=hydropower_water_yield.ARGS_SPEC['model_title'],
+            label=MODEL_UIS['hydropower_water_yield'].model_title,
             target=hydropower_water_yield.execute,
             validator=hydropower_water_yield.validate,
-            localdoc='reservoirhydropowerproduction.html')
+            localdoc=MODEL_UIS['hydropower_water_yield'].userguide)
 
         self.precipitation = inputs.File(
             args_key='precipitation_path',

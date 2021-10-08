@@ -28,76 +28,172 @@ except (ValueError, ImportError):
 
 DEFAULT_EXIT_CODE = 1
 LOGGER = logging.getLogger(__name__)
-_UIMETA = collections.namedtuple('UIMeta', 'model_title pyname gui aliases')
+_UIMETA = collections.namedtuple('UIMeta', 'model_title pyname gui userguide aliases')
 
-# this is used only to build up the MODEL_UIS dictionary.
-# use MODEL_UIS for everything else.
-_MODELS = {
-    # model name: python module name, gui, aliases
-    'carbon': ('carbon', 'carbon.Carbon', ()),
-    'coastal_blue_carbon': (
-        'coastal_blue_carbon.coastal_blue_carbon',
-        'cbc.CoastalBlueCarbon', ('cbc',)),
-    'coastal_blue_carbon_preprocessor': (
-        'coastal_blue_carbon.preprocessor',
-        'cbc.CoastalBlueCarbonPreprocessor', ('cbc_pre',)),
-    'coastal_vulnerability': (
-        'coastal_vulnerability', 'coastal_vulnerability.CoastalVulnerability',
-        ('cv',)),
-    'crop_production_percentile': (
-        'crop_production_percentile',
-        'crop_production.CropProductionPercentile', ('cpp',)),
-    'crop_production_regression': (
-        'crop_production_regression',
-        'crop_production.CropProductionRegression', ('cpr',)),
-    'delineateit': ('delineateit.delineateit', 'delineateit.Delineateit', ()),
-    'finfish_aquaculture': (
-        'finfish_aquaculture.finfish_aquaculture',
-        'finfish.FinfishAquaculture', ()),
-    'fisheries': ('fisheries.fisheries', 'fisheries.Fisheries', ()),
-    'fisheries_hst': ('fisheries.fisheries_hst', 'fisheries.FisheriesHST', ()),
-    'forest_carbon_edge_effect': (
-        'forest_carbon_edge_effect', 'forest_carbon.ForestCarbonEdgeEffect',
-        ('fc',)),
-    'globio': ('globio', 'globio.GLOBIO', ()),
-    'habitat_quality': (
-        'habitat_quality', 'habitat_quality.HabitatQuality', ('hq',)),
-    'habitat_risk_assessment': ('hra', 'hra.HabitatRiskAssessment', ('hra',)),
-    'hydropower_water_yield': (
-        'hydropower.hydropower_water_yield', 'hydropower.HydropowerWaterYield',
-        ('hwy',)),
-    'ndr': ('ndr.ndr', 'ndr.Nutrient', ()),
-    'pollination': ('pollination', 'pollination.Pollination', ()),
-    'recreation': ('recreation.recmodel_client', 'recreation.Recreation', ()),
-    'routedem': ('routedem', 'routedem.RouteDEM', ()),
-    'scenario_generator_proximity': (
-        'scenario_gen_proximity', 'scenario_gen.ScenarioGenProximity',
-        ('sgp',)),
-    'scenic_quality': (
-        'scenic_quality.scenic_quality', 'scenic_quality.ScenicQuality',
-        ('sq',)),
-    'sdr': ('sdr.sdr', 'sdr.SDR', ()),
-    'seasonal_water_yield': (
-        'seasonal_water_yield.seasonal_water_yield',
-        'seasonal_water_yield.SeasonalWaterYield', ('swy',)),
-    'wind_energy': ('wind_energy', 'wind_energy.WindEnergy', ()),
-    'wave_energy': ('wave_energy', 'wave_energy.WaveEnergy', ()),
-    'urban_flood_risk_mitigation': (
-        'urban_flood_risk_mitigation',
-        'urban_flood_risk_mitigation.UrbanFloodRiskMitigation', ('ufrm',)),
-    'urban_cooling_model': (
-        'urban_cooling_model', 'urban_cooling_model.UrbanCoolingModel',
-        ('ucm',)),
+MODEL_UIS = {
+    'carbon': _UIMETA(
+        model_title='Carbon Storage and Sequestration',
+        pyname='natcap.invest.carbon',
+        gui='carbon.Carbon',
+        userguide='carbonstorage.html',
+        aliases=()),
+    'coastal_blue_carbon': _UIMETA(
+        model_title='Coastal Blue Carbon',
+        pyname='natcap.invest.coastal_blue_carbon.coastal_blue_carbon',
+        gui='cbc.CoastalBlueCarbon',
+        userguide='coastal_blue_carbon.html',
+        aliases=('cbc',)),
+    'coastal_blue_carbon_preprocessor': _UIMETA(
+        model_title='Coastal Blue Carbon Preprocessor',
+        pyname='natcap.invest.coastal_blue_carbon.preprocessor',
+        gui='cbc.CoastalBlueCarbonPreprocessor',
+        userguide='coastal_blue_carbon.html',
+        aliases=('cbc_pre',)),
+    'coastal_vulnerability': _UIMETA(
+        model_title='Coastal Vulnerability',
+        pyname='natcap.invest.coastal_vulnerability',
+        gui='coastal_vulnerability.CoastalVulnerability',
+        userguide='coastal_vulnerability.html',
+        aliases=('cv',)),
+    'crop_production_percentile': _UIMETA(
+        model_title='Crop Production: Percentile',
+        pyname='natcap.invest.crop_production_percentile',
+        gui='crop_production.CropProductionPercentile',
+        userguide='crop_production.html',
+        aliases=('cpp',)),
+    'crop_production_regression': _UIMETA(
+        model_title='Crop Production: Regression',
+        pyname='natcap.invest.crop_production_regression',
+        gui='crop_production.CropProductionRegression',
+        userguide='crop_production.html',
+        aliases=('cpr',)),
+    'delineateit': _UIMETA(
+        model_title='DelineateIt',
+        pyname='natcap.invest.delineateit.delineateit',
+        gui='delineateit.Delineateit',
+        userguide='delineateit.html',
+        aliases=()),
+    'finfish_aquaculture': _UIMETA(
+        model_title='Finfish Aquaculture',
+        pyname='natcap.invest.finfish_aquaculture.finfish_aquaculture',
+        gui='finfish.FinfishAquaculture',
+        userguide='marine_fish.html',
+        aliases=()),
+    'fisheries': _UIMETA(
+        model_title='Fisheries',
+        pyname='natcap.invest.fisheries.fisheries',
+        gui='fisheries.Fisheries',
+        userguide='fisheries.html',
+        aliases=()),
+    'fisheries_hst': _UIMETA(
+        model_title='Fisheries Habitat Scenario Tool',
+        pyname='natcap.invest.fisheries.fisheries_hst',
+        gui='fisheries.FisheriesHST',
+        userguide='fisheries.html',
+        aliases=()),
+    'forest_carbon_edge_effect': _UIMETA(
+        model_title='Forest Carbon Edge Effect',
+        pyname='natcap.invest.forest_carbon_edge_effect',
+        gui='forest_carbon.ForestCarbonEdgeEffect',
+        userguide='carbon_edge.html',
+        aliases=('fc',)),
+    'globio': _UIMETA(
+        model_title='GLOBIO',
+        pyname='natcap.invest.globio',
+        gui='globio.GLOBIO',
+        userguide='../documentation/globio.html',
+        aliases=()),
+    'habitat_quality': _UIMETA(
+        model_title='Habitat Quality',
+        pyname='natcap.invest.habitat_quality',
+        gui='habitat_quality.HabitatQuality',
+        userguide='habitat_quality.html',
+        aliases=('hq',)),
+    'habitat_risk_assessment': _UIMETA(
+        model_title='Habitat Risk Assessment',
+        pyname='natcap.invest.hra',
+        gui='hra.HabitatRiskAssessment',
+        userguide='habitat_risk_assessment.html',
+        aliases=('hra',)),
+    'hydropower_water_yield': _UIMETA(
+        model_title='Annual Water Yield',
+        pyname='natcap.invest.hydropower.hydropower_water_yield',
+        gui='hydropower.HydropowerWaterYield',
+        userguide='reservoirhydropowerproduction.html',
+        aliases=('hwy',)),
+    'ndr': _UIMETA(
+        model_title='Nutrient Delivery Ratio',
+        pyname='natcap.invest.ndr.ndr',
+        gui='ndr.Nutrient',
+        userguide='ndr.html',
+        aliases=()),
+    'pollination': _UIMETA(
+        model_title='Crop Pollination',
+        pyname='natcap.invest.pollination',
+        gui='pollination.Pollination',
+        userguide='croppollination.html',
+        aliases=()),
+    'recreation': _UIMETA(
+        model_title='Visitation: Recreation and Tourism',
+        pyname='natcap.invest.recreation.recmodel_client',
+        gui='recreation.Recreation',
+        userguide='recreation.html',
+        aliases=()),
+    'routedem': _UIMETA(
+        model_title='RouteDEM',
+        pyname='natcap.invest.routedem',
+        gui='routedem.RouteDEM',
+        userguide='routedem.html',
+        aliases=()),
+    'scenario_generator_proximity': _UIMETA(
+        model_title='Scenario Generator: Proximity Based',
+        pyname='natcap.invest.scenario_gen_proximity',
+        gui='scenario_gen.ScenarioGenProximity',
+        userguide='scenario_gen_proximity.html',
+        aliases=('sgp',)),
+    'scenic_quality': _UIMETA(
+        model_title='Unobstructed Views: Scenic Quality Provision',
+        pyname='natcap.invest.scenic_quality.scenic_quality',
+        gui='scenic_quality.ScenicQuality',
+        userguide='scenic_quality.html',
+        aliases=('sq',)),
+    'sdr': _UIMETA(
+        model_title='Sediment Delivery Ratio',
+        pyname='natcap.invest.sdr.sdr',
+        gui='sdr.SDR',
+        userguide='sdr.html',
+        aliases=()),
+    'seasonal_water_yield': _UIMETA(
+        model_title='Seasonal Water Yield',
+        pyname='natcap.invest.seasonal_water_yield.seasonal_water_yield',
+        gui='seasonal_water_yield.SeasonalWaterYield',
+        userguide='seasonal_water_yield.html',
+        aliases=('swy',)),
+    'wind_energy': _UIMETA(
+        model_title='Wind Energy Production',
+        pyname='natcap.invest.wind_energy',
+        gui='wind_energy.WindEnergy',
+        userguide='wind_energy.html',
+        aliases=()),
+    'wave_energy': _UIMETA(
+        model_title='Wave Energy Production',
+        pyname='natcap.invest.wave_energy',
+        gui='wave_energy.WaveEnergy',
+        userguide='wave_energy.html',
+        aliases=()),
+    'urban_flood_risk_mitigation': _UIMETA(
+        model_title='Urban Flood Risk Mitigation',
+        pyname='natcap.invest.urban_flood_risk_mitigation',
+        gui='urban_flood_risk_mitigation.UrbanFloodRiskMitigation',
+        userguide='urban_flood_risk_mitigation.html',
+        aliases=('ufrm',)),
+    'urban_cooling_model': _UIMETA(
+        model_title='Urban Cooling',
+        pyname='natcap.invest.urban_cooling_model',
+        gui='urban_cooling_model.UrbanCoolingModel',
+        userguide='urban_cooling_model.html',
+        aliases=('ucm',)),
 }
-
-MODEL_UIS = {}
-for (model_name, (pyname, gui, aliases)) in _MODELS.items():
-    module = f'natcap.invest.{pyname}'
-    MODEL_UIS[model_name] = _UIMETA(
-        model_title=importlib.import_module(module).ARGS_SPEC['model_title'],
-        pyname=module,
-        gui=gui,
-        aliases=aliases)
 
 # Build up an index mapping aliases to modelname.
 # ``modelname`` is the key to the MODEL_UIS dict, above.

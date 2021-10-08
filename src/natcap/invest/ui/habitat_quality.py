@@ -1,17 +1,17 @@
 # coding=UTF-8
 
 from natcap.invest.ui import model, inputs
-import natcap.invest.habitat_quality
+from natcap.invest import habitat_quality, MODEL_UIS
 
 
 class HabitatQuality(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(
             self,
-            label=natcap.invest.habitat_quality.ARGS_SPEC['model_title'],
-            target=natcap.invest.habitat_quality.execute,
-            validator=natcap.invest.habitat_quality.validate,
-            localdoc='habitat_quality.html')
+            label=MODEL_UIS['habitat_quality'].model_title,
+            target=habitat_quality.execute,
+            validator=habitat_quality.validate,
+            localdoc=MODEL_UIS['habitat_quality'].userguide)
         self.current_landcover = inputs.File(
             args_key='lulc_cur_path',
             helptext=(

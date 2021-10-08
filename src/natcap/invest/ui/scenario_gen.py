@@ -2,7 +2,7 @@
 import logging
 
 from natcap.invest.ui import model, inputs
-import natcap.invest.scenario_gen_proximity
+from natcap.invest import scenario_gen_proximity, MODEL_UIS
 
 
 LOGGER = logging.getLogger(__name__)
@@ -12,10 +12,10 @@ class ScenarioGenProximity(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(
             self,
-            label=natcap.invest.scenario_gen_proximity.ARGS_SPEC['model_title'],
-            target=natcap.invest.scenario_gen_proximity.execute,
-            validator=natcap.invest.scenario_gen_proximity.validate,
-            localdoc='scenario_gen_proximity.html')
+            label=MODEL_UIS['scenario_gen_proximity'].model_title,
+            target=scenario_gen_proximity.execute,
+            validator=scenario_gen_proximity.validate,
+            localdoc=MODEL_UIS['scenario_gen_proximity'].userguide)
 
         self.base_lulc_path = inputs.File(
             args_key='base_lulc_path',

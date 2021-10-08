@@ -29,9 +29,6 @@ MONTH_ID_TO_LABEL = [
     'nov', 'dec']
 
 ARGS_SPEC = {
-    "model_title": "Seasonal Water Yield",
-    "module": __name__,
-    "userguide_html": "seasonal_water_yield.html",
     "args_with_spatial_overlap": {
         "spatial_keys": ["dem_raster_path", "lulc_raster_path",
                          "soil_group_path", "aoi_path", "l_path",

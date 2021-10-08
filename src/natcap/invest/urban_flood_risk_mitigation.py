@@ -19,9 +19,6 @@ from . import utils
 LOGGER = logging.getLogger(__name__)
 
 ARGS_SPEC = {
-    "model_title": "Urban Flood Risk Mitigation",
-    "module": __name__,
-    "userguide_html": "urban_flood_risk_mitigation.html",
     "args_with_spatial_overlap": {
         "spatial_keys": ["aoi_watersheds_path", "lulc_path",
                          "built_infrastructure_vector_path",

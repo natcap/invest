@@ -44,9 +44,6 @@ Pyro4.config.SERIALIZER = 'marshal'
 
 
 ARGS_SPEC = {
-    "model_title": "Visitation: Recreation and Tourism",
-    "module": __name__,
-    "userguide_html": "recreation.html",
     "args": {
         "workspace_dir": validation.WORKSPACE_SPEC,
         "results_suffix": validation.SUFFIX_SPEC,

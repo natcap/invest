@@ -17,9 +17,6 @@ from . import utils
 LOGGER = logging.getLogger(__name__)
 
 ARGS_SPEC = {
-    "model_title": "Carbon Storage and Sequestration",
-    "module": __name__,
-    "userguide_html": "carbonstorage.html",
     "args_with_spatial_overlap": {
         "spatial_keys": ["lulc_cur_path", "lulc_fut_path", "lulc_redd_path"],
     },
