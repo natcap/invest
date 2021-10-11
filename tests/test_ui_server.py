@@ -3,6 +3,8 @@ import os
 import shutil
 import tempfile
 import unittest
+from unittest.mock import patch
+import urllib.request
 
 TEST_DATA_PATH = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data')
@@ -141,7 +143,8 @@ class EndpointFunctionTests(unittest.TestCase):
         # test_cli.py asserts the actual contents of the file
         self.assertTrue(os.path.exists(filepath))
 
-    def test_log_model_start(self):
+    @patch('urllib.request.urlopen')
+    def test_log_model_start(self, mock_urlopen):
         """UI server: log_model_start endpoint."""
         from natcap.invest import ui_server
         test_client = ui_server.app.test_client()
@@ -152,11 +155,12 @@ class EndpointFunctionTests(unittest.TestCase):
             }),
             'invest_interface': 'Workbench',
             'session_id': '12345'
-        }
+        }    
         response = test_client.post('/log_model_start', json=payload)
         self.assertEqual(response.get_data(as_text=True), 'OK')
 
-    def test_log_model_exit(self):
+    @patch('urllib.request.urlopen')
+    def test_log_model_exit(self, mock_urlopen):
         """UI server: log_model_start endpoint."""
         from natcap.invest import ui_server
         test_client = ui_server.app.test_client()
