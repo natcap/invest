@@ -43,7 +43,7 @@ ARGS_SPEC = {
             **spec_utils.LULC,
             "projected": True,
             "projection_units": u.meter,
-            "about": (
+            "about": _(
                 "A GDAL-supported raster file containing integer values "
                 "representing the LULC code for each cell.  The LULC code "
                 "should be an integer.  The model will use the resolution of "
@@ -56,15 +56,15 @@ ARGS_SPEC = {
         "ref_eto_raster_path": spec_utils.ETO,
         "aoi_vector_path": spec_utils.AOI,
         "biophysical_table_path": {
-            "name": "Biophysical Table",
+            "name": _("Biophysical Table"),
             "type": "csv",
             "columns": {
                 "lucode": {"type": "integer"},
-                "kc": {"type": "number", "units": u.none, "about": (
+                "kc": {"type": "number", "units": u.none, "about": _(
                     "Crop coefficient")},
                 "green_area": {
                     "type": "boolean",
-                    "about": (
+                    "about": _(
                         "A value of either 0 or 1, 1 meaning that the LULC is "
                         "counted as a green area (green areas larger than 2ha "
                         "have an additional cooling effect), and 0 meaning "
@@ -72,12 +72,12 @@ ARGS_SPEC = {
                 "shade":  {
                     "type": "ratio",
                     "required": "cc_method == factors",
-                    "about": ("The proportion of tree cover (0 for no tree; 1 "
+                    "about": _("The proportion of tree cover (0 for no tree; 1 "
                               "for full tree cover; with trees>2m).")},
                 "albedo": {
                     "type": "ratio",
                     "required": "cc_method == factors",
-                    "about": (
+                    "about": _(
                         "The proportion of solar radiation directly "
                         "reflected by the LULC type. Required if using the "
                         "weighted factor approach to Cooling Coefficient "
@@ -85,10 +85,10 @@ ARGS_SPEC = {
                 "building_intensity": {
                     "type": "ratio",
                     "required": "cc_method == intensity",
-                    "about": ("The ratio of building floor area to footprint "
+                    "about": _("The ratio of building floor area to footprint "
                               "area, normalized between 0 and 1.")}
             },
-            "about": (
+            "about": _(
                 "A CSV table containing model information corresponding to "
                 "each of the land use classes in the LULC.  All classes in "
                 "the land cover raster MUST have corresponding values in this "
@@ -98,8 +98,8 @@ ARGS_SPEC = {
             "type": "number",
             "units": u.meter,
             "expression": "value >= 0",
-            "name": "Green area max cooling distance effect",
-            "about": (
+            "name": _("Green area max cooling distance effect"),
+            "about": _(
                 "Distance over which green areas larger than 2 hectares will "
                 "have a cooling effect."),
         },
@@ -107,16 +107,16 @@ ARGS_SPEC = {
             "type": "number",
             "units": u.meter,
             "expression": "value >= 0",
-            "name": "T_air moving average radius",
-            "about": (
+            "name": _("T_air moving average radius"),
+            "about": _(
                 "Radius of the averaging filter for turning T_air_nomix into "
                 "T_air")
         },
         "t_ref": {
-            "name": "Reference Air Temperature",
+            "name": _("Reference Air Temperature"),
             "type": "number",
             "units": u.degree_Celsius,
-            "about": (
+            "about": _(
                 "Rural reference temperature (where the urban heat "
                 "island effect is not observed) for the period of interest. "
                 "This could be nighttime or daytime temperature, for a "
@@ -124,39 +124,39 @@ ARGS_SPEC = {
                 "will be given for the same period of interest)"),
         },
         "uhi_max": {
-            "name": "Magnitude of the UHI effect",
+            "name": _("Magnitude of the UHI effect"),
             "type": "number",
             "units": u.degree_Celsius,
-            "about": (
+            "about": _(
                 "The magnitude of the urban heat island effect, Example: the "
                 "difference between the rural reference temperature and the "
                 "maximum temperature observed in the city."),
         },
         "do_energy_valuation": {
-            "name": "Run Energy Savings Valuation Model",
+            "name": _("Run Energy Savings Valuation Model"),
             "type": "boolean",
-            "about": "Select to run the energy savings valuation model."
+            "about": _("Select to run the energy savings valuation model.")
         },
         "do_productivity_valuation": {
-            "name": "Run Work Productivity Valuation Model",
+            "name": _("Run Work Productivity Valuation Model"),
             "type": "boolean",
-            "about": "Select to run the work productivity valuation model."
+            "about": _("Select to run the work productivity valuation model.")
         },
         "avg_rel_humidity": {
-            "name": "Average relative humidity",
+            "name": _("Average relative humidity"),
             "type": "percent",
             "required": "do_productivity_valuation",
-            "about": (
+            "about": _(
                 "The average relative humidity (0-100%) over the time period "
                 "of interest."),
         },
         "building_vector_path": {
-            "name": "Buildings vector",
+            "name": _("Buildings vector"),
             "type": "vector",
             "fields": {"type": {"type": "integer"}},
             "geometries": spec_utils.POLYGONS,
             "required": "do_energy_valuation",
-            "about": (
+            "about": _(
                 "A GDAL-compatible vector with built infrastructure "
                 "footprints.  The attribute table must contain the column "
                 "'type', with integers referencing the building type (e.g. "
@@ -164,19 +164,19 @@ ARGS_SPEC = {
                 "energy consumption table."),
         },
         "energy_consumption_table_path": {
-            "name": "Energy consumption table",
+            "name": _("Energy consumption table"),
             "type": "csv",
             "columns": {
                 "type": {
                     "type": "integer",
-                    "about": (
+                    "about": _(
                         "building type codes matching those in the building "
                         "vector")
                 },
                 "consumption": {
                     "type": "number",
                     "units": u.kilowatt_hour/(u.degree_Celsius * u.meter**2),
-                    "about": (
+                    "about": _(
                         "Energy consumption by footprint area for each "
                         "building type.This consumption value must be "
                         "adjusted for the average number of stories that "
@@ -185,7 +185,7 @@ ARGS_SPEC = {
                 "rh": {
                     "type": "percent",
                     "required": False,
-                    "about": (
+                    "about": _(
                         "Average relative humidity during the period of "
                         "interest, which is used to calculate the wet bulb "
                         "globe temperature for the work productivity module.")
@@ -194,7 +194,7 @@ ARGS_SPEC = {
                     "type": "number",
                     "units": u.currency/u.kilowatt_hour,
                     "required": False,
-                    "about": (
+                    "about": _(
                         "The cost of electricity for each building type. "
                         "If this column is provided in the Energy Consumption "
                         "table, the energy_sav field in the output vector "
@@ -204,12 +204,12 @@ ARGS_SPEC = {
                 }
             },
             "required": "do_energy_valuation",
-            "about": (
+            "about": _(
                 "A CSV table containing information on energy consumption for "
                 "various types of buildings, in kWh/deg C/m^2."),
         },
         "cc_method": {
-            "name": "Cooling capacity calculation method",
+            "name": _("Cooling capacity calculation method"),
             "type": "option_string",
             "options": {
                 "factors": ("Use the weighted shade, albedo, and ETI factors "
@@ -217,31 +217,31 @@ ARGS_SPEC = {
                 "intensity": ("Use building intensity as a temperature "
                               "predictor (for nighttime temperatures)")
             },
-            "about": (
+            "about": _(
                 "The method selected here determines the predictor used for "
                 "air temperature."),
         },
         "cc_weight_shade": {
-            "name": "Cooling capacity: adjust shade weight",
+            "name": _("Cooling capacity: adjust shade weight"),
             "type": "ratio",
             "required": False,
-            "about": (
+            "about": _(
                 "The relative weight to apply to shade when calculating the "
                 "cooling index.  Default: 0.6"),
         },
         "cc_weight_albedo": {
-            "name": "Cooling capacity: adjust albedo weight",
+            "name": _("Cooling capacity: adjust albedo weight"),
             "type": "ratio",
             "required": False,
-            "about": (
+            "about": _(
                 "The relative weight to apply to albedo when calculating the "
                 "cooling index.  Default: 0.2"),
         },
         "cc_weight_eti": {
-            "name": "Cooling capacity: adjust evapotranspiration weight",
+            "name": _("Cooling capacity: adjust evapotranspiration weight"),
             "type": "ratio",
             "required": False,
-            "about": (
+            "about": _(
                 "The relative weight to apply to ETI when calculating the "
                 "cooling index.  Default: 0.2")
         },

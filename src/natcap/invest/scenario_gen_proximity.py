@@ -34,74 +34,74 @@ ARGS_SPEC = {
         "base_lulc_path": {
             **spec_utils.LULC,
             "projected": True,
-            "about": "Path to the base landcover map",
-            "name": "Base Land Use/Cover"
+            "about": _("Path to the base landcover map"),
+            "name": _("Base Land Use/Cover")
         },
         "replacment_lucode": {
             "type": "integer",
-            "about": "Code to replace when converting pixels",
-            "name": "Replacement Landcover Code"
+            "about": _("Code to replace when converting pixels"),
+            "name": _("Replacement Landcover Code")
         },
         "area_to_convert": {
             "expression": "value > 0",
             "type": "number",
             "units": u.hectare,
-            "about": "Max area to convert",
-            "name": "Max area to convert"
+            "about": _("Max area to convert"),
+            "name": _("Max area to convert")
         },
         "focal_landcover_codes": {
             "type": "freestyle_string",
             "regexp": "[0-9 ]+",
-            "about": (
+            "about": _(
                 "A space separated string of landcover codes that are used to "
                 "determine the proximity when referring to 'towards' or "
                 "'away' from the base landcover codes"),
-            "name": "Focal Landcover Codes"
+            "name": _("Focal Landcover Codes")
         },
         "convertible_landcover_codes": {
             "type": "freestyle_string",
             "regexp": "[0-9 ]+",
-            "about": (
+            "about": _(
                 "A space separated string of landcover codes that can be "
                 "converted in the generation phase found in "
                 "`args['base_lulc_path']`."),
-            "name": "Convertible Landcover Codes"
+            "name": _("Convertible Landcover Codes")
         },
         "n_fragmentation_steps": {
             "expression": "value > 0",
             "type": "number",
             "units": u.count,
-            "about": (
+            "about": _(
                 "This parameter is used to divide the conversion simulation "
                 "into equal subareas of the requested max area. During each "
                 "sub-step the distance transform is recalculated from the "
                 "base landcover codes.  This can affect the final result if "
                 "the base types are also convertible types."),
-            "name": "Number of Steps in Conversion"
+            "name": _("Number of Steps in Conversion")
         },
         "aoi_path": {
             **spec_utils.AOI,
             "projected": True,
             "required": False,
-            "about": (
+            "about": _(
                 "This is a set of polygons that will be used to aggregate "
                 "carbon values at the end of the run if provided."),
         },
         "convert_farthest_from_edge": {
             "type": "boolean",
-            "about": (
+            "about": _(
                 "This scenario converts the convertible landcover codes "
                 "starting at the furthest pixel from the closest base "
                 "landcover codes and moves inward."),
-            "name": "Convert farthest from edge"
+            "name": _("Convert farthest from edge")
         },
         "convert_nearest_to_edge": {
             "type": "boolean",
-            "about": (
+            "about": _(
                 "This scenario converts the convertible landcover codes "
                 "starting at the closest pixel in the base landcover codes "
                 "and moves outward."),
-            "name": "Convert nearest to edge"
+            "name": _("Convert nearest to edge")
         }
     }
 }

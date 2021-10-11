@@ -88,11 +88,11 @@ ARGS_SPEC = {
                     ]
                 }
             },
-            "about": (
+            "about": _(
                 "A table that maps each LULC code from the LULC map to one of "
                 "the 175 canonical crop names representing the crop grown in "
                 "that LULC class."),
-            "name": "LULC to Crop Table"
+            "name": _("LULC to Crop Table")
         },
         "aggregate_polygon_path": {
             **spec_utils.AOI,
@@ -104,7 +104,7 @@ ARGS_SPEC = {
             "contents": {
                 "climate_percentile_yield_tables": {
                     "type": "directory",
-                    "about": (
+                    "about": _(
                         "Table mapping each climate bin to yield percentiles "
                         "for each crop."),
                     "contents": {
@@ -134,7 +134,7 @@ ARGS_SPEC = {
                 },
                 "extended_climate_bin_maps": {
                     "type": "directory",
-                    "about": "Maps of climate bins for each crop.",
+                    "about": _("Maps of climate bins for each crop."),
                     "contents": {
                         "extendedclimatebins[CROP]": {
                             "type": "raster",
@@ -144,7 +144,7 @@ ARGS_SPEC = {
                 },
                 "observed_yield": {
                     "type": "directory",
-                    "about": "Maps of actual observed yield for each crop.",
+                    "about": _("Maps of actual observed yield for each crop."),
                     "contents": {
                         "[CROP]_observed_yield.tif": {
                             "type": "raster",
@@ -199,8 +199,8 @@ ARGS_SPEC = {
                     }
                 }
             },
-            "about": "Path to the InVEST Crop Production Data directory.",
-            "name": "model data directory"
+            "about": _("Path to the InVEST Crop Production Data directory."),
+            "name": _("model data directory")
         }
     }
 }

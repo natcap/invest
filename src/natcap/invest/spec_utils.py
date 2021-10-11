@@ -39,8 +39,8 @@ u.define('none = []')
 
 # Specs for common arg types ##################################################
 WORKSPACE = {
-    "name": "workspace",
-    "about": (
+    "name": _("workspace"),
+    "about": _(
         "The folder where all the model's output files will be written. If "
         "this folder does not exist, it will be created. If data already "
         "exists in the folder, it will be overwritten."),
@@ -51,8 +51,8 @@ WORKSPACE = {
 }
 
 SUFFIX = {
-    "name": "file suffix",
-    "about": (
+    "name": _("file suffix"),
+    "about": _(
         "Suffix that will be appended to all output file names. Useful to "
         "differentiate between model runs."),
     "type": "freestyle_string",
@@ -61,8 +61,8 @@ SUFFIX = {
 }
 
 N_WORKERS = {
-    "name": "taskgraph n_workers parameter",
-    "about": (
+    "name": _("taskgraph n_workers parameter"),
+    "about": _(
         "The n_workers parameter to provide to taskgraph. "
         "-1 will cause all jobs to run synchronously. "
         "0 will run all jobs in the same process, but scheduling will take "
@@ -87,16 +87,16 @@ AOI = {
     "type": "vector",
     "fields": {},
     "geometries": {"POLYGON", "MULTIPOLYGON"},
-    "name": "area of interest",
-    "about": (
+    "name": _("area of interest"),
+    "about": _(
         "A polygon vector containing features over which to aggregate and "
         "summarize the final results."),
 }
 LULC = {
     "type": "raster",
     "bands": {1: {"type": "integer"}},
-    "about": "Map of land use/land cover codes.",
-    "name": "land use/land cover"
+    "about": _("Map of land use/land cover codes."),
+    "name": _("land use/land cover")
 }
 DEM = {
     "type": "raster",
@@ -106,8 +106,8 @@ DEM = {
             "units": u.meter
         }
     },
-    "about": "Map of elevation above sea level.",
-    "name": "digital elevation model"
+    "about": _("Map of elevation above sea level."),
+    "name": _("digital elevation model")
 }
 PRECIP = {
     "type": "raster",
@@ -117,11 +117,11 @@ PRECIP = {
             "units": u.millimeter/u.year
         }
     },
-    "about": "Map of average annual precipitation.",
-    "name": "precipitation"
+    "about": _("Map of average annual precipitation."),
+    "name": _("precipitation")
 }
 ETO = {
-    "name": "evapotranspiration",
+    "name": _("evapotranspiration"),
     "type": "raster",
     "bands": {
         1: {
@@ -129,25 +129,24 @@ ETO = {
             "units": u.millimeter
         }
     },
-    "about": "Map of evapotranspiration values."
+    "about": _("Map of evapotranspiration values.")
 }
 SOIL_GROUP = {
     "type": "raster",
     "bands": {1: {"type": "integer"}},
-    "about": (
+    "about": _(
         "Map of soil hydrologic groups. Pixels may have values 1, 2, 3, or 4, "
-        "corresponding to soil hydrologic groups A, B, C, or D, respectively."
-    ),
-    "name": "soil hydrologic group"
+        "corresponding to soil hydrologic groups A, B, C, or D, respectively."),
+    "name": _("soil hydrologic group")
 }
 THRESHOLD_FLOW_ACCUMULATION = {
     "expression": "value >= 0",
     "type": "number",
     "units": u.pixel,
-    "about": (
+    "about": _(
         "The number of upstream pixels that must flow into a pixel "
         "before it is classified as a stream."),
-    "name": "threshold flow accumulation"
+    "name": _("threshold flow accumulation")
 }
 
 # geometry types ##############################################################

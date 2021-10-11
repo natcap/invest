@@ -41,7 +41,7 @@ ARGS_SPEC = {
         "dem_path": {
             **spec_utils.DEM,
             "projected": True,
-            "about": (
+            "about": _(
                 "A GDAL-supported raster file with an elevation value for "
                 "each cell.  Make sure the DEM is corrected by filling in "
                 "sinks, and if necessary burning hydrographic features into "
@@ -55,7 +55,7 @@ ARGS_SPEC = {
                 "type": "number",
                 "units": u.megajoule*u.millimeter/(u.hectare*u.hour*u.year)}},
             "projected": True,
-            "about": (
+            "about": _(
                 "A GDAL-supported raster file, with an erosivity index value "
                 "for each cell.  This variable depends on the intensity and "
                 "duration of rainfall in the area of interest.  The greater "
@@ -63,7 +63,7 @@ ARGS_SPEC = {
                 "erosion potential. The erosivity index is widely used, but "
                 "in case of its absence, there are methods and equations to "
                 "help generate a grid using climatic data."),
-            "name": "Rainfall Erosivity Index (R)"
+            "name": _("Rainfall Erosivity Index (R)")
         },
         "erodibility_path": {
             "type": "raster",
@@ -71,12 +71,12 @@ ARGS_SPEC = {
                 "type": "number",
                 "units": u.metric_ton*u.hectare*u.hour/(u.hectare*u.megajoule*u.millimeter)}},
             "projected": True,
-            "about": (
+            "about": _(
                 "A GDAL-supported raster file, with a soil erodibility value "
                 "for each cell which is a measure of the susceptibility of "
                 "soil particles to detachment and transport by rainfall and "
                 "runoff."),
-            "name": "Soil Erodibility"
+            "name": _("Soil Erodibility")
         },
         "lulc_path": {
             **spec_utils.LULC,
@@ -89,13 +89,13 @@ ARGS_SPEC = {
             },
             "geometries": spec_utils.POLYGONS,
             "projected": True,
-            "about": (
+            "about": _(
                 "This is a layer of polygons representing watersheds such "
                 "that each watershed contributes to a point of interest where "
                 "water quality will be analyzed.  It must have the integer "
                 "field 'ws_id' where the values uniquely identify each "
                 "watershed."),
-            "name": "Watersheds"
+            "name": _("Watersheds")
         },
         "biophysical_table_path": {
             "type": "csv",
@@ -103,68 +103,68 @@ ARGS_SPEC = {
                 "lucode": {"type": "integer"},
                 "usle_c": {
                     "type": "ratio",
-                    "about": "Cover-management factor for the USLE"},
+                    "about": _("Cover-management factor for the USLE")},
                 "usle_p": {
                     "type": "ratio",
-                    "about": "Support practice factor for the USLE"}
+                    "about": _("Support practice factor for the USLE")}
             },
-            "about": (
+            "about": _(
                 "A CSV table containing model information corresponding to "
                 "each of the land use classes in the LULC raster input."),
-            "name": "Biophysical Table"
+            "name": _("Biophysical Table")
         },
         "threshold_flow_accumulation": {
             "expression": "value > 0",
             "type": "number",
             "units": u.pixel,
-            "about": (
+            "about": _(
                 "The number of upstream cells that must flow into a cell "
                 "before it's considered part of a stream such that retention "
                 "stops and the remaining export is exported to the stream. "
                 "Used to define streams from the DEM."),
-            "name": "Threshold Flow Accumulation"
+            "name": _("Threshold Flow Accumulation")
         },
         "k_param": {
             "type": "number",
             "units": u.none,
-            "about": "Borselli k parameter.",
-            "name": "Borselli k Parameter"
+            "about": _("Borselli k parameter."),
+            "name": _("Borselli k Parameter")
         },
         "sdr_max": {
             "type": "ratio",
-            "about": "Maximum SDR value.",
-            "name": "Max SDR Value"
+            "about": _("Maximum SDR value."),
+            "name": _("Max SDR Value")
         },
         "ic_0_param": {
             "type": "number",
             "units": u.none,
-            "about": "Borselli IC0 parameter.",
-            "name": "Borselli IC0 Parameter"
+            "about": _("Borselli IC0 parameter."),
+            "name": _("Borselli IC0 Parameter")
         },
         "l_max": {
             "type": "number",
             "expression": "value > 0",
             "units": u.none,
-            "about": (
+            "about": _(
                 "Values of L (the slope length component of the LS "
                 "slope length * slope gradient factor) larger than this value "
                 "will be clamped to this value. Ranges of 122-333 (unitless) "
                 "are found in relevant literature such as "
                 "Desmet and Govers, 1996 and Renard et al., 1997 "
                 "(see user's guide)."),
-            "name": "Max L Value",
+            "name": _("Max L Value"),
         },
         "drainage_path": {
             "type": "raster",
             "bands": {1: {"type": "number", "units": u.none}},
             "required": False,
-            "about": (
+            "about": _(
                 "An optional GDAL-supported raster file mask, that indicates "
                 "areas that drain to the watershed.  Format is that 1's "
                 "indicate drainage areas and 0's or nodata indicate areas "
                 "with no additional drainage.  This model is most accurate "
                 "when the drainage raster aligns with the DEM."),
-            "name": "Drainages"
+            "name": _("Drainages")
         }
     }
 }

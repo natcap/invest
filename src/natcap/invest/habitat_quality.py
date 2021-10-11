@@ -37,7 +37,7 @@ ARGS_SPEC = {
         "lulc_cur_path": {
             **spec_utils.LULC,
             "projected": True,
-            "about": (
+            "about": _(
                 "A GDAL-supported raster file.  The current LULC must have "
                 "its' own threat rasters, where each threat raster file path "
                 "is defined in the <b>Threats Data</b> CSV.<br/><br/> Each "
@@ -45,13 +45,13 @@ ARGS_SPEC = {
                 "should be in a projection where the units are in meters and "
                 "the projection used should be defined.  The LULC codes must "
                 "match the codes in the Sensitivity table."),
-            "name": "Current Land Cover"
+            "name": _("Current Land Cover")
         },
         "lulc_fut_path": {
             **spec_utils.LULC,
             "projected": True,
             "required": False,
-            "about": (
+            "about": _(
                 "Optional.  A GDAL-supported raster file.  Inputting a future "
                 "LULC will generate degradation, habitat quality, and habitat "
                 "rarity (If baseline is input) outputs.  The future LULC must "
@@ -62,13 +62,13 @@ ARGS_SPEC = {
                 "units are in meters and the projection used should be "
                 "defined. The LULC codes must match the codes in the "
                 "Sensitivity table."),
-            "name": "Future Land Cover"
+            "name": _("Future Land Cover")
         },
         "lulc_bas_path": {
             **spec_utils.LULC,
             "projected": True,
             "required": False,
-            "about": (
+            "about": _(
                 "Optional.  A GDAL-supported raster file.  If the baseline "
                 "LULC is provided, rarity outputs will be created for the "
                 "current and future LULC. The baseline LULC can have it's own "
@@ -83,7 +83,7 @@ ARGS_SPEC = {
                 "match the codes in the Sensitivity table.  If possible the "
                 "baseline map should refer to a time when intensive "
                 "management of the landscape was relatively rare."),
-            "name": "Baseline Land Cover"
+            "name": _("Baseline Land Cover")
         },
         "threats_table_path": {
             "type": "csv",
@@ -92,7 +92,7 @@ ARGS_SPEC = {
                 "max_dist": {
                     "type": "number",
                     "units": u.kilometer,
-                    "about": (
+                    "about": _(
                         "The maximum distance over which each threat affects "
                         "habitat quality. The impact of each degradation "
                         "source will decline to zero at this maximum "
@@ -100,14 +100,14 @@ ARGS_SPEC = {
                 },
                 "weight": {
                     "type": "ratio",
-                    "about": (
+                    "about": _(
                         "The impact of each threat on habitat quality, "
                         "relative to other threats.")
                 },
                 "decay": {
                     "type": "option_string",
                     "options": ["linear", "exponential"],
-                    "about": "The type of decay over space for each threat."
+                    "about": _("The type of decay over space for each threat.")
                 },
                 "cur_path": {
                     "type": "raster",
@@ -124,12 +124,12 @@ ARGS_SPEC = {
                     "bands": {1: {"type": "ratio"}},
                 }
             },
-            "about": (
+            "about": _(
                 "Table mapping each threat of interest to its properties and "
                 "maps of its distribution. The raster columns give filepaths "
                 "to maps of the relative intensity of each threat, ranging "
                 "from 0 to 1. Paths are relative to the threats table path."),
-            "name": "Threats Table"
+            "name": _("Threats Table")
         },
         "access_vector_path": {
             "type": "vector",
@@ -137,7 +137,7 @@ ARGS_SPEC = {
             "fields": {
                 "access": {
                     "type": "ratio",
-                    "about": (
+                    "about": _(
                         "The region's relative accessibility to threats, "
                         "where 0 represents completely inaccessible and 1 "
                         "represents completely accessible")
@@ -145,44 +145,44 @@ ARGS_SPEC = {
             },
             "geometries": spec_utils.POLYGONS,
             "required": False,
-            "about": (
+            "about": _(
                 "Map of the relative protection that legal, institutional, "
                 "social, and physical barriers provide against threats. Any "
                 "cells not covered by a polygon will be set to 1."),
-            "name": "Accessibility to Threats"
+            "name": _("Accessibility to Threats")
         },
         "sensitivity_table_path": {
             "type": "csv",
             "columns": {
                 "lulc": {
                     "type": "integer",
-                    "about": ("LULC codes corresponding to those in the LULC "
+                    "about": _("LULC codes corresponding to those in the LULC "
                               "rasters.")
                 },
                 "habitat": {
                     "type": "ratio",
-                    "about": (
+                    "about": _(
                         "Suitability of this LULC class as habitat, where 0 "
                         "is not suitable and 1 is completely suitable.")
                 },
                 "[THREAT]": {
                     "type": "ratio",
-                    "about": (
+                    "about": _(
                         "The relative sensitivity of each LULC class to each "
                         "type of threat.")
                 }
             },
-            "about": (
+            "about": _(
                 "Table mapping each LULC class to data about the species' "
                 "habitat preference and threat sensitivity in areas with that "
                 "LULC."),
-            "name": "Sensitivity of Land Cover Types to Each Threat"
+            "name": _("Sensitivity of Land Cover Types to Each Threat")
         },
         "half_saturation_constant": {
             "expression": "value > 0",
             "type": "number",
             "units": u.none,
-            "about": (
+            "about": _(
                 "A positive floating point value that is defaulted at 0.05. "
                 "This is the value of the parameter k in equation (4). In "
                 "general, set k to half of the highest grid cell degradation "
@@ -192,7 +192,7 @@ ARGS_SPEC = {
                 "Note that the choice of k only determines the spread and "
                 "central tendency of habitat quality cores and does not "
                 "affect the rank."),
-            "name": "Half-Saturation Constant"
+            "name": _("Half-Saturation Constant")
         },
     }
 }

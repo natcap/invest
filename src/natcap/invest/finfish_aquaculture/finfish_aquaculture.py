@@ -20,8 +20,8 @@ ARGS_SPEC = {
         "workspace_dir": spec_utils.WORKSPACE,
         "results_suffix": spec_utils.SUFFIX,
         "ff_farm_loc": {
-            "name": "Finfish Farm Location",
-            "about": (
+            "name": _("Finfish Farm Location"),
+            "about": _(
                 "A GDAL-supported vector file containing polygon or point "
                 "geometries, with a latitude and longitude value and a "
                 "numerical identifier for each farm.  File can be named "
@@ -30,7 +30,7 @@ ARGS_SPEC = {
             "fields": {
                 "[FARM_ID]": {  # may be anything, will be selected as the farm_ID
                     "type": "integer",
-                    "about": (
+                    "about": _(
                         "A user-defined ID field with a unique integer code "
                         "identifying each farm geometry.")
                 }
@@ -38,8 +38,8 @@ ARGS_SPEC = {
             "geometries": spec_utils.POLYGON | spec_utils.POINT,
         },
         "farm_ID": {
-            "name": "Farm Identifier Name",
-            "about": (
+            "name": _("Farm Identifier Name"),
+            "about": _(
                 "The name of a column heading used to identify each farm and "
                 "link the spatial information from the vector to subsequent "
                 "table input data (farm operation and daily water temperature "
@@ -50,8 +50,8 @@ ARGS_SPEC = {
             "options": {},
         },
         "g_param_a": {
-            "name": "Fish Growth Parameter (a)",
-            "about": (
+            "name": _("Fish Growth Parameter (a)"),
+            "about": _(
                 "Default a = (0.038 g/day). If the user chooses to adjust "
                 "these parameters, we recommend using them in the simple "
                 "growth model to determine if the time taken for a fish to "
@@ -61,8 +61,8 @@ ARGS_SPEC = {
             "units": u.gram/u.day,
         },
         "g_param_b": {
-            "name": "Fish Growth Parameter (b)",
-            "about": (
+            "name": _("Fish Growth Parameter (b)"),
+            "about": _(
                 "Default b = (0.6667 g/day). If the user chooses to adjust "
                 "these parameters, we recommend using them in the simple "
                 "growth model to determine if the time taken for a fish to "
@@ -72,8 +72,8 @@ ARGS_SPEC = {
             "units": u.gram/u.day,
         },
         "g_param_tau": {
-            "name": "Fish Growth Parameter (tau)",
-            "about": (
+            "name": _("Fish Growth Parameter (tau)"),
+            "about": _(
                 "Default tau = (0.08 C^-1).  Specifies how sensitive finfish "
                 "growth is to temperature.  If the user chooses to adjust "
                 "these parameters, we recommend using them in the simple "
@@ -84,13 +84,13 @@ ARGS_SPEC = {
             "units": u.degree_Celsius**-1,
         },
         "use_uncertainty": {
-            "name": "Enable uncertainty analysis",
-            "about": "Enable uncertainty analysis.",
+            "name": _("Enable uncertainty analysis"),
+            "about": _("Enable uncertainty analysis."),
             "type": "boolean",
         },
         "g_param_a_sd": {
-            "name": "Standard Deviation for Parameter (a)",
-            "about": (
+            "name": _("Standard Deviation for Parameter (a)"),
+            "about": _(
                 "Standard deviation for fish growth parameter a. This "
                 "indicates the level of uncertainty in the estimate for "
                 "parameter a."),
@@ -99,8 +99,8 @@ ARGS_SPEC = {
             "required": "use_uncertainty",
         },
         "g_param_b_sd": {
-            "name": "Standard Deviation for Parameter (b)",
-            "about": (
+            "name": _("Standard Deviation for Parameter (b)"),
+            "about": _(
                 "Standard deviation for fish growth parameter b. This "
                 "indicates the level of uncertainty in the estimate for "
                 "parameter b."),
@@ -109,8 +109,8 @@ ARGS_SPEC = {
             "required": "use_uncertainty",
         },
         "num_monte_carlo_runs": {
-            "name": "Number of Monte Carlo Simulation Runs",
-            "about": (
+            "name": _("Number of Monte Carlo Simulation Runs"),
+            "about": _(
                 "Number of runs of the model to perform as part of a Monte "
                 "Carlo simulation.  A larger number will tend to produce more "
                 "consistent and reliable output, but will also take longer to "
@@ -120,9 +120,9 @@ ARGS_SPEC = {
             "required": "use_uncertainty",
         },
         "water_temp_tbl": {
-            "name": "Table of Daily Water Temperature at Farm",
+            "name": _("Table of Daily Water Temperature at Farm"),
             "type": "csv",
-            "about": (
+            "about": _(
                 "Users must provide a time series of daily water temperature "
                 "(C) for each farm in the vector.  When daily temperatures "
                 "are not available, users can interpolate seasonal or monthly "
@@ -136,9 +136,9 @@ ARGS_SPEC = {
                 "experienced by the fish in the netpens."),
         },
         "farm_op_tbl": {
-            "name": "Farm Operations Table",
+            "name": _("Farm Operations Table"),
             "type": "csv",
-            "about": (
+            "about": _(
                 "A table of general and farm-specific operations parameters. "
                 "Please refer to the sample data table for reference to "
                 "ensure correct incorporation of data in the model. The "
@@ -153,21 +153,21 @@ ARGS_SPEC = {
                 "sample data table."),
         },
         "outplant_buffer": {
-            "name": "Outplant Date Buffer",
+            "name": _("Outplant Date Buffer"),
             "type": "number",
             "units": u.day,
-            "about": (
+            "about": _(
                 "This value will allow the outplant start day to start plus "
                 "or minus the number of days specified here."),
         },
         "do_valuation": {
-            "name": "Run valuation model",
-            "about": "Run valuation model",
+            "name": _("Run valuation model"),
+            "about": _("Run valuation model"),
             "type": "boolean",
         },
         "p_per_kg": {
-            "name": "Market Price of Processed Fish",
-            "about": (
+            "name": _("Market Price of Processed Fish"),
+            "about": _(
                 "Default value comes from Urner-Berry monthly fresh sheet "
                 "reports on price of farmed Atlantic salmon."),
             "type": "number",
@@ -175,16 +175,16 @@ ARGS_SPEC = {
             "required": "do_valuation",
         },
         "frac_p": {
-            "name": "Fraction of Price that Accounts to Costs",
-            "about": (
+            "name": _("Fraction of Price that Accounts to Costs"),
+            "about": _(
                 "Fraction of market price that accounts for costs rather than "
                 "profit.  Default value is 0.3 (30%)."),
             "required": "do_valuation",
             "type": "ratio"
         },
         "discount": {
-            "name": "Daily Market Discount Rate",
-            "about": (
+            "name": _("Daily Market Discount Rate"),
+            "about": _(
                 "We use a 7% annual discount rate, adjusted to a daily rate "
                 "of 0.000192 for 0.0192% (7%/365 days)."),
             "required": "do_valuation",

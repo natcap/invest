@@ -42,29 +42,29 @@ ARGS_SPEC = {
         "detect_pour_points": {
             "type": "boolean",
             "required": False,
-            "about": (
+            "about": _(
                 "Detect pour points (watershed outlets) based on "
                 "the DEM, and use these instead of a user-provided outlet "
                 "features vector."),
-            "name": "detect pour points"
+            "name": _("detect pour points")
         },
         "outlet_vector_path": {
             "type": "vector",
             "fields": {},
             "geometries": spec_utils.ALL_GEOMS,
             "required": "not detect_pour_points",
-            "about": (
+            "about": _(
                 "A map of watershed outlets from which to delineate the "
                 "watersheds. Required if Detect Pour Points is not checked."),
-            "name": "watershed outlets"
+            "name": _("watershed outlets")
         },
         "snap_points": {
             "type": "boolean",
             "required": False,
-            "about": (
+            "about": _(
                 "Snap point geometries to the center of the nearest stream "
                 "pixel. This has no effect if Detect Pour Points is selected."),
-            "name": "snap points to nearest stream"
+            "name": _("snap points to nearest stream")
         },
         "flow_threshold": {
             **spec_utils.THRESHOLD_FLOW_ACCUMULATION,
@@ -78,21 +78,20 @@ ARGS_SPEC = {
             "type": "number",
             "units": u.pixels,
             "required": "snap_points",
-            "about": (
+            "about": _(
                 "Maximum distance to relocate watershed outlet points in "
                 "order to snap them to a stream. Required if Snap Points "
                 "is selected."),
-            "name": "snap distance"
+            "name": _("snap distance")
         },
         "skip_invalid_geometry": {
             "type": "boolean",
             "required": False,
-            "about": (
+            "about": _(
                 "Skip delineation for any invalid geometries found in the "
                 "Outlet Features. Otherwise, an invalid geometry will cause "
-                "the model to crash."
-            ),
-            "name": "skip invalid geometries"
+                "the model to crash."),
+            "name": _("skip invalid geometries")
         }
     }
 }

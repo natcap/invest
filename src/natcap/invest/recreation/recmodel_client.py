@@ -46,12 +46,12 @@ Pyro4.config.SERIALIZER = 'marshal'
 predictor_table_columns = {
     "id": {
         "type": "freestyle_string",
-        "about": ("A unique identifier for the predictor (10 "
+        "about": _("A unique identifier for the predictor (10 "
                   "characters or less).")
     },
     "path": {
         "type": {"raster", "vector"},
-        "about": "A spatial file to use as a predictor",
+        "about": _("A spatial file to use as a predictor"),
         "bands": {1: {"type": "number", "units": u.none}},
         "fields": {},
         "geometries": spec_utils.ALL_GEOMS
@@ -97,100 +97,100 @@ ARGS_SPEC = {
         "n_workers": spec_utils.N_WORKERS,
         "aoi_path": {
             **spec_utils.AOI,
-            "about": (
+            "about": _(
                 "A GDAL-supported vector file representing the area of "
                 "interest where the model will run the analysis.")
         },
         "hostname": {
             "type": "freestyle_string",
             "required": False,
-            "about": (
+            "about": _(
                 "FQDN to a recreation server.  If not provided, a default is "
                 "assumed."),
-            "name": "hostname"
+            "name": _("hostname")
         },
         "port": {
             "type": "number",
             "expression": "value >= 0",
             "units": u.none,
             "required": False,
-            "about": (
+            "about": _(
                 "the port on ``hostname`` to use for contacting the "
                 "recreation server."),
-            "name": "port"
+            "name": _("port")
         },
         "start_year": {
             "type": "number",
             "expression": "value >= 2005",
             "units": u.year,
-            "about": "Year to start PUD calculations, date starts on Jan 1st.",
-            "name": "Start Year (inclusive, must be >= 2005)"
+            "about": _("Year to start PUD calculations, date starts on Jan 1st."),
+            "name": _("Start Year (inclusive, must be >= 2005)")
         },
         "end_year": {
             "type": "number",
             "expression": "value <= 2017",
             "units": u.year,
-            "about": (
+            "about": _(
                 "Year to end PUD calculations, date ends and includes Dec "
                 "31st."),
-            "name": "End Year (inclusive, must be <= 2017)"
+            "name": _("End Year (inclusive, must be <= 2017)")
         },
         "grid_aoi": {
             "type": "boolean",
             "required": False,
-            "about": (
+            "about": _(
                 "If true the polygon vector in ``args['aoi_path']`` should be "
                 "gridded into a new vector and the recreation model should be "
                 "executed on that"),
-            "name": "Grid the AOI"
+            "name": _("Grid the AOI")
         },
         "grid_type": {
             "type": "option_string",
             "options": ["square", "hexagon"],
             "required": "grid_aoi",
-            "about": (
+            "about": _(
                 "Optional, but must exist if args['grid_aoi'] is True. Is one "
                 "of 'hexagon' or 'square' and indicates the style of "
                 "gridding."),
-            "name": "Grid Type"
+            "name": _("Grid Type")
         },
         "cell_size": {
             "type": "number",
             "expression": "value > 0",
             "units": u.linear_unit,  # any unit of length is ok
             "required": "grid_aoi",
-            "about": (
+            "about": _(
                 "The size of the grid units measured in the projection units "
                 "of the AOI. For example, UTM projections use meters."),
-            "name": "Cell Size"
+            "name": _("Cell Size")
         },
         "compute_regression": {
             "type": "boolean",
             "required": False,
-            "about": (
+            "about": _(
                 "If True, then process the predictor table and scenario table "
                 "(if present)."),
-            "name": "Compute Regression"
+            "name": _("Compute Regression")
         },
         "predictor_table_path": {
             "type": "csv",
             "columns": predictor_table_columns,
             "required": "compute_regression",
-            "about": (
+            "about": _(
                 "A table that maps predictor IDs to spatial files and their "
                 "predictor metric types. The file paths can be absolute or "
                 "relative to the table."),
-            "name": "Predictor Table"
+            "name": _("Predictor Table")
         },
         "scenario_predictor_table_path": {
             "type": "csv",
             "columns": predictor_table_columns,
             "required": False,
-            "about": (
+            "about": _(
                 "A table of future or alternative scenario predictors. Maps "
                 "IDs to files and their types. The file paths can be absolute "
                 "or relative to the table."),
-            "name": "Scenario Predictor Table"
+            "name": _("Scenario Predictor Table")
         }
     }
 }

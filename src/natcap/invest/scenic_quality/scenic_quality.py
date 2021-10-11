@@ -62,7 +62,7 @@ ARGS_SPEC = {
             **spec_utils.AOI,
         },
         "structure_path": {
-            "name": "Features Impacting Scenic Quality",
+            "name": _("Features Impacting Scenic Quality"),
             "type": "vector",
             "geometries": spec_utils.POINT,
             "fields": {
@@ -70,7 +70,7 @@ ARGS_SPEC = {
                     "type": "number",
                     "units": u.meter,
                     "required": False,
-                    "about": (
+                    "about": _(
                         "Maximum length of the line "
                         "of sight originating from a viewpoint. The value can "
                         "either be positive (preferred) or negative (kept for "
@@ -83,7 +83,7 @@ ARGS_SPEC = {
                     "type": "number",
                     "units": u.none,
                     "required": False,
-                    "about": (
+                    "about": _(
                         "Viewshed importance coefficient: The user can assign "
                         "an importance to each viewshed by scaling them with "
                         "a real number (either positive or negative) stored "
@@ -93,12 +93,12 @@ ARGS_SPEC = {
                     "type": "number",
                     "units": u.meter,
                     "required": False,
-                    "about": (
+                    "about": _(
                         "Viewpoint height: Each feature's elevation above the "
                         "ground can be specified as a positive real number. "
                         "The default value is 0 if the field doesn’t exist.")}
             },
-            "about": (
+            "about": _(
                 "A GDAL-supported vector file.  The user must specify a point "
                 "feature layer that indicates locations of objects that "
                 "contribute to negative scenic quality, such as aquaculture "
@@ -111,7 +111,7 @@ ARGS_SPEC = {
             **spec_utils.DEM,
             "projected": True,
             "projection_units": u.meter,
-            "about": (
+            "about": _(
                 "A GDAL-supported raster file.  An elevation raster layer is "
                 "required to conduct viewshed analysis. Elevation data allows "
                 "the model to determine areas within the AOI's land-seascape "
@@ -119,9 +119,9 @@ ARGS_SPEC = {
                 "are visible."),
         },
         "refraction": {
-            "name": "Refractivity Coefficient",
+            "name": _("Refractivity Coefficient"),
             "type": "ratio",
-            "about": (
+            "about": _(
                 "The earth curvature correction option corrects for the "
                 "curvature of the earth and refraction of visible light in "
                 "air.  Changes in air density curve the light downward "
@@ -134,13 +134,13 @@ ARGS_SPEC = {
                 "refractivity coefficient to 0.13."),
         },
         "do_valuation": {
-            "name": "Valuation",
+            "name": _("Valuation"),
             "type": "boolean",
             "required": False,
-            "about": "Enable or disable valuation."
+            "about": _("Enable or disable valuation.")
         },
         "valuation_function": {
-            "name": "Valuation function",
+            "name": _("Valuation function"),
             "type": "option_string",
             "required": "do_valuation",
             "options": [
@@ -148,31 +148,31 @@ ARGS_SPEC = {
                 "logarithmic: a + b log(x+1)",
                 "exponential: a * e^(-bx)"
             ],
-            "about": (
+            "about": _(
                 "This field indicates the functional form f(x) the model will "
                 "use to value the visual impact for each viewpoint."),
         },
         "a_coef": {
-            "name": "'a' Coefficient",
+            "name": _("'a' Coefficient"),
             "type": "number",
             "units": u.none,
             "required": "do_valuation",
-            "about": "First coefficient used by the valuation function",
+            "about": _("First coefficient used by the valuation function"),
         },
         "b_coef": {
-            "name": "'a' Coefficient",
+            "name": _("'a' Coefficient"),
             "type": "number",
             "units": u.none,
             "required": "do_valuation",
-            "about": "Second coefficient used by the valuation function",
+            "about": _("Second coefficient used by the valuation function"),
         },
         "max_valuation_radius": {
-            "name": "Maximum Valuation Radius",
+            "name": _("Maximum Valuation Radius"),
             "type": "number",
             "units": u.meter,
             "required": False,
             "expression": "value > 0",
-            "about": (
+            "about": _(
                 "Radius beyond which the valuation is set to zero. The "
                 "valuation function 'f' cannot be negative at the radius 'r' "
                 "(f(r)>=0)."),

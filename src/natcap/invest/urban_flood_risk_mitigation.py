@@ -39,8 +39,8 @@ ARGS_SPEC = {
             "expression": "value > 0",
             "type": "number",
             "units": u.millimeter,
-            "about": "Depth of rainfall",
-            "name": "Depth of rainfall"
+            "about": _("Depth of rainfall"),
+            "name": _("Depth of rainfall")
         },
         "lulc_path": {
             **spec_utils.LULC,
@@ -57,26 +57,26 @@ ARGS_SPEC = {
                 "cn_[SOIL_GROUP]": {
                     "type": "number",
                     "units": u.none,
-                    "about": (
+                    "about": _(
                         "Curve number values for each LULC type and each "
                         "hydrologic soil group.")
                 }
             },
-            "about": (
+            "about": _(
                 "Path to a CSV table that to map landcover codes to curve "
                 "numbers"),
-            "name": "Biophysical Table"
+            "name": _("Biophysical Table")
         },
         "built_infrastructure_vector_path": {
             "type": "vector",
             "fields": {"type": {"type": "integer"}},
             "geometries": spec_utils.POLYGONS,
             "required": False,
-            "about": (
+            "about": _(
                 "Path to a vector with built infrastructure footprints. "
                 "Attribute table contains a column 'Type' with integers (e.g. "
                 "1=residential, 2=office, etc.)."),
-            "name": "Built Infrastructure Vector"
+            "name": _("Built Infrastructure Vector")
         },
         "infrastructure_damage_loss_table_path": {
             "type": "csv",
@@ -85,13 +85,13 @@ ARGS_SPEC = {
                 "damage": {"type": "number", "units": u.currency/(u.meter**2)}
             },
             "required": "built_infrastructure_vector_path",
-            "about": (
+            "about": _(
                 "Path to a a CSV table with columns 'Type' and 'Damage' with "
                 "values of built infrastructure type from the 'Type' field in "
                 "the 'Built Infrastructure Vector' and potential damage loss "
                 "(in currency/m^2). Required if the built infrastructure "
                 "vector is provided."),
-            "name": "Built Infrastructure Damage Loss Table"
+            "name": _("Built Infrastructure Damage Loss Table")
         }
     }
 }
