@@ -264,7 +264,7 @@ _EXPECTED_NUTRIENT_TABLE_HEADERS = [
     'Riboflavin', 'Niacin', 'Pantothenic', 'VitB6', 'Folate', 'VitB12',
     'VitK']
 _EXPECTED_LUCODE_TABLE_HEADER = 'lucode'
-_NODATA_YIELD = -1.0
+_NODATA_YIELD = -1
 
 
 def execute(args):
@@ -333,7 +333,7 @@ def execute(args):
     landcover_raster_info = pygeoprocessing.get_raster_info(
         args['landcover_raster_path'])
     pixel_area_ha = numpy.product([
-        abs(x) for x in landcover_raster_info['pixel_size']]) / 10000.0
+        abs(x) for x in landcover_raster_info['pixel_size']]) / 10000
     landcover_nodata = landcover_raster_info['nodata'][0]
     if landcover_nodata is None:
         LOGGER.warning(
@@ -412,8 +412,12 @@ def execute(args):
                 (bin_id,
                  crop_climate_percentile_table[bin_id][yield_percentile_id])
                 for bin_id in crop_climate_percentile_table])
+            # reclassify nodata to a valid value of 0
+            # we're assuming that the crop doesn't exist where there is no data
+            # this is more likely than assuming the crop does exist, esp.
+            # in the context of the provided climate bins map
             bin_to_percentile_yield[
-                crop_climate_bin_raster_info['nodata'][0]] = 0.0
+                crop_climate_bin_raster_info['nodata'][0]] = 0
             coarse_yield_percentile_raster_path = os.path.join(
                 output_dir,
                 _COARSE_YIELD_PERCENTILE_FILE_PATTERN % (
@@ -456,14 +460,13 @@ def execute(args):
                     crop_name, yield_percentile_id, file_suffix))
 
             create_percentile_production_task = task_graph.add_task(
-                func=pygeoprocessing.raster_calculator,
-                args=([(args['landcover_raster_path'], 1),
-                       (interpolated_yield_percentile_raster_path, 1),
-                       (landcover_nodata, 'raw'), (crop_lucode, 'raw'),
-                       (pixel_area_ha, 'raw')],
-                      _crop_production_op,
-                      percentile_crop_production_raster_path,
-                      gdal.GDT_Float32, _NODATA_YIELD),
+                func=calculate_crop_production,
+                args=(
+                    args['landcover_raster_path'],
+                    interpolated_yield_percentile_raster_path,
+                    crop_lucode,
+                    pixel_area_ha,
+                    percentile_crop_production_raster_path),
                 target_path_list=[percentile_crop_production_raster_path],
                 dependent_task_list=[
                     create_interpolated_yield_percentile_task],
@@ -587,32 +590,63 @@ def execute(args):
     task_graph.join()
 
 
-def _crop_production_op(
-        lulc_array, yield_array, landcover_nodata, crop_lucode, pixel_area_ha):
-    """Mask in yields that overlap with `crop_lucode`.
+def calculate_crop_production(lulc_path, yield_path, crop_lucode,
+                              pixel_area_ha, target_path):
+    """Calculate crop production for a particular crop.
+
+    The resulting production value is:
+
+    - nodata, where either the LULC or yield input has nodata
+    - 0, where the LULC does not match the given LULC code
+    - yield * pixel area, where the given LULC code exists
 
     Args:
-        lulc_array (numpy.ndarray): landcover raster values
-        yield_array (numpy.ndarray): interpolated yield raster values
-        landcover_nodata (float): extracted from landcover raster values
-        crop_lucode (int): code used to mask in the current crop
-        pixel_area_ha (float): area of lulc raster cells (hectares)
+        lulc_path (str): path to a raster of LULC codes
+        yield_path (str): path of a raster of yields for the crop identified
+            by ``crop_lucode``, in units per hectare
+        crop_lucode (int): LULC code that identifies the crop of interest in
+            the ``lulc_path`` raster.
+        pixel_area_ha (number): Pixel area in hectares for both input rasters
+        target_path (str): Path to write the output crop production raster
 
     Returns:
-        numpy.ndarray with float values of yields for the current crop
-
+        None
     """
-    result = numpy.empty(lulc_array.shape, dtype=numpy.float32)
-    if landcover_nodata is not None:
-        result[:] = _NODATA_YIELD
-        valid_mask = ~numpy.isclose(lulc_array, landcover_nodata)
-        result[valid_mask] = 0.0
-    else:
-        result[:] = 0.0
-    lulc_mask = lulc_array == crop_lucode
-    result[lulc_mask] = (
-        yield_array[lulc_mask] * pixel_area_ha)
-    return result
+
+    lulc_nodata = pygeoprocessing.get_raster_info(lulc_path)['nodata'][0]
+    yield_nodata = pygeoprocessing.get_raster_info(yield_path)['nodata'][0]
+
+    def _crop_production_op(lulc_array, yield_array):
+        """Mask in yields that overlap with `crop_lucode`.
+
+        Args:
+            lulc_array (numpy.ndarray): landcover raster values
+            yield_array (numpy.ndarray): interpolated yield raster values
+
+        Returns:
+            numpy.ndarray with float values of yields for the current crop
+
+        """
+        result = numpy.full(lulc_array.shape, _NODATA_YIELD,
+                            dtype=numpy.float32)
+
+        valid_mask = numpy.full(lulc_array.shape, True)
+        if lulc_nodata is not None:
+            valid_mask &= ~numpy.isclose(lulc_array, lulc_nodata)
+        if yield_nodata is not None:
+            valid_mask &= ~numpy.isclose(yield_array, yield_nodata)
+        result[valid_mask] = 0
+
+        lulc_mask = lulc_array == crop_lucode
+        result[valid_mask & lulc_mask] = (
+            yield_array[valid_mask & lulc_mask] * pixel_area_ha)
+        return result
+
+    pygeoprocessing.raster_calculator(
+        [(lulc_path, 1), (yield_path, 1)],
+        _crop_production_op,
+        target_path,
+        gdal.GDT_Float32, _NODATA_YIELD),
 
 
 def _zero_observed_yield_op(observed_yield_array, observed_yield_nodata):
@@ -628,7 +662,7 @@ def _zero_observed_yield_op(observed_yield_array, observed_yield_nodata):
     """
     result = numpy.empty(
         observed_yield_array.shape, dtype=numpy.float32)
-    result[:] = 0.0
+    result[:] = 0
     valid_mask = slice(None)
     if observed_yield_nodata is not None:
         valid_mask = ~numpy.isclose(
@@ -658,9 +692,9 @@ def _mask_observed_yield_op(
     if landcover_nodata is not None:
         result[:] = observed_yield_nodata
         valid_mask = ~numpy.isclose(lulc_array, landcover_nodata)
-        result[valid_mask] = 0.0
+        result[valid_mask] = 0
     else:
-        result[:] = 0.0
+        result[:] = 0
     lulc_mask = lulc_array == crop_lucode
     result[lulc_mask] = (
         observed_yield_array[lulc_mask] * pixel_area_ha)
@@ -715,7 +749,7 @@ def tabulate_results(
             result_table.write(crop_name)
             production_lookup = {}
             production_pixel_count = 0
-            yield_sum = 0.0
+            yield_sum = 0
             observed_production_raster_path = os.path.join(
                 output_dir,
                 _OBSERVED_PRODUCTION_FILE_PATTERN % (
@@ -735,7 +769,7 @@ def tabulate_results(
                     valid_mask = ~numpy.isclose(
                         yield_block, observed_yield_nodata)
                 production_pixel_count += numpy.count_nonzero(
-                    valid_mask & (yield_block > 0.0))
+                    valid_mask & (yield_block > 0))
                 yield_sum += numpy.sum(yield_block[valid_mask])
             production_area = production_pixel_count * pixel_area_ha
             production_lookup['observed'] = yield_sum
@@ -747,7 +781,7 @@ def tabulate_results(
                     output_dir,
                     _PERCENTILE_CROP_PRODUCTION_FILE_PATTERN % (
                         crop_name, yield_percentile_id, file_suffix))
-                yield_sum = 0.0
+                yield_sum = 0
                 for _, yield_block in pygeoprocessing.iterblocks(
                         (yield_percentile_raster_path, 1)):
                     # _NODATA_YIELD will always have a value (defined above)
@@ -759,7 +793,7 @@ def tabulate_results(
 
             # convert 100g to Mg and fraction left over from refuse
             nutrient_factor = 1e4 * (
-                1.0 - nutrient_table[crop_name]['Percentrefuse'] / 100.0)
+                1 - nutrient_table[crop_name]['Percentrefuse'] / 100)
             for nutrient_id in _EXPECTED_NUTRIENT_TABLE_HEADERS:
                 for yield_percentile_id in sorted(yield_percentile_headers):
                     total_nutrient = (
@@ -774,7 +808,7 @@ def tabulate_results(
                         nutrient_table[crop_name][nutrient_id]))
             result_table.write('\n')
 
-        total_area = 0.0
+        total_area = 0
         for _, band_values in pygeoprocessing.iterblocks(
                 (landcover_raster_path, 1)):
             if landcover_nodata is not None:
@@ -832,7 +866,7 @@ def aggregate_to_polygons(
     for crop_name in crop_to_landcover_table:
         # convert 100g to Mg and fraction left over from refuse
         nutrient_factor = 1e4 * (
-            1.0 - nutrient_table[crop_name]['Percentrefuse'] / 100.0)
+            1 - nutrient_table[crop_name]['Percentrefuse'] / 100)
         # loop over percentiles
         for yield_percentile_id in yield_percentile_headers:
             percentile_crop_production_raster_path = os.path.join(

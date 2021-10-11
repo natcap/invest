@@ -15,7 +15,7 @@ class Executor(QtCore.QObject, threading.Thread):
 
     finished = QtCore.Signal()
 
-    def __init__(self, target, args=None, kwargs=None):
+    def __init__(self, target, args=None, kwargs=None, log_events=True):
         """Initialize the Executor object.
 
         Args:
@@ -27,6 +27,9 @@ class Executor(QtCore.QObject, threading.Thread):
             kwargs (dict): A dict mapping string parameter names to parameter
                 values that should be passed to ``target``.  If ``None``,
                 keyword arguments will be ignored.
+            log_events=True (bool): If ``True``, exceptions raised when calling
+                ``target`` as well as completion of ``target`` will
+                be logged.
 
         Returns:
             ``None``.
@@ -34,6 +37,7 @@ class Executor(QtCore.QObject, threading.Thread):
         QtCore.QObject.__init__(self)
         threading.Thread.__init__(self)
         self.target = target
+        self.log_events = log_events
 
         if args is None:
             args = ()
@@ -75,10 +79,17 @@ class Executor(QtCore.QObject, threading.Thread):
             # there was something else very strange going on.
             # Failed build:
             # http://builds.naturalcapitalproject.org/job/test-natcap.invest.ui/100/
-            LOGGER.exception('Target %s failed with exception', self.target)
+
+            # When we're running a model, the exception is logged via
+            # utils.prepare_workspace.  But this thread is also used in the Qt
+            # interface by validation and the datastack archive creation
+            # function, and we for sure want to log exceptions in that case.
+            if self.log_events:
+                LOGGER.exception('Target %s failed with exception', self.target)
             self.failed = True
             self.exception = error
             self.traceback = traceback.format_exc()
         finally:
-            LOGGER.info('Execution finished')
+            if self.log_events:
+                LOGGER.info('Execution finished')
             self.finished.emit()
