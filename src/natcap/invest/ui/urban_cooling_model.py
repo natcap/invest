@@ -1,17 +1,17 @@
 # coding=UTF-8
 
 from natcap.invest.ui import model, inputs
-from natcap.invest import urban_cooling_model, MODEL_UIS
+from natcap.invest import urban_cooling_model, MODEL_METADATA
 
 
 class UrbanCoolingModel(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(
             self,
-            label=MODEL_UIS['urban_cooling_model'].model_title,
+            label=MODEL_METADATA['urban_cooling_model'].model_title,
             target=urban_cooling_model.execute,
             validator=urban_cooling_model.validate,
-            localdoc=MODEL_UIS['urban_cooling_model'].userguide)
+            localdoc=MODEL_METADATA['urban_cooling_model'].userguide)
 
         self.lulc_raster_path = inputs.File(
             args_key='lulc_raster_path',

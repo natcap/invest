@@ -1970,7 +1970,7 @@ class InVESTModel(QtWidgets.QMainWindow):
         else:
             save_filepath = filepath
 
-        for internal_model_name, _meta in cli.MODEL_UIS.items():
+        for internal_model_name, _meta in cli.MODEL_METADATA.items():
             if _meta.pyname == self.target.__module__:
                 break
         cli.export_to_python(

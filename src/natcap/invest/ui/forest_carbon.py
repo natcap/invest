@@ -1,17 +1,17 @@
 # coding=UTF-8
 
 from natcap.invest.ui import model, inputs
-from natcap.invest import forest_carbon_edge_effect, MODEL_UIS
+from natcap.invest import forest_carbon_edge_effect, MODEL_METADATA
 
 
 class ForestCarbonEdgeEffect(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(
             self,
-            label=MODEL_UIS['forest_carbon_edge_effect'].model_title,
+            label=MODEL_METADATA['forest_carbon_edge_effect'].model_title,
             target=forest_carbon_edge_effect.execute,
             validator=forest_carbon_edge_effect.validate,
-            localdoc=MODEL_UIS['forest_carbon_edge_effect'].userguide)
+            localdoc=MODEL_METADATA['forest_carbon_edge_effect'].userguide)
 
         self.lulc_raster_path = inputs.File(
             args_key='lulc_raster_path',

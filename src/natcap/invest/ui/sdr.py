@@ -2,17 +2,17 @@
 
 from natcap.invest.ui import model, inputs
 import natcap.invest.sdr.sdr
-from natcap.invest import MODEL_UIS
+from natcap.invest import MODEL_METADATA
 
 
 class SDR(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(
             self,
-            label=MODEL_UIS['sdr'].model_title,
+            label=MODEL_METADATA['sdr'].model_title,
             target=natcap.invest.sdr.sdr.execute,
             validator=natcap.invest.sdr.sdr.validate,
-            localdoc=MODEL_UIS['sdr'].userguide)
+            localdoc=MODEL_METADATA['sdr'].userguide)
         self.dem_path = inputs.File(
             args_key='dem_path',
             helptext=(

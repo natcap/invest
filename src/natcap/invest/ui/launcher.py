@@ -62,7 +62,7 @@ def main():
 
     labels_and_buttons = []
     for model_name, model_data in sorted(
-            cli.MODEL_UIS.items(),
+            cli.MODEL_METADATA.items(),
             # sort alphabetically by display name
             key=lambda item: item[1].model_title):
         row = layout.rowCount()

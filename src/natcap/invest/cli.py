@@ -2,7 +2,6 @@
 """Single entry point for all InVEST applications."""
 import argparse
 import codecs
-import collections
 import datetime
 import importlib
 import json
@@ -19,186 +18,23 @@ try:
     from . import __version__
     from . import utils
     from . import datastack
+    from . import MODEL_METADATA
 except (ValueError, ImportError):
     # When we're in a PyInstaller build, this isn't a module.
     from natcap.invest import __version__
     from natcap.invest import utils
     from natcap.invest import datastack
+    from natcap.invest import MODEL_METADATA
 
 
 DEFAULT_EXIT_CODE = 1
 LOGGER = logging.getLogger(__name__)
-_UIMETA = collections.namedtuple('UIMeta', 'model_title pyname gui userguide aliases')
 
-MODEL_UIS = {
-    'carbon': _UIMETA(
-        model_title='Carbon Storage and Sequestration',
-        pyname='natcap.invest.carbon',
-        gui='carbon.Carbon',
-        userguide='carbonstorage.html',
-        aliases=()),
-    'coastal_blue_carbon': _UIMETA(
-        model_title='Coastal Blue Carbon',
-        pyname='natcap.invest.coastal_blue_carbon.coastal_blue_carbon',
-        gui='cbc.CoastalBlueCarbon',
-        userguide='coastal_blue_carbon.html',
-        aliases=('cbc',)),
-    'coastal_blue_carbon_preprocessor': _UIMETA(
-        model_title='Coastal Blue Carbon Preprocessor',
-        pyname='natcap.invest.coastal_blue_carbon.preprocessor',
-        gui='cbc.CoastalBlueCarbonPreprocessor',
-        userguide='coastal_blue_carbon.html',
-        aliases=('cbc_pre',)),
-    'coastal_vulnerability': _UIMETA(
-        model_title='Coastal Vulnerability',
-        pyname='natcap.invest.coastal_vulnerability',
-        gui='coastal_vulnerability.CoastalVulnerability',
-        userguide='coastal_vulnerability.html',
-        aliases=('cv',)),
-    'crop_production_percentile': _UIMETA(
-        model_title='Crop Production: Percentile',
-        pyname='natcap.invest.crop_production_percentile',
-        gui='crop_production.CropProductionPercentile',
-        userguide='crop_production.html',
-        aliases=('cpp',)),
-    'crop_production_regression': _UIMETA(
-        model_title='Crop Production: Regression',
-        pyname='natcap.invest.crop_production_regression',
-        gui='crop_production.CropProductionRegression',
-        userguide='crop_production.html',
-        aliases=('cpr',)),
-    'delineateit': _UIMETA(
-        model_title='DelineateIt',
-        pyname='natcap.invest.delineateit.delineateit',
-        gui='delineateit.Delineateit',
-        userguide='delineateit.html',
-        aliases=()),
-    'finfish_aquaculture': _UIMETA(
-        model_title='Finfish Aquaculture',
-        pyname='natcap.invest.finfish_aquaculture.finfish_aquaculture',
-        gui='finfish.FinfishAquaculture',
-        userguide='marine_fish.html',
-        aliases=()),
-    'fisheries': _UIMETA(
-        model_title='Fisheries',
-        pyname='natcap.invest.fisheries.fisheries',
-        gui='fisheries.Fisheries',
-        userguide='fisheries.html',
-        aliases=()),
-    'fisheries_hst': _UIMETA(
-        model_title='Fisheries Habitat Scenario Tool',
-        pyname='natcap.invest.fisheries.fisheries_hst',
-        gui='fisheries.FisheriesHST',
-        userguide='fisheries.html',
-        aliases=()),
-    'forest_carbon_edge_effect': _UIMETA(
-        model_title='Forest Carbon Edge Effect',
-        pyname='natcap.invest.forest_carbon_edge_effect',
-        gui='forest_carbon.ForestCarbonEdgeEffect',
-        userguide='carbon_edge.html',
-        aliases=('fc',)),
-    'globio': _UIMETA(
-        model_title='GLOBIO',
-        pyname='natcap.invest.globio',
-        gui='globio.GLOBIO',
-        userguide='../documentation/globio.html',
-        aliases=()),
-    'habitat_quality': _UIMETA(
-        model_title='Habitat Quality',
-        pyname='natcap.invest.habitat_quality',
-        gui='habitat_quality.HabitatQuality',
-        userguide='habitat_quality.html',
-        aliases=('hq',)),
-    'habitat_risk_assessment': _UIMETA(
-        model_title='Habitat Risk Assessment',
-        pyname='natcap.invest.hra',
-        gui='hra.HabitatRiskAssessment',
-        userguide='habitat_risk_assessment.html',
-        aliases=('hra',)),
-    'hydropower_water_yield': _UIMETA(
-        model_title='Annual Water Yield',
-        pyname='natcap.invest.hydropower.hydropower_water_yield',
-        gui='hydropower.HydropowerWaterYield',
-        userguide='reservoirhydropowerproduction.html',
-        aliases=('hwy',)),
-    'ndr': _UIMETA(
-        model_title='Nutrient Delivery Ratio',
-        pyname='natcap.invest.ndr.ndr',
-        gui='ndr.Nutrient',
-        userguide='ndr.html',
-        aliases=()),
-    'pollination': _UIMETA(
-        model_title='Crop Pollination',
-        pyname='natcap.invest.pollination',
-        gui='pollination.Pollination',
-        userguide='croppollination.html',
-        aliases=()),
-    'recreation': _UIMETA(
-        model_title='Visitation: Recreation and Tourism',
-        pyname='natcap.invest.recreation.recmodel_client',
-        gui='recreation.Recreation',
-        userguide='recreation.html',
-        aliases=()),
-    'routedem': _UIMETA(
-        model_title='RouteDEM',
-        pyname='natcap.invest.routedem',
-        gui='routedem.RouteDEM',
-        userguide='routedem.html',
-        aliases=()),
-    'scenario_generator_proximity': _UIMETA(
-        model_title='Scenario Generator: Proximity Based',
-        pyname='natcap.invest.scenario_gen_proximity',
-        gui='scenario_gen.ScenarioGenProximity',
-        userguide='scenario_gen_proximity.html',
-        aliases=('sgp',)),
-    'scenic_quality': _UIMETA(
-        model_title='Unobstructed Views: Scenic Quality Provision',
-        pyname='natcap.invest.scenic_quality.scenic_quality',
-        gui='scenic_quality.ScenicQuality',
-        userguide='scenic_quality.html',
-        aliases=('sq',)),
-    'sdr': _UIMETA(
-        model_title='Sediment Delivery Ratio',
-        pyname='natcap.invest.sdr.sdr',
-        gui='sdr.SDR',
-        userguide='sdr.html',
-        aliases=()),
-    'seasonal_water_yield': _UIMETA(
-        model_title='Seasonal Water Yield',
-        pyname='natcap.invest.seasonal_water_yield.seasonal_water_yield',
-        gui='seasonal_water_yield.SeasonalWaterYield',
-        userguide='seasonal_water_yield.html',
-        aliases=('swy',)),
-    'wind_energy': _UIMETA(
-        model_title='Wind Energy Production',
-        pyname='natcap.invest.wind_energy',
-        gui='wind_energy.WindEnergy',
-        userguide='wind_energy.html',
-        aliases=()),
-    'wave_energy': _UIMETA(
-        model_title='Wave Energy Production',
-        pyname='natcap.invest.wave_energy',
-        gui='wave_energy.WaveEnergy',
-        userguide='wave_energy.html',
-        aliases=()),
-    'urban_flood_risk_mitigation': _UIMETA(
-        model_title='Urban Flood Risk Mitigation',
-        pyname='natcap.invest.urban_flood_risk_mitigation',
-        gui='urban_flood_risk_mitigation.UrbanFloodRiskMitigation',
-        userguide='urban_flood_risk_mitigation.html',
-        aliases=('ufrm',)),
-    'urban_cooling_model': _UIMETA(
-        model_title='Urban Cooling',
-        pyname='natcap.invest.urban_cooling_model',
-        gui='urban_cooling_model.UrbanCoolingModel',
-        userguide='urban_cooling_model.html',
-        aliases=('ucm',)),
-}
 
 # Build up an index mapping aliases to modelname.
-# ``modelname`` is the key to the MODEL_UIS dict, above.
+# ``modelname`` is the key to the MODEL_METADATA dict, above.
 _MODEL_ALIASES = {}
-for _modelname, _meta in MODEL_UIS.items():
+for _modelname, _meta in MODEL_METADATA.items():
     for _alias in _meta.aliases:
         assert _alias not in _MODEL_ALIASES, (
             'Alias %s already defined for model %s') % (
@@ -216,27 +52,27 @@ def build_model_list_table():
     Returns:
         A string representation of the formatted table.
     """
-    model_names = sorted(MODEL_UIS.keys())
+    model_names = sorted(MODEL_METADATA.keys())
     max_model_name_length = max(len(name) for name in model_names)
 
     # Adding 3 to max alias name length for the parentheses plus some padding.
     max_alias_name_length = max(len(', '.join(meta.aliases))
-                                for meta in MODEL_UIS.values()) + 3
+                                for meta in MODEL_METADATA.values()) + 3
     template_string = '    {modelname} {aliases} {modeltitle} {usage}'
     strings = ['Available models:']
-    for model_name in sorted(MODEL_UIS.keys()):
+    for model_name in sorted(MODEL_METADATA.keys()):
         usage_string = '(No GUI available)'
-        if MODEL_UIS[model_name].gui is not None:
+        if MODEL_METADATA[model_name].gui is not None:
             usage_string = ''
 
-        alias_string = ', '.join(MODEL_UIS[model_name].aliases)
+        alias_string = ', '.join(MODEL_METADATA[model_name].aliases)
         if alias_string:
             alias_string = '(%s)' % alias_string
 
         strings.append(template_string.format(
             modelname=model_name.ljust(max_model_name_length),
             aliases=alias_string.ljust(max_alias_name_length),
-            modeltitle=MODEL_UIS[model_name].model_title,
+            modeltitle=MODEL_METADATA[model_name].model_title,
             usage=usage_string))
     return '\n'.join(strings) + '\n'
 
@@ -253,7 +89,7 @@ def build_model_list_json():
 
     """
     json_object = {}
-    for model_name, model_data in MODEL_UIS.items():
+    for model_name, model_data in MODEL_METADATA.items():
         json_object[model_data.model_title] = {
             'model_name': model_name,
             'aliases': model_data.aliases
@@ -292,7 +128,7 @@ def export_to_python(target_filepath, model, args_dict=None):
     """)
 
     if args_dict is None:
-        model_module = importlib.import_module(name=MODEL_UIS[model].pyname)
+        model_module = importlib.import_module(name=MODEL_METADATA[model].pyname)
         spec = model_module.ARGS_SPEC
         cast_args = {key: '' for key in spec['args'].keys()}
     else:
@@ -311,8 +147,8 @@ def export_to_python(target_filepath, model, args_dict=None):
         py_file.write(script_template.format(
             invest_version=__version__,
             today=datetime.datetime.now().strftime('%c'),
-            model_title=MODEL_UIS[model].model_title,
-            pyname=MODEL_UIS[model].pyname,
+            model_title=MODEL_METADATA[model].model_title,
+            pyname=MODEL_METADATA[model].pyname,
             model_args=args))
 
 
@@ -331,11 +167,11 @@ class SelectModelAction(argparse.Action):
 
         Identifiable model names are:
 
-            * the model name (verbatim) as identified in the keys of MODEL_UIS
+            * the model name (verbatim) as identified in the keys of MODEL_METADATA
             * a uniquely identifiable prefix for the model name (e.g. "d"
               matches "delineateit", but "fi" matches both "fisheries" and
               "finfish"
-            * a known model alias, as registered in MODEL_UIS
+            * a known model alias, as registered in MODEL_METADATA
 
         If no single model can be identified based on these rules, an error
         message is printed and the parser exits with a nonzero exit code.
@@ -346,7 +182,7 @@ class SelectModelAction(argparse.Action):
 
         Overridden from argparse.Action.__call__.
         """
-        known_models = sorted(list(MODEL_UIS.keys()))
+        known_models = sorted(list(MODEL_METADATA.keys()))
 
         matching_models = [model for model in known_models if
                            model.startswith(values)]
@@ -568,7 +404,7 @@ def main(user_args=None):
         parser.exit(0)
 
     if args.subcommand == 'getspec':
-        target_model = MODEL_UIS[args.model].pyname
+        target_model = MODEL_METADATA[args.model].pyname
         model_module = importlib.import_module(name=target_model)
         spec = model_module.ARGS_SPEC
 
@@ -598,7 +434,7 @@ def main(user_args=None):
         else:
             parsed_datastack.args['workspace_dir'] = args.workspace
 
-        target_model = MODEL_UIS[args.model].pyname
+        target_model = MODEL_METADATA[args.model].pyname
         model_module = importlib.import_module(name=target_model)
         LOGGER.info('Imported target %s from %s',
                     model_module.__name__, model_module)
@@ -639,7 +475,7 @@ def main(user_args=None):
 
         from natcap.invest.ui import inputs
 
-        gui_class = MODEL_UIS[args.model].gui
+        gui_class = MODEL_METADATA[args.model].gui
         module_name, classname = gui_class.split('.')
         module = importlib.import_module(
             name='.ui.%s' % module_name,

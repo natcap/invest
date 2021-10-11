@@ -1,17 +1,17 @@
 # coding=UTF-8
 
 from natcap.invest.ui import model, inputs
-from natcap.invest import routedem, MODEL_UIS
+from natcap.invest import routedem, MODEL_METADATA
 
 
 class RouteDEM(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(
             self,
-            label=MODEL_UIS['routedem'].model_title,
+            label=MODEL_METADATA['routedem'].model_title,
             target=routedem.execute,
             validator=routedem.validate,
-            localdoc=MODEL_UIS['routedem'].userguide)
+            localdoc=MODEL_METADATA['routedem'].userguide)
 
         self.dem_path = inputs.File(
             args_key='dem_path',

@@ -2,17 +2,17 @@
 
 from natcap.invest.ui import model, inputs
 from natcap.invest.scenic_quality import scenic_quality
-from natcap.invest import MODEL_UIS
+from natcap.invest import MODEL_METADATA
 
 
 class ScenicQuality(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(
             self,
-            label=MODEL_UIS['scenic_quality'].model_title,
+            label=MODEL_METADATA['scenic_quality'].model_title,
             target=scenic_quality.execute,
             validator=scenic_quality.validate,
-            localdoc=MODEL_UIS['scenic_quality'].userguide)
+            localdoc=MODEL_METADATA['scenic_quality'].userguide)
 
         self.general_tab = inputs.Container(
             interactive=True,

@@ -2,17 +2,17 @@
 
 from natcap.invest.ui import model, inputs
 import natcap.invest.ndr.ndr
-from natcap.invest import MODEL_UIS
+from natcap.invest import MODEL_METADATA
 
 
 class Nutrient(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(
             self,
-            label=MODEL_UIS['ndr'].model_title,
+            label=MODEL_METADATA['ndr'].model_title,
             target=natcap.invest.ndr.ndr.execute,
             validator=natcap.invest.ndr.ndr.validate,
-            localdoc=MODEL_UIS['ndr'].userguide)
+            localdoc=MODEL_METADATA['ndr'].userguide)
 
         self.dem_path = inputs.File(
             args_key='dem_path',
