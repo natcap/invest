@@ -249,9 +249,9 @@ def main(user_args=None):
               'the console and (if running in headless mode) how much is '
               'written to the logfile.'))
     verbosity_group.add_argument(
-        '--debug', dest='log_level', default=logging.CRITICAL,
+        '--debug', dest='log_level', default=logging.ERROR,
         action='store_const', const=logging.DEBUG,
-        help='Enable debug logging. Alias for -vvvvv')
+        help='Enable debug logging. Alias for -vvvv')
 
     parser.add_argument(
         '-L', '--language', default='en', choices=['en', 'es'],
@@ -351,7 +351,7 @@ def main(user_args=None):
     # arguments.  Verbosity: the more v's the lower the logging threshold.
     # If --debug is used, the logging threshold is 10.
     # If the user goes lower than logging.DEBUG, default to logging.DEBUG.
-    log_level = min(args.log_level, logging.CRITICAL - (args.verbosity*10))
+    log_level = min(args.log_level, logging.ERROR - (args.verbosity*10))
     handler.setLevel(max(log_level, logging.DEBUG))  # don't go below DEBUG
     root_logger.addHandler(handler)
     LOGGER.info('Setting handler log level to %s', log_level)
@@ -462,6 +462,10 @@ def main(user_args=None):
 
             # We're deliberately not validating here because the user
             # can just call ``invest validate <datastack>`` to validate.
+            #
+            # Exceptions will already be logged to the logfile but will ALSO be
+            # written to stdout if this exception is uncaught.  This is by
+            # design.
             model_module.execute(parsed_datastack.args)
 
     # If we're running in a GUI (either through ``invest run`` or

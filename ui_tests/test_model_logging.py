@@ -58,14 +58,18 @@ class ModelLoggingTests(unittest.TestCase):
         model_args = {
             'raster': raster_path,
             'vector': vector_path,
-            'not_a_gis_input': 'foobar'
+            'not_a_gis_input': 'foobar',
+            'blank_raster_path': '',
+            'blank_vector_path': '',
         }
 
         args_spec = {
             'args': {
                 'raster': {'type': 'raster'},
                 'vector': {'type': 'vector'},
-                'not_a_gis_input': {'type': 'freestyle_string'}
+                'not_a_gis_input': {'type': 'freestyle_string'},
+                'blank_raster_path': {'type': 'raster'},
+                'blank_vector_path': {'type': 'vector'},
             }
         }
 

@@ -2,15 +2,18 @@
 # ---------------------
 # This file records the packages needed to build on readthedocs.org.
 # It assumes that the natcap.invest package is being
-# installed to the readthedocs virtualenv separately.  
+# installed to the readthedocs virtualenv separately.
 channels:
 - conda-forge
-- defaults
+# set nodefaults to remove the default channels
+# this is needed to keep memory use below RTD limit due to conda bug:
+# https://github.com/conda/conda/issues/5003
+- nodefaults
 dependencies:
 - chardet>=3.0.4
 - Cython
+- GDAL>=3.1.2,!=3.3.0
 - Flask
-- GDAL>=3.1.2,<3.3.0
 - numpy>=1.11.0,!=1.16.0
 - pandas>=1.0,<1.2.0
 - pip
@@ -28,11 +31,10 @@ dependencies:
 - xlrd>=1.2.0
 - xlwt
 - pip:
-  - pygeoprocessing>=2.1.1 # pip-only
+  - pygeoprocessing>=2.3.2 # pip-only
   - PyInstaller==3.5 # pip-only
   - Pyro4==4.77  # pip-only
   - PySide2!=5.15.0  # pip-only
   - qtawesome  # pip-only
   - setuptools_scm
   - sphinx-rtd-theme
-

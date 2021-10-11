@@ -18,6 +18,7 @@ import pygeoprocessing
 
 
 LOGGER = logging.getLogger(__name__)
+_OSGEO_LOGGER = logging.getLogger('osgeo')
 LOG_FMT = (
     "%(asctime)s "
     "(%(name)s) "
@@ -44,6 +45,60 @@ GDAL_ERROR_LEVELS = {
 DEFAULT_OSR_AXIS_MAPPING_STRATEGY = osr.OAMS_TRADITIONAL_GIS_ORDER
 
 
+def _log_gdal_errors(*args, **kwargs):
+    """Log error messages to osgeo.
+
+    All error messages are logged with reasonable ``logging`` levels based
+    on the GDAL error level.
+
+    Note:
+        This function is designed to accept any number of positional and
+        keyword arguments because of some odd forums questions where this
+        function was being called with an unexpected number of arguments.
+        With this catch-all function signature, we can at least guarantee
+        that in the off chance this function is called with the wrong
+        parameters, we can at least log what happened.  See the issue at
+        https://github.com/natcap/invest/issues/630 for details.
+
+    Args:
+        err_level (int): The GDAL error level (e.g. ``gdal.CE_Failure``)
+        err_no (int): The GDAL error number.  For a full listing of error
+            codes, see: http://www.gdal.org/cpl__error_8h.html
+        err_msg (string): The error string.
+
+    Returns:
+        ``None``
+    """
+    if len(args) + len(kwargs) != 3:
+        LOGGER.error(
+            '_log_gdal_errors was called with an incorrect number of '
+            f'arguments.  args: {args}, kwargs: {kwargs}')
+
+    try:
+        gdal_args = {}
+        for index, key in enumerate(('err_level', 'err_no', 'err_msg')):
+            try:
+                parameter = args[index]
+            except IndexError:
+                parameter = kwargs[key]
+            gdal_args[key] = parameter
+    except KeyError as missing_key:
+        LOGGER.exception(
+            f'_log_gdal_errors called without the argument {missing_key}. '
+            f'Called with args: {args}, kwargs: {kwargs}')
+
+        # Returning from the function because we don't have enough
+        # information to call the ``osgeo_logger`` in the way we intended.
+        return
+
+    err_level = gdal_args['err_level']
+    err_no = gdal_args['err_no']
+    err_msg = gdal_args['err_msg'].replace('\n', '')
+    _OSGEO_LOGGER.log(
+        level=GDAL_ERROR_LEVELS[err_level],
+        msg=f'[errno {err_no}] {err_msg}')
+
+
 @contextlib.contextmanager
 def capture_gdal_logging():
     """Context manager for logging GDAL errors with python logging.
@@ -58,28 +113,6 @@ def capture_gdal_logging():
     Returns:
         ``None``
     """
-    osgeo_logger = logging.getLogger('osgeo')
-
-    def _log_gdal_errors(err_level, err_no, err_msg):
-        """Log error messages to osgeo.
-
-        All error messages are logged with reasonable ``logging`` levels based
-        on the GDAL error level.
-
-        Args:
-            err_level (int): The GDAL error level (e.g. ``gdal.CE_Failure``)
-            err_no (int): The GDAL error number.  For a full listing of error
-                codes, see: http://www.gdal.org/cpl__error_8h.html
-            err_msg (string): The error string.
-
-        Returns:
-            ``None``
-        """
-        osgeo_logger.log(
-            level=GDAL_ERROR_LEVELS[err_level],
-            msg='[errno {err}] {msg}'.format(
-                err=err_no, msg=err_msg.replace('\n', ' ')))
-
     gdal.PushErrorHandler(_log_gdal_errors)
     try:
         yield
@@ -110,10 +143,11 @@ def prepare_workspace(
     if not os.path.exists(workspace):
         os.makedirs(workspace)
 
+    modelname = '-'.join(name.replace(':', '').split(' '))
     logfile = os.path.join(
         workspace,
         'InVEST-{modelname}-log-{timestamp}.txt'.format(
-            modelname='-'.join(name.replace(':', '').split(' ')),
+            modelname=modelname,
             timestamp=datetime.now().strftime("%Y-%m-%d--%H_%M_%S")))
 
     with capture_gdal_logging(), log_to_file(logfile,
@@ -125,10 +159,14 @@ def prepare_workspace(
             start_time = time.time()
             try:
                 yield
+            except Exception:
+                LOGGER.exception(f'Exception while executing {modelname}')
+                raise
             finally:
                 LOGGER.info('Elapsed time: %s',
                             _format_time(round(time.time() - start_time, 2)))
                 logging.captureWarnings(False)
+                LOGGER.info('Execution finished')
 
 
 class ThreadFilter(logging.Filter):

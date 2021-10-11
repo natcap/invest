@@ -566,7 +566,7 @@ def _calculate_damage_to_infrastructure_in_aoi(
             continue
 
         shapely_geometry = shapely.wkb.loads(
-            infrastructure_geometry.ExportToWkb())
+            bytes(infrastructure_geometry.ExportToWkb()))
 
         structures_index.insert(
             infrastructure_feature.GetFID(), shapely_geometry.bounds)
@@ -577,7 +577,8 @@ def _calculate_damage_to_infrastructure_in_aoi(
     aoi_damage = {}
     for aoi_feature in aoi_layer:
         aoi_geometry = aoi_feature.GetGeometryRef()
-        aoi_geometry_shapely = shapely.wkb.loads(aoi_geometry.ExportToWkb())
+        aoi_geometry_shapely = shapely.wkb.loads(
+            bytes(aoi_geometry.ExportToWkb()))
         aoi_geometry_prep = shapely.prepared.prep(aoi_geometry_shapely)
 
         total_damage = 0.0
@@ -586,7 +587,7 @@ def _calculate_damage_to_infrastructure_in_aoi(
             infrastructure_feature = infrastructure_layer.GetFeature(
                 infrastructure_fid)
             infrastructure_geometry = shapely.wkb.loads(
-                infrastructure_feature.GetGeometryRef().ExportToWkb())
+                bytes(infrastructure_feature.GetGeometryRef().ExportToWkb()))
             if aoi_geometry_prep.intersects(infrastructure_geometry):
                 intersection_geometry = aoi_geometry_shapely.intersection(
                     infrastructure_geometry)
