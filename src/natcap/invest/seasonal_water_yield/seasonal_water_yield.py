@@ -15,6 +15,7 @@ import taskgraph
 
 from .. import utils
 from .. import validation
+from .. import MODEL_METADATA
 
 from . import seasonal_water_yield_core
 
@@ -29,6 +30,8 @@ MONTH_ID_TO_LABEL = [
     'nov', 'dec']
 
 ARGS_SPEC = {
+    "model_name": MODEL_METADATA["seasonal_water_yield"].model_title,
+    "userguide_html": MODEL_METADATA["seasonal_water_yield"].userguide,
     "args_with_spatial_overlap": {
         "spatial_keys": ["dem_raster_path", "lulc_raster_path",
                          "soil_group_path", "aoi_path", "l_path",

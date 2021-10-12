@@ -1,8 +1,8 @@
 """init module for natcap.invest."""
-import collections
+import dataclasses
+import logging
 import os
 import sys
-import logging
 
 import pkg_resources
 
@@ -18,8 +18,16 @@ except pkg_resources.DistributionNotFound:
     LOGGER.exception('Could not load natcap.invest version information')
 
 
-_MODELMETA = collections.namedtuple('ModelMeta',
-                                    'model_title pyname gui userguide aliases')
+@dataclasses.dataclass
+class _MODELMETA:
+    """Dataclass to store frequently used model metadata."""
+    model_title: str  # display name for the model
+    pyname: str       # importable python module name for the model
+    gui: str          # importable python class for the corresponding Qt UI
+    userguide: str    # name of the corresponding built userguide file
+    aliases: tuple    # alternate names for the model, if any
+
+
 MODEL_METADATA = {
     'carbon': _MODELMETA(
         model_title='Carbon Storage and Sequestration',

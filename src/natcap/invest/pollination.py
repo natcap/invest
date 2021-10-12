@@ -15,10 +15,13 @@ import taskgraph
 
 from . import utils
 from . import validation
+from . import MODEL_METADATA
 
 LOGGER = logging.getLogger(__name__)
 
 ARGS_SPEC = {
+    "model_name": MODEL_METADATA["pollination"].model_title,
+    "userguide_html": MODEL_METADATA["pollination"].userguide,
     "args": {
         "workspace_dir": validation.WORKSPACE_SPEC,
         "results_suffix": validation.SUFFIX_SPEC,

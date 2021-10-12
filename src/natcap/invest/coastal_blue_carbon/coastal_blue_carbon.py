@@ -104,6 +104,7 @@ from osgeo import gdal
 
 from .. import utils
 from .. import validation
+from .. import MODEL_METADATA
 
 LOGGER = logging.getLogger(__name__)
 
@@ -148,6 +149,8 @@ TASKGRAPH_CACHE_DIR_NAME = 'task_cache'
 OUTPUT_DIR_NAME = 'output'
 
 ARGS_SPEC = {
+    "model_name": MODEL_METADATA["coastal_blue_carbon"].model_title,
+    "userguide_html": MODEL_METADATA["coastal_blue_carbon"].userguide,
     "args": {
         "workspace_dir": validation.WORKSPACE_SPEC,
         "results_suffix": validation.SUFFIX_SPEC,

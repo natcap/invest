@@ -12,11 +12,14 @@ import taskgraph
 
 from . import utils
 from . import validation
+from . import MODEL_METADATA
 
 
 LOGGER = logging.getLogger(__name__)
 
 ARGS_SPEC = {
+    "model_name": MODEL_METADATA["crop_production_percentile"].model_title,
+    "userguide_html": MODEL_METADATA["crop_production_percentile"].userguide,
     "args_with_spatial_overlap": {
         "spatial_keys": [
             "landcover_raster_path",

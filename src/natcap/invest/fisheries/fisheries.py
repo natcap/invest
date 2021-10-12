@@ -9,11 +9,14 @@ from . import fisheries_io as io
 from . import fisheries_model as model
 from .. import utils
 from .. import validation
+from .. import MODEL_METADATA
 
 LOGGER = logging.getLogger(__name__)
 LABEL = 'Fisheries'
 
 ARGS_SPEC = {
+    "model_name": MODEL_METADATA["fisheries"].model_title,
+    "userguide_html": MODEL_METADATA["fisheries"].userguide,
     "args": {
         "workspace_dir": validation.WORKSPACE_SPEC,
         "results_suffix": validation.SUFFIX_SPEC,

@@ -11,10 +11,13 @@ import numpy as np
 
 from . import fisheries_hst_io as io
 from .. import validation
+from .. import MODEL_METADATA
 
 LOGGER = logging.getLogger(__name__)
 
 ARGS_SPEC = {
+    "model_name": MODEL_METADATA["fisheries_hst"].model_title,
+    "userguide_html": MODEL_METADATA["fisheries_hst"].userguide,
     "args": {
         "workspace_dir": validation.WORKSPACE_SPEC,
         "results_suffix": validation.SUFFIX_SPEC,

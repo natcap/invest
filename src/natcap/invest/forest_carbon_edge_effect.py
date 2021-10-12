@@ -18,6 +18,7 @@ import taskgraph
 
 from . import utils
 from . import validation
+from . import MODEL_METADATA
 
 LOGGER = logging.getLogger(__name__)
 
@@ -28,6 +29,8 @@ DISTANCE_UPPER_BOUND = 500e3
 NODATA_VALUE = -1
 
 ARGS_SPEC = {
+    "model_name": MODEL_METADATA["forest_carbon_edge_effect"].model_title,
+    "userguide_html": MODEL_METADATA["forest_carbon_edge_effect"].userguide,
     "args_with_spatial_overlap": {
         "spatial_keys": ["aoi_vector_path", "lulc_raster_path"],
     },

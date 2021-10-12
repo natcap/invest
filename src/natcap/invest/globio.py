@@ -13,6 +13,7 @@ import taskgraph
 
 from . import utils
 from . import validation
+from . import MODEL_METADATA
 
 
 LOGGER = logging.getLogger(__name__)
@@ -23,6 +24,8 @@ LOGGER = logging.getLogger(__name__)
 SIGMA = 9.0
 
 ARGS_SPEC = {
+    "model_name": MODEL_METADATA["globio"].model_title,
+    "userguide_html": MODEL_METADATA["globio"].userguide,
     "args_with_spatial_overlap": {
         "spatial_keys": [
             "lulc_path", "pasture_path", "potential_vegetation_path",

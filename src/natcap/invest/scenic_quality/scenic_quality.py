@@ -17,6 +17,7 @@ import shapely.geometry
 from natcap.invest.scenic_quality.viewshed import viewshed
 from .. import utils
 from .. import validation
+from .. import MODEL_METADATA
 
 LOGGER = logging.getLogger(__name__)
 _VALUATION_NODATA = -99999  # largish negative nodata value.
@@ -45,6 +46,8 @@ _INTERMEDIATE_BASE_FILES = {
 
 
 ARGS_SPEC = {
+    "model_name": MODEL_METADATA["scenic_quality"].model_title,
+    "userguide_html": MODEL_METADATA["scenic_quality"].userguide,
     "args_with_spatial_overlap": {
         "spatial_keys": ["aoi_path", "structure_path", "dem_path"],
         "different_projections_ok": True,

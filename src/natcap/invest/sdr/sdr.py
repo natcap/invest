@@ -17,11 +17,14 @@ import pygeoprocessing.routing
 import taskgraph
 from .. import utils
 from .. import validation
+from .. import MODEL_METADATA
 from . import sdr_core
 
 LOGGER = logging.getLogger(__name__)
 
 ARGS_SPEC = {
+    "model_name": MODEL_METADATA["sdr"].model_title,
+    "userguide_html": MODEL_METADATA["sdr"].userguide,
     "args_with_spatial_overlap": {
         "spatial_keys": ["dem_path", "erosivity_path", "erodibility_path",
                          "lulc_path", "drainage_path", "watersheds_path", ],

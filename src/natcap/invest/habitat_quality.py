@@ -12,10 +12,13 @@ import taskgraph
 
 from . import utils
 from . import validation
+from . import MODEL_METADATA
 
 LOGGER = logging.getLogger(__name__)
 
 ARGS_SPEC = {
+    "model_name": MODEL_METADATA["habitat_quality"].model_title,
+    "userguide_html": MODEL_METADATA["habitat_quality"].userguide,
     "args_with_spatial_overlap": {
         "spatial_keys": [
             "lulc_cur_path", "lulc_fut_path", "lulc_bas_path",
