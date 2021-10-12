@@ -24,7 +24,7 @@ from . import validation
 LOGGER = logging.getLogger(__name__)
 
 ARGS_SPEC = {
-    "model_name": "Scenario Generator: Proximity Based",
+    "model_name": _("Scenario Generator: Proximity Based"),
     "module": __name__,
     "userguide_html": "scenario_gen_proximity.html",
     "args": {

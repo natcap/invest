@@ -30,12 +30,8 @@ except pkg_resources.DistributionNotFound:
 # Make sure it's defined so that natcap.invest modules are importable whether
 # or not gettext has been installed in the importing namespace
 if not callable(getattr(builtins, '_', None)):
-    print('_() not already defined; setting to identity')
     def identity(x): return x
     builtins.__dict__['_'] = identity
-else:
-    print('_() already defined')
-
 
 _UIMETA = collections.namedtuple('UIMeta', 'humanname pyname gui aliases')
 MODEL_UIS = {
@@ -180,7 +176,6 @@ MODEL_UIS = {
 def install_language(language_code):
     # globally install the _() function for the requested language
     # fall back to a NullTranslation, which returns the English messages
-    print(LOCALE_DIR)
     language = gettext.translation(
         'messages',
         languages=[language_code],
@@ -188,7 +183,6 @@ def install_language(language_code):
         fallback=True)
     language.install()
     LOGGER.debug(f'Installed language "{language_code}"')
-    print('installed language', language_code)
 
 
 def local_dir(source_file):

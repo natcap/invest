@@ -22,7 +22,7 @@ CROPS = [
     "sugarbeet", "sugarcane", "sunflower", "wheat"]
 
 ARGS_SPEC = {
-    "model_name": "Crop Production Regression Model",
+    "model_name": _("Crop Production Regression Model"),
     "module": __name__,
     "userguide_html": "crop_production.html",
     "args_with_spatial_overlap": {

@@ -22,7 +22,7 @@ MISSING_SENSITIVITY_TABLE_THREATS_MSG = (
     'Sensitivity columns: %s')  # (set of missing threats, set of found columns)
 
 ARGS_SPEC = {
-    "model_name": "Habitat Quality",
+    "model_name": _("Habitat Quality"),
     "module": __name__,
     "userguide_html": "habitat_quality.html",
     "args_with_spatial_overlap": {

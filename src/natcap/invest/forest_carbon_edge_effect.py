@@ -30,7 +30,7 @@ DISTANCE_UPPER_BOUND = 500e3
 NODATA_VALUE = -1
 
 ARGS_SPEC = {
-    "model_name": "Forest Carbon Edge Effect Model",
+    "model_name": _("Forest Carbon Edge Effect Model"),
     "module": __name__,
     "userguide_html": "carbon_edge.html",
     "args_with_spatial_overlap": {

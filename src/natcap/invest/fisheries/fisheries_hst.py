@@ -15,7 +15,7 @@ from .. import spec_utils
 LOGGER = logging.getLogger(__name__)
 
 ARGS_SPEC = {
-    "model_name": "Fisheries Habitat Scenario Tool",
+    "model_name": _("Fisheries Habitat Scenario Tool"),
     "module": __name__,
     "userguide_html": "fisheries.html",
     "args": {

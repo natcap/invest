@@ -22,7 +22,7 @@ UINT8_NODATA = 255
 UINT16_NODATA = 65535
 
 ARGS_SPEC = {
-    "model_name": "Stormwater Retention",
+    "model_name": _("Stormwater Retention"),
     "module": __name__,
     "userguide_html": "stormwater.html",
     "args_with_spatial_overlap": {

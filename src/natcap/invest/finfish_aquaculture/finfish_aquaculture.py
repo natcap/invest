@@ -13,7 +13,7 @@ from .. import validation
 LOGGER = logging.getLogger(__name__)
 
 ARGS_SPEC = {
-    "model_name": "Finfish Aquaculture",
+    "model_name": _("Finfish Aquaculture"),
     "module": __name__,
     "userguide_html": "marine_fish.html",
     "args": {

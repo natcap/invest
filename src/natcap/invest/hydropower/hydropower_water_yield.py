@@ -18,7 +18,7 @@ from .. import validation
 LOGGER = logging.getLogger(__name__)
 
 ARGS_SPEC = {
-    "model_name": "Hydropower Water Yield",
+    "model_name": _("Hydropower Water Yield"),
     "module": __name__,
     "userguide_html": "reservoirhydropowerproduction.html",
     "args_with_spatial_overlap": {

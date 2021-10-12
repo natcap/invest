@@ -31,7 +31,7 @@ MONTH_ID_TO_LABEL = [
     'nov', 'dec']
 
 ARGS_SPEC = {
-    "model_name": "Seasonal Water Yield",
+    "model_name": _("Seasonal Water Yield"),
     "module": __name__,
     "userguide_html": "seasonal_water_yield.html",
     "args_with_spatial_overlap": {

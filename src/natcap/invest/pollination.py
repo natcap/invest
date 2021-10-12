@@ -21,7 +21,7 @@ from . import validation
 LOGGER = logging.getLogger(__name__)
 
 ARGS_SPEC = {
-    "model_name": "Crop Pollination",
+    "model_name": _("Crop Pollination"),
     "module": __name__,
     "userguide_html": "croppollination.html",
     "args": {

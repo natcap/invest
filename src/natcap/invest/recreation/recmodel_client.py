@@ -88,7 +88,7 @@ predictor_table_columns = {
 
 
 ARGS_SPEC = {
-    "model_name": "Recreation Model",
+    "model_name": _("Recreation Model"),
     "module": __name__,
     "userguide_html": "recreation.html",
     "args": {
