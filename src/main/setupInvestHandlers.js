@@ -17,9 +17,9 @@ const logger = getLogger(__filename.split('/').slice(-1)[0]);
 // to translate to the invest CLI's verbosity flag:
 const LOGLEVELMAP = {
   DEBUG: '--debug',
-  INFO: '-vvv',
-  WARNING: '-vv',
-  ERROR: '-v',
+  INFO: '-vv',
+  WARNING: '-v',
+  ERROR: '',
 };
 const TEMP_DIR = path.join(app.getPath('userData'), 'tmp');
 const HOSTNAME = 'http://localhost';
