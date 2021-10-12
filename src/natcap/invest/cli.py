@@ -31,15 +31,15 @@ DEFAULT_EXIT_CODE = 1
 LOGGER = logging.getLogger(__name__)
 
 
-# Build up an index mapping aliases to modelname.
-# ``modelname`` is the key to the MODEL_METADATA dict, above.
+# Build up an index mapping aliases to model_name.
+# ``model_name`` is the key to the MODEL_METADATA dict.
 _MODEL_ALIASES = {}
-for _modelname, _meta in MODEL_METADATA.items():
-    for _alias in _meta.aliases:
-        assert _alias not in _MODEL_ALIASES, (
+for model_name, meta in MODEL_METADATA.items():
+    for alias in meta.aliases:
+        assert alias not in _MODEL_ALIASES, (
             'Alias %s already defined for model %s') % (
-                _alias, _MODEL_ALIASES[_alias])
-        _MODEL_ALIASES[_alias] = _modelname
+                alias, _MODEL_ALIASES[alias])
+        _MODEL_ALIASES[alias] = model_name
 
 
 def build_model_list_table():
@@ -58,9 +58,9 @@ def build_model_list_table():
     # Adding 3 to max alias name length for the parentheses plus some padding.
     max_alias_name_length = max(len(', '.join(meta.aliases))
                                 for meta in MODEL_METADATA.values()) + 3
-    template_string = '    {modelname} {aliases} {modeltitle} {usage}'
+    template_string = '    {model_name} {aliases} {model_title} {usage}'
     strings = ['Available models:']
-    for model_name in sorted(MODEL_METADATA.keys()):
+    for model_name in model_names:
         usage_string = '(No GUI available)'
         if MODEL_METADATA[model_name].gui is not None:
             usage_string = ''
@@ -70,9 +70,9 @@ def build_model_list_table():
             alias_string = '(%s)' % alias_string
 
         strings.append(template_string.format(
-            modelname=model_name.ljust(max_model_name_length),
+            model_name=model_name.ljust(max_model_name_length),
             aliases=alias_string.ljust(max_alias_name_length),
-            modeltitle=MODEL_METADATA[model_name].model_title,
+            model_title=MODEL_METADATA[model_name].model_title,
             usage=usage_string))
     return '\n'.join(strings) + '\n'
 

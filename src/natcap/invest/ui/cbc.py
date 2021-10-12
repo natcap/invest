@@ -68,10 +68,10 @@ class CoastalBlueCarbon(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(
             self,
-            label=MODEL_METADATA['coastal_blue_carbon_preprocessor'].model_title,
+            label=MODEL_METADATA['coastal_blue_carbon'].model_title,
             target=coastal_blue_carbon.execute,
             validator=coastal_blue_carbon.validate,
-            localdoc=MODEL_METADATA['coastal_blue_carbon_preprocessor'].userguide)
+            localdoc=MODEL_METADATA['coastal_blue_carbon'].userguide)
 
         _ui_keys = functools.partial(
             _create_input_kwargs_from_args_spec,
