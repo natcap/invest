@@ -35,7 +35,7 @@ ARGS_SPEC = {
     "args_with_spatial_overlap": {
         "spatial_keys": ["dem_raster_path", "lulc_raster_path",
                          "soil_group_path", "aoi_path", "l_path",
-                         "monthly_alpha_path"],
+                         "climate_zone_raster_path"],
         "different_projections_ok": True,
     },
     "args": {
