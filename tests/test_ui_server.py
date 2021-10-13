@@ -3,7 +3,7 @@ import os
 import shutil
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from natcap.invest import ui_server
 
@@ -141,6 +141,9 @@ class EndpointFunctionTests(unittest.TestCase):
     @patch('natcap.invest.ui_server.usage.urlopen')
     def test_log_model_start(self, mock_urlopen):
         """UI server: log_model_start endpoint."""
+        mock_response = Mock()
+        mock_response.read.return_value = '{"START": "http://foo.org/bar.html"}'
+        mock_urlopen.return_value = mock_response
         test_client = ui_server.app.test_client()
         payload = {
             'model_pyname': 'natcap.invest.carbon',
@@ -156,6 +159,9 @@ class EndpointFunctionTests(unittest.TestCase):
     @patch('natcap.invest.ui_server.usage.urlopen')
     def test_log_model_exit(self, mock_urlopen):
         """UI server: log_model_start endpoint."""
+        mock_response = Mock()
+        mock_response.read.return_value = '{"FINISH": "http://foo.org/bar.html"}'
+        mock_urlopen.return_value = mock_response
         test_client = ui_server.app.test_client()
         payload = {
             'session_id': '12345',

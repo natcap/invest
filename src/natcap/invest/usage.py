@@ -192,7 +192,7 @@ def _log_exit_status(session_id, status):
         urlopen(Request(log_finish_url, urlencode(payload).encode('utf-8')))
     except Exception as exception:
         # An exception was thrown, we don't care.
-        logger.warn(
+        logger.warning(
             'an exception encountered when _log_exit_status %s',
             str(exception))
 
@@ -250,5 +250,5 @@ def _log_model(model_pyname, model_args, invest_interface, session_id=None):
         urlopen(Request(log_start_url, urlencode(payload).encode('utf-8')))
     except Exception as exception:
         # An exception was thrown, we don't care.
-        logger.warn(
+        logger.warning(
             'an exception encountered when logging %s', repr(exception))
