@@ -1,101 +1,84 @@
 .. _installing:
 
-=============================
-Installing InVEST From Source
-=============================
+====================================
+Installing the InVEST Python Package
+====================================
 
 .. attention::
      Most users will want to install the InVEST app (Mac disk image or Windows 
      installer) from the `InVEST download page <https://naturalcapitalproject.stanford.edu/software/invest>`_.
      The instructions here are for more advanced use cases.
 
+.. note::
+    To install the ``natcap.invest`` package, you must have a C/C++ compiler
+    installed and configured for your system. MacOS and Linux users should
+    not need to do anything. Windows users should install Microsoft Visual
+    Studio, or at least the Build Tools for Visual Studio, if they have
+    not already. See the `python wiki page on compilation under Windows <https://wiki.python.org/moin/WindowsCompilers>`_ for more information.
 
-.. _BinaryDependencies:
+Suggested method
+----------------
 
-Binary Dependencies
--------------------
+**Pattern**::
 
-InVEST itself depends only on python packages, but many of these package
-dependencies depend on low-level libraries or have complex build processes.
-Some of these packages (notably, numpy and scipy) have started to release 
-precompiled binary packages of their own. Recently we have had success 
-installing all dependencies through ``conda`` and ``pip``; however you may 
-find it easier to install some through a system package manager.
+    conda create -y -c conda-forge -n <name> python=<python version>
+    conda activate <name>
+    conda install -y -c conda-forge gdal=<gdal version>
+    pip install natcap.invest==<invest version>
 
+Replace ``<name>`` with any name you'd like to give your environment.
+Replace ``<python version>`` with a python version known to be compatible with the desired invest version.
+Replace ``<gdal version>`` with a GDAL version known to be compatible with the desired invest version.
+Replace ``<invest version>`` with the desired invest version.
 
-Conda 
---------------
+Most of the time, it is not really necessary to specify the versions of ``python``, ``gdal``, and ``natcap.invest``. If you do not specify a version, the latest version will be installed. Usually the latest versions are compatible with each other, but not always. Specifying versions that are known to work can prevent some problems. You can find the supported range of GDAL versions in the [requirements.txt](https://github.com/natcap/invest/blob/main/requirements.txt) (be sure to switch to the desired release tag in the dropdown).
 
-If you're using a conda environment to manage your ``natcap.invest`` installation,
-it's easiest to install a few binary packages first before using pip to install
-the rest::
+**Example for InVEST 3.9.1**::
 
-    $ conda install "gdal>=3" numpy shapely rtree
-    $ pip install natcap.invest
-
-
-System Package Managers
------------------------
-
-.. _InstallingOnLinux:
-
-Linux
-*****
-
-Linux users have it easy, as almost every package required to use
-natcap.invest is available in the package repositories. The provided
-commands will install only the libraries and binaries that are needed, allowing
-``pip`` to install the rest.
+    conda create -y -c conda-forge -n invest391 python=3.9.7
+    conda activate invest391
+    conda install -y -c conda-forge gdal=3.3.1
+    pip install natcap.invest==3.9.1
 
 
-Ubuntu & Debian
-^^^^^^^^^^^^^^^
+**Condensed into one line**::
 
-.. attention::
-    The package versions in the debian:stable repositories often lag far
-    behind the latest releases.  It may be necessary to install a later
-    version of a library from a different package repository, or else build
-    the library from source.
+    conda create -y -c conda-forge -n invest391 python=3.9.7 gdal=3.3.1 && conda activate invest391 && pip install natcap.invest==3.9.1
 
 
-::
+Details
+-------
+Here is an explanation of what the commands are doing:
 
-    $ sudo apt-get install python3-dev python3-setuptools python3-gdal python3-rtree python3-shapely
+1. Create a brand-new environment with the correct python version.
 
+   ``conda create -y -c conda-forge -n <name> python=<python version>``
 
-Fedora
-^^^^^^
+   To be safe, you should **always install ``natcap.invest``` into a brand-new virtual environment**. This way you can be sure you have all the right versions of dependencies. Many issues with installing or using the ``natcap.invest`` package arise from dependency problems, and it's a lot easier to create a new environment than it is to fix an existing one.
 
-::
+2. Activate the brand-new environment just created.
 
-    $ sudo yum install python3-devel python3-setuptools python3-gdal python3-rtree python3-shapely
+   ``conda activate <name>``
 
-.. _InstallingOnMac:
+   If you run ``conda list`` after this, you'll see the specified python version is there along with around 15 other packages that are included with python by default. None of these are specific to invest. You're now in an isolated environment so you can control which versions of dependencies are available to invest.
 
-Mac OS X
-********
+3. Install GDAL before installing invest
 
-The easiest way to install binary packages on Mac OS X is through a package
-manager such as `Homebrew <http://brew.sh>`_::
+   ``conda install -y -c conda-forge gdal=<gdal version>``
 
-    $ brew install gdal spatialindex pyqt
+   This is important because GDAL is not an ordinary python package. When you install the ``natcap.invest`` package in step 4, ``pip`` will also install all the dependencies of ``natcap.invest``. When ``pip`` tries to install GDAL, you will get an error unless the underlying GDAL binaries are already installed. That's because the ``gdal`` package that ``pip`` installs is just a python wrapper that depends on the GDAL binaries. GDAL itself is not a python package and can't be installed with ``pip``. Luckily, it can be installed with ``conda``!
 
-The GDAL and PyQt packages include their respective python packages.
-The others will allow their corresponding python packages to be compiled
-against these binaries via ``pip``.
+4. Install invest
 
-.. _InstallingOnWindows:
+   ``pip install natcap.invest=<invest version>``
 
-Windows
-*******
+   ``pip`` will also install the correct versions of all dependencies of ``natcap.invest``.
 
-While many packages are available for Windows on the Python Package Index, some
-may need to be fetched from a different source. Many are available from
-Christogh Gohlke's unofficial build page:
-http://www.lfd.uci.edu/~gohlke/pythonlibs/
+   Since sometimes we don't need to use the UI at all, the basic ``natcap.invest`` package does not include the dependencies required for the UI. If you try to use the UI without having installed the UI dependencies, you'll get an error. If you do want to use the invest UI via the python package, install ``natcap.invest`` with the UI package extra: ::
 
-PyQt4 installers can also be downloaded from the `Riverbank Computing website <https://www.riverbankcomputing.com/software/pyqt/download>`_.
+      pip install natcap.invest[ui]=<invest version>
 
+   The ``[ui]`` tells `pip` to also install all the dependencies needed for the UI.
 
 
 Python Dependencies
@@ -105,58 +88,43 @@ Dependencies for ``natcap.invest`` are listed in ``requirements.txt``:
 
 .. include:: ../../requirements.txt
     :literal:
+    :start-line: 14
+
+Additional dependencies for the UI are listed in ``requirements-gui.txt``:
+
+.. include:: ../../requirements-gui.txt
+    :literal:
     :start-line: 9
 
+Please use ``conda`` and ``pip`` to install the correct versions of these dependencies automatically as described above.
 
+.. _BinaryDependencies:
 
+Binary Dependencies
+-------------------
 
-Optional Qt User Interface
---------------------------
-
-InVEST's user interface is built with PyQt.  Because of the hefty binary
-requirement of Qt and the relative difficulty of installing PyQt, these
-dependencies will not be installed with the standard
-``pip install natcap.invest``.  These dependencies are available
-as extras, however, and can be installed via pip::
-
-    $ pip install natcap.invest[ui]
-
-
-.. _installing-from-source:
-
-Installing from Source
-----------------------
-
-.. note::
-
-    Python 3.6 users will need to install Microsoft Visual Studio 2017, or at
-    least the Build Tools for Visual Studio 2017.
-    See the `python wiki page on compilation under Windows <https://wiki.python.org/moin/WindowsCompilers>`_
-    for more information.
-
-Assuming you have a C/C++ compiler installed and configured for your system, and
-dependencies installed, the easiest way to install InVEST as a python package
-is::
-
-    $ pip install natcap.invest
-
+InVEST itself depends only on python packages, but many of these package
+dependencies, such as numpy, scipy, and GDAL, depend on low-level libraries
+or have complex build processes. Precompiled binaries of all these dependencies
+are now available through ``conda`` and/or ``pip``. We recommend using ``conda``
+to manage these dependencies because it simplifies the install process and
+helps ensure versions are compatible. However, they may also be available through
+your system package manager.
 
 Installing the latest development version
 -----------------------------------------
 
+Pre-built binaries
+******************
 
-Pre-built binaries for Windows
-******************************
-
-Pre-built installers and wheels of development versions of ``natcap.invest``
-for 32-bit Windows python installations are available from
+Pre-built installers and wheels of development versions are available from
 http://releases.naturalcapitalproject.org/?prefix=invest/, along with other
-distributions of InVEST.  Once downloaded, wheels can be installed locally via
+distributions of InVEST. Once downloaded, wheels can be installed locally via
 pip.
 
 
-Installing from our source tree
-*******************************
+Installing from source
+**********************
 
 The latest development version of InVEST can be installed from our
 git source tree if you have a compiler installed::
