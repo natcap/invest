@@ -49,7 +49,7 @@ class AnnualWaterYieldTests(unittest.TestCase):
 
     def test_invalid_lulc_veg(self):
         """Hydro: catching invalid LULC_veg values."""
-        from natcap.invest.annual_water_yield import annual_water_yield
+        from natcap.invest import annual_water_yield
 
         args = AnnualWaterYieldTests.generate_base_args(self.workspace_dir)
 
@@ -76,7 +76,7 @@ class AnnualWaterYieldTests(unittest.TestCase):
     
     def test_missing_lulc_value(self):
         """Hydro: catching missing LULC value in Biophysical table."""
-        from natcap.invest.annual_water_yield import annual_water_yield
+        from natcap.invest import annual_water_yield
 
         args = AnnualWaterYieldTests.generate_base_args(self.workspace_dir)
 
@@ -99,7 +99,7 @@ class AnnualWaterYieldTests(unittest.TestCase):
     
     def test_missing_lulc_demand_value(self):
         """Hydro: catching missing LULC value in Demand table."""
-        from natcap.invest.annual_water_yield import annual_water_yield
+        from natcap.invest import annual_water_yield
 
         args = AnnualWaterYieldTests.generate_base_args(self.workspace_dir)
         
@@ -127,7 +127,7 @@ class AnnualWaterYieldTests(unittest.TestCase):
 
     def test_water_yield_subshed(self):
         """Hydro: testing water yield component only w/ subwatershed."""
-        from natcap.invest.annual_water_yield import annual_water_yield
+        from natcap.invest import annual_water_yield
         from natcap.invest import utils
 
         args = AnnualWaterYieldTests.generate_base_args(self.workspace_dir)
@@ -168,7 +168,7 @@ class AnnualWaterYieldTests(unittest.TestCase):
 
     def test_scarcity_subshed(self):
         """Hydro: testing Scarcity component w/ subwatershed."""
-        from natcap.invest.annual_water_yield import annual_water_yield
+        from natcap.invest import annual_water_yield
         from natcap.invest import utils
 
         args = AnnualWaterYieldTests.generate_base_args(self.workspace_dir)
@@ -206,7 +206,7 @@ class AnnualWaterYieldTests(unittest.TestCase):
 
     def test_valuation_subshed(self):
         """Hydro: testing Valuation component w/ subwatershed."""
-        from natcap.invest.annual_water_yield import annual_water_yield
+        from natcap.invest import annual_water_yield
         from natcap.invest import utils
 
         args = AnnualWaterYieldTests.generate_base_args(self.workspace_dir)
@@ -246,7 +246,7 @@ class AnnualWaterYieldTests(unittest.TestCase):
 
     def test_validation(self):
         """Hydro: test failure cases on the validation function."""
-        from natcap.invest.annual_water_yield import annual_water_yield
+        from natcap.invest import annual_water_yield
 
         args = AnnualWaterYieldTests.generate_base_args(self.workspace_dir)
 
