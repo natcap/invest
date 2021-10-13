@@ -10,6 +10,7 @@ from flask import request
 from natcap.invest import cli
 from natcap.invest import datastack
 from natcap.invest import spec_utils
+from natcap.invest import usage
 
 logging.basicConfig(level=logging.DEBUG)
 LOGGER = logging.getLogger(__name__)
@@ -199,3 +200,23 @@ def save_to_python():
         save_filepath, modelname, args_dict)
 
     return 'python script saved'
+
+
+@app.route('/log_model_start', methods=['POST'])
+def log_model_start():
+    payload = request.get_json()
+    usage._log_model(
+        payload['model_pyname'],
+        json.loads(payload['model_args']),
+        payload['invest_interface'],
+        payload['session_id'])
+    return 'OK'
+
+
+@app.route('/log_model_exit', methods=['POST'])
+def log_model_exit():
+    payload = request.get_json()
+    usage._log_exit_status(
+        payload['session_id'],
+        payload['status'])
+    return 'OK'

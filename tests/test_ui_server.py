@@ -3,6 +3,9 @@ import os
 import shutil
 import tempfile
 import unittest
+from unittest.mock import Mock, patch
+
+from natcap.invest import ui_server
 
 TEST_DATA_PATH = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data')
@@ -23,7 +26,6 @@ class EndpointFunctionTests(unittest.TestCase):
 
     def test_get_vector_colnames(self):
         """UI server: get_vector_colnames endpoint."""
-        from natcap.invest import ui_server
         test_client = ui_server.app.test_client()
         # an empty path
         response = test_client.post('/colnames', json={'vector_path': ''})
@@ -45,7 +47,6 @@ class EndpointFunctionTests(unittest.TestCase):
 
     def test_get_invest_models(self):
         """UI server: get_invest_models endpoint."""
-        from natcap.invest import ui_server
         test_client = ui_server.app.test_client()
         response = test_client.get('/models')
         models_dict = json.loads(response.get_data(as_text=True))
@@ -54,7 +55,6 @@ class EndpointFunctionTests(unittest.TestCase):
 
     def test_get_invest_spec(self):
         """UI server: get_invest_spec endpoint."""
-        from natcap.invest import ui_server
         test_client = ui_server.app.test_client()
         response = test_client.post('/getspec', json='sdr')
         spec = json.loads(response.get_data(as_text=True))
@@ -65,7 +65,7 @@ class EndpointFunctionTests(unittest.TestCase):
 
     def test_get_invest_validate(self):
         """UI server: get_invest_validate endpoint."""
-        from natcap.invest import ui_server, carbon
+        from natcap.invest import carbon
         test_client = ui_server.app.test_client()
         args = {
             'workspace_dir': 'foo'
@@ -83,7 +83,6 @@ class EndpointFunctionTests(unittest.TestCase):
 
     def test_post_datastack_file(self):
         """UI server: post_datastack_file endpoint."""
-        from natcap.invest import ui_server
         test_client = ui_server.app.test_client()
         self.workspace_dir = tempfile.mkdtemp()
         expected_datastack = {
@@ -105,7 +104,6 @@ class EndpointFunctionTests(unittest.TestCase):
 
     def test_write_parameter_set_file(self):
         """UI server: write_parameter_set_file endpoint."""
-        from natcap.invest import ui_server
         test_client = ui_server.app.test_client()
         self.workspace_dir = tempfile.mkdtemp()
         filepath = os.path.join(self.workspace_dir, 'datastack.json')
@@ -126,7 +124,6 @@ class EndpointFunctionTests(unittest.TestCase):
 
     def test_save_to_python(self):
         """UI server: save_to_python endpoint."""
-        from natcap.invest import ui_server
         test_client = ui_server.app.test_client()
         self.workspace_dir = tempfile.mkdtemp()
         filepath = os.path.join(self.workspace_dir, 'script.py')
@@ -140,3 +137,35 @@ class EndpointFunctionTests(unittest.TestCase):
         _ = test_client.post('/save_to_python', json=payload)
         # test_cli.py asserts the actual contents of the file
         self.assertTrue(os.path.exists(filepath))
+
+    @patch('natcap.invest.ui_server.usage.urlopen')
+    def test_log_model_start(self, mock_urlopen):
+        """UI server: log_model_start endpoint."""
+        mock_response = Mock()
+        mock_response.read.return_value = '{"START": "http://foo.org/bar.html"}'
+        mock_urlopen.return_value = mock_response
+        test_client = ui_server.app.test_client()
+        payload = {
+            'model_pyname': 'natcap.invest.carbon',
+            'model_args': json.dumps({
+                'workspace_dir': 'foo'
+            }),
+            'invest_interface': 'Workbench',
+            'session_id': '12345'
+        }    
+        response = test_client.post('/log_model_start', json=payload)
+        self.assertEqual(response.get_data(as_text=True), 'OK')
+
+    @patch('natcap.invest.ui_server.usage.urlopen')
+    def test_log_model_exit(self, mock_urlopen):
+        """UI server: log_model_start endpoint."""
+        mock_response = Mock()
+        mock_response.read.return_value = '{"FINISH": "http://foo.org/bar.html"}'
+        mock_urlopen.return_value = mock_response
+        test_client = ui_server.app.test_client()
+        payload = {
+            'session_id': '12345',
+            'status': ''
+        }
+        response = test_client.post('/log_model_exit', json=payload)
+        self.assertEqual(response.get_data(as_text=True), 'OK')
