@@ -10,9 +10,9 @@ from osgeo import ogr
 import pygeoprocessing
 import taskgraph
 
-from .. import validation
-from .. import utils
-from .. import MODEL_METADATA
+from . import validation
+from . import utils
+from . import MODEL_METADATA
 
 LOGGER = logging.getLogger(__name__)
 
