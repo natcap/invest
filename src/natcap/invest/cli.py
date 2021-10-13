@@ -389,7 +389,7 @@ def main(user_args=None):
     verbosity_group.add_argument(
         '--debug', dest='log_level', default=logging.ERROR,
         action='store_const', const=logging.DEBUG,
-        help='Enable debug logging. Alias for -vvvv')
+        help='Enable debug logging. Alias for -vvv')
 
     subparsers = parser.add_subparsers(dest='subcommand')
 
