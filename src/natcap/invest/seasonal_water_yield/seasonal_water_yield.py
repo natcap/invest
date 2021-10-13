@@ -245,7 +245,7 @@ ARGS_SPEC = {
                         "Values are the numbers 1-12 corresponding to each "
                         "month.")
                 },
-                "events": {
+                "alpha": {
                     "type": "number",
                     "units": u.none,
                     "about": "The alpha value for that month"
