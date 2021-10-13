@@ -29,6 +29,12 @@ class _MODELMETA:
 
 
 MODEL_METADATA = {
+    'annual_water_yield': _MODELMETA(
+        model_title='Annual Water Yield',
+        pyname='natcap.invest.annual_water_yield',
+        gui='annual_water_yield.AnnualWaterYield',
+        userguide='annual_water_yield.html',
+        aliases=('hwy',)),
     'carbon': _MODELMETA(
         model_title='Carbon Storage and Sequestration',
         pyname='natcap.invest.carbon',
@@ -99,7 +105,7 @@ MODEL_METADATA = {
         model_title='GLOBIO',
         pyname='natcap.invest.globio',
         gui='globio.GLOBIO',
-        userguide='../documentation/globio.html',
+        userguide='globio.html',
         aliases=()),
     'habitat_quality': _MODELMETA(
         model_title='Habitat Quality',
@@ -113,12 +119,6 @@ MODEL_METADATA = {
         gui='hra.HabitatRiskAssessment',
         userguide='habitat_risk_assessment.html',
         aliases=('hra',)),
-    'hydropower_water_yield': _MODELMETA(
-        model_title='Annual Water Yield',
-        pyname='natcap.invest.hydropower.hydropower_water_yield',
-        gui='hydropower.HydropowerWaterYield',
-        userguide='reservoirhydropowerproduction.html',
-        aliases=('hwy',)),
     'ndr': _MODELMETA(
         model_title='Nutrient Delivery Ratio',
         pyname='natcap.invest.ndr.ndr',
@@ -167,17 +167,17 @@ MODEL_METADATA = {
         gui='seasonal_water_yield.SeasonalWaterYield',
         userguide='seasonal_water_yield.html',
         aliases=('swy',)),
-    'wind_energy': _MODELMETA(
-        model_title='Wind Energy Production',
-        pyname='natcap.invest.wind_energy',
-        gui='wind_energy.WindEnergy',
-        userguide='wind_energy.html',
-        aliases=()),
     'wave_energy': _MODELMETA(
         model_title='Wave Energy Production',
         pyname='natcap.invest.wave_energy',
         gui='wave_energy.WaveEnergy',
         userguide='wave_energy.html',
+        aliases=()),
+    'wind_energy': _MODELMETA(
+        model_title='Wind Energy Production',
+        pyname='natcap.invest.wind_energy',
+        gui='wind_energy.WindEnergy',
+        userguide='wind_energy.html',
         aliases=()),
     'urban_flood_risk_mitigation': _MODELMETA(
         model_title='Urban Flood Risk Mitigation',
