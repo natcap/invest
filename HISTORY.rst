@@ -34,9 +34,13 @@
 
 .. :changelog:
 
-..
-  Unreleased Changes
-  ------------------
+
+Unreleased Changes
+------------------
+* Seasonal Water Yield
+    * Fixed a bug in validation where providing the monthly alpha table would
+      cause a "Spatial file <monthly alpha table> has no projection" error.
+      The montly alpha table was mistakenly being validated as a spatial file.
 
 Unreleased Changes (3.10)
 -------------------------
