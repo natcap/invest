@@ -39,6 +39,10 @@ Unreleased Changes
 * General:
     * Update and expand on the instructions in the API docs for installing
       the ``natcap.invest`` package.
+* Seasonal Water Yield
+    * Fixed a bug in validation where providing the monthly alpha table would
+      cause a "Spatial file <monthly alpha table> has no projection" error.
+      The montly alpha table was mistakenly being validated as a spatial file.
 
 3.9.1 (2021-09-22)
 ------------------
