@@ -1148,3 +1148,39 @@ class SWYValidationTests(unittest.TestCase):
         expected_missing_keys.difference_update(
             {'monthly_alpha', 'alpha_m'})
         self.assertEqual(invalid_keys, expected_missing_keys)
+
+    def test_all_inputs_valid(self):
+        """SWY Validate: assert valid inputs have no validation errors."""
+        from natcap.invest.seasonal_water_yield import seasonal_water_yield
+        args = SeasonalWaterYieldRegressionTests.generate_base_args(
+            self.workspace_dir)
+        args.update({
+            'user_defined_climate_zones': False,
+            'user_defined_local_recharge': False,
+            'monthly_alpha': False})
+
+        # first test with none of the optional params
+        validation_errors = seasonal_water_yield.validate(args)
+        self.assertEqual(validation_errors, [])
+
+        cz_csv_path = os.path.join(self.workspace_dir, 'cz.csv')
+        make_climate_zone_csv(cz_csv_path)
+        cz_ras_path = os.path.join(args['workspace_dir'], 'dem.tif')
+        make_gradient_raster(cz_ras_path)
+        args['climate_zone_raster_path'] = cz_ras_path
+        args['climate_zone_table_path'] = cz_csv_path
+        args['user_defined_climate_zones'] = True
+
+        recharge_ras_path = os.path.join(self.workspace_dir, 'L.tif')
+        make_recharge_raster(recharge_ras_path)
+        args['l_path'] = recharge_ras_path
+        args['user_defined_local_recharge'] = True
+
+        alpha_csv_path = os.path.join(self.workspace_dir, 'monthly_alpha.csv')
+        make_alpha_csv(alpha_csv_path)
+        args['monthly_alpha_path'] = alpha_csv_path
+        args['monthly_alpha'] = True
+
+        # test with all of the optional params
+        validation_errors = seasonal_water_yield.validate(args)
+        self.assertEqual(validation_errors, [])
