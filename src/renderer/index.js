@@ -8,14 +8,14 @@ import { ipcMainChannels } from '../main/ipcMainChannels';
 const logger = window.Workbench.getLogger(__filename.split('/').slice(-1)[0]);
 
 // Create a right-click menu
-// TODO: Not sure if Inspect Element should be available in production
-// very useful in dev though.
 let rightClickPosition = null;
-window.addEventListener('contextmenu', (e) => {
-  e.preventDefault();
-  rightClickPosition = { x: e.x, y: e.y };
-  ipcRenderer.send(ipcMainChannels.SHOW_CONTEXT_MENU, rightClickPosition);
-});
+if (window.Workbench.isDevMode) {
+  window.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    rightClickPosition = { x: e.x, y: e.y };
+    ipcRenderer.send(ipcMainChannels.SHOW_CONTEXT_MENU, rightClickPosition);
+  });
+}
 
 function render(isFirstRun) {
   ReactDom.render(
