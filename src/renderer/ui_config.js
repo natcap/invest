@@ -36,6 +36,15 @@ function isNotSufficient(argkey, state) {
 }
 
 const uiSpec = {
+  annual_water_yield: {
+    order: [
+      ["workspace_dir", "results_suffix"],
+      ["precipitation_path", "eto_path", "depth_to_root_rest_layer_path", "pawc_path"],
+      ["lulc_path", "biophysical_table_path", "seasonality_constant"],
+      ["watersheds_path", "sub_watersheds_path"],
+      ["demand_table_path", "valuation_table_path"]
+    ]
+  },
   carbon: {
     order: [
       ["workspace_dir", "results_suffix"],
@@ -226,15 +235,6 @@ const uiSpec = {
       ["risk_eq", "decay_eq"],
       ["aoi_vector_path"],
       ["visualize_outputs"]
-    ]
-  },
-  hydropower_water_yield: {
-    order: [
-      ["workspace_dir", "results_suffix"],
-      ["precipitation_path", "eto_path", "depth_to_root_rest_layer_path", "pawc_path"],
-      ["lulc_path", "biophysical_table_path", "seasonality_constant"],
-      ["watersheds_path", "sub_watersheds_path"],
-      ["demand_table_path", "valuation_table_path"]
     ]
   },
   ndr: {
