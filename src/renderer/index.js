@@ -9,13 +9,11 @@ const logger = window.Workbench.getLogger(__filename.split('/').slice(-1)[0]);
 
 // Create a right-click menu
 let rightClickPosition = null;
-if (window.Workbench.isDevMode) {
-  window.addEventListener('contextmenu', (e) => {
-    e.preventDefault();
-    rightClickPosition = { x: e.x, y: e.y };
-    ipcRenderer.send(ipcMainChannels.SHOW_CONTEXT_MENU, rightClickPosition);
-  });
-}
+window.addEventListener('contextmenu', (e) => {
+  e.preventDefault();
+  rightClickPosition = { x: e.x, y: e.y };
+  ipcRenderer.send(ipcMainChannels.SHOW_CONTEXT_MENU, rightClickPosition);
+});
 
 function render(isFirstRun) {
   ReactDom.render(
