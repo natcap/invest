@@ -28,4 +28,4 @@ if platform.system() == 'Windows':
     # https://github.com/OSGeo/gdal/commit/6c8c66e41928b54f341336fa66982029d5bb9745
     # has some helpful information about the intent of the change in how GDAL
     # imports its DLLs.
-    os.add_dll_directory(sys._MEIPASS)
+    os.add_dll_directory(os.path.dirname(sys.executable))
