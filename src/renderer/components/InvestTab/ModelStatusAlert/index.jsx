@@ -12,7 +12,7 @@ export default function ModelStatusAlert(props) {
       onClick={props.handleOpenWorkspace}
       disabled={props.status === 'running'}
     >
-      Open Workspace
+      {_("Open Workspace")}
     </Button>
   );
 
@@ -21,7 +21,7 @@ export default function ModelStatusAlert(props) {
       variant="outline-dark"
       onClick={props.terminateInvestProcess}
     >
-      Cancel Run
+      {_("Cancel Run")}
     </Button>
   );
 
@@ -43,7 +43,7 @@ export default function ModelStatusAlert(props) {
   if (props.status === 'success') {
     return (
       <Alert variant="success">
-        Model Complete
+        {_("Model Complete")}
         {WorkspaceButton}
       </Alert>
     );

@@ -141,11 +141,13 @@ export default class SettingsModal extends React.Component {
 
         <Modal show={this.state.show} onHide={this.handleClose}>
           <Modal.Header>
-            <Modal.Title>InVEST Settings</Modal.Title>
+            <Modal.Title>{_("InVEST Settings")}</Modal.Title>
           </Modal.Header>
           <Modal.Body>
             <Form.Group as={Row}>
-              <Form.Label column sm="8" htmlFor="logging-select">Logging threshold</Form.Label>
+              <Form.Label column sm="8" htmlFor="logging-select">
+                {_("Logging threshold")}
+              </Form.Label>
               <Col sm="4">
                 <Form.Control
                   id="logging-select"
@@ -155,14 +157,14 @@ export default class SettingsModal extends React.Component {
                   onChange={this.handleChange}
                 >
                   {logLevelOptions.map(opt =>
-                    <option value={opt} key={opt}>{opt}</option>
+                    <option value={opt} key={opt}>{_(opt)}</option>
                   )}
                 </Form.Control>
               </Col>
             </Form.Group>
             <Form.Group as={Row}>
               <Form.Label column sm="8" htmlFor="nworkers-text">
-                Taskgraph n_workers parameter
+                {_("Taskgraph n_workers parameter")}
                 <br />
                 (must be an integer &gt;= -1)
               </Form.Label>
@@ -178,7 +180,7 @@ export default class SettingsModal extends React.Component {
               </Col>
             </Form.Group>
             <Form.Group as={Row}>
-              <Form.Label column sm="8" htmlFor="logging-select">Language</Form.Label>
+              <Form.Label column sm="8" htmlFor="logging-select">{_("Language")}</Form.Label>
               <Col sm="4">
                 <Form.Control
                   id="language-select"
@@ -198,7 +200,7 @@ export default class SettingsModal extends React.Component {
             </Form.Group>
             <Form.Group as={Row}>
               <Form.Label column sm="8">
-                Reset to Defaults
+                {_("Reset to Defaults")}
               </Form.Label>
               <Col sm="4">
                 <Button
@@ -207,7 +209,7 @@ export default class SettingsModal extends React.Component {
                   type="button"
                   className="float-right"
                 >
-                  Reset
+                  {_("Reset")}
                 </Button>
               </Col>
             </Form.Group>
@@ -216,14 +218,14 @@ export default class SettingsModal extends React.Component {
               variant="primary"
               onClick={this.switchToDownloadModal}
             >
-              Download Sample Data
+              {_("Download Sample Data")}
             </Button>
             <hr />
             <Form.Group as={Row}>
               <Form.Label column sm="8">
-                Clear Recent Jobs Shortcuts
+                {_("Clear Recent Jobs Shortcuts")}
                 <br />
-                (no invest workspaces will be deleted)
+                {_("(no InVEST workspaces will be deleted)")}
               </Form.Label>
               <Col sm="4">
                 <Button
@@ -231,14 +233,14 @@ export default class SettingsModal extends React.Component {
                   onClick={this.props.clearJobsStorage}
                   className="float-right"
                 >
-                  Clear
+                  {_("Clear")}
                 </Button>
               </Col>
             </Form.Group>
           </Modal.Body>
           <Modal.Footer>
             <Button variant="secondary" onClick={this.handleClose}>
-              Cancel
+              {_("Cancel")}
             </Button>
             <Button
               variant="primary"
@@ -246,7 +248,7 @@ export default class SettingsModal extends React.Component {
               type="submit"
               disabled={!nWorkersIsValid}
             >
-              Save Changes
+              {_("Save Changes")}
             </Button>
           </Modal.Footer>
         </Modal>

@@ -225,7 +225,7 @@ export default class SetupTab extends React.Component {
       this.batchUpdateArgs(datastack.args);
     } else {
       alert(
-        `Datastack/Logfile for ${datastack.model_human_name} does not match this model.`
+        _(`Datastack/Logfile for ${datastack.model_human_name} does not match this model.`)
       );
     }
   }
@@ -363,7 +363,7 @@ export default class SetupTab extends React.Component {
         executeClicked
           ? (
             <span>
-              Running
+              {_("Running")}
               <Spinner
                 animation="border"
                 size="sm"
@@ -372,7 +372,7 @@ export default class SetupTab extends React.Component {
               />
             </span>
           )
-          : <span>Run</span>
+          : <span>{_("Run")}</span>
       );
       return (
         <Container fluid>
@@ -394,7 +394,7 @@ export default class SetupTab extends React.Component {
               delay={{ show: 250, hide: 400 }}
               overlay={(
                 <Tooltip>
-                  Browse to a datastack (.json) or InVEST logfile (.txt)
+                  {_("Browse to a datastack (.json) or InVEST logfile (.txt)")}
                 </Tooltip>
               )}
             >
@@ -402,7 +402,7 @@ export default class SetupTab extends React.Component {
                 onClick={this.browseForDatastack}
                 variant="link"
               >
-                Load parameters from file
+                {_("Load parameters from file")}
               </Button>
             </OverlayTrigger>
             <SaveParametersButtons
@@ -422,7 +422,7 @@ export default class SetupTab extends React.Component {
     }
     // The SetupTab remains disabled in this route, so no need
     // to render anything here.
-    return (<div>No args to see here</div>);
+    return (<div>{_("No args to see here")}</div>);
   }
 }
 

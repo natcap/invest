@@ -291,7 +291,7 @@ export default class App extends React.Component {
                     onSelect={this.switchTabs}
                     eventKey="home"
                   >
-                    InVEST
+                    {_("InVEST")}
                   </Nav.Link>
                 </Navbar.Brand>
               </Col>

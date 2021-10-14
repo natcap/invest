@@ -257,7 +257,7 @@ export default class InvestTab extends React.Component {
             >
               <Nav.Item>
                 <Nav.Link eventKey="setup">
-                  Setup
+                  {_("Setup")}
                 </Nav.Link>
               </Nav.Item>
               <div
@@ -266,7 +266,7 @@ export default class InvestTab extends React.Component {
               />
               <Nav.Item>
                 <Nav.Link eventKey="log" disabled={logDisabled}>
-                  Log
+                  {_("Log")}
                 </Nav.Link>
               </Nav.Item>
             </Nav>

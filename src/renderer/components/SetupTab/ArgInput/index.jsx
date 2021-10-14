@@ -24,7 +24,7 @@ import Modal from 'react-bootstrap/Modal';
  * @returns {string} - the filtered and formatted part of the message
  */
 function filterSpatialOverlapFeedback(message, filepath) {
-  const newPrefix = 'Bounding box does not intersect at least one other:';
+  const newPrefix = {_('Bounding box does not intersect at least one other:')};
   const bbox = message.split(`${filepath}:`).pop().split('|')[0];
   const bboxFormatted = bbox.split(' ').map(
     (str) => str.padEnd(22, ' ')
@@ -133,16 +133,16 @@ export default class ArgInput extends React.PureComponent {
       let placeholderText;
       switch (argSpec.type) {
         case 'freestyle_string':
-          placeholderText = 'text';
+          placeholderText = {_('text')};
           break;
         case 'percent':
-          placeholderText = 'percent: a number from 0 - 100';
+          placeholderText = {_('percent: a number from 0 - 100')};
           break;
         case 'ratio':
-          placeholderText = 'ratio: a decimal from 0 - 1';
+          placeholderText = {_('ratio: a decimal from 0 - 1')};
           break;
         default:
-          placeholderText = argSpec.type;
+          placeholderText = {_(argSpec.type)};
       }
 
       Input = (
@@ -191,7 +191,7 @@ export default class ArgInput extends React.PureComponent {
                           onClick={selectFile}
                           disabled={!enabled}
                         >
-                          Browse
+                          {_("Browse")}
                         </Button>
                       </InputGroup.Append>
                     )

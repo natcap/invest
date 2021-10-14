@@ -153,13 +153,13 @@ class RecentInvestJobs extends React.PureComponent {
           {recentButtons.length
             ? (
               <h4 className="d-inline-block">
-                Recent runs:
+                {_("Recent runs:")}
               </h4>
             )
             : (
               <div className="d-inline-block">
-                Try the <b>Open</b> button to setup a model from a sample 
-                datastack file (.json) or from an InVEST model's logfile (.txt)
+                {_("Try the <b>Open</b> button to setup a model from a sample "
+                "datastack file (.json) or from an InVEST model's logfile (.txt)")}
               </div>
             )}
           <OpenButton

@@ -60,10 +60,10 @@ export default function ResourcesTab(props) {
   return (
     <React.Fragment>
       <a href={userGuideURL} onClick={handleClick}>
-        {"User's Guide"}
+        {_("User's Guide")}
       </a>
       <a href={forumURL} onClick={handleClick}>
-        Frequently Asked Questions
+        {_("Frequently Asked Questions")}
       </a>
     </React.Fragment>
   );

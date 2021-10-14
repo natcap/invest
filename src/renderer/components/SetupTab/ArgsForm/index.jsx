@@ -41,7 +41,7 @@ export default class ArgsForm extends React.Component {
 
     const fileList = event.dataTransfer.files;
     if (fileList.length !== 1) {
-      alert('Only drop one file at a time.');
+      alert({_('Only drop one file at a time.')});
       return;
     }
     this.props.loadParametersFromFile(fileList[0].path);
@@ -83,7 +83,7 @@ export default class ArgsForm extends React.Component {
     // TODO: could add more filters based on argType (e.g. only show .csv)
     const fileList = event.dataTransfer.files;
     if (fileList.length !== 1) {
-      alert('Only drop one file at a time.');
+      alert({_('Only drop one file at a time.')});
     } else if (fileList.length === 1) {
       this.props.updateArgValues(name, fileList[0].path);
     } else {
