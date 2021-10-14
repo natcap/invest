@@ -211,7 +211,7 @@ test('Run a real invest model', async () => {
   expect(await findByText(sidebar, 'Run Canceled'));
   expect(await findByText(sidebar, 'Open Workspace'));
   await page.screenshot({ path: `${SCREENSHOT_PREFIX}6-run-canceled.png` });
-}, 120000); // >2x the sum of all the max timeouts within this test
+}, 240000); // >2x the sum of all the max timeouts within this test
 
 // Test for duplicate application launch.
 // We have the binary path, so now let's launch a new subprocess with the same binary

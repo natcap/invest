@@ -1,5 +1,4 @@
 import path from 'path';
-import os from 'os';
 
 import {
   app,
@@ -29,7 +28,7 @@ import { menuTemplate } from './menubar';
 import ELECTRON_DEV_MODE from './isDevMode';
 import { getLogger } from '../logger';
 import pkg from '../../package.json';
-console.log(ELECTRON_DEV_MODE)
+
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 process.env.PORT = '56789';
 
