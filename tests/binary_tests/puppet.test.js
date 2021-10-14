@@ -92,7 +92,6 @@ beforeAll(() => {
     }
   );
   ELECTRON_PROCESS.stderr.on('data', (data) => {
-    console.log('error from electron process spawn:');
     console.log(`${data}`);
   });
   const stdOutCallback = async (data) => {
@@ -104,7 +103,6 @@ beforeAll(() => {
           defaultViewport: null,
         });
       } catch (e) {
-        console.log('error connecting with puppeteer:');
         console.log(e);
       }
       ELECTRON_PROCESS.stdout.removeListener('data', stdOutCallback);
@@ -139,6 +137,8 @@ afterAll(async () => {
 
 test('Run a real invest model', async () => {
   const { findByText, findByLabelText, findByRole } = queries;
+  // On GHA MacOS, we seem to have to wait a long time for the browser
+  // to be ready. Maybe related to https://github.com/natcap/invest-workbench/issues/158
   await waitFor(() => {
     expect(BROWSER && BROWSER.isConnected()).toBeTruthy();
   }, { timeout: 60000 });
