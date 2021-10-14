@@ -76,9 +76,6 @@ export const createWindow = async () => {
       contextIsolation: false,
       nodeIntegration: true,
       preload: path.join(__dirname, '..', 'preload.js'),
-      additionalArguments: [
-        ELECTRON_DEV_MODE ? '--dev' : 'packaged'
-      ],
       defaultEncoding: 'UTF-8',
     },
   });
