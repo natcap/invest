@@ -138,7 +138,7 @@ afterAll(async () => {
 test('Run a real invest model', async () => {
   const { findByText, findByLabelText, findByRole } = queries;
   await waitFor(() => {
-    expect(BROWSER.isConnected()).toBeTruthy();
+    expect(BROWSER && BROWSER.isConnected()).toBeTruthy();
   }, { timeout: 30000 });
   // find the mainWindow's index.html, not the splashScreen's splash.html
   const target = await BROWSER.waitForTarget(
