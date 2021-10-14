@@ -6,7 +6,6 @@ const { getLogger } = require('./logger');
 
 function preload() {
   window.Workbench = {
-    isDevMode: !!process.defaultApp,
     getLogger: getLogger,
   };
 }
