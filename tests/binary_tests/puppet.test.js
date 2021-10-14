@@ -92,6 +92,7 @@ beforeAll(() => {
     }
   );
   ELECTRON_PROCESS.stderr.on('data', (data) => {
+    console.log('error from electron process spawn:');
     console.log(`${data}`);
   });
   const stdOutCallback = async (data) => {
@@ -103,6 +104,7 @@ beforeAll(() => {
           defaultViewport: null,
         });
       } catch (e) {
+        console.log('error connecting with puppeteer:');
         console.log(e);
       }
       ELECTRON_PROCESS.stdout.removeListener('data', stdOutCallback);
@@ -139,7 +141,7 @@ test('Run a real invest model', async () => {
   const { findByText, findByLabelText, findByRole } = queries;
   await waitFor(() => {
     expect(BROWSER && BROWSER.isConnected()).toBeTruthy();
-  }, { timeout: 30000 });
+  }, { timeout: 60000 });
   // find the mainWindow's index.html, not the splashScreen's splash.html
   const target = await BROWSER.waitForTarget(
     (target) => target.url().endsWith('index.html')
