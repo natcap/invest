@@ -29,3 +29,5 @@ if platform.system() == 'Windows':
     # has some helpful information about the intent of the change in how GDAL
     # imports its DLLs.
     os.add_dll_directory(os.path.dirname(sys.executable))
+    os.add_dll_directory(sys._MEIPASS)
+    os.add_dll_directory(os.getcwd())
