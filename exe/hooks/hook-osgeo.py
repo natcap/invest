@@ -15,5 +15,4 @@ if is_win:
     binaries = collect_dynamic_libs('osgeo', 'osgeo')
     pkg_base, pkg_dir = get_package_paths('osgeo')
     for pyd_file in glob.glob(os.path.join(pkg_dir, '*.pyd')):
-        binaries.append(
-            (pyd_file, os.path.join('osgeo', os.path.basename(pyd_file))))
+        binaries.append((pyd_file, 'osgeo'))
