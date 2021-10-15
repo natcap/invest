@@ -19,13 +19,3 @@ if platform.system() == 'Darwin':
     # sys._MEIPASS is the path to where the pyinstaller entrypoint bundle
     # lives.  See the pyinstaller docs for more details.
     os.environ['SPATIALINDEX_C_LIBRARY'] = sys._MEIPASS
-
-if platform.system() == 'Windows':
-    # On Windows, with Python >= 3.8, DLLs are no longer imported from the PATH.
-    # This is good for security, but it also means we need to be sure that
-    # pyinstaller can find our .pyd files.
-    # The commit message at
-    # https://github.com/OSGeo/gdal/commit/6c8c66e41928b54f341336fa66982029d5bb9745
-    # has some helpful information about the intent of the change in how GDAL
-    # imports its DLLs.
-    os.add_dll_directory(os.path.dirname(sys.executable))
