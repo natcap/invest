@@ -30,4 +30,3 @@ if platform.system() == 'Windows':
     # imports its DLLs.
     os.add_dll_directory(os.path.dirname(sys.executable))
     os.add_dll_directory(sys._MEIPASS)
-    os.add_dll_directory(os.getcwd())

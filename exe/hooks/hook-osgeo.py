@@ -1,16 +1,12 @@
-from PyInstaller.compat import is_darwin
-from PyInstaller.utils.hooks import (collect_system_data_files,
-                                     collect_data_files,
-                                     collect_submodules)
-import os
+from PyInstaller.compat import is_win
+from PyInstaller.utils.hooks import collect_dynamic_libs
 
-if is_darwin:
-    # Assume we're using a local conda env to install gdal.
-    # glob for gcs.csv instead of passing the env name.
-    # import glob
-    # datas = collect_system_data_files(
-    # 	path=os.path.dirname(glob.glob('**/gcs.csv', recursive=True)[0]),
-    #     destdir='gdal-data')
-    pass
-else:
-    datas = collect_data_files('osgeo')
+if is_win:
+    # GDAL appears to need `_gdal.cp38-win_amd64.pyd` located specifically in
+    # `osgeo/_gdal....pyd` in order to work.  This is because the GDAL python
+    # __init__ script specifically looks in the `osgeo` directory in order to
+    # find it.  This is apparently only an issue on Windows.
+    #
+    # This will take the dynamic libraries in osgeo and put them into osgeo,
+    # relative to the binaries directory.
+    binaries = collect_dynamic_libs('osgeo', 'osgeo')
