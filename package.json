@@ -25,7 +25,7 @@
   "invest": {
     "bucket": "releases.naturalcapitalproject.org",
     "fork": "natcap",
-    "version": "3.9.1.post321+gf8ee8ff7",
+    "version": "3.9.1.post464+gb05dea2e",
     "target": {
       "macos": "mac_invest_binaries.zip",
       "windows": "windows_invest_binaries.zip"
@@ -63,7 +63,7 @@
     "@testing-library/react": "^12.0.0",
     "@testing-library/user-event": "^12.8.3",
     "babel-eslint": "^10.1.0",
-    "electron": "^13.1.4",
+    "electron": "^15.1.1",
     "electron-builder": "^22.10.5",
     "electron-devtools-installer": "^3.2.0",
     "eslint": "^7.21.0",

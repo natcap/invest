@@ -9,15 +9,17 @@ import sanitizeHtml from 'sanitize-html';
 
 import { getLogger } from '../logger';
 import { ipcMainChannels } from './ipcMainChannels';
+import ELECTRON_DEV_MODE from './isDevMode';
+import investUsageLogger from './investUsageLogger';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
 // to translate to the invest CLI's verbosity flag:
 const LOGLEVELMAP = {
   DEBUG: '--debug',
-  INFO: '-vvv',
-  WARNING: '-vv',
-  ERROR: '-v',
+  INFO: '-vv',
+  WARNING: '-v',
+  ERROR: '',
 };
 const TEMP_DIR = path.join(app.getPath('userData'), 'tmp');
 const HOSTNAME = 'http://localhost';
@@ -71,6 +73,13 @@ export function setupInvestRunHandlers(investExe) {
   ipcMain.on(ipcMainChannels.INVEST_RUN, async (
     event, modelRunName, pyModuleName, args, loggingLevel, jobID
   ) => {
+    let investRun;
+    let investStarted = false;
+    let investStdErr = '';
+    const logPatterns = { ...LOG_PATTERNS };
+    logPatterns['invest-log-primary'] = new RegExp(pyModuleName);
+    const usageLogger = investUsageLogger();
+
     // Write a temporary datastack json for passing to invest CLI
     try {
       fs.mkdirSync(TEMP_DIR);
@@ -104,8 +113,6 @@ export function setupInvestRunHandlers(investExe) {
       `-d "${datastackPath}"`,
     ];
     logger.debug(`set to run ${cmdArgs}`);
-    let investRun;
-    let investLogfile;
     if (process.platform !== 'win32') {
       // It's likely the exe path includes spaces because it's composed of the
       // app's Product Name, a user-facing name given to electron-builder.
@@ -116,23 +123,27 @@ export function setupInvestRunHandlers(investExe) {
         detached: true, // counter-intuitive, but w/ true: invest terminates when this shell terminates
       });
     } else { // windows
-      investRun = spawn(investExe, cmdArgs, {
+      investRun = spawn(`"${investExe}"`, cmdArgs, {
         shell: true,
       });
     }
 
-    const logPatterns = { ...LOG_PATTERNS };
-    logPatterns['invest-log-primary'] = new RegExp(pyModuleName);
     // There's no general way to know that a spawned process started,
     // so this logic to listen once on stdout seems like the way.
-    // We need to store the PID to enable killing the task.
-    // And need to parse the logfile path from stdout.
+    // We need to do the following only once after the process started:
+    // 1. store the PID to enable killing the task.
+    // 2. parse the logfile path from stdout.
+    // 3. log the model run for invest usage stats.
     const stdOutCallback = async (data) => {
-      if (!investLogfile) {
+      if (!investStarted) {
         if (`${data}`.match('Writing log messages to')) {
-          investLogfile = `${data}`.split(' ').pop().trim();
+          investStarted = true;
           runningJobs[jobID] = investRun.pid;
+          const investLogfile = `${data}`.split(' ').pop().trim();
           event.reply(`invest-logging-${jobID}`, investLogfile);
+          if (!ELECTRON_DEV_MODE && !process.env.PUPPETEER) {
+            usageLogger.start(pyModuleName, args);
+          }
         }
       }
       // python logging flushes with each message, so data here should
@@ -146,7 +157,7 @@ export function setupInvestRunHandlers(investExe) {
 
     const stdErrCallback = (data) => {
       logger.debug(`${data}`);
-      event.reply(`invest-stderr-${jobID}`, `${data}`);
+      investStdErr += `${data}`;
     };
     investRun.stderr.on('data', stdErrCallback);
 
@@ -156,7 +167,10 @@ export function setupInvestRunHandlers(investExe) {
 
     investRun.on('exit', (code) => {
       delete runningJobs[jobID];
-      event.reply(`invest-exit-${jobID}`, code);
+      event.reply(`invest-exit-${jobID}`, {
+        code: code,
+        stdErr: investStdErr,
+      });
       logger.debug(code);
       fs.unlink(datastackPath, (err) => {
         if (err) { logger.error(err); }
@@ -164,6 +178,9 @@ export function setupInvestRunHandlers(investExe) {
           if (e) { logger.error(e); }
         });
       });
+      if (!ELECTRON_DEV_MODE && !process.env.PUPPETEER) {
+        usageLogger.exit(investStdErr);
+      }
     });
   });
 }
