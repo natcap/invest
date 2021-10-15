@@ -39,6 +39,10 @@ Unreleased Changes
 * General:
     * Update and expand on the instructions in the API docs for installing
       the ``natcap.invest`` package.
+    * The InVEST binaries on Windows now no longer inspect the ``%PATH%``
+      when looking for GDAL DLLs.  This fixes an issue where InVEST would not
+      launch on computers where the ``%PATH%`` either contained other
+      environment variables or was malformed.
 * Seasonal Water Yield
     * Fixed a bug in validation where providing the monthly alpha table would
       cause a "Spatial file <monthly alpha table> has no projection" error.
