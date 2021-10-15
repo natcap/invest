@@ -37,6 +37,9 @@
 Unreleased Changes
 ------------------
 * General:
+    * Improving our binary build by including a data file needed for the
+      ``charset-normalizer`` python package.  This eliminates a warning that
+      was printed to stdout on Windows.
     * Update and expand on the instructions in the API docs for installing
       the ``natcap.invest`` package.
 * Seasonal Water Yield
