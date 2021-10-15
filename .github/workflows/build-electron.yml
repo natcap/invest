@@ -73,8 +73,9 @@ jobs:
         bash ./scripts/setup_macos_keychain.sh 
 
         # these env variables tell electron-builder to do code signing
+        echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> $GITHUB_ENV
         echo "CSC_KEYCHAIN=$KEYCHAIN_NAME" >> $GITHUB_ENV
-        echo "CSC_NAME='Stanford University'" >> $GITHUB_ENV
+        echo "CSC_NAME='3rd Party Mac Developer Installer: Stanford University (CQRZ4E7K9U)'" >> $GITHUB_ENV
         echo "CSC_KEY_PASSWORD=${{ secrets.STANFORD_CERT_KEY_PASS }}" >> $GITHUB_ENV
 
     - name: Code-signing setup for Windows
