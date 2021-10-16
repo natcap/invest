@@ -76,7 +76,7 @@ jobs:
         echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> $GITHUB_ENV
         echo "CSC_KEYCHAIN=$KEYCHAIN_NAME" >> $GITHUB_ENV
         echo "CSC_NAME='3rd Party Mac Developer Installer: Stanford University (CQRZ4E7K9U)'" >> $GITHUB_ENV
-        echo "CSC_KEY_PASSWORD=${{ secrets.STANFORD_CERT_KEY_PASS }}" >> $GITHUB_ENV
+        echo "CSC_KEY_PASSWORD=${{ secrets.CODESIGN_CERT_KEY_PASS }}" >> $GITHUB_ENV
 
     - name: Code-signing setup for Windows
       if: github.event_name != 'pull_request' && matrix.os == 'windows-latest'
