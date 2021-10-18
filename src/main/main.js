@@ -1,5 +1,6 @@
 import path from 'path';
 
+// eslint-disable-next-line import/no-extraneous-dependencies
 import {
   app,
   BrowserWindow,
@@ -7,7 +8,7 @@ import {
   nativeTheme,
   Menu,
   ipcMain,
-} from 'electron'; // eslint-disable-line import/no-extraneous-dependencies
+} from 'electron';
 
 import {
   createPythonFlaskProcess,
@@ -24,7 +25,7 @@ import {
   setupInvestLogReaderHandler
 } from './setupInvestHandlers';
 import { ipcMainChannels } from './ipcMainChannels';
-import { menuTemplate } from './menubar';
+import menuTemplate from './menubar';
 import ELECTRON_DEV_MODE from './isDevMode';
 import { getLogger } from '../logger';
 import pkg from '../../package.json';

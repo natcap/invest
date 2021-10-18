@@ -1,4 +1,4 @@
-import { Menu } from 'electron';
+import { Menu } from 'electron'; // eslint-disable-line import/no-extraneous-dependencies
 
 import ELECTRON_DEV_MODE from './isDevMode';
 

@@ -1,10 +1,10 @@
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow } from 'electron'; // eslint-disable-line import/no-extraneous-dependencies
 
 import setupContextMenu from './setupContextMenu';
 
 const isMac = process.platform === 'darwin';
 
-function menuTemplate(parentWindow, isDevMode) {
+export default function menuTemplate(parentWindow, isDevMode) {
   // Much of this template comes straight from the docs
   // https://www.electronjs.org/docs/api/menu
   const template = [
@@ -147,5 +147,3 @@ function openReportWindow(parentWindow, isDevMode) {
     child.webContents.openDevTools();
   }
 }
-
-module.exports.menuTemplate = menuTemplate;
