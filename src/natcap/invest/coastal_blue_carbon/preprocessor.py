@@ -10,14 +10,15 @@ import taskgraph
 
 from .. import utils
 from .. import validation
+from .. import MODEL_METADATA
 from . import coastal_blue_carbon
 
 
 LOGGER = logging.getLogger(__name__)
 ARGS_SPEC = {
-    "model_name": "Coastal Blue Carbon Preprocessor",
-    "module": __name__,
-    "userguide_html": "coastal_blue_carbon.html",
+    "model_name": MODEL_METADATA["coastal_blue_carbon_preprocessor"].model_title,
+    "pyname": MODEL_METADATA["coastal_blue_carbon_preprocessor"].pyname,
+    "userguide_html": MODEL_METADATA["coastal_blue_carbon_preprocessor"].userguide,
     "args": {
         "workspace_dir": validation.WORKSPACE_SPEC,
         "results_suffix": validation.SUFFIX_SPEC,

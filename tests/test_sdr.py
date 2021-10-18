@@ -204,8 +204,7 @@ class SDRTests(unittest.TestCase):
         from natcap.invest.sdr import sdr
 
         # use predefined directory so test can clean up files during teardown
-        args = SDRTests.generate_base_args(
-            'sdr_test_workspace')  # self.workspace_dir)
+        args = SDRTests.generate_base_args(self.workspace_dir)
         # make args explicit that this is a base run of SWY
 
         sdr.execute(args)

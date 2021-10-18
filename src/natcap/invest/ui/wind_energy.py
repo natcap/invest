@@ -1,17 +1,17 @@
 # coding=UTF-8
 
 from natcap.invest.ui import model, inputs
-from natcap.invest import wind_energy
+from natcap.invest import wind_energy, MODEL_METADATA
 
 
 class WindEnergy(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(
             self,
-            label='Wind Energy',
+            label=MODEL_METADATA['wind_energy'].model_title,
             target=wind_energy.execute,
             validator=wind_energy.validate,
-            localdoc='wind_energy.html'
+            localdoc=MODEL_METADATA['wind_energy'].userguide
         )
 
         self.wind_data = inputs.File(

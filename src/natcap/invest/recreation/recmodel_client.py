@@ -22,7 +22,6 @@ import shapely.prepared
 import pygeoprocessing
 import numpy
 import numpy.linalg
-import pandas
 import shapely.speedups
 import taskgraph
 
@@ -33,6 +32,7 @@ if shapely.speedups.available:
 # installed and we import the global version of it rather than the local
 from .. import utils
 from .. import validation
+from .. import MODEL_METADATA
 
 LOGGER = logging.getLogger(__name__)
 
@@ -44,9 +44,9 @@ Pyro4.config.SERIALIZER = 'marshal'
 
 
 ARGS_SPEC = {
-    "model_name": "Recreation Model",
-    "module": __name__,
-    "userguide_html": "recreation.html",
+    "model_name": MODEL_METADATA["recreation"].model_title,
+    "pyname": MODEL_METADATA["recreation"].pyname,
+    "userguide_html": MODEL_METADATA["recreation"].userguide,
     "args": {
         "workspace_dir": validation.WORKSPACE_SPEC,
         "results_suffix": validation.SUFFIX_SPEC,
