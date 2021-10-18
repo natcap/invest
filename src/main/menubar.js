@@ -1,4 +1,6 @@
-const { app, BrowserWindow } = require('electron');
+import { app, BrowserWindow } from 'electron';
+
+import setupContextMenu from './setupContextMenu';
 
 const isMac = process.platform === 'darwin';
 
@@ -117,6 +119,7 @@ function openAboutWindow(parentWindow, isDevMode) {
       minimumFontSize: 18,
     },
   });
+  setupContextMenu(child);
   child.setMenu(null);
   child.loadURL(`file://${__dirname}/../static/about.html`);
   if (isDevMode) {
@@ -137,6 +140,7 @@ function openReportWindow(parentWindow, isDevMode) {
       minimumFontSize: 18,
     },
   });
+  setupContextMenu(child);
   child.setMenu(null);
   child.loadURL(`file://${__dirname}/../static/report_a_problem.html`);
   if (isDevMode) {

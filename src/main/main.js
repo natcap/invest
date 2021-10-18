@@ -56,7 +56,6 @@ export const createWindow = async () => {
   createPythonFlaskProcess(investExe);
   logger.info(`Running invest-workbench version ${pkg.version}`);
   setupDialogs();
-  setupContextMenu();
   setupCheckFirstRun();
 
   // always use light mode regardless of the OS/browser setting
@@ -120,6 +119,7 @@ export const createWindow = async () => {
   setupDownloadHandlers(mainWindow);
   setupInvestRunHandlers(investExe);
   setupInvestLogReaderHandler();
+  setupContextMenu(mainWindow);
 };
 
 export function removeIpcMainListeners() {
