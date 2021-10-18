@@ -51,7 +51,7 @@ class EndpointFunctionTests(unittest.TestCase):
         response = test_client.get('/models')
         models_dict = json.loads(response.get_data(as_text=True))
         for model in models_dict.values():
-            self.assertEqual(set(model), {'internal_name', 'aliases'})
+            self.assertEqual(set(model), {'model_name', 'aliases'})
 
     def test_get_invest_spec(self):
         """UI server: get_invest_spec endpoint."""
@@ -60,7 +60,7 @@ class EndpointFunctionTests(unittest.TestCase):
         spec = json.loads(response.get_data(as_text=True))
         self.assertEqual(
             set(spec),
-            {'model_name', 'module', 'userguide_html',
+            {'model_name', 'pyname', 'userguide_html',
              'args_with_spatial_overlap', 'args'})
 
     def test_get_invest_validate(self):
@@ -71,7 +71,7 @@ class EndpointFunctionTests(unittest.TestCase):
             'workspace_dir': 'foo'
         }
         payload = {
-            'model_module': carbon.ARGS_SPEC['module'],
+            'model_module': carbon.ARGS_SPEC['pyname'],
             'args': json.dumps(args)
         }
         response = test_client.post('/validate', json=payload)
