@@ -19,8 +19,15 @@ const inputArray = [
   { role: 'selectall' },
 ];
 
+/** Setup listener for right-clicks on a given browser window.
+ *
+ * The content of the menu is constructed based on whether the target
+ * is an editable element or selected text. And whether we're in dev mode.
+ *
+ * @param {BrowserWindow} win - an instance of an electron BrowserWindow.
+ */
 export default function setupContextMenu(win) {
-  win.webContents.on('context-menu', (e, props) => {
+  win.webContents.on('context-menu', (event, props) => {
     const template = [];
     if (ELECTRON_DEV_MODE) {
       template.push({
