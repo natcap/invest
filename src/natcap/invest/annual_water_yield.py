@@ -18,6 +18,7 @@ LOGGER = logging.getLogger(__name__)
 
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["annual_water_yield"].model_title,
+    "pyname": MODEL_METADATA["annual_water_yield"].pyname,
     "userguide_html": MODEL_METADATA["annual_water_yield"].userguide,
     "args_with_spatial_overlap": {
         "spatial_keys": ["depth_to_root_rest_layer_path",

@@ -31,6 +31,7 @@ MONTH_ID_TO_LABEL = [
 
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["seasonal_water_yield"].model_title,
+    "pyname": MODEL_METADATA["seasonal_water_yield"].pyname,
     "userguide_html": MODEL_METADATA["seasonal_water_yield"].userguide,
     "args_with_spatial_overlap": {
         "spatial_keys": ["dem_raster_path", "lulc_raster_path",

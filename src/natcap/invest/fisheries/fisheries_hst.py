@@ -17,6 +17,7 @@ LOGGER = logging.getLogger(__name__)
 
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["fisheries_hst"].model_title,
+    "pyname": MODEL_METADATA["fisheries_hst"].pyname,
     "userguide_html": MODEL_METADATA["fisheries_hst"].userguide,
     "args": {
         "workspace_dir": validation.WORKSPACE_SPEC,

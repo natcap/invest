@@ -47,6 +47,7 @@ _INTERMEDIATE_BASE_FILES = {
 
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["scenic_quality"].model_title,
+    "pyname": MODEL_METADATA["scenic_quality"].pyname,
     "userguide_html": MODEL_METADATA["scenic_quality"].userguide,
     "args_with_spatial_overlap": {
         "spatial_keys": ["aoi_path", "structure_path", "dem_path"],

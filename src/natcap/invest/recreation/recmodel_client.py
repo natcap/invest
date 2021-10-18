@@ -45,6 +45,7 @@ Pyro4.config.SERIALIZER = 'marshal'
 
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["recreation"].model_title,
+    "pyname": MODEL_METADATA["recreation"].pyname,
     "userguide_html": MODEL_METADATA["recreation"].userguide,
     "args": {
         "workspace_dir": validation.WORKSPACE_SPEC,

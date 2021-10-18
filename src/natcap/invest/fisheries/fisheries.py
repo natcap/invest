@@ -16,6 +16,7 @@ LABEL = 'Fisheries'
 
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["fisheries"].model_title,
+    "pyname": MODEL_METADATA["fisheries"].pyname,
     "userguide_html": MODEL_METADATA["fisheries"].userguide,
     "args": {
         "workspace_dir": validation.WORKSPACE_SPEC,

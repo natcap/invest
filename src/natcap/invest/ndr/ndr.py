@@ -17,6 +17,7 @@ LOGGER = logging.getLogger(__name__)
 
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["ndr"].model_title,
+    "pyname": MODEL_METADATA["ndr"].pyname,
     "userguide_html": MODEL_METADATA["ndr"].userguide,
     "args_with_spatial_overlap": {
         "spatial_keys": ["dem_path", "lulc_path", "runoff_proxy_path",

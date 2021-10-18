@@ -21,6 +21,7 @@ LOGGER = logging.getLogger(__name__)
 
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["urban_flood_risk_mitigation"].model_title,
+    "pyname": MODEL_METADATA["urban_flood_risk_mitigation"].pyname,
     "userguide_html": MODEL_METADATA["urban_flood_risk_mitigation"].userguide,
     "args_with_spatial_overlap": {
         "spatial_keys": ["aoi_watersheds_path", "lulc_path",

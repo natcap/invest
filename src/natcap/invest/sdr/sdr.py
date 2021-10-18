@@ -24,6 +24,7 @@ LOGGER = logging.getLogger(__name__)
 
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["sdr"].model_title,
+    "pyname": MODEL_METADATA["sdr"].pyname,
     "userguide_html": MODEL_METADATA["sdr"].userguide,
     "args_with_spatial_overlap": {
         "spatial_keys": ["dem_path", "erosivity_path", "erodibility_path",

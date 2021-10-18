@@ -34,7 +34,7 @@ MODEL_METADATA = {
         pyname='natcap.invest.annual_water_yield',
         gui='annual_water_yield.AnnualWaterYield',
         userguide='annual_water_yield.html',
-        aliases=('hwy',)),
+        aliases=('hwy', 'awy')),
     'carbon': _MODELMETA(
         model_title='Carbon Storage and Sequestration',
         pyname='natcap.invest.carbon',

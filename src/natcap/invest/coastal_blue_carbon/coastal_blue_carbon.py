@@ -150,6 +150,7 @@ OUTPUT_DIR_NAME = 'output'
 
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["coastal_blue_carbon"].model_title,
+    "pyname": MODEL_METADATA["coastal_blue_carbon"].pyname,
     "userguide_html": MODEL_METADATA["coastal_blue_carbon"].userguide,
     "args": {
         "workspace_dir": validation.WORKSPACE_SPEC,

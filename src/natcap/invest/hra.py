@@ -66,6 +66,7 @@ _DEFAULT_GTIFF_CREATION_OPTIONS = (
 
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["habitat_risk_assessment"].model_title,
+    "pyname": MODEL_METADATA["habitat_risk_assessment"].pyname,
     "userguide_html": MODEL_METADATA["habitat_risk_assessment"].userguide,
     "args": {
         "workspace_dir": validation.WORKSPACE_SPEC,
