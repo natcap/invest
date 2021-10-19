@@ -10,13 +10,14 @@ import numpy
 
 from . import utils
 from . import validation
+from . import MODEL_METADATA
 
 LOGGER = logging.getLogger(__name__)
 
 ARGS_SPEC = {
-    "model_name": "RouteDEM",
-    "module": __name__,
-    "userguide_html": "routedem.html",
+    "model_name": MODEL_METADATA["routedem"].model_title,
+    "pyname": MODEL_METADATA["routedem"].pyname,
+    "userguide_html": MODEL_METADATA["routedem"].userguide,
     "args": {
         "workspace_dir": validation.WORKSPACE_SPEC,
         "results_suffix": validation.SUFFIX_SPEC,

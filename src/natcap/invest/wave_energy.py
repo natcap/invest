@@ -19,13 +19,14 @@ import taskgraph
 import pygeoprocessing
 from . import validation
 from . import utils
+from . import MODEL_METADATA
 
 LOGGER = logging.getLogger(__name__)
 
 ARGS_SPEC = {
-    "model_name": "Wave Energy",
-    "module": __name__,
-    "userguide_html": "wave_energy.html",
+    "model_name": MODEL_METADATA["wave_energy"].model_title,
+    "pyname": MODEL_METADATA["wave_energy"].pyname,
+    "userguide_html": MODEL_METADATA["wave_energy"].userguide,
     "args": {
         "workspace_dir": validation.WORKSPACE_SPEC,
         "results_suffix": validation.SUFFIX_SPEC,

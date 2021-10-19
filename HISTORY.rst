@@ -40,6 +40,15 @@ Unreleased Changes
     * Improving our binary build by including a data file needed for the
       ``charset-normalizer`` python package.  This eliminates a warning that
       was printed to stdout on Windows.
+    * The Annual Water Yield model name is now standardized throughout InVEST. 
+      This model has been known in different contexts as Hydropower, Hydropower 
+      Water Yield, or Annual Water Yield. This name was chosen to emphasize 
+      that the model can be used for purposes other than hydropower (though the 
+      valuation component is hydropower-specific) and to highlight its 
+      difference from the Seasonal Water Yield model. The corresponding python 
+      module, formerly ``natcap.invest.hydropower.hydropower_water_yield`, is 
+      now ``natcap.invest.annual_water_yield``.
+    * Minor changes to some other models' display names.
     * Update and expand on the instructions in the API docs for installing
       the ``natcap.invest`` package.
 * Seasonal Water Yield

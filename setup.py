@@ -52,7 +52,6 @@ setup(
         'natcap.invest.delineateit',
         'natcap.invest.finfish_aquaculture',
         'natcap.invest.fisheries',
-        'natcap.invest.hydropower',
         'natcap.invest.ui',
         'natcap.invest.ndr',
         'natcap.invest.sdr',

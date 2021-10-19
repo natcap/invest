@@ -6,14 +6,15 @@ import logging
 from natcap.invest.finfish_aquaculture import finfish_aquaculture_core
 from .. import utils
 from .. import validation
+from .. import MODEL_METADATA
 
 
 LOGGER = logging.getLogger(__name__)
 
 ARGS_SPEC = {
-    "module_name": "Finfish Aquaculture",
-    "module": __name__,
-    "userguide_html": "marine_fish.html",
+    "model_name": MODEL_METADATA["finfish_aquaculture"].model_title,
+    "pyname": MODEL_METADATA["finfish_aquaculture"].pyname,
+    "userguide_html": MODEL_METADATA["finfish_aquaculture"].userguide,
     "args": {
         "workspace_dir": validation.WORKSPACE_SPEC,
         "results_suffix": validation.SUFFIX_SPEC,

@@ -10,15 +10,15 @@ import pygeoprocessing.routing
 from osgeo import gdal, ogr
 import taskgraph
 
-from .. import utils, validation
+from .. import utils, validation, MODEL_METADATA
 from . import ndr_core
 
 LOGGER = logging.getLogger(__name__)
 
 ARGS_SPEC = {
-    "model_name": "Nutrient Delivery Ratio Model (NDR)",
-    "module": __name__,
-    "userguide_html": "ndr.html",
+    "model_name": MODEL_METADATA["ndr"].model_title,
+    "pyname": MODEL_METADATA["ndr"].pyname,
+    "userguide_html": MODEL_METADATA["ndr"].userguide,
     "args_with_spatial_overlap": {
         "spatial_keys": ["dem_path", "lulc_path", "runoff_proxy_path",
                          "watersheds_path"],

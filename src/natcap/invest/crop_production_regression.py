@@ -11,14 +11,15 @@ import taskgraph
 
 from . import utils
 from . import validation
+from . import MODEL_METADATA
 
 
 LOGGER = logging.getLogger(__name__)
 
 ARGS_SPEC = {
-    "model_name": "Crop Production Regression Model",
-    "module": __name__,
-    "userguide_html": "crop_production.html",
+    "model_name": MODEL_METADATA["crop_production_regression"].model_title,
+    "pyname": MODEL_METADATA["crop_production_regression"].pyname,
+    "userguide_html": MODEL_METADATA["crop_production_regression"].userguide,
     "args_with_spatial_overlap": {
         "spatial_keys": ["landcover_raster_path", "aggregate_polygon_path"],
         "different_projections_ok": True,
