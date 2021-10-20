@@ -37,6 +37,9 @@
 Unreleased Changes
 ------------------
 * General:
+    * Improving our binary build by including a data file needed for the
+      ``charset-normalizer`` python package.  This eliminates a warning that
+      was printed to stdout on Windows.
     * The Annual Water Yield model name is now standardized throughout InVEST. 
       This model has been known in different contexts as Hydropower, Hydropower 
       Water Yield, or Annual Water Yield. This name was chosen to emphasize 
