@@ -75,7 +75,7 @@ jobs:
         # ls ~/Downloads
 
         # these env variables tell electron-builder to do code signing
-        echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> $GITHUB_ENV
+        # echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> $GITHUB_ENV
         echo "CSC_LINK=~/$P12_FILE_NAME" >> $GITHUB_ENV
         echo "CSC_KEY_PASSWORD=${{ secrets.CODESIGN_CERT_KEY_PASS }}" >> $GITHUB_ENV
 
@@ -85,7 +85,6 @@ jobs:
     - name: Code-signing setup for Windows
       if: github.event_name != 'pull_request' && matrix.os == 'windows-latest'
       env:
-        # P12_SOURCE_PATH: gs://stanford_cert//20220510Expiry-macOSInstallerDistributionCert.p12
         P12_FILE_NAME: codesign_cert.p12
         CLOUDSDK_PYTHON: ${{env.pythonLocation}}\python.exe
       run: |
