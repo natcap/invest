@@ -6,11 +6,11 @@ GIT_SAMPLE_DATA_REPO_REV    := 5284d217aff54f698950ff17336fcfd2cf7725db
 
 GIT_TEST_DATA_REPO          := https://bitbucket.org/natcap/invest-test-data.git
 GIT_TEST_DATA_REPO_PATH     := $(DATA_DIR)/invest-test-data
-GIT_TEST_DATA_REPO_REV      := 8be2d8cd8ff42aa709b7af3a35884798c34978c4
+GIT_TEST_DATA_REPO_REV      := 586a64b2b33a124d9197bd99c06c88b926807f70
 
-GIT_UG_REPO                  := https://github.com/natcap/invest.users-guide
-GIT_UG_REPO_PATH             := doc/users-guide
-GIT_UG_REPO_REV              := 4ae626c988a72523217aea679118903d8eb46287
+GIT_UG_REPO                 := https://github.com/natcap/invest.users-guide
+GIT_UG_REPO_PATH            := doc/users-guide
+GIT_UG_REPO_REV             := 4ae626c988a72523217aea679118903d8eb46287
 
 ENV = "./env"
 ifeq ($(OS),Windows_NT)
@@ -161,7 +161,7 @@ $(BUILD_DIR) $(DATA_DIR) $(DIST_DIR) $(DIST_DATA_DIR):
 	$(MKDIR) $@
 
 test: $(GIT_TEST_DATA_REPO_PATH)
-	$(TESTRUNNER) tests
+	$(TESTRUNNER) tests/test_crop_production.py
 
 test_ui: $(GIT_TEST_DATA_REPO_PATH)
 	$(TESTRUNNER) ui_tests
