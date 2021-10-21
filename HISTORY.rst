@@ -46,7 +46,7 @@ Unreleased Changes
       that the model can be used for purposes other than hydropower (though the 
       valuation component is hydropower-specific) and to highlight its 
       difference from the Seasonal Water Yield model. The corresponding python 
-      module, formerly ``natcap.invest.hydropower.hydropower_water_yield`, is 
+      module, formerly ``natcap.invest.hydropower.hydropower_water_yield``, is
       now ``natcap.invest.annual_water_yield``.
     * Minor changes to some other models' display names.
     * Update and expand on the instructions in the API docs for installing
@@ -55,6 +55,9 @@ Unreleased Changes
     * Fixed a bug in validation where providing the monthly alpha table would
       cause a "Spatial file <monthly alpha table> has no projection" error.
       The montly alpha table was mistakenly being validated as a spatial file.
+* Crop Production Regression
+    * Corrected a misspelled column name. The fertilization rate table column
+      must now be named ``phosphorus_rate``, not ``phosphorous_rate``.
 
 3.9.1 (2021-09-22)
 ------------------

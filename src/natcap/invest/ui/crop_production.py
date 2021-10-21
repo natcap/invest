@@ -152,7 +152,7 @@ class CropProductionRegression(model.InVESTModel):
             helptext=(
                 "A table that maps fertilization rates to crops in "
                 "the simulation.  Must include the headers "
-                "'crop_name', 'nitrogen_rate',  'phosphorous_rate', "
+                "'crop_name', 'nitrogen_rate',  'phosphorus_rate', "
                 "and 'potassium_rate'."),
             label='Fertilization Rate Table Path (csv)',
             validator=self.validator)

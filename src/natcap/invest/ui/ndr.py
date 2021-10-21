@@ -71,8 +71,8 @@ class Nutrient(model.InVESTModel):
         self.add_input(self.biophysical_table_path)
         self.calc_p = inputs.Checkbox(
             args_key='calc_p',
-            helptext='Select to calculate phosphorous export.',
-            label='Calculate phosphorous retention')
+            helptext='Select to calculate phosphorus export.',
+            label='Calculate phosphorus retention')
         self.add_input(self.calc_p)
         self.calc_n = inputs.Checkbox(
             args_key='calc_n',
@@ -107,7 +107,7 @@ class Nutrient(model.InVESTModel):
             args_key='subsurface_critical_length_p',
             helptext='',
             interactive=False,
-            label='Subsurface Critical Length (Phosphorous)',
+            label='Subsurface Critical Length (Phosphorus)',
             validator=self.validator)
         self.add_input(self.subsurface_critical_length_p)
         self.subsurface_eff_n = inputs.Text(
@@ -121,7 +121,7 @@ class Nutrient(model.InVESTModel):
             args_key='subsurface_eff_p',
             helptext='',
             interactive=False,
-            label='Subsurface Maximum Retention Efficiency (Phosphorous)',
+            label='Subsurface Maximum Retention Efficiency (Phosphorus)',
             validator=self.validator)
         self.add_input(self.subsurface_eff_p)
 
