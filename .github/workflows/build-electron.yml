@@ -60,15 +60,14 @@ jobs:
 
     - name: Code-signing setup for macOS
       if: github.event_name != 'pull_request' && matrix.os == 'macos-latest'
-      shell: bash
       env:
-        P12_FILE_PATH: ~/codesign_cert.p12
+        P12_FILE_NAME: codesign_cert.p12
         KEYCHAIN_NAME: codesign_keychain
         KEYCHAIN_PASS: ${{ secrets.MAC_KEYCHAIN_PASS }}
         CERT_KEY_PASS: ${{ secrets.CODESIGN_CERT_KEY_PASS }}
 
       run: |
-        gsutil cp gs://stanford_cert/20220510Expiry-macOSInstallerDistributionCert.p12 $P12_FILE_PATH
+        gsutil cp gs://stanford_cert/20220510Expiry-macOSInstallerDistributionCert.p12 ~/$P12_FILE_NAME
         ls ~/
 
         # bash ./scripts/setup_macos_keychain.sh
@@ -77,7 +76,7 @@ jobs:
 
         # these env variables tell electron-builder to do code signing
         echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> $GITHUB_ENV
-        echo "CSC_LINK=$P12_FILE_PATH" >> $GITHUB_ENV
+        echo "CSC_LINK=~/$P12_FILE_NAME" >> $GITHUB_ENV
         echo "CSC_KEY_PASSWORD=${{ secrets.CODESIGN_CERT_KEY_PASS }}" >> $GITHUB_ENV
 
         # echo "CSC_KEYCHAIN=$KEYCHAIN_NAME" >> $GITHUB_ENV
@@ -87,14 +86,14 @@ jobs:
       if: github.event_name != 'pull_request' && matrix.os == 'windows-latest'
       env:
         # P12_SOURCE_PATH: gs://stanford_cert//20220510Expiry-macOSInstallerDistributionCert.p12
-        P12_FILE_PATH: ~/codesign_cert.p12
+        P12_FILE_NAME: codesign_cert.p12
         CLOUDSDK_PYTHON: ${{env.pythonLocation}}\python.exe
       run: |
 
-        gsutil cp gs://stanford_cert/20220510Expiry-macOSInstallerDistributionCert.p12 $P12_FILE_PATH
+        gsutil cp gs://stanford_cert/20220510Expiry-macOSInstallerDistributionCert.p12 ~/$P12_FILE_NAME
 
         # all these variables are used by electron-builder
-        echo "CSC_LINK=$P12_FILE_PATH" >> $GITHUB_ENV
+        echo "CSC_LINK=~/$P12_FILE_NAME" >> $GITHUB_ENV
         echo "CSC_KEY_PASSWORD=${{ secrets.CODESIGN_CERT_KEY_PASS }}" >> $GITHUB_ENV
         echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> $GITHUB_ENV
 
