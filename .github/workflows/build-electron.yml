@@ -70,7 +70,11 @@ jobs:
       run: |
         gsutil cp gs://stanford_cert/20220510Expiry-macOSInstallerDistributionCert.p12 $P12_FILE_PATH
 
-        bash ./scripts/setup_macos_keychain.sh 
+        ls ~/Downloads
+
+        # bash ./scripts/setup_macos_keychain.sh
+
+        # ls ~/Downloads
 
         # these env variables tell electron-builder to do code signing
         echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> $GITHUB_ENV
@@ -97,7 +101,10 @@ jobs:
       env:
         GH_TOKEN: env.GITHUB_TOKEN
         DEBUG: electron-builder
-      run: yarn run dist
+      run: |
+        ls ~/Downloads
+
+        yarn run dist
 
     - name: Test electron app with puppeteer
       run: yarn run test-electron-app
