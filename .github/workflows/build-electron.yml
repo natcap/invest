@@ -4,7 +4,7 @@ on: [push, pull_request]
 
 defaults:
   run:
-    shell: bash -l {0}
+    shell: bash -l -x {0}
 
 jobs:
   build-and-release:
@@ -62,12 +62,13 @@ jobs:
       if: github.event_name != 'pull_request' && matrix.os == 'macos-latest'
       shell: bash
       env:
-        P12_FILE_PATH: ~/Downloads/codesign_cert.p12
+        P12_FILE_PATH: ~/codesign_cert.p12
         KEYCHAIN_NAME: codesign_keychain
         KEYCHAIN_PASS: ${{ secrets.MAC_KEYCHAIN_PASS }}
         CERT_KEY_PASS: ${{ secrets.CODESIGN_CERT_KEY_PASS }}
 
       run: |
+
         gsutil cp gs://stanford_cert/20220510Expiry-macOSInstallerDistributionCert.p12 $P12_FILE_PATH
 
         ls ~/Downloads
@@ -87,9 +88,10 @@ jobs:
     - name: Code-signing setup for Windows
       if: github.event_name != 'pull_request' && matrix.os == 'windows-latest'
       env:
-        P12_FILE: 20220510Expiry-macOSInstallerDistributionCert.p12
+        P12_FILE_PATH: ~/20220510Expiry-macOSInstallerDistributionCert.p12
         CLOUDSDK_PYTHON: ${{env.pythonLocation}}\python.exe
       run: |
+
         gsutil cp gs://stanford_cert/$P12_FILE ~/$P12_FILE
 
         # all these variables are used by electron-builder
