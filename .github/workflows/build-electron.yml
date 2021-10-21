@@ -68,10 +68,8 @@ jobs:
         CERT_KEY_PASS: ${{ secrets.CODESIGN_CERT_KEY_PASS }}
 
       run: |
-
         gsutil cp gs://stanford_cert/20220510Expiry-macOSInstallerDistributionCert.p12 $P12_FILE_PATH
-
-        ls ~/Downloads
+        ls ~/
 
         # bash ./scripts/setup_macos_keychain.sh
 
@@ -88,14 +86,15 @@ jobs:
     - name: Code-signing setup for Windows
       if: github.event_name != 'pull_request' && matrix.os == 'windows-latest'
       env:
-        P12_FILE_PATH: ~/20220510Expiry-macOSInstallerDistributionCert.p12
+        # P12_SOURCE_PATH: gs://stanford_cert//20220510Expiry-macOSInstallerDistributionCert.p12
+        P12_FILE_PATH: ~/codesign_cert.p12
         CLOUDSDK_PYTHON: ${{env.pythonLocation}}\python.exe
       run: |
 
-        gsutil cp gs://stanford_cert/$P12_FILE ~/$P12_FILE
+        gsutil cp gs://stanford_cert/20220510Expiry-macOSInstallerDistributionCert.p12 $P12_FILE_PATH
 
         # all these variables are used by electron-builder
-        echo "CSC_LINK=~/$P12_FILE" >> $GITHUB_ENV
+        echo "CSC_LINK=$P12_FILE_PATH" >> $GITHUB_ENV
         echo "CSC_KEY_PASSWORD=${{ secrets.CODESIGN_CERT_KEY_PASS }}" >> $GITHUB_ENV
         echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> $GITHUB_ENV
 
@@ -104,7 +103,7 @@ jobs:
         GH_TOKEN: env.GITHUB_TOKEN
         DEBUG: electron-builder
       run: |
-        ls ~/Downloads
+        ls ~/
 
         yarn run dist
 
