@@ -124,7 +124,7 @@ MAC_BINARIES_ZIP_FILE := "$(DIST_DIR)/InVEST-$(VERSION)-mac.zip"
 MAC_APPLICATION_BUNDLE := "$(BUILD_DIR)/mac_app_$(VERSION)/InVEST.app"
 
 
-.PHONY: fetch install binaries apidocs userguide windows_installer mac_dmg sampledata sampledata_single test test_ui clean help check python_packages jenkins purge mac_zipfile deploy codesign_mac signcode_windows $(GIT_SAMPLE_DATA_REPO_PATH) $(GIT_TEST_DATA_REPO_PATH) $(GIT_UG_REPO_REV)
+.PHONY: fetch install binaries apidocs userguide windows_installer mac_dmg sampledata sampledata_single test test_ui clean help check python_packages jenkins purge mac_zipfile deploy codesign_mac codesign_windows $(GIT_SAMPLE_DATA_REPO_PATH) $(GIT_TEST_DATA_REPO_PATH) $(GIT_UG_REPO_REV)
 
 # Very useful for debugging variables!
 # $ make print-FORKNAME, for example, would print the value of the variable $(FORKNAME)
@@ -149,8 +149,8 @@ help:
 	@echo "  python_packages   to build natcap.invest wheel and source distributions"
 	@echo "  windows_installer to build an NSIS installer for distribution"
 	@echo "  mac_dmg           to build a disk image for distribution"
-	@echo "  codesign_mac      to sign the mac disk image using the codesign tool"
-	@echo "  signcode_windows  to sign the windows installer using the SignCode tool"
+	@echo "  codesign_mac      to sign the mac disk image using the codesign utility"
+	@echo "  codesign_windows  to sign the windows installer using the SignTool utility"
 	@echo "  sampledata        to build sample data zipfiles"
 	@echo "  sampledata_single to build a single self-contained data zipfile.  Used for advanced NSIS install."
 	@echo "  test              to run pytest on the tests directory"
@@ -378,7 +378,7 @@ codesign_mac:
 	# relock the keychain (not sure if this is important?)
 	security lock-keychain '$(KEYCHAIN_NAME)'
 
-signcode_windows:
+codesign_windows:
 	$(GSUTIL) cp 'gs://stanford_cert/$(P12_FILE)' '$(BUILD_DIR)/$(P12_FILE)'
 	powershell.exe "& '$(SIGNTOOL)' sign /fd SHA256 /f '$(BUILD_DIR)\$(P12_FILE)' /p '$(CERT_KEY_PASS)' '$(BIN_TO_SIGN)'"
 	powershell.exe "& '$(SIGNTOOL)' timestamp /tr http://timestamp.sectigo.com /td SHA256 '$(BIN_TO_SIGN)'"
