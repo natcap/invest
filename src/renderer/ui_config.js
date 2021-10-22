@@ -345,18 +345,14 @@ const uiSpec = {
   stormwater: {
     order: [
       ['workspace_dir', 'results_suffix'],
-      [
-        'adjust_retention_ratios',
-        'aggregate_areas_path',
-        'biophysical_table',
-        'lulc_path',
-        'precipitation_path',
-        'replacement_cost',
-        'retention_radius',
-        'road_centerlines_path',
-        'soil_group_path',
-      ]
-    ]
+      ['lulc_path', 'soil_group_path', 'precipitation_path', 'biophysical_table'],
+      ['adjust_retention_ratios', 'retention_radius', 'road_centerlines_path'],
+      ['aggregate_areas_path', 'replacement_cost'],
+    ],
+    enabledFunctions: {
+      retention_radius: isSufficient.bind(null, 'adjust_retention_ratios'),
+      road_centerlines_path: isSufficient.bind(null, 'adjust_retention_ratios'),
+    }
   },
   urban_cooling_model: {
     order: [
