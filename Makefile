@@ -359,7 +359,6 @@ build/vcredist_x86.exe: | build
 P12_FILE := 20220510Expiry-macOSInstallerDistributionCert.p12
 KEYCHAIN_NAME := codesign_keychain
 codesign_mac:
-	set -x
 	# download the p12 certificate file from google cloud
 	$(GSUTIL) cp 'gs://stanford_cert/$(P12_FILE)' '$(BUILD_DIR)/$(P12_FILE)'
 	# create a new keychain (so that we can know what the password is)
