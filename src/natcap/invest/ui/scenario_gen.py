@@ -2,9 +2,8 @@
 import logging
 
 from natcap.invest.ui import model, inputs
-import natcap.invest.scenario_gen_proximity
+from natcap.invest import scenario_gen_proximity, MODEL_METADATA
 
-from osgeo import gdal
 
 LOGGER = logging.getLogger(__name__)
 
@@ -13,10 +12,10 @@ class ScenarioGenProximity(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(
             self,
-            label='Scenario Generator: Proximity Based',
-            target=natcap.invest.scenario_gen_proximity.execute,
-            validator=natcap.invest.scenario_gen_proximity.validate,
-            localdoc='scenario_gen_proximity.html')
+            label=MODEL_METADATA['scenario_gen_proximity'].model_title,
+            target=scenario_gen_proximity.execute,
+            validator=scenario_gen_proximity.validate,
+            localdoc=MODEL_METADATA['scenario_gen_proximity'].userguide)
 
         self.base_lulc_path = inputs.File(
             args_key='base_lulc_path',

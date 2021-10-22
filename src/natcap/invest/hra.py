@@ -18,6 +18,7 @@ from . import utils
 from . import spec_utils
 from .spec_utils import u
 from . import validation
+from . import MODEL_METADATA
 
 
 LOGGER = logging.getLogger('natcap.invest.hra')
@@ -66,9 +67,9 @@ _DEFAULT_GTIFF_CREATION_OPTIONS = (
     'BLOCKXSIZE=256', 'BLOCKYSIZE=256')
 
 ARGS_SPEC = {
-    "model_name": "Habitat Risk Assessment",
-    "module": __name__,
-    "userguide_html": "habitat_risk_assessment.html",
+    "model_name": MODEL_METADATA["habitat_risk_assessment"].model_title,
+    "pyname": MODEL_METADATA["habitat_risk_assessment"].pyname,
+    "userguide_html": MODEL_METADATA["habitat_risk_assessment"].userguide,
     "args": {
         "workspace_dir": spec_utils.WORKSPACE,
         "results_suffix": spec_utils.SUFFIX,

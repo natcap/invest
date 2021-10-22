@@ -2,16 +2,17 @@
 
 from natcap.invest.ui import model, inputs
 from natcap.invest.fisheries import fisheries, fisheries_hst
+from natcap.invest import MODEL_METADATA
 
 
 class Fisheries(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(
             self,
-            label='Fisheries',
+            label=MODEL_METADATA['fisheries'].model_title,
             target=fisheries.execute,
             validator=fisheries.validate,
-            localdoc='fisheries.html')
+            localdoc=MODEL_METADATA['fisheries'].userguide)
 
         self.alpha_only = inputs.Label(
             text=(
@@ -315,10 +316,10 @@ class FisheriesHST(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(
             self,
-            label='Fisheries Habitat Scenario Tool',
+            label=MODEL_METADATA['fisheries_hst'].model_title,
             target=fisheries_hst.execute,
             validator=fisheries_hst.validate,
-            localdoc='fisheries.html')
+            localdoc=MODEL_METADATA['fisheries_hst'].userguide)
 
         self.alpha_only = inputs.Label(
             text=(

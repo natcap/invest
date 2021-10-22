@@ -14,14 +14,15 @@ from .. import utils
 from .. import spec_utils
 from ..spec_utils import u
 from .. import validation
+from .. import MODEL_METADATA
 from . import ndr_core
 
 LOGGER = logging.getLogger(__name__)
 
 ARGS_SPEC = {
-    "model_name": "Nutrient Delivery Ratio Model (NDR)",
-    "module": __name__,
-    "userguide_html": "ndr.html",
+    "model_name": MODEL_METADATA["ndr"].model_title,
+    "pyname": MODEL_METADATA["ndr"].pyname,
+    "userguide_html": MODEL_METADATA["ndr"].userguide,
     "args_with_spatial_overlap": {
         "spatial_keys": ["dem_path", "lulc_path", "runoff_proxy_path",
                          "watersheds_path"],
@@ -116,8 +117,8 @@ ARGS_SPEC = {
         },
         "calc_p": {
             "type": "boolean",
-            "about": "Select to calculate phosphorous export.",
-            "name": "Calculate phosphorous retention"
+            "about": "Select to calculate phosphorus export.",
+            "name": "Calculate phosphorus retention"
         },
         "calc_n": {
             "type": "boolean",
@@ -165,7 +166,7 @@ ARGS_SPEC = {
             "type": "number",
             "units": u.meter,
             "required": "calc_p",
-            "name": "Subsurface Critical Length (Phosphorous)",
+            "name": "Subsurface Critical Length (Phosphorus)",
             "about": (
                 "The distance (traveled subsurface and downslope) after which "
                 "it is assumed that soil retains nutrient at its maximum "
@@ -188,7 +189,7 @@ ARGS_SPEC = {
         "subsurface_eff_p": {
             "type": "ratio",
             "required": "calc_p",
-            "name": "Subsurface Maximum Retention Efficiency (Phosphorous)",
+            "name": "Subsurface Maximum Retention Efficiency (Phosphorus)",
             "about": (
                 "The maximum nutrient retention efficiency that can be "
                 "reached through subsurface flow. This field characterizes "
@@ -282,7 +283,7 @@ def execute(args):
             If args['calc_n'] is True, must also contain the header
             'proportion_subsurface_n' field.
 
-        args['calc_p'] (boolean): if True, phosphorous is modeled,
+        args['calc_p'] (boolean): if True, phosphorus is modeled,
             additionally if True then biophysical table must have p fields in
             them
         args['calc_n'] (boolean): if True nitrogen will be modeled,
@@ -348,7 +349,7 @@ def execute(args):
         """
         # Make sure all the nutrient inputs are good
         if len(nutrients_to_process) == 0:
-            raise ValueError("Neither phosphorous nor nitrogen was selected"
+            raise ValueError("Neither phosphorus nor nitrogen was selected"
                              " to be processed.  Choose at least one.")
 
         # Build up a list that'll let us iterate through all the input tables
@@ -371,7 +372,7 @@ def execute(args):
                             "Missing header %s from %s" % (
                                 header, table_type))
 
-        # proportion_subsurface_n is a special case in which phosphorous does
+        # proportion_subsurface_n is a special case in which phosphorus does
         # not have an equivalent.
         if ('n' in nutrients_to_process and
                 'proportion_subsurface_n' not in lu_parameter_row):

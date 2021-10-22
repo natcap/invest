@@ -197,11 +197,11 @@ def _log_exit_status(session_id, status):
             str(exception))
 
 
-def _log_model(model_pyname, model_args, invest_interface, session_id=None):
+def _log_model(pyname, model_args, invest_interface, session_id=None):
     """Log information about a model run to a remote server.
 
     Args:
-        model_pyname (string): The string module name that identifies the model.
+        pyname (string): a python string of the package version.
         model_args (dict): the traditional InVEST argument dictionary.
         invest_interface (string): a string identifying the calling UI,
             e.g. `Qt` or 'Workbench'.
@@ -224,14 +224,14 @@ def _log_model(model_pyname, model_args, invest_interface, session_id=None):
         md5.update(json.dumps(data).encode('utf-8'))
         return md5.hexdigest()
 
-    args_spec = importlib.import_module(model_pyname).ARGS_SPEC
+    args_spec = importlib.import_module(pyname).ARGS_SPEC
 
     try:
         bounding_box_intersection, bounding_box_union = (
             _calculate_args_bounding_box(model_args, args_spec))
 
         payload = {
-            'model_name': model_pyname,
+            'model_name': pyname,
             'invest_release': natcap.invest.__version__,
             'invest_interface': invest_interface,
             'node_hash': _node_hash(),

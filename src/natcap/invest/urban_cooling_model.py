@@ -21,15 +21,16 @@ from . import utils
 from . import spec_utils
 from .spec_utils import u
 from . import validation
+from . import MODEL_METADATA
 
 LOGGER = logging.getLogger(__name__)
 TARGET_NODATA = -1
 _LOGGING_PERIOD = 5.0
 
 ARGS_SPEC = {
-    "model_name": "Urban Cooling Model",
-    'module': __name__,
-    "userguide_html": "urban_cooling_model.html",
+    "model_name": MODEL_METADATA["urban_cooling_model"].model_title,
+    "pyname": MODEL_METADATA["urban_cooling_model"].pyname,
+    "userguide_html": MODEL_METADATA["urban_cooling_model"].userguide,
     "args_with_spatial_overlap": {
         "spatial_keys": ["lulc_raster_path", "ref_eto_raster_path",
                          "aoi_vector_path", "building_vector_path"],
