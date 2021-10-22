@@ -356,9 +356,11 @@ $(MAC_BINARIES_ZIP_FILE): $(DIST_DIR) $(MAC_APPLICATION_BUNDLE) $(USERGUIDE_TARG
 build/vcredist_x86.exe: | build
 	powershell.exe -Command "Start-BitsTransfer -Source https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe -Destination build\vcredist_x86.exe"
 
-P12_FILE := 20220510Expiry-macOSInstallerDistributionCert.p12
+# P12_FILE := 20220510Expiry-macOSInstallerDistributionCert.p12
+P12_FILE := Stanford-natcap-code-signing-cert-expires-2024-01-26.p12
 KEYCHAIN_NAME := codesign_keychain
 codesign_mac:
+
 	# download the p12 certificate file from google cloud
 	$(GSUTIL) cp 'gs://stanford_cert/$(P12_FILE)' '$(BUILD_DIR)/$(P12_FILE)'
 	# create a new keychain (so that we can know what the password is)
@@ -376,7 +378,7 @@ codesign_mac:
 
 	security find-identity
 	# sign the dmg using certificate that's looked up by unique identifier 'Stanford'
-	codesign --timestamp --verbose --sign 'Stanford' $(MAC_DISK_IMAGE_FILE)
+	codesign --timestamp --verbose --sign Stanford $(MAC_DISK_IMAGE_FILE)
 	# relock the keychain (not sure if this is important?)
 	security lock-keychain '$(KEYCHAIN_NAME)'
 
