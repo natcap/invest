@@ -111,6 +111,10 @@ jobs:
         P12_FILE_NAME=codesign_cert.p12
         gsutil cp gs://stanford_cert/20220510Expiry-macOSInstallerDistributionCert.p12 ~/$P12_FILE_NAME
         ls ~/
+        # figure out the path to signtool.exe
+        SIGNTOOL_PATH=$(find 'C:\\Program Files (x86)\\Windows Kits\\10' -type f -name 'signtool.exe*' | head -n 1)
+        echo $SIGNTOOL_PATH
+        echo "SIGNTOOL_PATH=$SIGNTOOL_PATH" >> $GITHUB_ENV
 
     - name: Code signing part 2 (Windows)
       if: github.event_name != 'pull_request' && matrix.os == 'windows-latest'
@@ -120,8 +124,8 @@ jobs:
         BIN_TO_SIGN: dist\invest_*.exe
         P12_FILE_NAME: codesign_cert.p12
       run: |
-        signtool.exe sign /fd SHA256 /f "$HOME\$P12_FILE_NAME" /p "$CERT_KEY_PASS" $BIN_TO_SIGN
-        signtool.exe timestamp /tr http://timestamp.sectigo.com /td SHA256 $BIN_TO_SIGN
+        $SIGNTOOL_PATH sign /fd SHA256 /f "$HOME\$P12_FILE_NAME" /p "$CERT_KEY_PASS" $BIN_TO_SIGN
+        $SIGNTOOL_PATH timestamp /tr http://timestamp.sectigo.com /td SHA256 $BIN_TO_SIGN
 
 
     - name: Test electron app with puppeteer
