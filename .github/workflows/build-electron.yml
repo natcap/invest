@@ -94,13 +94,14 @@ jobs:
         # this is essential to avoid the UI password prompt
         security set-key-partition-list -S apple-tool:,apple: -s -k $KEYCHAIN_PASS $KEYCHAIN_NAME
 
+        echo "find identity:"
         security find-identity
 
-        # sign the dmg using certificate that's looked up by unique identifier 'Stanford'
-        codesign --timestamp --verbose --sign 'Stanford' $BIN_TO_SIGN
+        # # sign the dmg using certificate that's looked up by unique identifier 'Stanford'
+        # codesign --timestamp --verbose --sign 'Stanford' $BIN_TO_SIGN
 
-        # relock the keychain (not sure if this is important?)
-        security lock-keychain $KEYCHAIN_NAME
+        # # relock the keychain (not sure if this is important?)
+        # security lock-keychain $KEYCHAIN_NAME
 
     - name: Code signing (Windows)
       if: github.event_name != 'pull_request' && matrix.os == 'windows-latest'
@@ -119,8 +120,8 @@ jobs:
         BIN_TO_SIGN: dist\invest_*.exe
         P12_FILE_NAME: codesign_cert.p12
       run: |
-        signtool sign /fd SHA256 /f "$HOME\$P12_FILE_NAME" /p "$CERT_KEY_PASS" $BIN_TO_SIGN
-        signtool timestamp /tr http://timestamp.sectigo.com /td SHA256 $BIN_TO_SIGN
+        signtool.exe sign /fd SHA256 /f "$HOME\$P12_FILE_NAME" /p "$CERT_KEY_PASS" $BIN_TO_SIGN
+        signtool.exe timestamp /tr http://timestamp.sectigo.com /td SHA256 $BIN_TO_SIGN
 
 
     - name: Test electron app with puppeteer
