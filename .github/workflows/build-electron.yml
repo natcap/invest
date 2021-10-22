@@ -119,8 +119,8 @@ jobs:
         BIN_TO_SIGN: dist\invest_*.exe
         P12_FILE_NAME: codesign_cert.p12
       run: |
-        SignTool sign /fd SHA256 /f "$HOME\$P12_FILE_NAME" /p "$CERT_KEY_PASS" $BIN_TO_SIGN
-        SignTool timestamp /tr http://timestamp.sectigo.com /td SHA256 $BIN_TO_SIGN
+        signtool sign /fd SHA256 /f "$HOME\$P12_FILE_NAME" /p "$CERT_KEY_PASS" $BIN_TO_SIGN
+        signtool timestamp /tr http://timestamp.sectigo.com /td SHA256 $BIN_TO_SIGN
 
 
     - name: Test electron app with puppeteer
