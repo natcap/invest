@@ -109,7 +109,7 @@ jobs:
                 export CLOUDSDK_GSUTIL_PYTHON=$(which python)
 
                 # setup-gcloud adds 'gsutil' to PATH
-                make CERT_KEY_PASS=${{ secrets.STANFORD_CERT_KEY_PASS }} \
+                make CERT_KEY_PASS=${{ secrets.CODESIGN_CERT_KEY_PASS }} \
                         GSUTIL="gsutil" \
                         BIN_TO_SIGN="$INSTALLER_BINARY" \
                         SIGNTOOL="$SIGNTOOL_PATH" \
@@ -215,7 +215,7 @@ jobs:
               if: github.event_name != 'pull_request'
               shell: bash -l {0}
               env:
-                CERT_KEY_PASS: ${{ secrets.STANFORD_CERT_KEY_PASS }}
+                CERT_KEY_PASS: ${{ secrets.CODESIGN_CERT_KEY_PASS }}
                 KEYCHAIN_PASS: ${{ secrets.KEYCHAIN_PASS }}
               run: make -s codesign_mac
 
