@@ -359,6 +359,7 @@ build/vcredist_x86.exe: | build
 P12_FILE := 20220510Expiry-macOSInstallerDistributionCert.p12
 KEYCHAIN_NAME := codesign_keychain
 codesign_mac:
+	set -x
 	# download the p12 certificate file from google cloud
 	$(GSUTIL) cp 'gs://stanford_cert/$(P12_FILE)' '$(BUILD_DIR)/$(P12_FILE)'
 	# create a new keychain (so that we can know what the password is)
@@ -373,6 +374,8 @@ codesign_mac:
 	security import $(BUILD_DIR)/$(P12_FILE) -k '$(KEYCHAIN_NAME)' -P '$(CERT_KEY_PASS)' -T /usr/bin/codesign
 	# this is essential to avoid the UI password prompt
 	security set-key-partition-list -S apple-tool:,apple: -s -k '$(KEYCHAIN_PASS)' '$(KEYCHAIN_NAME)'
+
+	security find-identity
 	# sign the dmg using certificate that's looked up by unique identifier 'Stanford'
 	codesign --timestamp --verbose --sign 'Stanford' $(MAC_DISK_IMAGE_FILE)
 	# relock the keychain (not sure if this is important?)
