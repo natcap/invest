@@ -51,7 +51,6 @@ const config = {
     'build/**/*',
     'node_modules/**/*',
   ],
-  forceCodeSigning: true,
 };
 
 module.exports = config;
