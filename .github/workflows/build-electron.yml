@@ -94,8 +94,8 @@ jobs:
         # this is essential to avoid the UI password prompt
         security set-key-partition-list -S apple-tool:,apple: -s -k $KEYCHAIN_PASS $KEYCHAIN_NAME
 
-        # sign the dmg using certificate that's looked up by unique identifier 'Stanford Univeristy'
-        codesign --timestamp --verbose --sign 'Stanford University' $BIN_TO_SIGN
+        # sign the dmg using certificate that's looked up by unique identifier 'Stanford'
+        codesign --timestamp --verbose --sign 'Stanford' $BIN_TO_SIGN
 
         # relock the keychain (not sure if this is important?)
         security lock-keychain $KEYCHAIN_NAME
@@ -104,15 +104,21 @@ jobs:
       if: github.event_name != 'pull_request' && matrix.os == 'windows-latest'
       env:
         CLOUDSDK_PYTHON: ${{env.pythonLocation}}\python.exe
-        CERT_KEY_PASS: ${{ secrets.CODESIGN_CERT_KEY_PASS }}
-        BIN_TO_SIGN: dist\invest_*.exe
       run: |
         P12_FILE_NAME=codesign_cert.p12
         gsutil cp gs://stanford_cert/20220510Expiry-macOSInstallerDistributionCert.p12 ~/$P12_FILE_NAME
         ls ~/
 
-        pwsh -command ". 'SignTool sign /fd SHA256 /f "$HOME\$P12_FILE_NAME" /p $CERT_KEY_PASS $BIN_TO_SIGN'"
-        pwsh -command ". 'SignTool timestamp /tr http://timestamp.sectigo.com /td SHA256 $BIN_TO_SIGN'"
+    - name: Code signing part 2 (Windows)
+      if: github.event_name != 'pull_request' && matrix.os == 'windows-latest'
+      shell: pwsh
+      env:
+        CERT_KEY_PASS: ${{ secrets.CODESIGN_CERT_KEY_PASS }}
+        BIN_TO_SIGN: dist\invest_*.exe
+        P12_FILE_NAME: codesign_cert.p12
+      run: |
+        SignTool sign /fd SHA256 /f "$HOME\$P12_FILE_NAME" /p "$CERT_KEY_PASS" $BIN_TO_SIGN
+        SignTool timestamp /tr http://timestamp.sectigo.com /td SHA256 $BIN_TO_SIGN
 
 
     - name: Test electron app with puppeteer
