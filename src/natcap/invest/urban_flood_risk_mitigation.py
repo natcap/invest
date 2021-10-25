@@ -782,7 +782,7 @@ def _lu_to_cn_op(
         lucodes = numpy.unique(valid_lucodes)
         missing_codes = lucodes[lucodes >= lucode_to_cn_table.shape[0]]
         raise ValueError(
-            f'The biophysical table is missing a row for lucode(s)'
+            f'The biophysical table is missing a row for lucode(s) '
             f'{missing_codes.tolist()}')
 
     # Even without an IndexError, still must guard against
@@ -792,7 +792,7 @@ def _lu_to_cn_op(
         empty_rows = numpy.where(lucode_to_cn_table.sum(1) == 0)
         missing_codes = numpy.intersect1d(valid_lucodes, empty_rows)
         raise ValueError(
-            f'The biophysical table is missing a row for lucode(s)'
+            f'The biophysical table is missing a row for lucode(s) '
             f'{missing_codes.tolist()}')
 
     per_pixel_cn_array = (

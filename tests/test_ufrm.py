@@ -149,10 +149,11 @@ class UFRMTests(unittest.TestCase):
 
         with self.assertRaises(ValueError) as cm:
             urban_flood_risk_mitigation.execute(args)
-            actual_message = str(cm.exception)
-            expected_message = (
-                'Check that the Soil Group raster does not contain')
-            self.assertTrue(expected_message in actual_message)
+
+        actual_message = str(cm.exception)
+        expected_message = (
+            'Check that the Soil Group raster does not contain')
+        self.assertTrue(expected_message in actual_message)
 
     def test_ufrm_value_error_on_bad_lucode(self):
         """UFRM: assert exception on missing lucodes."""
@@ -173,10 +174,11 @@ class UFRMTests(unittest.TestCase):
 
         with self.assertRaises(ValueError) as cm:
             urban_flood_risk_mitigation.execute(args)
-            actual_message = str(cm.exception)
-            expected_message = (
-                'The biophysical table is missing a row for lucode(s)')
-            self.assertTrue(expected_message in actual_message)
+
+        actual_message = str(cm.exception)
+        expected_message = (
+            f'The biophysical table is missing a row for lucode(s) {[0]}')
+        self.assertEqual(expected_message, actual_message)
 
         # drop rows with lucodes known to exist in lulc raster
         # These are codes that will raise an IndexError on
@@ -188,10 +190,12 @@ class UFRMTests(unittest.TestCase):
 
         with self.assertRaises(ValueError) as cm:
             urban_flood_risk_mitigation.execute(args)
-            actual_message = str(cm.exception)
-            expected_message = (
-                'The biophysical table is missing a row for lucode(s)')
-            self.assertTrue(expected_message in actual_message)
+
+        actual_message = str(cm.exception)
+        expected_message = (
+            f'The biophysical table is missing a row for lucode(s) '
+            f'{[16, 17, 18, 21]}')
+        self.assertEqual(expected_message, actual_message)
 
     def test_ufrm_string_damage_to_infrastructure(self):
         """UFRM: handle str(int) structure indices.
