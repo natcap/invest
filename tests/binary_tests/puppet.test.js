@@ -86,7 +86,10 @@ beforeAll(() => {
     `"${BINARY_PATH}"`,
     // these are chromium args
     [`--remote-debugging-port=${PORT}`],
-    { shell: true }
+    {
+      shell: true,
+      env: { ...process.env, PUPPETEER: true }
+    }
   );
   ELECTRON_PROCESS.stderr.on('data', (data) => {
     console.log(`${data}`);
@@ -134,9 +137,11 @@ afterAll(async () => {
 
 test('Run a real invest model', async () => {
   const { findByText, findByLabelText, findByRole } = queries;
+  // On GHA MacOS, we seem to have to wait a long time for the browser
+  // to be ready. Maybe related to https://github.com/natcap/invest-workbench/issues/158
   await waitFor(() => {
-    expect(BROWSER.isConnected()).toBeTruthy();
-  }, { timeout: 30000 });
+    expect(BROWSER && BROWSER.isConnected()).toBeTruthy();
+  }, { timeout: 60000 });
   // find the mainWindow's index.html, not the splashScreen's splash.html
   const target = await BROWSER.waitForTarget(
     (target) => target.url().endsWith('index.html')
@@ -206,7 +211,7 @@ test('Run a real invest model', async () => {
   expect(await findByText(sidebar, 'Run Canceled'));
   expect(await findByText(sidebar, 'Open Workspace'));
   await page.screenshot({ path: `${SCREENSHOT_PREFIX}6-run-canceled.png` });
-}, 120000); // >2x the sum of all the max timeouts within this test
+}, 240000); // >2x the sum of all the max timeouts within this test
 
 // Test for duplicate application launch.
 // We have the binary path, so now let's launch a new subprocess with the same binary

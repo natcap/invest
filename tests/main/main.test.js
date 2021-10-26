@@ -15,6 +15,7 @@ import {
 import '@testing-library/jest-dom';
 import yazl from 'yazl';
 import rimraf from 'rimraf';
+import fetch from 'node-fetch';
 
 import {
   createWindow,
@@ -32,6 +33,7 @@ import {
 import findInvestBinaries from '../../src/main/findInvestBinaries';
 import extractZipInplace from '../../src/main/extractZipInplace';
 import { ipcMainChannels } from '../../src/main/ipcMainChannels';
+import investUsageLogger from '../../src/main/investUsageLogger';
 import { getInvestModelNames } from '../../src/renderer/server_requests';
 import App from '../../src/renderer/app';
 import {
@@ -39,6 +41,7 @@ import {
   getSettingsValue,
 } from '../../src/renderer/components/SettingsModal/SettingsStorage';
 
+jest.mock('node-fetch');
 jest.mock('child_process');
 execFileSync.mockReturnValue('foo');
 jest.mock('../../src/main/createPythonFlaskProcess');
@@ -280,5 +283,31 @@ describe('Integration tests for Download Sample Data Modal', () => {
       const value = await getSettingsValue('sampleDataDir');
       expect(value).toBe(existingValue);
     });
+  });
+});
+
+describe('investUsageLogger', () => {
+  test('sends requests with correct payload', () => {
+    const modelPyname = 'natcap.invest.carbon';
+    const args = {
+      workspace_dir: 'foo',
+      aoi: 'bar',
+    };
+    const investStdErr = '';
+    const usageLogger = investUsageLogger();
+
+    usageLogger.start(modelPyname, args);
+    expect(fetch.mock.calls).toHaveLength(1);
+    const startPayload = JSON.parse(fetch.mock.calls[0][1].body);
+
+    usageLogger.exit(investStdErr);
+    expect(fetch.mock.calls).toHaveLength(2);
+    const exitPayload = JSON.parse(fetch.mock.calls[1][1].body);
+
+    expect(startPayload.session_id).toBe(exitPayload.session_id);
+    expect(startPayload.model_pyname).toBe(modelPyname);
+    expect(JSON.parse(startPayload.model_args)).toMatchObject(args);
+    expect(startPayload.invest_interface).toContain('Workbench');
+    expect(exitPayload.status).toBe(investStdErr);
   });
 });

@@ -624,9 +624,11 @@ describe('InVEST subprocess testing', () => {
 
     // Only finalTraceback text should be rendered in a red alert
     const alert = await findByRole('alert');
-    expect(alert).toHaveTextContent(new RegExp(`^${finalTraceback}`));
-    expect(alert).not.toHaveTextContent(someStdErr);
-    expect(alert).toHaveClass('alert-danger');
+    await waitFor(() => {
+      expect(alert).toHaveTextContent(new RegExp(`^${finalTraceback}`));
+      expect(alert).not.toHaveTextContent(someStdErr);
+      expect(alert).toHaveClass('alert-danger');
+    });
     expect(await findByRole('button', { name: 'Open Workspace' }))
       .toBeEnabled();
 
