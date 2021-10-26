@@ -36,7 +36,8 @@ function makeLogFile(text) {
 }
 
 function cleanupLogFile(logfilePath) {
-  fs.unlink(logfilePath, () => {
+  fs.unlink(logfilePath, (err) => {
+    if (err) { throw err; }
     fs.rmdirSync(path.dirname(logfilePath));
   });
 }
