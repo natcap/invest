@@ -48,7 +48,7 @@ test('invest list items have expected properties', async () => {
 
 test('fetch invest model args spec', async () => {
   const spec = await server_requests.getSpec('carbon');
-  const expectedKeys = ['model_name', 'module', 'userguide_html', 'args'];
+  const expectedKeys = ['model_name', 'pyname', 'userguide_html', 'args'];
   expectedKeys.forEach((key) => {
     expect(spec[key]).not.toBeUndefined();
   });
@@ -59,7 +59,7 @@ test('fetch invest validation', async () => {
   // it's okay to validate even if none of the args have values yet
   const argsDict = argsDictFromObject(spec.args);
   const payload = {
-    model_module: spec.module,
+    model_module: spec.pyname,
     args: JSON.stringify(argsDict),
   };
 
@@ -75,7 +75,7 @@ test('write parameters to file and parse them from file', async () => {
   const filepath = 'tests/data/foo.json';
   const payload = {
     parameterSetPath: filepath,
-    moduleName: spec.module,
+    moduleName: spec.pyname,
     args: JSON.stringify(argsDict),
     relativePaths: true,
   };
@@ -116,7 +116,7 @@ test('write parameters to python script', async () => {
   const payload = {
     filepath: filepath,
     modelname: modelName,
-    pyname: spec.module,
+    pyname: spec.pyname,
     args: JSON.stringify(argsDict),
   };
   await server_requests.saveToPython(payload);
@@ -182,7 +182,7 @@ describe('Build each model UI from ARGS_SPEC', () => {
 
     const { findByLabelText } = render(
       <SetupTab
-        pyModuleName={argsSpec.module}
+        pyModuleName={argsSpec.pyname}
         modelName={argsSpec.model_name}
         argsSpec={argsSpec.args}
         uiSpec={uiSpec}
