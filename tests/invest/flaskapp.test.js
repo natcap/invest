@@ -42,7 +42,7 @@ afterAll(async () => {
 test('invest list items have expected properties', async () => {
   const investList = await server_requests.getInvestModelNames();
   Object.values(investList).forEach((item) => {
-    expect(item.internal_name).not.toBeUndefined();
+    expect(item.model_name).not.toBeUndefined();
   });
 });
 
@@ -136,8 +136,10 @@ test('write parameters to python script', async () => {
 test('validate the UI spec', async () => {
   const uiSpec = require('../../src/renderer/ui_config');
   const models = await server_requests.getInvestModelNames();
+  console.log(models);
+  console.log(Object.keys(models).map((key) => typeof(key)));
   const modelInternalNames = Object.keys(models)
-    .map((key) => models[key].internal_name);
+    .map((key) => models[key].model_name);
   // get the args spec for each model
   const argsSpecs = await Promise.all(modelInternalNames.map(
     (model) => server_requests.getSpec(model)

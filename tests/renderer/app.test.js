@@ -33,7 +33,7 @@ const MOCK_MODEL_LIST_KEY = 'Carbon';
 const MOCK_MODEL_RUN_NAME = 'carbon';
 const MOCK_INVEST_LIST = {
   [MOCK_MODEL_LIST_KEY]: {
-    internal_name: MOCK_MODEL_RUN_NAME,
+    model_name: MOCK_MODEL_RUN_NAME,
   },
 };
 const MOCK_VALIDATION_VALUE = [[['workspace_dir'], 'invalid because']];
@@ -493,7 +493,7 @@ describe('InVEST subprocess testing', () => {
     getSpec.mockResolvedValue(spec);
     fetchValidation.mockResolvedValue([]);
     getInvestModelNames.mockResolvedValue(
-      { Carbon: { internal_name: modelName } }
+      { Carbon: { model_name: modelName } }
     );
     const mockUISpec = {
       [modelName]: { order: [Object.keys(spec.args)] }
