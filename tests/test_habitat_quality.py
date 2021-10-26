@@ -53,7 +53,7 @@ def make_access_shp(access_shp_path):
 
     # Setup parameters for creating point shapefile
     fields = {'FID': ogr.OFTInteger64, 'ACCESS': ogr.OFTReal}
-    attrs = [{'FID': 0, 'ACCESS': 0.2}, {'FI': 1, 'ACCESS': 1.0}]
+    attrs = [{'FID': 0, 'ACCESS': 0.2}, {'FID': 1, 'ACCESS': 1.0}]
 
     poly_geoms = {
         'poly_1': [(pos_x, pos_y), (pos_x + 100, pos_y),
@@ -1262,7 +1262,6 @@ class HabitatQualityTests(unittest.TestCase):
             args['access_vector_path'], args['lulc_cur_path'])
 
         validate_result = habitat_quality.validate(args, limit_to=None)
-        print(validate_result)
         self.assertTrue(
             validate_result,
             "expected failed validations instead didn't get any")
