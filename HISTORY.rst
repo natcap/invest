@@ -62,6 +62,10 @@ Unreleased Changes
 * Crop Production Regression
     * Corrected a misspelled column name. The fertilization rate table column
       must now be named ``phosphorus_rate``, not ``phosphorous_rate``.
+* Urban Flood Risk
+    * Fixed a bug where lucodes present in the LULC raster but missing from
+      the biophysical table would either raise a cryptic IndexError or silently
+      apply invalid curve numbers. Now a helpful ValueError is raised.
 
 3.9.1 (2021-09-22)
 ------------------

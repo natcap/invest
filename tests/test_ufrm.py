@@ -149,10 +149,53 @@ class UFRMTests(unittest.TestCase):
 
         with self.assertRaises(ValueError) as cm:
             urban_flood_risk_mitigation.execute(args)
-            actual_message = str(cm.exception)
-            expected_message = (
-                'Check that the Soil Group raster does not contain')
-            self.assertTrue(expected_message in actual_message)
+
+        actual_message = str(cm.exception)
+        expected_message = (
+            'Check that the Soil Group raster does not contain')
+        self.assertTrue(expected_message in actual_message)
+
+    def test_ufrm_value_error_on_bad_lucode(self):
+        """UFRM: assert exception on missing lucodes."""
+        import pandas
+        from natcap.invest import urban_flood_risk_mitigation
+        args = self._make_args()
+
+        bad_cn_table_path = os.path.join(
+            self.workspace_dir, 'bad_cn_table.csv')
+        cn_table = pandas.read_csv(args['curve_number_table_path'])
+
+        # drop a row with an lucode known to exist in lulc raster
+        # This is a code that will successfully index into the
+        # CN table sparse matrix, but will not return valid data.
+        bad_cn_table = cn_table[cn_table['lucode'] != 0]
+        bad_cn_table.to_csv(bad_cn_table_path, index=False)
+        args['curve_number_table_path'] = bad_cn_table_path
+
+        with self.assertRaises(ValueError) as cm:
+            urban_flood_risk_mitigation.execute(args)
+
+        actual_message = str(cm.exception)
+        expected_message = (
+            f'The biophysical table is missing a row for lucode(s) {[0]}')
+        self.assertEqual(expected_message, actual_message)
+
+        # drop rows with lucodes known to exist in lulc raster
+        # These are codes that will raise an IndexError on
+        # indexing into the CN table sparse matrix. The test
+        # LULC raster has values from 0 to 21.
+        bad_cn_table = cn_table[cn_table['lucode'] < 15]
+        bad_cn_table.to_csv(bad_cn_table_path, index=False)
+        args['curve_number_table_path'] = bad_cn_table_path
+
+        with self.assertRaises(ValueError) as cm:
+            urban_flood_risk_mitigation.execute(args)
+
+        actual_message = str(cm.exception)
+        expected_message = (
+            f'The biophysical table is missing a row for lucode(s) '
+            f'{[16, 17, 18, 21]}')
+        self.assertEqual(expected_message, actual_message)
 
     def test_ufrm_string_damage_to_infrastructure(self):
         """UFRM: handle str(int) structure indices.
