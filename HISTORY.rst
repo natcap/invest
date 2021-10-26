@@ -51,6 +51,10 @@ Unreleased Changes
     * Minor changes to some other models' display names.
     * Update and expand on the instructions in the API docs for installing
       the ``natcap.invest`` package.
+    * The InVEST binaries on Windows now no longer inspect the ``%PATH%``
+      when looking for GDAL DLLs.  This fixes an issue where InVEST would not
+      launch on computers where the ``%PATH%`` either contained other
+      environment variables or was malformed.
 * Seasonal Water Yield
     * Fixed a bug in validation where providing the monthly alpha table would
       cause a "Spatial file <monthly alpha table> has no projection" error.
@@ -61,6 +65,10 @@ Unreleased Changes
 * Habitat Quality
     * Fixed a bug where optional input Allow Accessibility to Threats could
       not be passed as an empty string argument. Now handles falsey values.
+* Urban Flood Risk
+    * Fixed a bug where lucodes present in the LULC raster but missing from
+      the biophysical table would either raise a cryptic IndexError or silently
+      apply invalid curve numbers. Now a helpful ValueError is raised.
 
 3.9.1 (2021-09-22)
 ------------------
