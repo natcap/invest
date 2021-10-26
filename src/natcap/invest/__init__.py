@@ -167,6 +167,12 @@ MODEL_METADATA = {
         gui='seasonal_water_yield.SeasonalWaterYield',
         userguide='seasonal_water_yield.html',
         aliases=('swy',)),
+    'stormwater': _MODELMETA(
+        model_title='Stormwater',
+        pyname='natcap.invest.stormwater',
+        gui='stormwater.Stormwater',
+        userguide='stormwater.html',
+        aliases=()),
     'wave_energy': _MODELMETA(
         model_title='Wave Energy Production',
         pyname='natcap.invest.wave_energy',
