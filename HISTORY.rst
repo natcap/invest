@@ -58,6 +58,9 @@ Unreleased Changes
 * Crop Production Regression
     * Corrected a misspelled column name. The fertilization rate table column
       must now be named ``phosphorus_rate``, not ``phosphorous_rate``.
+* Habitat Quality
+    * Fixed a bug where optional input Allow Accessibility to Threats could
+      not be passed as an empty string argument. Now handles falsey values.
 
 3.9.1 (2021-09-22)
 ------------------
