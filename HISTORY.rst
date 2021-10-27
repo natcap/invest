@@ -41,12 +41,12 @@ Unreleased Changes
     * Improving our binary build by including a data file needed for the
       ``charset-normalizer`` python package.  This eliminates a warning that
       was printed to stdout on Windows.
-    * The Annual Water Yield model name is now standardized throughout InVEST. 
-      This model has been known in different contexts as Hydropower, Hydropower 
-      Water Yield, or Annual Water Yield. This name was chosen to emphasize 
-      that the model can be used for purposes other than hydropower (though the 
-      valuation component is hydropower-specific) and to highlight its 
-      difference from the Seasonal Water Yield model. The corresponding python 
+    * The Annual Water Yield model name is now standardized throughout InVEST.
+      This model has been known in different contexts as Hydropower, Hydropower
+      Water Yield, or Annual Water Yield. This name was chosen to emphasize
+      that the model can be used for purposes other than hydropower (though the
+      valuation component is hydropower-specific) and to highlight its
+      difference from the Seasonal Water Yield model. The corresponding python
       module, formerly ``natcap.invest.hydropower.hydropower_water_yield``, is
       now ``natcap.invest.annual_water_yield``.
     * Minor changes to some other models' display names.
@@ -56,6 +56,8 @@ Unreleased Changes
       when looking for GDAL DLLs.  This fixes an issue where InVEST would not
       launch on computers where the ``%PATH%`` either contained other
       environment variables or was malformed.
+    * JSON sample data parameter sets are now included in the complete sample
+      data archives.
 * Seasonal Water Yield
     * Fixed a bug in validation where providing the monthly alpha table would
       cause a "Spatial file <monthly alpha table> has no projection" error.
@@ -63,6 +65,9 @@ Unreleased Changes
 * Crop Production Regression
     * Corrected a misspelled column name. The fertilization rate table column
       must now be named ``phosphorus_rate``, not ``phosphorous_rate``.
+* Habitat Quality
+    * Fixed a bug where optional input Allow Accessibility to Threats could
+      not be passed as an empty string argument. Now handles falsey values.
 * Urban Flood Risk
     * Fixed a bug where lucodes present in the LULC raster but missing from
       the biophysical table would either raise a cryptic IndexError or silently
