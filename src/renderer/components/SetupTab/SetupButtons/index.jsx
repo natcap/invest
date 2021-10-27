@@ -8,7 +8,7 @@ export function SaveParametersButtons(props) {
   return (
     <React.Fragment>
       <SaveFileButton
-        title={(_"Save to JSON")}
+        title={_("Save to JSON")}
         defaultTargetPath="invest_args.json"
         func={props.saveJsonFile}
       />

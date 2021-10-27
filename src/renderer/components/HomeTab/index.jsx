@@ -158,8 +158,8 @@ class RecentInvestJobs extends React.PureComponent {
             )
             : (
               <div className="d-inline-block">
-                {_("Try the <b>Open</b> button to setup a model from a sample "
-                "datastack file (.json) or from an InVEST model's logfile (.txt)")}
+                {_(`Try the <b>Open</b> button to setup a model from a sample
+                    datastack file (.json) or from an InVEST model's logfile (.txt)`)}
               </div>
             )}
           <OpenButton

@@ -34,7 +34,7 @@ export default class OpenButton extends React.Component {
   }
 
   render() {
-    const tipText = {_('Browse to a datastack (.json) or InVEST logfile (.txt)')};
+    const tipText = _('Browse to a datastack (.json) or InVEST logfile (.txt)');
     return (
       <OverlayTrigger
         placement="left"
