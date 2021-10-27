@@ -44,7 +44,7 @@ function cleanupLogFile(logfilePath) {
 
 describe('LogTab displays log from a file', () => {
   const uniqueText = 'utils.prepare_workspace';
-  const primaryPythonLogger = 'natcap.invest.hydropower.hydropower_water_yield';
+  const primaryPythonLogger = 'natcap.invest.annual_water_yield';
 
   const logText = `
 2021-01-15 07:14:37,147 (natcap.invest.utils) ${uniqueText}(124) INFO Writing log ...
@@ -53,7 +53,7 @@ Arguments for InVEST ${primaryPythonLogger} 3.9.0.post147+gcc5a7cfe:
 biophysical_table_path        C:/Users/dmf/projects/invest/data/biophysical_table_gura.csv
 workspace_dir                 C:/Users/dmf/projects/invest-workbench/runs/awy
 
-2021-01-15 07:14:37,148 (${primaryPythonLogger}) hydropower_water_yield.execute(268) INFO Validating arguments
+2021-01-15 07:14:37,148 (${primaryPythonLogger}) annual_water_yield.execute(268) INFO Validating arguments
 2021-01-15 07:14:37,148 (natcap.invest.validation) validation._wrapped_validate_func(915) INFO ...
 2021-01-15 07:14:37,525 (taskgraph.Task) Task.__init__(333) WARNING the ...
 2021-01-15 07:14:37,636 (pygeoprocessing.geoprocessing) geoprocessing.align_and_resize_raster_stack(795) INFO ...

@@ -175,7 +175,7 @@ export default class InvestTab extends React.Component {
     ipcRenderer.send(
       ipcMainChannels.INVEST_RUN,
       job.modelRunName,
-      this.state.modelSpec.module,
+      this.state.modelSpec.pyname,
       args,
       investSettings.loggingLevel,
       jobID
@@ -281,7 +281,7 @@ export default class InvestTab extends React.Component {
             <TabContent>
               <TabPane eventKey="setup" title="Setup">
                 <SetupTab
-                  pyModuleName={modelSpec.module}
+                  pyModuleName={modelSpec.pyname}
                   modelName={modelSpec.model_name}
                   argsSpec={argsSpec}
                   uiSpec={uiSpec}
@@ -298,7 +298,7 @@ export default class InvestTab extends React.Component {
                   logfile={logfile}
                   executeClicked={executeClicked}
                   jobID={jobID}
-                  pyModuleName={modelSpec.module}
+                  pyModuleName={modelSpec.pyname}
                 />
               </TabPane>
             </TabContent>

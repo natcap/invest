@@ -45,7 +45,7 @@ function renderInvestTab(job = DEFAULT_JOB) {
 
 describe('Sidebar Alert renders with data from a recent run', () => {
   const spec = {
-    module: 'natcap.invest.foo',
+    pyname: 'natcap.invest.foo',
     model_name: 'FooModel',
     args: {
       workspace: {
@@ -153,7 +153,7 @@ describe('Sidebar Alert renders with data from a recent run', () => {
 
 describe('Save InVEST Model Setup Buttons', () => {
   const spec = {
-    module: 'natcap.invest.foo',
+    pyname: 'natcap.invest.foo',
     model_name: 'FooModel',
     args: {
       workspace: {
@@ -256,7 +256,7 @@ describe('Save InVEST Model Setup Buttons', () => {
 
   test('Load Parameters Button: loads parameters', async () => {
     const mockDatastack = {
-      module_name: spec.module,
+      module_name: spec.pyname,
       args: {
         workspace: 'myworkspace',
         port: '9999',
@@ -356,7 +356,7 @@ describe('Save InVEST Model Setup Buttons', () => {
 
 describe('InVEST Run Button', () => {
   const spec = {
-    module: 'natcap.invest.bar',
+    pyname: 'natcap.invest.bar',
     model_name: 'BarModel',
     args: {
       a: {
