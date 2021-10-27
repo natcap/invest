@@ -64,6 +64,9 @@ Unreleased Changes
 * Crop Production Regression
     * Corrected a misspelled column name. The fertilization rate table column
       must now be named ``phosphorus_rate``, not ``phosphorous_rate``.
+* Habitat Quality
+    * Fixed a bug where optional input Allow Accessibility to Threats could
+      not be passed as an empty string argument. Now handles falsey values.
 * Urban Flood Risk
     * Fixed a bug where lucodes present in the LULC raster but missing from
       the biophysical table would either raise a cryptic IndexError or silently
