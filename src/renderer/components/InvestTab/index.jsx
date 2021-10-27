@@ -229,8 +229,6 @@ export default class InvestTab extends React.Component {
     const sidebarSetupElementId = `sidebar-setup-${jobID}`;
     const sidebarFooterElementId = `sidebar-footer-${jobID}`;
 
-    console.log(modelSpec);
-
     return (
       <TabContainer activeKey={activeTab} id="invest-tab">
         <Row className="flex-nowrap">

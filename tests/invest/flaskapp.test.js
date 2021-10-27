@@ -136,8 +136,6 @@ test('write parameters to python script', async () => {
 test('validate the UI spec', async () => {
   const uiSpec = require('../../src/renderer/ui_config');
   const models = await server_requests.getInvestModelNames();
-  console.log(models);
-  console.log(Object.keys(models).map((key) => typeof(key)));
   const modelInternalNames = Object.keys(models)
     .map((key) => models[key].model_name);
   // get the args spec for each model
