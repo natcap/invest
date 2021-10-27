@@ -113,6 +113,11 @@ body {
 	white-space: nowrap;
 }
 
+.settings-icon-btn, .settings-icon-btn:hover {
+	background-color: transparent;
+	border-color: transparent;
+}
+
 .settings-icon {
 	color: black;
 	font-size: 2rem;
