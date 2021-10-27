@@ -26,7 +26,7 @@ export default class HomeTab extends React.PureComponent {
   handleClick(event) {
     const { value } = event.target;
     const { investList, openInvestModel } = this.props;
-    const modelRunName = investList[value].internal_name;
+    const modelRunName = investList[value].model_name;
     const job = new InvestJob({
       modelRunName: modelRunName,
       modelHumanName: value
@@ -80,7 +80,7 @@ export default class HomeTab extends React.PureComponent {
 HomeTab.propTypes = {
   investList: PropTypes.objectOf(
     PropTypes.shape({
-      internal_name: PropTypes.string,
+      model_name: PropTypes.string,
     }),
   ).isRequired,
   openInvestModel: PropTypes.func.isRequired,

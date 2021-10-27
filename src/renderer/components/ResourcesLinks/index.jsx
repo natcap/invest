@@ -13,7 +13,7 @@ const FORUM_TAGS = {
   habitat_quality: 'habitat-quality',
   seasonal_water_yield: 'seasonal-water-yield',
   carbon: 'carbon',
-  hydropower_water_yield: 'annual-water-yield',
+  annual_water_yield: 'annual-water-yield',
   habitat_risk_assessment: 'hra',
   recreation: 'recreation',
   coastal_vulnerability: 'coastal-vulnerability',
