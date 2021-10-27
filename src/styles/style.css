@@ -13,7 +13,7 @@ body {
 }
 
 .navbar .row {
-	align-items: baseline;
+	align-items: end;
 	padding-bottom: 0;
 	border-bottom: 3px solid var(--invest-green);
 	background-color: #fff
