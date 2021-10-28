@@ -19,10 +19,10 @@ function renderSetupFromSpec(baseSpec, uiSpec) {
   // but is required by PropType-checking
   const spec = { ...baseSpec };
   if (!spec.modelName) { spec.modelName = 'Eco Model'; }
-  if (!spec.module) { spec.module = 'natcap.invest.dot'; }
+  if (!spec.pyname) { spec.pyname = 'natcap.invest.dot'; }
   const { ...utils } = render(
     <SetupTab
-      pyModuleName={spec.module}
+      pyModuleName={spec.pyname}
       modelName={spec.modelName}
       argsSpec={spec.args}
       uiSpec={uiSpec}
@@ -260,7 +260,7 @@ describe('UI spec functionality', () => {
 
   test('A UI spec with conditionally enabled args', async () => {
     const spec = {
-      module: 'natcap.invest.dummy',
+      pyname: 'natcap.invest.dummy',
       args: {
         arg1: {
           name: 'Afoo',
@@ -369,7 +369,7 @@ describe('UI spec functionality', () => {
 
   test('Grouping and sorting of args', async () => {
     const spec = {
-      module: 'natcap.invest.dummy',
+      pyname: 'natcap.invest.dummy',
       args: {
         arg1: {
           name: 'A',
@@ -527,7 +527,7 @@ describe('Form drag-and-drop', () => {
 
   test('Dragover of a datastack/logfile updates all inputs', async () => {
     const spec = {
-      module: `natcap.invest.${MODULE}`,
+      pyname: `natcap.invest.${MODULE}`,
       args: {
         arg1: {
           name: 'Workspace',
@@ -544,7 +544,7 @@ describe('Form drag-and-drop', () => {
     );
 
     const mockDatastack = {
-      module_name: spec.module,
+      module_name: spec.pyname,
       args: {
         arg1: 'circle',
         arg2: 'square',
@@ -587,7 +587,7 @@ describe('Form drag-and-drop', () => {
 
   test('Drag enter/drop of a datastack sets .dragging class', async () => {
     const spec = {
-      module: `natcap.invest.${MODULE}`,
+      pyname: `natcap.invest.${MODULE}`,
       args: {
         arg1: {
           name: 'Workspace',
@@ -605,7 +605,7 @@ describe('Form drag-and-drop', () => {
     );
 
     const mockDatastack = {
-      module_name: spec.module,
+      module_name: spec.pyname,
       args: {
         arg1: 'circle',
         arg2: 'square',
@@ -647,7 +647,7 @@ describe('Form drag-and-drop', () => {
 
   test('Drag enter/leave of a datastack sets .dragging class', async () => {
     const spec = {
-      module: `natcap.invest.${MODULE}`,
+      pyname: `natcap.invest.${MODULE}`,
       args: {
         arg1: {
           name: 'Workspace',
@@ -691,7 +691,7 @@ describe('Form drag-and-drop', () => {
 
   test('Drag enter/drop of a file sets .input-dragging class on input', async () => {
     const spec = {
-      module: `natcap.invest.${MODULE}`,
+      pyname: `natcap.invest.${MODULE}`,
       args: {
         arg1: {
           name: 'Workspace',
@@ -742,7 +742,7 @@ describe('Form drag-and-drop', () => {
 
   test('Drag enter/leave of a file sets .input-dragging class on input', async () => {
     const spec = {
-      module: `natcap.invest.${MODULE}`,
+      pyname: `natcap.invest.${MODULE}`,
       args: {
         arg1: {
           name: 'Workspace',
@@ -789,7 +789,7 @@ describe('Form drag-and-drop', () => {
 
   test('Drag and drop on a disabled input element.', async () => {
     const spec = {
-      module: `natcap.invest.${MODULE}`,
+      pyname: `natcap.invest.${MODULE}`,
       args: {
         arg1: {
           name: 'Workspace',
