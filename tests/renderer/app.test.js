@@ -62,7 +62,7 @@ function mockUISpec(spec) {
   };
 }
 
-describe.only('Various ways to open and close InVEST models', () => {
+describe('Various ways to open and close InVEST models', () => {
   beforeAll(async () => {
     getInvestModelNames.mockResolvedValue(MOCK_INVEST_LIST);
     getSpec.mockResolvedValue(SAMPLE_SPEC);
