@@ -56,9 +56,9 @@ const SAMPLE_SPEC = {
 };
 
 const UI_CONFIG_PATH = '../../src/renderer/ui_config';
-function mockUISpec(spec) {
+function mockUISpec(spec, modelName) {
   return {
-    [MOCK_MODEL_RUN_NAME]: { order: [Object.keys(spec.args)] }
+    [modelName]: { order: [Object.keys(spec.args)] }
   };
 }
 
@@ -68,10 +68,11 @@ describe('Various ways to open and close InVEST models', () => {
     getSpec.mockResolvedValue(SAMPLE_SPEC);
     fetchValidation.mockResolvedValue(MOCK_VALIDATION_VALUE);
     const mockSpec = SAMPLE_SPEC; // jest.mock not allowed to ref out-of-scope var
-    jest.mock(UI_CONFIG_PATH, () => mockUISpec(mockSpec));
+    jest.mock(UI_CONFIG_PATH, () => mockUISpec(mockSpec, MOCK_MODEL_RUN_NAME));
   });
   afterAll(async () => {
     jest.resetAllMocks();
+    jest.resetModules();
   });
   afterEach(async () => {
     jest.clearAllMocks(); // clears usage data, does not reset/restore
@@ -263,6 +264,7 @@ describe('Display recently executed InVEST jobs on Home tab', () => {
   });
   afterEach(async () => {
     await InvestJob.clearStore();
+    jest.resetAllMocks();
   });
 
   test('Recent Jobs: each has a button', async () => {
@@ -521,10 +523,9 @@ describe('InVEST subprocess testing', () => {
     getInvestModelNames.mockResolvedValue(
       { Carbon: { model_name: modelName } }
     );
-    const mockUISpec = {
-      [modelName]: { order: [Object.keys(spec.args)] }
-    };
-    jest.mock('../../src/renderer/ui_config', () => mockUISpec);
+    const mockSpec = spec;
+    const mockModelName = modelName;
+    jest.mock(UI_CONFIG_PATH, () => mockUISpec(mockSpec, mockModelName));
 
     // Need to reset these streams since mockInvestProc is shared by tests
     // and the streams apparently receive the EOF signal in each test.
