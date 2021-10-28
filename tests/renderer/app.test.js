@@ -15,7 +15,6 @@ import {
   getInvestModelNames, getSpec, fetchValidation, fetchDatastackFromFile
 } from '../../src/renderer/server_requests';
 import InvestJob from '../../src/renderer/InvestJob';
-import SAMPLE_SPEC from '../data/carbon_args_spec.json';
 import {
   getSettingsValue, saveSettingsStore
 } from '../../src/renderer/components/SettingsModal/SettingsStorage';
@@ -38,11 +37,38 @@ const MOCK_INVEST_LIST = {
 };
 const MOCK_VALIDATION_VALUE = [[['workspace_dir'], 'invalid because']];
 
-describe('Various ways to open and close InVEST models', () => {
+const SAMPLE_SPEC = {
+  model_name: 'Carbon Storage and Sequestration',
+  pyname: 'natcap.invest.carbon',
+  userguide_html: 'carbonstorage.html',
+  args: {
+    workspace_dir: {
+      name: 'Workspace',
+      about: 'help text',
+      type: 'directory',
+    },
+    carbon_pools_path: {
+      name: 'Carbon Pools',
+      about: 'help text',
+      type: 'csv',
+    }
+  }
+};
+
+const UI_CONFIG_PATH = '../../src/renderer/ui_config';
+function mockUISpec(spec) {
+  return {
+    [MOCK_MODEL_RUN_NAME]: { order: [Object.keys(spec.args)] }
+  };
+}
+
+describe.only('Various ways to open and close InVEST models', () => {
   beforeAll(async () => {
     getInvestModelNames.mockResolvedValue(MOCK_INVEST_LIST);
     getSpec.mockResolvedValue(SAMPLE_SPEC);
     fetchValidation.mockResolvedValue(MOCK_VALIDATION_VALUE);
+    const mockSpec = SAMPLE_SPEC; // jest.mock not allowed to ref out-of-scope var
+    jest.mock(UI_CONFIG_PATH, () => mockUISpec(mockSpec));
   });
   afterAll(async () => {
     jest.resetAllMocks();
