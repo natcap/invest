@@ -13,5 +13,6 @@ for (const languageCode of languages) {
 
 export function setLanguage(languageCode) {
     i18n.loadJSON(messageCatalogs[languageCode], 'messages');
+    // make the _() gettext function available globally
     window._ = i18n.gettext();
 }
