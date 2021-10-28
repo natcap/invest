@@ -6,9 +6,6 @@ import fs from 'fs';
 
 
 const i18n = new gettext_js();
-console.log(i18n);
-
-const messageCatalogs = {};
 
 async function loadMessageCatalogs() {
   // load each message catalog JSON file into an object
@@ -17,29 +14,19 @@ async function loadMessageCatalogs() {
   for (const languageCode of languages) {
     const messageCatalogPath = `../../internationalization/locales/${languageCode}/LC_MESSAGES/messages.json`;
     const data = await import(messageCatalogPath).then(data => data['default']);
-    console.log(data);
-    messageCatalogs[languageCode] = data;
+    i18n.loadJSON(data, 'messages');
   }
 }
-
 loadMessageCatalogs();
 
-
-
-
-export function setLanguage(languageCode) {
-  console.log('setting language', languageCode);
-  i18n.loadJSON(messageCatalogs[languageCode], 'messages');
-  i18n.setLocale('es');
-}
 
 
 export function setupSetLanguage() {
   ipcMain.on(
     ipcMainChannels.SET_LANGUAGE,
     (event, languageCode) => {
-      console.log('handle setting language');
-      setLanguage(languageCode);
+      console.log('handle setting language', languageCode);
+      i18n.setLocale(languageCode);
     }
   );
 

@@ -18,7 +18,7 @@ window.addEventListener('contextmenu', (e) => {
 
 // call this before rendering the app so that _() is defined
 // default to English
-ipcRenderer.send(ipcMainChannels.SET_LANGUAGE, 'es');
+ipcRenderer.send(ipcMainChannels.SET_LANGUAGE, 'en');
 console.log(ipcRenderer.sendSync(ipcMainChannels.GETTEXT, 'Cancel'));
 window._ = ipcRenderer.sendSync.bind(null, ipcMainChannels.GETTEXT);  // partially applied function
 

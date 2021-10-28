@@ -1,5 +1,6 @@
 import React from 'react';
 import PropTypes from 'prop-types';
+import { ipcRenderer } from 'electron';
 
 import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
@@ -8,6 +9,7 @@ import Button from 'react-bootstrap/Button';
 import Modal from 'react-bootstrap/Modal';
 
 import { getDefaultSettings } from './SettingsStorage';
+import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
 /** Validate that n_workers is an acceptable value for Taskgraph.
  *
@@ -37,6 +39,7 @@ export default class SettingsModal extends React.Component {
     this.handleShow = this.handleShow.bind(this);
     this.handleClose = this.handleClose.bind(this);
     this.handleChange = this.handleChange.bind(this);
+    this.handleChangeLanguage = this.handleChangeLanguage.bind(this);
     this.handleSubmit = this.handleSubmit.bind(this);
     this.handleReset = this.handleReset.bind(this);
     this.switchToDownloadModal = this.switchToDownloadModal.bind(this);
@@ -93,6 +96,11 @@ export default class SettingsModal extends React.Component {
     this.setState({
       localSettings: newSettings,
     });
+  }
+
+  handleChangeLanguage(event) {
+    ipcRenderer.sendSync(ipcMainChannels.SET_LANGUAGE, event.target.value);
+    this.handleChange(event);
   }
 
   switchToDownloadModal() {
@@ -187,7 +195,7 @@ export default class SettingsModal extends React.Component {
                   as="select"
                   name="language"
                   value={this.state.localSettings.language}
-                  onChange={this.handleChange}
+                  onChange={this.handleChangeLanguage}
                 >
                   {Object.entries(languageOptions).map(entry => {
                     const displayName = entry[0];
