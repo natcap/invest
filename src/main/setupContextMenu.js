@@ -2,12 +2,14 @@ import { Menu } from 'electron'; // eslint-disable-line import/no-extraneous-dep
 
 import ELECTRON_DEV_MODE from './isDevMode';
 
+// context-menu options for selected text
 const selectionArray = [
   { role: 'copy' },
   { type: 'separator' },
   { role: 'selectall' },
 ];
 
+// context-menu options for editable input fields
 const inputArray = [
   { role: 'undo' },
   { role: 'redo' },
