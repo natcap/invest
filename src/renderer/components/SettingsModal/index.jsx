@@ -87,7 +87,7 @@ export default class SettingsModal extends React.Component {
   }
 
   handleChange(event) {
-    const newSettings = Object.assign({}, this.state.localSettings);
+    const newSettings = { ...this.state.localSettings };
     newSettings[event.target.name] = event.target.value;
     this.setState({
       localSettings: newSettings,
@@ -110,6 +110,7 @@ export default class SettingsModal extends React.Component {
     return (
       <React.Fragment>
         <Button
+          aria-label="settings"
           className="settings-icon-btn"
           onClick={this.handleShow}
         >

@@ -8,6 +8,7 @@ import { ipcRenderer } from 'electron';
 import {
   fireEvent, render, waitFor, within
 } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 
 import App from '../../src/renderer/app';
@@ -311,7 +312,7 @@ describe('Display recently executed InVEST jobs on Home tab', () => {
     });
     const recentJobs = await InvestJob.saveJob(job1);
 
-    const { getByText, findByText, getByTitle } = render(<App />);
+    const { getByText, findByText, getByRole } = render(<App />);
 
     await waitFor(() => {
       recentJobs.forEach((job) => {
@@ -319,7 +320,7 @@ describe('Display recently executed InVEST jobs on Home tab', () => {
           .toBeTruthy();
       });
     });
-    fireEvent.click(getByTitle('settings'));
+    fireEvent.click(getByRole('button', { name: 'settings' }));
     fireEvent.click(getByText('Clear'));
     const node = await findByText(/button to setup a model/);
     expect(node).toBeInTheDocument();
@@ -327,71 +328,108 @@ describe('Display recently executed InVEST jobs on Home tab', () => {
 });
 
 describe('InVEST global settings: dialog interactions', () => {
+  const nWorkersLabelText = 'Taskgraph n_workers parameter';
+  const loggingLabelText = 'Logging threshold';
+
   beforeEach(async () => {
     getInvestModelNames.mockResolvedValue({});
   });
+
   afterEach(async () => {
     jest.resetAllMocks();
   });
-  test('Invest settings: cancel, save, and invalid nWorkers', async () => {
+
+  test('Invest settings: change & Cancel', async () => {
     const nWorkers = '2';
     const loggingLevel = 'DEBUG';
-    const nWorkersLabelText = 'Taskgraph n_workers parameter';
-    const loggingLabelText = 'Logging threshold';
-    const badValue = 'a';
 
     const {
-      getByText, getByLabelText, getByTitle, findByTitle
+      getByText, getByLabelText, findByRole
     } = render(
       <App />
     );
 
-    fireEvent.click(await findByTitle('settings'));
+    userEvent.click(await findByRole('button', { name: 'settings' }));
     const nWorkersInput = getByLabelText(nWorkersLabelText, { exact: false });
     const loggingInput = getByLabelText(loggingLabelText, { exact: false });
 
-    // Test that the default values when no global-settings file exists are
-    // loaded. I've found this helps allow componentDidMount processes to
-    // finish
+    // Test that the default values are loaded.
     await waitFor(() => {
       expect(nWorkersInput).toHaveValue('-1');
       expect(loggingInput).toHaveValue('INFO');
     });
 
-    // Change the select input and cancel -- expect default selected
-    fireEvent.change(nWorkersInput, { target: { value: nWorkers } });
-    fireEvent.change(loggingInput, { target: { value: loggingLevel } });
-    await waitFor(() => { // the value to test is inherited through props
+    // Change the input values
+    userEvent.clear(nWorkersInput);
+    userEvent.type(nWorkersInput, nWorkers);
+    userEvent.selectOptions(loggingInput, [loggingLevel]);
+    await waitFor(() => {
       expect(nWorkersInput).toHaveValue(nWorkers);
       expect(loggingInput).toHaveValue(loggingLevel);
     });
-    fireEvent.click(getByText('Cancel'));
-    fireEvent.click(getByText('settings'));
+    // Cancel instead of save, so expect defaults again
+    userEvent.click(getByText('Cancel'));
+    userEvent.click(await findByRole('button', { name: 'settings' }));
     await waitFor(() => {
       expect(nWorkersInput).toHaveValue('-1');
       expect(loggingInput).toHaveValue('INFO');
     });
 
-    // Change the value for real and save
-    fireEvent.change(nWorkersInput, { target: { value: nWorkers } });
-    fireEvent.change(loggingInput, { target: { value: loggingLevel } });
-    // The real test: values saved to global-settings
-    fireEvent.click(getByText('Save Changes'));
-    fireEvent.click(getByTitle('settings'));
-    await waitFor(() => { // the value to test is inherited through props
+    // Check values in the settings store have not changed
+    expect(await getSettingsValue('nWorkers')).toBe('-1');
+    expect(await getSettingsValue('loggingLevel')).toBe('INFO');
+  });
+
+  test('Invest settings: change & Save', async () => {
+    const nWorkers = '2';
+    const loggingLevel = 'DEBUG';
+
+    const {
+      getByText, getByLabelText, findByRole
+    } = render(
+      <App />
+    );
+
+    userEvent.click(await findByRole('button', { name: 'settings' }));
+    const nWorkersInput = getByLabelText(nWorkersLabelText, { exact: false });
+    const loggingInput = getByLabelText(loggingLabelText, { exact: false });
+
+    userEvent.clear(nWorkersInput);
+    userEvent.type(nWorkersInput, nWorkers);
+    userEvent.selectOptions(loggingInput, [loggingLevel]);
+    await waitFor(() => {
       expect(nWorkersInput).toHaveValue(nWorkers);
       expect(loggingInput).toHaveValue(loggingLevel);
     });
+    userEvent.click(getByText('Save Changes'));
     // Check values in the settings store were saved
-    const nWorkersStore = await getSettingsValue('nWorkers');
-    const loggingLevelStore = await getSettingsValue('loggingLevel');
-    expect(nWorkersStore).toBe(nWorkers);
-    expect(loggingLevelStore).toBe(loggingLevel);
+    userEvent.click(await findByRole('button', { name: 'settings' }));
+    await waitFor(() => {
+      expect(nWorkersInput).toHaveValue(nWorkers);
+      expect(loggingInput).toHaveValue(loggingLevel);
+    });
+    expect(await getSettingsValue('nWorkers')).toBe(nWorkers);
+    expect(await getSettingsValue('loggingLevel')).toBe(loggingLevel);
+  });
+
+  test('Invest settings: invalid nWorkers value', async () => {
+    const badValue = 'a';
+
+    const {
+      getByText, getByLabelText, findByRole
+    } = render(
+      <App />
+    );
 
     // Change n_workers to bad value -- expect invalid signal
-    fireEvent.change(nWorkersInput, { target: { value: badValue} });
-    expect(nWorkersInput.classList.contains('is-invalid')).toBeTruthy();
-    expect(getByText('Save Changes')).toBeDisabled();
+    userEvent.click(await findByRole('button', { name: 'settings' }));
+    const nWorkersInput = getByLabelText(nWorkersLabelText, { exact: false });
+    userEvent.clear(nWorkersInput);
+    userEvent.type(nWorkersInput, badValue);
+    await waitFor(() => {
+      expect(nWorkersInput.classList.contains('is-invalid')).toBeTruthy();
+      expect(getByText('Save Changes')).toBeDisabled();
+    });
   });
 
   test('Load invest settings from storage and test Reset', async () => {
@@ -403,16 +441,16 @@ describe('InVEST global settings: dialog interactions', () => {
       nWorkers: '3',
       loggingLevel: 'ERROR',
     };
-    const nWorkersLabelText = 'Taskgraph n_workers parameter';
-    const loggingLabelText = 'Logging threshold';
 
     await saveSettingsStore(expectedSettings);
 
-    const { getByText, getByLabelText, findByTitle } = render(
+    const {
+      getByText, getByLabelText, findByRole
+    } = render(
       <App />
     );
 
-    fireEvent.click(await findByTitle('settings'));
+    userEvent.click(await findByRole('button', { name: 'settings' }));
     const nWorkersInput = getByLabelText(nWorkersLabelText, { exact: false });
     const loggingInput = getByLabelText(loggingLabelText, { exact: false });
 
@@ -423,15 +461,15 @@ describe('InVEST global settings: dialog interactions', () => {
     });
 
     // Test Reset sets values to default
-    fireEvent.click(getByText('Reset'));
+    userEvent.click(getByText('Reset'));
     await waitFor(() => {
       expect(nWorkersInput).toHaveValue(defaultSettings.nWorkers);
       expect(loggingInput).toHaveValue(defaultSettings.loggingLevel);
     });
 
     // Expect reset values to not have been saved when cancelling
-    fireEvent.click(getByText('Cancel'));
-    fireEvent.click(getByText('settings'));
+    userEvent.click(getByText('Cancel'));
+    userEvent.click(await findByRole('button', { name: 'settings' }));
     await waitFor(() => {
       expect(nWorkersInput).toHaveValue(expectedSettings.nWorkers);
       expect(loggingInput).toHaveValue(expectedSettings.loggingLevel);
@@ -440,14 +478,14 @@ describe('InVEST global settings: dialog interactions', () => {
 
   test('Access sampledata download Modal from settings', async () => {
     const {
-      findByText, findByRole, findByTitle, queryByText
+      findByText, findByRole, queryByText
     } = render(
       <App />
     );
 
-    const settingsBtn = await findByTitle('settings');
-    fireEvent.click(settingsBtn);
-    fireEvent.click(
+    const settingsBtn = await findByRole('button', { name: 'settings' });
+    userEvent.click(settingsBtn);
+    userEvent.click(
       await findByRole('button', { name: 'Download Sample Data' })
     );
 
