@@ -1,5 +1,6 @@
 import path from 'path';
 
+// eslint-disable-next-line import/no-extraneous-dependencies
 import {
   app,
   BrowserWindow,
@@ -7,7 +8,7 @@ import {
   nativeTheme,
   Menu,
   ipcMain,
-} from 'electron'; // eslint-disable-line import/no-extraneous-dependencies
+} from 'electron';
 
 import {
   createPythonFlaskProcess,
@@ -24,7 +25,7 @@ import {
   setupInvestLogReaderHandler
 } from './setupInvestHandlers';
 import { ipcMainChannels } from './ipcMainChannels';
-import { menuTemplate } from './menubar';
+import menuTemplate from './menubar';
 import ELECTRON_DEV_MODE from './isDevMode';
 import { getLogger } from '../logger';
 import pkg from '../../package.json';
@@ -56,7 +57,6 @@ export const createWindow = async () => {
   createPythonFlaskProcess(investExe);
   logger.info(`Running invest-workbench version ${pkg.version}`);
   setupDialogs();
-  setupContextMenu();
   setupCheckFirstRun();
 
   // always use light mode regardless of the OS/browser setting
@@ -76,9 +76,6 @@ export const createWindow = async () => {
       contextIsolation: false,
       nodeIntegration: true,
       preload: path.join(__dirname, '..', 'preload.js'),
-      additionalArguments: [
-        ELECTRON_DEV_MODE ? '--dev' : 'packaged'
-      ],
       defaultEncoding: 'UTF-8',
     },
   });
@@ -123,6 +120,7 @@ export const createWindow = async () => {
   setupDownloadHandlers(mainWindow);
   setupInvestRunHandlers(investExe);
   setupInvestLogReaderHandler();
+  setupContextMenu(mainWindow);
 };
 
 export function removeIpcMainListeners() {
