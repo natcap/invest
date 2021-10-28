@@ -1,7 +1,6 @@
 import { ipcRenderer } from 'electron'; // eslint-disable-line import/no-extraneous-dependencies
 import React from 'react';
 import ReactDom from 'react-dom';
-
 import App from './app';
 import { ipcMainChannels } from '../main/ipcMainChannels';
 
@@ -16,6 +15,12 @@ window.addEventListener('contextmenu', (e) => {
   rightClickPosition = { x: e.x, y: e.y };
   ipcRenderer.send(ipcMainChannels.SHOW_CONTEXT_MENU, rightClickPosition);
 });
+
+// call this before rendering the app so that _() is defined
+// default to English
+ipcRenderer.send(ipcMainChannels.SET_LANGUAGE, 'es');
+console.log(ipcRenderer.sendSync(ipcMainChannels.GETTEXT, 'Cancel'));
+window._ = ipcRenderer.sendSync.bind(null, ipcMainChannels.GETTEXT);  // partially applied function
 
 function render(isFirstRun) {
   ReactDom.render(

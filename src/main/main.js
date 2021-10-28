@@ -24,6 +24,7 @@ import {
   setupInvestRunHandlers,
   setupInvestLogReaderHandler
 } from './setupInvestHandlers';
+import { setupSetLanguage } from './setLanguage';
 import { ipcMainChannels } from './ipcMainChannels';
 import { getLogger } from '../logger';
 import { menuTemplate } from './menubar';
@@ -53,12 +54,15 @@ export const createWindow = async () => {
   });
   splashScreen.loadURL(`file://${__dirname}/../static/splash.html`);
 
+  setupSetLanguage();
   const investExe = findInvestBinaries(ELECTRON_DEV_MODE);
   createPythonFlaskProcess(investExe);
   logger.info(`Running invest-workbench version ${pkg.version}`);
   setupDialogs();
   setupContextMenu();
   setupCheckFirstRun();
+
+  console.log(ipcMain.eventNames());
 
   // always use light mode regardless of the OS/browser setting
   nativeTheme.themeSource = 'light';

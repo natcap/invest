@@ -7,4 +7,6 @@ export const ipcMainChannels = {
   INVEST_READ_LOG: 'invest-read-log',
   SHOW_CONTEXT_MENU: 'show-context-menu',
   IS_FIRST_RUN: 'is-first-run',
+  SET_LANGUAGE: 'set-language',
+  GETTEXT: 'gettext',
 };

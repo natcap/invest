@@ -1,0 +1,18 @@
+{
+   "": {
+      "project-id-version": "PROJECT VERSION",
+      "report-msgid-bugs-to": "EMAIL@ADDRESS",
+      "pot-creation-date": "2021-09-30 10:47-0700",
+      "po-revision-date": "2021-09-15 13:43-0700",
+      "last-translator": "FULL NAME <EMAIL@ADDRESS>",
+      "language": "es",
+      "language-team": "es <LL@li.org>",
+      "plural-forms": "nplurals=2; plural=(n != 1)",
+      "mime-version": "1.0",
+      "content-type": "text/plain; charset=utf-8",
+      "content-transfer-encoding": "8bit"
+   },
+   "Cancel": "Cancelar",
+   "Open": "Abre",
+   "Recent runs:": "Ejecuciones recientes"
+}
