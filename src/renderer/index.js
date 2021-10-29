@@ -4,6 +4,9 @@ import ReactDom from 'react-dom';
 import App from './app';
 import { ipcMainChannels } from '../main/ipcMainChannels';
 
+import { getSettingsValue } from './components/SettingsModal/SettingsStorage';
+
+
 const logger = window.Workbench.getLogger(__filename.split('/').slice(-1)[0]);
 
 // Create a right-click menu
@@ -16,10 +19,11 @@ window.addEventListener('contextmenu', (e) => {
   ipcRenderer.send(ipcMainChannels.SHOW_CONTEXT_MENU, rightClickPosition);
 });
 
+const language = await getSettingsValue('language');
+console.log(language)
 // call this before rendering the app so that _() is defined
 // default to English
-ipcRenderer.send(ipcMainChannels.SET_LANGUAGE, 'en');
-console.log(ipcRenderer.sendSync(ipcMainChannels.GETTEXT, 'Cancel'));
+ipcRenderer.invoke(ipcMainChannels.SET_LANGUAGE, language);
 window._ = ipcRenderer.sendSync.bind(null, ipcMainChannels.GETTEXT);  // partially applied function
 
 function render(isFirstRun) {

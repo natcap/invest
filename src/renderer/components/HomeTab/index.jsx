@@ -17,7 +17,7 @@ const logger = window.Workbench.getLogger(__filename.split('/').slice(-2).join('
  * Renders a table of buttons for each invest model and
  * a list of cards for each cached invest job.
  */
-export default class HomeTab extends React.PureComponent {
+export default class HomeTab extends React.Component {
   constructor(props) {
     super(props);
     this.handleClick = this.handleClick.bind(this);
@@ -35,6 +35,7 @@ export default class HomeTab extends React.PureComponent {
   }
 
   render() {
+    console.log('rendering home tab');
     const { investList, recentJobs } = this.props;
     // A button in a table row for each model
     const investButtons = [];
@@ -98,7 +99,7 @@ HomeTab.propTypes = {
 /**
  * Renders a button for each recent invest job.
  */
-class RecentInvestJobs extends React.PureComponent {
+class RecentInvestJobs extends React.Component {
   constructor(props) {
     super(props);
     this.handleClick = this.handleClick.bind(this);
@@ -109,6 +110,7 @@ class RecentInvestJobs extends React.PureComponent {
   }
 
   render() {
+    console.log('rendering recent runs');
     // Buttons to load each recently saved state
     const recentButtons = [];
     const { recentJobs } = this.props;

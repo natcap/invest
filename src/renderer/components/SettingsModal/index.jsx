@@ -96,11 +96,18 @@ export default class SettingsModal extends React.Component {
     this.setState({
       localSettings: newSettings,
     });
+    console.log('set state to', newSettings);
   }
 
   handleChangeLanguage(event) {
-    ipcRenderer.sendSync(ipcMainChannels.SET_LANGUAGE, event.target.value);
-    this.handleChange(event);
+    // update the gettext language setting
+    const newLanguage = event.target.value;
+    ipcRenderer.invoke(ipcMainChannels.SET_LANGUAGE, newLanguage
+      ).then(() => {
+        this.setState({
+          localSettings: {...this.state.localSettings, language: newLanguage}
+        });
+      });
   }
 
   switchToDownloadModal() {

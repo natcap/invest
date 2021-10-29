@@ -22,7 +22,7 @@ loadMessageCatalogs();
 
 
 export function setupSetLanguage() {
-  ipcMain.on(
+  ipcMain.handle(
     ipcMainChannels.SET_LANGUAGE,
     (event, languageCode) => {
       console.log('handle setting language', languageCode);
