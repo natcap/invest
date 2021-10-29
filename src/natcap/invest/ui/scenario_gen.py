@@ -12,10 +12,10 @@ class ScenarioGenProximity(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(
             self,
-            label=MODEL_METADATA['scenario_gen_proximity'].model_title,
+            label=MODEL_METADATA['scenario_generator_proximity'].model_title,
             target=scenario_gen_proximity.execute,
             validator=scenario_gen_proximity.validate,
-            localdoc=MODEL_METADATA['scenario_gen_proximity'].userguide)
+            localdoc=MODEL_METADATA['scenario_generator_proximity'].userguide)
 
         self.base_lulc_path = inputs.File(
             args_key='base_lulc_path',
