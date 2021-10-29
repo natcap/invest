@@ -13,7 +13,7 @@ import { APP_HAS_RUN_TOKEN } from '../../src/main/setupCheckFirstRun';
 
 jest.setTimeout(240000); // This test takes ~20 seconds, but sometimes longer
 const PORT = 9009;
-const TMP_DIR = fs.mkdtempSync('tests/data/_');
+const TMP_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'data-'));
 const TMP_AOI_PATH = path.join(TMP_DIR, 'aoi.geojson');
 let ELECTRON_PROCESS;
 let BROWSER;
@@ -127,10 +127,7 @@ afterAll(async () => {
     console.error(error);
   }
 
-  // being extra careful with recursive rm
-  if (TMP_DIR.startsWith('tests/data')) {
-    rimraf(TMP_DIR, (error) => { if (error) { throw error; } });
-  }
+  rimraf(TMP_DIR, (error) => { if (error) { throw error; } });
   const wasKilled = ELECTRON_PROCESS.kill();
   console.log(`electron process was killed: ${wasKilled}`);
 });
