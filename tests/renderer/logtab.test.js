@@ -29,7 +29,7 @@ function renderLogTab(logfilePath, primaryPythonLogger) {
 }
 
 function makeLogFile(text) {
-  const workspace = fs.mkdtempSync('tests/data/log-');
+  const workspace = fs.mkdtempSync('tests/data-log-');
   const logfilePath = path.join(workspace, 'logfile.txt');
   fs.writeFileSync(logfilePath, text);
   return logfilePath;
