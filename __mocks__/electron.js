@@ -11,7 +11,7 @@ run in node where all electron's exports are undefined. So we must mock,
 even for APIs that would otherwise seem okay to call during a test.
 */
 
-import path from 'path';
+import os from 'os';
 import events from 'events';
 
 class MockIPC extends events.EventEmitter {
@@ -37,7 +37,7 @@ class MockApp extends events.EventEmitter {
   constructor() {
     super();
     this.getPath = jest.fn().mockImplementation(
-      () => path.join('tests', 'data')
+      () => os.tmpdir()
     );
     this.setPath = jest.fn();
   }

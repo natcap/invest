@@ -4,6 +4,7 @@ like how starting and stopping invest subprocesses trigger log updates.
 */
 import path from 'path';
 import fs from 'fs';
+
 import React from 'react';
 import { render } from '@testing-library/react';
 import '@testing-library/jest-dom';
