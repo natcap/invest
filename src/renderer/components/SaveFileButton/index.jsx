@@ -3,6 +3,7 @@ import { ipcRenderer } from 'electron';
 import PropTypes from 'prop-types';
 
 import Button from 'react-bootstrap/Button';
+import { MdSave } from 'react-icons/md';
 
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
@@ -32,7 +33,8 @@ export default class SaveFileButton extends React.Component {
         onClick={this.browseSaveFile}
         variant="link"
       >
-        {this.props.title}
+        <MdSave />
+        {` ${this.props.title}`}
       </Button>
     );
   }
