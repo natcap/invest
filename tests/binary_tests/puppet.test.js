@@ -38,7 +38,7 @@ if (process.platform === 'darwin') {
   // on macos, os.tmpdir is a symlink which seems to slow down our
   // invest validation. https://github.com/nodejs/node/issues/11422
   TMP_DIR = fs.mkdtempSync(
-    path.join(fs.realPathSync(os.tmpdir()), 'data-')
+    path.join(fs.realpathSync(os.tmpdir()), 'data-')
   );
 } else if (process.platform === 'win32') {
   [BINARY_PATH] = glob.sync('./dist/win-unpacked/InVEST*.exe');
