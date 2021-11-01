@@ -29,10 +29,10 @@ jest.mock('child_process');
 jest.mock('../../src/renderer/server_requests');
 jest.mock('node-fetch');
 
-const MOCK_MODEL_LIST_KEY = 'Carbon';
+const MOCK_MODEL_TITLE = 'Carbon';
 const MOCK_MODEL_RUN_NAME = 'carbon';
 const MOCK_INVEST_LIST = {
-  [MOCK_MODEL_LIST_KEY]: {
+  [MOCK_MODEL_TITLE]: {
     model_name: MOCK_MODEL_RUN_NAME,
   },
 };
@@ -85,7 +85,7 @@ describe('Various ways to open and close InVEST models', () => {
       <App />
     );
 
-    const carbon = await findByRole('button', { name: MOCK_MODEL_LIST_KEY });
+    const carbon = await findByRole('button', { name: MOCK_MODEL_TITLE });
     fireEvent.click(carbon);
     const executeButton = await findByRole('button', { name: /Run/ });
     expect(executeButton).toBeDisabled();
@@ -187,12 +187,12 @@ describe('Various ways to open and close InVEST models', () => {
       queryAllByRole,
     } = render(<App />);
 
-    const carbon = await findByRole('button', { name: MOCK_MODEL_LIST_KEY });
+    const carbon = await findByRole('button', { name: MOCK_MODEL_TITLE });
     const homeTab = await findByRole('tabpanel', { name: /Home/ });
 
     // Open a model tab and expect that it's active
     fireEvent.click(carbon);
-    let modelTabs = await findAllByRole('tab', { name: /Carbon/ });
+    let modelTabs = await findAllByRole('tab', { name: MOCK_MODEL_TITLE });
     expect(modelTabs).toHaveLength(1); // one carbon tab open
     const tab1 = modelTabs[0];
     const tab1EventKey = tab1.getAttribute('data-rb-event-key');
@@ -202,7 +202,7 @@ describe('Various ways to open and close InVEST models', () => {
     // Open a second model tab and expect that it's active
     fireEvent.click(homeTab);
     fireEvent.click(carbon);
-    modelTabs = await findAllByRole('tab', { name: /Carbon/ });
+    modelTabs = await findAllByRole('tab', { name: MOCK_MODEL_TITLE });
     expect(modelTabs).toHaveLength(2); // 2 carbon tabs open
     const tab2 = modelTabs[1];
     const tab2EventKey = tab2.getAttribute('data-rb-event-key');
@@ -215,7 +215,7 @@ describe('Various ways to open and close InVEST models', () => {
     // Open a third model tab and expect that it's active
     fireEvent.click(homeTab);
     fireEvent.click(carbon);
-    modelTabs = await findAllByRole('tab', { name: /Carbon/ });
+    modelTabs = await findAllByRole('tab', { name: MOCK_MODEL_TITLE });
     expect(modelTabs).toHaveLength(3); // 3 carbon tabs open
     const tab3 = modelTabs[2];
     const tab3EventKey = tab3.getAttribute('data-rb-event-key');
@@ -229,10 +229,10 @@ describe('Various ways to open and close InVEST models', () => {
 
     // Click the close button on the middle tab
     const tab2CloseButton = await within(tab2.closest('.nav-item'))
-      .getByRole('button', { name: /x/ });
+      .getByRole('button', { name: new RegExp(`close ${MOCK_MODEL_TITLE}`) });
     fireEvent.click(tab2CloseButton);
     // Now there should only be 2 model tabs open
-    modelTabs = await findAllByRole('tab', { name: /Carbon/ });
+    modelTabs = await findAllByRole('tab', { name: MOCK_MODEL_TITLE });
     expect(modelTabs).toHaveLength(2);
     // Should have switched to tab3, the next tab to the right
     expect(tab3.classList.contains('active')).toBeTruthy();
@@ -240,10 +240,10 @@ describe('Various ways to open and close InVEST models', () => {
 
     // Click the close button on the right tab
     const tab3CloseButton = await within(tab3.closest('.nav-item'))
-      .getByRole('button', { name: /x/ });
+      .getByRole('button', { name: new RegExp(`close ${MOCK_MODEL_TITLE}`) });
     fireEvent.click(tab3CloseButton);
     // Now there should only be 1 model tab open
-    modelTabs = await findAllByRole('tab', { name: /Carbon/ });
+    modelTabs = await findAllByRole('tab', { name: MOCK_MODEL_TITLE });
     expect(modelTabs).toHaveLength(1);
     // No model tabs to the right, so it should switch to the next tab to the left.
     expect(tab1.classList.contains('active')).toBeTruthy();
@@ -251,10 +251,10 @@ describe('Various ways to open and close InVEST models', () => {
 
     // Click the close button on the last tab
     const tab1CloseButton = await within(tab1.closest('.nav-item'))
-      .getByRole('button', { name: /x/ });
+      .getByRole('button', { name: new RegExp(`close ${MOCK_MODEL_TITLE}`) });
     fireEvent.click(tab1CloseButton);
     // Now there should be no model tabs open.
-    modelTabs = await queryAllByRole('tab', { name: /Carbon/ });
+    modelTabs = await queryAllByRole('tab', { name: MOCK_MODEL_TITLE });
     expect(modelTabs).toHaveLength(0);
     // No more model tabs, so it should switch back to the home tab.
     expect(homeTab.classList.contains('active')).toBeTruthy();
@@ -615,7 +615,7 @@ describe('InVEST subprocess testing', () => {
       queryByText,
     } = render(<App />);
 
-    const carbon = await findByRole('button', { name: MOCK_MODEL_LIST_KEY });
+    const carbon = await findByRole('button', { name: MOCK_MODEL_TITLE });
     fireEvent.click(carbon);
     const workspaceInput = await findByLabelText(
       `${spec.args.workspace_dir.name}`
@@ -660,7 +660,7 @@ describe('InVEST subprocess testing', () => {
       getByRole,
     } = render(<App />);
 
-    const carbon = await findByRole('button', { name: MOCK_MODEL_LIST_KEY });
+    const carbon = await findByRole('button', { name: MOCK_MODEL_TITLE });
     fireEvent.click(carbon);
     const workspaceInput = await findByLabelText(
       `${spec.args.workspace_dir.name}`
@@ -716,7 +716,7 @@ describe('InVEST subprocess testing', () => {
       queryByText,
     } = render(<App />);
 
-    const carbon = await findByRole('button', { name: MOCK_MODEL_LIST_KEY });
+    const carbon = await findByRole('button', { name: MOCK_MODEL_TITLE });
     fireEvent.click(carbon);
     const workspaceInput = await findByLabelText(
       `${spec.args.workspace_dir.name}`
@@ -760,7 +760,7 @@ describe('InVEST subprocess testing', () => {
       findByRole,
     } = render(<App />);
 
-    const carbon = await findByRole('button', { name: MOCK_MODEL_LIST_KEY });
+    const carbon = await findByRole('button', { name: MOCK_MODEL_TITLE });
     fireEvent.click(carbon);
     const workspaceInput = await findByLabelText(
       `${spec.args.workspace_dir.name}`
