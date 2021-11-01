@@ -4,6 +4,8 @@ like how starting and stopping invest subprocesses trigger log updates.
 */
 import path from 'path';
 import fs from 'fs';
+import os from 'os';
+
 import React from 'react';
 import { render } from '@testing-library/react';
 import '@testing-library/jest-dom';
@@ -29,7 +31,7 @@ function renderLogTab(logfilePath, primaryPythonLogger) {
 }
 
 function makeLogFile(text) {
-  const workspace = fs.mkdtempSync('tests/data/log-');
+  const workspace = fs.mkdtempSync(path.join(os.tmpdir(), 'data-'));
   const logfilePath = path.join(workspace, 'logfile.txt');
   fs.writeFileSync(logfilePath, text);
   return logfilePath;

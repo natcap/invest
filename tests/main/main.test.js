@@ -4,6 +4,7 @@ instantiated by main.
 */
 
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import { execFileSync } from 'child_process';
 
@@ -106,7 +107,7 @@ describe('findInvestBinaries', () => {
 });
 
 describe('extractZipInplace', () => {
-  const root = path.join('tests', 'data');
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'data-'));
   const zipPath = path.join(root, 'output.zip');
   let level1Dir;
   let level2Dir;
@@ -131,7 +132,7 @@ describe('extractZipInplace', () => {
       fs.createWriteStream(zipPath)
     ).on('close', () => {
       // being extra careful with recursive rm
-      if (level1Dir.startsWith(path.join('tests', 'data', 'level1'))) {
+      if (level1Dir.startsWith(path.join(root, 'level1'))) {
         rimraf(level1Dir, (error) => { if (error) { throw error; } });
       }
       doneZipping = true;
@@ -140,11 +141,7 @@ describe('extractZipInplace', () => {
   });
 
   afterEach(() => {
-    fs.unlinkSync(zipPath);
-    // being extra careful with recursive rm
-    if (level1Dir.startsWith(path.join('tests', 'data', 'level1'))) {
-      rimraf(level1Dir, (error) => { if (error) { throw error; } });
-    }
+    fs.rmSync(root, { recursive: true, force: true });
   });
 
   it('should extract recursively', async () => {
