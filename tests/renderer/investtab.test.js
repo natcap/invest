@@ -397,8 +397,8 @@ describe('InVEST Run Button', () => {
     const runButton = await findByRole('button', { name: /Run/ });
     expect(runButton).toBeDisabled();
 
-    const a = await findByLabelText(RegExp(`${spec.args.a.name}`));
-    const b = await findByLabelText(RegExp(`${spec.args.b.name}`));
+    const a = await findByLabelText(`${spec.args.a.name}`);
+    const b = await findByLabelText(`${spec.args.b.name}`);
 
     expect(a).toHaveClass('is-invalid');
     expect(b).toHaveClass('is-invalid');
