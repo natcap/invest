@@ -185,6 +185,7 @@ export default class ArgInput extends React.PureComponent {
                     ? ( // add a file selector button
                       <InputGroup.Append>
                         <Button
+                          aria-label={`browse for ${argSpec.name}`}
                           className="ml-2"
                           id={argkey}
                           variant="outline-dark"
@@ -352,6 +353,7 @@ class AboutModal extends React.PureComponent {
     return (
       <React.Fragment>
         <Button
+          aria-label={`info about ${this.props.argument.name}`}
           className="mr-2"
           onClick={this.handleAboutOpen}
           variant="outline-info"
