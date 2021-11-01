@@ -25,6 +25,7 @@ import {
 import { getInvestModelNames } from './server_requests';
 import InvestJob from './InvestJob';
 import { dragOverHandlerNone } from './utils';
+import { ipcMainChannels } from '../main/ipcMainChannels';
 
 const logger = window.Workbench.getLogger(__filename.split('/').slice(-1)[0]);
 
@@ -91,9 +92,15 @@ export default class App extends React.Component {
   }
 
   saveSettings(settings) {
-    this.setState({
-      investSettings: settings,
-    });
+    console.log('save settings in app', settings);
+    ipcRenderer.invoke(ipcMainChannels.SET_LANGUAGE, settings.language
+      ).then(() => {
+        console.log('set language');
+        const x = this.setState({
+          investSettings: settings,
+        });
+      }
+    )
 
     saveSettingsStore(settings);
   }

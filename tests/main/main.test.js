@@ -176,6 +176,7 @@ describe('createWindow', () => {
       ipcMainChannels.SHOW_OPEN_DIALOG,
       ipcMainChannels.SHOW_SAVE_DIALOG,
       ipcMainChannels.IS_FIRST_RUN,
+      ipcMainChannels.SET_LANGUAGE,
     ];
     const expectedOnChannels = [
       ipcMainChannels.DOWNLOAD_URL,
@@ -183,6 +184,7 @@ describe('createWindow', () => {
       ipcMainChannels.INVEST_KILL,
       ipcMainChannels.INVEST_READ_LOG,
       ipcMainChannels.SHOW_CONTEXT_MENU,
+      ipcMainChannels.GETTEXT,
     ];
     createWindow();
     await waitFor(() => {

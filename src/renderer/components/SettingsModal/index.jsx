@@ -9,7 +9,6 @@ import Button from 'react-bootstrap/Button';
 import Modal from 'react-bootstrap/Modal';
 
 import { getDefaultSettings } from './SettingsStorage';
-import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
 /** Validate that n_workers is an acceptable value for Taskgraph.
  *
@@ -39,8 +38,6 @@ export default class SettingsModal extends React.Component {
     this.handleShow = this.handleShow.bind(this);
     this.handleClose = this.handleClose.bind(this);
     this.handleChange = this.handleChange.bind(this);
-    this.handleChangeLanguage = this.handleChangeLanguage.bind(this);
-    this.handleSubmit = this.handleSubmit.bind(this);
     this.handleReset = this.handleReset.bind(this);
     this.switchToDownloadModal = this.switchToDownloadModal.bind(this);
   }
@@ -71,43 +68,25 @@ export default class SettingsModal extends React.Component {
     this.setState({ show: true });
   }
 
-  handleSubmit(event) {
-    /** Handle a click on the "Save" button.
-     *
-     *  Updates the parent's state and persistent store.
-     */
-    event.preventDefault();
-    this.props.saveSettings(this.state.localSettings);
-    this.setState({ show: false });
-  }
-
   handleReset(event) {
     event.preventDefault();
     const resetSettings = getDefaultSettings();
-    this.setState({
-      localSettings: resetSettings,
-    });
+    this.setState(
+      { localSettings: resetSettings },
+      () => this.props.saveSettings(this.state.localSettings)
+    );
   }
 
   handleChange(event) {
-    console.log(event);
     const newSettings = Object.assign({}, this.state.localSettings);
     newSettings[event.target.name] = event.target.value;
-    this.setState({
-      localSettings: newSettings,
-    });
-    console.log('set state to', newSettings);
-  }
-
-  handleChangeLanguage(event) {
-    // update the gettext language setting
-    const newLanguage = event.target.value;
-    ipcRenderer.invoke(ipcMainChannels.SET_LANGUAGE, newLanguage
-      ).then(() => {
-        this.setState({
-          localSettings: {...this.state.localSettings, language: newLanguage}
-        });
-      });
+    this.setState(
+      { localSettings: newSettings },
+      // save to persistent settings storage
+      // this also updates the top level app component state,
+      // so the whole app will re-render in a new language
+      () => this.props.saveSettings(this.state.localSettings)
+    );
   }
 
   switchToDownloadModal() {
@@ -161,6 +140,28 @@ export default class SettingsModal extends React.Component {
           <Modal.Body>
             <Form.Group as={Row}>
               <Form.Label column sm="8" htmlFor="logging-select">
+                <span className="material-icons language-icon">translate</span>
+                {_("Language")}
+              </Form.Label>
+              <Col sm="4">
+                <Form.Control
+                  id="language-select"
+                  as="select"
+                  name="language"
+                  value={this.state.localSettings.language}
+                  onChange={this.handleChange}
+                >
+                  {Object.entries(languageOptions).map(entry => {
+                    const displayName = entry[0];
+                    const value = entry[1];
+                    return <option value={value} key={value}>{displayName}</option>;
+                  }
+                  )}
+                </Form.Control>
+              </Col>
+            </Form.Group>
+            <Form.Group as={Row}>
+              <Form.Label column sm="8" htmlFor="logging-select">
                 {_("Logging threshold")}
               </Form.Label>
               <Col sm="4">
@@ -192,25 +193,6 @@ export default class SettingsModal extends React.Component {
                   onChange={this.handleChange}
                   isInvalid={!nWorkersIsValid}
                 />
-              </Col>
-            </Form.Group>
-            <Form.Group as={Row}>
-              <Form.Label column sm="8" htmlFor="logging-select">{_("Language")}</Form.Label>
-              <Col sm="4">
-                <Form.Control
-                  id="language-select"
-                  as="select"
-                  name="language"
-                  value={this.state.localSettings.language}
-                  onChange={this.handleChangeLanguage}
-                >
-                  {Object.entries(languageOptions).map(entry => {
-                    const displayName = entry[0];
-                    const value = entry[1];
-                    return <option value={value} key={value}>{displayName}</option>;
-                  }
-                  )}
-                </Form.Control>
               </Col>
             </Form.Group>
             <Form.Group as={Row}>
@@ -253,19 +235,6 @@ export default class SettingsModal extends React.Component {
               </Col>
             </Form.Group>
           </Modal.Body>
-          <Modal.Footer>
-            <Button variant="secondary" onClick={this.handleClose}>
-              {_("Cancel")}
-            </Button>
-            <Button
-              variant="primary"
-              onClick={this.handleSubmit}
-              type="submit"
-              disabled={!nWorkersIsValid}
-            >
-              {_("Save Changes")}
-            </Button>
-          </Modal.Footer>
         </Modal>
       </React.Fragment>
     );
