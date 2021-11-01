@@ -176,13 +176,21 @@ test('Run a real invest model', async () => {
 
   const argsForm = await page.waitForSelector('.args-form');
   const typeDelay = 10;
-  const workspace = await findByLabelText(argsForm, /Workspace/i);
+  const workspace = await findByRole(
+    argsForm, 'textbox', { name: /Workspace/i }
+  );
   await workspace.type(TMP_DIR, { delay: typeDelay });
-  const aoi = await findByLabelText(argsForm, /area of interest/i);
+  const aoi = await findByRole(
+    argsForm, 'textbox', { name: /area of interest/i }
+  );
   await aoi.type(TMP_AOI_PATH, { delay: typeDelay });
-  const startYear = await findByLabelText(argsForm, /start year/i);
+  const startYear = await findByRole(
+    argsForm, 'textbox', { name: /start year/i }
+  );
   await startYear.type('2008', { delay: typeDelay });
-  const endYear = await findByLabelText(argsForm, /end year/i);
+  const endYear = await findByRole(
+    argsForm, 'textbox', {name: /end year/i }
+  );
   await endYear.type('2012', { delay: typeDelay });
   await page.screenshot({ path: `${SCREENSHOT_PREFIX}4-complete-setup-form.png` });
 
