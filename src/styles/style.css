@@ -380,6 +380,10 @@ input[type=text]::placeholder {
 	text-indent: -3rem;
 }
 
+.args-form svg {
+	font-size: 1.5rem;
+}
+
 /* InVEST Log Tab */
 #log-display {
 	overflow: auto;

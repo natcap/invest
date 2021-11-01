@@ -8,6 +8,7 @@ import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
 import InputGroup from 'react-bootstrap/InputGroup';
 import Modal from 'react-bootstrap/Modal';
+import { MdFolderOpen, MdInfo } from 'react-icons/md';
 
 /**
  * Filter a message that refers to many spatial inputs' bounding boxes.
@@ -184,14 +185,15 @@ export default class ArgInput extends React.PureComponent {
                     ? ( // add a file selector button
                       <InputGroup.Append>
                         <Button
+                          className="ml-2"
                           id={argkey}
-                          variant="outline-secondary"
+                          variant="outline-dark"
                           value={argSpec.type} // dialog will limit options accordingly
                           name={argkey}
                           onClick={selectFile}
                           disabled={!enabled}
                         >
-                          Browse
+                          <MdFolderOpen />
                         </Button>
                       </InputGroup.Append>
                     )
@@ -350,11 +352,11 @@ class AboutModal extends React.PureComponent {
     return (
       <React.Fragment>
         <Button
-          className="mr-3"
+          className="mr-2"
           onClick={this.handleAboutOpen}
           variant="outline-info"
         >
-          i
+          <MdInfo />
         </Button>
         <Modal show={this.state.aboutShow} onHide={this.handleAboutClose}>
           <Modal.Header>
