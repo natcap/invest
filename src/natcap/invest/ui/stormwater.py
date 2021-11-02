@@ -1,15 +1,15 @@
 from natcap.invest.ui import model, inputs
-import natcap.invest.stormwater
+from natcap.invest import MODEL_METADATA, stormwater
 
 
 class Stormwater(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(
             self,
-            label='InVEST Stormwater Model',
-            target=natcap.invest.stormwater.execute,
-            validator=natcap.invest.stormwater.validate,
-            localdoc='stormwater.html')
+            label=MODEL_METADATA['stormwater'].model_title,
+            target=stormwater.execute,
+            validator=stormwater.validate,
+            localdoc=MODEL_METADATA['stormwater'].userguide)
 
         self.lulc_path = inputs.File(
             args_key='lulc_path',

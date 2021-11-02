@@ -443,7 +443,7 @@ def execute(args):
         task_name='access_raster')
     access_task_list = [create_access_raster_task]
 
-    if 'access_vector_path' in args:
+    if 'access_vector_path' in args and args['access_vector_path']:
         LOGGER.debug("Rasterize Access vector")
         rasterize_access_task = task_graph.add_task(
             func=pygeoprocessing.rasterize,
