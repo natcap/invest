@@ -3,9 +3,7 @@ import React from 'react';
 import ReactDom from 'react-dom';
 import App from './app';
 import { ipcMainChannels } from '../main/ipcMainChannels';
-
 import { getSettingsValue } from './components/SettingsModal/SettingsStorage';
-
 
 const logger = window.Workbench.getLogger(__filename.split('/').slice(-1)[0]);
 
@@ -20,7 +18,6 @@ window.addEventListener('contextmenu', (e) => {
 });
 
 const language = await getSettingsValue('language');
-console.log(language)
 // call this before rendering the app so that _() is defined
 ipcRenderer.invoke(ipcMainChannels.SET_LANGUAGE, language);
 window._ = ipcRenderer.sendSync.bind(null, ipcMainChannels.GETTEXT);  // partially applied function

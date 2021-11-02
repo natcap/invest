@@ -187,7 +187,6 @@ export default class SetupTab extends React.Component {
     };
   }
 
-
   /** Save the current invest arguments to a python script via datastack.py API.
    *
    * @param {string} filepath - desired path to the python script

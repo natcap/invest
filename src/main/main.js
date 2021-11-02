@@ -62,8 +62,6 @@ export const createWindow = async () => {
   setupContextMenu();
   setupCheckFirstRun();
 
-  console.log(ipcMain.eventNames());
-
   // always use light mode regardless of the OS/browser setting
   nativeTheme.themeSource = 'light';
   // Wait for a response from the server before loading the app

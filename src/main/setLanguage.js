@@ -5,9 +5,9 @@ import fetch from 'node-fetch';
 import fs from 'fs';
 
 
-export const i18n = new gettext_js();
+const i18n = new gettext_js();
 
-export async function loadMessageCatalogs() {
+async function loadMessageCatalogs() {
   // load each message catalog JSON file into an object
   // for easy access when we switch languages
   const languages = ['es'];
@@ -18,8 +18,6 @@ export async function loadMessageCatalogs() {
   }
 }
 loadMessageCatalogs();
-
-console.log('here', i18n.gettext("Language"));
 
 export function setupSetLanguage() {
   ipcMain.handle(

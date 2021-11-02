@@ -31,7 +31,7 @@ export default class SettingsModal extends React.Component {
         nWorkers: '',
         loggingLevel: '',
         sampleDataDir: null,
-        language: 'en'
+        language: '',
       },
     };
 
@@ -78,7 +78,6 @@ export default class SettingsModal extends React.Component {
   }
 
   handleChange(event) {
-    console.log('handle change', event.target.value);
     const newSettings = Object.assign({}, this.state.localSettings);
     newSettings[event.target.name] = event.target.value;
     this.setState(
@@ -126,7 +125,7 @@ export default class SettingsModal extends React.Component {
         {children}
       </a>
     ));
-    console.log(_("Language"));
+
     return (
       <React.Fragment>
         <Button

@@ -305,7 +305,6 @@ export default class InvestTab extends React.Component {
                   argsInitValues={argsValues}
                   investExecute={this.investExecute}
                   nWorkers={this.props.investSettings.nWorkers}
-                  language={this.props.investSettings.language}
                   sidebarSetupElementId={sidebarSetupElementId}
                   sidebarFooterElementId={sidebarFooterElementId}
                   executeClicked={this.state.executeClicked}

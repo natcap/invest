@@ -298,7 +298,6 @@ describe('Translation', () => {
       'language': testLanguage,
       'plural-forms': 'nplurals=2; plural=(n!=1);'
     },
-    'Recent runs:': 'яєςєит яυиѕ:',
     'Open': 'σρєи',
     'Language': 'ℓαиgυαgє'
   };
