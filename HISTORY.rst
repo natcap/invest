@@ -34,7 +34,11 @@
 .. :changelog:
 
 
-Unreleased Changes
+..
+  Unreleased Changes
+  ------------------
+
+3.9.2 (2021-10-29)
 ------------------
 * General:
     * Improving our binary build by including a data file needed for the
