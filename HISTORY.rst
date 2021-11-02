@@ -56,6 +56,8 @@ Unreleased Changes
       when looking for GDAL DLLs.  This fixes an issue where InVEST would not
       launch on computers where the ``%PATH%`` either contained other
       environment variables or was malformed.
+    * invest processes announce their logfile path at a very high logging level
+      that cannot be filtered out by the user.
     * JSON sample data parameter sets are now included in the complete sample
       data archives.
 * Seasonal Water Yield
