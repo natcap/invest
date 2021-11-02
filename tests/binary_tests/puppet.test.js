@@ -13,8 +13,6 @@ import { APP_HAS_RUN_TOKEN } from '../../src/main/setupCheckFirstRun';
 
 jest.setTimeout(240000); // This test takes ~20 seconds, but sometimes longer
 const PORT = 9009;
-const TMP_DIR = fs.mkdtempSync('tests/data/_');
-const TMP_AOI_PATH = path.join(TMP_DIR, 'aoi.geojson');
 let ELECTRON_PROCESS;
 let BROWSER;
 
@@ -27,6 +25,7 @@ let SCREENSHOT_PREFIX;
 // We'll clear this token before launching the app so we can have a
 // predictable startup page.
 let APP_HAS_RUN_TOKEN_PATH;
+let TMP_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'data-'));
 if (process.platform === 'darwin') {
   // https://github.com/electron-userland/electron-builder/issues/2724#issuecomment-375850150
   [BINARY_PATH] = glob.sync('./dist/mac/*.app/Contents/MacOS/InVEST*');
@@ -36,6 +35,11 @@ if (process.platform === 'darwin') {
   APP_HAS_RUN_TOKEN_PATH = path.join(
     os.homedir(), 'Library/Application Support', pkg.name, APP_HAS_RUN_TOKEN
   );
+  // on macos, os.tmpdir is a symlink which seems to slow down our
+  // invest validation. https://github.com/nodejs/node/issues/11422
+  TMP_DIR = fs.mkdtempSync(
+    path.join(fs.realpathSync(os.tmpdir()), 'data-')
+  );
 } else if (process.platform === 'win32') {
   [BINARY_PATH] = glob.sync('./dist/win-unpacked/InVEST*.exe');
   SCREENSHOT_PREFIX = path.join(
@@ -44,7 +48,9 @@ if (process.platform === 'darwin') {
   APP_HAS_RUN_TOKEN_PATH = path.join(
     os.homedir(), 'AppData/Roaming', pkg.name, APP_HAS_RUN_TOKEN
   );
+  TMP_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'data-'));
 }
+const TMP_AOI_PATH = path.join(TMP_DIR, 'aoi.geojson');
 
 if (!fs.existsSync(BINARY_PATH)) {
   throw new Error(`Binary file not found: ${BINARY_PATH}`);
@@ -127,10 +133,7 @@ afterAll(async () => {
     console.error(error);
   }
 
-  // being extra careful with recursive rm
-  if (TMP_DIR.startsWith('tests/data')) {
-    rimraf(TMP_DIR, (error) => { if (error) { throw error; } });
-  }
+  rimraf(TMP_DIR, (error) => { if (error) { throw error; } });
   const wasKilled = ELECTRON_PROCESS.kill();
   console.log(`electron process was killed: ${wasKilled}`);
 });

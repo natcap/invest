@@ -4,6 +4,8 @@ like how starting and stopping invest subprocesses trigger log updates.
 */
 import path from 'path';
 import fs from 'fs';
+import os from 'os';
+
 import React from 'react';
 import { render } from '@testing-library/react';
 import '@testing-library/jest-dom';
@@ -28,18 +30,11 @@ function renderLogTab(logfilePath, primaryPythonLogger) {
   return utils;
 }
 
+const WORKSPACE = fs.mkdtempSync(path.join(os.tmpdir(), 'data-'));
 function makeLogFile(text) {
-  const workspace = fs.mkdtempSync('tests/data/log-');
-  const logfilePath = path.join(workspace, 'logfile.txt');
+  const logfilePath = path.join(WORKSPACE, 'logfile.txt');
   fs.writeFileSync(logfilePath, text);
   return logfilePath;
-}
-
-function cleanupLogFile(logfilePath) {
-  fs.unlink(logfilePath, (err) => {
-    if (err) { throw err; }
-    fs.rmdirSync(path.dirname(logfilePath));
-  });
 }
 
 describe('LogTab displays log from a file', () => {
@@ -85,7 +80,7 @@ ValueError: Values in the LULC raster were found that are not represented under 
 
   afterAll(() => {
     removeIpcMainListeners();
-    cleanupLogFile(logfilePath);
+    fs.rmSync(WORKSPACE, { recursive: true, force: true });
   });
 
   test('Text in logfile is rendered', async () => {
