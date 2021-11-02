@@ -10,6 +10,9 @@ import {
   fetchDatastackFromFile, fetchValidation,
 } from '../../src/renderer/server_requests';
 
+// mock out the global gettext function - avoid setting up translation
+global.window._ = x => x;
+
 jest.mock('../../src/renderer/server_requests');
 
 const MODULE = 'carbon';

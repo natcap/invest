@@ -10,6 +10,9 @@ import {
 } from '../../src/renderer/components/DataDownloadModal';
 import sampledata_registry from '../../src/renderer/sampledata_registry.json';
 
+// mock out the global gettext function - avoid setting up translation
+global.window._ = x => x;
+
 const nModels = Object.keys(sampledata_registry).length;
 const modelName = Object.keys(sampledata_registry)[0];
 

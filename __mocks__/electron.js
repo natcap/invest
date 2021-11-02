@@ -27,6 +27,7 @@ class MockIPC extends events.EventEmitter {
       };
       this.emit(channel, event, ...args);
     };
+    this.sendSync = jest.fn();
   }
 }
 const electronMockIPC = new MockIPC();

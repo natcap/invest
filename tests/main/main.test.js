@@ -15,6 +15,7 @@ import {
 import '@testing-library/jest-dom';
 import yazl from 'yazl';
 import rimraf from 'rimraf';
+import gettext_js from 'gettext.js';
 
 import {
   createWindow,
@@ -38,6 +39,9 @@ import {
   clearSettingsStore,
   getSettingsValue,
 } from '../../src/renderer/components/SettingsModal/SettingsStorage';
+
+// mock out the global gettext function - avoid setting up translation
+global.window._ = x => x;
 
 jest.mock('child_process');
 execFileSync.mockReturnValue('foo');
@@ -283,5 +287,81 @@ describe('Integration tests for Download Sample Data Modal', () => {
       const value = await getSettingsValue('sampleDataDir');
       expect(value).toBe(existingValue);
     });
+  });
+});
+
+describe('Translation', () => {
+  const i18n = new gettext_js();
+  const testLanguage = 'es';
+  const messageCatalog = {
+    '': {
+      'language': testLanguage,
+      'plural-forms': 'nplurals=2; plural=(n!=1);'
+    },
+    'Recent runs:': 'яєςєит яυиѕ:',
+    'Open': 'σρєи',
+    'Language': 'ℓαиgυαgє'
+  };
+
+  beforeAll(async () => {
+    getInvestModelNames.mockResolvedValue([]);
+
+    i18n.loadJSON(messageCatalog, 'messages');
+    console.log(i18n.gettext('Language'));
+
+    // mock out the relevant IPC channels
+    ipcRenderer.invoke.mockImplementation((channel, arg) => {
+      if (channel === ipcMainChannels.SET_LANGUAGE) {
+        i18n.setLocale(arg);
+      }
+      return Promise.resolve();
+    });
+
+    ipcRenderer.sendSync.mockImplementation((channel, arg) => {
+      if (channel === ipcMainChannels.GETTEXT) {
+        return i18n.gettext(arg)
+      }
+    });
+
+    // this is the same setup that's done in src/renderer/index.js (out of test scope)
+    ipcRenderer.invoke(ipcMainChannels.SET_LANGUAGE, 'en');
+    global.window._ = ipcRenderer.sendSync.bind(null, ipcMainChannels.GETTEXT);
+
+  });
+  afterAll(async () => {
+    jest.resetAllMocks();
+  });
+
+  test('Text rerenders in new language when language setting changes', async () => {
+
+    const {
+      findByText,
+      getByText,
+      queryByText,
+      findByTitle,
+      findByLabelText,
+    } = render(<App />);
+
+    fireEvent.click(await findByTitle('settings'));
+    let languageInput = await findByLabelText('Language', { exact: false });
+    expect(languageInput).toHaveValue('en');
+
+    fireEvent.change(languageInput, { target: { value: testLanguage } });
+
+    // text within the settings modal component should be translated
+    languageInput = await findByLabelText(messageCatalog['Language'], { exact: false });
+    expect(languageInput).toHaveValue(testLanguage);
+
+    // text should also be translated in other components
+    // such as the Open button (visible in background)
+    const openButton = await findByText(messageCatalog['Open']);
+
+    // text without a translation in the message catalog should display in the default English
+    expect(getByText('Logging threshold')).toBeDefined();
+
+    // resetting language should re-render components in English
+    fireEvent.click(getByText('Reset'));
+    expect(await findByText('Language')).toBeDefined();
+    expect(await findByText('Open')).toBeDefined();
   });
 });

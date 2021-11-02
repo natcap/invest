@@ -23,6 +23,8 @@ if (!process.env.PORT) {
 
 jest.setTimeout(250000); // This test is slow in CI
 global.window.fetch = fetch;
+// mock out the global gettext function - avoid setting up translation
+global.window._ = x => x;
 beforeAll(async () => {
   const isDevMode = true; // otherwise need to mock process.resourcesPath
   const investExe = findInvestBinaries(isDevMode);

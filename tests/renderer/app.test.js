@@ -25,6 +25,9 @@ import {
 } from '../../src/main/setupInvestHandlers';
 import { removeIpcMainListeners } from '../../src/main/main';
 
+// mock out the global gettext function - avoid setting up translation
+global.window._ = x => x;
+
 jest.mock('child_process');
 jest.mock('../../src/renderer/server_requests');
 jest.mock('node-fetch');
@@ -329,15 +332,18 @@ describe('Display recently executed InVEST jobs on Home tab', () => {
 describe('InVEST global settings: dialog interactions', () => {
   beforeEach(async () => {
     getInvestModelNames.mockResolvedValue({});
+    ipcRenderer.invoke.mockResolvedValue({});
   });
   afterEach(async () => {
     jest.resetAllMocks();
   });
-  test('Invest settings: cancel, save, and invalid nWorkers', async () => {
+  test('Invest settings', async () => {
     const nWorkers = '2';
     const loggingLevel = 'DEBUG';
+    const language = 'es';
     const nWorkersLabelText = 'Taskgraph n_workers parameter';
     const loggingLabelText = 'Logging threshold';
+    const languageLabelText = 'Language';
     const badValue = 'a';
 
     const {
@@ -349,6 +355,7 @@ describe('InVEST global settings: dialog interactions', () => {
     fireEvent.click(await findByTitle('settings'));
     const nWorkersInput = getByLabelText(nWorkersLabelText, { exact: false });
     const loggingInput = getByLabelText(loggingLabelText, { exact: false });
+    const languageInput = getByLabelText(languageLabelText, { exact: false });
 
     // Test that the default values when no global-settings file exists are
     // loaded. I've found this helps allow componentDidMount processes to
@@ -356,57 +363,55 @@ describe('InVEST global settings: dialog interactions', () => {
     await waitFor(() => {
       expect(nWorkersInput).toHaveValue('-1');
       expect(loggingInput).toHaveValue('INFO');
+      expect(languageInput).toHaveValue('en');
     });
 
-    // Change the select input and cancel -- expect default selected
+    // Change the select input and click away -- expect values are saved
     fireEvent.change(nWorkersInput, { target: { value: nWorkers } });
     fireEvent.change(loggingInput, { target: { value: loggingLevel } });
+    fireEvent.change(languageInput, { target: { value: language } });
     await waitFor(() => { // the value to test is inherited through props
       expect(nWorkersInput).toHaveValue(nWorkers);
       expect(loggingInput).toHaveValue(loggingLevel);
+      expect(languageInput).toHaveValue(language);
     });
-    fireEvent.click(getByText('Cancel'));
+    fireEvent.click(getByText('settings'));
     fireEvent.click(getByText('settings'));
     await waitFor(() => {
-      expect(nWorkersInput).toHaveValue('-1');
-      expect(loggingInput).toHaveValue('INFO');
-    });
-
-    // Change the value for real and save
-    fireEvent.change(nWorkersInput, { target: { value: nWorkers } });
-    fireEvent.change(loggingInput, { target: { value: loggingLevel } });
-    // The real test: values saved to global-settings
-    fireEvent.click(getByText('Save Changes'));
-    fireEvent.click(getByTitle('settings'));
-    await waitFor(() => { // the value to test is inherited through props
       expect(nWorkersInput).toHaveValue(nWorkers);
       expect(loggingInput).toHaveValue(loggingLevel);
+      expect(languageInput).toHaveValue(language);
     });
+
     // Check values in the settings store were saved
     const nWorkersStore = await getSettingsValue('nWorkers');
     const loggingLevelStore = await getSettingsValue('loggingLevel');
+    const languageStore = await getSettingsValue('language');
     expect(nWorkersStore).toBe(nWorkers);
     expect(loggingLevelStore).toBe(loggingLevel);
+    expect(languageStore).toBe(language);
 
     // Change n_workers to bad value -- expect invalid signal
     fireEvent.change(nWorkersInput, { target: { value: badValue} });
     expect(nWorkersInput.classList.contains('is-invalid')).toBeTruthy();
-    expect(getByText('Save Changes')).toBeDisabled();
   });
 
   test('Load invest settings from storage and test Reset', async () => {
     const defaultSettings = {
       nWorkers: '-1',
       loggingLevel: 'INFO',
+      language: 'en',
     };
-    const expectedSettings = {
+    const newSettings = {
       nWorkers: '3',
       loggingLevel: 'ERROR',
+      language: 'es',
     };
     const nWorkersLabelText = 'Taskgraph n_workers parameter';
     const loggingLabelText = 'Logging threshold';
+    const languageLabelText = 'Language';
 
-    await saveSettingsStore(expectedSettings);
+    await saveSettingsStore(newSettings);
 
     const { getByText, getByLabelText, findByTitle } = render(
       <App />
@@ -415,11 +420,13 @@ describe('InVEST global settings: dialog interactions', () => {
     fireEvent.click(await findByTitle('settings'));
     const nWorkersInput = getByLabelText(nWorkersLabelText, { exact: false });
     const loggingInput = getByLabelText(loggingLabelText, { exact: false });
+    const languageInput = getByLabelText(languageLabelText, { exact: false });
 
     // Test that the invest settings were loaded in from store.
     await waitFor(() => {
-      expect(nWorkersInput).toHaveValue(expectedSettings.nWorkers);
-      expect(loggingInput).toHaveValue(expectedSettings.loggingLevel);
+      expect(nWorkersInput).toHaveValue(newSettings.nWorkers);
+      expect(loggingInput).toHaveValue(newSettings.loggingLevel);
+      expect(languageInput).toHaveValue(newSettings.language);
     });
 
     // Test Reset sets values to default
@@ -427,14 +434,15 @@ describe('InVEST global settings: dialog interactions', () => {
     await waitFor(() => {
       expect(nWorkersInput).toHaveValue(defaultSettings.nWorkers);
       expect(loggingInput).toHaveValue(defaultSettings.loggingLevel);
+      expect(languageInput).toHaveValue(defaultSettings.language);
     });
 
-    // Expect reset values to not have been saved when cancelling
-    fireEvent.click(getByText('Cancel'));
+    // Expect reset values to have been saved
     fireEvent.click(getByText('settings'));
     await waitFor(() => {
-      expect(nWorkersInput).toHaveValue(expectedSettings.nWorkers);
-      expect(loggingInput).toHaveValue(expectedSettings.loggingLevel);
+      expect(nWorkersInput).toHaveValue(defaultSettings.nWorkers);
+      expect(loggingInput).toHaveValue(defaultSettings.loggingLevel);
+      expect(languageInput).toHaveValue(language);
     });
   });
 

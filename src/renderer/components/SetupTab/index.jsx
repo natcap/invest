@@ -439,7 +439,6 @@ SetupTab.propTypes = {
   argsInitValues: PropTypes.object,
   investExecute: PropTypes.func.isRequired,
   nWorkers: PropTypes.string.isRequired,
-  language: PropTypes.string.isRequired,
   sidebarSetupElementId: PropTypes.string.isRequired,
   sidebarFooterElementId: PropTypes.string.isRequired,
   executeClicked: PropTypes.bool.isRequired,

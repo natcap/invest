@@ -16,7 +16,6 @@
     "dist": "cross-env DEBUG=electron-builder electron-builder build --publish never --config electron-builder-config.js"
   },
   "jest": {
-    "verbose": true,
     "collectCoverage": true,
     "setupFiles": [
       "./tests/jest.overrides.js"

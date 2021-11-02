@@ -78,6 +78,7 @@ export default class SettingsModal extends React.Component {
   }
 
   handleChange(event) {
+    console.log('handle change', event.target.value);
     const newSettings = Object.assign({}, this.state.localSettings);
     newSettings[event.target.name] = event.target.value;
     this.setState(
@@ -125,7 +126,7 @@ export default class SettingsModal extends React.Component {
         {children}
       </a>
     ));
-
+    console.log(_("Language"));
     return (
       <React.Fragment>
         <Button
@@ -139,7 +140,7 @@ export default class SettingsModal extends React.Component {
           </Modal.Header>
           <Modal.Body>
             <Form.Group as={Row}>
-              <Form.Label column sm="8" htmlFor="logging-select">
+              <Form.Label column sm="8" htmlFor="language-select">
                 <span className="material-icons language-icon">translate</span>
                 {_("Language")}
               </Form.Label>

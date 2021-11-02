@@ -15,6 +15,9 @@ import {
 } from '../../src/renderer/server_requests';
 import InvestJob from '../../src/renderer/InvestJob';
 
+// mock out the global gettext function - avoid setting up translation
+global.window._ = x => x;
+
 jest.mock('../../src/renderer/server_requests');
 
 const UI_CONFIG_PATH = '../../src/renderer/ui_config';

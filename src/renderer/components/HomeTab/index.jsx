@@ -35,7 +35,6 @@ export default class HomeTab extends React.Component {
   }
 
   render() {
-    console.log('rendering home tab');
     const { investList, recentJobs } = this.props;
     // A button in a table row for each model
     const investButtons = [];
@@ -110,7 +109,6 @@ class RecentInvestJobs extends React.Component {
   }
 
   render() {
-    console.log('rendering recent runs');
     // Buttons to load each recently saved state
     const recentButtons = [];
     const { recentJobs } = this.props;

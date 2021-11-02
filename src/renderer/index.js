@@ -22,7 +22,6 @@ window.addEventListener('contextmenu', (e) => {
 const language = await getSettingsValue('language');
 console.log(language)
 // call this before rendering the app so that _() is defined
-// default to English
 ipcRenderer.invoke(ipcMainChannels.SET_LANGUAGE, language);
 window._ = ipcRenderer.sendSync.bind(null, ipcMainChannels.GETTEXT);  // partially applied function
 
