@@ -38,7 +38,7 @@ export default class HomeTab extends React.PureComponent {
     const { investList, recentJobs } = this.props;
     // A button in a table row for each model
     const investButtons = [];
-    Object.keys(investList).forEach((model) => {
+    Object.keys(investList).sort().forEach((model) => {
       investButtons.push(
         <tr key={model}>
           <td>
