@@ -10,7 +10,7 @@ import pkg_resources
 
 # location of our translation message catalog directory
 LOCALE_DIR = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), 'translations/locales')
+    os.path.dirname(os.path.abspath(__file__)), 'internationalization/locales')
 
 LOGGER = logging.getLogger('natcap.invest')
 LOGGER.addHandler(logging.NullHandler())

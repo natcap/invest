@@ -8,7 +8,9 @@ Common functionality provided by setup.py:
 
 For other commands, try `python setup.py --help-commands`
 """
+import os
 import platform
+import subprocess
 
 from setuptools.extension import Extension
 from setuptools import setup
@@ -36,6 +38,18 @@ README = open('README_PYTHON.rst').read().format(
 compiler_and_linker_args = []
 if platform.system() == 'Darwin':
     compiler_and_linker_args = ['-stdlib=libc++']
+
+# internationalization: compile human-readable PO message catalogs
+# into machine-readable MO message catalogs used by gettext
+# the MO files are included as package data
+locale_dir = os.path.abspath(os.path.join(
+    os.path.dirname(__file__), 'src/natcap/invest/internationalization/locales'))
+for locale in os.listdir(locale_dir):
+    subprocess.run([
+        'pybabel',
+        'compile',
+        '--input-file', f'{locale_dir}/{locale}/LC_MESSAGES/messages.po',
+        '--output-file', f'{locale_dir}/{locale}/LC_MESSAGES/messages.mo'])
 
 setup(
     name='natcap.invest',
@@ -158,7 +172,7 @@ setup(
             'reporting_data/*.js',
         ],
         'natcap.invest': [
-            'translations/locales/es/LC_MESSAGES/messages.mo'
+            'internationalization/locales/*/LC_MESSAGES/messages.mo'
         ]
     },
 )
