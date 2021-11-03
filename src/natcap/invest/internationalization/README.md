@@ -23,23 +23,44 @@ When we are ready to get a new batch of translations, here is the process.
 
 1. Run the following from the root invest directory, replacing `<LANG>` with the language code:
 ```
-pybabel extract --output src/natcap/invest/internationalization/messages.pot src/
-pybabel update --locale <LANG> --input-file src/natcap/invest/internationalization/messages.pot --output-file src/natcap/invest/internationalization/locales/<LANG>/LC_MESSAGES/messages.po
+pybabel extract \  # extract messages from source code and write to template
+   --no-wrap \
+   --project InVEST \
+   --version 3.10 \
+   --msgid-bugs-address esoth@stanford.edu \
+   --copyright-holder "Natural Capital Project" \
+   --output src/natcap/invest/internationalization/messages.pot \
+   src/
 
-# Check that the changes look correct, then commit
+pybabel update \  # update message catalog from template
+   --locale <LANG> \
+   --input-file src/natcap/invest/internationalization/messages.pot \
+   --output-file src/natcap/invest/internationalization/locales/<LANG>/LC_MESSAGES/messages.po
+```
+
+2. Check that the changes look correct, then commit:
+```
 git diff
 git add src/natcap/invest/internationalization/messages.pot src/natcap/invest/internationalization/locales/<LANG>/LC_MESSAGES/messages.po
 git commit -m "extract message catalog template and update <LANG> catalog from it"
 ```
 This looks through the source code for strings wrapped in the `_(...)` function and writes them to the message catalog template. Then it updates the message catalog for the specificed language. New strings that don't yet have a translation will have an empty `msgstr` value. Previously translated messages that are no longer needed will be commented out but remain in the file. This will save translator time if they're needed again in the future.
 
-2. Send `src/natcap/invest/internationalization/locales/<LANG>/LC_MESSAGES/messages.po` to the translator and wait to get it back. The translator will fill in the `msgstr` values for any new or edited messages.
+3. Send `src/natcap/invest/internationalization/locales/<LANG>/LC_MESSAGES/messages.po` to the translator and wait to get it back. The translator will fill in the `msgstr` values for any new or edited messages.
 
-3. Replace `src/natcap/invest/internationalization/locales/<LANG>/LC_MESSAGES/messages.po` with the updated version received from the translator and commit.
+4. Replace `src/natcap/invest/internationalization/locales/<LANG>/LC_MESSAGES/messages.po` with the updated version received from the translator and commit.
 ```
 git add internationalization/locales/<LANG>/LC_MESSAGES/messages.po
 git commit -m "update <LANG> message catalog with new translations"
 ```
+
+## Process to add support for a new language
+
+```
+mkdir -p src/natcap/invest/internationalization/locales/<LANG>/LC_MESSAGES/  # create the expected directory structure
+pybabel init --input-file src/natcap/invest/internationalization/messages.pot --output-file src/natcap/invest/internationalization/locales/<LANG>/LC_MESSAGES/messages.po  # initialize the message catalog from the template
+```
+Then follow the "Process to update translations" instructions above, starting from step 2.
 
 ## Which messages are translated?
 

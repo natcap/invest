@@ -51,7 +51,6 @@ class ValidateArgsSpecs(unittest.TestCase):
 
         required_keys = {'model_name', 'pyname', 'userguide_html', 'args'}
         optional_spatial_key = 'args_with_spatial_overlap'
-        for model_name, metadata in MODEL_UIS.items():
         for model_name, metadata in MODEL_METADATA.items():
             # metadata is a collections.namedtuple, fields accessible by name
             model = importlib.import_module(metadata.pyname)

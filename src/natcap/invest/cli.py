@@ -30,6 +30,7 @@ except (ValueError, ImportError):
 DEFAULT_EXIT_CODE = 1
 LOGGER = logging.getLogger(__name__)
 
+
 # Build up an index mapping aliases to model_name.
 # ``model_name`` is the key to the MODEL_METADATA dict.
 _MODEL_ALIASES = {}
