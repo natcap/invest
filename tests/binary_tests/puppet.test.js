@@ -29,7 +29,6 @@ let APP_HAS_RUN_TOKEN_PATH;
 // On GHA macos, invest validation can time-out reading from os.tmpdir
 // So on GHA, use the homedir instead.
 const rootDir = process.env.CI ? os.homedir() : os.tmpdir();
-console.log(rootDir)
 const TMP_DIR = fs.mkdtempSync(path.join(rootDir, 'data-'));
 const TMP_AOI_PATH = path.join(TMP_DIR, 'aoi.geojson');
 
