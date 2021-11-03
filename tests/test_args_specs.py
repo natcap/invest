@@ -2,7 +2,7 @@ import importlib
 import re
 import unittest
 
-from natcap.invest import MODEL_UIS
+from natcap.invest import MODEL_METADATA
 import pint
 
 
@@ -49,9 +49,10 @@ class ValidateArgsSpecs(unittest.TestCase):
     def test_model_specs_are_valid(self):
         """ARGS_SPEC: test each spec meets the expected pattern."""
 
-        required_keys = {'model_name', 'module', 'userguide_html', 'args'}
+        required_keys = {'model_name', 'pyname', 'userguide_html', 'args'}
         optional_spatial_key = 'args_with_spatial_overlap'
         for model_name, metadata in MODEL_UIS.items():
+        for model_name, metadata in MODEL_METADATA.items():
             # metadata is a collections.namedtuple, fields accessible by name
             model = importlib.import_module(metadata.pyname)
 
@@ -333,7 +334,7 @@ class ValidateArgsSpecs(unittest.TestCase):
         """ARGS_SPEC: test each ARGS_SPEC can serialize to JSON."""
         from natcap.invest import spec_utils
 
-        for model_name, metadata in MODEL_UIS.items():
+        for model_name, metadata in MODEL_METADATA.items():
             model = importlib.import_module(metadata.pyname)
             try:
                 _ = spec_utils.serialize_args_spec(model.ARGS_SPEC)

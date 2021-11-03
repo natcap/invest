@@ -65,7 +65,7 @@ Setting up your Python environment
          See the `pip docs for installing a package from a wheel
          <https://pip.pypa.io/en/stable/user_guide/#installing-from-wheels>`_
        * ``.zip`` and ``.tar.gz`` files are source archives.
-         See :ref:`installing-from-source` for details, including how to
+         See :ref:`installing` for details, including how to
          install specific development versions of ``natcap.invest``.
 
 

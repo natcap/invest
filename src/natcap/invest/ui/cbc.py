@@ -3,8 +3,8 @@
 import functools
 
 from natcap.invest.ui import model, inputs
-from natcap.invest.coastal_blue_carbon import coastal_blue_carbon
-from natcap.invest.coastal_blue_carbon import preprocessor
+from natcap.invest.coastal_blue_carbon import coastal_blue_carbon, preprocessor
+from natcap.invest import MODEL_METADATA
 
 
 def _create_input_kwargs_from_args_spec(
@@ -35,10 +35,10 @@ class CoastalBlueCarbonPreprocessor(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(
             self,
-            label='Coastal Blue Carbon Preprocessor',
+            label=MODEL_METADATA['coastal_blue_carbon_preprocessor'].model_title,
             target=preprocessor.execute,
             validator=preprocessor.validate,
-            localdoc='coastal_blue_carbon.html')
+            localdoc=MODEL_METADATA['coastal_blue_carbon_preprocessor'].userguide)
 
         _ui_keys = functools.partial(
             _create_input_kwargs_from_args_spec,
@@ -68,10 +68,10 @@ class CoastalBlueCarbon(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(
             self,
-            label='Coastal Blue Carbon',
+            label=MODEL_METADATA['coastal_blue_carbon'].model_title,
             target=coastal_blue_carbon.execute,
             validator=coastal_blue_carbon.validate,
-            localdoc='coastal_blue_carbon.html')
+            localdoc=MODEL_METADATA['coastal_blue_carbon'].userguide)
 
         _ui_keys = functools.partial(
             _create_input_kwargs_from_args_spec,

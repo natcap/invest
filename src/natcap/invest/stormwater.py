@@ -12,6 +12,7 @@ from . import spec_utils
 from .spec_utils import u
 from . import utils
 from . import validation
+from . import MODEL_METADATA
 
 
 LOGGER = logging.getLogger(__name__)
@@ -22,9 +23,9 @@ UINT8_NODATA = 255
 UINT16_NODATA = 65535
 
 ARGS_SPEC = {
-    "model_name": _("Stormwater Retention"),
-    "module": __name__,
-    "userguide_html": "stormwater.html",
+    "model_name": MODEL_METADATA["stormwater"].model_title,
+    "pyname": MODEL_METADATA["stormwater"].pyname,
+    "userguide_html": MODEL_METADATA["stormwater"].userguide,
     "args_with_spatial_overlap": {
         "spatial_keys": ["lulc_path", "soil_group_path", "precipitation_path",
                          "road_centerlines_path", "aggregate_areas_path"],

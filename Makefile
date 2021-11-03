@@ -2,15 +2,15 @@
 DATA_DIR := data
 GIT_SAMPLE_DATA_REPO        := https://bitbucket.org/natcap/invest-sample-data.git
 GIT_SAMPLE_DATA_REPO_PATH   := $(DATA_DIR)/invest-sample-data
-GIT_SAMPLE_DATA_REPO_REV    := f8c3ef11d06cee9d6f5a07f48057c05939e83028
+GIT_SAMPLE_DATA_REPO_REV    := c07883c44e00d4c977849e551891eb27e1ba3b1e
 
 GIT_TEST_DATA_REPO          := https://bitbucket.org/natcap/invest-test-data.git
 GIT_TEST_DATA_REPO_PATH     := $(DATA_DIR)/invest-test-data
-GIT_TEST_DATA_REPO_REV      := bc55f553c9d57baac0931f5691598baa1bcf3923
+GIT_TEST_DATA_REPO_REV      := 8361823d5927f712a1aec2ee61620f92ff4f49b3
 
-GIT_UG_REPO                  := https://github.com/natcap/invest.users-guide
-GIT_UG_REPO_PATH             := doc/users-guide
-GIT_UG_REPO_REV              := c53f85cec40c830ddd5b18a61e97c48607dd0ef9
+GIT_UG_REPO                 := https://github.com/natcap/invest.users-guide
+GIT_UG_REPO_PATH            := doc/users-guide
+GIT_UG_REPO_REV             := 7d0128ed9341acbcc73daef254be171a6cfba844
 
 ENV = "./env"
 ifeq ($(OS),Windows_NT)
@@ -329,7 +329,7 @@ SAMPLEDATA_SINGLE_ARCHIVE := dist/InVEST_$(VERSION)_sample_data.zip
 sampledata_single: $(SAMPLEDATA_SINGLE_ARCHIVE)
 
 $(SAMPLEDATA_SINGLE_ARCHIVE): $(GIT_SAMPLE_DATA_REPO_PATH) dist
-	$(BASHLIKE_SHELL_COMMAND) "cd $(GIT_SAMPLE_DATA_REPO_PATH) && $(ZIP) -r ../../$(SAMPLEDATA_SINGLE_ARCHIVE) ./* -x .svn -x .git -x *.json"
+	$(BASHLIKE_SHELL_COMMAND) "cd $(GIT_SAMPLE_DATA_REPO_PATH) && $(ZIP) -r ../../$(SAMPLEDATA_SINGLE_ARCHIVE) ./* -x .svn -x .git"
 
 
 # Installers for each platform.

@@ -15,13 +15,14 @@ from . import validation
 from . import utils
 from . import spec_utils
 from .spec_utils import u
+from . import MODEL_METADATA
 
 LOGGER = logging.getLogger(__name__)
 
 ARGS_SPEC = {
-    "model_name": _("InVEST Carbon Model"),
-    "module": __name__,
-    "userguide_html": "carbonstorage.html",
+    "model_name": MODEL_METADATA["carbon"].model_title,
+    "pyname": MODEL_METADATA["carbon"].pyname,
+    "userguide_html": MODEL_METADATA["carbon"].userguide,
     "args_with_spatial_overlap": {
         "spatial_keys": ["lulc_cur_path", "lulc_fut_path", "lulc_redd_path"],
     },

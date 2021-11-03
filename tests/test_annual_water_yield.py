@@ -1,4 +1,4 @@
-"""Module for Regression Testing the InVEST Hydropower module."""
+"""Module for Regression Testing the InVEST Annual Water Yield module."""
 import unittest
 import tempfile
 import shutil
@@ -8,15 +8,14 @@ import pandas
 import numpy
 import pygeoprocessing
 
-SAMPLE_DATA = os.path.join(
-    os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'hydropower',
-    'input')
+
 REGRESSION_DATA = os.path.join(
-    os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'hydropower')
+    os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'annual_water_yield')
+SAMPLE_DATA = os.path.join(REGRESSION_DATA, 'input')
 
 
-class HydropowerTests(unittest.TestCase):
-    """Regression Tests for Annual Water Yield Hydropower Model."""
+class AnnualWaterYieldTests(unittest.TestCase):
+    """Regression Tests for Annual Water Yield Model."""
 
     def setUp(self):
         """Overriding setUp func. to create temporary workspace directory."""
@@ -50,9 +49,9 @@ class HydropowerTests(unittest.TestCase):
 
     def test_invalid_lulc_veg(self):
         """Hydro: catching invalid LULC_veg values."""
-        from natcap.invest.hydropower import hydropower_water_yield
+        from natcap.invest import annual_water_yield
 
-        args = HydropowerTests.generate_base_args(self.workspace_dir)
+        args = AnnualWaterYieldTests.generate_base_args(self.workspace_dir)
 
         new_lulc_veg_path = os.path.join(self.workspace_dir,
                                          'new_lulc_veg.csv')
@@ -63,7 +62,7 @@ class HydropowerTests(unittest.TestCase):
         args['biophysical_table_path'] = new_lulc_veg_path
 
         with self.assertRaises(ValueError) as cm:
-            hydropower_water_yield.execute(args)
+            annual_water_yield.execute(args)
         self.assertTrue('veg value must be either 1 or 0' in str(cm.exception))
 
         table_df = pandas.read_csv(args['biophysical_table_path'])
@@ -72,14 +71,14 @@ class HydropowerTests(unittest.TestCase):
         args['biophysical_table_path'] = new_lulc_veg_path
 
         with self.assertRaises(ValueError) as cm:
-            hydropower_water_yield.execute(args)
+            annual_water_yield.execute(args)
         self.assertTrue('veg value must be either 1 or 0' in str(cm.exception))
     
     def test_missing_lulc_value(self):
         """Hydro: catching missing LULC value in Biophysical table."""
-        from natcap.invest.hydropower import hydropower_water_yield
+        from natcap.invest import annual_water_yield
 
-        args = HydropowerTests.generate_base_args(self.workspace_dir)
+        args = AnnualWaterYieldTests.generate_base_args(self.workspace_dir)
 
         # remove a row from the biophysical table so that lulc value is missing
         bad_biophysical_path = os.path.join(
@@ -93,16 +92,16 @@ class HydropowerTests(unittest.TestCase):
         args['biophysical_table_path'] = bad_biophysical_path
 
         with self.assertRaises(ValueError) as cm:
-            hydropower_water_yield.execute(args)
+            annual_water_yield.execute(args)
         self.assertTrue(
             "The missing values found in the LULC raster but not the table"
             " are: [2]" in str(cm.exception))
     
     def test_missing_lulc_demand_value(self):
         """Hydro: catching missing LULC value in Demand table."""
-        from natcap.invest.hydropower import hydropower_water_yield
+        from natcap.invest import annual_water_yield
 
-        args = HydropowerTests.generate_base_args(self.workspace_dir)
+        args = AnnualWaterYieldTests.generate_base_args(self.workspace_dir)
         
         args['demand_table_path'] = os.path.join(
             SAMPLE_DATA, 'water_demand_table.csv')
@@ -121,21 +120,21 @@ class HydropowerTests(unittest.TestCase):
         args['demand_table_path'] = bad_demand_path
 
         with self.assertRaises(ValueError) as cm:
-            hydropower_water_yield.execute(args)
+            annual_water_yield.execute(args)
         self.assertTrue(
             "The missing values found in the LULC raster but not the table"
             " are: [2]" in str(cm.exception))
 
     def test_water_yield_subshed(self):
         """Hydro: testing water yield component only w/ subwatershed."""
-        from natcap.invest.hydropower import hydropower_water_yield
+        from natcap.invest import annual_water_yield
         from natcap.invest import utils
 
-        args = HydropowerTests.generate_base_args(self.workspace_dir)
+        args = AnnualWaterYieldTests.generate_base_args(self.workspace_dir)
         args['sub_watersheds_path'] = os.path.join(
             SAMPLE_DATA, 'subwatersheds.shp')
         args['results_suffix'] = 'test'
-        hydropower_water_yield.execute(args)
+        annual_water_yield.execute(args)
 
         raster_results = ['aet_test.tif', 'fractp_test.tif', 'wyield_test.tif']
         for raster_path in raster_results:
@@ -169,16 +168,16 @@ class HydropowerTests(unittest.TestCase):
 
     def test_scarcity_subshed(self):
         """Hydro: testing Scarcity component w/ subwatershed."""
-        from natcap.invest.hydropower import hydropower_water_yield
+        from natcap.invest import annual_water_yield
         from natcap.invest import utils
 
-        args = HydropowerTests.generate_base_args(self.workspace_dir)
+        args = AnnualWaterYieldTests.generate_base_args(self.workspace_dir)
         args['demand_table_path'] = os.path.join(
             SAMPLE_DATA, 'water_demand_table.csv')
         args['sub_watersheds_path'] = os.path.join(
             SAMPLE_DATA, 'subwatersheds.shp')
 
-        hydropower_water_yield.execute(args)
+        annual_water_yield.execute(args)
 
         raster_results = ['aet.tif', 'fractp.tif', 'wyield.tif']
         for raster_path in raster_results:
@@ -207,10 +206,10 @@ class HydropowerTests(unittest.TestCase):
 
     def test_valuation_subshed(self):
         """Hydro: testing Valuation component w/ subwatershed."""
-        from natcap.invest.hydropower import hydropower_water_yield
+        from natcap.invest import annual_water_yield
         from natcap.invest import utils
 
-        args = HydropowerTests.generate_base_args(self.workspace_dir)
+        args = AnnualWaterYieldTests.generate_base_args(self.workspace_dir)
         args['demand_table_path'] = os.path.join(
             SAMPLE_DATA, 'water_demand_table.csv')
         args['valuation_table_path'] = os.path.join(
@@ -218,7 +217,7 @@ class HydropowerTests(unittest.TestCase):
         args['sub_watersheds_path'] = os.path.join(
             SAMPLE_DATA, 'subwatersheds.shp')
 
-        hydropower_water_yield.execute(args)
+        annual_water_yield.execute(args)
 
         raster_results = ['aet.tif', 'fractp.tif', 'wyield.tif']
         for raster_path in raster_results:
@@ -247,34 +246,33 @@ class HydropowerTests(unittest.TestCase):
 
     def test_validation(self):
         """Hydro: test failure cases on the validation function."""
-        from natcap.invest.hydropower import hydropower_water_yield
-        from natcap.invest import validation
+        from natcap.invest import annual_water_yield, validation
 
-        args = HydropowerTests.generate_base_args(self.workspace_dir)
+        args = AnnualWaterYieldTests.generate_base_args(self.workspace_dir)
 
         # default args should be fine
-        self.assertEqual(hydropower_water_yield.validate(args), [])
+        self.assertEqual(annual_water_yield.validate(args), [])
 
         args_bad_vector = args.copy()
         args_bad_vector['watersheds_path'] = args_bad_vector['eto_path']
-        bad_vector_list = hydropower_water_yield.validate(args_bad_vector)
+        bad_vector_list = annual_water_yield.validate(args_bad_vector)
         self.assertTrue('not be opened as a GDAL vector'
                         in bad_vector_list[0][1])
 
         args_bad_raster = args.copy()
         args_bad_raster['eto_path'] = args_bad_raster['watersheds_path']
-        bad_raster_list = hydropower_water_yield.validate(args_bad_raster)
+        bad_raster_list = annual_water_yield.validate(args_bad_raster)
         self.assertTrue('not be opened as a GDAL raster'
                         in bad_raster_list[0][1])
 
         args_bad_file = args.copy()
         args_bad_file['eto_path'] = 'non_existant_file.tif'
-        bad_file_list = hydropower_water_yield.validate(args_bad_file)
+        bad_file_list = annual_water_yield.validate(args_bad_file)
         self.assertTrue('File not found' in bad_file_list[0][1])
 
         args_missing_key = args.copy()
         del args_missing_key['eto_path']
-        validation_warnings = hydropower_water_yield.validate(
+        validation_warnings = annual_water_yield.validate(
             args_missing_key)
         self.assertEqual(
             validation_warnings,
@@ -297,7 +295,7 @@ class HydropowerTests(unittest.TestCase):
         args_bad_biophysical_table['biophysical_table_path'] = (
             bad_biophysical_path)
         with self.assertRaises(ValueError) as cm:
-            hydropower_water_yield.execute(args_bad_biophysical_table)
+            annual_water_yield.execute(args_bad_biophysical_table)
         actual_message = str(cm.exception)
         self.assertTrue(
             "The missing values found in the LULC raster but not the table"
@@ -336,7 +334,7 @@ class HydropowerTests(unittest.TestCase):
         # ensure that a missing watershed id the valuation table will
         # raise an exception that's helpful
         with self.assertRaises(ValueError) as cm:
-            hydropower_water_yield.execute(args_bad_demand_table)
+            annual_water_yield.execute(args_bad_demand_table)
         actual_message = str(cm.exception)
         self.assertTrue(
             "The missing values found in the LULC raster but not the table"
@@ -363,7 +361,7 @@ class HydropowerTests(unittest.TestCase):
                         break
 
         with self.assertRaises(ValueError) as cm:
-            hydropower_water_yield.execute(args_bad_valuation_table)
+            annual_water_yield.execute(args_bad_valuation_table)
         actual_message = str(cm.exception)
         self.assertTrue(
             'but are not found in the valuation table' in

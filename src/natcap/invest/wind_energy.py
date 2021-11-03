@@ -26,15 +26,16 @@ from . import utils
 from . import spec_utils
 from .spec_utils import u
 from . import validation
+from . import MODEL_METADATA
 
 
 LOGGER = logging.getLogger(__name__)
 speedups.enable()
 
 ARGS_SPEC = {
-    "model_name": _("Wind Energy"),
-    "module": __name__,
-    "userguide_html": "wind_energy.html",
+    "model_name": MODEL_METADATA["wind_energy"].model_title,
+    "pyname": MODEL_METADATA["wind_energy"].pyname,
+    "userguide_html": MODEL_METADATA["wind_energy"].userguide,
     "args_with_spatial_overlap": {
         "spatial_keys": ['aoi_vector_path', 'bathymetry_path',
                          'land_polygon_vector_path'],

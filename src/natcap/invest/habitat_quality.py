@@ -14,6 +14,7 @@ from . import utils
 from . import spec_utils
 from .spec_utils import u
 from . import validation
+from . import MODEL_METADATA
 
 LOGGER = logging.getLogger(__name__)
 
@@ -22,9 +23,9 @@ MISSING_SENSITIVITY_TABLE_THREATS_MSG = (
     'Sensitivity columns: %s')  # (set of missing threats, set of found columns)
 
 ARGS_SPEC = {
-    "model_name": _("Habitat Quality"),
-    "module": __name__,
-    "userguide_html": "habitat_quality.html",
+    "model_name": MODEL_METADATA["habitat_quality"].model_title,
+    "pyname": MODEL_METADATA["habitat_quality"].pyname,
+    "userguide_html": MODEL_METADATA["habitat_quality"].userguide,
     "args_with_spatial_overlap": {
         "spatial_keys": [
             "lulc_cur_path", "lulc_fut_path", "lulc_bas_path",
@@ -442,7 +443,7 @@ def execute(args):
         task_name='access_raster')
     access_task_list = [create_access_raster_task]
 
-    if 'access_vector_path' in args:
+    if 'access_vector_path' in args and args['access_vector_path']:
         LOGGER.debug("Rasterize Access vector")
         rasterize_access_task = task_graph.add_task(
             func=pygeoprocessing.rasterize,

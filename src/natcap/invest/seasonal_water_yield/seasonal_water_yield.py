@@ -17,6 +17,7 @@ from .. import utils
 from .. import spec_utils
 from ..spec_utils import u
 from .. import validation
+from .. import MODEL_METADATA
 
 from . import seasonal_water_yield_core
 
@@ -31,13 +32,13 @@ MONTH_ID_TO_LABEL = [
     'nov', 'dec']
 
 ARGS_SPEC = {
-    "model_name": _("Seasonal Water Yield"),
-    "module": __name__,
-    "userguide_html": "seasonal_water_yield.html",
+    "model_name": MODEL_METADATA["seasonal_water_yield"].model_title,
+    "pyname": MODEL_METADATA["seasonal_water_yield"].pyname,
+    "userguide_html": MODEL_METADATA["seasonal_water_yield"].userguide,
     "args_with_spatial_overlap": {
         "spatial_keys": ["dem_raster_path", "lulc_raster_path",
                          "soil_group_path", "aoi_path", "l_path",
-                         "monthly_alpha_path"],
+                         "climate_zone_raster_path"],
         "different_projections_ok": True,
     },
     "args": {
@@ -245,7 +246,7 @@ ARGS_SPEC = {
                         "Values are the numbers 1-12 corresponding to each "
                         "month.")
                 },
-                "events": {
+                "alpha": {
                     "type": "number",
                     "units": u.none,
                     "about": _("The alpha value for that month")

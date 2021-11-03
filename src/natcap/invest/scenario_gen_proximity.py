@@ -20,13 +20,14 @@ from . import utils
 from . import spec_utils
 from .spec_utils import u
 from . import validation
+from . import MODEL_METADATA
 
 LOGGER = logging.getLogger(__name__)
 
 ARGS_SPEC = {
-    "model_name": _("Scenario Generator: Proximity Based"),
-    "module": __name__,
-    "userguide_html": "scenario_gen_proximity.html",
+    "model_name": MODEL_METADATA["scenario_generator_proximity"].model_title,
+    "pyname": MODEL_METADATA["scenario_generator_proximity"].pyname,
+    "userguide_html": MODEL_METADATA["scenario_generator_proximity"].userguide,
     "args": {
         "workspace_dir": spec_utils.WORKSPACE,
         "results_suffix": spec_utils.SUFFIX,

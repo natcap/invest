@@ -155,7 +155,10 @@ def prepare_workspace(
                                              logging_level=logging_level):
         with sandbox_tempdir(dir=workspace):
             logging.captureWarnings(True)
-            LOGGER.info('Writing log messages to %s', logfile)
+            # If invest is launched as a subprocess (e.g. the Workbench)
+            # the parent process can rely on this announcement to know the
+            # logfile path, and to know the invest process has started.
+            LOGGER.log(100, 'Writing log messages to %s', logfile)
             start_time = time.time()
             try:
                 yield

@@ -11,13 +11,14 @@ import numpy as np
 from . import fisheries_hst_io as io
 from .. import validation
 from .. import spec_utils
+from .. import MODEL_METADATA
 
 LOGGER = logging.getLogger(__name__)
 
 ARGS_SPEC = {
-    "model_name": _("Fisheries Habitat Scenario Tool"),
-    "module": __name__,
-    "userguide_html": "fisheries.html",
+    "model_name": MODEL_METADATA["fisheries_hst"].model_title,
+    "pyname": MODEL_METADATA["fisheries_hst"].pyname,
+    "userguide_html": MODEL_METADATA["fisheries_hst"].userguide,
     "args": {
         "workspace_dir": spec_utils.WORKSPACE,
         "results_suffix": spec_utils.SUFFIX,

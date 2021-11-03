@@ -1,16 +1,17 @@
 # coding=UTF-8
 
 from natcap.invest.ui import model, inputs
-import natcap.invest.carbon
+from natcap.invest import carbon, MODEL_METADATA
 
 
 class Carbon(model.InVESTModel):
     def __init__(self):
-        model.InVESTModel.__init__(self,
-                                   label=_('InVEST Carbon Model'),
-                                   target=natcap.invest.carbon.execute,
-                                   validator=natcap.invest.carbon.validate,
-                                   localdoc='carbonstorage.html')
+        model.InVESTModel.__init__(
+            self,
+            label=MODEL_METADATA['carbon'].model_title,
+            target=carbon.execute,
+            validator=carbon.validate,
+            localdoc=MODEL_METADATA['carbon'].userguide)
 
         self.cur_lulc_raster = inputs.File(
             args_key='lulc_cur_path',
