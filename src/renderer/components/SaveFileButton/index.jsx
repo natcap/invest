@@ -33,8 +33,8 @@ export default class SaveFileButton extends React.Component {
         onClick={this.browseSaveFile}
         variant="link"
       >
-        <MdSave />
-        {` ${this.props.title}`}
+        <MdSave className="mr-1" />
+        {this.props.title}
       </Button>
     );
   }
