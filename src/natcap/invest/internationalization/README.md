@@ -1,7 +1,5 @@
 # Internationalization
 
-This directory contains
-
 ## Summary of files
 None of the translations files (.pot, .po, .mo) should be manually edited by us.
 
@@ -17,30 +15,44 @@ Human-readable message catalog file. Messages are added to this file from the PO
 ### `locales/<lang>/LC_MESSAGES/messages.mo`
 Machine-readable message catalog file. This is compiled from the corresponding PO file. `gettext` accesses this to look up string translations at runtime. These are *not* checked in, but they are created as part of the `setup.py install` process. They are not checked in because they duplicate the information that's in the PO files, and creating them is not computationally expensive.
 
-
 ## Process to update translations
 
-No changes are immediately needed when we add, remove, or edit strings that are translated. We only need to update the translations files when we are going to send them to the translator. Ideally this would happen for each language before each release, but that may not be possible, and that's okay. Any string for which a translation is unavailable will automatically fall back to the English version.
+No changes are immediately needed when we add, remove, or edit strings that are translated. We only need to update the translations files when we are going to send them to the translator. Ideally this would happen for each language before each release, but that may not be possible, and that's okay. This process can happen at any time, whenever a translator is available to us. Any string for which a translation is unavailable will automatically fall back to the English version.
 
-When we are ready to get a new batch of translations, here is the process. :
+When we are ready to get a new batch of translations, here is the process. Run the following from the root invest directory, replacing `<LANG>` with the language code:
 
-1. Update the PO template file
+```
+pybabel extract --output src/natcap/invest/internationalization/messages.pot src/
+pybabel update --locale <LANG> --input-file src/natcap/invest/internationalization/messages.pot --output-file src/natcap/invest/internationalization/locales/<LANG>/LC_MESSAGES/messages.po
+```
+This looks through the source code for strings wrapped in the `_(...)` function and writes them to the message catalog template. Then it updates the message catalog for the specificed language. New strings that don't yet have a translation will be entered like:
+   ```
+   msgid "a new message"
+   msgstr ""
+   ```
+Previously translated messages that are no longer needed will be commented out but remain in the file. This will save translator time if they're needed again in the future.
 
-2. Update the PO files based on the PO template file
+Check that the changes look correct, then commit.
+```
+git add src/natcap/invest/internationalization/messages.pot src/natcap/invest/internationalization/locales/<LANG>/LC_MESSAGES/messages.po
+git commit -m "extract message catalog template and update <LANG> catalog from it"
+```
 
-3. Send the PO files to the translator and wait to get them back.
+Send `src/natcap/invest/internationalization/locales/<LANG>/LC_MESSAGES/messages.po` to the translator and wait to get it back. The translator will fill in the `msgstr` values for any new or edited messages.
 
-   The translator will fill in the PO files with translations for any new or edited messages.
-
-4. Check in the new files
-
-   The new `messages.pot`, and `messages.po` for each language, should be checked in.
+Replace `src/natcap/invest/internationalization/locales/<LANG>/LC_MESSAGES/messages.po` with the updated version received from the translator and commit.
+```
+git add internationalization/locales/<LANG>/LC_MESSAGES/messages.po
+git commit -m "update <LANG> message catalog with new translations"
+```
 
 ## Which messages are translated?
 
-
-* `ARGS_SPEC` `model_name`, and `name` and `about` text for each arg
+* Model titles
+* `ARGS_SPEC` `name` and `about` text
 * Validation messages
-* Strings that appear in the UI, excluding log messages
+* Strings that appear in the UI, such as button labels and tooltip text
 
-We are not translating log messages at this time because most are not helpful to the user, there are a lot of them, and receiving log files in other languages would make it difficult for us to debug issues.
+We are not translating:
+* "InVEST"
+* Log messages - most are not helpful to the user anyway, there are a lot of them, and receiving log files in other languages would make it difficult for us to debug issues.
