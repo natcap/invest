@@ -38,7 +38,15 @@ export default class HomeTab extends React.PureComponent {
     const { investList, recentJobs } = this.props;
     // A button in a table row for each model
     const investButtons = [];
-    Object.keys(investList).sort().forEach((model) => {
+    const sortedModels = Object.keys(investList).sort();
+    try {
+      const cbcpElement = 'Coastal Blue Carbon Preprocessor';
+      const cbcIdx = sortedModels.indexOf('Coastal Blue Carbon');
+      const cbcpIdx = sortedModels.indexOf(cbcpElement);
+      sortedModels.splice(cbcpIdx, 1); // remove it
+      sortedModels.splice(cbcIdx, 0, cbcpElement); // insert it
+    } catch { } // If this ever doesn't work, it's okay;
+    sortedModels.forEach((model) => {
       investButtons.push(
         <tr key={model}>
           <td>
