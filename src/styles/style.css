@@ -13,7 +13,7 @@ body {
 }
 
 .navbar .row {
-	align-items: baseline;
+	align-items: end;
 	padding-bottom: 0;
 	border-bottom: 3px solid var(--invest-green);
 	background-color: #fff
@@ -50,6 +50,7 @@ body {
 .navbar-nav .nav-item {
 	display: flex;
 	justify-content: space-between;
+	align-items: center;
 	max-width: fit-content;
 	white-space: nowrap;
 	flex: 1; /*size by available space, not by content*/
@@ -82,14 +83,15 @@ body {
 	border-color: transparent;
 	color: #6c757d;
 	margin-left: 0.1rem;
-	padding-left: 0.6rem;
-	padding-right: 0.6rem;
-	padding-top: 0.25rem;
-	padding-bottom: 0.5rem;
+	padding-left: 0.1rem;
+	padding-right: 0.1rem;
+	padding-top: 0.1rem;
+	padding-bottom: 0.1rem;
+	height: fit-content;
 }
 .close-tab:hover, .close-tab:focus, .close-tab:active {
 	border-color: #6c757d;
-	background-color: #e46672;
+	background-color: #6c757d;
 	color: white;
 }
 
@@ -111,6 +113,11 @@ body {
 
 .navbar .row .text-right {
 	white-space: nowrap;
+}
+
+.settings-icon-btn, .settings-icon-btn:hover {
+	background-color: transparent;
+	border-color: transparent;
 }
 
 .settings-icon {
@@ -373,6 +380,10 @@ input[type=text]::placeholder {
 	white-space: pre-wrap;
 	padding-left: 3rem;
 	text-indent: -3rem;
+}
+
+.args-form svg {
+	font-size: 1.5rem;
 }
 
 /* InVEST Log Tab */

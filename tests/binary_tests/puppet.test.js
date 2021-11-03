@@ -25,7 +25,13 @@ let SCREENSHOT_PREFIX;
 // We'll clear this token before launching the app so we can have a
 // predictable startup page.
 let APP_HAS_RUN_TOKEN_PATH;
-let TMP_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'data-'));
+
+// On GHA macos, invest validation can time-out reading from os.tmpdir
+// So on GHA, use the homedir instead.
+const rootDir = process.env.CI ? os.homedir() : os.tmpdir();
+const TMP_DIR = fs.mkdtempSync(path.join(rootDir, 'data-'));
+const TMP_AOI_PATH = path.join(TMP_DIR, 'aoi.geojson');
+
 if (process.platform === 'darwin') {
   // https://github.com/electron-userland/electron-builder/issues/2724#issuecomment-375850150
   [BINARY_PATH] = glob.sync('./dist/mac/*.app/Contents/MacOS/InVEST*');
@@ -35,11 +41,6 @@ if (process.platform === 'darwin') {
   APP_HAS_RUN_TOKEN_PATH = path.join(
     os.homedir(), 'Library/Application Support', pkg.name, APP_HAS_RUN_TOKEN
   );
-  // on macos, os.tmpdir is a symlink which seems to slow down our
-  // invest validation. https://github.com/nodejs/node/issues/11422
-  TMP_DIR = fs.mkdtempSync(
-    path.join(fs.realpathSync(os.tmpdir()), 'data-')
-  );
 } else if (process.platform === 'win32') {
   [BINARY_PATH] = glob.sync('./dist/win-unpacked/InVEST*.exe');
   SCREENSHOT_PREFIX = path.join(
@@ -48,9 +49,7 @@ if (process.platform === 'darwin') {
   APP_HAS_RUN_TOKEN_PATH = path.join(
     os.homedir(), 'AppData/Roaming', pkg.name, APP_HAS_RUN_TOKEN
   );
-  TMP_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'data-'));
 }
-const TMP_AOI_PATH = path.join(TMP_DIR, 'aoi.geojson');
 
 if (!fs.existsSync(BINARY_PATH)) {
   throw new Error(`Binary file not found: ${BINARY_PATH}`);
@@ -176,13 +175,21 @@ test('Run a real invest model', async () => {
 
   const argsForm = await page.waitForSelector('.args-form');
   const typeDelay = 10;
-  const workspace = await findByLabelText(argsForm, /Workspace/i);
+  const workspace = await findByRole(
+    argsForm, 'textbox', { name: /Workspace/i }
+  );
   await workspace.type(TMP_DIR, { delay: typeDelay });
-  const aoi = await findByLabelText(argsForm, /area of interest/i);
+  const aoi = await findByRole(
+    argsForm, 'textbox', { name: /area of interest/i }
+  );
   await aoi.type(TMP_AOI_PATH, { delay: typeDelay });
-  const startYear = await findByLabelText(argsForm, /start year/i);
+  const startYear = await findByRole(
+    argsForm, 'textbox', { name: /start year/i }
+  );
   await startYear.type('2008', { delay: typeDelay });
-  const endYear = await findByLabelText(argsForm, /end year/i);
+  const endYear = await findByRole(
+    argsForm, 'textbox', {name: /end year/i }
+  );
   await endYear.type('2012', { delay: typeDelay });
   await page.screenshot({ path: `${SCREENSHOT_PREFIX}4-complete-setup-form.png` });
 

@@ -6,6 +6,7 @@ import Row from 'react-bootstrap/Row';
 import Form from 'react-bootstrap/Form';
 import Button from 'react-bootstrap/Button';
 import Modal from 'react-bootstrap/Modal';
+import { MdSettings } from 'react-icons/md';
 
 import { getDefaultSettings } from './SettingsStorage';
 
@@ -86,7 +87,7 @@ export default class SettingsModal extends React.Component {
   }
 
   handleChange(event) {
-    const newSettings = Object.assign({}, this.state.localSettings);
+    const newSettings = { ...this.state.localSettings };
     newSettings[event.target.name] = event.target.value;
     this.setState({
       localSettings: newSettings,
@@ -106,30 +107,17 @@ export default class SettingsModal extends React.Component {
       this.state.localSettings.nWorkers
     );
 
-    // define a custom button component to have a gear icon and no background
-    const CustomButton = React.forwardRef(({ children, onClick }, ref) => (
-      <a
-        href=""
-        ref={ref}
-        onClick={e => {
-          e.preventDefault();
-          onClick(e);
-        }}
-      >
-        <i className="material-icons mdc-button__icon settings-icon"
-          title="settings">
-          settings
-        </i>
-        {children}
-      </a>
-    ));
-
     return (
       <React.Fragment>
         <Button
-          as={CustomButton}
+          aria-label="settings"
+          className="settings-icon-btn"
           onClick={this.handleShow}
-        />
+        >
+          <MdSettings
+            className="settings-icon"
+          />
+        </Button>
 
         <Modal show={this.state.show} onHide={this.handleClose}>
           <Modal.Header>

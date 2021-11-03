@@ -12,6 +12,7 @@ import Button from 'react-bootstrap/Button';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import Spinner from 'react-bootstrap/Spinner';
+import { MdClose } from 'react-icons/md';
 
 import HomeTab from './components/HomeTab';
 import InvestTab from './components/InvestTab';
@@ -241,6 +242,7 @@ export default class App extends React.Component {
             {` ${job.modelHumanName}`}
           </Nav.Link>
           <Button
+            aria-label={`close ${job.modelHumanName} tab`}
             className="close-tab"
             variant="outline-dark"
             onClick={(event) => {
@@ -249,7 +251,7 @@ export default class App extends React.Component {
             }}
             onDragOver={dragOverHandlerNone}
           >
-            x
+            <MdClose />
           </Button>
         </Nav.Item>
       );

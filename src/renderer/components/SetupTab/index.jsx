@@ -8,6 +8,7 @@ import Row from 'react-bootstrap/Row';
 import Button from 'react-bootstrap/Button';
 import OverlayTrigger from 'react-bootstrap/OverlayTrigger';
 import Tooltip from 'react-bootstrap/Tooltip';
+import { MdFolderOpen } from 'react-icons/md';
 
 import Portal from '../Portal';
 import ArgsForm from './ArgsForm';
@@ -401,6 +402,7 @@ export default class SetupTab extends React.Component {
                 onClick={this.browseForDatastack}
                 variant="link"
               >
+                <MdFolderOpen className="mr-1" />
                 Load parameters from file
               </Button>
             </OverlayTrigger>

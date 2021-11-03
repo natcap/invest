@@ -188,7 +188,7 @@ describe('validate the UI spec', () => {
       expect(hasOrderProperty).toBe(true);
     });
   });
-})
+});
 
 describe('Build each model UI from ARGS_SPEC', () => {
   const uiConfig = require('../../src/renderer/ui_config');
@@ -197,7 +197,7 @@ describe('Build each model UI from ARGS_SPEC', () => {
     const argsSpec = await server_requests.getSpec(model);
     const uiSpec = uiConfig[model];
 
-    const { findByLabelText } = render(
+    const { findByRole } = render(
       <SetupTab
         pyModuleName={argsSpec.pyname}
         modelName={argsSpec.model_name}
@@ -211,6 +211,7 @@ describe('Build each model UI from ARGS_SPEC', () => {
         executeClicked={false}
       />
     );
-    expect(await findByLabelText(/workspace/i)).toBeInTheDocument();
+    expect(await findByRole('textbox', { name: /workspace/i }))
+      .toBeInTheDocument();
   });
 });
