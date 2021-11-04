@@ -160,15 +160,14 @@ test('Run a real invest model', async () => {
     doc, 'button', { name: 'Cancel' }, { timeout: extraTime }
   );
   await downloadModalCancel.click();
-  // Resorting to a class selector because we have two tables to differentiate
-  // Also, need to get the modelButton from w/in this table because there are
-  // buttons with the same name in the Recent Jobs container.
-  const investTable = await page.$('.invest-list-table');
+  // We need to get the modelButton from w/in this list-group because there
+  // are buttons with the same name in the Recent Jobs container.
+  const investModels = await page.$('.invest-list-group');
   await page.screenshot({ path: `${SCREENSHOT_PREFIX}2-models-list.png` });
 
   // Setting up Recreation model because it has very few data requirements
   const modelButton = await findByRole(
-    investTable, 'button', { name: /Visitation/ }
+    investModels, 'button', { name: /Visitation/ }
   );
   await modelButton.click();
   await page.screenshot({ path: `${SCREENSHOT_PREFIX}3-model-tab.png` });

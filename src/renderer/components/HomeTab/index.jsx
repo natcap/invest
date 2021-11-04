@@ -1,8 +1,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 
-import Button from 'react-bootstrap/Button';
-import Table from 'react-bootstrap/Table';
+import ListGroup from 'react-bootstrap/ListGroup';
 import Card from 'react-bootstrap/Card';
 import Container from 'react-bootstrap/Container';
 import Col from 'react-bootstrap/Col';
@@ -42,8 +41,7 @@ export default class HomeTab extends React.PureComponent {
     });
   }
 
-  handleClick(event) {
-    const { value } = event.target;
+  handleClick(value) {
     const { investList, openInvestModel } = this.props;
     const modelRunName = investList[value].model_name;
     const job = new InvestJob({
@@ -60,31 +58,23 @@ export default class HomeTab extends React.PureComponent {
     const investButtons = [];
     sortedModels.forEach((model) => {
       investButtons.push(
-        <tr key={model}>
-          <td>
-            <Button
-              className="invest-button"
-              block
-              size="lg"
-              value={model}
-              onClick={this.handleClick}
-              variant="link"
-            >
-              {model}
-            </Button>
-          </td>
-        </tr>
+        <ListGroup.Item
+          key={model}
+          className="invest-button"
+          action
+          onClick={() => this.handleClick(model)}
+        >
+          {model}
+        </ListGroup.Item>
       );
     });
 
     return (
       <Row>
-        <Col md={5} className="invest-list-table">
-          <Table size="sm">
-            <tbody>
-              {investButtons}
-            </tbody>
-          </Table>
+        <Col md={6}>
+          <ListGroup className="invest-list-group">
+            {investButtons}
+          </ListGroup>
         </Col>
         <Col className="recent-job-card-col">
           <RecentInvestJobs

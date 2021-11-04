@@ -132,19 +132,36 @@ body {
 
 /* Home Tab */
 
-.invest-list-table {
-	display: block;
+.invest-list-group {
+	display: flex;
+	flex-direction: column;
+	flex-wrap: wrap;
 	height: 87vh;
 	overflow-y: auto;
 }
 
-.invest-list-table .table td {
+.invest-list-group .list-group-item {
+	width: auto;
 	border-top: none;
-	border-bottom: 1px solid #dee2e6;
+	border-right: none;
+	border-left: none;
+	border-bottom: 1px solid rgba(0,0,0,.125);
+	margin-bottom: 0;
+}
+
+.invest-list-group .list-group-item:last-child {
+	border-radius: 0;
 }
 
 .invest-button {
 	color: var(--invest-green);
+	font-weight: 600;
+}
+
+.invest-button:hover {
+	color: white;
+	background-color: var(--invest-green);
+	opacity: 75%;
 	font-weight: 600;
 }
 
