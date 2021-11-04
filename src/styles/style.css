@@ -1,6 +1,7 @@
 body {
 	--invest-green: #148F68;
 	background-color: rgba(0,0,0,0);
+	font-size: 16px;
 	margin: 0;
 	padding: 1rem;
 	overflow-y: hidden;
