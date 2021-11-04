@@ -766,7 +766,7 @@ class StormwaterTests(unittest.TestCase):
 
     def test_validate(self):
         """Stormwater: test arg validation."""
-        from natcap.invest import stormwater
+        from natcap.invest import stormwater, validation
 
         # test args missing necessary values for adjust ratios
         args = {
@@ -784,7 +784,7 @@ class StormwaterTests(unittest.TestCase):
         messages = stormwater.validate(args)
         for arg_list, message in messages:
             if arg_list[0] in ['retention_radius', 'road_centerlines_path']:
-                self.assertEqual(message, 'Key is required but has no value')
+                self.assertEqual(message, validation.MESSAGES['MISSING_VALUE'])
 
     def test_lulc_signed_byte(self):
         """Stormwater: regression test for handling signed byte LULC input."""
