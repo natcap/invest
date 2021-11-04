@@ -18,7 +18,9 @@ __all__ = ['local_dir', ]
 
 try:
     __version__ = pkg_resources.get_distribution(__name__).version
+    print('version:', __version__)
 except pkg_resources.DistributionNotFound:
+    print('could not load version')
     # package is not installed.  Log the exception for debugging.
     LOGGER.exception('Could not load natcap.invest version information')
 
@@ -218,12 +220,14 @@ MODEL_METADATA = {
 def install_language(language_code):
     # globally install the _() function for the requested language
     # fall back to a NullTranslation, which returns the English messages
+    print('locale dir:', LOCALE_DIR, language_code)
     language = gettext.translation(
         'messages',
         languages=[language_code],
         localedir=LOCALE_DIR,
         fallback=True)
     language.install()
+    print(gettext.gettext('Available models:'))
     LOGGER.debug(f'Installed language "{language_code}"')
 
 

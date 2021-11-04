@@ -18,8 +18,10 @@ try:
     from . import __version__
     from . import utils
     from . import datastack
-    from . import MODEL_METADATA
+    import MODEL_METADATA
+    print('imported')
 except (ValueError, ImportError):
+    print('errored on import')
     # When we're in a PyInstaller build, this isn't a module.
     from natcap.invest import __version__
     from natcap.invest import utils
@@ -29,7 +31,6 @@ except (ValueError, ImportError):
 
 DEFAULT_EXIT_CODE = 1
 LOGGER = logging.getLogger(__name__)
-
 
 # Build up an index mapping aliases to model_name.
 # ``model_name`` is the key to the MODEL_METADATA dict.
@@ -46,33 +47,34 @@ def build_model_list_table():
     """Build a table of model names, aliases and other details.
 
     This table is a table only in the sense that its contents are aligned
-    into columns, but are not separated by a delimited.  This table
+    into columns, but are not separated by a delimiter.  This table
     is intended to be printed to stdout.
 
     Returns:
         A string representation of the formatted table.
     """
-    model_names = sorted(MODEL_METADATA.keys())
+    model_metadata = MODEL_METADATA
+    model_names = sorted(model_metadata.keys())
     max_model_name_length = max(len(name) for name in model_names)
 
     # Adding 3 to max alias name length for the parentheses plus some padding.
     max_alias_name_length = max(len(', '.join(meta.aliases))
-                                for meta in MODEL_METADATA.values()) + 3
+                                for meta in model_metadata.values()) + 3
     template_string = '    {model_name} {aliases} {model_title} {usage}'
-    strings = ['Available models:']
+    strings = [_('Available models:')]
     for model_name in model_names:
         usage_string = '(No GUI available)'
-        if MODEL_METADATA[model_name].gui is not None:
+        if model_metadata[model_name].gui is not None:
             usage_string = ''
 
-        alias_string = ', '.join(MODEL_METADATA[model_name].aliases)
+        alias_string = ', '.join(model_metadata[model_name].aliases)
         if alias_string:
             alias_string = '(%s)' % alias_string
 
         strings.append(template_string.format(
             model_name=model_name.ljust(max_model_name_length),
             aliases=alias_string.ljust(max_alias_name_length),
-            model_title=MODEL_METADATA[model_name].model_title,
+            model_title=model_metadata[model_name].model_title,
             usage=usage_string))
     return '\n'.join(strings) + '\n'
 
@@ -223,6 +225,7 @@ def main(user_args=None):
     so models may be run in this way without having GUI packages
     installed.
     """
+    print('cli.main')
     parser = argparse.ArgumentParser(
         description=(
             'Integrated Valuation of Ecosystem Services and Tradeoffs. '
@@ -337,6 +340,7 @@ def main(user_args=None):
 
     args = parser.parse_args(user_args)
 
+    print('installing language', args.language)
     from natcap.invest import install_language
     install_language(args.language)
 
