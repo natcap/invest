@@ -71,7 +71,7 @@ export default class HomeTab extends React.PureComponent {
 
     return (
       <Row>
-        <Col md={6}>
+        <Col md={6} className="invest-list-container">
           <ListGroup className="invest-list-group">
             {investButtons}
           </ListGroup>

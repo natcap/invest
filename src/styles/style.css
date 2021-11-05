@@ -133,21 +133,27 @@ body {
 
 /* Home Tab */
 
-.invest-list-group {
-	display: flex;
-	flex-direction: column;
-	flex-wrap: wrap;
+.invest-list-container {
 	height: 87vh;
 	overflow-y: auto;
 }
 
+.invest-list-group {
+	/*do not constrain height here because it can cause more
+	columns to be created. Constrain it in parent instead.*/
+	display: block;
+	column-count: 2;
+	white-space: nowrap;
+}
+
 .invest-list-group .list-group-item {
-	width: auto;
 	border-top: none;
 	border-right: none;
 	border-left: none;
 	border-bottom: 1px solid rgba(0,0,0,.125);
 	margin-bottom: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 
 .invest-list-group .list-group-item:last-child {
