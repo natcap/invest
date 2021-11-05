@@ -157,6 +157,7 @@ export default class ArgInput extends React.PureComponent {
           <FormLabel argkey={argkey}>
             <span>
               {argSpec.name}
+              <em>{('required' in argSpec) ? ' (optional)' : ''}</em>
             </span>
           </FormLabel>
           <Col sm="8">
