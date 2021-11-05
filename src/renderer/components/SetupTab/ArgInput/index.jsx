@@ -36,13 +36,24 @@ function filterSpatialOverlapFeedback(message, filepath) {
 function FormLabel(props) {
   return (
     <Form.Label column sm="3" htmlFor={props.argkey}>
-      {props.children}
+      <span>
+        {props.argname}
+        <em>
+          {
+            (typeof props.required === 'boolean' && !props.required)
+              ? ' (optional)' : ''
+          }
+        </em>
+      </span>
     </Form.Label>
   );
 }
 FormLabel.propTypes = {
   argkey: PropTypes.string.isRequired,
-  children: PropTypes.element.isRequired,
+  argname: PropTypes.string.isRequired,
+  required: PropTypes.oneOfType(
+    [PropTypes.string, PropTypes.bool]
+  ),
 };
 
 function Feedback(props) {
@@ -154,12 +165,21 @@ export default class ArgInput extends React.PureComponent {
           // this grays out the label but doesn't actually disable the field
           className={className}
         >
-          <FormLabel argkey={argkey}>
-            <span>
+          <FormLabel
+            argkey={argkey}
+            argname={argSpec.name}
+            required={argSpec.required}
+          />
+            {/*<span>
               {argSpec.name}
-              <em>{('required' in argSpec) ? ' (optional)' : ''}</em>
+              <em>
+                {
+                  (typeof argSpec.required === 'boolean' && !argSpec.required)
+                    ? ' (optional)' : ''
+                }
+              </em>
             </span>
-          </FormLabel>
+  */}
           <Col sm="8">
             <InputGroup>
               <div className="d-flex flex-nowrap w-100">
@@ -230,9 +250,11 @@ export default class ArgInput extends React.PureComponent {
           data-testid={`group-${argkey}`}
           className={className}
         >
-          <FormLabel argkey={argkey}>
-            <span>{argSpec.name}</span>
-          </FormLabel>
+          <FormLabel
+            argkey={argkey}
+            argname={argSpec.name}
+            required={argSpec.required}
+          />
           <Col sm="8" className="text-nowrap">
             <AboutModal argument={argSpec} />
             <Form.Check
@@ -270,9 +292,11 @@ export default class ArgInput extends React.PureComponent {
           data-testid={`group-${argkey}`}
           className={className}
         >
-          <FormLabel argkey={argkey}>
-            <span>{argSpec.name}</span>
-          </FormLabel>
+          <FormLabel
+            argkey={argkey}
+            argname={argSpec.name}
+            required={argSpec.required}
+          />
           <Col sm="4">
             <InputGroup>
               <div className="d-flex flex-nowrap w-100">
