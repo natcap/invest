@@ -195,6 +195,23 @@ describe('Arguments form interactions', () => {
     });
   });
 
+  test('Browse button populates an input - test click on child svg', async () => {
+    spec.args.arg.type = 'csv';
+    const {
+      findByRole, findByLabelText
+    } = renderSetupFromSpec(spec, uiSpec);
+
+    const filepath = 'grilled_cheese.csv';
+    const mockDialogData = { filePaths: [filepath] };
+    ipcRenderer.invoke.mockResolvedValue(mockDialogData);
+    const btn = await findByRole('button', { name: /browse for/ });
+    // Click on a target element nested within the button to make
+    // sure the handler still works correctly.
+    fireEvent.click(btn.querySelector('svg'));
+    expect(await findByLabelText(`${spec.args.arg.name}`))
+      .toHaveValue(filepath);
+  });
+
   test('Change value & get feedback on a required input', async () => {
     spec.args.arg.type = 'directory';
     spec.args.arg.required = true;
