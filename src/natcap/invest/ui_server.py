@@ -89,18 +89,21 @@ def get_invest_validate():
     Returns:
         A JSON string.
     """
-    install_language(request.args.get('language', 'en'))
     payload = request.get_json()
     LOGGER.debug(payload)
-    target_module = payload['model_module']
-    args_dict = json.loads(payload['args'])
-    LOGGER.debug(args_dict)
     try:
         limit_to = payload['limit_to']
     except KeyError:
         limit_to = None
-    model_module = importlib.import_module(name=target_module)
-    results = model_module.validate(args_dict, limit_to=limit_to)
+
+    install_language(request.args.get('language', 'en'))
+    importlib.reload(natcap.invest.validation)
+    importlib.reload(natcap.invest)
+    model_module = importlib.reload(
+        importlib.import_module(name=payload['model_module']))
+
+    results = model_module.validate(
+        json.loads(payload['args']), limit_to=limit_to)
     LOGGER.debug(results)
     return json.dumps(results)
 

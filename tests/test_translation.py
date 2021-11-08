@@ -15,13 +15,16 @@ from natcap.invest import validation
 
 TEST_LANG = 'en'
 
+# assign to local variable so that it won't be changed by translation
+missing_key_msg = validation.MESSAGES['MISSING_KEY']
+
 # Fake translations for testing
 TEST_MESSAGES = {
     "InVEST Carbon Model": "ιиνєѕт ςαявσи мσ∂єℓ",
     "Available models:": "αναιℓαвℓє мσ∂єℓѕ:",
     "Carbon Storage and Sequestration": "ςαявσи ѕтσяαgє αи∂ ѕєףυєѕтяαтισи",
     "current LULC": "ςυяяєит ℓυℓς",
-    validation.MESSAGES['MISSING_KEY']: "кєу ιѕ мιѕѕιиg fяσм тнє αяgѕ ∂ιςт"
+    missing_key_msg: "кєу ιѕ мιѕѕιиg fяσм тнє αяgѕ ∂ιςт"
 }
 
 TEST_CATALOG = Catalog(locale=TEST_LANG)
@@ -71,6 +74,48 @@ class TranslationTests(unittest.TestCase):
         self.assertTrue(
             TEST_MESSAGES['Carbon Storage and Sequestration'] in result)
 
+    def test_invest_getspec(self):
+        """Translation: test that CLI getspec output is translated."""
+
+        # patch the LOCALE_DIR variable in natcap/invest/__init__.py
+        # this is where gettext will look for translations
+        with patch('natcap.invest.LOCALE_DIR', self.test_locale_dir):
+            from natcap.invest import cli
+            # capture stdout
+            with patch('sys.stdout', new=io.StringIO()) as out:
+                with self.assertRaises(SystemExit):
+                    cli.main(['--language', TEST_LANG, 'getspec', 'carbon'])
+
+        result = out.getvalue()
+        self.assertTrue(TEST_MESSAGES['current LULC'] in result)
+
+    def test_invest_validate(self):
+        """Translation: test that CLI validate output is translated."""
+        from natcap.invest import carbon
+        datastack = {
+            'model_name': carbon.ARGS_SPEC['pyname'],
+            'invest_version': '0.0',
+            'args': {}
+        }
+        datastack_path = os.path.join(self.workspace_dir, 'datastack.json')
+        with open(datastack_path, 'w') as file:
+            json.dump(datastack, file)
+        with open(datastack_path) as file:
+            print(file.read())
+
+        # patch the LOCALE_DIR variable in natcap/invest/__init__.py
+        # this is where gettext will look for translations
+        with patch('natcap.invest.LOCALE_DIR', self.test_locale_dir):
+            from natcap.invest import cli
+            # capture stdout
+            with patch('sys.stdout', new=io.StringIO()) as out:
+                with self.assertRaises(SystemExit):
+                    cli.main(['--language', TEST_LANG, 'validate', datastack_path])
+
+        result = out.getvalue()
+        print(result)
+        self.assertTrue(TEST_MESSAGES[missing_key_msg] in result)
+
     def test_server_get_invest_models(self):
         """Translation: test that /models endpoint is translated."""
         from natcap.invest import ui_server
@@ -94,7 +139,7 @@ class TranslationTests(unittest.TestCase):
         print(spec)
         self.assertEqual(
             spec['args']['lulc_cur_path']['name'],
-            TEST_CATALOG.get('current LULC').string)
+            TEST_MESSAGES['current LULC'])
 
     def test_server_get_invest_validate(self):
         """Translation: test that /validate endpoint is translated."""
@@ -109,5 +154,5 @@ class TranslationTests(unittest.TestCase):
         results = json.loads(response.get_data(as_text=True))
         print(results)
         messages = [item[1] for item in results]
-        self.assertTrue(TEST_CATALOG.get(
-            validation.MESSAGES['MISSING_KEY']).string in messages)
+        self.assertTrue(
+            TEST_MESSAGES[missing_key_msg] in messages)

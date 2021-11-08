@@ -14,11 +14,12 @@ import sys
 import textwrap
 import warnings
 
+import natcap.invest
+
 try:
     from . import __version__
     from . import utils
     from . import datastack
-    import MODEL_METADATA
     print('imported')
 except (ValueError, ImportError):
     print('errored on import')
@@ -26,7 +27,6 @@ except (ValueError, ImportError):
     from natcap.invest import __version__
     from natcap.invest import utils
     from natcap.invest import datastack
-    from natcap.invest import MODEL_METADATA
 
 
 DEFAULT_EXIT_CODE = 1
@@ -35,7 +35,7 @@ LOGGER = logging.getLogger(__name__)
 # Build up an index mapping aliases to model_name.
 # ``model_name`` is the key to the MODEL_METADATA dict.
 _MODEL_ALIASES = {}
-for model_name, meta in MODEL_METADATA.items():
+for model_name, meta in natcap.invest.MODEL_METADATA.items():
     for alias in meta.aliases:
         assert alias not in _MODEL_ALIASES, (
             'Alias %s already defined for model %s') % (
@@ -53,28 +53,27 @@ def build_model_list_table():
     Returns:
         A string representation of the formatted table.
     """
-    model_metadata = MODEL_METADATA
-    model_names = sorted(model_metadata.keys())
+    model_names = sorted(natcap.invest.MODEL_METADATA.keys())
     max_model_name_length = max(len(name) for name in model_names)
 
     # Adding 3 to max alias name length for the parentheses plus some padding.
     max_alias_name_length = max(len(', '.join(meta.aliases))
-                                for meta in model_metadata.values()) + 3
+                                for meta in natcap.invest.MODEL_METADATA.values()) + 3
     template_string = '    {model_name} {aliases} {model_title} {usage}'
     strings = [_('Available models:')]
     for model_name in model_names:
         usage_string = '(No GUI available)'
-        if model_metadata[model_name].gui is not None:
+        if natcap.invest.MODEL_METADATA[model_name].gui is not None:
             usage_string = ''
 
-        alias_string = ', '.join(model_metadata[model_name].aliases)
+        alias_string = ', '.join(natcap.invest.MODEL_METADATA[model_name].aliases)
         if alias_string:
             alias_string = '(%s)' % alias_string
 
         strings.append(template_string.format(
             model_name=model_name.ljust(max_model_name_length),
             aliases=alias_string.ljust(max_alias_name_length),
-            model_title=model_metadata[model_name].model_title,
+            model_title=natcap.invest.MODEL_METADATA[model_name].model_title,
             usage=usage_string))
     return '\n'.join(strings) + '\n'
 
@@ -91,7 +90,7 @@ def build_model_list_json():
 
     """
     json_object = {}
-    for model_name, model_data in MODEL_METADATA.items():
+    for model_name, model_data in natcap.invest.MODEL_METADATA.items():
         json_object[model_data.model_title] = {
             'model_name': model_name,
             'aliases': model_data.aliases
@@ -130,7 +129,7 @@ def export_to_python(target_filepath, model, args_dict=None):
     """)
 
     if args_dict is None:
-        model_module = importlib.import_module(name=MODEL_METADATA[model].pyname)
+        model_module = importlib.import_module(name=natcap.invest.MODEL_METADATA[model].pyname)
         spec = model_module.ARGS_SPEC
         cast_args = {key: '' for key in spec['args'].keys()}
     else:
@@ -149,8 +148,8 @@ def export_to_python(target_filepath, model, args_dict=None):
         py_file.write(script_template.format(
             invest_version=__version__,
             today=datetime.datetime.now().strftime('%c'),
-            model_title=MODEL_METADATA[model].model_title,
-            pyname=MODEL_METADATA[model].pyname,
+            model_title=natcap.invest.MODEL_METADATA[model].model_title,
+            pyname=natcap.invest.MODEL_METADATA[model].pyname,
             model_args=args))
 
 
@@ -184,7 +183,7 @@ class SelectModelAction(argparse.Action):
 
         Overridden from argparse.Action.__call__.
         """
-        known_models = sorted(list(MODEL_METADATA.keys()))
+        known_models = sorted(list(natcap.invest.MODEL_METADATA.keys()))
 
         matching_models = [model for model in known_models if
                            model.startswith(values)]
@@ -225,7 +224,6 @@ def main(user_args=None):
     so models may be run in this way without having GUI packages
     installed.
     """
-    print('cli.main')
     parser = argparse.ArgumentParser(
         description=(
             'Integrated Valuation of Ecosystem Services and Tradeoffs. '
@@ -340,9 +338,11 @@ def main(user_args=None):
 
     args = parser.parse_args(user_args)
 
+    import natcap.invest
+    print(natcap.invest)
     print('installing language', args.language)
-    from natcap.invest import install_language
-    install_language(args.language)
+    natcap.invest.install_language(args.language)
+    importlib.reload(natcap.invest)
 
     root_logger = logging.getLogger()
     handler = logging.StreamHandler(sys.stdout)
@@ -381,6 +381,7 @@ def main(user_args=None):
         parser.exit(launcher.main())
 
     if args.subcommand == 'validate':
+        parsed_datastack = datastack.extract_parameter_set(args.datastack)
         try:
             parsed_datastack = datastack.extract_parameter_set(args.datastack)
         except Exception as error:
@@ -389,6 +390,8 @@ def main(user_args=None):
 
         model_module = importlib.import_module(
             name=parsed_datastack.model_name)
+        importlib.reload(importlib.import_module(name='natcap.invest.validation'))
+        importlib.reload(model_module)
 
         try:
             validation_result = model_module.validate(parsed_datastack.args)
@@ -421,7 +424,7 @@ def main(user_args=None):
         parser.exit(0)
 
     if args.subcommand == 'getspec':
-        target_model = MODEL_METADATA[args.model].pyname
+        target_model = natcap.invest.MODEL_METADATA[args.model].pyname
         model_module = importlib.import_module(name=target_model)
         spec = model_module.ARGS_SPEC
 
@@ -451,7 +454,7 @@ def main(user_args=None):
         else:
             parsed_datastack.args['workspace_dir'] = args.workspace
 
-        target_model = MODEL_METADATA[args.model].pyname
+        target_model = natcap.invest.MODEL_METADATA[args.model].pyname
         model_module = importlib.import_module(name=target_model)
         LOGGER.info('Imported target %s from %s',
                     model_module.__name__, model_module)
@@ -492,7 +495,7 @@ def main(user_args=None):
 
         from natcap.invest.ui import inputs
 
-        gui_class = MODEL_METADATA[args.model].gui
+        gui_class = natcap.invest.MODEL_METADATA[args.model].gui
         module_name, classname = gui_class.split('.')
         module = importlib.import_module(
             name='.ui.%s' % module_name,

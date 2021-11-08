@@ -8,6 +8,8 @@ import sys
 
 import pkg_resources
 
+print('executing init')
+
 # location of our translation message catalog directory
 LOCALE_DIR = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), 'internationalization/locales')
@@ -18,9 +20,7 @@ __all__ = ['local_dir', ]
 
 try:
     __version__ = pkg_resources.get_distribution(__name__).version
-    print('version:', __version__)
 except pkg_resources.DistributionNotFound:
-    print('could not load version')
     # package is not installed.  Log the exception for debugging.
     LOGGER.exception('Could not load natcap.invest version information')
 
