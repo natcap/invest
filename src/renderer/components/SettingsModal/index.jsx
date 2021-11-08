@@ -88,7 +88,8 @@ export default class SettingsModal extends React.Component {
 
   handleChange(event) {
     const newSettings = { ...this.state.localSettings };
-    newSettings[event.target.name] = event.target.value;
+    const { name, value } = event.currentTarget;
+    newSettings[name] = value;
     this.setState({
       localSettings: newSettings,
     });
