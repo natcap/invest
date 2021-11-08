@@ -355,8 +355,13 @@ body {
 
 .arg-group {
 	margin-top: 1.0rem;
-	margin-bottom: 2.0rem;
+	margin-bottom: 1.5rem;
+	padding-bottom: 0.5rem;
 	border-bottom: 1px dotted;
+}
+
+.arg-group:last-of-type {
+	border-bottom: none;
 }
 
 .arg-hide {
