@@ -106,6 +106,7 @@ export default class ArgsForm extends React.Component {
 
   async selectFile(event) {
     /** Handle clicks on browse-button inputs */
+    console.dir(event.target)
     const { name, value } = event.target; // the arg's key and type
     const prop = (value === 'directory') ? 'openDirectory' : 'openFile';
     // TODO: could add more filters based on argType (e.g. only show .csv)

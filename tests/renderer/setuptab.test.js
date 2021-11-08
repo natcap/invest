@@ -250,7 +250,7 @@ describe('Arguments form interactions', () => {
     fetchValidation.mockResolvedValue([]);
     const { findByLabelText } = renderSetupFromSpec(spec, uiSpec);
 
-    const input = await findByLabelText(`${spec.args.arg.name}`);
+    const input = await findByLabelText(`${spec.args.arg.name} (optional)`);
 
     // An optional input with no value is valid, but green check
     // does not display until the input has been touched.
