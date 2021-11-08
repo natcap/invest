@@ -354,8 +354,9 @@ body {
 }
 
 .arg-group {
-	margin-top: 2.0rem;
+	margin-top: 1.0rem;
 	margin-bottom: 2.0rem;
+	border-bottom: 1px dotted;
 }
 
 .arg-hide {
