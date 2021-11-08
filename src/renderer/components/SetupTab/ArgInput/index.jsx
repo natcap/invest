@@ -170,7 +170,7 @@ export default class ArgInput extends React.PureComponent {
             argname={argSpec.name}
             required={argSpec.required}
           />
-          <Col sm="8">
+          <Col>
             <InputGroup>
               <div className="d-flex flex-nowrap w-100">
                 <AboutModal argument={argSpec} />
@@ -245,7 +245,7 @@ export default class ArgInput extends React.PureComponent {
             argname={argSpec.name}
             required={argSpec.required}
           />
-          <Col sm="8" className="text-nowrap">
+          <Col className="text-nowrap">
             <AboutModal argument={argSpec} />
             <Form.Check
               id={argkey}
@@ -287,7 +287,7 @@ export default class ArgInput extends React.PureComponent {
             argname={argSpec.name}
             required={argSpec.required}
           />
-          <Col sm="8">
+          <Col>
             <InputGroup>
               <div className="d-flex flex-nowrap w-auto">
                 <AboutModal argument={argSpec} />
