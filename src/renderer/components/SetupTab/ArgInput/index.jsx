@@ -170,16 +170,6 @@ export default class ArgInput extends React.PureComponent {
             argname={argSpec.name}
             required={argSpec.required}
           />
-            {/*<span>
-              {argSpec.name}
-              <em>
-                {
-                  (typeof argSpec.required === 'boolean' && !argSpec.required)
-                    ? ' (optional)' : ''
-                }
-              </em>
-            </span>
-  */}
           <Col sm="8">
             <InputGroup>
               <div className="d-flex flex-nowrap w-100">
@@ -297,9 +287,9 @@ export default class ArgInput extends React.PureComponent {
             argname={argSpec.name}
             required={argSpec.required}
           />
-          <Col sm="4">
+          <Col sm="8">
             <InputGroup>
-              <div className="d-flex flex-nowrap w-100">
+              <div className="d-flex flex-nowrap w-auto">
                 <AboutModal argument={argSpec} />
                 <Form.Control
                   id={argkey}
