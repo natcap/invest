@@ -24,7 +24,7 @@ export default class HomeTab extends React.PureComponent {
   }
 
   handleClick(event) {
-    const { value } = event.target;
+    const { value } = event.currentTarget;
     const { investList, openInvestModel } = this.props;
     const modelRunName = investList[value].model_name;
     const job = new InvestJob({

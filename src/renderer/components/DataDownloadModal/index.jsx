@@ -72,17 +72,17 @@ export class DataDownloadModal extends React.Component {
     } = this.state;
     const newCheckList = Object.fromEntries(
       Object.entries(dataListCheckBoxes).map(
-        ([k, v]) => [k, event.target.checked]
+        ([k, v]) => [k, event.currentTarget.checked]
       )
     );
     let selectedLinks;
-    if (event.target.checked) {
+    if (event.currentTarget.checked) {
       selectedLinks = allLinksArray;
     } else {
       selectedLinks = [];
     }
     this.setState({
-      allDataCheck: event.target.checked,
+      allDataCheck: event.currentTarget.checked,
       dataListCheckBoxes: newCheckList,
       selectedLinksArray: selectedLinks,
     });
@@ -91,7 +91,7 @@ export class DataDownloadModal extends React.Component {
   handleCheckList(event, modelName) {
     let { selectedLinksArray, dataListCheckBoxes } = this.state;
     const { url } = sampledataRegistry[modelName];
-    if (event.target.checked) {
+    if (event.currentTarget.checked) {
       selectedLinksArray.push(url);
       dataListCheckBoxes[modelName] = true;
     } else {
