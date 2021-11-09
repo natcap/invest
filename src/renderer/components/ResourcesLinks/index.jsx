@@ -61,11 +61,21 @@ export default function ResourcesTab(props) {
   }
   return (
     <React.Fragment>
-      <a href={userGuideURL} onClick={handleClick}>
+      <a
+        href={userGuideURL}
+        title={userGuideURL}
+        aria-label="go to user guide in web browser"
+        onClick={handleClick}
+      >
         <MdOpenInNew className="mr-1" />
         User Guide
       </a>
-      <a href={forumURL} onClick={handleClick}>
+      <a
+        href={forumURL}
+        title={forumURL}
+        aria-label="go to user support forum in web browser"
+        onClick={handleClick}
+      >
         <MdOpenInNew className="mr-1" />
         Frequently Asked Questions
       </a>
