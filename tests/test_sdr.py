@@ -9,6 +9,7 @@ import numpy
 from osgeo import ogr
 from osgeo import osr
 from osgeo import gdal
+from natcap.invest import utils
 
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'sdr')
@@ -194,8 +195,8 @@ class SDRTests(unittest.TestCase):
         validate_result = sdr.validate(args, limit_to=None)
         self.assertTrue(len(validate_result) > 0,
                         'Expected validation errors but none found')
-        self.assertTrue(
-            'features have a non-integer ws_id field' in validate_result[0][1])
+        self.assertTrue(utils.matches_format_string(
+            validate_result[0][1], sdr.INVALID_ID_MSG))
 
     def test_base_regression(self):
         """SDR base regression test on sample data.

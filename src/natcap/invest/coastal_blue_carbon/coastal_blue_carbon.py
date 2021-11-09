@@ -110,6 +110,11 @@ from .. import MODEL_METADATA
 
 LOGGER = logging.getLogger(__name__)
 
+INVALID_ANALYSIS_YEAR_MSG = _(
+    "Analysis year {analysis_year} must be >= the latest snapshot year "
+    "({latest_year})")
+INVALID_SNAPSHOT_RASTER_MSG = _(
+    "Raster for snapshot {snapshot_year} could not be validated.")
 
 POOL_SOIL = 'soil'
 POOL_BIOMASS = 'biomass'
@@ -2144,18 +2149,19 @@ def validate(args, limit_to=None):
             raster_error_message = validation.check_raster(
                 snapshot_raster_path)
             if raster_error_message:
-                validation_warnings.append(
-                    (['landcover_snapshot_csv'], (
-                        f"Raster for snapshot {snapshot_year} could not "
-                        f"be validated: {raster_error_message}")))
+                validation_warnings.append((
+                    ['landcover_snapshot_csv'],
+                    INVALID_SNAPSHOT_RASTER_MSG.format(
+                        snapshot_year=snapshot_year
+                    ) + ' ' + raster_error_message))
 
         if ("analysis_year" not in invalid_keys
                 and "analysis_year" in sufficient_keys):
             if max(set(snapshots.keys())) > int(args['analysis_year']):
-                validation_warnings.append(
-                    (['analysis_year'], (
-                        f"Analysis year {args['analysis_year']} must be >= "
-                        f"the latest snapshot year ({max(snapshots.keys())})"
-                    )))
+                validation_warnings.append((
+                    ['analysis_year'],
+                    INVALID_ANALYSIS_YEAR_MSG.format(
+                        analysis_year=args['analysis_year'],
+                        latest_year=max(snapshots.keys()))))
 
     return validation_warnings

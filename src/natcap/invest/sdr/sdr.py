@@ -24,6 +24,8 @@ from . import sdr_core
 
 LOGGER = logging.getLogger(__name__)
 
+INVALID_ID_MSG = _('{number} features have a non-integer ws_id field')
+
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["sdr"].model_title,
     "pyname": MODEL_METADATA["sdr"].pyname,
@@ -1377,15 +1379,14 @@ def validate(args, limit_to=None):
         n_invalid_features = 0
         for feature in layer:
             try:
-                _ = int(feature.GetFieldAsString('ws_id'))
+                int(feature.GetFieldAsString('ws_id'))
             except ValueError:
                 n_invalid_features += 1
 
         if n_invalid_features:
             validation_warnings.append((
                 ['watersheds_path'],
-                ('%s features have a non-integer ws_id field' %
-                    n_invalid_features)))
+                INVALID_ID_MSG.format(number=n_invalid_features)))
             invalid_keys.add('watersheds_path')
 
     return validation_warnings

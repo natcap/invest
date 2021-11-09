@@ -16,6 +16,8 @@ from . import MODEL_METADATA
 
 LOGGER = logging.getLogger(__name__)
 
+INVALID_BAND_INDEX_MSG = _('Must be between 1 and {maximum}')
+
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["routedem"].model_title,
     "pyname": MODEL_METADATA["routedem"].pyname,
@@ -358,6 +360,6 @@ def validate(args, limit_to=None):
         if int(args['dem_band_index']) > raster_info['n_bands']:
             validation_warnings.append((
                 ['dem_band_index'],
-                'Must be between 1 and %s' % raster_info['n_bands']))
+                INVALID_BAND_INDEX_MSG.format(maximum=raster_info['n_bands'])))
 
     return validation_warnings

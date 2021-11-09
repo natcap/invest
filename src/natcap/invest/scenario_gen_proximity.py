@@ -24,6 +24,10 @@ from . import MODEL_METADATA
 
 LOGGER = logging.getLogger(__name__)
 
+MISSING_CONVERT_OPTION_MSG = _(
+    'One or more of "convert_nearest_to_edge" or "convert_farthest_from_edge" '
+    'must be selected')
+
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["scenario_generator_proximity"].model_title,
     "pyname": MODEL_METADATA["scenario_generator_proximity"].pyname,
@@ -880,7 +884,6 @@ def validate(args, limit_to=None):
                 not args['convert_farthest_from_edge']):
             validation_warnings.append((
                 ['convert_nearest_to_edge', 'convert_farthest_from_edge'],
-                ('One or more of "convert_nearest_to_edge" or '
-                 '"convert_farthest_from_edge" must be selected')))
+                MISSING_CONVERT_OPTION_MSG))
 
     return validation_warnings

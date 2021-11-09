@@ -18,9 +18,16 @@ from . import MODEL_METADATA
 
 LOGGER = logging.getLogger(__name__)
 
-MISSING_SENSITIVITY_TABLE_THREATS_MSG = (
-    'Threats %s does not match any column in the sensitivity table. '
-    'Sensitivity columns: %s')  # (set of missing threats, set of found columns)
+MISSING_SENSITIVITY_TABLE_THREATS_MSG = _(
+    'Threats {threats} does not match any column in the sensitivity table. '
+    'Sensitivity columns: {column_names}')  # (set of missing threats, set of found columns)
+MISSING_COLUMN_MSG = _(
+    "The column '{column_name}' was not found in the Threat Data table for "
+    "the corresponding input LULC scenario.")
+MISSING_THREAT_RASTER_MSG = _(
+    "A threat raster for threats: {threat_list} was not found or it "
+    "could not be opened by GDAL.")
+DUPLICATE_PATHS_MSG = _("Threat paths must be unique. Duplicates: ")
 
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["habitat_quality"].model_title,
@@ -1074,10 +1081,11 @@ def validate(args, limit_to=None):
         if missing_sens_header_set:
             validation_warnings.append(
                 (['sensitivity_table_path'],
-                 MISSING_SENSITIVITY_TABLE_THREATS_MSG % (
-                    missing_sens_header_set, sens_header_set)))
+                 MISSING_SENSITIVITY_TABLE_THREATS_MSG.format(
+                    threats=missing_sens_header_set,
+                    column_names=sens_header_set)))
 
-            invalid_keys.add('snsitivity_table_path')
+            invalid_keys.add('sensitivity_table_path')
 
         # Get the directory path for the Threats CSV, used for locating threat
         # rasters, which are relative to this path
@@ -1125,26 +1133,21 @@ def validate(args, limit_to=None):
                                 os.path.basename(threat_path))
 
         if bad_threat_columns:
-            validation_warnings.append(
-                (['threats_table_path'],
-                 (f"The column '{bad_threat_columns[0]}' was not found"
-                  " in the Threat Data table for the corresponding"
-                  " input LULC scenario.")))
+            validation_warnings.append((
+                ['threats_table_path'],
+                MISSING_COLUMN_MSG.format(column_name=bad_threat_columns[0])))
 
         if bad_threat_paths:
-            validation_warnings.append(
-                (['threats_table_path'],
-                 (f'A threat raster for threats: {bad_threat_paths}'
-                  ' was not found or it could not be opened by GDAL.')))
-
+            validation_warnings.append((
+                ['threats_table_path'],
+                MISSING_THREAT_RASTER_MSG.format(threat_list=bad_threat_paths)
+            ))
             invalid_keys.add('threats_table_path')
 
         if duplicate_paths:
             validation_warnings.append((
                 ['threats_table_path'],
-                ('Threat paths cannot be the same and must have unique '
-                 f'absolute filepaths. The threat paths: {duplicate_paths} '
-                 'were duplicates.')))
+                DUPLICATE_PATHS_MSG + str(duplicate_paths)))
 
             if 'threats_table_path' not in invalid_keys:
                 invalid_keys.add('threats_table_path')

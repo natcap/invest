@@ -19,6 +19,8 @@ from . import ndr_core
 
 LOGGER = logging.getLogger(__name__)
 
+MISSING_NUTRIENT_MSG = _('Either calc_n or calc_p must be True')
+
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["ndr"].model_title,
     "pyname": MODEL_METADATA["ndr"].pyname,
@@ -849,8 +851,7 @@ def validate(args, limit_to=None):
 
         if not nutrients_selected:
             validation_warnings.append(
-                (['calc_n', 'calc_p'],
-                 'Either calc_n or calc_p must be True'))
+                (['calc_n', 'calc_p'], MISSING_NUTRIENT_MSG))
 
         LOGGER.debug('Required nutrient-specific keys in CSV: %s',
                      nutrient_required_fields)
