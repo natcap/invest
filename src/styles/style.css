@@ -384,6 +384,10 @@ body {
 	align-items: center;
 }
 
+.args-form .form-label {
+	text-transform: capitalize;
+}
+
 .args-form .form-control {
 	font-family: monospace;
 	font-size:1.3rem;
