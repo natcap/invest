@@ -254,10 +254,7 @@ export default class SetupTab extends React.Component {
    * @returns {undefined}
    */
   updateArgValues(key, value) {
-    console.log(key)
-    console.log(value)
     const { argsValues } = this.state;
-    console.log(argsValues)
     argsValues[key].value = value;
     argsValues[key].touched = true;
 
