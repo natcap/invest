@@ -98,14 +98,18 @@ const uiSpec = {
   },
   coastal_vulnerability: {
     order: [
-      ["workspace_dir", "results_suffix"],
-      ["aoi_vector_path", "model_resolution"],
-      ["landmass_vector_path", "wwiii_vector_path", "max_fetch_distance"],
-      ["bathymetry_raster_path", "dem_path", "dem_averaging_radius"],
-      ["shelf_contour_vector_path", "habitat_table_path"],
-      ["geomorphology_vector_path", "geomorphology_fill_value"],
-      ["population_raster_path", "population_radius"],
-      ["slr_vector_path", "slr_field"]
+      ['workspace_dir', 'results_suffix'],
+      ['aoi_vector_path', 'model_resolution', 'landmass_vector_path'],
+      ['bathymetry_raster_path', 'wwiii_vector_path', 'max_fetch_distance'],
+      [
+        'habitat_table_path',
+        'shelf_contour_vector_path',
+        'dem_path',
+        'dem_averaging_radius',
+      ],
+      ['geomorphology_vector_path', 'geomorphology_fill_value'],
+      ['population_raster_path', 'population_radius'],
+      ['slr_vector_path', 'slr_field'],
     ],
     dropdownFunctions: {
       slr_field: ((state) => getVectorColumnNames(state.argsValues['slr_vector_path'].value))
