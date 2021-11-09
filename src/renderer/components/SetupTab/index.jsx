@@ -312,7 +312,11 @@ export default class SetupTab extends React.Component {
           keyset.delete(key);
         });
       });
-      // validated all, so ones left in keyset are valid
+      // validated all, so ones left in keyset are either valid
+      // or their "required" condition was unmet and so they were
+      // not validated and will appear disabled in the UI. Disabled
+      // inputs will not display a validation state, so it's okay
+      // to simply set all these as valid here.
       keyset.forEach((k) => {
         argsValidation[k].valid = true;
         argsValidation[k].validationMessage = '';

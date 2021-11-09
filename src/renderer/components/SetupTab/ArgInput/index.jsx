@@ -182,8 +182,8 @@ export default class ArgInput extends React.PureComponent {
                   value={value || ''} // empty string is handled better than `undefined`
                   onChange={handleChange}
                   onFocus={handleChange}
-                  isValid={touched && isValid}
-                  isInvalid={validationMessage}
+                  isValid={enabled && touched && isValid}
+                  isInvalid={enabled && validationMessage}
                   disabled={!enabled}
                   onDrop={inputDropHandler}
                   onDragOver={dragOverHandler}
