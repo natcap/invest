@@ -27,6 +27,11 @@ body {
 	padding-bottom: 0;
 }
 
+.navbar-brand:hover {
+	text-decoration-line: underline;
+	text-decoration-thickness: 3px;
+}
+
 .navbar-middle {
 	flex-shrink: 1;
 	min-width: 0;
