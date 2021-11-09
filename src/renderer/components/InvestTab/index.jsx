@@ -279,7 +279,10 @@ export default class InvestTab extends React.Component {
           </Col>
           <Col className="invest-main-col">
             <TabContent>
-              <TabPane eventKey="setup" title="Setup">
+              <TabPane
+                eventKey="setup"
+                aria-label="model setup tab"
+              >
                 <SetupTab
                   pyModuleName={modelSpec.pyname}
                   modelName={modelSpec.model_name}
@@ -293,7 +296,10 @@ export default class InvestTab extends React.Component {
                   executeClicked={this.state.executeClicked}
                 />
               </TabPane>
-              <TabPane eventKey="log" title="Log">
+              <TabPane
+                eventKey="log"
+                aria-label="model log tab"
+              >
                 <LogTab
                   logfile={logfile}
                   executeClicked={executeClicked}
