@@ -181,6 +181,7 @@ describe('createWindow', () => {
       ipcMainChannels.INVEST_RUN,
       ipcMainChannels.INVEST_KILL,
       ipcMainChannels.INVEST_READ_LOG,
+      ipcMainChannels.SHOW_ITEM_IN_FOLDER,
     ];
     createWindow();
     await waitFor(() => {

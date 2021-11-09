@@ -1,6 +1,7 @@
 export const ipcMainChannels = {
   SHOW_OPEN_DIALOG: 'show-open-dialog',
   SHOW_SAVE_DIALOG: 'show-save-dialog',
+  SHOW_ITEM_IN_FOLDER: 'show-item-in-folder',
   DOWNLOAD_URL: 'download-url',
   INVEST_RUN: 'invest-run',
   INVEST_KILL: 'invest-kill',

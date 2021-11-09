@@ -1,7 +1,7 @@
 import path from 'path';
 import React from 'react';
 import PropTypes from 'prop-types';
-import { ipcRenderer, shell } from 'electron';
+import { ipcRenderer } from 'electron';
 
 import TabPane from 'react-bootstrap/TabPane';
 import TabContent from 'react-bootstrap/TabContent';
@@ -42,7 +42,7 @@ async function investGetSpec(modelName) {
 }
 
 function handleOpenWorkspace(logfile) {
-  shell.showItemInFolder(logfile);
+  ipcRenderer.send(ipcMainChannels.SHOW_ITEM_IN_FOLDER, logfile);
 }
 
 /**
