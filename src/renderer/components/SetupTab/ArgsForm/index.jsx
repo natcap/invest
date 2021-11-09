@@ -74,12 +74,12 @@ export default class ArgsForm extends React.Component {
   inputDropHandler(event) {
     event.preventDefault();
     event.stopPropagation();
-    event.target.classList.remove('input-dragging');
+    event.currentTarget.classList.remove('input-dragging');
     // Don't take any action on disabled elements
-    if (event.target.disabled) {
+    if (event.currentTarget.disabled) {
       return;
     }
-    const { name } = event.target; // the arg's key and type
+    const { name } = event.currentTarget; // the arg's key and type
     // TODO: could add more filters based on argType (e.g. only show .csv)
     const fileList = event.dataTransfer.files;
     if (fileList.length !== 1) {
@@ -93,21 +93,20 @@ export default class ArgsForm extends React.Component {
 
   handleChange(event) {
     /** Pass input value up to SetupTab for storage & validation. */
-    const { name, value } = event.target;
+    const { name, value } = event.currentTarget;
     this.props.updateArgValues(name, value);
   }
 
   handleBoolChange(event) {
     /** Handle changes from boolean inputs that submit strings */
-    const { name, value } = event.target;
+    const { name, value } = event.currentTarget;
     const boolVal = boolStringToBoolean(value);
     this.props.updateArgValues(name, boolVal);
   }
 
   async selectFile(event) {
     /** Handle clicks on browse-button inputs */
-    console.dir(event.target)
-    const { name, value } = event.target; // the arg's key and type
+    const { name, value } = event.currentTarget; // the arg's key and type
     const prop = (value === 'directory') ? 'openDirectory' : 'openFile';
     // TODO: could add more filters based on argType (e.g. only show .csv)
     const data = await ipcRenderer.invoke(

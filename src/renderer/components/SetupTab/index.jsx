@@ -405,8 +405,8 @@ export default class SetupTab extends React.Component {
                 onClick={this.browseForDatastack}
                 variant="link"
               >
-                <MdFolderOpen />
-                {' Load parameters from file'}
+                <MdFolderOpen className="mr-1" />
+                Load parameters from file
               </Button>
             </OverlayTrigger>
             <SaveParametersButtons

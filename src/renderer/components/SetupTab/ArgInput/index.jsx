@@ -82,7 +82,7 @@ Feedback.defaultProps = {
 function dragOverHandler(event) {
   event.preventDefault();
   event.stopPropagation();
-  if (event.target.disabled) {
+  if (event.currentTarget.disabled) {
     event.dataTransfer.dropEffect = 'none';
   } else {
     event.dataTransfer.dropEffect = 'copy';
@@ -92,11 +92,11 @@ function dragOverHandler(event) {
 function dragEnterHandler(event) {
   event.preventDefault();
   event.stopPropagation();
-  if (event.target.disabled) {
+  if (event.currentTarget.disabled) {
     event.dataTransfer.dropeffect = 'none';
   } else {
     event.dataTransfer.dropEffect = 'copy';
-    event.target.classList.add('input-dragging');
+    event.currentTarget.classList.add('input-dragging');
   }
 }
 
@@ -104,7 +104,7 @@ function dragLeavingHandler(event) {
   event.preventDefault();
   event.stopPropagation();
   event.dataTransfer.dropEffect = 'copy';
-  event.target.classList.remove('input-dragging');
+  event.currentTarget.classList.remove('input-dragging');
 }
 
 export default class ArgInput extends React.PureComponent {

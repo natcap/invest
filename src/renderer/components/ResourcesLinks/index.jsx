@@ -38,7 +38,7 @@ const FORUM_TAGS = {
  */
 function handleClick(event) {
   event.preventDefault();
-  shell.openExternal(event.target.href);
+  shell.openExternal(event.currentTarget.href);
 }
 
 /** Render model-relevant links to the User's Guide and Forum.
