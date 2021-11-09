@@ -40,7 +40,7 @@ export default class App extends React.Component {
       activeTab: 'home',
       openNavIDs: [],
       openJobs: {},
-      investList: {},
+      investList: null,
       recentJobs: [],
       investSettings: null,
       showDownloadModal: false,
@@ -342,12 +342,16 @@ export default class App extends React.Component {
             onDragOver={dragOverHandlerNone}
           >
             <TabPane eventKey="home" title="Home">
-              <HomeTab
-                investList={investList}
-                openInvestModel={this.openInvestModel}
-                recentJobs={recentJobs}
-                batchUpdateArgs={this.batchUpdateArgs}
-              />
+              {(investList)
+                ? (
+                  <HomeTab
+                    investList={investList}
+                    openInvestModel={this.openInvestModel}
+                    recentJobs={recentJobs}
+                    batchUpdateArgs={this.batchUpdateArgs}
+                  />
+                )
+                : <div />}
             </TabPane>
             {investTabPanes}
           </TabContent>
