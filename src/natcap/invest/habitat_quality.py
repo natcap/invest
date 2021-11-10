@@ -819,7 +819,7 @@ def _compute_rarity_operation(
         if code in lulc_code_count_b:
             numerator = lulc_code_count_x[code] * lulc_area
             denominator = lulc_code_count_b[code] * base_area
-            ratio = 1.0 - (numerator / denominator)
+            ratio = 1.0 - (numerator / (denominator + numerator))
             code_index[code] = ratio
         else:
             code_index[code] = 0.0
