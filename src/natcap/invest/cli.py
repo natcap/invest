@@ -20,9 +20,7 @@ try:
     from . import __version__
     from . import utils
     from . import datastack
-    print('imported')
 except (ValueError, ImportError):
-    print('errored on import')
     # When we're in a PyInstaller build, this isn't a module.
     from natcap.invest import __version__
     from natcap.invest import utils
@@ -339,8 +337,6 @@ def main(user_args=None):
     args = parser.parse_args(user_args)
 
     import natcap.invest
-    print(natcap.invest)
-    print('installing language', args.language)
     natcap.invest.install_language(args.language)
     importlib.reload(natcap.invest)
 
@@ -381,7 +377,6 @@ def main(user_args=None):
         parser.exit(launcher.main())
 
     if args.subcommand == 'validate':
-        parsed_datastack = datastack.extract_parameter_set(args.datastack)
         try:
             parsed_datastack = datastack.extract_parameter_set(args.datastack)
         except Exception as error:

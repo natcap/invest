@@ -20,7 +20,6 @@ import numpy
 from . import utils
 from . import spec_utils
 
-print('executing validation')
 #: A flag to pass to the validation context manager indicating that all keys
 #: should be checked.
 CHECK_ALL_KEYS = None

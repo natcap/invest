@@ -1371,11 +1371,12 @@ class HabitatQualityTests(unittest.TestCase):
             validate_result,
             "expected failed validations instead didn't get any.")
         self.assertEqual(
-            habitat_quality.DUPLICATE_PATHS_MSG + str(
-                [('threat_1', 'cur_path'),
-                 ('threat_2', 'cur_path'),
-                 ('threat_1', 'fut_path'),
-                 ('threat_2', 'fut_path')]),
+            habitat_quality.MISSING_THREAT_RASTER_MSG.format(
+                threat_list=[
+                    ('threat_1', 'cur_path'),
+                    ('threat_2', 'cur_path'),
+                    ('threat_1', 'fut_path'),
+                    ('threat_2', 'fut_path')]),
             validate_result[0][1])
 
     def test_habitat_quality_missing_cur_threat_path(self):

@@ -937,10 +937,7 @@ def matches_format_string(test_string, format_string):
     """
     # replace all curly-braced substrings of the format string with '.*'
     # to make a regular expression
-    print(test_string)
-    print(format_string)
     pattern = re.sub(r'\{.*\}', '.*', format_string)
-    print(pattern)
     # check if the given string matches the format string pattern
     if re.fullmatch(pattern, test_string):
         return True

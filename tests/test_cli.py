@@ -225,6 +225,7 @@ class CLIHeadlessTests(unittest.TestCase):
                     new_parameter_set_path,
                 ])
         validation_output = stdout_stream.getvalue()
+        print(repr(validation_output))
         # it's expected that these paths aren't found because it's looking in
         # the temporary test directory. do_batch is False so it doesn't check
         # the population_csv_dir path, which also wouldn't exist.

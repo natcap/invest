@@ -17,7 +17,6 @@ from . import spec_utils
 from .spec_utils import u
 from . import MODEL_METADATA
 
-print('executing carbon')
 
 LOGGER = logging.getLogger(__name__)
 

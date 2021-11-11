@@ -8,7 +8,6 @@ import sys
 
 import pkg_resources
 
-print('executing init')
 
 # location of our translation message catalog directory
 LOCALE_DIR = os.path.join(
@@ -220,14 +219,12 @@ MODEL_METADATA = {
 def install_language(language_code):
     # globally install the _() function for the requested language
     # fall back to a NullTranslation, which returns the English messages
-    print('locale dir:', LOCALE_DIR, language_code)
     language = gettext.translation(
         'messages',
         languages=[language_code],
         localedir=LOCALE_DIR,
         fallback=True)
     language.install()
-    print(gettext.gettext('Available models:'))
     LOGGER.debug(f'Installed language "{language_code}"')
 
 

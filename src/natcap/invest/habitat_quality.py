@@ -349,10 +349,8 @@ def execute(args):
                         lulc_and_threat_raster_list.append(threat_path)
                     else:
                         raise ValueError(
-                            'Threat paths cannot be the same and must have '
-                            'unique absolute filepaths. The threat path: '
-                            f'{os.path.basename(threat_path)} is a '
-                            'duplicate.')
+                            DUPLICATE_PATHS_MSG + os.path.basename(threat_path)
+                        )
                     # Check threat raster values are 0 <= x <= 1
                     threat_values_task = task_graph.add_task(
                         func=_raster_values_in_bounds,
