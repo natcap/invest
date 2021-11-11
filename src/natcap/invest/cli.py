@@ -420,7 +420,8 @@ def main(user_args=None):
 
     if args.subcommand == 'getspec':
         target_model = natcap.invest.MODEL_METADATA[args.model].pyname
-        model_module = importlib.import_module(name=target_model)
+        model_module = importlib.reload(
+            importlib.import_module(name=target_model))
         spec = model_module.ARGS_SPEC
 
         if args.json:
