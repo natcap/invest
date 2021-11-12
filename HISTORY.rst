@@ -35,9 +35,14 @@
 .. :changelog:
 
 
-..
-  Unreleased Changes
-  ------------------
+
+Unreleased Changes
+------------------
+* General:
+    * Add a ``--language`` argument to the command-line interface, which will
+      translate model names, specs, and validation messages.
+    * Accept a ``language`` query parameter at the UI server endpoints, which
+      will translate model names, specs, and validation messages.
 
 3.9.2 (2021-10-29)
 ------------------

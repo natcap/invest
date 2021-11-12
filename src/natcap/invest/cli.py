@@ -248,8 +248,9 @@ def main(user_args=None):
 
     parser.add_argument(
         '-L', '--language', default='en', choices=['en', 'es'],
-        help=('The language to use. Allowed options are en (English) or es '
-              '(Spanish).'))
+        help=('Choose a language. Model specs, names, and validation messages '
+              'will be translated. Log messages are not translated. Value '
+              'should be an ISO 639-1 language code.'))
 
     subparsers = parser.add_subparsers(dest='subcommand')
 
