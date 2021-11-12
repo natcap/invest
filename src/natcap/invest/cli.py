@@ -15,16 +15,10 @@ import textwrap
 import warnings
 
 import natcap.invest
-
-try:
-    from . import __version__
-    from . import utils
-    from . import datastack
-except (ValueError, ImportError):
-    # When we're in a PyInstaller build, this isn't a module.
-    from natcap.invest import __version__
-    from natcap.invest import utils
-    from natcap.invest import datastack
+from natcap.invest import datastack
+from natcap.invest import ui_server
+from natcap.invest import utils
+from natcap.invest.ui import launcher, inputs
 
 
 DEFAULT_EXIT_CODE = 1
@@ -144,7 +138,7 @@ def export_to_python(target_filepath, model, args_dict=None):
         args = args.replace('{', '{\n ')
         args = args.replace('}', ',\n}')
         py_file.write(script_template.format(
-            invest_version=__version__,
+            invest_version=natcap.invest.__version__,
             today=datetime.datetime.now().strftime('%c'),
             model_title=natcap.invest.MODEL_METADATA[model].model_title,
             pyname=natcap.invest.MODEL_METADATA[model].pyname,
@@ -240,7 +234,7 @@ def main(user_args=None):
         prog='invest'
     )
     parser.add_argument('--version', action='version',
-                        version=__version__)
+                        version=natcap.invest.__version__)
     verbosity_group = parser.add_mutually_exclusive_group()
     verbosity_group.add_argument(
         '-v', '--verbose', dest='verbosity', default=0, action='count',
@@ -336,8 +330,9 @@ def main(user_args=None):
 
     args = parser.parse_args(user_args)
 
-    import natcap.invest
     natcap.invest.install_language(args.language)
+    # reevaluate in the new language
+    # NOTE this only reevaluates natcap/invest/__init__.py, no other modules
     importlib.reload(natcap.invest)
 
     root_logger = logging.getLogger()
@@ -373,7 +368,6 @@ def main(user_args=None):
         parser.exit()
 
     if args.subcommand == 'launch':
-        from natcap.invest.ui import launcher
         parser.exit(launcher.main())
 
     if args.subcommand == 'validate':
@@ -489,7 +483,6 @@ def main(user_args=None):
                 "the application hangs on startup, set 'QT_MAC_WANTS_LAYER=1' "
                 "in the shell running this CLI.", RuntimeWarning)
 
-        from natcap.invest.ui import inputs
 
         gui_class = natcap.invest.MODEL_METADATA[args.model].gui
         module_name, classname = gui_class.split('.')
@@ -533,8 +526,7 @@ def main(user_args=None):
                         'App terminated with exit code %s\n' % app_exitcode)
 
     if args.subcommand == 'serve':
-        import natcap.invest.ui_server
-        natcap.invest.ui_server.app.run(port=args.port)
+        ui_server.app.run(port=args.port)
         parser.exit(0)
 
     if args.subcommand == 'export-py':
