@@ -23,7 +23,7 @@ When we are ready to get a new batch of translations, here is the process.
 
 1. Run the following from the root invest directory, replacing `<LANG>` with the language code:
 ```
-pybabel extract \  # extract messages from source code and write to template
+pybabel extract \
    --no-wrap \
    --project InVEST \
    --version 3.10 \
@@ -58,7 +58,7 @@ git commit -m "update <LANG> message catalog with new translations"
 
 ```
 mkdir -p src/natcap/invest/internationalization/locales/<LANG>/LC_MESSAGES/  # create the expected directory structure
-pybabel init --input-file src/natcap/invest/internationalization/messages.pot --output-file src/natcap/invest/internationalization/locales/<LANG>/LC_MESSAGES/messages.po  # initialize the message catalog from the template
+pybabel init --input-file src/natcap/invest/internationalization/messages.pot --output-file src/natcap/invest/internationalization/locales/<LANG>/LC_MESSAGES/messages.po --locale <LANG> # initialize the message catalog from the template
 ```
 Then follow the "Process to update translations" instructions above, starting from step 2.
 

@@ -75,11 +75,10 @@ def get_invest_getspec():
     Returns:
         A JSON string.
     """
-    # this will be the model key name, not language specific
-    target_model = request.get_json()
-    target_module = MODEL_METADATA[target_model].pyname
     install_language(request.args.get('language', 'en'))
     importlib.reload(natcap.invest)
+    target_model = request.get_json()
+    target_module = MODEL_METADATA[target_model].pyname
     model_module = importlib.import_module(name=target_module)
     return spec_utils.serialize_args_spec(model_module.ARGS_SPEC)
 
