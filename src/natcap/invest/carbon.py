@@ -17,7 +17,6 @@ from . import spec_utils
 from .spec_utils import u
 from . import MODEL_METADATA
 
-
 LOGGER = logging.getLogger(__name__)
 
 ARGS_SPEC = {

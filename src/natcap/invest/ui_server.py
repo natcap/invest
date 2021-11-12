@@ -50,14 +50,17 @@ def shutdown():
 def get_invest_models():
     """Gets a list of available InVEST models.
 
+    Accepts a `language` query parameter which should be an ISO 639-1 language
+    code. Model names will be translated to the requested language if
+    translations are available, or fall back to English otherwise.
+
     Returns:
         A JSON string
     """
+    LOGGER.debug('get model list')
     install_language(request.args.get('language', 'en'))
     importlib.reload(natcap.invest)
-    LOGGER.debug('get model list')
-    a = cli.build_model_list_json()
-    return a
+    return cli.build_model_list_json()
 
 
 @app.route('/getspec', methods=['POST'])
@@ -65,6 +68,9 @@ def get_invest_getspec():
     """Gets the ARGS_SPEC dict from an InVEST model.
 
     Body (JSON string): "carbon"
+    Accepts a `language` query parameter which should be an ISO 639-1 language
+    code. Spec 'about' and 'name' values will be translated to the requested
+    language if translations are available, or fall back to English otherwise.
 
     Returns:
         A JSON string.
@@ -85,6 +91,10 @@ def get_invest_validate():
     Body (JSON string):
         model_module: string (e.g. natcap.invest.carbon)
         args: JSON string of InVEST model args keys and values
+
+    Accepts a `language` query parameter which should be an ISO 639-1 language
+    code. Validation messages will be translated to the requested language if
+    translations are available, or fall back to English otherwise.
 
     Returns:
         A JSON string.

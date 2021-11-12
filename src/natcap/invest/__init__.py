@@ -217,12 +217,12 @@ MODEL_METADATA = {
 
 
 def install_language(language_code):
-    # globally install the _() function for the requested language
-    # fall back to a NullTranslation, which returns the English messages
+    """Globally install the _() function for the requested language."""
     language = gettext.translation(
         'messages',
         languages=[language_code],
         localedir=LOCALE_DIR,
+        # fall back to a NullTranslation, which returns the English messages
         fallback=True)
     language.install()
     LOGGER.debug(f'Installed language "{language_code}"')
