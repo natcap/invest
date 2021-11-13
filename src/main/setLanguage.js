@@ -24,7 +24,6 @@ export function setupSetLanguage() {
   ipcMain.handle(
     ipcMainChannels.SET_LANGUAGE,
     (event, languageCode) => {
-      console.log('handle setting language', languageCode);
       i18n.setLocale(languageCode);
     }
   );
@@ -32,8 +31,6 @@ export function setupSetLanguage() {
   ipcMain.on(
     ipcMainChannels.GETTEXT,
     (event, message) => {
-      console.log('handling', message);
-      console.log(i18n.gettext(message));
       event.returnValue = i18n.gettext(message);
     }
   );
