@@ -92,13 +92,9 @@ export default class App extends React.Component {
   }
 
   saveSettings(settings) {
-    ipcRenderer.invoke(ipcMainChannels.SET_LANGUAGE, settings.language
-      ).then(() => {
-        const x = this.setState({
-          investSettings: settings,
-        });
-      }
-    )
+    ipcRenderer.invoke(
+      ipcMainChannels.SET_LANGUAGE, settings.language
+    ).then(() => this.setState({investSettings: settings}))
     saveSettingsStore(settings);
   }
 

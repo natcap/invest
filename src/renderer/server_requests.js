@@ -16,7 +16,6 @@ const HOSTNAME = 'http://localhost';
  */
 export async function getInvestModelNames() {
   const language = await getSettingsValue('language');
-  console.log(language);
   return (
     window.fetch(`${HOSTNAME}:${process.env.PORT}/models?language=${language}`, {
       method: 'get',
@@ -33,8 +32,9 @@ export async function getInvestModelNames() {
  * @returns {Promise} resolves object
  */
 export function getSpec(payload) {
+  const language = await getSettingsValue('language');
   return (
-    window.fetch(`${HOSTNAME}:${process.env.PORT}/getspec`, {
+    window.fetch(`${HOSTNAME}:${process.env.PORT}/getspec?language=${language}`, {
       method: 'post',
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },
@@ -54,9 +54,9 @@ export function getSpec(payload) {
  * @returns {Promise} resolves array
  */
 export function fetchValidation(payload) {
-  logger.debug('calling window.fetch validation');
+  const language = await getSettingsValue('language');
   return (
-    window.fetch(`${HOSTNAME}:${process.env.PORT}/validate`, {
+    window.fetch(`${HOSTNAME}:${process.env.PORT}/validate?language=${language}`, {
       method: 'post',
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },

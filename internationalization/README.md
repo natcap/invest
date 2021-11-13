@@ -1,6 +1,15 @@
 # Internationalization
 
-* PO files should never need to be edited manually.
+See the internationalization readme in the invest repo.
+
+The only difference is that here in the workbench, the POT file is edited manually instead of generated automatically.
+
+This is because:
+* There are a small number of messages so it was easy to create the POT file manually.
+* The standard message extraction tool, `xgettext`, supports JavaScript but did not work perfectly here. It probably got thrown off by the JSX syntax.
+* Changes to message strings will likely be small and infrequent.
+
+If it becomes burdensome to keep up with manually editing the POT file, we can look for a message extraction tool that supports JSX syntax or write our own script for it. For now, we'll need to manually update the POT file whenever we change a message string. It makes sense to do this at the same time, rather than all in one batch before translating, so that we don't forget any.
 
 ### Adding a new string that should be translated
 
@@ -40,10 +49,3 @@ This does *not* need to happen immediately after any change. Ideally we would ge
    git add internationalization/locales/<LANG>/LC_MESSAGES/messages.po
    git commit -m "update <LANG> message catalog with new translations"
    ```
-
-
-
-
-## Extracting messages
-Because of the small number of messages, I created messages.pot manually. This could be done instead with `xgettext`, which supports javascript, though I'm not sure if it works with JSX syntax.
-

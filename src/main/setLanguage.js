@@ -11,6 +11,7 @@ async function loadMessageCatalogs() {
   // load each message catalog JSON file into an object
   // for easy access when we switch languages
   const languages = ['es'];
+  fs.readdir('../../internationalization/locales', function (err, files) {
   for (const languageCode of languages) {
     const messageCatalogPath = `../../internationalization/locales/${languageCode}/LC_MESSAGES/messages.json`;
     const data = await import(messageCatalogPath).then(data => data['default']);
