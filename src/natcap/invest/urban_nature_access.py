@@ -1,9 +1,12 @@
+import os
 import logging
 
 import pygeoprocessing
+import taskgraph
 
 from . import validation
 from . import spec_utils
+from . import utils
 from .spec_utils import u
 from .. import MODEL_METADATA
 
@@ -66,6 +69,9 @@ ARGS_SPEC = {
 }
 
 
+_OUTPUT_BASE_FILES = {}
+_INTERMEDIATE_BASE_FILES = {}
+
 def execute(args):
     """Urban Nature Access.
 
@@ -107,6 +113,28 @@ def execute(args):
     # * Test on basic datasets
     # * align inputs  (what's the best way to reproject a population raster?)
     # * validation
+
+    output_dir = os.path.join(args['workspace_dir'], 'output')
+    intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
+    utils.make_directories([output_dir, intermediate_dir])
+
+    file_suffix = utils.make_suffix_string(args, 'results_suffix')
+    file_registry = utils.build_file_registry(
+        [(_OUTPUT_BASE_FILES, output_dir),
+         (_INTERMEDIATE_BASE_FILES, intermediate_dir)],
+        file_suffix)
+
+    work_token_dir = os.path.join(intermediate_dir, '_taskgraph_working_dir')
+    try:
+        n_workers = int(args['n_workers'])
+    except (KeyError, ValueError, TypeError):
+        # KeyError when n_workers is not present in args
+        # ValueError when n_workers is an empty string.
+        # TypeError when n_workers is None.
+        n_workers = -1  # Synchronous execution
+    graph = taskgraph.TaskGraph(work_token_dir, n_workers)
+
+    LOGGER.info('Finished Urban Nature Access Model')
 
 
 def validate(args, limit_to=None):
