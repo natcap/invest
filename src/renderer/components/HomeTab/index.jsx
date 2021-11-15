@@ -62,7 +62,6 @@ export default class HomeTab extends React.PureComponent {
           key={model}
           className="invest-button"
           title={model}
-          aria-label={`open ${model} model`}
           action
           onClick={() => this.handleClick(model)}
         >

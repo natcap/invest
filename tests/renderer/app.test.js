@@ -39,7 +39,7 @@ const MOCK_INVEST_LIST = {
 const MOCK_VALIDATION_VALUE = [[['workspace_dir'], 'invalid because']];
 
 const SAMPLE_SPEC = {
-  model_name: 'Carbon Storage and Sequestration',
+  model_name: MOCK_MODEL_TITLE,
   pyname: 'natcap.invest.carbon',
   userguide_html: 'carbonstorage.html',
   args: {
@@ -86,7 +86,7 @@ describe('Various ways to open and close InVEST models', () => {
     );
 
     const carbon = await findByRole(
-      'button', { name: `open ${MOCK_MODEL_TITLE} model` }
+      'button', { name: MOCK_MODEL_TITLE }
     );
     fireEvent.click(carbon);
     const executeButton = await findByRole('button', { name: /Run/ });
@@ -190,7 +190,7 @@ describe('Various ways to open and close InVEST models', () => {
     } = render(<App />);
 
     const carbon = await findByRole(
-      'button', { name: `open ${MOCK_MODEL_TITLE} model` }
+      'button', { name: MOCK_MODEL_TITLE }
     );
     const homeTab = await findByRole('tabpanel', { name: 'home tab' });
 
@@ -620,7 +620,7 @@ describe('InVEST subprocess testing', () => {
     } = render(<App />);
 
     const carbon = await findByRole(
-      'button', { name: `open ${MOCK_MODEL_TITLE} model` }
+      'button', { name: MOCK_MODEL_TITLE }
     );
     fireEvent.click(carbon);
     const workspaceInput = await findByLabelText(
@@ -667,7 +667,7 @@ describe('InVEST subprocess testing', () => {
     } = render(<App />);
 
     const carbon = await findByRole(
-      'button', { name: `open ${MOCK_MODEL_TITLE} model` }
+      'button', { name: MOCK_MODEL_TITLE }
     );
     fireEvent.click(carbon);
     const workspaceInput = await findByLabelText(
@@ -725,7 +725,7 @@ describe('InVEST subprocess testing', () => {
     } = render(<App />);
 
     const carbon = await findByRole(
-      'button', { name: `open ${MOCK_MODEL_TITLE} model` }
+      'button', { name: MOCK_MODEL_TITLE }
     );
     fireEvent.click(carbon);
     const workspaceInput = await findByLabelText(
@@ -771,7 +771,7 @@ describe('InVEST subprocess testing', () => {
     } = render(<App />);
 
     const carbon = await findByRole(
-      'button', { name: `open ${MOCK_MODEL_TITLE} model` }
+      'button', { name: MOCK_MODEL_TITLE }
     );
     fireEvent.click(carbon);
     const workspaceInput = await findByLabelText(
