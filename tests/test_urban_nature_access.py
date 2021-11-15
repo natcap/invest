@@ -49,18 +49,22 @@ class UNATests(unittest.TestCase):
             projection_wkt=population_wkt,
             target_path=source_population_raster_path)
 
-        target_population_raster_path = os.path.join(
-            self.workspace_dir, 'resampled_population.tif')
-        urban_nature_access._resample_population_raster(
-            source_population_raster_path=source_population_raster_path,
-            target_population_raster_path=target_population_raster_path,
-            target_pixel_size=(30, -30),  # 1/3 the population pixel size
-            target_bb=pygeoprocessing.get_raster_info(
-                source_population_raster_path)['bounding_box'],
-            target_projection_wkt=population_wkt,
-            working_dir=os.path.join(self.workspace_dir, 'working'))
+        for target_pixel_size in (
+                (30, -30),  # 1/3 the pixel size
+                (4, -4),  # way smaller
+                (100, -100)):  # bigger
+            target_population_raster_path = os.path.join(
+                self.workspace_dir, 'resampled_population.tif')
+            urban_nature_access._resample_population_raster(
+                source_population_raster_path=source_population_raster_path,
+                target_population_raster_path=target_population_raster_path,
+                target_pixel_size=target_pixel_size,
+                target_bb=pygeoprocessing.get_raster_info(
+                    source_population_raster_path)['bounding_box'],
+                target_projection_wkt=population_wkt,
+                working_dir=os.path.join(self.workspace_dir, 'working'))
 
-        resampled_population_array = pygeoprocessing.raster_to_numpy_array(
-            target_population_raster_path)
-        numpy.testing.assert_allclose(
-            population_array.sum(), resampled_population_array.sum())
+            resampled_population_array = pygeoprocessing.raster_to_numpy_array(
+                target_population_raster_path)
+            numpy.testing.assert_allclose(
+                population_array.sum(), resampled_population_array.sum())
