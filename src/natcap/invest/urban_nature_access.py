@@ -153,6 +153,39 @@ def execute(args):
 def _resample_population_raster(
         source_population_raster_path, target_population_raster_path,
         target_pixel_size, target_bb, target_projection_wkt, working_dir):
+    """Resample a population raster without losing or gaining people.
+
+    Population rasters are an interesting special case where the data are
+    neither continuous nor categorical, and the total population count
+    typically matters.  Common resampling methods for continuous
+    (interpolation) and categorical (nearest-neighbor) datasets leave room for
+    the total population of a resampled raster to significantly change.  This
+    function resamples a population raster with the following steps:
+
+        1. Convert a population count raster to population density per pixel
+        2. Warp the population density raster to the target spatial reference
+           and pixel size using bilinear interpolation.
+        3. Convert the warped density raster back to population counts.
+
+    Args:
+        source_population_raster_path (string): The source population raster.
+            Pixel values represent the number of people occupying the pixel.
+        target_population_raster_path (string): The path to where the target,
+            warped population raster will live on disk.
+        target_pixel_size (tuple): A tuple of the pixel size for the target
+            raster.  Passed directly to ``pygeoprocessing.warp_raster``.
+        target_bb (tuple): A tuple of the bounding box for the target raster.
+            Passed directly to ``pygeoprocessing.warp_raster``.
+        target_projection_wkt (string): The Well-Known Text of the target
+            spatial reference fro the target raster.  Passed directly to
+            ``pygeoprocessing.warp_raster``.
+        working_dir (string): The path to a directory on disk.  A new directory
+            is created within this directory for the storage of temporary files
+            and then deleted upon successful completion of the function.
+
+    Returns:
+        ``None``
+    """
     # Assumes population raster is linearly projected
     # Reasoning: the total population of a pixel is great, but we need to be
     # able to convert that pixel size without losing or gaining people due to
