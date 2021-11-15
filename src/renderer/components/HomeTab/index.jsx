@@ -61,6 +61,7 @@ export default class HomeTab extends React.PureComponent {
         <ListGroup.Item
           key={model}
           className="invest-button"
+          title={model}
           action
           onClick={() => this.handleClick(model)}
         >

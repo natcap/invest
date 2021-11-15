@@ -27,6 +27,11 @@ body {
 	padding-bottom: 0;
 }
 
+.navbar-brand:hover {
+	text-decoration-line: underline;
+	text-decoration-thickness: 3px;
+}
+
 .navbar-middle {
 	flex-shrink: 1;
 	min-width: 0;
@@ -345,9 +350,10 @@ body {
 .args-form {
 	height: 85vh;
 	width: 100%;
-	margin-left: 2rem;
 	overflow-y: auto;
 	overflow-x: hidden;
+	padding-left: 2rem;
+	padding-right: 1rem;
 }
 
 /* InVEST Argument Forms */
@@ -356,8 +362,14 @@ body {
 }
 
 .arg-group {
-	margin-top: 2.0rem;
-	margin-bottom: 2.0rem;
+	margin-top: 1.0rem;
+	margin-bottom: 1.5rem;
+	padding-bottom: 0.5rem;
+	border-bottom: 1px dotted;
+}
+
+.arg-group:last-of-type {
+	border-bottom: none;
 }
 
 .arg-hide {
@@ -365,7 +377,19 @@ body {
 }
 
 .arg-disable .form-label {
-	color: lightgray;
+	color: #a5a5a5;
+}
+
+.args-form .form-control:disabled {
+	color: #888888;
+}
+
+.args-form .form-group {
+	align-items: center;
+}
+
+.args-form .form-label {
+	text-transform: capitalize;
 }
 
 .args-form .form-control {

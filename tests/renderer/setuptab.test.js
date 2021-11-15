@@ -267,7 +267,7 @@ describe('Arguments form interactions', () => {
     fetchValidation.mockResolvedValue([]);
     const { findByLabelText } = renderSetupFromSpec(spec, uiSpec);
 
-    const input = await findByLabelText(`${spec.args.arg.name}`);
+    const input = await findByLabelText(`${spec.args.arg.name} (optional)`);
 
     // An optional input with no value is valid, but green check
     // does not display until the input has been touched.
@@ -281,7 +281,7 @@ describe('Arguments form interactions', () => {
 });
 
 describe('UI spec functionality', () => {
-  beforeAll(() => {
+  beforeEach(() => {
     fetchValidation.mockResolvedValue([]);
   });
 
@@ -311,6 +311,9 @@ describe('UI spec functionality', () => {
         }
       }
     };
+    // mock some validation state so that we can test that it only
+    // displays when an input is enabled.
+    fetchValidation.mockResolvedValue([[['arg4'], 'invalid because']]);
 
     const uiSpec = {
       order: [Object.keys(spec.args)],
@@ -349,6 +352,7 @@ describe('UI spec functionality', () => {
       expect(arg2).toBeEnabled();
       expect(arg3).toBeDisabled();
       expect(arg4).toBeEnabled();
+      expect(arg4).toHaveClass('is-invalid');
     });
 
     fireEvent.click(arg2, { target: { value: 'true' } });
@@ -356,6 +360,10 @@ describe('UI spec functionality', () => {
       expect(arg2).toBeEnabled();
       expect(arg3).toBeEnabled();
       expect(arg4).toBeDisabled();
+      // the disabled input's validation result has not changed,
+      // but the validation state should be hidden on disabled inputs.
+      expect(arg4).not.toHaveClass('is-invalid');
+      expect(arg4).not.toHaveClass('is-valid');
     });
   });
 

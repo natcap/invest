@@ -36,13 +36,24 @@ function filterSpatialOverlapFeedback(message, filepath) {
 function FormLabel(props) {
   return (
     <Form.Label column sm="3" htmlFor={props.argkey}>
-      {props.children}
+      <span>
+        {props.argname}
+        <em>
+          {
+            (typeof props.required === 'boolean' && !props.required)
+              ? ' (optional)' : ''
+          }
+        </em>
+      </span>
     </Form.Label>
   );
 }
 FormLabel.propTypes = {
   argkey: PropTypes.string.isRequired,
-  children: PropTypes.element.isRequired,
+  argname: PropTypes.string.isRequired,
+  required: PropTypes.oneOfType(
+    [PropTypes.string, PropTypes.bool]
+  ),
 };
 
 function Feedback(props) {
@@ -154,12 +165,12 @@ export default class ArgInput extends React.PureComponent {
           // this grays out the label but doesn't actually disable the field
           className={className}
         >
-          <FormLabel argkey={argkey}>
-            <span>
-              {argSpec.name}
-            </span>
-          </FormLabel>
-          <Col sm="8">
+          <FormLabel
+            argkey={argkey}
+            argname={argSpec.name}
+            required={argSpec.required}
+          />
+          <Col>
             <InputGroup>
               <div className="d-flex flex-nowrap w-100">
                 <AboutModal argument={argSpec} />
@@ -171,8 +182,8 @@ export default class ArgInput extends React.PureComponent {
                   value={value || ''} // empty string is handled better than `undefined`
                   onChange={handleChange}
                   onFocus={handleChange}
-                  isValid={touched && isValid}
-                  isInvalid={validationMessage}
+                  isValid={enabled && touched && isValid}
+                  isInvalid={enabled && validationMessage}
                   disabled={!enabled}
                   onDrop={inputDropHandler}
                   onDragOver={dragOverHandler}
@@ -229,10 +240,12 @@ export default class ArgInput extends React.PureComponent {
           data-testid={`group-${argkey}`}
           className={className}
         >
-          <FormLabel argkey={argkey}>
-            <span>{argSpec.name}</span>
-          </FormLabel>
-          <Col sm="8" className="text-nowrap">
+          <FormLabel
+            argkey={argkey}
+            argname={argSpec.name}
+            required={argSpec.required}
+          />
+          <Col className="text-nowrap">
             <AboutModal argument={argSpec} />
             <Form.Check
               id={argkey}
@@ -269,12 +282,14 @@ export default class ArgInput extends React.PureComponent {
           data-testid={`group-${argkey}`}
           className={className}
         >
-          <FormLabel argkey={argkey}>
-            <span>{argSpec.name}</span>
-          </FormLabel>
-          <Col sm="4">
+          <FormLabel
+            argkey={argkey}
+            argname={argSpec.name}
+            required={argSpec.required}
+          />
+          <Col>
             <InputGroup>
-              <div className="d-flex flex-nowrap w-100">
+              <div className="d-flex flex-nowrap w-auto">
                 <AboutModal argument={argSpec} />
                 <Form.Control
                   id={argkey}

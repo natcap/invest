@@ -2,43 +2,49 @@
 <html lang="en">
   <body>
     <p>
-      Hello Workbench-alpha tester! 
-    </p>
-      Please help us by reporting problems (nothing is too small or too large) to:  davefisher@stanford.edu
+      Please help us by reporting problems (nothing is too small or too large) to: 
+      <a
+        href="https://community.naturalcapitalproject.org/"
+        onClick="handleLinkClick(event)">
+        https://community.naturalcapitalproject.org
+      </a>
     </p>
     <p>
-      Include a brief description of the problem and attach the log files
-      that you can find using the button below. (There may be multiple 
-      files with a ".log" extension.)
-      <b>Please include all the log files.</b>
+      If the problem is related to a specific InVEST model error,
+      please see the guidelines here for reporting problems:
+      <a
+        href="https://community.naturalcapitalproject.org/t/guidelines-for-posting-software-support-questions/24"
+        onClick="handleLinkClick(event)">
+        Guidelines for posting software support questions
+      </a>
+    </p>
+    <p>
+      If the problem seems related to this User Interface, rather than
+      with a specific InVEST model, please include a brief description
+      of the problem, a screenshot if necessary, and attach the log files
+      that you can find using the button below. There may be multiple files
+      with a ".log" extension; please include all the log files.
     </p>
     <button type="button" onclick="handleButtonClick()">
       Find My Logs
     </button>
-    <br/>
-    <br/>
-    <p>
-      View a list of the issues already on our todo list:
-    </p>
-      <a
-        href="https://github.com/natcap/invest-workbench/issues"
-        onClick="handleLinkClick(event)">
-        https://github.com/natcap/invest-workbench/issues
-      </a>
-    <p>
-      If you have a github account, you're most welcome to join the discussions there too.
-    </p>
   </body>
   <script>
-    const { shell } = require('electron');
-    const { getLogger } = require('../logger');
-    const logger = getLogger(__filename.split('/').slice(-1)[0]);
+    const { ipcRenderer, shell } = require('electron');
+    const { ipcMainChannels } = require('../main/ipcMainChannels');
+
+    const logger = window.Workbench.getLogger(
+      __filename.split('/').slice(-1)[0]
+    );
 
     logger.debug('PROBLEM REPORT: process dump');
     logger.debug(JSON.stringify(process, null, 2));
 
     function handleButtonClick() {
-      shell.showItemInFolder(logger.transports.file.getFile().path)
+      ipcRenderer.send(
+        ipcMainChannels.SHOW_ITEM_IN_FOLDER,
+        logger.transports.file.getFile().path
+      );
     }
     function handleLinkClick(event) {
       event.preventDefault();

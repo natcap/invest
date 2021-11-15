@@ -14,6 +14,8 @@ import {
   fetchDatastackFromFile
 } from '../../src/renderer/server_requests';
 import InvestJob from '../../src/renderer/InvestJob';
+import setupDialogs from '../../src/main/setupDialogs';
+import { removeIpcMainListeners } from '../../src/main/main';
 
 jest.mock('../../src/renderer/server_requests');
 
@@ -61,6 +63,7 @@ describe('Sidebar Alert renders with data from a recent run', () => {
     fetchValidation.mockResolvedValue([]);
     const mockSpec = spec; // jest.mock not allowed to ref out-of-scope var
     jest.mock(UI_CONFIG_PATH, () => mockUISpec(mockSpec));
+    setupDialogs();
   });
 
   afterEach(() => {
@@ -71,6 +74,7 @@ describe('Sidebar Alert renders with data from a recent run', () => {
   afterAll(() => {
     jest.resetModules();
     jest.resetAllMocks();
+    removeIpcMainListeners();
   });
 
   test('final Traceback displays', async () => {

@@ -259,7 +259,7 @@ export default class App extends React.Component {
         <TabPane
           key={id}
           eventKey={id}
-          title={job.modelHumanName}
+          aria-label={`${job.modelHumanName} tab`}
         >
           <InvestTab
             job={job}
@@ -341,7 +341,10 @@ export default class App extends React.Component {
             id="top-tab-content"
             onDragOver={dragOverHandlerNone}
           >
-            <TabPane eventKey="home" title="Home">
+            <TabPane
+              eventKey="home"
+              aria-label="home tab"
+            >
               {(investList)
                 ? (
                   <HomeTab

@@ -39,7 +39,7 @@ const MOCK_INVEST_LIST = {
 const MOCK_VALIDATION_VALUE = [[['workspace_dir'], 'invalid because']];
 
 const SAMPLE_SPEC = {
-  model_name: 'Carbon Storage and Sequestration',
+  model_name: MOCK_MODEL_TITLE,
   pyname: 'natcap.invest.carbon',
   userguide_html: 'carbonstorage.html',
   args: {
@@ -85,7 +85,9 @@ describe('Various ways to open and close InVEST models', () => {
       <App />
     );
 
-    const carbon = await findByRole('button', { name: MOCK_MODEL_TITLE });
+    const carbon = await findByRole(
+      'button', { name: MOCK_MODEL_TITLE }
+    );
     fireEvent.click(carbon);
     const executeButton = await findByRole('button', { name: /Run/ });
     expect(executeButton).toBeDisabled();
@@ -172,7 +174,7 @@ describe('Various ways to open and close InVEST models', () => {
 
     const openButton = await findByRole('button', { name: 'Open' });
     fireEvent.click(openButton);
-    const homeTab = await findByRole('tabpanel', { name: /Home/ });
+    const homeTab = await findByRole('tabpanel', { name: 'home tab' });
     // expect we're on the same tab we started on instead of switching to Setup
     expect(homeTab.classList.contains('active')).toBeTruthy();
     // These are the calls that would have triggered if a file was selected
@@ -187,8 +189,10 @@ describe('Various ways to open and close InVEST models', () => {
       queryAllByRole,
     } = render(<App />);
 
-    const carbon = await findByRole('button', { name: MOCK_MODEL_TITLE });
-    const homeTab = await findByRole('tabpanel', { name: /Home/ });
+    const carbon = await findByRole(
+      'button', { name: MOCK_MODEL_TITLE }
+    );
+    const homeTab = await findByRole('tabpanel', { name: 'home tab' });
 
     // Open a model tab and expect that it's active
     fireEvent.click(carbon);
@@ -615,7 +619,9 @@ describe('InVEST subprocess testing', () => {
       queryByText,
     } = render(<App />);
 
-    const carbon = await findByRole('button', { name: MOCK_MODEL_TITLE });
+    const carbon = await findByRole(
+      'button', { name: MOCK_MODEL_TITLE }
+    );
     fireEvent.click(carbon);
     const workspaceInput = await findByLabelText(
       `${spec.args.workspace_dir.name}`
@@ -646,7 +652,7 @@ describe('InVEST subprocess testing', () => {
 
     // A recent job card should be rendered
     await getByRole('button', { name: 'InVEST' }).click();
-    const homeTab = await getByRole('tabpanel', { name: /Home/ });
+    const homeTab = await getByRole('tabpanel', { name: 'home tab' });
     const cardText = await within(homeTab)
       .findByText(`${path.resolve(fakeWorkspace)}`);
     expect(cardText).toBeInTheDocument();
@@ -660,7 +666,9 @@ describe('InVEST subprocess testing', () => {
       getByRole,
     } = render(<App />);
 
-    const carbon = await findByRole('button', { name: MOCK_MODEL_TITLE });
+    const carbon = await findByRole(
+      'button', { name: MOCK_MODEL_TITLE }
+    );
     fireEvent.click(carbon);
     const workspaceInput = await findByLabelText(
       `${spec.args.workspace_dir.name}`
@@ -701,7 +709,7 @@ describe('InVEST subprocess testing', () => {
 
     // A recent job card should be rendered
     await getByRole('button', { name: 'InVEST' }).click();
-    const homeTab = await getByRole('tabpanel', { name: /Home/ });
+    const homeTab = await getByRole('tabpanel', { name: 'home tab' });
     const cardText = await within(homeTab)
       .findByText(`${path.resolve(fakeWorkspace)}`);
     expect(cardText).toBeInTheDocument();
@@ -716,7 +724,9 @@ describe('InVEST subprocess testing', () => {
       queryByText,
     } = render(<App />);
 
-    const carbon = await findByRole('button', { name: MOCK_MODEL_TITLE });
+    const carbon = await findByRole(
+      'button', { name: MOCK_MODEL_TITLE }
+    );
     fireEvent.click(carbon);
     const workspaceInput = await findByLabelText(
       `${spec.args.workspace_dir.name}`
@@ -747,7 +757,7 @@ describe('InVEST subprocess testing', () => {
 
     // A recent job card should be rendered
     await getByRole('button', { name: 'InVEST' }).click();
-    const homeTab = await getByRole('tabpanel', { name: /Home/ });
+    const homeTab = await getByRole('tabpanel', { name: 'home tab' });
     const cardText = await within(homeTab)
       .findByText(`${path.resolve(fakeWorkspace)}`);
     expect(cardText).toBeInTheDocument();
@@ -760,7 +770,9 @@ describe('InVEST subprocess testing', () => {
       findByRole,
     } = render(<App />);
 
-    const carbon = await findByRole('button', { name: MOCK_MODEL_TITLE });
+    const carbon = await findByRole(
+      'button', { name: MOCK_MODEL_TITLE }
+    );
     fireEvent.click(carbon);
     const workspaceInput = await findByLabelText(
       `${spec.args.workspace_dir.name}`

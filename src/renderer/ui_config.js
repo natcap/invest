@@ -49,19 +49,26 @@ const uiSpec = {
     order: [
       ["workspace_dir", "results_suffix"],
       ["lulc_cur_path", "carbon_pools_path"],
-      ["calc_sequestration", "lulc_cur_year", "lulc_fut_path", "lulc_fut_year"],
+      ["calc_sequestration", "lulc_fut_path"],
       ["do_redd", "lulc_redd_path"],
-      ["do_valuation", "price_per_metric_ton_of_c", "discount_rate", "rate_change"]
+      [
+        "do_valuation",
+        "lulc_cur_year",
+        "lulc_fut_year",
+        "price_per_metric_ton_of_c",
+        "discount_rate",
+        "rate_change",
+      ],
     ],
     enabledFunctions: {
-      lulc_cur_year: isSufficient.bind(null, 'calc_sequestration'),
-      lulc_fut_year: isSufficient.bind(null, 'calc_sequestration'),
       lulc_fut_path: isSufficient.bind(null, 'calc_sequestration'),
 
       do_redd: isSufficient.bind(null, 'calc_sequestration'),
       lulc_redd_path: isSufficient.bind(null, 'do_redd'),
 
       do_valuation: isSufficient.bind(null, 'calc_sequestration'),
+      lulc_cur_year: isSufficient.bind(null, 'do_valuation'),
+      lulc_fut_year: isSufficient.bind(null, 'do_valuation'),
       price_per_metric_ton_of_c: isSufficient.bind(null, 'do_valuation'),
       discount_rate: isSufficient.bind(null, 'do_valuation'),
       rate_change: isSufficient.bind(null, 'do_valuation'),
@@ -91,14 +98,18 @@ const uiSpec = {
   },
   coastal_vulnerability: {
     order: [
-      ["workspace_dir", "results_suffix"],
-      ["aoi_vector_path", "model_resolution"],
-      ["landmass_vector_path", "wwiii_vector_path", "max_fetch_distance"],
-      ["bathymetry_raster_path", "dem_path", "dem_averaging_radius"],
-      ["shelf_contour_vector_path", "habitat_table_path"],
-      ["geomorphology_vector_path", "geomorphology_fill_value"],
-      ["population_raster_path", "population_radius"],
-      ["slr_vector_path", "slr_field"]
+      ['workspace_dir', 'results_suffix'],
+      ['aoi_vector_path', 'model_resolution', 'landmass_vector_path'],
+      ['bathymetry_raster_path', 'wwiii_vector_path', 'max_fetch_distance'],
+      [
+        'habitat_table_path',
+        'shelf_contour_vector_path',
+        'dem_path',
+        'dem_averaging_radius',
+      ],
+      ['geomorphology_vector_path', 'geomorphology_fill_value'],
+      ['population_raster_path', 'population_radius'],
+      ['slr_vector_path', 'slr_field'],
     ],
     dropdownFunctions: {
       slr_field: ((state) => getVectorColumnNames(state.argsValues['slr_vector_path'].value))
