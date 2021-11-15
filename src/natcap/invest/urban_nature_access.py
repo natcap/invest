@@ -80,7 +80,9 @@ ARGS_SPEC = {
 
 
 _OUTPUT_BASE_FILES = {}
-_INTERMEDIATE_BASE_FILES = {}
+_INTERMEDIATE_BASE_FILES = {
+    'resampled_population': 'population_resampled.tif',
+}
 
 
 def execute(args):
@@ -144,6 +146,24 @@ def execute(args):
         # TypeError when n_workers is None.
         n_workers = -1  # Synchronous execution
     graph = taskgraph.TaskGraph(work_token_dir, n_workers)
+
+    # Align the population raster to the LULC.
+    lulc_raster_info = pygeoprocessing.get_raster_info(
+        args['lulc_raster_path'])
+
+    population_alignment_task = graph.add_task(
+        _resample_population_raster,
+        kwargs={
+            'source_population_raster_path': args['population_raster_path'],
+            'target_population_raster_path': file_registry[
+                'resampled_population'],
+            'target_pixel_size': lulc_raster_info['pixel_size'],
+            'target_bb': lulc_raster_info['bounding_box'],
+            'target_projection_wkt': lulc_raster_info['projection_wkt'],
+            'working_dir': intermediate_dir,
+        },
+        target_path_list=[file_registry['resampled_population']],
+        task_name='Resample population to LULC resolution')
 
     graph.close()
     graph.join()
