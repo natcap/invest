@@ -377,7 +377,11 @@ body {
 }
 
 .arg-disable .form-label {
-	color: lightgray;
+	color: #a5a5a5;
+}
+
+.args-form .form-control:disabled {
+	color: #888888;
 }
 
 .args-form .form-group {
