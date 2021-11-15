@@ -30,15 +30,21 @@
     </p>
   </body>
   <script>
-    const { shell } = require('electron');
-    const { getLogger } = require('../logger');
-    const logger = getLogger(__filename.split('/').slice(-1)[0]);
+    const { ipcRenderer, shell } = require('electron');
+    const { ipcMainChannels } = require('../main/ipcMainChannels');
+
+    const logger = window.Workbench.getLogger(
+      __filename.split('/').slice(-1)[0]
+    );
 
     logger.debug('PROBLEM REPORT: process dump');
     logger.debug(JSON.stringify(process, null, 2));
 
     function handleButtonClick() {
-      shell.showItemInFolder(logger.transports.file.getFile().path)
+      ipcRenderer.send(
+        ipcMainChannels.SHOW_ITEM_IN_FOLDER,
+        logger.transports.file.getFile().path
+      );
     }
     function handleLinkClick(event) {
       event.preventDefault();

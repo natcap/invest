@@ -1,3 +1,5 @@
+import path from 'path';
+
 import { app, BrowserWindow } from 'electron'; // eslint-disable-line import/no-extraneous-dependencies
 
 import setupContextMenu from './setupContextMenu';
@@ -138,6 +140,8 @@ function openReportWindow(parentWindow, isDevMode) {
       enableRemoteModule: false,
       nodeIntegration: true,
       minimumFontSize: 18,
+      preload: path.join(__dirname, '..', 'preload.js'),
+      defaultEncoding: 'UTF-8',
     },
   });
   setupContextMenu(child);
