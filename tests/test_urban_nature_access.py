@@ -39,6 +39,7 @@ class UNATests(unittest.TestCase):
             self.workspace_dir, 'population.tif')
         population_pixel_size = (90, -90)
         population_array_shape = (10, 10)
+
         array_of_100s = numpy.full(
             population_array_shape, 100, dtype=numpy.uint32)
         array_of_random_ints = numpy.array(
@@ -84,3 +85,50 @@ class UNATests(unittest.TestCase):
                 numpy.testing.assert_allclose(
                     population_array.sum(), resampled_population_array.sum(),
                     rtol=1e-3)
+
+    def test_model(self):
+        """UNA: Run through the model."""
+        from natcap.invest import urban_nature_access
+
+        args = {
+            'workspace_dir': os.path.join(self.workspace_dir, 'workspace'),
+            'results_suffix': 'suffix',
+            'population_raster_path': os.path.join(
+                self.workspace_dir, 'population.tif'),
+            'lulc_raster_path': os.path.join(self.workspace_dir, 'lulc.tif'),
+        }
+
+        random.seed(-1)  # for our random number generation
+        population_pixel_size = (90, -90)
+        population_array_shape = (10, 10)
+        population_array = numpy.array(
+            random.choices(range(0, 100), k=100),
+            dtype=numpy.int32).reshape(population_array_shape)
+        population_srs = osr.SpatialReference()
+        population_srs.ImportFromEPSG(_DEFAULT_EPSG)
+        population_wkt = population_srs.ExportToWkt()
+        pygeoprocessing.numpy_array_to_raster(
+            base_array=population_array,
+            target_nodata=-1,
+            pixel_size=population_pixel_size,
+            origin=_DEFAULT_ORIGIN,
+            projection_wkt=population_wkt,
+            target_path=args['population_raster_path'])
+
+        lulc_pixel_size = _DEFAULT_PIXEL_SIZE
+        lulc_array_shape = (30, 30)
+        lulc_array = numpy.array(
+            random.choices(range(0, 10), k=900),
+            dtype=numpy.int32).reshape(lulc_array_shape)
+        pygeoprocessing.numpy_array_to_raster(
+            base_array=lulc_array,
+            target_nodata=-1,
+            pixel_size=lulc_pixel_size,
+            origin=_DEFAULT_ORIGIN,
+            projection_wkt=population_wkt,
+            target_path=args['lulc_raster_path'])
+
+        urban_nature_access.execute(args)
+
+        # TODO: Assertions will be added here later when I have something to
+        # test.
