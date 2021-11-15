@@ -1,5 +1,7 @@
 import os
 import logging
+import shutil
+import tempfile
 
 import pygeoprocessing
 import taskgraph
@@ -11,11 +13,11 @@ from . import validation
 from . import spec_utils
 from . import utils
 from .spec_utils import u
-from .. import MODEL_METADATA
+from natcap.invest import MODEL_METADATA
 
 LOGGER = logging.getLogger(__name__)
-UINT32_NODATA = numpy.finfo(numpy.uint32).max
-FLOAT32_NODATA = numpy.finfo(numpy.float32).max
+UINT32_NODATA = int(numpy.iinfo(numpy.uint32).max)
+FLOAT32_NODATA = float(numpy.finfo(numpy.float32).max)
 ARGS_SPEC = {
     'model_name': MODEL_METADATA['urban_nature_access'].model_title,
     'pyname': MODEL_METADATA['urban_nature_access'].pyname,
@@ -167,14 +169,16 @@ def _resample_population_raster(
     # Option 1: I could do each task right in the execute function
     # Option 2: I could do the 2 raster_calculator calls and 1 warp_raster call
     #     right here in this function
-
+    if not os.path.isdir(working_dir):
+        os.makedirs(working_dir)
+    tmp_working_dir = tempfile.mkdtemp(dir=working_dir)
     population_raster_info = pygeoprocessing.get_raster_info(
         source_population_raster_path)
-    pixel_area = numpy.multiply(population_raster_info['pixel_size'])
+    pixel_area = numpy.multiply(*population_raster_info['pixel_size'])
     population_nodata = population_raster_info['nodata'][0]
 
     population_srs = osr.SpatialReference()
-    population_srs.ImportFromWKT(population_raster_info['projection_wkt'])
+    population_srs.ImportFromWkt(population_raster_info['projection_wkt'])
 
     # Convert population pixel area to square km
     population_pixel_area = (
@@ -192,7 +196,7 @@ def _resample_population_raster(
         out_array = numpy.full(
             population.shape, FLOAT32_NODATA, dtype=numpy.float32)
 
-        valid_mask = slice()
+        valid_mask = slice(None)
         if population_nodata is not None:
             valid_mask = ~numpy.isclose(population, population_nodata)
 
@@ -200,14 +204,14 @@ def _resample_population_raster(
         return out_array
 
     # Step 1: convert the population raster to population density per sq. km
-    density_raster_path = os.path.join(working_dir, 'pop_density.tif')
+    density_raster_path = os.path.join(tmp_working_dir, 'pop_density.tif')
     pygeoprocessing.raster_calculator(
         [(source_population_raster_path, 1)],
         _convert_population_to_density,
         density_raster_path, gdal.GDT_Float32, FLOAT32_NODATA)
 
     # Step 2: align to the LULC
-    warped_density_path = os.path.join(working_dir, 'warped_density.tif')
+    warped_density_path = os.path.join(tmp_working_dir, 'warped_density.tif')
     pygeoprocessing.warp_raster(
         density_raster_path,
         target_pixel_size=target_pixel_size,
@@ -219,10 +223,10 @@ def _resample_population_raster(
     # Step 3: convert the warped population raster back from density to the
     # population per pixel
     target_srs = osr.SpatialReference()
-    target_srs.ImportFromWKT(target_projection_wkt)
+    target_srs.ImportFromWkt(target_projection_wkt)
     # Calculate target pixel area in km to match above
     target_pixel_area = (
-        numpy.multiply(target_pixel_size) * target_srs.GetLinearUnits()) / 1e6
+        numpy.multiply(*target_pixel_size) * target_srs.GetLinearUnits()) / 1e6
 
     def _convert_density_to_population(density):
         """Convert a population density raster back to population counts.
@@ -251,6 +255,8 @@ def _resample_population_raster(
         [(warped_density_path, 1)],
         _convert_density_to_population,
         target_population_raster_path, gdal.GDT_Float32, FLOAT32_NODATA)
+
+    shutil.rmtree(tmp_working_dir, ignore_errors=True)
 
 
 def validate(args, limit_to=None):

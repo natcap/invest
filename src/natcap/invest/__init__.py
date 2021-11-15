@@ -197,6 +197,12 @@ MODEL_METADATA = {
         gui='urban_cooling_model.UrbanCoolingModel',
         userguide='urban_cooling_model.html',
         aliases=('ucm',)),
+    'urban_nature_access': _MODELMETA(
+        model_title='Urban Nature Access',
+        pyname='natcap.invest.urban_nature_access',
+        gui='',  # TODO
+        userguide='',  # TODO,
+        aliases=('una',)),
 }
 
 
