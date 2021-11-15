@@ -34,17 +34,33 @@ ARGS_SPEC = {
             **spec_utils.LULC,
             'projected': True,
             'projection_units': u.meter,
-            'about': "",  # TODO
+            'about': (
+                "A map of LULC codes. "
+                "All values in this raster must have corresponding entries "
+                "in the LULC attribute table."),
         },
         'lulc_attribute_table': {
             'name': 'LULC attribute table',
             'type': 'csv',
             'columns': {
-                'lucode': {'type': 'integer'},
-                'greenspace': {'type': 'number', 'units': u.none,
-                               'about': ''}  # TODO,
+                'lucode': {
+                    'type': 'integer',
+                    'about': (
+                        "LULC code.  Every value in the LULC map must have a "
+                        "corresponding entry in this column."),
+                },
+                'greenspace': {
+                    'type': 'number',
+                    'units': u.none,
+                    'about': (
+                        "1 if this landcover code represents greenspace, 0 "
+                        "if not."
+                    ),
+                }
             },
-            'about': '',  # TODO
+            'about': (
+                "A table identifying which LULC codes represent greenspace."
+            ),
         },
         'population_raster_path': {
             'type': 'raster',
@@ -53,27 +69,30 @@ ARGS_SPEC = {
                 1: {'type': 'number', 'units': u.none}
             },
             'projected': True,
-            'about': "",  # TODO,
+            'about': (
+                "A raster representing the number of people who live in each "
+                "pixel. This raster must be linearly projected."
+            ),
         },
         'admin_unit_vector_path': {
             'type': 'vector',
             'name': 'administrative boundaries',
             'geometries': spec_utils.POLYGONS,
-            'about': "",  # TODO
+            'about': "",  # TODO, will know more about this when I implement.
         },
         'greenspace_demand': {
             'type': 'number',
             'name': 'greenspace demand per capita',
             'units': u.m**2,  # defined as m² per capita
             'expression': "value > 0",
-            'about': "",  # TODO,
+            'about': "",  # TODO, will know more about this when I implement.
         },
         'search_radius': {
             'type': 'number',
             'name': 'search radius',
             'units': u.m,
             'expression': "value > 0",
-            'about': "",  # TODO,
+            'about': "",  # TODO, will know more about this when I implement.
         }
     }
 }
@@ -121,11 +140,6 @@ def execute(args):
         ``None``
     """
     LOGGER.info('Starting Urban Nature Access Model')
-
-    # for initial PR, get the basic workflow going with a single test.
-    # * Test on basic datasets
-    # * align inputs  (what's the best way to reproject a population raster?)
-    # * validation
 
     output_dir = os.path.join(args['workspace_dir'], 'output')
     intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
