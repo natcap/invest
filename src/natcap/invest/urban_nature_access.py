@@ -78,6 +78,7 @@ ARGS_SPEC = {
             'type': 'vector',
             'name': 'administrative boundaries',
             'geometries': spec_utils.POLYGONS,
+            'fields': {},  # TODO, complete required fields (if any)
             'about': "",  # TODO, will know more about this when I implement.
         },
         'greenspace_demand': {
