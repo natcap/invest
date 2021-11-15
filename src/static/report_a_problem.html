@@ -2,14 +2,18 @@
 <html lang="en">
   <body>
     <p>
-      Hello Workbench-alpha tester! 
-    </p>
-      Please help us by reporting problems (nothing is too small or too large) to:  davefisher@stanford.edu
+      Please help us by reporting problems (nothing is too small or too large) to: 
+      <a
+        href="https://community.naturalcapitalproject.org/c/experimental-software-tools/6"
+        onClick="handleLinkClick(event)">
+        https://community.naturalcapitalproject.org
+      </a>
     </p>
     <p>
-      Include a brief description of the problem and attach the log files
-      that you can find using the button below. (There may be multiple 
-      files with a ".log" extension.)
+      Please use the "Experimental Software Tools" category, include a
+      brief description of the problem, a screenshot if necessary,
+      and attach the log files that you can find using the button below.
+      (There may be multiple files with a ".log" extension.)
       <b>Please include all the log files.</b>
     </p>
     <button type="button" onclick="handleButtonClick()">
@@ -25,9 +29,6 @@
         onClick="handleLinkClick(event)">
         https://github.com/natcap/invest-workbench/issues
       </a>
-    <p>
-      If you have a github account, you're most welcome to join the discussions there too.
-    </p>
   </body>
   <script>
     const { ipcRenderer, shell } = require('electron');
