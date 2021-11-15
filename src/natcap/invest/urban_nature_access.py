@@ -220,22 +220,6 @@ def _resample_population_raster(
     Returns:
         ``None``
     """
-    # Assumes population raster is linearly projected
-    # Reasoning: the total population of a pixel is great, but we need to be
-    # able to convert that pixel size without losing or gaining people due to
-    # resampling.
-    #
-    # Approach:
-    # * Assume population raster is linearly projected.
-    # * raster_calculator: convert population raster to density of people/pixel
-    # * align_and_resize_raster_stack: resample (bilinear should be fine) to
-    #   LULC raster's alignment/resolution
-    # * raster_calculator: Reconvert the population raster from density to
-    #   population
-
-    # Option 1: I could do each task right in the execute function
-    # Option 2: I could do the 2 raster_calculator calls and 1 warp_raster call
-    #     right here in this function
     if not os.path.isdir(working_dir):
         os.makedirs(working_dir)
     tmp_working_dir = tempfile.mkdtemp(dir=working_dir)
