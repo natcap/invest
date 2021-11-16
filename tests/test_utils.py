@@ -5,11 +5,13 @@ import os
 import tempfile
 import shutil
 import logging
+import logging.handlers
 import threading
 import warnings
 import re
 import glob
 import textwrap
+import queue
 
 import numpy
 from osgeo import gdal
@@ -456,6 +458,50 @@ class GDALWarningsLoggingTests(unittest.TestCase):
                         if msg if msg]
 
         self.assertEqual(len(messages), 1)
+
+    def test_log_gdal_errors_bad_n_args(self):
+        """utils: test error capture when number of args != 3."""
+        from natcap.invest import utils
+
+        log_queue = queue.Queue()
+        log_queue_handler = logging.handlers.QueueHandler(log_queue)
+        utils.LOGGER.addHandler(log_queue_handler)
+
+        try:
+            # 1 parameter, expected 3
+            utils._log_gdal_errors('foo')
+        finally:
+            utils.LOGGER.removeHandler(log_queue_handler)
+
+        record = log_queue.get()
+        self.assertEqual(record.name, 'natcap.invest.utils')
+        self.assertEqual(record.levelno, logging.ERROR)
+        self.assertIn(
+            '_log_gdal_errors was called with an incorrect number',
+            record.msg)
+
+    def test_log_gdal_errors_missing_param(self):
+        """utils: test error when specific parameters missing."""
+        from natcap.invest import utils
+
+        log_queue = queue.Queue()
+        log_queue_handler = logging.handlers.QueueHandler(log_queue)
+        utils.LOGGER.addHandler(log_queue_handler)
+
+        try:
+            # Missing third parameter, "err_msg"
+            utils._log_gdal_errors(
+                gdal.CE_Failure, 123,
+                bad_param='bad param')  # param obviously bad
+        finally:
+            utils.LOGGER.removeHandler(log_queue_handler)
+
+        record = log_queue.get()
+        self.assertEqual(record.name, 'natcap.invest.utils')
+        self.assertEqual(record.levelno, logging.ERROR)
+        self.assertIn(
+            "_log_gdal_errors called without the argument 'err_msg'",
+            record.msg)
 
 
 class PrepareWorkspaceTests(unittest.TestCase):
@@ -1436,8 +1482,7 @@ class ReclassifyRasterOpTests(unittest.TestCase):
         origin = (1180000, 690000)
         raster_path = os.path.join(self.workspace_dir, 'tmp_raster.tif')
 
-        array = numpy.array(
-            [[1, 1, 1], [2, 2, 2], [3, 3, 3]], dtype=numpy.int32)
+        array = numpy.array([[1,1,1], [2,2,2], [3,3,3]], dtype=numpy.int32)
 
         pygeoprocessing.numpy_array_to_raster(
             array, -1, (1, -1), origin, projection_wkt, raster_path)

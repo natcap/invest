@@ -34,6 +34,7 @@ from .. import utils
 from .. import spec_utils
 from ..spec_utils import u
 from .. import validation
+from .. import MODEL_METADATA
 
 LOGGER = logging.getLogger(__name__)
 
@@ -88,9 +89,9 @@ predictor_table_columns = {
 
 
 ARGS_SPEC = {
-    "model_name": "Recreation Model",
-    "module": __name__,
-    "userguide_html": "recreation.html",
+    "model_name": MODEL_METADATA["recreation"].model_title,
+    "pyname": MODEL_METADATA["recreation"].pyname,
+    "userguide_html": MODEL_METADATA["recreation"].userguide,
     "args": {
         "workspace_dir": spec_utils.WORKSPACE,
         "results_suffix": spec_utils.SUFFIX,

@@ -21,13 +21,14 @@ from . import utils
 from . import spec_utils
 from .spec_utils import u
 from . import validation
+from . import MODEL_METADATA
 
 LOGGER = logging.getLogger(__name__)
 
 ARGS_SPEC = {
-    "model_name": "Wave Energy",
-    "module": __name__,
-    "userguide_html": "wave_energy.html",
+    "model_name": MODEL_METADATA["wave_energy"].model_title,
+    "pyname": MODEL_METADATA["wave_energy"].pyname,
+    "userguide_html": MODEL_METADATA["wave_energy"].userguide,
     "args": {
         "workspace_dir": spec_utils.WORKSPACE,
         "results_suffix": spec_utils.SUFFIX,
