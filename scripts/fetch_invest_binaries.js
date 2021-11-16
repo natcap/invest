@@ -44,9 +44,9 @@ if (bucket === 'releases.naturalcapitalproject.org') {
   binaryZipBucketPath = `${bucket}/${repo}/${fork}/${VERSION}/${binaryZipName}`;
   DATA_PREFIX = `${repo}/${fork}/${VERSION}/data`;
 }
+const STORAGE_URL = 'https://storage.googleapis.com';
 const SRC_BINARY_URL = url.resolve(
-  'https://storage.googleapis.com',
-  binaryZipBucketPath
+  STORAGE_URL, binaryZipBucketPath
 );
 const DATA_QUERY_URL = url.resolve(
   'https://www.googleapis.com/storage/v1/b/',
@@ -116,7 +116,6 @@ function downloadAndUnzipBinaries(src, dest) {
  * keys may be left out and then this script can be run to populate those keys.
  */
 async function updateSampledataRegistry() {
-  // const googleAPI = 'https://www.googleapis.com/storage/v1/b';
   const template = require(DATA_REGISTRY_SRC_PATH);
   // make a deep copy so we can check if any updates were made and
   // only overwrite the file if necessary.
@@ -142,13 +141,13 @@ async function updateSampledataRegistry() {
   }
   const dataItems = await queryStorage(DATA_QUERY_URL);
   Object.keys(registry).forEach((model) => {
-    const filename = `${decodeURIComponent(DATA_PREFIX)}/${registry[model].filename}`;
+    const itemName = `${decodeURIComponent(DATA_PREFIX)}/${registry[model].filename}`;
     try {
-      registry[model].url = dataItems[filename].mediaLink;
-      registry[model].filesize = dataItems[filename].size;
+      registry[model].url = `${STORAGE_URL}/${bucket}/${dataItems[itemName].name}`;
+      registry[model].filesize = dataItems[itemName].size;
     } catch {
       throw new Error(
-        `no item found for ${filename} in ${JSON.stringify(dataItems, null, 2)}`
+        `no item found for ${itemName} in ${JSON.stringify(dataItems, null, 2)}`
       );
     }
   });
