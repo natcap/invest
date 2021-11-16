@@ -206,8 +206,16 @@ export function DownloadProgressBar(props) {
   const [nComplete, nTotal] = props.downloadedNofN;
   if (nComplete === nTotal) {
     return (
-      <Expire delay={props.expireAfter}>
-        <Alert variant="success">Download Complete</Alert>
+      <Expire
+        className="d-inline"
+        delay={props.expireAfter}
+      >
+        <Alert
+          className="d-inline"
+          variant="success"
+        >
+          Download Complete
+        </Alert>
       </Expire>
     );
   }
