@@ -6,8 +6,10 @@ import pint
 
 # the same unit registry instance should be shared across everything
 # load from custom unit defintions file
-u = pint.UnitRegistry(os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), 'unit_definitions'))
+u = pint.UnitRegistry()
+u._on_redefinition = 'ignore'  # don't raise warnings when redefining units
+u.load_definitions(os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), 'unit_definitions.txt'))
 
 # Specs for common arg types ##################################################
 WORKSPACE = {
