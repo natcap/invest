@@ -122,7 +122,7 @@ def execute(args):
             will take place in the current process.
         args['lulc_raster_path'] (string): (required) A string path to a
             GDAL-compatible land-use/land-cover raster containing integer
-            landcover codes.
+            landcover codes.  Must be linearly projected in meters.
         args['lulc_attribute_table'] (string): (required) A string path to a
             CSV with the following columns:
 
@@ -132,7 +132,7 @@ def execute(args):
 
         args['population_raster_path'] (string): (required) A string path to a
             GDAL-compatible raster where pixels represent the population of
-            that pixel.
+            that pixel.  Must be linearly projected in meters.
         args['admin_unit_vector_path'] (string): (required) A string path to a
             GDAL-compatible vector containing polygon administrative
             boundaries.
