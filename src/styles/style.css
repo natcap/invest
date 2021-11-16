@@ -117,6 +117,7 @@ body {
 }
 
 .navbar .alert {
+	display: inline;
 	padding: 0.4rem;
 }
 
