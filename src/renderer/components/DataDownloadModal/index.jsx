@@ -210,7 +210,12 @@ export function DownloadProgressBar(props) {
         className="d-inline"
         delay={props.expireAfter}
       >
-        <Alert variant="success">Download Complete</Alert>
+        <Alert
+          className="d-inline"
+          variant="success"
+        >
+          Download Complete
+        </Alert>
       </Expire>
     );
   }
