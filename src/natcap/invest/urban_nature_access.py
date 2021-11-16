@@ -1,13 +1,13 @@
-import os
 import logging
+import os
 import shutil
 import tempfile
 
-import pygeoprocessing
-import taskgraph
+import numpy
 from osgeo import gdal
 from osgeo import osr
-import numpy
+import pygeoprocessing
+import taskgraph
 
 from . import validation
 from . import spec_utils
