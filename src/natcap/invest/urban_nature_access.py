@@ -4,16 +4,16 @@ import shutil
 import tempfile
 
 import numpy
-from osgeo import gdal
-from osgeo import osr
 import pygeoprocessing
 import taskgraph
+from osgeo import gdal
+from osgeo import osr
 
-from . import validation
+from natcap.invest import MODEL_METADATA
 from . import spec_utils
 from . import utils
+from . import validation
 from .spec_utils import u
-from natcap.invest import MODEL_METADATA
 
 LOGGER = logging.getLogger(__name__)
 UINT32_NODATA = int(numpy.iinfo(numpy.uint32).max)

@@ -1,13 +1,13 @@
 # coding=UTF-8
 """Tests for the Urban Nature Access Model."""
-import unittest
-import tempfile
-import shutil
 import os
 import random
+import shutil
+import tempfile
+import unittest
 
-import pygeoprocessing
 import numpy
+import pygeoprocessing
 from osgeo import gdal
 from osgeo import osr
 
