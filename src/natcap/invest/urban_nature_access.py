@@ -23,7 +23,9 @@ ARGS_SPEC = {
     'pyname': MODEL_METADATA['urban_nature_access'].pyname,
     'userguide_html': MODEL_METADATA['urban_nature_access'].userguide,
     'args_with_spatial_overlap': {
-        'spatial_keys': [],
+        'spatial_keys': [
+            'lulc_raster_path', 'population_raster_path',
+            'admin_unit_vector_path'],
         'different_projections_ok': True,
     },
     'args': {
@@ -312,4 +314,5 @@ def _resample_population_raster(
 
 
 def validate(args, limit_to=None):
-    return validation.validate(args, ARGS_SPEC['args'])
+    return validation.validate(
+        args, ARGS_SPEC['args'], ARGS_SPEC['args_with_spatial_overlap'])
