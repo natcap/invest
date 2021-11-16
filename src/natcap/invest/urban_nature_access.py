@@ -176,9 +176,9 @@ def execute(args):
             'source_population_raster_path': args['population_raster_path'],
             'target_population_raster_path': file_registry[
                 'resampled_population'],
-            'target_pixel_size': lulc_raster_info['pixel_size'],
-            'target_bb': lulc_raster_info['bounding_box'],
-            'target_projection_wkt': lulc_raster_info['projection_wkt'],
+            'lulc_pixel_size': lulc_raster_info['pixel_size'],
+            'lulc_bb': lulc_raster_info['bounding_box'],
+            'lulc_projection_wkt': lulc_raster_info['projection_wkt'],
             'working_dir': intermediate_dir,
         },
         target_path_list=[file_registry['resampled_population']],
@@ -191,7 +191,7 @@ def execute(args):
 
 def _resample_population_raster(
         source_population_raster_path, target_population_raster_path,
-        target_pixel_size, target_bb, target_projection_wkt, working_dir):
+        lulc_pixel_size, lulc_bb, lulc_projection_wkt, working_dir):
     """Resample a population raster without losing or gaining people.
 
     Population rasters are an interesting special case where the data are
@@ -212,11 +212,11 @@ def _resample_population_raster(
             Must be linearly projected in meters.
         target_population_raster_path (string): The path to where the target,
             warped population raster will live on disk.
-        target_pixel_size (tuple): A tuple of the pixel size for the target
+        lulc_pixel_size (tuple): A tuple of the pixel size for the target
             raster.  Passed directly to ``pygeoprocessing.warp_raster``.
-        target_bb (tuple): A tuple of the bounding box for the target raster.
+        lulc_bb (tuple): A tuple of the bounding box for the target raster.
             Passed directly to ``pygeoprocessing.warp_raster``.
-        target_projection_wkt (string): The Well-Known Text of the target
+        lulc_projection_wkt (string): The Well-Known Text of the target
             spatial reference fro the target raster.  Passed directly to
             ``pygeoprocessing.warp_raster``.  Assumed to be a linear projection
             in meters.
@@ -272,19 +272,19 @@ def _resample_population_raster(
     warped_density_path = os.path.join(tmp_working_dir, 'warped_density.tif')
     pygeoprocessing.warp_raster(
         density_raster_path,
-        target_pixel_size=target_pixel_size,
+        target_pixel_size=lulc_pixel_size,
         target_raster_path=warped_density_path,
         resample_method='bilinear',
-        target_bb=target_bb,
-        target_projection_wkt=target_projection_wkt)
+        target_bb=lulc_bb,
+        target_projection_wkt=lulc_projection_wkt)
 
     # Step 3: convert the warped population raster back from density to the
     # population per pixel
     target_srs = osr.SpatialReference()
-    target_srs.ImportFromWkt(target_projection_wkt)
+    target_srs.ImportFromWkt(lulc_projection_wkt)
     # Calculate target pixel area in km to match above
     target_pixel_area = (
-        numpy.multiply(*target_pixel_size) * target_srs.GetLinearUnits()) / 1e6
+        numpy.multiply(*lulc_pixel_size) * target_srs.GetLinearUnits()) / 1e6
 
     def _convert_density_to_population(density):
         """Convert a population density raster back to population counts.

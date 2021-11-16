@@ -68,10 +68,10 @@ class UNATests(unittest.TestCase):
                 urban_nature_access._resample_population_raster(
                     source_population_raster_path,
                     target_population_raster_path,
-                    target_pixel_size=target_pixel_size,
-                    target_bb=pygeoprocessing.get_raster_info(
+                    lulc_pixel_size=target_pixel_size,
+                    lulc_bb=pygeoprocessing.get_raster_info(
                         source_population_raster_path)['bounding_box'],
-                    target_projection_wkt=population_wkt,
+                    lulc_projection_wkt=population_wkt,
                     working_dir=os.path.join(self.workspace_dir, 'working'))
 
                 resampled_population_array = (
