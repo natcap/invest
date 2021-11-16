@@ -158,7 +158,7 @@ async function updateSampledataRegistry() {
   }
   fs.writeFileSync(
     DATA_REGISTRY_SRC_PATH,
-    JSON.stringify(registry, null, 2)
+    JSON.stringify(registry, null, 2).concat('\n')
   );
   // babel does this copy also, but doing it here too so that
   // it doesn't matter if this script is run before or after npm run build
