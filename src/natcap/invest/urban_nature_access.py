@@ -39,7 +39,8 @@ ARGS_SPEC = {
             'about': (
                 "A map of LULC codes. "
                 "All values in this raster must have corresponding entries "
-                "in the LULC attribute table."),
+                "in the LULC attribute table.  This raster must be linearly "
+                "projected in meters."),
         },
         'lulc_attribute_table': {
             'name': 'LULC attribute table',
@@ -71,9 +72,10 @@ ARGS_SPEC = {
                 1: {'type': 'number', 'units': u.none}
             },
             'projected': True,
+            'projection_units': u.meter,
             'about': (
                 "A raster representing the number of people who live in each "
-                "pixel. This raster must be linearly projected."
+                "pixel. This raster must be linearly projected in meters."
             ),
         },
         'admin_unit_vector_path': {
@@ -207,6 +209,7 @@ def _resample_population_raster(
     Args:
         source_population_raster_path (string): The source population raster.
             Pixel values represent the number of people occupying the pixel.
+            Must be linearly projected in meters.
         target_population_raster_path (string): The path to where the target,
             warped population raster will live on disk.
         target_pixel_size (tuple): A tuple of the pixel size for the target
@@ -215,7 +218,8 @@ def _resample_population_raster(
             Passed directly to ``pygeoprocessing.warp_raster``.
         target_projection_wkt (string): The Well-Known Text of the target
             spatial reference fro the target raster.  Passed directly to
-            ``pygeoprocessing.warp_raster``.
+            ``pygeoprocessing.warp_raster``.  Assumed to be a linear projection
+            in meters.
         working_dir (string): The path to a directory on disk.  A new directory
             is created within this directory for the storage of temporary files
             and then deleted upon successful completion of the function.
