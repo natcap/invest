@@ -22,7 +22,7 @@ class UNATests(unittest.TestCase):
     def setUp(self):
         """Override setUp function to create temp workspace directory."""
         # this lets us delete the workspace after its done no matter the
-        # the rest result
+        # the test result
         self.workspace_dir = tempfile.mkdtemp(suffix='\U0001f60e')  # smiley
 
     def tearDown(self):
