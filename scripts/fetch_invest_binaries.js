@@ -112,7 +112,7 @@ function downloadAndUnzipBinaries(src, dest) {
  * the registry JSON won't be changed.
  *
  * If a new InVEST model is added, or a new sampledata zipfile, a new
- * entry in the registry should be added manually, but the `url` and `filename`
+ * entry in the registry should be added manually, but the `url` and `filesize`
  * keys may be left out and then this script can be run to populate those keys.
  */
 async function updateSampledataRegistry() {
