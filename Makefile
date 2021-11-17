@@ -370,7 +370,7 @@ codesign_mac:
 	# add the certificate to the keychain
 	# -T option says that the codesign executable can access the keychain
 	# for some reason this alone is not enough, also need the following step
-	security import $(BUILD_DIR)/$(P12_FILE) -k '$(KEYCHAIN_NAME)' -P '$(CERT_KEY_PASS)' -T /usr/bin/codesign
+	security import $(BUILD_DIR)/$(P12_FILE) -k "$(KEYCHAIN_NAME)" -P "$(CERT_KEY_PASS)" -T /usr/bin/codesign
 	# this is essential to avoid the UI password prompt
 	security set-key-partition-list -S apple-tool:,apple: -s -k '$(KEYCHAIN_PASS)' '$(KEYCHAIN_NAME)'
 
