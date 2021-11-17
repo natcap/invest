@@ -97,6 +97,20 @@ ARGS_SPEC = {
             'units': u.m,
             'expression': "value > 0",
             'about': "",  # TODO, will know more about this when I implement.
+        },
+        'decay_function': {
+            'name': 'decay function',
+            'type': 'option_string',
+            'required': False,
+            'options': [
+                'dichotomy',
+                # "exponential" is more consistent with other InVEST models'
+                # terminology.  "Power function" is used in the design doc.
+                'exponential',
+                'gaussian',
+                'density',
+            ],
+            'about': '',  # TODO
         }
     }
 }
@@ -197,6 +211,8 @@ def execute(args):
         },
         target_path_list=[file_registry['aligned_population']],
         task_name='Resample population to LULC resolution')
+
+
 
     graph.close()
     graph.join()
