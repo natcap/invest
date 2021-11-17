@@ -18,7 +18,7 @@ requires = ['setuptools', 'wheel', 'setuptools_scm', 'numpy', 'cython']
 # Each section of imports will be sorted alphabetically
 force_alphabetical_sort_within_sections = true
 
-# "from osgeo import gdal" and "from osgeo impor osr" are on separate lines
+# "from osgeo import gdal" and "from osgeo import osr" are on separate lines
 force_single_line = true
 
 # This defines the sections used, and clarifies that we don't want to have
