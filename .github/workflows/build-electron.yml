@@ -74,7 +74,7 @@ jobs:
         BIN_TO_SIGN: dist/invest_*.dmg
       run: |
         P12_FILE_NAME=codesign_cert.p12
-        gsutil cp gs://stanford_cert/20220510Expiry-macOSInstallerDistributionCert.p12 ~/$P12_FILE_NAME
+        gsutil cp gs://stanford_cert/2025-01-16-Expiry-AppStore-App.p12 ~/$P12_FILE_NAME
         ls ~/
 
         # create a new keychain (so that we can know what the password is)
@@ -108,7 +108,7 @@ jobs:
         CLOUDSDK_PYTHON: ${{env.pythonLocation}}\python.exe
       run: |
         P12_FILE_NAME=codesign_cert.p12
-        gsutil cp gs://stanford_cert/20220510Expiry-macOSInstallerDistributionCert.p12 ~/$P12_FILE_NAME
+        gsutil cp gs://stanford_cert/2025-01-16-Expiry-AppStore-App.p12 ~/$P12_FILE_NAME
         ls ~/
         # figure out the path to signtool.exe
         SIGNTOOL=$(find 'C:\\Program Files (x86)\\Windows Kits\\10' -type f -name 'signtool.exe*' | head -n 1)
