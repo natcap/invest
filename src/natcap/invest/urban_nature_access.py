@@ -39,8 +39,7 @@ ARGS_SPEC = {
             'about': (
                 "A map of LULC codes. "
                 "All values in this raster must have corresponding entries "
-                "in the LULC attribute table.  This raster must be linearly "
-                "projected in meters."),
+                "in the LULC attribute table."),
         },
         'lulc_attribute_table': {
             'name': 'LULC attribute table',
