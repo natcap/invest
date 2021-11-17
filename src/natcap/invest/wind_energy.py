@@ -237,7 +237,7 @@ ARGS_SPEC = {
         "number_of_turbines": {
             "expression": "value > 0",
             "type": "number",
-            "units": u.count,
+            "units": u.none,
             "about": (
                 "An integer value indicating the number of wind turbines per "
                 "wind farm."),

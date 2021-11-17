@@ -135,7 +135,7 @@ ARGS_SPEC = {
                 },
                 "events": {
                     "type": "number",
-                    "units": u.count,
+                    "units": u.none,
                     "about": "The number of rain events in that month"
                 }
             },
