@@ -6,3 +6,23 @@
 # that we can provide a much easier build experience so long as GDAL is
 # available at runtime.
 requires = ['setuptools', 'wheel', 'setuptools_scm', 'numpy', 'cython']
+
+[tool.isort]
+# isort can be installed from conda-forge
+# flake8-isort can also be used for flake8 linting integration
+#
+# To test isort configuration, run:
+#     isort . --show-config
+# A warning will present if config can't be loaded.
+#
+# Each section of imports will be sorted alphabetically
+force_alphabetical_sort_within_sections = true
+
+# "from osgeo import gdal" and "from osgeo import osr" are on separate lines
+force_single_line = true
+
+# This defines the sections used, and clarifies that we don't want to have
+# lines between the FIRSTPARTY (absolute natcap.invest imports) and the
+# LOCALFOLDER (relative imports, e.g. "from . import validation) section.
+sections = 'FUTURE,STDLIB,THIRDPARTY,FIRSTPARTY,LOCALFOLDER'
+no_lines_before = 'LOCALFOLDER'
