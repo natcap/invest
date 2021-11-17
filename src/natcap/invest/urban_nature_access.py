@@ -74,7 +74,7 @@ ARGS_SPEC = {
             'projection_units': u.meter,
             'about': (
                 "A raster representing the number of people who live in each "
-                "pixel. This raster must be linearly projected in meters."
+                "pixel."
             ),
         },
         'admin_unit_vector_path': {
