@@ -355,7 +355,7 @@ describe('Display recently executed InVEST jobs on Home tab', () => {
       });
     });
     fireEvent.click(getByRole('button', { name: 'settings' }));
-    fireEvent.click(getByText('Clear'));
+    fireEvent.click(getByText('Clear Recent Jobs'));
     const node = await findByText(/button to setup a model/);
     expect(node).toBeInTheDocument();
   });
@@ -495,7 +495,7 @@ describe('InVEST global settings: dialog interactions', () => {
     });
 
     // Test Reset sets values to default
-    userEvent.click(getByText('Reset'));
+    userEvent.click(getByText('Reset to Defaults'));
     await waitFor(() => {
       expect(nWorkersInput).toHaveValue(defaultSettings.nWorkers);
       expect(loggingInput).toHaveValue(defaultSettings.loggingLevel);
