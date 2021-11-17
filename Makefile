@@ -356,7 +356,7 @@ $(MAC_BINARIES_ZIP_FILE): $(DIST_DIR) $(MAC_APPLICATION_BUNDLE) $(USERGUIDE_TARG
 build/vcredist_x86.exe: | build
 	powershell.exe -Command "Start-BitsTransfer -Source https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe -Destination build\vcredist_x86.exe"
 
-P12_FILE := 20220510Expiry-macOSInstallerDistributionCert.p12
+P12_FILE := 2025-01-16-Expiry-AppStore-App.p12
 KEYCHAIN_NAME := codesign_keychain
 codesign_mac:
 	# download the p12 certificate file from google cloud
