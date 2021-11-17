@@ -2,9 +2,10 @@ import importlib
 import re
 import unittest
 
-from natcap.invest import cli, MODEL_METADATA
 import pint
 
+from natcap.invest import cli
+from natcap.invest import MODEL_METADATA
 
 valid_nested_types = {
     'all': {
@@ -99,19 +100,19 @@ class ValidateArgsSpecs(unittest.TestCase):
         """
         with self.subTest(nested_arg_name=name):
             for attr in required_attrs:
-                self.assertTrue(attr in arg)
+                self.assertIn(attr, arg)
 
             # arg['type'] can be either a string or a set of strings
             types = arg['type'] if isinstance(
                 arg['type'], set) else [arg['type']]
             attrs = set(arg.keys())
             for t in types:
-                self.assertTrue(t in valid_types)
+                self.assertIn(t, valid_types)
 
                 if t == 'option_string':
                     # option_string type should have an options property that
                     # describes the valid options
-                    self.assertTrue('options' in arg)
+                    self.assertIn('options', arg)
                     # May be a list or dict because some option sets are self
                     # explanatory and others need a description
                     self.assertTrue(isinstance(arg['options'], dict) or
@@ -139,7 +140,7 @@ class ValidateArgsSpecs(unittest.TestCase):
 
                 elif t == 'number':
                     # number type should have a units property
-                    self.assertTrue('units' in arg)
+                    self.assertIn('units', arg)
                     # Undefined units should use the custom u.none unit
                     self.assertTrue(isinstance(arg['units'], pint.Unit))
                     attrs.remove('units')
@@ -157,7 +158,7 @@ class ValidateArgsSpecs(unittest.TestCase):
                 elif t == 'raster':
                     # raster type should have a bands property that maps each band
                     # index to a nested type dictionary describing the band's data
-                    self.assertTrue('bands' in arg)
+                    self.assertIn('bands', arg)
                     self.assertTrue(isinstance(arg['bands'], dict))
                     for band in arg['bands']:
                         self.assertTrue(isinstance(band, int))
@@ -187,7 +188,7 @@ class ValidateArgsSpecs(unittest.TestCase):
                     # - a fields property that maps each field header to a nested
                     #   type dictionary describing the data in that field
                     # - a geometries property: the set of valid geometry types
-                    self.assertTrue('fields' in arg)
+                    self.assertIn('fields', arg)
                     self.assertTrue(isinstance(arg['fields'], dict))
                     for field in arg['fields']:
                         self.assertTrue(isinstance(field, str))
@@ -196,7 +197,7 @@ class ValidateArgsSpecs(unittest.TestCase):
                             f'{name}.fields.{field}',
                             valid_types=valid_nested_types['vector'])
 
-                    self.assertTrue('geometries' in arg)
+                    self.assertIn('geometries', arg)
                     self.assertTrue(isinstance(arg['geometries'], set))
 
                     attrs.remove('fields')
@@ -252,7 +253,7 @@ class ValidateArgsSpecs(unittest.TestCase):
                     # directory type should have a contents property that maps each
                     # expected path name/pattern within the directory to a nested
                     # type dictionary describing the data at that filepath
-                    self.assertTrue('contents' in arg)
+                    self.assertIn('contents', arg)
                     self.assertTrue(isinstance(arg['contents'], dict))
                     for path in arg['contents']:
                         self.assertTrue(isinstance(path, str))
