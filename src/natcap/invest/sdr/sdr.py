@@ -777,15 +777,17 @@ def _calculate_ls_factor(
 def _calculate_rkls(
         ls_factor_path, erosivity_path, erodibility_path, stream_path,
         rkls_path):
-    """Calculate per-pixel potential soil loss using the RKLS.
+    """Calculate potential soil loss (tons / (pixel * year)) using RKLS.
 
     (revised universal soil loss equation with no C or P).
 
     Args:
         ls_factor_path (string): path to LS raster that has square pixels in
             meter units.
-        erosivity_path (string): path to per pixel erosivity raster
+        erosivity_path (string): path to erosivity raster
+            (MJ * mm / (ha * hr * yr))
         erodibility_path (string): path to erodibility raster
+            (t * ha * hr / (MJ * ha * mm))
         stream_path (string): path to drainage raster
             (1 is drainage, 0 is not)
         rkls_path (string): path to RKLS raster
@@ -803,22 +805,21 @@ def _calculate_rkls(
 
     cell_size = abs(
         pygeoprocessing.get_raster_info(ls_factor_path)['pixel_size'][0])
-    cell_area_ha = cell_size**2 / 10000.0
+    cell_area_ha = cell_size**2 / 10000.0  # hectares per pixel
 
     def rkls_function(ls_factor, erosivity, erodibility, stream):
         """Calculate the RKLS equation.
 
         Args:
-            ls_factor (numpy.ndarray): length/slope factor
-        erosivity (numpy.ndarray): related to peak rainfall events
-        erodibility (numpy.ndarray): related to the potential for soil to
-            erode
-        stream (numpy.ndarray): stream mask (1 stream, 0 no stream)
+            ls_factor (numpy.ndarray): length/slope factor. unitless.
+            erosivity (numpy.ndarray): related to peak rainfall events. units:
+                MJ * mm / (ha * hr * yr)
+            erodibility (numpy.ndarray): related to the potential for soil to
+                erode. units: t * ha * hr / (MJ * ha * mm)
+            stream (numpy.ndarray): stream mask (1 stream, 0 no stream)
 
         Returns:
-            ls_factor * erosivity * erodibility * usle_c_p * avg_aspect or
-            nodata if any values are nodata themselves.
-
+            numpy.ndarray of RKLS values in tons / (pixel * year))
         """
         rkls = numpy.empty(ls_factor.shape, dtype=numpy.float32)
         nodata_mask = (
@@ -831,9 +832,11 @@ def _calculate_rkls(
         valid_mask = nodata_mask & (stream == 0)
         rkls[:] = _TARGET_NODATA
 
-        rkls[valid_mask] = (
-            ls_factor[valid_mask] * erosivity[valid_mask] *
-            erodibility[valid_mask] * cell_area_ha)
+        rkls[valid_mask] = (           # rkls units are tons / (pixel * year)
+            ls_factor[valid_mask] *    # unitless
+            erosivity[valid_mask] *    # MJ * mm / (ha * hr * yr)
+            erodibility[valid_mask] *  # t * ha * hr / (MJ * ha * mm)
+            cell_area_ha)              # ha / pixel
 
         # rkls is 1 on the stream
         rkls[nodata_mask & (stream == 1)] = 1
