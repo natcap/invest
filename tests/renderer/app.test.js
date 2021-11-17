@@ -373,7 +373,7 @@ describe('InVEST global settings: dialog interactions', () => {
     jest.resetAllMocks();
   });
 
-  test('Invest settings: change & Cancel', async () => {
+  test('Invest settings save on change', async () => {
     const nWorkers = '2';
     const loggingLevel = 'DEBUG';
 
@@ -387,56 +387,15 @@ describe('InVEST global settings: dialog interactions', () => {
     const nWorkersInput = getByLabelText(nWorkersLabelText, { exact: false });
     const loggingInput = getByLabelText(loggingLabelText, { exact: false });
 
-    // Test that the default values are loaded.
-    await waitFor(() => {
-      expect(nWorkersInput).toHaveValue('-1');
-      expect(loggingInput).toHaveValue('INFO');
-    });
-
-    // Change the input values
-    userEvent.clear(nWorkersInput);
-    userEvent.type(nWorkersInput, nWorkers);
+    userEvent.selectOptions(nWorkersInput, [nWorkers]);
     userEvent.selectOptions(loggingInput, [loggingLevel]);
     await waitFor(() => {
       expect(nWorkersInput).toHaveValue(nWorkers);
       expect(loggingInput).toHaveValue(loggingLevel);
     });
-    // Cancel instead of save, so expect defaults again
     userEvent.click(getByText('Cancel'));
-    userEvent.click(await findByRole('button', { name: 'settings' }));
-    await waitFor(() => {
-      expect(nWorkersInput).toHaveValue('-1');
-      expect(loggingInput).toHaveValue('INFO');
-    });
 
-    // Check values in the settings store have not changed
-    expect(await getSettingsValue('nWorkers')).toBe('-1');
-    expect(await getSettingsValue('loggingLevel')).toBe('INFO');
-  });
-
-  test('Invest settings: change & Save', async () => {
-    const nWorkers = '2';
-    const loggingLevel = 'DEBUG';
-
-    const {
-      getByText, getByLabelText, findByRole
-    } = render(
-      <App />
-    );
-
-    userEvent.click(await findByRole('button', { name: 'settings' }));
-    const nWorkersInput = getByLabelText(nWorkersLabelText, { exact: false });
-    const loggingInput = getByLabelText(loggingLabelText, { exact: false });
-
-    userEvent.clear(nWorkersInput);
-    userEvent.type(nWorkersInput, nWorkers);
-    userEvent.selectOptions(loggingInput, [loggingLevel]);
-    await waitFor(() => {
-      expect(nWorkersInput).toHaveValue(nWorkers);
-      expect(loggingInput).toHaveValue(loggingLevel);
-    });
-    userEvent.click(getByText('Save Changes'));
-    // Check values in the settings store were saved
+    // Check values were saved in app and in store
     userEvent.click(await findByRole('button', { name: 'settings' }));
     await waitFor(() => {
       expect(nWorkersInput).toHaveValue(nWorkers);
@@ -444,26 +403,6 @@ describe('InVEST global settings: dialog interactions', () => {
     });
     expect(await getSettingsValue('nWorkers')).toBe(nWorkers);
     expect(await getSettingsValue('loggingLevel')).toBe(loggingLevel);
-  });
-
-  test('Invest settings: invalid nWorkers value', async () => {
-    const badValue = 'a';
-
-    const {
-      getByText, getByLabelText, findByRole
-    } = render(
-      <App />
-    );
-
-    // Change n_workers to bad value -- expect invalid signal
-    userEvent.click(await findByRole('button', { name: 'settings' }));
-    const nWorkersInput = getByLabelText(nWorkersLabelText, { exact: false });
-    userEvent.clear(nWorkersInput);
-    userEvent.type(nWorkersInput, badValue);
-    await waitFor(() => {
-      expect(nWorkersInput.classList.contains('is-invalid')).toBeTruthy();
-      expect(getByText('Save Changes')).toBeDisabled();
-    });
   });
 
   test('Load invest settings from storage and test Reset', async () => {
@@ -499,14 +438,6 @@ describe('InVEST global settings: dialog interactions', () => {
     await waitFor(() => {
       expect(nWorkersInput).toHaveValue(defaultSettings.nWorkers);
       expect(loggingInput).toHaveValue(defaultSettings.loggingLevel);
-    });
-
-    // Expect reset values to not have been saved when cancelling
-    userEvent.click(getByText('Cancel'));
-    userEvent.click(await findByRole('button', { name: 'settings' }));
-    await waitFor(() => {
-      expect(nWorkersInput).toHaveValue(expectedSettings.nWorkers);
-      expect(loggingInput).toHaveValue(expectedSettings.loggingLevel);
     });
   });
 

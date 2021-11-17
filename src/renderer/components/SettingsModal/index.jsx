@@ -83,6 +83,13 @@ export default class SettingsModal extends React.Component {
         <Modal show={this.state.show} onHide={this.handleClose}>
           <Modal.Header>
             <Modal.Title>InVEST Settings</Modal.Title>
+            <Button
+              variant="secondary"
+              onClick={this.handleClose}
+              className="float-right"
+            >
+              Cancel
+            </Button>
           </Modal.Header>
           <Modal.Body>
             <Form.Group as={Row}>
@@ -102,7 +109,7 @@ export default class SettingsModal extends React.Component {
               </Col>
             </Form.Group>
             <Form.Group as={Row}>
-              <Form.Label column sm="8" htmlFor="nworkers-text">
+              <Form.Label column sm="8" htmlFor="nworkers-select">
                 Taskgraph n_workers parameter
                 <br />
                 (must be an integer &gt;= -1)
@@ -145,11 +152,6 @@ export default class SettingsModal extends React.Component {
             </Button>
             <div>(no invest workspaces will be deleted)</div>
           </Modal.Body>
-          <Modal.Footer>
-            <Button variant="secondary" onClick={this.handleClose}>
-              Cancel
-            </Button>
-          </Modal.Footer>
         </Modal>
       </React.Fragment>
     );
