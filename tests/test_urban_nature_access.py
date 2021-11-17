@@ -130,5 +130,24 @@ class UNATests(unittest.TestCase):
 
         urban_nature_access.execute(args)
 
-        # TODO: Assertions will be added here later when I have something to
-        # test.
+        # Since we're doing a semi-manual alignment step, assert that the
+        # aligned LULC and population rasters have the same pixel sizes, origin
+        # and raster dimensions.
+        aligned_lulc_raster_info = pygeoprocessing.get_raster_info(
+            os.path.join(args['workspace_dir'], 'intermediate',
+                         f"aligned_lulc_{args['results_suffix']}.tif"))
+        aligned_population_raster_info = pygeoprocessing.get_raster_info(
+            os.path.join(args['workspace_dir'], 'intermediate',
+                         f"aligned_population_{args['results_suffix']}.tif"))
+        numpy.testing.assert_allclose(
+            aligned_lulc_raster_info['pixel_size'],
+            aligned_population_raster_info['pixel_size'])
+        numpy.testing.assert_allclose(
+            aligned_lulc_raster_info['raster_size'],
+            aligned_population_raster_info['raster_size'])
+        numpy.testing.assert_allclose(
+            aligned_lulc_raster_info['geotransform'],
+            aligned_population_raster_info['geotransform'])
+        numpy.testing.assert_allclose(
+            aligned_lulc_raster_info['bounding_box'],
+            aligned_population_raster_info['bounding_box'])

@@ -104,7 +104,8 @@ ARGS_SPEC = {
 
 _OUTPUT_BASE_FILES = {}
 _INTERMEDIATE_BASE_FILES = {
-    'resampled_population': 'population_resampled.tif',
+    'aligned_population': 'aligned_population.tif',
+    'aligned_lulc': 'aligned_lulc.tif',
 }
 
 
@@ -169,23 +170,68 @@ def execute(args):
     lulc_raster_info = pygeoprocessing.get_raster_info(
         args['lulc_raster_path'])
 
+    squared_lulc_pixel_size = _square_off_pixels(args['lulc_raster_path'])
+    lulc_alignment_task = graph.add_task(
+        pygeoprocessing.warp_raster,
+        kwargs={
+            'base_raster_path': args['lulc_raster_path'],
+            'target_pixel_size': squared_lulc_pixel_size,
+            'target_bb': lulc_raster_info['bounding_box'],
+            'target_raster_path': file_registry['aligned_lulc'],
+            'resample_method': 'nearest',
+        },
+        target_path_list=[file_registry['aligned_lulc']],
+        task_name='Resample LULC to have square pixels'
+    )
+
     population_alignment_task = graph.add_task(
         _resample_population_raster,
         kwargs={
             'source_population_raster_path': args['population_raster_path'],
             'target_population_raster_path': file_registry[
-                'resampled_population'],
-            'lulc_pixel_size': lulc_raster_info['pixel_size'],
+                'aligned_population'],
+            'lulc_pixel_size': squared_lulc_pixel_size,
             'lulc_bb': lulc_raster_info['bounding_box'],
             'lulc_projection_wkt': lulc_raster_info['projection_wkt'],
             'working_dir': intermediate_dir,
         },
-        target_path_list=[file_registry['resampled_population']],
+        target_path_list=[file_registry['aligned_population']],
         task_name='Resample population to LULC resolution')
 
     graph.close()
     graph.join()
     LOGGER.info('Finished Urban Nature Access Model')
+
+
+def _square_off_pixels(raster_path):
+    """Create square pixels from the provided raster.
+
+    The pixel dimensions produced will respect the sign of the original pixel
+    dimensions and will be the mean of the absolute source pixel dimensions.
+
+    Args:
+        raster_path (string): The path to a raster on disk.
+
+    Returns:
+        A 2-tuple of ``(pixel_width, pixel_height)``, in projected units.
+    """
+    raster_info = pygeoprocessing.get_raster_info(raster_path)
+    pixel_width, pixel_height = raster_info['pixel_size']
+
+    if abs(pixel_width) == abs(pixel_height):
+        return (pixel_width, pixel_height)
+
+    pixel_tuple = ()
+    average_absolute_size = (abs(pixel_width) + abs(pixel_height)) / 2
+    for pixel_dimension_size in (pixel_width, pixel_height):
+        # This loop allows either or both pixel dimension(s) to be negative
+        sign_factor = 1
+        if pixel_dimension_size < 0:
+            sign_factor = -1
+
+        pixel_tuple += (average_absolute_size * sign_factor,)
+
+    return pixel_tuple
 
 
 def _resample_population_raster(
