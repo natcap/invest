@@ -10,7 +10,7 @@ GIT_TEST_DATA_REPO_REV      := 586a64b2b33a124d9197bd99c06c88b926807f70
 
 GIT_UG_REPO                 := https://github.com/natcap/invest.users-guide
 GIT_UG_REPO_PATH            := doc/users-guide
-GIT_UG_REPO_REV             := 4ae626c988a72523217aea679118903d8eb46287
+GIT_UG_REPO_REV             := 764aa04944319f3af79004860aa35c3be189b264
 
 ENV = "./env"
 ifeq ($(OS),Windows_NT)
@@ -328,7 +328,7 @@ SAMPLEDATA_SINGLE_ARCHIVE := dist/InVEST_$(VERSION)_sample_data.zip
 sampledata_single: $(SAMPLEDATA_SINGLE_ARCHIVE)
 
 $(SAMPLEDATA_SINGLE_ARCHIVE): $(GIT_SAMPLE_DATA_REPO_PATH) dist
-	$(BASHLIKE_SHELL_COMMAND) "cd $(GIT_SAMPLE_DATA_REPO_PATH) && $(ZIP) -r ../../$(SAMPLEDATA_SINGLE_ARCHIVE) ./* -x .svn -x .git -x *.json"
+	$(BASHLIKE_SHELL_COMMAND) "cd $(GIT_SAMPLE_DATA_REPO_PATH) && $(ZIP) -r ../../$(SAMPLEDATA_SINGLE_ARCHIVE) ./* -x .svn -x .git"
 
 
 # Installers for each platform.
