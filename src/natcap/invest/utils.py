@@ -1,21 +1,20 @@
 """InVEST specific code utils."""
 import codecs
-import math
-import os
 import contextlib
 import logging
-import tempfile
+import math
+import os
 import shutil
-from datetime import datetime
+import tempfile
 import time
+from datetime import datetime
 
-import pandas
 import numpy
-from shapely.wkt import loads
+import pandas
+import pygeoprocessing
 from osgeo import gdal
 from osgeo import osr
-import pygeoprocessing
-
+from shapely.wkt import loads
 
 LOGGER = logging.getLogger(__name__)
 _OSGEO_LOGGER = logging.getLogger('osgeo')
@@ -416,6 +415,79 @@ def exponential_decay_kernel_raster(expected_distance, kernel_filepath):
                                yoff=block_data['yoff'])
 
     kernel_band.FlushCache()
+    kernel_dataset.FlushCache()
+    kernel_band = None
+    kernel_dataset = None
+
+
+def gaussian_decay_kernel_raster(sigma, kernel_filepath):
+    """Create a raster-based gaussian decay kernel.
+
+    The raster will be a tiled GeoTIFF, with 256x256 memory blocks.
+
+    Note that the dimensions of the kernel raster will be 3 times the sigma
+    provided in order to cover 99% of the samples under the gaussian
+    distribution.
+
+    Args:
+        sigma (int or float): The distance (in pixels) of the standard
+            deviation from the center of the raster.
+        kernel_filepath (string): The path to the file on disk where this
+            kernel should be stored. If a file exists at this path, it will be
+            overwritten.
+
+    Returns:
+        ``None``
+    """
+    # going 3.0 times out from the sigma gives you over 99% of area under
+    # the guassian curve
+    max_distance = sigma * 3.0
+    kernel_size = int(numpy.round(max_distance * 2 + 1))
+
+    driver = gdal.GetDriverByName('GTiff')
+    kernel_dataset = driver.Create(
+        kernel_filepath.encode('utf-8'), kernel_size, kernel_size, 1,
+        gdal.GDT_Float32, options=[
+            'BIGTIFF=IF_SAFER', 'TILED=YES', 'BLOCKXSIZE=256',
+            'BLOCKYSIZE=256'])
+
+    # Make some kind of geotransform, it doesn't matter what but
+    # will make GIS libraries behave better if it's all defined
+    kernel_dataset.SetGeoTransform([0, 1, 0, 0, 0, -1])
+    srs = osr.SpatialReference()
+    srs.SetWellKnownGeogCS('WGS84')
+    kernel_dataset.SetProjection(srs.ExportToWkt())
+
+    kernel_band = kernel_dataset.GetRasterBand(1)
+    kernel_nodata = -9999
+    kernel_band.SetNoDataValue(kernel_nodata)
+
+    col_index = numpy.array(range(kernel_size))
+    running_sum = 0.0
+    for row_index in range(kernel_size):
+        distance_kernel_row = numpy.sqrt(
+            (row_index - max_distance) ** 2 +
+            (col_index - max_distance) ** 2).reshape(1, kernel_size)
+        kernel = numpy.where(
+            distance_kernel_row > max_distance, 0.0,
+            (1 / (2.0 * numpy.pi * sigma ** 2) *
+             numpy.exp(-distance_kernel_row**2 / (2 * sigma ** 2))))
+        running_sum += numpy.sum(kernel)
+        kernel_band.WriteArray(kernel, xoff=0, yoff=row_index)
+
+    kernel_dataset.FlushCache()
+    kernel_band = None
+    kernel_dataset = None
+
+    kernel_dataset = gdal.OpenEx(kernel_filepath, gdal.GA_Update)
+    kernel_band = kernel_dataset.GetRasterBand(1)
+    for kernel_data, kernel_block in pygeoprocessing.iterblocks(
+            (kernel_filepath, 1)):
+        # divide by sum to normalize
+        kernel_block /= running_sum
+        kernel_band.WriteArray(
+            kernel_block, xoff=kernel_data['xoff'], yoff=kernel_data['yoff'])
+
     kernel_dataset.FlushCache()
     kernel_band = None
     kernel_dataset = None
