@@ -374,11 +374,11 @@ describe('InVEST global settings: dialog interactions', () => {
   });
 
   test('Invest settings save on change', async () => {
-    const nWorkers = '2';
+    const nWorkers = '0';
     const loggingLevel = 'DEBUG';
 
     const {
-      getByText, getByLabelText, findByRole
+      getByRole, getByLabelText, findByRole
     } = render(
       <App />
     );
@@ -393,7 +393,7 @@ describe('InVEST global settings: dialog interactions', () => {
       expect(nWorkersInput).toHaveValue(nWorkers);
       expect(loggingInput).toHaveValue(loggingLevel);
     });
-    userEvent.click(getByText('Cancel'));
+    userEvent.click(getByRole('button', { name: 'close settings' }));
 
     // Check values were saved in app and in store
     userEvent.click(await findByRole('button', { name: 'settings' }));
@@ -411,7 +411,7 @@ describe('InVEST global settings: dialog interactions', () => {
       loggingLevel: 'INFO',
     };
     const expectedSettings = {
-      nWorkers: '3',
+      nWorkers: '0',
       loggingLevel: 'ERROR',
     };
 

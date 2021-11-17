@@ -6,7 +6,7 @@ import Row from 'react-bootstrap/Row';
 import Form from 'react-bootstrap/Form';
 import Button from 'react-bootstrap/Button';
 import Modal from 'react-bootstrap/Modal';
-import { MdSettings } from 'react-icons/md';
+import { MdSettings, MdClose } from 'react-icons/md';
 
 import { getDefaultSettings } from './SettingsStorage';
 
@@ -84,11 +84,12 @@ export default class SettingsModal extends React.Component {
           <Modal.Header>
             <Modal.Title>InVEST Settings</Modal.Title>
             <Button
-              variant="secondary"
+              variant="secondary-outline"
               onClick={this.handleClose}
               className="float-right"
+              aria-label="close settings"
             >
-              Cancel
+              <MdClose />
             </Button>
           </Modal.Header>
           <Modal.Body>
