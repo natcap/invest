@@ -1,22 +1,21 @@
 """GLOBIO InVEST Model."""
-import os
-import logging
 import collections
+import logging
+import os
 import tempfile
 
-from osgeo import gdal
-from osgeo import ogr
-from osgeo import osr
 import numpy
 import pygeoprocessing
 import taskgraph
+from osgeo import gdal
+from osgeo import ogr
+from osgeo import osr
 
-from . import utils
-from . import spec_utils
-from .spec_utils import u
-from . import validation
 from . import MODEL_METADATA
-
+from . import spec_utils
+from . import utils
+from . import validation
+from .spec_utils import u
 
 LOGGER = logging.getLogger(__name__)
 
@@ -268,7 +267,7 @@ def execute(args):
     gaussian_kernel_path = os.path.join(
         tmp_dir, 'gaussian_kernel%s.tif' % file_suffix)
     make_gaussian_kernel_task = task_graph.add_task(
-        func=make_gaussian_kernel_path,
+        func=utils.gaussian_decay_kernel_raster,
         args=(SIGMA, gaussian_kernel_path),
         target_path_list=[gaussian_kernel_path],
         task_name='gaussian_kernel')
@@ -679,45 +678,6 @@ def _msa_calculation(
     pygeoprocessing.raster_calculator(
         [(msa_f_path, 1), (msa_lu_path, 1), (msa_i_path, 1)],
         msa_op, msa_path, gdal.GDT_Float32, msa_nodata)
-
-
-def make_gaussian_kernel_path(sigma, kernel_path):
-    """Create a gaussian kernel raster."""
-    max_distance = sigma * 5
-    kernel_size = int(numpy.round(max_distance * 2 + 1))
-
-    driver = gdal.GetDriverByName('GTiff')
-    kernel_dataset = driver.Create(
-        kernel_path.encode('utf-8'), kernel_size, kernel_size, 1,
-        gdal.GDT_Float32, options=['BIGTIFF=IF_SAFER'])
-
-    # Make some kind of geotransform, it doesn't matter what but
-    # will make GIS libraries behave better if it's all defined
-    kernel_dataset.SetGeoTransform([444720, 30, 0, 3751320, 0, -30])
-    srs = osr.SpatialReference()
-    srs.SetUTM(11, 1)
-    srs.SetWellKnownGeogCS('NAD27')
-    kernel_dataset.SetProjection(srs.ExportToWkt())
-
-    kernel_band = kernel_dataset.GetRasterBand(1)
-    kernel_band.SetNoDataValue(-9999)
-
-    col_index = numpy.array(range(kernel_size))
-    integration = 0.0
-    for row_index in range(kernel_size):
-        kernel = numpy.exp(
-            -((row_index - max_distance)**2 +
-              (col_index - max_distance) ** 2)/(2.0*sigma**2)).reshape(
-                  1, kernel_size)
-
-        integration += numpy.sum(kernel)
-        kernel_band.WriteArray(kernel, xoff=0, yoff=row_index)
-
-    for row_index in range(kernel_size):
-        kernel_row = kernel_band.ReadAsArray(
-            xoff=0, yoff=row_index, win_xsize=kernel_size, win_ysize=1)
-        kernel_row /= integration
-        kernel_band.WriteArray(kernel_row, 0, row_index)
 
 
 def load_msa_parameter_table(
