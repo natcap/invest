@@ -101,11 +101,6 @@ jobs:
                 SIGNTOOL_PATH=$(find 'C:\\Program Files (x86)\\Windows Kits\\10' -type f -name 'signtool.exe*' | head -n 1)
                 INSTALLER_BINARY=$(find "$(pwd)/dist" -type f -name 'InVEST_*.exe' | head -n 1)
 
-                # Specify which python version we want to use (it's the one we're using
-                # in actions/setup-python.
-                export CLOUDSDK_PYTHON=$(which python)
-                export CLOUDSDK_GSUTIL_PYTHON=$(which python)
-
                 # setup-gcloud adds 'gsutil' to PATH
                 make BIN_TO_SIGN="$INSTALLER_BINARY" SIGNTOOL="$SIGNTOOL_PATH" codesign_windows
 
@@ -114,11 +109,6 @@ jobs:
               if: github.event_name != 'pull_request'
               shell: bash -l {0}
               run: |
-                  # Specify which python version we want to use (it's the one
-                  # we're using in actions/setup-miniconda)
-                  export CLOUDSDK_PYTHON=$(which python)
-                  export CLOUDSDK_GSUTIL_PYTHON=$(which python)
-
                   # setup-gcloud adds 'gsutil' to PATH
                   make GSUTIL="gsutil" deploy
 
@@ -210,7 +200,7 @@ jobs:
               shell: bash -l -x {0}
               env:
                 CERT_FILE: 2025-01-16-Expiry-AppStore-App.p12
-                CERT_PASS: ${{ secrets.CODESIGN_CERT_KEY_PASS }}
+                CERT_PASS: ${{ secrets.MACOS_CODESIGN_CERT_PASS }}
                 KEYCHAIN_PASS: ${{ secrets.KEYCHAIN_PASS }}
               run: make codesign_mac
 
