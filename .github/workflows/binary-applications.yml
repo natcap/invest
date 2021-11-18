@@ -93,9 +93,9 @@ jobs:
               # Secrets not available in PR so don't use GCP.
               if: github.event_name != 'pull_request'
               shell: bash -l {0}
-              # env:
-              #   CERT_FILE: Stanford-natcap-code-signing-cert-expires-2024-01-26.p12
-              #   CERT_PASS: ${{ secrets.WINDOWS_CODESIGN_CERT_PASS }}
+              env:
+                CERT_FILE: Stanford-natcap-code-signing-cert-expires-2024-01-26.p12
+                CERT_PASS: ${{ secrets.WINDOWS_CODESIGN_CERT_PASS }}
               run: |
                 # figure out the path to signtool.exe (it keeps changing with SDK updates)
                 SIGNTOOL_PATH=$(find 'C:\\Program Files (x86)\\Windows Kits\\10' -type f -name 'signtool.exe*' | head -n 1)
@@ -107,11 +107,7 @@ jobs:
                 export CLOUDSDK_GSUTIL_PYTHON=$(which python)
 
                 # setup-gcloud adds 'gsutil' to PATH
-                make CERT_KEY_PASS=${{ secrets.STANFORD_CERT_KEY_PASS }} \
-                        GSUTIL="gsutil" \
-                        BIN_TO_SIGN="$INSTALLER_BINARY" \
-                        SIGNTOOL="$SIGNTOOL_PATH" \
-                        -s signcode_windows
+                make BIN_TO_SIGN="$INSTALLER_BINARY" SIGNTOOL="$SIGNTOOL_PATH" codesign_windows
 
             - name: Deploy artifacts to GCS
               # Secrets not available in PR so don't use GCP.
