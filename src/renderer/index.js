@@ -7,14 +7,20 @@ import { ipcMainChannels } from '../main/ipcMainChannels';
 
 const logger = window.Workbench.getLogger(__filename.split('/').slice(-1)[0]);
 
-function render(isFirstRun) {
+async function render() {
+  const isFirstRun = await ipcRenderer.invoke(ipcMainChannels.IS_FIRST_RUN);
+  const nCPU = await ipcRenderer.invoke(ipcMainChannels.GET_N_CPUS);
   ReactDom.render(
-    <App isFirstRun={isFirstRun} />,
+    <App
+      isFirstRun={isFirstRun}
+      nCPU={nCPU}
+    />,
     document.getElementById('App')
   );
 }
 
-ipcRenderer.invoke(ipcMainChannels.IS_FIRST_RUN)
-  .then((response) => {
-    render(response);
-  });
+render();
+// ipcRenderer.invoke(ipcMainChannels.IS_FIRST_RUN)
+//   .then((response) => {
+//     render(response);
+//   });

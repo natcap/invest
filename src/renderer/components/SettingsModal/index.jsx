@@ -16,7 +16,7 @@ export default class SettingsModal extends React.Component {
     super(props);
     this.state = {
       show: false,
-      nWorkersOptions: [],
+      nWorkersOptions: null,
       logLevelOptions: ['DEBUG', 'INFO', 'WARNING', 'ERROR'],
     };
 
@@ -27,11 +27,9 @@ export default class SettingsModal extends React.Component {
     this.switchToDownloadModal = this.switchToDownloadModal.bind(this);
   }
 
-  componentDidMount() {
-    // const nCPU = ipcRenderer.invoke(ipcMainChannels.GET_N_CPUS, 'ping');
-    const nCPU = 12;
+  async componentDidMount() {
     const nWorkersOptions = [];
-    for (let i = -1; i <= nCPU; i++) {
+    for (let i = -1; i <= this.props.nCPU; i++) {
       nWorkersOptions.push(i);
     }
     this.setState({
@@ -109,27 +107,39 @@ export default class SettingsModal extends React.Component {
                 </Form.Control>
               </Col>
             </Form.Group>
-            <Form.Group as={Row}>
-              <Form.Label column sm="8" htmlFor="nworkers-select">
-                Taskgraph n_workers parameter
-                <br />
-                (must be an integer &gt;= -1)
-              </Form.Label>
-              <Col sm="4">
-                <Form.Control
-                  id="nworkers-select"
-                  as="select"
-                  name="nWorkers"
-                  type="text"
-                  value={this.props.investSettings.nWorkers}
-                  onChange={this.handleChange}
-                >
-                  {this.state.nWorkersOptions.map(
-                    (opt) => <option value={opt} key={opt}>{opt}</option>
-                  )}
-                </Form.Control>
-              </Col>
-            </Form.Group>
+            {
+              (this.state.nWorkersOptions)
+                ? (
+                  <Form.Group as={Row}>
+                    <Form.Label column sm="9" htmlFor="nworkers-select">
+                      Taskgraph n_workers parameter
+                      <ul>
+                        <li>-1: (recommended) synchronous mode</li>
+                        <li>0: single process with threaded task management</li>
+                        <li>
+                          n CPUs: depending on the InVEST model, tasks may execute
+                          in parallel using this many processes.
+                        </li>
+                      </ul>
+                    </Form.Label>
+                    <Col sm="3">
+                      <Form.Control
+                        id="nworkers-select"
+                        as="select"
+                        name="nWorkers"
+                        type="text"
+                        value={this.props.investSettings.nWorkers}
+                        onChange={this.handleChange}
+                      >
+                        {this.state.nWorkersOptions.map(
+                          (opt) => <option value={opt} key={opt}>{opt}</option>
+                        )}
+                      </Form.Control>
+                    </Col>
+                  </Form.Group>
+                )
+                : <div />
+            }
             <Button
               variant="secondary"
               onClick={this.handleReset}
@@ -167,4 +177,5 @@ SettingsModal.propTypes = {
     sampleDataDir: PropTypes.string,
   }),
   showDownloadModal: PropTypes.func,
+  nCPU: PropTypes.number
 };

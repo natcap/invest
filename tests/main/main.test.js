@@ -175,6 +175,7 @@ describe('createWindow', () => {
       ipcMainChannels.SHOW_OPEN_DIALOG,
       ipcMainChannels.SHOW_SAVE_DIALOG,
       ipcMainChannels.IS_FIRST_RUN,
+      ipcMainChannels.GET_N_CPUS,
     ];
     const expectedOnChannels = [
       ipcMainChannels.DOWNLOAD_URL,
