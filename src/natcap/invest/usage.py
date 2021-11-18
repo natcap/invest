@@ -15,12 +15,11 @@ import importlib
 from urllib.request import urlopen, Request
 from urllib.parse import urlencode
 
-from osgeo import gdal
 from osgeo import osr
 import natcap.invest
 import pygeoprocessing
 
-from .. import utils
+from . import utils
 
 ENCODING = sys.getfilesystemencoding()
 LOGGER = logging.getLogger(__name__)
@@ -36,19 +35,21 @@ _USAGE_LOGGING_THREAD_NAME = 'usage-logging-thread'
 
 
 @contextlib.contextmanager
-def log_run(module, args):
+def log_run(model_pyname, args):
     """Context manager to log an InVEST model run and exit status.
 
     Args:
-        module (string): The string module name that identifies the model.
+        model_pyname (string): The string module name that identifies the model.
         args (dict): The full args dictionary.
 
     Returns:
         ``None``
     """
+    invest_interface = 'Qt'  # this cm is only used by the Qt interface
     session_id = str(uuid.uuid4())
     log_thread = threading.Thread(
-        target=_log_model, args=(module, args, session_id),
+        target=_log_model,
+        args=(model_pyname, args, invest_interface, session_id),
         name=_USAGE_LOGGING_THREAD_NAME)
     log_thread.start()
 
@@ -115,12 +116,17 @@ def _calculate_args_bounding_box(args, args_spec):
         # Using gdal.OpenEx to check if an input is spatial caused the
         # model to hang sometimes (possible race condition), so only
         # get the bounding box of inputs that are known to be spatial.
+        # Also eliminate any string paths that are empty to prevent an
+        # exception. By the time we've made it to this function, all paths
+        # should already have been validated so the path is either valid or
+        # blank.
         spatial_info = None
-        if args_spec['args'][key]['type'] == 'raster':
+        if args_spec['args'][key]['type'] == 'raster' and value.strip() != '':
             spatial_info = pygeoprocessing.get_raster_info(value)
-        elif args_spec['args'][key]['type'] == 'vector':
+        elif (args_spec['args'][key]['type'] == 'vector'
+                and value.strip() != ''):
             spatial_info = pygeoprocessing.get_vector_info(value)
-                    
+
         if spatial_info:
             local_bb = spatial_info['bounding_box']
             projection_wkt = spatial_info['projection_wkt']
@@ -181,22 +187,24 @@ def _log_exit_status(session_id, status):
         log_finish_url = json.loads(urlopen(
             _ENDPOINTS_INDEX_URL).read().strip())['FINISH']
 
-        # The data must be a python string of bytes. This will be ``bytes`` 
+        # The data must be a python string of bytes. This will be ``bytes``
         # in python3.
         urlopen(Request(log_finish_url, urlencode(payload).encode('utf-8')))
     except Exception as exception:
         # An exception was thrown, we don't care.
-        logger.warn(
+        logger.warning(
             'an exception encountered when _log_exit_status %s',
             str(exception))
 
 
-def _log_model(model_name, model_args, session_id=None):
+def _log_model(pyname, model_args, invest_interface, session_id=None):
     """Log information about a model run to a remote server.
 
     Args:
-        model_name (string): a python string of the package version.
+        pyname (string): a python string of the package version.
         model_args (dict): the traditional InVEST argument dictionary.
+        invest_interface (string): a string identifying the calling UI,
+            e.g. `Qt` or 'Workbench'.
 
     Returns:
         None
@@ -216,15 +224,16 @@ def _log_model(model_name, model_args, session_id=None):
         md5.update(json.dumps(data).encode('utf-8'))
         return md5.hexdigest()
 
-    args_spec = importlib.import_module(model_name).ARGS_SPEC
+    args_spec = importlib.import_module(pyname).ARGS_SPEC
 
     try:
         bounding_box_intersection, bounding_box_union = (
             _calculate_args_bounding_box(model_args, args_spec))
 
         payload = {
-            'model_name': model_name,
+            'model_name': pyname,
             'invest_release': natcap.invest.__version__,
+            'invest_interface': invest_interface,
             'node_hash': _node_hash(),
             'system_full_platform_string': platform.platform(),
             'system_preferred_encoding': locale.getdefaultlocale()[1],
@@ -236,10 +245,10 @@ def _log_model(model_name, model_args, session_id=None):
         log_start_url = json.loads(urlopen(
             _ENDPOINTS_INDEX_URL).read().strip())['START']
 
-        # The data must be a python string of bytes. This will be ``bytes`` 
+        # The data must be a python string of bytes. This will be ``bytes``
         # in python3.
         urlopen(Request(log_start_url, urlencode(payload).encode('utf-8')))
     except Exception as exception:
         # An exception was thrown, we don't care.
-        logger.warn(
+        logger.warning(
             'an exception encountered when logging %s', repr(exception))

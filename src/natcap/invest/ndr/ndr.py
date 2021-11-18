@@ -14,14 +14,15 @@ from .. import utils
 from .. import spec_utils
 from ..spec_utils import u
 from .. import validation
+from .. import MODEL_METADATA
 from . import ndr_core
 
 LOGGER = logging.getLogger(__name__)
 
 ARGS_SPEC = {
-    "model_name": "Nutrient Delivery Ratio Model (NDR)",
-    "module": __name__,
-    "userguide_html": "ndr.html",
+    "model_name": MODEL_METADATA["ndr"].model_title,
+    "pyname": MODEL_METADATA["ndr"].pyname,
+    "userguide_html": MODEL_METADATA["ndr"].userguide,
     "args_with_spatial_overlap": {
         "spatial_keys": ["dem_path", "lulc_path", "runoff_proxy_path",
                          "watersheds_path"],
@@ -116,8 +117,8 @@ ARGS_SPEC = {
         },
         "calc_p": {
             "type": "boolean",
-            "about": "Select to calculate phosphorous export.",
-            "name": "Calculate phosphorous retention"
+            "about": "Select to calculate phosphorus export.",
+            "name": "Calculate phosphorus retention"
         },
         "calc_n": {
             "type": "boolean",
@@ -165,7 +166,7 @@ ARGS_SPEC = {
             "type": "number",
             "units": u.meter,
             "required": "calc_p",
-            "name": "Subsurface Critical Length (Phosphorous)",
+            "name": "Subsurface Critical Length (Phosphorus)",
             "about": (
                 "The distance (traveled subsurface and downslope) after which "
                 "it is assumed that soil retains nutrient at its maximum "
@@ -188,7 +189,7 @@ ARGS_SPEC = {
         "subsurface_eff_p": {
             "type": "ratio",
             "required": "calc_p",
-            "name": "Subsurface Maximum Retention Efficiency (Phosphorous)",
+            "name": "Subsurface Maximum Retention Efficiency (Phosphorus)",
             "about": (
                 "The maximum nutrient retention efficiency that can be "
                 "reached through subsurface flow. This field characterizes "
@@ -202,6 +203,8 @@ _OUTPUT_BASE_FILES = {
     'p_export_path': 'p_export.tif',
     'watershed_results_ndr_path': 'watershed_results_ndr.shp',
 }
+
+INTERMEDIATE_DIR_NAME = 'intermediate_outputs'
 
 _INTERMEDIATE_BASE_FILES = {
     'ic_factor_path': 'ic_factor.tif',
@@ -280,7 +283,7 @@ def execute(args):
             If args['calc_n'] is True, must also contain the header
             'proportion_subsurface_n' field.
 
-        args['calc_p'] (boolean): if True, phosphorous is modeled,
+        args['calc_p'] (boolean): if True, phosphorus is modeled,
             additionally if True then biophysical table must have p fields in
             them
         args['calc_n'] (boolean): if True nitrogen will be modeled,
@@ -346,7 +349,7 @@ def execute(args):
         """
         # Make sure all the nutrient inputs are good
         if len(nutrients_to_process) == 0:
-            raise ValueError("Neither phosphorous nor nitrogen was selected"
+            raise ValueError("Neither phosphorus nor nitrogen was selected"
                              " to be processed.  Choose at least one.")
 
         # Build up a list that'll let us iterate through all the input tables
@@ -369,7 +372,7 @@ def execute(args):
                             "Missing header %s from %s" % (
                                 header, table_type))
 
-        # proportion_subsurface_n is a special case in which phosphorous does
+        # proportion_subsurface_n is a special case in which phosphorus does
         # not have an equivalent.
         if ('n' in nutrients_to_process and
                 'proportion_subsurface_n' not in lu_parameter_row):
@@ -383,8 +386,7 @@ def execute(args):
     # Load all the tables for preprocessing
     output_dir = os.path.join(args['workspace_dir'])
     intermediate_output_dir = os.path.join(
-        args['workspace_dir'], 'intermediate_outputs')
-    output_dir = os.path.join(args['workspace_dir'])
+        args['workspace_dir'], INTERMEDIATE_DIR_NAME)
     cache_dir = os.path.join(intermediate_output_dir, 'cache_dir')
     utils.make_directories([output_dir, intermediate_output_dir, cache_dir])
 
@@ -477,7 +479,8 @@ def execute(args):
         args=(
             (f_reg['flow_accumulation_path'], 1),
             (f_reg['flow_direction_path'], 1),
-            float(args['threshold_flow_accumulation']), f_reg['stream_path']),
+            float(args['threshold_flow_accumulation']),
+            f_reg['stream_path']),
         target_path_list=[f_reg['stream_path']],
         dependent_task_list=[flow_accum_task],
         task_name='stream extraction')
@@ -486,7 +489,7 @@ def execute(args):
         func=pygeoprocessing.calculate_slope,
         args=((f_reg['filled_dem_path'], 1), f_reg['slope_path']),
         target_path_list=[f_reg['slope_path']],
-        dependent_task_list=[stream_extraction_task],
+        dependent_task_list=[fill_pits_task],
         task_name='calculate slope')
 
     threshold_slope_task = task_graph.add_task(
@@ -539,7 +542,8 @@ def execute(args):
     d_dn_task = task_graph.add_task(
         func=pygeoprocessing.routing.distance_to_channel_mfd,
         args=(
-            (f_reg['flow_direction_path'], 1), (f_reg['stream_path'], 1),
+            (f_reg['flow_direction_path'], 1),
+            (f_reg['stream_path'], 1),
             f_reg['d_dn_path']),
         kwargs={'weight_raster_path_band': (
             f_reg['s_factor_inverse_path'], 1)},
@@ -550,7 +554,8 @@ def execute(args):
     dist_to_channel_task = task_graph.add_task(
         func=pygeoprocessing.routing.distance_to_channel_mfd,
         args=(
-            (f_reg['flow_direction_path'], 1), (f_reg['stream_path'], 1),
+            (f_reg['flow_direction_path'], 1),
+            (f_reg['stream_path'], 1),
             f_reg['dist_to_channel_path']),
         dependent_task_list=[stream_extraction_task],
         target_path_list=[f_reg['dist_to_channel_path']],
@@ -635,7 +640,8 @@ def execute(args):
         ndr_eff_task = task_graph.add_task(
             func=ndr_core.ndr_eff_calculation,
             args=(
-                f_reg['flow_direction_path'], f_reg['stream_path'], eff_path,
+                f_reg['flow_direction_path'],
+                f_reg['stream_path'], eff_path,
                 crit_len_path, effective_retention_path),
             target_path_list=[effective_retention_path],
             dependent_task_list=[
@@ -1286,7 +1292,7 @@ def _calculate_sub_ndr(
 
     def _sub_ndr_op(dist_to_channel_array):
         """Calculate subsurface NDR."""
-        # nodata value from this ntermediate output should always be
+        # nodata value from this intermediate output should always be
         # defined by pygeoprocessing, not None
         valid_mask = ~numpy.isclose(
             dist_to_channel_array, dist_to_channel_nodata)
@@ -1320,10 +1326,11 @@ def _calculate_export(
         """Combine NDR and subsurface NDR."""
         # these intermediate outputs should always have defined nodata
         # values assigned by pygeoprocessing
-        valid_mask = ~(numpy.isclose(modified_load_array, load_nodata) |
-                       numpy.isclose(ndr_array, ndr_nodata) |
-                       numpy.isclose(modified_sub_load_array, subsurface_load_nodata) |
-                       numpy.isclose(sub_ndr_array, sub_ndr_nodata))
+        valid_mask = ~(
+            numpy.isclose(modified_load_array, load_nodata) |
+            numpy.isclose(ndr_array, ndr_nodata) |
+            numpy.isclose(modified_sub_load_array, subsurface_load_nodata) |
+            numpy.isclose(sub_ndr_array, sub_ndr_nodata))
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         result[:] = _TARGET_NODATA
         result[valid_mask] = (

@@ -1,17 +1,17 @@
 # coding=UTF-8
 
 from natcap.invest.ui import model, inputs
-from natcap.invest.hydropower import hydropower_water_yield
+from natcap.invest import annual_water_yield, MODEL_METADATA
 
 
-class HydropowerWaterYield(model.InVESTModel):
+class AnnualWaterYield(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(
             self,
-            label='Hydropower Water Yield',
-            target=hydropower_water_yield.execute,
-            validator=hydropower_water_yield.validate,
-            localdoc='reservoirhydropowerproduction.html')
+            label=MODEL_METADATA['annual_water_yield'].model_title,
+            target=annual_water_yield.execute,
+            validator=annual_water_yield.validate,
+            localdoc=MODEL_METADATA['annual_water_yield'].userguide)
 
         self.precipitation = inputs.File(
             args_key='precipitation_path',

@@ -20,13 +20,14 @@ from . import utils
 from . import spec_utils
 from .spec_utils import u
 from . import validation
+from . import MODEL_METADATA
 
 LOGGER = logging.getLogger(__name__)
 
 ARGS_SPEC = {
-    "model_name": "Scenario Generator: Proximity Based",
-    "module": __name__,
-    "userguide_html": "scenario_gen_proximity.html",
+    "model_name": MODEL_METADATA["scenario_generator_proximity"].model_title,
+    "pyname": MODEL_METADATA["scenario_generator_proximity"].pyname,
+    "userguide_html": MODEL_METADATA["scenario_generator_proximity"].userguide,
     "args": {
         "workspace_dir": spec_utils.WORKSPACE,
         "results_suffix": spec_utils.SUFFIX,
@@ -37,7 +38,7 @@ ARGS_SPEC = {
             "about": "Base map from which to generate scenarios.",
             "name": "base LULC map"
         },
-        "replacement_lucode": {
+        "replacment_lucode": {
             "type": "integer",
             "about": "The LULC code to which habitat will be converted.",
             "name": "replacement landcover code"
@@ -128,7 +129,7 @@ def execute(args):
         args['results_suffix'] (string): (optional) string to append to any
             output files
         args['base_lulc_path'] (string): path to the base landcover map
-        args['replacement_lucode'] (string or int): code to replace when
+        args['replacment_lucode'] (string or int): code to replace when
             converting pixels
         args['area_to_convert'] (string or float): max area (Ha) to convert
         args['focal_landcover_codes'] (string): a space separated string of
@@ -187,7 +188,7 @@ def execute(args):
     task_graph = taskgraph.TaskGraph(work_token_dir, n_workers)
 
     area_to_convert = float(args['area_to_convert'])
-    replacement_lucode = int(args['replacement_lucode'])
+    replacement_lucode = int(args['replacment_lucode'])
 
     # convert all the input strings to lists of ints
     convertible_type_list = numpy.array([

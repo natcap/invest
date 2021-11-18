@@ -14,8 +14,8 @@ import numpy
 import numpy.testing
 
 
-class ModelLoggingTests(unittest.TestCase):
-    """Tests for the InVEST model logging framework."""
+class UsageLoggingTests(unittest.TestCase):
+    """Tests for the InVEST usage logging framework."""
 
     def setUp(self):
         """Initalize a workspace."""
@@ -28,7 +28,7 @@ class ModelLoggingTests(unittest.TestCase):
     def test_bounding_boxes(self):
         """Usage logger test that we can extract bounding boxes."""
         from natcap.invest import utils
-        from natcap.invest.ui import usage
+        from natcap.invest import usage
 
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(32731)  # WGS84 / UTM zone 31s
@@ -58,14 +58,18 @@ class ModelLoggingTests(unittest.TestCase):
         model_args = {
             'raster': raster_path,
             'vector': vector_path,
-            'not_a_gis_input': 'foobar'
+            'not_a_gis_input': 'foobar',
+            'blank_raster_path': '',
+            'blank_vector_path': '',
         }
 
         args_spec = {
             'args': {
                 'raster': {'type': 'raster'},
                 'vector': {'type': 'vector'},
-                'not_a_gis_input': {'type': 'freestyle_string'}
+                'not_a_gis_input': {'type': 'freestyle_string'},
+                'blank_raster_path': {'type': 'raster'},
+                'blank_vector_path': {'type': 'vector'},
             }
         }
 
@@ -77,7 +81,7 @@ class ModelLoggingTests(unittest.TestCase):
         numpy.testing.assert_allclose(
             bb_inter, [-87.234108, -85.526151, -87.233424, -85.526205])
         numpy.testing.assert_allclose(
-            bb_union, [-87.237771, -85.526132, -87.23321 , -85.526491])
+            bb_union, [-87.237771, -85.526132, -87.23321, -85.526491])
 
         # Verify that no errors were raised in calculating the bounding boxes.
         self.assertTrue('ERROR' not in open(output_logfile).read(),

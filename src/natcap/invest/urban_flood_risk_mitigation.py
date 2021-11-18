@@ -17,13 +17,14 @@ from . import utils
 from . import spec_utils
 from .spec_utils import u
 from . import validation
+from . import MODEL_METADATA
 
 LOGGER = logging.getLogger(__name__)
 
 ARGS_SPEC = {
-    "model_name": "Urban Flood Risk Mitigation",
-    "module": __name__,
-    "userguide_html": "urban_flood_risk_mitigation.html",
+    "model_name": MODEL_METADATA["urban_flood_risk_mitigation"].model_title,
+    "pyname": MODEL_METADATA["urban_flood_risk_mitigation"].pyname,
+    "userguide_html": MODEL_METADATA["urban_flood_risk_mitigation"].userguide,
     "args_with_spatial_overlap": {
         "spatial_keys": ["aoi_watersheds_path", "lulc_path",
                          "built_infrastructure_vector_path",
@@ -581,7 +582,7 @@ def _calculate_damage_to_infrastructure_in_aoi(
             continue
 
         shapely_geometry = shapely.wkb.loads(
-            infrastructure_geometry.ExportToWkb())
+            bytes(infrastructure_geometry.ExportToWkb()))
 
         structures_index.insert(
             infrastructure_feature.GetFID(), shapely_geometry.bounds)
@@ -592,7 +593,8 @@ def _calculate_damage_to_infrastructure_in_aoi(
     aoi_damage = {}
     for aoi_feature in aoi_layer:
         aoi_geometry = aoi_feature.GetGeometryRef()
-        aoi_geometry_shapely = shapely.wkb.loads(aoi_geometry.ExportToWkb())
+        aoi_geometry_shapely = shapely.wkb.loads(
+            bytes(aoi_geometry.ExportToWkb()))
         aoi_geometry_prep = shapely.prepared.prep(aoi_geometry_shapely)
 
         total_damage = 0.0
@@ -601,7 +603,7 @@ def _calculate_damage_to_infrastructure_in_aoi(
             infrastructure_feature = infrastructure_layer.GetFeature(
                 infrastructure_fid)
             infrastructure_geometry = shapely.wkb.loads(
-                infrastructure_feature.GetGeometryRef().ExportToWkb())
+                bytes(infrastructure_feature.GetGeometryRef().ExportToWkb()))
             if aoi_geometry_prep.intersects(infrastructure_geometry):
                 intersection_geometry = aoi_geometry_shapely.intersection(
                     infrastructure_geometry)
@@ -771,8 +773,30 @@ def _lu_to_cn_op(
     # pixel and the rows are the curve number index for the landcover
     # type under that pixel (0..3 are CN_A..CN_D and 4 is "unknown")
     valid_lucodes = lucode_array[valid_mask].astype(int)
+
+    try:
+        cn_matrix = lucode_to_cn_table[valid_lucodes]
+    except IndexError:
+        # Find the code that raised the IndexError, and possibly
+        # any others that also would have.
+        lucodes = numpy.unique(valid_lucodes)
+        missing_codes = lucodes[lucodes >= lucode_to_cn_table.shape[0]]
+        raise ValueError(
+            f'The biophysical table is missing a row for lucode(s) '
+            f'{missing_codes.tolist()}')
+
+    # Even without an IndexError, still must guard against
+    # lucodes that can index into the sparse matrix but were
+    # missing from the biophysical table. They have rows of all 0.
+    if not cn_matrix.sum(1).all():
+        empty_rows = numpy.where(lucode_to_cn_table.sum(1) == 0)
+        missing_codes = numpy.intersect1d(valid_lucodes, empty_rows)
+        raise ValueError(
+            f'The biophysical table is missing a row for lucode(s) '
+            f'{missing_codes.tolist()}')
+
     per_pixel_cn_array = (
-        lucode_to_cn_table[valid_lucodes].toarray().reshape(
+        cn_matrix.toarray().reshape(
             (-1, 4))).transpose()
 
     # this is the soil type array with values ranging from 0..4 that will

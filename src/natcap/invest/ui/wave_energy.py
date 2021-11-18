@@ -1,17 +1,17 @@
 # coding=UTF-8
 
 from natcap.invest.ui import model, inputs
-import natcap.invest.wave_energy
+from natcap.invest import wave_energy, MODEL_METADATA
 
 
 class WaveEnergy(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(
             self,
-            label='Wave Energy',
-            target=natcap.invest.wave_energy.execute,
-            validator=natcap.invest.wave_energy.validate,
-            localdoc='wave_energy.html')
+            label=MODEL_METADATA['wave_energy'].model_title,
+            target=wave_energy.execute,
+            validator=wave_energy.validate,
+            localdoc=MODEL_METADATA['wave_energy'].userguide)
 
         self.wave_base_data = inputs.Folder(
             args_key='wave_base_data_path',

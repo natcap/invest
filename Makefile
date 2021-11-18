@@ -2,15 +2,15 @@
 DATA_DIR := data
 GIT_SAMPLE_DATA_REPO        := https://bitbucket.org/natcap/invest-sample-data.git
 GIT_SAMPLE_DATA_REPO_PATH   := $(DATA_DIR)/invest-sample-data
-GIT_SAMPLE_DATA_REPO_REV    := 0394386670f1e4f52cbacc246a40ec88e3349929
+GIT_SAMPLE_DATA_REPO_REV    := c07883c44e00d4c977849e551891eb27e1ba3b1e
 
 GIT_TEST_DATA_REPO          := https://bitbucket.org/natcap/invest-test-data.git
 GIT_TEST_DATA_REPO_PATH     := $(DATA_DIR)/invest-test-data
-GIT_TEST_DATA_REPO_REV      := 912a0732340d706a17968aeb04dc525b139904f2
+GIT_TEST_DATA_REPO_REV      := 8361823d5927f712a1aec2ee61620f92ff4f49b3
 
-GIT_UG_REPO                  := https://github.com/natcap/invest.users-guide
-GIT_UG_REPO_PATH             := doc/users-guide
-GIT_UG_REPO_REV              := c53f85cec40c830ddd5b18a61e97c48607dd0ef9
+GIT_UG_REPO                 := https://github.com/natcap/invest.users-guide
+GIT_UG_REPO_PATH            := doc/users-guide
+GIT_UG_REPO_REV             := 7d0128ed9341acbcc73daef254be171a6cfba844
 
 ENV = "./env"
 ifeq ($(OS),Windows_NT)
@@ -329,7 +329,7 @@ SAMPLEDATA_SINGLE_ARCHIVE := dist/InVEST_$(VERSION)_sample_data.zip
 sampledata_single: $(SAMPLEDATA_SINGLE_ARCHIVE)
 
 $(SAMPLEDATA_SINGLE_ARCHIVE): $(GIT_SAMPLE_DATA_REPO_PATH) dist
-	$(BASHLIKE_SHELL_COMMAND) "cd $(GIT_SAMPLE_DATA_REPO_PATH) && $(ZIP) -r ../../$(SAMPLEDATA_SINGLE_ARCHIVE) ./* -x .svn -x .git -x *.json"
+	$(BASHLIKE_SHELL_COMMAND) "cd $(GIT_SAMPLE_DATA_REPO_PATH) && $(ZIP) -r ../../$(SAMPLEDATA_SINGLE_ARCHIVE) ./* -x .svn -x .git"
 
 
 # Installers for each platform.
@@ -393,8 +393,8 @@ signcode:
 
 signcode_windows:
 	$(GSUTIL) cp 'gs://stanford_cert/$(P12_FILE)' '$(BUILD_DIR)/$(P12_FILE)'
-	powershell.exe "& '$(SIGNTOOL)' sign /f '$(BUILD_DIR)\$(P12_FILE)' /p '$(CERT_KEY_PASS)' '$(BIN_TO_SIGN)'"
-	powershell.exe "& '$(SIGNTOOL)' timestamp -t http://timestamp.sectigo.com '$(BIN_TO_SIGN)'"
+	powershell.exe "& '$(SIGNTOOL)' sign /fd SHA256 /f '$(BUILD_DIR)\$(P12_FILE)' /p '$(CERT_KEY_PASS)' '$(BIN_TO_SIGN)'"
+	powershell.exe "& '$(SIGNTOOL)' timestamp /tr http://timestamp.sectigo.com /td SHA256 '$(BIN_TO_SIGN)'"
 	-$(RM) $(BUILD_DIR)/$(P12_FILE)
 	@echo "Installer was signed with signtool"
 
