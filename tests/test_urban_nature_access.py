@@ -142,6 +142,26 @@ class UNATests(unittest.TestCase):
             n_1_pixels, expected_n_1_pixels, rtol=1e-5)
         self.assertEqual(kernel_info['raster_size'], expected_shape)
 
+    def test_density_decay(self):
+        """UNA: Test density decay."""
+        from natcap.invest import urban_nature_access
+
+        expected_distance = 200
+        kernel_filepath = os.path.join(self.workspace_dir, 'kernel.tif')
+
+        urban_nature_access.density_decay_kernel_raster(
+            expected_distance, kernel_filepath)
+
+        expected_shape = (expected_distance*2+1,) * 2
+        kernel_info = pygeoprocessing.get_raster_info(kernel_filepath)
+        kernel_array = pygeoprocessing.raster_to_numpy_array(kernel_filepath)
+        self.assertEqual(kernel_info['raster_size'], expected_shape)
+        numpy.testing.assert_allclose(
+            47123.867,  # obtained from manual inspection
+            kernel_array.sum())
+        self.assertEqual(0.75, kernel_array.max())
+        self.assertEqual(0, kernel_array.min())
+
     def test_model(self):
         """UNA: Run through the model."""
         from natcap.invest import urban_nature_access

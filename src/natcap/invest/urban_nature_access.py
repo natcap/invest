@@ -448,6 +448,77 @@ def instantaneous_decay_kernel_raster(expected_distance, kernel_filepath):
     kernel_raster = None
 
 
+def density_decay_kernel_raster(expected_distance, kernel_filepath):
+    """Create a raster-based density decay kernel.
+
+    Args:
+        expected_distance (int or float): The distance (in pixels) after which
+            the kernel becomes 0.
+        kernel_filepath (string): The string path on disk to where this kernel
+            should be stored.
+
+    Returns:
+        ``None``
+    """
+    pixel_radius = math.ceil(expected_distance)
+    kernel_size = pixel_radius * 2 + 1  # allow for a center pixel
+    driver = gdal.GetDriverByName('GTiff')
+    kernel_dataset = driver.Create(
+        kernel_filepath.encode('utf-8'), kernel_size, kernel_size, 1,
+        gdal.GDT_Float32, options=[
+            'BIGTIFF=IF_SAFER', 'TILED=YES', 'BLOCKXSIZE=256',
+            'BLOCKYSIZE=256'])
+
+    # Make some kind of geotransform, it doesn't matter what but
+    # will make GIS libraries behave better if it's all defined
+    kernel_dataset.SetGeoTransform([0, 1, 0, 0, 0, -1])
+    srs = osr.SpatialReference()
+    srs.SetWellKnownGeogCS('WGS84')
+    kernel_dataset.SetProjection(srs.ExportToWkt())
+
+    kernel_band = kernel_dataset.GetRasterBand(1)
+    kernel_nodata = float(numpy.finfo(numpy.float32).min)
+    kernel_band.SetNoDataValue(kernel_nodata)
+
+    kernel_band = None
+    kernel_dataset = None
+
+    kernel_raster = gdal.OpenEx(kernel_filepath, gdal.GA_Update)
+    kernel_band = kernel_raster.GetRasterBand(1)
+    band_x_size = kernel_band.XSize
+    band_y_size = kernel_band.YSize
+    for block_data in pygeoprocessing.iterblocks(
+            (kernel_filepath, 1), offset_only=True):
+        array_xmin = block_data['xoff'] - pixel_radius
+        array_xmax = min(
+            array_xmin + block_data['win_xsize'],
+            band_x_size - pixel_radius)
+        array_ymin = block_data['yoff'] - pixel_radius
+        array_ymax = min(
+            array_ymin + block_data['win_ysize'],
+            band_y_size - pixel_radius)
+
+        pixel_dist_from_center = numpy.hypot(
+            *numpy.mgrid[
+                array_ymin:array_ymax,
+                array_xmin:array_xmax])
+
+        density = numpy.zeros(
+            pixel_dist_from_center.shape, dtype=numpy.float32)
+        pixels_in_radius = (pixel_dist_from_center <= expected_distance)
+        density[pixels_in_radius] = (
+            0.75 * (1 - (pixel_dist_from_center[
+                pixels_in_radius] / expected_distance) ** 2))
+
+        kernel_band.WriteArray(
+            density,
+            yoff=block_data['yoff'],
+            xoff=block_data['xoff'])
+
+    kernel_band = None
+    kernel_raster = None
+
+
 def validate(args, limit_to=None):
     return validation.validate(
         args, ARGS_SPEC['args'], ARGS_SPEC['args_with_spatial_overlap'])
