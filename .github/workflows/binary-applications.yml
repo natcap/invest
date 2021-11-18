@@ -197,7 +197,7 @@ jobs:
 
             - name: Sign DMG
               if: github.event_name != 'pull_request'
-              shell: bash -l -x {0}
+              shell: bash -l {0}
               env:
                 CERT_FILE: 2025-01-16-Expiry-AppStore-App.p12
                 CERT_PASS: ${{ secrets.MACOS_CODESIGN_CERT_PASS }}

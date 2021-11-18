@@ -359,7 +359,7 @@ build/vcredist_x86.exe: | build
 KEYCHAIN_NAME := codesign_keychain
 codesign_mac:
 	# download the p12 certificate file from google cloud
-	$(GSUTIL) cp 'gs://stanford_cert/$(CERT_FILE)' '$(BUILD_DIR)/$(CERT_FILE)'
+	$(GSUTIL) cp gs://stanford_cert/$(CERT_FILE) $(BUILD_DIR)/$(CERT_FILE)
 	# create a new keychain (so that we can know what the password is)
 	security create-keychain -p $(KEYCHAIN_PASS) $(KEYCHAIN_NAME)
 	# add the keychain to the search list so it can be found
@@ -369,16 +369,16 @@ codesign_mac:
 	# add the certificate to the keychain
 	# -T option says that the codesign executable can access the keychain
 	# for some reason this alone is not enough, also need the following step
-	security import $(BUILD_DIR)/$(CERT_FILE) -k "$(KEYCHAIN_NAME)" -P "$(CERT_PASS)" -T /usr/bin/codesign
+	security import $(BUILD_DIR)/$(CERT_FILE) -k $(KEYCHAIN_NAME) -P $(CERT_PASS) -T /usr/bin/codesign
 	# this is essential to avoid the UI password prompt
-	security set-key-partition-list -S apple-tool:,apple: -s -k '$(KEYCHAIN_PASS)' '$(KEYCHAIN_NAME)'
+	security set-key-partition-list -S apple-tool:,apple: -s -k $(KEYCHAIN_PASS) $(KEYCHAIN_NAME)
 	# sign the dmg using certificate that's looked up by unique identifier 'Stanford'
 	codesign --timestamp --verbose --sign Stanford $(MAC_DISK_IMAGE_FILE)
 	# relock the keychain (not sure if this is important?)
 	security lock-keychain $(KEYCHAIN_NAME)
 
 codesign_windows:
-	$(GSUTIL) cp 'gs://stanford_cert/$(CERT_FILE)' '$(BUILD_DIR)/$(CERT_FILE)'
+	$(GSUTIL) cp gs://stanford_cert/$(CERT_FILE) $(BUILD_DIR)/$(CERT_FILE)
 	powershell.exe "& '$(SIGNTOOL)' sign /fd SHA256 /f '$(BUILD_DIR)\$(CERT_FILE)' /p '$(CERT_PASS)' '$(BIN_TO_SIGN)'"
 	powershell.exe "& '$(SIGNTOOL)' timestamp /tr http://timestamp.sectigo.com /td SHA256 '$(BIN_TO_SIGN)'"
 	-$(RM) $(BUILD_DIR)/$(CERT_FILE)
