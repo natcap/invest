@@ -268,7 +268,7 @@ def execute(args):
         tmp_dir, 'gaussian_kernel%s.tif' % file_suffix)
     make_gaussian_kernel_task = task_graph.add_task(
         func=utils.gaussian_decay_kernel_raster,
-        args=(SIGMA, gaussian_kernel_path),
+        args=(SIGMA, gaussian_kernel_path, 5.0),
         target_path_list=[gaussian_kernel_path],
         task_name='gaussian_kernel')
 

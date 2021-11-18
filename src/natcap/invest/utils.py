@@ -420,14 +420,17 @@ def exponential_decay_kernel_raster(expected_distance, kernel_filepath):
     kernel_dataset = None
 
 
-def gaussian_decay_kernel_raster(sigma, kernel_filepath):
+def gaussian_decay_kernel_raster(
+        sigma, kernel_filepath, n_std_dev=3.0):
     """Create a raster-based gaussian decay kernel.
 
     The raster will be a tiled GeoTIFF, with 256x256 memory blocks.
 
-    Note that the dimensions of the kernel raster will be 3 times the sigma
-    provided in order to cover 99% of the samples under the gaussian
-    distribution.
+    While the ``sigma`` parameter represents the width of a standard deviation
+    in pixels, the ``n_std_dev`` parameter defines how many standard deviations
+    should be included in the resulting kernel.  The resulting kernel raster
+    will be square in shape, with a width of ``(sigma * n_std_dev * 2) + 1``
+    pixels.
 
     Args:
         sigma (int or float): The distance (in pixels) of the standard
@@ -435,13 +438,16 @@ def gaussian_decay_kernel_raster(sigma, kernel_filepath):
         kernel_filepath (string): The path to the file on disk where this
             kernel should be stored. If a file exists at this path, it will be
             overwritten.
+        sigma_multiplier (int or float): The number of times sigma should be
+            multiplied in order to get the pixel radius of the resulting
+            kernel.
 
     Returns:
         ``None``
     """
     # going 3.0 times out from the sigma gives you over 99% of area under
     # the guassian curve
-    max_distance = sigma * 3.0
+    max_distance = sigma * n_std_dev
     kernel_size = int(numpy.round(max_distance * 2 + 1))
 
     driver = gdal.GetDriverByName('GTiff')
