@@ -1,5 +1,6 @@
 # coding=UTF-8
 """Tests for the Urban Nature Access Model."""
+import math
 import os
 import random
 import shutil
@@ -126,6 +127,20 @@ class UNATests(unittest.TestCase):
 
         urban_nature_access.instantaneous_decay_kernel_raster(
             expected_distance, kernel_filepath)
+
+        expected_shape = (expected_distance*2+1, expected_distance*2+1)
+        expected_n_1_pixels = math.pi*expected_distance**2
+
+        kernel_info = pygeoprocessing.get_raster_info(kernel_filepath)
+        n_1_pixels = 0
+        for _, block in pygeoprocessing.iterblocks((kernel_filepath, 1)):
+            n_1_pixels += numpy.count_nonzero(block)
+
+        # 210828417 is only a slight overestimate from the area of the circle
+        # at this radius: math.pi*expected_distance**2 = 210828714.13315654
+        numpy.testing.assert_allclose(
+            n_1_pixels, expected_n_1_pixels, rtol=1e-5)
+        self.assertEqual(kernel_info['raster_size'], expected_shape)
 
     def test_model(self):
         """UNA: Run through the model."""

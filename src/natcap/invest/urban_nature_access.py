@@ -415,16 +415,37 @@ def instantaneous_decay_kernel_raster(expected_distance, kernel_filepath):
     kernel_nodata = 255  # byte nodata
     kernel_band.SetNoDataValue(kernel_nodata)
 
-    pixel_dist_from_center = numpy.hypot(
-        *numpy.mgrid[
-            -pixel_radius:pixel_radius+1,
-            -pixel_radius:pixel_radius+1])
-    search_kernel = numpy.array(
-        pixel_dist_from_center <= expected_distance, dtype=numpy.uint8)
-
-    kernel_band.WriteArray(search_kernel)
     kernel_band = None
     kernel_dataset = None
+
+    kernel_raster = gdal.OpenEx(kernel_filepath, gdal.GA_Update)
+    kernel_band = kernel_raster.GetRasterBand(1)
+    band_x_size = kernel_band.XSize
+    band_y_size = kernel_band.YSize
+    for block_data in pygeoprocessing.iterblocks(
+            (kernel_filepath, 1), offset_only=True):
+        array_xmin = block_data['xoff'] - pixel_radius
+        array_xmax = min(
+            array_xmin + block_data['win_xsize'],
+            band_x_size - pixel_radius)
+        array_ymin = block_data['yoff'] - pixel_radius
+        array_ymax = min(
+            array_ymin + block_data['win_ysize'],
+            band_y_size - pixel_radius)
+
+        pixel_dist_from_center = numpy.hypot(
+            *numpy.mgrid[
+                array_ymin:array_ymax,
+                array_xmin:array_xmax])
+        search_kernel = numpy.array(
+            pixel_dist_from_center <= expected_distance, dtype=numpy.uint8)
+        kernel_band.WriteArray(
+            search_kernel,
+            yoff=block_data['yoff'],
+            xoff=block_data['xoff'])
+
+    kernel_band = None
+    kernel_raster = None
 
 
 def validate(args, limit_to=None):
