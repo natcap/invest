@@ -270,7 +270,7 @@ ARGS_SPEC = {
                 },
                 "cc": {
                     "type": "number",
-                    "units": u.currency/(u.count * u.kilowatt),
+                    "units": u.currency/u.kilowatt,
                     "about": "Capital cost per device installed."
                 },
                 "cml": {
