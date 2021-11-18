@@ -1,4 +1,5 @@
 import logging
+import math
 import os
 import shutil
 import tempfile
@@ -376,6 +377,54 @@ def _resample_population_raster(
         target_population_raster_path, gdal.GDT_Float32, FLOAT32_NODATA)
 
     shutil.rmtree(tmp_working_dir, ignore_errors=True)
+
+
+def instantaneous_decay_kernel_raster(expected_distance, kernel_filepath):
+    """Create a raster-based, discontinuous decay kernel.
+
+    This kernel has a value of ``1`` for all pixels within
+    ``expected_distance`` from the center of the kernel.  All values outside of
+    this distance are ``0``.
+
+    Args:
+        expected_distance (int or float): The distance (in pixels) after which
+            the kernel becomes 0.
+        kernel_filepath (string): The string path on disk to where this kernel
+            should be stored.
+
+    Returns:
+        ``None``
+    """
+    pixel_radius = math.ceil(expected_distance)
+    kernel_size = pixel_radius * 2 + 1  # allow for a center pixel
+    driver = gdal.GetDriverByName('GTiff')
+    kernel_dataset = driver.Create(
+        kernel_filepath.encode('utf-8'), kernel_size, kernel_size, 1,
+        gdal.GDT_Byte, options=[
+            'BIGTIFF=IF_SAFER', 'TILED=YES', 'BLOCKXSIZE=256',
+            'BLOCKYSIZE=256'])
+
+    # Make some kind of geotransform, it doesn't matter what but
+    # will make GIS libraries behave better if it's all defined
+    kernel_dataset.SetGeoTransform([0, 1, 0, 0, 0, -1])
+    srs = osr.SpatialReference()
+    srs.SetWellKnownGeogCS('WGS84')
+    kernel_dataset.SetProjection(srs.ExportToWkt())
+
+    kernel_band = kernel_dataset.GetRasterBand(1)
+    kernel_nodata = 255  # byte nodata
+    kernel_band.SetNoDataValue(kernel_nodata)
+
+    pixel_dist_from_center = numpy.hypot(
+        *numpy.mgrid[
+            -pixel_radius:pixel_radius+1,
+            -pixel_radius:pixel_radius+1])
+    search_kernel = numpy.array(
+        pixel_dist_from_center <= expected_distance, dtype=numpy.uint8)
+
+    kernel_band.WriteArray(search_kernel)
+    kernel_band = None
+    kernel_dataset = None
 
 
 def validate(args, limit_to=None):

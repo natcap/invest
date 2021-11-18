@@ -86,6 +86,47 @@ class UNATests(unittest.TestCase):
                     population_array.sum(), resampled_population_array.sum(),
                     rtol=1e-3)
 
+    def test_instantaneous_decay_simple(self):
+        """UNA: Test instantaneous decay on a simple case."""
+        from natcap.invest import urban_nature_access
+
+        expected_distance = 5
+        kernel_filepath = os.path.join(self.workspace_dir, 'kernel.tif')
+
+        urban_nature_access.instantaneous_decay_kernel_raster(
+            expected_distance, kernel_filepath)
+
+        expected_array = numpy.array([
+            [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+            [0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0],
+            [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+            [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+            [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+            [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+            [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+            [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+            [0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0],
+            [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0]], dtype=numpy.uint8)
+
+        extracted_kernel_array = pygeoprocessing.raster_to_numpy_array(
+            kernel_filepath)
+        numpy.testing.assert_array_equal(
+            expected_array, extracted_kernel_array)
+
+    def test_instantaneous_decay_large(self):
+        """UNA: Test instantaneous decay on a very large pixel radius."""
+        from natcap.invest import urban_nature_access
+
+        # kernel with > 268 million pixels.  This is big enough to force my
+        # laptop to noticeably hang while swapping memory on an all in-memory
+        # implementation.
+        expected_distance = 2**13
+        kernel_filepath = os.path.join(self.workspace_dir, 'kernel.tif')
+
+        urban_nature_access.instantaneous_decay_kernel_raster(
+            expected_distance, kernel_filepath)
+
     def test_model(self):
         """UNA: Run through the model."""
         from natcap.invest import urban_nature_access
