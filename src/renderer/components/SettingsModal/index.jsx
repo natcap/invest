@@ -1,12 +1,17 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 
+import Accordion from 'react-bootstrap/Accordion';
 import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
 import Form from 'react-bootstrap/Form';
 import Button from 'react-bootstrap/Button';
 import Modal from 'react-bootstrap/Modal';
-import { MdSettings, MdClose } from 'react-icons/md';
+import {
+  MdSettings,
+  MdClose,
+} from 'react-icons/md';
+import { BsChevronExpand } from 'react-icons/bs';
 
 import { getDefaultSettings } from './SettingsStorage';
 
@@ -92,8 +97,8 @@ export default class SettingsModal extends React.Component {
           </Modal.Header>
           <Modal.Body>
             <Form.Group as={Row}>
-              <Form.Label column sm="8" htmlFor="logging-select">Logging threshold</Form.Label>
-              <Col sm="4">
+              <Form.Label column sm="7" htmlFor="logging-select">Logging threshold</Form.Label>
+              <Col sm="5">
                 <Form.Control
                   id="logging-select"
                   as="select"
@@ -111,18 +116,12 @@ export default class SettingsModal extends React.Component {
               (this.state.nWorkersOptions)
                 ? (
                   <Form.Group as={Row}>
-                    <Form.Label column sm="9" htmlFor="nworkers-select">
-                      Taskgraph n_workers parameter
-                      <ul>
-                        <li>-1: (recommended) synchronous mode</li>
-                        <li>0: single process with threaded task management</li>
-                        <li>
-                          n CPUs: depending on the InVEST model, tasks may execute
-                          in parallel using this many processes.
-                        </li>
-                      </ul>
-                    </Form.Label>
-                    <Col sm="3">
+                    <Col sm="7">
+                      <Form.Label htmlFor="nworkers-select">
+                        Taskgraph n_workers parameter
+                      </Form.Label>
+                    </Col>
+                    <Col sm="5">
                       <Form.Control
                         id="nworkers-select"
                         as="select"
@@ -136,17 +135,43 @@ export default class SettingsModal extends React.Component {
                         )}
                       </Form.Control>
                     </Col>
+                    <Accordion>
+                      <Accordion.Toggle
+                        as={Button}
+                        variant="secondary-outline"
+                        eventKey="0"
+                        className="pt-0"
+                      >
+                        <BsChevronExpand className="mx-1" />
+                        <span className="small"><u>more info</u></span>
+                      </Accordion.Toggle>
+                      <Accordion.Collapse eventKey="0">
+                        <ul>
+                          <li>-1: (recommended) synchronous mode</li>
+                          <li>0: single process with threaded task management</li>
+                          <li>
+                            n CPUs: depending on the InVEST model, tasks may execute
+                            in parallel using this many processes.
+                          </li>
+                        </ul>
+                      </Accordion.Collapse>
+                    </Accordion>
                   </Form.Group>
                 )
                 : <div />
             }
-            <Button
-              variant="secondary"
-              onClick={this.handleReset}
-              type="button"
-            >
-              Reset to Defaults
-            </Button>
+            <Row className="justify-content-end">
+              <Col sm="5">
+                <Button
+                  variant="secondary"
+                  onClick={this.handleReset}
+                  type="button"
+                  className="w-100"
+                >
+                  Reset to Defaults
+                </Button>
+              </Col>
+            </Row>
             <hr />
             <Button
               variant="primary"
