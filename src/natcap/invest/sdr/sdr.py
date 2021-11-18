@@ -69,7 +69,7 @@ ARGS_SPEC = {
             "projected": True,
             "about": (
                 f"{spec_utils.LULC['about']} All values in this raster must "
-                "have corresponding etries in the Biophysical Table.")
+                "have corresponding entries in the Biophysical Table.")
         },
         "watersheds_path": {
             "type": "vector",
