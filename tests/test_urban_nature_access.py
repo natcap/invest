@@ -175,6 +175,8 @@ class UNATests(unittest.TestCase):
             'lulc_raster_path': os.path.join(self.workspace_dir, 'lulc.tif'),
             'lulc_attribute_table': os.path.join(
                 self.workspace_dir, 'lulc_attributes.csv'),
+            'decay_function': 'gaussian',
+            'search_radius': 100.0,  # meters
         }
 
         random.seed(-1)  # for our random number generation

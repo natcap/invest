@@ -123,6 +123,7 @@ _INTERMEDIATE_BASE_FILES = {
     'aligned_population': 'aligned_population.tif',
     'aligned_lulc': 'aligned_lulc.tif',
     'greenspace_area': 'greenspace_area.tif',
+    'greenspace_supply': 'greenspace_supply.tif',
 }
 
 
@@ -238,9 +239,27 @@ def execute(args):
             },
         },
         target_path_list=[file_registry['greenspace_area']],
-        task_name='Identify greenspace pixels',
+        task_name='Identify the area of greenspace in pixels',
         dependent_task_list=[lulc_alignment_task]
     )
+
+    floating_catchment_area_task = graph.add_task(
+        _two_step_floating_catchment_area,
+        kwargs={
+            'greenspace_area_raster_path': file_registry['greenspace_area'],
+            'population_raster_path': file_registry['aligned_population'],
+            'target_greenspace_supply_raster_path': (
+                file_registry['greenspace_supply']),
+            'search_radius_m': float(args['search_radius']),
+            'kernel_type': str(args['decay_function']),
+            'working_dir': intermediate_dir,
+        },
+        target_path_list=[''],
+        task_name='Two-step floating catchment area',
+        dependent_task_list=[
+            greenspace_reclassification_task,
+            population_alignment_task,
+        ])
 
     graph.close()
     graph.join()
@@ -544,6 +563,102 @@ def density_decay_kernel_raster(expected_distance, kernel_filepath):
 
     kernel_band = None
     kernel_raster = None
+
+
+def _two_step_floating_catchment_area(
+        greenspace_area_raster_path, population_raster_path,
+        target_greenspace_supply_raster_path, search_radius_m, kernel_type,
+        working_dir):
+    LOGGER.info("Starting 2-Step Floating Catchment Area")
+    # greenspace_raster - float32, greenspace area per pixel
+
+    # sum within the search distance the ratio of:
+    #  * numerator: convolved greenspace (kernel=selected by user)
+    #  * denominator: convolved population (kernel=selected by user)
+
+    # All kernel creation types have the same function signature
+    kernel_types = {
+        'dichotomy': instantaneous_decay_kernel_raster,
+        'exponential': utils.exponential_decay_kernel_raster,
+        'gaussian': utils.gaussian_decay_kernel_raster,
+        'density': density_decay_kernel_raster,
+    }
+    try:
+        kernel_function = kernel_types[kernel_type]
+    except KeyError:
+        raise ValueError(
+            f'Kernel type "{kernel_type}" is not recognized. '
+            f"Must be one of {', '.join(kernel_types.keys())}")
+
+    tmp_working_dir = tempfile.mkdtemp(
+        dir=working_dir, prefix='UNA-2SFCA')
+
+    # convert the search radius (which is in m) to pixels based on the pixel
+    # size of the greenspace area raster.
+    greenspace_raster_info = pygeoprocessing.get_raster_info(
+        greenspace_area_raster_path)
+    search_radius_in_pixels = (
+        search_radius_m / greenspace_raster_info['pixel_size'][0])
+    kernel_filepath = os.path.join(tmp_working_dir, 'kernel.tif')
+    kernel_function(search_radius_in_pixels, kernel_filepath)
+
+    convolved_population_path = os.path.join(
+        tmp_working_dir, 'convolved_population.tif')
+    LOGGER.debug(
+        "2SFCA - convolving %s to %s with kernel %s",
+        greenspace_area_raster_path, convolved_population_path,
+        kernel_filepath)
+    pygeoprocessing.convolve_2d(
+        signal_path_band=(greenspace_area_raster_path, 1),
+        kernel_path_band=(kernel_filepath, 1),
+        target_path=convolved_population_path,
+        working_dir=tmp_working_dir)
+
+    # Calculate R_j: the greenspace/population ratio
+    # Requires the population raster to have already been convolved
+    greenspace_nodata = pygeoprocessing.get_raster_info(
+        greenspace_area_raster_path)['nodata'][0]
+    population_nodata = pygeoprocessing.get_raster_info(
+        convolved_population_path)['nodata'][0]
+    def _greenspace_population_ratio(greenspace_area, convolved_population):
+        out_array = numpy.full(
+            greenspace_area.shape, FLOAT32_NODATA, dtype=numpy.float32)
+
+        valid_pixels = numpy.ones(greenspace_area.shape, dtype=bool)
+        if greenspace_nodata is not None:
+            valid_pixels &= ~numpy.isclose(greenspace_area, greenspace_nodata)
+
+        if population_nodata is not None:
+            valid_pixels &= ~numpy.isclose(
+                convolved_population, population_nodata)
+
+        out_array[valid_pixels] = (
+            greenspace_area[valid_pixels] / convolved_population[valid_pixels])
+        return out_array
+
+    greenspace_population_ratio_path = os.path.join(
+        tmp_working_dir, 'greenspace_population_ratio.tif')
+    LOGGER.debug(
+        "2SFCA - Calculating the greenspace/population ratio to %s",
+        greenspace_population_ratio_path)
+    pygeoprocessing.raster_calculator(
+        [(greenspace_area_raster_path, 1), (convolved_population_path, 1)],
+        _greenspace_population_ratio, greenspace_population_ratio_path,
+        gdal.GDT_Float32, FLOAT32_NODATA)
+
+    # Calculate A_i: the greenspace supplied to each pixel
+    # This is the greenspace population ratio convolved by the chosen kernel
+    LOGGER.debug(
+        "2SFCA - Convolving the greenspace/population ratio to %s",
+        target_greenspace_supply_raster_path)
+
+    pygeoprocessing.convolve_2d(
+        signal_path_band=(greenspace_population_ratio_path, 1),
+        kernel_path_band=(kernel_filepath, 1),
+        target_path=target_greenspace_supply_raster_path,
+        working_dir=tmp_working_dir)
+
+    shutil.rmtree(tmp_working_dir, ignore_errors=True)
 
 
 def validate(args, limit_to=None):
