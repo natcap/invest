@@ -470,3 +470,11 @@ input[type=text]::placeholder {
 	height: 80vh;
 	overflow-y: auto;
 }
+
+/* Settings Modal */
+.settings-modal .modal-dialog {
+	/*Hardcoding prevents dynamic resizing, which is convenient.
+	And it is okay because we set the minimum electron window width
+	at 800px when we create it.*/
+	max-width: 600px;
+}
