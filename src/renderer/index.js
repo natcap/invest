@@ -20,7 +20,3 @@ async function render() {
 }
 
 render();
-// ipcRenderer.invoke(ipcMainChannels.IS_FIRST_RUN)
-//   .then((response) => {
-//     render(response);
-//   });
