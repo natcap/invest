@@ -106,8 +106,6 @@ ARGS_SPEC = {
             'required': False,
             'options': [
                 'dichotomy',
-                # "exponential" is more consistent with other InVEST models'
-                # terminology.  "Power function" is used in the design doc.
                 'exponential',
                 'gaussian',
                 'density',
@@ -158,6 +156,9 @@ def execute(args):
             number indicating the required greenspace, in m² per capita.
         args['search_radius'] (number): (required) A positive, nonzero number
             indicating the maximum distance that people travel for recreation.
+        args['kernel_type'] (string): (optional) The selected kernel type.
+            Must be one of the keys in ``KERNEL_TYPES``.  If not provided, the
+            ``'dichotomy'`` kernel will be used.
 
     Returns:
         ``None``
@@ -183,6 +184,15 @@ def execute(args):
         # TypeError when n_workers is None.
         n_workers = -1  # Synchronous execution
     graph = taskgraph.TaskGraph(work_token_dir, n_workers)
+
+    if 'kernel_type' not in args:
+        kernel_type = 'dichotomy'
+    elif args['kernel_type'] not in kernel_types:
+        raise ValueError(
+            f'Kernel type "{kernel_type}" is not recognized. '
+            f"Must be one of {', '.join(kernel_types.keys())}")
+    else:
+        kernel_type = args['kernel_type']
 
     # Align the population raster to the LULC.
     lulc_raster_info = pygeoprocessing.get_raster_info(
@@ -251,7 +261,7 @@ def execute(args):
             'target_greenspace_supply_raster_path': (
                 file_registry['greenspace_supply']),
             'search_radius_m': float(args['search_radius']),
-            'kernel_type': str(args['decay_function']),
+            'kernel_type': kernel_type,
             'working_dir': intermediate_dir,
         },
         target_path_list=[''],
@@ -570,25 +580,6 @@ def _two_step_floating_catchment_area(
         target_greenspace_supply_raster_path, search_radius_m, kernel_type,
         working_dir):
     LOGGER.info("Starting 2-Step Floating Catchment Area")
-    # greenspace_raster - float32, greenspace area per pixel
-
-    # sum within the search distance the ratio of:
-    #  * numerator: convolved greenspace (kernel=selected by user)
-    #  * denominator: convolved population (kernel=selected by user)
-
-    # All kernel creation types have the same function signature
-    kernel_types = {
-        'dichotomy': instantaneous_decay_kernel_raster,
-        'exponential': utils.exponential_decay_kernel_raster,
-        'gaussian': utils.gaussian_decay_kernel_raster,
-        'density': density_decay_kernel_raster,
-    }
-    try:
-        kernel_function = kernel_types[kernel_type]
-    except KeyError:
-        raise ValueError(
-            f'Kernel type "{kernel_type}" is not recognized. '
-            f"Must be one of {', '.join(kernel_types.keys())}")
 
     tmp_working_dir = tempfile.mkdtemp(
         dir=working_dir, prefix='UNA-2SFCA')
@@ -600,7 +591,22 @@ def _two_step_floating_catchment_area(
     search_radius_in_pixels = (
         search_radius_m / greenspace_raster_info['pixel_size'][0])
     kernel_filepath = os.path.join(tmp_working_dir, 'kernel.tif')
-    kernel_function(search_radius_in_pixels, kernel_filepath)
+
+    kernel_types = {
+        'dichotomy': instantaneous_decay_kernel_raster,
+        # "exponential" is more consistent with other InVEST models'
+        # terminology.  "Power function" is used in the design doc.
+        'exponential': utils.exponential_decay_kernel_raster,
+        'gaussian': utils.gaussian_decay_kernel_raster,
+        'density': density_decay_kernel_raster,
+    }
+    # Since we have these keys defined in two places, I want to be super sure
+    # that the labels match.
+    assert sorted(kernel_types.keys()) == (
+        sorted(ARGS_SPEC['args']['decay_function']['options']))
+
+    # All kernel creation types have the same function signature
+    kernel_types[kernel_type](search_radius_in_pixels, kernel_filepath)
 
     convolved_population_path = os.path.join(
         tmp_working_dir, 'convolved_population.tif')
