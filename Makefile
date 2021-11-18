@@ -379,10 +379,18 @@ codesign_mac:
 	# relock the keychain (not sure if this is important?)
 	security lock-keychain $(KEYCHAIN_NAME)
 
+P12_FILE := Stanford-natcap-code-signing-cert-expires-2024-01-26.p12
+signcode_windows:
+	$(GSUTIL) cp 'gs://stanford_cert/$(P12_FILE)' '$(BUILD_DIR)/$(P12_FILE)'
+	powershell.exe "& '$(SIGNTOOL)' sign /fd SHA256 /f '$(BUILD_DIR)\$(P12_FILE)' /p '$(CERT_KEY_PASS)' '$(BIN_TO_SIGN)'"
+	powershell.exe "& '$(SIGNTOOL)' timestamp /tr http://timestamp.sectigo.com /td SHA256 '$(BIN_TO_SIGN)'"
+	-$(RM) $(BUILD_DIR)/$(P12_FILE)
+	security lock-keychain $(KEYCHAIN_NAME)
+
 codesign_windows:
 	$(GSUTIL) cp 'gs://stanford_cert/$(CERT_FILE)' '$(BUILD_DIR)/$(CERT_FILE)'
-	powershell.exe "& '$(SIGNTOOL)' sign /f '$(BUILD_DIR)\$(CERT_FILE)' /fd SHA256 /p \"$(CERT_PASS)\" /u 1.2.840.113635.100.4.9 '$(BIN_TO_SIGN)'"
-	powershell.exe "& '$(SIGNTOOL)' timestamp /td SHA256 /tr http://timestamp.sectigo.com '$(BIN_TO_SIGN)'"
+	powershell.exe "& '$(SIGNTOOL)' sign /fd SHA256 /f '$(BUILD_DIR)\$(CERT_FILE)' /p '$(CERT_PASS)' '$(BIN_TO_SIGN)'"
+	powershell.exe "& '$(SIGNTOOL)' timestamp /tr http://timestamp.sectigo.com /td SHA256 '$(BIN_TO_SIGN)'"
 	-$(RM) $(BUILD_DIR)/$(CERT_FILE)
 	@echo "Installer was signed with signtool"
 
