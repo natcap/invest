@@ -116,12 +116,16 @@ ARGS_SPEC = {
 }
 
 
-_OUTPUT_BASE_FILES = {}
+_OUTPUT_BASE_FILES = {
+    'greenspace_supply': 'greenspace_supply.tif',
+}
 _INTERMEDIATE_BASE_FILES = {
     'aligned_population': 'aligned_population.tif',
     'aligned_lulc': 'aligned_lulc.tif',
     'greenspace_area': 'greenspace_area.tif',
-    'greenspace_supply': 'greenspace_supply.tif',
+    'kernel': 'kernel.tif',
+    'greenspace_population_ratio': 'greenspace_population_ratio.tif',
+    'convolved_population': 'convolved_population.tif',
 }
 
 
@@ -185,13 +189,25 @@ def execute(args):
         n_workers = -1  # Synchronous execution
     graph = taskgraph.TaskGraph(work_token_dir, n_workers)
 
-    known_kernel_types = ARGS_SPEC['args']['decay_function']['options']
+    kernel_types = {
+        'dichotomy': instantaneous_decay_kernel_raster,
+        # "exponential" is more consistent with other InVEST models'
+        # terminology.  "Power function" is used in the design doc.
+        'exponential': utils.exponential_decay_kernel_raster,
+        'gaussian': utils.gaussian_decay_kernel_raster,
+        'density': density_decay_kernel_raster,
+    }
+    # Since we have these keys defined in two places, I want to be super sure
+    # that the labels match.
+    assert sorted(kernel_types.keys()) == (
+        sorted(ARGS_SPEC['args']['decay_function']['options']))
+
     if 'kernel_type' not in args:
         kernel_type = 'dichotomy'
-    elif args['kernel_type'] not in known_kernel_types:
+    elif args['kernel_type'] not in kernel_types:
         raise ValueError(
             f'Kernel type "{args["kernel_type"]}" is not recognized. '
-            f"Must be one of {', '.join(known_kernel_types.keys())}")
+            f"Must be one of {', '.join(kernel_types.keys())}")
     else:
         kernel_type = args['kernel_type']
 
@@ -254,27 +270,94 @@ def execute(args):
         dependent_task_list=[lulc_alignment_task]
     )
 
-    floating_catchment_area_task = graph.add_task(
-        _two_step_floating_catchment_area,
+    search_radius_in_pixels = (
+        float(args['search_radius']) / squared_lulc_pixel_size[0])
+    kernel_creation_task = graph.add_task(
+        # All kernel creation types have the same function signature
+        kernel_types[kernel_type],
+        args=(search_radius_in_pixels, file_registry['kernel']),
+        task_name=f'2SFCA - Create {kernel_type} kernel',
+        target_path_list=[file_registry['kernel']]
+    )
+
+    convolved_population_task = graph.add_task(
+        pygeoprocessing.convolve_2d,
         kwargs={
-            'greenspace_area_raster_path': file_registry['greenspace_area'],
-            'population_raster_path': file_registry['aligned_population'],
-            'target_greenspace_supply_raster_path': (
-                file_registry['greenspace_supply']),
-            'search_radius_m': float(args['search_radius']),
-            'kernel_type': kernel_type,
+            'signal_path_band': (file_registry['greenspace_area'], 1),
+            'kernel_path_band': (file_registry['kernel'], 1),
+            'target_path': file_registry['convolved_population'],
             'working_dir': intermediate_dir,
         },
-        target_path_list=[''],
-        task_name='Two-step floating catchment area',
+        task_name='2SFCA - Convolve population',
+        target_path_list=[file_registry['convolved_population']],
         dependent_task_list=[
-            greenspace_reclassification_task,
+            kernel_creation_task,
             population_alignment_task,
+        ])
+
+    greenspace_nodata = pygeoprocessing.get_raster_info(
+        file_registry['greenspace_area'])['nodata'][0]
+    population_nodata = pygeoprocessing.get_raster_info(
+        file_registry['convolved_population'])['nodata'][0]
+    greenspace_population_ratio_task = graph.add_task(
+        pygeoprocessing.raster_calculator,
+        kwargs={
+            'base_raster_path_band_const_list': [
+                (file_registry['greenspace_area'], 1),
+                (file_registry['convolved_population'], 1),
+                (greenspace_nodata, 'raw'),
+                (population_nodata, 'raw')],
+            'local_op': _greenspace_population_ratio,
+            'target_raster_path': file_registry['greenspace_population_ratio'],
+            'datatype_target': gdal.GDT_Float32,
+            'nodata_target': FLOAT32_NODATA
+        },
+        task_name='2SFCA: Calculate R_j greenspace/population ratio',
+        target_path_list=[file_registry['greenspace_population_ratio']],
+        dependent_task_list=[
+            convolved_population_task,
+            greenspace_reclassification_task,
+        ])
+
+    convolved_greenspace_population_ratio_task = graph.add_task(
+        pygeoprocessing.convolve_2d,
+        kwargs={
+            'signal_path_band': (
+                file_registry['greenspace_population_ratio'], 1),
+            'kernel_path_band': (file_registry['kernel'], 1),
+            'target_path': file_registry['greenspace_supply'],
+            'working_dir': intermediate_dir,
+        },
+        task_name='2SFCA - greenspace supply',
+        target_path_list=[file_registry['greenspace_supply']],
+        dependent_task_list=[
+            kernel_creation_task,
+            greenspace_population_ratio_task,
         ])
 
     graph.close()
     graph.join()
     LOGGER.info('Finished Urban Nature Access Model')
+
+
+def _greenspace_population_ratio(
+        greenspace_area, convolved_population, greenspace_nodata,
+        population_nodata):
+    """"""
+    out_array = numpy.full(
+        greenspace_area.shape, FLOAT32_NODATA, dtype=numpy.float32)
+
+    valid_pixels = numpy.ones(greenspace_area.shape, dtype=bool)
+    if greenspace_nodata is not None:
+        valid_pixels &= ~numpy.isclose(greenspace_area, greenspace_nodata)
+
+    if population_nodata is not None:
+        valid_pixels &= ~numpy.isclose(
+            convolved_population, population_nodata)
+
+    out_array[valid_pixels] = (
+        greenspace_area[valid_pixels] / convolved_population[valid_pixels])
+    return out_array
 
 
 def _square_off_pixels(raster_path):
@@ -574,98 +657,6 @@ def density_decay_kernel_raster(expected_distance, kernel_filepath):
 
     kernel_band = None
     kernel_raster = None
-
-
-def _two_step_floating_catchment_area(
-        greenspace_area_raster_path, population_raster_path,
-        target_greenspace_supply_raster_path, search_radius_m, kernel_type,
-        working_dir):
-    LOGGER.info("Starting 2-Step Floating Catchment Area")
-
-    tmp_working_dir = tempfile.mkdtemp(
-        dir=working_dir, prefix='UNA-2SFCA')
-
-    # convert the search radius (which is in m) to pixels based on the pixel
-    # size of the greenspace area raster.
-    greenspace_raster_info = pygeoprocessing.get_raster_info(
-        greenspace_area_raster_path)
-    search_radius_in_pixels = (
-        search_radius_m / greenspace_raster_info['pixel_size'][0])
-    kernel_filepath = os.path.join(tmp_working_dir, 'kernel.tif')
-
-    kernel_types = {
-        'dichotomy': instantaneous_decay_kernel_raster,
-        # "exponential" is more consistent with other InVEST models'
-        # terminology.  "Power function" is used in the design doc.
-        'exponential': utils.exponential_decay_kernel_raster,
-        'gaussian': utils.gaussian_decay_kernel_raster,
-        'density': density_decay_kernel_raster,
-    }
-    # Since we have these keys defined in two places, I want to be super sure
-    # that the labels match.
-    assert sorted(kernel_types.keys()) == (
-        sorted(ARGS_SPEC['args']['decay_function']['options']))
-
-    # All kernel creation types have the same function signature
-    kernel_types[kernel_type](search_radius_in_pixels, kernel_filepath)
-
-    convolved_population_path = os.path.join(
-        tmp_working_dir, 'convolved_population.tif')
-    LOGGER.debug(
-        "2SFCA - convolving %s to %s with kernel %s",
-        greenspace_area_raster_path, convolved_population_path,
-        kernel_filepath)
-    pygeoprocessing.convolve_2d(
-        signal_path_band=(greenspace_area_raster_path, 1),
-        kernel_path_band=(kernel_filepath, 1),
-        target_path=convolved_population_path,
-        working_dir=tmp_working_dir)
-
-    # Calculate R_j: the greenspace/population ratio
-    # Requires the population raster to have already been convolved
-    greenspace_nodata = pygeoprocessing.get_raster_info(
-        greenspace_area_raster_path)['nodata'][0]
-    population_nodata = pygeoprocessing.get_raster_info(
-        convolved_population_path)['nodata'][0]
-    def _greenspace_population_ratio(greenspace_area, convolved_population):
-        out_array = numpy.full(
-            greenspace_area.shape, FLOAT32_NODATA, dtype=numpy.float32)
-
-        valid_pixels = numpy.ones(greenspace_area.shape, dtype=bool)
-        if greenspace_nodata is not None:
-            valid_pixels &= ~numpy.isclose(greenspace_area, greenspace_nodata)
-
-        if population_nodata is not None:
-            valid_pixels &= ~numpy.isclose(
-                convolved_population, population_nodata)
-
-        out_array[valid_pixels] = (
-            greenspace_area[valid_pixels] / convolved_population[valid_pixels])
-        return out_array
-
-    greenspace_population_ratio_path = os.path.join(
-        tmp_working_dir, 'greenspace_population_ratio.tif')
-    LOGGER.debug(
-        "2SFCA - Calculating the greenspace/population ratio to %s",
-        greenspace_population_ratio_path)
-    pygeoprocessing.raster_calculator(
-        [(greenspace_area_raster_path, 1), (convolved_population_path, 1)],
-        _greenspace_population_ratio, greenspace_population_ratio_path,
-        gdal.GDT_Float32, FLOAT32_NODATA)
-
-    # Calculate A_i: the greenspace supplied to each pixel
-    # This is the greenspace population ratio convolved by the chosen kernel
-    LOGGER.debug(
-        "2SFCA - Convolving the greenspace/population ratio to %s",
-        target_greenspace_supply_raster_path)
-
-    pygeoprocessing.convolve_2d(
-        signal_path_band=(greenspace_population_ratio_path, 1),
-        kernel_path_band=(kernel_filepath, 1),
-        target_path=target_greenspace_supply_raster_path,
-        working_dir=tmp_working_dir)
-
-    shutil.rmtree(tmp_working_dir, ignore_errors=True)
 
 
 def validate(args, limit_to=None):
