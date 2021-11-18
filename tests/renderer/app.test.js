@@ -374,11 +374,12 @@ describe('InVEST global settings: dialog interactions', () => {
   });
 
   test('Invest settings save on change', async () => {
-    const nWorkers = '0';
+    const nWorkersLabel = 'Threaded task management (0)';
+    const nWorkersValue = '0';
     const loggingLevel = 'DEBUG';
 
     const {
-      getByRole, getByLabelText, findByRole
+      getByText, getByRole, getByLabelText, findByRole
     } = render(
       <App />
     );
@@ -387,10 +388,10 @@ describe('InVEST global settings: dialog interactions', () => {
     const nWorkersInput = getByLabelText(nWorkersLabelText, { exact: false });
     const loggingInput = getByLabelText(loggingLabelText, { exact: false });
 
-    userEvent.selectOptions(nWorkersInput, [nWorkers]);
+    userEvent.selectOptions(nWorkersInput, [getByText(nWorkersLabel)]);
     userEvent.selectOptions(loggingInput, [loggingLevel]);
     await waitFor(() => {
-      expect(nWorkersInput).toHaveValue(nWorkers);
+      expect(nWorkersInput).toHaveValue(nWorkersValue);
       expect(loggingInput).toHaveValue(loggingLevel);
     });
     userEvent.click(getByRole('button', { name: 'close settings' }));
@@ -398,10 +399,10 @@ describe('InVEST global settings: dialog interactions', () => {
     // Check values were saved in app and in store
     userEvent.click(await findByRole('button', { name: 'settings' }));
     await waitFor(() => {
-      expect(nWorkersInput).toHaveValue(nWorkers);
+      expect(nWorkersInput).toHaveValue(nWorkersValue);
       expect(loggingInput).toHaveValue(loggingLevel);
     });
-    expect(await getSettingsValue('nWorkers')).toBe(nWorkers);
+    expect(await getSettingsValue('nWorkers')).toBe(nWorkersValue);
     expect(await getSettingsValue('loggingLevel')).toBe(loggingLevel);
   });
 

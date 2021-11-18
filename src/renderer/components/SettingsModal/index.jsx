@@ -34,8 +34,10 @@ export default class SettingsModal extends React.Component {
 
   async componentDidMount() {
     const nWorkersOptions = [];
-    for (let i = -1; i <= this.props.nCPU; i++) {
-      nWorkersOptions.push(i);
+    nWorkersOptions.push([-1, 'Synchronous (-1)']);
+    nWorkersOptions.push([0, 'Threaded task management (0)']);
+    for (let i = 1; i <= this.props.nCPU; i++) {
+      nWorkersOptions.push([i, `${i} CPUs`]);
     }
     this.setState({
       nWorkersOptions: nWorkersOptions
@@ -83,7 +85,11 @@ export default class SettingsModal extends React.Component {
           />
         </Button>
 
-        <Modal show={this.state.show} onHide={this.handleClose}>
+        <Modal
+          className="settings-modal"
+          show={this.state.show}
+          onHide={this.handleClose}
+        >
           <Modal.Header>
             <Modal.Title>InVEST Settings</Modal.Title>
             <Button
@@ -97,8 +103,8 @@ export default class SettingsModal extends React.Component {
           </Modal.Header>
           <Modal.Body>
             <Form.Group as={Row}>
-              <Form.Label column sm="7" htmlFor="logging-select">Logging threshold</Form.Label>
-              <Col sm="5">
+              <Form.Label column sm="6" htmlFor="logging-select">Logging threshold</Form.Label>
+              <Col sm="6">
                 <Form.Control
                   id="logging-select"
                   as="select"
@@ -116,12 +122,12 @@ export default class SettingsModal extends React.Component {
               (this.state.nWorkersOptions)
                 ? (
                   <Form.Group as={Row}>
-                    <Col sm="7">
+                    <Col sm="6">
                       <Form.Label htmlFor="nworkers-select">
                         Taskgraph n_workers parameter
                       </Form.Label>
                     </Col>
-                    <Col sm="5">
+                    <Col sm="6">
                       <Form.Control
                         id="nworkers-select"
                         as="select"
@@ -131,7 +137,7 @@ export default class SettingsModal extends React.Component {
                         onChange={this.handleChange}
                       >
                         {this.state.nWorkersOptions.map(
-                          (opt) => <option value={opt} key={opt}>{opt}</option>
+                          (opt) => <option value={opt[0]}key={opt[0]}>{opt[1]}</option>
                         )}
                       </Form.Control>
                     </Col>
@@ -147,10 +153,13 @@ export default class SettingsModal extends React.Component {
                       </Accordion.Toggle>
                       <Accordion.Collapse eventKey="0" className="pr-1">
                         <ul>
-                          <li>-1: (recommended) synchronous mode</li>
-                          <li>0: single process with threaded task management</li>
+                          <li>synchronous task execution is most reliable</li>
                           <li>
-                            n: depending on the InVEST model, tasks may execute
+                            threaded task management: tasks execute only in the
+                            main process, using multiple threads.
+                          </li>
+                          <li>
+                            n CPUs: depending on the InVEST model, tasks may execute
                             in parallel using up to this many processes.
                           </li>
                         </ul>
@@ -188,7 +197,7 @@ export default class SettingsModal extends React.Component {
             >
               Clear Recent Jobs
             </Button>
-            <span><small>no invest workspaces will be deleted</small></span>
+            <span>no invest workspaces will be deleted</span>
           </Modal.Body>
         </Modal>
       </React.Fragment>
