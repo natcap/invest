@@ -194,13 +194,12 @@ export default class SetupTab extends React.Component {
    * @returns {undefined}
    */
   savePythonScript(filepath) {
-    const { modelName, pyModuleName } = this.props;
+    const { modelName } = this.props;
     const argsValues = this.insertNWorkers(this.state.argsValues);
     const argsDict = argsDictFromObject(argsValues);
     const payload = {
       filepath: filepath,
       modelname: modelName,
-      pyname: pyModuleName,
       args: JSON.stringify(argsDict),
     };
     saveToPython(payload);
