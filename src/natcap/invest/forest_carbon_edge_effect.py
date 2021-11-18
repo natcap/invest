@@ -20,6 +20,7 @@ from . import utils
 from . import spec_utils
 from .spec_utils import u
 from . import validation
+from . import MODEL_METADATA
 
 LOGGER = logging.getLogger(__name__)
 
@@ -30,9 +31,9 @@ DISTANCE_UPPER_BOUND = 500e3
 NODATA_VALUE = -1
 
 ARGS_SPEC = {
-    "model_name": "Forest Carbon Edge Effect Model",
-    "module": __name__,
-    "userguide_html": "carbon_edge.html",
+    "model_name": MODEL_METADATA["forest_carbon_edge_effect"].model_title,
+    "pyname": MODEL_METADATA["forest_carbon_edge_effect"].pyname,
+    "userguide_html": MODEL_METADATA["forest_carbon_edge_effect"].userguide,
     "args_with_spatial_overlap": {
         "spatial_keys": ["aoi_vector_path", "lulc_raster_path"],
     },

@@ -106,6 +106,7 @@ from .. import utils
 from .. import spec_utils
 from ..spec_utils import u
 from .. import validation
+from .. import MODEL_METADATA
 
 LOGGER = logging.getLogger(__name__)
 
@@ -150,9 +151,9 @@ TASKGRAPH_CACHE_DIR_NAME = 'task_cache'
 OUTPUT_DIR_NAME = 'output'
 
 ARGS_SPEC = {
-    "model_name": "Coastal Blue Carbon",
-    "module": __name__,
-    "userguide_html": "coastal_blue_carbon.html",
+    "model_name": MODEL_METADATA["coastal_blue_carbon"].model_title,
+    "pyname": MODEL_METADATA["coastal_blue_carbon"].pyname,
+    "userguide_html": MODEL_METADATA["coastal_blue_carbon"].userguide,
     "args": {
         "workspace_dir": spec_utils.WORKSPACE,
         "results_suffix": spec_utils.SUFFIX,

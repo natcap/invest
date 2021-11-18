@@ -22,6 +22,7 @@
   - Scenic Quality
   - SDR
   - Seasonal Water Yield
+  - Stormwater
   - Urban Cooling
   - Urban Flood Risk
   - Wave Energy
@@ -33,6 +34,51 @@
 
 .. :changelog:
 
+
+..
+  Unreleased Changes
+  ------------------
+
+3.9.2 (2021-10-29)
+------------------
+* General:
+    * Improving our binary build by including a data file needed for the
+      ``charset-normalizer`` python package.  This eliminates a warning that
+      was printed to stdout on Windows.
+    * The Annual Water Yield model name is now standardized throughout InVEST.
+      This model has been known in different contexts as Hydropower, Hydropower
+      Water Yield, or Annual Water Yield. This name was chosen to emphasize
+      that the model can be used for purposes other than hydropower (though the
+      valuation component is hydropower-specific) and to highlight its
+      difference from the Seasonal Water Yield model. The corresponding python
+      module, formerly ``natcap.invest.hydropower.hydropower_water_yield``, is
+      now ``natcap.invest.annual_water_yield``.
+    * Minor changes to some other models' display names.
+    * Update and expand on the instructions in the API docs for installing
+      the ``natcap.invest`` package.
+    * The InVEST binaries on Windows now no longer inspect the ``%PATH%``
+      when looking for GDAL DLLs.  This fixes an issue where InVEST would not
+      launch on computers where the ``%PATH%`` either contained other
+      environment variables or was malformed.
+    * invest processes announce their logfile path at a very high logging level
+      that cannot be filtered out by the user.
+    * JSON sample data parameter sets are now included in the complete sample
+      data archives.
+* Seasonal Water Yield
+    * Fixed a bug in validation where providing the monthly alpha table would
+      cause a "Spatial file <monthly alpha table> has no projection" error.
+      The montly alpha table was mistakenly being validated as a spatial file.
+* Crop Production Regression
+    * Corrected a misspelled column name. The fertilization rate table column
+      must now be named ``phosphorus_rate``, not ``phosphorous_rate``.
+* Habitat Quality
+    * Fixed a bug where optional input Allow Accessibility to Threats could
+      not be passed as an empty string argument. Now handles falsey values.
+* Urban Flood Risk
+    * Fixed a bug where lucodes present in the LULC raster but missing from
+      the biophysical table would either raise a cryptic IndexError or silently
+      apply invalid curve numbers. Now a helpful ValueError is raised.
+
 Unreleased Changes (3.10)
 -------------------------
 * General:
@@ -41,8 +87,8 @@ Unreleased Changes (3.10)
     * Major updates to each model's ``ARGS_SPEC`` (and some related validation)
       to facilitate re-use & display in the Workbench and User's Guide.
 
-Unreleased Changes (3.9.1)
---------------------------
+3.9.1 (2021-09-22)
+------------------
 * General:
     * Added error-handling for when ``pandas`` fails to decode a non-utf8
       encoded CSV.
@@ -79,6 +125,19 @@ Unreleased Changes (3.9.1)
       could have been computed by previous runs.
     * Validation now returns a more helpful message when a spatial input has
       no projection defined.
+    * Updated to pygeoprocessing 2.3.2
+    * Added support for GDAL 3.3.1 and above
+    * Added some logging to ``natcap.invest.utils._log_gdal_errors`` to aid in
+      debugging some hard-to-reproduce GDAL logging errors that occasionally
+      cause InVEST models to crash.  If GDAL calls ``_log_gdal_errors`` with an
+      incorrect set of arguments, this is now logged.
+    * Improved the reliability and consistency of log messages across the
+      various ways that InVEST models can be run.  Running InVEST in
+      ``--headless`` mode, for example, will now have the same logging behavior,
+      including with exceptions, as the UI would produce.
+    * The default log level for the CLI has been lowered from
+      ``logging.CRITICAL`` to ``logging.ERROR``.  This ensures that exceptions
+      should always be written to the correct logging streams.
 * Carbon
     * Fixed a bug where, if rate change and discount rate were set to 0, the
       valuation results were in $/year rather than $, too small by a factor of
@@ -102,6 +161,13 @@ Unreleased Changes (3.9.1)
 * HRA
     * Fixed bugs that allowed zeros in DQ & Weight columns of criteria
       table to raise DivideByZero errors.
+* NDR
+    * Fixed a bug that allowed SDR to be calculated in areas that don't drain
+      to any stream. Now all outputs that depend on distance to stream (
+      ``d_dn``, ``dist_to_channel``, ``ic``, ``ndr_n``, ``ndr_p``,
+      ``sub_ndr_n``, ``sub_ndr_p``, ``n_export``, ``p_export``) are only
+      defined for pixels that drain to a stream. They have nodata everywhere
+      else.
 * Pollination
     * Updated so that the ``total_pollinator_abundance_[season].tif`` outputs
       are always created. Before, they weren't created if a farm vector was
@@ -119,6 +185,14 @@ Unreleased Changes (3.9.1)
     * Changed how SDR thresholds its L factor to allow direct thresholding
       rather than based off of upstream area. Exposed this parameter as
       ``l_max`` in the ``args`` input and in the user interface.
+    * Fixed a bug that allowed SDR to be calculated in areas that don't drain
+      to any stream. Now all outputs that depend on distance to stream (
+      ``d_dn``, ``d_dn_bare``, ``ic``, ``ic_bare``, ``sdr``, ``sdr_bare``,
+      ``e_prime``, ``sed_retention``, ``sed_retention_index``,
+      ``sed_deposition``, ``sed_export``) are only defined for pixels that
+      drain to a stream. They have nodata everywhere else.
+* Stormwater
+    * Added this new model
 * Urban Flood Risk
     * Fixed a bug where a String ``Type`` column in the infrastructure vector
       would cause the aggregation step of the model to crash, even with the

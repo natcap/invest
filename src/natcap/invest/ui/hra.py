@@ -1,16 +1,16 @@
 # coding=UTF-8
 from natcap.invest.ui import model, inputs
-from natcap.invest import hra
+from natcap.invest import hra, MODEL_METADATA
 
 
 class HabitatRiskAssessment(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(
             self,
-            label='Habitat Risk Assessment',
+            label=MODEL_METADATA['habitat_risk_assessment'].model_title,
             target=hra.execute,
             validator=hra.validate,
-            localdoc='habitat_risk_assessment.html')
+            localdoc=MODEL_METADATA['habitat_risk_assessment'].userguide)
 
         self.info_table_path = inputs.File(
             args_key='info_table_path',

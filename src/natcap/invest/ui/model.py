@@ -27,11 +27,11 @@ import qtawesome
 import natcap.invest
 
 from . import inputs
-from . import usage
 from . import execution
 from .. import cli
-from .. import utils
 from .. import datastack
+from .. import usage
+from .. import utils
 from .. import validation
 
 LOGGER = logging.getLogger(__name__)
@@ -692,8 +692,8 @@ class WindowTitle(QtCore.QObject):
         # that handle __setattr__ differently. In 3.7, the super()
         # implementation causes a `TypeError: can't apply this __setattr__
         # to object object` when running `invest run carbon`. In Python 3.8.4+
-        # with the object implementation the error `TypeError: can't apply 
-        # this __setattr__ to Carbon object` 
+        # with the object implementation the error `TypeError: can't apply
+        # this __setattr__ to Carbon object`
         if (sys.version_info.minor >= 8) and (sys.version_info.micro >= 4):
             super().__setattr__(name, value)
         else:
@@ -1477,8 +1477,8 @@ class InVESTModel(QtWidgets.QMainWindow):
         # that handle __setattr__ differently. In 3.7, the super()
         # implementation causes a `TypeError: can't apply this __setattr__
         # to object object` when running `invest run carbon`. In Python 3.8.4+
-        # with the object implementation the error `TypeError: can't apply 
-        # this __setattr__ to Carbon object` 
+        # with the object implementation the error `TypeError: can't apply
+        # this __setattr__ to Carbon object`
         if (sys.version_info.minor >= 8) and (sys.version_info.micro >= 4):
             super().__setattr__(name, value)
         else:
@@ -1645,15 +1645,9 @@ class InVESTModel(QtWidgets.QMainWindow):
                                'Starting model with parameters: \n%s',
                                datastack.format_args_dict(
                                    args, self.target.__module__))
-
-                    try:
-                        return self.target(args=args)
-                    except Exception:
-                        LOGGER.exception('Exception while executing %s',
-                                         self.target)
-                        raise
-                    finally:
-                        LOGGER.info('Execution finished')
+                    # Exceptions will be captured and logged in
+                    # utils.prepare_workspace.
+                    return self.target(args=args)
 
         self.form.run(target=_logged_target,
                       window_title='Running %s' % self.label,
@@ -1853,7 +1847,7 @@ class InVESTModel(QtWidgets.QMainWindow):
         def _validate(new_value):
             # We want to validate the whole form; discard the individual value
             self.validate(block=False)
-        
+
         # Set up quickrun options if we're doing a quickrun
         if quickrun:
             @QtCore.Slot()
@@ -1976,7 +1970,7 @@ class InVESTModel(QtWidgets.QMainWindow):
         else:
             save_filepath = filepath
 
-        for internal_model_name, _meta in cli._MODEL_UIS.items():
+        for internal_model_name, _meta in cli.MODEL_METADATA.items():
             if _meta.pyname == self.target.__module__:
                 break
         cli.export_to_python(

@@ -2,16 +2,17 @@
 
 from natcap.invest.ui import model, inputs
 from natcap.invest.seasonal_water_yield import seasonal_water_yield
+from natcap.invest import MODEL_METADATA
 
 
 class SeasonalWaterYield(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(
             self,
-            label='Seasonal Water Yield',
+            label=MODEL_METADATA['seasonal_water_yield'].model_title,
             target=seasonal_water_yield.execute,
             validator=seasonal_water_yield.validate,
-            localdoc='seasonal_water_yield.html')
+            localdoc=MODEL_METADATA['seasonal_water_yield'].userguide)
 
         self.threshold_flow_accumulation = inputs.Text(
             args_key='threshold_flow_accumulation',

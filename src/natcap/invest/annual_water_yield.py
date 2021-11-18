@@ -1,4 +1,4 @@
-"""InVEST Hydropower Water Yield model."""
+"""InVEST Annual Water Yield model."""
 import logging
 import os
 import math
@@ -10,17 +10,18 @@ from osgeo import ogr
 import pygeoprocessing
 import taskgraph
 
-from .. import utils
-from .. import spec_utils
-from ..spec_utils import u
-from .. import validation
+from . import utils
+from . import spec_utils
+from .spec_utils import u
+from . import validation
+from . import MODEL_METADATA
 
 LOGGER = logging.getLogger(__name__)
 
 ARGS_SPEC = {
-    "model_name": "Hydropower Water Yield",
-    "module": __name__,
-    "userguide_html": "reservoirhydropowerproduction.html",
+    "model_name": MODEL_METADATA["annual_water_yield"].model_title,
+    "pyname": MODEL_METADATA["annual_water_yield"].pyname,
+    "userguide_html": MODEL_METADATA["annual_water_yield"].userguide,
     "args_with_spatial_overlap": {
         "spatial_keys": ["lulc_path",
                          "depth_to_root_rest_layer_path",
@@ -248,7 +249,7 @@ ARGS_SPEC = {
 def execute(args):
     """Annual Water Yield: Reservoir Hydropower Production.
 
-    Executes the hydropower/water_yield model
+    Executes the hydropower/annual water yield model
 
     Args:
         args['workspace_dir'] (string): a path to the directory that will write

@@ -18,15 +18,16 @@ from .. import utils
 from .. import spec_utils
 from ..spec_utils import u
 from .. import validation
+from .. import MODEL_METADATA
 from . import delineateit_core
 
 
 LOGGER = logging.getLogger(__name__)
 
 ARGS_SPEC = {
-    "model_name": "DelineateIt: Watershed Delineation",
-    "module": __name__,
-    "userguide_html": "delineateit.html",
+    "model_name": MODEL_METADATA["delineateit"].model_title,
+    "pyname": MODEL_METADATA["delineateit"].pyname,
+    "userguide_html": MODEL_METADATA["delineateit"].userguide,
     "args_with_spatial_overlap": {
         "spatial_keys": ["dem_path", "outlet_vector_path"],
         "different_projections_ok": True,
@@ -388,7 +389,8 @@ def check_geometries(outlet_vector_path, dem_path, target_vector_path,
         original_geometry = feature.GetGeometryRef()
 
         try:
-            shapely_geom = shapely.wkb.loads(original_geometry.ExportToWkb())
+            shapely_geom = shapely.wkb.loads(
+                bytes(original_geometry.ExportToWkb()))
 
             # The classic bowtie polygons will load but require a separate
             # check for validity.
@@ -531,7 +533,7 @@ def snap_points_to_nearest_stream(points_vector_path, stream_raster_path_band,
             snapped_layer.CreateFeature(new_feature)
             continue
 
-        point = shapely.wkb.loads(source_geometry.ExportToWkb())
+        point = shapely.wkb.loads(bytes(source_geometry.ExportToWkb()))
         if geom_name == 'MULTIPOINT':
             # We already checked (above) that there's only one component point
             point = point.geoms[0]

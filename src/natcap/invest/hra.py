@@ -18,6 +18,7 @@ from . import utils
 from . import spec_utils
 from .spec_utils import u
 from . import validation
+from . import MODEL_METADATA
 
 
 LOGGER = logging.getLogger('natcap.invest.hra')
@@ -66,9 +67,9 @@ _DEFAULT_GTIFF_CREATION_OPTIONS = (
     'BLOCKXSIZE=256', 'BLOCKYSIZE=256')
 
 ARGS_SPEC = {
-    "model_name": "Habitat Risk Assessment",
-    "module": __name__,
-    "userguide_html": "habitat_risk_assessment.html",
+    "model_name": MODEL_METADATA["habitat_risk_assessment"].model_title,
+    "pyname": MODEL_METADATA["habitat_risk_assessment"].pyname,
+    "userguide_html": MODEL_METADATA["habitat_risk_assessment"].userguide,
     "args": {
         "workspace_dir": spec_utils.WORKSPACE,
         "results_suffix": spec_utils.SUFFIX,
@@ -1380,7 +1381,7 @@ def _get_vector_geometries_by_field(
     for feat in base_layer:
         field_value = feat.GetField(field_name)
         geom = feat.GetGeometryRef()
-        geom_wkb = shapely.wkb.loads(geom.ExportToWkb())
+        geom_wkb = shapely.wkb.loads(bytes(geom.ExportToWkb()))
         if field_value is None:
             base_vector = None
             base_layer = None
@@ -2602,8 +2603,9 @@ def _get_criteria_dataframe(base_criteria_table_path):
     file_ext = os.path.splitext(base_criteria_table_path)[1].lower()
     if file_ext == '.csv':
         # use sep=None, engine='python' to infer what the separator is
-        criteria_df = pandas.read_csv(base_criteria_table_path,
-                                      index_col=0, header=None, sep=None, engine='python')
+        criteria_df = pandas.read_csv(
+            base_criteria_table_path, index_col=0, header=None, sep=None,
+            engine='python')
     elif file_ext in ['.xlsx', '.xls']:
         criteria_df = pandas.read_excel(base_criteria_table_path,
                                         index_col=0, header=None)
@@ -2912,6 +2914,10 @@ def _get_overlap_dataframe(criteria_df, habitat_names, stressor_attributes,
             # Values are always grouped in threes (rating, dq, weight)
             for idx in range(0, row_data.size, 3):
                 habitat = row_data.keys()[idx]
+                if habitat not in habitat_names:
+                    # This is how we ignore extra columns in the csv
+                    # like we have in the sample data for "Rating Instruction".
+                    break
                 rating = row_data[idx]
                 dq = row_data[idx + 1]
                 weight = row_data[idx + 2]

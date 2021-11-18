@@ -1,17 +1,17 @@
 # coding=UTF-8
 
 from natcap.invest.ui import model, inputs
-import natcap.invest.globio
+from natcap.invest import globio, MODEL_METADATA
 
 
 class GLOBIO(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(
             self,
-            label='GLOBIO',
-            target=natcap.invest.globio.execute,
-            validator=natcap.invest.globio.validate,
-            localdoc='globio.html')
+            label=MODEL_METADATA['globio'].model_title,
+            target=globio.execute,
+            validator=globio.validate,
+            localdoc=MODEL_METADATA['globio'].userguide)
 
         self.lulc_to_globio_table_path = inputs.File(
             args_key='lulc_to_globio_table_path',
