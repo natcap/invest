@@ -145,13 +145,13 @@ export default class SettingsModal extends React.Component {
                         <BsChevronExpand className="mx-1" />
                         <span className="small"><u>more info</u></span>
                       </Accordion.Toggle>
-                      <Accordion.Collapse eventKey="0">
+                      <Accordion.Collapse eventKey="0" className="pr-1">
                         <ul>
                           <li>-1: (recommended) synchronous mode</li>
                           <li>0: single process with threaded task management</li>
                           <li>
-                            n CPUs: depending on the InVEST model, tasks may execute
-                            in parallel using this many processes.
+                            n: depending on the InVEST model, tasks may execute
+                            in parallel using up to this many processes.
                           </li>
                         </ul>
                       </Accordion.Collapse>
@@ -176,6 +176,7 @@ export default class SettingsModal extends React.Component {
             <Button
               variant="primary"
               onClick={this.switchToDownloadModal}
+              className="w-50"
             >
               Download Sample Data
             </Button>
@@ -183,10 +184,11 @@ export default class SettingsModal extends React.Component {
             <Button
               variant="secondary"
               onClick={this.props.clearJobsStorage}
+              className="mr-2 w-50"
             >
               Clear Recent Jobs
             </Button>
-            <div>(no invest workspaces will be deleted)</div>
+            <span><small>no invest workspaces will be deleted</small></span>
           </Modal.Body>
         </Modal>
       </React.Fragment>
