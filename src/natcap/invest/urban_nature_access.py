@@ -19,6 +19,7 @@ from .spec_utils import u
 LOGGER = logging.getLogger(__name__)
 UINT32_NODATA = int(numpy.iinfo(numpy.uint32).max)
 FLOAT32_NODATA = float(numpy.finfo(numpy.float32).max)
+BYTE_NODATA = 255
 ARGS_SPEC = {
     'model_name': MODEL_METADATA['urban_nature_access'].model_title,
     'pyname': MODEL_METADATA['urban_nature_access'].pyname,
@@ -121,6 +122,7 @@ _OUTPUT_BASE_FILES = {}
 _INTERMEDIATE_BASE_FILES = {
     'aligned_population': 'aligned_population.tif',
     'aligned_lulc': 'aligned_lulc.tif',
+    'is_greenspace': 'is_greenspace.tif',
 }
 
 
@@ -213,7 +215,31 @@ def execute(args):
         target_path_list=[file_registry['aligned_population']],
         task_name='Resample population to LULC resolution')
 
-
+    greenspace_lulc_lookup = utils.build_lookup_from_csv(
+        args['lulc_attribute_table'], 'lucode')
+    is_greenspace_map = {
+        lucode: int(attributes['greenspace'])
+        for lucode, attributes in greenspace_lulc_lookup.items()
+    }
+    greenspace_reclassification_task = graph.add_task(
+        utils.reclassify_raster,
+        kwargs={
+            'raster_path_band': (file_registry['aligned_lulc'], 1),
+            'value_map': is_greenspace_map,
+            'target_raster_path': file_registry['is_greenspace'],
+            'target_datatype': gdal.GDT_Byte,
+            'target_nodata': BYTE_NODATA,
+            'error_details': {
+                'raster_name': ARGS_SPEC['args']['lulc_raster_path']['name'],
+                'column_name': 'greenspace',
+                'table_name': ARGS_SPEC['args'][
+                    'lulc_attribute_table']['name'],
+            },
+        },
+        target_path_list=[file_registry['is_greenspace']],
+        task_name='Identify greenspace pixels',
+        dependent_task_list=[lulc_alignment_task]
+    )
 
     graph.close()
     graph.join()

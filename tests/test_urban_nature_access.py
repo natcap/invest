@@ -5,6 +5,7 @@ import os
 import random
 import shutil
 import tempfile
+import textwrap
 import unittest
 
 import numpy
@@ -172,6 +173,8 @@ class UNATests(unittest.TestCase):
             'population_raster_path': os.path.join(
                 self.workspace_dir, 'population.tif'),
             'lulc_raster_path': os.path.join(self.workspace_dir, 'lulc.tif'),
+            'lulc_attribute_table': os.path.join(
+                self.workspace_dir, 'lulc_attributes.csv'),
         }
 
         random.seed(-1)  # for our random number generation
@@ -203,6 +206,20 @@ class UNATests(unittest.TestCase):
             origin=_DEFAULT_ORIGIN,
             projection_wkt=population_wkt,
             target_path=args['lulc_raster_path'])
+
+        with open(args['lulc_attribute_table'], 'w') as attr_table:
+            attr_table.write(textwrap.dedent(
+                """lucode,greenspace
+                0,0
+                1,1
+                2,0
+                3,1
+                4,0
+                5,1
+                6,0
+                7,1
+                8,0
+                9,1"""))
 
         urban_nature_access.execute(args)
 
