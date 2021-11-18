@@ -356,11 +356,10 @@ $(MAC_BINARIES_ZIP_FILE): $(DIST_DIR) $(MAC_APPLICATION_BUNDLE) $(USERGUIDE_TARG
 build/vcredist_x86.exe: | build
 	powershell.exe -Command "Start-BitsTransfer -Source https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe -Destination build\vcredist_x86.exe"
 
-P12_FILE := 2025-01-16-Expiry-AppStore-App.p12
 KEYCHAIN_NAME := codesign_keychain
 codesign_mac:
 	# download the p12 certificate file from google cloud
-	$(GSUTIL) cp 'gs://stanford_cert/$(P12_FILE)' '$(BUILD_DIR)/$(P12_FILE)'
+	$(GSUTIL) cp 'gs://stanford_cert/$(CERT_FILE)' '$(BUILD_DIR)/$(CERT_FILE)'
 	# create a new keychain (so that we can know what the password is)
 	security create-keychain -p $(KEYCHAIN_PASS) $(KEYCHAIN_NAME)
 	# add the keychain to the search list so it can be found
@@ -370,7 +369,7 @@ codesign_mac:
 	# add the certificate to the keychain
 	# -T option says that the codesign executable can access the keychain
 	# for some reason this alone is not enough, also need the following step
-	security import $(BUILD_DIR)/$(P12_FILE) -k "$(KEYCHAIN_NAME)" -P "$(CERT_KEY_PASS)" -T /usr/bin/codesign
+	security import $(BUILD_DIR)/$(CERT_FILE) -k "$(KEYCHAIN_NAME)" -P "$(CERT_PASS)" -T /usr/bin/codesign
 	# this is essential to avoid the UI password prompt
 	security set-key-partition-list -S apple-tool:,apple: -s -k '$(KEYCHAIN_PASS)' '$(KEYCHAIN_NAME)'
 
@@ -381,10 +380,10 @@ codesign_mac:
 	security lock-keychain $(KEYCHAIN_NAME)
 
 codesign_windows:
-	$(GSUTIL) cp 'gs://stanford_cert/$(P12_FILE)' '$(BUILD_DIR)/$(P12_FILE)'
-	powershell.exe "& '$(SIGNTOOL)' sign /f '$(BUILD_DIR)\$(P12_FILE)' /fd SHA256 /p \"$(CERT_KEY_PASS)\" /u 1.2.840.113635.100.4.9 '$(BIN_TO_SIGN)'"
+	$(GSUTIL) cp 'gs://stanford_cert/$(CERT_FILE)' '$(BUILD_DIR)/$(CERT_FILE)'
+	powershell.exe "& '$(SIGNTOOL)' sign /f '$(BUILD_DIR)\$(CERT_FILE)' /fd SHA256 /p \"$(CERT_PASS)\" /u 1.2.840.113635.100.4.9 '$(BIN_TO_SIGN)'"
 	powershell.exe "& '$(SIGNTOOL)' timestamp /td SHA256 /tr http://timestamp.sectigo.com '$(BIN_TO_SIGN)'"
-	-$(RM) $(BUILD_DIR)/$(P12_FILE)
+	-$(RM) $(BUILD_DIR)/$(CERT_FILE)
 	@echo "Installer was signed with signtool"
 
 deploy:
