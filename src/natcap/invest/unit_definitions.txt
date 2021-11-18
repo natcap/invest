@@ -31,3 +31,6 @@ hour = 60 * minute = h = hr
 # the symbol 'yr' is english-specific and the international symbol 'a' may
 # not be well-known, so we will need to translate this
 year = 365.25 * day = _ = yr = a = julian_year
+
+# redefine degree to use ° symbol
+degree = π / 180 * radian = ° = deg = arcdeg = arcdegree = angular_degree
