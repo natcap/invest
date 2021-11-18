@@ -137,7 +137,7 @@ export default class SettingsModal extends React.Component {
                         onChange={this.handleChange}
                       >
                         {this.state.nWorkersOptions.map(
-                          (opt) => <option value={opt[0]}key={opt[0]}>{opt[1]}</option>
+                          (opt) => <option value={opt[0]} key={opt[0]}>{opt[1]}</option>
                         )}
                       </Form.Control>
                     </Col>
