@@ -185,12 +185,13 @@ def execute(args):
         n_workers = -1  # Synchronous execution
     graph = taskgraph.TaskGraph(work_token_dir, n_workers)
 
+    known_kernel_types = ARGS_SPEC['args']['decay_function']['options']
     if 'kernel_type' not in args:
         kernel_type = 'dichotomy'
-    elif args['kernel_type'] not in kernel_types:
+    elif args['kernel_type'] not in known_kernel_types:
         raise ValueError(
-            f'Kernel type "{kernel_type}" is not recognized. '
-            f"Must be one of {', '.join(kernel_types.keys())}")
+            f'Kernel type "{args["kernel_type"]}" is not recognized. '
+            f"Must be one of {', '.join(known_kernel_types.keys())}")
     else:
         kernel_type = args['kernel_type']
 
