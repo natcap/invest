@@ -37,7 +37,7 @@ class ScenarioProximityTests(unittest.TestCase):
             'convertible_landcover_codes': '1 2 3 4 5',
             'focal_landcover_codes': '1 2 3 4 5',
             'n_fragmentation_steps': '1',
-            'replacement_lucode': '12',
+            'replacment_lucode': '12',
             'n_workers': '-1',
         }
         return args
@@ -141,7 +141,7 @@ class ScenarioGenValidationTests(unittest.TestCase):
         """Initiate list of required keys."""
         self.base_required_keys = [
             'focal_landcover_codes',
-            'replacement_lucode',
+            'replacment_lucode',
             'workspace_dir',
             'n_fragmentation_steps',
             'convertible_landcover_codes',
