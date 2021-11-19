@@ -35,9 +35,12 @@
 .. :changelog:
 
 
-..
-  Unreleased Changes
-  ------------------
+
+Unreleased Changes
+------------------
+* General:
+    * Standardized and de-duplicated text in ``ARGS_SPEC`` ``about`` and
+      ``name`` strings.
 
 3.9.2 (2021-10-29)
 ------------------
