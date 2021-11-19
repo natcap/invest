@@ -18,7 +18,7 @@ from .spec_utils import u
 
 LOGGER = logging.getLogger(__name__)
 UINT32_NODATA = int(numpy.iinfo(numpy.uint32).max)
-FLOAT32_NODATA = float(numpy.finfo(numpy.float32).max)
+FLOAT32_NODATA = float(numpy.finfo(numpy.float32).min)
 BYTE_NODATA = 255
 ARGS_SPEC = {
     'model_name': MODEL_METADATA['urban_nature_access'].model_title,
@@ -245,11 +245,12 @@ def execute(args):
 
     greenspace_lulc_lookup = utils.build_lookup_from_csv(
         args['lulc_attribute_table'], 'lucode')
-    squared_pixel_area = numpy.multiply(*squared_lulc_pixel_size)
+    squared_pixel_area = abs(numpy.multiply(*squared_lulc_pixel_size))
     greenspace_area_map = {
         lucode: int(attributes['greenspace']) * squared_pixel_area
         for lucode, attributes in greenspace_lulc_lookup.items()
     }
+    greenspace_area_map[lulc_raster_info['nodata'][0]] = FLOAT32_NODATA
     greenspace_reclassification_task = graph.add_task(
         utils.reclassify_raster,
         kwargs={
@@ -270,7 +271,7 @@ def execute(args):
         dependent_task_list=[lulc_alignment_task]
     )
 
-    search_radius_in_pixels = (
+    search_radius_in_pixels = abs(
         float(args['search_radius']) / squared_lulc_pixel_size[0])
     kernel_creation_task = graph.add_task(
         # All kernel creation types have the same function signature
@@ -281,9 +282,9 @@ def execute(args):
     )
 
     convolved_population_task = graph.add_task(
-        pygeoprocessing.convolve_2d,
+        _convolve_and_set_lower_bounds_for_population,
         kwargs={
-            'signal_path_band': (file_registry['greenspace_area'], 1),
+            'signal_path_band': (file_registry['aligned_population'], 1),
             'kernel_path_band': (file_registry['kernel'], 1),
             'target_path': file_registry['convolved_population'],
             'working_dir': intermediate_dir,
@@ -344,20 +345,51 @@ def _greenspace_population_ratio(
         greenspace_area, convolved_population, greenspace_nodata,
         population_nodata):
     """"""
+    # ASSUMPTION: population nodata value is not close to 0.
+    #  Shouldn't be if we're coming from convolution.
     out_array = numpy.full(
         greenspace_area.shape, FLOAT32_NODATA, dtype=numpy.float32)
 
-    valid_pixels = numpy.ones(greenspace_area.shape, dtype=bool)
-    if greenspace_nodata is not None:
-        valid_pixels &= ~numpy.isclose(greenspace_area, greenspace_nodata)
-
+    # avoid divide-by-zero and very small negative values
+    valid_pixels = (convolved_population > 0)
     if population_nodata is not None:
         valid_pixels &= ~numpy.isclose(
             convolved_population, population_nodata)
 
+    if greenspace_nodata is not None:
+        valid_pixels &= ~numpy.isclose(greenspace_area, greenspace_nodata)
+
+    out_array[numpy.isclose(convolved_population, 0.0)] = 0.0
     out_array[valid_pixels] = (
         greenspace_area[valid_pixels] / convolved_population[valid_pixels])
+
     return out_array
+
+
+def _convolve_and_set_lower_bounds_for_population(
+        signal_path_band, kernel_path_band, target_path, working_dir):
+    pygeoprocessing.convolve_2d(
+        signal_path_band=signal_path_band,
+        kernel_path_band=kernel_path_band,
+        target_path=target_path,
+        working_dir=working_dir)
+
+    # Sometimes there are negative
+    target_raster = gdal.OpenEx(target_path, gdal.GA_Update)
+    target_band = target_raster.GetRasterBand(1)
+    target_nodata = target_band.GetNoDataValue()
+    for block_data in pygeoprocessing.iterblocks(
+            (target_path, 1), offset_only=True):
+        block = target_band.ReadAsArray(**block_data)
+        valid_pixels = slice(None)
+        if target_nodata is not None:
+            valid_pixels = ~numpy.isclose(block, target_nodata)
+        block[(block < 0.0) & valid_pixels] = 0.0
+        target_band.WriteArray(
+            block, xoff=block_data['xoff'], yoff=block_data['yoff'])
+
+    target_band = None
+    target_raster = None
 
 
 def _square_off_pixels(raster_path):
