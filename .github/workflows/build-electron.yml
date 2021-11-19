@@ -106,27 +106,29 @@ jobs:
       env:
         CLOUDSDK_PYTHON: ${{env.pythonLocation}}\python.exe
         CERT_FILE: Stanford-natcap-code-signing-cert-expires-2024-01-26.p12
+        CERT_PASS: ${{ secrets.WINDOWS_CODESIGN_CERT_PASS }}
+        BIN_TO_SIGN: dist\invest_*.exe
       run: |
         gsutil cp gs://stanford_cert/$CERT_FILE ~/$CERT_FILE
-        ls ~/
+
         # figure out the path to signtool.exe
         SIGNTOOL=$(find 'C:\\Program Files (x86)\\Windows Kits\\10' -type f -name 'signtool.exe*' | head -n 1)
         echo $SIGNTOOL
         echo "SIGNTOOL=$SIGNTOOL" >> $GITHUB_ENV
 
-        # powershell.exe "& '$SIGNTOOL' sign /f '$HOME\$CERT_FILE' /fd SHA256 /p '$CERT_PASS' /u 1.2.840.113635.100.4.9 '$BIN_TO_SIGN'"
-        # powershell.exe "& '$SIGNTOOL' timestamp /td SHA256 /tr http://timestamp.sectigo.com  '$BIN_TO_SIGN'"
+        powershell.exe "& $SIGNTOOL sign /fd SHA256 /f ~/$CERT_FILE /p $CERT_PASS $BIN_TO_SIGN"
+        powershell.exe "& $SIGNTOOL timestamp /tr http://timestamp.sectigo.com /td SHA256 '$BIN_TO_SIGN'"
 
-    - name: Code signing part 2 (Windows)
-      if: github.event_name != 'pull_request' && matrix.os == 'windows-latest'
-      shell: pwsh
-      env:
-        CERT_PASS: ${{ secrets.WINDOWS_CODESIGN_CERT_PASS }}
-        BIN_TO_SIGN: dist\invest_*.exe
-        CERT_FILE: Stanford-natcap-code-signing-cert-expires-2024-01-26.p12
-      run: |
-        & "$SIGNTOOL" sign /fd SHA256 /f "$HOME\$CERT_FILE" /p "$CERT_PASS" $BIN_TO_SIGN
-        & "$SIGNTOOL" timestamp /tr http://timestamp.sectigo.com /td SHA256 $BIN_TO_SIGN
+    # - name: Code signing part 2 (Windows)
+    #   if: github.event_name != 'pull_request' && matrix.os == 'windows-latest'
+    #   shell: pwsh
+    #   env:
+    #     CERT_PASS: ${{ secrets.WINDOWS_CODESIGN_CERT_PASS }}
+    #     BIN_TO_SIGN: dist\invest_*.exe
+    #     CERT_FILE: Stanford-natcap-code-signing-cert-expires-2024-01-26.p12
+    #   run: |
+    #     & "$SIGNTOOL" sign /fd SHA256 /f "$HOME\$CERT_FILE" /p "$CERT_PASS" $BIN_TO_SIGN
+    #     & "$SIGNTOOL" timestamp /tr http://timestamp.sectigo.com /td SHA256 $BIN_TO_SIGN
 
 
     - name: Test electron app with puppeteer
