@@ -387,7 +387,11 @@ def _greenspace_population_ratio(
     if greenspace_nodata is not None:
         valid_pixels &= ~numpy.isclose(greenspace_area, greenspace_nodata)
 
-    out_array[numpy.isclose(convolved_population, 0.0)] = 0.0
+    # If the population in the search radius is numerically 0, the model
+    # specifies that the ratio should be set to the greenspace area.
+    population_close_to_zero = numpy.isclose(convolved_population, 0.0)
+    out_array[population_close_to_zero] = (
+        greenspace_pixels[population_close_to_zero])
     out_array[~greenspace_pixels] = 0.0  # set non-greenspace non-nodata to 0
     out_array[valid_pixels] = (
         greenspace_area[valid_pixels] / convolved_population[valid_pixels])
