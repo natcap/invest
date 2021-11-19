@@ -139,7 +139,7 @@ ARGS_SPEC = {
                     "about": (
                         "The region's relative accessibility to threats, "
                         "where 0 represents completely inaccessible and 1 "
-                        "represents completely accessible")
+                        "represents completely accessible.")
                 }
             },
             "geometries": spec_utils.POLYGONS,
