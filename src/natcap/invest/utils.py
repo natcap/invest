@@ -325,7 +325,8 @@ def make_suffix_string(args, suffix_key):
     return file_suffix
 
 
-def exponential_decay_kernel_raster(expected_distance, kernel_filepath):
+def exponential_decay_kernel_raster(expected_distance, kernel_filepath,
+        normalize=True):
     """Create a raster-based exponential decay kernel.
 
     The raster created will be a tiled GeoTiff, with 256x256 memory blocks.
@@ -406,22 +407,27 @@ def exponential_decay_kernel_raster(expected_distance, kernel_filepath):
     # object in interblocks()
     kernel_band.FlushCache()
     kernel_dataset.FlushCache()
-
-    for block_data in pygeoprocessing.iterblocks(
-            (kernel_filepath, 1), offset_only=True):
-        kernel_block = kernel_band.ReadAsArray(**block_data)
-        kernel_block /= integration
-        kernel_band.WriteArray(kernel_block, xoff=block_data['xoff'],
-                               yoff=block_data['yoff'])
-
-    kernel_band.FlushCache()
-    kernel_dataset.FlushCache()
     kernel_band = None
     kernel_dataset = None
 
+    if normalize:
+        kernel_dataset = gdal.OpenEx(kernel_filepath, gdal.GA_Update)
+        kernel_band = kernel_dataset.GetRasterBand(1)
+        for block_data in pygeoprocessing.iterblocks(
+                (kernel_filepath, 1), offset_only=True):
+            kernel_block = kernel_band.ReadAsArray(**block_data)
+            kernel_block /= integration
+            kernel_band.WriteArray(kernel_block, xoff=block_data['xoff'],
+                                   yoff=block_data['yoff'])
+
+        kernel_band.FlushCache()
+        kernel_dataset.FlushCache()
+        kernel_band = None
+        kernel_dataset = None
+
 
 def gaussian_decay_kernel_raster(
-        sigma, kernel_filepath, n_std_dev=3.0):
+        sigma, kernel_filepath, n_std_dev=3.0, normalize=True):
     """Create a raster-based gaussian decay kernel.
 
     The raster will be a tiled GeoTIFF, with 256x256 memory blocks.
@@ -485,18 +491,20 @@ def gaussian_decay_kernel_raster(
     kernel_band = None
     kernel_dataset = None
 
-    kernel_dataset = gdal.OpenEx(kernel_filepath, gdal.GA_Update)
-    kernel_band = kernel_dataset.GetRasterBand(1)
-    for kernel_data, kernel_block in pygeoprocessing.iterblocks(
-            (kernel_filepath, 1)):
-        # divide by sum to normalize
-        kernel_block /= running_sum
-        kernel_band.WriteArray(
-            kernel_block, xoff=kernel_data['xoff'], yoff=kernel_data['yoff'])
+    if normalize:
+        kernel_dataset = gdal.OpenEx(kernel_filepath, gdal.GA_Update)
+        kernel_band = kernel_dataset.GetRasterBand(1)
+        for kernel_data, kernel_block in pygeoprocessing.iterblocks(
+                (kernel_filepath, 1)):
+            # divide by sum to normalize
+            kernel_block /= running_sum
+            kernel_band.WriteArray(
+                kernel_block, xoff=kernel_data['xoff'],
+                yoff=kernel_data['yoff'])
 
-    kernel_dataset.FlushCache()
-    kernel_band = None
-    kernel_dataset = None
+        kernel_dataset.FlushCache()
+        kernel_band = None
+        kernel_dataset = None
 
 
 def build_file_registry(base_file_path_list, file_suffix):

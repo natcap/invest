@@ -277,6 +277,7 @@ def execute(args):
         # All kernel creation types have the same function signature
         kernel_types[kernel_type],
         args=(search_radius_in_pixels, file_registry['kernel']),
+        kwargs={'normalize': False},  # Model math calls for un-normalized
         task_name=f'2SFCA - Create {kernel_type} kernel',
         target_path_list=[file_registry['kernel']]
     )
@@ -344,14 +345,41 @@ def execute(args):
 def _greenspace_population_ratio(
         greenspace_area, convolved_population, greenspace_nodata,
         population_nodata):
-    """"""
+    """Calculate the greenspace-population ratio R_j.
+
+    Args:
+        greenspace_area (numpy.array): A numpy array representing the area of
+            greenspace in the pixel.  Pixel values will be ``0`` if there is no
+            greenspace.  Pixel values may also match ``greenspace_nodata``.
+        convolved_population (numpy.array): A numpy array where each pixel
+            represents the total number of people within a search radius of
+            each pixel, perhaps adjusted by a search kernel.
+        greenspace_nodata (int or float): The nodata value of the
+            ``greenspace_area`` matrix.
+        population_nodata (int or float): The nodata value of the
+            ``convolved_population`` matrix.
+
+    Returns:
+        A numpy array with the ratio ``R_j`` representing thew
+        greenspace-population ratio with the following constraints:
+
+            * ``convolved_population`` pixels that are numerically close to
+              ``0`` are snapped to ``0`` to avoid unrealistically small
+              denominators in the final ratio.
+            * Any non-greenspace pixels will have a value of ``0.0`` in the
+              output matrix.
+    """
     # ASSUMPTION: population nodata value is not close to 0.
     #  Shouldn't be if we're coming from convolution.
     out_array = numpy.full(
         greenspace_area.shape, FLOAT32_NODATA, dtype=numpy.float32)
 
-    # avoid divide-by-zero and very small negative values
+    # Avoid divide-by-zero and very small negative values
     valid_pixels = (convolved_population > 0)
+
+    # R_j is a ratio only calculated for the greenspace pixels.
+    greenspace_pixels = ~numpy.isclose(greenspace_area, 0.0)
+    valid_pixels &= greenspace_pixels
     if population_nodata is not None:
         valid_pixels &= ~numpy.isclose(
             convolved_population, population_nodata)
@@ -360,6 +388,7 @@ def _greenspace_population_ratio(
         valid_pixels &= ~numpy.isclose(greenspace_area, greenspace_nodata)
 
     out_array[numpy.isclose(convolved_population, 0.0)] = 0.0
+    out_array[~greenspace_pixels] = 0.0  # set non-greenspace non-nodata to 0
     out_array[valid_pixels] = (
         greenspace_area[valid_pixels] / convolved_population[valid_pixels])
 
@@ -551,7 +580,8 @@ def _resample_population_raster(
     shutil.rmtree(tmp_working_dir, ignore_errors=True)
 
 
-def instantaneous_decay_kernel_raster(expected_distance, kernel_filepath):
+def instantaneous_decay_kernel_raster(expected_distance, kernel_filepath,
+        normalize=False):
     """Create a raster-based, discontinuous decay kernel.
 
     This kernel has a value of ``1`` for all pixels within
@@ -572,7 +602,7 @@ def instantaneous_decay_kernel_raster(expected_distance, kernel_filepath):
     driver = gdal.GetDriverByName('GTiff')
     kernel_dataset = driver.Create(
         kernel_filepath.encode('utf-8'), kernel_size, kernel_size, 1,
-        gdal.GDT_Byte, options=[
+        gdal.GDT_Float32, options=[
             'BIGTIFF=IF_SAFER', 'TILED=YES', 'BLOCKXSIZE=256',
             'BLOCKYSIZE=256'])
 
@@ -584,7 +614,7 @@ def instantaneous_decay_kernel_raster(expected_distance, kernel_filepath):
     kernel_dataset.SetProjection(srs.ExportToWkt())
 
     kernel_band = kernel_dataset.GetRasterBand(1)
-    kernel_nodata = 255  # byte nodata
+    kernel_nodata = FLOAT32_NODATA
     kernel_band.SetNoDataValue(kernel_nodata)
 
     kernel_band = None
@@ -594,6 +624,7 @@ def instantaneous_decay_kernel_raster(expected_distance, kernel_filepath):
     kernel_band = kernel_raster.GetRasterBand(1)
     band_x_size = kernel_band.XSize
     band_y_size = kernel_band.YSize
+    running_sum = 0.0
     for block_data in pygeoprocessing.iterblocks(
             (kernel_filepath, 1), offset_only=True):
         array_xmin = block_data['xoff'] - pixel_radius
@@ -611,16 +642,33 @@ def instantaneous_decay_kernel_raster(expected_distance, kernel_filepath):
                 array_xmin:array_xmax])
         search_kernel = numpy.array(
             pixel_dist_from_center <= expected_distance, dtype=numpy.uint8)
+        running_sum += search_kernel.sum()
         kernel_band.WriteArray(
             search_kernel,
             yoff=block_data['yoff'],
             xoff=block_data['xoff'])
 
+    kernel_raster.FlushCache()
     kernel_band = None
     kernel_raster = None
 
+    if normalize:
+        kernel_raster = gdal.OpenEx(kernel_filepath, gdal.GA_Update)
+        kernel_band = kernel_raster.GetRasterBand(1)
+        for block_data, kernel_block in pygeoprocessing.iterblocks(
+                (kernel_filepath, 1)):
+            # divide by sum to normalize
+            kernel_block /= running_sum
+            kernel_band.WriteArray(
+                kernel_block, xoff=block_data['xoff'], yoff=block_data['yoff'])
 
-def density_decay_kernel_raster(expected_distance, kernel_filepath):
+        kernel_raster.FlushCache()
+        kernel_band = None
+        kernel_raster = None
+
+
+def density_decay_kernel_raster(expected_distance, kernel_filepath,
+        normalize=False):
     """Create a raster-based density decay kernel.
 
     Args:
@@ -659,6 +707,7 @@ def density_decay_kernel_raster(expected_distance, kernel_filepath):
     kernel_band = kernel_raster.GetRasterBand(1)
     band_x_size = kernel_band.XSize
     band_y_size = kernel_band.YSize
+    running_sum = 0.0
     for block_data in pygeoprocessing.iterblocks(
             (kernel_filepath, 1), offset_only=True):
         array_xmin = block_data['xoff'] - pixel_radius
@@ -681,14 +730,30 @@ def density_decay_kernel_raster(expected_distance, kernel_filepath):
         density[pixels_in_radius] = (
             0.75 * (1 - (pixel_dist_from_center[
                 pixels_in_radius] / expected_distance) ** 2))
+        running_sum += density.sum()
 
         kernel_band.WriteArray(
             density,
             yoff=block_data['yoff'],
             xoff=block_data['xoff'])
 
+    kernel_raster.FlushCache()
     kernel_band = None
     kernel_raster = None
+
+    if normalize:
+        kernel_raster = gdal.OpenEx(kernel_filepath, gdal.GA_Update)
+        kernel_band = kernel_raster.GetRasterBand(1)
+        for block_data, kernel_block in pygeoprocessing.iterblocks(
+                (kernel_filepath, 1)):
+            # divide by sum to normalize
+            kernel_block /= running_sum
+            kernel_band.WriteArray(
+                kernel_block, xoff=block_data['xoff'], yoff=block_data['yoff'])
+
+        kernel_raster.FlushCache()
+        kernel_band = None
+        kernel_raster = None
 
 
 def validate(args, limit_to=None):
