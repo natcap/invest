@@ -70,11 +70,12 @@ jobs:
       env:
         KEYCHAIN_NAME: codesign_keychain
         KEYCHAIN_PASS: ${{ secrets.MAC_KEYCHAIN_PASS }}
-        CERT_KEY_PASS: ${{ secrets.CODESIGN_CERT_KEY_PASS }}
+        CERT_PASS: ${{ secrets.MACOS_CODESIGN_CERT_PASS }}
+        CERT_FILE: 2025-01-16-Expiry-AppStore-App.p12
         BIN_TO_SIGN: dist/invest_*.dmg
       run: |
-        P12_FILE_NAME=codesign_cert.p12
-        gsutil cp gs://stanford_cert/2025-01-16-Expiry-AppStore-App.p12 ~/$P12_FILE_NAME
+
+        gsutil cp gs://stanford_cert/$CERT_FILE ~/$CERT_FILE
         ls ~/
 
         # create a new keychain (so that we can know what the password is)
@@ -89,12 +90,10 @@ jobs:
         # add the certificate to the keychain
         # -T option says that the codesign executable can access the keychain
         # for some reason this alone is not enough, also need the following step
-        security import ~/$P12_FILE_NAME -k $KEYCHAIN_NAME -P $CERT_KEY_PASS -T /usr/bin/codesign
+        security import ~/$CERT_FILE -k "$KEYCHAIN_NAME" -P "$CERT_PASS" -T /usr/bin/codesign
 
         # this is essential to avoid the UI password prompt
         security set-key-partition-list -S apple-tool:,apple: -s -k $KEYCHAIN_PASS $KEYCHAIN_NAME
-
-        security find-identity
 
         # sign the dmg using certificate that's looked up by unique identifier 'Stanford'
         codesign --timestamp --verbose --sign Stanford $BIN_TO_SIGN
@@ -106,27 +105,27 @@ jobs:
       if: github.event_name != 'pull_request' && matrix.os == 'windows-latest'
       env:
         CLOUDSDK_PYTHON: ${{env.pythonLocation}}\python.exe
+        CERT_FILE: Stanford-natcap-code-signing-cert-expires-2024-01-26.p12
       run: |
-        P12_FILE_NAME=codesign_cert.p12
-        gsutil cp gs://stanford_cert/2025-01-16-Expiry-AppStore-App.p12 ~/$P12_FILE_NAME
+        gsutil cp gs://stanford_cert/$CERT_FILE ~/$CERT_FILE
         ls ~/
         # figure out the path to signtool.exe
         SIGNTOOL=$(find 'C:\\Program Files (x86)\\Windows Kits\\10' -type f -name 'signtool.exe*' | head -n 1)
         echo $SIGNTOOL
         echo "SIGNTOOL=$SIGNTOOL" >> $GITHUB_ENV
 
-        # powershell.exe "& '$SIGNTOOL' sign /f '$HOME\$P12_FILE_NAME' /fd SHA256 /p '$CERT_KEY_PASS' /u 1.2.840.113635.100.4.9 '$BIN_TO_SIGN'"
+        # powershell.exe "& '$SIGNTOOL' sign /f '$HOME\$CERT_FILE' /fd SHA256 /p '$CERT_PASS' /u 1.2.840.113635.100.4.9 '$BIN_TO_SIGN'"
         # powershell.exe "& '$SIGNTOOL' timestamp /td SHA256 /tr http://timestamp.sectigo.com  '$BIN_TO_SIGN'"
 
     - name: Code signing part 2 (Windows)
       if: github.event_name != 'pull_request' && matrix.os == 'windows-latest'
       shell: pwsh
       env:
-        CERT_KEY_PASS: ${{ secrets.CODESIGN_CERT_KEY_PASS }}
+        CERT_PASS: ${{ secrets.WINDOWS_CODESIGN_CERT_PASS }}
         BIN_TO_SIGN: dist\invest_*.exe
-        P12_FILE_NAME: codesign_cert.p12
+        CERT_FILE: Stanford-natcap-code-signing-cert-expires-2024-01-26.p12
       run: |
-        & "$SIGNTOOL" sign /fd SHA256 /f "$HOME\$P12_FILE_NAME" /p "$CERT_KEY_PASS" $BIN_TO_SIGN
+        & "$SIGNTOOL" sign /fd SHA256 /f "$HOME\$CERT_FILE" /p "$CERT_PASS" $BIN_TO_SIGN
         & "$SIGNTOOL" timestamp /tr http://timestamp.sectigo.com /td SHA256 $BIN_TO_SIGN
 
 
