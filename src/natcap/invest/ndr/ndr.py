@@ -92,9 +92,9 @@ ARGS_SPEC = {
                         "The distance after which it is assumed that this "
                         "LULC type retains the nutrient at its maximum "
                         "capacity. If nutrients travel a shorter distance "
-                        "that this, the retention "
-                        "efficiency will be less than the maximum value "
-                        "eff_x, following an exponential decay.")},
+                        "than this, the retention efficiency will be less "
+                        "than the maximum value eff_x, following an "
+                        "exponential decay.")},
                 "proportion_subsurface_n": {
                     "type": "ratio",
                     "required": "calc_n",
