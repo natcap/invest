@@ -4,7 +4,7 @@ on: [push, pull_request]
 
 defaults:
   run:
-    shell: bash -l -x {0}
+    shell: bash -l {0}
 
 jobs:
   build-and-release:
@@ -65,6 +65,7 @@ jobs:
         CSC_IDENTITY_AUTO_DISCOVERY: false  # disable electron-builder code signing
       run: yarn run dist
 
+    # do code signing ourselves because it's easier than with electron-builder
     - name: Code signing (MacOS)
       if: github.event_name != 'pull_request' && matrix.os == 'macos-latest'
       env:
@@ -74,10 +75,7 @@ jobs:
         CERT_FILE: 2025-01-16-Expiry-AppStore-App.p12
         BIN_TO_SIGN: dist/invest_*.dmg
       run: |
-
         gsutil cp gs://stanford_cert/$CERT_FILE ~/$CERT_FILE
-        ls ~/
-
         # create a new keychain (so that we can know what the password is)
         security create-keychain -p $KEYCHAIN_PASS $KEYCHAIN_NAME
 
@@ -113,23 +111,9 @@ jobs:
 
         # figure out the path to signtool.exe
         SIGNTOOL=$(find 'C:\\Program Files (x86)\\Windows Kits\\10' -type f -name 'signtool.exe*' | head -n 1)
-        echo $SIGNTOOL
-        echo "SIGNTOOL=$SIGNTOOL" >> $GITHUB_ENV
 
         "$SIGNTOOL" sign -fd SHA256 -f ~/$CERT_FILE -p $CERT_PASS $BIN_TO_SIGN
         "$SIGNTOOL" timestamp -tr http://timestamp.sectigo.com -td SHA256 $BIN_TO_SIGN
-
-    # - name: Code signing part 2 (Windows)
-    #   if: github.event_name != 'pull_request' && matrix.os == 'windows-latest'
-    #   shell: pwsh
-    #   env:
-    #     CERT_PASS: ${{ secrets.WINDOWS_CODESIGN_CERT_PASS }}
-    #     BIN_TO_SIGN: dist\invest_*.exe
-    #     CERT_FILE: Stanford-natcap-code-signing-cert-expires-2024-01-26.p12
-    #   run: |
-    #     & "$SIGNTOOL" sign /fd SHA256 /f "$HOME\$CERT_FILE" /p "$CERT_PASS" $BIN_TO_SIGN
-    #     & "$SIGNTOOL" timestamp /tr http://timestamp.sectigo.com /td SHA256 $BIN_TO_SIGN
-
 
     - name: Test electron app with puppeteer
       run: yarn run test-electron-app
