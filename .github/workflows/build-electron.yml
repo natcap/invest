@@ -116,8 +116,8 @@ jobs:
         echo $SIGNTOOL
         echo "SIGNTOOL=$SIGNTOOL" >> $GITHUB_ENV
 
-        powershell.exe "& $SIGNTOOL sign /fd SHA256 /f ~/$CERT_FILE /p $CERT_PASS $BIN_TO_SIGN"
-        powershell.exe "& $SIGNTOOL timestamp /tr http://timestamp.sectigo.com /td SHA256 '$BIN_TO_SIGN'"
+        powershell.exe "& '$SIGNTOOL' sign /fd SHA256 /f ~/$CERT_FILE /p $CERT_PASS $BIN_TO_SIGN"
+        powershell.exe "& '$SIGNTOOL' timestamp /tr http://timestamp.sectigo.com /td SHA256 '$BIN_TO_SIGN'"
 
     # - name: Code signing part 2 (Windows)
     #   if: github.event_name != 'pull_request' && matrix.os == 'windows-latest'
