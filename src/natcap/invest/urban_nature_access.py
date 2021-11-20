@@ -613,6 +613,8 @@ def instantaneous_decay_kernel_raster(expected_distance, kernel_filepath,
             the kernel becomes 0.
         kernel_filepath (string): The string path on disk to where this kernel
             should be stored.
+        normalize=False (bool): Whether to divide the kernel values by the sum
+            of all values in the kernel.
 
     Returns:
         ``None``
@@ -696,6 +698,8 @@ def density_decay_kernel_raster(expected_distance, kernel_filepath,
             the kernel becomes 0.
         kernel_filepath (string): The string path on disk to where this kernel
             should be stored.
+        normalize=False (bool): Whether to divide the kernel values by the sum
+            of all values in the kernel.
 
     Returns:
         ``None``

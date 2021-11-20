@@ -338,6 +338,8 @@ def exponential_decay_kernel_raster(expected_distance, kernel_filepath,
         kernel_filepath (string): The path to the file on disk where this
             kernel should be stored.  If this file exists, it will be
             overwritten.
+        normalize=True (bool): Whether to divide the kernel values by the sum
+            of all values in the kernel.
 
     Returns:
         None
@@ -447,6 +449,8 @@ def gaussian_decay_kernel_raster(
         sigma_multiplier (int or float): The number of times sigma should be
             multiplied in order to get the pixel radius of the resulting
             kernel.
+        normalize=True (bool): Whether to divide the kernel values by the sum
+            of all values in the kernel.
 
     Returns:
         ``None``
