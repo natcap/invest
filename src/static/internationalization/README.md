@@ -29,5 +29,13 @@ Do *not* remove the entry from the PO files. When we update them with `msgmerge`
 
 See the InVEST internationalization README. The only difference is to use `msgmerge` instead of `pybabel` to update the PO file:
 ```
-msgmerge internationalization/locales/<LANG>/LC_MESSAGES/messages.po internationalization/messages.pot
+$ msgmerge internationalization/locales/<LANG>/LC_MESSAGES/messages.po internationalization/messages.pot
 ```
+
+## Adding support for a new language
+```
+$ mkdir -p internationalization/locales/<LANG>/LC_MESSAGES
+
+$ msginit --no-translator --input internationalization/messages.pot --output-file internationalization/locales/<LANG>/LC_MESSAGES/messages.po
+```
+

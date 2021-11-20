@@ -303,7 +303,7 @@ describe('Translation', () => {
   };
 
   beforeAll(async () => {
-    getInvestModelNames.mockResolvedValue([]);
+    getInvestModelNames.mockResolvedValue({});
 
     i18n.loadJSON(messageCatalog, 'messages');
     console.log(i18n.gettext('Language'));

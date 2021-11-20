@@ -31,7 +31,7 @@ export async function getInvestModelNames() {
  * @param {string} payload - model name as given by `invest list`
  * @returns {Promise} resolves object
  */
-export function getSpec(payload) {
+export async function getSpec(payload) {
   const language = await getSettingsValue('language');
   return (
     window.fetch(`${HOSTNAME}:${process.env.PORT}/getspec?language=${language}`, {
@@ -53,7 +53,7 @@ export function getSpec(payload) {
  * }
  * @returns {Promise} resolves array
  */
-export function fetchValidation(payload) {
+export async function fetchValidation(payload) {
   const language = await getSettingsValue('language');
   return (
     window.fetch(`${HOSTNAME}:${process.env.PORT}/validate?language=${language}`, {

@@ -442,7 +442,7 @@ describe('InVEST global settings: dialog interactions', () => {
     await waitFor(() => {
       expect(nWorkersInput).toHaveValue(defaultSettings.nWorkers);
       expect(loggingInput).toHaveValue(defaultSettings.loggingLevel);
-      expect(languageInput).toHaveValue(language);
+      expect(languageInput).toHaveValue(defaultSettings.language);
     });
   });
 
