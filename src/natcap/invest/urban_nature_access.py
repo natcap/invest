@@ -401,13 +401,29 @@ def _greenspace_population_ratio(
 
 def _convolve_and_set_lower_bounds_for_population(
         signal_path_band, kernel_path_band, target_path, working_dir):
+    """Convolve a raster and set all values below 0 to 0.
+
+    Args:
+        signal_path_band (tuple): A 2-tuple of (signal_raster_path, band_index)
+            to use as the signal raster in the convolution.
+        kernel_path_band (tuple): A 2-tuple of (kernel_raster_path, band_index)
+            to use as the kernel raster in the convolution.
+        target_path (string): Where the target raster should be written.
+        working_dir (string): The working directory that
+            ``pygeoprocessing.convolve_2d`` may use for its intermediate files.
+
+    Returns:
+        ``None``
+    """
     pygeoprocessing.convolve_2d(
         signal_path_band=signal_path_band,
         kernel_path_band=kernel_path_band,
         target_path=target_path,
         working_dir=working_dir)
 
-    # Sometimes there are negative
+    # Sometimes there are negative values that should have been clamped to 0 in
+    # the convolution but weren't, so let's clamp them to avoid support issues
+    # later on.
     target_raster = gdal.OpenEx(target_path, gdal.GA_Update)
     target_band = target_raster.GetRasterBand(1)
     target_nodata = target_band.GetNoDataValue()
