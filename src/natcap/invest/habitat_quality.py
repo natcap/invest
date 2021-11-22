@@ -755,6 +755,12 @@ def _compute_rarity_operation(
         base_lulc_path_band, lulc_path_band, new_cover_path, rarity_path):
     """Calculate habitat rarity.
 
+    Output rarity values will be an index from 0 - 1 where:
+       pixel > 0.5 - more rare
+       pixel < 0.5 - less rare
+       pixel = 0.5 - no rarity change
+       pixel = 0.0 - LULC not found in the baseline for comparison
+
     Args:
         base_lulc_path_band (tuple): a 2 tuple for the path to input base
             LULC raster of the form (path, band index).
@@ -819,7 +825,7 @@ def _compute_rarity_operation(
         if code in lulc_code_count_b:
             numerator = lulc_code_count_x[code] * lulc_area
             denominator = lulc_code_count_b[code] * base_area
-            ratio = 1.0 - (numerator / denominator)
+            ratio = 1.0 - (numerator / (denominator + numerator))
             code_index[code] = ratio
         else:
             code_index[code] = 0.0
