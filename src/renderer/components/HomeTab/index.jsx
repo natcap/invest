@@ -1,8 +1,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 
-import Button from 'react-bootstrap/Button';
-import Table from 'react-bootstrap/Table';
+import ListGroup from 'react-bootstrap/ListGroup';
 import Card from 'react-bootstrap/Card';
 import Container from 'react-bootstrap/Container';
 import Col from 'react-bootstrap/Col';
@@ -20,13 +19,31 @@ const logger = window.Workbench.getLogger(__filename.split('/').slice(-2).join('
 export default class HomeTab extends React.PureComponent {
   constructor(props) {
     super(props);
+    this.state = {
+      sortedModels: []
+    };
     this.handleClick = this.handleClick.bind(this);
   }
 
-  handleClick(event) {
-    const { value } = event.target;
+  componentDidMount() {
+    // sort the model list alphabetically, by the model title,
+    // and with special placement of CBC Preprocessor before CBC model.
+    const sortedModels = Object.keys(this.props.investList).sort();
+    const cbcpElement = 'Coastal Blue Carbon Preprocessor';
+    const cbcIdx = sortedModels.indexOf('Coastal Blue Carbon');
+    const cbcpIdx = sortedModels.indexOf(cbcpElement);
+    if (cbcIdx > -1 && cbcpIdx > -1) {
+      sortedModels.splice(cbcpIdx, 1); // remove it
+      sortedModels.splice(cbcIdx, 0, cbcpElement); // insert it
+    }
+    this.setState({
+      sortedModels: sortedModels
+    });
+  }
+
+  handleClick(value) {
     const { investList, openInvestModel } = this.props;
-    const modelRunName = investList[value].internal_name;
+    const modelRunName = investList[value].model_name;
     const job = new InvestJob({
       modelRunName: modelRunName,
       modelHumanName: value
@@ -35,36 +52,30 @@ export default class HomeTab extends React.PureComponent {
   }
 
   render() {
-    const { investList, recentJobs } = this.props;
+    const { recentJobs } = this.props;
+    const { sortedModels } = this.state;
     // A button in a table row for each model
     const investButtons = [];
-    Object.keys(investList).forEach((model) => {
+    sortedModels.forEach((model) => {
       investButtons.push(
-        <tr key={model}>
-          <td>
-            <Button
-              className="invest-button"
-              block
-              size="lg"
-              value={model}
-              onClick={this.handleClick}
-              variant="link"
-            >
-              {model}
-            </Button>
-          </td>
-        </tr>
+        <ListGroup.Item
+          key={model}
+          className="invest-button"
+          title={model}
+          action
+          onClick={() => this.handleClick(model)}
+        >
+          {model}
+        </ListGroup.Item>
       );
     });
 
     return (
       <Row>
-        <Col md={5} className="invest-list-table">
-          <Table size="sm">
-            <tbody>
-              {investButtons}
-            </tbody>
-          </Table>
+        <Col md={6} className="invest-list-container">
+          <ListGroup className="invest-list-group">
+            {investButtons}
+          </ListGroup>
         </Col>
         <Col className="recent-job-card-col">
           <RecentInvestJobs
@@ -80,7 +91,7 @@ export default class HomeTab extends React.PureComponent {
 HomeTab.propTypes = {
   investList: PropTypes.objectOf(
     PropTypes.shape({
-      internal_name: PropTypes.string,
+      model_name: PropTypes.string,
     }),
   ).isRequired,
   openInvestModel: PropTypes.func.isRequired,

@@ -25,7 +25,9 @@ export default function findInvestBinaries(isDevMode) {
     }
     // Checking that we have a functional invest exe by getting version
     const investVersion = execFileSync(investExe, ['--version']);
-    logger.info(`Found invest binaries ${investExe} for version ${investVersion}`);
+    logger.info(
+      `Found invest binaries ${investExe} for version ${investVersion}`
+    );
     return investExe;
   } catch (error) {
     logger.error(error.message);

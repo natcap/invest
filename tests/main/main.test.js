@@ -4,6 +4,7 @@ instantiated by main.
 */
 
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import { execFileSync } from 'child_process';
 
@@ -15,6 +16,7 @@ import {
 import '@testing-library/jest-dom';
 import yazl from 'yazl';
 import rimraf from 'rimraf';
+import fetch from 'node-fetch';
 
 import {
   createWindow,
@@ -32,6 +34,7 @@ import {
 import findInvestBinaries from '../../src/main/findInvestBinaries';
 import extractZipInplace from '../../src/main/extractZipInplace';
 import { ipcMainChannels } from '../../src/main/ipcMainChannels';
+import investUsageLogger from '../../src/main/investUsageLogger';
 import { getInvestModelNames } from '../../src/renderer/server_requests';
 import App from '../../src/renderer/app';
 import {
@@ -39,6 +42,7 @@ import {
   getSettingsValue,
 } from '../../src/renderer/components/SettingsModal/SettingsStorage';
 
+jest.mock('node-fetch');
 jest.mock('child_process');
 execFileSync.mockReturnValue('foo');
 jest.mock('../../src/main/createPythonFlaskProcess');
@@ -91,8 +95,7 @@ describe('findInvestBinaries', () => {
   it('should point to resourcesPath in production', async () => {
     const isDevMode = false;
     const exePath = findInvestBinaries(isDevMode);
-    expect(exePath)
-      .toBe(path.join(process.resourcesPath, 'invest', filename));
+    expect(exePath).toBe(path.join(process.resourcesPath, 'invest', filename));
   });
   it('should throw if the invest exe is bad', async () => {
     execFileSync.mockImplementation(() => {
@@ -104,7 +107,7 @@ describe('findInvestBinaries', () => {
 });
 
 describe('extractZipInplace', () => {
-  const root = path.join('tests', 'data');
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'data-'));
   const zipPath = path.join(root, 'output.zip');
   let level1Dir;
   let level2Dir;
@@ -129,7 +132,7 @@ describe('extractZipInplace', () => {
       fs.createWriteStream(zipPath)
     ).on('close', () => {
       // being extra careful with recursive rm
-      if (level1Dir.startsWith(path.join('tests', 'data', 'level1'))) {
+      if (level1Dir.startsWith(path.join(root, 'level1'))) {
         rimraf(level1Dir, (error) => { if (error) { throw error; } });
       }
       doneZipping = true;
@@ -138,11 +141,7 @@ describe('extractZipInplace', () => {
   });
 
   afterEach(() => {
-    fs.unlinkSync(zipPath);
-    // being extra careful with recursive rm
-    if (level1Dir.startsWith(path.join('tests', 'data', 'level1'))) {
-      rimraf(level1Dir, (error) => { if (error) { throw error; } });
-    }
+    fs.rmSync(root, { recursive: true, force: true });
   });
 
   it('should extract recursively', async () => {
@@ -176,13 +175,14 @@ describe('createWindow', () => {
       ipcMainChannels.SHOW_OPEN_DIALOG,
       ipcMainChannels.SHOW_SAVE_DIALOG,
       ipcMainChannels.IS_FIRST_RUN,
+      ipcMainChannels.GET_N_CPUS,
     ];
     const expectedOnChannels = [
       ipcMainChannels.DOWNLOAD_URL,
       ipcMainChannels.INVEST_RUN,
       ipcMainChannels.INVEST_KILL,
       ipcMainChannels.INVEST_READ_LOG,
-      ipcMainChannels.SHOW_CONTEXT_MENU,
+      ipcMainChannels.SHOW_ITEM_IN_FOLDER,
     ];
     createWindow();
     await waitFor(() => {
@@ -281,5 +281,31 @@ describe('Integration tests for Download Sample Data Modal', () => {
       const value = await getSettingsValue('sampleDataDir');
       expect(value).toBe(existingValue);
     });
+  });
+});
+
+describe('investUsageLogger', () => {
+  test('sends requests with correct payload', () => {
+    const modelPyname = 'natcap.invest.carbon';
+    const args = {
+      workspace_dir: 'foo',
+      aoi: 'bar',
+    };
+    const investStdErr = '';
+    const usageLogger = investUsageLogger();
+
+    usageLogger.start(modelPyname, args);
+    expect(fetch.mock.calls).toHaveLength(1);
+    const startPayload = JSON.parse(fetch.mock.calls[0][1].body);
+
+    usageLogger.exit(investStdErr);
+    expect(fetch.mock.calls).toHaveLength(2);
+    const exitPayload = JSON.parse(fetch.mock.calls[1][1].body);
+
+    expect(startPayload.session_id).toBe(exitPayload.session_id);
+    expect(startPayload.model_pyname).toBe(modelPyname);
+    expect(JSON.parse(startPayload.model_args)).toMatchObject(args);
+    expect(startPayload.invest_interface).toContain('Workbench');
+    expect(exitPayload.status).toBe(investStdErr);
   });
 });

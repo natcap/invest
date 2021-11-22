@@ -8,12 +8,15 @@ class Store {
   getItem(key) {
     return new Promise((resolve) => resolve(this.store[key]));
   }
+
   setItem(key, val) {
     this.store[key] = val;
   }
+
   removeItem(key) {
     delete this.store[key];
   }
+
   clear() {
     const tmpName = this.store.name;
     this.store = {

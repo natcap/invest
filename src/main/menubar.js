@@ -1,8 +1,12 @@
-const { app, BrowserWindow } = require('electron');
+import path from 'path';
+
+import { app, BrowserWindow } from 'electron'; // eslint-disable-line import/no-extraneous-dependencies
+
+import setupContextMenu from './setupContextMenu';
 
 const isMac = process.platform === 'darwin';
 
-function menuTemplate(parentWindow, isDevMode) {
+export default function menuTemplate(parentWindow, isDevMode) {
   // Much of this template comes straight from the docs
   // https://www.electronjs.org/docs/api/menu
   const template = [
@@ -63,7 +67,6 @@ function menuTemplate(parentWindow, isDevMode) {
       submenu: [
         { role: 'reload' },
         { role: 'forcereload' },
-        { role: 'toggledevtools' },
         { type: 'separator' },
         { role: 'resetzoom' },
         { role: 'zoomin' },
@@ -118,6 +121,7 @@ function openAboutWindow(parentWindow, isDevMode) {
       minimumFontSize: 18,
     },
   });
+  setupContextMenu(child);
   child.setMenu(null);
   child.loadURL(`file://${__dirname}/../static/about.html`);
   if (isDevMode) {
@@ -136,13 +140,14 @@ function openReportWindow(parentWindow, isDevMode) {
       enableRemoteModule: false,
       nodeIntegration: true,
       minimumFontSize: 18,
+      preload: path.join(__dirname, '..', 'preload.js'),
+      defaultEncoding: 'UTF-8',
     },
   });
+  setupContextMenu(child);
   child.setMenu(null);
   child.loadURL(`file://${__dirname}/../static/report_a_problem.html`);
   if (isDevMode) {
     child.webContents.openDevTools();
   }
 }
-
-module.exports.menuTemplate = menuTemplate;

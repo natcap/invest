@@ -11,13 +11,21 @@ export default function Expire(props) {
     }, props.delay);
   }, [props.delay]);
 
-  return visible ? <div>{props.children}</div> : <div />;
+  return (
+    visible
+      ? <div className={props.className}>{props.children}</div>
+      : <div />
+  );
 }
 
 Expire.propTypes = {
+  className: PropTypes.string,
   delay: PropTypes.number.isRequired,
   children: PropTypes.oneOfType([
     PropTypes.arrayOf(PropTypes.node),
     PropTypes.node,
   ]).isRequired,
+};
+Expire.defaultProps = {
+  className: ''
 };

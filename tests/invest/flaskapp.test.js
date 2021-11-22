@@ -1,6 +1,9 @@
 import fs from 'fs';
-
+import os from 'os';
+import path from 'path';
 import readline from 'readline';
+
+import rimraf from 'rimraf';
 import fetch from 'node-fetch';
 import React from 'react';
 import { render } from '@testing-library/react';
@@ -23,6 +26,7 @@ if (!process.env.PORT) {
 
 jest.setTimeout(250000); // This test is slow in CI
 global.window.fetch = fetch;
+
 beforeAll(async () => {
   const isDevMode = true; // otherwise need to mock process.resourcesPath
   const investExe = findInvestBinaries(isDevMode);
@@ -39,137 +43,149 @@ afterAll(async () => {
   await shutdownPythonProcess();
 });
 
-test('invest list items have expected properties', async () => {
-  const investList = await server_requests.getInvestModelNames();
-  Object.values(investList).forEach((item) => {
-    expect(item.internal_name).not.toBeUndefined();
-  });
-});
-
-test('fetch invest model args spec', async () => {
-  const spec = await server_requests.getSpec('carbon');
-  const expectedKeys = ['model_name', 'module', 'userguide_html', 'args'];
-  expectedKeys.forEach((key) => {
-    expect(spec[key]).not.toBeUndefined();
-  });
-});
-
-test('fetch invest validation', async () => {
-  const spec = await server_requests.getSpec('carbon');
-  // it's okay to validate even if none of the args have values yet
-  const argsDict = argsDictFromObject(spec.args);
-  const payload = {
-    model_module: spec.module,
-    args: JSON.stringify(argsDict),
-  };
-
-  const results = await server_requests.fetchValidation(payload);
-  // There's always an array of arrays, where each child array has
-  // two elements: 1) an array of invest arg keys, 2) string message
-  expect(results[0]).toHaveLength(2);
-});
-
-test('write parameters to file and parse them from file', async () => {
-  const spec = await server_requests.getSpec('carbon');
-  const argsDict = argsDictFromObject(spec.args);
-  const filepath = 'tests/data/foo.json';
-  const payload = {
-    parameterSetPath: filepath,
-    moduleName: spec.module,
-    args: JSON.stringify(argsDict),
-    relativePaths: true,
-  };
-
-  // First test the data is written
-  await server_requests.writeParametersToFile(payload);
-  const data = JSON.parse(fs.readFileSync(filepath));
-  const expectedKeys = [
-    'args',
-    'invest_version',
-    'model_name'
-  ];
-  expectedKeys.forEach((key) => {
-    expect(data[key]).not.toBeUndefined();
+describe('requests to flask endpoints', () => {
+  let WORKSPACE;
+  beforeAll(() => {
+    WORKSPACE = fs.mkdtempSync(path.join(os.tmpdir(), 'data-'));
   });
 
-  // Second test the datastack is read and parsed
-  const data2 = await server_requests.fetchDatastackFromFile(filepath);
-  const expectedKeys2 = [
-    'type',
-    'args',
-    'invest_version',
-    'module_name',
-    'model_run_name',
-    'model_human_name',
-  ];
-  expectedKeys2.forEach((key) => {
-    expect(data2[key]).not.toBeUndefined();
+  afterAll(() => {
+    rimraf.sync(WORKSPACE);
   });
-  fs.unlinkSync(filepath);
-});
 
-test('write parameters to python script', async () => {
-  const modelName = 'carbon'; // as appearing in `invest list`
-  const spec = await server_requests.getSpec(modelName);
-  const argsDict = argsDictFromObject(spec.args);
-  const filepath = 'tests/data/foo.py';
-  const payload = {
-    filepath: filepath,
-    modelname: modelName,
-    pyname: spec.module,
-    args: JSON.stringify(argsDict),
-  };
-  await server_requests.saveToPython(payload);
-
-  const file = readline.createInterface({
-    input: fs.createReadStream(filepath),
-    crlfDelay: Infinity,
+  test('invest list items have expected properties', async () => {
+    const investList = await server_requests.getInvestModelNames();
+    Object.values(investList).forEach((item) => {
+      expect(item.model_name).not.toBeUndefined();
+    });
   });
-  // eslint-disable-next-line
-  for await (const line of file) {
-    expect(`${line}`).toBe('# coding=UTF-8');
-    break;
-  }
-  fs.unlinkSync(filepath);
-});
 
-test('validate the UI spec', async () => {
-  const uiSpec = require('../../src/renderer/ui_config');
-  const models = await server_requests.getInvestModelNames();
-  const modelInternalNames = Object.keys(models)
-    .map((key) => models[key].internal_name);
-  // get the args spec for each model
-  const argsSpecs = await Promise.all(modelInternalNames.map(
-    (model) => server_requests.getSpec(model)
-  ));
+  test('fetch invest model args spec', async () => {
+    const spec = await server_requests.getSpec('carbon');
+    const expectedKeys = ['model_name', 'pyname', 'userguide_html', 'args'];
+    expectedKeys.forEach((key) => {
+      expect(spec[key]).not.toBeUndefined();
+    });
+  });
 
-  argsSpecs.forEach((spec, idx) => {
-    const modelName = modelInternalNames[idx];
-    // make sure that we actually got an args spec
-    expect(spec.model_name).toBeDefined();
-    let hasOrderProperty = false;
-    // expect the model's spec has an entry in the UI spec.
-    expect(Object.keys(uiSpec)).toContain(modelName);
-    // expect each arg in the UI spec to exist in the args spec
-    for (const property in uiSpec[modelName]) {
-      if (property === 'order') {
-        hasOrderProperty = true;
-        // 'order' is a 2D array of arg names
-        const orderArray = uiSpec[modelName].order.flat();
-        const orderSet = new Set(orderArray);
-        // expect there to be no duplicated args in the order
-        expect(orderArray).toHaveLength(orderSet.size);
-        orderArray.forEach((arg) => {
-          expect(spec.args[arg]).toBeDefined();
-        });
-      } else {
-        // for other properties, each key is an arg
-        Object.keys(uiSpec[modelName][property]).forEach((arg) => {
-          expect(spec.args[arg]).toBeDefined();
-        });
-      }
+  test('fetch invest validation', async () => {
+    const spec = await server_requests.getSpec('carbon');
+    // it's okay to validate even if none of the args have values yet
+    const argsDict = argsDictFromObject(spec.args);
+    const payload = {
+      model_module: spec.pyname,
+      args: JSON.stringify(argsDict),
+    };
+
+    const results = await server_requests.fetchValidation(payload);
+    // There's always an array of arrays, where each child array has
+    // two elements: 1) an array of invest arg keys, 2) string message
+    expect(results[0]).toHaveLength(2);
+  });
+
+  test('write parameters to file and parse them from file', async () => {
+    const spec = await server_requests.getSpec('carbon');
+    const argsDict = argsDictFromObject(spec.args);
+    const filepath = path.join(WORKSPACE, 'foo.json');
+    const payload = {
+      parameterSetPath: filepath,
+      moduleName: spec.pyname,
+      args: JSON.stringify(argsDict),
+      relativePaths: true,
+    };
+
+    // First test the data is written
+    await server_requests.writeParametersToFile(payload);
+    const data = JSON.parse(fs.readFileSync(filepath));
+    const expectedKeys = [
+      'args',
+      'invest_version',
+      'model_name'
+    ];
+    expectedKeys.forEach((key) => {
+      expect(data[key]).not.toBeUndefined();
+    });
+
+    // Second test the datastack is read and parsed
+    const data2 = await server_requests.fetchDatastackFromFile(filepath);
+    const expectedKeys2 = [
+      'type',
+      'args',
+      'invest_version',
+      'module_name',
+      'model_run_name',
+      'model_human_name',
+    ];
+    expectedKeys2.forEach((key) => {
+      expect(data2[key]).not.toBeUndefined();
+    });
+    fs.unlinkSync(filepath);
+  });
+
+  test('write parameters to python script', async () => {
+    const modelName = 'carbon'; // as appearing in `invest list`
+    const spec = await server_requests.getSpec(modelName);
+    const argsDict = argsDictFromObject(spec.args);
+    const filepath = path.join(WORKSPACE, 'foo.py');
+    const payload = {
+      filepath: filepath,
+      modelname: modelName,
+      args: JSON.stringify(argsDict),
+    };
+    await server_requests.saveToPython(payload);
+
+    const file = readline.createInterface({
+      input: fs.createReadStream(filepath),
+      crlfDelay: Infinity,
+    });
+    // eslint-disable-next-line
+    for await (const line of file) {
+      expect(`${line}`).toBe('# coding=UTF-8');
+      break;
     }
-    expect(hasOrderProperty).toBe(true);
+    fs.unlinkSync(filepath);
+  });
+});
+
+describe('validate the UI spec', () => {
+  test('each model has an entry', async () => {
+    const uiSpec = require('../../src/renderer/ui_config');
+    const models = await server_requests.getInvestModelNames();
+    const modelInternalNames = Object.keys(models)
+      .map((key) => models[key].model_name);
+    // get the args spec for each model
+    const argsSpecs = await Promise.all(modelInternalNames.map(
+      (model) => server_requests.getSpec(model)
+    ));
+
+    argsSpecs.forEach((spec, idx) => {
+      const modelName = modelInternalNames[idx];
+      // make sure that we actually got an args spec
+      expect(spec.model_name).toBeDefined();
+      let hasOrderProperty = false;
+      // expect the model's spec has an entry in the UI spec.
+      expect(Object.keys(uiSpec)).toContain(modelName);
+      // expect each arg in the UI spec to exist in the args spec
+      for (const property in uiSpec[modelName]) {
+        if (property === 'order') {
+          hasOrderProperty = true;
+          // 'order' is a 2D array of arg names
+          const orderArray = uiSpec[modelName].order.flat();
+          const orderSet = new Set(orderArray);
+          // expect there to be no duplicated args in the order
+          expect(orderArray).toHaveLength(orderSet.size);
+          orderArray.forEach((arg) => {
+            expect(spec.args[arg]).toBeDefined();
+          });
+        } else {
+          // for other properties, each key is an arg
+          Object.keys(uiSpec[modelName][property]).forEach((arg) => {
+            expect(spec.args[arg]).toBeDefined();
+          });
+        }
+      }
+      expect(hasOrderProperty).toBe(true);
+    });
   });
 });
 
@@ -180,9 +196,9 @@ describe('Build each model UI from ARGS_SPEC', () => {
     const argsSpec = await server_requests.getSpec(model);
     const uiSpec = uiConfig[model];
 
-    const { findByLabelText } = render(
+    const { findByRole } = render(
       <SetupTab
-        pyModuleName={argsSpec.module}
+        pyModuleName={argsSpec.pyname}
         modelName={argsSpec.model_name}
         argsSpec={argsSpec.args}
         uiSpec={uiSpec}
@@ -194,6 +210,7 @@ describe('Build each model UI from ARGS_SPEC', () => {
         executeClicked={false}
       />
     );
-    expect(await findByLabelText('Workspace')).toBeInTheDocument();
+    expect(await findByRole('textbox', { name: /workspace/i }))
+      .toBeInTheDocument();
   });
 });

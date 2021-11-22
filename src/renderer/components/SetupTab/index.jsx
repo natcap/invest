@@ -8,6 +8,7 @@ import Row from 'react-bootstrap/Row';
 import Button from 'react-bootstrap/Button';
 import OverlayTrigger from 'react-bootstrap/OverlayTrigger';
 import Tooltip from 'react-bootstrap/Tooltip';
+import { MdFolderOpen } from 'react-icons/md';
 
 import Portal from '../Portal';
 import ArgsForm from './ArgsForm';
@@ -193,13 +194,12 @@ export default class SetupTab extends React.Component {
    * @returns {undefined}
    */
   savePythonScript(filepath) {
-    const { modelName, pyModuleName } = this.props;
+    const { modelName } = this.props;
     const argsValues = this.insertNWorkers(this.state.argsValues);
     const argsDict = argsDictFromObject(argsValues);
     const payload = {
       filepath: filepath,
       modelname: modelName,
-      pyname: pyModuleName,
       args: JSON.stringify(argsDict),
     };
     saveToPython(payload);
@@ -311,7 +311,11 @@ export default class SetupTab extends React.Component {
           keyset.delete(key);
         });
       });
-      // validated all, so ones left in keyset are valid
+      // validated all, so ones left in keyset are either valid
+      // or their "required" condition was unmet and so they were
+      // not validated and will appear disabled in the UI. Disabled
+      // inputs will not display a validation state, so it's okay
+      // to simply set all these as valid here.
       keyset.forEach((k) => {
         argsValidation[k].valid = true;
         argsValidation[k].validationMessage = '';
@@ -401,6 +405,7 @@ export default class SetupTab extends React.Component {
                 onClick={this.browseForDatastack}
                 variant="link"
               >
+                <MdFolderOpen className="mr-1" />
                 Load parameters from file
               </Button>
             </OverlayTrigger>

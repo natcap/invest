@@ -1,7 +1,9 @@
 import path from 'path';
 import React from 'react';
+
 import PropTypes from 'prop-types';
-import Electron from 'electron'; // eslint-disable-line import/no-extraneous-dependencies
+import { shell } from 'electron'; // eslint-disable-line import/no-extraneous-dependencies
+import { MdOpenInNew } from 'react-icons/md';
 
 const UG_ROOT = 'http://releases.naturalcapitalproject.org/invest-userguide/latest/';
 const FORUM_ROOT = 'https://community.naturalcapitalproject.org/';
@@ -13,7 +15,7 @@ const FORUM_TAGS = {
   habitat_quality: 'habitat-quality',
   seasonal_water_yield: 'seasonal-water-yield',
   carbon: 'carbon',
-  hydropower_water_yield: 'annual-water-yield',
+  annual_water_yield: 'annual-water-yield',
   habitat_risk_assessment: 'hra',
   recreation: 'recreation',
   coastal_vulnerability: 'coastal-vulnerability',
@@ -36,7 +38,7 @@ const FORUM_TAGS = {
  */
 function handleClick(event) {
   event.preventDefault();
-  Electron.shell.openExternal(event.target.href);
+  shell.openExternal(event.currentTarget.href);
 }
 
 /** Render model-relevant links to the User's Guide and Forum.
@@ -59,10 +61,22 @@ export default function ResourcesTab(props) {
   }
   return (
     <React.Fragment>
-      <a href={userGuideURL} onClick={handleClick}>
-        {"User's Guide"}
+      <a
+        href={userGuideURL}
+        title={userGuideURL}
+        aria-label="go to user guide in web browser"
+        onClick={handleClick}
+      >
+        <MdOpenInNew className="mr-1" />
+        User Guide
       </a>
-      <a href={forumURL} onClick={handleClick}>
+      <a
+        href={forumURL}
+        title={forumURL}
+        aria-label="go to user support forum in web browser"
+        onClick={handleClick}
+      >
+        <MdOpenInNew className="mr-1" />
         Frequently Asked Questions
       </a>
     </React.Fragment>
