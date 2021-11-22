@@ -35,9 +35,17 @@
 .. :changelog:
 
 
-..
-  Unreleased Changes
-  ------------------
+Unreleased Changes
+------------------
+* Habitat Quality
+    * Changed how Habitat Rarity outputs are calculated to be less confusing.
+      Values now represent a 0 to 1 index where before there could be
+      negative values. Now values of 0 indicate current/future LULC not
+      represented in baseline LULC; values 0 to 0.5 indicate more
+      abundance in current/future LULC and therefore less rarity; values
+      of 0.5 indicate same abundance between baseline and current/future
+      LULC; values 0.5 to 1 indicate less abundance in current/future LULC
+      and therefore higher rarity.
 
 Unreleased Changes (3.10)
 -------------------------
