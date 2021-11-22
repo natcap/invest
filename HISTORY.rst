@@ -39,6 +39,17 @@
   Unreleased Changes
   ------------------
 
+Unreleased Changes (3.10)
+-------------------------
+* General:
+    * Added ``invest serve`` entry-point to the CLI. This launches a Flask app
+      and server on the localhost, to support the workbench.
+    * Major updates to each model's ``ARGS_SPEC`` (and some related validation)
+      to facilitate re-use & display in the Workbench and User's Guide.
+* Coastal Vulnerability:
+    * Fixed bug where shore points were created on interior landmass holes
+      (i.e. lakes).
+
 3.9.2 (2021-10-29)
 ------------------
 * General:
@@ -78,14 +89,6 @@
     * Fixed a bug where lucodes present in the LULC raster but missing from
       the biophysical table would either raise a cryptic IndexError or silently
       apply invalid curve numbers. Now a helpful ValueError is raised.
-
-Unreleased Changes (3.10)
--------------------------
-* General:
-    * Added ``invest serve`` entry-point to the CLI. This launches a Flask app
-      and server on the localhost, to support the workbench.
-    * Major updates to each model's ``ARGS_SPEC`` (and some related validation)
-      to facilitate re-use & display in the Workbench and User's Guide.
 
 3.9.1 (2021-09-22)
 ------------------
