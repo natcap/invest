@@ -176,15 +176,10 @@ class HabitatQualityTests(unittest.TestCase):
         # this lets us delete the workspace after its done no matter the
         # the rest result
         self.workspace_dir = tempfile.mkdtemp()
-        #dir_path = os.path.join('C:', os.sep, 'Users', 'ddenu', 'Documents',
-        #        'hq-rarity-test-changes')
-        #os.mkdir(dir_path)
-        #self.workspace_dir = dir_path
 
     def tearDown(self):
         """Override tearDown function to remove temporary directory."""
         shutil.rmtree(self.workspace_dir)
-        #pass
 
     def test_habitat_quality_regression(self):
         """Habitat Quality: base regression test with simplified data."""
@@ -238,8 +233,8 @@ class HabitatQualityTests(unittest.TestCase):
                 'deg_sum_f_regression.tif': 33.931896,
                 'quality_c_regression.tif': 7499.983,
                 'quality_f_regression.tif': 4999.9893,
-                'rarity_c_regression.tif': 3333.33335,
-                'rarity_f_regression.tif': 3333.33335}.items():
+                'rarity_c_regression.tif': 3333.3335,
+                'rarity_f_regression.tif': 3333.3335}.items():
             raster_path = os.path.join(args['workspace_dir'], output_filename)
             # Check that the raster's computed values are what we expect.
             # In this case, the LULC and threat rasters should have been
