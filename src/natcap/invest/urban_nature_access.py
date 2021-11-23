@@ -360,7 +360,7 @@ def _greenspace_population_ratio(
             ``convolved_population`` matrix.
 
     Returns:
-        A numpy array with the ratio ``R_j`` representing thew
+        A numpy array with the ratio ``R_j`` representing the
         greenspace-population ratio with the following constraints:
 
             * ``convolved_population`` pixels that are numerically close to
