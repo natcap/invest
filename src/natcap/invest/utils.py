@@ -446,9 +446,10 @@ def gaussian_decay_kernel_raster(
         kernel_filepath (string): The path to the file on disk where this
             kernel should be stored. If a file exists at this path, it will be
             overwritten.
-        sigma_multiplier (int or float): The number of times sigma should be
+        n_std_dev=3.0 (int or float): The number of times sigma should be
             multiplied in order to get the pixel radius of the resulting
-            kernel.
+            kernel.  The default of 3 standard deviations will cover 99.7% of
+            the area under the gaussian curve.
         normalize=True (bool): Whether to divide the kernel values by the sum
             of all values in the kernel.
 
@@ -456,7 +457,7 @@ def gaussian_decay_kernel_raster(
         ``None``
     """
     # going 3.0 times out from the sigma gives you over 99% of area under
-    # the guassian curve
+    # the gaussian curve
     max_distance = sigma * n_std_dev
     kernel_size = int(numpy.round(max_distance * 2 + 1))
 
