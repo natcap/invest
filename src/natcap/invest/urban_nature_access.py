@@ -190,7 +190,7 @@ def execute(args):
     graph = taskgraph.TaskGraph(work_token_dir, n_workers)
 
     kernel_types = {
-        'dichotomy': instantaneous_decay_kernel_raster,
+        'dichotomy': dichotomous_decay_kernel_raster,
         # "exponential" is more consistent with other InVEST models'
         # terminology.  "Power function" is used in the design doc.
         'exponential': utils.exponential_decay_kernel_raster,
@@ -602,9 +602,9 @@ def _resample_population_raster(
     shutil.rmtree(tmp_working_dir, ignore_errors=True)
 
 
-def instantaneous_decay_kernel_raster(expected_distance, kernel_filepath,
+def dichotomous_decay_kernel_raster(expected_distance, kernel_filepath,
         normalize=False):
-    """Create a raster-based, discontinuous decay kernel.
+    """Create a raster-based, discontinuous decay kernel based on a dichotomy.
 
     This kernel has a value of ``1`` for all pixels within
     ``expected_distance`` from the center of the kernel.  All values outside of

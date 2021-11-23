@@ -88,14 +88,14 @@ class UNATests(unittest.TestCase):
                     population_array.sum(), resampled_population_array.sum(),
                     rtol=1e-3)
 
-    def test_instantaneous_decay_simple(self):
-        """UNA: Test instantaneous decay on a simple case."""
+    def test_dichotomous_decay_simple(self):
+        """UNA: Test dichotomous decay on a simple case."""
         from natcap.invest import urban_nature_access
 
         expected_distance = 5
         kernel_filepath = os.path.join(self.workspace_dir, 'kernel.tif')
 
-        urban_nature_access.instantaneous_decay_kernel_raster(
+        urban_nature_access.dichotomous_decay_kernel_raster(
             expected_distance, kernel_filepath)
 
         expected_array = numpy.array([
@@ -116,8 +116,8 @@ class UNATests(unittest.TestCase):
         numpy.testing.assert_array_equal(
             expected_array, extracted_kernel_array)
 
-    def test_instantaneous_decay_large(self):
-        """UNA: Test instantaneous decay on a very large pixel radius."""
+    def test_dichotomous_decay_large(self):
+        """UNA: Test dichotomous decay on a very large pixel radius."""
         from natcap.invest import urban_nature_access
 
         # kernel with > 268 million pixels.  This is big enough to force my
@@ -126,7 +126,7 @@ class UNATests(unittest.TestCase):
         expected_distance = 2**13
         kernel_filepath = os.path.join(self.workspace_dir, 'kernel.tif')
 
-        urban_nature_access.instantaneous_decay_kernel_raster(
+        urban_nature_access.dichotomous_decay_kernel_raster(
             expected_distance, kernel_filepath)
 
         expected_shape = (expected_distance*2+1, expected_distance*2+1)
