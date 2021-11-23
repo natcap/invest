@@ -474,6 +474,7 @@ def _square_off_pixels(raster_path):
     return pixel_tuple
 
 
+# TODO: refactor this into raster_calculator and align_and_resize...
 def _resample_population_raster(
         source_population_raster_path, target_population_raster_path,
         lulc_pixel_size, lulc_bb, lulc_projection_wkt, working_dir):
