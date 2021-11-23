@@ -374,7 +374,9 @@ def _greenspace_population_ratio(
     out_array = numpy.full(
         greenspace_area.shape, FLOAT32_NODATA, dtype=numpy.float32)
 
-    # Avoid divide-by-zero and very small negative values
+    # Small negative values should already have been filtered out in another
+    # function after the convolution.
+    # This avoids divide-by-zero errors when taking the ratio.
     valid_pixels = (convolved_population > 0)
 
     # R_j is a ratio only calculated for the greenspace pixels.
