@@ -1,9 +1,11 @@
 # coding=UTF-8
 """Tests for the Urban Nature Access Model."""
+import math
 import os
 import random
 import shutil
 import tempfile
+import textwrap
 import unittest
 
 import numpy
@@ -86,6 +88,81 @@ class UNATests(unittest.TestCase):
                     population_array.sum(), resampled_population_array.sum(),
                     rtol=1e-3)
 
+    def test_dichotomous_decay_simple(self):
+        """UNA: Test dichotomous decay on a simple case."""
+        from natcap.invest import urban_nature_access
+
+        expected_distance = 5
+        kernel_filepath = os.path.join(self.workspace_dir, 'kernel.tif')
+
+        urban_nature_access.dichotomous_decay_kernel_raster(
+            expected_distance, kernel_filepath)
+
+        expected_array = numpy.array([
+            [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+            [0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0],
+            [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+            [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+            [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+            [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+            [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+            [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+            [0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0],
+            [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0]], dtype=numpy.uint8)
+
+        extracted_kernel_array = pygeoprocessing.raster_to_numpy_array(
+            kernel_filepath)
+        numpy.testing.assert_array_equal(
+            expected_array, extracted_kernel_array)
+
+    def test_dichotomous_decay_large(self):
+        """UNA: Test dichotomous decay on a very large pixel radius."""
+        from natcap.invest import urban_nature_access
+
+        # kernel with > 268 million pixels.  This is big enough to force my
+        # laptop to noticeably hang while swapping memory on an all in-memory
+        # implementation.
+        expected_distance = 2**13
+        kernel_filepath = os.path.join(self.workspace_dir, 'kernel.tif')
+
+        urban_nature_access.dichotomous_decay_kernel_raster(
+            expected_distance, kernel_filepath)
+
+        expected_shape = (expected_distance*2+1, expected_distance*2+1)
+        expected_n_1_pixels = math.pi*expected_distance**2
+
+        kernel_info = pygeoprocessing.get_raster_info(kernel_filepath)
+        n_1_pixels = 0
+        for _, block in pygeoprocessing.iterblocks((kernel_filepath, 1)):
+            n_1_pixels += numpy.count_nonzero(block)
+
+        # 210828417 is only a slight overestimate from the area of the circle
+        # at this radius: math.pi*expected_distance**2 = 210828714.13315654
+        numpy.testing.assert_allclose(
+            n_1_pixels, expected_n_1_pixels, rtol=1e-5)
+        self.assertEqual(kernel_info['raster_size'], expected_shape)
+
+    def test_density_decay(self):
+        """UNA: Test density decay."""
+        from natcap.invest import urban_nature_access
+
+        expected_distance = 200
+        kernel_filepath = os.path.join(self.workspace_dir, 'kernel.tif')
+
+        urban_nature_access.density_decay_kernel_raster(
+            expected_distance, kernel_filepath)
+
+        expected_shape = (expected_distance*2+1,) * 2
+        kernel_info = pygeoprocessing.get_raster_info(kernel_filepath)
+        kernel_array = pygeoprocessing.raster_to_numpy_array(kernel_filepath)
+        self.assertEqual(kernel_info['raster_size'], expected_shape)
+        numpy.testing.assert_allclose(
+            47123.867,  # obtained from manual inspection
+            kernel_array.sum())
+        self.assertEqual(0.75, kernel_array.max())
+        self.assertEqual(0, kernel_array.min())
+
     def test_model(self):
         """UNA: Run through the model."""
         from natcap.invest import urban_nature_access
@@ -96,6 +173,10 @@ class UNATests(unittest.TestCase):
             'population_raster_path': os.path.join(
                 self.workspace_dir, 'population.tif'),
             'lulc_raster_path': os.path.join(self.workspace_dir, 'lulc.tif'),
+            'lulc_attribute_table': os.path.join(
+                self.workspace_dir, 'lulc_attributes.csv'),
+            'decay_function': 'gaussian',
+            'search_radius': 100.0,  # meters
         }
 
         random.seed(-1)  # for our random number generation
@@ -128,7 +209,40 @@ class UNATests(unittest.TestCase):
             projection_wkt=population_wkt,
             target_path=args['lulc_raster_path'])
 
+        with open(args['lulc_attribute_table'], 'w') as attr_table:
+            attr_table.write(textwrap.dedent(
+                """lucode,greenspace
+                0,0
+                1,1
+                2,0
+                3,1
+                4,0
+                5,1
+                6,0
+                7,1
+                8,0
+                9,1"""))
+
         urban_nature_access.execute(args)
 
-        # TODO: Assertions will be added here later when I have something to
-        # test.
+        # Since we're doing a semi-manual alignment step, assert that the
+        # aligned LULC and population rasters have the same pixel sizes, origin
+        # and raster dimensions.
+        aligned_lulc_raster_info = pygeoprocessing.get_raster_info(
+            os.path.join(args['workspace_dir'], 'intermediate',
+                         f"aligned_lulc_{args['results_suffix']}.tif"))
+        aligned_population_raster_info = pygeoprocessing.get_raster_info(
+            os.path.join(args['workspace_dir'], 'intermediate',
+                         f"aligned_population_{args['results_suffix']}.tif"))
+        numpy.testing.assert_allclose(
+            aligned_lulc_raster_info['pixel_size'],
+            aligned_population_raster_info['pixel_size'])
+        numpy.testing.assert_allclose(
+            aligned_lulc_raster_info['raster_size'],
+            aligned_population_raster_info['raster_size'])
+        numpy.testing.assert_allclose(
+            aligned_lulc_raster_info['geotransform'],
+            aligned_population_raster_info['geotransform'])
+        numpy.testing.assert_allclose(
+            aligned_lulc_raster_info['bounding_box'],
+            aligned_population_raster_info['bounding_box'])

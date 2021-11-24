@@ -1,4 +1,5 @@
 import logging
+import math
 import os
 import shutil
 import tempfile
@@ -17,7 +18,8 @@ from .spec_utils import u
 
 LOGGER = logging.getLogger(__name__)
 UINT32_NODATA = int(numpy.iinfo(numpy.uint32).max)
-FLOAT32_NODATA = float(numpy.finfo(numpy.float32).max)
+FLOAT32_NODATA = float(numpy.finfo(numpy.float32).min)
+BYTE_NODATA = 255
 ARGS_SPEC = {
     'model_name': MODEL_METADATA['urban_nature_access'].model_title,
     'pyname': MODEL_METADATA['urban_nature_access'].pyname,
@@ -97,14 +99,33 @@ ARGS_SPEC = {
             'units': u.m,
             'expression': "value > 0",
             'about': "",  # TODO, will know more about this when I implement.
+        },
+        'decay_function': {
+            'name': 'decay function',
+            'type': 'option_string',
+            'required': False,
+            'options': [
+                'dichotomy',
+                'exponential',
+                'gaussian',
+                'density',
+            ],
+            'about': '',  # TODO
         }
     }
 }
 
 
-_OUTPUT_BASE_FILES = {}
+_OUTPUT_BASE_FILES = {
+    'greenspace_supply': 'greenspace_supply.tif',
+}
 _INTERMEDIATE_BASE_FILES = {
-    'resampled_population': 'population_resampled.tif',
+    'aligned_population': 'aligned_population.tif',
+    'aligned_lulc': 'aligned_lulc.tif',
+    'greenspace_area': 'greenspace_area.tif',
+    'kernel': 'kernel.tif',
+    'greenspace_population_ratio': 'greenspace_population_ratio.tif',
+    'convolved_population': 'convolved_population.tif',
 }
 
 
@@ -139,6 +160,9 @@ def execute(args):
             number indicating the required greenspace, in m² per capita.
         args['search_radius'] (number): (required) A positive, nonzero number
             indicating the maximum distance that people travel for recreation.
+        args['kernel_type'] (string): (optional) The selected kernel type.
+            Must be one of the keys in ``KERNEL_TYPES``.  If not provided, the
+            ``'dichotomy'`` kernel will be used.
 
     Returns:
         ``None``
@@ -165,29 +189,292 @@ def execute(args):
         n_workers = -1  # Synchronous execution
     graph = taskgraph.TaskGraph(work_token_dir, n_workers)
 
+    kernel_types = {
+        'dichotomy': dichotomous_decay_kernel_raster,
+        # "exponential" is more consistent with other InVEST models'
+        # terminology.  "Power function" is used in the design doc.
+        'exponential': utils.exponential_decay_kernel_raster,
+        'gaussian': utils.gaussian_decay_kernel_raster,
+        'density': density_decay_kernel_raster,
+    }
+    # Since we have these keys defined in two places, I want to be super sure
+    # that the labels match.
+    assert sorted(kernel_types.keys()) == (
+        sorted(ARGS_SPEC['args']['decay_function']['options']))
+
+    if 'kernel_type' not in args:
+        kernel_type = 'dichotomy'
+    elif args['kernel_type'] not in kernel_types:
+        raise ValueError(
+            f'Kernel type "{args["kernel_type"]}" is not recognized. '
+            f"Must be one of {', '.join(kernel_types.keys())}")
+    else:
+        kernel_type = args['kernel_type']
+
     # Align the population raster to the LULC.
     lulc_raster_info = pygeoprocessing.get_raster_info(
         args['lulc_raster_path'])
+
+    squared_lulc_pixel_size = _square_off_pixels(args['lulc_raster_path'])
+    lulc_alignment_task = graph.add_task(
+        pygeoprocessing.warp_raster,
+        kwargs={
+            'base_raster_path': args['lulc_raster_path'],
+            'target_pixel_size': squared_lulc_pixel_size,
+            'target_bb': lulc_raster_info['bounding_box'],
+            'target_raster_path': file_registry['aligned_lulc'],
+            'resample_method': 'nearest',
+        },
+        target_path_list=[file_registry['aligned_lulc']],
+        task_name='Resample LULC to have square pixels'
+    )
 
     population_alignment_task = graph.add_task(
         _resample_population_raster,
         kwargs={
             'source_population_raster_path': args['population_raster_path'],
             'target_population_raster_path': file_registry[
-                'resampled_population'],
-            'lulc_pixel_size': lulc_raster_info['pixel_size'],
+                'aligned_population'],
+            'lulc_pixel_size': squared_lulc_pixel_size,
             'lulc_bb': lulc_raster_info['bounding_box'],
             'lulc_projection_wkt': lulc_raster_info['projection_wkt'],
             'working_dir': intermediate_dir,
         },
-        target_path_list=[file_registry['resampled_population']],
+        target_path_list=[file_registry['aligned_population']],
         task_name='Resample population to LULC resolution')
+
+    greenspace_lulc_lookup = utils.build_lookup_from_csv(
+        args['lulc_attribute_table'], 'lucode')
+    squared_pixel_area = abs(numpy.multiply(*squared_lulc_pixel_size))
+    greenspace_area_map = {
+        lucode: int(attributes['greenspace']) * squared_pixel_area
+        for lucode, attributes in greenspace_lulc_lookup.items()
+    }
+    greenspace_area_map[lulc_raster_info['nodata'][0]] = FLOAT32_NODATA
+    greenspace_reclassification_task = graph.add_task(
+        utils.reclassify_raster,
+        kwargs={
+            'raster_path_band': (file_registry['aligned_lulc'], 1),
+            'value_map': greenspace_area_map,
+            'target_raster_path': file_registry['greenspace_area'],
+            'target_datatype': gdal.GDT_Float32,
+            'target_nodata': FLOAT32_NODATA,
+            'error_details': {
+                'raster_name': ARGS_SPEC['args']['lulc_raster_path']['name'],
+                'column_name': 'greenspace',
+                'table_name': ARGS_SPEC['args'][
+                    'lulc_attribute_table']['name'],
+            },
+        },
+        target_path_list=[file_registry['greenspace_area']],
+        task_name='Identify the area of greenspace in pixels',
+        dependent_task_list=[lulc_alignment_task]
+    )
+
+    search_radius_in_pixels = abs(
+        float(args['search_radius']) / squared_lulc_pixel_size[0])
+    kernel_creation_task = graph.add_task(
+        # All kernel creation types have the same function signature
+        kernel_types[kernel_type],
+        args=(search_radius_in_pixels, file_registry['kernel']),
+        kwargs={'normalize': False},  # Model math calls for un-normalized
+        task_name=f'2SFCA - Create {kernel_type} kernel',
+        target_path_list=[file_registry['kernel']]
+    )
+
+    convolved_population_task = graph.add_task(
+        _convolve_and_set_lower_bounds_for_population,
+        kwargs={
+            'signal_path_band': (file_registry['aligned_population'], 1),
+            'kernel_path_band': (file_registry['kernel'], 1),
+            'target_path': file_registry['convolved_population'],
+            'working_dir': intermediate_dir,
+        },
+        task_name='2SFCA - Convolve population',
+        target_path_list=[file_registry['convolved_population']],
+        dependent_task_list=[
+            kernel_creation_task,
+            population_alignment_task,
+        ])
+
+    greenspace_nodata = pygeoprocessing.get_raster_info(
+        file_registry['greenspace_area'])['nodata'][0]
+    population_nodata = pygeoprocessing.get_raster_info(
+        file_registry['convolved_population'])['nodata'][0]
+    greenspace_population_ratio_task = graph.add_task(
+        pygeoprocessing.raster_calculator,
+        kwargs={
+            'base_raster_path_band_const_list': [
+                (file_registry['greenspace_area'], 1),
+                (file_registry['convolved_population'], 1),
+                (greenspace_nodata, 'raw'),
+                (population_nodata, 'raw')],
+            'local_op': _greenspace_population_ratio,
+            'target_raster_path': file_registry['greenspace_population_ratio'],
+            'datatype_target': gdal.GDT_Float32,
+            'nodata_target': FLOAT32_NODATA
+        },
+        task_name='2SFCA: Calculate R_j greenspace/population ratio',
+        target_path_list=[file_registry['greenspace_population_ratio']],
+        dependent_task_list=[
+            convolved_population_task,
+            greenspace_reclassification_task,
+        ])
+
+    convolved_greenspace_population_ratio_task = graph.add_task(
+        pygeoprocessing.convolve_2d,
+        kwargs={
+            'signal_path_band': (
+                file_registry['greenspace_population_ratio'], 1),
+            'kernel_path_band': (file_registry['kernel'], 1),
+            'target_path': file_registry['greenspace_supply'],
+            'working_dir': intermediate_dir,
+        },
+        task_name='2SFCA - greenspace supply',
+        target_path_list=[file_registry['greenspace_supply']],
+        dependent_task_list=[
+            kernel_creation_task,
+            greenspace_population_ratio_task,
+        ])
 
     graph.close()
     graph.join()
     LOGGER.info('Finished Urban Nature Access Model')
 
 
+def _greenspace_population_ratio(
+        greenspace_area, convolved_population, greenspace_nodata,
+        population_nodata):
+    """Calculate the greenspace-population ratio R_j.
+
+    Args:
+        greenspace_area (numpy.array): A numpy array representing the area of
+            greenspace in the pixel.  Pixel values will be ``0`` if there is no
+            greenspace.  Pixel values may also match ``greenspace_nodata``.
+        convolved_population (numpy.array): A numpy array where each pixel
+            represents the total number of people within a search radius of
+            each pixel, perhaps adjusted by a search kernel.
+        greenspace_nodata (int or float): The nodata value of the
+            ``greenspace_area`` matrix.
+        population_nodata (int or float): The nodata value of the
+            ``convolved_population`` matrix.
+
+    Returns:
+        A numpy array with the ratio ``R_j`` representing the
+        greenspace-population ratio with the following constraints:
+
+            * ``convolved_population`` pixels that are numerically close to
+              ``0`` are snapped to ``0`` to avoid unrealistically small
+              denominators in the final ratio.
+            * Any non-greenspace pixels will have a value of ``0.0`` in the
+              output matrix.
+    """
+    # ASSUMPTION: population nodata value is not close to 0.
+    #  Shouldn't be if we're coming from convolution.
+    out_array = numpy.full(
+        greenspace_area.shape, FLOAT32_NODATA, dtype=numpy.float32)
+
+    # Small negative values should already have been filtered out in another
+    # function after the convolution.
+    # This avoids divide-by-zero errors when taking the ratio.
+    valid_pixels = (convolved_population > 0)
+
+    # R_j is a ratio only calculated for the greenspace pixels.
+    greenspace_pixels = ~numpy.isclose(greenspace_area, 0.0)
+    valid_pixels &= greenspace_pixels
+    if population_nodata is not None:
+        valid_pixels &= ~numpy.isclose(
+            convolved_population, population_nodata)
+
+    if greenspace_nodata is not None:
+        valid_pixels &= ~numpy.isclose(greenspace_area, greenspace_nodata)
+
+    # If the population in the search radius is numerically 0, the model
+    # specifies that the ratio should be set to the greenspace area.
+    population_close_to_zero = numpy.isclose(convolved_population, 0.0)
+    out_array[population_close_to_zero] = (
+        greenspace_pixels[population_close_to_zero])
+    out_array[~greenspace_pixels] = 0.0  # set non-greenspace non-nodata to 0
+    out_array[valid_pixels] = (
+        greenspace_area[valid_pixels] / convolved_population[valid_pixels])
+
+    return out_array
+
+
+def _convolve_and_set_lower_bounds_for_population(
+        signal_path_band, kernel_path_band, target_path, working_dir):
+    """Convolve a raster and set all values below 0 to 0.
+
+    Args:
+        signal_path_band (tuple): A 2-tuple of (signal_raster_path, band_index)
+            to use as the signal raster in the convolution.
+        kernel_path_band (tuple): A 2-tuple of (kernel_raster_path, band_index)
+            to use as the kernel raster in the convolution.
+        target_path (string): Where the target raster should be written.
+        working_dir (string): The working directory that
+            ``pygeoprocessing.convolve_2d`` may use for its intermediate files.
+
+    Returns:
+        ``None``
+    """
+    pygeoprocessing.convolve_2d(
+        signal_path_band=signal_path_band,
+        kernel_path_band=kernel_path_band,
+        target_path=target_path,
+        working_dir=working_dir)
+
+    # Sometimes there are negative values that should have been clamped to 0 in
+    # the convolution but weren't, so let's clamp them to avoid support issues
+    # later on.
+    target_raster = gdal.OpenEx(target_path, gdal.GA_Update)
+    target_band = target_raster.GetRasterBand(1)
+    target_nodata = target_band.GetNoDataValue()
+    for block_data in pygeoprocessing.iterblocks(
+            (target_path, 1), offset_only=True):
+        block = target_band.ReadAsArray(**block_data)
+        valid_pixels = slice(None)
+        if target_nodata is not None:
+            valid_pixels = ~numpy.isclose(block, target_nodata)
+        block[(block < 0.0) & valid_pixels] = 0.0
+        target_band.WriteArray(
+            block, xoff=block_data['xoff'], yoff=block_data['yoff'])
+
+    target_band = None
+    target_raster = None
+
+
+def _square_off_pixels(raster_path):
+    """Create square pixels from the provided raster.
+
+    The pixel dimensions produced will respect the sign of the original pixel
+    dimensions and will be the mean of the absolute source pixel dimensions.
+
+    Args:
+        raster_path (string): The path to a raster on disk.
+
+    Returns:
+        A 2-tuple of ``(pixel_width, pixel_height)``, in projected units.
+    """
+    raster_info = pygeoprocessing.get_raster_info(raster_path)
+    pixel_width, pixel_height = raster_info['pixel_size']
+
+    if abs(pixel_width) == abs(pixel_height):
+        return (pixel_width, pixel_height)
+
+    pixel_tuple = ()
+    average_absolute_size = (abs(pixel_width) + abs(pixel_height)) / 2
+    for pixel_dimension_size in (pixel_width, pixel_height):
+        # This loop allows either or both pixel dimension(s) to be negative
+        sign_factor = 1
+        if pixel_dimension_size < 0:
+            sign_factor = -1
+
+        pixel_tuple += (average_absolute_size * sign_factor,)
+
+    return pixel_tuple
+
+
+# TODO: refactor this into raster_calculator and align_and_resize...
 def _resample_population_raster(
         source_population_raster_path, target_population_raster_path,
         lulc_pixel_size, lulc_bb, lulc_projection_wkt, working_dir):
@@ -314,6 +601,186 @@ def _resample_population_raster(
         target_population_raster_path, gdal.GDT_Float32, FLOAT32_NODATA)
 
     shutil.rmtree(tmp_working_dir, ignore_errors=True)
+
+
+def dichotomous_decay_kernel_raster(expected_distance, kernel_filepath,
+        normalize=False):
+    """Create a raster-based, discontinuous decay kernel based on a dichotomy.
+
+    This kernel has a value of ``1`` for all pixels within
+    ``expected_distance`` from the center of the kernel.  All values outside of
+    this distance are ``0``.
+
+    Args:
+        expected_distance (int or float): The distance (in pixels) after which
+            the kernel becomes 0.
+        kernel_filepath (string): The string path on disk to where this kernel
+            should be stored.
+        normalize=False (bool): Whether to divide the kernel values by the sum
+            of all values in the kernel.
+
+    Returns:
+        ``None``
+    """
+    pixel_radius = math.ceil(expected_distance)
+    kernel_size = pixel_radius * 2 + 1  # allow for a center pixel
+    driver = gdal.GetDriverByName('GTiff')
+    kernel_dataset = driver.Create(
+        kernel_filepath.encode('utf-8'), kernel_size, kernel_size, 1,
+        gdal.GDT_Float32, options=[
+            'BIGTIFF=IF_SAFER', 'TILED=YES', 'BLOCKXSIZE=256',
+            'BLOCKYSIZE=256'])
+
+    # Make some kind of geotransform, it doesn't matter what but
+    # will make GIS libraries behave better if it's all defined
+    kernel_dataset.SetGeoTransform([0, 1, 0, 0, 0, -1])
+    srs = osr.SpatialReference()
+    srs.SetWellKnownGeogCS('WGS84')
+    kernel_dataset.SetProjection(srs.ExportToWkt())
+
+    kernel_band = kernel_dataset.GetRasterBand(1)
+    kernel_nodata = FLOAT32_NODATA
+    kernel_band.SetNoDataValue(kernel_nodata)
+
+    kernel_band = None
+    kernel_dataset = None
+
+    kernel_raster = gdal.OpenEx(kernel_filepath, gdal.GA_Update)
+    kernel_band = kernel_raster.GetRasterBand(1)
+    band_x_size = kernel_band.XSize
+    band_y_size = kernel_band.YSize
+    running_sum = 0.0
+    for block_data in pygeoprocessing.iterblocks(
+            (kernel_filepath, 1), offset_only=True):
+        array_xmin = block_data['xoff'] - pixel_radius
+        array_xmax = min(
+            array_xmin + block_data['win_xsize'],
+            band_x_size - pixel_radius)
+        array_ymin = block_data['yoff'] - pixel_radius
+        array_ymax = min(
+            array_ymin + block_data['win_ysize'],
+            band_y_size - pixel_radius)
+
+        pixel_dist_from_center = numpy.hypot(
+            *numpy.mgrid[
+                array_ymin:array_ymax,
+                array_xmin:array_xmax])
+        search_kernel = numpy.array(
+            pixel_dist_from_center <= expected_distance, dtype=numpy.uint8)
+        running_sum += search_kernel.sum()
+        kernel_band.WriteArray(
+            search_kernel,
+            yoff=block_data['yoff'],
+            xoff=block_data['xoff'])
+
+    kernel_raster.FlushCache()
+    kernel_band = None
+    kernel_raster = None
+
+    if normalize:
+        kernel_raster = gdal.OpenEx(kernel_filepath, gdal.GA_Update)
+        kernel_band = kernel_raster.GetRasterBand(1)
+        for block_data, kernel_block in pygeoprocessing.iterblocks(
+                (kernel_filepath, 1)):
+            # divide by sum to normalize
+            kernel_block /= running_sum
+            kernel_band.WriteArray(
+                kernel_block, xoff=block_data['xoff'], yoff=block_data['yoff'])
+
+        kernel_raster.FlushCache()
+        kernel_band = None
+        kernel_raster = None
+
+
+def density_decay_kernel_raster(expected_distance, kernel_filepath,
+        normalize=False):
+    """Create a raster-based density decay kernel.
+
+    Args:
+        expected_distance (int or float): The distance (in pixels) after which
+            the kernel becomes 0.
+        kernel_filepath (string): The string path on disk to where this kernel
+            should be stored.
+        normalize=False (bool): Whether to divide the kernel values by the sum
+            of all values in the kernel.
+
+    Returns:
+        ``None``
+    """
+    pixel_radius = math.ceil(expected_distance)
+    kernel_size = pixel_radius * 2 + 1  # allow for a center pixel
+    driver = gdal.GetDriverByName('GTiff')
+    kernel_dataset = driver.Create(
+        kernel_filepath.encode('utf-8'), kernel_size, kernel_size, 1,
+        gdal.GDT_Float32, options=[
+            'BIGTIFF=IF_SAFER', 'TILED=YES', 'BLOCKXSIZE=256',
+            'BLOCKYSIZE=256'])
+
+    # Make some kind of geotransform, it doesn't matter what but
+    # will make GIS libraries behave better if it's all defined
+    kernel_dataset.SetGeoTransform([0, 1, 0, 0, 0, -1])
+    srs = osr.SpatialReference()
+    srs.SetWellKnownGeogCS('WGS84')
+    kernel_dataset.SetProjection(srs.ExportToWkt())
+
+    kernel_band = kernel_dataset.GetRasterBand(1)
+    kernel_nodata = float(numpy.finfo(numpy.float32).min)
+    kernel_band.SetNoDataValue(kernel_nodata)
+
+    kernel_band = None
+    kernel_dataset = None
+
+    kernel_raster = gdal.OpenEx(kernel_filepath, gdal.GA_Update)
+    kernel_band = kernel_raster.GetRasterBand(1)
+    band_x_size = kernel_band.XSize
+    band_y_size = kernel_band.YSize
+    running_sum = 0.0
+    for block_data in pygeoprocessing.iterblocks(
+            (kernel_filepath, 1), offset_only=True):
+        array_xmin = block_data['xoff'] - pixel_radius
+        array_xmax = min(
+            array_xmin + block_data['win_xsize'],
+            band_x_size - pixel_radius)
+        array_ymin = block_data['yoff'] - pixel_radius
+        array_ymax = min(
+            array_ymin + block_data['win_ysize'],
+            band_y_size - pixel_radius)
+
+        pixel_dist_from_center = numpy.hypot(
+            *numpy.mgrid[
+                array_ymin:array_ymax,
+                array_xmin:array_xmax])
+
+        density = numpy.zeros(
+            pixel_dist_from_center.shape, dtype=numpy.float32)
+        pixels_in_radius = (pixel_dist_from_center <= expected_distance)
+        density[pixels_in_radius] = (
+            0.75 * (1 - (pixel_dist_from_center[
+                pixels_in_radius] / expected_distance) ** 2))
+        running_sum += density.sum()
+
+        kernel_band.WriteArray(
+            density,
+            yoff=block_data['yoff'],
+            xoff=block_data['xoff'])
+
+    kernel_raster.FlushCache()
+    kernel_band = None
+    kernel_raster = None
+
+    if normalize:
+        kernel_raster = gdal.OpenEx(kernel_filepath, gdal.GA_Update)
+        kernel_band = kernel_raster.GetRasterBand(1)
+        for block_data, kernel_block in pygeoprocessing.iterblocks(
+                (kernel_filepath, 1)):
+            # divide by sum to normalize
+            kernel_block /= running_sum
+            kernel_band.WriteArray(
+                kernel_block, xoff=block_data['xoff'], yoff=block_data['yoff'])
+
+        kernel_raster.FlushCache()
+        kernel_band = None
+        kernel_raster = None
 
 
 def validate(args, limit_to=None):
