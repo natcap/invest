@@ -226,7 +226,18 @@ MODEL_METADATA = {
 
 
 def install_language(language_code):
-    """Globally install the _() function for the requested language."""
+    """Globally install the _() function for the requested language.
+
+    Args:
+        language_code (str): ISO 639-1 locale code for a language supported
+            by invest
+
+    Returns:
+        None
+    """
+    if language_code not in LOCALES:
+        raise ValueError(
+            f"language '{language_code}' is not supported by InVEST.")
     language = gettext.translation(
         'messages',
         languages=[language_code],
