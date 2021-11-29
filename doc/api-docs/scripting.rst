@@ -313,7 +313,9 @@ If you use the InVEST python API to access model names, ``ARGS_SPEC``s, or valid
     import gettext
     import pkg_resources
 
-    language_code = 'en'  # replace with your desired ISO 639-1 language code
+    # replace with your desired ISO 639-1 language code
+    # see https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes
+    language_code = 'en'
 
     # locate the internationalization data included with the invest package
     # for languages supported by invest
