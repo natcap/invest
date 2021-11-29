@@ -14,6 +14,7 @@ import subprocess
 
 from setuptools.extension import Extension
 from setuptools import setup
+from setuptools.command.build_py import build_py as _build_py
 import Cython.Build
 import numpy
 
@@ -39,17 +40,26 @@ compiler_and_linker_args = []
 if platform.system() == 'Darwin':
     compiler_and_linker_args = ['-stdlib=libc++']
 
-# internationalization: compile human-readable PO message catalogs
-# into machine-readable MO message catalogs used by gettext
-# the MO files are included as package data
-locale_dir = os.path.abspath(os.path.join(
-    os.path.dirname(__file__), 'src/natcap/invest/internationalization/locales'))
-for locale in os.listdir(locale_dir):
-    subprocess.run([
-        'pybabel',
-        'compile',
-        '--input-file', f'{locale_dir}/{locale}/LC_MESSAGES/messages.po',
-        '--output-file', f'{locale_dir}/{locale}/LC_MESSAGES/messages.mo'])
+
+class build_py(_build_py):
+    """Command to compile translation message catalogs before building."""
+
+    def run(self):
+        # internationalization: compile human-readable PO message catalogs
+        # into machine-readable MO message catalogs used by gettext
+        # the MO files are included as package data
+        locale_dir = os.path.abspath(os.path.join(
+            os.path.dirname(__file__),
+            'src/natcap/invest/internationalization/locales'))
+        for locale in os.listdir(locale_dir):
+            subprocess.run([
+                'pybabel',
+                'compile',
+                '--input-file', f'{locale_dir}/{locale}/LC_MESSAGES/messages.po',
+                '--output-file', f'{locale_dir}/{locale}/LC_MESSAGES/messages.mo'])
+        # then execute the original run method
+        _build_py.run(self)
+
 
 setup(
     name='natcap.invest',
@@ -151,13 +161,14 @@ setup(
             extra_link_args=compiler_and_linker_args,
             language="c++"),
     ],
-    cmdclass={'build_ext': Cython.Build.build_ext},
+    cmdclass={
+        'build_ext': Cython.Build.build_ext,
+        'build_py': build_py},
     command_options={
         'build_sphinx': {
             'source_dir': ('setup.py', 'doc/api-docs'),
             'build_dir': ('setup.py', 'doc/api-docs-build'),
             'config_dir': ('setup.py', 'doc/api-docs')}},
-
     entry_points={
         'console_scripts': [
             'invest = natcap.invest.cli:main'
