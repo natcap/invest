@@ -380,8 +380,6 @@ def main(user_args=None):
 
         model_module = importlib.import_module(
             name=parsed_datastack.model_name)
-        importlib.reload(importlib.import_module(name='natcap.invest.validation'))
-        importlib.reload(model_module)
 
         try:
             validation_result = model_module.validate(parsed_datastack.args)
@@ -415,8 +413,7 @@ def main(user_args=None):
 
     if args.subcommand == 'getspec':
         target_model = natcap.invest.MODEL_METADATA[args.model].pyname
-        model_module = importlib.reload(
-            importlib.import_module(name=target_model))
+        model_module = importlib.import_module(name=target_model)
         spec = model_module.ARGS_SPEC
 
         if args.json:
@@ -483,7 +480,6 @@ def main(user_args=None):
                 "environment variable to be defined in order to run. If "
                 "the application hangs on startup, set 'QT_MAC_WANTS_LAYER=1' "
                 "in the shell running this CLI.", RuntimeWarning)
-
 
         gui_class = natcap.invest.MODEL_METADATA[args.model].gui
         module_name, classname = gui_class.split('.')
