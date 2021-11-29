@@ -130,8 +130,8 @@ ARGS_SPEC = {
             "expression": "value > 0",
             "units": u.none,
             "about": (
-                "The maximum allowed value of the L parameter in the LS "
-                "factor."),
+                "The maximum allowed value of the slope length parameter (L) "
+                "in the LS factor."),
             "name": "maximum l value",
         },
         "drainage_path": {

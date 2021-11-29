@@ -162,29 +162,17 @@ ARGS_SPEC = {
         },
         "machine_perf_path": {
             "type": "csv",
-            "columns": {
-                "hs(m)/tp(sec)": {
-                    "type": "number",
-                    "units": u.meter,
-                    "about": (
-                        "User-defined wave height bins from smallest to "
-                        "largest")
-                },
-                "[WAVE_PERIOD_BIN]": {
-                    "about": (
-                        "Captured wave energy for the given seastate "
-                        "conditions described by the wave height (row) "
-                        "and wave period (column). Replace [WAVE_PERIOD_BIN] "
-                        "with the wave period bin in seconds, so that there "
-                        "is one column for each wave period bin, increasing "
-                        "from left to right."),
-                    "type": "number",
-                    "units": u.kilowatt
-                }
-            },
             "about": (
                 "A matrix of the wave machine performance, or ability to "
-                "capture wave energy, in different sea state conditions."),
+                "capture wave energy, in different sea state conditions. The "
+                "first column contains wave height values (in meters, "
+                "increasing from top to bottom), and the first row contains "
+                "wave period values (in seconds, increasing from left to "
+                "right). Values within the matrix are the machine performance "
+                "in kilowatts at that sea state condition, described by the "
+                "wave height (row) and wave period (column). The model "
+                "linearly interpolates sea state data from the base wave "
+                "dataset onto this matrix to determine performance."),
             "name": "machine performance table"
         },
         "machine_param_path": {
