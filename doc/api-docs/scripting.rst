@@ -306,7 +306,7 @@ Using the parameter study example, this might look like:
 Internationalization
 ====================
 
-If you use the InVEST python API to access model names, `ARGS_SPEC`s, or validation messages, you can translate those strings using `gettext`:
+If you use the InVEST python API to access model names, ``ARGS_SPEC``s, or validation messages, you can translate those strings using ``gettext``:
 
 .. code-block:: python
 
@@ -329,7 +329,7 @@ If you use the InVEST python API to access model names, `ARGS_SPEC`s, or validat
     import natcap.invest.carbon
     ...
 
-Note that `natcap.invest` defines the `_(...)` function globally in `builtins`. When you import anything from `natcap.invest`, `_` is first defined to return the default English. This way everything works whether or not the client sets up `gettext`.
+Note that ``natcap.invest`` defines the ``_(...)`` function globally in ``builtins``. When you import anything from ``natcap.invest``, ``_`` is first defined to return the default English. This way everything works whether or not the client sets up ``gettext``.
 
 See the `GNU gettext manual <https://www.gnu.org/software/gettext/manual/gettext.html>`_ and the `Python gettext documentation <https://docs.python.org/3/library/gettext.html>`_ for more information.
 
