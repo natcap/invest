@@ -341,7 +341,7 @@ ARGS_SPEC = {
             "required": "valuation_container",
             "about": (
                 "Use a Wind Energy Price Table instead of calculating annual "
-                "prices from the intial Energy Price and Rate of Price Change "
+                "prices from the initial Energy Price and Rate of Price Change "
                 "inputs."),
             "name": "use price table"
         },
