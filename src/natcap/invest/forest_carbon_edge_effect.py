@@ -42,7 +42,7 @@ ARGS_SPEC = {
         "results_suffix": spec_utils.SUFFIX,
         "n_workers": spec_utils.N_WORKERS,
         "n_nearest_model_points": {
-            "expression": "value > 0",
+            "expression": "value > 0 and value.is_integer()",
             "type": "number",
             "units": u.none,
             "required": "compute_forest_edge_effects",
