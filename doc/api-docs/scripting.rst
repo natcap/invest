@@ -306,7 +306,7 @@ Using the parameter study example, this might look like:
 Internationalization
 ====================
 
-If you use the InVEST python API to access model names, `ARGS_SPEC`s, or validation messages, you can translate those strings using `gettext`:
+If you use the InVEST python API to access model names, ``ARGS_SPEC``s, or validation messages, you can translate those strings using ``gettext``:
 
 .. code-block:: python
 
