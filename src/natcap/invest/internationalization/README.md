@@ -7,7 +7,7 @@ None of the translations files (.pot, .po, .mo) should be manually edited by us.
 Message catalog template file. This contains all the strings ("messages") that are translated, without any translations. All the PO files are derived from this.
 
 ### `locales/`
-Locale directory. The contents of this directory are organized in a specific structure that `gettext` expects. `locales/` contains one subdirectory for each language for which there are any translations (not including the default English). The subdirectories are named after the corresponding language code. Each language subdirectory contains a directory `LC_MESSAGES`, which then contains the message catalog files for that language.
+Locale directory. The contents of this directory are organized in a specific structure that `gettext` expects. `locales/` contains one subdirectory for each language for which there are any translations (not including the default English). The subdirectories are named after the corresponding ISO 639-1 language code. Each language subdirectory contains a directory `LC_MESSAGES`, which then contains the message catalog files for that language.
 
 ### `locales/<lang>/LC_MESSAGES/messages.po`
 Human-readable message catalog file. Messages are added to this file from the PO template, and translations for the messages are added by the translator.
