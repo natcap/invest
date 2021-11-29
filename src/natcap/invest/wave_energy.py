@@ -237,7 +237,7 @@ ARGS_SPEC = {
                     "options": {
                         "LAND": "This is a land connection point",
                         "GRID": "This is a grid connection point"},
-                    "about": "They type of connection at this point."
+                    "about": "The type of connection at this point."
                 },
                 "lat": {
                     "type": "number",
