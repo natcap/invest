@@ -376,8 +376,6 @@ codesign_mac:
 	security set-key-partition-list -S apple-tool:,apple: -s -k $(KEYCHAIN_PASS) $(KEYCHAIN_NAME)
 	# sign the dmg using certificate that's looked up by unique identifier 'Stanford'
 	codesign --timestamp --verbose --sign Stanford $(MAC_DISK_IMAGE_FILE)
-	# relock the keychain (not sure if this is important?)
-	security lock-keychain $(KEYCHAIN_NAME)
 
 codesign_windows:
 	$(GSUTIL) cp gs://stanford_cert/$(CERT_FILE) $(BUILD_DIR)/$(CERT_FILE)
