@@ -6,16 +6,25 @@ import logging
 import os
 import sys
 
+import babel
 import pkg_resources
 
+LOGGER = logging.getLogger('natcap.invest')
+LOGGER.addHandler(logging.NullHandler())
+__all__ = ['local_dir', ]
 
 # location of our translation message catalog directory
 LOCALE_DIR = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), 'internationalization/locales')
 
-LOGGER = logging.getLogger('natcap.invest')
-LOGGER.addHandler(logging.NullHandler())
-__all__ = ['local_dir', ]
+# all supported language codes, including the default English
+LOCALES = sorted(os.listdir(LOCALE_DIR) + ['en'])
+
+# map locale codes to the corresponding localized language name
+# e.g. 'es': 'español'
+LOCALE_NAME_MAP = {
+    locale: babel.Locale(locale).display_name for locale in LOCALES
+}
 
 try:
     __version__ = pkg_resources.get_distribution(__name__).version

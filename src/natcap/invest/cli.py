@@ -246,11 +246,17 @@ def main(user_args=None):
         action='store_const', const=logging.DEBUG,
         help='Enable debug logging. Alias for -vvv')
 
+    # list the language code and corresponding language name (in that language)
+    supported_languages_string = ', '.join([
+        f'{locale} ({display_name})'
+        for locale, display_name in natcap.invest.LOCALE_NAME_MAP.items()])
     parser.add_argument(
-        '-L', '--language', default='en', choices=['en', 'es'],
+        '-L', '--language', default='en',
+        choices=natcap.invest.LOCALES,
         help=('Choose a language. Model specs, names, and validation messages '
               'will be translated. Log messages are not translated. Value '
-              'should be an ISO 639-1 language code.'))
+              'should be an ISO 639-1 language code. Supported options are: '
+              f'{supported_languages_string}.'))
 
     subparsers = parser.add_subparsers(dest='subcommand')
 
