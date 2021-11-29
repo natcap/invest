@@ -357,6 +357,8 @@ build/vcredist_x86.exe: | build
 	powershell.exe -Command "Start-BitsTransfer -Source https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe -Destination build\vcredist_x86.exe"
 
 KEYCHAIN_NAME := codesign_keychain
+# only need password to be able to create the keychain, not for security
+KEYCHAIN_PASS := password
 codesign_mac:
 	# download the p12 certificate file from google cloud
 	$(GSUTIL) cp gs://stanford_cert/$(CERT_FILE) $(BUILD_DIR)/$(CERT_FILE)
