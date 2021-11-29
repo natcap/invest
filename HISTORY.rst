@@ -49,6 +49,7 @@ Unreleased Changes (3.10)
 * Coastal Vulnerability:
     * Fixed bug where shore points were created on interior landmass holes
       (i.e. lakes).
+    * Added feature to accept raster (in addition to vector) habitat layers.
 
 3.9.2 (2021-10-29)
 ------------------
