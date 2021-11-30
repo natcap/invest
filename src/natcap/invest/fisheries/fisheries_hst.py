@@ -23,7 +23,7 @@ ARGS_SPEC = {
         "workspace_dir": spec_utils.WORKSPACE,
         "results_suffix": spec_utils.SUFFIX,
         "sexsp": {
-            "name": "Population Classes are Sex-Specific",
+            "name": "sex-specific classes",
             "type": "option_string",
             "options": ["No", "Yes"],
             "about": (
@@ -31,18 +31,15 @@ ARGS_SPEC = {
                 "the Population Parameters CSV file are distinguished by sex."),
         },
         "population_csv_path": {
-            "name": "Population Parameters File",
+            "name": "population parameters table",
             "type": "csv",
             "about": (
                 "A CSV file containing all necessary attributes for "
                 "population classes based on age/stage, sex, and area - "
-                "excluding possible migration information.<br><br>See the "
-                "'Running the Model >> Core Model >> Population Parameters' "
-                "section in the model's documentation for help on how to "
-                "format this file."),
+                "excluding possible migration information."),
         },
         "habitat_dep_csv_path": {
-            "name": "Habitat Dependency Parameters File",
+            "name": "habitat dependency parameters table",
             "type": "csv",
             "columns": {
                 "habitats": {"type": "freestyle_string"},
@@ -59,7 +56,7 @@ ARGS_SPEC = {
                 "the Habitat Change CSV File."),
         },
         "habitat_chg_csv_path": {
-            "name": "Habitat Area Change File",
+            "name": "habitat area change table",
             "type": "csv",
             "columns": {
                 "habitats": {"type": "freestyle_string"},
@@ -76,7 +73,7 @@ ARGS_SPEC = {
                 "those which the population depends on at any life stage."),
         },
         "gamma": {
-            "name": "Gamma",
+            "name": "gamma",
             "type": "ratio",
             "about": (
                 "Gamma describes the relationship between a change in habitat "

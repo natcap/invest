@@ -38,7 +38,10 @@ ARGS_SPEC = {
         },
         "lulc_path": {
             **spec_utils.LULC,
-            "projected": True
+            "projected": True,
+            "about": (
+                f"{spec_utils.LULC['about']} All values in this raster must "
+                "have corresponding entries in the Biophysical table.")
         },
         "runoff_proxy_path": {
             "type": "raster",
@@ -47,55 +50,49 @@ ARGS_SPEC = {
                 "units": u.none
             }},
             "about": (
-                "Map representing the spatial variability in runoff "
-                "potential, i.e. the capacity to transport nutrients "
-                "downstream. This can be a quickflow index (e.g. from the "
-                "InVEST Seasonal Water Yield model) or simply annual "
-                "precipitation. The model will normalize this raster by "
-                "dividing by its average value to compute the runoff "
-                "potential index (RPI)."),
-            "name": "Nutrient Runoff Proxy"
+                "Map of runoff potential, the capacity to transport "
+                "nutrients downstream. This can be a quickflow index "
+                "or annual precipitation. Any units are allowed since "
+                "the values will be normalized by their average."),
+            "name": "nutrient runoff proxy"
         },
         "watersheds_path": {
             "type": "vector",
             "projected": True,
-            "fields": {"ws_id": {"type": "integer"}},
             "geometries": spec_utils.POLYGONS,
+            "fields": {},
             "about": (
-                "A GDAL-supported vector file containing watersheds such that "
-                "each watershed contributes to a point of interest where "
-                "water quality will be analyzed.  It must have the integer "
-                "field 'ws_id' where the values uniquely identify each "
-                "watershed."),
-            "name": "Watersheds"
+                "Map of the boundaries of the watershed(s) over which to "
+                "aggregate the model results."),
+            "name": "watersheds"
         },
         "biophysical_table_path": {
             "type": "csv",
             "columns": {
-                "lucode": {"type": "integer"},
+                "lucode": {
+                    "type": "integer",
+                    "about": (
+                        "LULC code for this class corresponding to values in "
+                        "the LULC raster.")
+                },
                 "load_[NUTRIENT]": {  # nitrogen or phosphorus nutrient loads
                     "type": "number",
                     "units": u.kilogram/u.hectare/u.year,
-                    "about": "The nutrient loading for each land use class"},
+                    "about": "The nutrient loading for this land use class."},
                 "eff_[NUTRIENT]": {  # nutrient retention capacities
                     "type": "ratio",
                     "about": (
-                        "The maximum nutrient retention efficiency for each "
-                        "LULC class. The nutrient retention capacity for a "
-                        "given vegetation type is expressed as a proportion "
-                        "of the amount of nutrient from upstream. For "
-                        "example, high values (0.6 to 0.8) may be assigned to "
-                        "all natural vegetation types (such as forests, "
-                        "natural pastures, wetlands, or prairie), indicating "
-                        "that 60-80% of nutrient is retained.")},
+                        "Maximum nutrient retention efficiency. This is the "
+                        "maximum proportion of the nutrient that is retained "
+                        "on this LULC class.")},
                 "crit_len_[NUTRIENT]": {  # nutrient critical lengths
                     "type": "number",
                     "units": u.meter,
                     "about": (
-                        "The distance after which it is assumed that a patch "
-                        "of a particular LULC type retains nutrient at its "
-                        "maximum capacity. If nutrients travel a distance "
-                        "smaller than the retention length, the retention "
+                        "The distance after which it is assumed that this "
+                        "LULC type retains the nutrient at its maximum "
+                        "capacity. If nutrients travel a shorter distance "
+                        "that this, the retention "
                         "efficiency will be less than the maximum value "
                         "eff_x, following an exponential decay.")},
                 "proportion_subsurface_n": {
@@ -110,31 +107,27 @@ ARGS_SPEC = {
             },
             "about": (
                 "A table mapping each LULC class to its biophysical "
-                "properties related to nutrient load and retention. The three "
-                "biophysical properties must be provided for at least one of "
-                "N (nitrogen) and P (phosphorus)."),
-            "name": "Biophysical Table"
+                "properties related to nutrient load and retention. Replace "
+                "'[NUTRIENT]' in the column names with 'n' or 'p' for "
+                "nitrogen or phosphorus respectively. Nitrogen data must be "
+                "provided if Calculate Nitrogen is selected. Phosphorus data "
+                "must be provided if Calculate Phosphorus is selected. All "
+                "LULC codes in the LULC raster must have corresponding "
+                "entries in this table."),
+            "name": "biophysical table"
         },
         "calc_p": {
             "type": "boolean",
-            "about": "Select to calculate phosphorus export.",
-            "name": "Calculate phosphorus retention"
+            "about": "Calculate phosphorus retention and export.",
+            "name": "calculate phosphorus"
         },
         "calc_n": {
             "type": "boolean",
-            "about": "Select to calculate nitrogen export.",
-            "name": "Calculate Nitrogen Retention"
+            "about": "Calculate nitrogen retention and export.",
+            "name": "calculate nitrogen"
         },
         "threshold_flow_accumulation": {
-            "expression": "value > 0",
-            "type": "number",
-            "units": u.pixel,
-            "about": (
-                "The number of upstream cells that must flow into a cell "
-                "before it's considered part of a stream such that retention "
-                "stops and the remaining export is exported to the stream. "
-                "Used to define streams from the DEM."),
-            "name": "Threshold Flow Accumulation"
+            **spec_utils.THRESHOLD_FLOW_ACCUMULATION
         },
         "k_param": {
             "type": "number",
@@ -144,56 +137,48 @@ ARGS_SPEC = {
                 "relationship between hydrologic connectivity (the degree of "
                 "connection from patches of land to the stream) and the "
                 "nutrient delivery ratio (percentage of nutrient that "
-                "actually reaches the stream)"),
+                "actually reaches the stream)."),
             "name": "Borselli k parameter",
         },
         "subsurface_critical_length_n": {
             "type": "number",
             "units": u.meter,
             "required": "calc_n",
-            "name": "Subsurface Critical Length (Nitrogen)",
+            "name": "subsurface critical length (nitrogen)",
             "about": (
-                "The distance (traveled subsurface and downslope) after which "
-                "it is assumed that soil retains nutrient at its maximum "
-                "capacity. If dissolved nutrients travel a distance smaller "
-                "than Subsurface Critical Length, the retention efficiency "
-                "will be lower than the Subsurface Maximum Retention "
-                "Efficiency value defined. Setting this value to a distance "
-                "smaller than the pixel size will result in the maximum "
-                "retention efficiency being reached within one pixel only."),
+                "The distance traveled (subsurface and downslope) after which "
+                "it is assumed that soil retains nitrogen at its maximum "
+                "capacity. Required if Calculate Nitrogen is selected."),
         },
         "subsurface_critical_length_p": {
             "type": "number",
             "units": u.meter,
             "required": "calc_p",
-            "name": "Subsurface Critical Length (Phosphorus)",
+            "name": "subsurface critical length (phosphorus)",
             "about": (
-                "The distance (traveled subsurface and downslope) after which "
-                "it is assumed that soil retains nutrient at its maximum "
-                "capacity. If dissolved nutrients travel a distance smaller "
-                "than Subsurface Critical Length, the retention efficiency "
-                "will be lower than the Subsurface Maximum Retention "
-                "Efficiency value defined. Setting this value to a distance "
-                "smaller than the pixel size will result in the maximum "
-                "retention efficiency being reached within one pixel only."),
+                "The distance traveled (subsurface and downslope) after which "
+                "it is assumed that soil retains phosphorus at its maximum "
+                "capacity. Required if Calculate Phosphorus is selected."),
         },
         "subsurface_eff_n": {
             "type": "ratio",
             "required": "calc_n",
-            "name": "Subsurface Maximum Retention Efficiency (Nitrogen)",
+            "name": "subsurface maximum retention efficiency (nitrogen)",
             "about": (
-                "The maximum nutrient retention efficiency that can be "
-                "reached through subsurface flow. This field characterizes "
-                "the retention due to biochemical degradation in soils."),
+                "The maximum nitrogen retention efficiency that can be "
+                "reached through subsurface flow. This characterizes the "
+                "retention due to biochemical degradation in soils. Required "
+                "if Calculate Nitrogen is selected."),
         },
         "subsurface_eff_p": {
             "type": "ratio",
             "required": "calc_p",
-            "name": "Subsurface Maximum Retention Efficiency (Phosphorus)",
+            "name": "subsurface maximum retention efficiency (phosphorus)",
             "about": (
-                "The maximum nutrient retention efficiency that can be "
-                "reached through subsurface flow. This field characterizes "
-                "the retention due to biochemical degradation in soils."),
+                "The maximum phosphorus retention efficiency that can be "
+                "reached through subsurface flow. This characterizes the "
+                "retention due to biochemical degradation in soils. Required "
+                "if Calculate Phosphorus is selected."),
         }
     }
 }
