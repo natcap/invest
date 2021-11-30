@@ -12,13 +12,14 @@ import taskgraph
 
 from . import utils
 from . import validation
+from . import MODEL_METADATA
 
 LOGGER = logging.getLogger(__name__)
 
 ARGS_SPEC = {
-    "model_name": "Habitat Quality",
-    "module": __name__,
-    "userguide_html": "habitat_quality.html",
+    "model_name": MODEL_METADATA["habitat_quality"].model_title,
+    "pyname": MODEL_METADATA["habitat_quality"].pyname,
+    "userguide_html": MODEL_METADATA["habitat_quality"].userguide,
     "args_with_spatial_overlap": {
         "spatial_keys": [
             "lulc_cur_path", "lulc_fut_path", "lulc_bas_path",
@@ -439,7 +440,7 @@ def execute(args):
         task_name='access_raster')
     access_task_list = [create_access_raster_task]
 
-    if 'access_vector_path' in args:
+    if 'access_vector_path' in args and args['access_vector_path']:
         LOGGER.debug("Rasterize Access vector")
         rasterize_access_task = task_graph.add_task(
             func=pygeoprocessing.rasterize,
@@ -754,6 +755,12 @@ def _compute_rarity_operation(
         base_lulc_path_band, lulc_path_band, new_cover_path, rarity_path):
     """Calculate habitat rarity.
 
+    Output rarity values will be an index from 0 - 1 where:
+       pixel > 0.5 - more rare
+       pixel < 0.5 - less rare
+       pixel = 0.5 - no rarity change
+       pixel = 0.0 - LULC not found in the baseline for comparison
+
     Args:
         base_lulc_path_band (tuple): a 2 tuple for the path to input base
             LULC raster of the form (path, band index).
@@ -818,7 +825,7 @@ def _compute_rarity_operation(
         if code in lulc_code_count_b:
             numerator = lulc_code_count_x[code] * lulc_area
             denominator = lulc_code_count_b[code] * base_area
-            ratio = 1.0 - (numerator / denominator)
+            ratio = 1.0 - (numerator / (denominator + numerator))
             code_index[code] = ratio
         else:
             code_index[code] = 0.0

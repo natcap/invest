@@ -16,6 +16,7 @@ import pygeoprocessing
 
 from . import utils
 from . import validation
+from . import MODEL_METADATA
 
 
 LOGGER = logging.getLogger('natcap.invest.hra')
@@ -64,9 +65,9 @@ _DEFAULT_GTIFF_CREATION_OPTIONS = (
     'BLOCKXSIZE=256', 'BLOCKYSIZE=256')
 
 ARGS_SPEC = {
-    "model_name": "Habitat Risk Assessment",
-    "module": __name__,
-    "userguide_html": "habitat_risk_assessment.html",
+    "model_name": MODEL_METADATA["habitat_risk_assessment"].model_title,
+    "pyname": MODEL_METADATA["habitat_risk_assessment"].pyname,
+    "userguide_html": MODEL_METADATA["habitat_risk_assessment"].userguide,
     "args": {
         "workspace_dir": validation.WORKSPACE_SPEC,
         "results_suffix": validation.SUFFIX_SPEC,

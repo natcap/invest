@@ -53,7 +53,7 @@ def make_access_shp(access_shp_path):
 
     # Setup parameters for creating point shapefile
     fields = {'FID': ogr.OFTInteger64, 'ACCESS': ogr.OFTReal}
-    attrs = [{'FID': 0, 'ACCESS': 0.2}, {'FI': 1, 'ACCESS': 1.0}]
+    attrs = [{'FID': 0, 'ACCESS': 0.2}, {'FID': 1, 'ACCESS': 1.0}]
 
     poly_geoms = {
         'poly_1': [(pos_x, pos_y), (pos_x + 100, pos_y),
@@ -233,8 +233,8 @@ class HabitatQualityTests(unittest.TestCase):
                 'deg_sum_f_regression.tif': 33.931896,
                 'quality_c_regression.tif': 7499.983,
                 'quality_f_regression.tif': 4999.9893,
-                'rarity_c_regression.tif': 2500.0000000,
-                'rarity_f_regression.tif': 2500.0000000}.items():
+                'rarity_c_regression.tif': 3333.3335,
+                'rarity_f_regression.tif': 3333.3335}.items():
             raster_path = os.path.join(args['workspace_dir'], output_filename)
             # Check that the raster's computed values are what we expect.
             # In this case, the LULC and threat rasters should have been
@@ -297,8 +297,8 @@ class HabitatQualityTests(unittest.TestCase):
                 'deg_sum_f_regression.tif': 46.279358,
                 'quality_c_regression.tif': 7499.9414,
                 'quality_f_regression.tif': 4999.955,
-                'rarity_c_regression.tif': 2500.0000000,
-                'rarity_f_regression.tif': 2500.0000000}.items():
+                'rarity_c_regression.tif': 3333.3335,
+                'rarity_f_regression.tif': 3333.3335}.items():
             raster_path = os.path.join(args['workspace_dir'], output_filename)
             # Check that the raster's computed values are what we expect.
             # In this case, the LULC and threat rasters should have been
@@ -358,8 +358,8 @@ class HabitatQualityTests(unittest.TestCase):
                 'deg_sum_f_regression.tif': 46.279358,
                 'quality_c_regression.tif': 7499.9414,
                 'quality_f_regression.tif': 4999.955,
-                'rarity_c_regression.tif': 2500.0000000,
-                'rarity_f_regression.tif': 2500.0000000}.items():
+                'rarity_c_regression.tif': 3333.3335,
+                'rarity_f_regression.tif': 3333.3335}.items():
             raster_path = os.path.join(args['workspace_dir'], output_filename)
             # Check that the raster's computed values are what we expect.
             # In this case, the LULC and threat rasters should have been
@@ -420,8 +420,8 @@ class HabitatQualityTests(unittest.TestCase):
                 'deg_sum_f_regression.tif': 46.279358,
                 'quality_c_regression.tif': 7499.9414,
                 'quality_f_regression.tif': 4999.955,
-                'rarity_c_regression.tif': 2500.0000000,
-                'rarity_f_regression.tif': 2500.0000000}.items():
+                'rarity_c_regression.tif': 3333.3335,
+                'rarity_f_regression.tif': 3333.3335}.items():
             raster_path = os.path.join(args['workspace_dir'], output_filename)
             # Check that the raster's computed values are what we expect.
             # In this case, the LULC and threat rasters should have been
@@ -563,8 +563,8 @@ class HabitatQualityTests(unittest.TestCase):
                 'deg_sum_f_regression.tif': 46.279358,
                 'quality_c_regression.tif': 7499.9414,
                 'quality_f_regression.tif': 4999.955,
-                'rarity_c_regression.tif': 2500.0000000,
-                'rarity_f_regression.tif': 2500.0000000
+                'rarity_c_regression.tif': 3333.3335,
+                'rarity_f_regression.tif': 3333.3335
         }.items():
             assert_array_sum(os.path.join(
                 args['workspace_dir'], output_filename), assert_value)
@@ -1078,7 +1078,7 @@ class HabitatQualityTests(unittest.TestCase):
             7499.524)
         assert_array_sum(
             os.path.join(args['workspace_dir'], 'rarity_c.tif'),
-            2500.000000)
+            3333.3335)
 
     def test_habitat_quality_missing_lucodes_in_table(self):
         """Habitat Quality: on missing lucodes in the sensitivity table."""
@@ -1262,7 +1262,6 @@ class HabitatQualityTests(unittest.TestCase):
             args['access_vector_path'], args['lulc_cur_path'])
 
         validate_result = habitat_quality.validate(args, limit_to=None)
-        print(validate_result)
         self.assertTrue(
             validate_result,
             "expected failed validations instead didn't get any")

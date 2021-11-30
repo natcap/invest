@@ -32,7 +32,6 @@ from . import execution
 from .. import cli
 from .. import utils
 from .. import datastack
-from .. import validation
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.addHandler(logging.NullHandler())
@@ -40,9 +39,9 @@ QT_APP = inputs.QT_APP
 
 # How long satus bar messages should be visible, in milliseconds.
 STATUSBAR_MSG_DURATION = 10000
-ICON_BACK = qtawesome.icon('fa.arrow-circle-o-left', color='grey')
-ICON_ALERT = qtawesome.icon('fa.exclamation-triangle', color='orange')
-ICON_UPDATE = qtawesome.icon('fa.refresh', color='orange')
+ICON_BACK = qtawesome.icon('fa5s.arrow-alt-circle-left', color='grey')
+ICON_ALERT = qtawesome.icon('fa5s.exclamation-triangle', color='orange')
+ICON_UPDATE = qtawesome.icon('fa5s.sync', color='orange')
 
 _ONLINE_DOCS_LINK = (
     'http://releases.naturalcapitalproject.org/invest-userguide/latest/')
@@ -180,7 +179,7 @@ class OptionsDialog(QtWidgets.QDialog):
         self.ok_button.setIcon(inputs.ICON_ENTER)
         self.ok_button.clicked.connect(self.accept)
         self.cancel_button = QtWidgets.QPushButton(self._reject_text)
-        self.cancel_button.setIcon(qtawesome.icon('fa.times',
+        self.cancel_button.setIcon(qtawesome.icon('fa5s.times',
                                                   color='grey'))
         self.cancel_button.clicked.connect(self.reject)
 
@@ -1296,15 +1295,15 @@ class InVESTModel(QtWidgets.QMainWindow):
         # Menu items.
         self.file_menu = QtWidgets.QMenu('&File', parent=self)
         self.file_menu.addAction(
-            qtawesome.icon('fa.cog'),
+            qtawesome.icon('fa5s.cog'),
             'Settings ...', self.settings_dialog.exec_,
             QtGui.QKeySequence(QtGui.QKeySequence.Preferences))
         self.file_menu.addAction(
-            qtawesome.icon('fa.floppy-o'),
+            qtawesome.icon('fa5s.save'),
             'Save as ...', self._save_datastack_as,
             QtGui.QKeySequence(QtGui.QKeySequence.SaveAs))
         self.open_menu = QtWidgets.QMenu('Load parameters', parent=self)
-        self.open_menu.setIcon(qtawesome.icon('fa.folder-open-o'))
+        self.open_menu.setIcon(qtawesome.icon('fa5s.folder-open'))
         self.build_open_menu()
         self.file_menu.addMenu(self.open_menu)
 
@@ -1315,26 +1314,26 @@ class InVESTModel(QtWidgets.QMainWindow):
 
         self.edit_menu = QtWidgets.QMenu('&Edit', parent=self)
         self.edit_menu.addAction(
-            qtawesome.icon('fa.undo', color='red'),
+            qtawesome.icon('fa5s.undo', color='red'),
             'Clear inputs', self.clear_inputs)
         self.edit_menu.addAction(
-            qtawesome.icon('fa.trash-o'),
+            qtawesome.icon('fa5s.trash'),
             'Clear parameter cache for %s' % self.label,
             self.clear_local_settings)
         self.menuBar().addMenu(self.edit_menu)
 
         self.dev_menu = QtWidgets.QMenu('&Development', parent=self)
         self.dev_menu.addAction(
-            qtawesome.icon('fa.file-code-o'),
+            qtawesome.icon('fa5s.file-code'),
             'Save to python script ...', self.save_to_python)
         self.menuBar().addMenu(self.dev_menu)
 
         self.help_menu = QtWidgets.QMenu('&Help', parent=self)
         self.help_menu.addAction(
-            qtawesome.icon('fa.info'),
+            qtawesome.icon('fa5s.info'),
             'About InVEST', self.about_dialog.exec_)
         self.help_menu.addAction(
-            qtawesome.icon('fa.external-link'),
+            qtawesome.icon('fa5s.external-link-alt'),
             'View documentation', self._check_local_docs,
             QtGui.QKeySequence(QtGui.QKeySequence.HelpContents))
         self.menuBar().addMenu(self.help_menu)
@@ -1354,7 +1353,7 @@ class InVESTModel(QtWidgets.QMainWindow):
         """
         self.open_menu.clear()
         self.open_file_action = self.open_menu.addAction(
-            qtawesome.icon('fa.arrow-circle-o-up'),
+            qtawesome.icon('fa5s.arrow-alt-circle-up'),
             'L&oad datastack, parameter set or logfile...',
             self.load_datastack,
             QtGui.QKeySequence(QtGui.QKeySequence.Open))
@@ -1787,7 +1786,7 @@ class InVESTModel(QtWidgets.QMainWindow):
         LOGGER.info('Whole-model validation returned: %s',
                     validation_warnings)
         if validation_warnings:
-            icon = qtawesome.icon('fa.times', color='red')
+            icon = qtawesome.icon('fa5s.times', color='red')
         else:
             icon = inputs.ICON_ENTER
         self.form.run_button.setIcon(icon)
@@ -1970,7 +1969,7 @@ class InVESTModel(QtWidgets.QMainWindow):
         else:
             save_filepath = filepath
 
-        for internal_model_name, _meta in cli._MODEL_UIS.items():
+        for internal_model_name, _meta in cli.MODEL_METADATA.items():
             if _meta.pyname == self.target.__module__:
                 break
         cli.export_to_python(
