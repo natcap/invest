@@ -36,6 +36,8 @@
 
 Unreleased Changes
 ------------------
+* General
+    * Update to FontAwesome 5 icons in the QT interface.
 * Habitat Quality
     * Changed how Habitat Rarity outputs are calculated to be less confusing.
       Values now represent a 0 to 1 index where before there could be
