@@ -163,22 +163,65 @@ class UNATests(unittest.TestCase):
         self.assertEqual(0.75, kernel_array.max())
         self.assertEqual(0, kernel_array.min())
 
-    def test_per_capita_greenspace_budget(self):
-        """UNA: Test the per-capita greenspace budget function."""
+    def test_greenspace_budgets(self):
+        """UNA: Test the per-capita greenspace budgets function."""
         from natcap.invest import urban_nature_access
 
         nodata = urban_nature_access.FLOAT32_NODATA
+        greenspace_supply_path = os.path.join(
+            self.workspace_dir, 'greenspace_supply.tif')
         greenspace_supply = numpy.array([
-            [nodata, 100.5]], dtype=numpy.float32)
+            [nodata, 100.5],
+            [75, 100]], dtype=numpy.float32)
         greenspace_demand = 50
 
-        greenspace_budget = urban_nature_access._per_capita_greenspace_budget(
-            greenspace_supply, greenspace_demand)
+        population_path = os.path.join(self.workspace_dir, 'population.tif')
+        population = numpy.array([
+            [50, 100],
+            [40.75, nodata]], dtype=numpy.float32)
+
+        target_greenspace_budget_path = os.path.join(
+            self.workspace_dir, 'greenspace_budget.tif')
+        target_supply_demand_path = os.path.join(
+            self.workspace_dir, 'supply_demand.tif')
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(_DEFAULT_EPSG)
+        wkt = srs.ExportToWkt()
+
+        for matrix, filepath in (
+                (greenspace_supply, greenspace_supply_path),
+                (population, population_path)):
+            pygeoprocessing.numpy_array_to_raster(
+                base_array=matrix,
+                target_nodata=nodata,
+                pixel_size=(10, -10),
+                origin=_DEFAULT_ORIGIN,
+                projection_wkt=wkt,
+                target_path=filepath)
+
+        urban_nature_access._calculate_per_capita_greenspace_budgets(
+            greenspace_supply_raster_path=greenspace_supply_path,
+            population_raster_path=population_path,
+            greenspace_demand=greenspace_demand,
+            target_greenspace_budget_path=target_greenspace_budget_path,
+            target_supply_demand_budget_path=target_supply_demand_path)
 
         expected_greenspace_budget = numpy.array([
-            [nodata, 50.5]], dtype=numpy.float32)
+            [nodata, 50.5],
+            [25, 50]], dtype=numpy.float32)
         numpy.testing.assert_allclose(
-            greenspace_budget, expected_greenspace_budget)
+            pygeoprocessing.raster_to_numpy_array(
+                target_greenspace_budget_path),
+            expected_greenspace_budget)
+
+        expected_supply_demand = numpy.array([
+            [nodata, 100 * 50.5],
+            [25 * 40.75, nodata]], dtype=numpy.float32)
+        numpy.testing.assert_allclose(
+            pygeoprocessing.raster_to_numpy_array(
+                target_supply_demand_path),
+            expected_supply_demand)
 
     def test_model(self):
         """UNA: Run through the model."""

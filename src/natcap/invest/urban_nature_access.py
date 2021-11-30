@@ -130,6 +130,7 @@ _INTERMEDIATE_BASE_FILES = {
     'greenspace_population_ratio': 'greenspace_population_ratio.tif',
     'convolved_population': 'convolved_population.tif',
     'greenspace_budget': 'greenspace_budget.tif',
+    'greenspace_supply_demand_budget': 'greenspace_supply_demand_budget.tif',
 }
 
 
@@ -345,26 +346,90 @@ def execute(args):
             greenspace_population_ratio_task,
         ])
 
-    per_capita_greenspace_budget = graph.add_task(
-        pygeoprocessing.raster_calculator,
+    per_capita_greenspace_budgets_task = graph.add_task(
+        _calculate_per_capita_greenspace_budgets,
         kwargs={
-            'base_raster_path_band_const_list': [
-                (file_registry['greenspace_supply'], 1),
-                (float(args['greenspace_demand']), 'raw')],
-            'local_op': _per_capita_greenspace_budget,
-            'target_raster_path': file_registry['greenspace_budget'],
-            'datatype_target': gdal.GDT_Float32,
-            'nodata_target': FLOAT32_NODATA,
+            'greenspace_supply_raster_path': file_registry[
+                'greenspace_supply'],
+            'population_raster_path': file_registry[
+                'aligned_population'],
+            'greenspace_demand': float(args['greenspace_demand']),
+            'target_greenspace_budget_path': file_registry[
+                'greenspace_budget'],
+            'target_supply_demand_budget_path': file_registry[
+                'greenspace_supply_demand_budget']
         },
-        task_name='Calculate greenspace budget',
-        target_path_list=[file_registry['greenspace_budget']],
+        task_name='Calculate greenspace budgets',
+        target_path_list=[
+            file_registry['greenspace_budget'],
+            file_registry['greenspace_supply_demand_budget']
+        ],
         dependent_task_list=[
             convolved_greenspace_population_ratio_task,
+            population_alignment_task
         ])
 
     graph.close()
     graph.join()
     LOGGER.info('Finished Urban Nature Access Model')
+
+
+def _calculate_per_capita_greenspace_budgets(
+        greenspace_supply_raster_path, population_raster_path,
+        greenspace_demand, target_greenspace_budget_path,
+        target_supply_demand_budget_path):
+    """"""
+
+    for target_path in (
+            target_greenspace_budget_path,
+            target_supply_demand_budget_path):
+        pygeoprocessing.new_raster_from_base(
+            base_path=greenspace_supply_raster_path,
+            target_path=target_path,
+            datatype=gdal.GDT_Float32,
+            band_nodata_list=[FLOAT32_NODATA]
+        )
+
+    population_raster = gdal.OpenEx(population_raster_path)
+    population_band = population_raster.GetRasterBand(1)
+
+    greenspace_budget_raster = gdal.OpenEx(
+        target_greenspace_budget_path, gdal.GA_Update)
+    greenspace_budget_band = greenspace_budget_raster.GetRasterBand(1)
+
+    supply_demand_raster = gdal.OpenEx(
+        target_supply_demand_budget_path, gdal.GA_Update)
+    supply_demand_band = supply_demand_raster.GetRasterBand(1)
+
+    for block_info, greenspace_supply in pygeoprocessing.iterblocks(
+            (greenspace_supply_raster_path, 1)):
+        valid_pixels = ~numpy.isclose(greenspace_supply, FLOAT32_NODATA)
+
+        # This calculates the per-capita greenspace budget
+        greenspace_budget = numpy.full(
+            greenspace_supply.shape, FLOAT32_NODATA, dtype=numpy.float32)
+        greenspace_budget[valid_pixels] = (
+            greenspace_supply[valid_pixels] - greenspace_demand)
+        greenspace_budget_band.WriteArray(
+            greenspace_budget, xoff=block_info['xoff'],
+            yoff=block_info['yoff'])
+
+        # This calculates the greenspace supply-demand budget
+        population = population_band.ReadAsArray(**block_info)
+        valid_pixels &= ~numpy.isclose(population, FLOAT32_NODATA)
+        supply_demand = numpy.full(
+            greenspace_supply.shape, FLOAT32_NODATA, dtype=numpy.float32)
+        supply_demand[valid_pixels] = (
+            greenspace_budget[valid_pixels] * population[valid_pixels])
+        supply_demand_band.WriteArray(
+            supply_demand, xoff=block_info['xoff'], yoff=block_info['yoff'])
+
+    population_band = None
+    population_raster = None
+    greenspace_budget_band = None
+    greenspace_budget_raster = None
+    supply_demand_band = None
+    supply_demand_raster = None
 
 
 def _per_capita_greenspace_budget(
