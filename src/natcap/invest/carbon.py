@@ -150,7 +150,7 @@ ARGS_SPEC = {
         },
         "price_per_metric_ton_of_c": {
             "type": "number",
-            "units": u.currency/u.ton,
+            "units": u.currency/u.metric_ton,
             "required": "do_valuation",
             "about": _(
                 "The present value of carbon. "
