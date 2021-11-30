@@ -42,18 +42,19 @@ ARGS_SPEC = {
         "results_suffix": spec_utils.SUFFIX,
         "n_workers": spec_utils.N_WORKERS,
         "n_nearest_model_points": {
-            "expression": "value > 0",
+            "expression": "value > 0 and value.is_integer()",
             "type": "number",
             "units": u.none,
             "required": "compute_forest_edge_effects",
             "about": _(
-                "Used when calculating the biomass in a pixel.  This number "
-                "determines the number of closest regression models that are "
-                "used when calculating the total biomass.  Each local model "
-                "is linearly weighted by distance such that the biomass in "
-                "the pixel is a function of each of these points with the "
-                "closest point having the highest effect."),
-            "name": _("Number of nearest model points to average")
+                "Number of closest regression models that are used when "
+                "calculating the total biomass. Each local model is linearly "
+                "weighted by distance such that the pixel's biomass is a "
+                "function of each of these points with the closest point "
+                "having the largest effect. Must be an integer greater than "
+                "0. Required if Compute Forest Edge Effects is selected."
+            ),
+            "name": _("number of points to average")
         },
         "aoi_vector_path": {
             **spec_utils.AOI,
@@ -63,8 +64,17 @@ ARGS_SPEC = {
         "biophysical_table_path": {
             "type": "csv",
             "columns": {
-                "lucode": {"type": "integer"},
-                "is_tropical_forest": {"type": "boolean"},
+                "lucode": {
+                    "type": "integer",
+                    "about": (
+                        "Code for this LULC class from the LULC map. Every "
+                        "value in the LULC raster must have a corresponding "
+                        "entry in this column.")},
+                "is_tropical_forest": {
+                    "type": "boolean",
+                    "about": (
+                        "Enter 1 if the LULC class is tropical forest, 0 if "
+                        "it is not tropical forest.")},
                 "c_above": {
                     "type": "number",
                     "units": u.metric_ton/u.hectare,
@@ -77,85 +87,99 @@ ARGS_SPEC = {
                     "units": u.metric_ton/u.hectare,
                     "required": "pools_to_calculate == 'all'",
                     "about": _(
-                        "Carbon density value for the belowground carbon pool")
+                        "Carbon density value for the belowground carbon "
+                        "pool. Required if calculating all pools.")
                 },
                 "c_soil": {
                     "type": "number",
                     "units": u.metric_ton/u.hectare,
                     "required": "pools_to_calculate == 'all'",
-                    "about": _("Carbon density value for the soil carbon pool")
+                    "about": _(
+                        "Carbon density value for the soil carbon pool. "
+                        "Required if calculating all pools.")
                 },
                 "c_dead": {
                     "type": "number",
                     "units": u.metric_ton/u.hectare,
                     "required": "pools_to_calculate == 'all'",
                     "about": _(
-                        "Carbon density value for the dead matter carbon pool")
+                        "Carbon density value for the dead matter carbon "
+                        "pool. Required if calculating all pools.")
                 },
             },
             "about": _(
-                "A CSV table containing model information corresponding to "
-                "each of the land use classes in the LULC raster input.  If "
-                "the user selects 'all carbon pools' the table must also "
-                "contain entries for 'c_below', 'c_soil', and 'c_dead'.  See "
-                "the InVEST Forest Carbon User's Guide for more information "
-                "about these fields."),
-            "name": _("Biophysical Table")
+                "A table mapping each LULC code from the LULC map to "
+                "biophysical data for that LULC class."),
+            "name": _("biophysical table")
         },
         "lulc_raster_path": {
             **spec_utils.LULC,
+            "about": (
+                f"{spec_utils.LULC['about']} All values in this raster must "
+                "have corresponding entries in the Biophysical Table."),
             "projected": True
         },
         "pools_to_calculate": {
             "type": "option_string",
             "options": {
-                "all": ("Use all pools (c_above, c_below, c_dead, and c_soil) "
-                        "in the carbon pool calculation"),
+                "all": (
+                    "Use all pools (aboveground, belowground, soil, and dead "
+                    "matter) in the carbon pool calculation."),
                 "above_ground": (
-                    "Only use the c_above pool in the carbon pool calculation")
+                    "Only use the aboveground pool in the carbon pool "
+                    "calculation.")
             },
-            "about": _("Which carbon pools to use (all or c_above only)"),
-            "name": _("Carbon Pools to Calculate")
+            "about": _("Which carbon pools to consider."),
+            "name": _("carbon pools to calculate")
         },
         "compute_forest_edge_effects": {
             "type": "boolean",
-            "about": _(
-                "If selected, will use the Chaplin-Kramer, et. al method to "
-                "account for above ground carbon stocks in tropical forest "
-                "types indicated by a '1' in the 'is_tropical_forest' field "
-                "in the biophysical table."),
-            "name": _("Compute forest edge effects")
+            "about": _("Account for forest edge effects on aboveground carbon."),
+            "name": _("compute forest edge effects")
         },
         "tropical_forest_edge_carbon_model_vector_path": {
             "type": "vector",
             "fields": {
                 "method": {
+                    "type": "option_string",
+                    "options": {
+                        "1": "Asymptotic: biomass=θ₁-θ₂·exp(-θ₃·distance)",
+                        "2": "Logarithmic: biomass=θ₁+θ₂·ln(distance)",
+                        "3": "Linear: biomass=θ₁+θ₂·distance"
+                    },
+                    "about": "Optimal regression model for the area."
+                },
+                "theta1": {
                     "type": "number",
                     "units": u.none,
-                    "expression": "value in {1, 2, 3}"
-                },
-                "theta1": {"type": "number", "units": u.none},
-                "theta2": {"type": "number", "units": u.none},
-                "theta3": {"type": "number", "units": u.none}
+                    "about": "θ₁ parameter for the regression equation."},
+                "theta2": {
+                    "type": "number",
+                    "units": u.none,
+                    "about": "θ₂ parameter for the regression equation."},
+                "theta3": {
+                    "type": "number",
+                    "units": u.none,
+                    "about": (
+                        "θ₃ parameter for the regression equation. "
+                        "Used only for the asymptotic model.")}
             },
             "geometries": spec_utils.POLYGONS,
             "required": "compute_forest_edge_effects",
             "about": _(
-                "A vector with fields 'method', 'theta1', 'theta2', 'theta3' "
-                "describing the global forest carbon edge models. Provided as "
-                "default data for the model."),
-            "name": _("Global forest carbon edge regression models")
+                "Map storing the optimal regression model for each tropical "
+                "subregion and the corresponding theta parameters for that "
+                "regression equation. Default data is provided. Required if "
+                "Compute Forest Edge Effects is selected."),
+            "name": _("global regression models")
         },
         "biomass_to_carbon_conversion_factor": {
             "type": "ratio",
             "required": "compute_forest_edge_effects",
             "about": _(
-                "Number by which to scale forest edge biomass to convert to "
-                "carbon.  Default value is 0.47 (according to IPCC 2006). "
-                "This pertains to forest classes only; values in the "
-                "biophysical table for non-forest classes should already be "
-                "in terms of carbon, not biomass."),
-            "name": _("Forest Edge Biomass to Carbon Conversion Factor")
+                "Proportion of forest edge biomass that is elemental carbon. "
+                "Required if Compute Forest Edge Effects is selected."),
+            "name": _("forest edge biomass to carbon conversion factor")
         }
     }
 }

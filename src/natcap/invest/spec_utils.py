@@ -63,7 +63,7 @@ AOI = {
     "geometries": {"POLYGON", "MULTIPOLYGON"},
     "name": _("area of interest"),
     "about": _(
-        "A polygon vector containing features over which to aggregate and "
+        "A map of areas over which to aggregate and "
         "summarize the final results."),
 }
 LULC = {

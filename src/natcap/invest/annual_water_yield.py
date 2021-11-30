@@ -38,7 +38,10 @@ ARGS_SPEC = {
         "n_workers": spec_utils.N_WORKERS,
         "lulc_path": {
             **spec_utils.LULC,
-            "projected": True
+            "projected": True,
+            "about": (
+                f"{spec_utils.LULC['about']} All values in this raster "
+                "must have corresponding entries in the Biophysical Table.")
         },
         "depth_to_root_rest_layer_path": {
             "type": "raster",
@@ -48,9 +51,10 @@ ARGS_SPEC = {
             }},
             "projected": True,
             "about": _(
-                "A GDAL-supported raster file containing an average root "
-                "restricting layer depth value for each cell."),
-            "name": _("Depth To Root Restricting Layer")
+                "Map of root restricting layer depth, the soil depth at "
+                "which root penetration is strongly inhibited because of "
+                "physical or chemical characteristics."),
+            "name": _("root restricting layer depth")
         },
         "precipitation_path": {
             **spec_utils.PRECIP,
@@ -61,10 +65,10 @@ ARGS_SPEC = {
             "bands": {1: {"type": "ratio"}},
             "projected": True,
             "about": _(
-                "A GDAL-supported raster file containing plant available "
-                "water content values for each cell.  The plant available "
-                "water content fraction should be a value between 0 and 1."),
-            "name": _("Plant Available Water Fraction")
+                "Map of plant available water content, the fraction of "
+                "water that can be stored in the soil profile that is "
+                "available to plants."),
+            "name": _("plant available water content")
         },
         "eto_path": {
             **spec_utils.ETO,
@@ -73,51 +77,79 @@ ARGS_SPEC = {
         "watersheds_path": {
             "projected": True,
             "type": "vector",
-            "fields": {"ws_id": {"type": "integer"}},
-            "geometries": spec_utils.POLYGONS,
+            "fields": {
+                "ws_id": {
+                    "type": "integer",
+                    "about": _("Unique identifier for each watershed.")
+                }
+            },
+            "geometries": spec_utils.POLYGON,
             "about": _(
-                "A GDAL-supported vector file containing one polygon per "
-                "watershed.  Each polygon that represents a watershed is "
-                "required to have a field 'ws_id' that is a unique integer "
-                "which identifies that watershed."),
-            "name": _("Watersheds")
+                "Map of watershed boundaries, such that each watershed drains "
+                "to a point of interest where hydropower production will be "
+                "analyzed."),
+            "name": _("watersheds")
         },
         "sub_watersheds_path": {
             "projected": True,
             "type": "vector",
-            "fields": {"subws_id": {"type": "integer"}},
+            "fields": {
+                "subws_id": {
+                    "type": "integer",
+                    "about": "Unique identifier for each subwatershed."
+                }
+            },
             "geometries": spec_utils.POLYGONS,
             "required": False,
             "about": _(
-                "A GDAL-supported vector file with one polygon per sub- "
-                "watershed within the main watersheds specified in the "
-                "Watersheds shapefile.  Each polygon that represents a sub- "
-                "watershed is required to have a field 'subws_id' that is a "
-                "unique integer which identifies that sub-watershed."),
-            "name": _("Sub-Watersheds")
+                "Map of subwatershed boundaries within each watershed in "
+                "the Watersheds map."),
+            "name": _("sub-watersheds")
         },
         "biophysical_table_path": {
             "type": "csv",
             "columns": {
-                "lucode": {"type": "integer"},
-                "root_depth": {"type": "number", "units": u.millimeter},
-                "kc": {"type": "number", "units": u.none}
+                "lucode": {
+                    "type": "integer",
+                    "about": (
+                        "LULC code corresponding to values in the LULC map.")
+                },
+                "lulc_veg": {
+                    "type": "integer",
+                    "about": (
+                        "Code indicating whether the the LULC class is "
+                        "vegetated for the purpose of AET. Enter 1 for all "
+                        "vegetated classes except wetlands, and 0 for all "
+                        "other classes, including wetlands, urban areas, "
+                        "water bodies, etc.")
+                },
+                "root_depth": {
+                    "type": "number",
+                    "units": u.millimeter,
+                    "about": (
+                        "Maximum root depth for plants in this LULC class. "
+                        "Only used for classes with a 'lulc_veg' value of 1.")
+                },
+                "kc": {
+                    "type": "number",
+                    "units": u.none,
+                    "about": "Crop coefficient for this LULC class."}
             },
             "about": _(
-                "A CSV table of land use/land cover (LULC) classes, "
-                "containing data on biophysical coefficients used in this "
-                "model.  The following columns are required: 'lucode' "
-                "(integer), 'root_depth' (mm), 'Kc' (coefficient)."),
-            "name": _("Biophysical Table")
+                "Table of biophysical parameters for each LULC class. All "
+                "values in the LULC raster must have corresponding entries "
+                "in this table."),
+            "name": _("biophysical table")
         },
         "seasonality_constant": {
             "expression": "value > 0",
             "type": "number",
             "units": u.none,
             "about": _(
-                "Floating point value on the order of 1 to 30 corresponding "
-                "to the seasonal distribution of precipitation."),
-            "name": _("Z parameter")
+                "The seasonality factor, representing hydrogeological "
+                "characterisitics and the seasonal distribution of "
+                "precipitation. Values typically range from 1 - 30."),
+            "name": _("z parameter")
         },
         "demand_table_path": {
             "type": "csv",
@@ -127,21 +159,18 @@ ARGS_SPEC = {
                     "type": "integer"
                 },
                 "demand": {
-                    "about": _("Estimated average consumptive water use for "
-                              "a pixel in each LULC type"),
+                    "about": _(
+                        "Average consumptive water use in this LULC class."),
                     "type": "number",
                     "units": u.meter**3/u.year/u.pixel
                 }
             },
             "required": False,
             "about": _(
-                "A table mapping each LULC class to the estimated average "
-                "consumptive water use for that class. Each LULC code in the "
-                "LULC raster must have a corresponding row in this table. "
-                "NOTE: It is important that the demand values account for "
-                "pixel area is important since larger areas will consume "
-                "more water for the same land-cover type."),
-            "name": _("Water Demand Table")
+                "A table of water demand for each LULC class. Each LULC code "
+                "in the LULC raster must have a corresponding row in this "
+                "table."),
+            "name": _("water demand table")
         },
         "valuation_table_path": {
             "type": "csv",
@@ -149,24 +178,24 @@ ARGS_SPEC = {
                 "ws_id": {
                     "type": "integer",
                     "about": _(
-                        "Watershed ID corresponding to a watershed in the "
-                        "watersheds vector file")
+                        "Unique identifier for the hydropower station. This "
+                        "must match the 'ws_id' value for the corresponding "
+                        "watershed in the Watersheds vector. Each watershed "
+                        "in the Watersheds vector must have its 'ws_id' "
+                        "entered in this column.")
                 },
                 "efficiency": {
                     "type": "ratio",
                     "about": _(
                         "Turbine efficiency, the proportion of potential "
-                        "energy captured by the turbine. May be obtained from "
-                        "the hydropower plant manager. Generally 0.7 to 0.9.")
+                        "energy captured and converted to electricity by the "
+                        "turbine.")
                 },
                 "fraction": {
                     "type": "ratio",
                     "about": _(
-                        "The fraction of inflow water volume that is used to "
-                        "generate energy, obtained from the hydropower plant "
-                        "manager. Managers can release water without "
-                        "generating electricity to satisfy irrigation, "
-                        "drinking water or environmental demands.")
+                        "The proportion of inflow water volume that is used "
+                        "to generate energy.")
                 },
                 "height": {
                     "type": "number",
@@ -180,37 +209,38 @@ ARGS_SPEC = {
                     "type": "number",
                     "units": u.currency/u.kilowatt_hour,
                     "about": _(
-                        "The price of power produced by the station, in the "
-                        "same currency used for the cost column.")
+                        "The price of power produced by the station. Must be "
+                        "in the same currency used in the 'cost' column.")
                 },
                 "cost": {
                     "type": "number",
                     "units": u.currency/u.year,
                     "about": _(
-                        "Annual cost of running the hydropower station "
-                        "(maintenance and operations costs), in the same "
-                        "currency used for the kw_price column.")
+                        "Annual maintenance and operations cost of running "
+                        "the hydropower station. Must be in the same currency "
+                        "used in the 'kw_price' column.")
                 },
                 "time_span": {
                     "type": "number",
                     "units": u.year,
                     "about": _(
-                        "Either the expected lifespan of the hydropower "
-                        "station or the duration of the land use scenario of "
-                        "interest. Used in net present value calculations.")
+                        "Number of years over which to value the "
+                        "hydropower station. This is either the station's "
+                        "expected lifespan or the duration of the land use "
+                        "scenario of interest.")
                 },
                 "discount": {
                     "type": "percent",
                     "about": _(
-                        "The discount rate over the time span, used in net "
-                        "present value calculations.")
+                        "The annual discount rate, applied for each year in "
+                        "the time span.")
                 }
             },
             "required": False,
             "about": _(
-                "A table mapping each watershed's hydropower station to its "
-                "associated valuation parameters"),
-            "name": _("Hydropower Valuation Table")
+                "A table mapping each watershed to the associated valuation "
+                "parameters for its hydropower station."),
+            "name": _("hydropower valuation table")
         }
     }
 }
