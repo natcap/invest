@@ -124,7 +124,7 @@ MAC_BINARIES_ZIP_FILE := "$(DIST_DIR)/InVEST-$(VERSION)-mac.zip"
 MAC_APPLICATION_BUNDLE := "$(BUILD_DIR)/mac_app_$(VERSION)/InVEST.app"
 
 
-.PHONY: fetch install binaries apidocs userguide windows_installer mac_dmg sampledata sampledata_single test test_ui clean help check python_packages jenkins purge mac_zipfile deploy signcode $(GIT_SAMPLE_DATA_REPO_PATH) $(GIT_TEST_DATA_REPO_PATH) $(GIT_UG_REPO_REV)
+.PHONY: fetch install binaries apidocs userguide windows_installer mac_dmg sampledata sampledata_single test test_ui clean help check python_packages jenkins purge mac_zipfile deploy codesign_mac codesign_windows $(GIT_SAMPLE_DATA_REPO_PATH) $(GIT_TEST_DATA_REPO_PATH) $(GIT_UG_REPO_REV)
 
 # Very useful for debugging variables!
 # $ make print-FORKNAME, for example, would print the value of the variable $(FORKNAME)
@@ -149,6 +149,8 @@ help:
 	@echo "  python_packages   to build natcap.invest wheel and source distributions"
 	@echo "  windows_installer to build an NSIS installer for distribution"
 	@echo "  mac_dmg           to build a disk image for distribution"
+	@echo "  codesign_mac      to sign the mac disk image using the codesign utility"
+	@echo "  codesign_windows  to sign the windows installer using the SignTool utility"
 	@echo "  sampledata        to build sample data zipfiles"
 	@echo "  sampledata_single to build a single self-contained data zipfile.  Used for advanced NSIS install."
 	@echo "  test              to run pytest on the tests directory"
@@ -354,45 +356,32 @@ $(MAC_BINARIES_ZIP_FILE): $(DIST_DIR) $(MAC_APPLICATION_BUNDLE) $(USERGUIDE_TARG
 build/vcredist_x86.exe: | build
 	powershell.exe -Command "Start-BitsTransfer -Source https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe -Destination build\vcredist_x86.exe"
 
-CERT_FILE := codesigning-2021.crt
-KEY_FILE := Stanford-natcap-code-signing-cert-expires-2024-01-26.key.pem
-P12_FILE := Stanford-natcap-code-signing-cert-expires-2024-01-26.p12
 KEYCHAIN_NAME := codesign_keychain
+# only need password to be able to create the keychain, not for security
+KEYCHAIN_PASS := password
 codesign_mac:
 	# download the p12 certificate file from google cloud
-	$(GSUTIL) cp 'gs://stanford_cert/$(P12_FILE)' '$(BUILD_DIR)/$(P12_FILE)'
+	$(GSUTIL) cp gs://stanford_cert/$(CERT_FILE) $(BUILD_DIR)/$(CERT_FILE)
 	# create a new keychain (so that we can know what the password is)
-	security create-keychain -p '$(KEYCHAIN_PASS)' '$(KEYCHAIN_NAME)'
+	security create-keychain -p $(KEYCHAIN_PASS) $(KEYCHAIN_NAME)
 	# add the keychain to the search list so it can be found
-	security list-keychains -s '$(KEYCHAIN_NAME)'
+	security list-keychains -s $(KEYCHAIN_NAME)
 	# unlock the keychain so we can import to it (stays unlocked 5 minutes by default)
-	security unlock-keychain -p '$(KEYCHAIN_PASS)' '$(KEYCHAIN_NAME)'
+	security unlock-keychain -p $(KEYCHAIN_PASS) $(KEYCHAIN_NAME)
 	# add the certificate to the keychain
 	# -T option says that the codesign executable can access the keychain
 	# for some reason this alone is not enough, also need the following step
-	security import $(BUILD_DIR)/$(P12_FILE) -k '$(KEYCHAIN_NAME)' -P '$(CERT_KEY_PASS)' -T /usr/bin/codesign
+	security import $(BUILD_DIR)/$(CERT_FILE) -k $(KEYCHAIN_NAME) -P "$(CERT_PASS)" -T /usr/bin/codesign
 	# this is essential to avoid the UI password prompt
-	security set-key-partition-list -S apple-tool:,apple: -s -k '$(KEYCHAIN_PASS)' '$(KEYCHAIN_NAME)'
-	# sign the dmg using certificate that's looked up by unique identifier 'Stanford Univeristy'
-	codesign --timestamp --verbose --sign 'Stanford University' $(MAC_DISK_IMAGE_FILE)
-	# relock the keychain (not sure if this is important?)
-	security lock-keychain '$(KEYCHAIN_NAME)'
+	security set-key-partition-list -S apple-tool:,apple: -s -k $(KEYCHAIN_PASS) $(KEYCHAIN_NAME)
+	# sign the dmg using certificate that's looked up by unique identifier 'Stanford'
+	codesign --timestamp --verbose --sign Stanford $(MAC_DISK_IMAGE_FILE)
 
-signcode:
+codesign_windows:
 	$(GSUTIL) cp gs://stanford_cert/$(CERT_FILE) $(BUILD_DIR)/$(CERT_FILE)
-	$(GSUTIL) cp gs://stanford_cert/$(KEY_FILE) $(BUILD_DIR)/$(KEY_FILE)
-	# On some OS (including our build container), osslsigncode fails with Bus error if we overwrite the binary when signing.
-	osslsigncode -certs $(BUILD_DIR)/$(CERT_FILE) -key $(BUILD_DIR)/$(KEY_FILE) -pass $(CERT_KEY_PASS) -in $(BIN_TO_SIGN) -out "signed.exe"
-	mv "signed.exe" $(BIN_TO_SIGN)
+	"$(SIGNTOOL)" sign -fd SHA256 -f $(BUILD_DIR)/$(CERT_FILE) -p $(CERT_PASS) $(BIN_TO_SIGN)
+	"$(SIGNTOOL)" timestamp -tr http://timestamp.sectigo.com -td SHA256 $(BIN_TO_SIGN)
 	$(RM) $(BUILD_DIR)/$(CERT_FILE)
-	$(RM) $(BUILD_DIR)/$(KEY_FILE)
-	@echo "Installer was signed with osslsigncode"
-
-signcode_windows:
-	$(GSUTIL) cp 'gs://stanford_cert/$(P12_FILE)' '$(BUILD_DIR)/$(P12_FILE)'
-	powershell.exe "& '$(SIGNTOOL)' sign /fd SHA256 /f '$(BUILD_DIR)\$(P12_FILE)' /p '$(CERT_KEY_PASS)' '$(BIN_TO_SIGN)'"
-	powershell.exe "& '$(SIGNTOOL)' timestamp /tr http://timestamp.sectigo.com /td SHA256 '$(BIN_TO_SIGN)'"
-	-$(RM) $(BUILD_DIR)/$(P12_FILE)
 	@echo "Installer was signed with signtool"
 
 deploy:
