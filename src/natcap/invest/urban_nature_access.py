@@ -91,7 +91,10 @@ ARGS_SPEC = {
             'name': 'greenspace demand per capita',
             'units': u.m**2,  # defined as m² per capita
             'expression': "value > 0",
-            'about': "",  # TODO, will know more about this when I implement.
+            'about': (
+                "The amount of greenspace that each resident should have. "
+                "This is often defined by local urban planning documents."
+            )
         },
         'search_radius': {
             'type': 'number',
@@ -126,6 +129,7 @@ _INTERMEDIATE_BASE_FILES = {
     'kernel': 'kernel.tif',
     'greenspace_population_ratio': 'greenspace_population_ratio.tif',
     'convolved_population': 'convolved_population.tif',
+    'greenspace_budget': 'greenspace_budget.tif',
 }
 
 
@@ -329,6 +333,10 @@ def execute(args):
             'kernel_path_band': (file_registry['kernel'], 1),
             'target_path': file_registry['greenspace_supply'],
             'working_dir': intermediate_dir,
+            # Insurance against future pygeoprocessing API changes.  The target
+            # nodata right now is the minimum possible numpy float32 value,
+            # which is also what we use here as FLOAT32_NODATA.
+            'target_nodata': FLOAT32_NODATA,
         },
         task_name='2SFCA - greenspace supply',
         target_path_list=[file_registry['greenspace_supply']],
@@ -337,9 +345,53 @@ def execute(args):
             greenspace_population_ratio_task,
         ])
 
+    per_capita_greenspace_budget = graph.add_task(
+        pygeoprocessing.raster_calculator,
+        kwargs={
+            'base_raster_path_band_const_list': [
+                (file_registry['greenspace_supply'], 1),
+                (float(args['greenspace_demand']), 'raw')],
+            'local_op': _per_capita_greenspace_budget,
+            'target_raster_path': file_registry['greenspace_budget'],
+            'datatype_target': gdal.GDT_Float32,
+            'nodata_target': FLOAT32_NODATA,
+        },
+        task_name='Calculate greenspace budget',
+        target_path_list=[file_registry['greenspace_budget']],
+        dependent_task_list=[
+            convolved_greenspace_population_ratio_task,
+        ])
+
     graph.close()
     graph.join()
     LOGGER.info('Finished Urban Nature Access Model')
+
+
+def _per_capita_greenspace_budget(
+        greenspace_supply, greenspace_demand):
+    """Calculate per-capita, per-pixel greenspace budget.
+
+    In the user's guide, this is the variable ``SUP_DEMi_cap``.
+
+    The nodata value of ``greenspace_supply`` must be FLOAT32_NODATA.
+
+    Args:
+        greenspace_supply (numpy.array): A ``numpy.float32`` matrix of
+            greenspace supply values.  The nodata value of this matrix is
+            assumed to be ``FLOAT32_NODATA``.
+        greenspace_demand (float): A number reflecting the amount of greenspace
+            that each resident should have, in m**2/person.
+
+    Returns:
+        A ``numpy.array`` of ``greenspace_supply - greenspace_demand`` for all
+        non-nodata pixels, and ``FLOAT32_NODATA`` otherwise.
+    """
+    out_array = numpy.full(
+        greenspace_supply.shape, FLOAT32_NODATA, dtype=numpy.float32)
+    valid_pixels = ~numpy.isclose(greenspace_supply, FLOAT32_NODATA)
+    out_array[valid_pixels] = (
+        greenspace_supply[valid_pixels] - greenspace_demand)
+    return out_array
 
 
 def _greenspace_population_ratio(

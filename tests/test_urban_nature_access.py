@@ -163,6 +163,23 @@ class UNATests(unittest.TestCase):
         self.assertEqual(0.75, kernel_array.max())
         self.assertEqual(0, kernel_array.min())
 
+    def test_per_capita_greenspace_budget(self):
+        """UNA: Test the per-capita greenspace budget function."""
+        from natcap.invest import urban_nature_access
+
+        nodata = urban_nature_access.FLOAT32_NODATA
+        greenspace_supply = numpy.array([
+            [nodata, 100.5]], dtype=numpy.float32)
+        greenspace_demand = 50
+
+        greenspace_budget = urban_nature_access._per_capita_greenspace_budget(
+            greenspace_supply, greenspace_demand)
+
+        expected_greenspace_budget = numpy.array([
+            [nodata, 50.5]], dtype=numpy.float32)
+        numpy.testing.assert_allclose(
+            greenspace_budget, expected_greenspace_budget)
+
     def test_model(self):
         """UNA: Run through the model."""
         from natcap.invest import urban_nature_access
@@ -177,6 +194,7 @@ class UNATests(unittest.TestCase):
                 self.workspace_dir, 'lulc_attributes.csv'),
             'decay_function': 'gaussian',
             'search_radius': 100.0,  # meters
+            'greenspace_demand': 100,  # square meters
         }
 
         random.seed(-1)  # for our random number generation
