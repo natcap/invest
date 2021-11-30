@@ -34,9 +34,18 @@
 
 .. :changelog:
 
-
-Unreleased Changes
-------------------
+Unreleased Changes (3.10)
+-------------------------
+* General:
+    * Added ``invest serve`` entry-point to the CLI. This launches a Flask app
+      and server on the localhost, to support the workbench.
+    * Major updates to each model's ``ARGS_SPEC`` (and some related validation)
+      to facilitate re-use & display in the Workbench and User's Guide.
+    * Standardized and de-duplicated text in ``ARGS_SPEC`` ``about`` and
+      ``name`` strings.
+* Coastal Vulnerability:
+    * Fixed bug where shore points were created on interior landmass holes
+      (i.e. lakes).
 * Habitat Quality
     * Changed how Habitat Rarity outputs are calculated to be less confusing.
       Values now represent a 0 to 1 index where before there could be
@@ -46,17 +55,6 @@ Unreleased Changes
       of 0.5 indicate same abundance between baseline and current/future
       LULC; values 0.5 to 1 indicate less abundance in current/future LULC
       and therefore higher rarity.
-
-Unreleased Changes (3.10)
--------------------------
-* General:
-    * Added ``invest serve`` entry-point to the CLI. This launches a Flask app
-      and server on the localhost, to support the workbench.
-    * Major updates to each model's ``ARGS_SPEC`` (and some related validation)
-      to facilitate re-use & display in the Workbench and User's Guide.
-* Coastal Vulnerability:
-    * Fixed bug where shore points were created on interior landmass holes
-      (i.e. lakes).
 
 3.9.2 (2021-10-29)
 ------------------
