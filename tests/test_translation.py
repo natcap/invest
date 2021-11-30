@@ -6,13 +6,14 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from babel.messages import Catalog, mofile, pofile
+from babel.messages import Catalog, mofile
 from natcap.invest import validation
 
 TEST_LANG = 'en'
 
 # assign to local variable so that it won't be changed by translation
 missing_key_msg = validation.MESSAGES['MISSING_KEY']
+not_a_number_msg = validation.MESSAGES['NOT_A_NUMBER']
 
 # Fake translations for testing
 TEST_MESSAGES = {
@@ -20,7 +21,8 @@ TEST_MESSAGES = {
     "Available models:": "αναιℓαвℓє мσ∂єℓѕ:",
     "Carbon Storage and Sequestration": "ςαявσи ѕтσяαgє αи∂ ѕєףυєѕтяαтισи",
     "current LULC": "ςυяяєит ℓυℓς",
-    missing_key_msg: "кєу ιѕ мιѕѕιиg fяσм тнє αяgѕ ∂ιςт"
+    missing_key_msg: "кєу ιѕ мιѕѕιиg fяσм тнє αяgѕ ∂ιςт",
+    not_a_number_msg: 'ναℓυє "{value}" ςσυℓ∂ иσт вє ιитєяρяєтє∂ αѕ α иυмвєя'
 }
 
 TEST_CATALOG = Catalog(locale=TEST_LANG)
@@ -79,10 +81,9 @@ class TranslationTests(unittest.TestCase):
 
     def test_invest_validate(self):
         """Translation: test that CLI validate output is translated."""
-        from natcap.invest import carbon
         # write datastack to a JSON file
         datastack = {
-            'model_name': carbon.ARGS_SPEC['pyname'],
+            'model_name': 'natcap.invest.carbon',
             'invest_version': '0.0',
             'args': {}
         }
@@ -99,6 +100,7 @@ class TranslationTests(unittest.TestCase):
                         ['--language', TEST_LANG, 'validate', datastack_path])
 
         result = out.getvalue()
+        print(result)
         self.assertTrue(TEST_MESSAGES[missing_key_msg] in result)
 
     def test_server_get_invest_models(self):
@@ -138,3 +140,12 @@ class TranslationTests(unittest.TestCase):
         messages = [item[1] for item in results]
         self.assertTrue(
             TEST_MESSAGES[missing_key_msg] in messages)
+
+    def test_translate_formatted_string(self):
+        from natcap.invest import carbon
+        args = {'n_workers': 'not a number'}
+        validation_messages = carbon.validate(args)
+
+        self.assertTrue(
+            TEST_MESSAGES[not_a_number_msg].format(value=args['n_workers']) in
+            str(validation_messages))
