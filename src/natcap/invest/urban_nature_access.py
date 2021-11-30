@@ -378,8 +378,40 @@ def _calculate_per_capita_greenspace_budgets(
         greenspace_supply_raster_path, population_raster_path,
         greenspace_demand, target_greenspace_budget_path,
         target_supply_demand_budget_path):
-    """"""
+    """Calculate per-capita greenspace budgets.
 
+    This function will produce two target rasters:
+
+        * The per-capita supply-demand budget at the pixel level
+        * The greenspace supply-demand budget at the pixel level
+
+    The latter depends on the former, so running them in a single function
+    allows us to avoid reading another raster from disk.
+
+    .. note::
+        All rasters provided as parameters to this function must all have the
+        same projections, pixel length and width, and have the same numbers of
+        pixels in the X and Y dimensions.  They must also have a nodata value
+        of ``FLOAT32_NODATA``.
+
+    Args:
+        greenspace_supply_raster_path (string): The path to the greenspace
+            supply raster on disk.
+        population_raster_path (string): The path to the population raster on
+            disk.
+        greenspace_demand (float): The per-person demand for greenspace.
+        target_greenspace_budget_path (string): The path to where the
+            greenspace budget raster produced by this function will be written
+            on disk.  If a file exists at this location, it will be
+            overwritten.
+        target_supply_demand_budget_path (string): The path to where the
+            greenspace supply/demand budget raster produced by this function
+            will be written on disk.  If a file exists at this location, it
+            will be overwritten.
+
+    Returns:
+        ``None``
+    """
     for target_path in (
             target_greenspace_budget_path,
             target_supply_demand_budget_path):
@@ -430,33 +462,6 @@ def _calculate_per_capita_greenspace_budgets(
     greenspace_budget_raster = None
     supply_demand_band = None
     supply_demand_raster = None
-
-
-def _per_capita_greenspace_budget(
-        greenspace_supply, greenspace_demand):
-    """Calculate per-capita, per-pixel greenspace budget.
-
-    In the user's guide, this is the variable ``SUP_DEMi_cap``.
-
-    The nodata value of ``greenspace_supply`` must be FLOAT32_NODATA.
-
-    Args:
-        greenspace_supply (numpy.array): A ``numpy.float32`` matrix of
-            greenspace supply values.  The nodata value of this matrix is
-            assumed to be ``FLOAT32_NODATA``.
-        greenspace_demand (float): A number reflecting the amount of greenspace
-            that each resident should have, in m**2/person.
-
-    Returns:
-        A ``numpy.array`` of ``greenspace_supply - greenspace_demand`` for all
-        non-nodata pixels, and ``FLOAT32_NODATA`` otherwise.
-    """
-    out_array = numpy.full(
-        greenspace_supply.shape, FLOAT32_NODATA, dtype=numpy.float32)
-    valid_pixels = ~numpy.isclose(greenspace_supply, FLOAT32_NODATA)
-    out_array[valid_pixels] = (
-        greenspace_supply[valid_pixels] - greenspace_demand)
-    return out_array
 
 
 def _greenspace_population_ratio(
