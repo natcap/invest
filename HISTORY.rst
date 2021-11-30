@@ -38,6 +38,9 @@ Unreleased Changes
 ------------------
 * General
     * Update to FontAwesome 5 icons in the QT interface.
+    * Updating the ``taskgraph`` requirement to ``0.11.0`` to resolve an issue
+      where modifying a file within a roughly 2-second window would fool
+      ``taskgraph`` into believing that the file had not been modified.
 * Habitat Quality
     * Changed how Habitat Rarity outputs are calculated to be less confusing.
       Values now represent a 0 to 1 index where before there could be
