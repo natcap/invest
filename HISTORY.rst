@@ -34,6 +34,7 @@
 
 .. :changelog:
 
+
 Unreleased Changes (3.10)
 -------------------------
 * General:
@@ -43,6 +44,7 @@ Unreleased Changes (3.10)
       to facilitate re-use & display in the Workbench and User's Guide.
     * Standardized and de-duplicated text in ``ARGS_SPEC`` ``about`` and
       ``name`` strings.
+    * Update to FontAwesome 5 icons in the QT interface.
 * Coastal Vulnerability:
     * Fixed bug where shore points were created on interior landmass holes
       (i.e. lakes).
