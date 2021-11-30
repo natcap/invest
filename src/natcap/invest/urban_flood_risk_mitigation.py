@@ -40,12 +40,15 @@ ARGS_SPEC = {
             "expression": "value > 0",
             "type": "number",
             "units": u.millimeter,
-            "about": _("Depth of rainfall"),
-            "name": _("Depth of rainfall")
+            "about": _("Depth of rainfall for the design storm of interest."),
+            "name": _("rainfall depth")
         },
         "lulc_path": {
             **spec_utils.LULC,
-            "projected": True
+            "projected": True,
+            "about": (
+                "Map of LULC. All values in this raster must have "
+                "corresponding entries in the Biophysical Table.")
         },
         "soils_hydrological_group_raster_path": {
             **spec_utils.SOIL_GROUP,
@@ -54,45 +57,57 @@ ARGS_SPEC = {
         "curve_number_table_path": {
             "type": "csv",
             "columns": {
-                "lucode": {"type": "integer"},
+                "lucode": {
+                    "type": "integer",
+                    "about": "LULC codes matching those in the LULC map."},
                 "cn_[SOIL_GROUP]": {
                     "type": "number",
                     "units": u.none,
                     "about": _(
-                        "Curve number values for each LULC type and each "
-                        "hydrologic soil group.")
+                        "The curve number value for this LULC type in each "
+                        "hydrologic soil group. Replace [SOIL_GROUP] with the "
+                        "soil group codes A, B, C, D, so that there is a "
+                        "column for each soil group.")
                 }
             },
             "about": _(
-                "Path to a CSV table that to map landcover codes to curve "
-                "numbers"),
-            "name": _("Biophysical Table")
+                "Table of curve number data for each LULC class. All LULC "
+                "codes in the LULC raster must have corresponding entries in "
+                "this table."),
+            "name": _("biophysical table")
         },
         "built_infrastructure_vector_path": {
             "type": "vector",
-            "fields": {"type": {"type": "integer"}},
+            "fields": {
+                "type": {
+                    "type": "integer",
+                    "about": (
+                        "Code indicating the building type. These codes "
+                        "must match those in the Damage Loss Table."
+                    )}},
             "geometries": spec_utils.POLYGONS,
             "required": False,
-            "about": _(
-                "Path to a vector with built infrastructure footprints. "
-                "Attribute table contains a column 'Type' with integers (e.g. "
-                "1=residential, 2=office, etc.)."),
-            "name": _("Built Infrastructure Vector")
+            "about": _("Map of building footprints."),
+            "name": _("built infrastructure")
         },
         "infrastructure_damage_loss_table_path": {
             "type": "csv",
             "columns": {
-                "type": {"type": "integer"},
-                "damage": {"type": "number", "units": u.currency/(u.meter**2)}
+                "type": {
+                    "type": "integer",
+                    "about": "Building type code."},
+                "damage": {
+                    "type": "number",
+                    "units": u.currency/(u.meter**2),
+                    "about": "Potential damage loss for this building type."}
             },
             "required": "built_infrastructure_vector_path",
             "about": _(
-                "Path to a a CSV table with columns 'Type' and 'Damage' with "
-                "values of built infrastructure type from the 'Type' field in "
-                "the 'Built Infrastructure Vector' and potential damage loss "
-                "(in currency/m^2). Required if the built infrastructure "
-                "vector is provided."),
-            "name": _("Built Infrastructure Damage Loss Table")
+                "Table of potential damage loss data for each building type. "
+                "All values in the Built Infrastructure vector 'type' field "
+                "must have corresponding entries in this table. Required if "
+                "the Built Infrastructure vector is provided."),
+            "name": _("damage loss table")
         }
     }
 }

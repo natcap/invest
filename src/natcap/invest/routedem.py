@@ -33,9 +33,8 @@ ARGS_SPEC = {
             "units": u.none,
             "required": False,
             "about": _(
-                "The band index to use from the raster. This positive integer "
-                "is 1-based. Default: 1"),
-            "name": _("Band Index")
+                "Index of the raster band to use, for multi-band rasters."),
+            "name": _("band index")
         },
         "algorithm": {
             "type": "option_string",
@@ -45,45 +44,49 @@ ARGS_SPEC = {
                 "MFD": ("Flow off a pixel is modeled fractionally so that "
                         "water is split among multiple downstream pixels")
             },
-            "about": _("The routing algorithm to use"),
-            "name": _("Routing Algorithm")
+            "about": _("The routing algorithm to use."),
+            "name": _("routing algorithm")
         },
         "calculate_flow_direction": {
             "type": "boolean",
             "required": False,
-            "about": _("Select to calculate flow direction"),
-            "name": _("Calculate Flow Direction")
+            "about": _("Calculate flow direction from the provided DEM."),
+            "name": _("calculate flow direction")
         },
         "calculate_flow_accumulation": {
             "type": "boolean",
             "required": False,
-            "about": _("Select to calculate flow accumulation."),
-            "name": _("Calculate Flow Accumulation")
+            "about": _(
+                "Calculate flow accumulation from the flow direction output."),
+            "name": _("calculate flow accumulation")
         },
         "calculate_stream_threshold": {
             "type": "boolean",
             "required": False,
             "about": _(
-                "Select to calculate a stream threshold to flow accumulation."),
-            "name": _("Calculate Stream Thresholds")
+                "Calculate streams from the flow accumulation output. "),
+            "name": _("calculate streams")
         },
         "threshold_flow_accumulation": {
             **spec_utils.THRESHOLD_FLOW_ACCUMULATION,
-            "required": "calculate_stream_threshold"
+            "required": "calculate_stream_threshold",
+            "about": (
+                f"{spec_utils.THRESHOLD_FLOW_ACCUMULATION['about']} "
+                "Required if Calculate Streams is selected.")
         },
         "calculate_downstream_distance": {
             "type": "boolean",
             "required": False,
             "about": _(
-                "If selected, creates a downstream distance raster based on "
-                "the thresholded flow accumulation stream classification."),
-            "name": _("Calculate Distance to stream")
+                "Calculate flow distance from each pixel to a stream as "
+                "defined in the Calculate Streams output."),
+            "name": _("calculate distance to stream")
         },
         "calculate_slope": {
             "type": "boolean",
             "required": False,
-            "about": _("If selected, calculates slope from the provided DEM."),
-            "name": _("Calculate Slope")
+            "about": _("Calculate percent slope from the provided DEM."),
+            "name": _("calculate slope")
         }
     }
 }

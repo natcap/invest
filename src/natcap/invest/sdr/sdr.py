@@ -41,14 +41,7 @@ ARGS_SPEC = {
         "n_workers": spec_utils.N_WORKERS,
         "dem_path": {
             **spec_utils.DEM,
-            "projected": True,
-            "about": _(
-                "A GDAL-supported raster file with an elevation value for "
-                "each cell.  Make sure the DEM is corrected by filling in "
-                "sinks, and if necessary burning hydrographic features into "
-                "the elevation model (recommended when unusual streams are "
-                "observed.) See the 'Working with the DEM' section of the "
-                "InVEST User's Guide for more information."),
+            "projected": True
         },
         "erosivity_path": {
             "type": "raster",
@@ -57,14 +50,9 @@ ARGS_SPEC = {
                 "units": u.megajoule*u.millimeter/(u.hectare*u.hour*u.year)}},
             "projected": True,
             "about": _(
-                "A GDAL-supported raster file, with an erosivity index value "
-                "for each cell.  This variable depends on the intensity and "
-                "duration of rainfall in the area of interest.  The greater "
-                "the intensity and duration of the rain storm, the higher the "
-                "erosion potential. The erosivity index is widely used, but "
-                "in case of its absence, there are methods and equations to "
-                "help generate a grid using climatic data."),
-            "name": _("Rainfall Erosivity Index (R)")
+                "Map of rainfall erosivity, reflecting the intensity and "
+                "duration of rainfall in the area of interest."),
+            "name": _("erosivity")
         },
         "erodibility_path": {
             "type": "raster",
@@ -73,35 +61,39 @@ ARGS_SPEC = {
                 "units": u.metric_ton*u.hectare*u.hour/(u.hectare*u.megajoule*u.millimeter)}},
             "projected": True,
             "about": _(
-                "A GDAL-supported raster file, with a soil erodibility value "
-                "for each cell which is a measure of the susceptibility of "
-                "soil particles to detachment and transport by rainfall and "
+                "Map of soil erodibility, the susceptibility of soil "
+                "particles to detachment and transport by rainfall and "
                 "runoff."),
-            "name": _("Soil Erodibility")
+            "name": _("soil erodibility")
         },
         "lulc_path": {
             **spec_utils.LULC,
-            "projected": True
+            "projected": True,
+            "about": (
+                f"{spec_utils.LULC['about']} All values in this raster must "
+                "have corresponding entries in the Biophysical Table.")
         },
         "watersheds_path": {
             "type": "vector",
             "fields": {
-                "ws_id": {"type": "integer"}
+                "ws_id": {
+                    "type": "integer",
+                    "about": "Unique identifier for the watershed."}
             },
             "geometries": spec_utils.POLYGONS,
             "projected": True,
             "about": _(
-                "This is a layer of polygons representing watersheds such "
-                "that each watershed contributes to a point of interest where "
-                "water quality will be analyzed.  It must have the integer "
-                "field 'ws_id' where the values uniquely identify each "
-                "watershed."),
+                "Map of the boundaries of the watershed(s) over which to "
+                "aggregate results. Each watershed should contribute to a "
+                "point of interest where water quality will be analyzed."),
             "name": _("Watersheds")
         },
         "biophysical_table_path": {
             "type": "csv",
             "columns": {
-                "lucode": {"type": "integer"},
+                "lucode": {
+                    "type": "integer",
+                    "about": "LULC code from the LULC raster."},
                 "usle_c": {
                     "type": "ratio",
                     "about": _("Cover-management factor for the USLE")},
@@ -110,62 +102,47 @@ ARGS_SPEC = {
                     "about": _("Support practice factor for the USLE")}
             },
             "about": _(
-                "A CSV table containing model information corresponding to "
-                "each of the land use classes in the LULC raster input."),
-            "name": _("Biophysical Table")
+                "A table mapping each LULC code to biophysical properties of "
+                "that LULC class. All values in the LULC raster must have "
+                "corresponding entries in this table."),
+            "name": _("biophysical table")
         },
-        "threshold_flow_accumulation": {
-            "expression": "value > 0",
-            "type": "number",
-            "units": u.pixel,
-            "about": _(
-                "The number of upstream cells that must flow into a cell "
-                "before it's considered part of a stream such that retention "
-                "stops and the remaining export is exported to the stream. "
-                "Used to define streams from the DEM."),
-            "name": _("Threshold Flow Accumulation")
-        },
+        "threshold_flow_accumulation": spec_utils.THRESHOLD_FLOW_ACCUMULATION,
         "k_param": {
             "type": "number",
             "units": u.none,
             "about": _("Borselli k parameter."),
-            "name": _("Borselli k Parameter")
+            "name": _("Borselli k parameter")
         },
         "sdr_max": {
             "type": "ratio",
-            "about": _("Maximum SDR value."),
-            "name": _("Max SDR Value")
+            "about": _("The maximum SDR value that a pixel can have."),
+            "name": _("maximum SDR value")
         },
         "ic_0_param": {
             "type": "number",
             "units": u.none,
             "about": _("Borselli IC0 parameter."),
-            "name": _("Borselli IC0 Parameter")
+            "name": _("Borselli IC0 parameter")
         },
         "l_max": {
             "type": "number",
             "expression": "value > 0",
             "units": u.none,
             "about": _(
-                "Values of L (the slope length component of the LS "
-                "slope length * slope gradient factor) larger than this value "
-                "will be clamped to this value. Ranges of 122-333 (unitless) "
-                "are found in relevant literature such as "
-                "Desmet and Govers, 1996 and Renard et al., 1997 "
-                "(see user's guide)."),
-            "name": _("Max L Value"),
+                "The maximum allowed value of the slope length parameter (L) "
+                "in the LS factor."),
+            "name": _("maximum l value"),
         },
         "drainage_path": {
             "type": "raster",
             "bands": {1: {"type": "number", "units": u.none}},
             "required": False,
             "about": _(
-                "An optional GDAL-supported raster file mask, that indicates "
-                "areas that drain to the watershed.  Format is that 1's "
-                "indicate drainage areas and 0's or nodata indicate areas "
-                "with no additional drainage.  This model is most accurate "
-                "when the drainage raster aligns with the DEM."),
-            "name": _("Drainages")
+                "Map of locations of artificial drainages that drain to the "
+                "watershed. Pixels with 1 are drainages and are treated like "
+                "streams. Pixels with 0 are not drainages."),
+            "name": _("drainages")
         }
     }
 }
@@ -779,15 +756,17 @@ def _calculate_ls_factor(
 def _calculate_rkls(
         ls_factor_path, erosivity_path, erodibility_path, stream_path,
         rkls_path):
-    """Calculate per-pixel potential soil loss using the RKLS.
+    """Calculate potential soil loss (tons / (pixel * year)) using RKLS.
 
     (revised universal soil loss equation with no C or P).
 
     Args:
         ls_factor_path (string): path to LS raster that has square pixels in
             meter units.
-        erosivity_path (string): path to per pixel erosivity raster
+        erosivity_path (string): path to erosivity raster
+            (MJ * mm / (ha * hr * yr))
         erodibility_path (string): path to erodibility raster
+            (t * ha * hr / (MJ * ha * mm))
         stream_path (string): path to drainage raster
             (1 is drainage, 0 is not)
         rkls_path (string): path to RKLS raster
@@ -805,22 +784,21 @@ def _calculate_rkls(
 
     cell_size = abs(
         pygeoprocessing.get_raster_info(ls_factor_path)['pixel_size'][0])
-    cell_area_ha = cell_size**2 / 10000.0
+    cell_area_ha = cell_size**2 / 10000.0  # hectares per pixel
 
     def rkls_function(ls_factor, erosivity, erodibility, stream):
         """Calculate the RKLS equation.
 
         Args:
-            ls_factor (numpy.ndarray): length/slope factor
-        erosivity (numpy.ndarray): related to peak rainfall events
-        erodibility (numpy.ndarray): related to the potential for soil to
-            erode
-        stream (numpy.ndarray): stream mask (1 stream, 0 no stream)
+            ls_factor (numpy.ndarray): length/slope factor. unitless.
+            erosivity (numpy.ndarray): related to peak rainfall events. units:
+                MJ * mm / (ha * hr * yr)
+            erodibility (numpy.ndarray): related to the potential for soil to
+                erode. units: t * ha * hr / (MJ * ha * mm)
+            stream (numpy.ndarray): stream mask (1 stream, 0 no stream)
 
         Returns:
-            ls_factor * erosivity * erodibility * usle_c_p * avg_aspect or
-            nodata if any values are nodata themselves.
-
+            numpy.ndarray of RKLS values in tons / (pixel * year))
         """
         rkls = numpy.empty(ls_factor.shape, dtype=numpy.float32)
         nodata_mask = (
@@ -833,9 +811,11 @@ def _calculate_rkls(
         valid_mask = nodata_mask & (stream == 0)
         rkls[:] = _TARGET_NODATA
 
-        rkls[valid_mask] = (
-            ls_factor[valid_mask] * erosivity[valid_mask] *
-            erodibility[valid_mask] * cell_area_ha)
+        rkls[valid_mask] = (           # rkls units are tons / (pixel * year)
+            ls_factor[valid_mask] *    # unitless
+            erosivity[valid_mask] *    # MJ * mm / (ha * hr * yr)
+            erodibility[valid_mask] *  # t * ha * hr / (MJ * ha * mm)
+            cell_area_ha)              # ha / pixel
 
         # rkls is 1 on the stream
         rkls[nodata_mask & (stream == 1)] = 1
