@@ -6,7 +6,7 @@ GIT_SAMPLE_DATA_REPO_REV    := 9adec6ee9000e192589b3538ff381e574c1812d6
 
 GIT_TEST_DATA_REPO          := https://bitbucket.org/natcap/invest-test-data.git
 GIT_TEST_DATA_REPO_PATH     := $(DATA_DIR)/invest-test-data
-GIT_TEST_DATA_REPO_REV      := 2a5a64b16493ccfaa60107c5212ed91edbcee7d9
+GIT_TEST_DATA_REPO_REV      := 15754c80bc32bf15f30eaec265512014c9c8fab3
 
 GIT_UG_REPO                 := https://github.com/natcap/invest.users-guide
 GIT_UG_REPO_PATH            := doc/users-guide
