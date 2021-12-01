@@ -415,6 +415,9 @@ def _admin_level_supply_demand(
     """
     raster_info = pygeoprocessing.get_raster_info(greenspace_budget_path)
 
+    # Reprojecting the vector here within this function allows us to produce
+    # the vector where it is used.  Otherwise, we'd be reprojecting in a
+    # separate task and then copying it to another filepath.
     pygeoprocessing.reproject_vector(
         admin_unit_vector_path, raster_info['projection_wkt'],
         target_admin_unit_vector_path, driver_name='GPKG')
@@ -445,14 +448,8 @@ def _admin_level_supply_demand(
         target_layer.SetFeature(feature)
     target_layer.CommitTransaction()
 
-
-
-
-
-
-
-
-
+    target_layer = None
+    target_vector = None
 
 
 def _calculate_per_capita_greenspace_budgets(
