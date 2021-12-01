@@ -300,6 +300,8 @@ class UNATests(unittest.TestCase):
         # Since we're doing a semi-manual alignment step, assert that the
         # aligned LULC and population rasters have the same pixel sizes, origin
         # and raster dimensions.
+        # TODO: Remove these assertions once we're using align_and_resize and
+        # it works as expected.
         aligned_lulc_raster_info = pygeoprocessing.get_raster_info(
             os.path.join(args['workspace_dir'], 'intermediate',
                          f"aligned_lulc_{args['results_suffix']}.tif"))
@@ -318,3 +320,16 @@ class UNATests(unittest.TestCase):
         numpy.testing.assert_allclose(
             aligned_lulc_raster_info['bounding_box'],
             aligned_population_raster_info['bounding_box'])
+
+        # Check that we're getting the appropriate summary values in the admin
+        # units vector.
+        admin_vector_path = os.path.join(
+            args['workspace_dir'], 'output',
+            f"admin_units_{args['results_suffix']}.gpkg")
+        admin_vector = gdal.OpenEx(admin_vector_path)
+        admin_layer = admin_vector.GetLayer()
+        self.assertEqual(admin_layer.GetFeatureCount(), 1)
+
+        admin_feature = admin_layer.GetFeature(1)
+        numpy.testing.assert_allclose(
+            admin_feature.GetField('average_greenspace_budget'), -17.9078)

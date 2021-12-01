@@ -123,6 +123,7 @@ ARGS_SPEC = {
 
 _OUTPUT_BASE_FILES = {
     'greenspace_supply': 'greenspace_supply.tif',
+    'admin_units': 'admin_units.gpkg',
 }
 _INTERMEDIATE_BASE_FILES = {
     'aligned_population': 'aligned_population.tif',
@@ -133,7 +134,6 @@ _INTERMEDIATE_BASE_FILES = {
     'convolved_population': 'convolved_population.tif',
     'greenspace_budget': 'greenspace_budget.tif',
     'greenspace_supply_demand_budget': 'greenspace_supply_demand_budget.tif',
-    'admin_units': 'admin_units.gpkg',
 }
 
 
