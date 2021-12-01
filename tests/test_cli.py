@@ -37,8 +37,8 @@ class CLIHeadlessTests(unittest.TestCase):
         """Remove the temporary workspace after a test run."""
         shutil.rmtree(self.workspace_dir)
 
-    def test_run_cbc_workspace_in_json(self):
-        """CLI: Run the carbon model with JSON-defined workspace."""
+    def test_run_coastal_blue_carbon_workspace_in_json(self):
+        """CLI: Run a model with JSON-defined workspace."""
         from natcap.invest import cli
         parameter_set_path = os.path.join(
             os.path.dirname(__file__), '..', 'data', 'invest-test-data',
@@ -64,7 +64,7 @@ class CLIHeadlessTests(unittest.TestCase):
         patched_model.assert_called_once()
 
     def test_run_coastal_blue_carbon(self):
-        """CLI: Run the coastal_blue_carbon model through the cli."""
+        """CLI: Run a model through the cli."""
         from natcap.invest import cli
         parameter_set_path = os.path.join(
             os.path.dirname(__file__), '..', 'data', 'invest-test-data',
@@ -83,7 +83,7 @@ class CLIHeadlessTests(unittest.TestCase):
         patched_model.assert_called_once()
 
     def test_run_coastal_blue_carbon_no_workspace(self):
-        """CLI: Run the coastal_blue_carbon model through the cli without a workspace."""
+        """CLI: Run a model through the cli without a workspace."""
         from natcap.invest import cli
         parameter_set_path = os.path.join(
             os.path.dirname(__file__), '..', 'data', 'invest-test-data',
@@ -99,7 +99,7 @@ class CLIHeadlessTests(unittest.TestCase):
         self.assertEqual(exit_cm.exception.code, 1)
 
     def test_run_coastal_blue_carbon_no_datastack(self):
-        """CLI: Run the coastal_blue_carbon model through the cli without a datastack."""
+        """CLI: Run a model through the cli without a datastack."""
         from natcap.invest import cli
 
         with self.assertRaises(SystemExit) as exit_cm:
@@ -112,7 +112,7 @@ class CLIHeadlessTests(unittest.TestCase):
         self.assertEqual(exit_cm.exception.code, 1)
 
     def test_run_coastal_blue_carbon_invalid_datastack(self):
-        """CLI: Run the coastal_blue_carbon model through the cli invalid datastack."""
+        """CLI: Run a model through the cli invalid datastack."""
         from natcap.invest import cli
         parameter_set_path = os.path.join(
             self.workspace_dir, 'bad-paramset.invs.json')
@@ -202,7 +202,7 @@ class CLIHeadlessTests(unittest.TestCase):
         self.assertEqual(exit_cm.exception.code, 0)
 
     def test_validate_carbon(self):
-        """CLI: Validate the carbon model inputs through the cli."""
+        """CLI: Validate a model inputs through the cli."""
         from natcap.invest import cli
 
         datastack_dict = {
@@ -236,7 +236,7 @@ class CLIHeadlessTests(unittest.TestCase):
         self.assertEqual(exit_cm.exception.code, 0)
 
     def test_validate_coastal_blue_carbon_missing_workspace(self):
-        """CLI: Validate the blue_carbon model inputs through the cli."""
+        """CLI: Validate a model inputs with missing workspace."""
         from natcap.invest import cli
         parameter_set_path = os.path.join(
             os.path.dirname(__file__), '..', 'data', 'invest-test-data',
@@ -256,7 +256,7 @@ class CLIHeadlessTests(unittest.TestCase):
         self.assertEqual(exit_cm.exception.code, 0)
 
     def test_validate_coastal_blue_carbon_missing_workspace_json(self):
-        """CLI: Validate the blue_carbon model inputs through the cli."""
+        """CLI: Validate inputs with missing workspace; JSON response."""
         from natcap.invest import cli
         parameter_set_path = os.path.join(
             os.path.dirname(__file__), '..', 'data', 'invest-test-data',
