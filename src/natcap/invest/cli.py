@@ -384,6 +384,8 @@ def main(user_args=None):
             parser.exit(
                 1, "Error when parsing JSON datastack:\n    " + str(error))
 
+        # reload validation module first so it's also in the correct language
+        importlib.reload(importlib.import_module('natcap.invest.validation'))
         model_module = importlib.import_module(
             name=parsed_datastack.model_name)
 

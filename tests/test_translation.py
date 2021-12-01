@@ -32,6 +32,11 @@ for key, value in TEST_MESSAGES.items():
 
 class TranslationTests(unittest.TestCase):
     """Tests for translation."""
+    def setUp(self):
+        """Reset the global context for each test."""
+        def identity(x): return x
+        __builtins__['_'] = identity
+
     @classmethod
     def setUpClass(cls):
         """Create temporary workspace and write MO file to it."""
@@ -51,7 +56,6 @@ class TranslationTests(unittest.TestCase):
 
     def test_invest_list(self):
         """Translation: test that CLI list output is translated."""
-
         # patch the LOCALE_DIR variable in natcap/invest/__init__.py
         # this is where gettext will look for translations
         with patch('natcap.invest.LOCALE_DIR', self.test_locale_dir):
@@ -68,7 +72,6 @@ class TranslationTests(unittest.TestCase):
 
     def test_invest_getspec(self):
         """Translation: test that CLI getspec output is translated."""
-
         with patch('natcap.invest.LOCALE_DIR', self.test_locale_dir):
             from natcap.invest import cli
             # capture stdout
@@ -100,7 +103,6 @@ class TranslationTests(unittest.TestCase):
                         ['--language', TEST_LANG, 'validate', datastack_path])
 
         result = out.getvalue()
-        print(result)
         self.assertTrue(TEST_MESSAGES[missing_key_msg] in result)
 
     def test_server_get_invest_models(self):
