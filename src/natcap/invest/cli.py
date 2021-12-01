@@ -336,11 +336,7 @@ def main(user_args=None):
         help='Define a location for the saved .py file')
 
     args = parser.parse_args(user_args)
-
     natcap.invest.install_language(args.language)
-    # reevaluate in the new language
-    # NOTE this only reevaluates natcap/invest/__init__.py, no other modules
-    importlib.reload(natcap.invest)
 
     root_logger = logging.getLogger()
     handler = logging.StreamHandler(sys.stdout)
@@ -366,6 +362,9 @@ def main(user_args=None):
     logging.getLogger('natcap').setLevel(logging.DEBUG)
 
     if args.subcommand == 'list':
+        # reevaluate in the new language
+        # NOTE this only reevaluates natcap/invest/__init__.py, no other modules
+        importlib.reload(natcap.invest)
         if args.json:
             message = build_model_list_json()
         else:
@@ -386,8 +385,8 @@ def main(user_args=None):
 
         # reload validation module first so it's also in the correct language
         importlib.reload(importlib.import_module('natcap.invest.validation'))
-        model_module = importlib.import_module(
-            name=parsed_datastack.model_name)
+        model_module = importlib.reload(importlib.import_module(
+            name=parsed_datastack.model_name))
 
         try:
             validation_result = model_module.validate(parsed_datastack.args)
@@ -421,7 +420,8 @@ def main(user_args=None):
 
     if args.subcommand == 'getspec':
         target_model = natcap.invest.MODEL_METADATA[args.model].pyname
-        model_module = importlib.import_module(name=target_model)
+        model_module = importlib.reload(
+            importlib.import_module(name=target_model))
         spec = model_module.ARGS_SPEC
 
         if args.json:

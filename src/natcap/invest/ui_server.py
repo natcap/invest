@@ -76,10 +76,10 @@ def get_invest_getspec():
         A JSON string.
     """
     install_language(request.args.get('language', 'en'))
-    importlib.reload(natcap.invest)
     target_model = request.get_json()
     target_module = MODEL_METADATA[target_model].pyname
-    model_module = importlib.import_module(name=target_module)
+    model_module = importlib.reload(
+        importlib.import_module(name=target_module))
     return spec_utils.serialize_args_spec(model_module.ARGS_SPEC)
 
 
@@ -107,7 +107,6 @@ def get_invest_validate():
 
     install_language(request.args.get('language', 'en'))
     importlib.reload(natcap.invest.validation)
-    importlib.reload(natcap.invest)
     model_module = importlib.reload(
         importlib.import_module(name=payload['model_module']))
 

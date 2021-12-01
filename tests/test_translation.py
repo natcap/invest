@@ -1,3 +1,4 @@
+import importlib
 import io
 import json
 import os
@@ -7,7 +8,7 @@ import unittest
 from unittest.mock import patch
 
 from babel.messages import Catalog, mofile
-from natcap.invest import validation
+from natcap.invest import carbon, validation, install_language, ui_server
 
 TEST_LANG = 'en'
 
@@ -30,12 +31,23 @@ for key, value in TEST_MESSAGES.items():
     TEST_CATALOG.add(key, value)
 
 
+def reset_global_context():
+    """Reset affected parts of the global context."""
+    def identity(x): return x
+    __builtins__['_'] = identity
+
+    # "unimport" the modules being translated
+    # NOTE: it would be better to run each test in a new process,
+    # but that's difficult on windows: https://stackoverflow.com/a/48310939
+    importlib.reload(validation)
+    importlib.reload(carbon)
+
+
 class TranslationTests(unittest.TestCase):
     """Tests for translation."""
-    def setUp(self):
-        """Reset the global context for each test."""
-        def identity(x): return x
-        __builtins__['_'] = identity
+
+    def tearDown(self):
+        reset_global_context()  # reset after each test case
 
     @classmethod
     def setUpClass(cls):
@@ -48,6 +60,8 @@ class TranslationTests(unittest.TestCase):
         # format the test catalog object into MO file format
         with open(mo_path, 'wb') as mo_file:
             mofile.write_mo(mo_file, TEST_CATALOG)
+        # reset so that these tests are unaffected by previous tests
+        reset_global_context()
 
     @classmethod
     def tearDownClass(cls):
@@ -66,9 +80,9 @@ class TranslationTests(unittest.TestCase):
                     cli.main(['--language', TEST_LANG, 'list'])
 
         result = out.getvalue()
-        self.assertTrue(TEST_MESSAGES['Available models:'] in result)
-        self.assertTrue(
-            TEST_MESSAGES['Carbon Storage and Sequestration'] in result)
+        self.assertIn(TEST_MESSAGES['Available models:'], result)
+        self.assertIn(
+            TEST_MESSAGES['Carbon Storage and Sequestration'], result)
 
     def test_invest_getspec(self):
         """Translation: test that CLI getspec output is translated."""
@@ -80,7 +94,7 @@ class TranslationTests(unittest.TestCase):
                     cli.main(['--language', TEST_LANG, 'getspec', 'carbon'])
 
         result = out.getvalue()
-        self.assertTrue(TEST_MESSAGES['current LULC'] in result)
+        self.assertIn(TEST_MESSAGES['current LULC'], result)
 
     def test_invest_validate(self):
         """Translation: test that CLI validate output is translated."""
@@ -103,23 +117,19 @@ class TranslationTests(unittest.TestCase):
                         ['--language', TEST_LANG, 'validate', datastack_path])
 
         result = out.getvalue()
-        self.assertTrue(TEST_MESSAGES[missing_key_msg] in result)
+        self.assertIn(TEST_MESSAGES[missing_key_msg], result)
 
     def test_server_get_invest_models(self):
         """Translation: test that /models endpoint is translated."""
-        from natcap.invest import ui_server
-
         with patch('natcap.invest.LOCALE_DIR', self.test_locale_dir):
             test_client = ui_server.app.test_client()
             response = test_client.get('/models')
             result = json.loads(response.get_data(as_text=True))
-        self.assertTrue(
-            TEST_MESSAGES['Carbon Storage and Sequestration'] in result)
+        self.assertIn(
+            TEST_MESSAGES['Carbon Storage and Sequestration'], result)
 
     def test_server_get_invest_getspec(self):
         """Translation: test that /getspec endpoint is translated."""
-        from natcap.invest import ui_server
-
         with patch('natcap.invest.LOCALE_DIR', self.test_locale_dir):
             test_client = ui_server.app.test_client()
             response = test_client.post('/getspec', json='carbon')
@@ -130,7 +140,6 @@ class TranslationTests(unittest.TestCase):
 
     def test_server_get_invest_validate(self):
         """Translation: test that /validate endpoint is translated."""
-        from natcap.invest import ui_server, carbon
         with patch('natcap.invest.LOCALE_DIR', self.test_locale_dir):
             test_client = ui_server.app.test_client()
             payload = {
@@ -140,14 +149,16 @@ class TranslationTests(unittest.TestCase):
             response = test_client.post('/validate', json=payload)
         results = json.loads(response.get_data(as_text=True))
         messages = [item[1] for item in results]
-        self.assertTrue(
-            TEST_MESSAGES[missing_key_msg] in messages)
+        self.assertIn(TEST_MESSAGES[missing_key_msg], messages)
 
     def test_translate_formatted_string(self):
-        from natcap.invest import carbon
+        with patch('natcap.invest.LOCALE_DIR', self.test_locale_dir):
+            install_language('en')
+        importlib.reload(validation)
+        importlib.reload(carbon)
         args = {'n_workers': 'not a number'}
         validation_messages = carbon.validate(args)
 
-        self.assertTrue(
-            TEST_MESSAGES[not_a_number_msg].format(value=args['n_workers']) in
+        self.assertIn(
+            TEST_MESSAGES[not_a_number_msg].format(value=args['n_workers']),
             str(validation_messages))
