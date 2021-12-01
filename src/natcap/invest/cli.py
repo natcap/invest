@@ -169,8 +169,8 @@ class SelectModelAction(argparse.Action):
 
             * the model name (verbatim) as identified in the keys of MODEL_METADATA
             * a uniquely identifiable prefix for the model name (e.g. "d"
-              matches "delineateit", but "fi" matches both "fisheries" and
-              "finfish"
+              matches "delineateit", but "co" matches both
+              "coastal_vulnerability" and "coastal_blue_carbon").
             * a known model alias, as registered in MODEL_METADATA
 
         If no single model can be identified based on these rules, an error
