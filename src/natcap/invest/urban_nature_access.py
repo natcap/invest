@@ -517,9 +517,6 @@ def _admin_level_supply_demand(
     """
     raster_info = pygeoprocessing.get_raster_info(greenspace_budget_path)
 
-    # raster_calculator to get values < 0  -- Pund_adm
-    # raster_calculator to get values > 0  -- Povr_adm
-
     # Reprojecting the vector here within this function allows us to produce
     # the vector where it is used.  Otherwise, we'd be reprojecting in a
     # separate task and then copying it to another filepath.
@@ -533,10 +530,9 @@ def _admin_level_supply_demand(
     supply_sum_fieldname = 'SUP_DEMadm_cap'
     undersupply_fieldname = 'Pund_adm'
     oversupply_fieldname = 'Povr_adm'
-    for fieldname in (
-            supply_sum_fieldname,
-            undersupply_fieldname,
-            oversupply_fieldname):
+    for fieldname in (supply_sum_fieldname,
+                      undersupply_fieldname,
+                      oversupply_fieldname):
         field = ogr.FieldDefn(fieldname, ogr.OFTReal)
         field.SetWidth(24)
         field.SetPrecision(11)
