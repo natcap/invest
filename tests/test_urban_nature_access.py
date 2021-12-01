@@ -10,6 +10,7 @@ import unittest
 
 import numpy
 import pygeoprocessing
+import shapely.geometry
 from osgeo import gdal
 from osgeo import osr
 
@@ -238,6 +239,8 @@ class UNATests(unittest.TestCase):
             'decay_function': 'gaussian',
             'search_radius': 100.0,  # meters
             'greenspace_demand': 100,  # square meters
+            'admin_unit_vector_path': os.path.join(
+                self.workspace_dir, 'admin_units.geojson'),
         }
 
         random.seed(-1)  # for our random number generation
@@ -283,6 +286,14 @@ class UNATests(unittest.TestCase):
                 7,1
                 8,0
                 9,1"""))
+
+        admin_geom = [
+            shapely.geometry.box(
+                *pygeoprocessing.get_raster_info(
+                    args['lulc_raster_path'])['bounding_box'])]
+        pygeoprocessing.shapely_geometry_to_vector(
+            admin_geom, args['admin_unit_vector_path'],
+            population_wkt, 'GeoJSON')
 
         urban_nature_access.execute(args)
 

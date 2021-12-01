@@ -5,9 +5,11 @@ import shutil
 import tempfile
 
 import numpy
+import numpy.testing
 import pygeoprocessing
 import taskgraph
 from osgeo import gdal
+from osgeo import ogr
 from osgeo import osr
 
 from natcap.invest import MODEL_METADATA
@@ -131,6 +133,7 @@ _INTERMEDIATE_BASE_FILES = {
     'convolved_population': 'convolved_population.tif',
     'greenspace_budget': 'greenspace_budget.tif',
     'greenspace_supply_demand_budget': 'greenspace_supply_demand_budget.tif',
+    'admin_units': 'admin_units.gpkg',
 }
 
 
@@ -369,9 +372,87 @@ def execute(args):
             population_alignment_task
         ])
 
+    aggregate_admin_units_task = graph.add_task(
+        _admin_level_supply_demand,
+        kwargs={
+            'greenspace_budget_path': file_registry[
+                'greenspace_supply_demand_budget'],
+            'population_path': file_registry['aligned_population'],
+            'admin_unit_vector_path': args['admin_unit_vector_path'],
+            'target_admin_unit_vector_path': file_registry['admin_units'],
+        },
+        task_name='Aggregate supply-demand to the admin units',
+        target_path_list=[file_registry['admin_units']],
+        dependent_task_list=[per_capita_greenspace_budgets_task]
+    )
+
     graph.close()
     graph.join()
     LOGGER.info('Finished Urban Nature Access Model')
+
+
+def _admin_level_supply_demand(
+        greenspace_budget_path, population_path, admin_unit_vector_path,
+        target_admin_unit_vector_path):
+    """Calculate average greenspace supply per admin unit.
+
+    Note:
+        The greenspace budget raster and population raster must align
+        perfectly in terms of pixel sizes and raster dimensions, and must have
+        the same projection.
+
+    Args:
+        greenspace_budget_path (string): The path to the greenspace budget
+            raster on disk.
+        population_path (string): The path to the population raster on disk.
+        admin_unit_vector_path (string): The path to the administrative units
+            vector.
+        target_admin_unit_vector_path (string): The path to where the target
+            administrative units vector will be created on disk.
+
+    Returns:
+        ``None``
+    """
+    raster_info = pygeoprocessing.get_raster_info(greenspace_budget_path)
+
+    pygeoprocessing.reproject_vector(
+        admin_unit_vector_path, raster_info['projection_wkt'],
+        target_admin_unit_vector_path, driver_name='GPKG')
+
+    target_vector = gdal.OpenEx(target_admin_unit_vector_path, gdal.GA_Update)
+    target_layer = target_vector.GetLayer()
+
+    supply_sum_fieldname = 'average_greenspace_budget'
+    supply_sum_field = ogr.FieldDefn(supply_sum_fieldname, ogr.OFTReal)
+    supply_sum_field.SetWidth(24)
+    supply_sum_field.SetPrecision(11)
+    target_layer.CreateField(supply_sum_field)
+
+    greenspace_stats = pygeoprocessing.zonal_statistics(
+        (greenspace_budget_path, 1), target_admin_unit_vector_path)
+    population_stats = pygeoprocessing.zonal_statistics(
+        (population_path, 1), target_admin_unit_vector_path)
+
+    target_layer.StartTransaction()
+    for feature in target_layer:
+        feature_id = feature.GetFID()
+
+        avg_greenspace_supply_demand = (
+            greenspace_stats[feature_id]['sum'] /
+            population_stats[feature_id]['sum'])
+
+        feature.SetField(supply_sum_fieldname, avg_greenspace_supply_demand)
+        target_layer.SetFeature(feature)
+    target_layer.CommitTransaction()
+
+
+
+
+
+
+
+
+
 
 
 def _calculate_per_capita_greenspace_budgets(
@@ -388,7 +469,7 @@ def _calculate_per_capita_greenspace_budgets(
     The latter depends on the former, so running them in a single function
     allows us to avoid reading another raster from disk.
 
-    .. note::
+    Note:
         All rasters provided as parameters to this function must all have the
         same projections, pixel length and width, and have the same numbers of
         pixels in the X and Y dimensions.  They must also have a nodata value
