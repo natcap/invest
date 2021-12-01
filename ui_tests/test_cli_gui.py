@@ -2,6 +2,7 @@ import unittest
 import shutil
 import tempfile
 import os
+import json
 
 
 class CLIGUITests(unittest.TestCase):
@@ -16,9 +17,25 @@ class CLIGUITests(unittest.TestCase):
     def test_run_model(self):
         """CLI-GUI: Run a model GUI through the cli."""
         from natcap.invest import cli
-        parameter_set_path = os.path.join(
+
+        input_data_dir = os.path.join(
             os.path.dirname(__file__), '..', 'data', 'invest-test-data',
-            'fisheries', 'spiny_lobster_belize.invs.json')
+            'delineateit', 'input')
+        datastack_dict = {
+            'model_name': 'natcap.invest.delineateit.delineateit',
+            'invest_version': '3.10',
+            'args': {
+                'dem_path': os.path.join(
+                    input_data_dir, 'dem.tif'),
+                'outlet_vector_path': os.path.join(
+                    input_data_dir, 'outlets.shp')
+            }
+        }
+        parameter_set_path = os.path.join(
+            self.workspace_dir, 'paramset.invs.json')
+        with open(parameter_set_path, 'w') as parameter_set_file:
+            parameter_set_file.write(
+                json.dumps(datastack_dict, indent=4, sort_keys=True))
 
         # I tried patching the model import via mock, but GUI would hang.  I'd
         # rather have a reliable test that takes a few more seconds than a test
@@ -26,7 +43,7 @@ class CLIGUITests(unittest.TestCase):
         cli.main([
             '--debug',
             'quickrun',
-            'fisheries',
+            'delineateit',
             parameter_set_path,
             '--workspace', self.workspace_dir,
         ])
