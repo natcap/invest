@@ -350,7 +350,7 @@ def execute(args):
             greenspace_population_ratio_task,
         ])
 
-    # SUP_DEMi_cap
+    # This is "SUP_DEMi_cap" from the user's guide
     per_capita_greenspace_budget_task = graph.add_task(
         pygeoprocessing.raster_calculator,
         kwargs={
@@ -369,7 +369,7 @@ def execute(args):
             convolved_greenspace_population_ratio_task
         ])
 
-    # SUP_DEMi
+    # This is "SUP_DEMi" from the user's guide
     greenspace_supply_demand_task = graph.add_task(
         pygeoprocessing.raster_calculator,
         kwargs={
@@ -505,7 +505,7 @@ def _greenspace_supply_demand_op(greenspace_budget, population):
             value.  This matrix must be the same size and shape as
             ``population``.
         population (numpy.array): Pixel values represent the population count
-            Of the pixel.  This matrix must be the same size and shape as
+            of the pixel.  This matrix must be the same size and shape as
             ``greenspace_budget``, and must have ``FLOAT32_NODATA`` as its
             nodata value.
 
