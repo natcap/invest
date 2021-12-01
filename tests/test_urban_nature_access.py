@@ -10,6 +10,7 @@ import unittest
 
 import numpy
 import pygeoprocessing
+import shapely.geometry
 from osgeo import gdal
 from osgeo import osr
 
@@ -163,6 +164,36 @@ class UNATests(unittest.TestCase):
         self.assertEqual(0.75, kernel_array.max())
         self.assertEqual(0, kernel_array.min())
 
+    def test_greenspace_budgets(self):
+        """UNA: Test the per-capita greenspace budgets functions."""
+        from natcap.invest import urban_nature_access
+
+        nodata = urban_nature_access.FLOAT32_NODATA
+        greenspace_supply = numpy.array([
+            [nodata, 100.5],
+            [75, 100]], dtype=numpy.float32)
+        greenspace_demand = 50
+
+        population = numpy.array([
+            [50, 100],
+            [40.75, nodata]], dtype=numpy.float32)
+
+        greenspace_budget = urban_nature_access._greenspace_budget_op(
+                greenspace_supply, greenspace_demand)
+        expected_greenspace_budget = numpy.array([
+            [nodata, 50.5],
+            [25, 50]], dtype=numpy.float32)
+        numpy.testing.assert_allclose(
+            greenspace_budget, expected_greenspace_budget)
+
+        supply_demand = urban_nature_access._greenspace_supply_demand_op(
+            greenspace_budget, population)
+        expected_supply_demand = numpy.array([
+            [nodata, 100 * 50.5],
+            [25 * 40.75, nodata]], dtype=numpy.float32)
+        numpy.testing.assert_allclose(
+            supply_demand, expected_supply_demand)
+
     def test_model(self):
         """UNA: Run through the model."""
         from natcap.invest import urban_nature_access
@@ -177,6 +208,9 @@ class UNATests(unittest.TestCase):
                 self.workspace_dir, 'lulc_attributes.csv'),
             'decay_function': 'gaussian',
             'search_radius': 100.0,  # meters
+            'greenspace_demand': 100,  # square meters
+            'admin_unit_vector_path': os.path.join(
+                self.workspace_dir, 'admin_units.geojson'),
         }
 
         random.seed(-1)  # for our random number generation
@@ -223,11 +257,21 @@ class UNATests(unittest.TestCase):
                 8,0
                 9,1"""))
 
+        admin_geom = [
+            shapely.geometry.box(
+                *pygeoprocessing.get_raster_info(
+                    args['lulc_raster_path'])['bounding_box'])]
+        pygeoprocessing.shapely_geometry_to_vector(
+            admin_geom, args['admin_unit_vector_path'],
+            population_wkt, 'GeoJSON')
+
         urban_nature_access.execute(args)
 
         # Since we're doing a semi-manual alignment step, assert that the
         # aligned LULC and population rasters have the same pixel sizes, origin
         # and raster dimensions.
+        # TODO: Remove these assertions once we're using align_and_resize and
+        # it works as expected.
         aligned_lulc_raster_info = pygeoprocessing.get_raster_info(
             os.path.join(args['workspace_dir'], 'intermediate',
                          f"aligned_lulc_{args['results_suffix']}.tif"))
@@ -246,3 +290,17 @@ class UNATests(unittest.TestCase):
         numpy.testing.assert_allclose(
             aligned_lulc_raster_info['bounding_box'],
             aligned_population_raster_info['bounding_box'])
+
+        # Check that we're getting the appropriate summary values in the admin
+        # units vector.
+        admin_vector_path = os.path.join(
+            args['workspace_dir'], 'output',
+            f"admin_units_{args['results_suffix']}.gpkg")
+        admin_vector = gdal.OpenEx(admin_vector_path)
+        admin_layer = admin_vector.GetLayer()
+        self.assertEqual(admin_layer.GetFeatureCount(), 1)
+
+        admin_feature = admin_layer.GetFeature(1)
+        numpy.testing.assert_allclose(
+            admin_feature.GetField('average_greenspace_budget'),
+            -17.9078)  # from eyeballing the results; random seed = 1
