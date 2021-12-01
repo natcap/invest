@@ -94,8 +94,9 @@ ARGS_SPEC = {
             'units': u.m**2,  # defined as m² per capita
             'expression': "value > 0",
             'about': (
-                "The amount of greenspace that each resident should have. "
-                "This is often defined by local urban planning documents."
+                "The amount of greenspace that each resident should have "
+                "access to. This is often defined by local urban planning "
+                "documents."
             )
         },
         'search_radius': {
