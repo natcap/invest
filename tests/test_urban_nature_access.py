@@ -307,11 +307,13 @@ class UNATests(unittest.TestCase):
 
         undersupplied_pop = admin_feature.GetField('Pund_adm')
         numpy.testing.assert_allclose(
-            undersupplied_pop, 4094.012207)
+            undersupplied_pop,
+            4094.012207)  # From eyeballing the results; random seed = 1
 
         oversupplied_pop = admin_feature.GetField('Povr_adm')
         numpy.testing.assert_allclose(
-            oversupplied_pop, 981.987549)
+            oversupplied_pop,
+            981.987549)  # From eyeballing the results; random seed = 1
 
         # The sum of the under-and-oversupplied populations should be equal to
         # the total population count.
