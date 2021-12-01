@@ -2,7 +2,7 @@
 DATA_DIR := data
 GIT_SAMPLE_DATA_REPO        := https://bitbucket.org/natcap/invest-sample-data.git
 GIT_SAMPLE_DATA_REPO_PATH   := $(DATA_DIR)/invest-sample-data
-GIT_SAMPLE_DATA_REPO_REV    := c07883c44e00d4c977849e551891eb27e1ba3b1e
+GIT_SAMPLE_DATA_REPO_REV    := a566628798350ed818fc156da1989324fa97c28e
 
 GIT_TEST_DATA_REPO          := https://bitbucket.org/natcap/invest-test-data.git
 GIT_TEST_DATA_REPO_PATH     := $(DATA_DIR)/invest-test-data
@@ -293,14 +293,12 @@ $(USERGUIDE_ZIP_FILE): $(USERGUIDE_TARGET_DIR)
 # know which data zipfiles to create until the data repo is cloned.
 # All data zipfiles are written to dist/data/*.zip
 ZIPDIRS = Annual_Water_Yield \
-		  Aquaculture \
 		  Base_Data \
 		  Carbon \
 		  CoastalBlueCarbon \
 		  CoastalVulnerability \
 		  CropProduction \
 		  DelineateIt \
-		  Fisheries \
 		  forest_carbon_edge_effect \
 		  globio \
 		  GridSeascape \
