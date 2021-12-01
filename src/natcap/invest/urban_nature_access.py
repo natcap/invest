@@ -462,9 +462,12 @@ def execute(args):
 def _filter_population(population, greenspace_budget, numpy_filter_op):
     """Filter the population by a defined op and the greenspace budget.
 
+    Note:
+        The ``population`` and ``greenspace_budget`` inputs must have the same
+        shape and must both use ``FLOAT32_NODATA`` as their nodata value.
+
     Args:
-        population (numpy.array): A numpy array with population counts.  The
-            nodata value for this raster must be ``FLOAT32_NODATA``
+        population (numpy.array): A numpy array with population counts.
         greenspace_budget (numpy.array): A numpy array with the greenspace
             budget values.
         numpy_filter_op (callable): A function that takes a numpy array as
