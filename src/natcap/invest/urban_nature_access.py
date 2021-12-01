@@ -530,7 +530,7 @@ def _admin_level_supply_demand(
     target_vector = gdal.OpenEx(target_admin_unit_vector_path, gdal.GA_Update)
     target_layer = target_vector.GetLayer()
 
-    supply_sum_fieldname = 'average_greenspace_budget'
+    supply_sum_fieldname = 'SUP_DEMadm_cap'
     undersupply_fieldname = 'Pund_adm'
     oversupply_fieldname = 'Povr_adm'
     for fieldname in (

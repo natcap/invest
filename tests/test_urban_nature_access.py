@@ -302,7 +302,7 @@ class UNATests(unittest.TestCase):
 
         admin_feature = admin_layer.GetFeature(1)
         numpy.testing.assert_allclose(
-            admin_feature.GetField('average_greenspace_budget'),
+            admin_feature.GetField('SUP_DEMadm_cap'),
             -17.9078)  # from eyeballing the results; random seed = 1
 
         undersupplied_pop = admin_feature.GetField('Pund_adm')
