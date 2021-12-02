@@ -38,6 +38,12 @@ Unreleased Changes
 ------------------
 * General
     * Update to FontAwesome 5 icons in the QT interface.
+    * In response to the deprecation of ``setup.py``-based commands in Python
+      3.10, the recommended way to build python distributions of
+      ``natcap.invest`` is now with the ``build`` package, and installation
+      should be done via ``pip``.  The ``README`` has been updated to reflect
+      this change, and this should only be noticeable for those installing
+      ``natcap.invest`` from source.
 * Habitat Quality
     * Changed how Habitat Rarity outputs are calculated to be less confusing.
       Values now represent a 0 to 1 index where before there could be
