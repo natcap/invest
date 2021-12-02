@@ -48,6 +48,8 @@ Unreleased Changes (3.10)
 * Coastal Vulnerability:
     * Fixed bug where shore points were created on interior landmass holes
       (i.e. lakes).
+    * Added feature to accept raster (in addition to vector) habitat layers.
+    * Changed one intermediate output (geomorphology) from SHP to GPKG.
 * Habitat Quality
     * Changed how Habitat Rarity outputs are calculated to be less confusing.
       Values now represent a 0 to 1 index where before there could be
