@@ -91,13 +91,13 @@ jobs:
               run: |
                   conda install nomkl # make sure numpy is w/out MKL
                   conda upgrade -y pip setuptools
-                  conda install ${{ matrix.numpy }} ${{ matrix.gdal }} toml twine
+                  conda install ${{ matrix.numpy }} ${{ matrix.gdal }} toml twine build
                   conda install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
 
             - name: Build wheel
               shell: bash -l {0}
               run: |
-                  python setup.py bdist_wheel
+                  python -m build --wheel
                   python -m twine check dist/*
 
             - name: Install runtime dependencies
@@ -196,7 +196,7 @@ jobs:
               run: |
                   conda install nomkl # make sure numpy is w/out MKL
                   conda upgrade -y pip setuptools
-                  conda install toml twine
+                  conda install toml twine build
                   conda install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
                   python ./scripts/convert-requirements-to-conda-yml.py \
                     requirements.txt > requirements-all.yml
@@ -205,7 +205,8 @@ jobs:
             - name: Build source distribution
               shell: bash -l {0}
               run: |
-                  python setup.py build_ext sdist
+                  python -m build --wheel
+                  python -m build --sdist
                   python -m twine check dist/*
 
             - name: Install from source distribution
@@ -280,12 +281,12 @@ jobs:
               shell: bash -l {0}
               run: |
                   conda install nomkl # make sure numpy w/out mkl
-                  conda install pytest requests
+                  conda install pytest requests build
                   conda install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
                   conda upgrade -y pip wheel
                   python ./scripts/convert-requirements-to-conda-yml.py requirements.txt > requirements.yml
                   conda env update --file requirements.yml
-                  python setup.py install
+                  make install
 
             - name: Validate sample data
               shell: bash -l {0}
@@ -340,7 +341,7 @@ jobs:
                     requirements.txt requirements-dev.txt \
                     requirements-gui.txt > requirements-all.yml
                   conda env update --file requirements-all.yml
-                  python setup.py install
+                  make install
 
             - name: Run UI tests
               shell: bash -l {0}

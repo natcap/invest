@@ -238,12 +238,12 @@ install: $(DIST_DIR)/natcap.invest%.whl
 
 
 # Build python packages and put them in dist/
-python_packages: $(DIST_DIR)/natcap.invest%.whl $(DIST_DIR)/natcap.invest%.zip
+python_packages: $(DIST_DIR)/natcap.invest%.whl $(DIST_DIR)/natcap.invest%.tar.gz
 $(DIST_DIR)/natcap.invest%.whl: | $(DIST_DIR)
-	$(PYTHON) setup.py bdist_wheel
+	$(PYTHON) -m build --wheel
 
-$(DIST_DIR)/natcap.invest%.zip: | $(DIST_DIR)
-	$(PYTHON) setup.py sdist --formats=zip
+$(DIST_DIR)/natcap.invest%.tar.gz: | $(DIST_DIR)
+	$(PYTHON) -m build --sdist
 
 
 # Build binaries and put them in dist/invest
