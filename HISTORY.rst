@@ -48,6 +48,8 @@ Unreleased Changes (3.10)
 * Coastal Vulnerability:
     * Fixed bug where shore points were created on interior landmass holes
       (i.e. lakes).
+    * Added feature to accept raster (in addition to vector) habitat layers.
+    * Changed one intermediate output (geomorphology) from SHP to GPKG.
 * Fisheries
     * The Fisheries models were deprecated due to lack of use,
       lack of scientific support staff, and maintenance costs.
