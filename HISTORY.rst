@@ -50,7 +50,7 @@ Unreleased Changes (3.10)
       (i.e. lakes).
     * Added feature to accept raster (in addition to vector) habitat layers.
     * Changed one intermediate output (geomorphology) from SHP to GPKG.
-* Fisheries
+* Fisheries and Fisheries HST
     * The Fisheries models were deprecated due to lack of use,
       lack of scientific support staff, and maintenance costs.
 * Finfish
