@@ -18,6 +18,8 @@ class CLIGUITests(unittest.TestCase):
         """CLI-GUI: Run a model GUI through the cli."""
         from natcap.invest import cli
 
+        # Choosing DelineatIt because there are only two required inputs,
+        # we already have them in the test data repo, and it runs fast.
         input_data_dir = os.path.join(
             os.path.dirname(__file__), '..', 'data', 'invest-test-data',
             'delineateit', 'input')
@@ -45,5 +47,6 @@ class CLIGUITests(unittest.TestCase):
             'quickrun',
             'delineateit',
             parameter_set_path,
-            '--workspace', self.workspace_dir,
+            '--workspace', os.path.join(
+                self.workspace_dir, 'newdir'),  # avoids alert about overwrite
         ])
