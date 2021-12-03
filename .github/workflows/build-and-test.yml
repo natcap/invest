@@ -205,7 +205,10 @@ jobs:
             - name: Build source distribution
               shell: bash -l {0}
               run: |
-                  python -m build --wheel
+                  # Because we're using PEP518 build requirements, the user's
+                  # computer is guaranteed to have cython available at build
+                  # time.  Thus, it is no longer necessary to distribute the
+                  # .cpp files in addition to the .pyx files.
                   python -m build --sdist
                   python -m twine check dist/*
 
