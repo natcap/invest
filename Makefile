@@ -2,15 +2,15 @@
 DATA_DIR := data
 GIT_SAMPLE_DATA_REPO        := https://bitbucket.org/natcap/invest-sample-data.git
 GIT_SAMPLE_DATA_REPO_PATH   := $(DATA_DIR)/invest-sample-data
-GIT_SAMPLE_DATA_REPO_REV    := 9adec6ee9000e192589b3538ff381e574c1812d6
+GIT_SAMPLE_DATA_REPO_REV    := ef05ac1f4e43d8dc217f26624de030ecba820bc9
 
 GIT_TEST_DATA_REPO          := https://bitbucket.org/natcap/invest-test-data.git
 GIT_TEST_DATA_REPO_PATH     := $(DATA_DIR)/invest-test-data
-GIT_TEST_DATA_REPO_REV      := 15754c80bc32bf15f30eaec265512014c9c8fab3
+GIT_TEST_DATA_REPO_REV      := fc2fe9dc216cbfb351f4973b9cff832835ebf4d2
 
 GIT_UG_REPO                 := https://github.com/natcap/invest.users-guide
 GIT_UG_REPO_PATH            := doc/users-guide
-GIT_UG_REPO_REV             := d046b3b3ab3cfed99a383db972b74639a8591e4b
+GIT_UG_REPO_REV             := b2ec6b79e26cb8852ab8cdbf69fd31e4eabf4a2b
 
 ENV = "./env"
 ifeq ($(OS),Windows_NT)
@@ -293,14 +293,12 @@ $(USERGUIDE_ZIP_FILE): $(USERGUIDE_TARGET_DIR)
 # know which data zipfiles to create until the data repo is cloned.
 # All data zipfiles are written to dist/data/*.zip
 ZIPDIRS = Annual_Water_Yield \
-		  Aquaculture \
 		  Base_Data \
 		  Carbon \
 		  CoastalBlueCarbon \
 		  CoastalVulnerability \
 		  CropProduction \
 		  DelineateIt \
-		  Fisheries \
 		  forest_carbon_edge_effect \
 		  globio \
 		  GridSeascape \

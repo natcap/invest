@@ -50,13 +50,10 @@ setup(
         'natcap.invest',
         'natcap.invest.coastal_blue_carbon',
         'natcap.invest.delineateit',
-        'natcap.invest.finfish_aquaculture',
-        'natcap.invest.fisheries',
         'natcap.invest.ui',
         'natcap.invest.ndr',
         'natcap.invest.sdr',
         'natcap.invest.recreation',
-        'natcap.invest.reporting',
         'natcap.invest.scenic_quality',
         'natcap.invest.seasonal_water_yield',
     ],
@@ -151,11 +148,5 @@ setup(
     },
     extras_require={
         'ui': _GUI_REQUIREMENTS,
-    },
-    package_data={
-        'natcap.invest.reporting': [
-            'reporting_data/*.js',
-            'reporting_data/*.css',
-        ],
     },
 )
