@@ -21,137 +21,100 @@ ARGS_SPEC = {
         "workspace_dir": spec_utils.WORKSPACE,
         "results_suffix": spec_utils.SUFFIX,
         "ff_farm_loc": {
-            "name": "Finfish Farm Location",
-            "about": (
-                "A GDAL-supported vector file containing polygon or point "
-                "geometries, with a latitude and longitude value and a "
-                "numerical identifier for each farm.  File can be named "
-                "anything, but no spaces in the name."),
+            "name": "finfish farm location",
+            "about": "Map of finfish farm locations.",
             "type": "vector",
             "fields": {
                 "[FARM_ID]": {  # may be anything, will be selected as the farm_ID
                     "type": "integer",
                     "about": (
-                        "A user-defined ID field with a unique integer code "
-                        "identifying each farm geometry.")
+                        "A unique identifier for each geometry. This field "
+                        "name must be selected as the Farm Identifier Name.")
                 }
             },
             "geometries": spec_utils.POLYGON | spec_utils.POINT,
         },
         "farm_ID": {
-            "name": "Farm Identifier Name",
+            "name": "farm identifier name",
             "about": (
-                "The name of a column heading used to identify each farm and "
-                "link the spatial information from the vector to subsequent "
-                "table input data (farm operation and daily water temperature "
-                "at farm tables). Additionally, the numbers underneath this "
-                "farm identifier name must be unique integers for all the "
-                "inputs."),
+                "Name of the field in the Finfish Farm Location map that "
+                "contains a unique identifier for each farm geometry."),
             "type": "option_string",
             "options": {},
         },
         "g_param_a": {
-            "name": "Fish Growth Parameter (a)",
-            "about": (
-                "Default a = (0.038 g/day). If the user chooses to adjust "
-                "these parameters, we recommend using them in the simple "
-                "growth model to determine if the time taken for a fish to "
-                "reach a target harvest weight typical for the region of "
-                "interest is accurate."),
+            "name": "fish growth parameter α",
+            "about": "Growth parameter α in the fish growth equation.",
             "type": "number",
             "units": u.gram/u.day,
         },
         "g_param_b": {
-            "name": "Fish Growth Parameter (b)",
-            "about": (
-                "Default b = (0.6667 g/day). If the user chooses to adjust "
-                "these parameters, we recommend using them in the simple "
-                "growth model to determine if the time taken for a fish to "
-                "reach a target harvest weight typical for the region of "
-                "interest is accurate."),
+            "name": "fish growth parameter β",
+            "about": "Growth parameter β in the fish growth equation.",
             "type": "number",
-            "units": u.gram/u.day,
+            "units": u.none,
         },
         "g_param_tau": {
-            "name": "Fish Growth Parameter (tau)",
+            "name": "fish growth parameter τ",
             "about": (
-                "Default tau = (0.08 C^-1).  Specifies how sensitive finfish "
-                "growth is to temperature.  If the user chooses to adjust "
-                "these parameters, we recommend using them in the simple "
-                "growth model to determine if the time taken for a fish to "
-                "reach a target harvest weight typical for the region of "
-                "interest is accurate."),
+                "Growth parameter τ in the fish growth equation. Specifies "
+                "how sensitive finfish growth is to temperature."),
             "type": "number",
             "units": u.degree_Celsius**-1,
         },
         "use_uncertainty": {
-            "name": "Enable uncertainty analysis",
-            "about": "Enable uncertainty analysis.",
+            "name": "enable uncertainty analysis",
+            "about": (
+                "Run uncertainty analysis using a Monte Carlo simulation."),
             "type": "boolean",
         },
         "g_param_a_sd": {
-            "name": "Standard Deviation for Parameter (a)",
+            "name": "α standard deviation",
             "about": (
-                "Standard deviation for fish growth parameter a. This "
-                "indicates the level of uncertainty in the estimate for "
-                "parameter a."),
+                "Standard deviation for fish growth parameter α. This "
+                "indicates the level of uncertainty in the value of α. "
+                "Required if Enable Uncertainty Analysis is selected."),
             "type": "number",
             "units": u.gram/u.day,
             "required": "use_uncertainty",
         },
         "g_param_b_sd": {
-            "name": "Standard Deviation for Parameter (b)",
+            "name": "β standard deviation",
             "about": (
-                "Standard deviation for fish growth parameter b. This "
-                "indicates the level of uncertainty in the estimate for "
-                "parameter b."),
+                "Standard deviation for fish growth parameter β. This "
+                "indicates the level of uncertainty in the value of β."
+                "Required if Enable Uncertainty Analysis is selected."),
             "type": "number",
             "units": u.gram/u.day,
             "required": "use_uncertainty",
         },
         "num_monte_carlo_runs": {
-            "name": "Number of Monte Carlo Simulation Runs",
+            "name": "Monte Carlo simulation runs",
             "about": (
-                "Number of runs of the model to perform as part of a Monte "
-                "Carlo simulation.  A larger number will tend to produce more "
-                "consistent and reliable output, but will also take longer to "
-                "run."),
+                "Number of times to run the model for the Monte Carlo "
+                "simulation. "
+                "Required if Enable Uncertainty Analysis is selected."),
             "type": "number",
-            "units": u.count,
+            "units": u.none,
             "required": "use_uncertainty",
         },
         "water_temp_tbl": {
-            "name": "Table of Daily Water Temperature at Farm",
+            "name": "daily water temperature table",
             "type": "csv",
             "about": (
-                "Users must provide a time series of daily water temperature "
-                "(C) for each farm in the vector.  When daily temperatures "
-                "are not available, users can interpolate seasonal or monthly "
-                "temperatures to a daily resolution. Water temperatures "
-                "collected at existing aquaculture facilities are preferable, "
-                "but if unavailable, users can consult online sources such as "
-                "NOAAs 4 km AVHRR Pathfinder Data and Canadas Department of "
-                "Fisheries and Oceans Oceanographic Database.  The most "
-                "appropriate temperatures to use are those from the upper "
-                "portion of the water column, which are the temperatures "
-                "experienced by the fish in the netpens."),
+                "Table of water temperatures in degrees Celsius for each farm "
+                "on each day of the year. There are 365 rows (rows 6-370), "
+                "each corresponding to a day of the year. The first two "
+                "columns contain the number for that year (1-365) and the day "
+                "and month. The following columns contain temperature data "
+                "for each farm. Farm column headers must correspond to the "
+                "farm's unique identifier in the Finfish Farm Location map.")
         },
         "farm_op_tbl": {
-            "name": "Farm Operations Table",
+            "name": "farm operations table",
             "type": "csv",
             "about": (
-                "A table of general and farm-specific operations parameters. "
-                "Please refer to the sample data table for reference to "
-                "ensure correct incorporation of data in the model. The "
-                "values for 'farm operations' (applied to all farms) and 'add "
-                "new farms' (beginning with row 32) may be modified according "
-                "to the user's needs . However, the location of cells in this "
-                "template must not be modified.  If for example, if the model "
-                "is to run for three farms only, the farms should be listed "
-                "in rows 10, 11 and 12 (farms 1, 2, and 3, respectively). "
-                "Several default values that are applicable to Atlantic "
-                "salmon farming in British Columbia are also included in the "
-                "sample data table."),
+                "A table of general and farm-specific operations parameters.")
         },
         "outplant_buffer": {
             "name": "Outplant Date Buffer",
@@ -163,31 +126,33 @@ ARGS_SPEC = {
         },
         "do_valuation": {
             "name": "Run valuation model",
-            "about": "Run valuation model",
+            "about": "Run valuation model.",
             "type": "boolean",
         },
         "p_per_kg": {
-            "name": "Market Price of Processed Fish",
+            "name": "price",
             "about": (
-                "Default value comes from Urner-Berry monthly fresh sheet "
-                "reports on price of farmed Atlantic salmon."),
+                "Market price of processed fish. "
+                "Required if Run Valuation is selected."),
             "type": "number",
             "units": u.currency/u.kilogram,
             "required": "do_valuation",
         },
         "frac_p": {
-            "name": "Fraction of Price that Accounts to Costs",
+            "name": "fraction of price accounting for costs",
             "about": (
-                "Fraction of market price that accounts for costs rather than "
-                "profit.  Default value is 0.3 (30%)."),
+                "Fraction of the market price that accounts for business "
+                "expenses, rather than profit. "
+                "Required if Run Valuation is selected."),
             "required": "do_valuation",
             "type": "ratio"
         },
         "discount": {
-            "name": "Daily Market Discount Rate",
+            "name": "daily market discount rate",
             "about": (
-                "We use a 7% annual discount rate, adjusted to a daily rate "
-                "of 0.000192 for 0.0192% (7%/365 days)."),
+                "Daily market discount rate that reflects the preference for "
+                "immediate benefits vs. future benefits. "
+                "Required if Run Valuation is selected."),
             "required": "do_valuation",
             "type": "ratio"
         }

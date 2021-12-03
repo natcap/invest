@@ -135,6 +135,8 @@ _INTERMEDIATE_BASE_FILES = {
     'convolved_population': 'convolved_population.tif',
     'greenspace_budget': 'greenspace_budget.tif',
     'greenspace_supply_demand_budget': 'greenspace_supply_demand_budget.tif',
+    'undersupplied_population': 'undersupplied_population.tif',
+    'oversupplied_population': 'oversupplied_population.tif',
 }
 
 
@@ -390,6 +392,46 @@ def execute(args):
              population_alignment_task,
         ])
 
+    undersupplied_population_task = graph.add_task(
+        pygeoprocessing.raster_calculator,
+        kwargs={
+            'base_raster_path_band_const_list': [
+                (file_registry['aligned_population'], 1),
+                (file_registry['greenspace_budget'], 1),
+                (numpy.less, 'raw'),  # element-wise less-than
+            ],
+            'local_op': _filter_population,
+            'target_raster_path': file_registry['undersupplied_population'],
+            'datatype_target': gdal.GDT_Float32,
+            'nodata_target': FLOAT32_NODATA,
+        },
+        task_name='Determine undersupplied populations',
+        target_path_list=[file_registry['undersupplied_population']],
+        dependent_task_list=[
+            greenspace_supply_demand_task,
+            population_alignment_task,
+        ])
+
+    oversupplied_population_task = graph.add_task(
+        pygeoprocessing.raster_calculator,
+        kwargs={
+            'base_raster_path_band_const_list': [
+                (file_registry['aligned_population'], 1),
+                (file_registry['greenspace_budget'], 1),
+                (numpy.greater, 'raw'),  # element-wise greater-than
+            ],
+            'local_op': _filter_population,
+            'target_raster_path': file_registry['oversupplied_population'],
+            'datatype_target': gdal.GDT_Float32,
+            'nodata_target': FLOAT32_NODATA,
+        },
+        task_name='Determine oversupplied populations',
+        target_path_list=[file_registry['oversupplied_population']],
+        dependent_task_list=[
+            greenspace_supply_demand_task,
+            population_alignment_task,
+        ])
+
     aggregate_admin_units_task = graph.add_task(
         _admin_level_supply_demand,
         kwargs={
@@ -398,12 +440,18 @@ def execute(args):
             'population_path': file_registry['aligned_population'],
             'admin_unit_vector_path': args['admin_unit_vector_path'],
             'target_admin_unit_vector_path': file_registry['admin_units'],
+            'undersupplied_populations_path': file_registry[
+                'undersupplied_population'],
+            'oversupplied_populations_path': file_registry[
+                'oversupplied_population'],
         },
         task_name='Aggregate supply-demand to the admin units',
         target_path_list=[file_registry['admin_units']],
         dependent_task_list=[
             greenspace_supply_demand_task,
             population_alignment_task,
+            undersupplied_population_task,
+            oversupplied_population_task,
         ])
 
     graph.close()
@@ -411,9 +459,43 @@ def execute(args):
     LOGGER.info('Finished Urban Nature Access Model')
 
 
+def _filter_population(population, greenspace_budget, numpy_filter_op):
+    """Filter the population by a defined op and the greenspace budget.
+
+    Note:
+        The ``population`` and ``greenspace_budget`` inputs must have the same
+        shape and must both use ``FLOAT32_NODATA`` as their nodata value.
+
+    Args:
+        population (numpy.array): A numpy array with population counts.
+        greenspace_budget (numpy.array): A numpy array with the greenspace
+            budget values.
+        numpy_filter_op (callable): A function that takes a numpy array as
+            parameter 1 and a scalar value as parameter 2.  This function must
+            return a boolean numpy array of the same shape as parameter 1.
+
+    Returns:
+        A ``numpy.array`` with the population values where the
+        ``greenspace_budget`` pixels match the ``numpy_filter_op``.
+    """
+    population_matching_filter = numpy.full(
+        population.shape, FLOAT32_NODATA, dtype=numpy.float32)
+    valid_pixels = (
+        ~numpy.isclose(greenspace_budget, FLOAT32_NODATA) &
+        ~numpy.isclose(population, FLOAT32_NODATA))
+
+    population_matching_filter[valid_pixels] = numpy.where(
+        numpy_filter_op(greenspace_budget[valid_pixels], 0),
+        population[valid_pixels],  # If condition is true, use population
+        0.0  # If condition is false, use 0
+    )
+    return population_matching_filter
+
+
 def _admin_level_supply_demand(
         greenspace_budget_path, population_path, admin_unit_vector_path,
-        target_admin_unit_vector_path):
+        target_admin_unit_vector_path, undersupplied_populations_path,
+        oversupplied_populations_path):
     """Calculate average greenspace supply per admin unit.
 
     Note:
@@ -445,16 +527,25 @@ def _admin_level_supply_demand(
     target_vector = gdal.OpenEx(target_admin_unit_vector_path, gdal.GA_Update)
     target_layer = target_vector.GetLayer()
 
-    supply_sum_fieldname = 'average_greenspace_budget'
-    supply_sum_field = ogr.FieldDefn(supply_sum_fieldname, ogr.OFTReal)
-    supply_sum_field.SetWidth(24)
-    supply_sum_field.SetPrecision(11)
-    target_layer.CreateField(supply_sum_field)
+    supply_sum_fieldname = 'SUP_DEMadm_cap'
+    undersupply_fieldname = 'Pund_adm'
+    oversupply_fieldname = 'Povr_adm'
+    for fieldname in (supply_sum_fieldname,
+                      undersupply_fieldname,
+                      oversupply_fieldname):
+        field = ogr.FieldDefn(fieldname, ogr.OFTReal)
+        field.SetWidth(24)
+        field.SetPrecision(11)
+        target_layer.CreateField(field)
 
     greenspace_stats = pygeoprocessing.zonal_statistics(
         (greenspace_budget_path, 1), target_admin_unit_vector_path)
     population_stats = pygeoprocessing.zonal_statistics(
         (population_path, 1), target_admin_unit_vector_path)
+    undersupplied_stats = pygeoprocessing.zonal_statistics(
+        (undersupplied_populations_path, 1), target_admin_unit_vector_path)
+    oversupplied_stats = pygeoprocessing.zonal_statistics(
+        (oversupplied_populations_path, 1), target_admin_unit_vector_path)
 
     target_layer.StartTransaction()
     for feature in target_layer:
@@ -463,8 +554,11 @@ def _admin_level_supply_demand(
         avg_greenspace_supply_demand = (
             greenspace_stats[feature_id]['sum'] /
             population_stats[feature_id]['sum'])
-
         feature.SetField(supply_sum_fieldname, avg_greenspace_supply_demand)
+        feature.SetField(
+            undersupply_fieldname, undersupplied_stats[feature_id]['sum'])
+        feature.SetField(
+            oversupply_fieldname, oversupplied_stats[feature_id]['sum'])
         target_layer.SetFeature(feature)
     target_layer.CommitTransaction()
 

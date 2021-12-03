@@ -1,41 +1,15 @@
 import json
+import os
 
 import pint
 
 
 # the same unit registry instance should be shared across everything
-u = pint.UnitRegistry()
-
-# Custom unit definitions #####################################################
-
-# see https://pint.readthedocs.io/en/stable/defining.html
-# pint doesn't allow multiple base units for the same dimension
-# but you can define mutliple dimensionless units with []
-# https://github.com/hgrecco/pint/issues/1278
-u.define('currency = [value]')    # non-specific unit of value
-u.define('pixel = []')            # non-specific unit of area
-# used in coastal vulnerability, the DEM pixel values measure
-# elevation (length) but the specific units don't matter
-# and in the rec model for cell size
-u.define('linear_unit = []')  # non-specific unit of length
-# add "us_survey_foot" on to the aliases because it's used in some rasters
-u.define('survey_foot = 1200 / 3937 * meter = sft = us_survey_foot')
-# Vitamin A in the crop production nutrient table is measured in IUs
-# A special unit in pharmacology that measures biologically active substances
-# May be converted to weight or volume, but conversion factors are specific
-# to the substance. I couldn't find a definition of its dimensionality.
-u.define('international_unit = [biologic_amount] = iu = IU')
-# use 'h' not 'hr' as the symbol for hour, as per SI guidelines
-# overwrite the default use of the symbol 'h' for henries
-u.define('henry = weber / ampere')
-u.define('hour = 60 * minute = h = hr')
-# overwrite the year definition to use 'year' rather than 'a' as default symbol
-# the symbol 'yr' is english-specific and the international symbol 'a' may
-# not be well-known, so we will need to translate this
-u.define('year = 365.25 * day = _ = yr = a = julian_year')
-# Use u.none for unitless measurements
-u.define('none = []')
-
+# load from custom unit defintions file
+# don't raise warnings when redefining units
+u = pint.UnitRegistry(on_redefinition='ignore')
+u.load_definitions(os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), 'unit_definitions.txt'))
 
 # Specs for common arg types ##################################################
 WORKSPACE = {
@@ -89,7 +63,7 @@ AOI = {
     "geometries": {"POLYGON", "MULTIPOLYGON"},
     "name": "area of interest",
     "about": (
-        "A polygon vector containing features over which to aggregate and "
+        "A map of areas over which to aggregate and "
         "summarize the final results."),
 }
 LULC = {

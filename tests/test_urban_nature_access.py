@@ -302,5 +302,21 @@ class UNATests(unittest.TestCase):
 
         admin_feature = admin_layer.GetFeature(1)
         numpy.testing.assert_allclose(
-            admin_feature.GetField('average_greenspace_budget'),
+            admin_feature.GetField('SUP_DEMadm_cap'),
             -17.9078)  # from eyeballing the results; random seed = 1
+
+        undersupplied_pop = admin_feature.GetField('Pund_adm')
+        numpy.testing.assert_allclose(
+            undersupplied_pop,
+            4094.012207)  # From eyeballing the results; random seed = 1
+
+        oversupplied_pop = admin_feature.GetField('Povr_adm')
+        numpy.testing.assert_allclose(
+            oversupplied_pop,
+            981.987549)  # From eyeballing the results; random seed = 1
+
+        # The sum of the under-and-oversupplied populations should be equal to
+        # the total population count.
+        numpy.testing.assert_allclose(
+            undersupplied_pop + oversupplied_pop,
+            population_array.sum())
