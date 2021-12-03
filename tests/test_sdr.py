@@ -217,6 +217,14 @@ class SDRTests(unittest.TestCase):
             args['workspace_dir'], 'watershed_results_sdr.shp')
         assert_expected_results_in_vector(expected_results, vector_path)
 
+        # We only need to test that the drainage mask exists.  Functionality
+        # for that raster is tested elsewhere
+        self.assertTrue(
+            os.path.exists(
+                os.path.join(
+                    args['workspace_dir'], 'intermediate_outputs',
+                    'what_drains_to_stream.tif')))
+
     def test_regression_with_undefined_nodata(self):
         """SDR base regression test with undefined nodata values.
 
