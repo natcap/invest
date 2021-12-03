@@ -371,27 +371,43 @@ class SDRTests(unittest.TestCase):
         """SDR test for what pixels drain to a stream."""
         from natcap.invest.sdr import sdr
 
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(26910)  # NAD83 / UTM zone 11N
+        srs_wkt = srs.ExportToWkt()
+        origin = (463250, 4929700)
+        pixel_size = (30, -30)
+
         flow_dir_mfd = numpy.array([
             [0, 1],
             [1, 1]], dtype=numpy.float64)
         flow_dir_mfd_nodata = 0  # Matches pygeoprocessing output
+        flow_dir_mfd_path = os.path.join(self.workspace_dir, 'flow_dir.tif')
+        pygeoprocessing.numpy_array_to_raster(
+            flow_dir_mfd, flow_dir_mfd_nodata, pixel_size, origin, srs_wkt,
+            flow_dir_mfd_path)
 
         dist_to_channel = numpy.array([
             [10, 5],
             [-1, 6]], dtype=numpy.float64)
         dist_to_channel_nodata = -1  # Matches pygeoprocessing output
+        dist_to_channel_path = os.path.join(
+            self.workspace_dir, 'dist_to_channel.tif')
+        pygeoprocessing.numpy_array_to_raster(
+            dist_to_channel, dist_to_channel_nodata, pixel_size, origin,
+            srs_wkt, dist_to_channel_path)
 
-        what_drains = sdr._what_drains_to_stream(
-            flow_dir_mfd, dist_to_channel, flow_dir_mfd_nodata,
-            dist_to_channel_nodata)
+        target_what_drains_path = os.path.join(
+            self.workspace_dir, 'what_drains.tif')
+        sdr._calculate_what_drains_to_stream(
+            flow_dir_mfd_path, dist_to_channel_path, target_what_drains_path)
 
         # 255 is the byte nodata value assigned
         expected_drainage = numpy.array([
             [255, 1],
             [0, 1]], dtype=numpy.uint8)
+        what_drains = pygeoprocessing.raster_to_numpy_array(
+            target_what_drains_path)
         numpy.testing.assert_allclose(what_drains, expected_drainage)
-
-
 
     @staticmethod
     def _assert_regression_results_equal(
