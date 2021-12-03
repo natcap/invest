@@ -39,10 +39,16 @@ ARGS_SPEC = {
         "algorithm": {
             "type": "option_string",
             "options": {
-                "D8": ("All water on a pixel flows into the most downhill of "
-                       "its 8 surrounding pixels"),
-                "MFD": ("Flow off a pixel is modeled fractionally so that "
-                        "water is split among multiple downstream pixels")
+                "D8": {
+                    "display_name": "D8",
+                    "description": _(
+                        "All water on a pixel flows into the most downhill of "
+                        "its 8 surrounding pixels")},
+                "MFD": {
+                    "display_name": "MFD",
+                    "description": _(
+                        "Flow off a pixel is modeled fractionally so that "
+                        "water is split among multiple downstream pixels")}
             },
             "about": _("The routing algorithm to use."),
             "name": _("routing algorithm")

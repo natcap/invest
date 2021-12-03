@@ -48,7 +48,7 @@ predictor_table_columns = {
     "id": {
         "type": "freestyle_string",
         "about": _("A unique identifier for the predictor (10 "
-                  "characters or less).")
+                   "characters or less).")
     },
     "path": {
         "type": {"raster", "vector"},
@@ -61,29 +61,36 @@ predictor_table_columns = {
         "type": "option_string",
         "about": "The type of predictor file provided in the 'path' column.",
         "options": {
-            "raster_mean": (
-                "Predictor is a raster. Metric is the mean of values "
-                "within the AOI grid cell or polygon."),
-            "raster_sum": (
-                "Predictor is a raster. Metric is the sum of values within "
-                "the AOI grid cell or polygon."),
-            "point_count": (
-                "Predictor is a point vector. Metric is the number of points "
-                "within each AOI grid cell or polygon."),
-            "point_nearest_distance": (
-                "Predictor is a point vector. Metric is the Euclidean "
-                "distance between the center of each AOI grid cell and the "
-                "nearest point in this layer."),
-            "line_intersect_length": (
-                "Predictor is a line vector. Metric is the total length of "
-                "the lines that fall within each AOI grid cell."),
-            "polygon_area_coverage": (
-                "Predictor is a polygon vector. Metric is the area of overlap "
-                "between the polygon and each AOI grid cell."),
-            "polygon_percent_coverage": (
-                "Predictor is a polygon vector. Metric is the percentage "
-                "(0-100) of overlapping area between the polygon and each AOI "
-                "grid cell.")
+            "raster_mean": {
+                "description": _(
+                    "Predictor is a raster. Metric is the mean of values "
+                    "within the AOI grid cell or polygon.")},
+            "raster_sum": {
+                "description": _(
+                    "Predictor is a raster. Metric is the sum of values "
+                    "within the AOI grid cell or polygon.")},
+            "point_count": {
+                "description": _(
+                    "Predictor is a point vector. Metric is the number of "
+                    "points within each AOI grid cell or polygon.")},
+            "point_nearest_distance": {
+                "description": _(
+                    "Predictor is a point vector. Metric is the Euclidean "
+                    "distance between the center of each AOI grid cell and "
+                    "the nearest point in this layer.")},
+            "line_intersect_length": {
+                "description": _(
+                    "Predictor is a line vector. Metric is the total length "
+                    "of the lines that fall within each AOI grid cell.")},
+            "polygon_area_coverage": {
+                "description": _(
+                    "Predictor is a polygon vector. Metric is the area of "
+                    "overlap between the polygon and each AOI grid cell.")},
+            "polygon_percent_coverage": {
+                "description": _(
+                    "Predictor is a polygon vector. Metric is the percentage "
+                    "(0-100) of overlapping area between the polygon and each "
+                    "AOI grid cell.")}
         }
     }
 }
@@ -152,7 +159,10 @@ ARGS_SPEC = {
         },
         "grid_type": {
             "type": "option_string",
-            "options": ["square", "hexagon"],
+            "options": {
+                "square": {"display_name": _("square")},
+                "hexagon": {"display_name": _("hexagon")}
+            },
             "required": "grid_aoi",
             "about": _(
                 "The shape of grid cells to make within the AOI polygons. "

@@ -107,7 +107,10 @@ ARGS_SPEC = {
                 },
                 "type": {
                     "type": "option_string",
-                    "options": ["habitat", "stressor"],
+                    "options": {
+                        "habitat": {"display_name": _("habitat")},
+                        "stressor": {"display_name": _("stressor")}
+                    },
                     "about": _(
                         "Whether this row is for a habitat or a stressor.")
                 },
@@ -158,7 +161,10 @@ ARGS_SPEC = {
                 "The equation to use to calculate risk from exposure and "
                 "consequence."),
             "type": "option_string",
-            "options": ["Multiplicative", "Euclidean"]
+            "options": {
+                "Multiplicative": {"display_name": _("multiplicative")},
+                "Euclidean": {"display_name": _("Euclidean")}
+            }
         },
         "decay_eq": {
             "name": _("decay equation"),
@@ -166,14 +172,21 @@ ARGS_SPEC = {
                 "The equation to model effects of stressors in buffer areas."),
             "type": "option_string",
             "options": {
-                "None": _(
-                    "No decay. Stressor has full effect in the buffer area."),
-                "Linear": _(
-                    "Stressor effects in the buffer area decay linearly with "
-                    "distance from the stressor."),
-                "Exponential": _(
-                    "Stressor effects in the buffer area decay exponentially "
-                    "with distance from the stressor.")
+                "None": {
+                    "display_name": _("none"),
+                    "description": _(
+                        "No decay. Stressor has full effect in the buffer "
+                        "area.")},
+                "Linear": {
+                    "display_name": _("linear"),
+                    "description": _(
+                        "Stressor effects in the buffer area decay linearly "
+                        "with distance from the stressor.")},
+                "Exponential": {
+                    "display_name": _("exponential"),
+                    "description": _(
+                        "Stressor effects in the buffer area decay "
+                        "exponentially with distance from the stressor.")}
             }
         },
         "aoi_vector_path": {

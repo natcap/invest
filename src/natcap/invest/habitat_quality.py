@@ -99,7 +99,16 @@ ARGS_SPEC = {
                 },
                 "decay": {
                     "type": "option_string",
-                    "options": ["linear", "exponential"],
+                    "options": {
+                        "linear": {
+                            "description": _(
+                                "Effects of the threat decay linearly with "
+                                "distance from the threat.")},
+                        "exponential": {
+                            "description": _(
+                                "Effects of the threat decay exponentially "
+                                "with distance from the threat.")}
+                    },
                     "about": _("The type of decay over space for each threat.")
                 },
                 "cur_path": {

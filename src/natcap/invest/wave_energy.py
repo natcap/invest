@@ -142,14 +142,18 @@ ARGS_SPEC = {
         },
         "analysis_area_path": {
             "type": "option_string",
-            "options": [
-                "West Coast of North America and Hawaii",
-                "East Coast of North America and Puerto Rico",
-                "North Sea 4 meter resolution",
-                "North Sea 10 meter resolution",
-                "Australia",
-                "Global"
-            ],
+            "options": {
+                "westcoast": {"display_name": _(
+                    "West Coast of North America and Hawaii")},
+                "eastcoast": {"display_name": _(
+                    "East Coast of North America and Puerto Rico")},
+                "northsea4": {
+                    "display_name": _("North Sea 4 meter resolution")},
+                "northsea10": {
+                    "display_name": _("North Sea 10 meter resolution")},
+                "australia": {"display_name": _("Australia")},
+                "global": {"display_name": _("Global")}
+            },
             "about": _(
                 "The analysis area over which to run the model."),
             "name": _("analysis area")
@@ -223,8 +227,10 @@ ARGS_SPEC = {
                 "type": {
                     "type": "option_string",
                     "options": {
-                        "LAND": "This is a land connection point",
-                        "GRID": "This is a grid connection point"},
+                        "LAND": {"description": _(
+                            "This is a land connection point")},
+                        "GRID": {"description": _(
+                            "This is a grid connection point")},
                     "about": "The type of connection at this point."
                 },
                 "lat": {
@@ -506,7 +512,7 @@ def execute(args):
     # that stores the related paths to the needed inputs
     wave_base_data_path = args['wave_base_data_path']
     analysis_dict = {
-        'West Coast of North America and Hawaii': {
+        'westcoast': {
             'point_vector':
             os.path.join(wave_base_data_path, 'NAmerica_WestCoast_4m.shp'),
             'extract_vector':
@@ -514,7 +520,7 @@ def execute(args):
             'ww3_path':
             os.path.join(wave_base_data_path, 'NAmerica_WestCoast_4m.txt.bin')
         },
-        'East Coast of North America and Puerto Rico': {
+        'eastcoast': {
             'point_vector':
             os.path.join(wave_base_data_path, 'NAmerica_EastCoast_4m.shp'),
             'extract_vector':
@@ -522,7 +528,7 @@ def execute(args):
             'ww3_path':
             os.path.join(wave_base_data_path, 'NAmerica_EastCoast_4m.txt.bin')
         },
-        'North Sea 4 meter resolution': {
+        'northsea4': {
             'point_vector':
             os.path.join(wave_base_data_path, 'North_Sea_4m.shp'),
             'extract_vector':
@@ -530,7 +536,7 @@ def execute(args):
             'ww3_path':
             os.path.join(wave_base_data_path, 'North_Sea_4m.bin')
         },
-        'North Sea 10 meter resolution': {
+        'northsea10': {
             'point_vector':
             os.path.join(wave_base_data_path, 'North_Sea_10m.shp'),
             'extract_vector':
@@ -538,7 +544,7 @@ def execute(args):
             'ww3_path':
             os.path.join(wave_base_data_path, 'North_Sea_10m.bin')
         },
-        'Australia': {
+        'australia': {
             'point_vector':
             os.path.join(wave_base_data_path, 'Australia_4m.shp'),
             'extract_vector':
@@ -546,7 +552,7 @@ def execute(args):
             'ww3_path':
             os.path.join(wave_base_data_path, 'Australia_4m.bin')
         },
-        'Global': {
+        'global': {
             'point_vector':
             os.path.join(wave_base_data_path, 'Global.shp'),
             'extract_vector':

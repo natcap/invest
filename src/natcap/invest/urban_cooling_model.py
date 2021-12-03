@@ -205,12 +205,16 @@ ARGS_SPEC = {
             "name": _("cooling capacity calculation method"),
             "type": "option_string",
             "options": {
-                "factors": (
-                    "Use the weighted shade, albedo, and ETI factors as a "
-                    "temperature predictor (for daytime temperatures)."),
-                "intensity": (
-                    "Use building intensity as a temperature predictor (for "
-                    "nighttime temperatures).")
+                "factors": {
+                    "display_name": _("factors"),
+                    "description": _(
+                        "Use the weighted shade, albedo, and ETI factors as a "
+                        "temperature predictor (for daytime temperatures).")},
+                "intensity": {
+                    "display_name": _("intensity"),
+                    "description": _(
+                        "Use building intensity as a temperature predictor "
+                        "(for nighttime temperatures).")}
             },
             "about": _("The air temperature predictor method to use.")
         },
