@@ -173,7 +173,6 @@ validate_sampledata: $(GIT_SAMPLE_DATA_REPO_PATH)
 	$(DATAVALIDATOR)
 
 clean:
-	$(PYTHON) setup.py clean
 	-$(RMDIR) $(BUILD_DIR)
 	-$(RMDIR) natcap.invest.egg-info
 	-$(RMDIR) cover
@@ -261,9 +260,11 @@ $(INVEST_BINARIES_DIR): | $(DIST_DIR) $(BUILD_DIR)
 # Documentation.
 # API docs are built in build/sphinx and copied to dist/apidocs
 apidocs: $(APIDOCS_TARGET_DIR) $(APIDOCS_ZIP_FILE)
-$(APIDOCS_TARGET_DIR): | $(DIST_DIR)
+$(APIDOCS_TARGET_DIR): | $(DIST_DIR) $(APIDOCS_TARGET_DIR)
 	# -a: always build all files
-	$(PYTHON) setup.py build_sphinx -a --source-dir doc/api-docs --build-dir $(APIDOCS_BUILD_DIR)
+	$(PYTHON) -m sphinx -a -b html \
+		-d $(APIDOCS_BUILD_DIR) \
+		doc/api-docs $(APIDOCS_BUILD_DIR)
 	# only copy over the built html files, not the doctrees
 	$(COPYDIR) $(APIDOCS_BUILD_DIR)/html $(APIDOCS_TARGET_DIR)
 
