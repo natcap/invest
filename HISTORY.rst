@@ -47,6 +47,16 @@ Unreleased Changes
       of 0.5 indicate same abundance between baseline and current/future
       LULC; values 0.5 to 1 indicate less abundance in current/future LULC
       and therefore higher rarity.
+* SDR
+    * Added a new raster to the model's workspace,
+      ``intermediate_outputs/what_drains_to_stream[suffix].tif``.  This raster
+      has pixel values of 1 where DEM pixels flow to an identified stream, and
+      0 where they do not.
+* NDR
+    * Added a new raster to the model's workspace,
+      ``intermediate_outputs/what_drains_to_stream[suffix].tif``.  This raster
+      has pixel values of 1 where DEM pixels flow to an identified stream, and
+      0 where they do not.
 
 3.9.2 (2021-10-29)
 ------------------
