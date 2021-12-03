@@ -34,10 +34,11 @@ class EndpointFunctionTests(unittest.TestCase):
         self.assertEqual(colnames, [])
         # a vector with one column
         path = os.path.join(
-            TEST_DATA_PATH, 'aquaculture', 'Input', 'Finfish_Netpens.shp')
+            TEST_DATA_PATH, 'annual_water_yield', 'input',
+            'watersheds.shp')
         response = test_client.post('/colnames', json={'vector_path': path})
         colnames = json.loads(response.get_data(as_text=True))
-        self.assertEqual(colnames, ['FarmID'])
+        self.assertEqual(colnames, ['ws_id'])
         # a non-vector file
         path = os.path.join(TEST_DATA_PATH, 'ndr', 'input', 'dem.tif')
         response = test_client.post('/colnames', json={'vector_path': path})

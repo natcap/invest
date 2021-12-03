@@ -102,24 +102,6 @@ MODEL_METADATA = {
         gui='delineateit.Delineateit',
         userguide='delineateit.html',
         aliases=()),
-    'finfish_aquaculture': _MODELMETA(
-        model_title=_('Finfish Aquaculture'),
-        pyname='natcap.invest.finfish_aquaculture.finfish_aquaculture',
-        gui='finfish.FinfishAquaculture',
-        userguide='marine_fish.html',
-        aliases=()),
-    'fisheries': _MODELMETA(
-        model_title=_('Fisheries'),
-        pyname='natcap.invest.fisheries.fisheries',
-        gui='fisheries.Fisheries',
-        userguide='fisheries.html',
-        aliases=()),
-    'fisheries_hst': _MODELMETA(
-        model_title=_('Fisheries Habitat Scenario Tool'),
-        pyname='natcap.invest.fisheries.fisheries_hst',
-        gui='fisheries.FisheriesHST',
-        userguide='fisheries.html',
-        aliases=()),
     'forest_carbon_edge_effect': _MODELMETA(
         model_title=_('Forest Carbon Edge Effect'),
         pyname='natcap.invest.forest_carbon_edge_effect',
