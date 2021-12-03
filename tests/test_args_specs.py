@@ -7,7 +7,7 @@ import pint
 
 
 valid_nested_types = {
-    'all': {
+    None: {  # if no parent type (arg is top-level), then all types are valid
         'boolean',
         'integer',
         'csv',
@@ -70,26 +70,20 @@ class ValidateArgsSpecs(unittest.TestCase):
             for key, arg in model.ARGS_SPEC['args'].items():
                 # the top level should have 'name' and 'about' attrs
                 # but they aren't required at nested levels
-                self.validate(
-                    arg,
-                    f'{model_name}.{key}',
-                    valid_types=valid_nested_types['all'],
-                    required_attrs=['name', 'about'])
+                self.validate(arg, f'{model_name}.{key}')
 
-    def validate(self, arg, name, valid_types, is_pattern=False, required_attrs=[]):
+    def validate(self, arg, name, parent_type=None, is_pattern=False):
         """
         Recursively validate nested args against the ARGS_SPEC standard.
 
         Args:
             arg (dict): any nested arg component of an ARGS_SPEC
             name (str): name to use in error messages to identify the arg
-            valid_types (list[str]): a list of the arg types that are valid
-                for this nested arg (due to its parent's type).
+            parent_type (str): the type of this arg's parent arg (or None if
+                no parent).
             is_pattern (bool): if True, the arg is validated as a pattern (such
                 as for user-defined  CSV headers, vector fields, or directory
                 paths).
-            required_attrs (list[str]): a list of attributes that must be in
-                the arg dictionary regardless of type
 
         Returns:
             None
@@ -98,15 +92,16 @@ class ValidateArgsSpecs(unittest.TestCase):
             AssertionError if the arg violates the standard
         """
         with self.subTest(nested_arg_name=name):
-            for attr in required_attrs:
-                self.assertTrue(attr in arg)
+            if parent_type is None:  # all top-level args must have these attrs
+                for attr in ['name', 'about']:
+                    self.assertTrue(attr in arg)
 
             # arg['type'] can be either a string or a set of strings
             types = arg['type'] if isinstance(
                 arg['type'], set) else [arg['type']]
             attrs = set(arg.keys())
             for t in types:
-                self.assertTrue(t in valid_types)
+                self.assertTrue(t in valid_nested_types[parent_type])
 
                 if t == 'option_string':
                     # option_string type should have an options property that
@@ -114,19 +109,27 @@ class ValidateArgsSpecs(unittest.TestCase):
                     self.assertTrue('options' in arg)
                     # May be a list or dict because some option sets are self
                     # explanatory and others need a description
-                    self.assertTrue(isinstance(arg['options'], dict) or
-                                    isinstance(arg['options'], list))
-                    if isinstance(arg['options'], list):
-                        for item in arg['options']:
-                            self.assertTrue(
-                                isinstance(item, str) or
-                                isinstance(item, int))
-                    else:
-                        for key, val in arg['options'].items():
-                            self.assertTrue(
-                                isinstance(key, str) or
-                                isinstance(key, int))
-                            self.assertTrue(isinstance(val, str))
+                    self.assertTrue(isinstance(arg['options'], dict))
+                    for key, val in arg['options'].items():
+                        self.assertTrue(
+                            isinstance(key, str) or
+                            isinstance(key, int))
+                        self.assertTrue(isinstance(val, dict))
+                        # top-level option_string args are shown as dropdowns
+                        # so each option needs a display name and description
+                        if parent_type is None:
+                            self.assertEqual(
+                                set(val.keys()),
+                                {'display_name', 'description'})
+                        # option_strings within a CSV or vector don't get a
+                        # display name. the user has to enter the key.
+                        else:
+                            self.assertEqual(set(val.keys()), {'description'})
+                        if 'display_name' in val:
+                            self.assertTrue(isinstance(val['display_name'], str))
+                        if 'description' in val:
+                            self.assertTrue(isinstance(val['description'], str))
+
                     attrs.remove('options')
 
                 elif t == 'freestyle_string':
@@ -164,7 +167,7 @@ class ValidateArgsSpecs(unittest.TestCase):
                         self.validate(
                             arg['bands'][band],
                             f'{name}.bands.{band}',
-                            valid_types=valid_nested_types['raster'])
+                            parent_type=t)
                     attrs.remove('bands')
 
                     # may optionally have a 'projected' attribute that says
@@ -194,7 +197,7 @@ class ValidateArgsSpecs(unittest.TestCase):
                         self.validate(
                             arg['fields'][field],
                             f'{name}.fields.{field}',
-                            valid_types=valid_nested_types['vector'])
+                            parent_type=t)
 
                     self.assertTrue('geometries' in arg)
                     self.assertTrue(isinstance(arg['geometries'], set))
@@ -238,7 +241,7 @@ class ValidateArgsSpecs(unittest.TestCase):
                             self.validate(
                                 headers[header],
                                 f'{name}.{direction}.{header}',
-                                valid_types=valid_nested_types['csv'])
+                                parent_type=t)
 
                         attrs.discard('rows')
                         attrs.discard('columns')
@@ -259,7 +262,7 @@ class ValidateArgsSpecs(unittest.TestCase):
                         self.validate(
                             arg['contents'][path],
                             f'{name}.contents.{path}',
-                            valid_types=valid_nested_types['directory'])
+                            parent_type=t)
                     attrs.remove('contents')
 
                     # may optionally have a 'permissions' attribute, which is a
