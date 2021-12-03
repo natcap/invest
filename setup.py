@@ -10,11 +10,10 @@ For other commands, try `python setup.py --help-commands`
 """
 import platform
 
-from setuptools.extension import Extension
-from setuptools import setup
 import Cython.Build
 import numpy
-
+from setuptools import setup
+from setuptools.extension import Extension
 
 # Read in requirements.txt and populate the python readme with the
 # non-comment, non-environment-specifier contents.
@@ -138,12 +137,6 @@ setup(
             language="c++"),
     ],
     cmdclass={'build_ext': Cython.Build.build_ext},
-    command_options={
-        'build_sphinx': {
-            'source_dir': ('setup.py', 'doc/api-docs'),
-            'build_dir': ('setup.py', 'doc/api-docs-build'),
-            'config_dir': ('setup.py', 'doc/api-docs')}},
-
     entry_points={
         'console_scripts': [
             'invest = natcap.invest.cli:main'
