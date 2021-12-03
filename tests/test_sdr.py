@@ -1,14 +1,12 @@
 """InVEST SDR model tests."""
-import unittest
-import tempfile
-import shutil
 import os
+import shutil
+import tempfile
+import unittest
 
-import pygeoprocessing
 import numpy
-from osgeo import ogr
-from osgeo import osr
-from osgeo import gdal
+import pygeoprocessing
+from osgeo import gdal, ogr, osr
 
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'sdr')
@@ -346,8 +344,8 @@ class SDRTests(unittest.TestCase):
 
     def test_missing_lulc_value(self):
         """SDR test for ValueError when LULC value not found in table."""
-        from natcap.invest.sdr import sdr
         import pandas
+        from natcap.invest.sdr import sdr
 
         # use predefined directory so test can clean up files during teardown
         args = SDRTests.generate_base_args(self.workspace_dir)
@@ -368,6 +366,32 @@ class SDRTests(unittest.TestCase):
             "The missing values found in the LULC raster but not the table"
             " are: [2.]" in str(context.exception),
             f'error does not match {str(context.exception)}')
+
+    def test_what_drains_to_stream(self):
+        """SDR test for what pixels drain to a stream."""
+        from natcap.invest.sdr import sdr
+
+        flow_dir_mfd = numpy.array([
+            [0, 1],
+            [1, 1]], dtype=numpy.float64)
+        flow_dir_mfd_nodata = 0  # Matches pygeoprocessing output
+
+        dist_to_channel = numpy.array([
+            [10, 5],
+            [-1, 6]], dtype=numpy.float64)
+        dist_to_channel_nodata = -1  # Matches pygeoprocessing output
+
+        what_drains = sdr._what_drains_to_stream(
+            flow_dir_mfd, dist_to_channel, flow_dir_mfd_nodata,
+            dist_to_channel_nodata)
+
+        # 255 is the byte nodata value assigned
+        expected_drainage = numpy.array([
+            [255, 1],
+            [0, 1]], dtype=numpy.uint8)
+        numpy.testing.assert_allclose(what_drains, expected_drainage)
+
+
 
     @staticmethod
     def _assert_regression_results_equal(

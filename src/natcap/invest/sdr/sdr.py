@@ -7,17 +7,16 @@ The SDR method in this model is based on:
     large watersheds." Journal of Soil and Water Conservation 63.3 (2008):
     105-111.
 """
-import os
 import logging
+import os
 
-from osgeo import gdal, ogr
 import numpy
 import pygeoprocessing
 import pygeoprocessing.routing
 import taskgraph
-from .. import utils
-from .. import validation
-from .. import MODEL_METADATA
+from osgeo import gdal, ogr
+
+from .. import MODEL_METADATA, utils, validation
 from . import sdr_core
 
 LOGGER = logging.getLogger(__name__)
@@ -220,7 +219,8 @@ _INTERMEDIATE_BASE_FILES = {
     'w_path': 'w.tif',
     'ws_inverse_path': 'ws_inverse.tif',
     'e_prime_path': 'e_prime.tif',
-    'weighted_avg_aspect_path': 'weighted_avg_aspect.tif'
+    'weighted_avg_aspect_path': 'weighted_avg_aspect.tif',
+    'drainage_mask': 'what_drains_to_stream.tif',
 }
 
 _TMP_BASE_FILES = {
@@ -234,6 +234,7 @@ _TMP_BASE_FILES = {
 # Target nodata is for general rasters that are positive, and _IC_NODATA are
 # for rasters that are any range
 _TARGET_NODATA = -1.0
+_BYTE_NODATA = 255
 _IC_NODATA = float(numpy.finfo('float32').min)
 
 
@@ -674,6 +675,44 @@ def execute(args):
 
     task_graph.close()
     task_graph.join()
+
+
+def _what_drains_to_stream(
+        flow_dir_mfd, dist_to_channel, flow_dir_mfd_nodata,
+        dist_to_channel_nodata):
+    """Determine which pixels do and do not drain to a stream.
+
+    Args:
+        flow_dir_mfd (numpy.array): A numpy array of MFD flow direction values.
+        dist_to_channel (numpy.array): A numpy array of calculated distances to
+            the nearest channel.
+        flow_dir_mfd_nodata (int or float): The nodata value of the
+            ``flow_dir_mfd`` matrix.
+        dist_to_channel_nodata (int or flow): The nodata value of the
+
+    Returns:
+        A ``numpy.array`` of dtype ``numpy.uint8`` with pixels where:
+
+            * ``255`` where both ``flow_dir_mfd`` and ``dist_to_channel`` are
+              nodata.
+            * ``0`` where ``flow_dir_mfd`` has data and ``dist_to_channel``
+              does not
+            * ``1`` where ``flow_dir_mfd`` has data, and ``dist_to_channel``
+              also has data.
+    """
+    drains_to_stream = numpy.full(
+        flow_dir_mfd.shape, _BYTE_NODATA, dtype=numpy.uint8)
+    valid_flow_dir = ~numpy.isclose(flow_dir_mfd, flow_dir_mfd_nodata)
+    valid_dist_to_channel = (
+        ~numpy.isclose(dist_to_channel, dist_to_channel_nodata) &
+        valid_flow_dir)
+
+    # Nodata where both flow_dir and dist_to_channel are nodata
+    # 1 where flow_dir and dist_to_channel have values (drains to stream)
+    # 0 where flow_dir has data and dist_to_channel does not (does not drain)
+    drains_to_stream[valid_flow_dir & valid_dist_to_channel] = 1
+    drains_to_stream[valid_flow_dir & ~valid_dist_to_channel] = 0
+    return drains_to_stream
 
 
 def _calculate_ls_factor(
