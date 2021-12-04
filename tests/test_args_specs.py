@@ -116,15 +116,18 @@ class ValidateArgsSpecs(unittest.TestCase):
                             isinstance(key, int))
                         self.assertTrue(isinstance(val, dict))
                         # top-level option_string args are shown as dropdowns
-                        # so each option needs a display name and description
+                        # so each option needs a display name
+                        # an additional description is optional
                         if parent_type is None:
-                            self.assertEqual(
-                                set(val.keys()),
-                                {'display_name', 'description'})
+                            self.assertTrue(
+                                set(val.keys()) == {'display_name'} or
+                                set(val.keys()) == {
+                                    'display_name', 'description'})
                         # option_strings within a CSV or vector don't get a
                         # display name. the user has to enter the key.
                         else:
                             self.assertEqual(set(val.keys()), {'description'})
+
                         if 'display_name' in val:
                             self.assertTrue(isinstance(val['display_name'], str))
                         if 'description' in val:

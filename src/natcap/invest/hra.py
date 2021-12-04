@@ -108,8 +108,8 @@ ARGS_SPEC = {
                 "type": {
                     "type": "option_string",
                     "options": {
-                        "habitat": {"display_name": _("habitat")},
-                        "stressor": {"display_name": _("stressor")}
+                        "habitat": {"description": _("habitat")},
+                        "stressor": {"description": _("stressor")}
                     },
                     "about": _(
                         "Whether this row is for a habitat or a stressor.")
