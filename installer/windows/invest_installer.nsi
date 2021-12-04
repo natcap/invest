@@ -439,7 +439,6 @@ Section "InVEST Tools" Section_InVEST_Tools
         !insertmacro StartMenuLink "${SMPATH}\Forest Carbon Edge Effect" "forest_carbon_edge_effect"
         !insertmacro StartMenuLink "${SMPATH}\GLOBIO" "globio"
         !insertmacro StartMenuLink "${SMPATH}\Pollination" "pollination"
-        !insertmacro StartMenuLink "${SMPATH}\Finfish Aquaculture" "finfish_aquaculture"
         !insertmacro StartMenuLink "${SMPATH}\Wave Energy" "wave_energy"
         !insertmacro StartMenuLink "${SMPATH}\Wind Energy" "wind_energy"
         !insertmacro StartMenuLink "${SMPATH}\Coastal Vulnerability" "cv"
@@ -460,11 +459,6 @@ Section "InVEST Tools" Section_InVEST_Tools
         CreateDirectory "${COASTALBLUECARBON}"
         !insertmacro StartMenuLink "${COASTALBLUECARBON}\Coastal Blue Carbon (1) Preprocessor" "cbc_pre"
         !insertmacro StartMenuLink "${COASTALBLUECARBON}\Coastal Blue Carbon (2)" "cbc"
-
-        !define FISHERIES "${SMPATH}\Fisheries"
-        CreateDirectory "${FISHERIES}"
-        !insertmacro StartMenuLink "${FISHERIES}\Fisheries" "fisheries"
-        !insertmacro StartMenuLink "${FISHERIES}\Fisheries Habitat Scenario Tool" "fisheries_hst"
 
         ${if} $MultiUser.InstallMode == "AllUsers"
             CreateShortCut "$SMPROGRAMS\$StartMenuFolder\Uninstall.lnk" "${UNINSTALL_PATH}" "/allusers"
@@ -565,13 +559,11 @@ SectionGroup /e "InVEST Datasets" SEC_DATA
     ;they were calculated by hand by decompressing all the .zip files and recording
     ;the size by hand.
     !insertmacro downloadData "Annual Water Yield (optional)" "Annual_Water_Yield.zip" 20513
-    !insertmacro downloadData "Aquaculture (optional)" "Aquaculture.zip" 116
     !insertmacro downloadData "Carbon (optional)" "Carbon.zip" 17748
     !insertmacro downloadData "Coastal Blue Carbon (optional)" "CoastalBlueCarbon.zip" 332
     !insertmacro downloadData "Coastal Vulnerability (optional)" "CoastalVulnerability.zip" 169918
     !insertmacro downloadData "Crop Production (optional)" "CropProduction.zip" 111898
     !insertmacro downloadData "DelineateIt (optional)" "DelineateIt.zip" 536
-    !insertmacro downloadData "Fisheries (optional)" "Fisheries.zip" 637
     !insertmacro downloadData "Forest Carbon Edge Effect (required for forest carbon edge model)" "forest_carbon_edge_effect.zip" 8060
     !insertmacro downloadData "GLOBIO (optional)" "globio.zip" 186020
     !insertmacro downloadData "Habitat Quality (optional)" "HabitatQuality.zip" 1880
