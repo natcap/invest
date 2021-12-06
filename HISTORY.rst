@@ -68,6 +68,15 @@ Unreleased Changes (3.10)
       abundance in current/future LULC and therefore less rarity; values
       of 0.5 indicate same abundance between baseline and current/future
       LULC; values 0.5 to 1 indicate less abundance in current/future LULC
+* Scenic Quality
+    * Simplify the option names for the ``valuation_function`` arg. The options
+      are now: ``linear``, ``logarithmic``, ``exponential``.
+* Wave Energy
+    * Rename the ``analysis_area_path`` arg to ``analysis_area``, since it is
+      not a path but an option string.
+    * Simplify the option names for the ``analysis_area`` arg. The option names
+      are now: ``westcoast``, ``eastcoast``, ``northsea4``, ``northsea10``,
+      ``australia``, ``global``.
 
 3.9.2 (2021-10-29)
 ------------------
