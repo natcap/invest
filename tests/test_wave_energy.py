@@ -407,7 +407,7 @@ class WaveEnergyRegressionTests(unittest.TestCase):
         args = {
             'workspace_dir': workspace_dir,
             'wave_base_data_path': os.path.join(SAMPLE_DATA, 'WaveData'),
-            'analysis_area_path': 'westcoast',
+            'analysis_area': 'westcoast',
             'machine_perf_path': os.path.join(
                 SAMPLE_DATA, 'Machine_Pelamis_Performance.csv'),
             'machine_param_path': os.path.join(
@@ -621,7 +621,7 @@ class WaveEnergyValidateTests(unittest.TestCase):
             'workspace_dir',
             'machine_param_path',
             'wave_base_data_path',
-            'analysis_area_path',
+            'analysis_area',
             'machine_perf_path',
             'dem_path',
         ]
@@ -650,12 +650,12 @@ class WaveEnergyValidateTests(unittest.TestCase):
             ['number_of_machines', 'machine_econ_path', 'land_gridPts_path'])
         self.assertEqual(invalid_keys, expected_missing_keys)
 
-    def test_incorrect_analysis_area_path_value(self):
-        """WaveEnergy: testing incorrect analysis_area_path value."""
+    def test_incorrect_analysis_area_value(self):
+        """WaveEnergy: testing incorrect analysis_area value."""
         from natcap.invest import wave_energy, validation
 
         args = {}
-        args['analysis_area_path'] = 'Incorrect Analysis Area'
+        args['analysis_area'] = 'Incorrect Analysis Area'
         validation_error_list = wave_energy.validate(args)
         expected_message = validation.MESSAGES['INVALID_OPTION'].format(
             option_list=sorted([
