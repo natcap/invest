@@ -407,7 +407,7 @@ class WaveEnergyRegressionTests(unittest.TestCase):
         args = {
             'workspace_dir': workspace_dir,
             'wave_base_data_path': os.path.join(SAMPLE_DATA, 'WaveData'),
-            'analysis_area_path': 'West Coast of North America and Hawaii',
+            'analysis_area_path': 'westcoast',
             'machine_perf_path': os.path.join(
                 SAMPLE_DATA, 'Machine_Pelamis_Performance.csv'),
             'machine_param_path': os.path.join(
@@ -659,15 +659,13 @@ class WaveEnergyValidateTests(unittest.TestCase):
         validation_error_list = wave_energy.validate(args)
         expected_message = validation.MESSAGES['INVALID_OPTION'].format(
             option_list=sorted([
-                "West Coast of North America and Hawaii",
-                "East Coast of North America and Puerto Rico",
-                "North Sea 4 meter resolution",
-                "North Sea 10 meter resolution",
-                "Australia",
-                "Global"]))
+                "westcoast", "eastcoast", "northsea4", "northsea10",
+                "australia", "global"]))
         actual_messages = ''
         for keys, error_strings in validation_error_list:
             actual_messages += error_strings
+        print(expected_message)
+        print(actual_messages)
         self.assertTrue(expected_message in actual_messages)
 
     def test_validate_keys_missing_values(self):
