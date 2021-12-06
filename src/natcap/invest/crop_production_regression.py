@@ -19,10 +19,15 @@ from . import MODEL_METADATA
 LOGGER = logging.getLogger(__name__)
 
 CROPS = {
-    crop: {
-        "description": _(crop)
-    } for crop in ["barley", "maize", "oilpalm", "potato", "rice", "soybean",
-                   "sugarbeet", "sugarcane", "sunflower", "wheat"]
+    "barley": {"description": _("barley")},
+    "maize": {"description": _("maize")},
+    "oilpalm": {"description": _("oil palm")},
+    "potato": {"description": _("potato")},
+    "rice": {"description": _("rice")},
+    "soybean": {"description": _("soybean")},
+    "sugarbeet": {"description": _("sugar beet")},
+    "sugarcane": {"description": _("sugarcane")},
+    "wheat": {"description": _("wheat")}
 }
 
 
