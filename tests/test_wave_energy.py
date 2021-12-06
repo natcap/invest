@@ -664,8 +664,6 @@ class WaveEnergyValidateTests(unittest.TestCase):
         actual_messages = ''
         for keys, error_strings in validation_error_list:
             actual_messages += error_strings
-        print(expected_message)
-        print(actual_messages)
         self.assertTrue(expected_message in actual_messages)
 
     def test_validate_keys_missing_values(self):
