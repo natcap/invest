@@ -18,7 +18,7 @@ export default function findInvestBinaries(isDevMode) {
     const filename = `invest${ext}`;
 
     if (isDevMode) {
-      investExe = path.join('build', 'invest', filename);
+      investExe = filename; // assume an active python env w/ exe on path
     } else {
       const binaryPath = path.join(process.resourcesPath, 'invest');
       investExe = path.join(binaryPath, filename);
