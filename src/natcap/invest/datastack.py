@@ -311,6 +311,14 @@ def build_datastack_archive(args, model_name, datastack_path):
     Returns:
         ``None``
     """
+    module = __import__(model_name)
+
+    # Allow the model to override the common datastack function.  This is
+    # useful for tables (like HRA) that are too complicated to describe in the
+    # ARGS_SPEC format.
+    if hasattr(module, 'build_datastack_archive', False):
+        return module.build_datastack_archive(args, datastack_path)
+
     args = args.copy()
     temp_workspace = tempfile.mkdtemp(prefix='datastack_')
     logfile = os.path.join(temp_workspace, 'log')
