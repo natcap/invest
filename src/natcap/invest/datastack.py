@@ -17,23 +17,23 @@ A **logfile** for InVEST is a text file that is written to disk for each model
 run.
 """
 
-import os
-import json
-import tarfile
-import shutil
-import logging
-import tempfile
-import codecs
-import pprint
-import collections
-import re
 import ast
+import codecs
+import collections
+import json
+import logging
+import os
+import pprint
+import re
+import shutil
+import tarfile
+import tempfile
 import warnings
 
 from osgeo import gdal
-from osgeo import ogr
 
 from . import utils
+
 try:
     from . import __version__
 except ImportError:
@@ -78,7 +78,7 @@ def _collect_spatial_files(filepath, data_dir, folder_prefix):
     Args:
         filepath (string): The filepath to analyze.
         data_dir (string): The path to the data directory.
-        folder_prefix (string): A descriptive prefix for the folder name, 
+        folder_prefix (string): A descriptive prefix for the folder name,
             derived from the nested key for which ``filepath`` is a value,
             e.g. ``dem_path``
 
@@ -95,7 +95,7 @@ def _collect_spatial_files(filepath, data_dir, folder_prefix):
             # give the folder a descriptive name with a unique
             # random suffix to avoid name conflicts
             new_path = tempfile.mkdtemp(
-                prefix=f'{folder_prefix}_raster_', 
+                prefix=f'{folder_prefix}_raster_',
                 dir=data_dir)
             driver = gdal.GetDriverByName('GTiff')
             LOGGER.info('[%s] Saving new raster to %s',
@@ -132,7 +132,7 @@ def _collect_spatial_files(filepath, data_dir, folder_prefix):
                 return None
 
             new_path = tempfile.mkdtemp(
-                prefix=f'{folder_prefix}_vector_', 
+                prefix=f'{folder_prefix}_vector_',
                 dir=data_dir)
             driver = gdal.GetDriverByName('ESRI Shapefile')
             LOGGER.info('[%s] Saving new vector to %s',
@@ -159,7 +159,7 @@ def _collect_filepath(path, data_dir, folder_prefix):
         path (string): The path to examine.  Must exist on disk.
         data_dir (string): The path to the data directory, where any data
             files will be stored.
-        folder_prefix (string): A descriptive prefix for the folder name, 
+        folder_prefix (string): A descriptive prefix for the folder name,
             derived from the nested key for which ``filepath`` is a value,
             e.g. ``dem_path``
 
@@ -248,8 +248,8 @@ def format_args_dict(args_dict, model_name):
 
     args_string = '\n'.join([format_str % (arg) for arg in sorted_args])
     args_string = "Arguments for InVEST %s %s:\n%s\n" % (model_name,
-                                                          __version__,
-                                                          args_string)
+                                                         __version__,
+                                                         args_string)
     return args_string
 
 
@@ -355,7 +355,7 @@ def build_datastack_archive(args, model_name, datastack_path):
                 except KeyError:
                     # turn the nested key into a nice name for a folder
                     # e.g. args['category']['data_path'] --> category_data_path
-                    folder_prefix = nested_key[6 : -2].replace('\'][\'', '_')
+                    folder_prefix = nested_key[6: -2].replace('\'][\'', '_')
                     found_filepath = _collect_filepath(possible_path,
                                                        data_dir,
                                                        folder_prefix)
