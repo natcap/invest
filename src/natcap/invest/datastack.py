@@ -319,7 +319,7 @@ def build_datastack_archive(args, model_name, datastack_path):
 
     # For tracking existing files so we don't copy things twice
     files_found = {}
-    LOGGER.debug('Keys: %s', sorted(args.keys()))
+    LOGGER.debug(f'Keys: {sorted(args.keys())}')
 
     def _recurse(args_param, handler, nested_key=None):
         if isinstance(args_param, dict):
@@ -327,9 +327,9 @@ def build_datastack_archive(args, model_name, datastack_path):
             for args_key, args_value in args_param.items():
                 # log the key via a filter installed to the handler.
                 if nested_key:
-                    args_key_label = "%s['%s']" % (nested_key, args_key)
+                    args_key_label = f"{nested_key}['{args_key}']"
                 else:
-                    args_key_label = "args['%s']" % args_key
+                    args_key_label = f"args['{args_key}']"
 
                 args_key_filter = _ArgsKeyFilter(args_key_label)
                 handler.addFilter(args_key_filter)
@@ -348,9 +348,8 @@ def build_datastack_archive(args, model_name, datastack_path):
             if os.path.exists(possible_path):
                 try:
                     filepath = files_found[possible_path]
-                    LOGGER.debug(('Parameter known from a previous '
-                                  'entry: %s, using %s'),
-                                 possible_path, filepath)
+                    LOGGER.debug(('Parameter known from a previous entry: '
+                                  f'{possible_path}, using {filepath}'))
                     return filepath
                 except KeyError:
                     # turn the nested key into a nice name for a folder
@@ -364,12 +363,12 @@ def build_datastack_archive(args, model_name, datastack_path):
                     relative_filepath = os.path.relpath(
                         found_filepath, temp_workspace).replace('\\', '/')
                     files_found[possible_path] = relative_filepath
-                    LOGGER.debug('Processed path %s to %s',
-                                 args_param, relative_filepath)
+                    LOGGER.debug(
+                        'Processed path {args_param} to {relative_filepath}')
                     return relative_filepath
         # It's not a file or a structure to recurse through, so
         # just return the item verbatim.
-        LOGGER.info('Using verbatim value: %s', args_param)
+        LOGGER.info('Using verbatim value: {args_param}')
         return args_param
 
     log_format = "%(args_key)-25s %(name)-25s %(levelname)-8s %(message)s"
@@ -380,8 +379,8 @@ def build_datastack_archive(args, model_name, datastack_path):
             'invest_version': __version__
         }
 
-    LOGGER.debug('found files: \n%s', pprint.pformat(files_found))
-    LOGGER.debug('new arguments: \n%s', pprint.pformat(new_args))
+    LOGGER.debug(f'found files: \n{pprint.pformat(files_found)}')
+    LOGGER.debug(f'new arguments: \n{pprint.pformat(new_args)}')
     # write parameters to a new json file in the temp workspace
     param_file_uri = os.path.join(temp_workspace,
                                   'parameters' + PARAMETER_SET_EXTENSION)
