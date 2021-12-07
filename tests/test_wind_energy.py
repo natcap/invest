@@ -464,7 +464,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         args['min_distance'] = 0
         args['max_distance'] = 200000
         args['valuation_container'] = True
-        args['foundation_cost'] = 2
+        args['foundation_cost'] = 2000000
         args['discount_rate'] = 0.07
         # Test that only grid points are provided in grid_points_path
         args['grid_points_path'] = os.path.join(
@@ -514,7 +514,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         args['min_distance'] = 0
         args['max_distance'] = 200000
         args['valuation_container'] = True
-        args['foundation_cost'] = 2
+        args['foundation_cost'] = 2000000
         args['discount_rate'] = 0.07
         # there was no sample data that provided landing points, thus for
         # testing, grid points in 'resampled_grid_pts.csv' were duplicated and
@@ -561,7 +561,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         args['min_distance'] = 0
         args['max_distance'] = 200000
         args['valuation_container'] = True
-        args['foundation_cost'] = 2
+        args['foundation_cost'] = 2000000
         args['discount_rate'] = 0.07
         args['price_table'] = True
         args['wind_schedule'] = os.path.join(
@@ -653,7 +653,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
             'min_distance': 0,
             'max_distance': 200000,
             'valuation_container': True,
-            'foundation_cost': 2,
+            'foundation_cost': 2000000,
             'discount_rate': 0.07,
             'avg_grid_distance': 4,
             'price_table': True,

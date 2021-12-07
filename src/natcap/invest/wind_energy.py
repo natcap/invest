@@ -1286,12 +1286,12 @@ def _calculate_npv_levelized_rasters(
     # turbines rated power
     total_mega_watt = mega_watt * int(args['number_of_turbines'])
 
-    # Total infield cable cost, in currency units
+    # Total infield cable cost
     infield_cable_cost = infield_length * infield_cost * int(
         args['number_of_turbines'])
     LOGGER.debug('infield_cable_cost : %s', infield_cable_cost)
 
-    # Total foundation cost, in currency units
+    # Total foundation cost
     total_foundation_cost = (foundation_cost + unit_cost) * int(
         args['number_of_turbines'])
     LOGGER.debug('total_foundation_cost : %s', total_foundation_cost)
