@@ -148,7 +148,7 @@ ARGS_SPEC = {
                     "about": "The length of infield cable."},
                 "infield_cable_cost": {
                     "type": "number",
-                    "units": u.currency,
+                    "units": u.megacurrency,
                     "about": "The cost of infield cable."},
                 "mw_coef_ac": {
                     "type": "number",
@@ -231,7 +231,7 @@ ARGS_SPEC = {
                     "about": "The turbine's rated power output."},
                 "turbine_cost": {
                     "type": "number",
-                    "units": u.currency,
+                    "units": u.megacurrency,
                     "about": "The cost of one turbine."}
             },
             "about": "A table of parameters specific to the type of turbine.",
@@ -282,7 +282,7 @@ ARGS_SPEC = {
         },
         "foundation_cost": {
             "type": "number",
-            "units": u.currency,
+            "units": u.megacurrency,
             "required": "valuation_container",
             "about": "The cost of the foundation for one turbine.",
             "name": "foundation cost"
@@ -403,7 +403,7 @@ _SCALE_KEY = 'LAM'
 _SHAPE_KEY = 'K'
 
 # Set the raster nodata value and data type to use throughout the model
-_TARGET_NODATA = -64329
+_TARGET_NODATA = -64329.0
 _TARGET_DATA_TYPE = gdal.GDT_Float32
 
 # The harvested energy is on a per year basis
@@ -835,8 +835,8 @@ def execute(args):
 
     # Get the min and max depth values from the arguments and set to a negative
     # value indicating below sea level
-    min_depth = abs(float(args['min_depth'])) * -1
-    max_depth = abs(float(args['max_depth'])) * -1
+    min_depth = abs(float(args['min_depth'])) * -1.0
+    max_depth = abs(float(args['max_depth'])) * -1.0
 
     # Create a mask for any values that are out of the range of the depth
     # values
@@ -1147,7 +1147,7 @@ def execute(args):
         # Since the grid points were not provided use the land polygon to get
         # near shore distances
         # The average land cable distance in km converted to meters
-        avg_grid_distance = float(args['avg_grid_distance']) * 1000
+        avg_grid_distance = float(args['avg_grid_distance']) * 1000.0
 
         land_poly_dist_raster_path = os.path.join(
             inter_dir, 'land_poly_dist%s.tif' % suffix)
@@ -1255,11 +1255,11 @@ def _calculate_npv_levelized_rasters(
     # Get constants from val_parameters_dict to make it more readable
     # The length of infield cable in km
     infield_length = float(val_parameters_dict['infield_cable_length'])
-    # The cost of infield cable in currency units per km
+    # The cost of infield cable in millions of currency units per km
     infield_cost = float(val_parameters_dict['infield_cable_cost'])
-    # The cost of the foundation in currency units
+    # The cost of the foundation in millions of currency units
     foundation_cost = float(args['foundation_cost'])
-    # The cost of each turbine unit in currency units
+    # The cost of each turbine unit in millions of currency units
     unit_cost = float(val_parameters_dict['turbine_cost'])
     # The installation cost as a decimal
     install_cost = float(val_parameters_dict['installation_cost'])
@@ -1301,7 +1301,7 @@ def _calculate_npv_levelized_rasters(
     LOGGER.debug('cap_less_dist : %s', cap_less_dist)
 
     # Discount rate plus one to get that constant
-    disc_const = discount_rate + 1
+    disc_const = discount_rate + 1.0
     LOGGER.debug('discount_rate : %s', disc_const)
 
     # Discount constant raised to the total time, a constant found in the NPV
@@ -1317,17 +1317,17 @@ def _calculate_npv_levelized_rasters(
         target_nodata_mask = (harvest_block_data == _TARGET_NODATA)
 
         # Total cable distance converted to kilometers
-        cable_dist_arr = dist_block_data / 1000
+        cable_dist_arr = dist_block_data / 1000.0
 
         # The energy value converted from MWhr/yr (Mega Watt hours as output
         # from CK's biophysical model equations) to kWhr/yr for the
         # valuation model
-        energy_val_arr = harvest_block_data * 1000
+        energy_val_arr = harvest_block_data * 1000.0
 
         # Calculate cable cost. The break at 'circuit_break' indicates the
         # difference in using AC and DC current systems
         circuit_mask = (cable_dist_arr <= circuit_break)
-        cable_cost_arr = np.full(target_arr_shape, 0, dtype=np.float32)
+        cable_cost_arr = np.full(target_arr_shape, 0.0, dtype=np.float32)
 
         # Calculate AC cable cost
         cable_cost_arr[circuit_mask] = cable_dist_arr[
@@ -1343,7 +1343,7 @@ def _calculate_npv_levelized_rasters(
 
         # Nominal total capital costs including installation and
         # miscellaneous costs (capex_arr)
-        capex_arr = cap_arr / (1 - install_cost - misc_capex_cost)
+        capex_arr = cap_arr / (1.0 - install_cost - misc_capex_cost)
 
         # The ongoing cost of the farm
         ongoing_capex_arr = op_maint_cost * capex_arr
@@ -1354,16 +1354,16 @@ def _calculate_npv_levelized_rasters(
         # Initialize the summation of the revenue less the ongoing costs,
         # adjusted for discount rate
         npv_arr = np.full(
-            target_arr_shape, 0, dtype=np.float32)
+            target_arr_shape, 0.0, dtype=np.float32)
 
         # Initialize the numerator summation part of the levelized cost
         levelized_num_arr = np.full(
-            target_arr_shape, 0, dtype=np.float32)
+            target_arr_shape, 0.0, dtype=np.float32)
 
         # Initialize and calculate the denominator summation value for
         # levelized cost of energy at year 0
         levelized_denom_arr = np.full(
-            target_arr_shape, 0, dtype=np.float32)
+            target_arr_shape, 0.0, dtype=np.float32)
         levelized_denom_arr = energy_val_arr / disc_const**0
 
         # Calculate the total NPV and the levelized cost over the lifespan of
@@ -1396,7 +1396,8 @@ def _calculate_npv_levelized_rasters(
             decommish_capex_arr[~target_nodata_mask] -
             capex_arr[~target_nodata_mask])
 
-        # Calculate the levelized cost of energy, in currency units
+        # Calculate the levelized cost of energy, converting from millions of
+        # currency units to currency units
         levelized_arr = (
             (levelized_num_arr + decommish_capex_arr + capex_arr) /
             levelized_denom_arr)
@@ -1608,7 +1609,7 @@ def _calculate_carbon_op(harvested_arr, carbon_coef):
     # from CK's biophysical model equations) to kWhr for the
     # valuation model
     out_array[valid_pixels_mask] = (
-        harvested_arr[valid_pixels_mask] * carbon_coef * 1000)
+        harvested_arr[valid_pixels_mask] * carbon_coef * 1000.0)
     return out_array
 
 
@@ -1681,7 +1682,7 @@ def _calculate_land_to_grid_distance(
         shapely_land_point = shapely.wkt.loads(land_point_wkt)
         # Get the distance in meters and convert to km
         land_to_grid_dist = shapely_land_point.distance(
-            grid_point_collection) / 1000
+            grid_point_collection) / 1000.0
         # Add the distance value to the new field and set to the feature
         land_point_feat.SetField(dist_field_name, land_to_grid_dist)
         target_land_layer.SetFeature(land_point_feat)
@@ -1980,7 +1981,7 @@ def _compute_density_harvested_fields(
 
         # Convert harvested energy from Whr/yr to MWhr/yr by dividing by
         # 1,000,000
-        harvested_wind_energy = harvested_wind_energy / 1000000
+        harvested_wind_energy = harvested_wind_energy / 1000000.00
 
         # Now factor in the percent losses due to turbine
         # downtime (mechanical failure, storm damage, etc.)
@@ -2142,7 +2143,7 @@ def _get_suitable_projection_params(
         target_pixel_size = _convert_degree_pixel_size_to_square_meters(
             base_raster_info['pixel_size'], centroid_y)
 
-        utm_code = (math.floor((centroid_x + 180) / 6) % 60) + 1
+        utm_code = (math.floor((centroid_x + 180.0) / 6) % 60) + 1
         lat_code = 6 if centroid_y > 0 else 7
         epsg_code = int('32%d%02d' % (lat_code, utm_code))
         target_srs = osr.SpatialReference()
