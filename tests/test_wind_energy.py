@@ -183,7 +183,7 @@ class WindEnergyUnitTests(unittest.TestCase):
 
         expected_result = {
             'air_density': 1.225,
-            'exponent_power_curve': 2.0,
+            'exponent_power_curve': 2,
             'decommission_cost': 0.037,
             'operation_maintenance_cost': .035,
             'miscellaneous_capex_cost': .05
@@ -289,8 +289,8 @@ class WindEnergyUnitTests(unittest.TestCase):
 
         # Set up a coordinate with a longitude in the range of -360 to 0.
         wind_data = {
-            (31.79, -200.0): {
-                'LONG': -200.0, 'LATI': 31.79, 'Ram-080m': 7.98,
+            (31.79, -200): {
+                'LONG': -200, 'LATI': 31.79, 'Ram-080m': 7.98,
                 'K-010m': 1.90}
         }
         wind_data_pickle_path = os.path.join(
@@ -307,7 +307,7 @@ class WindEnergyUnitTests(unittest.TestCase):
         ogr_point = ogr.Geometry(ogr.wkbPoint)
         # Point geometry should have been converted to the WSG84 norm of
         # -180 to 180
-        ogr_point.AddPoint_2D(160.00, 31.79)
+        ogr_point.AddPoint_2D(160, 31.79)
 
         shape = ogr.Open(out_path)
         layer = shape.GetLayer()
@@ -325,7 +325,7 @@ class WindEnergyUnitTests(unittest.TestCase):
                 try:
                     field_val = feat.GetField(field)
                     self.assertEqual(
-                        wind_data[(31.79, -200.0)][field], field_val)
+                        wind_data[(31.79, -200)][field], field_val)
                 except ValueError:
                     raise AssertionError(
                         'Could not find field %s' % field)
@@ -621,8 +621,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
             suffix='.csv', dir=args['workspace_dir'])
         os.close(tmp)
         data = {
-            'hub_height': 80, 'cut_in_wspd': 4.0, 'rated_wspd': 12.5,
-            'turbine_rated_pwr': 3.6, 'turbine_cost': 8.0
+            'hub_height': 80, 'cut_in_wspd': 4, 'rated_wspd': 12.5,
+            'turbine_rated_pwr': 3.6, 'turbine_cost': 8
         }
         _create_vertical_csv(data, file_path)
         args['turbine_parameters_path'] = file_path
