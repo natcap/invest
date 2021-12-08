@@ -2,22 +2,20 @@
   Changes should be grouped for readability.
 
   InVEST model names:
-  - Carbon
+  - Annual Water Yield
+  - Carbon Storage and Sequestration
   - Coastal Blue Carbon
   - Coastal Vulnerability
+  - Crop Pollination
   - Crop Production
   - DelineateIt
-  - Finfish
-  - Fisheries
   - Forest Carbon Edge Effects
   - Globio
   - Habitat Quality
   - HRA
-  - Annual Water Yield
   - NDR
-  - Pollination
-  - Recreation
-  - Routedem
+  - Visitation: Recreation and Tourism
+  - RouteDEM
   - Scenario Generator
   - Scenic Quality
   - SDR
@@ -37,7 +35,7 @@
 
 Unreleased Changes (3.10)
 -------------------------
-* General:
+* General
     * Added ``invest serve`` entry-point to the CLI. This launches a Flask app
       and server on the localhost, to support the workbench.
     * Major updates to each model's ``ARGS_SPEC`` (and some related validation)
@@ -45,11 +43,17 @@ Unreleased Changes (3.10)
     * Standardized and de-duplicated text in ``ARGS_SPEC`` ``about`` and
       ``name`` strings.
     * Update to FontAwesome 5 icons in the QT interface.
-* Coastal Vulnerability:
+* Annual Water Yield
+    * Renamed the Windows start menu shortcut from "Water Yield" to
+      "Annual Water Yield".
+* Coastal Vulnerability
     * Fixed bug where shore points were created on interior landmass holes
       (i.e. lakes).
     * Added feature to accept raster (in addition to vector) habitat layers.
     * Changed one intermediate output (geomorphology) from SHP to GPKG.
+* Crop Pollination
+    * Renamed the Windows start menu shortcut from "Pollination" to
+      "Crop Pollination".
 * Fisheries and Fisheries HST
     * The Fisheries models were deprecated due to lack of use,
       lack of scientific support staff, and maintenance costs.
@@ -65,6 +69,12 @@ Unreleased Changes (3.10)
       of 0.5 indicate same abundance between baseline and current/future
       LULC; values 0.5 to 1 indicate less abundance in current/future LULC
       and therefore higher rarity.
+* Scenic Quality
+    * Renamed the model title from
+      "Unobstructed Views: Scenic Quality Provision" to "Scenic Quality".
+* Visitation: Recreation and Tourism
+    * Renamed the Windows start menu shortcut from "Recreation" to
+      "Visitation: Recreation and Tourism".
 
 3.9.2 (2021-10-29)
 ------------------
