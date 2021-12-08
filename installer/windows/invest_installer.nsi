@@ -435,21 +435,21 @@ Section "InVEST Tools" Section_InVEST_Tools
         !insertmacro StartMenuLink "${SMPATH}\Crop Production (Regression)" "crop_production_regression"
         !insertmacro StartMenuLink "${SMPATH}\Scenic Quality" "scenic_quality"
         !insertmacro StartMenuLink "${SMPATH}\Habitat Quality" "habitat_quality"
-        !insertmacro StartMenuLink "${SMPATH}\Carbon" "carbon"
+        !insertmacro StartMenuLink "${SMPATH}\Carbon Storage and Sequestration" "carbon"
         !insertmacro StartMenuLink "${SMPATH}\Forest Carbon Edge Effect" "forest_carbon_edge_effect"
         !insertmacro StartMenuLink "${SMPATH}\GLOBIO" "globio"
-        !insertmacro StartMenuLink "${SMPATH}\Pollination" "pollination"
+        !insertmacro StartMenuLink "${SMPATH}\Crop Pollination" "pollination"
         !insertmacro StartMenuLink "${SMPATH}\Wave Energy" "wave_energy"
         !insertmacro StartMenuLink "${SMPATH}\Wind Energy" "wind_energy"
         !insertmacro StartMenuLink "${SMPATH}\Coastal Vulnerability" "cv"
         !insertmacro StartMenuLink "${SMPATH}\SDR: Sediment Delivery Ratio" "sdr"
         !insertmacro StartMenuLink "${SMPATH}\NDR: Nutrient Delivery Ratio" "ndr"
         !insertmacro StartMenuLink "${SMPATH}\Scenario Generator: Proximity Based" "sgp"
-        !insertmacro StartMenuLink "${SMPATH}\Water Yield" "hwy"
+        !insertmacro StartMenuLink "${SMPATH}\Annual Water Yield" "hwy"
         !insertmacro StartMenuLink "${SMPATH}\Seasonal Water Yield" "swy"
         !insertmacro StartMenuLink "${SMPATH}\RouteDEM" "routedem"
         !insertmacro StartMenuLink "${SMPATH}\DelineateIt" "delineateit"
-        !insertmacro StartMenuLink "${SMPATH}\Recreation" "recreation"
+        !insertmacro StartMenuLink "${SMPATH}\Visitation: Recreation and Tourism" "recreation"
         !insertmacro StartMenuLink "${SMPATH}\Urban Flood Risk Mitigation" "ufrm"
         !insertmacro StartMenuLink "${SMPATH}\Urban Cooling Model" "ucm"
         !insertmacro StartMenuLink "${SMPATH}\Urban Stormwater Retention Model" "stormwater"
@@ -559,7 +559,7 @@ SectionGroup /e "InVEST Datasets" SEC_DATA
     ;they were calculated by hand by decompressing all the .zip files and recording
     ;the size by hand.
     !insertmacro downloadData "Annual Water Yield (optional)" "Annual_Water_Yield.zip" 20513
-    !insertmacro downloadData "Carbon (optional)" "Carbon.zip" 17748
+    !insertmacro downloadData "Carbon Storage and Sequestration (optional)" "Carbon.zip" 17748
     !insertmacro downloadData "Coastal Blue Carbon (optional)" "CoastalBlueCarbon.zip" 332
     !insertmacro downloadData "Coastal Vulnerability (optional)" "CoastalVulnerability.zip" 169918
     !insertmacro downloadData "Crop Production (optional)" "CropProduction.zip" 111898
@@ -569,8 +569,8 @@ SectionGroup /e "InVEST Datasets" SEC_DATA
     !insertmacro downloadData "Habitat Quality (optional)" "HabitatQuality.zip" 1880
     !insertmacro downloadData "Habitat Risk Assessment (optional)" "HabitatRiskAssess.zip" 7791
     !insertmacro downloadData "Nutrient Delivery Ratio (optional)" "NDR.zip" 10973
-    !insertmacro downloadData "Pollination (optional)" "pollination.zip" 687
-    !insertmacro downloadData "Recreation (optional)" "recreation.zip" 5826
+    !insertmacro downloadData "Crop Pollination (optional)" "pollination.zip" 687
+    !insertmacro downloadData "Visitation: Recreation and Tourism (optional)" "recreation.zip" 5826
     !insertmacro downloadData "RouteDEM (optional)" "RouteDEM.zip" 532
     !insertmacro downloadData "Scenario Generator: Proximity Based (optional)" "scenario_proximity.zip" 7508
     !insertmacro downloadData "Scenic Quality (optional)" "ScenicQuality.zip" 165792
