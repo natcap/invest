@@ -58,43 +58,62 @@ jobs:
         version: '281.0.0'
         service_account_key: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
 
-    - name: Code-signing setup for macOS
-      if: github.event_name != 'pull_request' && matrix.os == 'macos-latest'
-      shell: bash
-      env:
-        P12_FILE_PATH: ~/Downloads/stanford_cert.p12
-        KEYCHAIN_NAME: codesign_keychain
-        KEYCHAIN_PASS: ${{ secrets.MAC_KEYCHAIN_PASS }}
-        CERT_KEY_PASS: ${{ secrets.STANFORD_CERT_KEY_PASS }}
-
-      run: |
-        gsutil cp gs://stanford_cert/Stanford-natcap-code-signing-cert-expires-2024-01-26.p12 $P12_FILE_PATH 
-
-        bash ./scripts/setup_macos_keychain.sh 
-
-        # these env variables tell electron-builder to do code signing
-        echo "CSC_KEYCHAIN=$KEYCHAIN_NAME" >> $GITHUB_ENV
-        echo "CSC_NAME='Stanford University'" >> $GITHUB_ENV
-        echo "CSC_KEY_PASSWORD=${{ secrets.STANFORD_CERT_KEY_PASS }}" >> $GITHUB_ENV
-
-    - name: Code-signing setup for Windows
-      if: github.event_name != 'pull_request' && matrix.os == 'windows-latest'
-      env:
-        P12_FILE: Stanford-natcap-code-signing-cert-expires-2024-01-26.p12
-        CLOUDSDK_PYTHON: ${{env.pythonLocation}}\python.exe
-      run: |
-        gsutil cp gs://stanford_cert/$P12_FILE ~/$P12_FILE
-
-        # all these variables are used by electron-builder
-        echo "CSC_LINK=~/$P12_FILE" >> $GITHUB_ENV
-        echo "CSC_KEY_PASSWORD=${{ secrets.STANFORD_CERT_KEY_PASS }}" >> $GITHUB_ENV
-        echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> $GITHUB_ENV
-
     - name: Run electron-builder
       env:
         GH_TOKEN: env.GITHUB_TOKEN
         DEBUG: electron-builder
+        CSC_IDENTITY_AUTO_DISCOVERY: false  # disable electron-builder code signing
       run: yarn run dist
+
+    # do code signing ourselves because it's easier than with electron-builder
+    - name: Code signing (MacOS)
+      if: github.event_name != 'pull_request' && matrix.os == 'macos-latest'
+      env:
+        KEYCHAIN_NAME: codesign_keychain
+        KEYCHAIN_PASS: ${{ secrets.MAC_KEYCHAIN_PASS }}
+        CERT_PASS: ${{ secrets.MACOS_CODESIGN_CERT_PASS }}
+        CERT_FILE: 2025-01-16-Expiry-AppStore-App.p12
+        BIN_TO_SIGN: dist/invest_*.dmg
+      run: |
+        gsutil cp gs://stanford_cert/$CERT_FILE ~/$CERT_FILE
+        # create a new keychain (so that we can know what the password is)
+        security create-keychain -p $KEYCHAIN_PASS $KEYCHAIN_NAME
+
+        # add the keychain to the search list so it can be found
+        security list-keychains -s $KEYCHAIN_NAME
+
+        # unlock the keychain so we can import to it (stays unlocked 5 minutes by default)
+        security unlock-keychain -p $KEYCHAIN_PASS $KEYCHAIN_NAME
+
+        # add the certificate to the keychain
+        # -T option says that the codesign executable can access the keychain
+        # for some reason this alone is not enough, also need the following step
+        security import ~/$CERT_FILE -k "$KEYCHAIN_NAME" -P "$CERT_PASS" -T /usr/bin/codesign
+
+        # this is essential to avoid the UI password prompt
+        security set-key-partition-list -S apple-tool:,apple: -s -k $KEYCHAIN_PASS $KEYCHAIN_NAME
+
+        # sign the dmg using certificate that's looked up by unique identifier 'Stanford'
+        codesign --timestamp --verbose --sign Stanford $BIN_TO_SIGN
+
+        # relock the keychain (not sure if this is important?)
+        security lock-keychain $KEYCHAIN_NAME
+
+    - name: Code signing (Windows)
+      if: github.event_name != 'pull_request' && matrix.os == 'windows-latest'
+      env:
+        CLOUDSDK_PYTHON: ${{env.pythonLocation}}\python.exe
+        CERT_FILE: Stanford-natcap-code-signing-cert-expires-2024-01-26.p12
+        CERT_PASS: ${{ secrets.WINDOWS_CODESIGN_CERT_PASS }}
+        BIN_TO_SIGN: dist\invest_*.exe
+      run: |
+        gsutil cp gs://stanford_cert/$CERT_FILE ~/$CERT_FILE
+
+        # figure out the path to signtool.exe
+        SIGNTOOL=$(find 'C:\\Program Files (x86)\\Windows Kits\\10' -type f -name 'signtool.exe*' | head -n 1)
+
+        "$SIGNTOOL" sign -fd SHA256 -f ~/$CERT_FILE -p $CERT_PASS $BIN_TO_SIGN
+        "$SIGNTOOL" timestamp -tr http://timestamp.sectigo.com -td SHA256 $BIN_TO_SIGN
 
     - name: Test electron app with puppeteer
       run: npx cross-env CI=true yarn run test-electron-app

@@ -7,4 +7,5 @@ export const ipcMainChannels = {
   INVEST_KILL: 'invest-kill',
   INVEST_READ_LOG: 'invest-read-log',
   IS_FIRST_RUN: 'is-first-run',
+  GET_N_CPUS: 'get-n-cpus',
 };

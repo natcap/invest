@@ -1,6 +1,6 @@
 {
   "name": "invest-workbench",
-  "version": "0.1.0-alpha",
+  "version": "0.1.0-beta",
   "description": "Models that map and value the goods and services from nature that sustain and fulfill human life",
   "main": "build/main/main.js",
   "homepage": "./",
@@ -25,7 +25,7 @@
   "invest": {
     "bucket": "releases.naturalcapitalproject.org",
     "fork": "natcap",
-    "version": "3.9.2.post470+g11795c5c",
+    "version": "3.9.2.post480+gc06f40d7",
     "target": {
       "macos": "mac_invest_binaries.zip",
       "windows": "windows_invest_binaries.zip"

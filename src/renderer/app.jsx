@@ -329,6 +329,7 @@ export default class App extends React.Component {
                         investSettings={investSettings}
                         clearJobsStorage={this.clearRecentJobs}
                         showDownloadModal={() => this.showDownloadModal(true)}
+                        nCPU={this.props.nCPU}
                       />
                     )
                     : <div />
@@ -366,10 +367,12 @@ export default class App extends React.Component {
 
 App.propTypes = {
   isFirstRun: PropTypes.bool,
+  nCPU: PropTypes.number,
 };
 
-// Setting a default here mainly to make testing easy, so this prop
+// Setting a default here mainly to make testing easy, so these props
 // can be undefined for unrelated tests.
 App.defaultProps = {
   isFirstRun: false,
+  nCPU: 1,
 };

@@ -48,7 +48,7 @@ function renderInvestTab(job = DEFAULT_JOB) {
 describe('Sidebar Alert renders with data from a recent run', () => {
   const spec = {
     pyname: 'natcap.invest.foo',
-    model_name: 'FooModel',
+    model_name: 'Foo Model',
     args: {
       workspace: {
         name: 'Workspace',
@@ -158,7 +158,7 @@ describe('Sidebar Alert renders with data from a recent run', () => {
 describe('Save InVEST Model Setup Buttons', () => {
   const spec = {
     pyname: 'natcap.invest.foo',
-    model_name: 'FooModel',
+    model_name: 'Foo Model',
     args: {
       workspace: {
         name: 'Workspace',
@@ -243,11 +243,14 @@ describe('Save InVEST Model Setup Buttons', () => {
     await waitFor(() => {
       const results = saveToPython.mock.results[0].value;
       expect(Object.keys(results)).toEqual(expect.arrayContaining(
-        ['filepath', 'modelname', 'pyname', 'args']
+        ['filepath', 'modelname', 'args']
       ));
-      Object.keys(results).forEach((key) => {
-        expect(results[key]).not.toBeUndefined();
-      });
+      expect(typeof results.filepath).toBe('string');
+      expect(typeof results.modelname).toBe('string');
+      // guard against a common mistake of passing a model title
+      expect(results.modelname.split(' ')).toHaveLength(1);
+
+      expect(results.args).not.toBeUndefined();
       const args = JSON.parse(results.args);
       const argKeys = Object.keys(args);
       expect(argKeys).toEqual(expect.arrayContaining(expectedArgKeys));
@@ -361,7 +364,7 @@ describe('Save InVEST Model Setup Buttons', () => {
 describe('InVEST Run Button', () => {
   const spec = {
     pyname: 'natcap.invest.bar',
-    model_name: 'BarModel',
+    model_name: 'Bar Model',
     args: {
       a: {
         name: 'abar',

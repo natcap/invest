@@ -285,7 +285,7 @@ export default class InvestTab extends React.Component {
               >
                 <SetupTab
                   pyModuleName={modelSpec.pyname}
-                  modelName={modelSpec.model_name}
+                  modelName={modelRunName}
                   argsSpec={argsSpec}
                   uiSpec={uiSpec}
                   argsInitValues={argsValues}

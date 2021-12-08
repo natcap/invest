@@ -130,7 +130,6 @@ describe('requests to flask endpoints', () => {
     const payload = {
       filepath: filepath,
       modelname: modelName,
-      pyname: spec.pyname,
       args: JSON.stringify(argsDict),
     };
     await server_requests.saveToPython(payload);

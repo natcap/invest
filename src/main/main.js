@@ -24,6 +24,7 @@ import {
   setupInvestRunHandlers,
   setupInvestLogReaderHandler
 } from './setupInvestHandlers';
+import setupGetNCPUs from './setupGetNCPUs';
 import { ipcMainChannels } from './ipcMainChannels';
 import menuTemplate from './menubar';
 import ELECTRON_DEV_MODE from './isDevMode';
@@ -121,6 +122,7 @@ export const createWindow = async () => {
   setupInvestRunHandlers(investExe);
   setupInvestLogReaderHandler();
   setupContextMenu(mainWindow);
+  setupGetNCPUs();
 };
 
 export function removeIpcMainListeners() {
