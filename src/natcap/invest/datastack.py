@@ -20,6 +20,7 @@ run.
 import ast
 import codecs
 import collections
+import importlib
 import json
 import logging
 import os
@@ -311,12 +312,12 @@ def build_datastack_archive(args, model_name, datastack_path):
     Returns:
         ``None``
     """
-    module = __import__(model_name)
+    module = importlib.import_module(name=model_name)
 
     # Allow the model to override the common datastack function.  This is
     # useful for tables (like HRA) that are too complicated to describe in the
     # ARGS_SPEC format.
-    if hasattr(module, 'build_datastack_archive', False):
+    if hasattr(module, 'build_datastack_archive'):
         return module.build_datastack_archive(args, datastack_path)
 
     args = args.copy()
@@ -330,6 +331,7 @@ def build_datastack_archive(args, model_name, datastack_path):
     LOGGER.debug(f'Keys: {sorted(args.keys())}')
     args_spec = module.ARGS_SPEC['args']
 
+    rewritten_args = {}
     for key in args:
         # Possible that a user might pass an args key that doesn't belong to
         # this model.  Skip if so.
@@ -355,6 +357,8 @@ def build_datastack_archive(args, model_name, datastack_path):
                 if col_types.intersection(spatial_types):
                     spatial_columns.append(col_name)
 
+            print(spatial_columns)
+
             if not spatial_columns:
                 target_arg_value = os.path.join(data_dir, f'{key}.csv')
                 files_found[args[key]] = target_arg_value
@@ -364,23 +368,39 @@ def build_datastack_archive(args, model_name, datastack_path):
                     dir=data_dir)
 
                 dataframe = utils.read_csv_to_dataframe(args[key])
+                csv_source_dir = os.path.dirname(args[key])
                 for spatial_column_name in spatial_columns:
                     # Iterate through the spatial columns, identify the set of
                     # unique files and copy them out.
                     # if a string is not a filepath, assume it's supposed to be
                     # there and skip it
-                    for row_index, column_value in dataframe[[spatial_column_name]]:
-                        # TODO: make this respect paths relative to csv path
-                        if os.path.exists(column_value):
-                            # might be a file on disk
-                            # TODO: are there any CSVs that link to other CSVs
-                            # that then link to spatial files?  HRA doesn't
-                            # count, that's a special case as we know.
-                            dataframe.at[
-                                row_index, spatial_column_name] = new_path
-                            pass
-                    pass
+                    for row_index, column_value in dataframe[
+                            spatial_column_name].items():
+                        for source_filepath in (
+                                column_value,
+                                os.path.join(csv_source_dir, column_value),
+                                None):
+                            if os.path.exists(source_filepath):
+                                break
 
+                        # If we didn't end up finding a valid source filepath
+                        # for the field value, assume it's supposed to be that
+                        # way and leave it alone.
+                        if not source_filepath:
+                            continue
+
+                        # TODO: handle spatial files here.
+                        #  I'll need to refactor the spatial file copying into
+                        #  a separate function
+                        if source_filepath not in files_found:
+                            target_filepath = os.path.join(
+                                contained_files_dir,
+                                f'{row_index}_{os.path.basename()}')
+
+                        dataframe.at[
+                            row_index, spatial_column_name] = target_filepath
+                        files_found[os.path.abspath(source_filepath)] = (
+                            target_filepath)
         elif input_type == 'file':
             target_filepath = os.path.join(
                 data_dir, f'{key}_{os.path.basename(args[key])}')
@@ -429,10 +449,7 @@ def build_datastack_archive(args, model_name, datastack_path):
             # not a filesystem-based type
             # Record the value directly
             target_arg_value = json.dumps(args[key])
-
-
-
-
+        rewritten_args[key] = target_arg_value
 
     def _recurse(args_param, handler, nested_key=None):
         if isinstance(args_param, dict):
@@ -487,7 +504,8 @@ def build_datastack_archive(args, model_name, datastack_path):
     log_format = "%(args_key)-25s %(name)-25s %(levelname)-8s %(message)s"
     with utils.log_to_file(logfile, log_fmt=log_format) as handler:
         new_args = {
-            'args': _recurse(args, handler),
+            #'args': _recurse(args, handler),
+            'args': rewritten_args,
             'model_name': model_name,
             'invest_version': __version__
         }
