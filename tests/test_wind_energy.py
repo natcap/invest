@@ -577,11 +577,12 @@ class WindEnergyRegressionTests(unittest.TestCase):
             'npv.tif']
 
         for raster_path in raster_results:
+            print(raster_path)
             model_array = pygeoprocessing.raster_to_numpy_array(
                 os.path.join(args['workspace_dir'], 'output', raster_path))
             reg_array = pygeoprocessing.raster_to_numpy_array(
                 os.path.join(REGRESSION_DATA, 'priceval', raster_path))
-            numpy.testing.assert_allclose(model_array, reg_array)
+            numpy.testing.assert_allclose(model_array, reg_array, rtol=1e-6)
 
         vector_path = 'wind_energy_points.shp'
         _assert_vectors_equal(
