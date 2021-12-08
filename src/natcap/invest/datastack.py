@@ -328,6 +328,63 @@ def build_datastack_archive(args, model_name, datastack_path):
     # For tracking existing files so we don't copy things twice
     files_found = {}
     LOGGER.debug(f'Keys: {sorted(args.keys())}')
+    args_spec = module.ARGS_SPEC['args']
+
+    for key in args:
+        # Possible that a user might pass an args key that doesn't belong to
+        # this model.  Skip if so.
+        if key not in args_spec:
+            LOGGER.info(f'Skipping arg {key}; not in model ARGS_SPEC')
+
+        # Filesystem-based types.
+        input_type = args_spec[key]['type']
+        if input_type == 'csv':
+            # check the CSV for linked files
+            pass
+        elif input_type == 'directory':
+            # copy the whole folder
+            target_directory = tempfile.mkdtemp(
+                prefix=f'{key}_directory',
+                dir=data_dir)
+
+            # We want to copy the directory contents into the tempfile-created
+            # directory directly, not copy the parent folder into the
+            # tempfile-created directory.
+            for filename in os.listdir(args[key]):
+                src_path = os.path.join(args[key], filename)
+                dest_path = os.path.join(target_directory, filename)
+                if os.path.isdir(src_path):
+                    shutil.copytree(src_path, dest_path)
+                else:
+                    shutil.copyfile(src_path, dest_path)
+            target_arg_value = target_directory
+        elif input_type in {'raster', 'vector'}:
+            # Create a directory with a readable name, something like
+            # "aoi_path_vector" or "lulc_cur_path_raster".
+            spatial_dir = tempfile.mkdtemp(
+                prefix=f'{key}_{input_type}',
+                dir=data_dir)
+
+            spatial_file = gdal.OpenEx(args[key])
+            for member_file in spatial_file:
+                target_filepath = os.path.join(
+                    spatial_dir, os.path.basename(member_file))
+                shutil.copyfile(member_file, target_filepath)
+            spatial_file = None
+            target_arg_value = target_filepath
+        elif input_type == 'other':
+            # Note that no models currently use this to the best of my
+            # knowledge, so better to raise a NotImplementedError
+            raise NotImplementedError(
+                'The "other" ARGS_SPEC input type is not supported')
+        else:
+            # not a filesystem-based type
+            # Record the value directly
+            target_arg_value = json.dumps(args[key])
+
+
+
+
 
     def _recurse(args_param, handler, nested_key=None):
         if isinstance(args_param, dict):
