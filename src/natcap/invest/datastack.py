@@ -438,8 +438,9 @@ def build_datastack_archive(args, model_name, datastack_path):
                             row_index, spatial_column_name] = target_filepath
                         files_found[source_filepath] = target_filepath
 
-                target_arg_value = _relpath(
-                    os.path.join(data_dir, f'{key}.csv'))
+                target_csv_path = os.path.join(data_dir, f'{key}.csv')
+                dataframe.to_csv(target_csv_path)
+                target_arg_value = _relpath(target_csv_path)
                 files_found[args[key]] = target_arg_value
 
         elif input_type == 'file':
@@ -581,6 +582,7 @@ def extract_datastack_archive(datastack_path, dest_dir_path):
             archive.  Paths to files are absolute paths.
     """
     LOGGER.info('Extracting archive %s to %s', datastack_path, dest_dir_path)
+    dest_dir_path = os.path.abspath(dest_dir_path)
     # extract the archive to the workspace
     with tarfile.open(datastack_path) as tar:
         tar.extractall(dest_dir_path)
