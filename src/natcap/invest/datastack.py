@@ -336,11 +336,57 @@ def build_datastack_archive(args, model_name, datastack_path):
         if key not in args_spec:
             LOGGER.info(f'Skipping arg {key}; not in model ARGS_SPEC')
 
+        # TODO why use mkdtemp?  If keys are in dirname, do we need suffix at
+        # all?
+
         # Filesystem-based types.
         input_type = args_spec[key]['type']
+        spatial_types = {'raster', 'vector'}
         if input_type == 'csv':
-            # check the CSV for linked files
-            pass
+            # check the CSV for columns that may be spatial
+            spatial_columns = []
+            for col_name, col_definition in args_spec[key]['columns'].items():
+                # Type attribute may be a string (one type) or set (multiple
+                # types allowed), so always convert to a set for easier
+                # comparison.
+                col_types = col_definition['type']
+                if isinstance(col_types, str):
+                    col_types = set([col_types])
+                if col_types.intersection(spatial_types):
+                    spatial_columns.append(col_name)
+
+            if not spatial_columns:
+                target_arg_value = os.path.join(data_dir, f'{key}.csv')
+                files_found[args[key]] = target_arg_value
+            else:
+                contained_files_dir = tempfile.mkdtemp(
+                    prefix=f'{key}_csv',
+                    dir=data_dir)
+
+                dataframe = utils.read_csv_to_dataframe(args[key])
+                for spatial_column_name in spatial_columns:
+                    # Iterate through the spatial columns, identify the set of
+                    # unique files and copy them out.
+                    # if a string is not a filepath, assume it's supposed to be
+                    # there and skip it
+                    for row_index, column_value in dataframe[[spatial_column_name]]:
+                        # TODO: make this respect paths relative to csv path
+                        if os.path.exists(column_value):
+                            # might be a file on disk
+                            # TODO: are there any CSVs that link to other CSVs
+                            # that then link to spatial files?  HRA doesn't
+                            # count, that's a special case as we know.
+                            dataframe.at[
+                                row_index, spatial_column_name] = new_path
+                            pass
+                    pass
+
+        elif input_type == 'file':
+            target_filepath = os.path.join(
+                data_dir, f'{key}_{os.path.basename(args[key])}')
+            shutil.copyfile(args[key], target_filepath)
+            target_arg_value = target_filepath
+            files_found[args[key]] = target_filepath
         elif input_type == 'directory':
             # copy the whole folder
             target_directory = tempfile.mkdtemp(
@@ -358,6 +404,7 @@ def build_datastack_archive(args, model_name, datastack_path):
                 else:
                     shutil.copyfile(src_path, dest_path)
             target_arg_value = target_directory
+            files_found[args[key]] = target_arg_value
         elif input_type in {'raster', 'vector'}:
             # Create a directory with a readable name, something like
             # "aoi_path_vector" or "lulc_cur_path_raster".
@@ -366,12 +413,13 @@ def build_datastack_archive(args, model_name, datastack_path):
                 dir=data_dir)
 
             spatial_file = gdal.OpenEx(args[key])
-            for member_file in spatial_file:
+            for member_file in spatial_file.GetFileList():
                 target_filepath = os.path.join(
                     spatial_dir, os.path.basename(member_file))
                 shutil.copyfile(member_file, target_filepath)
             spatial_file = None
             target_arg_value = target_filepath
+            files_found[args[key]] = target_arg_value
         elif input_type == 'other':
             # Note that no models currently use this to the best of my
             # knowledge, so better to raise a NotImplementedError
