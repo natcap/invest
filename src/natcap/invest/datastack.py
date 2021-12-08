@@ -153,6 +153,37 @@ def _collect_spatial_files(filepath, data_dir, folder_prefix):
     return None
 
 
+def _copy_spatial_files(spatial_filepath, target_dir):
+    if not os.path.exists(target_dir):
+        os.makedirs(target_dir)
+
+    source_basename = os.path.basename(spatial_filepath)
+    return_filepath = None
+
+    spatial_file = gdal.OpenEx(spatial_filepath)
+    for member_file in spatial_file.GetFileList():
+        # ArcGIS Binary/Grid format includes the directory in the file listing.
+        # The parent directory isn't strictly needed, so we can just skip it.
+        if os.path.isdir(member_file):
+            continue
+
+        target_basename = os.path.basename(member_file)
+        target_filepath = os.path.join(target_dir, target_basename)
+        if source_basename == target_basename:
+            return_filepath = target_filepath
+        shutil.copyfile(member_file, target_filepath)
+    spatial_file = None
+
+    # I can't conceive of a case where the basename of the source file does not
+    # match any of the the member file basenames, but just in case there's a
+    # weird GDAL driver that does this, it seems reasonable to fall back to
+    # whichever of the member files was most recent.
+    if not return_filepath:
+        return_filepath = target_filepath
+
+    return return_filepath
+
+
 def _collect_filepath(path, data_dir, folder_prefix):
     """Collect files on disk into the data directory of an archive.
 
@@ -331,6 +362,9 @@ def build_datastack_archive(args, model_name, datastack_path):
     LOGGER.debug(f'Keys: {sorted(args.keys())}')
     args_spec = module.ARGS_SPEC['args']
 
+    def _relpath(path):
+        return os.path.relpath(path, temp_workspace)
+
     rewritten_args = {}
     for key in args:
         # Possible that a user might pass an args key that doesn't belong to
@@ -357,11 +391,9 @@ def build_datastack_archive(args, model_name, datastack_path):
                 if col_types.intersection(spatial_types):
                     spatial_columns.append(col_name)
 
-            print(spatial_columns)
-
             if not spatial_columns:
                 target_arg_value = os.path.join(data_dir, f'{key}.csv')
-                files_found[args[key]] = target_arg_value
+                files_found[args[key]] = _relpath(target_arg_value)
             else:
                 contained_files_dir = tempfile.mkdtemp(
                     prefix=f'{key}_csv',
@@ -376,11 +408,12 @@ def build_datastack_archive(args, model_name, datastack_path):
                     # there and skip it
                     for row_index, column_value in dataframe[
                             spatial_column_name].items():
-                        for source_filepath in (
-                                column_value,
-                                os.path.join(csv_source_dir, column_value),
-                                None):
-                            if os.path.exists(source_filepath):
+                        source_filepath = None
+                        for possible_filepath in (
+                                os.path.abspath(column_value),
+                                os.path.join(csv_source_dir, column_value)):
+                            if os.path.exists(possible_filepath):
+                                source_filepath = possible_filepath
                                 break
 
                         # If we didn't end up finding a valid source filepath
@@ -389,24 +422,28 @@ def build_datastack_archive(args, model_name, datastack_path):
                         if not source_filepath:
                             continue
 
-                        # TODO: handle spatial files here.
-                        #  I'll need to refactor the spatial file copying into
-                        #  a separate function
-                        if source_filepath not in files_found:
-                            target_filepath = os.path.join(
+                        try:
+                            target_filepath = files_found[source_filepath]
+                        except KeyError:
+                            basename = os.path.basename(source_filepath)
+                            target_dir = os.path.join(
                                 contained_files_dir,
-                                f'{row_index}_{os.path.basename()}')
+                                f'{row_index}_{basename}')
+                            target_filepath = _copy_spatial_files(
+                                source_filepath, target_dir)
 
+                        target_filepath = _relpath(target_filepath)
                         dataframe.at[
                             row_index, spatial_column_name] = target_filepath
-                        files_found[os.path.abspath(source_filepath)] = (
-                            target_filepath)
+                        files_found[source_filepath] = target_filepath
+
         elif input_type == 'file':
             target_filepath = os.path.join(
                 data_dir, f'{key}_{os.path.basename(args[key])}')
             shutil.copyfile(args[key], target_filepath)
-            target_arg_value = target_filepath
-            files_found[args[key]] = target_filepath
+            target_arg_value = _relpath(target_filepath)
+            files_found[args[key]] = target_arg_value
+
         elif input_type == 'directory':
             # copy the whole folder
             target_directory = tempfile.mkdtemp(
@@ -423,23 +460,19 @@ def build_datastack_archive(args, model_name, datastack_path):
                     shutil.copytree(src_path, dest_path)
                 else:
                     shutil.copyfile(src_path, dest_path)
-            target_arg_value = target_directory
+            target_arg_value = _relpath(target_directory)
             files_found[args[key]] = target_arg_value
+
         elif input_type in {'raster', 'vector'}:
             # Create a directory with a readable name, something like
             # "aoi_path_vector" or "lulc_cur_path_raster".
             spatial_dir = tempfile.mkdtemp(
                 prefix=f'{key}_{input_type}',
                 dir=data_dir)
-
-            spatial_file = gdal.OpenEx(args[key])
-            for member_file in spatial_file.GetFileList():
-                target_filepath = os.path.join(
-                    spatial_dir, os.path.basename(member_file))
-                shutil.copyfile(member_file, target_filepath)
-            spatial_file = None
-            target_arg_value = target_filepath
+            target_arg_value = _relpath(_copy_spatial_files(
+                args[key], spatial_dir))
             files_found[args[key]] = target_arg_value
+
         elif input_type == 'other':
             # Note that no models currently use this to the best of my
             # knowledge, so better to raise a NotImplementedError
