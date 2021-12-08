@@ -425,7 +425,8 @@ def build_datastack_archive(args, model_name, datastack_path):
                         try:
                             target_filepath = files_found[source_filepath]
                         except KeyError:
-                            basename = os.path.basename(source_filepath)
+                            basename = os.path.splitext(
+                                os.path.basename(source_filepath))[0]
                             target_dir = os.path.join(
                                 contained_files_dir,
                                 f'{row_index}_{basename}')
@@ -436,6 +437,10 @@ def build_datastack_archive(args, model_name, datastack_path):
                         dataframe.at[
                             row_index, spatial_column_name] = target_filepath
                         files_found[source_filepath] = target_filepath
+
+                target_arg_value = _relpath(
+                    os.path.join(data_dir, f'{key}.csv'))
+                files_found[args[key]] = target_arg_value
 
         elif input_type == 'file':
             target_filepath = os.path.join(
@@ -481,7 +486,7 @@ def build_datastack_archive(args, model_name, datastack_path):
         else:
             # not a filesystem-based type
             # Record the value directly
-            target_arg_value = json.dumps(args[key])
+            target_arg_value = str(args[key])
         rewritten_args[key] = target_arg_value
 
     def _recurse(args_param, handler, nested_key=None):
