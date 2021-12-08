@@ -65,6 +65,21 @@ Unreleased Changes (3.10)
       of 0.5 indicate same abundance between baseline and current/future
       LULC; values 0.5 to 1 indicate less abundance in current/future LULC
       and therefore higher rarity.
+* Wind Energy
+    * No model inputs or outputs are measured in "millions of" currency units
+      any more. Specifically:
+    * The ``mw_coef_ac`` and ``mw_coef_dc`` values in the Global Wind Energy
+      Parameters table were in millions of currency units per MW; now they
+      should be provided in currency units per MW.
+    * The ``infield_cable_cost``, ``cable_coef_ac``, and ``cable_coef_dc``
+      values in the Global Wind Energy Parameters table were in millions of
+      currency units per km; now they should be provided in currency units per km.
+    * The ``turbine_cost`` value in the Turbine Parameters table was in
+      millions of currency units; now it should be provided in currency units.
+    * The ``foundation_cost`` parameter was in millions of currency units; now
+      it should be provided in currency units.
+    * The NPV output, formerly ``npv_US_millions.tif``, is now ``npv.tif``.
+      It is now in currency units, not millions of currency units.
 
 3.9.2 (2021-10-29)
 ------------------

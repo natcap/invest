@@ -148,7 +148,7 @@ ARGS_SPEC = {
                     "about": "The length of infield cable."},
                 "infield_cable_cost": {
                     "type": "number",
-                    "units": u.megacurrency,
+                    "units": u.currency/u.kilometer,
                     "about": "The cost of infield cable."},
                 "mw_coef_ac": {
                     "type": "number",
@@ -231,7 +231,7 @@ ARGS_SPEC = {
                     "about": "The turbine's rated power output."},
                 "turbine_cost": {
                     "type": "number",
-                    "units": u.megacurrency,
+                    "units": u.currency,
                     "about": "The cost of one turbine."}
             },
             "about": "A table of parameters specific to the type of turbine.",
@@ -282,7 +282,7 @@ ARGS_SPEC = {
         },
         "foundation_cost": {
             "type": "number",
-            "units": u.megacurrency,
+            "units": u.currency,
             "required": "valuation_container",
             "about": "The cost of the foundation for one turbine.",
             "name": "foundation cost"
@@ -1169,7 +1169,7 @@ def execute(args):
             dependent_task_list=[land_poly_dist_raster_task])
 
     # Create output NPV and levelized rasters
-    npv_raster_path = os.path.join(out_dir, 'npv_US_millions%s.tif' % suffix)
+    npv_raster_path = os.path.join(out_dir, 'npv%s.tif' % suffix)
     levelized_raster_path = os.path.join(
         out_dir, 'levelized_cost_price_per_kWh%s.tif' % suffix)
 
@@ -1255,11 +1255,11 @@ def _calculate_npv_levelized_rasters(
     # Get constants from val_parameters_dict to make it more readable
     # The length of infield cable in km
     infield_length = float(val_parameters_dict['infield_cable_length'])
-    # The cost of infield cable in millions of currency units per km
+    # The cost of infield cable in currency units per km
     infield_cost = float(val_parameters_dict['infield_cable_cost'])
-    # The cost of the foundation in millions of currency units
+    # The cost of the foundation in currency units
     foundation_cost = float(args['foundation_cost'])
-    # The cost of each turbine unit in millions of currency units
+    # The cost of each turbine unit in currency units
     unit_cost = float(val_parameters_dict['turbine_cost'])
     # The installation cost as a decimal
     install_cost = float(val_parameters_dict['installation_cost'])
@@ -1372,8 +1372,7 @@ def _calculate_npv_levelized_rasters(
             # currency units per kilowatt-hour of that year
             currency_per_kwh = float(price_list[year])
 
-            # The revenue in millions of currency units for the wind farm. The
-            # energy_val_arr is in kWh/yr
+            # The revenue for the wind farm. The energy_val_arr is in kWh/yr
             rev_arr = energy_val_arr * currency_per_kwh
 
             # Calculate the net present value (NPV), the summation of the net
@@ -1396,8 +1395,7 @@ def _calculate_npv_levelized_rasters(
             decommish_capex_arr[~target_nodata_mask] -
             capex_arr[~target_nodata_mask])
 
-        # Calculate the levelized cost of energy, converting from millions of
-        # currency units to currency units
+        # Calculate the levelized cost of energy
         levelized_arr = (
             (levelized_num_arr + decommish_capex_arr + capex_arr) /
             levelized_denom_arr)
