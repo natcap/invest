@@ -51,6 +51,8 @@ Unreleased Changes (3.10)
       (i.e. lakes).
     * Added feature to accept raster (in addition to vector) habitat layers.
     * Changed one intermediate output (geomorphology) from SHP to GPKG.
+    * Fixed bug where output vectors had coordinates with an unncessary 
+      z-dimension. Output vectors now have 2D geometry.
 * Crop Pollination
     * Renamed the Windows start menu shortcut from "Pollination" to
       "Crop Pollination".
