@@ -400,7 +400,7 @@ def build_datastack_archive(args, model_name, datastack_path):
                     dir=data_dir)
 
                 dataframe = utils.read_csv_to_dataframe(args[key])
-                csv_source_dir = os.path.dirname(args[key])
+                csv_source_dir = os.path.abspath(os.path.dirname(args[key]))
                 for spatial_column_name in spatial_columns:
                     # Iterate through the spatial columns, identify the set of
                     # unique files and copy them out.
@@ -410,7 +410,7 @@ def build_datastack_archive(args, model_name, datastack_path):
                             spatial_column_name].items():
                         source_filepath = None
                         for possible_filepath in (
-                                os.path.abspath(column_value),
+                                column_value,
                                 os.path.join(csv_source_dir, column_value)):
                             if os.path.exists(possible_filepath):
                                 source_filepath = possible_filepath
@@ -423,6 +423,8 @@ def build_datastack_archive(args, model_name, datastack_path):
                             continue
 
                         try:
+                            # This path is already relative to the data
+                            # directory
                             target_filepath = files_found[source_filepath]
                         except KeyError:
                             basename = os.path.splitext(
@@ -432,9 +434,9 @@ def build_datastack_archive(args, model_name, datastack_path):
                                 f'{row_index}_{basename}')
                             target_filepath = _copy_spatial_files(
                                 source_filepath, target_dir)
+                            target_filepath = os.path.relpath(
+                                target_filepath, data_dir)
 
-                        target_filepath = os.path.relpath(
-                            target_filepath, data_dir)
                         dataframe.at[
                             row_index, spatial_column_name] = target_filepath
                         files_found[source_filepath] = target_filepath

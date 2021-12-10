@@ -1,5 +1,6 @@
 """Testing Module for Datastack."""
 import filecmp
+import importlib
 import json
 import os
 import shutil
@@ -21,6 +22,10 @@ SAMPLE_DATA_DIR = os.path.join(
     _TEST_FILE_CWD, '..', 'data', 'invest-sample-data')
 
 
+# Allow our tests to import the test modules in the test directory.
+sys.path.append(_TEST_FILE_CWD)
+
+
 class NewDatastackTest(unittest.TestCase):
     """Test Datastack."""
 
@@ -32,30 +37,40 @@ class NewDatastackTest(unittest.TestCase):
         """Remove temporary workspace."""
         shutil.rmtree(self.workspace)
 
-    def test_coastal_blue_carbon(self):
-        """Datastack: Test CBC."""
+    def execute_model(self, model_name, parameter_file):
         from natcap.invest import datastack
-        from natcap.invest.coastal_blue_carbon import coastal_blue_carbon
 
-        source_parameter_set_path = os.path.join(
-            SAMPLE_DATA_DIR, 'CoastalBlueCarbon',
-            'cbc_galveston_bay.invs.json')
-        source_args = datastack.extract_parameter_set(
-            source_parameter_set_path)
+        source_args = datastack.extract_parameter_set(parameter_file)
 
-        datastack_archive_path = os.path.join(self.workspace,
-            'datastack.invs.tar.gz')
+        datastack_archive_path = os.path.join(
+            self.workspace, 'datastack.invs.tar.gz')
         datastack.build_datastack_archive(
-            source_args.args,
-            'natcap.invest.coastal_blue_carbon.coastal_blue_carbon',
-            datastack_archive_path)
+            source_args.args, model_name, datastack_archive_path)
 
         extraction_dir = os.path.join(self.workspace, 'archived_data')
         args = datastack.extract_datastack_archive(
             datastack_archive_path, extraction_dir)
 
-        args['workspace_dir'] = os.path.join(self.workspace, 'cbc_workspace')
-        coastal_blue_carbon.execute(args)
+        args['workspace_dir'] = os.path.join(self.workspace, 'workspace')
+        module = importlib.import_module(name=model_name)
+        module.execute(args)
+
+    def test_coastal_blue_carbon(self):
+        """Datastack: Test CBC."""
+        source_parameter_set_path = os.path.join(
+            SAMPLE_DATA_DIR, 'CoastalBlueCarbon',
+            'cbc_galveston_bay.invs.json')
+        model_name = 'natcap.invest.coastal_blue_carbon.coastal_blue_carbon'
+        self.execute_model(model_name, source_parameter_set_path)
+
+    def test_recreation(self):
+        source_parameter_set_path = os.path.join(
+            SAMPLE_DATA_DIR, 'recreation', 'recreation_andros.invs.json')
+        model_name = 'natcap.invest.recreation.recmodel_client'
+        self.execute_model(model_name, source_parameter_set_path)
+
+    def test_import_module(self):
+        import invest_test_modules.datastack
 
 
 
