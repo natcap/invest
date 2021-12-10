@@ -63,17 +63,12 @@ class NewDatastackTest(unittest.TestCase):
         model_name = 'natcap.invest.coastal_blue_carbon.coastal_blue_carbon'
         self.execute_model(model_name, source_parameter_set_path)
 
+    @unittest.skip('Invokes remote server; network may be slow.')
     def test_recreation(self):
         source_parameter_set_path = os.path.join(
             SAMPLE_DATA_DIR, 'recreation', 'recreation_andros.invs.json')
         model_name = 'natcap.invest.recreation.recmodel_client'
         self.execute_model(model_name, source_parameter_set_path)
-
-    def test_import_module(self):
-        import invest_test_modules.datastack
-
-
-
 
 
 class DatastacksTest(unittest.TestCase):
@@ -822,7 +817,9 @@ class DatastacksTest(unittest.TestCase):
                 open_file.write('the contents of this file do not matter.')
 
         datastack_path = os.path.join(self.workspace, 'archive.invest.tar.gz')
-        datastack.build_datastack_archive(args, 'sample_model', datastack_path)
+        datastack.build_datastack_archive(
+            args, 'test_datastack_modules.mixed_path_separators',
+            datastack_path)
 
         extraction_path = os.path.join(self.workspace, 'extracted_dir')
         extracted_args = datastack.extract_datastack_archive(datastack_path,

@@ -375,9 +375,15 @@ def build_datastack_archive(args, model_name, datastack_path):
         # TODO why use mkdtemp?  If keys are in dirname, do we need suffix at
         # all?
 
-        # Filesystem-based types.
         input_type = args_spec[key]['type']
         spatial_types = {'raster', 'vector'}
+
+        # Python can't handle mixed file separators, so let's just standardize
+        # on linux filepaths internally.
+        if input_type in spatial_types.union(
+                {'csv', 'file', 'directory'}):
+            source_path = args[key].replace('\\', '/')
+
         if input_type == 'csv':
             # check the CSV for columns that may be spatial
             spatial_columns = []
@@ -393,14 +399,14 @@ def build_datastack_archive(args, model_name, datastack_path):
 
             target_csv_path = os.path.join(data_dir, f'{key}.csv')
             if not spatial_columns:
-                shutil.copyfile(args[key], target_csv_path)
+                shutil.copyfile(source_path, target_csv_path)
             else:
                 contained_files_dir = tempfile.mkdtemp(
                     prefix=f'{key}_csv_data',
                     dir=data_dir)
 
-                dataframe = utils.read_csv_to_dataframe(args[key])
-                csv_source_dir = os.path.abspath(os.path.dirname(args[key]))
+                dataframe = utils.read_csv_to_dataframe(source_path)
+                csv_source_dir = os.path.abspath(os.path.dirname(source_path))
                 for spatial_column_name in spatial_columns:
                     # Iterate through the spatial columns, identify the set of
                     # unique files and copy them out.
@@ -444,14 +450,14 @@ def build_datastack_archive(args, model_name, datastack_path):
                 dataframe.to_csv(target_csv_path)
 
             target_arg_value = _relpath(target_csv_path)
-            files_found[args[key]] = target_arg_value
+            files_found[source_path] = target_arg_value
 
         elif input_type == 'file':
             target_filepath = os.path.join(
-                data_dir, f'{key}_{os.path.basename(args[key])}')
-            shutil.copyfile(args[key], target_filepath)
+                data_dir, f'{key}_{os.path.basename(source_path)}')
+            shutil.copyfile(source_path, target_filepath)
             target_arg_value = _relpath(target_filepath)
-            files_found[args[key]] = target_arg_value
+            files_found[source_path] = target_arg_value
 
         elif input_type == 'directory':
             # copy the whole folder
@@ -462,25 +468,25 @@ def build_datastack_archive(args, model_name, datastack_path):
             # We want to copy the directory contents into the tempfile-created
             # directory directly, not copy the parent folder into the
             # tempfile-created directory.
-            for filename in os.listdir(args[key]):
-                src_path = os.path.join(args[key], filename)
+            for filename in os.listdir(source_path):
+                src_path = os.path.join(source_path, filename)
                 dest_path = os.path.join(target_directory, filename)
                 if os.path.isdir(src_path):
                     shutil.copytree(src_path, dest_path)
                 else:
                     shutil.copyfile(src_path, dest_path)
             target_arg_value = _relpath(target_directory)
-            files_found[args[key]] = target_arg_value
+            files_found[source_path] = target_arg_value
 
-        elif input_type in {'raster', 'vector'}:
+        elif input_type in spatial_types:
             # Create a directory with a readable name, something like
             # "aoi_path_vector" or "lulc_cur_path_raster".
             spatial_dir = tempfile.mkdtemp(
                 prefix=f'{key}_{input_type}',
                 dir=data_dir)
             target_arg_value = _relpath(_copy_spatial_files(
-                args[key], spatial_dir))
-            files_found[args[key]] = target_arg_value
+                source_path, spatial_dir))
+            files_found[source_path] = target_arg_value
 
         elif input_type == 'other':
             # Note that no models currently use this to the best of my
