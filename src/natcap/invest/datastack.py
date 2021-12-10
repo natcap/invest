@@ -391,12 +391,12 @@ def build_datastack_archive(args, model_name, datastack_path):
                 if col_types.intersection(spatial_types):
                     spatial_columns.append(col_name)
 
+            target_csv_path = os.path.join(data_dir, f'{key}.csv')
             if not spatial_columns:
-                target_arg_value = os.path.join(data_dir, f'{key}.csv')
-                files_found[args[key]] = _relpath(target_arg_value)
+                shutil.copyfile(args[key], target_csv_path)
             else:
                 contained_files_dir = tempfile.mkdtemp(
-                    prefix=f'{key}_csv',
+                    prefix=f'{key}_csv_data',
                     dir=data_dir)
 
                 dataframe = utils.read_csv_to_dataframe(args[key])
@@ -433,15 +433,16 @@ def build_datastack_archive(args, model_name, datastack_path):
                             target_filepath = _copy_spatial_files(
                                 source_filepath, target_dir)
 
-                        target_filepath = _relpath(target_filepath)
+                        target_filepath = os.path.relpath(
+                            target_filepath, data_dir)
                         dataframe.at[
                             row_index, spatial_column_name] = target_filepath
                         files_found[source_filepath] = target_filepath
 
-                target_csv_path = os.path.join(data_dir, f'{key}.csv')
                 dataframe.to_csv(target_csv_path)
-                target_arg_value = _relpath(target_csv_path)
-                files_found[args[key]] = target_arg_value
+
+            target_arg_value = _relpath(target_csv_path)
+            files_found[args[key]] = target_arg_value
 
         elif input_type == 'file':
             target_filepath = os.path.join(

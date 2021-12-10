@@ -1,22 +1,64 @@
 """Testing Module for Datastack."""
-import os
-import sys
-import unittest
-import tempfile
-import shutil
-import json
-import tarfile
-import textwrap
 import filecmp
+import json
+import os
+import shutil
+import sys
+import tarfile
+import tempfile
+import textwrap
+import unittest
 
 import numpy
 import pandas
 import pygeoprocessing
 from osgeo import ogr
 
-
-DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+_TEST_FILE_CWD = os.path.dirname(os.path.abspath(__file__))
+DATA_DIR = os.path.join(_TEST_FILE_CWD,
                         '..', 'data', 'invest-test-data', 'data_stack')
+SAMPLE_DATA_DIR = os.path.join(
+    _TEST_FILE_CWD, '..', 'data', 'invest-sample-data')
+
+
+class NewDatastackTest(unittest.TestCase):
+    """Test Datastack."""
+
+    def setUp(self):
+        """Create temporary workspace."""
+        self.workspace = tempfile.mkdtemp()
+
+    def tearDown(self):
+        """Remove temporary workspace."""
+        shutil.rmtree(self.workspace)
+
+    def test_coastal_blue_carbon(self):
+        """Datastack: Test CBC."""
+        from natcap.invest import datastack
+        from natcap.invest.coastal_blue_carbon import coastal_blue_carbon
+
+        source_parameter_set_path = os.path.join(
+            SAMPLE_DATA_DIR, 'CoastalBlueCarbon',
+            'cbc_galveston_bay.invs.json')
+        source_args = datastack.extract_parameter_set(
+            source_parameter_set_path)
+
+        datastack_archive_path = os.path.join(self.workspace,
+            'datastack.invs.tar.gz')
+        datastack.build_datastack_archive(
+            source_args.args,
+            'natcap.invest.coastal_blue_carbon.coastal_blue_carbon',
+            datastack_archive_path)
+
+        extraction_dir = os.path.join(self.workspace, 'archived_data')
+        args = datastack.extract_datastack_archive(
+            datastack_archive_path, extraction_dir)
+
+        args['workspace_dir'] = os.path.join(self.workspace, 'cbc_workspace')
+        coastal_blue_carbon.execute(args)
+
+
+
 
 
 class DatastacksTest(unittest.TestCase):
@@ -389,7 +431,7 @@ class DatastacksTest(unittest.TestCase):
 
     def test_datastack_parameter_set(self):
         """Datastack: test datastack parameter set."""
-        from natcap.invest import datastack, __version__
+        from natcap.invest import __version__, datastack
 
         params = {
             'a': 1,
@@ -433,7 +475,7 @@ class DatastacksTest(unittest.TestCase):
 
     def test_relative_parameter_set(self):
         """Datastack: test relative parameter set."""
-        from natcap.invest import datastack, __version__
+        from natcap.invest import __version__, datastack
 
         params = {
             'a': 1,
@@ -484,7 +526,7 @@ class DatastacksTest(unittest.TestCase):
     @unittest.skipUnless(sys.platform.startswith("win"), "requires Windows")
     def test_relative_parameter_set_windows(self):
         """Datastack: test relative parameter set paths saved linux style."""
-        from natcap.invest import datastack, __version__
+        from natcap.invest import __version__, datastack
 
         params = {
             'foo': os.path.join(self.workspace, 'foo.txt'),
@@ -785,7 +827,7 @@ class UtilitiesTest(unittest.TestCase):
     """Datastack Utilities Tests."""
     def test_print_args(self):
         """Datastacks: verify that we format args correctly."""
-        from natcap.invest.datastack import format_args_dict, __version__
+        from natcap.invest.datastack import __version__, format_args_dict
 
         args_dict = {
             'some_arg': [1, 2, 3, 4],
