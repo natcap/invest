@@ -43,6 +43,9 @@ Unreleased Changes (3.10)
     * Standardized and de-duplicated text in ``ARGS_SPEC`` ``about`` and
       ``name`` strings.
     * Update to FontAwesome 5 icons in the QT interface.
+    * Updating the ``taskgraph`` requirement to ``0.11.0`` to resolve an issue
+      where modifying a file within a roughly 2-second window would fool
+      ``taskgraph`` into believing that the file had not been modified.
 * Annual Water Yield
     * Renamed the Windows start menu shortcut from "Water Yield" to
       "Annual Water Yield".
@@ -51,7 +54,7 @@ Unreleased Changes (3.10)
       (i.e. lakes).
     * Added feature to accept raster (in addition to vector) habitat layers.
     * Changed one intermediate output (geomorphology) from SHP to GPKG.
-    * Fixed bug where output vectors had coordinates with an unncessary 
+    * Fixed bug where output vectors had coordinates with an unncessary
       z-dimension. Output vectors now have 2D geometry.
 * Crop Pollination
     * Renamed the Windows start menu shortcut from "Pollination" to
