@@ -44,6 +44,9 @@ Unreleased Changes
       should be done via ``pip``.  The ``README`` has been updated to reflect
       this change, and this should only be noticeable for those installing
       ``natcap.invest`` from source.
+    * Updating the ``taskgraph`` requirement to ``0.11.0`` to resolve an issue
+      where modifying a file within a roughly 2-second window would fool
+      ``taskgraph`` into believing that the file had not been modified.
 * Habitat Quality
     * Changed how Habitat Rarity outputs are calculated to be less confusing.
       Values now represent a 0 to 1 index where before there could be
