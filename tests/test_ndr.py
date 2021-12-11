@@ -7,8 +7,7 @@ import unittest
 
 import numpy
 import pygeoprocessing
-from osgeo import gdal
-from osgeo import ogr
+from osgeo import gdal, ogr
 
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'ndr')
@@ -246,10 +245,18 @@ class NDRTests(unittest.TestCase):
         if mismatch_list:
             raise RuntimeError("results not expected: %s" % mismatch_list)
 
+        # We only need to test that the drainage mask exists.  Functionality
+        # for that raster is tested in SDR.
+        self.assertTrue(
+            os.path.exists(
+                os.path.join(
+                    args['workspace_dir'], 'intermediate_outputs',
+                    'what_drains_to_stream.tif')))
+
     def test_validation(self):
         """NDR test argument validation."""
-        from natcap.invest.ndr import ndr
         from natcap.invest import validation
+        from natcap.invest.ndr import ndr
 
         # use predefined directory so test can clean up files during teardown
         args = NDRTests.generate_base_args(self.workspace_dir)

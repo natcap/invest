@@ -7,17 +7,16 @@ The SDR method in this model is based on:
     large watersheds." Journal of Soil and Water Conservation 63.3 (2008):
     105-111.
 """
-import os
 import logging
+import os
 
-from osgeo import gdal, ogr
 import numpy
 import pygeoprocessing
 import pygeoprocessing.routing
 import taskgraph
-from .. import utils
-from .. import validation
-from .. import MODEL_METADATA
+from osgeo import gdal, ogr
+
+from .. import MODEL_METADATA, utils, validation
 from . import sdr_core
 
 LOGGER = logging.getLogger(__name__)
@@ -220,7 +219,8 @@ _INTERMEDIATE_BASE_FILES = {
     'w_path': 'w.tif',
     'ws_inverse_path': 'ws_inverse.tif',
     'e_prime_path': 'e_prime.tif',
-    'weighted_avg_aspect_path': 'weighted_avg_aspect.tif'
+    'weighted_avg_aspect_path': 'weighted_avg_aspect.tif',
+    'drainage_mask': 'what_drains_to_stream.tif',
 }
 
 _TMP_BASE_FILES = {
@@ -234,6 +234,7 @@ _TMP_BASE_FILES = {
 # Target nodata is for general rasters that are positive, and _IC_NODATA are
 # for rasters that are any range
 _TARGET_NODATA = -1.0
+_BYTE_NODATA = 255
 _IC_NODATA = float(numpy.finfo('float32').min)
 
 
@@ -662,6 +663,14 @@ def execute(args):
         task_name='calculate sediment retention')
 
     _ = task_graph.add_task(
+        func=_calculate_what_drains_to_stream,
+        args=(f_reg['flow_direction_path'], f_reg['d_dn_path'],
+              f_reg['drainage_mask']),
+        target_path_list=[f_reg['drainage_mask']],
+        dependent_task_list=[flow_dir_task, d_dn_task],
+        task_name='write mask of what drains to stream')
+
+    _ = task_graph.add_task(
         func=_generate_report,
         args=(
             args['watersheds_path'], f_reg['usle_path'],
@@ -674,6 +683,71 @@ def execute(args):
 
     task_graph.close()
     task_graph.join()
+
+
+def _calculate_what_drains_to_stream(
+        flow_dir_mfd_path, dist_to_channel_mfd_path, target_mask_path):
+    """Create a mask indicating regions that do or do not drain to a stream.
+
+    This is useful because ``pygeoprocessing.distance_to_stream_mfd`` may leave
+    some unexpected regions as nodata if they do not drain to a stream.  This
+    may be confusing behavior, so this mask is intended to locate what drains
+    to a stream and what does not. A pixel doesn't drain to a stream if it has
+    a defined flow direction but undefined distance to stream.
+
+    Args:
+        flow_dir_mfd_path (string): The path to an MFD flow direction raster.
+            This raster must have a nodata value defined.
+        dist_to_channel_mfd_path (string): The path to an MFD
+            distance-to-channel raster.  This raster must have a nodata value
+            defined.
+        target_mask_path (string): The path to where the mask raster should be
+            written.
+
+    Returns:
+        ``None``
+    """
+    flow_dir_mfd_nodata = pygeoprocessing.get_raster_info(
+        flow_dir_mfd_path)['nodata'][0]
+    dist_to_channel_nodata = pygeoprocessing.get_raster_info(
+        dist_to_channel_mfd_path)['nodata'][0]
+
+    def _what_drains_to_stream(flow_dir_mfd, dist_to_channel):
+        """Determine which pixels do and do not drain to a stream.
+
+        Args:
+            flow_dir_mfd (numpy.array): A numpy array of MFD flow direction
+                values.
+            dist_to_channel (numpy.array): A numpy array of calculated
+                distances to the nearest channel.
+
+        Returns:
+            A ``numpy.array`` of dtype ``numpy.uint8`` with pixels where:
+
+                * ``255`` where ``flow_dir_mfd`` is nodata (and thus 
+                  ``dist_to_channel`` is also nodata).
+                * ``0`` where ``flow_dir_mfd`` has data and ``dist_to_channel``
+                  does not
+                * ``1`` where ``flow_dir_mfd`` has data, and
+                  ``dist_to_channel`` also has data.
+        """
+        drains_to_stream = numpy.full(
+            flow_dir_mfd.shape, _BYTE_NODATA, dtype=numpy.uint8)
+        valid_flow_dir = ~numpy.isclose(flow_dir_mfd, flow_dir_mfd_nodata)
+        valid_dist_to_channel = (
+            ~numpy.isclose(dist_to_channel, dist_to_channel_nodata) &
+            valid_flow_dir)
+
+        # Nodata where both flow_dir and dist_to_channel are nodata
+        # 1 where flow_dir and dist_to_channel have values (drains to stream)
+        # 0 where flow_dir has data and dist_to_channel doesn't (doesn't drain)
+        drains_to_stream[valid_flow_dir & valid_dist_to_channel] = 1
+        drains_to_stream[valid_flow_dir & ~valid_dist_to_channel] = 0
+        return drains_to_stream
+
+    pygeoprocessing.raster_calculator(
+        [(flow_dir_mfd_path, 1), (dist_to_channel_mfd_path, 1)],
+        _what_drains_to_stream, target_mask_path, gdal.GDT_Byte, _BYTE_NODATA)
 
 
 def _calculate_ls_factor(
