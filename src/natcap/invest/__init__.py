@@ -157,7 +157,7 @@ MODEL_METADATA = {
         userguide='scenario_gen_proximity.html',
         aliases=('sgp',)),
     'scenic_quality': _MODELMETA(
-        model_title=_('Unobstructed Views: Scenic Quality Provision'),
+        model_title=_('Scenic Quality'),
         pyname='natcap.invest.scenic_quality.scenic_quality',
         gui='scenic_quality.ScenicQuality',
         userguide='scenic_quality.html',

@@ -448,7 +448,7 @@ class StormwaterTests(unittest.TestCase):
          precipitation_array,
          precipitation_path,
          retention_cost,
-         pixel_area) = self.basic_setup(self.workspace_dir)
+         pixel_area) = self.basic_setup(self.workspace_dir, ir=True)
 
         args = {
             'workspace_dir': self.workspace_dir,
@@ -466,30 +466,42 @@ class StormwaterTests(unittest.TestCase):
 
         expected_feature_fields = {
             1: {
-                'RR_mean': 0.825,
-                'RV_sum': 8.5,
-                'avoided_pollutant1': .0085,
-                'load_pollutant1': .000375,
-                'val_sum': 21.505
+                'mean_retention_ratio': 0.825,
+                'mean_runoff_ratio': 0.175,
+                'mean_infiltration_ratio': 0.575,
+                'total_retention_volume': 8.5,
+                'total_runoff_volume': 1.5,
+                'total_infiltration_volume': 5.5,
+                'pollutant1_total_avoided_load': .0085,
+                'pollutant1_mean_load': .000375,
+                'total_retention_value': 21.505
             },
             2: {
-                'RR_mean': 0.5375,
-                'RV_sum': 7.5,
-                'avoided_pollutant1': .0075,
-                'load_pollutant1': .006875,
-                'val_sum': 18.975
+                'mean_retention_ratio': 0.5375,
+                'mean_runoff_ratio': 0.4625,
+                'mean_infiltration_ratio': 0.7625,
+                'total_retention_volume': 7.5,
+                'total_runoff_volume': 7.5,
+                'total_infiltration_volume': 11.5,
+                'pollutant1_total_avoided_load': .0075,
+                'pollutant1_mean_load': .006875,
+                'total_retention_value': 18.975
             },
             3: {
-                'RR_mean': 0,
-                'RV_sum': 0,
-                'avoided_pollutant1': 0,
-                'load_pollutant1': 0,
-                'val_sum': 0
+                'mean_retention_ratio': 0,
+                'total_retention_volume': 0,
+                'mean_runoff_ratio': 0,
+                'total_runoff_volume': 0,
+                'mean_infiltration_ratio': 0,
+                'total_infiltration_volume': 0,
+                'pollutant1_total_avoided_load': 0,
+                'pollutant1_mean_load': 0,
+                'total_retention_value': 0
             }
         }
 
         aggregate_data_path = os.path.join(
-            self.workspace_dir,
+            args['workspace_dir'],
             stormwater.FINAL_OUTPUTS['reprojected_aggregate_areas_path'])
         aggregate_vector = gdal.OpenEx(aggregate_data_path, gdal.OF_VECTOR)
         aggregate_layer = aggregate_vector.GetLayer()

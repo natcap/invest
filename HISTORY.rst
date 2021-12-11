@@ -2,22 +2,20 @@
   Changes should be grouped for readability.
 
   InVEST model names:
-  - Carbon
+  - Annual Water Yield
+  - Carbon Storage and Sequestration
   - Coastal Blue Carbon
   - Coastal Vulnerability
+  - Crop Pollination
   - Crop Production
   - DelineateIt
-  - Finfish
-  - Fisheries
   - Forest Carbon Edge Effects
   - Globio
   - Habitat Quality
   - HRA
-  - Annual Water Yield
   - NDR
-  - Pollination
-  - Recreation
-  - Routedem
+  - Visitation: Recreation and Tourism
+  - RouteDEM
   - Scenario Generator
   - Scenic Quality
   - SDR
@@ -37,7 +35,7 @@
 
 Unreleased Changes (3.10)
 -------------------------
-* General:
+* General
     * Add a ``--language`` argument to the command-line interface, which will
       translate model names, specs, and validation messages.
     * Accept a ``language`` query parameter at the UI server endpoints, which
@@ -49,11 +47,19 @@ Unreleased Changes (3.10)
     * Standardized and de-duplicated text in ``ARGS_SPEC`` ``about`` and
       ``name`` strings.
     * Update to FontAwesome 5 icons in the QT interface.
-* Coastal Vulnerability:
+* Annual Water Yield
+    * Renamed the Windows start menu shortcut from "Water Yield" to
+      "Annual Water Yield".
+* Coastal Vulnerability
     * Fixed bug where shore points were created on interior landmass holes
       (i.e. lakes).
     * Added feature to accept raster (in addition to vector) habitat layers.
     * Changed one intermediate output (geomorphology) from SHP to GPKG.
+    * Fixed bug where output vectors had coordinates with an unncessary 
+      z-dimension. Output vectors now have 2D geometry.
+* Crop Pollination
+    * Renamed the Windows start menu shortcut from "Pollination" to
+      "Crop Pollination".
 * Fisheries and Fisheries HST
     * The Fisheries models were deprecated due to lack of use,
       lack of scientific support staff, and maintenance costs.
@@ -74,6 +80,8 @@ Unreleased Changes (3.10)
       ``linear``, ``logarithmic``, ``exponential``. The names displayed in the
       UI dropdown will stay the same as before. Datastacks or scripts will need
       to be updated to use the new option values.
+    * Renamed the model title from
+      "Unobstructed Views: Scenic Quality Provision" to "Scenic Quality".
 * Wave Energy
     * Rename the ``analysis_area_path`` arg to ``analysis_area``, since it is
       not a path but an option string.
@@ -82,6 +90,9 @@ Unreleased Changes (3.10)
       ``australia``, ``global``. The names displayed in the UI dropdown will
       stay the same as before. Datastacks and scripts will need to be updated
       to use the new option values.
+* Visitation: Recreation and Tourism
+    * Renamed the Windows start menu shortcut from "Recreation" to
+      "Visitation: Recreation and Tourism".
 
 3.9.2 (2021-10-29)
 ------------------
