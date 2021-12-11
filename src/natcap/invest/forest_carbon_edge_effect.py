@@ -122,12 +122,16 @@ ARGS_SPEC = {
         "pools_to_calculate": {
             "type": "option_string",
             "options": {
-                "all": (
-                    "Use all pools (aboveground, belowground, soil, and dead "
-                    "matter) in the carbon pool calculation."),
-                "above_ground": (
-                    "Only use the aboveground pool in the carbon pool "
-                    "calculation.")
+                "all": {
+                    "display_name": _("all"),
+                    "description": _(
+                        "Use all pools (aboveground, belowground, soil, and "
+                        "dead matter) in the carbon pool calculation.")},
+                "above_ground": {
+                    "display_name": _("aboveground only"),
+                    "description": _(
+                        "Only use the aboveground pool in the carbon pool "
+                        "calculation.")}
             },
             "about": _("Which carbon pools to consider."),
             "name": _("carbon pools to calculate")
@@ -143,9 +147,9 @@ ARGS_SPEC = {
                 "method": {
                     "type": "option_string",
                     "options": {
-                        "1": "Asymptotic: biomass=θ₁-θ₂·exp(-θ₃·distance)",
-                        "2": "Logarithmic: biomass=θ₁+θ₂·ln(distance)",
-                        "3": "Linear: biomass=θ₁+θ₂·distance"
+                        "1": {"description": _("asymptotic")},
+                        "2": {"description": _("logarithmic")},
+                        "3": {"description": _("linear")}
                     },
                     "about": "Optimal regression model for the area."
                 },

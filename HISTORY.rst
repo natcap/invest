@@ -69,6 +69,19 @@ Unreleased Changes (3.10)
       of 0.5 indicate same abundance between baseline and current/future
       LULC; values 0.5 to 1 indicate less abundance in current/future LULC
       and therefore higher rarity.
+* Scenic Quality
+    * Simplify the ``valuation_function`` arg options. The options are now:
+      ``linear``, ``logarithmic``, ``exponential``. The names displayed in the
+      UI dropdown will stay the same as before. Datastacks or scripts will need
+      to be updated to use the new option values.
+* Wave Energy
+    * Rename the ``analysis_area_path`` arg to ``analysis_area``, since it is
+      not a path but an option string.
+    * Simplify the ``analysis_area`` arg options. The options are now:
+      ``westcoast``, ``eastcoast``, ``northsea4``, ``northsea10``,
+      ``australia``, ``global``. The names displayed in the UI dropdown will
+      stay the same as before. Datastacks and scripts will need to be updated
+      to use the new option values.
 
 3.9.2 (2021-10-29)
 ------------------

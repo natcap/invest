@@ -412,15 +412,14 @@ def check_option_string(value, options, **kwargs):
     Args:
         value: The value to test. Will be cast to a string before comparing
             against the allowed options.
-        options (list | dict): strings to test against.
-            If a dict, test against the keys.
+        options (dict): option spec to validate against.
 
     Returns:
         A string error message if ``value`` is not in ``options``.  ``None``
         otherwise.
 
     """
-    # if options is an empty set, that means it's dynamically populated
+    # if options is empty, that means it's dynamically populated
     # so validation should be left to the model's validate function.
     if options and str(value) not in options:
         return MESSAGES['INVALID_OPTION'].format(option_list=sorted(options))

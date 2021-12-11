@@ -784,9 +784,9 @@ class ScenicQualityValidationTests(unittest.TestCase):
             single_key_errors['valuation_function'],
             validation.MESSAGES['INVALID_OPTION'].format(
                 option_list=[
-                    'exponential: a * e^(-bx)',
-                    'linear: a + bx',
-                    'logarithmic: a + b log(x+1)']))
+                    'exponential',
+                    'linear',
+                    'logarithmic']))
 
     def test_dem_projected_in_m(self):
         """SQ Validate: the DEM must be projected in meters."""

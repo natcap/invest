@@ -146,21 +146,28 @@ ARGS_SPEC = {
                 "msa_type": {
                     "type": "option_string",
                     "options": {
-                        "msa_i_primary": (
-                            "This MSA value represents infrastructure impacts "
-                            "on primary vegetation. The value in the 'value' "
-                            "column is a distance range in meters."),
-                        "msa_i_other": (
-                            "This MSA value represents infrastructure impacts "
-                            "on non-primary vegetation. The value in the "
-                            "'value' column is a distance range in meters."),
-                        "msa_f": (
-                            "This MSA value represents fragmentation impacts."
-                            "The value in the 'value' column is an FFQI range."),
-                        "msa_lu": (
-                            "This MSA value represents land-use impacts. The "
-                            "value in the 'value' column is one of the GLOBIO-"
-                            "recognized LULC codes."),
+                        "msa_i_primary": {
+                            "description": _(
+                                "This MSA value represents infrastructure "
+                                "impacts on primary vegetation. The value in "
+                                "the 'value' column is a distance range in "
+                                "meters.")},
+                        "msa_i_other": {
+                            "description": _(
+                                "This MSA value represents infrastructure "
+                                "impacts on non-primary vegetation. The value "
+                                "in the 'value' column is a distance range in "
+                                "meters.")},
+                        "msa_f": {
+                            "description": _(
+                                "This MSA value represents fragmentation "
+                                "impacts. The value in the 'value' column is "
+                                "an FFQI range.")},
+                        "msa_lu": {
+                            "description": _(
+                                "This MSA value represents land-use impacts. "
+                                "The value in the 'value' column is one of "
+                                "the GLOBIO-recognized LULC codes.")},
                     },
                     "about": "The type of MSA value in this row."
                 },

@@ -307,11 +307,21 @@ ARGS_SPEC = {
                 "[LULC CODE]": {
                     "type": "option_string",
                     "options": {
-                        "accum": "a state of carbon accumulation",
-                        "high-impact-disturb": "high carbon disturbance rate",
-                        "med-impact-disturb": "medium carbon disturbance rate",
-                        "low-impact-disturb": "low carbon disturbance rate",
-                        "NCC": "no change in carbon",
+                        "accum": {
+                            "description": _("a state of carbon accumulation")
+                        },
+                        "high-impact-disturb": {
+                            "description": _("high carbon disturbance rate")
+                        },
+                        "med-impact-disturb": {
+                            "description": _("medium carbon disturbance rate")
+                        },
+                        "low-impact-disturb": {
+                            "description": _("low carbon disturbance rate")
+                        },
+                        "NCC": {
+                            "description": _("no change in carbon")
+                        }
                     },
                     "about": _(
                         "A transition matrix describing the type of carbon "

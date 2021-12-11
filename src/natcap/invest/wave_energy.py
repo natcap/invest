@@ -140,16 +140,20 @@ ARGS_SPEC = {
                 "with the sample data."),
             "name": _("wave base data")
         },
-        "analysis_area_path": {
+        "analysis_area": {
             "type": "option_string",
-            "options": [
-                "West Coast of North America and Hawaii",
-                "East Coast of North America and Puerto Rico",
-                "North Sea 4 meter resolution",
-                "North Sea 10 meter resolution",
-                "Australia",
-                "Global"
-            ],
+            "options": {
+                "westcoast": {"display_name": _(
+                    "West Coast of North America and Hawaii")},
+                "eastcoast": {"display_name": _(
+                    "East Coast of North America and Puerto Rico")},
+                "northsea4": {
+                    "display_name": _("North Sea 4 meter resolution")},
+                "northsea10": {
+                    "display_name": _("North Sea 10 meter resolution")},
+                "australia": {"display_name": _("Australia")},
+                "global": {"display_name": _("Global")}
+            },
             "about": _(
                 "The analysis area over which to run the model."),
             "name": _("analysis area")
@@ -223,8 +227,11 @@ ARGS_SPEC = {
                 "type": {
                     "type": "option_string",
                     "options": {
-                        "LAND": "This is a land connection point",
-                        "GRID": "This is a grid connection point"},
+                        "LAND": {"description": _(
+                            "This is a land connection point")},
+                        "GRID": {"description": _(
+                            "This is a grid connection point")}
+                    },
                     "about": "The type of connection at this point."
                 },
                 "lat": {
@@ -395,7 +402,7 @@ def execute(args):
         wave_base_data_path (str): Directory location of wave base data
             including WAVEWATCH III (WW3) data and analysis area shapefile.
             (required)
-        analysis_area_path (str): A string identifying the analysis area of
+        analysis_area (str): A string identifying the analysis area of
             interest. Used to determine wave data shapefile, wave data text
             file, and analysis area boundary shape. (required)
         aoi_path (str): A polygon OGR vector outlining a more detailed area
@@ -506,7 +513,7 @@ def execute(args):
     # that stores the related paths to the needed inputs
     wave_base_data_path = args['wave_base_data_path']
     analysis_dict = {
-        'West Coast of North America and Hawaii': {
+        'westcoast': {
             'point_vector':
             os.path.join(wave_base_data_path, 'NAmerica_WestCoast_4m.shp'),
             'extract_vector':
@@ -514,7 +521,7 @@ def execute(args):
             'ww3_path':
             os.path.join(wave_base_data_path, 'NAmerica_WestCoast_4m.txt.bin')
         },
-        'East Coast of North America and Puerto Rico': {
+        'eastcoast': {
             'point_vector':
             os.path.join(wave_base_data_path, 'NAmerica_EastCoast_4m.shp'),
             'extract_vector':
@@ -522,7 +529,7 @@ def execute(args):
             'ww3_path':
             os.path.join(wave_base_data_path, 'NAmerica_EastCoast_4m.txt.bin')
         },
-        'North Sea 4 meter resolution': {
+        'northsea4': {
             'point_vector':
             os.path.join(wave_base_data_path, 'North_Sea_4m.shp'),
             'extract_vector':
@@ -530,7 +537,7 @@ def execute(args):
             'ww3_path':
             os.path.join(wave_base_data_path, 'North_Sea_4m.bin')
         },
-        'North Sea 10 meter resolution': {
+        'northsea10': {
             'point_vector':
             os.path.join(wave_base_data_path, 'North_Sea_10m.shp'),
             'extract_vector':
@@ -538,7 +545,7 @@ def execute(args):
             'ww3_path':
             os.path.join(wave_base_data_path, 'North_Sea_10m.bin')
         },
-        'Australia': {
+        'australia': {
             'point_vector':
             os.path.join(wave_base_data_path, 'Australia_4m.shp'),
             'extract_vector':
@@ -546,7 +553,7 @@ def execute(args):
             'ww3_path':
             os.path.join(wave_base_data_path, 'Australia_4m.bin')
         },
-        'Global': {
+        'global': {
             'point_vector':
             os.path.join(wave_base_data_path, 'Global.shp'),
             'extract_vector':
@@ -558,14 +565,14 @@ def execute(args):
 
     # Get the String value for the analysis area provided from the dropdown
     # menu in the user interface
-    analysis_area_path = args['analysis_area_path']
+    analysis_area = args['analysis_area']
     # Use the analysis area String to get the path's to the wave seastate data,
     # the wave point shapefile, and the polygon extract shapefile
     wave_seastate_bins = _binary_wave_data_to_dict(
-        analysis_dict[analysis_area_path]['ww3_path'])
-    analysis_area_points_path = analysis_dict[analysis_area_path][
+        analysis_dict[analysis_area]['ww3_path'])
+    analysis_area_points_path = analysis_dict[analysis_area][
         'point_vector']
-    analysis_area_extract_path = analysis_dict[analysis_area_path][
+    analysis_area_extract_path = analysis_dict[analysis_area][
         'extract_vector']
 
     # Remove the wave point shapefile if it exists

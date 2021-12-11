@@ -18,9 +18,18 @@ from . import MODEL_METADATA
 
 LOGGER = logging.getLogger(__name__)
 
-CROPS = [
-    "barley", "maize", "oilpalm", "potato", "rice", "soybean",
-    "sugarbeet", "sugarcane", "sunflower", "wheat"]
+CROPS = {
+    "barley": {"description": _("barley")},
+    "maize": {"description": _("maize")},
+    "oilpalm": {"description": _("oil palm")},
+    "potato": {"description": _("potato")},
+    "rice": {"description": _("rice")},
+    "soybean": {"description": _("soybean")},
+    "sugarbeet": {"description": _("sugar beet")},
+    "sugarcane": {"description": _("sugarcane")},
+    "wheat": {"description": _("wheat")}
+}
+
 
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["crop_production_regression"].model_title,

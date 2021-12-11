@@ -124,11 +124,12 @@ ARGS_SPEC = {
             "name": _("Valuation function"),
             "type": "option_string",
             "required": "do_valuation",
-            "options": [
-                "linear: a + bx",
-                "logarithmic: a + b log(x+1)",
-                "exponential: a * e^(-bx)"
-            ],
+            "options": {
+                "linear": {"display_name": _("linear: a + bx")},
+                "logarithmic": {"display_name": _(
+                    "logarithmic: a + b log(x+1)")},
+                "exponential": {"display_name": _("exponential: a * e^(-bx)")}
+            },
             "about": _(
                 "Valuation function used to calculate the visual impact of "
                 "each feature, given distance from the feature 'x' and "
@@ -215,16 +216,10 @@ def execute(args):
             'a': float(args['a_coef']),
             'b': float(args['b_coef']),
         }
-        if args['valuation_function'].startswith('linear'):
-            valuation_method = 'linear'
-        elif args['valuation_function'].startswith('logarithmic'):
-            valuation_method = 'logarithmic'
-        elif args['valuation_function'].startswith('exponential'):
-            valuation_method = 'exponential'
-        else:
+        if (args['valuation_function'] not in
+                ARGS_SPEC['args']['valuation_function']['options']):
             raise ValueError('Valuation function type %s not recognized' %
                              args['valuation_function'])
-
         max_valuation_radius = float(args['max_valuation_radius'])
 
     # Create output and intermediate directory
@@ -349,7 +344,7 @@ def execute(args):
                 args=(visibility_filepath,
                       viewpoint,
                       weight,  # user defined, from WEIGHT field in vector
-                      valuation_method,
+                      args['valuation_function'],
                       valuation_coefficients,  # a, b from args, a dict.
                       max_valuation_radius,
                       viewshed_valuation_path),
@@ -694,7 +689,6 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
         ``None``
 
     """
-    valuation_method = valuation_method.lower()
     LOGGER.info('Calculating valuation with %s method. Coefficients: %s',
                 valuation_method,
                 ' '.join(['%s=%g' % (k, v) for (k, v) in
