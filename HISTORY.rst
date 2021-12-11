@@ -68,6 +68,7 @@ Unreleased Changes (3.10)
       abundance in current/future LULC and therefore less rarity; values
       of 0.5 indicate same abundance between baseline and current/future
       LULC; values 0.5 to 1 indicate less abundance in current/future LULC
+      and therefore higher rarity.
 * Scenic Quality
     * Simplify the ``valuation_function`` arg options. The options are now:
       ``linear``, ``logarithmic``, ``exponential``. The names displayed in the

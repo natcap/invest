@@ -219,7 +219,8 @@ def install_language(language_code):
     """
     if language_code not in LOCALES:
         raise ValueError(
-            f"language '{language_code}' is not supported by InVEST.")
+            f"Language '{language_code}' is not supported by InVEST. "
+            f"Supported language codes are: {LOCALES}")
     language = gettext.translation(
         'messages',
         languages=[language_code],
