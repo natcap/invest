@@ -723,8 +723,8 @@ def _calculate_what_drains_to_stream(
         Returns:
             A ``numpy.array`` of dtype ``numpy.uint8`` with pixels where:
 
-                * ``255`` where both ``flow_dir_mfd`` and ``dist_to_channel``
-                  are nodata.
+                * ``255`` where ``flow_dir_mfd`` is nodata (and thus 
+                  ``dist_to_channel`` is also nodata).
                 * ``0`` where ``flow_dir_mfd`` has data and ``dist_to_channel``
                   does not
                 * ``1`` where ``flow_dir_mfd`` has data, and
