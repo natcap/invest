@@ -692,7 +692,8 @@ def _calculate_what_drains_to_stream(
     This is useful because ``pygeoprocessing.distance_to_stream_mfd`` may leave
     some unexpected regions as nodata if they do not drain to a stream.  This
     may be confusing behavior, so this mask is intended to locate what drains
-    to a stream and what does not.
+    to a stream and what does not. A pixel doesn't drain to a stream if it has
+    a defined flow direction but undefined distance to stream.
 
     Args:
         flow_dir_mfd_path (string): The path to an MFD flow direction raster.
