@@ -48,6 +48,9 @@ Unreleased Changes
       of ``natcap.invest`` is built and installed.  The former (buggy) version
       of ``make install`` would install whatever the latest version was in your
       ``dist`` folder.
+    * Updating the ``taskgraph`` requirement to ``0.11.0`` to resolve an issue
+      where modifying a file within a roughly 2-second window would fool
+      ``taskgraph`` into believing that the file had not been modified.
 * Habitat Quality
     * Changed how Habitat Rarity outputs are calculated to be less confusing.
       Values now represent a 0 to 1 index where before there could be
