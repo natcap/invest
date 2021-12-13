@@ -145,62 +145,6 @@ const uiSpec = {
       snap_distance: isSufficient.bind(null, 'snap_points')
     }
   },
-  finfish_aquaculture: {
-    order: [
-      ["workspace_dir", "results_suffix"],
-      ["ff_farm_loc", "farm_ID"],
-      ["g_param_a", "g_param_b", "g_param_tau"],
-      ["use_uncertainty", "g_param_a_sd", "g_param_b_sd", "num_monte_carlo_runs"],
-      ["water_temp_tbl", "farm_op_tbl", "outplant_buffer"],
-      ["do_valuation", "p_per_kg", "frac_p", "discount"]
-    ],
-    dropdownFunctions: {
-      farm_ID: ((state) => getVectorColumnNames(state.argsValues['ff_farm_loc'].value))
-    },
-    enabledFunctions: {
-      farm_ID: isSufficient.bind(null, 'ff_farm_loc'),
-      g_param_a_sd: isSufficient.bind(null, 'use_uncertainty'),
-      g_param_b_sd: isSufficient.bind(null, 'use_uncertainty'),
-      num_monte_carlo_runs: isSufficient.bind(null, 'use_uncertainty'),
-      p_per_kg: isSufficient.bind(null, 'do_valuation'),
-      frac_p: isSufficient.bind(null, 'do_valuation'),
-      discount: isSufficient.bind(null, 'do_valuation')
-    }
-  },
-  fisheries: {
-    order: [
-      ["workspace_dir", "results_suffix"],
-      ["aoi_vector_path", "total_timesteps"],
-      ["population_type", "sexsp", "harvest_units"],
-      ["do_batch", "population_csv_path", "population_csv_dir"],
-      ["total_init_recruits", "recruitment_type", "spawn_units", "alpha", "beta", "total_recur_recruits"],
-      ["migr_cont", "migration_dir"],
-      ["val_cont", "frac_post_process", "unit_price"]
-
-    ],
-    enabledFunctions: {
-      population_csv_path: isNotSufficient.bind(null, 'do_batch'),
-      population_csv_dir: isSufficient.bind(null, 'do_batch'),
-      spawn_units: (state => isSufficient('recruitment_type', state) &&
-        ['Beverton-Holt', 'Ricker'].includes(state.argsValues['recruitment_type'].value)),
-      alpha: (state => isSufficient('recruitment_type', state) &&
-        ['Beverton-Holt', 'Ricker'].includes(state.argsValues['recruitment_type'].value)),
-      beta: (state => isSufficient('recruitment_type', state) &&
-        ['Beverton-Holt', 'Ricker'].includes(state.argsValues['recruitment_type'].value)),
-      total_recur_recruits: (state => isSufficient('recruitment_type', state) &&
-        state.argsValues['recruitment_type'].value === 'Fixed'),
-      migration_dir: isSufficient.bind(null, 'migr_cont'),
-      frac_post_process: isSufficient.bind(null, 'val_cont'),
-      unit_price: isSufficient.bind(null, 'val_cont'),
-    }
-  },
-  fisheries_hst: {
-    order: [
-      ["workspace_dir", "results_suffix"],
-      ["population_csv_path", "sexsp"],
-      ["habitat_dep_csv_path", "habitat_chg_csv_path", "gamma"]
-    ]
-  },
   forest_carbon_edge_effect: {
     order: [
       ["workspace_dir", "results_suffix"],
