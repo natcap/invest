@@ -74,9 +74,19 @@ Unreleased Changes (3.10)
       of 0.5 indicate same abundance between baseline and current/future
       LULC; values 0.5 to 1 indicate less abundance in current/future LULC
       and therefore higher rarity.
+* NDR
+    * Added a new raster to the model's workspace,
+      ``intermediate_outputs/what_drains_to_stream[suffix].tif``.  This raster
+      has pixel values of 1 where DEM pixels flow to an identified stream, and
+      0 where they do not.
 * Scenic Quality
     * Renamed the model title from
       "Unobstructed Views: Scenic Quality Provision" to "Scenic Quality".
+* SDR
+    * Added a new raster to the model's workspace,
+      ``intermediate_outputs/what_drains_to_stream[suffix].tif``.  This raster
+      has pixel values of 1 where DEM pixels flow to an identified stream, and
+      0 where they do not.
 * Visitation: Recreation and Tourism
     * Renamed the Windows start menu shortcut from "Recreation" to
       "Visitation: Recreation and Tourism".
