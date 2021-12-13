@@ -44,6 +44,10 @@ Unreleased Changes
       should be done via ``pip``.  The ``README`` has been updated to reflect
       this change, and this should only be noticeable for those installing
       ``natcap.invest`` from source.
+    * A bug has been fixed in ``make install`` so that now the current version
+      of ``natcap.invest`` is built and installed.  The former (buggy) version
+      of ``make install`` would install whatever the latest version was in your
+      ``dist`` folder.
 * Habitat Quality
     * Changed how Habitat Rarity outputs are calculated to be less confusing.
       Values now represent a 0 to 1 index where before there could be
