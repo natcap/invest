@@ -150,7 +150,7 @@ MODEL_METADATA = {
         userguide='seasonal_water_yield.html',
         aliases=('swy',)),
     'stormwater': _MODELMETA(
-        model_title='Stormwater',
+        model_title='Urban Stormwater Retention',
         pyname='natcap.invest.stormwater',
         gui='stormwater.Stormwater',
         userguide='stormwater.html',

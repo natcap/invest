@@ -174,7 +174,7 @@ FINAL_OUTPUTS = {
 
 
 def execute(args):
-    """Execute the stormwater model.
+    """Execute the urban stormwater retention model.
 
     Args:
         args['workspace_dir'] (str): path to a directory to write intermediate

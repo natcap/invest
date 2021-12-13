@@ -1,4 +1,4 @@
-"""InVEST stormwater model tests."""
+"""InVEST urban stormwater retention model tests."""
 import functools
 import os
 import shutil
