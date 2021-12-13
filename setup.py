@@ -62,8 +62,6 @@ setup(
     package_dir={
         'natcap': 'src/natcap'
     },
-    use_scm_version={'version_scheme': 'post-release',
-                     'local_scheme': 'node-and-date'},
     include_package_data=True,
     install_requires=_REQUIREMENTS,
     setup_requires=['setuptools_scm', 'numpy', 'cython'],
