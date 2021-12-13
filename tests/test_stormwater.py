@@ -216,15 +216,15 @@ class StormwaterTests(unittest.TestCase):
 
         retention_volume_path = os.path.join(
             self.workspace_dir, 'retention_volume_suffix.tif')
-        infiltration_volume_path = os.path.join(
-            self.workspace_dir, 'infiltration_volume_suffix.tif')
+        recharge_volume_path = os.path.join(
+            self.workspace_dir, 'recharge_volume_suffix.tif')
         pollutant_path = os.path.join(
             self.workspace_dir, 'avoided_pollutant_load_pollutant1_suffix.tif')
         value_path = os.path.join(
             self.workspace_dir, 'retention_value_suffix.tif')
-        # there should be no infiltration output because there's no
-        # infiltration data in the biophysical table
-        self.assertFalse(os.path.exists(infiltration_volume_path))
+        # there should be no recharge output because there's no
+        # recharge data in the biophysical table
+        self.assertFalse(os.path.exists(recharge_volume_path))
 
         retention_raster = gdal.OpenEx(retention_volume_path, gdal.OF_RASTER)
         retention_volume = retention_raster.GetRasterBand(1).ReadAsArray()
@@ -310,9 +310,9 @@ class StormwaterTests(unittest.TestCase):
         retention_volume_path = os.path.join(
             self.workspace_dir,
             stormwater.FINAL_OUTPUTS['retention_volume_path'])
-        infiltration_volume_path = os.path.join(
+        recharge_volume_path = os.path.join(
             self.workspace_dir,
-            stormwater.FINAL_OUTPUTS['infiltration_volume_path'])
+            stormwater.FINAL_OUTPUTS['recharge_volume_path'])
         value_path = os.path.join(
             self.workspace_dir,
             stormwater.FINAL_OUTPUTS['retention_value_path'])
@@ -320,9 +320,9 @@ class StormwaterTests(unittest.TestCase):
         retention_raster = gdal.OpenEx(retention_volume_path, gdal.OF_RASTER)
         retention_volume = retention_raster.GetRasterBand(1).ReadAsArray()
 
-        infiltration_raster = gdal.OpenEx(
-            infiltration_volume_path, gdal.OF_RASTER)
-        infiltration_volume = infiltration_raster.GetRasterBand(
+        recharge_raster = gdal.OpenEx(
+            recharge_volume_path, gdal.OF_RASTER)
+        recharge_volume = recharge_raster.GetRasterBand(
             1).ReadAsArray()
 
         retention_value_raster = gdal.OpenEx(value_path, gdal.OF_RASTER)
@@ -352,8 +352,8 @@ class StormwaterTests(unittest.TestCase):
                 numpy.testing.assert_allclose(actual_value, expected_value,
                                               rtol=1e-6)
 
-        for row in range(infiltration_volume.shape[0]):
-            for col in range(infiltration_volume.shape[1]):
+        for row in range(recharge_volume.shape[0]):
+            for col in range(recharge_volume.shape[1]):
 
                 soil_group = soil_group_array[row][col]
                 lulc = lulc_array[row][col]
@@ -365,7 +365,7 @@ class StormwaterTests(unittest.TestCase):
                 # precipitation (mm/yr) * 0.001 (m/mm) * pixel area (m^2) = m^3
                 expected_volume = (ir_value) * \
                     precipitation * 0.001 * pixel_area
-                numpy.testing.assert_allclose(infiltration_volume[row][col],
+                numpy.testing.assert_allclose(recharge_volume[row][col],
                                               expected_volume, rtol=1e-6)
 
     def test_adjust(self):
@@ -468,10 +468,10 @@ class StormwaterTests(unittest.TestCase):
             1: {
                 'mean_retention_ratio': 0.825,
                 'mean_runoff_ratio': 0.175,
-                'mean_infiltration_ratio': 0.575,
+                'mean_recharge_ratio': 0.575,
                 'total_retention_volume': 8.5,
                 'total_runoff_volume': 1.5,
-                'total_infiltration_volume': 5.5,
+                'total_recharge_volume': 5.5,
                 'pollutant1_total_avoided_load': .0085,
                 'pollutant1_mean_load': .000375,
                 'total_retention_value': 21.505
@@ -479,10 +479,10 @@ class StormwaterTests(unittest.TestCase):
             2: {
                 'mean_retention_ratio': 0.5375,
                 'mean_runoff_ratio': 0.4625,
-                'mean_infiltration_ratio': 0.7625,
+                'mean_recharge_ratio': 0.7625,
                 'total_retention_volume': 7.5,
                 'total_runoff_volume': 7.5,
-                'total_infiltration_volume': 11.5,
+                'total_recharge_volume': 11.5,
                 'pollutant1_total_avoided_load': .0075,
                 'pollutant1_mean_load': .006875,
                 'total_retention_value': 18.975
@@ -492,8 +492,8 @@ class StormwaterTests(unittest.TestCase):
                 'total_retention_volume': 0,
                 'mean_runoff_ratio': 0,
                 'total_runoff_volume': 0,
-                'mean_infiltration_ratio': 0,
-                'total_infiltration_volume': 0,
+                'mean_recharge_ratio': 0,
+                'total_recharge_volume': 0,
                 'pollutant1_total_avoided_load': 0,
                 'pollutant1_mean_load': 0,
                 'total_retention_value': 0

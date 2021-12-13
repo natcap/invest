@@ -66,7 +66,7 @@ ARGS_SPEC = {
                 **{
                     f"ir_{soil_group}": {
                         "type": "ratio",
-                        "about": ("Stormwater infiltration coefficient for "
+                        "about": ("Stormwater recharge coefficient for "
                                   f"soil group {soil_group}"),
                         "required": False
                     } for soil_group in ["a", "b", "c", "d"]
@@ -88,7 +88,7 @@ ARGS_SPEC = {
             "about": (
                 "Table mapping each LULC code found in the LULC raster to "
                 "biophysical data about that LULC class. If you provide the "
-                "infiltration coefficient column (IR_[X]) for any soil group, "
+                "recharge coefficient column (IR_[X]) for any soil group, "
                 "you must provide it for all four soil groups."),
             "name": "Biophysical table"
         },
@@ -129,8 +129,8 @@ ARGS_SPEC = {
             "about": (
                 "Areas over which to aggregate results (typically watersheds "
                 "or sewersheds). The aggregated data are: average retention "
-                "ratio and total retention volume; average infiltration ratio "
-                "and total infiltration volume if infiltration data was "
+                "ratio and total retention volume; average recharge ratio "
+                "and total recharge volume if recharge data was "
                 "provided; total retention value if replacement cost was "
                 "provided; and total avoided pollutant load for each "
                 "pollutant provided."),
@@ -167,8 +167,8 @@ FINAL_OUTPUTS = {
     'runoff_ratio_path': 'runoff_ratio.tif',
     'retention_volume_path': 'retention_volume.tif',
     'runoff_volume_path': 'runoff_volume.tif',
-    'infiltration_ratio_path': 'infiltration_ratio.tif',
-    'infiltration_volume_path': 'infiltration_volume.tif',
+    'recharge_ratio_path': 'recharge_ratio.tif',
+    'recharge_volume_path': 'recharge_volume.tif',
     'retention_value_path': 'retention_value.tif'
 }
 
@@ -193,7 +193,7 @@ def execute(args):
         args['biophysical_table'] (str): path to biophysical table with columns
             'lucode', 'EMC_x' (event mean concentration mg/L) for each
             pollutant x, 'RC_y' (retention coefficient) and 'IR_y'
-            (infiltration coefficient) for each soil group y, and
+            (recharge coefficient) for each soil group y, and
             'is_connected' if args['adjust_retention_ratios'] is True
         args['adjust_retention_ratios'] (bool): If True, apply retention ratio
             adjustment algorithm.
@@ -479,48 +479,48 @@ def execute(args):
         (files['runoff_ratio_path'], 'mean_runoff_ratio', 'mean'),
         (files['runoff_volume_path'], 'total_runoff_volume', 'sum')]
 
-    # (Optional) Calculate stormwater infiltration ratio and volume from
+    # (Optional) Calculate stormwater recharge ratio and volume from
     # LULC, soil groups, biophysical table, and precipitation
     if 'ir_a' in next(iter(biophysical_dict.values())):
-        LOGGER.info('Infiltration data detected in biophysical table. '
-                    'Will calculate infiltration ratio and volume rasters.')
-        infiltration_ratio_array = numpy.array([
+        LOGGER.info('recharge data detected in biophysical table. '
+                    'Will calculate recharge ratio and volume rasters.')
+        recharge_ratio_array = numpy.array([
             [biophysical_dict[lucode][f'ir_{soil_group}']
                 for soil_group in ['a', 'b', 'c', 'd']
              ] for lucode in sorted_lucodes
         ], dtype=numpy.float32)
-        infiltration_ratio_task = task_graph.add_task(
+        recharge_ratio_task = task_graph.add_task(
             func=lookup_ratios,
             args=(
                 files['lulc_aligned_path'],
                 files['soil_group_aligned_path'],
-                infiltration_ratio_array,
+                recharge_ratio_array,
                 sorted_lucodes,
-                files['infiltration_ratio_path']),
-            target_path_list=[files['infiltration_ratio_path']],
+                files['recharge_ratio_path']),
+            target_path_list=[files['recharge_ratio_path']],
             dependent_task_list=[align_task],
-            task_name='calculate stormwater infiltration ratio')
+            task_name='calculate stormwater recharge ratio')
 
-        infiltration_volume_task = task_graph.add_task(
+        recharge_volume_task = task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
             args=([
-                (files['infiltration_ratio_path'], 1),
+                (files['recharge_ratio_path'], 1),
                 (files['precipitation_aligned_path'], 1),
                 (precipitation_nodata, 'raw'),
                 (pixel_area, 'raw')],
                 volume_op,
-                files['infiltration_volume_path'],
+                files['recharge_volume_path'],
                 gdal.GDT_Float32,
                 FLOAT_NODATA),
-            target_path_list=[files['infiltration_volume_path']],
-            dependent_task_list=[align_task, infiltration_ratio_task],
+            target_path_list=[files['recharge_volume_path']],
+            dependent_task_list=[align_task, recharge_ratio_task],
             task_name='calculate stormwater retention volume'
         )
-        aggregation_task_dependencies.append(infiltration_volume_task)
-        data_to_aggregate.append((files['infiltration_ratio_path'],
-                                 'mean_infiltration_ratio', 'mean'))
-        data_to_aggregate.append((files['infiltration_volume_path'],
-                                 'total_infiltration_volume', 'sum'))
+        aggregation_task_dependencies.append(recharge_volume_task)
+        data_to_aggregate.append((files['recharge_ratio_path'],
+                                 'mean_recharge_ratio', 'mean'))
+        data_to_aggregate.append((files['recharge_volume_path'],
+                                 'total_recharge_volume', 'sum'))
 
     # get all EMC columns from an arbitrary row in the dictionary
     # strip the first four characters off 'EMC_pollutant' to get pollutant name
@@ -626,7 +626,7 @@ def execute(args):
 
 def lookup_ratios(lulc_path, soil_group_path, ratio_lookup, sorted_lucodes,
                   output_path):
-    """Look up retention/infiltration ratios from LULC codes and soil groups.
+    """Look up retention/recharge ratios from LULC codes and soil groups.
 
     Args:
         lulc_array (numpy.ndarray): 2D array of LULC codes
