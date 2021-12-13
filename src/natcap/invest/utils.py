@@ -916,3 +916,23 @@ def reclassify_raster(
             f" {raster_name} raster but not the table are:"
             f" {err.missing_values}.")
         raise ValueError(error_message)
+
+
+def compare_nodata_nan_support(array, nodata):
+    """Check for the presense of ``nodata`` values in ``array``.
+
+    The comparison supports ``numpy.nan`` nodata values.
+
+    Args:
+        array (numpy array): the array to mask for nodata values.
+        nodata (number): the nodata value to check for. Supports ``numpy.nan``.
+
+    Returns:
+        A boolean numpy array with values of 1 where ``array`` is equal to
+        ``nodata`` and 0 otherwise.
+    """
+    # comparing an integer array against numpy.nan works correctly and is
+    # faster than using ``numpy.isclose()``.
+    if numpy.issubdtype(array.dtype, numpy.integer):
+        return array == nodata
+    return numpy.isclose(array, nodata, equal_nan=True)
