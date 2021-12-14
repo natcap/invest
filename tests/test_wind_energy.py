@@ -183,7 +183,7 @@ class WindEnergyUnitTests(unittest.TestCase):
 
         expected_result = {
             'air_density': 1.225,
-            'exponent_power_curve': 2.0,
+            'exponent_power_curve': 2,
             'decommission_cost': 0.037,
             'operation_maintenance_cost': .035,
             'miscellaneous_capex_cost': .05
@@ -289,8 +289,8 @@ class WindEnergyUnitTests(unittest.TestCase):
 
         # Set up a coordinate with a longitude in the range of -360 to 0.
         wind_data = {
-            (31.79, -200.0): {
-                'LONG': -200.0, 'LATI': 31.79, 'Ram-080m': 7.98,
+            (31.79, -200): {
+                'LONG': -200, 'LATI': 31.79, 'Ram-080m': 7.98,
                 'K-010m': 1.90}
         }
         wind_data_pickle_path = os.path.join(
@@ -307,7 +307,7 @@ class WindEnergyUnitTests(unittest.TestCase):
         ogr_point = ogr.Geometry(ogr.wkbPoint)
         # Point geometry should have been converted to the WSG84 norm of
         # -180 to 180
-        ogr_point.AddPoint_2D(160.00, 31.79)
+        ogr_point.AddPoint_2D(160, 31.79)
 
         shape = ogr.Open(out_path)
         layer = shape.GetLayer()
@@ -325,7 +325,7 @@ class WindEnergyUnitTests(unittest.TestCase):
                 try:
                     field_val = feat.GetField(field)
                     self.assertEqual(
-                        wind_data[(31.79, -200.0)][field], field_val)
+                        wind_data[(31.79, -200)][field], field_val)
                 except ValueError:
                     raise AssertionError(
                         'Could not find field %s' % field)
@@ -464,7 +464,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         args['min_distance'] = 0
         args['max_distance'] = 200000
         args['valuation_container'] = True
-        args['foundation_cost'] = 2
+        args['foundation_cost'] = 2000000
         args['discount_rate'] = 0.07
         # Test that only grid points are provided in grid_points_path
         args['grid_points_path'] = os.path.join(
@@ -486,7 +486,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         raster_results = [
             'carbon_emissions_tons.tif',
-            'levelized_cost_price_per_kWh.tif', 'npv_US_millions.tif']
+            'levelized_cost_price_per_kWh.tif', 'npv.tif']
 
         for raster_path in raster_results:
             model_array = pygeoprocessing.raster_to_numpy_array(
@@ -514,7 +514,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         args['min_distance'] = 0
         args['max_distance'] = 200000
         args['valuation_container'] = True
-        args['foundation_cost'] = 2
+        args['foundation_cost'] = 2000000
         args['discount_rate'] = 0.07
         # there was no sample data that provided landing points, thus for
         # testing, grid points in 'resampled_grid_pts.csv' were duplicated and
@@ -530,7 +530,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         raster_results = [
             'carbon_emissions_tons.tif', 'levelized_cost_price_per_kWh.tif',
-            'npv_US_millions.tif']
+            'npv.tif']
 
         for raster_path in raster_results:
             model_array = pygeoprocessing.raster_to_numpy_array(
@@ -561,7 +561,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         args['min_distance'] = 0
         args['max_distance'] = 200000
         args['valuation_container'] = True
-        args['foundation_cost'] = 2
+        args['foundation_cost'] = 2000000
         args['discount_rate'] = 0.07
         args['price_table'] = True
         args['wind_schedule'] = os.path.join(
@@ -574,14 +574,15 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         raster_results = [
             'carbon_emissions_tons.tif', 'levelized_cost_price_per_kWh.tif',
-            'npv_US_millions.tif']
+            'npv.tif']
 
         for raster_path in raster_results:
+            print(raster_path)
             model_array = pygeoprocessing.raster_to_numpy_array(
                 os.path.join(args['workspace_dir'], 'output', raster_path))
             reg_array = pygeoprocessing.raster_to_numpy_array(
                 os.path.join(REGRESSION_DATA, 'priceval', raster_path))
-            numpy.testing.assert_allclose(model_array, reg_array)
+            numpy.testing.assert_allclose(model_array, reg_array, rtol=1e-6)
 
         vector_path = 'wind_energy_points.shp'
         _assert_vectors_equal(
@@ -620,8 +621,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
             suffix='.csv', dir=args['workspace_dir'])
         os.close(tmp)
         data = {
-            'hub_height': 80, 'cut_in_wspd': 4.0, 'rated_wspd': 12.5,
-            'turbine_rated_pwr': 3.6, 'turbine_cost': 8.0
+            'hub_height': 80, 'cut_in_wspd': 4, 'rated_wspd': 12.5,
+            'turbine_rated_pwr': 3.6, 'turbine_cost': 8
         }
         _create_vertical_csv(data, file_path)
         args['turbine_parameters_path'] = file_path
@@ -653,7 +654,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
             'min_distance': 0,
             'max_distance': 200000,
             'valuation_container': True,
-            'foundation_cost': 2,
+            'foundation_cost': 2000000,
             'discount_rate': 0.07,
             'avg_grid_distance': 4,
             'price_table': True,
