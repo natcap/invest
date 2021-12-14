@@ -474,6 +474,7 @@ def build_datastack_archive(args, model_name, datastack_path):
         elif input_type == 'directory':
             # copy the whole folder
             target_directory = os.path.join(data_dir, f'{key}_directory')
+            os.makedirs(target_directory)
 
             # We want to copy the directory contents into the directory
             # directly, not copy the parent folder into the directory.

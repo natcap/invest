@@ -63,6 +63,7 @@ class NewDatastackTest(unittest.TestCase):
         model_name = 'natcap.invest.coastal_blue_carbon.coastal_blue_carbon'
         self.execute_model(model_name, source_parameter_set_path)
 
+    @unittest.skip('Takes a long time to run')
     def test_habitat_quality(self):
         """Datastack: Test Habitat Quality."""
         source_parameter_set_path = os.path.join(
@@ -188,6 +189,57 @@ class NewDatastackTest(unittest.TestCase):
                 os.path.join(out_directory, archived_params['vector']))
 
             self.assertEqual(len(archived_params), 1)  # sanity check
+
+    def test_nonspatial_files(self):
+        """Datastack: test nonspatial files."""
+        from natcap.invest import datastack
+
+        params = {
+            'some_file': os.path.join(self.workspace, 'foo.txt'),
+            'data_dir': os.path.join(self.workspace, 'data_dir')
+        }
+        with open(params['some_file'], 'w') as textfile:
+            textfile.write('some text here!')
+
+        os.makedirs(params['data_dir'])
+        for filename in ('foo.txt', 'bar.txt', 'baz.txt'):
+            data_filepath = os.path.join(params['data_dir'], filename)
+            with open(data_filepath, 'w') as textfile:
+                textfile.write(filename)
+
+        # make a folder within the data folder.
+        nested_folder = os.path.join(params['data_dir'], 'nested')
+        os.makedirs(nested_folder)
+        with open(os.path.join(nested_folder, 'nested.txt'), 'w') as textfile:
+            textfile.write('hello, world!')
+
+        # Collect the file into an archive
+        archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
+        datastack.build_datastack_archive(
+            params, 'test_datastack_modules.nonspatial_files', archive_path)
+
+        # extract the archive
+        out_directory = os.path.join(self.workspace, 'extracted_archive')
+        with tarfile.open(archive_path) as tar:
+            tar.extractall(out_directory)
+
+        archived_params = json.load(
+            open(os.path.join(out_directory,
+                              datastack.DATASTACK_PARAMETER_FILENAME)))['args']
+        self.assertTrue(filecmp.cmp(
+            params['some_file'],
+            os.path.join(out_directory, archived_params['some_file']),
+            shallow=False))
+        self.assertEqual(len(archived_params), 2)  # sanity check
+
+        common_files = ['foo.txt', 'bar.txt', 'baz.txt', 'nested/nested.txt']
+        matched_files, mismatch_files, error_files = filecmp.cmpfiles(
+            params['data_dir'],
+            os.path.join(out_directory, archived_params['data_dir']),
+            common_files, shallow=False)
+        if mismatch_files or error_files:
+            self.fail('Directory mismatch or error. The mismatches are'
+                      f' {mismatch_files} ; and the errors are {error_files}')
 
 
 class DatastacksTest(unittest.TestCase):
