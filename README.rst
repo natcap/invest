@@ -113,8 +113,9 @@ Building python packages without GNU make
 """""""""""""""""""""""""""""""""""""""""
 Python distributions may be built with the standard distutils/setuptools commands::
 
-    $ python setup.py bdist_wheel
-    $ python setup.py sdist
+    $ python -m pip install build
+    $ python -m build --wheel
+    $ python -m build --sdist
 
 InVEST Standalone Binaries
 ++++++++++++++++++++++++++
@@ -232,9 +233,9 @@ To run tests for user interface functionality::
 Changing how GNU make runs tests
 ++++++++++++++++++++++++++++++++
 
-The InVEST Makefile setup depends on ``pytest`` and ``coverage`` to display 
+The InVEST Makefile setup depends on ``pytest`` and ``coverage`` to display
 line coverage and produce HTML and XML reports.  You can force ``make`` to use
-``coverage`` with a different test runner by setting a parameter at the 
+``coverage`` with a different test runner by setting a parameter at the
 command line.  For example, to run the tests with ``nose``::
 
     $ make TESTRUNNER=nose test
