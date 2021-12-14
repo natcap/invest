@@ -23,6 +23,7 @@ import collections
 import importlib
 import json
 import logging
+import math
 import os
 import pprint
 import re
@@ -407,7 +408,8 @@ def build_datastack_archive(args, model_name, datastack_path):
                 contained_files_dir = os.path.join(
                     data_dir, f'{key}_csv_data')
 
-                dataframe = utils.read_csv_to_dataframe(source_path)
+                dataframe = utils.read_csv_to_dataframe(
+                    source_path, to_lower=True)
                 csv_source_dir = os.path.abspath(os.path.dirname(source_path))
                 for spatial_column_name in spatial_columns:
                     # Iterate through the spatial columns, identify the set of
@@ -415,7 +417,15 @@ def build_datastack_archive(args, model_name, datastack_path):
                     # if a string is not a filepath, assume it's supposed to be
                     # there and skip it
                     for row_index, column_value in dataframe[
-                            spatial_column_name].items():
+                            spatial_column_name.lower()].items():
+                        if ((isinstance(column_value, float) and
+                                math.isnan(column_value)) or
+                                column_value == ''):
+                            # The table cell is blank, so skip it.
+                            # We can't compare nan values directly in a way
+                            # that also works for strings, so skip it.
+                            continue
+
                         source_filepath = None
                         for possible_filepath in (
                                 column_value,
