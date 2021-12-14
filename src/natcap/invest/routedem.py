@@ -145,8 +145,7 @@ def _threshold_flow(flow_accum_pixels, threshold, in_nodata, out_nodata):
 
     valid_mask = slice(None)
     if in_nodata is not None:
-        valid_mask = ~utils.check_array_for_nodata(
-            flow_accum_pixels, in_nodata)
+        valid_mask = ~utils.array_equals_nodata(flow_accum_pixels, in_nodata)
 
     out_matrix[valid_mask & stream_mask] = 1
     out_matrix[valid_mask & ~stream_mask] = 0

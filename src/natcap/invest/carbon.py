@@ -441,7 +441,7 @@ def _accumulate_totals(raster_path):
         # the sum.  Users calculated the sum with ArcGIS zonal statistics,
         # noticed a difference and wrote to us about it on the forum.
         raster_sum += numpy.sum(
-            block[~utils.check_array_for_nodata(
+            block[~utils.array_equals_nodata(
                     block, nodata)], dtype=numpy.float64)
     return raster_sum
 

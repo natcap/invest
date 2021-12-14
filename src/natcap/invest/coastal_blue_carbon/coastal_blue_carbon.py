@@ -1461,8 +1461,8 @@ def _calculate_stocks_after_baseline_period(
         target_matrix[:] = NODATA_FLOAT32_MIN
 
         valid_pixels = (
-            ~utils.check_array_for_nodata(baseline_matrix, baseline_nodata) &
-            ~utils.check_array_for_nodata(accum_matrix, accum_nodata))
+            ~utils.array_equals_nodata(baseline_matrix, baseline_nodata) &
+            ~utils.array_equals_nodata(accum_matrix, accum_nodata))
 
         target_matrix[valid_pixels] = (
             baseline_matrix[valid_pixels] + (
@@ -1687,14 +1687,15 @@ def _calculate_net_sequestration(
                                                dtype=bool)
         if accumulation_nodata is not None:
             valid_accumulation_pixels &= (
-                ~utils.check_array_for_nodata(accumulation_matrix, accumulation_nodata))
+                ~utils.array_equals_nodata(
+                    accumulation_matrix, accumulation_nodata))
         target_matrix[valid_accumulation_pixels] += (
             accumulation_matrix[valid_accumulation_pixels])
 
         valid_emissions_pixels = ~numpy.isclose(emissions_matrix, 0.0)
         if emissions_nodata is not None:
             valid_emissions_pixels &= (
-                ~utils.check_array_for_nodata(emissions_matrix, emissions_nodata))
+                ~utils.array_equals_nodata(emissions_matrix, emissions_nodata))
 
         target_matrix[valid_emissions_pixels] = emissions_matrix[
             valid_emissions_pixels] * -1
@@ -1820,7 +1821,7 @@ def _sum_n_rasters(
             array = band.ReadAsArray(**block_info)
             valid_pixels = slice(None)
             if nodata is not None:
-                valid_pixels = ~utils.check_array_for_nodata(array, nodata)
+                valid_pixels = ~utils.array_equals_nodata(array, nodata)
 
             sum_array[valid_pixels] += array[valid_pixels]
             pixels_touched[valid_pixels] = 1

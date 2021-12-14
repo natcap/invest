@@ -919,7 +919,7 @@ def reclassify_raster(
         raise ValueError(error_message)
 
 
-def check_array_for_nodata(array, nodata):
+def array_equals_nodata(array, nodata):
     """Check for the presense of ``nodata`` values in ``array``.
 
     The comparison supports ``numpy.nan`` nodata values.
