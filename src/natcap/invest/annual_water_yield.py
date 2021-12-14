@@ -798,7 +798,7 @@ def aet_op(fractp, precip, precip_nodata, output_nodata):
     # and the nodata value is a large negative number.
     valid_mask = fractp >= 0
     if precip_nodata is not None:
-        valid_mask &= ~utils.compare_nodata_nan_support(precip, precip_nodata)
+        valid_mask &= ~utils.check_array_for_nodata(precip, precip_nodata)
     result[valid_mask] = fractp[valid_mask] * precip[valid_mask]
     return result
 
@@ -820,9 +820,9 @@ def wyield_op(fractp, precip, precip_nodata, output_nodata):
     result = numpy.empty_like(fractp)
     result[:] = output_nodata
     # output_nodata is defined above, should never be None
-    valid_mask = ~utils.compare_nodata_nan_support(fractp, output_nodata)
+    valid_mask = ~utils.check_array_for_nodata(fractp, output_nodata)
     if precip_nodata is not None:
-        valid_mask &= ~utils.compare_nodata_nan_support(precip, precip_nodata)
+        valid_mask &= ~utils.check_array_for_nodata(precip, precip_nodata)
     result[valid_mask] = (1.0 - fractp[valid_mask]) * precip[valid_mask]
     return result
 
@@ -863,21 +863,21 @@ def fractp_op(
     # and retain their original nodata values.
     # out_nodata is defined above and should never be None.
     valid_mask = (
-        ~utils.compare_nodata_nan_support(Kc, nodata_dict['out_nodata']) &
-        ~utils.compare_nodata_nan_support(root, nodata_dict['out_nodata']) &
-        ~utils.compare_nodata_nan_support(veg, nodata_dict['out_nodata']) &
-        ~utils.compare_nodata_nan_support(precip, 0.0))
+        ~utils.check_array_for_nodata(Kc, nodata_dict['out_nodata']) &
+        ~utils.check_array_for_nodata(root, nodata_dict['out_nodata']) &
+        ~utils.check_array_for_nodata(veg, nodata_dict['out_nodata']) &
+        ~utils.check_array_for_nodata(precip, 0.0))
     if nodata_dict['eto'] is not None:
-        valid_mask &= ~utils.compare_nodata_nan_support(
+        valid_mask &= ~utils.check_array_for_nodata(
             eto, nodata_dict['eto'])
     if nodata_dict['precip'] is not None:
-        valid_mask &= ~utils.compare_nodata_nan_support(
+        valid_mask &= ~utils.check_array_for_nodata(
             precip, nodata_dict['precip'])
     if nodata_dict['depth_root'] is not None:
-        valid_mask &= ~utils.compare_nodata_nan_support(
+        valid_mask &= ~utils.check_array_for_nodata(
             soil, nodata_dict['depth_root'])
     if nodata_dict['pawc'] is not None:
-        valid_mask &= ~utils.compare_nodata_nan_support(
+        valid_mask &= ~utils.check_array_for_nodata(
             pawc, nodata_dict['pawc'])
 
     # Compute Budyko Dryness index
@@ -942,9 +942,9 @@ def pet_op(eto_pix, Kc_pix, eto_nodata, output_nodata):
     result = numpy.empty(eto_pix.shape, dtype=numpy.float32)
     result[:] = output_nodata
 
-    valid_mask = ~utils.compare_nodata_nan_support(Kc_pix, output_nodata)
+    valid_mask = ~utils.check_array_for_nodata(Kc_pix, output_nodata)
     if eto_nodata is not None:
-        valid_mask &= ~utils.compare_nodata_nan_support(eto_pix, eto_nodata)
+        valid_mask &= ~utils.check_array_for_nodata(eto_pix, eto_nodata)
     result[valid_mask] = eto_pix[valid_mask] * Kc_pix[valid_mask]
     return result
 

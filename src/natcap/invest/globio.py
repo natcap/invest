@@ -503,7 +503,7 @@ def _primary_veg_mask_op(lulc_array, globio_nodata, primary_veg_mask_nodata):
     result[:] = primary_veg_mask_nodata
     valid_mask = slice(None)
     if globio_nodata is not None:
-        valid_mask = ~utils.compare_nodata_nan_support(
+        valid_mask = ~utils.check_array_for_nodata(
             lulc_array, globio_nodata)
     result[valid_mask] = lulc_array[valid_mask] == 1
     return result
@@ -567,7 +567,7 @@ def _msa_f_calculation(
                 less_than[1])
 
         if msa_nodata is not None:
-            nodata_mask = utils.compare_nodata_nan_support(
+            nodata_mask = utils.check_array_for_nodata(
                 primary_veg_smooth, primary_veg_mask_nodata)
             msa_f[nodata_mask] = msa_nodata
 
@@ -636,7 +636,7 @@ def _msa_i_calculation(
             lulc_array, msa_nodata, dtype=numpy.float32)
         msa_i_other = numpy.full_like(
             lulc_array, msa_nodata, dtype=numpy.float32)
-        nodata_mask = utils.compare_nodata_nan_support(lulc_array, lulc_nodata)
+        nodata_mask = utils.check_array_for_nodata(lulc_array, lulc_nodata)
 
         if primary_greater_than:
             msa_i_primary[distance_to_infrastructure > primary_greater_than[0]] = (
@@ -693,7 +693,7 @@ def _msa_calculation(
         valid_mask = numpy.ones(msa_f.shape, dtype=bool)
         for msa_array, nodata_val in zip([msa_f, msa_lu, msa_i], nodata_array):
             if nodata_val is not None:
-                valid_mask &= ~utils.compare_nodata_nan_support(
+                valid_mask &= ~utils.check_array_for_nodata(
                     msa_array, nodata_val)
         result[valid_mask] = (
             msa_f[valid_mask] * msa_lu[valid_mask] * msa_i[valid_mask])
@@ -1083,7 +1083,7 @@ def _collapse_infrastructure_layers(
             infrastructure_mask |= infrastructure_array_list[index] > 0
             if infrastructure_nodata_list[index] is not None:
                 # update nodata mask: intersection with this layer
-                nodata_mask &= utils.compare_nodata_nan_support(
+                nodata_mask &= utils.check_array_for_nodata(
                     infrastructure_array_list[index],
                     infrastructure_nodata_list[index])
             # if nodata is None, every pixel in this layer has data,

@@ -1806,7 +1806,7 @@ def _sum_n_rasters(
             array = band.ReadAsArray(**block_info)
             valid_pixels = slice(None)
             if nodata is not None:
-                valid_pixels = ~utils.compare_nodata_nan_support(array, nodata)
+                valid_pixels = ~utils.check_array_for_nodata(array, nodata)
 
             sum_array[valid_pixels] += array[valid_pixels]
             pixels_touched[valid_pixels] = 1

@@ -1088,7 +1088,7 @@ def calc_t_air_nomix_op(t_ref_val, hm_array, uhi_max):
     result = numpy.empty(hm_array.shape, dtype=numpy.float32)
     result[:] = TARGET_NODATA
     # TARGET_NODATA should never be None
-    valid_mask = ~utils.compare_nodata_nan_support(hm_array, TARGET_NODATA)
+    valid_mask = ~utils.check_array_for_nodata(hm_array, TARGET_NODATA)
     result[valid_mask] = t_ref_val + (1-hm_array[valid_mask]) * uhi_max
     return result
 
@@ -1116,9 +1116,9 @@ def calc_cc_op_factors(
     result = numpy.empty(shade_array.shape, dtype=numpy.float32)
     result[:] = TARGET_NODATA
     valid_mask = ~(
-        utils.compare_nodata_nan_support(shade_array, TARGET_NODATA) |
-        utils.compare_nodata_nan_support(albedo_array, TARGET_NODATA) |
-        utils.compare_nodata_nan_support(eti_array, TARGET_NODATA))
+        utils.check_array_for_nodata(shade_array, TARGET_NODATA) |
+        utils.check_array_for_nodata(albedo_array, TARGET_NODATA) |
+        utils.check_array_for_nodata(eti_array, TARGET_NODATA))
     result[valid_mask] = (
         cc_weight_shade*shade_array[valid_mask] +
         cc_weight_albedo*albedo_array[valid_mask] +
@@ -1138,7 +1138,7 @@ def calc_cc_op_intensity(intensity_array):
     """
     result = numpy.empty(intensity_array.shape, dtype=numpy.float32)
     result[:] = TARGET_NODATA
-    valid_mask = ~utils.compare_nodata_nan_support(
+    valid_mask = ~utils.check_array_for_nodata(
         intensity_array, TARGET_NODATA)
     result[valid_mask] = 1.0 - intensity_array[valid_mask]
     return result
@@ -1150,9 +1150,9 @@ def calc_eti_op(
     result = numpy.empty(kc_array.shape, dtype=numpy.float32)
     result[:] = target_nodata
     # kc intermediate output should always have a nodata value defined
-    valid_mask = ~utils.compare_nodata_nan_support(kc_array, kc_nodata)
+    valid_mask = ~utils.check_array_for_nodata(kc_array, kc_nodata)
     if et0_nodata is not None:
-        valid_mask &= ~utils.compare_nodata_nan_support(et0_array, et0_nodata)
+        valid_mask &= ~utils.check_array_for_nodata(et0_array, et0_nodata)
     result[valid_mask] = (
         kc_array[valid_mask] * et0_array[valid_mask] / et_max)
     return result
@@ -1184,7 +1184,7 @@ def calculate_wbgt(
 
         valid_mask = slice(None)
         if t_air_nodata is not None:
-            valid_mask = ~utils.compare_nodata_nan_support(
+            valid_mask = ~utils.check_array_for_nodata(
                 t_air_array, t_air_nodata)
         wbgt[:] = TARGET_NODATA
         t_air_valid = t_air_array[valid_mask]
@@ -1299,8 +1299,8 @@ def hm_op(cc_array, green_area_sum, cc_park_array, green_area_threshold):
     result = numpy.empty(cc_array.shape, dtype=numpy.float32)
     result[:] = TARGET_NODATA
     valid_mask = ~(
-        utils.compare_nodata_nan_support(cc_array, TARGET_NODATA) &
-        utils.compare_nodata_nan_support(cc_park_array, TARGET_NODATA))
+        utils.check_array_for_nodata(cc_array, TARGET_NODATA) &
+        utils.check_array_for_nodata(cc_park_array, TARGET_NODATA))
     cc_mask = ((cc_array >= cc_park_array) |
                (green_area_sum < green_area_threshold))
     result[cc_mask & valid_mask] = cc_array[cc_mask & valid_mask]
@@ -1332,7 +1332,7 @@ def map_work_loss(
     def classify_to_percent_op(temperature_array):
         result = numpy.empty(temperature_array.shape)
         result[:] = byte_target_nodata
-        valid_mask = ~utils.compare_nodata_nan_support(
+        valid_mask = ~utils.check_array_for_nodata(
             temperature_array, TARGET_NODATA)
         result[
             valid_mask &

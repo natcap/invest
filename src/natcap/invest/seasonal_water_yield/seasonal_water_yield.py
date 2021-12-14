@@ -943,16 +943,16 @@ def _calculate_monthly_quick_flow(
         valid_mask = ((p_im != 0.0) &
                       (stream_array != 1) &
                       (n_events > 0) &
-                      ~utils.compare_nodata_nan_support(s_i, si_nodata))
+                      ~utils.check_array_for_nodata(s_i, si_nodata))
         if p_nodata is not None:
-            valid_mask &= ~utils.compare_nodata_nan_support(p_im, p_nodata)
+            valid_mask &= ~utils.check_array_for_nodata(p_im, p_nodata)
         if n_events_nodata is not None:
-            valid_mask &= ~utils.compare_nodata_nan_support(
+            valid_mask &= ~utils.check_array_for_nodata(
                 n_events, n_events_nodata)
         # stream_nodata is the only input that carry over nodata values from
         # the aligned DEM.
         if stream_nodata is not None:
-            valid_mask &= ~utils.compare_nodata_nan_support(
+            valid_mask &= ~utils.check_array_for_nodata(
                 stream_array, stream_nodata)
 
         valid_n_events = n_events[valid_mask]
@@ -988,14 +988,14 @@ def _calculate_monthly_quick_flow(
         # if we're on a stream, set quickflow to the precipitation
         valid_stream_precip_mask = stream_array == 1
         if p_nodata is not None:
-            valid_stream_precip_mask &= ~utils.compare_nodata_nan_support(
+            valid_stream_precip_mask &= ~utils.check_array_for_nodata(
                 p_im, p_nodata)
         qf_im[valid_stream_precip_mask] = p_im[valid_stream_precip_mask]
 
         # this handles some user cases where they don't have data defined on
         # their landcover raster. It otherwise crashes later with some NaNs.
         # more intermediate outputs with nodata values guaranteed to be defined
-        qf_im[utils.compare_nodata_nan_support(qf_im, qf_nodata) &
+        qf_im[utils.check_array_for_nodata(qf_im, qf_nodata) &
               (stream_array != stream_nodata)] = 0.0
         return qf_im
 

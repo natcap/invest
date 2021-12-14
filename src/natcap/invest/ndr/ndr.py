@@ -873,7 +873,7 @@ def _normalize_raster(base_raster_path_band, target_normalized_raster_path):
             base_raster_path_band):
         valid_mask = slice(None)
         if base_nodata is not None:
-            valid_mask = ~utils.compare_nodata_nan_support(
+            valid_mask = ~utils.check_array_for_nodata(
                 raster_block, base_nodata)
 
         valid_block = raster_block[valid_mask]
@@ -891,7 +891,7 @@ def _normalize_raster(base_raster_path_band, target_normalized_raster_path):
 
         valid_mask = slice(None)
         if base_nodata is not None:
-            valid_mask = ~utils.compare_nodata_nan_support(array, base_nodata)
+            valid_mask = ~utils.check_array_for_nodata(array, base_nodata)
         result[valid_mask] = array[valid_mask]
         if value_mean != 0:
             result[valid_mask] /= value_mean
@@ -972,7 +972,7 @@ def _multiply_rasters(raster_path_list, target_nodata, target_result_path):
         valid_mask = numpy.full(result.shape, True)
         for array, nodata in zip(*[iter(array_nodata_list)]*2):
             if nodata is not None:
-                valid_mask &= ~utils.compare_nodata_nan_support(array, nodata)
+                valid_mask &= ~utils.check_array_for_nodata(array, nodata)
         result[valid_mask] = array_nodata_list[0][valid_mask]
         for array in array_nodata_list[2::2]:
             result[valid_mask] *= array[valid_mask]
@@ -1205,7 +1205,7 @@ def invert_raster_values(base_raster_path, target_raster_path):
         result[:] = _TARGET_NODATA
         valid_mask = slice(None)
         if base_nodata is not None:
-            valid_mask = ~utils.compare_nodata_nan_support(
+            valid_mask = ~utils.check_array_for_nodata(
                 base_val, base_nodata)
 
         zero_mask = base_val == 0.0
@@ -1281,7 +1281,7 @@ def _calculate_sub_ndr(
         """Calculate subsurface NDR."""
         # nodata value from this intermediate output should always be
         # defined by pygeoprocessing, not None
-        valid_mask = ~utils.compare_nodata_nan_support(
+        valid_mask = ~utils.check_array_for_nodata(
             dist_to_channel_array, dist_to_channel_nodata)
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         result[:] = _TARGET_NODATA
@@ -1314,12 +1314,12 @@ def _calculate_export(
         # these intermediate outputs should always have defined nodata
         # values assigned by pygeoprocessing
         valid_mask = ~(
-            utils.compare_nodata_nan_support(
+            utils.check_array_for_nodata(
                 modified_load_array, load_nodata) |
-            utils.compare_nodata_nan_support(ndr_array, ndr_nodata) |
-            utils.compare_nodata_nan_support(
+            utils.check_array_for_nodata(ndr_array, ndr_nodata) |
+            utils.check_array_for_nodata(
                 modified_sub_load_array, subsurface_load_nodata) |
-            utils.compare_nodata_nan_support(sub_ndr_array, sub_ndr_nodata))
+            utils.check_array_for_nodata(sub_ndr_array, sub_ndr_nodata))
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         result[:] = _TARGET_NODATA
         result[valid_mask] = (

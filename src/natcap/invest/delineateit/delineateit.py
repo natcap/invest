@@ -317,7 +317,7 @@ def _threshold_streams(flow_accum, src_nodata, out_nodata, threshold):
 
     valid_pixels = slice(None)
     if src_nodata is not None:
-        valid_pixels = ~utils.compare_nodata_nan_support(
+        valid_pixels = ~utils.check_array_for_nodata(
             flow_accum, src_nodata)
 
     over_threshold = flow_accum > threshold

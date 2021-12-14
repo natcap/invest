@@ -674,8 +674,8 @@ def _calculate_habitat_quality(deg_hab_raster_list, quality_out_path, ksq):
         # interpreted as nodata.
         # _OUT_NODATA (defined above) should never be None, so this is okay
         valid_pixels = ~(
-            utils.compare_nodata_nan_support(degradation, _OUT_NODATA) |
-            utils.compare_nodata_nan_support(habitat, _OUT_NODATA))
+            utils.check_array_for_nodata(degradation, _OUT_NODATA) |
+            utils.check_array_for_nodata(habitat, _OUT_NODATA))
 
         out_array[valid_pixels] = (
             habitat[valid_pixels] *
@@ -735,7 +735,7 @@ def _calculate_total_degradation(
         nodata_mask = numpy.empty(raster[0].shape, dtype=numpy.int8)
         nodata_mask[:] = 0
         for array in raster:
-            nodata_mask = nodata_mask | utils.compare_nodata_nan_support(
+            nodata_mask = nodata_mask | utils.check_array_for_nodata(
                 array, _OUT_NODATA)
 
         # the last element in raster is access
@@ -984,7 +984,7 @@ def _raster_values_in_bounds(raster_path_band, lower_bound, upper_bound):
     values_valid = True
 
     for _, raster_block in pygeoprocessing.iterblocks(raster_path_band):
-        nodata_mask = ~utils.compare_nodata_nan_support(
+        nodata_mask = ~utils.check_array_for_nodata(
             raster_block, raster_nodata)
         if ((raster_block[nodata_mask] < lower_bound) |
                 (raster_block[nodata_mask] > upper_bound)).any():
