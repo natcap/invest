@@ -725,7 +725,7 @@ def _zero_observed_yield_op(observed_yield_array, observed_yield_nodata):
     result[:] = 0
     valid_mask = slice(None)
     if observed_yield_nodata is not None:
-        valid_mask = ~numpy.isclose(
+        valid_mask = ~utils.compare_nodata_nan_support(
             observed_yield_array, observed_yield_nodata)
     result[valid_mask] = observed_yield_array[valid_mask]
     return result
@@ -751,7 +751,8 @@ def _mask_observed_yield_op(
     result = numpy.empty(lulc_array.shape, dtype=numpy.float32)
     if landcover_nodata is not None:
         result[:] = observed_yield_nodata
-        valid_mask = ~numpy.isclose(lulc_array, landcover_nodata)
+        valid_mask = ~utils.compare_nodata_nan_support(
+            lulc_array, landcover_nodata)
         result[valid_mask] = 0
     else:
         result[:] = 0
@@ -814,7 +815,7 @@ def tabulate_regression_results(
                 # if nodata value undefined, assume all pixels are valid
                 valid_mask = slice(None)
                 if observed_yield_nodata is not None:
-                    valid_mask = ~numpy.isclose(
+                    valid_mask = ~utils.compare_nodata_nan_support(
                         yield_block, observed_yield_nodata)
                 production_pixel_count += numpy.count_nonzero(
                     valid_mask & (yield_block > 0.0))
@@ -832,7 +833,8 @@ def tabulate_regression_results(
                     (crop_production_raster_path, 1)):
                 yield_sum += numpy.sum(
                     # _NODATA_YIELD will always have a value (defined above)
-                    yield_block[~numpy.isclose(yield_block, _NODATA_YIELD)])
+                    yield_block[~utils.compare_nodata_nan_support(
+                        yield_block, _NODATA_YIELD)])
             production_lookup['modeled'] = yield_sum
             result_table.write(",%f" % yield_sum)
 
@@ -857,7 +859,8 @@ def tabulate_regression_results(
                 (landcover_raster_path, 1)):
             if landcover_nodata is not None:
                 total_area += numpy.count_nonzero(
-                    ~numpy.isclose(band_values, landcover_nodata))
+                    ~utils.compare_nodata_nan_support(
+                        band_values, landcover_nodata))
             else:
                 total_area += band_values.size
         result_table.write(

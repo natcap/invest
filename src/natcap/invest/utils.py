@@ -932,7 +932,7 @@ def compare_nodata_nan_support(array, nodata):
         ``nodata`` and 0 otherwise.
     """
     # comparing an integer array against numpy.nan works correctly and is
-    # faster than using ``numpy.isclose()``.
+    # faster than using numpy.isclose().
     if numpy.issubdtype(array.dtype, numpy.integer):
         return array == nodata
     return numpy.isclose(array, nodata, equal_nan=True)

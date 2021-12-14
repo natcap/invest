@@ -697,7 +697,8 @@ def _calculate_ls_factor(
         # avg aspect intermediate output should always have a defined
         # nodata value from pygeoprocessing
         valid_mask = (
-            (~numpy.isclose(avg_aspect, avg_aspect_nodata)) &
+            (~utils.compare_nodata_nan_support(
+                avg_aspect, avg_aspect_nodata)) &
             (percent_slope != slope_nodata) &
             (flow_accumulation != flow_accumulation_nodata))
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
@@ -804,9 +805,11 @@ def _calculate_rkls(
         nodata_mask = (
             (ls_factor != _TARGET_NODATA) & (stream != stream_nodata))
         if erosivity_nodata is not None:
-            nodata_mask &= ~numpy.isclose(erosivity, erosivity_nodata)
+            nodata_mask &= ~utils.compare_nodata_nan_support(
+                erosivity, erosivity_nodata)
         if erodibility_nodata is not None:
-            nodata_mask &= ~numpy.isclose(erodibility, erodibility_nodata)
+            nodata_mask &= ~utils.compare_nodata_nan_support(
+                erodibility, erodibility_nodata)
 
         valid_mask = nodata_mask & (stream == 0)
         rkls[:] = _TARGET_NODATA
@@ -1029,8 +1032,10 @@ def _calculate_bar_factor(
         # flow accumulation intermediate output should always have a defined
         # nodata value from pygeoprocessing
         valid_mask = ~(
-            numpy.isclose(base_accumulation, _TARGET_NODATA) |
-            numpy.isclose(flow_accumulation, flow_accumulation_nodata))
+            utils.compare_nodata_nan_support(
+                base_accumulation, _TARGET_NODATA) |
+            utils.compare_nodata_nan_support(
+                flow_accumulation, flow_accumulation_nodata))
         result[:] = _TARGET_NODATA
         result[valid_mask] = (
             base_accumulation[valid_mask] / flow_accumulation[valid_mask])

@@ -693,9 +693,10 @@ def volume_op(ratio_array, precip_array, precip_nodata, pixel_area):
     """
     volume_array = numpy.full(ratio_array.shape, FLOAT_NODATA,
                               dtype=numpy.float32)
-    valid_mask = ~numpy.isclose(ratio_array, FLOAT_NODATA)
+    valid_mask = ~utils.compare_nodata_nan_support(ratio_array, FLOAT_NODATA)
     if precip_nodata is not None:
-        valid_mask &= ~numpy.isclose(precip_array, precip_nodata)
+        valid_mask &= ~utils.compare_nodata_nan_support(
+            precip_array, precip_nodata)
 
     # precipitation (mm/yr) * pixel area (m^2) *
     # 0.001 (m/mm) * ratio = volume (m^3/yr)
@@ -718,7 +719,8 @@ def retention_to_runoff_op(retention_array):
     """
     runoff_array = numpy.full(retention_array.shape, FLOAT_NODATA,
                               dtype=numpy.float32)
-    valid_mask = ~numpy.isclose(retention_array, FLOAT_NODATA)
+    valid_mask = ~utils.compare_nodata_nan_support(
+        retention_array, FLOAT_NODATA)
     runoff_array[valid_mask] = 1 - retention_array[valid_mask]
     return runoff_array
 
@@ -750,7 +752,7 @@ def pollutant_load_op(lulc_array, lulc_nodata, volume_array, sorted_lucodes,
     """
     load_array = numpy.full(
         lulc_array.shape, FLOAT_NODATA, dtype=numpy.float32)
-    valid_mask = ~numpy.isclose(volume_array, FLOAT_NODATA)
+    valid_mask = ~utils.compare_nodata_nan_support(volume_array, FLOAT_NODATA)
     if lulc_nodata is not None:
         valid_mask &= (lulc_array != lulc_nodata)
 
@@ -782,7 +784,8 @@ def retention_value_op(retention_volume_array, replacement_cost):
     """
     value_array = numpy.full(retention_volume_array.shape, FLOAT_NODATA,
                              dtype=numpy.float32)
-    valid_mask = ~numpy.isclose(retention_volume_array, FLOAT_NODATA)
+    valid_mask = ~utils.compare_nodata_nan_support(
+        retention_volume_array, FLOAT_NODATA)
 
     # retention (m^3/yr) * replacement cost ($/m^3) = retention value ($/yr)
     value_array[valid_mask] = (
@@ -814,8 +817,8 @@ def adjust_op(ratio_array, avg_ratio_array, near_connected_lulc_array,
     adjustment_factor_array = numpy.full(ratio_array.shape, FLOAT_NODATA,
                                          dtype=numpy.float32)
     valid_mask = (
-        ~numpy.isclose(ratio_array, FLOAT_NODATA) &
-        ~numpy.isclose(avg_ratio_array, FLOAT_NODATA) &
+        ~utils.compare_nodata_nan_support(ratio_array, FLOAT_NODATA) &
+        ~utils.compare_nodata_nan_support(avg_ratio_array, FLOAT_NODATA) &
         (near_connected_lulc_array != UINT8_NODATA) &
         (near_road_array != UINT8_NODATA))
 
