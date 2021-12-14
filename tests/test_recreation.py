@@ -1250,7 +1250,8 @@ class RecreationValidationTests(unittest.TestCase):
 
         expected_message = [(
             ['predictor_table_path'],
-            validation.MATCHED_NO_HEADERS_MSG % ('column', 'id'))]
+            validation.MESSAGES['MATCHED_NO_HEADERS'].format(
+                header='column', header_name='id'))]
         validation_warnings = recreation.recmodel_client.validate({
             'compute_regression': True,
             'predictor_table_path': table_path,
@@ -1271,9 +1272,11 @@ class RecreationValidationTests(unittest.TestCase):
             'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp')})
         expected_messages = [
             (['predictor_table_path'],
-             validation.MATCHED_NO_HEADERS_MSG % ('column', 'id')),
+             validation.MESSAGES['MATCHED_NO_HEADERS'].format(
+                header='column', header_name='id')),
             (['scenario_predictor_table_path'],
-             validation.MATCHED_NO_HEADERS_MSG % ('column', 'id'))]
+             validation.MESSAGES['MATCHED_NO_HEADERS'] .format(
+                header='column', header_name='id'))]
         self.assertEqual(len(validation_warnings), 2)
         for message in expected_messages:
             self.assertTrue(message in validation_warnings)

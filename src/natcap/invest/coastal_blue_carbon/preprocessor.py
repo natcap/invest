@@ -26,25 +26,25 @@ ARGS_SPEC = {
         "results_suffix": spec_utils.SUFFIX,
         "n_workers": spec_utils.N_WORKERS,
         "lulc_lookup_table_path": {
-            "name": "LULC lookup table",
+            "name": _("LULC lookup table"),
             "type": "csv",
-            "about": (
+            "about": _(
                 "A table mapping LULC codes from the snapshot rasters to the "
                 "corresponding LULC class names, and whether or not the "
                 "class is a coastal blue carbon habitat."),
             "columns": {
                 "code": {
                     "type": "integer",
-                    "about": (
+                    "about": _(
                         "LULC code. Every value in the "
                         "snapshot LULC maps must have a corresponding entry "
                         "in this column.")},
                 "lulc-class": {
                     "type": "freestyle_string",
-                    "about": "Name of the LULC class."},
+                    "about": _("Name of the LULC class.")},
                 "is_coastal_blue_carbon_habitat": {
                     "type": "boolean",
-                    "about": (
+                    "about": _(
                         "Enter TRUE if this LULC class is a coastal blue "
                         "carbon habitat, FALSE if not.")}
             }
@@ -55,20 +55,20 @@ ARGS_SPEC = {
                 "snapshot_year": {
                     "type": "number",
                     "units": u.year,
-                    "about": "Year to snapshot."},
+                    "about": _("Year to snapshot.")},
                 "raster_path": {
                     "type": "raster",
                     "bands": {1: {"type": "integer"}},
-                    "about": (
+                    "about": _(
                         "Map of LULC in the snapshot year. "
                         "All values in this raster must have corresponding "
                         "entries in the LULC Lookup table.")
                 }
             },
-            "about": (
+            "about": _(
                 "A table mapping snapshot years to corresponding LULC maps "
                 "for each year."),
-            "name": "LULC snapshots table",
+            "name": _("LULC snapshots table"),
         },
     }
 }

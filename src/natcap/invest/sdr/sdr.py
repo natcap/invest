@@ -7,22 +7,26 @@ The SDR method in this model is based on:
     large watersheds." Journal of Soil and Water Conservation 63.3 (2008):
     105-111.
 """
-import os
 import logging
+import os
 
-from osgeo import gdal, ogr
 import numpy
 import pygeoprocessing
 import pygeoprocessing.routing
 import taskgraph
-from .. import utils
-from .. import spec_utils
-from ..spec_utils import u
-from .. import validation
+from osgeo import gdal
+from osgeo import ogr
+
 from .. import MODEL_METADATA
+from .. import spec_utils
+from .. import utils
+from .. import validation
+from ..spec_utils import u
 from . import sdr_core
 
 LOGGER = logging.getLogger(__name__)
+
+INVALID_ID_MSG = _('{number} features have a non-integer ws_id field')
 
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["sdr"].model_title,
@@ -47,10 +51,10 @@ ARGS_SPEC = {
                 "type": "number",
                 "units": u.megajoule*u.millimeter/(u.hectare*u.hour*u.year)}},
             "projected": True,
-            "about": (
+            "about": _(
                 "Map of rainfall erosivity, reflecting the intensity and "
                 "duration of rainfall in the area of interest."),
-            "name": "erosivity"
+            "name": _("erosivity")
         },
         "erodibility_path": {
             "type": "raster",
@@ -58,11 +62,11 @@ ARGS_SPEC = {
                 "type": "number",
                 "units": u.metric_ton*u.hectare*u.hour/(u.hectare*u.megajoule*u.millimeter)}},
             "projected": True,
-            "about": (
+            "about": _(
                 "Map of soil erodibility, the susceptibility of soil "
                 "particles to detachment and transport by rainfall and "
                 "runoff."),
-            "name": "soil erodibility"
+            "name": _("soil erodibility")
         },
         "lulc_path": {
             **spec_utils.LULC,
@@ -80,11 +84,11 @@ ARGS_SPEC = {
             },
             "geometries": spec_utils.POLYGONS,
             "projected": True,
-            "about": (
+            "about": _(
                 "Map of the boundaries of the watershed(s) over which to "
                 "aggregate results. Each watershed should contribute to a "
                 "point of interest where water quality will be analyzed."),
-            "name": "Watersheds"
+            "name": _("Watersheds")
         },
         "biophysical_table_path": {
             "type": "csv",
@@ -94,55 +98,53 @@ ARGS_SPEC = {
                     "about": "LULC code from the LULC raster."},
                 "usle_c": {
                     "type": "ratio",
-                    "about": "Cover-management factor for the USLE"},
+                    "about": _("Cover-management factor for the USLE")},
                 "usle_p": {
                     "type": "ratio",
-                    "about": "Support practice factor for the USLE"}
+                    "about": _("Support practice factor for the USLE")}
             },
-            "about": (
+            "about": _(
                 "A table mapping each LULC code to biophysical properties of "
                 "that LULC class. All values in the LULC raster must have "
                 "corresponding entries in this table."),
-            "name": "Biophysical Table"
+            "name": _("biophysical table")
         },
-        "threshold_flow_accumulation": {
-            **spec_utils.THRESHOLD_FLOW_ACCUMULATION
-        },
+        "threshold_flow_accumulation": spec_utils.THRESHOLD_FLOW_ACCUMULATION,
         "k_param": {
             "type": "number",
             "units": u.none,
-            "about": "Borselli k parameter.",
-            "name": "Borselli k parameter"
+            "about": _("Borselli k parameter."),
+            "name": _("Borselli k parameter")
         },
         "sdr_max": {
             "type": "ratio",
-            "about": "The maximum SDR value that a pixel can have.",
-            "name": "maximum SDR value"
+            "about": _("The maximum SDR value that a pixel can have."),
+            "name": _("maximum SDR value")
         },
         "ic_0_param": {
             "type": "number",
             "units": u.none,
-            "about": "Borselli IC0 parameter.",
-            "name": "Borselli IC0 parameter"
+            "about": _("Borselli IC0 parameter."),
+            "name": _("Borselli IC0 parameter")
         },
         "l_max": {
             "type": "number",
             "expression": "value > 0",
             "units": u.none,
-            "about": (
+            "about": _(
                 "The maximum allowed value of the slope length parameter (L) "
                 "in the LS factor."),
-            "name": "maximum l value",
+            "name": _("maximum l value"),
         },
         "drainage_path": {
             "type": "raster",
             "bands": {1: {"type": "number", "units": u.none}},
             "required": False,
-            "about": (
+            "about": _(
                 "Map of locations of artificial drainages that drain to the "
                 "watershed. Pixels with 1 are drainages and are treated like "
                 "streams. Pixels with 0 are not drainages."),
-            "name": "drainages"
+            "name": _("drainages")
         }
     }
 }
@@ -187,7 +189,8 @@ _INTERMEDIATE_BASE_FILES = {
     'w_path': 'w.tif',
     'ws_inverse_path': 'ws_inverse.tif',
     'e_prime_path': 'e_prime.tif',
-    'weighted_avg_aspect_path': 'weighted_avg_aspect.tif'
+    'weighted_avg_aspect_path': 'weighted_avg_aspect.tif',
+    'drainage_mask': 'what_drains_to_stream.tif',
 }
 
 _TMP_BASE_FILES = {
@@ -201,6 +204,7 @@ _TMP_BASE_FILES = {
 # Target nodata is for general rasters that are positive, and _IC_NODATA are
 # for rasters that are any range
 _TARGET_NODATA = -1.0
+_BYTE_NODATA = 255
 _IC_NODATA = float(numpy.finfo('float32').min)
 
 
@@ -629,6 +633,14 @@ def execute(args):
         task_name='calculate sediment retention')
 
     _ = task_graph.add_task(
+        func=_calculate_what_drains_to_stream,
+        args=(f_reg['flow_direction_path'], f_reg['d_dn_path'],
+              f_reg['drainage_mask']),
+        target_path_list=[f_reg['drainage_mask']],
+        dependent_task_list=[flow_dir_task, d_dn_task],
+        task_name='write mask of what drains to stream')
+
+    _ = task_graph.add_task(
         func=_generate_report,
         args=(
             args['watersheds_path'], f_reg['usle_path'],
@@ -641,6 +653,71 @@ def execute(args):
 
     task_graph.close()
     task_graph.join()
+
+
+def _calculate_what_drains_to_stream(
+        flow_dir_mfd_path, dist_to_channel_mfd_path, target_mask_path):
+    """Create a mask indicating regions that do or do not drain to a stream.
+
+    This is useful because ``pygeoprocessing.distance_to_stream_mfd`` may leave
+    some unexpected regions as nodata if they do not drain to a stream.  This
+    may be confusing behavior, so this mask is intended to locate what drains
+    to a stream and what does not. A pixel doesn't drain to a stream if it has
+    a defined flow direction but undefined distance to stream.
+
+    Args:
+        flow_dir_mfd_path (string): The path to an MFD flow direction raster.
+            This raster must have a nodata value defined.
+        dist_to_channel_mfd_path (string): The path to an MFD
+            distance-to-channel raster.  This raster must have a nodata value
+            defined.
+        target_mask_path (string): The path to where the mask raster should be
+            written.
+
+    Returns:
+        ``None``
+    """
+    flow_dir_mfd_nodata = pygeoprocessing.get_raster_info(
+        flow_dir_mfd_path)['nodata'][0]
+    dist_to_channel_nodata = pygeoprocessing.get_raster_info(
+        dist_to_channel_mfd_path)['nodata'][0]
+
+    def _what_drains_to_stream(flow_dir_mfd, dist_to_channel):
+        """Determine which pixels do and do not drain to a stream.
+
+        Args:
+            flow_dir_mfd (numpy.array): A numpy array of MFD flow direction
+                values.
+            dist_to_channel (numpy.array): A numpy array of calculated
+                distances to the nearest channel.
+
+        Returns:
+            A ``numpy.array`` of dtype ``numpy.uint8`` with pixels where:
+
+                * ``255`` where ``flow_dir_mfd`` is nodata (and thus
+                  ``dist_to_channel`` is also nodata).
+                * ``0`` where ``flow_dir_mfd`` has data and ``dist_to_channel``
+                  does not
+                * ``1`` where ``flow_dir_mfd`` has data, and
+                  ``dist_to_channel`` also has data.
+        """
+        drains_to_stream = numpy.full(
+            flow_dir_mfd.shape, _BYTE_NODATA, dtype=numpy.uint8)
+        valid_flow_dir = ~numpy.isclose(flow_dir_mfd, flow_dir_mfd_nodata)
+        valid_dist_to_channel = (
+            ~numpy.isclose(dist_to_channel, dist_to_channel_nodata) &
+            valid_flow_dir)
+
+        # Nodata where both flow_dir and dist_to_channel are nodata
+        # 1 where flow_dir and dist_to_channel have values (drains to stream)
+        # 0 where flow_dir has data and dist_to_channel doesn't (doesn't drain)
+        drains_to_stream[valid_flow_dir & valid_dist_to_channel] = 1
+        drains_to_stream[valid_flow_dir & ~valid_dist_to_channel] = 0
+        return drains_to_stream
+
+    pygeoprocessing.raster_calculator(
+        [(flow_dir_mfd_path, 1), (dist_to_channel_mfd_path, 1)],
+        _what_drains_to_stream, target_mask_path, gdal.GDT_Byte, _BYTE_NODATA)
 
 
 def _calculate_ls_factor(
@@ -1359,15 +1436,14 @@ def validate(args, limit_to=None):
         n_invalid_features = 0
         for feature in layer:
             try:
-                _ = int(feature.GetFieldAsString('ws_id'))
+                int(feature.GetFieldAsString('ws_id'))
             except ValueError:
                 n_invalid_features += 1
 
         if n_invalid_features:
             validation_warnings.append((
                 ['watersheds_path'],
-                ('%s features have a non-integer ws_id field' %
-                    n_invalid_features)))
+                INVALID_ID_MSG.format(number=n_invalid_features)))
             invalid_keys.add('watersheds_path')
 
     return validation_warnings

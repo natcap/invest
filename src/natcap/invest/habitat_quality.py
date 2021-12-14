@@ -18,9 +18,16 @@ from . import MODEL_METADATA
 
 LOGGER = logging.getLogger(__name__)
 
-MISSING_SENSITIVITY_TABLE_THREATS_MSG = (
-    'Threats %s does not match any column in the sensitivity table. '
-    'Sensitivity columns: %s')  # (set of missing threats, set of found columns)
+MISSING_SENSITIVITY_TABLE_THREATS_MSG = _(
+    'Threats {threats} does not match any column in the sensitivity table. '
+    'Sensitivity columns: {column_names}')  # (set of missing threats, set of found columns)
+MISSING_COLUMN_MSG = _(
+    "The column '{column_name}' was not found in the Threat Data table for "
+    "the corresponding input LULC scenario.")
+MISSING_THREAT_RASTER_MSG = _(
+    "A threat raster for threats: {threat_list} was not found or it "
+    "could not be opened by GDAL.")
+DUPLICATE_PATHS_MSG = _("Threat paths must be unique. Duplicates: ")
 
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["habitat_quality"].model_title,
@@ -38,33 +45,33 @@ ARGS_SPEC = {
         "lulc_cur_path": {
             **spec_utils.LULC,
             "projected": True,
-            "about": (
+            "about": _(
                 "Map of LULC at present. All values in this raster must "
                 "have corresponding entries in the Sensitivity table."),
-            "name": "current land cover"
+            "name": _("current land cover")
         },
         "lulc_fut_path": {
             **spec_utils.LULC,
             "projected": True,
             "required": False,
-            "about": (
+            "about": _(
                 "Map of LULC in a future scenario. All values in this raster "
                 "must have corresponding entries in the Sensitivity "
                 "Table. Must use the same classification scheme and codes as "
                 "in the Current LULC map."),
-            "name": "future land cover"
+            "name": _("future land cover")
         },
         "lulc_bas_path": {
             **spec_utils.LULC,
             "projected": True,
             "required": False,
-            "about": (
+            "about": _(
                 "Map of LULC in a baseline scenario, when intensive landscape "
                 "management was relatively rare. All values in this raster "
                 "must have corresponding entries in the Sensitivity "
                 "table. Must use the same classification scheme and codes as "
                 "in the Current LULC map."),
-            "name": "baseline land cover"
+            "name": _("baseline land cover")
         },
         "threats_table_path": {
             "type": "csv",
@@ -77,7 +84,7 @@ ARGS_SPEC = {
                 "max_dist": {
                     "type": "number",
                     "units": u.kilometer,
-                    "about": (
+                    "about": _(
                         "The maximum distance over which each threat affects "
                         "habitat quality. The impact of each degradation "
                         "source will decline to zero at this maximum "
@@ -86,14 +93,23 @@ ARGS_SPEC = {
                 },
                 "weight": {
                     "type": "ratio",
-                    "about": (
+                    "about": _(
                         "The impact of each threat on habitat quality, "
                         "relative to other threats.")
                 },
                 "decay": {
                     "type": "option_string",
-                    "options": ["linear", "exponential"],
-                    "about": "The type of decay over space for each threat."
+                    "options": {
+                        "linear": {
+                            "description": _(
+                                "Effects of the threat decay linearly with "
+                                "distance from the threat.")},
+                        "exponential": {
+                            "description": _(
+                                "Effects of the threat decay exponentially "
+                                "with distance from the threat.")}
+                    },
+                    "about": _("The type of decay over space for each threat.")
                 },
                 "cur_path": {
                     "type": "raster",
@@ -124,11 +140,11 @@ ARGS_SPEC = {
                         "Required if Baseline LULC is provided.")
                 }
             },
-            "about": (
+            "about": _(
                 "Table mapping each threat of interest to its properties and "
                 "distribution maps. Paths are relative to the threats "
                 "table path."),
-            "name": "threats table"
+            "name": _("threats table")
         },
         "access_vector_path": {
             "type": "vector",
@@ -136,7 +152,7 @@ ARGS_SPEC = {
             "fields": {
                 "access": {
                     "type": "ratio",
-                    "about": (
+                    "about": _(
                         "The region's relative accessibility to threats, "
                         "where 0 represents completely inaccessible and 1 "
                         "represents completely accessible.")
@@ -144,29 +160,29 @@ ARGS_SPEC = {
             },
             "geometries": spec_utils.POLYGONS,
             "required": False,
-            "about": (
+            "about": _(
                 "Map of the relative protection that legal, institutional, "
                 "social, and physical barriers provide against threats. Any "
                 "cells not covered by a polygon will be set to 1."),
-            "name": "accessibility to threats"
+            "name": _("accessibility to threats")
         },
         "sensitivity_table_path": {
             "type": "csv",
             "columns": {
                 "lulc": {
                     "type": "integer",
-                    "about": ("LULC codes corresponding to those in the LULC "
-                              "rasters.")
+                    "about": _("LULC codes corresponding to those in the LULC "
+                               "rasters.")
                 },
                 "habitat": {
                     "type": "ratio",
-                    "about": (
+                    "about": _(
                         "Suitability of this LULC class as habitat, where 0 "
                         "is not suitable and 1 is completely suitable.")
                 },
                 "[THREAT]": {
                     "type": "ratio",
-                    "about": (
+                    "about": _(
                         "The relative sensitivity of each LULC class to each "
                         "type of threat, where 1 represents high sensitivity "
                         "and 0 represents that it is unaffected. There must "
@@ -174,19 +190,19 @@ ARGS_SPEC = {
                         "'threats' column of the Threats Table.")
                 }
             },
-            "about": (
+            "about": _(
                 "Table mapping each LULC class to data about the species' "
                 "habitat preference and threat sensitivity in areas with that "
                 "LULC."),
-            "name": "sensitivity table"
+            "name": _("sensitivity table")
         },
         "half_saturation_constant": {
             "expression": "value > 0",
             "type": "number",
             "units": u.none,
-            "about": (
+            "about": _(
                 "Half-saturation constant used in the degradation equation."),
-            "name": "half-saturation constant"
+            "name": _("half-saturation constant")
         },
     }
 }
@@ -335,10 +351,8 @@ def execute(args):
                         lulc_and_threat_raster_list.append(threat_path)
                     else:
                         raise ValueError(
-                            'Threat paths cannot be the same and must have '
-                            'unique absolute filepaths. The threat path: '
-                            f'{os.path.basename(threat_path)} is a '
-                            'duplicate.')
+                            DUPLICATE_PATHS_MSG + os.path.basename(threat_path)
+                        )
                     # Check threat raster values are 0 <= x <= 1
                     threat_values_task = task_graph.add_task(
                         func=_raster_values_in_bounds,
@@ -1073,10 +1087,11 @@ def validate(args, limit_to=None):
         if missing_sens_header_set:
             validation_warnings.append(
                 (['sensitivity_table_path'],
-                 MISSING_SENSITIVITY_TABLE_THREATS_MSG % (
-                    missing_sens_header_set, sens_header_set)))
+                 MISSING_SENSITIVITY_TABLE_THREATS_MSG.format(
+                    threats=missing_sens_header_set,
+                    column_names=sens_header_set)))
 
-            invalid_keys.add('snsitivity_table_path')
+            invalid_keys.add('sensitivity_table_path')
 
         # Get the directory path for the Threats CSV, used for locating threat
         # rasters, which are relative to this path
@@ -1124,26 +1139,21 @@ def validate(args, limit_to=None):
                                 os.path.basename(threat_path))
 
         if bad_threat_columns:
-            validation_warnings.append(
-                (['threats_table_path'],
-                 (f"The column '{bad_threat_columns[0]}' was not found"
-                  " in the Threat Data table for the corresponding"
-                  " input LULC scenario.")))
+            validation_warnings.append((
+                ['threats_table_path'],
+                MISSING_COLUMN_MSG.format(column_name=bad_threat_columns[0])))
 
         if bad_threat_paths:
-            validation_warnings.append(
-                (['threats_table_path'],
-                 (f'A threat raster for threats: {bad_threat_paths}'
-                  ' was not found or it could not be opened by GDAL.')))
-
+            validation_warnings.append((
+                ['threats_table_path'],
+                MISSING_THREAT_RASTER_MSG.format(threat_list=bad_threat_paths)
+            ))
             invalid_keys.add('threats_table_path')
 
         if duplicate_paths:
             validation_warnings.append((
                 ['threats_table_path'],
-                ('Threat paths cannot be the same and must have unique '
-                 f'absolute filepaths. The threat paths: {duplicate_paths} '
-                 'were duplicates.')))
+                DUPLICATE_PATHS_MSG + str(duplicate_paths)))
 
             if 'threats_table_path' not in invalid_keys:
                 invalid_keys.add('threats_table_path')
