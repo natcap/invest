@@ -63,6 +63,23 @@ class NewDatastackTest(unittest.TestCase):
         model_name = 'natcap.invest.coastal_blue_carbon.coastal_blue_carbon'
         self.execute_model(model_name, source_parameter_set_path)
 
+    def test_habitat_quality(self):
+        """Datastack: Test Habitat Quality."""
+        source_parameter_set_path = os.path.join(
+            SAMPLE_DATA_DIR, 'HabitatQuality',
+            'habitat_quality_willamette.invs.json')
+        model_name = 'natcap.invest.habitat_quality'
+        self.execute_model(model_name, source_parameter_set_path)
+
+    @unittest.skip('Takes a long time to run')
+    def test_cv(self):
+        """Datastack: Test Coastal Vulnerability."""
+        source_parameter_set_path = os.path.join(
+            SAMPLE_DATA_DIR, 'CoastalVulnerability',
+            'coastal_vuln_grandbahama.invs.json')
+        model_name = 'natcap.invest.coastal_vulnerability'
+        self.execute_model(model_name, source_parameter_set_path)
+
     @unittest.skip('Invokes remote server; network may be slow.')
     def test_recreation(self):
         source_parameter_set_path = os.path.join(

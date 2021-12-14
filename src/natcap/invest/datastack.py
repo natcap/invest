@@ -377,8 +377,14 @@ def build_datastack_archive(args, model_name, datastack_path):
 
         # Python can't handle mixed file separators, so let's just standardize
         # on linux filepaths internally.
+        #
+        # Also check to see if a file-based path has no value; skip if so
         if input_type in spatial_types.union(
                 {'csv', 'file', 'directory'}):
+            if args[key] in {None, ''}:
+                rewritten_args[key] = ''
+                continue
+
             source_path = args[key].replace('\\', '/')
 
         if input_type == 'csv':
