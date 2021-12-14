@@ -203,7 +203,7 @@ class CLIHeadlessTests(unittest.TestCase):
 
     def test_validate_carbon(self):
         """CLI: Validate a model inputs through the cli."""
-        from natcap.invest import cli
+        from natcap.invest import cli, validation
 
         datastack_dict = {
             'model_name': 'natcap.invest.carbon',
@@ -226,13 +226,9 @@ class CLIHeadlessTests(unittest.TestCase):
         validation_output = stdout_stream.getvalue()
         # it's expected that these keys are missing because the only
         # key we included was the workspace_dir
-        expected_warnings = [
-            "(['carbon_pools_path', 'lulc_cur_path'], "
-            "'Key is missing from the args dict')"]
-        for warning in expected_warnings:
-            self.assertTrue(warning in validation_output)
-        # 1 line = 1 warning messages
-        self.assertEqual(len(validation_output.split('\n')), 1)
+        expected_warning = [(['carbon_pools_path', 'lulc_cur_path'],
+                            validation.MESSAGES['MISSING_KEY'])]
+        self.assertEqual(validation_output, str(expected_warning))
         self.assertEqual(exit_cm.exception.code, 0)
 
     def test_validate_coastal_blue_carbon_missing_workspace(self):

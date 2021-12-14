@@ -46,54 +46,57 @@ ARGS_SPEC = {
                 "lucode": {"type": "integer"},
                 "crop_name": {
                     "type": "option_string",
-                    "options": [
-                        "abaca", "agave", "alfalfa", "almond", "aniseetc",
-                        "apple", "apricot", "areca", "artichoke", "asparagus",
-                        "avocado", "bambara", "banana", "barley", "bean",
-                        "beetfor", "berrynes", "blueberry", "brazil",
-                        "canaryseed", "carob", "carrot", "carrotfor", "cashew",
-                        "broadbean", "buckwheat", "cabbage", "cabbagefor",
-                        "cashewapple", "cassava", "castor", "cauliflower",
-                        "cerealnes", "cherry", "chestnut", "chickpea",
-                        "chicory", "chilleetc", "cinnamon", "citrusnes",
-                        "clove", "clover", "cocoa", "coconut", "coffee",
-                        "cotton", "cowpea", "cranberry", "cucumberetc",
-                        "currant", "date", "eggplant", "fibrenes", "fig",
-                        "flax", "fonio", "fornes", "fruitnes", "garlic",
-                        "ginger", "gooseberry", "grape", "grapefruitetc",
-                        "grassnes", "greenbean", "greenbroadbean", "greencorn",
-                        "greenonion", "greenpea", "groundnut", "hazelnut",
-                        "hemp", "hempseed", "hop", "jute", "jutelikefiber",
-                        "kapokfiber", "kapokseed", "karite", "kiwi", "kolanut",
-                        "legumenes", "lemonlime", "lentil", "lettuce",
-                        "linseed", "lupin", "maize", "maizefor", "mango",
-                        "mate", "melonetc", "melonseed", "millet",
-                        "mixedgrain", "mixedgrass", "mushroom", "mustard",
-                        "nutmeg", "nutnes", "oats", "oilpalm", "oilseedfor",
-                        "oilseednes", "okra", "olive", "onion", "orange",
-                        "papaya", "pea", "peachetc", "pear", "pepper",
-                        "peppermint", "persimmon", "pigeonpea", "pimento",
-                        "pineapple", "pistachio", "plantain", "plum", "poppy",
-                        "potato", "pulsenes", "pumpkinetc", "pyrethrum",
-                        "quince", "quinoa", "ramie", "rapeseed", "rasberry",
-                        "rice", "rootnes", "rubber", "rye", "ryefor",
-                        "safflower", "sesame", "sisal", "sorghum",
-                        "sorghumfor", "sourcherry, soybean", "spicenes",
-                        "spinach", "stonefruitnes", "strawberry", "stringbean",
-                        "sugarbeet", "sugarcane", "sugarnes", "sunflower",
-                        "swedefor", "sweetpotato", "tangetc", "taro", "tea",
-                        "tobacco", "tomato", "triticale", "tropicalnes",
-                        "tung", "turnipfor", "vanilla", "vegetablenes",
-                        "vegfor", "vetch", "walnut", "watermelon", "wheat",
-                        "yam", "yautia"
-                    ]
+                    "options": {
+                        # TODO: use human-readable translatable crop names (#614)
+                        crop: {"description": crop} for crop in [
+                            "abaca", "agave", "alfalfa", "almond", "aniseetc",
+                            "apple", "apricot", "areca", "artichoke", "asparagus",
+                            "avocado", "bambara", "banana", "barley", "bean",
+                            "beetfor", "berrynes", "blueberry", "brazil",
+                            "canaryseed", "carob", "carrot", "carrotfor", "cashew",
+                            "broadbean", "buckwheat", "cabbage", "cabbagefor",
+                            "cashewapple", "cassava", "castor", "cauliflower",
+                            "cerealnes", "cherry", "chestnut", "chickpea",
+                            "chicory", "chilleetc", "cinnamon", "citrusnes",
+                            "clove", "clover", "cocoa", "coconut", "coffee",
+                            "cotton", "cowpea", "cranberry", "cucumberetc",
+                            "currant", "date", "eggplant", "fibrenes", "fig",
+                            "flax", "fonio", "fornes", "fruitnes", "garlic",
+                            "ginger", "gooseberry", "grape", "grapefruitetc",
+                            "grassnes", "greenbean", "greenbroadbean", "greencorn",
+                            "greenonion", "greenpea", "groundnut", "hazelnut",
+                            "hemp", "hempseed", "hop", "jute", "jutelikefiber",
+                            "kapokfiber", "kapokseed", "karite", "kiwi", "kolanut",
+                            "legumenes", "lemonlime", "lentil", "lettuce",
+                            "linseed", "lupin", "maize", "maizefor", "mango",
+                            "mate", "melonetc", "melonseed", "millet",
+                            "mixedgrain", "mixedgrass", "mushroom", "mustard",
+                            "nutmeg", "nutnes", "oats", "oilpalm", "oilseedfor",
+                            "oilseednes", "okra", "olive", "onion", "orange",
+                            "papaya", "pea", "peachetc", "pear", "pepper",
+                            "peppermint", "persimmon", "pigeonpea", "pimento",
+                            "pineapple", "pistachio", "plantain", "plum", "poppy",
+                            "potato", "pulsenes", "pumpkinetc", "pyrethrum",
+                            "quince", "quinoa", "ramie", "rapeseed", "rasberry",
+                            "rice", "rootnes", "rubber", "rye", "ryefor",
+                            "safflower", "sesame", "sisal", "sorghum",
+                            "sorghumfor", "sourcherry, soybean", "spicenes",
+                            "spinach", "stonefruitnes", "strawberry", "stringbean",
+                            "sugarbeet", "sugarcane", "sugarnes", "sunflower",
+                            "swedefor", "sweetpotato", "tangetc", "taro", "tea",
+                            "tobacco", "tomato", "triticale", "tropicalnes",
+                            "tung", "turnipfor", "vanilla", "vegetablenes",
+                            "vegfor", "vetch", "walnut", "watermelon", "wheat",
+                            "yam", "yautia"
+                        ]
+                    }
                 }
             },
-            "about": (
+            "about": _(
                 "A table that maps each LULC code from the LULC map to one of "
                 "the 175 canonical crop names representing the crop grown in "
                 "that LULC class."),
-            "name": "LULC to Crop Table"
+            "name": _("LULC to Crop Table")
         },
         "aggregate_polygon_path": {
             **spec_utils.AOI,
@@ -105,7 +108,7 @@ ARGS_SPEC = {
             "contents": {
                 "climate_percentile_yield_tables": {
                     "type": "directory",
-                    "about": (
+                    "about": _(
                         "Table mapping each climate bin to yield percentiles "
                         "for each crop."),
                     "contents": {
@@ -135,7 +138,7 @@ ARGS_SPEC = {
                 },
                 "extended_climate_bin_maps": {
                     "type": "directory",
-                    "about": "Maps of climate bins for each crop.",
+                    "about": _("Maps of climate bins for each crop."),
                     "contents": {
                         "extendedclimatebins[CROP]": {
                             "type": "raster",
@@ -145,7 +148,7 @@ ARGS_SPEC = {
                 },
                 "observed_yield": {
                     "type": "directory",
-                    "about": "Maps of actual observed yield for each crop.",
+                    "about": _("Maps of actual observed yield for each crop."),
                     "contents": {
                         "[CROP]_observed_yield.tif": {
                             "type": "raster",
@@ -200,8 +203,8 @@ ARGS_SPEC = {
                     }
                 }
             },
-            "about": "Path to the InVEST Crop Production Data directory.",
-            "name": "model data directory"
+            "about": _("Path to the InVEST Crop Production Data directory."),
+            "name": _("model data directory")
         }
     }
 }

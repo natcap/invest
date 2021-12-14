@@ -46,7 +46,7 @@ ARGS_SPEC = {
             "type": "number",
             "units": u.none,
             "required": "compute_forest_edge_effects",
-            "about": (
+            "about": _(
                 "Number of closest regression models that are used when "
                 "calculating the total biomass. Each local model is linearly "
                 "weighted by distance such that the pixel's biomass is a "
@@ -54,7 +54,7 @@ ARGS_SPEC = {
                 "having the largest effect. Must be an integer greater than "
                 "0. Required if Compute Forest Edge Effects is selected."
             ),
-            "name": "number of points to average"
+            "name": _("number of points to average")
         },
         "aoi_vector_path": {
             **spec_utils.AOI,
@@ -78,7 +78,7 @@ ARGS_SPEC = {
                 "c_above": {
                     "type": "number",
                     "units": u.metric_ton/u.hectare,
-                    "about": (
+                    "about": _(
                         "Carbon density value for the aboveground carbon "
                         "pool.")
                 },
@@ -86,7 +86,7 @@ ARGS_SPEC = {
                     "type": "number",
                     "units": u.metric_ton/u.hectare,
                     "required": "pools_to_calculate == 'all'",
-                    "about": (
+                    "about": _(
                         "Carbon density value for the belowground carbon "
                         "pool. Required if calculating all pools.")
                 },
@@ -94,7 +94,7 @@ ARGS_SPEC = {
                     "type": "number",
                     "units": u.metric_ton/u.hectare,
                     "required": "pools_to_calculate == 'all'",
-                    "about": (
+                    "about": _(
                         "Carbon density value for the soil carbon pool. "
                         "Required if calculating all pools.")
                 },
@@ -102,15 +102,15 @@ ARGS_SPEC = {
                     "type": "number",
                     "units": u.metric_ton/u.hectare,
                     "required": "pools_to_calculate == 'all'",
-                    "about": (
+                    "about": _(
                         "Carbon density value for the dead matter carbon "
                         "pool. Required if calculating all pools.")
                 },
             },
-            "about": (
+            "about": _(
                 "A table mapping each LULC code from the LULC map to "
                 "biophysical data for that LULC class."),
-            "name": "biophysical table"
+            "name": _("biophysical table")
         },
         "lulc_raster_path": {
             **spec_utils.LULC,
@@ -122,20 +122,24 @@ ARGS_SPEC = {
         "pools_to_calculate": {
             "type": "option_string",
             "options": {
-                "all": (
-                    "Use all pools (aboveground, belowground, soil, and dead "
-                    "matter) in the carbon pool calculation."),
-                "above_ground": (
-                    "Only use the aboveground pool in the carbon pool "
-                    "calculation.")
+                "all": {
+                    "display_name": _("all"),
+                    "description": _(
+                        "Use all pools (aboveground, belowground, soil, and "
+                        "dead matter) in the carbon pool calculation.")},
+                "above_ground": {
+                    "display_name": _("aboveground only"),
+                    "description": _(
+                        "Only use the aboveground pool in the carbon pool "
+                        "calculation.")}
             },
-            "about": "Which carbon pools to consider.",
-            "name": "carbon pools to calculate"
+            "about": _("Which carbon pools to consider."),
+            "name": _("carbon pools to calculate")
         },
         "compute_forest_edge_effects": {
             "type": "boolean",
-            "about": "Account for forest edge effects on aboveground carbon.",
-            "name": "compute forest edge effects"
+            "about": _("Account for forest edge effects on aboveground carbon."),
+            "name": _("compute forest edge effects")
         },
         "tropical_forest_edge_carbon_model_vector_path": {
             "type": "vector",
@@ -143,9 +147,9 @@ ARGS_SPEC = {
                 "method": {
                     "type": "option_string",
                     "options": {
-                        "1": "Asymptotic: biomass=θ₁-θ₂·exp(-θ₃·distance)",
-                        "2": "Logarithmic: biomass=θ₁+θ₂·ln(distance)",
-                        "3": "Linear: biomass=θ₁+θ₂·distance"
+                        "1": {"description": _("asymptotic")},
+                        "2": {"description": _("logarithmic")},
+                        "3": {"description": _("linear")}
                     },
                     "about": "Optimal regression model for the area."
                 },
@@ -166,20 +170,20 @@ ARGS_SPEC = {
             },
             "geometries": spec_utils.POLYGONS,
             "required": "compute_forest_edge_effects",
-            "about": (
+            "about": _(
                 "Map storing the optimal regression model for each tropical "
                 "subregion and the corresponding theta parameters for that "
                 "regression equation. Default data is provided. Required if "
                 "Compute Forest Edge Effects is selected."),
-            "name": "global regression models"
+            "name": _("global regression models")
         },
         "biomass_to_carbon_conversion_factor": {
             "type": "ratio",
             "required": "compute_forest_edge_effects",
-            "about": (
+            "about": _(
                 "Proportion of forest edge biomass that is elemental carbon. "
                 "Required if Compute Forest Edge Effects is selected."),
-            "name": "forest edge biomass to carbon conversion factor"
+            "name": _("forest edge biomass to carbon conversion factor")
         }
     }
 }

@@ -367,7 +367,7 @@ class HabitatQualityTests(unittest.TestCase):
             # so we should exclude those new nodata pixel values.
             assert_array_sum(raster_path, assert_value, include_nodata=False)
 
-    def test_habtitat_quality_undefined_threat_nodata(self):
+    def test_habitat_quality_undefined_threat_nodata(self):
         """Habitat Quality: test for undefined threat nodata."""
         from natcap.invest import habitat_quality
 
@@ -749,8 +749,8 @@ class HabitatQualityTests(unittest.TestCase):
         with self.assertRaises(ValueError) as cm:
             habitat_quality.execute(args)
 
-        self.assertTrue(
-            "max distance for threat: 'threat_1' is less" in str(cm.exception))
+        self.assertIn("max distance for threat: 'threat_1' is less",
+                      str(cm.exception))
 
     def test_habitat_quality_invalid_decay_type(self):
         """Habitat Quality: expected ValueError on invalid decay type."""
@@ -936,10 +936,10 @@ class HabitatQualityTests(unittest.TestCase):
             habitat_quality.execute(args)
 
         actual_message = str(cm.exception)
-        self.assertTrue(
+        self.assertIn(
             'There was an Error locating a threat raster from '
-            'the path in CSV for column: cur_path and threat: threat_1' in
-            actual_message, actual_message)
+            'the path in CSV for column: cur_path and threat: threat_1',
+            actual_message)
 
     def test_habitat_quality_lulc_current_only(self):
         """Habitat Quality: on missing base and future LULC rasters."""
@@ -1141,9 +1141,9 @@ class HabitatQualityTests(unittest.TestCase):
 
         # 2 is the missing landcover codes.
         # Raster nodata is 255 and should NOT appear in this list.
-        self.assertTrue(
+        self.assertIn(
             "The missing values found in the LULC_c raster but not the table"
-            " are: [2]" in str(cm.exception))
+            " are: [2]", str(cm.exception))
 
     def test_habitat_quality_validate(self):
         """Habitat Quality: validate raise exception as expected."""
@@ -1163,7 +1163,7 @@ class HabitatQualityTests(unittest.TestCase):
             'half_saturation_constant'])
         self.assertEqual(set(validation_results[0][0]), keys_without_value)
 
-    def test_habtitat_quality_validate_complete(self):
+    def test_habitat_quality_validate_complete(self):
         """Habitat Quality: test regular validation."""
         from natcap.invest import habitat_quality
 
@@ -1213,7 +1213,7 @@ class HabitatQualityTests(unittest.TestCase):
             validate_result,  # List should be empty if validation passes
             f"expected no failed validations instead got {validate_result}.")
 
-    def test_habtitat_quality_validation_wrong_spatial_types(self):
+    def test_habitat_quality_validation_wrong_spatial_types(self):
         """Habitat Quality: test validation for wrong GIS types."""
         from natcap.invest import habitat_quality
 
@@ -1267,11 +1267,11 @@ class HabitatQualityTests(unittest.TestCase):
             "expected failed validations instead didn't get any")
         for (validation_keys, error_msg), phrase in zip(
                 validate_result, ['GDAL vector', 'GDAL raster']):
-            self.assertTrue(phrase in error_msg)
+            self.assertIn(phrase, error_msg)
 
-    def test_habtitat_quality_validation_missing_sens_header(self):
+    def test_habitat_quality_validation_missing_sens_header(self):
         """Habitat Quality: test validation for sens threat header."""
-        from natcap.invest import habitat_quality, validation
+        from natcap.invest import habitat_quality, utils
 
         args = {
             'half_saturation_constant': '0.5',
@@ -1319,10 +1319,11 @@ class HabitatQualityTests(unittest.TestCase):
         validate_result = habitat_quality.validate(args, limit_to=None)
         self.assertEqual(len(validate_result), 1)
         self.assertEqual(validate_result[0][0], ['sensitivity_table_path'])
-        expected_msg = 'does not match any column in the sensitivity table'
-        self.assertTrue(expected_msg in validate_result[0][1])
+        self.assertTrue(utils.matches_format_string(
+            validate_result[0][1],
+            habitat_quality.MISSING_SENSITIVITY_TABLE_THREATS_MSG))
 
-    def test_habtitat_quality_validation_bad_threat_path(self):
+    def test_habitat_quality_validation_bad_threat_path(self):
         """Habitat Quality: test validation for bad threat paths."""
         from natcap.invest import habitat_quality
 
@@ -1369,12 +1370,14 @@ class HabitatQualityTests(unittest.TestCase):
         self.assertTrue(
             validate_result,
             "expected failed validations instead didn't get any.")
-        self.assertTrue(
-            "A threat raster for threats: [('threat_1', 'cur_path'), "
-            "('threat_2', 'cur_path'), ('threat_1', 'fut_path'), "
-            "('threat_2', 'fut_path')] "
-            "was not found or it could not be opened by GDAL." in
-            validate_result[0][1], validate_result[0][1])
+        self.assertEqual(
+            habitat_quality.MISSING_THREAT_RASTER_MSG.format(
+                threat_list=[
+                    ('threat_1', 'cur_path'),
+                    ('threat_2', 'cur_path'),
+                    ('threat_1', 'fut_path'),
+                    ('threat_2', 'fut_path')]),
+            validate_result[0][1])
 
     def test_habitat_quality_missing_cur_threat_path(self):
         """Habitat Quality: test for missing threat paths in current."""
@@ -1424,10 +1427,10 @@ class HabitatQualityTests(unittest.TestCase):
             habitat_quality.execute(args)
 
         actual_message = str(cm.exception)
-        self.assertTrue(
+        self.assertIn(
             'There was an Error locating a threat raster from '
-            'the path in CSV for column: cur_path and threat: threat_1' in
-            actual_message, actual_message)
+            'the path in CSV for column: cur_path and threat: threat_1',
+            actual_message)
 
     def test_habitat_quality_missing_fut_threat_path(self):
         """Habitat Quality: test for missing threat paths in future."""
@@ -1477,10 +1480,10 @@ class HabitatQualityTests(unittest.TestCase):
             habitat_quality.execute(args)
 
         actual_message = str(cm.exception)
-        self.assertTrue(
+        self.assertIn(
             'There was an Error locating a threat raster from '
-            'the path in CSV for column: fut_path and threat: threat_1' in
-            actual_message, actual_message)
+            'the path in CSV for column: fut_path and threat: threat_1',
+            actual_message)
 
     def test_habitat_quality_misspelled_cur_threat_path(self):
         """Habitat Quality: test for a misspelled current threat path."""
@@ -1530,10 +1533,10 @@ class HabitatQualityTests(unittest.TestCase):
             habitat_quality.execute(args)
 
         actual_message = str(cm.exception)
-        self.assertTrue(
+        self.assertIn(
             'There was an Error locating a threat raster from '
-            'the path in CSV for column: cur_path and threat: threat_1' in
-            actual_message, actual_message)
+            'the path in CSV for column: cur_path and threat: threat_1',
+            actual_message)
 
     def test_habitat_quality_validate_missing_cur_threat_path(self):
         """Habitat Quality: test validate for missing threat paths in cur."""
@@ -1583,9 +1586,9 @@ class HabitatQualityTests(unittest.TestCase):
         self.assertTrue(
             validate_result,
             "expected failed validations instead didn't get any.")
-        self.assertTrue(
-            "A threat raster for threats: [('threat_1', 'cur_path')] was not "
-            "found or it could not be opened by GDAL." in
+        self.assertEqual(
+            habitat_quality.MISSING_THREAT_RASTER_MSG.format(
+                threat_list=[('threat_1', 'cur_path')]),
             validate_result[0][1])
 
     def test_habitat_quality_validate_missing_fut_threat_path(self):
@@ -1636,9 +1639,9 @@ class HabitatQualityTests(unittest.TestCase):
         self.assertTrue(
             validate_result,
             "expected failed validations instead didn't get any.")
-        self.assertTrue(
-            "A threat raster for threats: [('threat_1', 'fut_path')] was not "
-            "found or it could not be opened by GDAL." in
+        self.assertEqual(
+            habitat_quality.MISSING_THREAT_RASTER_MSG.format(
+                threat_list=[('threat_1', 'fut_path')]),
             validate_result[0][1])
 
     def test_habitat_quality_validate_misspelled_cur_threat_path(self):
@@ -1689,9 +1692,9 @@ class HabitatQualityTests(unittest.TestCase):
         self.assertTrue(
             validate_result,
             "expected failed validations instead didn't get any.")
-        self.assertTrue(
-            "A threat raster for threats: [('threat_1', 'cur_path')] was not "
-            "found or it could not be opened by GDAL." in
+        self.assertEqual(
+            habitat_quality.MISSING_THREAT_RASTER_MSG.format(
+                threat_list=[('threat_1', 'cur_path')]),
             validate_result[0][1], validate_result[0][1])
 
     def test_habitat_quality_validate_duplicate_threat_path(self):
@@ -1755,11 +1758,9 @@ class HabitatQualityTests(unittest.TestCase):
         self.assertTrue(
             validate_result,
             "expected failed validations instead didn't get any.")
-        self.assertTrue(
-            "Threat paths cannot be the same and must have unique "
-            "absolute filepaths. The threat paths: ['threat_1_c.tif'] were "
-            "duplicates." in
-            validate_result[0][1], validate_result[0][1])
+        self.assertEqual(
+            habitat_quality.DUPLICATE_PATHS_MSG + str(['threat_1_c.tif']),
+            validate_result[0][1])
 
     def test_habitat_quality_duplicate_threat_path(self):
         """Habitat Quality: test for duplicate threat paths."""
@@ -1823,13 +1824,9 @@ class HabitatQualityTests(unittest.TestCase):
 
         actual_message = str(cm.exception)
         # assert that a duplicate error message was raised
-        self.assertTrue(
-            'Threat paths cannot be the same and must have '
-            'unique absolute filepaths.' in
-            actual_message, actual_message)
+        self.assertIn(habitat_quality.DUPLICATE_PATHS_MSG, actual_message)
         # assert that the path for the duplicate was in the error message
-        self.assertTrue(
-            'threat_1_c.tif' in actual_message, actual_message)
+        self.assertIn('threat_1_c.tif', actual_message)
 
     def test_habitat_quality_argspec_spatial_overlap(self):
         """Habitat Quality: raise error on incorrect spatial overlap."""
@@ -1916,13 +1913,11 @@ class HabitatQualityTests(unittest.TestCase):
         self.assertTrue(
             validate_result,
             "expected failed validations instead didn't get any.")
-        self.assertTrue(
-            "Bounding boxes do not intersect" in
-            validate_result[0][1], validate_result[0][1])
+        self.assertIn("Bounding boxes do not intersect", validate_result[0][1])
 
     def test_habitat_quality_argspec_missing_projection(self):
         """Habitat Quality: raise error on missing projection."""
-        from natcap.invest import habitat_quality
+        from natcap.invest import habitat_quality, validation
 
         args = {
             'half_saturation_constant': '0.5',
@@ -1993,8 +1988,7 @@ class HabitatQualityTests(unittest.TestCase):
                 'threat_2_f.tif\n')
 
         validate_result = habitat_quality.validate(args)
-        expected = [
-            (['lulc_cur_path'], 'Dataset must have a valid projection.')]
+        expected = [(['lulc_cur_path'], validation.MESSAGES['INVALID_PROJECTION'])]
         self.assertEqual(validate_result, expected)
 
     def test_habitat_quality_argspec_missing_threat_header(self):
@@ -2043,7 +2037,8 @@ class HabitatQualityTests(unittest.TestCase):
         validate_result = habitat_quality.validate(args, limit_to=None)
         expected = [(
             ['threats_table_path'],
-            validation.MATCHED_NO_HEADERS_MSG % ('column', 'decay'))]
+            validation.MESSAGES['MATCHED_NO_HEADERS'].format(
+                header='column', header_name='decay'))]
         self.assertEqual(validate_result, expected)
 
     def test_habitat_quality_validate_missing_base_column(self):
@@ -2093,8 +2088,8 @@ class HabitatQualityTests(unittest.TestCase):
         validate_result = habitat_quality.validate(args, limit_to=None)
         expected = [(
             ['threats_table_path'],
-            ("The column 'base_path' was not found in the Threat Data table "
-             "for the corresponding input LULC scenario."))]
+            habitat_quality.MISSING_COLUMN_MSG.format(column_name='base_path')
+        )]
         self.assertEqual(validate_result, expected)
 
     def test_habitat_quality_validate_missing_fut_column(self):
@@ -2143,6 +2138,5 @@ class HabitatQualityTests(unittest.TestCase):
         validate_result = habitat_quality.validate(args, limit_to=None)
         expected = [(
             ['threats_table_path'],
-            ("The column 'fut_path' was not found in the Threat Data table "
-             "for the corresponding input LULC scenario."))]
+            habitat_quality.MISSING_COLUMN_MSG.format(column_name='fut_path'))]
         self.assertEqual(validate_result, expected)

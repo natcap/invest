@@ -51,42 +51,36 @@ ARGS_SPEC = {
             "contents": {
                 # monthly et0 maps, each file ending in a number 1-12
                 "[MONTH]": {
-                    "type": "raster",
-                    "bands": {1: {
-                        "type": "number",
-                        "units": u.millimeter}},
-                    "about": (
-                        "Map of reference evapotranspiration for each month. "
-                        "File names must end with the month number (1-12).")
+                    "about": _(
+                        "Twelve files, one for each month. File names must "
+                        "end with the month number (1-12)."),
+                    **spec_utils.ETO
                 }
             },
             "required": "not user_defined_local_recharge",
-            "about": (
+            "about": _(
                 "Directory containing maps of reference evapotranspiration "
                 "for each month. Only .tif files should be in this folder "
                 "(no .tfw, .xml, etc files)."),
-            "name": "ET0 directory"
+            "name": _("ET0 directory")
         },
         "precip_dir": {
             "type": "directory",
             "contents": {
                 # monthly precipitation maps, each file ending in a number 1-12
                 "[MONTH]": {
-                    "type": "raster",
-                    "bands": {1: {
-                        "type": "number",
-                        "units": u.millimeter/u.year}},
-                    "about": (
-                        "Map of monthly precipitation for each month. File "
-                        "names must end with the month number (1-12).")
+                    "about": _(
+                        "Twelve files, one for each month. File names must end "
+                        "with the month number (1-12)."),
+                    **spec_utils.PRECIP
                 }
             },
             "required": "not user_defined_local_recharge",
-            "about": (
+            "about": _(
                 "Directory containing maps of monthly precipitation for each "
                 "month. Only .tif files should be in this folder (no .tfw, "
                 ".xml, etc files)."),
-            "name": "precipitation directory"
+            "name": _("precipitation directory")
         },
         "dem_raster_path": {
             **spec_utils.DEM,
@@ -117,7 +111,7 @@ ARGS_SPEC = {
                 "cn_[SOIL_GROUP]": {
                     "type": "number",
                     "units": u.none,
-                    "about": (
+                    "about": _(
                         "Curve number values for each combination of soil "
                         "group and LULC class. Replace [SOIL_GROUP] with each "
                         "soil group code A, B, C, D so that there is one "
@@ -127,18 +121,18 @@ ARGS_SPEC = {
                 "kc_[MONTH]": {
                     "type": "number",
                     "units": u.none,
-                    "about": (
+                    "about": _(
                         "Crop/vegetation coefficient (Kc) values for this "
                         "LULC class in each month. Replace [MONTH] with the "
                         "numbers 1 to 12 so that there is one column for each "
                         "month.")
                 }
             },
-            "about": (
+            "about": _(
                 "A table mapping each LULC code to biophysical properties of "
                 "the corresponding LULC class. All values in the LULC raster "
                 "must have corresponding entries in this table."),
-            "name": "biophysical table"
+            "name": _("biophysical table")
         },
         "rain_events_table_path": {
             "type": "csv",
@@ -146,54 +140,54 @@ ARGS_SPEC = {
                 "month": {
                     "type": "number",
                     "units": u.none,
-                    "about": (
+                    "about": _(
                         "Values are the numbers 1-12 corresponding to each "
                         "month, January (1) through December (12).")
                 },
                 "events": {
                     "type": "number",
                     "units": u.none,
-                    "about": "The number of rain events in that month."
+                    "about": _("The number of rain events in that month.")
                 }
             },
             "required": (
                 "(not user_defined_local_recharge) & (not "
                 "user_defined_climate_zones)"),
-            "about": (
+            "about": _(
                 "A table containing the number of rain events for each month. "
                 "Required if neither User-Defined Local Recharge nor User-"
                 "Defined Climate Zones is selected."),
-            "name": "rain events table"
+            "name": _("rain events table")
         },
         "alpha_m": {
             "type": "freestyle_string",
             "required": "not monthly_alpha",
-            "about": (
+            "about": _(
                 "The proportion of upslope annual available local recharge "
                 "that is available in each month. Required if Use Monthly "
                 "Alpha Table is not selected."),
-            "name": "alpha_m parameter"
+            "name": _("alpha_m parameter")
         },
         "beta_i": {
             "type": "ratio",
-            "about": (
+            "about": _(
                 "The proportion of the upgradient subsidy that is available "
                 "for downgradient evapotranspiration."),
-            "name": "beta_i parameter"
+            "name": _("beta_i parameter")
         },
         "gamma": {
             "type": "ratio",
-            "about": (
+            "about": _(
                 "The proportion of pixel local recharge that is available to "
                 "downgradient pixels."),
-            "name": "gamma parameter"
+            "name": _("gamma parameter")
         },
         "user_defined_local_recharge": {
             "type": "boolean",
-            "about": (
+            "about": _(
                 "Use user-defined local recharge data instead of calculating "
                 "local recharge from the other provided data."),
-            "name": "user-defined recharge layer (advanced)"
+            "name": _("user-defined recharge layer (advanced)")
         },
         "l_path": {
             "type": "raster",
@@ -203,30 +197,30 @@ ARGS_SPEC = {
             }},
             "required": "user_defined_local_recharge",
             "projected": True,
-            "about": (
+            "about": _(
                 "Map of local recharge data. Required if User-Defined Local "
                 "Recharge is selected."),
-            "name": "local recharge"
+            "name": _("local recharge")
         },
         "user_defined_climate_zones": {
             "type": "boolean",
-            "about": (
+            "about": _(
                 "Use user-defined climate zone data in lieu of a global rain "
                 "events table."),
-            "name": "climate zones (advanced)"
+            "name": _("climate zones (advanced)")
         },
         "climate_zone_table_path": {
             "type": "csv",
             "columns": {
                 "cz_id": {
                     "type": "integer",
-                    "about": (
+                    "about": _(
                         "Climate zone ID numbers, corresponding to the values "
                         "in the Climate Zones map.")},
                 "[MONTH]": {  # jan, feb, mar, etc.
                     "type": "number",
                     "units": u.none,
-                    "about": (
+                    "about": _(
                         "The number of rain events that occur in each month "
                         "in this climate zone. Replace [MONTH] with the month "
                         "abbreviations: jan, feb, mar, apr, may, jun, jul, "
@@ -234,27 +228,27 @@ ARGS_SPEC = {
                         "for each month.")}
             },
             "required": "user_defined_climate_zones",
-            "about": (
+            "about": _(
                 "Table of monthly precipitation events for each climate zone. "
                 "Required if User-Defined Climate Zones is selected."),
-            "name": "climate zone table"
+            "name": _("climate zone table")
         },
         "climate_zone_raster_path": {
             "type": "raster",
             "bands": {1: {"type": "integer"}},
             "required": "user_defined_climate_zones",
             "projected": True,
-            "about": (
+            "about": _(
                 "Map of climate zones. All values in this raster must have "
                 "corresponding entries in the Climate Zone Table."),
-            "name": "climate zone map"
+            "name": _("climate zone map")
         },
         "monthly_alpha": {
             "type": "boolean",
-            "about": (
+            "about": _(
                 "Use montly alpha values instead of a single value for the "
                 "whole year."),
-            "name": "use monthly alpha table (advanced)"
+            "name": _("use monthly alpha table (advanced)")
         },
         "monthly_alpha_path": {
             "type": "csv",
@@ -262,21 +256,21 @@ ARGS_SPEC = {
                 "month": {
                     "type": "number",
                     "units": u.none,
-                    "about": (
+                    "about": _(
                         "Values are the numbers 1-12 corresponding to each "
                         "month.")
                 },
                 "alpha": {
                     "type": "number",
                     "units": u.none,
-                    "about": "The alpha value for that month."
+                    "about": _("The alpha value for that month.")
                 }
             },
             "required": "monthly_alpha",
-            "about": (
+            "about": _(
                 "Table of alpha values for each month. "
                 "Required if Use Monthly Alpha Table is selected."),
-            "name": "monthly alpha table"
+            "name": _("monthly alpha table")
         }
     }
 }

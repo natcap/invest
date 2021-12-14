@@ -127,7 +127,7 @@ class DelineateItTests(unittest.TestCase):
         }
         validation_warnings = delineateit.validate(missing_values_args)
         self.assertEqual(len(validation_warnings), 1)
-        self.assertTrue('has no value' in validation_warnings[0][1])
+        self.assertEqual(validation_warnings[0][1], validation.MESSAGES['MISSING_VALUE'])
 
         file_not_found_args = {
             'workspace_dir': os.path.join(self.workspace_dir),
@@ -139,8 +139,8 @@ class DelineateItTests(unittest.TestCase):
         validation_warnings = delineateit.validate(file_not_found_args)
         self.assertEqual(
             validation_warnings,
-            [(['dem_path'], 'File not found'),
-             (['outlet_vector_path'], 'File not found')])
+            [(['dem_path'], validation.MESSAGES['FILE_NOT_FOUND']),
+             (['outlet_vector_path'], validation.MESSAGES['FILE_NOT_FOUND'])])
 
         bad_spatial_files_args = {
             'workspace_dir': self.workspace_dir,
@@ -159,13 +159,13 @@ class DelineateItTests(unittest.TestCase):
         validation_warnings = delineateit.validate(bad_spatial_files_args)
         self.assertEqual(
             validation_warnings,
-            [(['dem_path'], 'File could not be opened as a GDAL raster'),
-             (['flow_threshold'], 'Value does not meet condition value >= 0'),
-             (['outlet_vector_path'], (
-                 'File could not be opened as a GDAL vector')),
+            [(['dem_path'], validation.MESSAGES['NOT_GDAL_RASTER']),
+             (['flow_threshold'], validation.MESSAGES['INVALID_VALUE'].format(
+                condition='value >= 0')),
+             (['outlet_vector_path'], validation.MESSAGES['NOT_GDAL_VECTOR']),
              (['snap_distance'], (
-                validation.NOT_A_NUMBER_MSG %
-                bad_spatial_files_args['snap_distance']))])
+                validation.MESSAGES['NOT_A_NUMBER'].format(
+                    value=bad_spatial_files_args['snap_distance'])))])
 
     def test_point_snapping(self):
         """DelineateIt: test point snapping."""
