@@ -372,9 +372,6 @@ def build_datastack_archive(args, model_name, datastack_path):
         if key not in args_spec:
             LOGGER.info(f'Skipping arg {key}; not in model ARGS_SPEC')
 
-        # TODO why use mkdtemp?  If keys are in dirname, do we need suffix at
-        # all?
-
         input_type = args_spec[key]['type']
         spatial_types = {'raster', 'vector'}
 
@@ -401,9 +398,8 @@ def build_datastack_archive(args, model_name, datastack_path):
             if not spatial_columns:
                 shutil.copyfile(source_path, target_csv_path)
             else:
-                contained_files_dir = tempfile.mkdtemp(
-                    prefix=f'{key}_csv_data',
-                    dir=data_dir)
+                contained_files_dir = os.path.join(
+                    data_dir, f'{key}_csv_data')
 
                 dataframe = utils.read_csv_to_dataframe(source_path)
                 csv_source_dir = os.path.abspath(os.path.dirname(source_path))
@@ -461,13 +457,10 @@ def build_datastack_archive(args, model_name, datastack_path):
 
         elif input_type == 'directory':
             # copy the whole folder
-            target_directory = tempfile.mkdtemp(
-                prefix=f'{key}_directory',
-                dir=data_dir)
+            target_directory = os.path.join(data_dir, f'{key}_directory')
 
-            # We want to copy the directory contents into the tempfile-created
-            # directory directly, not copy the parent folder into the
-            # tempfile-created directory.
+            # We want to copy the directory contents into the directory
+            # directly, not copy the parent folder into the directory.
             for filename in os.listdir(source_path):
                 src_path = os.path.join(source_path, filename)
                 dest_path = os.path.join(target_directory, filename)
@@ -481,9 +474,7 @@ def build_datastack_archive(args, model_name, datastack_path):
         elif input_type in spatial_types:
             # Create a directory with a readable name, something like
             # "aoi_path_vector" or "lulc_cur_path_raster".
-            spatial_dir = tempfile.mkdtemp(
-                prefix=f'{key}_{input_type}',
-                dir=data_dir)
+            spatial_dir = os.path.join(data_dir, f'{key}_{input_type}')
             target_arg_value = _relpath(_copy_spatial_files(
                 source_path, spatial_dir))
             files_found[source_path] = target_arg_value
