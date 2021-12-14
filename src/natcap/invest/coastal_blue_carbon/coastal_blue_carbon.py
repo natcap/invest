@@ -1461,8 +1461,8 @@ def _calculate_stocks_after_baseline_period(
         target_matrix[:] = NODATA_FLOAT32_MIN
 
         valid_pixels = (
-            ~utils.isclose(baseline_matrix, baseline_nodata) &
-            ~utils.isclose(accum_matrix, accum_nodata))
+            ~utils.check_array_for_nodata(baseline_matrix, baseline_nodata) &
+            ~utils.check_array_for_nodata(accum_matrix, accum_nodata))
 
         target_matrix[valid_pixels] = (
             baseline_matrix[valid_pixels] + (
@@ -1687,14 +1687,14 @@ def _calculate_net_sequestration(
                                                dtype=bool)
         if accumulation_nodata is not None:
             valid_accumulation_pixels &= (
-                ~utils.isclose(accumulation_matrix, accumulation_nodata))
+                ~utils.check_array_for_nodata(accumulation_matrix, accumulation_nodata))
         target_matrix[valid_accumulation_pixels] += (
             accumulation_matrix[valid_accumulation_pixels])
 
         valid_emissions_pixels = ~numpy.isclose(emissions_matrix, 0.0)
         if emissions_nodata is not None:
             valid_emissions_pixels &= (
-                ~utils.isclose(emissions_matrix, emissions_nodata))
+                ~utils.check_array_for_nodata(emissions_matrix, emissions_nodata))
 
         target_matrix[valid_emissions_pixels] = emissions_matrix[
             valid_emissions_pixels] * -1
