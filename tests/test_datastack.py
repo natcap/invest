@@ -97,6 +97,33 @@ class NewDatastackTest(unittest.TestCase):
                              datastack.DATASTACK_PARAMETER_FILENAME)))['args'],
             {'a': 1, 'b': 'hello there', 'c': 'plain bytestring', 'd': ''})
 
+    def test_collect_multipart_gdal_raster(self):
+        """Datastack: test collect multipart gdal raster."""
+        from natcap.invest import datastack
+        params = {
+            'raster': os.path.join(DATA_DIR, 'dem'),
+        }
+
+        # Collect the raster's files into a single archive
+        archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
+        datastack.build_datastack_archive(
+            params, 'test_datastack_modules.raster', archive_path)
+
+        # extract the archive
+        out_directory = os.path.join(self.workspace, 'extracted_archive')
+
+        with tarfile.open(archive_path) as tar:
+            tar.extractall(out_directory)
+
+        archived_params = json.load(
+            open(os.path.join(out_directory,
+                              datastack.DATASTACK_PARAMETER_FILENAME)))['args']
+
+        self.assertEqual(len(archived_params), 1)
+        model_array = pygeoprocessing.raster_to_numpy_array(params['raster'])
+        reg_array = pygeoprocessing.raster_to_numpy_array(
+            os.path.join(out_directory, archived_params['raster']))
+        numpy.testing.assert_allclose(model_array, reg_array)
 
 
 class DatastacksTest(unittest.TestCase):
