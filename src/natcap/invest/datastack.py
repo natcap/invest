@@ -487,7 +487,7 @@ def build_datastack_archive(args, model_name, datastack_path):
         else:
             # not a filesystem-based type
             # Record the value directly
-            target_arg_value = str(args[key])
+            target_arg_value = args[key]
         rewritten_args[key] = target_arg_value
 
     def _recurse(args_param, handler, nested_key=None):

@@ -70,6 +70,34 @@ class NewDatastackTest(unittest.TestCase):
         model_name = 'natcap.invest.recreation.recmodel_client'
         self.execute_model(model_name, source_parameter_set_path)
 
+    def test_collect_simple_parameters(self):
+        """Datastack: test collect simple parameters."""
+        from natcap.invest import datastack
+        params = {
+            'a': 1,
+            'b': 'hello there',
+            'c': 'plain bytestring',
+            'd': '',
+        }
+
+        archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
+
+        datastack.build_datastack_archive(
+            params, 'test_datastack_modules.simple_parameters', archive_path)
+        out_directory = os.path.join(self.workspace, 'extracted_archive')
+
+        with tarfile.open(archive_path) as tar:
+            tar.extractall(out_directory)
+
+        self.assertEqual(len(os.listdir(out_directory)), 3)
+
+        self.assertEqual(
+            json.load(open(
+                os.path.join(out_directory,
+                             datastack.DATASTACK_PARAMETER_FILENAME)))['args'],
+            {'a': 1, 'b': 'hello there', 'c': 'plain bytestring', 'd': ''})
+
+
 
 class DatastacksTest(unittest.TestCase):
     """Test Datastack."""
@@ -441,7 +469,8 @@ class DatastacksTest(unittest.TestCase):
 
     def test_datastack_parameter_set(self):
         """Datastack: test datastack parameter set."""
-        from natcap.invest import __version__, datastack
+        from natcap.invest import __version__
+        from natcap.invest import datastack
 
         params = {
             'a': 1,
@@ -485,7 +514,8 @@ class DatastacksTest(unittest.TestCase):
 
     def test_relative_parameter_set(self):
         """Datastack: test relative parameter set."""
-        from natcap.invest import __version__, datastack
+        from natcap.invest import __version__
+        from natcap.invest import datastack
 
         params = {
             'a': 1,
@@ -536,7 +566,8 @@ class DatastacksTest(unittest.TestCase):
     @unittest.skipUnless(sys.platform.startswith("win"), "requires Windows")
     def test_relative_parameter_set_windows(self):
         """Datastack: test relative parameter set paths saved linux style."""
-        from natcap.invest import __version__, datastack
+        from natcap.invest import __version__
+        from natcap.invest import datastack
 
         params = {
             'foo': os.path.join(self.workspace, 'foo.txt'),
@@ -839,7 +870,8 @@ class UtilitiesTest(unittest.TestCase):
     """Datastack Utilities Tests."""
     def test_print_args(self):
         """Datastacks: verify that we format args correctly."""
-        from natcap.invest.datastack import __version__, format_args_dict
+        from natcap.invest.datastack import __version__
+        from natcap.invest.datastack import format_args_dict
 
         args_dict = {
             'some_arg': [1, 2, 3, 4],
