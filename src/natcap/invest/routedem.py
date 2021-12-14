@@ -16,6 +16,8 @@ from . import MODEL_METADATA
 
 LOGGER = logging.getLogger(__name__)
 
+INVALID_BAND_INDEX_MSG = _('Must be between 1 and {maximum}')
+
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["routedem"].model_title,
     "pyname": MODEL_METADATA["routedem"].pyname,
@@ -30,40 +32,46 @@ ARGS_SPEC = {
             "expression": "value >= 1",
             "units": u.none,
             "required": False,
-            "about": (
+            "about": _(
                 "Index of the raster band to use, for multi-band rasters."),
-            "name": "band index"
+            "name": _("band index")
         },
         "algorithm": {
             "type": "option_string",
             "options": {
-                "D8": ("All water on a pixel flows into the most downhill of "
-                       "its 8 surrounding pixels"),
-                "MFD": ("Flow off a pixel is modeled fractionally so that "
-                        "water is split among multiple downstream pixels")
+                "D8": {
+                    "display_name": "D8",
+                    "description": _(
+                        "All water on a pixel flows into the most downhill of "
+                        "its 8 surrounding pixels")},
+                "MFD": {
+                    "display_name": "MFD",
+                    "description": _(
+                        "Flow off a pixel is modeled fractionally so that "
+                        "water is split among multiple downstream pixels")}
             },
-            "about": "The routing algorithm to use.",
-            "name": "routing algorithm"
+            "about": _("The routing algorithm to use."),
+            "name": _("routing algorithm")
         },
         "calculate_flow_direction": {
             "type": "boolean",
             "required": False,
-            "about": "Calculate flow direction from the provided DEM.",
-            "name": "calculate flow direction"
+            "about": _("Calculate flow direction from the provided DEM."),
+            "name": _("calculate flow direction")
         },
         "calculate_flow_accumulation": {
             "type": "boolean",
             "required": False,
-            "about": (
+            "about": _(
                 "Calculate flow accumulation from the flow direction output."),
-            "name": "calculate flow accumulation"
+            "name": _("calculate flow accumulation")
         },
         "calculate_stream_threshold": {
             "type": "boolean",
             "required": False,
-            "about": (
+            "about": _(
                 "Calculate streams from the flow accumulation output. "),
-            "name": "calculate streams"
+            "name": _("calculate streams")
         },
         "threshold_flow_accumulation": {
             **spec_utils.THRESHOLD_FLOW_ACCUMULATION,
@@ -75,16 +83,16 @@ ARGS_SPEC = {
         "calculate_downstream_distance": {
             "type": "boolean",
             "required": False,
-            "about": (
+            "about": _(
                 "Calculate flow distance from each pixel to a stream as "
                 "defined in the Calculate Streams output."),
-            "name": "calculate distance to stream"
+            "name": _("calculate distance to stream")
         },
         "calculate_slope": {
             "type": "boolean",
             "required": False,
-            "about": "Calculate percent slope from the provided DEM.",
-            "name": "calculate slope"
+            "about": _("Calculate percent slope from the provided DEM."),
+            "name": _("calculate slope")
         }
     }
 }
@@ -361,6 +369,6 @@ def validate(args, limit_to=None):
         if int(args['dem_band_index']) > raster_info['n_bands']:
             validation_warnings.append((
                 ['dem_band_index'],
-                'Must be between 1 and %s' % raster_info['n_bands']))
+                INVALID_BAND_INDEX_MSG.format(maximum=raster_info['n_bands'])))
 
     return validation_warnings

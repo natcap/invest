@@ -453,5 +453,6 @@ class GlobioValidationTests(unittest.TestCase):
             {'msa_parameters_path': msa_parameters_path})
         expected_warning = (
             ['msa_parameters_path'],
-            validation.MATCHED_NO_HEADERS_MSG % ('column', 'msa_type'))
+            validation.MESSAGES['MATCHED_NO_HEADERS'].format(
+                header='column', header_name='msa_type'))
         self.assertTrue(expected_warning in validation_warnings)

@@ -28,7 +28,7 @@ import natcap.invest
 
 from . import inputs
 from . import execution
-from .. import cli
+from .. import cli, MODEL_METADATA, utils
 from .. import datastack
 from .. import usage
 from .. import utils
@@ -1969,7 +1969,7 @@ class InVESTModel(QtWidgets.QMainWindow):
         else:
             save_filepath = filepath
 
-        for internal_model_name, _meta in cli.MODEL_METADATA.items():
+        for internal_model_name, _meta in MODEL_METADATA.items():
             if _meta.pyname == self.target.__module__:
                 break
         cli.export_to_python(

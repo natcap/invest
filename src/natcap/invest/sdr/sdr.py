@@ -26,6 +26,8 @@ from . import sdr_core
 
 LOGGER = logging.getLogger(__name__)
 
+INVALID_ID_MSG = _('{number} features have a non-integer ws_id field')
+
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["sdr"].model_title,
     "pyname": MODEL_METADATA["sdr"].pyname,
@@ -49,10 +51,10 @@ ARGS_SPEC = {
                 "type": "number",
                 "units": u.megajoule*u.millimeter/(u.hectare*u.hour*u.year)}},
             "projected": True,
-            "about": (
+            "about": _(
                 "Map of rainfall erosivity, reflecting the intensity and "
                 "duration of rainfall in the area of interest."),
-            "name": "erosivity"
+            "name": _("erosivity")
         },
         "erodibility_path": {
             "type": "raster",
@@ -60,11 +62,11 @@ ARGS_SPEC = {
                 "type": "number",
                 "units": u.metric_ton*u.hectare*u.hour/(u.hectare*u.megajoule*u.millimeter)}},
             "projected": True,
-            "about": (
+            "about": _(
                 "Map of soil erodibility, the susceptibility of soil "
                 "particles to detachment and transport by rainfall and "
                 "runoff."),
-            "name": "soil erodibility"
+            "name": _("soil erodibility")
         },
         "lulc_path": {
             **spec_utils.LULC,
@@ -82,11 +84,11 @@ ARGS_SPEC = {
             },
             "geometries": spec_utils.POLYGONS,
             "projected": True,
-            "about": (
+            "about": _(
                 "Map of the boundaries of the watershed(s) over which to "
                 "aggregate results. Each watershed should contribute to a "
                 "point of interest where water quality will be analyzed."),
-            "name": "Watersheds"
+            "name": _("Watersheds")
         },
         "biophysical_table_path": {
             "type": "csv",
@@ -96,55 +98,53 @@ ARGS_SPEC = {
                     "about": "LULC code from the LULC raster."},
                 "usle_c": {
                     "type": "ratio",
-                    "about": "Cover-management factor for the USLE"},
+                    "about": _("Cover-management factor for the USLE")},
                 "usle_p": {
                     "type": "ratio",
-                    "about": "Support practice factor for the USLE"}
+                    "about": _("Support practice factor for the USLE")}
             },
-            "about": (
+            "about": _(
                 "A table mapping each LULC code to biophysical properties of "
                 "that LULC class. All values in the LULC raster must have "
                 "corresponding entries in this table."),
-            "name": "Biophysical Table"
+            "name": _("biophysical table")
         },
-        "threshold_flow_accumulation": {
-            **spec_utils.THRESHOLD_FLOW_ACCUMULATION
-        },
+        "threshold_flow_accumulation": spec_utils.THRESHOLD_FLOW_ACCUMULATION,
         "k_param": {
             "type": "number",
             "units": u.none,
-            "about": "Borselli k parameter.",
-            "name": "Borselli k parameter"
+            "about": _("Borselli k parameter."),
+            "name": _("Borselli k parameter")
         },
         "sdr_max": {
             "type": "ratio",
-            "about": "The maximum SDR value that a pixel can have.",
-            "name": "maximum SDR value"
+            "about": _("The maximum SDR value that a pixel can have."),
+            "name": _("maximum SDR value")
         },
         "ic_0_param": {
             "type": "number",
             "units": u.none,
-            "about": "Borselli IC0 parameter.",
-            "name": "Borselli IC0 parameter"
+            "about": _("Borselli IC0 parameter."),
+            "name": _("Borselli IC0 parameter")
         },
         "l_max": {
             "type": "number",
             "expression": "value > 0",
             "units": u.none,
-            "about": (
+            "about": _(
                 "The maximum allowed value of the slope length parameter (L) "
                 "in the LS factor."),
-            "name": "maximum l value",
+            "name": _("maximum l value"),
         },
         "drainage_path": {
             "type": "raster",
             "bands": {1: {"type": "number", "units": u.none}},
             "required": False,
-            "about": (
+            "about": _(
                 "Map of locations of artificial drainages that drain to the "
                 "watershed. Pixels with 1 are drainages and are treated like "
                 "streams. Pixels with 0 are not drainages."),
-            "name": "drainages"
+            "name": _("drainages")
         }
     }
 }
@@ -1436,15 +1436,14 @@ def validate(args, limit_to=None):
         n_invalid_features = 0
         for feature in layer:
             try:
-                _ = int(feature.GetFieldAsString('ws_id'))
+                int(feature.GetFieldAsString('ws_id'))
             except ValueError:
                 n_invalid_features += 1
 
         if n_invalid_features:
             validation_warnings.append((
                 ['watersheds_path'],
-                ('%s features have a non-integer ws_id field' %
-                    n_invalid_features)))
+                INVALID_ID_MSG.format(number=n_invalid_features)))
             invalid_keys.add('watersheds_path')
 
     return validation_warnings
