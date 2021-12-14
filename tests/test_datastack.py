@@ -28,8 +28,8 @@ SAMPLE_DATA_DIR = os.path.join(
 sys.path.append(_TEST_FILE_CWD)
 
 
-class NewDatastackTest(unittest.TestCase):
-    """Test Datastack."""
+class DatastackArchiveTests(unittest.TestCase):
+    """Test Datastack Archives."""
 
     def setUp(self):
         """Create temporary workspace."""
@@ -39,21 +39,34 @@ class NewDatastackTest(unittest.TestCase):
         """Remove temporary workspace."""
         shutil.rmtree(self.workspace)
 
-    def execute_model(self, model_name, parameter_file):
+    @staticmethod
+    def execute_model(workspace, source_parameter_set):
+        """Helper function to run a model from its parameter set file.
+
+        Args:
+            workspace (str): The path to the workspace to use for the test run.
+                All files will be written here.
+            source_parameter_set (str): The path to the parameter set from
+                which the args dict and model name should be loaded.
+
+        Returns:
+            ``None``
+        """
         from natcap.invest import datastack
 
-        source_args = datastack.extract_parameter_set(parameter_file)
+        source_args = datastack.extract_parameter_set(source_parameter_set)
+        model_name = source_args.model_name
 
         datastack_archive_path = os.path.join(
-            self.workspace, 'datastack.invs.tar.gz')
+            workspace, 'datastack.invs.tar.gz')
         datastack.build_datastack_archive(
             source_args.args, model_name, datastack_archive_path)
 
-        extraction_dir = os.path.join(self.workspace, 'archived_data')
+        extraction_dir = os.path.join(workspace, 'archived_data')
         args = datastack.extract_datastack_archive(
             datastack_archive_path, extraction_dir)
 
-        args['workspace_dir'] = os.path.join(self.workspace, 'workspace')
+        args['workspace_dir'] = os.path.join(workspace, 'workspace')
         module = importlib.import_module(name=model_name)
         module.execute(args)
 
@@ -62,8 +75,8 @@ class NewDatastackTest(unittest.TestCase):
         source_parameter_set_path = os.path.join(
             SAMPLE_DATA_DIR, 'CoastalBlueCarbon',
             'cbc_galveston_bay.invs.json')
-        model_name = 'natcap.invest.coastal_blue_carbon.coastal_blue_carbon'
-        self.execute_model(model_name, source_parameter_set_path)
+        DatastackArchiveTests.execute_model(
+            self.workspace, source_parameter_set_path)
 
     @unittest.skip('Takes a long time to run')
     def test_habitat_quality(self):
@@ -71,8 +84,8 @@ class NewDatastackTest(unittest.TestCase):
         source_parameter_set_path = os.path.join(
             SAMPLE_DATA_DIR, 'HabitatQuality',
             'habitat_quality_willamette.invs.json')
-        model_name = 'natcap.invest.habitat_quality'
-        self.execute_model(model_name, source_parameter_set_path)
+        DatastackArchiveTests.execute_model(
+            self.workspace, source_parameter_set_path)
 
     @unittest.skip('Takes a long time to run')
     def test_cv(self):
@@ -80,15 +93,15 @@ class NewDatastackTest(unittest.TestCase):
         source_parameter_set_path = os.path.join(
             SAMPLE_DATA_DIR, 'CoastalVulnerability',
             'coastal_vuln_grandbahama.invs.json')
-        model_name = 'natcap.invest.coastal_vulnerability'
-        self.execute_model(model_name, source_parameter_set_path)
+        DatastackArchiveTests.execute_model(
+            self.workspace, source_parameter_set_path)
 
     @unittest.skip('Invokes remote server; network may be slow.')
     def test_recreation(self):
         source_parameter_set_path = os.path.join(
             SAMPLE_DATA_DIR, 'recreation', 'recreation_andros.invs.json')
-        model_name = 'natcap.invest.recreation.recmodel_client'
-        self.execute_model(model_name, source_parameter_set_path)
+        DatastackArchiveTests.execute_model(
+            self.workspace, source_parameter_set_path)
 
     def test_collect_simple_parameters(self):
         """Datastack: test collect simple parameters."""
@@ -316,7 +329,8 @@ class NewDatastackTest(unittest.TestCase):
             spatial_csv.write(f"2,{params['vector']}\n")
 
             # Create a raster only referenced by the CSV
-            target_csv_raster_path = os.path.join(self.workspace, 'new_raster.tif')
+            target_csv_raster_path = os.path.join(
+                self.workspace, 'new_raster.tif')
             pygeoprocessing.new_raster_from_base(
                 params['raster'], target_csv_raster_path, gdal.GDT_UInt16, [0])
             spatial_csv.write(f'3,{target_csv_raster_path}\n')
@@ -370,7 +384,7 @@ class NewDatastackTest(unittest.TestCase):
             target_csv_vector_path)
 
 
-class DatastacksTest(unittest.TestCase):
+class ParameterSetTest(unittest.TestCase):
     """Test Datastack."""
     def setUp(self):
         """Create temporary workspace."""
@@ -379,23 +393,6 @@ class DatastacksTest(unittest.TestCase):
     def tearDown(self):
         """Remove temporary workspace."""
         shutil.rmtree(self.workspace)
-
-    def test_nested_args_keys(self):
-        """Datastack: test nested argument keys."""
-        from natcap.invest import datastack
-
-        params = {
-            'a': {
-                'b': 1
-            }
-        }
-
-        archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
-        datastack.build_datastack_archive(params, 'sample_model', archive_path)
-        out_directory = os.path.join(self.workspace, 'extracted_archive')
-        archive_params = datastack.extract_datastack_archive(
-            archive_path, out_directory)
-        self.assertEqual(archive_params, params)
 
     def test_datastack_parameter_set(self):
         """Datastack: test datastack parameter set."""
@@ -591,13 +588,15 @@ class DatastacksTest(unittest.TestCase):
         }
 
         archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
-        datastack.build_datastack_archive(params, 'sample_model', archive_path)
+        datastack.build_datastack_archive(
+            params, 'test_datastack_modules.simple_parameters', archive_path)
 
         stack_type, stack_info = datastack.get_datastack_info(archive_path)
 
         self.assertEqual(stack_type, 'archive')
         self.assertEqual(stack_info, datastack.ParameterSet(
-            params, 'sample_model', natcap.invest.__version__))
+            params, 'test_datastack_modules.simple_parameters',
+            natcap.invest.__version__))
 
     def test_get_datastack_info_parameter_set(self):
         """Datastack: test get datastack info parameter set."""
@@ -611,15 +610,17 @@ class DatastacksTest(unittest.TestCase):
             'd': '',
         }
 
+        test_module_name = 'test_datastack_modules.simple_parameters'
         json_path = os.path.join(self.workspace, 'archive.invs.json')
-        datastack.build_parameter_set(params, 'sample_model', json_path)
+        datastack.build_parameter_set(
+            params, test_module_name, json_path)
 
         stack_type, stack_info = datastack.get_datastack_info(json_path)
         self.assertEqual(stack_type, 'json')
-        self.assertEqual(stack_info, datastack.ParameterSet(
-            params, 'sample_model', natcap.invest.__version__),
-            f"stack_info: {stack_info} v. datastack.ParameterSet : "
-            f"{datastack.ParameterSet(params, 'sample_model', natcap.invest.__version__)}")
+        self.assertEqual(
+            stack_info,
+            datastack.ParameterSet(
+                params, test_module_name, natcap.invest.__version__))
 
     def test_get_datastack_info_logfile_new_style(self):
         """Datastack: test get datastack info logfile new style."""
@@ -756,44 +757,6 @@ class DatastacksTest(unittest.TestCase):
 
         extracted_paramset = datastack.extract_parameter_set(paramset_path)
         self.assertEqual(extracted_paramset.args, expected_args)
-
-    def test_mixed_path_separators_in_archive(self):
-        """Datastacks: datastack archives must handle windows, linux paths."""
-        from natcap.invest import datastack
-
-        args = {
-            'windows_path': os.path.join(self.workspace,
-                                         'dir1\\filepath1.txt'),
-            'linux_path': os.path.join(self.workspace,
-                                       'dir2/filepath2.txt'),
-        }
-        for filepath in args.values():
-            normalized_path = os.path.normpath(filepath.replace('\\', os.sep))
-            try:
-                os.makedirs(os.path.dirname(normalized_path))
-            except OSError:
-                pass
-
-            with open(normalized_path, 'w') as open_file:
-                open_file.write('the contents of this file do not matter.')
-
-        datastack_path = os.path.join(self.workspace, 'archive.invest.tar.gz')
-        datastack.build_datastack_archive(
-            args, 'test_datastack_modules.mixed_path_separators',
-            datastack_path)
-
-        extraction_path = os.path.join(self.workspace, 'extracted_dir')
-        extracted_args = datastack.extract_datastack_archive(datastack_path,
-                                                             extraction_path)
-
-        expected_args = {
-            'windows_path': os.path.join(
-                extraction_path, 'data', 'filepath1.txt'),
-            'linux_path': os.path.join(
-                extraction_path, 'data', 'filepath2.txt'),
-        }
-        self.maxDiff = None  # show whole exception on failure
-        self.assertEqual(extracted_args, expected_args)
 
 
 class UtilitiesTest(unittest.TestCase):
