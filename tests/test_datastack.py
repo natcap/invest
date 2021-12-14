@@ -131,6 +131,47 @@ class NewDatastackTest(unittest.TestCase):
                 os.path.join(out_directory, archived_params['raster']))
             numpy.testing.assert_allclose(model_array, reg_array)
 
+    def test_collect_vectors(self):
+        """Datastack: test collect ogr vector."""
+        from natcap.invest import datastack
+        from natcap.invest.utils import _assert_vectors_equal
+        source_vector_path = os.path.join(DATA_DIR, 'watersheds.shp')
+        source_vector = ogr.Open(source_vector_path)
+
+        for format_name, extension in (('ESRI Shapefile', 'shp'),
+                                       ('GeoJSON', 'geojson')):
+            dest_dir = os.path.join(self.workspace, format_name)
+            os.makedirs(dest_dir)
+            dest_vector_path = os.path.join(dest_dir,
+                                            'vector.%s' % extension)
+            params = {
+                'vector': dest_vector_path,
+            }
+            driver = ogr.GetDriverByName(format_name)
+            driver.CopyDataSource(source_vector, dest_vector_path)
+
+            archive_path = os.path.join(dest_dir,
+                                        'archive.invs.tar.gz')
+
+            # Collect the vector's files into a single archive
+            datastack.build_datastack_archive(
+                params, 'test_datastack_modules.vector', archive_path)
+
+            # extract the archive
+            out_directory = os.path.join(dest_dir, 'extracted_archive')
+            with tarfile.open(archive_path) as tar:
+                tar.extractall(out_directory)
+
+            archived_params = json.load(
+                open(os.path.join(
+                    out_directory,
+                    datastack.DATASTACK_PARAMETER_FILENAME)))['args']
+            _assert_vectors_equal(
+                params['vector'],
+                os.path.join(out_directory, archived_params['vector']))
+
+            self.assertEqual(len(archived_params), 1)  # sanity check
+
 
 class DatastacksTest(unittest.TestCase):
     """Test Datastack."""
