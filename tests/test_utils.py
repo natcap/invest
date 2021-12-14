@@ -1507,7 +1507,7 @@ class ReclassifyRasterOpTests(unittest.TestCase):
         self.assertTrue(
             expected_message in str(context.exception), str(context.exception))
 
-class CheckArrayNodataTests(unittest.TestCase):
+class ArrayEqualsNodataTests(unittest.TestCase):
     """Tests for natcap.invest.utils.array_equals_nodata."""
 
     def test_integer_array(self):
