@@ -7,14 +7,16 @@ import pickle
 import numpy
 import pygeoprocessing
 import pygeoprocessing.routing
-from osgeo import gdal, ogr
 import taskgraph
+from osgeo import gdal
+from osgeo import ogr
 
-from .. import utils
-from .. import spec_utils
-from ..spec_utils import u
-from .. import validation
 from .. import MODEL_METADATA
+from .. import spec_utils
+from .. import utils
+from .. import validation
+from ..sdr import sdr
+from ..spec_utils import u
 from . import ndr_core
 
 LOGGER = logging.getLogger(__name__)
@@ -231,6 +233,7 @@ _INTERMEDIATE_BASE_FILES = {
     'flow_direction_path': 'flow_direction.tif',
     'thresholded_slope_path': 'thresholded_slope.tif',
     'dist_to_channel_path': 'dist_to_channel.tif',
+    'drainage_mask': 'what_drains_to_stream.tif',
 }
 
 _CACHE_BASE_FILES = {
@@ -548,6 +551,15 @@ def execute(args):
         dependent_task_list=[stream_extraction_task],
         target_path_list=[f_reg['dist_to_channel_path']],
         task_name='dist to channel')
+
+    _ = task_graph.add_task(
+        func=sdr._calculate_what_drains_to_stream,
+        args=(f_reg['flow_direction_path'],
+              f_reg['dist_to_channel_path'],
+              f_reg['drainage_mask']),
+        target_path_list=[f_reg['drainage_mask']],
+        dependent_task_list=[flow_dir_task, dist_to_channel_task],
+        task_name='write mask of what drains to stream')
 
     ic_task = task_graph.add_task(
         func=calculate_ic,

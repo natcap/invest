@@ -47,6 +47,9 @@ Unreleased Changes (3.10)
     * Standardized and de-duplicated text in ``ARGS_SPEC`` ``about`` and
       ``name`` strings.
     * Update to FontAwesome 5 icons in the QT interface.
+    * Updating the ``taskgraph`` requirement to ``0.11.0`` to resolve an issue
+      where modifying a file within a roughly 2-second window would fool
+      ``taskgraph`` into believing that the file had not been modified.
 * Annual Water Yield
     * Renamed the Windows start menu shortcut from "Water Yield" to
       "Annual Water Yield".
@@ -55,7 +58,7 @@ Unreleased Changes (3.10)
       (i.e. lakes).
     * Added feature to accept raster (in addition to vector) habitat layers.
     * Changed one intermediate output (geomorphology) from SHP to GPKG.
-    * Fixed bug where output vectors had coordinates with an unncessary 
+    * Fixed bug where output vectors had coordinates with an unnecessary
       z-dimension. Output vectors now have 2D geometry.
 * Crop Pollination
     * Renamed the Windows start menu shortcut from "Pollination" to
@@ -75,6 +78,11 @@ Unreleased Changes (3.10)
       of 0.5 indicate same abundance between baseline and current/future
       LULC; values 0.5 to 1 indicate less abundance in current/future LULC
       and therefore higher rarity.
+* NDR
+    * Added a new raster to the model's workspace,
+      ``intermediate_outputs/what_drains_to_stream[suffix].tif``.  This raster
+      has pixel values of 1 where DEM pixels flow to an identified stream, and
+      0 where they do not.
 * Scenic Quality
     * Simplify the ``valuation_function`` arg options. The options are now:
       ``linear``, ``logarithmic``, ``exponential``. The names displayed in the
@@ -82,6 +90,11 @@ Unreleased Changes (3.10)
       to be updated to use the new option values.
     * Renamed the model title from
       "Unobstructed Views: Scenic Quality Provision" to "Scenic Quality".
+* SDR
+    * Added a new raster to the model's workspace,
+      ``intermediate_outputs/what_drains_to_stream[suffix].tif``.  This raster
+      has pixel values of 1 where DEM pixels flow to an identified stream, and
+      0 where they do not.
 * Wave Energy
     * Rename the ``analysis_area_path`` arg to ``analysis_area``, since it is
       not a path but an option string.
