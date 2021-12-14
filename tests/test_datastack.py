@@ -13,6 +13,8 @@ import unittest
 import numpy
 import pandas
 import pygeoprocessing
+import shapely.geometry
+from osgeo import gdal
 from osgeo import ogr
 
 _TEST_FILE_CWD = os.path.dirname(os.path.abspath(__file__))
@@ -241,17 +243,6 @@ class NewDatastackTest(unittest.TestCase):
             self.fail('Directory mismatch or error. The mismatches are'
                       f' {mismatch_files} ; and the errors are {error_files}')
 
-
-class DatastacksTest(unittest.TestCase):
-    """Test Datastack."""
-    def setUp(self):
-        """Create temporary workspace."""
-        self.workspace = tempfile.mkdtemp()
-
-    def tearDown(self):
-        """Remove temporary workspace."""
-        shutil.rmtree(self.workspace)
-
     def test_duplicate_filepaths(self):
         """Datastack: test duplicate filepaths."""
         from natcap.invest import datastack
@@ -264,7 +255,8 @@ class DatastacksTest(unittest.TestCase):
 
         # Collect the file into an archive
         archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
-        datastack.build_datastack_archive(params, 'sample_model', archive_path)
+        datastack.build_datastack_archive(
+            params, 'test_datastack_modules.duplicate_filepaths', archive_path)
 
         # extract the archive
         out_directory = os.path.join(self.workspace, 'extracted_archive')
@@ -289,7 +281,8 @@ class DatastacksTest(unittest.TestCase):
     def test_archive_extraction(self):
         """Datastack: test archive extraction."""
         from natcap.invest import datastack
-        from natcap.invest.utils import _assert_vectors_equal
+        from natcap.invest import utils
+
         params = {
             'blank': '',
             'a': 1,
@@ -297,14 +290,11 @@ class DatastacksTest(unittest.TestCase):
             'c': 'plain bytestring',
             'foo': os.path.join(self.workspace, 'foo.txt'),
             'bar': os.path.join(self.workspace, 'foo.txt'),
-            'file_list': [
-                os.path.join(self.workspace, 'file1.txt'),
-                os.path.join(self.workspace, 'file2.txt'),
-            ],
             'data_dir': os.path.join(self.workspace, 'data_dir'),
             'raster': os.path.join(DATA_DIR, 'dem'),
             'vector': os.path.join(DATA_DIR, 'watersheds.shp'),
-            'table': os.path.join(DATA_DIR, 'carbon_pools_samp.csv'),
+            'simple_table': os.path.join(DATA_DIR, 'carbon_pools_samp.csv'),
+            'spatial_table': os.path.join(self.workspace, 'spatial_table.csv'),
         }
         # synthesize sample data
         os.makedirs(params['data_dir'])
@@ -316,13 +306,36 @@ class DatastacksTest(unittest.TestCase):
         with open(params['foo'], 'w') as textfile:
             textfile.write('hello world!')
 
-        for filename in params['file_list']:
-            with open(filename, 'w') as textfile:
-                textfile.write(filename)
+        with open(params['spatial_table'], 'w') as spatial_csv:
+            # copy existing DEM
+            # copy existing watersheds
+            # new raster
+            # new vector
+            spatial_csv.write('ID,path\n')
+            spatial_csv.write(f"1,{params['raster']}\n")
+            spatial_csv.write(f"2,{params['vector']}\n")
 
-        # collect parameters:
+            # Create a raster only referenced by the CSV
+            target_csv_raster_path = os.path.join(self.workspace, 'new_raster.tif')
+            pygeoprocessing.new_raster_from_base(
+                params['raster'], target_csv_raster_path, gdal.GDT_UInt16, [0])
+            spatial_csv.write(f'3,{target_csv_raster_path}\n')
+
+            # Create a vector only referenced by the CSV
+            target_csv_vector_path = os.path.join(
+                self.workspace, 'new_vector.geojson')
+            pygeoprocessing.shapely_geometry_to_vector(
+                [shapely.geometry.Point(100, 100)],
+                target_csv_vector_path,
+                pygeoprocessing.get_raster_info(
+                    params['raster'])['projection_wkt'],
+                'GeoJSON',
+                ogr_geom_type=ogr.wkbPoint)
+            spatial_csv.write(f'4,{target_csv_vector_path}\n')
+
         archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
-        datastack.build_datastack_archive(params, 'sample_model', archive_path)
+        datastack.build_datastack_archive(
+            params, 'test_datastack_modules.archive_extraction', archive_path)
         out_directory = os.path.join(self.workspace, 'extracted_archive')
         archive_params = datastack.extract_datastack_archive(
             archive_path, out_directory)
@@ -330,11 +343,11 @@ class DatastacksTest(unittest.TestCase):
             archive_params['raster'])
         reg_array = pygeoprocessing.raster_to_numpy_array(params['raster'])
         numpy.testing.assert_allclose(model_array, reg_array)
-        _assert_vectors_equal(
+        utils._assert_vectors_equal(
             archive_params['vector'], params['vector'])
-        model_df = pandas.read_csv(archive_params['table'])
-        reg_df = pandas.read_csv(params['table'])
-        pandas.testing.assert_frame_equal(model_df, reg_df)
+        pandas.testing.assert_frame_equal(
+            pandas.read_csv(archive_params['simple_table']),
+            pandas.read_csv(params['simple_table']))
         for key in ('blank', 'a', 'b', 'c'):
             self.assertEqual(archive_params[key],
                              params[key],
@@ -344,10 +357,28 @@ class DatastacksTest(unittest.TestCase):
             self.assertTrue(
                 filecmp.cmp(archive_params[key], params[key], shallow=False))
 
-        for expected_file, archive_file in zip(
-                params['file_list'], archive_params['file_list']):
-            self.assertTrue(
-                filecmp.cmp(expected_file, archive_file, shallow=False))
+        spatial_csv_dict = utils.build_lookup_from_csv(
+            archive_params['spatial_table'], 'ID', to_lower=True)
+        spatial_csv_dir = os.path.dirname(archive_params['spatial_table'])
+        numpy.testing.assert_allclose(
+            pygeoprocessing.raster_to_numpy_array(
+                os.path.join(spatial_csv_dir, spatial_csv_dict[3]['path'])),
+            pygeoprocessing.raster_to_numpy_array(
+                target_csv_raster_path))
+        utils._assert_vectors_equal(
+            os.path.join(spatial_csv_dir, spatial_csv_dict[4]['path']),
+            target_csv_vector_path)
+
+
+class DatastacksTest(unittest.TestCase):
+    """Test Datastack."""
+    def setUp(self):
+        """Create temporary workspace."""
+        self.workspace = tempfile.mkdtemp()
+
+    def tearDown(self):
+        """Remove temporary workspace."""
+        shutil.rmtree(self.workspace)
 
     def test_nested_args_keys(self):
         """Datastack: test nested argument keys."""

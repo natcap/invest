@@ -388,18 +388,28 @@ def build_datastack_archive(args, model_name, datastack_path):
 
             source_path = args[key].replace('\\', '/')
 
+        # If we already know about the parameter, then we can just reuse it and
+        # skip the file copying.
+        if args[key] in files_found:
+            rewritten_args[key] = files_found[args[key]]
+            continue
+
         if input_type == 'csv':
-            # check the CSV for columns that may be spatial
+            # check the CSV for columns that may be spatial.
+            # But also, the columns specification might not be listed, so don't
+            # require that 'columns' exists in the ARGS_SPEC.
             spatial_columns = []
-            for col_name, col_definition in args_spec[key]['columns'].items():
-                # Type attribute may be a string (one type) or set (multiple
-                # types allowed), so always convert to a set for easier
-                # comparison.
-                col_types = col_definition['type']
-                if isinstance(col_types, str):
-                    col_types = set([col_types])
-                if col_types.intersection(spatial_types):
-                    spatial_columns.append(col_name)
+            if 'columns' in args_spec[key]:
+                for col_name, col_definition in (
+                        args_spec[key]['columns'].items()):
+                    # Type attribute may be a string (one type) or set
+                    # (multiple types allowed), so always convert to a set for
+                    # easier comparison.
+                    col_types = col_definition['type']
+                    if isinstance(col_types, str):
+                        col_types = set([col_types])
+                    if col_types.intersection(spatial_types):
+                        spatial_columns.append(col_name)
 
             target_csv_path = os.path.join(data_dir, f'{key}.csv')
             if not spatial_columns:
