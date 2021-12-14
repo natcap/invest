@@ -583,7 +583,7 @@ def execute(args):
         data_to_aggregate.append((avoided_pollutant_load_path,
                                  f'{pollutant}_total_avoided_load', 'sum'))
         data_to_aggregate.append(
-            (actual_pollutant_load_path, f'{pollutant}_mean_load', 'mean'))
+            (actual_pollutant_load_path, f'{pollutant}_total_load', 'sum'))
 
     # (Optional) Do valuation if a replacement cost is defined
     # you could theoretically have a cost of 0 which should be allowed

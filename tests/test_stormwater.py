@@ -473,7 +473,7 @@ class StormwaterTests(unittest.TestCase):
                 'total_runoff_volume': 1.5,
                 'total_recharge_volume': 5.5,
                 'pollutant1_total_avoided_load': .0085,
-                'pollutant1_mean_load': .000375,
+                'pollutant1_total_load': .0015,
                 'total_retention_value': 21.505
             },
             2: {
@@ -484,7 +484,7 @@ class StormwaterTests(unittest.TestCase):
                 'total_runoff_volume': 7.5,
                 'total_recharge_volume': 11.5,
                 'pollutant1_total_avoided_load': .0075,
-                'pollutant1_mean_load': .006875,
+                'pollutant1_total_load': .0275,
                 'total_retention_value': 18.975
             },
             3: {
@@ -495,7 +495,7 @@ class StormwaterTests(unittest.TestCase):
                 'mean_recharge_ratio': 0,
                 'total_recharge_volume': 0,
                 'pollutant1_total_avoided_load': 0,
-                'pollutant1_mean_load': 0,
+                'pollutant1_total_load': 0,
                 'total_retention_value': 0
             }
         }
