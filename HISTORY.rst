@@ -46,6 +46,8 @@ Unreleased Changes (3.10)
     * Updating the ``taskgraph`` requirement to ``0.11.0`` to resolve an issue
       where modifying a file within a roughly 2-second window would fool
       ``taskgraph`` into believing that the file had not been modified.
+    * Fixed a bug where some input rasters with NaN nodata values would cause
+      bad behavior.
 * Annual Water Yield
     * Renamed the Windows start menu shortcut from "Water Yield" to
       "Annual Water Yield".
