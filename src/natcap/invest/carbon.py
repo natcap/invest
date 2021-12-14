@@ -34,28 +34,28 @@ ARGS_SPEC = {
             **spec_utils.LULC,
             "projected": True,
             "projection_units": u.meter,
-            "about": (
+            "about": _(
                 "A map of LULC for the current scenario. "
                 "All values in this raster must have corresponding "
                 "entries in the Carbon Pools table."),
-            "name": "current LULC"
+            "name": _("current LULC")
         },
         "calc_sequestration": {
             "type": "boolean",
             "required": "do_valuation | do_redd",
-            "about": (
+            "about": _(
                 "Run sequestration analysis. This requires inputs "
                 "of LULC maps for both current and future "
                 "scenarios. Required if REDD scenario analysis or "
                 "run valuation model is selected."),
-            "name": "calculate sequestration"
+            "name": _("calculate sequestration")
         },
         "lulc_fut_path": {
             **spec_utils.LULC,
             "projected": True,
             "projection_units": u.meter,
             "required": "calc_sequestration",
-            "about": (
+            "about": _(
                 "A map of LULC for the future scenario. "
                 "If run valuation model is "
                 "selected, this should be the reference, or baseline, future "
@@ -63,36 +63,36 @@ ARGS_SPEC = {
                 "All values in this raster must have corresponding entries in "
                 "the Carbon Pools table. Required if Calculate Sequestration "
                 "is selected."),
-            "name": "future LULC"
+            "name": _("future LULC")
         },
         "do_redd": {
             "type": "boolean",
             "required": False,
-            "about": (
+            "about": _(
                 "Run REDD scenario analysis. This requires three "
                 "LULC maps: one for the current scenario, one "
                 "for the future baseline scenario, and one for the future "
                 "REDD policy scenario."),
-            "name": "REDD scenario analysis"
+            "name": _("REDD scenario analysis")
         },
         "lulc_redd_path": {
             **spec_utils.LULC,
             "projected": True,
             "projection_units": u.meter,
             "required": "do_redd",
-            "about": (
+            "about": _(
                 "A map of LULC for the REDD policy scenario. "
                 "All values in this raster must have corresponding entries in "
                 "the Carbon Pools table. Required if REDD Scenario Analysis "
                 "is selected."),
-            "name": "REDD LULC"
+            "name": _("REDD LULC")
         },
         "carbon_pools_path": {
             "type": "csv",
             "columns": {
                 "lucode": {
                     "type": "integer",
-                    "about": (
+                    "about": _(
                         "LULC code. Every value in the "
                         "LULC maps must have a corresponding entry in "
                         "this column.")
@@ -100,41 +100,41 @@ ARGS_SPEC = {
                 "c_above": {
                     "type": "number",
                     "units": u.metric_ton/u.hectare,
-                    "about": "Carbon density of aboveground biomass."},
+                    "about": _("Carbon density of aboveground biomass.")},
                 "c_below": {
                     "type": "number",
                     "units": u.metric_ton/u.hectare,
-                    "about": "Carbon density of belowground biomass."},
+                    "about": _("Carbon density of belowground biomass.")},
                 "c_soil": {
                     "type": "number",
                     "units": u.metric_ton/u.hectare,
-                    "about": "Carbon density of soil."},
+                    "about": _("Carbon density of soil.")},
                 "c_dead": {
                     "type": "number",
                     "units": u.metric_ton/u.hectare,
-                    "about": "Carbon density of dead matter."}
+                    "about": _("Carbon density of dead matter.")}
             },
-            "about": (
+            "about": _(
                 "A table that maps each LULC code to carbon pool data for "
                 "that LULC type."),
-            "name": "carbon pools"
+            "name": _("carbon pools")
         },
         "lulc_cur_year": {
             "expression": "float(value).is_integer()",
             "type": "number",
             "units": u.year,
             "required": "do_valuation",
-            "about": (
+            "about": _(
                 "The calendar year of the current scenario depicted in the "
                 "current LULC map. Required if Run Valuation model is selected."),
-            "name": "current LULC year"
+            "name": _("current LULC year")
         },
         "lulc_fut_year": {
             "expression": "float(value).is_integer()",
             "type": "number",
             "units": u.year,
             "required": "do_valuation",
-            "about": (
+            "about": _(
                 "The calendar year of the future scenario depicted in the "
                 "future LULC map. Required if Run Valuation model is selected."),
             "name": f"future LULC year"
@@ -142,38 +142,38 @@ ARGS_SPEC = {
         "do_valuation": {
             "type": "boolean",
             "required": False,
-            "about": (
+            "about": _(
                 "Calculate net present value for the future scenario, and the "
                 "REDD scenario if provided, and report it in the final HTML "
                 "document."),
-            "name": "run valuation model"
+            "name": _("run valuation model")
         },
         "price_per_metric_ton_of_c": {
             "type": "number",
             "units": u.currency/u.metric_ton,
             "required": "do_valuation",
-            "about": (
+            "about": _(
                 "The present value of carbon. "
                 "Required if Run Valuation model is selected."),
-            "name": "price of carbon"
+            "name": _("price of carbon")
         },
         "discount_rate": {
             "type": "ratio",
             "required": "do_valuation",
-            "about": (
+            "about": _(
                 "The annual market discount rate in the price of carbon, "
                 "which reflects society's preference for immediate benefits "
                 "over future benefits. Required if Run Valuation model is "
                 "selected."),
-            "name": "annual market discount rate"
+            "name": _("annual market discount rate")
         },
         "rate_change": {
             "type": "ratio",
             "required": "do_valuation",
-            "about": (
+            "about": _(
                 "The relative annual increase of the price of carbon. "
                 "Required if Run Valuation model is selected."),
-            "name": "annual price change"
+            "name": _("annual price change")
         }
     }
 }
@@ -441,8 +441,7 @@ def _accumulate_totals(raster_path):
         # the sum.  Users calculated the sum with ArcGIS zonal statistics,
         # noticed a difference and wrote to us about it on the forum.
         raster_sum += numpy.sum(
-            block[~utils.check_array_for_nodata(
-                block, nodata)], dtype=numpy.float64)
+            block[~numpy.isclose(block, nodata)], dtype=numpy.float64)
     return raster_sum
 
 
