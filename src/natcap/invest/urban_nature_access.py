@@ -8,11 +8,11 @@ import numpy
 import numpy.testing
 import pygeoprocessing
 import taskgraph
+from natcap.invest import MODEL_METADATA
 from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
 
-from natcap.invest import MODEL_METADATA
 from . import spec_utils
 from . import utils
 from . import validation
@@ -110,12 +110,12 @@ ARGS_SPEC = {
             'name': 'decay function',
             'type': 'option_string',
             'required': False,
-            'options': [
-                'dichotomy',
-                'exponential',
-                'gaussian',
-                'density',
-            ],
+            'options': {
+                'dichotomy': {'display_name': 'dichotomy'},
+                'exponential': {'display_name': 'exponential'},
+                'gaussian': {'display_name': 'gaussian'},
+                'density': {'display_name': 'density'},
+            },
             'about': '',  # TODO
         }
     }
