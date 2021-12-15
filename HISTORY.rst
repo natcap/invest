@@ -50,6 +50,10 @@ Unreleased Changes (3.10)
     * Updating the ``taskgraph`` requirement to ``0.11.0`` to resolve an issue
       where modifying a file within a roughly 2-second window would fool
       ``taskgraph`` into believing that the file had not been modified.
+    * Fixed an issue where datastack archives would not include any spatial
+      datasets that were linked to in CSV files.  This now works for all models
+      except HRA.  If an HRA datastack archive is requested,
+      ``NotImplementedError`` will be raised.  A fix for HRA is pending.
 * Annual Water Yield
     * Renamed the Windows start menu shortcut from "Water Yield" to
       "Annual Water Yield".
