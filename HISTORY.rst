@@ -47,6 +47,16 @@ Unreleased Changes (3.10)
     * Standardized and de-duplicated text in ``ARGS_SPEC`` ``about`` and
       ``name`` strings.
     * Update to FontAwesome 5 icons in the QT interface.
+    * In response to the deprecation of ``setup.py``-based commands in Python
+      3.10, the recommended way to build python distributions of
+      ``natcap.invest`` is now with the ``build`` package, and installation
+      should be done via ``pip``.  The ``README`` has been updated to reflect
+      this change, and this should only be noticeable for those installing
+      ``natcap.invest`` from source.
+    * A bug has been fixed in ``make install`` so that now the current version
+      of ``natcap.invest`` is built and installed.  The former (buggy) version
+      of ``make install`` would install whatever the latest version was in your
+      ``dist`` folder.
     * Updating the ``taskgraph`` requirement to ``0.11.0`` to resolve an issue
       where modifying a file within a roughly 2-second window would fool
       ``taskgraph`` into believing that the file had not been modified.
