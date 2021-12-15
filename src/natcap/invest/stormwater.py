@@ -60,14 +60,14 @@ ARGS_SPEC = {
                     f"rc_{soil_group}": {
                         "type": "ratio",
                         "about": ("Stormwater runoff coefficient for soil "
-                                  f"group {soil_group}")
+                                  f"group {soil_group.upper()}")
                     } for soil_group in ["a", "b", "c", "d"]
                 },
                 **{
                     f"ir_{soil_group}": {
                         "type": "ratio",
                         "about": ("Stormwater recharge coefficient for "
-                                  f"soil group {soil_group}"),
+                                  f"soil group {soil_group.upper()}"),
                         "required": False
                     } for soil_group in ["a", "b", "c", "d"]
                 },
