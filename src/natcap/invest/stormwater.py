@@ -88,7 +88,7 @@ ARGS_SPEC = {
             "about": (
                 "Table mapping each LULC code found in the LULC raster to "
                 "biophysical data about that LULC class. If you provide the "
-                "percolation coefficient column (IR_[X]) for any soil group, "
+                "percolation coefficient column (PE_[X]) for any soil group, "
                 "you must provide it for all four soil groups."),
             "name": "Biophysical table"
         },
@@ -192,7 +192,7 @@ def execute(args):
             precipitation in millimeters
         args['biophysical_table'] (str): path to biophysical table with columns
             'lucode', 'EMC_x' (event mean concentration mg/L) for each
-            pollutant x, 'RC_y' (retention coefficient) and 'IR_y'
+            pollutant x, 'RC_y' (retention coefficient) and 'PE_y'
             (percolation coefficient) for each soil group y, and
             'is_connected' if args['adjust_retention_ratios'] is True
         args['adjust_retention_ratios'] (bool): If True, apply retention ratio
@@ -481,11 +481,11 @@ def execute(args):
 
     # (Optional) Calculate stormwater percolation ratio and volume from
     # LULC, soil groups, biophysical table, and precipitation
-    if 'ir_a' in next(iter(biophysical_dict.values())):
+    if 'pe_a' in next(iter(biophysical_dict.values())):
         LOGGER.info('percolation data detected in biophysical table. '
                     'Will calculate percolation ratio and volume rasters.')
         percolation_ratio_array = numpy.array([
-            [biophysical_dict[lucode][f'ir_{soil_group}']
+            [biophysical_dict[lucode][f'pe_{soil_group}']
                 for soil_group in ['a', 'b', 'c', 'd']
              ] for lucode in sorted_lucodes
         ], dtype=numpy.float32)
