@@ -696,11 +696,10 @@ def _map_distance_from_tropical_forest_edge(
         # where LULC has nodata, overwrite edge distance with nodata value
         lulc_block = lulc_band.ReadAsArray(**offset_dict)
         distance_block = edge_distance_band.ReadAsArray(**offset_dict)
-        valid_mask = ~utils.array_equals_nodata(lulc_block, lulc_nodata)
-        masked_distance_block[:] = lulc_nodata
-        masked_distance_block[valid_mask] = distance_block[valid_mask]
+        nodata_mask = utils.array_equals_nodata(lulc_block, lulc_nodata)
+        distance_block[nodata_mask] = lulc_nodata
         edge_distance_band.WriteArray(
-            masked_distance_block,
+            distance_block,
             xoff=offset_dict['xoff'],
             yoff=offset_dict['yoff'])
 
