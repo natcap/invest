@@ -1136,8 +1136,8 @@ def _map_lulc_to_val_mask_stream(
     def _map_eff_op(lucode_array, stream_array):
         """Map efficiency from LULC and handle nodata/streams."""
         valid_mask = (
-            ~utils.array_equals_nodata(lucode_array != nodata_landuse) &
-            ~utils.array_equals_nodata(stream_array != nodata_stream))
+            ~utils.array_equals_nodata(lucode_array, nodata_landuse) &
+            ~utils.array_equals_nodata(stream_array, nodata_stream))
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         result[:] = _TARGET_NODATA
         index = numpy.digitize(
