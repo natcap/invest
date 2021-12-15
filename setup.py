@@ -176,7 +176,7 @@ setup(
     },
     package_data={
         'natcap.invest': [
-            'internationalization/locales/*/LC_MESSAGES/messages.mo'
+            'internationalization/locales'
         ]
     }
 )
