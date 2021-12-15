@@ -70,6 +70,7 @@ class DatastackArchiveTests(unittest.TestCase):
         module = importlib.import_module(name=model_name)
         module.execute(args)
 
+    @unittest.skip('Sample data not usually cloned for test runs.')
     def test_coastal_blue_carbon(self):
         """Datastack: Test CBC."""
         source_parameter_set_path = os.path.join(
@@ -78,7 +79,7 @@ class DatastackArchiveTests(unittest.TestCase):
         DatastackArchiveTests.execute_model(
             self.workspace, source_parameter_set_path)
 
-    @unittest.skip('Takes a long time to run')
+    @unittest.skip('Sample data not usually cloned for test runs.')
     def test_habitat_quality(self):
         """Datastack: Test Habitat Quality."""
         source_parameter_set_path = os.path.join(
@@ -87,7 +88,7 @@ class DatastackArchiveTests(unittest.TestCase):
         DatastackArchiveTests.execute_model(
             self.workspace, source_parameter_set_path)
 
-    @unittest.skip('Takes a long time to run')
+    @unittest.skip('Sample data not usually cloned for test runs.')
     def test_cv(self):
         """Datastack: Test Coastal Vulnerability."""
         source_parameter_set_path = os.path.join(
@@ -96,7 +97,7 @@ class DatastackArchiveTests(unittest.TestCase):
         DatastackArchiveTests.execute_model(
             self.workspace, source_parameter_set_path)
 
-    @unittest.skip('Invokes remote server; network may be slow.')
+    @unittest.skip('Sample data not usually cloned for test runs.')
     def test_recreation(self):
         source_parameter_set_path = os.path.join(
             SAMPLE_DATA_DIR, 'recreation', 'recreation_andros.invs.json')
