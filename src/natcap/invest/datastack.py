@@ -232,27 +232,27 @@ def build_datastack_archive(args, model_name, datastack_path):
 
         input_type = args_spec[key]['type']
         spatial_types = {'raster', 'vector'}
+        file_based_types = spatial_types.union({'csv', 'file', 'directory'})
 
-        # Python can't handle mixed file separators, so let's just standardize
-        # on linux filepaths internally.
-        #
-        # Also check to see if a file-based path has no value; skip if so
-        if input_type in spatial_types.union(
-                {'csv', 'file', 'directory'}):
+        if input_type in file_based_types:
             if args[key] in {None, ''}:
-                LOGGER.info(f'Skipping key {key}, value is empty')
+                LOGGER.info(
+                    f'Skipping key {key}, value is empty and cannot point to '
+                    'a file.')
                 rewritten_args[key] = ''
                 continue
 
+            # Python can't handle mixed file separators, so let's just
+            # standardize on linux filepaths.
             source_path = args[key].replace('\\', '/')
 
-        # If we already know about the parameter, then we can just reuse it and
-        # skip the file copying.
-        if args[key] in files_found:
-            LOGGER.debug(
-                f'Key {key} already known. Using {files_found[args[key]]}')
-            rewritten_args[key] = files_found[args[key]]
-            continue
+            # If we already know about the parameter, then we can just reuse it
+            # and skip the file copying.
+            if source_path in files_found:
+                LOGGER.debug(
+                    f'Key {key} is known: using {files_found[source_path]}')
+                rewritten_args[key] = files_found[source_path]
+                continue
 
         if input_type == 'csv':
             # check the CSV for columns that may be spatial.
