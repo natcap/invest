@@ -203,10 +203,18 @@ def build_datastack_archive(args, model_name, datastack_path):
     args = args.copy()
     temp_workspace = tempfile.mkdtemp(prefix='datastack_')
     data_dir = os.path.join(temp_workspace, 'data')
-    logfile = os.paht.join(temp_workspace, 'log.txt')
     os.makedirs(data_dir)
 
-    # For tracking existing files so we don't copy things twice
+    # write a logfile to the archive
+    logfile = os.path.join(temp_workspace, 'log')
+    archive_filehandler = logging.FileHandler(logfile, 'w')
+    archive_formatter = logging.Formatter(
+        "%(name)-25s %(levelname)-8s %(message)s")
+    archive_filehandler.setFormatter(archive_formatter)
+    archive_filehandler.setLevel(logging.NOTSET)
+    logging.getLogger().addHandler(archive_filehandler)
+
+    # For tracking existing files so we don't copy files in twice
     files_found = {}
     LOGGER.debug(f'Keys: {sorted(args.keys())}')
     args_spec = module.ARGS_SPEC['args']
@@ -216,6 +224,7 @@ def build_datastack_archive(args, model_name, datastack_path):
 
     rewritten_args = {}
     for key in args:
+        LOGGER.info(f'Starting to archive arg "{key}": {args[key]}')
         # Possible that a user might pass an args key that doesn't belong to
         # this model.  Skip if so.
         if key not in args_spec:
@@ -240,7 +249,7 @@ def build_datastack_archive(args, model_name, datastack_path):
         # If we already know about the parameter, then we can just reuse it and
         # skip the file copying.
         if args[key] in files_found:
-            LOGGER.info(
+            LOGGER.debug(
                 f'Key {key} already known. Using {files_found[args[key]]}')
             rewritten_args[key] = files_found[args[key]]
             continue
@@ -261,9 +270,12 @@ def build_datastack_archive(args, model_name, datastack_path):
                         col_types = set([col_types])
                     if col_types.intersection(spatial_types):
                         spatial_columns.append(col_name)
+            LOGGER.debug(f'Detected spatial columns: {spatial_columns}')
 
             target_csv_path = os.path.join(data_dir, f'{key}.csv')
             if not spatial_columns:
+                LOGGER.debug(
+                    f'No spatial columns, copying to {target_csv_path}')
                 shutil.copyfile(source_path, target_csv_path)
             else:
                 contained_files_dir = os.path.join(
@@ -316,10 +328,15 @@ def build_datastack_archive(args, model_name, datastack_path):
                             target_filepath = os.path.relpath(
                                 target_filepath, data_dir)
 
+                        LOGGER.debug(
+                            'Spatial file in CSV copied from '
+                            f'{source_filepath} --> {target_filepath}')
                         dataframe.at[
                             row_index, spatial_column_name] = target_filepath
                         files_found[source_filepath] = target_filepath
 
+                LOGGER.debug(
+                    f'Rewritten spatial CSV written to {target_csv_path}')
                 dataframe.to_csv(target_csv_path)
 
             target_arg_value = _relpath(target_csv_path)
@@ -329,6 +346,8 @@ def build_datastack_archive(args, model_name, datastack_path):
             target_filepath = os.path.join(
                 data_dir, f'{key}_{os.path.basename(source_path)}')
             shutil.copyfile(source_path, target_filepath)
+            LOGGER.debug(
+                f'File copied from {source_path} --> {target_filepath}')
             target_arg_value = _relpath(target_filepath)
             files_found[source_path] = target_arg_value
 
@@ -346,6 +365,9 @@ def build_datastack_archive(args, model_name, datastack_path):
                     shutil.copytree(src_path, dest_path)
                 else:
                     shutil.copyfile(src_path, dest_path)
+
+            LOGGER.debug(
+                f'Directory copied from {source_path} --> {target_directory}')
             target_arg_value = _relpath(target_directory)
             files_found[source_path] = target_arg_value
 
@@ -363,10 +385,15 @@ def build_datastack_archive(args, model_name, datastack_path):
             raise NotImplementedError(
                 'The "other" ARGS_SPEC input type is not supported')
         else:
+            LOGGER.debug(
+                f"Type {input_type} is not filesystem-based; "
+                "recording value directly")
             # not a filesystem-based type
             # Record the value directly
             target_arg_value = args[key]
         rewritten_args[key] = target_arg_value
+
+    LOGGER.info('Args preprocessing complete')
 
     new_args = {
         'args': rewritten_args,
@@ -383,6 +410,10 @@ def build_datastack_archive(args, model_name, datastack_path):
         params.write(json.dumps(new_args,
                                 indent=4,
                                 sort_keys=True))
+
+    # Remove the handler before archiving the working dir (and the logfile)
+    archive_filehandler.close()
+    logging.getLogger().removeHandler(archive_filehandler)
 
     # archive the workspace.
     with utils.sandbox_tempdir() as temp_dir:
