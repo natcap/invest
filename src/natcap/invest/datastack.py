@@ -60,6 +60,21 @@ ParameterSet = collections.namedtuple('ParameterSet',
 
 
 def _copy_spatial_files(spatial_filepath, target_dir):
+    """Copy spatial files to a new directory.
+
+    Args:
+        spatial_filepath (str): The filepath to a GDAL-supported file.
+        target_dir (str): The directory where all component files of
+            ``spatial_filepath`` should be copied.
+
+    Returns:
+        filepath (str): The path to a representative file copied into the
+        ``target_dir``.  If possible, this will match the basename of
+        ``spatial_filepath``, so if someone provides an ESRI Shapefile called
+        ``my_vector.shp``, the return value will be ``os.path.join(target_dir,
+        my_vector.shp)``.
+    """
+    LOGGER.info(f'Copying {spatial_filepath} --> {target_dir}')
     if not os.path.exists(target_dir):
         os.makedirs(target_dir)
 
