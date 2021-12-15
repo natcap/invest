@@ -37,12 +37,12 @@ class CLIHeadlessTests(unittest.TestCase):
         """Remove the temporary workspace after a test run."""
         shutil.rmtree(self.workspace_dir)
 
-    def test_run_fisheries_workspace_in_json(self):
-        """CLI: Run the fisheries model with JSON-defined workspace."""
+    def test_run_coastal_blue_carbon_workspace_in_json(self):
+        """CLI: Run a model with JSON-defined workspace."""
         from natcap.invest import cli
         parameter_set_path = os.path.join(
             os.path.dirname(__file__), '..', 'data', 'invest-test-data',
-            'fisheries', 'spiny_lobster_belize.invs.json')
+            'coastal_blue_carbon', 'cbc_galveston_bay.invs.json')
 
         datastack_dict = json.load(open(parameter_set_path))
         datastack_dict['args']['workspace_dir'] = self.workspace_dir
@@ -53,66 +53,66 @@ class CLIHeadlessTests(unittest.TestCase):
                 json.dumps(datastack_dict, indent=4, sort_keys=True))
 
         with unittest.mock.patch(
-                'natcap.invest.fisheries.fisheries.execute',
+                'natcap.invest.coastal_blue_carbon.coastal_blue_carbon.execute',
                 return_value=None) as patched_model:
             cli.main([
                 'run',
-                'fisheries',  # uses an exact modelname
+                'coastal_blue_carbon',  # uses an exact modelname
                 '--datastack', new_parameter_set_path,
                 '--headless',
             ])
         patched_model.assert_called_once()
 
-    def test_run_fisheries(self):
-        """CLI: Run the fisheries model through the cli."""
+    def test_run_coastal_blue_carbon(self):
+        """CLI: Run a model through the cli."""
         from natcap.invest import cli
         parameter_set_path = os.path.join(
             os.path.dirname(__file__), '..', 'data', 'invest-test-data',
-            'fisheries', 'spiny_lobster_belize.invs.json')
+            'coastal_blue_carbon', 'cbc_galveston_bay.invs.json')
 
         with unittest.mock.patch(
-                'natcap.invest.fisheries.fisheries.execute',
+                'natcap.invest.coastal_blue_carbon.coastal_blue_carbon.execute',
                 return_value=None) as patched_model:
             cli.main([
                 'run',
-                'fisheries',  # uses an exact modelname
+                'coastal_blue_carbon',  # uses an exact modelname
                 '--datastack', parameter_set_path,
                 '--headless',
                 '--workspace', self.workspace_dir,
             ])
         patched_model.assert_called_once()
 
-    def test_run_fisheries_no_workspace(self):
-        """CLI: Run the fisheries model through the cli without a workspace."""
+    def test_run_coastal_blue_carbon_no_workspace(self):
+        """CLI: Run a model through the cli without a workspace."""
         from natcap.invest import cli
         parameter_set_path = os.path.join(
             os.path.dirname(__file__), '..', 'data', 'invest-test-data',
-            'fisheries', 'spiny_lobster_belize.invs.json')
+            'coastal_blue_carbon', 'cbc_galveston_bay.invs.json')
 
         with self.assertRaises(SystemExit) as exit_cm:
             cli.main([
                 'run',
-                'fisheries',  # uses an exact modelname
+                'coastal_blue_carbon',  # uses an exact modelname
                 '--datastack', parameter_set_path,
                 '--headless',
             ])
         self.assertEqual(exit_cm.exception.code, 1)
 
-    def test_run_fisheries_no_datastack(self):
-        """CLI: Run the fisheries model through the cli without a datastack."""
+    def test_run_coastal_blue_carbon_no_datastack(self):
+        """CLI: Run a model through the cli without a datastack."""
         from natcap.invest import cli
 
         with self.assertRaises(SystemExit) as exit_cm:
             cli.main([
                 'run',
-                'fisheries',  # uses an exact modelname
+                'coastal_blue_carbon',  # uses an exact modelname
                 '--headless',
                 '--workspace', self.workspace_dir,
             ])
         self.assertEqual(exit_cm.exception.code, 1)
 
-    def test_run_fisheries_invalid_datastack(self):
-        """CLI: Run the fisheries model through the cli invalid datastack."""
+    def test_run_coastal_blue_carbon_invalid_datastack(self):
+        """CLI: Run a model through the cli invalid datastack."""
         from natcap.invest import cli
         parameter_set_path = os.path.join(
             self.workspace_dir, 'bad-paramset.invs.json')
@@ -123,7 +123,7 @@ class CLIHeadlessTests(unittest.TestCase):
         with self.assertRaises(SystemExit) as exit_cm:
             cli.main([
                 'run',
-                'fisheries',  # uses an exact modelname
+                'coastal_blue_carbon',  # uses an exact modelname
                 '--datastack', parameter_set_path,
                 '--headless',
             ])
@@ -134,12 +134,12 @@ class CLIHeadlessTests(unittest.TestCase):
         from natcap.invest import cli
         parameter_set_path = os.path.join(
             os.path.dirname(__file__), '..', 'data', 'invest-test-data',
-            'fisheries', 'spiny_lobster_belize.invs.json')
+            'coastal_blue_carbon', 'cbc_galveston_bay.invs.json')
 
         with self.assertRaises(SystemExit) as exit_cm:
             cli.main([
                 'run',
-                'fish',  # ambiguous substring
+                'coastal',  # ambiguous substring
                 '--datastack', parameter_set_path,
                 '--headless',
                 '--workspace', self.workspace_dir,
@@ -201,16 +201,15 @@ class CLIHeadlessTests(unittest.TestCase):
 
         self.assertEqual(exit_cm.exception.code, 0)
 
-    def test_validate_fisheries(self):
-        """CLI: Validate the fisheries model inputs through the cli."""
-        from natcap.invest import cli
-        parameter_set_path = os.path.join(
-            os.path.dirname(__file__), '..', 'data', 'invest-test-data',
-            'fisheries', 'spiny_lobster_belize.invs.json')
+    def test_validate_carbon(self):
+        """CLI: Validate a model inputs through the cli."""
+        from natcap.invest import cli, validation
 
-        # The InVEST sample data JSON arguments don't have a workspace, so I
-        # need to add it in.
-        datastack_dict = json.load(open(parameter_set_path))
+        datastack_dict = {
+            'model_name': 'natcap.invest.carbon',
+            'invest_version': '3.10',
+            'args': {}
+        }
         datastack_dict['args']['workspace_dir'] = self.workspace_dir
         new_parameter_set_path = os.path.join(
             self.workspace_dir, 'paramset.invs.json')
@@ -225,25 +224,19 @@ class CLIHeadlessTests(unittest.TestCase):
                     new_parameter_set_path,
                 ])
         validation_output = stdout_stream.getvalue()
-        # it's expected that these paths aren't found because it's looking in
-        # the temporary test directory. do_batch is False so it doesn't check
-        # the population_csv_dir path, which also wouldn't exist.
-        expected_warnings = [
-            "(['aoi_vector_path'], 'File not found')",
-            "(['migration_dir'], 'Directory not found')",
-            "(['population_csv_path'], 'File not found')"]
-        for warning in expected_warnings:
-            self.assertTrue(warning in validation_output)
-        # 3 lines = 3 warning messages
-        self.assertEqual(len(validation_output.split('\n')), 3)
+        # it's expected that these keys are missing because the only
+        # key we included was the workspace_dir
+        expected_warning = [(['carbon_pools_path', 'lulc_cur_path'],
+                            validation.MESSAGES['MISSING_KEY'])]
+        self.assertEqual(validation_output, str(expected_warning))
         self.assertEqual(exit_cm.exception.code, 0)
 
-    def test_validate_fisheries_missing_workspace(self):
-        """CLI: Validate the fisheries model inputs through the cli."""
+    def test_validate_coastal_blue_carbon_missing_workspace(self):
+        """CLI: Validate a model inputs with missing workspace."""
         from natcap.invest import cli
         parameter_set_path = os.path.join(
             os.path.dirname(__file__), '..', 'data', 'invest-test-data',
-            'fisheries', 'spiny_lobster_belize.invs.json')
+            'coastal_blue_carbon', 'cbc_galveston_bay.invs.json')
 
         # The InVEST sample data JSON arguments don't have a workspace.  In
         # this case, I want to leave it out and verify validation catches it.
@@ -258,12 +251,12 @@ class CLIHeadlessTests(unittest.TestCase):
         # Validation failed, not the program.
         self.assertEqual(exit_cm.exception.code, 0)
 
-    def test_validate_fisheries_missing_workspace_json(self):
-        """CLI: Validate the fisheries model inputs through the cli."""
+    def test_validate_coastal_blue_carbon_missing_workspace_json(self):
+        """CLI: Validate inputs with missing workspace; JSON response."""
         from natcap.invest import cli
         parameter_set_path = os.path.join(
             os.path.dirname(__file__), '..', 'data', 'invest-test-data',
-            'fisheries', 'spiny_lobster_belize.invs.json')
+            'coastal_blue_carbon', 'cbc_galveston_bay.invs.json')
 
         # The InVEST sample data JSON arguments don't have a workspace.  In
         # this case, I want to leave it out and verify validation catches it.
@@ -300,23 +293,15 @@ class CLIHeadlessTests(unittest.TestCase):
         self.assertTrue(len(stdout_stream.getvalue()) == 0)
         self.assertEqual(exit_cm.exception.code, 1)
 
-    def test_validate_fisheries_json(self):
-        """CLI: Validate the fisheries model inputs as JSON through the cli."""
+    def test_validate_carbon_json(self):
+        """CLI: Get validation results as JSON from cli."""
         from natcap.invest import cli
-        parameter_set_path = os.path.join(
-            os.path.dirname(__file__), '..', 'data', 'invest-test-data',
-            'fisheries', 'spiny_lobster_belize.invs.json')
-
-        # The InVEST sample data JSON arguments don't have a workspace, so I
-        # need to add it in.
-        datastack_dict = json.load(open(parameter_set_path))
+        datastack_dict = {
+            'model_name': 'natcap.invest.carbon',
+            'invest_version': '3.10',
+            'args': {}
+        }
         datastack_dict['args']['workspace_dir'] = self.workspace_dir
-
-        # In this case, I also want to set one of the inputs to an invalid path
-        # to test the presentation of a validation error.
-        datastack_dict['args']['aoi_vector_path'] = os.path.join(
-            self.workspace_dir, 'not-a-vector.shp')
-
         new_parameter_set_path = os.path.join(
             self.workspace_dir, 'paramset.invs.json')
         with open(new_parameter_set_path, 'w') as parameter_set_file:
@@ -333,10 +318,8 @@ class CLIHeadlessTests(unittest.TestCase):
         stdout = stdout_stream.getvalue()
         stdout_json = json.loads(stdout)
         self.assertEqual(len(stdout_json), 1)
-        # migration path, aoi_vector_path, population_csv_path not found
-        # population_csv_dir is also incorrect, but shouldn't be marked
-        # invalid because do_batch is False
-        self.assertEqual(len(stdout_json['validation_results']), 3)
+        # Some required keys are missing, so we have validation results
+        self.assertEqual(len(stdout_json['validation_results']), 1)
 
         # Validation returned successfully, so error code 0 even though there
         # are warnings.

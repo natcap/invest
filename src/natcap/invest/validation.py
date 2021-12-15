@@ -24,16 +24,40 @@ from . import spec_utils
 #: A flag to pass to the validation context manager indicating that all keys
 #: should be checked.
 CHECK_ALL_KEYS = None
-MESSAGE_REQUIRED = 'Parameter is required but is missing or has no value'
 LOGGER = logging.getLogger(__name__)
 
-# (header type, header name) e.g. 'column', 'lucode'
-MATCHED_NO_HEADERS_MSG = 'Expected the %s "%s" but did not find it'
-# (header type, header name, number of times found) e.g. 'row', 'lucode', 2
-DUPLICATE_HEADER_MSG = 'Expected the %s "%s" only once but found it %d times'
-
-NOT_A_NUMBER_MSG = 'Value "%s" could not be interpreted as a number'
-WRONG_PROJECTION_UNIT_MSG = 'Layer must be projected in this unit: "%s" but found this unit: "%s"'
+MESSAGES = {
+    'MISSING_KEY': _('Key is missing from the args dict'),
+    'MISSING_VALUE': _('Input is required but has no value'),
+    'MATCHED_NO_HEADERS': _('Expected the {header} "{header_name}" but did '
+                            'not find it'),
+    'DUPLICATE_HEADER': _('Expected the {header} "{header_name}" only once '
+                          'but found it {number} times'),
+    'NOT_A_NUMBER': _('Value "{value}" could not be interpreted as a number'),
+    'WRONG_PROJECTION_UNIT': _('Layer must be projected in this unit: '
+                               '"{unit_a}" but found this unit: "{unit_b}"'),
+    'UNEXPECTED_ERROR': _('An unexpected error occurred in validation'),
+    'DIR_NOT_FOUND': _('Directory not found'),
+    'NOT_A_DIR': _('Path must be a directory'),
+    'FILE_NOT_FOUND': _('File not found'),
+    'INVALID_PROJECTION': _('Dataset must have a valid projection.'),
+    'NOT_PROJECTED': _('Dataset must be projected in linear units.'),
+    'NOT_GDAL_RASTER': _('File could not be opened as a GDAL raster'),
+    'OVR_FILE': _('File found to be an overview ".ovr" file.'),
+    'NOT_GDAL_VECTOR': _('File could not be opened as a GDAL vector'),
+    'NOT_CSV_OR_EXCEL': _('File could not be opened as a CSV or Excel file.'),
+    'NOT_CSV': _('File could not be opened as a CSV. File must be encoded as '
+                 'a UTF-8 CSV.'),
+    'REGEXP_MISMATCH': _("Value did not match expected pattern {regexp}"),
+    'INVALID_OPTION': _("Value must be one of: {option_list}"),
+    'INVALID_VALUE': _('Value does not meet condition {condition}'),
+    'NOT_WITHIN_RANGE': _('Value {value} is not in the range {range}'),
+    'NOT_AN_INTEGER': _('Value "{value}" does not represent an integer'),
+    'NOT_BOOLEAN': _("Value must be either True or False, not {value}"),
+    'NO_PROJECTION': _('Spatial file {filepath} has no projection'),
+    'BBOX_NOT_INTERSECT': _("Bounding boxes do not intersect:"),
+    'NEED_PERMISSION': _('You must have {permission} access to this file'),
+}
 
 
 def _evaluate_expression(expression, variable_map):
@@ -139,11 +163,11 @@ def check_directory(dirpath, must_exist=True, permissions='rx', **kwargs):
     """
     if must_exist:
         if not os.path.exists(dirpath):
-            return "Directory not found"
+            return MESSAGES['DIR_NOT_FOUND']
 
     if os.path.exists(dirpath):
         if not os.path.isdir(dirpath):
-            return "Path must be a directory"
+            return MESSAGES['NOT_A_DIR']
     else:
         # find the parent directory that does exist and check permissions
         child = dirpath
@@ -176,7 +200,7 @@ def check_file(filepath, permissions='r', **kwargs):
 
     """
     if not os.path.exists(filepath):
-        return "File not found"
+        return MESSAGES['FILE_NOT_FOUND']
 
     permissions_warning = check_permissions(filepath, permissions)
     if permissions_warning:
@@ -204,7 +228,7 @@ def check_permissions(path, permissions):
             ('w', os.W_OK, 'write'),
             ('x', os.X_OK, 'execute')):
         if letter in permissions and not os.access(path, mode):
-            return 'You must have %s access to this file' % descriptor
+            return MESSAGES['NEED_PERMISSION'].format(permission=letter)
 
 
 def _check_projection(srs, projected, projection_units):
@@ -223,11 +247,11 @@ def _check_projection(srs, projected, projection_units):
     """
     empty_srs = osr.SpatialReference()
     if srs is None or srs.IsSame(empty_srs):
-        return "Dataset must have a valid projection."
+        return MESSAGES['INVALID_PROJECTION']
 
     if projected:
         if not srs.IsProjected():
-            return "Dataset must be projected in linear units."
+            return MESSAGES['NOT_PROJECTED']
 
     if projection_units:
         # pint uses underscores in multi-word units e.g. 'survey_foot'
@@ -238,11 +262,11 @@ def _check_projection(srs, projected, projection_units):
             layer_units = spec_utils.u.Unit(layer_units_name)
             # Compare pint Unit objects
             if projection_units != layer_units:
-                return WRONG_PROJECTION_UNIT_MSG % (
-                    projection_units, layer_units_name)
+                return MESSAGES['WRONG_PROJECTION_UNIT'].format(
+                    unit_a=projection_units, unit_b=layer_units_name)
         except pint.errors.UndefinedUnitError:
-            return WRONG_PROJECTION_UNIT_MSG % (
-                projection_units, layer_units_name)
+            return MESSAGES['WRONG_PROJECTION_UNIT'].format(
+                unit_a=projection_units, unit_b=layer_units_name)
 
     return None
 
@@ -271,10 +295,10 @@ def check_raster(filepath, projected=False, projection_units=None, **kwargs):
     gdal.PopErrorHandler()
 
     if gdal_dataset is None:
-        return "File could not be opened as a GDAL raster"
+        return MESSAGES['NOT_GDAL_RASTER']
     # Check that an overview .ovr file wasn't opened.
     if os.path.splitext(filepath)[1] == '.ovr':
-        return "File found to be an overview '.ovr' file."
+        return MESSAGES['OVR_FILE']
 
     srs = osr.SpatialReference()
     srs.ImportFromWkt(gdal_dataset.GetProjection())
@@ -342,7 +366,7 @@ def check_vector(filepath, fields=None, projected=False, projection_units=None,
     gdal.PopErrorHandler()
 
     if gdal_dataset is None:
-        return 'File could not be opened as a GDAL vector'
+        return MESSAGES['NOT_GDAL_VECTOR']
 
     layer = gdal_dataset.GetLayer()
     srs = layer.GetSpatialRef()
@@ -378,7 +402,7 @@ def check_freestyle_string(value, regexp=None, **kwargs):
     if regexp:
         matches = re.findall(regexp, str(value), re.IGNORECASE)
         if not matches:
-            return f"Value did not match expected pattern {regexp}"
+            return MESSAGES['REGEXP_MISMATCH'].format(regexp=regexp)
     return None
 
 
@@ -388,18 +412,17 @@ def check_option_string(value, options, **kwargs):
     Args:
         value: The value to test. Will be cast to a string before comparing
             against the allowed options.
-        options (list | dict): strings to test against.
-            If a dict, test against the keys.
+        options (dict): option spec to validate against.
 
     Returns:
         A string error message if ``value`` is not in ``options``.  ``None``
         otherwise.
 
     """
-    # if options is an empty set, that means it's dynamically populated
+    # if options is empty, that means it's dynamically populated
     # so validation should be left to the model's validate function.
     if options and str(value) not in options:
-        return "Value must be one of: %s" % sorted(options)
+        return MESSAGES['INVALID_OPTION'].format(option_list=sorted(options))
 
 
 def check_number(value, expression=None, **kwargs):
@@ -420,7 +443,7 @@ def check_number(value, expression=None, **kwargs):
     try:
         float(value)
     except (TypeError, ValueError):
-        return NOT_A_NUMBER_MSG % value
+        return MESSAGES['NOT_A_NUMBER'].format(value=value)
 
     if expression:
         # Check to make sure that 'value' is in the expression.
@@ -434,7 +457,7 @@ def check_number(value, expression=None, **kwargs):
         # be raised if asteval can't evaluate the expression.
         result = _evaluate_expression(expression, {'value': float(value)})
         if not result:  # A python bool object is returned.
-            return f'Value does not meet condition {expression}'
+            return MESSAGES['INVALID_VALUE'].format(condition=expression)
 
     return None
 
@@ -452,10 +475,12 @@ def check_ratio(value, **kwargs):
     try:
         as_float = float(value)
     except (TypeError, ValueError):
-        return NOT_A_NUMBER_MSG % value
+        return MESSAGES['NOT_A_NUMBER'].format(value=value)
 
     if as_float < 0 or as_float > 1:
-        return f'Value {as_float} is not in the range [0, 1]'
+        return MESSAGES['NOT_WITHIN_RANGE'].format(
+            value=as_float,
+            range='[0, 1]')
 
     return None
 
@@ -473,10 +498,12 @@ def check_percent(value, **kwargs):
     try:
         as_float = float(value)
     except (TypeError, ValueError):
-        return NOT_A_NUMBER_MSG % value
+        return MESSAGES['NOT_A_NUMBER'].format(value=value)
 
     if as_float < 0 or as_float > 100:
-        return f'Value {as_float} is not in the range [0, 100]'
+        return MESSAGES['NOT_WITHIN_RANGE'].format(
+            value=as_float,
+            range='[0, 100]')
 
     return None
 
@@ -495,9 +522,9 @@ def check_integer(value, **kwargs):
         # must first cast to float, to handle both string and float inputs
         as_float = float(value)
         if not as_float.is_integer():
-            return f'Value "{value}" does not represent an integer'
+            return MESSAGES['NOT_AN_INTEGER'].format(value=value)
     except (TypeError, ValueError):
-        return NOT_A_NUMBER_MSG % value
+        return MESSAGES['NOT_A_NUMBER'].format(value=value)
     return None
 
 
@@ -516,8 +543,7 @@ def check_boolean(value, **kwargs):
 
     """
     if not isinstance(value, bool):
-        return "Value must be either True or False, not %s %s" % (
-            type(value), value)
+        return MESSAGES['NOT_BOOLEAN'].format(value=value)
 
 
 def check_csv(filepath, rows=None, columns=None, excel_ok=False, **kwargs):
@@ -560,10 +586,9 @@ def check_csv(filepath, rows=None, columns=None, excel_ok=False, **kwargs):
             try:
                 dataframe = pandas.read_excel(filepath)
             except ValueError:
-                return "File could not be opened as a CSV or Excel file."
+                return MESSAGES['NOT_CSV_OR_EXCEL']
         else:
-            return ("File could not be opened as a CSV. "
-                    "File must be encoded as a UTF-8 CSV.")
+            return MESSAGES['NOT_CSV']
 
     # assume that at most one of `rows` and `columns` is defined
     if columns:
@@ -574,7 +599,7 @@ def check_csv(filepath, rows=None, columns=None, excel_ok=False, **kwargs):
         return check_headers(get_headers_to_validate(rows), headers, 'row')
 
 
-def check_headers(expected_headers, actual_headers, header_name='header'):
+def check_headers(expected_headers, actual_headers, header_type='header'):
     """Validate that expected headers are in a list of actual headers.
 
     - Each expected header should be found exactly once.
@@ -586,7 +611,7 @@ def check_headers(expected_headers, actual_headers, header_name='header'):
             exist in `actual_headers`.
         actual_headers (list[str]): A list of actual headers to validate
             against `expected_headers`.
-        header_name (str): A string to use in the error message to refer to the
+        header_type (str): A string to use in the error message to refer to the
             header (typically one of 'column', 'row', 'field')
 
     Returns:
@@ -598,9 +623,14 @@ def check_headers(expected_headers, actual_headers, header_name='header'):
     for expected in expected_headers:
         count = actual_headers.count(expected)
         if count == 0:
-            return MATCHED_NO_HEADERS_MSG % (header_name, expected)
+            return MESSAGES['MATCHED_NO_HEADERS'].format(
+                header=header_type,
+                header_name=expected)
         elif count > 1:
-            return DUPLICATE_HEADER_MSG % (header_name, expected, count)
+            return MESSAGES['DUPLICATE_HEADER'].format(
+                header=header_type,
+                header_name=expected,
+                number=count)
     return None
 
 
@@ -632,7 +662,7 @@ def check_spatial_overlap(spatial_filepaths_list,
             info = pygeoprocessing.get_vector_info(filepath)
 
         if info['projection_wkt'] is None:
-            return f'Spatial file {filepath} has no projection'
+            return MESSAGES['NO_PROJECTION'].format(filepath=filepath)
 
         if different_projections_ok:
             bounding_box = pygeoprocessing.transform_bounding_box(
@@ -655,8 +685,7 @@ def check_spatial_overlap(spatial_filepaths_list,
         formatted_lists = ' | '.join(
             [a + ': ' + str(b) for a, b in zip(
                 checked_file_list, bounding_boxes)])
-        message = f"Bounding boxes do not intersect: {formatted_lists}"
-        return message
+        return MESSAGES['BBOX_NOT_INTERSECT'].format(bboxes=formatted_lists)
     return None
 
 
@@ -803,13 +832,10 @@ def validate(args, spec, spatial_overlap_opts=None):
             conditionally_required_keys.add(key)
 
     if missing_keys:
-        validation_warnings.append(
-            (sorted(missing_keys), "Key is missing from the args dict"))
+        validation_warnings.append((sorted(missing_keys), MESSAGES['MISSING_KEY']))
 
     if keys_with_no_value:
-        validation_warnings.append(
-            (sorted(keys_with_no_value),
-             "Input is required but has no value"))
+        validation_warnings.append((sorted(keys_with_no_value), MESSAGES['MISSING_VALUE']))
 
     # step 2: evaluate sufficiency of keys/inputs
     # Sufficiency: An input is sufficient when its key is present in args and
@@ -861,12 +887,10 @@ def validate(args, spec, spatial_overlap_opts=None):
             variable_map=sufficient_inputs)
         if is_conditionally_required:
             if key not in args:
-                validation_warnings.append(
-                    ([key], "Key is missing from the args dict"))
+                validation_warnings.append(([key], MESSAGES['MISSING_KEY']))
             else:
                 if args[key] in ('', None):
-                    validation_warnings.append(
-                        ([key], "Key is required but has no value"))
+                    validation_warnings.append(([key], MESSAGES['MISSING_VALUE']))
         else:
             excluded_keys.add(key)
 
@@ -904,8 +928,7 @@ def validate(args, spec, spatial_overlap_opts=None):
             LOGGER.exception(
                 'Error when validating key %s with value %s',
                 key, args[key])
-            validation_warnings.append(
-                ([key], 'An unexpected error occurred in validation'))
+            validation_warnings.append(([key], MESSAGES['UNEXPECTED_ERROR']))
 
     # step 5: check spatial overlap if applicable
     if spatial_overlap_opts:

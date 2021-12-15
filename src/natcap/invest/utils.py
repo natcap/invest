@@ -4,6 +4,7 @@ import contextlib
 import logging
 import math
 import os
+import re
 import shutil
 import tempfile
 import time
@@ -1007,3 +1008,28 @@ def reclassify_raster(
             f" {raster_name} raster but not the table are:"
             f" {err.missing_values}.")
         raise ValueError(error_message)
+
+
+def matches_format_string(test_string, format_string):
+    """Assert that a given string matches a given format string.
+
+    This means that the given test string could be derived from the given
+    format string by replacing replacement fields with any text. For example,
+    the string 'Value "foo" is invalid.' matches the format string
+    'Value "{value}" is invalid.'
+
+    Args:
+        test_string (str): string to test.
+        format_string (str): format string, which may contain curly-brace
+            delimited replacement fields
+
+    Returns:
+        True if test_string matches format_string, False if not.
+    """
+    # replace all curly-braced substrings of the format string with '.*'
+    # to make a regular expression
+    pattern = re.sub(r'\{.*\}', '.*', format_string)
+    # check if the given string matches the format string pattern
+    if re.fullmatch(pattern, test_string):
+        return True
+    return False

@@ -40,129 +40,133 @@ ARGS_SPEC = {
                     "type": "vector",
                     "fields": {},
                     "geometries": spec_utils.POINT,
-                    "about": (
+                    "about": _(
                         "Point vector for the west coast of North America and "
                         "Hawaii.")},
                 "WCNA_extract.shp": {
                     "type": "vector",
                     "fields": {},
                     "geometries": spec_utils.POLYGON,
-                    "about": (
+                    "about": _(
                         "Extract vector for the west coast of North America "
                         "and Hawaii.")},
                 "NAmerica_WestCoast_4m.txt.bin": {
                     "type": "file",
-                    "about": (
+                    "about": _(
                         "WaveWatchIII data for the west coast of North "
                         "America and Hawaii.")},
                 "NAmerica_EastCoast_4m.shp": {
                     "type": "vector",
                     "fields": {},
                     "geometries": spec_utils.POINT,
-                    "about": (
+                    "about": _(
                         "Point vector for the East Coast of North America and "
                         "Puerto Rico.")},
                 "ECNA_extract.shp": {
                     "type": "vector",
                     "fields": {},
                     "geometries": spec_utils.POLYGON,
-                    "about": (
+                    "about": _(
                         "Extract vector for the East Coast of North America "
                         "and Puerto Rico.")},
                 "NAmerica_EastCoast_4m.txt.bin": {
                     "type": "file",
-                    "about": (
+                    "about": _(
                         "WaveWatchIII data for the East Coast of North "
                         "America and Puerto Rico.")},
                 "North_Sea_4m.shp": {
                     "type": "vector",
                     "fields": {},
                     "geometries": spec_utils.POINT,
-                    "about": (
+                    "about": _(
                         "Point vector for the North Sea 4 meter resolution.")},
                 "North_Sea_4m_Extract.shp": {
                     "type": "vector",
                     "fields": {},
                     "geometries": spec_utils.POLYGON,
-                    "about": (
+                    "about": _(
                         "Extract vector for the North Sea 4 meter resolution.")},
                 "North_Sea_4m.bin": {
                     "type": "file",
-                    "about": (
+                    "about": _(
                         "WaveWatchIII data for the North Sea 4 meter "
                         "resolution.")},
                 "North_Sea_10m.shp": {
                     "type": "vector",
                     "fields": {},
                     "geometries": spec_utils.POINT,
-                    "about": (
+                    "about": _(
                         "Point vector for the North Sea 10 meter resolution.")},
                 "North_Sea_10m_Extract.shp": {
                     "type": "vector",
                     "fields": {},
                     "geometries": spec_utils.POLYGON,
-                    "about": (
+                    "about": _(
                         "Extract vector for the North Sea 10 meter resolution.")},
                 "North_Sea_10m.bin": {
                     "type": "file",
-                    "about": (
+                    "about": _(
                         "WaveWatchIII data for the North Sea 10 meter "
                         "resolution.")},
                 "Australia_4m.shp": {
                     "type": "vector",
                     "fields": {},
                     "geometries": spec_utils.POINT,
-                    "about": "Point vector for Australia."},
+                    "about": _("Point vector for Australia.")},
                 "Australia_Extract.shp": {
                     "type": "vector",
                     "fields": {},
                     "geometries": spec_utils.POLYGON,
-                    "about": "Extract vector for Australia."},
+                    "about": _("Extract vector for Australia.")},
                 "Australia_4m.bin": {
                     "type": "file",
-                    "about": "WaveWatchIII data for Australia."},
+                    "about": _("WaveWatchIII data for Australia.")},
                 "Global.shp": {
                     "type": "vector",
                     "fields": {},
                     "geometries": spec_utils.POINT,
-                    "about": "Global point vector."},
+                    "about": _("Global point vector.")},
                 "Global_extract.shp": {
                     "type": "vector",
                     "fields": {},
                     "geometries": spec_utils.POLYGON,
-                    "about": "Global extract vector."},
+                    "about": _("Global extract vector.")},
                 "Global_WW3.txt.bin": {
                     "type": "file",
-                    "about": "Global WaveWatchIII data."}
+                    "about": _("Global WaveWatchIII data.")}
             },
-            "about": (
+            "about": _(
                 "Pre-packaged wave energy data directory. This is provided "
                 "with the sample data."),
-            "name": "wave base data"
+            "name": _("wave base data")
         },
-        "analysis_area_path": {
+        "analysis_area": {
             "type": "option_string",
-            "options": [
-                "West Coast of North America and Hawaii",
-                "East Coast of North America and Puerto Rico",
-                "North Sea 4 meter resolution",
-                "North Sea 10 meter resolution",
-                "Australia",
-                "Global"
-            ],
-            "about": (
+            "options": {
+                "westcoast": {"display_name": _(
+                    "West Coast of North America and Hawaii")},
+                "eastcoast": {"display_name": _(
+                    "East Coast of North America and Puerto Rico")},
+                "northsea4": {
+                    "display_name": _("North Sea 4 meter resolution")},
+                "northsea10": {
+                    "display_name": _("North Sea 10 meter resolution")},
+                "australia": {"display_name": _("Australia")},
+                "global": {"display_name": _("Global")}
+            },
+            "about": _(
                 "The analysis area over which to run the model."),
-            "name": "analysis area"
+            "name": _("analysis area")
         },
         "aoi_path": {
             **spec_utils.AOI,
             "projected": True,
             "projection_units": u.meter,
-            "required": False,
+            "required": False
         },
         "machine_perf_path": {
             "type": "csv",
-            "about": (
+            "about": _(
                 "A matrix of the wave machine performance, or ability to "
                 "capture wave energy, in different sea state conditions. The "
                 "first column contains wave height values (in meters, "
@@ -173,25 +177,25 @@ ARGS_SPEC = {
                 "wave height (row) and wave period (column). The model "
                 "linearly interpolates sea state data from the base wave "
                 "dataset onto this matrix to determine performance."),
-            "name": "machine performance table"
+            "name": _("machine performance table")
         },
         "machine_param_path": {
             "type": "csv",
             "rows": {
                 "capmax": {
-                    "about": "Maximum capacity for device.",
+                    "about": _("Maximum capacity for device."),
                     "type": "number",
                     "units": u.kilowatt
                 },
                 "hsmax": {
-                    "about": (
+                    "about": _(
                         "Upper limit of wave height for device operation. The "
                         "device shuts down when waves are higher than this."),
                     "type": "number",
                     "units": u.meter
                 },
                 "tpmax": {
-                    "about": (
+                    "about": _(
                         "Upper limit of wave period for device operation. The "
                         "device shuts down when the wave period is longer "
                         "than this."),
@@ -199,54 +203,57 @@ ARGS_SPEC = {
                     "units": u.second
                 }
             },
-            "about": "Table of parameters for the wave energy machine in use.",
-            "name": "machine parameter table"
+            "about": _("Table of parameters for the wave energy machine in use."),
+            "name": _("machine parameter table")
         },
         "dem_path": {
-            "name": "bathymetry",
+            "name": _("bathymetry"),
             "type": "raster",
             "bands": {1: {"type": "number", "units": u.meter}},
-            "about": "Map of ocean depth. Values should be negative."
+            "about": _("Map of ocean depth. Values should be negative.")
         },
         "valuation_container": {
             "type": "boolean",
             "required": False,
-            "about": "Run the valuation model.",
-            "name": "run valuation"
+            "about": _("Run the valuation model."),
+            "name": _("run valuation")
         },
         "land_gridPts_path": {
             "type": "csv",
             "columns": {
                 "id": {
                     "type": "integer",
-                    "about": "Unique identifier for each point."},
+                    "about": _("Unique identifier for each point.")},
                 "type": {
                     "type": "option_string",
                     "options": {
-                        "LAND": "This is a land connection point",
-                        "GRID": "This is a grid connection point"},
+                        "LAND": {"description": _(
+                            "This is a land connection point")},
+                        "GRID": {"description": _(
+                            "This is a grid connection point")}
+                    },
                     "about": "The type of connection at this point."
                 },
                 "lat": {
                     "type": "number",
                     "units": u.degree,
-                    "about": "Latitude of the connection point."
+                    "about": _("Latitude of the connection point.")
                 },
                 "long": {
                     "type": "number",
                     "units": u.degree,
-                    "about": "Longitude of the connection point."
+                    "about": _("Longitude of the connection point.")
                 },
                 "location": {
                     "type": "freestyle_string",
-                    "about": "Name for the connection point location."
+                    "about": _("Name for the connection point location.")
                 }
             },
             "required": "valuation_container",
-            "about": (
+            "about": _(
                 "A table of data for each connection point. Required if "
                 "Run Valuation is selected."),
-            "name": "Grid Connection Points Table"
+            "name": _("grid connection points table")
         },
         "machine_econ_path": {
             "type": "csv",
@@ -254,64 +261,64 @@ ARGS_SPEC = {
                 "capmax": {
                     "type": "number",
                     "units": u.kilowatt,
-                    "about": "Maximum capacity of the device."
+                    "about": _("Maximum capacity of the device.")
                 },
                 "cc": {
                     "type": "number",
                     "units": u.currency/u.kilowatt,
-                    "about": "Capital cost per device installed."
+                    "about": _("Capital cost per device installed.")
                 },
                 "cml": {
                     "type": "number",
                     "units": u.currency/u.meter,
-                    "about": "Cost of mooring lines."
+                    "about": _("Cost of mooring lines.")
                 },
                 "cul": {
                     "type": "number",
                     "units": u.currency/u.kilometer,
-                    "about": "Cost of underwater cable."
+                    "about": _("Cost of underwater cable.")
                 },
                 "col": {
                     "type": "number",
                     "units": u.currency/u.kilometer,
-                    "about": "Cost of overland transmission lines."
+                    "about": _("Cost of overland transmission lines.")
                 },
                 "omc": {
                     "type": "number",
                     "units": u.currency/u.kilowatt_hour,
-                    "about": "Operating and maintenance cost."
+                    "about": _("Operating and maintenance cost.")
                 },
                 "p": {
                     "type": "number",
                     "units": u.currency/u.kilowatt_hour,
-                    "about": "Price of electricity."
+                    "about": _("Price of electricity.")
                 },
                 "r": {
                     "type": "ratio",
-                    "about": "Discount rate."
+                    "about": _("Discount rate.")
                 },
                 "smlpm": {
                     "type": "number",
                     "units": u.none,
-                    "about": "Number of slack lines required per machine."
+                    "about": _("Number of slack lines required per machine.")
                 }
 
             },
             "required": "valuation_container",
-            "about": (
+            "about": _(
                 "Table of economic parameters for the wave energy machine. "
                 "Required if Run Valuation is selected."),
-            "name": "machine economic table"
+            "name": _("machine economic table")
         },
         "number_of_machines": {
             "expression": "value > 0",
             "type": "number",
             "units": u.none,
             "required": "valuation_container",
-            "about": (
+            "about": _(
                 "Number of wave machines to model. Required if Run Valuation "
                 "is selected."),
-            "name": "number of machines"
+            "name": _("number of machines")
         }
     }
 }
@@ -395,7 +402,7 @@ def execute(args):
         wave_base_data_path (str): Directory location of wave base data
             including WAVEWATCH III (WW3) data and analysis area shapefile.
             (required)
-        analysis_area_path (str): A string identifying the analysis area of
+        analysis_area (str): A string identifying the analysis area of
             interest. Used to determine wave data shapefile, wave data text
             file, and analysis area boundary shape. (required)
         aoi_path (str): A polygon OGR vector outlining a more detailed area
@@ -506,7 +513,7 @@ def execute(args):
     # that stores the related paths to the needed inputs
     wave_base_data_path = args['wave_base_data_path']
     analysis_dict = {
-        'West Coast of North America and Hawaii': {
+        'westcoast': {
             'point_vector':
             os.path.join(wave_base_data_path, 'NAmerica_WestCoast_4m.shp'),
             'extract_vector':
@@ -514,7 +521,7 @@ def execute(args):
             'ww3_path':
             os.path.join(wave_base_data_path, 'NAmerica_WestCoast_4m.txt.bin')
         },
-        'East Coast of North America and Puerto Rico': {
+        'eastcoast': {
             'point_vector':
             os.path.join(wave_base_data_path, 'NAmerica_EastCoast_4m.shp'),
             'extract_vector':
@@ -522,7 +529,7 @@ def execute(args):
             'ww3_path':
             os.path.join(wave_base_data_path, 'NAmerica_EastCoast_4m.txt.bin')
         },
-        'North Sea 4 meter resolution': {
+        'northsea4': {
             'point_vector':
             os.path.join(wave_base_data_path, 'North_Sea_4m.shp'),
             'extract_vector':
@@ -530,7 +537,7 @@ def execute(args):
             'ww3_path':
             os.path.join(wave_base_data_path, 'North_Sea_4m.bin')
         },
-        'North Sea 10 meter resolution': {
+        'northsea10': {
             'point_vector':
             os.path.join(wave_base_data_path, 'North_Sea_10m.shp'),
             'extract_vector':
@@ -538,7 +545,7 @@ def execute(args):
             'ww3_path':
             os.path.join(wave_base_data_path, 'North_Sea_10m.bin')
         },
-        'Australia': {
+        'australia': {
             'point_vector':
             os.path.join(wave_base_data_path, 'Australia_4m.shp'),
             'extract_vector':
@@ -546,7 +553,7 @@ def execute(args):
             'ww3_path':
             os.path.join(wave_base_data_path, 'Australia_4m.bin')
         },
-        'Global': {
+        'global': {
             'point_vector':
             os.path.join(wave_base_data_path, 'Global.shp'),
             'extract_vector':
@@ -558,14 +565,14 @@ def execute(args):
 
     # Get the String value for the analysis area provided from the dropdown
     # menu in the user interface
-    analysis_area_path = args['analysis_area_path']
+    analysis_area = args['analysis_area']
     # Use the analysis area String to get the path's to the wave seastate data,
     # the wave point shapefile, and the polygon extract shapefile
     wave_seastate_bins = _binary_wave_data_to_dict(
-        analysis_dict[analysis_area_path]['ww3_path'])
-    analysis_area_points_path = analysis_dict[analysis_area_path][
+        analysis_dict[analysis_area]['ww3_path'])
+    analysis_area_points_path = analysis_dict[analysis_area][
         'point_vector']
-    analysis_area_extract_path = analysis_dict[analysis_area_path][
+    analysis_area_extract_path = analysis_dict[analysis_area][
         'extract_vector']
 
     # Remove the wave point shapefile if it exists
