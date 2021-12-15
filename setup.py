@@ -176,7 +176,7 @@ setup(
     },
     package_data={
         'natcap.invest': [
-            'internationalization/locales'
+            'internationalization/locales/en/.gitignore'
         ]
     }
 )

@@ -18,7 +18,7 @@ LOCALE_DIR = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), 'internationalization/locales')
 
 # all supported language codes, including the default English
-LOCALES = sorted(os.listdir(LOCALE_DIR) + ['en'])
+LOCALES = sorted(set(os.listdir(LOCALE_DIR) + ['en']))
 
 # map locale codes to the corresponding localized language name
 # e.g. 'es': 'español'
