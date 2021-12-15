@@ -246,7 +246,7 @@ class AnnualWaterYieldTests(unittest.TestCase):
 
     def test_validation(self):
         """Hydro: test failure cases on the validation function."""
-        from natcap.invest import annual_water_yield
+        from natcap.invest import annual_water_yield, validation
 
         args = AnnualWaterYieldTests.generate_base_args(self.workspace_dir)
 
@@ -276,7 +276,7 @@ class AnnualWaterYieldTests(unittest.TestCase):
             args_missing_key)
         self.assertEqual(
             validation_warnings,
-            [(['eto_path'], 'Key is missing from the args dict')])
+            [(['eto_path'], validation.MESSAGES['MISSING_KEY'])])
 
         # ensure that a missing landcover code in the biophysical table will
         # raise an exception that's helpful

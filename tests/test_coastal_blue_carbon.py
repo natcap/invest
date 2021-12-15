@@ -813,11 +813,12 @@ class TestCBC2(unittest.TestCase):
         validation_warnings = coastal_blue_carbon.validate(args)
         self.assertEqual(len(validation_warnings), 2)
         self.assertIn(
-            f"Raster for snapshot {baseline_year + 10} could not "
-            "be validated", validation_warnings[0][1])
+            coastal_blue_carbon.INVALID_SNAPSHOT_RASTER_MSG.format(
+                snapshot_year=baseline_year + 10),
+            validation_warnings[0][1])
         self.assertIn(
-            "Analysis year 2000 must be >= the latest snapshot year "
-            "(2010)",
+            coastal_blue_carbon.INVALID_ANALYSIS_YEAR_MSG.format(
+                analysis_year=2000, latest_year=2010),
             validation_warnings[1][1])
 
     def test_track_first_disturbance(self):

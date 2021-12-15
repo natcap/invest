@@ -75,23 +75,29 @@ ARGS_SPEC = {
         "results_suffix": spec_utils.SUFFIX,
         "n_workers": spec_utils.N_WORKERS,
         "info_table_path": {
-            "name": "habitat stressor table",
-            "about": "A table describing each habitat and stressor.",
+            "name": _("habitat stressor table"),
+            "about": _("A table describing each habitat and stressor."),
             "type": "csv",
             "columns": {
                 "name": {
                     "type": "freestyle_string",
-                    "about": (
+                    "about": _(
                         "A unique name for each habitat or stressor. These "
                         "names must match the habitat and stressor names in "
-                        "the Criteria Scores Table.")
-                },
+                        "the Criteria Scores Table.")},
                 "path": {
                     "type": {"vector", "raster"},
-                    "bands": {1: {"type": "number", "units": u.none}},
+                    "bands": {1: {
+                        "type": "number",
+                        "units": u.none,
+                        "about": _(
+                            "Pixel values are 1, indicating presence of the "
+                            "habitat/stressor, or 0 indicating absence. Any "
+                            "values besides 0 or 1 will be treated as 0.")
+                    }},
                     "fields": {},
                     "geometries": spec_utils.POLYGONS,
-                    "about": (
+                    "about": _(
                         "Map of where the habitat or stressor exists. For "
                         "rasters, a pixel value of 1 indicates presence of "
                         "the habitat or stressor. 0 (or any other value) "
@@ -101,13 +107,17 @@ ARGS_SPEC = {
                 },
                 "type": {
                     "type": "option_string",
-                    "options": ["habitat", "stressor"],
-                    "about": "Whether this row is for a habitat or a stressor."
+                    "options": {
+                        "habitat": {"description": _("habitat")},
+                        "stressor": {"description": _("stressor")}
+                    },
+                    "about": _(
+                        "Whether this row is for a habitat or a stressor.")
                 },
                 "stressor buffer (meters)": {
                     "type": "number",
                     "units": u.meter,
-                    "about": (
+                    "about": _(
                         "The desired buffer distance used to expand a given "
                         "stressor’s influence or footprint. This should be "
                         "left blank for habitats, but must be filled in for "
@@ -122,15 +132,15 @@ ARGS_SPEC = {
             "excel_ok": True
         },
         "criteria_table_path": {
-            "name": "criteria scores table",
-            "about": (
+            "name": _("criteria scores table"),
+            "about": _(
                 "A table of criteria scores for all habitats and stressors."),
             "type": "csv",
             "excel_ok": True,
         },
         "resolution": {
-            "name": "resolution of analysis",
-            "about": (
+            "name": _("resolution of analysis"),
+            "about": _(
                 "The resolution at which to run the analysis. The model "
                 "outputs will have this resolution."),
             "type": "number",
@@ -138,35 +148,45 @@ ARGS_SPEC = {
             "expression": "value > 0",
         },
         "max_rating": {
-            "name": "maximum criteria score",
-            "about": (
+            "name": _("maximum criteria score"),
+            "about": _(
                 "The highest possible criteria score in the scoring system."),
             "type": "number",
             "units": u.none,
             "expression": "value > 0"
         },
         "risk_eq": {
-            "name": "risk equation",
-            "about": (
+            "name": _("risk equation"),
+            "about": _(
                 "The equation to use to calculate risk from exposure and "
                 "consequence."),
             "type": "option_string",
-            "options": ["Multiplicative", "Euclidean"]
+            "options": {
+                "Multiplicative": {"display_name": _("multiplicative")},
+                "Euclidean": {"display_name": _("Euclidean")}
+            }
         },
         "decay_eq": {
-            "name": "decay equation",
-            "about": (
+            "name": _("decay equation"),
+            "about": _(
                 "The equation to model effects of stressors in buffer areas."),
             "type": "option_string",
             "options": {
-                "None": (
-                    "No decay. Stressor has full effect in the buffer area."),
-                "Linear": (
-                    "Stressor effects in the buffer area decay linearly with "
-                    "distance from the stressor."),
-                "Exponential": (
-                    "Stressor effects in the buffer area decay exponentially "
-                    "with distance from the stressor.")
+                "None": {
+                    "display_name": _("none"),
+                    "description": _(
+                        "No decay. Stressor has full effect in the buffer "
+                        "area.")},
+                "Linear": {
+                    "display_name": _("linear"),
+                    "description": _(
+                        "Stressor effects in the buffer area decay linearly "
+                        "with distance from the stressor.")},
+                "Exponential": {
+                    "display_name": _("exponential"),
+                    "description": _(
+                        "Stressor effects in the buffer area decay "
+                        "exponentially with distance from the stressor.")}
             }
         },
         "aoi_vector_path": {
@@ -177,18 +197,18 @@ ARGS_SPEC = {
                 "name": {
                     "required": False,
                     "type": "freestyle_string",
-                    "about": (
+                    "about": _(
                         "Uniquely identifies each feature. Required if "
                         "the vector contains more than one feature.")
                 }
             },
-            "about": (
+            "about": _(
                 "A GDAL-supported vector file containing feature containing "
                 "one or more planning regions or subregions."),
         },
         "visualize_outputs": {
-            "name": "Generate GeoJSONs",
-            "about": "Generate GeoJSON outputs for web visualization.",
+            "name": _("Generate GeoJSONs"),
+            "about": _("Generate GeoJSON outputs for web visualization."),
             "type": "boolean"
         }
     }

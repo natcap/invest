@@ -63,7 +63,7 @@ ARGS_SPEC = {
             **spec_utils.AOI,
         },
         "structure_path": {
-            "name": "features impacting scenic quality",
+            "name": _("features impacting scenic quality"),
             "type": "vector",
             "geometries": spec_utils.POINT,
             "fields": {
@@ -71,7 +71,7 @@ ARGS_SPEC = {
                     "type": "number",
                     "units": u.meter,
                     "required": False,
-                    "about": (
+                    "about": _(
                         "Maximum length of the line of sight originating from "
                         "a viewpoint. The value can either be positive "
                         "(preferred) or negative (kept for backwards "
@@ -84,7 +84,7 @@ ARGS_SPEC = {
                     "type": "number",
                     "units": u.none,
                     "required": False,
-                    "about": (
+                    "about": _(
                         "Viewshed importance coefficient. If this field is "
                         "provided, the values are used to weight each "
                         "feature's viewshed impacts. If not provided, all "
@@ -93,12 +93,12 @@ ARGS_SPEC = {
                     "type": "number",
                     "units": u.meter,
                     "required": False,
-                    "about": (
+                    "about": _(
                         "Viewpoint height, the elevation above the ground of "
                         "each feature. If this field is not provided, "
                         "defaults to 0.")}
             },
-            "about": (
+            "about": _(
                 "Map of locations of objects that negatively affect scenic "
                 "quality. This must have the same projection as the DEM.")
         },
@@ -108,53 +108,54 @@ ARGS_SPEC = {
             "projection_units": u.meter
         },
         "refraction": {
-            "name": "refractivity coefficient",
+            "name": _("refractivity coefficient"),
             "type": "ratio",
-            "about": (
+            "about": _(
                 "The refractivity coefficient corrects for the curvature of "
                 "the earth and refraction of visible light in air.")
         },
         "do_valuation": {
-            "name": "run valuation",
+            "name": _("run valuation"),
             "type": "boolean",
             "required": False,
-            "about": "Run the valuation model."
+            "about": _("Run the valuation model.")
         },
         "valuation_function": {
-            "name": "Valuation function",
+            "name": _("Valuation function"),
             "type": "option_string",
             "required": "do_valuation",
-            "options": [
-                "linear: a + bx",
-                "logarithmic: a + b log(x+1)",
-                "exponential: a * e^(-bx)"
-            ],
-            "about": (
+            "options": {
+                "linear": {"display_name": _("linear: a + bx")},
+                "logarithmic": {"display_name": _(
+                    "logarithmic: a + b log(x+1)")},
+                "exponential": {"display_name": _("exponential: a * e^(-bx)")}
+            },
+            "about": _(
                 "Valuation function used to calculate the visual impact of "
                 "each feature, given distance from the feature 'x' and "
                 "parameters 'a' and 'b'."),
         },
         "a_coef": {
-            "name": "coefficient a",
+            "name": _("coefficient a"),
             "type": "number",
             "units": u.none,
             "required": "do_valuation",
-            "about": "First coefficient ('a') used by the valuation function",
+            "about": _("First coefficient ('a') used by the valuation function"),
         },
         "b_coef": {
-            "name": "coefficient b",
+            "name": _("coefficient b"),
             "type": "number",
             "units": u.none,
             "required": "do_valuation",
-            "about": "Second coefficient ('b') used by the valuation function",
+            "about": _("Second coefficient ('b') used by the valuation function"),
         },
         "max_valuation_radius": {
-            "name": "maximum valuation radius",
+            "name": _("maximum valuation radius"),
             "type": "number",
             "units": u.meter,
             "required": False,
             "expression": "value > 0",
-            "about": (
+            "about": _(
                 "Valuation will only be computed for cells that fall within "
                 "this radius of a feature impacting scenic quality."),
         },
@@ -215,16 +216,10 @@ def execute(args):
             'a': float(args['a_coef']),
             'b': float(args['b_coef']),
         }
-        if args['valuation_function'].startswith('linear'):
-            valuation_method = 'linear'
-        elif args['valuation_function'].startswith('logarithmic'):
-            valuation_method = 'logarithmic'
-        elif args['valuation_function'].startswith('exponential'):
-            valuation_method = 'exponential'
-        else:
+        if (args['valuation_function'] not in
+                ARGS_SPEC['args']['valuation_function']['options']):
             raise ValueError('Valuation function type %s not recognized' %
                              args['valuation_function'])
-
         max_valuation_radius = float(args['max_valuation_radius'])
 
     # Create output and intermediate directory
@@ -349,7 +344,7 @@ def execute(args):
                 args=(visibility_filepath,
                       viewpoint,
                       weight,  # user defined, from WEIGHT field in vector
-                      valuation_method,
+                      args['valuation_function'],
                       valuation_coefficients,  # a, b from args, a dict.
                       max_valuation_radius,
                       viewshed_valuation_path),
@@ -694,7 +689,6 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
         ``None``
 
     """
-    valuation_method = valuation_method.lower()
     LOGGER.info('Calculating valuation with %s method. Coefficients: %s',
                 valuation_method,
                 ' '.join(['%s=%g' % (k, v) for (k, v) in

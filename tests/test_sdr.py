@@ -5,6 +5,7 @@ import tempfile
 import unittest
 
 import numpy
+from natcap.invest import utils
 import pygeoprocessing
 from osgeo import gdal, ogr, osr
 
@@ -156,7 +157,8 @@ class SDRTests(unittest.TestCase):
             'expected a validation error but didn\'t get one')
         expected = [(
             ['watersheds_path'],
-            validation.MATCHED_NO_HEADERS_MSG % ('field', 'ws_id'))]
+            validation.MESSAGES['MATCHED_NO_HEADERS'].format(
+                header='field', header_name='ws_id'))]
         self.assertEqual(validate_result, expected)
 
     def test_sdr_validation_watershed_missing_ws_id_value(self):
@@ -191,8 +193,8 @@ class SDRTests(unittest.TestCase):
         validate_result = sdr.validate(args, limit_to=None)
         self.assertTrue(len(validate_result) > 0,
                         'Expected validation errors but none found')
-        self.assertTrue(
-            'features have a non-integer ws_id field' in validate_result[0][1])
+        self.assertTrue(utils.matches_format_string(
+            validate_result[0][1], sdr.INVALID_ID_MSG))
 
     def test_base_regression(self):
         """SDR base regression test on sample data.

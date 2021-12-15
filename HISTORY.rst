@@ -36,6 +36,10 @@
 Unreleased Changes (3.10)
 -------------------------
 * General
+    * Add a ``--language`` argument to the command-line interface, which will
+      translate model names, specs, and validation messages.
+    * Accept a ``language`` query parameter at the UI server endpoints, which
+      will translate model names, specs, and validation messages.
     * Added ``invest serve`` entry-point to the CLI. This launches a Flask app
       and server on the localhost, to support the workbench.
     * Major updates to each model's ``ARGS_SPEC`` (and some related validation)
@@ -80,6 +84,10 @@ Unreleased Changes (3.10)
       has pixel values of 1 where DEM pixels flow to an identified stream, and
       0 where they do not.
 * Scenic Quality
+    * Simplify the ``valuation_function`` arg options. The options are now:
+      ``linear``, ``logarithmic``, ``exponential``. The names displayed in the
+      UI dropdown will stay the same as before. Datastacks or scripts will need
+      to be updated to use the new option values.
     * Renamed the model title from
       "Unobstructed Views: Scenic Quality Provision" to "Scenic Quality".
 * SDR
@@ -87,9 +95,32 @@ Unreleased Changes (3.10)
       ``intermediate_outputs/what_drains_to_stream[suffix].tif``.  This raster
       has pixel values of 1 where DEM pixels flow to an identified stream, and
       0 where they do not.
+* Wave Energy
+    * Rename the ``analysis_area_path`` arg to ``analysis_area``, since it is
+      not a path but an option string.
+    * Simplify the ``analysis_area`` arg options. The options are now:
+      ``westcoast``, ``eastcoast``, ``northsea4``, ``northsea10``,
+      ``australia``, ``global``. The names displayed in the UI dropdown will
+      stay the same as before. Datastacks and scripts will need to be updated
+      to use the new option values.
 * Visitation: Recreation and Tourism
     * Renamed the Windows start menu shortcut from "Recreation" to
       "Visitation: Recreation and Tourism".
+* Wind Energy
+    * No model inputs or outputs are measured in "millions of" currency units
+      any more. Specifically:
+    * The ``mw_coef_ac`` and ``mw_coef_dc`` values in the Global Wind Energy
+      Parameters table were in millions of currency units per MW; now they
+      should be provided in currency units per MW.
+    * The ``infield_cable_cost``, ``cable_coef_ac``, and ``cable_coef_dc``
+      values in the Global Wind Energy Parameters table were in millions of
+      currency units per km; now they should be provided in currency units per km.
+    * The ``turbine_cost`` value in the Turbine Parameters table was in
+      millions of currency units; now it should be provided in currency units.
+    * The ``foundation_cost`` parameter was in millions of currency units; now
+      it should be provided in currency units.
+    * The NPV output, formerly ``npv_US_millions.tif``, is now ``npv.tif``.
+      It is now in currency units, not millions of currency units.
 
 3.9.2 (2021-10-29)
 ------------------
