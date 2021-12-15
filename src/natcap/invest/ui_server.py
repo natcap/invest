@@ -6,8 +6,10 @@ import logging
 from osgeo import gdal
 from flask import Flask
 from flask import request
+import natcap.invest
 from natcap.invest import cli
 from natcap.invest import datastack
+from natcap.invest import install_language
 from natcap.invest import MODEL_METADATA
 from natcap.invest import spec_utils
 from natcap.invest import usage
@@ -48,10 +50,16 @@ def shutdown():
 def get_invest_models():
     """Gets a list of available InVEST models.
 
+    Accepts a `language` query parameter which should be an ISO 639-1 language
+    code. Model names will be translated to the requested language if
+    translations are available, or fall back to English otherwise.
+
     Returns:
         A JSON string
     """
     LOGGER.debug('get model list')
+    install_language(request.args.get('language', 'en'))
+    importlib.reload(natcap.invest)
     return cli.build_model_list_json()
 
 
@@ -60,13 +68,18 @@ def get_invest_getspec():
     """Gets the ARGS_SPEC dict from an InVEST model.
 
     Body (JSON string): "carbon"
+    Accepts a `language` query parameter which should be an ISO 639-1 language
+    code. Spec 'about' and 'name' values will be translated to the requested
+    language if translations are available, or fall back to English otherwise.
 
     Returns:
         A JSON string.
     """
+    install_language(request.args.get('language', 'en'))
     target_model = request.get_json()
     target_module = MODEL_METADATA[target_model].pyname
-    model_module = importlib.import_module(name=target_module)
+    model_module = importlib.reload(
+        importlib.import_module(name=target_module))
     return spec_utils.serialize_args_spec(model_module.ARGS_SPEC)
 
 
@@ -78,20 +91,27 @@ def get_invest_validate():
         model_module: string (e.g. natcap.invest.carbon)
         args: JSON string of InVEST model args keys and values
 
+    Accepts a `language` query parameter which should be an ISO 639-1 language
+    code. Validation messages will be translated to the requested language if
+    translations are available, or fall back to English otherwise.
+
     Returns:
         A JSON string.
     """
     payload = request.get_json()
     LOGGER.debug(payload)
-    target_module = payload['model_module']
-    args_dict = json.loads(payload['args'])
-    LOGGER.debug(args_dict)
     try:
         limit_to = payload['limit_to']
     except KeyError:
         limit_to = None
-    model_module = importlib.import_module(name=target_module)
-    results = model_module.validate(args_dict, limit_to=limit_to)
+
+    install_language(request.args.get('language', 'en'))
+    importlib.reload(natcap.invest.validation)
+    model_module = importlib.reload(
+        importlib.import_module(name=payload['model_module']))
+
+    results = model_module.validate(
+        json.loads(payload['args']), limit_to=limit_to)
     LOGGER.debug(results)
     return json.dumps(results)
 

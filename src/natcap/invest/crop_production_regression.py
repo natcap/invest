@@ -18,9 +18,18 @@ from . import MODEL_METADATA
 
 LOGGER = logging.getLogger(__name__)
 
-CROPS = [
-    "barley", "maize", "oilpalm", "potato", "rice", "soybean",
-    "sugarbeet", "sugarcane", "sunflower", "wheat"]
+CROPS = {
+    "barley": {"description": _("barley")},
+    "maize": {"description": _("maize")},
+    "oilpalm": {"description": _("oil palm")},
+    "potato": {"description": _("potato")},
+    "rice": {"description": _("rice")},
+    "soybean": {"description": _("soybean")},
+    "sugarbeet": {"description": _("sugar beet")},
+    "sugarcane": {"description": _("sugarcane")},
+    "wheat": {"description": _("wheat")}
+}
+
 
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["crop_production_regression"].model_title,
@@ -48,11 +57,11 @@ ARGS_SPEC = {
                     "options": CROPS
                 }
             },
-            "about": (
+            "about": _(
                 "A table that maps each LULC code from the LULC map to one of "
                 "the 10 canonical crop names representing the crop grown in "
                 "that LULC class."),
-            "name": "LULC to crop table"
+            "name": _("LULC to crop table")
         },
         "fertilization_rate_table_path": {
             "type": "csv",
@@ -60,7 +69,7 @@ ARGS_SPEC = {
                 "crop_name": {
                     "type": "option_string",
                     "options": CROPS,
-                    "about": "One of the supported crop types."
+                    "about": _("One of the supported crop types.")
                 },
                 **{f"{nutrient}_rate": {
                     "type": "number",
@@ -68,9 +77,9 @@ ARGS_SPEC = {
                     "about": f"Rate of {nutrient} application for the crop."
                 } for nutrient in ["nitrogen", "phosphorus", "potassium"]}
             },
-            "about": (
+            "about": _(
                 "A table that maps crops to fertilizer application rates."),
-            "name": "fertilization rate table"
+            "name": _("fertilization rate table")
         },
         "aggregate_polygon_path": {
             **spec_utils.AOI,
@@ -143,8 +152,8 @@ ARGS_SPEC = {
                     }
                 }
             },
-            "about": "The Crop Production datasets provided with the model.",
-            "name": "model data"
+            "about": _("The Crop Production datasets provided with the model."),
+            "name": _("model data")
         }
     }
 }

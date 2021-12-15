@@ -474,8 +474,10 @@ def execute(args):
     aggregation_task_dependencies = [retention_volume_task]
     data_to_aggregate = [
         # tuple of (raster path, output field name, op) for aggregation
-        (final_retention_ratio_path, 'RR_mean', 'mean'),
-        (files['retention_volume_path'], 'RV_sum', 'sum')]
+        (final_retention_ratio_path, 'mean_retention_ratio', 'mean'),
+        (files['retention_volume_path'], 'total_retention_volume', 'sum'),
+        (files['runoff_ratio_path'], 'mean_runoff_ratio', 'mean'),
+        (files['runoff_volume_path'], 'total_runoff_volume', 'sum')]
 
     # (Optional) Calculate stormwater infiltration ratio and volume from
     # LULC, soil groups, biophysical table, and precipitation
@@ -515,10 +517,10 @@ def execute(args):
             task_name='calculate stormwater retention volume'
         )
         aggregation_task_dependencies.append(infiltration_volume_task)
-        data_to_aggregate.append(
-            (files['infiltration_ratio_path'], 'IR_mean', 'mean'))
-        data_to_aggregate.append(
-            (files['infiltration_volume_path'], 'IV_sum', 'sum'))
+        data_to_aggregate.append((files['infiltration_ratio_path'],
+                                 'mean_infiltration_ratio', 'mean'))
+        data_to_aggregate.append((files['infiltration_volume_path'],
+                                 'total_infiltration_volume', 'sum'))
 
     # get all EMC columns from an arbitrary row in the dictionary
     # strip the first four characters off 'EMC_pollutant' to get pollutant name
@@ -578,10 +580,10 @@ def execute(args):
             task_name=f'calculate actual pollutant {pollutant} load'
         )
         aggregation_task_dependencies += [avoided_load_task, actual_load_task]
+        data_to_aggregate.append((avoided_pollutant_load_path,
+                                 f'{pollutant}_total_avoided_load', 'sum'))
         data_to_aggregate.append(
-            (avoided_pollutant_load_path, f'avoided_{pollutant}', 'sum'))
-        data_to_aggregate.append(
-            (actual_pollutant_load_path, f'load_{pollutant}', 'mean'))
+            (actual_pollutant_load_path, f'{pollutant}_mean_load', 'mean'))
 
     # (Optional) Do valuation if a replacement cost is defined
     # you could theoretically have a cost of 0 which should be allowed
@@ -602,7 +604,7 @@ def execute(args):
         )
         aggregation_task_dependencies.append(valuation_task)
         data_to_aggregate.append(
-            (files['retention_value_path'], 'val_sum', 'sum'))
+            (files['retention_value_path'], 'total_retention_value', 'sum'))
 
     # (Optional) Aggregate to watersheds if an aggregate vector is defined
     if 'aggregate_areas_path' in args and args['aggregate_areas_path']:
