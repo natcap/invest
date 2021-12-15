@@ -633,7 +633,7 @@ def _flood_vol_op(
     """
     result = numpy.empty(q_pi_array.shape, dtype=numpy.float32)
     result[:] = target_nodata
-    valid_mask = q_pi_array != q_pi_nodata
+    valid_mask = ~utils.array_equals_nodata(q_pi_array, q_pi_nodata)
     # 0.001 converts mm (quickflow) to m (pixel area units)
     result[valid_mask] = (
         q_pi_array[valid_mask] * pixel_area * 0.001)
@@ -658,7 +658,8 @@ def _runoff_retention_vol_op(
     """
     result = numpy.empty(runoff_retention_array.shape, dtype=numpy.float32)
     result[:] = target_nodata
-    valid_mask = runoff_retention_array != runoff_retention_nodata
+    valid_mask = ~utils.array_equals_nodata(
+        runoff_retention_array, runoff_retention_nodata)
     # the 1e-3 converts the mm of p_value to meters.
     result[valid_mask] = (
         runoff_retention_array[valid_mask] * p_value * cell_area * 1e-3)

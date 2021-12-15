@@ -755,7 +755,7 @@ def _slope_proportion_and_threshold(slope_path, target_threshold_slope_path):
 
     def _slope_proportion_and_threshold_op(slope):
         """Rescale and threshold slope between 0.005 and 1.0."""
-        valid_mask = slope != slope_nodata
+        valid_mask = ~utils.array_equals_nodata(slope, slope_nodata)
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         result[:] = slope_nodata
         slope_fraction = slope[valid_mask] / 100
@@ -949,7 +949,9 @@ def _calculate_load(
         result = numpy.empty(lucode_array.shape)
         result[:] = _TARGET_NODATA
         for lucode in numpy.unique(lucode_array):
-            if lucode != nodata_landuse:
+            lucode_is_nodata = utils.array_equals_nodata(
+                numpy.array([lucode]), nodata_landuse).any()
+            if not lucode_is_nodata:
                 try:
                     result[lucode_array == lucode] = (
                         lucode_to_parameters[lucode][load_type] *
@@ -1034,10 +1036,10 @@ def _map_surface_load(
         # If we don't have subsurface, just return 0.0.
         if subsurface_proportion_type is None:
             return numpy.where(
-                lucode_array != nodata_landuse, modified_load_array,
-                _TARGET_NODATA)
+                ~utils.array_equals_nodata(lucode_array, nodata_landuse),
+                modified_load_array, _TARGET_NODATA)
 
-        valid_mask = lucode_array != nodata_landuse
+        valid_mask = ~utils.array_equals_nodata(lucode_array, nodata_landuse)
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         result[:] = _TARGET_NODATA
         index = numpy.digitize(
@@ -1084,9 +1086,10 @@ def _map_subsurface_load(
         # If we don't have subsurface, just return 0.0.
         if subsurface_proportion_type is None:
             return numpy.where(
-                lucode_array != nodata_landuse, 0, _TARGET_NODATA)
+                ~utils.array_equals_nodata(lucode_array, nodata_landuse),
+                0, _TARGET_NODATA)
 
-        valid_mask = lucode_array != nodata_landuse
+        valid_mask = ~utils.array_equals_nodata(lucode_array, nodata_landuse)
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         result[:] = _TARGET_NODATA
         index = numpy.digitize(
@@ -1133,8 +1136,8 @@ def _map_lulc_to_val_mask_stream(
     def _map_eff_op(lucode_array, stream_array):
         """Map efficiency from LULC and handle nodata/streams."""
         valid_mask = (
-            (lucode_array != nodata_landuse) &
-            (stream_array != nodata_stream))
+            ~utils.array_equals_nodata(lucode_array != nodata_landuse) &
+            ~utils.array_equals_nodata(stream_array != nodata_stream))
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         result[:] = _TARGET_NODATA
         index = numpy.digitize(
@@ -1159,8 +1162,8 @@ def s_bar_calculate(
     def _bar_op(s_accumulation, flow_accumulation):
         """Calculate bar operation of s_accum / flow_accum."""
         valid_mask = (
-            (s_accumulation != s_nodata) &
-            (flow_accumulation != flow_nodata))
+            ~utils.array_equals_nodata(s_accumulation, s_nodata) &
+            ~utils.array_equals_nodata(flow_accumulation, flow_nodata))
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         result[:] = _TARGET_NODATA
         result[valid_mask] = (
@@ -1183,8 +1186,8 @@ def d_up_calculation(s_bar_path, flow_accum_path, target_d_up_path):
     def _d_up_op(s_bar, flow_accumulation):
         """Calculate d_up index."""
         valid_mask = (
-            (s_bar != s_bar_nodata) &
-            (flow_accumulation != flow_accum_nodata))
+            ~utils.array_equals_nodata(s_bar, s_bar_nodata) &
+            ~utils.array_equals_nodata(flow_accumulation, flow_accum_nodata))
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         result[:] = _TARGET_NODATA
         result[valid_mask] = (
@@ -1240,7 +1243,8 @@ def calculate_ic(d_up_path, d_dn_path, target_ic_path):
     def _ic_op(d_up, d_dn):
         """Calculate IC0."""
         valid_mask = (
-            (d_up != d_up_nodata) & (d_dn != d_dn_nodata) & (d_up != 0) &
+            ~utils.array_equals_nodata(d_up, d_up_nodata) &
+            ~utils.array_equals_nodata(d_dn, d_dn_nodata) & (d_up != 0) &
             (d_dn != 0))
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         result[:] = ic_nodata
@@ -1268,8 +1272,9 @@ def _calculate_ndr(
     def _calculate_ndr_op(effective_retention_array, ic_array):
         """Calculate NDR."""
         valid_mask = (
-            (effective_retention_array != effective_retention_nodata) &
-            (ic_array != ic_nodata))
+            ~utils.array_equals_nodata(
+                effective_retention_array, effective_retention_nodata) &
+            ~utils.array_equals_nodata(ic_array, ic_nodata))
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         result[:] = _TARGET_NODATA
         result[valid_mask] = (

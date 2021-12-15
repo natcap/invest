@@ -659,9 +659,10 @@ def lookup_ratios(lulc_path, soil_group_path, ratio_lookup, sorted_lucodes,
                                         dtype=numpy.float32)
         valid_mask = numpy.full(lulc_array.shape, True)
         if lulc_nodata is not None:
-            valid_mask &= (lulc_array != lulc_nodata)
+            valid_mask &= ~utils.array_equals_nodata(lulc_array, lulc_nodata)
         if soil_group_nodata is not None:
-            valid_mask &= (soil_group_array != soil_group_nodata)
+            valid_mask &= ~utils.array_equals_nodata(
+                soil_group_array, soil_group_nodata)
         # the index of each lucode in the sorted lucodes array
         lulc_index = numpy.digitize(lulc_array[valid_mask], sorted_lucodes,
                                     right=True)
@@ -752,7 +753,7 @@ def pollutant_load_op(lulc_array, lulc_nodata, volume_array, sorted_lucodes,
         lulc_array.shape, FLOAT_NODATA, dtype=numpy.float32)
     valid_mask = ~utils.array_equals_nodata(volume_array, FLOAT_NODATA)
     if lulc_nodata is not None:
-        valid_mask &= (lulc_array != lulc_nodata)
+        valid_mask &= ~utils.array_equals_nodata(lulc_array, lulc_nodata)
 
     # bin each value in the LULC array such that
     # lulc_array[i,j] == sorted_lucodes[lulc_index[i,j]]. thus,

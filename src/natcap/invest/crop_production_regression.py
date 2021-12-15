@@ -694,8 +694,9 @@ def _x_yield_op(
     result = numpy.empty(b_x.shape, dtype=numpy.float32)
     result[:] = _NODATA_YIELD
     valid_mask = (
-        (y_max != _NODATA_YIELD) &
-        (b_x != _NODATA_YIELD) & (c_x != _NODATA_YIELD) &
+        ~utils.array_equals_nodata(y_max,  _NODATA_YIELD) &
+        ~utils.array_equals_nodata(b_x, _NODATA_YIELD) &
+        ~utils.array_equals_nodata(c_x, _NODATA_YIELD) &
         (lulc_array == crop_lucode))
     result[valid_mask] = pixel_area_ha * y_max[valid_mask] * (
         1 - b_x[valid_mask] * numpy.exp(
@@ -709,8 +710,9 @@ def _min_op(y_n, y_p, y_k):
     result = numpy.empty(y_n.shape, dtype=numpy.float32)
     result[:] = _NODATA_YIELD
     valid_mask = (
-        (y_n != _NODATA_YIELD) & (y_k != _NODATA_YIELD) &
-        (y_p != _NODATA_YIELD))
+        ~utils.array_equals_nodata(y_n, _NODATA_YIELD) &
+        ~utils.array_equals_nodata(y_k, _NODATA_YIELD) &
+        ~utils.array_equals_nodata(y_p, _NODATA_YIELD))
     result[valid_mask] = (
         numpy.min(
             [y_n[valid_mask], y_k[valid_mask], y_p[valid_mask]],

@@ -1609,7 +1609,8 @@ def _track_disturbance(
             known_transition_years_matrix = (
                 year_of_disturbance_band.ReadAsArray(**block_info))
             pixels_previously_disturbed = (
-                known_transition_years_matrix != (NODATA_UINT16_MAX))
+                ~utils.array_equals_nodata(
+                    known_transition_years_matrix, NODATA_UINT16_MAX))
             year_last_disturbed[pixels_previously_disturbed] = (
                 known_transition_years_matrix[pixels_previously_disturbed])
 
@@ -1737,7 +1738,8 @@ def _calculate_emissions(
 
     valid_pixels = (
         (~numpy.isclose(carbon_disturbed_matrix, NODATA_FLOAT32_MIN)) &
-        (year_of_last_disturbance_matrix != NODATA_UINT16_MAX) &
+        ~utils.array_equals_nodata(
+            year_of_last_disturbance_matrix, NODATA_UINT16_MAX) &
         (~zero_half_life))
 
     # Emissions happen immediately.
@@ -2018,10 +2020,12 @@ def _reclassify_accumulation_transition(
         valid_pixels = numpy.ones(landuse_transition_from_matrix.shape,
                                   dtype=bool)
         if from_nodata is not None:
-            valid_pixels &= (landuse_transition_from_matrix != from_nodata)
+            valid_pixels &= ~utils.array_equals_nodata(
+                landuse_transition_from_matrix, from_nodata)
 
         if to_nodata is not None:
-            valid_pixels &= (landuse_transition_to_matrix != to_nodata)
+            valid_pixels &= ~utils.array_equals_nodata(
+                landuse_transition_to_matrix, to_nodata)
 
         output_matrix[valid_pixels] = accumulation_rate_matrix[
             landuse_transition_from_matrix[valid_pixels],
@@ -2080,10 +2084,12 @@ def _reclassify_disturbance_magnitude(
         valid_pixels = numpy.ones(landuse_transition_from_matrix.shape,
                                   dtype=bool)
         if from_nodata is not None:
-            valid_pixels &= (landuse_transition_from_matrix != from_nodata)
+            valid_pixels &= ~utils.array_equals_nodata(
+                landuse_transition_from_matrix, from_nodata)
 
         if to_nodata is not None:
-            valid_pixels &= (landuse_transition_to_matrix != to_nodata)
+            valid_pixels &= ~utils.array_equals_nodata(
+                landuse_transition_to_matrix, to_nodata)
 
         disturbance_magnitude = disturbance_magnitude_matrix[
             landuse_transition_from_matrix[valid_pixels],

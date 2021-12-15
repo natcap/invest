@@ -775,8 +775,9 @@ def _calculate_ls_factor(
         # nodata value from pygeoprocessing
         valid_mask = (
             (~utils.array_equals_nodata(avg_aspect, avg_aspect_nodata)) &
-            (percent_slope != slope_nodata) &
-            (flow_accumulation != flow_accumulation_nodata))
+            ~utils.array_equals_nodata(percent_slope, slope_nodata) &
+            ~utils.array_equals_nodata(
+                flow_accumulation, flow_accumulation_nodata))
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         result[:] = _TARGET_NODATA
 
@@ -879,7 +880,8 @@ def _calculate_rkls(
         """
         rkls = numpy.empty(ls_factor.shape, dtype=numpy.float32)
         nodata_mask = (
-            (ls_factor != _TARGET_NODATA) & (stream != stream_nodata))
+            ~utils.array_equals_nodata(ls_factor, _TARGET_NODATA) &
+            ~utils.array_equals_nodata(stream, stream_nodata))
         if erosivity_nodata is not None:
             nodata_mask &= ~utils.array_equals_nodata(
                 erosivity, erosivity_nodata)
@@ -927,7 +929,7 @@ def _threshold_slope(slope_path, out_thresholded_slope_path):
 
         As desribed in Cavalli et al., 2013.
         """
-        valid_slope = slope != slope_nodata
+        valid_slope = ~utils.array_equals_nodata(slope, slope_nodata)
         slope_m = slope[valid_slope] / 100.0
         slope_m[slope_m < 0.005] = 0.005
         slope_m[slope_m > 1.0] = 1.0
@@ -1006,7 +1008,7 @@ def _calculate_w(
     def threshold_w(w_val):
         """Threshold w to 0.001."""
         w_val_copy = w_val.copy()
-        nodata_mask = w_val == _TARGET_NODATA
+        nodata_mask = utils.array_equals_nodata(w_val, _TARGET_NODATA)
         w_val_copy[w_val < 0.001] = 0.001
         w_val_copy[nodata_mask] = _TARGET_NODATA
         return w_val_copy
@@ -1056,7 +1058,9 @@ def _calculate_usle(
         """Calculate USLE."""
         result = numpy.empty(rkls.shape, dtype=numpy.float32)
         result[:] = _TARGET_NODATA
-        valid_mask = (rkls != _TARGET_NODATA) & (cp_factor != _TARGET_NODATA)
+        valid_mask = (
+            ~utils.array_equals_nodata(rkls, _TARGET_NODATA) &
+            ~utils.array_equals_nodata(cp_factor, _TARGET_NODATA))
         result[valid_mask] = rkls[valid_mask] * cp_factor[valid_mask] * (
             1 - drainage[valid_mask])
         return result
@@ -1135,8 +1139,10 @@ def _calculate_d_up(
 
         """
         valid_mask = (
-            (w_bar != _TARGET_NODATA) & (s_bar != _TARGET_NODATA) &
-            (flow_accumulation != flow_accumulation_nodata))
+            ~utils.array_equals_nodata(w_bar, _TARGET_NODATA) &
+            ~utils.array_equals_nodata(s_bar, _TARGET_NODATA) &
+            ~utils.array_equals_nodata(
+                flow_accumulation, flow_accumulation_nodata))
         d_up_array = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         d_up_array[:] = _TARGET_NODATA
         d_up_array[valid_mask] = (
@@ -1165,8 +1171,9 @@ def _calculate_d_up_bare(
 
         """
         valid_mask = (
-            (flow_accumulation != flow_accumulation_nodata) &
-            (s_bar != _TARGET_NODATA))
+            ~utils.array_equals_nodata(
+                flow_accumulation, flow_accumulation_nodata) &
+            ~utils.array_equals_nodata(s_bar, _TARGET_NODATA))
         d_up_array = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         d_up_array[:] = _TARGET_NODATA
         d_up_array[valid_mask] = (
@@ -1188,7 +1195,9 @@ def _calculate_inverse_ws_factor(
 
     def ws_op(w_factor, s_factor):
         """Calculate the inverse ws factor."""
-        valid_mask = (w_factor != _TARGET_NODATA) & (s_factor != slope_nodata)
+        valid_mask = (
+            ~utils.array_equals_nodata(w_factor, _TARGET_NODATA) &
+            ~utils.array_equals_nodata(s_factor, slope_nodata))
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         result[:] = _TARGET_NODATA
         result[valid_mask] = (
@@ -1208,7 +1217,7 @@ def _calculate_inverse_s_factor(
 
     def s_op(s_factor):
         """Calculate the inverse s factor."""
-        valid_mask = (s_factor != slope_nodata)
+        valid_mask = ~utils.array_equals_nodata(s_factor, slope_nodata)
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         result[:] = _TARGET_NODATA
         result[valid_mask] = 1.0 / s_factor[valid_mask]
@@ -1227,7 +1236,8 @@ def _calculate_ic(d_up_path, d_dn_path, out_ic_factor_path):
     def ic_op(d_up, d_dn):
         """Calculate IC factor."""
         valid_mask = (
-            (d_up != _TARGET_NODATA) & (d_dn != d_dn_nodata) & (d_dn != 0) &
+            ~utils.array_equals_nodata(d_up, _TARGET_NODATA) &
+            ~utils.array_equals_nodata(d_dn, d_dn_nodata) & (d_dn != 0) &
             (d_up != 0))
         ic_array = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         ic_array[:] = _IC_NODATA
@@ -1246,7 +1256,7 @@ def _calculate_sdr(
     def sdr_op(ic_factor, stream):
         """Calculate SDR factor."""
         valid_mask = (
-            (ic_factor != _IC_NODATA) & (stream != 1))
+            ~utils.array_equals_nodata(ic_factor, _IC_NODATA) & (stream != 1))
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         result[:] = _TARGET_NODATA
         result[valid_mask] = (
@@ -1263,7 +1273,9 @@ def _calculate_sed_export(usle_path, sdr_path, target_sed_export_path):
     """Calculate USLE * SDR."""
     def sed_export_op(usle, sdr):
         """Sediment export."""
-        valid_mask = (usle != _TARGET_NODATA) & (sdr != _TARGET_NODATA)
+        valid_mask = (
+            ~utils.array_equals_nodata(usle, _TARGET_NODATA) &
+            ~utils.array_equals_nodata(sdr, _TARGET_NODATA))
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         result[:] = _TARGET_NODATA
         result[valid_mask] = usle[valid_mask] * sdr[valid_mask]
@@ -1278,7 +1290,9 @@ def _calculate_e_prime(usle_path, sdr_path, target_e_prime):
     """Calculate USLE * (1-SDR)."""
     def e_prime_op(usle, sdr):
         """Wash that does not reach stream."""
-        valid_mask = (usle != _TARGET_NODATA) & (sdr != _TARGET_NODATA)
+        valid_mask = (
+            ~utils.array_equals_nodata(usle, _TARGET_NODATA) &
+            ~utils.array_equals_nodata(sdr, _TARGET_NODATA))
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         result[:] = _TARGET_NODATA
         result[valid_mask] = usle[valid_mask] * (1-sdr[valid_mask])
@@ -1296,8 +1310,9 @@ def _calculate_sed_retention_index(
     def sediment_index_op(rkls, usle, sdr_factor):
         """Calculate sediment retention index."""
         valid_mask = (
-            (rkls != _TARGET_NODATA) & (usle != _TARGET_NODATA) &
-            (sdr_factor != _TARGET_NODATA))
+            ~utils.array_equals_nodata(rkls, _TARGET_NODATA) &
+            ~utils.array_equals_nodata(usle, _TARGET_NODATA) &
+            ~utils.array_equals_nodata(sdr_factor, _TARGET_NODATA))
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         result[:] = _TARGET_NODATA
         result[valid_mask] = (
@@ -1342,11 +1357,11 @@ def _calculate_sed_retention(
             rkls, usle, stream_factor, sdr_factor, sdr_factor_bare_soil):
         """Subtract bare soil export from real landcover."""
         valid_mask = (
-            (rkls != _TARGET_NODATA) &
-            (usle != _TARGET_NODATA) &
-            (stream_factor != stream_nodata) &
-            (sdr_factor != _TARGET_NODATA) &
-            (sdr_factor_bare_soil != _TARGET_NODATA))
+            ~utils.array_equals_nodata(rkls, _TARGET_NODATA) &
+            ~utils.array_equals_nodata(usle, _TARGET_NODATA) &
+            ~utils.array_equals_nodata(stream_factor, stream_nodata) &
+            ~utils.array_equals_nodata(sdr_factor, _TARGET_NODATA) &
+            ~utils.array_equals_nodata(sdr_factor_bare_soil, _TARGET_NODATA))
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         result[:] = _TARGET_NODATA
         result[valid_mask] = (

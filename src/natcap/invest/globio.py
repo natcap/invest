@@ -520,7 +520,8 @@ def _ffqi_op(forest_areas_array, smoothed_forest_areas, forest_areas_nodata):
     result = numpy.empty_like(forest_areas_array, dtype=numpy.float32)
     result[:] = forest_areas_nodata
     # forest_areas_array and _nodata are integer types and not user-defined
-    valid_mask = forest_areas_array != forest_areas_nodata
+    valid_mask = ~utils.array_equals_nodata(
+        forest_areas_array, forest_areas_nodata)
     result[valid_mask] = (
         forest_areas_array[valid_mask] * smoothed_forest_areas[valid_mask])
     return result
@@ -943,7 +944,7 @@ def _calculate_globio_lulc_map(
 def _forest_area_mask_op(lulc_array, globio_nodata, forest_areas_nodata):
     """Masking out forest areas."""
     # comparing integers, numpy.isclose not needed
-    valid_mask = lulc_array != globio_nodata
+    valid_mask = ~utils.array_equals_nodata(lulc_array, globio_nodata)
     # landcover code 130 represents all MODIS forest codes which originate
     # as 1-5
     result = numpy.empty_like(lulc_array, dtype=numpy.int16)
@@ -958,7 +959,7 @@ def _create_globio_lulc_op(
     """Construct GLOBIO lulc given relevant biophysical parameters."""
     result = numpy.empty_like(lulc_array, dtype=numpy.int16)
     result[:] = globio_nodata
-    valid_mask = lulc_array != globio_nodata
+    valid_mask = ~utils.array_equals_nodata(lulc_array, globio_nodata)
     valid_result = result[valid_mask]
 
     # Split Shrublands and grasslands into primary vegetations,

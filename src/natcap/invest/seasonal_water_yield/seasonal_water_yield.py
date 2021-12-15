@@ -836,7 +836,8 @@ def _calculate_vri(l_path, target_vri_path):
     l_nodata = pygeoprocessing.get_raster_info(l_path)['nodata'][0]
 
     for _, block in pygeoprocessing.iterblocks((l_path, 1)):
-        valid_mask = (block != l_nodata) & (~numpy.isinf(block))
+        valid_mask = (
+            ~utils.array_equals_nodata(block, l_nodata) & (~numpy.isinf(block))
         qb_sum += numpy.sum(block[valid_mask])
         qb_valid_count += numpy.count_nonzero(valid_mask)
     li_nodata = pygeoprocessing.get_raster_info(l_path)['nodata'][0]
@@ -846,7 +847,7 @@ def _calculate_vri(l_path, target_vri_path):
         result = numpy.empty_like(li_array)
         result[:] = li_nodata
         if qb_sum > 0:
-            valid_mask = li_array != li_nodata
+            valid_mask = ~utils.array_equals_nodata(li_array, li_nodata)
             try:
                 result[valid_mask] = li_array[valid_mask] / qb_sum
             except RuntimeWarning:
@@ -874,7 +875,7 @@ def _calculate_annual_qfi(qfm_path_list, target_qf_path):
     def qfi_sum_op(*qf_values):
         """Sum the monthly qfis."""
         qf_sum = numpy.zeros(qf_values[0].shape)
-        valid_mask = qf_values[0] != qf_nodata
+        valid_mask = ~utils.array_equals_nodata(qf_values[0], qf_nodata)
         valid_qf_sum = qf_sum[valid_mask]
         for index in range(len(qf_values)):
             valid_qf_sum += qf_values[index][valid_mask]
@@ -989,7 +990,7 @@ def _calculate_monthly_quick_flow(
         # their landcover raster. It otherwise crashes later with some NaNs.
         # more intermediate outputs with nodata values guaranteed to be defined
         qf_im[utils.array_equals_nodata(qf_im, qf_nodata) &
-              (stream_array != stream_nodata)] = 0.0
+              ~utils.array_equals_nodata(stream_array, stream_nodata)] = 0.0
         return qf_im
 
     pygeoprocessing.raster_calculator(
@@ -1042,7 +1043,7 @@ def _calculate_curve_number_raster(
         }
 
         for lucode in sorted(lucodes):
-            if lucode != lulc_nodata:
+            if ~utils.array_equals_nodata(numpy.array(lucode), lulc_nodata).any():
                 lulc_to_soil[soil_id]['cn_values'].append(
                     biophysical_table[lucode][soil_column])
                 lulc_to_soil[soil_id]['lulc_values'].append(lucode)
@@ -1083,7 +1084,7 @@ def _calculate_curve_number_raster(
             raise ValueError(error_message)
 
         for soil_group_id in numpy.unique(soil_group_array):
-            if soil_group_id == soil_nodata:
+            if utils.array_equals_nodata(numpy.array(soil_group_id), soil_nodata).any():
                 continue
             current_soil_mask = (soil_group_array == soil_group_id)
             index = numpy.digitize(
@@ -1117,7 +1118,9 @@ def _calculate_si_raster(cn_path, stream_path, si_path):
 
     def si_op(ci_factor, stream_mask):
         """Calculate si factor."""
-        valid_mask = (ci_factor != cn_nodata) & (ci_factor > 0)
+        valid_mask = (
+            ~utils.array_equals_nodata(ci_factor, cn_nodata) &
+            (ci_factor > 0))
         si_array = numpy.empty(ci_factor.shape)
         si_array[:] = si_nodata
         # multiply by the stream mask != 1 so we get 0s on the stream and
@@ -1211,7 +1214,7 @@ def _calculate_l_avail(l_path, gamma, target_l_avail_path):
         """Calculate equation [8] L_avail = min(gamma*L, L)."""
         result = numpy.empty(l_array.shape)
         result[:] = li_nodata
-        valid_mask = (l_array != li_nodata)
+        valid_mask = ~utils.array_equals_nodata(l_array, li_nodata)
         result[valid_mask] = numpy.min(numpy.stack(
             (gamma*l_array[valid_mask], l_array[valid_mask])), axis=0)
         return result

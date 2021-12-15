@@ -480,7 +480,8 @@ def _sum_rasters(storage_path_list, output_sum_path):
         """Sum all the arrays or nodata a pixel stack if one exists."""
         valid_mask = reduce(
             lambda x, y: x & y, [
-                _ != _CARBON_NODATA for _ in storage_arrays])
+                ~utils.array_equals_nodata(_, _CARBON_NODATA)
+                for _ in storage_arrays])
         result = numpy.empty(storage_arrays[0].shape)
         result[:] = _CARBON_NODATA
         result[valid_mask] = numpy.sum([
@@ -499,8 +500,8 @@ def _diff_rasters(storage_path_list, output_diff_path):
         result = numpy.empty(base_array.shape, dtype=numpy.float32)
         result[:] = _CARBON_NODATA
         valid_mask = (
-            (base_array != _CARBON_NODATA) &
-            (future_array != _CARBON_NODATA))
+            ~utils.array_equals_nodata(base_array, _CARBON_NODATA) &
+            ~utils.array_equals_nodata(future_array, _CARBON_NODATA))
         result[valid_mask] = (
             future_array[valid_mask] - base_array[valid_mask])
         return result
@@ -561,7 +562,7 @@ def _calculate_npv(delta_carbon_path, valuation_constant, npv_out_path):
         """Calculate the NPV given carbon storage or loss values."""
         result = numpy.empty(carbon_array.shape, dtype=numpy.float32)
         result[:] = _VALUE_NODATA
-        valid_mask = carbon_array != _CARBON_NODATA
+        valid_mask = ~utils.array_equals_nodata(carbon_array,  _CARBON_NODATA)
         result[valid_mask] = carbon_array[valid_mask] * valuation_constant
         return result
 

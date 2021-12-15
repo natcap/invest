@@ -1281,7 +1281,9 @@ class _CalculateHabitatNestingIndex(object):
                 numpy.stack([x.flatten() for x in substrate_index_arrays]) *
                 self.species_substrate_suitability_index_array, axis=0)
             result = result.reshape(substrate_index_arrays[0].shape)
-            result[substrate_index_arrays[0] == _INDEX_NODATA] = _INDEX_NODATA
+            nodata_mask = utils.array_equals_nodata(
+                substrate_index_arrays[0], _INDEX_NODATA)
+            result[nodata_mask] = _INDEX_NODATA
             return result
 
         pygeoprocessing.raster_calculator(
@@ -1312,7 +1314,7 @@ class _SumRasters(object):
         result = numpy.empty_like(array_list[0])
         result[:] = 0
         for array in array_list:
-            local_valid_mask = array != _INDEX_NODATA
+            local_valid_mask = ~utils.array_equals_nodata(array, _INDEX_NODATA)
             result[local_valid_mask] += array[local_valid_mask]
             valid_mask |= local_valid_mask
         result[~valid_mask] = _INDEX_NODATA
@@ -1339,7 +1341,8 @@ class _PollinatorSupplyOp(object):
             self, foraged_flowers_array, floral_resources_array,
             convolve_ps_array):
         """Calculating (RA*fa)/FR * convolve(PS)."""
-        valid_mask = foraged_flowers_array != _INDEX_NODATA
+        valid_mask = ~utils.array_equals_nodata(
+            foraged_flowers_array, _INDEX_NODATA)
         result = numpy.empty_like(foraged_flowers_array)
         result[:] = _INDEX_NODATA
         zero_mask = floral_resources_array == 0
@@ -1384,7 +1387,8 @@ class _PollinatorSupplyIndexOp(object):
         """Calculate f_r * h_n * self.species_abundance."""
         result = numpy.empty_like(floral_resources_array)
         result[:] = _INDEX_NODATA
-        valid_mask = floral_resources_array != _INDEX_NODATA
+        valid_mask = ~utils.array_equals_nodata(
+            floral_resources_array, _INDEX_NODATA)
         result[valid_mask] = (
             self.species_abundance * floral_resources_array[valid_mask] *
             habitat_nesting_suitability_array[valid_mask])
@@ -1422,7 +1426,7 @@ class _MultByScalar(object):
         """Return array * self.scalar accounting for nodata."""
         result = numpy.empty_like(array)
         result[:] = _INDEX_NODATA
-        valid_mask = array != _INDEX_NODATA
+        valid_mask = ~utils.array_equals_nodata(array, _INDEX_NODATA)
         result[valid_mask] = array[valid_mask] * self.scalar
         return result
 
@@ -1448,7 +1452,9 @@ class _OnFarmPollinatorAbundance(object):
         result = numpy.empty_like(h_array)
         result[:] = _INDEX_NODATA
 
-        valid_mask = (h_array != _INDEX_NODATA) & (pat_array != _INDEX_NODATA)
+        valid_mask = (
+            ~utils.array_equals_nodata(h_array, _INDEX_NODATA) &
+            ~utils.array_equals_nodata(pat_array, _INDEX_NODATA))
 
         result[valid_mask] = (
             (pat_array[valid_mask]*(1-h_array[valid_mask])) /
@@ -1475,7 +1481,7 @@ class _PYTOp(object):
 
     def __call__(self, mp_array, FP_array):
         """Return min(mp_array+FP_array, 1) accounting for nodata."""
-        valid_mask = mp_array != _INDEX_NODATA
+        valid_mask = ~utils.array_equals_nodata(mp_array, _INDEX_NODATA)
         result = numpy.empty_like(mp_array)
         result[:] = _INDEX_NODATA
         result[valid_mask] = mp_array[valid_mask]+FP_array[valid_mask]
@@ -1502,7 +1508,7 @@ class _PYWOp(object):
 
     def __call__(self, mp_array, PYT_array):
         """Return max(0,PYT_array-mp_array) accounting for nodata."""
-        valid_mask = mp_array != _INDEX_NODATA
+        valid_mask = ~utils.array_equals_nodata(mp_array, _INDEX_NODATA)
         result = numpy.empty_like(mp_array)
         result[:] = _INDEX_NODATA
         result[valid_mask] = PYT_array[valid_mask]-mp_array[valid_mask]

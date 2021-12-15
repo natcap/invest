@@ -1112,7 +1112,9 @@ def _calc_and_pickle_zonal_stats(
         score_block = score_band.ReadAsArray(**score_offsets)
         zonal_block = zonal_band.ReadAsArray(**score_offsets)
 
-        valid_mask = (score_block != score_nodata) & (zonal_block == 1)
+        valid_mask = (
+            ~utils.array_equals_nodata(score_block, score_nodata) &
+            (zonal_block == 1))
         valid_score_block = score_block[valid_mask]
         if valid_score_block.size == 0:
             continue
@@ -1465,13 +1467,14 @@ def _ecosystem_risk_op(habitat_count_arr, *hab_risk_arrays):
     """
     ecosystem_risk_arr = numpy.full(
         habitat_count_arr.shape, _TARGET_NODATA_FLT, dtype=numpy.float32)
-    ecosystem_mask = (habitat_count_arr > 0) & (
-        habitat_count_arr != _TARGET_NODATA_INT)
+    ecosystem_mask = (habitat_count_arr > 0) & ~utils.array_equals_nodata(
+        habitat_count_arr, _TARGET_NODATA_INT)
     ecosystem_risk_arr[ecosystem_mask] = 0
 
     # Add up all the risks of each habitat
     for hab_risk_arr in hab_risk_arrays:
-        valid_risk_mask = (hab_risk_arr != _TARGET_NODATA_FLT)
+        valid_risk_mask = ~utils.array_equals_nodata(
+            hab_risk_arr, _TARGET_NODATA_FLT)
         ecosystem_risk_arr[valid_risk_mask] += hab_risk_arr[valid_risk_mask]
 
     # Divide risk score by the number of habitats in each pixel. This way we
@@ -1505,7 +1508,8 @@ def _reclassify_ecosystem_risk_op(ecosystem_risk_arr, max_rating):
     """
     reclass_ecosystem_risk_arr = numpy.full(
         ecosystem_risk_arr.shape, _TARGET_NODATA_INT, dtype=numpy.int8)
-    valid_pixel_mask = (ecosystem_risk_arr != _TARGET_NODATA_FLT)
+    valid_pixel_mask = ~utils.array_equals_nodata(
+        ecosystem_risk_arr, _TARGET_NODATA_FLT)
 
     # Divide risk score by (maximum possible risk score/3) to get an integer
     # ranging from 0 to 3, then return the ceiling of it
@@ -1533,7 +1537,8 @@ def _count_habitats_op(*habitat_arrays):
         habitat_arrays[0].shape, 0, dtype=numpy.int8)
 
     for habitat_arr in habitat_arrays:
-        habiat_mask = (habitat_arr != _TARGET_NODATA_INT)
+        habiat_mask = ~utils.array_equals_nodata(
+            habitat_arr, _TARGET_NODATA_INT)
         habitat_count_arr[habiat_mask] += habitat_arr.astype(
             numpy.int8)[habiat_mask]
 
@@ -1564,7 +1569,7 @@ def _reclassify_risk_op(risk_arr, max_rating):
     """
     reclass_arr = numpy.full(
         risk_arr.shape, _TARGET_NODATA_INT, dtype=numpy.int8)
-    valid_pixel_mask = (risk_arr != _TARGET_NODATA_FLT)
+    valid_pixel_mask = ~utils.array_equals_nodata(risk_arr, _TARGET_NODATA_FLT)
 
     # Return the ceiling of the continuous risk score
     reclass_arr[valid_pixel_mask] = numpy.ceil(
@@ -1597,11 +1602,13 @@ def _tot_risk_op(habitat_arr, *pair_risk_arrays):
     tot_risk_arr[habitat_mask] = 0
 
     for pair_risk_arr in pair_risk_arrays:
-        valid_pixel_mask = (pair_risk_arr != _TARGET_NODATA_FLT)
+        valid_pixel_mask = ~utils.array_equals_nodata(
+            pair_risk_arr, _TARGET_NODATA_FLT)
         tot_risk_arr[valid_pixel_mask] += pair_risk_arr[valid_pixel_mask]
 
     # Rescale total risk to 0 to max_rating
-    final_valid_mask = (tot_risk_arr != _TARGET_NODATA_FLT)
+    final_valid_mask = ~utils.array_equals_nodata(
+        tot_risk_arr, _TARGET_NODATA_FLT)
     tot_risk_arr[final_valid_mask] /= len(pair_risk_arrays)
 
     return tot_risk_arr
@@ -1640,8 +1647,9 @@ def _pair_risk_op(exposure_arr, consequence_arr, max_rating, risk_eq):
     risk_arr = numpy.full(
         exposure_arr.shape, _TARGET_NODATA_FLT, dtype=numpy.float32)
     zero_pixel_mask = (exposure_arr == 0) | (consequence_arr == 0)
-    valid_pixel_mask = (exposure_arr != _TARGET_NODATA_FLT) & (
-        consequence_arr != _TARGET_NODATA_FLT)
+    valid_pixel_mask = (
+        ~utils.array_equals_nodata(exposure_arr, _TARGET_NODATA_FLT) &
+        ~utils.array_equals_nodata(consequence_arr, _TARGET_NODATA_FLT))
     nonzero_valid_pixel_mask = ~zero_pixel_mask & valid_pixel_mask
 
     # Zero pixels are where non of the stressor exists in the habitat
@@ -1709,14 +1717,16 @@ def _total_exposure_op(habitat_arr, *num_denom_list):
 
     # Calculate the cumulative numerator and denominator values
     for num_arr in num_arr_list:
-        valid_num_mask = (num_arr != _TARGET_NODATA_FLT)
+        valid_num_mask = ~utils.array_equals_nodata(
+            num_arr, _TARGET_NODATA_FLT)
         tot_num_arr[valid_num_mask] += num_arr[valid_num_mask]
 
     for denom in denom_list:
         tot_denom += denom
 
     # If the numerator is nodata, do not divide the arrays
-    final_valid_mask = (tot_num_arr != _TARGET_NODATA_FLT)
+    final_valid_mask = ~utils.array_equals_nodata(
+        tot_num_arr, _TARGET_NODATA_FLT)
 
     tot_expo_arr[final_valid_mask] = tot_num_arr[
         final_valid_mask] / tot_denom
@@ -1769,14 +1779,16 @@ def _total_consequence_op(
 
     # Calculate the cumulative numerator and denominator values
     for num_arr in num_arr_list:
-        valid_num_mask = (num_arr != _TARGET_NODATA_FLT)
+        valid_num_mask = ~utils.array_equals_nodata(
+            num_arr, _TARGET_NODATA_FLT)
         tot_num_arr[valid_num_mask] += num_arr[valid_num_mask]
 
     for denom in denom_list:
         tot_denom += denom
 
     # If the numerator is nodata, do not divide the arrays
-    final_valid_mask = (tot_num_arr != _TARGET_NODATA_FLT)
+    final_valid_mask = ~utils.array_equals_nodata(
+        tot_num_arr, _TARGET_NODATA_FLT)
 
     tot_conseq_arr[final_valid_mask] = tot_num_arr[
         final_valid_mask] / tot_denom
@@ -1944,7 +1956,8 @@ def _pair_criteria_num_op(
             spatial_explicit_arr_const[2::4],
             spatial_explicit_arr_const[3::4]):
         # Mask pixels where both habitat, stressor, and spatial array exist
-        overlap_mask = hab_stress_buff_mask & (spatial_arr != nodata)
+        overlap_mask = hab_stress_buff_mask & ~utils.array_equals_nodata(
+                spatial_arr, nodata)
 
         # Compute the cumulative numerator score
         num_arr[overlap_mask] += spatial_arr[overlap_mask]/(dq*weight)
@@ -2137,7 +2150,8 @@ def _recovery_num_op(habitat_arr, num, *spatial_explicit_arr_const):
             spatial_explicit_arr_const[2::4],
             spatial_explicit_arr_const[3::4]):
         # Mask pixels where both habitat and resilience score exist
-        hab_res_overlap_mask = habitat_mask & (resilience_arr != nodata)
+        hab_res_overlap_mask = habitat_mask & ~utils.array_equals_nodata(
+                resilience_arr, nodata)
 
         # Compute cumulative numerator score
         num_arr[hab_res_overlap_mask] += resilience_arr[

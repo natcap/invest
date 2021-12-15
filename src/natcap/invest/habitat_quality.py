@@ -813,9 +813,12 @@ def _compute_rarity_operation(
         Returns:
             _OUT_NODATA where either array has nodata, otherwise cover_x.
         """
-        return numpy.where(
-            (base == base_nodata) | (cover_x == lulc_nodata),
-            base_nodata, cover_x)
+        result_array = numpy.full(base.shape, base_nodata)
+        valid_mask = (
+            ~utils.array_equals_nodata(base, base_nodata) &
+            ~utils.array_equals_nodata(cover_x, lulc_nodata))
+        result_array[valid_mask] = cover_x[valid_mask]
+        return result_array
 
     pygeoprocessing.raster_calculator(
         [base_lulc_path_band, lulc_path_band], trim_op, new_cover_path[0],
