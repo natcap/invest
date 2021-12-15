@@ -91,13 +91,13 @@ class StormwaterTests(unittest.TestCase):
         shutil.rmtree(self.workspace_dir)
 
     @staticmethod
-    def basic_setup(workspace_dir, ir=False):
+    def basic_setup(workspace_dir, pe=False):
         """
         Set up for the full model run tests.
 
         Args:
             workspace_dir (str): path to a directory in which to create files
-            ir (bool): if True, include IR data in the biophysical table
+            pe (bool): if True, include PE data in the biophysical table
 
         Returns:
             List of the data and files that were created, in this order:
@@ -115,7 +115,7 @@ class StormwaterTests(unittest.TestCase):
             8 (float): stormwater retention cost value per cubic meter
             9 (float): pixel area for all the rasters created
         """
-        # In practice RC_X + IR_X <= 1, but they are independent in the model,
+        # In practice RC_X + PE_X <= 1, but they are independent in the model,
         # so ignoring that constraint for convenience.
         biophysical_dict = {
             'lucode': [0, 1, 11, 12],
@@ -126,12 +126,12 @@ class StormwaterTests(unittest.TestCase):
             'RC_D': [0, 0.45, 0.4, 1],
             'is_connected': [0, 0, 0, 1]
         }
-        if ir:
+        if pe:
             biophysical_dict.update({
-                'IR_A': [0, 0.55, 0.5, 1],
-                'IR_B': [0, 0.65, 0.6, 1],
-                'IR_C': [0, 0.75, 0.7, 1],
-                'IR_D': [0, 0.85, 0.8, 1]
+                'PE_A': [0, 0.55, 0.5, 1],
+                'PE_B': [0, 0.65, 0.6, 1],
+                'PE_C': [0, 0.75, 0.7, 1],
+                'PE_D': [0, 0.85, 0.8, 1]
             })
 
         biophysical_table = pandas.DataFrame(
@@ -216,15 +216,15 @@ class StormwaterTests(unittest.TestCase):
 
         retention_volume_path = os.path.join(
             self.workspace_dir, 'retention_volume_suffix.tif')
-        recharge_volume_path = os.path.join(
-            self.workspace_dir, 'recharge_volume_suffix.tif')
+        percolation_volume_path = os.path.join(
+            self.workspace_dir, 'percolation_volume_suffix.tif')
         pollutant_path = os.path.join(
             self.workspace_dir, 'avoided_pollutant_load_pollutant1_suffix.tif')
         value_path = os.path.join(
             self.workspace_dir, 'retention_value_suffix.tif')
-        # there should be no recharge output because there's no
-        # recharge data in the biophysical table
-        self.assertFalse(os.path.exists(recharge_volume_path))
+        # there should be no percolation output because there's no
+        # percolation data in the biophysical table
+        self.assertFalse(os.path.exists(percolation_volume_path))
 
         retention_raster = gdal.OpenEx(retention_volume_path, gdal.OF_RASTER)
         retention_volume = retention_raster.GetRasterBand(1).ReadAsArray()
@@ -275,8 +275,8 @@ class StormwaterTests(unittest.TestCase):
                 numpy.testing.assert_allclose(
                     avoided_load, expected_avoided_load, rtol=1e-6)
 
-    def test_ir(self):
-        """Stormwater: full model run with IR data in biophysical table."""
+    def test_pe(self):
+        """Stormwater: full model run with PE data in biophysical table."""
         from natcap.invest import stormwater
 
         (biophysical_table,
@@ -288,7 +288,7 @@ class StormwaterTests(unittest.TestCase):
          precipitation_array,
          precipitation_path,
          retention_cost,
-         pixel_area) = self.basic_setup(self.workspace_dir, ir=True)
+         pixel_area) = self.basic_setup(self.workspace_dir, pe=True)
 
         args = {
             'workspace_dir': self.workspace_dir,
@@ -310,9 +310,9 @@ class StormwaterTests(unittest.TestCase):
         retention_volume_path = os.path.join(
             self.workspace_dir,
             stormwater.FINAL_OUTPUTS['retention_volume_path'])
-        recharge_volume_path = os.path.join(
+        percolation_volume_path = os.path.join(
             self.workspace_dir,
-            stormwater.FINAL_OUTPUTS['recharge_volume_path'])
+            stormwater.FINAL_OUTPUTS['percolation_volume_path'])
         value_path = os.path.join(
             self.workspace_dir,
             stormwater.FINAL_OUTPUTS['retention_value_path'])
@@ -320,9 +320,9 @@ class StormwaterTests(unittest.TestCase):
         retention_raster = gdal.OpenEx(retention_volume_path, gdal.OF_RASTER)
         retention_volume = retention_raster.GetRasterBand(1).ReadAsArray()
 
-        recharge_raster = gdal.OpenEx(
-            recharge_volume_path, gdal.OF_RASTER)
-        recharge_volume = recharge_raster.GetRasterBand(
+        percolation_raster = gdal.OpenEx(
+            percolation_volume_path, gdal.OF_RASTER)
+        percolation_volume = percolation_raster.GetRasterBand(
             1).ReadAsArray()
 
         retention_value_raster = gdal.OpenEx(value_path, gdal.OF_RASTER)
@@ -352,20 +352,20 @@ class StormwaterTests(unittest.TestCase):
                 numpy.testing.assert_allclose(actual_value, expected_value,
                                               rtol=1e-6)
 
-        for row in range(recharge_volume.shape[0]):
-            for col in range(recharge_volume.shape[1]):
+        for row in range(percolation_volume.shape[0]):
+            for col in range(percolation_volume.shape[1]):
 
                 soil_group = soil_group_array[row][col]
                 lulc = lulc_array[row][col]
                 precipitation = precipitation_array[row][col]
 
-                ir_value = biophysical_table[
-                    f'IR_{soil_group_codes[soil_group]}'][lulc]
+                pe_value = biophysical_table[
+                    f'PE_{soil_group_codes[soil_group]}'][lulc]
 
                 # precipitation (mm/yr) * 0.001 (m/mm) * pixel area (m^2) = m^3
-                expected_volume = (ir_value) * \
+                expected_volume = (pe_value) * \
                     precipitation * 0.001 * pixel_area
-                numpy.testing.assert_allclose(recharge_volume[row][col],
+                numpy.testing.assert_allclose(percolation_volume[row][col],
                                               expected_volume, rtol=1e-6)
 
     def test_adjust(self):
@@ -448,7 +448,7 @@ class StormwaterTests(unittest.TestCase):
          precipitation_array,
          precipitation_path,
          retention_cost,
-         pixel_area) = self.basic_setup(self.workspace_dir, ir=True)
+         pixel_area) = self.basic_setup(self.workspace_dir, pe=True)
 
         args = {
             'workspace_dir': self.workspace_dir,
@@ -468,10 +468,10 @@ class StormwaterTests(unittest.TestCase):
             1: {
                 'mean_retention_ratio': 0.825,
                 'mean_runoff_ratio': 0.175,
-                'mean_recharge_ratio': 0.575,
+                'mean_percolation_ratio': 0.575,
                 'total_retention_volume': 8.5,
                 'total_runoff_volume': 1.5,
-                'total_recharge_volume': 5.5,
+                'total_percolation_volume': 5.5,
                 'pollutant1_total_avoided_load': .0085,
                 'pollutant1_total_load': .0015,
                 'total_retention_value': 21.505
@@ -479,10 +479,10 @@ class StormwaterTests(unittest.TestCase):
             2: {
                 'mean_retention_ratio': 0.5375,
                 'mean_runoff_ratio': 0.4625,
-                'mean_recharge_ratio': 0.7625,
+                'mean_percolation_ratio': 0.7625,
                 'total_retention_volume': 7.5,
                 'total_runoff_volume': 7.5,
-                'total_recharge_volume': 11.5,
+                'total_percolation_volume': 11.5,
                 'pollutant1_total_avoided_load': .0075,
                 'pollutant1_total_load': .0275,
                 'total_retention_value': 18.975
@@ -492,8 +492,8 @@ class StormwaterTests(unittest.TestCase):
                 'total_retention_volume': 0,
                 'mean_runoff_ratio': 0,
                 'total_runoff_volume': 0,
-                'mean_recharge_ratio': 0,
-                'total_recharge_volume': 0,
+                'mean_percolation_ratio': 0,
+                'total_percolation_volume': 0,
                 'pollutant1_total_avoided_load': 0,
                 'pollutant1_total_load': 0,
                 'total_retention_value': 0
