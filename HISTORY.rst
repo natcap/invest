@@ -51,6 +51,11 @@ Unreleased Changes
     * Updating the ``taskgraph`` requirement to ``0.11.0`` to resolve an issue
       where modifying a file within a roughly 2-second window would fool
       ``taskgraph`` into believing that the file had not been modified.
+* DelineateIt
+    * When snapping points to streams, if a point is equally near to more than
+      one stream pixel, it will now snap to the stream pixel with a higher
+      flow accumulation value. Before, it would snap to the stream pixel
+      encountered first in the raster (though this was not guaranteed).
 * Habitat Quality
     * Changed how Habitat Rarity outputs are calculated to be less confusing.
       Values now represent a 0 to 1 index where before there could be

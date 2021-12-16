@@ -67,7 +67,10 @@ ARGS_SPEC = {
             "about": (
                 "Whether to snap point geometries to the nearest stream "
                 "pixel.  If ``True``, ``args['flow_threshold']`` and "
-                "``args['snap_distance']`` must also be defined."),
+                "``args['snap_distance']`` must also be defined. If a point "
+                "is equally near to more than one stream pixel, it will be "
+                "snapped to the stream pixel with the highest flow "
+                "accumulation value."),
             "name": "Snap points to the nearest stream"
         },
         "flow_threshold": {
