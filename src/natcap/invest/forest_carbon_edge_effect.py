@@ -462,7 +462,7 @@ def combine_carbon_maps(*carbon_maps):
     nodata_mask = numpy.empty(carbon_maps[0].shape, dtype=bool)
     nodata_mask[:] = True
     for carbon_map in carbon_maps:
-        valid_mask = carbon_map != NODATA_VALUE
+        valid_mask = ~utils.array_equals_nodata(carbon_map, NODATA_VALUE)
         nodata_mask &= ~valid_mask
         result[valid_mask] += carbon_map[valid_mask]
     result[nodata_mask] = NODATA_VALUE
@@ -696,10 +696,10 @@ def _map_distance_from_tropical_forest_edge(
         # where LULC has nodata, overwrite edge distance with nodata value
         lulc_block = lulc_band.ReadAsArray(**offset_dict)
         distance_block = edge_distance_band.ReadAsArray(**offset_dict)
-        masked_distance_block = numpy.where(
-            lulc_block == lulc_nodata, NODATA_VALUE, distance_block)
+        nodata_mask = utils.array_equals_nodata(lulc_block, lulc_nodata)
+        distance_block[nodata_mask] = lulc_nodata
         edge_distance_band.WriteArray(
-            masked_distance_block,
+            distance_block,
             xoff=offset_dict['xoff'],
             yoff=offset_dict['yoff'])
 
