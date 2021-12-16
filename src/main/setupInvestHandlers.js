@@ -5,12 +5,12 @@ import { spawn, exec } from 'child_process';
 
 import { app, ipcMain } from 'electron';
 import fetch from 'node-fetch';
-import sanitizeHtml from 'sanitize-html';
 
 import { getLogger } from '../logger';
 import { ipcMainChannels } from './ipcMainChannels';
 import ELECTRON_DEV_MODE from './isDevMode';
 import investUsageLogger from './investUsageLogger';
+import markupMessage from './investLogMarkup';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
@@ -23,49 +23,6 @@ const LOGLEVELMAP = {
 };
 const TEMP_DIR = path.join(app.getPath('userData'), 'tmp');
 const HOSTNAME = 'http://localhost';
-
-// const LOG_TEXT_TAG = 'span';
-// const ALLOWED_HTML_OPTIONS = {
-//   allowedTags: [LOG_TEXT_TAG],
-//   allowedAttributes: { [LOG_TEXT_TAG]: ['class'] },
-// };
-
-// const LOG_ERROR_REGEX = /(ERROR|CRITICAL)/;
-// export const LOG_PATTERNS = {
-//   'invest-log-error': LOG_ERROR_REGEX,
-//   'invest-log-primary-warning': null,
-//   'invest-log-primary': null,
-// };
-/**
- * Encapsulate text in html, assigning class based on text content.
- *
- * @param  {string} message - from a python logger
- * @param  {string} pyModuleName - e.g. 'natcap.invest.carbon'
- * @returns {string} - sanitized html
- */
-export function markupMessage(message, pyModuleName) {
-  const escapedPyModuleName = pyModuleName.replace(/\./g, '\\.');
-  const patterns = {
-    'invest-log-error': /(ERROR|CRITICAL)/,
-    'invest-log-primary-warning': new RegExp(`${escapedPyModuleName}.*WARNING`),
-    'invest-log-primary': new RegExp(escapedPyModuleName)
-  };
-
-  const LOG_TEXT_TAG = 'span';
-  const ALLOWED_HTML_OPTIONS = {
-    allowedTags: [LOG_TEXT_TAG],
-    allowedAttributes: { [LOG_TEXT_TAG]: ['class'] },
-  };
-
-  // eslint-disable-next-line
-  for (const [cls, pattern] of Object.entries(patterns)) {
-    if (pattern.test(message)) {
-      const markup = `<${LOG_TEXT_TAG} class="${cls}">${message}</${LOG_TEXT_TAG}>`;
-      return sanitizeHtml(markup, ALLOWED_HTML_OPTIONS);
-    }
-  }
-  return sanitizeHtml(message, ALLOWED_HTML_OPTIONS);
-}
 
 export function setupInvestRunHandlers(investExe) {
   const runningJobs = {};

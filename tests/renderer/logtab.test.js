@@ -11,10 +11,8 @@ import { render } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
 import LogTab from '../../src/renderer/components/LogTab';
-import {
-  setupInvestLogReaderHandler,
-  markupMessage,
-} from '../../src/main/setupInvestHandlers';
+import { setupInvestLogReaderHandler } from '../../src/main/setupInvestHandlers';
+import markupMessage from '../../src/main/investLogMarkup';
 import { removeIpcMainListeners } from '../../src/main/main';
 
 function renderLogTab(logfilePath, primaryPythonLogger) {
@@ -39,7 +37,6 @@ describe('LogTab displays log from a file', () => {
 
   const uniqueText = 'utils.prepare_workspace';
   const primaryPythonLogger = 'natcap.invest.annual_water_yield';
-
   const logText = `
 2021-01-15 07:14:37,147 (natcap.invest.utils) ${uniqueText}(124) INFO Writing log ...
 2021-01-15 07:14:37,147 (__main__) cli.main(521) Level 100 Starting model with parameters: 
@@ -123,6 +120,7 @@ ValueError: Values in the LULC raster were found that are not represented under 
     errorMessages.forEach((msg) => {
       expect(msg).toHaveClass('invest-log-error');
     });
+  });
 });
 
 describe('Unit tests for invest logger message markup', () => {
