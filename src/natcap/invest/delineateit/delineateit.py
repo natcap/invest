@@ -279,6 +279,7 @@ def execute(args):
             snap_points_to_nearest_stream,
             args=(outlet_vector_path,
                   (file_registry['streams'], 1),
+                  file_registry['flow_accumulation'],
                   snap_distance,
                   file_registry['snapped_outlets']),
             target_path_list=[file_registry['snapped_outlets']],
@@ -461,7 +462,8 @@ def check_geometries(outlet_vector_path, dem_path, target_vector_path,
 
 
 def snap_points_to_nearest_stream(points_vector_path, stream_raster_path_band,
-                                  snap_distance, snapped_points_vector_path):
+                                  flow_accum_raster_path, snap_distance,
+                                  snapped_points_vector_path):
     """Adjust the location of points to the nearest stream pixel.
 
     The new point layer will have all fields and field values copied over from
@@ -475,6 +477,7 @@ def snap_points_to_nearest_stream(points_vector_path, stream_raster_path_band,
         stream_raster_path_band (tuple): A tuple of (path, band index), where
             pixel values are ``1`` (indicating a stream pixel) or ``0``
             (indicating a non-stream pixel).
+        flow_accum_raster_path (string): A path to a flow accumulation raster.
         snap_distance (number): The maximum distance (in pixels) to search
             for stream pixels for each point.  This must be a positive, nonzero
             value.
@@ -500,6 +503,9 @@ def snap_points_to_nearest_stream(points_vector_path, stream_raster_path_band,
     n_cols, n_rows = stream_raster_info['raster_size']
     stream_raster = gdal.OpenEx(stream_raster_path_band[0], gdal.OF_RASTER)
     stream_band = stream_raster.GetRasterBand(stream_raster_path_band[1])
+
+    flow_accum_raster = gdal.OpenEx(flow_accum_raster_path, gdal.OF_RASTER)
+    flow_accum_band = flow_accum_raster.GetRasterBand(1)
 
     driver = gdal.GetDriverByName('GPKG')
     snapped_vector = driver.Create(snapped_points_vector_path, 0, 0, 0,
@@ -571,6 +577,9 @@ def snap_points_to_nearest_stream(points_vector_path, stream_raster_path_band,
         stream_window = stream_band.ReadAsArray(
             int(x_left), int(y_top), int(x_right - x_left),
             int(y_bottom - y_top))
+        flow_accum_array = flow_accum_band.ReadAsArray(
+            int(x_left), int(y_top), int(x_right - x_left),
+            int(y_bottom - y_top))
         row_indexes, col_indexes = numpy.nonzero(
             stream_window == 1)
         if row_indexes.size > 0:
@@ -582,11 +591,15 @@ def snap_points_to_nearest_stream(points_vector_path, stream_raster_path_band,
 
             # Find the closest stream pixel that meets the distance
             # requirement.
-            min_index = numpy.argmin(distance_array)
-            min_row = row_indexes[min_index]
-            min_col = col_indexes[min_index]
-            offset_row = min_row - (y_center - y_top)
-            offset_col = min_col - (x_center - x_left)
+            nearest_stream_pixel_row, nearest_stream_pixel_col = (
+                numpy.unravel_index(  # convert back to 2d index
+                    numpy.argmin(  # 1d index of min value in flattened array
+                        (distance_array == distance_array.min()) *
+                        flow_accum_array  # weight by flow accum to break ties
+                    )))
+
+            offset_row = nearest_stream_pixel_row - (y_center - y_top)
+            offset_col = nearest_stream_pixel_col - (x_center - x_left)
 
             y_index += offset_row
             x_index += offset_col
