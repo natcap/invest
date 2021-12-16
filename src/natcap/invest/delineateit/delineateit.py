@@ -582,24 +582,32 @@ def snap_points_to_nearest_stream(points_vector_path, stream_raster_path_band,
             int(y_bottom - y_top))
         row_indexes, col_indexes = numpy.nonzero(
             stream_window == 1)
-        if row_indexes.size > 0:
-            # Calculate euclidean distance for sorting
+
+        # Find the closest stream pixel that meets the distance
+        # requirement. If there is a tie, snap to the stream pixel with
+        # a higher flow accumulation value.
+        if row_indexes.size > 0:  # there are streams within the snap distance
+            # Calculate euclidean distance from the point to each stream pixel
             distance_array = numpy.hypot(
+                # distance along y axis from the point to each stream pixel
                 y_center - y_top - row_indexes,
+                # distance along x axis from the point to each stream pixel
                 x_center - x_left - col_indexes,
                 dtype=numpy.float32)
 
-            # Find the closest stream pixel that meets the distance
-            # requirement.
-            nearest_stream_pixel_row, nearest_stream_pixel_col = (
-                numpy.unravel_index(  # convert back to 2d index
-                    numpy.argmin(  # 1d index of min value in flattened array
-                        (distance_array == distance_array.min()) *
-                        flow_accum_array  # weight by flow accum to break ties
-                    )))
+            stream_flow_accums = flow_accum_array[row_indexes, col_indexes]
 
-            offset_row = nearest_stream_pixel_row - (y_center - y_top)
-            offset_col = nearest_stream_pixel_col - (x_center - x_left)
+            # 1d index of max value in flattened array
+            nearest_stream_index_1d = numpy.argmax(
+                (distance_array == distance_array.min()) *
+                stream_flow_accums  # weight by flow accum to break ties
+            )
+            # convert 1d index back to coordinates relative to window
+            nearest_stream_row = row_indexes[nearest_stream_index_1d]
+            nearest_stream_col = col_indexes[nearest_stream_index_1d]
+
+            offset_row = nearest_stream_row - (y_center - y_top)
+            offset_col = nearest_stream_col - (x_center - x_left)
 
             y_index += offset_row
             x_index += offset_col
