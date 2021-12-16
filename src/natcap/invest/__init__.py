@@ -196,7 +196,7 @@ MODEL_METADATA = {
         model_title=_('Urban Flood Risk Mitigation'),
         pyname='natcap.invest.urban_flood_risk_mitigation',
         gui='urban_flood_risk_mitigation.UrbanFloodRiskMitigation',
-        userguide='urban_flood_risk_mitigation.html',
+        userguide='urban_flood_mitigation.html',
         aliases=('ufrm',)),
     'urban_cooling_model': _MODELMETA(
         model_title=_('Urban Cooling'),
