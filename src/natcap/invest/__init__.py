@@ -18,7 +18,7 @@ LOCALE_DIR = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), 'internationalization/locales')
 
 # all supported language codes, including the default English
-LOCALES = sorted(os.listdir(LOCALE_DIR) + ['en'])
+LOCALES = sorted(set(os.listdir(LOCALE_DIR) + ['en']))
 
 # map locale codes to the corresponding localized language name
 # e.g. 'es': 'español'
@@ -175,7 +175,7 @@ MODEL_METADATA = {
         userguide='seasonal_water_yield.html',
         aliases=('swy',)),
     'stormwater': _MODELMETA(
-        model_title=_('Stormwater'),
+        model_title=_('Urban Stormwater Retention'),
         pyname='natcap.invest.stormwater',
         gui='stormwater.Stormwater',
         userguide='stormwater.html',
