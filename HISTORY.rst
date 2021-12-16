@@ -105,6 +105,11 @@ Unreleased Changes (3.10)
       ``intermediate_outputs/what_drains_to_stream[suffix].tif``.  This raster
       has pixel values of 1 where DEM pixels flow to an identified stream, and
       0 where they do not.
+* Urban Flood Risk:
+    * Fixed broken documentation link in the user interface.
+* Visitation: Recreation and Tourism
+    * Renamed the Windows start menu shortcut from "Recreation" to
+      "Visitation: Recreation and Tourism".
 * Wave Energy
     * Rename the ``analysis_area_path`` arg to ``analysis_area``, since it is
       not a path but an option string.
@@ -113,9 +118,6 @@ Unreleased Changes (3.10)
       ``australia``, ``global``. The names displayed in the UI dropdown will
       stay the same as before. Datastacks and scripts will need to be updated
       to use the new option values.
-* Visitation: Recreation and Tourism
-    * Renamed the Windows start menu shortcut from "Recreation" to
-      "Visitation: Recreation and Tourism".
 * Wind Energy
     * No model inputs or outputs are measured in "millions of" currency units
       any more. Specifically:
