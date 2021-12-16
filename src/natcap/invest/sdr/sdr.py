@@ -703,9 +703,11 @@ def _calculate_what_drains_to_stream(
         """
         drains_to_stream = numpy.full(
             flow_dir_mfd.shape, _BYTE_NODATA, dtype=numpy.uint8)
-        valid_flow_dir = ~numpy.isclose(flow_dir_mfd, flow_dir_mfd_nodata)
+        valid_flow_dir = ~utils.array_equals_nodata(
+            flow_dir_mfd, flow_dir_mfd_nodata)
         valid_dist_to_channel = (
-            ~numpy.isclose(dist_to_channel, dist_to_channel_nodata) &
+            ~utils.array_equals_nodata(
+                dist_to_channel, dist_to_channel_nodata) &
             valid_flow_dir)
 
         # Nodata where both flow_dir and dist_to_channel are nodata

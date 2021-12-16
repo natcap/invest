@@ -1044,7 +1044,7 @@ def _calculate_curve_number_raster(
         }
 
         for lucode in sorted(lucodes):
-            if ~utils.array_equals_nodata(numpy.array(lucode), lulc_nodata).any():
+            if lucode != lulc_nodata:
                 lulc_to_soil[soil_id]['cn_values'].append(
                     biophysical_table[lucode][soil_column])
                 lulc_to_soil[soil_id]['lulc_values'].append(lucode)
@@ -1085,7 +1085,7 @@ def _calculate_curve_number_raster(
             raise ValueError(error_message)
 
         for soil_group_id in numpy.unique(soil_group_array):
-            if utils.array_equals_nodata(numpy.array(soil_group_id), soil_nodata).any():
+            if soil_group_id == soil_nodata:
                 continue
             current_soil_mask = (soil_group_array == soil_group_id)
             index = numpy.digitize(

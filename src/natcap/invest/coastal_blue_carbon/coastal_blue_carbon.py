@@ -1409,7 +1409,7 @@ def _calculate_npv(
             matrix_sum = numpy.zeros(npv.shape, dtype=numpy.float32)
             valid_pixels = numpy.ones(npv.shape, dtype=bool)
             for matrix in sequestration_matrices:
-                valid_pixels &= ~numpy.isclose(matrix, NODATA_FLOAT32_MIN)
+                valid_pixels &= ~utils.array_equals_nodata(matrix, NODATA_FLOAT32_MIN)
                 matrix_sum[valid_pixels] += matrix[valid_pixels]
 
             npv[valid_pixels] = (
@@ -1502,9 +1502,9 @@ def _calculate_accumulation_over_time(
     target_matrix[:] = NODATA_FLOAT32_MIN
 
     valid_pixels = (
-        ~numpy.isclose(annual_biomass_matrix, NODATA_FLOAT32_MIN) &
-        ~numpy.isclose(annual_soil_matrix, NODATA_FLOAT32_MIN) &
-        ~numpy.isclose(annual_litter_matrix, NODATA_FLOAT32_MIN))
+        ~utils.array_equals_nodata(annual_biomass_matrix, NODATA_FLOAT32_MIN) &
+        ~utils.array_equals_nodata(annual_soil_matrix, NODATA_FLOAT32_MIN) &
+        ~utils.array_equals_nodata(annual_litter_matrix, NODATA_FLOAT32_MIN))
 
     target_matrix[valid_pixels] = (
         (annual_biomass_matrix[valid_pixels] +
@@ -1602,7 +1602,7 @@ def _track_disturbance(
             disturbance_magnitude_matrix.shape, dtype=numpy.float32)
         disturbed_carbon_volume[:] = NODATA_FLOAT32_MIN
         disturbed_carbon_volume[
-            ~numpy.isclose(disturbance_magnitude_matrix,
+            ~utils.array_equals_nodata(disturbance_magnitude_matrix,
                            NODATA_FLOAT32_MIN)] = 0.0
 
         if year_of_disturbance_band:
@@ -1621,9 +1621,9 @@ def _track_disturbance(
 
         stock_matrix = stock_band.ReadAsArray(**block_info)
         pixels_changed_this_year = (
-            ~numpy.isclose(disturbance_magnitude_matrix, NODATA_FLOAT32_MIN) &
-            ~numpy.isclose(disturbance_magnitude_matrix, 0.0) &
-            ~numpy.isclose(stock_matrix, NODATA_FLOAT32_MIN)
+            ~utils.array_equals_nodata(disturbance_magnitude_matrix, NODATA_FLOAT32_MIN) &
+            ~utils.array_equals_nodata(disturbance_magnitude_matrix, 0.0) &
+            ~utils.array_equals_nodata(stock_matrix, NODATA_FLOAT32_MIN)
         )
 
         disturbed_carbon_volume[pixels_changed_this_year] = (
@@ -1737,10 +1737,11 @@ def _calculate_emissions(
     zero_half_life = numpy.isclose(carbon_half_life_matrix, 0.0)
 
     valid_pixels = (
-        (~numpy.isclose(carbon_disturbed_matrix, NODATA_FLOAT32_MIN)) &
+        ~utils.array_equals_nodata(
+            carbon_disturbed_matrix, NODATA_FLOAT32_MIN) &
         ~utils.array_equals_nodata(
             year_of_last_disturbance_matrix, NODATA_UINT16_MAX) &
-        (~zero_half_life))
+        ~zero_half_life)
 
     # Emissions happen immediately.
     # This means that if the transition happens in year 2020, the emissions in

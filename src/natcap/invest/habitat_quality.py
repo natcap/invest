@@ -813,7 +813,7 @@ def _compute_rarity_operation(
         Returns:
             _OUT_NODATA where either array has nodata, otherwise cover_x.
         """
-        result_array = numpy.full(base.shape, base_nodata)
+        result_array = numpy.full(cover_x.shape, _OUT_NODATA)
         valid_mask = (
             ~utils.array_equals_nodata(base, base_nodata) &
             ~utils.array_equals_nodata(cover_x, lulc_nodata))

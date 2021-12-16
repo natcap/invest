@@ -949,9 +949,7 @@ def _calculate_load(
         result = numpy.empty(lucode_array.shape)
         result[:] = _TARGET_NODATA
         for lucode in numpy.unique(lucode_array):
-            lucode_is_nodata = utils.array_equals_nodata(
-                numpy.array([lucode]), nodata_landuse).any()
-            if not lucode_is_nodata:
+            if lucode != nodata_landuse:
                 try:
                     result[lucode_array == lucode] = (
                         lucode_to_parameters[lucode][load_type] *
