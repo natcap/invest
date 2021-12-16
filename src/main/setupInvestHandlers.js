@@ -154,7 +154,7 @@ export function setupInvestRunHandlers(investExe) {
 
 export function setupInvestLogReaderHandler() {
   ipcMain.on(ipcMainChannels.INVEST_READ_LOG,
-    (event, logfile, pyModuleName, channel) => {
+    (event, logfile, channel) => {
       const fileStream = fs.createReadStream(logfile);
       fileStream.on('error', (err) => {
         logger.error(err);

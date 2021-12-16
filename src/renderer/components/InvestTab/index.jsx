@@ -304,7 +304,6 @@ export default class InvestTab extends React.Component {
                   logfile={logfile}
                   executeClicked={executeClicked}
                   jobID={jobID}
-                  pyModuleName={modelSpec.pyname}
                 />
               </TabPane>
             </TabContent>

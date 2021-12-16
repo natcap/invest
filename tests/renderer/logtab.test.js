@@ -15,13 +15,12 @@ import { setupInvestLogReaderHandler } from '../../src/main/setupInvestHandlers'
 import markupMessage from '../../src/main/investLogMarkup';
 import { removeIpcMainListeners } from '../../src/main/main';
 
-function renderLogTab(logfilePath, primaryPythonLogger) {
+function renderLogTab(logfilePath) {
   const { ...utils } = render(
     <LogTab
       executeClicked={false}
       jobID="foo"
       logfile={logfilePath}
-      pyModuleName={primaryPythonLogger}
     />
   );
   return utils;
@@ -80,18 +79,14 @@ ValueError: Values in the LULC raster were found that are not represented under 
   });
 
   test('Text in logfile is rendered', async () => {
-    const { findByText } = renderLogTab(
-      logfilePath, primaryPythonLogger
-    );
+    const { findByText } = renderLogTab(logfilePath);
 
     const log = await findByText(new RegExp(uniqueText));
     expect(log).toBeInTheDocument();
   });
 
   test('message from non-primary invest logger is plain', async () => {
-    const { findByText } = renderLogTab(
-      logfilePath, primaryPythonLogger
-    );
+    const { findByText } = renderLogTab(logfilePath);
 
     const log = await findByText(new RegExp(uniqueText));
     expect(log).not.toHaveClass();
@@ -99,9 +94,7 @@ ValueError: Values in the LULC raster were found that are not represented under 
 
   // Skip because https://github.com/natcap/invest-workbench/issues/169
   test.skip('messages from primary invest logger are highlighted', async () => {
-    const { findAllByText } = renderLogTab(
-      logfilePath, primaryPythonLogger
-    );
+    const { findAllByText } = renderLogTab(logfilePath);
 
     const messages = await findAllByText(new RegExp(primaryPythonLogger));
     messages.forEach((msg) => {
@@ -111,12 +104,10 @@ ValueError: Values in the LULC raster were found that are not represented under 
 
   // Skip because https://github.com/natcap/invest-workbench/issues/169
   test.skip('error messages are highlighted', async () => {
-    const { findAllByText } = renderLogTab(
-      logfilePath, primaryPythonLogger
-    );
+    const { findAllByText } = renderLogTab(logfilePath);
 
     // an ERROR-level message from a python logger
-    errorMessages = await findAllByText(/ERROR Something went wrong/);
+    const errorMessages = await findAllByText(/ERROR Something went wrong/);
     errorMessages.forEach((msg) => {
       expect(msg).toHaveClass('invest-log-error');
     });
