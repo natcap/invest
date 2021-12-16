@@ -32,9 +32,11 @@
 
 .. :changelog:
 
+Unreleased Changes
+------------------
 
-Unreleased Changes (3.10)
--------------------------
+3.10 (2021-12-16)
+-----------------
 * General
     * Add a ``--language`` argument to the command-line interface, which will
       translate model names, specs, and validation messages.
