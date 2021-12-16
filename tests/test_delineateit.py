@@ -227,13 +227,13 @@ class DelineateItTests(unittest.TestCase):
         snap_distance = -1
         with self.assertRaises(ValueError) as cm:
             delineateit.snap_points_to_nearest_stream(
-                source_points_path, (stream_raster_path, 1), flow_accum_path,
+                source_points_path, stream_raster_path, flow_accum_path,
                 snap_distance, snapped_points_path)
         self.assertTrue('must be >= 0' in str(cm.exception))
 
         snap_distance = 10  # large enough to get multiple streams per point.
         delineateit.snap_points_to_nearest_stream(
-            source_points_path, (stream_raster_path, 1), flow_accum_path,
+            source_points_path, stream_raster_path, flow_accum_path,
             snap_distance, snapped_points_path)
 
         snapped_points_vector = gdal.OpenEx(snapped_points_path,
@@ -326,7 +326,7 @@ class DelineateItTests(unittest.TestCase):
                                            'snapped_points.gpkg')
         snap_distance = 10  # large enough to get multiple streams per point.
         delineateit.snap_points_to_nearest_stream(
-            source_points_path, (stream_raster_path, 1), flow_accum_path,
+            source_points_path, stream_raster_path, flow_accum_path,
             snap_distance, snapped_points_path)
 
         try:
@@ -390,7 +390,7 @@ class DelineateItTests(unittest.TestCase):
 
         snap_distance = 10  # large enough to get multiple streams per point.
         delineateit.snap_points_to_nearest_stream(
-            source_points_path, (stream_raster_path, 1), flow_accum_path,
+            source_points_path, stream_raster_path, flow_accum_path,
             snap_distance, snapped_points_path)
 
         snapped_points_vector = gdal.OpenEx(snapped_points_path,
