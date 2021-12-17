@@ -22,7 +22,7 @@ class WaveEnergy(model.InVESTModel):
             validator=self.validator)
         self.add_input(self.wave_base_data)
         self.analysis_area = inputs.Dropdown(
-            args_key='analysis_area_path',
+            args_key='analysis_area',
             helptext=(
                 "A list of analysis areas for which the model can "
                 "currently be run.  All the wave energy data needed "
