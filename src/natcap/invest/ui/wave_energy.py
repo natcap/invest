@@ -3,6 +3,11 @@
 from natcap.invest.ui import model, inputs
 from natcap.invest import wave_energy, MODEL_METADATA
 
+ANALYSIS_AREA_VALUES = {
+    val['display_name']: key for key, val in
+    wave_energy.ARGS_SPEC['args']['analysis_area']['options'].items()
+}
+
 
 class WaveEnergy(model.InVESTModel):
     def __init__(self):
@@ -29,13 +34,7 @@ class WaveEnergy(model.InVESTModel):
                 "for these areas are pre-packaged in the WaveData "
                 "folder."),
             label='Analysis Area',
-            options=(
-                'West Coast of North America and Hawaii',
-                'East Coast of North America and Puerto Rico',
-                'North Sea 4 meter resolution',
-                'North Sea 10 meter resolution',
-                'Australia',
-                'Global'))
+            options=tuple(ANALYSIS_AREA_VALUES))
         self.add_input(self.analysis_area)
         self.aoi = inputs.File(
             args_key='aoi_path',
@@ -112,7 +111,8 @@ class WaveEnergy(model.InVESTModel):
             self.workspace.args_key: self.workspace.value(),
             self.suffix.args_key: self.suffix.value(),
             self.wave_base_data.args_key: self.wave_base_data.value(),
-            self.analysis_area.args_key: self.analysis_area.value(),
+            self.analysis_area.args_key: (
+                ANALYSIS_AREA_VALUES[self.analysis_area.value()]),
             self.machine_perf_table.args_key: self.machine_perf_table.value(),
             self.machine_param_table.args_key: self.machine_param_table.value(),
             self.dem.args_key: self.dem.value(),
