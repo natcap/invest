@@ -95,6 +95,8 @@ Unreleased Changes (3.10)
       ``intermediate_outputs/what_drains_to_stream[suffix].tif``.  This raster
       has pixel values of 1 where DEM pixels flow to an identified stream, and
       0 where they do not.
+* Scenario Generator
+    * Changed an args key from ``replacment_lucode`` to ``replacement_lucode``.
 * Scenic Quality
     * Simplify the ``valuation_function`` arg options. The options are now:
       ``linear``, ``logarithmic``, ``exponential``. The names displayed in the
