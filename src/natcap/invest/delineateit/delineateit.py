@@ -481,7 +481,8 @@ def snap_points_to_nearest_stream(points_vector_path, stream_raster_path,
             pixel values are ``1`` (indicating a stream pixel) or ``0``
             (indicating a non-stream pixel).
         flow_accum_raster_path (string): A path to a flow accumulation raster
-            that is aligned with the stream raster.
+            that is aligned with the stream raster. Used to break ties between
+            equally-near stream pixels.
         snap_distance (number): The maximum distance (in pixels) to search
             for stream pixels for each point.  This must be a positive, nonzero
             value.
@@ -578,9 +579,6 @@ def snap_points_to_nearest_stream(points_vector_path, stream_raster_path,
         stream_window = stream_band.ReadAsArray(
             int(x_left), int(y_top), int(x_right - x_left),
             int(y_bottom - y_top))
-        flow_accum_array = flow_accum_band.ReadAsArray(
-            int(x_left), int(y_top), int(x_right - x_left),
-            int(y_bottom - y_top))
         row_indexes, col_indexes = numpy.nonzero(
             stream_window == 1)
 
@@ -596,13 +594,18 @@ def snap_points_to_nearest_stream(points_vector_path, stream_raster_path,
                 x_index - x_left - col_indexes,
                 dtype=numpy.float32)
 
-            stream_flow_accums = flow_accum_array[row_indexes, col_indexes]
+            is_nearest = distance_array == distance_array.min()
+            # if > 1 stream pixel is nearest, break tie with flow accumulation
+            if is_nearest.sum() > 1:
+                flow_accum_array = flow_accum_band.ReadAsArray(
+                    int(x_left), int(y_top), int(x_right - x_left),
+                    int(y_bottom - y_top))
+                # weight by flow accum
+                is_nearest = is_nearest * flow_accum_array[row_indexes, col_indexes]
 
             # 1d index of max value in flattened array
-            nearest_stream_index_1d = numpy.argmax(
-                (distance_array == distance_array.min()) *
-                stream_flow_accums  # weight by flow accum to break ties
-            )
+            nearest_stream_index_1d = numpy.argmax(is_nearest)
+
             # convert 1d index back to coordinates relative to window
             nearest_stream_row = row_indexes[nearest_stream_index_1d]
             nearest_stream_col = col_indexes[nearest_stream_index_1d]
