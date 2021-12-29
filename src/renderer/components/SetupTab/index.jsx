@@ -71,6 +71,27 @@ function initializeArgValues(argsSpec, uiSpec, argsDict) {
   });
 }
 
+/** Get a debounced version of a function.
+ *
+ * The original function will not be called until after the
+ * debounced version stops being invoked for N milliseconds.
+ *
+ * @param {func} func - a function that takes no args.
+ *
+ * @returns {func} - debounced version, called instead of the original.
+ */
+function debounce(func) {
+  let timer;
+  return () => {
+    if (timer) {
+      clearTimeout(timer);
+    }
+    // we want validation to be very responsive,
+    // but also to wait for a pause in data entry.
+    timer = setTimeout(func, 200);
+  };
+}
+
 /** Renders an arguments form, execute button, and save buttons. */
 export default class SetupTab extends React.Component {
   constructor(props) {
@@ -89,6 +110,7 @@ export default class SetupTab extends React.Component {
     this.saveJsonFile = this.saveJsonFile.bind(this);
     this.wrapInvestExecute = this.wrapInvestExecute.bind(this);
     this.investValidate = this.investValidate.bind(this);
+    this.debouncedValidate = debounce(this.investValidate).bind(this);
     this.updateArgValues = this.updateArgValues.bind(this);
     this.batchUpdateArgs = this.batchUpdateArgs.bind(this);
     this.insertNWorkers = this.insertNWorkers.bind(this);
@@ -135,6 +157,7 @@ export default class SetupTab extends React.Component {
       argsDropdownOptions: argsDropdownOptions,
     }, () => {
       this.investValidate();
+      // this.debouncedValidate();
       this.callUISpecFunctions();
     });
   }
@@ -260,7 +283,8 @@ export default class SetupTab extends React.Component {
     this.setState({
       argsValues: argsValues
     }, () => {
-      this.investValidate();
+      // this.investValidate();
+      this.debouncedValidate();
       this.callUISpecFunctions();
     });
   }
@@ -281,6 +305,7 @@ export default class SetupTab extends React.Component {
       argsDropdownOptions: argsDropdownOptions,
     }, () => {
       this.investValidate();
+      // this.debouncedValidate();
       this.callUISpecFunctions();
     });
   }
@@ -290,6 +315,7 @@ export default class SetupTab extends React.Component {
    * @returns undefined
    */
   async investValidate() {
+    console.log('investValidate')
     const { argsSpec, pyModuleName } = this.props;
     const { argsValues, argsValidation } = this.state;
     const keyset = new Set(Object.keys(argsSpec));
