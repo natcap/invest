@@ -145,35 +145,10 @@ ARGS_SPEC = {
                 "in the maximum retention efficiency being reached within "
                 "one pixel only."),
         },
-        "subsurface_critical_length_p": {
-            "type": "number",
-            "required": "calc_p",
-            "name": "Subsurface Critical Length (Phosphorus)",
-            "about": (
-                "The distance (traveled subsurface and downslope) after "
-                "which it is assumed that soil retains nutrient at its "
-                "maximum capacity, given in meters. If dissolved nutrients "
-                "travel a distance smaller than Subsurface Critical Length, "
-                "the retention efficiency will be lower than the Subsurface "
-                "Maximum Retention Efficiency value defined. Setting this "
-                "value to a distance smaller than the pixel size will result "
-                "in the maximum retention efficiency being reached within "
-                "one pixel only."),
-        },
         "subsurface_eff_n": {
             "type": "number",
             "required": "calc_n",
             "name": "Subsurface Maximum Retention Efficiency (Nitrogen)",
-            "about": (
-                "The maximum nutrient retention efficiency that can be "
-                "reached through subsurface flow, a floating point value "
-                "between 0 and 1. This field characterizes the retention due "
-                "to biochemical degradation in soils."),
-        },
-        "subsurface_eff_p": {
-            "type": "number",
-            "required": "calc_p",
-            "name": "Subsurface Maximum Retention Efficiency (Phosphorus)",
             "about": (
                 "The maximum nutrient retention efficiency that can be "
                 "reached through subsurface flow, a floating point value "
@@ -205,17 +180,12 @@ _INTERMEDIATE_BASE_FILES = {
     's_factor_inverse_path': 's_factor_inverse.tif',
     'stream_path': 'stream.tif',
     'sub_crit_len_n_path': 'sub_crit_len_n.tif',
-    'sub_crit_len_p_path': 'sub_crit_len_p.tif',
     'sub_eff_n_path': 'sub_eff_n.tif',
-    'sub_eff_p_path': 'sub_eff_p.tif',
     'sub_effective_retention_n_path': 'sub_effective_retention_n.tif',
-    'sub_effective_retention_p_path': 'sub_effective_retention_p.tif',
     'sub_load_n_path': 'sub_load_n.tif',
-    'sub_load_p_path': 'sub_load_p.tif',
     'surface_load_n_path': 'surface_load_n.tif',
     'surface_load_p_path': 'surface_load_p.tif',
     'sub_ndr_n_path': 'sub_ndr_n.tif',
-    'sub_ndr_p_path': 'sub_ndr_p.tif',
     'crit_len_n_path': 'crit_len_n.tif',
     'crit_len_p_path': 'crit_len_p.tif',
     'd_dn_path': 'd_dn.tif',
@@ -241,7 +211,6 @@ _CACHE_BASE_FILES = {
     'surface_load_n_pickle_path': 'surface_load_n.pickle',
     'surface_load_p_pickle_path': 'surface_load_p.pickle',
     'subsurface_load_n_pickle_path': 'subsurface_load_n.pickle',
-    'subsurface_load_p_pickle_path': 'subsurface_load_p.pickle',
     'export_n_pickle_path': 'export_n.pickle',
     'export_p_pickle_path': 'export_p.pickle',
 }
@@ -290,23 +259,10 @@ def execute(args):
             value to a distance smaller than the pixel size will result in the
             maximum retention efficiency being reached within one pixel only.
             Required if ``calc_n``.
-        args['subsurface_critical_length_p'] (number): The distance (traveled
-            subsurface and downslope) after which it is assumed that soil
-            retains nutrient at its maximum capacity, given in meters. If
-            dissolved nutrients travel a distance smaller than Subsurface
-            Critical Length, the retention efficiency will be lower than the
-            Subsurface Maximum Retention Efficiency value defined. Setting this
-            value to a distance smaller than the pixel size will result in the
-            maximum retention efficiency being reached within one pixel only.
-            Required if ``calc_p``.
         args['subsurface_eff_n'] (number): The maximum nutrient retention
             efficiency that can be reached through subsurface flow, a floating
             point value between 0 and 1. This field characterizes the retention
             due to biochemical degradation in soils.  Required if ``calc_n``.
-        args['subsurface_eff_p'] (number): The maximum nutrient retention
-            efficiency that can be reached through subsurface flow, a floating
-            point value between 0 and 1. This field characterizes the retention
-            due to biochemical degradation in soils.  Required if ``calc_p``.
         args['n_workers'] (int): if present, indicates how many worker
             processes should be used in parallel processing. -1 indicates
             single process mode, 0 is single process but non-blocking mode,
@@ -600,18 +556,6 @@ def execute(args):
             dependent_task_list=[modified_load_task, align_raster_task],
             task_name='map surface load %s' % nutrient)
 
-        if nutrient == 'n':
-            subsurface_load_path = f_reg['sub_load_n_path']
-            proportion_subsurface_map = {
-                lucode: params['proportion_subsurface_n']
-                for lucode, params in lucode_to_parameters.items()}
-            subsurface_load_task = task_graph.add_task(
-                func=_map_subsurface_load,
-                args=(modified_load_path, f_reg['aligned_lulc_path'],
-                      proportion_subsurface_map, subsurface_load_path),
-                target_path_list=[subsurface_load_path],
-                dependent_task_list=[modified_load_task, align_raster_task],
-                task_name='map subsurface load %s' % nutrient)
 
         eff_path = f_reg['eff_%s_path' % nutrient]
         eff_task = task_graph.add_task(
@@ -656,16 +600,29 @@ def execute(args):
             dependent_task_list=[ndr_eff_task, ic_task],
             task_name='calc ndr %s' % nutrient)
 
-        sub_ndr_path = f_reg['sub_ndr_%s_path' % nutrient]
-        sub_ndr_task = task_graph.add_task(
-            func=_calculate_sub_ndr,
-            args=(
-                float(args['subsurface_eff_%s' % nutrient]),
-                float(args['subsurface_critical_length_%s' % nutrient]),
-                f_reg['dist_to_channel_path'], sub_ndr_path),
-            target_path_list=[sub_ndr_path],
-            dependent_task_list=[dist_to_channel_task],
-            task_name='sub ndr %s' % nutrient)
+        if nutrient == 'n':
+            subsurface_load_path = f_reg['sub_load_n_path']
+            proportion_subsurface_map = {
+                lucode: params['proportion_subsurface_n']
+                for lucode, params in lucode_to_parameters.items()}
+            subsurface_load_task = task_graph.add_task(
+                func=_map_subsurface_load,
+                args=(modified_load_path, f_reg['aligned_lulc_path'],
+                      proportion_subsurface_map, subsurface_load_path),
+                target_path_list=[subsurface_load_path],
+                dependent_task_list=[modified_load_task, align_raster_task],
+                task_name='map subsurface load n')
+
+            sub_ndr_path = f_reg['sub_ndr_n_path']
+            sub_ndr_task = task_graph.add_task(
+                func=_calculate_sub_ndr,
+                args=(
+                    float(args['subsurface_eff_n']),
+                    float(args['subsurface_critical_length_n']),
+                    f_reg['dist_to_channel_path'], sub_ndr_path),
+                target_path_list=[sub_ndr_path],
+                dependent_task_list=[dist_to_channel_task],
+                task_name='sub ndr n')
 
         export_path = f_reg['%s_export_path' % nutrient]
         calculate_export_task = task_graph.add_task(
@@ -772,30 +729,6 @@ def _add_fields_to_shapefile(
     """Add fields and values to an OGR layer open for writing.
 
     Args:
-        field_pickle_map (dict): maps field name to a pickle file that is a
-            result of pygeoprocessing.zonal_stats with FIDs that match
-            `target_vector_path`.
-        field_header_order (list of string): a list of field headers in the
-            order to appear in the output table.
-        target_vector_path (string): path to target vector file.
-
-    Returns:
-        None.
-
-    """
-    target_vector = gdal.OpenEx(
-        target_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
-    target_layer = target_vector.GetLayer()
-    field_summaries = {}
-    for field_name in field_header_order:
-        field_def = ogr.FieldDefn(field_name, ogr.OFTReal)
-        field_def.SetWidth(24)
-        field_def.SetPrecision(11)
-        target_layer.CreateField(field_def)
-        with open(field_pickle_map[field_name], 'rb') as pickle_file:
-            field_summaries[field_name] = pickle.load(pickle_file)
-
-    for feature in target_layer:
         fid = feature.GetFID()
         for field_name in field_header_order:
             feature.SetField(
