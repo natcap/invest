@@ -556,7 +556,6 @@ def execute(args):
             dependent_task_list=[modified_load_task, align_raster_task],
             task_name='map surface load %s' % nutrient)
 
-
         eff_path = f_reg['eff_%s_path' % nutrient]
         eff_task = task_graph.add_task(
             func=_map_lulc_to_val_mask_stream,
@@ -600,48 +599,96 @@ def execute(args):
             dependent_task_list=[ndr_eff_task, ic_task],
             task_name='calc ndr %s' % nutrient)
 
+        surface_export_path = f_reg['%s_surface_export_path' % nutrient]
+        surface_export_task = task_graph.add_task(
+            func=_calculate_export,
+            args=(surface_load_path, ndr_path, surface_export_path),
+            target_path_list=[surface_export_path],
+            dependent_task_list=[
+                load_task, ndr_task, surface_load_task],
+            task_name='surface export %s' % nutrient)
+
+        # only calculate subsurface things for nitrogen
         if nutrient == 'n':
-            subsurface_load_path = f_reg['sub_load_n_path']
             proportion_subsurface_map = {
                 lucode: params['proportion_subsurface_n']
                 for lucode, params in lucode_to_parameters.items()}
             subsurface_load_task = task_graph.add_task(
                 func=_map_subsurface_load,
                 args=(modified_load_path, f_reg['aligned_lulc_path'],
-                      proportion_subsurface_map, subsurface_load_path),
-                target_path_list=[subsurface_load_path],
+                      proportion_subsurface_map, f_reg['sub_load_n_path']),
+                target_path_list=[f_reg['sub_load_n_path']],
                 dependent_task_list=[modified_load_task, align_raster_task],
                 task_name='map subsurface load n')
 
-            sub_ndr_path = f_reg['sub_ndr_n_path']
-            sub_ndr_task = task_graph.add_task(
+            subsurface_ndr_task = task_graph.add_task(
                 func=_calculate_sub_ndr,
                 args=(
                     float(args['subsurface_eff_n']),
                     float(args['subsurface_critical_length_n']),
-                    f_reg['dist_to_channel_path'], sub_ndr_path),
-                target_path_list=[sub_ndr_path],
+                    f_reg['dist_to_channel_path'], f_reg['sub_ndr_n_path']),
+                target_path_list=[f_reg['sub_ndr_n_path']],
                 dependent_task_list=[dist_to_channel_task],
                 task_name='sub ndr n')
 
-        export_path = f_reg['%s_export_path' % nutrient]
-        calculate_export_task = task_graph.add_task(
-            func=_calculate_export,
-            args=(
-                surface_load_path, ndr_path, subsurface_load_path,
-                sub_ndr_path, export_path),
-            target_path_list=[export_path],
-            dependent_task_list=[
-                load_task, ndr_task, surface_load_task, subsurface_load_task,
-                sub_ndr_task],
-            task_name='export %s' % nutrient)
+            subsurface_export_task = task_graph.add_task(
+                func=_calculate_export,
+                args=(subsurface_load_path, sub_ndr_path,
+                      f_reg['n_subsurface_export_path']),
+                target_path_list=[f_reg['n_subsurface_export_path']],
+                dependent_task_list=[
+                    subsurface_load_task, subsurface_ndr_task],
+                task_name='subsurface export n')
 
-        aggregate_export_task = task_graph.add_task(
+            # only need to calculate total for nitrogen because
+            # phosphorus only has surface export
+            total_export_task = task_graph.add_task(
+                func=_sum,
+                args=(surface_export_path, subsurface_export_path,
+                      f_reg['n_total_export_path']),
+                target_path_list=[f_reg['n_total_export_path']],
+                dependent_task_list=[
+                    surface_export_task, subsurface_export_task],
+                task_name='total export n')
+
+            aggregate_subsurface_export_task = task_graph.add_task(
+                func=_aggregate_and_pickle_total,
+                args=(
+                    (subsurface_export_path, 1), f_reg['watershed_results_ndr_path'],
+                    f_reg['subsurface_export_n_pickle_path']),
+                target_path_list=[f_reg['subsurface_export_n_pickle_path']],
+                dependent_task_list=[calculate_export_task],
+                task_name='aggregate n subsurface export')
+
+            aggregate_total_export_task = task_graph.add_task(
+                func=_aggregate_and_pickle_total,
+                args=(
+                    (total_export_path, 1), f_reg['watershed_results_ndr_path'],
+                    f_reg['total_export_n_pickle_path']),
+                target_path_list=[f_reg['surface_export_%s_pickle_path' % nutrient]],
+                dependent_task_list=[calculate_export_task],
+                task_name='aggregate n total export')
+
+            aggregate_subsurface_load_task = task_graph.add_task(
+                func=_aggregate_and_pickle_total,
+                args=(
+                    (subsurface_load_path, 1), f_reg['watershed_results_ndr_path'],
+                    f_reg['subsurface_load_%s_pickle_path' % nutrient]),
+                target_path_list=[
+                    f_reg['subsurface_load_%s_pickle_path' % nutrient]],
+                dependent_task_list=[subsurface_load_task, create_vector_task],
+                task_name='aggregate %s subsurface load' % nutrient)
+
+            field_pickle_map['n_exp_sub'] = f_reg['subsurface_export_n_pickle_path']
+            field_pickle_map['n_exp_tot'] = f_reg['total_export_n_pickle_path']
+            field_pickle_map['sub_n_ld'] = f_reg['subsurface_load_n_pickle_path']
+
+        aggregate_surface_export_task = task_graph.add_task(
             func=_aggregate_and_pickle_total,
             args=(
-                (export_path, 1), f_reg['watershed_results_ndr_path'],
-                f_reg['export_%s_pickle_path' % nutrient]),
-            target_path_list=[f_reg['export_%s_pickle_path' % nutrient]],
+                (surface_export_path, 1), f_reg['watershed_results_ndr_path'],
+                f_reg['surface_export_%s_pickle_path' % nutrient]),
+            target_path_list=[f_reg['surface_export_%s_pickle_path' % nutrient]],
             dependent_task_list=[calculate_export_task],
             task_name='aggregate %s export' % nutrient)
 
@@ -654,21 +701,9 @@ def execute(args):
             dependent_task_list=[surface_load_task, create_vector_task],
             task_name='aggregate %s surface load' % nutrient)
 
-        aggregate_subsurface_load_task = task_graph.add_task(
-            func=_aggregate_and_pickle_total,
-            args=(
-                (subsurface_load_path, 1), f_reg['watershed_results_ndr_path'],
-                f_reg['subsurface_load_%s_pickle_path' % nutrient]),
-            target_path_list=[
-                f_reg['subsurface_load_%s_pickle_path' % nutrient]],
-            dependent_task_list=[subsurface_load_task, create_vector_task],
-            task_name='aggregate %s subsurface load' % nutrient)
-
         field_pickle_map['surf_%s_ld' % nutrient] = (
             f_reg['surface_load_%s_pickle_path' % nutrient])
-        field_pickle_map['sub_%s_ld' % nutrient] = (
-            f_reg['subsurface_load_%s_pickle_path' % nutrient])
-        field_pickle_map['%s_exp_tot' % nutrient] = (
+        field_pickle_map['%s_exp_surf' % nutrient] = (
             f_reg['export_%s_pickle_path' % nutrient])
         field_header_order_list = (
             [x % nutrient for x in [
@@ -1228,41 +1263,34 @@ def _calculate_sub_ndr(
         gdal.GDT_Float32, _TARGET_NODATA)
 
 
-def _calculate_export(
-        surface_load_path, ndr_path, subsurface_load_path,
-        subsurface_ndr_path, target_export_path):
-    """Calculate export."""
-    load_nodata = pygeoprocessing.get_raster_info(
-        surface_load_path)['nodata'][0]
-    subsurface_load_nodata = pygeoprocessing.get_raster_info(
-        subsurface_load_path)['nodata'][0]
-    ndr_nodata = pygeoprocessing.get_raster_info(
-        ndr_path)['nodata'][0]
-    sub_ndr_nodata = pygeoprocessing.get_raster_info(
-        subsurface_ndr_path)['nodata'][0]
+def _calculate_export(load_path, ndr_path, target_export_path):
+    """Calculate export.
 
-    def _calculate_export_op(
-            modified_load_array, ndr_array, modified_sub_load_array,
-            sub_ndr_array):
-        """Combine NDR and subsurface NDR."""
+    Args:
+        load_path (str): path to nutrient load raster
+        ndr_path (str): path to corresponding ndr raster
+        target_export_path (str): path to write out export raster.
+
+    Returns:
+        None
+    """
+    load_nodata = pygeoprocessing.get_raster_info(load_path)['nodata'][0]
+    ndr_nodata = pygeoprocessing.get_raster_info(ndr_path)['nodata'][0]
+
+    def _calculate_export_op(load_array, ndr_array):
+        """Multiply load by NDR."""
         # these intermediate outputs should always have defined nodata
         # values assigned by pygeoprocessing
         valid_mask = ~(
-            numpy.isclose(modified_load_array, load_nodata) |
-            numpy.isclose(ndr_array, ndr_nodata) |
-            numpy.isclose(modified_sub_load_array, subsurface_load_nodata) |
-            numpy.isclose(sub_ndr_array, sub_ndr_nodata))
-        result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
-        result[:] = _TARGET_NODATA
-        result[valid_mask] = (
-            modified_load_array[valid_mask] * ndr_array[valid_mask] +
-            modified_sub_load_array[valid_mask] *
-            sub_ndr_array[valid_mask])
+            numpy.isclose(load_array, load_nodata) |
+            numpy.isclose(ndr_array, ndr_nodata))
+        result = numpy.full(valid_mask.shape, _TARGET_NODATA,
+                            dtype=numpy.float32)
+        result[valid_mask] = load_array[valid_mask] * ndr_array[valid_mask]
         return result
 
     pygeoprocessing.raster_calculator(
-        [(surface_load_path, 1), (ndr_path, 1),
-         (subsurface_load_path, 1), (subsurface_ndr_path, 1)],
+        [(load_path, 1), (ndr_path, 1)],
         _calculate_export_op, target_export_path, gdal.GDT_Float32,
         _TARGET_NODATA)
 
