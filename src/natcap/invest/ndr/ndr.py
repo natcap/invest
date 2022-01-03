@@ -600,15 +600,18 @@ def execute(args):
             dependent_task_list=[modified_load_task, align_raster_task],
             task_name='map surface load %s' % nutrient)
 
-        subsurface_load_path = f_reg['sub_load_%s_path' % nutrient]
-        subsurface_load_task = task_graph.add_task(
-            func=_map_subsurface_load,
-            args=(modified_load_path, f_reg['aligned_lulc_path'],
-                  lucode_to_parameters,
-                  subsurface_proportion_type, subsurface_load_path),
-            target_path_list=[subsurface_load_path],
-            dependent_task_list=[modified_load_task, align_raster_task],
-            task_name='map subsurface load %s' % nutrient)
+        if nutrient == 'n':
+            subsurface_load_path = f_reg['sub_load_n_path']
+            proportion_subsurface_map = {
+                lucode: params['proportion_subsurface_n']
+                for lucode, params in lucode_to_parameters.items()}
+            subsurface_load_task = task_graph.add_task(
+                func=_map_subsurface_load,
+                args=(modified_load_path, f_reg['aligned_lulc_path'],
+                      proportion_subsurface_map, subsurface_load_path),
+                target_path_list=[subsurface_load_path],
+                dependent_task_list=[modified_load_task, align_raster_task],
+                task_name='map subsurface load %s' % nutrient)
 
         eff_path = f_reg['eff_%s_path' % nutrient]
         eff_task = task_graph.add_task(
@@ -1048,17 +1051,15 @@ def _map_surface_load(
 
 
 def _map_subsurface_load(
-        modified_load_path, lulc_raster_path, lucode_to_parameters,
-        subsurface_proportion_type, target_sub_load_path):
+        modified_load_path, lulc_raster_path, proportion_subsurface_map,
+        target_sub_load_path):
     """Calculate subsurface load from landcover raster.
 
     Args:
         modified_load_path (string): path to modified load raster.
         lulc_raster_path (string): path to landcover raster.
-        lucode_to_parameters (dict): maps landcover codes to a dictionary that
-            can be indexed by by `subsurface_proportion_type`.
-        subsurface_proportion_type (string): if None no subsurface transfer
-            is mapped.  Otherwise indexed from lucode_to_parameters.
+        proportion_subsurface_map (dict): maps each landcover code to its
+            subsurface permeance value.
         target_sub_load_path (string): path to target raster.
 
     Returns:
@@ -1068,19 +1069,12 @@ def _map_subsurface_load(
     lulc_raster_info = pygeoprocessing.get_raster_info(lulc_raster_path)
     nodata_landuse = lulc_raster_info['nodata'][0]
 
-    keys = sorted(numpy.array(list(lucode_to_parameters)))
-    if subsurface_proportion_type is not None:
-        subsurface_permeance_values = numpy.array(
-            [lucode_to_parameters[x][subsurface_proportion_type]
-             for x in keys])
+    keys = sorted(numpy.array(list(proportion_subsurface_map)))
+    subsurface_permeance_values = numpy.array(
+        [proportion_subsurface_map[x] for x in keys])
 
     def _map_subsurface_load_op(lucode_array, modified_load_array):
         """Convert unit load to total load & handle nodata."""
-        # If we don't have subsurface, just return 0.0.
-        if subsurface_proportion_type is None:
-            return numpy.where(
-                lucode_array != nodata_landuse, 0, _TARGET_NODATA)
-
         valid_mask = lucode_array != nodata_landuse
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         result[:] = _TARGET_NODATA
