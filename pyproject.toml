@@ -5,7 +5,7 @@
 # will dynamically import GDAL via python's import system.  This behavior means
 # that we can provide a much easier build experience so long as GDAL is
 # available at runtime.
-requires = ['setuptools>=45', 'wheel', 'setuptools_scm>=6.2', 'numpy', 'cython', 'babel']
+requires = ['setuptools>=45', 'wheel', 'setuptools_scm>=6.2', 'numpy<1.22.0', 'cython', 'babel']
 
 [tool.setuptools_scm]
 version_scheme = "post-release"
