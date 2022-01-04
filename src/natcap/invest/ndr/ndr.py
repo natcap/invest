@@ -159,9 +159,11 @@ ARGS_SPEC = {
 }
 
 _OUTPUT_BASE_FILES = {
-    'n_export_path': 'n_export.tif',
-    'p_export_path': 'p_export.tif',
-    'watershed_results_ndr_path': 'watershed_results_ndr.shp',
+    'n_surface_export_path': 'n_surface_export.tif',
+    'n_subsurface_export_path': 'n_surface_export.tif',
+    'n_total_export_path': 'n_surface_export.tif',
+    'p_surface_export_path': 'p_surface_export.tif',
+    'watershed_results_ndr_path': 'watershed_results_ndr.gpkg',
 }
 
 INTERMEDIATE_DIR_NAME = 'intermediate_outputs'
@@ -179,9 +181,6 @@ _INTERMEDIATE_BASE_FILES = {
     's_bar_path': 's_bar.tif',
     's_factor_inverse_path': 's_factor_inverse.tif',
     'stream_path': 'stream.tif',
-    'sub_crit_len_n_path': 'sub_crit_len_n.tif',
-    'sub_eff_n_path': 'sub_eff_n.tif',
-    'sub_effective_retention_n_path': 'sub_effective_retention_n.tif',
     'sub_load_n_path': 'sub_load_n.tif',
     'surface_load_n_path': 'surface_load_n.tif',
     'surface_load_p_path': 'surface_load_p.tif',
@@ -361,7 +360,6 @@ def execute(args):
 
     # these are used for aggregation in the last step
     field_pickle_map = {}
-    field_header_order_list = []
 
     create_vector_task = task_graph.add_task(
         func=create_vector_copy,
@@ -521,8 +519,8 @@ def execute(args):
         task_name='calc ic')
 
     for nutrient in nutrients_to_process:
-        load_path = f_reg['load_%s_path' % nutrient]
-        modified_load_path = f_reg['modified_load_%s_path' % nutrient]
+        load_path = f_reg[f'load_{nutrient}_path']
+        modified_load_path = f_reg[f'modified_load_{nutrient}_path']
         # Perrine says that 'n' is the only case where we could consider a
         # prop subsurface component.  So there's a special case for that.
         if nutrient == 'n':
@@ -533,10 +531,10 @@ def execute(args):
             func=_calculate_load,
             args=(
                 f_reg['aligned_lulc_path'], lucode_to_parameters,
-                'load_%s' % nutrient, load_path),
+                f'load_{nutrient}', load_path),
             dependent_task_list=[align_raster_task],
             target_path_list=[load_path],
-            task_name='%s load' % nutrient)
+            task_name=f'{nutrient} load')
 
         modified_load_task = task_graph.add_task(
             func=_multiply_rasters,
@@ -544,9 +542,9 @@ def execute(args):
                   _TARGET_NODATA, modified_load_path),
             target_path_list=[modified_load_path],
             dependent_task_list=[load_task, runoff_proxy_index_task],
-            task_name='modified load %s' % nutrient)
+            task_name=f'modified load {nutrient}')
 
-        surface_load_path = f_reg['surface_load_%s_path' % nutrient]
+        surface_load_path = f_reg[f'surface_load_{nutrient}_path']
         surface_load_task = task_graph.add_task(
             func=_map_surface_load,
             args=(modified_load_path, f_reg['aligned_lulc_path'],
@@ -554,30 +552,30 @@ def execute(args):
                   surface_load_path),
             target_path_list=[surface_load_path],
             dependent_task_list=[modified_load_task, align_raster_task],
-            task_name='map surface load %s' % nutrient)
+            task_name=f'map surface load {nutrient}')
 
-        eff_path = f_reg['eff_%s_path' % nutrient]
+        eff_path = f_reg[f'eff_{nutrient}_path']
         eff_task = task_graph.add_task(
             func=_map_lulc_to_val_mask_stream,
             args=(
                 f_reg['aligned_lulc_path'], f_reg['stream_path'],
-                lucode_to_parameters, 'eff_%s' % nutrient, eff_path),
+                lucode_to_parameters, f'eff_{nutrient}', eff_path),
             target_path_list=[eff_path],
             dependent_task_list=[align_raster_task, stream_extraction_task],
-            task_name='ret eff %s' % nutrient)
+            task_name=f'ret eff {nutrient}')
 
-        crit_len_path = f_reg['crit_len_%s_path' % nutrient]
+        crit_len_path = f_reg[f'crit_len_{nutrient}_path']
         crit_len_task = task_graph.add_task(
             func=_map_lulc_to_val_mask_stream,
             args=(
                 f_reg['aligned_lulc_path'], f_reg['stream_path'],
-                lucode_to_parameters, 'crit_len_%s' % nutrient, crit_len_path),
+                lucode_to_parameters, f'crit_len_{nutrient}', crit_len_path),
             target_path_list=[crit_len_path],
             dependent_task_list=[align_raster_task, stream_extraction_task],
-            task_name='ret eff %s' % nutrient)
+            task_name=f'ret eff {nutrient}')
 
         effective_retention_path = (
-            f_reg['effective_retention_%s_path' % nutrient])
+            f_reg[f'effective_retention_{nutrient}_path'])
         ndr_eff_task = task_graph.add_task(
             func=ndr_core.ndr_eff_calculation,
             args=(
@@ -587,9 +585,9 @@ def execute(args):
             target_path_list=[effective_retention_path],
             dependent_task_list=[
                 stream_extraction_task, eff_task, crit_len_task],
-            task_name='eff ret %s' % nutrient)
+            task_name=f'eff ret {nutrient}')
 
-        ndr_path = f_reg['ndr_%s_path' % nutrient]
+        ndr_path = f_reg[f'ndr_{nutrient}_path']
         ndr_task = task_graph.add_task(
             func=_calculate_ndr,
             args=(
@@ -597,16 +595,16 @@ def execute(args):
                 float(args['k_param']), ndr_path),
             target_path_list=[ndr_path],
             dependent_task_list=[ndr_eff_task, ic_task],
-            task_name='calc ndr %s' % nutrient)
+            task_name=f'calc ndr {nutrient}')
 
-        surface_export_path = f_reg['%s_surface_export_path' % nutrient]
+        surface_export_path = f_reg[f'{nutrient}_surface_export_path']
         surface_export_task = task_graph.add_task(
             func=_calculate_export,
             args=(surface_load_path, ndr_path, surface_export_path),
             target_path_list=[surface_export_path],
             dependent_task_list=[
                 load_task, ndr_task, surface_load_task],
-            task_name='surface export %s' % nutrient)
+            task_name=f'surface export {nutrient}')
 
         # only calculate subsurface things for nitrogen
         if nutrient == 'n':
@@ -665,7 +663,7 @@ def execute(args):
                 args=(
                     (total_export_path, 1), f_reg['watershed_results_ndr_path'],
                     f_reg['total_export_n_pickle_path']),
-                target_path_list=[f_reg['surface_export_%s_pickle_path' % nutrient]],
+                target_path_list=[f_reg[f'surface_export_{nutrient}_pickle_path']],
                 dependent_task_list=[calculate_export_task],
                 task_name='aggregate n total export')
 
@@ -673,50 +671,45 @@ def execute(args):
                 func=_aggregate_and_pickle_total,
                 args=(
                     (subsurface_load_path, 1), f_reg['watershed_results_ndr_path'],
-                    f_reg['subsurface_load_%s_pickle_path' % nutrient]),
+                    f_reg[f'subsurface_load_{nutrient}_pickle_path']),
                 target_path_list=[
-                    f_reg['subsurface_load_%s_pickle_path' % nutrient]],
+                    f_reg[f'subsurface_load_{nutrient}_pickle_path']],
                 dependent_task_list=[subsurface_load_task, create_vector_task],
-                task_name='aggregate %s subsurface load' % nutrient)
+                task_name=f'aggregate {nutrient} subsurface load')
 
-            field_pickle_map['n_exp_sub'] = f_reg['subsurface_export_n_pickle_path']
-            field_pickle_map['n_exp_tot'] = f_reg['total_export_n_pickle_path']
-            field_pickle_map['sub_n_ld'] = f_reg['subsurface_load_n_pickle_path']
+            field_pickle_map['n_subsurface_export'] = f_reg['subsurface_export_n_pickle_path']
+            field_pickle_map['n_total_export'] = f_reg['total_export_n_pickle_path']
+            field_pickle_map['n_subsurface_load'] = f_reg['subsurface_load_n_pickle_path']
 
         aggregate_surface_export_task = task_graph.add_task(
             func=_aggregate_and_pickle_total,
             args=(
                 (surface_export_path, 1), f_reg['watershed_results_ndr_path'],
-                f_reg['surface_export_%s_pickle_path' % nutrient]),
-            target_path_list=[f_reg['surface_export_%s_pickle_path' % nutrient]],
+                f_reg[f'surface_export_{nutrient}_pickle_path']),
+            target_path_list=[f_reg[f'surface_export_{nutrient}_pickle_path']],
             dependent_task_list=[calculate_export_task],
-            task_name='aggregate %s export' % nutrient)
+            task_name=f'aggregate {nutrient} export')
 
         aggregate_surface_load_task = task_graph.add_task(
             func=_aggregate_and_pickle_total,
             args=(
                 (surface_load_path, 1), f_reg['watershed_results_ndr_path'],
-                f_reg['surface_load_%s_pickle_path' % nutrient]),
-            target_path_list=[f_reg['surface_load_%s_pickle_path' % nutrient]],
+                f_reg[f'surface_load_{nutrient}_pickle_path']),
+            target_path_list=[f_reg[f'surface_load_{nutrient}_pickle_path']],
             dependent_task_list=[surface_load_task, create_vector_task],
-            task_name='aggregate %s surface load' % nutrient)
+            task_name=f'aggregate {nutrient} surface load')
 
-        field_pickle_map['surf_%s_ld' % nutrient] = (
-            f_reg['surface_load_%s_pickle_path' % nutrient])
-        field_pickle_map['%s_exp_surf' % nutrient] = (
-            f_reg['export_%s_pickle_path' % nutrient])
-        field_header_order_list = (
-            [x % nutrient for x in [
-                'surf_%s_ld', 'sub_%s_ld', '%s_exp_tot']] +
-            field_header_order_list)
+        field_pickle_map[f'{nutrient}_surface_load'] = (
+            f_reg[f'surface_load_{nutrient}_pickle_path'])
+        field_pickle_map[f'{nutrient}_surface_export'] = (
+            f_reg[f'export_{nutrient}_pickle_path'])
 
     task_graph.close()
     task_graph.join()
 
     LOGGER.info('Writing summaries to output shapefile')
     _add_fields_to_shapefile(
-        field_pickle_map, field_header_order_list,
-        f_reg['watershed_results_ndr_path'])
+        field_pickle_map, f_reg['watershed_results_ndr_path'])
 
     LOGGER.info(r'NDR complete!')
     LOGGER.info(r'  _   _    ____    ____     ')
@@ -759,11 +752,11 @@ def _slope_proportion_and_threshold(slope_path, target_threshold_slope_path):
         target_threshold_slope_path, gdal.GDT_Float32, slope_nodata)
 
 
-def _add_fields_to_shapefile(
-        field_pickle_map, field_header_order, target_vector_path):
+def _add_fields_to_shapefile(field_pickle_map, target_vector_path):
     """Add fields and values to an OGR layer open for writing.
 
     Args:
+
         fid = feature.GetFID()
         for field_name in field_header_order:
             feature.SetField(
@@ -807,13 +800,13 @@ def validate(args, limit_to=None):
 
         nutrients_selected = set()
         for nutrient_letter in ('n', 'p'):
-            do_nutrient_key = 'calc_%s' % nutrient_letter
+            do_nutrient_key = f'calc_{nutrient_letter}'
             if do_nutrient_key in args and args[do_nutrient_key]:
                 nutrients_selected.add(do_nutrient_key)
                 required_fields += [
-                    'load_%s' % nutrient_letter,
-                    'eff_%s' % nutrient_letter,
-                    'crit_len_%s' % nutrient_letter,
+                    f'load_{nutrient_letter}',
+                    f'eff_{nutrient_letter}',
+                    f'crit_len_{nutrient_letter}',
                 ]
 
         if not nutrients_selected:
@@ -1324,7 +1317,7 @@ def create_vector_copy(base_vector_path, target_vector_path):
     if os.path.isfile(target_vector_path):
         os.remove(target_vector_path)
     base_vector = gdal.OpenEx(base_vector_path, gdal.OF_VECTOR)
-    driver = gdal.GetDriverByName('ESRI Shapefile')
+    driver = gdal.GetDriverByName('GPKG')
     target_vector = driver.CreateCopy(
         target_vector_path, base_vector)
     target_vector = None  # seemingly uncessary but gdal seems to like it.
