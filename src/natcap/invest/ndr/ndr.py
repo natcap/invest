@@ -756,9 +756,29 @@ def _add_fields_to_shapefile(field_pickle_map, target_vector_path):
     """Add fields and values to an OGR layer open for writing.
 
     Args:
+        field_pickle_map (dict): maps field name to a pickle file that is a
+            result of pygeoprocessing.zonal_stats with FIDs that match
+            `target_vector_path`. Fields will be written in the order they
+            appear in this dictionary.
+        target_vector_path (string): path to target vector file.
+    Returns:
+        None.
+    """
+    target_vector = gdal.OpenEx(
+        target_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
+    target_layer = target_vector.GetLayer()
+    field_summaries = {}
+    for field_name, pickle_file_name in field_pickle_map.items():
+        field_def = ogr.FieldDefn(field_name, ogr.OFTReal)
+        field_def.SetWidth(24)
+        field_def.SetPrecision(11)
+        target_layer.CreateField(field_def)
+        with open(pickle_file_name, 'rb') as pickle_file:
+            field_summaries[field_name] = pickle.load(pickle_file)
 
+    for feature in target_layer:
         fid = feature.GetFID()
-        for field_name in field_header_order:
+        for field_name in field_pickle_map:
             feature.SetField(
                 field_name, float(field_summaries[field_name][fid]['sum']))
         # Save back to datasource
