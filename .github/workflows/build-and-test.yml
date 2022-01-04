@@ -348,7 +348,7 @@ jobs:
                     requirements.txt requirements-dev.txt \
                     requirements-gui.txt > requirements-all.yml
                   conda env update --file requirements-all.yml
-                  make install
+                  python -m pip install .
 
             - name: Run UI tests
               shell: bash -l {0}
