@@ -101,6 +101,7 @@ OutFile ..\..\dist\InVEST_${FORKNAME}${VERSION}_${ARCHITECTURE}_Setup.exe
 ShowInstDetails show
 BrandingText "2021 ${PRODUCT_PUBLISHER}"
 SetCompressor zlib
+Unicode false
 
 ; Include after SetCompressor
 !include Utils.nsh
