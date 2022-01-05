@@ -663,7 +663,8 @@ def execute(args):
                     f_reg['watershed_results_ndr_path'],
                     f_reg['subsurface_export_n_pickle_path']),
                 target_path_list=[f_reg['subsurface_export_n_pickle_path']],
-                dependent_task_list=[subsurface_export_task, create_vector_task],
+                dependent_task_list=[
+                    subsurface_export_task, create_vector_task],
                 task_name='aggregate n subsurface export')
 
             _ = task_graph.add_task(
@@ -672,7 +673,8 @@ def execute(args):
                     (f_reg['n_total_export_path'], 1),
                     f_reg['watershed_results_ndr_path'],
                     f_reg['total_export_n_pickle_path']),
-                target_path_list=[f_reg[f'total_export_{nutrient}_pickle_path']],
+                target_path_list=[
+                    f_reg[f'total_export_{nutrient}_pickle_path']],
                 dependent_task_list=[total_export_task, create_vector_task],
                 task_name='aggregate n total export')
 
@@ -687,9 +689,12 @@ def execute(args):
                 dependent_task_list=[subsurface_load_task, create_vector_task],
                 task_name=f'aggregate {nutrient} subsurface load')
 
-            field_pickle_map['n_subsurface_export'] = f_reg['subsurface_export_n_pickle_path']
-            field_pickle_map['n_total_export'] = f_reg['total_export_n_pickle_path']
-            field_pickle_map['n_subsurface_load'] = f_reg['subsurface_load_n_pickle_path']
+            field_pickle_map['n_subsurface_export'] = f_reg[
+                'subsurface_export_n_pickle_path']
+            field_pickle_map['n_total_export'] = f_reg[
+                'total_export_n_pickle_path']
+            field_pickle_map['n_subsurface_load'] = f_reg[
+                'subsurface_load_n_pickle_path']
 
         _ = task_graph.add_task(
             func=_aggregate_and_pickle_total,
