@@ -151,15 +151,13 @@ jobs:
             - name: Authenticate GCP
               # Secrets not available in PR so don't use GCP.
               if: github.event_name != 'pull_request'
-              uses: 'google-github-actions/auth@v0'
+              uses: google-github-actions/auth@v0
               with:
-                credentials_json: '${{ secrets.GOOGLE_SERVICE_ACC_KEY }}'
+                credentials_json: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
 
             - name: Set up GCP
               if: github.event_name != 'pull_request'
               uses: google-github-actions/setup-gcloud@v0
-              with:
-                  service_account_key: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
 
             - name: Deploy artifacts to GCS
               # Secrets not available in PR so don't use GCP.
@@ -242,9 +240,9 @@ jobs:
             - name: Authenticate GCP
               # Secrets not available in PR so don't use GCP.
               if: github.event_name != 'pull_request'
-              uses: 'google-github-actions/auth@v0'
+              uses: google-github-actions/auth@v0
               with:
-                credentials_json: '${{ secrets.GOOGLE_SERVICE_ACC_KEY }}'
+                credentials_json: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
 
             - name: Set up GCP
               if: github.event_name != 'pull_request'
