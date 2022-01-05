@@ -9,95 +9,90 @@ import taskgraph
 import numpy
 
 from . import utils
+from . import spec_utils
+from .spec_utils import u
 from . import validation
 from . import MODEL_METADATA
 
 LOGGER = logging.getLogger(__name__)
+
+INVALID_BAND_INDEX_MSG = _('Must be between 1 and {maximum}')
 
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["routedem"].model_title,
     "pyname": MODEL_METADATA["routedem"].pyname,
     "userguide_html": MODEL_METADATA["routedem"].userguide,
     "args": {
-        "workspace_dir": validation.WORKSPACE_SPEC,
-        "results_suffix": validation.SUFFIX_SPEC,
-        "n_workers": validation.N_WORKERS_SPEC,
-        "dem_path": {
-            "type": "raster",
-            "required": True,
-            "about": (
-                "A GDAL-supported raster file containing a base Digital "
-                "Elevation Model to execute the routing functionality "
-                "across."),
-            "name": "Digital Elevation Model"
-        },
+        "workspace_dir": spec_utils.WORKSPACE,
+        "results_suffix": spec_utils.SUFFIX,
+        "n_workers": spec_utils.N_WORKERS,
+        "dem_path": spec_utils.DEM,
         "dem_band_index": {
-            "validation_options": {
-                "expression": "value >= 1",
-            },
             "type": "number",
+            "expression": "value >= 1",
+            "units": u.none,
             "required": False,
-            "about": (
-                "The band index to use from the raster. This positive "
-                "integer is 1-based. Default: 1"),
-            "name": "Band Index"
+            "about": _(
+                "Index of the raster band to use, for multi-band rasters."),
+            "name": _("band index")
         },
         "algorithm": {
-            "validation_options": {
-                "options": ["D8", "MFD"],
-            },
             "type": "option_string",
-            "required": True,
-            "about": (
-                "The routing algorithm to use. "
-                "<ul><li>D8: all water flows directly into the most downhill "
-                "of each of the 8 neighbors of a cell.</li>"
-                "<li>MFD: Multiple Flow Direction. Fractional flow is "
-                "modeled between pixels.</li></ul>"),
-            "name": "Routing Algorithm"
+            "options": {
+                "D8": {
+                    "display_name": "D8",
+                    "description": _(
+                        "All water on a pixel flows into the most downhill of "
+                        "its 8 surrounding pixels")},
+                "MFD": {
+                    "display_name": "MFD",
+                    "description": _(
+                        "Flow off a pixel is modeled fractionally so that "
+                        "water is split among multiple downstream pixels")}
+            },
+            "about": _("The routing algorithm to use."),
+            "name": _("routing algorithm")
         },
         "calculate_flow_direction": {
             "type": "boolean",
             "required": False,
-            "about": "Select to calculate flow direction",
-            "name": "Calculate Flow Direction"
+            "about": _("Calculate flow direction from the provided DEM."),
+            "name": _("calculate flow direction")
         },
         "calculate_flow_accumulation": {
-            "validation_options": {},
             "type": "boolean",
             "required": False,
-            "about": "Select to calculate flow accumulation.",
-            "name": "Calculate Flow Accumulation"
+            "about": _(
+                "Calculate flow accumulation from the flow direction output."),
+            "name": _("calculate flow accumulation")
         },
         "calculate_stream_threshold": {
             "type": "boolean",
             "required": False,
-            "about": "Select to calculate a stream threshold to flow accumulation.",
-            "name": "Calculate Stream Thresholds"
+            "about": _(
+                "Calculate streams from the flow accumulation output. "),
+            "name": _("calculate streams")
         },
         "threshold_flow_accumulation": {
-            "validation_options": {},
-            "type": "number",
+            **spec_utils.THRESHOLD_FLOW_ACCUMULATION,
             "required": "calculate_stream_threshold",
             "about": (
-                "The number of upstream cells that must flow into a cell "
-                "before it's classified as a stream."),
-            "name": "Threshold Flow Accumulation Limit"
+                f"{spec_utils.THRESHOLD_FLOW_ACCUMULATION['about']} "
+                "Required if Calculate Streams is selected.")
         },
         "calculate_downstream_distance": {
             "type": "boolean",
             "required": False,
-            "about": (
-                "If selected, creates a downstream distance raster based "
-                "on the thresholded flow accumulation stream "
-                "classification."),
-            "name": "Calculate Distance to stream"
+            "about": _(
+                "Calculate flow distance from each pixel to a stream as "
+                "defined in the Calculate Streams output."),
+            "name": _("calculate distance to stream")
         },
         "calculate_slope": {
             "type": "boolean",
             "required": False,
-            "about": "If selected, calculates slope from the provided DEM.",
-            "name": "Calculate Slope"
+            "about": _("Calculate percent slope from the provided DEM."),
+            "name": _("calculate slope")
         }
     }
 }
@@ -150,8 +145,8 @@ def _threshold_flow(flow_accum_pixels, threshold, in_nodata, out_nodata):
 
     valid_mask = slice(None)
     if in_nodata is not None:
-        valid_mask = ~numpy.isclose(flow_accum_pixels, in_nodata)
-    
+        valid_mask = ~utils.array_equals_nodata(flow_accum_pixels, in_nodata)
+
     out_matrix[valid_mask & stream_mask] = 1
     out_matrix[valid_mask & ~stream_mask] = 0
     return out_matrix
@@ -374,6 +369,6 @@ def validate(args, limit_to=None):
         if int(args['dem_band_index']) > raster_info['n_bands']:
             validation_warnings.append((
                 ['dem_band_index'],
-                'Must be between 1 and %s' % raster_info['n_bands']))
+                INVALID_BAND_INDEX_MSG.format(maximum=raster_info['n_bands'])))
 
     return validation_warnings

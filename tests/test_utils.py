@@ -213,6 +213,7 @@ class ExponentialDecayUtilsTests(unittest.TestCase):
 
 class SandboxTempdirTests(unittest.TestCase):
     """Test Sandbox Tempdir."""
+
     def setUp(self):
         """Setup workspace."""
         self.workspace_dir = tempfile.mkdtemp()
@@ -239,6 +240,7 @@ class SandboxTempdirTests(unittest.TestCase):
 
 class TimeFormattingTests(unittest.TestCase):
     """Test Time Formatting."""
+
     def test_format_time_hours(self):
         """Test format time hours."""
         from natcap.invest.utils import _format_time
@@ -263,6 +265,7 @@ class TimeFormattingTests(unittest.TestCase):
 
 class LogToFileTests(unittest.TestCase):
     """Test Log To File."""
+
     def setUp(self):
         """Create a temporary workspace."""
         self.workspace = tempfile.mkdtemp()
@@ -334,6 +337,7 @@ class LogToFileTests(unittest.TestCase):
 
 class ThreadFilterTests(unittest.TestCase):
     """Test Thread Filter."""
+
     def test_thread_filter_same_thread(self):
         """Test threat filter same thread."""
         from natcap.invest.utils import ThreadFilter
@@ -422,6 +426,7 @@ class MakeDirectoryTests(unittest.TestCase):
 
 class GDALWarningsLoggingTests(unittest.TestCase):
     """Test GDAL Warnings Logging."""
+
     def setUp(self):
         """Create a temporary workspace."""
         self.workspace = tempfile.mkdtemp()
@@ -501,6 +506,7 @@ class GDALWarningsLoggingTests(unittest.TestCase):
 
 class PrepareWorkspaceTests(unittest.TestCase):
     """Test Prepare Workspace."""
+
     def setUp(self):
         """Create a temporary workspace."""
         self.workspace = tempfile.mkdtemp()
@@ -540,6 +546,7 @@ class PrepareWorkspaceTests(unittest.TestCase):
 
 class BuildLookupFromCSVTests(unittest.TestCase):
     """Tests for natcap.invest.utils.build_lookup_from_csv."""
+
     def setUp(self):
         """Make temporary directory for workspace."""
         self.workspace_dir = tempfile.mkdtemp()
@@ -564,8 +571,8 @@ class BuildLookupFromCSVTests(unittest.TestCase):
                 'foo': -1.0,
                 'bar': 'bar',
                 '_': 'apple'
-                },
-            }
+            },
+        }
         self.assertDictEqual(result, expected_dict)
 
     def test_unique_key_not_first_column(self):
@@ -583,10 +590,10 @@ class BuildLookupFromCSVTests(unittest.TestCase):
         result = utils.build_lookup_from_csv(
             table_path, 'lucode', to_lower=True)
         expected_result = {
-                1: {'desc': 'corn', 'val1': 0.5, 'val2': 2, 'lucode': 1},
-                2: {'desc': 'bread', 'val1': 1, 'val2': 4, 'lucode': 2},
-                3: {'desc': 'beans', 'val1': 0.5, 'val2': 4, 'lucode': 3},
-                4: {'desc': 'butter', 'val1': 9, 'val2': 1, 'lucode': 4}}
+            1: {'desc': 'corn', 'val1': 0.5, 'val2': 2, 'lucode': 1},
+            2: {'desc': 'bread', 'val1': 1, 'val2': 4, 'lucode': 2},
+            3: {'desc': 'beans', 'val1': 0.5, 'val2': 4, 'lucode': 3},
+            4: {'desc': 'butter', 'val1': 9, 'val2': 1, 'lucode': 4}}
 
         self.assertDictEqual(result, expected_result)
 
@@ -635,10 +642,10 @@ class BuildLookupFromCSVTests(unittest.TestCase):
         result = utils.build_lookup_from_csv(
             table_path, 'lucode', to_lower=True)
         expected_result = {
-                1: {'desc': 'corn', 'val1': 0.5, 'val2': 2, 'lucode': 1},
-                2: {'desc': '', 'val1': 1, 'val2': 4, 'lucode': 2},
-                3: {'desc': 'beans', 'val1': 0.5, 'val2': 4, 'lucode': 3},
-                4: {'desc': 'butter', 'val1': '', 'val2': 1, 'lucode': 4}}
+            1: {'desc': 'corn', 'val1': 0.5, 'val2': 2, 'lucode': 1},
+            2: {'desc': '', 'val1': 1, 'val2': 4, 'lucode': 2},
+            3: {'desc': 'beans', 'val1': 0.5, 'val2': 4, 'lucode': 3},
+            4: {'desc': 'butter', 'val1': '', 'val2': 1, 'lucode': 4}}
 
         self.assertDictEqual(result, expected_result)
 
@@ -657,9 +664,9 @@ class BuildLookupFromCSVTests(unittest.TestCase):
         result = utils.build_lookup_from_csv(
             table_path, 'lucode', to_lower=True)
         expected_result = {
-                1.0: {'desc': 'corn', 'val1': 0.5, 'val2': 2, 'lucode': 1.0},
-                3.0: {'desc': 'beans', 'val1': 0.5, 'val2': 4, 'lucode': 3.0},
-                4.0: {'desc': 'butter', 'val1': 9, 'val2': 1, 'lucode': 4.0}}
+            1.0: {'desc': 'corn', 'val1': 0.5, 'val2': 2, 'lucode': 1.0},
+            3.0: {'desc': 'beans', 'val1': 0.5, 'val2': 4, 'lucode': 3.0},
+            4.0: {'desc': 'butter', 'val1': 9, 'val2': 1, 'lucode': 4.0}}
 
         self.assertDictEqual(result, expected_result)
 
@@ -679,10 +686,10 @@ class BuildLookupFromCSVTests(unittest.TestCase):
             table_path, 'lucode', to_lower=True, column_list=['val1', 'val2'])
 
         expected_result = {
-                1: {'val1': 0.5, 'val2': 2, 'lucode': 1},
-                2: {'val1': 1, 'val2': 4, 'lucode': 2},
-                3: {'val1': 0.5, 'val2': 4, 'lucode': 3},
-                4: {'val1': 9, 'val2': 1, 'lucode': 4}}
+            1: {'val1': 0.5, 'val2': 2, 'lucode': 1},
+            2: {'val1': 1, 'val2': 4, 'lucode': 2},
+            3: {'val1': 0.5, 'val2': 4, 'lucode': 3},
+            4: {'val1': 9, 'val2': 1, 'lucode': 4}}
 
         self.assertDictEqual(result, expected_result)
 
@@ -702,10 +709,10 @@ class BuildLookupFromCSVTests(unittest.TestCase):
             table_path, 'lucode', to_lower=True)
 
         expected_result = {
-                1: {'desc': 'corn', 'val1': 0.5, 'val2': 2, 'lucode': 1},
-                2: {'desc': 'bread', 'val1': 1, 'val2': 4, 'lucode': 2},
-                3: {'desc': 'beans', 'val1': 0.5, 'val2': 4, 'lucode': 3},
-                4: {'desc': 'butter', 'val1': 9, 'val2': 1, 'lucode': 4}}
+            1: {'desc': 'corn', 'val1': 0.5, 'val2': 2, 'lucode': 1},
+            2: {'desc': 'bread', 'val1': 1, 'val2': 4, 'lucode': 2},
+            3: {'desc': 'beans', 'val1': 0.5, 'val2': 4, 'lucode': 3},
+            4: {'desc': 'butter', 'val1': 9, 'val2': 1, 'lucode': 4}}
 
         self.assertDictEqual(result, expected_result)
 
@@ -725,10 +732,10 @@ class BuildLookupFromCSVTests(unittest.TestCase):
             table_path, 'lucode', to_lower=True)
 
         expected_result = {
-                1: {'desc': 'corn', 'val1': 0.5, 'val2': 2, 'lucode': 1},
-                2: {'desc': 'bread', 'val1': 1, 'val2': 4, 'lucode': 2},
-                3: {'desc': 'beans', 'val1': 0.5, 'val2': 4, 'lucode': 3},
-                4: {'desc': 'butter', 'val1': 9, 'val2': 1, 'lucode': 4}}
+            1: {'desc': 'corn', 'val1': 0.5, 'val2': 2, 'lucode': 1},
+            2: {'desc': 'bread', 'val1': 1, 'val2': 4, 'lucode': 2},
+            3: {'desc': 'beans', 'val1': 0.5, 'val2': 4, 'lucode': 3},
+            4: {'desc': 'butter', 'val1': 9, 'val2': 1, 'lucode': 4}}
 
         self.assertDictEqual(result, expected_result)
 
@@ -1080,6 +1087,7 @@ class CreateCoordinateTransformationTests(unittest.TestCase):
 
 class AssertVectorsEqualTests(unittest.TestCase):
     """Tests for natcap.invest.utils._assert_vectors_equal."""
+
     def setUp(self):
         """Setup workspace."""
         self.workspace_dir = tempfile.mkdtemp()
@@ -1452,6 +1460,7 @@ class AssertVectorsEqualTests(unittest.TestCase):
 
         self.assertTrue("Vector geometry assertion fail." in str(cm.exception))
 
+
 class ReclassifyRasterOpTests(unittest.TestCase):
     """Tests for natcap.invest.utils.reclassify_raster."""
 
@@ -1491,9 +1500,39 @@ class ReclassifyRasterOpTests(unittest.TestCase):
                 (raster_path, 1), value_map, target_raster_path,
                 gdal.GDT_Int32, -1, error_details=message_details)
         expected_message = (
-                "Values in the LULC raster were found that are"
-                " not represented under the 'lucode' column"
-                " of the Biophysical table. The missing values found in"
-                " the LULC raster but not the table are: [3].")
+            "Values in the LULC raster were found that are"
+            " not represented under the 'lucode' column"
+            " of the Biophysical table. The missing values found in"
+            " the LULC raster but not the table are: [3].")
         self.assertTrue(
             expected_message in str(context.exception), str(context.exception))
+
+class ArrayEqualsNodataTests(unittest.TestCase):
+    """Tests for natcap.invest.utils.array_equals_nodata."""
+
+    def test_integer_array(self):
+        """Utils: test integer array is returned as expected."""
+        from natcap.invest import utils
+
+        nodata_values = [9, 9.0]
+
+        int_array = numpy.array(
+            [[4, 2, 9], [1, 9, 3], [9, 6, 1]], dtype=numpy.int16)
+
+        expected_array = numpy.array([[0, 0, 1], [0, 1, 0], [1, 0, 0]])
+
+        for nodata in nodata_values:
+            result_array = utils.array_equals_nodata(int_array, nodata)
+            numpy.testing.assert_array_equal(result_array, expected_array)
+
+    def test_nan_nodata_array(self):
+        """Utils: test array with numpy.nan nodata values."""
+        from natcap.invest import utils
+
+        array = numpy.array(
+            [[4, 2, numpy.nan], [1, numpy.nan, 3], [numpy.nan, 6, 1]])
+
+        expected_array = numpy.array([[0, 0, 1], [0, 1, 0], [1, 0, 0]])
+
+        result_array = utils.array_equals_nodata(array, numpy.nan)
+        numpy.testing.assert_array_equal(result_array, expected_array)

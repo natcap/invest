@@ -256,8 +256,8 @@ jobs:
                   # setup-gcloud action adds 'gsutil' to the PATH
                   make GSUTIL="gsutil" deploy
 
-    validate-sampledata:
-        name: "Validate sample datastacks"
+    validate-resources:
+        name: "Validate Sampledata & User Guide"
         runs-on: windows-latest
         needs: check-syntax-errors
         steps:
@@ -294,6 +294,10 @@ jobs:
             - name: Validate sample data
               shell: bash -l {0}
               run: make validate_sampledata
+
+            - name: Validate user guide links
+              shell: bash -l {0}
+              run: make validate_userguide_filenames
 
     run-ui-tests:
         name: "Run UI Tests"

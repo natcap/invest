@@ -31,7 +31,7 @@ Replace ``<python version>`` with a python version known to be compatible with t
 Replace ``<gdal version>`` with a GDAL version known to be compatible with the desired invest version.
 Replace ``<invest version>`` with the desired invest version.
 
-Most of the time, it is not really necessary to specify the versions of ``python``, ``gdal``, and ``natcap.invest``. If you do not specify a version, the latest version will be installed. Usually the latest versions are compatible with each other, but not always. Specifying versions that are known to work can prevent some problems. You can find the supported range of GDAL versions in the [requirements.txt](https://github.com/natcap/invest/blob/main/requirements.txt) (be sure to switch to the desired release tag in the dropdown).
+Most of the time, it is not really necessary to specify the versions of ``python``, ``gdal``, and ``natcap.invest``. If you do not specify a version, the latest version will be installed. Usually the latest versions are compatible with each other, but not always. Specifying versions that are known to work can prevent some problems. You can find the supported range of GDAL versions in the `requirements.txt <https://github.com/natcap/invest/blob/main/requirements.txt>`_ (be sure to switch to the desired release tag in the dropdown).
 
 **Example for InVEST 3.9.1**::
 
@@ -54,7 +54,7 @@ Here is an explanation of what the commands are doing:
 
    ``conda create -y -c conda-forge -n <name> python=<python version>``
 
-   To be safe, you should **always install ``natcap.invest``` into a brand-new virtual environment**. This way you can be sure you have all the right versions of dependencies. Many issues with installing or using the ``natcap.invest`` package arise from dependency problems, and it's a lot easier to create a new environment than it is to fix an existing one.
+   To be safe, you should **always install** ``natcap.invest`` **into a brand-new virtual environment**. This way you can be sure you have all the right versions of dependencies. Many issues with installing or using the ``natcap.invest`` package arise from dependency problems, and it's a lot easier to create a new environment than it is to fix an existing one.
 
 2. Activate the brand-new environment just created.
 
@@ -78,7 +78,7 @@ Here is an explanation of what the commands are doing:
 
       pip install natcap.invest[ui]=<invest version>
 
-   The ``[ui]`` tells `pip` to also install all the dependencies needed for the UI.
+   The ``[ui]`` tells ``pip`` to also install all the dependencies needed for the UI.
 
 
 Python Dependencies

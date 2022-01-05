@@ -14,27 +14,20 @@ import sys
 import textwrap
 import warnings
 
-try:
-    from . import __version__
-    from . import utils
-    from . import datastack
-    from . import MODEL_METADATA
-except (ValueError, ImportError):
-    # When we're in a PyInstaller build, this isn't a module.
-    from natcap.invest import __version__
-    from natcap.invest import utils
-    from natcap.invest import datastack
-    from natcap.invest import MODEL_METADATA
+import natcap.invest
+from natcap.invest import datastack
+from natcap.invest import ui_server
+from natcap.invest import utils
+from natcap.invest.ui import launcher, inputs
 
 
 DEFAULT_EXIT_CODE = 1
 LOGGER = logging.getLogger(__name__)
 
-
 # Build up an index mapping aliases to model_name.
 # ``model_name`` is the key to the MODEL_METADATA dict.
 _MODEL_ALIASES = {}
-for model_name, meta in MODEL_METADATA.items():
+for model_name, meta in natcap.invest.MODEL_METADATA.items():
     for alias in meta.aliases:
         assert alias not in _MODEL_ALIASES, (
             'Alias %s already defined for model %s') % (
@@ -46,33 +39,33 @@ def build_model_list_table():
     """Build a table of model names, aliases and other details.
 
     This table is a table only in the sense that its contents are aligned
-    into columns, but are not separated by a delimited.  This table
+    into columns, but are not separated by a delimiter.  This table
     is intended to be printed to stdout.
 
     Returns:
         A string representation of the formatted table.
     """
-    model_names = sorted(MODEL_METADATA.keys())
+    model_names = sorted(natcap.invest.MODEL_METADATA.keys())
     max_model_name_length = max(len(name) for name in model_names)
 
     # Adding 3 to max alias name length for the parentheses plus some padding.
     max_alias_name_length = max(len(', '.join(meta.aliases))
-                                for meta in MODEL_METADATA.values()) + 3
+                                for meta in natcap.invest.MODEL_METADATA.values()) + 3
     template_string = '    {model_name} {aliases} {model_title} {usage}'
-    strings = ['Available models:']
+    strings = [_('Available models:')]
     for model_name in model_names:
         usage_string = '(No GUI available)'
-        if MODEL_METADATA[model_name].gui is not None:
+        if natcap.invest.MODEL_METADATA[model_name].gui is not None:
             usage_string = ''
 
-        alias_string = ', '.join(MODEL_METADATA[model_name].aliases)
+        alias_string = ', '.join(natcap.invest.MODEL_METADATA[model_name].aliases)
         if alias_string:
             alias_string = '(%s)' % alias_string
 
         strings.append(template_string.format(
             model_name=model_name.ljust(max_model_name_length),
             aliases=alias_string.ljust(max_alias_name_length),
-            model_title=MODEL_METADATA[model_name].model_title,
+            model_title=natcap.invest.MODEL_METADATA[model_name].model_title,
             usage=usage_string))
     return '\n'.join(strings) + '\n'
 
@@ -89,7 +82,7 @@ def build_model_list_json():
 
     """
     json_object = {}
-    for model_name, model_data in MODEL_METADATA.items():
+    for model_name, model_data in natcap.invest.MODEL_METADATA.items():
         json_object[model_data.model_title] = {
             'model_name': model_name,
             'aliases': model_data.aliases
@@ -128,7 +121,7 @@ def export_to_python(target_filepath, model, args_dict=None):
     """)
 
     if args_dict is None:
-        model_module = importlib.import_module(name=MODEL_METADATA[model].pyname)
+        model_module = importlib.import_module(name=natcap.invest.MODEL_METADATA[model].pyname)
         spec = model_module.ARGS_SPEC
         cast_args = {key: '' for key in spec['args'].keys()}
     else:
@@ -145,10 +138,10 @@ def export_to_python(target_filepath, model, args_dict=None):
         args = args.replace('{', '{\n ')
         args = args.replace('}', ',\n}')
         py_file.write(script_template.format(
-            invest_version=__version__,
+            invest_version=natcap.invest.__version__,
             today=datetime.datetime.now().strftime('%c'),
-            model_title=MODEL_METADATA[model].model_title,
-            pyname=MODEL_METADATA[model].pyname,
+            model_title=natcap.invest.MODEL_METADATA[model].model_title,
+            pyname=natcap.invest.MODEL_METADATA[model].pyname,
             model_args=args))
 
 
@@ -169,8 +162,8 @@ class SelectModelAction(argparse.Action):
 
             * the model name (verbatim) as identified in the keys of MODEL_METADATA
             * a uniquely identifiable prefix for the model name (e.g. "d"
-              matches "delineateit", but "fi" matches both "fisheries" and
-              "finfish"
+              matches "delineateit", but "co" matches both
+              "coastal_vulnerability" and "coastal_blue_carbon").
             * a known model alias, as registered in MODEL_METADATA
 
         If no single model can be identified based on these rules, an error
@@ -182,7 +175,7 @@ class SelectModelAction(argparse.Action):
 
         Overridden from argparse.Action.__call__.
         """
-        known_models = sorted(list(MODEL_METADATA.keys()))
+        known_models = sorted(list(natcap.invest.MODEL_METADATA.keys()))
 
         matching_models = [model for model in known_models if
                            model.startswith(values)]
@@ -211,7 +204,7 @@ class SelectModelAction(argparse.Action):
 
 
 def main(user_args=None):
-    """CLI entry point for launching InVEST runs.
+    """CLI entry point for launching InVEST runs and other useful utilities.
 
     This command-line interface supports two methods of launching InVEST models
     from the command-line:
@@ -241,7 +234,7 @@ def main(user_args=None):
         prog='invest'
     )
     parser.add_argument('--version', action='version',
-                        version=__version__)
+                        version=natcap.invest.__version__)
     verbosity_group = parser.add_mutually_exclusive_group()
     verbosity_group.add_argument(
         '-v', '--verbose', dest='verbosity', default=0, action='count',
@@ -252,6 +245,18 @@ def main(user_args=None):
         '--debug', dest='log_level', default=logging.ERROR,
         action='store_const', const=logging.DEBUG,
         help='Enable debug logging. Alias for -vvv')
+
+    # list the language code and corresponding language name (in that language)
+    supported_languages_string = ', '.join([
+        f'{locale} ({display_name})'
+        for locale, display_name in natcap.invest.LOCALE_NAME_MAP.items()])
+    parser.add_argument(
+        '-L', '--language', default='en',
+        choices=natcap.invest.LOCALES,
+        help=('Choose a language. Model specs, names, and validation messages '
+              'will be translated. Log messages are not translated. Value '
+              'should be an ISO 639-1 language code. Supported options are: '
+              f'{supported_languages_string}.'))
 
     subparsers = parser.add_subparsers(dest='subcommand')
 
@@ -314,6 +319,12 @@ def main(user_args=None):
         help=('The model for which the spec should be fetched.  Use "invest '
               'list" to list the available models.'))
 
+    serve_subparser = subparsers.add_parser(
+        'serve', help=('Start the flask app on the localhost.'))
+    serve_subparser.add_argument(
+        '--port', type=int, default=56789,
+        help='Port number for the Flask server')
+
     export_py_subparser = subparsers.add_parser(
         'export-py', help=('Save a python script that executes a model.'))
     export_py_subparser.add_argument(
@@ -325,6 +336,7 @@ def main(user_args=None):
         help='Define a location for the saved .py file')
 
     args = parser.parse_args(user_args)
+    natcap.invest.install_language(args.language)
 
     root_logger = logging.getLogger()
     handler = logging.StreamHandler(sys.stdout)
@@ -350,6 +362,9 @@ def main(user_args=None):
     logging.getLogger('natcap').setLevel(logging.DEBUG)
 
     if args.subcommand == 'list':
+        # reevaluate in the new language
+        # NOTE this only reevaluates natcap/invest/__init__.py, no other modules
+        importlib.reload(natcap.invest)
         if args.json:
             message = build_model_list_json()
         else:
@@ -359,7 +374,6 @@ def main(user_args=None):
         parser.exit()
 
     if args.subcommand == 'launch':
-        from natcap.invest.ui import launcher
         parser.exit(launcher.main())
 
     if args.subcommand == 'validate':
@@ -369,12 +383,13 @@ def main(user_args=None):
             parser.exit(
                 1, "Error when parsing JSON datastack:\n    " + str(error))
 
-        model_module = importlib.import_module(
-            name=parsed_datastack.model_name)
+        # reload validation module first so it's also in the correct language
+        importlib.reload(importlib.import_module('natcap.invest.validation'))
+        model_module = importlib.reload(importlib.import_module(
+            name=parsed_datastack.model_name))
 
         try:
-            validation_result = getattr(
-                model_module, 'validate')(parsed_datastack.args)
+            validation_result = model_module.validate(parsed_datastack.args)
         except KeyError as missing_keys_error:
             if args.json:
                 message = json.dumps(
@@ -404,8 +419,9 @@ def main(user_args=None):
         parser.exit(0)
 
     if args.subcommand == 'getspec':
-        target_model = MODEL_METADATA[args.model].pyname
-        model_module = importlib.import_module(name=target_model)
+        target_model = natcap.invest.MODEL_METADATA[args.model].pyname
+        model_module = importlib.reload(
+            importlib.import_module(name=target_model))
         spec = model_module.ARGS_SPEC
 
         if args.json:
@@ -434,7 +450,7 @@ def main(user_args=None):
         else:
             parsed_datastack.args['workspace_dir'] = args.workspace
 
-        target_model = MODEL_METADATA[args.model].pyname
+        target_model = natcap.invest.MODEL_METADATA[args.model].pyname
         model_module = importlib.import_module(name=target_model)
         LOGGER.info('Imported target %s from %s',
                     model_module.__name__, model_module)
@@ -453,7 +469,7 @@ def main(user_args=None):
             # Exceptions will already be logged to the logfile but will ALSO be
             # written to stdout if this exception is uncaught.  This is by
             # design.
-            getattr(model_module, 'execute')(parsed_datastack.args)
+            model_module.execute(parsed_datastack.args)
 
     # If we're running in a GUI (either through ``invest run`` or
     # ``invest quickrun``), we'll need to load the Model's GUI class,
@@ -466,16 +482,14 @@ def main(user_args=None):
         # Creating this warning for future us to alert us to potential issues
         # if/when we forget to define QT_MAC_WANTS_LAYER at runtime.
         if (platform.system() == "Darwin" and
-                "QT_MAC_WANTS_LAYER"  not in os.environ):
+                "QT_MAC_WANTS_LAYER" not in os.environ):
             warnings.warn(
                 "Mac OS X Big Sur may require the 'QT_MAC_WANTS_LAYER' "
-                "environment variable to be defined in order to run.  If "
+                "environment variable to be defined in order to run. If "
                 "the application hangs on startup, set 'QT_MAC_WANTS_LAYER=1' "
                 "in the shell running this CLI.", RuntimeWarning)
 
-        from natcap.invest.ui import inputs
-
-        gui_class = MODEL_METADATA[args.model].gui
+        gui_class = natcap.invest.MODEL_METADATA[args.model].gui
         module_name, classname = gui_class.split('.')
         module = importlib.import_module(
             name='.ui.%s' % module_name,
@@ -515,6 +529,10 @@ def main(user_args=None):
         if app_exitcode != 0:
             parser.exit(app_exitcode,
                         'App terminated with exit code %s\n' % app_exitcode)
+
+    if args.subcommand == 'serve':
+        ui_server.app.run(port=args.port)
+        parser.exit(0)
 
     if args.subcommand == 'export-py':
         target_filepath = args.filepath

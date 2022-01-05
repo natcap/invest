@@ -13,8 +13,10 @@ import rtree
 import shapely.wkb
 import shapely.prepared
 
-from . import validation
 from . import utils
+from . import spec_utils
+from .spec_utils import u
+from . import validation
 from . import MODEL_METADATA
 
 LOGGER = logging.getLogger(__name__)
@@ -30,84 +32,82 @@ ARGS_SPEC = {
         "different_projections_ok": True,
     },
     "args": {
-        "workspace_dir": validation.WORKSPACE_SPEC,
-        "results_suffix": validation.SUFFIX_SPEC,
-        "n_workers": validation.N_WORKERS_SPEC,
-        "aoi_watersheds_path": {
-            "type": "vector",
-            "required": True,
-            "about": (
-                "Path to a vector of (sub)watersheds or sewersheds used to "
-                "indicate spatial area of interest."),
-            "name": "Watershed Vector"
-        },
+        "workspace_dir": spec_utils.WORKSPACE,
+        "results_suffix": spec_utils.SUFFIX,
+        "n_workers": spec_utils.N_WORKERS,
+        "aoi_watersheds_path": spec_utils.AOI,
         "rainfall_depth": {
-            "validation_options": {
-                "expression": "value > 0",
-            },
+            "expression": "value > 0",
             "type": "number",
-            "required": True,
-            "about": "Depth of rainfall in mm.",
-            "name": "Depth of rainfall in mm"
+            "units": u.millimeter,
+            "about": _("Depth of rainfall for the design storm of interest."),
+            "name": _("rainfall depth")
         },
         "lulc_path": {
-            "type": "raster",
-            "validation_options": {
-                "projected": True,
-            },
-            "required": True,
-            "about": "Path to a landcover raster",
-            "name": "Landcover Raster"
+            **spec_utils.LULC,
+            "projected": True,
+            "about": (
+                "Map of LULC. All values in this raster must have "
+                "corresponding entries in the Biophysical Table.")
         },
         "soils_hydrological_group_raster_path": {
-            "type": "raster",
-            "required": True,
-            "validation_options": {
-                "projected": True,
-            },
-            "about": (
-                "Raster with values equal to 1, 2, 3, 4, corresponding to "
-                "soil hydrologic group A, B, C, or D, respectively (used to "
-                "derive the CN number)"),
-            "name": "Soils Hydrological Group Raster"
+            **spec_utils.SOIL_GROUP,
+            "projected": True
         },
         "curve_number_table_path": {
-            "validation_options": {
-                "required_fields": ["lucode", "CN_A", "CN_B", "CN_C", "CN_D"],
-            },
             "type": "csv",
-            "required": True,
-            "about": (
-                "Path to a CSV table that to map landcover codes to curve "
-                "numbers and contains at least the headers 'lucode', "
-                "'CN_A', 'CN_B', 'CN_C', 'CN_D'"),
-            "name": "Biophysical Table"
+            "columns": {
+                "lucode": {
+                    "type": "integer",
+                    "about": "LULC codes matching those in the LULC map."},
+                "cn_[SOIL_GROUP]": {
+                    "type": "number",
+                    "units": u.none,
+                    "about": _(
+                        "The curve number value for this LULC type in each "
+                        "hydrologic soil group. Replace [SOIL_GROUP] with the "
+                        "soil group codes A, B, C, D, so that there is a "
+                        "column for each soil group.")
+                }
+            },
+            "about": _(
+                "Table of curve number data for each LULC class. All LULC "
+                "codes in the LULC raster must have corresponding entries in "
+                "this table."),
+            "name": _("biophysical table")
         },
         "built_infrastructure_vector_path": {
-            "validation_options": {
-                "required_fields": ["type"],
-            },
             "type": "vector",
+            "fields": {
+                "type": {
+                    "type": "integer",
+                    "about": (
+                        "Code indicating the building type. These codes "
+                        "must match those in the Damage Loss Table."
+                    )}},
+            "geometries": spec_utils.POLYGONS,
             "required": False,
-            "about": (
-                "Path to a vector with built infrastructure footprints. "
-                "Attribute table contains a column 'Type' with integers "
-                "(e.g. 1=residential, 2=office, etc.)."),
-            "name": "Built Infrastructure Vector"
+            "about": _("Map of building footprints."),
+            "name": _("built infrastructure")
         },
         "infrastructure_damage_loss_table_path": {
-            "validation_options": {
-                "required_fields": ["type", "damage"],
-            },
             "type": "csv",
+            "columns": {
+                "type": {
+                    "type": "integer",
+                    "about": "Building type code."},
+                "damage": {
+                    "type": "number",
+                    "units": u.currency/(u.meter**2),
+                    "about": "Potential damage loss for this building type."}
+            },
             "required": "built_infrastructure_vector_path",
-            "about": (
-                "Path to a a CSV table with columns 'Type' and 'Damage' with "
-                "values of built infrastructure type from the 'Type' field "
-                "in the 'Built Infrastructure Vector' and potential damage "
-                "loss (in $/m^2). Required if the built infrastructure vector "
-                "is provided."),
-            "name": "Built Infrastructure Damage Loss Table"
+            "about": _(
+                "Table of potential damage loss data for each building type. "
+                "All values in the Built Infrastructure vector 'type' field "
+                "must have corresponding entries in this table. Required if "
+                "the Built Infrastructure vector is provided."),
+            "name": _("damage loss table")
         }
     }
 }
@@ -143,7 +143,7 @@ def execute(args):
             path to a CSV table with columns 'Type' and 'Damage' with values
             of built infrastructure type from the 'Type' field in
             ``args['built_infrastructure_vector_path']`` and potential damage
-            loss (in $/m^2).
+            loss (in currency/m^2).
         args['n_workers'] (int): (optional) if present, indicates how many
             worker processes should be used in parallel processing. -1
             indicates single process mode, 0 is single process but
@@ -430,8 +430,8 @@ def _write_summary_vector(
     If ``damage_per_aoi_stats`` is provided, then these additional columns will
     be written to the vector::
 
-        * ``'aff_bld'``: Potential damage to built infrastructure in $,
-          per watershed.
+        * ``'aff_bld'``: Potential damage to built infrastructure in currency
+          units, per watershed.
         * ``'serv_blt'``: Spatial indicator of the importance of the runoff
           retention service
 
@@ -633,7 +633,7 @@ def _flood_vol_op(
     """
     result = numpy.empty(q_pi_array.shape, dtype=numpy.float32)
     result[:] = target_nodata
-    valid_mask = q_pi_array != q_pi_nodata
+    valid_mask = ~utils.array_equals_nodata(q_pi_array, q_pi_nodata)
     # 0.001 converts mm (quickflow) to m (pixel area units)
     result[valid_mask] = (
         q_pi_array[valid_mask] * pixel_area * 0.001)
@@ -658,7 +658,8 @@ def _runoff_retention_vol_op(
     """
     result = numpy.empty(runoff_retention_array.shape, dtype=numpy.float32)
     result[:] = target_nodata
-    valid_mask = runoff_retention_array != runoff_retention_nodata
+    valid_mask = ~utils.array_equals_nodata(
+        runoff_retention_array, runoff_retention_nodata)
     # the 1e-3 converts the mm of p_value to meters.
     result[valid_mask] = (
         runoff_retention_array[valid_mask] * p_value * cell_area * 1e-3)
@@ -683,7 +684,7 @@ def _runoff_retention_op(q_pi_array, p_value, q_pi_nodata, result_nodata):
     result[:] = result_nodata
     valid_mask = numpy.ones(q_pi_array.shape, dtype=bool)
     if q_pi_nodata is not None:
-        valid_mask[:] = ~numpy.isclose(q_pi_array, q_pi_nodata)
+        valid_mask[:] = ~utils.array_equals_nodata(q_pi_array, q_pi_nodata)
     result[valid_mask] = 1.0 - (q_pi_array[valid_mask] / p_value)
     return result
 
@@ -708,7 +709,8 @@ def _q_pi_op(p_value, s_max_array, s_max_nodata, result_nodata):
     zero_mask = (p_value <= lam * s_max_array)
     non_nodata_mask = numpy.ones(s_max_array.shape, dtype=bool)
     if s_max_nodata is not None:
-        non_nodata_mask[:] = ~numpy.isclose(s_max_array, s_max_nodata)
+        non_nodata_mask[:] = ~utils.array_equals_nodata(
+            s_max_array, s_max_nodata)
 
     # valid if not nodata and not going to be set to 0.
     valid_mask = non_nodata_mask & ~zero_mask
@@ -737,7 +739,7 @@ def _s_max_op(cn_array, cn_nodata, result_nodata):
     zero_mask = cn_array == 0
     valid_mask = ~zero_mask
     if cn_nodata is not None:
-        valid_mask[:] &= ~numpy.isclose(cn_array, cn_nodata)
+        valid_mask[:] &= ~utils.array_equals_nodata(cn_array, cn_nodata)
     result[valid_mask] = 25400.0 / cn_array[valid_mask] - 254.0
     result[zero_mask] = 0.0
     return result
@@ -765,9 +767,11 @@ def _lu_to_cn_op(
     result[:] = cn_nodata
     valid_mask = numpy.ones(lucode_array.shape, dtype=bool)
     if lucode_nodata is not None:
-        valid_mask[:] &= ~numpy.isclose(lucode_array, lucode_nodata)
+        valid_mask[:] &= ~utils.array_equals_nodata(
+            lucode_array, lucode_nodata)
     if soil_type_nodata is not None:
-        valid_mask[:] &= ~numpy.isclose(soil_type_array, soil_type_nodata)
+        valid_mask[:] &= ~utils.array_equals_nodata(
+            soil_type_array, soil_type_nodata)
 
     # this is an array where each column represents a valid landcover
     # pixel and the rows are the curve number index for the landcover

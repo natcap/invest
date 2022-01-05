@@ -2,28 +2,27 @@
   Changes should be grouped for readability.
 
   InVEST model names:
-  - Carbon
+  - Annual Water Yield
+  - Carbon Storage and Sequestration
   - Coastal Blue Carbon
   - Coastal Vulnerability
+  - Crop Pollination
   - Crop Production
   - DelineateIt
-  - Finfish
-  - Fisheries
   - Forest Carbon Edge Effects
   - Globio
   - Habitat Quality
   - HRA
-  - Annual Water Yield
   - NDR
-  - Pollination
-  - Recreation
-  - Routedem
+  - Visitation: Recreation and Tourism
+  - RouteDEM
   - Scenario Generator
   - Scenic Quality
   - SDR
   - Seasonal Water Yield
   - Urban Cooling
   - Urban Flood Risk
+  - Urban Stormwater Retention
   - Wave Energy
   - Wind Energy
 
@@ -33,10 +32,27 @@
 
 .. :changelog:
 
-
 Unreleased Changes
 ------------------
+* DelineateIt
+    * When snapping points to streams, if a point is equally near to more than
+      one stream pixel, it will now snap to the stream pixel with a higher
+      flow accumulation value. Before, it would snap to the stream pixel
+      encountered first in the raster (though this was not guaranteed).
+
+3.10.0 (2022-01-04)
+-------------------
 * General
+    * Add a ``--language`` argument to the command-line interface, which will
+      translate model names, specs, and validation messages.
+    * Accept a ``language`` query parameter at the UI server endpoints, which
+      will translate model names, specs, and validation messages.
+    * Added ``invest serve`` entry-point to the CLI. This launches a Flask app
+      and server on the localhost, to support the workbench.
+    * Major updates to each model's ``ARGS_SPEC`` (and some related validation)
+      to facilitate re-use & display in the Workbench and User's Guide.
+    * Standardized and de-duplicated text in ``ARGS_SPEC`` ``about`` and
+      ``name`` strings.
     * Update to FontAwesome 5 icons in the QT interface.
     * In response to the deprecation of ``setup.py``-based commands in Python
       3.10, the recommended way to build python distributions of
@@ -51,11 +67,27 @@ Unreleased Changes
     * Updating the ``taskgraph`` requirement to ``0.11.0`` to resolve an issue
       where modifying a file within a roughly 2-second window would fool
       ``taskgraph`` into believing that the file had not been modified.
-* DelineateIt
-    * When snapping points to streams, if a point is equally near to more than
-      one stream pixel, it will now snap to the stream pixel with a higher
-      flow accumulation value. Before, it would snap to the stream pixel
-      encountered first in the raster (though this was not guaranteed).
+    * Fixed a bug where some input rasters with NaN nodata values would go
+      undetected as nodata and yield unexpected behavior.
+* Annual Water Yield
+    * Renamed the Windows start menu shortcut from "Water Yield" to
+      "Annual Water Yield".
+* Coastal Vulnerability
+    * Fixed bug where shore points were created on interior landmass holes
+      (i.e. lakes).
+    * Added feature to accept raster (in addition to vector) habitat layers.
+    * Changed one intermediate output (geomorphology) from SHP to GPKG.
+    * Fixed bug where output vectors had coordinates with an unnecessary
+      z-dimension. Output vectors now have 2D geometry.
+* Crop Pollination
+    * Renamed the Windows start menu shortcut from "Pollination" to
+      "Crop Pollination".
+* Fisheries and Fisheries HST
+    * The Fisheries models were deprecated due to lack of use,
+      lack of scientific support staff, and maintenance costs.
+* Finfish
+    * The Finfish model was deprecated due to lack of use,
+      lack of scientific support staff, and maintenance costs.
 * Habitat Quality
     * Changed how Habitat Rarity outputs are calculated to be less confusing.
       Values now represent a 0 to 1 index where before there could be
@@ -65,16 +97,55 @@ Unreleased Changes
       of 0.5 indicate same abundance between baseline and current/future
       LULC; values 0.5 to 1 indicate less abundance in current/future LULC
       and therefore higher rarity.
-* SDR
-    * Added a new raster to the model's workspace,
-      ``intermediate_outputs/what_drains_to_stream[suffix].tif``.  This raster
-      has pixel values of 1 where DEM pixels flow to an identified stream, and
-      0 where they do not.
 * NDR
     * Added a new raster to the model's workspace,
       ``intermediate_outputs/what_drains_to_stream[suffix].tif``.  This raster
       has pixel values of 1 where DEM pixels flow to an identified stream, and
       0 where they do not.
+* Scenario Generator
+    * Changed an args key from ``replacment_lucode`` to ``replacement_lucode``.
+* Scenic Quality
+    * Simplify the ``valuation_function`` arg options. The options are now:
+      ``linear``, ``logarithmic``, ``exponential``. The names displayed in the
+      UI dropdown will stay the same as before. Datastacks or scripts will need
+      to be updated to use the new option values.
+    * Renamed the model title from
+      "Unobstructed Views: Scenic Quality Provision" to "Scenic Quality".
+* SDR
+    * Added a new raster to the model's workspace,
+      ``intermediate_outputs/what_drains_to_stream[suffix].tif``.  This raster
+      has pixel values of 1 where DEM pixels flow to an identified stream, and
+      0 where they do not.
+* Urban Flood Risk:
+    * Fixed broken documentation link in the user interface.
+* Urban Stormwater Retention
+    * Added this new model
+* Visitation: Recreation and Tourism
+    * Renamed the Windows start menu shortcut from "Recreation" to
+      "Visitation: Recreation and Tourism".
+* Wave Energy
+    * Rename the ``analysis_area_path`` arg to ``analysis_area``, since it is
+      not a path but an option string.
+    * Simplify the ``analysis_area`` arg options. The options are now:
+      ``westcoast``, ``eastcoast``, ``northsea4``, ``northsea10``,
+      ``australia``, ``global``. The names displayed in the UI dropdown will
+      stay the same as before. Datastacks and scripts will need to be updated
+      to use the new option values.
+* Wind Energy
+    * No model inputs or outputs are measured in "millions of" currency units
+      any more. Specifically:
+    * The ``mw_coef_ac`` and ``mw_coef_dc`` values in the Global Wind Energy
+      Parameters table were in millions of currency units per MW; now they
+      should be provided in currency units per MW.
+    * The ``infield_cable_cost``, ``cable_coef_ac``, and ``cable_coef_dc``
+      values in the Global Wind Energy Parameters table were in millions of
+      currency units per km; now they should be provided in currency units per km.
+    * The ``turbine_cost`` value in the Turbine Parameters table was in
+      millions of currency units; now it should be provided in currency units.
+    * The ``foundation_cost`` parameter was in millions of currency units; now
+      it should be provided in currency units.
+    * The NPV output, formerly ``npv_US_millions.tif``, is now ``npv.tif``.
+      It is now in currency units, not millions of currency units.
 
 3.9.2 (2021-10-29)
 ------------------
@@ -97,6 +168,8 @@ Unreleased Changes
       when looking for GDAL DLLs.  This fixes an issue where InVEST would not
       launch on computers where the ``%PATH%`` either contained other
       environment variables or was malformed.
+    * invest processes announce their logfile path at a very high logging level
+      that cannot be filtered out by the user.
     * JSON sample data parameter sets are now included in the complete sample
       data archives.
 * Seasonal Water Yield

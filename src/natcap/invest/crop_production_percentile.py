@@ -1,3 +1,4 @@
+
 """InVEST Crop Production Percentile Model."""
 import collections
 import logging
@@ -11,6 +12,8 @@ import pygeoprocessing
 import taskgraph
 
 from . import utils
+from . import spec_utils
+from .spec_utils import u
 from . import validation
 from . import MODEL_METADATA
 
@@ -29,89 +32,179 @@ ARGS_SPEC = {
         "different_projections_ok": True,
     },
     "args": {
-        "workspace_dir": validation.WORKSPACE_SPEC,
-        "results_suffix": validation.SUFFIX_SPEC,
-        "n_workers": validation.N_WORKERS_SPEC,
+        "workspace_dir": spec_utils.WORKSPACE,
+        "results_suffix": spec_utils.SUFFIX,
+        "n_workers": spec_utils.N_WORKERS,
         "landcover_raster_path": {
-            "validation_options": {
-                "projected": True,
-                "projection_units": "meters",
-            },
-            "type": "raster",
-            "required": True,
-            "about": (
-                "A raster file, representing integer land use/land code "
-                "covers for each cell. This raster should have a projected "
-                "coordinate system with units of meters (e.g. UTM) because "
-                "pixel areas are divided by 10000 in order to report some "
-                "results in hectares."),
-            "name": "Land-Use/Land-Cover Map"
+            **spec_utils.LULC,
+            "projected": True,
+            "projection_units": u.meter
         },
         "landcover_to_crop_table_path": {
-            "validation_options": {
-                "required_fields": ["crop_name", "lucode"],
-            },
             "type": "csv",
-            "required": True,
-            "about": (
-                "A CSV table mapping canonical crop names to land use codes "
-                "contained in the landcover/use raster.   The allowed crop "
-                "names are abaca, agave, alfalfa, almond, aniseetc, apple, "
-                "apricot, areca, artichoke, asparagus, avocado, bambara, "
-                "banana, barley, bean, beetfor, berrynes, blueberry, brazil, "
-                "broadbean, buckwheat, cabbage, cabbagefor, canaryseed, "
-                "carob, carrot, carrotfor, cashew, cashewapple, cassava, "
-                "castor, cauliflower, cerealnes, cherry, chestnut, chickpea, "
-                "chicory, chilleetc, cinnamon, citrusnes, clove, clover, "
-                "cocoa, coconut, coffee, cotton, cowpea, cranberry, "
-                "cucumberetc, currant, date, eggplant, fibrenes, fig, flax, "
-                "fonio, fornes, fruitnes, garlic, ginger, gooseberry, grape, "
-                "grapefruitetc, grassnes, greenbean, greenbroadbean, "
-                "greencorn, greenonion, greenpea, groundnut, hazelnut, hemp, "
-                "hempseed, hop, jute, jutelikefiber, kapokfiber, kapokseed, "
-                "karite, kiwi, kolanut, legumenes, lemonlime, lentil, "
-                "lettuce, linseed, lupin, maize, maizefor, mango, mate, "
-                "melonetc, melonseed, millet, mixedgrain, mixedgrass, "
-                "mushroom, mustard, nutmeg, nutnes, oats, oilpalm, "
-                "oilseedfor, oilseednes, okra, olive, onion, orange, papaya, "
-                "pea, peachetc, pear, pepper, peppermint, persimmon, "
-                "pigeonpea, pimento, pineapple, pistachio, plantain, plum, "
-                "poppy, potato, pulsenes, pumpkinetc, pyrethrum, quince, "
-                "quinoa, ramie, rapeseed, rasberry, rice, rootnes, rubber, "
-                "rye, ryefor, safflower, sesame, sisal, sorghum, sorghumfor, "
-                "sourcherry, soybean, spicenes, spinach, stonefruitnes, "
-                "strawberry, stringbean, sugarbeet, sugarcane, sugarnes, "
-                "sunflower, swedefor, sweetpotato, tangetc, taro, tea, "
-                "tobacco, tomato, triticale, tropicalnes, tung, turnipfor, "
-                "vanilla, vegetablenes, vegfor, vetch, walnut, watermelon, "
-                "wheat, yam, and yautia."),
-            "name": "Landcover to Crop Table"
+            "columns": {
+                "lucode": {"type": "integer"},
+                "crop_name": {
+                    "type": "option_string",
+                    "options": {
+                        # TODO: use human-readable translatable crop names (#614)
+                        crop: {"description": crop} for crop in [
+                            "abaca", "agave", "alfalfa", "almond", "aniseetc",
+                            "apple", "apricot", "areca", "artichoke", "asparagus",
+                            "avocado", "bambara", "banana", "barley", "bean",
+                            "beetfor", "berrynes", "blueberry", "brazil",
+                            "canaryseed", "carob", "carrot", "carrotfor", "cashew",
+                            "broadbean", "buckwheat", "cabbage", "cabbagefor",
+                            "cashewapple", "cassava", "castor", "cauliflower",
+                            "cerealnes", "cherry", "chestnut", "chickpea",
+                            "chicory", "chilleetc", "cinnamon", "citrusnes",
+                            "clove", "clover", "cocoa", "coconut", "coffee",
+                            "cotton", "cowpea", "cranberry", "cucumberetc",
+                            "currant", "date", "eggplant", "fibrenes", "fig",
+                            "flax", "fonio", "fornes", "fruitnes", "garlic",
+                            "ginger", "gooseberry", "grape", "grapefruitetc",
+                            "grassnes", "greenbean", "greenbroadbean", "greencorn",
+                            "greenonion", "greenpea", "groundnut", "hazelnut",
+                            "hemp", "hempseed", "hop", "jute", "jutelikefiber",
+                            "kapokfiber", "kapokseed", "karite", "kiwi", "kolanut",
+                            "legumenes", "lemonlime", "lentil", "lettuce",
+                            "linseed", "lupin", "maize", "maizefor", "mango",
+                            "mate", "melonetc", "melonseed", "millet",
+                            "mixedgrain", "mixedgrass", "mushroom", "mustard",
+                            "nutmeg", "nutnes", "oats", "oilpalm", "oilseedfor",
+                            "oilseednes", "okra", "olive", "onion", "orange",
+                            "papaya", "pea", "peachetc", "pear", "pepper",
+                            "peppermint", "persimmon", "pigeonpea", "pimento",
+                            "pineapple", "pistachio", "plantain", "plum", "poppy",
+                            "potato", "pulsenes", "pumpkinetc", "pyrethrum",
+                            "quince", "quinoa", "ramie", "rapeseed", "rasberry",
+                            "rice", "rootnes", "rubber", "rye", "ryefor",
+                            "safflower", "sesame", "sisal", "sorghum",
+                            "sorghumfor", "sourcherry, soybean", "spicenes",
+                            "spinach", "stonefruitnes", "strawberry", "stringbean",
+                            "sugarbeet", "sugarcane", "sugarnes", "sunflower",
+                            "swedefor", "sweetpotato", "tangetc", "taro", "tea",
+                            "tobacco", "tomato", "triticale", "tropicalnes",
+                            "tung", "turnipfor", "vanilla", "vegetablenes",
+                            "vegfor", "vetch", "walnut", "watermelon", "wheat",
+                            "yam", "yautia"
+                        ]
+                    }
+                }
+            },
+            "about": _(
+                "A table that maps each LULC code from the LULC map to one of "
+                "the 175 canonical crop names representing the crop grown in "
+                "that LULC class."),
+            "name": _("LULC to Crop Table")
         },
         "aggregate_polygon_path": {
-            "type": "vector",
-            "required": False,
-            "validation_options": {
-                "projected": True,
-            },
-            "about": (
-                "A polygon vector containing features with which to "
-                "aggregate/summarize final results. It is fine to have "
-                "overlapping polygons."),
-            "name": "Aggregate results polygon"
+            **spec_utils.AOI,
+            "projected": True,
+            "required": False
         },
         "model_data_path": {
             "type": "directory",
-            "required": True,
-            "validation_options": {
-                "exists": True,
+            "contents": {
+                "climate_percentile_yield_tables": {
+                    "type": "directory",
+                    "about": _(
+                        "Table mapping each climate bin to yield percentiles "
+                        "for each crop."),
+                    "contents": {
+                        "[CROP]_percentile_yield_table.csv": {
+                            "type": "csv",
+                            "columns": {
+                                "climate_bin": {"type": "integer"},
+                                "yield_25th": {
+                                    "type": "number",
+                                    "units": u.metric_ton/u.hectare
+                                },
+                                "yield_50th": {
+                                    "type": "number",
+                                    "units": u.metric_ton/u.hectare
+                                },
+                                "yield_75th": {
+                                    "type": "number",
+                                    "units": u.metric_ton/u.hectare
+                                },
+                                "yield_95th": {
+                                    "type": "number",
+                                    "units": u.metric_ton/u.hectare
+                                }
+                            }
+                        },
+                    }
+                },
+                "extended_climate_bin_maps": {
+                    "type": "directory",
+                    "about": _("Maps of climate bins for each crop."),
+                    "contents": {
+                        "extendedclimatebins[CROP]": {
+                            "type": "raster",
+                            "bands": {1: {"type": "integer"}},
+                        }
+                    }
+                },
+                "observed_yield": {
+                    "type": "directory",
+                    "about": _("Maps of actual observed yield for each crop."),
+                    "contents": {
+                        "[CROP]_observed_yield.tif": {
+                            "type": "raster",
+                            "bands": {1: {
+                                "type": "number",
+                                "units": u.metric_ton/u.hectare
+                            }}
+                        }
+                    }
+                },
+                "crop_nutrient.csv": {
+                    "type": "csv",
+                    "columns": {
+                        nutrient: {
+                            "type": "number",
+                            "units": units
+                        } for nutrient, units in {
+                            "protein":     u.gram/u.hectogram,
+                            "lipid":       u.gram/u.hectogram,       # total lipid
+                            "energy":      u.kilojoule/u.hectogram,
+                            "ca":          u.milligram/u.hectogram,  # calcium
+                            "fe":          u.milligram/u.hectogram,  # iron
+                            "mg":          u.milligram/u.hectogram,  # magnesium
+                            "ph":          u.milligram/u.hectogram,  # phosphorus
+                            "k":           u.milligram/u.hectogram,  # potassium
+                            "na":          u.milligram/u.hectogram,  # sodium
+                            "zn":          u.milligram/u.hectogram,  # zinc
+                            "cu":          u.milligram/u.hectogram,  # copper
+                            "fl":          u.microgram/u.hectogram,  # fluoride
+                            "mn":          u.milligram/u.hectogram,  # manganese
+                            "se":          u.microgram/u.hectogram,  # selenium
+                            "vita":        u.IU/u.hectogram,         # vitamin A
+                            "betac":       u.microgram/u.hectogram,  # beta carotene
+                            "alphac":      u.microgram/u.hectogram,  # alpha carotene
+                            "vite":        u.milligram/u.hectogram,  # vitamin e
+                            "crypto":      u.microgram/u.hectogram,  # cryptoxanthin
+                            "lycopene":    u.microgram/u.hectogram,  # lycopene
+                            "lutein":      u.microgram/u.hectogram,  # lutein + zeaxanthin
+                            "betaT":       u.milligram/u.hectogram,  # beta tocopherol
+                            "gammaT":      u.milligram/u.hectogram,  # gamma tocopherol
+                            "deltaT":      u.milligram/u.hectogram,  # delta tocopherol
+                            "vitc":        u.milligram/u.hectogram,  # vitamin C
+                            "thiamin":     u.milligram/u.hectogram,
+                            "riboflavin":  u.milligram/u.hectogram,
+                            "niacin":      u.milligram/u.hectogram,
+                            "pantothenic": u.milligram/u.hectogram,  # pantothenic acid
+                            "vitb6":       u.milligram/u.hectogram,  # vitamin B6
+                            "folate":      u.microgram/u.hectogram,
+                            "vitb12":      u.microgram/u.hectogram,  # vitamin B12
+                            "vitk":        u.microgram/u.hectogram,  # vitamin K
+                        }.items()
+                    }
+                }
             },
-            "about": (
-                "A path to the InVEST Crop Production Data directory. These "
-                "data would have been included with the InVEST installer if "
-                "selected, or can be manually downloaded from "
-                "http://releases.naturalcapitalproject.org/.  If downloaded "
-                "with InVEST, the default value should be used."),
-            "name": "Directory to model data"
+            "about": _("Path to the InVEST Crop Production Data directory."),
+            "name": _("model data directory")
         }
     }
 }
@@ -210,7 +303,7 @@ def execute(args):
             * climate_bin_maps (contains [cropname]_climate_bin.tif files)
             * climate_percentile_yield (contains
               [cropname]_percentile_yield_table.csv files)
-              
+
             Please see the InVEST user's guide chapter on crop production for
             details about how to download these data.
         args['n_workers'] (int): (optional) The number of worker processes to
@@ -543,9 +636,9 @@ def calculate_crop_production(lulc_path, yield_path, crop_lucode,
 
         valid_mask = numpy.full(lulc_array.shape, True)
         if lulc_nodata is not None:
-            valid_mask &= ~numpy.isclose(lulc_array, lulc_nodata)
+            valid_mask &= ~utils.array_equals_nodata(lulc_array, lulc_nodata)
         if yield_nodata is not None:
-            valid_mask &= ~numpy.isclose(yield_array, yield_nodata)
+            valid_mask &= ~utils.array_equals_nodata(yield_array, yield_nodata)
         result[valid_mask] = 0
 
         lulc_mask = lulc_array == crop_lucode
@@ -576,7 +669,7 @@ def _zero_observed_yield_op(observed_yield_array, observed_yield_nodata):
     result[:] = 0
     valid_mask = slice(None)
     if observed_yield_nodata is not None:
-        valid_mask = ~numpy.isclose(
+        valid_mask = ~utils.array_equals_nodata(
             observed_yield_array, observed_yield_nodata)
     result[valid_mask] = observed_yield_array[valid_mask]
     return result
@@ -602,7 +695,7 @@ def _mask_observed_yield_op(
     result = numpy.empty(lulc_array.shape, dtype=numpy.float32)
     if landcover_nodata is not None:
         result[:] = observed_yield_nodata
-        valid_mask = ~numpy.isclose(lulc_array, landcover_nodata)
+        valid_mask = ~utils.array_equals_nodata(lulc_array, landcover_nodata)
         result[valid_mask] = 0
     else:
         result[:] = 0
@@ -677,7 +770,7 @@ def tabulate_results(
                 # if nodata value undefined, assume all pixels are valid
                 valid_mask = slice(None)
                 if observed_yield_nodata is not None:
-                    valid_mask = ~numpy.isclose(
+                    valid_mask = ~utils.array_equals_nodata(
                         yield_block, observed_yield_nodata)
                 production_pixel_count += numpy.count_nonzero(
                     valid_mask & (yield_block > 0))
@@ -697,7 +790,7 @@ def tabulate_results(
                         (yield_percentile_raster_path, 1)):
                     # _NODATA_YIELD will always have a value (defined above)
                     yield_sum += numpy.sum(
-                        yield_block[~numpy.isclose(
+                        yield_block[~utils.array_equals_nodata(
                             yield_block, _NODATA_YIELD)])
                 production_lookup[yield_percentile_id] = yield_sum
                 result_table.write(",%f" % yield_sum)
@@ -724,7 +817,7 @@ def tabulate_results(
                 (landcover_raster_path, 1)):
             if landcover_nodata is not None:
                 total_area += numpy.count_nonzero(
-                    ~numpy.isclose(band_values, landcover_nodata))
+                    ~utils.array_equals_nodata(band_values, landcover_nodata))
             else:
                 total_area += band_values.size
         result_table.write(

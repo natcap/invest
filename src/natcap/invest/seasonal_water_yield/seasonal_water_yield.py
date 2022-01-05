@@ -14,6 +14,8 @@ import pygeoprocessing.routing
 import taskgraph
 
 from .. import utils
+from .. import spec_utils
+from ..spec_utils import u
 from .. import validation
 from .. import MODEL_METADATA
 
@@ -40,212 +42,235 @@ ARGS_SPEC = {
         "different_projections_ok": True,
     },
     "args": {
-        "workspace_dir": validation.WORKSPACE_SPEC,
-        "results_suffix": validation.SUFFIX_SPEC,
-        "n_workers": validation.N_WORKERS_SPEC,
-        "threshold_flow_accumulation": {
-            "validation_options": {
-                "expression": "value > 0"
-            },
-            "type": "number",
-            "required": True,
-            "about": (
-                "The number of upstream cells that must flow into a cell "
-                "before it's considered part of a stream such that retention "
-                "stops and the remaining export is exported to the stream.  "
-                "Used to define streams from the DEM."),
-            "name": "Threshold Flow Accumulation"
-        },
+        "workspace_dir": spec_utils.WORKSPACE,
+        "results_suffix": spec_utils.SUFFIX,
+        "n_workers": spec_utils.N_WORKERS,
+        "threshold_flow_accumulation": spec_utils.THRESHOLD_FLOW_ACCUMULATION,
         "et0_dir": {
-            "validation_options": {
-                "exists": True,
-            },
             "type": "directory",
+            "contents": {
+                # monthly et0 maps, each file ending in a number 1-12
+                "[MONTH]": {
+                    "about": _(
+                        "Twelve files, one for each month. File names must "
+                        "end with the month number (1-12)."),
+                    **spec_utils.ETO
+                }
+            },
             "required": "not user_defined_local_recharge",
-            "about": (
-                "The selected folder has a list of ET0 files with a "
-                "specified format."),
-            "name": "ET0 Directory"
+            "about": _(
+                "Directory containing maps of reference evapotranspiration "
+                "for each month. Only .tif files should be in this folder "
+                "(no .tfw, .xml, etc files)."),
+            "name": _("ET0 directory")
         },
         "precip_dir": {
-            "validation_options": {
-                "exists": True,
-            },
             "type": "directory",
+            "contents": {
+                # monthly precipitation maps, each file ending in a number 1-12
+                "[MONTH]": {
+                    "about": _(
+                        "Twelve files, one for each month. File names must end "
+                        "with the month number (1-12)."),
+                    **spec_utils.PRECIP
+                }
+            },
             "required": "not user_defined_local_recharge",
-            "about": (
-                "The selected folder has a list of monthly precipitation "
-                "files with a specified format."),
-            "name": "Precipitation Directory"
+            "about": _(
+                "Directory containing maps of monthly precipitation for each "
+                "month. Only .tif files should be in this folder (no .tfw, "
+                ".xml, etc files)."),
+            "name": _("precipitation directory")
         },
         "dem_raster_path": {
-            "type": "raster",
-            "required": True,
-            "validation_options": {
-                "projected": True,
-            },
-            "about": (
-                "A GDAL-supported raster file with an elevation value for "
-                "each cell.  Make sure the DEM is corrected by filling in "
-                "sinks, and if necessary burning hydrographic features into "
-                "the elevation model (recommended when unusual streams are "
-                "observed.) See the 'Working with the DEM' section of the "
-                "InVEST User's Guide for more information."),
-            "name": "Digital Elevation Model"
+            **spec_utils.DEM,
+            "projected": True
         },
         "lulc_raster_path": {
-            "type": "raster",
-            "required": True,
-            "validation_options": {
-                "projected": True,
-            },
+            **spec_utils.LULC,
+            "projected": True,
             "about": (
-                "A GDAL-supported raster file, with an integer LULC code "
-                "for each cell."),
-            "name": "Land-Use/Land-Cover"
+                f"{spec_utils.LULC['about']} All values in this raster MUST "
+                "have corresponding entries in the Biophysical Table.")
         },
         "soil_group_path": {
-            "type": "raster",
-            "required": "not user_defined_local_recharge",
-            "validation_options": {
-                "projected": True,
-            },
-            "about": (
-                "Map of SCS soil groups (A, B, C, or D) mapped to integer "
-                "values (1, 2, 3, or 4) used in combination of the LULC map "
-                "to compute the CN map."),
-            "name": "Soil Group"
+            **spec_utils.SOIL_GROUP,
+            "projected": True,
+            "required": "not user_defined_local_recharge"
         },
         "aoi_path": {
-            "type": "vector",
-            "required": True,
-            "validation_options": {
-                "projected": True,
-            },
-            "about": (
-                "Path to a vector that indicates the area over which the "
-                "model should be run, as well as the area in which to "
-                "aggregate over when calculating the output Qb."),
-            "name": "AOI/Watershed"
+            **spec_utils.AOI,
+            "projected": True
         },
         "biophysical_table_path": {
-            "validation_options": {
-                "required_fields": ["lucode"] + [
-                    "kc_%s" % i for i in range(1, 13)]
-            },
             "type": "csv",
-            "required": True,
-            "about": (
-                "A CSV table containing model information corresponding to "
-                "each of the land use classes in the LULC raster input.  It "
-                "must contain the fields 'lucode', and one 'Kc_<int>' column "
-                "per season."),
-            "name": "Biophysical Table"
+            "columns": {
+                "lucode": {
+                    "type": "integer",
+                    "about": "LULC code matching those in the LULC raster."},
+                "cn_[SOIL_GROUP]": {
+                    "type": "number",
+                    "units": u.none,
+                    "about": _(
+                        "Curve number values for each combination of soil "
+                        "group and LULC class. Replace [SOIL_GROUP] with each "
+                        "soil group code A, B, C, D so that there is one "
+                        "column for each soil group. Curve number values must "
+                        "be greater than 0.")
+                },
+                "kc_[MONTH]": {
+                    "type": "number",
+                    "units": u.none,
+                    "about": _(
+                        "Crop/vegetation coefficient (Kc) values for this "
+                        "LULC class in each month. Replace [MONTH] with the "
+                        "numbers 1 to 12 so that there is one column for each "
+                        "month.")
+                }
+            },
+            "about": _(
+                "A table mapping each LULC code to biophysical properties of "
+                "the corresponding LULC class. All values in the LULC raster "
+                "must have corresponding entries in this table."),
+            "name": _("biophysical table")
         },
         "rain_events_table_path": {
-            "validation_options": {
-                "required_fields": ["month", "events"],
-            },
             "type": "csv",
+            "columns": {
+                "month": {
+                    "type": "number",
+                    "units": u.none,
+                    "about": _(
+                        "Values are the numbers 1-12 corresponding to each "
+                        "month, January (1) through December (12).")
+                },
+                "events": {
+                    "type": "number",
+                    "units": u.none,
+                    "about": _("The number of rain events in that month.")
+                }
+            },
             "required": (
-                "(not user_defined_local_recharge) & (not user_defined_climate_zones)"),
-            "about": (
-                "Not required if args['user_defined_local_recharge'] is True "
-                "or args['user_defined_climate_zones'] is True.  Path to a "
-                "CSV table that has headers 'month' (1-12) and 'events' "
-                "(int >= 0) that indicates the number of rain events per "
-                "month"),
-            "name": "Rain Events Table"
+                "(not user_defined_local_recharge) & (not "
+                "user_defined_climate_zones)"),
+            "about": _(
+                "A table containing the number of rain events for each month. "
+                "Required if neither User-Defined Local Recharge nor User-"
+                "Defined Climate Zones is selected."),
+            "name": _("rain events table")
         },
         "alpha_m": {
             "type": "freestyle_string",
             "required": "not monthly_alpha",
-            "about": (
-                "Required if args['monthly_alpha'] is false.  Is the "
-                "proportion of upslope annual available local recharge that "
-                "is available in month m."),
-            "name": "alpha_m Parameter"
+            "about": _(
+                "The proportion of upslope annual available local recharge "
+                "that is available in each month. Required if Use Monthly "
+                "Alpha Table is not selected."),
+            "name": _("alpha_m parameter")
         },
         "beta_i": {
-            "type": "number",
-            "required": True,
-            "about": (
-                "Is the fraction of the upgradient subsidy that is "
-                "available for downgradient evapotranspiration."),
-            "name": "beta_i Parameter"
+            "type": "ratio",
+            "about": _(
+                "The proportion of the upgradient subsidy that is available "
+                "for downgradient evapotranspiration."),
+            "name": _("beta_i parameter")
         },
         "gamma": {
-            "type": "number",
-            "required": True,
-            "about": (
-                "The fraction of pixel local recharge that is available to "
+            "type": "ratio",
+            "about": _(
+                "The proportion of pixel local recharge that is available to "
                 "downgradient pixels."),
-            "name": "gamma Parameter"
+            "name": _("gamma parameter")
         },
         "user_defined_local_recharge": {
             "type": "boolean",
-            "required": True,
-            "about": (
-                "If True, indicates user will provide pre-defined local "
-                "recharge raster layer"),
-            "name": "User Defined Recharge Layer (Advanced)"
+            "about": _(
+                "Use user-defined local recharge data instead of calculating "
+                "local recharge from the other provided data."),
+            "name": _("user-defined recharge layer (advanced)")
         },
         "l_path": {
             "type": "raster",
+            "bands": {1: {
+                "type": "number",
+                "units": u.millimeter
+            }},
             "required": "user_defined_local_recharge",
-            "validation_options": {
-                "projected": True,
-            },
-            "about": (
-                "A path to a GDAL-compatible raster.  Pixels indicate the "
-                "amount of local recharge in mm.  Required if "
-                "args['user_defined_local_recharge'] is True."),
-            "name": "Local Recharge ("
+            "projected": True,
+            "about": _(
+                "Map of local recharge data. Required if User-Defined Local "
+                "Recharge is selected."),
+            "name": _("local recharge")
         },
         "user_defined_climate_zones": {
             "type": "boolean",
-            "required": True,
-            "about": (
-                "If True, user provides a climate zone rain events table and "
-                "a climate zone raster map in lieu of a global rain events "
-                "table."),
-            "name": "Climate Zones (Advanced)"
+            "about": _(
+                "Use user-defined climate zone data in lieu of a global rain "
+                "events table."),
+            "name": _("climate zones (advanced)")
         },
         "climate_zone_table_path": {
-            "validation_options": {
-                "required_fields": ["cz_id"] + MONTH_ID_TO_LABEL,
-            },
             "type": "csv",
+            "columns": {
+                "cz_id": {
+                    "type": "integer",
+                    "about": _(
+                        "Climate zone ID numbers, corresponding to the values "
+                        "in the Climate Zones map.")},
+                "[MONTH]": {  # jan, feb, mar, etc.
+                    "type": "number",
+                    "units": u.none,
+                    "about": _(
+                        "The number of rain events that occur in each month "
+                        "in this climate zone. Replace [MONTH] with the month "
+                        "abbreviations: jan, feb, mar, apr, may, jun, jul, "
+                        "aug, sep, oct, nov, dec, so that there is a column "
+                        "for each month.")}
+            },
             "required": "user_defined_climate_zones",
-            "about": (
-                "Required if args['user_defined_climate_zones'] is True. "
-                "Contains monthly precipitation events per climate zone.  "
-                "Fields must be 'cz_id', %s." % ', '.join(MONTH_ID_TO_LABEL)),
-            "name": "Climate Zone Table"
+            "about": _(
+                "Table of monthly precipitation events for each climate zone. "
+                "Required if User-Defined Climate Zones is selected."),
+            "name": _("climate zone table")
         },
         "climate_zone_raster_path": {
             "type": "raster",
+            "bands": {1: {"type": "integer"}},
             "required": "user_defined_climate_zones",
-            "validation_options": {
-                "projected": True,
-            },
-            "about": (
-                "Map of climate zones that are found in the Climate Zone "
-                "Table input.  Pixel values correspond to values in the "
-                "cz_id column."),
-            "name": "Climate Zone"
+            "projected": True,
+            "about": _(
+                "Map of climate zones. All values in this raster must have "
+                "corresponding entries in the Climate Zone Table."),
+            "name": _("climate zone map")
         },
         "monthly_alpha": {
             "type": "boolean",
-            "required": True,
-            "about": "If True, use the monthly alpha table.",
-            "name": "Use Monthly Alpha Table (Advanced)"
+            "about": _(
+                "Use montly alpha values instead of a single value for the "
+                "whole year."),
+            "name": _("use monthly alpha table (advanced)")
         },
         "monthly_alpha_path": {
             "type": "csv",
+            "columns": {
+                "month": {
+                    "type": "number",
+                    "units": u.none,
+                    "about": _(
+                        "Values are the numbers 1-12 corresponding to each "
+                        "month.")
+                },
+                "alpha": {
+                    "type": "number",
+                    "units": u.none,
+                    "about": _("The alpha value for that month.")
+                }
+            },
             "required": "monthly_alpha",
-            "about": "Required if args['monthly_alpha'] is True.",
-            "name": "Monthly Alpha Table"
+            "about": _(
+                "Table of alpha values for each month. "
+                "Required if Use Monthly Alpha Table is selected."),
+            "name": _("monthly alpha table")
         }
     }
 }
@@ -263,7 +288,7 @@ _OUTPUT_BASE_FILES = {
     'b_sum_path': 'B_sum.tif',
     'b_path': 'B.tif',
     'vri_path': 'Vri.tif',
-    }
+}
 
 _INTERMEDIATE_BASE_FILES = {
     'aet_path': 'aet.tif',
@@ -292,7 +317,7 @@ _TMP_BASE_FILES = {
     'l_aligned_path': 'l_aligned.tif',
     'cz_aligned_raster_path': 'cz_aligned.tif',
     'l_sum_pre_clamp': 'l_sum_pre_clamp.tif'
-    }
+}
 
 
 def execute(args):
@@ -811,7 +836,9 @@ def _calculate_vri(l_path, target_vri_path):
     l_nodata = pygeoprocessing.get_raster_info(l_path)['nodata'][0]
 
     for _, block in pygeoprocessing.iterblocks((l_path, 1)):
-        valid_mask = (block != l_nodata) & (~numpy.isinf(block))
+        valid_mask = (
+            ~utils.array_equals_nodata(block, l_nodata) &
+            (~numpy.isinf(block)))
         qb_sum += numpy.sum(block[valid_mask])
         qb_valid_count += numpy.count_nonzero(valid_mask)
     li_nodata = pygeoprocessing.get_raster_info(l_path)['nodata'][0]
@@ -821,7 +848,7 @@ def _calculate_vri(l_path, target_vri_path):
         result = numpy.empty_like(li_array)
         result[:] = li_nodata
         if qb_sum > 0:
-            valid_mask = li_array != li_nodata
+            valid_mask = ~utils.array_equals_nodata(li_array, li_nodata)
             try:
                 result[valid_mask] = li_array[valid_mask] / qb_sum
             except RuntimeWarning:
@@ -849,7 +876,7 @@ def _calculate_annual_qfi(qfm_path_list, target_qf_path):
     def qfi_sum_op(*qf_values):
         """Sum the monthly qfis."""
         qf_sum = numpy.zeros(qf_values[0].shape)
-        valid_mask = qf_values[0] != qf_nodata
+        valid_mask = ~utils.array_equals_nodata(qf_values[0], qf_nodata)
         valid_qf_sum = qf_sum[valid_mask]
         for index in range(len(qf_values)):
             valid_qf_sum += qf_values[index][valid_mask]
@@ -912,15 +939,16 @@ def _calculate_monthly_quick_flow(
         valid_mask = ((p_im != 0.0) &
                       (stream_array != 1) &
                       (n_events > 0) &
-                      ~numpy.isclose(s_i, si_nodata))
+                      ~utils.array_equals_nodata(s_i, si_nodata))
         if p_nodata is not None:
-            valid_mask &= ~numpy.isclose(p_im, p_nodata)
+            valid_mask &= ~utils.array_equals_nodata(p_im, p_nodata)
         if n_events_nodata is not None:
-            valid_mask &= ~numpy.isclose(n_events, n_events_nodata)
+            valid_mask &= ~utils.array_equals_nodata(n_events, n_events_nodata)
         # stream_nodata is the only input that carry over nodata values from
         # the aligned DEM.
         if stream_nodata is not None:
-            valid_mask &= ~numpy.isclose(stream_array, stream_nodata)
+            valid_mask &= ~utils.array_equals_nodata(
+                stream_array, stream_nodata)
 
         valid_n_events = n_events[valid_mask]
         valid_si = s_i[valid_mask]
@@ -955,14 +983,15 @@ def _calculate_monthly_quick_flow(
         # if we're on a stream, set quickflow to the precipitation
         valid_stream_precip_mask = stream_array == 1
         if p_nodata is not None:
-            valid_stream_precip_mask &= ~numpy.isclose(p_im, p_nodata)
+            valid_stream_precip_mask &= ~utils.array_equals_nodata(
+                p_im, p_nodata)
         qf_im[valid_stream_precip_mask] = p_im[valid_stream_precip_mask]
 
         # this handles some user cases where they don't have data defined on
         # their landcover raster. It otherwise crashes later with some NaNs.
         # more intermediate outputs with nodata values guaranteed to be defined
-        qf_im[numpy.isclose(qf_im, qf_nodata) &
-              (stream_array != stream_nodata)] = 0.0
+        qf_im[utils.array_equals_nodata(qf_im, qf_nodata) &
+              ~utils.array_equals_nodata(stream_array, stream_nodata)] = 0.0
         return qf_im
 
     pygeoprocessing.raster_calculator(
@@ -1090,7 +1119,9 @@ def _calculate_si_raster(cn_path, stream_path, si_path):
 
     def si_op(ci_factor, stream_mask):
         """Calculate si factor."""
-        valid_mask = (ci_factor != cn_nodata) & (ci_factor > 0)
+        valid_mask = (
+            ~utils.array_equals_nodata(ci_factor, cn_nodata) &
+            (ci_factor > 0))
         si_array = numpy.empty(ci_factor.shape)
         si_array[:] = si_nodata
         # multiply by the stream mask != 1 so we get 0s on the stream and
@@ -1184,7 +1215,7 @@ def _calculate_l_avail(l_path, gamma, target_l_avail_path):
         """Calculate equation [8] L_avail = min(gamma*L, L)."""
         result = numpy.empty(l_array.shape)
         result[:] = li_nodata
-        valid_mask = (l_array != li_nodata)
+        valid_mask = ~utils.array_equals_nodata(l_array, li_nodata)
         result[valid_mask] = numpy.min(numpy.stack(
             (gamma*l_array[valid_mask], l_array[valid_mask])), axis=0)
         return result
