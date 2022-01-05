@@ -203,7 +203,7 @@ class NDRTests(unittest.TestCase):
         from natcap.invest.ndr import ndr
 
         # use predefined directory so test can clean up files during teardown
-        args = NDRTests.generate_base_args(self.workspace_dir )
+        args = NDRTests.generate_base_args(self.workspace_dir)
         # make an empty output shapefile on top of where the new output
         # shapefile should reside to ensure the model overwrites it
         with open(
