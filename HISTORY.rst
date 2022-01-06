@@ -20,9 +20,9 @@
   - Scenic Quality
   - SDR
   - Seasonal Water Yield
-  - Stormwater
   - Urban Cooling
   - Urban Flood Risk
+  - Urban Stormwater Retention
   - Wave Energy
   - Wind Energy
 
@@ -34,6 +34,13 @@
 
 Unreleased Changes
 ------------------
+
+3.10.1 (2022-01-06)
+-------------------
+* Urban Stormwater Retention
+    * Fixed a bug where this model's sample data was not available via the
+      Windows installer.
+
 
 3.10.0 (2022-01-04)
 -------------------
@@ -113,6 +120,8 @@ Unreleased Changes
       0 where they do not.
 * Urban Flood Risk:
     * Fixed broken documentation link in the user interface.
+* Urban Stormwater Retention
+    * Added this new model
 * Visitation: Recreation and Tourism
     * Renamed the Windows start menu shortcut from "Recreation" to
       "Visitation: Recreation and Tourism".
@@ -284,8 +293,6 @@ Unreleased Changes
       ``e_prime``, ``sed_retention``, ``sed_retention_index``,
       ``sed_deposition``, ``sed_export``) are only defined for pixels that
       drain to a stream. They have nodata everywhere else.
-* Stormwater
-    * Added this new model
 * Urban Flood Risk
     * Fixed a bug where a String ``Type`` column in the infrastructure vector
       would cause the aggregation step of the model to crash, even with the
