@@ -40,6 +40,13 @@ Unreleased Changes
       flow accumulation value. Before, it would snap to the stream pixel
       encountered first in the raster (though this was not guaranteed).
 
+3.10.1 (2022-01-06)
+-------------------
+* Urban Stormwater Retention
+    * Fixed a bug where this model's sample data was not available via the
+      Windows installer.
+
+
 3.10.0 (2022-01-04)
 -------------------
 * General
