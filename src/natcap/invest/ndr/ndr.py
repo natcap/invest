@@ -991,39 +991,37 @@ def _multiply_rasters(raster_path_list, target_nodata, target_result_path):
 
 
 def _sum_rasters(raster_path_list, target_nodata, target_result_path):
-    """Sum the rasters in `raster_path_list`.
+    """Sum two or more rasters pixelwise.
+
+    The result has nodata where any input raster has nodata.
 
     Args:
-        raster_path_list (list): list of single band raster paths.
-        target_nodata (float): desired target nodata value.
-        target_result_path (string): path to float 32 target raster
-            multiplied where all rasters are not nodata.
+        raster_path_list (list): list of raster paths to sum
+        target_nodata (float): desired target nodata value
+        target_result_path (string): path to write out the sum raster
 
     Returns:
         None.
 
     """
-    def _sum_op(*array_nodata_list):
-        """Multiply non-nodata stacks."""
-        result = numpy.empty(array_nodata_list[0].shape)
-        result[:] = target_nodata
+    nodata_list = [pygeoprocessing.get_raster_info(
+        path)['nodata'][0] for path in raster_path_list]
+
+    def _sum_op(*array_list):
+        """Sum arrays where all are valid."""
+        result = numpy.full(array_list[0].shape, target_nodata)
         valid_mask = numpy.full(result.shape, True)
-        for array, nodata in zip(*[iter(array_nodata_list)]*2):
+        for array, nodata in zip(array_list, nodata_list):
             if nodata is not None:
                 valid_mask &= ~numpy.isclose(array, nodata)
-        result[valid_mask] = array_nodata_list[0][valid_mask]
-        for array in array_nodata_list[2::2]:
+        result[valid_mask] = array_list[0][valid_mask]
+        for array in array_list:
             result[valid_mask] += array[valid_mask]
         return result
 
-    # make a list of (raster_path_band, nodata) tuples, then flatten it
-    path_nodata_list = list(itertools.chain(*[
-        ((path, 1),
-         (pygeoprocessing.get_raster_info(path)['nodata'][0], 'raw'))
-        for path in raster_path_list]))
     pygeoprocessing.raster_calculator(
-        path_nodata_list, _sum_op, target_result_path,
-        gdal.GDT_Float32, target_nodata)
+        [(path, 1) for path in raster_path_list],
+        _sum_op, target_result_path, gdal.GDT_Float32, target_nodata)
 
 
 def _map_surface_load(
