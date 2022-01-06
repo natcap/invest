@@ -20,9 +20,9 @@
   - Scenic Quality
   - SDR
   - Seasonal Water Yield
-  - Stormwater
   - Urban Cooling
   - Urban Flood Risk
+  - Urban Stormwater Retention
   - Wave Energy
   - Wind Energy
 
@@ -32,9 +32,23 @@
 
 .. :changelog:
 
+Unreleased Changes
+------------------
+* General
+    * Fixed an issue where datastack archives would not include any spatial
+      datasets that were linked to in CSV files.  This now works for all models
+      except HRA.  If an HRA datastack archive is requested,
+      ``NotImplementedError`` will be raised.  A fix for HRA is pending.
 
-Unreleased Changes (3.10)
--------------------------
+3.10.1 (2022-01-06)
+-------------------
+* Urban Stormwater Retention
+    * Fixed a bug where this model's sample data was not available via the
+      Windows installer.
+
+
+3.10.0 (2022-01-04)
+-------------------
 * General
     * Add a ``--language`` argument to the command-line interface, which will
       translate model names, specs, and validation messages.
@@ -60,10 +74,8 @@ Unreleased Changes (3.10)
     * Updating the ``taskgraph`` requirement to ``0.11.0`` to resolve an issue
       where modifying a file within a roughly 2-second window would fool
       ``taskgraph`` into believing that the file had not been modified.
-    * Fixed an issue where datastack archives would not include any spatial
-      datasets that were linked to in CSV files.  This now works for all models
-      except HRA.  If an HRA datastack archive is requested,
-      ``NotImplementedError`` will be raised.  A fix for HRA is pending.
+    * Fixed a bug where some input rasters with NaN nodata values would go
+      undetected as nodata and yield unexpected behavior.
 * Annual Water Yield
     * Renamed the Windows start menu shortcut from "Water Yield" to
       "Annual Water Yield".
@@ -97,6 +109,8 @@ Unreleased Changes (3.10)
       ``intermediate_outputs/what_drains_to_stream[suffix].tif``.  This raster
       has pixel values of 1 where DEM pixels flow to an identified stream, and
       0 where they do not.
+* Scenario Generator
+    * Changed an args key from ``replacment_lucode`` to ``replacement_lucode``.
 * Scenic Quality
     * Simplify the ``valuation_function`` arg options. The options are now:
       ``linear``, ``logarithmic``, ``exponential``. The names displayed in the
@@ -109,6 +123,13 @@ Unreleased Changes (3.10)
       ``intermediate_outputs/what_drains_to_stream[suffix].tif``.  This raster
       has pixel values of 1 where DEM pixels flow to an identified stream, and
       0 where they do not.
+* Urban Flood Risk:
+    * Fixed broken documentation link in the user interface.
+* Urban Stormwater Retention
+    * Added this new model
+* Visitation: Recreation and Tourism
+    * Renamed the Windows start menu shortcut from "Recreation" to
+      "Visitation: Recreation and Tourism".
 * Wave Energy
     * Rename the ``analysis_area_path`` arg to ``analysis_area``, since it is
       not a path but an option string.
@@ -117,9 +138,6 @@ Unreleased Changes (3.10)
       ``australia``, ``global``. The names displayed in the UI dropdown will
       stay the same as before. Datastacks and scripts will need to be updated
       to use the new option values.
-* Visitation: Recreation and Tourism
-    * Renamed the Windows start menu shortcut from "Recreation" to
-      "Visitation: Recreation and Tourism".
 * Wind Energy
     * No model inputs or outputs are measured in "millions of" currency units
       any more. Specifically:
@@ -280,8 +298,6 @@ Unreleased Changes (3.10)
       ``e_prime``, ``sed_retention``, ``sed_retention_index``,
       ``sed_deposition``, ``sed_export``) are only defined for pixels that
       drain to a stream. They have nodata everywhere else.
-* Stormwater
-    * Added this new model
 * Urban Flood Risk
     * Fixed a bug where a String ``Type`` column in the infrastructure vector
       would cause the aggregation step of the model to crash, even with the

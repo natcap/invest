@@ -6,7 +6,7 @@ import shutil
 import tempfile
 import math
 
-import numpy as np
+import numpy
 import pandas
 from scipy import integrate
 
@@ -547,7 +547,7 @@ def execute(args):
             inter_dir, 'bathymetry_resampled%s.tif' % suffix)
 
         # Get the minimum absolute value from the bathymetry pixel size tuple
-        mean_pixel_size = np.min(np.absolute(bathy_pixel_size))
+        mean_pixel_size = numpy.min(numpy.absolute(bathy_pixel_size))
         # Use it as the target pixel size for resampling and warping rasters
         target_pixel_size = (mean_pixel_size, -mean_pixel_size)
         LOGGER.debug('Target pixel size: %s' % (target_pixel_size,))
@@ -1316,7 +1316,8 @@ def _calculate_npv_levelized_rasters(
             pygeoprocessing.iterblocks((base_dist_raster_path, 1))):
 
         target_arr_shape = harvest_block_data.shape
-        target_nodata_mask = (harvest_block_data == _TARGET_NODATA)
+        target_nodata_mask = utils.array_equals_nodata(
+            harvest_block_data, _TARGET_NODATA)
 
         # Total cable distance converted to kilometers
         cable_dist_arr = dist_block_data / 1000
@@ -1329,7 +1330,7 @@ def _calculate_npv_levelized_rasters(
         # Calculate cable cost. The break at 'circuit_break' indicates the
         # difference in using AC and DC current systems
         circuit_mask = (cable_dist_arr <= circuit_break)
-        cable_cost_arr = np.full(target_arr_shape, 0, dtype=np.float32)
+        cable_cost_arr = numpy.full(target_arr_shape, 0, dtype=numpy.float32)
 
         # Calculate AC cable cost
         cable_cost_arr[circuit_mask] = cable_dist_arr[
@@ -1355,17 +1356,17 @@ def _calculate_npv_levelized_rasters(
 
         # Initialize the summation of the revenue less the ongoing costs,
         # adjusted for discount rate
-        npv_arr = np.full(
-            target_arr_shape, 0, dtype=np.float32)
+        npv_arr = numpy.full(
+            target_arr_shape, 0, dtype=numpy.float32)
 
         # Initialize the numerator summation part of the levelized cost
-        levelized_num_arr = np.full(
-            target_arr_shape, 0, dtype=np.float32)
+        levelized_num_arr = numpy.full(
+            target_arr_shape, 0, dtype=numpy.float32)
 
         # Initialize and calculate the denominator summation value for
         # levelized cost of energy at year 0
-        levelized_denom_arr = np.full(
-            target_arr_shape, 0, dtype=np.float32)
+        levelized_denom_arr = numpy.full(
+            target_arr_shape, 0, dtype=numpy.float32)
         levelized_denom_arr = energy_val_arr / disc_const**0
 
         # Calculate the total NPV and the levelized cost over the lifespan of
@@ -1487,14 +1488,14 @@ def _depth_op(bath, min_depth, max_depth):
         _TARGET_NODATA (int or float): a nodata value set above
 
     Returns:
-        out_array (np.array): an array where values are _TARGET_NODATA
+        out_array (numpy.array): an array where values are _TARGET_NODATA
             if 'bath' does not fall within the range, or 'bath' if it does.
 
     """
-    out_array = np.full(
-        bath.shape, _TARGET_NODATA, dtype=np.float32)
+    out_array = numpy.full(
+        bath.shape, _TARGET_NODATA, dtype=numpy.float32)
     valid_pixels_mask = ((bath >= max_depth) & (bath <= min_depth) &
-                         (bath != _TARGET_NODATA))
+                         ~utils.array_equals_nodata(bath, _TARGET_NODATA))
     out_array[
         valid_pixels_mask] = bath[valid_pixels_mask]
     return out_array
@@ -1504,20 +1505,20 @@ def _add_avg_dist_op(tmp_dist, mean_pixel_size, avg_grid_distance):
     """Convert distances to meters and add in avg_grid_distance.
 
     Args:
-        tmp_dist (np.array): an array of distances
+        tmp_dist (numpy.array): an array of distances
         mean_pixel_size (float): the minimum absolute value of a pixel in
             meters
         avg_grid_distance (float): the average land cable distance in km
             converted to meters
 
     Returns:
-        out_array (np.array): distance values in meters with average
+        out_array (numpy.array): distance values in meters with average
             grid to land distance factored in
 
     """
-    out_array = np.full(
-        tmp_dist.shape, _TARGET_NODATA, dtype=np.float32)
-    valid_pixels_mask = (tmp_dist != _TARGET_NODATA)
+    out_array = numpy.full(
+        tmp_dist.shape, _TARGET_NODATA, dtype=numpy.float32)
+    valid_pixels_mask = ~utils.array_equals_nodata(tmp_dist, _TARGET_NODATA)
     out_array[valid_pixels_mask] = tmp_dist[
         valid_pixels_mask] * mean_pixel_size + avg_grid_distance
     return out_array
@@ -1577,14 +1578,15 @@ def _mask_out_depth_dist(*rasters):
             rasters[2] - the distance mask value (optional)
 
     Returns:
-        out_array (np.array): an array of either _TARGET_NODATA or density
+        out_array (numpy.array): an array of either _TARGET_NODATA or density
             values from rasters[0]
 
     """
-    out_array = np.full(rasters[0].shape, _TARGET_NODATA, dtype=np.float32)
-    nodata_mask = np.full(rasters[0].shape, False, dtype=bool)
+    out_array = numpy.full(rasters[0].shape, _TARGET_NODATA, dtype=numpy.float32)
+    nodata_mask = numpy.full(rasters[0].shape, False, dtype=bool)
     for array in rasters:
-        nodata_mask = nodata_mask | (array == _TARGET_NODATA)
+        nodata_mask = nodata_mask | utils.array_equals_nodata(
+                array, _TARGET_NODATA)
     out_array[~nodata_mask] = rasters[0][~nodata_mask]
     return out_array
 
@@ -1593,17 +1595,18 @@ def _calculate_carbon_op(harvested_arr, carbon_coef):
     """Calculate the carbon offset from harvested array.
 
     Args:
-        harvested_arr (np.array): an array of harvested energy values
+        harvested_arr (numpy.array): an array of harvested energy values
         carbon_coef (float): the amount of CO2 not released into the
                 atmosphere
 
     Returns:
-        out_array (np.array): an array of carbon offset values
+        out_array (numpy.array): an array of carbon offset values
 
     """
-    out_array = np.full(
-        harvested_arr.shape, _TARGET_NODATA, dtype=np.float32)
-    valid_pixels_mask = (harvested_arr != _TARGET_NODATA)
+    out_array = numpy.full(
+        harvested_arr.shape, _TARGET_NODATA, dtype=numpy.float32)
+    valid_pixels_mask = ~utils.array_equals_nodata(
+        harvested_arr, _TARGET_NODATA)
 
     # The energy value converted from MWhr/yr (Mega Watt hours as output
     # from CK's biophysical model equations) to kWhr for the
@@ -1749,9 +1752,10 @@ def _mask_by_distance(base_raster_path, min_dist, max_dist, out_nodata,
 
     def _dist_mask_op(dist_arr):
         """Mask & multiply distance values by min/max values & cell size."""
-        out_array = np.full(dist_arr.shape, out_nodata, dtype=np.float32)
-        valid_pixels_mask = ((dist_arr != raster_nodata) &
-                             (dist_arr >= min_dist) & (dist_arr <= max_dist))
+        out_array = numpy.full(dist_arr.shape, out_nodata, dtype=numpy.float32)
+        valid_pixels_mask = (
+            ~utils.array_equals_nodata(dist_arr, raster_nodata) &
+            (dist_arr >= min_dist) & (dist_arr <= max_dist))
         out_array[
             valid_pixels_mask] = dist_arr[valid_pixels_mask] * mean_pixel_size
         return out_array
@@ -2170,7 +2174,7 @@ def _get_suitable_projection_params(
             'intersection')
 
         # Get the minimum square pixel size
-        min_pixel_size = np.min(np.absolute(base_raster_info['pixel_size']))
+        min_pixel_size = numpy.min(numpy.absolute(base_raster_info['pixel_size']))
         target_pixel_size = (min_pixel_size, -min_pixel_size)
 
     with open(target_pickle_path, 'wb') as pickle_file:
@@ -2246,8 +2250,8 @@ def _convert_degree_pixel_size_to_square_meters(pixel_size, center_lat):
     x_meter_size = longlen * pixel_size[0]
     y_meter_size = latlen * pixel_size[1]
     meter_pixel_size_tuple = (x_meter_size, y_meter_size)
-    if not np.isclose(x_meter_size, y_meter_size):
-        min_meter_size = np.min(np.absolute(meter_pixel_size_tuple))
+    if not numpy.isclose(x_meter_size, y_meter_size):
+        min_meter_size = numpy.min(numpy.absolute(meter_pixel_size_tuple))
         meter_pixel_size_tuple = (min_meter_size, -min_meter_size)
 
     return meter_pixel_size_tuple
@@ -2592,7 +2596,7 @@ def _calculate_distances_land_grid(base_point_vector_path, base_raster_path,
     target_vector = None
     base_point_layer = None
     base_point_vector = None
-    l2g_dist_array = np.array(l2g_dist)
+    l2g_dist_array = numpy.array(l2g_dist)
 
     def _min_land_ocean_dist(*grid_distances):
         """Aggregate each features distance transform output and create one
@@ -2608,8 +2612,8 @@ def _calculate_distances_land_grid(base_point_vector_path, base_raster_path,
         """
         # Get the shape of the incoming numpy arrays
         # Initialize with land to grid distances from the first array
-        min_distances = np.min(grid_distances, axis=0)
-        min_land_grid_dist = l2g_dist_array[np.argmin(grid_distances, axis=0)]
+        min_distances = numpy.min(grid_distances, axis=0)
+        min_land_grid_dist = l2g_dist_array[numpy.argmin(grid_distances, axis=0)]
         return min_distances * mean_pixel_size + min_land_grid_dist
 
     pygeoprocessing.raster_calculator(
@@ -2663,13 +2667,13 @@ def _calculate_grid_dist_on_raster(grid_vector_path, harvested_masked_path,
         """Multiply the pixel value of a raster by the mean pixel size.
 
         Args:
-            tmp_dist (np.array): an nd numpy array
+            tmp_dist (numpy.array): an nd numpy array
 
         Returns:
-            out_array (np.array): an array multiplied by a pixel size
+            out_array (numpy.array): an array multiplied by a pixel size
         """
-        out_array = np.full(tmp_dist.shape, out_nodata, dtype=np.float32)
-        valid_pixels_mask = (tmp_dist != out_nodata)
+        out_array = numpy.full(tmp_dist.shape, out_nodata, dtype=numpy.float32)
+        valid_pixels_mask = ~utils.array_equals_nodata(tmp_dist, out_nodata)
         out_array[
             valid_pixels_mask] = tmp_dist[valid_pixels_mask] * mean_pixel_size
         return out_array

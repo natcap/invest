@@ -14,7 +14,6 @@ from natcap.invest import MODEL_METADATA
 from natcap.invest import spec_utils
 from natcap.invest import usage
 
-logging.basicConfig(level=logging.DEBUG)
 LOGGER = logging.getLogger(__name__)
 
 app = Flask(__name__)

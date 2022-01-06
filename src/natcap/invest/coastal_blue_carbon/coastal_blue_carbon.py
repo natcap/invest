@@ -1409,7 +1409,7 @@ def _calculate_npv(
             matrix_sum = numpy.zeros(npv.shape, dtype=numpy.float32)
             valid_pixels = numpy.ones(npv.shape, dtype=bool)
             for matrix in sequestration_matrices:
-                valid_pixels &= ~numpy.isclose(matrix, NODATA_FLOAT32_MIN)
+                valid_pixels &= ~utils.array_equals_nodata(matrix, NODATA_FLOAT32_MIN)
                 matrix_sum[valid_pixels] += matrix[valid_pixels]
 
             npv[valid_pixels] = (
@@ -1460,8 +1460,9 @@ def _calculate_stocks_after_baseline_period(
         target_matrix = numpy.empty(baseline_matrix.shape, dtype=numpy.float32)
         target_matrix[:] = NODATA_FLOAT32_MIN
 
-        valid_pixels = (~numpy.isclose(baseline_matrix, baseline_nodata) &
-                        ~numpy.isclose(accum_matrix, accum_nodata))
+        valid_pixels = (
+            ~utils.array_equals_nodata(baseline_matrix, baseline_nodata) &
+            ~utils.array_equals_nodata(accum_matrix, accum_nodata))
 
         target_matrix[valid_pixels] = (
             baseline_matrix[valid_pixels] + (
@@ -1501,9 +1502,9 @@ def _calculate_accumulation_over_time(
     target_matrix[:] = NODATA_FLOAT32_MIN
 
     valid_pixels = (
-        ~numpy.isclose(annual_biomass_matrix, NODATA_FLOAT32_MIN) &
-        ~numpy.isclose(annual_soil_matrix, NODATA_FLOAT32_MIN) &
-        ~numpy.isclose(annual_litter_matrix, NODATA_FLOAT32_MIN))
+        ~utils.array_equals_nodata(annual_biomass_matrix, NODATA_FLOAT32_MIN) &
+        ~utils.array_equals_nodata(annual_soil_matrix, NODATA_FLOAT32_MIN) &
+        ~utils.array_equals_nodata(annual_litter_matrix, NODATA_FLOAT32_MIN))
 
     target_matrix[valid_pixels] = (
         (annual_biomass_matrix[valid_pixels] +
@@ -1601,14 +1602,15 @@ def _track_disturbance(
             disturbance_magnitude_matrix.shape, dtype=numpy.float32)
         disturbed_carbon_volume[:] = NODATA_FLOAT32_MIN
         disturbed_carbon_volume[
-            ~numpy.isclose(disturbance_magnitude_matrix,
+            ~utils.array_equals_nodata(disturbance_magnitude_matrix,
                            NODATA_FLOAT32_MIN)] = 0.0
 
         if year_of_disturbance_band:
             known_transition_years_matrix = (
                 year_of_disturbance_band.ReadAsArray(**block_info))
             pixels_previously_disturbed = (
-                known_transition_years_matrix != (NODATA_UINT16_MAX))
+                ~utils.array_equals_nodata(
+                    known_transition_years_matrix, NODATA_UINT16_MAX))
             year_last_disturbed[pixels_previously_disturbed] = (
                 known_transition_years_matrix[pixels_previously_disturbed])
 
@@ -1619,9 +1621,9 @@ def _track_disturbance(
 
         stock_matrix = stock_band.ReadAsArray(**block_info)
         pixels_changed_this_year = (
-            ~numpy.isclose(disturbance_magnitude_matrix, NODATA_FLOAT32_MIN) &
-            ~numpy.isclose(disturbance_magnitude_matrix, 0.0) &
-            ~numpy.isclose(stock_matrix, NODATA_FLOAT32_MIN)
+            ~utils.array_equals_nodata(disturbance_magnitude_matrix, NODATA_FLOAT32_MIN) &
+            ~utils.array_equals_nodata(disturbance_magnitude_matrix, 0.0) &
+            ~utils.array_equals_nodata(stock_matrix, NODATA_FLOAT32_MIN)
         )
 
         disturbed_carbon_volume[pixels_changed_this_year] = (
@@ -1686,14 +1688,15 @@ def _calculate_net_sequestration(
                                                dtype=bool)
         if accumulation_nodata is not None:
             valid_accumulation_pixels &= (
-                ~numpy.isclose(accumulation_matrix, accumulation_nodata))
+                ~utils.array_equals_nodata(
+                    accumulation_matrix, accumulation_nodata))
         target_matrix[valid_accumulation_pixels] += (
             accumulation_matrix[valid_accumulation_pixels])
 
         valid_emissions_pixels = ~numpy.isclose(emissions_matrix, 0.0)
         if emissions_nodata is not None:
             valid_emissions_pixels &= (
-                ~numpy.isclose(emissions_matrix, emissions_nodata))
+                ~utils.array_equals_nodata(emissions_matrix, emissions_nodata))
 
         target_matrix[valid_emissions_pixels] = emissions_matrix[
             valid_emissions_pixels] * -1
@@ -1734,9 +1737,11 @@ def _calculate_emissions(
     zero_half_life = numpy.isclose(carbon_half_life_matrix, 0.0)
 
     valid_pixels = (
-        (~numpy.isclose(carbon_disturbed_matrix, NODATA_FLOAT32_MIN)) &
-        (year_of_last_disturbance_matrix != NODATA_UINT16_MAX) &
-        (~zero_half_life))
+        ~utils.array_equals_nodata(
+            carbon_disturbed_matrix, NODATA_FLOAT32_MIN) &
+        ~utils.array_equals_nodata(
+            year_of_last_disturbance_matrix, NODATA_UINT16_MAX) &
+        ~zero_half_life)
 
     # Emissions happen immediately.
     # This means that if the transition happens in year 2020, the emissions in
@@ -1819,7 +1824,7 @@ def _sum_n_rasters(
             array = band.ReadAsArray(**block_info)
             valid_pixels = slice(None)
             if nodata is not None:
-                valid_pixels = ~numpy.isclose(array, nodata)
+                valid_pixels = ~utils.array_equals_nodata(array, nodata)
 
             sum_array[valid_pixels] += array[valid_pixels]
             pixels_touched[valid_pixels] = 1
@@ -2016,10 +2021,12 @@ def _reclassify_accumulation_transition(
         valid_pixels = numpy.ones(landuse_transition_from_matrix.shape,
                                   dtype=bool)
         if from_nodata is not None:
-            valid_pixels &= (landuse_transition_from_matrix != from_nodata)
+            valid_pixels &= ~utils.array_equals_nodata(
+                landuse_transition_from_matrix, from_nodata)
 
         if to_nodata is not None:
-            valid_pixels &= (landuse_transition_to_matrix != to_nodata)
+            valid_pixels &= ~utils.array_equals_nodata(
+                landuse_transition_to_matrix, to_nodata)
 
         output_matrix[valid_pixels] = accumulation_rate_matrix[
             landuse_transition_from_matrix[valid_pixels],
@@ -2078,10 +2085,12 @@ def _reclassify_disturbance_magnitude(
         valid_pixels = numpy.ones(landuse_transition_from_matrix.shape,
                                   dtype=bool)
         if from_nodata is not None:
-            valid_pixels &= (landuse_transition_from_matrix != from_nodata)
+            valid_pixels &= ~utils.array_equals_nodata(
+                landuse_transition_from_matrix, from_nodata)
 
         if to_nodata is not None:
-            valid_pixels &= (landuse_transition_to_matrix != to_nodata)
+            valid_pixels &= ~utils.array_equals_nodata(
+                landuse_transition_to_matrix, to_nodata)
 
         disturbance_magnitude = disturbance_magnitude_matrix[
             landuse_transition_from_matrix[valid_pixels],

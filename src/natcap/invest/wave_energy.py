@@ -1459,7 +1459,9 @@ def _create_percentile_rasters(base_raster_path, target_raster_path,
     base_dtype = base_raster_info['datatype']
 
     def _mask_below_start_value(array):
-        valid_mask = (array != base_nodata) & (array >= float(start_value))
+        valid_mask = (
+            ~utils.array_equals_nodata(array, base_nodata) &
+            (array >= float(start_value)))
         result = numpy.empty_like(array)
         result[:] = base_nodata
         result[valid_mask] = array[valid_mask]
@@ -1502,7 +1504,7 @@ def _create_percentile_rasters(base_raster_path, target_raster_path,
     def raster_percentile(band):
         """Group the band pixels together based on _PERCENTILES, starting from 1.
         """
-        valid_data_mask = (band != base_nodata)
+        valid_data_mask = ~utils.array_equals_nodata(band, base_nodata)
         band[valid_data_mask] = numpy.searchsorted(
             percentile_values, band[valid_data_mask]) + 1
         band[~valid_data_mask] = target_nodata

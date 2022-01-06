@@ -224,8 +224,9 @@ def _create_transition_table(landcover_table, lulc_snapshot_list,
             # This comparison assumes that our landcover rasters are of an
             # integer type.  When int matrices, we can compare directly to
             # None.
-            valid_pixels = ((from_array != from_nodata) &
-                            (to_array != to_nodata))
+            valid_pixels = (
+                ~utils.array_equals_nodata(from_array, from_nodata) &
+                ~utils.array_equals_nodata(to_array, to_nodata))
             transition_pairs = transition_pairs.union(
                 set(zip(from_array[valid_pixels].flatten(),
                         to_array[valid_pixels].flatten())))
