@@ -38,8 +38,9 @@ DATASTACKS = {
     'scenic_quality': ['ScenicQuality/wind_turbines_wcvi.invs.json'],
     'sdr': ['SDR/sdr_gura.invs.json'],
     'seasonal_water_yield': ['Seasonal_Water_Yield/seasonal_water_yield_gura.invs.json'],
-    'urban_flood_risk_mitigation': ['UrbanFloodMitigation/urban_flood_risk_mitigation.invs.json'],
+    'stormwater': ['UrbanStormwater/stormwater_datastack.invest.json'],
     'urban_cooling_model': ['UrbanCoolingModel/urban_cooling_model_datastack.invest.json'],
+    'urban_flood_risk_mitigation': ['UrbanFloodMitigation/urban_flood_risk_mitigation.invs.json'],
     'wind_energy': ['WindEnergy/wind_energy_new_england.invs.json'],
     'wave_energy': [
         'WaveEnergy/wave_energy_aquabuoy_wcvi.invs.json',

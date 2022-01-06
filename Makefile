@@ -319,9 +319,9 @@ ZIPDIRS = Annual_Water_Yield \
 		  ScenicQuality \
 		  SDR \
 		  Seasonal_Water_Yield \
-		  storm_impact \
-		  UrbanFloodMitigation \
 		  UrbanCoolingModel \
+		  UrbanFloodMitigation \
+		  UrbanStormwater \
 		  WaveEnergy \
 		  WindEnergy
 
