@@ -820,14 +820,15 @@ def _assert_vectors_equal(
             # geometry ordering
             geoms_equal = expected_geom_shapely.equals(actual_geom_shapely)
             if not geoms_equal:
-                # Try almost_equal allowing for precision differences
-                geoms_almost_eq = expected_geom_shapely.almost_equals(
-                    actual_geom_shapely)
-                if not geoms_almost_eq:
-                    raise AssertionError(
-                        "Vector geometry assertion fail. \n"
-                        f"Expected geometry: {expected_geom_wkt}. \n"
-                        f"Actual geometry: {actual_geom_wkt}. ")
+                # Try allowing for precision differences,
+                # but assuming that geometries must be in the same order
+                for expected, actual in zip(expected_geom_shapely.geoms,
+                                            actual_geom_shapely.geoms):
+                    if not numpy.isclose(expected, actual):
+                        raise AssertionError(
+                            "Vector geometry assertion fail. \n"
+                            f"Expected geometry: {expected_geom_wkt}. \n"
+                            f"Actual geometry: {actual_geom_wkt}. ")
 
             expected_feature = None
             actual_feature = None

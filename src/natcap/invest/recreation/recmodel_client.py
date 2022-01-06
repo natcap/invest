@@ -558,7 +558,7 @@ def _grid_vector(vector_path, grid_type, cell_size, out_grid_vector_path):
         original_vector_shapes.append(wkt_feat)
     vector_layer.ResetReading()
     original_polygon = shapely.prepared.prep(
-        shapely.ops.cascaded_union(original_vector_shapes))
+        shapely.ops.unary_union(original_vector_shapes))
 
     out_grid_vector = driver.Create(
         out_grid_vector_path, 0, 0, 0, gdal.GDT_Unknown)
