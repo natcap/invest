@@ -86,7 +86,7 @@ Unreleased Changes
       * Renamed the output ``p_export.tif`` to ``p_surface_export.tif`` to
         clarify that it only models the surface export of phosphorus.
       * Renamed the output ``n_export.tif`` to ``n_total_export.tif`` to
-        clarify that is is the total of surface and subsurface nitrogen export.
+        clarify that it is the total of surface and subsurface nitrogen export.
       * Added the new outputs ``n_surface_export.tif`` and
         ``n_subsurface_export.tif``, showing the surface and subsurface
         components of the total nitrogen export.
