@@ -1009,12 +1009,13 @@ def _sum_rasters(raster_path_list, target_nodata, target_result_path):
 
     def _sum_op(*array_list):
         """Sum arrays where all are valid."""
-        result = numpy.full(array_list[0].shape, target_nodata)
+        result = numpy.full(array_list[0].shape, target_nodata,
+                            dtype=numpy.float32)
         valid_mask = numpy.full(result.shape, True)
         for array, nodata in zip(array_list, nodata_list):
             if nodata is not None:
                 valid_mask &= ~numpy.isclose(array, nodata)
-        result[valid_mask] = array_list[0][valid_mask]
+        result[valid_mask] = 0
         for array in array_list:
             result[valid_mask] += array[valid_mask]
         return result
