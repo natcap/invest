@@ -407,7 +407,7 @@ class WaveEnergyRegressionTests(unittest.TestCase):
         args = {
             'workspace_dir': workspace_dir,
             'wave_base_data_path': os.path.join(SAMPLE_DATA, 'WaveData'),
-            'analysis_area_path': 'West Coast of North America and Hawaii',
+            'analysis_area': 'westcoast',
             'machine_perf_path': os.path.join(
                 SAMPLE_DATA, 'Machine_Pelamis_Performance.csv'),
             'machine_param_path': os.path.join(
@@ -621,7 +621,7 @@ class WaveEnergyValidateTests(unittest.TestCase):
             'workspace_dir',
             'machine_param_path',
             'wave_base_data_path',
-            'analysis_area_path',
+            'analysis_area',
             'machine_perf_path',
             'dem_path',
         ]
@@ -650,14 +650,17 @@ class WaveEnergyValidateTests(unittest.TestCase):
             ['number_of_machines', 'machine_econ_path', 'land_gridPts_path'])
         self.assertEqual(invalid_keys, expected_missing_keys)
 
-    def test_incorrect_analysis_area_path_value(self):
-        """WaveEnergy: testing incorrect analysis_area_path value."""
-        from natcap.invest import wave_energy
+    def test_incorrect_analysis_area_value(self):
+        """WaveEnergy: testing incorrect analysis_area value."""
+        from natcap.invest import wave_energy, validation
 
         args = {}
-        args['analysis_area_path'] = 'Incorrect Analysis Area'
+        args['analysis_area'] = 'Incorrect Analysis Area'
         validation_error_list = wave_energy.validate(args)
-        expected_message = 'Value must be one of'  # Start of option error msg
+        expected_message = validation.MESSAGES['INVALID_OPTION'].format(
+            option_list=sorted([
+                "westcoast", "eastcoast", "northsea4", "northsea10",
+                "australia", "global"]))
         actual_messages = ''
         for keys, error_strings in validation_error_list:
             actual_messages += error_strings
@@ -665,30 +668,44 @@ class WaveEnergyValidateTests(unittest.TestCase):
 
     def test_validate_keys_missing_values(self):
         """WaveEnergy: testing validate when keys are missing values."""
-        from natcap.invest import wave_energy
+        from natcap.invest import wave_energy, validation
 
         args = {}
         args['wave_base_data_path'] = None
         args['dem_path'] = None
 
         validation_error_list = wave_energy.validate(args)
-        expected_errors = [
-            (['dem_path', 'wave_base_data_path'],
-             'Input is required but has no value'),
-        ]
-        for expected_error in expected_errors:
-            self.assertTrue(expected_error in validation_error_list)
+        expected_error = (
+            ['dem_path', 'wave_base_data_path'], validation.MESSAGES['MISSING_VALUE'])
+        self.assertTrue(expected_error in validation_error_list)
 
-    def test_validate_bad_aoi_format(self):
-        """WaveEnergy: testing bad AOI vector format with validate."""
-        from natcap.invest import wave_energy
+    def test_validate_bad_aoi_incorrect_proj_units(self):
+        """WaveEnergy: test validating AOI vector with incorrect units."""
+        from natcap.invest import wave_energy, validation
 
         args = {}
-        args['aoi_path'] = os.path.join(SAMPLE_DATA, 'bad_AOI_WCVI.shp')
+        # Validation will recognize the units "foot" and say it's incorrect
+        args['aoi_path'] = os.path.join(SAMPLE_DATA,
+                                        'bad_AOI_us_survey_foot.shp')
+        validation_error_list = wave_energy.validate(args)
+        expected_error = (
+            ['aoi_path'],
+            validation.MESSAGES['WRONG_PROJECTION_UNIT'].format(
+                unit_a='meter', unit_b='us_survey_foot'))
+        self.assertTrue(expected_error in validation_error_list)
+
+    def test_validate_bad_aoi_unrecognized_proj_units(self):
+        """WaveEnergy: test validating AOI vector with unrecognized units"""
+        from natcap.invest import wave_energy, validation
+
+        args = {}
+        # The unit "not_a_unit" is not recognized by pint
+        args['aoi_path'] = os.path.join(
+            SAMPLE_DATA, 'bad_AOI_fake_unit.shp')
 
         validation_error_list = wave_energy.validate(args)
-        expected_errors = [
-            (['aoi_path'], 'Layer must be projected in meters'),
-        ]
-        for expected_error in expected_errors:
-            self.assertTrue(expected_error in validation_error_list)
+        expected_error = (
+            ['aoi_path'],
+            validation.MESSAGES['WRONG_PROJECTION_UNIT'].format(
+                unit_a='meter', unit_b='not_a_unit'))
+        self.assertTrue(expected_error in validation_error_list)

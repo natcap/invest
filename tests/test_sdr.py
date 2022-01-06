@@ -5,6 +5,7 @@ import tempfile
 import unittest
 
 import numpy
+from natcap.invest import utils
 import pygeoprocessing
 from osgeo import gdal, ogr, osr
 
@@ -127,7 +128,7 @@ class SDRTests(unittest.TestCase):
 
     def test_sdr_validation_watershed_missing_ws_id(self):
         """SDR test validation notices missing `ws_id` field on watershed."""
-        from natcap.invest.sdr import sdr
+        from natcap.invest import sdr, validation
 
         vector_driver = ogr.GetDriverByName("ESRI Shapefile")
         test_watershed_path = os.path.join(
@@ -150,12 +151,15 @@ class SDRTests(unittest.TestCase):
         args = SDRTests.generate_base_args(
             self.workspace_dir)
         args['watersheds_path'] = test_watershed_path
-        validate_result = sdr.validate(args, limit_to=None)
+        validate_result = sdr.sdr.validate(args, limit_to=None)
         self.assertTrue(
             validate_result,
             'expected a validation error but didn\'t get one')
-        self.assertTrue(
-            'Fields are missing from the first layer' in validate_result[0][1])
+        expected = [(
+            ['watersheds_path'],
+            validation.MESSAGES['MATCHED_NO_HEADERS'].format(
+                header='field', header_name='ws_id'))]
+        self.assertEqual(validate_result, expected)
 
     def test_sdr_validation_watershed_missing_ws_id_value(self):
         """SDR test validation notices bad value in `ws_id` watershed."""
@@ -189,8 +193,8 @@ class SDRTests(unittest.TestCase):
         validate_result = sdr.validate(args, limit_to=None)
         self.assertTrue(len(validate_result) > 0,
                         'Expected validation errors but none found')
-        self.assertTrue(
-            'features have a non-integer ws_id field' in validate_result[0][1])
+        self.assertTrue(utils.matches_format_string(
+            validate_result[0][1], sdr.INVALID_ID_MSG))
 
     def test_base_regression(self):
         """SDR base regression test on sample data.
@@ -235,8 +239,6 @@ class SDRTests(unittest.TestCase):
 
         # use predefined directory so test can clean up files during teardown
         args = SDRTests.generate_base_args(self.workspace_dir)
-        # args_copy = args.copy()
-        # args_copy['workspace_dir'] = 'sdr_test_workspace'
 
         # set all input rasters to have undefined nodata values
         tmp_dir = os.path.join(args['workspace_dir'], 'nodata_raster_dir')

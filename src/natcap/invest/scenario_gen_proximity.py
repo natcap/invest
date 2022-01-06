@@ -16,114 +16,97 @@ import scipy
 import pygeoprocessing
 import taskgraph
 
-from . import validation
 from . import utils
+from . import spec_utils
+from .spec_utils import u
+from . import validation
 from . import MODEL_METADATA
 
 LOGGER = logging.getLogger(__name__)
+
+MISSING_CONVERT_OPTION_MSG = _(
+    'One or more of "convert_nearest_to_edge" or "convert_farthest_from_edge" '
+    'must be selected')
 
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["scenario_generator_proximity"].model_title,
     "pyname": MODEL_METADATA["scenario_generator_proximity"].pyname,
     "userguide_html": MODEL_METADATA["scenario_generator_proximity"].userguide,
     "args": {
-        "workspace_dir": validation.WORKSPACE_SPEC,
-        "results_suffix": validation.SUFFIX_SPEC,
-        "n_workers": validation.N_WORKERS_SPEC,
+        "workspace_dir": spec_utils.WORKSPACE,
+        "results_suffix": spec_utils.SUFFIX,
+        "n_workers": spec_utils.N_WORKERS,
         "base_lulc_path": {
-            "validation_options": {
-                "projected": True,
-            },
-            "type": "raster",
-            "required": True,
-            "about": "Path to the base landcover map",
-            "name": "Base Land Use/Cover"
+            **spec_utils.LULC,
+            "projected": True,
+            "about": _("Base map from which to generate scenarios."),
+            "name": _("base LULC map")
         },
-        "replacment_lucode": {
-            "type": "number",
-            "required": True,
-            "about": "Code to replace when converting pixels",
-            "name": "Replacement Landcover Code"
+        "replacement_lucode": {
+            "type": "integer",
+            "about": _("The LULC code to which habitat will be converted."),
+            "name": _("replacement landcover code")
         },
         "area_to_convert": {
-            "validation_options": {
-                "expression": "value > 0",
-            },
+            "expression": "value > 0",
             "type": "number",
-            "required": True,
-            "about": "Max area (Ha) to convert",
-            "name": "Max area to convert"
+            "units": u.hectare,
+            "about": _("Maximum area to be converted to agriculture."),
+            "name": _("maximum area to convert")
         },
         "focal_landcover_codes": {
-            "validation_options": {
-                "regexp": {
-                    "pattern": "[0-9 ]+",
-                },
-            },
             "type": "freestyle_string",
-            "required": True,
-            "about": (
-                "A space separated string of landcover codes that are used "
-                "to determine the proximity when referring to 'towards' or "
+            "regexp": "[0-9 ]+",
+            "about": _(
+                "A space-separated list of LULC codes that are used to "
+                "determine the proximity when referring to 'towards' or "
                 "'away' from the base landcover codes"),
-            "name": "Focal Landcover Codes"
+            "name": _("focal landcover codes")
         },
         "convertible_landcover_codes": {
-            "validation_options": {
-                "regexp": {
-                    "pattern": "[0-9 ]+",
-                },
-            },
             "type": "freestyle_string",
-            "required": True,
-            "about": (
-                "A space separated string of landcover codes that can be "
-                "converted in the generation phase found in "
-                "`args['base_lulc_path']`."),
-            "name": "Convertible Landcover Codes"
+            "regexp": "[0-9 ]+",
+            "about": _(
+                "A space-separated list of LULC codes that can be "
+                "converted to be converted to agriculture."),
+            "name": _("convertible landcover codes")
         },
         "n_fragmentation_steps": {
-            "validation_options": {
-                "expression": "value > 0",
-            },
+            "expression": "value > 0",
             "type": "number",
-            "required": True,
-            "about": (
-                "This parameter is used to divide the conversion simulation "
-                "into equal subareas of the requested max area.  During each "
-                "sub-step the distance transform is recalculated from the "
-                "base landcover codes.  This can affect the final result "
-                "if the base types are also convertible types."),
-            "name": "Number of Steps in Conversion"
+            "units": u.none,
+            "about": _(
+                "The number of steps that the simulation should take to "
+                "fragment the habitat of interest in the fragmentation "
+                "scenario. This parameter is used to divide the conversion "
+                "simulation into equal subareas of the requested max area. "
+                "During each sub-step the distance transform is recalculated "
+                "from the base landcover codes.  This can affect the final "
+                "result if the base types are also convertible types."),
+            "name": _("number of conversion steps")
         },
         "aoi_path": {
-            "type": "vector",
+            **spec_utils.AOI,
             "required": False,
-            "validation_options": {
-                "projected": True,
-            },
-            "about": (
-                "This is a set of polygons that will be used to aggregate "
-                "carbon values at the end of the run if provided."),
-            "name": "Area of interest"
+            "about": _(
+                "Area over which to run the conversion. Provide this input if "
+                "change is only desired in a subregion of the Base LULC map."),
         },
         "convert_farthest_from_edge": {
             "type": "boolean",
-            "required": True,
-            "about": (
-                "This scenario converts the convertible landcover codes "
-                "starting at the furthest pixel from the closest base "
-                "landcover codes and moves inward."),
-            "name": "Convert farthest from edge"
+            "about": _(
+                "Convert the 'convertible' landcover codes starting at the "
+                "furthest pixel from the 'focal' land cover areas "
+                "and working inwards."),
+            "name": _("convert farthest from edge")
         },
         "convert_nearest_to_edge": {
             "type": "boolean",
-            "required": True,
-            "about": (
-                "This scenario converts the convertible landcover codes "
-                "starting at the closest pixel in the base landcover codes "
-                "and moves outward."),
-            "name": "Convert nearest to edge"
+            "about": _(
+                "Convert the 'convertible' landcover codes starting at the "
+                "nearest pixels to the 'focal' land cover areas "
+                "and working outwards."),
+            "name": _("convert nearest to edge")
         }
     }
 }
@@ -150,7 +133,7 @@ def execute(args):
         args['results_suffix'] (string): (optional) string to append to any
             output files
         args['base_lulc_path'] (string): path to the base landcover map
-        args['replacment_lucode'] (string or int): code to replace when
+        args['replacement_lucode'] (string or int): code to replace when
             converting pixels
         args['area_to_convert'] (string or float): max area (Ha) to convert
         args['focal_landcover_codes'] (string): a space separated string of
@@ -197,7 +180,8 @@ def execute(args):
     utils.make_directories(
         [output_dir, intermediate_output_dir, tmp_dir])
 
-    work_token_dir = os.path.join(intermediate_output_dir, '_taskgraph_working_dir')
+    work_token_dir = os.path.join(
+        intermediate_output_dir, '_taskgraph_working_dir')
     try:
         n_workers = int(args['n_workers'])
     except (KeyError, ValueError, TypeError):
@@ -208,7 +192,7 @@ def execute(args):
     task_graph = taskgraph.TaskGraph(work_token_dir, n_workers)
 
     area_to_convert = float(args['area_to_convert'])
-    replacement_lucode = int(args['replacment_lucode'])
+    replacement_lucode = int(args['replacement_lucode'])
 
     # convert all the input strings to lists of ints
     convertible_type_list = numpy.array([
@@ -437,7 +421,7 @@ def _convert_landscape(
                 if invert_mask:
                     base_mask = ~base_mask
                 return numpy.where(
-                    lulc_array == lulc_nodata,
+                    utils.array_equals_nodata(lulc_array, lulc_nodata),
                     mask_nodata, base_mask)
             pygeoprocessing.raster_calculator(
                 [(output_landscape_raster_path, 1)], _mask_base_op,
@@ -643,9 +627,9 @@ def _sort_to_disk(dataset_path, score_weight=1.0):
 
         col_coords, row_coords = numpy.meshgrid(
             range(scores_data['xoff'], scores_data['xoff'] +
-                   scores_data['win_xsize']),
+                  scores_data['win_xsize']),
             range(scores_data['yoff'], scores_data['yoff'] +
-                   scores_data['win_ysize']))
+                  scores_data['win_ysize']))
 
         flat_indexes = (col_coords + row_coords * n_cols).flatten()
 
@@ -900,7 +884,6 @@ def validate(args, limit_to=None):
                 not args['convert_farthest_from_edge']):
             validation_warnings.append((
                 ['convert_nearest_to_edge', 'convert_farthest_from_edge'],
-                ('One or more of "convert_nearest_to_edge" or '
-                 '"convert_farthest_from_edge" must be selected')))
+                MISSING_CONVERT_OPTION_MSG))
 
     return validation_warnings

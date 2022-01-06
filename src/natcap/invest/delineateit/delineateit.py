@@ -15,6 +15,8 @@ import pygeoprocessing.routing
 import taskgraph
 
 from .. import utils
+from .. import spec_utils
+from ..spec_utils import u
 from .. import validation
 from .. import MODEL_METADATA
 from . import delineateit_core
@@ -31,85 +33,71 @@ ARGS_SPEC = {
         "different_projections_ok": True,
     },
     "args": {
-        "workspace_dir": validation.WORKSPACE_SPEC,
-        "results_suffix": validation.SUFFIX_SPEC,
-        "n_workers": validation.N_WORKERS_SPEC,
+        "workspace_dir": spec_utils.WORKSPACE,
+        "results_suffix": spec_utils.SUFFIX,
+        "n_workers": spec_utils.N_WORKERS,
         "dem_path": {
-            "validation_options": {
-                "projected": True,
-            },
-            "type": "raster",
-            "required": True,
-            "about": (
-                "A GDAL-supported raster file with an elevation value for "
-                "each cell."),
-            "name": "Digital Elevation Model"
+            **spec_utils.DEM,
+            "projected": True
         },
         "detect_pour_points": {
             "type": "boolean",
             "required": False,
-            "about": (
-                "If ``True``, the pour point detection algorithm will run, "
-                "creating a point vector file pour_points.gpkg."),
-            "name": "Detect pour points"
+            "about": _(
+                "Detect pour points (watershed outlets) based on "
+                "the DEM, and use these instead of a user-provided outlet "
+                "features vector."),
+            "name": _("detect pour points")
         },
         "outlet_vector_path": {
             "type": "vector",
+            "fields": {},
+            "geometries": spec_utils.ALL_GEOMS,
             "required": "not detect_pour_points",
-            "about": (
-                "This is a layer of geometries representing watershed "
-                "outlets such as municipal water intakes or lakes."),
-            "name": "Outlet Features"
+            "about": _(
+                "A map of watershed outlets from which to delineate the "
+                "watersheds. Required if Detect Pour Points is not checked."),
+            "name": _("watershed outlets")
         },
         "snap_points": {
             "type": "boolean",
             "required": False,
-            "about": (
+            "about": _(
                 "Whether to snap point geometries to the nearest stream "
                 "pixel.  If ``True``, ``args['flow_threshold']`` and "
                 "``args['snap_distance']`` must also be defined. If a point "
                 "is equally near to more than one stream pixel, it will be "
                 "snapped to the stream pixel with the highest flow "
-                "accumulation value."),
-            "name": "Snap points to the nearest stream"
+                "accumulation value. This has no effect if Detect Pour Points "
+                "is selected."),
+            "name": _("snap points to the nearest stream")
         },
         "flow_threshold": {
-            "validation_options": {
-                "expression": "value > 0",
-            },
-            "type": "number",
+            **spec_utils.THRESHOLD_FLOW_ACCUMULATION,
             "required": "snap_points",
-            "about": (
-                "The number of upstream cells that must flow into a cell "
-                "before it's considered part of a stream such that retention "
-                "stops and the remaining export is exported to the stream.  "
-                "Used to define streams from the DEM."),
-            "name": "Threshold Flow Accumulation"
+            "about": _(
+                spec_utils.THRESHOLD_FLOW_ACCUMULATION["about"] +
+                " Required if Snap Points is selected."),
         },
         "snap_distance": {
-            "validation_options": {
-                "expression": "value > 0",
-            },
+            "expression": "value > 0",
             "type": "number",
+            "units": u.pixels,
             "required": "snap_points",
-            "about": (
-                "If provided, the maximum search radius in pixels to look "
-                "for stream pixels.  If a stream pixel is found within the "
-                "snap distance, the outflow point will be snapped to the "
-                "center of the nearest stream pixel.  Geometries that are "
-                "not points (such as Lines and Polygons) will not be "
-                "snapped.  MultiPoint geoemtries will also not be snapped."),
-            "name": "Pixel Distance to Snap Outlet Points"
+            "about": _(
+                "Maximum distance to relocate watershed outlet points in "
+                "order to snap them to a stream. Required if Snap Points "
+                "is selected."),
+            "name": _("snap distance")
         },
         "skip_invalid_geometry": {
             "type": "boolean",
             "required": False,
-            "about": (
-                "If ``True``, any invalid geometries encountered "
-                "in the outlet vector will not be included in the "
-                "delineation.  If ``False``, an invalid geometry "
-                "will cause DelineateIt to crash."),
-            "name": "Crash on invalid geometries"
+            "about": _(
+                "Skip delineation for any invalid geometries found in the "
+                "Outlet Features. Otherwise, an invalid geometry will cause "
+                "the model to crash."),
+            "name": _("skip invalid geometries")
         }
     }
 }
@@ -334,7 +322,7 @@ def _threshold_streams(flow_accum, src_nodata, out_nodata, threshold):
 
     valid_pixels = slice(None)
     if src_nodata is not None:
-        valid_pixels = ~numpy.isclose(flow_accum, src_nodata)
+        valid_pixels = ~utils.array_equals_nodata(flow_accum, src_nodata)
 
     over_threshold = flow_accum > threshold
     out_matrix[valid_pixels & over_threshold] = 1
