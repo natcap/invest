@@ -75,7 +75,7 @@ ARGS_SPEC = {
         "flow_threshold": {
             **spec_utils.THRESHOLD_FLOW_ACCUMULATION,
             "required": "snap_points",
-            "about": (
+            "about": _(
                 spec_utils.THRESHOLD_FLOW_ACCUMULATION["about"] +
                 " Required if Snap Points is selected."),
         },

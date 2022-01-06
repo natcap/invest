@@ -46,7 +46,7 @@ ARGS_SPEC = {
         "lulc_path": {
             **spec_utils.LULC,
             "projected": True,
-            "about": (
+            "about": _(
                 "Map of LULC. All values in this raster must have "
                 "corresponding entries in the Biophysical Table.")
         },
@@ -81,7 +81,7 @@ ARGS_SPEC = {
             "fields": {
                 "type": {
                     "type": "integer",
-                    "about": (
+                    "about": _(
                         "Code indicating the building type. These codes "
                         "must match those in the Damage Loss Table."
                     )}},

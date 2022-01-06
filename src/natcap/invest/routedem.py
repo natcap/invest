@@ -76,7 +76,7 @@ ARGS_SPEC = {
         "threshold_flow_accumulation": {
             **spec_utils.THRESHOLD_FLOW_ACCUMULATION,
             "required": "calculate_stream_threshold",
-            "about": (
+            "about": _(
                 f"{spec_utils.THRESHOLD_FLOW_ACCUMULATION['about']} "
                 "Required if Calculate Streams is selected.")
         },

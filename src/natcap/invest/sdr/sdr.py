@@ -71,7 +71,7 @@ ARGS_SPEC = {
         "lulc_path": {
             **spec_utils.LULC,
             "projected": True,
-            "about": (
+            "about": _(
                 f"{spec_utils.LULC['about']} All values in this raster must "
                 "have corresponding entries in the Biophysical Table.")
         },
@@ -80,7 +80,7 @@ ARGS_SPEC = {
             "fields": {
                 "ws_id": {
                     "type": "integer",
-                    "about": "Unique identifier for the watershed."}
+                    "about": _("Unique identifier for the watershed.")}
             },
             "geometries": spec_utils.POLYGONS,
             "projected": True,

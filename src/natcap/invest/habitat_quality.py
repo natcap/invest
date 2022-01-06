@@ -78,7 +78,7 @@ ARGS_SPEC = {
             "columns": {
                 "threat": {
                     "type": "freestyle_string",
-                    "about": (
+                    "about": _(
                         "Name of the threat. Each threat name must have a "
                         "corresponding column in the Sensitivity table.")},
                 "max_dist": {
@@ -114,7 +114,7 @@ ARGS_SPEC = {
                 "cur_path": {
                     "type": "raster",
                     "bands": {1: {"type": "ratio"}},
-                    "about": (
+                    "about": _(
                         "Map of the threat's distribution in the current "
                         "scenario. Each pixel value is the relative intensity "
                         "of the threat at that location. ")
@@ -123,7 +123,7 @@ ARGS_SPEC = {
                     "required": "lulc_fut_path",
                     "type": "raster",
                     "bands": {1: {"type": "ratio"}},
-                    "about": (
+                    "about": _(
                         "Map of the threat's distribution in the future "
                         "scenario. Each pixel value is the relative intensity "
                         "of the threat at that location. "
@@ -133,7 +133,7 @@ ARGS_SPEC = {
                     "required": "lulc_bas_path",
                     "type": "raster",
                     "bands": {1: {"type": "ratio"}},
-                    "about": (
+                    "about": _(
                         "Map of the threat's distribution in the baseline "
                         "scenario. Each pixel value is the relative intensity "
                         "of the threat at that location. "

@@ -39,7 +39,7 @@ ARGS_SPEC = {
         "lulc_path": {
             **spec_utils.LULC,
             "projected": True,
-            "about": (
+            "about": _(
                 f"{spec_utils.LULC['about']} All values in this raster "
                 "must have corresponding entries in the Biophysical Table.")
         },
@@ -111,12 +111,12 @@ ARGS_SPEC = {
             "columns": {
                 "lucode": {
                     "type": "integer",
-                    "about": (
+                    "about": _(
                         "LULC code corresponding to values in the LULC map.")
                 },
                 "lulc_veg": {
                     "type": "integer",
-                    "about": (
+                    "about": _(
                         "Code indicating whether the the LULC class is "
                         "vegetated for the purpose of AET. Enter 1 for all "
                         "vegetated classes except wetlands, and 0 for all "
@@ -126,14 +126,14 @@ ARGS_SPEC = {
                 "root_depth": {
                     "type": "number",
                     "units": u.millimeter,
-                    "about": (
+                    "about": _(
                         "Maximum root depth for plants in this LULC class. "
                         "Only used for classes with a 'lulc_veg' value of 1.")
                 },
                 "kc": {
                     "type": "number",
                     "units": u.none,
-                    "about": "Crop coefficient for this LULC class."}
+                    "about": _("Crop coefficient for this LULC class.")}
             },
             "about": _(
                 "Table of biophysical parameters for each LULC class. All "
