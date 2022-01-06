@@ -95,7 +95,7 @@ ARGS_SPEC = {
             "columns": {
                 "lucode": {
                     "type": "integer",
-                    "about": "LULC code from the LULC raster."},
+                    "about": _("LULC code from the LULC raster.")},
                 "usle_c": {
                     "type": "ratio",
                     "about": _("Cover-management factor for the USLE")},

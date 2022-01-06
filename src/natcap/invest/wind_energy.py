@@ -51,12 +51,12 @@ ARGS_SPEC = {
                 "long": {
                     "type": "number",
                     "units": u.degree,
-                    "about": "Longitude of the data point."
+                    "about": _("Longitude of the data point.")
                 },
                 "lati": {
                     "type": "number",
                     "units": u.degree,
-                    "about": "Latitude of the data point."
+                    "about": _("Latitude of the data point.")
                 },
                 "lam": {
                     "type": "number",

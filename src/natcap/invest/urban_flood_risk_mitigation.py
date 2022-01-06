@@ -59,7 +59,7 @@ ARGS_SPEC = {
             "columns": {
                 "lucode": {
                     "type": "integer",
-                    "about": "LULC codes matching those in the LULC map."},
+                    "about": _("LULC codes matching those in the LULC map.")},
                 "cn_[SOIL_GROUP]": {
                     "type": "number",
                     "units": u.none,
@@ -95,11 +95,11 @@ ARGS_SPEC = {
             "columns": {
                 "type": {
                     "type": "integer",
-                    "about": "Building type code."},
+                    "about": _("Building type code.")},
                 "damage": {
                     "type": "number",
                     "units": u.currency/(u.meter**2),
-                    "about": "Potential damage loss for this building type."}
+                    "about": _("Potential damage loss for this building type.")}
             },
             "required": "built_infrastructure_vector_path",
             "about": _(

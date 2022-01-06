@@ -96,7 +96,7 @@ ARGS_SPEC = {
             "fields": {
                 "subws_id": {
                     "type": "integer",
-                    "about": "Unique identifier for each subwatershed."
+                    "about": _("Unique identifier for each subwatershed.")
                 }
             },
             "geometries": spec_utils.POLYGONS,

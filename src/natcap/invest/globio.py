@@ -60,10 +60,10 @@ ARGS_SPEC = {
             "columns": {
                 "lucode": {
                     "type": "integer",
-                    "about": "LULC code from the LULC map input."},
+                    "about": _("LULC code from the LULC map input.")},
                 "globio_lucode": {
                     "type": "integer",
-                    "about": "Corresponding GLOBIO LULC code."}
+                    "about": _("Corresponding GLOBIO LULC code.")}
             },
             "required": "not predefined_globio",
             "about": _(
@@ -169,7 +169,7 @@ ARGS_SPEC = {
                                 "The value in the 'value' column is one of "
                                 "the GLOBIO-recognized LULC codes.")},
                     },
-                    "about": "The type of MSA value in this row."
+                    "about": _("The type of MSA value in this row.")
                 },
                 "value": {
                     "type": "freestyle_string",

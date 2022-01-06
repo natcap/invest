@@ -232,7 +232,7 @@ ARGS_SPEC = {
                         "GRID": {"description": _(
                             "This is a grid connection point")}
                     },
-                    "about": "The type of connection at this point."
+                    "about": _("The type of connection at this point.")
                 },
                 "lat": {
                     "type": "number",
