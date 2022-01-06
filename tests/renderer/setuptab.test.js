@@ -22,10 +22,10 @@ function renderSetupFromSpec(baseSpec, uiSpec) {
   // but is required by PropType-checking
   const spec = { ...baseSpec };
   if (!spec.modelName) { spec.modelName = 'Eco Model'; }
-  if (!spec.module) { spec.module = 'natcap.invest.dot'; }
+  if (!spec.pyname) { spec.pyname = 'natcap.invest.dot'; }
   const { ...utils } = render(
     <SetupTab
-      pyModuleName={spec.module}
+      pyModuleName={spec.pyname}
       modelName={spec.modelName}
       argsSpec={spec.args}
       uiSpec={uiSpec}
@@ -42,7 +42,8 @@ function renderSetupFromSpec(baseSpec, uiSpec) {
 
 describe('Arguments form input types', () => {
   const validationMessage = 'invalid because';
-  let baseSpec, uiSpec;
+  let baseSpec;
+  let uiSpec;
 
   afterEach(() => {
     jest.resetAllMocks();
@@ -75,10 +76,15 @@ describe('Arguments form input types', () => {
   ])('render a text input & browse button for a %s', async (type) => {
     const spec = { ...baseSpec };
     spec.args.arg.type = type;
-    const { findByText, findByLabelText } = renderSetupFromSpec(spec, uiSpec);
-    const input = await findByLabelText(RegExp(`${spec.args.arg.name}`));
+
+    const {
+      findByLabelText, findByRole
+    } = renderSetupFromSpec(spec, uiSpec);
+
+    const input = await findByLabelText(`${spec.args.arg.name}`);
     expect(input).toHaveAttribute('type', 'text');
-    expect(await findByText('Browse')).toBeInTheDocument();
+    expect(await findByRole('button', { name: /browse for/ }))
+      .toBeInTheDocument();
   });
 
   test.each([
@@ -91,7 +97,7 @@ describe('Arguments form input types', () => {
     const spec = { ...baseSpec };
     spec.args.arg.type = type;
     const { findByLabelText } = renderSetupFromSpec(spec, uiSpec);
-    const input = await findByLabelText(RegExp(`${spec.args.arg.name}`));
+    const input = await findByLabelText(`${spec.args.arg.name}`);
     expect(input).toHaveAttribute('type', 'text');
   });
 
@@ -99,7 +105,7 @@ describe('Arguments form input types', () => {
     const spec = { ...baseSpec };
     spec.args.arg.type = 'boolean';
     const { findByLabelText } = renderSetupFromSpec(spec, uiSpec);
-    const input = await findByLabelText(RegExp(`${spec.args.arg.name}`));
+    const input = await findByLabelText(`${spec.args.arg.name}`);
     expect(input).toHaveAttribute('type', 'radio');
     expect(input).not.toBeChecked();
   });
@@ -112,7 +118,7 @@ describe('Arguments form input types', () => {
       b: 'about b',
     };
     const { findByLabelText } = renderSetupFromSpec(spec, uiSpec);
-    const input = await findByLabelText(RegExp(`${spec.args.arg.name}`));
+    const input = await findByLabelText(`${spec.args.arg.name}`);
     expect(input).toHaveValue('a');
     expect(input).not.toHaveValue('b');
   });
@@ -122,7 +128,7 @@ describe('Arguments form input types', () => {
     spec.args.arg.type = 'option_string';
     spec.args.arg.options = ['a', 'b'];
     const { findByLabelText } = renderSetupFromSpec(spec, uiSpec);
-    const input = await findByLabelText(RegExp(`${spec.args.arg.name}`));
+    const input = await findByLabelText(`${spec.args.arg.name}`);
     expect(input).toHaveValue('a');
     expect(input).not.toHaveValue('b');
   });
@@ -130,15 +136,16 @@ describe('Arguments form input types', () => {
   test('expect the info dialog contains text about input', async () => {
     const spec = { ...baseSpec };
     spec.args.arg.type = 'directory';
-    const { findByText } = renderSetupFromSpec(spec, uiSpec);
-    fireEvent.click(await findByText('i'));
+    const { findByText, findByRole } = renderSetupFromSpec(spec, uiSpec);
+    fireEvent.click(await findByRole('button', { name: /info about/ }));
     expect(await findByText(spec.args.arg.about)).toBeInTheDocument();
   });
 });
 
 describe('Arguments form interactions', () => {
   const validationMessage = 'invalid because';
-  let spec, uiSpec;
+  let spec;
+  let uiSpec;
 
   afterEach(() => {
     jest.resetAllMocks();
@@ -156,7 +163,7 @@ describe('Arguments form interactions', () => {
       },
     };
 
-    uiSpec = {order: [Object.keys(spec.args)]}
+    uiSpec = { order: [Object.keys(spec.args)] };
     fetchValidation.mockResolvedValue(
       [[Object.keys(spec.args), validationMessage]]
     );
@@ -164,17 +171,20 @@ describe('Arguments form interactions', () => {
 
   test('Browse button populates an input', async () => {
     spec.args.arg.type = 'csv';
-    const { findByText, findByLabelText } = renderSetupFromSpec(spec, uiSpec);
+    const {
+      findByRole, findByLabelText
+    } = renderSetupFromSpec(spec, uiSpec);
 
-    const input = await findByLabelText(RegExp(`${spec.args.arg.name}`));
+    const input = await findByLabelText(`${spec.args.arg.name}`);
     expect(input).toHaveAttribute('type', 'text');
-    expect(await findByText('Browse')).toBeInTheDocument();
+    expect(await findByRole('button', { name: /browse for/ }))
+      .toBeInTheDocument();
 
     // Browsing for a file
     const filepath = 'grilled_cheese.csv';
     let mockDialogData = { filePaths: [filepath] };
     ipcRenderer.invoke.mockResolvedValue(mockDialogData);
-    fireEvent.click(await findByText('Browse'));
+    fireEvent.click(await findByRole('button', { name: /browse for/ }));
     await waitFor(() => {
       expect(input).toHaveValue(filepath);
     });
@@ -182,18 +192,37 @@ describe('Arguments form interactions', () => {
     // Browse again, but cancel it and expect the previous value
     mockDialogData = { filePaths: [] }; // empty array is a mocked 'Cancel'
     ipcRenderer.invoke.mockResolvedValue(mockDialogData);
-    fireEvent.click(await findByText('Browse'));
+    fireEvent.click(await findByRole('button', { name: /browse for/ }));
     await waitFor(() => {
       expect(input).toHaveValue(filepath);
     });
   });
 
+  test('Browse button populates an input - test click on child svg', async () => {
+    spec.args.arg.type = 'csv';
+    const {
+      findByRole, findByLabelText
+    } = renderSetupFromSpec(spec, uiSpec);
+
+    const filepath = 'grilled_cheese.csv';
+    const mockDialogData = { filePaths: [filepath] };
+    ipcRenderer.invoke.mockResolvedValue(mockDialogData);
+    const btn = await findByRole('button', { name: /browse for/ });
+    // Click on a target element nested within the button to make
+    // sure the handler still works correctly.
+    fireEvent.click(btn.querySelector('svg'));
+    expect(await findByLabelText(`${spec.args.arg.name}`))
+      .toHaveValue(filepath);
+  });
+
   test('Change value & get feedback on a required input', async () => {
     spec.args.arg.type = 'directory';
     spec.args.arg.required = true;
-    const { findByText, findByLabelText, queryByText } = renderSetupFromSpec(spec, uiSpec);
+    const {
+      findByText, findByLabelText, queryByText
+    } = renderSetupFromSpec(spec, uiSpec);
 
-    const input = await findByLabelText(RegExp(`${spec.args.arg.name}`));
+    const input = await findByLabelText(`${spec.args.arg.name}`);
 
     // A required input with no value is invalid (red X), but
     // feedback does not display until the input has been touched.
@@ -219,9 +248,11 @@ describe('Arguments form interactions', () => {
   test('Focus on required input & get validation feedback', async () => {
     spec.args.arg.type = 'csv';
     spec.args.arg.required = true;
-    const { findByText, findByLabelText, queryByText } = renderSetupFromSpec(spec, uiSpec);
+    const {
+      findByText, findByLabelText, queryByText
+    } = renderSetupFromSpec(spec, uiSpec);
 
-    const input = await findByLabelText(RegExp(`${spec.args.arg.name}`));
+    const input = await findByLabelText(`${spec.args.arg.name}`);
     expect(input).toHaveClass('is-invalid');
     expect(queryByText(RegExp(validationMessage))).toBeNull();
 
@@ -239,7 +270,7 @@ describe('Arguments form interactions', () => {
     fetchValidation.mockResolvedValue([]);
     const { findByLabelText } = renderSetupFromSpec(spec, uiSpec);
 
-    const input = await findByLabelText(RegExp(`${spec.args.arg.name}`));
+    const input = await findByLabelText(`${spec.args.arg.name} (optional)`);
 
     // An optional input with no value is valid, but green check
     // does not display until the input has been touched.
@@ -253,7 +284,7 @@ describe('Arguments form interactions', () => {
 });
 
 describe('UI spec functionality', () => {
-  beforeAll(() => {
+  beforeEach(() => {
     fetchValidation.mockResolvedValue([]);
   });
 
@@ -263,7 +294,7 @@ describe('UI spec functionality', () => {
 
   test('A UI spec with conditionally enabled args', async () => {
     const spec = {
-      module: 'natcap.invest.dummy',
+      pyname: 'natcap.invest.dummy',
       args: {
         arg1: {
           name: 'Afoo',
@@ -283,6 +314,9 @@ describe('UI spec functionality', () => {
         }
       }
     };
+    // mock some validation state so that we can test that it only
+    // displays when an input is enabled.
+    fetchValidation.mockResolvedValue([[['arg4'], 'invalid because']]);
 
     const uiSpec = {
       order: [Object.keys(spec.args)],
@@ -299,10 +333,10 @@ describe('UI spec functionality', () => {
     };
 
     const { findByLabelText } = renderSetupFromSpec(spec, uiSpec);
-    const arg1 = await findByLabelText(RegExp(`${spec.args.arg1.name}`));
-    const arg2 = await findByLabelText(RegExp(`${spec.args.arg2.name}`));
-    const arg3 = await findByLabelText(RegExp(`${spec.args.arg3.name}`));
-    const arg4 = await findByLabelText(RegExp(`${spec.args.arg4.name}`));
+    const arg1 = await findByLabelText(`${spec.args.arg1.name}`);
+    const arg2 = await findByLabelText(`${spec.args.arg2.name}`);
+    const arg3 = await findByLabelText(`${spec.args.arg3.name}`);
+    const arg4 = await findByLabelText(`${spec.args.arg4.name}`);
 
     await waitFor(() => {
       // Boolean Radios should default to "false" when a spec is loaded,
@@ -321,6 +355,7 @@ describe('UI spec functionality', () => {
       expect(arg2).toBeEnabled();
       expect(arg3).toBeDisabled();
       expect(arg4).toBeEnabled();
+      expect(arg4).toHaveClass('is-invalid');
     });
 
     fireEvent.click(arg2, { target: { value: 'true' } });
@@ -328,6 +363,10 @@ describe('UI spec functionality', () => {
       expect(arg2).toBeEnabled();
       expect(arg3).toBeEnabled();
       expect(arg4).toBeDisabled();
+      // the disabled input's validation result has not changed,
+      // but the validation state should be hidden on disabled inputs.
+      expect(arg4).not.toHaveClass('is-invalid');
+      expect(arg4).not.toHaveClass('is-valid');
     });
   });
 
@@ -360,8 +399,10 @@ describe('UI spec functionality', () => {
         arg2: mockGetVectorColumnNames,
       },
     };
-    const { findByLabelText, findByText, queryByText } = renderSetupFromSpec(spec, uiSpec);
-    const arg1 = await findByLabelText(RegExp(`${spec.args.arg1.name}`));
+    const {
+      findByLabelText, findByText, queryByText
+    } = renderSetupFromSpec(spec, uiSpec);
+    const arg1 = await findByLabelText(`${spec.args.arg1.name}`);
     let option = await queryByText('Field1');
     expect(option).toBeNull();
 
@@ -372,7 +413,7 @@ describe('UI spec functionality', () => {
 
   test('Grouping and sorting of args', async () => {
     const spec = {
-      module: 'natcap.invest.dummy',
+      pyname: 'natcap.invest.dummy',
       args: {
         arg1: {
           name: 'A',
@@ -453,7 +494,7 @@ describe('Misc form validation stuff', () => {
       },
     };
 
-    const uiSpec = {order: [Object.keys(spec.args)]}
+    const uiSpec = { order: [Object.keys(spec.args)] };
 
     // Mocking to return the payload so we can assert we always send
     // correct payload to this endpoint.
@@ -530,7 +571,7 @@ describe('Form drag-and-drop', () => {
 
   test('Dragover of a datastack/logfile updates all inputs', async () => {
     const spec = {
-      module: `natcap.invest.${MODULE}`,
+      pyname: `natcap.invest.${MODULE}`,
       args: {
         arg1: {
           name: 'Workspace',
@@ -547,7 +588,7 @@ describe('Form drag-and-drop', () => {
     );
 
     const mockDatastack = {
-      module_name: spec.module,
+      module_name: spec.pyname,
       args: {
         arg1: 'circle',
         arg2: 'square',
@@ -556,7 +597,9 @@ describe('Form drag-and-drop', () => {
     const uiSpec = { order: [Object.keys(spec.args)] };
     fetchDatastackFromFile.mockResolvedValue(mockDatastack);
 
-    const { findByLabelText, findByTestId } = renderSetupFromSpec(spec, uiSpec);
+    const {
+      findByLabelText, findByTestId
+    } = renderSetupFromSpec(spec, uiSpec);
     const setupForm = await findByTestId('setup-form');
 
     // This should work but doesn't due to lack of dataTransfer object in jsdom:
@@ -582,15 +625,15 @@ describe('Form drag-and-drop', () => {
     });
     fireEvent(setupForm, fileDropEvent);
 
-    expect(await findByLabelText(RegExp(`${spec.args.arg1.name}`)))
+    expect(await findByLabelText(`${spec.args.arg1.name}`))
       .toHaveValue(mockDatastack.args.arg1);
-    expect(await findByLabelText(RegExp(`${spec.args.arg2.name}`)))
+    expect(await findByLabelText(`${spec.args.arg2.name}`))
       .toHaveValue(mockDatastack.args.arg2);
   });
 
   test('Drag enter/drop of a datastack sets .dragging class', async () => {
     const spec = {
-      module: `natcap.invest.${MODULE}`,
+      pyname: `natcap.invest.${MODULE}`,
       args: {
         arg1: {
           name: 'Workspace',
@@ -608,7 +651,7 @@ describe('Form drag-and-drop', () => {
     );
 
     const mockDatastack = {
-      module_name: spec.module,
+      module_name: spec.pyname,
       args: {
         arg1: 'circle',
         arg2: 'square',
@@ -616,7 +659,9 @@ describe('Form drag-and-drop', () => {
     };
     fetchDatastackFromFile.mockResolvedValue(mockDatastack);
 
-    const { findByLabelText, findByTestId } = renderSetupFromSpec(spec, uiSpec);
+    const {
+      findByLabelText, findByTestId
+    } = renderSetupFromSpec(spec, uiSpec);
     const setupForm = await findByTestId('setup-form');
 
     const fileDragEvent = createEvent.dragEnter(setupForm);
@@ -641,16 +686,16 @@ describe('Form drag-and-drop', () => {
     });
     fireEvent(setupForm, fileDropEvent);
 
-    expect(await findByLabelText(RegExp(`${spec.args.arg1.name}`)))
+    expect(await findByLabelText(`${spec.args.arg1.name}`))
       .toHaveValue(mockDatastack.args.arg1);
-    expect(await findByLabelText(RegExp(`${spec.args.arg2.name}`)))
+    expect(await findByLabelText(`${spec.args.arg2.name}`))
       .toHaveValue(mockDatastack.args.arg2);
     expect(setupForm).not.toHaveClass('dragging');
   });
 
   test('Drag enter/leave of a datastack sets .dragging class', async () => {
     const spec = {
-      module: `natcap.invest.${MODULE}`,
+      pyname: `natcap.invest.${MODULE}`,
       args: {
         arg1: {
           name: 'Workspace',
@@ -694,7 +739,7 @@ describe('Form drag-and-drop', () => {
 
   test('Drag enter/drop of a file sets .input-dragging class on input', async () => {
     const spec = {
-      module: `natcap.invest.${MODULE}`,
+      pyname: `natcap.invest.${MODULE}`,
       args: {
         arg1: {
           name: 'Workspace',
@@ -711,9 +756,11 @@ describe('Form drag-and-drop', () => {
       [[Object.keys(spec.args), 'invalid because']]
     );
 
-    const { findByLabelText, findByTestId } = renderSetupFromSpec(spec, uiSpec);
+    const {
+      findByLabelText, findByTestId
+    } = renderSetupFromSpec(spec, uiSpec);
     const setupForm = await findByTestId('setup-form');
-    const setupInput = await findByLabelText(RegExp(`${spec.args.arg1.name}`));
+    const setupInput = await findByLabelText(`${spec.args.arg1.name}`);
 
     const fileDragEvent = createEvent.dragEnter(setupInput);
     // `dataTransfer.files` normally returns a `FileList` object. Since we are
@@ -745,7 +792,7 @@ describe('Form drag-and-drop', () => {
 
   test('Drag enter/leave of a file sets .input-dragging class on input', async () => {
     const spec = {
-      module: `natcap.invest.${MODULE}`,
+      pyname: `natcap.invest.${MODULE}`,
       args: {
         arg1: {
           name: 'Workspace',
@@ -763,7 +810,7 @@ describe('Form drag-and-drop', () => {
     );
 
     const { findByLabelText } = renderSetupFromSpec(spec, uiSpec);
-    const setupInput = await findByLabelText(RegExp(`${spec.args.arg1.name}`));
+    const setupInput = await findByLabelText(`${spec.args.arg1.name}`);
 
     const fileDragEnterEvent = createEvent.dragEnter(setupInput);
     // `dataTransfer.files` normally returns a `FileList` object. Since we are
@@ -792,7 +839,7 @@ describe('Form drag-and-drop', () => {
 
   test('Drag and drop on a disabled input element.', async () => {
     const spec = {
-      module: `natcap.invest.${MODULE}`,
+      pyname: `natcap.invest.${MODULE}`,
       args: {
         arg1: {
           name: 'Workspace',
@@ -816,7 +863,7 @@ describe('Form drag-and-drop', () => {
     );
 
     const { findByLabelText } = renderSetupFromSpec(spec, uiSpec);
-    const setupInput = await findByLabelText(RegExp(`${spec.args.arg2.name}`));
+    const setupInput = await findByLabelText(`${spec.args.arg2.name}`);
 
     const fileDragEnterEvent = createEvent.dragEnter(setupInput);
     // `dataTransfer.files` normally returns a `FileList` object. Since we are

@@ -1,7 +1,7 @@
 import path from 'path';
 import React from 'react';
 import PropTypes from 'prop-types';
-import { ipcRenderer, shell } from 'electron';
+import { ipcRenderer } from 'electron';
 
 import TabPane from 'react-bootstrap/TabPane';
 import TabContent from 'react-bootstrap/TabContent';
@@ -42,7 +42,7 @@ async function investGetSpec(modelName) {
 }
 
 function handleOpenWorkspace(logfile) {
-  shell.showItemInFolder(logfile);
+  ipcRenderer.send(ipcMainChannels.SHOW_ITEM_IN_FOLDER, logfile);
 }
 
 /**
@@ -58,7 +58,7 @@ export default class InvestTab extends React.Component {
       modelSpec: null, // ARGS_SPEC dict with all keys except ARGS_SPEC.args
       argsSpec: null, // ARGS_SPEC.args, the immutable args stuff
       uiSpec: null,
-      logStdErr: '', // stderr data from the invest subprocess
+      userTerminated: false,
       executeClicked: false,
     };
 
@@ -66,7 +66,6 @@ export default class InvestTab extends React.Component {
     this.switchTabs = this.switchTabs.bind(this);
     this.terminateInvestProcess = this.terminateInvestProcess.bind(this);
     this.investLogfileCallback = this.investLogfileCallback.bind(this);
-    this.investStdErrCallback = this.investStdErrCallback.bind(this);
     this.investExitCallback = this.investExitCallback.bind(this);
   }
 
@@ -82,16 +81,12 @@ export default class InvestTab extends React.Component {
     }, () => { this.switchTabs('setup'); });
     const { jobID } = this.props;
     ipcRenderer.on(`invest-logging-${jobID}`, this.investLogfileCallback);
-    ipcRenderer.on(`invest-stderr-${jobID}`, this.investStdErrCallback);
     ipcRenderer.on(`invest-exit-${jobID}`, this.investExitCallback);
   }
 
   componentWillUnmount() {
     ipcRenderer.removeListener(
       `invest-logging-${this.props.jobID}`, this.investLogfileCallback
-    );
-    ipcRenderer.removeListener(
-      `invest-stderr-${this.props.jobID}`, this.investStdErrCallback
     );
     ipcRenderer.removeListener(
       `invest-exit-${this.props.jobID}`, this.investExitCallback
@@ -106,28 +101,24 @@ export default class InvestTab extends React.Component {
     });
   }
 
-  investStdErrCallback(event, data) {
-    let { logStdErr } = this.state;
-    logStdErr += data;
-    this.setState({
-      logStdErr: logStdErr,
-    });
-  }
-
-  investExitCallback(event, code) {
-    const { logStdErr } = this.state;
+  /** Receive data about the exit status of the invest process.
+   *
+   * @param {object} data - of shape { code: number, stdErr: string }
+   */
+  investExitCallback(event, data) {
     const {
       jobID,
       updateJobProperties,
       saveJob,
     } = this.props;
-    const status = (code === 0) ? 'success' : 'error';
     let finalTraceback = '';
-    if (logStdErr) {
+    if (this.state.userTerminated) {
+      finalTraceback = 'Run Canceled';
+    } else if (data.stdErr) {
       // Get the last meaningful line of stderr for display in an Alert.
       // The PyInstaller exe will always emit a final 'Failed ...' message
       // after an uncaught exception.
-      const stdErrLines = logStdErr.split(/\r\n|\r|\n/);
+      const stdErrLines = data.stdErr.split(/\r\n|\r|\n/);
       while (
         !finalTraceback || finalTraceback.includes(
           "Failed to execute script 'cli' due to unhandled exception!"
@@ -136,13 +127,15 @@ export default class InvestTab extends React.Component {
         finalTraceback = stdErrLines.pop();
       }
     }
+    const status = (data.code === 0) ? 'success' : 'error';
     updateJobProperties(jobID, {
       status: status,
       finalTraceback: finalTraceback,
     });
     saveJob(jobID);
     this.setState({
-      executeClicked: false
+      executeClicked: false,
+      userTerminated: false,
     });
   }
 
@@ -160,7 +153,6 @@ export default class InvestTab extends React.Component {
   async investExecute(argsValues) {
     this.setState({
       executeClicked: true, // disable the button until invest exits
-      logStdErr: '', // reset because we could be re-running a job
     });
     const {
       job,
@@ -183,7 +175,7 @@ export default class InvestTab extends React.Component {
     ipcRenderer.send(
       ipcMainChannels.INVEST_RUN,
       job.modelRunName,
-      this.state.modelSpec.module,
+      this.state.modelSpec.pyname,
       args,
       investSettings.loggingLevel,
       investSettings.language,
@@ -193,11 +185,8 @@ export default class InvestTab extends React.Component {
   }
 
   terminateInvestProcess() {
-    // For the benefit of displaying user-feedback, mock some stdErr
-    // here before sending the kill signal. This way the exit listener will
-    // have some stderr data to work with.
     this.setState({
-      logStdErr: 'Run Canceled'
+      userTerminated: true,
     }, () => {
       ipcRenderer.send(
         ipcMainChannels.INVEST_KILL, this.props.jobID
@@ -245,7 +234,6 @@ export default class InvestTab extends React.Component {
       <TabContainer activeKey={activeTab} id="invest-tab">
         <Row className="flex-nowrap">
           <Col
-            md={3}
             className="invest-sidebar-col"
           >
             <Nav
@@ -255,20 +243,16 @@ export default class InvestTab extends React.Component {
               activeKey={activeTab}
               onSelect={this.switchTabs}
             >
-              <Nav.Item>
-                <Nav.Link eventKey="setup">
-                  {_("Setup")}
-                </Nav.Link>
-              </Nav.Item>
+              <Nav.Link eventKey="setup">
+                {_("Setup")}
+              </Nav.Link>
               <div
                 className="sidebar-setup"
                 id={sidebarSetupElementId}
               />
-              <Nav.Item>
-                <Nav.Link eventKey="log" disabled={logDisabled}>
-                  {_("Log")}
-                </Nav.Link>
-              </Nav.Item>
+              <Nav.Link eventKey="log" disabled={logDisabled}>
+                {_("Log")}
+              </Nav.Link>
             </Nav>
             <div className="sidebar-row">
               <ResourcesLinks
@@ -296,10 +280,13 @@ export default class InvestTab extends React.Component {
           </Col>
           <Col className="invest-main-col">
             <TabContent>
-              <TabPane eventKey="setup" title="Setup">
+              <TabPane
+                eventKey="setup"
+                aria-label="model setup tab"
+              >
                 <SetupTab
-                  pyModuleName={modelSpec.module}
-                  modelName={modelSpec.model_name}
+                  pyModuleName={modelSpec.pyname}
+                  modelName={modelRunName}
                   argsSpec={argsSpec}
                   uiSpec={uiSpec}
                   argsInitValues={argsValues}
@@ -310,12 +297,15 @@ export default class InvestTab extends React.Component {
                   executeClicked={this.state.executeClicked}
                 />
               </TabPane>
-              <TabPane eventKey="log" title="Log">
+              <TabPane
+                eventKey="log"
+                aria-label="model log tab"
+              >
                 <LogTab
                   logfile={logfile}
                   executeClicked={executeClicked}
                   jobID={jobID}
-                  pyModuleName={modelSpec.module}
+                  pyModuleName={modelSpec.pyname}
                 />
               </TabPane>
             </TabContent>

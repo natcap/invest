@@ -13,8 +13,6 @@ import { APP_HAS_RUN_TOKEN } from '../../src/main/setupCheckFirstRun';
 
 jest.setTimeout(240000); // This test takes ~20 seconds, but sometimes longer
 const PORT = 9009;
-const TMP_DIR = fs.mkdtempSync('tests/data/_');
-const TMP_AOI_PATH = path.join(TMP_DIR, 'aoi.geojson');
 let ELECTRON_PROCESS;
 let BROWSER;
 
@@ -27,6 +25,13 @@ let SCREENSHOT_PREFIX;
 // We'll clear this token before launching the app so we can have a
 // predictable startup page.
 let APP_HAS_RUN_TOKEN_PATH;
+
+// On GHA macos, invest validation can time-out reading from os.tmpdir
+// So on GHA, use the homedir instead.
+const rootDir = process.env.CI ? os.homedir() : os.tmpdir();
+const TMP_DIR = fs.mkdtempSync(path.join(rootDir, 'data-'));
+const TMP_AOI_PATH = path.join(TMP_DIR, 'aoi.geojson');
+
 if (process.platform === 'darwin') {
   // https://github.com/electron-userland/electron-builder/issues/2724#issuecomment-375850150
   [BINARY_PATH] = glob.sync('./dist/mac/*.app/Contents/MacOS/InVEST*');
@@ -86,7 +91,10 @@ beforeAll(() => {
     `"${BINARY_PATH}"`,
     // these are chromium args
     [`--remote-debugging-port=${PORT}`],
-    { shell: true }
+    {
+      shell: true,
+      env: { ...process.env, PUPPETEER: true }
+    }
   );
   ELECTRON_PROCESS.stderr.on('data', (data) => {
     console.log(`${data}`);
@@ -124,19 +132,18 @@ afterAll(async () => {
     console.error(error);
   }
 
-  // being extra careful with recursive rm
-  if (TMP_DIR.startsWith('tests/data')) {
-    rimraf(TMP_DIR, (error) => { if (error) { throw error; } });
-  }
+  rimraf(TMP_DIR, (error) => { if (error) { throw error; } });
   const wasKilled = ELECTRON_PROCESS.kill();
   console.log(`electron process was killed: ${wasKilled}`);
 });
 
 test('Run a real invest model', async () => {
   const { findByText, findByLabelText, findByRole } = queries;
+  // On GHA MacOS, we seem to have to wait a long time for the browser
+  // to be ready. Maybe related to https://github.com/natcap/invest-workbench/issues/158
   await waitFor(() => {
-    expect(BROWSER.isConnected()).toBeTruthy();
-  }, { timeout: 30000 });
+    expect(BROWSER && BROWSER.isConnected()).toBeTruthy();
+  }, { timeout: 60000 });
   // find the mainWindow's index.html, not the splashScreen's splash.html
   const target = await BROWSER.waitForTarget(
     (target) => target.url().endsWith('index.html')
@@ -153,28 +160,35 @@ test('Run a real invest model', async () => {
     doc, 'button', { name: 'Cancel' }, { timeout: extraTime }
   );
   await downloadModalCancel.click();
-  // Resorting to a class selector because we have two tables to differentiate
-  // Also, need to get the modelButton from w/in this table because there are
-  // buttons with the same name in the Recent Jobs container.
-  const investTable = await page.$('.invest-list-table');
+  // We need to get the modelButton from w/in this list-group because there
+  // are buttons with the same name in the Recent Jobs container.
+  const investModels = await page.$('.invest-list-group');
   await page.screenshot({ path: `${SCREENSHOT_PREFIX}2-models-list.png` });
 
   // Setting up Recreation model because it has very few data requirements
   const modelButton = await findByRole(
-    investTable, 'button', { name: /Visitation/ }
+    investModels, 'button', { name: /Visitation/ }
   );
   await modelButton.click();
   await page.screenshot({ path: `${SCREENSHOT_PREFIX}3-model-tab.png` });
 
   const argsForm = await page.waitForSelector('.args-form');
   const typeDelay = 10;
-  const workspace = await findByLabelText(argsForm, /Workspace/i);
+  const workspace = await findByRole(
+    argsForm, 'textbox', { name: /Workspace/i }
+  );
   await workspace.type(TMP_DIR, { delay: typeDelay });
-  const aoi = await findByLabelText(argsForm, /area of interest/i);
+  const aoi = await findByRole(
+    argsForm, 'textbox', { name: /area of interest/i }
+  );
   await aoi.type(TMP_AOI_PATH, { delay: typeDelay });
-  const startYear = await findByLabelText(argsForm, /start year/i);
+  const startYear = await findByRole(
+    argsForm, 'textbox', { name: /start year/i }
+  );
   await startYear.type('2008', { delay: typeDelay });
-  const endYear = await findByLabelText(argsForm, /end year/i);
+  const endYear = await findByRole(
+    argsForm, 'textbox', {name: /end year/i }
+  );
   await endYear.type('2012', { delay: typeDelay });
   await page.screenshot({ path: `${SCREENSHOT_PREFIX}4-complete-setup-form.png` });
 
@@ -206,7 +220,7 @@ test('Run a real invest model', async () => {
   expect(await findByText(sidebar, 'Run Canceled'));
   expect(await findByText(sidebar, 'Open Workspace'));
   await page.screenshot({ path: `${SCREENSHOT_PREFIX}6-run-canceled.png` });
-}, 120000); // >2x the sum of all the max timeouts within this test
+}, 240000); // >2x the sum of all the max timeouts within this test
 
 // Test for duplicate application launch.
 // We have the binary path, so now let's launch a new subprocess with the same binary

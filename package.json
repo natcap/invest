@@ -1,6 +1,6 @@
 {
   "name": "invest-workbench",
-  "version": "0.1.0-alpha",
+  "version": "0.1.0-beta",
   "description": "Models that map and value the goods and services from nature that sustain and fulfill human life",
   "main": "build/main/main.js",
   "homepage": "./",
@@ -25,7 +25,7 @@
   "invest": {
     "bucket": "releases.naturalcapitalproject.org",
     "fork": "natcap",
-    "version": "3.9.0.post721+g0f8cc295",
+    "version": "3.9.2.post480+gc06f40d7",
     "target": {
       "macos": "mac_invest_binaries.zip",
       "windows": "windows_invest_binaries.zip"
@@ -35,19 +35,19 @@
   "author": "Natural Capital Project",
   "license": "MIT",
   "dependencies": {
-    "cross-env": "^5.2.1",
+    "bootstrap": "4.3.1",
     "electron-log": "^4.3.5",
     "esm": "^3.2.25",
     "gettext.js": "^1.0.1",
     "glob": "^7.1.6",
     "localforage": "^1.9.0",
-    "material-design-icons": "^3.0.1",
     "node-fetch": "^2.6.1",
     "po2json": "^0.4.5",
     "prop-types": "^15.7.2",
     "react": "^17.0.1",
     "react-bootstrap": "^1.5.2",
     "react-dom": "^17.0.1",
+    "react-icons": "^4.3.1",
     "sanitize-html": "^2.2.0",
     "yauzl": "^2.10.0"
   },
@@ -64,7 +64,8 @@
     "@testing-library/react": "^12.0.0",
     "@testing-library/user-event": "^12.8.3",
     "babel-eslint": "^10.1.0",
-    "electron": "^13.1.4",
+    "cross-env": "^7.0.3",
+    "electron": "^15.1.1",
     "electron-builder": "^22.10.5",
     "electron-devtools-installer": "^3.2.0",
     "eslint": "^7.21.0",

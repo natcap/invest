@@ -8,6 +8,7 @@ import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
 import InputGroup from 'react-bootstrap/InputGroup';
 import Modal from 'react-bootstrap/Modal';
+import { MdFolderOpen, MdInfo } from 'react-icons/md';
 
 /**
  * Filter a message that refers to many spatial inputs' bounding boxes.
@@ -35,13 +36,24 @@ function filterSpatialOverlapFeedback(message, filepath) {
 function FormLabel(props) {
   return (
     <Form.Label column sm="3" htmlFor={props.argkey}>
-      {props.children}
+      <span>
+        {props.argname}
+        <em>
+          {
+            (typeof props.required === 'boolean' && !props.required)
+              ? ' (optional)' : ''
+          }
+        </em>
+      </span>
     </Form.Label>
   );
 }
 FormLabel.propTypes = {
   argkey: PropTypes.string.isRequired,
-  children: PropTypes.element.isRequired,
+  argname: PropTypes.string.isRequired,
+  required: PropTypes.oneOfType(
+    [PropTypes.string, PropTypes.bool]
+  ),
 };
 
 function Feedback(props) {
@@ -70,7 +82,7 @@ Feedback.defaultProps = {
 function dragOverHandler(event) {
   event.preventDefault();
   event.stopPropagation();
-  if (event.target.disabled) {
+  if (event.currentTarget.disabled) {
     event.dataTransfer.dropEffect = 'none';
   } else {
     event.dataTransfer.dropEffect = 'copy';
@@ -80,11 +92,11 @@ function dragOverHandler(event) {
 function dragEnterHandler(event) {
   event.preventDefault();
   event.stopPropagation();
-  if (event.target.disabled) {
+  if (event.currentTarget.disabled) {
     event.dataTransfer.dropeffect = 'none';
   } else {
     event.dataTransfer.dropEffect = 'copy';
-    event.target.classList.add('input-dragging');
+    event.currentTarget.classList.add('input-dragging');
   }
 }
 
@@ -92,7 +104,7 @@ function dragLeavingHandler(event) {
   event.preventDefault();
   event.stopPropagation();
   event.dataTransfer.dropEffect = 'copy';
-  event.target.classList.remove('input-dragging');
+  event.currentTarget.classList.remove('input-dragging');
 }
 
 export default class ArgInput extends React.PureComponent {
@@ -153,12 +165,12 @@ export default class ArgInput extends React.PureComponent {
           // this grays out the label but doesn't actually disable the field
           className={className}
         >
-          <FormLabel argkey={argkey}>
-            <span>
-              {argSpec.name}
-            </span>
-          </FormLabel>
-          <Col sm="8">
+          <FormLabel
+            argkey={argkey}
+            argname={argSpec.name}
+            required={argSpec.required}
+          />
+          <Col>
             <InputGroup>
               <div className="d-flex flex-nowrap w-100">
                 <AboutModal argument={argSpec} />
@@ -170,8 +182,8 @@ export default class ArgInput extends React.PureComponent {
                   value={value || ''} // empty string is handled better than `undefined`
                   onChange={handleChange}
                   onFocus={handleChange}
-                  isValid={touched && isValid}
-                  isInvalid={validationMessage}
+                  isValid={enabled && touched && isValid}
+                  isInvalid={enabled && validationMessage}
                   disabled={!enabled}
                   onDrop={inputDropHandler}
                   onDragOver={dragOverHandler}
@@ -184,14 +196,16 @@ export default class ArgInput extends React.PureComponent {
                     ? ( // add a file selector button
                       <InputGroup.Append>
                         <Button
+                          aria-label={`browse for ${argSpec.name}`}
+                          className="ml-2"
                           id={argkey}
-                          variant="outline-secondary"
+                          variant="outline-dark"
                           value={argSpec.type} // dialog will limit options accordingly
                           name={argkey}
                           onClick={selectFile}
                           disabled={!enabled}
                         >
-                          {_("Browse")}
+                          <MdFolderOpen />
                         </Button>
                       </InputGroup.Append>
                     )
@@ -226,10 +240,12 @@ export default class ArgInput extends React.PureComponent {
           data-testid={`group-${argkey}`}
           className={className}
         >
-          <FormLabel argkey={argkey}>
-            <span>{argSpec.name}</span>
-          </FormLabel>
-          <Col sm="8" className="text-nowrap">
+          <FormLabel
+            argkey={argkey}
+            argname={argSpec.name}
+            required={argSpec.required}
+          />
+          <Col className="text-nowrap">
             <AboutModal argument={argSpec} />
             <Form.Check
               id={argkey}
@@ -266,12 +282,14 @@ export default class ArgInput extends React.PureComponent {
           data-testid={`group-${argkey}`}
           className={className}
         >
-          <FormLabel argkey={argkey}>
-            <span>{argSpec.name}</span>
-          </FormLabel>
-          <Col sm="4">
+          <FormLabel
+            argkey={argkey}
+            argname={argSpec.name}
+            required={argSpec.required}
+          />
+          <Col>
             <InputGroup>
-              <div className="d-flex flex-nowrap w-100">
+              <div className="d-flex flex-nowrap w-auto">
                 <AboutModal argument={argSpec} />
                 <Form.Control
                   id={argkey}
@@ -350,11 +368,12 @@ class AboutModal extends React.PureComponent {
     return (
       <React.Fragment>
         <Button
-          className="mr-3"
+          aria-label={`info about ${this.props.argument.name}`}
+          className="mr-2"
           onClick={this.handleAboutOpen}
           variant="outline-info"
         >
-          i
+          <MdInfo />
         </Button>
         <Modal show={this.state.aboutShow} onHide={this.handleAboutClose}>
           <Modal.Header>

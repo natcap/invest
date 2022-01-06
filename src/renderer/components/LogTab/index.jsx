@@ -26,7 +26,11 @@ class LogDisplay extends React.Component {
     natcap.invest, not by user-input, and because all text is passed
     through sanitize-html. */
     return (
-      <Col id="log-display" ref={this.content}>
+      <Col
+        className="text-break"
+        id="log-display"
+        ref={this.content}
+      >
         <div
           id="log-text"
           dangerouslySetInnerHTML={{ __html: this.props.logdata }}

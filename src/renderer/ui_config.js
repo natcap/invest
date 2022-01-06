@@ -36,23 +36,39 @@ function isNotSufficient(argkey, state) {
 }
 
 const uiSpec = {
+  annual_water_yield: {
+    order: [
+      ["workspace_dir", "results_suffix"],
+      ["precipitation_path", "eto_path", "depth_to_root_rest_layer_path", "pawc_path"],
+      ["lulc_path", "biophysical_table_path", "seasonality_constant"],
+      ["watersheds_path", "sub_watersheds_path"],
+      ["demand_table_path", "valuation_table_path"]
+    ]
+  },
   carbon: {
     order: [
       ["workspace_dir", "results_suffix"],
       ["lulc_cur_path", "carbon_pools_path"],
-      ["calc_sequestration", "lulc_cur_year", "lulc_fut_path", "lulc_fut_year"],
+      ["calc_sequestration", "lulc_fut_path"],
       ["do_redd", "lulc_redd_path"],
-      ["do_valuation", "price_per_metric_ton_of_c", "discount_rate", "rate_change"]
+      [
+        "do_valuation",
+        "lulc_cur_year",
+        "lulc_fut_year",
+        "price_per_metric_ton_of_c",
+        "discount_rate",
+        "rate_change",
+      ],
     ],
     enabledFunctions: {
-      lulc_cur_year: isSufficient.bind(null, 'calc_sequestration'),
-      lulc_fut_year: isSufficient.bind(null, 'calc_sequestration'),
       lulc_fut_path: isSufficient.bind(null, 'calc_sequestration'),
 
       do_redd: isSufficient.bind(null, 'calc_sequestration'),
       lulc_redd_path: isSufficient.bind(null, 'do_redd'),
 
       do_valuation: isSufficient.bind(null, 'calc_sequestration'),
+      lulc_cur_year: isSufficient.bind(null, 'do_valuation'),
+      lulc_fut_year: isSufficient.bind(null, 'do_valuation'),
       price_per_metric_ton_of_c: isSufficient.bind(null, 'do_valuation'),
       discount_rate: isSufficient.bind(null, 'do_valuation'),
       rate_change: isSufficient.bind(null, 'do_valuation'),
@@ -82,14 +98,18 @@ const uiSpec = {
   },
   coastal_vulnerability: {
     order: [
-      ["workspace_dir", "results_suffix"],
-      ["aoi_vector_path", "model_resolution"],
-      ["landmass_vector_path", "wwiii_vector_path", "max_fetch_distance"],
-      ["bathymetry_raster_path", "dem_path", "dem_averaging_radius"],
-      ["shelf_contour_vector_path", "habitat_table_path"],
-      ["geomorphology_vector_path", "geomorphology_fill_value"],
-      ["population_raster_path", "population_radius"],
-      ["slr_vector_path", "slr_field"]
+      ['workspace_dir', 'results_suffix'],
+      ['aoi_vector_path', 'model_resolution', 'landmass_vector_path'],
+      ['bathymetry_raster_path', 'wwiii_vector_path', 'max_fetch_distance'],
+      [
+        'habitat_table_path',
+        'shelf_contour_vector_path',
+        'dem_path',
+        'dem_averaging_radius',
+      ],
+      ['geomorphology_vector_path', 'geomorphology_fill_value'],
+      ['population_raster_path', 'population_radius'],
+      ['slr_vector_path', 'slr_field'],
     ],
     dropdownFunctions: {
       slr_field: ((state) => getVectorColumnNames(state.argsValues['slr_vector_path'].value))
@@ -228,15 +248,6 @@ const uiSpec = {
       ["visualize_outputs"]
     ]
   },
-  hydropower_water_yield: {
-    order: [
-      ["workspace_dir", "results_suffix"],
-      ["precipitation_path", "eto_path", "depth_to_root_rest_layer_path", "pawc_path"],
-      ["lulc_path", "biophysical_table_path", "seasonality_constant"],
-      ["watersheds_path", "sub_watersheds_path"],
-      ["demand_table_path", "valuation_table_path"]
-    ]
-  },
   ndr: {
     order: [
       ["workspace_dir", "results_suffix"],
@@ -340,6 +351,18 @@ const uiSpec = {
       climate_zone_raster_path: isSufficient.bind(null, 'user_defined_climate_zones'),
       monthly_alpha_path: isSufficient.bind(null, 'monthly_alpha'),
       alpha_m: isNotSufficient.bind(null, 'monthly_alpha')
+    }
+  },
+  stormwater: {
+    order: [
+      ['workspace_dir', 'results_suffix'],
+      ['lulc_path', 'soil_group_path', 'precipitation_path', 'biophysical_table'],
+      ['adjust_retention_ratios', 'retention_radius', 'road_centerlines_path'],
+      ['aggregate_areas_path', 'replacement_cost'],
+    ],
+    enabledFunctions: {
+      retention_radius: isSufficient.bind(null, 'adjust_retention_ratios'),
+      road_centerlines_path: isSufficient.bind(null, 'adjust_retention_ratios'),
     }
   },
   urban_cooling_model: {

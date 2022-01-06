@@ -1,3 +1,7 @@
+:root {
+	font-size: 16px;
+}
+
 body {
 	--invest-green: #148F68;
 	background-color: rgba(0,0,0,0);
@@ -13,7 +17,7 @@ body {
 }
 
 .navbar .row {
-	align-items: baseline;
+	align-items: end;
 	padding-bottom: 0;
 	border-bottom: 3px solid var(--invest-green);
 	background-color: #fff
@@ -21,6 +25,11 @@ body {
 
 .navbar-brand {
 	padding-bottom: 0;
+}
+
+.navbar-brand:hover {
+	text-decoration-line: underline;
+	text-decoration-thickness: 3px;
 }
 
 .navbar-middle {
@@ -50,6 +59,7 @@ body {
 .navbar-nav .nav-item {
 	display: flex;
 	justify-content: space-between;
+	align-items: center;
 	max-width: fit-content;
 	white-space: nowrap;
 	flex: 1; /*size by available space, not by content*/
@@ -82,14 +92,15 @@ body {
 	border-color: transparent;
 	color: #6c757d;
 	margin-left: 0.1rem;
-	padding-left: 0.6rem;
-	padding-right: 0.6rem;
-	padding-top: 0.25rem;
-	padding-bottom: 0.5rem;
+	padding-left: 0.1rem;
+	padding-right: 0.1rem;
+	padding-top: 0.1rem;
+	padding-bottom: 0.1rem;
+	height: fit-content;
 }
 .close-tab:hover, .close-tab:focus, .close-tab:active {
 	border-color: #6c757d;
-	background-color: #e46672;
+	background-color: #6c757d;
 	color: white;
 }
 
@@ -113,6 +124,11 @@ body {
 	white-space: nowrap;
 }
 
+.settings-icon-btn, .settings-icon-btn:hover {
+	background-color: transparent;
+	border-color: transparent;
+}
+
 .settings-icon {
 	color: black;
 	font-size: 2rem;
@@ -132,19 +148,42 @@ body {
 
 /* Home Tab */
 
-.invest-list-table {
-	display: block;
+.invest-list-container {
 	height: 87vh;
 	overflow-y: auto;
 }
 
-.invest-list-table .table td {
+.invest-list-group {
+	/*do not constrain height here because it can cause more
+	columns to be created. Constrain it in parent instead.*/
+	display: block;
+	column-count: 2;
+	white-space: nowrap;
+}
+
+.invest-list-group .list-group-item {
 	border-top: none;
-	border-bottom: 1px solid #dee2e6;
+	border-right: none;
+	border-left: none;
+	border-bottom: 1px solid rgba(0,0,0,.125);
+	margin-bottom: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.invest-list-group .list-group-item:last-child {
+	border-radius: 0;
 }
 
 .invest-button {
 	color: var(--invest-green);
+	font-weight: 600;
+}
+
+.invest-button:hover {
+	color: white;
+	background-color: var(--invest-green);
+	opacity: 75%;
 	font-weight: 600;
 }
 
@@ -218,11 +257,25 @@ body {
 
 /* InVEST Model Tab */
 
+.invest-main-col {
+	 /* main col can grow & shrink, sidebar cannot. */
+	flex:  1 1 0;
+	padding-left: 0;
+	height: 85vh;
+}
+
+.invest-main-col .tab-content {
+	background-color: ghostwhite;
+}
+
 .invest-sidebar-col {
+	/* sidebar cannot grow or shrink, main col can.
+	 * sidebar width tries to be 25%.
+	 */
+	flex: 0 0 25%;
 	display: flex;
 	flex-direction: column;
 	padding-right: 0;
-	min-width: fit-content;
 }
 
 .invest-sidebar-col .nav-link {
@@ -267,10 +320,26 @@ body {
 	padding: inherit;
 }
 
+.invest-sidebar-col .alert {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	order: -1;
+	font-family: monospace;
+	font-weight: bold;
+}
+
+.invest-sidebar-col .alert .btn {
+	flex: 1;
+	margin-top: 1rem;
+	font-size: 1.1rem;
+	font-family: revert;
+	letter-spacing: 0.03rem;
+}
+
 .sidebar-footer {
     margin-top: auto;
-    padding-bottom: 2rem;
-    padding-right: 2rem;
+    padding-right: 1rem;
 }
 
 .sidebar-footer .btn-primary {
@@ -284,22 +353,14 @@ body {
 	margin-bottom: 0.25rem;
 }
 
-.invest-main-col {
-	padding-left: 0;
-	height: 85vh;
-}
-
-.invest-main-col .tab-content {
-	background-color: ghostwhite;
-}
-
 /* InVEST Setup Tab */
 .args-form {
 	height: 85vh;
 	width: 100%;
-	margin-left: 2rem;
 	overflow-y: auto;
 	overflow-x: hidden;
+	padding-left: 2rem;
+	padding-right: 1rem;
 }
 
 /* InVEST Argument Forms */
@@ -308,8 +369,14 @@ body {
 }
 
 .arg-group {
-	margin-top: 2.0rem;
-	margin-bottom: 2.0rem;
+	margin-top: 1.0rem;
+	margin-bottom: 1.5rem;
+	padding-bottom: 0.5rem;
+	border-bottom: 1px dotted;
+}
+
+.arg-group:last-of-type {
+	border-bottom: none;
 }
 
 .arg-hide {
@@ -317,7 +384,19 @@ body {
 }
 
 .arg-disable .form-label {
-	color: lightgray;
+	color: #a5a5a5;
+}
+
+.args-form .form-control:disabled {
+	color: #888888;
+}
+
+.args-form .form-group {
+	align-items: center;
+}
+
+.args-form .form-label {
+	text-transform: capitalize;
 }
 
 .args-form .form-control {
@@ -361,6 +440,10 @@ input[type=text]::placeholder {
 	text-indent: -3rem;
 }
 
+.args-form svg {
+	font-size: 1.5rem;
+}
+
 /* InVEST Log Tab */
 #log-display {
 	overflow: auto;
@@ -385,21 +468,6 @@ input[type=text]::placeholder {
 	font-weight: bold;
 }
 
-.invest-sidebar-col .alert {
-	display: flex;
-	flex-direction: column;
-	justify-content: center;
-	order: -1;
-	font-size: 1.2rem;
-}
-
-.invest-sidebar-col .alert .btn {
-	flex: 1;
-	margin-top: 1rem;
-	font-size: 1.1rem;
-	letter-spacing: 0.03rem;
-}
-
 /* Download Data Modal */
 .download-data-modal .modal-dialog {
 	overflow-y: initial;
@@ -408,4 +476,12 @@ input[type=text]::placeholder {
 .download-data-modal .modal-body {
 	height: 80vh;
 	overflow-y: auto;
+}
+
+/* Settings Modal */
+.settings-modal .modal-dialog {
+	/*Hardcoding prevents dynamic resizing, which is convenient.
+	And it is okay because we set the minimum electron window width
+	at 800px when we create it.*/
+	max-width: 600px;
 }

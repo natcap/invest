@@ -21,13 +21,8 @@ export function createPythonFlaskProcess(investExe) {
   // Once those are resolved, we probably want some logging here,
   // maybe --debug if devMode, -vvv if production?
   const pythonServerProcess = spawn(
-    path.basename(investExe),
+    investExe,
     ['serve', '--port', process.env.PORT],
-    {
-      env: {
-        PATH: path.dirname(investExe),
-      },
-    }
   );
 
   logger.debug(`Started python process as PID ${pythonServerProcess.pid}`);

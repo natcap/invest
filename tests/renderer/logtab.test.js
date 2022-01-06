@@ -4,6 +4,8 @@ like how starting and stopping invest subprocesses trigger log updates.
 */
 import path from 'path';
 import fs from 'fs';
+import os from 'os';
+
 import React from 'react';
 import { render } from '@testing-library/react';
 import '@testing-library/jest-dom';
@@ -28,22 +30,16 @@ function renderLogTab(logfilePath, primaryPythonLogger) {
   return utils;
 }
 
+const WORKSPACE = fs.mkdtempSync(path.join(os.tmpdir(), 'data-'));
 function makeLogFile(text) {
-  const workspace = fs.mkdtempSync('tests/data/log-');
-  const logfilePath = path.join(workspace, 'logfile.txt');
+  const logfilePath = path.join(WORKSPACE, 'logfile.txt');
   fs.writeFileSync(logfilePath, text);
   return logfilePath;
 }
 
-function cleanupLogFile(logfilePath) {
-  fs.unlink(logfilePath, () => {
-    fs.rmdirSync(path.dirname(logfilePath));
-  });
-}
-
 describe('LogTab displays log from a file', () => {
   const uniqueText = 'utils.prepare_workspace';
-  const primaryPythonLogger = 'natcap.invest.hydropower.hydropower_water_yield';
+  const primaryPythonLogger = 'natcap.invest.annual_water_yield';
 
   const logText = `
 2021-01-15 07:14:37,147 (natcap.invest.utils) ${uniqueText}(124) INFO Writing log ...
@@ -52,7 +48,7 @@ Arguments for InVEST ${primaryPythonLogger} 3.9.0.post147+gcc5a7cfe:
 biophysical_table_path        C:/Users/dmf/projects/invest/data/biophysical_table_gura.csv
 workspace_dir                 C:/Users/dmf/projects/invest-workbench/runs/awy
 
-2021-01-15 07:14:37,148 (${primaryPythonLogger}) hydropower_water_yield.execute(268) INFO Validating arguments
+2021-01-15 07:14:37,148 (${primaryPythonLogger}) annual_water_yield.execute(268) INFO Validating arguments
 2021-01-15 07:14:37,148 (natcap.invest.validation) validation._wrapped_validate_func(915) INFO ...
 2021-01-15 07:14:37,525 (taskgraph.Task) Task.__init__(333) WARNING the ...
 2021-01-15 07:14:37,636 (pygeoprocessing.geoprocessing) geoprocessing.align_and_resize_raster_stack(795) INFO ...
@@ -84,7 +80,7 @@ ValueError: Values in the LULC raster were found that are not represented under 
 
   afterAll(() => {
     removeIpcMainListeners();
-    cleanupLogFile(logfilePath);
+    fs.rmSync(WORKSPACE, { recursive: true, force: true });
   });
 
   test('Text in logfile is rendered', async () => {

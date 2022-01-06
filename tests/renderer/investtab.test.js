@@ -14,6 +14,8 @@ import {
   fetchDatastackFromFile
 } from '../../src/renderer/server_requests';
 import InvestJob from '../../src/renderer/InvestJob';
+import setupDialogs from '../../src/main/setupDialogs';
+import { removeIpcMainListeners } from '../../src/main/main';
 
 // mock out the global gettext function - avoid setting up translation
 global.window._ = x => x;
@@ -48,8 +50,8 @@ function renderInvestTab(job = DEFAULT_JOB) {
 
 describe('Sidebar Alert renders with data from a recent run', () => {
   const spec = {
-    module: 'natcap.invest.foo',
-    model_name: 'FooModel',
+    pyname: 'natcap.invest.foo',
+    model_name: 'Foo Model',
     args: {
       workspace: {
         name: 'Workspace',
@@ -64,6 +66,7 @@ describe('Sidebar Alert renders with data from a recent run', () => {
     fetchValidation.mockResolvedValue([]);
     const mockSpec = spec; // jest.mock not allowed to ref out-of-scope var
     jest.mock(UI_CONFIG_PATH, () => mockUISpec(mockSpec));
+    setupDialogs();
   });
 
   afterEach(() => {
@@ -74,6 +77,7 @@ describe('Sidebar Alert renders with data from a recent run', () => {
   afterAll(() => {
     jest.resetModules();
     jest.resetAllMocks();
+    removeIpcMainListeners();
   });
 
   test('final Traceback displays', async () => {
@@ -156,8 +160,8 @@ describe('Sidebar Alert renders with data from a recent run', () => {
 
 describe('Save InVEST Model Setup Buttons', () => {
   const spec = {
-    module: 'natcap.invest.foo',
-    model_name: 'FooModel',
+    pyname: 'natcap.invest.foo',
+    model_name: 'Foo Model',
     args: {
       workspace: {
         name: 'Workspace',
@@ -242,11 +246,14 @@ describe('Save InVEST Model Setup Buttons', () => {
     await waitFor(() => {
       const results = saveToPython.mock.results[0].value;
       expect(Object.keys(results)).toEqual(expect.arrayContaining(
-        ['filepath', 'modelname', 'pyname', 'args']
+        ['filepath', 'modelname', 'args']
       ));
-      Object.keys(results).forEach((key) => {
-        expect(results[key]).not.toBeUndefined();
-      });
+      expect(typeof results.filepath).toBe('string');
+      expect(typeof results.modelname).toBe('string');
+      // guard against a common mistake of passing a model title
+      expect(results.modelname.split(' ')).toHaveLength(1);
+
+      expect(results.args).not.toBeUndefined();
       const args = JSON.parse(results.args);
       const argKeys = Object.keys(args);
       expect(argKeys).toEqual(expect.arrayContaining(expectedArgKeys));
@@ -259,7 +266,7 @@ describe('Save InVEST Model Setup Buttons', () => {
 
   test('Load Parameters Button: loads parameters', async () => {
     const mockDatastack = {
-      module_name: spec.module,
+      module_name: spec.pyname,
       args: {
         workspace: 'myworkspace',
         port: '9999',
@@ -359,8 +366,8 @@ describe('Save InVEST Model Setup Buttons', () => {
 
 describe('InVEST Run Button', () => {
   const spec = {
-    module: 'natcap.invest.bar',
-    model_name: 'BarModel',
+    pyname: 'natcap.invest.bar',
+    model_name: 'Bar Model',
     args: {
       a: {
         name: 'abar',
@@ -400,8 +407,8 @@ describe('InVEST Run Button', () => {
     const runButton = await findByRole('button', { name: /Run/ });
     expect(runButton).toBeDisabled();
 
-    const a = await findByLabelText(RegExp(`${spec.args.a.name}`));
-    const b = await findByLabelText(RegExp(`${spec.args.b.name}`));
+    const a = await findByLabelText(`${spec.args.a.name}`);
+    const b = await findByLabelText(`${spec.args.b.name}`);
 
     expect(a).toHaveClass('is-invalid');
     expect(b).toHaveClass('is-invalid');

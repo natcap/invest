@@ -12,6 +12,7 @@ import Button from 'react-bootstrap/Button';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import Spinner from 'react-bootstrap/Spinner';
+import { MdClose } from 'react-icons/md';
 
 import HomeTab from './components/HomeTab';
 import InvestTab from './components/InvestTab';
@@ -40,7 +41,7 @@ export default class App extends React.Component {
       activeTab: 'home',
       openNavIDs: [],
       openJobs: {},
-      investList: {},
+      investList: null,
       recentJobs: [],
       investSettings: null,
       showDownloadModal: false,
@@ -240,6 +241,7 @@ export default class App extends React.Component {
             {` ${job.modelHumanName}`}
           </Nav.Link>
           <Button
+            aria-label={`close ${job.modelHumanName} tab`}
             className="close-tab"
             variant="outline-dark"
             onClick={(event) => {
@@ -248,7 +250,7 @@ export default class App extends React.Component {
             }}
             onDragOver={dragOverHandlerNone}
           >
-            x
+            <MdClose />
           </Button>
         </Nav.Item>
       );
@@ -256,7 +258,7 @@ export default class App extends React.Component {
         <TabPane
           key={id}
           eventKey={id}
-          title={job.modelHumanName}
+          aria-label={`${job.modelHumanName} tab`}
         >
           <InvestTab
             job={job}
@@ -326,6 +328,7 @@ export default class App extends React.Component {
                         investSettings={investSettings}
                         clearJobsStorage={this.clearRecentJobs}
                         showDownloadModal={() => this.showDownloadModal(true)}
+                        nCPU={this.props.nCPU}
                       />
                     )
                     : <div />
@@ -338,13 +341,20 @@ export default class App extends React.Component {
             id="top-tab-content"
             onDragOver={dragOverHandlerNone}
           >
-            <TabPane eventKey="home" title="Home">
-              <HomeTab
-                investList={investList}
-                openInvestModel={this.openInvestModel}
-                recentJobs={recentJobs}
-                batchUpdateArgs={this.batchUpdateArgs}
-              />
+            <TabPane
+              eventKey="home"
+              aria-label="home tab"
+            >
+              {(investList)
+                ? (
+                  <HomeTab
+                    investList={investList}
+                    openInvestModel={this.openInvestModel}
+                    recentJobs={recentJobs}
+                    batchUpdateArgs={this.batchUpdateArgs}
+                  />
+                )
+                : <div />}
             </TabPane>
             {investTabPanes}
           </TabContent>
@@ -356,10 +366,12 @@ export default class App extends React.Component {
 
 App.propTypes = {
   isFirstRun: PropTypes.bool,
+  nCPU: PropTypes.number,
 };
 
-// Setting a default here mainly to make testing easy, so this prop
+// Setting a default here mainly to make testing easy, so these props
 // can be undefined for unrelated tests.
 App.defaultProps = {
   isFirstRun: false,
+  nCPU: 1,
 };

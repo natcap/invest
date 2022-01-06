@@ -33,7 +33,7 @@ jobs:
     - name: Install Dependencies
       run: |
         yarn config set network-timeout 600000 -g
-        yarn install --verbose
+        yarn install
 
     - name: Fetch InVEST Binaries
       run: yarn run fetch-invest
@@ -97,7 +97,7 @@ jobs:
       run: yarn run dist
 
     - name: Test electron app with puppeteer
-      run: yarn run test-electron-app
+      run: npx cross-env CI=true yarn run test-electron-app
 
     - name: Upload app logging from puppeteer to github - MacOS
       uses: actions/upload-artifact@v2.2.4

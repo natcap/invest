@@ -136,6 +136,7 @@
     </p>
   </body>
   <script>
+    const { shell } = require('electron');
     const pkg = require('../../package.json');
 
     const node1 = document.getElementById('invest-version');
@@ -148,7 +149,7 @@
 
     function handleClick(event) {
       event.preventDefault();
-      shell.openExternal(event.target.href);
+      shell.openExternal(event.currentTarget.href);
     }
   </script>
 </html>
