@@ -222,6 +222,8 @@ def build_datastack_archive(args, model_name, datastack_path):
     def _relpath(path):
         return os.path.relpath(path, temp_workspace)
 
+    spatial_types = {'raster', 'vector'}
+    file_based_types = spatial_types.union({'csv', 'file', 'directory'})
     rewritten_args = {}
     for key in args:
         LOGGER.info(f'Starting to archive arg "{key}": {args[key]}')
@@ -231,9 +233,6 @@ def build_datastack_archive(args, model_name, datastack_path):
             LOGGER.info(f'Skipping arg {key}; not in model ARGS_SPEC')
 
         input_type = args_spec[key]['type']
-        spatial_types = {'raster', 'vector'}
-        file_based_types = spatial_types.union({'csv', 'file', 'directory'})
-
         if input_type in file_based_types:
             if args[key] in {None, ''}:
                 LOGGER.info(
