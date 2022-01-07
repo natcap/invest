@@ -1717,6 +1717,9 @@ def _create_distance_raster(base_raster_path, base_vector_path,
     LOGGER.info("Starting _create_distance_raster")
     temp_dir = tempfile.mkdtemp(dir=work_dir, prefix='dist-raster-')
 
+    base_raster_info = pygeoprocessing.get_raster_info(base_raster_path)
+    pixel_xy_scale = tuple([abs(p) for p in base_raster_info['pixel_size']])
+
     rasterized_raster_path = os.path.join(temp_dir, 'rasterized_raster.tif')
 
     # Create a new raster based on the given base raster and fill with 0's
@@ -1736,8 +1739,9 @@ def _create_distance_raster(base_raster_path, base_vector_path,
         option_list=["ALL_TOUCHED=TRUE"])
 
     # Calculate euclidean distance transform
-    pygeoprocessing.distance_transform_edt((rasterized_raster_path, 1),
-                                           target_dist_raster_path)
+    pygeoprocessing.distance_transform_edt(
+        (rasterized_raster_path, 1), target_dist_raster_path,
+        sampling_distance=pixel_xy_scale)
 
     # Set the nodata value of output raster to _TARGET_NODATA
     target_dist_raster = gdal.OpenEx(
