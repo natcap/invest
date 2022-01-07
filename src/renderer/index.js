@@ -8,6 +8,7 @@ import { getSettingsValue } from './components/SettingsModal/SettingsStorage';
 const logger = window.Workbench.getLogger(__filename.split('/').slice(-1)[0]);
 
 const language = await getSettingsValue('language');
+
 // call this before rendering the app so that _() is defined
 ipcRenderer.invoke(ipcMainChannels.SET_LANGUAGE, language);
 window._ = ipcRenderer.sendSync.bind(null, ipcMainChannels.GETTEXT);  // partially applied function

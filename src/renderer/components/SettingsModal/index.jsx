@@ -17,6 +17,12 @@ import { BsChevronExpand } from 'react-icons/bs';
 
 import { getDefaultSettings } from './SettingsStorage';
 
+// map display names to standard language codes
+const languageOptions = {
+  'English': 'en',
+  'Español': 'es'
+}
+
 /** Render a dialog with a form for configuring global invest settings */
 export default class SettingsModal extends React.Component {
   constructor(props) {
@@ -75,12 +81,6 @@ export default class SettingsModal extends React.Component {
   }
 
   render() {
-    // map display names to standard language codes
-    const languageOptions = {
-      'English': 'en',
-      'Español': 'es'
-    }
-
     return (
       <React.Fragment>
         <Button
