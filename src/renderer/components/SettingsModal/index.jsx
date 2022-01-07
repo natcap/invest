@@ -11,6 +11,7 @@ import Modal from 'react-bootstrap/Modal';
 import {
   MdSettings,
   MdClose,
+  MdTranslate,
 } from 'react-icons/md';
 import { BsChevronExpand } from 'react-icons/bs';
 
@@ -24,7 +25,6 @@ export default class SettingsModal extends React.Component {
       show: false,
       nWorkersOptions: null,
       logLevelOptions: ['DEBUG', 'INFO', 'WARNING', 'ERROR'],
-      language: '',
     };
 
     this.handleShow = this.handleShow.bind(this);
@@ -112,7 +112,7 @@ export default class SettingsModal extends React.Component {
           <Modal.Body>
             <Form.Group as={Row}>
               <Form.Label column sm="8" htmlFor="language-select">
-                <span className="material-icons language-icon">translate</span>
+                <MdTranslate className="language-icon"/>
                 {_("Language")}
               </Form.Label>
               <Col sm="4">
@@ -120,7 +120,7 @@ export default class SettingsModal extends React.Component {
                   id="language-select"
                   as="select"
                   name="language"
-                  value={this.state.localSettings.language}
+                  value={this.props.investSettings.language}
                   onChange={this.handleChange}
                 >
                   {Object.entries(languageOptions).map(entry => {
@@ -186,12 +186,12 @@ export default class SettingsModal extends React.Component {
                         <ul>
                           <li>{_("synchronous task execution is most reliable")}</li>
                           <li>
-                            {_("threaded task management: tasks execute only in the
-                            main process, using multiple threads.
+                            {_(`threaded task management: tasks execute only in the
+                            main process, using multiple threads.`)}
                           </li>
                           <li>
-                            n CPUs: depending on the InVEST model, tasks may execute
-                            in parallel using up to this many processes.
+                            {_(`n CPUs: depending on the InVEST model, tasks may execute
+                            in parallel using up to this many processes.`)}
                           </li>
                         </ul>
                       </Accordion.Collapse>
@@ -242,7 +242,6 @@ SettingsModal.propTypes = {
     nWorkers: PropTypes.string,
     loggingLevel: PropTypes.string,
     sampleDataDir: PropTypes.string,
-    language: PropTypes.string,
   }),
   showDownloadModal: PropTypes.func,
   nCPU: PropTypes.number

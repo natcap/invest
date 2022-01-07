@@ -54,7 +54,6 @@ export const createWindow = async () => {
     alwaysOnTop: false,
   });
   splashScreen.loadURL(`file://${__dirname}/../static/splash.html`);
-
   setupSetLanguage();
   const investExe = findInvestBinaries(ELECTRON_DEV_MODE);
   createPythonFlaskProcess(investExe);

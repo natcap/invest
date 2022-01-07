@@ -14,7 +14,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Language: en_US\n"
+"Language: es\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 msgid "Bounding box does not intersect at least one other:"
@@ -100,7 +100,7 @@ msgid "Log"
 msgstr "Log"
 
 msgid "Logging threshold"
-msgstr "Logging threshold"
+msgstr "en espanol"
 
 msgid "Model Complete"
 msgstr "Model Complete"
