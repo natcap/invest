@@ -46,11 +46,11 @@ class ScenarioGenProximity(model.InVESTModel):
             label='Convertible Landcover Codes (list)',
             validator=self.validator)
         self.add_input(self.convertible_landcover_codes)
-        self.replacment_lucode = inputs.Text(
-            args_key='replacment_lucode',
+        self.replacement_lucode = inputs.Text(
+            args_key='replacement_lucode',
             label='Replacement Landcover Code (int)',
             validator=self.validator)
-        self.add_input(self.replacment_lucode)
+        self.add_input(self.replacement_lucode)
         self.convert_farthest_from_edge = inputs.Checkbox(
             args_key='convert_farthest_from_edge',
             helptext=(
@@ -91,7 +91,7 @@ class ScenarioGenProximity(model.InVESTModel):
                 self.focal_landcover_codes.value(),
             self.convertible_landcover_codes.args_key:
                 self.convertible_landcover_codes.value(),
-            self.replacment_lucode.args_key: self.replacment_lucode.value(),
+            self.replacement_lucode.args_key: self.replacement_lucode.value(),
             self.convert_farthest_from_edge.args_key:
                 self.convert_farthest_from_edge.value(),
             self.convert_nearest_to_edge.args_key:

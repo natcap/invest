@@ -15,12 +15,11 @@ import importlib
 from urllib.request import urlopen, Request
 from urllib.parse import urlencode
 
-from osgeo import gdal
 from osgeo import osr
 import natcap.invest
 import pygeoprocessing
 
-from .. import utils
+from . import utils
 
 ENCODING = sys.getfilesystemencoding()
 LOGGER = logging.getLogger(__name__)
@@ -36,19 +35,21 @@ _USAGE_LOGGING_THREAD_NAME = 'usage-logging-thread'
 
 
 @contextlib.contextmanager
-def log_run(module, args):
+def log_run(model_pyname, args):
     """Context manager to log an InVEST model run and exit status.
 
     Args:
-        module (string): The string module name that identifies the model.
+        model_pyname (string): The string module name that identifies the model.
         args (dict): The full args dictionary.
 
     Returns:
         ``None``
     """
+    invest_interface = 'Qt'  # this cm is only used by the Qt interface
     session_id = str(uuid.uuid4())
     log_thread = threading.Thread(
-        target=_log_model, args=(module, args, session_id),
+        target=_log_model,
+        args=(model_pyname, args, invest_interface, session_id),
         name=_USAGE_LOGGING_THREAD_NAME)
     log_thread.start()
 
@@ -191,17 +192,19 @@ def _log_exit_status(session_id, status):
         urlopen(Request(log_finish_url, urlencode(payload).encode('utf-8')))
     except Exception as exception:
         # An exception was thrown, we don't care.
-        logger.warn(
+        logger.warning(
             'an exception encountered when _log_exit_status %s',
             str(exception))
 
 
-def _log_model(pyname, model_args, session_id=None):
+def _log_model(pyname, model_args, invest_interface, session_id=None):
     """Log information about a model run to a remote server.
 
     Args:
         pyname (string): a python string of the package version.
         model_args (dict): the traditional InVEST argument dictionary.
+        invest_interface (string): a string identifying the calling UI,
+            e.g. `Qt` or 'Workbench'.
 
     Returns:
         None
@@ -230,6 +233,7 @@ def _log_model(pyname, model_args, session_id=None):
         payload = {
             'model_name': pyname,
             'invest_release': natcap.invest.__version__,
+            'invest_interface': invest_interface,
             'node_hash': _node_hash(),
             'system_full_platform_string': platform.platform(),
             'system_preferred_encoding': locale.getdefaultlocale()[1],
@@ -246,5 +250,5 @@ def _log_model(pyname, model_args, session_id=None):
         urlopen(Request(log_start_url, urlencode(payload).encode('utf-8')))
     except Exception as exception:
         # An exception was thrown, we don't care.
-        logger.warn(
+        logger.warning(
             'an exception encountered when logging %s', repr(exception))

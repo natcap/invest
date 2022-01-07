@@ -2,15 +2,15 @@
 DATA_DIR := data
 GIT_SAMPLE_DATA_REPO        := https://bitbucket.org/natcap/invest-sample-data.git
 GIT_SAMPLE_DATA_REPO_PATH   := $(DATA_DIR)/invest-sample-data
-GIT_SAMPLE_DATA_REPO_REV    := 5284d217aff54f698950ff17336fcfd2cf7725db
+GIT_SAMPLE_DATA_REPO_REV    := 1ba3d13680caff0b8382de22987a4ac118ec98a6
 
 GIT_TEST_DATA_REPO          := https://bitbucket.org/natcap/invest-test-data.git
 GIT_TEST_DATA_REPO_PATH     := $(DATA_DIR)/invest-test-data
-GIT_TEST_DATA_REPO_REV      := 586a64b2b33a124d9197bd99c06c88b926807f70
+GIT_TEST_DATA_REPO_REV      := ac7023d684478485fea89c68f8f4154163541e1d
 
 GIT_UG_REPO                 := https://github.com/natcap/invest.users-guide
 GIT_UG_REPO_PATH            := doc/users-guide
-GIT_UG_REPO_REV             := be19f67350e7663397a7a05408c429e763882051
+GIT_UG_REPO_REV             := 10877682d8f2f49f792b60a3ffbed50c6ad8e8c0
 
 ENV = "./env"
 ifeq ($(OS),Windows_NT)
@@ -38,6 +38,7 @@ ifeq ($(OS),Windows_NT)
 	.DEFAULT_GOAL := windows_installer
 	RM_DATA_DIR := $(RMDIR) $(DATA_DIR)
 	/ := '\'
+	OSNAME = 'windows'
 else
 	NULL := /dev/null
 	PROGRAM_CHECK_SCRIPT := ./scripts/check_required_programs.sh
@@ -56,6 +57,7 @@ else
 
 	ifeq ($(shell sh -c 'uname -s 2>/dev/null || echo not'),Darwin)  # mac OSX
 		.DEFAULT_GOAL := mac_dmg
+		OSNAME = 'mac'
 	else
 		.DEFAULT_GOAL := binaries
 	endif
@@ -108,8 +110,11 @@ TESTRUNNER := pytest -vs --import-mode=importlib --durations=0
 DATAVALIDATOR := $(PYTHON) scripts/invest-autovalidate.py $(GIT_SAMPLE_DATA_REPO_PATH)
 TEST_DATAVALIDATOR := $(PYTHON) -m pytest -vs scripts/invest-autovalidate.py
 
+UG_FILE_VALIDATOR := $(PYTHON) scripts/userguide-filevalidator.py $(GIT_UG_REPO_PATH)
+
 # Target names.
 INVEST_BINARIES_DIR := $(DIST_DIR)/invest
+INVEST_BINARIES_DIR_ZIP := $(OSNAME)_invest_binaries.zip
 
 APIDOCS_BUILD_DIR := $(BUILD_DIR)/sphinx/apidocs
 APIDOCS_TARGET_DIR := $(DIST_DIR)/apidocs
@@ -171,6 +176,9 @@ test_ui: $(GIT_TEST_DATA_REPO_PATH)
 validate_sampledata: $(GIT_SAMPLE_DATA_REPO_PATH)
 	$(TEST_DATAVALIDATOR)
 	$(DATAVALIDATOR)
+
+validate_userguide_filenames: $(GIT_UG_REPO_PATH)
+	$(UG_FILE_VALIDATOR)
 
 clean:
 	-$(RMDIR) $(BUILD_DIR)
@@ -291,14 +299,12 @@ $(USERGUIDE_ZIP_FILE): $(USERGUIDE_TARGET_DIR)
 # know which data zipfiles to create until the data repo is cloned.
 # All data zipfiles are written to dist/data/*.zip
 ZIPDIRS = Annual_Water_Yield \
-		  Aquaculture \
 		  Base_Data \
 		  Carbon \
 		  CoastalBlueCarbon \
 		  CoastalVulnerability \
 		  CropProduction \
 		  DelineateIt \
-		  Fisheries \
 		  forest_carbon_edge_effect \
 		  globio \
 		  GridSeascape \
@@ -313,9 +319,9 @@ ZIPDIRS = Annual_Water_Yield \
 		  ScenicQuality \
 		  SDR \
 		  Seasonal_Water_Yield \
-		  storm_impact \
-		  UrbanFloodMitigation \
 		  UrbanCoolingModel \
+		  UrbanFloodMitigation \
+		  UrbanStormwater \
 		  WaveEnergy \
 		  WindEnergy
 

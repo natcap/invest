@@ -37,7 +37,7 @@ class ScenarioProximityTests(unittest.TestCase):
             'convertible_landcover_codes': '1 2 3 4 5',
             'focal_landcover_codes': '1 2 3 4 5',
             'n_fragmentation_steps': '1',
-            'replacment_lucode': '12',
+            'replacement_lucode': '12',
             'n_workers': '-1',
         }
         return args
@@ -141,7 +141,7 @@ class ScenarioGenValidationTests(unittest.TestCase):
         """Initiate list of required keys."""
         self.base_required_keys = [
             'focal_landcover_codes',
-            'replacment_lucode',
+            'replacement_lucode',
             'workspace_dir',
             'n_fragmentation_steps',
             'convertible_landcover_codes',
@@ -169,9 +169,8 @@ class ScenarioGenValidationTests(unittest.TestCase):
         validation_errors = scenario_gen_proximity.validate(
             {'convert_nearest_to_edge': False,
              'convert_farthest_from_edge': False})
-        expected_message = ('One or more of "convert_nearest_to_edge" or'
-                            ' "convert_farthest_from_edge" must be selected')
         actual_messages = set()
         for keys, error_strings in validation_errors:
             actual_messages.add(error_strings)
-        self.assertTrue(expected_message in actual_messages)
+        self.assertTrue(scenario_gen_proximity.MISSING_CONVERT_OPTION_MSG
+            in actual_messages)

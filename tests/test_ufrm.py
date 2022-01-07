@@ -284,10 +284,10 @@ class UFRMTests(unittest.TestCase):
 
     def test_validate(self):
         """UFRM: test validate function."""
-        from natcap.invest import urban_flood_risk_mitigation
+        from natcap.invest import urban_flood_risk_mitigation, validation
         args = self._make_args()
-        self.assertEqual(
-            len(urban_flood_risk_mitigation.validate(args)), 0)
+        validation_warnings = urban_flood_risk_mitigation.validate(args)
+        self.assertEqual(len(validation_warnings), 0)
 
         del args['workspace_dir']
         validation_warnings = urban_flood_risk_mitigation.validate(args)
@@ -295,24 +295,32 @@ class UFRMTests(unittest.TestCase):
 
         args['workspace_dir'] = ''
         result = urban_flood_risk_mitigation.validate(args)
-        self.assertTrue('has no value' in result[0][1])
+        self.assertEqual(
+            result, [(['workspace_dir'], validation.MESSAGES['MISSING_VALUE'])])
 
         args = self._make_args()
         args['lulc_path'] = 'fake/path/notfound.tif'
         result = urban_flood_risk_mitigation.validate(args)
-        self.assertTrue('not found' in result[0][1])
+        self.assertEqual(
+            result, [(['lulc_path'], validation.MESSAGES['FILE_NOT_FOUND'])])
 
         args = self._make_args()
         args['lulc_path'] = args['aoi_watersheds_path']
         result = urban_flood_risk_mitigation.validate(args)
-        self.assertTrue('GDAL raster' in result[0][1])
+        self.assertEqual(
+            result, [(['lulc_path'], validation.MESSAGES['NOT_GDAL_RASTER'])])
 
         args = self._make_args()
         args['aoi_watersheds_path'] = args['lulc_path']
         result = urban_flood_risk_mitigation.validate(args)
-        self.assertTrue('GDAL vector' in result[0][1])
+        self.assertEqual(
+            result,
+            [(['aoi_watersheds_path'], validation.MESSAGES['NOT_GDAL_VECTOR'])])
 
         args = self._make_args()
         del args['infrastructure_damage_loss_table_path']
         result = urban_flood_risk_mitigation.validate(args)
-        self.assertTrue('missing from the args dict' in result[0][1])
+        self.assertEqual(
+            result,
+            [(['infrastructure_damage_loss_table_path'],
+                validation.MESSAGES['MISSING_KEY'])])

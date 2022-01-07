@@ -8,11 +8,14 @@ Common functionality provided by setup.py:
 
 For other commands, try `python setup.py --help-commands`
 """
+import os
 import platform
+import subprocess
 
 import Cython.Build
 import numpy
 from setuptools import setup
+from setuptools.command.build_py import build_py as _build_py
 from setuptools.extension import Extension
 
 # Read in requirements.txt and populate the python readme with the
@@ -36,6 +39,27 @@ compiler_and_linker_args = []
 if platform.system() == 'Darwin':
     compiler_and_linker_args = ['-stdlib=libc++']
 
+
+class build_py(_build_py):
+    """Command to compile translation message catalogs before building."""
+
+    def run(self):
+        # internationalization: compile human-readable PO message catalogs
+        # into machine-readable MO message catalogs used by gettext
+        # the MO files are included as package data
+        locale_dir = os.path.abspath(os.path.join(
+            os.path.dirname(__file__),
+            'src/natcap/invest/internationalization/locales'))
+        for locale in os.listdir(locale_dir):
+            subprocess.run([
+                'pybabel',
+                'compile',
+                '--input-file', f'{locale_dir}/{locale}/LC_MESSAGES/messages.po',
+                '--output-file', f'{locale_dir}/{locale}/LC_MESSAGES/messages.mo'])
+        # then execute the original run method
+        _build_py.run(self)
+
+
 setup(
     name='natcap.invest',
     description="InVEST Ecosystem Service models",
@@ -49,13 +73,10 @@ setup(
         'natcap.invest',
         'natcap.invest.coastal_blue_carbon',
         'natcap.invest.delineateit',
-        'natcap.invest.finfish_aquaculture',
-        'natcap.invest.fisheries',
         'natcap.invest.ui',
         'natcap.invest.ndr',
         'natcap.invest.sdr',
         'natcap.invest.recreation',
-        'natcap.invest.reporting',
         'natcap.invest.scenic_quality',
         'natcap.invest.seasonal_water_yield',
     ],
@@ -134,7 +155,9 @@ setup(
             extra_link_args=compiler_and_linker_args,
             language="c++"),
     ],
-    cmdclass={'build_ext': Cython.Build.build_ext},
+    cmdclass={
+        'build_ext': Cython.Build.build_ext,
+        'build_py': build_py},
     entry_points={
         'console_scripts': [
             'invest = natcap.invest.cli:main'
@@ -144,9 +167,8 @@ setup(
         'ui': _GUI_REQUIREMENTS,
     },
     package_data={
-        'natcap.invest.reporting': [
-            'reporting_data/*.js',
-            'reporting_data/*.css',
-        ],
-    },
+        'natcap.invest': [
+            'internationalization/locales/en/.gitignore'
+        ]
+    }
 )
