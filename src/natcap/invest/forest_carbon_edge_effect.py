@@ -66,13 +66,13 @@ ARGS_SPEC = {
             "columns": {
                 "lucode": {
                     "type": "integer",
-                    "about": (
+                    "about": _(
                         "Code for this LULC class from the LULC map. Every "
                         "value in the LULC raster must have a corresponding "
                         "entry in this column.")},
                 "is_tropical_forest": {
                     "type": "boolean",
-                    "about": (
+                    "about": _(
                         "Enter 1 if the LULC class is tropical forest, 0 if "
                         "it is not tropical forest.")},
                 "c_above": {
@@ -114,7 +114,7 @@ ARGS_SPEC = {
         },
         "lulc_raster_path": {
             **spec_utils.LULC,
-            "about": (
+            "about": _(
                 f"{spec_utils.LULC['about']} All values in this raster must "
                 "have corresponding entries in the Biophysical Table."),
             "projected": True
@@ -151,20 +151,20 @@ ARGS_SPEC = {
                         "2": {"description": _("logarithmic")},
                         "3": {"description": _("linear")}
                     },
-                    "about": "Optimal regression model for the area."
+                    "about": _("Optimal regression model for the area.")
                 },
                 "theta1": {
                     "type": "number",
                     "units": u.none,
-                    "about": "θ₁ parameter for the regression equation."},
+                    "about": _("θ₁ parameter for the regression equation.")},
                 "theta2": {
                     "type": "number",
                     "units": u.none,
-                    "about": "θ₂ parameter for the regression equation."},
+                    "about": _("θ₂ parameter for the regression equation.")},
                 "theta3": {
                     "type": "number",
                     "units": u.none,
-                    "about": (
+                    "about": _(
                         "θ₃ parameter for the regression equation. "
                         "Used only for the asymptotic model.")}
             },

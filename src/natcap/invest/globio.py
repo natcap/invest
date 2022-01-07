@@ -50,7 +50,7 @@ ARGS_SPEC = {
             **spec_utils.LULC,
             "projected": True,
             "required": "not predefined_globio",
-            "about": (
+            "about": _(
                 f"{spec_utils.LULC['about']} Each LULC code must have a "
                 "corresponding entry in the biophysical table. "
                 "Required if Use Predefined GLOBIO LULC is not selected.")
@@ -60,10 +60,10 @@ ARGS_SPEC = {
             "columns": {
                 "lucode": {
                     "type": "integer",
-                    "about": "LULC code from the LULC map input."},
+                    "about": _("LULC code from the LULC map input.")},
                 "globio_lucode": {
                     "type": "integer",
-                    "about": "Corresponding GLOBIO LULC code."}
+                    "about": _("Corresponding GLOBIO LULC code.")}
             },
             "required": "not predefined_globio",
             "about": _(
@@ -169,7 +169,7 @@ ARGS_SPEC = {
                                 "The value in the 'value' column is one of "
                                 "the GLOBIO-recognized LULC codes.")},
                     },
-                    "about": "The type of MSA value in this row."
+                    "about": _("The type of MSA value in this row.")
                 },
                 "value": {
                     "type": "freestyle_string",
@@ -181,7 +181,7 @@ ARGS_SPEC = {
                 },
                 "msa_x": {
                     "type": "ratio",
-                    "about": (
+                    "about": _(
                         "MSA value for the MSA type specified in the "
                         "'msa_type' column, when the impact value is within "
                         "the range given in the 'value' column.")}

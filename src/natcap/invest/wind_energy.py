@@ -51,12 +51,12 @@ ARGS_SPEC = {
                 "long": {
                     "type": "number",
                     "units": u.degree,
-                    "about": "Longitude of the data point."
+                    "about": _("Longitude of the data point.")
                 },
                 "lati": {
                     "type": "number",
                     "units": u.degree,
-                    "about": "Latitude of the data point."
+                    "about": _("Latitude of the data point.")
                 },
                 "lam": {
                     "type": "number",
@@ -129,43 +129,43 @@ ARGS_SPEC = {
                 },
                 "operation_maintenance_cost": {
                     "type": "ratio",
-                    "about": (
+                    "about": _(
                         "The operations and maintenance costs as a proportion "
                         "of capex_arr")},
                 "miscellaneous_capex_cost": {
                     "type": "ratio",
-                    "about": (
+                    "about": _(
                         "The miscellaneous costs as a proportion of capex_arr")
                 },
                 "installation_cost": {
                     "type": "ratio",
-                    "about": (
+                    "about": _(
                         "The installation costs as a proportion of capex_arr")
                 },
                 "infield_cable_length": {
                     "type": "number",
                     "units": u.kilometer,
-                    "about": "The length of infield cable."},
+                    "about": _("The length of infield cable.")},
                 "infield_cable_cost": {
                     "type": "number",
                     "units": u.currency/u.kilometer,
-                    "about": "The cost of infield cable."},
+                    "about": _("The cost of infield cable.")},
                 "mw_coef_ac": {
                     "type": "number",
                     "units": u.currency/u.megawatt,
-                    "about": "Cost of AC cable that scales with capacity."},
+                    "about": _("Cost of AC cable that scales with capacity.")},
                 "mw_coef_dc": {
                     "type": "number",
                     "units": u.currency/u.megawatt,
-                    "about": "Cost of DC cable that scales with capacity."},
+                    "about": _("Cost of DC cable that scales with capacity.")},
                 "cable_coef_ac": {
                     "type": "number",
                     "units": u.currency/u.kilometer,
-                    "about": "Cost of AC cable that scales with length."},
+                    "about": _("Cost of AC cable that scales with length.")},
                 "cable_coef_dc": {
                     "type": "number",
                     "units": u.currency/u.kilometer,
-                    "about": "Cost of DC cable that scales with length."},
+                    "about": _("Cost of DC cable that scales with length.")},
                 "ac_dc_distance_break": {
                     "type": "number",
                     "units": u.kilometer,

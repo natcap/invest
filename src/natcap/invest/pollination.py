@@ -89,7 +89,7 @@ ARGS_SPEC = {
             "columns": {
                 "lucode": {
                     "type": "integer",
-                    "about": (
+                    "about": _(
                         "LULC code representing this class in the LULC raster."
                     )
                 },

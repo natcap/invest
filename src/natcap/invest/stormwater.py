@@ -46,12 +46,12 @@ ARGS_SPEC = {
             "columns": {
                 "lucode": {
                     "type": "integer",
-                    "about": "LULC code corresponding to the LULC raster"
+                    "about": _("LULC code corresponding to the LULC raster")
                 },
                 "emc_[POLLUTANT]": {
                     "type": "number",
                     "units": u.milligram/u.liter,
-                    "about": (
+                    "about": _(
                         "Event mean concentration of the pollutant in "
                         "stormwater. You may include any number of these "
                         "columns for different pollutants, or none at all.")
@@ -59,14 +59,14 @@ ARGS_SPEC = {
                 **{
                     f"rc_{soil_group}": {
                         "type": "ratio",
-                        "about": ("Stormwater runoff coefficient for soil "
+                        "about": _("Stormwater runoff coefficient for soil "
                                   f"group {soil_group.upper()}")
                     } for soil_group in ["a", "b", "c", "d"]
                 },
                 **{
                     f"pe_{soil_group}": {
                         "type": "ratio",
-                        "about": ("Stormwater percolation coefficient for "
+                        "about": _("Stormwater percolation coefficient for "
                                   f"soil group {soil_group.upper()}"),
                         "required": False
                     } for soil_group in ["a", "b", "c", "d"]
@@ -74,7 +74,7 @@ ARGS_SPEC = {
                 "is_connected": {
                     "type": "boolean",
                     "required": False,
-                    "about": (
+                    "about": _(
                         "Enter 1 if the LULC class is a connected impervious "
                         "surface, 0 if not. This column is only used if the "
                         "'adjust retention ratios' option is selected. If "
@@ -85,48 +85,48 @@ ARGS_SPEC = {
                         "centerlines are used.")
                 }
             },
-            "about": (
+            "about": _(
                 "Table mapping each LULC code found in the LULC raster to "
                 "biophysical data about that LULC class. If you provide the "
                 "percolation coefficient column (PE_[X]) for any soil group, "
                 "you must provide it for all four soil groups."),
-            "name": "Biophysical table"
+            "name": _("Biophysical table")
         },
         "adjust_retention_ratios": {
             "type": "boolean",
-            "about": (
+            "about": _(
                 "If true, adjust retention ratios. The adjustment algorithm "
                 "accounts for drainage effects of nearby impervious surfaces "
                 "which are directly connected to artifical urban drainage "
                 "channels (typically roads, parking lots, etc.) Connected "
                 "impervious surfaces are indicated by the is_connected column"
                 "in the biophysical table and/or the road centerlines vector."),
-            "name": "Adjust retention ratios"
+            "name": _("Adjust retention ratios")
         },
         "retention_radius": {
             "type": "number",
             "units": u.linear_unit,
             "required": "adjust_retention_ratios",
-            "about": (
+            "about": _(
                 "Radius around each pixel to adjust retention ratios. "
                 "Measured in raster coordinate system units. For the "
                 "adjustment algorithm, a pixel is 'near' a connected "
                 "impervious surface if its centerpoint is within this radius "
                 "of connected-impervious LULC and/or a road centerline."),
-            "name": "Retention radius"
+            "name": _("Retention radius")
         },
         "road_centerlines_path": {
             "type": "vector",
             "geometries": {"LINESTRING", "MULTILINESTRING"},
             "fields": {},
             "required": "adjust_retention_ratios",
-            "about": "Map of road centerlines",
-            "name": "Road centerlines"
+            "about": _("Map of road centerlines"),
+            "name": _("Road centerlines")
         },
         "aggregate_areas_path": {
             **spec_utils.AOI,
             "required": False,
-            "about": (
+            "about": _(
                 "Areas over which to aggregate results (typically watersheds "
                 "or sewersheds). The aggregated data are: average retention "
                 "ratio and total retention volume; average percolation ratio "
@@ -139,8 +139,8 @@ ARGS_SPEC = {
             "type": "number",
             "units": u.currency/u.meter**3,
             "required": False,
-            "about": "Replacement cost of stormwater retention devices",
-            "name": "Replacement cost"
+            "about": _("Replacement cost of stormwater retention devices"),
+            "name": _("Replacement cost")
         }
     }
 }

@@ -39,6 +39,11 @@ Unreleased Changes
       datasets that were linked to in CSV files.  This now works for all models
       except HRA.  If an HRA datastack archive is requested,
       ``NotImplementedError`` will be raised.  A fix for HRA is pending.
+* DelineateIt
+    * When snapping points to streams, if a point is equally near to more than
+      one stream pixel, it will now snap to the stream pixel with a higher
+      flow accumulation value. Before, it would snap to the stream pixel
+      encountered first in the raster (though this was not guaranteed).
 
 3.10.1 (2022-01-06)
 -------------------
