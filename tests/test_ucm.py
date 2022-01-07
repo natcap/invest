@@ -335,7 +335,7 @@ class UCMTests(unittest.TestCase):
 
     def test_bad_args(self):
         """UCM: test validation of bad arguments."""
-        import natcap.invest.urban_cooling_model
+        from natcap.invest import urban_cooling_model, validation
         args = {
             'workspace_dir': self.workspace_dir,
             'results_suffix': 'test_suffix',
@@ -365,45 +365,52 @@ class UCMTests(unittest.TestCase):
             }
 
         del args['t_ref']
-        warnings = natcap.invest.urban_cooling_model.validate(args)
-        self.assertTrue('Key is missing from the args dict' in warnings[0][1])
+        warnings = urban_cooling_model.validate(args)
+        expected_warning = (['t_ref'], validation.MESSAGES['MISSING_KEY'])
+        self.assertTrue(expected_warning in warnings)
 
         args['t_ref'] = ''
-        result = natcap.invest.urban_cooling_model.validate(args)
-        self.assertEqual(result[0][1], "Input is required but has no value")
+        result = urban_cooling_model.validate(args)
+        self.assertEqual(result[0][1], validation.MESSAGES['MISSING_VALUE'])
 
         args['t_ref'] = 35.0
         args['cc_weight_shade'] = -0.6
-        result = natcap.invest.urban_cooling_model.validate(args)
+        result = urban_cooling_model.validate(args)
         self.assertEqual(
-            result[0][1], "Value does not meet condition value > 0")
+            result[0][1], validation.MESSAGES['NOT_WITHIN_RANGE'].format(
+                value=args['cc_weight_shade'], range='[0, 1]'))
 
         args['cc_weight_shade'] = "not a number"
-        result = natcap.invest.urban_cooling_model.validate(args)
-        self.assertEqual(result[0][1], ("Value 'not a number' could not be "
-                                        "interpreted as a number"))
+        result = urban_cooling_model.validate(args)
+        self.assertEqual(
+            result[0][1],
+            validation.MESSAGES['NOT_A_NUMBER'].format(value=args['cc_weight_shade']))
 
         args['cc_method'] = 'nope'
-        result = natcap.invest.urban_cooling_model.validate(args)
+        result = urban_cooling_model.validate(args)
         self.assertEqual(
-            result[0][1], ("Value must be one of: ['factors', "
-                           "'intensity']"))
+            result[0][1],
+            validation.MESSAGES['INVALID_OPTION'].format(
+                option_list=['factors', 'intensity']))
 
         args['cc_method'] = 'intensity'
         args['cc_weight_shade'] = 0.2  # reset this arg
 
-        # Create a new table like the original one, but without the building
-        # intensity column.
+        # Create a new table like the original one, but without the green area
+        # column.
         old_df = pandas.read_csv(args['biophysical_table_path'])
-        new_df = old_df.drop('building_intensity', axis='columns')
+        new_df = old_df.drop('Green_area', axis='columns')
 
         args['biophysical_table_path'] = os.path.join(
             self.workspace_dir, 'new_csv.csv')
         new_df.to_csv(args['biophysical_table_path'])
 
-        result = natcap.invest.urban_cooling_model.validate(args)
-        self.assertTrue(
-            'Fields are missing from this table' in result[0][1])
+        result = urban_cooling_model.validate(args)
+        expected = [(
+            ['biophysical_table_path'],
+            validation.MESSAGES['MATCHED_NO_HEADERS'].format(
+                header='column', header_name='green_area'))]
+        self.assertEqual(result, expected)
 
     def test_flat_disk_kernel(self):
         """UCM: test flat disk kernel."""
@@ -475,13 +482,13 @@ class UCMTests(unittest.TestCase):
         energy_consumption_vector_path = os.path.join(
             args['workspace_dir'], f'buildings_with_stats.shp')
 
-        # make sure the energy valuation outputs are there, 
+        # make sure the energy valuation outputs are there,
         # and the productivity valuation outputs aren't
-        for path in [intermediate_building_vector_path, t_air_stats_pickle_path, 
+        for path in [intermediate_building_vector_path, t_air_stats_pickle_path,
                      energy_consumption_vector_path]:
             self.assertTrue(os.path.exists(path))
 
-        for path in [wbgt_path, light_work_loss_path, heavy_work_loss_path, 
+        for path in [wbgt_path, light_work_loss_path, heavy_work_loss_path,
                      wbgt_stats_pickle_path, light_loss_stats_pickle_path, heavy_loss_stats_pickle_path]:
             self.assertFalse(os.path.exists(path))
 
@@ -540,12 +547,12 @@ class UCMTests(unittest.TestCase):
             intermediate_dir, 't_air_stats.pickle')
         energy_consumption_vector_path = os.path.join(
             args['workspace_dir'], f'buildings_with_stats.shp')
-        
-        # make sure the productivity valuation outputs are there, 
+
+        # make sure the productivity valuation outputs are there,
         # and the energy valuation outputs aren't
-        for path in [wbgt_path, light_work_loss_path, heavy_work_loss_path, 
+        for path in [wbgt_path, light_work_loss_path, heavy_work_loss_path,
                      wbgt_stats_pickle_path, light_loss_stats_pickle_path, heavy_loss_stats_pickle_path]:
             self.assertTrue(os.path.exists(path))
-        for path in [intermediate_building_vector_path, t_air_stats_pickle_path, 
+        for path in [intermediate_building_vector_path, t_air_stats_pickle_path,
                      energy_consumption_vector_path]:
             self.assertFalse(os.path.exists(path))

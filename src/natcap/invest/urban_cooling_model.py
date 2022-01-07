@@ -17,8 +17,10 @@ import shapely.wkb
 import shapely.prepared
 import rtree
 
-from . import validation
 from . import utils
+from . import spec_utils
+from .spec_utils import u
+from . import validation
 from . import MODEL_METADATA
 
 LOGGER = logging.getLogger(__name__)
@@ -35,211 +37,210 @@ ARGS_SPEC = {
         "different_projections_ok": True,
     },
     "args": {
-        "workspace_dir": validation.WORKSPACE_SPEC,
-        "results_suffix": validation.SUFFIX_SPEC,
-        "n_workers": validation.N_WORKERS_SPEC,
+        "workspace_dir": spec_utils.WORKSPACE,
+        "results_suffix": spec_utils.SUFFIX,
+        "n_workers": spec_utils.N_WORKERS,
         "lulc_raster_path": {
-            "name": "Land Use / Land Cover Raster",
-            "type": "raster",
-            "required": True,
-            "validation_options": {
-                "projected": True,
-                "projection_units": "m",
-            },
-            "about": (
-                "A GDAL-supported raster file containing integer values "
-                "representing the LULC code for each cell.  The LULC code "
-                "should be an integer.  The model will use the resolution of "
-                "this layer to resample all outputs.  The resolution should "
-                "be small enough to capture the effect of green areas in the "
-                "landscape, although LULC categories can comprise a mix of "
-                "vegetated and non-vegetated covers (e.g. 'residential', "
-                "which may have 30% canopy cover."
-            )
+            **spec_utils.LULC,
+            "projected": True,
+            "projection_units": u.meter,
+            "about": _(
+                "Map of LULC for the area of interest. All values in this "
+                "raster must have corresponding entries in the Biophysical "
+                "Table.")
         },
-        "ref_eto_raster_path": {
-            "name": "Reference Evapotranspiration Raster",
-            "type": "raster",
-            "required": True,
-            "about": (
-                "A GDAL-supported raster file containing numeric values "
-                "representing the evapotranspiration (in mm) for the period "
-                "of interest."
-            )
-        },
-        "aoi_vector_path": {
-            "name": "Area of Interest Vector",
-            "type": "vector",
-            "required": True,
-            "about": (
-                "A GDAL-compatible vector delineating areas of interest "
-                "(city or neighborhood boundaries).  Results will be "
-                "aggregated within each feature in this vector."
-            )
-        },
+        "ref_eto_raster_path": spec_utils.ETO,
+        "aoi_vector_path": spec_utils.AOI,
         "biophysical_table_path": {
-            "name": "Biophysical Table",
+            "name": _("biophysical table"),
             "type": "csv",
-            "required": True,
-            "validation_options": {
-                "required_fields": ["lucode", "kc", "green_area"],
+            "columns": {
+                "lucode": {
+                    "type": "integer",
+                    "about": _(
+                        "LULC code corresponding to those in the LULC map.")},
+                "kc": {
+                    "type": "number",
+                    "units": u.none,
+                    "about": _("Crop coefficient for this LULC class.")},
+                "green_area": {
+                    "type": "boolean",
+                    "about": _(
+                        "Enter 1 to indicate that the LULC is considered a "
+                        "green area. Enter 0 to indicate that the LULC is not "
+                        "considered a green area.")},
+                "shade":  {
+                    "type": "ratio",
+                    "required": "cc_method == factors",
+                    "about": _(
+                        "The proportion of area in this LULC class that is "
+                        "covered by tree canopy at least 2 meters high. "
+                        "Required if the 'factors' option is selected for "
+                        "the Cooling Capacity Calculation Method.")},
+                "albedo": {
+                    "type": "ratio",
+                    "required": "cc_method == factors",
+                    "about": _(
+                        "The proportion of solar radiation that is directly "
+                        "reflected by this LULC class. Required if the "
+                        "'factors' option is selected for the Cooling "
+                        "Capacity Calculation Method.")},
+                "building_intensity": {
+                    "type": "ratio",
+                    "required": "cc_method == intensity",
+                    "about": _(
+                        "The ratio of building floor area to footprint "
+                        "area, normalized between 0 and 1. Required if the "
+                        "'intensity' option is selected for the Cooling "
+                        "Capacity Calculation Method.")}
             },
-            "about": (
-                "A CSV table containing model information corresponding "
-                "to each of the land use classes in the LULC.  All classes "
-                "in the land cover raster MUST have corresponding values "
-                "in this table.  Each row is a land use/land cover class."
-            ),
+            "about": _(
+                "A table mapping each LULC code to biophysical data for that "
+                "LULC class. All values in the LULC raster must have "
+                "corresponding entries in this table."),
         },
         "green_area_cooling_distance": {
-            "name": "Green area max cooling distance effect (m)",
             "type": "number",
-            "required": True,
-            "validation_options": {
-                "expression": "value > 0",
-            },
-            "about": (
-                "Distance (in m) over which large green areas (> 2 ha) "
-                "will have a cooling effect."
-            ),
+            "units": u.meter,
+            "expression": "value >= 0",
+            "name": _("maximum cooling distance"),
+            "about": _(
+                "Distance over which green areas larger than 2 hectares have "
+                "a cooling effect."),
         },
         "t_air_average_radius": {
-            "name": "T_air moving average radius (m)",
             "type": "number",
-            "required": True,
-            "validation_options": {
-                "expression": "value > 0"
-            },
-            "about": (
-                "Radius of the averaging filter for turning T_air_nomix "
-                "into T_air")
+            "units": u.meter,
+            "expression": "value >= 0",
+            "name": _("air blending distance"),
+            "about": _(
+                "Radius over which to average air temperatures to account for "
+                "air mixing.")
         },
         "t_ref": {
-            "name": "Reference Air Temperature",
+            "name": _("reference air temperature"),
             "type": "number",
-            "required": True,
-            "about": (
-                "Rural reference temperature (where the urban heat island"
-                "effect is not observed) for the period of interest. This "
-                "could be nighttime or daytime temperature, for a specific "
-                "date or an average over several days. The results will be "
-                "given for the same period of interest)"),
+            "units": u.degree_Celsius,
+            "about": _(
+                "Air temperature in a rural reference area where the urban "
+                "heat island effect is not observed.")
         },
         "uhi_max": {
-            "name": "Magnitude of the UHI effect",
+            "name": _("UHI effect"),
             "type": "number",
-            "required": True,
-            "about": (
-                "The magnitude of the urban heat island effect, in degrees "
-                "C.  Example: the difference between the rural reference "
-                "temperature and the maximum temperature observed in the "
-                "city."
-            ),
+            "units": u.degree_Celsius,
+            "about": _(
+                "The magnitude of the urban heat island effect, i.e., the "
+                "difference between the rural reference temperature and the "
+                "maximum temperature observed in the city.")
         },
         "do_energy_valuation": {
-            "name": "Run Energy Savings Valuation Model",
+            "name": _("run energy savings valuation"),
             "type": "boolean",
-            "required": True,
-            "about": "Select to run the energy savings valuation model."
+            "about": _("Run the energy savings valuation model.")
         },
         "do_productivity_valuation": {
-            "name": "Run Work Productivity Valuation Model",
+            "name": _("run work productivity valuation"),
             "type": "boolean",
-            "required": True,
-            "about": "Select to run the work productivity valuation model."
+            "about": _("Run the work productivity valuation model.")
         },
         "avg_rel_humidity": {
-            "name": "Average relative humidity (0-100%)",
-            "type": "number",
+            "name": _("average relative humidity"),
+            "type": "percent",
             "required": "do_productivity_valuation",
-            "validation_options": {
-                "expression": "(value >= 0) and (value <= 100)",
-            },
-            "about": (
-                "The average relative humidity (0-100%) over the time period "
-                "of interest."
-            ),
+            "about": _(
+                "The average relative humidity over the time period of "
+                "interest. Required if Run Work Productivity Valuation is "
+                "selected."),
         },
         "building_vector_path": {
-            "name": "Buildings vector",
+            "name": _("buildings"),
             "type": "vector",
+            "fields": {
+                "type": {
+                    "type": "integer",
+                    "about": _(
+                        "Code indicating the building type. These codes must "
+                        "match those in the Energy Consumption Table.")}},
+            "geometries": spec_utils.POLYGONS,
             "required": "do_energy_valuation",
-            "validation_options": {
-                "required_fields": ["type"],
-            },
-            "about": (
-                "A GDAL-compatible vector with built infrastructure "
-                "footprints.  The attribute table must contain the column "
-                "'type', with integers referencing the building type "
-                "(e.g. 1=residential, 2=office, etc.) that match types in "
-                "the energy consumption table."
-            ),
+            "about": _(
+                "A map of built infrastructure footprints. Required if Run "
+                "Energy Savings Valuation is selected.")
         },
         "energy_consumption_table_path": {
-            "name": "Energy consumption table",
+            "name": _("energy consumption table"),
             "type": "csv",
-            "required": "do_energy_valuation",
-            "validation_options": {
-                "required_fields": ["type", "consumption"],
+            "columns": {
+                "type": {
+                    "type": "integer",
+                    "about": _(
+                        "Building type codes matching those in the Buildings "
+                        "vector.")
+                },
+                "consumption": {
+                    "type": "number",
+                    "units": u.kilowatt_hour/(u.degree_Celsius * u.meter**2),
+                    "about": _(
+                        "Energy consumption by footprint area for this "
+                        "building type.")
+                },
+                "cost": {
+                    "type": "number",
+                    "units": u.currency/u.kilowatt_hour,
+                    "required": False,
+                    "about": _(
+                        "The cost of electricity for this building type. "
+                        "If this column is provided, the energy savings "
+                        "outputs will be in the this currency unit rather "
+                        "than kWh.")
+                }
             },
-            "about": (
-                "A CSV table containing information on energy consumption "
-                "for various types of buildings, in kWh/deg C/m^2."
-            ),
+            "required": "do_energy_valuation",
+            "about": _(
+                "A table of energy consumption data for each building type. "
+                "Required if Run Energy Savings Valuation is selected.")
         },
         "cc_method": {
-            "name": "Cooling capacity calculation method",
+            "name": _("cooling capacity calculation method"),
             "type": "option_string",
-            "required": True,
-            "validation_options": {
-                "options": ['factors', 'intensity'],
+            "options": {
+                "factors": {
+                    "display_name": _("factors"),
+                    "description": _(
+                        "Use the weighted shade, albedo, and ETI factors as a "
+                        "temperature predictor (for daytime temperatures).")},
+                "intensity": {
+                    "display_name": _("intensity"),
+                    "description": _(
+                        "Use building intensity as a temperature predictor "
+                        "(for nighttime temperatures).")}
             },
-            "about": (
-                'The method selected here determines the predictor used for '
-                'air temperature.  If <b>"Weighted Factors"</b> is '
-                'selected, the Cooling Capacity calculations will use the '
-                'weighted factors for shade, albedo and ETI as a predictor '
-                'for daytime temperatures. <br/>'
-                'Alternatively, if <b>"Building Intensity"</b> is selected, '
-                'building intensity will be used as a predictor for nighttime '
-                'temperature instead of shade, albedo and ETI.'
-            ),
+            "about": _("The air temperature predictor method to use.")
         },
         "cc_weight_shade": {
-            "name": "Cooling capacity: adjust shade weight",
-            "type": "number",
+            "name": _("shade weight"),
+            "type": "ratio",
             "required": False,
-            "validation_options": {
-                "expression": "value > 0",
-            },
-            "about": (
+            "about": _(
                 "The relative weight to apply to shade when calculating the "
-                "cooling index.  Default: 0.6"
-            ),
+                "cooling capacity index. If not provided, defaults to 0.6."),
         },
         "cc_weight_albedo": {
-            "name": "Cooling capacity: adjust albedo weight",
-            "type": "number",
+            "name": _("albedo weight"),
+            "type": "ratio",
             "required": False,
-            "validation_options": {
-                "expression": "value > 0",
-            },
-            "about": (
+            "about": _(
                 "The relative weight to apply to albedo when calculating the "
-                "cooling index.  Default: 0.2"
-            ),
+                "cooling capacity index. If not provided, defaults to 0.2."),
         },
         "cc_weight_eti": {
-            "name": "Cooling capacity: adjust evapotranspiration weight",
-            "type": "number",
+            "name": _("evapotranspiration weight"),
+            "type": "ratio",
             "required": False,
-            "validation_options": {
-                "expression": "value > 0",
-            },
-            "about": (
+            "about": _(
                 "The relative weight to apply to ETI when calculating the "
-                "cooling index.  Default: 0.2"
-            )
+                "cooling capacity index. If not provided, defaults to 0.2.")
         },
     }
 }
@@ -1091,7 +1092,7 @@ def calc_t_air_nomix_op(t_ref_val, hm_array, uhi_max):
     result = numpy.empty(hm_array.shape, dtype=numpy.float32)
     result[:] = TARGET_NODATA
     # TARGET_NODATA should never be None
-    valid_mask = ~numpy.isclose(hm_array, TARGET_NODATA)
+    valid_mask = ~utils.array_equals_nodata(hm_array, TARGET_NODATA)
     result[valid_mask] = t_ref_val + (1-hm_array[valid_mask]) * uhi_max
     return result
 
@@ -1119,9 +1120,9 @@ def calc_cc_op_factors(
     result = numpy.empty(shade_array.shape, dtype=numpy.float32)
     result[:] = TARGET_NODATA
     valid_mask = ~(
-        numpy.isclose(shade_array, TARGET_NODATA) |
-        numpy.isclose(albedo_array, TARGET_NODATA) |
-        numpy.isclose(eti_array, TARGET_NODATA))
+        utils.array_equals_nodata(shade_array, TARGET_NODATA) |
+        utils.array_equals_nodata(albedo_array, TARGET_NODATA) |
+        utils.array_equals_nodata(eti_array, TARGET_NODATA))
     result[valid_mask] = (
         cc_weight_shade*shade_array[valid_mask] +
         cc_weight_albedo*albedo_array[valid_mask] +
@@ -1141,7 +1142,7 @@ def calc_cc_op_intensity(intensity_array):
     """
     result = numpy.empty(intensity_array.shape, dtype=numpy.float32)
     result[:] = TARGET_NODATA
-    valid_mask = ~numpy.isclose(intensity_array, TARGET_NODATA)
+    valid_mask = ~utils.array_equals_nodata(intensity_array, TARGET_NODATA)
     result[valid_mask] = 1.0 - intensity_array[valid_mask]
     return result
 
@@ -1152,9 +1153,9 @@ def calc_eti_op(
     result = numpy.empty(kc_array.shape, dtype=numpy.float32)
     result[:] = target_nodata
     # kc intermediate output should always have a nodata value defined
-    valid_mask = ~numpy.isclose(kc_array, kc_nodata)
+    valid_mask = ~utils.array_equals_nodata(kc_array, kc_nodata)
     if et0_nodata is not None:
-        valid_mask &= ~numpy.isclose(et0_array, et0_nodata)
+        valid_mask &= ~utils.array_equals_nodata(et0_array, et0_nodata)
     result[valid_mask] = (
         kc_array[valid_mask] * et0_array[valid_mask] / et_max)
     return result
@@ -1186,7 +1187,7 @@ def calculate_wbgt(
 
         valid_mask = slice(None)
         if t_air_nodata is not None:
-            valid_mask = ~numpy.isclose(t_air_array, t_air_nodata)
+            valid_mask = ~utils.array_equals_nodata(t_air_array, t_air_nodata)
         wbgt[:] = TARGET_NODATA
         t_air_valid = t_air_array[valid_mask]
         e_i = (
@@ -1299,8 +1300,8 @@ def hm_op(cc_array, green_area_sum, cc_park_array, green_area_threshold):
     """
     result = numpy.empty(cc_array.shape, dtype=numpy.float32)
     result[:] = TARGET_NODATA
-    valid_mask = ~(numpy.isclose(cc_array, TARGET_NODATA) &
-                   numpy.isclose(cc_park_array, TARGET_NODATA))
+    valid_mask = ~(utils.array_equals_nodata(cc_array, TARGET_NODATA) &
+                   utils.array_equals_nodata(cc_park_array, TARGET_NODATA))
     cc_mask = ((cc_array >= cc_park_array) |
                (green_area_sum < green_area_threshold))
     result[cc_mask & valid_mask] = cc_array[cc_mask & valid_mask]
@@ -1332,7 +1333,8 @@ def map_work_loss(
     def classify_to_percent_op(temperature_array):
         result = numpy.empty(temperature_array.shape)
         result[:] = byte_target_nodata
-        valid_mask = ~numpy.isclose(temperature_array, TARGET_NODATA)
+        valid_mask = ~utils.array_equals_nodata(
+            temperature_array, TARGET_NODATA)
         result[
             valid_mask &
             (temperature_array < work_temp_threshold_array[0])] = 0
@@ -1446,12 +1448,10 @@ def validate(args, limit_to=None):
             # ARGS_SPEC.
             extra_biophysical_keys = ['building_intensity']
 
-        required_keys = (
-            extra_biophysical_keys +
-            ARGS_SPEC['args']['biophysical_table_path'][
-                'validation_options']['required_fields'][:])
         error_msg = validation.check_csv(
-            args['biophysical_table_path'], required_fields=required_keys)
+            args['biophysical_table_path'],
+            header_patterns=extra_biophysical_keys,
+            axis=1)
         if error_msg:
             validation_warnings.append((['biophysical_table_path'], error_msg))
 

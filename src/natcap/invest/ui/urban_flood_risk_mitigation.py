@@ -71,7 +71,7 @@ class UrbanFloodRiskMitigation(model.InVESTModel):
                 "path to a a CSV table with columns 'Type' and 'Damage' "
                 "with values of built infrastructure type from the 'Type' "
                 "field in the 'Built Infrastructure Vector' and potential "
-                "damage loss (in $/m^2)."),
+                "damage loss (in currency/m^2)."),
             label='Built Infrastructure Damage Loss Table (optional)',
             validator=self.validator)
         self.add_input(self.infrastructure_damage_loss_table_path)

@@ -9,6 +9,8 @@ import pygeoprocessing
 import taskgraph
 
 from .. import utils
+from .. import spec_utils
+from ..spec_utils import u
 from .. import validation
 from .. import MODEL_METADATA
 from . import coastal_blue_carbon
@@ -20,35 +22,53 @@ ARGS_SPEC = {
     "pyname": MODEL_METADATA["coastal_blue_carbon_preprocessor"].pyname,
     "userguide_html": MODEL_METADATA["coastal_blue_carbon_preprocessor"].userguide,
     "args": {
-        "workspace_dir": validation.WORKSPACE_SPEC,
-        "results_suffix": validation.SUFFIX_SPEC,
-        "n_workers": validation.N_WORKERS_SPEC,
+        "workspace_dir": spec_utils.WORKSPACE,
+        "results_suffix": spec_utils.SUFFIX,
+        "n_workers": spec_utils.N_WORKERS,
         "lulc_lookup_table_path": {
-            "name": "LULC Lookup Table",
+            "name": _("LULC lookup table"),
             "type": "csv",
-            "about": (
-                "A CSV table used to map lulc classes to their values "
-                "in a raster, as well as to indicate whether or not "
-                "the lulc class is a coastal blue carbon habitat."),
-            "required": True,
-            "validation_options": {
-                "required_fields": ["lulc-class", "code",
-                                    "is_coastal_blue_carbon_habitat"]
-            },
+            "about": _(
+                "A table mapping LULC codes from the snapshot rasters to the "
+                "corresponding LULC class names, and whether or not the "
+                "class is a coastal blue carbon habitat."),
+            "columns": {
+                "code": {
+                    "type": "integer",
+                    "about": _(
+                        "LULC code. Every value in the "
+                        "snapshot LULC maps must have a corresponding entry "
+                        "in this column.")},
+                "lulc-class": {
+                    "type": "freestyle_string",
+                    "about": _("Name of the LULC class.")},
+                "is_coastal_blue_carbon_habitat": {
+                    "type": "boolean",
+                    "about": _(
+                        "Enter TRUE if this LULC class is a coastal blue "
+                        "carbon habitat, FALSE if not.")}
+            }
         },
         "landcover_snapshot_csv": {
-            "validation_options": {
-                "required_fields": ["snapshot_year", "raster_path"],
-            },
             "type": "csv",
-            "required": True,
-            "about": (
-                "A CSV table where each row represents the year and path "
-                "to a raster file on disk representing the landcover raster "
-                "representing the state of the landscape in that year. "
-                "Landcover codes match those in the LULC lookup table."
-            ),
-            "name": "LULC Snapshots Table",
+            "columns": {
+                "snapshot_year": {
+                    "type": "number",
+                    "units": u.year,
+                    "about": _("Year to snapshot.")},
+                "raster_path": {
+                    "type": "raster",
+                    "bands": {1: {"type": "integer"}},
+                    "about": _(
+                        "Map of LULC in the snapshot year. "
+                        "All values in this raster must have corresponding "
+                        "entries in the LULC Lookup table.")
+                }
+            },
+            "about": _(
+                "A table mapping snapshot years to corresponding LULC maps "
+                "for each year."),
+            "name": _("LULC snapshots table"),
         },
     }
 }
@@ -204,8 +224,9 @@ def _create_transition_table(landcover_table, lulc_snapshot_list,
             # This comparison assumes that our landcover rasters are of an
             # integer type.  When int matrices, we can compare directly to
             # None.
-            valid_pixels = ((from_array != from_nodata) &
-                            (to_array != to_nodata))
+            valid_pixels = (
+                ~utils.array_equals_nodata(from_array, from_nodata) &
+                ~utils.array_equals_nodata(to_array, to_nodata))
             transition_pairs = transition_pairs.union(
                 set(zip(from_array[valid_pixels].flatten(),
                         to_array[valid_pixels].flatten())))
@@ -296,7 +317,7 @@ def _create_biophysical_table(landcover_table, target_biophysical_table_path):
     """
     target_column_names = [
         colname.lower() for colname in coastal_blue_carbon.ARGS_SPEC['args'][
-            'biophysical_table_path']['validation_options']['required_fields']]
+            'biophysical_table_path']['columns']]
 
     with open(target_biophysical_table_path, 'w') as bio_table:
         bio_table.write(f"{','.join(target_column_names)}\n")

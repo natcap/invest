@@ -7,6 +7,10 @@ from natcap.invest import MODEL_METADATA
 
 class ScenicQuality(model.InVESTModel):
     def __init__(self):
+        val_func_options = {
+            val['display_name']: key for key, val in
+            scenic_quality.ARGS_SPEC['args']['valuation_function']['options'].items()
+        }
         model.InVESTModel.__init__(
             self,
             label=MODEL_METADATA['scenic_quality'].model_title,
@@ -86,7 +90,8 @@ class ScenicQuality(model.InVESTModel):
             label='Valuation Function',
             options=['linear: a + bx',
                      'logarithmic: a + b log(x+1)',
-                     'exponential: a * e^(-bx)'])
+                     'exponential: a * e^(-bx)'],
+            return_value_map=val_func_options)
         self.valuation_container.add_input(self.valuation_function)
         self.a_coefficient = inputs.Text(
             args_key='a_coef',
