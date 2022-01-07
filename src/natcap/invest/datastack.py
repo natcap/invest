@@ -272,7 +272,7 @@ def build_datastack_archive(args, model_name, datastack_path):
             LOGGER.debug(f'Detected spatial columns: {spatial_columns}')
 
             target_csv_path = os.path.join(
-                data_dir, f'{key}_csv_{os.path.basename(source_path)}.csv')
+                data_dir, f'{key}_csv.csv')
             if not spatial_columns:
                 LOGGER.debug(
                     f'No spatial columns, copying to {target_csv_path}')
@@ -344,7 +344,7 @@ def build_datastack_archive(args, model_name, datastack_path):
 
         elif input_type == 'file':
             target_filepath = os.path.join(
-                data_dir, f'{key}_file_{os.path.basename(source_path)}')
+                data_dir, f'{key}_file')
             shutil.copyfile(source_path, target_filepath)
             LOGGER.debug(
                 f'File copied from {source_path} --> {target_filepath}')
