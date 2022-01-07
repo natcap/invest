@@ -96,7 +96,7 @@ def _copy_spatial_files(spatial_filepath, target_dir):
     spatial_file = None
 
     # I can't conceive of a case where the basename of the source file does not
-    # match any of the the member file basenames, but just in case there's a
+    # match any of the member file basenames, but just in case there's a
     # weird GDAL driver that does this, it seems reasonable to fall back to
     # whichever of the member files was most recent.
     if not return_filepath:
@@ -271,7 +271,8 @@ def build_datastack_archive(args, model_name, datastack_path):
                         spatial_columns.append(col_name)
             LOGGER.debug(f'Detected spatial columns: {spatial_columns}')
 
-            target_csv_path = os.path.join(data_dir, f'{key}.csv')
+            target_csv_path = os.path.join(
+                data_dir, f'{key}_csv_{os.path.basename(source_path)}.csv')
             if not spatial_columns:
                 LOGGER.debug(
                     f'No spatial columns, copying to {target_csv_path}')
@@ -343,7 +344,7 @@ def build_datastack_archive(args, model_name, datastack_path):
 
         elif input_type == 'file':
             target_filepath = os.path.join(
-                data_dir, f'{key}_{os.path.basename(source_path)}')
+                data_dir, f'{key}_file_{os.path.basename(source_path)}')
             shutil.copyfile(source_path, target_filepath)
             LOGGER.debug(
                 f'File copied from {source_path} --> {target_filepath}')
