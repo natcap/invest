@@ -78,7 +78,7 @@ ARGS_SPEC = {
             "columns": {
                 "threat": {
                     "type": "freestyle_string",
-                    "about": (
+                    "about": _(
                         "Name of the threat. Each threat name must have a "
                         "corresponding column in the Sensitivity table.")},
                 "max_dist": {
@@ -114,7 +114,7 @@ ARGS_SPEC = {
                 "cur_path": {
                     "type": "raster",
                     "bands": {1: {"type": "ratio"}},
-                    "about": (
+                    "about": _(
                         "Map of the threat's distribution in the current "
                         "scenario. Each pixel value is the relative intensity "
                         "of the threat at that location. ")
@@ -123,7 +123,7 @@ ARGS_SPEC = {
                     "required": "lulc_fut_path",
                     "type": "raster",
                     "bands": {1: {"type": "ratio"}},
-                    "about": (
+                    "about": _(
                         "Map of the threat's distribution in the future "
                         "scenario. Each pixel value is the relative intensity "
                         "of the threat at that location. "
@@ -133,7 +133,7 @@ ARGS_SPEC = {
                     "required": "lulc_bas_path",
                     "type": "raster",
                     "bands": {1: {"type": "ratio"}},
-                    "about": (
+                    "about": _(
                         "Map of the threat's distribution in the baseline "
                         "scenario. Each pixel value is the relative intensity "
                         "of the threat at that location. "
@@ -687,8 +687,9 @@ def _calculate_habitat_quality(deg_hab_raster_list, quality_out_path, ksq):
         # might be *slightly* off of _OUT_NODATA but should still be
         # interpreted as nodata.
         # _OUT_NODATA (defined above) should never be None, so this is okay
-        valid_pixels = ~(numpy.isclose(
-            degradation, _OUT_NODATA) | numpy.isclose(habitat, _OUT_NODATA))
+        valid_pixels = ~(
+            utils.array_equals_nodata(degradation, _OUT_NODATA) |
+            utils.array_equals_nodata(habitat, _OUT_NODATA))
 
         out_array[valid_pixels] = (
             habitat[valid_pixels] *
@@ -748,7 +749,8 @@ def _calculate_total_degradation(
         nodata_mask = numpy.empty(raster[0].shape, dtype=numpy.int8)
         nodata_mask[:] = 0
         for array in raster:
-            nodata_mask = nodata_mask | numpy.isclose(array, _OUT_NODATA)
+            nodata_mask = nodata_mask | utils.array_equals_nodata(
+                array, _OUT_NODATA)
 
         # the last element in raster is access
         return numpy.where(
@@ -811,9 +813,12 @@ def _compute_rarity_operation(
         Returns:
             _OUT_NODATA where either array has nodata, otherwise cover_x.
         """
-        return numpy.where(
-            (base == base_nodata) | (cover_x == lulc_nodata),
-            base_nodata, cover_x)
+        result_array = numpy.full(cover_x.shape, _OUT_NODATA)
+        valid_mask = (
+            ~utils.array_equals_nodata(base, base_nodata) &
+            ~utils.array_equals_nodata(cover_x, lulc_nodata))
+        result_array[valid_mask] = cover_x[valid_mask]
+        return result_array
 
     pygeoprocessing.raster_calculator(
         [base_lulc_path_band, lulc_path_band], trim_op, new_cover_path[0],
@@ -996,7 +1001,7 @@ def _raster_values_in_bounds(raster_path_band, lower_bound, upper_bound):
     values_valid = True
 
     for _, raster_block in pygeoprocessing.iterblocks(raster_path_band):
-        nodata_mask = ~numpy.isclose(raster_block, raster_nodata)
+        nodata_mask = ~utils.array_equals_nodata(raster_block, raster_nodata)
         if ((raster_block[nodata_mask] < lower_bound) |
                 (raster_block[nodata_mask] > upper_bound)).any():
             values_valid = False

@@ -101,6 +101,7 @@ OutFile ..\..\dist\InVEST_${FORKNAME}${VERSION}_${ARCHITECTURE}_Setup.exe
 ShowInstDetails show
 BrandingText "2021 ${PRODUCT_PUBLISHER}"
 SetCompressor zlib
+Unicode false
 
 ; Include after SetCompressor
 !include Utils.nsh
@@ -451,8 +452,8 @@ Section "InVEST Tools" Section_InVEST_Tools
         !insertmacro StartMenuLink "${SMPATH}\DelineateIt" "delineateit"
         !insertmacro StartMenuLink "${SMPATH}\Visitation: Recreation and Tourism" "recreation"
         !insertmacro StartMenuLink "${SMPATH}\Urban Flood Risk Mitigation" "ufrm"
-        !insertmacro StartMenuLink "${SMPATH}\Urban Cooling Model" "ucm"
-        !insertmacro StartMenuLink "${SMPATH}\Urban Stormwater Retention Model" "stormwater"
+        !insertmacro StartMenuLink "${SMPATH}\Urban Cooling" "ucm"
+        !insertmacro StartMenuLink "${SMPATH}\Urban Stormwater Retention" "stormwater"
         !insertmacro StartMenuLink "${SMPATH}\Habitat Risk Assessment" "hra"
 
         !define COASTALBLUECARBON "${SMPATH}\Coastal Blue Carbon"
@@ -576,8 +577,9 @@ SectionGroup /e "InVEST Datasets" SEC_DATA
     !insertmacro downloadData "Scenic Quality (optional)" "ScenicQuality.zip" 165792
     !insertmacro downloadData "Seasonal Water Yield: (optional)" "Seasonal_Water_Yield.zip" 6044
     !insertmacro downloadData "Sediment Delivery Ratio (optional)" "SDR.zip" 15853
-    !insertmacro downloadData "Urban Flood Risk Mitigation (optional)" "UrbanFloodMitigation.zip" 688
     !insertmacro downloadData "Urban Cooling Model (optional)" "UrbanCoolingModel.zip" 6885
+    !insertmacro downloadData "Urban Flood Risk Mitigation (optional)" "UrbanFloodMitigation.zip" 688
+    !insertmacro downloadData "Urban Stormwater Retention (optional)" "UrbanStormwater.zip" 453
     !insertmacro downloadData "Wave Energy (required to run model)" "WaveEnergy.zip" 831423
     !insertmacro downloadData "Wind Energy (required to run model)" "WindEnergy.zip" 7984
     !insertmacro downloadData "Global DEM & Polygon (optional)" "Base_Data.zip" 631322

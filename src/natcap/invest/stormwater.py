@@ -46,12 +46,12 @@ ARGS_SPEC = {
             "columns": {
                 "lucode": {
                     "type": "integer",
-                    "about": "LULC code corresponding to the LULC raster"
+                    "about": _("LULC code corresponding to the LULC raster")
                 },
                 "emc_[POLLUTANT]": {
                     "type": "number",
                     "units": u.milligram/u.liter,
-                    "about": (
+                    "about": _(
                         "Event mean concentration of the pollutant in "
                         "stormwater. You may include any number of these "
                         "columns for different pollutants, or none at all.")
@@ -59,22 +59,22 @@ ARGS_SPEC = {
                 **{
                     f"rc_{soil_group}": {
                         "type": "ratio",
-                        "about": ("Stormwater runoff coefficient for soil "
-                                  f"group {soil_group}")
+                        "about": _("Stormwater runoff coefficient for soil "
+                                  f"group {soil_group.upper()}")
                     } for soil_group in ["a", "b", "c", "d"]
                 },
                 **{
-                    f"ir_{soil_group}": {
+                    f"pe_{soil_group}": {
                         "type": "ratio",
-                        "about": ("Stormwater infiltration coefficient for "
-                                  f"soil group {soil_group}"),
+                        "about": _("Stormwater percolation coefficient for "
+                                  f"soil group {soil_group.upper()}"),
                         "required": False
                     } for soil_group in ["a", "b", "c", "d"]
                 },
                 "is_connected": {
                     "type": "boolean",
                     "required": False,
-                    "about": (
+                    "about": _(
                         "Enter 1 if the LULC class is a connected impervious "
                         "surface, 0 if not. This column is only used if the "
                         "'adjust retention ratios' option is selected. If "
@@ -85,52 +85,52 @@ ARGS_SPEC = {
                         "centerlines are used.")
                 }
             },
-            "about": (
+            "about": _(
                 "Table mapping each LULC code found in the LULC raster to "
                 "biophysical data about that LULC class. If you provide the "
-                "infiltration coefficient column (IR_[X]) for any soil group, "
+                "percolation coefficient column (PE_[X]) for any soil group, "
                 "you must provide it for all four soil groups."),
-            "name": "Biophysical table"
+            "name": _("Biophysical table")
         },
         "adjust_retention_ratios": {
             "type": "boolean",
-            "about": (
+            "about": _(
                 "If true, adjust retention ratios. The adjustment algorithm "
                 "accounts for drainage effects of nearby impervious surfaces "
                 "which are directly connected to artifical urban drainage "
                 "channels (typically roads, parking lots, etc.) Connected "
                 "impervious surfaces are indicated by the is_connected column"
                 "in the biophysical table and/or the road centerlines vector."),
-            "name": "Adjust retention ratios"
+            "name": _("Adjust retention ratios")
         },
         "retention_radius": {
             "type": "number",
             "units": u.linear_unit,
             "required": "adjust_retention_ratios",
-            "about": (
+            "about": _(
                 "Radius around each pixel to adjust retention ratios. "
                 "Measured in raster coordinate system units. For the "
                 "adjustment algorithm, a pixel is 'near' a connected "
                 "impervious surface if its centerpoint is within this radius "
                 "of connected-impervious LULC and/or a road centerline."),
-            "name": "Retention radius"
+            "name": _("Retention radius")
         },
         "road_centerlines_path": {
             "type": "vector",
             "geometries": {"LINESTRING", "MULTILINESTRING"},
             "fields": {},
             "required": "adjust_retention_ratios",
-            "about": "Map of road centerlines",
-            "name": "Road centerlines"
+            "about": _("Map of road centerlines"),
+            "name": _("Road centerlines")
         },
         "aggregate_areas_path": {
             **spec_utils.AOI,
             "required": False,
-            "about": (
+            "about": _(
                 "Areas over which to aggregate results (typically watersheds "
                 "or sewersheds). The aggregated data are: average retention "
-                "ratio and total retention volume; average infiltration ratio "
-                "and total infiltration volume if infiltration data was "
+                "ratio and total retention volume; average percolation ratio "
+                "and total percolation volume if percolation data was "
                 "provided; total retention value if replacement cost was "
                 "provided; and total avoided pollutant load for each "
                 "pollutant provided."),
@@ -139,8 +139,8 @@ ARGS_SPEC = {
             "type": "number",
             "units": u.currency/u.meter**3,
             "required": False,
-            "about": "Replacement cost of stormwater retention devices",
-            "name": "Replacement cost"
+            "about": _("Replacement cost of stormwater retention devices"),
+            "name": _("Replacement cost")
         }
     }
 }
@@ -167,14 +167,14 @@ FINAL_OUTPUTS = {
     'runoff_ratio_path': 'runoff_ratio.tif',
     'retention_volume_path': 'retention_volume.tif',
     'runoff_volume_path': 'runoff_volume.tif',
-    'infiltration_ratio_path': 'infiltration_ratio.tif',
-    'infiltration_volume_path': 'infiltration_volume.tif',
+    'percolation_ratio_path': 'percolation_ratio.tif',
+    'percolation_volume_path': 'percolation_volume.tif',
     'retention_value_path': 'retention_value.tif'
 }
 
 
 def execute(args):
-    """Execute the stormwater model.
+    """Execute the urban stormwater retention model.
 
     Args:
         args['workspace_dir'] (str): path to a directory to write intermediate
@@ -192,8 +192,8 @@ def execute(args):
             precipitation in millimeters
         args['biophysical_table'] (str): path to biophysical table with columns
             'lucode', 'EMC_x' (event mean concentration mg/L) for each
-            pollutant x, 'RC_y' (retention coefficient) and 'IR_y'
-            (infiltration coefficient) for each soil group y, and
+            pollutant x, 'RC_y' (retention coefficient) and 'PE_y'
+            (percolation coefficient) for each soil group y, and
             'is_connected' if args['adjust_retention_ratios'] is True
         args['adjust_retention_ratios'] (bool): If True, apply retention ratio
             adjustment algorithm.
@@ -479,48 +479,48 @@ def execute(args):
         (files['runoff_ratio_path'], 'mean_runoff_ratio', 'mean'),
         (files['runoff_volume_path'], 'total_runoff_volume', 'sum')]
 
-    # (Optional) Calculate stormwater infiltration ratio and volume from
+    # (Optional) Calculate stormwater percolation ratio and volume from
     # LULC, soil groups, biophysical table, and precipitation
-    if 'ir_a' in next(iter(biophysical_dict.values())):
-        LOGGER.info('Infiltration data detected in biophysical table. '
-                    'Will calculate infiltration ratio and volume rasters.')
-        infiltration_ratio_array = numpy.array([
-            [biophysical_dict[lucode][f'ir_{soil_group}']
+    if 'pe_a' in next(iter(biophysical_dict.values())):
+        LOGGER.info('percolation data detected in biophysical table. '
+                    'Will calculate percolation ratio and volume rasters.')
+        percolation_ratio_array = numpy.array([
+            [biophysical_dict[lucode][f'pe_{soil_group}']
                 for soil_group in ['a', 'b', 'c', 'd']
              ] for lucode in sorted_lucodes
         ], dtype=numpy.float32)
-        infiltration_ratio_task = task_graph.add_task(
+        percolation_ratio_task = task_graph.add_task(
             func=lookup_ratios,
             args=(
                 files['lulc_aligned_path'],
                 files['soil_group_aligned_path'],
-                infiltration_ratio_array,
+                percolation_ratio_array,
                 sorted_lucodes,
-                files['infiltration_ratio_path']),
-            target_path_list=[files['infiltration_ratio_path']],
+                files['percolation_ratio_path']),
+            target_path_list=[files['percolation_ratio_path']],
             dependent_task_list=[align_task],
-            task_name='calculate stormwater infiltration ratio')
+            task_name='calculate stormwater percolation ratio')
 
-        infiltration_volume_task = task_graph.add_task(
+        percolation_volume_task = task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
             args=([
-                (files['infiltration_ratio_path'], 1),
+                (files['percolation_ratio_path'], 1),
                 (files['precipitation_aligned_path'], 1),
                 (precipitation_nodata, 'raw'),
                 (pixel_area, 'raw')],
                 volume_op,
-                files['infiltration_volume_path'],
+                files['percolation_volume_path'],
                 gdal.GDT_Float32,
                 FLOAT_NODATA),
-            target_path_list=[files['infiltration_volume_path']],
-            dependent_task_list=[align_task, infiltration_ratio_task],
+            target_path_list=[files['percolation_volume_path']],
+            dependent_task_list=[align_task, percolation_ratio_task],
             task_name='calculate stormwater retention volume'
         )
-        aggregation_task_dependencies.append(infiltration_volume_task)
-        data_to_aggregate.append((files['infiltration_ratio_path'],
-                                 'mean_infiltration_ratio', 'mean'))
-        data_to_aggregate.append((files['infiltration_volume_path'],
-                                 'total_infiltration_volume', 'sum'))
+        aggregation_task_dependencies.append(percolation_volume_task)
+        data_to_aggregate.append((files['percolation_ratio_path'],
+                                 'mean_percolation_ratio', 'mean'))
+        data_to_aggregate.append((files['percolation_volume_path'],
+                                 'total_percolation_volume', 'sum'))
 
     # get all EMC columns from an arbitrary row in the dictionary
     # strip the first four characters off 'EMC_pollutant' to get pollutant name
@@ -583,7 +583,7 @@ def execute(args):
         data_to_aggregate.append((avoided_pollutant_load_path,
                                  f'{pollutant}_total_avoided_load', 'sum'))
         data_to_aggregate.append(
-            (actual_pollutant_load_path, f'{pollutant}_mean_load', 'mean'))
+            (actual_pollutant_load_path, f'{pollutant}_total_load', 'sum'))
 
     # (Optional) Do valuation if a replacement cost is defined
     # you could theoretically have a cost of 0 which should be allowed
@@ -626,7 +626,7 @@ def execute(args):
 
 def lookup_ratios(lulc_path, soil_group_path, ratio_lookup, sorted_lucodes,
                   output_path):
-    """Look up retention/infiltration ratios from LULC codes and soil groups.
+    """Look up retention/percolation ratios from LULC codes and soil groups.
 
     Args:
         lulc_array (numpy.ndarray): 2D array of LULC codes
@@ -659,9 +659,10 @@ def lookup_ratios(lulc_path, soil_group_path, ratio_lookup, sorted_lucodes,
                                         dtype=numpy.float32)
         valid_mask = numpy.full(lulc_array.shape, True)
         if lulc_nodata is not None:
-            valid_mask &= (lulc_array != lulc_nodata)
+            valid_mask &= ~utils.array_equals_nodata(lulc_array, lulc_nodata)
         if soil_group_nodata is not None:
-            valid_mask &= (soil_group_array != soil_group_nodata)
+            valid_mask &= ~utils.array_equals_nodata(
+                soil_group_array, soil_group_nodata)
         # the index of each lucode in the sorted lucodes array
         lulc_index = numpy.digitize(lulc_array[valid_mask], sorted_lucodes,
                                     right=True)
@@ -693,9 +694,9 @@ def volume_op(ratio_array, precip_array, precip_nodata, pixel_area):
     """
     volume_array = numpy.full(ratio_array.shape, FLOAT_NODATA,
                               dtype=numpy.float32)
-    valid_mask = ~numpy.isclose(ratio_array, FLOAT_NODATA)
+    valid_mask = ~utils.array_equals_nodata(ratio_array, FLOAT_NODATA)
     if precip_nodata is not None:
-        valid_mask &= ~numpy.isclose(precip_array, precip_nodata)
+        valid_mask &= ~utils.array_equals_nodata(precip_array, precip_nodata)
 
     # precipitation (mm/yr) * pixel area (m^2) *
     # 0.001 (m/mm) * ratio = volume (m^3/yr)
@@ -718,7 +719,7 @@ def retention_to_runoff_op(retention_array):
     """
     runoff_array = numpy.full(retention_array.shape, FLOAT_NODATA,
                               dtype=numpy.float32)
-    valid_mask = ~numpy.isclose(retention_array, FLOAT_NODATA)
+    valid_mask = ~utils.array_equals_nodata(retention_array, FLOAT_NODATA)
     runoff_array[valid_mask] = 1 - retention_array[valid_mask]
     return runoff_array
 
@@ -750,9 +751,9 @@ def pollutant_load_op(lulc_array, lulc_nodata, volume_array, sorted_lucodes,
     """
     load_array = numpy.full(
         lulc_array.shape, FLOAT_NODATA, dtype=numpy.float32)
-    valid_mask = ~numpy.isclose(volume_array, FLOAT_NODATA)
+    valid_mask = ~utils.array_equals_nodata(volume_array, FLOAT_NODATA)
     if lulc_nodata is not None:
-        valid_mask &= (lulc_array != lulc_nodata)
+        valid_mask &= ~utils.array_equals_nodata(lulc_array, lulc_nodata)
 
     # bin each value in the LULC array such that
     # lulc_array[i,j] == sorted_lucodes[lulc_index[i,j]]. thus,
@@ -782,7 +783,8 @@ def retention_value_op(retention_volume_array, replacement_cost):
     """
     value_array = numpy.full(retention_volume_array.shape, FLOAT_NODATA,
                              dtype=numpy.float32)
-    valid_mask = ~numpy.isclose(retention_volume_array, FLOAT_NODATA)
+    valid_mask = ~utils.array_equals_nodata(
+        retention_volume_array, FLOAT_NODATA)
 
     # retention (m^3/yr) * replacement cost ($/m^3) = retention value ($/yr)
     value_array[valid_mask] = (
@@ -814,8 +816,8 @@ def adjust_op(ratio_array, avg_ratio_array, near_connected_lulc_array,
     adjustment_factor_array = numpy.full(ratio_array.shape, FLOAT_NODATA,
                                          dtype=numpy.float32)
     valid_mask = (
-        ~numpy.isclose(ratio_array, FLOAT_NODATA) &
-        ~numpy.isclose(avg_ratio_array, FLOAT_NODATA) &
+        ~utils.array_equals_nodata(ratio_array, FLOAT_NODATA) &
+        ~utils.array_equals_nodata(avg_ratio_array, FLOAT_NODATA) &
         (near_connected_lulc_array != UINT8_NODATA) &
         (near_road_array != UINT8_NODATA))
 

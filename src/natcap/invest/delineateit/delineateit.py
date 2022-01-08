@@ -63,14 +63,19 @@ ARGS_SPEC = {
             "type": "boolean",
             "required": False,
             "about": _(
-                "Snap point geometries to the center of the nearest stream "
-                "pixel. This has no effect if Detect Pour Points is selected."),
-            "name": _("snap points to nearest stream")
+                "Whether to snap point geometries to the nearest stream "
+                "pixel.  If ``True``, ``args['flow_threshold']`` and "
+                "``args['snap_distance']`` must also be defined. If a point "
+                "is equally near to more than one stream pixel, it will be "
+                "snapped to the stream pixel with the highest flow "
+                "accumulation value. This has no effect if Detect Pour Points "
+                "is selected."),
+            "name": _("snap points to the nearest stream")
         },
         "flow_threshold": {
             **spec_utils.THRESHOLD_FLOW_ACCUMULATION,
             "required": "snap_points",
-            "about": (
+            "about": _(
                 spec_utils.THRESHOLD_FLOW_ACCUMULATION["about"] +
                 " Required if Snap Points is selected."),
         },
@@ -132,14 +137,14 @@ def execute(args):
             selected folder does not exist, it will be created. If datasets
             already exist in the selected folder, they will be overwritten.
             (required)
-        args['results_suffix'] (string):  This text will be appended to the end of
-            output files to help separate multiple runs. (optional)
-        args['dem_path'] (string):  A GDAL-supported raster file with an elevation
-            for each cell. Make sure the DEM is corrected by filling in sinks,
-            and if necessary burning hydrographic features into the elevation
-            model (recommended when unusual streams are observed.) See the
-            'Working with the DEM' section of the InVEST User's Guide for more
-            information. (required)
+        args['results_suffix'] (string):  This text will be appended to the end
+            of output files to help separate multiple runs. (optional)
+        args['dem_path'] (string):  A GDAL-supported raster file with an
+            elevation for each cell. Make sure the DEM is corrected by filling
+            in sinks, and if necessary burning hydrographic features into the
+            elevation model (recommended when unusual streams are observed.)
+            See the 'Working with the DEM' section of the InVEST User's Guide
+            for more information. (required)
         args['outlet_vector_path'] (string):  This is a vector representing
             geometries that the watersheds should be built around. Required if
             ``args['detect_pour_points']`` is False; not used otherwise.
@@ -264,7 +269,8 @@ def execute(args):
         snapped_outflow_points_task = graph.add_task(
             snap_points_to_nearest_stream,
             args=(outlet_vector_path,
-                  (file_registry['streams'], 1),
+                  file_registry['streams'],
+                  file_registry['flow_accumulation'],
                   snap_distance,
                   file_registry['snapped_outlets']),
             target_path_list=[file_registry['snapped_outlets']],
@@ -273,7 +279,7 @@ def execute(args):
         delineation_dependent_tasks.append(snapped_outflow_points_task)
         outlet_vector_path = file_registry['snapped_outlets']
 
-    watershed_delineation_task = graph.add_task(
+    _ = graph.add_task(
         pygeoprocessing.routing.delineate_watersheds_d8,
         args=((file_registry['flow_dir_d8'], 1),
               outlet_vector_path,
@@ -316,7 +322,7 @@ def _threshold_streams(flow_accum, src_nodata, out_nodata, threshold):
 
     valid_pixels = slice(None)
     if src_nodata is not None:
-        valid_pixels = ~numpy.isclose(flow_accum, src_nodata)
+        valid_pixels = ~utils.array_equals_nodata(flow_accum, src_nodata)
 
     over_threshold = flow_accum > threshold
     out_matrix[valid_pixels & over_threshold] = 1
@@ -446,8 +452,9 @@ def check_geometries(outlet_vector_path, dem_path, target_vector_path,
     target_vector = None
 
 
-def snap_points_to_nearest_stream(points_vector_path, stream_raster_path_band,
-                                  snap_distance, snapped_points_vector_path):
+def snap_points_to_nearest_stream(points_vector_path, stream_raster_path,
+                                  flow_accum_raster_path, snap_distance,
+                                  snapped_points_vector_path):
     """Adjust the location of points to the nearest stream pixel.
 
     The new point layer will have all fields and field values copied over from
@@ -458,9 +465,12 @@ def snap_points_to_nearest_stream(points_vector_path, stream_raster_path_band,
         points_vector_path (string): A path to a vector on disk containing
             point geometries.  Must be in the same projection as the stream
             raster.
-        stream_raster_path_band (tuple): A tuple of (path, band index), where
+        stream_raster_path (string): A path to a stream raster, where
             pixel values are ``1`` (indicating a stream pixel) or ``0``
             (indicating a non-stream pixel).
+        flow_accum_raster_path (string): A path to a flow accumulation raster
+            that is aligned with the stream raster. Used to break ties between
+            equally-near stream pixels.
         snap_distance (number): The maximum distance (in pixels) to search
             for stream pixels for each point.  This must be a positive, nonzero
             value.
@@ -480,12 +490,14 @@ def snap_points_to_nearest_stream(points_vector_path, stream_raster_path_band,
     points_vector = gdal.OpenEx(points_vector_path, gdal.OF_VECTOR)
     points_layer = points_vector.GetLayer()
 
-    stream_raster_info = pygeoprocessing.get_raster_info(
-        stream_raster_path_band[0])
+    stream_raster_info = pygeoprocessing.get_raster_info(stream_raster_path)
     geotransform = stream_raster_info['geotransform']
     n_cols, n_rows = stream_raster_info['raster_size']
-    stream_raster = gdal.OpenEx(stream_raster_path_band[0], gdal.OF_RASTER)
-    stream_band = stream_raster.GetRasterBand(stream_raster_path_band[1])
+    stream_raster = gdal.OpenEx(stream_raster_path, gdal.OF_RASTER)
+    stream_band = stream_raster.GetRasterBand(1)
+
+    flow_accum_raster = gdal.OpenEx(flow_accum_raster_path, gdal.OF_RASTER)
+    flow_accum_band = flow_accum_raster.GetRasterBand(1)
 
     driver = gdal.GetDriverByName('GPKG')
     snapped_vector = driver.Create(snapped_points_vector_path, 0, 0, 0,
@@ -546,8 +558,6 @@ def snap_points_to_nearest_stream(points_vector_path, stream_raster_path_band,
                 f'stream raster.  FID:{point_feature.GetFID()} at {point}')
             continue
 
-        x_center = x_index
-        y_center = y_index
         x_left = max(x_index - snap_distance, 0)
         y_top = max(y_index - snap_distance, 0)
         x_right = min(x_index + snap_distance, n_cols)
@@ -559,20 +569,37 @@ def snap_points_to_nearest_stream(points_vector_path, stream_raster_path_band,
             int(y_bottom - y_top))
         row_indexes, col_indexes = numpy.nonzero(
             stream_window == 1)
-        if row_indexes.size > 0:
-            # Calculate euclidean distance for sorting
+
+        # Find the closest stream pixel that meets the distance
+        # requirement. If there is a tie, snap to the stream pixel with
+        # a higher flow accumulation value.
+        if row_indexes.size > 0:  # there are streams within the snap distance
+            # Calculate euclidean distance from the point to each stream pixel
             distance_array = numpy.hypot(
-                y_center - y_top - row_indexes,
-                x_center - x_left - col_indexes,
+                # distance along y axis from the point to each stream pixel
+                y_index - y_top - row_indexes,
+                # distance along x axis from the point to each stream pixel
+                x_index - x_left - col_indexes,
                 dtype=numpy.float32)
 
-            # Find the closest stream pixel that meets the distance
-            # requirement.
-            min_index = numpy.argmin(distance_array)
-            min_row = row_indexes[min_index]
-            min_col = col_indexes[min_index]
-            offset_row = min_row - (y_center - y_top)
-            offset_col = min_col - (x_center - x_left)
+            is_nearest = distance_array == distance_array.min()
+            # if > 1 stream pixel is nearest, break tie with flow accumulation
+            if is_nearest.sum() > 1:
+                flow_accum_array = flow_accum_band.ReadAsArray(
+                    int(x_left), int(y_top), int(x_right - x_left),
+                    int(y_bottom - y_top))
+                # weight by flow accum
+                is_nearest = is_nearest * flow_accum_array[row_indexes, col_indexes]
+
+            # 1d index of max value in flattened array
+            nearest_stream_index_1d = numpy.argmax(is_nearest)
+
+            # convert 1d index back to coordinates relative to window
+            nearest_stream_row = row_indexes[nearest_stream_index_1d]
+            nearest_stream_col = col_indexes[nearest_stream_index_1d]
+
+            offset_row = nearest_stream_row - (y_index - y_top)
+            offset_col = nearest_stream_col - (x_index - x_left)
 
             y_index += offset_row
             x_index += offset_col

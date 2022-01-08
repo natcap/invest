@@ -43,7 +43,7 @@ ARGS_SPEC = {
         "lulc_path": {
             **spec_utils.LULC,
             "projected": True,
-            "about": (
+            "about": _(
                 f"{spec_utils.LULC['about']} All values in this raster must "
                 "have corresponding entries in the Biophysical table.")
         },
@@ -75,7 +75,7 @@ ARGS_SPEC = {
             "columns": {
                 "lucode": {
                     "type": "integer",
-                    "about": (
+                    "about": _(
                         "LULC code for this class corresponding to values in "
                         "the LULC raster.")
                 },
@@ -755,7 +755,7 @@ def _slope_proportion_and_threshold(slope_path, target_threshold_slope_path):
 
     def _slope_proportion_and_threshold_op(slope):
         """Rescale and threshold slope between 0.005 and 1.0."""
-        valid_mask = slope != slope_nodata
+        valid_mask = ~utils.array_equals_nodata(slope, slope_nodata)
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         result[:] = slope_nodata
         slope_fraction = slope[valid_mask] / 100
@@ -887,7 +887,7 @@ def _normalize_raster(base_raster_path_band, target_normalized_raster_path):
             base_raster_path_band):
         valid_mask = slice(None)
         if base_nodata is not None:
-            valid_mask = ~numpy.isclose(raster_block, base_nodata)
+            valid_mask = ~utils.array_equals_nodata(raster_block, base_nodata)
 
         valid_block = raster_block[valid_mask]
         value_sum += numpy.sum(valid_block)
@@ -904,7 +904,7 @@ def _normalize_raster(base_raster_path_band, target_normalized_raster_path):
 
         valid_mask = slice(None)
         if base_nodata is not None:
-            valid_mask = ~numpy.isclose(array, base_nodata)
+            valid_mask = ~utils.array_equals_nodata(array, base_nodata)
         result[valid_mask] = array[valid_mask]
         if value_mean != 0:
             result[valid_mask] /= value_mean
@@ -985,7 +985,7 @@ def _multiply_rasters(raster_path_list, target_nodata, target_result_path):
         valid_mask = numpy.full(result.shape, True)
         for array, nodata in zip(*[iter(array_nodata_list)]*2):
             if nodata is not None:
-                valid_mask &= ~numpy.isclose(array, nodata)
+                valid_mask &= ~utils.array_equals_nodata(array, nodata)
         result[valid_mask] = array_nodata_list[0][valid_mask]
         for array in array_nodata_list[2::2]:
             result[valid_mask] *= array[valid_mask]
@@ -1034,10 +1034,10 @@ def _map_surface_load(
         # If we don't have subsurface, just return 0.0.
         if subsurface_proportion_type is None:
             return numpy.where(
-                lucode_array != nodata_landuse, modified_load_array,
-                _TARGET_NODATA)
+                ~utils.array_equals_nodata(lucode_array, nodata_landuse),
+                modified_load_array, _TARGET_NODATA)
 
-        valid_mask = lucode_array != nodata_landuse
+        valid_mask = ~utils.array_equals_nodata(lucode_array, nodata_landuse)
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         result[:] = _TARGET_NODATA
         index = numpy.digitize(
@@ -1084,9 +1084,10 @@ def _map_subsurface_load(
         # If we don't have subsurface, just return 0.0.
         if subsurface_proportion_type is None:
             return numpy.where(
-                lucode_array != nodata_landuse, 0, _TARGET_NODATA)
+                ~utils.array_equals_nodata(lucode_array, nodata_landuse),
+                0, _TARGET_NODATA)
 
-        valid_mask = lucode_array != nodata_landuse
+        valid_mask = ~utils.array_equals_nodata(lucode_array, nodata_landuse)
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         result[:] = _TARGET_NODATA
         index = numpy.digitize(
@@ -1133,8 +1134,8 @@ def _map_lulc_to_val_mask_stream(
     def _map_eff_op(lucode_array, stream_array):
         """Map efficiency from LULC and handle nodata/streams."""
         valid_mask = (
-            (lucode_array != nodata_landuse) &
-            (stream_array != nodata_stream))
+            ~utils.array_equals_nodata(lucode_array, nodata_landuse) &
+            ~utils.array_equals_nodata(stream_array, nodata_stream))
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         result[:] = _TARGET_NODATA
         index = numpy.digitize(
@@ -1159,8 +1160,8 @@ def s_bar_calculate(
     def _bar_op(s_accumulation, flow_accumulation):
         """Calculate bar operation of s_accum / flow_accum."""
         valid_mask = (
-            (s_accumulation != s_nodata) &
-            (flow_accumulation != flow_nodata))
+            ~utils.array_equals_nodata(s_accumulation, s_nodata) &
+            ~utils.array_equals_nodata(flow_accumulation, flow_nodata))
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         result[:] = _TARGET_NODATA
         result[valid_mask] = (
@@ -1183,8 +1184,8 @@ def d_up_calculation(s_bar_path, flow_accum_path, target_d_up_path):
     def _d_up_op(s_bar, flow_accumulation):
         """Calculate d_up index."""
         valid_mask = (
-            (s_bar != s_bar_nodata) &
-            (flow_accumulation != flow_accum_nodata))
+            ~utils.array_equals_nodata(s_bar, s_bar_nodata) &
+            ~utils.array_equals_nodata(flow_accumulation, flow_accum_nodata))
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         result[:] = _TARGET_NODATA
         result[valid_mask] = (
@@ -1218,7 +1219,7 @@ def invert_raster_values(base_raster_path, target_raster_path):
         result[:] = _TARGET_NODATA
         valid_mask = slice(None)
         if base_nodata is not None:
-            valid_mask = ~numpy.isclose(base_val, base_nodata)
+            valid_mask = ~utils.array_equals_nodata(base_val, base_nodata)
 
         zero_mask = base_val == 0.0
         result[valid_mask & ~zero_mask] = (
@@ -1240,7 +1241,8 @@ def calculate_ic(d_up_path, d_dn_path, target_ic_path):
     def _ic_op(d_up, d_dn):
         """Calculate IC0."""
         valid_mask = (
-            (d_up != d_up_nodata) & (d_dn != d_dn_nodata) & (d_up != 0) &
+            ~utils.array_equals_nodata(d_up, d_up_nodata) &
+            ~utils.array_equals_nodata(d_dn, d_dn_nodata) & (d_up != 0) &
             (d_dn != 0))
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         result[:] = ic_nodata
@@ -1268,8 +1270,9 @@ def _calculate_ndr(
     def _calculate_ndr_op(effective_retention_array, ic_array):
         """Calculate NDR."""
         valid_mask = (
-            (effective_retention_array != effective_retention_nodata) &
-            (ic_array != ic_nodata))
+            ~utils.array_equals_nodata(
+                effective_retention_array, effective_retention_nodata) &
+            ~utils.array_equals_nodata(ic_array, ic_nodata))
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         result[:] = _TARGET_NODATA
         result[valid_mask] = (
@@ -1293,7 +1296,7 @@ def _calculate_sub_ndr(
         """Calculate subsurface NDR."""
         # nodata value from this intermediate output should always be
         # defined by pygeoprocessing, not None
-        valid_mask = ~numpy.isclose(
+        valid_mask = ~utils.array_equals_nodata(
             dist_to_channel_array, dist_to_channel_nodata)
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         result[:] = _TARGET_NODATA
@@ -1326,10 +1329,11 @@ def _calculate_export(
         # these intermediate outputs should always have defined nodata
         # values assigned by pygeoprocessing
         valid_mask = ~(
-            numpy.isclose(modified_load_array, load_nodata) |
-            numpy.isclose(ndr_array, ndr_nodata) |
-            numpy.isclose(modified_sub_load_array, subsurface_load_nodata) |
-            numpy.isclose(sub_ndr_array, sub_ndr_nodata))
+            utils.array_equals_nodata(modified_load_array, load_nodata) |
+            utils.array_equals_nodata(ndr_array, ndr_nodata) |
+            utils.array_equals_nodata(
+                modified_sub_load_array, subsurface_load_nodata) |
+            utils.array_equals_nodata(sub_ndr_array, sub_ndr_nodata))
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         result[:] = _TARGET_NODATA
         result[valid_mask] = (

@@ -59,7 +59,7 @@ predictor_table_columns = {
     },
     "type": {
         "type": "option_string",
-        "about": "The type of predictor file provided in the 'path' column.",
+        "about": _("The type of predictor file provided in the 'path' column."),
         "options": {
             "raster_mean": {
                 "description": _(
