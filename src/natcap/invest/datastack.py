@@ -219,9 +219,6 @@ def build_datastack_archive(args, model_name, datastack_path):
     LOGGER.debug(f'Keys: {sorted(args.keys())}')
     args_spec = module.ARGS_SPEC['args']
 
-    def _relpath(path):
-        return os.path.relpath(path, temp_workspace)
-
     spatial_types = {'raster', 'vector'}
     file_based_types = spatial_types.union({'csv', 'file', 'directory'})
     rewritten_args = {}
@@ -346,7 +343,7 @@ def build_datastack_archive(args, model_name, datastack_path):
                     f'Rewritten spatial CSV written to {target_csv_path}')
                 dataframe.to_csv(target_csv_path)
 
-            target_arg_value = _relpath(target_csv_path)
+            target_arg_value = target_csv_path
             files_found[source_path] = target_arg_value
 
         elif input_type == 'file':
@@ -355,7 +352,7 @@ def build_datastack_archive(args, model_name, datastack_path):
             shutil.copyfile(source_path, target_filepath)
             LOGGER.debug(
                 f'File copied from {source_path} --> {target_filepath}')
-            target_arg_value = _relpath(target_filepath)
+            target_arg_value = target_filepath
             files_found[source_path] = target_arg_value
 
         elif input_type == 'directory':
@@ -375,15 +372,15 @@ def build_datastack_archive(args, model_name, datastack_path):
 
             LOGGER.debug(
                 f'Directory copied from {source_path} --> {target_directory}')
-            target_arg_value = _relpath(target_directory)
+            target_arg_value = target_directory
             files_found[source_path] = target_arg_value
 
         elif input_type in spatial_types:
             # Create a directory with a readable name, something like
             # "aoi_path_vector" or "lulc_cur_path_raster".
             spatial_dir = os.path.join(data_dir, f'{key}_{input_type}')
-            target_arg_value = _relpath(_copy_spatial_files(
-                source_path, spatial_dir))
+            target_arg_value = _copy_spatial_files(
+                source_path, spatial_dir)
             files_found[source_path] = target_arg_value
 
         elif input_type == 'other':
@@ -402,21 +399,13 @@ def build_datastack_archive(args, model_name, datastack_path):
 
     LOGGER.info('Args preprocessing complete')
 
-    new_args = {
-        'args': rewritten_args,
-        'model_name': model_name,
-        'invest_version': __version__
-    }
-
     LOGGER.debug(f'found files: \n{pprint.pformat(files_found)}')
-    LOGGER.debug(f'new arguments: \n{pprint.pformat(new_args)}')
+    LOGGER.debug(f'new arguments: \n{pprint.pformat(rewritten_args)}')
     # write parameters to a new json file in the temp workspace
     param_file_uri = os.path.join(temp_workspace,
                                   'parameters' + PARAMETER_SET_EXTENSION)
-    with codecs.open(param_file_uri, 'w', encoding='UTF-8') as params:
-        params.write(json.dumps(new_args,
-                                indent=4,
-                                sort_keys=True))
+    build_parameter_set(
+        rewritten_args, model_name, param_file_uri, relative=True)
 
     # Remove the handler before archiving the working dir (and the logfile)
     archive_filehandler.close()
