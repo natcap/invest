@@ -3,6 +3,7 @@ import filecmp
 import importlib
 import json
 import os
+import pprint
 import shutil
 import sys
 import tarfile
@@ -65,9 +66,15 @@ class DatastackArchiveTests(unittest.TestCase):
         extraction_dir = os.path.join(workspace, 'archived_data')
         args = datastack.extract_datastack_archive(
             datastack_archive_path, extraction_dir)
-
         args['workspace_dir'] = os.path.join(workspace, 'workspace')
+
+        # validate the args for good measure
         module = importlib.import_module(name=model_name)
+        errors = module.validate(args)
+        if errors != []:
+            raise AssertionError(
+                f"Errors founds: {pprint.pformat(errors)}")
+
         module.execute(args)
 
     @unittest.skip('Sample data not usually cloned for test runs.')
@@ -287,8 +294,11 @@ class DatastackArchiveTests(unittest.TestCase):
         # file.
         self.assertEqual(archived_params['foo'], archived_params['bar'])
 
-        # Assert we have the expected number of files in the archive
-        self.assertEqual(len(os.listdir(os.path.join(out_directory))), 3)
+        # Assert we have the expected directory contents.
+        self.assertEqual(
+            sorted(os.listdir(out_directory)),
+            ['data', 'log', 'parameters.invest.json'])
+        self.assertTrue(os.path.isdir(os.path.join(out_directory, 'data')))
 
         # Assert we have the expected number of files in the data dir.
         self.assertEqual(
