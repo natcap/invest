@@ -297,7 +297,7 @@ class DatastackArchiveTests(unittest.TestCase):
         # Assert we have the expected directory contents.
         self.assertEqual(
             sorted(os.listdir(out_directory)),
-            ['data', 'log', 'parameters.invest.json'])
+            ['data', 'log.txt', 'parameters.invest.json'])
         self.assertTrue(os.path.isdir(os.path.join(out_directory, 'data')))
 
         # Assert we have the expected number of files in the data dir.

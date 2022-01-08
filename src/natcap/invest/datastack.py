@@ -206,7 +206,7 @@ def build_datastack_archive(args, model_name, datastack_path):
     os.makedirs(data_dir)
 
     # write a logfile to the archive
-    logfile = os.path.join(temp_workspace, 'log')
+    logfile = os.path.join(temp_workspace, 'log.txt')
     archive_filehandler = logging.FileHandler(logfile, 'w')
     archive_formatter = logging.Formatter(
         "%(name)-25s %(levelname)-8s %(message)s")
