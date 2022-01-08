@@ -226,6 +226,13 @@ def build_datastack_archive(args, model_name, datastack_path):
     file_based_types = spatial_types.union({'csv', 'file', 'directory'})
     rewritten_args = {}
     for key in args:
+        # We don't want to accidentally archive a user's complete workspace
+        # directory, complete with prior runs there.
+        if key == 'workspace_dir':
+            LOGGER.debug(
+                f"Skipping workspace directory: {args['workspace_dir']}")
+            continue
+
         LOGGER.info(f'Starting to archive arg "{key}": {args[key]}')
         # Possible that a user might pass an args key that doesn't belong to
         # this model.  Skip if so.

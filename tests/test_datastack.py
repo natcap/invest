@@ -112,6 +112,7 @@ class DatastackArchiveTests(unittest.TestCase):
             'b': 'hello there',
             'c': 'plain bytestring',
             'd': '',
+            'workspace_dir': os.path.join(self.workspace),
         }
 
         archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
@@ -125,6 +126,7 @@ class DatastackArchiveTests(unittest.TestCase):
 
         self.assertEqual(len(os.listdir(out_directory)), 3)
 
+        # We expect the workspace to be excluded from the resulting args dict.
         self.assertEqual(
             json.load(open(
                 os.path.join(out_directory,

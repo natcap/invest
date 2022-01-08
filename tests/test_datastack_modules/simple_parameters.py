@@ -4,5 +4,6 @@ ARGS_SPEC = {
         'b': {'type': 'freestyle_string'},
         'c': {'type': 'freestyle_string'},
         'd': {'type': 'freestyle_string'},
+        'workspace_dir': {'type': 'directory'},
     }
 }
