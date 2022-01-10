@@ -138,7 +138,6 @@ Unreleased Changes
         * Added a new field ``n_subsurface_export``, representing the sum of
           ``n_subsurface_export.tif``
         * Removed the field ``sub_p_ld``, since ``sub_load_p.tif`` was removed.
-
 * Scenario Generator
     * Changed an args key from ``replacment_lucode`` to ``replacement_lucode``.
 * Scenic Quality
