@@ -39,6 +39,11 @@ Unreleased Changes
       one stream pixel, it will now snap to the stream pixel with a higher
       flow accumulation value. Before, it would snap to the stream pixel
       encountered first in the raster (though this was not guaranteed).
+* Wind Energy
+    * Fixed a bug where distance was masking by pixel distance instead of
+      linear distance.
+    * Renamed the foundation cost label and help info to reflect it is no
+      measured in Millions of US dollars.
 
 3.10.1 (2022-01-06)
 -------------------
