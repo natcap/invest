@@ -42,6 +42,7 @@ Unreleased Changes
 * NDR
     * Changed some model inputs and outputs to clarify that subsurface
       phosphorus is not modeled.
+
         * Removed the inputs ``subsurface_critical_length_p`` and
           ``subsurface_eff_p``
         * Removed the output ``sub_ndr_p.tif``. The model no longer calculates
@@ -59,6 +60,7 @@ Unreleased Changes
           a geopackage ``watershed_results_ndr.gpkg``.
         * The aggregate vector fields were given more descriptive names, and
           updated corresponding to the changed raster outputs:
+
             * ``surf_p_ld`` was renamed to ``p_surface_load``
             * ``surf_n_ld`` was renamed to ``n_surface_load``
             * ``p_exp_tot`` was renamed to ``p_surface_export``
