@@ -34,6 +34,11 @@
 
 Unreleased Changes
 ------------------
+* General
+    * Fixed an issue where datastack archives would not include any spatial
+      datasets that were linked to in CSV files.  This now works for all models
+      except HRA.  If an HRA datastack archive is requested,
+      ``NotImplementedError`` will be raised.  A fix for HRA is pending.
 * DelineateIt
     * When snapping points to streams, if a point is equally near to more than
       one stream pixel, it will now snap to the stream pixel with a higher
