@@ -103,13 +103,6 @@ class Nutrient(model.InVESTModel):
             label='Subsurface Critical Length (Nitrogen)',
             validator=self.validator)
         self.add_input(self.subsurface_critical_length_n)
-        self.subsurface_critical_length_p = inputs.Text(
-            args_key='subsurface_critical_length_p',
-            helptext='',
-            interactive=False,
-            label='Subsurface Critical Length (Phosphorus)',
-            validator=self.validator)
-        self.add_input(self.subsurface_critical_length_p)
         self.subsurface_eff_n = inputs.Text(
             args_key='subsurface_eff_n',
             helptext='',
@@ -117,23 +110,12 @@ class Nutrient(model.InVESTModel):
             label='Subsurface Maximum Retention Efficiency (Nitrogen)',
             validator=self.validator)
         self.add_input(self.subsurface_eff_n)
-        self.subsurface_eff_p = inputs.Text(
-            args_key='subsurface_eff_p',
-            helptext='',
-            interactive=False,
-            label='Subsurface Maximum Retention Efficiency (Phosphorus)',
-            validator=self.validator)
-        self.add_input(self.subsurface_eff_p)
 
         # Set interactivity, requirement as input sufficiency changes
         self.calc_n.sufficiency_changed.connect(
             self.subsurface_critical_length_n.set_interactive)
-        self.calc_p.sufficiency_changed.connect(
-            self.subsurface_critical_length_p.set_interactive)
         self.calc_n.sufficiency_changed.connect(
             self.subsurface_eff_n.set_interactive)
-        self.calc_p.sufficiency_changed.connect(
-            self.subsurface_eff_p.set_interactive)
 
     def assemble_args(self):
         args = {
@@ -152,10 +134,7 @@ class Nutrient(model.InVESTModel):
             self.k_param.args_key: self.k_param.value(),
             self.subsurface_critical_length_n.args_key:
                 self.subsurface_critical_length_n.value(),
-            self.subsurface_critical_length_p.args_key:
-                self.subsurface_critical_length_p.value(),
             self.subsurface_eff_n.args_key: self.subsurface_eff_n.value(),
-            self.subsurface_eff_p.args_key: self.subsurface_eff_p.value(),
         }
 
         return args
