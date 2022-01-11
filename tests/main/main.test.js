@@ -11,12 +11,12 @@ import { execFileSync } from 'child_process';
 import { app, ipcMain, ipcRenderer } from 'electron';
 import React from 'react';
 import {
-  fireEvent, render, waitFor,
+  fireEvent, render, waitFor
 } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import yazl from 'yazl';
 import rimraf from 'rimraf';
-import gettext_js from 'gettext.js';
+import GettextJS from 'gettext.js';
 import fetch from 'node-fetch';
 
 import {
@@ -30,7 +30,7 @@ import {
 } from '../../src/main/setupCheckFirstRun';
 import {
   createPythonFlaskProcess,
-  getFlaskIsReady,
+  getFlaskIsReady
 } from '../../src/main/createPythonFlaskProcess';
 import findInvestBinaries from '../../src/main/findInvestBinaries';
 import extractZipInplace from '../../src/main/extractZipInplace';
@@ -40,11 +40,11 @@ import { getInvestModelNames } from '../../src/renderer/server_requests';
 import App from '../../src/renderer/app';
 import {
   clearSettingsStore,
-  getSettingsValue,
+  getSettingsValue
 } from '../../src/renderer/components/SettingsModal/SettingsStorage';
 
 // mock out the global gettext function - avoid setting up translation
-global.window._ = x => x;
+global.window._ = (x) => x;
 
 jest.mock('node-fetch');
 jest.mock('child_process');
@@ -291,15 +291,15 @@ describe('Integration tests for Download Sample Data Modal', () => {
 });
 
 describe('Translation', () => {
-  const i18n = new gettext_js();
+  const i18n = new GettextJS();
   const testLanguage = 'es';
   const messageCatalog = {
     '': {
-      'language': testLanguage,
-      'plural-forms': 'nplurals=2; plural=(n!=1);'
+      language: testLanguage,
+      'plural-forms': 'nplurals=2; plural=(n!=1);',
     },
-    'Open': 'σρєи',
-    'Language': 'ℓαиgυαgє'
+    Open: 'σρєи',
+    Language: 'ℓαиgυαgє',
   };
 
   beforeAll(async () => {
@@ -318,48 +318,45 @@ describe('Translation', () => {
 
     ipcRenderer.sendSync.mockImplementation((channel, arg) => {
       if (channel === ipcMainChannels.GETTEXT) {
-        return i18n.gettext(arg)
+        return i18n.gettext(arg);
       }
+      return undefined;
     });
 
     // this is the same setup that's done in src/renderer/index.js (out of test scope)
     ipcRenderer.invoke(ipcMainChannels.SET_LANGUAGE, 'en');
     global.window._ = ipcRenderer.sendSync.bind(null, ipcMainChannels.GETTEXT);
-
   });
   afterAll(async () => {
     jest.resetAllMocks();
   });
 
   test('Text rerenders in new language when language setting changes', async () => {
-
     const {
       findByText,
       getByText,
-      queryByText,
-      findByTitle,
       findByLabelText,
     } = render(<App />);
 
-    fireEvent.click(await findByTitle('settings'));
+    fireEvent.click(await findByLabelText('settings'));
     let languageInput = await findByLabelText('Language', { exact: false });
     expect(languageInput).toHaveValue('en');
 
     fireEvent.change(languageInput, { target: { value: testLanguage } });
 
     // text within the settings modal component should be translated
-    languageInput = await findByLabelText(messageCatalog['Language'], { exact: false });
+    languageInput = await findByLabelText(messageCatalog.Language, { exact: false });
     expect(languageInput).toHaveValue(testLanguage);
 
     // text should also be translated in other components
     // such as the Open button (visible in background)
-    const openButton = await findByText(messageCatalog['Open']);
+    await findByText(messageCatalog.Open);
 
     // text without a translation in the message catalog should display in the default English
     expect(getByText('Logging threshold')).toBeDefined();
 
     // resetting language should re-render components in English
-    fireEvent.click(getByText('Reset'));
+    fireEvent.click(getByText('Reset to Defaults'));
     expect(await findByText('Language')).toBeDefined();
     expect(await findByText('Open')).toBeDefined();
   });
