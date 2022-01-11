@@ -1,10 +1,10 @@
 """InVEST Wind Energy model."""
 import logging
+import math
 import os
 import pickle
 import shutil
 import tempfile
-import math
 
 import numpy
 import pandas
@@ -20,8 +20,8 @@ from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
 
-import taskgraph
 import pygeoprocessing
+import taskgraph
 from . import utils
 from . import spec_utils
 from .spec_utils import u
@@ -970,7 +970,7 @@ def execute(args):
         dependent_task_list=[align_and_resize_density_and_harvest_task])
 
     LOGGER.info('Mask out depth and [distance] areas from Harvested raster')
-    task_graph.add_task(
+    masked_harvested_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=([(path, 1) for path in aligned_harvested_mask_list],
               _mask_out_depth_dist, harvested_masked_path, _TARGET_DATA_TYPE,
@@ -1013,8 +1013,8 @@ def execute(args):
         land_df.set_index('id', inplace=True)
         land_dict = land_df.to_dict('index')
 
-        grid_vector_path = os.path.join(inter_dir,
-                                        'val_grid_points%s.shp' % suffix)
+        grid_vector_path = os.path.join(
+            inter_dir, 'val_grid_points%s.shp' % suffix)
 
         # Create a point shapefile from the grid point dictionary.
         # This makes it easier for future distance calculations and provides a
@@ -1159,6 +1159,7 @@ def execute(args):
             args=(harvested_masked_path, land_poly_proj_vector_path,
                   land_poly_dist_raster_path, inter_dir),
             target_path_list=[land_poly_dist_raster_path],
+            dependent_task_list=[masked_harvested_task],
             task_name='create_land_poly_dist_raster')
 
         final_dist_task = task_graph.add_task(
@@ -1196,6 +1197,7 @@ def execute(args):
               _calculate_carbon_op, carbon_path, _TARGET_DATA_TYPE,
               _TARGET_NODATA),
         target_path_list=[carbon_path],
+        dependent_task_list=[masked_harvested_task],
         task_name='calculate_carbon_raster')
 
     task_graph.close()
