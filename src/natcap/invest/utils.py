@@ -12,6 +12,7 @@ import time
 import pandas
 import numpy
 from shapely.wkt import loads
+from shapely.geometry.base import BaseMultipartGeometry, dump_coords
 from osgeo import gdal
 from osgeo import osr
 import pygeoprocessing
@@ -722,6 +723,12 @@ def _assert_vectors_equal(
     Assert spatial reference, feature count, geometries, field names, and
     values are equal with no respect to order of field names or geometries.
 
+    Note: this assertion may fail incorrectly. The comparison algorithm
+    allows for float imprecision if geometry coords are in the same order. It
+    also allows coords to be in a different order if the numbers match exactly.
+    If the coords are in a different order and have float imprecision, the
+    assertion will fail.
+
     Args:
         actual_vector_path (string): path on disk to a gdal Vector dataset.
         expected_vector_path (string): path on disk to a gdal Vector dataset
@@ -816,19 +823,18 @@ def _assert_vectors_equal(
             actual_geom_wkt = actual_geom.ExportToWkt()
             expected_geom_shapely = loads(expected_geom_wkt)
             actual_geom_shapely = loads(actual_geom_wkt)
-            # Try comparing geoms exactly equal allowing for different
-            # geometry ordering
-            geoms_equal = expected_geom_shapely.equals(actual_geom_shapely)
+            # confusingly named, `equals` compares numbers exactly but
+            # allows coords to be in a different order.
+            # `equals_exact` compares numbers with a tolerance but
+            # coords must be in the same order.
+            geoms_equal = (
+                expected_geom_shapely.equals(actual_geom_shapely) or
+                expected_geom_shapely.equals_exact(actual_geom_shapely, 1e-6))
             if not geoms_equal:
-                # Try allowing for precision differences,
-                # but assuming that geometries must be in the same order
-                for expected, actual in zip(expected_geom_shapely.geoms,
-                                            actual_geom_shapely.geoms):
-                    if not numpy.isclose(expected, actual):
-                        raise AssertionError(
-                            "Vector geometry assertion fail. \n"
-                            f"Expected geometry: {expected_geom_wkt}. \n"
-                            f"Actual geometry: {actual_geom_wkt}. ")
+                raise AssertionError(
+                    "Vector geometry assertion fail. \n"
+                    f"Expected geometry: {expected_geom_wkt}. \n"
+                    f"Actual geometry: {actual_geom_wkt}. ")
 
             expected_feature = None
             actual_feature = None
