@@ -71,31 +71,12 @@ function initializeArgValues(argsSpec, uiSpec, argsDict) {
   });
 }
 
-/** Get a debounced version of a function.
- *
- * The original function will not be called until after the
- * debounced version stops being invoked for N milliseconds.
- *
- * @param {func} func - a function that takes no args.
- * @param {number} ms - number of milliseconds.
- *
- * @returns {func} - debounced version, called instead of the original.
- */
-function debounce(func, ms) {
-  let timer;
-  return () => {
-    if (timer) {
-      clearTimeout(timer);
-    }
-    timer = setTimeout(func, ms);
-  };
-}
-
 /** Renders an arguments form, execute button, and save buttons. */
 export default class SetupTab extends React.Component {
   constructor(props) {
     super(props);
     this._isMounted = false;
+    this.validationTimer = null;
 
     this.state = {
       argsValues: null,
@@ -109,9 +90,8 @@ export default class SetupTab extends React.Component {
     this.saveJsonFile = this.saveJsonFile.bind(this);
     this.wrapInvestExecute = this.wrapInvestExecute.bind(this);
     this.investValidate = this.investValidate.bind(this);
-    // we want validation to be very responsive,
-    // but also to wait for a pause in data entry.
-    this.debouncedValidate = debounce(this.investValidate, 200).bind(this);
+    this.debouncedValidate = this.debouncedValidate.bind(this);
+    this.updateArgTouched = this.updateArgTouched.bind(this);
     this.updateArgValues = this.updateArgValues.bind(this);
     this.batchUpdateArgs = this.batchUpdateArgs.bind(this);
     this.insertNWorkers = this.insertNWorkers.bind(this);
@@ -164,6 +144,7 @@ export default class SetupTab extends React.Component {
 
   componentWillUnmount() {
     this._isMounted = false;
+    clearTimeout(this.timer);
   }
 
   /**
@@ -264,12 +245,30 @@ export default class SetupTab extends React.Component {
     this.props.investExecute(argsDictFromObject(argsValues));
   }
 
+  /** Update state to indicate that an input was touched.
+   *
+   * Validation messages only display on inputs that have been touched.
+   * Validation state is always displayed, but suppressing the message
+   * until an input is touched reduces noise & clutter on a default form.
+   *
+   * @param {string} key - the invest argument key
+   * @returns {undefined}
+   */
+  updateArgTouched(key) {
+    const { argsValues } = this.state;
+    if (!argsValues[key].touched) {
+      argsValues[key].touched = true;
+      this.setState({
+        argsValues: argsValues
+      });
+    }
+  }
+
   /** Update state with arg values as they change. And validate the args.
    *
    * Updating means:
    * 1) setting the value
-   * 2) 'touching' the arg - implications for display of validation warnings
-   * 3) toggling the enabled/disabled/hidden state of any dependent args
+   * 2) toggling the enabled/disabled/hidden state of any dependent args
    *
    * @param {string} key - the invest argument key
    * @param {string} value - the invest argument value
@@ -278,8 +277,6 @@ export default class SetupTab extends React.Component {
   updateArgValues(key, value) {
     const { argsValues } = this.state;
     argsValues[key].value = value;
-    argsValues[key].touched = true;
-
     this.setState({
       argsValues: argsValues
     }, () => {
@@ -308,9 +305,25 @@ export default class SetupTab extends React.Component {
     });
   }
 
+  /** Get a debounced version of investValidate.
+   *
+   * The original validate function will not be called until after the
+   * debounced version stops being invoked for N milliseconds.
+   *
+   * @returns {undefined}
+   */
+  debouncedValidate() {
+    if (this.validationTimer) {
+      clearTimeout(this.validationTimer);
+    }
+    // we want validation to be very responsive,
+    // but also to wait for a pause in data entry.
+    this.validationTimer = setTimeout(this.investValidate, 200);
+  }
+
   /** Validate an arguments dictionary using the InVEST model's validate function.
    *
-   * @returns undefined
+   * @returns {undefined}
    */
   async investValidate() {
     const { argsSpec, pyModuleName } = this.props;
@@ -411,6 +424,7 @@ export default class SetupTab extends React.Component {
               argsDropdownOptions={argsDropdownOptions}
               argsOrder={uiSpec.order}
               updateArgValues={this.updateArgValues}
+              updateArgTouched={this.updateArgTouched}
               loadParametersFromFile={this.loadParametersFromFile}
             />
           </Row>

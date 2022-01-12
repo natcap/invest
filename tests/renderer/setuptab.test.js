@@ -3,6 +3,7 @@ import React from 'react';
 import {
   createEvent, fireEvent, render, waitFor, within
 } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 
 import SetupTab from '../../src/renderer/components/SetupTab';
@@ -226,7 +227,7 @@ describe('Arguments form interactions', () => {
     expect(input).toHaveClass('is-invalid');
     expect(queryByText(RegExp(validationMessage))).toBeNull();
 
-    fireEvent.change(input, { target: { value: 'foo' } });
+    userEvent.type(input, 'foo');
     await waitFor(() => {
       expect(input).toHaveValue('foo');
       expect(input).toHaveClass('is-invalid');
@@ -235,7 +236,7 @@ describe('Arguments form interactions', () => {
       .toBeInTheDocument();
 
     fetchValidation.mockResolvedValue([]); // now make input valid
-    fireEvent.change(input, { target: { value: 'mydir' } });
+    userEvent.type(input, 'mydir');
     await waitFor(() => {
       expect(input).toHaveClass('is-valid');
       expect(queryByText(RegExp(validationMessage))).toBeNull();
@@ -285,8 +286,8 @@ describe('UI spec functionality', () => {
     fetchValidation.mockResolvedValue([]);
   });
 
-  afterAll(() => {
-    jest.resetAllMocks();
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   test('A UI spec with conditionally enabled args', async () => {
@@ -469,6 +470,10 @@ describe('UI spec functionality', () => {
 });
 
 describe('Misc form validation stuff', () => {
+  beforeEach(() => {
+    fetchValidation.mockReset();
+  });
+
   afterEach(() => {
     fetchValidation.mockReset();
   });
@@ -536,9 +541,8 @@ describe('Misc form validation stuff', () => {
     const { findByLabelText } = renderSetupFromSpec(spec, uiSpec);
     const vectorInput = await findByLabelText(spec.args.vector.name);
     const rasterInput = await findByLabelText(spec.args.raster.name);
-
-    fireEvent.change(vectorInput, { target: { value: vectorValue } });
-    fireEvent.change(rasterInput, { target: { value: rasterValue } });
+    userEvent.type(vectorInput, vectorValue);
+    userEvent.type(rasterInput, rasterValue);
 
     // Feedback on each input should only include the bounding box
     // of that single input.
@@ -561,6 +565,10 @@ describe('Misc form validation stuff', () => {
 });
 
 describe('Form drag-and-drop', () => {
+  beforeEach(() => {
+    fetchValidation.mockReset();
+  });
+
   afterEach(() => {
     fetchValidation.mockReset();
     fetchDatastackFromFile.mockReset();
