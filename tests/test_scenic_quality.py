@@ -744,6 +744,7 @@ class ScenicQualityValidationTests(unittest.TestCase):
     def test_bad_values(self):
         """SQ Validate: Assert we can catch various validation errors."""
         from natcap.invest.scenic_quality import scenic_quality
+        from natcap.invest import validation
 
         # AOI path is missing
         args = {
@@ -771,20 +772,26 @@ class ScenicQualityValidationTests(unittest.TestCase):
 
         self.assertTrue('refraction' not in single_key_errors)
         self.assertEqual(
-            single_key_errors['a_coef'], (
-                "Value 'foo' could not be interpreted as a number"))
+            single_key_errors['a_coef'],
+            validation.MESSAGES['NOT_A_NUMBER'].format(value=args['a_coef']))
         self.assertEqual(
-            single_key_errors['dem_path'], 'File not found')
-        self.assertEqual(single_key_errors['structure_path'],
-                         'File not found')
-        self.assertEqual(single_key_errors['aoi_path'], 'File not found')
-        self.assertTrue(
-            single_key_errors['valuation_function'].startswith(
-                'Value must be one of'))
+            single_key_errors['dem_path'], validation.MESSAGES['FILE_NOT_FOUND'])
+        self.assertEqual(
+            single_key_errors['structure_path'], validation.MESSAGES['FILE_NOT_FOUND'])
+        self.assertEqual(
+            single_key_errors['aoi_path'], validation.MESSAGES['FILE_NOT_FOUND'])
+        self.assertEqual(
+            single_key_errors['valuation_function'],
+            validation.MESSAGES['INVALID_OPTION'].format(
+                option_list=[
+                    'exponential',
+                    'linear',
+                    'logarithmic']))
 
     def test_dem_projected_in_m(self):
         """SQ Validate: the DEM must be projected in meters."""
         from natcap.invest.scenic_quality import scenic_quality
+        from natcap.invest import validation
 
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(4326)  # WGS84 is not projected.
@@ -798,9 +805,9 @@ class ScenicQualityValidationTests(unittest.TestCase):
         args = {'dem_path': filepath}
 
         validation_errors = scenic_quality.validate(args, limit_to='dem_path')
-        self.assertEqual(len(validation_errors), 1)
-        self.assertTrue('must be projected in linear units' in
-                        validation_errors[0][1])
+        self.assertEqual(
+            validation_errors,
+            [(['dem_path'], validation.MESSAGES['NOT_PROJECTED'])])
 
 
 class ViewshedTests(unittest.TestCase):

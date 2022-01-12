@@ -10,8 +10,10 @@ from osgeo import ogr
 import pygeoprocessing
 import taskgraph
 
-from . import validation
 from . import utils
+from . import spec_utils
+from .spec_utils import u
+from . import validation
 from . import MODEL_METADATA
 
 LOGGER = logging.getLogger(__name__)
@@ -21,7 +23,8 @@ ARGS_SPEC = {
     "pyname": MODEL_METADATA["annual_water_yield"].pyname,
     "userguide_html": MODEL_METADATA["annual_water_yield"].userguide,
     "args_with_spatial_overlap": {
-        "spatial_keys": ["depth_to_root_rest_layer_path",
+        "spatial_keys": ["lulc_path",
+                         "depth_to_root_rest_layer_path",
                          "precipitation_path",
                          "pawc_path",
                          "eto_path",
@@ -30,158 +33,214 @@ ARGS_SPEC = {
         "different_projections_ok": False,
     },
     "args": {
-        "workspace_dir": validation.WORKSPACE_SPEC,
-        "results_suffix": validation.SUFFIX_SPEC,
-        "n_workers": validation.N_WORKERS_SPEC,
+        "workspace_dir": spec_utils.WORKSPACE,
+        "results_suffix": spec_utils.SUFFIX,
+        "n_workers": spec_utils.N_WORKERS,
         "lulc_path": {
-            "type": "raster",
-            "required": True,
-            "validation_options": {
-                "projected": True,
-            },
-            "about": (
-                "A GDAL-supported raster file containing LULC code "
-                "(expressed as integers) for each cell."),
-            "name": "Land Use"
+            **spec_utils.LULC,
+            "projected": True,
+            "about": _(
+                f"{spec_utils.LULC['about']} All values in this raster "
+                "must have corresponding entries in the Biophysical Table.")
         },
         "depth_to_root_rest_layer_path": {
             "type": "raster",
-            "required": True,
-            "validation_options": {
-                "projected": True,
-            },
-            "about": (
-                "A GDAL-supported raster file containing an average root "
-                "restricting layer depth value for each cell. The root "
-                "restricting layer depth value should be in "
-                "millimeters (mm)."),
-            "name": "Depth To Root Restricting Layer"
+            "bands": {1: {
+                "type": "number",
+                "units": u.millimeter
+            }},
+            "projected": True,
+            "about": _(
+                "Map of root restricting layer depth, the soil depth at "
+                "which root penetration is strongly inhibited because of "
+                "physical or chemical characteristics."),
+            "name": _("root restricting layer depth")
         },
         "precipitation_path": {
-            "type": "raster",
-            "required": True,
-            "validation_options": {
-                "projected": True,
-            },
-            "about": (
-                "A GDAL-supported raster file containing non-zero, average "
-                "annual precipitation values for each cell. The "
-                "precipitation values should be in millimeters "
-                "(mm)."),
-            "name": "Precipitation"
+            **spec_utils.PRECIP,
+            "projected": True
         },
         "pawc_path": {
             "type": "raster",
-            "required": True,
-            "validation_options": {
-                "projected": True,
-            },
-            "about": (
-                "A GDAL-supported raster file containing plant available "
-                "water content values for each cell.  The plant available "
-                "water content fraction should be a value between 0 "
-                "and 1."),
-            "name": "Plant Available Water Fraction"
+            "bands": {1: {"type": "ratio"}},
+            "projected": True,
+            "about": _(
+                "Map of plant available water content, the fraction of "
+                "water that can be stored in the soil profile that is "
+                "available to plants."),
+            "name": _("plant available water content")
         },
         "eto_path": {
-            "type": "raster",
-            "required": True,
-            "validation_options": {
-                "projected": True,
-            },
-            "about": (
-                "A GDAL-supported raster file containing annual average "
-                "reference evapotranspiration values for each cell.  The "
-                "reference evapotranspiration values should be in "
-                "millimeters (mm)."),
-            "name": "Reference Evapotranspiration"
+            **spec_utils.ETO,
+            "projected": True
         },
         "watersheds_path": {
-            "validation_options": {
-                "required_fields": ['ws_id'],
-                "projected": True,
-            },
+            "projected": True,
             "type": "vector",
-            "required": True,
-            "about": (
-                "A GDAL-supported vector file containing one polygon per "
-                "watershed.  Each polygon that represents a watershed is "
-                "required to have a field 'ws_id' that is a unique integer "
-                "which identifies that watershed."),
-            "name": "Watersheds"
+            "fields": {
+                "ws_id": {
+                    "type": "integer",
+                    "about": _("Unique identifier for each watershed.")
+                }
+            },
+            "geometries": spec_utils.POLYGON,
+            "about": _(
+                "Map of watershed boundaries, such that each watershed drains "
+                "to a point of interest where hydropower production will be "
+                "analyzed."),
+            "name": _("watersheds")
         },
         "sub_watersheds_path": {
-            "validation_options": {
-                "required_fields": ["subws_id"],
-                "projected": True
-            },
+            "projected": True,
             "type": "vector",
+            "fields": {
+                "subws_id": {
+                    "type": "integer",
+                    "about": _("Unique identifier for each subwatershed.")
+                }
+            },
+            "geometries": spec_utils.POLYGONS,
             "required": False,
-            "about": (
-                "A GDAL-supported vector file with one polygon per "
-                "sub-watershed within the main watersheds specified in the "
-                "Watersheds shapefile.  Each polygon that represents a "
-                "sub-watershed is required to have a field 'subws_id' that "
-                "is a unique integer which identifies that sub-watershed."),
-            "name": "Sub-Watersheds"
+            "about": _(
+                "Map of subwatershed boundaries within each watershed in "
+                "the Watersheds map."),
+            "name": _("sub-watersheds")
         },
         "biophysical_table_path": {
-            "validation_options": {
-                "required_fields": ["lucode", "root_depth", "Kc"],
-            },
             "type": "csv",
-            "required": True,
-            "about": (
-                "A CSV table of land use/land cover (LULC) classes, "
-                "containing data on biophysical coefficients used in this "
-                "model.  The following columns are required: "
-                "'lucode' (integer), 'root_depth' (mm), 'Kc' (coefficient)."),
-            "name": "Biophysical Table"
+            "columns": {
+                "lucode": {
+                    "type": "integer",
+                    "about": _(
+                        "LULC code corresponding to values in the LULC map.")
+                },
+                "lulc_veg": {
+                    "type": "integer",
+                    "about": _(
+                        "Code indicating whether the the LULC class is "
+                        "vegetated for the purpose of AET. Enter 1 for all "
+                        "vegetated classes except wetlands, and 0 for all "
+                        "other classes, including wetlands, urban areas, "
+                        "water bodies, etc.")
+                },
+                "root_depth": {
+                    "type": "number",
+                    "units": u.millimeter,
+                    "about": _(
+                        "Maximum root depth for plants in this LULC class. "
+                        "Only used for classes with a 'lulc_veg' value of 1.")
+                },
+                "kc": {
+                    "type": "number",
+                    "units": u.none,
+                    "about": _("Crop coefficient for this LULC class.")}
+            },
+            "about": _(
+                "Table of biophysical parameters for each LULC class. All "
+                "values in the LULC raster must have corresponding entries "
+                "in this table."),
+            "name": _("biophysical table")
         },
         "seasonality_constant": {
-            "validation_options": {
-                "expression": "value > 0"
-            },
+            "expression": "value > 0",
             "type": "number",
-            "required": True,
-            "about": (
-                "Floating point value on the order of 1 to 30 "
-                "corresponding to the seasonal distribution of "
-                "precipitation."),
-            "name": "Z parameter"
+            "units": u.none,
+            "about": _(
+                "The seasonality factor, representing hydrogeological "
+                "characterisitics and the seasonal distribution of "
+                "precipitation. Values typically range from 1 - 30."),
+            "name": _("z parameter")
         },
         "demand_table_path": {
-            "validation_options": {
-                "required_fields": ["lucode", "demand"],
-            },
             "type": "csv",
+            "columns": {
+                "lucode": {
+                    "about": _("LULC code corresponding to the LULC raster"),
+                    "type": "integer"
+                },
+                "demand": {
+                    "about": _(
+                        "Average consumptive water use in this LULC class."),
+                    "type": "number",
+                    "units": u.meter**3/u.year/u.pixel
+                }
+            },
             "required": False,
-            "about": (
-                "A CSV table of LULC classes, showing consumptive water use "
-                "for each land-use/land-cover type.  The table requires two "
-                "column fields: 'lucode' and 'demand'. The demand values "
-                "should be the estimated average consumptive water use for "
-                "each land-use/land- cover type.  Water use should be given "
-                "in cubic meters per year for a pixel in the "
-                "land-use/land-cover map.  NOTE: the accounting for pixel "
-                "area is important since larger areas will consume more "
-                "water for the same land-cover type."),
-            "name": "Water Demand Table"
+            "about": _(
+                "A table of water demand for each LULC class. Each LULC code "
+                "in the LULC raster must have a corresponding row in this "
+                "table."),
+            "name": _("water demand table")
         },
         "valuation_table_path": {
-            "validation_options": {
-                "required_fields": ["ws_id", "efficiency", "fraction",
-                                    "height", "kw_price", "cost", "time_span",
-                                    "discount"],
-            },
             "type": "csv",
+            "columns": {
+                "ws_id": {
+                    "type": "integer",
+                    "about": _(
+                        "Unique identifier for the hydropower station. This "
+                        "must match the 'ws_id' value for the corresponding "
+                        "watershed in the Watersheds vector. Each watershed "
+                        "in the Watersheds vector must have its 'ws_id' "
+                        "entered in this column.")
+                },
+                "efficiency": {
+                    "type": "ratio",
+                    "about": _(
+                        "Turbine efficiency, the proportion of potential "
+                        "energy captured and converted to electricity by the "
+                        "turbine.")
+                },
+                "fraction": {
+                    "type": "ratio",
+                    "about": _(
+                        "The proportion of inflow water volume that is used "
+                        "to generate energy.")
+                },
+                "height": {
+                    "type": "number",
+                    "units": u.meter,
+                    "about": _(
+                        "The head, measured as the average annual effective "
+                        "height of water behind each dam at the turbine "
+                        "intake.")
+                },
+                "kw_price": {
+                    "type": "number",
+                    "units": u.currency/u.kilowatt_hour,
+                    "about": _(
+                        "The price of power produced by the station. Must be "
+                        "in the same currency used in the 'cost' column.")
+                },
+                "cost": {
+                    "type": "number",
+                    "units": u.currency/u.year,
+                    "about": _(
+                        "Annual maintenance and operations cost of running "
+                        "the hydropower station. Must be in the same currency "
+                        "used in the 'kw_price' column.")
+                },
+                "time_span": {
+                    "type": "number",
+                    "units": u.year,
+                    "about": _(
+                        "Number of years over which to value the "
+                        "hydropower station. This is either the station's "
+                        "expected lifespan or the duration of the land use "
+                        "scenario of interest.")
+                },
+                "discount": {
+                    "type": "percent",
+                    "about": _(
+                        "The annual discount rate, applied for each year in "
+                        "the time span.")
+                }
+            },
             "required": False,
-            "about": (
-                "A CSV table of hydropower stations with associated model "
-                "values.  The table should have the following column "
-                "fields: 'ws_id', 'efficiency', 'fraction', 'height', "
-                "'kw_price', 'cost', 'time_span', and 'discount'."),
-            "name": "Hydropower Valuation Table"
+            "about": _(
+                "A table mapping each watershed to the associated valuation "
+                "parameters for its hydropower station."),
+            "name": _("hydropower valuation table")
         }
     }
 }
@@ -254,7 +313,7 @@ def execute(args):
         args['valuation_table_path'] (string): (optional) if a non-empty
             string, a path to an input CSV table of
             hydropower stations with the following fields to calculate
-            valuation: 'ws_id', 'time_span', 'discount', 'efficiency', 
+            valuation: 'ws_id', 'time_span', 'discount', 'efficiency',
             'fraction', 'cost', 'height', 'kw_price'
             Required if ``calculate_valuation`` is True.
 
@@ -739,7 +798,7 @@ def aet_op(fractp, precip, precip_nodata, output_nodata):
     # and the nodata value is a large negative number.
     valid_mask = fractp >= 0
     if precip_nodata is not None:
-        valid_mask &= ~numpy.isclose(precip, precip_nodata)
+        valid_mask &= ~utils.array_equals_nodata(precip, precip_nodata)
     result[valid_mask] = fractp[valid_mask] * precip[valid_mask]
     return result
 
@@ -761,9 +820,9 @@ def wyield_op(fractp, precip, precip_nodata, output_nodata):
     result = numpy.empty_like(fractp)
     result[:] = output_nodata
     # output_nodata is defined above, should never be None
-    valid_mask = ~numpy.isclose(fractp, output_nodata)
+    valid_mask = ~utils.array_equals_nodata(fractp, output_nodata)
     if precip_nodata is not None:
-        valid_mask &= ~numpy.isclose(precip, precip_nodata)
+        valid_mask &= ~utils.array_equals_nodata(precip, precip_nodata)
     result[valid_mask] = (1.0 - fractp[valid_mask]) * precip[valid_mask]
     return result
 
@@ -804,18 +863,19 @@ def fractp_op(
     # and retain their original nodata values.
     # out_nodata is defined above and should never be None.
     valid_mask = (
-        ~numpy.isclose(Kc, nodata_dict['out_nodata']) &
-        ~numpy.isclose(root, nodata_dict['out_nodata']) &
-        ~numpy.isclose(veg, nodata_dict['out_nodata']) &
-        ~numpy.isclose(precip, 0.0))
+        ~utils.array_equals_nodata(Kc, nodata_dict['out_nodata']) &
+        ~utils.array_equals_nodata(root, nodata_dict['out_nodata']) &
+        ~utils.array_equals_nodata(veg, nodata_dict['out_nodata']) &
+        ~utils.array_equals_nodata(precip, 0.0))
     if nodata_dict['eto'] is not None:
-        valid_mask &= ~numpy.isclose(eto, nodata_dict['eto'])
+        valid_mask &= ~utils.array_equals_nodata(eto, nodata_dict['eto'])
     if nodata_dict['precip'] is not None:
-        valid_mask &= ~numpy.isclose(precip, nodata_dict['precip'])
+        valid_mask &= ~utils.array_equals_nodata(precip, nodata_dict['precip'])
     if nodata_dict['depth_root'] is not None:
-        valid_mask &= ~numpy.isclose(soil, nodata_dict['depth_root'])
+        valid_mask &= ~utils.array_equals_nodata(
+            soil, nodata_dict['depth_root'])
     if nodata_dict['pawc'] is not None:
-        valid_mask &= ~numpy.isclose(pawc, nodata_dict['pawc'])
+        valid_mask &= ~utils.array_equals_nodata(pawc, nodata_dict['pawc'])
 
     # Compute Budyko Dryness index
     # Use the original AET equation if the land cover type is vegetation
@@ -879,9 +939,9 @@ def pet_op(eto_pix, Kc_pix, eto_nodata, output_nodata):
     result = numpy.empty(eto_pix.shape, dtype=numpy.float32)
     result[:] = output_nodata
 
-    valid_mask = ~numpy.isclose(Kc_pix, output_nodata)
+    valid_mask = ~utils.array_equals_nodata(Kc_pix, output_nodata)
     if eto_nodata is not None:
-        valid_mask &= ~numpy.isclose(eto_pix, eto_nodata)
+        valid_mask &= ~utils.array_equals_nodata(eto_pix, eto_nodata)
     result[valid_mask] = eto_pix[valid_mask] * Kc_pix[valid_mask]
     return result
 
