@@ -144,7 +144,7 @@ export default class SetupTab extends React.Component {
 
   componentWillUnmount() {
     this._isMounted = false;
-    clearTimeout(this.timer);
+    clearTimeout(this.validationTimer);
   }
 
   /**
