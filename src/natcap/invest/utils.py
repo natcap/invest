@@ -12,7 +12,6 @@ import time
 import pandas
 import numpy
 from shapely.wkt import loads
-from shapely.geometry.base import BaseMultipartGeometry, dump_coords
 from osgeo import gdal
 from osgeo import osr
 import pygeoprocessing
