@@ -24,7 +24,7 @@ import {
   setupInvestRunHandlers,
   setupInvestLogReaderHandler
 } from './setupInvestHandlers';
-import { setupSetLanguage } from './setLanguage';
+import setupSetLanguage from './setLanguage';
 import setupGetNCPUs from './setupGetNCPUs';
 import { ipcMainChannels } from './ipcMainChannels';
 import menuTemplate from './menubar';

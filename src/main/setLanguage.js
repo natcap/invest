@@ -1,9 +1,8 @@
 import GettextJS from 'gettext.js';
 import gettextParser from 'gettext-parser';
 import { ipcMain } from 'electron';
-import { ipcMainChannels } from './ipcMainChannels';
-import fetch from 'node-fetch';
 import fs from 'fs';
+import { ipcMainChannels } from './ipcMainChannels';
 
 const i18n = new GettextJS();
 
@@ -27,7 +26,7 @@ function readMessageCatalog(messageCatalogPath) {
     } else {
       formattedPO[msgid] = rawPO.translations[''][msgid].msgstr;
     }
-  };
+  }
   return formattedPO;
 }
 
@@ -46,7 +45,7 @@ async function loadMessageCatalogs() {
       }
     }
   );
-  console.log('loaded message catalogs')
+  console.log('loaded message catalogs');
 }
 loadMessageCatalogs();
 
@@ -55,7 +54,8 @@ export default function setupSetLanguage() {
     ipcMainChannels.SET_LANGUAGE,
     (e, languageCode) => {
       console.log('set language', languageCode);
-      i18n.setLocale(languageCode); }
+      i18n.setLocale(languageCode);
+    }
   );
 
   ipcMain.on(
