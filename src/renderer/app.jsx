@@ -93,6 +93,8 @@ export default class App extends React.Component {
 
   saveSettings(settings) {
     console.log('save settings', settings.language);
+    console.log(ipcRenderer.invoke);
+    console.log(ipcRenderer.invoke());
     const a = ipcRenderer.invoke(
       ipcMainChannels.SET_LANGUAGE, settings.language
     );

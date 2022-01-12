@@ -30,7 +30,7 @@ jest.mock('../../src/renderer/server_requests');
 jest.mock('node-fetch');
 
 // mock out the global gettext function - avoid setting up translation
-global.window._ = x => x;
+global.window._ = (x) => x;
 
 const MOCK_MODEL_TITLE = 'Carbon';
 const MOCK_MODEL_RUN_NAME = 'carbon';
@@ -367,10 +367,10 @@ describe('Display recently executed InVEST jobs on Home tab', () => {
 describe('InVEST global settings: dialog interactions', () => {
   const nWorkersLabelText = 'Taskgraph n_workers parameter';
   const loggingLabelText = 'Logging threshold';
-  const languageLabelText = 'Language';
 
   beforeEach(async () => {
     getInvestModelNames.mockResolvedValue({});
+    ipcRenderer.invoke.mockResolvedValue({});
   });
 
   afterEach(async () => {
@@ -391,11 +391,9 @@ describe('InVEST global settings: dialog interactions', () => {
     userEvent.click(await findByRole('button', { name: 'settings' }));
     const nWorkersInput = getByLabelText(nWorkersLabelText, { exact: false });
     const loggingInput = getByLabelText(loggingLabelText, { exact: false });
-    const languageInput = getByLabelText(languageLabelText, { exact: false });
 
     userEvent.selectOptions(nWorkersInput, [getByText(nWorkersLabel)]);
     userEvent.selectOptions(loggingInput, [loggingLevel]);
-    userEvent.selectOptions(languageInput, [loggingLevel]);
     await waitFor(() => {
       expect(nWorkersInput).toHaveValue(nWorkersValue);
       expect(loggingInput).toHaveValue(loggingLevel);
@@ -416,12 +414,10 @@ describe('InVEST global settings: dialog interactions', () => {
     const defaultSettings = {
       nWorkers: '-1',
       loggingLevel: 'INFO',
-      language: 'en',
     };
     const expectedSettings = {
       nWorkers: '0',
       loggingLevel: 'ERROR',
-      language: 'es',
     };
 
     await saveSettingsStore(expectedSettings);
@@ -435,13 +431,11 @@ describe('InVEST global settings: dialog interactions', () => {
     userEvent.click(await findByRole('button', { name: 'settings' }));
     const nWorkersInput = getByLabelText(nWorkersLabelText, { exact: false });
     const loggingInput = getByLabelText(loggingLabelText, { exact: false });
-    // const languageInput = getByLabelText(languageLabelText, { exact: false });
 
     // Test that the invest settings were loaded in from store.
     await waitFor(() => {
       expect(nWorkersInput).toHaveValue(expectedSettings.nWorkers);
       expect(loggingInput).toHaveValue(expectedSettings.loggingLevel);
-      // expect(languageInput).toHaveValue(expectedSettings.languageLevel);
     });
 
     // Test Reset sets values to default
@@ -449,7 +443,6 @@ describe('InVEST global settings: dialog interactions', () => {
     await waitFor(() => {
       expect(nWorkersInput).toHaveValue(defaultSettings.nWorkers);
       expect(loggingInput).toHaveValue(defaultSettings.loggingLevel);
-      // expect(languageInput).toHaveValue(defaultSettings.languageLevel);
     });
   });
 
