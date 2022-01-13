@@ -39,7 +39,7 @@ ARGS_SPEC = {
         "lulc_path": {
             **spec_utils.LULC,
             "projected": True,
-            "about": (
+            "about": _(
                 f"{spec_utils.LULC['about']} All values in this raster "
                 "must have corresponding entries in the Biophysical Table.")
         },
@@ -96,7 +96,7 @@ ARGS_SPEC = {
             "fields": {
                 "subws_id": {
                     "type": "integer",
-                    "about": "Unique identifier for each subwatershed."
+                    "about": _("Unique identifier for each subwatershed.")
                 }
             },
             "geometries": spec_utils.POLYGONS,
@@ -111,12 +111,12 @@ ARGS_SPEC = {
             "columns": {
                 "lucode": {
                     "type": "integer",
-                    "about": (
+                    "about": _(
                         "LULC code corresponding to values in the LULC map.")
                 },
                 "lulc_veg": {
                     "type": "integer",
-                    "about": (
+                    "about": _(
                         "Code indicating whether the the LULC class is "
                         "vegetated for the purpose of AET. Enter 1 for all "
                         "vegetated classes except wetlands, and 0 for all "
@@ -126,14 +126,14 @@ ARGS_SPEC = {
                 "root_depth": {
                     "type": "number",
                     "units": u.millimeter,
-                    "about": (
+                    "about": _(
                         "Maximum root depth for plants in this LULC class. "
                         "Only used for classes with a 'lulc_veg' value of 1.")
                 },
                 "kc": {
                     "type": "number",
                     "units": u.none,
-                    "about": "Crop coefficient for this LULC class."}
+                    "about": _("Crop coefficient for this LULC class.")}
             },
             "about": _(
                 "Table of biophysical parameters for each LULC class. All "
@@ -798,7 +798,7 @@ def aet_op(fractp, precip, precip_nodata, output_nodata):
     # and the nodata value is a large negative number.
     valid_mask = fractp >= 0
     if precip_nodata is not None:
-        valid_mask &= ~numpy.isclose(precip, precip_nodata)
+        valid_mask &= ~utils.array_equals_nodata(precip, precip_nodata)
     result[valid_mask] = fractp[valid_mask] * precip[valid_mask]
     return result
 
@@ -820,9 +820,9 @@ def wyield_op(fractp, precip, precip_nodata, output_nodata):
     result = numpy.empty_like(fractp)
     result[:] = output_nodata
     # output_nodata is defined above, should never be None
-    valid_mask = ~numpy.isclose(fractp, output_nodata)
+    valid_mask = ~utils.array_equals_nodata(fractp, output_nodata)
     if precip_nodata is not None:
-        valid_mask &= ~numpy.isclose(precip, precip_nodata)
+        valid_mask &= ~utils.array_equals_nodata(precip, precip_nodata)
     result[valid_mask] = (1.0 - fractp[valid_mask]) * precip[valid_mask]
     return result
 
@@ -863,18 +863,19 @@ def fractp_op(
     # and retain their original nodata values.
     # out_nodata is defined above and should never be None.
     valid_mask = (
-        ~numpy.isclose(Kc, nodata_dict['out_nodata']) &
-        ~numpy.isclose(root, nodata_dict['out_nodata']) &
-        ~numpy.isclose(veg, nodata_dict['out_nodata']) &
-        ~numpy.isclose(precip, 0.0))
+        ~utils.array_equals_nodata(Kc, nodata_dict['out_nodata']) &
+        ~utils.array_equals_nodata(root, nodata_dict['out_nodata']) &
+        ~utils.array_equals_nodata(veg, nodata_dict['out_nodata']) &
+        ~utils.array_equals_nodata(precip, 0.0))
     if nodata_dict['eto'] is not None:
-        valid_mask &= ~numpy.isclose(eto, nodata_dict['eto'])
+        valid_mask &= ~utils.array_equals_nodata(eto, nodata_dict['eto'])
     if nodata_dict['precip'] is not None:
-        valid_mask &= ~numpy.isclose(precip, nodata_dict['precip'])
+        valid_mask &= ~utils.array_equals_nodata(precip, nodata_dict['precip'])
     if nodata_dict['depth_root'] is not None:
-        valid_mask &= ~numpy.isclose(soil, nodata_dict['depth_root'])
+        valid_mask &= ~utils.array_equals_nodata(
+            soil, nodata_dict['depth_root'])
     if nodata_dict['pawc'] is not None:
-        valid_mask &= ~numpy.isclose(pawc, nodata_dict['pawc'])
+        valid_mask &= ~utils.array_equals_nodata(pawc, nodata_dict['pawc'])
 
     # Compute Budyko Dryness index
     # Use the original AET equation if the land cover type is vegetation
@@ -938,9 +939,9 @@ def pet_op(eto_pix, Kc_pix, eto_nodata, output_nodata):
     result = numpy.empty(eto_pix.shape, dtype=numpy.float32)
     result[:] = output_nodata
 
-    valid_mask = ~numpy.isclose(Kc_pix, output_nodata)
+    valid_mask = ~utils.array_equals_nodata(Kc_pix, output_nodata)
     if eto_nodata is not None:
-        valid_mask &= ~numpy.isclose(eto_pix, eto_nodata)
+        valid_mask &= ~utils.array_equals_nodata(eto_pix, eto_nodata)
     result[valid_mask] = eto_pix[valid_mask] * Kc_pix[valid_mask]
     return result
 

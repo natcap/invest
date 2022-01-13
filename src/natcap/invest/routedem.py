@@ -76,7 +76,7 @@ ARGS_SPEC = {
         "threshold_flow_accumulation": {
             **spec_utils.THRESHOLD_FLOW_ACCUMULATION,
             "required": "calculate_stream_threshold",
-            "about": (
+            "about": _(
                 f"{spec_utils.THRESHOLD_FLOW_ACCUMULATION['about']} "
                 "Required if Calculate Streams is selected.")
         },
@@ -145,7 +145,7 @@ def _threshold_flow(flow_accum_pixels, threshold, in_nodata, out_nodata):
 
     valid_mask = slice(None)
     if in_nodata is not None:
-        valid_mask = ~numpy.isclose(flow_accum_pixels, in_nodata)
+        valid_mask = ~utils.array_equals_nodata(flow_accum_pixels, in_nodata)
 
     out_matrix[valid_mask & stream_mask] = 1
     out_matrix[valid_mask & ~stream_mask] = 0

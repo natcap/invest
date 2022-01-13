@@ -42,7 +42,7 @@ ARGS_SPEC = {
             "about": _("Base map from which to generate scenarios."),
             "name": _("base LULC map")
         },
-        "replacment_lucode": {
+        "replacement_lucode": {
             "type": "integer",
             "about": _("The LULC code to which habitat will be converted."),
             "name": _("replacement landcover code")
@@ -133,7 +133,7 @@ def execute(args):
         args['results_suffix'] (string): (optional) string to append to any
             output files
         args['base_lulc_path'] (string): path to the base landcover map
-        args['replacment_lucode'] (string or int): code to replace when
+        args['replacement_lucode'] (string or int): code to replace when
             converting pixels
         args['area_to_convert'] (string or float): max area (Ha) to convert
         args['focal_landcover_codes'] (string): a space separated string of
@@ -192,7 +192,7 @@ def execute(args):
     task_graph = taskgraph.TaskGraph(work_token_dir, n_workers)
 
     area_to_convert = float(args['area_to_convert'])
-    replacement_lucode = int(args['replacment_lucode'])
+    replacement_lucode = int(args['replacement_lucode'])
 
     # convert all the input strings to lists of ints
     convertible_type_list = numpy.array([
@@ -422,7 +422,7 @@ def _convert_landscape(
                 if invert_mask:
                     base_mask = ~base_mask
                 return numpy.where(
-                    lulc_array == lulc_nodata,
+                    utils.array_equals_nodata(lulc_array, lulc_nodata),
                     mask_nodata, base_mask)
             pygeoprocessing.raster_calculator(
                 [(output_landscape_raster_path, 1)], _mask_base_op,

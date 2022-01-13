@@ -6,6 +6,10 @@ from natcap.invest import wave_energy, MODEL_METADATA
 
 class WaveEnergy(model.InVESTModel):
     def __init__(self):
+        analysis_area_options = {
+            val['display_name']: key for key, val in
+            wave_energy.ARGS_SPEC['args']['analysis_area']['options'].items()
+        }
         model.InVESTModel.__init__(
             self,
             label=MODEL_METADATA['wave_energy'].model_title,
@@ -22,7 +26,7 @@ class WaveEnergy(model.InVESTModel):
             validator=self.validator)
         self.add_input(self.wave_base_data)
         self.analysis_area = inputs.Dropdown(
-            args_key='analysis_area_path',
+            args_key='analysis_area',
             helptext=(
                 "A list of analysis areas for which the model can "
                 "currently be run.  All the wave energy data needed "
@@ -35,7 +39,8 @@ class WaveEnergy(model.InVESTModel):
                 'North Sea 4 meter resolution',
                 'North Sea 10 meter resolution',
                 'Australia',
-                'Global'))
+                'Global'),
+            return_value_map=analysis_area_options)
         self.add_input(self.analysis_area)
         self.aoi = inputs.File(
             args_key='aoi_path',

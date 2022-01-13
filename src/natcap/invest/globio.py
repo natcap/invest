@@ -49,7 +49,7 @@ ARGS_SPEC = {
             **spec_utils.LULC,
             "projected": True,
             "required": "not predefined_globio",
-            "about": (
+            "about": _(
                 f"{spec_utils.LULC['about']} Each LULC code must have a "
                 "corresponding entry in the biophysical table. "
                 "Required if Use Predefined GLOBIO LULC is not selected.")
@@ -59,10 +59,10 @@ ARGS_SPEC = {
             "columns": {
                 "lucode": {
                     "type": "integer",
-                    "about": "LULC code from the LULC map input."},
+                    "about": _("LULC code from the LULC map input.")},
                 "globio_lucode": {
                     "type": "integer",
-                    "about": "Corresponding GLOBIO LULC code."}
+                    "about": _("Corresponding GLOBIO LULC code.")}
             },
             "required": "not predefined_globio",
             "about": _(
@@ -168,7 +168,7 @@ ARGS_SPEC = {
                                 "The value in the 'value' column is one of "
                                 "the GLOBIO-recognized LULC codes.")},
                     },
-                    "about": "The type of MSA value in this row."
+                    "about": _("The type of MSA value in this row.")
                 },
                 "value": {
                     "type": "freestyle_string",
@@ -180,7 +180,7 @@ ARGS_SPEC = {
                 },
                 "msa_x": {
                     "type": "ratio",
-                    "about": (
+                    "about": _(
                         "MSA value for the MSA type specified in the "
                         "'msa_type' column, when the impact value is within "
                         "the range given in the 'value' column.")}
@@ -509,7 +509,7 @@ def _primary_veg_mask_op(lulc_array, globio_nodata, primary_veg_mask_nodata):
     result[:] = primary_veg_mask_nodata
     valid_mask = slice(None)
     if globio_nodata is not None:
-        valid_mask = ~numpy.isclose(lulc_array, globio_nodata)
+        valid_mask = ~utils.array_equals_nodata(lulc_array, globio_nodata)
     result[valid_mask] = lulc_array[valid_mask] == 1
     return result
 
@@ -519,7 +519,8 @@ def _ffqi_op(forest_areas_array, smoothed_forest_areas, forest_areas_nodata):
     result = numpy.empty_like(forest_areas_array, dtype=numpy.float32)
     result[:] = forest_areas_nodata
     # forest_areas_array and _nodata are integer types and not user-defined
-    valid_mask = forest_areas_array != forest_areas_nodata
+    valid_mask = ~utils.array_equals_nodata(
+        forest_areas_array, forest_areas_nodata)
     result[valid_mask] = (
         forest_areas_array[valid_mask] * smoothed_forest_areas[valid_mask])
     return result
@@ -572,7 +573,7 @@ def _msa_f_calculation(
                 less_than[1])
 
         if msa_nodata is not None:
-            nodata_mask = numpy.isclose(
+            nodata_mask = utils.array_equals_nodata(
                 primary_veg_smooth, primary_veg_mask_nodata)
             msa_f[nodata_mask] = msa_nodata
 
@@ -641,7 +642,7 @@ def _msa_i_calculation(
             lulc_array, msa_nodata, dtype=numpy.float32)
         msa_i_other = numpy.full_like(
             lulc_array, msa_nodata, dtype=numpy.float32)
-        nodata_mask = numpy.isclose(lulc_array, lulc_nodata)
+        nodata_mask = utils.array_equals_nodata(lulc_array, lulc_nodata)
 
         if primary_greater_than:
             msa_i_primary[distance_to_infrastructure > primary_greater_than[0]] = (
@@ -698,7 +699,7 @@ def _msa_calculation(
         valid_mask = numpy.ones(msa_f.shape, dtype=bool)
         for msa_array, nodata_val in zip([msa_f, msa_lu, msa_i], nodata_array):
             if nodata_val is not None:
-                valid_mask &= ~numpy.isclose(msa_array, nodata_val)
+                valid_mask &= ~utils.array_equals_nodata(msa_array, nodata_val)
         result[valid_mask] = (
             msa_f[valid_mask] * msa_lu[valid_mask] * msa_i[valid_mask])
         return result
@@ -903,7 +904,7 @@ def _calculate_globio_lulc_map(
 def _forest_area_mask_op(lulc_array, globio_nodata, forest_areas_nodata):
     """Masking out forest areas."""
     # comparing integers, numpy.isclose not needed
-    valid_mask = lulc_array != globio_nodata
+    valid_mask = ~utils.array_equals_nodata(lulc_array, globio_nodata)
     # landcover code 130 represents all MODIS forest codes which originate
     # as 1-5
     result = numpy.empty_like(lulc_array, dtype=numpy.int16)
@@ -918,7 +919,7 @@ def _create_globio_lulc_op(
     """Construct GLOBIO lulc given relevant biophysical parameters."""
     result = numpy.empty_like(lulc_array, dtype=numpy.int16)
     result[:] = globio_nodata
-    valid_mask = lulc_array != globio_nodata
+    valid_mask = ~utils.array_equals_nodata(lulc_array, globio_nodata)
     valid_result = result[valid_mask]
 
     # Split Shrublands and grasslands into primary vegetations,
@@ -1048,8 +1049,9 @@ def _collapse_infrastructure_layers(
             infrastructure_mask |= infrastructure_array_list[index] > 0
             if infrastructure_nodata_list[index] is not None:
                 # update nodata mask: intersection with this layer
-                nodata_mask &= numpy.isclose(infrastructure_array_list[index],
-                                             infrastructure_nodata_list[index])
+                nodata_mask &= utils.array_equals_nodata(
+                    infrastructure_array_list[index],
+                    infrastructure_nodata_list[index])
             # if nodata is None, every pixel in this layer has data,
             # so the nodata_mask should be all False
             else:

@@ -17,14 +17,6 @@ $env:PATH += ";C:\ProgramData\chocolatey\bin"
 # Choco-provided command to reload environment variables
 refreshenv
 
-# Install NSIS.  The choco-provided NSIS puts it somewhere else and
-# the choco CLI option --install-directory isn't available in the OSS
-# version of choco.
-Invoke-WebRequest https://iweb.dl.sourceforge.net/project/nsis/NSIS%203/3.05/nsis-3.05-setup.exe -OutFile nsis.exe
-
-# See http://www.silentinstall.org/nsis for flags used.
-& nsis.exe /SD /D="C:\Program Files (x86)\NSIS"
-
 # Download and install NSIS plugins to their correct places.
 Write-Host "Downloading and extracting NSIS"
 Invoke-WebRequest https://storage.googleapis.com/natcap-build-dependencies/windows/Inetc.zip -OutFile Inetc.zip
