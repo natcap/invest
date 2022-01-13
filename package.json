@@ -25,7 +25,7 @@
   "invest": {
     "bucket": "releases.naturalcapitalproject.org",
     "fork": "natcap",
-    "version": "3.9.2.post480+gc06f40d7",
+    "version": "3.10.1",
     "target": {
       "macos": "mac_invest_binaries.zip",
       "windows": "windows_invest_binaries.zip"
