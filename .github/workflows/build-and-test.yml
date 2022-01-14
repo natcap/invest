@@ -55,6 +55,10 @@ jobs:
                     - python-version: 3.9
                       numpy: "numpy=1.20"
                       gdal: "gdal==3.3.1"
+                    - os: macos-latest
+                      conda-cache: /Users/runner/conda_pkgs_dir
+                    - os: windows-latest
+                      conda-cache: C:\Users\runneradmin\conda_pkgs_dir
         steps:
             - uses: actions/checkout@v2
               with:
@@ -89,7 +93,7 @@ jobs:
             - name: conda cache
               uses: actions/cache@v2
               with:
-                  path: ~/opt/miniconda3/pkgs
+                  path: ${{ matrix.conda-cache }}
                   key: ${{ runner.os }}-py${{ matrix.python-version }}-${{ matrix.python-architecture }}-conda-${{ hashFiles('**/requirements*.txt') }}-model-tests
 
             - name: Install build dependencies
