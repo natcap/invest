@@ -44,6 +44,38 @@ Unreleased Changes
       one stream pixel, it will now snap to the stream pixel with a higher
       flow accumulation value. Before, it would snap to the stream pixel
       encountered first in the raster (though this was not guaranteed).
+* NDR
+    * Changed some model inputs and outputs to clarify that subsurface
+      phosphorus is not modeled.
+
+        * Removed the inputs ``subsurface_critical_length_p`` and
+          ``subsurface_eff_p``
+        * Removed the output ``sub_ndr_p.tif``. The model no longer calculates
+          subsurface NDR for phosphorus.
+        * Removed the output ``sub_load_p.tif``. All pixels in this raster were
+          always 0, because the model assumed no subsurface phosphorus movement.
+        * Renamed the output ``p_export.tif`` to ``p_surface_export.tif`` to
+          clarify that it only models the surface export of phosphorus.
+        * Renamed the output ``n_export.tif`` to ``n_total_export.tif`` to
+          clarify that it is the total of surface and subsurface nitrogen export.
+        * Added the new outputs ``n_surface_export.tif`` and
+          ``n_subsurface_export.tif``, showing the surface and subsurface
+          components of the total nitrogen export.
+        * The aggregate vector output ``watershed_results_ndr.shp`` was changed to
+          a geopackage ``watershed_results_ndr.gpkg``.
+        * The aggregate vector fields were given more descriptive names, and
+          updated corresponding to the changed raster outputs:
+
+            * ``surf_p_ld`` was renamed to ``p_surface_load``
+            * ``surf_n_ld`` was renamed to ``n_surface_load``
+            * ``p_exp_tot`` was renamed to ``p_surface_export``
+            * ``sub_n_ld`` was renamed to ``n_subsurface_load``
+            * ``n_exp_tot`` was renamed to ``n_total_export``
+            * Added a new field ``n_surface_export``, representing the sum of
+              ``n_surface_export.tif``
+            * Added a new field ``n_subsurface_export``, representing the sum
+              of ``n_subsurface_export.tif``
+            * Removed the field ``sub_p_ld``, since ``sub_load_p.tif`` was removed.
 
 3.10.1 (2022-01-06)
 -------------------
