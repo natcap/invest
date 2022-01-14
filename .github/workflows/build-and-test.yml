@@ -291,7 +291,8 @@ jobs:
             - name: Install dependencies
               shell: bash -l {0}
               run: |
-                  pip install build nomkl # make sure numpy w/out mkl
+                  pip install build
+                  conda install nomkl # make sure numpy w/out mkl
                   make install
 
             - name: Validate sample data
