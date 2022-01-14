@@ -1,6 +1,7 @@
 """Habitat risk assessment (HRA) model for InVEST."""
 # -*- coding: UTF-8 -*-
 import logging
+import json
 import os
 import pickle
 import shutil
@@ -540,6 +541,16 @@ def execute(args):
               habitat_count_raster_path, gdal.GDT_Byte, _TARGET_NODATA_INT),
         target_path_list=[habitat_count_raster_path],
         task_name='counting_habitats',
+        dependent_task_list=[align_and_resize_rasters_task])
+
+    LOGGER.info('Calculating maximum number of stressors')
+    max_n_stressors_file = os.path.join(
+        intermediate_dir, 'max_n_overlapping_stressors.json')
+    count_stressors_task = task_graph.add_task(
+        func=_count_maximum_number_of_stressors,
+        args=(align_stressor_raster_list, max_n_stressors_file),
+        target_path_list=[max_n_stressors_file],
+        task_name='count_maximum_number_of_overlapping_stressors',
         dependent_task_list=[align_and_resize_rasters_task])
 
     # A dependent task list for calculating ecosystem risk from all habitat
@@ -1539,6 +1550,34 @@ def _count_habitats_op(*habitat_arrays):
             numpy.int8)[habiat_mask]
 
     return habitat_count_arr
+
+
+def _count_maximum_number_of_stressors(
+        stressor_raster_paths, target_json_path):
+    # stressor_raster_paths must be aligned, must be ints 1/0
+
+    raster_list = [
+        gdal.OpenEx(raster_path) for raster_path in stressor_raster_paths]
+    band_list = [raster.GetRasterBand(1) for raster in raster_list]
+
+    max_n_overlapping_stressors = 0
+
+    for block_data in pygeoprocessing.iterblocks(
+            (stressor_raster_paths[0], 1), offset_only=True):
+        n_overlapping_stressors = numpy.zeros(
+            (block_data['win_ysize'], block_data['win_xsize']),
+            dtype=numpy.uint16)  # uint16 should be more than enough
+        for band in band_list:
+            values = band.ReadAsArray(**block_data)
+            valid_values = (values == 1)
+            n_overlapping_stressors[valid_values] += 1
+
+        max_n_overlapping_stressors = max(
+            max_n_overlapping_stressors,
+            numpy.amax(n_overlapping_stressors))
+
+    with open(target_json_path, 'w') as target_file:
+        json.dump(int(max_n_overlapping_stressors), target_file)
 
 
 def _reclassify_risk_op(risk_arr, max_rating):
