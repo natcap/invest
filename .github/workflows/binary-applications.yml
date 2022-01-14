@@ -8,6 +8,11 @@ defaults:
   run:
     shell: bash -l {0}
 
+env:
+  WINDOWS_PIP_CACHE: ~\AppData\Local\pip\Cache
+  MACOS_PIP_CACHE: ~/Library/Caches/pip
+  CONDA_CACHE: ~/conda_pkgs_dir  # setup-miniconda sets same cache dir on windows and mac
+
 jobs:
     check-syntax-errors:
         name: "Check for syntax errors"
@@ -48,8 +53,14 @@ jobs:
             - name: Restore pip cache
               uses: actions/cache@v2
               with:
-                  path: ~\AppData\Local\pip\Cache
-                  key: windows-py${{ env.PYTHON_VERSION }}-${{ env.PYTHON_ARCH }}-pip-${{ hashFiles('**/requirements*.txt') }}-exe
+                  path: ${{ env.WINDOWS_PIP_CACHE }}
+                  key: pip-windows-py${{ env.PYTHON_VERSION }}-${{ hashFiles('**/requirements*.txt') }}-exe
+
+            - name: Restore conda cache
+              uses: actions/cache@v2
+              with:
+                  path: ${{ env.CONDA_CACHE }}
+                  key: conda-windows-py${{ env.PYTHON_VERSION }}-${{ hashFiles('**/requirements*.txt') }}-exe
 
             - name: Setup conda environment
               uses: conda-incubator/setup-miniconda@v2
@@ -72,6 +83,9 @@ jobs:
                   conda env update --file requirements-all.yml
                   python -m pip install .
 
+              # Not caching chocolatey packages because the cache may not be reliable
+              # https://github.com/chocolatey/choco/issues/2134
+              # and this step only takes about 1 minute.
             - name: Install build dependencies
               shell: powershell
               run: |
@@ -157,11 +171,17 @@ jobs:
                   brew update
                   brew install pandoc
 
+            - name: Restore pip cache
+              uses: actions/cache@v2
+              with:
+                  path: ${{ env.WINDOWS_PIP_CACHE }}
+                  key: pip-mac-py${{ env.PYTHON_VERSION }}-${{ hashFiles('**/requirements*.txt') }}-dmg
+
             - name: Restore conda cache
               uses: actions/cache@v2
               with:
-                  path: ~/opt/anaconda3
-                  key: mac-py${{ env.PYTHON_VERSION }}-${{ env.PYTHON_ARCH}}-conda-${{ hashFiles('**/requirements*.txt') }}-exe
+                  path: ${{ env.CONDA_CACHE }}
+                  key: conda-mac-py${{ env.PYTHON_VERSION }}-${{ hashFiles('**/requirements*.txt') }}-dmg
 
             - name: Setup conda environment
               uses: conda-incubator/setup-miniconda@v2

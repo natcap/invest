@@ -4,6 +4,11 @@ on:
     push:
     pull_request:
 
+env:
+  WINDOWS_PIP_CACHE: ~\AppData\Local\pip\Cache
+  MACOS_PIP_CACHE: ~/Library/Caches/pip
+  CONDA_CACHE: ~/conda_pkgs_dir  # setup-miniconda sets same cache dir on windows and mac
+
 jobs:
     # This job will check for obvious syntax errors.
     # The other jobs in this file depend on this one and won't show up in the
@@ -61,12 +66,25 @@ jobs:
                   # Fetch complete history for accurate versioning
                   fetch-depth: 0
 
-              # Taken from https://github.com/actions/cache/blob/master/examples.md#python---pip
-            - name: Restore pip cache
+            - name: Restore pip cache (MacOS)
+              if: ${{ matrix.os == 'macos-latest' }}
               uses: actions/cache@v2
               with:
-                  path: ~\AppData\Local\pip\Cache
-                  key: ${{ runner.os }}-py${{ matrix.python-version }}-${{ matrix.python-architecture }}-pip-${{ hashFiles('**/requirements*.txt') }}-model-tests
+                  path: ${{ env.MACOS_PIP_CACHE }}
+                  key: pip-${{ matrix.os }}-py${{ matrix.python-version }}-${{ hashFiles('**/requirements*.txt') }}-model-tests
+
+            - name: Restore pip cache (Windows)
+              if: ${{ matrix.os == 'windows-latest' }}
+              uses: actions/cache@v2
+              with:
+                  path: ${{ env.WINDOWS_PIP_CACHE }}
+                  key: pip-${{ matrix.os }}-py${{ matrix.python-version }}-${{ hashFiles('**/requirements*.txt') }}-model-tests
+
+            - name: Restore conda cache
+              uses: actions/cache@v2
+              with:
+                  path: ${{ env.CONDA_CACHE }}
+                  key: conda-${{ matrix.os }}-py${{ matrix.python-version }}-${{ hashFiles('**/requirements*.txt') }}-model-tests
 
             # NOTE: It takes twice as long to save the sample data cache
             # as it does to do a fresh clone (almost 5 minutes vs. 2.5 minutes)
@@ -187,6 +205,26 @@ jobs:
             - name: Fetch git tags
               run: git fetch origin +refs/tags/*:refs/tags/*
 
+            - name: Restore pip cache (MacOS)
+              if: ${{ matrix.os == 'macos-latest' }}
+              uses: actions/cache@v2
+              with:
+                  path: ${{ env.MACOS_PIP_CACHE }}
+                  key: pip-${{ matrix.os }}-py${{ matrix.python-version }}-${{ hashFiles('**/requirements*.txt') }}-test-sdist
+
+            - name: Restore pip cache (Windows)
+              if: ${{ matrix.os == 'windows-latest' }}
+              uses: actions/cache@v2
+              with:
+                  path: ${{ env.WINDOWS_PIP_CACHE }}
+                  key: pip-${{ matrix.os }}-py${{ matrix.python-version }}-${{ hashFiles('**/requirements*.txt') }}-test-sdist
+
+            - name: Restore conda cache
+              uses: actions/cache@v2
+              with:
+                  path: ${{ env.CONDA_CACHE }}
+                  key: conda-${{ matrix.os }}-py${{ matrix.python-version }}-${{ hashFiles('**/requirements*.txt') }}-test-sdist
+
             - name: Setup conda environment
               uses: conda-incubator/setup-miniconda@v2
               with:
@@ -277,8 +315,14 @@ jobs:
             - name: Restore pip cache
               uses: actions/cache@v2
               with:
-                  path: ~\AppData\Local\pip\Cache
-                  key: windows-py37-pipcache-sampledata-${{ hashfiles('requirements.txt') }}
+                  path: ${{ env.WINDOWS_PIP_CACHE }}
+                  key: pip-windows-cache-sampledata-${{ hashfiles('requirements.txt') }}
+
+            - name: Restore conda cache
+              uses: actions/cache@v2
+              with:
+                  path: ${{ env.CONDA_CACHE }}
+                  key: conda-windows-cache-sampledata-${{ hashfiles('requirements.txt') }}
 
             - name: Setup conda environment
               uses: conda-incubator/setup-miniconda@v2
@@ -329,8 +373,14 @@ jobs:
             - name: Restore pip cache
               uses: actions/cache@v2
               with:
-                  path: ~\AppData\Local\pip\Cache
-                  key: ${{ runner.os }}-py${{ matrix.python-version }}-${{ matrix.python-architecture }}-pip-${{ hashFiles('**/requirements*.txt') }}-ui-tests
+                  path: ${{ env.WINDOWS_PIP_CACHE }}
+                  key: pip-windows-py${{ matrix.python-version }}-${{ hashFiles('**/requirements*.txt') }}-ui-tests
+
+            - name: Restore conda cache
+              uses: actions/cache@v2
+              with:
+                  path: ${{ env.CONDA_CACHE }}
+                  key: conda-windows-py${{ matrix.python-version }}-${{ hashFiles('**/requirements*.txt') }}-ui-tests
 
             - name: Restore git-LFS test data cache
               uses: actions/cache@v2
