@@ -57,8 +57,10 @@ jobs:
                       gdal: "gdal==3.3.1"
                     - os: macos-latest
                       conda-cache: /Users/runner/conda_pkgs_dir
+                      pip-cache: /Users/emily/Library/Caches/pip
                     - os: windows-latest
                       conda-cache: C:\Users\runneradmin\conda_pkgs_dir
+                      pip-cache: ~\AppData\Local\pip\Cache
         steps:
             - uses: actions/checkout@v2
               with:
@@ -69,8 +71,14 @@ jobs:
             - name: Restore pip cache
               uses: actions/cache@v2
               with:
-                  path: ~\AppData\Local\pip\Cache
+                  path: ${{ matrix.pip-cache }}
                   key: ${{ runner.os }}-py${{ matrix.python-version }}-${{ matrix.python-architecture }}-pip-${{ hashFiles('**/requirements*.txt') }}-model-tests
+
+            - name: Restore conda cache
+              uses: actions/cache@v2
+              with:
+                  path: ${{ matrix.conda-cache }}
+                  key: ${{ runner.os }}-py${{ matrix.python-version }}-${{ matrix.python-architecture }}-conda-${{ hashFiles('**/requirements*.txt') }}-model-tests
 
             # NOTE: It takes twice as long to save the sample data cache
             # as it does to do a fresh clone (almost 5 minutes vs. 2.5 minutes)
@@ -90,16 +98,10 @@ jobs:
                   python-version: ${{ matrix.python-version }}
                   channels: conda-forge
 
-            - name: conda cache
-              uses: actions/cache@v2
-              with:
-                  path: ${{ matrix.conda-cache }}
-                  key: ${{ runner.os }}-py${{ matrix.python-version }}-${{ matrix.python-architecture }}-conda-${{ hashFiles('**/requirements*.txt') }}-model-tests
-
             - name: Install build dependencies
               shell: bash -l {0}
               run: |
-                  conda info
+                  pip cache dir
                   conda install nomkl # make sure numpy is w/out MKL
                   conda upgrade -y pip setuptools
                   conda install ${{ matrix.numpy }} ${{ matrix.gdal }} toml twine build
