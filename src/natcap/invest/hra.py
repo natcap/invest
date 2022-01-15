@@ -1703,10 +1703,12 @@ def _tot_risk_op(habitat_arr, *pair_risk_arrays):
             pair_risk_arr, _TARGET_NODATA_FLT)
         tot_risk_arr[valid_pixel_mask] += pair_risk_arr[valid_pixel_mask]
 
+    # TODO: yeah, this doesn't work as specified at all.
+    #  I think the total risk is supposed to exceed the max criteria score.
     # Rescale total risk to 0 to max_rating
-    final_valid_mask = ~utils.array_equals_nodata(
-        tot_risk_arr, _TARGET_NODATA_FLT)
-    tot_risk_arr[final_valid_mask] /= len(pair_risk_arrays)
+    #final_valid_mask = ~utils.array_equals_nodata(
+    #    tot_risk_arr, _TARGET_NODATA_FLT)
+    #tot_risk_arr[final_valid_mask] /= len(pair_risk_arrays)
 
     return tot_risk_arr
 
@@ -1767,7 +1769,9 @@ def _pair_risk_op(exposure_arr, consequence_arr, max_rating, risk_eq):
             exposure_arr[nonzero_valid_pixel_mask],
             consequence_arr[nonzero_valid_pixel_mask])
 
-    risk_arr[nonzero_valid_pixel_mask] *= (max_rating/max_risk_score)
+    # TODO: why do we multiply?  I don't see this in the UG
+    #    I wonder if this was an attempt to rescale everything (0-1)?
+    #risk_arr[nonzero_valid_pixel_mask] *= (max_rating/max_risk_score)
 
     return risk_arr
 
