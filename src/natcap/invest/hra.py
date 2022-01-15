@@ -3057,32 +3057,30 @@ def _get_overlap_dataframe(criteria_df, habitat_names, stressor_attributes,
                 overlap_df.loc[
                     (habitat, stressor),
                     criteria_type + '_RASTER_PATH'] = os.path.join(
-                        output_dir, criteria_type + '_' + habitat
-                        + '_' + stressor + suffix + '.tif')
+                        output_dir,
+                        f'{criteria_type}_{habitat}_{stressor}{suffix}.tif')
                 overlap_df.loc[
                     (habitat, stressor),
                     criteria_type + '_NUM_RASTER_PATH'] = os.path.join(
-                        inter_dir, criteria_type + '_num_' +
-                        habitat + '_' + stressor + suffix + '.tif')
+                        inter_dir,
+                        f'{criteria_type}_num_{habitat}_{stressor}{suffix}.tif')
 
                 # Create individual habitat-stressor risk raster path
                 overlap_df.loc[
                     (habitat, stressor),
                     'PAIR_RISK_RASTER_PATH'] = os.path.join(
-                        output_dir, 'RISK_' +
-                        habitat + '_' + stressor + suffix + '.tif')
+                        output_dir, f'RISK_{habitat}_{stressor}{suffix}.tif')
 
                 # Create pickle file path that stores zonal stats dict
                 overlap_df.loc[
                     (habitat, stressor), criteria_type +
                     '_PICKLE_STATS_PATH'] = os.path.join(
-                        inter_dir, criteria_type + '_' +
-                        habitat + '_' + stressor + suffix + '_.pickle')
+                        inter_dir,
+                        f'{criteria_type}_{habitat}_{stressor}{suffix}.pickle')
                 overlap_df.loc[
                     (habitat, stressor),
                     'PAIR_RISK_PICKLE_STATS_PATH'] = os.path.join(
-                        inter_dir, 'risk_' +
-                        habitat + '_' + stressor + suffix + '_.pickle')
+                        inter_dir, f'risk_{habitat}_{stressor}{suffix}.pickle')
 
                 _ = _validate_rating(
                     rating, max_rating, criteria_name, habitat, stressor)
