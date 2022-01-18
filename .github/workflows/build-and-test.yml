@@ -59,28 +59,31 @@ jobs:
                     - python-version: 3.9
                       numpy: "numpy=1.20"
                       gdal: "gdal==3.3.1"
-                    - os: macos-latest
-                      pip-cache: ${{ env.MACOS_PIP_CACHE }}
-                    - os: windows-latest
-                      pip-cache: ${{ env.WINDOWS_PIP_CACHE }}
         steps:
             - uses: actions/checkout@v2
               with:
                   # Fetch complete history for accurate versioning
                   fetch-depth: 0
 
-              # Taken from https://github.com/actions/cache/blob/master/examples.md#python---pip
-            - name: Restore pip cache
+            - name: Restore pip cache (MacOS)
+              if: ${{ matrix.os == macos-latest }}
               uses: actions/cache@v2
               with:
-                  path: ${{ matrix.pip-cache }}
-                  key: ${{ runner.os }}-py${{ matrix.python-version }}-pip-${{ hashFiles('**/requirements*.txt') }}-model-tests
+                  path: ${{ env.MACOS_PIP_CACHE }}
+                  key: ${{ matrix.os }}-py${{ matrix.python-version }}-pip-${{ hashFiles('**/requirements*.txt') }}-model-tests
+
+            - name: Restore pip cache (Windows)
+              if: ${{ matrix.os == windows-latest }}
+              uses: actions/cache@v2
+              with:
+                  path: ${{ env.WINDOWS_PIP_CACHE }}
+                  key: ${{ matrix.os }}-py${{ matrix.python-version }}-pip-${{ hashFiles('**/requirements*.txt') }}-model-tests
 
             - name: Restore conda cache
               uses: actions/cache@v2
               with:
                   path: ${{ env.CONDA_CACHE }}
-                  key: ${{ runner.os }}-py${{ matrix.python-version }}-conda-${{ hashFiles('**/requirements*.txt') }}-model-tests
+                  key: ${{ matrix.os }}-py${{ matrix.python-version }}-conda-${{ hashFiles('**/requirements*.txt') }}-model-tests
 
             # NOTE: It takes twice as long to save the sample data cache
             # as it does to do a fresh clone (almost 5 minutes vs. 2.5 minutes)
@@ -194,28 +197,31 @@ jobs:
             matrix:
                 python-version: [3.7, 3.8, 3.9]
                 os: [windows-latest, macos-latest]
-                include:
-                    - os: macos-latest
-                      pip-cache: ${{ env.MACOS_PIP_CACHE }}
-                    - os: windows-latest
-                      pip-cache: ${{ env.WINDOWS_PIP_CACHE }}
         steps:
             - uses: actions/checkout@v2
 
             - name: Fetch git tags
               run: git fetch origin +refs/tags/*:refs/tags/*
 
-            - name: Restore pip cache
+            - name: Restore pip cache (MacOS)
+              if: ${{ matrix.os == macos-latest }}
               uses: actions/cache@v2
               with:
-                  path: ${{ matrix.pip-cache }}
-                  key: ${{ runner.os }}-py${{ matrix.python-version }}-pip-${{ hashFiles('**/requirements*.txt') }}-test-sdist
+                  path: ${{ env.MACOS_PIP_CACHE }}
+                  key: ${{ matrix.os }}-py${{ matrix.python-version }}-pip-${{ hashFiles('**/requirements*.txt') }}-model-tests
+
+            - name: Restore pip cache (Windows)
+              if: ${{ matrix.os == windows-latest }}
+              uses: actions/cache@v2
+              with:
+                  path: ${{ env.WINDOWS_PIP_CACHE }}
+                  key: ${{ matrix.os }}-py${{ matrix.python-version }}-pip-${{ hashFiles('**/requirements*.txt') }}-model-tests
 
             - name: Restore conda cache
               uses: actions/cache@v2
               with:
                   path: ${{ env.CONDA_CACHE }}
-                  key: ${{ runner.os }}-py${{ matrix.python-version }}-conda-${{ hashFiles('**/requirements*.txt') }}-test-sdist
+                  key: ${{ matrix.os }}-py${{ matrix.python-version }}-conda-${{ hashFiles('**/requirements*.txt') }}-test-sdist
 
             - name: Setup conda environment
               uses: conda-incubator/setup-miniconda@v2
