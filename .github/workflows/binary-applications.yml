@@ -16,7 +16,7 @@ env:
 
 jobs:
     check-syntax-errors:
-        name: "Check for syntax errors"
+        name: Check for syntax errors
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v2
@@ -37,7 +37,7 @@ jobs:
                 python -m flake8 src --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
     build-windows-binaries:
-        name: "Build windows binaries"
+        name: Build windows binaries
         needs: check-syntax-errors
         runs-on: windows-latest
         steps:
@@ -52,13 +52,13 @@ jobs:
               uses: actions/cache@v2
               with:
                   path: ${{ env.WINDOWS_PIP_CACHE }}
-                  key: windows-py${{ env.PYTHON_VERSION }}-pip-${{ hashFiles('**/requirements*.txt') }}-exe
+                  key: pip-windows-py${{ env.PYTHON_VERSION }}-${{ hashFiles('**/requirements*.txt') }}-exe
 
             - name: Restore conda cache
               uses: actions/cache@v2
               with:
                   path: ${{ env.CONDA_CACHE }}
-                  key: windows-py${{ env.PYTHON_VERSION }}-conda-${{ hashFiles('**/requirements*.txt') }}-exe
+                  key: conda-windows-py${{ env.PYTHON_VERSION }}-${{ hashFiles('**/requirements*.txt') }}-exe
 
             - name: Setup conda environment
               uses: conda-incubator/setup-miniconda@v2
@@ -147,7 +147,7 @@ jobs:
                   path: ${{ github.workspace }}
 
     build-mac-binaries:
-        name: "Build mac binaries"
+        name: Build mac binaries
         needs: check-syntax-errors
         runs-on: macos-10.15
         steps:
@@ -167,13 +167,13 @@ jobs:
               uses: actions/cache@v2
               with:
                   path: ${{ env.WINDOWS_PIP_CACHE }}
-                  key: mac-py${{ env.PYTHON_VERSION }}-pip-${{ hashFiles('**/requirements*.txt') }}-dmg
+                  key: pip-mac-py${{ env.PYTHON_VERSION }}-${{ hashFiles('**/requirements*.txt') }}-dmg
 
             - name: Restore conda cache
               uses: actions/cache@v2
               with:
                   path: ${{ env.CONDA_CACHE }}
-                  key: mac-py${{ env.PYTHON_VERSION }}-conda-${{ hashFiles('**/requirements*.txt') }}-dmg
+                  key: conda-mac-py${{ env.PYTHON_VERSION }}-${{ hashFiles('**/requirements*.txt') }}-dmg
 
             - name: Setup conda environment
               uses: conda-incubator/setup-miniconda@v2
