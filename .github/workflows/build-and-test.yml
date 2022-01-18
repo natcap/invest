@@ -66,14 +66,14 @@ jobs:
                   fetch-depth: 0
 
             - name: Restore pip cache (MacOS)
-              if: ${{ matrix.os == macos-latest }}
+              if: ${{ matrix.os }} = macos-latest
               uses: actions/cache@v2
               with:
                   path: ${{ env.MACOS_PIP_CACHE }}
                   key: ${{ matrix.os }}-py${{ matrix.python-version }}-pip-${{ hashFiles('**/requirements*.txt') }}-model-tests
 
             - name: Restore pip cache (Windows)
-              if: ${{ matrix.os == windows-latest }}
+              if: ${{ matrix.os }} == windows-latest
               uses: actions/cache@v2
               with:
                   path: ${{ env.WINDOWS_PIP_CACHE }}
@@ -204,14 +204,14 @@ jobs:
               run: git fetch origin +refs/tags/*:refs/tags/*
 
             - name: Restore pip cache (MacOS)
-              if: ${{ matrix.os == macos-latest }}
+              if: ${{ matrix.os }} == macos-latest
               uses: actions/cache@v2
               with:
                   path: ${{ env.MACOS_PIP_CACHE }}
                   key: ${{ matrix.os }}-py${{ matrix.python-version }}-pip-${{ hashFiles('**/requirements*.txt') }}-model-tests
 
             - name: Restore pip cache (Windows)
-              if: ${{ matrix.os == windows-latest }}
+              if: ${{ matrix.os }} == windows-latest
               uses: actions/cache@v2
               with:
                   path: ${{ env.WINDOWS_PIP_CACHE }}
