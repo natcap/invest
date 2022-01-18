@@ -281,7 +281,7 @@ jobs:
               run: |
                   conda install nomkl # make sure numpy w/out mkl
                   conda install pytest requests build
-                  conda install setuptools wheel setuptools_scm cython babel numpy==1.19.3
+                  conda install setuptools wheel setuptools_scm cython babel numpy==1.19.4
                   conda upgrade -y pip wheel
                   python ./scripts/convert-requirements-to-conda-yml.py requirements.txt > requirements.yml
                   conda env update --file requirements.yml
