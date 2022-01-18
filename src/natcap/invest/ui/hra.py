@@ -52,6 +52,12 @@ class HabitatRiskAssessment(model.InVESTModel):
             label='Maximum Criteria Score',
             validator=self.validator)
         self.add_input(self.max_rating)
+        self.override_max_overlapping_stressors = inputs.Text(
+            args_key='override_max_overlapping_stressors',
+            helptext="FILL ME IN",
+            label="Override Max # Overlapping Stressors",
+            validator=self.validator)
+        self.add_input(self.override_max_overlapping_stressors)
         self.risk_eq = inputs.Dropdown(
             args_key='risk_eq',
             helptext=(
@@ -95,13 +101,16 @@ class HabitatRiskAssessment(model.InVESTModel):
             self.workspace.args_key: self.workspace.value(),
             self.suffix.args_key: self.suffix.value(),
             self.info_table_path.args_key: self.info_table_path.value(),
-            self.criteria_table_path.args_key: self.criteria_table_path.value(),
+            self.criteria_table_path.args_key:
+                self.criteria_table_path.value(),
             self.resolution.args_key: self.resolution.value(),
             self.risk_eq.args_key: self.risk_eq.value(),
             self.decay_eq.args_key: self.decay_eq.value(),
             self.max_rating.args_key: self.max_rating.value(),
             self.aoi_vector_path.args_key: self.aoi_vector_path.value(),
             self.visualize_outputs.args_key: self.visualize_outputs.value(),
+            self.override_max_overlapping_stressors.args_key:
+                self.override_max_overlapping_stressors.value(),
         }
 
         return args

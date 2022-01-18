@@ -204,6 +204,17 @@ ARGS_SPEC = {
                 "A GDAL-supported vector file containing feature containing "
                 "one or more planning regions or subregions."),
         },
+        "override_max_overlapping_stressors": {
+            "name": _("Override Max Number of Overlapping Stressors"),
+            "type": "number",
+            "required": False,
+            "about": _(
+                "If provided, this number will be used in risk "
+                "reclassification instead of the calculated number of "
+                "stressor layers that overlap."),
+            "units": u.none,
+            "expression": "value > 0",
+        },
         "visualize_outputs": {
             "name": _("Generate GeoJSONs"),
             "about": _("Generate GeoJSON outputs for web visualization."),
@@ -246,6 +257,9 @@ def execute(args):
             each habitat-stressor combination over each area. Optionally, if
             each of the shapefile features contain a 'name' field, it will
             be used as a way of identifying each individual shape.
+        args['override_max_overlapping_stressors'] (number): If provided, this
+            number will be used in risk reclassification instead of the
+            calculated maximum number of stressor layers that overlap.
         args['n_workers'] (int): the number of worker processes to
             use for processing this model.  If omitted, computation will take
             place in the current process. (optional)
@@ -544,15 +558,38 @@ def execute(args):
         task_name='counting_habitats',
         dependent_task_list=[align_and_resize_rasters_task])
 
-    LOGGER.info('Calculating maximum number of stressors')
+    try:
+        # Validation should ensure that this user-defined value is greater than
+        # 0.  If it is equal to 0, we'll end up calculating the number of
+        # stressors.  But also, the risk equation won't make any sense if the
+        # number of stressors is 0, because that would mean there are 0
+        # stressors at all, so then why are we running HRA?
+        user_defined_max_n_stressors = float(
+            args['override_max_overlapping_stressors'])
+    except (KeyError, TypeError, ValueError):
+        # KeyError when key not in args
+        # TypeError when value is None
+        # ValueError when value is the empty string.
+        user_defined_max_n_stressors = None
     max_n_stressors_file = os.path.join(
         intermediate_dir, 'max_n_overlapping_stressors.json')
-    count_stressors_task = task_graph.add_task(
-        func=_count_maximum_number_of_stressors,
-        args=(align_stressor_raster_list, max_n_stressors_file),
-        target_path_list=[max_n_stressors_file],
-        task_name='count_maximum_number_of_overlapping_stressors',
-        dependent_task_list=[align_and_resize_rasters_task])
+    if user_defined_max_n_stressors:
+        LOGGER.info(
+            'Using user-defined max. number of stressors: '
+            f'{user_defined_max_n_stressors}')
+        count_stressors_task = task_graph.add_task(
+            func=_write_stressors_count_file,
+            args=(user_defined_max_n_stressors, max_n_stressors_file),
+            target_path_list=[max_n_stressors_file],
+            task_name='write user-defined max_n_stressors to a file')
+    else:
+        LOGGER.info('Calculating maximum number of stressors')
+        count_stressors_task = task_graph.add_task(
+            func=_count_maximum_number_of_stressors,
+            args=(align_stressor_raster_list, max_n_stressors_file),
+            target_path_list=[max_n_stressors_file],
+            task_name='count_maximum_number_of_overlapping_stressors',
+            dependent_task_list=[align_and_resize_rasters_task])
 
     # A dependent task list for calculating ecosystem risk from all habitat
     # risk rasters
@@ -1582,7 +1619,12 @@ def _count_maximum_number_of_stressors(
             max_n_overlapping_stressors,
             numpy.amax(n_overlapping_stressors))
 
-    with open(target_json_path, 'w') as target_file:
+    _write_stressors_count_file(max_n_overlapping_stressors, target_json_path)
+
+
+def _write_stressors_count_file(
+        max_n_overlapping_stressors, target_filepath):
+    with open(target_filepath, 'w') as target_file:
         json.dump(int(max_n_overlapping_stressors), target_file)
 
 
