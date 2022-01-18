@@ -270,10 +270,6 @@ jobs:
                   path: ~/Library/Caches/pip
                   key: ubuntu-py${{ env.PYTHON_VERSION }}-pip-${{ hashFiles('**/requirements*.txt') }}-build-sampledata
 
-            - run: |
-                pip install toml
-                pip install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
-
             - run: make sampledata sampledata_single
 
             - name: Authenticate GCP
