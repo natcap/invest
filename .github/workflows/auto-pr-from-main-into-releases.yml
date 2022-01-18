@@ -27,7 +27,6 @@ jobs:
             - run: sudo apt-get update && sudo apt-get install gettext-base
 
             - name: Open a PR into each open release branch
-              shell: bash
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
                   SOURCE_BRANCH: ${{ env.SOURCE_BRANCH }}

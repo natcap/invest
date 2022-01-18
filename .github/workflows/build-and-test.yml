@@ -4,6 +4,10 @@ on:
     push:
     pull_request:
 
+defaults:
+  run:
+    shell: bash -l {0}
+
 jobs:
     # This job will check for obvious syntax errors.
     # The other jobs in this file depend on this one and won't show up in the
@@ -25,7 +29,7 @@ jobs:
                   python-version: 3.9
 
             - name: Set up environment
-              run: python -m pip install --upgrade pip setuptools setuptools_scm flake8
+              run: python -m pip install --upgrade flake8
 
             - name: Lint with flake8
               run: |
@@ -87,19 +91,16 @@ jobs:
                   channels: conda-forge
 
             - name: Install build dependencies
-              shell: bash -l {0}
               run: |
                   conda install build nomkl twine # make sure numpy is w/out MKL
                   conda install ${{ matrix.numpy }} ${{ matrix.gdal }}
 
             - name: Build wheel
-              shell: bash -l {0}
               run: |
                   python -m build --wheel
                   python -m twine check dist/*
 
             - name: Install runtime dependencies
-              shell: bash -l {0}
               run: |
                   pip install requests
                   python ./scripts/convert-requirements-to-conda-yml.py \
@@ -108,7 +109,6 @@ jobs:
                   conda env update --file requirements-all.yml
 
             - name: Conda Environment Listing
-              shell: bash -l {0}
               run: |
                   conda list
                   conda list --export > conda-env.txt
@@ -127,12 +127,10 @@ jobs:
 
             - name: Compare Conda Environments
               continue-on-error: true
-              shell: bash -l {0}
               run: |
                   diff ./conda-env.txt ./conda-env-artifact/conda-env.txt
 
             - name: Run model tests
-              shell: bash -l {0}
               run: |
                   pip install $(find dist -name "natcap.invest*.whl")
                   make test
@@ -161,7 +159,6 @@ jobs:
             - name: Deploy artifacts to GCS
               # Secrets not available in PR so don't use GCP.
               if: github.event_name != 'pull_request'
-              shell: bash -l {0}
               run: |
                   # Specify which python version we want to use (it's the one
                   # we're using in actions/setup-miniconda)
@@ -195,7 +192,6 @@ jobs:
                   channels: conda-forge
 
             - name: Install dependencies
-              shell: bash -l {0}
               run: |
                   conda install build nomkl requests twine # make sure numpy is w/out MKL
                   python ./scripts/convert-requirements-to-conda-yml.py \
@@ -203,7 +199,6 @@ jobs:
                   conda env update --file requirements-all.yml
 
             - name: Build source distribution
-              shell: bash -l {0}
               run: |
                   # Because we're using PEP518 build requirements, the user's
                   # computer is guaranteed to have cython available at build
@@ -213,7 +208,6 @@ jobs:
                   python -m twine check dist/*
 
             - name: Install from source distribution
-              shell: bash -l {0}
               run : |
                   # Prevent pip from thinking that CWD is a natcap.invest
                   # installation. It's not.
@@ -250,7 +244,6 @@ jobs:
               # overwrite artifacts or have duplicates (mac/windows sdists have
               # different extensions)
               if: github.event_name != 'pull_request' && matrix.os == 'macos-latest' && matrix.python-version == '3.7'
-              shell: bash -l {0}
               run: |
                   # Specify which python version we want to use (it's the one
                   # we're using in actions/setup-miniconda)
@@ -285,19 +278,18 @@ jobs:
                   channels: conda-forge
 
             - name: Install dependencies
-              shell: bash -l {0}
               run: |
                   conda install build nomkl requests # make sure numpy w/out mkl
+                  conda install pytest
+                  conda upgrade -y pip wheel
                   python ./scripts/convert-requirements-to-conda-yml.py requirements.txt > requirements.yml
                   conda env update --file requirements.yml
                   make install
 
             - name: Validate sample data
-              shell: bash -l {0}
               run: make validate_sampledata
 
             - name: Validate user guide links
-              shell: bash -l {0}
               run: make validate_userguide_filenames
 
     run-ui-tests:
@@ -340,7 +332,6 @@ jobs:
                   channels: conda-forge
 
             - name: Install dependencies
-              shell: bash -l {0}
               run: |
                   conda install build nomkl requests  # make sure numpy w/out mkl
                   python ./scripts/convert-requirements-to-conda-yml.py \
@@ -350,6 +341,5 @@ jobs:
                   python -m pip install .
 
             - name: Run UI tests
-              shell: bash -l {0}
               timeout-minutes: 10  # tests usually take < 2 minutes, so 10 is generous.
               run: make test_ui
