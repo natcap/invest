@@ -68,11 +68,6 @@ jobs:
             - name: Install python dependencies
               run: |
                   conda install ${{ env.DEFAULT_DEPENDENCIES }}
-                  python ./scripts/convert-requirements-to-conda-yml.py \
-                        requirements.txt \
-                        requirements-dev.txt \
-                        requirements-gui.txt > requirements-all.yml
-                  conda env update --file requirements-all.yml
                   make install
 
             - name: Install build dependencies
@@ -177,11 +172,6 @@ jobs:
             - name: Build conda env with python dependencies
               run: |
                   conda install ${{ env.DEFAULT_DEPENDENCIES }}
-                  python ./scripts/convert-requirements-to-conda-yml.py \
-                        requirements.txt \
-                        requirements-dev.txt \
-                        requirements-gui.txt > requirements-all.yml
-                  conda env update --file requirements-all.yml
                   make install
 
             - name: Build binaries

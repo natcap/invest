@@ -98,12 +98,15 @@ jobs:
 
             - name: Install dependencies
               run: |
-                  conda install ${{ env.DEFAULT_DEPENDENCIES }} twine
-                  conda install ${{ matrix.numpy }} ${{ matrix.gdal }}
-                  python ./scripts/convert-requirements-to-conda-yml.py \
-                    requirements.txt requirements-dev.txt \
-                    requirements-gui.txt > requirements-all.yml
-                  conda env update --file requirements-all.yml
+                  # twine: used to check whether the long description will render correctly on PyPI
+                  # numpy, gdal: install specific versions so we test with the full range of versions
+                  conda install ${{ env.DEFAULT_DEPENDENCIES }} twine ${{ matrix.numpy }} ${{ matrix.gdal }}
+
+            - name: Build and install wheel
+              run: |
+                  python -m build --wheel
+                  python -m twine check dist/*
+                  pip install $(find dist -name "natcap.invest*.whl")
 
             - name: Conda Environment Listing
               run: |
@@ -126,12 +129,6 @@ jobs:
               continue-on-error: true
               run: |
                   diff ./conda-env.txt ./conda-env-artifact/conda-env.txt
-
-            - name: Build and install wheel
-              run: |
-                  python -m build --wheel
-                  python -m twine check dist/*
-                  pip install $(find dist -name "natcap.invest*.whl")
 
             - name: Run model tests
               run: make test
@@ -195,9 +192,6 @@ jobs:
             - name: Install dependencies
               run: |
                   conda install ${{ env.DEFAULT_DEPENDENCIES }} twine
-                  python ./scripts/convert-requirements-to-conda-yml.py \
-                    requirements.txt > requirements-all.yml
-                  conda env update --file requirements-all.yml
 
             - name: Build source distribution
               run: |
@@ -283,8 +277,6 @@ jobs:
                   # pytest: dependency of make validate_sampledata
                   # setuptools_scm: dependency of make install
                   conda install ${{ env.DEFAULT_DEPENDENCIES }} pytest setuptools_scm
-                  python ./scripts/convert-requirements-to-conda-yml.py requirements.txt > requirements.yml
-                  conda env update --file requirements.yml
                   make install
 
             - name: Validate sample data
@@ -334,12 +326,8 @@ jobs:
 
             - name: Install dependencies
               run: |
-                  conda install ${{ env.DEFAULT_DEPENDENCIES }}
-                  python ./scripts/convert-requirements-to-conda-yml.py \
-                    requirements.txt requirements-dev.txt \
-                    requirements-gui.txt > requirements-all.yml
-                  conda env update --file requirements-all.yml
-                  python -m pip install .
+                  conda install ${{ env.DEFAULT_DEPENDENCIES }} pytest
+                  python -m pip install .[ui]
 
             - name: Run UI tests
               timeout-minutes: 10  # tests usually take < 2 minutes, so 10 is generous.
