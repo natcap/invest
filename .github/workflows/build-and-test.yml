@@ -279,7 +279,12 @@ jobs:
 
             - name: Install dependencies
               run: |
-                  conda install build nomkl requests pytest setuptools_scm # make sure numpy w/out mkl
+                  # build: dependency of make install
+                  # nomkl: make sure numpy w/out mkl
+                  # requests: dependency of convert-requirements-to-conda-yml.py
+                  # pytest: dependency of make validate_sampledata
+                  # setuptools_scm: dependency of make install
+                  conda install build nomkl requests pytest setuptools_scm
                   python ./scripts/convert-requirements-to-conda-yml.py requirements.txt > requirements.yml
                   conda env update --file requirements.yml
                   make install
