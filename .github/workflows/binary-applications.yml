@@ -8,6 +8,12 @@ defaults:
   run:
     shell: bash -l {0}
 
+env:
+  # build: dependency of make install
+  # nomkl: make sure numpy w/out mkl
+  # requests: dependency of convert-requirements-to-conda-yml.py
+  DEFAULT_DEPENDENCIES: build nomkl requests
+
 jobs:
     check-syntax-errors:
         name: "Check for syntax errors"
@@ -21,7 +27,7 @@ jobs:
                   python-version: 3.8
 
             - name: Set up environment
-              run: python -m pip install --upgrade flake8
+              run: pip install flake8
 
             - name: Lint with flake8
               run: |
@@ -61,7 +67,7 @@ jobs:
 
             - name: Install python dependencies
               run: |
-                  conda install nomkl requests # make sure numpy is w/out MKL
+                  conda install ${{ env.DEFAULT_DEPENDENCIES }}
                   python ./scripts/convert-requirements-to-conda-yml.py \
                         requirements.txt \
                         requirements-dev.txt \
@@ -170,7 +176,7 @@ jobs:
 
             - name: Build conda env with python dependencies
               run: |
-                  conda install nomkl requests
+                  conda install ${{ env.DEFAULT_DEPENDENCIES }}
                   python ./scripts/convert-requirements-to-conda-yml.py \
                         requirements.txt \
                         requirements-dev.txt \

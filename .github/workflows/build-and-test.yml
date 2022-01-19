@@ -8,6 +8,12 @@ defaults:
   run:
     shell: bash -l {0}
 
+env:
+  # build: dependency of make install
+  # nomkl: make sure numpy w/out mkl
+  # requests: dependency of convert-requirements-to-conda-yml.py
+  DEFAULT_DEPENDENCIES: build nomkl requests
+
 jobs:
     # This job will check for obvious syntax errors.
     # The other jobs in this file depend on this one and won't show up in the
@@ -29,7 +35,7 @@ jobs:
                   python-version: 3.9
 
             - name: Set up environment
-              run: python -m pip install --upgrade flake8
+              run: pip install flake8
 
             - name: Lint with flake8
               run: |
@@ -90,19 +96,10 @@ jobs:
                   python-version: ${{ matrix.python-version }}
                   channels: conda-forge
 
-            - name: Install build dependencies
+            - name: Install dependencies
               run: |
-                  conda install build nomkl twine # make sure numpy is w/out MKL
+                  conda install ${{ env.DEFAULT_DEPENDENCIES }} twine
                   conda install ${{ matrix.numpy }} ${{ matrix.gdal }}
-
-            - name: Build wheel
-              run: |
-                  python -m build --wheel
-                  python -m twine check dist/*
-
-            - name: Install runtime dependencies
-              run: |
-                  pip install requests
                   python ./scripts/convert-requirements-to-conda-yml.py \
                     requirements.txt requirements-dev.txt \
                     requirements-gui.txt > requirements-all.yml
@@ -130,10 +127,14 @@ jobs:
               run: |
                   diff ./conda-env.txt ./conda-env-artifact/conda-env.txt
 
-            - name: Run model tests
+            - name: Build and install wheel
               run: |
+                  python -m build --wheel
+                  python -m twine check dist/*
                   pip install $(find dist -name "natcap.invest*.whl")
-                  make test
+
+            - name: Run model tests
+              run: make test
 
             - uses: actions/upload-artifact@v2
               with:
@@ -193,7 +194,7 @@ jobs:
 
             - name: Install dependencies
               run: |
-                  conda install build nomkl requests twine # make sure numpy is w/out MKL
+                  conda install ${{ env.DEFAULT_DEPENDENCIES }} twine
                   python ./scripts/convert-requirements-to-conda-yml.py \
                     requirements.txt > requirements-all.yml
                   conda env update --file requirements-all.yml
@@ -279,12 +280,9 @@ jobs:
 
             - name: Install dependencies
               run: |
-                  # build: dependency of make install
-                  # nomkl: make sure numpy w/out mkl
-                  # requests: dependency of convert-requirements-to-conda-yml.py
                   # pytest: dependency of make validate_sampledata
                   # setuptools_scm: dependency of make install
-                  conda install build nomkl requests pytest setuptools_scm
+                  conda install ${{ env.DEFAULT_DEPENDENCIES }} pytest setuptools_scm
                   python ./scripts/convert-requirements-to-conda-yml.py requirements.txt > requirements.yml
                   conda env update --file requirements.yml
                   make install
@@ -336,7 +334,7 @@ jobs:
 
             - name: Install dependencies
               run: |
-                  conda install build nomkl requests  # make sure numpy w/out mkl
+                  conda install ${{ env.DEFAULT_DEPENDENCIES }}
                   python ./scripts/convert-requirements-to-conda-yml.py \
                     requirements.txt requirements-dev.txt \
                     requirements-gui.txt > requirements-all.yml
