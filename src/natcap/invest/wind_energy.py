@@ -781,8 +781,8 @@ def execute(args):
                 task_name='create_aoi_raster_from_vector')
 
             # Rasterize land polygon onto AOI and calculate distance transform
-            dist_trans_path = os.path.join(inter_dir,
-                                           'distance_trans%s.tif' % suffix)
+            dist_trans_path = os.path.join(
+                inter_dir, 'distance_trans%s.tif' % suffix)
             create_distance_raster_task = task_graph.add_task(
                 func=_create_distance_raster,
                 args=(aoi_raster_path, land_poly_proj_vector_path,
@@ -1129,9 +1129,9 @@ def execute(args):
             if calc_grid_dist_without_land:
                 # Calculate distance raster without land points provided
                 final_dist_task = task_graph.add_task(
-                    func=_calculate_grid_dist_on_raster,
-                    args=(grid_projected_vector_path,
-                          harvested_masked_path,
+                    func=_create_distance_raster,
+                    args=(harvested_masked_path,
+                          grid_projected_vector_path,
                           final_dist_raster_path,
                           inter_dir),
                     target_path_list=[final_dist_raster_path],
@@ -1164,9 +1164,10 @@ def execute(args):
 
         final_dist_task = task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
-            args=([(land_poly_dist_raster_path, 1), (mean_pixel_size, 'raw'),
-                   (avg_grid_distance, 'raw')], _add_avg_dist_op,
-                  final_dist_raster_path, _TARGET_DATA_TYPE, _TARGET_NODATA),
+            args=(
+                [(land_poly_dist_raster_path, 1), (avg_grid_distance, 'raw')],
+                _add_avg_dist_op, final_dist_raster_path, _TARGET_DATA_TYPE,
+                _TARGET_NODATA),
             target_path_list=[final_dist_raster_path],
             task_name='calculate_final_distance_in_meters',
             dependent_task_list=[land_poly_dist_raster_task])
@@ -1503,15 +1504,12 @@ def _depth_op(bath, min_depth, max_depth):
     return out_array
 
 
-def _add_avg_dist_op(tmp_dist, mean_pixel_size, avg_grid_distance):
-    """Convert distances to meters and add in avg_grid_distance.
+def _add_avg_dist_op(tmp_dist, avg_grid_distance):
+    """Add in avg_grid_distance.
 
     Args:
-        tmp_dist (numpy.array): an array of distances
-        mean_pixel_size (float): the minimum absolute value of a pixel in
-            meters
-        avg_grid_distance (float): the average land cable distance in km
-            converted to meters
+        tmp_dist (numpy.array): an array of distances in meters
+        avg_grid_distance (float): the average land cable distance in meters
 
     Returns:
         out_array (numpy.array): distance values in meters with average
@@ -1521,8 +1519,8 @@ def _add_avg_dist_op(tmp_dist, mean_pixel_size, avg_grid_distance):
     out_array = numpy.full(
         tmp_dist.shape, _TARGET_NODATA, dtype=numpy.float32)
     valid_pixels_mask = ~utils.array_equals_nodata(tmp_dist, _TARGET_NODATA)
-    out_array[valid_pixels_mask] = tmp_dist[
-        valid_pixels_mask] * mean_pixel_size + avg_grid_distance
+    out_array[valid_pixels_mask] = (
+        tmp_dist[valid_pixels_mask] + avg_grid_distance)
     return out_array
 
 
@@ -1736,7 +1734,7 @@ def _mask_by_distance(base_raster_path, min_dist, max_dist, out_nodata,
     """Create a raster whose pixel values are bound by min and max distances.
 
     Args:
-        base_raster_path (str): path to a raster with distance values.
+        base_raster_path (str): path to a raster with euclidean distance values.
         min_dist (int): the minimum distance allowed in meters.
         max_dist (int): the maximum distance allowed in meters.
         target_raster_path (str): path output to the raster masked by distance
@@ -1748,18 +1746,16 @@ def _mask_by_distance(base_raster_path, min_dist, max_dist, out_nodata,
 
     """
     raster_info = pygeoprocessing.get_raster_info(base_raster_path)
-    mean_pixel_size, _ = utils.mean_pixel_size_and_area(
-        raster_info['pixel_size'])
     raster_nodata = raster_info['nodata'][0]
 
     def _dist_mask_op(dist_arr):
-        """Mask & multiply distance values by min/max values & cell size."""
+        """Mask distance values by min/max values."""
         out_array = numpy.full(dist_arr.shape, out_nodata, dtype=numpy.float32)
         valid_pixels_mask = (
             ~utils.array_equals_nodata(dist_arr, raster_nodata) &
             (dist_arr >= min_dist) & (dist_arr <= max_dist))
         out_array[
-            valid_pixels_mask] = dist_arr[valid_pixels_mask] * mean_pixel_size
+            valid_pixels_mask] = dist_arr[valid_pixels_mask]
         return out_array
 
     pygeoprocessing.raster_calculator([(base_raster_path, 1)], _dist_mask_op,
@@ -2539,11 +2535,6 @@ def _calculate_distances_land_grid(base_point_vector_path, base_raster_path,
     # A list to hold the individual distance transform path's in order
     land_point_dist_raster_path_list = []
 
-    # Get the mean pixel size to calculate minimum distance from land to grid
-    pixel_size = pygeoprocessing.get_raster_info(base_raster_path)[
-        'pixel_size']
-    mean_pixel_size, _ = utils.mean_pixel_size_and_area(pixel_size)
-
     # Get the original layer definition which holds needed attribute values
     base_layer_defn = base_point_layer.GetLayerDefn()
     file_ext, driver_name = _get_file_ext_and_driver_name(
@@ -2620,7 +2611,7 @@ def _calculate_distances_land_grid(base_point_vector_path, base_raster_path,
         # Initialize with land to grid distances from the first array
         min_distances = numpy.min(grid_distances, axis=0)
         min_land_grid_dist = l2g_dist_array[numpy.argmin(grid_distances, axis=0)]
-        return min_distances * mean_pixel_size + min_land_grid_dist
+        return min_distances + min_land_grid_dist
 
     pygeoprocessing.raster_calculator(
         [(path, 1)
@@ -2630,65 +2621,6 @@ def _calculate_distances_land_grid(base_point_vector_path, base_raster_path,
     shutil.rmtree(temp_dir, ignore_errors=True)
 
     LOGGER.info('Finished _calculate_distances_land_grid.')
-
-
-def _calculate_grid_dist_on_raster(grid_vector_path, harvested_masked_path,
-                                   final_dist_raster_path, work_dir):
-    """Creates a distance transform raster from an OGR shapefile.
-
-    The function first burns the features from 'grid_vector_path' onto a raster
-    using 'harvested_masked_path' as the base for that raster. It then does a
-    distance transform from those locations and converts from pixel distances
-    to distance in meters.
-
-    Args:
-        grid_vector_path (str) a path to an OGR shapefile that has the
-            desired features to get the distance from.
-        harvested_masked_path (str): a path to a GDAL raster that is used to
-            get the proper extents and configuration for new rasters.
-        final_dist_raster_path (str) a path to a GDAL raster for the final
-            distance transform raster output.
-        work_dir (str): path to create a temp folder for saving files.
-
-    Returns:
-        None
-
-    """
-    LOGGER.info('Starting _calculate_grid_dist_on_raster.')
-    temp_dir = tempfile.mkdtemp(dir=work_dir, prefix='calc-grid-dist-')
-
-    raster_info = pygeoprocessing.get_raster_info(harvested_masked_path)
-    # Get nodata value to use in raster creation and masking
-    out_nodata = raster_info['nodata'][0]
-    # Get pixel size from biophysical output
-    mean_pixel_size, _ = utils.mean_pixel_size_and_area(
-        raster_info['pixel_size'])
-
-    grid_poly_dist_raster_path = os.path.join(temp_dir, 'grid_poly_dist.tif')
-
-    _create_distance_raster(harvested_masked_path, grid_vector_path,
-                            grid_poly_dist_raster_path, work_dir)
-
-    def _dist_meters_op(tmp_dist):
-        """Multiply the pixel value of a raster by the mean pixel size.
-
-        Args:
-            tmp_dist (numpy.array): an nd numpy array
-
-        Returns:
-            out_array (numpy.array): an array multiplied by a pixel size
-        """
-        out_array = numpy.full(tmp_dist.shape, out_nodata, dtype=numpy.float32)
-        valid_pixels_mask = ~utils.array_equals_nodata(tmp_dist, out_nodata)
-        out_array[
-            valid_pixels_mask] = tmp_dist[valid_pixels_mask] * mean_pixel_size
-        return out_array
-
-    pygeoprocessing.raster_calculator([(grid_poly_dist_raster_path, 1)],
-                                      _dist_meters_op, final_dist_raster_path,
-                                      _TARGET_DATA_TYPE, out_nodata)
-
-    shutil.rmtree(temp_dir, ignore_errors=True)
 
 
 @validation.invest_validator
