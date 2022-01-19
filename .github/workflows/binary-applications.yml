@@ -60,6 +60,12 @@ jobs:
                   path: ${{ env.CONDA_CACHE }}
                   key: conda-windows-py${{ env.PYTHON_VERSION }}-${{ hashFiles('**/requirements*.txt') }}-exe
 
+            - name: Restore chocolatey cache
+              uses: actions/cache@v2
+              with:
+                  path: ~\AppData\Local\Temp
+                  key: chocolatey-windows-exe
+
             - name: Setup conda environment
               uses: conda-incubator/setup-miniconda@v2
               with:
@@ -70,6 +76,10 @@ jobs:
 
             - name: Install python dependencies
               run: |
+                  echo $TEMP
+                  choco config get cacheLocation
+                  choco config get --name cacheLocation
+
                   conda install nomkl # make sure numpy is w/out MKL
                   conda upgrade -y pip setuptools
                   conda install toml requests
