@@ -1,25 +1,21 @@
 """Habitat risk assessment (HRA) model for InVEST."""
 # -*- coding: UTF-8 -*-
-import os
 import logging
+import os
 import pickle
 import shutil
 import tempfile
 
 import numpy
-from osgeo import gdal, ogr, osr
 import pandas
+import pygeoprocessing
 import shapely.ops
 import shapely.wkb
 import taskgraph
-import pygeoprocessing
+from osgeo import gdal, ogr, osr
 
-from . import utils
-from . import spec_utils
+from . import MODEL_METADATA, spec_utils, utils, validation
 from .spec_utils import u
-from . import validation
-from . import MODEL_METADATA
-
 
 LOGGER = logging.getLogger('natcap.invest.hra')
 
@@ -3209,6 +3205,27 @@ def _simplify_geometry(
 
     target_simplified_layer = None
     target_simplified_vector = None
+
+
+def build_datastack_archive(args, datastack_path):
+    """Build a datastack-compliant archive of all spatial inputs to HRA.
+
+    This function is implemented here and not in natcap.invest.datastack
+    because HRA's inputs are too complicated to describe in ARGS_SPEC.  Because
+    the input table and its linked spatial inputs are too custom, it warrants a
+    custom datastack archive-generation function.
+
+    Args:
+        args (dict): The complete ``args`` dict to package up into a datastack
+            archive.
+        datastack_path (string): The path on disk to where the datastack should
+            be written.
+
+    Returns:
+        ``None``
+    """
+    # TODO: flesh this out
+    raise NotImplementedError()
 
 
 @validation.invest_validator

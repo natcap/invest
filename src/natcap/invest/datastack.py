@@ -17,23 +17,25 @@ A **logfile** for InVEST is a text file that is written to disk for each model
 run.
 """
 
-import os
-import json
-import tarfile
-import shutil
-import logging
-import tempfile
-import codecs
-import pprint
-import collections
-import re
 import ast
+import codecs
+import collections
+import importlib
+import json
+import logging
+import math
+import os
+import pprint
+import re
+import shutil
+import tarfile
+import tempfile
 import warnings
 
 from osgeo import gdal
-from osgeo import ogr
 
 from . import utils
+
 try:
     from . import __version__
 except ImportError:
@@ -57,171 +59,50 @@ ParameterSet = collections.namedtuple('ParameterSet',
                                       'args model_name invest_version')
 
 
-def _collect_spatial_files(filepath, data_dir, folder_prefix):
-    """Collect spatial files into the data directory of an archive.
-
-    This function detects whether a filepath is a raster or vector
-    recognizable by GDAL/OGR and does what is needed to copy the dataset
-    into the datastack's archive folder.
-
-    Rasters copied into the archive will be stored in a new folder with the
-    "``folder_prefix``_raster_" prefix.  Vectors will be stored in a new folder
-    with the "``folder_prefix``_vector_" prefix. Both will have a random unique
-    suffix to prevent name conflicts.
-
-    .. Note :: CSV files are not handled by this function.
-
-        While the CSV format can be read as a vector format by OGR, we
-        explicitly exclude CSV files from this function.  This is to maintain
-        readibility of the final textfile.
+def _copy_spatial_files(spatial_filepath, target_dir):
+    """Copy spatial files to a new directory.
 
     Args:
-        filepath (string): The filepath to analyze.
-        data_dir (string): The path to the data directory.
-        folder_prefix (string): A descriptive prefix for the folder name, 
-            derived from the nested key for which ``filepath`` is a value,
-            e.g. ``dem_path``
+        spatial_filepath (str): The filepath to a GDAL-supported file.
+        target_dir (str): The directory where all component files of
+            ``spatial_filepath`` should be copied.
 
     Returns:
-        ``None`` If the file is not a spatial file, or the ``path`` to the new
-        resting place of the spatial files.
+        filepath (str): The path to a representative file copied into the
+        ``target_dir``.  If possible, this will match the basename of
+        ``spatial_filepath``, so if someone provides an ESRI Shapefile called
+        ``my_vector.shp``, the return value will be ``os.path.join(target_dir,
+        my_vector.shp)``.
     """
-    # If the user provides a mutli-part file, wrap it into a folder and grab
-    # that instead of the individual file.
+    LOGGER.info(f'Copying {spatial_filepath} --> {target_dir}')
+    if not os.path.exists(target_dir):
+        os.makedirs(target_dir)
 
-    with utils.capture_gdal_logging():
-        raster = gdal.OpenEx(filepath, gdal.OF_RASTER)
-        if raster is not None:
-            # give the folder a descriptive name with a unique
-            # random suffix to avoid name conflicts
-            new_path = tempfile.mkdtemp(
-                prefix=f'{folder_prefix}_raster_', 
-                dir=data_dir)
-            driver = gdal.GetDriverByName('GTiff')
-            LOGGER.info('[%s] Saving new raster to %s',
-                        driver.LongName, new_path)
-            # driver.CreateCopy returns None if there's an error
-            # Common case: driver does not have Create() method implemented
-            # ESRI Arc/Binary Grids are a great example of this.
-            if not driver.CreateCopy(new_path, raster):
-                LOGGER.info('Manually copying raster files to %s', new_path)
-                new_files = []
-                for filename in raster.GetFileList():
-                    if os.path.isdir(filename):
-                        # ESRI Arc/Binary grids include the parent folder in
-                        # the list of all files in the dataset.
-                        continue
+    source_basename = os.path.basename(spatial_filepath)
+    return_filepath = None
 
-                    new_filename = os.path.join(
-                        new_path, os.path.basename(filename))
-                    shutil.copyfile(filename, new_filename)
-                    new_files.append(new_filename)
+    spatial_file = gdal.OpenEx(spatial_filepath)
+    for member_file in spatial_file.GetFileList():
+        # ArcGIS Binary/Grid format includes the directory in the file listing.
+        # The parent directory isn't strictly needed, so we can just skip it.
+        if os.path.isdir(member_file):
+            continue
 
-                # Pass the first file in the file list
-                new_path = sorted(new_files)[0]
+        target_basename = os.path.basename(member_file)
+        target_filepath = os.path.join(target_dir, target_basename)
+        if source_basename == target_basename:
+            return_filepath = target_filepath
+        shutil.copyfile(member_file, target_filepath)
+    spatial_file = None
 
-            driver = None
-            raster = None
-            return new_path
+    # I can't conceive of a case where the basename of the source file does not
+    # match any of the member file basenames, but just in case there's a
+    # weird GDAL driver that does this, it seems reasonable to fall back to
+    # whichever of the member files was most recent.
+    if not return_filepath:
+        return_filepath = target_filepath
 
-        vector = gdal.OpenEx(filepath, gdal.OF_VECTOR)
-        if vector is not None:
-            # OGR also reads CSVs; verify this IS actually a vector
-            if vector.GetDriver().ShortName == 'CSV':
-                vector = None
-                return None
-
-            new_path = tempfile.mkdtemp(
-                prefix=f'{folder_prefix}_vector_', 
-                dir=data_dir)
-            driver = gdal.GetDriverByName('ESRI Shapefile')
-            LOGGER.info('[%s] Saving new vector to %s',
-                        driver.ShortName, new_path)
-            new_vector = driver.CreateCopy(new_path, vector)
-
-            # This is needed for copying GeoJSON files, and presumably other
-            # formats as well.
-            if not new_vector:
-                new_path = os.path.join(new_path,
-                                        os.path.basename(filepath))
-                new_vector = driver.CreateCopy(new_path, vector)
-            new_vector.FlushCache()
-            driver = None
-            vector = None
-            return new_path
-    return None
-
-
-def _collect_filepath(path, data_dir, folder_prefix):
-    """Collect files on disk into the data directory of an archive.
-
-    Args:
-        path (string): The path to examine.  Must exist on disk.
-        data_dir (string): The path to the data directory, where any data
-            files will be stored.
-        folder_prefix (string): A descriptive prefix for the folder name, 
-            derived from the nested key for which ``filepath`` is a value,
-            e.g. ``dem_path``
-
-    Returns:
-        The path to the new filename within ``data_dir``.
-    """
-    # initialize the return_path
-    multi_part_folder = _collect_spatial_files(path, data_dir, folder_prefix)
-    if multi_part_folder is not None:
-        return multi_part_folder
-
-    elif os.path.isfile(path):
-        new_filename = os.path.join(data_dir,
-                                    os.path.basename(path))
-        shutil.copyfile(path, new_filename)
-        return new_filename
-
-    elif os.path.isdir(path):
-        # path is a folder, so we want to copy the folder and all
-        # its contents to the data dir.
-        new_foldername = tempfile.mkdtemp(
-            prefix=f'{folder_prefix}_data_',
-            dir=data_dir)
-        for filename in os.listdir(path):
-            src_path = os.path.join(path, filename)
-            dest_path = os.path.join(new_foldername, filename)
-            if os.path.isdir(src_path):
-                shutil.copytree(src_path, dest_path)
-            else:
-                shutil.copyfile(src_path, dest_path)
-        return new_foldername
-
-
-class _ArgsKeyFilter(logging.Filter):
-    """A python logging filter for adding an args_key attribute to records."""
-
-    def __init__(self, args_key):
-        """Initialize the filter.
-
-        Args:
-            args_key (string): The args key to be added to all records.
-
-        Returns:
-            ``None``
-        """
-        logging.Filter.__init__(self)
-        self.args_key = args_key
-
-    def filter(self, record):
-        """Filter a logging record.
-
-        Adds the ``args_key`` attribute to the record from the ``args_key``
-        that this filter was initialized with.
-
-        Args:
-            record (logging.Record): The log record.
-
-        Returns:
-            ``True``.  All log records will be passed through once modified.
-        """
-        record.args_key = self.args_key
-        return True
+    return return_filepath
 
 
 def format_args_dict(args_dict, model_name):
@@ -248,8 +129,8 @@ def format_args_dict(args_dict, model_name):
 
     args_string = '\n'.join([format_str % (arg) for arg in sorted_args])
     args_string = "Arguments for InVEST %s %s:\n%s\n" % (model_name,
-                                                          __version__,
-                                                          args_string)
+                                                         __version__,
+                                                         args_string)
     return args_string
 
 
@@ -311,84 +192,224 @@ def build_datastack_archive(args, model_name, datastack_path):
     Returns:
         ``None``
     """
+    module = importlib.import_module(name=model_name)
+
+    # Allow the model to override the common datastack function.  This is
+    # useful for tables (like HRA) that are too complicated to describe in the
+    # ARGS_SPEC format.
+    if hasattr(module, 'build_datastack_archive'):
+        return module.build_datastack_archive(args, datastack_path)
+
     args = args.copy()
     temp_workspace = tempfile.mkdtemp(prefix='datastack_')
-    logfile = os.path.join(temp_workspace, 'log')
     data_dir = os.path.join(temp_workspace, 'data')
     os.makedirs(data_dir)
 
-    # For tracking existing files so we don't copy things twice
+    # write a logfile to the archive
+    logfile = os.path.join(temp_workspace, 'log.txt')
+    archive_filehandler = logging.FileHandler(logfile, 'w')
+    archive_formatter = logging.Formatter(
+        "%(name)-25s %(levelname)-8s %(message)s")
+    archive_filehandler.setFormatter(archive_formatter)
+    archive_filehandler.setLevel(logging.NOTSET)
+    logging.getLogger().addHandler(archive_filehandler)
+
+    # For tracking existing files so we don't copy files in twice
     files_found = {}
-    LOGGER.debug('Keys: %s', sorted(args.keys()))
+    LOGGER.debug(f'Keys: {sorted(args.keys())}')
+    args_spec = module.ARGS_SPEC['args']
 
-    def _recurse(args_param, handler, nested_key=None):
-        if isinstance(args_param, dict):
-            new_dict = {}
-            for args_key, args_value in args_param.items():
-                # log the key via a filter installed to the handler.
-                if nested_key:
-                    args_key_label = "%s['%s']" % (nested_key, args_key)
+    spatial_types = {'raster', 'vector'}
+    file_based_types = spatial_types.union({'csv', 'file', 'directory'})
+    rewritten_args = {}
+    for key in args:
+        # We don't want to accidentally archive a user's complete workspace
+        # directory, complete with prior runs there.
+        if key == 'workspace_dir':
+            LOGGER.debug(
+                f"Skipping workspace directory: {args['workspace_dir']}")
+            continue
+
+        LOGGER.info(f'Starting to archive arg "{key}": {args[key]}')
+        # Possible that a user might pass an args key that doesn't belong to
+        # this model.  Skip if so.
+        if key not in args_spec:
+            LOGGER.info(f'Skipping arg {key}; not in model ARGS_SPEC')
+
+        input_type = args_spec[key]['type']
+        if input_type in file_based_types:
+            if args[key] in {None, ''}:
+                LOGGER.info(
+                    f'Skipping key {key}, value is empty and cannot point to '
+                    'a file.')
+                rewritten_args[key] = ''
+                continue
+
+            # Python can't handle mixed file separators, so let's just
+            # standardize on linux filepaths.
+            source_path = args[key].replace('\\', '/')
+
+            # If we already know about the parameter, then we can just reuse it
+            # and skip the file copying.
+            if source_path in files_found:
+                LOGGER.debug(
+                    f'Key {key} is known: using {files_found[source_path]}')
+                rewritten_args[key] = files_found[source_path]
+                continue
+
+        if input_type == 'csv':
+            # check the CSV for columns that may be spatial.
+            # But also, the columns specification might not be listed, so don't
+            # require that 'columns' exists in the ARGS_SPEC.
+            spatial_columns = []
+            if 'columns' in args_spec[key]:
+                for col_name, col_definition in (
+                        args_spec[key]['columns'].items()):
+                    # Type attribute may be a string (one type) or set
+                    # (multiple types allowed), so always convert to a set for
+                    # easier comparison.
+                    col_types = col_definition['type']
+                    if isinstance(col_types, str):
+                        col_types = set([col_types])
+                    if col_types.intersection(spatial_types):
+                        spatial_columns.append(col_name)
+            LOGGER.debug(f'Detected spatial columns: {spatial_columns}')
+
+            target_csv_path = os.path.join(
+                data_dir, f'{key}_csv.csv')
+            if not spatial_columns:
+                LOGGER.debug(
+                    f'No spatial columns, copying to {target_csv_path}')
+                shutil.copyfile(source_path, target_csv_path)
+            else:
+                contained_files_dir = os.path.join(
+                    data_dir, f'{key}_csv_data')
+
+                dataframe = utils.read_csv_to_dataframe(
+                    source_path, to_lower=True)
+                csv_source_dir = os.path.abspath(os.path.dirname(source_path))
+                for spatial_column_name in spatial_columns:
+                    # Iterate through the spatial columns, identify the set of
+                    # unique files and copy them out.
+                    # if a string is not a filepath, assume it's supposed to be
+                    # there and skip it
+                    for row_index, column_value in dataframe[
+                            spatial_column_name.lower()].items():
+                        if ((isinstance(column_value, float) and
+                                math.isnan(column_value)) or
+                                column_value == ''):
+                            # The table cell is blank, so skip it.
+                            # We can't compare nan values directly in a way
+                            # that also works for strings, so skip it.
+                            continue
+
+                        source_filepath = None
+                        for possible_filepath in (
+                                column_value,
+                                os.path.join(csv_source_dir, column_value)):
+                            if os.path.exists(possible_filepath):
+                                source_filepath = possible_filepath
+                                break
+
+                        # If we didn't end up finding a valid source filepath
+                        # for the field value, assume it's supposed to be that
+                        # way and leave it alone.
+                        if not source_filepath:
+                            continue
+
+                        try:
+                            # This path is already relative to the data
+                            # directory
+                            target_filepath = files_found[source_filepath]
+                        except KeyError:
+                            basename = os.path.splitext(
+                                os.path.basename(source_filepath))[0]
+                            target_dir = os.path.join(
+                                contained_files_dir,
+                                f'{row_index}_{basename}')
+                            target_filepath = _copy_spatial_files(
+                                source_filepath, target_dir)
+                            target_filepath = os.path.relpath(
+                                target_filepath, data_dir)
+
+                        LOGGER.debug(
+                            'Spatial file in CSV copied from '
+                            f'{source_filepath} --> {target_filepath}')
+                        dataframe.at[
+                            row_index, spatial_column_name] = target_filepath
+                        files_found[source_filepath] = target_filepath
+
+                LOGGER.debug(
+                    f'Rewritten spatial CSV written to {target_csv_path}')
+                dataframe.to_csv(target_csv_path)
+
+            target_arg_value = target_csv_path
+            files_found[source_path] = target_arg_value
+
+        elif input_type == 'file':
+            target_filepath = os.path.join(
+                data_dir, f'{key}_file')
+            shutil.copyfile(source_path, target_filepath)
+            LOGGER.debug(
+                f'File copied from {source_path} --> {target_filepath}')
+            target_arg_value = target_filepath
+            files_found[source_path] = target_arg_value
+
+        elif input_type == 'directory':
+            # copy the whole folder
+            target_directory = os.path.join(data_dir, f'{key}_directory')
+            os.makedirs(target_directory)
+
+            # We want to copy the directory contents into the directory
+            # directly, not copy the parent folder into the directory.
+            for filename in os.listdir(source_path):
+                src_path = os.path.join(source_path, filename)
+                dest_path = os.path.join(target_directory, filename)
+                if os.path.isdir(src_path):
+                    shutil.copytree(src_path, dest_path)
                 else:
-                    args_key_label = "args['%s']" % args_key
+                    shutil.copyfile(src_path, dest_path)
 
-                args_key_filter = _ArgsKeyFilter(args_key_label)
-                handler.addFilter(args_key_filter)
-                if args_key not in ('workspace_dir',):
-                    new_dict[args_key] = _recurse(args_value, handler,
-                                                  nested_key=args_key_label)
-                handler.removeFilter(args_key_filter)
-            return new_dict
-        elif isinstance(args_param, str):
-            # If the parameter string is blank, return an empty string.
-            if args_param.strip() == '':
-                return ''
+            LOGGER.debug(
+                f'Directory copied from {source_path} --> {target_directory}')
+            target_arg_value = target_directory
+            files_found[source_path] = target_arg_value
 
-            # It's a string and exists on disk, it's a file!
-            possible_path = os.path.normpath(args_param.replace('\\', os.sep))
-            if os.path.exists(possible_path):
-                try:
-                    filepath = files_found[possible_path]
-                    LOGGER.debug(('Parameter known from a previous '
-                                  'entry: %s, using %s'),
-                                 possible_path, filepath)
-                    return filepath
-                except KeyError:
-                    # turn the nested key into a nice name for a folder
-                    # e.g. args['category']['data_path'] --> category_data_path
-                    folder_prefix = nested_key[6 : -2].replace('\'][\'', '_')
-                    found_filepath = _collect_filepath(possible_path,
-                                                       data_dir,
-                                                       folder_prefix)
+        elif input_type in spatial_types:
+            # Create a directory with a readable name, something like
+            # "aoi_path_vector" or "lulc_cur_path_raster".
+            spatial_dir = os.path.join(data_dir, f'{key}_{input_type}')
+            target_arg_value = _copy_spatial_files(
+                source_path, spatial_dir)
+            files_found[source_path] = target_arg_value
 
-                    # Store only linux-style filepaths.
-                    relative_filepath = os.path.relpath(
-                        found_filepath, temp_workspace).replace('\\', '/')
-                    files_found[possible_path] = relative_filepath
-                    LOGGER.debug('Processed path %s to %s',
-                                 args_param, relative_filepath)
-                    return relative_filepath
-        # It's not a file or a structure to recurse through, so
-        # just return the item verbatim.
-        LOGGER.info('Using verbatim value: %s', args_param)
-        return args_param
+        elif input_type == 'other':
+            # Note that no models currently use this to the best of my
+            # knowledge, so better to raise a NotImplementedError
+            raise NotImplementedError(
+                'The "other" ARGS_SPEC input type is not supported')
+        else:
+            LOGGER.debug(
+                f"Type {input_type} is not filesystem-based; "
+                "recording value directly")
+            # not a filesystem-based type
+            # Record the value directly
+            target_arg_value = args[key]
+        rewritten_args[key] = target_arg_value
 
-    log_format = "%(args_key)-25s %(name)-25s %(levelname)-8s %(message)s"
-    with utils.log_to_file(logfile, log_fmt=log_format) as handler:
-        new_args = {
-            'args': _recurse(args, handler),
-            'model_name': model_name,
-            'invest_version': __version__
-        }
+    LOGGER.info('Args preprocessing complete')
 
-    LOGGER.debug('found files: \n%s', pprint.pformat(files_found))
-    LOGGER.debug('new arguments: \n%s', pprint.pformat(new_args))
+    LOGGER.debug(f'found files: \n{pprint.pformat(files_found)}')
+    LOGGER.debug(f'new arguments: \n{pprint.pformat(rewritten_args)}')
     # write parameters to a new json file in the temp workspace
     param_file_uri = os.path.join(temp_workspace,
                                   'parameters' + PARAMETER_SET_EXTENSION)
-    with codecs.open(param_file_uri, 'w', encoding='UTF-8') as params:
-        params.write(json.dumps(new_args,
-                                indent=4,
-                                sort_keys=True))
+    build_parameter_set(
+        rewritten_args, model_name, param_file_uri, relative=True)
+
+    # Remove the handler before archiving the working dir (and the logfile)
+    archive_filehandler.close()
+    logging.getLogger().removeHandler(archive_filehandler)
 
     # archive the workspace.
     with utils.sandbox_tempdir() as temp_dir:
@@ -413,6 +434,7 @@ def extract_datastack_archive(datastack_path, dest_dir_path):
             archive.  Paths to files are absolute paths.
     """
     LOGGER.info('Extracting archive %s to %s', datastack_path, dest_dir_path)
+    dest_dir_path = os.path.abspath(dest_dir_path)
     # extract the archive to the workspace
     with tarfile.open(datastack_path) as tar:
         tar.extractall(dest_dir_path)
