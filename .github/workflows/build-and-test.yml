@@ -191,7 +191,7 @@ jobs:
 
             - name: Install dependencies
               run: |
-                  conda install ${{ env.DEFAULT_DEPENDENCIES }} twine
+                  conda install ${{ env.DEFAULT_DEPENDENCIES }} twine gdal
 
             - name: Build source distribution
               run: |
@@ -276,7 +276,7 @@ jobs:
               run: |
                   # pytest: dependency of make validate_sampledata
                   # setuptools_scm: dependency of make install
-                  conda install ${{ env.DEFAULT_DEPENDENCIES }} pytest setuptools_scm
+                  conda install ${{ env.DEFAULT_DEPENDENCIES }} pytest setuptools_scm gdal
                   make install
 
             - name: Validate sample data
@@ -326,7 +326,7 @@ jobs:
 
             - name: Install dependencies
               run: |
-                  conda install ${{ env.DEFAULT_DEPENDENCIES }} pytest
+                  conda install ${{ env.DEFAULT_DEPENDENCIES }} pytest gdal
                   python -m pip install .[ui]
 
             - name: Run UI tests

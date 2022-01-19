@@ -67,7 +67,7 @@ jobs:
 
             - name: Install python dependencies
               run: |
-                  conda install ${{ env.DEFAULT_DEPENDENCIES }}
+                  conda install ${{ env.DEFAULT_DEPENDENCIES }} gdal
                   make install
 
             - name: Install build dependencies
@@ -171,7 +171,7 @@ jobs:
 
             - name: Build conda env with python dependencies
               run: |
-                  conda install ${{ env.DEFAULT_DEPENDENCIES }}
+                  conda install ${{ env.DEFAULT_DEPENDENCIES }} gdal
                   make install
 
             - name: Build binaries
