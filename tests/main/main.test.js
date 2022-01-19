@@ -1,6 +1,10 @@
-/* Tests for main process code and integration tests for front-end
-features that depend on a BrowserWindow instance, since that is
-instantiated by main.
+/**
+ * @jest-environment node
+ */
+
+/* Tests for main process code running in a node env.
+ * Tests requiring a DOM do not belong here, they are
+ * in tests/renderer/*.test.js.
 */
 
 import fs from 'fs';
@@ -8,12 +12,7 @@ import os from 'os';
 import path from 'path';
 import { execFileSync } from 'child_process';
 
-import { app, ipcMain, ipcRenderer } from 'electron';
-import React from 'react';
-import {
-  fireEvent, render, waitFor,
-} from '@testing-library/react';
-import '@testing-library/jest-dom';
+import { app, ipcMain } from 'electron';
 import yazl from 'yazl';
 import rimraf from 'rimraf';
 import fetch from 'node-fetch';
@@ -35,25 +34,26 @@ import findInvestBinaries from '../../src/main/findInvestBinaries';
 import extractZipInplace from '../../src/main/extractZipInplace';
 import { ipcMainChannels } from '../../src/main/ipcMainChannels';
 import investUsageLogger from '../../src/main/investUsageLogger';
-import { getInvestModelNames } from '../../src/renderer/server_requests';
-import App from '../../src/renderer/app';
-import {
-  clearSettingsStore,
-  getSettingsValue,
-} from '../../src/renderer/components/SettingsModal/SettingsStorage';
 
 jest.mock('node-fetch');
 jest.mock('child_process');
-execFileSync.mockReturnValue('foo');
 jest.mock('../../src/main/createPythonFlaskProcess');
-createPythonFlaskProcess.mockImplementation(() => {});
-jest.mock('../../src/renderer/server_requests');
-getFlaskIsReady.mockResolvedValue(true);
 
-// These vars are only defined in an electron environment and our
-// app expects them to be defined.
-process.defaultApp = 'test'; // imitates dev mode
-process.resourcesPath = 'path/to/electron/package';
+beforeAll(() => {
+  execFileSync.mockReturnValue('foo');
+  createPythonFlaskProcess.mockImplementation(() => {});
+  getFlaskIsReady.mockResolvedValue(true);
+  // These vars are only defined in an electron environment and our
+  // app expects them to be defined.
+  process.defaultApp = 'test'; // imitates dev mode
+  process.resourcesPath = 'path/to/electron/package';
+});
+
+afterAll(() => {
+  createPythonFlaskProcess.mockReset();
+  getFlaskIsReady.mockReset();
+  execFileSync.mockReset();
+});
 
 describe('checkFirstRun', () => {
   const tokenPath = path.join(app.getPath(), APP_HAS_RUN_TOKEN);
@@ -115,7 +115,7 @@ describe('extractZipInplace', () => {
   let file2Path;
   let doneZipping = false;
 
-  beforeEach(() => {
+  beforeEach((done) => {
     level1Dir = fs.mkdtempSync(path.join(root, 'level1'));
     level2Dir = fs.mkdtempSync(path.join(level1Dir, 'level2'));
     file1Path = path.join(level1Dir, 'file1');
@@ -133,9 +133,14 @@ describe('extractZipInplace', () => {
     ).on('close', () => {
       // being extra careful with recursive rm
       if (level1Dir.startsWith(path.join(root, 'level1'))) {
-        rimraf(level1Dir, (error) => { if (error) { throw error; } });
+        rimraf(level1Dir, (error) => {
+          if (error) {
+            throw error;
+          }
+          doneZipping = true;
+          done();
+        });
       }
-      doneZipping = true;
     });
     zipfile.end();
   });
@@ -145,31 +150,30 @@ describe('extractZipInplace', () => {
   });
 
   it('should extract recursively', async () => {
-    await waitFor(() => {
-      expect(doneZipping).toBe(true);
-      // The expected state after the setup, before extraction
-      expect(fs.existsSync(zipPath)).toBe(true);
-      expect(fs.existsSync(file1Path)).toBe(false);
-      expect(fs.existsSync(file2Path)).toBe(false);
-    });
+    expect(doneZipping).toBe(true);
+    // The expected state after the setup, before extraction
+    expect(fs.existsSync(zipPath)).toBe(true);
+    expect(fs.existsSync(file1Path)).toBe(false);
+    expect(fs.existsSync(file2Path)).toBe(false);
+    // });
 
     expect(await extractZipInplace(zipPath)).toBe(true);
 
     // And the expected state after extraction
-    await waitFor(() => {
-      expect(fs.existsSync(file1Path)).toBe(true);
-      expect(fs.existsSync(file2Path)).toBe(true);
-    });
+    expect(fs.existsSync(file1Path)).toBe(true);
+    expect(fs.existsSync(file2Path)).toBe(true);
   });
 });
 
 describe('createWindow', () => {
   beforeEach(async () => {
-    jest.clearAllMocks();
+    await createWindow();
   });
+
   afterEach(() => {
-    jest.clearAllMocks();
+    destroyWindow();
   });
+
   it('should register various ipcMain listeners', async () => {
     const expectedHandleChannels = [
       ipcMainChannels.SHOW_OPEN_DIALOG,
@@ -184,103 +188,19 @@ describe('createWindow', () => {
       ipcMainChannels.INVEST_READ_LOG,
       ipcMainChannels.SHOW_ITEM_IN_FOLDER,
     ];
-    createWindow();
-    await waitFor(() => {
-      // Even with mocking, the 'on' method is a real event handler,
-      // so we can get it's registered events from the EventEmitter.
-      const registeredOnChannels = ipcMain.eventNames();
-      // for 'handle', we query the mock's calls.
-      const registeredHandleChannels = ipcMain.handle.mock.calls.map(
-        (item) => item[0]
-      );
-      expect(registeredHandleChannels.sort())
-        .toEqual(expectedHandleChannels.sort());
-      expect(registeredOnChannels.sort())
-        .toEqual(expectedOnChannels.sort());
-    });
+    // Even with mocking, the 'on' method is a real event handler,
+    // so we can get it's registered events from the EventEmitter.
+    const registeredOnChannels = ipcMain.eventNames();
+    // for 'handle', we query the mock's calls.
+    const registeredHandleChannels = ipcMain.handle.mock.calls.map(
+      (item) => item[0]
+    );
+    expect(registeredHandleChannels.sort())
+      .toEqual(expectedHandleChannels.sort());
+    expect(registeredOnChannels.sort())
+      .toEqual(expectedOnChannels.sort());
     removeIpcMainListeners();
-    await waitFor(() => {
-      expect(ipcMain.eventNames()).toEqual([]);
-    });
-  });
-});
-
-describe('Integration tests for Download Sample Data Modal', () => {
-  beforeAll(async () => {
-    await createWindow();
-  });
-  beforeEach(async () => {
-    getInvestModelNames.mockResolvedValue({});
-  });
-  afterAll(() => {
-    destroyWindow();
-  });
-  afterEach(async () => {
-    await clearSettingsStore();
-    jest.resetAllMocks();
-  });
-
-  test('Modal does not display when app has been run before', async () => {
-    const { queryByText } = render(<App />);
-    const modalTitle = await queryByText('Download InVEST sample data');
-    expect(modalTitle).toBeNull();
-  });
-
-  test('Modal displays immediately on user`s first run', async () => {
-    const {
-      findByText,
-      getByText,
-    } = render(<App isFirstRun />);
-
-    const modalTitle = await findByText('Download InVEST sample data');
-    expect(modalTitle).toBeInTheDocument();
-    fireEvent.click(getByText('Cancel'));
-    await waitFor(() => {
-      expect(modalTitle).not.toBeInTheDocument();
-    });
-  });
-
-  test('Download starts, updates progress, & stores location', async () => {
-    const dialogData = {
-      filePaths: ['foo/directory'],
-    };
-    ipcRenderer.invoke.mockResolvedValue(dialogData);
-
-    const {
-      findByRole,
-      findAllByRole,
-    } = render(<App isFirstRun />);
-
-    const allCheckBoxes = await findAllByRole('checkbox');
-    const downloadButton = await findByRole('button', { name: 'Download' });
-    fireEvent.click(downloadButton);
-    const nURLs = allCheckBoxes.length - 1; // all except Select All
-    await waitFor(async () => {
-      expect(await getSettingsValue('sampleDataDir'))
-        .toBe(dialogData.filePaths[0]);
-    });
-    const progressBar = await findByRole('progressbar');
-    expect(progressBar).toHaveTextContent(`Downloading 1 of ${nURLs}`);
-    // We don't have mocks that take us all the way through to a complete
-    // download, when the progress bar would become a 'Download Complete' alert
-  });
-
-  test('Cancel does not store a sampleDataDir value', async () => {
-    const spy = jest.spyOn(ipcRenderer, 'send');
-
-    const { findByRole } = render(<App isFirstRun />);
-
-    const existingValue = await getSettingsValue('sampleDataDir');
-    const cancelButton = await findByRole('button', { name: 'Cancel' });
-    fireEvent.click(cancelButton);
-
-    await waitFor(() => {
-      expect(spy).toHaveBeenCalledTimes(0);
-    });
-    await waitFor(async () => {
-      const value = await getSettingsValue('sampleDataDir');
-      expect(value).toBe(existingValue);
-    });
+    expect(ipcMain.eventNames()).toEqual([]);
   });
 });
 

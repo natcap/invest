@@ -123,6 +123,7 @@ export const createWindow = async () => {
   setupInvestLogReaderHandler();
   setupContextMenu(mainWindow);
   setupGetNCPUs();
+  return Promise.resolve(); // lets tests await createWindow(), then assert
 };
 
 export function removeIpcMainListeners() {

@@ -3,17 +3,56 @@ import {
   fireEvent, render, waitFor
 } from '@testing-library/react';
 import '@testing-library/jest-dom';
+import { ipcRenderer, BrowserWindow } from 'electron';
 
 import {
   DataDownloadModal,
   DownloadProgressBar
 } from '../../src/renderer/components/DataDownloadModal';
 import sampledata_registry from '../../src/renderer/sampledata_registry.json';
+import { getInvestModelNames } from '../../src/renderer/server_requests';
+import App from '../../src/renderer/app';
+import {
+  clearSettingsStore,
+  getSettingsValue,
+} from '../../src/renderer/components/SettingsModal/SettingsStorage';
+import setupDownloadHandlers from '../../src/main/setupDownloadHandlers';
+import { removeIpcMainListeners } from '../../src/main/main';
+
+jest.mock('../../src/renderer/server_requests');
 
 const nModels = Object.keys(sampledata_registry).length;
 const modelName = Object.keys(sampledata_registry)[0];
 
 describe('Sample Data Download Form', () => {
+  beforeEach(() => {
+    getInvestModelNames.mockResolvedValue({});
+  });
+
+  afterEach(() => {
+    getInvestModelNames.mockReset();
+  });
+
+  test('Modal displays immediately on user`s first run', async () => {
+    const {
+      findByText,
+      getByText,
+    } = render(<App isFirstRun />);
+
+    const modalTitle = await findByText('Download InVEST sample data');
+    expect(modalTitle).toBeInTheDocument();
+    fireEvent.click(getByText('Cancel'));
+    await waitFor(() => {
+      expect(modalTitle).not.toBeInTheDocument();
+    });
+  });
+
+  test('Modal does not display when app has been run before', async () => {
+    const { queryByText } = render(<App isFirstRun={false} />);
+    const modalTitle = await queryByText('Download InVEST sample data');
+    expect(modalTitle).toBeNull();
+  });
+
   test('Checkbox initial state & interactions', () => {
     const {
       getByLabelText,
@@ -84,6 +123,24 @@ describe('Sample Data Download Form', () => {
       expect(modelCheckbox).toBeChecked();
     });
   });
+
+  test('Cancel does not store a sampleDataDir value', async () => {
+    const spy = jest.spyOn(ipcRenderer, 'send');
+
+    const { findByRole } = render(<App isFirstRun />);
+
+    const existingValue = await getSettingsValue('sampleDataDir');
+    const cancelButton = await findByRole('button', { name: 'Cancel' });
+    fireEvent.click(cancelButton);
+
+    await waitFor(() => {
+      expect(spy).toHaveBeenCalledTimes(0);
+    });
+    await waitFor(async () => {
+      const value = await getSettingsValue('sampleDataDir');
+      expect(value).toBe(existingValue);
+    });
+  });
 });
 
 describe('DownloadProgressBar', () => {
@@ -113,5 +170,44 @@ describe('DownloadProgressBar', () => {
     await waitFor(() => {
       expect(alert).not.toBeInTheDocument();
     });
+  });
+});
+
+describe('Integration tests with main process', () => {
+  const dialogData = {
+    filePaths: ['foo/directory'],
+  };
+
+  beforeEach(async () => {
+    setupDownloadHandlers(new BrowserWindow());
+    getInvestModelNames.mockResolvedValue({});
+    ipcRenderer.invoke.mockResolvedValue(dialogData);
+  });
+
+  afterEach(async () => {
+    removeIpcMainListeners();
+    await clearSettingsStore();
+    ipcRenderer.invoke.mockReset();
+    getInvestModelNames.mockReset();
+  });
+
+  test('Download starts, updates progress, & stores location', async () => {
+    const {
+      findByRole,
+      findAllByRole,
+    } = render(<App isFirstRun />);
+
+    const allCheckBoxes = await findAllByRole('checkbox');
+    const downloadButton = await findByRole('button', { name: 'Download' });
+    fireEvent.click(downloadButton);
+    const nURLs = allCheckBoxes.length - 1; // all except Select All
+    await waitFor(async () => {
+      expect(await getSettingsValue('sampleDataDir'))
+        .toBe(dialogData.filePaths[0]);
+    });
+    const progressBar = await findByRole('progressbar');
+    expect(progressBar).toHaveTextContent(`Downloading 1 of ${nURLs}`);
+    // We don't have mocks that take us all the way through to a complete
+    // download, when the progress bar would become a 'Download Complete' alert
   });
 });
