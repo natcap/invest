@@ -99,8 +99,9 @@ jobs:
             - name: Install dependencies
               run: |
                   # twine: used to check whether the long description will render correctly on PyPI
+                  # pytest: dependency of make test
                   # numpy, gdal: install specific versions so we test with the full range of versions
-                  conda install ${{ env.DEFAULT_DEPENDENCIES }} twine ${{ matrix.numpy }} ${{ matrix.gdal }}
+                  conda install ${{ env.DEFAULT_DEPENDENCIES }} twine pytest ${{ matrix.numpy }} ${{ matrix.gdal }}
 
             - name: Build and install wheel
               run: |
@@ -276,7 +277,7 @@ jobs:
               run: |
                   # pytest: dependency of make validate_sampledata
                   # setuptools_scm: dependency of make install
-                  conda install ${{ env.DEFAULT_DEPENDENCIES }} pytest setuptools_scm gdal
+                  conda install ${{ env.DEFAULT_DEPENDENCIES }} pytest setuptools setuptools_scm gdal
                   make install
 
             - name: Validate sample data
