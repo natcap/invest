@@ -1,7 +1,7 @@
 """Habitat risk assessment (HRA) model for InVEST."""
 # -*- coding: UTF-8 -*-
-import logging
 import json
+import logging
 import math
 import os
 import pickle
@@ -14,9 +14,14 @@ import pygeoprocessing
 import shapely.ops
 import shapely.wkb
 import taskgraph
-from osgeo import gdal, ogr, osr
+from osgeo import gdal
+from osgeo import ogr
+from osgeo import osr
 
-from . import MODEL_METADATA, spec_utils, utils, validation
+from . import MODEL_METADATA
+from . import spec_utils
+from . import utils
+from . import validation
 from .spec_utils import u
 
 LOGGER = logging.getLogger('natcap.invest.hra')
@@ -781,11 +786,23 @@ def execute(args):
             dependent_task_list=total_risk_dependent_tasks)
         ecosystem_risk_dependent_tasks.append(calc_risk_task)
 
+        max_habitat_risk_path = os.path.join(
+            intermediate_dir, f'MAX_RISK_TO_{habitat}{file_suffix}.tif')
+        max_stressor_pair_task = task_graph.add_task(
+            func=pygeoprocessing.raster_calculator,
+            args=(total_risk_path_band_list, _max_risk_op,
+                  max_habitat_risk_path, _TARGET_PIXEL_FLT,
+                  _TARGET_NODATA_FLT),
+            target_path_list=[max_habitat_risk_path],
+            task_name=f'calculate_riskiest_stressor_to_{habitat}',
+            dependent_task_list=total_risk_dependent_tasks)
+
         # Reclassify the risk score into three categories by dividing the total
         task_graph.add_task(
             func=_reclassify_risk,
             kwargs={
                 'cumulative_risk_raster': total_habitat_risk_path,
+                'maximum_habitat_risk_raster': max_habitat_risk_path,
                 'rating_type': '',
                 'max_rating': max_rating,
                 'max_n_overlapping_stressors_path': max_n_stressors_file,
@@ -794,7 +811,7 @@ def execute(args):
             target_path_list=[reclass_habitat_risk_path],
             task_name=f'reclassify_{habitat}_risk',
             dependent_task_list=[
-                calc_risk_task, count_stressors_task]
+                calc_risk_task, count_stressors_task, max_stressor_pair_task]
         )
 
     # Calculate ecosystem risk scores. This task depends on every task above,
@@ -1595,6 +1612,28 @@ def _count_habitats_op(*habitat_arrays):
     return habitat_count_arr
 
 
+def _max_risk_op(habitat_arr, *risk_arrays):
+    # Habitat_arr is a boolean 0/1
+    # All risk arrays represent float32 risk
+    # All arraays use float32 nodata.
+    # Returns a float32 array
+    habitat_mask = (habitat_arr == 1)
+    max_risk_array = numpy.full(
+        habitat_arr.shape, _TARGET_NODATA_FLT, dtype=numpy.float32)
+    max_risk_array[habitat_mask] = 0  # initialize the habitat pixels
+
+    for risk_array in risk_arrays:
+        # TODO: is the "& habitat_mask" needed?  We don't use it in the total
+        # risk summation.
+        valid_pixel_mask = ~utils.array_equals_nodata(
+            risk_array, _TARGET_NODATA_FLT) & habitat_mask
+        max_risk_array[valid_pixel_mask] = numpy.maximum(
+            max_risk_array[valid_pixel_mask],
+            risk_array[valid_pixel_mask])
+
+    return max_risk_array
+
+
 def _count_maximum_number_of_stressors(
         stressor_raster_paths, target_json_path):
     # stressor_raster_paths must be aligned, must be ints 1/(0 or nodata)
@@ -1629,24 +1668,27 @@ def _write_stressors_count_file(
 
 
 def _reclassify_risk(
-        cumulative_risk_raster, rating_type, max_rating,
-        max_n_overlapping_stressors_path, target_raster_path):
+        cumulative_risk_raster, maximum_habitat_risk_raster, rating_type,
+        max_rating, max_n_overlapping_stressors_path, target_raster_path):
     with open(max_n_overlapping_stressors_path) as json_file:
         max_n_overlapping_stressors = json.load(json_file)
 
     if rating_type == 'Multiplicative':
         # The maximum risk from a single stressor is max_rating*max_rating
-        max_possible_score = max_rating ** 2
+        max_risk_per_stressor = max_rating ** 2
     else:
         # The maximum risk score for a habitat from a single stressor is
         # sqrt( (max_rating-1)^2 + (max_rating-1)^2 )
-        max_possible_score = math.sqrt(((max_rating-1)**2) * 2)
+        max_risk_per_stressor = math.sqrt(((max_rating-1)**2) * 2)
 
-    def _reclassify_risk_op(risk_arr):
+    def _reclassify_risk_op(cumulative_risk_arr, maximum_per_pixel_risk_arr):
         reclass_arr = numpy.full(
-            risk_arr.shape, _TARGET_NODATA_INT, dtype=numpy.int8)
-        valid_pixel_mask = ~utils.array_equals_nodata(
-            risk_arr, _TARGET_NODATA_FLT)
+            cumulative_risk_arr.shape, _TARGET_NODATA_INT, dtype=numpy.int8)
+        valid_pixel_mask = (
+            ~utils.array_equals_nodata(
+                cumulative_risk_arr, _TARGET_NODATA_FLT) &
+            ~utils.array_equals_nodata(
+                maximum_per_pixel_risk_arr, _TARGET_NODATA_FLT))
 
         # Determine the risk classification (none/low/medium/high).
         # Risks classifications are:
@@ -1658,29 +1700,33 @@ def _reclassify_risk(
         #  * a percentage of the max possible risk score for the rating type
         #  * a percentage of the maximum cumulative risk score
         #
-        # Step 4.1: Risk is classified based on a percentage of the maximum
-        # possible risk score for the rating type.
+        # Step 4.1: Classify the maximum risk of any habitat-stressor pair.
+        # This way, if a single habitat-stressor interaction is high risk, the
+        # reclassified raster should reflect this.
         classified_maximum_risk_score = numpy.digitize(
-            risk_arr[valid_pixel_mask],
-            [0, max_possible_score*(1/3), max_possible_score*(2/3)],
+            maximum_per_pixel_risk_arr[valid_pixel_mask],
+            [0, max_risk_per_stressor*(1/3), max_risk_per_stressor*(2/3)],
             right=True)
 
-        # Step 4.2: Risk is classified based on the calculated maximum possible
-        # risk for the habitat/stressor combination.
-        max_possible_risk = max_n_overlapping_stressors * max_possible_score
+        # Step 4.2: Classify the cumulative risk into high/medium/low based on
+        # the maximum possible cumulative risk.
+        max_cumulative_risk = (  # This is `user_max_risk` in invest-3 HRA.
+            max_n_overlapping_stressors * max_risk_per_stressor)
         classified_total_possible_risk = numpy.digitize(
-            risk_arr[valid_pixel_mask],
-            [0, max_possible_risk*(1/3), max_possible_risk*(2/3)],
+            cumulative_risk_arr[valid_pixel_mask],
+            [0, max_cumulative_risk*(1/3), max_cumulative_risk*(2/3)],
             right=True)
 
+        # Given the two reclassifications, take the higher risk.
         reclass_arr[valid_pixel_mask] = numpy.maximum(
             classified_maximum_risk_score,
             classified_total_possible_risk)
         return reclass_arr
 
     pygeoprocessing.raster_calculator(
-        [(cumulative_risk_raster, 1)], _reclassify_risk_op, target_raster_path,
-        _TARGET_PIXEL_INT, _TARGET_NODATA_INT)
+        [(cumulative_risk_raster, 1), (maximum_habitat_risk_raster, 1)],
+        _reclassify_risk_op, target_raster_path, _TARGET_PIXEL_INT,
+        _TARGET_NODATA_INT)
 
 
 # TODO: remove this function if it's no longer needed.
