@@ -21,7 +21,10 @@
     "setupFiles": [
       "./tests/jest.overrides.js"
     ],
-    "testEnvironment": "jsdom"
+    "testEnvironment": "jsdom",
+    "clearMocks": true,
+    "resetMocks": true,
+    "restoreMocks": true
   },
   "invest": {
     "bucket": "releases.naturalcapitalproject.org",
