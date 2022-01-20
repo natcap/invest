@@ -78,9 +78,11 @@ Unreleased Changes
             * Removed the field ``sub_p_ld``, since ``sub_load_p.tif`` was removed.
 * Wind Energy
     * Fixed a bug where distance was masking by pixel distance instead of
-      linear distance.
+      euclidean distance.
     * Renamed the foundation cost label and help info to reflect it is no
-      measured in Millions of US dollars.
+      longer measured in Millions of US dollars.
+    * Fixed a bug where running valuation with TaskGraph in asynchronous mode
+      would cause the model to error.
 
 3.10.1 (2022-01-06)
 -------------------

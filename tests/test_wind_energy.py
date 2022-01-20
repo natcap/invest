@@ -680,6 +680,50 @@ class WindEnergyRegressionTests(unittest.TestCase):
             os.path.join(args['workspace_dir'], 'output', vector_path),
             os.path.join(REGRESSION_DATA, 'priceval', vector_path))
 
+    def test_valuation_taskgraph(self):
+        """WindEnergy: testing Valuation with async TaskGraph."""
+        from natcap.invest import wind_energy
+        from natcap.invest.utils import _assert_vectors_equal
+        args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
+        # Also use an already projected bathymetry
+        args['bathymetry_path'] = os.path.join(
+            SAMPLE_DATA, 'resampled_global_dem_projected.tif')
+        args['aoi_vector_path'] = os.path.join(
+            SAMPLE_DATA, 'New_England_US_Aoi.shp')
+        args['land_polygon_vector_path'] = os.path.join(
+            SAMPLE_DATA, 'simple_north_america_polygon.shp')
+        args['min_distance'] = 0
+        args['max_distance'] = 200000
+        args['valuation_container'] = True
+        args['foundation_cost'] = 2000000
+        args['discount_rate'] = 0.07
+        args['price_table'] = True
+        args['wind_schedule'] = os.path.join(
+            SAMPLE_DATA, 'price_table_example.csv')
+        args['wind_price'] = 0.187
+        args['rate_change'] = 0.2
+        args['avg_grid_distance'] = 4
+        args['n_workers'] = 1
+
+        wind_energy.execute(args)
+
+        raster_results = [
+            'carbon_emissions_tons.tif', 'levelized_cost_price_per_kWh.tif',
+            'npv.tif']
+
+        for raster_path in raster_results:
+            print(raster_path)
+            model_array = pygeoprocessing.raster_to_numpy_array(
+                os.path.join(args['workspace_dir'], 'output', raster_path))
+            reg_array = pygeoprocessing.raster_to_numpy_array(
+                os.path.join(REGRESSION_DATA, 'priceval', raster_path))
+            numpy.testing.assert_allclose(model_array, reg_array, rtol=1e-6)
+
+        vector_path = 'wind_energy_points.shp'
+        _assert_vectors_equal(
+            os.path.join(args['workspace_dir'], 'output', vector_path),
+            os.path.join(REGRESSION_DATA, 'priceval', vector_path))
+
     def test_field_error_missing_bio_param(self):
         """WindEnergy: test that ValueError raised when missing bio param."""
         from natcap.invest import wind_energy
