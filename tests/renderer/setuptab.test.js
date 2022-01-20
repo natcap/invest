@@ -43,10 +43,6 @@ describe('Arguments form input types', () => {
   let baseSpec;
   let uiSpec;
 
-  afterEach(() => {
-    jest.resetAllMocks();
-  });
-
   beforeEach(() => {
     baseSpec = {
       args: {
@@ -144,10 +140,6 @@ describe('Arguments form interactions', () => {
   const validationMessage = 'invalid because';
   let spec;
   let uiSpec;
-
-  afterEach(() => {
-    jest.resetAllMocks();
-  });
 
   beforeEach(() => {
     spec = {
@@ -284,10 +276,6 @@ describe('Arguments form interactions', () => {
 describe('UI spec functionality', () => {
   beforeEach(() => {
     fetchValidation.mockResolvedValue([]);
-  });
-
-  afterEach(() => {
-    jest.restoreAllMocks();
   });
 
   test('A UI spec with conditionally enabled args', async () => {
@@ -470,14 +458,6 @@ describe('UI spec functionality', () => {
 });
 
 describe('Misc form validation stuff', () => {
-  beforeEach(() => {
-    fetchValidation.mockReset();
-  });
-
-  afterEach(() => {
-    fetchValidation.mockReset();
-  });
-
   test('Validation payload is well-formatted', async () => {
     const spec = {
       args: {
@@ -565,15 +545,6 @@ describe('Misc form validation stuff', () => {
 });
 
 describe('Form drag-and-drop', () => {
-  beforeEach(() => {
-    fetchValidation.mockReset();
-  });
-
-  afterEach(() => {
-    fetchValidation.mockReset();
-    fetchDatastackFromFile.mockReset();
-  });
-
   test('Dragover of a datastack/logfile updates all inputs', async () => {
     const spec = {
       pyname: `natcap.invest.${MODULE}`,
