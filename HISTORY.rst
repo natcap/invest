@@ -39,6 +39,10 @@ Unreleased Changes
       datasets that were linked to in CSV files.  This now works for all models
       except HRA.  If an HRA datastack archive is requested,
       ``NotImplementedError`` will be raised.  A fix for HRA is pending.
+    * Pinned ``numpy`` versions in ``pyproject.toml`` to the lowest compatible
+      version for each supported python version. This prevents issues when
+      ``natcap.invest`` is used in an environment with a lower numpy version
+      than it was built with (https://github.com/cython/cython/issues/4452).
 * DelineateIt
     * When snapping points to streams, if a point is equally near to more than
       one stream pixel, it will now snap to the stream pixel with a higher
