@@ -1734,7 +1734,7 @@ def _mask_by_distance(base_raster_path, min_dist, max_dist, out_nodata,
     """Create a raster whose pixel values are bound by min and max distances.
 
     Args:
-        base_raster_path (str): path to a raster with euclidean distance values.
+        base_raster_path (str): path to a raster with euclidean distance values in meters
         min_dist (int): the minimum distance allowed in meters.
         max_dist (int): the maximum distance allowed in meters.
         target_raster_path (str): path output to the raster masked by distance
