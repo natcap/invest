@@ -1681,6 +1681,21 @@ def _reclassify_risk(
         # sqrt( (max_rating-1)^2 + (max_rating-1)^2 )
         max_risk_per_stressor = math.sqrt(((max_rating-1)**2) * 2)
 
+    pairwise_risk_bucket_breaks = [
+        0, max_risk_per_stressor*(1/3), max_risk_per_stressor*(2/3)]
+    LOGGER.debug(
+        f'Max risk per stressor for {rating_type}: {max_risk_per_stressor}')
+    LOGGER.debug(
+        f'Pairwise risk bucket breaks: {pairwise_risk_bucket_breaks}')
+
+    max_cumulative_risk = (  # This is `user_max_risk` in invest-3 HRA.
+        max_n_overlapping_stressors * max_risk_per_stressor)
+    cumulative_risk_bucket_breaks = [
+        0, max_cumulative_risk*(1/3), max_cumulative_risk*(2/3)]
+    LOGGER.debug(f'Max cumulative risk: {max_cumulative_risk}')
+    LOGGER.debug(
+        f'Cumulative risk bucket breaks: {cumulative_risk_bucket_breaks}')
+
     def _reclassify_risk_op(cumulative_risk_arr, maximum_per_pixel_risk_arr):
         reclass_arr = numpy.full(
             cumulative_risk_arr.shape, _TARGET_NODATA_INT, dtype=numpy.int8)
@@ -1705,16 +1720,14 @@ def _reclassify_risk(
         # reclassified raster should reflect this.
         classified_maximum_risk_score = numpy.digitize(
             maximum_per_pixel_risk_arr[valid_pixel_mask],
-            [0, max_risk_per_stressor*(1/3), max_risk_per_stressor*(2/3)],
+            pairwise_risk_bucket_breaks,
             right=True)
 
         # Step 4.2: Classify the cumulative risk into high/medium/low based on
         # the maximum possible cumulative risk.
-        max_cumulative_risk = (  # This is `user_max_risk` in invest-3 HRA.
-            max_n_overlapping_stressors * max_risk_per_stressor)
         classified_total_possible_risk = numpy.digitize(
             cumulative_risk_arr[valid_pixel_mask],
-            [0, max_cumulative_risk*(1/3), max_cumulative_risk*(2/3)],
+            cumulative_risk_bucket_breaks,
             right=True)
 
         # Given the two reclassifications, take the higher risk.
