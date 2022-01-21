@@ -64,19 +64,15 @@ function mockUISpec(spec, modelName) {
 }
 
 describe('Various ways to open and close InVEST models', () => {
-  beforeAll(async () => {
+  beforeEach(async () => {
     getInvestModelNames.mockResolvedValue(MOCK_INVEST_LIST);
     getSpec.mockResolvedValue(SAMPLE_SPEC);
     fetchValidation.mockResolvedValue(MOCK_VALIDATION_VALUE);
     const mockSpec = SAMPLE_SPEC; // jest.mock not allowed to ref out-of-scope var
     jest.mock(UI_CONFIG_PATH, () => mockUISpec(mockSpec, MOCK_MODEL_RUN_NAME));
   });
-  afterAll(async () => {
-    jest.resetAllMocks();
-    jest.resetModules();
-  });
+
   afterEach(async () => {
-    jest.clearAllMocks(); // clears usage data, does not reset/restore
     await InvestJob.clearStore(); // because a test calls InvestJob.saveJob()
   });
 
@@ -269,9 +265,9 @@ describe('Display recently executed InVEST jobs on Home tab', () => {
   beforeEach(() => {
     getInvestModelNames.mockResolvedValue({});
   });
+
   afterEach(async () => {
     await InvestJob.clearStore();
-    jest.resetAllMocks();
   });
 
   test('Recent Jobs: each has a button', async () => {
@@ -367,10 +363,6 @@ describe('InVEST global settings: dialog interactions', () => {
 
   beforeEach(async () => {
     getInvestModelNames.mockResolvedValue({});
-  });
-
-  afterEach(async () => {
-    jest.resetAllMocks();
   });
 
   test('Invest settings save on change', async () => {
@@ -486,11 +478,14 @@ describe('InVEST subprocess testing', () => {
   const stdOutText = 'hello from invest';
   const investExe = 'foo';
   let mockInvestProc;
-  let spyKill;
 
   beforeAll(() => {
     setupInvestRunHandlers(investExe);
     setupInvestLogReaderHandler();
+  });
+
+  afterAll(() => {
+    removeIpcMainListeners();
   });
 
   beforeEach(() => {
@@ -503,8 +498,6 @@ describe('InVEST subprocess testing', () => {
     const mockModelName = modelName;
     jest.mock(UI_CONFIG_PATH, () => mockUISpec(mockSpec, mockModelName));
 
-    // Need to reset these streams since mockInvestProc is shared by tests
-    // and the streams apparently receive the EOF signal in each test.
     mockInvestProc = new events.EventEmitter();
     mockInvestProc.pid = -9999999; // a value that is not a plausible pid
     mockInvestProc.stdout = new Stream.Readable({
@@ -517,7 +510,7 @@ describe('InVEST subprocess testing', () => {
     spawn.mockImplementation(() => mockInvestProc);
 
     if (process.platform !== 'win32') {
-      spyKill = jest.spyOn(process, 'kill')
+      jest.spyOn(process, 'kill')
         .mockImplementation(() => {
           mockInvestProc.emit('exit', null);
         });
@@ -528,18 +521,9 @@ describe('InVEST subprocess testing', () => {
     }
   });
 
-  afterAll(() => {
-    if (spyKill) {
-      spyKill.mockRestore();
-    }
-    removeIpcMainListeners();
-  });
-
   afterEach(async () => {
     mockInvestProc = null;
     await InvestJob.clearStore();
-    jest.resetAllMocks();
-    jest.resetModules();
   });
 
   test('exit without error - expect log display', async () => {
