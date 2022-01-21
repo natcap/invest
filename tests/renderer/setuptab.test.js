@@ -15,6 +15,19 @@ jest.mock('../../src/renderer/server_requests');
 
 const MODULE = 'carbon';
 
+const VALIDATION_MESSAGE = 'invalid because';
+const BASE_ARGS_SPEC = {
+  args: {
+    arg: {
+      name: 'foo',
+      type: undefined, // varies by test
+      required: undefined,
+      about: 'this is about foo',
+    },
+  },
+};
+const UI_SPEC = { order: [Object.keys(BASE_ARGS_SPEC.args)] };
+
 function renderSetupFromSpec(baseSpec, uiSpec) {
   // some ARGS_SPEC boilerplate that is not under test,
   // but is required by PropType-checking
@@ -39,25 +52,9 @@ function renderSetupFromSpec(baseSpec, uiSpec) {
 }
 
 describe('Arguments form input types', () => {
-  const validationMessage = 'invalid because';
-  let baseSpec;
-  let uiSpec;
-
   beforeEach(() => {
-    baseSpec = {
-      args: {
-        arg: {
-          name: 'foo',
-          type: undefined, // varies by test
-          required: undefined,
-          about: 'this is about foo',
-        },
-      },
-    };
-
-    uiSpec = { order: [Object.keys(baseSpec.args)] };
     fetchValidation.mockResolvedValue(
-      [[Object.keys(baseSpec.args), validationMessage]]
+      [[Object.keys(BASE_ARGS_SPEC.args), VALIDATION_MESSAGE]]
     );
   });
 
@@ -68,12 +65,12 @@ describe('Arguments form input types', () => {
     ['raster'],
     ['file'],
   ])('render a text input & browse button for a %s', async (type) => {
-    const spec = { ...baseSpec };
+    const spec = { ...BASE_ARGS_SPEC };
     spec.args.arg.type = type;
 
     const {
       findByLabelText, findByRole
-    } = renderSetupFromSpec(spec, uiSpec);
+    } = renderSetupFromSpec(spec, UI_SPEC);
 
     const input = await findByLabelText(`${spec.args.arg.name}`);
     expect(input).toHaveAttribute('type', 'text');
@@ -88,82 +85,67 @@ describe('Arguments form input types', () => {
     ['percent'],
     ['integer'],
   ])('render a text input for a %s', async (type) => {
-    const spec = { ...baseSpec };
+    const spec = { ...BASE_ARGS_SPEC };
     spec.args.arg.type = type;
-    const { findByLabelText } = renderSetupFromSpec(spec, uiSpec);
+    const { findByLabelText } = renderSetupFromSpec(spec, UI_SPEC);
     const input = await findByLabelText(`${spec.args.arg.name}`);
     expect(input).toHaveAttribute('type', 'text');
   });
 
   test('render an unchecked radio button for a boolean', async () => {
-    const spec = { ...baseSpec };
+    const spec = { ...BASE_ARGS_SPEC };
     spec.args.arg.type = 'boolean';
-    const { findByLabelText } = renderSetupFromSpec(spec, uiSpec);
+    const { findByLabelText } = renderSetupFromSpec(spec, UI_SPEC);
     const input = await findByLabelText(`${spec.args.arg.name}`);
     expect(input).toHaveAttribute('type', 'radio');
     expect(input).not.toBeChecked();
   });
 
   test('render a select input for an option_string dict', async () => {
-    const spec = { ...baseSpec };
+    const spec = { ...BASE_ARGS_SPEC };
     spec.args.arg.type = 'option_string';
     spec.args.arg.options = {
       a: 'about a',
       b: 'about b',
     };
-    const { findByLabelText } = renderSetupFromSpec(spec, uiSpec);
+    const { findByLabelText } = renderSetupFromSpec(spec, UI_SPEC);
     const input = await findByLabelText(`${spec.args.arg.name}`);
     expect(input).toHaveValue('a');
     expect(input).not.toHaveValue('b');
   });
 
   test('render a select input for an option_string list', async () => {
-    const spec = { ...baseSpec };
+    const spec = { ...BASE_ARGS_SPEC };
     spec.args.arg.type = 'option_string';
     spec.args.arg.options = ['a', 'b'];
-    const { findByLabelText } = renderSetupFromSpec(spec, uiSpec);
+    const { findByLabelText } = renderSetupFromSpec(spec, UI_SPEC);
     const input = await findByLabelText(`${spec.args.arg.name}`);
     expect(input).toHaveValue('a');
     expect(input).not.toHaveValue('b');
   });
 
   test('expect the info dialog contains text about input', async () => {
-    const spec = { ...baseSpec };
+    const spec = { ...BASE_ARGS_SPEC };
     spec.args.arg.type = 'directory';
-    const { findByText, findByRole } = renderSetupFromSpec(spec, uiSpec);
+    const { findByText, findByRole } = renderSetupFromSpec(spec, UI_SPEC);
     userEvent.click(await findByRole('button', { name: /info about/ }));
     expect(await findByText(spec.args.arg.about)).toBeInTheDocument();
   });
 });
 
 describe('Arguments form interactions', () => {
-  const validationMessage = 'invalid because';
-  let spec;
-  let uiSpec;
-
   beforeEach(() => {
-    spec = {
-      args: {
-        arg: {
-          name: 'foo',
-          type: undefined, // varies by test
-          required: undefined, // varies by test
-          about: 'this is about foo',
-        },
-      },
-    };
-
-    uiSpec = { order: [Object.keys(spec.args)] };
     fetchValidation.mockResolvedValue(
-      [[Object.keys(spec.args), validationMessage]]
+      [[Object.keys(BASE_ARGS_SPEC.args), VALIDATION_MESSAGE]]
     );
   });
 
   test('Browse button populates an input', async () => {
+    const spec = { ...BASE_ARGS_SPEC };
     spec.args.arg.type = 'csv';
     const {
       findByRole, findByLabelText
-    } = renderSetupFromSpec(spec, uiSpec);
+    } = renderSetupFromSpec(spec, UI_SPEC);
 
     const input = await findByLabelText(`${spec.args.arg.name}`);
     expect(input).toHaveAttribute('type', 'text');
@@ -189,10 +171,11 @@ describe('Arguments form interactions', () => {
   });
 
   test('Browse button populates an input - test click on child svg', async () => {
+    const spec = { ...BASE_ARGS_SPEC };
     spec.args.arg.type = 'csv';
     const {
       findByRole, findByLabelText
-    } = renderSetupFromSpec(spec, uiSpec);
+    } = renderSetupFromSpec(spec, UI_SPEC);
 
     const filepath = 'grilled_cheese.csv';
     const mockDialogData = { filePaths: [filepath] };
@@ -206,59 +189,62 @@ describe('Arguments form interactions', () => {
   });
 
   test('Change value & get feedback on a required input', async () => {
+    const spec = { ...BASE_ARGS_SPEC };
     spec.args.arg.type = 'directory';
     spec.args.arg.required = true;
     const {
       findByText, findByLabelText, queryByText
-    } = renderSetupFromSpec(spec, uiSpec);
+    } = renderSetupFromSpec(spec, UI_SPEC);
 
     const input = await findByLabelText(`${spec.args.arg.name}`);
 
     // A required input with no value is invalid (red X), but
     // feedback does not display until the input has been touched.
     expect(input).toHaveClass('is-invalid');
-    expect(queryByText(RegExp(validationMessage))).toBeNull();
+    expect(queryByText(RegExp(VALIDATION_MESSAGE))).toBeNull();
 
     userEvent.type(input, 'foo');
     await waitFor(() => {
       expect(input).toHaveValue('foo');
       expect(input).toHaveClass('is-invalid');
     });
-    expect(await findByText(RegExp(validationMessage)))
+    expect(await findByText(RegExp(VALIDATION_MESSAGE)))
       .toBeInTheDocument();
 
     fetchValidation.mockResolvedValue([]); // now make input valid
     userEvent.type(input, 'mydir');
     await waitFor(() => {
       expect(input).toHaveClass('is-valid');
-      expect(queryByText(RegExp(validationMessage))).toBeNull();
+      expect(queryByText(RegExp(VALIDATION_MESSAGE))).toBeNull();
     });
   });
 
   test('Focus on required input & get validation feedback', async () => {
+    const spec = { ...BASE_ARGS_SPEC };
     spec.args.arg.type = 'csv';
     spec.args.arg.required = true;
     const {
       findByText, findByLabelText, queryByText
-    } = renderSetupFromSpec(spec, uiSpec);
+    } = renderSetupFromSpec(spec, UI_SPEC);
 
     const input = await findByLabelText(`${spec.args.arg.name}`);
     expect(input).toHaveClass('is-invalid');
-    expect(queryByText(RegExp(validationMessage))).toBeNull();
+    expect(queryByText(RegExp(VALIDATION_MESSAGE))).toBeNull();
 
     await userEvent.click(input);
     await waitFor(() => {
       expect(input).toHaveClass('is-invalid');
     });
-    expect(await findByText(RegExp(validationMessage)))
+    expect(await findByText(RegExp(VALIDATION_MESSAGE)))
       .toBeInTheDocument();
   });
 
   test('Focus on optional input & get valid display', async () => {
+    const spec = { ...BASE_ARGS_SPEC };
     spec.args.arg.type = 'csv';
     spec.args.arg.required = false;
     fetchValidation.mockResolvedValue([]);
-    const { findByLabelText } = renderSetupFromSpec(spec, uiSpec);
+    const { findByLabelText } = renderSetupFromSpec(spec, UI_SPEC);
 
     const input = await findByLabelText(`${spec.args.arg.name} (optional)`);
 
@@ -333,7 +319,6 @@ describe('UI spec functionality', () => {
     });
 
     // Check how the state changes as we click the checkboxes
-    // userEvent.click(arg1, { target: { value: 'true' } });
     userEvent.click(arg1);
     await waitFor(() => {
       expect(arg2).toBeEnabled();
@@ -342,7 +327,6 @@ describe('UI spec functionality', () => {
       expect(arg4).toHaveClass('is-invalid');
     });
 
-    // userEvent.click(arg2, { target: { value: 'true' } });
     userEvent.click(arg2);
     await waitFor(() => {
       expect(arg2).toBeEnabled();
