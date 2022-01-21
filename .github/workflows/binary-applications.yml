@@ -69,6 +69,7 @@ jobs:
                   auto-update-conda: true
                   python-version: 3.8
                   channels: conda-forge
+                  use-only-tar-bz2: true # this needs to be set for caching to work properly
 
             - name: Install python dependencies
               run: |
@@ -190,6 +191,7 @@ jobs:
                   auto-update-conda: true
                   python-version: 3.8
                   channels: conda-forge
+                  use-only-tar-bz2: true
 
             - name: Build conda env with python dependencies
               run: |

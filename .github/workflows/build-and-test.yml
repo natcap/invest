@@ -103,6 +103,7 @@ jobs:
                   auto-update-conda: true
                   python-version: ${{ matrix.python-version }}
                   channels: conda-forge
+                  use-only-tar-bz2: true # this needs to be set for caching to work properly
 
             - name: Install build dependencies
               shell: bash -l {0}
@@ -232,6 +233,7 @@ jobs:
                   auto-update-conda: true
                   python-version: ${{ matrix.python-version }}
                   channels: conda-forge
+                  use-only-tar-bz2: true
 
             - name: Install dependencies
               shell: bash -l {0}
@@ -331,6 +333,7 @@ jobs:
                   auto-update-conda: true
                   python-version: 3.9
                   channels: conda-forge
+                  use-only-tar-bz2: true
 
             - name: Install dependencies
               shell: bash -l {0}
@@ -395,6 +398,7 @@ jobs:
                   auto-update-conda: true
                   python-version: ${{ matrix.python-version }}
                   channels: conda-forge
+                  use-only-tar-bz2: true
 
             - name: Install dependencies
               shell: bash -l {0}
