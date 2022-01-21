@@ -50,17 +50,17 @@ jobs:
             - name: Fetch git tags
               run: git fetch origin +refs/tags/*:refs/tags/*
 
-            - name: Restore pip cache
-              uses: actions/cache@v2
+            - name: Set up python
+              uses: actions/setup-python@v1
               with:
-                  path: ${{ env.WINDOWS_PIP_CACHE }}
-                  key: pip-windows-python${{ env.PYTHON_VERSION }}-${{ hashFiles('**/requirements*.txt') }}-exe
+                  python-version: {{ env.PYTHON_VERSION }}
+                  cache: 'pip'
 
             - name: Restore conda cache
               uses: actions/cache@v2
               with:
                   path: ${{ env.CONDA_CACHE }}
-                  key: conda-windows-python${{ env.PYTHON_VERSION }}-${{ hashFiles('**/requirements*.txt') }}-exe
+                  key: conda_windows-python${{ env.PYTHON_VERSION }}-${{ hashFiles('**/requirements*.txt') }}-exe
 
             - name: Setup conda environment
               uses: conda-incubator/setup-miniconda@v2
@@ -172,17 +172,17 @@ jobs:
                   brew update
                   brew install pandoc
 
-            - name: Restore pip cache
-              uses: actions/cache@v2
+            - name: Set up python
+              uses: actions/setup-python@v1
               with:
-                  path: ${{ env.WINDOWS_PIP_CACHE }}
-                  key: pip-mac-python${{ env.PYTHON_VERSION }}-${{ hashFiles('**/requirements*.txt') }}-dmg
+                  python-version: {{ env.PYTHON_VERSION }}
+                  cache: 'pip'
 
             - name: Restore conda cache
               uses: actions/cache@v2
               with:
                   path: ${{ env.CONDA_CACHE }}
-                  key: conda-mac-python${{ env.PYTHON_VERSION }}-${{ hashFiles('**/requirements*.txt') }}-dmg
+                  key: conda_mac-python${{ env.PYTHON_VERSION }}-${{ hashFiles('**/requirements*.txt') }}-dmg
 
             - name: Setup conda environment
               uses: conda-incubator/setup-miniconda@v2
