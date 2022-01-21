@@ -29,10 +29,6 @@ describe('Sample Data Download Form', () => {
     getInvestModelNames.mockResolvedValue({});
   });
 
-  afterEach(() => {
-    getInvestModelNames.mockReset();
-  });
-
   test('Modal displays immediately on user`s first run', async () => {
     const {
       findByText,
@@ -123,24 +119,6 @@ describe('Sample Data Download Form', () => {
       expect(modelCheckbox).toBeChecked();
     });
   });
-
-  test('Cancel does not store a sampleDataDir value', async () => {
-    const spy = jest.spyOn(ipcRenderer, 'send');
-
-    const { findByRole } = render(<App isFirstRun />);
-
-    const existingValue = await getSettingsValue('sampleDataDir');
-    const cancelButton = await findByRole('button', { name: 'Cancel' });
-    fireEvent.click(cancelButton);
-
-    await waitFor(() => {
-      expect(spy).toHaveBeenCalledTimes(0);
-    });
-    await waitFor(async () => {
-      const value = await getSettingsValue('sampleDataDir');
-      expect(value).toBe(existingValue);
-    });
-  });
 });
 
 describe('DownloadProgressBar', () => {
@@ -174,24 +152,22 @@ describe('DownloadProgressBar', () => {
 });
 
 describe('Integration tests with main process', () => {
-  const dialogData = {
-    filePaths: ['foo/directory'],
-  };
-
   beforeEach(async () => {
     setupDownloadHandlers(new BrowserWindow());
     getInvestModelNames.mockResolvedValue({});
-    ipcRenderer.invoke.mockResolvedValue(dialogData);
   });
 
   afterEach(async () => {
     removeIpcMainListeners();
     await clearSettingsStore();
-    ipcRenderer.invoke.mockReset();
-    getInvestModelNames.mockReset();
   });
 
-  test('Download starts, updates progress, & stores location', async () => {
+  test('Download: starts, updates progress, & stores location', async () => {
+    const dialogData = {
+      filePaths: ['foo/directory'],
+    };
+    ipcRenderer.invoke.mockResolvedValue(dialogData);
+
     const {
       findByRole,
       findAllByRole,
@@ -209,5 +185,18 @@ describe('Integration tests with main process', () => {
     expect(progressBar).toHaveTextContent(`Downloading 1 of ${nURLs}`);
     // We don't have mocks that take us all the way through to a complete
     // download, when the progress bar would become a 'Download Complete' alert
+  });
+
+  test('Cancel: does not store a sampleDataDir value', async () => {
+    const { findByRole } = render(<App isFirstRun />);
+
+    const existingValue = await getSettingsValue('sampleDataDir');
+    const cancelButton = await findByRole('button', { name: 'Cancel' });
+    fireEvent.click(cancelButton);
+
+    await waitFor(async () => {
+      const value = await getSettingsValue('sampleDataDir');
+      expect(value).toBe(existingValue);
+    });
   });
 });

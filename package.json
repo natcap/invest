@@ -23,8 +23,8 @@
     ],
     "testEnvironment": "jsdom",
     "clearMocks": true,
-    "resetMocks": true,
-    "restoreMocks": true
+    "restoreMocks": true,
+    "resetModules": true
   },
   "invest": {
     "bucket": "releases.naturalcapitalproject.org",
