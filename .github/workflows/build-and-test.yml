@@ -71,20 +71,20 @@ jobs:
               uses: actions/cache@v2
               with:
                   path: ${{ env.MACOS_PIP_CACHE }}
-                  key: pip-${{ matrix.os }}-py${{ matrix.python-version }}-${{ hashFiles('**/requirements*.txt') }}-model-tests
+                  key: pip-${{ matrix.os }}-python${{ matrix.python-version }}-${{ hashFiles('**/requirements*.txt') }}-model-tests
 
             - name: Restore pip cache (Windows)
               if: ${{ matrix.os == 'windows-latest' }}
               uses: actions/cache@v2
               with:
                   path: ${{ env.WINDOWS_PIP_CACHE }}
-                  key: pip-${{ matrix.os }}-py${{ matrix.python-version }}-${{ hashFiles('**/requirements*.txt') }}-model-tests
+                  key: pip-${{ matrix.os }}-python${{ matrix.python-version }}-${{ hashFiles('**/requirements*.txt') }}-model-tests
 
             - name: Restore conda cache
               uses: actions/cache@v2
               with:
                   path: ${{ env.CONDA_CACHE }}
-                  key: conda-${{ matrix.os }}-py${{ matrix.python-version }}-${{ hashFiles('**/requirements*.txt') }}-model-tests
+                  key: conda-${{ matrix.os }}-python${{ matrix.python-version }}-${{ hashFiles('**/requirements*.txt') }}-model-tests
 
             # NOTE: It takes twice as long to save the sample data cache
             # as it does to do a fresh clone (almost 5 minutes vs. 2.5 minutes)
@@ -210,20 +210,20 @@ jobs:
               uses: actions/cache@v2
               with:
                   path: ${{ env.MACOS_PIP_CACHE }}
-                  key: pip-${{ matrix.os }}-py${{ matrix.python-version }}-${{ hashFiles('**/requirements*.txt') }}-test-sdist
+                  key: pip-${{ matrix.os }}-python${{ matrix.python-version }}-${{ hashFiles('**/requirements*.txt') }}-test-sdist
 
             - name: Restore pip cache (Windows)
               if: ${{ matrix.os == 'windows-latest' }}
               uses: actions/cache@v2
               with:
                   path: ${{ env.WINDOWS_PIP_CACHE }}
-                  key: pip-${{ matrix.os }}-py${{ matrix.python-version }}-${{ hashFiles('**/requirements*.txt') }}-test-sdist
+                  key: pip-${{ matrix.os }}-python${{ matrix.python-version }}-${{ hashFiles('**/requirements*.txt') }}-test-sdist
 
             - name: Restore conda cache
               uses: actions/cache@v2
               with:
                   path: ${{ env.CONDA_CACHE }}
-                  key: conda-${{ matrix.os }}-py${{ matrix.python-version }}-${{ hashFiles('**/requirements*.txt') }}-test-sdist
+                  key: conda-${{ matrix.os }}-python${{ matrix.python-version }}-${{ hashFiles('**/requirements*.txt') }}-test-sdist
 
             - name: Setup conda environment
               uses: conda-incubator/setup-miniconda@v2
@@ -316,13 +316,13 @@ jobs:
               uses: actions/cache@v2
               with:
                   path: ${{ env.WINDOWS_PIP_CACHE }}
-                  key: pip-windows-cache-sampledata-${{ hashfiles('requirements.txt') }}
+                  key: pip-windows-cache-sample-data-${{ hashfiles('requirements.txt') }}
 
             - name: Restore conda cache
               uses: actions/cache@v2
               with:
                   path: ${{ env.CONDA_CACHE }}
-                  key: conda-windows-cache-sampledata-${{ hashfiles('requirements.txt') }}
+                  key: conda-windows-cache-sample-data-${{ hashfiles('requirements.txt') }}
 
             - name: Setup conda environment
               uses: conda-incubator/setup-miniconda@v2
@@ -374,13 +374,13 @@ jobs:
               uses: actions/cache@v2
               with:
                   path: ${{ env.WINDOWS_PIP_CACHE }}
-                  key: pip-windows-py${{ matrix.python-version }}-${{ hashFiles('**/requirements*.txt') }}-ui-tests
+                  key: pip-windows-python${{ matrix.python-version }}-${{ hashFiles('**/requirements*.txt') }}-ui-tests
 
             - name: Restore conda cache
               uses: actions/cache@v2
               with:
                   path: ${{ env.CONDA_CACHE }}
-                  key: conda-windows-py${{ matrix.python-version }}-${{ hashFiles('**/requirements*.txt') }}-ui-tests
+                  key: conda-windows-python${{ matrix.python-version }}-${{ hashFiles('**/requirements*.txt') }}-ui-tests
 
             - name: Restore git-LFS test data cache
               uses: actions/cache@v2

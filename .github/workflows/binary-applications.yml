@@ -54,13 +54,13 @@ jobs:
               uses: actions/cache@v2
               with:
                   path: ${{ env.WINDOWS_PIP_CACHE }}
-                  key: pip-windows-py${{ env.PYTHON_VERSION }}-${{ hashFiles('**/requirements*.txt') }}-exe
+                  key: pip-windows-python${{ env.PYTHON_VERSION }}-${{ hashFiles('**/requirements*.txt') }}-exe
 
             - name: Restore conda cache
               uses: actions/cache@v2
               with:
                   path: ${{ env.CONDA_CACHE }}
-                  key: conda-windows-py${{ env.PYTHON_VERSION }}-${{ hashFiles('**/requirements*.txt') }}-exe
+                  key: conda-windows-python${{ env.PYTHON_VERSION }}-${{ hashFiles('**/requirements*.txt') }}-exe
 
             - name: Setup conda environment
               uses: conda-incubator/setup-miniconda@v2
@@ -175,13 +175,13 @@ jobs:
               uses: actions/cache@v2
               with:
                   path: ${{ env.WINDOWS_PIP_CACHE }}
-                  key: pip-mac-py${{ env.PYTHON_VERSION }}-${{ hashFiles('**/requirements*.txt') }}-dmg
+                  key: pip-mac-python${{ env.PYTHON_VERSION }}-${{ hashFiles('**/requirements*.txt') }}-dmg
 
             - name: Restore conda cache
               uses: actions/cache@v2
               with:
                   path: ${{ env.CONDA_CACHE }}
-                  key: conda-mac-py${{ env.PYTHON_VERSION }}-${{ hashFiles('**/requirements*.txt') }}-dmg
+                  key: conda-mac-python${{ env.PYTHON_VERSION }}-${{ hashFiles('**/requirements*.txt') }}-dmg
 
             - name: Setup conda environment
               uses: conda-incubator/setup-miniconda@v2
