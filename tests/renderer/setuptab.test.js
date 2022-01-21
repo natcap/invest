@@ -131,7 +131,7 @@ describe('Arguments form input types', () => {
     const spec = { ...baseSpec };
     spec.args.arg.type = 'directory';
     const { findByText, findByRole } = renderSetupFromSpec(spec, uiSpec);
-    fireEvent.click(await findByRole('button', { name: /info about/ }));
+    userEvent.click(await findByRole('button', { name: /info about/ }));
     expect(await findByText(spec.args.arg.about)).toBeInTheDocument();
   });
 });
@@ -174,7 +174,7 @@ describe('Arguments form interactions', () => {
     const filepath = 'grilled_cheese.csv';
     let mockDialogData = { filePaths: [filepath] };
     ipcRenderer.invoke.mockResolvedValue(mockDialogData);
-    fireEvent.click(await findByRole('button', { name: /browse for/ }));
+    userEvent.click(await findByRole('button', { name: /browse for/ }));
     await waitFor(() => {
       expect(input).toHaveValue(filepath);
     });
@@ -182,7 +182,7 @@ describe('Arguments form interactions', () => {
     // Browse again, but cancel it and expect the previous value
     mockDialogData = { filePaths: [] }; // empty array is a mocked 'Cancel'
     ipcRenderer.invoke.mockResolvedValue(mockDialogData);
-    fireEvent.click(await findByRole('button', { name: /browse for/ }));
+    userEvent.click(await findByRole('button', { name: /browse for/ }));
     await waitFor(() => {
       expect(input).toHaveValue(filepath);
     });
@@ -200,7 +200,7 @@ describe('Arguments form interactions', () => {
     const btn = await findByRole('button', { name: /browse for/ });
     // Click on a target element nested within the button to make
     // sure the handler still works correctly.
-    fireEvent.click(btn.querySelector('svg'));
+    userEvent.click(btn.querySelector('svg'));
     expect(await findByLabelText(`${spec.args.arg.name}`))
       .toHaveValue(filepath);
   });
@@ -246,7 +246,7 @@ describe('Arguments form interactions', () => {
     expect(input).toHaveClass('is-invalid');
     expect(queryByText(RegExp(validationMessage))).toBeNull();
 
-    await fireEvent.focus(input);
+    await userEvent.click(input);
     await waitFor(() => {
       expect(input).toHaveClass('is-invalid');
     });
@@ -266,7 +266,7 @@ describe('Arguments form interactions', () => {
     // does not display until the input has been touched.
     expect(input).not.toHaveClass('is-valid', 'is-invalid');
 
-    await fireEvent.focus(input);
+    await userEvent.click(input);
     await waitFor(() => {
       expect(input).toHaveClass('is-valid');
     });
@@ -331,12 +331,10 @@ describe('UI spec functionality', () => {
       expect(arg3).toBeDisabled();
       expect(arg4).toBeDisabled();
     });
-    // fireEvent.change doesn't trigger the change handler but .click does
-    // even though React demands an onChange handler for controlled checkbox inputs.
-    // https://github.com/testing-library/react-testing-library/issues/156
-    fireEvent.click(arg1, { target: { value: 'true' } });
 
     // Check how the state changes as we click the checkboxes
+    // userEvent.click(arg1, { target: { value: 'true' } });
+    userEvent.click(arg1);
     await waitFor(() => {
       expect(arg2).toBeEnabled();
       expect(arg3).toBeDisabled();
@@ -344,7 +342,8 @@ describe('UI spec functionality', () => {
       expect(arg4).toHaveClass('is-invalid');
     });
 
-    fireEvent.click(arg2, { target: { value: 'true' } });
+    // userEvent.click(arg2, { target: { value: 'true' } });
+    userEvent.click(arg2);
     await waitFor(() => {
       expect(arg2).toBeEnabled();
       expect(arg3).toBeEnabled();
@@ -393,7 +392,7 @@ describe('UI spec functionality', () => {
     expect(option).toBeNull();
 
     // check that the dropdown option appears when the text field gets a value
-    fireEvent.change(arg1, { target: { value: 'a vector' } });
+    userEvent.type(arg1, 'a vector');
     option = await findByText('Field1'); // will raise an error if not found
   });
 

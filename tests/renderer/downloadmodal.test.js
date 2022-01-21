@@ -1,8 +1,9 @@
 import React from 'react';
 import {
-  fireEvent, render, waitFor
+  render, waitFor
 } from '@testing-library/react';
 import '@testing-library/jest-dom';
+import userEvent from '@testing-library/user-event';
 import { ipcRenderer, BrowserWindow } from 'electron';
 
 import {
@@ -37,7 +38,7 @@ describe('Sample Data Download Form', () => {
 
     const modalTitle = await findByText('Download InVEST sample data');
     expect(modalTitle).toBeInTheDocument();
-    fireEvent.click(getByText('Cancel'));
+    userEvent.click(getByText('Cancel'));
     await waitFor(() => {
       expect(modalTitle).not.toBeInTheDocument();
     });
@@ -73,24 +74,24 @@ describe('Sample Data Download Form', () => {
 
     // Toggle all off using Select All
     const selectAllCheckbox = getByLabelText('Select All');
-    fireEvent.click(selectAllCheckbox);
+    userEvent.click(selectAllCheckbox);
     allCheckBoxes.forEach((box) => {
       expect(box).not.toBeChecked();
     });
     expect(downloadButton).toBeDisabled();
 
     // Toggle all on using Select All
-    fireEvent.click(selectAllCheckbox);
+    userEvent.click(selectAllCheckbox);
     allCheckBoxes.forEach((box) => {
       expect(box).toBeChecked();
     });
 
     // Toggle one off & on
     const modelCheckbox = getByLabelText(new RegExp(modelName));
-    fireEvent.click(modelCheckbox);
+    userEvent.click(modelCheckbox);
     expect(modelCheckbox).not.toBeChecked();
     expect(selectAllCheckbox).not.toBeChecked();
-    fireEvent.click(modelCheckbox);
+    userEvent.click(modelCheckbox);
     expect(modelCheckbox).toBeChecked();
   });
 
@@ -175,7 +176,7 @@ describe('Integration tests with main process', () => {
 
     const allCheckBoxes = await findAllByRole('checkbox');
     const downloadButton = await findByRole('button', { name: 'Download' });
-    fireEvent.click(downloadButton);
+    userEvent.click(downloadButton);
     const nURLs = allCheckBoxes.length - 1; // all except Select All
     await waitFor(async () => {
       expect(await getSettingsValue('sampleDataDir'))
@@ -192,7 +193,7 @@ describe('Integration tests with main process', () => {
 
     const existingValue = await getSettingsValue('sampleDataDir');
     const cancelButton = await findByRole('button', { name: 'Cancel' });
-    fireEvent.click(cancelButton);
+    userEvent.click(cancelButton);
 
     await waitFor(async () => {
       const value = await getSettingsValue('sampleDataDir');
