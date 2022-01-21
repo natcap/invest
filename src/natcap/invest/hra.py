@@ -1613,31 +1613,47 @@ def _count_habitats_op(*habitat_arrays):
 
 
 def _max_risk_op(habitat_arr, *risk_arrays):
-    # Habitat_arr is a boolean 0/1
-    # All risk arrays represent float32 risk
-    # All arraays use float32 nodata.
-    # Returns a float32 array
+    """Calculate the maximum pixel value given a stack of risk arrays.
+
+    Args:
+        habitat_arr (numpy.array): A boolean array indicating presence (1) or
+            absence (0) of habitat.
+        risk_arrays (list): A list of float32 numpy arrays with the calculated
+            risk values.  Risk values must only be present where habitats are.
+            All risk arrays must use ``_TARGET_NODATA_FLT`` as their nodata
+            value.
+
+    Returns:
+        A float32 numpy array with the maximum risk value in the pixel stack.
+    """
     habitat_mask = (habitat_arr == 1)
     max_risk_array = numpy.full(
         habitat_arr.shape, _TARGET_NODATA_FLT, dtype=numpy.float32)
     max_risk_array[habitat_mask] = 0  # initialize the habitat pixels
 
     for risk_array in risk_arrays:
-        # TODO: is the "& habitat_mask" needed?  We don't use it in the total
-        # risk summation.
         valid_pixel_mask = ~utils.array_equals_nodata(
-            risk_array, _TARGET_NODATA_FLT) & habitat_mask
+            risk_array, _TARGET_NODATA_FLT)
         max_risk_array[valid_pixel_mask] = numpy.maximum(
             max_risk_array[valid_pixel_mask],
             risk_array[valid_pixel_mask])
-
     return max_risk_array
 
 
 def _count_maximum_number_of_stressors(
         stressor_raster_paths, target_json_path):
-    # stressor_raster_paths must be aligned, must be ints 1/(0 or nodata)
+    """Determine the maximum number of overlapping stressors.
 
+    Args:
+        stressor_raster_paths (list): A list of Byte rasters indicating
+            presence (1) or absence (0/nodata) of a stressor on a pixel.  All
+            rasters in this list must be aligned.
+        target_json_path (string): A path to where the maximum number of
+            overlapping stressors will be written to a json object.
+
+    Returns:
+        ``None``
+    """
     raster_list = [
         gdal.OpenEx(raster_path) for raster_path in stressor_raster_paths]
     band_list = [raster.GetRasterBand(1) for raster in raster_list]
@@ -1663,6 +1679,20 @@ def _count_maximum_number_of_stressors(
 
 def _write_stressors_count_file(
         max_n_overlapping_stressors, target_filepath):
+    """Write out the number of stressors to a JSON file.
+
+    This is useful to break out into a separate function to ensure consistency
+    of formatting of the file.
+
+    Args:
+        max_n_overlapping_stressors (int): The maximum number of stressors that
+            overlap in any one pixel.  Really, this is just the data that's
+            written to the target filepath.
+        target_filepath (string): The path to where the file lives on disk.
+
+    Returns:
+        ``None``
+    """
     with open(target_filepath, 'w') as target_file:
         json.dump(int(max_n_overlapping_stressors), target_file)
 
@@ -1670,6 +1700,25 @@ def _write_stressors_count_file(
 def _reclassify_risk(
         cumulative_risk_raster, maximum_habitat_risk_raster, rating_type,
         max_rating, max_n_overlapping_stressors_path, target_raster_path):
+    """Reclassify cumulative risk into buckets of high/medium/low.
+
+    Args:
+        cumulative_risk_raster (string): Path to the cumulative risk raster, a
+            float32 raster with a nodata value of ``_TARGET_NODATA_FLT``.
+        maximum_habitat_risk_raster (string): Path to an integer raster where
+            pixel values represent the maximum risk to this habitat from any
+            habitat-stressor interaction. This will be a floating-point raster.
+        rating_type (string): Either "Multiplicative" or "Euclidean"
+        max_rating (number): The user-defined maximum criteria score.
+        max_n_overlapping_stressors_path (string): The path to a JSON file
+            containing the maximum number of overlapping stressors on any given
+            pixel in the study area.
+        target_raster_path (string): The path to the target reclassified risk
+            raster.
+
+    Returns:
+        ``None``
+    """
     with open(max_n_overlapping_stressors_path) as json_file:
         max_n_overlapping_stressors = json.load(json_file)
     LOGGER.debug(f"max_n_overlapping_stressors: {max_n_overlapping_stressors}")
@@ -1743,40 +1792,6 @@ def _reclassify_risk(
         _TARGET_NODATA_INT)
 
 
-# TODO: remove this function if it's no longer needed.
-def _reclassify_risk_op_old(risk_arr, max_rating):
-    """Reclassify total risk score on each pixel into 0 to 3, discretely.
-
-    Divide total risk score by (max_risk_score/3) to get a continuous risk
-    score of 0 to 3, then use numpy.ceil to get discrete score.
-
-    If 0 < risk <= 1, classify the risk score to 1.
-    If 1 < risk <= 2, classify the risk score to 2.
-    If 2 < risk <= 3 , classify the risk score to 3.
-    Note: If risk == 0, it will remain 0, meaning that there's no
-    stressor on that habitat.
-
-    Args:
-        risk_arr (array): an array of cumulative risk scores from all stressors
-        max_rating (float): the maximum possible risk score used for
-            reclassifying the risk score into 0 to 3 on each pixel.
-
-    Returns:
-        reclass_arr (array): an integer array of reclassified risk scores for a
-            certain habitat. The values are discrete on the array.
-
-    """
-    reclass_arr = numpy.full(
-        risk_arr.shape, _TARGET_NODATA_INT, dtype=numpy.int8)
-    valid_pixel_mask = ~utils.array_equals_nodata(risk_arr, _TARGET_NODATA_FLT)
-
-    # Return the ceiling of the continuous risk score
-    reclass_arr[valid_pixel_mask] = numpy.ceil(
-        risk_arr[valid_pixel_mask] / (max_rating/3.)).astype(numpy.int8)
-
-    return reclass_arr
-
-
 def _tot_risk_op(habitat_arr, *pair_risk_arrays):
     """Calculate the cumulative risks to a habitat from all stressors.
 
@@ -1804,13 +1819,6 @@ def _tot_risk_op(habitat_arr, *pair_risk_arrays):
         valid_pixel_mask = ~utils.array_equals_nodata(
             pair_risk_arr, _TARGET_NODATA_FLT)
         tot_risk_arr[valid_pixel_mask] += pair_risk_arr[valid_pixel_mask]
-
-    # TODO: yeah, this doesn't work as specified at all.
-    #  I think the total risk is supposed to exceed the max criteria score.
-    # Rescale total risk to 0 to max_rating
-    #final_valid_mask = ~utils.array_equals_nodata(
-    #    tot_risk_arr, _TARGET_NODATA_FLT)
-    #tot_risk_arr[final_valid_mask] /= len(pair_risk_arrays)
 
     return tot_risk_arr
 
