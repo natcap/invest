@@ -23,7 +23,7 @@ jobs:
                   fetch-depth: 0
 
             - name: Set up python 3.9
-              uses: actions/setup-python@v1
+              uses: actions/setup-python@v2
               with:
                   python-version: 3.9
 
@@ -65,9 +65,9 @@ jobs:
                   fetch-depth: 0
 
             - name: Set up python
-              uses: actions/setup-python@v1
+              uses: actions/setup-python@v2
               with:
-                  python-version: {{ matrix.python-version }}
+                  python-version: ${{ matrix.python-version }}
                   cache: 'pip'
 
             - name: Restore conda cache
@@ -197,9 +197,9 @@ jobs:
               run: git fetch origin +refs/tags/*:refs/tags/*
 
             - name: Set up python
-              uses: actions/setup-python@v1
+              uses: actions/setup-python@v2
               with:
-                  python-version: {{ matrix.python-version }}
+                  python-version: ${{ matrix.python-version }}
                   cache: 'pip'
 
             - name: Restore conda cache
@@ -297,7 +297,7 @@ jobs:
                   fetch-depth: 0
 
             - name: Set up python
-              uses: actions/setup-python@v1
+              uses: actions/setup-python@v2
               with:
                   python-version: 3.9
                   cache: 'pip'
@@ -355,9 +355,9 @@ jobs:
                   fetch-depth: 0
 
             - name: Set up python
-              uses: actions/setup-python@v1
+              uses: actions/setup-python@v2
               with:
-                  python-version: {{ matrix.python-version }}
+                  python-version: ${{ matrix.python-version }}
                   cache: 'pip'
 
             - name: Restore conda cache
