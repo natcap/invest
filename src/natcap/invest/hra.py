@@ -1672,6 +1672,7 @@ def _reclassify_risk(
         max_rating, max_n_overlapping_stressors_path, target_raster_path):
     with open(max_n_overlapping_stressors_path) as json_file:
         max_n_overlapping_stressors = json.load(json_file)
+    LOGGER.debug(f"max_n_overlapping_stressors: {max_n_overlapping_stressors}")
 
     if rating_type == 'Multiplicative':
         # The maximum risk from a single stressor is max_rating*max_rating
@@ -1852,7 +1853,7 @@ def _pair_risk_op(exposure_arr, consequence_arr, max_rating, risk_eq):
         ~utils.array_equals_nodata(consequence_arr, _TARGET_NODATA_FLT))
     nonzero_valid_pixel_mask = ~zero_pixel_mask & valid_pixel_mask
 
-    # Zero pixels are where non of the stressor exists in the habitat
+    # Zero pixels are where none of the stressor exists in the habitat
     risk_arr[zero_pixel_mask] = 0
 
     if risk_eq == 'Euclidean':
@@ -3198,7 +3199,7 @@ def _get_overlap_dataframe(criteria_df, habitat_names, stressor_attributes,
                         isinstance(rating, (int, float))):
                     overlap_df.loc[(habitat, stressor),
                                    criteria_type + '_NUM'] += \
-                        float(rating)/float(dq)/float(weight)
+                        float(rating)/(float(dq) * float(weight))
 
                 # Save the rating, dq, and weight to the spatial criteria
                 # dictionary in the dataframe if rating is not a number
@@ -3212,7 +3213,7 @@ def _get_overlap_dataframe(criteria_df, habitat_names, stressor_attributes,
                 # Calculate the cumulative denominator score
                 overlap_df.loc[
                     (habitat, stressor), criteria_type + '_DENOM'] += \
-                    1/float(dq)/float(weight)
+                    1/(float(dq) * float(weight))
 
     # If any stressor-habitat doesn't have at least one E or C criteria rating,
     # raise an exception
