@@ -1768,7 +1768,8 @@ def _create_distance_raster(base_raster_path, base_vector_path,
     """Create and rasterize vector onto a raster, and calculate dist transform.
 
     Create a raster where the pixel values represent the euclidean distance to
-    the vector.
+    the vector. The distance inherits units from ``base_raster_path`` pixel
+    dimensions.
 
     Args:
         base_raster_path (str): path to raster to create a new raster from.
