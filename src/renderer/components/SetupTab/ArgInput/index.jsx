@@ -115,7 +115,6 @@ export default class ArgInput extends React.PureComponent {
       enabled,
       handleBoolChange,
       handleChange,
-      handleFocus,
       inputDropHandler,
       isValid,
       selectFile,
@@ -182,7 +181,7 @@ export default class ArgInput extends React.PureComponent {
                   placeholder={placeholderText}
                   value={value || ''} // empty string is handled better than `undefined`
                   onChange={handleChange}
-                  onFocus={handleFocus}
+                  onFocus={handleChange}
                   isValid={enabled && touched && isValid}
                   isInvalid={enabled && validationMessage}
                   disabled={!enabled}
@@ -333,7 +332,6 @@ ArgInput.propTypes = {
   touched: PropTypes.bool,
   isValid: PropTypes.bool,
   validationMessage: PropTypes.string,
-  handleFocus: PropTypes.func.isRequired,
   handleChange: PropTypes.func.isRequired,
   handleBoolChange: PropTypes.func.isRequired,
   selectFile: PropTypes.func.isRequired,
