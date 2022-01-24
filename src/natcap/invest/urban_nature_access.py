@@ -456,6 +456,18 @@ def execute(args):
 
 def _reclassify_greenspace_area(
         lulc_raster_path, lulc_attribute_table, target_raster_path):
+    """Reclassify LULC pixels into the greenspace area they represent.
+
+    Args:
+        lulc_raster_path (string): The path to a land-use/land-cover raster.
+        lulc_attribute_table (string): The path to a CSV table representing
+            LULC attributes.  Must have "lucode" and "greenspace" columns.
+        target_raster_path (string): Where the reclassified greenspace raster
+            should be written.
+
+    Returns:
+        ``None``
+    """
     attribute_table_dict = utils.build_lookup_from_csv(
         lulc_attribute_table, key_field='lucode')
 
@@ -485,6 +497,25 @@ def _reclassify_greenspace_area(
 
 def _preprocess_lulc_attribute_table(
         source_attr_table_path, default_radius, target_attr_table_path):
+    """Preprocess the LULC attribute table.
+
+    This function ensures that we have an attribute table where a radius is
+    defined for every greenspace landcover classification.  For classifications
+    where the radius is not defined, the user-defined default radius is used
+    instead.
+
+    Args:
+        source_attr_table_path (string): The path to a CSV on disk.  Must
+            contain the "lucode" and "greenspace" columns.  May contain a
+            "search_radius_m" column.
+        default_radius (number): The default radius to use when
+            "search_radius_m" is not defined.
+        target_attr_table_path (string): The location on disk where the
+            preprocessed attribute table is written.
+
+    Returns:
+        ``None``
+    """
     attr_dataframe = utils.read_csv_to_dataframe(
         source_attr_table_path, to_lower=True, sep=None, engine='python',
         dtype={'greenspace': int})
