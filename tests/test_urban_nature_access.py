@@ -9,6 +9,8 @@ import textwrap
 import unittest
 
 import numpy
+import pandas
+import pandas.testing
 import pygeoprocessing
 import shapely.geometry
 from osgeo import gdal
@@ -265,8 +267,70 @@ class UNATests(unittest.TestCase):
         numpy.testing.assert_allclose(
             supply_demand, expected_supply_demand)
 
-    def test_model(self):
-        """UNA: Run through the model."""
+    def test_preprocess_attr_table_no_radius_column(self):
+        """UNA: Test attr table preprocessing without a radius column."""
+        from natcap.invest import urban_nature_access
+
+        attr_table_path = os.path.join(self.workspace_dir, 'test.csv')
+        with open(attr_table_path, 'w') as csv_file:
+            csv_file.write(textwrap.dedent(
+                """lucode,greenspace
+                0,0
+                1,1
+                2,0
+                3,1"""))
+
+        target_attr_table = os.path.join(self.workspace_dir, 'target.csv')
+        default_radius = 555
+        urban_nature_access._preprocess_lulc_attribute_table(
+            attr_table_path, default_radius, target_attr_table)
+
+        expected_csv_path = os.path.join(self.workspace_dir, 'expected.csv')
+        with open(expected_csv_path, 'w') as csv_file:
+            csv_file.write(textwrap.dedent(
+                """lucode,greenspace,search_radius_m
+                0,0,
+                1,1,555
+                2,0,
+                3,1,555"""))
+
+        pandas.testing.assert_frame_equal(
+            pandas.read_csv(target_attr_table),
+            pandas.read_csv(expected_csv_path))
+
+    def test_preprocess_attr_table_with_radius_column(self):
+        """UNA: Test attr table preprocessing with a radius column."""
+        from natcap.invest import urban_nature_access
+
+        attr_table_path = os.path.join(self.workspace_dir, 'test.csv')
+        with open(attr_table_path, 'w') as csv_file:
+            csv_file.write(textwrap.dedent(
+                """lucode,greenspace,search_radius_m
+                0,0,
+                1,1,555
+                2,0,
+                3,1,"""))
+
+        target_attr_table = os.path.join(self.workspace_dir, 'target.csv')
+        default_radius = 555
+        urban_nature_access._preprocess_lulc_attribute_table(
+            attr_table_path, default_radius, target_attr_table)
+
+        expected_csv_path = os.path.join(self.workspace_dir, 'expected.csv')
+        with open(expected_csv_path, 'w') as csv_file:
+            csv_file.write(textwrap.dedent(
+                """lucode,greenspace,search_radius_m
+                0,0,
+                1,1,555
+                2,0,
+                3,1,555"""))
+
+        pandas.testing.assert_frame_equal(
+            pandas.read_csv(target_attr_table),
+            pandas.read_csv(expected_csv_path))
+
+    def test_core_model(self):
+        """UNA: Run through the model with no optional parts."""
         from natcap.invest import urban_nature_access
 
         args = _build_model_args(self.workspace_dir)
@@ -327,3 +391,25 @@ class UNATests(unittest.TestCase):
         numpy.testing.assert_allclose(
             undersupplied_pop + oversupplied_pop,
             population_array.sum())
+
+    def test_split_greenspace(self):
+        """UNA: Test the split greenspace optional feature."""
+        from natcap.invest import urban_nature_access
+
+        args = _build_model_args(self.workspace_dir)
+
+        # The split greenspace feature requires an extra column in the
+        # attribute table.
+        attribute_table = pandas.read_csv(args['lulc_attribute_table'])
+        new_search_radius_values = {
+            value: 30*value for value in range(1, 10, 2)}
+        attribute_table['search_radius_m'] = attribute_table['lucode'].map(
+            new_search_radius_values)
+        attribute_table.to_csv(args['lulc_attribute_table'])
+        # TODO: check with science team about enabling split greenspace.
+        # The user's guide doesn't explicitly call for an enable/disable switch
+        # for this.  The way this is worded in the UG allows for the search
+        # radius to fall back to the default search radius if it isn't defined.
+        args['use_split_greenspace'] = True
+
+        urban_nature_access.execute(args)

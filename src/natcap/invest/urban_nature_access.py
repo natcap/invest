@@ -459,6 +459,34 @@ def execute(args):
     LOGGER.info('Finished Urban Nature Access Model')
 
 
+def _preprocess_lulc_attribute_table(
+        source_attr_table_path, default_radius, target_attr_table_path):
+    attr_dataframe = utils.read_csv_to_dataframe(
+        source_attr_table_path, to_lower=True, sep=None, engine='python',
+        dtype={'greenspace': int})
+
+    try:
+        # If the search_radius_m column is present in the table but there are
+        # undefined search radii for some lucodes, fill them in with a default
+        # radius.
+        attr_dataframe.loc[
+            (attr_dataframe['greenspace'] == 1 &
+             attr_dataframe['search_radius_m'].isna()),
+            'search_radius_m'] = default_radius
+    except KeyError:
+        # If the search_radius_m column is not in the table, set the default
+        # radius for any greenspace lucodes.
+        attr_dataframe.loc[
+            attr_dataframe['greenspace'] == 1, 'search_radius_m'] = (
+                default_radius)
+
+    # Re-export the preprocessed CSV with only the columns that we need.
+    attr_dataframe.to_csv(
+        target_attr_table_path,
+        header=['lucode', 'greenspace', 'search_radius_m'],
+        index=False)
+
+
 def _filter_population(population, greenspace_budget, numpy_filter_op):
     """Filter the population by a defined op and the greenspace budget.
 
