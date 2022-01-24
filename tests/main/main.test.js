@@ -39,7 +39,7 @@ jest.mock('node-fetch');
 jest.mock('child_process');
 jest.mock('../../src/main/createPythonFlaskProcess');
 
-beforeAll(() => {
+beforeEach(() => {
   execFileSync.mockReturnValue('foo');
   createPythonFlaskProcess.mockImplementation(() => {});
   getFlaskIsReady.mockResolvedValue(true);
@@ -47,12 +47,6 @@ beforeAll(() => {
   // app expects them to be defined.
   process.defaultApp = 'test'; // imitates dev mode
   process.resourcesPath = 'path/to/electron/package';
-});
-
-afterAll(() => {
-  createPythonFlaskProcess.mockReset();
-  getFlaskIsReady.mockReset();
-  execFileSync.mockReset();
 });
 
 describe('checkFirstRun', () => {
@@ -63,41 +57,38 @@ describe('checkFirstRun', () => {
     } catch {}
   });
 
-  afterAll(() => {
+  afterEach(() => {
     try {
       fs.unlinkSync(tokenPath);
     } catch {}
   });
 
-  it('should return true & create token if token does not exist', () => {
+  test('should return true & create token if token does not exist', () => {
     expect(fs.existsSync(tokenPath)).toBe(false);
     expect(checkFirstRun()).toBe(true);
     expect(fs.existsSync(tokenPath)).toBe(true);
   });
 
-  it('should return false if token already exists', () => {
+  test('should return false if token already exists', () => {
     fs.writeFileSync(tokenPath, '');
     expect(checkFirstRun()).toBe(false);
   });
 });
 
 describe('findInvestBinaries', () => {
-  afterAll(() => {
-    execFileSync.mockReset();
-  });
   const ext = (process.platform === 'win32') ? '.exe' : '';
   const filename = `invest${ext}`;
-  it('should point to build folder in dev mode', () => {
+  test('should point to build folder in dev mode', () => {
     const isDevMode = true;
     const exePath = findInvestBinaries(isDevMode);
     expect(exePath).toBe(path.join('build', 'invest', filename));
   });
-  it('should point to resourcesPath in production', async () => {
+  test('should point to resourcesPath in production', async () => {
     const isDevMode = false;
     const exePath = findInvestBinaries(isDevMode);
     expect(exePath).toBe(path.join(process.resourcesPath, 'invest', filename));
   });
-  it('should throw if the invest exe is bad', async () => {
+  test('should throw if the invest exe is bad', async () => {
     execFileSync.mockImplementation(() => {
       throw new Error('error from invest --version');
     });
@@ -149,13 +140,12 @@ describe('extractZipInplace', () => {
     fs.rmSync(root, { recursive: true, force: true });
   });
 
-  it('should extract recursively', async () => {
+  test('should extract recursively', async () => {
     expect(doneZipping).toBe(true);
     // The expected state after the setup, before extraction
     expect(fs.existsSync(zipPath)).toBe(true);
     expect(fs.existsSync(file1Path)).toBe(false);
     expect(fs.existsSync(file2Path)).toBe(false);
-    // });
 
     expect(await extractZipInplace(zipPath)).toBe(true);
 
@@ -166,15 +156,8 @@ describe('extractZipInplace', () => {
 });
 
 describe('createWindow', () => {
-  beforeEach(async () => {
+  test('should register various ipcMain listeners', async () => {
     await createWindow();
-  });
-
-  afterEach(() => {
-    destroyWindow();
-  });
-
-  it('should register various ipcMain listeners', async () => {
     const expectedHandleChannels = [
       ipcMainChannels.SHOW_OPEN_DIALOG,
       ipcMainChannels.SHOW_SAVE_DIALOG,
@@ -201,6 +184,7 @@ describe('createWindow', () => {
       .toEqual(expectedOnChannels.sort());
     removeIpcMainListeners();
     expect(ipcMain.eventNames()).toEqual([]);
+    destroyWindow();
   });
 });
 
