@@ -127,6 +127,7 @@ _OUTPUT_BASE_FILES = {
     'admin_units': 'admin_units.gpkg',
 }
 _INTERMEDIATE_BASE_FILES = {
+    'attribute_table': 'attribute_table.csv',
     'aligned_population': 'aligned_population.tif',
     'aligned_lulc': 'aligned_lulc.tif',
     'greenspace_area': 'greenspace_area.tif',
@@ -254,28 +255,22 @@ def execute(args):
         target_path_list=[file_registry['aligned_population']],
         task_name='Resample population to LULC resolution')
 
-    greenspace_lulc_lookup = utils.build_lookup_from_csv(
-        args['lulc_attribute_table'], 'lucode')
-    squared_pixel_area = abs(numpy.multiply(*squared_lulc_pixel_size))
-    greenspace_area_map = {
-        lucode: int(attributes['greenspace']) * squared_pixel_area
-        for lucode, attributes in greenspace_lulc_lookup.items()
-    }
-    greenspace_area_map[lulc_raster_info['nodata'][0]] = FLOAT32_NODATA
-    greenspace_reclassification_task = graph.add_task(
-        utils.reclassify_raster,
+    preprocess_attr_table_task = graph.add_task(
+        _preprocess_lulc_attribute_table,
         kwargs={
-            'raster_path_band': (file_registry['aligned_lulc'], 1),
-            'value_map': greenspace_area_map,
+            'source_attr_table_path': args['lulc_attribute_table'],
+            'default_radius': float(args['search_radius']),
+            'target_attr_table_path': file_registry['attribute_table'],
+        },
+        target_path_list=[file_registry['attribute_table']],
+        task_name='Preprocess the attribute table')
+
+    greenspace_reclassification_task = graph.add_task(
+        _reclassify_greenspace_area,
+        kwargs={
+            'lulc_raster_path': file_registry['aligned_lulc'],
+            'lulc_attribute_table': file_registry['attribute_table'],
             'target_raster_path': file_registry['greenspace_area'],
-            'target_datatype': gdal.GDT_Float32,
-            'target_nodata': FLOAT32_NODATA,
-            'error_details': {
-                'raster_name': ARGS_SPEC['args']['lulc_raster_path']['name'],
-                'column_name': 'greenspace',
-                'table_name': ARGS_SPEC['args'][
-                    'lulc_attribute_table']['name'],
-            },
         },
         target_path_list=[file_registry['greenspace_area']],
         task_name='Identify the area of greenspace in pixels',
@@ -457,6 +452,35 @@ def execute(args):
     graph.close()
     graph.join()
     LOGGER.info('Finished Urban Nature Access Model')
+
+
+def _reclassify_greenspace_area(
+        lulc_raster_path, lulc_attribute_table, target_raster_path):
+    attribute_table_dict = utils.build_lookup_from_csv(
+        lulc_attribute_table, key_field='lucode')
+
+    squared_pixel_area = abs(
+        numpy.multiply(*_square_off_pixels(lulc_raster_path)))
+
+    greenspace_area_map = {
+        lucode: int(attributes['greenspace']) * squared_pixel_area
+        for lucode, attributes in attribute_table_dict.items()
+    }
+    lulc_raster_info = pygeoprocessing.get_raster_info(lulc_raster_path)
+    greenspace_area_map[lulc_raster_info['nodata'][0]] = FLOAT32_NODATA
+
+    utils.reclassify_raster(
+        raster_path_band=(lulc_raster_path, 1),
+        value_map=greenspace_area_map,
+        target_raster_path=target_raster_path,
+        target_datatype=gdal.GDT_Float32,
+        target_nodata=FLOAT32_NODATA,
+        error_details={
+            'raster_name': ARGS_SPEC['args']['lulc_raster_path']['name'],
+            'column_name': 'greenspace',
+            'table_name': ARGS_SPEC['args']['lulc_attribute_table']['name'],
+        }
+    )
 
 
 def _preprocess_lulc_attribute_table(
