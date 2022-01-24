@@ -34,7 +34,10 @@ export default function ModelStatusAlert(props) {
   }
   if (props.status === 'error') {
     return (
-      <Alert variant="danger">
+      <Alert
+        className="text-break"
+        variant="danger"
+      >
         {props.finalTraceback}
         {WorkspaceButton}
       </Alert>
