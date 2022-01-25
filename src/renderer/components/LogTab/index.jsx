@@ -65,7 +65,6 @@ export default class LogTab extends React.Component {
       ipcRenderer.send(
         ipcMainChannels.INVEST_READ_LOG,
         logfile,
-        this.props.pyModuleName,
         jobID,
       );
     }
@@ -98,5 +97,4 @@ LogTab.propTypes = {
   logfile: PropTypes.string,
   executeClicked: PropTypes.bool.isRequired,
   jobID: PropTypes.string.isRequired,
-  pyModuleName: PropTypes.string.isRequired,
 };
