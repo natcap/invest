@@ -83,6 +83,25 @@ jobs:
                   # This builds the users guide, binaries, and installer
                   make windows_installer
 
+            - name: Install Node.js
+              uses: actions/setup-node@v2
+              with:
+                node-version: 14.x
+
+            - name: Install Workbench Dependencies
+              run: |
+                yarn config set network-timeout 600000 -g
+                yarn install
+
+            - name: Build Workbench
+              env:
+                GH_TOKEN: env.GITHUB_TOKEN
+                DEBUG: electron-builder
+                CSC_IDENTITY_AUTO_DISCOVERY: false  # disable electron-builder code signing
+              run: |
+                yarn run build
+                yarn run dist
+
             - name: Authenticate GCP
               # Secrets not available in PR so don't use GCP.
               if: github.event_name != 'pull_request'

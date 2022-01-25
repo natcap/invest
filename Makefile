@@ -63,7 +63,7 @@ else
 	endif
 endif
 
-REQUIRED_PROGRAMS := make zip pandoc $(PYTHON) git git-lfs conda
+REQUIRED_PROGRAMS := make zip pandoc $(PYTHON) git git-lfs conda yarn
 ifeq ($(OS),Windows_NT)
 	REQUIRED_PROGRAMS += makensis
 endif
@@ -76,10 +76,11 @@ PYTHON_ARCH := $(shell $(PYTHON) -c "import sys; print('x86' if sys.maxsize <= 2
 GSUTIL := gsutil
 SIGNTOOL := SignTool
 
-# Output directory names
+# local directory names
 DIST_DIR := dist
 DIST_DATA_DIR := $(DIST_DIR)/data
 BUILD_DIR := build
+WORKBENCH := workbench
 
 # The fork name and user here are derived from the git path on github.
 # The fork name will need to be set manually (e.g. make FORKNAME=natcap/invest)
@@ -113,8 +114,8 @@ TEST_DATAVALIDATOR := $(PYTHON) -m pytest -vs scripts/invest-autovalidate.py
 UG_FILE_VALIDATOR := $(PYTHON) scripts/userguide-filevalidator.py $(GIT_UG_REPO_PATH)
 
 # Target names.
-INVEST_BINARIES_DIR := $(DIST_DIR)/invest
-INVEST_BINARIES_DIR_ZIP := $(OSNAME)_invest_binaries.zip
+# INVEST_BINARIES_DIR := $(DIST_DIR)/invest
+# INVEST_BINARIES_DIR_ZIP := $(OSNAME)_invest_binaries.zip
 
 APIDOCS_BUILD_DIR := $(BUILD_DIR)/sphinx/apidocs
 APIDOCS_TARGET_DIR := $(DIST_DIR)/apidocs
@@ -172,6 +173,9 @@ test: $(GIT_TEST_DATA_REPO_PATH)
 
 test_ui: $(GIT_TEST_DATA_REPO_PATH)
 	$(TESTRUNNER) ui_tests
+
+test_workbench:
+	cd $(WORKBENCH) && yarn run test
 
 validate_sampledata: $(GIT_SAMPLE_DATA_REPO_PATH)
 	$(TEST_DATAVALIDATOR)
@@ -392,7 +396,7 @@ codesign_windows:
 	@echo "Installer was signed with signtool"
 
 deploy:
-	-(cd $(INVEST_BINARIES_DIR) && $(ZIP) -r ../$(INVEST_BINARIES_DIR_ZIP) .)
+# 	-(cd $(INVEST_BINARIES_DIR) && $(ZIP) -r ../$(INVEST_BINARIES_DIR_ZIP) .)
 	-$(GSUTIL) -m rsync $(DIST_DIR) $(DIST_URL_BASE)
 	-$(GSUTIL) -m rsync -r $(DIST_DIR)/data $(DIST_URL_BASE)/data
 	-$(GSUTIL) -m rsync -r $(DIST_DIR)/userguide $(DIST_URL_BASE)/userguide
