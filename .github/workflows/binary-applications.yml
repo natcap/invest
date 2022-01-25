@@ -124,9 +124,10 @@ jobs:
                 # figure out the path to signtool.exe (it keeps changing with SDK updates)
                 SIGNTOOL_PATH=$(find 'C:\\Program Files (x86)\\Windows Kits\\10' -type f -name 'signtool.exe*' | head -n 1)
                 INSTALLER_BINARY=$(find "$(pwd)/dist" -type f -name 'InVEST_*.exe' | head -n 1)
+                WORKBENCH_BINARY=$(find "$(pwd)/workbench/dist" -type f -name 'invest_*.exe' | head -n 1)
 
                 # setup-gcloud adds 'gsutil' to PATH
-                make BIN_TO_SIGN="$INSTALLER_BINARY" SIGNTOOL="$SIGNTOOL_PATH" codesign_windows
+                make BIN_TO_SIGN="$INSTALLER_BINARY" WORKBENCH_BIN_TO_SIGN="$WORKBENCH_BINARY" SIGNTOOL="$SIGNTOOL_PATH" codesign_windows
 
             - name: Deploy artifacts to GCS
               # Secrets not available in PR so don't use GCP.
