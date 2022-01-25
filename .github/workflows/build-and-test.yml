@@ -98,6 +98,8 @@ jobs:
             - name: Install build dependencies
               shell: bash -l {0}
               run: |
+                  pip cache list
+                  ls ${{ env.CONDA_CACHE }}
                   conda install nomkl # make sure numpy is w/out MKL
                   conda upgrade -y pip setuptools
                   conda install ${{ matrix.numpy }} ${{ matrix.gdal }} toml twine build
