@@ -23,5 +23,5 @@ test('Open File: displays a tooltip on hover', async () => {
   userEvent.unhover(openButton);
   await waitFor(() => {
     expect(queryByText(hoverText)).toBeNull();
-  })
+  });
 });

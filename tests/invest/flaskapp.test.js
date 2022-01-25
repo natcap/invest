@@ -3,7 +3,6 @@ import os from 'os';
 import path from 'path';
 import readline from 'readline';
 
-import rimraf from 'rimraf';
 import fetch from 'node-fetch';
 import React from 'react';
 import { render } from '@testing-library/react';
@@ -47,12 +46,12 @@ afterAll(async () => {
 
 describe('requests to flask endpoints', () => {
   let WORKSPACE;
-  beforeAll(() => {
+  beforeEach(() => {
     WORKSPACE = fs.mkdtempSync(path.join(os.tmpdir(), 'data-'));
   });
 
-  afterAll(() => {
-    rimraf.sync(WORKSPACE);
+  afterEach(() => {
+    fs.rmdirSync(WORKSPACE, { recursive: true });
   });
 
   test('invest list items have expected properties', async () => {
@@ -121,7 +120,6 @@ describe('requests to flask endpoints', () => {
     expectedKeys2.forEach((key) => {
       expect(data2[key]).not.toBeUndefined();
     });
-    fs.unlinkSync(filepath);
   });
 
   test('write parameters to python script', async () => {
@@ -145,7 +143,6 @@ describe('requests to flask endpoints', () => {
       expect(`${line}`).toBe('# coding=UTF-8');
       break;
     }
-    fs.unlinkSync(filepath);
   });
 });
 

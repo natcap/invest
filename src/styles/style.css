@@ -463,6 +463,10 @@ input[type=text]::placeholder {
 	font-weight: bold;
 }
 
+#log-text .invest-log-primary-warning {
+	color: #f13232;
+}
+
 #log-text .invest-log-error {
 	color: #f13232;
 	font-weight: bold;

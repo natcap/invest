@@ -40,6 +40,8 @@ class MockApp extends events.EventEmitter {
       () => os.tmpdir()
     );
     this.setPath = jest.fn();
+    this.getName = jest.fn();
+    this.getVersion = jest.fn();
   }
 }
 export const app = new MockApp();

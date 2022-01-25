@@ -46,6 +46,9 @@ export function destroyWindow() {
 
 /** Create an Electron browser window and start the flask application. */
 export const createWindow = async () => {
+  logger.info(`Running invest-workbench version ${pkg.version}`);
+  nativeTheme.themeSource = 'light'; // override OS/browser setting
+
   splashScreen = new BrowserWindow({
     width: 574, // dims set to match the image in splash.html
     height: 500,
@@ -57,13 +60,8 @@ export const createWindow = async () => {
   setupSetLanguage();
   const investExe = findInvestBinaries(ELECTRON_DEV_MODE);
   createPythonFlaskProcess(investExe);
-  logger.info(`Running invest-workbench version ${pkg.version}`);
   setupDialogs();
   setupCheckFirstRun();
-
-  // always use light mode regardless of the OS/browser setting
-  nativeTheme.themeSource = 'light';
-  // Wait for a response from the server before loading the app
   await getFlaskIsReady();
 
   // Create the browser window.
@@ -124,6 +122,7 @@ export const createWindow = async () => {
   setupInvestLogReaderHandler();
   setupContextMenu(mainWindow);
   setupGetNCPUs();
+  return Promise.resolve(); // lets tests await createWindow(), then assert
 };
 
 export function removeIpcMainListeners() {

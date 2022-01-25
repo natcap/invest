@@ -20,7 +20,11 @@
     "collectCoverage": true,
     "setupFiles": [
       "./tests/jest.overrides.js"
-    ]
+    ],
+    "testEnvironment": "jsdom",
+    "clearMocks": true,
+    "restoreMocks": true,
+    "resetModules": true
   },
   "invest": {
     "bucket": "releases.naturalcapitalproject.org",
@@ -62,7 +66,7 @@
     "@testing-library/dom": "^8.1.0",
     "@testing-library/jest-dom": "^5.14.1",
     "@testing-library/react": "^12.0.0",
-    "@testing-library/user-event": "^12.8.3",
+    "@testing-library/user-event": "^13.5.0",
     "babel-eslint": "^10.1.0",
     "cross-env": "^7.0.3",
     "electron": "^15.1.1",
@@ -77,7 +81,7 @@
     "eslint-plugin-react": "^7.22.0",
     "eslint-plugin-react-hooks": "^4.2.0",
     "fs-extra": "^9.1.0",
-    "jest": "^26.6.3",
+    "jest": "^27.4.7",
     "pptr-testing-library": "^0.6.4",
     "puppeteer-core": "^9.1.1",
     "react-devtools": "^4.10.1",

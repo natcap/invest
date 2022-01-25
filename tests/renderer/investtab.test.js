@@ -1,6 +1,6 @@
 import React from 'react';
 import { ipcRenderer, shell } from 'electron';
-import { fireEvent, render, waitFor } from '@testing-library/react';
+import { render, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import userEvent from '@testing-library/user-event';
 
@@ -61,7 +61,7 @@ describe('Sidebar Alert renders with data from a recent run', () => {
     },
   };
 
-  beforeAll(() => {
+  beforeEach(() => {
     getSpec.mockResolvedValue(spec);
     fetchValidation.mockResolvedValue([]);
     const mockSpec = spec; // jest.mock not allowed to ref out-of-scope var
@@ -70,13 +70,6 @@ describe('Sidebar Alert renders with data from a recent run', () => {
   });
 
   afterEach(() => {
-    // Since we're testing for number of times called
-    jest.clearAllMocks();
-  });
-
-  afterAll(() => {
-    jest.resetModules();
-    jest.resetAllMocks();
     removeIpcMainListeners();
   });
 
@@ -178,22 +171,11 @@ describe('Save InVEST Model Setup Buttons', () => {
   // args expected to be in the saved JSON / Python dictionary
   const expectedArgKeys = ['workspace', 'n_workers'];
 
-  beforeAll(() => {
+  beforeEach(async () => {
     getSpec.mockResolvedValue(spec);
     fetchValidation.mockResolvedValue([]);
     const mockSpec = spec;
     jest.mock(UI_CONFIG_PATH, () => mockUISpec(mockSpec));
-  });
-
-  afterAll(() => {
-    // the API for removing mocks is confusing (see https://github.com/facebook/jest/issues/7136)
-    // not sure why, but resetModules is needed to unmock the ui_config
-    jest.resetModules();
-    jest.resetAllMocks();
-    // Careful with reset because "resetting a spy results
-    // in a function with no return value". I had been using spies to observe
-    // function calls, but not to mock return values. Spies used for that
-    // purpose should be 'restored' not 'reset'. Do that inside the test as-needed.
   });
 
   test('SaveParametersButton: requests endpoint with correct payload', async () => {
@@ -208,7 +190,7 @@ describe('Save InVEST Model Setup Buttons', () => {
 
     const { findByText } = renderInvestTab();
     const saveButton = await findByText('Save to JSON');
-    fireEvent.click(saveButton);
+    userEvent.click(saveButton);
 
     await waitFor(() => {
       const results = writeParametersToFile.mock.results[0].value;
@@ -241,7 +223,7 @@ describe('Save InVEST Model Setup Buttons', () => {
     const { findByText } = renderInvestTab();
 
     const saveButton = await findByText('Save to Python script');
-    fireEvent.click(saveButton);
+    userEvent.click(saveButton);
 
     await waitFor(() => {
       const results = saveToPython.mock.results[0].value;
@@ -277,7 +259,6 @@ describe('Save InVEST Model Setup Buttons', () => {
       filePaths: ['foo.json']
     };
     ipcRenderer.invoke.mockResolvedValue(mockDialogData);
-
     const { findByText, findByLabelText, queryByText } = renderInvestTab();
 
     const loadButton = await findByText('Load parameters from file');
@@ -289,7 +270,7 @@ describe('Save InVEST Model Setup Buttons', () => {
     await waitFor(() => {
       expect(queryByText(hoverText)).toBeNull();
     });
-    fireEvent.click(loadButton);
+    userEvent.click(loadButton);
 
     const input1 = await findByLabelText(spec.args.workspace.name);
     expect(input1).toHaveValue(mockDatastack.args.workspace);
@@ -304,63 +285,51 @@ describe('Save InVEST Model Setup Buttons', () => {
       filePath: ''
     };
     ipcRenderer.invoke.mockResolvedValue(mockDialogData);
-    // Spy on this method so we can assert it was never called.
-    // Don't forget to restore! Otherwise a 'resetAllMocks'
-    // can silently turn this spy into a function that returns nothing.
     const spy = jest.spyOn(SetupTab.prototype, 'saveJsonFile');
 
     const { findByText } = renderInvestTab();
 
     const saveButton = await findByText('Save to JSON');
-    fireEvent.click(saveButton);
+    userEvent.click(saveButton);
 
     // These are the calls that would have triggered if a file was selected
     expect(spy).toHaveBeenCalledTimes(0);
-    spy.mockRestore(); // restores to unmocked implementation
   });
 
   test('SavePythonButton: Dialog callback does nothing when canceled', async () => {
-    // this resembles the callback data if the dialog is canceled instead of 
+    // this resembles the callback data if the dialog is canceled instead of
     // a save file selected.
     const mockDialogData = {
       filePath: ''
     };
     ipcRenderer.invoke.mockResolvedValue(mockDialogData);
-    // Spy on this method so we can assert it was never called.
-    // Don't forget to restore! Otherwise the beforeEach will 'resetAllMocks'
-    // will silently turn this spy into a function that returns nothing.
     const spy = jest.spyOn(SetupTab.prototype, 'savePythonScript');
 
     const { findByText } = renderInvestTab();
 
     const saveButton = await findByText('Save to Python script');
-    fireEvent.click(saveButton);
+    userEvent.click(saveButton);
 
     // These are the calls that would have triggered if a file was selected
     expect(spy).toHaveBeenCalledTimes(0);
-    spy.mockRestore(); // restores to unmocked implementation
   });
 
   test('Load Parameters Button: does nothing when canceled', async () => {
-    // this resembles the callback data if the dialog is canceled instead of 
+    // this resembles the callback data if the dialog is canceled instead of
     // a save file selected.
     const mockDialogData = {
       filePaths: ['']
     };
     ipcRenderer.invoke.mockResolvedValue(mockDialogData);
-    // Spy on this method so we can assert it was never called.
-    // Don't forget to restore! Otherwise the beforeEach will 'resetAllMocks'
-    // will silently turn this spy into a function that returns nothing.
     const spy = jest.spyOn(SetupTab.prototype, 'loadParametersFromFile');
 
     const { findByText } = renderInvestTab();
 
     const loadButton = await findByText('Load parameters from file');
-    fireEvent.click(loadButton);
+    userEvent.click(loadButton);
 
     // These are the calls that would have triggered if a file was selected
     expect(spy).toHaveBeenCalledTimes(0);
-    spy.mockRestore(); // restores to unmocked implementation
   });
 });
 
@@ -384,15 +353,10 @@ describe('InVEST Run Button', () => {
     },
   };
 
-  beforeAll(() => {
+  beforeEach(() => {
     getSpec.mockResolvedValue(spec);
     const mockSpec = spec;
     jest.mock(UI_CONFIG_PATH, () => mockUISpec(mockSpec));
-  });
-
-  afterAll(() => {
-    jest.resetModules();
-    jest.resetAllMocks();
   });
 
   test('Changing inputs trigger validation & enable/disable Run', async () => {
@@ -415,8 +379,8 @@ describe('InVEST Run Button', () => {
 
     // These new values will be valid - Run should enable
     fetchValidation.mockResolvedValue([]);
-    fireEvent.change(a, { target: { value: 'foo' } });
-    fireEvent.change(b, { target: { value: 1 } });
+    userEvent.type(a, 'foo');
+    userEvent.type(b, '1');
     await waitFor(() => {
       expect(runButton).toBeEnabled();
     });
@@ -424,7 +388,7 @@ describe('InVEST Run Button', () => {
     // This new value will be invalid - Run should disable again
     invalidFeedback = 'must be a number';
     fetchValidation.mockResolvedValue([[['b'], invalidFeedback]]);
-    fireEvent.change(b, { target: { value: 'one' } });
+    userEvent.type(b, 'one');
     await waitFor(() => {
       expect(runButton).toBeDisabled();
     });

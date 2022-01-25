@@ -6,7 +6,7 @@ import Stream from 'stream';
 import React from 'react';
 import { ipcRenderer } from 'electron';
 import {
-  fireEvent, render, waitFor, within
+  render, waitFor, within
 } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
@@ -67,19 +67,15 @@ function mockUISpec(spec, modelName) {
 }
 
 describe('Various ways to open and close InVEST models', () => {
-  beforeAll(async () => {
+  beforeEach(async () => {
     getInvestModelNames.mockResolvedValue(MOCK_INVEST_LIST);
     getSpec.mockResolvedValue(SAMPLE_SPEC);
     fetchValidation.mockResolvedValue(MOCK_VALIDATION_VALUE);
     const mockSpec = SAMPLE_SPEC; // jest.mock not allowed to ref out-of-scope var
     jest.mock(UI_CONFIG_PATH, () => mockUISpec(mockSpec, MOCK_MODEL_RUN_NAME));
   });
-  afterAll(async () => {
-    jest.resetAllMocks();
-    jest.resetModules();
-  });
+
   afterEach(async () => {
-    jest.clearAllMocks(); // clears usage data, does not reset/restore
     await InvestJob.clearStore(); // because a test calls InvestJob.saveJob()
   });
 
@@ -91,7 +87,7 @@ describe('Various ways to open and close InVEST models', () => {
     const carbon = await findByRole(
       'button', { name: MOCK_MODEL_TITLE }
     );
-    fireEvent.click(carbon);
+    userEvent.click(carbon);
     const executeButton = await findByRole('button', { name: /Run/ });
     expect(executeButton).toBeDisabled();
     const setupTab = await findByText('Setup');
@@ -119,7 +115,7 @@ describe('Various ways to open and close InVEST models', () => {
     const recentJobCard = await findByText(
       argsValues.workspace_dir
     );
-    fireEvent.click(recentJobCard);
+    userEvent.click(recentJobCard);
     const executeButton = await findByRole('button', { name: /Run/ });
     expect(executeButton).toBeDisabled();
     const setupTab = await findByText('Setup');
@@ -153,7 +149,7 @@ describe('Various ways to open and close InVEST models', () => {
 
     const openButton = await findByRole('button', { name: 'Open' });
     expect(openButton).not.toBeDisabled();
-    fireEvent.click(openButton);
+    userEvent.click(openButton);
     const executeButton = await findByRole('button', { name: /Run/ });
     expect(executeButton).toBeDisabled();
     const setupTab = await findByText('Setup');
@@ -176,7 +172,7 @@ describe('Various ways to open and close InVEST models', () => {
     );
 
     const openButton = await findByRole('button', { name: 'Open' });
-    fireEvent.click(openButton);
+    userEvent.click(openButton);
     const homeTab = await findByRole('tabpanel', { name: 'home tab' });
     // expect we're on the same tab we started on instead of switching to Setup
     expect(homeTab.classList.contains('active')).toBeTruthy();
@@ -198,7 +194,7 @@ describe('Various ways to open and close InVEST models', () => {
     const homeTab = await findByRole('tabpanel', { name: 'home tab' });
 
     // Open a model tab and expect that it's active
-    fireEvent.click(carbon);
+    userEvent.click(carbon);
     let modelTabs = await findAllByRole('tab', { name: MOCK_MODEL_TITLE });
     expect(modelTabs).toHaveLength(1); // one carbon tab open
     const tab1 = modelTabs[0];
@@ -207,8 +203,8 @@ describe('Various ways to open and close InVEST models', () => {
     expect(homeTab.classList.contains('active')).toBeFalsy();
 
     // Open a second model tab and expect that it's active
-    fireEvent.click(homeTab);
-    fireEvent.click(carbon);
+    userEvent.click(homeTab);
+    userEvent.click(carbon);
     modelTabs = await findAllByRole('tab', { name: MOCK_MODEL_TITLE });
     expect(modelTabs).toHaveLength(2); // 2 carbon tabs open
     const tab2 = modelTabs[1];
@@ -220,8 +216,8 @@ describe('Various ways to open and close InVEST models', () => {
     expect(tab2EventKey).not.toEqual(tab1EventKey);
 
     // Open a third model tab and expect that it's active
-    fireEvent.click(homeTab);
-    fireEvent.click(carbon);
+    userEvent.click(homeTab);
+    userEvent.click(carbon);
     modelTabs = await findAllByRole('tab', { name: MOCK_MODEL_TITLE });
     expect(modelTabs).toHaveLength(3); // 3 carbon tabs open
     const tab3 = modelTabs[2];
@@ -237,7 +233,7 @@ describe('Various ways to open and close InVEST models', () => {
     // Click the close button on the middle tab
     const tab2CloseButton = await within(tab2.closest('.nav-item'))
       .getByRole('button', { name: new RegExp(`close ${MOCK_MODEL_TITLE}`) });
-    fireEvent.click(tab2CloseButton);
+    userEvent.click(tab2CloseButton);
     // Now there should only be 2 model tabs open
     modelTabs = await findAllByRole('tab', { name: MOCK_MODEL_TITLE });
     expect(modelTabs).toHaveLength(2);
@@ -248,7 +244,7 @@ describe('Various ways to open and close InVEST models', () => {
     // Click the close button on the right tab
     const tab3CloseButton = await within(tab3.closest('.nav-item'))
       .getByRole('button', { name: new RegExp(`close ${MOCK_MODEL_TITLE}`) });
-    fireEvent.click(tab3CloseButton);
+    userEvent.click(tab3CloseButton);
     // Now there should only be 1 model tab open
     modelTabs = await findAllByRole('tab', { name: MOCK_MODEL_TITLE });
     expect(modelTabs).toHaveLength(1);
@@ -259,7 +255,7 @@ describe('Various ways to open and close InVEST models', () => {
     // Click the close button on the last tab
     const tab1CloseButton = await within(tab1.closest('.nav-item'))
       .getByRole('button', { name: new RegExp(`close ${MOCK_MODEL_TITLE}`) });
-    fireEvent.click(tab1CloseButton);
+    userEvent.click(tab1CloseButton);
     // Now there should be no model tabs open.
     modelTabs = await queryAllByRole('tab', { name: MOCK_MODEL_TITLE });
     expect(modelTabs).toHaveLength(0);
@@ -272,9 +268,9 @@ describe('Display recently executed InVEST jobs on Home tab', () => {
   beforeEach(() => {
     getInvestModelNames.mockResolvedValue({});
   });
+
   afterEach(async () => {
     await InvestJob.clearStore();
-    jest.resetAllMocks();
   });
 
   test('Recent Jobs: each has a button', async () => {
@@ -357,8 +353,8 @@ describe('Display recently executed InVEST jobs on Home tab', () => {
           .toBeTruthy();
       });
     });
-    fireEvent.click(getByRole('button', { name: 'settings' }));
-    fireEvent.click(getByText('Clear Recent Jobs'));
+    userEvent.click(getByRole('button', { name: 'settings' }));
+    userEvent.click(getByText('Clear Recent Jobs'));
     const node = await findByText(/button to setup a model/);
     expect(node).toBeInTheDocument();
   });
@@ -371,10 +367,6 @@ describe('InVEST global settings: dialog interactions', () => {
   beforeEach(async () => {
     getInvestModelNames.mockResolvedValue({});
     ipcRenderer.invoke.mockResolvedValue({});
-  });
-
-  afterEach(async () => {
-    jest.resetAllMocks();
   });
 
   test('Invest settings save on change', async () => {
@@ -490,11 +482,14 @@ describe('InVEST subprocess testing', () => {
   const stdOutText = 'hello from invest';
   const investExe = 'foo';
   let mockInvestProc;
-  let spyKill;
 
   beforeAll(() => {
     setupInvestRunHandlers(investExe);
     setupInvestLogReaderHandler();
+  });
+
+  afterAll(() => {
+    removeIpcMainListeners();
   });
 
   beforeEach(() => {
@@ -507,8 +502,6 @@ describe('InVEST subprocess testing', () => {
     const mockModelName = modelName;
     jest.mock(UI_CONFIG_PATH, () => mockUISpec(mockSpec, mockModelName));
 
-    // Need to reset these streams since mockInvestProc is shared by tests
-    // and the streams apparently receive the EOF signal in each test.
     mockInvestProc = new events.EventEmitter();
     mockInvestProc.pid = -9999999; // a value that is not a plausible pid
     mockInvestProc.stdout = new Stream.Readable({
@@ -521,7 +514,7 @@ describe('InVEST subprocess testing', () => {
     spawn.mockImplementation(() => mockInvestProc);
 
     if (process.platform !== 'win32') {
-      spyKill = jest.spyOn(process, 'kill')
+      jest.spyOn(process, 'kill')
         .mockImplementation(() => {
           mockInvestProc.emit('exit', null);
         });
@@ -532,18 +525,9 @@ describe('InVEST subprocess testing', () => {
     }
   });
 
-  afterAll(() => {
-    if (spyKill) {
-      spyKill.mockRestore();
-    }
-    removeIpcMainListeners();
-  });
-
   afterEach(async () => {
     mockInvestProc = null;
     await InvestJob.clearStore();
-    jest.resetAllMocks();
-    jest.resetModules();
   });
 
   test('exit without error - expect log display', async () => {
@@ -558,13 +542,13 @@ describe('InVEST subprocess testing', () => {
     const carbon = await findByRole(
       'button', { name: MOCK_MODEL_TITLE }
     );
-    fireEvent.click(carbon);
+    userEvent.click(carbon);
     const workspaceInput = await findByLabelText(
       `${spec.args.workspace_dir.name}`
     );
-    fireEvent.change(workspaceInput, { target: { value: fakeWorkspace } });
+    userEvent.type(workspaceInput, fakeWorkspace);
     const execute = await findByRole('button', { name: /Run/ });
-    fireEvent.click(execute);
+    userEvent.click(execute);
     await waitFor(() => {
       expect(execute).toBeDisabled();
     });
@@ -605,14 +589,14 @@ describe('InVEST subprocess testing', () => {
     const carbon = await findByRole(
       'button', { name: MOCK_MODEL_TITLE }
     );
-    fireEvent.click(carbon);
+    userEvent.click(carbon);
     const workspaceInput = await findByLabelText(
       `${spec.args.workspace_dir.name}`
     );
-    fireEvent.change(workspaceInput, { target: { value: fakeWorkspace } });
+    userEvent.type(workspaceInput, fakeWorkspace);
 
     const execute = await findByRole('button', { name: /Run/ });
-    fireEvent.click(execute);
+    userEvent.click(execute);
 
     // To test that we can parse the finalTraceback even after extra data
     const someStdErr = 'something went wrong';
@@ -663,14 +647,14 @@ describe('InVEST subprocess testing', () => {
     const carbon = await findByRole(
       'button', { name: MOCK_MODEL_TITLE }
     );
-    fireEvent.click(carbon);
+    userEvent.click(carbon);
     const workspaceInput = await findByLabelText(
       `${spec.args.workspace_dir.name}`
     );
-    fireEvent.change(workspaceInput, { target: { value: fakeWorkspace } });
+    userEvent.type(workspaceInput, fakeWorkspace);
 
     const execute = await findByRole('button', { name: /Run/ });
-    fireEvent.click(execute);
+    userEvent.click(execute);
 
     // stdout listener is how the app knows the process started
     // Canel button only appears after this signal.
@@ -685,7 +669,7 @@ describe('InVEST subprocess testing', () => {
       .toBeInTheDocument();
 
     const cancelButton = await findByText('Cancel Run');
-    fireEvent.click(cancelButton);
+    userEvent.click(cancelButton);
     expect(await findByText('Open Workspace'))
       .toBeEnabled();
     expect(await findByRole('alert'))
@@ -709,14 +693,14 @@ describe('InVEST subprocess testing', () => {
     const carbon = await findByRole(
       'button', { name: MOCK_MODEL_TITLE }
     );
-    fireEvent.click(carbon);
+    userEvent.click(carbon);
     const workspaceInput = await findByLabelText(
       `${spec.args.workspace_dir.name}`
     );
-    fireEvent.change(workspaceInput, { target: { value: fakeWorkspace } });
+    userEvent.type(workspaceInput, fakeWorkspace);
 
     const execute = await findByRole('button', { name: /Run/ });
-    fireEvent.click(execute);
+    userEvent.click(execute);
 
     // stdout listener is how the app knows the process started
     mockInvestProc.stdout.push(stdOutText);
@@ -729,15 +713,15 @@ describe('InVEST subprocess testing', () => {
       .toBeInTheDocument();
 
     const cancelButton = await findByText('Cancel Run');
-    fireEvent.click(cancelButton);
+    userEvent.click(cancelButton);
     expect(await findByText('Open Workspace'))
       .toBeEnabled();
 
     // Now click away from Log, re-run, and expect the switch
     // back to the new log
     const setupTab = await findByText('Setup');
-    fireEvent.click(setupTab);
-    fireEvent.click(execute);
+    userEvent.click(setupTab);
+    userEvent.click(execute);
     // firing execute re-assigns mockInvestProc via the spawn mock,
     // but we need to wait for that before pushing to it's stdout.
     // Since the production code cannot 'await spawn()',
@@ -779,8 +763,8 @@ describe('InVEST subprocess testing', () => {
     const recentJobCard = await findByText(
       argsValues.workspace_dir
     );
-    fireEvent.click(recentJobCard);
-    fireEvent.click(await findByText('Log'));
+    userEvent.click(recentJobCard);
+    userEvent.click(await findByText('Log'));
     // We don't need to have a real logfile in order to test that LogTab
     // is trying to read from a file instead of from stdout
     expect(await findByText(/Logfile is missing/)).toBeInTheDocument();
@@ -788,9 +772,9 @@ describe('InVEST subprocess testing', () => {
     // Now re-run from the same InvestTab component and expect
     // LogTab is displaying the new invest process stdout
     const setupTab = await findByText('Setup');
-    fireEvent.click(setupTab);
+    userEvent.click(setupTab);
     const execute = await findByRole('button', { name: /Run/ });
-    fireEvent.click(execute);
+    userEvent.click(execute);
     // firing execute re-assigns mockInvestProc via the spawn mock,
     // but we need to wait for that before pushing to it's stdout.
     // Since the production code cannot 'await spawn()',
