@@ -28,5 +28,5 @@ export default function markupMessage(message, pyModuleName) {
       return sanitizeHtml(markup, allowedHtml);
     }
   }
-  return sanitizeHtml(message, allowedHtml);
+  return sanitizeHtml(message);
 }
