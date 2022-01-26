@@ -387,7 +387,7 @@ codesign_mac:
 	# this is essential to avoid the UI password prompt
 	security set-key-partition-list -S apple-tool:,apple: -s -k $(KEYCHAIN_PASS) $(KEYCHAIN_NAME)
 	# sign the dmg using certificate that's looked up by unique identifier 'Stanford'
-	codesign --timestamp --verbose --sign Stanford $(MAC_DISK_IMAGE_FILE)
+	codesign --timestamp --verbose --sign Stanford $(BIN_TO_SIGN) $(WORKBENCH_BIN_TO_SIGN)
 
 codesign_windows:
 	$(GSUTIL) cp gs://stanford_cert/$(CERT_FILE) $(BUILD_DIR)/$(CERT_FILE)
