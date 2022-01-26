@@ -57,6 +57,7 @@ FormLabel.propTypes = {
 };
 
 function Feedback(props) {
+  console.log('render feedback', props.message);
   return (
     // d-block class is needed because of a bootstrap bug
     // https://github.com/twbs/bootstrap/issues/29439
@@ -123,6 +124,7 @@ export default class ArgInput extends React.PureComponent {
       value,
     } = this.props;
     let { validationMessage } = this.props;
+    console.log('render input', validationMessage);
     let Input;
     // Messages with this pattern include validation feedback about
     // multiple inputs, but the whole message is repeated for each input.
@@ -321,6 +323,9 @@ export default class ArgInput extends React.PureComponent {
         </Form.Group>
       );
     }
+    console.log(validationMessage && touched);
+    console.log(!!validationMessage)
+    console.log(!!touched)
     return Input;
   }
 }

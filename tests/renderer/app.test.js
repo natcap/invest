@@ -3,6 +3,7 @@ import events from 'events';
 import { spawn, exec } from 'child_process';
 import Stream from 'stream';
 
+import GettextJS from 'gettext.js';
 import React from 'react';
 import { ipcRenderer } from 'electron';
 import {
@@ -19,6 +20,7 @@ import InvestJob from '../../src/renderer/InvestJob';
 import {
   getSettingsValue, saveSettingsStore
 } from '../../src/renderer/components/SettingsModal/SettingsStorage';
+import { ipcMainChannels } from '../../src/main/ipcMainChannels';
 import {
   setupInvestRunHandlers,
   setupInvestLogReaderHandler,
@@ -55,14 +57,14 @@ const SAMPLE_SPEC = {
       name: 'Carbon Pools',
       about: 'help text',
       type: 'csv',
-    }
-  }
+    },
+  },
 };
 
 const UI_CONFIG_PATH = '../../src/renderer/ui_config';
 function mockUISpec(spec, modelName) {
   return {
-    [modelName]: { order: [Object.keys(spec.args)] }
+    [modelName]: { order: [Object.keys(spec.args)] },
   };
 }
 
@@ -375,7 +377,7 @@ describe('InVEST global settings: dialog interactions', () => {
     const loggingLevel = 'DEBUG';
 
     const {
-      getByText, getByRole, getByLabelText, findByRole
+      getByText, getByRole, getByLabelText, findByRole,
     } = render(
       <App />
     );
@@ -415,7 +417,7 @@ describe('InVEST global settings: dialog interactions', () => {
     await saveSettingsStore(expectedSettings);
 
     const {
-      getByText, getByLabelText, findByRole
+      getByText, getByLabelText, findByRole,
     } = render(
       <App />
     );
@@ -440,7 +442,7 @@ describe('InVEST global settings: dialog interactions', () => {
 
   test('Access sampledata download Modal from settings', async () => {
     const {
-      findByText, findByRole, queryByText
+      findByText, findByRole, queryByText,
     } = render(
       <App />
     );
@@ -750,7 +752,7 @@ describe('InVEST subprocess testing', () => {
       modelHumanName: 'Carbon Sequestration',
       argsValues: argsValues,
       status: 'success',
-      logfile: logfilePath
+      logfile: logfilePath,
     });
     await InvestJob.saveJob(mockJob);
 
@@ -792,5 +794,77 @@ describe('InVEST subprocess testing', () => {
     mockInvestProc.emit('exit', 0);
     // Give it time to run the listener before unmounting.
     await new Promise((resolve) => setTimeout(resolve, 300));
+  });
+});
+
+describe('Translation', () => {
+  const i18n = new GettextJS();
+  const testLanguage = 'es';
+  const messageCatalog = {
+    '': {
+      language: testLanguage,
+      'plural-forms': 'nplurals=2; plural=(n!=1);',
+    },
+    Open: 'σρєи',
+    Language: 'ℓαиgυαgє',
+  };
+
+  beforeAll(async () => {
+    getInvestModelNames.mockResolvedValue({});
+
+    i18n.loadJSON(messageCatalog, 'messages');
+    console.log(i18n.gettext('Language'));
+
+    // mock out the relevant IPC channels
+    ipcRenderer.invoke.mockImplementation((channel, arg) => {
+      if (channel === ipcMainChannels.SET_LANGUAGE) {
+        i18n.setLocale(arg);
+      }
+      return Promise.resolve();
+    });
+
+    ipcRenderer.sendSync.mockImplementation((channel, arg) => {
+      if (channel === ipcMainChannels.GETTEXT) {
+        return i18n.gettext(arg);
+      }
+      return undefined;
+    });
+
+    // this is the same setup that's done in src/renderer/index.js (out of test scope)
+    ipcRenderer.invoke(ipcMainChannels.SET_LANGUAGE, 'en');
+    global.window._ = ipcRenderer.sendSync.bind(null, ipcMainChannels.GETTEXT);
+  });
+  afterAll(async () => {
+    jest.resetAllMocks();
+  });
+
+  test('Text rerenders in new language when language setting changes', async () => {
+    const {
+      findByText,
+      getByText,
+      findByLabelText,
+    } = render(<App />);
+
+    userEvent.click(await findByLabelText('settings'));
+    let languageInput = await findByLabelText('Language', { exact: false });
+    expect(languageInput).toHaveValue('en');
+
+    userEvent.selectOptions(languageInput, testLanguage);
+
+    // text within the settings modal component should be translated
+    languageInput = await findByLabelText(messageCatalog.Language, { exact: false });
+    expect(languageInput).toHaveValue(testLanguage);
+
+    // text should also be translated in other components
+    // such as the Open button (visible in background)
+    await findByText(messageCatalog.Open);
+
+    // text without a translation in the message catalog should display in the default English
+    expect(getByText('Logging threshold')).toBeDefined();
+
+    // resetting language should re-render components in English
+    userEvent.click(getByText('Reset to Defaults'));
+    expect(await findByText('Language')).toBeDefined();
+    expect(await findByText('Open')).toBeDefined();
   });
 });

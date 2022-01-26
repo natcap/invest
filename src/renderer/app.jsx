@@ -72,7 +72,7 @@ export default class App extends React.Component {
 
     ipcRenderer.on('download-status', (event, downloadedNofN) => {
       this.setState({
-        downloadedNofN: downloadedNofN
+        downloadedNofN: downloadedNofN,
       });
     });
   }
@@ -92,20 +92,15 @@ export default class App extends React.Component {
   }
 
   saveSettings(settings) {
-    console.log('save settings', settings.language);
-    console.log(ipcRenderer.invoke);
-    console.log(ipcRenderer.invoke());
-    const a = ipcRenderer.invoke(
+    ipcRenderer.invoke(
       ipcMainChannels.SET_LANGUAGE, settings.language
-    );
-    console.log(a);
-    a.then(() => this.setState({ investSettings: settings }));
+    ).then(() => this.setState({ investSettings: settings }));
     saveSettingsStore(settings);
   }
 
   /** Store a sampledata filepath in localforage.
    *
-   * @param {String} dir - the path to the user-selected dir
+   * @param {string} dir - the path to the user-selected dir
    */
   storeDownloadDir(dir) {
     const { investSettings } = this.state;

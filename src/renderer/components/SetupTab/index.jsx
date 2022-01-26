@@ -377,6 +377,7 @@ export default class SetupTab extends React.Component {
           )
           : <span>{_("Run")}</span>
       );
+      console.log('render', argsValidation)
       return (
         <Container fluid>
           <Row>

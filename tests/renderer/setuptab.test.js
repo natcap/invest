@@ -230,6 +230,10 @@ describe('Arguments form interactions', () => {
       findByText, findByLabelText, queryByText,
     } = renderSetupFromSpec(spec, UI_SPEC);
 
+    fetchValidation.mockResolvedValue(
+      [[Object.keys(spec.args), VALIDATION_MESSAGE]]
+    );
+
     const input = await findByLabelText(`${spec.args.arg.name}`);
     expect(input).toHaveClass('is-invalid');
     expect(queryByText(RegExp(VALIDATION_MESSAGE))).toBeNull();
