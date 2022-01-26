@@ -408,10 +408,10 @@ jobs:
                   conda env update --file requirements-all.yml
                   make install
 
-            - name: Clone Workbench
             # TODO: this is temporary so we can test the rest of
             # the workflow before we git add the workbench to invest.
-                run: |
+            - name: Clone Workbench
+              run: |
                   git clone https://github.com/davemfish/invest-workbench.git workbench
                   cd workbench
                   git fetch origin experimental/invest-integration
@@ -428,8 +428,7 @@ jobs:
                   yarn config set network-timeout 600000 -g
                   yarn install
 
-
-            - name: run tests
+            - name: run workbench tests
               working-directory: ./workbench
               run: yarn test
               env:
