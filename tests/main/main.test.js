@@ -87,10 +87,10 @@ describe('findInvestBinaries', () => {
   });
   const ext = (process.platform === 'win32') ? '.exe' : '';
   const filename = `invest${ext}`;
-  it('should point to build folder in dev mode', () => {
+  it('should be on the PATH in dev mode', () => {
     const isDevMode = true;
     const exePath = findInvestBinaries(isDevMode);
-    expect(exePath).toBe(path.join('build', 'invest', filename));
+    expect(exePath).toBe(filename);
   });
   it('should point to resourcesPath in production', async () => {
     const isDevMode = false;
