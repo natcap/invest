@@ -28,7 +28,7 @@ const config = {
   },
   extraResources: [
     {
-      from: 'build/invest',
+      from: '../dist/invest',
       to: 'invest',
     },
   ],
