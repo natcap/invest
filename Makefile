@@ -115,7 +115,7 @@ TEST_DATAVALIDATOR := $(PYTHON) -m pytest -vs scripts/invest-autovalidate.py
 UG_FILE_VALIDATOR := $(PYTHON) scripts/userguide-filevalidator.py $(GIT_UG_REPO_PATH)
 
 # Target names.
-# INVEST_BINARIES_DIR := $(DIST_DIR)/invest
+INVEST_BINARIES_DIR := $(DIST_DIR)/invest
 # INVEST_BINARIES_DIR_ZIP := $(OSNAME)_invest_binaries.zip
 
 APIDOCS_BUILD_DIR := $(BUILD_DIR)/sphinx/apidocs
