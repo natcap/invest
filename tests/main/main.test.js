@@ -37,7 +37,7 @@ import { ipcMainChannels } from '../../src/main/ipcMainChannels';
 import investUsageLogger from '../../src/main/investUsageLogger';
 
 // mock out the global gettext function - avoid setting up translation
-global.window._ = (x) => x;
+// global.window._ = (x) => x;
 
 jest.mock('node-fetch');
 jest.mock('child_process');

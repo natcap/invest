@@ -166,6 +166,7 @@ describe('validate the UI spec', () => {
       expect(Object.keys(uiSpec)).toContain(modelName);
       // expect each arg in the UI spec to exist in the args spec
       for (const property in uiSpec[modelName]) {
+        console.log(property);
         if (property === 'order') {
           hasOrderProperty = true;
           // 'order' is a 2D array of arg names
@@ -174,11 +175,13 @@ describe('validate the UI spec', () => {
           // expect there to be no duplicated args in the order
           expect(orderArray).toHaveLength(orderSet.size);
           orderArray.forEach((arg) => {
+            console.log(arg);
             expect(spec.args[arg]).toBeDefined();
           });
         } else {
           // for other properties, each key is an arg
           Object.keys(uiSpec[modelName][property]).forEach((arg) => {
+            console.log(arg);
             expect(spec.args[arg]).toBeDefined();
           });
         }
