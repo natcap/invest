@@ -5,12 +5,12 @@ import { spawn, exec } from 'child_process';
 
 import { app, ipcMain } from 'electron';
 import fetch from 'node-fetch';
-import sanitizeHtml from 'sanitize-html';
 
 import { getLogger } from '../logger';
 import { ipcMainChannels } from './ipcMainChannels';
 import ELECTRON_DEV_MODE from './isDevMode';
 import investUsageLogger from './investUsageLogger';
+import markupMessage from './investLogMarkup';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
@@ -23,37 +23,6 @@ const LOGLEVELMAP = {
 };
 const TEMP_DIR = path.join(app.getPath('userData'), 'tmp');
 const HOSTNAME = 'http://localhost';
-
-const LOG_TEXT_TAG = 'span';
-const ALLOWED_HTML_OPTIONS = {
-  allowedTags: [LOG_TEXT_TAG],
-  allowedAttributes: { [LOG_TEXT_TAG]: ['class'] },
-};
-const LOG_ERROR_REGEX = /(Traceback)|(([A-Z]{1}[a-z]*){1,}Error)|(ERROR)/;
-export const LOG_PATTERNS = {
-  'invest-log-error': LOG_ERROR_REGEX,
-  'invest-log-primary': null,
-};
-/**
- * Encapsulate text in html, assigning class based on text content.
- *
- * @param  {string} message - plaintext string
- * @param  {object} patterns - of shape {string: RegExp}
- * @returns {string} - sanitized html
- */
-export function markupMessage(message, patterns) {
-  // eslint-disable-next-line
-  for (const [cls, pattern] of Object.entries(patterns)) {
-    // in case we somehow don't have a RegExp as the pattern
-    if (pattern && typeof pattern.test === 'function') {
-      if (pattern.test(message)) {
-        const markup = `<${LOG_TEXT_TAG} class="${cls}">${message}</${LOG_TEXT_TAG}>`;
-        return sanitizeHtml(markup, ALLOWED_HTML_OPTIONS);
-      }
-    }
-  }
-  return sanitizeHtml(message, ALLOWED_HTML_OPTIONS);
-}
 
 export function setupInvestRunHandlers(investExe) {
   const runningJobs = {};
@@ -76,8 +45,6 @@ export function setupInvestRunHandlers(investExe) {
     let investRun;
     let investStarted = false;
     let investStdErr = '';
-    const logPatterns = { ...LOG_PATTERNS };
-    logPatterns['invest-log-primary'] = new RegExp(pyModuleName);
     const usageLogger = investUsageLogger();
 
     // Write a temporary datastack json for passing to invest CLI
@@ -150,7 +117,7 @@ export function setupInvestRunHandlers(investExe) {
       // only be one logger message at a time.
       event.reply(
         `invest-stdout-${jobID}`,
-        markupMessage(`${data}`, logPatterns)
+        markupMessage(`${data}`, pyModuleName)
       );
     };
     investRun.stdout.on('data', stdOutCallback);
@@ -187,7 +154,7 @@ export function setupInvestRunHandlers(investExe) {
 
 export function setupInvestLogReaderHandler() {
   ipcMain.on(ipcMainChannels.INVEST_READ_LOG,
-    (event, logfile, pyModuleName, channel) => {
+    (event, logfile, channel) => {
       const fileStream = fs.createReadStream(logfile);
       fileStream.on('error', (err) => {
         logger.error(err);

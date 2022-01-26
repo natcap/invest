@@ -3,6 +3,7 @@ import React from 'react';
 import {
   createEvent, fireEvent, render, waitFor, within
 } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 
 import SetupTab from '../../src/renderer/components/SetupTab';
@@ -13,6 +14,19 @@ import {
 jest.mock('../../src/renderer/server_requests');
 
 const MODULE = 'carbon';
+
+const VALIDATION_MESSAGE = 'invalid because';
+const BASE_ARGS_SPEC = {
+  args: {
+    arg: {
+      name: 'foo',
+      type: undefined, // varies by test
+      required: undefined,
+      about: 'this is about foo',
+    },
+  },
+};
+const UI_SPEC = { order: [Object.keys(BASE_ARGS_SPEC.args)] };
 
 function renderSetupFromSpec(baseSpec, uiSpec) {
   // some ARGS_SPEC boilerplate that is not under test,
@@ -38,29 +52,9 @@ function renderSetupFromSpec(baseSpec, uiSpec) {
 }
 
 describe('Arguments form input types', () => {
-  const validationMessage = 'invalid because';
-  let baseSpec;
-  let uiSpec;
-
-  afterEach(() => {
-    jest.resetAllMocks();
-  });
-
   beforeEach(() => {
-    baseSpec = {
-      args: {
-        arg: {
-          name: 'foo',
-          type: undefined, // varies by test
-          required: undefined,
-          about: 'this is about foo',
-        },
-      },
-    };
-
-    uiSpec = { order: [Object.keys(baseSpec.args)] };
     fetchValidation.mockResolvedValue(
-      [[Object.keys(baseSpec.args), validationMessage]]
+      [[Object.keys(BASE_ARGS_SPEC.args), VALIDATION_MESSAGE]]
     );
   });
 
@@ -71,12 +65,12 @@ describe('Arguments form input types', () => {
     ['raster'],
     ['file'],
   ])('render a text input & browse button for a %s', async (type) => {
-    const spec = { ...baseSpec };
+    const spec = { ...BASE_ARGS_SPEC };
     spec.args.arg.type = type;
 
     const {
       findByLabelText, findByRole
-    } = renderSetupFromSpec(spec, uiSpec);
+    } = renderSetupFromSpec(spec, UI_SPEC);
 
     const input = await findByLabelText(`${spec.args.arg.name}`);
     expect(input).toHaveAttribute('type', 'text');
@@ -91,86 +85,67 @@ describe('Arguments form input types', () => {
     ['percent'],
     ['integer'],
   ])('render a text input for a %s', async (type) => {
-    const spec = { ...baseSpec };
+    const spec = { ...BASE_ARGS_SPEC };
     spec.args.arg.type = type;
-    const { findByLabelText } = renderSetupFromSpec(spec, uiSpec);
+    const { findByLabelText } = renderSetupFromSpec(spec, UI_SPEC);
     const input = await findByLabelText(`${spec.args.arg.name}`);
     expect(input).toHaveAttribute('type', 'text');
   });
 
   test('render an unchecked radio button for a boolean', async () => {
-    const spec = { ...baseSpec };
+    const spec = { ...BASE_ARGS_SPEC };
     spec.args.arg.type = 'boolean';
-    const { findByLabelText } = renderSetupFromSpec(spec, uiSpec);
+    const { findByLabelText } = renderSetupFromSpec(spec, UI_SPEC);
     const input = await findByLabelText(`${spec.args.arg.name}`);
     expect(input).toHaveAttribute('type', 'radio');
     expect(input).not.toBeChecked();
   });
 
   test('render a select input for an option_string dict', async () => {
-    const spec = { ...baseSpec };
+    const spec = { ...BASE_ARGS_SPEC };
     spec.args.arg.type = 'option_string';
     spec.args.arg.options = {
       a: 'about a',
       b: 'about b',
     };
-    const { findByLabelText } = renderSetupFromSpec(spec, uiSpec);
+    const { findByLabelText } = renderSetupFromSpec(spec, UI_SPEC);
     const input = await findByLabelText(`${spec.args.arg.name}`);
     expect(input).toHaveValue('a');
     expect(input).not.toHaveValue('b');
   });
 
   test('render a select input for an option_string list', async () => {
-    const spec = { ...baseSpec };
+    const spec = { ...BASE_ARGS_SPEC };
     spec.args.arg.type = 'option_string';
     spec.args.arg.options = ['a', 'b'];
-    const { findByLabelText } = renderSetupFromSpec(spec, uiSpec);
+    const { findByLabelText } = renderSetupFromSpec(spec, UI_SPEC);
     const input = await findByLabelText(`${spec.args.arg.name}`);
     expect(input).toHaveValue('a');
     expect(input).not.toHaveValue('b');
   });
 
   test('expect the info dialog contains text about input', async () => {
-    const spec = { ...baseSpec };
+    const spec = { ...BASE_ARGS_SPEC };
     spec.args.arg.type = 'directory';
-    const { findByText, findByRole } = renderSetupFromSpec(spec, uiSpec);
-    fireEvent.click(await findByRole('button', { name: /info about/ }));
+    const { findByText, findByRole } = renderSetupFromSpec(spec, UI_SPEC);
+    userEvent.click(await findByRole('button', { name: /info about/ }));
     expect(await findByText(spec.args.arg.about)).toBeInTheDocument();
   });
 });
 
 describe('Arguments form interactions', () => {
-  const validationMessage = 'invalid because';
-  let spec;
-  let uiSpec;
-
-  afterEach(() => {
-    jest.resetAllMocks();
-  });
-
   beforeEach(() => {
-    spec = {
-      args: {
-        arg: {
-          name: 'foo',
-          type: undefined, // varies by test
-          required: undefined, // varies by test
-          about: 'this is about foo',
-        },
-      },
-    };
-
-    uiSpec = { order: [Object.keys(spec.args)] };
     fetchValidation.mockResolvedValue(
-      [[Object.keys(spec.args), validationMessage]]
+      [[Object.keys(BASE_ARGS_SPEC.args), VALIDATION_MESSAGE]]
     );
   });
 
   test('Browse button populates an input', async () => {
+    const spec = { ...BASE_ARGS_SPEC };
     spec.args.arg.type = 'csv';
     const {
       findByRole, findByLabelText
-    } = renderSetupFromSpec(spec, uiSpec);
+    } = renderSetupFromSpec(spec, UI_SPEC);
 
     const input = await findByLabelText(`${spec.args.arg.name}`);
     expect(input).toHaveAttribute('type', 'text');
@@ -181,7 +156,7 @@ describe('Arguments form interactions', () => {
     const filepath = 'grilled_cheese.csv';
     let mockDialogData = { filePaths: [filepath] };
     ipcRenderer.invoke.mockResolvedValue(mockDialogData);
-    fireEvent.click(await findByRole('button', { name: /browse for/ }));
+    userEvent.click(await findByRole('button', { name: /browse for/ }));
     await waitFor(() => {
       expect(input).toHaveValue(filepath);
     });
@@ -189,17 +164,18 @@ describe('Arguments form interactions', () => {
     // Browse again, but cancel it and expect the previous value
     mockDialogData = { filePaths: [] }; // empty array is a mocked 'Cancel'
     ipcRenderer.invoke.mockResolvedValue(mockDialogData);
-    fireEvent.click(await findByRole('button', { name: /browse for/ }));
+    userEvent.click(await findByRole('button', { name: /browse for/ }));
     await waitFor(() => {
       expect(input).toHaveValue(filepath);
     });
   });
 
   test('Browse button populates an input - test click on child svg', async () => {
+    const spec = { ...BASE_ARGS_SPEC };
     spec.args.arg.type = 'csv';
     const {
       findByRole, findByLabelText
-    } = renderSetupFromSpec(spec, uiSpec);
+    } = renderSetupFromSpec(spec, UI_SPEC);
 
     const filepath = 'grilled_cheese.csv';
     const mockDialogData = { filePaths: [filepath] };
@@ -207,65 +183,68 @@ describe('Arguments form interactions', () => {
     const btn = await findByRole('button', { name: /browse for/ });
     // Click on a target element nested within the button to make
     // sure the handler still works correctly.
-    fireEvent.click(btn.querySelector('svg'));
+    userEvent.click(btn.querySelector('svg'));
     expect(await findByLabelText(`${spec.args.arg.name}`))
       .toHaveValue(filepath);
   });
 
   test('Change value & get feedback on a required input', async () => {
+    const spec = { ...BASE_ARGS_SPEC };
     spec.args.arg.type = 'directory';
     spec.args.arg.required = true;
     const {
       findByText, findByLabelText, queryByText
-    } = renderSetupFromSpec(spec, uiSpec);
+    } = renderSetupFromSpec(spec, UI_SPEC);
 
     const input = await findByLabelText(`${spec.args.arg.name}`);
 
     // A required input with no value is invalid (red X), but
     // feedback does not display until the input has been touched.
     expect(input).toHaveClass('is-invalid');
-    expect(queryByText(RegExp(validationMessage))).toBeNull();
+    expect(queryByText(RegExp(VALIDATION_MESSAGE))).toBeNull();
 
-    fireEvent.change(input, { target: { value: 'foo' } });
+    userEvent.type(input, 'foo');
     await waitFor(() => {
       expect(input).toHaveValue('foo');
       expect(input).toHaveClass('is-invalid');
     });
-    expect(await findByText(RegExp(validationMessage)))
+    expect(await findByText(RegExp(VALIDATION_MESSAGE)))
       .toBeInTheDocument();
 
     fetchValidation.mockResolvedValue([]); // now make input valid
-    fireEvent.change(input, { target: { value: 'mydir' } });
+    userEvent.type(input, 'mydir');
     await waitFor(() => {
       expect(input).toHaveClass('is-valid');
-      expect(queryByText(RegExp(validationMessage))).toBeNull();
+      expect(queryByText(RegExp(VALIDATION_MESSAGE))).toBeNull();
     });
   });
 
   test('Focus on required input & get validation feedback', async () => {
+    const spec = { ...BASE_ARGS_SPEC };
     spec.args.arg.type = 'csv';
     spec.args.arg.required = true;
     const {
       findByText, findByLabelText, queryByText
-    } = renderSetupFromSpec(spec, uiSpec);
+    } = renderSetupFromSpec(spec, UI_SPEC);
 
     const input = await findByLabelText(`${spec.args.arg.name}`);
     expect(input).toHaveClass('is-invalid');
-    expect(queryByText(RegExp(validationMessage))).toBeNull();
+    expect(queryByText(RegExp(VALIDATION_MESSAGE))).toBeNull();
 
-    await fireEvent.focus(input);
+    await userEvent.click(input);
     await waitFor(() => {
       expect(input).toHaveClass('is-invalid');
     });
-    expect(await findByText(RegExp(validationMessage)))
+    expect(await findByText(RegExp(VALIDATION_MESSAGE)))
       .toBeInTheDocument();
   });
 
   test('Focus on optional input & get valid display', async () => {
+    const spec = { ...BASE_ARGS_SPEC };
     spec.args.arg.type = 'csv';
     spec.args.arg.required = false;
     fetchValidation.mockResolvedValue([]);
-    const { findByLabelText } = renderSetupFromSpec(spec, uiSpec);
+    const { findByLabelText } = renderSetupFromSpec(spec, UI_SPEC);
 
     const input = await findByLabelText(`${spec.args.arg.name} (optional)`);
 
@@ -273,7 +252,7 @@ describe('Arguments form interactions', () => {
     // does not display until the input has been touched.
     expect(input).not.toHaveClass('is-valid', 'is-invalid');
 
-    await fireEvent.focus(input);
+    await userEvent.click(input);
     await waitFor(() => {
       expect(input).toHaveClass('is-valid');
     });
@@ -283,10 +262,6 @@ describe('Arguments form interactions', () => {
 describe('UI spec functionality', () => {
   beforeEach(() => {
     fetchValidation.mockResolvedValue([]);
-  });
-
-  afterAll(() => {
-    jest.resetAllMocks();
   });
 
   test('A UI spec with conditionally enabled args', async () => {
@@ -342,12 +317,9 @@ describe('UI spec functionality', () => {
       expect(arg3).toBeDisabled();
       expect(arg4).toBeDisabled();
     });
-    // fireEvent.change doesn't trigger the change handler but .click does
-    // even though React demands an onChange handler for controlled checkbox inputs.
-    // https://github.com/testing-library/react-testing-library/issues/156
-    fireEvent.click(arg1, { target: { value: 'true' } });
 
     // Check how the state changes as we click the checkboxes
+    userEvent.click(arg1);
     await waitFor(() => {
       expect(arg2).toBeEnabled();
       expect(arg3).toBeDisabled();
@@ -355,7 +327,7 @@ describe('UI spec functionality', () => {
       expect(arg4).toHaveClass('is-invalid');
     });
 
-    fireEvent.click(arg2, { target: { value: 'true' } });
+    userEvent.click(arg2);
     await waitFor(() => {
       expect(arg2).toBeEnabled();
       expect(arg3).toBeEnabled();
@@ -404,7 +376,7 @@ describe('UI spec functionality', () => {
     expect(option).toBeNull();
 
     // check that the dropdown option appears when the text field gets a value
-    fireEvent.change(arg1, { target: { value: 'a vector' } });
+    userEvent.type(arg1, 'a vector');
     option = await findByText('Field1'); // will raise an error if not found
   });
 
@@ -469,10 +441,6 @@ describe('UI spec functionality', () => {
 });
 
 describe('Misc form validation stuff', () => {
-  afterEach(() => {
-    fetchValidation.mockReset();
-  });
-
   test('Validation payload is well-formatted', async () => {
     const spec = {
       args: {
@@ -536,9 +504,8 @@ describe('Misc form validation stuff', () => {
     const { findByLabelText } = renderSetupFromSpec(spec, uiSpec);
     const vectorInput = await findByLabelText(spec.args.vector.name);
     const rasterInput = await findByLabelText(spec.args.raster.name);
-
-    fireEvent.change(vectorInput, { target: { value: vectorValue } });
-    fireEvent.change(rasterInput, { target: { value: rasterValue } });
+    userEvent.type(vectorInput, vectorValue);
+    userEvent.type(rasterInput, rasterValue);
 
     // Feedback on each input should only include the bounding box
     // of that single input.
@@ -561,11 +528,6 @@ describe('Misc form validation stuff', () => {
 });
 
 describe('Form drag-and-drop', () => {
-  afterEach(() => {
-    fetchValidation.mockReset();
-    fetchDatastackFromFile.mockReset();
-  });
-
   test('Dragover of a datastack/logfile updates all inputs', async () => {
     const spec = {
       pyname: `natcap.invest.${MODULE}`,
