@@ -1,6 +1,5 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import { ipcRenderer } from 'electron';
 
 import Accordion from 'react-bootstrap/Accordion';
 import Col from 'react-bootstrap/Col';
@@ -11,7 +10,7 @@ import Modal from 'react-bootstrap/Modal';
 import {
   MdSettings,
   MdClose,
-  MdTranslate,
+  MdTranslate
 } from 'react-icons/md';
 import { BsChevronExpand } from 'react-icons/bs';
 
@@ -19,9 +18,9 @@ import { getDefaultSettings } from './SettingsStorage';
 
 // map display names to standard language codes
 const languageOptions = {
-  'English': 'en',
-  'Español': 'es'
-}
+  English: 'en',
+  Español: 'es',
+};
 
 /** Render a dialog with a form for configuring global invest settings */
 export default class SettingsModal extends React.Component {
@@ -44,7 +43,7 @@ export default class SettingsModal extends React.Component {
     const nWorkersOptions = [];
     nWorkersOptions.push([-1, 'Synchronous (-1)']);
     nWorkersOptions.push([0, 'Threaded task management (0)']);
-    for (let i = 1; i <= this.props.nCPU; i++) {
+    for (let i = 1; i <= this.props.nCPU; i += 1) {
       nWorkersOptions.push([i, `${i} CPUs`]);
     }
     this.setState({
@@ -99,7 +98,7 @@ export default class SettingsModal extends React.Component {
           onHide={this.handleClose}
         >
           <Modal.Header>
-            <Modal.Title>{_("InVEST Settings")}</Modal.Title>
+            <Modal.Title>{_('InVEST Settings')}</Modal.Title>
             <Button
               variant="secondary-outline"
               onClick={this.handleClose}
@@ -112,8 +111,8 @@ export default class SettingsModal extends React.Component {
           <Modal.Body>
             <Form.Group as={Row}>
               <Form.Label column sm="8" htmlFor="language-select">
-                <MdTranslate className="language-icon"/>
-                {_("Language")}
+                <MdTranslate className="language-icon" />
+                {_('Language')}
               </Form.Label>
               <Col sm="4">
                 <Form.Control
@@ -123,7 +122,7 @@ export default class SettingsModal extends React.Component {
                   value={this.props.investSettings.language}
                   onChange={this.handleChange}
                 >
-                  {Object.entries(languageOptions).map(entry => {
+                  {Object.entries(languageOptions).map((entry) => {
                     const displayName = entry[0];
                     const value = entry[1];
                     return <option value={value} key={value}>{displayName}</option>;
@@ -133,7 +132,7 @@ export default class SettingsModal extends React.Component {
             </Form.Group>
             <Form.Group as={Row}>
               <Form.Label column sm="6" htmlFor="logging-select">
-                {_("Logging threshold")}
+                {_('Logging threshold')}
               </Form.Label>
               <Col sm="6">
                 <Form.Control
@@ -155,7 +154,7 @@ export default class SettingsModal extends React.Component {
                   <Form.Group as={Row}>
                     <Col sm="6">
                       <Form.Label htmlFor="nworkers-select">
-                        {_("Taskgraph n_workers parameter")}
+                        {_('Taskgraph n_workers parameter')}
                       </Form.Label>
                     </Col>
                     <Col sm="6">
@@ -184,7 +183,7 @@ export default class SettingsModal extends React.Component {
                       </Accordion.Toggle>
                       <Accordion.Collapse eventKey="0" className="pr-1">
                         <ul>
-                          <li>{_("synchronous task execution is most reliable")}</li>
+                          <li>{_('synchronous task execution is most reliable')}</li>
                           <li>
                             {_(`threaded task management: tasks execute only in the
                             main process, using multiple threads.`)}
@@ -208,7 +207,7 @@ export default class SettingsModal extends React.Component {
                   type="button"
                   className="w-100"
                 >
-                  {_("Reset to Defaults")}
+                  {_('Reset to Defaults')}
                 </Button>
               </Col>
             </Row>
@@ -218,7 +217,7 @@ export default class SettingsModal extends React.Component {
               onClick={this.switchToDownloadModal}
               className="w-50"
             >
-              {_("Download Sample Data")}
+              {_('Download Sample Data')}
             </Button>
             <hr />
             <Button
@@ -226,9 +225,9 @@ export default class SettingsModal extends React.Component {
               onClick={this.props.clearJobsStorage}
               className="mr-2 w-50"
             >
-              {_("Clear Recent Jobs")}
+              {_('Clear Recent Jobs')}
             </Button>
-            <span>{_("no invest workspaces will be deleted")}</span>
+            <span>{_('no invest workspaces will be deleted')}</span>
           </Modal.Body>
         </Modal>
       </React.Fragment>
@@ -242,6 +241,7 @@ SettingsModal.propTypes = {
     nWorkers: PropTypes.string,
     loggingLevel: PropTypes.string,
     sampleDataDir: PropTypes.string,
+    language: PropTypes.string,
   }),
   showDownloadModal: PropTypes.func,
   nCPU: PropTypes.number
