@@ -365,6 +365,7 @@ describe('Display recently executed InVEST jobs on Home tab', () => {
 describe('InVEST global settings: dialog interactions', () => {
   const nWorkersLabelText = 'Taskgraph n_workers parameter';
   const loggingLabelText = 'Logging threshold';
+  const languageLabelText = 'Language';
 
   beforeEach(async () => {
     getInvestModelNames.mockResolvedValue({});
@@ -375,6 +376,7 @@ describe('InVEST global settings: dialog interactions', () => {
     const nWorkersLabel = 'Threaded task management (0)';
     const nWorkersValue = '0';
     const loggingLevel = 'DEBUG';
+    const languageValue = 'es';
 
     const {
       getByText, getByRole, getByLabelText, findByRole,
@@ -385,12 +387,15 @@ describe('InVEST global settings: dialog interactions', () => {
     userEvent.click(await findByRole('button', { name: 'settings' }));
     const nWorkersInput = getByLabelText(nWorkersLabelText, { exact: false });
     const loggingInput = getByLabelText(loggingLabelText, { exact: false });
+    const languageInput = getByLabelText(languageLabelText, { exact: false });
 
     userEvent.selectOptions(nWorkersInput, [getByText(nWorkersLabel)]);
     userEvent.selectOptions(loggingInput, [loggingLevel]);
+    userEvent.selectOptions(languageInput, [languageValue]);
     await waitFor(() => {
       expect(nWorkersInput).toHaveValue(nWorkersValue);
       expect(loggingInput).toHaveValue(loggingLevel);
+      expect(languageInput).toHaveValue(languageValue);
     });
     userEvent.click(getByRole('button', { name: 'close settings' }));
 
@@ -399,19 +404,23 @@ describe('InVEST global settings: dialog interactions', () => {
     await waitFor(() => {
       expect(nWorkersInput).toHaveValue(nWorkersValue);
       expect(loggingInput).toHaveValue(loggingLevel);
+      expect(languageInput).toHaveValue(languageValue);
     });
     expect(await getSettingsValue('nWorkers')).toBe(nWorkersValue);
     expect(await getSettingsValue('loggingLevel')).toBe(loggingLevel);
+    expect(await getSettingsValue('language')).toBe(languageValue);
   });
 
   test('Load invest settings from storage and test Reset', async () => {
     const defaultSettings = {
       nWorkers: '-1',
       loggingLevel: 'INFO',
+      language: 'en',
     };
     const expectedSettings = {
       nWorkers: '0',
       loggingLevel: 'ERROR',
+      language: 'es',
     };
 
     await saveSettingsStore(expectedSettings);
@@ -425,11 +434,13 @@ describe('InVEST global settings: dialog interactions', () => {
     userEvent.click(await findByRole('button', { name: 'settings' }));
     const nWorkersInput = getByLabelText(nWorkersLabelText, { exact: false });
     const loggingInput = getByLabelText(loggingLabelText, { exact: false });
+    const languageInput = getByLabelText(languageLabelText, { exact: false });
 
     // Test that the invest settings were loaded in from store.
     await waitFor(() => {
       expect(nWorkersInput).toHaveValue(expectedSettings.nWorkers);
       expect(loggingInput).toHaveValue(expectedSettings.loggingLevel);
+      expect(languageInput).toHaveValue(expectedSettings.language);
     });
 
     // Test Reset sets values to default
@@ -437,6 +448,7 @@ describe('InVEST global settings: dialog interactions', () => {
     await waitFor(() => {
       expect(nWorkersInput).toHaveValue(defaultSettings.nWorkers);
       expect(loggingInput).toHaveValue(defaultSettings.loggingLevel);
+      expect(languageInput).toHaveValue(defaultSettings.language);
     });
   });
 

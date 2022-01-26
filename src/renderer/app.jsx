@@ -92,10 +92,11 @@ export default class App extends React.Component {
   }
 
   saveSettings(settings) {
+    saveSettingsStore(settings);
     ipcRenderer.invoke(
       ipcMainChannels.SET_LANGUAGE, settings.language
-    ).then(() => this.setState({ investSettings: settings }));
-    saveSettingsStore(settings);
+    );
+    this.setState({ investSettings: settings });
   }
 
   /** Store a sampledata filepath in localforage.
