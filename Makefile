@@ -175,9 +175,6 @@ test: $(GIT_TEST_DATA_REPO_PATH)
 test_ui: $(GIT_TEST_DATA_REPO_PATH)
 	$(TESTRUNNER) ui_tests
 
-test_workbench:
-	cd $(WORKBENCH) && yarn run test
-
 validate_sampledata: $(GIT_SAMPLE_DATA_REPO_PATH)
 	$(TEST_DATAVALIDATOR)
 	$(DATAVALIDATOR)
