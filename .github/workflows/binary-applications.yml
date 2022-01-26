@@ -154,6 +154,13 @@ jobs:
                   name: InVEST-windows-installer
                   path: dist/*.exe
 
+            - name: Upload workbench installer artifact
+              if: always()
+              uses: actions/upload-artifact@v2
+              with:
+                  name: Workbench-windows-installer
+                  path: workbench/dist/*.exe
+
             - name: Upload user's guide artifact
               uses: actions/upload-artifact@v2
               with:
@@ -277,17 +284,25 @@ jobs:
               if: github.event_name != 'pull_request'
               run: make deploy
 
-            - name: Upload binaries artifact
-              uses: actions/upload-artifact@v2
-              with:
-                  name: InVEST-mac-binaries
-                  path: dist/InVEST-*-mac.zip
+            # TODO: we're not building zips, right?
+            # - name: Upload binaries artifact
+            #   uses: actions/upload-artifact@v2
+            #   with:
+            #       name: InVEST-mac-binaries
+            #       path: dist/InVEST-*-mac.zip
 
             - name: Upload DMG artifact
               uses: actions/upload-artifact@v2
               with:
                   name: InVEST-dmg
                   path: dist/InVEST*.dmg
+
+            - name: Upload workbench DMG artifact
+              if: always()
+              uses: actions/upload-artifact@v2
+              with:
+                  name: Workbench-mac-installer
+                  path: workbench/dist/*.dmg
 
             - name: Tar the workspace to preserve permissions
               if: ${{ failure() }}
