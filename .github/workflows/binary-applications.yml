@@ -113,6 +113,10 @@ jobs:
                 yarn run build
                 yarn run dist
 
+            - name: Test electron app with puppeteer
+              working-directory: ./workbench
+              run: npx cross-env CI=true yarn run test-electron-app
+
             - name: Authenticate GCP
               # Secrets not available in PR so don't use GCP.
               if: github.event_name != 'pull_request'
@@ -166,6 +170,13 @@ jobs:
               with:
                   name: InVEST-user-guide
                   path: dist/InVEST_*_userguide.zip
+
+            - name: Upload app logging from puppeteer to github - Windows
+              uses: actions/upload-artifact@v2.2.4
+              if: always()
+              with:
+                name: 'windows_puppeteer_log.zip'
+                path: '~/AppData/Roaming/invest-workbench/logs/'
 
             - name: Upload workspace on failure
               if: ${{ failure() }}
@@ -256,6 +267,10 @@ jobs:
                 yarn run build
                 yarn run dist
 
+            - name: Test electron app with puppeteer
+              working-directory: ./workbench
+              run: npx cross-env CI=true yarn run test-electron-app
+
             - name: Authenticate GCP
               # Secrets not available in PR so don't use GCP.
               if: github.event_name != 'pull_request'
@@ -303,6 +318,13 @@ jobs:
               with:
                   name: Workbench-mac-installer
                   path: workbench/dist/*.dmg
+
+            - name: Upload workbench logging from puppeteer to github - MacOS
+              uses: actions/upload-artifact@v2.2.4
+              if: always()
+              with:
+                name: 'macos_puppeteer_log.zip'
+                path: '~/Library/Logs/invest-workbench/'
 
             - name: Tar the workspace to preserve permissions
               if: ${{ failure() }}
