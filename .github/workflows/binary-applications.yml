@@ -98,11 +98,13 @@ jobs:
                 node-version: 14.x
 
             - name: Install Workbench Dependencies
+              working-directory: ./workbench
               run: |
                 yarn config set network-timeout 600000 -g
                 yarn install
 
             - name: Build Workbench
+              working-directory: ./workbench
               env:
                 GH_TOKEN: env.GITHUB_TOKEN
                 DEBUG: electron-builder
@@ -232,11 +234,13 @@ jobs:
                 node-version: 14.x
 
             - name: Install Workbench Dependencies
+              working-directory: ./workbench
               run: |
                 yarn config set network-timeout 600000 -g
                 yarn install
 
             - name: Build Workbench
+              working-directory: ./workbench
               env:
                 GH_TOKEN: env.GITHUB_TOKEN
                 DEBUG: electron-builder
