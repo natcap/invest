@@ -83,6 +83,15 @@ jobs:
                   # This builds the users guide, binaries, and installer
                   make windows_installer
 
+            - name: Clone Workbench
+            # TODO: this is temporary so we can test the rest of
+            # the workflow before we git add the workbench to invest.
+              run: |
+                git clone https://github.com/davemfish/invest-workbench.git workbench
+                cd workbench
+                git fetch origin experimental/invest-integration
+                git checkout experimental/invest-integration
+
             - name: Install Node.js
               uses: actions/setup-node@v2
               with:
@@ -207,6 +216,15 @@ jobs:
               run: |
                   make install
                   make mac_dmg
+
+            - name: Clone Workbench
+            # TODO: this is temporary so we can test the rest of
+            # the workflow before we git add the workbench to invest.
+              run: |
+                git clone https://github.com/davemfish/invest-workbench.git workbench
+                cd workbench
+                git fetch origin experimental/invest-integration
+                git checkout experimental/invest-integration
 
             - name: Authenticate GCP
               # Secrets not available in PR so don't use GCP.
