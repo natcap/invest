@@ -156,12 +156,12 @@ class WindEnergy(model.InVESTModel):
             args_key='foundation_cost',
             helptext=(
                 "A floating point number for the unit cost of the "
-                "foundation type (in millions of currency units). The cost of "
+                "foundation type. The cost of "
                 "a foundation will depend on the type selected, which "
                 "itself depends on a variety of factors including "
                 "depth and turbine choice.  Please see the User's "
                 "Guide for guidance on properly selecting this value."),
-            label='Cost of the Foundation Type (USD, in Millions)',
+            label='Cost of the Foundation Type',
             validator=self.validator)
         self.valuation_container.add_input(self.foundation_cost)
         self.discount_rate = inputs.Text(
