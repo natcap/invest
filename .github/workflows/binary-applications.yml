@@ -250,6 +250,10 @@ jobs:
               with:
                   python-version: 3.8
 
+            - name: Install dependencies
+              # dependencies of setup.py, needed to get the version string
+              run: pip install babel cython numpy setuptools setuptools_scm wheel
+
             - run: make sampledata sampledata_single
 
             - name: Authenticate GCP
