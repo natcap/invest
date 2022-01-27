@@ -145,7 +145,7 @@ describe('requests to flask endpoints', () => {
 });
 
 describe('validate the UI spec', () => {
-  test('each model has an entry', async () => {
+  test('each model has a complete entry', async () => {
     const uiSpec = require('../../src/renderer/ui_config');
     const models = await server_requests.getInvestModelNames();
     const modelInternalNames = Object.keys(models)
@@ -157,31 +157,27 @@ describe('validate the UI spec', () => {
 
     argsSpecs.forEach((spec, idx) => {
       const modelName = modelInternalNames[idx];
-      // make sure that we actually got an args spec
       expect(spec.model_name).toBeDefined();
-      let hasOrderProperty = false;
-      // expect the model's spec has an entry in the UI spec.
       expect(Object.keys(uiSpec)).toContain(modelName);
-      // expect each arg in the UI spec to exist in the args spec
+      expect(Object.keys(uiSpec[modelName])).toContain('order');
+      // expect each ARGS_SPEC arg to exist in 'order' or 'hidden' property
+      const orderArray = uiSpec[modelName].order.flat();
+      // 'hidden' is an optional property. It need not include 'n_workers',
+      // but we should insert 'n_workers' here as it is present in ARGS_SPEC.
+      const hiddenArray = uiSpec[modelName].hidden || [];
+      const allArgs = orderArray.concat(hiddenArray.concat('n_workers'));
+      const argsSet = new Set(allArgs);
+      expect(allArgs).toHaveLength(argsSet.size); // no duplicates
+      expect(argsSet).toEqual(new Set(Object.keys(spec.args)));
+
+      // for other properties, expect each key is an arg
       for (const property in uiSpec[modelName]) {
-        if (property === 'order') {
-          hasOrderProperty = true;
-          // 'order' is a 2D array of arg names
-          const orderArray = uiSpec[modelName].order.flat();
-          const orderSet = new Set(orderArray);
-          // expect there to be no duplicated args in the order
-          expect(orderArray).toHaveLength(orderSet.size);
-          orderArray.forEach((arg) => {
-            expect(Object.keys(spec.args)).toContain(arg);
-          });
-        } else {
-          // for other properties, each key is an arg
+        if (!['order', 'hidden'].includes(property)) {
           Object.keys(uiSpec[modelName][property]).forEach((arg) => {
             expect(Object.keys(spec.args)).toContain(arg);
           });
         }
       }
-      expect(hasOrderProperty).toBe(true);
     });
   });
 });

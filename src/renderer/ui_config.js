@@ -1,31 +1,39 @@
 import { getVectorColumnNames } from './server_requests';
 
-// Some input fields are rendered differently conditional upon the state of other input fields.
-// This file describes these dependencies between fields.
-//
-// Format:
-// const uiSpec = {
-//     order: [['arg']]
-//     modelName: {
-//        category: {
-//            arg: f
-//         }
-//     }
-// }
-// where
-// - `order` is a 2D array of args in the order that they should be rendered.
-//    Args within each nested array are visually grouped together.
-// - `modelName` equals `ARGS_SPEC.model_name`
-// - `category` is a category that the SetupTab component looks for
-//    (currently `enabledFunctions` or `dropdownFunctions`)
-// - `f` is a function that accepts `SetupTab.state` as its one argument
-//     - in the `enabledFunctions` section, `f` returns a boolean where true = enabled, false = disabled
-//     - in the `dropdownFunctions` section, `f` returns a list of dropdown options.
-//       Note: Most dropdown inputs will have a static list of options defined in the ARGS_SPEC.
-//       This is only for dynamically populating a dropdown.
+/*
+Some input fields are rendered conditionally on the state of other inputs.
+This file describes these dependencies between fields.
 
-// When the SetupTab component renders, it calls `f(this.state)` to get
-// the enabled state of each input, and dropdown options if any.
+const uiSpec = {
+  modelName: {
+    order: [['arg']],
+    hidden: ['arg_to_hide'],
+    category: {
+      arg: f
+    }
+  }
+}
+
+where
+- `order` is a 2D array of args in the order that they should be rendered.
+   Args within each nested array are visually grouped together.
+- `hidden` (optional) a 1D array of args that should not be displayed in a GUI.
+   Use this for model-specific args, no need to include 'n_workers'.
+   All args in ARGS_SPEC (except n_workers) must be contained in `order`+`hidden`.
+   `hidden` is only used in tests, to catch args that should be in `order`,
+   but are missing.
+- `modelName` as passed to `invest getspec <modelName>`
+- `category` is a category that the SetupTab component looks for
+   (currently `enabledFunctions` or `dropdownFunctions`)
+- `f` is a function that accepts `SetupTab.state` as its one argument
+    - in the `enabledFunctions` section, `f` returns a boolean where true = enabled, false = disabled
+    - in the `dropdownFunctions` section, `f` returns a list of dropdown options.
+      Note: Most dropdown inputs will have a static list of options defined in the ARGS_SPEC.
+      This is only for dynamically populating a dropdown.
+
+When the SetupTab component renders, it calls `f(this.state)` to get
+the enabled state of each input, and dropdown options if any.
+*/
 
 function isSufficient(argkey, state) {
   return state.argsEnabled[argkey] && !!state.argsValues[argkey].value;
@@ -214,11 +222,12 @@ const uiSpec = {
   },
   recreation: {
     order: [
-      ["workspace_dir", "results_suffix"],
-      ["aoi_path", "start_year", "end_year"],
-      ["compute_regression", "predictor_table_path", "scenario_predictor_table_path"],
-      ["grid_aoi", "grid_type", "cell_size"]
+      ['workspace_dir', 'results_suffix'],
+      ['aoi_path', 'start_year', 'end_year'],
+      ['compute_regression', 'predictor_table_path', 'scenario_predictor_table_path'],
+      ['grid_aoi', 'grid_type', 'cell_size'],
     ],
+    hidden: ['hostname', 'port'],
     enabledFunctions: {
       predictor_table_path: isSufficient.bind(null, 'compute_regression'),
       scenario_predictor_table_path: isSufficient.bind(null, 'compute_regression'),
@@ -270,7 +279,7 @@ const uiSpec = {
       ["dem_path", "erosivity_path", "erodibility_path"],
       ["lulc_path", "biophysical_table_path"],
       ["watersheds_path", "drainage_path"],
-      ["threshold_flow_accumulation", "k_param", "sdr_max", "ic_0_param"]
+      ["threshold_flow_accumulation", "k_param", "sdr_max", "ic_0_param", "l_max"]
     ]
   },
   seasonal_water_yield: {
