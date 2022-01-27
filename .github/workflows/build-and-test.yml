@@ -438,5 +438,6 @@ jobs:
                   yarn test
 
             - name: test run workbench tests
+              if: always()
               run: |
                   invest list
