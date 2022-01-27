@@ -368,7 +368,7 @@ jobs:
             fail-fast: False
             max-parallel: 4
             matrix:
-                python-version: [3.9]
+                python-version: [3.8] # TODO: 3.9 was not building
                 python-architecture: [x64]
                 os: [windows-latest, macos-latest]
 
@@ -407,6 +407,7 @@ jobs:
                     requirements-gui.txt > requirements-all.yml
                   conda env update --file requirements-all.yml
                   make install
+                  invest list
 
             # TODO: this is temporary so we can test the rest of
             # the workflow before we git add the workbench to invest.
