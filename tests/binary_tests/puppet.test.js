@@ -137,8 +137,8 @@ afterAll(async () => {
   }
 
   rimraf(TMP_DIR, (error) => { if (error) { throw error; } });
-  const wasKilled = ELECTRON_PROCESS.kill();
-  console.log(`electron process was killed: ${wasKilled}`);
+  ELECTRON_PROCESS.removeAllListeners();
+  ELECTRON_PROCESS.kill();
 });
 
 test('Run a real invest model', async () => {
