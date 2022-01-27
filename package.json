@@ -26,15 +26,6 @@
     "restoreMocks": true,
     "resetModules": true
   },
-  "invest": {
-    "bucket": "releases.naturalcapitalproject.org",
-    "fork": "natcap",
-    "version": "3.9.2.post655+g8f313b6b",
-    "target": {
-      "macos": "mac_invest_binaries.zip",
-      "windows": "windows_invest_binaries.zip"
-    }
-  },
   "keywords": [],
   "author": "Natural Capital Project",
   "license": "MIT",
