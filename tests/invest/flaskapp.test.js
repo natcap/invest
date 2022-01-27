@@ -172,12 +172,12 @@ describe('validate the UI spec', () => {
           // expect there to be no duplicated args in the order
           expect(orderArray).toHaveLength(orderSet.size);
           orderArray.forEach((arg) => {
-            expect(spec.args[arg]).toBeDefined();
+            expect(Object.keys(spec.args)).toContain(arg);
           });
         } else {
           // for other properties, each key is an arg
           Object.keys(uiSpec[modelName][property]).forEach((arg) => {
-            expect(spec.args[arg]).toBeDefined();
+            expect(Object.keys(spec.args)).toContain(arg);
           });
         }
       }
