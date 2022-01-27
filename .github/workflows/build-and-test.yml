@@ -408,6 +408,7 @@ jobs:
                   conda env update --file requirements-all.yml
                   make install
                   invest list
+                  which invest
 
             # TODO: this is temporary so we can test the rest of
             # the workflow before we git add the workbench to invest.
@@ -430,14 +431,11 @@ jobs:
                   yarn install
 
             - name: run workbench tests
+              shell: bash -l {0}
               working-directory: ./workbench
               env:
                   CI: true
               run: |
+                  conda info
                   invest list
                   yarn test
-
-            - name: test run workbench tests
-              if: always()
-              run: |
-                  invest list
