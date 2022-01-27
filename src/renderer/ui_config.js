@@ -196,13 +196,11 @@ const uiSpec = {
     order: [
       ["workspace_dir", "results_suffix"],
       ["dem_path", "lulc_path", "runoff_proxy_path", "watersheds_path", "biophysical_table_path"],
-      ["calc_p", "subsurface_critical_length_p", "subsurface_eff_p"],
+      ["calc_p"],
       ["calc_n", "subsurface_critical_length_n", "subsurface_eff_n"],
       ["threshold_flow_accumulation", "k_param"],
     ],
     enabledFunctions: {
-      subsurface_critical_length_p: isSufficient.bind(null, 'calc_p'),
-      subsurface_eff_p: isSufficient.bind(null, 'calc_p'),
       subsurface_critical_length_n: isSufficient.bind(null, 'calc_n'),
       subsurface_eff_n: isSufficient.bind(null, 'calc_n')
     }
@@ -249,7 +247,7 @@ const uiSpec = {
     order: [
       ["workspace_dir", "results_suffix"],
       ["base_lulc_path", "aoi_path"],
-      ["area_to_convert", "focal_landcover_codes", "convertible_landcover_codes", "replacment_lucode"],
+      ["area_to_convert", "focal_landcover_codes", "convertible_landcover_codes", "replacement_lucode"],
       ["convert_farthest_from_edge", "convert_nearest_to_edge", "n_fragmentation_steps"]
     ]
   },
@@ -335,7 +333,7 @@ const uiSpec = {
   wave_energy: {
     order: [
       ["workspace_dir", "results_suffix"],
-      ["wave_base_data_path", "analysis_area_path", "aoi_path", "dem_path"],
+      ["wave_base_data_path", "analysis_area", "aoi_path", "dem_path"],
       ["machine_perf_path", "machine_param_path"],
       ["valuation_container", "land_gridPts_path", "machine_econ_path", "number_of_machines"]
     ],
