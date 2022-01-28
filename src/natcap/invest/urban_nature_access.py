@@ -274,8 +274,18 @@ def execute(args):
         },
         target_path_list=[file_registry['greenspace_area']],
         task_name='Identify the area of greenspace in pixels',
-        dependent_task_list=[lulc_alignment_task]
+        dependent_task_list=[lulc_alignment_task, preprocess_attr_table_task]
     )
+
+    # for each unique search radius:
+    #    - Filter the landcover codes matching the search radius
+    #    - create the kernel with the target search radius
+    #    - convolve the population with the kernel
+    #    - do the whole 2SFCA pipeline
+    #    - if there is only 1 unique search radius:
+    #       - copy the Ai_r raster to Ai
+    #       - else, sum Ai_r rasters to Ai.
+    #    - Remaining calculations then use the Ai_sum raster.
 
     search_radius_in_pixels = abs(
         float(args['search_radius']) / squared_lulc_pixel_size[0])
