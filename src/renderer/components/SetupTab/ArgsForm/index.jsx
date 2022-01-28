@@ -19,10 +19,11 @@ function dragOverHandler(event) {
 export default class ArgsForm extends React.Component {
   constructor(props) {
     super(props);
+    this.handleFocus = this.handleFocus.bind(this);
     this.handleChange = this.handleChange.bind(this);
-    this.inputDropHandler = this.inputDropHandler.bind(this);
     this.handleBoolChange = this.handleBoolChange.bind(this);
     this.selectFile = this.selectFile.bind(this);
+    this.inputDropHandler = this.inputDropHandler.bind(this);
     this.onArchiveDragDrop = this.onArchiveDragDrop.bind(this);
     this.dragEnterHandler = this.dragEnterHandler.bind(this);
     this.dragLeaveHandler = this.dragLeaveHandler.bind(this);
@@ -91,6 +92,11 @@ export default class ArgsForm extends React.Component {
     }
   }
 
+  handleFocus(event) {
+    const { name } = event.currentTarget;
+    this.props.updateArgTouched(name);
+  }
+
   handleChange(event) {
     /** Pass input value up to SetupTab for storage & validation. */
     const { name, value } = event.currentTarget;
@@ -145,6 +151,7 @@ export default class ArgsForm extends React.Component {
             isValid={argsValidation[argkey].valid}
             validationMessage={argsValidation[argkey].validationMessage}
             handleChange={this.handleChange}
+            handleFocus={this.handleFocus}
             inputDropHandler={this.inputDropHandler}
             handleBoolChange={this.handleBoolChange}
             selectFile={this.selectFile}

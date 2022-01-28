@@ -219,6 +219,45 @@ describe('Arguments form interactions', () => {
     });
   });
 
+  test('Type fast & confirm validation waits for pause in typing', async () => {
+    const spy = jest.spyOn(SetupTab.prototype, 'investValidate');
+    const spec = { ...BASE_ARGS_SPEC };
+    spec.args.arg.type = 'directory';
+    spec.args.arg.required = true;
+    const {
+      findByLabelText
+    } = renderSetupFromSpec(spec, UI_SPEC);
+
+    const input = await findByLabelText(`${spec.args.arg.name}`);
+    spy.mockClear(); // it was already called once on render
+
+    // Fast typing, expect only 1 validation call
+    userEvent.type(input, 'foo', { delay: 0 });
+    await waitFor(() => {
+      expect(spy).toHaveBeenCalledTimes(1);
+    }, 500); // debouncedValidate waits for 200ms
+  });
+
+  test('Type slow & confirm validation waits for pause in typing', async () => {
+    const spy = jest.spyOn(SetupTab.prototype, 'investValidate');
+    const spec = { ...BASE_ARGS_SPEC };
+    spec.args.arg.type = 'directory';
+    spec.args.arg.required = true;
+    const {
+      findByLabelText
+    } = renderSetupFromSpec(spec, UI_SPEC);
+
+    const input = await findByLabelText(`${spec.args.arg.name}`);
+    spy.mockClear(); // it was already called once on render
+
+    // Slow typing, expect validation call after each character
+    // debouncedValidate is set at 200ms, delay more than that per char.
+    await userEvent.type(input, 'foo', { delay: 210 });
+    await waitFor(() => {
+      expect(spy).toHaveBeenCalledTimes(3);
+    }, 1000);
+  });
+
   test('Focus on required input & get validation feedback', async () => {
     const spec = { ...BASE_ARGS_SPEC };
     spec.args.arg.type = 'csv';
