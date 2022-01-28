@@ -70,7 +70,7 @@ endif
 
 ZIP := zip
 PIP = $(PYTHON) -m pip
-VERSION := $(shell $(PYTHON) setup.py --version)
+VERSION := $(shell $(PYTHON) -m setuptools_scm)
 PYTHON_ARCH := $(shell $(PYTHON) -c "import sys; print('x86' if sys.maxsize <= 2**32 else 'x64')")
 
 GSUTIL := gsutil

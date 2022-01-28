@@ -6,7 +6,7 @@
 # that we can provide a much easier build experience so long as GDAL is
 # available at runtime.
 requires = [
-    'setuptools>=45', 'wheel', 'setuptools_scm>=6.2', 'cython', 'babel',
+    'setuptools>=45', 'wheel', 'setuptools_scm>=6.4.0', 'cython', 'babel',
     # use minimum compatible numpy for each python version
     # https://github.com/cython/cython/issues/4452
     'numpy==1.16.5; python_version=="3.7"',
