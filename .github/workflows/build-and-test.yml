@@ -108,6 +108,9 @@ jobs:
                 path: ${{ env.pythonLocation }}
                 key: ${{ env.pythonLocation }}-model-tests-${{ env.WEEK}}
 
+            - name: List environment contents
+              run: ls ${{ env.pythonLocation }}
+
             # NOTE: It takes twice as long to save the sample data cache
             # as it does to do a fresh clone (almost 5 minutes vs. 2.5 minutes)
             # Test data is way, way faster by contrast (on the order of a few
@@ -126,6 +129,18 @@ jobs:
                   python-version: ${{ matrix.python-version }}
                   channels: conda-forge
                   use-only-tar-bz2: true # this needs to be set for caching to work properly
+
+            - name: List environment contents
+              run: |
+                ls ${{ env.CONDA }}
+                ls ${{ env.CONDA }}/envs/${{ matrix.os }}-test-env
+
+            - name: Restore conda environment cache
+              uses: actions/cache@v2
+              with:
+                path: ${{ env.CONDA }}/envs/${{ matrix.os }}-test-env
+                key: ${{ env.pythonLocation }}-model-tests-${{ env.WEEK}}
+
 
             - name: Install build dependencies
               shell: bash -l {0}
