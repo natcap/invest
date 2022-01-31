@@ -1,128 +1,128 @@
 {
   "Annual Water Yield": {
     "filename": "Annual_Water_Yield.zip",
-    "url": "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.9.2.post655+g8f313b6b/data/Annual_Water_Yield.zip",
-    "filesize": "244430"
+    "url": "https://storage.googleapis.com/natcap-dev-build-artifacts/invest/davemfish/3.9.2.post991+g2a0a11386.d20220131/data/Annual_Water_Yield.zip",
+    "filesize": 249489
   },
   "Carbon Storage and Sequestration": {
     "filename": "Carbon.zip",
-    "url": "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.9.2.post655+g8f313b6b/data/Carbon.zip",
-    "filesize": "1900623"
+    "url": "https://storage.googleapis.com/natcap-dev-build-artifacts/invest/davemfish/3.9.2.post991+g2a0a11386.d20220131/data/Carbon.zip",
+    "filesize": 1903157
   },
   "Coastal Blue Carbon": {
     "filename": "CoastalBlueCarbon.zip",
-    "url": "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.9.2.post655+g8f313b6b/data/CoastalBlueCarbon.zip",
-    "filesize": "79665"
+    "url": "https://storage.googleapis.com/natcap-dev-build-artifacts/invest/davemfish/3.9.2.post991+g2a0a11386.d20220131/data/CoastalBlueCarbon.zip",
+    "filesize": 83154
   },
   "Coastal Vulnerability": {
     "filename": "CoastalVulnerability.zip",
-    "url": "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.9.2.post655+g8f313b6b/data/CoastalVulnerability.zip",
-    "filesize": "39812067",
+    "url": "https://storage.googleapis.com/natcap-dev-build-artifacts/invest/davemfish/3.9.2.post991+g2a0a11386.d20220131/data/CoastalVulnerability.zip",
+    "filesize": 39822199,
     "labelSuffix": "(recommended to run model)"
   },
   "Crop Pollination": {
     "filename": "pollination.zip",
-    "url": "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.9.2.post655+g8f313b6b/data/pollination.zip",
-    "filesize": "634514"
+    "url": "https://storage.googleapis.com/natcap-dev-build-artifacts/invest/davemfish/3.9.2.post991+g2a0a11386.d20220131/data/pollination.zip",
+    "filesize": 635991
   },
   "Crop Production": {
     "filename": "CropProduction.zip",
-    "url": "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.9.2.post655+g8f313b6b/data/CropProduction.zip",
-    "filesize": "58678907",
+    "url": "https://storage.googleapis.com/natcap-dev-build-artifacts/invest/davemfish/3.9.2.post991+g2a0a11386.d20220131/data/CropProduction.zip",
+    "filesize": 58826382,
     "labelSuffix": "(required to run model)"
   },
   "DelineateIt": {
     "filename": "DelineateIt.zip",
-    "url": "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.9.2.post655+g8f313b6b/data/DelineateIt.zip",
-    "filesize": "529494"
+    "url": "https://storage.googleapis.com/natcap-dev-build-artifacts/invest/davemfish/3.9.2.post991+g2a0a11386.d20220131/data/DelineateIt.zip",
+    "filesize": 531832
   },
   "Forest Carbon Edge Effect": {
     "filename": "forest_carbon_edge_effect.zip",
-    "url": "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.9.2.post655+g8f313b6b/data/forest_carbon_edge_effect.zip",
-    "filesize": "1036547",
+    "url": "https://storage.googleapis.com/natcap-dev-build-artifacts/invest/davemfish/3.9.2.post991+g2a0a11386.d20220131/data/forest_carbon_edge_effect.zip",
+    "filesize": 1039411,
     "labelSuffix": "(required to run model)"
   },
   "GLOBIO": {
     "filename": "globio.zip",
-    "url": "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.9.2.post655+g8f313b6b/data/globio.zip",
-    "filesize": "2082836"
+    "url": "https://storage.googleapis.com/natcap-dev-build-artifacts/invest/davemfish/3.9.2.post991+g2a0a11386.d20220131/data/globio.zip",
+    "filesize": 2085338
   },
   "Habitat Quality": {
     "filename": "HabitatQuality.zip",
-    "url": "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.9.2.post655+g8f313b6b/data/HabitatQuality.zip",
-    "filesize": "1739986"
+    "url": "https://storage.googleapis.com/natcap-dev-build-artifacts/invest/davemfish/3.9.2.post991+g2a0a11386.d20220131/data/HabitatQuality.zip",
+    "filesize": 1745392
   },
   "Habitat Risk Assessment": {
     "filename": "HabitatRiskAssess.zip",
-    "url": "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.9.2.post655+g8f313b6b/data/HabitatRiskAssess.zip",
-    "filesize": "3268540"
+    "url": "https://storage.googleapis.com/natcap-dev-build-artifacts/invest/davemfish/3.9.2.post991+g2a0a11386.d20220131/data/HabitatRiskAssess.zip",
+    "filesize": 3282927
   },
   "Nutrient Delivery Ratio": {
     "filename": "NDR.zip",
-    "url": "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.9.2.post655+g8f313b6b/data/NDR.zip",
-    "filesize": "702024"
+    "url": "https://storage.googleapis.com/natcap-dev-build-artifacts/invest/davemfish/3.9.2.post991+g2a0a11386.d20220131/data/NDR.zip",
+    "filesize": 706206
   },
   "RouteDEM": {
     "filename": "RouteDEM.zip",
-    "url": "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.9.2.post655+g8f313b6b/data/RouteDEM.zip",
-    "filesize": "526336"
+    "url": "https://storage.googleapis.com/natcap-dev-build-artifacts/invest/davemfish/3.9.2.post991+g2a0a11386.d20220131/data/RouteDEM.zip",
+    "filesize": 527388
   },
   "Scenario Generator: Proximity Based": {
     "filename": "scenario_proximity.zip",
-    "url": "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.9.2.post655+g8f313b6b/data/scenario_proximity.zip",
-    "filesize": "927821"
+    "url": "https://storage.googleapis.com/natcap-dev-build-artifacts/invest/davemfish/3.9.2.post991+g2a0a11386.d20220131/data/scenario_proximity.zip",
+    "filesize": 929278
+  },
+  "Scenic Quality": {
+    "filename": "ScenicQuality.zip",
+    "url": "https://storage.googleapis.com/natcap-dev-build-artifacts/invest/davemfish/3.9.2.post991+g2a0a11386.d20220131/data/ScenicQuality.zip",
+    "filesize": 25076605
   },
   "Seasonal Water Yield": {
     "filename": "Seasonal_Water_Yield.zip",
-    "url": "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.9.2.post655+g8f313b6b/data/Seasonal_Water_Yield.zip",
-    "filesize": "703708"
+    "url": "https://storage.googleapis.com/natcap-dev-build-artifacts/invest/davemfish/3.9.2.post991+g2a0a11386.d20220131/data/Seasonal_Water_Yield.zip",
+    "filesize": 716083
   },
   "Sediment Delivery Ratio": {
     "filename": "SDR.zip",
-    "url": "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.9.2.post655+g8f313b6b/data/SDR.zip",
-    "filesize": "726317"
+    "url": "https://storage.googleapis.com/natcap-dev-build-artifacts/invest/davemfish/3.9.2.post991+g2a0a11386.d20220131/data/SDR.zip",
+    "filesize": 730925
   },
-  "Stormwater": {
-    "filename": "storm_impact.zip",
-    "url": "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.9.2.post655+g8f313b6b/data/storm_impact.zip",
-    "filesize": "436581"
-  },
-  "Unobstructed Views: Scenic Quality Provision": {
-    "filename": "ScenicQuality.zip",
-    "url": "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.9.2.post655+g8f313b6b/data/ScenicQuality.zip",
-    "filesize": "25073475"
+  "Urban Stormwater Retention": {
+    "filename": "UrbanStormwater.zip",
+    "url": "https://storage.googleapis.com/natcap-dev-build-artifacts/invest/davemfish/3.9.2.post991+g2a0a11386.d20220131/data/UrbanStormwater.zip",
+    "filesize": 465018
   },
   "Urban Cooling": {
     "filename": "UrbanCoolingModel.zip",
-    "url": "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.9.2.post655+g8f313b6b/data/UrbanCoolingModel.zip",
-    "filesize": "1132530"
+    "url": "https://storage.googleapis.com/natcap-dev-build-artifacts/invest/davemfish/3.9.2.post991+g2a0a11386.d20220131/data/UrbanCoolingModel.zip",
+    "filesize": 1135262
   },
   "Urban Flood Risk Mitigation": {
     "filename": "UrbanFloodMitigation.zip",
-    "url": "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.9.2.post655+g8f313b6b/data/UrbanFloodMitigation.zip",
-    "filesize": "187926"
+    "url": "https://storage.googleapis.com/natcap-dev-build-artifacts/invest/davemfish/3.9.2.post991+g2a0a11386.d20220131/data/UrbanFloodMitigation.zip",
+    "filesize": 188117
   },
   "Visitation: Recreation and Tourism": {
     "filename": "recreation.zip",
-    "url": "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.9.2.post655+g8f313b6b/data/recreation.zip",
-    "filesize": "3695258"
+    "url": "https://storage.googleapis.com/natcap-dev-build-artifacts/invest/davemfish/3.9.2.post991+g2a0a11386.d20220131/data/recreation.zip",
+    "filesize": 3706408
   },
   "Wave Energy Production": {
     "filename": "WaveEnergy.zip",
-    "url": "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.9.2.post655+g8f313b6b/data/WaveEnergy.zip",
-    "filesize": "77718614",
+    "url": "https://storage.googleapis.com/natcap-dev-build-artifacts/invest/davemfish/3.9.2.post991+g2a0a11386.d20220131/data/WaveEnergy.zip",
+    "filesize": 77736893,
     "labelSuffix": "(required to run model)"
   },
   "Wind Energy Production": {
     "filename": "WindEnergy.zip",
-    "url": "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.9.2.post655+g8f313b6b/data/WindEnergy.zip",
-    "filesize": "5436801",
+    "url": "https://storage.googleapis.com/natcap-dev-build-artifacts/invest/davemfish/3.9.2.post991+g2a0a11386.d20220131/data/WindEnergy.zip",
+    "filesize": 5447261,
     "labelSuffix": "(required to run model)"
   },
   "Global DEM & Landmass Polygon": {
     "filename": "Base_Data.zip",
     "labelSuffix": "(required for Wind & Wave Energy)",
-    "url": "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.9.2.post655+g8f313b6b/data/Base_Data.zip",
-    "filesize": "151372182"
+    "url": "https://storage.googleapis.com/natcap-dev-build-artifacts/invest/davemfish/3.9.2.post991+g2a0a11386.d20220131/data/Base_Data.zip",
+    "filesize": 151373507
   }
 }
