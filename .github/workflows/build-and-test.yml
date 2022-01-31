@@ -4,6 +4,10 @@ on:
     push:
     pull_request:
 
+defaults:
+  run:
+    shell: bash -l {0}
+
 env:
   WINDOWS_PIP_CACHE: ~\AppData\Local\pip\Cache
   MACOS_PIP_CACHE: ~/Library/Caches/pip
