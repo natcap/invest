@@ -133,13 +133,17 @@ jobs:
             - name: List environment contents
               run: |
                 ls ${{ env.CONDA }}
-                ls ${{ env.CONDA }}/envs/${{ matrix.os }}-test-env
+                ls ${{ env.CONDA_PREFIX }}
+                ls ${{ env.CONDA_PREFIX }}/envs/${{ matrix.os }}-test-env
 
             - name: Restore conda environment cache
               uses: actions/cache@v2
               with:
-                path: ${{ env.CONDA }}/envs/${{ matrix.os }}-test-env
-                key: ${{ env.pythonLocation }}-model-tests-${{ env.WEEK}}
+                path: ${{ env.CONDA_PREFIX }}/envs/${{ matrix.os }}-test-env
+                key: ${{ matrix.os }}-${{ env.pythonLocation }}-model-tests-${{ env.WEEK}}
+
+            - name: List environment contents again
+              run: ls ${{ env.CONDA_PREFIX }}/envs/${{ matrix.os }}-test-env
 
 
             - name: Install build dependencies
