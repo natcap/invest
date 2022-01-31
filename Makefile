@@ -34,7 +34,7 @@ ifeq ($(OS),Windows_NT)
 	# widely available on Windows now, especially through git-bash
 	SHELL := /usr/bin/bash
 	CONDA := conda.bat
-	BASHLIKE_SHELL_COMMAND := $(SHELL) -c
+	BASHLIKE_SHELL_COMMAND := '$(SHELL)' -c
 	.DEFAULT_GOAL := windows_installer
 	RM_DATA_DIR := $(RMDIR) $(DATA_DIR)
 	/ := '\'
