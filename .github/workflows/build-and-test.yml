@@ -76,14 +76,18 @@ jobs:
             - name: Get current week
               run: |
                 echo ${{ env.pythonLocation }}
+                date +%U
+                echo $(date +%U)
+                echo "WEEK=$(date +%U)"
                 echo "WEEK=$(date +%U)" >> $GITHUB_ENV
+                cat $GITHUB_ENV
 
             - name: Restore pip cache (MacOS)
               uses: actions/cache@v2
               if: matrix.os == 'macos-latest'
               with:
                   path: ${{ env.MACOS_PIP_CACHE }}
-                  key: pip-${{ matrix.os }}-python${{ matrix.python-version }}-model-tests-${{ env.WEEK}}
+                  key: pip-${{ matrix.os }}-python${{ matrix.python-version }}-model-tests-${{ env.WEEK }}
 
             - name: Restore pip cache (Windows)
               uses: actions/cache@v2
