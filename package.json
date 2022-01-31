@@ -10,7 +10,6 @@
     "test": "jest --runInBand --testPathIgnorePatterns /tests/binary_tests/",
     "test-electron-app": "jest --runInBand --testMatch **/tests/binary_tests/puppet.test.js",
     "postinstall": "electron-builder install-app-deps",
-    "fetch-invest": "node ./scripts/fetch_invest_binaries.js && git diff src/renderer/sampledata_registry.json",
     "dev": "node ./scripts/clean-build-dir.js && babel src -d build --verbose --config-file ./babel.config.js --copy-files --ignore **/__mocks__/* --no-copy-ignored --watch -s both",
     "build": "node ./scripts/clean-build-dir.js && babel src -d build --verbose --config-file ./babel.config.js --copy-files --ignore **/__mocks__/* --no-copy-ignored",
     "dist": "cross-env DEBUG=electron-builder electron-builder build --publish never --config electron-builder-config.js"
