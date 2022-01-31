@@ -9,6 +9,8 @@ defaults:
     shell: bash -l {0}
 
 env:
+  WINDOWS_PIP_CACHE: ~\AppData\Local\pip\Cache
+  MACOS_PIP_CACHE: ~/Library/Caches/pip
   CONDA_CACHE: ~/conda_pkgs_dir  # setup-miniconda sets same cache dir on windows and mac
 
 jobs:
@@ -52,13 +54,21 @@ jobs:
               uses: actions/setup-python@v2
               with:
                   python-version: ${{ env.PYTHON_VERSION }}
-                  cache: 'pip'
+
+            - name: Get current week
+              run: echo "WEEK=$(date +%U)" >> $GITHUB_ENV
+
+            - name: Restore pip cache
+              uses: actions/cache@v2
+              with:
+                  path: ${{ env.WINDOWS_PIP_CACHE }}
+                  key: pip-python${{ matrix.python-version }}-windows-binaries-${{ env.WEEK}}
 
             - name: Restore conda cache
               uses: actions/cache@v2
               with:
                   path: ${{ env.CONDA_CACHE }}
-                  key: conda_windows-python${{ env.PYTHON_VERSION }}-${{ hashFiles('**/requirements*.txt') }}-exe
+                  key: conda-python${{ env.PYTHON_VERSION }}-windows-binaries-${{ env.WEEK}}
 
             - name: Setup conda environment
               uses: conda-incubator/setup-miniconda@v2
@@ -174,13 +184,21 @@ jobs:
               uses: actions/setup-python@v2
               with:
                   python-version: ${{ env.PYTHON_VERSION }}
-                  cache: 'pip'
+
+            - name: Get current week
+              run: echo "WEEK=$(date +%U)" >> $GITHUB_ENV
+
+            - name: Restore pip cache
+              uses: actions/cache@v2
+              with:
+                  path: ${{ env.MACOS_PIP_CACHE }}
+                  key: pip-python${{ env.PYTHON_VERSION }}-macos-binaries-${{ env.WEEK}}
 
             - name: Restore conda cache
               uses: actions/cache@v2
               with:
                   path: ${{ env.CONDA_CACHE }}
-                  key: conda_mac-python${{ env.PYTHON_VERSION }}-${{ hashFiles('**/requirements*.txt') }}-dmg
+                  key: conda-python${{ env.PYTHON_VERSION }}-macos-binaries-${{ env.WEEK}}
 
             - name: Setup conda environment
               uses: conda-incubator/setup-miniconda@v2

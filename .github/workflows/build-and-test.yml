@@ -5,6 +5,8 @@ on:
     pull_request:
 
 env:
+  WINDOWS_PIP_CACHE: ~\AppData\Local\pip\Cache
+  MACOS_PIP_CACHE: ~/Library/Caches/pip
   CONDA_CACHE: ~/conda_pkgs_dir  # setup-miniconda sets same cache dir on windows and mac
 
 jobs:
@@ -64,17 +66,37 @@ jobs:
                   # Fetch complete history for accurate versioning
                   fetch-depth: 0
 
+            # Can't use setup-python pip caching feature because it can't do
+            # separate caches for different OSs and python versions
             - name: Set up python
               uses: actions/setup-python@v2
               with:
                   python-version: ${{ matrix.python-version }}
-                  cache: 'pip'
+
+            - name: Get current week
+              run: |
+                echo ${{ env.pythonLocation }}
+                echo "WEEK=$(date +%U)" >> $GITHUB_ENV
+
+            - name: Restore pip cache (MacOS)
+              uses: actions/cache@v2
+              if: matrix.os == 'macos-latest'
+              with:
+                  path: ${{ env.MACOS_PIP_CACHE }}
+                  key: pip-${{ matrix.os }}-python${{ matrix.python-version }}-model-tests-${{ env.WEEK}}
+
+            - name: Restore pip cache (Windows)
+              uses: actions/cache@v2
+              if: matrix.os == 'windows-latest'
+              with:
+                  path: ${{ env.WINDOWS_PIP_CACHE }}
+                  key: pip-${{ matrix.os }}-python${{ matrix.python-version }}-model-tests-${{ env.WEEK}}
 
             - name: Restore conda cache
               uses: actions/cache@v2
               with:
                   path: ${{ env.CONDA_CACHE }}
-                  key: conda_${{ matrix.os }}-python${{ matrix.python-version }}-${{ hashFiles('**/requirements*.txt') }}-model-tests
+                  key: conda-${{ matrix.os }}-python${{ matrix.python-version }}-model-tests-${{ env.WEEK}}
 
             # NOTE: It takes twice as long to save the sample data cache
             # as it does to do a fresh clone (almost 5 minutes vs. 2.5 minutes)
@@ -202,13 +224,29 @@ jobs:
               uses: actions/setup-python@v2
               with:
                   python-version: ${{ matrix.python-version }}
-                  cache: 'pip'
+
+            - name: Get current week
+              run: echo "WEEK=$(date +%U)" >> $GITHUB_ENV
+
+            - name: Restore pip cache (MacOS)
+              uses: actions/cache@v2
+              if: matrix.os == 'macos-latest'
+              with:
+                  path: ${{ env.MACOS_PIP_CACHE }}
+                  key: pip-${{ matrix.os }}-python${{ matrix.python-version }}-test-sdist-${{ env.WEEK}}
+
+            - name: Restore pip cache (Windows)
+              uses: actions/cache@v2
+              if: matrix.os == 'windows-latest'
+              with:
+                  path: ${{ env.WINDOWS_PIP_CACHE }}
+                  key: pip-${{ matrix.os }}-python${{ matrix.python-version }}-test-sdist-${{ env.WEEK}}
 
             - name: Restore conda cache
               uses: actions/cache@v2
               with:
                   path: ${{ env.CONDA_CACHE }}
-                  key: conda_${{ matrix.os }}-python${{ matrix.python-version }}-${{ hashFiles('**/requirements*.txt') }}-test-sdist
+                  key: conda-${{ matrix.os }}-python${{ matrix.python-version }}-test-sdist-${{ env.WEEK}}
 
             - name: Setup conda environment
               uses: conda-incubator/setup-miniconda@v2
@@ -302,13 +340,23 @@ jobs:
               uses: actions/setup-python@v2
               with:
                   python-version: 3.9
-                  cache: 'pip'
+
+            - name: Get current week
+              run: |
+                echo ${{ env.pythonLocation }}
+                echo "WEEK=$(date +%U)" >> $GITHUB_ENV
+
+            - name: Restore pip cache
+              uses: actions/cache@v2
+              with:
+                  path: ${{ env.WINDOWS_PIP_CACHE }}
+                  key: pip-validate-resources-${{ env.WEEK}}
 
             - name: Restore conda cache
               uses: actions/cache@v2
               with:
                   path: ${{ env.CONDA_CACHE }}
-                  key: conda_windows-cache-sample-data-${{ hashfiles('requirements.txt') }}
+                  key: conda-validate-resources-${{ env.WEEK}}
 
             - name: Setup conda environment
               uses: conda-incubator/setup-miniconda@v2
@@ -360,13 +408,21 @@ jobs:
               uses: actions/setup-python@v2
               with:
                   python-version: ${{ matrix.python-version }}
-                  cache: 'pip'
+
+            - name: Get current week
+              run: echo "WEEK=$(date +%U)" >> $GITHUB_ENV
+
+            - name: Restore pip cache
+              uses: actions/cache@v2
+              with:
+                  path: ${{ env.WINDOWS_PIP_CACHE }}
+                  key: pip-${{ matrix.os }}-python${{ matrix.python-version }}-ui-tests-${{ env.WEEK}}
 
             - name: Restore conda cache
               uses: actions/cache@v2
               with:
                   path: ${{ env.CONDA_CACHE }}
-                  key: conda_windows-python${{ matrix.python-version }}-${{ hashFiles('**/requirements*.txt') }}-ui-tests
+                  key: conda-${{ matrix.os }}-python${{ matrix.python-version }}-ui-tests-${{ env.WEEK}}
 
             - name: Restore git-LFS test data cache
               uses: actions/cache@v2
