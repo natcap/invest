@@ -31,9 +31,6 @@ jest.mock('child_process');
 jest.mock('../../src/renderer/server_requests');
 jest.mock('node-fetch');
 
-// mock out the global gettext function - avoid setting up translation
-global.window._ = (x) => x;
-
 const MOCK_MODEL_TITLE = 'Carbon';
 const MOCK_MODEL_RUN_NAME = 'carbon';
 const MOCK_INVEST_LIST = {
@@ -845,9 +842,6 @@ describe('Translation', () => {
     // this is the same setup that's done in src/renderer/index.js (out of test scope)
     ipcRenderer.invoke(ipcMainChannels.SET_LANGUAGE, 'en');
     global.window._ = ipcRenderer.sendSync.bind(null, ipcMainChannels.GETTEXT);
-  });
-  afterAll(async () => {
-    jest.resetAllMocks();
   });
 
   test('Text rerenders in new language when language setting changes', async () => {

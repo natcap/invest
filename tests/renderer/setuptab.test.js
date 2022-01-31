@@ -11,9 +11,6 @@ import {
   fetchDatastackFromFile, fetchValidation
 } from '../../src/renderer/server_requests';
 
-// mock out the global gettext function - avoid setting up translation
-global.window._ = (x) => x;
-
 jest.mock('../../src/renderer/server_requests');
 
 const MODULE = 'carbon';
@@ -229,10 +226,6 @@ describe('Arguments form interactions', () => {
     const {
       findByText, findByLabelText, queryByText,
     } = renderSetupFromSpec(spec, UI_SPEC);
-
-    fetchValidation.mockResolvedValue(
-      [[Object.keys(spec.args), VALIDATION_MESSAGE]]
-    );
 
     const input = await findByLabelText(`${spec.args.arg.name}`);
     expect(input).toHaveClass('is-invalid');

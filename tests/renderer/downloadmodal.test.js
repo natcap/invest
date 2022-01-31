@@ -22,9 +22,6 @@ import { removeIpcMainListeners } from '../../src/main/main';
 
 jest.mock('../../src/renderer/server_requests');
 
-// mock out the global gettext function - avoid setting up translation
-global.window._ = x => x;
-
 const nModels = Object.keys(sampledata_registry).length;
 const modelName = Object.keys(sampledata_registry)[0];
 

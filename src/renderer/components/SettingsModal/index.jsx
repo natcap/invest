@@ -21,6 +21,7 @@ const languageOptions = {
   English: 'en',
   Español: 'es',
 };
+const logLevelOptions = ['DEBUG', 'INFO', 'WARNING', 'ERROR'];
 
 /** Render a dialog with a form for configuring global invest settings */
 export default class SettingsModal extends React.Component {
@@ -29,7 +30,6 @@ export default class SettingsModal extends React.Component {
     this.state = {
       show: false,
       nWorkersOptions: null,
-      logLevelOptions: ['DEBUG', 'INFO', 'WARNING', 'ERROR'],
     };
 
     this.handleShow = this.handleShow.bind(this);
@@ -47,7 +47,7 @@ export default class SettingsModal extends React.Component {
       nWorkersOptions.push([i, `${i} CPUs`]);
     }
     this.setState({
-      nWorkersOptions: nWorkersOptions
+      nWorkersOptions: nWorkersOptions,
     });
   }
 
@@ -80,6 +80,8 @@ export default class SettingsModal extends React.Component {
   }
 
   render() {
+    const { show, nWorkersOptions } = this.state;
+    const { investSettings, clearJobsStorage } = this.props;
     return (
       <React.Fragment>
         <Button
@@ -94,7 +96,7 @@ export default class SettingsModal extends React.Component {
 
         <Modal
           className="settings-modal"
-          show={this.state.show}
+          show={show}
           onHide={this.handleClose}
         >
           <Modal.Header>
@@ -119,12 +121,11 @@ export default class SettingsModal extends React.Component {
                   id="language-select"
                   as="select"
                   name="language"
-                  value={this.props.investSettings.language}
+                  value={investSettings.language}
                   onChange={this.handleChange}
                 >
                   {Object.entries(languageOptions).map((entry) => {
-                    const displayName = entry[0];
-                    const value = entry[1];
+                    const [displayName, value] = entry;
                     return <option value={value} key={value}>{displayName}</option>;
                   })}
                 </Form.Control>
@@ -139,17 +140,17 @@ export default class SettingsModal extends React.Component {
                   id="logging-select"
                   as="select"
                   name="loggingLevel"
-                  value={this.props.investSettings.loggingLevel}
+                  value={investSettings.loggingLevel}
                   onChange={this.handleChange}
                 >
-                  {this.state.logLevelOptions.map(
+                  {logLevelOptions.map(
                     (opt) => <option value={opt} key={opt}>{_(opt)}</option>
                   )}
                 </Form.Control>
               </Col>
             </Form.Group>
             {
-              (this.state.nWorkersOptions)
+              (nWorkersOptions)
                 ? (
                   <Form.Group as={Row}>
                     <Col sm="6">
@@ -163,10 +164,10 @@ export default class SettingsModal extends React.Component {
                         as="select"
                         name="nWorkers"
                         type="text"
-                        value={this.props.investSettings.nWorkers}
+                        value={investSettings.nWorkers}
                         onChange={this.handleChange}
                       >
-                        {this.state.nWorkersOptions.map(
+                        {nWorkersOptions.map(
                           (opt) => <option value={opt[0]} key={opt[0]}>{opt[1]}</option>
                         )}
                       </Form.Control>
@@ -222,7 +223,7 @@ export default class SettingsModal extends React.Component {
             <hr />
             <Button
               variant="secondary"
-              onClick={this.props.clearJobsStorage}
+              onClick={clearJobsStorage}
               className="mr-2 w-50"
             >
               {_('Clear Recent Jobs')}
@@ -236,13 +237,14 @@ export default class SettingsModal extends React.Component {
 }
 
 SettingsModal.propTypes = {
-  saveSettings: PropTypes.func,
+  saveSettings: PropTypes.func.isRequired,
+  clearJobsStorage: PropTypes.func.isRequired,
   investSettings: PropTypes.shape({
     nWorkers: PropTypes.string,
     loggingLevel: PropTypes.string,
     sampleDataDir: PropTypes.string,
     language: PropTypes.string,
-  }),
-  showDownloadModal: PropTypes.func,
-  nCPU: PropTypes.number
+  }).isRequired,
+  showDownloadModal: PropTypes.func.isRequired,
+  nCPU: PropTypes.number.isRequired,
 };

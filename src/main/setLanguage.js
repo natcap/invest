@@ -2,8 +2,10 @@ import GettextJS from 'gettext.js';
 import gettextParser from 'gettext-parser';
 import { ipcMain } from 'electron';
 import fs from 'fs';
+import { getLogger } from '../logger';
 import { ipcMainChannels } from './ipcMainChannels';
 
+const logger = getLogger(__filename.split('/').slice(-1)[0]);
 const i18n = new GettextJS();
 
 /** Read PO file into gettext.js formatted message catalog object. */
@@ -14,19 +16,23 @@ function readMessageCatalog(messageCatalogPath) {
   const rawPO = gettextParser.po.parse(input);
 
   // convert from gettext-parser format to gettext.js format
+  // https://github.com/smhg/gettext-parser#data-structure-of-parsed-mopo-files
   // https://github.com/guillaumepotier/gettext.js#required-json-format
-  const formattedPO = {};
-  formattedPO[''] = {};
-  formattedPO[''].language = rawPO.headers.language;
-  formattedPO['']['plural-forms'] = rawPO.headers['plural-forms'];
+  const formattedPO = {
+    '': {
+      language: rawPO.headers.language,
+      'plural-forms': rawPO.headers['plural-forms'],
+    },
+  };
+  // leave out the empty message which contains the header string
   delete rawPO.translations[''][''];
-  for (const msgid of Object.keys(rawPO.translations[''])) {
+  Object.keys(rawPO.translations['']).forEach((msgid) => {
     if (rawPO.translations[''][msgid].msgstr.length === 1) {
-      formattedPO[msgid] = rawPO.translations[''][msgid].msgstr[0];
+      [formattedPO[msgid]] = rawPO.translations[''][msgid].msgstr;
     } else {
       formattedPO[msgid] = rawPO.translations[''][msgid].msgstr;
     }
-  }
+  });
   return formattedPO;
 }
 
@@ -38,22 +44,23 @@ async function loadMessageCatalogs() {
     `${__dirname}/../static/internationalization/locales`,
     async (err, languages) => {
       if (languages) {
-        for (const language of languages) {
+        languages.forEach((language) => {
           const messageCatalogPath = `${__dirname}/../static/internationalization/locales/${language}/LC_MESSAGES/messages.po`;
           i18n.loadJSON(readMessageCatalog(messageCatalogPath), 'messages');
-        }
+        });
       }
     }
   );
-  console.log('loaded message catalogs');
+  logger.debug('loaded message catalogs');
 }
-loadMessageCatalogs();
 
 export default function setupSetLanguage() {
+  loadMessageCatalogs();
+
   ipcMain.handle(
     ipcMainChannels.SET_LANGUAGE,
     (e, languageCode) => {
-      console.log('set language', languageCode);
+      logger.debug('setting language to', languageCode);
       i18n.setLocale(languageCode);
     }
   );
