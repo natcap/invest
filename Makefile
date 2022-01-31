@@ -332,6 +332,7 @@ ZIPTARGETS = $(foreach dirname,$(ZIPDIRS),$(addprefix $(DIST_DATA_DIR)/,$(dirnam
 sampledata: $(ZIPTARGETS)
 $(DIST_DATA_DIR)/%.zip: $(DIST_DATA_DIR) $(GIT_SAMPLE_DATA_REPO_PATH)
 	cd $(GIT_SAMPLE_DATA_REPO_PATH); $(BASHLIKE_SHELL_COMMAND) "$(ZIP) -r $(addprefix ../../,$@) $(subst $(DIST_DATA_DIR)/,$(DATADIR),$(subst .zip,,$@))"
+	$(PYTHON) $(WORKBENCH)/scripts/build_sampledata_registry.py $(DATA_BASE_URL) $(CURDIR)/$(DIST_DATA_DIR)
 
 SAMPLEDATA_SINGLE_ARCHIVE := dist/InVEST_$(VERSION)_sample_data.zip
 sampledata_single: $(SAMPLEDATA_SINGLE_ARCHIVE)
