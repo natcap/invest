@@ -362,5 +362,5 @@ class CarbonValidationTests(unittest.TestCase):
         # Using a numpy float32 in numpy.sum will pass up to rtol=1e-9.
         numpy.testing.assert_allclose(
             carbon._accumulate_totals(raster_path),
-            492919.73994,
+            492919.769386,
             rtol=1e-12)  # Note better precision
