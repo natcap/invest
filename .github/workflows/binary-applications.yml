@@ -78,7 +78,7 @@ jobs:
             - name: Install python dependencies
               if: steps.condacache.outputs.cache-hit != 'true'
               run: |
-                  conda install python=${{ env.python-version }}
+                  conda install python="${{ env.python-version }}"
                   conda install nomkl # make sure numpy is w/out MKL
                   conda upgrade -y pip setuptools
                   conda install toml requests
@@ -206,7 +206,7 @@ jobs:
             - name: Build conda env with python dependencies
               if: steps.condacache.outputs.cache-hit != 'true'
               run: |
-                  conda install python=${{ env.python-version }}
+                  conda install python="${{ env.python-version }}"
                   conda upgrade -y pip setuptools
                   conda install toml requests
                   conda install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")

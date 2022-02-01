@@ -111,7 +111,7 @@ jobs:
               if: steps.condacache.outputs.cache-hit != 'true'
               shell: bash -l {0}
               run: |
-                  conda install python=${{ matrix.python-version }}
+                  conda install python="${{ matrix.python-version }}"
                   conda install nomkl # make sure numpy is w/out MKL
                   conda upgrade -y pip setuptools
                   conda install ${{ matrix.numpy }} ${{ matrix.gdal }} toml twine build
@@ -240,7 +240,7 @@ jobs:
               if: steps.condacache.outputs.cache-hit != 'true'
               shell: bash -l {0}
               run: |
-                  conda install python=${{ matrix.python-version }}
+                  conda install python="${{ matrix.python-version }}"
                   conda install nomkl # make sure numpy is w/out MKL
                   conda upgrade -y pip setuptools
                   conda install toml twine build
@@ -418,7 +418,7 @@ jobs:
               if: steps.condacache.outputs.cache-hit != 'true'
               shell: bash -l {0}
               run: |
-                  conda install python=${{ matrix.python-version }}
+                  conda install python="${{ matrix.python-version }}"
                   conda install nomkl  # make sure numpy w/out mkl
                   conda install requests
                   conda upgrade -y pip setuptools
