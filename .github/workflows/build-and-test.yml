@@ -137,19 +137,24 @@ jobs:
             - name: List environment contents
               run: |
                 echo $CONDA_PREFIX
-                ls $CONDA_PREFIX
+                ls $CONDA_PREFIX/bin
+                conda list
                 echo "CONDA_PREFIX=$CONDA_PREFIX" >> $GITHUB_ENV
 
             - name: Restore conda environment cache
               uses: actions/cache@v2
               with:
                 path: ${{ env.CONDA_PREFIX }}
-                key: ${{ matrix.os }}-${{ env.pythonLocation }}-model-tests-${{ env.WEEK}}
+                key: ${{ matrix.os }}-${{ env.pythonLocation }}-model-tests-${{ env.WEEK }}
+              id: condacache
 
             - name: List environment contents again
-              run: ls $CONDA_PREFIX
+              run: |
+                ls $CONDA_PREFIX
+                conda list
 
             - name: Install build dependencies
+              if: steps.condacache.outputs.cache-hit != 'true'
               shell: bash -l {0}
               run: |
                   pip cache list
@@ -166,6 +171,7 @@ jobs:
                   python -m twine check dist/*
 
             - name: Install runtime dependencies
+              if: steps.condacache.outputs.cache-hit != 'true'
               shell: bash -l {0}
               run: |
                   python ./scripts/convert-requirements-to-conda-yml.py \
