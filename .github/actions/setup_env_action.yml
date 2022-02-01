@@ -1,0 +1,45 @@
+name: "Set up python and conda environment"
+description: 'Greet someone'
+inputs:
+  python-version:
+    description: "Python version to use"
+    required: true
+  key:
+    description: "Unique key for caching"
+    required: true
+outputs:
+  random-number:
+    description: "Random number"
+    value: ${{ steps.random-number-generator.outputs.random-id }}
+  cache-hit:
+    description: "Whether a cache hit was found"
+    value: ${{ steps.condacache.outputs.cache-hit }}
+runs:
+  using: "composite"
+  steps:
+    - name: Set up python
+      uses: actions/setup-python@v2
+      with:
+          python-version: ${{ inputs.python-version }}
+
+    - name: Get current week
+      run: echo "WEEK=$(date +%U)" >> $GITHUB_ENV
+      shell: bash
+
+    - name: Setup conda environment
+      uses: conda-incubator/setup-miniconda@v2
+      with:
+          activate-environment: env
+          auto-update-conda: true
+          channels: conda-forge
+
+    - name: Export CONDA_PREFIX variable
+      run: echo "CONDA_PREFIX=$CONDA_PREFIX" >> $GITHUB_ENV
+      shell: bash
+
+    - name: Restore conda environment cache
+      uses: actions/cache@v2
+      with:
+        path: ${{ env.CONDA_PREFIX }}
+        key: ${{ inputs.key }}-${{ env.WEEK }}
+      id: condacache

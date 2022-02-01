@@ -70,16 +70,6 @@ jobs:
                   # Fetch complete history for accurate versioning
                   fetch-depth: 0
 
-            # Can't use setup-python pip caching feature because it can't do
-            # separate caches for different OSs and python versions
-            - name: Set up python
-              uses: actions/setup-python@v2
-              with:
-                  python-version: ${{ matrix.python-version }}
-
-            - name: Get current week
-              run: echo "WEEK=$(date +%U)" >> $GITHUB_ENV
-
             # NOTE: It takes twice as long to save the sample data cache
             # as it does to do a fresh clone (almost 5 minutes vs. 2.5 minutes)
             # Test data is way, way faster by contrast (on the order of a few
@@ -90,22 +80,11 @@ jobs:
                   path: data/invest-test-data
                   key: git-lfs-testdata-${{ hashfiles('Makefile') }}
 
-            - name: Setup conda environment
-              uses: conda-incubator/setup-miniconda@v2
+            - name: Set up python and conda environment
+              uses: ./.github/actions/setup_env_action.yml
               with:
-                  activate-environment: ${{ matrix.os }}-test-env
-                  auto-update-conda: true
-                  channels: conda-forge
-
-            - name: Export CONDA_PREFIX variable
-              run: echo "CONDA_PREFIX=$CONDA_PREFIX" >> $GITHUB_ENV
-
-            - name: Restore conda environment cache
-              uses: actions/cache@v2
-              with:
-                path: ${{ env.CONDA_PREFIX }}
-                key: ${{ matrix.os }}-py${{ matrix.python-version }}-model-tests-${{ env.WEEK }}-${{ hashFiles('**/requirements*.txt') }}
-              id: condacache
+                  python-version: ${{ matrix.python-version }}
+                  key: ${{ matrix.python-version }}-${{ matrix.os }}-model-tests
 
             - name: Install build dependencies
               if: steps.condacache.outputs.cache-hit != 'true'
