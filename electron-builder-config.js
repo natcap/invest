@@ -1,26 +1,22 @@
-const fs = require('fs');
 const { execFileSync } = require('child_process');
-const pkg = require('./package');
 
 const OS = process.platform;
 const ARCH = process.arch;
 const EXT = OS === 'win32' ? 'exe' : 'dmg';
 
+// Uniquely identify the changeset we're building & packaging.
+const investVersion = execFileSync('invest', ['--version'])
+  .toString().trim();
+
 // the appID may not display anywhere, but seems to control if the
 // install overwrites pre-existing or creates a new install directory.
-// It deliberately only varies by invest version (not workbench version)
-const APP_ID = `NaturalCapitalProject.Invest.Workbench.${pkg.invest.version}`;
-
-// Uniquely identify the changeset we're building & packaging.
-const workbenchVersion = execFileSync('git', ['describe', '--tags'])
-  .toString().trim();
-// Need to pass this data to the GHA deploy step
-fs.writeFileSync('.workbench_version_string.env', workbenchVersion);
+// It deliberately varies by invest version.
+const APP_ID = `NaturalCapitalProject.Invest.Workbench.${investVersion}`;
 
 // productName controls the install dirname & app name
 // We might want to remove the workbench version from this name
-const PRODUCT_NAME = `InVEST ${pkg.invest.version} Workbench ${workbenchVersion}`;
-const ARTIFACT_NAME = `invest_${pkg.invest.version}_workbench_${workbenchVersion}_${OS}_${ARCH}.${EXT}`;
+const PRODUCT_NAME = `InVEST ${investVersion} Workbench`;
+const ARTIFACT_NAME = `invest_${investVersion}_workbench_${OS}_${ARCH}.${EXT}`;
 
 const config = {
   extraMetadata: {
