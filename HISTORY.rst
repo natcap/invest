@@ -35,6 +35,10 @@
 Unreleased Changes
 ------------------
 * General
+    * The minimum ``setuptools_scm`` version has been increased to 6.4.0 in
+      order to bypass calling ``setup.py`` for version information.  The
+      version of this project can now be retrieved by calling ``python -m
+      setuptools_scm`` from the project root.
     * Fixed an issue where datastack archives would not include any spatial
       datasets that were linked to in CSV files.  This now works for all models
       except HRA.  If an HRA datastack archive is requested,
@@ -48,6 +52,10 @@ Unreleased Changes
       one stream pixel, it will now snap to the stream pixel with a higher
       flow accumulation value. Before, it would snap to the stream pixel
       encountered first in the raster (though this was not guaranteed).
+* HRA
+    * Fixed a bug with how a pandas dataframe was instantiated. This bug did
+      not effect outputs though some might notice less trailing zeros in the
+      ``SUMMARY_STATISTICS.csv`` output.
 * NDR
     * Changed some model inputs and outputs to clarify that subsurface
       phosphorus is not modeled.
