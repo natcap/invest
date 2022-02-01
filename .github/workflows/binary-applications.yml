@@ -58,18 +58,6 @@ jobs:
             - name: Get current week
               run: echo "WEEK=$(date +%U)" >> $GITHUB_ENV
 
-            - name: Restore pip cache
-              uses: actions/cache@v2
-              with:
-                  path: ${{ env.WINDOWS_PIP_CACHE }}
-                  key: pip-python${{ matrix.python-version }}-windows-binaries-${{ env.WEEK}}
-
-            - name: Restore conda cache
-              uses: actions/cache@v2
-              with:
-                  path: ${{ env.CONDA_CACHE }}
-                  key: conda-python${{ env.PYTHON_VERSION }}-windows-binaries-${{ env.WEEK}}
-
             - name: Setup conda environment
               uses: conda-incubator/setup-miniconda@v2
               with:
@@ -79,7 +67,18 @@ jobs:
                   channels: conda-forge
                   use-only-tar-bz2: true # this needs to be set for caching to work properly
 
+            - name: Export CONDA_PREFIX variable
+              run: echo "CONDA_PREFIX=$CONDA_PREFIX" >> $GITHUB_ENV
+
+            - name: Restore conda environment cache
+              uses: actions/cache@v2
+              with:
+                path: ${{ env.CONDA_PREFIX }}
+                key: ${{ matrix.os }}-${{ matrix.python-version }}-windows-binaries-${{ env.WEEK }}-${{ hashFiles('**/requirements*.txt') }}
+              id: condacache
+
             - name: Install python dependencies
+              if: steps.condacache.outputs.cache-hit != 'true'
               run: |
                   conda install nomkl # make sure numpy is w/out MKL
                   conda upgrade -y pip setuptools
@@ -188,18 +187,6 @@ jobs:
             - name: Get current week
               run: echo "WEEK=$(date +%U)" >> $GITHUB_ENV
 
-            - name: Restore pip cache
-              uses: actions/cache@v2
-              with:
-                  path: ${{ env.MACOS_PIP_CACHE }}
-                  key: pip-python${{ env.PYTHON_VERSION }}-macos-binaries-${{ env.WEEK}}
-
-            - name: Restore conda cache
-              uses: actions/cache@v2
-              with:
-                  path: ${{ env.CONDA_CACHE }}
-                  key: conda-python${{ env.PYTHON_VERSION }}-macos-binaries-${{ env.WEEK}}
-
             - name: Setup conda environment
               uses: conda-incubator/setup-miniconda@v2
               with:
@@ -209,7 +196,18 @@ jobs:
                   channels: conda-forge
                   use-only-tar-bz2: true
 
+            - name: Export CONDA_PREFIX variable
+              run: echo "CONDA_PREFIX=$CONDA_PREFIX" >> $GITHUB_ENV
+
+            - name: Restore conda environment cache
+              uses: actions/cache@v2
+              with:
+                path: ${{ env.CONDA_PREFIX }}
+                key: ${{ matrix.os }}-${{ matrix.python-version }}-macos-binaries-${{ env.WEEK }}-${{ hashFiles('**/requirements*.txt') }}
+              id: condacache
+
             - name: Build conda env with python dependencies
+              if: steps.condacache.outputs.cache-hit != 'true'
               run: |
                   conda upgrade -y pip setuptools
                   conda install toml requests

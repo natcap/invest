@@ -105,20 +105,15 @@ jobs:
                   channels: conda-forge
                   use-only-tar-bz2: true # this needs to be set for caching to work properly
 
-            - name: List environment contents
-              run: |
-                conda list
-                echo "CONDA_PREFIX=$CONDA_PREFIX" >> $GITHUB_ENV
+            - name: Export CONDA_PREFIX variable
+              run: echo "CONDA_PREFIX=$CONDA_PREFIX" >> $GITHUB_ENV
 
             - name: Restore conda environment cache
               uses: actions/cache@v2
               with:
                 path: ${{ env.CONDA_PREFIX }}
-                key: ${{ matrix.os }}-${{ matrix.python-version }}-model-tests-${{ env.WEEK }}
+                key: ${{ matrix.os }}-${{ matrix.python-version }}-model-tests-${{ env.WEEK }}-${{ hashFiles('**/requirements*.txt') }}
               id: condacache
-
-            - name: List environment contents again
-              run: conda list
 
             - name: Install build dependencies
               if: steps.condacache.outputs.cache-hit != 'true'
@@ -240,16 +235,14 @@ jobs:
                   channels: conda-forge
                   use-only-tar-bz2: true
 
-            - name: List environment contents
-              run: |
-                conda list
-                echo "CONDA_PREFIX=$CONDA_PREFIX" >> $GITHUB_ENV
+            - name: Export CONDA_PREFIX variable
+              run: echo "CONDA_PREFIX=$CONDA_PREFIX" >> $GITHUB_ENV
 
             - name: Restore conda environment cache
               uses: actions/cache@v2
               with:
                 path: ${{ env.CONDA_PREFIX }}
-                key: ${{ matrix.os }}-${{ matrix.python-version }}-test-sdist-${{ env.WEEK }}
+                key: ${{ matrix.os }}-${{ matrix.python-version }}-test-sdist-${{ env.WEEK }}-${{ hashFiles('**/requirements*.txt') }}
               id: condacache
 
             - name: Install dependencies
@@ -351,16 +344,14 @@ jobs:
                   channels: conda-forge
                   use-only-tar-bz2: true
 
-            - name: List environment contents
-              run: |
-                conda list
-                echo "CONDA_PREFIX=$CONDA_PREFIX" >> $GITHUB_ENV
+            - name: Export CONDA_PREFIX variable
+              run: echo "CONDA_PREFIX=$CONDA_PREFIX" >> $GITHUB_ENV
 
             - name: Restore conda environment cache
               uses: actions/cache@v2
               with:
                 path: ${{ env.CONDA_PREFIX }}
-                key: ${{ matrix.os }}-${{ matrix.python-version }}-validate-resources-${{ env.WEEK }}
+                key: ${{ matrix.os }}-${{ matrix.python-version }}-validate-resources-${{ env.WEEK }}-${{ hashFiles('**/requirements*.txt') }}
               id: condacache
 
             - name: Install dependencies
@@ -424,16 +415,14 @@ jobs:
                   channels: conda-forge
                   use-only-tar-bz2: true
 
-            - name: List environment contents
-              run: |
-                conda list
-                echo "CONDA_PREFIX=$CONDA_PREFIX" >> $GITHUB_ENV
+            - name: Export CONDA_PREFIX variable
+              run: echo "CONDA_PREFIX=$CONDA_PREFIX" >> $GITHUB_ENV
 
             - name: Restore conda environment cache
               uses: actions/cache@v2
               with:
                 path: ${{ env.CONDA_PREFIX }}
-                key: ${{ matrix.os }}-${{ matrix.python-version }}-ui-tests-${{ env.WEEK }}
+                key: ${{ matrix.os }}-${{ matrix.python-version }}-ui-tests-${{ env.WEEK }}-${{ hashFiles('**/requirements*.txt') }}
               id: condacache
 
             - name: Install dependencies
