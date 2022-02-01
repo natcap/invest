@@ -140,16 +140,16 @@ jobs:
                 echo $CONDA
                 echo $CONDA_PREFIX
                 echo $CONDA_DEFAULT_ENV
-                ls $CONDA_DEFAULT_ENV
+                ls $CONDA_PREFIX
 
             - name: Restore conda environment cache
               uses: actions/cache@v2
               with:
-                path: ${{ env.CONDA_DEFAULT_ENV }}
+                path: ${{ env.CONDA_PREFIX }}
                 key: ${{ matrix.os }}-${{ env.pythonLocation }}-model-tests-${{ env.WEEK}}
 
             - name: List environment contents again
-              run: ls $CONDA_DEFAULT_ENV
+              run: ls $CONDA_PREFIX
 
             - name: Install build dependencies
               shell: bash -l {0}
