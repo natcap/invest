@@ -1,6 +1,5 @@
 import json
 import os
-import pprint
 import sys
 
 REGISTRY_PATH = os.path.join(
@@ -10,7 +9,6 @@ REGISTRY_PATH = os.path.join(
 if __name__ == '__main__':
     storage_url = sys.argv[1]
     zip_dir = sys.argv[2]
-    print(zip_dir)
 
     with open(REGISTRY_PATH, 'r') as json_file:
         registry = json.load(json_file)

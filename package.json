@@ -9,6 +9,7 @@
     "lint": "eslint --cache --color --ext .jsx,.js src",
     "test": "jest --runInBand --testPathIgnorePatterns /tests/binary_tests/",
     "test-electron-app": "jest --runInBand --testMatch **/tests/binary_tests/puppet.test.js",
+    "test-sampledata-registry": "jest --runInBand --testMatch **/tests/sampledata_linkcheck/sampledata_registry.test.js",
     "postinstall": "electron-builder install-app-deps",
     "dev": "node ./scripts/clean-build-dir.js && babel src -d build --verbose --config-file ./babel.config.js --copy-files --ignore **/__mocks__/* --no-copy-ignored --watch -s both",
     "build": "node ./scripts/clean-build-dir.js && babel src -d build --verbose --config-file ./babel.config.js --copy-files --ignore **/__mocks__/* --no-copy-ignored",
