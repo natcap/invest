@@ -7,7 +7,7 @@
   "scripts": {
     "start": "electron .",
     "lint": "eslint --cache --color --ext .jsx,.js src",
-    "test": "jest --runInBand --testPathIgnorePatterns /tests/binary_tests/",
+    "test": "jest --runInBand --testPathIgnorePatterns /tests/binary_tests/ /tests/sampledata_linkcheck/",
     "test-electron-app": "jest --runInBand --testMatch **/tests/binary_tests/puppet.test.js",
     "test-sampledata-registry": "jest --runInBand --testMatch **/tests/sampledata_linkcheck/sampledata_registry.test.js",
     "postinstall": "electron-builder install-app-deps",
