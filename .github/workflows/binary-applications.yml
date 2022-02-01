@@ -8,11 +8,6 @@ defaults:
   run:
     shell: bash -l {0}
 
-env:
-  WINDOWS_PIP_CACHE: ~\AppData\Local\pip\Cache
-  MACOS_PIP_CACHE: ~/Library/Caches/pip
-  CONDA_CACHE: ~/conda_pkgs_dir  # setup-miniconda sets same cache dir on windows and mac
-
 jobs:
     check-syntax-errors:
         name: "Check for syntax errors"
