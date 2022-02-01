@@ -341,6 +341,7 @@ class CarbonValidationTests(unittest.TestCase):
 
     def test_carbon_totals_precision(self):
         """Carbon: check float64 precision in pixel value summation."""
+        from pkg_resources import parse_version
         from natcap.invest import carbon
 
         big_float32_array = numpy.random.default_rng(seed=1).random(
@@ -358,9 +359,13 @@ class CarbonValidationTests(unittest.TestCase):
             big_float32_array, float(nodata), (2, -2), (2, -2), wkt,
             raster_path)
 
+        if parse_version(numpy.__version__) >= parse_version('1.22'):
+            expected_value = 492919.769386
+        else:
+            expected_value = 492919.73994
         # Verify better-than-float32 precision on raster summation.
         # Using a numpy float32 in numpy.sum will pass up to rtol=1e-9.
         numpy.testing.assert_allclose(
             carbon._accumulate_totals(raster_path),
-            492919.769386,
+            expected_value,
             rtol=1e-12)  # Note better precision
