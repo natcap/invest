@@ -83,7 +83,7 @@ jobs:
 
             - name: Get current week
               run: |
-                echo ${{ env.pythonLocation }}
+                echo $pythonLocation
                 echo "WEEK=$(date +%U)" >> $GITHUB_ENV
 
             # - name: Restore pip cache (MacOS)
@@ -134,20 +134,23 @@ jobs:
                   channels: conda-forge
                   use-only-tar-bz2: true # this needs to be set for caching to work properly
 
-            - name: List environment contents (mac)
-              if: matrix.os == 'macos-latest'
+            - name: List environment contents
               run: |
                 conda info
-                ls ${{ matrix.conda-prefix }}/${{ matrix.os }}-test-env
+                echo $CONDA
+                echo $CONDA_PREFIX
+                echo $CONDA_DEFAULT_ENV
+                echo $CONDA_PREFIX/$CONDA_DEFAULT_ENV
+                ls $CONDA_PREFIX/$CONDA_DEFAULT_ENV
 
             - name: Restore conda environment cache
               uses: actions/cache@v2
               with:
-                path: ${{ matrix.conda-prefix }}/${{ matrix.os }}-test-env
+                path: $CONDA_PREFIX/$CONDA_DEFAULT_ENV
                 key: ${{ matrix.os }}-${{ env.pythonLocation }}-model-tests-${{ env.WEEK}}
 
             - name: List environment contents again
-              run: ls ${{ matrix.conda-prefix }}/${{ matrix.os }}-test-env
+              run: ls $CONDA_PREFIX/$CONDA_DEFAULT_ENV
 
             - name: Install build dependencies
               shell: bash -l {0}
