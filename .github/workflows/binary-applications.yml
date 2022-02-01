@@ -371,9 +371,14 @@ jobs:
 
             - name: Deploy artifacts to GCS
               # Secrets not available in PR so don't use GCP.
-              # We only want to upload artifacts to a release object in a release.
               if: github.event_name != 'pull_request'
               run: make deploy
+
+            - name: Check sampledata registry links
+              # no artifacts were deployed in a PR
+              if: github.event_name != 'pull_request'
+              working-directory: ./workbench
+              run: yarn run test-sampledata-registry
 
             - name: Upload sample data artifact
               uses: actions/upload-artifact@v2
