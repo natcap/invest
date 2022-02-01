@@ -387,13 +387,11 @@ describe('InVEST global settings: dialog interactions', () => {
     const languageInput = getByLabelText(languageLabelText, { exact: false });
 
     userEvent.selectOptions(nWorkersInput, [getByText(nWorkersLabel)]);
+    await waitFor(() => { expect(nWorkersInput).toHaveValue(nWorkersValue); });
     userEvent.selectOptions(loggingInput, [loggingLevel]);
+    await waitFor(() => { expect(loggingInput).toHaveValue(loggingLevel); });
     userEvent.selectOptions(languageInput, [languageValue]);
-    await waitFor(() => {
-      expect(nWorkersInput).toHaveValue(nWorkersValue);
-      expect(loggingInput).toHaveValue(loggingLevel);
-      expect(languageInput).toHaveValue(languageValue);
-    });
+    await waitFor(() => { expect(languageInput).toHaveValue(languageValue); });
     userEvent.click(getByRole('button', { name: 'close settings' }));
 
     // Check values were saved in app and in store

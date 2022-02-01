@@ -20,8 +20,8 @@ function readMessageCatalog(messageCatalogPath) {
   // https://github.com/guillaumepotier/gettext.js#required-json-format
   const formattedPO = {
     '': {
-      language: rawPO.headers.language,
-      'plural-forms': rawPO.headers['plural-forms'],
+      language: rawPO.headers.Language,
+      'plural-forms': rawPO.headers['Plural-Forms'],
     },
   };
   // leave out the empty message which contains the header string
