@@ -29,14 +29,16 @@ runs:
     - name: Setup conda environment
       uses: conda-incubator/setup-miniconda@v2
       with:
+          python-version: 3.9
           activate-environment: foo
           auto-update-conda: true
           channels: conda-forge
 
     - name: Activate conda environment
       run: |
+        echo $CONDA
         echo $CONDA_PREFIX
-        conda activate foo
+        $CONDA activate foo
         echo $CONDA_PREFIX
       shell: bash
 
