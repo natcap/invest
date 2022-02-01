@@ -4,6 +4,7 @@ import { ipcMain } from 'electron';
 import fs from 'fs';
 import { getLogger } from '../logger';
 import { ipcMainChannels } from './ipcMainChannels';
+import ELECTRON_DEV_MODE from './isDevMode'
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 const i18n = new GettextJS();
@@ -37,10 +38,10 @@ function readMessageCatalog(messageCatalogPath) {
 }
 
 /** Load message catalogs for each language so they're available to i18n. */
-async function loadMessageCatalogs() {
+function loadMessageCatalogs() {
   // load each language's message catalog PO file into an object
   // for easy access when we switch languages
-  fs.readdir(
+  fs.readdirSync(
     `${__dirname}/../static/internationalization/locales`,
     async (err, languages) => {
       if (languages) {
@@ -69,6 +70,13 @@ export default function setupSetLanguage() {
     ipcMainChannels.GETTEXT,
     (event, message) => {
       event.returnValue = i18n.gettext(message);
+    }
+  );
+
+  ipcMain.on(
+    ipcMainChannels.IS_DEV_MODE,
+    (event) => {
+      event.returnValue = ELECTRON_DEV_MODE;
     }
   );
 }

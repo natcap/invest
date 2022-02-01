@@ -1,5 +1,6 @@
 import React from 'react';
 import PropTypes from 'prop-types';
+import { ipcRenderer } from 'electron';
 
 import Accordion from 'react-bootstrap/Accordion';
 import Col from 'react-bootstrap/Col';
@@ -15,6 +16,7 @@ import {
 import { BsChevronExpand } from 'react-icons/bs';
 
 import { getDefaultSettings } from './SettingsStorage';
+import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
 // map display names to standard language codes
 const languageOptions = {
@@ -82,6 +84,32 @@ export default class SettingsModal extends React.Component {
   render() {
     const { show, nWorkersOptions } = this.state;
     const { investSettings, clearJobsStorage } = this.props;
+    const isDevMode = ipcRenderer.sendSync(ipcMainChannels.IS_DEV_MODE);
+    let languageFragment = <React.Fragment />;
+    if (isDevMode) { // for now, only show language option in dev mode
+      languageFragment = (
+        <Form.Group as={Row}>
+          <Form.Label column sm="8" htmlFor="language-select">
+            <MdTranslate className="language-icon" />
+            {_('Language')}
+          </Form.Label>
+          <Col sm="4">
+            <Form.Control
+              id="language-select"
+              as="select"
+              name="language"
+              value={investSettings.language}
+              onChange={this.handleChange}
+            >
+              {Object.entries(languageOptions).map((entry) => {
+                const [displayName, value] = entry;
+                return <option value={value} key={value}>{displayName}</option>;
+              })}
+            </Form.Control>
+          </Col>
+        </Form.Group>
+      );
+    }
     return (
       <React.Fragment>
         <Button
@@ -111,26 +139,7 @@ export default class SettingsModal extends React.Component {
             </Button>
           </Modal.Header>
           <Modal.Body>
-            <Form.Group as={Row}>
-              <Form.Label column sm="8" htmlFor="language-select">
-                <MdTranslate className="language-icon" />
-                {_('Language')}
-              </Form.Label>
-              <Col sm="4">
-                <Form.Control
-                  id="language-select"
-                  as="select"
-                  name="language"
-                  value={investSettings.language}
-                  onChange={this.handleChange}
-                >
-                  {Object.entries(languageOptions).map((entry) => {
-                    const [displayName, value] = entry;
-                    return <option value={value} key={value}>{displayName}</option>;
-                  })}
-                </Form.Control>
-              </Col>
-            </Form.Group>
+            {languageFragment}
             <Form.Group as={Row}>
               <Form.Label column sm="6" htmlFor="logging-select">
                 {_('Logging threshold')}
