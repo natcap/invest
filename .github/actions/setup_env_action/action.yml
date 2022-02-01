@@ -38,6 +38,7 @@ runs:
         echo $CONDA_PREFIX
         conda activate foo
         echo $CONDA_PREFIX
+      shell: bash
 
     - name: Export CONDA_PREFIX variable
       run: echo "CONDA_PREFIX=$CONDA_PREFIX" >> $GITHUB_ENV
