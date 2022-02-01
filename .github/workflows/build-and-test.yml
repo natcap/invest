@@ -86,35 +86,6 @@ jobs:
                 echo $pythonLocation
                 echo "WEEK=$(date +%U)" >> $GITHUB_ENV
 
-            # - name: Restore pip cache (MacOS)
-            #   uses: actions/cache@v2
-            #   if: matrix.os == 'macos-latest'
-            #   with:
-            #       path: ${{ env.MACOS_PIP_CACHE }}
-            #       key: pip-${{ matrix.os }}-python${{ matrix.python-version }}-model-tests-${{ env.WEEK }}
-
-            # - name: Restore pip cache (Windows)
-            #   uses: actions/cache@v2
-            #   if: matrix.os == 'windows-latest'
-            #   with:
-            #       path: ${{ env.WINDOWS_PIP_CACHE }}
-            #       key: pip-${{ matrix.os }}-python${{ matrix.python-version }}-model-tests-${{ env.WEEK}}
-
-            # - name: Restore conda cache
-            #   uses: actions/cache@v2
-            #   with:
-            #       path: ${{ env.CONDA_CACHE }}
-            #       key: conda-${{ matrix.os }}-python${{ matrix.python-version }}-model-tests-${{ env.WEEK}}
-
-            - name: Restore python environment cache
-              uses: actions/cache@v2
-              with:
-                path: ${{ env.pythonLocation }}
-                key: ${{ env.pythonLocation }}-model-tests-${{ env.WEEK}}
-
-            - name: List environment contents
-              run: ls $pythonLocation
-
             # NOTE: It takes twice as long to save the sample data cache
             # as it does to do a fresh clone (almost 5 minutes vs. 2.5 minutes)
             # Test data is way, way faster by contrast (on the order of a few
@@ -136,8 +107,6 @@ jobs:
 
             - name: List environment contents
               run: |
-                echo $CONDA_PREFIX
-                ls $CONDA_PREFIX/bin
                 conda list
                 echo "CONDA_PREFIX=$CONDA_PREFIX" >> $GITHUB_ENV
 
@@ -145,20 +114,16 @@ jobs:
               uses: actions/cache@v2
               with:
                 path: ${{ env.CONDA_PREFIX }}
-                key: ${{ matrix.os }}-${{ env.pythonLocation }}-model-tests-${{ env.WEEK }}
+                key: ${{ matrix.os }}-${{ matrix.python-version }}-model-tests-${{ env.WEEK }}
               id: condacache
 
             - name: List environment contents again
-              run: |
-                ls $CONDA_PREFIX
-                conda list
+              run: conda list
 
             - name: Install build dependencies
               if: steps.condacache.outputs.cache-hit != 'true'
               shell: bash -l {0}
               run: |
-                  pip cache list
-                  ls ${{ env.CONDA_CACHE }}
                   conda install nomkl # make sure numpy is w/out MKL
                   conda upgrade -y pip setuptools
                   conda install ${{ matrix.numpy }} ${{ matrix.gdal }} toml twine build
@@ -266,26 +231,6 @@ jobs:
             - name: Get current week
               run: echo "WEEK=$(date +%U)" >> $GITHUB_ENV
 
-            - name: Restore pip cache (MacOS)
-              uses: actions/cache@v2
-              if: matrix.os == 'macos-latest'
-              with:
-                  path: ${{ env.MACOS_PIP_CACHE }}
-                  key: pip-${{ matrix.os }}-python${{ matrix.python-version }}-test-sdist-${{ env.WEEK}}
-
-            - name: Restore pip cache (Windows)
-              uses: actions/cache@v2
-              if: matrix.os == 'windows-latest'
-              with:
-                  path: ${{ env.WINDOWS_PIP_CACHE }}
-                  key: pip-${{ matrix.os }}-python${{ matrix.python-version }}-test-sdist-${{ env.WEEK}}
-
-            - name: Restore conda cache
-              uses: actions/cache@v2
-              with:
-                  path: ${{ env.CONDA_CACHE }}
-                  key: conda-${{ matrix.os }}-python${{ matrix.python-version }}-test-sdist-${{ env.WEEK}}
-
             - name: Setup conda environment
               uses: conda-incubator/setup-miniconda@v2
               with:
@@ -295,7 +240,20 @@ jobs:
                   channels: conda-forge
                   use-only-tar-bz2: true
 
+            - name: List environment contents
+              run: |
+                conda list
+                echo "CONDA_PREFIX=$CONDA_PREFIX" >> $GITHUB_ENV
+
+            - name: Restore conda environment cache
+              uses: actions/cache@v2
+              with:
+                path: ${{ env.CONDA_PREFIX }}
+                key: ${{ matrix.os }}-${{ matrix.python-version }}-test-sdist-${{ env.WEEK }}
+              id: condacache
+
             - name: Install dependencies
+              if: steps.condacache.outputs.cache-hit != 'true'
               shell: bash -l {0}
               run: |
                   conda install nomkl # make sure numpy is w/out MKL
@@ -384,18 +342,6 @@ jobs:
                 echo ${{ env.pythonLocation }}
                 echo "WEEK=$(date +%U)" >> $GITHUB_ENV
 
-            - name: Restore pip cache
-              uses: actions/cache@v2
-              with:
-                  path: ${{ env.WINDOWS_PIP_CACHE }}
-                  key: pip-validate-resources-${{ env.WEEK}}
-
-            - name: Restore conda cache
-              uses: actions/cache@v2
-              with:
-                  path: ${{ env.CONDA_CACHE }}
-                  key: conda-validate-resources-${{ env.WEEK}}
-
             - name: Setup conda environment
               uses: conda-incubator/setup-miniconda@v2
               with:
@@ -405,7 +351,20 @@ jobs:
                   channels: conda-forge
                   use-only-tar-bz2: true
 
+            - name: List environment contents
+              run: |
+                conda list
+                echo "CONDA_PREFIX=$CONDA_PREFIX" >> $GITHUB_ENV
+
+            - name: Restore conda environment cache
+              uses: actions/cache@v2
+              with:
+                path: ${{ env.CONDA_PREFIX }}
+                key: ${{ matrix.os }}-${{ matrix.python-version }}-validate-resources-${{ env.WEEK }}
+              id: condacache
+
             - name: Install dependencies
+              if: steps.condacache.outputs.cache-hit != 'true'
               shell: bash -l {0}
               run: |
                   conda install nomkl # make sure numpy w/out mkl
@@ -450,18 +409,6 @@ jobs:
             - name: Get current week
               run: echo "WEEK=$(date +%U)" >> $GITHUB_ENV
 
-            - name: Restore pip cache
-              uses: actions/cache@v2
-              with:
-                  path: ${{ env.WINDOWS_PIP_CACHE }}
-                  key: pip-${{ matrix.os }}-python${{ matrix.python-version }}-ui-tests-${{ env.WEEK}}
-
-            - name: Restore conda cache
-              uses: actions/cache@v2
-              with:
-                  path: ${{ env.CONDA_CACHE }}
-                  key: conda-${{ matrix.os }}-python${{ matrix.python-version }}-ui-tests-${{ env.WEEK}}
-
             - name: Restore git-LFS test data cache
               uses: actions/cache@v2
               with:
@@ -477,7 +424,20 @@ jobs:
                   channels: conda-forge
                   use-only-tar-bz2: true
 
+            - name: List environment contents
+              run: |
+                conda list
+                echo "CONDA_PREFIX=$CONDA_PREFIX" >> $GITHUB_ENV
+
+            - name: Restore conda environment cache
+              uses: actions/cache@v2
+              with:
+                path: ${{ env.CONDA_PREFIX }}
+                key: ${{ matrix.os }}-${{ matrix.python-version }}-ui-tests-${{ env.WEEK }}
+              id: condacache
+
             - name: Install dependencies
+              if: steps.condacache.outputs.cache-hit != 'true'
               shell: bash -l {0}
               run: |
                   conda install nomkl  # make sure numpy w/out mkl
