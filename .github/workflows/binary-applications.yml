@@ -63,9 +63,7 @@ jobs:
               with:
                   activate-environment: winbin-env
                   auto-update-conda: true
-                  python-version: 3.8
                   channels: conda-forge
-                  use-only-tar-bz2: true # this needs to be set for caching to work properly
 
             - name: Export CONDA_PREFIX variable
               run: echo "CONDA_PREFIX=$CONDA_PREFIX" >> $GITHUB_ENV
@@ -74,12 +72,13 @@ jobs:
               uses: actions/cache@v2
               with:
                 path: ${{ env.CONDA_PREFIX }}
-                key: ${{ matrix.os }}-${{ matrix.python-version }}-windows-binaries-${{ env.WEEK }}-${{ hashFiles('**/requirements*.txt') }}
+                key: py${{ env.python-version }}-windows-binaries-${{ env.WEEK }}-${{ hashFiles('**/requirements*.txt') }}
               id: condacache
 
             - name: Install python dependencies
               if: steps.condacache.outputs.cache-hit != 'true'
               run: |
+                  conda install python=${{ env.python-version }}
                   conda install nomkl # make sure numpy is w/out MKL
                   conda upgrade -y pip setuptools
                   conda install toml requests
@@ -192,9 +191,7 @@ jobs:
               with:
                   activate-environment: macbin-env
                   auto-update-conda: true
-                  python-version: 3.8
                   channels: conda-forge
-                  use-only-tar-bz2: true
 
             - name: Export CONDA_PREFIX variable
               run: echo "CONDA_PREFIX=$CONDA_PREFIX" >> $GITHUB_ENV
@@ -203,12 +200,13 @@ jobs:
               uses: actions/cache@v2
               with:
                 path: ${{ env.CONDA_PREFIX }}
-                key: ${{ matrix.os }}-${{ matrix.python-version }}-macos-binaries-${{ env.WEEK }}-${{ hashFiles('**/requirements*.txt') }}
+                key: py${{ env.python-version }}-macos-binaries-${{ env.WEEK }}-${{ hashFiles('**/requirements*.txt') }}
               id: condacache
 
             - name: Build conda env with python dependencies
               if: steps.condacache.outputs.cache-hit != 'true'
               run: |
+                  conda install python=${{ env.python-version }}
                   conda upgrade -y pip setuptools
                   conda install toml requests
                   conda install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")

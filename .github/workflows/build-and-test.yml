@@ -64,10 +64,6 @@ jobs:
                     - python-version: 3.9
                       numpy: "numpy=1.20"
                       gdal: "gdal==3.3.1"
-                    - os: macos-latest
-                      conda-prefix: /Users/runner/miniconda3/envs
-                    - os: windows-latest
-                      conda-prefix: C:\Miniconda3\envs
         steps:
             - uses: actions/checkout@v2
               with:
@@ -82,9 +78,7 @@ jobs:
                   python-version: ${{ matrix.python-version }}
 
             - name: Get current week
-              run: |
-                echo $pythonLocation
-                echo "WEEK=$(date +%U)" >> $GITHUB_ENV
+              run: echo "WEEK=$(date +%U)" >> $GITHUB_ENV
 
             # NOTE: It takes twice as long to save the sample data cache
             # as it does to do a fresh clone (almost 5 minutes vs. 2.5 minutes)
@@ -101,9 +95,7 @@ jobs:
               with:
                   activate-environment: ${{ matrix.os }}-test-env
                   auto-update-conda: true
-                  python-version: ${{ matrix.python-version }}
                   channels: conda-forge
-                  use-only-tar-bz2: true # this needs to be set for caching to work properly
 
             - name: Export CONDA_PREFIX variable
               run: echo "CONDA_PREFIX=$CONDA_PREFIX" >> $GITHUB_ENV
@@ -112,13 +104,14 @@ jobs:
               uses: actions/cache@v2
               with:
                 path: ${{ env.CONDA_PREFIX }}
-                key: ${{ matrix.os }}-${{ matrix.python-version }}-model-tests-${{ env.WEEK }}-${{ hashFiles('**/requirements*.txt') }}
+                key: ${{ matrix.os }}-py${{ matrix.python-version }}-model-tests-${{ env.WEEK }}-${{ hashFiles('**/requirements*.txt') }}
               id: condacache
 
             - name: Install build dependencies
               if: steps.condacache.outputs.cache-hit != 'true'
               shell: bash -l {0}
               run: |
+                  conda install python=${{ matrix.python-version }}
                   conda install nomkl # make sure numpy is w/out MKL
                   conda upgrade -y pip setuptools
                   conda install ${{ matrix.numpy }} ${{ matrix.gdal }} toml twine build
@@ -231,9 +224,7 @@ jobs:
               with:
                   activate-environment: source-env
                   auto-update-conda: true
-                  python-version: ${{ matrix.python-version }}
                   channels: conda-forge
-                  use-only-tar-bz2: true
 
             - name: Export CONDA_PREFIX variable
               run: echo "CONDA_PREFIX=$CONDA_PREFIX" >> $GITHUB_ENV
@@ -242,13 +233,14 @@ jobs:
               uses: actions/cache@v2
               with:
                 path: ${{ env.CONDA_PREFIX }}
-                key: ${{ matrix.os }}-${{ matrix.python-version }}-test-sdist-${{ env.WEEK }}-${{ hashFiles('**/requirements*.txt') }}
+                key: ${{ matrix.os }}-py${{ matrix.python-version }}-test-sdist-${{ env.WEEK }}-${{ hashFiles('**/requirements*.txt') }}
               id: condacache
 
             - name: Install dependencies
               if: steps.condacache.outputs.cache-hit != 'true'
               shell: bash -l {0}
               run: |
+                  conda install python=${{ matrix.python-version }}
                   conda install nomkl # make sure numpy is w/out MKL
                   conda upgrade -y pip setuptools
                   conda install toml twine build
@@ -340,9 +332,7 @@ jobs:
               with:
                   activate-environment: validate-env
                   auto-update-conda: true
-                  python-version: 3.9
                   channels: conda-forge
-                  use-only-tar-bz2: true
 
             - name: Export CONDA_PREFIX variable
               run: echo "CONDA_PREFIX=$CONDA_PREFIX" >> $GITHUB_ENV
@@ -351,13 +341,14 @@ jobs:
               uses: actions/cache@v2
               with:
                 path: ${{ env.CONDA_PREFIX }}
-                key: ${{ matrix.os }}-${{ matrix.python-version }}-validate-resources-${{ env.WEEK }}-${{ hashFiles('**/requirements*.txt') }}
+                key: ${{ matrix.os }}-validate-resources-${{ env.WEEK }}-${{ hashFiles('**/requirements*.txt') }}
               id: condacache
 
             - name: Install dependencies
               if: steps.condacache.outputs.cache-hit != 'true'
               shell: bash -l {0}
               run: |
+                  conda install python=3.9
                   conda install nomkl # make sure numpy w/out mkl
                   conda install pytest requests build
                   conda install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
@@ -411,9 +402,7 @@ jobs:
               with:
                   activate-environment: ui-env
                   auto-update-conda: true
-                  python-version: ${{ matrix.python-version }}
                   channels: conda-forge
-                  use-only-tar-bz2: true
 
             - name: Export CONDA_PREFIX variable
               run: echo "CONDA_PREFIX=$CONDA_PREFIX" >> $GITHUB_ENV
@@ -422,13 +411,14 @@ jobs:
               uses: actions/cache@v2
               with:
                 path: ${{ env.CONDA_PREFIX }}
-                key: ${{ matrix.os }}-${{ matrix.python-version }}-ui-tests-${{ env.WEEK }}-${{ hashFiles('**/requirements*.txt') }}
+                key: ${{ matrix.os }}-py${{ matrix.python-version }}-ui-tests-${{ env.WEEK }}-${{ hashFiles('**/requirements*.txt') }}
               id: condacache
 
             - name: Install dependencies
               if: steps.condacache.outputs.cache-hit != 'true'
               shell: bash -l {0}
               run: |
+                  conda install python=${{ matrix.python-version }}
                   conda install nomkl  # make sure numpy w/out mkl
                   conda install requests
                   conda upgrade -y pip setuptools
