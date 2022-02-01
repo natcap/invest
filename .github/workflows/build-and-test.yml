@@ -136,11 +136,9 @@ jobs:
 
             - name: List environment contents
               run: |
-                conda info
-                echo $CONDA
                 echo $CONDA_PREFIX
-                echo $CONDA_DEFAULT_ENV
                 ls $CONDA_PREFIX
+                echo "CONDA_PREFIX=$CONDA_PREFIX" >> $GITHUB_ENV
 
             - name: Restore conda environment cache
               uses: actions/cache@v2
