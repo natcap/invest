@@ -1,8 +1,9 @@
 name: "Set up python and conda environment"
 inputs:
-  python-version:
-    description: "Version of python to use"
-    required: true
+  key:
+    description: "Unique key to identify the cache to create/restore"
+    required: false
+    default: ""
 outputs:
   cache-hit:
     description: "Whether a cache hit was found"
@@ -10,11 +11,8 @@ outputs:
 runs:
   using: "composite"
   steps:
-    - name: Set up python
-      uses: actions/setup-python@v2
-      with:
-          python-version: ${{ inputs.python-version }}
-
+    # don't need to run setup-python because we'll always use the
+    # conda-managed python that'll be installed into this environment
     - name: Setup conda environment
       uses: conda-incubator/setup-miniconda@v2
       with:
@@ -31,5 +29,5 @@ runs:
       uses: actions/cache@v2
       with:
         path: ${{ env.CONDA_PREFIX }}
-        key: win-${{ inputs.python-version }}-test-sdist-${{ env.WEEK }}-${{ hashFiles('**/requirements*.txt') }}
+        key: ${{ inputs.key }}-${{ env.WEEK }}-${{ hashFiles('**/requirements*.txt') }}
       id: condacache

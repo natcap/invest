@@ -78,7 +78,6 @@ jobs:
             - name: Set up python and conda environment
               uses: ./.github/actions/setup_env
               with:
-                  python-version: ${{ matrix.python-version }}
                   key: ${{ matrix.python-version }}-${{ matrix.os }}-model-tests
               id: condacache
 
@@ -189,7 +188,6 @@ jobs:
             - name: Set up python and conda environment
               uses: ./.github/actions/setup_env
               with:
-                  python-version: ${{ matrix.python-version }}
                   key: ${{ matrix.python-version }}-${{ matrix.os }}-model-tests
               id: condacache
 
@@ -277,7 +275,6 @@ jobs:
             - name: Set up python and conda environment
               uses: ./.github/actions/setup_env
               with:
-                  python-version: 3.9
                   key: ${{ matrix.python-version }}-${{ matrix.os }}-model-tests
               id: condacache
 
@@ -329,7 +326,6 @@ jobs:
             - name: Set up python and conda environment
               uses: ./.github/actions/setup_env
               with:
-                  python-version: ${{ matrix.python-version }}
                   key: ${{ matrix.python-version }}-${{ matrix.os }}-model-tests
               id: condacache
 

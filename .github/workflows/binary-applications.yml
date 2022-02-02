@@ -48,7 +48,6 @@ jobs:
             - name: Set up python and conda environment
               uses: ./.github/actions/setup_env
               with:
-                  python-version: ${{ env.PYTHON_VERSION }}
                   key: ${{ env.PYTHON_VERSION }}-windows-binaries
               id: condacache
 
@@ -158,7 +157,6 @@ jobs:
             - name: Set up python and conda environment
               uses: ./.github/actions/setup_env
               with:
-                  python-version: ${{ env.PYTHON_VERSION }}
                   key: ${{ env.PYTHON_VERSION }}-macos-binaries
               id: condacache
 
