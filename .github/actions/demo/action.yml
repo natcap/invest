@@ -1,4 +1,4 @@
-name: "Demo"
+name: Demo
 runs:
   using: "composite"
   steps:
