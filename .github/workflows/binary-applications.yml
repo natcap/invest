@@ -351,6 +351,16 @@ jobs:
               with:
                   python-version: 3.8
 
+            - name: Clone Workbench
+            # TODO: this is temporary so we can test the rest of
+            # the workflow before we git add the workbench to invest.
+            # `make sampledata` runs ./workbench/scripts/build_sampledata_registry.py
+              run: |
+                git clone https://github.com/davemfish/invest-workbench.git workbench
+                cd workbench
+                git fetch origin experimental/invest-integration
+                git checkout experimental/invest-integration
+
             - name: Install dependencies
               # dependencies of setup.py, needed to get the version string
               run: pip install babel cython numpy setuptools setuptools_scm wheel
