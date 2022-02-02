@@ -16,10 +16,10 @@ jobs:
         os: [windows-latest, macos-latest]
 
     steps:
-      - name: Setup conda environment
+      - name: Set up conda environment
         uses: conda-incubator/setup-miniconda@v2
 
-      - name: Export CONDA_PREFIX variable
+      - name: Check for activated environment
         run: |
           echo $CONDA_PREFIX
           conda info
@@ -32,4 +32,4 @@ jobs:
 
     steps:
       - name: Use custom action
-        uses: ./.github/actions/setup_env_action
+        uses: ./.github/actions/demo
