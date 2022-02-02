@@ -24,7 +24,10 @@ export default function findInvestBinaries(isDevMode) {
       investExe = path.join(binaryPath, filename);
     }
     // Checking that we have a functional invest exe by getting version
-    const investVersion = execFileSync(investExe, ['--version']);
+    // shell is necessary in dev mode when relying on an active conda env
+    const investVersion = execFileSync(
+      investExe, ['--version'], { shell: true }
+    );
     logger.info(
       `Found invest binaries ${investExe} for version ${investVersion}`
     );

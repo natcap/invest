@@ -1,4 +1,3 @@
-import path from 'path';
 import { spawn } from 'child_process';
 
 import fetch from 'node-fetch';
@@ -23,6 +22,7 @@ export function createPythonFlaskProcess(investExe) {
   const pythonServerProcess = spawn(
     investExe,
     ['serve', '--port', process.env.PORT],
+    { shell: true } // necessary in dev mode & relying on a conda env
   );
 
   logger.debug(`Started python process as PID ${pythonServerProcess.pid}`);
