@@ -143,6 +143,7 @@ jobs:
                   path: dist
 
             - uses: actions/upload-artifact@v2
+              continue-on-error: true
               with:
                   name: Conda Env for ${{ matrix.os }} ${{ matrix.python-version }} ${{ matrix.python-architecture }}
                   path: ./conda-env.txt
