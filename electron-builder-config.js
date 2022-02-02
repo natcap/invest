@@ -5,8 +5,9 @@ const ARCH = process.arch;
 const EXT = OS === 'win32' ? 'exe' : 'dmg';
 
 // Uniquely identify the changeset we're building & packaging.
-const investVersion = execFileSync('invest', ['--version'])
-  .toString().trim();
+const investVersion = execFileSync(
+  '../dist/invest/invest', ['--version']
+).toString().trim();
 
 // the appID may not display anywhere, but seems to control if the
 // install overwrites pre-existing or creates a new install directory.
