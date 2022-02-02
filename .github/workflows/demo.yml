@@ -24,7 +24,6 @@ jobs:
           echo $CONDA_PREFIX
           conda info
 
-jobs:
   demo2:
     runs-on: ${{ matrix.os }}
     strategy:
