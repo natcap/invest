@@ -384,11 +384,18 @@ jobs:
               if: github.event_name != 'pull_request'
               run: make deploy
 
+            - name: Install Node.js
+              uses: actions/setup-node@v2
+              with:
+                node-version: 14.x
+
             - name: Check sampledata registry links
               # no artifacts were deployed in a PR
               if: github.event_name != 'pull_request'
               working-directory: ./workbench
-              run: yarn run test-sampledata-registry
+              run: |
+                yarn install jest
+                yarn run test-sampledata-registry
 
             - name: Upload sample data artifact
               uses: actions/upload-artifact@v2
