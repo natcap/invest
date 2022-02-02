@@ -172,6 +172,7 @@ describe('createWindow', () => {
       ipcMainChannels.INVEST_READ_LOG,
       ipcMainChannels.GETTEXT,
       ipcMainChannels.SHOW_ITEM_IN_FOLDER,
+      ipcMainChannels.IS_DEV_MODE,
     ];
     // Even with mocking, the 'on' method is a real event handler,
     // so we can get it's registered events from the EventEmitter.

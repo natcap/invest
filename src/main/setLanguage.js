@@ -41,17 +41,13 @@ function readMessageCatalog(messageCatalogPath) {
 function loadMessageCatalogs() {
   // load each language's message catalog PO file into an object
   // for easy access when we switch languages
-  fs.readdirSync(
-    `${__dirname}/../static/internationalization/locales`,
-    async (err, languages) => {
-      if (languages) {
-        languages.forEach((language) => {
-          const messageCatalogPath = `${__dirname}/../static/internationalization/locales/${language}/LC_MESSAGES/messages.po`;
-          i18n.loadJSON(readMessageCatalog(messageCatalogPath), 'messages');
-        });
-      }
-    }
-  );
+  const languages = fs.readdirSync(`${__dirname}/../static/internationalization/locales`);
+  if (languages) {
+    languages.forEach((language) => {
+      const messageCatalogPath = `${__dirname}/../static/internationalization/locales/${language}/LC_MESSAGES/messages.po`;
+      i18n.loadJSON(readMessageCatalog(messageCatalogPath), 'messages');
+    });
+  }
   logger.debug('loaded message catalogs');
 }
 
