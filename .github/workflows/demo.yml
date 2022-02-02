@@ -1,0 +1,36 @@
+name: Demo
+
+on:
+    push:
+    pull_request:
+
+defaults:
+  run:
+    shell: bash -l {0}
+
+jobs:
+  demo1:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest]
+
+    steps:
+      - name: Setup conda environment
+        uses: conda-incubator/setup-miniconda@v2
+
+      - name: Export CONDA_PREFIX variable
+        run: |
+          echo $CONDA_PREFIX
+          conda info
+
+jobs:
+  demo2:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest]
+
+    steps:
+      - name: Use custom action
+        uses: ./.github/actions/setup_env_action

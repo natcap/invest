@@ -14,7 +14,7 @@ runs:
 
     - name: Get current week
       run: echo "WEEK=$(date +%U)" >> $GITHUB_ENV
-      shell: bash
+      shell: bash -l {0}
 
     - name: Setup conda environment
       uses: conda-incubator/setup-miniconda@v2
@@ -25,7 +25,7 @@ runs:
 
     - name: Export CONDA_PREFIX variable
       run: echo "CONDA_PREFIX=$CONDA_PREFIX" >> $GITHUB_ENV
-      shell: bash
+      shell: bash -l {0}
 
     - name: Restore conda environment cache
       uses: actions/cache@v2
