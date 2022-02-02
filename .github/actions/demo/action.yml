@@ -4,3 +4,9 @@ runs:
   steps:
     - name: Setup conda environment
       uses: conda-incubator/setup-miniconda@v2
+
+    - name: Check for activated environment
+      run: |
+        echo $CONDA_PREFIX
+        conda info
+      shell: bash -l {0}
