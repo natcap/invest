@@ -38,7 +38,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Use custom action
-        uses: .github/actions/demo
+        uses: ./.github/actions/demo
 
       - name: Check for activated environment
         run: |
