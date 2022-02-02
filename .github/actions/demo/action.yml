@@ -21,6 +21,8 @@ runs:
       run: |
         echo $CONDA_PREFIX
         conda info
+        echo "CONDA_PREFIX=$CONDA_PREFIX" >> $GITHUB_ENV
+        cat $GITHUB_ENV
       shell: bash -l {0}
 
     - name: Restore conda environment cache
