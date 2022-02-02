@@ -76,7 +76,7 @@ jobs:
                   key: git-lfs-testdata-${{ hashfiles('Makefile') }}
 
             - name: Set up python and conda environment
-              uses: ./.github/actions/setup_env_action
+              uses: ./.github/actions/demo
               with:
                   python-version: ${{ matrix.python-version }}
                   key: ${{ matrix.python-version }}-${{ matrix.os }}-model-tests

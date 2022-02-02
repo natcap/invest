@@ -1,4 +1,8 @@
-name: Demo
+name: "Set up python and conda environment"
+outputs:
+  cache-hit:
+    description: "Whether a cache hit was found"
+    value: ${{ steps.condacache.outputs.cache-hit }}
 runs:
   using: "composite"
   steps:
