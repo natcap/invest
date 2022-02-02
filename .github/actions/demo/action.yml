@@ -2,6 +2,15 @@ name: Demo
 runs:
   using: "composite"
   steps:
+    - name: Set up python
+      uses: actions/setup-python@v2
+      with:
+          python-version: 3.9
+
+    - name: Get current week
+      run: echo "WEEK=$(date +%U)" >> $GITHUB_ENV
+      shell: bash -l {0}
+
     - name: Setup conda environment
       uses: conda-incubator/setup-miniconda@v2
       with:
@@ -13,3 +22,10 @@ runs:
         echo $CONDA_PREFIX
         conda info
       shell: bash -l {0}
+
+    - name: Restore conda environment cache
+      uses: actions/cache@v2
+      with:
+        path: ${{ env.CONDA_PREFIX }}
+        key: win-py3.9-test-sdist-${{ env.WEEK }}-${{ hashFiles('**/requirements*.txt') }}
+      id: condacache
