@@ -45,29 +45,11 @@ jobs:
             - name: Fetch git tags
               run: git fetch origin +refs/tags/*:refs/tags/*
 
-            - name: Set up python
-              uses: actions/setup-python@v2
+            - name: Set up python and conda environment
+              uses: ./.github/actions/setup_env
               with:
                   python-version: ${{ env.PYTHON_VERSION }}
-
-            - name: Get current week
-              run: echo "WEEK=$(date +%U)" >> $GITHUB_ENV
-
-            - name: Setup conda environment
-              uses: conda-incubator/setup-miniconda@v2
-              with:
-                  activate-environment: winbin-env
-                  auto-update-conda: true
-                  channels: conda-forge
-
-            - name: Export CONDA_PREFIX variable
-              run: echo "CONDA_PREFIX=$CONDA_PREFIX" >> $GITHUB_ENV
-
-            - name: Restore conda environment cache
-              uses: actions/cache@v2
-              with:
-                path: ${{ env.CONDA_PREFIX }}
-                key: py${{ env.python-version }}-windows-binaries-${{ env.WEEK }}-${{ hashFiles('**/requirements*.txt') }}
+                  key: ${{ env.PYTHON_VERSION }}-windows-binaries
               id: condacache
 
             - name: Install python dependencies
@@ -173,29 +155,11 @@ jobs:
                   brew update
                   brew install pandoc
 
-            - name: Set up python
-              uses: actions/setup-python@v2
+            - name: Set up python and conda environment
+              uses: ./.github/actions/setup_env
               with:
                   python-version: ${{ env.PYTHON_VERSION }}
-
-            - name: Get current week
-              run: echo "WEEK=$(date +%U)" >> $GITHUB_ENV
-
-            - name: Setup conda environment
-              uses: conda-incubator/setup-miniconda@v2
-              with:
-                  activate-environment: macbin-env
-                  auto-update-conda: true
-                  channels: conda-forge
-
-            - name: Export CONDA_PREFIX variable
-              run: echo "CONDA_PREFIX=$CONDA_PREFIX" >> $GITHUB_ENV
-
-            - name: Restore conda environment cache
-              uses: actions/cache@v2
-              with:
-                path: ${{ env.CONDA_PREFIX }}
-                key: py${{ env.python-version }}-macos-binaries-${{ env.WEEK }}-${{ hashFiles('**/requirements*.txt') }}
+                  key: ${{ env.PYTHON_VERSION }}-macos-binaries
               id: condacache
 
             - name: Build conda env with python dependencies

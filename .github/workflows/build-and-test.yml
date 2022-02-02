@@ -76,10 +76,11 @@ jobs:
                   key: git-lfs-testdata-${{ hashfiles('Makefile') }}
 
             - name: Set up python and conda environment
-              uses: ./.github/actions/demo
+              uses: ./.github/actions/setup_env
               with:
                   python-version: ${{ matrix.python-version }}
                   key: ${{ matrix.python-version }}-${{ matrix.os }}-model-tests
+              id: condacache
 
             - name: Install build dependencies
               if: steps.condacache.outputs.cache-hit != 'true'
@@ -185,32 +186,11 @@ jobs:
             - name: Fetch git tags
               run: git fetch origin +refs/tags/*:refs/tags/*
 
-            - name: Set up python
-              uses: actions/setup-python@v2
+            - name: Set up python and conda environment
+              uses: ./.github/actions/setup_env
               with:
                   python-version: ${{ matrix.python-version }}
-
-            - name: Get current week
-              run: echo "WEEK=$(date +%U)" >> $GITHUB_ENV
-
-            - name: Setup conda environment
-              uses: conda-incubator/setup-miniconda@v2
-              with:
-                  activate-environment: source-env
-                  auto-update-conda: true
-                  channels: conda-forge
-
-            - name: Export CONDA_PREFIX variable
-              run: |
-                echo $CONDA_PREFIX
-                echo "CONDA_PREFIX=$CONDA_PREFIX" >> $GITHUB_ENV
-                conda info
-
-            - name: Restore conda environment cache
-              uses: actions/cache@v2
-              with:
-                path: ${{ env.CONDA_PREFIX }}
-                key: ${{ matrix.os }}-py${{ matrix.python-version }}-test-sdist-${{ env.WEEK }}-${{ hashFiles('**/requirements*.txt') }}
+                  key: ${{ matrix.python-version }}-${{ matrix.os }}-model-tests
               id: condacache
 
             - name: Install dependencies
@@ -294,31 +274,11 @@ jobs:
                   # Fetch complete history for accurate versioning
                   fetch-depth: 0
 
-            - name: Set up python
-              uses: actions/setup-python@v2
+            - name: Set up python and conda environment
+              uses: ./.github/actions/setup_env
               with:
                   python-version: 3.9
-
-            - name: Get current week
-              run: |
-                echo ${{ env.pythonLocation }}
-                echo "WEEK=$(date +%U)" >> $GITHUB_ENV
-
-            - name: Setup conda environment
-              uses: conda-incubator/setup-miniconda@v2
-              with:
-                  activate-environment: validate-env
-                  auto-update-conda: true
-                  channels: conda-forge
-
-            - name: Export CONDA_PREFIX variable
-              run: echo "CONDA_PREFIX=$CONDA_PREFIX" >> $GITHUB_ENV
-
-            - name: Restore conda environment cache
-              uses: actions/cache@v2
-              with:
-                path: ${{ env.CONDA_PREFIX }}
-                key: ${{ matrix.os }}-validate-resources-${{ env.WEEK }}-${{ hashFiles('**/requirements*.txt') }}
+                  key: ${{ matrix.python-version }}-${{ matrix.os }}-model-tests
               id: condacache
 
             - name: Install dependencies
@@ -360,35 +320,17 @@ jobs:
                   # Fetch complete history for accurate versioning
                   fetch-depth: 0
 
-            - name: Set up python
-              uses: actions/setup-python@v2
-              with:
-                  python-version: ${{ matrix.python-version }}
-
-            - name: Get current week
-              run: echo "WEEK=$(date +%U)" >> $GITHUB_ENV
-
             - name: Restore git-LFS test data cache
               uses: actions/cache@v2
               with:
                   path: data/invest-test-data
                   key: git-lfs-testdata-${{ hashfiles('Makefile') }}
 
-            - name: Setup conda environment
-              uses: conda-incubator/setup-miniconda@v2
+            - name: Set up python and conda environment
+              uses: ./.github/actions/setup_env
               with:
-                  activate-environment: ui-env
-                  auto-update-conda: true
-                  channels: conda-forge
-
-            - name: Export CONDA_PREFIX variable
-              run: echo "CONDA_PREFIX=$CONDA_PREFIX" >> $GITHUB_ENV
-
-            - name: Restore conda environment cache
-              uses: actions/cache@v2
-              with:
-                path: ${{ env.CONDA_PREFIX }}
-                key: ${{ matrix.os }}-py${{ matrix.python-version }}-ui-tests-${{ env.WEEK }}-${{ hashFiles('**/requirements*.txt') }}
+                  python-version: ${{ matrix.python-version }}
+                  key: ${{ matrix.python-version }}-${{ matrix.os }}-model-tests
               id: condacache
 
             - name: Install dependencies
