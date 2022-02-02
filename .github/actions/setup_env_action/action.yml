@@ -1,16 +1,6 @@
 name: "Set up python and conda environment"
 description: 'Greet someone'
-inputs:
-  python-version:
-    description: "Python version to use"
-    required: true
-  key:
-    description: "Unique key for caching"
-    required: true
 outputs:
-  random-number:
-    description: "Random number"
-    value: ${{ steps.random-number-generator.outputs.random-id }}
   cache-hit:
     description: "Whether a cache hit was found"
     value: ${{ steps.condacache.outputs.cache-hit }}
@@ -20,7 +10,7 @@ runs:
     - name: Set up python
       uses: actions/setup-python@v2
       with:
-          python-version: ${{ inputs.python-version }}
+          python-version: 3.9
 
     - name: Get current week
       run: echo "WEEK=$(date +%U)" >> $GITHUB_ENV
@@ -29,18 +19,9 @@ runs:
     - name: Setup conda environment
       uses: conda-incubator/setup-miniconda@v2
       with:
-          python-version: 3.9
-          activate-environment: foo
+          activate-environment: source-env
           auto-update-conda: true
           channels: conda-forge
-
-    - name: Activate conda environment
-      run: |
-        echo $CONDA
-        echo $CONDA_PREFIX
-        $CONDA activate foo
-        echo $CONDA_PREFIX
-      shell: bash
 
     - name: Export CONDA_PREFIX variable
       run: echo "CONDA_PREFIX=$CONDA_PREFIX" >> $GITHUB_ENV
@@ -50,5 +31,5 @@ runs:
       uses: actions/cache@v2
       with:
         path: ${{ env.CONDA_PREFIX }}
-        key: ${{ inputs.key }}-${{ env.WEEK }}
+        key: win-py3.9-test-sdist-${{ env.WEEK }}-${{ hashFiles('**/requirements*.txt') }}
       id: condacache

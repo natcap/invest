@@ -201,7 +201,10 @@ jobs:
                   channels: conda-forge
 
             - name: Export CONDA_PREFIX variable
-              run: echo "CONDA_PREFIX=$CONDA_PREFIX" >> $GITHUB_ENV
+              run: |
+                echo $CONDA_PREFIX
+                echo "CONDA_PREFIX=$CONDA_PREFIX" >> $GITHUB_ENV
+                conda info
 
             - name: Restore conda environment cache
               uses: actions/cache@v2
