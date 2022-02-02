@@ -4,6 +4,9 @@ runs:
   steps:
     - name: Setup conda environment
       uses: conda-incubator/setup-miniconda@v2
+      with:
+        auto-update-conda: true
+        channels: conda-forge
 
     - name: Check for activated environment
       run: |
