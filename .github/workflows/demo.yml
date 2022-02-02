@@ -39,3 +39,8 @@ jobs:
 
       - name: Use custom action
         uses: ./.github/actions/demo
+
+      - name: Check for activated environment
+        run: |
+          echo $CONDA_PREFIX
+          conda info

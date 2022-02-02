@@ -4,8 +4,3 @@ runs:
   steps:
     - name: Setup conda environment
       uses: conda-incubator/setup-miniconda@v2
-
-    - name: Export CONDA_PREFIX variable
-      run: |
-        echo $CONDA_PREFIX
-        conda info
