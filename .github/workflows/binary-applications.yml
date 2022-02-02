@@ -394,7 +394,7 @@ jobs:
               if: github.event_name != 'pull_request'
               working-directory: ./workbench
               run: |
-                yarn install jest
+                yarn add jest
                 yarn run test-sampledata-registry
 
             - name: Upload sample data artifact
