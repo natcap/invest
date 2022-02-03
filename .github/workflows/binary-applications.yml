@@ -234,12 +234,12 @@ jobs:
         needs: check-syntax-errors
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/checkout@v1
+            - uses: actions/checkout@v2
               with:
                   fetch-depth: 0  # Fetch complete history
             - run: git fetch origin +refs/tags/*:refs/tags/*
 
-            - uses: actions/setup-python@v2
+            - uses: actions/setup-python@v1
               with:
                   python-version: 3.8
 
