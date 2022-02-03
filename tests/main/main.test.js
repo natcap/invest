@@ -28,7 +28,7 @@ import {
 } from '../../src/main/setupCheckFirstRun';
 import {
   createPythonFlaskProcess,
-  getFlaskIsReady,
+  getFlaskIsReady
 } from '../../src/main/createPythonFlaskProcess';
 import findInvestBinaries from '../../src/main/findInvestBinaries';
 import extractZipInplace from '../../src/main/extractZipInplace';
@@ -169,13 +169,16 @@ describe('createWindow', () => {
       ipcMainChannels.SHOW_OPEN_DIALOG,
       ipcMainChannels.SHOW_SAVE_DIALOG,
       ipcMainChannels.IS_FIRST_RUN,
+      ipcMainChannels.SET_LANGUAGE,
       ipcMainChannels.GET_N_CPUS,
+      ipcMainChannels.IS_DEV_MODE,
     ];
     const expectedOnChannels = [
       ipcMainChannels.DOWNLOAD_URL,
       ipcMainChannels.INVEST_RUN,
       ipcMainChannels.INVEST_KILL,
       ipcMainChannels.INVEST_READ_LOG,
+      ipcMainChannels.GETTEXT,
       ipcMainChannels.SHOW_ITEM_IN_FOLDER,
     ];
     // Even with mocking, the 'on' method is a real event handler,

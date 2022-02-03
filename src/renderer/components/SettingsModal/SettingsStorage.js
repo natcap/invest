@@ -18,6 +18,7 @@ export function getDefaultSettings() {
     nWorkers: '-1',
     loggingLevel: 'INFO',
     sampleDataDir: '',
+    language: 'en'
   };
   return defaultSettings;
 }

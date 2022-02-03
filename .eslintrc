@@ -46,5 +46,8 @@
         "react/destructuring-assignment": ["warn", "always"],
         "react/jsx-fragments": ["off", "syntax"],
         "react/jsx-filename-extension": ["warn", { "extensions": [".js", ".jsx"] }]
+    },
+    "globals": {
+        "_": "writeable"
     }
 }

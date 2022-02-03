@@ -148,7 +148,7 @@ export class DataDownloadModal extends React.Component {
       >
         <Form>
           <Modal.Header>
-            <Modal.Title>Download InVEST sample data</Modal.Title>
+            <Modal.Title>{_("Download InVEST sample data")}</Modal.Title>
           </Modal.Header>
           <Modal.Body>
             <Table
@@ -180,14 +180,14 @@ export class DataDownloadModal extends React.Component {
               variant="secondary"
               onClick={this.props.closeModal}
             >
-              Cancel
+              {_("Cancel")}
             </Button>
             <Button
               variant="primary"
               onClick={this.handleSubmit}
               disabled={!downloadEnabled}
             >
-              Download
+              {_("Download")}
             </Button>
           </Modal.Footer>
         </Form>
@@ -214,7 +214,7 @@ export function DownloadProgressBar(props) {
           className="d-inline"
           variant="success"
         >
-          Download Complete
+          {_("Download Complete")}
         </Alert>
       </Expire>
     );
@@ -224,7 +224,7 @@ export function DownloadProgressBar(props) {
       animated
       max={1}
       now={(nComplete + 1) / nTotal}
-      label={`Downloading ${nComplete + 1} of ${nTotal}`}
+      label={_(`Downloading ${nComplete + 1} of ${nTotal}`)}
     />
   );
 }

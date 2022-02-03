@@ -19,10 +19,11 @@ function dragOverHandler(event) {
 export default class ArgsForm extends React.Component {
   constructor(props) {
     super(props);
+    this.handleFocus = this.handleFocus.bind(this);
     this.handleChange = this.handleChange.bind(this);
-    this.inputDropHandler = this.inputDropHandler.bind(this);
     this.handleBoolChange = this.handleBoolChange.bind(this);
     this.selectFile = this.selectFile.bind(this);
+    this.inputDropHandler = this.inputDropHandler.bind(this);
     this.onArchiveDragDrop = this.onArchiveDragDrop.bind(this);
     this.dragEnterHandler = this.dragEnterHandler.bind(this);
     this.dragLeaveHandler = this.dragLeaveHandler.bind(this);
@@ -41,7 +42,7 @@ export default class ArgsForm extends React.Component {
 
     const fileList = event.dataTransfer.files;
     if (fileList.length !== 1) {
-      alert('Only drop one file at a time.');
+      alert(_('Only drop one file at a time.'));
       return;
     }
     this.props.loadParametersFromFile(fileList[0].path);
@@ -83,12 +84,17 @@ export default class ArgsForm extends React.Component {
     // TODO: could add more filters based on argType (e.g. only show .csv)
     const fileList = event.dataTransfer.files;
     if (fileList.length !== 1) {
-      alert('Only drop one file at a time.');
+      alert(_('Only drop one file at a time.'));
     } else if (fileList.length === 1) {
       this.props.updateArgValues(name, fileList[0].path);
     } else {
       throw new Error('Error handling input file drop');
     }
+  }
+
+  handleFocus(event) {
+    const { name } = event.currentTarget;
+    this.props.updateArgTouched(name);
   }
 
   handleChange(event) {
@@ -145,6 +151,7 @@ export default class ArgsForm extends React.Component {
             isValid={argsValidation[argkey].valid}
             validationMessage={argsValidation[argkey].validationMessage}
             handleChange={this.handleChange}
+            handleFocus={this.handleFocus}
             inputDropHandler={this.inputDropHandler}
             handleBoolChange={this.handleBoolChange}
             selectFile={this.selectFile}

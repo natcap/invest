@@ -7,13 +7,13 @@ import {
   screen,
   nativeTheme,
   Menu,
-  ipcMain,
+  ipcMain
 } from 'electron';
 
 import {
   createPythonFlaskProcess,
   getFlaskIsReady,
-  shutdownPythonProcess,
+  shutdownPythonProcess
 } from './createPythonFlaskProcess';
 import findInvestBinaries from './findInvestBinaries';
 import setupDownloadHandlers from './setupDownloadHandlers';
@@ -24,6 +24,7 @@ import {
   setupInvestRunHandlers,
   setupInvestLogReaderHandler
 } from './setupInvestHandlers';
+import setupSetLanguage from './setLanguage';
 import setupGetNCPUs from './setupGetNCPUs';
 import { ipcMainChannels } from './ipcMainChannels';
 import menuTemplate from './menubar';
@@ -56,7 +57,6 @@ export const createWindow = async () => {
     alwaysOnTop: false,
   });
   splashScreen.loadURL(`file://${__dirname}/../static/splash.html`);
-
   const investExe = findInvestBinaries(ELECTRON_DEV_MODE);
   createPythonFlaskProcess(investExe);
   setupDialogs();
@@ -121,6 +121,7 @@ export const createWindow = async () => {
   setupInvestLogReaderHandler();
   setupContextMenu(mainWindow);
   setupGetNCPUs();
+  setupSetLanguage();
   return Promise.resolve(); // lets tests await createWindow(), then assert
 };
 
@@ -130,7 +131,7 @@ export function removeIpcMainListeners() {
   });
 }
 
-export function main(argv) {
+export function main() {
   // calling requestSingleInstanceLock on mac causes a crash
   if (process.platform.startsWith('win')) {
     logger.info('Windows detected, requesting single instance lock');
@@ -149,10 +150,10 @@ export function main(argv) {
     if (ELECTRON_DEV_MODE) {
       const {
         default: installExtension,
-        REACT_DEVELOPER_TOOLS
+        REACT_DEVELOPER_TOOLS,
       } = require('electron-devtools-installer');
       await installExtension(REACT_DEVELOPER_TOOLS, {
-        loadExtensionOptions: { allowFileAccess: true }
+        loadExtensionOptions: { allowFileAccess: true },
       });
     }
     createWindow();

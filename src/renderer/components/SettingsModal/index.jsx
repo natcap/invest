@@ -1,5 +1,6 @@
 import React from 'react';
 import PropTypes from 'prop-types';
+import { ipcRenderer } from 'electron';
 
 import Accordion from 'react-bootstrap/Accordion';
 import Col from 'react-bootstrap/Col';
@@ -10,10 +11,19 @@ import Modal from 'react-bootstrap/Modal';
 import {
   MdSettings,
   MdClose,
+  MdTranslate
 } from 'react-icons/md';
 import { BsChevronExpand } from 'react-icons/bs';
 
 import { getDefaultSettings } from './SettingsStorage';
+import { ipcMainChannels } from '../../../main/ipcMainChannels';
+
+// map display names to standard language codes
+const languageOptions = {
+  English: 'en',
+  Español: 'es',
+};
+const logLevelOptions = ['DEBUG', 'INFO', 'WARNING', 'ERROR'];
 
 /** Render a dialog with a form for configuring global invest settings */
 export default class SettingsModal extends React.Component {
@@ -22,9 +32,8 @@ export default class SettingsModal extends React.Component {
     this.state = {
       show: false,
       nWorkersOptions: null,
-      logLevelOptions: ['DEBUG', 'INFO', 'WARNING', 'ERROR'],
     };
-
+    this.isDevMode = false;
     this.handleShow = this.handleShow.bind(this);
     this.handleClose = this.handleClose.bind(this);
     this.handleChange = this.handleChange.bind(this);
@@ -36,12 +45,13 @@ export default class SettingsModal extends React.Component {
     const nWorkersOptions = [];
     nWorkersOptions.push([-1, 'Synchronous (-1)']);
     nWorkersOptions.push([0, 'Threaded task management (0)']);
-    for (let i = 1; i <= this.props.nCPU; i++) {
+    for (let i = 1; i <= this.props.nCPU; i += 1) {
       nWorkersOptions.push([i, `${i} CPUs`]);
     }
     this.setState({
-      nWorkersOptions: nWorkersOptions
+      nWorkersOptions: nWorkersOptions,
     });
+    this.isDevMode = await ipcRenderer.invoke(ipcMainChannels.IS_DEV_MODE);
   }
 
   handleClose() {
@@ -73,6 +83,30 @@ export default class SettingsModal extends React.Component {
   }
 
   render() {
+    const { show, nWorkersOptions } = this.state;
+    const { investSettings, clearJobsStorage } = this.props;
+    const languageFragment = this.isDevMode ? (
+      <Form.Group as={Row}>
+        <Form.Label column sm="8" htmlFor="language-select">
+          <MdTranslate className="language-icon" />
+          {_('Language')}
+        </Form.Label>
+        <Col sm="4">
+          <Form.Control
+            id="language-select"
+            as="select"
+            name="language"
+            value={investSettings.language}
+            onChange={this.handleChange}
+          >
+            {Object.entries(languageOptions).map((entry) => {
+              const [displayName, value] = entry;
+              return <option value={value} key={value}>{displayName}</option>;
+            })}
+          </Form.Control>
+        </Col>
+      </Form.Group>
+    ) : <React.Fragment />;
     return (
       <React.Fragment>
         <Button
@@ -87,11 +121,11 @@ export default class SettingsModal extends React.Component {
 
         <Modal
           className="settings-modal"
-          show={this.state.show}
+          show={show}
           onHide={this.handleClose}
         >
           <Modal.Header>
-            <Modal.Title>InVEST Settings</Modal.Title>
+            <Modal.Title>{_('InVEST Settings')}</Modal.Title>
             <Button
               variant="secondary-outline"
               onClick={this.handleClose}
@@ -102,29 +136,32 @@ export default class SettingsModal extends React.Component {
             </Button>
           </Modal.Header>
           <Modal.Body>
+            {languageFragment}
             <Form.Group as={Row}>
-              <Form.Label column sm="6" htmlFor="logging-select">Logging threshold</Form.Label>
+              <Form.Label column sm="6" htmlFor="logging-select">
+                {_('Logging threshold')}
+              </Form.Label>
               <Col sm="6">
                 <Form.Control
                   id="logging-select"
                   as="select"
                   name="loggingLevel"
-                  value={this.props.investSettings.loggingLevel}
+                  value={investSettings.loggingLevel}
                   onChange={this.handleChange}
                 >
-                  {this.state.logLevelOptions.map(
-                    (opt) => <option value={opt} key={opt}>{opt}</option>
+                  {logLevelOptions.map(
+                    (opt) => <option value={opt} key={opt}>{_(opt)}</option>
                   )}
                 </Form.Control>
               </Col>
             </Form.Group>
             {
-              (this.state.nWorkersOptions)
+              (nWorkersOptions)
                 ? (
                   <Form.Group as={Row}>
                     <Col sm="6">
                       <Form.Label htmlFor="nworkers-select">
-                        Taskgraph n_workers parameter
+                        {_('Taskgraph n_workers parameter')}
                       </Form.Label>
                     </Col>
                     <Col sm="6">
@@ -133,10 +170,10 @@ export default class SettingsModal extends React.Component {
                         as="select"
                         name="nWorkers"
                         type="text"
-                        value={this.props.investSettings.nWorkers}
+                        value={investSettings.nWorkers}
                         onChange={this.handleChange}
                       >
-                        {this.state.nWorkersOptions.map(
+                        {nWorkersOptions.map(
                           (opt) => <option value={opt[0]} key={opt[0]}>{opt[1]}</option>
                         )}
                       </Form.Control>
@@ -153,14 +190,14 @@ export default class SettingsModal extends React.Component {
                       </Accordion.Toggle>
                       <Accordion.Collapse eventKey="0" className="pr-1">
                         <ul>
-                          <li>synchronous task execution is most reliable</li>
+                          <li>{_('synchronous task execution is most reliable')}</li>
                           <li>
-                            threaded task management: tasks execute only in the
-                            main process, using multiple threads.
+                            {_(`threaded task management: tasks execute only in the
+                            main process, using multiple threads.`)}
                           </li>
                           <li>
-                            n CPUs: depending on the InVEST model, tasks may execute
-                            in parallel using up to this many processes.
+                            {_(`n CPUs: depending on the InVEST model, tasks may execute
+                            in parallel using up to this many processes.`)}
                           </li>
                         </ul>
                       </Accordion.Collapse>
@@ -177,7 +214,7 @@ export default class SettingsModal extends React.Component {
                   type="button"
                   className="w-100"
                 >
-                  Reset to Defaults
+                  {_('Reset to Defaults')}
                 </Button>
               </Col>
             </Row>
@@ -187,17 +224,17 @@ export default class SettingsModal extends React.Component {
               onClick={this.switchToDownloadModal}
               className="w-50"
             >
-              Download Sample Data
+              {_('Download Sample Data')}
             </Button>
             <hr />
             <Button
               variant="secondary"
-              onClick={this.props.clearJobsStorage}
+              onClick={clearJobsStorage}
               className="mr-2 w-50"
             >
-              Clear Recent Jobs
+              {_('Clear Recent Jobs')}
             </Button>
-            <span>no invest workspaces will be deleted</span>
+            <span>{_('no invest workspaces will be deleted')}</span>
           </Modal.Body>
         </Modal>
       </React.Fragment>
@@ -206,12 +243,14 @@ export default class SettingsModal extends React.Component {
 }
 
 SettingsModal.propTypes = {
-  saveSettings: PropTypes.func,
+  saveSettings: PropTypes.func.isRequired,
+  clearJobsStorage: PropTypes.func.isRequired,
   investSettings: PropTypes.shape({
     nWorkers: PropTypes.string,
     loggingLevel: PropTypes.string,
     sampleDataDir: PropTypes.string,
-  }),
-  showDownloadModal: PropTypes.func,
-  nCPU: PropTypes.number
+    language: PropTypes.string,
+  }).isRequired,
+  showDownloadModal: PropTypes.func.isRequired,
+  nCPU: PropTypes.number.isRequired,
 };

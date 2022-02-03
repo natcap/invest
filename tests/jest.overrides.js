@@ -48,7 +48,7 @@ if (global.window) {
       warn: jest.fn(),
       error: jest.fn(),
       silly: jest.fn(),
-    })
+    }),
   };
 
   // TODO: this serves as a global mock for the 'crypto' node module
@@ -57,10 +57,11 @@ if (global.window) {
   // in the renderer process.
   // https://github.com/natcap/invest-workbench/issues/60
   global.window.crypto = {
-    getRandomValues: () => {
-      return [crypto.randomBytes(4).toString('hex')];
-    }
+    getRandomValues: () => [crypto.randomBytes(4).toString('hex')],
   };
+
+  // mock out the global gettext function - avoid setting up translation
+  global.window._ = (x) => x;
 
   jest.mock('../src/logger');
 }

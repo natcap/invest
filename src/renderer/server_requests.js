@@ -1,3 +1,5 @@
+import { getSettingsValue } from './components/SettingsModal/SettingsStorage';
+
 const logger = window.Workbench.getLogger(__filename.split('/').slice(-1)[0]);
 const HOSTNAME = 'http://localhost';
 
@@ -12,9 +14,10 @@ const HOSTNAME = 'http://localhost';
  *
  * @returns {Promise} resolves object
  */
-export function getInvestModelNames() {
+export async function getInvestModelNames() {
+  const language = await getSettingsValue('language');
   return (
-    window.fetch(`${HOSTNAME}:${process.env.PORT}/models`, {
+    window.fetch(`${HOSTNAME}:${process.env.PORT}/models?language=${language}`, {
       method: 'get',
     })
       .then((response) => response.json())
@@ -28,9 +31,10 @@ export function getInvestModelNames() {
  * @param {string} payload - model name as given by `invest list`
  * @returns {Promise} resolves object
  */
-export function getSpec(payload) {
+export async function getSpec(payload) {
+  const language = await getSettingsValue('language');
   return (
-    window.fetch(`${HOSTNAME}:${process.env.PORT}/getspec`, {
+    window.fetch(`${HOSTNAME}:${process.env.PORT}/getspec?language=${language}`, {
       method: 'post',
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },
@@ -49,10 +53,10 @@ export function getSpec(payload) {
  * }
  * @returns {Promise} resolves array
  */
-export function fetchValidation(payload) {
-  logger.debug('calling window.fetch validation');
+export async function fetchValidation(payload) {
+  const language = await getSettingsValue('language');
   return (
-    window.fetch(`${HOSTNAME}:${process.env.PORT}/validate`, {
+    window.fetch(`${HOSTNAME}:${process.env.PORT}/validate?language=${language}`, {
       method: 'post',
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },
