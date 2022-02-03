@@ -362,7 +362,7 @@ class CarbonValidationTests(unittest.TestCase):
         if parse_version(numpy.__version__) >= parse_version('1.22'):
             expected_value = 492919.769386
         else:
-            expected_value = 492919.73994
+            expected_value = 492919.739940
         # Verify better-than-float32 precision on raster summation.
         # Using a numpy float32 in numpy.sum will pass up to rtol=1e-9.
         numpy.testing.assert_allclose(
