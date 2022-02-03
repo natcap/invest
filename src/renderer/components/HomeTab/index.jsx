@@ -16,7 +16,7 @@ const logger = window.Workbench.getLogger(__filename.split('/').slice(-2).join('
  * Renders a table of buttons for each invest model and
  * a list of cards for each cached invest job.
  */
-export default class HomeTab extends React.PureComponent {
+export default class HomeTab extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
@@ -109,7 +109,7 @@ HomeTab.propTypes = {
 /**
  * Renders a button for each recent invest job.
  */
-class RecentInvestJobs extends React.PureComponent {
+class RecentInvestJobs extends React.Component {
   constructor(props) {
     super(props);
     this.handleClick = this.handleClick.bind(this);
@@ -164,13 +164,13 @@ class RecentInvestJobs extends React.PureComponent {
           {recentButtons.length
             ? (
               <h4 className="d-inline-block">
-                Recent runs:
+                {_("Recent runs:")}
               </h4>
             )
             : (
               <div className="d-inline-block">
-                Try the <b>Open</b> button to setup a model from a sample 
-                datastack file (.json) or from an InVEST model's logfile (.txt)
+                {_(`Try the <b>Open</b> button to setup a model from a sample
+                    datastack file (.json) or from an InVEST model's logfile (.txt)`)}
               </div>
             )}
           <OpenButton

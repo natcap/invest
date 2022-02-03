@@ -40,7 +40,7 @@ export function setupInvestRunHandlers(investExe) {
   });
 
   ipcMain.on(ipcMainChannels.INVEST_RUN, async (
-    event, modelRunName, pyModuleName, args, loggingLevel, jobID
+    event, modelRunName, pyModuleName, args, loggingLevel, language, jobID
   ) => {
     let investRun;
     let investStarted = false;
@@ -74,6 +74,7 @@ export function setupInvestRunHandlers(investExe) {
 
     const cmdArgs = [
       LOGLEVELMAP[loggingLevel],
+      `--language "${language}"`,
       'run',
       modelRunName,
       '--headless',

@@ -8,7 +8,7 @@ import '@testing-library/jest-dom';
 
 import SetupTab from '../../src/renderer/components/SetupTab';
 import {
-  fetchDatastackFromFile, fetchValidation,
+  fetchDatastackFromFile, fetchValidation
 } from '../../src/renderer/server_requests';
 
 jest.mock('../../src/renderer/server_requests');
@@ -69,7 +69,7 @@ describe('Arguments form input types', () => {
     spec.args.arg.type = type;
 
     const {
-      findByLabelText, findByRole
+      findByLabelText, findByRole,
     } = renderSetupFromSpec(spec, UI_SPEC);
 
     const input = await findByLabelText(`${spec.args.arg.name}`);
@@ -144,7 +144,7 @@ describe('Arguments form interactions', () => {
     const spec = { ...BASE_ARGS_SPEC };
     spec.args.arg.type = 'csv';
     const {
-      findByRole, findByLabelText
+      findByRole, findByLabelText,
     } = renderSetupFromSpec(spec, UI_SPEC);
 
     const input = await findByLabelText(`${spec.args.arg.name}`);
@@ -174,7 +174,7 @@ describe('Arguments form interactions', () => {
     const spec = { ...BASE_ARGS_SPEC };
     spec.args.arg.type = 'csv';
     const {
-      findByRole, findByLabelText
+      findByRole, findByLabelText,
     } = renderSetupFromSpec(spec, UI_SPEC);
 
     const filepath = 'grilled_cheese.csv';
@@ -193,7 +193,7 @@ describe('Arguments form interactions', () => {
     spec.args.arg.type = 'directory';
     spec.args.arg.required = true;
     const {
-      findByText, findByLabelText, queryByText
+      findByText, findByLabelText, queryByText,
     } = renderSetupFromSpec(spec, UI_SPEC);
 
     const input = await findByLabelText(`${spec.args.arg.name}`);
@@ -263,7 +263,7 @@ describe('Arguments form interactions', () => {
     spec.args.arg.type = 'csv';
     spec.args.arg.required = true;
     const {
-      findByText, findByLabelText, queryByText
+      findByText, findByLabelText, queryByText,
     } = renderSetupFromSpec(spec, UI_SPEC);
 
     const input = await findByLabelText(`${spec.args.arg.name}`);
@@ -322,25 +322,25 @@ describe('UI spec functionality', () => {
         arg4: {
           name: 'Dfoo',
           type: 'number',
-        }
-      }
+        },
+      },
     };
     // mock some validation state so that we can test that it only
     // displays when an input is enabled.
-    fetchValidation.mockResolvedValue([[['arg4'], 'invalid because']]);
+    fetchValidation.mockResolvedValue([[['arg4'], VALIDATION_MESSAGE]]);
 
     const uiSpec = {
       order: [Object.keys(spec.args)],
       enabledFunctions: {
         // enabled if arg1 is sufficient
-        arg2: (state => state.argsEnabled['arg1'] && !!state.argsValues['arg1'].value),
+        arg2: ((state) => state.argsEnabled.arg1 && !!state.argsValues.arg1.value),
         // enabled if arg1 and arg2 are sufficient
-        arg3: (state => state.argsEnabled['arg1'] && !!state.argsValues['arg1'].value &&
-                       (state.argsEnabled['arg2'] && !!state.argsValues['arg2'].value)),
+        arg3: ((state) => state.argsEnabled.arg1 && !!state.argsValues.arg1.value
+                       && (state.argsEnabled.arg2 && !!state.argsValues.arg2.value)),
         // enabled if arg1 is sufficient and arg2 is not sufficient
-        arg4: (state => state.argsEnabled['arg1'] && !!state.argsValues['arg1'].value &&
-                      !(state.argsEnabled['arg2'] && !!state.argsValues['arg2'].value))
-      }
+        arg4: ((state) => state.argsEnabled.arg1 && !!state.argsValues.arg1.value
+                      && !(state.argsEnabled.arg2 && !!state.argsValues.arg2.value)),
+      },
     };
 
     const { findByLabelText } = renderSetupFromSpec(spec, uiSpec);
@@ -408,7 +408,7 @@ describe('UI spec functionality', () => {
       },
     };
     const {
-      findByLabelText, findByText, queryByText
+      findByLabelText, findByText, queryByText,
     } = renderSetupFromSpec(spec, uiSpec);
     const arg1 = await findByLabelText(`${spec.args.arg1.name}`);
     let option = await queryByText('Field1');
@@ -452,7 +452,7 @@ describe('UI spec functionality', () => {
 
     const uiSpec = {
       // intentionally leaving out arg6, it should not be in the setup form
-      order: [['arg4'], ['arg3', 'arg2'], ['arg1'], ['arg5']]
+      order: [['arg4'], ['arg3', 'arg2'], ['arg1'], ['arg5']],
     };
 
     const { findByTestId, queryByText } = renderSetupFromSpec(spec, uiSpec);
@@ -582,7 +582,7 @@ describe('Form drag-and-drop', () => {
       },
     };
     fetchValidation.mockResolvedValue(
-      [[Object.keys(spec.args), 'invalid because']]
+      [[Object.keys(spec.args), VALIDATION_MESSAGE]]
     );
 
     const mockDatastack = {
@@ -596,7 +596,7 @@ describe('Form drag-and-drop', () => {
     fetchDatastackFromFile.mockResolvedValue(mockDatastack);
 
     const {
-      findByLabelText, findByTestId
+      findByLabelText, findByTestId,
     } = renderSetupFromSpec(spec, uiSpec);
     const setupForm = await findByTestId('setup-form');
 
@@ -619,7 +619,7 @@ describe('Form drag-and-drop', () => {
       length: { value: 1 },
     });
     Object.defineProperty(fileDropEvent, 'dataTransfer', {
-      value: { files: [fileValue] }
+      value: { files: [fileValue] },
     });
     fireEvent(setupForm, fileDropEvent);
 
@@ -645,7 +645,7 @@ describe('Form drag-and-drop', () => {
     };
     const uiSpec = { order: [Object.keys(spec.args)] };
     fetchValidation.mockResolvedValue(
-      [[Object.keys(spec.args), 'invalid because']]
+      [[Object.keys(spec.args), VALIDATION_MESSAGE]]
     );
 
     const mockDatastack = {
@@ -658,7 +658,7 @@ describe('Form drag-and-drop', () => {
     fetchDatastackFromFile.mockResolvedValue(mockDatastack);
 
     const {
-      findByLabelText, findByTestId
+      findByLabelText, findByTestId,
     } = renderSetupFromSpec(spec, uiSpec);
     const setupForm = await findByTestId('setup-form');
 
@@ -672,7 +672,7 @@ describe('Form drag-and-drop', () => {
       length: { value: 1 },
     });
     Object.defineProperty(fileDragEvent, 'dataTransfer', {
-      value: { files: [fileValue] }
+      value: { files: [fileValue] },
     });
     fireEvent(setupForm, fileDragEvent);
 
@@ -680,7 +680,7 @@ describe('Form drag-and-drop', () => {
 
     const fileDropEvent = createEvent.drop(setupForm);
     Object.defineProperty(fileDropEvent, 'dataTransfer', {
-      value: { files: [fileValue] }
+      value: { files: [fileValue] },
     });
     fireEvent(setupForm, fileDropEvent);
 
@@ -707,7 +707,7 @@ describe('Form drag-and-drop', () => {
     };
     const uiSpec = { order: [Object.keys(spec.args)] };
     fetchValidation.mockResolvedValue(
-      [[Object.keys(spec.args), 'invalid because']]
+      [[Object.keys(spec.args), VALIDATION_MESSAGE]]
     );
 
     const { findByTestId } = renderSetupFromSpec(spec, uiSpec);
@@ -723,7 +723,7 @@ describe('Form drag-and-drop', () => {
       length: { value: 1 },
     });
     Object.defineProperty(fileDragEnterEvent, 'dataTransfer', {
-      value: { files: [fileValue] }
+      value: { files: [fileValue] },
     });
     fireEvent(setupForm, fileDragEnterEvent);
 
@@ -751,11 +751,11 @@ describe('Form drag-and-drop', () => {
     };
     const uiSpec = { order: [Object.keys(spec.args)] };
     fetchValidation.mockResolvedValue(
-      [[Object.keys(spec.args), 'invalid because']]
+      [[Object.keys(spec.args), VALIDATION_MESSAGE]]
     );
 
     const {
-      findByLabelText, findByTestId
+      findByLabelText, findByTestId,
     } = renderSetupFromSpec(spec, uiSpec);
     const setupForm = await findByTestId('setup-form');
     const setupInput = await findByLabelText(`${spec.args.arg1.name}`);
@@ -770,7 +770,7 @@ describe('Form drag-and-drop', () => {
       length: { value: 1 },
     });
     Object.defineProperty(fileDragEvent, 'dataTransfer', {
-      value: { files: [fileValue] }
+      value: { files: [fileValue] },
     });
     fireEvent(setupInput, fileDragEvent);
 
@@ -779,7 +779,7 @@ describe('Form drag-and-drop', () => {
 
     const fileDropEvent = createEvent.drop(setupInput);
     Object.defineProperty(fileDropEvent, 'dataTransfer', {
-      value: { files: [fileValue] }
+      value: { files: [fileValue] },
     });
     fireEvent(setupInput, fileDropEvent);
 
@@ -804,7 +804,7 @@ describe('Form drag-and-drop', () => {
     };
     const uiSpec = { order: [Object.keys(spec.args)] };
     fetchValidation.mockResolvedValue(
-      [[Object.keys(spec.args), 'invalid because']]
+      [[Object.keys(spec.args), VALIDATION_MESSAGE]]
     );
 
     const { findByLabelText } = renderSetupFromSpec(spec, uiSpec);
@@ -820,7 +820,7 @@ describe('Form drag-and-drop', () => {
       length: { value: 1 },
     });
     Object.defineProperty(fileDragEnterEvent, 'dataTransfer', {
-      value: { files: [fileValue] }
+      value: { files: [fileValue] },
     });
     fireEvent(setupInput, fileDragEnterEvent);
 
@@ -828,7 +828,7 @@ describe('Form drag-and-drop', () => {
 
     const fileDragLeaveEvent = createEvent.dragLeave(setupInput);
     Object.defineProperty(fileDragLeaveEvent, 'dataTransfer', {
-      value: { files: [fileValue] }
+      value: { files: [fileValue] },
     });
     fireEvent(setupInput, fileDragLeaveEvent);
 
@@ -852,12 +852,12 @@ describe('Form drag-and-drop', () => {
     const uiSpec = {
       order: [Object.keys(spec.args)],
       enabledFunctions: {
-        arg2: (state => false) // make this arg always disabled
-      }
+        arg2: (() => false), // make this arg always disabled
+      },
     };
 
     fetchValidation.mockResolvedValue(
-      [[Object.keys(spec.args), 'invalid because']]
+      [[Object.keys(spec.args), VALIDATION_MESSAGE]]
     );
 
     const { findByLabelText } = renderSetupFromSpec(spec, uiSpec);
@@ -873,7 +873,7 @@ describe('Form drag-and-drop', () => {
       length: { value: 1 },
     });
     Object.defineProperty(fileDragEnterEvent, 'dataTransfer', {
-      value: { files: [fileValue] }
+      value: { files: [fileValue] },
     });
     fireEvent(setupInput, fileDragEnterEvent);
 

@@ -3,6 +3,7 @@ import events from 'events';
 import { spawn, exec } from 'child_process';
 import Stream from 'stream';
 
+import GettextJS from 'gettext.js';
 import React from 'react';
 import { ipcRenderer } from 'electron';
 import {
@@ -19,6 +20,7 @@ import InvestJob from '../../src/renderer/InvestJob';
 import {
   getSettingsValue, saveSettingsStore
 } from '../../src/renderer/components/SettingsModal/SettingsStorage';
+import { ipcMainChannels } from '../../src/main/ipcMainChannels';
 import {
   setupInvestRunHandlers,
   setupInvestLogReaderHandler,
@@ -52,14 +54,14 @@ const SAMPLE_SPEC = {
       name: 'Carbon Pools',
       about: 'help text',
       type: 'csv',
-    }
-  }
+    },
+  },
 };
 
 const UI_CONFIG_PATH = '../../src/renderer/ui_config';
 function mockUISpec(spec, modelName) {
   return {
-    [modelName]: { order: [Object.keys(spec.args)] }
+    [modelName]: { order: [Object.keys(spec.args)] },
   };
 }
 
@@ -360,18 +362,26 @@ describe('Display recently executed InVEST jobs on Home tab', () => {
 describe('InVEST global settings: dialog interactions', () => {
   const nWorkersLabelText = 'Taskgraph n_workers parameter';
   const loggingLabelText = 'Logging threshold';
+  const languageLabelText = 'Language';
 
   beforeEach(async () => {
     getInvestModelNames.mockResolvedValue({});
+    ipcRenderer.invoke.mockImplementation((channel) => {
+      if (channel === ipcMainChannels.IS_DEV_MODE) {
+        return Promise.resolve(true); // mock dev mode so that language dropdown is rendered
+      }
+      return Promise.resolve();
+    });
   });
 
   test('Invest settings save on change', async () => {
     const nWorkersLabel = 'Threaded task management (0)';
     const nWorkersValue = '0';
     const loggingLevel = 'DEBUG';
+    const languageValue = 'es';
 
     const {
-      getByText, getByRole, getByLabelText, findByRole
+      getByText, getByRole, getByLabelText, findByRole,
     } = render(
       <App />
     );
@@ -379,13 +389,14 @@ describe('InVEST global settings: dialog interactions', () => {
     userEvent.click(await findByRole('button', { name: 'settings' }));
     const nWorkersInput = getByLabelText(nWorkersLabelText, { exact: false });
     const loggingInput = getByLabelText(loggingLabelText, { exact: false });
+    const languageInput = getByLabelText(languageLabelText, { exact: false });
 
     userEvent.selectOptions(nWorkersInput, [getByText(nWorkersLabel)]);
+    await waitFor(() => { expect(nWorkersInput).toHaveValue(nWorkersValue); });
     userEvent.selectOptions(loggingInput, [loggingLevel]);
-    await waitFor(() => {
-      expect(nWorkersInput).toHaveValue(nWorkersValue);
-      expect(loggingInput).toHaveValue(loggingLevel);
-    });
+    await waitFor(() => { expect(loggingInput).toHaveValue(loggingLevel); });
+    userEvent.selectOptions(languageInput, [languageValue]);
+    await waitFor(() => { expect(languageInput).toHaveValue(languageValue); });
     userEvent.click(getByRole('button', { name: 'close settings' }));
 
     // Check values were saved in app and in store
@@ -393,25 +404,29 @@ describe('InVEST global settings: dialog interactions', () => {
     await waitFor(() => {
       expect(nWorkersInput).toHaveValue(nWorkersValue);
       expect(loggingInput).toHaveValue(loggingLevel);
+      expect(languageInput).toHaveValue(languageValue);
     });
     expect(await getSettingsValue('nWorkers')).toBe(nWorkersValue);
     expect(await getSettingsValue('loggingLevel')).toBe(loggingLevel);
+    expect(await getSettingsValue('language')).toBe(languageValue);
   });
 
   test('Load invest settings from storage and test Reset', async () => {
     const defaultSettings = {
       nWorkers: '-1',
       loggingLevel: 'INFO',
+      language: 'en',
     };
     const expectedSettings = {
       nWorkers: '0',
       loggingLevel: 'ERROR',
+      language: 'es',
     };
 
     await saveSettingsStore(expectedSettings);
 
     const {
-      getByText, getByLabelText, findByRole
+      getByText, getByLabelText, findByRole,
     } = render(
       <App />
     );
@@ -419,11 +434,13 @@ describe('InVEST global settings: dialog interactions', () => {
     userEvent.click(await findByRole('button', { name: 'settings' }));
     const nWorkersInput = getByLabelText(nWorkersLabelText, { exact: false });
     const loggingInput = getByLabelText(loggingLabelText, { exact: false });
+    const languageInput = getByLabelText(languageLabelText, { exact: false });
 
     // Test that the invest settings were loaded in from store.
     await waitFor(() => {
       expect(nWorkersInput).toHaveValue(expectedSettings.nWorkers);
       expect(loggingInput).toHaveValue(expectedSettings.loggingLevel);
+      expect(languageInput).toHaveValue(expectedSettings.language);
     });
 
     // Test Reset sets values to default
@@ -431,12 +448,13 @@ describe('InVEST global settings: dialog interactions', () => {
     await waitFor(() => {
       expect(nWorkersInput).toHaveValue(defaultSettings.nWorkers);
       expect(loggingInput).toHaveValue(defaultSettings.loggingLevel);
+      expect(languageInput).toHaveValue(defaultSettings.language);
     });
   });
 
   test('Access sampledata download Modal from settings', async () => {
     const {
-      findByText, findByRole, queryByText
+      findByText, findByRole, queryByText,
     } = render(
       <App />
     );
@@ -746,7 +764,7 @@ describe('InVEST subprocess testing', () => {
       modelHumanName: 'Carbon Sequestration',
       argsValues: argsValues,
       status: 'success',
-      logfile: logfilePath
+      logfile: logfilePath,
     });
     await InvestJob.saveJob(mockJob);
 
@@ -788,5 +806,76 @@ describe('InVEST subprocess testing', () => {
     mockInvestProc.emit('exit', 0);
     // Give it time to run the listener before unmounting.
     await new Promise((resolve) => setTimeout(resolve, 300));
+  });
+});
+
+describe('Translation', () => {
+  const i18n = new GettextJS();
+  const testLanguage = 'es';
+  const messageCatalog = {
+    '': {
+      language: testLanguage,
+      'plural-forms': 'nplurals=2; plural=(n!=1);',
+    },
+    Open: 'σρєи',
+    Language: 'ℓαиgυαgє',
+  };
+
+  beforeAll(async () => {
+    getInvestModelNames.mockResolvedValue({});
+
+    i18n.loadJSON(messageCatalog, 'messages');
+
+    // mock out the relevant IPC channels
+    ipcRenderer.invoke.mockImplementation((channel, arg) => {
+      if (channel === ipcMainChannels.SET_LANGUAGE) {
+        i18n.setLocale(arg);
+      }
+      if (channel === ipcMainChannels.IS_DEV_MODE) {
+        return Promise.resolve(true); // mock dev mode so that language dropdown is rendered
+      }
+      return Promise.resolve();
+    });
+
+    ipcRenderer.sendSync.mockImplementation((channel, arg) => {
+      if (channel === ipcMainChannels.GETTEXT) {
+        return i18n.gettext(arg);
+      }
+      return undefined;
+    });
+
+    // this is the same setup that's done in src/renderer/index.js (out of test scope)
+    ipcRenderer.invoke(ipcMainChannels.SET_LANGUAGE, 'en');
+    global.window._ = ipcRenderer.sendSync.bind(null, ipcMainChannels.GETTEXT);
+  });
+
+  test('Text rerenders in new language when language setting changes', async () => {
+    const {
+      findByText,
+      getByText,
+      findByLabelText,
+    } = render(<App />);
+
+    userEvent.click(await findByLabelText('settings'));
+    let languageInput = await findByLabelText('Language', { exact: false });
+    expect(languageInput).toHaveValue('en');
+
+    userEvent.selectOptions(languageInput, testLanguage);
+
+    // text within the settings modal component should be translated
+    languageInput = await findByLabelText(messageCatalog.Language, { exact: false });
+    expect(languageInput).toHaveValue(testLanguage);
+
+    // text should also be translated in other components
+    // such as the Open button (visible in background)
+    await findByText(messageCatalog.Open);
+
+    // text without a translation in the message catalog should display in the default English
+    expect(getByText('Logging threshold')).toBeDefined();
+
+    // resetting language should re-render components in English
+    userEvent.click(getByText('Reset to Defaults'));
+    expect(await findByText('Language')).toBeDefined();
+    expect(await findByText('Open')).toBeDefined();
   });
 });

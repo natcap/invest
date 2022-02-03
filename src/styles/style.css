@@ -132,7 +132,14 @@ body {
 .settings-icon {
 	color: black;
 	font-size: 2rem;
-	vertical-align: middle;
+	vertical-align: text-bottom;
+}
+
+.language-icon {
+	color: black;
+	font-size: 1rem;
+	vertical-align: text-bottom;
+	margin-right: 0.2rem;
 }
 
 .tab-content {

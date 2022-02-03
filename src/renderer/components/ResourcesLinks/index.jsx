@@ -68,7 +68,7 @@ export default function ResourcesTab(props) {
         onClick={handleClick}
       >
         <MdOpenInNew className="mr-1" />
-        User Guide
+        {_("User's Guide")}
       </a>
       <a
         href={forumURL}
@@ -77,7 +77,7 @@ export default function ResourcesTab(props) {
         onClick={handleClick}
       >
         <MdOpenInNew className="mr-1" />
-        Frequently Asked Questions
+        {_("Frequently Asked Questions")}
       </a>
     </React.Fragment>
   );

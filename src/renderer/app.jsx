@@ -26,6 +26,7 @@ import {
 import { getInvestModelNames } from './server_requests';
 import InvestJob from './InvestJob';
 import { dragOverHandlerNone } from './utils';
+import { ipcMainChannels } from '../main/ipcMainChannels';
 
 const logger = window.Workbench.getLogger(__filename.split('/').slice(-1)[0]);
 
@@ -62,7 +63,6 @@ export default class App extends React.Component {
     const investList = await getInvestModelNames();
     const recentJobs = await InvestJob.getJobStore();
     const investSettings = await getAllSettings();
-
     this.setState({
       investList: investList,
       recentJobs: recentJobs,
@@ -72,7 +72,7 @@ export default class App extends React.Component {
 
     ipcRenderer.on('download-status', (event, downloadedNofN) => {
       this.setState({
-        downloadedNofN: downloadedNofN
+        downloadedNofN: downloadedNofN,
       });
     });
   }
@@ -92,16 +92,17 @@ export default class App extends React.Component {
   }
 
   saveSettings(settings) {
-    this.setState({
-      investSettings: settings,
-    });
-
     saveSettingsStore(settings);
+    ipcRenderer.invoke(
+      ipcMainChannels.SET_LANGUAGE, settings.language
+    ).then(() => {
+      this.setState({ investSettings: settings });
+    });
   }
 
   /** Store a sampledata filepath in localforage.
    *
-   * @param {String} dir - the path to the user-selected dir
+   * @param {string} dir - the path to the user-selected dir
    */
   storeDownloadDir(dir) {
     const { investSettings } = this.state;
@@ -293,7 +294,7 @@ export default class App extends React.Component {
                     onSelect={this.switchTabs}
                     eventKey="home"
                   >
-                    InVEST
+                    {_("InVEST")}
                   </Nav.Link>
                 </Navbar.Brand>
               </Col>

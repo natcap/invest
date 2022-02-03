@@ -178,6 +178,7 @@ export default class InvestTab extends React.Component {
       this.state.modelSpec.pyname,
       args,
       investSettings.loggingLevel,
+      investSettings.language,
       jobID
     );
     this.switchTabs('log');
@@ -243,14 +244,14 @@ export default class InvestTab extends React.Component {
               onSelect={this.switchTabs}
             >
               <Nav.Link eventKey="setup">
-                Setup
+                {_("Setup")}
               </Nav.Link>
               <div
                 className="sidebar-setup"
                 id={sidebarSetupElementId}
               />
               <Nav.Link eventKey="log" disabled={logDisabled}>
-                Log
+                {_("Log")}
               </Nav.Link>
             </Nav>
             <div className="sidebar-row">
@@ -327,6 +328,7 @@ InvestTab.propTypes = {
   investSettings: PropTypes.shape({
     nWorkers: PropTypes.string,
     loggingLevel: PropTypes.string,
+    language: PropTypes.string,
   }).isRequired,
   saveJob: PropTypes.func.isRequired,
   updateJobProperties: PropTypes.func.isRequired,
