@@ -52,6 +52,9 @@ Unreleased Changes
       one stream pixel, it will now snap to the stream pixel with a higher
       flow accumulation value. Before, it would snap to the stream pixel
       encountered first in the raster (though this was not guaranteed).
+* GLOBIO
+    * Gaussian decay kernels are now always tiled, which should result in a
+      minor improvement in model runtime when large decay distances are used.
 * Habitat Quality:
     * Linear decay kernels are now always tiled, which should result in a minor
       improvement in model runtime, particularly with large decay distances.
