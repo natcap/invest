@@ -51,7 +51,7 @@ export default class SettingsModal extends React.Component {
     this.setState({
       nWorkersOptions: nWorkersOptions,
     });
-    this.isDevMode = ipcRenderer.sendSync(ipcMainChannels.IS_DEV_MODE);
+    this.isDevMode = await ipcRenderer.invoke(ipcMainChannels.IS_DEV_MODE);
   }
 
   handleClose() {
