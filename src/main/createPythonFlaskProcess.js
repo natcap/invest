@@ -20,7 +20,8 @@ export function createPythonFlaskProcess(investExe) {
   // Once those are resolved, we probably want some logging here,
   // maybe --debug if devMode, -vvv if production?
   const pythonServerProcess = spawn(
-    `"${investExe}"`,
+    // `"${investExe}"`,
+    investExe,
     ['serve', '--port', process.env.PORT],
     { shell: true } // necessary in dev mode & relying on a conda env
   );

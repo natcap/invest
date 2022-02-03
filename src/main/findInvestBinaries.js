@@ -4,6 +4,7 @@ import { execFileSync } from 'child_process';
 import { getLogger } from '../logger';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
+
 /**
  * Find paths to local invest executeable under dev or production environments.
  *
@@ -20,13 +21,21 @@ export default function findInvestBinaries(isDevMode) {
     if (isDevMode) {
       investExe = filename; // assume an active python env w/ exe on path
     } else {
-      const binaryPath = path.join(process.resourcesPath, 'invest');
-      investExe = path.join(binaryPath, filename);
+      investExe = path.join(process.resourcesPath, 'invest', filename);
+      // It's likely the exe path includes spaces because it's composed of
+      // app's Product Name, a user-facing name given to electron-builder.
+      // Extra quotes because https://github.com/nodejs/node/issues/38490
+      // Quoting depends on the shell, '/bin/sh' or 'cmd.exe'.
+      if (process.platform === 'win32') {
+        investExe = `""${investExe}""`;
+      } else {
+        investExe = `"'${investExe}'"`;
+      }
     }
     // Checking that we have a functional invest exe by getting version
     // shell is necessary in dev mode when relying on an active conda env
     const investVersion = execFileSync(
-      `"${investExe}"`, ['--version'], { shell: true }
+      investExe, ['--version'], { shell: true }
     );
     logger.info(
       `Found invest binaries ${investExe} for version ${investVersion}`
