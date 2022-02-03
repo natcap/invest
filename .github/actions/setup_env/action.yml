@@ -1,12 +1,18 @@
 name: "Set up python and conda environment"
 inputs:
-  key:
-    description: "Unique key to identify the cache to create/restore"
+  cache-id:
+    description:
+      "Cache identifier used in the cache key. This should include any values
+      needed to uniquely identify the appropriate cache, such as python
+      version and operating system. The number of the current week in the
+      year, and a hash of all requirements files, are appended onto this
+      identifier to make the cache key. This way the cache will refresh each
+      week, or if the requirements change."
     required: false
     default: ""
 outputs:
   cache-hit:
-    description: "Whether a cache hit was found"
+    description: "True if a cache hit was found, false if not"
     value: ${{ steps.condacache.outputs.cache-hit }}
 runs:
   using: "composite"
@@ -19,6 +25,8 @@ runs:
         auto-update-conda: true
         channels: conda-forge
 
+    # save week number to use in next step
+    # save CONDA_PREFIX to GITHUB_ENV so it's accessible outside of shell commands
     - name: Set environment variables
       run: |
         echo "WEEK=$(date +%U)" >> $GITHUB_ENV

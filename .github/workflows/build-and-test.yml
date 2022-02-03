@@ -24,7 +24,7 @@ jobs:
                   fetch-depth: 0
 
             - name: Set up python 3.9
-              uses: actions/setup-python@v2
+              uses: actions/setup-python@v1
               with:
                   python-version: 3.9
 
@@ -75,10 +75,10 @@ jobs:
                   path: data/invest-test-data
                   key: git-lfs-testdata-${{ hashfiles('Makefile') }}
 
-            - name: Set up python and conda environment
+            - name: Set up conda environment
               uses: ./.github/actions/setup_env
               with:
-                  key: ${{ matrix.python-version }}-${{ matrix.os }}-model-tests
+                  cache-id: ${{ matrix.python-version }}-${{ matrix.os }}-model-tests
               id: condacache
 
             - name: Install build dependencies
@@ -185,10 +185,10 @@ jobs:
             - name: Fetch git tags
               run: git fetch origin +refs/tags/*:refs/tags/*
 
-            - name: Set up python and conda environment
+            - name: Set up conda environment
               uses: ./.github/actions/setup_env
               with:
-                  key: ${{ matrix.python-version }}-${{ matrix.os }}-model-tests
+                  cache-id: ${{ matrix.python-version }}-${{ matrix.os }}-test-sdist
               id: condacache
 
             - name: Install dependencies
@@ -272,10 +272,10 @@ jobs:
                   # Fetch complete history for accurate versioning
                   fetch-depth: 0
 
-            - name: Set up python and conda environment
+            - name: Set up conda environment
               uses: ./.github/actions/setup_env
               with:
-                  key: ${{ matrix.python-version }}-${{ matrix.os }}-model-tests
+                  cache-id: ${{ matrix.python-version }}-${{ matrix.os }}-validate
               id: condacache
 
             - name: Install dependencies
@@ -323,10 +323,10 @@ jobs:
                   path: data/invest-test-data
                   key: git-lfs-testdata-${{ hashfiles('Makefile') }}
 
-            - name: Set up python and conda environment
+            - name: Set up conda environment
               uses: ./.github/actions/setup_env
               with:
-                  key: ${{ matrix.python-version }}-${{ matrix.os }}-model-tests
+                  cache-id: ${{ matrix.python-version }}-${{ matrix.os }}-ui-tests
               id: condacache
 
             - name: Install dependencies
