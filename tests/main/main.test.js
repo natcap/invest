@@ -86,7 +86,14 @@ describe('findInvestBinaries', () => {
   test('should point to resourcesPath in production', async () => {
     const isDevMode = false;
     const exePath = findInvestBinaries(isDevMode);
-    expect(exePath).toBe(path.join(process.resourcesPath, 'invest', filename));
+    let expectedPath = path.join(process.resourcesPath, 'invest', filename);
+    // see findInvestBinaries for comments about quoting
+    if (process.platform === 'win32') {
+      expectedPath = `""${expectedPath}""`;
+    } else {
+      expectedPath = `"'${expectedPath}'"`;
+    }
+    expect(exePath).toBe(expectedPath);
   });
   test('should throw if the invest exe is bad', async () => {
     execFileSync.mockImplementation(() => {
