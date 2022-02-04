@@ -337,34 +337,17 @@ def execute(args):
         file_preprocessing_dir, file_suffix)
 
     # Get target projection from the AOI vector file
-    if 'aoi_vector_path' in args and args['aoi_vector_path'] != '':
-        target_sr_wkt = pygeoprocessing.get_vector_info(
-            args['aoi_vector_path'])['projection_wkt']
-        target_sr = osr.SpatialReference()
-        if target_sr_wkt:
-            target_sr.ImportFromWkt(target_sr_wkt)
-        if not target_sr.IsProjected():
-            raise ValueError(
-                'The AOI vector file %s is provided but not projected.' %
-                args['aoi_vector_path'])
-        else:
-            # Get the value to multiply by linear distances in order to
-            # transform them to meters
-            linear_unit = target_sr.GetLinearUnits()
-            LOGGER.info(
-                'Target projection from AOI: %s. EPSG: %s. Linear unit: '
-                '%s.' % (target_sr.GetAttrValue('PROJECTION'),
-                         target_sr.GetAttrValue("AUTHORITY", 1), linear_unit))
-
-    # Rasterize habitat and stressor layers if they are vectors.
-    # Divide resolution (meters) by linear unit to convert to projection units
-    target_pixel_size = (float(args['resolution'])/linear_unit,
-                         -float(args['resolution'])/linear_unit)
+    # ARGS_SPEC-based validation should ensure that the projection is in m.
+    aoi_info = pygeoprocessing.get_vector_info(
+        args['aoi_vector_path'])
+    target_sr_wkt = aoi_info['projection_wkt']
+    target_pixel_size = (float(args['resolution']),
+                         -float(args['resolution']))
 
     # Simplify the AOI vector for faster run on zonal statistics
-    simplified_aoi_vector_path = os.path.join(
+    aoi_vector_path = os.path.join(
         file_preprocessing_dir, 'simplified_aoi%s.gpkg' % file_suffix)
-    aoi_tolerance = (float(args['resolution']) / linear_unit) / 2
+    aoi_tolerance = float(args['resolution']) / 2
 
     # Check if subregion field exists in the AOI vector
     subregion_field_exists = _has_field_name(
@@ -376,21 +359,14 @@ def execute(args):
     if subregion_field_exists:
         aoi_preserved_field = (_SUBREGION_FIELD_NAME, ogr.OFTString)
         aoi_field_name = _SUBREGION_FIELD_NAME
-        LOGGER.info('Simplifying AOI vector while preserving field %s.' %
-                    aoi_field_name)
-    else:
-        LOGGER.info('Simplifying AOI vector without subregion field.')
 
     simplify_aoi_task = task_graph.add_task(
         func=_simplify_geometry,
         args=(args['aoi_vector_path'], aoi_tolerance,
-              simplified_aoi_vector_path),
+              aoi_vector_path),
         kwargs={'preserved_field': aoi_preserved_field},
-        target_path_list=[simplified_aoi_vector_path],
+        target_path_list=[aoi_vector_path],
         task_name='simplify_aoi_vector')
-
-    # Use the simplified AOI vector to run analyses
-    aoi_vector_path = simplified_aoi_vector_path
 
     # Rasterize AOI vector for later risk statistics calculation
     LOGGER.info('Rasterizing AOI vector.')
@@ -533,8 +509,6 @@ def execute(args):
 
     LOGGER.info('Calculating euclidean distance transform on stressors.')
     # Convert pixel size from meters to projection unit
-    sampling_distance = (float(args['resolution'])/linear_unit,
-                         float(args['resolution'])/linear_unit)
     distance_transform_tasks = []
     for (align_raster_path, dist_raster_path, stressor_name) in zip(
         align_stressor_raster_list, dist_stressor_raster_list,
@@ -543,7 +517,8 @@ def execute(args):
         distance_transform_task = task_graph.add_task(
             func=pygeoprocessing.distance_transform_edt,
             args=((align_raster_path, 1), dist_raster_path),
-            kwargs={'sampling_distance': sampling_distance,
+            kwargs={'sampling_distance': [abs(dimension) for dimension
+                                          in target_pixel_size],
                     'working_dir': intermediate_dir},
             target_path_list=[dist_raster_path],
             task_name='distance_transform_on_%s' % stressor_name,
@@ -1492,7 +1467,11 @@ def _get_vector_geometries_by_field(
 
     geom_sets_by_field = {}
     for feat in base_layer:
-        field_value = feat.GetField(field_name)
+        try:
+            field_value = feat.GetField(field_name)
+        except Exception as e:
+            import pdb; pdb.set_trace()
+            pass
         geom = feat.GetGeometryRef()
         geom_wkb = shapely.wkb.loads(bytes(geom.ExportToWkb()))
         if field_value is None:
@@ -1529,14 +1508,10 @@ def _has_field_name(base_vector_path, field_name):
     base_vector = gdal.OpenEx(base_vector_path, gdal.OF_VECTOR)
     base_layer = base_vector.GetLayer()
 
-    fields = [field.GetName().lower() for field in base_layer.schema]
+    fields = set([field.GetName().lower() for field in base_layer.schema])
     base_vector = None
     base_layer = None
-    if field_name not in fields:
-        LOGGER.info('The %s field is not provided in the vector.' % field_name)
-        return False
-    else:
-        return True
+    return field_name in fields
 
 
 def _ecosystem_risk_op(habitat_count_arr, *hab_risk_arrays):
@@ -3392,7 +3367,7 @@ def _simplify_geometry(
     """Simplify all the geometry in the vector.
 
     See https://en.wikipedia.org/wiki/Nyquist%E2%80%93Shannon_sampling_theorem
-    for the math prove.
+    for the proof.
 
     Args:
         base_vector_path (string): path to base vector.
@@ -3414,6 +3389,8 @@ def _simplify_geometry(
     if preserved_field:
         # Convert the field name to lowercase
         preserved_field_name = preserved_field[0].lower()
+        LOGGER.info(f'Simplifying {base_vector_path}, preserving field '
+                    f'{preserved_field_name}')
         for base_field in base_layer.schema:
             base_field_name = base_field.GetName().lower()
             # Find the first field name, case-insensitive
@@ -3466,8 +3443,8 @@ def _simplify_geometry(
             target_simplified_layer.CreateFeature(target_feature)
         base_geometry = None
 
-    target_simplified_layer.SyncToDisk()
     target_simplified_vector.CommitTransaction()
+    target_simplified_layer.SyncToDisk()
 
     target_simplified_layer = None
     target_simplified_vector = None
