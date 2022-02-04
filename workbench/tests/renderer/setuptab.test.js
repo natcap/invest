@@ -252,10 +252,10 @@ describe('Arguments form interactions', () => {
 
     // Slow typing, expect validation call after each character
     // debouncedValidate is set at 200ms, delay more than that per char.
-    await userEvent.type(input, 'foo', { delay: 210 });
+    await userEvent.type(input, 'foo', { delay: 250 });
     await waitFor(() => {
       expect(spy).toHaveBeenCalledTimes(3);
-    }, 1000);
+    }, 2000);
   });
 
   test('Focus on required input & get validation feedback', async () => {
