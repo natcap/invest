@@ -48,6 +48,7 @@ const config = {
     'build/**/*',
     'node_modules/**/*',
   ],
+  publish: ['never']
 };
 
 module.exports = config;
