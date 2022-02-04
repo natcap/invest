@@ -408,15 +408,6 @@ jobs:
                   conda env update --file requirements-all.yml
                   make install
 
-            # TODO: this is temporary so we can test the rest of
-            # the workflow before we git add the workbench to invest.
-            - name: Clone Workbench
-              run: |
-                  git clone https://github.com/davemfish/invest-workbench.git workbench
-                  cd workbench
-                  git fetch origin experimental/invest-integration
-                  git checkout experimental/invest-integration
-
             - name: Install Node.js
               uses: actions/setup-node@v2
               with:

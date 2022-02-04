@@ -83,15 +83,6 @@ jobs:
                   # This builds the users guide, binaries, and installer
                   make windows_installer
 
-            - name: Clone Workbench
-            # TODO: this is temporary so we can test the rest of
-            # the workflow before we git add the workbench to invest.
-              run: |
-                git clone https://github.com/davemfish/invest-workbench.git workbench
-                cd workbench
-                git fetch origin experimental/invest-integration
-                git checkout experimental/invest-integration
-
             - name: Install Node.js
               uses: actions/setup-node@v2
               with:
@@ -171,7 +162,7 @@ jobs:
                   name: InVEST-user-guide
                   path: dist/InVEST_*_userguide.zip
 
-            - name: Upload app logging from puppeteer to github - Windows
+            - name: Upload app logging from puppeteer
               uses: actions/upload-artifact@v2.2.4
               if: always()
               with:
@@ -236,15 +227,6 @@ jobs:
               run: |
                   make install
                   make mac_dmg
-
-            - name: Clone Workbench
-            # TODO: this is temporary so we can test the rest of
-            # the workflow before we git add the workbench to invest.
-              run: |
-                git clone https://github.com/davemfish/invest-workbench.git workbench
-                cd workbench
-                git fetch origin experimental/invest-integration
-                git checkout experimental/invest-integration
 
             - name: Install Node.js
               uses: actions/setup-node@v2
@@ -319,7 +301,7 @@ jobs:
                   name: Workbench-mac-installer
                   path: workbench/dist/*.dmg
 
-            - name: Upload workbench logging from puppeteer to github - MacOS
+            - name: Upload workbench logging from puppeteer
               uses: actions/upload-artifact@v2.2.4
               if: always()
               with:
@@ -350,16 +332,6 @@ jobs:
             - uses: actions/setup-python@v1
               with:
                   python-version: 3.8
-
-            - name: Clone Workbench
-            # TODO: this is temporary so we can test the rest of
-            # the workflow before we git add the workbench to invest.
-            # `make sampledata` runs ./workbench/scripts/build_sampledata_registry.py
-              run: |
-                git clone https://github.com/davemfish/invest-workbench.git workbench
-                cd workbench
-                git fetch origin experimental/invest-integration
-                git checkout experimental/invest-integration
 
             - name: Install dependencies
               # dependencies of setup.py, needed to get the version string
