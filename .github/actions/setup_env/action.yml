@@ -37,5 +37,5 @@ runs:
       uses: actions/cache@v2
       with:
         path: ${{ env.CONDA_PREFIX }}
-        key: ${{ inputs.key }}-${{ env.WEEK }}-${{ hashFiles('**/requirements*.txt') }}
+        key: ${{ inputs.cache-id }}-${{ env.WEEK }}-${{ hashFiles('**/requirements*.txt') }}
       id: condacache
