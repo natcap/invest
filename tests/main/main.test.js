@@ -10,7 +10,7 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { execFileSync } from 'child_process';
+import { spawnSync } from 'child_process';
 
 import { app, ipcMain } from 'electron';
 import yazl from 'yazl';
@@ -40,7 +40,12 @@ jest.mock('child_process');
 jest.mock('../../src/main/createPythonFlaskProcess');
 
 beforeEach(() => {
-  execFileSync.mockReturnValue('foo');
+  // A mock for the call in findInvestBinaries
+  spawnSync.mockReturnValue({
+    stdout: Buffer.from('foo', 'utf8'),
+    stderr: Buffer.from('', 'utf8'),
+    error: null
+  });
   createPythonFlaskProcess.mockImplementation(() => {});
   getFlaskIsReady.mockResolvedValue(true);
   // These vars are only defined in an electron environment and our
@@ -78,26 +83,26 @@ describe('checkFirstRun', () => {
 describe('findInvestBinaries', () => {
   const ext = (process.platform === 'win32') ? '.exe' : '';
   const filename = `invest${ext}`;
+
   test('should be on the PATH in dev mode', () => {
     const isDevMode = true;
     const exePath = findInvestBinaries(isDevMode);
     expect(exePath).toBe(filename);
   });
+
   test('should point to resourcesPath in production', async () => {
     const isDevMode = false;
     const exePath = findInvestBinaries(isDevMode);
-    let expectedPath = path.join(process.resourcesPath, 'invest', filename);
-    // see findInvestBinaries for comments about quoting
-    if (process.platform === 'win32') {
-      expectedPath = `""${expectedPath}""`;
-    } else {
-      expectedPath = `"'${expectedPath}'"`;
-    }
-    expect(exePath).toBe(expectedPath);
+    expect(exePath).toBe(
+      `"${path.join(process.resourcesPath, 'invest', filename)}"`
+    );
   });
+
   test('should throw if the invest exe is bad', async () => {
-    execFileSync.mockImplementation(() => {
-      throw new Error('error from invest --version');
+    spawnSync.mockReturnValue({
+      stdout: Buffer.from('', 'utf8'),
+      stderr: Buffer.from('', 'utf8'),
+      error: new Error('error from invest --version')
     });
     const isDevMode = false;
     expect(() => findInvestBinaries(isDevMode)).toThrow();
