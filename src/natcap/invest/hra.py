@@ -709,6 +709,28 @@ def execute(args):
                 dependent_task_list=[pair_expo_task, pair_conseq_task])
             total_risk_dependent_tasks.append(pair_risk_task)
 
+            # Reclassify the pairwise risk into High/Med/Low classfication
+            pair_risk_path = os.path.join(
+                intermediate_dir,
+                f'RECLASS_RISK_{habitat}_{stressor}{file_suffix}.tif')
+            _ = task_graph.add_task(
+                func=pygeoprocessing.raster_calculator,
+                kwargs={
+                    'base_raster_path_band_const_list': [
+                        (target_pair_risk_raster_path, 1),
+                        (args['risk_eq'], 'raw'),
+                        (max_rating, 'raw'),
+                    ],
+                    'local_op': _reclassify_hab_stressor_pair_risk,
+                    'target_raster_path': pair_risk_path,
+                    'datatype_target': _TARGET_PIXEL_INT,
+                    'nodata_target': _TARGET_NODATA_INT,
+                },
+                target_path_list=[pair_risk_path],
+                task_name=f'Reclassify risk to {habitat} from {stressor}',
+                dependent_task_list=[pair_risk_task]
+            )
+
         # Calculate cumulative E, C & risk scores on each habitat
         total_e_habitat_path = habitat_info_df['TOT_E_RASTER_PATH'].item()
         total_c_habitat_path = habitat_info_df['TOT_C_RASTER_PATH'].item()
@@ -1699,6 +1721,32 @@ def _write_stressors_count_file(
         json.dump(int(max_n_overlapping_stressors), target_file)
 
 
+def _reclassify_hab_stressor_pair_risk(
+        pair_risk_matrix, rating_type, max_rating):
+    assert rating_type in _VALID_RISK_EQS
+    if rating_type == 'Multiplicative':
+        # The maximum risk from a single stressor is max_rating*max_rating
+        max_risk_per_stressor = max_rating ** 2
+    else:
+        # The maximum risk score for a habitat from a single stressor is
+        # sqrt( (max_rating-1)^2 + (max_rating-1)^2 )
+        max_risk_per_stressor = math.sqrt(((max_rating-1)**2) * 2)
+
+    valid_pixel_mask = ~utils.array_equals_nodata(
+        pair_risk_matrix, _TARGET_NODATA_FLT)
+
+    pairwise_risk_bucket_breaks = [
+        0, max_risk_per_stressor*(1/3), max_risk_per_stressor*(2/3)]
+
+    reclassified = numpy.full(pair_risk_matrix.shape, _TARGET_NODATA_INT)
+
+    reclassified[valid_pixel_mask] = numpy.digitize(
+        pair_risk_matrix[valid_pixel_mask],
+        pairwise_risk_bucket_breaks,
+        right=True)
+    return reclassified
+
+
 def _reclassify_risk(
         cumulative_risk_raster, maximum_habitat_risk_raster, rating_type,
         max_rating, max_n_overlapping_stressors_path, target_raster_path):
@@ -1847,22 +1895,24 @@ def _pair_risk_op(exposure_arr, consequence_arr, max_rating, risk_eq):
             equation.
 
     """
-    # Calculate the maximum possible risk score
-    if risk_eq == 'Multiplicative':
-        # The maximum risk from a single stressor is max_rating*max_rating
-        max_risk_score = max_rating*max_rating
-    else:  # risk_eq is 'Euclidean'
-        # The maximum risk score for a habitat from a single stressor is
-        # sqrt( (max_rating-1)^2 + (max_rating-1)^2 )
-        max_risk_score = numpy.sqrt(numpy.power((max_rating-1), 2)*2)
+    # TODO: Remove.  Pretty sure not needed.
+    # # Calculate the maximum possible risk score
+    # if risk_eq == 'Multiplicative':
+    #     # The maximum risk from a single stressor is max_rating*max_rating
+    #     max_risk_score = max_rating*max_rating
+    # else:  # risk_eq is 'Euclidean'
+    #     # The maximum risk score for a habitat from a single stressor is
+    #     # sqrt( (max_rating-1)^2 + (max_rating-1)^2 )
+    #     max_risk_score = numpy.sqrt(numpy.power((max_rating-1), 2)*2)
 
+    assert risk_eq in _VALID_RISK_EQS  # sanity check
     risk_arr = numpy.full(
         exposure_arr.shape, _TARGET_NODATA_FLT, dtype=numpy.float32)
     zero_pixel_mask = (exposure_arr == 0) | (consequence_arr == 0)
     valid_pixel_mask = (
         ~utils.array_equals_nodata(exposure_arr, _TARGET_NODATA_FLT) &
         ~utils.array_equals_nodata(consequence_arr, _TARGET_NODATA_FLT))
-    nonzero_valid_pixel_mask = ~zero_pixel_mask & valid_pixel_mask
+    nonzero_valid_pixel_mask = (~zero_pixel_mask) & valid_pixel_mask
 
     # Zero pixels are where none of the stressor exists in the habitat
     risk_arr[zero_pixel_mask] = 0
