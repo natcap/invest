@@ -15,7 +15,7 @@
 GDAL>=3.1.2,!=3.3.0  # 3.3.0 had a bug that broke our windows builds: https://github.com/OSGeo/gdal/issues/3898
 Pyro4==4.77  # pip-only
 pandas>=1.2.1
-numpy>=1.11.0,!=1.16.0,<1.22.0
+numpy>=1.11.0,!=1.16.0
 Rtree>=0.8.2,!=0.9.1
 Shapely>=1.7.1,<2.0.0
 scipy>=1.6.0  # pip-only
