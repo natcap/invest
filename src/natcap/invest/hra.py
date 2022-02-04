@@ -228,6 +228,8 @@ ARGS_SPEC = {
     }
 }
 
+_VALID_RISK_EQS = set(ARGS_SPEC['args']['risk_eq']['options'].keys())
+
 
 def execute(args):
     """Habitat Risk Assessment.
@@ -803,7 +805,7 @@ def execute(args):
             kwargs={
                 'cumulative_risk_raster': total_habitat_risk_path,
                 'maximum_habitat_risk_raster': max_habitat_risk_path,
-                'rating_type': '',
+                'rating_type': args['risk_eq'],
                 'max_rating': max_rating,
                 'max_n_overlapping_stressors_path': max_n_stressors_file,
                 'target_raster_path': reclass_habitat_risk_path,
@@ -1705,7 +1707,7 @@ def _reclassify_risk(
     Args:
         cumulative_risk_raster (string): Path to the cumulative risk raster, a
             float32 raster with a nodata value of ``_TARGET_NODATA_FLT``.
-        maximum_habitat_risk_raster (string): Path to an integer raster where
+        maximum_habitat_risk_raster (string): Path to a raster where
             pixel values represent the maximum risk to this habitat from any
             habitat-stressor interaction. This will be a floating-point raster.
         rating_type (string): Either "Multiplicative" or "Euclidean"
@@ -1719,6 +1721,7 @@ def _reclassify_risk(
     Returns:
         ``None``
     """
+    assert rating_type in _VALID_RISK_EQS
     with open(max_n_overlapping_stressors_path) as json_file:
         max_n_overlapping_stressors = json.load(json_file)
     LOGGER.debug(f"max_n_overlapping_stressors: {max_n_overlapping_stressors}")
