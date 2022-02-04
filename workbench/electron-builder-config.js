@@ -48,7 +48,7 @@ const config = {
     'build/**/*',
     'node_modules/**/*',
   ],
-  publish: ['never']
+  publish: null // undocumented. does what you would expect ['never'] to do
 };
 
 module.exports = config;
