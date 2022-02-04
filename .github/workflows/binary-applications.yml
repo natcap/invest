@@ -48,7 +48,7 @@ jobs:
             - name: Set up conda environment
               uses: ./.github/actions/setup_env
               with:
-                  cache-id: ${{ env.PYTHON_VERSION }}-windows-binaries
+                  cache-id: py${{ env.PYTHON_VERSION }}-windows-binaries
               id: condacache
 
             - name: Install python dependencies
@@ -157,7 +157,7 @@ jobs:
             - name: Set up conda environment
               uses: ./.github/actions/setup_env
               with:
-                  cache-id: ${{ env.PYTHON_VERSION }}-macos-binaries
+                  cache-id: py${{ env.PYTHON_VERSION }}-macos-binaries
               id: condacache
 
             - name: Build conda env with python dependencies
