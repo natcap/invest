@@ -323,6 +323,7 @@ def execute(args):
     resilience_attributes, stressor_attributes = \
         _get_attributes_from_df(criteria_df, habitat_names, stressor_names)
     max_rating = float(args['max_rating'])
+    resolution = float(args['resolution'])
     recovery_df = _get_recovery_dataframe(
         criteria_df, habitat_names, resilience_attributes, max_rating,
         file_preprocessing_dir, intermediate_dir, file_suffix)
@@ -341,13 +342,12 @@ def execute(args):
     aoi_info = pygeoprocessing.get_vector_info(
         args['aoi_vector_path'])
     target_sr_wkt = aoi_info['projection_wkt']
-    target_pixel_size = (float(args['resolution']),
-                         -float(args['resolution']))
+    target_pixel_size = (resolution, -resolution)
 
     # Simplify the AOI vector for faster run on zonal statistics
     aoi_vector_path = os.path.join(
         file_preprocessing_dir, 'simplified_aoi%s.gpkg' % file_suffix)
-    aoi_tolerance = float(args['resolution']) / 2
+    aoi_tolerance = resolution / 2
 
     # Check if subregion field exists in the AOI vector
     subregion_field_exists = _has_field_name(
@@ -438,7 +438,7 @@ def execute(args):
             vector_type = row['TYPE']
             vector_path = row['PATH']
             simplified_vector_path = row['SIMPLE_VECTOR_PATH']
-            tolerance = (float(args['resolution']) / row['LINEAR_UNIT']) / 2
+            tolerance = resolution / 2
             target_raster_path = row['BASE_RASTER_PATH']
             LOGGER.info('Rasterizing %s vector.' % vector_name)
 
