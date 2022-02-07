@@ -249,7 +249,7 @@ def execute(args):
             contains the set of criteria ranking of each stressor on each
             habitat.
         args['resolution'] (int): a number representing the desired pixel
-            dimensions of output rasters in meters.
+            #dimensions of output rasters in meters.
         args['max_rating'] (str, int or float): a number representing the
             highest potential value that should be represented in rating in the
             criteria scores table.
@@ -299,6 +299,23 @@ def _parse_tables(info_table_path, criteria_table_path):
     #
     # HABITAT/STRESSOR OVERLAP PROPERTIES
     #   * {stressorname: {attribute
+
+    # need to get a list of criteria for each habitat/stressor pair.
+    # Maybe output a single CSV with the columns:
+    # habitat, stressor, criterion, rating, dq, weight
+    # WHERE (habitat, stressor, criterion) is the primary key.
+    #
+    # And then a separate CSV mapping:
+    # stressor, criterion, crit_type (E/C)
+    # WHERE (stressor, criterion) is the primary key.
+    #
+    # And another CSV of resilience attributes with the columns
+    # habitat, attribute, rating, dq, weight
+    # WHERE (habitat, attribute) is the primary key.
+    #
+    # And this should also return (or write out) the attributes for habitats
+    # and stressors and the locations (and radii) of those file.
+
     pass
 
 
@@ -323,6 +340,8 @@ def _calc_criteria(attributes_list, habitat_mask_raster, target_criterion_path):
         habitat_mask = habitat_band.ReadAsArray(**block_info)
         valid_mask = (habitat_mask == 1)
 
+        criterion_score = numpy.full(habitat_mask.shape, _TARGET_NODATA_FLT,
+                                     dtype=numpy.float32)
         numerator = numpy.zeros(habitat_mask.shape, dtype=numpy.float32)
         denominator = numpy.zeros(habitat_mask.shap, dtype=numpy.float32)
         for attribute_dict in attributes_list:
@@ -345,9 +364,6 @@ def _calc_criteria(attributes_list, habitat_mask_raster, target_criterion_path):
             # guaranteed to be a number and not a raster.
             numerator[valid_mask] += (rating / (data_quality + weight))
             denominator[valid_mask] += (1 / (data_quality + weight))
-
-        criterion_score = numpy.full(habitat_mask.shape, _TARGET_NODATA_FLT,
-                                     dtype=numpy.float32)
         criterion_score[valid_mask] = (
             numerator[valid_mask] / denominator[valid_mask])
 
