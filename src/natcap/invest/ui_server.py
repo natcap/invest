@@ -185,7 +185,7 @@ def write_parameter_set_file():
         A string.
     """
     payload = request.get_json()
-    filepath = payload['parameterSetPath']
+    filepath = payload['filepath']
     modulename = payload['moduleName']
     args = json.loads(payload['args'])
     relative_paths = payload['relativePaths']
@@ -201,7 +201,7 @@ def save_to_python():
 
     Body (JSON string):
         filepath: string
-        modelname: string (e.g. carbon)
+        modelname: string (a key in natcap.invest.MODEL_METADATA)
         args_dict: JSON string of InVEST model args keys and values
 
     Returns:

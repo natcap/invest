@@ -87,6 +87,7 @@ export default class SetupTab extends React.Component {
       argsDropdownOptions: null,
     };
 
+    this.saveDatastack = this.saveDatastack.bind(this);
     this.savePythonScript = this.savePythonScript.bind(this);
     this.saveJsonFile = this.saveJsonFile.bind(this);
     this.wrapInvestExecute = this.wrapInvestExecute.bind(this);
@@ -214,7 +215,7 @@ export default class SetupTab extends React.Component {
     const argsValues = this.insertNWorkers(this.state.argsValues);
     const args = argsDictFromObject(argsValues);
     const payload = {
-      parameterSetPath: datastackPath,
+      filepath: datastackPath,
       moduleName: this.props.pyModuleName,
       relativePaths: false,
       args: JSON.stringify(args),
@@ -225,7 +226,7 @@ export default class SetupTab extends React.Component {
   saveDatastack(datastackPath) {
     const args = argsDictFromObject(this.state.argsValues);
     const payload = {
-      parameterSetPath: datastackPath,
+      filepath: datastackPath,
       moduleName: this.props.pyModuleName,
       args: JSON.stringify(args),
     };
