@@ -285,3 +285,83 @@ def execute(args):
     output_dir = os.path.join(args['workspace_dir'])
 
     # parse the tables. info table, criteria table
+
+
+def _parse_tables(info_table_path, criteria_table_path):
+    # parsing the info_table_path give us:
+    #   * A set of stressors with their names, paths, and radii
+    #   * A set of habitats with their names, paths.
+    #
+    # Parsing the criteria_table_path gives us 2 separate tables.
+    # HABITAT RESILIENCE
+    #   * {attribute: {habitatname: {rating: int/file, dq: int, weight: int}},
+    #      criteria_type: E/C}
+    #
+    # HABITAT/STRESSOR OVERLAP PROPERTIES
+    #   * {stressorname: {attribute
+    pass
+
+
+# This is to calculate E or C for a single habitat/stressor pair.
+def _calc_criteria(attributes_list, habitat_mask_raster, target_criterion_path):
+    # Assume attributes_list is structured like so:
+    #  [{"rating": int/path, "dq": int, "weight": int}, ... ]
+
+    pygeoprocessing.new_raster_from_base(
+        habitat_mask_raster, target_criterion_path, _TARGET_PIXEL_FLT,
+        [_TARGET_NODATA_FLT])
+
+    habitat_raster = gdal.OpenEx(habitat_mask_raster)
+    habitat_band = habitat_mask_raster.GetRasterBand(1)
+
+    target_criterion_raster = gdal.OpenEx(target_criterion_path,
+                                          gdal.GA_Update)
+    target_criterion_band = target_criterion_raster.GetRasterBand(1)
+
+    for block_info in pygeoprocessing.iterblocks((habitat_mask_raster, 1),
+                                                 offset_only=True):
+        habitat_mask = habitat_band.ReadAsArray(**block_info)
+        valid_mask = (habitat_mask == 1)
+
+        numerator = numpy.zeros(habitat_mask.shape, dtype=numpy.float32)
+        denominator = numpy.zeros(habitat_mask.shap, dtype=numpy.float32)
+        for attribute_dict in attributes_list:
+            try:
+                rating = float(attribute_dict['rating'])
+            except ValueError:
+                # When rating is a string filepath, it represents a raster.
+                try:
+                    rating_raster = gdal.OpenEx(attribute_dict['rating'])
+                    rating_band = rating_raster.GetRasterBand(1)
+                    rating = rating_band.ReadAsArray(**block_info)[valid_mask]
+                finally:
+                    rating_band = None
+                    rating_raster = None
+            data_quality = attribute_dict['data_quality']
+            weight = attribute_dict['weight']
+
+            # The (data_quality + weight) denominator is duplicated here
+            # because it's easier to read this way and per the docs is
+            # guaranteed to be a number and not a raster.
+            numerator[valid_mask] += (rating / (data_quality + weight))
+            denominator[valid_mask] += (1 / (data_quality + weight))
+
+        criterion_score = numpy.full(habitat_mask.shape, _TARGET_NODATA_FLT,
+                                     dtype=numpy.float32)
+        criterion_score[valid_mask] = (
+            numerator[valid_mask] / denominator[valid_mask])
+
+        target_criterion_band.WriteArray(criterion_score,
+                                         xoff=block_info['xoff'],
+                                         yoff=block_info['yoff'])
+
+    target_criterion_band = None
+    target_criterion_raster = None
+
+
+
+
+
+
+
+
