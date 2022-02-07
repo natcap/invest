@@ -218,6 +218,29 @@ def save_to_python():
     return 'python script saved'
 
 
+@app.route('/build_datastack_archive', methods=['POST'])
+def build_datastack_archive():
+    """.
+
+    Body (JSON string):
+        filepath: string
+        modelname: string (e.g. carbon)
+        args_dict: JSON string of InVEST model args keys and values
+
+    Returns:
+        A string.
+    """
+    payload = request.get_json()
+    target_filepath = payload['filepath']
+    modelname = payload['modelname']
+    args_dict = json.loads(payload['args'])
+
+    datastack.build_datastack_archive(
+        args_dict, modelname, target_filepath)
+
+    return 'datastack archive created'
+
+
 @app.route('/log_model_start', methods=['POST'])
 def log_model_start():
     payload = request.get_json()

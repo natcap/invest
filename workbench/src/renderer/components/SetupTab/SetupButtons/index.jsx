@@ -17,6 +17,11 @@ export function SaveParametersButtons(props) {
         defaultTargetPath="execute_invest.py"
         func={props.savePythonScript}
       />
+      <SaveFileButton
+        title={_("Save datastack")}
+        defaultTargetPath="invest_datastack.tgz"
+        func={props.saveDatastack}
+      />
     </React.Fragment>
   );
 }

@@ -16,6 +16,7 @@ import {
   RunButton, SaveParametersButtons
 } from './SetupButtons';
 import {
+  archiveDatastack,
   fetchDatastackFromFile,
   fetchValidation,
   saveToPython,
@@ -219,6 +220,16 @@ export default class SetupTab extends React.Component {
       args: JSON.stringify(args),
     };
     writeParametersToFile(payload);
+  }
+
+  saveDatastack(datastackPath) {
+    const args = argsDictFromObject(this.state.argsValues);
+    const payload = {
+      parameterSetPath: datastackPath,
+      moduleName: this.props.pyModuleName,
+      args: JSON.stringify(args),
+    };
+    archiveDatastack(payload);
   }
 
   async loadParametersFromFile(filepath) {
@@ -449,6 +460,7 @@ export default class SetupTab extends React.Component {
             <SaveParametersButtons
               savePythonScript={this.savePythonScript}
               saveJsonFile={this.saveJsonFile}
+              saveDatastack={this.saveDatastack}
             />
           </Portal>
           <Portal elId={sidebarFooterElementId}>

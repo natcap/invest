@@ -126,6 +126,29 @@ export function saveToPython(payload) {
 }
 
 /**
+ * Write invest model arguments to a python script.
+ *
+ * @param  {object} payload {
+ *   filepath: string
+ *   modelname: string (e.g. carbon)
+ *   args_dict: JSON string of InVEST model args keys and values
+ * }
+ * @returns {Promise} resolves undefined
+ */
+export function archiveDatastack(payload) {
+  return (
+    window.fetch(`${HOSTNAME}:${process.env.PORT}/build_datastack_archive`, {
+      method: 'post',
+      body: JSON.stringify(payload),
+      headers: { 'Content-Type': 'application/json' },
+    })
+      .then((response) => response.text())
+      .then((text) => logger.debug(text))
+      .catch((error) => logger.error(error.stack))
+  );
+}
+
+/**
  * Write invest model arguments to a JSON file.
  *
  * @param  {object} payload {
