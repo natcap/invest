@@ -232,6 +232,7 @@ export default class SetupTab extends React.Component {
       moduleName: this.props.pyModuleName,
       args: JSON.stringify(args),
     };
+    this.props.setSaveAlert('archiving...');
     const response = await archiveDatastack(payload);
     this.props.setSaveAlert(response);
   }

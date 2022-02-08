@@ -317,9 +317,19 @@ body {
 	display: flex;
 	flex-direction: column;
 	font-size: 1.0rem;
-	padding: inherit;
+	padding-left: inherit;
+	padding-right: 1rem;
 }
 
+.sidebar-row .alert {
+	margin-top: 1rem;
+}
+
+.sidebar-footer {
+    margin-top: auto;
+}
+
+/* Model Status Alert */
 .invest-sidebar-col .sidebar-footer .alert {
 	display: flex;
 	flex-direction: column;
@@ -337,11 +347,7 @@ body {
 	letter-spacing: 0.03rem;
 }
 
-.sidebar-footer {
-    margin-top: auto;
-    padding-right: 1rem;
-}
-
+/* The Run button */
 .sidebar-footer .btn-primary {
 	font-size: 1.5rem;
 	font-weight: 600;

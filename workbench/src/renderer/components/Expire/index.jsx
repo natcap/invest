@@ -6,10 +6,15 @@ export default function Expire(props) {
   const [visible, setVisible] = useState(true);
 
   useEffect(() => {
-    setTimeout(() => {
+    // Anytime children update, reset visibility to true
+    // otherwise this component can only really be used once
+    setVisible(true);
+    const timerId = setTimeout(() => {
       setVisible(false);
     }, props.delay);
-  }, [props.delay]);
+
+    return () => clearTimeout(timerId);
+  }, [props.children]);
 
   return (
     visible

@@ -15,6 +15,7 @@ import ModelStatusAlert from './ModelStatusAlert';
 import SetupTab from '../SetupTab';
 import LogTab from '../LogTab';
 import ResourcesLinks from '../ResourcesLinks';
+import Expire from '../Expire';
 import { getSpec } from '../../server_requests';
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
@@ -236,6 +237,8 @@ export default class InvestTab extends React.Component {
       return (<div />);
     }
 
+    // Alert won't expire during archiving; will expire 2s after completion
+    const alertExpires = (saveAlert === 'archiving...') ? 1e7 : 2000;
     const logDisabled = !logfile;
     const sidebarSetupElementId = `sidebar-setup-${jobID}`;
     const sidebarFooterElementId = `sidebar-footer-${jobID}`;
@@ -272,9 +275,14 @@ export default class InvestTab extends React.Component {
               {
                 saveAlert
                   ? (
-                    <Alert variant="success">
-                      {saveAlert}
-                    </Alert>
+                    <Expire
+                      className="d-inline"
+                      delay={alertExpires}
+                    >
+                      <Alert variant="success">
+                        {saveAlert}
+                      </Alert>
+                    </Expire>
                   )
                   : <div />
               }
