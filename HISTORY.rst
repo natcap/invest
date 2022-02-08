@@ -36,7 +36,7 @@
   Unreleased Changes
   ------------------
 
-3.10.2 (2022-02-07)
+3.10.2 (2022-02-08)
 -------------------
 * General
     * The minimum ``setuptools_scm`` version has been increased to 6.4.0 in
