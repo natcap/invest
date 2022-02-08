@@ -296,17 +296,9 @@ describe('Save InVEST Model Setup Buttons', () => {
       filePaths: ['foo.json']
     };
     ipcRenderer.invoke.mockResolvedValue(mockDialogData);
-    const { findByText, findByLabelText, queryByText } = renderInvestTab();
+    const { findByText, findByLabelText } = renderInvestTab();
 
     const loadButton = await findByText('Load parameters from file');
-    // test the tooltip before we click
-    userEvent.hover(loadButton);
-    const hoverText = 'Browse to a datastack (.json) or InVEST logfile (.txt)';
-    expect(await findByText(hoverText)).toBeInTheDocument();
-    userEvent.unhover(loadButton);
-    await waitFor(() => {
-      expect(queryByText(hoverText)).toBeNull();
-    });
     userEvent.click(loadButton);
 
     const input1 = await findByLabelText(spec.args.workspace.name);
@@ -321,7 +313,7 @@ describe('Save InVEST Model Setup Buttons', () => {
     ['Save to JSON', 'saveJsonFile'],
     ['Save datastack', 'saveDatastack']
   ])('%s does nothing when canceled', async (label, method) => {
-    // callback data if the OS dialog was canceled 
+    // callback data if the OS dialog was canceled
     const mockDialogData = {
       filePaths: ['']
     };
@@ -335,7 +327,27 @@ describe('Save InVEST Model Setup Buttons', () => {
 
     // Calls that would have triggered if a file was selected
     expect(spy).toHaveBeenCalledTimes(0);
-  })
+  });
+
+  test.each([
+    ['Load parameters from file'],
+    ['Save to Python script'],
+    ['Save to JSON'],
+    ['Save datastack'],
+  ])('%s has hover text', async (label) => {
+    const {
+      findByText,
+      findByRole,
+      queryByRole
+    } = renderInvestTab();
+    const loadButton = await findByText(label);
+    userEvent.hover(loadButton);
+    expect(await findByRole('tooltip')).toBeInTheDocument();
+    userEvent.unhover(loadButton);
+    await waitFor(() => {
+      expect(queryByRole('tooltip')).toBeNull();
+    });
+  });
 });
 
 describe('InVEST Run Button', () => {
