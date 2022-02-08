@@ -18,7 +18,7 @@ pandas>=1.2.1
 numpy>=1.11.0,!=1.16.0
 Rtree>=0.8.2,!=0.9.1
 Shapely>=1.7.1,<2.0.0
-scipy>=1.6.0  # pip-only
+scipy>=1.6.0,<1.8.0  # pip-only
 pygeoprocessing>=2.3.2  # pip-only
 taskgraph[niced_processes]>=0.11.0  # pip-only
 psutil>=5.6.6
