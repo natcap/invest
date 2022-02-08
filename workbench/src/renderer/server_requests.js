@@ -126,11 +126,11 @@ export function saveToPython(payload) {
 }
 
 /**
- * Write invest model arguments to a python script.
+ * Archive invest model input data.
  *
  * @param  {object} payload {
  *   filepath: string
- *   modelname: string (e.g. carbon)
+ *   moduleName: string (e.g. natcap.invest.carbon)
  *   args_dict: JSON string of InVEST model args keys and values
  * }
  * @returns {Promise} resolves undefined
@@ -152,7 +152,7 @@ export function archiveDatastack(payload) {
  * Write invest model arguments to a JSON file.
  *
  * @param  {object} payload {
- *   parameterSetPath: string
+ *   filepath: string
  *   moduleName: string (e.g. natcap.invest.carbon)
  *   args: JSON string of InVEST model args keys and values
  *   relativePaths: boolean

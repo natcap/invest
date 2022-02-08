@@ -224,19 +224,19 @@ def build_datastack_archive():
 
     Body (JSON string):
         filepath: string
-        modelname: string (e.g. carbon)
-        args_dict: JSON string of InVEST model args keys and values
+        moduleName: string (e.g. natcap.invest.carbon)
+        args: JSON string of InVEST model args keys and values
 
     Returns:
         A string.
     """
     payload = request.get_json()
     target_filepath = payload['filepath']
-    modelname = payload['modelname']
+    pyname = payload['moduleName']
     args_dict = json.loads(payload['args'])
 
     datastack.build_datastack_archive(
-        args_dict, modelname, target_filepath)
+        args_dict, pyname, target_filepath)
 
     return 'datastack archive created'
 
