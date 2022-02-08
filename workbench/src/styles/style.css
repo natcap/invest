@@ -320,7 +320,7 @@ body {
 	padding: inherit;
 }
 
-.invest-sidebar-col .alert {
+.invest-sidebar-col .sidebar-footer .alert {
 	display: flex;
 	flex-direction: column;
 	justify-content: center;

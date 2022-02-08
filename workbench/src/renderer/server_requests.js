@@ -120,7 +120,10 @@ export function saveToPython(payload) {
       headers: { 'Content-Type': 'application/json' },
     })
       .then((response) => response.text())
-      .then((text) => logger.debug(text))
+      .then((text) => {
+        logger.debug(text);
+        return text;
+      })
       .catch((error) => logger.error(error.stack))
   );
 }
@@ -143,7 +146,10 @@ export function archiveDatastack(payload) {
       headers: { 'Content-Type': 'application/json' },
     })
       .then((response) => response.text())
-      .then((text) => logger.debug(text))
+      .then((text) => {
+        logger.debug(text);
+        return text;
+      })
       .catch((error) => logger.error(error.stack))
   );
 }
@@ -167,7 +173,10 @@ export function writeParametersToFile(payload) {
       headers: { 'Content-Type': 'application/json' },
     })
       .then((response) => response.text())
-      .then((text) => logger.debug(text))
+      .then((text) => {
+        logger.debug(text);
+        return text;
+      })
       .catch((error) => logger.error(error.stack))
   );
 }

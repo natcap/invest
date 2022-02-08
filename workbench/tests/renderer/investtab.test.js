@@ -338,7 +338,7 @@ describe('Save InVEST Model Setup Buttons', () => {
     const {
       findByText,
       findByRole,
-      queryByRole
+      queryByRole,
     } = renderInvestTab();
     const loadButton = await findByText(label);
     userEvent.hover(loadButton);

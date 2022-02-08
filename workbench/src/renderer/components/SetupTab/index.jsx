@@ -199,7 +199,7 @@ export default class SetupTab extends React.Component {
    * @param {string} filepath - desired path to the python script
    * @returns {undefined}
    */
-  savePythonScript(filepath) {
+  async savePythonScript(filepath) {
     const { modelName } = this.props;
     const argsValues = this.insertNWorkers(this.state.argsValues);
     const argsDict = argsDictFromObject(argsValues);
@@ -208,10 +208,11 @@ export default class SetupTab extends React.Component {
       modelname: modelName,
       args: JSON.stringify(argsDict),
     };
-    saveToPython(payload);
+    const response = await saveToPython(payload);
+    this.props.setSaveAlert(response);
   }
 
-  saveJsonFile(datastackPath) {
+  async saveJsonFile(datastackPath) {
     const argsValues = this.insertNWorkers(this.state.argsValues);
     const args = argsDictFromObject(argsValues);
     const payload = {
@@ -220,17 +221,19 @@ export default class SetupTab extends React.Component {
       relativePaths: false,
       args: JSON.stringify(args),
     };
-    writeParametersToFile(payload);
+    const response = await writeParametersToFile(payload);
+    this.props.setSaveAlert(response);
   }
 
-  saveDatastack(datastackPath) {
+  async saveDatastack(datastackPath) {
     const args = argsDictFromObject(this.state.argsValues);
     const payload = {
       filepath: datastackPath,
       moduleName: this.props.pyModuleName,
       args: JSON.stringify(args),
     };
-    archiveDatastack(payload);
+    const response = await archiveDatastack(payload);
+    this.props.setSaveAlert(response);
   }
 
   async loadParametersFromFile(filepath) {

@@ -9,6 +9,7 @@ import TabContainer from 'react-bootstrap/TabContainer';
 import Nav from 'react-bootstrap/Nav';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
+import Alert from 'react-bootstrap/Alert';
 
 import ModelStatusAlert from './ModelStatusAlert';
 import SetupTab from '../SetupTab';
@@ -60,6 +61,7 @@ export default class InvestTab extends React.Component {
       uiSpec: null,
       userTerminated: false,
       executeClicked: false,
+      saveAlert: null,
     };
 
     this.investExecute = this.investExecute.bind(this);
@@ -67,6 +69,7 @@ export default class InvestTab extends React.Component {
     this.terminateInvestProcess = this.terminateInvestProcess.bind(this);
     this.investLogfileCallback = this.investLogfileCallback.bind(this);
     this.investExitCallback = this.investExitCallback.bind(this);
+    this.setSaveAlert = this.setSaveAlert.bind(this);
   }
 
   async componentDidMount() {
@@ -204,6 +207,12 @@ export default class InvestTab extends React.Component {
     );
   }
 
+  setSaveAlert(response) {
+    this.setState({
+      saveAlert: response
+    });
+  }
+
   render() {
     const {
       activeTab,
@@ -211,6 +220,7 @@ export default class InvestTab extends React.Component {
       argsSpec,
       uiSpec,
       executeClicked,
+      saveAlert,
     } = this.state;
     const {
       status,
@@ -259,6 +269,15 @@ export default class InvestTab extends React.Component {
                 moduleName={modelRunName}
                 docs={modelSpec.userguide_html}
               />
+              {
+                saveAlert
+                  ? (
+                    <Alert variant="success">
+                      {saveAlert}
+                    </Alert>
+                  )
+                  : <div />
+              }
             </div>
             <div
               className="sidebar-row sidebar-footer"
@@ -295,6 +314,7 @@ export default class InvestTab extends React.Component {
                   sidebarSetupElementId={sidebarSetupElementId}
                   sidebarFooterElementId={sidebarFooterElementId}
                   executeClicked={this.state.executeClicked}
+                  setSaveAlert={this.setSaveAlert}
                 />
               </TabPane>
               <TabPane
