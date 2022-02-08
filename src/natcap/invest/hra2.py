@@ -320,22 +320,23 @@ def _parse_tables(info_table_path, criteria_table_path):
 
 
 # This is to calculate E or C for a single habitat/stressor pair.
-def _calc_criteria(attributes_list, habitat_mask_raster, target_criterion_path):
+def _calc_criteria(attributes_list, habitat_mask_raster_path,
+                   target_criterion_path):
     # Assume attributes_list is structured like so:
     #  [{"rating": int/path, "dq": int, "weight": int}, ... ]
 
     pygeoprocessing.new_raster_from_base(
-        habitat_mask_raster, target_criterion_path, _TARGET_PIXEL_FLT,
+        habitat_mask_raster_path, target_criterion_path, _TARGET_PIXEL_FLT,
         [_TARGET_NODATA_FLT])
 
-    habitat_raster = gdal.OpenEx(habitat_mask_raster)
+    habitat_mask_raster = gdal.OpenEx(habitat_mask_raster_path)
     habitat_band = habitat_mask_raster.GetRasterBand(1)
 
     target_criterion_raster = gdal.OpenEx(target_criterion_path,
                                           gdal.GA_Update)
     target_criterion_band = target_criterion_raster.GetRasterBand(1)
 
-    for block_info in pygeoprocessing.iterblocks((habitat_mask_raster, 1),
+    for block_info in pygeoprocessing.iterblocks((habitat_mask_raster_path, 1),
                                                  offset_only=True):
         habitat_mask = habitat_band.ReadAsArray(**block_info)
         valid_mask = (habitat_mask == 1)
@@ -343,7 +344,7 @@ def _calc_criteria(attributes_list, habitat_mask_raster, target_criterion_path):
         criterion_score = numpy.full(habitat_mask.shape, _TARGET_NODATA_FLT,
                                      dtype=numpy.float32)
         numerator = numpy.zeros(habitat_mask.shape, dtype=numpy.float32)
-        denominator = numpy.zeros(habitat_mask.shap, dtype=numpy.float32)
+        denominator = numpy.zeros(habitat_mask.shape, dtype=numpy.float32)
         for attribute_dict in attributes_list:
             try:
                 rating = float(attribute_dict['rating'])
@@ -362,8 +363,8 @@ def _calc_criteria(attributes_list, habitat_mask_raster, target_criterion_path):
             # The (data_quality + weight) denominator is duplicated here
             # because it's easier to read this way and per the docs is
             # guaranteed to be a number and not a raster.
-            numerator[valid_mask] += (rating / (data_quality + weight))
-            denominator[valid_mask] += (1 / (data_quality + weight))
+            numerator[valid_mask] += (rating / (data_quality * weight))
+            denominator[valid_mask] += (1 / (data_quality * weight))
         criterion_score[valid_mask] = (
             numerator[valid_mask] / denominator[valid_mask])
 
@@ -373,11 +374,3 @@ def _calc_criteria(attributes_list, habitat_mask_raster, target_criterion_path):
 
     target_criterion_band = None
     target_criterion_raster = None
-
-
-
-
-
-
-
-
