@@ -345,6 +345,7 @@ def _calc_criteria(attributes_list, habitat_mask_raster, target_criterion_path):
         numerator = numpy.zeros(habitat_mask.shape, dtype=numpy.float32)
         denominator = numpy.zeros(habitat_mask.shap, dtype=numpy.float32)
         for attribute_dict in attributes_list:
+            # RATING may be either a number or a raster.
             try:
                 rating = float(attribute_dict['rating'])
             except ValueError:
