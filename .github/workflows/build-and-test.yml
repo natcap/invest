@@ -188,7 +188,7 @@ jobs:
             - name: Set up conda environment
               uses: ./.github/actions/setup_env
               with:
-                  cache-id: py${{ matrix.python-version }}-${{ matrix.os }}-test-sdist
+                  cache-id: py${{ matrix.python-version }}-${{ matrix.os }}-test-source-dist
               id: condacache
 
             - name: Install dependencies
