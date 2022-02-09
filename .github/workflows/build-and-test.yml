@@ -198,7 +198,7 @@ jobs:
                   conda install python=${{ matrix.python-version }}
                   conda install nomkl # make sure numpy is w/out MKL
                   conda upgrade -y pip setuptools
-                  conda install twine build
+                  conda install twine build setuptools_scm
                   python ./scripts/convert-requirements-to-conda-yml.py \
                     requirements.txt > requirements-all.yml
                   conda env update --file requirements-all.yml

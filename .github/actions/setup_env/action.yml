@@ -33,6 +33,7 @@ runs:
         echo "CONDA_PREFIX=$CONDA_PREFIX" >> $GITHUB_ENV
       shell: bash -l {0}
 
+    # NOTE the post step that saves the cache will only run if the job succeeds
     - name: Restore conda environment cache
       uses: actions/cache@v2
       with:
