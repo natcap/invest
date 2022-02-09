@@ -318,6 +318,45 @@ def _parse_tables(info_table_path, criteria_table_path):
 
     pass
 
+def _calculate_decayed_distance(stressor_raster_path, decay_type,
+                                buffer_distance, target_edt_path):
+    # TODO: ensure we're working with square pixels in our raster stack
+    pygeoprocessing.distance_transform_edt(stressor_raster_path,
+                                           target_edt_path)
+    pixel_size = pygeoprocessing.get_raster_info(
+        stressor_raster_path)['pixel_size'][0]  # TODO: handle negative dims
+    buffer_distance_in_pixels = buffer_distance / pixel_size
+
+    target_edt_raster = gdal.OpenEx(target_edt_path, gdal.GA_Update)
+    target_edt_band = target_edt_raster.GetRasterBand(1)
+    edt_nodata = target_edt_band.GetNoDataValue()
+    for block_info in pygeoprocessing.iterblocks((target_edt_path, 1),
+                                                 offset_only=True):
+        source_edt_block = target_edt_band.ReadAsArray(**block_info)
+        valid_pixels = ~utils.array_equals_nodata(source_edt_block, edt_nodata)
+
+        # The pygeoprocessing target datatype for EDT is a float32
+        decayed_edt = numpy.full(source_edt_block.shape, edt_nodata,
+                                 dtype=numpy.float32)
+
+        # Anything outside the buffer has a weight of 0.0
+        pixels_outside_buffer = (source_edt_block > buffer_distance_in_pixels)
+        decayed_edt[valid_pixels & pixels_outside_buffer] = 0
+
+        if decay_type == 'linear':
+            decayed_edt[valid_pixels] *= (1 - decayed_edt[valid_pixels])
+        elif decay_type == 'exponential':
+            decayed_edt[valid_pixels] *= 0  # TODO: finish this.
+        else:
+            raise AssertionError('Invalid decay type provided.')
+
+        target_edt_band.WriteArray(decayed_edt,
+                                   xoff=block_info['xoff'],
+                                   yoff=block_info['yoff'])
+
+    target_edt_band = None
+    target_edt_raster = None
+
 
 # This is to calculate E or C for a single habitat/stressor pair.
 def _calc_criteria(attributes_list, habitat_mask_raster_path,
