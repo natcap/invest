@@ -38,6 +38,14 @@ class HRATests2(unittest.TestCase):
         pygeoprocessing.numpy_array_to_raster(
             rating_array, -1, (30, -30), ORIGIN, SRS_WKT, rating_raster_path)
 
+        decayed_distance_array = numpy.array([
+            [0, 1, 1]], dtype=numpy.float32)
+        decayed_distance_raster_path = os.path.join(self.workspace_dir,
+                                                    'decayed_dist.tif')
+        pygeoprocessing.numpy_array_to_raster(
+            decayed_distance_array, -1, (30, -30), ORIGIN, SRS_WKT,
+            decayed_distance_raster_path)
+
         attributes_list = [
             {'rating': rating_raster_path, 'data_quality': 3, 'weight': 3},
             {'rating': 1, 'data_quality': 2, 'weight': 1},
@@ -46,7 +54,7 @@ class HRATests2(unittest.TestCase):
         ]
         target_exposure_path = os.path.join(self.workspace_dir, 'exposure.tif')
         hra2._calc_criteria(attributes_list, habitat_mask_path,
-                            target_exposure_path)
+                            decayed_distance_raster_path, target_exposure_path)
 
         exposure_array = pygeoprocessing.raster_to_numpy_array(
             target_exposure_path)
