@@ -1,3 +1,4 @@
+import math
 import os
 import shutil
 import tempfile
@@ -84,6 +85,32 @@ class HRATests2(unittest.TestCase):
 
         expected_array = numpy.array([
             [1, 0.75, 0.5, 0.25, 0, 0]], dtype=numpy.float32)
+        numpy.testing.assert_allclose(
+            expected_array,
+            pygeoprocessing.raster_to_numpy_array(decayed_edt_path))
+
+    def test_decayed_distance_exponential(self):
+        from natcap.invest import hra2
+
+        stressor_mask = numpy.array([
+            [1, 0, 0, 0, 0, 0]], dtype=numpy.uint8)
+        stressor_raster_path = os.path.join(self.workspace_dir, 'stressor.tif')
+        pygeoprocessing.numpy_array_to_raster(
+            stressor_mask, 255, (30, -30), ORIGIN, SRS_WKT,
+            stressor_raster_path)
+
+        # buffer distance is 4*pixelwidth
+        buffer_distance = 4*30
+        decayed_edt_path = os.path.join(self.workspace_dir, 'decayed_edt.tif')
+        hra2._calculate_decayed_distance(
+            stressor_raster_path, 'exponential', buffer_distance,
+            decayed_edt_path)
+
+        # Values here are represented by e**(-x), where x is pixel distances
+        # away from the closest stressor pixel.
+        expected_array = numpy.array([
+            [1, math.exp(-1), math.exp(-2), math.exp(-3), 0, 0]],
+            dtype=numpy.float32)
         numpy.testing.assert_allclose(
             expected_array,
             pygeoprocessing.raster_to_numpy_array(decayed_edt_path))

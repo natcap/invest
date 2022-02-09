@@ -350,8 +350,8 @@ def _calculate_decayed_distance(stressor_raster_path, decay_type,
                 1 - (source_edt_block[valid_pixels] /
                      buffer_distance_in_pixels))
         elif decay_type == 'exponential':
-            decayed_edt[valid_pixels] *= (
-                1 - numpy.exp(source_edt_block[valid_pixels]))
+            decayed_edt[valid_pixels] = numpy.exp(
+                -source_edt_block[valid_pixels])
         else:
             raise AssertionError('Invalid decay type provided.')
 
