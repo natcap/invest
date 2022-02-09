@@ -351,6 +351,8 @@ def _calc_criteria(attributes_list, habitat_mask_raster_path,
             # RATING may be either a number or a raster.
             try:
                 rating = float(attribute_dict['rating'])
+                if rating == 0:
+                    continue
             except ValueError:
                 # When rating is a string filepath, it represents a raster.
                 try:

@@ -41,7 +41,8 @@ class HRATests2(unittest.TestCase):
         attributes_list = [
             {'rating': rating_raster_path, 'data_quality': 3, 'weight': 3},
             {'rating': 1, 'data_quality': 2, 'weight': 1},
-            {'rating': 2, 'data_quality': 3, 'weight': 3}
+            {'rating': 2, 'data_quality': 3, 'weight': 3},
+            {'rating': 0, 'data_quality': 3, 'weight': 3},
         ]
         target_exposure_path = os.path.join(self.workspace_dir, 'exposure.tif')
         hra2._calc_criteria(attributes_list, habitat_mask_path,
