@@ -348,6 +348,7 @@ def _calc_criteria(attributes_list, habitat_mask_raster_path,
         for attribute_dict in attributes_list:
             # TODO: a rating of 0 means that the criterion should be ignored
             #  THIS MEANS IGNORING IN BOTH NUMERATOR AND DENOMINATOR
+            # RATING may be either a number or a raster.
             try:
                 rating = float(attribute_dict['rating'])
             except ValueError:
