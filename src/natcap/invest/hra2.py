@@ -376,7 +376,7 @@ def _calculate_decayed_distance(stressor_raster_path, decay_type,
 
 # This is to calculate E or C for a single habitat/stressor pair.
 def _calc_criteria(attributes_list, habitat_mask_raster_path,
-                   stressor_weighted_distance_raster_path,
+                   decayed_edt_raster_path,
                    target_criterion_path):
     # Assume attributes_list is structured like so:
     #  [{"rating": int/path, "dq": int, "weight": int}, ... ]
@@ -395,10 +395,9 @@ def _calc_criteria(attributes_list, habitat_mask_raster_path,
                                           gdal.GA_Update)
     target_criterion_band = target_criterion_raster.GetRasterBand(1)
 
-    # TODO: Rename these variables to be something clearer.
-    distance_weighted_stressor_raster = gdal.OpenEx(
-        stressor_weighted_distance_raster_path, gdal.GA_Update)
-    distance_weighted_stressor_band = distance_weighted_stressor_raster.GetRasterBand(1)
+    decayed_edt_raster = gdal.OpenEx(
+        decayed_edt_raster_path, gdal.GA_Update)
+    decayed_edt_band = decayed_edt_raster.GetRasterBand(1)
 
     for block_info in pygeoprocessing.iterblocks((habitat_mask_raster_path, 1),
                                                  offset_only=True):
@@ -440,7 +439,7 @@ def _calc_criteria(attributes_list, habitat_mask_raster_path,
         # by the stressor's weighted distance raster.
         # This will give highest values to pixels that overlap stressors and
         # decaying values further away from the overlapping pixels.
-        numerator[valid_mask] *= distance_weighted_stressor_band.ReadAsArray(
+        numerator[valid_mask] *= decayed_edt_band.ReadAsArray(
             **block_info)[valid_mask]
         criterion_score[valid_mask] = (
             numerator[valid_mask] / denominator[valid_mask])
