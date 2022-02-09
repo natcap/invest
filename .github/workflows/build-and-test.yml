@@ -88,8 +88,7 @@ jobs:
                   conda install python=${{ matrix.python-version }}
                   conda install nomkl # make sure numpy is w/out MKL
                   conda upgrade -y pip setuptools
-                  conda install ${{ matrix.numpy }} ${{ matrix.gdal }} toml twine build
-                  conda install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
+                  conda install ${{ matrix.numpy }} ${{ matrix.gdal }} twine build
 
             - name: Build wheel
               shell: bash -l {0}
@@ -142,6 +141,7 @@ jobs:
                   path: dist
 
             - uses: actions/upload-artifact@v2
+              continue-on-error: true
               with:
                   name: Conda Env for ${{ matrix.os }} ${{ matrix.python-version }} ${{ matrix.python-architecture }}
                   path: ./conda-env.txt
@@ -198,8 +198,7 @@ jobs:
                   conda install python=${{ matrix.python-version }}
                   conda install nomkl # make sure numpy is w/out MKL
                   conda upgrade -y pip setuptools
-                  conda install toml twine build
-                  conda install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
+                  conda install twine build
                   python ./scripts/convert-requirements-to-conda-yml.py \
                     requirements.txt > requirements-all.yml
                   conda env update --file requirements-all.yml
@@ -284,8 +283,7 @@ jobs:
               run: |
                   conda install python=3.9
                   conda install nomkl # make sure numpy w/out mkl
-                  conda install pytest requests build
-                  conda install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
+                  conda install pytest requests build setuptools_scm
                   conda upgrade -y pip wheel
                   python ./scripts/convert-requirements-to-conda-yml.py requirements.txt > requirements.yml
                   conda env update --file requirements.yml

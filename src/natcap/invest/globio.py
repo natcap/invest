@@ -1,22 +1,21 @@
 """GLOBIO InVEST Model."""
-import os
-import logging
 import collections
+import logging
+import os
 import tempfile
 
-from osgeo import gdal
-from osgeo import ogr
-from osgeo import osr
 import numpy
 import pygeoprocessing
 import taskgraph
+from osgeo import gdal
+from osgeo import ogr
+from osgeo import osr
 
-from . import utils
-from . import spec_utils
-from .spec_utils import u
-from . import validation
 from . import MODEL_METADATA
-
+from . import spec_utils
+from . import utils
+from . import validation
+from .spec_utils import u
 
 LOGGER = logging.getLogger(__name__)
 
@@ -718,7 +717,9 @@ def make_gaussian_kernel_path(sigma, kernel_path):
     driver = gdal.GetDriverByName('GTiff')
     kernel_dataset = driver.Create(
         kernel_path.encode('utf-8'), kernel_size, kernel_size, 1,
-        gdal.GDT_Float32, options=['BIGTIFF=IF_SAFER'])
+        gdal.GDT_Float32, options=[
+            'BIGTIFF=IF_SAFER', 'TILED=YES', 'BLOCKXSIZE=256',
+            'BLOCKYSIZE=256'])
 
     # Make some kind of geotransform, it doesn't matter what but
     # will make GIS libraries behave better if it's all defined

@@ -57,14 +57,13 @@ jobs:
                   conda install python=${{ env.PYTHON_VERSION }}
                   conda install nomkl # make sure numpy is w/out MKL
                   conda upgrade -y pip setuptools
-                  conda install toml requests
-                  conda install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
+                  conda install requests
                   python ./scripts/convert-requirements-to-conda-yml.py \
                         requirements.txt \
                         requirements-dev.txt \
                         requirements-gui.txt > requirements-all.yml
                   conda env update --file requirements-all.yml
-                  python -m pip install .
+                  make install
 
               # Not caching chocolatey packages because the cache may not be reliable
               # https://github.com/chocolatey/choco/issues/2134
@@ -165,8 +164,7 @@ jobs:
               run: |
                   conda install python=${{ env.PYTHON_VERSION }}
                   conda upgrade -y pip setuptools
-                  conda install toml requests
-                  conda install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
+                  conda install requests
                   python ./scripts/convert-requirements-to-conda-yml.py \
                         requirements.txt \
                         requirements-dev.txt \
@@ -243,9 +241,9 @@ jobs:
               with:
                   python-version: 3.8
 
-            - run: |
-                pip install toml
-                pip install $(python -c "import toml;print(' '.join(toml.load('pyproject.toml')['build-system']['requires']))")
+            - name: Install dependencies
+              # dependencies of setup.py, needed to get the version string
+              run: pip install babel cython numpy setuptools setuptools_scm wheel
 
             - run: make sampledata sampledata_single
 

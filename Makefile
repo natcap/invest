@@ -10,7 +10,7 @@ GIT_TEST_DATA_REPO_REV      := ac7023d684478485fea89c68f8f4154163541e1d
 
 GIT_UG_REPO                 := https://github.com/natcap/invest.users-guide
 GIT_UG_REPO_PATH            := doc/users-guide
-GIT_UG_REPO_REV             := 10877682d8f2f49f792b60a3ffbed50c6ad8e8c0
+GIT_UG_REPO_REV             := cc1a43b46cc6ffb1de814553a8306d145e228394
 
 ENV = "./env"
 ifeq ($(OS),Windows_NT)
@@ -70,7 +70,7 @@ endif
 
 ZIP := zip
 PIP = $(PYTHON) -m pip
-VERSION := $(shell $(PYTHON) setup.py --version)
+VERSION := $(shell $(PYTHON) -m setuptools_scm)
 PYTHON_ARCH := $(shell $(PYTHON) -c "import sys; print('x86' if sys.maxsize <= 2**32 else 'x64')")
 
 GSUTIL := gsutil
@@ -392,11 +392,12 @@ codesign_windows:
 	@echo "Installer was signed with signtool"
 
 deploy:
+	-(cd $(INVEST_BINARIES_DIR) && $(ZIP) -r ../$(INVEST_BINARIES_DIR_ZIP) .)
 	-$(GSUTIL) -m rsync $(DIST_DIR) $(DIST_URL_BASE)
 	-$(GSUTIL) -m rsync -r $(DIST_DIR)/data $(DIST_URL_BASE)/data
 	-$(GSUTIL) -m rsync -r $(DIST_DIR)/userguide $(DIST_URL_BASE)/userguide
 	@echo "Application binaries (if they were created) can be downloaded from:"
-	@echo "  * $(DOWNLOAD_DIR_URL)/$(subst $(DIST_DIR)/,,$(WINDOWS_INSTALLER_FILE))"
+	@echo "  * $(DOWNLOAD_DIR_URL)"
 
 # Notes on Makefile development
 #

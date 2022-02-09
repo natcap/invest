@@ -22,7 +22,7 @@ sphinx-rtd-theme
 sphinx-intl
 sphinx-reredirects
 PyInstaller>=4.1
-setuptools_scm
+setuptools_scm>=6.4.0
 requests
 coverage
 xlwt

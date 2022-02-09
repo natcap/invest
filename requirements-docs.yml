@@ -37,6 +37,6 @@ dependencies:
   - Pyro4==4.77  # pip-only
   - PySide2!=5.15.0  # pip-only
   - qtawesome  # pip-only
-  - setuptools_scm
+  - setuptools_scm>=6.4.0
   - sphinx-rtd-theme
   - sphinx-reredirects
