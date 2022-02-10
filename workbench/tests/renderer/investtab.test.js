@@ -149,7 +149,7 @@ describe('Sidebar Alert renders with data from a recent run', () => {
   });
 });
 
-describe.only('Save InVEST Model Setup Buttons', () => {
+describe('Save InVEST Model Setup Buttons', () => {
   const spec = {
     pyname: 'natcap.invest.foo',
     model_name: 'Foo Model',
