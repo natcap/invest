@@ -126,6 +126,8 @@ class HRATests2(unittest.TestCase):
                     # This leading backslash is important for dedent to parse
                     # the right number of leading spaces from the following
                     # rows.
+                    # The paths don't actually need to exist for this test -
+                    # this function is merely parsing the table contents.
                     """\
                     NAME,PATH,TYPE,STRESSOR BUFFER (meters)
                     corals,habitat/corals.shp,habitat,
@@ -153,3 +155,24 @@ class HRATests2(unittest.TestCase):
             }
         }
         self.assertEqual(stressors, expected_stressors)
+
+    def test_criteria_table_parsing_one_habitat(self):
+        from natcap.invest import hra2
+
+        criteria_table_path = os.path.join(self.workspace_dir, 'criteria.csv')
+        with open(criteria_table_path, 'w') as criteria_table:
+            criteria_table.write(
+                textwrap.dedent(
+                    """\
+                    HABITAT NAME,eelgrass,,,hardbottom,,,CRITERIA TYPE
+                    HABITAT RESILIENCE ATTRIBUTES,RATING,DQ,WEIGHT,RATING,DQ_WEIGHT,E/C
+                    recruitment rate,2,2,2,2,2,2,C
+                    connectivity rate,eelgrass_connectivity.shp,2,2,2,2,2,C
+                    ,,,,,,,
+                    HABITAT STRESSOR OVERLAP PROPERTIES
+                    oil,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
+                    frequency of disturbance,2,2,3,2,2,3,C
+                    management effectiveness,2,2,1,2,2,1,E
+                    """
+                ))
+        hra2._parse_criteria_table(criteria_table_path)
