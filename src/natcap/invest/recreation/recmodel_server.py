@@ -1,5 +1,6 @@
 """InVEST Recreation Server."""
-
+import tracemalloc
+import gc
 import subprocess
 import os
 import multiprocessing
@@ -198,8 +199,11 @@ class RecModel(object):
                 run on the server
 
         """
+        tracemalloc.start()
         # make a random workspace name so we can work in parallel
         workspace_id = str(uuid.uuid4())
+        current, peak = tracemalloc.get_traced_memory()
+        print(f"Start of new job: Current memory usage for {workspace_id} is {current / 10**6}MB; Peak was {peak / 10**6}MB")
         workspace_path = os.path.join(self.cache_workspace, workspace_id)
         os.makedirs(workspace_path)
 
@@ -220,10 +224,14 @@ class RecModel(object):
         numpy_date_range = (
             numpy.datetime64(date_range[0]),
             numpy.datetime64(date_range[1]))
+        current, peak = tracemalloc.get_traced_memory()
+        print(f"Before PUD Calc: Current memory usage for {workspace_id} is {current / 10**6}MB; Peak was {peak / 10**6}MB")
         base_pud_aoi_path, monthly_table_path = (
             self._calc_aggregated_points_in_aoi(
                 aoi_path, workspace_path, numpy_date_range,
-                out_vector_filename))
+                out_vector_filename, workspace_id))
+        current, peak = tracemalloc.get_traced_memory()
+        print(f"After all calcs: Current memory usage for {workspace_id} is {current / 10**6}MB; Peak was {peak / 10**6}MB")
 
         # ZIP and stream the result back
         LOGGER.info('zipping result')
@@ -240,9 +248,10 @@ class RecModel(object):
             'calc user days complete sending binary back on %s',
             workspace_path)
         return open(aoi_pud_archive_path, 'rb').read(), workspace_id
+        tracemalloc.stop()
 
     def _calc_aggregated_points_in_aoi(
-            self, aoi_path, workspace_path, date_range, out_vector_filename):
+            self, aoi_path, workspace_path, date_range, out_vector_filename, workspace_id):
         """Aggregate the PUD in the AOI.
 
         Args:
@@ -379,6 +388,9 @@ class RecModel(object):
                     local_qt_pickle_filename, aoi_path, date_range,
                     poly_test_queue, pud_poly_feature_queue))
             polytest_process.daemon = True
+            # gc.collect() # no change
+            current, peak = tracemalloc.get_traced_memory()
+            print(f"Before Fork: Current memory usage for {workspace_id} is {current / 10**6}MB; Peak was {peak / 10**6}MB")
             polytest_process.start()
             polytest_process_list.append(polytest_process)
 
