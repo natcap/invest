@@ -2,6 +2,7 @@ import math
 import os
 import shutil
 import tempfile
+import textwrap
 import unittest
 
 import numpy
@@ -114,3 +115,41 @@ class HRATests2(unittest.TestCase):
         numpy.testing.assert_allclose(
             expected_array,
             pygeoprocessing.raster_to_numpy_array(decayed_edt_path))
+
+    def test_info_table_parsing(self):
+        from natcap.invest import hra2
+
+        info_table_path = os.path.join(self.workspace_dir, 'info_table.csv')
+        with open(info_table_path, 'w') as info_table:
+            info_table.write(
+                textwrap.dedent(
+                    # This leading backslash is important for dedent to parse
+                    # the right number of leading spaces from the following
+                    # rows.
+                    """\
+                    NAME,PATH,TYPE,STRESSOR BUFFER (meters)
+                    corals,habitat/corals.shp,habitat,
+                    oil,stressors/oil.shp,stressor,1000
+                    transportation,stressors/transport.shp,stressor,100"""
+                ))
+
+        habitats, stressors = hra2._parse_info_table(info_table_path)
+
+        expected_habitats = {
+            'corals': {
+                'path': 'habitat/corals.shp',
+            }
+        }
+        self.assertEqual(habitats, expected_habitats)
+
+        expected_stressors = {
+            'oil': {
+                'path': 'stressors/oil.shp',
+                'buffer': 1000,
+            },
+            'transportation': {
+                'path': 'stressors/transport.shp',
+                'buffer': 100,
+            }
+        }
+        self.assertEqual(stressors, expected_stressors)

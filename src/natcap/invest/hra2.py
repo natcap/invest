@@ -315,8 +315,28 @@ def _parse_tables(info_table_path, criteria_table_path):
     #
     # And this should also return (or write out) the attributes for habitats
     # and stressors and the locations (and radii) of those file.
-
+    #
+    # Return a tuple of (
+    #    habitat names,
+    #    {stressor: [dict(RATING, DQ, WEIGHT)]}
+    # )
     pass
+
+
+def _parse_info_table(info_table_path):
+    table = utils.read_csv_to_dataframe(info_table_path, to_lower=True)
+    table = table.set_index('name')
+    table = table.rename(columns={'stressor buffer (meters)': 'buffer'})
+
+    # Drop the buffer column from the habitats list; we don't need it.
+    habitats = table.loc[table['type'] == 'habitat'].drop(
+        columns=['type', 'buffer']).to_dict(orient='index')
+
+    # Keep the buffer column in the stressors dataframe.
+    stressors = table.loc[table['type'] == 'stressor'].drop(
+        columns=['type']).to_dict(orient='index')
+
+    return (habitats, stressors)
 
 
 def _calculate_decayed_distance(stressor_raster_path, decay_type,
@@ -450,3 +470,53 @@ def _calc_criteria(attributes_list, habitat_mask_raster_path,
 
     target_criterion_band = None
     target_criterion_raster = None
+
+
+def _calculate_pairwise_risk(habitat_mask_raster_path, exposure_raster_path,
+                             consequence_raster_path, risk_equation,
+                             target_risk_raster_path):
+    def _muliplicative_risk(habitat_mask, exposure, consequence):
+        habitat_pixels = (habitat_mask == 1)
+        risk_array = numpy.full(habitat_mask.shape, _TARGET_NODATA_FLT,
+                                dtype=numpy.float32)
+        risk_array[habitat_pixels] = (
+            exposure[habitat_pixels] * consequence[habitat_pixels])
+        return risk_array
+
+    def _euclidean_risk(habitat_mask, exposure, consequence):
+        habitat_pixels = (habitat_mask == 1)
+        risk_array = numpy.full(habitat_mask.shape, _TARGET_NODATA_FLT,
+                                dtype=numpy.float32)
+        risk_array[habitat_pixels] = numpy.sqrt(
+            (exposure[habitat_pixels] - 1) ** 2 +
+            (consequence[habitat_pixels] - 1) ** 2)
+
+    if risk_equation == 'multiplicative':
+        risk_op = _muliplicative_risk
+    elif risk_equation == 'euclidean':
+        risk_op = _euclidean_risk
+    else:
+        raise AssertionError('Invalid risk equation provided')
+
+    pygeoprocessing.raster_calculator(
+        [(habitat_mask_raster_path, 1),
+         (exposure_raster_path, 1),
+         (consequence_raster_path, 1)],
+        risk_op, target_risk_raster_path, _TARGET_PIXEL_FLT,
+        _TARGET_NODATA_FLT)
+
+
+# max pairwise risk is calculated based on user input and choice of risk
+# equation.  Might as well pass in the numeric value rather than the risk
+# equation type.
+def _reclassify_pairwise_risk(habitat_mask, max_pairwise_risk, pairwise_risk):
+    habitat_pixels = (habitat_mask == 1)
+    reclassified = numpy.full(habitat_mask.shape, _TARGET_NODATA_INT,
+                              dtype=numpy.uint8)
+    reclassified[habitat_pixels] = numpy.digitize(
+        pairwise_risk[habitat_pixels],
+        [0, max_pairwise_risk*(1/3), max_pairwise_risk*(2/3)],
+        right=True)  # bins[i-1] >= x > bins[i]
+    return reclassified
+
+# TODO: to sum rasters, use natcap.invest.ndr._sum_rasters
