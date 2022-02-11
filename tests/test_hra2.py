@@ -165,14 +165,14 @@ class HRATests2(unittest.TestCase):
                 textwrap.dedent(
                     """\
                     HABITAT NAME,eelgrass,,,hardbottom,,,CRITERIA TYPE
-                    HABITAT RESILIENCE ATTRIBUTES,RATING,DQ,WEIGHT,RATING,DQ_WEIGHT,E/C
+                    HABITAT RESILIENCE ATTRIBUTES,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
                     recruitment rate,2,2,2,2,2,2,C
                     connectivity rate,eelgrass_connectivity.shp,2,2,2,2,2,C
                     ,,,,,,,
-                    HABITAT STRESSOR OVERLAP PROPERTIES
+                    HABITAT STRESSOR OVERLAP PROPERTIES,,,,,,,
                     oil,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
                     frequency of disturbance,2,2,3,2,2,3,C
                     management effectiveness,2,2,1,2,2,1,E
                     """
                 ))
-        hra2._parse_criteria_table(criteria_table_path)
+        hra2._parse_criteria_table(criteria_table_path, ['oil'])

@@ -1,5 +1,6 @@
 """Habitat risk assessment (HRA) model for InVEST."""
 # -*- coding: UTF-8 -*-
+import collections
 import json
 import logging
 import math
@@ -323,6 +324,7 @@ def _parse_tables(info_table_path, criteria_table_path):
     pass
 
 
+# TODO: support Excel and CSV both
 def _parse_info_table(info_table_path):
     table = utils.read_csv_to_dataframe(info_table_path, to_lower=True)
     table = table.set_index('name')
@@ -337,6 +339,108 @@ def _parse_info_table(info_table_path):
         columns=['type']).to_dict(orient='index')
 
     return (habitats, stressors)
+
+
+# What do I need from this function?
+# attributes for each habitat/stressor combination.
+#    {habitat: {stressor: [{NAME: criterion, RATING: rating, DQ: dq, WEIGHT:
+#                           weight, CRITERIA_TYPE: E/C}]}}
+def _parse_criteria_table(criteria_table_path, known_stressors):
+
+    table = pandas.read_csv(criteria_table_path, header=None,
+                            sep=None, engine='python').to_numpy()
+    known_stressors = set(known_stressors)
+
+    # Fill in habitat names in the table for easier reference.
+    criteria_col = None
+    habitats = set()
+    for col_index, value in enumerate(table[0]):
+        if value == 'HABITAT NAME':
+            continue
+        if value == 'CRITERIA TYPE':
+            criteria_col = col_index
+            break  # We're done with habitats
+        if not isinstance(value, str):
+            value = table[0][col_index-1]  # Fill in from column to the left
+            habitats.add(value)
+            table[0][col_index] = value
+
+    habitat_columns = collections.defaultdict(list)
+    for col_index, col_value in enumerate(table[0]):
+        if col_value in habitats:
+            habitat_columns[col_value].append(col_index)
+
+    # the primary key of this table is (habitat_stressor, criterion)
+    overlap_df = pandas.DataFrame(columns=['habitat', 'stressor', 'criterion',
+                                           'rating', 'dq', 'weight', 'e/c'])
+
+    current_stressor = None
+    for row_index, row in enumerate(table[1:], start=1):
+        if row[0] == 'HABITAT STRESSOR OVERLAP PROPERTIES':
+            continue
+
+        if (row[0] in known_stressors or
+                row[0] == 'HABITAT RESILIENCE ATTRIBUTES'):
+            current_stressor = row[0]
+            current_stressor_header_row = row_index
+            continue  # can skip this row
+
+        try:
+            if numpy.all(numpy.isnan(row.astype(numpy.float32))):
+                continue
+        except (TypeError, ValueError):
+            # Either of these exceptions are thrown when there are string types
+            # in the row
+            pass
+
+        # {habitat: {rating/dq/weight/ec dict}
+        stressor_habitat_data = {
+            'stressor': current_stressor,
+            'criterion': row[0],
+            'e/c': row[criteria_col],
+        }
+        for habitat, habitat_col_indices in habitat_columns.items():
+            stressor_habitat_data['habitat'] = habitat
+            for col_index in habitat_col_indices:
+                # attribute is rating, dq or weight
+                attribute_name = table[current_stressor_header_row][col_index]
+                attribute_value = row[col_index]
+                stressor_habitat_data[
+                    attribute_name.lower()] = attribute_value
+            overlap_df = overlap_df.append(
+                stressor_habitat_data, ignore_index=True)
+
+    # overlap_df now has all of the data I care about
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 def _calculate_decayed_distance(stressor_raster_path, decay_type,
