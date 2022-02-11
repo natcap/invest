@@ -285,43 +285,22 @@ def execute(args):
                                     'intermediate_outputs')
     output_dir = os.path.join(args['workspace_dir'])
 
-    # parse the tables. info table, criteria table
-
-
-def _parse_tables(info_table_path, criteria_table_path):
-    # parsing the info_table_path give us:
-    #   * A set of stressors with their names, paths, and radii
-    #   * A set of habitats with their names, paths.
+    # parse the info table and get habitats, stressors
+    # parse the criteria table to get the composite table
     #
-    # Parsing the criteria_table_path gives us 2 separate tables.
-    # HABITAT RESILIENCE
-    #   * {attribute: {habitatname: {rating: int/file, dq: int, weight: int}},
-    #      criteria_type: E/C}
+    # For each habitat and stressor dataset:
+    #   * simplify - Nyquist
+    #   * rasterize
     #
-    # HABITAT/STRESSOR OVERLAP PROPERTIES
-    #   * {stressorname: {attribute
-
-    # need to get a list of criteria for each habitat/stressor pair.
-    # Maybe output a single CSV with the columns:
-    # habitat, stressor, criterion, rating, dq, weight
-    # WHERE (habitat, stressor, criterion) is the primary key.
+    # Given rasterized habitats, make a habitat mask
+    # Do EDT/buffer/decay on each stressor.
     #
-    # And then a separate CSV mapping:
-    # stressor, criterion, crit_type (E/C)
-    # WHERE (stressor, criterion) is the primary key.
+    # Load the composite dataframe
+    #   * for each row, calculate the criteria score
+    #       * Track as needed (aggregating by habitats) for later summary
+    #         rasters
     #
-    # And another CSV of resilience attributes with the columns
-    # habitat, attribute, rating, dq, weight
-    # WHERE (habitat, attribute) is the primary key.
-    #
-    # And this should also return (or write out) the attributes for habitats
-    # and stressors and the locations (and radii) of those file.
-    #
-    # Return a tuple of (
-    #    habitat names,
-    #    {stressor: [dict(RATING, DQ, WEIGHT)]}
-    # )
-    pass
+    # Calculate summary operations.
 
 
 # TODO: support Excel and CSV both
