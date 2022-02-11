@@ -59,7 +59,7 @@ class HRATests2(unittest.TestCase):
         ]
         target_exposure_path = os.path.join(self.workspace_dir, 'exposure.tif')
         hra2._calc_criteria(attributes_list, habitat_mask_path,
-                            decayed_distance_raster_path, target_exposure_path)
+                            target_exposure_path, decayed_distance_raster_path)
 
         exposure_array = pygeoprocessing.raster_to_numpy_array(
             target_exposure_path)
@@ -208,3 +208,4 @@ class HRATests2(unittest.TestCase):
         composite_dataframe = pandas.read_csv(target_composite_csv_path)
         pandas.testing.assert_frame_equal(
             expected_composite_dataframe, composite_dataframe)
+        import pdb; pdb.set_trace()

@@ -391,10 +391,10 @@ def execute(args):
     )
 
     # --> for stressor in stressors, do a decayed EDT.
-    decayed_edt_paths = {}
-    decayed_edt_tasks = {}  # {stressor: edt task}
+    decayed_edt_paths = {}  # {stressor: decayed EDT raster}
+    decayed_edt_tasks = {}  # {stressor: decayed EDT task}
     for stressor, stressor_path in aligned_stressor_raster_paths.items():
-        target_edt_path = os.path.join(
+        decayed_edt_paths[stressor] = os.path.join(
             intermediate_dir, f'decayed_edt_{stressor}{suffix}.tif')
         decayed_edt_tasks[stressor] = graph.add_task(
             _calculate_decayed_distance,
@@ -402,20 +402,88 @@ def execute(args):
                 'stressor_raster_path': stressor_path,
                 'decay_type': args['decay_eq'],
                 'buffer_distance': stressors[stressor]['buffer'],
-                'target_edt_path': target_edt_path,
+                'target_edt_path': decayed_edt_paths[stressor],
             },
             task_name=f'Make decayed EDT for {stressor}',
-            target_path_list=[target_edt_path],
+            target_path_list=[decayed_edt_paths[stressor]],
             dependent_task_list=[alignment_task]
         )
 
-    for row in pandas.read_csv(composite_criteria_table_path):
-        # Recovery attributes are calculated with the same numerical method as
-        # other criteria, but are unweighted by distance to a stressor.
-        if row['stressor'] == 'RESILIENCE':
-            decayed_distance_edt_path = None
-        else:
-            decayed_distance_edt_path = decayed_edts[row['stressor']]
+    criteria_df = pandas.read_csv(
+        composite_criteria_table_path)
+    for habitat in habitats:
+        pairwise_risk_tasks = []
+        pairwise_risk_paths = []
+        for stressor in stressors:
+            criteria_tasks = {}  # {criteria type: task}
+            criteria_rasters = {}  # {criteria type: score raster path}
+            for criteria_type in ['E', 'C']:
+                criteria_rasters[criteria_type] = os.path.join(
+                    intermediate_dir,
+                    f'{habitat}_{stressor}_{criteria_type}_score{suffix}.tif')
+
+                # This rather complicated filter just grabs the rows matching
+                # this habitat, stressor and criteria type.  It's the pandas
+                # equivalent of SELECT * FROM criteria_df WHERE the habitat,
+                # stressor and criteria type match.
+                local_criteria_df = criteria_df[
+                    (criteria_df['habitat'] == habitat) &
+                    (criteria_df['stressor'] == stressor) &
+                    (criteria_df['e/c'] == criteria_type)]
+
+                # This produces a list of dicts in the form:
+                # [{'rating': (score), 'weight': (score), 'dq': (score)}],
+                # which is what _cal_criteria() expects.
+                attributes_list = local_criteria_df[
+                    ['rating', 'weight', 'dq']].to_dict(orient='records')
+
+                criteria_tasks[criteria_type] = graph.add_task(
+                    _calc_criteria,
+                    kwargs={
+                        'attributes_list': attributes_list,
+                        'habitat_mask_raster_path': habitat_mask_path,
+                        'target_criterion_path':
+                            criteria_rasters[criteria_type],
+                        'decayed_edt_raster_path':
+                            decayed_edt_paths[stressor],
+                    },
+                    task_name=(
+                        f'Calculate {criteria_type} score for '
+                        f'{habitat} / {stressor}'),
+                    target_path_list=[criteria_rasters[criteria_type]],
+                    dependent_task_list=[
+                        decayed_edt_tasks[stressor],
+                        habitat_mask_task
+                    ])
+
+            pairwise_risk_path = os.path.join(
+                intermediate_dir, f'risk_{habitat}_{stressor}{suffix}.tif')
+            pairwise_risk_paths.append(pairwise_risk_path)
+            pairwise_risk_tasks.append(graph.add_task(
+                _calculate_pairwise_risk,
+                kwargs={
+                    'habitat_mask_raster_path': habitat_mask_path,
+                    'exposure_raster_path': criteria_rasters['E'],
+                    'consequence_raster_path': criteria_rasters['C'],
+                    'risk_equation': args['risk_eq'],
+                    'target_risk_raster_path': pairwise_risk_path,
+                },
+                task_name=f'Calculate pairwise risk for {habitat}/{stressor}',
+                dependent_task_list=sorted(criteria_tasks.values())
+            ))
+
+
+    # Recovery attributes are calculated with the same numerical method as
+    # other criteria, but are unweighted by distance to a stressor.
+    for habitat in habitats:
+        resilience_criteria_df = criteria_df[
+            (criteria_df['habitat'] == habitat) &
+            (criteria_df['stressor'] == 'RESILIENCE')]
+
+
+
+
+
 
         # If we need to rasterize a criteria score, use the bounding box from
         # the habitats mask.
