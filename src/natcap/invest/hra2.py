@@ -24,9 +24,10 @@ from . import MODEL_METADATA
 from . import spec_utils
 from . import utils
 from . import validation
+from .ndr import ndr
 from .spec_utils import u
 
-LOGGER = logging.getLogger('natcap.invest.hra')
+LOGGER = logging.getLogger(__name__)
 
 # Parameters from the user-provided criteria and info tables
 _BUFFER_HEADER = 'STRESSOR BUFFER (METERS)'
@@ -459,7 +460,7 @@ def execute(args):
             pairwise_risk_path = os.path.join(
                 intermediate_dir, f'risk_{habitat}_{stressor}{suffix}.tif')
             pairwise_risk_paths.append(pairwise_risk_path)
-            pairwise_risk_tasks.append(graph.add_task(
+            pairwise_risk_task = graph.add_task(
                 _calculate_pairwise_risk,
                 kwargs={
                     'habitat_mask_raster_path': habitat_mask_path,
@@ -470,7 +471,37 @@ def execute(args):
                 },
                 task_name=f'Calculate pairwise risk for {habitat}/{stressor}',
                 dependent_task_list=sorted(criteria_tasks.values())
-            ))
+            )
+            pairwise_risk_tasks.append(pairwise_risk_task)
+
+            reclassified_pairwise_risk_path = os.path.join(
+                intermediate_dir, f'reclass_{habitat}_{stressor}{suffix}.tif')
+            _ = graph.add_task(
+                pygeoprocessing.raster_calculator,
+                kwargs={
+                    'base_raster_path_band_const_list': [
+                        (habitat_mask_path, 1),
+                        (max_risk, 'raw'),
+                        (pairwise_risk_path, 1)],
+                    'local_op': _reclassify_pairwise_score,
+                    'target_raster_path': reclassified_pairwise_risk_path,
+                    'datatype_target': _TARGET_NODATA_FLT,
+                },
+                task_name=f'Reclassify risk for {habitat}/{stressor}',
+                dependent_task_list=[pairwise_risk_task]
+            )
+
+        # Sum the pairwise risk scores to get cumulative risk to the habitat.
+        cumulative_risk_task = graph.add_task(
+            ndr._sum_rasters,
+            kwargs={
+                'raster_path_list': pairwise_risk_paths,
+                'target_nodata': _TARGET_NODATA_FLT,
+                'target_result_path': None,
+            },
+            task_name=f'Cumulative risk to {habitat}',
+            dependent_task_list=pairwise_risk_tasks
+        )
 
 
     # Recovery attributes are calculated with the same numerical method as
