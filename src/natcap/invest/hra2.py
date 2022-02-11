@@ -280,13 +280,31 @@ def execute(args):
         None.
 
     """
+    # TODO: is the preprocessing dir actually needed?
     preprocessing_dir = os.path.join(args['workspace_dir'], 'file_preprocessing')
     intermediate_dir = os.path.join(args['workspace_dir'],
                                     'intermediate_outputs')
     output_dir = os.path.join(args['workspace_dir'])
+    taskgraph_working_dir = os.path.join(args['workspace_dir'], '.taskgraph')
+    utils.make_directories([intermediate_dir, output_dir])
+    suffix = utils.make_suffix_string(args, 'results_suffix')
+
+    try:
+        n_workers = int(args['n_workers'])
+    except (KeyError, ValueError, TypeError):
+        # KeyError when n_workers is not present in args
+        # ValueError when n_workers is an empty string.
+        # TypeError when n_workers is None.
+        n_workers = -1  # single process mode.
+    graph = taskgraph.TaskGraph(taskgraph_working_dir, n_workers)
 
     # parse the info table and get habitats, stressors
+    habitats, stressors = _parse_info_table(args['info_table_path'])
+
     # parse the criteria table to get the composite table
+    composite_criteria_table_path = os.path.join(
+        intermediate_dir, f'composite_criteria{suffix}.csv')
+
     #
     # For each habitat and stressor dataset:
     #   * simplify - Nyquist
@@ -301,6 +319,22 @@ def execute(args):
     #         rasters
     #
     # Calculate summary operations.
+
+    for row in pandas.read_csv(composite_criteria_table_path):
+        if row['stressor'] == 'RESILIENCE':
+            decayed_distance_edt_path = None
+        else:
+            decayed_distance_edt_path = decayed_edts[row['stressor']]
+
+        # calculate criteria score
+
+    for habitat in habitats:
+        pass
+        # sum stressor criteria per habitat and reclassify
+        # sum resilience criteria per habitat and reclassify
+
+
+
 
 
 # TODO: support Excel and CSV both
