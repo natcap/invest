@@ -293,7 +293,7 @@ def execute(args):
 
     resolution = float(args['resolution'])
     max_rating = float(args['max_rating'])
-    max_stressors = float(args['max_overlapping_stressors'])
+    max_n_stressors = float(args['override_max_overlapping_stressors'])
 
     if args['risk_eq'].lower() == 'multiplicative':
         max_pairwise_risk = max_rating * max_rating
@@ -483,6 +483,7 @@ def execute(args):
                     'target_risk_raster_path': pairwise_risk_path,
                 },
                 task_name=f'Calculate pairwise risk for {habitat}/{stressor}',
+                target_path_list=[pairwise_risk_path],
                 dependent_task_list=sorted(criteria_tasks.values())
             )
             pairwise_risk_tasks.append(pairwise_risk_task)
@@ -496,33 +497,98 @@ def execute(args):
                         (habitat_mask_path, 1),
                         (max_pairwise_risk, 'raw'),
                         (pairwise_risk_path, 1)],
-                    'local_op': _reclassify_pairwise_score,
+                    'local_op': _reclassify_score,
                     'target_raster_path': reclassified_pairwise_risk_path,
                     'datatype_target': _TARGET_NODATA_FLT,
                 },
                 task_name=f'Reclassify risk for {habitat}/{stressor}',
+                target_path_list=[reclassified_pairwise_risk_path],
                 dependent_task_list=[pairwise_risk_task]
             )
 
         # Sum the pairwise risk scores to get cumulative risk to the habitat.
+        cumulative_risk_path = os.path.join(
+            intermediate_dir, 'total_risk_{habitat}{suffix}.tif')
         cumulative_risk_task = graph.add_task(
             ndr._sum_rasters,
             kwargs={
                 'raster_path_list': pairwise_risk_paths,
                 'target_nodata': _TARGET_NODATA_FLT,
-                'target_result_path': None,
+                'target_result_path': cumulative_risk_path,
             },
             task_name=f'Cumulative risk to {habitat}',
+            target_path_list=[cumulative_risk_path],
             dependent_task_list=pairwise_risk_tasks
         )
 
+        reclassified_cumulative_risk_path = os.path.join(
+            intermediate_dir, f'reclass_total_risk_{habitat}{suffix}.tif')
+        reclassified_cumulative_risk_task = graph.add_task(
+            pygeoprocessing.raster_calculator,
+            kwargs={
+                'base_raster_path_band_const_list': [
+                    (habitat_mask_path, 1),
+                    (max_pairwise_risk * max_n_stressors, 'raw'),
+                    (cumulative_risk_path, 1)],
+                'local_op': _reclassify_score,
+                'target_raster_path': reclassified_cumulative_risk_path,
+                'datatype_target': _TARGET_NODATA_FLT,
+            },
+            task_name=f'Reclassify risk for {habitat}/{stressor}',
+            target_path_list=[reclassified_cumulative_risk_path],
+            dependent_task_list=[pairwise_risk_task]
+        )
 
     # Recovery attributes are calculated with the same numerical method as
     # other criteria, but are unweighted by distance to a stressor.
+    #
+    # TODO: verify with Katie, Jess and Jade that this is correct.
+    # It's hard to tell from the UG how recovery is supposed to be calculated
+    # and what it's supposed to represent.
     for habitat in habitats:
         resilience_criteria_df = criteria_df[
             (criteria_df['habitat'] == habitat) &
             (criteria_df['stressor'] == 'RESILIENCE')]
+        criteria_attributes_list = resilience_criteria_df[
+            ['rating', 'weight', 'dq']].to_dict(orient='records')
+
+        recovery_score_path = os.path.join(
+            intermediate_dir, f'recovery_{habitat}{suffix}.tif')
+        recovery_score_task = graph.add_task(
+            _calc_criteria,
+            kwargs={
+                'attributes_list': recovery_score_path,
+                'habitat_mask_raster_path': habitat_mask_path,
+                'target_criterion_path': recovery_score_path,
+                'decayed_edt_raster_path': None,  # not a stressor so no EDT
+            },
+            task_name=f'Calculate recovery score for {habitat}',
+            target_path_list=[recovery_score_path],
+            dependent_task_list=[habitat_mask_task]
+        )
+
+        reclassified_recovery_path = os.path.join(
+            intermediate_dir, 'reclass_recovery_{habitat}{suffix}.tif')
+        reclassified_recovery_task = graph.add_task(
+            pygeoprocessing.raster_calculator,
+            kwargs={
+                'base_raster_path_band_const_list': [
+                    (habitat_mask_path, 1),
+                    (max_pairwise_risk, 'raw'),  # TODO: verify
+                    (recovery_score_path, 1)],
+                'local_op': _reclassify_score,
+                'target_raster_path': reclassified_recovery_path,
+                'datatype_target': _TARGET_NODATA_FLT,
+            },
+            task_name=f'Reclassify risk for {habitat}/{stressor}',
+            target_path_list=[reclassified_cumulative_risk_path],
+            dependent_task_list=[pairwise_risk_task]
+        )
+
+
+
+
+
 
 
 
@@ -849,13 +915,12 @@ def _calculate_pairwise_risk(habitat_mask_raster_path, exposure_raster_path,
 # max pairwise risk or recovery is calculated based on user input and choice of
 # risk equation.  Might as well pass in the numeric value rather than the risk
 # equation type.
-def _reclassify_pairwise_score(habitat_mask, max_pairwise_risk,
-                               pairwise_score):
+def _reclassify_score(habitat_mask, max_pairwise_risk, score):
     habitat_pixels = (habitat_mask == 1)
     reclassified = numpy.full(habitat_mask.shape, _TARGET_NODATA_INT,
                               dtype=numpy.uint8)
     reclassified[habitat_pixels] = numpy.digitize(
-        pairwise_score[habitat_pixels],
+        score[habitat_pixels],
         [0, max_pairwise_risk*(1/3), max_pairwise_risk*(2/3)],
         right=True)  # bins[i-1] >= x > bins[i]
     return reclassified
