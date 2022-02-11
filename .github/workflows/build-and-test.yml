@@ -369,7 +369,7 @@ jobs:
             fail-fast: False
             max-parallel: 4
             matrix:
-                python-version: [3.8] # TODO: 3.9 was not building
+                python-version: [3.9]
                 python-architecture: [x64]
                 os: [windows-latest, macos-latest]
 

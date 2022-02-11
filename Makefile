@@ -395,7 +395,6 @@ codesign_windows:
 	@echo "Installer was signed with signtool"
 
 deploy:
-# 	-(cd $(INVEST_BINARIES_DIR) && $(ZIP) -r ../$(INVEST_BINARIES_DIR_ZIP) .)
 	-$(GSUTIL) -m rsync $(DIST_DIR) $(DIST_URL_BASE)
 	-$(GSUTIL) -m rsync -r $(DIST_DIR)/data $(DIST_URL_BASE)/data
 	-$(GSUTIL) -m rsync -r $(DIST_DIR)/userguide $(DIST_URL_BASE)/userguide

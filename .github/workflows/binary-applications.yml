@@ -281,13 +281,6 @@ jobs:
               if: github.event_name != 'pull_request'
               run: make deploy
 
-            # TODO: we're not building zips, right?
-            # - name: Upload binaries artifact
-            #   uses: actions/upload-artifact@v2
-            #   with:
-            #       name: InVEST-mac-binaries
-            #       path: dist/InVEST-*-mac.zip
-
             - name: Upload DMG artifact
               uses: actions/upload-artifact@v2
               with:
