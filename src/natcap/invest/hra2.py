@@ -1,6 +1,7 @@
 """Habitat risk assessment (HRA) model for InVEST."""
 # -*- coding: UTF-8 -*-
 import collections
+import itertools
 import json
 import logging
 import math
@@ -289,6 +290,8 @@ def execute(args):
     utils.make_directories([intermediate_dir, output_dir])
     suffix = utils.make_suffix_string(args, 'results_suffix')
 
+    resolution = float(args['resolution'])
+
     try:
         n_workers = int(args['n_workers'])
     except (KeyError, ValueError, TypeError):
@@ -304,6 +307,58 @@ def execute(args):
     # parse the criteria table to get the composite table
     composite_criteria_table_path = os.path.join(
         intermediate_dir, f'composite_criteria{suffix}.csv')
+
+    # Preprocess habitat and stressor datasets.
+    # All of these are spatial in nature but might be rasters or vectors.
+    source_raster_paths = []
+    aligned_raster_paths = []
+    rasterize_tasks = []
+    for name, attributes in itertools.chain(habitats, stressors):
+        source_filepath = attributes['path']
+        gis_type = pygeoprocessing.get_gis_type(source_filepath)
+
+        # If the input is already a raster, there's nothing to do besides
+        # align the input.
+        if gis_type == pygeoprocessing.RASTER_TYPE:
+            source_raster_paths.append(source_filepath)
+
+        # If the input is a vector, rasterize it.
+        elif gis_type == pygeoprocessing.VECTOR_TYPE:
+            target_raster_path = os.path.join(
+                intermediate_dir, f'rasterized_{name}{suffix}.tif')
+            source_raster_paths.append(target_raster_path)
+            rasterize_tasks.append(graph.add_task(
+                func=_rasterize,
+                kwargs={
+                    'source_vector_path': source_filepath,
+                    'resolution': resolution,
+                    'target_raster_path': target_raster_path,
+                },
+                task_name=f'Rasterize {name}',
+                target_path_list=[target_raster_path]
+            ))
+
+        aligned_raster_paths.append(
+            os.path.join(intermediate_dir, f'aligned_{name}{suffix}.tif'))
+
+    alignment_task = graph.add_task(
+        pygeoprocessing.align_and_resize_raster_stack,
+        kwargs={
+            'base_raster_path_list': source_raster_paths,
+            'target_raster_path_list': aligned_raster_paths,
+            'resample_method_list': ['near'] * len(source_raster_paths),
+            'target_pixel_size': (resolution, -resolution),
+            'bounding_box_mode': 'union',
+        },
+        task_name='Align raster stack',
+        target_path_list=aligned_raster_paths,
+        dependent_task_list=rasterize_tasks
+    )
+
+
+
+
+
 
     #
     # For each habitat and stressor dataset:
@@ -321,6 +376,8 @@ def execute(args):
     # Calculate summary operations.
 
     for row in pandas.read_csv(composite_criteria_table_path):
+        # Recovery attributes are calculated with the same numerical method as
+        # other criteria, but are unweighted by distance to a stressor.
         if row['stressor'] == 'RESILIENCE':
             decayed_distance_edt_path = None
         else:
@@ -334,6 +391,16 @@ def execute(args):
         # sum resilience criteria per habitat and reclassify
 
 
+def _rasterize(source_vector_path, resolution, target_raster_path):
+    # TODO: shall we simplify as well?
+
+    pygeoprocessing.create_raster_from_vector_extents(
+        source_vector_rpath, target_raster_path, (resolution, -resolution),
+        target_pixel_type=gdal.GDT_Byte, target_nodata_value=255)
+
+    # TODO: Does this need to be ALL_TOUCHED=TRUE?
+    pygeoprocessing.rasterize(
+        source_vector_path, target_raster_path, burn_values=[1])
 
 
 
@@ -350,6 +417,8 @@ def _parse_info_table(info_table_path):
     # Keep the buffer column in the stressors dataframe.
     stressors = table.loc[table['type'] == 'stressor'].drop(
         columns=['type']).to_dict(orient='index')
+
+    # TODO: check that habitats and stressor names are nonoverlapping sets.
 
     return (habitats, stressors)
 
