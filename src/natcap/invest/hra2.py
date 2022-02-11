@@ -292,6 +292,18 @@ def execute(args):
     suffix = utils.make_suffix_string(args, 'results_suffix')
 
     resolution = float(args['resolution'])
+    max_rating = float(args['max_rating'])
+    max_stressors = float(args['max_overlapping_stressors'])
+
+    if args['risk_eq'].lower() == 'multiplicative':
+        max_pairwise_risk = max_rating * max_rating
+    elif args['risk_eq'].lower() == 'euclidean':
+        max_pairwise_risk = math.sqrt(
+            ((max_rating - 1) ** 2) + ((max_rating - 1) ** 2))
+    else:
+        raise ValueError(
+            "args['risk_eq'] must be either 'Multiplicative' or 'Euclidean' "
+            f"not {args['risk_eq']}")
 
     try:
         n_workers = int(args['n_workers'])
@@ -410,14 +422,15 @@ def execute(args):
             dependent_task_list=[alignment_task]
         )
 
-    criteria_df = pandas.read_csv(
-        composite_criteria_table_path)
+    criteria_df = pandas.read_csv(composite_criteria_table_path)
     for habitat in habitats:
         pairwise_risk_tasks = []
         pairwise_risk_paths = []
+
         for stressor in stressors:
             criteria_tasks = {}  # {criteria type: task}
             criteria_rasters = {}  # {criteria type: score raster path}
+
             for criteria_type in ['E', 'C']:
                 criteria_rasters[criteria_type] = os.path.join(
                     intermediate_dir,
@@ -481,7 +494,7 @@ def execute(args):
                 kwargs={
                     'base_raster_path_band_const_list': [
                         (habitat_mask_path, 1),
-                        (max_risk, 'raw'),
+                        (max_pairwise_risk, 'raw'),
                         (pairwise_risk_path, 1)],
                     'local_op': _reclassify_pairwise_score,
                     'target_raster_path': reclassified_pairwise_risk_path,
@@ -846,9 +859,6 @@ def _reclassify_pairwise_score(habitat_mask, max_pairwise_risk,
         [0, max_pairwise_risk*(1/3), max_pairwise_risk*(2/3)],
         right=True)  # bins[i-1] >= x > bins[i]
     return reclassified
-
-
-# TODO: to sum rasters, use natcap.invest.ndr._sum_rasters
 
 
 def build_datastack_archive(args, datastack_path):
