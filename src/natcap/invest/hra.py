@@ -1183,7 +1183,7 @@ def _zonal_stats_to_csv(
         ['E_']*len_crit_cols + ['C_']*len_crit_cols + ['R_']*len_risk_cols,
         crit_stats_cols*2 + risk_stats_cols)
 
-    stats_df = pandas.DataFrame(index=overlap_df.index, columns=columns)
+    stats_df = pandas.DataFrame(index=overlap_df.index, columns=list(columns))
 
     # Add a ``SUBREGION`` column to the dataframe and update it with the
     # corresponding stats in each subregion

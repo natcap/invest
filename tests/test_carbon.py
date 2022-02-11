@@ -338,29 +338,3 @@ class CarbonValidationTests(unittest.TestCase):
              'lulc_cur_year',
              'lulc_fut_year'])
         self.assertEqual(invalid_keys, expected_missing_keys)
-
-    def test_carbon_totals_precision(self):
-        """Carbon: check float64 precision in pixel value summation."""
-        from natcap.invest import carbon
-
-        big_float32_array = numpy.random.default_rng(seed=1).random(
-            (1000, 1000), dtype=numpy.float32)
-
-        # Throw in some nodata values for good measure.
-        nodata = numpy.finfo(numpy.float32).min
-        big_float32_array[1:15] = nodata
-
-        srs = osr.SpatialReference()
-        srs.ImportFromEPSG(32731)  # WGS84/UTM zone 31s
-        wkt = srs.ExportToWkt()
-        raster_path = os.path.join(self.workspace_dir, 'raster.tif')
-        pygeoprocessing.numpy_array_to_raster(
-            big_float32_array, float(nodata), (2, -2), (2, -2), wkt,
-            raster_path)
-
-        # Verify better-than-float32 precision on raster summation.
-        # Using a numpy float32 in numpy.sum will pass up to rtol=1e-9.
-        numpy.testing.assert_allclose(
-            carbon._accumulate_totals(raster_path),
-            492919.73994,
-            rtol=1e-12)  # Note better precision
