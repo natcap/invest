@@ -345,7 +345,8 @@ def _parse_info_table(info_table_path):
 # attributes for each habitat/stressor combination.
 #    {habitat: {stressor: [{NAME: criterion, RATING: rating, DQ: dq, WEIGHT:
 #                           weight, CRITERIA_TYPE: E/C}]}}
-def _parse_criteria_table(criteria_table_path, known_stressors):
+def _parse_criteria_table(criteria_table_path, known_stressors,
+                          target_composite_csv_path):
 
     table = pandas.read_csv(criteria_table_path, header=None,
                             sep=None, engine='python').to_numpy()
@@ -381,6 +382,8 @@ def _parse_criteria_table(criteria_table_path, known_stressors):
 
         if (row[0] in known_stressors or
                 row[0] == 'HABITAT RESILIENCE ATTRIBUTES'):
+            if row[0] == 'HABITAT RESILIENCE ATTRIBUTES':
+                row[0] = 'RESILIENCE'  # Shorten for convenience
             current_stressor = row[0]
             current_stressor_header_row = row_index
             continue  # can skip this row
@@ -410,37 +413,8 @@ def _parse_criteria_table(criteria_table_path, known_stressors):
             overlap_df = overlap_df.append(
                 stressor_habitat_data, ignore_index=True)
 
-    # overlap_df now has all of the data I care about
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    # TODO: figure out if we need a special case for the resilience data.
+    overlap_df.to_csv(target_composite_csv_path, index=False)
 
 
 def _calculate_decayed_distance(stressor_raster_path, decay_type,
@@ -485,7 +459,6 @@ def _calculate_decayed_distance(stressor_raster_path, decay_type,
         numpy.where(decayed_edt[valid_pixels] < 1e-6,
                     0.0,
                     decayed_edt[valid_pixels])
-        print(decayed_edt)
 
         # Reset any nodata pixels that were in the original block.
         decayed_edt[nodata_pixels] = edt_nodata

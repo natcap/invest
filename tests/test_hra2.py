@@ -1,3 +1,4 @@
+import io
 import math
 import os
 import shutil
@@ -6,6 +7,8 @@ import textwrap
 import unittest
 
 import numpy
+import pandas
+import pandas.testing
 import pygeoprocessing
 from osgeo import gdal
 from osgeo import osr
@@ -156,7 +159,7 @@ class HRATests2(unittest.TestCase):
         }
         self.assertEqual(stressors, expected_stressors)
 
-    def test_criteria_table_parsing_one_habitat(self):
+    def test_criteria_table_parsing(self):
         from natcap.invest import hra2
 
         criteria_table_path = os.path.join(self.workspace_dir, 'criteria.csv')
@@ -173,6 +176,35 @@ class HRATests2(unittest.TestCase):
                     oil,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
                     frequency of disturbance,2,2,3,2,2,3,C
                     management effectiveness,2,2,1,2,2,1,E
+                    ,,,,,,,
+                    HABITAT STRESSOR OVERLAP PROPERTIES,,,,,,,
+                    fishing,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
+                    frequency of disturbance,2,2,3,2,2,3,C
+                    management effectiveness,2,2,1,2,2,1,E
                     """
                 ))
-        hra2._parse_criteria_table(criteria_table_path, ['oil'])
+        target_composite_csv_path = os.path.join(self.workspace_dir,
+                                                 'composite.csv')
+        hra2._parse_criteria_table(criteria_table_path, ['oil', 'fishing'],
+                                   target_composite_csv_path)
+
+        expected_composite_dataframe = pandas.read_csv(
+            io.StringIO(textwrap.dedent(
+                """\
+                habitat,stressor,criterion,rating,dq,weight,e/c
+                eelgrass,RESILIENCE,recruitment rate,2,2,2,C
+                hardbottom,RESILIENCE,recruitment rate,2,2,2,C
+                eelgrass,RESILIENCE,connectivity rate,eelgrass_connectivity.shp,2,2,C
+                hardbottom,RESILIENCE,connectivity rate,2,2,2,C
+                eelgrass,oil,frequency of disturbance,2,2,3,C
+                hardbottom,oil,frequency of disturbance,2,2,3,C
+                eelgrass,oil,management effectiveness,2,2,1,E
+                hardbottom,oil,management effectiveness,2,2,1,E
+                eelgrass,fishing,frequency of disturbance,2,2,3,C
+                hardbottom,fishing,frequency of disturbance,2,2,3,C
+                eelgrass,fishing,management effectiveness,2,2,1,E
+                hardbottom,fishing,management effectiveness,2,2,1,E
+                """)))
+        composite_dataframe = pandas.read_csv(target_composite_csv_path)
+        pandas.testing.assert_frame_equal(
+            expected_composite_dataframe, composite_dataframe)
