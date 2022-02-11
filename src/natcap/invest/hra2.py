@@ -601,17 +601,62 @@ def _calculate_pairwise_risk(habitat_mask_raster_path, exposure_raster_path,
         _TARGET_NODATA_FLT)
 
 
-# max pairwise risk is calculated based on user input and choice of risk
-# equation.  Might as well pass in the numeric value rather than the risk
+# max pairwise risk or recovery is calculated based on user input and choice of
+# risk equation.  Might as well pass in the numeric value rather than the risk
 # equation type.
-def _reclassify_pairwise_risk(habitat_mask, max_pairwise_risk, pairwise_risk):
+def _reclassify_pairwise_score(habitat_mask, max_pairwise_risk,
+                               pairwise_score):
     habitat_pixels = (habitat_mask == 1)
     reclassified = numpy.full(habitat_mask.shape, _TARGET_NODATA_INT,
                               dtype=numpy.uint8)
     reclassified[habitat_pixels] = numpy.digitize(
-        pairwise_risk[habitat_pixels],
+        pairwise_score[habitat_pixels],
         [0, max_pairwise_risk*(1/3), max_pairwise_risk*(2/3)],
         right=True)  # bins[i-1] >= x > bins[i]
     return reclassified
 
+
 # TODO: to sum rasters, use natcap.invest.ndr._sum_rasters
+
+
+def build_datastack_archive(args, datastack_path):
+    """Build a datastack-compliant archive of all spatial inputs to HRA.
+
+    This function is implemented here and not in natcap.invest.datastack
+    because HRA's inputs are too complicated to describe in ARGS_SPEC.  Because
+    the input table and its linked spatial inputs are too custom, it warrants a
+    custom datastack archive-generation function.
+
+    Args:
+        args (dict): The complete ``args`` dict to package up into a datastack
+            archive.
+        datastack_path (string): The path on disk to where the datastack should
+            be written.
+
+    Returns:
+        ``None``
+    """
+    # TODO: flesh this out
+    raise NotImplementedError()
+
+
+@validation.invest_validator
+def validate(args, limit_to=None):
+    """Validate args to ensure they conform to ``execute``'s contract.
+
+    Args:
+        args (dict): dictionary of key(str)/value pairs where keys and
+            values are specified in ``execute`` docstring.
+        limit_to (str): (optional) if not None indicates that validation
+            should only occur on the args[limit_to] value. The intent that
+            individual key validation could be significantly less expensive
+            than validating the entire ``args`` dictionary.
+
+    Returns:
+        list of ([invalid key_a, invalid_keyb, ...], 'warning/error message')
+            tuples. Where an entry indicates that the invalid keys caused
+            the error message in the second part of the tuple. This should
+            be an empty list if validation succeeds.
+
+    """
+    return validation.validate(args, ARGS_SPEC['args'])
