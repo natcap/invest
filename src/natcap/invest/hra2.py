@@ -486,13 +486,16 @@ def _calculate_decayed_distance(stressor_raster_path, decay_type,
 
 # This is to calculate E or C for a single habitat/stressor pair.
 def _calc_criteria(attributes_list, habitat_mask_raster_path,
-                   decayed_edt_raster_path,
-                   target_criterion_path):
+                   target_criterion_path,
+                   decayed_edt_raster_path=None):
     # Assume attributes_list is structured like so:
     #  [{"rating": int/path, "dq": int, "weight": int}, ... ]
     #
     # Stressor weighted distance raster path is the decayed, thresholded
     # stressor raster.
+    #
+    # Resilience scores are calculated with the same numerical method, but they
+    # don't use the decayed EDT.
 
     pygeoprocessing.new_raster_from_base(
         habitat_mask_raster_path, target_criterion_path, _TARGET_PIXEL_FLT,
@@ -505,9 +508,10 @@ def _calc_criteria(attributes_list, habitat_mask_raster_path,
                                           gdal.GA_Update)
     target_criterion_band = target_criterion_raster.GetRasterBand(1)
 
-    decayed_edt_raster = gdal.OpenEx(
-        decayed_edt_raster_path, gdal.GA_Update)
-    decayed_edt_band = decayed_edt_raster.GetRasterBand(1)
+    if decayed_edt_raster_path:
+        decayed_edt_raster = gdal.OpenEx(
+            decayed_edt_raster_path, gdal.GA_Update)
+        decayed_edt_band = decayed_edt_raster.GetRasterBand(1)
 
     for block_info in pygeoprocessing.iterblocks((habitat_mask_raster_path, 1),
                                                  offset_only=True):
@@ -549,8 +553,9 @@ def _calc_criteria(attributes_list, habitat_mask_raster_path,
         # by the stressor's weighted distance raster.
         # This will give highest values to pixels that overlap stressors and
         # decaying values further away from the overlapping pixels.
-        numerator[valid_mask] *= decayed_edt_band.ReadAsArray(
-            **block_info)[valid_mask]
+        if decayed_edt_raster_path:
+            numerator[valid_mask] *= decayed_edt_band.ReadAsArray(
+                **block_info)[valid_mask]
         criterion_score[valid_mask] = (
             numerator[valid_mask] / denominator[valid_mask])
 
