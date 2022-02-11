@@ -200,41 +200,54 @@ export default class SetupTab extends React.Component {
    * @returns {undefined}
    */
   async savePythonScript(filepath) {
-    const { modelName } = this.props;
-    const argsValues = this.insertNWorkers(this.state.argsValues);
-    const argsDict = argsDictFromObject(argsValues);
+    const {
+      modelName,
+      setSaveAlert,
+    } = this.props;
+    const args = argsDictFromObject(
+      this.insertNWorkers(this.state.argsValues)
+    );
     const payload = {
       filepath: filepath,
       modelname: modelName,
-      args: JSON.stringify(argsDict),
+      args: JSON.stringify(args),
     };
     const response = await saveToPython(payload);
-    this.props.setSaveAlert(response);
+    setSaveAlert(response);
   }
 
   async saveJsonFile(datastackPath) {
-    const argsValues = this.insertNWorkers(this.state.argsValues);
-    const args = argsDictFromObject(argsValues);
+    const {
+      pyModuleName,
+      setSaveAlert,
+    } = this.props;
+    const args = argsDictFromObject(
+      this.insertNWorkers(this.state.argsValues)
+    );
     const payload = {
       filepath: datastackPath,
-      moduleName: this.props.pyModuleName,
+      moduleName: pyModuleName,
       relativePaths: false,
       args: JSON.stringify(args),
     };
     const response = await writeParametersToFile(payload);
-    this.props.setSaveAlert(response);
+    setSaveAlert(response);
   }
 
   async saveDatastack(datastackPath) {
+    const {
+      pyModuleName,
+      setSaveAlert,
+    } = this.props;
     const args = argsDictFromObject(this.state.argsValues);
     const payload = {
       filepath: datastackPath,
-      moduleName: this.props.pyModuleName,
+      moduleName: pyModuleName,
       args: JSON.stringify(args),
     };
-    this.props.setSaveAlert('archiving...');
+    setSaveAlert('archiving...');
     const response = await archiveDatastack(payload);
-    this.props.setSaveAlert(response);
+    setSaveAlert(response);
   }
 
   async loadParametersFromFile(filepath) {
@@ -257,8 +270,9 @@ export default class SetupTab extends React.Component {
   }
 
   wrapInvestExecute() {
-    const argsValues = this.insertNWorkers(this.state.argsValues);
-    this.props.investExecute(argsDictFromObject(argsValues));
+    this.props.investExecute(
+      argsDictFromObject(this.insertNWorkers(this.state.argsValues))
+    );
   }
 
   /** Update state to indicate that an input was touched.
@@ -500,4 +514,5 @@ SetupTab.propTypes = {
   sidebarSetupElementId: PropTypes.string.isRequired,
   sidebarFooterElementId: PropTypes.string.isRequired,
   executeClicked: PropTypes.bool.isRequired,
+  setSaveAlert: PropTypes.func.isRequired,
 };

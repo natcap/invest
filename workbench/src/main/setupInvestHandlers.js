@@ -56,7 +56,7 @@ export function setupInvestRunHandlers(investExe) {
     );
     const datastackPath = path.join(tempDatastackDir, 'datastack.json');
     const payload = {
-      parameterSetPath: datastackPath,
+      filepath: datastackPath,
       moduleName: pyModuleName,
       relativePaths: false,
       args: JSON.stringify(args),

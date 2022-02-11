@@ -173,117 +173,109 @@ describe('Save InVEST Model Setup Buttons', () => {
     jest.mock(UI_CONFIG_PATH, () => mockUISpec(mockSpec));
   });
 
-  test('SaveParametersButton: requests endpoint with correct payload', async () => {
-    // mock the server call, instead just returning
-    // the payload. At least we can assert the payload is what
-    // the flask endpoint needs to build the json file.
-    writeParametersToFile.mockImplementation(
-      (payload) => payload
-    );
+  test('Save to JSON: requests endpoint with correct payload', async () => {
+    const response = 'saved';
+    writeParametersToFile.mockResolvedValue(response);
     const mockDialogData = { filePath: 'foo.json' };
     ipcRenderer.invoke.mockResolvedValueOnce(mockDialogData);
 
-    const { findByText } = renderInvestTab();
+    const { findByText, findByRole } = renderInvestTab();
     const saveButton = await findByText('Save to JSON');
     userEvent.click(saveButton);
 
-    await waitFor(() => {
-      const results = writeParametersToFile.mock.results[0].value;
-      expect(Object.keys(results)).toEqual(expect.arrayContaining(
-        ['filepath', 'moduleName', 'relativePaths', 'args']
-      ));
-      Object.keys(results).forEach((key) => {
-        expect(results[key]).not.toBeUndefined();
-      });
-      const args = JSON.parse(results.args);
-      const argKeys = Object.keys(args);
-      expect(argKeys).toEqual(
-        expect.arrayContaining(Object.keys(spec.args).concat('n_workers'))
-      );
-      argKeys.forEach((key) => {
-        expect(typeof args[key]).toBe('string');
-      });
-      expect(writeParametersToFile).toHaveBeenCalledTimes(1);
+    expect(await findByRole('alert')).toHaveTextContent(response);
+    const payload = writeParametersToFile.mock.calls[0][0];
+    expect(Object.keys(payload)).toEqual(expect.arrayContaining(
+      ['filepath', 'moduleName', 'relativePaths', 'args']
+    ));
+    Object.keys(payload).forEach((key) => {
+      expect(payload[key]).not.toBeUndefined();
     });
+    const args = JSON.parse(payload.args);
+    const argKeys = Object.keys(args);
+    expect(argKeys).toEqual(
+      expect.arrayContaining(Object.keys(spec.args).concat('n_workers'))
+    );
+    argKeys.forEach((key) => {
+      expect(typeof args[key]).toBe('string');
+    });
+    expect(writeParametersToFile).toHaveBeenCalledTimes(1);
   });
 
-  test('SavePythonButton: requests endpoint with correct payload', async () => {
-    // mock the server call, instead just returning
-    // the payload. At least we can assert the payload is what
-    // the flask endpoint needs to build the python script.
-    saveToPython.mockImplementation(
-      (payload) => payload
-    );
+  test('Save to Python script: requests endpoint with correct payload', async () => {
+    const response = 'saved';
+    saveToPython.mockResolvedValue(response);
     const mockDialogData = { filePath: 'foo.py' };
     ipcRenderer.invoke.mockResolvedValue(mockDialogData);
 
-    const { findByText } = renderInvestTab();
+    const { findByText, findByRole } = renderInvestTab();
 
     const saveButton = await findByText('Save to Python script');
     userEvent.click(saveButton);
 
-    await waitFor(() => {
-      const results = saveToPython.mock.results[0].value;
-      expect(Object.keys(results)).toEqual(expect.arrayContaining(
-        ['filepath', 'modelname', 'args']
-      ));
-      expect(typeof results.filepath).toBe('string');
-      expect(typeof results.modelname).toBe('string');
-      // guard against a common mistake of passing a model title
-      expect(results.modelname.split(' ')).toHaveLength(1);
+    expect(await findByRole('alert')).toHaveTextContent(response);
+    const payload = saveToPython.mock.calls[0][0];
+    expect(Object.keys(payload)).toEqual(expect.arrayContaining(
+      ['filepath', 'modelname', 'args']
+    ));
+    expect(typeof payload.filepath).toBe('string');
+    expect(typeof payload.modelname).toBe('string');
+    // guard against a common mistake of passing a model title
+    expect(payload.modelname.split(' ')).toHaveLength(1);
 
-      expect(results.args).not.toBeUndefined();
-      const args = JSON.parse(results.args);
-      const argKeys = Object.keys(args);
-      expect(argKeys).toEqual(
-        expect.arrayContaining(Object.keys(spec.args).concat('n_workers'))
-      );
-      argKeys.forEach((key) => {
-        expect(typeof args[key]).toBe('string');
-      });
-      expect(saveToPython).toHaveBeenCalledTimes(1);
+    expect(payload.args).not.toBeUndefined();
+    const args = JSON.parse(payload.args);
+    const argKeys = Object.keys(args);
+    expect(argKeys).toEqual(
+      expect.arrayContaining(Object.keys(spec.args).concat('n_workers'))
+    );
+    argKeys.forEach((key) => {
+      expect(typeof args[key]).toBe('string');
     });
+    expect(saveToPython).toHaveBeenCalledTimes(1);
   });
 
-  test('SaveDatastackButton: requests endpoint with correct payload', async () => {
-    // mock the server call, instead just returning
-    // the payload. At least we can assert the payload is what
-    // the flask endpoint needs to build the python script.
-    archiveDatastack.mockImplementation(
-      (payload) => payload
-    );
+  test('Save datastack: requests endpoint with correct payload', async () => {
+    const response = 'saved';
+    archiveDatastack.mockImplementation(() => new Promise(
+      (resolve) => {
+        setTimeout(() => resolve(response), 100);
+      }
+    ));
     const mockDialogData = { filePath: 'foo.py' };
     ipcRenderer.invoke.mockResolvedValue(mockDialogData);
 
-    const { findByText } = renderInvestTab();
+    const { findByText, findByRole, getByRole } = renderInvestTab();
 
     const saveButton = await findByText('Save datastack');
     userEvent.click(saveButton);
 
+    expect(await findByRole('alert')).toHaveTextContent('archiving...');
     await waitFor(() => {
-      const results = archiveDatastack.mock.results[0].value;
-      expect(Object.keys(results)).toEqual(expect.arrayContaining(
-        ['filepath', 'moduleName', 'args']
-      ));
-      expect(typeof results.filepath).toBe('string');
-      expect(typeof results.moduleName).toBe('string');
-      // guard against a common mistake of passing a model title
-      expect(results.moduleName.split(' ')).toHaveLength(1);
-
-      expect(results.args).not.toBeUndefined();
-      const args = JSON.parse(results.args);
-      const argKeys = Object.keys(args);
-      expect(argKeys).toEqual(
-        expect.arrayContaining(Object.keys(spec.args))
-      );
-      argKeys.forEach((key) => {
-        expect(typeof args[key]).toBe('string');
-      });
-      expect(archiveDatastack).toHaveBeenCalledTimes(1);
+      expect(getByRole('alert')).toHaveTextContent(response);
     });
+    const payload = archiveDatastack.mock.calls[0][0];
+    expect(Object.keys(payload)).toEqual(expect.arrayContaining(
+      ['filepath', 'moduleName', 'args']
+    ));
+    expect(typeof payload.filepath).toBe('string');
+    expect(typeof payload.moduleName).toBe('string');
+    // guard against a common mistake of passing a model title
+    expect(payload.moduleName.split(' ')).toHaveLength(1);
+
+    expect(payload.args).not.toBeUndefined();
+    const args = JSON.parse(payload.args);
+    const argKeys = Object.keys(args);
+    expect(argKeys).toEqual(
+      expect.arrayContaining(Object.keys(spec.args))
+    );
+    argKeys.forEach((key) => {
+      expect(typeof args[key]).toBe('string');
+    });
+    expect(archiveDatastack).toHaveBeenCalledTimes(1);
   });
 
-  test('Load Parameters Button: loads parameters', async () => {
+  test('Load parameters from file: loads parameters', async () => {
     const mockDatastack = {
       module_name: spec.pyname,
       args: {
@@ -312,7 +304,7 @@ describe('Save InVEST Model Setup Buttons', () => {
     ['Save to Python script', 'savePythonScript'],
     ['Save to JSON', 'saveJsonFile'],
     ['Save datastack', 'saveDatastack']
-  ])('%s does nothing when canceled', async (label, method) => {
+  ])('%s: does nothing when canceled', async (label, method) => {
     // callback data if the OS dialog was canceled
     const mockDialogData = {
       filePaths: ['']
@@ -334,7 +326,7 @@ describe('Save InVEST Model Setup Buttons', () => {
     ['Save to Python script'],
     ['Save to JSON'],
     ['Save datastack'],
-  ])('%s has hover text', async (label) => {
+  ])('%s: has hover text', async (label) => {
     const {
       findByText,
       findByRole,
