@@ -313,6 +313,8 @@ def execute(args):
     alignment_source_raster_paths = []
     aligned_raster_paths = []
     alignment_dependent_tasks = []
+    aligned_habitat_raster_paths = []
+    aligned_stressor_raster_paths = {}
     for name, attributes in itertools.chain(habitats, stressors):
         source_filepath = attributes['path']
         gis_type = pygeoprocessing.get_gis_type(source_filepath)
@@ -349,8 +351,13 @@ def execute(args):
                 target_path_list=[target_raster_path]
             ))
 
-        aligned_raster_paths.append(
-            os.path.join(intermediate_dir, f'aligned_{name}{suffix}.tif'))
+        aligned_raster_path = os.path.join(
+            intermediate_dir, f'aligned_{name}{suffix}.tif')
+        aligned_raster_paths.append(aligned_raster_path)
+        if name in habitats:
+            aligned_habitat_raster_paths.append(aligned_raster_path)
+        else:  # must be a stressor
+            aligned_stressor_raster_paths[name] = aligned_raster_path
 
     alignment_task = graph.add_task(
         pygeoprocessing.align_and_resize_raster_stack,
@@ -367,8 +374,40 @@ def execute(args):
     )
 
     # --> Create a binary mask of habitat pixels.
+    habitat_mask_path = os.path.join(
+        intermediate_dir, f'habitat_mask{suffix}.tif')
+    habitat_mask_task = graph.add_task(
+        pygeoprocessing.raster_calculator,
+        kwargs={
+            'base_raster_path_band_const_list': [
+                (path, 1) for path in aligned_habitat_raster_paths],
+            'local_op': _habitat_mask_op,
+            'target_raster_path': habitat_mask_path,
+            'datatype_target': _TARGET_NODATA_INT,
+        },
+        task_name='Create habitat mask',
+        target_path_list=[habitat_mask_path],
+        dependent_task_list=[alignment_task]
+    )
 
     # --> for stressor in stressors, do a decayed EDT.
+    decayed_edt_paths = {}
+    decayed_edt_tasks = {}  # {stressor: edt task}
+    for stressor, stressor_path in aligned_stressor_raster_paths.items():
+        target_edt_path = os.path.join(
+            intermediate_dir, f'decayed_edt_{stressor}{suffix}.tif')
+        decayed_edt_tasks[stressor] = graph.add_task(
+            _calculate_decayed_distance,
+            kwargs={
+                'stressor_raster_path': stressor_path,
+                'decay_type': args['decay_eq'],
+                'buffer_distance': stressors[stressor]['buffer'],
+                'target_edt_path': target_edt_path,
+            },
+            task_name=f'Make decayed EDT for {stressor}',
+            target_path_list=[target_edt_path],
+            dependent_task_list=[alignment_task]
+        )
 
     for row in pandas.read_csv(composite_criteria_table_path):
         # Recovery attributes are calculated with the same numerical method as
@@ -420,6 +459,13 @@ def _prep_input_raster(source_raster_path, target_raster_path):
         _TARGET_PIXEL_INT, _TARGET_NODATA_INT)
 
 
+def _habitat_mask_op(*habitats):
+    output_mask = numpy.full(habitats[0].shape, _TARGET_NODATA_INT,
+                             dtype=numpy.uint8)
+    for habitat_array in habitats:
+        output_mask[habitat_array == 1] = 1
+
+    return output_mask
 
 
 # TODO: support Excel and CSV both
