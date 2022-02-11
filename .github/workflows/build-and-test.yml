@@ -76,7 +76,7 @@ jobs:
                   key: git-lfs-testdata-${{ hashfiles('Makefile') }}
 
             - name: Set up conda environment
-              uses: ./.github/actions/setup_env
+              uses: .github/actions/setup_env
               with:
                   cache-id: py${{ matrix.python-version }}-${{ matrix.os }}-model-tests
               id: condacache
