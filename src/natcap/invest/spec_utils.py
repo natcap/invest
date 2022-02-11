@@ -401,8 +401,8 @@ def format_type_string(arg_type):
         return format_single_type(arg_type)
 
 
-def format_arg(name, spec):
-    """Format an arg spec into user-friendly documentation.
+def describe_arg_from_spec(name, spec):
+    """Generate RST documentation for an arg, given an arg spec.
 
     This is used for documenting:
         - a single top-level arg
@@ -478,27 +478,21 @@ def format_arg(name, spec):
     return [first_line] + ['\t' + line for line in indented_block]
 
 
-def document_arg_rst(module_name, *arg_keys):
-    """Get the spec dictionary for a particular arg.
+def describe_arg_from_name(module_name, *arg_keys):
+    """Generate RST documentation for an arg, given its model and name.
 
     Args:
         module_name (str): invest model module containing the arg.
         *arg_keys: one or more strings that are nested arg keys.
 
     Returns:
-        arg spec (dict)
+        String describing the arg in RST format
     """
     # import the specified module (that should have an ARGS_SPEC attribute)
-    try:
-        module = importlib.import_module(module_name)
-        spec = module.ARGS_SPEC['args']
-    except ImportError:
-        raise ValueError(
-            f'Could not import the module "{module_name}"')
-    except AttributeError:
-        raise ValueError(
-            f'Module "{module_name}" does not have an ARGS_SPEC')
-
+    module = importlib.import_module(module_name)
+    # start with the spec for all args
+    # narrow down to the nested spec indicated by the sequence of arg keys
+    spec = module.ARGS_SPEC['args']
     for i, key in enumerate(arg_keys):
         # convert raster band numbers to ints
         if arg_keys[i - 1] == 'bands':
@@ -517,7 +511,7 @@ def document_arg_rst(module_name, *arg_keys):
             arg_name = capitalize(spec['name'])
         else:
             arg_name = arg_keys[-1]
-        rst = '\n\n'.join(format_arg(arg_name, spec))
+        rst = '\n\n'.join(describe_arg_from_spec(arg_name, spec))
     elif isinstance(spec, pint.Unit):
         rst = format_unit(spec)
     else:
