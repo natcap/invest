@@ -366,21 +366,9 @@ def execute(args):
         dependent_task_list=alignment_dependent_tasks
     )
 
+    # --> Create a binary mask of habitat pixels.
 
-    #
-    # For each habitat and stressor dataset:
-    #   * simplify - Nyquist
-    #   * rasterize
-    #
-    # Given rasterized habitats, make a habitat mask
-    # Do EDT/buffer/decay on each stressor.
-    #
-    # Load the composite dataframe
-    #   * for each row, calculate the criteria score
-    #       * Track as needed (aggregating by habitats) for later summary
-    #         rasters
-    #
-    # Calculate summary operations.
+    # --> for stressor in stressors, do a decayed EDT.
 
     for row in pandas.read_csv(composite_criteria_table_path):
         # Recovery attributes are calculated with the same numerical method as
@@ -389,6 +377,9 @@ def execute(args):
             decayed_distance_edt_path = None
         else:
             decayed_distance_edt_path = decayed_edts[row['stressor']]
+
+        # If we need to rasterize a criteria score, use the bounding box from
+        # the habitats mask.
 
         # calculate criteria score
 
