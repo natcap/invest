@@ -310,24 +310,35 @@ def execute(args):
 
     # Preprocess habitat and stressor datasets.
     # All of these are spatial in nature but might be rasters or vectors.
-    source_raster_paths = []
+    alignment_source_raster_paths = []
     aligned_raster_paths = []
-    rasterize_tasks = []
+    alignment_dependent_tasks = []
     for name, attributes in itertools.chain(habitats, stressors):
         source_filepath = attributes['path']
         gis_type = pygeoprocessing.get_gis_type(source_filepath)
 
-        # If the input is already a raster, there's nothing to do besides
-        # align the input.
+        # If the input is already a raster, run it through raster_calculator to
+        # ensure we know the nodata value and pixel values.
         if gis_type == pygeoprocessing.RASTER_TYPE:
-            source_raster_paths.append(source_filepath)
+            rewritten_raster_path = os.path.join(
+                intermediate_dir, 'rewritten_{name}{suffix}.tif')
+            alignment_source_raster_paths.append(rewritten_raster_path)
+            alignment_dependent_tasks.append(graph.add_task(
+                func=_prep_input_raster,
+                kwargs={
+                    'source_raster_path': source_filepath,
+                    'target_filepath': rewritten_raster_path,
+                },
+                task_name=f'Rewrite {name} raster for consistency',
+                target_path_list=rewritten_raster_path
+            ))
 
         # If the input is a vector, rasterize it.
         elif gis_type == pygeoprocessing.VECTOR_TYPE:
             target_raster_path = os.path.join(
                 intermediate_dir, f'rasterized_{name}{suffix}.tif')
-            source_raster_paths.append(target_raster_path)
-            rasterize_tasks.append(graph.add_task(
+            alignment_source_raster_paths.append(target_raster_path)
+            alignment_dependent_tasks.append(graph.add_task(
                 func=_rasterize,
                 kwargs={
                     'source_vector_path': source_filepath,
@@ -344,20 +355,16 @@ def execute(args):
     alignment_task = graph.add_task(
         pygeoprocessing.align_and_resize_raster_stack,
         kwargs={
-            'base_raster_path_list': source_raster_paths,
+            'base_raster_path_list': alignment_source_raster_paths,
             'target_raster_path_list': aligned_raster_paths,
-            'resample_method_list': ['near'] * len(source_raster_paths),
+            'resample_method_list': ['near'] * len(aligned_raster_paths),
             'target_pixel_size': (resolution, -resolution),
             'bounding_box_mode': 'union',
         },
         task_name='Align raster stack',
         target_path_list=aligned_raster_paths,
-        dependent_task_list=rasterize_tasks
+        dependent_task_list=alignment_dependent_tasks
     )
-
-
-
-
 
 
     #
@@ -395,12 +402,32 @@ def _rasterize(source_vector_path, resolution, target_raster_path):
     # TODO: shall we simplify as well?
 
     pygeoprocessing.create_raster_from_vector_extents(
-        source_vector_rpath, target_raster_path, (resolution, -resolution),
+        source_vector_path, target_raster_path, (resolution, -resolution),
         target_pixel_type=gdal.GDT_Byte, target_nodata_value=255)
 
     # TODO: Does this need to be ALL_TOUCHED=TRUE?
     pygeoprocessing.rasterize(
         source_vector_path, target_raster_path, burn_values=[1])
+
+
+def _prep_input_raster(source_raster_path, target_raster_path):
+    # The intent of this function is to take whatever raster the user gives us
+    # and convert its pixel values to 1 or nodata.
+
+    source_nodata = pygeoprocessing.get_raster_info(
+        source_raster_path)['nodata'][0]
+
+    def _translate_op(input_array):
+        presence = numpy.full(input_array.shape, _TARGET_NODATA_INT,
+                              dtype=numpy.uint8)
+        valid_mask = ~utils.array_equals_nodata(input_array, source_nodata)
+        presence[valid_mask & (input_array == 1)] = 1
+        return presence
+
+    pygeoprocessing.raster_calculator(
+        [(source_raster_path, 1)], _translate_op, target_raster_path,
+        _TARGET_PIXEL_INT, _TARGET_NODATA_INT)
+
 
 
 
