@@ -8,6 +8,7 @@ import pickle
 
 import numpy
 import numpy.testing
+from shapely.geometry import box
 from shapely.geometry import Polygon
 from shapely.geometry import Point
 from osgeo import gdal
@@ -190,49 +191,6 @@ class WindEnergyUnitTests(unittest.TestCase):
         }
         self.assertDictEqual(expected_result, result)
 
-    def test_calculate_grid_dist_on_raster(self):
-        """WindEnergy: testing 'calculate_distances_grid' function."""
-        from natcap.invest import wind_energy
-
-        # Setup parameters to create point shapefile
-        fields = {'id': ogr.OFTReal}
-        attrs = [{'id': 1}, {'id': 2}]
-
-        srs = osr.SpatialReference()
-        srs.ImportFromEPSG(3157)
-        projection_wkt = srs.ExportToWkt()
-        origin = (443723.127327877911739, 4956546.905980412848294)
-        pos_x = origin[0]
-        pos_y = origin[1]
-
-        geometries = [Point(pos_x + 50, pos_y - 50),
-                      Point(pos_x + 50, pos_y - 150)]
-        land_shape_path = os.path.join(self.workspace_dir, 'point_shape.shp')
-        # Create point shapefile to use as testing input
-        pygeoprocessing.shapely_geometry_to_vector(
-            geometries, land_shape_path, projection_wkt,
-            'ESRI Shapefile', fields=fields, attribute_list=attrs,
-            ogr_geom_type=ogr.wkbPoint)
-
-        matrix = numpy.array([[1, 1, 1, 1], [1, 1, 1, 1]], dtype=numpy.int32)
-        harvested_masked_path = os.path.join(self.workspace_dir, 'raster.tif')
-        # Create raster to use as testing input
-        pygeoprocessing.numpy_array_to_raster(
-            matrix, -1, (100, -100), origin, projection_wkt,
-            harvested_masked_path)
-
-        tmp_dist_final_path = os.path.join(
-            self.workspace_dir, 'dist_final.tif')
-        # Call function to test
-        wind_energy._calculate_grid_dist_on_raster(
-            land_shape_path, harvested_masked_path, tmp_dist_final_path, '')
-
-        # Compare
-        exp_array = numpy.array(
-            [[0, 100, 200, 300], [0, 100, 200, 300]], dtype=numpy.int32)
-        res_array = pygeoprocessing.raster_to_numpy_array(tmp_dist_final_path)
-        numpy.testing.assert_array_equal(res_array, exp_array)
-
     def test_wind_data_to_point_vector(self):
         """WindEnergy: testing 'wind_data_to_point_vector' function."""
         from natcap.invest import wind_energy
@@ -332,6 +290,139 @@ class WindEnergyUnitTests(unittest.TestCase):
 
             feat = layer.GetNextFeature()
 
+    def test_create_distance_raster(self):
+        """WindEnergy: testing '_create_distance_raster' function."""
+        from natcap.invest import wind_energy
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(3157) #UTM Zone 10N
+        projection_wkt = srs.ExportToWkt()
+        origin = (443723.127327877911739, 4956546.905980412848294)
+        pos_x = origin[0]
+        pos_y = origin[1]
+
+        # Setup and create vector to pass to function
+        fields = {'id': ogr.OFTReal}
+        attrs = [{'id': 1}]
+
+        # Square polygon that will overlap the 4 pixels of the raster in the 
+        # upper left corner
+        poly_geometry = [box(pos_x, pos_y - 17, pos_x + 17, pos_y)]
+        poly_vector_path = os.path.join(
+            self.workspace_dir, 'distance_from_vector.gpkg')
+        # Create polygon shapefile to use as testing input
+        pygeoprocessing.shapely_geometry_to_vector(
+            poly_geometry, poly_vector_path, projection_wkt,
+            'GPKG', fields=fields, attribute_list=attrs,
+            ogr_geom_type=ogr.wkbPolygon)
+
+        # Create 2x5 raster
+        matrix = numpy.array(
+            [[1, 1, 1, 1, 1], [1, 1, 1, 1, 1]], dtype=numpy.float32)
+        base_raster_path = os.path.join(self.workspace_dir, 'temp_raster.tif')
+        # Create raster to use for testing input
+        pygeoprocessing.numpy_array_to_raster(
+            matrix, -1, (10, -10), origin, projection_wkt, base_raster_path)
+
+        dist_raster_path = os.path.join(self.workspace_dir, 'dist.tif')
+        # Call function to test given testing inputs
+        wind_energy._create_distance_raster(
+            base_raster_path, poly_vector_path, dist_raster_path, 
+            self.workspace_dir)
+
+        # Compare the results
+        res_array = pygeoprocessing.raster_to_numpy_array(dist_raster_path)
+        exp_array = numpy.array(
+            [[0, 0, 10, 20, 30], [0, 0, 10, 20, 30]], dtype=numpy.float32)
+        numpy.testing.assert_allclose(res_array, exp_array)
+
+    def test_calculate_npv_levelized_rasters(self):
+        """WindEnergy: testing '_calculate_npv_levelized_rasters' function."""
+        from natcap.invest import wind_energy
+
+        val_parameters_dict = {
+            'air_density': 1.225,
+            'exponent_power_curve': 2,
+            'decommission_cost': 0.03,
+            'operation_maintenance_cost': 0.03,
+            'miscellaneous_capex_cost': 0.05,
+            'installation_cost': 0.2,
+            'infield_cable_length': 0.9,
+            'infield_cable_cost': 260000,
+            'mw_coef_ac': 810000,
+            'mw_coef_dc': 1090000,
+            'cable_coef_ac': 1360000,
+            'cable_coef_dc': 890000,
+            'ac_dc_distance_break': 60,
+            'time_period': 5,
+            'rotor_diameter_factor': 7,
+            'carbon_coefficient': 6.90E-04,
+            'air_density_coefficient': 1.19E-04,
+            'loss_parameter': 0.05,
+            'turbine_cost': 10000,
+            'turbine_rated_pwr': 5
+            }
+        args = {
+            'foundation_cost': 1000000,
+            'discount_rate': 0.01,
+            'number_of_turbines': 10
+            }
+        price_list = [0.10, 0.10, 0.10, 0.10, 0.10]
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(3157) #UTM Zone 10N
+        projection_wkt = srs.ExportToWkt()
+        origin = (443723.127327877911739, 4956546.905980412848294)
+        pos_x = origin[0]
+        pos_y = origin[1]
+
+        # Create harvested raster
+        harvest_val = 1000000
+        harvest_matrix = numpy.array(
+            [[harvest_val, harvest_val + 1e5, harvest_val + 2e5,
+                harvest_val + 3e5, harvest_val + 4e5],
+             [harvest_val, harvest_val + 1e5, harvest_val + 2e5,
+                 harvest_val + 3e5, harvest_val + 4e5],
+            ], dtype=numpy.float32)
+        base_harvest_path = os.path.join(self.workspace_dir, 'harvest_raster.tif')
+        # Create raster to use for testing input
+        pygeoprocessing.numpy_array_to_raster(
+            harvest_matrix, -1, (10, -10), origin, projection_wkt, base_harvest_path)
+        # Create distance raster
+        dist_matrix = numpy.array(
+            [[0, 10, 20, 30, 40], [0, 10, 20, 30, 40]], dtype=numpy.float32)
+        base_distance_path = os.path.join(self.workspace_dir, 'dist_raster.tif')
+        # Create raster to use for testing input
+        pygeoprocessing.numpy_array_to_raster(
+            dist_matrix, -1, (10, -10), origin, projection_wkt, base_distance_path)
+
+        target_npv_raster_path = os.path.join(self.workspace_dir, 'npv.tif')
+        target_levelized_raster_path = os.path.join(
+            self.workspace_dir, 'levelized.tif')
+        # Call function to test given testing inputs
+        wind_energy._calculate_npv_levelized_rasters(
+            base_harvest_path, base_distance_path,
+            target_npv_raster_path, target_levelized_raster_path,
+            val_parameters_dict, args, price_list)
+
+        # Compare the results that were "eye" tested.
+        desired_npv_array = numpy.array(
+            [[309332320.0, 348331200.0, 387330020.0, 426328930.0,
+               465327800.0],
+             [309332320.0, 348331200.0, 387330020.0, 426328930.0,
+               465327800.0]], dtype=numpy.float32)
+        actual_npv_array = pygeoprocessing.raster_to_numpy_array(
+            target_npv_raster_path)
+        numpy.testing.assert_allclose(actual_npv_array, desired_npv_array)
+
+        desired_levelized_array = numpy.array(
+            [[0.016496297, 0.015000489, 0.0137539795, 0.01269924, 0.011795178],
+             [0.016496297, 0.015000489, 0.0137539795, 0.01269924, 0.011795178]],
+            dtype=numpy.float32)
+        actual_levelized_array = pygeoprocessing.raster_to_numpy_array(
+            target_levelized_raster_path)
+        numpy.testing.assert_allclose(
+            actual_levelized_array, desired_levelized_array)
 
 class WindEnergyRegressionTests(unittest.TestCase):
     """Regression tests for the Wind Energy module."""
@@ -577,7 +668,49 @@ class WindEnergyRegressionTests(unittest.TestCase):
             'npv.tif']
 
         for raster_path in raster_results:
-            print(raster_path)
+            model_array = pygeoprocessing.raster_to_numpy_array(
+                os.path.join(args['workspace_dir'], 'output', raster_path))
+            reg_array = pygeoprocessing.raster_to_numpy_array(
+                os.path.join(REGRESSION_DATA, 'priceval', raster_path))
+            numpy.testing.assert_allclose(model_array, reg_array, rtol=1e-6)
+
+        vector_path = 'wind_energy_points.shp'
+        _assert_vectors_equal(
+            os.path.join(args['workspace_dir'], 'output', vector_path),
+            os.path.join(REGRESSION_DATA, 'priceval', vector_path))
+
+    def test_valuation_taskgraph(self):
+        """WindEnergy: testing Valuation with async TaskGraph."""
+        from natcap.invest import wind_energy
+        from natcap.invest.utils import _assert_vectors_equal
+        args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
+        # Also use an already projected bathymetry
+        args['bathymetry_path'] = os.path.join(
+            SAMPLE_DATA, 'resampled_global_dem_projected.tif')
+        args['aoi_vector_path'] = os.path.join(
+            SAMPLE_DATA, 'New_England_US_Aoi.shp')
+        args['land_polygon_vector_path'] = os.path.join(
+            SAMPLE_DATA, 'simple_north_america_polygon.shp')
+        args['min_distance'] = 0
+        args['max_distance'] = 200000
+        args['valuation_container'] = True
+        args['foundation_cost'] = 2000000
+        args['discount_rate'] = 0.07
+        args['price_table'] = True
+        args['wind_schedule'] = os.path.join(
+            SAMPLE_DATA, 'price_table_example.csv')
+        args['wind_price'] = 0.187
+        args['rate_change'] = 0.2
+        args['avg_grid_distance'] = 4
+        args['n_workers'] = 1
+
+        wind_energy.execute(args)
+
+        raster_results = [
+            'carbon_emissions_tons.tif', 'levelized_cost_price_per_kWh.tif',
+            'npv.tif']
+
+        for raster_path in raster_results:
             model_array = pygeoprocessing.raster_to_numpy_array(
                 os.path.join(args['workspace_dir'], 'output', raster_path))
             reg_array = pygeoprocessing.raster_to_numpy_array(
