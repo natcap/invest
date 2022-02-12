@@ -557,7 +557,7 @@ def execute(args):
         recovery_score_task = graph.add_task(
             _calc_criteria,
             kwargs={
-                'attributes_list': recovery_score_path,
+                'attributes_list': criteria_attributes_list,
                 'habitat_mask_raster_path': habitat_mask_path,
                 'target_criterion_path': recovery_score_path,
                 'decayed_edt_raster_path': None,  # not a stressor so no EDT
@@ -582,28 +582,16 @@ def execute(args):
             },
             task_name=f'Reclassify risk for {habitat}/{stressor}',
             target_path_list=[reclassified_cumulative_risk_path],
-            dependent_task_list=[pairwise_risk_task]
+            dependent_task_list=[habitat_mask_task, recovery_score_task]
         )
 
+    # TODO: create the 2-way reclassified risk raster.
+    # TODO: create total risk to ecosystem raster
+    # TODO: visualize outputs
+    # TODO: create summary statistics output file
 
-
-
-
-
-
-
-
-
-
-        # If we need to rasterize a criteria score, use the bounding box from
-        # the habitats mask.
-
-        # calculate criteria score
-
-    for habitat in habitats:
-        pass
-        # sum stressor criteria per habitat and reclassify
-        # sum resilience criteria per habitat and reclassify
+    graph.close()
+    graph.join()
 
 
 def _rasterize(source_vector_path, resolution, target_raster_path):
