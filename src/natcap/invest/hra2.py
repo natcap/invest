@@ -536,7 +536,7 @@ def execute(args):
             },
             task_name=f'Reclassify risk for {habitat}/{stressor}',
             target_path_list=[reclassified_cumulative_risk_path],
-            dependent_task_list=[pairwise_risk_task]
+            dependent_task_list=[cumulative_risk_task]
         )
 
     # Recovery attributes are calculated with the same numerical method as
@@ -589,6 +589,7 @@ def execute(args):
     # TODO: create total risk to ecosystem raster
     # TODO: visualize outputs
     # TODO: create summary statistics output file
+    # TODO: visualize the graph of tasks to make sure it looks right
 
     graph.close()
     graph.join()
