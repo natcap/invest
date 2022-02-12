@@ -303,6 +303,9 @@ def execute(args):
     # parse the criteria table to get the composite table
     composite_criteria_table_path = os.path.join(
         intermediate_dir, f'composite_criteria{suffix}.csv')
+    _parse_criteria_table(
+        args['criteria_table_path'], set(stressors.keys()),
+        composite_criteria_table_path)
 
     # Preprocess habitat and stressor datasets.
     # All of these are spatial in nature but might be rasters or vectors.
@@ -311,7 +314,8 @@ def execute(args):
     alignment_dependent_tasks = []
     aligned_habitat_raster_paths = []
     aligned_stressor_raster_paths = {}
-    for name, attributes in itertools.chain(habitats, stressors):
+    for name, attributes in itertools.chain(habitats.items(),
+                                            stressors.items()):
         source_filepath = attributes['path']
         gis_type = pygeoprocessing.get_gis_type(source_filepath)
 
@@ -379,7 +383,8 @@ def execute(args):
                 (path, 1) for path in aligned_habitat_raster_paths],
             'local_op': _habitat_mask_op,
             'target_raster_path': habitat_mask_path,
-            'datatype_target': _TARGET_NODATA_BYTE,
+            'datatype_target': _TARGET_GDAL_TYPE_BYTE,
+            'nodata_target': _TARGET_NODATA_BYTE,
         },
         task_name='Create habitat mask',
         target_path_list=[habitat_mask_path],
@@ -482,7 +487,8 @@ def execute(args):
                         (pairwise_risk_path, 1)],
                     'local_op': _reclassify_score,
                     'target_raster_path': reclassified_pairwise_risk_path,
-                    'datatype_target': _TARGET_NODATA_FLOAT32,
+                    'datatype_target': _TARGET_GDAL_TYPE_FLOAT32,
+                    'nodata_target': _TARGET_NODATA_FLOAT32
                 },
                 task_name=f'Reclassify risk for {habitat}/{stressor}',
                 target_path_list=[reclassified_pairwise_risk_path],
@@ -515,7 +521,8 @@ def execute(args):
                     (cumulative_risk_path, 1)],
                 'local_op': _reclassify_score,
                 'target_raster_path': reclassified_cumulative_risk_path,
-                'datatype_target': _TARGET_NODATA_FLOAT32,
+                'datatype_target': _TARGET_GDAL_TYPE_FLOAT32,
+                'nodata_target': _TARGET_NODATA_FLOAT32,
             },
             task_name=f'Reclassify risk for {habitat}/{stressor}',
             target_path_list=[reclassified_cumulative_risk_path],
@@ -561,13 +568,15 @@ def execute(args):
                     (recovery_score_path, 1)],
                 'local_op': _reclassify_score,
                 'target_raster_path': reclassified_recovery_path,
-                'datatype_target': _TARGET_NODATA_FLOAT32,
+                'datatype_target': _TARGET_GDAL_TYPE_FLOAT32,
+                'nodata_target': _TARGET_NODATA_FLOAT32,
             },
             task_name=f'Reclassify risk for {habitat}/{stressor}',
             target_path_list=[reclassified_cumulative_risk_path],
             dependent_task_list=[habitat_mask_task, recovery_score_task]
         )
 
+    # TODO: implement decay type None
     # TODO: create the 2-way reclassified risk raster.
     # TODO: create total risk to ecosystem raster
     # TODO: visualize outputs
@@ -577,13 +586,18 @@ def execute(args):
     graph.close()
     graph.join()
 
+    import sys
+    sys.path.insert(0, os.getcwd())
+    import make_graph
+    make_graph.doit(graph)
+
 
 def _rasterize(source_vector_path, resolution, target_raster_path):
     # TODO: shall we simplify as well?
 
     pygeoprocessing.create_raster_from_vector_extents(
         source_vector_path, target_raster_path, (resolution, -resolution),
-        target_pixel_type=gdal.GDT_Byte, target_nodata_value=255)
+        target_pixel_type=gdal.GDT_Byte, target_nodata=255)
 
     # TODO: Does this need to be ALL_TOUCHED=TRUE?
     pygeoprocessing.rasterize(
@@ -620,9 +634,19 @@ def _habitat_mask_op(*habitats):
 
 # TODO: support Excel and CSV both
 def _parse_info_table(info_table_path):
+    info_table_path = os.path.abspath(info_table_path)
+
     table = utils.read_csv_to_dataframe(info_table_path, to_lower=True)
     table = table.set_index('name')
     table = table.rename(columns={'stressor buffer (meters)': 'buffer'})
+
+    def _make_abspath(row):
+        path = row['path'].replace('\\', '/')
+        if os.path.isabs(path):
+            return path
+        return os.path.join(os.path.dirname(info_table_path), path)
+
+    table['path'] = table.apply(lambda row: _make_abspath(row), axis=1)
 
     # Drop the buffer column from the habitats list; we don't need it.
     habitats = table.loc[table['type'] == 'habitat'].drop(
@@ -715,6 +739,7 @@ def _parse_criteria_table(criteria_table_path, known_stressors,
 
 def _calculate_decayed_distance(stressor_raster_path, decay_type,
                                 buffer_distance, target_edt_path):
+    decay_type = decay_type.lower()
     # TODO: ensure we're working with square pixels in our raster stack
     pygeoprocessing.distance_transform_edt((stressor_raster_path, 1),
                                            target_edt_path)
@@ -747,7 +772,7 @@ def _calculate_decayed_distance(stressor_raster_path, decay_type,
             decayed_edt[valid_pixels] = numpy.exp(
                 -source_edt_block[valid_pixels])
         else:
-            raise AssertionError('Invalid decay type provided.')
+            raise AssertionError(f'Invalid decay type {decay_type} provided.')
 
         # Any values less than 1e-6 are numerically noise and should be 0.
         # Mostly useful for exponential decay, but should also apply to
@@ -822,7 +847,7 @@ def _calc_criteria(attributes_list, habitat_mask_raster_path,
                 finally:
                     rating_band = None
                     rating_raster = None
-            data_quality = attribute_dict['data_quality']
+            data_quality = attribute_dict['dq']
             weight = attribute_dict['weight']
 
             # The (data_quality + weight) denominator is duplicated here
@@ -868,13 +893,15 @@ def _calculate_pairwise_risk(habitat_mask_raster_path, exposure_raster_path,
         risk_array[habitat_pixels] = numpy.sqrt(
             (exposure[habitat_pixels] - 1) ** 2 +
             (consequence[habitat_pixels] - 1) ** 2)
+        return risk_array
 
+    risk_equation = risk_equation.lower()
     if risk_equation == 'multiplicative':
         risk_op = _muliplicative_risk
     elif risk_equation == 'euclidean':
         risk_op = _euclidean_risk
     else:
-        raise AssertionError('Invalid risk equation provided')
+        raise AssertionError(f'Invalid risk equation {risq_equation} provided')
 
     pygeoprocessing.raster_calculator(
         [(habitat_mask_raster_path, 1),

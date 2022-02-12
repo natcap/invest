@@ -19,7 +19,7 @@ _SRS.ImportFromEPSG(26910)  # UTM zone 10N
 SRS_WKT = _SRS.ExportToWkt()
 
 
-class HRATests2(unittest.TestCase):
+class HRAUnitTests(unittest.TestCase):
     def setUp(self):
         self.workspace_dir = tempfile.mkdtemp()
 
@@ -63,7 +63,7 @@ class HRATests2(unittest.TestCase):
 
         exposure_array = pygeoprocessing.raster_to_numpy_array(
             target_exposure_path)
-        nodata = hra2._TARGET_NODATA_FLT
+        nodata = hra2._TARGET_NODATA_FLOAT32
         # These expected values were calculated by hand based on the equation
         # for criteria scores in the user's guide.
         expected_exposure_array = numpy.array([
@@ -208,4 +208,27 @@ class HRATests2(unittest.TestCase):
         composite_dataframe = pandas.read_csv(target_composite_csv_path)
         pandas.testing.assert_frame_equal(
             expected_composite_dataframe, composite_dataframe)
-        import pdb; pdb.set_trace()
+
+
+class HRAModelTests(unittest.TestCase):
+    def setUp(self):
+        self.workspace_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self.workspace_dir)
+
+    def test_model(self):
+        from natcap.invest import hra2
+
+        args = {
+            'workspace_dir': os.path.join(self.workspace_dir, 'workspace'),
+            'info_table_path': os.path.join(self.workspace_dir, 'info.csv'),
+            'criteria_table_path': os.path.join(self.workspace_dir,
+                                                'criteria.csv'),
+            'resolution': 250,
+            'max_rating': 3,
+            'risk_eq': 'Multiplicative',
+            'decay_eq': 'linear',
+            'aoi_vector_path': 'create a vector',
+            'override_max_overlapping_stressors': 2,
+        }
