@@ -29,19 +29,6 @@ from .spec_utils import u
 
 LOGGER = logging.getLogger(__name__)
 
-# Parameters from the user-provided criteria and info tables
-_BUFFER_HEADER = 'STRESSOR BUFFER (METERS)'
-_CRITERIA_TYPE_HEADER = 'CRITERIA TYPE'
-_HABITAT_NAME_HEADER = 'HABITAT NAME'
-_HABITAT_RESILIENCE_HEADER = 'HABITAT RESILIENCE ATTRIBUTES'
-_HABITAT_STRESSOR_OVERLAP_HEADER = 'HABITAT STRESSOR OVERLAP PROPERTIES'
-_SPATIAL_CRITERIA_TYPE = 'spatial_criteria'
-_HABITAT_TYPE = 'habitat'
-_STRESSOR_TYPE = 'stressor'
-_SUBREGION_FIELD_NAME = 'name'
-_WEIGHT_KEY = 'Weight'
-_DQ_KEY = 'DQ'
-
 # Parameters to be used in dataframe and output stats CSV
 _HABITAT_HEADER = 'HABITAT'
 _STRESSOR_HEADER = 'STRESSOR'
@@ -50,15 +37,11 @@ _TOTAL_REGION_NAME = 'Total Region'
 # Parameters for the spatially explicit criteria shapefiles
 _RATING_FIELD = 'rating'
 
-# A cutoff for the decay amount after which we will say scores are equivalent
-# to 0, since we don't want to have values outside the buffer zone.
-_EXP_DEDAY_CUTOFF = 1E-6
-
 # Target cell type or values for raster files.
-_TARGET_PIXEL_FLT = gdal.GDT_Float32
-_TARGET_PIXEL_INT = gdal.GDT_Byte
-_TARGET_NODATA_FLT = float(numpy.finfo(numpy.float32).min)
-_TARGET_NODATA_INT = 255  # for unsigned 8-bit int
+_TARGET_GDAL_TYPE_FLOAT32 = gdal.GDT_Float32
+_TARGET_GDAL_TYPE_BYTE = gdal.GDT_Byte
+_TARGET_NODATA_FLOAT32 = float(numpy.finfo(numpy.float32).min)
+_TARGET_NODATA_BYTE = 255  # for unsigned 8-bit int
 
 # ESPG code for warping rasters to WGS84 coordinate system.
 _WGS84_ESPG_CODE = 4326
@@ -396,7 +379,7 @@ def execute(args):
                 (path, 1) for path in aligned_habitat_raster_paths],
             'local_op': _habitat_mask_op,
             'target_raster_path': habitat_mask_path,
-            'datatype_target': _TARGET_NODATA_INT,
+            'datatype_target': _TARGET_NODATA_BYTE,
         },
         task_name='Create habitat mask',
         target_path_list=[habitat_mask_path],
@@ -499,7 +482,7 @@ def execute(args):
                         (pairwise_risk_path, 1)],
                     'local_op': _reclassify_score,
                     'target_raster_path': reclassified_pairwise_risk_path,
-                    'datatype_target': _TARGET_NODATA_FLT,
+                    'datatype_target': _TARGET_NODATA_FLOAT32,
                 },
                 task_name=f'Reclassify risk for {habitat}/{stressor}',
                 target_path_list=[reclassified_pairwise_risk_path],
@@ -513,7 +496,7 @@ def execute(args):
             ndr._sum_rasters,
             kwargs={
                 'raster_path_list': pairwise_risk_paths,
-                'target_nodata': _TARGET_NODATA_FLT,
+                'target_nodata': _TARGET_NODATA_FLOAT32,
                 'target_result_path': cumulative_risk_path,
             },
             task_name=f'Cumulative risk to {habitat}',
@@ -532,7 +515,7 @@ def execute(args):
                     (cumulative_risk_path, 1)],
                 'local_op': _reclassify_score,
                 'target_raster_path': reclassified_cumulative_risk_path,
-                'datatype_target': _TARGET_NODATA_FLT,
+                'datatype_target': _TARGET_NODATA_FLOAT32,
             },
             task_name=f'Reclassify risk for {habitat}/{stressor}',
             target_path_list=[reclassified_cumulative_risk_path],
@@ -578,7 +561,7 @@ def execute(args):
                     (recovery_score_path, 1)],
                 'local_op': _reclassify_score,
                 'target_raster_path': reclassified_recovery_path,
-                'datatype_target': _TARGET_NODATA_FLT,
+                'datatype_target': _TARGET_NODATA_FLOAT32,
             },
             task_name=f'Reclassify risk for {habitat}/{stressor}',
             target_path_list=[reclassified_cumulative_risk_path],
@@ -615,7 +598,7 @@ def _prep_input_raster(source_raster_path, target_raster_path):
         source_raster_path)['nodata'][0]
 
     def _translate_op(input_array):
-        presence = numpy.full(input_array.shape, _TARGET_NODATA_INT,
+        presence = numpy.full(input_array.shape, _TARGET_NODATA_BYTE,
                               dtype=numpy.uint8)
         valid_mask = ~utils.array_equals_nodata(input_array, source_nodata)
         presence[valid_mask & (input_array == 1)] = 1
@@ -623,11 +606,11 @@ def _prep_input_raster(source_raster_path, target_raster_path):
 
     pygeoprocessing.raster_calculator(
         [(source_raster_path, 1)], _translate_op, target_raster_path,
-        _TARGET_PIXEL_INT, _TARGET_NODATA_INT)
+        _TARGET_GDAL_TYPE_BYTE, _TARGET_NODATA_BYTE)
 
 
 def _habitat_mask_op(*habitats):
-    output_mask = numpy.full(habitats[0].shape, _TARGET_NODATA_INT,
+    output_mask = numpy.full(habitats[0].shape, _TARGET_NODATA_BYTE,
                              dtype=numpy.uint8)
     for habitat_array in habitats:
         output_mask[habitat_array == 1] = 1
@@ -798,8 +781,8 @@ def _calc_criteria(attributes_list, habitat_mask_raster_path,
     # don't use the decayed EDT.
 
     pygeoprocessing.new_raster_from_base(
-        habitat_mask_raster_path, target_criterion_path, _TARGET_PIXEL_FLT,
-        [_TARGET_NODATA_FLT])
+        habitat_mask_raster_path, target_criterion_path, _TARGET_GDAL_TYPE_FLOAT32,
+        [_TARGET_NODATA_FLOAT32])
 
     habitat_mask_raster = gdal.OpenEx(habitat_mask_raster_path)
     habitat_band = habitat_mask_raster.GetRasterBand(1)
@@ -818,7 +801,7 @@ def _calc_criteria(attributes_list, habitat_mask_raster_path,
         habitat_mask = habitat_band.ReadAsArray(**block_info)
         valid_mask = (habitat_mask == 1)
 
-        criterion_score = numpy.full(habitat_mask.shape, _TARGET_NODATA_FLT,
+        criterion_score = numpy.full(habitat_mask.shape, _TARGET_NODATA_FLOAT32,
                                      dtype=numpy.float32)
         numerator = numpy.zeros(habitat_mask.shape, dtype=numpy.float32)
         denominator = numpy.zeros(habitat_mask.shape, dtype=numpy.float32)
@@ -872,7 +855,7 @@ def _calculate_pairwise_risk(habitat_mask_raster_path, exposure_raster_path,
                              target_risk_raster_path):
     def _muliplicative_risk(habitat_mask, exposure, consequence):
         habitat_pixels = (habitat_mask == 1)
-        risk_array = numpy.full(habitat_mask.shape, _TARGET_NODATA_FLT,
+        risk_array = numpy.full(habitat_mask.shape, _TARGET_NODATA_FLOAT32,
                                 dtype=numpy.float32)
         risk_array[habitat_pixels] = (
             exposure[habitat_pixels] * consequence[habitat_pixels])
@@ -880,7 +863,7 @@ def _calculate_pairwise_risk(habitat_mask_raster_path, exposure_raster_path,
 
     def _euclidean_risk(habitat_mask, exposure, consequence):
         habitat_pixels = (habitat_mask == 1)
-        risk_array = numpy.full(habitat_mask.shape, _TARGET_NODATA_FLT,
+        risk_array = numpy.full(habitat_mask.shape, _TARGET_NODATA_FLOAT32,
                                 dtype=numpy.float32)
         risk_array[habitat_pixels] = numpy.sqrt(
             (exposure[habitat_pixels] - 1) ** 2 +
@@ -897,8 +880,8 @@ def _calculate_pairwise_risk(habitat_mask_raster_path, exposure_raster_path,
         [(habitat_mask_raster_path, 1),
          (exposure_raster_path, 1),
          (consequence_raster_path, 1)],
-        risk_op, target_risk_raster_path, _TARGET_PIXEL_FLT,
-        _TARGET_NODATA_FLT)
+        risk_op, target_risk_raster_path, _TARGET_GDAL_TYPE_FLOAT32,
+        _TARGET_NODATA_FLOAT32)
 
 
 # max pairwise risk or recovery is calculated based on user input and choice of
@@ -906,7 +889,7 @@ def _calculate_pairwise_risk(habitat_mask_raster_path, exposure_raster_path,
 # equation type.
 def _reclassify_score(habitat_mask, max_pairwise_risk, score):
     habitat_pixels = (habitat_mask == 1)
-    reclassified = numpy.full(habitat_mask.shape, _TARGET_NODATA_INT,
+    reclassified = numpy.full(habitat_mask.shape, _TARGET_NODATA_BYTE,
                               dtype=numpy.uint8)
     reclassified[habitat_pixels] = numpy.digitize(
         score[habitat_pixels],
