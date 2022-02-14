@@ -119,6 +119,31 @@ class HRAUnitTests(unittest.TestCase):
             expected_array,
             pygeoprocessing.raster_to_numpy_array(decayed_edt_path))
 
+    def test_decayed_distance_no_decay(self):
+        from natcap.invest import hra2
+
+        stressor_mask = numpy.array([
+            [1, 0, 0, 0, 0, 0]], dtype=numpy.uint8)
+        stressor_raster_path = os.path.join(self.workspace_dir, 'stressor.tif')
+        pygeoprocessing.numpy_array_to_raster(
+            stressor_mask, 255, (30, -30), ORIGIN, SRS_WKT,
+            stressor_raster_path)
+
+        # buffer distance is 4*pixelwidth
+        buffer_distance = 4*30
+        decayed_edt_path = os.path.join(self.workspace_dir, 'decayed_edt.tif')
+        hra2._calculate_decayed_distance(
+            stressor_raster_path, 'None', buffer_distance,
+            decayed_edt_path)
+
+        # All pixels within the buffer distance are as impacted as though the
+        # stressor overlapped it directly.
+        expected_array = numpy.array([
+            [1, 1, 1, 1, 0, 0]], dtype=numpy.float32)
+        numpy.testing.assert_allclose(
+            expected_array,
+            pygeoprocessing.raster_to_numpy_array(decayed_edt_path))
+
     def test_info_table_parsing(self):
         from natcap.invest import hra2
 
