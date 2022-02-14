@@ -10,7 +10,7 @@ GIT_TEST_DATA_REPO_REV      := ac7023d684478485fea89c68f8f4154163541e1d
 
 GIT_UG_REPO                 := https://github.com/natcap/invest.users-guide
 GIT_UG_REPO_PATH            := doc/users-guide
-GIT_UG_REPO_REV             := f28397ee24272c73264219ca142c3ae6eaaf2ab6
+GIT_UG_REPO_REV             := cc1a43b46cc6ffb1de814553a8306d145e228394
 
 ENV = "./env"
 ifeq ($(OS),Windows_NT)
@@ -168,7 +168,7 @@ $(BUILD_DIR) $(DATA_DIR) $(DIST_DIR) $(DIST_DATA_DIR):
 	$(MKDIR) $@
 
 test: $(GIT_TEST_DATA_REPO_PATH)
-	$(TESTRUNNER) tests
+	$(TESTRUNNER) tests/test_spec_utils.py
 
 test_ui: $(GIT_TEST_DATA_REPO_PATH)
 	$(TESTRUNNER) ui_tests
