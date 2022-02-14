@@ -49,13 +49,16 @@ if (global.window) {
       error: jest.fn(),
       silly: jest.fn(),
     }),
+    getWorkspaceHash: (x, y, z) => {
+      return crypto.createHash('sha1').update(
+        `${x}
+         ${JSON.stringify(y)}
+         ${JSON.stringify(z)}`
+      ).digest('hex');
+    }
   };
 
-  // TODO: this serves as a global mock for the 'crypto' node module
-  // which is used in the renderer by app.jsx and InvestJob.js.
-  // A better solution is to avoid reliance on that node module
-  // in the renderer process.
-  // https://github.com/natcap/invest-workbench/issues/60
+  // jsdom does not implement window.crypto
   global.window.crypto = {
     getRandomValues: () => [crypto.randomBytes(4).toString('hex')],
   };

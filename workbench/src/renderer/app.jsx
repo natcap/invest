@@ -1,4 +1,3 @@
-import crypto from 'crypto';
 import React from 'react';
 import PropTypes from 'prop-types';
 import { ipcRenderer } from 'electron';
@@ -121,7 +120,10 @@ export default class App extends React.Component {
    * @param {InvestJob} job - as constructed by new InvestJob()
    */
   openInvestModel(job) {
-    const navID = crypto.randomBytes(16).toString('hex');
+    const navID = window.crypto.getRandomValues(
+      new Uint32Array(1)
+    ).toString();
+    // const navID = crypto.randomBytes(16).toString('hex');
     const { openJobs, openNavIDs } = this.state;
     openNavIDs.push(navID);
     openJobs[navID] = job;

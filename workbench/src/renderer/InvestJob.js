@@ -1,4 +1,3 @@
-import crypto from 'crypto';
 import localforage from 'localforage';
 
 const logger = window.Workbench.getLogger(__filename.split('/').slice(-1)[0]);
@@ -45,12 +44,15 @@ export default class InvestJob {
 
   static getWorkspaceHash(modelRunName, workspaceDir, resultsSuffix) {
     if (workspaceDir && modelRunName) {
-      const workspaceHash = crypto.createHash('sha1').update(
-        `${modelRunName}
-         ${JSON.stringify(workspaceDir)}
-         ${JSON.stringify(resultsSuffix)}`
-      ).digest('hex');
-      return workspaceHash;
+      // const workspaceHash = crypto.createHash('sha1').update(
+      //   `${modelRunName}
+      //    ${JSON.stringify(workspaceDir)}
+      //    ${JSON.stringify(resultsSuffix)}`
+      // ).digest('hex');
+      // return workspaceHash;
+      return window.Workbench.getWorkspaceHash(
+        modelRunName, workspaceDir, resultsSuffix
+      )
     }
     throw Error(
       'Cannot hash a job that is missing workspace or modelRunName properties'
