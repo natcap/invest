@@ -1,0 +1,491 @@
+:root {
+	font-size: 16px;
+}
+
+body {
+	--invest-green: #148F68;
+	background-color: rgba(0,0,0,0);
+	margin: 0;
+	padding: 1rem;
+	overflow-y: hidden;
+}
+
+/*Top Navigation*/
+
+.navbar {
+	height: 3rem;
+}
+
+.navbar .row {
+	align-items: end;
+	padding-bottom: 0;
+	border-bottom: 3px solid var(--invest-green);
+	background-color: #fff
+}
+
+.navbar-brand {
+	padding-bottom: 0;
+}
+
+.navbar-brand:hover {
+	text-decoration-line: underline;
+	text-decoration-thickness: 3px;
+}
+
+.navbar-middle {
+	flex-shrink: 1;
+	min-width: 0;
+}
+
+.navbar-right {
+	max-width: fit-content;
+	margin-left: 0.5rem;
+}
+
+.navbar-brand .nav-link {
+	color: var(--invest-green);
+	font-weight: 600;
+	font-size: 2.0rem;
+	letter-spacing: 1px;
+	padding-bottom: 0;
+}
+
+.navbar-nav.nav-tabs {
+	border-bottom: 0;
+	overflow-x: hidden;
+	overflow-y: hidden;
+}
+
+.navbar-nav .nav-item {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	max-width: fit-content;
+	white-space: nowrap;
+	flex: 1; /*size by available space, not by content*/
+	min-width: 0; /*and allow it to shrink to fit container*/
+	background-color: transparent;
+	border: 2px solid #999999;
+  border-bottom: 0;
+  border-radius: 5px 5px 0 0;
+}
+
+.navbar-nav .nav-item.active {
+	border: 3px solid var(--invest-green);
+	border-bottom: 0;
+	background-color: ghostwhite;
+}
+
+.navbar-light .navbar-nav .nav-link {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	min-width: 0;
+  background-color: transparent;
+  color: #999999;
+  border: 0;
+  border-bottom: 0;
+  font-size: 1.1rem;
+}
+
+.close-tab.btn {
+	background-color: transparent;
+	border-color: transparent;
+	color: #6c757d;
+	margin-left: 0.1rem;
+	padding-left: 0.1rem;
+	padding-right: 0.1rem;
+	padding-top: 0.1rem;
+	padding-bottom: 0.1rem;
+	height: fit-content;
+}
+.close-tab:hover, .close-tab:focus, .close-tab:active {
+	border-color: #6c757d;
+	background-color: #6c757d;
+	color: white;
+}
+
+.progress {
+	display: inline-flex;
+	height: 2rem;
+	font-size: 1rem;
+	background-color: #aeb1b3;
+}
+
+.progress-bar {
+	padding-left: 0.5rem;
+	padding-right: 0.5rem;
+}
+
+.navbar .alert {
+	padding: 0.4rem;
+}
+
+.navbar .row .text-right {
+	white-space: nowrap;
+}
+
+.settings-icon-btn, .settings-icon-btn:hover {
+	background-color: transparent;
+	border-color: transparent;
+}
+
+.settings-icon {
+	color: black;
+	font-size: 2rem;
+	vertical-align: text-bottom;
+}
+
+.language-icon {
+	color: black;
+	font-size: 1rem;
+	vertical-align: text-bottom;
+	margin-right: 0.2rem;
+}
+
+.tab-content {
+	padding-top:  10px;
+}
+
+/* Home Tab */
+
+.invest-list-container {
+	height: 87vh;
+	overflow-y: auto;
+}
+
+.invest-list-group {
+	/*do not constrain height here because it can cause more
+	columns to be created. Constrain it in parent instead.*/
+	display: block;
+	column-count: 2;
+	white-space: nowrap;
+}
+
+.invest-list-group .list-group-item {
+	border-top: none;
+	border-right: none;
+	border-left: none;
+	border-bottom: 1px solid rgba(0,0,0,.125);
+	margin-bottom: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.invest-list-group .list-group-item:last-child {
+	border-radius: 0;
+}
+
+.invest-button {
+	color: var(--invest-green);
+	font-weight: 600;
+}
+
+.invest-button:hover {
+	color: white;
+	background-color: var(--invest-green);
+	opacity: 75%;
+	font-weight: 600;
+}
+
+.recent-job-card-col {
+	display: flex;
+	flex-wrap: nowrap;
+	flex-direction: column;
+	height: 87vh;
+	overflow-y: auto;
+	margin-top: 15px;
+}
+
+.recent-job-card {
+	flex: 1 0 auto!important;
+	flex-direction: row;
+	width: inherit; 
+	margin-bottom: 15px!important;
+	padding: 0;
+}
+
+.card-body {
+	padding: 0;
+	width: inherit;
+}
+
+.card-header {
+	background-color: var(--invest-green);
+	filter: opacity(0.75);
+}
+
+.card-header .header-title {
+	color: white;
+	font-size: 1.35rem;
+	font-weight: 600;
+	letter-spacing: 0.5px;
+}
+
+.card-title {
+	padding-top: 1rem;
+	padding-left: 1.25rem;
+}
+
+.card-title .text-heading {
+	color: gray;
+}
+
+.card-title .text-mono {
+	font-family: monospace;
+	font-size: 1.2rem;
+}
+
+.card-text {
+	padding-left: 1.25rem;
+}
+
+.card-footer {
+	display: flex;
+	justify-content: space-between;
+	white-space: nowrap;
+}
+
+.card-footer .status-traceback {
+	color: red;
+	overflow: hidden;
+	text-overflow: ellipsis;	
+}
+
+.card-footer .timestamp {
+	padding-right:  2rem;
+}
+
+/* InVEST Model Tab */
+
+.invest-main-col {
+	 /* main col can grow & shrink, sidebar cannot. */
+	flex:  1 1 0;
+	padding-left: 0;
+	height: 85vh;
+}
+
+.invest-main-col .tab-content {
+	background-color: ghostwhite;
+}
+
+.invest-sidebar-col {
+	/* sidebar cannot grow or shrink, main col can.
+	 * sidebar width tries to be 25%.
+	 */
+	flex: 0 0 25%;
+	display: flex;
+	flex-direction: column;
+	padding-right: 0;
+}
+
+.invest-sidebar-col .nav-link {
+	color: #000;
+	background-color: #fff;
+	font-size: 1.3rem;
+	font-weight: 550;
+}
+
+.invest-sidebar-col .nav-link:hover, .invest-sidebar-col .nav-link:focus {
+	background-color: ghostwhite;
+}
+
+.invest-sidebar-col .nav-link.disabled {
+	color: #6c757d;
+}
+
+.invest-sidebar-col .nav-link.active {
+	color: #000;
+	background-color: ghostwhite;
+	border-right: 5px solid var(--invest-green);
+	border-radius: 0;
+}
+
+.sidebar-setup {
+	display: flex;
+	flex-direction: column;
+	flex-wrap: nowrap;
+	align-items: flex-start;
+	padding-left: 1.5rem;
+}
+
+.sidebar-setup .btn {
+	white-space: nowrap;
+}
+
+/* Resources Links */
+.sidebar-row {
+	display: flex;
+	flex-direction: column;
+	font-size: 1.0rem;
+	padding: inherit;
+}
+
+.invest-sidebar-col .alert {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	order: -1;
+	font-family: monospace;
+	font-weight: bold;
+}
+
+.invest-sidebar-col .alert .btn {
+	flex: 1;
+	margin-top: 1rem;
+	font-size: 1.1rem;
+	font-family: revert;
+	letter-spacing: 0.03rem;
+}
+
+.sidebar-footer {
+    margin-top: auto;
+    padding-right: 1rem;
+}
+
+.sidebar-footer .btn-primary {
+	font-size: 1.5rem;
+	font-weight: 600;
+	letter-spacing: 0.1rem;
+}
+
+.sidebar-footer .btn-primary .spinner-border {
+	margin-left: 1rem;
+	margin-bottom: 0.25rem;
+}
+
+/* InVEST Setup Tab */
+.args-form {
+	height: 85vh;
+	width: 100%;
+	overflow-y: auto;
+	overflow-x: hidden;
+	padding-left: 2rem;
+	padding-right: 1rem;
+}
+
+/* InVEST Argument Forms */
+.args-form.dragging {
+  opacity: 0.2;
+}
+
+.arg-group {
+	margin-top: 1.0rem;
+	margin-bottom: 1.5rem;
+	padding-bottom: 0.5rem;
+	border-bottom: 1px dotted;
+}
+
+.arg-group:last-of-type {
+	border-bottom: none;
+}
+
+.arg-hide {
+	display: none;
+}
+
+.arg-disable .form-label {
+	color: #a5a5a5;
+}
+
+.args-form .form-control:disabled {
+	color: #888888;
+}
+
+.args-form .form-group {
+	align-items: center;
+}
+
+.args-form .form-label {
+	text-transform: capitalize;
+}
+
+.args-form .form-control {
+	font-family: monospace;
+	font-size:1.3rem;
+}
+
+.args-form .form-control[type=text] {
+	/* In order to keep the important part of long filepaths visible
+	https://stackoverflow.com/questions/38222696/issue-with-the-direction-rtl-css-property */
+	direction: rtl;
+	text-align: left;
+	unicode-bidi: plaintext;
+}
+
+input.input-dragging {
+  border: 4px dashed #cccccc;
+}
+
+input[type=text]::placeholder {
+	font-style: italic;
+	color: #a5a5a5;
+}
+
+/* Default sized Radio buttons are too small */
+.form-check-inline .form-check-input {
+	transform:scale(2.0);
+	margin-left: 1rem;
+}
+
+.form-check-label {
+	padding-left: 0.5rem;
+	padding-right: 1rem;
+}
+
+.invalid-feedback {
+	font-size: 0.9rem;
+	font-family: monospace;
+	white-space: pre-wrap;
+	padding-left: 3rem;
+	text-indent: -3rem;
+}
+
+.args-form svg {
+	font-size: 1.5rem;
+}
+
+/* InVEST Log Tab */
+#log-display {
+	overflow: auto;
+	white-space: pre-wrap;
+	height: 85vh;
+	/*background-color: #191919;*/
+}
+
+#log-text {
+	font-family: monospace;
+	font-size:1.0rem;
+	color: #000;
+}
+
+#log-text .invest-log-primary {
+	color: #000;
+	font-weight: bold;
+}
+
+#log-text .invest-log-primary-warning {
+	color: #f13232;
+}
+
+#log-text .invest-log-error {
+	color: #f13232;
+	font-weight: bold;
+}
+
+/* Download Data Modal */
+.download-data-modal .modal-dialog {
+	overflow-y: initial;
+}
+
+.download-data-modal .modal-body {
+	height: 80vh;
+	overflow-y: auto;
+}
+
+/* Settings Modal */
+.settings-modal .modal-dialog {
+	/*Hardcoding prevents dynamic resizing, which is convenient.
+	And it is okay because we set the minimum electron window width
+	at 800px when we create it.*/
+	max-width: 600px;
+}

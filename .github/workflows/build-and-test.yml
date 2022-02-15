@@ -360,3 +360,69 @@ jobs:
               shell: bash -l {0}
               timeout-minutes: 10  # tests usually take < 2 minutes, so 10 is generous.
               run: make test_ui
+
+    run-workbench-tests:
+        name: "Run Workbench Tests"
+        runs-on: ${{ matrix.os }}
+        needs: check-syntax-errors
+        strategy:
+            fail-fast: False
+            max-parallel: 4
+            matrix:
+                python-version: [3.9]
+                python-architecture: [x64]
+                os: [windows-latest, macos-latest]
+
+        steps:
+            - uses: actions/checkout@v2
+              with:
+                  # Fetch complete history for accurate versioning
+                  fetch-depth: 0
+
+              # Taken from https://github.com/actions/cache/blob/master/examples.md#python---pip
+            - name: Restore pip cache
+              uses: actions/cache@v2
+              with:
+                  path: ~\AppData\Local\pip\Cache
+                  key: ${{ runner.os }}-py${{ matrix.python-version }}-${{ matrix.python-architecture }}-pip-${{ hashFiles('**/requirements*.txt') }}-ui-tests
+
+            - name: Setup conda environment
+              uses: conda-incubator/setup-miniconda@v2
+              with:
+                  activate-environment: ${{ matrix.os }}-test-env
+                  auto-update-conda: true
+                  python-version: ${{ matrix.python-version }}
+                  channels: conda-forge
+
+            - name: Install build dependencies
+              shell: bash -l {0}
+              run: |
+                  conda install nomkl requests # make sure numpy is w/out MKL
+                  conda upgrade -y pip setuptools
+
+            - name: Install runtime dependencies
+              shell: bash -l {0}
+              run: |
+                  python ./scripts/convert-requirements-to-conda-yml.py \
+                    requirements.txt requirements-dev.txt \
+                    requirements-gui.txt > requirements-all.yml
+                  conda env update --file requirements-all.yml
+                  make install
+
+            - name: Install Node.js
+              uses: actions/setup-node@v2
+              with:
+                  node-version: 14.x
+
+            - name: Install Workbench Dependencies
+              working-directory: ./workbench
+              run: |
+                  yarn config set network-timeout 600000 -g
+                  yarn install
+
+            - name: run workbench tests
+              shell: bash -l {0}
+              working-directory: ./workbench
+              env:
+                  CI: true
+              run: yarn test

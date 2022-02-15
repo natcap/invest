@@ -1,0 +1,95 @@
+{
+  "name": "invest-workbench",
+  "version": "0.1.0-beta",
+  "description": "Models that map and value the goods and services from nature that sustain and fulfill human life",
+  "main": "build/main/main.js",
+  "homepage": "./",
+  "scripts": {
+    "start": "electron .",
+    "lint": "eslint --cache --color --ext .jsx,.js src",
+    "test": "jest --runInBand --testPathIgnorePatterns /tests/binary_tests/ /tests/sampledata_linkcheck/",
+    "test-electron-app": "jest --runInBand --testMatch **/tests/binary_tests/puppet.test.js",
+    "test-sampledata-registry": "jest --runInBand --testMatch **/tests/sampledata_linkcheck/sampledata_registry.test.js",
+    "postinstall": "electron-builder install-app-deps",
+    "dev": "node ./scripts/clean-build-dir.js && babel src -d build --verbose --config-file ./babel.config.js --copy-files --ignore **/__mocks__/* --no-copy-ignored --watch -s both",
+    "build": "node ./scripts/clean-build-dir.js && babel src -d build --verbose --config-file ./babel.config.js --copy-files --ignore **/__mocks__/* --no-copy-ignored",
+    "dist": "cross-env DEBUG=electron-builder electron-builder build --config electron-builder-config.js"
+  },
+  "jest": {
+    "verbose": true,
+    "collectCoverage": true,
+    "setupFiles": [
+      "./tests/jest.overrides.js"
+    ],
+    "testEnvironment": "jsdom",
+    "clearMocks": true,
+    "restoreMocks": true,
+    "resetModules": true
+  },
+  "keywords": [],
+  "author": "Natural Capital Project",
+  "license": "MIT",
+  "dependencies": {
+    "bootstrap": "4.3.1",
+    "electron-log": "^4.3.5",
+    "esm": "^3.2.25",
+    "gettext-parser": "^4.2.0",
+    "gettext.js": "^1.0.1",
+    "glob": "^7.1.6",
+    "localforage": "^1.9.0",
+    "node-fetch": "^2.6.7",
+    "prop-types": "^15.7.2",
+    "react": "^17.0.1",
+    "react-bootstrap": "^1.5.2",
+    "react-dom": "^17.0.1",
+    "react-icons": "^4.3.1",
+    "sanitize-html": "^2.2.0",
+    "yauzl": "^2.10.0"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.13.10",
+    "@babel/plugin-transform-runtime": "^7.13.10",
+    "@babel/preset-env": "^7.13.10",
+    "@babel/preset-react": "^7.12.13",
+    "@babel/register": "^7.13.8",
+    "@babel/runtime": "^7.13.10",
+    "@jest-runner/electron": "^3.0.0",
+    "@testing-library/dom": "^8.1.0",
+    "@testing-library/jest-dom": "^5.14.1",
+    "@testing-library/react": "^12.0.0",
+    "@testing-library/user-event": "^13.5.0",
+    "babel-eslint": "^10.1.0",
+    "cross-env": "^7.0.3",
+    "electron": "^15.1.1",
+    "electron-builder": "^22.10.5",
+    "electron-devtools-installer": "^3.2.0",
+    "eslint": "^7.21.0",
+    "eslint-config-airbnb": "^18.2.1",
+    "eslint-plugin-import": "^2.22.1",
+    "eslint-plugin-jest": "^24.2.1",
+    "eslint-plugin-jsdoc": "^31.6.1",
+    "eslint-plugin-jsx-a11y": "^6.4.1",
+    "eslint-plugin-react": "^7.22.0",
+    "eslint-plugin-react-hooks": "^4.2.0",
+    "fs-extra": "^9.1.0",
+    "jest": "^27.4.7",
+    "pptr-testing-library": "^0.6.4",
+    "puppeteer-core": "^9.1.1",
+    "react-devtools": "^4.10.1",
+    "react-test-renderer": "^17.0.1",
+    "rimraf": "^3.0.2",
+    "yazl": "^2.5.1"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}

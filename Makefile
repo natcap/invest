@@ -34,7 +34,7 @@ ifeq ($(OS),Windows_NT)
 	# widely available on Windows now, especially through git-bash
 	SHELL := /usr/bin/bash
 	CONDA := conda.bat
-	BASHLIKE_SHELL_COMMAND := $(SHELL) -c
+	BASHLIKE_SHELL_COMMAND := '$(SHELL)' -c
 	.DEFAULT_GOAL := windows_installer
 	RM_DATA_DIR := $(RMDIR) $(DATA_DIR)
 	/ := '\'
@@ -63,7 +63,7 @@ else
 	endif
 endif
 
-REQUIRED_PROGRAMS := make zip pandoc $(PYTHON) git git-lfs conda
+REQUIRED_PROGRAMS := make zip pandoc $(PYTHON) git git-lfs conda yarn
 ifeq ($(OS),Windows_NT)
 	REQUIRED_PROGRAMS += makensis
 endif
@@ -76,10 +76,12 @@ PYTHON_ARCH := $(shell $(PYTHON) -c "import sys; print('x86' if sys.maxsize <= 2
 GSUTIL := gsutil
 SIGNTOOL := SignTool
 
-# Output directory names
+# local directory names
 DIST_DIR := dist
 DIST_DATA_DIR := $(DIST_DIR)/data
 BUILD_DIR := build
+WORKBENCH := workbench
+WORKBENCH_DIST_DIR := $(WORKBENCH)/dist
 
 # The fork name and user here are derived from the git path on github.
 # The fork name will need to be set manually (e.g. make FORKNAME=natcap/invest)
@@ -114,7 +116,7 @@ UG_FILE_VALIDATOR := $(PYTHON) scripts/userguide-filevalidator.py $(GIT_UG_REPO_
 
 # Target names.
 INVEST_BINARIES_DIR := $(DIST_DIR)/invest
-INVEST_BINARIES_DIR_ZIP := $(OSNAME)_invest_binaries.zip
+# INVEST_BINARIES_DIR_ZIP := $(OSNAME)_invest_binaries.zip
 
 APIDOCS_BUILD_DIR := $(BUILD_DIR)/sphinx/apidocs
 APIDOCS_TARGET_DIR := $(DIST_DIR)/apidocs
@@ -328,6 +330,7 @@ ZIPDIRS = Annual_Water_Yield \
 ZIPTARGETS = $(foreach dirname,$(ZIPDIRS),$(addprefix $(DIST_DATA_DIR)/,$(dirname).zip))
 
 sampledata: $(ZIPTARGETS)
+	$(PYTHON) $(WORKBENCH)/scripts/build_sampledata_registry.py $(DATA_BASE_URL) $(CURDIR)/$(DIST_DATA_DIR)
 $(DIST_DATA_DIR)/%.zip: $(DIST_DATA_DIR) $(GIT_SAMPLE_DATA_REPO_PATH)
 	cd $(GIT_SAMPLE_DATA_REPO_PATH); $(BASHLIKE_SHELL_COMMAND) "$(ZIP) -r $(addprefix ../../,$@) $(subst $(DIST_DATA_DIR)/,$(DATADIR),$(subst .zip,,$@))"
 
@@ -382,20 +385,20 @@ codesign_mac:
 	# this is essential to avoid the UI password prompt
 	security set-key-partition-list -S apple-tool:,apple: -s -k $(KEYCHAIN_PASS) $(KEYCHAIN_NAME)
 	# sign the dmg using certificate that's looked up by unique identifier 'Stanford'
-	codesign --timestamp --verbose --sign Stanford $(MAC_DISK_IMAGE_FILE)
+	codesign --timestamp --verbose --sign Stanford $(BIN_TO_SIGN) $(WORKBENCH_BIN_TO_SIGN)
 
 codesign_windows:
 	$(GSUTIL) cp gs://stanford_cert/$(CERT_FILE) $(BUILD_DIR)/$(CERT_FILE)
-	"$(SIGNTOOL)" sign -fd SHA256 -f $(BUILD_DIR)/$(CERT_FILE) -p $(CERT_PASS) $(BIN_TO_SIGN)
-	"$(SIGNTOOL)" timestamp -tr http://timestamp.sectigo.com -td SHA256 $(BIN_TO_SIGN)
+	"$(SIGNTOOL)" sign -fd SHA256 -f $(BUILD_DIR)/$(CERT_FILE) -p $(CERT_PASS) $(BIN_TO_SIGN) $(WORKBENCH_BIN_TO_SIGN)
+	"$(SIGNTOOL)" timestamp -tr http://timestamp.sectigo.com -td SHA256 $(BIN_TO_SIGN) $(WORKBENCH_BIN_TO_SIGN)
 	$(RM) $(BUILD_DIR)/$(CERT_FILE)
 	@echo "Installer was signed with signtool"
 
 deploy:
-	-(cd $(INVEST_BINARIES_DIR) && $(ZIP) -r ../$(INVEST_BINARIES_DIR_ZIP) .)
 	-$(GSUTIL) -m rsync $(DIST_DIR) $(DIST_URL_BASE)
 	-$(GSUTIL) -m rsync -r $(DIST_DIR)/data $(DIST_URL_BASE)/data
 	-$(GSUTIL) -m rsync -r $(DIST_DIR)/userguide $(DIST_URL_BASE)/userguide
+	-$(GSUTIL) -m rsync -r $(WORKBENCH_DIST_DIR) $(DIST_URL_BASE)/workbench
 	@echo "Application binaries (if they were created) can be downloaded from:"
 	@echo "  * $(DOWNLOAD_DIR_URL)"
 
