@@ -4,6 +4,10 @@ on:
     push:
     pull_request:
 
+defaults:
+  run:
+    shell: bash -l {0}
+
 jobs:
     # This job will check for obvious syntax errors.
     # The other jobs in this file depend on this one and won't show up in the
@@ -61,13 +65,6 @@ jobs:
                   # Fetch complete history for accurate versioning
                   fetch-depth: 0
 
-              # Taken from https://github.com/actions/cache/blob/master/examples.md#python---pip
-            - name: Restore pip cache
-              uses: actions/cache@v2
-              with:
-                  path: ~\AppData\Local\pip\Cache
-                  key: ${{ runner.os }}-py${{ matrix.python-version }}-${{ matrix.python-architecture }}-pip-${{ hashFiles('**/requirements*.txt') }}-model-tests
-
             # NOTE: It takes twice as long to save the sample data cache
             # as it does to do a fresh clone (almost 5 minutes vs. 2.5 minutes)
             # Test data is way, way faster by contrast (on the order of a few
@@ -78,17 +75,17 @@ jobs:
                   path: data/invest-test-data
                   key: git-lfs-testdata-${{ hashfiles('Makefile') }}
 
-            - name: Setup conda environment
-              uses: conda-incubator/setup-miniconda@v2
+            - name: Set up conda environment
+              uses: ./.github/actions/setup_env
               with:
-                  activate-environment: ${{ matrix.os }}-test-env
-                  auto-update-conda: true
-                  python-version: ${{ matrix.python-version }}
-                  channels: conda-forge
+                  cache-id: py${{ matrix.python-version }}-${{ matrix.os }}-model-tests
+              id: condacache
 
             - name: Install build dependencies
+              if: steps.condacache.outputs.cache-hit != 'true'
               shell: bash -l {0}
               run: |
+                  conda install python=${{ matrix.python-version }}
                   conda install nomkl # make sure numpy is w/out MKL
                   conda upgrade -y pip setuptools
                   conda install ${{ matrix.numpy }} ${{ matrix.gdal }} twine build
@@ -100,6 +97,7 @@ jobs:
                   python -m twine check dist/*
 
             - name: Install runtime dependencies
+              if: steps.condacache.outputs.cache-hit != 'true'
               shell: bash -l {0}
               run: |
                   python ./scripts/convert-requirements-to-conda-yml.py \
@@ -187,20 +185,20 @@ jobs:
             - name: Fetch git tags
               run: git fetch origin +refs/tags/*:refs/tags/*
 
-            - name: Setup conda environment
-              uses: conda-incubator/setup-miniconda@v2
+            - name: Set up conda environment
+              uses: ./.github/actions/setup_env
               with:
-                  activate-environment: source-env
-                  auto-update-conda: true
-                  python-version: ${{ matrix.python-version }}
-                  channels: conda-forge
+                  cache-id: py${{ matrix.python-version }}-${{ matrix.os }}-test-source-dist
+              id: condacache
 
             - name: Install dependencies
+              if: steps.condacache.outputs.cache-hit != 'true'
               shell: bash -l {0}
               run: |
+                  conda install python=${{ matrix.python-version }}
                   conda install nomkl # make sure numpy is w/out MKL
                   conda upgrade -y pip setuptools
-                  conda install twine build
+                  conda install twine build setuptools_scm
                   python ./scripts/convert-requirements-to-conda-yml.py \
                     requirements.txt > requirements-all.yml
                   conda env update --file requirements-all.yml
@@ -273,23 +271,17 @@ jobs:
                   # Fetch complete history for accurate versioning
                   fetch-depth: 0
 
-            - name: Restore pip cache
-              uses: actions/cache@v2
+            - name: Set up conda environment
+              uses: ./.github/actions/setup_env
               with:
-                  path: ~\AppData\Local\pip\Cache
-                  key: windows-py37-pipcache-sampledata-${{ hashfiles('requirements.txt') }}
-
-            - name: Setup conda environment
-              uses: conda-incubator/setup-miniconda@v2
-              with:
-                  activate-environment: validate-env
-                  auto-update-conda: true
-                  python-version: 3.9
-                  channels: conda-forge
+                  cache-id: py${{ matrix.python-version }}-${{ matrix.os }}-validate
+              id: condacache
 
             - name: Install dependencies
+              if: steps.condacache.outputs.cache-hit != 'true'
               shell: bash -l {0}
               run: |
+                  conda install python=3.9
                   conda install nomkl # make sure numpy w/out mkl
                   conda install pytest requests build setuptools_scm
                   conda upgrade -y pip wheel
@@ -323,30 +315,23 @@ jobs:
                   # Fetch complete history for accurate versioning
                   fetch-depth: 0
 
-              # Taken from https://github.com/actions/cache/blob/master/examples.md#python---pip
-            - name: Restore pip cache
-              uses: actions/cache@v2
-              with:
-                  path: ~\AppData\Local\pip\Cache
-                  key: ${{ runner.os }}-py${{ matrix.python-version }}-${{ matrix.python-architecture }}-pip-${{ hashFiles('**/requirements*.txt') }}-ui-tests
-
             - name: Restore git-LFS test data cache
               uses: actions/cache@v2
               with:
                   path: data/invest-test-data
                   key: git-lfs-testdata-${{ hashfiles('Makefile') }}
 
-            - name: Setup conda environment
-              uses: conda-incubator/setup-miniconda@v2
+            - name: Set up conda environment
+              uses: ./.github/actions/setup_env
               with:
-                  activate-environment: ui-env
-                  auto-update-conda: true
-                  python-version: ${{ matrix.python-version }}
-                  channels: conda-forge
+                  cache-id: py${{ matrix.python-version }}-${{ matrix.os }}-ui-tests
+              id: condacache
 
             - name: Install dependencies
+              if: steps.condacache.outputs.cache-hit != 'true'
               shell: bash -l {0}
               run: |
+                  conda install python=${{ matrix.python-version }}
                   conda install nomkl  # make sure numpy w/out mkl
                   conda install requests
                   conda upgrade -y pip setuptools

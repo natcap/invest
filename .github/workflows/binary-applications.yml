@@ -45,22 +45,16 @@ jobs:
             - name: Fetch git tags
               run: git fetch origin +refs/tags/*:refs/tags/*
 
-            - name: Restore pip cache
-              uses: actions/cache@v2
+            - name: Set up conda environment
+              uses: ./.github/actions/setup_env
               with:
-                  path: ~\AppData\Local\pip\Cache
-                  key: windows-py${{ env.PYTHON_VERSION }}-${{ env.PYTHON_ARCH }}-pip-${{ hashFiles('**/requirements*.txt') }}-exe
-
-            - name: Setup conda environment
-              uses: conda-incubator/setup-miniconda@v2
-              with:
-                  activate-environment: winbin-env
-                  auto-update-conda: true
-                  python-version: 3.8
-                  channels: conda-forge
+                  cache-id: py${{ env.PYTHON_VERSION }}-windows-binaries
+              id: condacache
 
             - name: Install python dependencies
+              if: steps.condacache.outputs.cache-hit != 'true'
               run: |
+                  conda install python=${{ env.PYTHON_VERSION }}
                   conda install nomkl # make sure numpy is w/out MKL
                   conda upgrade -y pip setuptools
                   conda install requests
@@ -71,6 +65,9 @@ jobs:
                   conda env update --file requirements-all.yml
                   make install
 
+              # Not caching chocolatey packages because the cache may not be reliable
+              # https://github.com/chocolatey/choco/issues/2134
+              # and this step only takes about 1 minute.
             - name: Install build dependencies
               shell: powershell
               run: |
@@ -196,22 +193,16 @@ jobs:
                   brew update
                   brew install pandoc
 
-            - name: Restore conda cache
-              uses: actions/cache@v2
+            - name: Set up conda environment
+              uses: ./.github/actions/setup_env
               with:
-                  path: ~/opt/anaconda3
-                  key: mac-py${{ env.PYTHON_VERSION }}-${{ env.PYTHON_ARCH}}-conda-${{ hashFiles('**/requirements*.txt') }}-exe
-
-            - name: Setup conda environment
-              uses: conda-incubator/setup-miniconda@v2
-              with:
-                  activate-environment: macbin-env
-                  auto-update-conda: true
-                  python-version: 3.8
-                  channels: conda-forge
+                  cache-id: py${{ env.PYTHON_VERSION }}-macos-binaries
+              id: condacache
 
             - name: Build conda env with python dependencies
+              if: steps.condacache.outputs.cache-hit != 'true'
               run: |
+                  conda install python=${{ env.PYTHON_VERSION }}
                   conda upgrade -y pip setuptools
                   conda install requests
                   python ./scripts/convert-requirements-to-conda-yml.py \
