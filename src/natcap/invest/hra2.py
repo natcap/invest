@@ -414,6 +414,8 @@ def execute(args):
     for habitat in habitats:
         pairwise_risk_tasks = []
         pairwise_risk_paths = []
+        reclassified_pairwise_risk_paths = []
+        reclassified_pairwise_risk_tasks = []
 
         for stressor in stressors:
             criteria_tasks = {}  # {criteria type: task}
@@ -478,7 +480,9 @@ def execute(args):
 
             reclassified_pairwise_risk_path = os.path.join(
                 intermediate_dir, f'reclass_{habitat}_{stressor}{suffix}.tif')
-            _ = graph.add_task(
+            reclassified_pairwise_risk_paths.append(
+                reclassified_pairwise_risk_path)
+            reclassified_pairwise_risk_tasks.append(graph.add_task(
                 pygeoprocessing.raster_calculator,
                 kwargs={
                     'base_raster_path_band_const_list': [
@@ -493,7 +497,7 @@ def execute(args):
                 task_name=f'Reclassify risk for {habitat}/{stressor}',
                 target_path_list=[reclassified_pairwise_risk_path],
                 dependent_task_list=[pairwise_risk_task]
-            )
+            ))
 
         # Sum the pairwise risk scores to get cumulative risk to the habitat.
         cumulative_risk_path = os.path.join(
@@ -527,6 +531,26 @@ def execute(args):
             task_name=f'Reclassify risk for {habitat}/{stressor}',
             target_path_list=[reclassified_cumulative_risk_path],
             dependent_task_list=[cumulative_risk_task]
+        )
+
+        max_risk_classification_path = os.path.join(
+            output_dir, f'risk_{habitat}{suffix}.tif')
+        maximum_reclassified_risk_task = graph.add_task(
+            pygeoprocessing.raster_calculator,
+            kwargs={
+                'base_raster_path_band_const_list': [
+                    (habitat_mask_path, 1)
+                ] + [(path, 1) for path in reclassified_pairwise_risk_paths],
+                'local_op': _maximum_reclassified_score,
+                'target_raster_path': max_risk_classification_path,
+                'datatype_target': _TARGET_GDAL_TYPE_BYTE,
+                'nodata_target': _TARGET_NODATA_BYTE,
+            },
+            task_name=f'Maximum reclassification for {habitat}',
+            target_path_list=[max_risk_classification_path],
+            dependent_task_list=([
+                reclassified_cumulative_risk_task] +
+                reclassified_pairwise_risk_tasks)
         )
 
     # Recovery attributes are calculated with the same numerical method as
@@ -576,8 +600,6 @@ def execute(args):
             dependent_task_list=[habitat_mask_task, recovery_score_task]
         )
 
-    # TODO: implement decay type None
-    # TODO: create the 2-way reclassified risk raster.
     # TODO: create total risk to ecosystem raster
     # TODO: visualize outputs
     # TODO: create summary statistics output file
@@ -926,6 +948,18 @@ def _reclassify_score(habitat_mask, max_pairwise_risk, score):
         [0, max_pairwise_risk*(1/3), max_pairwise_risk*(2/3)],
         right=True)  # bins[i-1] >= x > bins[i]
     return reclassified
+
+
+def _maximum_reclassified_score(habitat_mask, *risk_classes):
+    target_matrix = numpy.zeros(habitat_mask.shape, dtype=numpy.uint8)
+    valid_pixels = (habitat_mask == 1)
+
+    for risk_class_matrix in risk_classes:
+        target_matrix[valid_pixels] = numpy.maximum(
+            target_matrix[valid_pixels], risk_class_matrix[valid_pixels])
+
+    target_matrix[~valid_pixels] = _TARGET_NODATA_BYTE
+    return target_matrix
 
 
 def build_datastack_archive(args, datastack_path):

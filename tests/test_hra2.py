@@ -237,6 +237,28 @@ class HRAUnitTests(unittest.TestCase):
         pandas.testing.assert_frame_equal(
             expected_composite_dataframe, composite_dataframe)
 
+    def test_maximum_reclassified_score(self):
+        from natcap.invest import hra2
+
+        nodata = hra2._TARGET_NODATA_BYTE
+
+        habitat_mask = numpy.array(
+            [[0, 1, nodata, 1, 1]], dtype=numpy.uint8)
+
+        risk_classes = [
+            numpy.array(classes, dtype=numpy.uint8) for classes in [
+                [[nodata, 1, nodata, 2, 1]],
+                [[nodata, 2, nodata, 2, 1]],
+                [[nodata, 3, nodata, 1, 1]]]
+        ]
+        reclassified_score = hra2._maximum_reclassified_score(
+            habitat_mask, *risk_classes)
+
+        expected_risk_classes = numpy.array(
+            [[nodata, 3, nodata, 2, 1]], dtype=numpy.uint8)
+        numpy.testing.assert_allclose(
+            reclassified_score, expected_risk_classes)
+
 
 class HRAModelTests(unittest.TestCase):
     def setUp(self):
