@@ -1,8 +1,6 @@
 name: Build InVEST App Binaries
 
-on:
-    push:
-    pull_request:
+on: [push, pull_request]
 
 defaults:
   run:
@@ -14,350 +12,346 @@ env:
   # requests: dependency of convert-requirements-to-conda-yml.py
   DEFAULT_DEPENDENCIES: build nomkl requests
   PYTHON_VERSION: 3.9
-  WINDOWS_PIP_CACHE: ~\AppData\Local\pip\Cache
-  MACOS_PIP_CACHE: ~/Library/Caches/pip
-  CONDA_CACHE: ~/conda_pkgs_dir  # setup-miniconda sets same cache dir on windows and mac
 
 jobs:
-    check-syntax-errors:
-        name: Check for syntax errors
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v2
+  check-syntax-errors:
+    name: Check for syntax errors
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
 
-            - name: Set up python ${{ env.PYTHON_VERSION }}
-              uses: actions/setup-python@v1
-              with:
-                  python-version: ${{ env.PYTHON_VERSION }}
+      - name: Set up python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v1
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
 
-            - name: Set up environment
-              run: pip install flake8
+      - name: Set up environment
+        run: pip install flake8
 
-            - name: Lint with flake8
-              run: |
-                # stop the build if there are Python syntax errors or undefined names
-                python -m flake8 src --count --select=E9,F63,F7,F82 --show-source --statistics
-                # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-                python -m flake8 src --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+      - name: Lint with flake8
+        run: |
+          # stop the build if there are Python syntax errors or undefined names
+          python -m flake8 src --count --select=E9,F63,F7,F82 --show-source --statistics
+          # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+          python -m flake8 src --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
-    build-windows-binaries:
-        name: Build windows binaries
-        needs: check-syntax-errors
-        runs-on: windows-latest
-        steps:
-            - uses: actions/checkout@v2
-              with:
-                  fetch-depth: 0  # fetch complete history
+  build-windows-binaries:
+    name: Build windows binaries
+    needs: check-syntax-errors
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0  # fetch complete history
 
-            - name: Fetch git tags
-              run: git fetch origin +refs/tags/*:refs/tags/*
+      - name: Fetch git tags
+        run: git fetch origin +refs/tags/*:refs/tags/*
 
-            - name: Set up conda environment
-              uses: ./.github/actions/setup_env
-              with:
-                  cache-id: py${{ env.PYTHON_VERSION }}-windows-binaries
-              id: condacache
+      - name: Set up conda environment
+        uses: ./.github/actions/setup_env
+        with:
+          cache-id: py${{ env.PYTHON_VERSION }}-windows-binaries
+        id: condacache
 
-            - name: Install python dependencies
-              if: steps.condacache.outputs.cache-hit != 'true'
-              run: |
-                  conda install python=${{ env.PYTHON_VERSION }}
-                  conda install nomkl # make sure numpy is w/out MKL
-                  conda upgrade -y pip setuptools
-                  conda install requests
-                  python ./scripts/convert-requirements-to-conda-yml.py \
-                        requirements.txt \
-                        requirements-dev.txt \
-                        requirements-gui.txt > requirements-all.yml
-                  conda env update --file requirements-all.yml
-                  make install
+      - name: Install python dependencies
+        if: steps.condacache.outputs.cache-hit != 'true'
+        run: |
+          conda install python=${{ env.PYTHON_VERSION }}
+          conda install nomkl # make sure numpy is w/out MKL
+          conda upgrade -y pip setuptools
+          conda install requests
+          python ./scripts/convert-requirements-to-conda-yml.py \
+            requirements.txt \
+            requirements-dev.txt \
+            requirements-gui.txt > requirements-all.yml
+          conda env update --file requirements-all.yml
+          make install
 
-              # Not caching chocolatey packages because the cache may not be reliable
-              # https://github.com/chocolatey/choco/issues/2134
-              # and this step only takes about 1 minute.
-            - name: Install build dependencies
-              shell: powershell
-              run: |
-                  # Appveyor build scripts expects PYTHON to point to the dir containing python.
-                  $env:PYTHON = python -c "import sys, os; print(os.path.dirname(sys.executable))"
-                  ./ci/windows-ci-binary-install.ps1
+        # Not caching chocolatey packages because the cache may not be reliable
+        # https://github.com/chocolatey/choco/issues/2134
+        # and this step only takes about 1 minute.
+      - name: Install build dependencies
+        shell: powershell
+        run: |
+          # Appveyor build scripts expects PYTHON to point to the dir containing python.
+          $env:PYTHON = python -c "import sys, os; print(os.path.dirname(sys.executable))"
+          ./ci/windows-ci-binary-install.ps1
 
-            - name: Build userguide, binaries, installer
-              run: |
-                  # This builds the users guide, binaries, and installer
-                  make windows_installer
+      - name: Build userguide, binaries, installer
+        run: |
+          # This builds the users guide, binaries, and installer
+          make windows_installer
 
-            - name: Install Node.js
-              uses: actions/setup-node@v2
-              with:
-                node-version: 14.x
+      - name: Install Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: 14.x
 
-            - name: Install Workbench Dependencies
-              working-directory: ./workbench
-              run: |
-                yarn config set network-timeout 600000 -g
-                yarn install
+      - name: Install Workbench Dependencies
+        working-directory: ./workbench
+        run: |
+          yarn config set network-timeout 600000 -g
+          yarn install
 
-            - name: Build Workbench
-              working-directory: ./workbench
-              env:
-                GH_TOKEN: env.GITHUB_TOKEN
-                DEBUG: electron-builder
-                CSC_IDENTITY_AUTO_DISCOVERY: false  # disable electron-builder code signing
-              run: |
-                yarn run build
-                yarn run dist
+      - name: Build Workbench
+        working-directory: ./workbench
+        env:
+          GH_TOKEN: env.GITHUB_TOKEN
+          DEBUG: electron-builder
+          CSC_IDENTITY_AUTO_DISCOVERY: false  # disable electron-builder code signing
+        run: |
+          yarn run build
+          yarn run dist
 
-            - name: Test electron app with puppeteer
-              working-directory: ./workbench
-              run: npx cross-env CI=true yarn run test-electron-app
+      - name: Test electron app with puppeteer
+        working-directory: ./workbench
+        run: npx cross-env CI=true yarn run test-electron-app
 
-            - name: Authenticate GCP
-              # Secrets not available in PR so don't use GCP.
-              if: github.event_name != 'pull_request'
-              uses: google-github-actions/auth@v0
-              with:
-                credentials_json: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
+      - name: Authenticate GCP
+        # Secrets not available in PR so don't use GCP.
+        if: github.event_name != 'pull_request'
+        uses: google-github-actions/auth@v0
+        with:
+          credentials_json: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
 
-            - name: Set up GCP
-              # Secrets not available in PR so don't use GCP.
-              if: github.event_name != 'pull_request'
-              uses: google-github-actions/setup-gcloud@v0
+      - name: Set up GCP
+        # Secrets not available in PR so don't use GCP.
+        if: github.event_name != 'pull_request'
+        uses: google-github-actions/setup-gcloud@v0
 
-            - name: Sign binaries
-              # Secrets not available in PR so don't use GCP.
-              if: github.event_name != 'pull_request'
-              env:
-                CERT_FILE: Stanford-natcap-code-signing-cert-expires-2024-01-26.p12
-                CERT_PASS: ${{ secrets.WINDOWS_CODESIGN_CERT_PASS }}
-              run: |
-                # figure out the path to signtool.exe (it keeps changing with SDK updates)
-                SIGNTOOL_PATH=$(find 'C:\\Program Files (x86)\\Windows Kits\\10' -type f -name 'signtool.exe*' | head -n 1)
-                INSTALLER_BINARY=$(find "$(pwd)/dist" -type f -name 'InVEST_*.exe' | head -n 1)
-                WORKBENCH_BINARY=$(find "$(pwd)/workbench/dist" -type f -name 'invest_*.exe' | head -n 1)
+      - name: Sign binaries
+        # Secrets not available in PR so don't use GCP.
+        if: github.event_name != 'pull_request'
+        env:
+          CERT_FILE: Stanford-natcap-code-signing-cert-expires-2024-01-26.p12
+          CERT_PASS: ${{ secrets.WINDOWS_CODESIGN_CERT_PASS }}
+        run: |
+          # figure out the path to signtool.exe (it keeps changing with SDK updates)
+          SIGNTOOL_PATH=$(find 'C:\\Program Files (x86)\\Windows Kits\\10' -type f -name 'signtool.exe*' | head -n 1)
+          INSTALLER_BINARY=$(find "$(pwd)/dist" -type f -name 'InVEST_*.exe' | head -n 1)
+          WORKBENCH_BINARY=$(find "$(pwd)/workbench/dist" -type f -name 'invest_*.exe' | head -n 1)
 
-                # setup-gcloud adds 'gsutil' to PATH
-                make BIN_TO_SIGN="$INSTALLER_BINARY" WORKBENCH_BIN_TO_SIGN="$WORKBENCH_BINARY" SIGNTOOL="$SIGNTOOL_PATH" codesign_windows
+          # setup-gcloud adds 'gsutil' to PATH
+          make BIN_TO_SIGN="$INSTALLER_BINARY" WORKBENCH_BIN_TO_SIGN="$WORKBENCH_BINARY" SIGNTOOL="$SIGNTOOL_PATH" codesign_windows
 
-            - name: Deploy artifacts to GCS
-              # Secrets not available in PR so don't use GCP.
-              if: github.event_name != 'pull_request'
-              run: |
-                  # setup-gcloud adds 'gsutil' to PATH
-                  make GSUTIL="gsutil" deploy
+      - name: Deploy artifacts to GCS
+        # Secrets not available in PR so don't use GCP.
+        if: github.event_name != 'pull_request'
+        run: make GSUTIL="gsutil" deploy # setup-gcloud adds 'gsutil' to PATH
 
-            - name: Upload installer artifact
-              if: always()
-              uses: actions/upload-artifact@v2
-              with:
-                  name: InVEST-windows-installer
-                  path: dist/*.exe
+      - name: Upload installer artifact
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: InVEST-windows-installer
+          path: dist/*.exe
 
-            - name: Upload workbench installer artifact
-              if: always()
-              uses: actions/upload-artifact@v2
-              with:
-                  name: Workbench-windows-installer
-                  path: workbench/dist/*.exe
+      - name: Upload workbench installer artifact
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: Workbench-windows-installer
+          path: workbench/dist/*.exe
 
-            - name: Upload user's guide artifact
-              uses: actions/upload-artifact@v2
-              with:
-                  name: InVEST-user-guide
-                  path: dist/InVEST_*_userguide.zip
+      - name: Upload user's guide artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: InVEST-user-guide
+          path: dist/InVEST_*_userguide.zip
 
-            - name: Upload app logging from puppeteer
-              uses: actions/upload-artifact@v2.2.4
-              if: always()
-              with:
-                name: 'windows_puppeteer_log.zip'
-                path: '~/AppData/Roaming/invest-workbench/logs/'
+      - name: Upload app logging from puppeteer
+        uses: actions/upload-artifact@v2.2.4
+        if: always()
+        with:
+          name: 'windows_puppeteer_log.zip'
+          path: '~/AppData/Roaming/invest-workbench/logs/'
 
-            - name: Upload workspace on failure
-              if: ${{ failure() }}
-              uses: actions/upload-artifact@v2
-              with:
-                  name: InVEST-failed-windows-workspace
-                  path: ${{ github.workspace }}
+      - name: Upload workspace on failure
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: InVEST-failed-windows-workspace
+          path: ${{ github.workspace }}
 
-    build-mac-binaries:
-        name: Build mac binaries
-        needs: check-syntax-errors
-        runs-on: macos-10.15
-        steps:
-            - uses: actions/checkout@v2
-              with:
-                  fetch-depth: 0  # fetch complete history
+  build-mac-binaries:
+    name: Build mac binaries
+    needs: check-syntax-errors
+    runs-on: macos-10.15
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0  # fetch complete history
 
-            - name: Fetch git tags
-              run: git fetch origin +refs/tags/*:refs/tags/*
+      - name: Fetch git tags
+        run: git fetch origin +refs/tags/*:refs/tags/*
 
-            - name: Install homebrew dependencies
-              run: |
-                  brew update
-                  brew install pandoc
+      - name: Install homebrew dependencies
+        run: |
+          brew update
+          brew install pandoc
 
-            - name: Set up conda environment
-              uses: ./.github/actions/setup_env
-              with:
-                  cache-id: py${{ env.PYTHON_VERSION }}-macos-binaries
-              id: condacache
+      - name: Set up conda environment
+        uses: ./.github/actions/setup_env
+        with:
+          cache-id: py${{ env.PYTHON_VERSION }}-macos-binaries
+        id: condacache
 
-            - name: Build conda env with python dependencies
-              if: steps.condacache.outputs.cache-hit != 'true'
-              run: |
-                  conda install python=${{ env.PYTHON_VERSION }}
-                  conda upgrade -y pip setuptools
-                  conda install requests
-                  python ./scripts/convert-requirements-to-conda-yml.py \
-                        requirements.txt \
-                        requirements-dev.txt \
-                        requirements-gui.txt > requirements-all.yml
-                  conda env update --file requirements-all.yml
+      - name: Build conda env with python dependencies
+        if: steps.condacache.outputs.cache-hit != 'true'
+        run: |
+          conda install python=${{ env.PYTHON_VERSION }}
+          conda upgrade -y pip setuptools
+          conda install requests
+          python ./scripts/convert-requirements-to-conda-yml.py \
+            requirements.txt \
+            requirements-dev.txt \
+            requirements-gui.txt > requirements-all.yml
+          conda env update --file requirements-all.yml
 
-                  # Libtiff from conda defaults channel gets around issue with missing libwebp
-                  conda install --yes libtiff
-                  make install
+          # Libtiff from conda defaults channel gets around issue with missing libwebp
+          conda install --yes libtiff
+          make install
 
-            - name: Build binaries
-              run: make mac_dmg
+      - name: Build binaries
+        run: make mac_dmg
 
-            - name: Install Node.js
-              uses: actions/setup-node@v2
-              with:
-                node-version: 14.x
+      - name: Install Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: 14.x
 
-            - name: Install Workbench Dependencies
-              working-directory: ./workbench
-              run: |
-                yarn config set network-timeout 600000 -g
-                yarn install
+      - name: Install Workbench Dependencies
+        working-directory: ./workbench
+        run: |
+          yarn config set network-timeout 600000 -g
+          yarn install
 
-            - name: Build Workbench
-              working-directory: ./workbench
-              env:
-                GH_TOKEN: env.GITHUB_TOKEN
-                DEBUG: electron-builder
-                CSC_IDENTITY_AUTO_DISCOVERY: false  # disable electron-builder code signing
-              run: |
-                yarn run build
-                yarn run dist
+      - name: Build Workbench
+        working-directory: ./workbench
+        env:
+          GH_TOKEN: env.GITHUB_TOKEN
+          DEBUG: electron-builder
+          CSC_IDENTITY_AUTO_DISCOVERY: false  # disable electron-builder code signing
+        run: |
+          yarn run build
+          yarn run dist
 
-            - name: Test electron app with puppeteer
-              working-directory: ./workbench
-              run: npx cross-env CI=true yarn run test-electron-app
+      - name: Test electron app with puppeteer
+        working-directory: ./workbench
+        run: npx cross-env CI=true yarn run test-electron-app
 
-            - name: Authenticate GCP
-              # Secrets not available in PR so don't use GCP.
-              if: github.event_name != 'pull_request'
-              uses: google-github-actions/auth@v0
-              with:
-                credentials_json: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
+      - name: Authenticate GCP
+        # Secrets not available in PR so don't use GCP.
+        if: github.event_name != 'pull_request'
+        uses: google-github-actions/auth@v0
+        with:
+          credentials_json: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
 
-            - name: Set up GCP
-              # Secrets not available in PR so don't use GCP.
-              # We only want to upload artifacts to a release object in a release.
-              if: github.event_name != 'pull_request'
-              uses: google-github-actions/setup-gcloud@v0
+      - name: Set up GCP
+        # Secrets not available in PR so don't use GCP.
+        # We only want to upload artifacts to a release object in a release.
+        if: github.event_name != 'pull_request'
+        uses: google-github-actions/setup-gcloud@v0
 
-            - name: Sign DMG
-              if: github.event_name != 'pull_request'
-              env:
-                CERT_FILE: 2025-01-16-Expiry-AppStore-App.p12
-                CERT_PASS: ${{ secrets.MACOS_CODESIGN_CERT_PASS }}
-              run: |
-                INSTALLER_BINARY=$(find "$(pwd)/dist" -type f -name 'InVEST_*.dmg' | head -n 1)
-                WORKBENCH_BINARY=$(find "$(pwd)/workbench/dist" -type f -name 'invest_*.dmg' | head -n 1)
-                make BIN_TO_SIGN="$INSTALLER_BINARY" WORKBENCH_BIN_TO_SIGN="$WORKBENCH_BINARY" codesign_mac
+      - name: Sign DMG
+        if: github.event_name != 'pull_request'
+        env:
+          CERT_FILE: 2025-01-16-Expiry-AppStore-App.p12
+          CERT_PASS: ${{ secrets.MACOS_CODESIGN_CERT_PASS }}
+        run: |
+          INSTALLER_BINARY=$(find "$(pwd)/dist" -type f -name 'InVEST_*.dmg' | head -n 1)
+          WORKBENCH_BINARY=$(find "$(pwd)/workbench/dist" -type f -name 'invest_*.dmg' | head -n 1)
+          make BIN_TO_SIGN="$INSTALLER_BINARY" WORKBENCH_BIN_TO_SIGN="$WORKBENCH_BINARY" codesign_mac
 
-            - name: Deploy artifacts to GCS
-              # Secrets not available in PR so don't use GCP.
-              if: github.event_name != 'pull_request'
-              run: make deploy
+      - name: Deploy artifacts to GCS
+        # Secrets not available in PR so don't use GCP.
+        if: github.event_name != 'pull_request'
+        run: make deploy
 
-            - name: Upload DMG artifact
-              uses: actions/upload-artifact@v2
-              with:
-                  name: InVEST-dmg
-                  path: dist/InVEST*.dmg
+      - name: Upload DMG artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: InVEST-dmg
+          path: dist/InVEST*.dmg
 
-            - name: Upload workbench DMG artifact
-              if: always()
-              uses: actions/upload-artifact@v2
-              with:
-                  name: Workbench-mac-installer
-                  path: workbench/dist/*.dmg
+      - name: Upload workbench DMG artifact
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: Workbench-mac-installer
+          path: workbench/dist/*.dmg
 
-            - name: Upload workbench logging from puppeteer
-              uses: actions/upload-artifact@v2.2.4
-              if: always()
-              with:
-                name: 'macos_puppeteer_log.zip'
-                path: '~/Library/Logs/invest-workbench/'
+      - name: Upload workbench logging from puppeteer
+        uses: actions/upload-artifact@v2.2.4
+        if: always()
+        with:
+          name: 'macos_puppeteer_log.zip'
+          path: '~/Library/Logs/invest-workbench/'
 
-            - name: Tar the workspace to preserve permissions
-              if: ${{ failure() }}
-              run: tar -cvf InVEST-failed-mac-workspace.tar ${{ github.workspace }}
+      - name: Tar the workspace to preserve permissions
+        if: ${{ failure() }}
+        run: tar -cvf InVEST-failed-mac-workspace.tar ${{ github.workspace }}
 
-            - name: Upload workspace on failure
-              if: ${{ failure() }}
-              uses: actions/upload-artifact@v2
-              with:
-                  name: InVEST-failed-mac-workspace
-                  path: InVEST-failed-mac-workspace.tar
+      - name: Upload workspace on failure
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: InVEST-failed-mac-workspace
+          path: InVEST-failed-mac-workspace.tar
 
-    build-sampledata:
-        name: Build sampledata archives
-        needs: check-syntax-errors
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v2
-              with:
-                  fetch-depth: 0  # Fetch complete history
-            - run: git fetch origin +refs/tags/*:refs/tags/*
+  build-sampledata:
+    name: Build sampledata archives
+    needs: check-syntax-errors
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0  # Fetch complete history
 
-            - uses: actions/setup-python@v1
-              with:
-                  python-version: 3.8
+      - run: git fetch origin +refs/tags/*:refs/tags/*
 
-            - name: Install dependencies
-              # dependencies of setup.py, needed to get the version string
-              run: pip install babel cython numpy setuptools setuptools_scm wheel
+      - uses: actions/setup-python@v1
+        with:
+          python-version: 3.8
 
-            - run: make sampledata sampledata_single
+      - name: Install dependencies
+        # dependencies of setup.py, needed to get the version string
+        run: pip install babel cython numpy setuptools setuptools_scm wheel
 
-            - name: Authenticate GCP
-              # Secrets not available in PR so don't use GCP.
-              if: github.event_name != 'pull_request'
-              uses: google-github-actions/auth@v0
-              with:
-                credentials_json: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
+      - run: make sampledata sampledata_single
 
-            - name: Set up GCP
-              # Secrets not available in PR so don't use GCP.
-              if: github.event_name != 'pull_request'
-              uses: google-github-actions/setup-gcloud@v0
+      - name: Authenticate GCP
+        # Secrets not available in PR so don't use GCP.
+        if: github.event_name != 'pull_request'
+        uses: google-github-actions/auth@v0
+        with:
+          credentials_json: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
 
-            - name: Deploy artifacts to GCS
-              # Secrets not available in PR so don't use GCP.
-              if: github.event_name != 'pull_request'
-              run: make deploy
+      - name: Set up GCP
+        # Secrets not available in PR so don't use GCP.
+        if: github.event_name != 'pull_request'
+        uses: google-github-actions/setup-gcloud@v0
 
-            - name: Install Node.js
-              uses: actions/setup-node@v2
-              with:
-                node-version: 14.x
+      - name: Deploy artifacts to GCS
+        # Secrets not available in PR so don't use GCP.
+        if: github.event_name != 'pull_request'
+        run: make deploy
 
-            - name: Check sampledata registry links
-              # no artifacts were deployed in a PR
-              if: github.event_name != 'pull_request'
-              working-directory: ./workbench
-              run: |
-                yarn add jest
-                yarn run test-sampledata-registry
+      - name: Install Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: 14.x
 
-            - name: Upload sample data artifact
-              uses: actions/upload-artifact@v2
-              with:
-                  name: InVEST-sample-data
-                  path: dist/*.zip
+      - name: Check sampledata registry links
+        # no artifacts were deployed in a PR
+        if: github.event_name != 'pull_request'
+        working-directory: ./workbench
+        run: |
+          yarn add jest
+          yarn run test-sampledata-registry
+
+      - name: Upload sample data artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: InVEST-sample-data
+          path: dist/*.zip
