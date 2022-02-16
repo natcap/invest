@@ -411,6 +411,8 @@ def execute(args):
         )
 
     criteria_df = pandas.read_csv(composite_criteria_table_path)
+    cumulative_risk_to_habitat_paths = []
+    cumulative_risk_to_habitat_tasks = []
     for habitat in habitats:
         pairwise_risk_tasks = []
         pairwise_risk_paths = []
@@ -502,6 +504,7 @@ def execute(args):
         # Sum the pairwise risk scores to get cumulative risk to the habitat.
         cumulative_risk_path = os.path.join(
             intermediate_dir, 'total_risk_{habitat}{suffix}.tif')
+        cumulative_risk_to_habitat_paths.append(cumulative_risk_path)
         cumulative_risk_task = graph.add_task(
             ndr._sum_rasters,
             kwargs={
@@ -513,6 +516,7 @@ def execute(args):
             target_path_list=[cumulative_risk_path],
             dependent_task_list=pairwise_risk_tasks
         )
+        cumulative_risk_to_habitat_tasks.append(cumulative_risk_task)
 
         reclassified_cumulative_risk_path = os.path.join(
             intermediate_dir, f'reclass_total_risk_{habitat}{suffix}.tif')
@@ -535,7 +539,7 @@ def execute(args):
 
         max_risk_classification_path = os.path.join(
             output_dir, f'risk_{habitat}{suffix}.tif')
-        maximum_reclassified_risk_task = graph.add_task(
+        _ = graph.add_task(
             pygeoprocessing.raster_calculator,
             kwargs={
                 'base_raster_path_band_const_list': [
@@ -548,10 +552,29 @@ def execute(args):
             },
             task_name=f'Maximum reclassification for {habitat}',
             target_path_list=[max_risk_classification_path],
-            dependent_task_list=([
-                reclassified_cumulative_risk_task] +
-                reclassified_pairwise_risk_tasks)
+            dependent_task_list=[
+                reclassified_cumulative_risk_task,
+                *reclassified_pairwise_risk_tasks,
+            ]
         )
+
+    # total risk is the sum of all cumulative risk rasters.
+    ecosystem_risk_path = os.path.join(
+        output_dir, f'TOTAL_RISK_Ecosystem{suffix}.tif')
+    _ = graph.add_task(
+        ndr._sum_rasters,
+        kwargs={
+            'raster_path_list': cumulative_risk_to_habitat_paths,
+            'target_nodata': _TARGET_NODATA_FLOAT32,
+            'target_result_path': ecosystem_risk_path,
+        },
+        task_name='Cumulative risk to ecosystem.',
+        target_path_list=[ecosystem_risk_path],
+        dependent_task_list=[
+            habitat_mask_task,
+            *cumulative_risk_to_habitat_tasks,
+        ]
+    )
 
     # Recovery attributes are calculated with the same numerical method as
     # other criteria, but are unweighted by distance to a stressor.
@@ -600,7 +623,6 @@ def execute(args):
             dependent_task_list=[habitat_mask_task, recovery_score_task]
         )
 
-    # TODO: create total risk to ecosystem raster
     # TODO: visualize outputs
     # TODO: create summary statistics output file
     # TODO: visualize the graph of tasks to make sure it looks right
