@@ -73,26 +73,6 @@ jobs:
                   # Fetch complete history for accurate versioning
                   fetch-depth: 0
 
-            - name: Restore pip cache (MacOS)
-              if: ${{ matrix.os == 'macos-latest' }}
-              uses: actions/cache@v2
-              with:
-                  path: ${{ env.MACOS_PIP_CACHE }}
-                  key: pip-${{ matrix.os }}-py${{ matrix.python-version }}-${{ hashFiles('**/requirements*.txt') }}-model-tests
-
-            - name: Restore pip cache (Windows)
-              if: ${{ matrix.os == 'windows-latest' }}
-              uses: actions/cache@v2
-              with:
-                  path: ${{ env.WINDOWS_PIP_CACHE }}
-                  key: pip-${{ matrix.os }}-py${{ matrix.python-version }}-${{ hashFiles('**/requirements*.txt') }}-model-tests
-
-            - name: Restore conda cache
-              uses: actions/cache@v2
-              with:
-                  path: ${{ env.CONDA_CACHE }}
-                  key: conda-${{ matrix.os }}-py${{ matrix.python-version }}-${{ hashFiles('**/requirements*.txt') }}-model-tests
-
             # NOTE: It takes twice as long to save the sample data cache
             # as it does to do a fresh clone (almost 5 minutes vs. 2.5 minutes)
             # Test data is way, way faster by contrast (on the order of a few
@@ -103,26 +83,35 @@ jobs:
                   path: data/invest-test-data
                   key: git-lfs-testdata-${{ hashfiles('Makefile') }}
 
-            - name: Setup conda environment
-              uses: conda-incubator/setup-miniconda@v2
+            - name: Set up conda environment
+              uses: ./.github/actions/setup_env
               with:
-                  activate-environment: ${{ matrix.os }}-test-env
-                  auto-update-conda: true
-                  python-version: ${{ matrix.python-version }}
-                  channels: conda-forge
+                  cache-id: py${{ matrix.python-version }}-${{ matrix.os }}-model-tests
+              id: condacache
 
-            - name: Install dependencies
+            - name: Install build dependencies
+              if: steps.condacache.outputs.cache-hit != 'true'
+              shell: bash -l {0}
               run: |
-                  # twine: used to check whether the long description will render correctly on PyPI
-                  # pytest: dependency of make test
-                  # numpy, gdal: install specific versions so we test with the full range of versions
-                  conda install ${{ env.DEFAULT_DEPENDENCIES }} twine pytest ${{ matrix.numpy }} ${{ matrix.gdal }}
+                  conda install python=${{ matrix.python-version }}
+                  conda install nomkl # make sure numpy is w/out MKL
+                  conda upgrade -y pip setuptools
+                  conda install ${{ matrix.numpy }} ${{ matrix.gdal }} twine build
 
             - name: Build and install wheel
               run: |
                   python -m build --wheel
                   python -m twine check dist/*
                   pip install $(find dist -name "natcap.invest*.whl")
+
+            - name: Install runtime dependencies
+              if: steps.condacache.outputs.cache-hit != 'true'
+              shell: bash -l {0}
+              run: |
+                  python ./scripts/convert-requirements-to-conda-yml.py \
+                    requirements.txt requirements-dev.txt \
+                    requirements-gui.txt > requirements-all.yml
+                  conda env update --file requirements-all.yml
 
             - name: Conda Environment Listing
               run: |
@@ -155,6 +144,7 @@ jobs:
                   path: dist
 
             - uses: actions/upload-artifact@v2
+              continue-on-error: true
               with:
                   name: Conda Env for ${{ matrix.os }} ${{ matrix.python-version }}
                   path: ./conda-env.txt
@@ -196,37 +186,23 @@ jobs:
             - name: Fetch git tags
               run: git fetch origin +refs/tags/*:refs/tags/*
 
-            - name: Restore pip cache (MacOS)
-              if: ${{ matrix.os == 'macos-latest' }}
-              uses: actions/cache@v2
+            - name: Set up conda environment
+              uses: ./.github/actions/setup_env
               with:
-                  path: ${{ env.MACOS_PIP_CACHE }}
-                  key: pip-${{ matrix.os }}-py${{ matrix.python-version }}-${{ hashFiles('**/requirements*.txt') }}-test-sdist
-
-            - name: Restore pip cache (Windows)
-              if: ${{ matrix.os == 'windows-latest' }}
-              uses: actions/cache@v2
-              with:
-                  path: ${{ env.WINDOWS_PIP_CACHE }}
-                  key: pip-${{ matrix.os }}-py${{ matrix.python-version }}-${{ hashFiles('**/requirements*.txt') }}-test-sdist
-
-            - name: Restore conda cache
-              uses: actions/cache@v2
-              with:
-                  path: ${{ env.CONDA_CACHE }}
-                  key: conda-${{ matrix.os }}-py${{ matrix.python-version }}-${{ hashFiles('**/requirements*.txt') }}-test-sdist
-
-            - name: Setup conda environment
-              uses: conda-incubator/setup-miniconda@v2
-              with:
-                  activate-environment: source-env
-                  auto-update-conda: true
-                  python-version: ${{ matrix.python-version }}
-                  channels: conda-forge
+                  cache-id: py${{ matrix.python-version }}-${{ matrix.os }}-test-source-dist
+              id: condacache
 
             - name: Install dependencies
+              if: steps.condacache.outputs.cache-hit != 'true'
+              shell: bash -l {0}
               run: |
-                  conda install ${{ env.DEFAULT_DEPENDENCIES }} twine gdal
+                  conda install python=${{ matrix.python-version }}
+                  conda install nomkl # make sure numpy is w/out MKL
+                  conda upgrade -y pip setuptools
+                  conda install twine build setuptools_scm
+                  python ./scripts/convert-requirements-to-conda-yml.py \
+                    requirements.txt > requirements-all.yml
+                  conda env update --file requirements-all.yml
 
             - name: Build source distribution
               run: |
@@ -293,31 +269,22 @@ jobs:
                   # Fetch complete history for accurate versioning
                   fetch-depth: 0
 
-            - name: Restore pip cache
-              uses: actions/cache@v2
+            - name: Set up conda environment
+              uses: ./.github/actions/setup_env
               with:
-                  path: ${{ env.WINDOWS_PIP_CACHE }}
-                  key: pip-windows-cache-sampledata-${{ hashfiles('requirements.txt') }}
-
-            - name: Restore conda cache
-              uses: actions/cache@v2
-              with:
-                  path: ${{ env.CONDA_CACHE }}
-                  key: conda-windows-cache-sampledata-${{ hashfiles('requirements.txt') }}
-
-            - name: Setup conda environment
-              uses: conda-incubator/setup-miniconda@v2
-              with:
-                  activate-environment: validate-env
-                  auto-update-conda: true
-                  python-version: 3.9
-                  channels: conda-forge
+                  cache-id: py${{ matrix.python-version }}-${{ matrix.os }}-validate
+              id: condacache
 
             - name: Install dependencies
+              if: steps.condacache.outputs.cache-hit != 'true'
+              shell: bash -l {0}
               run: |
-                  # pytest: dependency of make validate_sampledata
-                  # setuptools_scm: dependency of make install
-                  conda install ${{ env.DEFAULT_DEPENDENCIES }} pytest setuptools setuptools_scm gdal
+                  conda install python=3.9
+                  conda install nomkl # make sure numpy w/out mkl
+                  conda install pytest requests build setuptools_scm
+                  conda upgrade -y pip wheel
+                  python ./scripts/convert-requirements-to-conda-yml.py requirements.txt > requirements.yml
+                  conda env update --file requirements.yml
                   make install
 
             - name: Validate sample data
@@ -342,38 +309,98 @@ jobs:
                   # Fetch complete history for accurate versioning
                   fetch-depth: 0
 
-              # Taken from https://github.com/actions/cache/blob/master/examples.md#python---pip
-            - name: Restore pip cache
-              uses: actions/cache@v2
-              with:
-                  path: ${{ env.WINDOWS_PIP_CACHE }}
-                  key: pip-windows-py${{ matrix.python-version }}-${{ hashFiles('**/requirements*.txt') }}-ui-tests
-
-            - name: Restore conda cache
-              uses: actions/cache@v2
-              with:
-                  path: ${{ env.CONDA_CACHE }}
-                  key: conda-windows-py${{ matrix.python-version }}-${{ hashFiles('**/requirements*.txt') }}-ui-tests
-
             - name: Restore git-LFS test data cache
               uses: actions/cache@v2
               with:
                   path: data/invest-test-data
                   key: git-lfs-testdata-${{ hashfiles('Makefile') }}
 
-            - name: Setup conda environment
-              uses: conda-incubator/setup-miniconda@v2
+            - name: Set up conda environment
+              uses: ./.github/actions/setup_env
               with:
-                  activate-environment: ui-env
-                  auto-update-conda: true
-                  python-version: ${{ matrix.python-version }}
-                  channels: conda-forge
+                  cache-id: py${{ matrix.python-version }}-${{ matrix.os }}-ui-tests
+              id: condacache
 
             - name: Install dependencies
+              if: steps.condacache.outputs.cache-hit != 'true'
+              shell: bash -l {0}
               run: |
-                  conda install ${{ env.DEFAULT_DEPENDENCIES }} pytest gdal
-                  python -m pip install .[ui]
+                  conda install python=${{ matrix.python-version }}
+                  conda install nomkl  # make sure numpy w/out mkl
+                  conda install requests
+                  conda upgrade -y pip setuptools
+                  python ./scripts/convert-requirements-to-conda-yml.py \
+                    requirements.txt requirements-dev.txt \
+                    requirements-gui.txt > requirements-all.yml
+                  conda env update --file requirements-all.yml
+                  python -m pip install .
 
             - name: Run UI tests
               timeout-minutes: 10  # tests usually take < 2 minutes, so 10 is generous.
               run: make test_ui
+
+    run-workbench-tests:
+        name: "Run Workbench Tests"
+        runs-on: ${{ matrix.os }}
+        needs: check-syntax-errors
+        strategy:
+            fail-fast: False
+            max-parallel: 4
+            matrix:
+                python-version: [3.9]
+                python-architecture: [x64]
+                os: [windows-latest, macos-latest]
+
+        steps:
+            - uses: actions/checkout@v2
+              with:
+                  # Fetch complete history for accurate versioning
+                  fetch-depth: 0
+
+              # Taken from https://github.com/actions/cache/blob/master/examples.md#python---pip
+            - name: Restore pip cache
+              uses: actions/cache@v2
+              with:
+                  path: ~\AppData\Local\pip\Cache
+                  key: ${{ runner.os }}-py${{ matrix.python-version }}-${{ matrix.python-architecture }}-pip-${{ hashFiles('**/requirements*.txt') }}-ui-tests
+
+            - name: Setup conda environment
+              uses: conda-incubator/setup-miniconda@v2
+              with:
+                  activate-environment: ${{ matrix.os }}-test-env
+                  auto-update-conda: true
+                  python-version: ${{ matrix.python-version }}
+                  channels: conda-forge
+
+            - name: Install build dependencies
+              shell: bash -l {0}
+              run: |
+                  conda install nomkl requests # make sure numpy is w/out MKL
+                  conda upgrade -y pip setuptools
+
+            - name: Install runtime dependencies
+              shell: bash -l {0}
+              run: |
+                  python ./scripts/convert-requirements-to-conda-yml.py \
+                    requirements.txt requirements-dev.txt \
+                    requirements-gui.txt > requirements-all.yml
+                  conda env update --file requirements-all.yml
+                  make install
+
+            - name: Install Node.js
+              uses: actions/setup-node@v2
+              with:
+                  node-version: 14.x
+
+            - name: Install Workbench Dependencies
+              working-directory: ./workbench
+              run: |
+                  yarn config set network-timeout 600000 -g
+                  yarn install
+
+            - name: run workbench tests
+              shell: bash -l {0}
+              working-directory: ./workbench
+              env:
+                  CI: true
+              run: yarn test

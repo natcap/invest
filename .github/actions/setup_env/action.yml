@@ -1,0 +1,42 @@
+name: "Set up python and conda environment"
+inputs:
+  cache-id:
+    description:
+      "Cache identifier used in the cache key. This should include any values
+      needed to uniquely identify the appropriate cache, such as python
+      version and operating system. The number of the current week in the
+      year, and a hash of all requirements files, are appended onto this
+      identifier to make the cache key. This way the cache will refresh each
+      week, or if the requirements change."
+    required: false
+    default: ""
+outputs:
+  cache-hit:
+    description: "True if a cache hit was found, false if not"
+    value: ${{ steps.condacache.outputs.cache-hit }}
+runs:
+  using: "composite"
+  steps:
+    # don't need to run setup-python because we'll always use the
+    # conda-managed python that'll be installed into this environment
+    - name: Setup conda environment
+      uses: conda-incubator/setup-miniconda@v2
+      with:
+        auto-update-conda: true
+        channels: conda-forge
+
+    # save week number to use in next step
+    # save CONDA_PREFIX to GITHUB_ENV so it's accessible outside of shell commands
+    - name: Set environment variables
+      run: |
+        echo "WEEK=$(date +%U)" >> $GITHUB_ENV
+        echo "CONDA_PREFIX=$CONDA_PREFIX" >> $GITHUB_ENV
+      shell: bash -l {0}
+
+    # NOTE the post step that saves the cache will only run if the job succeeds
+    - name: Restore conda environment cache
+      uses: actions/cache@v2
+      with:
+        path: ${{ env.CONDA_PREFIX }}
+        key: ${{ inputs.cache-id }}-${{ env.WEEK }}-${{ hashFiles('**/requirements*.txt') }}
+      id: condacache

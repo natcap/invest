@@ -1,0 +1,172 @@
+# Translations template for PROJECT.
+# Copyright (C) 2021 ORGANIZATION
+# This file is distributed under the same license as the PROJECT project.
+# Automatically generated, 2021.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"Report-Msgid-Bugs-To: esoth@stanford.edu\n"
+"POT-Creation-Date: 2021-10-28 13:00-0700\n"
+"PO-Revision-Date: 2021-10-28 13:00-0700\n"
+"Last-Translator: Automatically generated\n"
+"Language-Team: none\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: zh\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "Bounding box does not intersect at least one other:"
+msgstr "Bounding box does not intersect at least one other:"
+
+msgid "Browse"
+msgstr "Browse"
+
+msgid "Browse to a datastack (.json) or InVEST logfile (.txt)"
+msgstr "Browse to a datastack (.json) or InVEST logfile (.txt)"
+
+msgid "Cancel"
+msgstr "Cancel"
+
+msgid "Cancel Run"
+msgstr "Cancel Run"
+
+msgid "Clear"
+msgstr "Clear"
+
+msgid "Clear Recent Jobs Shortcuts"
+msgstr "Clear Recent Jobs Shortcuts"
+
+msgid "csv"
+msgstr "csv"
+
+msgid ""
+"`Datastack/Logfile for ${datastack.model_human_name} does not match this "
+"model.`"
+msgstr ""
+"`Datastack/Logfile for ${datastack.model_human_name} does not match this "
+"model.`"
+
+msgid "DEBUG"
+msgstr "DEBUG"
+
+msgid "directory"
+msgstr "directory"
+
+msgid "Download"
+msgstr "Download"
+
+msgid "Download Complete"
+msgstr "Download Complete"
+
+msgid "Download InVEST sample data"
+msgstr "Download InVEST sample data"
+
+msgid "Download Sample Data"
+msgstr "Download Sample Data"
+
+msgid "`Downloading ${nComplete + 1} of ${nTotal}`"
+msgstr "`Downloading ${nComplete + 1} of ${nTotal}`"
+
+msgid "ERROR"
+msgstr "ERROR"
+
+msgid "file"
+msgstr "file"
+
+msgid "Frequently Asked Questions"
+msgstr "Frequently Asked Questions"
+
+msgid "INFO"
+msgstr "INFO"
+
+msgid "integer"
+msgstr "integer"
+
+msgid "InVEST"
+msgstr "InVEST"
+
+msgid "InVEST Settings"
+msgstr "InVEST Settings"
+
+msgid "Language"
+msgstr "Language"
+
+msgid "Load parameters from file"
+msgstr "Load parameters from file"
+
+msgid "Log"
+msgstr "Log"
+
+msgid "Logging threshold"
+msgstr "Logging threshold"
+
+msgid "Model Complete"
+msgstr "Model Complete"
+
+msgid "No args to see here"
+msgstr "No args to see here"
+
+msgid "(no InVEST workspaces will be deleted)"
+msgstr "(no InVEST workspaces will be deleted)"
+
+msgid "number"
+msgstr "number"
+
+msgid "Only drop one file at a time."
+msgstr "Only drop one file at a time."
+
+msgid "Open"
+msgstr "Open"
+
+msgid "Open Workspace"
+msgstr "Open Workspace"
+
+msgid "percent: a number from 0 - 100"
+msgstr "percent: a number from 0 - 100"
+
+msgid "raster"
+msgstr "raster"
+
+msgid "ratio: a decimal from 0 - 1"
+msgstr "ratio: a decimal from 0 - 1"
+
+msgid "Recent runs:"
+msgstr "Recent runs:"
+
+msgid "Reset"
+msgstr "Reset"
+
+msgid "Reset to Defaults"
+msgstr "Reset to Defaults"
+
+msgid "Run"
+msgstr "Run"
+
+msgid "Running"
+msgstr "Running"
+
+msgid "Save Changes"
+msgstr "Save Changes"
+
+msgid "Save to Python script"
+msgstr "Save to Python script"
+
+msgid "Setup"
+msgstr "Setup"
+
+msgid "Taskgraph n_workers parameter"
+msgstr "Taskgraph n_workers parameter"
+
+msgid "text"
+msgstr "text"
+
+msgid "User's Guide"
+msgstr "User's Guide"
+
+msgid "vector"
+msgstr "vector"
+
+msgid "WARNING"
+msgstr "WARNING"
