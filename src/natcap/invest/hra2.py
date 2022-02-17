@@ -636,8 +636,93 @@ def execute(args):
     make_graph.doit(graph)
 
 
+def _create_summary_statistics_file():
+    # inputs:
+    #  AOI vector (simplified to the nyquist limit)
+    #  habitat mask raster
+    #  list of dicts {
+    #       'habitat': _, 'stressor': _, 'exposure_path': _,
+    #       'consequence_path', 'risk_path'}
+    #  Working dir
+    #  Target CSV path
+
+    # rasterize the AOI vector into distinct nonoverlapping sets.
+    # for each nonoverlapping set raster:
+    #     associate the exposure, consequence and risk values with the
+    #     corresponding aoi regions.
+    #     Looking for MIN, MAX, MEAN per subregion.
+    #
+    # Write out the CSV.
+
+    pass
+
+
+def _rasterize_aoi_regions(source_aoi_vector, habitat_vector_mask,
+                           target_raster_dir, target_info_json):
+    # disjoint polygon set
+    # add to a Memory layer (and simplify)
+    # rasterize to target_raster_dir
+    # target_json has structure:
+    #   {'subregion_rasters': [paths],
+    #    'subregion_ids_to_names': {FID: name}}
+
+    source_aoi_vector = gdal.OpenEx(source_aoi_vector, gdal.OF_VECTOR)
+    source_aoi_layer = source_aoi_vector.GetLayer()
+
+    driver = ogr.GetDriverByName('MEMORY')
+    disjoint_vector = driver.CreateDataSource('disjoint_vector')
+    spat_ref = source_aoi_layer.GetSpatialRef()
+
+    subregion_rasters = []
+    subregion_names = {}  # {rasterized id: name}
+
+    for set_index, disjoint_fid_set in enumerate(
+            pygeoprocessing.calculate_disjoint_polygon_set(source_aoi_vector)):
+        disjoint_set_raster_path = os.path.join(
+            target_raster_dir, f'subregion_set_{set_index}.tif')
+        subregion_rasters.append(disjoint_set_raster_path)
+        pygeoprocessing.new_raster_from_base(
+            habitat_vector_mask, disjoint_set_raster_path, gdal.GDT_Int32,
+            [-1])
+        fid_raster = gdal.OpenEx(disjoint_set_raster_path, gdal.GA_Update)
+
+        disjoint_layer = disjoint_vector.CreateLayer(
+            'disjoint_vector', spat_ref, ogr.wkbPolygon)
+        disjoint_layer.CreateField(
+            ogr.FieldDefn('FID', ogr.OFTInteger))
+        disjoint_layer_defn = disjoint_layer.GetLayerDefn()
+        disjoint_layer.StartTransaction()
+        for source_fid in disjoint_fid_set:
+            source_feature = source_aoi_layer.GetFeature(source_fid)
+            source_geometry = source_feature.GetGeometryRef()
+            new_feature = ogr.Feature(disjoint_layer_defn)
+            new_feature.SetGeometry(source_geometry.Clone())
+            source_geometry = None
+
+            new_feature.SetField('FID', source_fid)
+            subregion_names[source_fid] = source_feature.GetField('name')
+
+            disjoint_layer.CreateFeature(new_feature)
+        disjoint_layer.CommitTransaction()
+
+        gdal.RasterizeLayer(
+            fid_raster, [1], disjoint_layer, options=["ALL_TOUCHED=FALSE",
+                                                      "ATTRIBUTE=FID"])
+        fid_raster.FlushCache()
+        fid_raster = None
+
+        disjoint_layer = None
+        disjoint_vector.DeleteLayer(0)
+
+    with open(target_info_json, 'w') as target_json:
+        target_json.write(
+            json.dumps({'subregion_rasters': subregion_rasters,
+                        'subregion_names': subregion_names},
+                       indent=4))
+
+
 def _rasterize(source_vector_path, resolution, target_raster_path):
-    # TODO: shall we simplify as well?
+    # TODO: shall we simplify as well?  See delineateit.check_geometries()
 
     pygeoprocessing.create_raster_from_vector_extents(
         source_vector_path, target_raster_path, (resolution, -resolution),
