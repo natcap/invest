@@ -10,7 +10,7 @@ GIT_TEST_DATA_REPO_REV      := ac7023d684478485fea89c68f8f4154163541e1d
 
 GIT_UG_REPO                 := https://github.com/natcap/invest.users-guide
 GIT_UG_REPO_PATH            := doc/users-guide
-GIT_UG_REPO_REV             := 3694e4b33856354be0ea995f4f611d654f59bc23
+GIT_UG_REPO_REV             := cc1a43b46cc6ffb1de814553a8306d145e228394
 
 ENV = "./env"
 ifeq ($(OS),Windows_NT)
@@ -395,7 +395,6 @@ codesign_windows:
 	@echo "Installer was signed with signtool"
 
 deploy:
-# 	-(cd $(INVEST_BINARIES_DIR) && $(ZIP) -r ../$(INVEST_BINARIES_DIR_ZIP) .)
 	-$(GSUTIL) -m rsync $(DIST_DIR) $(DIST_URL_BASE)
 	-$(GSUTIL) -m rsync -r $(DIST_DIR)/data $(DIST_URL_BASE)/data
 	-$(GSUTIL) -m rsync -r $(DIST_DIR)/userguide $(DIST_URL_BASE)/userguide
