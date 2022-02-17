@@ -63,7 +63,6 @@ jobs:
                         requirements-dev.txt \
                         requirements-gui.txt > requirements-all.yml
                   conda env update --file requirements-all.yml
-                  make install
 
               # Not caching chocolatey packages because the cache may not be reliable
               # https://github.com/chocolatey/choco/issues/2134
@@ -77,6 +76,7 @@ jobs:
 
             - name: Build userguide, binaries, installer
               run: |
+                  make install
                   # This builds the users guide, binaries, and installer
                   make windows_installer
 
