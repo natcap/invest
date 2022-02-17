@@ -43,7 +43,7 @@ runs:
     # save week number to use in next step
     # save CONDA_PREFIX to GITHUB_ENV so it's accessible outside of shell commands
     - name: Set environment variables
-      shell: bash -l {0}
+      shell: bash -l {0} # need login shell so that CONDA_PREFIX is set
       run: |
         echo "WEEK=$(date +%U)" >> $GITHUB_ENV
         echo "CONDA_PREFIX=$CONDA_PREFIX" >> $GITHUB_ENV
@@ -76,7 +76,7 @@ runs:
 
     - name: Update environment with dependencies
       if: steps.condacache.outputs.cache-hit != 'true'
-      shell: bash
+      shell: bash -l {0}
       run: conda env update --file environment.yml
 
     - name: List conda environment
