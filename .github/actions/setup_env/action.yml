@@ -51,34 +51,28 @@ runs:
     - name: Copy requirements into file
       shell: bash
       run: |
-        echo "${{ inputs.requirements }}"
-        REQUIREMENTS=$(echo "${{ inputs.requirements }}" | tr " " "\n")
-        echo "$REQUIREMENTS"
-
-        echo "python=${{ inputs.python-version }}
-          $REQUIREMENTS" \
-        > extra_requirements.txt
+        # make sure each package is separated by a newline
+        echo "python=${{ inputs.python-version }}" > extra_requirements.txt
+        echo "${{ inputs.requirements }}" | xargs | tr " " "\n" >> extra_requirements.txt
+        cat extra_requirements.txt
 
     - name: Combine all requirements into environment YML
       shell: bash
       run: |
-        echo "${{ inputs.requirements-files }}"
-        REQUIREMENTS_FILES=$(echo "${{ inputs.requirements-files }}" | tr "\n" " ")
-        echo $REQUIREMENTS_FILES
-        echo "$REQUIREMENTS_FILES"
-
+        # make sure each file is separated by a space
+        REQUIREMENTS_FILES=$(echo "${{ inputs.requirements-files }}" | xargs | tr "\n" " ")
         python ./scripts/convert-requirements-to-conda-yml.py \
-          extra_requirements.txt \
-          ${{ inputs.requirements-files }} \
+          extra_requirements.txt $REQUIREMENTS_FILES \
         > environment.yml
+        cat environment.yml
 
     # NOTE the post step that saves the cache will only run if the job succeeds
     - name: Restore conda environment cache
+      id: condacache
       uses: actions/cache@v2
       with:
         path: ${{ env.CONDA_PREFIX }}
         key: ${{ inputs.cache-id }}-${{ env.WEEK }}-${{ hashFiles('environment.yml') }}
-      id: condacache
 
     - name: Update environment with dependencies
       if: steps.condacache.outputs.cache-hit != 'true'
