@@ -9,7 +9,9 @@ defaults:
 env:
   # build: dependency of make install
   # nomkl: make sure numpy w/out mkl
-  DEFAULT_DEPENDENCIES: build nomkl
+  DEFAULT_DEPENDENCIES: |
+    build
+    nomkl
   PYTHON_VERSION: 3.9
 
 jobs:
@@ -36,7 +38,9 @@ jobs:
         with:
           cache-id: py${{ env.PYTHON_VERSION }}-windows-binaries
           python-version: ${{ env.PYTHON_VERSION }}
-          requirements-files: requirements.txt requirements-dev.txt requirements-gui.txt
+          requirements-files: |
+            requirements.txt
+            requirements-dev.txt requirements-gui.txt
           requirements: ${{ env.DEFAULT_DEPENDENCIES }}
 
       - name: Make install

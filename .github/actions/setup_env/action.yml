@@ -14,11 +14,15 @@ inputs:
     description: "Python version to install"
     required: true
   requirements-files:
-    description: "Series of requirements files to install from"
+    description:
+      "List of requirements files to install from. May be separated by spaces
+      and/or newlines."
     required: false
     default: ""
   requirements:
-    description: "List of requirements to install"
+    description:
+      "List of conda packages to install. May be separated by spaces and/or
+      newlines."
     required: false
     default: ""
 outputs:
@@ -41,23 +45,28 @@ runs:
     - name: Set environment variables
       shell: bash
       run: |
-        echo "${{ inputs.requirements }}"
-        echo "${{ inputs.requirements-files }}"
-        echo $RUNNER_OS$RUNNER_ARCH
         echo "WEEK=$(date +%U)" >> $GITHUB_ENV
         echo "CONDA_PREFIX=$CONDA_PREFIX" >> $GITHUB_ENV
 
     - name: Copy requirements into file
       shell: bash
       run: |
+        echo "${{ inputs.requirements }}"
+        REQUIREMENTS=$(echo "${{ inputs.requirements }}" | tr " " "\n")
+        echo "$REQUIREMENTS
+
         echo "python=${{ inputs.python-version }}
-          ${{ inputs.requirements }}" > extra_requirements.txt
+          $REQUIREMENTS" \
+        > extra_requirements.txt
 
     - name: Combine all requirements into environment YML
       shell: bash
       run: |
-        REQUIREMENTS_FILES=$(echo ${{ inputs.requirements-files }} | tr "\n" " ")
+        echo "${{ inputs.requirements-files }}"
+        REQUIREMENTS_FILES=$(echo "${{ inputs.requirements-files }}" | tr "\n" " ")
         echo $REQUIREMENTS_FILES
+        echo "$REQUIREMENTS_FILES"
+
         python ./scripts/convert-requirements-to-conda-yml.py \
           extra_requirements.txt \
           ${{ inputs.requirements-files }} \
