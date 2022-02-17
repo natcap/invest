@@ -49,15 +49,18 @@ runs:
 
     - name: Copy requirements into file
       shell: bash
-      run: echo "python=${{ inputs.python-version }} ${{ inputs.requirements }}" > extra_requirements.txt
+      run: |
+        echo "python=${{ inputs.python-version }}
+          ${{ inputs.requirements }}" > extra_requirements.txt
 
     - name: Combine all requirements into environment YML
       shell: bash
       run: |
         REQUIREMENTS_FILES=$(echo ${{ inputs.requirements-files }} | tr "\n" " ")
+        echo $REQUIREMENTS_FILES
         python ./scripts/convert-requirements-to-conda-yml.py \
           extra_requirements.txt \
-          $REQUIREMENTS_FILES \
+          ${{ inputs.requirements-files }} \
         > environment.yml
 
     # NOTE the post step that saves the cache will only run if the job succeeds
