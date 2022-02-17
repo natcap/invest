@@ -35,18 +35,11 @@ jobs:
         uses: ./.github/actions/setup_env
         with:
           cache-id: py${{ env.PYTHON_VERSION }}-windows-binaries
-        id: condacache
+          requirements-files: requirements.txt requirements-dev.txt requirements-gui.txt
+          requirements: python=${{ env.PYTHON_VERSION }} ${{ env.DEFAULT_DEPENDENCIES }}
 
-      - name: Install python dependencies
-        if: steps.condacache.outputs.cache-hit != 'true'
-        run: |
-          conda install python=${{ env.PYTHON_VERSION }} ${{ env.DEFAULT_DEPENDENCIES }}
-          python ./scripts/convert-requirements-to-conda-yml.py \
-            requirements.txt \
-            requirements-dev.txt \
-            requirements-gui.txt > requirements-all.yml
-          conda env update --file requirements-all.yml
-          make install
+      - name: Make install
+        run: make install
 
         # Not caching chocolatey packages because the cache may not be reliable
         # https://github.com/chocolatey/choco/issues/2134
@@ -154,18 +147,11 @@ jobs:
         uses: ./.github/actions/setup_env
         with:
           cache-id: py${{ env.PYTHON_VERSION }}-macos-binaries
-        id: condacache
+          requirements-files: requirements.txt requirements-dev.txt requirements-gui.txt
+          requirements: python=${{ env.PYTHON_VERSION }} ${{ env.DEFAULT_DEPENDENCIES }}
 
-      - name: Build conda env with python dependencies
-        if: steps.condacache.outputs.cache-hit != 'true'
-        run: |
-          conda install python=${{ env.PYTHON_VERSION }} ${{ env.DEFAULT_DEPENDENCIES }}
-          python ./scripts/convert-requirements-to-conda-yml.py \
-            requirements.txt \
-            requirements-dev.txt \
-            requirements-gui.txt > requirements-all.yml
-          conda env update --file requirements-all.yml
-          make install
+      - name: Make install
+        run: make install
 
       - name: Build binaries
         run: make mac_dmg

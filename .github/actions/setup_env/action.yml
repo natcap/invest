@@ -38,6 +38,8 @@ runs:
     - name: Set environment variables
       shell: bash
       run: |
+        echo ${{ inputs.requirements }}
+        echo ${{ inputs.requirements-files }}
         echo "WEEK=$(date +%U)" >> $GITHUB_ENV
         echo "CONDA_PREFIX=$CONDA_PREFIX" >> $GITHUB_ENV
 
@@ -45,7 +47,6 @@ runs:
       run: echo ${{ inputs.requirements }} | tr " " "\n" > extra_requirements.txt
 
     - name: Combine all requirements into environment YML
-      if: steps.condacache.outputs.cache-hit != 'true'
       shell: bash
       run: |
         python ./scripts/convert-requirements-to-conda-yml.py \
@@ -62,5 +63,11 @@ runs:
       id: condacache
 
     - name: Update environment with dependencies
+      if: steps.condacache.outputs.cache-hit != 'true'
       shell: bash
       run: conda env update --file environment.yml
+
+    - name: List conda environment
+      run: |
+        conda list
+        conda list --export > conda-env.txt
