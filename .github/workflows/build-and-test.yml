@@ -9,9 +9,10 @@ defaults:
 env:
   # build: dependency of make install
   # nomkl: make sure numpy w/out mkl
-  DEFAULT_DEPENDENCIES: build nomkl
+  DEFAULT_DEPENDENCIES: |
+    build
+    nomkl
   PYTHON_VERSION: 3.9
-  CI_REQUIREMENTS_FILE: ci_requirements.txt
 
 jobs:
   # This job will check for obvious syntax errors.
@@ -66,11 +67,16 @@ jobs:
       - uses: ./.github/actions/setup_env
         with:
           cache-id: py${{ matrix.python-version }}-${{ matrix.os }}-model-tests
+          python-version: ${{ matrix.python-version }}
           requirements-files: |
             requirements.txt
             requirements-dev.txt
             requirements-gui.txt
-          requirements: python=${{ matrix.python-version }} ${{ env.DEFAULT_DEPENDENCIES }} ${{ matrix.numpy }} ${{ matrix.gdal }} twine
+          requirements: |
+            ${{ env.DEFAULT_DEPENDENCIES }}
+            ${{ matrix.numpy }}
+            ${{ matrix.gdal }}
+            twine
 
       - name: Build and install wheel
         run: |
@@ -126,8 +132,12 @@ jobs:
       - uses: ./.github/actions/setup_env
         with:
           cache-id: py${{ matrix.python-version }}-${{ matrix.os }}-test-source-dist
+          python-version: ${{ matrix.python-version }}
           requirements-files: requirements.txt
-          requirements: python=${{ matrix.python-version }} ${{ env.DEFAULT_DEPENDENCIES }} setuptools_scm twine
+          requirements: |
+            ${{ env.DEFAULT_DEPENDENCIES }}
+            setuptools_scm
+            twine
 
       - name: Build source distribution
         run: |
@@ -177,8 +187,12 @@ jobs:
       - uses: ./.github/actions/setup_env
         with:
           cache-id: validate-resources
+          python-version: ${{ env.PYTHON_VERSION }}
           requirements-files: requirements.txt
-          requirements: python=${{ env.PYTHON_VERSION }} ${{ env.DEFAULT_DEPENDENCIES }} pytest setuptools_scm
+          requirements: |
+            ${{ env.DEFAULT_DEPENDENCIES }}
+            pytest
+            setuptools_scm
 
       - name: Make install
         run: make install
@@ -213,8 +227,12 @@ jobs:
       - uses: ./.github/actions/setup_env
         with:
           cache-id: py${{ matrix.python-version }}-${{ matrix.os }}-ui-tests
-          requirements-files: requirements.txt requirements-dev.txt requirements-gui.txt
-          requirements: python=${{ matrix.python-version }} ${{ env.DEFAULT_DEPENDENCIES }}
+          python-version: ${{ matrix.python-version }}
+          requirements-files: |
+            requirements.txt
+            requirements-dev.txt
+            requirements-gui.txt
+          requirements: ${{ env.DEFAULT_DEPENDENCIES }}
 
       - name: Pip install
         run: python -m pip install .
@@ -241,8 +259,12 @@ jobs:
       - uses: ./.github/actions/setup_env
         with:
           cache-id: ${{ matrix.os }}-workbench-tests
-          requirements-files: requirements.txt requirements-dev.txt requirements-gui.txt
-          requirements: python=${{ env.python-version }} ${{ env.DEFAULT_DEPENDENCIES }}
+          python-version: ${{ env.python-version }}
+          requirements-files: |
+            requirements.txt
+            requirements-dev.txt
+            requirements-gui.txt
+          requirements: ${{ env.DEFAULT_DEPENDENCIES }}
 
       - name: Make install
         run: make install

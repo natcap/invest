@@ -10,6 +10,9 @@ inputs:
       week, or if the requirements change."
     required: false
     default: ""
+  python-version:
+    description: "Python version to install"
+    required: true
   requirements-files:
     description: "Series of requirements files to install from"
     required: false
@@ -38,21 +41,23 @@ runs:
     - name: Set environment variables
       shell: bash
       run: |
-        echo ${{ inputs.requirements }}
-        echo ${{ inputs.requirements-files }}
+        echo "${{ inputs.requirements }}"
+        echo "${{ inputs.requirements-files }}"
+        echo $RUNNER_OS$RUNNER_ARCH
         echo "WEEK=$(date +%U)" >> $GITHUB_ENV
         echo "CONDA_PREFIX=$CONDA_PREFIX" >> $GITHUB_ENV
 
     - name: Copy requirements into file
       shell: bash
-      run: echo ${{ inputs.requirements }} | tr " " "\n" > extra_requirements.txt
+      run: echo "python=${{ inputs.python-version }} ${{ inputs.requirements }}" > extra_requirements.txt
 
     - name: Combine all requirements into environment YML
       shell: bash
       run: |
+        REQUIREMENTS_FILES=$(echo ${{ inputs.requirements-files }} | tr "\n" " ")
         python ./scripts/convert-requirements-to-conda-yml.py \
           extra_requirements.txt \
-          ${{ inputs.requirements-files }} \
+          $REQUIREMENTS_FILES \
         > environment.yml
 
     # NOTE the post step that saves the cache will only run if the job succeeds

@@ -35,8 +35,9 @@ jobs:
         uses: ./.github/actions/setup_env
         with:
           cache-id: py${{ env.PYTHON_VERSION }}-windows-binaries
+          python-version: ${{ env.PYTHON_VERSION }}
           requirements-files: requirements.txt requirements-dev.txt requirements-gui.txt
-          requirements: python=${{ env.PYTHON_VERSION }} ${{ env.DEFAULT_DEPENDENCIES }}
+          requirements: ${{ env.DEFAULT_DEPENDENCIES }}
 
       - name: Make install
         run: make install
@@ -147,8 +148,9 @@ jobs:
         uses: ./.github/actions/setup_env
         with:
           cache-id: py${{ env.PYTHON_VERSION }}-macos-binaries
+          python-version: ${{ env.PYTHON_VERSION }}
           requirements-files: requirements.txt requirements-dev.txt requirements-gui.txt
-          requirements: python=${{ env.PYTHON_VERSION }} ${{ env.DEFAULT_DEPENDENCIES }}
+          requirements: ${{ env.DEFAULT_DEPENDENCIES }}
 
       - name: Make install
         run: make install
