@@ -176,7 +176,7 @@ def write_parameter_set_file():
     """Writes InVEST model args keys and values to a datastack JSON file.
 
     Body (JSON string):
-        parameterSetPath: string
+        filepath: string
         moduleName: string(e.g. natcap.invest.carbon)
         args: JSON string of InVEST model args keys and values
         relativePaths: boolean
