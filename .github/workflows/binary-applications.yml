@@ -30,10 +30,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          fetch-depth: 0  # fetch complete history
-
-      - name: Fetch git tags
-        run: git fetch origin +refs/tags/*:refs/tags/*
+          fetch-depth: 0 # Fetch complete history for accurate versioning
 
       - name: Set up conda environment
         uses: ./.github/actions/setup_env
@@ -44,10 +41,7 @@ jobs:
       - name: Install python dependencies
         if: steps.condacache.outputs.cache-hit != 'true'
         run: |
-          conda install python=${{ env.PYTHON_VERSION }}
-          conda install nomkl # make sure numpy is w/out MKL
-          conda upgrade -y pip setuptools
-          conda install requests
+          conda install python=${{ env.PYTHON_VERSION }} ${{ env.DEFAULT_DEPENDENCIES }}
           python ./scripts/convert-requirements-to-conda-yml.py \
             requirements.txt \
             requirements-dev.txt \
@@ -66,9 +60,7 @@ jobs:
           ./ci/windows-ci-binary-install.ps1
 
       - name: Build userguide, binaries, installer
-        run: |
-          # This builds the users guide, binaries, and installer
-          make windows_installer
+        run: make windows_installer
 
       - name: Install Node.js
         uses: actions/setup-node@v2
@@ -95,18 +87,6 @@ jobs:
         working-directory: ./workbench
         run: npx cross-env CI=true yarn run test-electron-app
 
-      - name: Authenticate GCP
-        # Secrets not available in PR so don't use GCP.
-        if: github.event_name != 'pull_request'
-        uses: google-github-actions/auth@v0
-        with:
-          credentials_json: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
-
-      - name: Set up GCP
-        # Secrets not available in PR so don't use GCP.
-        if: github.event_name != 'pull_request'
-        uses: google-github-actions/setup-gcloud@v0
-
       - name: Sign binaries
         # Secrets not available in PR so don't use GCP.
         if: github.event_name != 'pull_request'
@@ -122,10 +102,8 @@ jobs:
           # setup-gcloud adds 'gsutil' to PATH
           make BIN_TO_SIGN="$INSTALLER_BINARY" WORKBENCH_BIN_TO_SIGN="$WORKBENCH_BINARY" SIGNTOOL="$SIGNTOOL_PATH" codesign_windows
 
-      - name: Deploy artifacts to GCS
-        # Secrets not available in PR so don't use GCP.
-        if: github.event_name != 'pull_request'
-        run: make GSUTIL="gsutil" deploy # setup-gcloud adds 'gsutil' to PATH
+      - if: github.event_name != 'pull_request'
+        uses: ./.github/actions/setup_gcp_and_deploy
 
       - name: Upload installer artifact
         if: always()
@@ -148,7 +126,7 @@ jobs:
           path: dist/InVEST_*_userguide.zip
 
       - name: Upload app logging from puppeteer
-        uses: actions/upload-artifact@v2.2.4
+        uses: actions/upload-artifact@v2
         if: always()
         with:
           name: 'windows_puppeteer_log.zip'
@@ -168,15 +146,10 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          fetch-depth: 0  # fetch complete history
-
-      - name: Fetch git tags
-        run: git fetch origin +refs/tags/*:refs/tags/*
+          fetch-depth: 0 # Fetch complete history for accurate versioning
 
       - name: Install homebrew dependencies
-        run: |
-          brew update
-          brew install pandoc
+        run: brew install pandoc
 
       - name: Set up conda environment
         uses: ./.github/actions/setup_env
@@ -187,17 +160,12 @@ jobs:
       - name: Build conda env with python dependencies
         if: steps.condacache.outputs.cache-hit != 'true'
         run: |
-          conda install python=${{ env.PYTHON_VERSION }}
-          conda upgrade -y pip setuptools
-          conda install requests
+          conda install python=${{ env.PYTHON_VERSION }} ${{ env.DEFAULT_DEPENDENCIES }}
           python ./scripts/convert-requirements-to-conda-yml.py \
             requirements.txt \
             requirements-dev.txt \
             requirements-gui.txt > requirements-all.yml
           conda env update --file requirements-all.yml
-
-          # Libtiff from conda defaults channel gets around issue with missing libwebp
-          conda install --yes libtiff
           make install
 
       - name: Build binaries
@@ -228,19 +196,6 @@ jobs:
         working-directory: ./workbench
         run: npx cross-env CI=true yarn run test-electron-app
 
-      - name: Authenticate GCP
-        # Secrets not available in PR so don't use GCP.
-        if: github.event_name != 'pull_request'
-        uses: google-github-actions/auth@v0
-        with:
-          credentials_json: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
-
-      - name: Set up GCP
-        # Secrets not available in PR so don't use GCP.
-        # We only want to upload artifacts to a release object in a release.
-        if: github.event_name != 'pull_request'
-        uses: google-github-actions/setup-gcloud@v0
-
       - name: Sign DMG
         if: github.event_name != 'pull_request'
         env:
@@ -251,10 +206,8 @@ jobs:
           WORKBENCH_BINARY=$(find "$(pwd)/workbench/dist" -type f -name 'invest_*.dmg' | head -n 1)
           make BIN_TO_SIGN="$INSTALLER_BINARY" WORKBENCH_BIN_TO_SIGN="$WORKBENCH_BINARY" codesign_mac
 
-      - name: Deploy artifacts to GCS
-        # Secrets not available in PR so don't use GCP.
-        if: github.event_name != 'pull_request'
-        run: make deploy
+      - if: github.event_name != 'pull_request'
+        uses: ./.github/actions/setup_gcp_and_deploy
 
       - name: Upload DMG artifact
         uses: actions/upload-artifact@v2
@@ -270,7 +223,7 @@ jobs:
           path: workbench/dist/*.dmg
 
       - name: Upload workbench logging from puppeteer
-        uses: actions/upload-artifact@v2.2.4
+        uses: actions/upload-artifact@v2
         if: always()
         with:
           name: 'macos_puppeteer_log.zip'
@@ -294,13 +247,11 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          fetch-depth: 0  # Fetch complete history
+          fetch-depth: 0 # Fetch complete history for accurate versioning
 
-      - run: git fetch origin +refs/tags/*:refs/tags/*
-
-      - uses: actions/setup-python@v1
+      - uses: actions/setup-python@v2
         with:
-          python-version: 3.8
+          python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Install dependencies
         # dependencies of setup.py, needed to get the version string
@@ -308,22 +259,8 @@ jobs:
 
       - run: make sampledata sampledata_single
 
-      - name: Authenticate GCP
-        # Secrets not available in PR so don't use GCP.
-        if: github.event_name != 'pull_request'
-        uses: google-github-actions/auth@v0
-        with:
-          credentials_json: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
-
-      - name: Set up GCP
-        # Secrets not available in PR so don't use GCP.
-        if: github.event_name != 'pull_request'
-        uses: google-github-actions/setup-gcloud@v0
-
-      - name: Deploy artifacts to GCS
-        # Secrets not available in PR so don't use GCP.
-        if: github.event_name != 'pull_request'
-        run: make deploy
+      - if: github.event_name != 'pull_request'
+        uses: ./.github/actions/setup_gcp_and_deploy
 
       - name: Install Node.js
         uses: actions/setup-node@v2

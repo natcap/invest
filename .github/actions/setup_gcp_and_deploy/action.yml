@@ -1,0 +1,19 @@
+name: Set up GCP and deploy artifacts
+inputs:
+  python-version:
+    description: "The python version to use"
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Authenticate GCP
+      uses: google-github-actions/auth@v0
+      with:
+        credentials_json: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
+
+    - name: Set up GCP
+      uses: google-github-actions/setup-gcloud@v0
+
+    - name: Deploy artifacts to GCS
+      if: github.event_name != 'pull_request'
+      run: make GSUTIL="gsutil" deploy # setup-gcloud action adds 'gsutil' to the PATH
