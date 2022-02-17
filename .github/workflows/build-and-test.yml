@@ -9,8 +9,9 @@ defaults:
 env:
   # build: dependency of make install
   # nomkl: make sure numpy w/out mkl
-  # requests: dependency of convert-requirements-to-conda-yml.py
-  DEFAULT_DEPENDENCIES: build nomkl requests
+  DEFAULT_DEPENDENCIES: build nomkl
+  PYTHON_VERSION: 3.9
+  CI_REQUIREMENTS_FILE: ci_requirements.txt
 
 jobs:
   # This job will check for obvious syntax errors.
@@ -25,7 +26,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: ./.github/actions/check_for_syntax_errors
         with:
-          python-version: 3.9
+          python-version: ${{ env.PYTHON_VERSION }}
 
   run-model-tests:
     name: Run model tests
@@ -62,17 +63,27 @@ jobs:
           path: data/invest-test-data
           key: git-lfs-testdata-${{ hashfiles('Makefile') }}
 
-      - uses: ./.github/actions/setup_env
+      - id: condacache
+        uses: ./.github/actions/setup_env
         with:
           cache-id: py${{ matrix.python-version }}-${{ matrix.os }}-model-tests
-        id: condacache
+          requirements-files: |
+            ${{ env.CI_REQUIREMENTS_FILE }}
+            requirements.txt
+            requirements-dev.txt
+            requirements-gui.txt
+          requirements: python=${{ matrix.python-version }} ${{ env.DEFAULT_DEPENDENCIES }} ${{ matrix.numpy }} ${{ matrix.gdal }} twine
+
+
 
       - name: Install dependencies
         if: steps.condacache.outputs.cache-hit != 'true'
         run: |
-          conda install python=${{ matrix.python-version }} ${{ matrix.numpy }} ${{ matrix.gdal }} ${{ env.DEFAULT_DEPENDENCIES }} twine
+          echo python=${{ matrix.python-version }} \
+            ${{ env.DEFAULT_DEPENDENCIES }} ${{ matrix.numpy }} \
+            ${{ matrix.gdal }} twine | tr " " "\n" > ${{ env.CI_REQUIREMENTS_FILE }}
           python ./scripts/convert-requirements-to-conda-yml.py \
-            requirements.txt requirements-dev.txt \
+            ${{ env.CI_REQUIREMENTS_FILE }} requirements.txt requirements-dev.txt \
             requirements-gui.txt > requirements-all.yml
           conda env update --file requirements-all.yml
 
@@ -140,9 +151,10 @@ jobs:
       - name: Install dependencies
         if: steps.condacache.outputs.cache-hit != 'true'
         run: |
-          conda install python=${{ matrix.python-version }} ${{ env.DEFAULT_DEPENDENCIES }} twine setuptools_scm
+          echo python=${{ matrix.python-version }} \
+            ${{ env.DEFAULT_DEPENDENCIES }} setuptools_scm twine | tr " " "\n" > ${{ env.CI_REQUIREMENTS_FILE }}
           python ./scripts/convert-requirements-to-conda-yml.py \
-            requirements.txt > requirements-all.yml
+            ${{ env.CI_REQUIREMENTS_FILE }} requirements.txt > requirements-all.yml
           conda env update --file requirements-all.yml
 
       - name: Build source distribution
@@ -178,7 +190,7 @@ jobs:
         # Only upload sdist in one of the matrix cases so we don't
         # overwrite artifacts or have duplicates (mac/windows sdists have
         # different extensions)
-      - if: github.event_name != 'pull_request' && matrix.os == 'macos-latest' && matrix.python-version == '3.7'
+      - if: github.event_name != 'pull_request' && matrix.os == 'macos-latest' && matrix.python-version == '${{ env.PYTHON_VERSION }}'
         uses: ./.github/actions/setup_gcp_and_deploy
 
   validate-resources:
@@ -190,18 +202,19 @@ jobs:
         with:
           fetch-depth: 0 # Fetch complete history for accurate versioning
 
-
       - uses: ./.github/actions/setup_env
         with:
-          cache-id: py${{ matrix.python-version }}-${{ matrix.os }}-validate
+          cache-id: validate-resources
         id: condacache
 
       - name: Install dependencies
         if: steps.condacache.outputs.cache-hit != 'true'
         run: |
-          conda install python=3.9 ${{ env.DEFAULT_DEPENDENCIES }} pytest setuptools_scm
-          python ./scripts/convert-requirements-to-conda-yml.py requirements.txt > requirements.yml
-          conda env update --file requirements.yml
+          echo python=${{ env.python-version }} ${{ env.DEFAULT_DEPENDENCIES }} \
+            pytest setuptools_scm | tr " " "\n" > ${{ env.CI_REQUIREMENTS_FILE }}
+          python ./scripts/convert-requirements-to-conda-yml.py \
+            ${{ env.CI_REQUIREMENTS_FILE }} requirements.txt > requirements-all.yml
+          conda env update --file requirements-all.yml
           make install
 
       - name: Validate sample data
@@ -240,9 +253,10 @@ jobs:
       - name: Install dependencies
         if: steps.condacache.outputs.cache-hit != 'true'
         run: |
-          conda install python=${{ matrix.python-version }} ${{ env.DEFAULT_DEPENDENCIES }}
+          echo python=${{ matrix.python-version }} ${{ env.DEFAULT_DEPENDENCIES }} \
+          | tr " " "\n" > ${{ env.CI_REQUIREMENTS_FILE }}
           python ./scripts/convert-requirements-to-conda-yml.py \
-            requirements.txt requirements-dev.txt \
+            ${{ env.CI_REQUIREMENTS_FILE }} requirements.txt requirements-dev.txt \
             requirements-gui.txt > requirements-all.yml
           conda env update --file requirements-all.yml
           python -m pip install .
@@ -259,7 +273,6 @@ jobs:
       fail-fast: False
       max-parallel: 4
       matrix:
-        python-version: [3.9]
         os: [windows-latest, macos-latest]
 
     steps:
@@ -269,15 +282,17 @@ jobs:
 
       - uses: ./.github/actions/setup_env
         with:
-          cache-id: py${{ matrix.python-version }}-${{ matrix.os }}-workbench-tests
+          cache-id: ${{ matrix.os }}-workbench-tests
+          requirements:
         id: condacache
 
       - name: Install dependencies
         if: steps.condacache.outputs.cache-hit != 'true'
         run: |
-          conda install ${{ env.DEFAULT_DEPENDENCIES }}
+          echo python=${{ env.python-version }} ${{ env.DEFAULT_DEPENDENCIES }} \
+          | tr " " "\n" > ${{ env.CI_REQUIREMENTS_FILE }}
           python ./scripts/convert-requirements-to-conda-yml.py \
-            requirements.txt requirements-dev.txt \
+            ${{ env.CI_REQUIREMENTS_FILE }} requirements.txt requirements-dev.txt \
             requirements-gui.txt > requirements-all.yml
           conda env update --file requirements-all.yml
           make install

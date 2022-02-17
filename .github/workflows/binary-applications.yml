@@ -9,8 +9,7 @@ defaults:
 env:
   # build: dependency of make install
   # nomkl: make sure numpy w/out mkl
-  # requests: dependency of convert-requirements-to-conda-yml.py
-  DEFAULT_DEPENDENCIES: build nomkl requests
+  DEFAULT_DEPENDENCIES: build nomkl
   PYTHON_VERSION: 3.9
 
 jobs:

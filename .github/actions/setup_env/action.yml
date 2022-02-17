@@ -10,6 +10,14 @@ inputs:
       week, or if the requirements change."
     required: false
     default: ""
+  requirements-files:
+    description: "Series of requirements files to install from"
+    required: false
+    default: ""
+  requirements:
+    description: "List of requirements to install"
+    required: false
+    default: ""
 outputs:
   cache-hit:
     description: "True if a cache hit was found, false if not"
@@ -28,15 +36,31 @@ runs:
     # save week number to use in next step
     # save CONDA_PREFIX to GITHUB_ENV so it's accessible outside of shell commands
     - name: Set environment variables
+      shell: bash
       run: |
         echo "WEEK=$(date +%U)" >> $GITHUB_ENV
         echo "CONDA_PREFIX=$CONDA_PREFIX" >> $GITHUB_ENV
-      shell: bash -l {0}
+
+    - name: Copy requirements into file
+      run: echo ${{ inputs.requirements }} | tr " " "\n" > extra_requirements.txt
+
+    - name: Combine all requirements into environment YML
+      if: steps.condacache.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        python ./scripts/convert-requirements-to-conda-yml.py \
+          extra_requirements.txt \
+          ${{ inputs.requirements-files }} \
+        > environment.yml
 
     # NOTE the post step that saves the cache will only run if the job succeeds
     - name: Restore conda environment cache
       uses: actions/cache@v2
       with:
         path: ${{ env.CONDA_PREFIX }}
-        key: ${{ inputs.cache-id }}-${{ env.WEEK }}-${{ hashFiles('**/requirements*.txt') }}
+        key: ${{ inputs.cache-id }}-${{ env.WEEK }}-${{ hashFiles('environment.yml') }}
       id: condacache
+
+    - name: Update environment with dependencies
+      shell: bash
+      run: conda env update --file environment.yml
