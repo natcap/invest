@@ -76,11 +76,11 @@ runs:
 
     - name: Update environment with dependencies
       if: steps.condacache.outputs.cache-hit != 'true'
-      shell: bash -l {0}
+      shell: bash -l {0} # conda only available in login shell
       run: conda env update --file environment.yml
 
     - name: List conda environment
-      shell: bash
+      shell: bash -l {0} # conda only available in login shell
       run: |
         conda list
         conda list --export > conda-env.txt
