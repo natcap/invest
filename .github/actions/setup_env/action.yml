@@ -53,7 +53,7 @@ runs:
       run: |
         echo "${{ inputs.requirements }}"
         REQUIREMENTS=$(echo "${{ inputs.requirements }}" | tr " " "\n")
-        echo "$REQUIREMENTS
+        echo "$REQUIREMENTS"
 
         echo "python=${{ inputs.python-version }}
           $REQUIREMENTS" \

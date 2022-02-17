@@ -9,9 +9,7 @@ defaults:
 env:
   # build: dependency of make install
   # nomkl: make sure numpy w/out mkl
-  DEFAULT_DEPENDENCIES: |
-    build
-    nomkl
+  DEFAULT_DEPENDENCIES: build nomkl
   PYTHON_VERSION: 3.9
 
 jobs:
