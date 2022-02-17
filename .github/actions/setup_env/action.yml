@@ -44,6 +44,7 @@ runs:
         echo "CONDA_PREFIX=$CONDA_PREFIX" >> $GITHUB_ENV
 
     - name: Copy requirements into file
+      shell: bash
       run: echo ${{ inputs.requirements }} | tr " " "\n" > extra_requirements.txt
 
     - name: Combine all requirements into environment YML
@@ -68,6 +69,7 @@ runs:
       run: conda env update --file environment.yml
 
     - name: List conda environment
+      shell: bash
       run: |
         conda list
         conda list --export > conda-env.txt
