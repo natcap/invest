@@ -1,7 +1,7 @@
 name: Set up GCP and deploy artifacts
 inputs:
-  credentials_json: "GCP credentials JSON to pass to google-github-actions/auth"
-    description: "The python version to use"
+  credentials_json:
+    description: "GCP credentials JSON to pass to google-github-actions/auth"
     required: true
 runs:
   using: composite
