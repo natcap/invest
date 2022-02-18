@@ -46,16 +46,6 @@ jobs:
         with:
           fetch-depth: 0 # Fetch complete history for accurate versioning
 
-      - name: Set up conda environment
-        uses: ./.github/actions/setup_env
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          requirements-files: requirements.txt requirements-dev.txt requirements-gui.txt
-          requirements: ${{ env.DEFAULT_DEPENDENCIES }} pandoc
-
-      - name: Make install
-        run: make install
-
         # Not caching chocolatey packages because the cache may not be reliable
         # https://github.com/chocolatey/choco/issues/2134
         # and this step only takes about 1 minute.
@@ -66,6 +56,16 @@ jobs:
           # Appveyor build scripts expects PYTHON to point to the dir containing python.
           $env:PYTHON = python -c "import sys, os; print(os.path.dirname(sys.executable))"
           ./ci/windows-ci-binary-install.ps1
+
+      - name: Set up conda environment
+        uses: ./.github/actions/setup_env
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          requirements-files: requirements.txt requirements-dev.txt requirements-gui.txt
+          requirements: ${{ env.DEFAULT_DEPENDENCIES }} pandoc
+
+      - name: Make install
+        run: make install
 
       - name: Build binaries
         run: make ${{ matrix.binary-make-command }}
