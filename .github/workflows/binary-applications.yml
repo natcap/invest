@@ -99,7 +99,7 @@ jobs:
       - if: github.event_name != 'pull_request'
         uses: ./.github/actions/setup_gcp_and_deploy
         with:
-          credentials_json: secrets.GOOGLE_SERVICE_ACC_KEY
+          credentials_json: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
 
       - name: Upload installer artifact
         if: always()
@@ -198,7 +198,7 @@ jobs:
       - if: github.event_name != 'pull_request'
         uses: ./.github/actions/setup_gcp_and_deploy
         with:
-          credentials_json: secrets.GOOGLE_SERVICE_ACC_KEY
+          credentials_json: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
 
       - name: Upload DMG artifact
         uses: actions/upload-artifact@v2
@@ -253,7 +253,7 @@ jobs:
       - if: github.event_name != 'pull_request'
         uses: ./.github/actions/setup_gcp_and_deploy
         with:
-          credentials_json: secrets.GOOGLE_SERVICE_ACC_KEY
+          credentials_json: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
 
       - name: Install Node.js
         uses: actions/setup-node@v2
