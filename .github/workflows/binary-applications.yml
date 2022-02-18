@@ -9,7 +9,7 @@ defaults:
 env:
   # build: dependency of make install
   # nomkl: make sure numpy w/out mkl
-  DEFAULT_DEPENDENCIES: build nomkl
+  DEFAULT_DEPENDENCIES: build nomkl setuptools_scm
   PYTHON_VERSION: 3.9
 
 jobs:
@@ -34,7 +34,6 @@ jobs:
       - name: Set up conda environment
         uses: ./.github/actions/setup_env
         with:
-          cache-id: py${{ env.PYTHON_VERSION }}-windows-binaries
           python-version: ${{ env.PYTHON_VERSION }}
           requirements-files: |
             requirements.txt
@@ -149,7 +148,6 @@ jobs:
       - name: Set up conda environment
         uses: ./.github/actions/setup_env
         with:
-          cache-id: py${{ env.PYTHON_VERSION }}-macos-binaries
           python-version: ${{ env.PYTHON_VERSION }}
           requirements-files: requirements.txt requirements-dev.txt requirements-gui.txt
           requirements: ${{ env.DEFAULT_DEPENDENCIES }}

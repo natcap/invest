@@ -9,7 +9,8 @@ defaults:
 env:
   # build: dependency of make install
   # nomkl: make sure numpy w/out mkl
-  DEFAULT_DEPENDENCIES: build nomkl
+  # setuptools_scm: needed for versioning to work
+  DEFAULT_DEPENDENCIES: build nomkl setuptools_scm
   PYTHON_VERSION: 3.9
 
 jobs:
@@ -64,7 +65,6 @@ jobs:
 
       - uses: ./.github/actions/setup_env
         with:
-          cache-id: py${{ matrix.python-version }}-${{ matrix.os }}-model-tests
           python-version: ${{ matrix.python-version }}
           requirements-files: |
             requirements.txt
@@ -129,16 +129,15 @@ jobs:
 
       - uses: ./.github/actions/setup_env
         with:
-          cache-id: py${{ matrix.python-version }}-${{ matrix.os }}-test-source-dist
           python-version: ${{ matrix.python-version }}
           requirements-files: requirements.txt
-          requirements: |
-            ${{ env.DEFAULT_DEPENDENCIES }}
-            setuptools_scm
-            twine
+          requirements: ${{ env.DEFAULT_DEPENDENCIES }} twine
 
       - name: Build source distribution
         run: |
+          echo ${{ github.event_name }}
+          echo ${{ matrix.os }}
+          echo ${{ matrix.python-version }}
           # Because we're using PEP518 build requirements, the user's
           # computer is guaranteed to have cython available at build
           # time.  Thus, it is no longer necessary to distribute the
@@ -184,13 +183,9 @@ jobs:
 
       - uses: ./.github/actions/setup_env
         with:
-          cache-id: validate-resources
           python-version: ${{ env.PYTHON_VERSION }}
           requirements-files: requirements.txt
-          requirements: |
-            ${{ env.DEFAULT_DEPENDENCIES }}
-            pytest
-            setuptools_scm
+          requirements: ${{ env.DEFAULT_DEPENDENCIES }} pytest
 
       - name: Make install
         run: make install
@@ -224,7 +219,6 @@ jobs:
 
       - uses: ./.github/actions/setup_env
         with:
-          cache-id: py${{ matrix.python-version }}-${{ matrix.os }}-ui-tests
           python-version: ${{ matrix.python-version }}
           requirements-files: |
             requirements.txt
@@ -256,8 +250,7 @@ jobs:
 
       - uses: ./.github/actions/setup_env
         with:
-          cache-id: ${{ matrix.os }}-workbench-tests
-          python-version: ${{ env.python-version }}
+          python-version: ${{ env.PYTHON_VERSION }}
           requirements-files: |
             requirements.txt
             requirements-dev.txt

@@ -1,15 +1,5 @@
 name: "Set up python and conda environment"
 inputs:
-  cache-id:
-    description:
-      "Cache identifier used in the cache key. This should include any values
-      needed to uniquely identify the appropriate cache, such as python
-      version and operating system. The number of the current week in the
-      year, and a hash of all requirements files, are appended onto this
-      identifier to make the cache key. This way the cache will refresh each
-      week, or if the requirements change."
-    required: false
-    default: ""
   python-version:
     description: "Python version to install"
     required: true
@@ -79,7 +69,7 @@ runs:
       uses: actions/cache@v2
       with:
         path: ${{ env.CONDA_PREFIX }}
-        key: ${{ inputs.cache-id }}-${{ env.WEEK }}-${{ hashFiles('environment.yml') }}
+        key: ${{ runner.os }}${{ runner.arch }}-${{ env.WEEK }}-${{ hashFiles('environment.yml') }}
 
     - name: Update environment with dependencies
       if: steps.condacache.outputs.cache-hit != 'true'
