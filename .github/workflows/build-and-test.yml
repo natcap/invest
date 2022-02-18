@@ -115,6 +115,8 @@ jobs:
         # Secrets not available in PR so don't use GCP.
       - if: github.event_name != 'pull_request'
         uses: ./.github/actions/setup_gcp_and_deploy
+        with:
+          credentials_json: secrets.GOOGLE_SERVICE_ACC_KEY
 
   test-source-distribution:
     name: Check sdist
@@ -169,8 +171,10 @@ jobs:
         # Only upload sdist in one of the matrix cases so we don't
         # overwrite artifacts or have duplicates (mac/windows sdists have
         # different extensions)
-      - if: github.event_name != 'pull_request'
+      - if: github.event_name != 'pull_request' && matrix.os == 'macos-latest'
         uses: ./.github/actions/setup_gcp_and_deploy
+        with:
+          credentials_json: secrets.GOOGLE_SERVICE_ACC_KEY
 
   validate-resources:
     name: Validate Sampledata & User Guide

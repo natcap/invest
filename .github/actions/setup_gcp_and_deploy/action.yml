@@ -1,6 +1,6 @@
 name: Set up GCP and deploy artifacts
 inputs:
-  python-version:
+  credentials_json: "GCP credentials JSON to pass to google-github-actions/auth"
     description: "The python version to use"
     required: true
 runs:
@@ -9,7 +9,7 @@ runs:
     - name: Authenticate GCP
       uses: google-github-actions/auth@v0
       with:
-        credentials_json: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
+        credentials_json: ${{ inputs.credentials_json }}
 
     - name: Set up GCP
       uses: google-github-actions/setup-gcloud@v0
