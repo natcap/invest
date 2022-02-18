@@ -11,6 +11,7 @@ runs:
       with:
         python-version: ${{ inputs.python-version }}
 
+    # this is fast enough that it's not worth caching
     - name: Set up environment
       shell: bash
       run: pip install flake8
