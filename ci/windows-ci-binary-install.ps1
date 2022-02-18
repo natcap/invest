@@ -11,7 +11,7 @@
 # NOTE: it turns out that `wget` is an alias for the powershell command `Invoke-WebRequest`,
 # which I've made a point of using here instead of the actual wget. See https://superuser.com/a/693179
 
-choco install make vcredist140 pandoc zip 7zip unzip
+choco install make vcredist140 zip 7zip unzip
 $env:PATH += ";C:\ProgramData\chocolatey\bin"
 
 # Choco-provided command to reload environment variables

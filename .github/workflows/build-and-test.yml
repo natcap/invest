@@ -66,10 +66,7 @@ jobs:
       - uses: ./.github/actions/setup_env
         with:
           python-version: ${{ matrix.python-version }}
-          requirements-files: |
-            requirements.txt
-            requirements-dev.txt
-            requirements-gui.txt
+          requirements-files: requirements.txt requirements-dev.txt requirements-gui.txt
           requirements: |
             ${{ env.DEFAULT_DEPENDENCIES }}
             ${{ matrix.numpy }}
@@ -82,31 +79,17 @@ jobs:
           python -m twine check dist/*
           pip install $(find dist -name "natcap.invest*.whl")
 
-      - name: Download Conda Env Artifact
-        continue-on-error: true
-        # Using 'dawidd6' since 'download-artifact' GH action doesn't
-        # support downloading artifacts from prior workflow runs
-        uses: dawidd6/action-download-artifact@v2
-        with:
-          workflow: build-and-test.yml
-          # Get frozen conda env artifact from last successful workflow
-          workflow_conclusion: success
-          name: Conda Env for ${{ matrix.os }} ${{ matrix.python-version }}
-          path: ./conda-env-artifact
-
-      - name: Compare Conda Environments
-        continue-on-error: true
-        run: diff conda-env.txt conda-env-artifact/conda-env.txt
-
       - name: Run model tests
         run: make test
 
-      - uses: actions/upload-artifact@v2
+      - name: Upload wheel artifact
+        uses: actions/upload-artifact@v2
         with:
           name: Wheel for ${{ matrix.os }} ${{ matrix.python-version }}
           path: dist
 
-      - uses: actions/upload-artifact@v2
+      - name: Upload conda env artifact
+        uses: actions/upload-artifact@v2
         continue-on-error: true
         with:
           name: Conda Env for ${{ matrix.os }} ${{ matrix.python-version }}
@@ -137,9 +120,6 @@ jobs:
 
       - name: Build source distribution
         run: |
-          echo ${{ github.event_name }}
-          echo ${{ matrix.os }}
-          echo ${{ matrix.python-version }}
           # Because we're using PEP518 build requirements, the user's
           # computer is guaranteed to have cython available at build
           # time.  Thus, it is no longer necessary to distribute the
@@ -224,14 +204,11 @@ jobs:
       - uses: ./.github/actions/setup_env
         with:
           python-version: ${{ matrix.python-version }}
-          requirements-files: |
-            requirements.txt
-            requirements-dev.txt
-            requirements-gui.txt
+          requirements-files: requirements.txt requirements-dev.txt requirements-gui.txt
           requirements: ${{ env.DEFAULT_DEPENDENCIES }}
 
-      - name: Pip install
-        run: python -m pip install .
+      - name: Make install
+        run: make install
 
       - name: Run UI tests
         timeout-minutes: 10  # tests usually take < 2 minutes, so 10 is generous.
@@ -248,33 +225,33 @@ jobs:
         os: [windows-latest, macos-latest]
 
     steps:
-      - uses: actions/checkout@v2
+      - name: Check out repo
+        uses: actions/checkout@v2
         with:
           fetch-depth: 0 # Fetch complete history for accurate versioning
 
-      - uses: ./.github/actions/setup_env
+      - name: Set up python environment
+        uses: ./.github/actions/setup_env
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-          requirements-files: |
-            requirements.txt
-            requirements-dev.txt
-            requirements-gui.txt
+          requirements-files: requirements.txt requirements-dev.txt requirements-gui.txt
           requirements: ${{ env.DEFAULT_DEPENDENCIES }}
 
       - name: Make install
         run: make install
 
-      - uses: actions/setup-node@v2
+      - name: Set up node
+        uses: actions/setup-node@v2
         with:
           node-version: 14.x
 
-      - name: Install Workbench Dependencies
+      - name: Install workbench dependencies
         working-directory: ./workbench
         run: |
           yarn config set network-timeout 600000 -g
           yarn install
 
-      - name: run workbench tests
+      - name: Run workbench tests
         working-directory: ./workbench
         env:
           CI: true
