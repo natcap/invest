@@ -46,17 +46,6 @@ jobs:
         with:
           fetch-depth: 0 # Fetch complete history for accurate versioning
 
-        # Not caching chocolatey packages because the cache may not be reliable
-        # https://github.com/chocolatey/choco/issues/2134
-        # and this step only takes about 1 minute.
-      - name: Install build dependencies (Windows)
-        if: matrix.os == 'windows-latest'
-        shell: powershell
-        run: |
-          # Appveyor build scripts expects PYTHON to point to the dir containing python.
-          $env:PYTHON = python -c "import sys, os; print(os.path.dirname(sys.executable))"
-          ./ci/windows-ci-binary-install.ps1
-
       - name: Set up conda environment
         uses: ./.github/actions/setup_env
         with:
