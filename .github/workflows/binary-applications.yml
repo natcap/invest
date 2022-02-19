@@ -154,7 +154,7 @@ jobs:
           path: ${{ matrix.puppeteer-log }}
 
       - name: Tar the workspace to preserve permissions (macOS)
-        if: ${{ failure() }} && matrix.os == 'macos-latest'
+        if: failure() && matrix.os == 'macos-latest'
         run: tar -cvf ${{ matrix.workspace-path}} ${{ github.workspace }}
 
       - name: Upload workspace on failure
