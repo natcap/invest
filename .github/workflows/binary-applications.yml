@@ -46,6 +46,17 @@ jobs:
         with:
           fetch-depth: 0 # Fetch complete history for accurate versioning
 
+        # Not caching chocolatey packages because the cache may not be reliable
+        # https://github.com/chocolatey/choco/issues/2134
+        # and this step only takes about 1 minute.
+      - name: Install build dependencies (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: powershell
+        run: |
+          choco install zip
+          $env:PATH += ";C:\ProgramData\chocolatey\bin"
+          refreshenv # Choco-provided command to reload environment variables
+
       - name: Set up conda environment
         uses: ./.github/actions/setup_env
         with:
