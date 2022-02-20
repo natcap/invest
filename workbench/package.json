@@ -13,7 +13,10 @@
     "postinstall": "electron-builder install-app-deps",
     "dev": "node ./scripts/clean-build-dir.js && babel src -d build --verbose --config-file ./babel.config.js --copy-files --ignore **/__mocks__/* --no-copy-ignored --watch -s both",
     "build": "node ./scripts/clean-build-dir.js && babel src -d build --verbose --config-file ./babel.config.js --copy-files --ignore **/__mocks__/* --no-copy-ignored",
-    "dist": "cross-env DEBUG=electron-builder electron-builder build --config electron-builder-config.js"
+    "dist": "cross-env DEBUG=electron-builder electron-builder build --config electron-builder-config.js",
+    "build-renderer": "cd src/renderer && vite build",
+    "build-main": "cd src/main && vite build",
+    "build-vite": "yarn run build-renderer && yarn run build-main"
   },
   "jest": {
     "verbose": true,
@@ -30,6 +33,7 @@
   "author": "Natural Capital Project",
   "license": "MIT",
   "dependencies": {
+    "@vitejs/plugin-react": "^1.2.0",
     "bootstrap": "4.3.1",
     "electron-log": "^4.3.5",
     "esm": "^3.2.25",
@@ -44,6 +48,7 @@
     "react-dom": "^17.0.1",
     "react-icons": "^4.3.1",
     "sanitize-html": "^2.2.0",
+    "vite": "^2.8.3",
     "yauzl": "^2.10.0"
   },
   "devDependencies": {
