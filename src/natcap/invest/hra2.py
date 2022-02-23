@@ -387,6 +387,18 @@ def execute(args):
         dependent_task_list=alignment_dependent_tasks
     )
 
+    simplified_aoi_path = os.path.join(intermediate_dir, 'simplified_aoi.gpkg')
+    aoi_simplify_task = graph.add_task(
+        func=_simplify,
+        kwargs={
+            'source_vector_path': args['aoi_vector_path'],
+            'tolerance': resolution / 2,  # by the nyquist theorem
+            'target_vector_path': simplified_aoi_path,
+        },
+        task_name='Simplify AOI',
+        target_path_list=[simplified_aoi_path]
+    )
+
     # --> Create a binary mask of habitat pixels.
     habitat_mask_path = os.path.join(
         intermediate_dir, f'habitat_mask{suffix}.tif')
@@ -637,9 +649,13 @@ def execute(args):
             dependent_task_list=[habitat_mask_task, recovery_score_task]
         )
 
-    # TODO: visualize outputs
+    # TODO: output visualization folder.
     # TODO: create summary statistics output file
     # TODO: visualize the graph of tasks to make sure it looks right
+    # TODO: Make sure paths match what they're supposed to.
+    # TODO: align bounding boxes and maybe not align rasters
+    #   It's possible to completely avoid calling align_and_resize if the user
+    #   doesn't provide a raster habitat/stressor at all.
 
     graph.close()
     graph.join()
