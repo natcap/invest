@@ -781,9 +781,9 @@ def _rasterize(source_vector_path, resolution, target_raster_path):
         source_vector_path, target_raster_path, (resolution, -resolution),
         target_pixel_type=gdal.GDT_Byte, target_nodata=255)
 
-    # TODO: Does this need to be ALL_TOUCHED=TRUE?
     pygeoprocessing.rasterize(
-        source_vector_path, target_raster_path, burn_values=[1])
+        source_vector_path, target_raster_path,
+        burn_values=[1], option_list=['ALL_TOUCHED=TRUE'])
 
 
 def _prep_input_raster(source_raster_path, target_raster_path):

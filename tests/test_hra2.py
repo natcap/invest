@@ -10,6 +10,7 @@ import numpy
 import pandas
 import pandas.testing
 import pygeoprocessing
+import shapely.geometry
 from osgeo import gdal
 from osgeo import osr
 
@@ -258,6 +259,32 @@ class HRAUnitTests(unittest.TestCase):
             [[nodata, 3, nodata, 2, 1]], dtype=numpy.uint8)
         numpy.testing.assert_allclose(
             reclassified_score, expected_risk_classes)
+
+    def test_simplify(self):
+        from natcap.invest import hra2
+
+        geoms = [
+            shapely.geometry.Point((ORIGIN[0] + 50, ORIGIN[1] + 50)).buffer(100),
+            shapely.geometry.Point((ORIGIN[0] + 25, ORIGIN[1] + 25)).buffer(50),
+        ]
+        source_vector_path = os.path.join(self.workspace_dir,
+                                          'source_vector.shp')
+        pygeoprocessing.shapely_geometry_to_vector(
+            geoms, source_vector_path, SRS_WKT, 'ESRI Shapefile')
+
+        target_vector_path = os.path.join(self.workspace_dir,
+                                          'target_vector.shp')
+        hra2._simplify(source_vector_path, 20, target_vector_path)
+
+        # Expected areas are from eyeballing that the resulting geometry look
+        # correctly simplified.
+        expected_areas = [28284.271247476, 5000.0]
+        target_vector = gdal.OpenEx(target_vector_path)
+        target_layer = target_vector.GetLayer()
+        self.assertEqual(target_layer.GetFeatureCount(), 2)
+        for expected_area, feature in zip(expected_areas, target_layer):
+            feature_geom = feature.GetGeometryRef()
+            self.assertAlmostEqual(expected_area, feature_geom.Area())
 
 
 class HRAModelTests(unittest.TestCase):
