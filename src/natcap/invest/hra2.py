@@ -335,20 +335,34 @@ def execute(args):
                 target_path_list=rewritten_raster_path
             ))
 
-        # If the input is a vector, rasterize it.
+        # If the input is a vector, simplify and rasterize it.
         elif gis_type == pygeoprocessing.VECTOR_TYPE:
+            target_simplified_vector = os.path.join(
+                intermediate_dir, f'simplified_{name}{suffix}.gpkg')
+            simplify_task = graph.add_task(
+                func=_simplify,
+                kwargs={
+                    'source_vector_path': source_filepath,
+                    'tolerance': resolution / 2,  # by the nyquist theorem.
+                    'target_vector_path': target_simplified_vector,
+                },
+                task_name=f'Simplify {name}',
+                target_path_list=[target_simplified_vector]
+            )
+
             target_raster_path = os.path.join(
                 intermediate_dir, f'rasterized_{name}{suffix}.tif')
             alignment_source_raster_paths.append(target_raster_path)
             alignment_dependent_tasks.append(graph.add_task(
                 func=_rasterize,
                 kwargs={
-                    'source_vector_path': source_filepath,
+                    'source_vector_path': target_simplified_vector,
                     'resolution': resolution,
                     'target_raster_path': target_raster_path,
                 },
                 task_name=f'Rasterize {name}',
-                target_path_list=[target_raster_path]
+                target_path_list=[target_raster_path],
+                dependent_task_list=[simplify_task]
             ))
 
         aligned_raster_path = os.path.join(
@@ -721,9 +735,48 @@ def _rasterize_aoi_regions(source_aoi_vector, habitat_vector_mask,
                        indent=4))
 
 
-def _rasterize(source_vector_path, resolution, target_raster_path):
-    # TODO: shall we simplify as well?  See delineateit.check_geometries()
+def _simplify(source_vector_path, tolerance, target_vector_path):
+    source_vector = gdal.OpenEx(source_vector_path)
+    source_layer = source_vector.GetLayer()
 
+    target_driver = gdal.GetDriverByName('GPKG')
+    target_vector = target_driver.Create(
+        target_vector_path, 0, 0, 0, gdal.GDT_Unknown)
+    target_layer_name = os.path.splitext(
+        os.path.basename(target_vector_path))[0]
+
+    # Using wkbUnknown is important here because a user can provide a single
+    # vector with multiple geometry types.  GPKG can handle whatever geom types
+    # we want it to use, but it will only be a conformant GPKG if and only if
+    # we set the layer type to ogr.wkbUnknown.  Otherwise, the GPKG standard
+    # would expect that all geometries in a layer match the geom type of the
+    # layer and GDAL will raise a warning if that's not the case.
+    target_layer = target_vector.CreateLayer(
+        target_layer_name, source_layer.GetSpatialRef(), ogr.wkbUnknown)
+    target_layer_defn = target_layer.GetLayerDefn()
+
+    target_layer.StartTransaction()
+    for source_feature in source_layer:
+        target_feature = ogr.Feature(target_layer_defn)
+        source_geom = source_feature.GetGeometryRef()
+
+        simplified_geom = source_geom.SimplifyPreserveTopology(tolerance)
+        if simplified_geom is not None:
+            target_geom = simplified_geom
+        else:
+            # If the simplification didn't work for whatever reason, fall back
+            # to the original geometry.
+            target_geom = source_geom
+
+        target_feature.SetGeometry(target_geom)
+        target_layer.CreateFeature(target_feature)
+
+    target_layer.CommitTransaction()
+    target_layer = None
+    target_vector = None
+
+
+def _rasterize(source_vector_path, resolution, target_raster_path):
     pygeoprocessing.create_raster_from_vector_extents(
         source_vector_path, target_raster_path, (resolution, -resolution),
         target_pixel_type=gdal.GDT_Byte, target_nodata=255)
