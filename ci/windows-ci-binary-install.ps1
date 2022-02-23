@@ -1,10 +1,13 @@
-# This is an install script needed for our binary build on AppVeyor.
+# This is an install script needed for our binary build.
 #
-# It assumes that the applications choco and 7zip are available
-# and on the PATH.
+# It assumes that the applications choco and 7zip are available and on the PATH.
 
 # NOTE: it turns out that `wget` is an alias for the powershell command `Invoke-WebRequest`,
 # which I've made a point of using here instead of the actual wget. See https://superuser.com/a/693179
+
+choco install zip unzip
+$env:PATH += ";C:\ProgramData\chocolatey\bin"
+refreshenv # Choco-provided command to reload environment variables
 
 # Download and install NSIS plugins to their correct places.
 Write-Host "Downloading and extracting NSIS"
