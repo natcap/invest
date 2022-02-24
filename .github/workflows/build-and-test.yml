@@ -88,6 +88,25 @@ jobs:
             ${{ matrix.gdal }}
             twine
 
+      - name: Download previous conda environment
+        continue-on-error: true
+        # Using 'dawidd6' since 'download-artifact' GH action doesn't
+        # support downloading artifacts from prior workflow runs
+        uses: dawidd6/action-download-artifact@v2
+        with:
+          workflow: build-and-test.yml
+          # Get frozen conda env artifact from last successful workflow
+          workflow_conclusion: success
+          name: Conda Env for ${{ matrix.os }} ${{ matrix.python-version }} ${{ matrix.python-architecture }}
+          path: ./conda-env-artifact
+
+      - name: Compare conda environments
+        continue-on-error: true
+        shell: bash -l {0}
+        run: |
+          conda list --export > conda-env.txt
+          diff ./conda-env.txt ./conda-env-artifact/conda-env.txt
+
       - name: Build and install wheel
         run: |
           python -m build --wheel
@@ -284,13 +303,13 @@ jobs:
           key: ${{ runner.os }}-${{ hashFiles('workbench/yarn.lock') }}
 
       - name: Install workbench dependencies
-        working-directory: ./workbench
+        working-directory: workbench
         run: |
           yarn config set network-timeout 600000 -g
           yarn install
 
       - name: Run workbench tests
-        working-directory: ./workbench
+        working-directory: workbench
         env:
           CI: true
         run: yarn test
@@ -376,7 +395,7 @@ jobs:
           yarn install
 
       - name: Build Workbench
-        working-directory: ./workbench
+        working-directory: workbench
         env:
           GH_TOKEN: env.GITHUB_TOKEN
           DEBUG: electron-builder
@@ -386,7 +405,7 @@ jobs:
           yarn run dist
 
       - name: Test electron app with puppeteer
-        working-directory: ./workbench
+        working-directory: workbench
         run: npx cross-env CI=true yarn run test-electron-app
 
       - name: Authenticate GCP
@@ -490,7 +509,7 @@ jobs:
 
       - name: Check sampledata registry links
         if: github.event_name != 'pull_request' # no artifacts were deployed in a PR
-        working-directory: ./workbench
+        working-directory: workbench
         run: |
           yarn add jest
           yarn run test-sampledata-registry
