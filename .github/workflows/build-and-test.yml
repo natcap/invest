@@ -277,11 +277,11 @@ jobs:
         with:
           node-version: 14.x
 
-      # - name: Restore node_modules cache
-      #   uses: actions/cache@v2
-      #   with:
-      #     path: node_modules
-      #     key: ${{ runner.os }}-${{ hashFiles('workbench/yarn.lock') }}
+      - name: Restore node_modules cache
+        uses: actions/cache@v2
+        with:
+          path: workbench/node_modules
+          key: ${{ runner.os }}-${{ hashFiles('workbench/yarn.lock') }}
 
       - name: Install workbench dependencies
         working-directory: ./workbench
@@ -330,8 +330,6 @@ jobs:
           $env:PATH += ";C:\ProgramData\chocolatey\bin"
           refreshenv  # Choco-provided command to reload environment variables
 
-          ls "C:\Program Files (x86)\NSIS"
-
       - name: Restore cached NSIS plugins (Windows)
         id: restore-nsis-cache
         if: matrix.os == 'windows-latest'
@@ -365,19 +363,17 @@ jobs:
         with:
           node-version: 14.x
 
-      # - name: Restore node_modules cache
-      #   uses: actions/cache@v2
-      #   with:
-      #     path: node_modules
-      #     key: ${{ runner.os }}-${{ hashFiles('workbench/yarn.lock') }}
+      - name: Restore node_modules cache
+        uses: actions/cache@v2
+        with:
+          path: workbench/node_modules
+          key: ${{ runner.os }}-${{ hashFiles('workbench/yarn.lock') }}
 
       - name: Install Workbench Dependencies
-        working-directory: ./workbench
+        working-directory: workbench
         run: |
           yarn config set network-timeout 600000 -g
           yarn install
-          ls
-          ls workbench/
 
       - name: Build Workbench
         working-directory: ./workbench
