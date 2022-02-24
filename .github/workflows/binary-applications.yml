@@ -32,7 +32,7 @@ jobs:
       matrix:
         os: [macos-10.15, windows-latest]
         include:  # test with a range of numpy and gdal versions
-          - os: macos-latest
+          - os: macos-10.15
             binary-make-command: mac_dmg
             puppeteer-log: ~/Library/Logs/invest-workbench/
             workspace-path: InVEST-failed-mac-workspace.tar
