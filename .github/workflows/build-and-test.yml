@@ -300,6 +300,24 @@ jobs:
       - name: Install build dependencies (Windows)
         if: matrix.os == 'windows-latest'
         shell: powershell
+        run: |
+          choco install zip unzip
+          $env:PATH += ";C:\ProgramData\chocolatey\bin"
+          refreshenv  # Choco-provided command to reload environment variables
+
+          ls "C:\Program Files (x86)\NSIS"
+
+      - name: Restore cached NSIS plugins (Windows)
+        id: restore-nsis-cache
+        if: matrix.os == 'windows-latest'
+        uses: actions/cache@v2
+        with:
+          path: C:\Program Files (x86)\NSIS
+          key: nsis-plugins
+
+      - name: Download NSIS plugins (Windows)  # only if they couldn't be restored from the cache
+        if: matrix.os == 'windows-latest' && steps.restore-nsis-cache.outputs.cache-hit != 'true'
+        shell: powershell
         run: ./ci/windows-ci-binary-install.ps1
 
       - name: Set up conda environment
