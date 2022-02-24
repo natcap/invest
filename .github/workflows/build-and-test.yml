@@ -6,6 +6,10 @@ defaults:
   run:
     shell: bash -l {0}
 
+concurrency:  # only run the latest instance of this workflow
+  group: build-and-test
+  cancel-in-progress: true
+
 env:
   # build: dependency of make install
   # nomkl: make sure numpy w/out mkl
@@ -213,7 +217,7 @@ jobs:
     runs-on: windows-latest
     needs: check-syntax-errors
     strategy:
-      fail-fast: False
+      fail-fast: false
       max-parallel: 4
       matrix:
         python-version: [3.7, 3.8, 3.9]
@@ -247,7 +251,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     needs: check-syntax-errors
     strategy:
-      fail-fast: False
+      fail-fast: false
       max-parallel: 4
       matrix:
         os: [windows-latest, macos-latest]
@@ -272,6 +276,12 @@ jobs:
         uses: actions/setup-node@v2
         with:
           node-version: 14.x
+
+      # - name: Restore node_modules cache
+      #   uses: actions/cache@v2
+      #   with:
+      #     path: node_modules
+      #     key: ${{ runner.os }}-${{ hashFiles('workbench/yarn.lock') }}
 
       - name: Install workbench dependencies
         working-directory: ./workbench
@@ -355,11 +365,19 @@ jobs:
         with:
           node-version: 14.x
 
+      # - name: Restore node_modules cache
+      #   uses: actions/cache@v2
+      #   with:
+      #     path: node_modules
+      #     key: ${{ runner.os }}-${{ hashFiles('workbench/yarn.lock') }}
+
       - name: Install Workbench Dependencies
         working-directory: ./workbench
         run: |
           yarn config set network-timeout 600000 -g
           yarn install
+          ls
+          ls workbench/
 
       - name: Build Workbench
         working-directory: ./workbench

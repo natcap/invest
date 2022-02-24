@@ -1,4 +1,11 @@
 name: "Set up python and conda environment"
+description:
+  "This action creates a conda environment containing a given python version
+  and set of requirements. It caches the environment and restores it from
+  the cache when possible to minimize execution time. It uses a cache key
+  that includes the runner OS and architecture, python version, hash of all
+  requirements, and the number of the week in the year, so that the cache
+  refreshes weekly."
 inputs:
   python-version:
     description: "Python version to install"
@@ -15,10 +22,6 @@ inputs:
       newlines."
     required: false
     default: ""
-outputs:
-  cache-hit:
-    description: "True if a cache hit was found, false if not"
-    value: ${{ steps.condacache.outputs.cache-hit }}
 runs:
   using: "composite"
   steps:
@@ -29,8 +32,7 @@ runs:
       uses: actions/setup-python@v2
       with:
         python-version: ${{ inputs.python-version }}
-    # don't need to run setup-python because we'll always use the
-    # conda-managed python that'll be installed into this environment
+
     - name: Setup conda environment
       uses: conda-incubator/setup-miniconda@v2
       with:
@@ -51,7 +53,6 @@ runs:
         # make sure each package is separated by a newline
         echo "python=${{ inputs.python-version }}" > extra_requirements.txt
         echo "${{ inputs.requirements }}" | xargs | tr " " "\n" >> extra_requirements.txt
-        cat extra_requirements.txt
 
     - name: Combine all requirements into environment YML
       shell: bash
@@ -61,6 +62,7 @@ runs:
         python ./scripts/convert-requirements-to-conda-yml.py \
           extra_requirements.txt $REQUIREMENTS_FILES \
         > environment.yml
+        echo "Will update environment using this environment.yml:"
         cat environment.yml
 
     # NOTE the post step that saves the cache will only run if the job succeeds
