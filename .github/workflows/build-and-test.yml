@@ -31,11 +31,9 @@ jobs:
 
       # this is fast enough that it's not worth caching
       - name: Set up environment
-        shell: bash
         run: pip install flake8
 
       - name: Lint with flake8
-        shell: bash
         run: |
           # stop the build if there are Python syntax errors or undefined names
           python -m flake8 src --count --select=E9,F63,F7,F82 --show-source --statistics
@@ -88,7 +86,7 @@ jobs:
             ${{ matrix.gdal }}
             twine
 
-      - name: Download previous conda environment
+      - name: Download previous conda environment.yml
         continue-on-error: true
         # Using 'dawidd6' since 'download-artifact' GH action doesn't
         # support downloading artifacts from prior workflow runs
@@ -102,7 +100,6 @@ jobs:
 
       - name: Compare conda environments
         continue-on-error: true
-        shell: bash -l {0}
         run: |
           conda list --export > conda-env.txt
           diff ./conda-env.txt ./conda-env-artifact/conda-env.txt
