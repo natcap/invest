@@ -246,15 +246,10 @@ jobs:
         with:
           name: 'macos_puppeteer_log.zip'
           path: '~/Library/Logs/invest-workbench/'
-          name: ${{ runner.os }}_puppeteer_log.zip'
-          path: ${{ matrix.puppeteer-log }}
 
       - name: Tar the workspace to preserve permissions
         if: ${{ failure() }}
         run: tar -cvf InVEST-failed-mac-workspace.tar ${{ github.workspace }}
-      - name: Tar the workspace to preserve permissions (macOS)
-        if: ${{ failure() }} && matrix.os == 'macos-latest'
-        run: tar -cvf ${{ matrix.workspace-path}} ${{ github.workspace }}
 
       - name: Upload workspace on failure
         if: ${{ failure() }}
@@ -262,9 +257,6 @@ jobs:
         with:
           name: InVEST-failed-mac-workspace
           path: InVEST-failed-mac-workspace.tar
-          name: InVEST-failed-${{ runner.os }}-workspace
-          path: ${{ matrix.workspace-path}}
-
 
 
   build-sampledata:
