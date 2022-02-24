@@ -1,4 +1,4 @@
-name: Run Tests, Build Python Distributions
+name: Run Tests and Build
 
 on: [push, pull_request]
 
@@ -14,11 +14,6 @@ env:
   PYTHON_VERSION: 3.9
 
 jobs:
-  # This job will check for obvious syntax errors.
-  # The other jobs in this file depend on this one and won't show up in the
-  # jobs list on actions until this one completes successfully.
-  # Best to run in linux ... windows won't honor nonzero exit statuses
-  # by default.
   check-syntax-errors:
     name: Check for syntax errors
     runs-on: ubuntu-latest
@@ -274,3 +269,199 @@ jobs:
         env:
           CI: true
         run: yarn test
+
+  build-binaries:
+    name: Build binaries
+    needs: check-syntax-errors
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-10.15, windows-latest]
+        include:  # test with a range of numpy and gdal versions
+          - os: macos-10.15
+            binary-make-command: mac_dmg
+            puppeteer-log: ~/Library/Logs/invest-workbench/
+            workspace-path: InVEST-failed-mac-workspace.tar
+            binary-extension: dmg
+          - os: windows-latest
+            binary-make-command: windows_installer
+            puppeteer-log: ~/AppData/Roaming/invest-workbench/logs/
+            workspace-path: ${{ github.workspace }}
+            binary-extension: exe
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0 # Fetch complete history for accurate versioning
+
+        # Not caching chocolatey packages because the cache may not be reliable
+        # https://github.com/chocolatey/choco/issues/2134
+        # and this step only takes about 1 minute.
+      - name: Install build dependencies (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: powershell
+        run: ./ci/windows-ci-binary-install.ps1
+
+      - name: Set up conda environment
+        uses: ./.github/actions/setup_env
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          requirements-files: requirements.txt requirements-dev.txt requirements-gui.txt
+          requirements: ${{ env.DEFAULT_DEPENDENCIES }} pandoc
+
+      - name: Make install
+        run: make install
+
+      - name: Build binaries
+        run: make ${{ matrix.binary-make-command }}
+
+      - name: Install Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: 14.x
+
+      - name: Install Workbench Dependencies
+        working-directory: ./workbench
+        run: |
+          yarn config set network-timeout 600000 -g
+          yarn install
+
+      - name: Build Workbench
+        working-directory: ./workbench
+        env:
+          GH_TOKEN: env.GITHUB_TOKEN
+          DEBUG: electron-builder
+          CSC_IDENTITY_AUTO_DISCOVERY: false  # disable electron-builder code signing
+        run: |
+          yarn run build
+          yarn run dist
+
+      - name: Test electron app with puppeteer
+        working-directory: ./workbench
+        run: npx cross-env CI=true yarn run test-electron-app
+
+      - name: Authenticate GCP
+        if: github.event_name != 'pull_request'
+        uses: google-github-actions/auth@v0
+        with:
+          credentials_json: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
+
+      - name: Set up GCP
+        if: github.event_name != 'pull_request'
+        uses: google-github-actions/setup-gcloud@v0
+
+      - name: Sign binaries (macOS)
+        if: github.event_name != 'pull_request' && matrix.os == 'macos-latest' # secrets not available in PR
+        env:
+          CERT_FILE: 2025-01-16-Expiry-AppStore-App.p12
+          CERT_PASS: ${{ secrets.MACOS_CODESIGN_CERT_PASS }}
+        run: |
+          INSTALLER_BINARY=$(find "$(pwd)/dist" -type f -name 'InVEST_*.dmg' | head -n 1)
+          WORKBENCH_BINARY=$(find "$(pwd)/workbench/dist" -type f -name 'invest_*.dmg' | head -n 1)
+          make BIN_TO_SIGN="$INSTALLER_BINARY" WORKBENCH_BIN_TO_SIGN="$WORKBENCH_BINARY" codesign_mac
+
+      - name: Sign binaries (Windows)
+        if: github.event_name != 'pull_request' && matrix.os == 'windows-latest' # secrets not available in PR
+        env:
+          CERT_FILE: Stanford-natcap-code-signing-cert-expires-2024-01-26.p12
+          CERT_PASS: ${{ secrets.WINDOWS_CODESIGN_CERT_PASS }}
+        run: |
+          # figure out the path to signtool.exe (it keeps changing with SDK updates)
+          SIGNTOOL_PATH=$(find 'C:\\Program Files (x86)\\Windows Kits\\10' -type f -name 'signtool.exe*' | head -n 1)
+          INSTALLER_BINARY=$(find "$(pwd)/dist" -type f -name 'InVEST_*.exe' | head -n 1)
+          WORKBENCH_BINARY=$(find "$(pwd)/workbench/dist" -type f -name 'invest_*.exe' | head -n 1)
+          make BIN_TO_SIGN="$INSTALLER_BINARY" WORKBENCH_BIN_TO_SIGN="$WORKBENCH_BINARY" SIGNTOOL="$SIGNTOOL_PATH" codesign_windows
+
+      - name: Deploy artifacts to GCS
+        if: github.event_name != 'pull_request'
+        run: make deploy
+
+      - name: Upload binary artifact
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: InVEST-${{ runner.os }}-binary
+          path: dist/*.${{ matrix.binary-extension }}
+
+      - name: Upload workbench binary artifact
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: Workbench-${{ runner.os }}-binary
+          path: workbench/dist/*.{{ matrix.binary-extension }}
+
+      - name: Upload user's guide artifact (Windows)
+        if: matrix.os == 'windows-latest'
+        uses: actions/upload-artifact@v2
+        with:
+          name: InVEST-user-guide
+          path: dist/InVEST_*_userguide.zip
+
+      - name: Upload workbench logging from puppeteer
+        uses: actions/upload-artifact@v2
+        if: always()
+        with:
+          name: ${{ runner.os }}_puppeteer_log.zip'
+          path: ${{ matrix.puppeteer-log }}
+
+      - name: Tar the workspace to preserve permissions (macOS)
+        if: failure() && matrix.os == 'macos-latest'
+        run: tar -cvf ${{ matrix.workspace-path}} ${{ github.workspace }}
+
+      - name: Upload workspace on failure
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: InVEST-failed-${{ runner.os }}-workspace
+          path: ${{ matrix.workspace-path}}
+
+  build-sampledata:
+    name: Build sampledata archives
+    needs: check-syntax-errors
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0 # Fetch complete history for accurate versioning
+
+      - uses: actions/setup-python@v2
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        # dependencies of setup.py, needed to get the version string
+        run: pip install babel cython numpy setuptools setuptools_scm wheel
+
+      - run: make sampledata sampledata_single
+
+      - name: Install Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: 14.x
+
+      - name: Check sampledata registry links
+        if: github.event_name != 'pull_request' # no artifacts were deployed in a PR
+        working-directory: ./workbench
+        run: |
+          yarn add jest
+          yarn run test-sampledata-registry
+
+      - name: Upload sample data artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: InVEST-sample-data
+          path: dist/*.zip
+
+      - name: Authenticate GCP
+        if: github.event_name != 'pull_request'
+        uses: google-github-actions/auth@v0
+        with:
+          credentials_json: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
+
+      - name: Set up GCP
+        if: github.event_name != 'pull_request'
+        uses: google-github-actions/setup-gcloud@v0
+
+      - name: Deploy artifacts to GCS
+        if: github.event_name != 'pull_request'
+        run: make deploy
