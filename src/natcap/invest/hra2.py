@@ -336,11 +336,31 @@ def execute(args):
                     'target_filepath': rewritten_raster_path,
                 },
                 task_name=f'Rewrite {name} raster for consistency',
-                target_path_list=rewritten_raster_path
+                target_path_list=rewritten_raster_path,
+                dependent_task_list=[]
             ))
 
-        # If the input is a vector, simplify and rasterize it.
+        # If the input is a vector, reproject to the AOI SRS and simplify.
+        # Rasterization happens in the alignment step.
         elif gis_type == pygeoprocessing.VECTOR_TYPE:
+            # Using Shapefile here because its driver appears to not raise a
+            # warning if a MultiPolygon geometry is inserted into a Polygon
+            # layer, which was happening on a real-world sample dataset while
+            # in development.
+            target_reprojected_vector = os.path.join(
+                intermediate_dir, f'reprojected_{name}{suffix}.shp')
+            reprojected_vector_task = graph.add_task(
+                pygeoprocessing.reproject_vector,
+                kwargs={
+                    'base_vector_path': source_filepath,
+                    'target_projection_wkt': target_srs_wkt,
+                    'target_path': target_reprojected_vector,
+                },
+                task_name=f'Reproject {name} to AOI',
+                target_path_list=[target_reprojected_vector],
+                dependent_task_list=[]
+            )
+
             target_simplified_vector = os.path.join(
                 intermediate_dir, f'simplified_{name}{suffix}.gpkg')
             alignment_source_vector_paths[
@@ -353,7 +373,8 @@ def execute(args):
                     'target_vector_path': target_simplified_vector,
                 },
                 task_name=f'Simplify {name}',
-                target_path_list=[target_simplified_vector]
+                target_path_list=[target_simplified_vector],
+                dependent_task_list=[reprojected_vector_task]
             ))
 
         # Later operations make use of the habitats rasters or the stressors
@@ -783,8 +804,6 @@ def _align(raster_path_map, vector_path_map, target_pixel_size, target_srs_wkt):
     if vector_path_map:
         LOGGER.info(f'Aligning {len(vector_path_map)} vectors')
         for source_vector_path, target_raster_path in vector_path_map.items():
-            # TODO: ensure all vectors coming in are in the same proejction
-            # --> reproject in execute if we don't already.
             _create_raster_from_bounding_box(
                 target_raster_path=target_raster_path,
                 target_bounding_box=target_bounding_box,
