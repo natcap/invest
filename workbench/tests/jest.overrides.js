@@ -40,11 +40,18 @@ Without this override:
       306 |               </TabPane>
 */
 
+// a real port used to start the flask server for flaskapp.test.js,
+// but different from the port used when running the electron app
+if (!process.env.PORT) {
+  process.env.PORT = '56788';
+}
+
 if (global.window) {
   // Detected a jsdom env (as opposed to node). This means
   // we're running renderer tests, so need to mock the work
   // of preload.js here.
   global.window.Workbench = {
+    PORT: process.env.PORT,
     getLogger: jest.fn().mockReturnValue({
       debug: jest.fn(),
       verbose: jest.fn(),

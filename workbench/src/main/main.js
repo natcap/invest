@@ -33,7 +33,10 @@ import { getLogger } from '../logger';
 import pkg from '../../package.json';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
-process.env.PORT = '56789';
+
+if (!process.env.PORT) {
+  process.env.PORT = '56789';
+}
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.

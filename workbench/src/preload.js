@@ -11,6 +11,7 @@ const crypto = require('crypto');
 const { getLogger } = require('./logger');
 
 contextBridge.exposeInMainWorld('Workbench', {
+  PORT: process.env.PORT,
   getLogger: getLogger,
   getWorkspaceHash: (modelRunName, workspaceDir, resultsSuffix) => {
     return crypto.createHash('sha1').update(

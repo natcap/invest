@@ -18,11 +18,6 @@ import {
 } from '../../src/main/createPythonFlaskProcess';
 import findInvestBinaries from '../../src/main/findInvestBinaries';
 
-// This could be optionally configured already in '.env'
-if (!process.env.PORT) {
-  process.env.PORT = 56788;
-}
-
 jest.setTimeout(250000); // This test is slow in CI
 global.window.fetch = fetch;
 
