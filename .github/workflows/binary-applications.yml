@@ -30,7 +30,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, windows-latest]
+        os: [macos-10.15, windows-latest]
         include:  # test with a range of numpy and gdal versions
           - os: macos-latest
             binary-make-command: mac_dmg
@@ -167,97 +167,6 @@ jobs:
         with:
           name: InVEST-failed-${{ runner.os }}-workspace
           path: ${{ matrix.workspace-path}}
-
-  build-mac-binaries:
-    name: Build mac binaries
-    needs: check-syntax-errors
-    runs-on: macos-10.15
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 0 # Fetch complete history for accurate versioning
-
-      - name: Set up conda environment
-        uses: ./.github/actions/setup_env
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          requirements-files: requirements.txt requirements-dev.txt requirements-gui.txt
-          requirements: ${{ env.DEFAULT_DEPENDENCIES }} pandoc
-
-      - name: Make install
-        run: make install
-
-      - name: Build binaries
-        run: make mac_dmg
-
-      - name: Install Node.js
-        uses: actions/setup-node@v2
-        with:
-          node-version: 14.x
-
-      - name: Install Workbench Dependencies
-        working-directory: ./workbench
-        run: |
-          yarn config set network-timeout 600000 -g
-          yarn install
-      - name: Build Workbench
-        working-directory: ./workbench
-        env:
-          GH_TOKEN: env.GITHUB_TOKEN
-          DEBUG: electron-builder
-          CSC_IDENTITY_AUTO_DISCOVERY: false  # disable electron-builder code signing
-        run: |
-          yarn run build
-          yarn run dist
-      - name: Test electron app with puppeteer
-        working-directory: ./workbench
-        run: npx cross-env CI=true yarn run test-electron-app
-
-      - name: Sign DMG
-        if: github.event_name != 'pull_request'
-        env:
-          CERT_FILE: 2025-01-16-Expiry-AppStore-App.p12
-          CERT_PASS: ${{ secrets.MACOS_CODESIGN_CERT_PASS }}
-        run: |
-          INSTALLER_BINARY=$(find "$(pwd)/dist" -type f -name 'InVEST_*.dmg' | head -n 1)
-          WORKBENCH_BINARY=$(find "$(pwd)/workbench/dist" -type f -name 'invest_*.dmg' | head -n 1)
-          make BIN_TO_SIGN="$INSTALLER_BINARY" WORKBENCH_BIN_TO_SIGN="$WORKBENCH_BINARY" codesign_mac
-      - if: github.event_name != 'pull_request'
-        uses: ./.github/actions/setup_gcp_and_deploy
-        with:
-          credentials_json: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
-
-      - name: Upload DMG artifact
-        uses: actions/upload-artifact@v2
-        with:
-          name: InVEST-dmg
-          path: dist/InVEST*.dmg
-
-      - name: Upload workbench DMG artifact
-        if: always()
-        uses: actions/upload-artifact@v2
-        with:
-          name: Workbench-mac-installer
-          path: workbench/dist/*.dmg
-
-      - name: Upload workbench logging from puppeteer
-        uses: actions/upload-artifact@v2
-        if: always()
-        with:
-          name: 'macos_puppeteer_log.zip'
-          path: '~/Library/Logs/invest-workbench/'
-
-      - name: Tar the workspace to preserve permissions
-        if: ${{ failure() }}
-        run: tar -cvf InVEST-failed-mac-workspace.tar ${{ github.workspace }}
-
-      - name: Upload workspace on failure
-        if: ${{ failure() }}
-        uses: actions/upload-artifact@v2
-        with:
-          name: InVEST-failed-mac-workspace
-          path: InVEST-failed-mac-workspace.tar
-
 
   build-sampledata:
     name: Build sampledata archives

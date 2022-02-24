@@ -26,5 +26,5 @@ setuptools_scm>=6.4.0
 requests
 coverage
 xlwt
-dmgbuild==1.4.2; sys_platform == 'darwin'  # pip-only
+dmgbuild; sys_platform == 'darwin'  # pip-only
 build
