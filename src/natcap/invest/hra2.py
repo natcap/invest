@@ -406,9 +406,11 @@ def execute(args):
             'source_vector_path': args['aoi_vector_path'],
             'tolerance': resolution / 2,  # by the nyquist theorem
             'target_vector_path': simplified_aoi_path,
+            'preserve_columns': ['name'],
         },
         task_name='Simplify AOI',
-        target_path_list=[simplified_aoi_path]
+        target_path_list=[simplified_aoi_path],
+        dependent_task_list=[]
     )
 
     # --> Create a binary mask of habitat pixels.
@@ -427,6 +429,24 @@ def execute(args):
         task_name='Create habitat mask',
         target_path_list=[habitat_mask_path],
         dependent_task_list=[alignment_task]
+    )
+
+    # --> Rasterize the AOI regions for later - not needed until summary stats.
+    aoi_subregions_dir = os.path.join(
+        intermediate_dir, f'aoi_subregions{suffix}')
+    target_info_json = os.path.join(
+        aoi_subregions_dir, f'subregions{suffix}.json')
+    rasterize_aoi_regions_task = graph.add_task(
+        func=_rasterize_aoi_regions,
+        kwargs={
+            'source_aoi_vector_path': simplified_aoi_path,
+            'habitat_mask_raster': habitat_mask_path,
+            'target_raster_dir': aoi_subregions_dir,
+            'target_info_json': target_info_json,
+        },
+        task_name='Rasterize AOI regions',
+        dependent_task_list=[aoi_simplify_task],
+        target_path_list=[target_info_json]
     )
 
     # --> for stressor in stressors, do a decayed EDT.
@@ -696,7 +716,7 @@ def _create_summary_statistics_file():
     pass
 
 
-def _rasterize_aoi_regions(source_aoi_vector, habitat_vector_mask,
+def _rasterize_aoi_regions(source_aoi_vector_path, habitat_mask_raster,
                            target_raster_dir, target_info_json):
     # disjoint polygon set
     # add to a Memory layer (and simplify)
@@ -705,7 +725,7 @@ def _rasterize_aoi_regions(source_aoi_vector, habitat_vector_mask,
     #   {'subregion_rasters': [paths],
     #    'subregion_ids_to_names': {FID: name}}
 
-    source_aoi_vector = gdal.OpenEx(source_aoi_vector, gdal.OF_VECTOR)
+    source_aoi_vector = gdal.OpenEx(source_aoi_vector_path, gdal.OF_VECTOR)
     source_aoi_layer = source_aoi_vector.GetLayer()
 
     driver = ogr.GetDriverByName('MEMORY')
@@ -715,13 +735,25 @@ def _rasterize_aoi_regions(source_aoi_vector, habitat_vector_mask,
     subregion_rasters = []
     subregion_names = {}  # {rasterized id: name}
 
+    # locate the "name" field, case-insensitive.
+    field_index = None
+    for index, fieldname in enumerate([info.GetName() for info in
+                                       source_aoi_layer.schema]):
+        print(fieldname)
+        if fieldname.lower() == 'name':
+            field_index = index
+            break
+    if field_index is None:
+        LOGGER.info('Field "name" (case-insensitive) was not found')
+
     for set_index, disjoint_fid_set in enumerate(
-            pygeoprocessing.calculate_disjoint_polygon_set(source_aoi_vector)):
+            pygeoprocessing.calculate_disjoint_polygon_set(
+                source_aoi_vector_path)):
         disjoint_set_raster_path = os.path.join(
             target_raster_dir, f'subregion_set_{set_index}.tif')
         subregion_rasters.append(disjoint_set_raster_path)
         pygeoprocessing.new_raster_from_base(
-            habitat_vector_mask, disjoint_set_raster_path, gdal.GDT_Int32,
+            habitat_mask_raster, disjoint_set_raster_path, gdal.GDT_Int32,
             [-1])
         fid_raster = gdal.OpenEx(disjoint_set_raster_path, gdal.GA_Update)
 
@@ -739,14 +771,17 @@ def _rasterize_aoi_regions(source_aoi_vector, habitat_vector_mask,
             source_geometry = None
 
             new_feature.SetField('FID', source_fid)
-            subregion_names[source_fid] = source_feature.GetField('name')
+            if field_index is None:
+                subregion_name = source_fid
+            else:
+                subregion_name = source_feature.GetField(field_index)
+            subregion_names[source_fid] = subregion_name
 
             disjoint_layer.CreateFeature(new_feature)
         disjoint_layer.CommitTransaction()
-
         gdal.RasterizeLayer(
-            fid_raster, [1], disjoint_layer, options=["ALL_TOUCHED=FALSE",
-                                                      "ATTRIBUTE=FID"])
+            fid_raster, [1], disjoint_layer,
+            options=["ALL_TOUCHED=FALSE", "ATTRIBUTE=FID"])
         fid_raster.FlushCache()
         fid_raster = None
 
@@ -857,9 +892,12 @@ def _create_raster_from_bounding_box(
     raster = None
 
 
+def _simplify(source_vector_path, tolerance, target_vector_path,
+              preserve_columns=None):
+    if preserve_columns is None:
+        preserve_columns = []
+    preserve_columns = set(name.lower() for name in preserve_columns)
 
-
-def _simplify(source_vector_path, tolerance, target_vector_path):
     source_vector = gdal.OpenEx(source_vector_path)
     source_layer = source_vector.GetLayer()
 
@@ -877,9 +915,15 @@ def _simplify(source_vector_path, tolerance, target_vector_path):
     # layer and GDAL will raise a warning if that's not the case.
     target_layer = target_vector.CreateLayer(
         target_layer_name, source_layer.GetSpatialRef(), ogr.wkbUnknown)
-    target_layer_defn = target_layer.GetLayerDefn()
 
+    for field in source_layer.schema:
+        if field.GetName().lower() in preserve_columns:
+            new_definition = ogr.FieldDefn(field.GetName(), field.GetType())
+            target_layer.CreateField(new_definition)
+
+    target_layer_defn = target_layer.GetLayerDefn()
     target_layer.StartTransaction()
+
     for source_feature in source_layer:
         target_feature = ogr.Feature(target_layer_defn)
         source_geom = source_feature.GetGeometryRef()
@@ -891,6 +935,10 @@ def _simplify(source_vector_path, tolerance, target_vector_path):
             # If the simplification didn't work for whatever reason, fall back
             # to the original geometry.
             target_geom = source_geom
+
+        for fieldname in [field.GetName() for field in target_layer.schema]:
+            target_feature.SetField(
+                fieldname, source_feature.GetField(fieldname))
 
         target_feature.SetGeometry(target_geom)
         target_layer.CreateFeature(target_feature)
