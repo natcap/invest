@@ -265,7 +265,6 @@ def execute(args):
         None.
 
     """
-    # TODO: is the preprocessing dir actually needed?
     intermediate_dir = os.path.join(args['workspace_dir'],
                                     'intermediate_outputs')
     output_dir = os.path.join(args['workspace_dir'])
@@ -755,14 +754,16 @@ def _align(raster_path_map, vector_path_map, target_pixel_size, target_srs_wkt):
     for source_raster_path, aligned_raster_path in raster_path_map.items():
         source_raster_paths.append(source_raster_path)
         aligned_raster_paths.append(aligned_raster_path)
-        bounding_box_list.append(
-            pygeoprocessing.get_raster_info(
-                source_raster_path)['bounding_box'])
+        raster_info = pygeoprocessing.get_raster_info(source_raster_path)
+        bounding_box_list.append(pygeoprocessing.transform_bounding_box(
+            raster_info['bounding_box'], raster_info['projection_wkt'],
+            target_srs_wkt))
 
     for source_vector_path in vector_path_map.keys():
-        bounding_box_list.append(
-            pygeoprocessing.get_vector_info(
-                source_vector_path)['bounding_box'])
+        vector_info = pygeoprocessing.get_vector_info(source_vector_path)
+        bounding_box_list.append(pygeoprocessing.transform_bounding_box(
+            vector_info['bounding_box'], vector_info['projection_wkt'],
+            target_srs_wkt))
 
     # Bounding box is in the order [minx, miny, maxx, maxy]
     target_bounding_box = pygeoprocessing.merge_bounding_box_list(
@@ -802,37 +803,35 @@ def _create_raster_from_bounding_box(
         target_raster_path, target_bounding_box, target_pixel_size,
         target_pixel_type, target_srs_wkt, fill_value=None):
 
+    bbox_minx, bbox_miny, bbox_maxx, bbox_maxy = target_bounding_box
+
     driver = gdal.GetDriverByName('GTiff')
     n_bands = 1
     n_cols = int(numpy.ceil(
-        abs((target_bounding_box[1] - target_bounding_box[0]) /
-            target_pixel_size[0])))
+        abs((bbox_maxx - bbox_minx) / target_pixel_size[0])))
     n_rows = int(numpy.ceil(
-        abs((target_bounding_box[3] - target_bounding_box[2]) /
-            target_pixel_size[1])))
+        abs((bbox_maxy - bbox_miny) / target_pixel_size[1])))
 
     raster = driver.Create(
         target_raster_path, n_cols, n_rows, n_bands, target_pixel_type,
         options=['TILED=YES', 'BIGTIFF=YES', 'COMPRESS=DEFLATE',
                  'BLOCKXSIZE=256', 'BLOCKYSIZE=256'])
+    raster.SetProjection(target_srs_wkt)
 
     # Set the transform based on the upper left corner and given pixel
-    # dimensions
+    # dimensions.  Bounding box is in format [minx, miny, maxx, maxy]
     if target_pixel_size[0] < 0:
-        x_source = target_bounding_box[1]
+        x_source = bbox_maxx
     else:
-        x_source = target_bounding_box[0]
+        x_source = bbox_minx
     if target_pixel_size[1] < 0:
-        y_source = target_bounding_box[3]
+        y_source = bbox_maxy
     else:
-        y_source = target_bounding_box[2]
+        y_source = bbox_miny
     raster_transform = [
         x_source, target_pixel_size[0], 0.0,
         y_source, 0.0, target_pixel_size[1]]
     raster.SetGeoTransform(raster_transform)
-
-    # Use the same projection on the raster as the shapefile
-    raster.SetProjection(target_srs_wkt)
 
     # Initialize everything to nodata
     if fill_value is not None:
