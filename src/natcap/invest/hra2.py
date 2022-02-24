@@ -266,7 +266,6 @@ def execute(args):
 
     """
     # TODO: is the preprocessing dir actually needed?
-    preprocessing_dir = os.path.join(args['workspace_dir'], 'file_preprocessing')
     intermediate_dir = os.path.join(args['workspace_dir'],
                                     'intermediate_outputs')
     output_dir = os.path.join(args['workspace_dir'])
@@ -277,6 +276,8 @@ def execute(args):
     resolution = float(args['resolution'])
     max_rating = float(args['max_rating'])
     max_n_stressors = float(args['override_max_overlapping_stressors'])
+    target_srs_wkt = pygeoprocessing.get_vector_info(
+        args['aoi_vector_path'])['projection_wkt']
 
     if args['risk_eq'].lower() == 'multiplicative':
         max_pairwise_risk = max_rating * max_rating
@@ -309,7 +310,8 @@ def execute(args):
 
     # Preprocess habitat and stressor datasets.
     # All of these are spatial in nature but might be rasters or vectors.
-    alignment_source_raster_paths = []
+    alignment_source_raster_paths = {}
+    alignment_source_vector_paths = {}
     aligned_raster_paths = []
     alignment_dependent_tasks = []
     aligned_habitat_raster_paths = []
@@ -318,13 +320,16 @@ def execute(args):
                                             stressors.items()):
         source_filepath = attributes['path']
         gis_type = pygeoprocessing.get_gis_type(source_filepath)
+        aligned_raster_path = os.path.join(
+            intermediate_dir, f'aligned_{name}{suffix}.tif')
 
         # If the input is already a raster, run it through raster_calculator to
         # ensure we know the nodata value and pixel values.
         if gis_type == pygeoprocessing.RASTER_TYPE:
             rewritten_raster_path = os.path.join(
                 intermediate_dir, 'rewritten_{name}{suffix}.tif')
-            alignment_source_raster_paths.append(rewritten_raster_path)
+            alignment_source_raster_paths[
+                rewritten_raster_path] = aligned_raster_path
             alignment_dependent_tasks.append(graph.add_task(
                 func=_prep_input_raster,
                 kwargs={
@@ -339,7 +344,9 @@ def execute(args):
         elif gis_type == pygeoprocessing.VECTOR_TYPE:
             target_simplified_vector = os.path.join(
                 intermediate_dir, f'simplified_{name}{suffix}.gpkg')
-            simplify_task = graph.add_task(
+            alignment_source_vector_paths[
+                target_simplified_vector] = aligned_raster_path
+            alignment_dependent_tasks.append(graph.add_task(
                 func=_simplify,
                 kwargs={
                     'source_vector_path': source_filepath,
@@ -348,43 +355,28 @@ def execute(args):
                 },
                 task_name=f'Simplify {name}',
                 target_path_list=[target_simplified_vector]
-            )
-
-            target_raster_path = os.path.join(
-                intermediate_dir, f'rasterized_{name}{suffix}.tif')
-            alignment_source_raster_paths.append(target_raster_path)
-            alignment_dependent_tasks.append(graph.add_task(
-                func=_rasterize,
-                kwargs={
-                    'source_vector_path': target_simplified_vector,
-                    'resolution': resolution,
-                    'target_raster_path': target_raster_path,
-                },
-                task_name=f'Rasterize {name}',
-                target_path_list=[target_raster_path],
-                dependent_task_list=[simplify_task]
             ))
 
-        aligned_raster_path = os.path.join(
-            intermediate_dir, f'aligned_{name}{suffix}.tif')
-        aligned_raster_paths.append(aligned_raster_path)
+        # Later operations make use of the habitats rasters or the stressors
+        # rasters, so it's useful to collect those here now.
         if name in habitats:
             aligned_habitat_raster_paths.append(aligned_raster_path)
         else:  # must be a stressor
             aligned_stressor_raster_paths[name] = aligned_raster_path
 
     alignment_task = graph.add_task(
-        pygeoprocessing.align_and_resize_raster_stack,
+        func=_align,
         kwargs={
-            'base_raster_path_list': alignment_source_raster_paths,
-            'target_raster_path_list': aligned_raster_paths,
-            'resample_method_list': ['near'] * len(aligned_raster_paths),
+            'raster_path_map': alignment_source_raster_paths,
+            'vector_path_map': alignment_source_vector_paths,
             'target_pixel_size': (resolution, -resolution),
-            'bounding_box_mode': 'union',
+            'target_srs_wkt': target_srs_wkt,
         },
         task_name='Align raster stack',
-        target_path_list=aligned_raster_paths,
-        dependent_task_list=alignment_dependent_tasks
+        target_path_list=list(itertools.chain(
+            alignment_source_raster_paths.values(),
+            alignment_source_vector_paths.values())),
+        dependent_task_list=alignment_dependent_tasks,
     )
 
     simplified_aoi_path = os.path.join(intermediate_dir, 'simplified_aoi.gpkg')
@@ -749,6 +741,107 @@ def _rasterize_aoi_regions(source_aoi_vector, habitat_vector_mask,
             json.dumps({'subregion_rasters': subregion_rasters,
                         'subregion_names': subregion_names},
                        indent=4))
+
+
+def _align(raster_path_map, vector_path_map, target_pixel_size, target_srs_wkt):
+    # Determine the union bounding box of all inputs.
+    # if rasters to align, align them with align_and_resize.
+    # if vectors to align, create rasters based on bounding box and then
+    # rasterize.
+
+    bounding_box_list = []
+    source_raster_paths = []
+    aligned_raster_paths = []
+    for source_raster_path, aligned_raster_path in raster_path_map.items():
+        source_raster_paths.append(source_raster_path)
+        aligned_raster_paths.append(aligned_raster_path)
+        bounding_box_list.append(
+            pygeoprocessing.get_raster_info(
+                source_raster_path)['bounding_box'])
+
+    for source_vector_path in vector_path_map.keys():
+        bounding_box_list.append(
+            pygeoprocessing.get_vector_info(
+                source_vector_path)['bounding_box'])
+
+    # Bounding box is in the order [minx, miny, maxx, maxy]
+    target_bounding_box = pygeoprocessing.merge_bounding_box_list(
+        bounding_box_list, 'union')
+
+    if raster_path_map:
+        LOGGER.info(f'Aligning {len(raster_path_map)} rasters')
+        pygeoprocessing.align_and_resize_raster_stack(
+            base_raster_path_list=source_raster_paths,
+            target_raster_path_list=aligned_raster_paths,
+            resample_method_list=['near'] * len(source_raster_paths),
+            target_pixel_size=target_pixel_size,
+            bounding_box_mode=target_bounding_box,
+            target_srs_wkt=target_srs_wkt
+        )
+
+    if vector_path_map:
+        LOGGER.info(f'Aligning {len(vector_path_map)} vectors')
+        for source_vector_path, target_raster_path in vector_path_map.items():
+            # TODO: ensure all vectors coming in are in the same proejction
+            # --> reproject in execute if we don't already.
+            _create_raster_from_bounding_box(
+                target_raster_path=target_raster_path,
+                target_bounding_box=target_bounding_box,
+                target_pixel_size=target_pixel_size,
+                target_pixel_type=_TARGET_GDAL_TYPE_BYTE,
+                target_srs_wkt=target_srs_wkt,
+                fill_value=_TARGET_NODATA_BYTE
+            )
+
+            pygeoprocessing.rasterize(
+                source_vector_path, target_raster_path,
+                burn_values=[1], option_list=['ALL_TOUCHED=TRUE'])
+
+
+def _create_raster_from_bounding_box(
+        target_raster_path, target_bounding_box, target_pixel_size,
+        target_pixel_type, target_srs_wkt, fill_value=None):
+
+    driver = gdal.GetDriverByName('GTiff')
+    n_bands = 1
+    n_cols = int(numpy.ceil(
+        abs((target_bounding_box[1] - target_bounding_box[0]) /
+            target_pixel_size[0])))
+    n_rows = int(numpy.ceil(
+        abs((target_bounding_box[3] - target_bounding_box[2]) /
+            target_pixel_size[1])))
+
+    raster = driver.Create(
+        target_raster_path, n_cols, n_rows, n_bands, target_pixel_type,
+        options=['TILED=YES', 'BIGTIFF=YES', 'COMPRESS=DEFLATE',
+                 'BLOCKXSIZE=256', 'BLOCKYSIZE=256'])
+
+    # Set the transform based on the upper left corner and given pixel
+    # dimensions
+    if target_pixel_size[0] < 0:
+        x_source = target_bounding_box[1]
+    else:
+        x_source = target_bounding_box[0]
+    if target_pixel_size[1] < 0:
+        y_source = target_bounding_box[3]
+    else:
+        y_source = target_bounding_box[2]
+    raster_transform = [
+        x_source, target_pixel_size[0], 0.0,
+        y_source, 0.0, target_pixel_size[1]]
+    raster.SetGeoTransform(raster_transform)
+
+    # Use the same projection on the raster as the shapefile
+    raster.SetProjection(target_srs_wkt)
+
+    # Initialize everything to nodata
+    if fill_value is not None:
+        band = raster.GetRasterBand(1)
+        band.Fill(fill_value)
+        band = None
+    raster = None
+
+
 
 
 def _simplify(source_vector_path, tolerance, target_vector_path):
