@@ -1,11 +1,12 @@
 import React from 'react';
-import { ipcRenderer } from 'electron';
 import PropTypes from 'prop-types';
 
 import Button from 'react-bootstrap/Button';
 import { MdSave } from 'react-icons/md';
 
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
+
+const { ipcRenderer } = window.Workbench;
 
 /** Render a button that saves current args to a datastack json.
  * Opens an native OS filesystem dialog to browse to a save location.

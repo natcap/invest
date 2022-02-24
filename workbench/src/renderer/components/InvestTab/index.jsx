@@ -1,7 +1,6 @@
 import path from 'path';
 import React from 'react';
 import PropTypes from 'prop-types';
-import { ipcRenderer } from 'electron';
 
 import TabPane from 'react-bootstrap/TabPane';
 import TabContent from 'react-bootstrap/TabContent';
@@ -19,6 +18,7 @@ import Expire from '../Expire';
 import { getSpec } from '../../server_requests';
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
+const { ipcRenderer } = window.Workbench;
 const logger = window.Workbench.getLogger(__filename.split('/').slice(-1)[0]);
 
 /** Get an invest model's ARGS_SPEC when a model button is clicked.

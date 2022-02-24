@@ -1,6 +1,5 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-// import { ipcRenderer } from 'electron';
 
 import TabPane from 'react-bootstrap/TabPane';
 import TabContent from 'react-bootstrap/TabContent';

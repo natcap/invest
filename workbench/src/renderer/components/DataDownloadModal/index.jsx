@@ -1,6 +1,5 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import { ipcRenderer } from 'electron';
 
 import Form from 'react-bootstrap/Form';
 import Button from 'react-bootstrap/Button';
@@ -13,6 +12,7 @@ import Expire from '../Expire';
 import sampledataRegistry from '../../sampledata_registry.json';
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
+const { ipcRenderer } = window.Workbench;
 const logger = window.Workbench.getLogger(__filename.split('/').slice(-1)[0]);
 
 /** Render a dialog with a form for configuring global invest settings */

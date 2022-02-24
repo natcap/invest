@@ -1,4 +1,3 @@
-// import { ipcRenderer } from 'electron'; // eslint-disable-line import/no-extraneous-dependencies
 import React from 'react';
 import ReactDom from 'react-dom';
 

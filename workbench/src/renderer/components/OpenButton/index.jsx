@@ -1,5 +1,4 @@
 import React from 'react';
-import { ipcRenderer } from 'electron'; // eslint-disable-line import/no-extraneous-dependencies
 import PropTypes from 'prop-types';
 
 import Button from 'react-bootstrap/Button';
@@ -9,6 +8,8 @@ import Tooltip from 'react-bootstrap/Tooltip';
 import InvestJob from '../../InvestJob';
 import { fetchDatastackFromFile } from '../../server_requests';
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
+
+const { ipcRenderer } = window.Workbench;
 
 /**
  * Render a button that loads args from a datastack, parameterset, or logfile.
