@@ -9,7 +9,7 @@ import InvestJob from '../../InvestJob';
 import { fetchDatastackFromFile } from '../../server_requests';
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
-const { ipcRenderer } = window.Workbench;
+const { ipcRenderer } = window.Workbench.electron;
 
 /**
  * Render a button that loads args from a datastack, parameterset, or logfile.

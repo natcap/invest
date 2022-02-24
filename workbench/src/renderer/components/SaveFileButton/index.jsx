@@ -6,7 +6,7 @@ import { MdSave } from 'react-icons/md';
 
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
-const { ipcRenderer } = window.Workbench;
+const { ipcRenderer } = window.Workbench.electron;
 
 /** Render a button that saves current args to a datastack json.
  * Opens an native OS filesystem dialog to browse to a save location.

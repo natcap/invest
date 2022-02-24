@@ -7,7 +7,7 @@ import ArgInput from '../ArgInput';
 import { boolStringToBoolean } from '../../../utils';
 import { ipcMainChannels } from '../../../../main/ipcMainChannels';
 
-const { ipcRenderer } = window.Workbench;
+const { ipcRenderer } = window.Workbench.electron;
 
 /** Prevent the default case for onDragOver so onDrop event will be fired. */
 function dragOverHandler(event) {

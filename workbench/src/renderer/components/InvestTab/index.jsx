@@ -18,8 +18,8 @@ import Expire from '../Expire';
 import { getSpec } from '../../server_requests';
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
-const { ipcRenderer } = window.Workbench;
-const logger = window.Workbench.getLogger(__filename.split('/').slice(-1)[0]);
+const { ipcRenderer } = window.Workbench.electron;
+const logger = window.Workbench.getLogger('InvestTab');
 
 /** Get an invest model's ARGS_SPEC when a model button is clicked.
  *

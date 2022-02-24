@@ -24,7 +24,7 @@ import {
 import { argsDictFromObject } from '../../utils';
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
-const { ipcRenderer } = window.Workbench;
+const { ipcRenderer } = window.Workbench.electron;
 
 /** Initialize values of InVEST args based on the model's UI Spec.
  *

@@ -17,7 +17,7 @@ import { BsChevronExpand } from 'react-icons/bs';
 import { getDefaultSettings } from './SettingsStorage';
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
-const { ipcRenderer } = window.Workbench;
+const { ipcRenderer } = window.Workbench.electron;
 
 // map display names to standard language codes
 const languageOptions = {

@@ -4,6 +4,7 @@
 const {
   contextBridge,
   ipcRenderer,
+  shell,
 } = require('electron');
 const crypto = require('crypto');
 
@@ -18,7 +19,10 @@ contextBridge.exposeInMainWorld('Workbench', {
        ${JSON.stringify(resultsSuffix)}`
     ).digest('hex');
   },
-  ipcRenderer: ipcRenderer,
+  electron: {
+    ipcRenderer: ipcRenderer,
+    shell: shell,
+  },
 });
 console.log('loaded PRELOAD');
 

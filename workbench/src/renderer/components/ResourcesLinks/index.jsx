@@ -2,8 +2,9 @@ import path from 'path';
 import React from 'react';
 
 import PropTypes from 'prop-types';
-import { shell } from 'electron'; // eslint-disable-line import/no-extraneous-dependencies
 import { MdOpenInNew } from 'react-icons/md';
+
+const { shell } = window.Workbench.electron;
 
 const UG_ROOT = 'http://releases.naturalcapitalproject.org/invest-userguide/latest/';
 const FORUM_ROOT = 'https://community.naturalcapitalproject.org/';

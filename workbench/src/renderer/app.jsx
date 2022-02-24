@@ -26,8 +26,8 @@ import InvestJob from './InvestJob';
 import { dragOverHandlerNone } from './utils';
 import { ipcMainChannels } from '../main/ipcMainChannels';
 
-const { ipcRenderer } = window.Workbench;
-const logger = window.Workbench.getLogger(__filename.split('/').slice(-1)[0]);
+const { ipcRenderer } = window.Workbench.electron;
+const logger = window.Workbench.getLogger('app.jsx');
 
 /** This component manages any application state that should persist
  * and be independent from properties of a single invest job.

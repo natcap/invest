@@ -1,6 +1,6 @@
 import { getSettingsValue } from './components/SettingsModal/SettingsStorage';
 
-const logger = window.Workbench.getLogger(__filename.split('/').slice(-1)[0]);
+const logger = window.Workbench.getLogger('server_requests.js');
 const HOSTNAME = 'http://localhost';
 
 // The Flask server sends UTF-8 encoded responses by default

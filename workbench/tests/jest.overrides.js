@@ -1,5 +1,8 @@
 const crypto = require('crypto');
-const { ipcRenderer } = require('electron');
+const {
+  ipcRenderer,
+  shell,
+} = require('electron');
 
 // Cause tests to fail on console.error messages
 // Taken from https://stackoverflow.com/questions/28615293/is-there-a-jest-config-that-will-fail-tests-on-console-warn/50584643#50584643
@@ -57,7 +60,10 @@ if (global.window) {
          ${JSON.stringify(z)}`
       ).digest('hex');
     },
-    ipcRenderer: ipcRenderer,
+    electron: {
+      ipcRenderer: ipcRenderer,
+      shell: shell,
+    }
   };
 
   // jsdom does not implement window.crypto

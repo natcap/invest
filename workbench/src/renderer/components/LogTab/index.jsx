@@ -7,7 +7,7 @@ import Container from 'react-bootstrap/Container';
 
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
-const { ipcRenderer } = window.Workbench;
+const { ipcRenderer } = window.Workbench.electron;
 const logger = window.Workbench.getLogger('LogTab');
 
 class LogDisplay extends React.Component {
