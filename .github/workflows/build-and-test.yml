@@ -7,7 +7,7 @@ defaults:
     shell: bash -l {0}
 
 concurrency:  # only run the latest instance of this workflow
-  group: build-and-test
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 env:
@@ -31,7 +31,12 @@ jobs:
 
       # this is fast enough that it's not worth caching
       - name: Set up environment
-        run: pip install flake8
+        run: |
+          echo ${{ github.workflow }}
+          echo ${{ github.ref }}
+          echo ${{ github.head_ref }}
+
+          pip install flake8
 
       - name: Lint with flake8
         run: |
