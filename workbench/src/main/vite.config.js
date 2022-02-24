@@ -1,24 +1,32 @@
 import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
+// import react from '@vitejs/plugin-react';
 import { builtinModules } from 'module';
 
 // https://vitejs.dev/config/
 export default defineConfig({
   // root: './src/renderer/',
-  plugins: [react()],
+  // plugins: [react()],
   build: {
+    sourcemap: 'inline',
+    outDir: '../../dist/main',
+    minify: process.env.MODE !== 'development',
     target: 'node14',
     lib: {
+      mode: process.env.MODE,
       entry: './main.js',
       formats: ['cjs'],
-      name: 'Workbench'
+      name: 'Workbench',
     },
     rollupOptions: {
       external: [
         'electron',
         'electron-devtools-installer',
-        ...builtinModules
-      ]
-    }
-  }
+        ...builtinModules,
+      ],
+      output: {
+        entryFileNames: '[name].cjs',
+      },
+    },
+    emptyOutDir: true,
+  },
 });

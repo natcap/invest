@@ -1,6 +1,6 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import { ipcRenderer } from 'electron';
+// import { ipcRenderer } from 'electron';
 
 import TabPane from 'react-bootstrap/TabPane';
 import TabContent from 'react-bootstrap/TabContent';
@@ -27,6 +27,7 @@ import InvestJob from './InvestJob';
 import { dragOverHandlerNone } from './utils';
 import { ipcMainChannels } from '../main/ipcMainChannels';
 
+const { ipcRenderer } = window.Workbench;
 const logger = window.Workbench.getLogger(__filename.split('/').slice(-1)[0]);
 
 /** This component manages any application state that should persist

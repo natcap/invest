@@ -46,6 +46,7 @@ export function destroyWindow() {
 
 /** Create an Electron browser window and start the flask application. */
 export const createWindow = async () => {
+  // console.log(import.meta.env)
   logger.info(`Running invest-workbench version ${pkg.version}`);
   nativeTheme.themeSource = 'light'; // override OS/browser setting
 
@@ -56,7 +57,10 @@ export const createWindow = async () => {
     frame: false,
     alwaysOnTop: false,
   });
-  splashScreen.loadURL(`file://${__dirname}/../static/splash.html`);
+  const splashURL = ELECTRON_DEV_MODE
+    ? 'http://localhost:3000/src/renderer/static/splash.html'
+    : `file://${__dirname}/../renderer/static/splash.html`;
+  splashScreen.loadURL(splashURL);
   const investExe = findInvestBinaries(ELECTRON_DEV_MODE);
   createPythonFlaskProcess(investExe);
   setupDialogs();
@@ -72,7 +76,7 @@ export const createWindow = async () => {
     minWidth: 800,
     show: true, // see comment in 'ready-to-show' listener
     webPreferences: {
-      contextIsolation: false,
+      contextIsolation: true,
       nodeIntegration: true,
       preload: path.join(__dirname, '..', 'preload.js'),
       defaultEncoding: 'UTF-8',
@@ -82,7 +86,10 @@ export const createWindow = async () => {
     menuTemplate(mainWindow, ELECTRON_DEV_MODE)
   );
   Menu.setApplicationMenu(menubar);
-  mainWindow.loadURL(`file://${__dirname}/../renderer/index.html`);
+  const indexURL = ELECTRON_DEV_MODE
+    ? 'http://localhost:3000/src/renderer/index.html'
+    : `file://${__dirname}/../renderer/index.html`;
+  mainWindow.loadURL(indexURL);
 
   mainWindow.once('ready-to-show', () => {
     splashScreen.destroy();
