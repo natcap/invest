@@ -35,7 +35,6 @@ jobs:
           echo ${{ github.workflow }}
           echo ${{ github.ref }}
           echo ${{ github.head_ref }}
-
           pip install flake8
 
       - name: Lint with flake8
