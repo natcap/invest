@@ -6,7 +6,13 @@ defaults:
   run:
     shell: bash -l {0}
 
-concurrency:  # only run the latest instance of this workflow
+concurrency:
+  # make sure only one run of this workflow for a given PR or a given branch
+  # can happen at one time. previous queued or started runs will be cancelled.
+  # github.workflow is the workflow name
+  # github.ref is the ref that triggered the workflow run
+  # on push, this is refs/heads/<branch name>
+  # on pull request, this is refs/pull/<pull request number>/merge
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
