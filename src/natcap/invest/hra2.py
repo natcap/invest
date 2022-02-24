@@ -661,13 +661,10 @@ def execute(args):
             dependent_task_list=[habitat_mask_task, recovery_score_task]
         )
 
-    # TODO: output visualization folder.
     # TODO: create summary statistics output file
+    # TODO: output visualization folder.
     # TODO: visualize the graph of tasks to make sure it looks right
     # TODO: Make sure paths match what they're supposed to.
-    # TODO: align bounding boxes and maybe not align rasters
-    #   It's possible to completely avoid calling align_and_resize if the user
-    #   doesn't provide a raster habitat/stressor at all.
 
     graph.close()
     graph.join()
@@ -1118,8 +1115,8 @@ def _calc_criteria(attributes_list, habitat_mask_raster_path,
     # don't use the decayed EDT.
 
     pygeoprocessing.new_raster_from_base(
-        habitat_mask_raster_path, target_criterion_path, _TARGET_GDAL_TYPE_FLOAT32,
-        [_TARGET_NODATA_FLOAT32])
+        habitat_mask_raster_path, target_criterion_path,
+        _TARGET_GDAL_TYPE_FLOAT32, [_TARGET_NODATA_FLOAT32])
 
     habitat_mask_raster = gdal.OpenEx(habitat_mask_raster_path)
     habitat_band = habitat_mask_raster.GetRasterBand(1)
@@ -1138,8 +1135,8 @@ def _calc_criteria(attributes_list, habitat_mask_raster_path,
         habitat_mask = habitat_band.ReadAsArray(**block_info)
         valid_mask = (habitat_mask == 1)
 
-        criterion_score = numpy.full(habitat_mask.shape, _TARGET_NODATA_FLOAT32,
-                                     dtype=numpy.float32)
+        criterion_score = numpy.full(
+            habitat_mask.shape, _TARGET_NODATA_FLOAT32, dtype=numpy.float32)
         numerator = numpy.zeros(habitat_mask.shape, dtype=numpy.float32)
         denominator = numpy.zeros(habitat_mask.shape, dtype=numpy.float32)
         for attribute_dict in attributes_list:
@@ -1213,7 +1210,7 @@ def _calculate_pairwise_risk(habitat_mask_raster_path, exposure_raster_path,
     elif risk_equation == 'euclidean':
         risk_op = _euclidean_risk
     else:
-        raise AssertionError(f'Invalid risk equation {risq_equation} provided')
+        raise AssertionError(f'Invalid risk equation {risk_equation} provided')
 
     pygeoprocessing.raster_calculator(
         [(habitat_mask_raster_path, 1),
