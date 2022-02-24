@@ -19,9 +19,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: ./.github/actions/check_for_syntax_errors
+
+      - name: Set up python
+        uses: actions/setup-python@v2
         with:
           python-version: ${{ env.PYTHON_VERSION }}
+
+      # this is fast enough that it's not worth caching
+      - name: Set up environment
+        shell: bash
+        run: pip install flake8
+
+      - name: Lint with flake8
+        shell: bash
+        run: |
+          # stop the build if there are Python syntax errors or undefined names
+          python -m flake8 src --count --select=E9,F63,F7,F82 --show-source --statistics
+          # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+          python -m flake8 src --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
   run-model-tests:
     name: Run model tests
@@ -296,7 +311,7 @@ jobs:
 
         # Not caching chocolatey packages because the cache may not be reliable
         # https://github.com/chocolatey/choco/issues/2134
-        # and this step only takes about 1 minute.
+        # and this step only takes about 30 seconds.
       - name: Install build dependencies (Windows)
         if: matrix.os == 'windows-latest'
         shell: powershell
@@ -312,8 +327,10 @@ jobs:
         if: matrix.os == 'windows-latest'
         uses: actions/cache@v2
         with:
-          path: C:\Program Files (x86)\NSIS
-          key: nsis-plugins
+          path: |
+            C:\Program Files (x86)\NSIS\Include
+            C:\Program Files (x86)\NSIS\Plugins
+          key: NSIS-plugins
 
       - name: Download NSIS plugins (Windows)  # only if they couldn't be restored from the cache
         if: matrix.os == 'windows-latest' && steps.restore-nsis-cache.outputs.cache-hit != 'true'
