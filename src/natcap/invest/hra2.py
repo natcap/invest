@@ -441,6 +441,7 @@ def execute(args):
     criteria_df = pandas.read_csv(composite_criteria_table_path)
     cumulative_risk_to_habitat_paths = []
     cumulative_risk_to_habitat_tasks = []
+    reclassified_rasters = []  # For visualization geojson, if requested
     pairwise_summary_data = []  # for the later summary statistics.
     for habitat in habitats:
         pairwise_risk_tasks = []
@@ -560,6 +561,7 @@ def execute(args):
 
         reclassified_cumulative_risk_path = os.path.join(
             intermediate_dir, f'reclass_total_risk_{habitat}{suffix}.tif')
+        reclassified_rasters.append(reclassified_cumulative_risk_path)
         reclassified_cumulative_risk_task = graph.add_task(
             pygeoprocessing.raster_calculator,
             kwargs={
@@ -631,8 +633,8 @@ def execute(args):
                 (ecosystem_risk_path, 1)],
             'local_op': _reclassify_score,
             'target_raster_path': reclassified_ecosystem_risk_path,
-            'datatype_target': _TARGET_GDAL_TYPE_FLOAT32,
-            'nodata_target': _TARGET_NODATA_FLOAT32,
+            'datatype_target': _TARGET_GDAL_TYPE_BYTE,
+            'nodata_target': _TARGET_NODATA_BYTE,
         },
         task_name=f'Reclassify risk for {habitat}/{stressor}',
         target_path_list=[reclassified_cumulative_risk_path],
@@ -750,8 +752,7 @@ def execute(args):
 
     # For each raster in reclassified risk rasters + Reclass ecosystem risk:
     #   convert to geojson with fieldname "Risk Score"
-    reclassified_rasters = cumulative_risk_to_habitat_paths + [
-        reclassified_ecosystem_risk_path]
+    reclassified_rasters.append(reclassified_ecosystem_risk_path)
     # TODO: add in dependent tasks too?
     for raster_paths, fieldname, geojson_prefix in [
             (reclassified_rasters, 'Risk Score', 'RECLASS_RISK'),
@@ -759,19 +760,33 @@ def execute(args):
         for source_raster_path in raster_paths:
             basename = os.path.splitext(
                 os.path.basename(source_raster_path))[0]
+            polygonize_mask_raster_path = os.path.join(
+                intermediate_dir, f'polygonize_mask_{basename}.tif')
+            rewrite_for_polygonize_task = graph.add_task(
+                func=_rewrite_raster_for_polygonization,
+                kwargs={
+                    'source_raster_path': source_raster_path,
+                    'target_raster_path': polygonize_mask_raster_path,
+                },
+                task_name=f'Rewrite {basename} for polygonization',
+                target_path_list=[polygonize_mask_raster_path],
+                dependent_task_list=[]
+            )
+
             polygonized_gpkg = os.path.join(
                 intermediate_dir, f'polygonized_{basename}.gpkg')
             polygonize_task = graph.add_task(
                 func=_polygonize,
                 kwargs={
-                    'source_raster_path': source_raster_path,
+                    'source_raster_path': polygonize_mask_raster_path,
                     'target_polygonized_vector': polygonized_gpkg,
                     'field_name': fieldname,
                 },
-                task_name=f'Polygonizing f{basename}',
+                task_name=f'Polygonizing {basename}',
                 target_path_list=[polygonized_gpkg],
-                dependent_task_list=[]
+                dependent_task_list=[rewrite_for_polygonize_task]
             )
+
             target_geojson_path = os.path.join(
                 visualization_dir,
                 f'{geojson_prefix}_{basename}.geojson')
@@ -795,6 +810,19 @@ def execute(args):
     # sys.path.insert(0, os.getcwd())
     # import make_graph
     # make_graph.doit(graph)
+
+
+def _rewrite_raster_for_polygonization(source_raster_path, target_raster_path):
+    nodata = pygeoprocessing.get_raster_info(source_raster_path)['nodata'][0]
+
+    def _rewrite(raster_values):
+        out_array = numpy.full(raster_values.shape, 0, dtype=numpy.uint8)
+        out_array[raster_values != nodata] = 1
+        return out_array
+
+    pygeoprocessing.raster_calculator(
+        [(source_raster_path, 1)], _rewrite, target_raster_path,
+        gdal.GDT_Byte, 0)
 
 
 def _polygonize(source_raster_path, target_polygonized_vector, field_name):
@@ -825,38 +853,6 @@ def _polygonize(source_raster_path, target_polygonized_vector, field_name):
     # (param 1) so that polygonization respects the nodata regions.
     # 0 represents field index 0, into which pixel values will be written.
     gdal.Polygonize(band, band, layer, 0)
-    layer.CommitTransaction()
-
-
-def _raster_to_wgs84_geojson(source_raster_path, target_geojson_path,
-                             habitat_mask_raster_path,
-                             field_name):
-    LOGGER.info(f'Polygonizing {source_raster_path} to {target_geojson_path}')
-    wgs84_srs = osr.SpatialReference()
-    wgs84_srs.ImportFromEPSG(4326)  # WGS84 EPSG code.
-
-    driver = gdal.GetDriverByName('GeoJSON')
-    vector = driver.Create(target_geojson_path, 0, 0, 0, gdal.GDT_Unknown)
-    layer_name = os.path.splitext(os.path.basename(target_geojson_path))[0]
-    layer = vector.CreateLayer(layer_name, wgs84_srs, ogr.wkbPolygon)
-
-    # Create an integer field that contains values from the raster
-    field_defn = ogr.FieldDefn(str(field_name), ogr.OFTInteger)
-    field_defn.SetWidth(3)
-    field_defn.SetPrecision(0)
-    layer.CreateField(field_defn)
-
-    raster = gdal.OpenEx(source_raster_path, gdal.OF_RASTER)
-    band = raster.GetRasterBand(1)
-
-    raster_srs = osr.SpatialReference()
-    raster_srs.ImportFromWkt(raster.GetProjectionRef())
-
-    habitat_raster = gdal.OpenEx(habitat_mask_raster_path, gdal.OF_RASTER)
-    habitat_mask_band = habitat_raster.GetRasterBand(1)
-
-    layer.StartTransaction()
-    gdal.Polygonize(band, habitat_mask_band, layer, 0)  # field index 0
     layer.CommitTransaction()
 
 
