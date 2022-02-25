@@ -661,7 +661,6 @@ def execute(args):
             dependent_task_list=[habitat_mask_task, recovery_score_task]
         )
 
-    # TODO: create summary statistics output file
     # TODO: output visualization folder.
     # TODO: visualize the graph of tasks to make sure it looks right
     # TODO: Make sure paths match what they're supposed to.
@@ -681,7 +680,7 @@ def execute(args):
         dependent_task_list=[]
     )
 
-    # --> Rasterize the AOI regions for later - not needed until summary stats.
+    # --> Rasterize the AOI regions for summary stats.
     aoi_subregions_dir = os.path.join(
         intermediate_dir, f'aoi_subregions{suffix}')
     aoi_subregions_json = os.path.join(
@@ -723,26 +722,9 @@ def execute(args):
     make_graph.doit(graph)
 
 
-# TODO: use the habitats mask raster
 def _create_summary_statistics_file(
         aoi_raster_json_path, habitat_mask_raster_path, pairwise_raster_dicts,
         target_summary_csv_path):
-    # inputs:
-    #  AOI vector (simplified to the nyquist limit)
-    #  habitat mask raster
-    #  list of dicts {
-    #       'habitat': _, 'stressor': _, 'exposure_path': _,
-    #       'consequence_path', 'risk_path'}
-    #  Working dir
-    #  Target CSV path
-
-    # rasterize the AOI vector into distinct nonoverlapping sets.
-    # for each nonoverlapping set raster:
-    #     associate the exposure, consequence and risk values with the
-    #     corresponding aoi regions.
-    #     Looking for MIN, MAX, MEAN per subregion.
-    #
-    # Write out the CSV.
 
     json_data = json.load(open(aoi_raster_json_path))
     subregion_names = json_data['subregion_names']
@@ -775,6 +757,8 @@ def _create_summary_statistics_file(
     # Helps reduce human errors in having to write out the columns in precisely
     # the right order as they are declared.
     records = []
+
+    # itertools.product is roughly the equivalent of a nested for-loop.
     for habitat, stressor in itertools.product(sorted(habitats),
                                                sorted(stressors)):
         e_raster = pairwise_data[habitat, stressor]['e_path']
@@ -808,6 +792,8 @@ def _create_summary_statistics_file(
                     try:
                         stats = subregion_stats[subregion_id]
                     except KeyError:
+                        # If subregion_id is not in the subregion_stats dict,
+                        # we need to initialize it.
                         stats = {}
                         for prefix in ('E', 'C', 'R'):
                             for suffix, initial_value in [
