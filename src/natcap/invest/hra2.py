@@ -399,20 +399,6 @@ def execute(args):
         dependent_task_list=alignment_dependent_tasks,
     )
 
-    simplified_aoi_path = os.path.join(intermediate_dir, 'simplified_aoi.gpkg')
-    aoi_simplify_task = graph.add_task(
-        func=_simplify,
-        kwargs={
-            'source_vector_path': args['aoi_vector_path'],
-            'tolerance': resolution / 2,  # by the nyquist theorem
-            'target_vector_path': simplified_aoi_path,
-            'preserve_columns': ['name'],
-        },
-        task_name='Simplify AOI',
-        target_path_list=[simplified_aoi_path],
-        dependent_task_list=[]
-    )
-
     # --> Create a binary mask of habitat pixels.
     habitat_mask_path = os.path.join(
         intermediate_dir, f'habitat_mask{suffix}.tif')
@@ -429,24 +415,6 @@ def execute(args):
         task_name='Create habitat mask',
         target_path_list=[habitat_mask_path],
         dependent_task_list=[alignment_task]
-    )
-
-    # --> Rasterize the AOI regions for later - not needed until summary stats.
-    aoi_subregions_dir = os.path.join(
-        intermediate_dir, f'aoi_subregions{suffix}')
-    target_info_json = os.path.join(
-        aoi_subregions_dir, f'subregions{suffix}.json')
-    rasterize_aoi_regions_task = graph.add_task(
-        func=_rasterize_aoi_regions,
-        kwargs={
-            'source_aoi_vector_path': simplified_aoi_path,
-            'habitat_mask_raster': habitat_mask_path,
-            'target_raster_dir': aoi_subregions_dir,
-            'target_info_json': target_info_json,
-        },
-        task_name='Rasterize AOI regions',
-        dependent_task_list=[aoi_simplify_task],
-        target_path_list=[target_info_json]
     )
 
     # --> for stressor in stressors, do a decayed EDT.
@@ -471,6 +439,7 @@ def execute(args):
     criteria_df = pandas.read_csv(composite_criteria_table_path)
     cumulative_risk_to_habitat_paths = []
     cumulative_risk_to_habitat_tasks = []
+    pairwise_summary_data = []  # for the later summary statistics.
     for habitat in habitats:
         pairwise_risk_tasks = []
         pairwise_risk_paths = []
@@ -480,11 +449,18 @@ def execute(args):
         for stressor in stressors:
             criteria_tasks = {}  # {criteria type: task}
             criteria_rasters = {}  # {criteria type: score raster path}
+            summary_data = {
+                'habitat': habitat,
+                'stressor': stressor,
+            }
 
             for criteria_type in ['E', 'C']:
-                criteria_rasters[criteria_type] = os.path.join(
+                criteria_raster_path = os.path.join(
                     intermediate_dir,
                     f'{habitat}_{stressor}_{criteria_type}_score{suffix}.tif')
+                criteria_rasters[criteria_type] = criteria_raster_path
+                summary_data[
+                    f'{criteria_type.lower()}_path'] = criteria_raster_path
 
                 # This rather complicated filter just grabs the rows matching
                 # this habitat, stressor and criteria type.  It's the pandas
@@ -523,6 +499,10 @@ def execute(args):
             pairwise_risk_path = os.path.join(
                 intermediate_dir, f'risk_{habitat}_{stressor}{suffix}.tif')
             pairwise_risk_paths.append(pairwise_risk_path)
+
+            summary_data['risk_path'] = pairwise_risk_path
+            pairwise_summary_data.append(summary_data)
+
             pairwise_risk_task = graph.add_task(
                 _calculate_pairwise_risk,
                 kwargs={
@@ -686,6 +666,54 @@ def execute(args):
     # TODO: visualize the graph of tasks to make sure it looks right
     # TODO: Make sure paths match what they're supposed to.
 
+    simplified_aoi_path = os.path.join(
+        intermediate_dir, 'simplified_aoi.gpkg')
+    aoi_simplify_task = graph.add_task(
+        func=_simplify,
+        kwargs={
+            'source_vector_path': args['aoi_vector_path'],
+            'tolerance': resolution / 2,  # by the nyquist theorem
+            'target_vector_path': simplified_aoi_path,
+            'preserve_columns': ['name'],
+        },
+        task_name='Simplify AOI',
+        target_path_list=[simplified_aoi_path],
+        dependent_task_list=[]
+    )
+
+    # --> Rasterize the AOI regions for later - not needed until summary stats.
+    aoi_subregions_dir = os.path.join(
+        intermediate_dir, f'aoi_subregions{suffix}')
+    aoi_subregions_json = os.path.join(
+        aoi_subregions_dir, f'subregions{suffix}.json')
+    rasterize_aoi_regions_task = graph.add_task(
+        func=_rasterize_aoi_regions,
+        kwargs={
+            'source_aoi_vector_path': simplified_aoi_path,
+            'habitat_mask_raster': habitat_mask_path,
+            'target_raster_dir': aoi_subregions_dir,
+            'target_info_json': aoi_subregions_json,
+        },
+        task_name='Rasterize AOI regions',
+        dependent_task_list=[aoi_simplify_task],
+        target_path_list=[aoi_subregions_json]
+    )
+
+    summary_csv_path = os.path.join(
+        output_dir, f'SUMMARY_STATISTICS{suffix}.csv')
+    summary_stats_csv_task = graph.add_task(
+        func=_create_summary_statistics_file,
+        kwargs={
+            'aoi_raster_json_path': aoi_subregions_json,
+            'habitat_mask_raster_path': habitat_mask_path,
+            'pairwise_raster_dicts': pairwise_summary_data,
+            'target_summary_csv_path': summary_csv_path,
+        },
+        task_name='Create summary statistics table',
+        target_path_list=[summary_csv_path],
+        dependent_task_list=[rasterize_aoi_regions_task]
+    )
+
     graph.close()
     graph.join()
 
@@ -695,7 +723,10 @@ def execute(args):
     make_graph.doit(graph)
 
 
-def _create_summary_statistics_file():
+# TODO: use the habitats mask raster
+def _create_summary_statistics_file(
+        aoi_raster_json_path, habitat_mask_raster_path, pairwise_raster_dicts,
+        target_summary_csv_path):
     # inputs:
     #  AOI vector (simplified to the nyquist limit)
     #  habitat mask raster
@@ -713,7 +744,113 @@ def _create_summary_statistics_file():
     #
     # Write out the CSV.
 
-    pass
+    json_data = json.load(open(aoi_raster_json_path))
+    subregion_names = json_data['subregion_names']
+
+    def _read_stats_from_block(raster_path, block_info, mask_array):
+        raster = gdal.OpenEx(raster_path, gdal.OF_RASTER)
+        band = raster.GetRasterBand(1)
+        nodata = band.GetNoDataValue()
+        block = band.ReadAsArray(**block_info)
+        valid_pixels = block[
+            ~utils.array_equals_nodata(block, nodata) & mask_array]
+
+        return (numpy.min(valid_pixels),
+                numpy.max(valid_pixels),
+                numpy.sum(valid_pixels),
+                valid_pixels.size)
+
+    pairwise_data = {}
+    habitats = set()
+    stressors = set()
+    for info_dict in pairwise_raster_dicts:
+        pairwise_data[info_dict['habitat'], info_dict['stressor']] = info_dict
+        habitats.add(info_dict['habitat'])
+        stressors.add(info_dict['stressor'])
+
+    habitat_mask_raster = gdal.OpenEx(habitat_mask_raster_path, gdal.OF_RASTER)
+    habitat_mask_band = habitat_mask_raster.GetRasterBand(1)
+
+    # Track the table data as a list of dicts, to be written out later.
+    # Helps reduce human errors in having to write out the columns in precisely
+    # the right order as they are declared.
+    records = []
+    for habitat, stressor in itertools.product(sorted(habitats),
+                                               sorted(stressors)):
+        e_raster = pairwise_data[habitat, stressor]['e_path']
+        c_raster = pairwise_data[habitat, stressor]['c_path']
+        r_raster = pairwise_data[habitat, stressor]['risk_path']
+
+        subregion_stats = {}
+
+        for subregion_raster_path in json_data['subregion_rasters']:
+            subregion_raster = gdal.OpenEx(subregion_raster_path,
+                                           gdal.OF_RASTER)
+            subregion_band = subregion_raster.GetRasterBand(1)
+            subregion_nodata = subregion_band.GetNoDataValue()
+            LOGGER.info(f'{habitat} {stressor} {subregion_raster_path}')
+
+            for block_info in pygeoprocessing.iterblocks(
+                    (subregion_raster_path, 1), offset_only=True):
+                habitat_mask_block = habitat_mask_band.ReadAsArray(
+                    **block_info)
+                habitat_mask = (habitat_mask_block == 1)
+                subregion_block = subregion_band.ReadAsArray(**block_info)
+
+                local_unique_subregions = numpy.unique(
+                    subregion_block[
+                        (~utils.array_equals_nodata(
+                            subregion_block, subregion_nodata)) &
+                        habitat_mask])
+
+                for subregion_id in local_unique_subregions:
+                    subregion_mask = (subregion_block == subregion_id)
+                    try:
+                        stats = subregion_stats[subregion_id]
+                    except KeyError:
+                        stats = {}
+                        for prefix in ('E', 'C', 'R'):
+                            for suffix, initial_value in [
+                                    ('MIN', float('inf')), ('MAX', 0),
+                                    ('SUM', 0), ('N_PIXELS', 0)]:
+                                stats[f'{prefix}_{suffix}'] = initial_value
+
+                    for prefix, raster in [('E', e_raster),
+                                           ('C', c_raster),
+                                           ('R', r_raster)]:
+                        pixel_min, pixel_max, pixel_sum, n_pixels = (
+                            _read_stats_from_block(raster, block_info,
+                                                   subregion_mask))
+                        if pixel_min < stats[f'{prefix}_MIN']:
+                            stats[f'{prefix}_MIN'] = pixel_min
+
+                        if pixel_max > stats[f'{prefix}_MAX']:
+                            stats[f'{prefix}_MAX'] = pixel_max
+
+                        stats[f'{prefix}_SUM'] += pixel_sum
+                        stats[f'{prefix}_N_PIXELS'] += n_pixels
+                    subregion_stats[subregion_id] = stats
+
+        for subregion_id, stats in subregion_stats.items():
+            record = {
+                'HABITAT': habitat,
+                'STRESSOR': stressor,
+                'SUBREGION': subregion_names[str(subregion_id)],
+            }
+            for prefix in ('E', 'C', 'R'):
+                record[f'{prefix}_MIN'] = float(stats[f'{prefix}_MIN'])
+                record[f'{prefix}_MAX'] = float(stats[f'{prefix}_MAX'])
+                record[f'{prefix}_MEAN'] = float(
+                    stats[f'{prefix}_SUM'] / stats[f'{prefix}_N_PIXELS'])
+            records.append(record)
+
+    out_dataframe = pandas.DataFrame.from_records(
+        records, columns=[
+            'HABITAT', 'STRESSOR', 'SUBREGION',
+            'E_MIN', 'E_MAX', 'E_MEAN',
+            'C_MIN', 'C_MAX', 'C_MEAN',
+            'R_MIN', 'R_MAX', 'R_MEAN'])
+    out_dataframe.to_csv(target_summary_csv_path, index=False)
 
 
 def _rasterize_aoi_regions(source_aoi_vector_path, habitat_mask_raster,
@@ -1015,10 +1152,6 @@ def _parse_info_table(info_table_path):
     return (habitats, stressors)
 
 
-# What do I need from this function?
-# attributes for each habitat/stressor combination.
-#    {habitat: {stressor: [{NAME: criterion, RATING: rating, DQ: dq, WEIGHT:
-#                           weight, CRITERIA_TYPE: E/C}]}}
 def _parse_criteria_table(criteria_table_path, known_stressors,
                           target_composite_csv_path):
 
