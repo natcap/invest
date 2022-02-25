@@ -880,8 +880,28 @@ def _rasterize_aoi_regions(source_aoi_vector_path, habitat_mask_raster,
         if fieldname.lower() == 'name':
             field_index = index
             break
+
+    # If the user did not provide a 'name' field (case-insensitive), then we
+    # treat all features as though they're in the same region.
     if field_index is None:
-        LOGGER.info('Field "name" (case-insensitive) was not found')
+        LOGGER.info(
+            'Field "name" (case-insensitive) not found; all features will '
+            'be treated as one region')
+        target_raster_path = os.path.join(
+            target_raster_dir, 'subregion_set_0.tif')
+        pygeoprocessing.new_raster_from_base(
+            habitat_mask_raster, target_raster_path, _TARGET_GDAL_TYPE_BYTE,
+            [_TARGET_NODATA_BYTE])
+        pygeoprocessing.rasterize(
+            source_aoi_vector_path, target_raster_path,
+            burn_values=[1], option_list=['ALL_TOUCHED=TRUE'])
+
+        with open(target_info_json, 'w') as target_json:
+            target_json.write(
+                json.dumps({'subregion_rasters': [target_raster_path],
+                            'subregion_names': {1: 'Total Region'}},
+                           indent=4))
+        return
 
     for set_index, disjoint_fid_set in enumerate(
             pygeoprocessing.calculate_disjoint_polygon_set(
@@ -1083,16 +1103,6 @@ def _simplify(source_vector_path, tolerance, target_vector_path,
     target_layer.CommitTransaction()
     target_layer = None
     target_vector = None
-
-
-def _rasterize(source_vector_path, resolution, target_raster_path):
-    pygeoprocessing.create_raster_from_vector_extents(
-        source_vector_path, target_raster_path, (resolution, -resolution),
-        target_pixel_type=gdal.GDT_Byte, target_nodata=255)
-
-    pygeoprocessing.rasterize(
-        source_vector_path, target_raster_path,
-        burn_values=[1], option_list=['ALL_TOUCHED=TRUE'])
 
 
 def _prep_input_raster(source_raster_path, target_raster_path):
