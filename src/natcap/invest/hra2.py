@@ -881,6 +881,14 @@ def _rasterize_aoi_regions(source_aoi_vector_path, habitat_mask_raster,
             field_index = index
             break
 
+    def _write_info_json(subregion_rasters_list, subregion_ids_to_names):
+        info_dict = {
+            'subregion_rasters': subregion_rasters_list,
+            'subregion_names': subregion_ids_to_names,
+        }
+        with open(target_info_json, 'w') as target_json:
+            json.dump(info_dict, target_json, indent=4)
+
     # If the user did not provide a 'name' field (case-insensitive), then we
     # treat all features as though they're in the same region.
     if field_index is None:
@@ -895,12 +903,9 @@ def _rasterize_aoi_regions(source_aoi_vector_path, habitat_mask_raster,
         pygeoprocessing.rasterize(
             source_aoi_vector_path, target_raster_path,
             burn_values=[1], option_list=['ALL_TOUCHED=TRUE'])
-
-        with open(target_info_json, 'w') as target_json:
-            target_json.write(
-                json.dumps({'subregion_rasters': [target_raster_path],
-                            'subregion_names': {1: 'Total Region'}},
-                           indent=4))
+        _write_info_json(
+            subregion_rasters_list=[target_raster_path],
+            subregion_ids_to_names={1: 'Total Region'})
         return
 
     for set_index, disjoint_fid_set in enumerate(
@@ -945,11 +950,9 @@ def _rasterize_aoi_regions(source_aoi_vector_path, habitat_mask_raster,
         disjoint_layer = None
         disjoint_vector.DeleteLayer(0)
 
-    with open(target_info_json, 'w') as target_json:
-        target_json.write(
-            json.dumps({'subregion_rasters': subregion_rasters,
-                        'subregion_names': subregion_names},
-                       indent=4))
+    _write_info_json(
+        subregion_rasters_list=subregion_rasters,
+        subregion_ids_to_names=subregion_names)
 
 
 def _align(raster_path_map, vector_path_map, target_pixel_size, target_srs_wkt):
