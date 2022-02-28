@@ -32,9 +32,14 @@
 
 .. :changelog:
 
-..
-  Unreleased Changes
-  ------------------
+Unreleased Changes
+------------------
+* General
+    * ``spec_utils.ETO`` has been renamed to ``spec_utils.ET0`` (with a zero).
+* Seasonal Water Yield
+    * Fixed an issue with the documentation for ET0 and Precip directories,
+      where a module-specific informational string was being overridden by a
+      default value.
 
 3.10.2 (2022-02-08)
 -------------------
