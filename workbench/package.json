@@ -5,7 +5,9 @@
   "main": "build/main/main.js",
   "homepage": "./",
   "scripts": {
-    "start": "concurrently \"yarn run dev-vite\" \"electron .\"",
+    "go": "electron .",
+    "serve": "yarn run dev-vite",
+    "start": "concurrently --kill-others \"yarn run dev-vite\" \"electron .\"",
     "lint": "eslint --cache --color --ext .jsx,.js src",
     "test": "jest --runInBand --testPathIgnorePatterns /tests/binary_tests/ /tests/sampledata_linkcheck/",
     "test-electron-app": "jest --runInBand --testMatch **/tests/binary_tests/puppet.test.js",

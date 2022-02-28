@@ -23,6 +23,8 @@ PYNAME_TO_MODEL_NAME_MAP = {
     for model_name, metadata in MODEL_METADATA.items()
 }
 
+PREFIX = 'api'
+
 
 def shutdown_server():
     """Shutdown the flask server."""
@@ -32,20 +34,20 @@ def shutdown_server():
     func()
 
 
-@app.route('/ready', methods=['GET'])
+@app.route('/api/ready', methods=['GET'])
 def get_is_ready():
     """Returns something simple to confirm the server is open."""
     return 'Flask ready'
 
 
-@app.route('/shutdown', methods=['GET'])
+@app.route('/api/shutdown', methods=['GET'])
 def shutdown():
     """A request to this endpoint shuts down the server."""
     shutdown_server()
     return 'Flask server shutting down...'
 
 
-@app.route('/models', methods=['GET'])
+@app.route('/api/models', methods=['GET'])
 def get_invest_models():
     """Gets a list of available InVEST models.
 
@@ -62,7 +64,7 @@ def get_invest_models():
     return cli.build_model_list_json()
 
 
-@app.route('/getspec', methods=['POST'])
+@app.route('/api/getspec', methods=['POST'])
 def get_invest_getspec():
     """Gets the ARGS_SPEC dict from an InVEST model.
 
@@ -82,7 +84,7 @@ def get_invest_getspec():
     return spec_utils.serialize_args_spec(model_module.ARGS_SPEC)
 
 
-@app.route('/validate', methods=['POST'])
+@app.route('/api/validate', methods=['POST'])
 def get_invest_validate():
     """Gets the return value of an InVEST model's validate function.
 
@@ -115,7 +117,7 @@ def get_invest_validate():
     return json.dumps(results)
 
 
-@app.route('/colnames', methods=['POST'])
+@app.route('/api/colnames', methods=['POST'])
 def get_vector_colnames():
     """Get a list of column names from a vector.
     This is used to fill in dropdown menu options in a couple models.
@@ -147,7 +149,7 @@ def get_vector_colnames():
     return json.dumps([]), 422
 
 
-@app.route('/post_datastack_file', methods=['POST'])
+@app.route('/api/post_datastack_file', methods=['POST'])
 def post_datastack_file():
     """Extracts InVEST model args from json, logfiles, or datastacks.
 
@@ -171,7 +173,7 @@ def post_datastack_file():
     return json.dumps(result_dict)
 
 
-@app.route('/write_parameter_set_file', methods=['POST'])
+@app.route('/api/write_parameter_set_file', methods=['POST'])
 def write_parameter_set_file():
     """Writes InVEST model args keys and values to a datastack JSON file.
 
@@ -195,7 +197,7 @@ def write_parameter_set_file():
     return 'parameter set saved'
 
 
-@app.route('/save_to_python', methods=['POST'])
+@app.route('/api/save_to_python', methods=['POST'])
 def save_to_python():
     """Writes a python script with a call to an InVEST model execute function.
 
@@ -218,7 +220,7 @@ def save_to_python():
     return 'python script saved'
 
 
-@app.route('/build_datastack_archive', methods=['POST'])
+@app.route('/api/build_datastack_archive', methods=['POST'])
 def build_datastack_archive():
     """.
 
@@ -241,7 +243,7 @@ def build_datastack_archive():
     return 'datastack archive created'
 
 
-@app.route('/log_model_start', methods=['POST'])
+@app.route('/api/log_model_start', methods=['POST'])
 def log_model_start():
     payload = request.get_json()
     usage._log_model(
@@ -252,7 +254,7 @@ def log_model_start():
     return 'OK'
 
 
-@app.route('/log_model_exit', methods=['POST'])
+@app.route('/api/log_model_exit', methods=['POST'])
 def log_model_exit():
     payload = request.get_json()
     usage._log_exit_status(
