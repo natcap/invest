@@ -51,11 +51,11 @@ ARGS_SPEC = {
             "contents": {
                 # monthly et0 maps, each file ending in a number 1-12
                 "[MONTH]": {
+                    **spec_utils.ET0,
                     "about": _(
                         "Twelve files, one for each month. File names must "
                         "end with the month number (1-12)."),
-                    **spec_utils.ETO
-                }
+                },
             },
             "required": "not user_defined_local_recharge",
             "about": _(
@@ -69,11 +69,11 @@ ARGS_SPEC = {
             "contents": {
                 # monthly precipitation maps, each file ending in a number 1-12
                 "[MONTH]": {
+                    **spec_utils.PRECIP,
                     "about": _(
                         "Twelve files, one for each month. File names must end "
                         "with the month number (1-12)."),
-                    **spec_utils.PRECIP
-                }
+                },
             },
             "required": "not user_defined_local_recharge",
             "about": _(

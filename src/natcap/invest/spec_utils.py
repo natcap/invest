@@ -95,7 +95,7 @@ PRECIP = {
     "about": _("Map of average annual precipitation."),
     "name": _("precipitation")
 }
-ETO = {
+ET0 = {
     "name": _("evapotranspiration"),
     "type": "raster",
     "bands": {

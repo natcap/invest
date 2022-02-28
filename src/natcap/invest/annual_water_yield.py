@@ -71,7 +71,7 @@ ARGS_SPEC = {
             "name": _("plant available water content")
         },
         "eto_path": {
-            **spec_utils.ETO,
+            **spec_utils.ET0,
             "projected": True
         },
         "watersheds_path": {
