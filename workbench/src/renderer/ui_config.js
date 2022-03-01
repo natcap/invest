@@ -255,13 +255,13 @@ const uiSpec = {
       ['algorithm'],
       ['calculate_flow_direction'],
       ['calculate_flow_accumulation'],
-      ['calculate_stream_threshold', 'threshold_flow_accumulation', 'calculate_downstream_distance'],
+      ['calculate_stream_threshold', 'threshold_flow_accumulation', 'calculate_downslope_distance'],
     ],
     enabledFunctions: {
       calculate_flow_accumulation: isSufficient.bind(null, 'calculate_flow_direction'),
       calculate_stream_threshold: isSufficient.bind(null, 'calculate_flow_accumulation'),
       threshold_flow_accumulation: isSufficient.bind(null, 'calculate_stream_threshold'),
-      calculate_downstream_distance: isSufficient.bind(null, 'calculate_stream_threshold'),
+      calculate_downslope_distance: isSufficient.bind(null, 'calculate_stream_threshold'),
     },
   },
   scenario_generator_proximity: {

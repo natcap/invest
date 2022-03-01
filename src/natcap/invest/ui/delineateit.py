@@ -62,7 +62,7 @@ class Delineateit(model.InVESTModel):
         self.flow_threshold = inputs.Text(
             args_key='flow_threshold',
             helptext=(
-                "The number of upstream cells that must flow into a "
+                "The number of upslope cells that must flow into a "
                 "cell before it's considered part of a stream such "
                 "that retention stops and the remaining export is "
                 "exported to the stream.  Used to define streams from "

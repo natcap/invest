@@ -548,7 +548,7 @@ def ndr_eff_calculation(
                 else:
                     LOGGER.error('outflow_weight_sum %s', outflow_weight_sum)
                     raise Exception("got to a cell that has no outflow!")
-            # search upstream to see if we need to push a cell on the stack
+            # search upslope to see if we need to push a cell on the stack
             for i in range(8):
                 neighbor_col = col_offsets[i] + global_col
                 if neighbor_col < 0 or neighbor_col >= n_cols:
@@ -572,8 +572,8 @@ def ndr_eff_calculation(
                 to_process_flow_directions_raster.set(
                     neighbor_col, neighbor_row, neighbor_process_flow_dir)
                 if neighbor_process_flow_dir == 0:
-                    # if 0 then all downstream have been processed,
-                    # push on stack, otherwise another downstream pixel will
+                    # if 0 then all downslope have been processed,
+                    # push on stack, otherwise another downslope pixel will
                     # pick it up
                     processing_stack.push(neighbor_row*n_cols + neighbor_col)
     to_process_flow_directions_raster.close()
