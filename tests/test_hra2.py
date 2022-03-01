@@ -166,23 +166,21 @@ class HRAUnitTests(unittest.TestCase):
 
         habitats, stressors = hra2._parse_info_table(info_table_path)
 
+        workspace = self.workspace_dir.replace('\\', '/')
         expected_habitats = {
             'corals': {
-                'path': os.path.join(self.workspace_dir, 'habitat',
-                                     'corals.shp'),
+                'path': f'{workspace}/habitat/corals.shp',
             }
         }
         self.assertEqual(habitats, expected_habitats)
 
         expected_stressors = {
             'oil': {
-                'path': os.path.join(self.workspace_dir, 'stressors',
-                                     'oil.shp'),
+                'path': f'{workspace}/stressors/oil.shp',
                 'buffer': 1000,
             },
             'transportation': {
-                'path': os.path.join(self.workspace_dir, 'stressors',
-                                     'transport.shp'),
+                'path': f'{workspace}/stressors/transport.shp',
                 'buffer': 100,
             }
         }

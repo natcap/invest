@@ -1268,7 +1268,8 @@ def _parse_info_table(info_table_path):
         path = row['path'].replace('\\', '/')
         if os.path.isabs(path):
             return path
-        return os.path.join(os.path.dirname(info_table_path), path)
+        return os.path.join(
+            os.path.dirname(info_table_path), path).replace('\\', '/')
 
     table['path'] = table.apply(lambda row: _make_abspath(row), axis=1)
 
