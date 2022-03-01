@@ -54,7 +54,10 @@ ARGS_SPEC = {
                     **spec_utils.ET0,
                     "about": _(
                         "Twelve files, one for each month. File names must "
-                        "end with the month number (1-12)."),
+                        "end with the month number (1-12). For example, "
+                        "the filenames 'et0_1.tif' "
+                        "'evapotranspiration1.tif' are both valid for the "
+                        "month of January."),
                 },
             },
             "required": "not user_defined_local_recharge",
@@ -71,8 +74,10 @@ ARGS_SPEC = {
                 "[MONTH]": {
                     **spec_utils.PRECIP,
                     "about": _(
-                        "Twelve files, one for each month. File names must end "
-                        "with the month number (1-12)."),
+                        "Twelve files, one for each month. File names must "
+                        "end with the month number (1-12). For example, "
+                        "the filenames 'precip_1.tif' and 'precip1.tif' are "
+                        "both valid names for the month of January."),
                 },
             },
             "required": "not user_defined_local_recharge",
