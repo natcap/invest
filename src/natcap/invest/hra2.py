@@ -763,7 +763,7 @@ def execute(args):
             polygonize_mask_raster_path = os.path.join(
                 intermediate_dir, f'polygonize_mask_{basename}.tif')
             rewrite_for_polygonize_task = graph.add_task(
-                func=_rewrite_raster_for_polygonization,
+                func=_create_mask_for_polygonization,
                 kwargs={
                     'source_raster_path': source_raster_path,
                     'target_raster_path': polygonize_mask_raster_path,
@@ -778,7 +778,8 @@ def execute(args):
             polygonize_task = graph.add_task(
                 func=_polygonize,
                 kwargs={
-                    'source_raster_path': polygonize_mask_raster_path,
+                    'source_raster_path': source_raster_path,
+                    'mask_raster_path': polygonize_mask_raster_path,
                     'target_polygonized_vector': polygonized_gpkg,
                     'field_name': fieldname,
                 },
@@ -806,16 +807,47 @@ def execute(args):
     graph.close()
     graph.join()
 
+    # TODO: check the task graph - AST most likely
+    # TODO: tables - support excel and also CSV.
+    # TODO: docstrings
+    # TODO: contructed tests.
+    # TODO: function to build a datastack archive.
+    # TODO: proposed plan for migrating relevant functions to pygeoprocessing.
+
     # import sys
     # sys.path.insert(0, os.getcwd())
     # import make_graph
     # make_graph.doit(graph)
 
 
-def _rewrite_raster_for_polygonization(source_raster_path, target_raster_path):
+def _create_mask_for_polygonization(source_raster_path, target_raster_path):
+    """Create a mask of non-nodata pixels.
+
+    This mask raster is intended to be used as a mask input for GDAL's
+    polygonization function.
+
+    Args:
+        source_raster_path (string): The source raster from which the mask
+            raster will be created. This raster is assumed to be an integer
+            raster.
+        target_raster_path (string): The path to where the target raster should
+            be written.
+
+    Returns:
+        ``None``
+    """
     nodata = pygeoprocessing.get_raster_info(source_raster_path)['nodata'][0]
 
     def _rewrite(raster_values):
+        """Convert any non-nodata values to 1, all other values to 0.
+
+        Args:
+            raster_values (numpy.array): Integer pixel values from the source
+                raster.
+
+        Returns:
+            out_array (numpy.array): An unsigned byte mask with pixel values of
+            0 (on nodata pixels) or 1 (on non-nodata pixels)."""
         out_array = numpy.full(raster_values.shape, 0, dtype=numpy.uint8)
         out_array[raster_values != nodata] = 1
         return out_array
@@ -825,9 +857,31 @@ def _rewrite_raster_for_polygonization(source_raster_path, target_raster_path):
         gdal.GDT_Byte, 0)
 
 
-def _polygonize(source_raster_path, target_polygonized_vector, field_name):
+def _polygonize(source_raster_path, mask_raster_path,
+                target_polygonized_vector, field_name):
+    """Polygonize a raster.
+
+    Args:
+        source_raster_path (string): The source raster to polygonize.  This
+            raster must be an integer raster.
+        mask_raster_path (string): The path to a mask raster, where pixel
+            values are 1 where polygons should be created, 0 otherwise.
+        target_polygonized_vector (string): The path to a vector into which the
+            new polygons will be inserted.  A new GeoPackage will be created at
+            this location.
+        field_name (string): The name of a field into which the polygonized
+            region's numerical value should be recorded.  A new field with this
+            name will be created in ``target_polygonized_vector``, and with an
+            Integer field type.
+
+    Returns:
+        ``None``
+    """
     raster = gdal.OpenEx(source_raster_path, gdal.OF_RASTER)
     band = raster.GetRasterBand(1)
+
+    mask_raster = gdal.OpenEx(mask_raster_path, gdal.OF_RASTER)
+    mask_band = mask_raster.GetRasteBand(1)
 
     raster_srs = osr.SpatialReference()
     raster_srs.ImportFromWkt(raster.GetProjectionRef())
@@ -849,10 +903,8 @@ def _polygonize(source_raster_path, target_polygonized_vector, field_name):
     raster_srs.ImportFromWkt(raster.GetProjectionRef())
 
     layer.StartTransaction()
-    # We're using the band as the source band (param 0) AND the mask band
-    # (param 1) so that polygonization respects the nodata regions.
     # 0 represents field index 0, into which pixel values will be written.
-    gdal.Polygonize(band, band, layer, 0)
+    gdal.Polygonize(band, mask_band, layer, 0)
     layer.CommitTransaction()
 
 
@@ -996,7 +1048,6 @@ def _rasterize_aoi_regions(source_aoi_vector_path, habitat_mask_raster,
     field_index = None
     for index, fieldname in enumerate([info.GetName() for info in
                                        source_aoi_layer.schema]):
-        print(fieldname)
         if fieldname.lower() == 'name':
             field_index = index
             break
