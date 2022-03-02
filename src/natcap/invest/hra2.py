@@ -881,7 +881,7 @@ def _polygonize(source_raster_path, mask_raster_path,
     band = raster.GetRasterBand(1)
 
     mask_raster = gdal.OpenEx(mask_raster_path, gdal.OF_RASTER)
-    mask_band = mask_raster.GetRasteBand(1)
+    mask_band = mask_raster.GetRasterBand(1)
 
     raster_srs = osr.SpatialReference()
     raster_srs.ImportFromWkt(raster.GetProjectionRef())
