@@ -22,7 +22,6 @@ env:
   # setuptools_scm: needed for versioning to work
   CONDA_DEFAULT_DEPENDENCIES: build nomkl setuptools_scm
   LATEST_SUPPORTED_PYTHON_VERSION: 3.9
-  SUPPORTED_PYTHON_VERSIONS: "[3.7, 3.8, 3.9]"
 
 jobs:
   check-syntax-errors:
@@ -58,7 +57,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ${{ env.SUPPORTED_PYTHON_VERSIONS }}
+        python-version: [3.7, 3.8, 3.9]
         os: [windows-latest, macos-latest]
     steps:
       - uses: actions/checkout@v2
@@ -142,7 +141,7 @@ jobs:
     needs: check-syntax-errors
     strategy:
       matrix:
-        python-version: ${{ env.SUPPORTED_PYTHON_VERSIONS }}
+        python-version: [3.7, 3.8, 3.9]
         os: [windows-latest, macos-latest]
     steps:
       - uses: actions/checkout@v2
@@ -231,7 +230,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ${{ env.SUPPORTED_PYTHON_VERSIONS }}
+        python-version: [3.7, 3.8, 3.9]
 
     steps:
       - uses: actions/checkout@v2
