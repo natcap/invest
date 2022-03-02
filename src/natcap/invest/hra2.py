@@ -1126,12 +1126,13 @@ def _rasterize_aoi_regions(source_aoi_vector_path, habitat_mask_raster,
         pygeoprocessing.new_raster_from_base(
             habitat_mask_raster, target_raster_path, _TARGET_GDAL_TYPE_BYTE,
             [_TARGET_NODATA_BYTE])
+        burn_value = 0  # burning onto a nodata mask (nodata=255)
         pygeoprocessing.rasterize(
             source_aoi_vector_path, target_raster_path,
-            burn_values=[1], option_list=['ALL_TOUCHED=TRUE'])
+            burn_values=[0], option_list=['ALL_TOUCHED=TRUE'])
         _write_info_json(
             subregion_rasters_list=[target_raster_path],
-            subregion_ids_to_names={1: 'Total Region'})
+            subregion_ids_to_names={burn_value: 'Total Region'})
         return
 
     # If we've reached this point, then the user provided a name field and we

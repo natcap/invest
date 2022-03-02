@@ -1,4 +1,5 @@
 import io
+import json
 import math
 import os
 import shutil
@@ -12,6 +13,7 @@ import pandas.testing
 import pygeoprocessing
 import shapely.geometry
 from osgeo import gdal
+from osgeo import ogr
 from osgeo import osr
 
 ORIGIN = (1180000.0, 690000.0)
@@ -350,6 +352,81 @@ class HRAUnitTests(unittest.TestCase):
             pygeoprocessing.raster_to_numpy_array(mask_raster_path),
             (source_array != nodata).astype(numpy.uint8)
         )
+
+    def test_summary_statistics_file(self):
+        # TODO: test this in the model test?
+        pass
+
+    def test_rasterize_aoi_regions(self):
+        from natcap.invest import hra2
+
+        habitat_mask_path = os.path.join(
+            self.workspace_dir, 'habitat_mask.tif')
+        nodata = 255
+        habitat_mask_array = numpy.array([
+            [0, 1, 1],
+            [0, 1, 255],
+            [255, 1, 1]], dtype=numpy.uint8)
+        pygeoprocessing.numpy_array_to_raster(
+            habitat_mask_array, nodata, (30, -30), ORIGIN, SRS_WKT,
+            habitat_mask_path)
+
+        bounding_box = pygeoprocessing.get_raster_info(
+            habitat_mask_path)['bounding_box']
+
+        # 3 overlapping AOI regions
+        aoi_geometries = [shapely.geometry.box(*bounding_box)] * 3
+        source_vector_path = os.path.join(self.workspace_dir, 'aoi.shp')
+
+        target_raster_dir = os.path.join(self.workspace_dir, 'rasters')
+        target_json = os.path.join(self.workspace_dir, 'aoi_rasters.json')
+
+        # First test: with no subregion names provided, there's only 1
+        # subregion raster produced.
+        pygeoprocessing.shapely_geometry_to_vector(
+            aoi_geometries, source_vector_path, SRS_WKT, 'ESRI Shapefile')
+        hra2._rasterize_aoi_regions(
+            source_vector_path, habitat_mask_path, target_raster_dir,
+            target_json)
+        self.assertEqual(
+            os.listdir(target_raster_dir),
+            ['subregion_set_0.tif'])
+
+        self.assertEqual(
+            json.load(open(target_json)),
+            {'subregion_rasters': [
+                os.path.join(target_raster_dir, 'subregion_set_0.tif')],
+             'subregion_names': {'0': 'Total Region'}})
+
+        # Second test: when subregion names are provided, subregions should be
+        # treated as distinct, nonoverlapping regions.
+        pygeoprocessing.shapely_geometry_to_vector(
+            aoi_geometries, source_vector_path, SRS_WKT,
+            vector_format='ESRI Shapefile',
+            fields={'NamE': ogr.OFTString},
+            attribute_list=[
+                {'NamE': 'subregion_1'},
+                {'NamE': 'subregion_2'},
+                {'NamE': 'subregion_3'},
+            ])
+        hra2._rasterize_aoi_regions(
+            source_vector_path, habitat_mask_path, target_raster_dir,
+            target_json)
+        self.assertEqual(
+            os.listdir(target_raster_dir),
+            [f'subregion_set_{n}.tif' for n in (0, 1, 2)])
+        self.assertEqual(
+            json.load(open(target_json)),
+            {'subregion_rasters': [
+                os.path.join(target_raster_dir, f'subregion_set_{n}.tif')
+                for n in (0, 1, 2)],
+             'subregion_names': {
+                 '0': 'subregion_1',
+                 '1': 'subregion_2',
+                 '2': 'subregion_3',
+             }}
+        )
+
 
 
 
