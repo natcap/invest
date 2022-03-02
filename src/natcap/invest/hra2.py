@@ -1108,6 +1108,7 @@ def _rasterize_aoi_regions(source_aoi_vector_path, habitat_mask_raster,
             break
 
     def _write_info_json(subregion_rasters_list, subregion_ids_to_names):
+        """Write an info JSON file.  Abstracted into a function for DRY."""
         info_dict = {
             'subregion_rasters': subregion_rasters_list,
             'subregion_names': subregion_ids_to_names,
@@ -1139,6 +1140,8 @@ def _rasterize_aoi_regions(source_aoi_vector_path, habitat_mask_raster,
     # need to rasterize the sets of non-overlapping polygons.
     # If 2 features have the same name, they should have the same ID.
     # TODO: if 2 features have the same name, they should have the same Id.
+    # should they, though?  If they have overlapping area, then we need to be
+    # able to handle that too.
     for set_index, disjoint_fid_set in enumerate(
             pygeoprocessing.calculate_disjoint_polygon_set(
                 source_aoi_vector_path)):
@@ -1186,12 +1189,41 @@ def _rasterize_aoi_regions(source_aoi_vector_path, habitat_mask_raster,
         subregion_ids_to_names=subregion_names)
 
 
-def _align(raster_path_map, vector_path_map, target_pixel_size, target_srs_wkt):
-    # Determine the union bounding box of all inputs.
-    # if rasters to align, align them with align_and_resize.
-    # if vectors to align, create rasters based on bounding box and then
-    # rasterize.
+def _align(raster_path_map, vector_path_map, target_pixel_size,
+           target_srs_wkt):
+    """Align a stack of rasters and/or vectors.
 
+    In HRA, habitats and stressors (and optionally criteria) may be defined as
+    a stack of rasters and/or vectors.  This function enables this stack to be
+    precisely aligned and rasterized, while minimizing sampling error in
+    rasterization.
+
+    Rasters passed in to this function will be aligned and resampled using
+    nearest-neighbor interpolation.
+
+    Vectors passed in to this function will be rasterized onto new rasters that
+    align with the rest of the stack.
+
+    All aligned rasters and rasterized vectors will have a bounding box that
+    matches the union of the bounding boxes of all spatial inputs to this
+    function, and with the target pixel size and SRS.
+
+    Args:
+        raster_path_map (dict): A dict mapping source raster paths to aligned
+            raster paths.  This dict may be empty.
+        vector_path_map (dict): A dict mapping source vector paths to aligned
+            raster paths.  This dict may be empty.  These source vectors must
+            already be in the target projection's SRS.
+        target_pixel_size (tuple): The pixel size of the target rasters, in
+            the form (x, y), expressed in meters.
+        target_srs_wkt (string): The target SRS of the aligned rasters.
+
+    Returns:
+        ``None``
+    """
+    # Step 1: Create a bounding box of the union of all input spatial rasters
+    # and vectors.  To be safe, we're assuming that the source SRS of a dataset
+    # might be different from the target SRS and this is taken into account.
     bounding_box_list = []
     source_raster_paths = []
     aligned_raster_paths = []
@@ -1213,6 +1245,9 @@ def _align(raster_path_map, vector_path_map, target_pixel_size, target_srs_wkt):
     target_bounding_box = pygeoprocessing.merge_bounding_box_list(
         bounding_box_list, 'union')
 
+    # Step 2: Align raster inputs.
+    # If any rasters were provided, they will be aligned to the bounding box
+    # we determined, interpolating and warping as needed.
     if raster_path_map:
         LOGGER.info(f'Aligning {len(raster_path_map)} rasters')
         pygeoprocessing.align_and_resize_raster_stack(
@@ -1224,6 +1259,11 @@ def _align(raster_path_map, vector_path_map, target_pixel_size, target_srs_wkt):
             target_srs_wkt=target_srs_wkt
         )
 
+    # Step 3: Rasterize vectors onto aligned rasters.
+    # If any vectors were provided, they will be rasterized onto new rasters
+    # that align with the bounding box we determined earlier.
+    # This approach yields more precise rasters than resampling an
+    # already-rasterized vector through align_and_resize_raster_stack.
     if vector_path_map:
         LOGGER.info(f'Aligning {len(vector_path_map)} vectors')
         for source_vector_path, target_raster_path in vector_path_map.items():
@@ -1233,6 +1273,7 @@ def _align(raster_path_map, vector_path_map, target_pixel_size, target_srs_wkt):
                 target_pixel_size=target_pixel_size,
                 target_pixel_type=_TARGET_GDAL_TYPE_BYTE,
                 target_srs_wkt=target_srs_wkt,
+                target_nodata=_TARGET_NODATA_BYTE,
                 fill_value=_TARGET_NODATA_BYTE
             )
 
@@ -1243,7 +1284,27 @@ def _align(raster_path_map, vector_path_map, target_pixel_size, target_srs_wkt):
 
 def _create_raster_from_bounding_box(
         target_raster_path, target_bounding_box, target_pixel_size,
-        target_pixel_type, target_srs_wkt, fill_value=None):
+        target_pixel_type, target_srs_wkt, target_nodata=None,
+        fill_value=None):
+    """Create a raster from a given bounding box.
+
+    Args:
+        target_raster_path (string): The path to where the new raster should be
+            created on disk.
+        target_bounding_box (tuple): a 4-element iterable of (minx, miny,
+            maxx, maxy) in projected units matching the SRS of
+            ``target_srs_wkt``.
+        target_pixel_size (tuple): A 2-element tuple of the (x, y) pixel size
+            of the target raster.  Elements are in units of the target SRS.
+        target_pixel_type (int): The GDAL GDT_* type of the target raster.
+        target_srs_wkt (string): The SRS of the target raster, in Well-Known
+            Text format.
+        target_nodata (float): If provided, the nodata value of the target
+            raster.
+        fill_value=None (number): If provided, the value that the target raster
+            should be filled with.
+
+    """
 
     bbox_minx, bbox_miny, bbox_maxx, bbox_maxy = target_bounding_box
 
@@ -1275,11 +1336,16 @@ def _create_raster_from_bounding_box(
         y_source, 0.0, target_pixel_size[1]]
     raster.SetGeoTransform(raster_transform)
 
-    # Initialize everything to nodata
+    # Fill the band if requested.
+    band = raster.GetRasterBand(1)
     if fill_value is not None:
-        band = raster.GetRasterBand(1)
         band.Fill(fill_value)
-        band = None
+
+    # Set the nodata value.
+    if target_nodata is not None:
+        band.SetNoDataValue(float(target_nodata))
+
+    band = None
     raster = None
 
 

@@ -427,6 +427,45 @@ class HRAUnitTests(unittest.TestCase):
              }}
         )
 
+    # TODO: test alignment function
+
+    def test_create_raster_from_bounding_box(self):
+        from natcap.invest import hra2
+
+        # [minx, miny, maxx, maxy]
+        bounding_box = [
+            ORIGIN[0],
+            ORIGIN[1] - 100,  # force rounding up of pixel dimensions
+            ORIGIN[0] + 90,  # no rounding up needed
+            ORIGIN[1],
+        ]
+        pixel_size = (30, -30)
+        target_raster_path = os.path.join(self.workspace_dir, 'raster.tif')
+        hra2._create_raster_from_bounding_box(
+            target_raster_path, bounding_box, pixel_size, gdal.GDT_Byte,
+            SRS_WKT, target_nodata=2, fill_value=2)
+
+        try:
+            raster = gdal.OpenEx(target_raster_path)
+            band = raster.GetRasterBand(1)
+            self.assertEqual(
+                raster.GetGeoTransform(),
+                (ORIGIN[0], pixel_size[0], 0.0, ORIGIN[1], 0.0, pixel_size[1])
+            )
+            self.assertEqual(raster.RasterXSize, 3)
+            self.assertEqual(raster.RasterYSize, 4)
+            self.assertEqual(band.GetNoDataValue(), 2)
+            numpy.testing.assert_array_equal(
+                band.ReadAsArray(),
+                numpy.full((4, 3), 2, dtype=numpy.uint8))
+        finally:
+            band = None
+            raster = None
+
+
+
+
+
 
 
 
