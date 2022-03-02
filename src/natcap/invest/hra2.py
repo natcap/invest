@@ -848,9 +848,7 @@ def _create_mask_for_polygonization(source_raster_path, target_raster_path):
         Returns:
             out_array (numpy.array): An unsigned byte mask with pixel values of
             0 (on nodata pixels) or 1 (on non-nodata pixels)."""
-        out_array = numpy.full(raster_values.shape, 0, dtype=numpy.uint8)
-        out_array[raster_values != nodata] = 1
-        return out_array
+        return (raster_values != nodata).astype(numpy.uint8)
 
     pygeoprocessing.raster_calculator(
         [(source_raster_path, 1)], _rewrite, target_raster_path,

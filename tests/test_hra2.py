@@ -328,6 +328,36 @@ class HRAUnitTests(unittest.TestCase):
             layer = None
             vector = None
 
+    def test_polygonize_mask(self):
+        from natcap.invest import hra2
+
+        source_raster_path = os.path.join(self.workspace_dir, 'source.tif')
+        nodata = 255
+        source_array = numpy.array([
+            [nodata, 1, 2],
+            [1, 1, 2],
+            [nodata, 1, 2]], dtype=numpy.uint8)
+        pygeoprocessing.numpy_array_to_raster(
+            source_array, nodata, (30, -30), ORIGIN, SRS_WKT,
+            source_raster_path)
+
+        mask_raster_path = os.path.join(self.workspace_dir, 'mask.tif')
+
+        hra2._create_mask_for_polygonization(
+            source_raster_path, mask_raster_path)
+
+        numpy.testing.assert_allclose(
+            pygeoprocessing.raster_to_numpy_array(mask_raster_path),
+            (source_array != nodata).astype(numpy.uint8)
+        )
+
+
+
+
+
+
+
+
 
 class HRAModelTests(unittest.TestCase):
     def setUp(self):
