@@ -911,7 +911,42 @@ def _polygonize(source_raster_path, mask_raster_path,
 def _create_summary_statistics_file(
         aoi_raster_json_path, habitat_mask_raster_path, pairwise_raster_dicts,
         target_summary_csv_path):
+    """Summarize pairwise habitat/stressor rasters by AOI subregions.
 
+    Functionally, this is a modified version of
+    ``pygeoprocessing.zonal_statistics`` that doesn't force re-rasterization of
+    subregions.
+
+    Args:
+        aoi_raster_json_path (string): The path to a JSON file with information
+            about the provided AOI subregions.  The following keys must exist
+            in the dict:
+
+                * ``subregion_names``: A mapping of integer subregion IDs to
+                  string names identifying the subregion.
+                * ``subregion_rasters``: A list of rasters containing
+                  disjoint sets of rasterized AOI geometries, where each
+                  geometry has been rasterized with a unique integer subregion
+                  ID that is also identified in ``subregion_names``.
+
+        habitat_mask_raster_path (string): The path to a raster with 1s
+            indicating the presence of habitats (any number) and 0 or nodata
+            otherwise.
+        pairwise_raster_dicts (list): A list of dicts for each habitat/stressor
+            pair containing the following keys:
+
+                * ``"habitat"`` the string habitat name.
+                * ``"stressor"`` the string stressor name.
+                * ``"e_path"`` the exposure criteria score raster.
+                * ``"c_path"`` the consequence criteria score raster.
+                * ``"risk_path"`` the raster of calculated risk.
+
+        target_summary_csv_path (string): The path to where the summary CSV
+            should be written
+
+    Returns:
+        ``None``
+    """
     json_data = json.load(open(aoi_raster_json_path))
     subregion_names = json_data['subregion_names']
 
@@ -1027,13 +1062,35 @@ def _create_summary_statistics_file(
 
 def _rasterize_aoi_regions(source_aoi_vector_path, habitat_mask_raster,
                            target_raster_dir, target_info_json):
-    # disjoint polygon set
-    # add to a Memory layer (and simplify)
-    # rasterize to target_raster_dir
-    # target_json has structure:
-    #   {'subregion_rasters': [paths],
-    #    'subregion_ids_to_names': {FID: name}}
+    """Rasterize AOI subregions.
 
+    If the source AOI vector has a "NAME" field (case-insensitive), then
+    non-overlapping sets of polygons are rasterized onto as many rasters as are
+    needed to cover all of the AOI's subregions.
+
+    If the source AOI vector does not have a "NAME" field (case-insensitive),
+    then all AOI features are considered to be in the same region and all
+    features are rasterized onto a single raster.  In this case, the subregion
+    name is "Total Region".
+
+    In both cases, an output JSON file is written with information about the
+    rasters created and the names of the target subregions.
+
+    Args:
+        source_aoi_vector_path (string): The path to the source AOI vector
+            containing AOI geometries and (optionally) a "NAME" column
+            (case-insensitive).
+        habitat_mask_path (string): The path to a raster where pixel values of
+            1 indicate the presence of habitats and pixel values of 0 or nodata
+            indicate the absence of habitats.
+        target_raster_dir (string): The path to a directory where rasterized
+            AOI subregions should be stored.
+        target_info_json (string): The path to where a target info JSON file
+            should be written.
+
+    Returns:
+        ``None``
+    """
     source_aoi_vector = gdal.OpenEx(source_aoi_vector_path, gdal.OF_VECTOR)
     source_aoi_layer = source_aoi_vector.GetLayer()
 
@@ -1079,6 +1136,10 @@ def _rasterize_aoi_regions(source_aoi_vector_path, habitat_mask_raster,
             subregion_ids_to_names={1: 'Total Region'})
         return
 
+    # If we've reached this point, then the user provided a name field and we
+    # need to rasterize the sets of non-overlapping polygons.
+    # If 2 features have the same name, they should have the same ID.
+    # TODO: if 2 features have the same name, they should have the same Id.
     for set_index, disjoint_fid_set in enumerate(
             pygeoprocessing.calculate_disjoint_polygon_set(
                 source_aoi_vector_path)):
