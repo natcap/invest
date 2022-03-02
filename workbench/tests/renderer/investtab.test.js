@@ -46,7 +46,7 @@ function renderInvestTab(job = DEFAULT_JOB) {
   return utils;
 }
 
-describe('Sidebar Alert renders with data from a recent run', () => {
+describe('Run status Alert renders with data from a recent run', () => {
   const spec = {
     pyname: 'natcap.invest.foo',
     model_name: 'Foo Model',

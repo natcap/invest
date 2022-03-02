@@ -269,8 +269,6 @@ export default class SetupTab extends React.Component {
   ) {
     this.setState({
       saveAlerts: { ...this.state.saveAlerts, ...{ [key]: message } }
-    }, () => {
-      console.log(this.state.saveAlerts);
     });
   }
 
