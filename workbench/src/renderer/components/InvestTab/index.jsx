@@ -62,7 +62,6 @@ export default class InvestTab extends React.Component {
       uiSpec: null,
       userTerminated: false,
       executeClicked: false,
-      saveAlert: null,
     };
 
     this.investExecute = this.investExecute.bind(this);
@@ -70,7 +69,6 @@ export default class InvestTab extends React.Component {
     this.terminateInvestProcess = this.terminateInvestProcess.bind(this);
     this.investLogfileCallback = this.investLogfileCallback.bind(this);
     this.investExitCallback = this.investExitCallback.bind(this);
-    this.setSaveAlert = this.setSaveAlert.bind(this);
   }
 
   async componentDidMount() {
@@ -208,12 +206,6 @@ export default class InvestTab extends React.Component {
     );
   }
 
-  setSaveAlert(response) {
-    this.setState({
-      saveAlert: response
-    });
-  }
-
   render() {
     const {
       activeTab,
@@ -221,7 +213,6 @@ export default class InvestTab extends React.Component {
       argsSpec,
       uiSpec,
       executeClicked,
-      saveAlert,
     } = this.state;
     const {
       status,
@@ -237,8 +228,6 @@ export default class InvestTab extends React.Component {
       return (<div />);
     }
 
-    // Alert won't expire during archiving; will expire 2s after completion
-    const alertExpires = (saveAlert === 'archiving...') ? 1e7 : 2000;
     const logDisabled = !logfile;
     const sidebarSetupElementId = `sidebar-setup-${jobID}`;
     const sidebarFooterElementId = `sidebar-footer-${jobID}`;
@@ -272,20 +261,6 @@ export default class InvestTab extends React.Component {
                 moduleName={modelRunName}
                 docs={modelSpec.userguide_html}
               />
-              {
-                saveAlert
-                  ? (
-                    <Expire
-                      className="d-inline"
-                      delay={alertExpires}
-                    >
-                      <Alert variant="success">
-                        {saveAlert}
-                      </Alert>
-                    </Expire>
-                  )
-                  : <div />
-              }
             </div>
             <div
               className="sidebar-row sidebar-footer"
@@ -322,7 +297,6 @@ export default class InvestTab extends React.Component {
                   sidebarSetupElementId={sidebarSetupElementId}
                   sidebarFooterElementId={sidebarFooterElementId}
                   executeClicked={this.state.executeClicked}
-                  setSaveAlert={this.setSaveAlert}
                 />
               </TabPane>
               <TabPane

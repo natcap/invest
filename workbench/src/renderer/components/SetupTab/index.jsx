@@ -2,6 +2,7 @@ import { ipcRenderer } from 'electron';
 import React from 'react';
 import PropTypes from 'prop-types';
 
+import Alert from 'react-bootstrap/Alert';
 import Container from 'react-bootstrap/Container';
 import Spinner from 'react-bootstrap/Spinner';
 import Row from 'react-bootstrap/Row';
@@ -10,6 +11,7 @@ import OverlayTrigger from 'react-bootstrap/OverlayTrigger';
 import Tooltip from 'react-bootstrap/Tooltip';
 import { MdFolderOpen } from 'react-icons/md';
 
+import Expire from '../Expire';
 import Portal from '../Portal';
 import ArgsForm from './ArgsForm';
 import {
@@ -85,11 +87,13 @@ export default class SetupTab extends React.Component {
       argsValid: false,
       argsEnabled: null,
       argsDropdownOptions: null,
+      saveAlerts: {},
     };
 
     this.saveDatastack = this.saveDatastack.bind(this);
     this.savePythonScript = this.savePythonScript.bind(this);
     this.saveJsonFile = this.saveJsonFile.bind(this);
+    this.setSaveAlert = this.setSaveAlert.bind(this);
     this.wrapInvestExecute = this.wrapInvestExecute.bind(this);
     this.investValidate = this.investValidate.bind(this);
     this.debouncedValidate = this.debouncedValidate.bind(this);
@@ -202,7 +206,6 @@ export default class SetupTab extends React.Component {
   async savePythonScript(filepath) {
     const {
       modelName,
-      setSaveAlert,
     } = this.props;
     const args = argsDictFromObject(
       this.insertNWorkers(this.state.argsValues)
@@ -213,13 +216,12 @@ export default class SetupTab extends React.Component {
       args: JSON.stringify(args),
     };
     const response = await saveToPython(payload);
-    setSaveAlert(response);
+    this.setSaveAlert(response);
   }
 
   async saveJsonFile(datastackPath) {
     const {
       pyModuleName,
-      setSaveAlert,
     } = this.props;
     const args = argsDictFromObject(
       this.insertNWorkers(this.state.argsValues)
@@ -231,13 +233,12 @@ export default class SetupTab extends React.Component {
       args: JSON.stringify(args),
     };
     const response = await writeParametersToFile(payload);
-    setSaveAlert(response);
+    this.setSaveAlert(response);
   }
 
   async saveDatastack(datastackPath) {
     const {
       pyModuleName,
-      setSaveAlert,
     } = this.props;
     const args = argsDictFromObject(this.state.argsValues);
     const payload = {
@@ -245,9 +246,32 @@ export default class SetupTab extends React.Component {
       moduleName: pyModuleName,
       args: JSON.stringify(args),
     };
-    setSaveAlert('archiving...');
+    const key = window.crypto.getRandomValues(new Uint16Array(1))[0].toString();
+    this.setSaveAlert('archiving...', key);
     const response = await archiveDatastack(payload);
-    setSaveAlert(response);
+    this.setSaveAlert(response, key);
+  }
+
+  /** State updater for alert messages from various save buttons.
+   *
+   * @param {string} message - the message to display
+   * @param {string} key - a key to uniquely identify each save action,
+   *        passed as prop to `Expire` so that it can be aware of whether to,
+   *        1. display: because a new save occurred, or
+   *        2. not display: on a re-render after `Expire` expired, or
+   *        3. update: because 'archiving...' alert changes to final message
+   *
+   * @returns {undefined}
+   */
+  setSaveAlert(
+    message,
+    key = window.crypto.getRandomValues(new Uint16Array(1))[0].toString()
+  ) {
+    this.setState({
+      saveAlerts: { ...this.state.saveAlerts, ...{ [key]: message } }
+    }, () => {
+      console.log(this.state.saveAlerts);
+    });
   }
 
   async loadParametersFromFile(filepath) {
@@ -418,6 +442,7 @@ export default class SetupTab extends React.Component {
       argsValidation,
       argsEnabled,
       argsDropdownOptions,
+      saveAlerts,
     } = this.state;
     if (argsValues) {
       const {
@@ -427,6 +452,26 @@ export default class SetupTab extends React.Component {
         executeClicked,
         uiSpec,
       } = this.props;
+
+      const SaveAlerts = [];
+      Object.keys(saveAlerts).forEach((key) => {
+        const message = saveAlerts[key];
+        if (message) {
+          // Alert won't expire during archiving; will expire 2s after completion
+          const alertExpires = (message === 'archiving...') ? 1e7 : 2000;
+          SaveAlerts.push(
+            <Expire
+              key={key}
+              className="d-inline"
+              delay={alertExpires}
+            >
+              <Alert variant="success">
+                {message}
+              </Alert>
+            </Expire>
+          );
+        }
+      });
 
       const buttonText = (
         executeClicked
@@ -464,7 +509,7 @@ export default class SetupTab extends React.Component {
               delay={{ show: 250, hide: 400 }}
               overlay={(
                 <Tooltip>
-                  {_("Browse to a datastack (.json) or InVEST logfile (.txt)")}
+                  {_("Browse to a datastack (.json, .tgz) or InVEST logfile (.txt)")}
                 </Tooltip>
               )}
             >
@@ -481,6 +526,9 @@ export default class SetupTab extends React.Component {
               saveJsonFile={this.saveJsonFile}
               saveDatastack={this.saveDatastack}
             />
+            <React.Fragment>
+              {SaveAlerts}
+            </React.Fragment>
           </Portal>
           <Portal elId={sidebarFooterElementId}>
             <RunButton
@@ -514,5 +562,4 @@ SetupTab.propTypes = {
   sidebarSetupElementId: PropTypes.string.isRequired,
   sidebarFooterElementId: PropTypes.string.isRequired,
   executeClicked: PropTypes.bool.isRequired,
-  setSaveAlert: PropTypes.func.isRequired,
 };
