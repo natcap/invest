@@ -284,6 +284,50 @@ class HRAUnitTests(unittest.TestCase):
             feature_geom = feature.GetGeometryRef()
             self.assertAlmostEqual(expected_area, feature_geom.Area())
 
+    def test_polygonize(self):
+        from natcap.invest import hra2
+
+        source_raster_path = os.path.join(self.workspace_dir, 'source.tif')
+        source_array = numpy.array([
+            [0, 1, 2],
+            [1, 1, 2],
+            [0, 1, 2]], dtype=numpy.uint8)
+
+        mask_raster_path = os.path.join(self.workspace_dir, 'mask.tif')
+        mask_array = (source_array != 0).astype(numpy.uint8)
+
+        for array, target_path in ((source_array, source_raster_path),
+                                   (mask_array, mask_raster_path)):
+            pygeoprocessing.numpy_array_to_raster(
+                array, 255, (30, -30), ORIGIN, SRS_WKT, target_path)
+
+        target_vector_path = os.path.join(self.workspace_dir, 'target.gpkg')
+        hra2._polygonize(source_raster_path, mask_raster_path,
+                         target_vector_path, 'source_id')
+
+        try:
+            vector = gdal.OpenEx(target_vector_path, gdal.OF_VECTOR)
+            layer = vector.GetLayer()
+            self.assertEqual(
+                [field.GetName() for field in layer.schema],
+                ['source_id'])
+
+            # The 0 pixels, which are not in the mask, should not be included
+            # in the output vector.
+            self.assertEqual(layer.GetFeatureCount(), 2)
+
+            source_id_to_area = {
+                1: 900 * 4,  # 4 pixels at 900m2/pixel
+                2: 900 * 3,  # 3 pixels at 900m2/pixel
+            }
+            for feature in layer:
+                source_id = feature.GetField('source_id')
+                area = feature.GetGeometryRef().Area()
+                self.assertEqual(area, source_id_to_area[source_id])
+        finally:
+            layer = None
+            vector = None
+
 
 class HRAModelTests(unittest.TestCase):
     def setUp(self):
