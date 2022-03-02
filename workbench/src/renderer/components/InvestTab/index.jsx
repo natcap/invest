@@ -9,13 +9,11 @@ import TabContainer from 'react-bootstrap/TabContainer';
 import Nav from 'react-bootstrap/Nav';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
-import Alert from 'react-bootstrap/Alert';
 
 import ModelStatusAlert from './ModelStatusAlert';
 import SetupTab from '../SetupTab';
 import LogTab from '../LogTab';
 import ResourcesLinks from '../ResourcesLinks';
-import Expire from '../Expire';
 import { getSpec } from '../../server_requests';
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
