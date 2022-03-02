@@ -22,7 +22,7 @@ env:
   # setuptools_scm: needed for versioning to work
   CONDA_DEFAULT_DEPENDENCIES: build nomkl setuptools_scm
   LATEST_SUPPORTED_PYTHON_VERSION: 3.9
-  SUPPORTED_PYTHON_VERSIONS: [3.7, 3.8, 3.9]
+  SUPPORTED_PYTHON_VERSIONS: "[3.7, 3.8, 3.9]"
 
 jobs:
   check-syntax-errors:
