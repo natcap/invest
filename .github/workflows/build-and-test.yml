@@ -20,8 +20,9 @@ env:
   # build: dependency of make install
   # nomkl: make sure numpy w/out mkl
   # setuptools_scm: needed for versioning to work
-  DEFAULT_DEPENDENCIES: build nomkl setuptools_scm
-  PYTHON_VERSION: 3.9
+  CONDA_DEFAULT_DEPENDENCIES: build nomkl setuptools_scm
+  LATEST_SUPPORTED_PYTHON_VERSION: 3.9
+  SUPPORTED_PYTHON_VERSIONS: [3.7, 3.8, 3.9]
 
 jobs:
   check-syntax-errors:
@@ -33,7 +34,7 @@ jobs:
       - name: Set up python
         uses: actions/setup-python@v2
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
+          python-version: ${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
 
       # this is fast enough that it's not worth caching
       - name: Set up environment
@@ -57,18 +58,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [3.7, 3.8, 3.9]
+        python-version: ${{ env.SUPPORTED_PYTHON_VERSIONS }}
         os: [windows-latest, macos-latest]
-        include:  # test with a range of numpy and gdal versions
-          - python-version: 3.7
-            numpy: "numpy==1.16.6"  # oldest version compatible with other requirements
-            gdal: "gdal==3.1.2"
-          - python-version: 3.8
-            numpy: "numpy==1.20.0"  # in between version
-            gdal: "gdal==3.3.1"
-          - python-version: 3.9
-            numpy: numpy           # latest version
-            gdal: gdal
     steps:
       - uses: actions/checkout@v2
         with:
@@ -89,11 +80,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           requirements-files: requirements.txt requirements-dev.txt requirements-gui.txt
-          requirements: |
-            ${{ env.DEFAULT_DEPENDENCIES }}
-            ${{ matrix.numpy }}
-            ${{ matrix.gdal }}
-            twine
+          requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }} twine
 
       - name: Download previous conda environment.yml
         continue-on-error: true
@@ -104,7 +91,7 @@ jobs:
           workflow: build-and-test.yml
           # Get frozen conda env artifact from last successful workflow
           workflow_conclusion: success
-          name: Conda Env for ${{ matrix.os }} ${{ matrix.python-version }} ${{ matrix.python-architecture }}
+          name: Conda Env for ${{ matrix.os }} ${{ matrix.python-version }}
           path: ./conda-env-artifact
 
       - name: Compare conda environments
@@ -155,7 +142,7 @@ jobs:
     needs: check-syntax-errors
     strategy:
       matrix:
-        python-version: [3.7, 3.8, 3.9]
+        python-version: ${{ env.SUPPORTED_PYTHON_VERSIONS }}
         os: [windows-latest, macos-latest]
     steps:
       - uses: actions/checkout@v2
@@ -164,7 +151,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           requirements-files: requirements.txt
-          requirements: ${{ env.DEFAULT_DEPENDENCIES }} twine
+          requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }} twine
 
       - name: Build source distribution
         run: |
@@ -200,17 +187,17 @@ jobs:
         # overwrite artifacts or have duplicates (mac/windows sdists have
         # different extensions)
       - name: Authenticate GCP
-        if: github.event_name != 'pull_request' && matrix.os == 'macos-latest' && matrix.python-version == env.PYTHON_VERSION
+        if: github.event_name != 'pull_request' && matrix.os == 'macos-latest' && matrix.python-version == env.LATEST_SUPPORTED_PYTHON_VERSION
         uses: google-github-actions/auth@v0
         with:
           credentials_json: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
 
       - name: Set up GCP
-        if: github.event_name != 'pull_request' && matrix.os == 'macos-latest' && matrix.python-version == env.PYTHON_VERSION
+        if: github.event_name != 'pull_request' && matrix.os == 'macos-latest' && matrix.python-version == env.LATEST_SUPPORTED_PYTHON_VERSION
         uses: google-github-actions/setup-gcloud@v0
 
       - name: Deploy artifacts to GCS
-        if: github.event_name != 'pull_request' && matrix.os == 'macos-latest' && matrix.python-version == env.PYTHON_VERSION
+        if: github.event_name != 'pull_request' && matrix.os == 'macos-latest' && matrix.python-version == env.LATEST_SUPPORTED_PYTHON_VERSION
         run: make deploy
 
   validate-resources:
@@ -224,9 +211,9 @@ jobs:
 
       - uses: ./.github/actions/setup_env
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
+          python-version: ${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
           requirements-files: requirements.txt
-          requirements: ${{ env.DEFAULT_DEPENDENCIES }} pytest
+          requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }} pytest
 
       - name: Make install
         run: make install
@@ -244,7 +231,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [3.7, 3.8, 3.9]
+        python-version: ${{ env.SUPPORTED_PYTHON_VERSIONS }}
 
     steps:
       - uses: actions/checkout@v2
@@ -261,7 +248,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           requirements-files: requirements.txt requirements-dev.txt requirements-gui.txt
-          requirements: ${{ env.DEFAULT_DEPENDENCIES }}
+          requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
 
       - name: Make install
         run: make install
@@ -289,9 +276,9 @@ jobs:
       - name: Set up python environment
         uses: ./.github/actions/setup_env
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
+          python-version: ${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
           requirements-files: requirements.txt requirements-dev.txt requirements-gui.txt
-          requirements: ${{ env.DEFAULT_DEPENDENCIES }}
+          requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
 
       - name: Make install
         run: make install
@@ -302,12 +289,14 @@ jobs:
           node-version: 14.x
 
       - name: Restore node_modules cache
+        id: nodemodules-cache
         uses: actions/cache@v2
         with:
           path: workbench/node_modules
           key: ${{ runner.os }}-${{ hashFiles('workbench/yarn.lock') }}
 
       - name: Install workbench dependencies
+        if: steps.nodemodules-cache.outputs.cache-hit != 'true'
         working-directory: workbench
         run: |
           yarn config set network-timeout 600000 -g
@@ -327,7 +316,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [macos-10.15, windows-latest]
-        include:  # test with a range of numpy and gdal versions
+        include:
           - os: macos-10.15
             binary-make-command: mac_dmg
             puppeteer-log: ~/Library/Logs/invest-workbench/
@@ -360,9 +349,19 @@ jobs:
         uses: actions/cache@v2
         with:
           path: |
-            C:\Program Files (x86)\NSIS\Include
-            C:\Program Files (x86)\NSIS\Plugins
-          key: NSIS-plugins
+            C:\Program Files (x86)\NSIS\Plugins\x86-ansi\Plugin\nsProcess.dll
+            C:\Program Files (x86)\NSIS\Include\Include\nsProcess.nsh
+            C:\Program Files (x86)\NSIS\Plugins\x86-ansi\Plugins\x86-ansi\INetC.dll
+            C:\Program Files (x86)\NSIS\Plugins\x86-ansi\nsisunz\Release\nsisunz.dll
+            C:\Program Files (x86)\NSIS\Plugins\x86-ansi\Plugins\x86-ansi\StdUtils.dll
+            C:\Program Files (x86)\NSIS\Plugins\x86-ansi\Plugins\x86-ansi\UAC.dll
+            C:\Program Files (x86)\NSIS\Include\Include\NsisMultiUser.nsh
+            C:\Program Files (x86)\NSIS\Include\Include\NsisMultiUserLang.nsh
+            C:\Program Files (x86)\NSIS\Include\Include\StdUtils.nsh
+            C:\Program Files (x86)\NSIS\Include\Include\UAC.nsh
+            C:\Program Files (x86)\NSIS\Include\Demos\Common\Utils.nsh
+            C:\Program Files (x86)\NSIS\Include\Demos\Common\un.Utils.nsh
+          key: NSIS_plugins
 
       - name: Download NSIS plugins (Windows)  # only if they couldn't be restored from the cache
         if: matrix.os == 'windows-latest' && steps.restore-nsis-cache.outputs.cache-hit != 'true'
@@ -372,9 +371,9 @@ jobs:
       - name: Set up conda environment
         uses: ./.github/actions/setup_env
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
+          python-version: ${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
           requirements-files: requirements.txt requirements-dev.txt requirements-gui.txt
-          requirements: ${{ env.DEFAULT_DEPENDENCIES }} pandoc
+          requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }} pandoc
 
       - name: Make install
         run: make install
@@ -388,12 +387,14 @@ jobs:
           node-version: 14.x
 
       - name: Restore node_modules cache
+        id: nodemodules-cache
         uses: actions/cache@v2
         with:
           path: workbench/node_modules
           key: ${{ runner.os }}-${{ hashFiles('workbench/yarn.lock') }}
 
       - name: Install Workbench Dependencies
+        if: steps.nodemodules-cache.outputs.cache-hit != 'true'
         working-directory: workbench
         run: |
           yarn config set network-timeout 600000 -g
@@ -499,7 +500,7 @@ jobs:
 
       - uses: actions/setup-python@v2
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
+          python-version: ${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
 
       - name: Install dependencies
         # dependencies of setup.py, needed to get the version string
