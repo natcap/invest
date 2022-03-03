@@ -464,12 +464,9 @@ class HRAUnitTests(unittest.TestCase):
             band = None
             raster = None
 
-
-
-
-
-
-
+    # TODO: test _prep_input_criterion_raster
+    # TODO: test _prep_input_habitat_or_stressor_raster
+    # TODO: test _align with rasters, binary vectors, float vectors.
 
 
 

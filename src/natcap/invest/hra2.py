@@ -308,17 +308,37 @@ def execute(args):
     _parse_criteria_table(
         args['criteria_table_path'], set(stressors.keys()),
         composite_criteria_table_path)
+    criteria_df = pandas.read_csv(composite_criteria_table_path,
+                                  index_col=False)
 
-    # Preprocess habitat and stressor datasets.
+    # Because criteria may be spatial, we need to prepare those spatial inputs
+    # as well.
+    spatial_criteria_attrs = {}
+    for (habitat, stressor, criterion, rating) in criteria_df[
+            ['habitat', 'stressor', 'criterion',
+             'rating']].itertuples(index=False):
+        if isinstance(rating, (int, float)):
+            continue  # obviously a numeric rating
+
+        # If the rating is non-numeric, it's a spatial criterion.
+        # this dict matches the structure of the outputs for habitat/stressor
+        # dicts, from _parse_info_table
+        name = f'{habitat}-{stressor}-{criterion}'
+        spatial_criteria_attrs[name] = {
+            'name': name,
+            'path': rating,  # Previously validated to be a GIS type.
+        }
+
+    # Preprocess habitat, stressor spatial criteria datasets.
     # All of these are spatial in nature but might be rasters or vectors.
     alignment_source_raster_paths = {}
     alignment_source_vector_paths = {}
-    aligned_raster_paths = []
     alignment_dependent_tasks = []
     aligned_habitat_raster_paths = []
     aligned_stressor_raster_paths = {}
     for name, attributes in itertools.chain(habitats.items(),
-                                            stressors.items()):
+                                            stressors.items(),
+                                            spatial_criteria_attrs.items()):
         source_filepath = attributes['path']
         gis_type = pygeoprocessing.get_gis_type(source_filepath)
         aligned_raster_path = os.path.join(
@@ -331,16 +351,40 @@ def execute(args):
                 intermediate_dir, 'rewritten_{name}{suffix}.tif')
             alignment_source_raster_paths[
                 rewritten_raster_path] = aligned_raster_path
-            alignment_dependent_tasks.append(graph.add_task(
-                func=_prep_input_raster,
-                kwargs={
-                    'source_raster_path': source_filepath,
-                    'target_filepath': rewritten_raster_path,
-                },
-                task_name=f'Rewrite {name} raster for consistency',
-                target_path_list=rewritten_raster_path,
-                dependent_task_list=[]
-            ))
+            # TODO: make sure we can handle spatial criteria
+            # Habitats/stressors must have pixel values of 0 or 1.
+            # Criteria may be between [0, max_criteria_score]
+            if name in spatial_criteria_attrs:
+                # Spatial criteria rasters can represent any positive real
+                # values, though they're supposed to be in the range [0, max
+                # criteria score], inclusive.
+                prep_raster_task = graph.add_task(
+                    func=_prep_input_criterion_raster,
+                    kwargs={
+                        'source_raster_path': source_filepath,
+                        'target_filepath': rewritten_raster_path,
+                    },
+                    task_name=(
+                        f'Rewrite {name} criteria raster for consistency'),
+                    target_path_list=rewritten_raster_path,
+                    dependent_task_list=[]
+                )
+            else:
+                # habitat/stressor rasters represent presence/absence in the
+                # form of 1 or 0 pixel values.
+                prep_raster_task = graph.add_task(
+                    func=_prep_input_habitat_or_stressor_raster,
+                    kwargs={
+                        'source_raster_path': source_filepath,
+                        'target_filepath': rewritten_raster_path,
+                    },
+                    task_name=(
+                        f'Rewrite {name} habitat/stressor raster for '
+                        'consistency'),
+                    target_path_list=rewritten_raster_path,
+                    dependent_task_list=[]
+                )
+            alignment_dependent_tasks.append(prep_raster_task)
 
         # If the input is a vector, reproject to the AOI SRS and simplify.
         # Rasterization happens in the alignment step.
@@ -363,6 +407,14 @@ def execute(args):
                 dependent_task_list=[]
             )
 
+            # Spatial habitats/stressors are rasterized as presence/absence, so
+            # we don't need to preserve any columns.
+            fields_to_preserve = None
+            if name in spatial_criteria_attrs:
+                # In spatial criteria vectors, the 'rating' field contains the
+                # numeric rating that needs to be rasterized.
+                fields_to_preserve = ['rating']
+
             target_simplified_vector = os.path.join(
                 intermediate_dir, f'simplified_{name}{suffix}.gpkg')
             alignment_source_vector_paths[
@@ -373,6 +425,7 @@ def execute(args):
                     'source_vector_path': source_filepath,
                     'tolerance': resolution / 2,  # by the nyquist theorem.
                     'target_vector_path': target_simplified_vector,
+                    'preserve_columns': fields_to_preserve,
                 },
                 task_name=f'Simplify {name}',
                 target_path_list=[target_simplified_vector],
@@ -386,6 +439,7 @@ def execute(args):
         else:  # must be a stressor
             aligned_stressor_raster_paths[name] = aligned_raster_path
 
+    # TODO: this doesn't yet include spatial criteria
     alignment_task = graph.add_task(
         func=_align,
         kwargs={
@@ -438,7 +492,6 @@ def execute(args):
             dependent_task_list=[alignment_task]
         )
 
-    criteria_df = pandas.read_csv(composite_criteria_table_path)
     cumulative_risk_to_habitat_paths = []
     cumulative_risk_to_habitat_tasks = []
     reclassified_rasters = []  # For visualization geojson, if requested
@@ -1234,7 +1287,9 @@ def _align(raster_path_map, vector_path_map, target_pixel_size,
             raster paths.  This dict may be empty.
         vector_path_map (dict): A dict mapping source vector paths to aligned
             raster paths.  This dict may be empty.  These source vectors must
-            already be in the target projection's SRS.
+            already be in the target projection's SRS.  If a 'rating'
+            (case-insensitive) column is present, then those values will be
+            rasterized.  Otherwise, 1 will be rasterized.
         target_pixel_size (tuple): The pixel size of the target rasters, in
             the form (x, y), expressed in meters.
         target_srs_wkt (string): The target SRS of the aligned rasters.
@@ -1288,20 +1343,41 @@ def _align(raster_path_map, vector_path_map, target_pixel_size,
     if vector_path_map:
         LOGGER.info(f'Aligning {len(vector_path_map)} vectors')
         for source_vector_path, target_raster_path in vector_path_map.items():
-            # TODO: spatially-explicit criteria may have floating-point fields
+            # if there's a 'rating' column, then we're rasterizing a vector
+            # attribute that represents a positive floating-point value.
+            vector = gdal.OpenEx(source_vector_path, gdal.OF_VECTOR)
+            layer = vector.GetLayer()
+            raster_type = _TARGET_GDAL_TYPE_BYTE
+            nodata_value = _TARGET_NODATA_BYTE
+            burn_values = [1]
+            rasterize_option_list = ['ALL_TOUCHED=TRUE']
+
+            for field in layer.schema:
+                fieldname = field.GetName()
+                if fieldname.lower() == 'rating':
+                    rasterize_option_list.append(
+                        f'ATTRIBUTE={fieldname}')
+                    raster_type = _TARGET_GDAL_TYPE_FLOAT32
+                    nodata_value = _TARGET_NODATA_FLOAT32
+                    burn_values = None
+                    break
+
+            layer = None
+            vector = None
+
             _create_raster_from_bounding_box(
                 target_raster_path=target_raster_path,
                 target_bounding_box=target_bounding_box,
                 target_pixel_size=target_pixel_size,
-                target_pixel_type=_TARGET_GDAL_TYPE_BYTE,
+                target_pixel_type=raster_type,
                 target_srs_wkt=target_srs_wkt,
-                target_nodata=_TARGET_NODATA_BYTE,
-                fill_value=_TARGET_NODATA_BYTE
+                target_nodata=nodata_value,
+                fill_value=nodata_value
             )
 
             pygeoprocessing.rasterize(
                 source_vector_path, target_raster_path,
-                burn_values=[1], option_list=['ALL_TOUCHED=TRUE'])
+                burn_values=burn_values, option_list=rasterize_option_list)
 
 
 def _create_raster_from_bounding_box(
@@ -1447,7 +1523,31 @@ def _simplify(source_vector_path, tolerance, target_vector_path,
     target_vector = None
 
 
-def _prep_input_raster(source_raster_path, target_raster_path):
+def _prep_input_criterion_raster(
+        source_raster_path, target_raster_path):
+    source_nodata = pygeoprocessing.get_raster_info(
+        source_raster_path)['nodata'][0]
+
+    def _translate_op(source_rating_array):
+        target_rating_array = numpy.full(
+            source_rating_array.shape, _TARGET_NODATA_FLOAT32,
+            dtype=numpy.float32)
+        # Anything less than 0 should be ignored.
+        # Anything greater than or equal than 0 should be left as-is.
+        valid_mask = (
+             ~utils.array_equals_nodata(
+                 source_rating_array, source_nodata) &
+             source_rating_array >= 0.0)
+        target_rating_array[valid_mask] = source_rating_array[valid_mask]
+        return target_rating_array
+
+    pygeoprocessing.raster_calculator(
+        [(source_raster_path, 1)], _translate_op, target_raster_path,
+        _TARGET_GDAL_TYPE_FLOAT32, _TARGET_NODATA_FLOAT32)
+
+
+def _prep_input_habitat_or_stressor_raster(
+        source_raster_path, target_raster_path):
     # The intent of this function is to take whatever raster the user gives us
     # and convert its pixel values to 1 or nodata.
 
@@ -1481,6 +1581,7 @@ def _parse_info_table(info_table_path):
 
     table = utils.read_csv_to_dataframe(info_table_path, to_lower=True)
     table = table.set_index('name')
+    # TODO: do we buffer these yet?
     table = table.rename(columns={'stressor buffer (meters)': 'buffer'})
 
     def _make_abspath(row):
@@ -1505,6 +1606,7 @@ def _parse_info_table(info_table_path):
     return (habitats, stressors)
 
 
+# TODO: validate spatial criteria can be opened by GDAL.
 def _parse_criteria_table(criteria_table_path, known_stressors,
                           target_composite_csv_path):
 
