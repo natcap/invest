@@ -855,6 +855,27 @@ def _create_mask_for_polygonization(source_raster_path, target_raster_path):
         gdal.GDT_Byte, 0)
 
 
+def _convert_to_binary_mask(source_raster_path, target_raster_path,
+                            target_nodata):
+    nodata = pygeoprocessing.get_raster_info(source_raster_path)['nodata'][0]
+
+    def _rewrite(*raster_values):
+        """Convert any non-nodata values to 1, all other values to 0.
+
+        Args:
+            raster_values (numpy.array): Integer pixel values from the source
+                raster.
+
+        Returns:
+            out_array (numpy.array): An unsigned byte mask with pixel values of
+            0 (on nodata pixels) or 1 (on non-nodata pixels)."""
+        return (raster_values != nodata).astype(numpy.uint8)
+
+    pygeoprocessing.raster_calculator(
+        [(source_raster_path, 1)], _rewrite, target_raster_path,
+        gdal.GDT_Byte, target_nodata)
+
+
 def _polygonize(source_raster_path, mask_raster_path,
                 target_polygonized_vector, field_name):
     """Polygonize a raster.
@@ -1267,6 +1288,7 @@ def _align(raster_path_map, vector_path_map, target_pixel_size,
     if vector_path_map:
         LOGGER.info(f'Aligning {len(vector_path_map)} vectors')
         for source_vector_path, target_raster_path in vector_path_map.items():
+            # TODO: spatially-explicit criteria may have floating-point fields
             _create_raster_from_bounding_box(
                 target_raster_path=target_raster_path,
                 target_bounding_box=target_bounding_box,
@@ -1304,8 +1326,9 @@ def _create_raster_from_bounding_box(
         fill_value=None (number): If provided, the value that the target raster
             should be filled with.
 
+    Returns:
+        ``None``
     """
-
     bbox_minx, bbox_miny, bbox_maxx, bbox_maxy = target_bounding_box
 
     driver = gdal.GetDriverByName('GTiff')
@@ -1351,6 +1374,25 @@ def _create_raster_from_bounding_box(
 
 def _simplify(source_vector_path, tolerance, target_vector_path,
               preserve_columns=None):
+    """Simplify a geometry to a given tolerance.
+
+    This function uses the GEOS SimplifyPreserveTopology function under the
+    hood.  For docs, see GEOSTopologyPreserveSimplify() at
+    https://libgeos.org/doxygen/geos__c_8h.html
+
+    Args:
+        source_vector_path (string): The path to a source vector to simplify.
+        tolerance (number): The numerical tolerance to simplify by.
+        target_vector_path (string): Where the simplified geometry should be
+            stored on disk.
+        preserve_columns=None (iterable or None): If provided, this is an
+            iterable of string column names (case-insensitive) that should be
+            carried over from the source vector to the target vector.  If
+            ``None``, no columns will be carried over.
+
+    Returns:
+        ``None``.
+    """
     if preserve_columns is None:
         preserve_columns = []
     preserve_columns = set(name.lower() for name in preserve_columns)

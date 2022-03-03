@@ -264,8 +264,10 @@ class HRAUnitTests(unittest.TestCase):
         from natcap.invest import hra2
 
         geoms = [
-            shapely.geometry.Point((ORIGIN[0] + 50, ORIGIN[1] + 50)).buffer(100),
-            shapely.geometry.Point((ORIGIN[0] + 25, ORIGIN[1] + 25)).buffer(50),
+            shapely.geometry.Point(
+                (ORIGIN[0] + 50, ORIGIN[1] + 50)).buffer(100),
+            shapely.geometry.Point(
+                (ORIGIN[0] + 25, ORIGIN[1] + 25)).buffer(50),
         ]
         source_vector_path = os.path.join(self.workspace_dir,
                                           'source_vector.shp')
