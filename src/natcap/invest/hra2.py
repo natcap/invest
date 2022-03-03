@@ -1303,10 +1303,19 @@ def _align(raster_path_map, vector_path_map, target_pixel_size,
     bounding_box_list = []
     source_raster_paths = []
     aligned_raster_paths = []
+    resample_method_list = []
     for source_raster_path, aligned_raster_path in raster_path_map.items():
         source_raster_paths.append(source_raster_path)
         aligned_raster_paths.append(aligned_raster_path)
         raster_info = pygeoprocessing.get_raster_info(source_raster_path)
+
+        # Integer (discrete) rasters should be nearest-neighbor, continuous
+        # rasters should be interpolated with bilinear.
+        if numpy.issubdtype(raster_info['numpy_type'], numpy.integer):
+            resample_method_list.append('near')
+        else:
+            resample_method_list.append('bilinear')
+
         bounding_box_list.append(pygeoprocessing.transform_bounding_box(
             raster_info['bounding_box'], raster_info['projection_wkt'],
             target_srs_wkt))
@@ -1332,7 +1341,7 @@ def _align(raster_path_map, vector_path_map, target_pixel_size,
             resample_method_list=['near'] * len(source_raster_paths),
             target_pixel_size=target_pixel_size,
             bounding_box_mode=target_bounding_box,
-            target_srs_wkt=target_srs_wkt
+            target_projection_wkt=target_srs_wkt
         )
 
     # Step 3: Rasterize vectors onto aligned rasters.

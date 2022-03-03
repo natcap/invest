@@ -1,4 +1,5 @@
 import io
+import itertools
 import json
 import math
 import os
@@ -490,7 +491,6 @@ class HRAUnitTests(unittest.TestCase):
             pygeoprocessing.get_raster_info(target_filepath)['nodata'][0],
             hra2._TARGET_NODATA_FLOAT32)
 
-    # TODO: test _prep_input_habitat_or_stressor_raster
     def test_prep_input_habitat_or_stressor_raster(self):
         from natcap.invest import hra2
 
@@ -517,8 +517,125 @@ class HRAUnitTests(unittest.TestCase):
             pygeoprocessing.get_raster_info(target_filepath)['nodata'][0],
             hra2._TARGET_NODATA_BYTE)
 
-
     # TODO: test _align with rasters, binary vectors, float vectors.
+    def test_align(self):
+        from natcap.invest import hra2
+
+        # habitat raster
+        # habitat vector
+        # criterion raster
+        # criterion vector
+
+        habitat_raster_path = os.path.join(
+            self.workspace_dir, 'habitat_raster.tif')
+        habitat_array = numpy.array([
+            [0, 1, 0],
+            [1, 1, 1],
+            [0, 1, 0]], dtype=numpy.uint8)
+        # pixel size is slightly smaller to force a change.
+        pygeoprocessing.numpy_array_to_raster(
+            habitat_array, hra2._TARGET_NODATA_BYTE, (29, -29), ORIGIN,
+            SRS_WKT, habitat_raster_path)
+
+        criterion_raster_path = os.path.join(
+            self.workspace_dir, 'criterion_raster.tif')
+        criterion_array = numpy.array([
+            [1.1, 1, 0.9, 0.8, 0.7],
+            [1.1, 1, 0.9, 0.8, 0.7],
+            [1.1, 1, 0.9, 0.8, 0.7],
+            [1.1, 1, 0.9, 0.8, 0.7]], dtype=numpy.float32)
+        pygeoprocessing.numpy_array_to_raster(
+            criterion_array, hra2._TARGET_NODATA_FLOAT32, (30, -30), ORIGIN,
+            SRS_WKT, criterion_raster_path)
+
+        habitat_vector_path = os.path.join(
+            self.workspace_dir, 'habitat_vector.shp')
+        habitat_polygons = [
+            shapely.geometry.Point(
+                (ORIGIN[0] + 50, ORIGIN[1] - 50)).buffer(30)]
+        pygeoprocessing.shapely_geometry_to_vector(
+            habitat_polygons, habitat_vector_path, SRS_WKT, 'ESRI Shapefile')
+
+        criterion_vector_path = os.path.join(
+            self.workspace_dir, 'criterion_vector.shp')
+        criterion_polygons = [
+            shapely.geometry.Point(
+                (ORIGIN[0] - 50, ORIGIN[1] + 50)).buffer(100)]
+        pygeoprocessing.shapely_geometry_to_vector(
+            criterion_polygons, criterion_vector_path, SRS_WKT,
+            vector_format='ESRI Shapefile',
+            fields={'RatInG': ogr.OFTReal},  # test case sensitivity.
+            attribute_list=[{'RatInG': 0.12}]
+        )
+
+        raster_path_map = {
+            habitat_raster_path: os.path.join(
+                self.workspace_dir, 'aligned_habitat_raster.tif'),
+            criterion_raster_path: os.path.join(
+                self.workspace_dir, 'aligned_criterion_raster.tif')
+        }
+        vector_path_map = {
+            habitat_vector_path: os.path.join(
+                self.workspace_dir, 'aligned_habitat_vector.tif'),
+            criterion_vector_path: os.path.join(
+                self.workspace_dir, 'aligned_criterion_vector.tif'),
+        }
+
+        hra2._align(raster_path_map, vector_path_map, (30, -30), SRS_WKT)
+
+        # Calculated by hand given the above spatial inputs and
+        # (30, -30) pixels.  All rasters should share the same extents and
+        # pixel size.
+        expected_bounding_box = [
+            ORIGIN[0] - 150,
+            ORIGIN[1] - 120,
+            ORIGIN[0] + 150,
+            ORIGIN[1] + 150
+        ]
+        for aligned_raster_path in itertools.chain(raster_path_map.values(),
+                                                   vector_path_map.values()):
+            raster_info = pygeoprocessing.get_raster_info(aligned_raster_path)
+            self.assertEqual(raster_info['pixel_size'], (30, -30))
+            self.assertEqual(raster_info['bounding_box'],
+                             expected_bounding_box)
+
+        # The aligned habitat raster should have been rasterized as all 1s on a
+        # field of nodata.
+        expected_habitat_array = numpy.array([
+            [255, 255, 255, 255, 255, 255, 255, 255, 255, 255],
+            [255, 255, 255, 255, 255, 255, 255, 255, 255, 255],
+            [255, 255, 255, 255, 255, 255, 255, 255, 255, 255],
+            [255, 255, 255, 255, 255, 255, 255, 255, 255, 255],
+            [255, 255, 255, 255, 255, 255, 255, 255, 255, 255],
+            [255, 255, 255, 255, 255, 1, 1, 1, 255, 255],
+            [255, 255, 255, 255, 255, 1, 1, 1, 255, 255],
+            [255, 255, 255, 255, 255, 1, 1, 1, 255, 255],
+            [255, 255, 255, 255, 255, 255, 255, 255, 255, 255]],
+            dtype=numpy.uint8)
+        aligned_habitat_array = pygeoprocessing.raster_to_numpy_array(
+            vector_path_map[habitat_vector_path])
+        numpy.testing.assert_equal(
+            aligned_habitat_array, expected_habitat_array)
+
+        # The aligned criterion raster should have been rasterized from the
+        # rating column.
+        ndta = hra2._TARGET_NODATA_FLOAT32
+        expected_criterion_array = numpy.array([
+            [0.12, 0.12, 0.12, 0.12, 0.12, 0.12, ndta, ndta, ndta, ndta],
+            [0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, ndta, ndta, ndta],
+            [0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, ndta, ndta, ndta],
+            [0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, ndta, ndta, ndta],
+            [0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, ndta, ndta, ndta],
+            [0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, ndta, ndta, ndta],
+            [ndta, 0.12, 0.12, 0.12, 0.12, 0.12, ndta, ndta, ndta, ndta],
+            [ndta, ndta, ndta, ndta, ndta, ndta, ndta, ndta, ndta, ndta],
+            [ndta, ndta, ndta, ndta, ndta, ndta, ndta, ndta, ndta, ndta]],
+            dtype=numpy.float32)
+        aligned_criterion_array = pygeoprocessing.raster_to_numpy_array(
+            vector_path_map[criterion_vector_path])
+        numpy.testing.assert_allclose(
+            aligned_criterion_array, expected_criterion_array)
+
 
 
 
