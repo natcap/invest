@@ -347,7 +347,7 @@ jobs:
         if: matrix.os == 'windows-latest'
         uses: actions/cache@v2
         with:
-          path: |
+          path: | # update this list of paths if windows-ci-binary-install.ps1 changes
             C:\Program Files (x86)\NSIS\Plugins\x86-ansi\Plugin\nsProcess.dll
             C:\Program Files (x86)\NSIS\Include\Include\nsProcess.nsh
             C:\Program Files (x86)\NSIS\Plugins\x86-ansi\Plugins\x86-ansi\INetC.dll
@@ -360,7 +360,7 @@ jobs:
             C:\Program Files (x86)\NSIS\Include\Include\UAC.nsh
             C:\Program Files (x86)\NSIS\Include\Demos\Common\Utils.nsh
             C:\Program Files (x86)\NSIS\Include\Demos\Common\un.Utils.nsh
-          key: NSIS_plugins
+          key: NSIS-plugins-${{ hashFiles('ci/windows-ci-binary-install.ps1') }}
 
       - name: Download NSIS plugins (Windows)  # only if they couldn't be restored from the cache
         if: matrix.os == 'windows-latest' && steps.restore-nsis-cache.outputs.cache-hit != 'true'

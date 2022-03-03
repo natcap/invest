@@ -1,4 +1,5 @@
 # Download and install NSIS plugins to their correct places.
+# Update the list of cached files in .github/workflows/build-and-test.ym if we add or remove any plugins.
 Write-Host "Downloading and extracting NSIS"
 Invoke-WebRequest https://storage.googleapis.com/natcap-build-dependencies/windows/Inetc.zip -OutFile Inetc.zip
 Invoke-WebRequest https://storage.googleapis.com/natcap-build-dependencies/windows/Nsisunz.zip -OutFile Nsisunz.zip
