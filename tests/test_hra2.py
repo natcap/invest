@@ -464,7 +464,35 @@ class HRAUnitTests(unittest.TestCase):
             band = None
             raster = None
 
-    # TODO: test _prep_input_criterion_raster
+    def test_prep_input_criterion_raster(self):
+        from natcap.invest import hra2
+
+        # less than 0
+        # convert nodata
+        nodata = -1
+        source_matrix = numpy.array([
+            [nodata, -2, 1.3],
+            [2.2, 2, 1]], dtype=numpy.float32)
+        source_filepath = os.path.join(self.workspace_dir, 'source.tif')
+
+        pygeoprocessing.numpy_array_to_raster(
+            source_matrix, nodata, (30, -30), ORIGIN, SRS_WKT, source_filepath)
+
+        target_filepath = os.path.join(self.workspace_dir, 'target.tif')
+        hra2._prep_input_criterion_raster(
+            source_filepath, target_filepath)
+
+        converted_array = pygeoprocessing.raster_to_numpy_array(
+            target_filepath)
+        expected_array = numpy.array([
+            [hra2._TARGET_NODATA_FLOAT32, hra2._TARGET_NODATA_FLOAT32, 1.3],
+            [2.2, 2, 1]], dtype=numpy.float32)
+        numpy.testing.assert_allclose(converted_array, expected_array)
+        self.assertEqual(
+            pygeoprocessing.get_raster_info(target_filepath)['nodata'][0],
+            hra2._TARGET_NODATA_FLOAT32)
+
+
     # TODO: test _prep_input_habitat_or_stressor_raster
     # TODO: test _align with rasters, binary vectors, float vectors.
 

@@ -1535,9 +1535,9 @@ def _prep_input_criterion_raster(
         # Anything less than 0 should be ignored.
         # Anything greater than or equal than 0 should be left as-is.
         valid_mask = (
-             ~utils.array_equals_nodata(
-                 source_rating_array, source_nodata) &
-             source_rating_array >= 0.0)
+             (~utils.array_equals_nodata(
+                 source_rating_array, source_nodata)) &
+             (source_rating_array >= 0.0))
         target_rating_array[valid_mask] = source_rating_array[valid_mask]
         return target_rating_array
 
