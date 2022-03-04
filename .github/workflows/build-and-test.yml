@@ -331,6 +331,10 @@ jobs:
         with:
           fetch-depth: 0 # Fetch complete history for accurate versioning
 
+      - run: |
+          ls "C:\Program Files (x86)\NSIS\Plugins\x86-ansi\"
+          ls "C:\Program Files (x86)\NSIS\Include"
+
         # Not caching chocolatey packages because the cache may not be reliable
         # https://github.com/chocolatey/choco/issues/2134
         # and this step only takes about 30 seconds.
@@ -348,19 +352,19 @@ jobs:
         uses: actions/cache@v2
         with:
           path: | # update this list of paths if windows-ci-binary-install.ps1 changes
-            C:\Program Files (x86)\NSIS\Plugins\x86-ansi\Plugin\nsProcess.dll
-            C:\Program Files (x86)\NSIS\Include\Include\nsProcess.nsh
-            C:\Program Files (x86)\NSIS\Plugins\x86-ansi\Plugins\x86-ansi\INetC.dll
-            C:\Program Files (x86)\NSIS\Plugins\x86-ansi\nsisunz\Release\nsisunz.dll
-            C:\Program Files (x86)\NSIS\Plugins\x86-ansi\Plugins\x86-ansi\StdUtils.dll
-            C:\Program Files (x86)\NSIS\Plugins\x86-ansi\Plugins\x86-ansi\UAC.dll
-            C:\Program Files (x86)\NSIS\Include\Include\NsisMultiUser.nsh
-            C:\Program Files (x86)\NSIS\Include\Include\NsisMultiUserLang.nsh
-            C:\Program Files (x86)\NSIS\Include\Include\StdUtils.nsh
-            C:\Program Files (x86)\NSIS\Include\Include\UAC.nsh
-            C:\Program Files (x86)\NSIS\Include\Demos\Common\Utils.nsh
-            C:\Program Files (x86)\NSIS\Include\Demos\Common\un.Utils.nsh
-          key: NSIS_xrplugins-${{ hashFiles('ci/windows-ci-binary-install.ps1') }}
+            C:\Program Files (x86)\NSIS\Plugins\x86-ansi\nsProcess.dll
+            C:\Program Files (x86)\NSIS\Include\nsProcess.nsh
+            C:\Program Files (x86)\NSIS\Plugins\x86-ansi\INetC.dll
+            C:\Program Files (x86)\NSIS\Plugins\x86-ansi\nsisunz.dll
+            C:\Program Files (x86)\NSIS\Plugins\x86-ansi\StdUtils.dll
+            C:\Program Files (x86)\NSIS\Plugins\x86-ansi\UAC.dll
+            C:\Program Files (x86)\NSIS\Include\NsisMultiUser.nsh
+            C:\Program Files (x86)\NSIS\Include\NsisMultiUserLang.nsh
+            C:\Program Files (x86)\NSIS\Include\StdUtils.nsh
+            C:\Program Files (x86)\NSIS\Include\UAC.nsh
+            C:\Program Files (x86)\NSIS\Include\Utils.nsh
+            C:\Program Files (x86)\NSIS\Include\un.Utils.nsh
+          key: NSIS-plugins--${{ hashFiles('ci/windows-ci-binary-install.ps1') }}
 
       - name: Download NSIS plugins (Windows)  # only if they couldn't be restored from the cache
         if: matrix.os == 'windows-latest' && steps.restore-nsis-cache.outputs.cache-hit != 'true'
@@ -369,24 +373,8 @@ jobs:
 
       - name: check nsis plugins
         run: |
-          echo "C:\Program Files (x86)"
-          ls "C:\Program Files (x86)"
-
-          echo "C:\Program Files (x86)\NSIS"
-          ls "C:\Program Files (x86)\NSIS"
-
-          echo "C:\Program Files (x86)\NSIS\Plugins"
-          ls "C:\Program Files (x86)\NSIS\Plugins"
-
-          echo "C:\Program Files (x86)\NSIS\Plugins\x86-ansi"
-          ls "C:\Program Files (x86)\NSIS\Plugins\x86-ansi"
-
-          echo "C:\Program Files (x86)\NSIS\Include"
+          ls "C:\Program Files (x86)\NSIS\Plugins\x86-ansi\"
           ls "C:\Program Files (x86)\NSIS\Include"
-
-          echo "C:\Program Files (x86)\NSIS\Include\Include"
-          ls "C:\Program Files (x86)\NSIS\Include\Include"
-
 
       - name: Set up conda environment
         uses: ./.github/actions/setup_env
