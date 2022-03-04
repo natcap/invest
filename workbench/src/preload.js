@@ -8,6 +8,7 @@ const {
 } = require('electron');
 const crypto = require('crypto');
 
+const { ipcMainChannels } = require('./main/ipcMainChannels');
 const { getLogger } = require('./logger');
 
 contextBridge.exposeInMainWorld('Workbench', {
@@ -21,7 +22,28 @@ contextBridge.exposeInMainWorld('Workbench', {
     ).digest('hex');
   },
   electron: {
-    ipcRenderer: ipcRenderer,
+    ipcRenderer: {
+      invoke: (channel, data) => {
+        if (Object.values(ipcMainChannels).includes(channel)) {
+          ipcRenderer.invoke(channel, data);
+        }
+      },
+      send: (channel, data) => {
+        if (Object.values(ipcMainChannels).includes(channel)) {
+          ipcRenderer.send(channel, data);
+        }
+      },
+      sendSync: (channel, data) => {
+        if (Object.values(ipcMainChannels).includes(channel)) {
+          ipcRenderer.sendSync(channel, data);
+        }
+      },
+      on: (channel, func) => {
+        if (Object.values(ipcMainChannels).includes(channel)) {
+          ipcRenderer.on(channel, (event, ...args) => func(...args));
+        }
+      },
+    },
     shell: shell,
   },
 });
