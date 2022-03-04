@@ -1534,15 +1534,44 @@ def _simplify(source_vector_path, tolerance, target_vector_path,
 
 def _prep_input_criterion_raster(
         source_raster_path, target_raster_path):
+    """Prepare an input criterion raster for internal use.
+
+    In order to make raster calculations more consistent within HRA, it's
+    helpful to preprocess spatially-explicity criteria rasters for consistency.
+    Rasters produced by this function will have:
+
+        * A nodata value matching ``_TARGET_NODATA_FLOAT32``
+        * Source values < 0 are converted to ``_TARGET_NODATA_FLOAT32``
+
+    Args:
+        source_raster_path (string): The path to a user-provided criterion
+            raster.
+        target_raster_path (string): The path to where the translated raster
+            should be written on disk.
+
+    Returns:
+        ``None``.
+    """
     source_nodata = pygeoprocessing.get_raster_info(
         source_raster_path)['nodata'][0]
 
     def _translate_op(source_rating_array):
+        """Translate rating pixel values.
+
+            * Nodata values should have the new (internal) nodata.
+            * Anything < 0 should become nodata.
+            * Anything >= 0 is assumed to be valid and left as-is.
+
+        Args:
+            source_rating_array (numpy.array): An array of rating values.
+
+        Returns:
+            ``target_rating_array`` (numpy.array): An array with
+                potentially-translated values.
+        """
         target_rating_array = numpy.full(
             source_rating_array.shape, _TARGET_NODATA_FLOAT32,
             dtype=numpy.float32)
-        # Anything less than 0 should be ignored.
-        # Anything greater than or equal than 0 should be left as-is.
         valid_mask = (
              (~utils.array_equals_nodata(
                  source_rating_array, source_nodata)) &

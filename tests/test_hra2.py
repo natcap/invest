@@ -430,8 +430,6 @@ class HRAUnitTests(unittest.TestCase):
              }}
         )
 
-    # TODO: test alignment function
-
     def test_create_raster_from_bounding_box(self):
         from natcap.invest import hra2
 
@@ -517,14 +515,8 @@ class HRAUnitTests(unittest.TestCase):
             pygeoprocessing.get_raster_info(target_filepath)['nodata'][0],
             hra2._TARGET_NODATA_BYTE)
 
-    # TODO: test _align with rasters, binary vectors, float vectors.
     def test_align(self):
         from natcap.invest import hra2
-
-        # habitat raster
-        # habitat vector
-        # criterion raster
-        # criterion vector
 
         habitat_raster_path = os.path.join(
             self.workspace_dir, 'habitat_raster.tif')
@@ -636,6 +628,43 @@ class HRAUnitTests(unittest.TestCase):
         numpy.testing.assert_allclose(
             aligned_criterion_array, expected_criterion_array)
 
+    def test_prep_criterion_raster(self):
+        from natcap.invest import hra2
+
+        # Test what happens when the raster has a defined nodata value.
+        nodata = 255
+        criterion_array_with_nodata = numpy.array([
+            [-1, 0, 1.67, nodata]], dtype=numpy.float32)
+        raster_path = os.path.join(
+            self.workspace_dir, 'raster_with_nodata.tif')
+        pygeoprocessing.numpy_array_to_raster(
+            criterion_array_with_nodata, nodata, (30, -30), ORIGIN, SRS_WKT,
+            raster_path)
+        target_raster_path = os.path.join(self.workspace_dir, 'target.tif')
+        hra2._prep_input_criterion_raster(raster_path, target_raster_path)
+        expected_array = numpy.array([
+            [hra2._TARGET_NODATA_FLOAT32, 0, 1.67,
+             hra2._TARGET_NODATA_FLOAT32]], dtype=numpy.float32)
+        numpy.testing.assert_allclose(
+            pygeoprocessing.raster_to_numpy_array(target_raster_path),
+            expected_array)
+
+        # Test what happens when the raster does not have a defined nodata
+        # value
+        criterion_array_without_nodata = numpy.array([
+            [-1, 0, 0.33, 2]], dtype=numpy.float32)
+        raster_path = os.path.join(
+            self.workspace_dir, 'raster_without_nodata.tif')
+        pygeoprocessing.numpy_array_to_raster(
+            criterion_array_without_nodata, None, (30, -30), ORIGIN, SRS_WKT,
+            raster_path)
+        target_raster_path = os.path.join(self.workspace_dir, 'target.tif')
+        hra2._prep_input_criterion_raster(raster_path, target_raster_path)
+        expected_array = numpy.array([
+            [hra2._TARGET_NODATA_FLOAT32, 0, 0.33, 2]], dtype=numpy.float32)
+        numpy.testing.assert_allclose(
+            pygeoprocessing.raster_to_numpy_array(target_raster_path),
+            expected_array)
 
 
 
