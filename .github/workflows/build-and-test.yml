@@ -360,7 +360,7 @@ jobs:
             C:\Program Files (x86)\NSIS\Include\Include\UAC.nsh
             C:\Program Files (x86)\NSIS\Include\Demos\Common\Utils.nsh
             C:\Program Files (x86)\NSIS\Include\Demos\Common\un.Utils.nsh
-          key: NSIS_plugins-${{ hashFiles('ci/windows-ci-binary-install.ps1') }}
+          key: NSIS_xrplugins-${{ hashFiles('ci/windows-ci-binary-install.ps1') }}
 
       - name: Download NSIS plugins (Windows)  # only if they couldn't be restored from the cache
         if: matrix.os == 'windows-latest' && steps.restore-nsis-cache.outputs.cache-hit != 'true'
@@ -369,11 +369,23 @@ jobs:
 
       - name: check nsis plugins
         run: |
+          echo "C:\Program Files (x86)"
           ls "C:\Program Files (x86)"
+
+          echo "C:\Program Files (x86)\NSIS"
           ls "C:\Program Files (x86)\NSIS"
+
+          echo "C:\Program Files (x86)\NSIS\Plugins"
           ls "C:\Program Files (x86)\NSIS\Plugins"
-          ls "C:\Program Files (x86)\NSIS\Plugins\x86-ansi\"
-          ls "C:\Program Files (x86)\NSIS\Include\Include\"
+
+          echo "C:\Program Files (x86)\NSIS\Plugins\x86-ansi"
+          ls "C:\Program Files (x86)\NSIS\Plugins\x86-ansi"
+
+          echo "C:\Program Files (x86)\NSIS\Include"
+          ls "C:\Program Files (x86)\NSIS\Include"
+
+          echo "C:\Program Files (x86)\NSIS\Include\Include"
+          ls "C:\Program Files (x86)\NSIS\Include\Include"
 
 
       - name: Set up conda environment
