@@ -152,7 +152,7 @@ def execute(args):
             nearest stream pixel.  If ``True``, ``args['flow_threshold']``
             and ``args['snap_distance']`` must also be defined.
         args['flow_threshold'] (int):  The number of upslope cells that must
-            into a cell before it's considered part of a stream such that
+            flow into a cell before it's considered part of a stream such that
             retention stops and the remaining export is exported to the stream.
             Used to define streams from the DEM.
         args['snap_distance'] (int):  Pixel Distance to Snap Outlet Points
