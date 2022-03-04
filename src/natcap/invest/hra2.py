@@ -1586,17 +1586,30 @@ def _prep_input_criterion_raster(
 
 def _prep_input_habitat_or_stressor_raster(
         source_raster_path, target_raster_path):
-    # The intent of this function is to take whatever raster the user gives us
-    # and convert its pixel values to 1 or nodata.
+    """Prepare an input habitat/stressor raster for internal use.
 
-    source_nodata = pygeoprocessing.get_raster_info(
-        source_raster_path)['nodata'][0]
+    In order to make raster calculations more consistent within HRA, it's
+    helpful to preprocess raster-based habitat/stressor rasters to ensure
+    consistency.  Rasters produced by this function will have:
 
+        * A nodata value matching ``_TARGET_NODATA_BYTE``
+        * Any source pixel values other than 1 are converted to
+          ``_TARGET_NODATA_BYTE``.
+
+    Args:
+        source_raster_path (string): The path to a user-provided input raster
+            representing presence/absence of a habitat or stressor.
+        target_raster_path (string): The path to where the preprocessed source
+            raster will be written.
+
+    Returns:
+        ``None``.
+    """
     def _translate_op(input_array):
+        """Translate the input array to nodata, except where values are 1."""
         presence = numpy.full(input_array.shape, _TARGET_NODATA_BYTE,
                               dtype=numpy.uint8)
-        valid_mask = ~utils.array_equals_nodata(input_array, source_nodata)
-        presence[valid_mask & (input_array == 1)] = 1
+        presence[input_array == 1] = 1
         return presence
 
     pygeoprocessing.raster_calculator(
