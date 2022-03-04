@@ -12,3 +12,4 @@ qtawesome  # pip-only
 requests
 PySide2!=5.15.0  # pip-only
 Flask
+flask_cors

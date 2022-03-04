@@ -6,6 +6,7 @@ import logging
 from osgeo import gdal
 from flask import Flask
 from flask import request
+from flask_cors import CORS
 import natcap.invest
 from natcap.invest import cli
 from natcap.invest import datastack
@@ -15,8 +16,14 @@ from natcap.invest import spec_utils
 from natcap.invest import usage
 
 LOGGER = logging.getLogger(__name__)
+logging.getLogger('flask_cors').level = logging.DEBUG
 
 app = Flask(__name__)
+CORS(app, resources={
+    '/api/*': {
+        'origins': 'http://localhost:*'
+    }
+})
 
 PYNAME_TO_MODEL_NAME_MAP = {
     metadata.pyname: model_name

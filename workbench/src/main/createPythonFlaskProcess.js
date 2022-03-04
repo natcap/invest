@@ -57,9 +57,9 @@ export function createPythonFlaskProcess(investExe) {
  * @param {number} retries - number of recursive calls this function is allowed.
  * @returns { Promise } resolves text indicating success.
  */
-export function getFlaskIsReady({ i = 0, retries = 21 } = {}) {
+export function getFlaskIsReady({ i = 0, retries = 41 } = {}) {
   return (
-    fetch(`${HOSTNAME}:${process.env.PORT}/ready`, {
+    fetch(`${HOSTNAME}:${process.env.PORT}/api/ready`, {
       method: 'get',
     })
       .then((response) => response.text())
@@ -87,7 +87,7 @@ export function getFlaskIsReady({ i = 0, retries = 21 } = {}) {
  */
 export function shutdownPythonProcess() {
   return (
-    fetch(`http://localhost:${process.env.PORT}/shutdown`, {
+    fetch(`http://localhost:${process.env.PORT}/api/shutdown`, {
       method: 'get',
     })
       .then((response) => response.text())
