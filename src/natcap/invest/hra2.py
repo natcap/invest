@@ -373,10 +373,10 @@ def execute(args):
                 # habitat/stressor rasters represent presence/absence in the
                 # form of 1 or 0 pixel values.
                 prep_raster_task = graph.add_task(
-                    func=_prep_input_habitat_or_stressor_raster,
+                    func=_mask_binary_presence_absence_rasters,
                     kwargs={
-                        'source_raster_path': source_filepath,
-                        'target_filepath': rewritten_raster_path,
+                        'source_raster_paths': [source_filepath],
+                        'target_mask_path': rewritten_raster_path,
                     },
                     task_name=(
                         f'Rewrite {name} habitat/stressor raster for '
@@ -459,14 +459,10 @@ def execute(args):
     habitat_mask_path = os.path.join(
         intermediate_dir, f'habitat_mask{suffix}.tif')
     habitat_mask_task = graph.add_task(
-        pygeoprocessing.raster_calculator,
+        _mask_binary_presence_absence_rasters,
         kwargs={
-            'base_raster_path_band_const_list': [
-                (path, 1) for path in aligned_habitat_raster_paths],
-            'local_op': _habitat_mask_op,
-            'target_raster_path': habitat_mask_path,
-            'datatype_target': _TARGET_GDAL_TYPE_BYTE,
-            'nodata_target': _TARGET_NODATA_BYTE,
+            'source_raster_paths': aligned_habitat_raster_paths,
+            'target_mask_path': habitat_mask_path,
         },
         task_name='Create habitat mask',
         target_path_list=[habitat_mask_path],
@@ -1584,50 +1580,24 @@ def _prep_input_criterion_raster(
         _TARGET_GDAL_TYPE_FLOAT32, _TARGET_NODATA_FLOAT32)
 
 
-def _prep_input_habitat_or_stressor_raster(
-        source_raster_path, target_raster_path):
-    """Prepare an input habitat/stressor raster for internal use.
-
-    In order to make raster calculations more consistent within HRA, it's
-    helpful to preprocess raster-based habitat/stressor rasters to ensure
-    consistency.  Rasters produced by this function will have:
-
-        * A nodata value matching ``_TARGET_NODATA_BYTE``
-        * Any source pixel values other than 1 are converted to
-          ``_TARGET_NODATA_BYTE``.
-
-    Args:
-        source_raster_path (string): The path to a user-provided input raster
-            representing presence/absence of a habitat or stressor.
-        target_raster_path (string): The path to where the preprocessed source
-            raster will be written.
-
-    Returns:
-        ``None``.
-    """
-    def _translate_op(input_array):
-        """Translate the input array to nodata, except where values are 1."""
-        presence = numpy.full(input_array.shape, _TARGET_NODATA_BYTE,
-                              dtype=numpy.uint8)
-        presence[input_array == 1] = 1
-        return presence
-
-    pygeoprocessing.raster_calculator(
-        [(source_raster_path, 1)], _translate_op, target_raster_path,
-        _TARGET_GDAL_TYPE_BYTE, _TARGET_NODATA_BYTE)
-
-
-def _habitat_mask_op(*habitats):
-    output_mask = numpy.full(habitats[0].shape, _TARGET_NODATA_BYTE,
-                             dtype=numpy.uint8)
-    for habitat_array in habitats:
-        output_mask[habitat_array == 1] = 1
-
-    return output_mask
-
-
 def _mask_binary_presence_absence_rasters(
         source_raster_paths, target_mask_path):
+    """Create a mask where any values in a raster stack are 1.
+
+    Given a stack of aligned source rasters, if any pixel values in a pixel
+    stack are exactly equal to 1, the output mask at that pixel will be 1.
+
+    This can be applied to user-defined rasters or in creating a mask across a
+    stack of presence/absence rasters.
+
+    Args:
+        source_raster_paths (list): A list of string paths to rasters.
+        target_mask_path (string): The path to there the mask raster
+            will be written.
+
+    Returns:
+        ``None``
+    """
     def _translate_op(*input_arrays):
         """Translate the input array to nodata, except where values are 1."""
         presence = numpy.full(input_arrays[0].shape, _TARGET_NODATA_BYTE,
