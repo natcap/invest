@@ -12,8 +12,13 @@ const { ipcMainChannels } = require('./main/ipcMainChannels');
 const { getLogger } = require('./logger');
 
 contextBridge.exposeInMainWorld('Workbench', {
+  // The gettext callable
+  _: ipcRenderer.sendSync.bind(null, ipcMainChannels.GETTEXT), // partially applied function
+  // Passing data from main to renderer for window.fetch
   PORT: process.env.PORT,
   getLogger: getLogger,
+  // TODO: this next one feels out of place, just expose crypto.createHash
+  // here instead?
   getWorkspaceHash: (modelRunName, workspaceDir, resultsSuffix) => {
     return crypto.createHash('sha1').update(
       `${modelRunName}
