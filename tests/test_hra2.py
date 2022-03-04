@@ -733,6 +733,36 @@ class HRAUnitTests(unittest.TestCase):
 
         numpy.testing.assert_allclose(mask_array, expected_mask_array)
 
+    def test_mask_binary_values(self):
+        from natcap.invest import hra2
+
+        mask_array_1 = numpy.array([
+            [0, 1, 255]], dtype=numpy.uint8)
+        float32_min = numpy.finfo(numpy.float32).min
+        mask_array_2 = numpy.array([
+            [1, 0, float32_min]], dtype=numpy.float32)
+        mask_array_3 = numpy.array([
+            [1024, 0, 1]], dtype=numpy.int32)
+        source_paths = []
+        for index, (array, nodata) in enumerate([
+                (mask_array_1, 255),
+                (mask_array_2, float(float32_min)),
+                (mask_array_3, None)]):
+            path = os.path.join(self.workspace_dir, f'{index}.tif')
+            source_paths.append(path)
+            pygeoprocessing.numpy_array_to_raster(
+                array, nodata, (30, -30), ORIGIN, SRS_WKT, path)
+
+        mask_path = os.path.join(self.workspace_dir, 'mask.tif')
+        hra2._mask_binary_presence_absence_rasters(source_paths, mask_path)
+
+        expected_mask_array = numpy.array([
+            [1, 1, 1]], dtype=numpy.uint8)
+
+        numpy.testing.assert_allclose(
+            pygeoprocessing.raster_to_numpy_array(mask_path),
+            expected_mask_array)
+
 
 
 

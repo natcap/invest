@@ -1626,6 +1626,22 @@ def _habitat_mask_op(*habitats):
     return output_mask
 
 
+def _mask_binary_presence_absence_rasters(
+        source_raster_paths, target_mask_path):
+    def _translate_op(*input_arrays):
+        """Translate the input array to nodata, except where values are 1."""
+        presence = numpy.full(input_arrays[0].shape, _TARGET_NODATA_BYTE,
+                              dtype=numpy.uint8)
+        for input_array in input_arrays:
+            presence[input_array == 1] = 1
+        return presence
+
+    pygeoprocessing.raster_calculator(
+        [(source_path, 1) for source_path in source_raster_paths],
+        _translate_op, target_mask_path,
+        _TARGET_GDAL_TYPE_BYTE, _TARGET_NODATA_BYTE)
+
+
 # TODO: support Excel and CSV both
 def _parse_info_table(info_table_path):
     info_table_path = os.path.abspath(info_table_path)
