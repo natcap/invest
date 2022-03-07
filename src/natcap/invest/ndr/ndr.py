@@ -55,7 +55,7 @@ ARGS_SPEC = {
             }},
             "about": _(
                 "Map of runoff potential, the capacity to transport "
-                "nutrients downstream. This can be a quickflow index "
+                "nutrients downslope. This can be a quickflow index "
                 "or annual precipitation. Any units are allowed since "
                 "the values will be normalized by their average."),
             "name": _("nutrient runoff proxy")
@@ -257,7 +257,7 @@ def execute(args):
         args['results_suffix'] (string): (optional) a text field to append to
             all output files
         args['threshold_flow_accumulation']: a number representing the flow
-            accumulation in terms of upstream pixels.
+            accumulation in terms of upslope pixels.
         args['k_param'] (number): The Borselli k parameter. This is a
             calibration parameter that determines the shape of the
             relationship between hydrologic connectivity.
@@ -1198,7 +1198,7 @@ def s_bar_calculate(
 
 
 def d_up_calculation(s_bar_path, flow_accum_path, target_d_up_path):
-    """Calculate d_up = s_bar * sqrt(upstream area)."""
+    """Calculate d_up = s_bar * sqrt(upslope area)."""
     s_bar_info = pygeoprocessing.get_raster_info(s_bar_path)
     s_bar_nodata = s_bar_info['nodata'][0]
     flow_accum_nodata = pygeoprocessing.get_raster_info(

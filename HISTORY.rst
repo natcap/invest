@@ -36,6 +36,10 @@ Unreleased Changes
 ------------------
 * General
     * ``spec_utils.ETO`` has been renamed to ``spec_utils.ET0`` (with a zero).
+* RouteDEM
+    * Rename the arg ``calculate_downstream_distance`` to
+      ``calculate_downslope_distance``. This is meant to clarify that it
+      applies to pixels that are not part of a stream.
 * Seasonal Water Yield
     * Fixed an issue with the documentation for ET0 and Precip directories,
       where a module-specific informational string was being overridden by a
