@@ -1612,6 +1612,7 @@ def _mask_binary_presence_absence_rasters(
         _TARGET_GDAL_TYPE_BYTE, _TARGET_NODATA_BYTE)
 
 
+# TODO: figure out if we really need this shared function.
 def _open_table_as_dataframe(table_path, **kwargs):
     extension = os.path.splitext(table_path)[1].lower()
     # Technically, pandas.read_excel can handle xls, xlsx, xlsm, xlsb, odf, ods
@@ -1627,6 +1628,25 @@ def _open_table_as_dataframe(table_path, **kwargs):
 
 
 def _parse_info_table(info_table_path):
+    """Parse the HRA habitat/stressor info table.
+
+    Args:
+        info_table_path (string): The path to the info table.  May be either
+            CSV or Excel format.  The columns 'name', 'path', 'type' and
+            'stressor buffer (meters)' are all required.  The stressor buffer
+            only needs values for those rows representing stressors.
+
+    Returns:
+        (habitats, stressors) (tuple): a 2-tuple of dicts where the habitat or
+            stressor name (respectively) maps to attributes about that habitat
+            or stressor:
+
+                * Habitats have a structure of
+                  ``{habitat_name: {'path': path to spatial layer}}``
+                * Stressors have a structure of
+                  ``{stressor_name: {'path': path to spatial layer, 'buffer':
+                      buffer distance}}``
+    """
     info_table_path = os.path.abspath(info_table_path)
 
     table = _open_table_as_dataframe(info_table_path)
@@ -1657,6 +1677,7 @@ def _parse_info_table(info_table_path):
 
 
 # TODO: validate spatial criteria can be opened by GDAL.
+# TODO: return the habitats/stressors for use in validation.
 def _parse_criteria_table(criteria_table_path, known_stressors,
                           target_composite_csv_path):
     # This function requires that the table is read as a numpy array, so it's
@@ -1731,7 +1752,6 @@ def _parse_criteria_table(criteria_table_path, known_stressors,
             overlap_df = overlap_df.append(
                 stressor_habitat_data, ignore_index=True)
 
-    # TODO: figure out if we need a special case for the resilience data.
     overlap_df.to_csv(target_composite_csv_path, index=False)
 
 
