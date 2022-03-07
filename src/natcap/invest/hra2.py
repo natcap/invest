@@ -1991,15 +1991,34 @@ def _calculate_pairwise_risk(habitat_mask_raster_path, exposure_raster_path,
         _TARGET_NODATA_FLOAT32)
 
 
-# max pairwise risk or recovery is calculated based on user input and choice of
-# risk equation.  Might as well pass in the numeric value rather than the risk
-# equation type.
-def _reclassify_score(habitat_mask, max_pairwise_risk, score):
+def _reclassify_score(habitat_mask, max_pairwise_risk, scores):
+    """Reclassify risk scores into high/medium/low.
+
+    The output raster will break values into 3 buckets based on the
+    ``max_pairwise_risk`` (shortened to "MPR"):
+
+        * Scores in the range [ 0, MPR*(1/3) ) have a value of 1
+          indicating low risk.
+        * Scores in the range [ MPR*(1/3), MPR*(2/3) ) have a value of 2
+          indicating medium risk.
+        * Scores in the range [ MPR*(2/3), infinity ) have a value of 3
+          indicating high risk.
+
+    Args:
+        habitat_mask (numpy.array): A numpy array where 1 indicates presence of
+            habitats and 0 or ``_TARGET_NODATA_BYTE`` indicate absence.
+        max_pairwise_risk (float): The maximum likely pairwise risk value.
+        scores (numpy.array): A numpy array of floating-point risk scores.
+
+    Returns:
+        ``reclassified`` (numpy.array): An unsigned byte numpy array of a
+            shape/size matching ``habitat_mask`` and ``scores``.
+    """
     habitat_pixels = (habitat_mask == 1)
     reclassified = numpy.full(habitat_mask.shape, _TARGET_NODATA_BYTE,
                               dtype=numpy.uint8)
     reclassified[habitat_pixels] = numpy.digitize(
-        score[habitat_pixels],
+        scores[habitat_pixels],
         [0, max_pairwise_risk*(1/3), max_pairwise_risk*(2/3)],
         right=True)  # bins[i-1] >= x > bins[i]
     return reclassified
