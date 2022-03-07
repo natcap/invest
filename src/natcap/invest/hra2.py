@@ -1839,19 +1839,35 @@ def _calculate_decayed_distance(stressor_raster_path, decay_type,
     target_edt_raster = None
 
 
-# This is to calculate E or C for a single habitat/stressor pair.
 def _calc_criteria(attributes_list, habitat_mask_raster_path,
                    target_criterion_path,
                    decayed_edt_raster_path=None):
-    # Assume attributes_list is structured like so:
-    #  [{"rating": int/path, "dq": int, "weight": int}, ... ]
-    #
-    # Stressor weighted distance raster path is the decayed, thresholded
-    # stressor raster.
-    #
-    # Resilience scores are calculated with the same numerical method, but they
-    # don't use the decayed EDT.
+    """Calculate Exposure or Consequence for a single habitat/stressor pair.
 
+    Args:
+        attributes_list (list): A list of dicts for all of the criteria for
+            this criterion type (E or C).  Each dict must have the following
+            keys:
+
+                * ``rating``: A numeric criterion rating (if consistent across
+                  the whole study area) or the path to a raster with
+                  spatially-explicit ratings.  A rating raster must align with
+                  ``habitat_mask_raster_path``.
+                * ``dq``: The numeric data quality rating for this criterion.
+                * ``weight``: The numeric weight for this criterion.
+
+        habitat_mask_raster_path (string): The path to a raster with pixel
+            values of 1 indicating presence of habitats, and 0 or nodata
+            representing the absence of habitats.
+        target_criterion_path (string): The path to where the calculated
+            criterion layer should be written.
+        decayed_edt_raster_path=None (string or None): If provided, this is the
+            path to an raster of weights that should be applied to the
+            numerator of the criterion calculation.
+
+    Returns:
+        ``None``
+    """
     pygeoprocessing.new_raster_from_base(
         habitat_mask_raster_path, target_criterion_path,
         _TARGET_GDAL_TYPE_FLOAT32, [_TARGET_NODATA_FLOAT32])
@@ -1878,8 +1894,7 @@ def _calc_criteria(attributes_list, habitat_mask_raster_path,
         numerator = numpy.zeros(habitat_mask.shape, dtype=numpy.float32)
         denominator = numpy.zeros(habitat_mask.shape, dtype=numpy.float32)
         for attribute_dict in attributes_list:
-            # TODO: a rating of 0 means that the criterion should be ignored
-            #  THIS MEANS IGNORING IN BOTH NUMERATOR AND DENOMINATOR
+            # A rating of 0 means that the criterion should be ignored.
             # RATING may be either a number or a raster.
             try:
                 rating = float(attribute_dict['rating'])
@@ -1888,6 +1903,8 @@ def _calc_criteria(attributes_list, habitat_mask_raster_path,
             except ValueError:
                 # When rating is a string filepath, it represents a raster.
                 try:
+                    # Opening a raster is fairly inexpensive, so it should be
+                    # fine to re-open the raster on each block iteration.
                     rating_raster = gdal.OpenEx(attribute_dict['rating'])
                     rating_band = rating_raster.GetRasterBand(1)
                     rating = rating_band.ReadAsArray(**block_info)[valid_mask]
@@ -1897,9 +1914,12 @@ def _calc_criteria(attributes_list, habitat_mask_raster_path,
             data_quality = attribute_dict['dq']
             weight = attribute_dict['weight']
 
-            # The (data_quality + weight) denominator is duplicated here
-            # because it's easier to read this way and per the docs is
-            # guaranteed to be a number and not a raster.
+            # The (data_quality + weight) denominator running sum is
+            # re-calculated for each block.  While this is inefficient to
+            # ``dq`` and ``weight`` are always scalars and so the wasted CPU
+            # time is pretty trivial, even on large habitat/stressor matrices.
+            # Plus, it's way easier to read and more maintainable to just have
+            # everything be recalculated.
             numerator[valid_mask] += (rating / (data_quality * weight))
             denominator[valid_mask] += (1 / (data_quality * weight))
 
@@ -1917,7 +1937,8 @@ def _calc_criteria(attributes_list, habitat_mask_raster_path,
         target_criterion_band.WriteArray(criterion_score,
                                          xoff=block_info['xoff'],
                                          yoff=block_info['yoff'])
-
+    decayed_edt_band = None
+    decayed_edt_raster = None
     target_criterion_band = None
     target_criterion_raster = None
 
