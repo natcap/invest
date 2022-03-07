@@ -7,9 +7,9 @@ export default defineConfig({
   // root: './src/renderer/',
   // plugins: [react()],
   build: {
-    sourcemap: 'inline',
+    // sourcemap: 'inline',
     outDir: '../../dist/main',
-    minify: process.env.MODE !== 'development',
+    minify: false,
     target: 'node14',
     lib: {
       mode: process.env.MODE,

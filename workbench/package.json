@@ -2,7 +2,7 @@
   "name": "invest-workbench",
   "version": "0.1.0-beta",
   "description": "Models that map and value the goods and services from nature that sustain and fulfill human life",
-  "main": "build/main/main.js",
+  "main": "dist/main/main.cjs",
   "homepage": "./",
   "scripts": {
     "go": "electron .",

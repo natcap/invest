@@ -19,6 +19,7 @@ import { getSpec } from '../../server_requests';
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
 const { ipcRenderer } = window.Workbench.electron;
+const { loadUIConfig } = window.Workbench;
 const logger = window.Workbench.getLogger('InvestTab');
 
 /** Get an invest model's ARGS_SPEC when a model button is clicked.
@@ -31,7 +32,8 @@ async function investGetSpec(modelName) {
   const spec = await getSpec(modelName);
   if (spec) {
     const { args, ...modelSpec } = spec;
-    const uiSpecs = require('../../ui_config');
+    // const uiSpecs = require('../../ui_config');
+    const uiSpecs = loadUIConfig('../../ui_config');
     const uiSpec = uiSpecs[modelName];
     if (uiSpec) {
       return { modelSpec: modelSpec, argsSpec: args, uiSpec: uiSpec };

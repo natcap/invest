@@ -10,12 +10,13 @@ const crypto = require('crypto');
 
 const { ipcMainChannels } = require('./main/ipcMainChannels');
 const { getLogger } = require('./logger');
+const { PORT } = require('./flaskPort');
 
 contextBridge.exposeInMainWorld('Workbench', {
   // The gettext callable
   _: ipcRenderer.sendSync.bind(null, ipcMainChannels.GETTEXT), // partially applied function
   // Passing data from main to renderer for window.fetch
-  PORT: process.env.PORT,
+  PORT: PORT,
   getLogger: getLogger,
   // TODO: this next one feels out of place, just expose crypto.createHash
   // here instead?
@@ -26,6 +27,7 @@ contextBridge.exposeInMainWorld('Workbench', {
        ${JSON.stringify(resultsSuffix)}`
     ).digest('hex');
   },
+  loadUIConfig: (path) => require(path),
   electron: {
     ipcRenderer: {
       invoke: (channel, data) => {
