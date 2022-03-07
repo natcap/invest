@@ -1946,36 +1946,29 @@ def _calc_criteria(attributes_list, habitat_mask_raster_path,
 def _calculate_pairwise_risk(habitat_mask_raster_path, exposure_raster_path,
                              consequence_raster_path, risk_equation,
                              target_risk_raster_path):
-    def _muliplicative_risk(habitat_mask, exposure, consequence):
-        habitat_pixels = (habitat_mask == 1)
-        risk_array = numpy.full(habitat_mask.shape, _TARGET_NODATA_FLOAT32,
-                                dtype=numpy.float32)
-        risk_array[habitat_pixels] = (
-            exposure[habitat_pixels] * consequence[habitat_pixels])
-        return risk_array
-
-    def _euclidean_risk(habitat_mask, exposure, consequence):
-        habitat_pixels = (habitat_mask == 1)
-        risk_array = numpy.full(habitat_mask.shape, _TARGET_NODATA_FLOAT32,
-                                dtype=numpy.float32)
-        risk_array[habitat_pixels] = numpy.sqrt(
-            (exposure[habitat_pixels] - 1) ** 2 +
-            (consequence[habitat_pixels] - 1) ** 2)
-        return risk_array
-
     risk_equation = risk_equation.lower()
-    if risk_equation == 'multiplicative':
-        risk_op = _muliplicative_risk
-    elif risk_equation == 'euclidean':
-        risk_op = _euclidean_risk
-    else:
-        raise AssertionError(f'Invalid risk equation {risk_equation} provided')
+
+    def _calculate_risk(habitat_mask, exposure, consequence):
+        habitat_pixels = (habitat_mask == 1)
+        risk_array = numpy.full(habitat_mask.shape, _TARGET_NODATA_FLOAT32,
+                                dtype=numpy.float32)
+        if risk_equation == 'multiplicative':
+            risk_array[habitat_pixels] = (
+                exposure[habitat_pixels] * consequence[habitat_pixels])
+        elif risk_equation == 'euclidean':
+            risk_array[habitat_pixels] = numpy.sqrt(
+                (exposure[habitat_pixels] - 1) ** 2 +
+                (consequence[habitat_pixels] - 1) ** 2)
+        else:
+            raise AssertionError(
+                f'Invalid risk equation {risk_equation} provided')
+        return risk_array
 
     pygeoprocessing.raster_calculator(
         [(habitat_mask_raster_path, 1),
          (exposure_raster_path, 1),
          (consequence_raster_path, 1)],
-        risk_op, target_risk_raster_path, _TARGET_GDAL_TYPE_FLOAT32,
+        _calculate_risk, target_risk_raster_path, _TARGET_GDAL_TYPE_FLOAT32,
         _TARGET_NODATA_FLOAT32)
 
 

@@ -743,10 +743,12 @@ class HRAUnitTests(unittest.TestCase):
             pygeoprocessing.raster_to_numpy_array(euclidean_risk_path)
         )
 
+        with self.assertRaises(AssertionError) as cm:
+            hra2._calculate_pairwise_risk(
+                habitat_mask_path, exposure_path, consequence_path,
+                'bad_risk_type', euclidean_risk_path)
 
-
-
-
+        self.assertIn('Invalid risk equation', str(cm.exception))
 
 
 class HRAModelTests(unittest.TestCase):
