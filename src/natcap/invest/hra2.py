@@ -2025,6 +2025,19 @@ def _reclassify_score(habitat_mask, max_pairwise_risk, scores):
 
 
 def _maximum_reclassified_score(habitat_mask, *risk_classes):
+    """Determine the maximum risk score in a stack of risk rasters.
+
+    Args:
+        habitat_mask (numpy.array): A numpy array where values of 1 indicate
+            presence of habitats.  Values of 0 or ``_TARGET_NODATA_BYTE``
+            indicate absence of habitats.
+        *risk_classes (list of numpy.arrays): A variable number of unsigned
+            integer reclassified risk arrays.
+
+    Returns:
+        A numpy.array with each pixel that has habitats on it has the highest
+        risk score in the ``risk_classes`` stack of arrays.
+    """
     target_matrix = numpy.zeros(habitat_mask.shape, dtype=numpy.uint8)
     valid_pixels = (habitat_mask == 1)
 
