@@ -149,8 +149,8 @@ ARGS_SPEC = {
                 "consequence."),
             "type": "option_string",
             "options": {
-                "Multiplicative": {"display_name": _("multiplicative")},
-                "Euclidean": {"display_name": _("Euclidean")}
+                "multiplicative": {"display_name": _("Multiplicative")},
+                "euclidean": {"display_name": _("Euclidean")}
             }
         },
         "decay_eq": {
@@ -1947,6 +1947,9 @@ def _calculate_pairwise_risk(habitat_mask_raster_path, exposure_raster_path,
                              consequence_raster_path, risk_equation,
                              target_risk_raster_path):
     risk_equation = risk_equation.lower()
+    if risk_equation not in _VALID_RISK_EQS:
+        raise AssertionError(
+            f'Invalid risk equation {risk_equation} provided')
 
     def _calculate_risk(habitat_mask, exposure, consequence):
         habitat_pixels = (habitat_mask == 1)
@@ -1955,13 +1958,10 @@ def _calculate_pairwise_risk(habitat_mask_raster_path, exposure_raster_path,
         if risk_equation == 'multiplicative':
             risk_array[habitat_pixels] = (
                 exposure[habitat_pixels] * consequence[habitat_pixels])
-        elif risk_equation == 'euclidean':
+        else:  # risk_equation == 'euclidean':
             risk_array[habitat_pixels] = numpy.sqrt(
                 (exposure[habitat_pixels] - 1) ** 2 +
                 (consequence[habitat_pixels] - 1) ** 2)
-        else:
-            raise AssertionError(
-                f'Invalid risk equation {risk_equation} provided')
         return risk_array
 
     pygeoprocessing.raster_calculator(
