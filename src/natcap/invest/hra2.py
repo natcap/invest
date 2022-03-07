@@ -1651,7 +1651,6 @@ def _parse_info_table(info_table_path):
 
     table = _open_table_as_dataframe(info_table_path)
     table = table.set_index('name')
-    # TODO: do we buffer these yet?
     table = table.rename(columns={'stressor buffer (meters)': 'buffer'})
 
     def _make_abspath(row):
@@ -1757,10 +1756,36 @@ def _parse_criteria_table(criteria_table_path, known_stressors,
 
 def _calculate_decayed_distance(stressor_raster_path, decay_type,
                                 buffer_distance, target_edt_path):
-    decay_type = decay_type.lower()
-    # TODO: ensure we're working with square pixels in our raster stack
+    """Decay the influence of a stressor given decay type and buffer distance.
+
+    Args:
+        stressor_raster_path (string): The path to a stressor raster, where
+            pixel values of 1 indicate presence of the stressor and 0 or nodata
+            indicate absence of the stressor.
+        decay_type (string): The type of decay.  Valid values are:
+
+            * ``linear``: Pixel values decay linearly from the stressor pixels
+              out to the buffer distance.
+            * ``exponential``: Pixel values decay exponentially out to the
+              buffer distance.
+            * ``none``: Pixel values do not decay out to the buffer distance.
+              Instead, all pixels within the buffer distance have the same
+              influence as though it were overlapping the stressor itself.
+        buffer_distance (number): The distance out to which the stressor has an
+            influence.  This is in linearly projected units and should be in
+            meters.
+        target_edt_path (string): The path where the target EDT raster should
+            be written.
+
+    Returns:
+        ``None``
+
+    Raises:
+        ``AssertionError``: When an invalid ``decay_type`` is provided.
+    """
     pygeoprocessing.distance_transform_edt((stressor_raster_path, 1),
                                            target_edt_path)
+    # We're assuming that we're working with square pixels
     pixel_size = abs(pygeoprocessing.get_raster_info(
         stressor_raster_path)['pixel_size'][0])
     buffer_distance_in_pixels = buffer_distance / pixel_size
@@ -1768,6 +1793,7 @@ def _calculate_decayed_distance(stressor_raster_path, decay_type,
     target_edt_raster = gdal.OpenEx(target_edt_path, gdal.GA_Update)
     target_edt_band = target_edt_raster.GetRasterBand(1)
     edt_nodata = target_edt_band.GetNoDataValue()
+    decay_type = decay_type.lower()
     for block_info in pygeoprocessing.iterblocks((target_edt_path, 1),
                                                  offset_only=True):
         source_edt_block = target_edt_band.ReadAsArray(**block_info)
