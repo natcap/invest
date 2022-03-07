@@ -367,12 +367,6 @@ jobs:
         shell: powershell
         run: ./ci/windows-ci-binary-install.ps1
 
-      - name: check nsis plugins
-        run: |
-          ls "C:\Program Files (x86)\NSIS\Plugins"
-          ls "C:\Program Files (x86)\NSIS\Include"
-          ls "C:\Program Files (x86)\NSIS\Plugins\x86-ansi"
-
       - name: Set up conda environment
         uses: ./.github/actions/setup_env
         with:
