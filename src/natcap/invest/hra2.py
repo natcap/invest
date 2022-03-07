@@ -1946,6 +1946,25 @@ def _calc_criteria(attributes_list, habitat_mask_raster_path,
 def _calculate_pairwise_risk(habitat_mask_raster_path, exposure_raster_path,
                              consequence_raster_path, risk_equation,
                              target_risk_raster_path):
+    """Calculate risk for a single habitat/stressor pair.
+
+    Args:
+        habitat_mask_raster_path (string): The path to a habitat mask raster,
+            where pixels with a value of 1 represent the presence of habitats,
+            and values of 0 or nodata represent the absence of habitats.
+        exposure_raster_path (string): The path to a raster of computed
+            exposure scores.  Must align with ``habitat_mask_raster_path``.
+        consequence_raster_path (string): The path to a raster of computed
+            consequence scores.  Must align with ``habitat_mask_raster_path``.
+        risk_equation (string): The risk equation to use.  Must be one of
+            ``multiplicative`` or ``euclidean``.
+
+    Returns:
+        ``None``
+
+    Raises:
+        ``AssertionError`` when an invalid risk equation is provided.
+    """
     risk_equation = risk_equation.lower()
     if risk_equation not in _VALID_RISK_EQS:
         raise AssertionError(
