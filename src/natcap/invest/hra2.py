@@ -6,15 +6,11 @@ import json
 import logging
 import math
 import os
-import pickle
 import shutil
-import tempfile
 
 import numpy
 import pandas
 import pygeoprocessing
-import shapely.ops
-import shapely.wkb
 import taskgraph
 from osgeo import gdal
 from osgeo import ogr
@@ -216,6 +212,7 @@ ARGS_SPEC = {
     }
 }
 
+# TODO: use this in an assertion where it's useful.
 _VALID_RISK_EQS = set(ARGS_SPEC['args']['risk_eq']['options'].keys())
 
 
@@ -351,7 +348,6 @@ def execute(args):
                 intermediate_dir, 'rewritten_{name}{suffix}.tif')
             alignment_source_raster_paths[
                 rewritten_raster_path] = aligned_raster_path
-            # TODO: make sure we can handle spatial criteria
             # Habitats/stressors must have pixel values of 0 or 1.
             # Criteria may be between [0, max_criteria_score]
             if name in spatial_criteria_attrs:
@@ -439,7 +435,6 @@ def execute(args):
         else:  # must be a stressor
             aligned_stressor_raster_paths[name] = aligned_raster_path
 
-    # TODO: this doesn't yet include spatial criteria
     alignment_task = graph.add_task(
         func=_align,
         kwargs={
@@ -470,8 +465,8 @@ def execute(args):
     )
 
     # --> for stressor in stressors, do a decayed EDT.
-    decayed_edt_paths = {}  # {stressor: decayed EDT raster}
-    decayed_edt_tasks = {}  # {stressor: decayed EDT task}
+    decayed_edt_paths = {}  # {stressor name: decayed EDT raster}
+    decayed_edt_tasks = {}  # {stressor name: decayed EDT task}
     for stressor, stressor_path in aligned_stressor_raster_paths.items():
         decayed_edt_paths[stressor] = os.path.join(
             intermediate_dir, f'decayed_edt_{stressor}{suffix}.tif')
@@ -517,7 +512,8 @@ def execute(args):
                 # This rather complicated filter just grabs the rows matching
                 # this habitat, stressor and criteria type.  It's the pandas
                 # equivalent of SELECT * FROM criteria_df WHERE the habitat,
-                # stressor and criteria type match.
+                # stressor and criteria type match the current habitat,
+                # stressor and criteria type.
                 local_criteria_df = criteria_df[
                     (criteria_df['habitat'] == habitat) &
                     (criteria_df['stressor'] == stressor) &
@@ -525,7 +521,7 @@ def execute(args):
 
                 # This produces a list of dicts in the form:
                 # [{'rating': (score), 'weight': (score), 'dq': (score)}],
-                # which is what _cal_criteria() expects.
+                # which is what _calc_criteria() expects.
                 attributes_list = local_criteria_df[
                     ['rating', 'weight', 'dq']].to_dict(orient='records')
 
@@ -649,7 +645,8 @@ def execute(args):
             ]
         )
 
-    # total risk is the sum of all cumulative risk rasters.
+    # total risk to the ecosystem is the sum of all cumulative risk rasters
+    # across all habitats.
     ecosystem_risk_path = os.path.join(
         output_dir, f'TOTAL_RISK_Ecosystem{suffix}.tif')
     ecosystem_risk_task = graph.add_task(
@@ -798,11 +795,13 @@ def execute(args):
     visualization_dir = os.path.join(args['workspace_dir'],
                                      'visualization_outputs')
     utils.make_directories([visualization_dir])
+    shutil.copy(
+        summary_csv_path,
+        os.path.join(visualization_dir, os.path.basename(summary_csv_path)))
 
     # For each raster in reclassified risk rasters + Reclass ecosystem risk:
     #   convert to geojson with fieldname "Risk Score"
     reclassified_rasters.append(reclassified_ecosystem_risk_path)
-    # TODO: add in dependent tasks too?
     for raster_paths, fieldname, geojson_prefix in [
             (reclassified_rasters, 'Risk Score', 'RECLASS_RISK'),
             (aligned_stressor_raster_paths.values(), 'Stressor', 'STRESSOR')]:
@@ -819,6 +818,7 @@ def execute(args):
                 },
                 task_name=f'Rewrite {basename} for polygonization',
                 target_path_list=[polygonize_mask_raster_path],
+                # TODO: use the right dependent tasks?  Worth it?
                 dependent_task_list=[]
             )
 
@@ -1612,11 +1612,24 @@ def _mask_binary_presence_absence_rasters(
         _TARGET_GDAL_TYPE_BYTE, _TARGET_NODATA_BYTE)
 
 
-# TODO: support Excel and CSV both
+def _open_table_as_dataframe(table_path, **kwargs):
+    extension = os.path.splitext(table_path)[1].lower()
+    # Technically, pandas.read_excel can handle xls, xlsx, xlsm, xlsb, odf, ods
+    # and odt file extensions, but I have not tested anything other than XLS
+    # and XLSX, so leaving this as-is from the prior HRA implementation.
+    if extension in {'.xls', '.xlsx'}:
+        excel_df = pandas.read_excel(table_path, **kwargs)
+        excel_df.columns = excel_df.columns.str.lower()
+        return excel_df
+    else:
+        return utils.read_csv_to_dataframe(
+            table_path, sep=None, to_lower=True, engine='python', **kwargs)
+
+
 def _parse_info_table(info_table_path):
     info_table_path = os.path.abspath(info_table_path)
 
-    table = utils.read_csv_to_dataframe(info_table_path, to_lower=True)
+    table = _open_table_as_dataframe(info_table_path)
     table = table.set_index('name')
     # TODO: do we buffer these yet?
     table = table.rename(columns={'stressor buffer (meters)': 'buffer'})
@@ -1646,9 +1659,15 @@ def _parse_info_table(info_table_path):
 # TODO: validate spatial criteria can be opened by GDAL.
 def _parse_criteria_table(criteria_table_path, known_stressors,
                           target_composite_csv_path):
-
-    table = pandas.read_csv(criteria_table_path, header=None,
-                            sep=None, engine='python').to_numpy()
+    # This function requires that the table is read as a numpy array, so it's
+    # easiest to read the table directly.
+    extension = os.path.splitext(criteria_table_path)[1].lower()
+    if extension in {'.xls', '.xlsx'}:
+        df = pandas.read_excel(criteria_table_path, header=None)
+    else:
+        df = pandas.read_csv(criteria_table_path, header=None, sep=None,
+                             engine='python')
+    table = df.to_numpy()
     known_stressors = set(known_stressors)
 
     # Fill in habitat names in the table for easier reference.
@@ -1670,7 +1689,7 @@ def _parse_criteria_table(criteria_table_path, known_stressors,
         if col_value in habitats:
             habitat_columns[col_value].append(col_index)
 
-    # the primary key of this table is (habitat_stressor, criterion)
+    # the primary key of this table is (habitat, stressor, criterion)
     overlap_df = pandas.DataFrame(columns=['habitat', 'stressor', 'criterion',
                                            'rating', 'dq', 'weight', 'e/c'])
 

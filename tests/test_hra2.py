@@ -498,7 +498,8 @@ class HRAUnitTests(unittest.TestCase):
             [0, 1, 0],
             [1, 1, 1],
             [0, 1, 0]], dtype=numpy.uint8)
-        # pixel size is slightly smaller to force a change.
+        # pixel size is slightly smaller than the target pixel size in order to
+        # force resampling.
         pygeoprocessing.numpy_array_to_raster(
             habitat_array, hra2._TARGET_NODATA_BYTE, (29, -29), ORIGIN,
             SRS_WKT, habitat_raster_path)
@@ -670,8 +671,26 @@ class HRAUnitTests(unittest.TestCase):
             pygeoprocessing.raster_to_numpy_array(mask_path),
             expected_mask_array)
 
+    def test_table_format_loading(self):
+        from natcap.invest import hra2
 
+        # No matter the supported file format, make sure we have consistent
+        # table headings.
+        source_df = pandas.read_csv(io.StringIO(textwrap.dedent("""\
+                FOO,bar,BaZ
+                1, 2, 3""")))
 
+        expected_df = source_df.copy()  # defaults to a deepcopy.
+        expected_df.columns = expected_df.columns.str.lower()
+
+        for filename, func in [('target.csv', source_df.to_csv),
+                               ('target.xls', source_df.to_excel),
+                               ('target.xlsx', source_df.to_excel)]:
+            full_filepath = os.path.join(self.workspace_dir, filename)
+            func(full_filepath, index=False)
+
+            opened_df = hra2._open_table_as_dataframe(full_filepath)
+            pandas.testing.assert_frame_equal(expected_df, opened_df)
 
 
 
