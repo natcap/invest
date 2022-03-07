@@ -331,11 +331,6 @@ jobs:
         with:
           fetch-depth: 0 # Fetch complete history for accurate versioning
 
-      - run: |
-          ls "C:\Program Files (x86)\NSIS"
-          ls "C:\Program Files (x86)\NSIS\Plugins"
-          ls "C:\Program Files (x86)\NSIS\Include"
-
         # Not caching chocolatey packages because the cache may not be reliable
         # https://github.com/chocolatey/choco/issues/2134
         # and this step only takes about 30 seconds.
@@ -374,8 +369,9 @@ jobs:
 
       - name: check nsis plugins
         run: |
-          ls "C:\Program Files (x86)\NSIS\Plugins\x86-ansi\"
+          ls "C:\Program Files (x86)\NSIS\Plugins"
           ls "C:\Program Files (x86)\NSIS\Include"
+          ls "C:\Program Files (x86)\NSIS\Plugins\x86-ansi"
 
       - name: Set up conda environment
         uses: ./.github/actions/setup_env
