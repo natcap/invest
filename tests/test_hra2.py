@@ -207,7 +207,6 @@ class HRAUnitTests(unittest.TestCase):
                     frequency of disturbance,2,2,3,2,2,3,C
                     management effectiveness,2,2,1,2,2,1,E
                     ,,,,,,,
-                    HABITAT STRESSOR OVERLAP PROPERTIES,,,,,,,
                     fishing,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
                     frequency of disturbance,2,2,3,2,2,3,C
                     management effectiveness,2,2,1,2,2,1,E
@@ -215,8 +214,10 @@ class HRAUnitTests(unittest.TestCase):
                 ))
         target_composite_csv_path = os.path.join(self.workspace_dir,
                                                  'composite.csv')
-        hra2._parse_criteria_table(criteria_table_path, ['oil', 'fishing'],
-                                   target_composite_csv_path)
+        habitats, stressors = hra2._parse_criteria_table(
+            criteria_table_path, target_composite_csv_path)
+        self.assertEqual(habitats, {'eelgrass', 'hardbottom'})
+        self.assertEqual(stressors, {'oil', 'fishing'})
 
         expected_composite_dataframe = pandas.read_csv(
             io.StringIO(textwrap.dedent(

@@ -303,8 +303,7 @@ def execute(args):
     composite_criteria_table_path = os.path.join(
         intermediate_dir, f'composite_criteria{suffix}.csv')
     _parse_criteria_table(
-        args['criteria_table_path'], set(stressors.keys()),
-        composite_criteria_table_path)
+        args['criteria_table_path'], composite_criteria_table_path)
     criteria_df = pandas.read_csv(composite_criteria_table_path,
                                   index_col=False)
 
@@ -1677,8 +1676,7 @@ def _parse_info_table(info_table_path):
 
 # TODO: validate spatial criteria can be opened by GDAL.
 # TODO: return the habitats/stressors for use in validation.
-def _parse_criteria_table(criteria_table_path, known_stressors,
-                          target_composite_csv_path):
+def _parse_criteria_table(criteria_table_path, target_composite_csv_path):
     # This function requires that the table is read as a numpy array, so it's
     # easiest to read the table directly.
     extension = os.path.splitext(criteria_table_path)[1].lower()
@@ -1688,9 +1686,26 @@ def _parse_criteria_table(criteria_table_path, known_stressors,
         df = pandas.read_csv(criteria_table_path, header=None, sep=None,
                              engine='python')
     table = df.to_numpy()
-    known_stressors = set(known_stressors)
 
-    # Fill in habitat names in the table for easier reference.
+    # Habitats are loaded from the top row (table[0])
+    known_habitats = set(table[0]).difference(
+        {'HABITAT NAME', numpy.nan, 'CRITERIA TYPE'})
+
+    # Stressors are loaded from the first column (table[:, 0])
+    overlap_section_header = 'HABITAT STRESSOR OVERLAP PROPERTIES'
+    known_stressors = set()
+    for row_index, value in enumerate(table[:, 0]):
+        try:
+            if value == overlap_section_header or numpy.isnan(value):
+                known_stressors.add(table[row_index + 1, 0])
+        except TypeError:
+            # calling numpy.isnan on a string raises a TypeError.
+            pass
+    # The overlap section header is presented after an empty line, so it'll
+    # normally show up in this set.  Remove it.
+    known_stressors.remove(overlap_section_header)
+
+    # Fill in habitat names in the table's top row for easier reference.
     criteria_col = None
     habitats = set()
     for col_index, value in enumerate(table[0]):
@@ -1715,7 +1730,7 @@ def _parse_criteria_table(criteria_table_path, known_stressors,
 
     current_stressor = None
     for row_index, row in enumerate(table[1:], start=1):
-        if row[0] == 'HABITAT STRESSOR OVERLAP PROPERTIES':
+        if row[0] == overlap_section_header:
             continue
 
         if (row[0] in known_stressors or
@@ -1752,6 +1767,8 @@ def _parse_criteria_table(criteria_table_path, known_stressors,
                 stressor_habitat_data, ignore_index=True)
 
     overlap_df.to_csv(target_composite_csv_path, index=False)
+
+    return (known_habitats, known_stressors)
 
 
 def _calculate_decayed_distance(stressor_raster_path, decay_type,
@@ -2089,4 +2106,25 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
-    return validation.validate(args, ARGS_SPEC['args'])
+    validation_warnings = validation.validate(args, ARGS_SPEC['args'])
+
+    sufficient_keys = validation.get_sufficient_keys(args)
+    invalid_keys = validation.get_invalid_keys(validation_warnings)
+
+    if ('info_table_path' not in invalid_keys and
+            'info_table_path' in sufficient_keys):
+        habitats, stressors = _parse_info_table(args['info_table_path'])
+
+        if len(habitats) == 0:
+            validation_warnings.append(
+                ('info_table_path', 'Info table must have at least 1 habitat'))
+
+        if len(stressors) == 0:
+            validation_warnings.append(
+                ('info_table_path', 'Info table must have at least 1 stressor')
+            )
+
+        if ('criteria_table_path' not in invalid_keys and
+                'criteria_table_path' in sufficient_keys):
+            pass
+            # get the habitats and stressors
