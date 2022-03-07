@@ -372,22 +372,22 @@ def calculate_sediment_deposition(
     where:
 
     - ``p(i,j)`` is the proportion of flow from pixel ``i`` into pixel ``j``
-    - ``J`` is the set of pixels that are immediate upstream neighbors of
+    - ``J`` is the set of pixels that are immediate upslope neighbors of
       pixel ``i``
-    - ``K`` is the set of pixels that are immediate downstream neighbors of
+    - ``K`` is the set of pixels that are immediate downslope neighbors of
       pixel ``i``
     - ``E'`` is ``USLE * (1 - SDR)``, the amount of sediment loss from pixel
       ``i`` that doesn't reach a stream (``e_prime_path``)
     - ``SDR`` is the sediment delivery ratio (``sdr_path``)
 
-    ``f_i`` is recursively defined in terms of ``i``'s upstream neighbors.
+    ``f_i`` is recursively defined in terms of ``i``'s upslope neighbors.
     The algorithm begins from seed pixels that are local high points and so
-    have no upstream neighbors. It works downstream from each seed pixel,
-    only adding a pixel to the stack when all its upstream neighbors are
+    have no upslope neighbors. It works downslope from each seed pixel,
+    only adding a pixel to the stack when all its upslope neighbors are
     already calculated.
 
     Note that this function is designed to be used in the context of the SDR
-    model. Because the algorithm is recursive upstream and downstream of each
+    model. Because the algorithm is recursive upslope and downslope of each
     pixel, nodata values in the SDR input would propagate along the flow path.
     This case is not handled because we assume the SDR and flow dir inputs
     will come from the SDR model and have nodata in the same places.
@@ -451,7 +451,7 @@ def calculate_sediment_deposition(
     cdef int flow_val, neighbor_flow_val, ds_neighbor_flow_val
     cdef int flow_weight, neighbor_flow_weight
     cdef float flow_sum, neighbor_flow_sum
-    cdef float downstream_sdr_weighted_sum, sdr_i, sdr_j
+    cdef float downslope_sdr_weighted_sum, sdr_i, sdr_j
     cdef float p_j, p_val
 
     for offset_dict in pygeoprocessing.iterblocks(
@@ -501,16 +501,16 @@ def calculate_sediment_deposition(
                     processing_stack.push(seed_row * n_cols + seed_col)
 
                 while processing_stack.size() > 0:
-                    # loop invariant: cell has all upstream neighbors
+                    # loop invariant: cell has all upslope neighbors
                     # processed. this is true for seed pixels because they
-                    # have no upstream neighbors.
+                    # have no upslope neighbors.
                     flat_index = processing_stack.top()
                     processing_stack.pop()
                     global_row = flat_index // n_cols
                     global_col = flat_index % n_cols
 
                     # (sum over j ∈ J of f_j * p(i,j) in the equation for r_i)
-                    # calculate the upstream f_j contribution to this pixel,
+                    # calculate the upslope f_j contribution to this pixel,
                     # the weighted sum of flux flowing onto this pixel from
                     # all neighbors
                     f_j_weighted_sum = 0
@@ -547,11 +547,11 @@ def calculate_sediment_deposition(
                             # flow proportion
                             f_j_weighted_sum += p_val * f_j
 
-                    # calculate sum of SDR values of immediate downstream 
+                    # calculate sum of SDR values of immediate downslope
                     # neighbors, weighted by proportion of flow into each
                     # neighbor
                     # (sum over k ∈ K of SDR_k * p(i,k) in the equation above)
-                    downstream_sdr_weighted_sum = 0
+                    downslope_sdr_weighted_sum = 0
                     flow_val = <int>mfd_flow_direction_raster.get(
                         global_col, global_row)
                     flow_sum = 0
@@ -567,7 +567,7 @@ def calculate_sediment_deposition(
                         neighbor_col = global_col + COL_OFFSETS[j]
                         if neighbor_col < 0 or neighbor_col >= n_cols:
                             continue
-                        # if it is a downstream neighbor, add to the sum and
+                        # if it is a downslope neighbor, add to the sum and
                         # check if it can be pushed onto the stack yet
                         flow_weight = (flow_val >> (j*4)) & 0xF
                         if flow_weight > 0:
@@ -580,15 +580,15 @@ def calculate_sediment_deposition(
                                 # is the last step on which to retain sediment
                                 sdr_j = 1
                             p_j = flow_weight / flow_sum
-                            downstream_sdr_weighted_sum += sdr_j * p_j
+                            downslope_sdr_weighted_sum += sdr_j * p_j
 
                             # check if we can add neighbor j to the stack yet
                             #
-                            # if there is a downstream neighbor it
+                            # if there is a downslope neighbor it
                             # couldn't have been pushed on the processing
-                            # stack yet, because the upstream was just
+                            # stack yet, because the upslope was just
                             # completed
-                            upstream_neighbors_processed = 1
+                            upslope_neighbors_processed = 1
                             # iterate over each neighbor-of-neighbor
                             for k in range(8):
                                 # no need to push the one we're currently
@@ -605,7 +605,7 @@ def calculate_sediment_deposition(
                                     neighbor_col + COL_OFFSETS[k])
                                 if ds_neighbor_col < 0 or ds_neighbor_col >= n_cols:
                                     continue
-                                # if any upstream neighbor of j hasn't been
+                                # if any upslope neighbor of j hasn't been
                                 # calculated, we can't push j onto the stack
                                 # yet
                                 ds_neighbor_flow_val = (
@@ -616,11 +616,11 @@ def calculate_sediment_deposition(
                                     if (sediment_deposition_raster.get(
                                             ds_neighbor_col, ds_neighbor_row) ==
                                             target_nodata):
-                                        upstream_neighbors_processed = 0
+                                        upslope_neighbors_processed = 0
                                         break
-                            # if all upstream neighbors of neighbor j are
+                            # if all upslope neighbors of neighbor j are
                             # processed, we can push j onto the stack.
-                            if upstream_neighbors_processed:
+                            if upslope_neighbors_processed:
                                 processing_stack.push(
                                     neighbor_row * n_cols +
                                     neighbor_col)
@@ -633,14 +633,14 @@ def calculate_sediment_deposition(
                     if e_prime_i == e_prime_nodata:
                         continue
 
-                    if downstream_sdr_weighted_sum < sdr_i:
+                    if downslope_sdr_weighted_sum < sdr_i:
                         # i think this happens because of our low resolution
                         # flow direction, it's okay to zero out.
-                        downstream_sdr_weighted_sum = sdr_i
+                        downslope_sdr_weighted_sum = sdr_i
 
                     # these correspond to the full equations for
                     # dr_i, r_i, and f_i given in the docstring
-                    dr_i = (downstream_sdr_weighted_sum - sdr_i) / (1 - sdr_i)
+                    dr_i = (downslope_sdr_weighted_sum - sdr_i) / (1 - sdr_i)
                     r_i = dr_i * (e_prime_i + f_j_weighted_sum)
                     f_i = (1 - dr_i) * (e_prime_i + f_j_weighted_sum)
 

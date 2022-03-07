@@ -119,7 +119,7 @@ THRESHOLD_FLOW_ACCUMULATION = {
     "type": "number",
     "units": u.pixel,
     "about": _(
-        "The number of upstream pixels that must flow into a pixel "
+        "The number of upslope pixels that must flow into a pixel "
         "before it is classified as a stream."),
     "name": _("threshold flow accumulation")
 }

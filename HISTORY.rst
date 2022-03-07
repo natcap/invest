@@ -32,9 +32,12 @@
 
 .. :changelog:
 
-..
-  Unreleased Changes
-  ------------------
+Unreleased Changes
+------------------
+* RouteDEM
+    * Rename the arg ``calculate_downstream_distance`` to
+      ``calculate_downslope_distance``. This is meant to clarify that it
+      applies to pixels that are not part of a stream.
 
 3.10.2 (2022-02-08)
 -------------------
