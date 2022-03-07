@@ -692,6 +692,61 @@ class HRAUnitTests(unittest.TestCase):
             opened_df = hra2._open_table_as_dataframe(full_filepath)
             pandas.testing.assert_frame_equal(expected_df, opened_df)
 
+    def test_pairwise_risk(self):
+        from natcap.invest import hra2
+
+        byte_nodata = hra2._TARGET_NODATA_BYTE
+        habitat_mask_path = os.path.join(
+            self.workspace_dir, 'habitat_mask.tif')
+        habitat_mask_array = numpy.array([
+            [1, 1, 0, byte_nodata]], dtype=numpy.uint8)
+
+        float_nodata = hra2._TARGET_NODATA_FLOAT32
+        exposure_path = os.path.join(self.workspace_dir, 'exposure.tif')
+        exposure_array = numpy.array([
+            [0.1, 0.2, 0.3, float_nodata]], dtype=numpy.float32)
+
+        consequence_path = os.path.join(self.workspace_dir, 'consequence.tif')
+        consequence_array = numpy.array([
+            [0.2, 0.3, 0.4, float_nodata]], dtype=numpy.float32)
+
+        for path, array, nodata in [
+                (habitat_mask_path, habitat_mask_array, byte_nodata),
+                (exposure_path, exposure_array, float_nodata),
+                (consequence_path, consequence_array, float_nodata)]:
+            pygeoprocessing.numpy_array_to_raster(
+                array, nodata, (30, -30), ORIGIN, SRS_WKT, path)
+
+        multiplicative_risk_path = os.path.join(
+            self.workspace_dir, 'multiplicative.tif')
+        hra2._calculate_pairwise_risk(
+            habitat_mask_path, exposure_path, consequence_path,
+            'multiplicative', multiplicative_risk_path)
+
+        expected_multiplicative_array = numpy.array([
+            [0.02, 0.06, float_nodata, float_nodata]], dtype=numpy.float32)
+        numpy.testing.assert_allclose(
+            expected_multiplicative_array,
+            pygeoprocessing.raster_to_numpy_array(multiplicative_risk_path))
+
+        euclidean_risk_path = os.path.join(
+            self.workspace_dir, 'euclidean.tif')
+        hra2._calculate_pairwise_risk(
+            habitat_mask_path, exposure_path, consequence_path, 'euclidean',
+            euclidean_risk_path)
+
+        expected_euclidean_array = numpy.array([
+            [1.2041595, 1.0630146, float_nodata, float_nodata]],
+            dtype=numpy.float32)
+        numpy.testing.assert_allclose(
+            expected_euclidean_array,
+            pygeoprocessing.raster_to_numpy_array(euclidean_risk_path)
+        )
+
+
+
+
+
 
 
 class HRAModelTests(unittest.TestCase):
