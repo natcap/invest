@@ -303,11 +303,26 @@ def execute(args):
     # parse the criteria table to get the composite table
     composite_criteria_table_path = os.path.join(
         intermediate_dir, f'composite_criteria{suffix}.csv')
-    _parse_criteria_table(
+    criteria_habitats, criteria_stressors = _parse_criteria_table(
         args['criteria_table_path'], composite_criteria_table_path)
+
+    # Validate that habitats and stressors match precisely.
+    for label, info_set, criteria_set in [
+            ('habitats', set(habitats.keys()), criteria_habitats),
+            ('stressors', set(stressors.keys()), criteria_stressors)]:
+        if info_set != criteria_set:
+            missing_from_info_table = ", ".join(
+                sorted(criteria_set - info_set))
+            missing_from_criteria_table = ", ".join(
+                sorted(info_set - criteria_set))
+            raise ValueError(
+                f"The {label} in the info and criteria tables do not match:\n"
+                f"  Missing from info table: {missing_from_info_table}\n"
+                f"  Missing from criteria table: {missing_from_criteria_table}"
+            )
+
     criteria_df = pandas.read_csv(composite_criteria_table_path,
                                   index_col=False)
-
     # Because criteria may be spatial, we need to prepare those spatial inputs
     # as well.
     spatial_criteria_attrs = {}
@@ -317,7 +332,7 @@ def execute(args):
         if isinstance(rating, (int, float)):
             continue  # obviously a numeric rating
 
-        # If the rating is non-numeric, it's a spatial criterion.
+        # If the rating is non-numeric, assume it's a spatial criterion.
         # this dict matches the structure of the outputs for habitat/stressor
         # dicts, from _parse_info_table
         name = f'{habitat}-{stressor}-{criterion}'
@@ -1676,7 +1691,6 @@ def _parse_info_table(info_table_path):
 
 
 # TODO: validate spatial criteria can be opened by GDAL.
-# TODO: return the habitats/stressors for use in validation.
 def _parse_criteria_table(criteria_table_path, target_composite_csv_path):
     # This function requires that the table is read as a numpy array, so it's
     # easiest to read the table directly.
@@ -1704,7 +1718,13 @@ def _parse_criteria_table(criteria_table_path, target_composite_csv_path):
             pass
     # The overlap section header is presented after an empty line, so it'll
     # normally show up in this set.  Remove it.
-    known_stressors.remove(overlap_section_header)
+    # It's also all too easy to end up with multiple nan rows between sections,
+    # so if a numpy.nan ends up in the set, remove it.
+    for value in (overlap_section_header, numpy.nan):
+        try:
+            known_stressors.remove(value)
+        except KeyError:
+            pass
 
     # Fill in habitat names in the table's top row for easier reference.
     criteria_col = None
@@ -2107,25 +2127,4 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
-    validation_warnings = validation.validate(args, ARGS_SPEC['args'])
-
-    sufficient_keys = validation.get_sufficient_keys(args)
-    invalid_keys = validation.get_invalid_keys(validation_warnings)
-
-    if ('info_table_path' not in invalid_keys and
-            'info_table_path' in sufficient_keys):
-        habitats, stressors = _parse_info_table(args['info_table_path'])
-
-        if len(habitats) == 0:
-            validation_warnings.append(
-                ('info_table_path', 'Info table must have at least 1 habitat'))
-
-        if len(stressors) == 0:
-            validation_warnings.append(
-                ('info_table_path', 'Info table must have at least 1 stressor')
-            )
-
-        if ('criteria_table_path' not in invalid_keys and
-                'criteria_table_path' in sufficient_keys):
-            pass
-            # get the habitats and stressors
+    return validation.validate(args, ARGS_SPEC['args'])

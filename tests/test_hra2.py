@@ -772,5 +772,120 @@ class HRAModelTests(unittest.TestCase):
             'risk_eq': 'Multiplicative',
             'decay_eq': 'linear',
             'aoi_vector_path': 'create a vector',
-            'override_max_overlapping_stressors': 2,
+            'n_overlapping_stressors': 2,
         }
+
+    def test_model_habitat_mismatch(self):
+        from natcap.invest import hra2
+
+        criteria_table_path = os.path.join(self.workspace_dir, 'criteria.csv')
+        with open(criteria_table_path, 'w') as criteria_table:
+            criteria_table.write(textwrap.dedent(
+                """\
+                HABITAT NAME,eelgrass,,,hardbottom,,,CRITERIA TYPE
+                HABITAT RESILIENCE ATTRIBUTES,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
+                recruitment rate,2,2,2,2,2,2,C
+                connectivity rate,eelgrass_connectivity.shp,2,2,2,2,2,C
+                ,,,,,,,
+                HABITAT STRESSOR OVERLAP PROPERTIES,,,,,,,
+                oil,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
+                frequency of disturbance,2,2,3,2,2,3,C
+                management effectiveness,2,2,1,2,2,1,E
+                ,,,,,,,
+                fishing,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
+                frequency of disturbance,2,2,3,2,2,3,C
+                management effectiveness,2,2,1,2,2,1,E
+                """
+            ))
+
+        info_table_path = os.path.join(self.workspace_dir, 'info.csv')
+        with open(info_table_path, 'w') as info_table:
+            info_table.write(textwrap.dedent(
+                """\
+                NAME,PATH,TYPE,STRESSOR BUFFER (meters)
+                corals,habitat/corals.shp,habitat,
+                oil,stressors/oil.shp,stressor,1000
+                transportation,stressors/transport.shp,stressor,100"""))
+
+        args = {
+            'workspace_dir': os.path.join(self.workspace_dir, 'workspace'),
+            'criteria_table_path': criteria_table_path,
+            'info_table_path': info_table_path,
+            'resolution': 250,
+            'max_rating': 3,
+            'n_overlapping_stressors': 3,
+            'risk_eq': 'multiplicative',
+            'aoi_vector_path': os.path.join(self.workspace_dir, 'aoi.shp'),
+        }
+
+        aoi_geoms = [shapely.geometry.box(
+            *shapely.geometry.Point(ORIGIN).buffer(100).bounds)]
+        pygeoprocessing.shapely_geometry_to_vector(
+            aoi_geoms, args['aoi_vector_path'], SRS_WKT, 'ESRI Shapefile')
+
+        with self.assertRaises(ValueError) as cm:
+            hra2.execute(args)
+
+        self.assertIn('habitats', str(cm.exception))
+        self.assertIn("Missing from info table: eelgrass, hardbottom",
+                      str(cm.exception))
+        self.assertIn("Missing from criteria table: corals",
+                      str(cm.exception))
+
+    def test_model_stressor_mismatch(self):
+        from natcap.invest import hra2
+
+        criteria_table_path = os.path.join(self.workspace_dir, 'criteria.csv')
+        with open(criteria_table_path, 'w') as criteria_table:
+            criteria_table.write(textwrap.dedent(
+                """\
+                HABITAT NAME,eelgrass,,,hardbottom,,,CRITERIA TYPE
+                HABITAT RESILIENCE ATTRIBUTES,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
+                recruitment rate,2,2,2,2,2,2,C
+                connectivity rate,eelgrass_connectivity.shp,2,2,2,2,2,C
+                ,,,,,,,
+                HABITAT STRESSOR OVERLAP PROPERTIES,,,,,,,
+                oil,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
+                frequency of disturbance,2,2,3,2,2,3,C
+                management effectiveness,2,2,1,2,2,1,E
+                ,,,,,,,
+                fishing,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
+                frequency of disturbance,2,2,3,2,2,3,C
+                management effectiveness,2,2,1,2,2,1,E
+                """
+            ))
+
+        info_table_path = os.path.join(self.workspace_dir, 'info.csv')
+        with open(info_table_path, 'w') as info_table:
+            info_table.write(textwrap.dedent(
+                """\
+                NAME,PATH,TYPE,STRESSOR BUFFER (meters)
+                eelgrass,habitat/eelgrass.shp,habitat,
+                hardbottom,habitat/hardbottom.shp,habitat,
+                oil,stressors/oil.shp,stressor,1000
+                transportation,stressors/transport.shp,stressor,100"""))
+
+        args = {
+            'workspace_dir': os.path.join(self.workspace_dir, 'workspace'),
+            'criteria_table_path': criteria_table_path,
+            'info_table_path': info_table_path,
+            'resolution': 250,
+            'max_rating': 3,
+            'n_overlapping_stressors': 3,
+            'risk_eq': 'multiplicative',
+            'aoi_vector_path': os.path.join(self.workspace_dir, 'aoi.shp'),
+        }
+
+        aoi_geoms = [shapely.geometry.box(
+            *shapely.geometry.Point(ORIGIN).buffer(100).bounds)]
+        pygeoprocessing.shapely_geometry_to_vector(
+            aoi_geoms, args['aoi_vector_path'], SRS_WKT, 'ESRI Shapefile')
+
+        with self.assertRaises(ValueError) as cm:
+            hra2.execute(args)
+
+        self.assertIn('stressors', str(cm.exception))
+        self.assertIn("Missing from info table: fishing",
+                      str(cm.exception))
+        self.assertIn("Missing from criteria table: transportation",
+                      str(cm.exception))
