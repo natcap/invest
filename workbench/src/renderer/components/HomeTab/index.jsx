@@ -169,7 +169,7 @@ class RecentInvestJobs extends React.Component {
             )
             : (
               <div className="d-inline-block">
-                {_(`Try the "Open" button to setup a model from a sample
+                {_(`Try the <b>Open</b> button to setup a model from a sample
                     datastack file (.json) or from an InVEST model's logfile (.txt)`)}
               </div>
             )}

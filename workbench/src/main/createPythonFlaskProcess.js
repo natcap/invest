@@ -3,7 +3,6 @@ import { spawn } from 'child_process';
 import fetch from 'node-fetch';
 
 import { getLogger } from '../logger';
-import { PORT } from '../flaskPort';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 const HOSTNAME = 'http://localhost';
@@ -22,7 +21,7 @@ export function createPythonFlaskProcess(investExe) {
   // maybe --debug if devMode, -vvv if production?
   const pythonServerProcess = spawn(
     investExe,
-    ['serve', '--port', PORT],
+    ['serve', '--port', process.env.PORT],
     { shell: true } // necessary in dev mode & relying on a conda env
   );
 
@@ -60,7 +59,7 @@ export function createPythonFlaskProcess(investExe) {
  */
 export function getFlaskIsReady({ i = 0, retries = 41 } = {}) {
   return (
-    fetch(`${HOSTNAME}:${PORT}/api/ready`, {
+    fetch(`${HOSTNAME}:${process.env.PORT}/api/ready`, {
       method: 'get',
     })
       .then((response) => response.text())
@@ -88,7 +87,7 @@ export function getFlaskIsReady({ i = 0, retries = 41 } = {}) {
  */
 export function shutdownPythonProcess() {
   return (
-    fetch(`http://localhost:${PORT}/api/shutdown`, {
+    fetch(`http://localhost:${process.env.PORT}/api/shutdown`, {
       method: 'get',
     })
       .then((response) => response.text())
