@@ -213,7 +213,6 @@ ARGS_SPEC = {
     }
 }
 
-# TODO: use this in an assertion where it's useful.
 _VALID_RISK_EQS = set(ARGS_SPEC['args']['risk_eq']['options'].keys())
 
 
@@ -350,6 +349,7 @@ def execute(args):
 
     # Preprocess habitat, stressor spatial criteria datasets.
     # All of these are spatial in nature but might be rasters or vectors.
+    user_files_to_aligned_raster_paths = {}
     alignment_source_raster_paths = {}
     alignment_source_vector_paths = {}
     alignment_dependent_tasks = []
@@ -362,6 +362,7 @@ def execute(args):
         gis_type = pygeoprocessing.get_gis_type(source_filepath)
         aligned_raster_path = os.path.join(
             intermediate_dir, f'aligned_{name}{suffix}.tif')
+        user_files_to_aligned_raster_paths[source_filepath] = aligned_raster_path
 
         # If the input is already a raster, run it through raster_calculator to
         # ensure we know the nodata value and pixel values.
@@ -544,8 +545,18 @@ def execute(args):
                 # This produces a list of dicts in the form:
                 # [{'rating': (score), 'weight': (score), 'dq': (score)}],
                 # which is what _calc_criteria() expects.
-                attributes_list = local_criteria_df[
-                    ['rating', 'weight', 'dq']].to_dict(orient='records')
+                attributes_list = []
+                for attrs in local_criteria_df[
+                        ['rating', 'weight', 'dq']].to_dict(orient='records'):
+                    try:
+                        float(attrs['rating'])
+                    except ValueError:
+                        # When attrs['rating'] is not a number, we should
+                        # assume it's a spatial file.
+                        attrs['rating'] = user_files_to_aligned_raster_paths[attrs['rating']]
+                    attributes_list.append(attrs)
+                import pprint
+                LOGGER.info(pprint.pformat(attributes_list))
 
                 criteria_tasks[criteria_type] = graph.add_task(
                     _calc_criteria,
@@ -719,8 +730,16 @@ def execute(args):
         resilience_criteria_df = criteria_df[
             (criteria_df['habitat'] == habitat) &
             (criteria_df['stressor'] == 'RESILIENCE')]
-        criteria_attributes_list = resilience_criteria_df[
-            ['rating', 'weight', 'dq']].to_dict(orient='records')
+        criteria_attributes_list = []
+        for attrs in resilience_criteria_df[
+                ['rating', 'weight', 'dq']].to_dict(orient='records'):
+            try:
+                float(attrs['rating'])
+            except ValueError:
+                # When attrs['rating'] is not a number, we should assume it's a
+                # spatial file.
+                attrs['rating'] = user_files_to_aligned_raster_paths[attrs['rating']]
+            criteria_attributes_list.append(attrs)
 
         recovery_score_path = os.path.join(
             intermediate_dir, f'recovery_{habitat}{suffix}.tif')
@@ -809,15 +828,20 @@ def execute(args):
     )
 
     graph.join()
-    if not args['visualize_outputs']:
+    if not args.get('visualize_outputs', False):
         graph.close()
         return
 
+    # Although the generation of visualization outputs could have more precise
+    # task dependencies, the effort involved in tracking them precisely doesn't
+    # feel worth it when the visualization steps are such a standalone
+    # component and it isn't clear if we'll end up keeping this in HRA or
+    # refactoring it out (should we end up doing more such visualizations).
     LOGGER.info('Generating visualization outputs')
     visualization_dir = os.path.join(args['workspace_dir'],
                                      'visualization_outputs')
     utils.make_directories([visualization_dir])
-    shutil.copy(
+    shutil.copy(  # copy in the summary table.
         summary_csv_path,
         os.path.join(visualization_dir, os.path.basename(summary_csv_path)))
 
@@ -840,7 +864,6 @@ def execute(args):
                 },
                 task_name=f'Rewrite {basename} for polygonization',
                 target_path_list=[polygonize_mask_raster_path],
-                # TODO: use the right dependent tasks?  Worth it?
                 dependent_task_list=[]
             )
 
