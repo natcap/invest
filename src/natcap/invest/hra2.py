@@ -331,6 +331,13 @@ def execute(args):
              'rating']].itertuples(index=False):
         if isinstance(rating, (int, float)):
             continue  # obviously a numeric rating
+        try:
+            float(rating)
+            continue
+        except ValueError:
+            # If we can't cast it to a float, assume it's a string and
+            # therefore spatial.
+            pass
 
         # If the rating is non-numeric, assume it's a spatial criterion.
         # this dict matches the structure of the outputs for habitat/stressor
@@ -360,7 +367,7 @@ def execute(args):
         # ensure we know the nodata value and pixel values.
         if gis_type == pygeoprocessing.RASTER_TYPE:
             rewritten_raster_path = os.path.join(
-                intermediate_dir, 'rewritten_{name}{suffix}.tif')
+                intermediate_dir, f'rewritten_{name}{suffix}.tif')
             alignment_source_raster_paths[
                 rewritten_raster_path] = aligned_raster_path
             # Habitats/stressors must have pixel values of 0 or 1.
@@ -377,7 +384,7 @@ def execute(args):
                     },
                     task_name=(
                         f'Rewrite {name} criteria raster for consistency'),
-                    target_path_list=rewritten_raster_path,
+                    target_path_list=[rewritten_raster_path],
                     dependent_task_list=[]
                 )
             else:
@@ -392,7 +399,7 @@ def execute(args):
                     task_name=(
                         f'Rewrite {name} habitat/stressor raster for '
                         'consistency'),
-                    target_path_list=rewritten_raster_path,
+                    target_path_list=[rewritten_raster_path],
                     dependent_task_list=[]
                 )
             alignment_dependent_tasks.append(prep_raster_task)
@@ -447,7 +454,7 @@ def execute(args):
         # rasters, so it's useful to collect those here now.
         if name in habitats:
             aligned_habitat_raster_paths.append(aligned_raster_path)
-        else:  # must be a stressor
+        elif name in stressors:
             aligned_stressor_raster_paths[name] = aligned_raster_path
 
     alignment_task = graph.add_task(
@@ -1782,6 +1789,17 @@ def _parse_criteria_table(criteria_table_path, target_composite_csv_path):
                 # attribute is rating, dq or weight
                 attribute_name = table[current_stressor_header_row][col_index]
                 attribute_value = row[col_index]
+                try:
+                    # Just a test to see if this value is a number.
+                    # It's OK if it stays an int.
+                    float(attribute_value)
+                except ValueError:
+                    # If we can't cast it to a float, assume it's a string path
+                    # to a raster or vector.
+                    if not os.path.isabs(attribute_value):
+                        attribute_value = os.path.join(
+                            os.path.dirname(criteria_table_path),
+                            attribute_value)
                 stressor_habitat_data[
                     attribute_name.lower()] = attribute_value
             overlap_df = overlap_df.append(

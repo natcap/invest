@@ -219,13 +219,15 @@ class HRAUnitTests(unittest.TestCase):
         self.assertEqual(habitats, {'eelgrass', 'hardbottom'})
         self.assertEqual(stressors, {'oil', 'fishing'})
 
+        eelgrass_path = os.path.join(
+            self.workspace_dir, 'eelgrass_connectivity.shp')
         expected_composite_dataframe = pandas.read_csv(
             io.StringIO(textwrap.dedent(
-                """\
+                f"""\
                 habitat,stressor,criterion,rating,dq,weight,e/c
                 eelgrass,RESILIENCE,recruitment rate,2,2,2,C
                 hardbottom,RESILIENCE,recruitment rate,2,2,2,C
-                eelgrass,RESILIENCE,connectivity rate,eelgrass_connectivity.shp,2,2,C
+                eelgrass,RESILIENCE,connectivity rate,{eelgrass_path},2,2,C
                 hardbottom,RESILIENCE,connectivity rate,2,2,2,C
                 eelgrass,oil,frequency of disturbance,2,2,3,C
                 hardbottom,oil,frequency of disturbance,2,2,3,C
@@ -771,9 +773,80 @@ class HRAModelTests(unittest.TestCase):
             'max_rating': 3,
             'risk_eq': 'Multiplicative',
             'decay_eq': 'linear',
-            'aoi_vector_path': 'create a vector',
+            'aoi_vector_path': os.path.join(self.workspace_dir, 'aoi.shp'),
             'n_overlapping_stressors': 2,
         }
+        aoi_geoms = [shapely.geometry.box(
+            *shapely.geometry.Point(ORIGIN).buffer(1000).bounds)]
+        pygeoprocessing.shapely_geometry_to_vector(
+            aoi_geoms, args['aoi_vector_path'], SRS_WKT, 'ESRI Shapefile')
+
+        with open(args['criteria_table_path'], 'w') as criteria_table:
+            criteria_table.write(textwrap.dedent(
+                """\
+                HABITAT NAME,eelgrass,,,hardbottom,,,CRITERIA TYPE
+                HABITAT RESILIENCE ATTRIBUTES,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
+                recruitment rate,2,2,2,2,2,2,C
+                connectivity rate,eelgrass_connectivity.shp,2,2,2,2,2,C
+                ,,,,,,,
+                HABITAT STRESSOR OVERLAP PROPERTIES,,,,,,,
+                oil,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
+                frequency of disturbance,2,2,3,2,2,3,C
+                management effectiveness,2,2,1,2,2,1,E
+                ,,,,,,,
+                fishing,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
+                frequency of disturbance,2,2,3,2,2,3,C
+                management effectiveness,2,2,1,2,2,1,E
+                ,,,,,,,
+                transportation,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
+                frequency of disturbance,2,2,3,2,2,3,C
+                management effectiveness,2,2,1,2,2,1,E
+                """
+            ))
+
+        with open(args['info_table_path'], 'w') as info_table:
+            info_table.write(textwrap.dedent(
+                """\
+                NAME,PATH,TYPE,STRESSOR BUFFER (meters)
+                eelgrass,habitats/eelgrass.tif,habitat,
+                hardbottom,habitats/hardbottom.shp,habitat
+                oil,stressors/oil.tif,stressor,1000
+                fishing,stressors/fishing.shp,stressor,500
+                transportation,stressors/transport.shp,stressor,100"""))
+
+        # The tuple notation (path, ) is needed here to tell python to
+        # interpret the result of itertuples as a tuple.
+        spatial_files_to_make = [
+            item[0] for item in
+            pandas.read_csv(args['info_table_path'])[['PATH']].itertuples(
+                index=False)]
+        spatial_files_to_make.append('eelgrass_connectivity.shp')
+
+        for path in spatial_files_to_make:
+            full_path = os.path.join(self.workspace_dir, path)
+            if not os.path.exists(os.path.dirname(full_path)):
+                os.makedirs(os.path.dirname(full_path))
+
+            if path.endswith('.shp'):
+                # Make a point that sits at the center of the AOI, buffered by
+                # 100m
+                geoms = [shapely.geometry.Point(ORIGIN).buffer(100)]
+                pygeoprocessing.shapely_geometry_to_vector(
+                    geoms, full_path, SRS_WKT, 'ESRI Shapefile')
+            else:  # Assume geotiff
+                # Raster is centered on the origin, spanning 50m on either
+                # side.
+                array = numpy.ones((20, 20), dtype=numpy.uint8)
+                pygeoprocessing.numpy_array_to_raster(
+                    array, 255, (10, -10), (ORIGIN[0] - 50, ORIGIN[1] - 50),
+                    SRS_WKT, full_path)
+
+        hra2.execute(args)
+
+        # Ecosystem risk is the sum of all risk values.
+
+
+
 
     def test_model_habitat_mismatch(self):
         from natcap.invest import hra2
