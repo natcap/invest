@@ -5,7 +5,7 @@
   "main": "build/main/main.js",
   "homepage": "./",
   "scripts": {
-    "start": "yarn build-main && yarn build-preload && concurrently \"yarn serve\" \"electron .\"",
+    "start": "yarn build-main && yarn build-preload && concurrently --kill-others \"yarn serve\" \"electron .\"",
     "serve": "cross-env MODE=development node scripts/watch.js",
     "lint": "eslint --cache --color --ext .jsx,.js src",
     "test": "jest --runInBand --testPathIgnorePatterns /tests/binary_tests/ /tests/sampledata_linkcheck/",
