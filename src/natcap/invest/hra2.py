@@ -555,8 +555,6 @@ def execute(args):
                         # assume it's a spatial file.
                         attrs['rating'] = user_files_to_aligned_raster_paths[attrs['rating']]
                     attributes_list.append(attrs)
-                import pprint
-                LOGGER.info(pprint.pformat(attributes_list))
 
                 criteria_tasks[criteria_type] = graph.add_task(
                     _calc_criteria,
@@ -1574,7 +1572,7 @@ def _simplify(source_vector_path, tolerance, target_vector_path,
 
 
 def _prep_input_criterion_raster(
-        source_raster_path, target_raster_path):
+        source_raster_path, target_filepath):
     """Prepare an input criterion raster for internal use.
 
     In order to make raster calculations more consistent within HRA, it's
@@ -1587,7 +1585,7 @@ def _prep_input_criterion_raster(
     Args:
         source_raster_path (string): The path to a user-provided criterion
             raster.
-        target_raster_path (string): The path to where the translated raster
+        target_filepath (string): The path to where the translated raster
             should be written on disk.
 
     Returns:
@@ -1621,7 +1619,7 @@ def _prep_input_criterion_raster(
         return target_rating_array
 
     pygeoprocessing.raster_calculator(
-        [(source_raster_path, 1)], _translate_op, target_raster_path,
+        [(source_raster_path, 1)], _translate_op, target_filepath,
         _TARGET_GDAL_TYPE_FLOAT32, _TARGET_NODATA_FLOAT32)
 
 
