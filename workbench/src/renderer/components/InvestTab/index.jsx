@@ -1,4 +1,3 @@
-import path from 'path';
 import React from 'react';
 import PropTypes from 'prop-types';
 
@@ -165,11 +164,6 @@ export default class InvestTab extends React.Component {
       updateJobProperties,
     } = this.props;
     const args = { ...argsValues };
-    // Not strictly necessary, but resolving to a complete path
-    // here to be extra certain we avoid unexpected collisions
-    // of workspaceHash, which uniquely ids a job in the database
-    // in part by it's workspace directory.
-    args.workspace_dir = path.resolve(argsValues.workspace_dir);
 
     updateJobProperties(jobID, {
       argsValues: args,

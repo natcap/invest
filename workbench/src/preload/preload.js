@@ -23,7 +23,7 @@ contextBridge.exposeInMainWorld('Workbench', {
   getWorkspaceHash: (modelRunName, workspaceDir, resultsSuffix) => {
     return crypto.createHash('sha1').update(
       `${modelRunName}
-       ${JSON.stringify(workspaceDir)}
+       ${JSON.stringify(path.resolve(workspaceDir))}
        ${JSON.stringify(resultsSuffix)}`
     ).digest('hex');
   },
