@@ -3,6 +3,7 @@
 // of our "-r @babel/register" dev mode strategy.
 const {
   contextBridge,
+  dialog,
   ipcRenderer,
   shell,
 } = require('electron');
@@ -30,7 +31,7 @@ contextBridge.exposeInMainWorld('Workbench', {
     ipcRenderer: {
       invoke: (channel, data) => {
         if (Object.values(ipcMainChannels).includes(channel)) {
-          ipcRenderer.invoke(channel, data);
+          return ipcRenderer.invoke(channel, data);
         }
       },
       send: (channel, data) => {
@@ -55,6 +56,5 @@ contextBridge.exposeInMainWorld('Workbench', {
       },
       removeAllListeners: () => ipcRenderer.removeAllListeners(),
     },
-    shell: shell,
   },
 });
