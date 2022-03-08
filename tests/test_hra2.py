@@ -849,6 +849,8 @@ class HRAModelTests(unittest.TestCase):
         # Check that expected GeoJSONs are there, in web mercator, with correct
         # names.
 
+        # TODO: add a spatial criterion (non-resilience/recovery)
+
 
 
 

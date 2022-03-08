@@ -1773,10 +1773,7 @@ def _parse_criteria_table(criteria_table_path, target_composite_csv_path):
         if col_value in habitats:
             habitat_columns[col_value].append(col_index)
 
-    # the primary key of this table is (habitat, stressor, criterion)
-    overlap_df = pandas.DataFrame(columns=['habitat', 'stressor', 'criterion',
-                                           'rating', 'dq', 'weight', 'e/c'])
-
+    records = []
     current_stressor = None
     for row_index, row in enumerate(table[1:], start=1):
         if row[0] == overlap_section_header:
@@ -1823,9 +1820,15 @@ def _parse_criteria_table(criteria_table_path, target_composite_csv_path):
                             attribute_value)
                 stressor_habitat_data[
                     attribute_name.lower()] = attribute_value
-            overlap_df = overlap_df.append(
-                stressor_habitat_data, ignore_index=True)
+            # Keep the copy() unless you want to all of the 'records' dicts to
+            # have the same contents!  This is normal behavior given python's
+            # memory model.
+            records.append(stressor_habitat_data.copy())
 
+    # the primary key of this table is (habitat, stressor, criterion)
+    overlap_df = pandas.DataFrame.from_records(
+        records, columns=['habitat', 'stressor', 'criterion', 'rating', 'dq',
+                          'weight', 'e/c'])
     overlap_df.to_csv(target_composite_csv_path, index=False)
 
     return (known_habitats, known_stressors)
