@@ -48,6 +48,12 @@ contextBridge.exposeInMainWorld('Workbench', {
           ipcRenderer.on(channel, (event, ...args) => func(...args));
         }
       },
+      removeListener: (channel, func) => {
+        if (Object.values(ipcMainChannels).includes(channel)) {
+          ipcRenderer.removeListener(channel, func);
+        }
+      },
+      removeAllListeners: () => ipcRenderer.removeAllListeners(),
     },
     shell: shell,
   },
