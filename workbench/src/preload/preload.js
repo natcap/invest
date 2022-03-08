@@ -8,8 +8,8 @@ const {
 } = require('electron');
 const crypto = require('crypto');
 
-const { ipcMainChannels } = require('./main/ipcMainChannels');
-const { getLogger } = require('./logger');
+const { ipcMainChannels } = require('../main/ipcMainChannels');
+const { getLogger } = require('../main/logger');
 
 contextBridge.exposeInMainWorld('Workbench', {
   // The gettext callable
@@ -52,19 +52,3 @@ contextBridge.exposeInMainWorld('Workbench', {
     shell: shell,
   },
 });
-console.log('loaded PRELOAD');
-
-// function preload() {
-//   window.Workbench = {
-//     getLogger: getLogger,
-//     getWorkspaceHash: (modelRunName, workspaceDir, resultsSuffix) => {
-//       return crypto.createHash('sha1').update(
-//         `${modelRunName}
-//          ${JSON.stringify(workspaceDir)}
-//          ${JSON.stringify(resultsSuffix)}`
-//       ).digest('hex');
-//     }
-//   };
-// }
-
-// preload();

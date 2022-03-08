@@ -16,6 +16,7 @@ import LogTab from '../LogTab';
 import ResourcesLinks from '../ResourcesLinks';
 import Expire from '../Expire';
 import { getSpec } from '../../server_requests';
+import UI_SPEC from '../../ui_config';
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
 const { ipcRenderer } = window.Workbench.electron;
@@ -31,8 +32,7 @@ async function investGetSpec(modelName) {
   const spec = await getSpec(modelName);
   if (spec) {
     const { args, ...modelSpec } = spec;
-    const uiSpecs = require('../../ui_config');
-    const uiSpec = uiSpecs[modelName];
+    const uiSpec = UI_SPEC[modelName];
     if (uiSpec) {
       return { modelSpec: modelSpec, argsSpec: args, uiSpec: uiSpec };
     }
