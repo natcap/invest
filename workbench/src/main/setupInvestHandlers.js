@@ -62,7 +62,7 @@ export function setupInvestRunHandlers(investExe) {
       args: JSON.stringify(args),
     };
     try {
-      const response = await fetch(`${HOSTNAME}:${process.env.PORT}/write_parameter_set_file`, {
+      const response = await fetch(`${HOSTNAME}:${process.env.PORT}/api/write_parameter_set_file`, {
         method: 'post',
         body: JSON.stringify(payload),
         headers: { 'Content-Type': 'application/json' },
