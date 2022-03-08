@@ -2,9 +2,9 @@ import GettextJS from 'gettext.js';
 import gettextParser from 'gettext-parser';
 import { ipcMain } from 'electron';
 import fs from 'fs';
-import { getLogger } from '../logger';
+import { getLogger } from './logger';
 import { ipcMainChannels } from './ipcMainChannels';
-import ELECTRON_DEV_MODE from './isDevMode'
+import ELECTRON_DEV_MODE from './isDevMode';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 const i18n = new GettextJS();

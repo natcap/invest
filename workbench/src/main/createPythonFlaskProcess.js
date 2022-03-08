@@ -2,7 +2,7 @@ import { spawn } from 'child_process';
 
 import fetch from 'node-fetch';
 
-import { getLogger } from '../logger';
+import { getLogger } from './logger';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 const HOSTNAME = 'http://localhost';

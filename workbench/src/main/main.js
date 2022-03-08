@@ -29,7 +29,7 @@ import setupGetNCPUs from './setupGetNCPUs';
 import { ipcMainChannels } from './ipcMainChannels';
 import menuTemplate from './menubar';
 import ELECTRON_DEV_MODE from './isDevMode';
-import { getLogger } from '../logger';
+import { getLogger } from './logger';
 import pkg from '../../package.json';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
@@ -81,7 +81,7 @@ export const createWindow = async () => {
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: true,
-      preload: path.join(__dirname, '..', 'preload.js'),
+      preload: path.join(__dirname, '../preload/preload.js'),
       defaultEncoding: 'UTF-8',
     },
   });

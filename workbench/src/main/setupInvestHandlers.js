@@ -6,7 +6,7 @@ import { spawn, exec } from 'child_process';
 import { app, ipcMain } from 'electron';
 import fetch from 'node-fetch';
 
-import { getLogger } from '../logger';
+import { getLogger } from './logger';
 import { ipcMainChannels } from './ipcMainChannels';
 import ELECTRON_DEV_MODE from './isDevMode';
 import investUsageLogger from './investUsageLogger';
