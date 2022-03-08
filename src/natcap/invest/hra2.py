@@ -193,14 +193,15 @@ ARGS_SPEC = {
                 "A GDAL-supported vector file containing feature containing "
                 "one or more planning regions or subregions."),
         },
-        "override_max_overlapping_stressors": {
-            "name": _("Override Max Number of Overlapping Stressors"),
+        "n_overlapping_stressors": {
+            "name": _("Number of Overlapping Stressors"),
             "type": "number",
-            "required": False,
+            "required": True,
             "about": _(
-                "If provided, this number will be used in risk "
-                "reclassification instead of the calculated number of "
-                "stressor layers that overlap."),
+                "The number of overlapping stressors to consider as "
+                "'maximum' when reclassifying risk scores into "
+                "high/medium/low.  Affects the breaks between risk "
+                "classifications."),
             "units": u.none,
             "expression": "value > 0",
         },
@@ -249,7 +250,7 @@ def execute(args):
             each habitat-stressor combination over each area. Optionally, if
             each of the shapefile features contain a 'name' field, it will
             be used as a way of identifying each individual shape.
-        args['override_max_overlapping_stressors'] (number): If provided, this
+        args['n_overlapping_stressors'] (number): If provided, this
             number will be used in risk reclassification instead of the
             calculated maximum number of stressor layers that overlap.
         args['n_workers'] (int): the number of worker processes to
@@ -273,7 +274,7 @@ def execute(args):
 
     resolution = float(args['resolution'])
     max_rating = float(args['max_rating'])
-    max_n_stressors = float(args['override_max_overlapping_stressors'])
+    max_n_stressors = float(args['n_overlapping_stressors'])
     target_srs_wkt = pygeoprocessing.get_vector_info(
         args['aoi_vector_path'])['projection_wkt']
 
