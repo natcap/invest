@@ -775,6 +775,7 @@ class HRAModelTests(unittest.TestCase):
             'decay_eq': 'linear',
             'aoi_vector_path': os.path.join(self.workspace_dir, 'aoi.shp'),
             'n_overlapping_stressors': 2,
+            'visualize_outputs': True,
         }
         aoi_geoms = [shapely.geometry.box(
             *shapely.geometry.Point(ORIGIN).buffer(1000).bounds)]
@@ -844,6 +845,9 @@ class HRAModelTests(unittest.TestCase):
         hra2.execute(args)
 
         # Ecosystem risk is the sum of all risk values.
+
+        # Check that expected GeoJSONs are there, in web mercator, with correct
+        # names.
 
 
 
