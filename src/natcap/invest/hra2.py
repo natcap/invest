@@ -6,6 +6,7 @@ import json
 import logging
 import math
 import os
+import re
 import shutil
 
 import numpy
@@ -852,6 +853,13 @@ def execute(args):
         for source_raster_path in raster_paths:
             basename = os.path.splitext(
                 os.path.basename(source_raster_path))[0]
+
+            # clean up the filename to what the viz webapp expects.
+            for pattern in (f'^{geojson_prefix}_',
+                            '^aligned_',
+                            '^reclass_total_risk_'):
+                basename = re.sub(pattern, '', basename)
+
             polygonize_mask_raster_path = os.path.join(
                 intermediate_dir, f'polygonize_mask_{basename}.tif')
             rewrite_for_polygonize_task = graph.add_task(
