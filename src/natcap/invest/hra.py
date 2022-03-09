@@ -2540,6 +2540,11 @@ def _to_abspath(base_path, dir_path):
         ValueError if the file doesn't exist.
 
     """
+    # JD -- HACK FOR TESTING.
+    possible_base_path = os.path.abspath(base_path)
+    if os.path.exists(possible_base_path):
+        return possible_base_path
+
     if not os.path.isabs(base_path):
         target_abs_path = os.path.join(dir_path, base_path)
 
