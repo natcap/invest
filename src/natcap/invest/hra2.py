@@ -475,17 +475,17 @@ def execute(args):
     )
 
     # --> Create a binary mask of habitat pixels.
-    habitat_mask_path = os.path.join(
+    all_habitats_mask_path = os.path.join(
         intermediate_dir, f'habitat_mask{suffix}.tif')
-    habitat_mask_task = graph.add_task(
+    all_habitats_mask_task = graph.add_task(
         _mask_binary_presence_absence_rasters,
         kwargs={
             'source_raster_paths':
                 list(aligned_habitat_raster_paths.values()),
-            'target_mask_path': habitat_mask_path,
+            'target_mask_path': all_habitats_mask_path,
         },
-        task_name='Create habitat mask',
-        target_path_list=[habitat_mask_path],
+        task_name='Create mask of all habitats',
+        target_path_list=[all_habitats_mask_path],
         dependent_task_list=[alignment_task]
     )
 
@@ -575,7 +575,7 @@ def execute(args):
                     target_path_list=[criteria_rasters[criteria_type]],
                     dependent_task_list=[
                         decayed_edt_tasks[stressor],
-                        habitat_mask_task
+                        all_habitats_mask_task
                     ])
 
             pairwise_risk_path = os.path.join(
@@ -694,7 +694,7 @@ def execute(args):
         task_name='Cumulative risk to ecosystem.',
         target_path_list=[ecosystem_risk_path],
         dependent_task_list=[
-            habitat_mask_task,
+            all_habitats_mask_task,
             *cumulative_risk_to_habitat_tasks,
         ]
     )
@@ -709,7 +709,7 @@ def execute(args):
         pygeoprocessing.raster_calculator,
         kwargs={
             'base_raster_path_band_const_list': [
-                (habitat_mask_path, 1),
+                (all_habitats_mask_path, 1),
                 (max_pairwise_risk * len(habitats), 'raw'),
                 (ecosystem_risk_path, 1)],
             'local_op': _reclassify_score,
@@ -719,7 +719,7 @@ def execute(args):
         },
         task_name=f'Reclassify risk for {habitat}/{stressor}',
         target_path_list=[reclassified_cumulative_risk_path],
-        dependent_task_list=[habitat_mask_task, ecosystem_risk_task]
+        dependent_task_list=[all_habitats_mask_task, ecosystem_risk_task]
     )
 
     # Recovery attributes are calculated with the same numerical method as
@@ -749,13 +749,13 @@ def execute(args):
             _calc_criteria,
             kwargs={
                 'attributes_list': criteria_attributes_list,
-                'habitat_mask_raster_path': habitat_mask_path,
+                'habitat_mask_raster_path': all_habitats_mask_path,
                 'target_criterion_path': recovery_score_path,
                 'decayed_edt_raster_path': None,  # not a stressor so no EDT
             },
             task_name=f'Calculate recovery score for {habitat}',
             target_path_list=[recovery_score_path],
-            dependent_task_list=[habitat_mask_task]
+            dependent_task_list=[all_habitats_mask_task]
         )
 
         reclassified_recovery_path = os.path.join(
@@ -764,7 +764,7 @@ def execute(args):
             pygeoprocessing.raster_calculator,
             kwargs={
                 'base_raster_path_band_const_list': [
-                    (habitat_mask_path, 1),
+                    (aligned_habitat_raster_paths[habitat], 1),
                     (max_pairwise_risk, 'raw'),  # TODO: verify
                     (recovery_score_path, 1)],
                 'local_op': _reclassify_score,
@@ -774,7 +774,7 @@ def execute(args):
             },
             task_name=f'Reclassify risk for {habitat}/{stressor}',
             target_path_list=[reclassified_cumulative_risk_path],
-            dependent_task_list=[habitat_mask_task, recovery_score_task]
+            dependent_task_list=[alignment_task, recovery_score_task]
         )
 
     # TODO: output visualization folder.
@@ -805,7 +805,7 @@ def execute(args):
         func=_rasterize_aoi_regions,
         kwargs={
             'source_aoi_vector_path': simplified_aoi_path,
-            'habitat_mask_raster': habitat_mask_path,
+            'habitat_mask_raster': all_habitats_mask_path,
             'target_raster_dir': aoi_subregions_dir,
             'target_info_json': aoi_subregions_json,
         },
@@ -820,7 +820,7 @@ def execute(args):
         func=_create_summary_statistics_file,
         kwargs={
             'aoi_raster_json_path': aoi_subregions_json,
-            'habitat_mask_raster_path': habitat_mask_path,
+            'habitat_mask_raster_path': all_habitats_mask_path,
             'pairwise_raster_dicts': pairwise_summary_data,
             'target_summary_csv_path': summary_csv_path,
         },
