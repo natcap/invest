@@ -354,7 +354,7 @@ def execute(args):
     alignment_source_raster_paths = {}
     alignment_source_vector_paths = {}
     alignment_dependent_tasks = []
-    aligned_habitat_raster_paths = []
+    aligned_habitat_raster_paths = {}
     aligned_stressor_raster_paths = {}
     for name, attributes in itertools.chain(habitats.items(),
                                             stressors.items(),
@@ -455,7 +455,7 @@ def execute(args):
         # Later operations make use of the habitats rasters or the stressors
         # rasters, so it's useful to collect those here now.
         if name in habitats:
-            aligned_habitat_raster_paths.append(aligned_raster_path)
+            aligned_habitat_raster_paths[name] = aligned_raster_path
         elif name in stressors:
             aligned_stressor_raster_paths[name] = aligned_raster_path
 
@@ -480,7 +480,8 @@ def execute(args):
     habitat_mask_task = graph.add_task(
         _mask_binary_presence_absence_rasters,
         kwargs={
-            'source_raster_paths': aligned_habitat_raster_paths,
+            'source_raster_paths':
+                list(aligned_habitat_raster_paths.values()),
             'target_mask_path': habitat_mask_path,
         },
         task_name='Create habitat mask',
@@ -561,7 +562,8 @@ def execute(args):
                     _calc_criteria,
                     kwargs={
                         'attributes_list': attributes_list,
-                        'habitat_mask_raster_path': habitat_mask_path,
+                        'habitat_mask_raster_path':
+                            aligned_habitat_raster_paths[habitat],
                         'target_criterion_path':
                             criteria_rasters[criteria_type],
                         'decayed_edt_raster_path':
@@ -586,7 +588,8 @@ def execute(args):
             pairwise_risk_task = graph.add_task(
                 _calculate_pairwise_risk,
                 kwargs={
-                    'habitat_mask_raster_path': habitat_mask_path,
+                    'habitat_mask_raster_path':
+                        aligned_habitat_raster_paths[habitat],
                     'exposure_raster_path': criteria_rasters['E'],
                     'consequence_raster_path': criteria_rasters['C'],
                     'risk_equation': args['risk_eq'],
@@ -606,7 +609,7 @@ def execute(args):
                 pygeoprocessing.raster_calculator,
                 kwargs={
                     'base_raster_path_band_const_list': [
-                        (habitat_mask_path, 1),
+                        (aligned_habitat_raster_paths[habitat], 1),
                         (max_pairwise_risk, 'raw'),
                         (pairwise_risk_path, 1)],
                     'local_op': _reclassify_score,
@@ -643,7 +646,7 @@ def execute(args):
             pygeoprocessing.raster_calculator,
             kwargs={
                 'base_raster_path_band_const_list': [
-                    (habitat_mask_path, 1),
+                    (aligned_habitat_raster_paths[habitat], 1),
                     (max_pairwise_risk * max_n_stressors, 'raw'),
                     (cumulative_risk_path, 1)],
                 'local_op': _reclassify_score,
@@ -662,7 +665,7 @@ def execute(args):
             pygeoprocessing.raster_calculator,
             kwargs={
                 'base_raster_path_band_const_list': [
-                    (habitat_mask_path, 1)
+                    (aligned_habitat_raster_paths[habitat], 1)
                 ] + [(path, 1) for path in reclassified_pairwise_risk_paths],
                 'local_op': _maximum_reclassified_score,
                 'target_raster_path': max_risk_classification_path,
