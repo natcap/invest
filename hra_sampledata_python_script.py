@@ -26,6 +26,7 @@ logging.basicConfig(level=logging.INFO, handlers=[handler])
 # Assumes sampledata has been all checked out.
 SAMPLEDATA = os.path.join(os.path.dirname(__file__), 'data',
                           'invest-sample-data', 'HabitatRiskAssess', 'Input')
+WORKSPACE_BASE = os.path.join(os.path.dirname(__file__), 'hra-sampledata')
 
 args = {
     'aoi_vector_path': os.path.join(SAMPLEDATA, 'subregions.shp'),
@@ -43,11 +44,17 @@ args = {
 }
 
 if __name__ == '__main__':
-    if os.path.exists(args['workspace_dir']):
-        shutil.rmtree(args['workspace_dir'])
+    if os.path.exists(WORKSPACE_BASE):
+        shutil.rmtree(WORKSPACE_BASE)
     start_time = time.time()
-    #natcap.invest.hra.execute(args)
+    args['workspace_dir'] = os.path.join(WORKSPACE_BASE, 'current_hra')
+    natcap.invest.hra.execute(args)
+    old_hra_time = time.time() - start_time
+
+    start_time = time.time()
+    args['workspace_dir'] = os.path.join(WORKSPACE_BASE, 'new_hra')
     natcap.invest.hra2.execute(args)
+    print(f'old elapsed: {old_hra_time}')
     print(f'elapsed: {time.time() - start_time}')
     # 13.286s for the 3.10.2 HRA
     # 8.3932s for the reimplementation.
