@@ -1814,6 +1814,7 @@ def _parse_criteria_table(criteria_table_path, target_composite_csv_path):
                 except ValueError:
                     # If we can't cast it to a float, assume it's a string path
                     # to a raster or vector.
+                    attribute_value = attribute_value.replace('\\', '/')
                     if not os.path.isabs(attribute_value):
                         attribute_value = os.path.join(
                             os.path.dirname(criteria_table_path),

@@ -200,7 +200,7 @@ class HRAUnitTests(unittest.TestCase):
                     HABITAT NAME,eelgrass,,,hardbottom,,,CRITERIA TYPE
                     HABITAT RESILIENCE ATTRIBUTES,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
                     recruitment rate,2,2,2,2,2,2,C
-                    connectivity rate,eelgrass_connectivity.shp,2,2,2,2,2,C
+                    connectivity rate,foo\\eelgrass_connectivity.shp,2,2,2,2,2,C
                     ,,,,,,,
                     HABITAT STRESSOR OVERLAP PROPERTIES,,,,,,,
                     oil,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
@@ -219,8 +219,8 @@ class HRAUnitTests(unittest.TestCase):
         self.assertEqual(habitats, {'eelgrass', 'hardbottom'})
         self.assertEqual(stressors, {'oil', 'fishing'})
 
-        eelgrass_path = os.path.join(
-            self.workspace_dir, 'eelgrass_connectivity.shp')
+        # We expect the backslash to have been converted to a forward slash.
+        eelgrass_path = f'{self.workspace_dir}/foo/eelgrass_connectivity.shp'
         expected_composite_dataframe = pandas.read_csv(
             io.StringIO(textwrap.dedent(
                 f"""\
