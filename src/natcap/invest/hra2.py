@@ -765,7 +765,7 @@ def execute(args):
             kwargs={
                 'base_raster_path_band_const_list': [
                     (aligned_habitat_raster_paths[habitat], 1),
-                    (max_pairwise_risk, 'raw'),  # TODO: verify
+                    (max_pairwise_risk, 'raw'),  # TODO: verify this num.
                     (recovery_score_path, 1)],
                 'local_op': _reclassify_score,
                 'target_raster_path': reclassified_recovery_path,
@@ -777,7 +777,6 @@ def execute(args):
             dependent_task_list=[alignment_task, recovery_score_task]
         )
 
-    # TODO: output visualization folder.
     # TODO: visualize the graph of tasks to make sure it looks right
     # TODO: Make sure paths match what they're supposed to.
 
