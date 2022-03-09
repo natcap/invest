@@ -50,7 +50,14 @@ jobs:
           fi
 
           # Using grep with pattern ^release filters out any autorelease branches.
-          BRANCHES=$(git ls-remote --heads origin | cut -d '/' -f 3- | grep ^release)
+          # If no release branches are found, exit github actions.
+          BRANCHES=$(git ls-remote --heads origin | cut -d '/' -f 3- | grep ^release || echo '')
+          if [ -z "$BRANCHES" ]
+          then
+              echo "No release branches found; exiting github actions workflow."
+              exit 0
+          fi
+
           echo $BRANCHES  # debugging
           ERRORSPRESENT=0
           for BRANCH in $BRANCHES
