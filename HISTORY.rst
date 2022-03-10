@@ -38,6 +38,19 @@ Unreleased Changes
     * Rename the arg ``calculate_downstream_distance`` to
       ``calculate_downslope_distance``. This is meant to clarify that it
       applies to pixels that are not part of a stream.
+* HRA
+    * Fixed an issue with risk calculations where risk values would be much
+      lower than they should be.  Risk values are now correctly calculated.
+    * Fixed an issue with risk reclassifications where most pixels would end up
+      classified as medium risk.
+    * Added an input field to the model to indicate the number of overlapping
+      stressors to use in risk reclassification calculations.  This input
+      affects the numerical boundaries between high, medium and low risk
+      classifications.
+    * HRA now has a function to build a functioning datastack archive that will
+      also include spatial criteria in the archive.
+    * Various improvements to the model have resulted in a modest (~33%)
+      speedup in runtime.
 
 3.10.2 (2022-02-08)
 -------------------
