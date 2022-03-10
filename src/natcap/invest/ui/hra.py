@@ -1,6 +1,8 @@
 # coding=UTF-8
-from natcap.invest.ui import model, inputs
-from natcap.invest import hra, MODEL_METADATA
+from natcap.invest import hra2
+from natcap.invest import MODEL_METADATA
+from natcap.invest.ui import inputs
+from natcap.invest.ui import model
 
 
 class HabitatRiskAssessment(model.InVESTModel):
@@ -8,8 +10,8 @@ class HabitatRiskAssessment(model.InVESTModel):
         model.InVESTModel.__init__(
             self,
             label=MODEL_METADATA['habitat_risk_assessment'].model_title,
-            target=hra.execute,
-            validator=hra.validate,
+            target=hra2.execute,
+            validator=hra2.validate,
             localdoc=MODEL_METADATA['habitat_risk_assessment'].userguide)
 
         self.info_table_path = inputs.File(
@@ -52,12 +54,6 @@ class HabitatRiskAssessment(model.InVESTModel):
             label='Maximum Criteria Score',
             validator=self.validator)
         self.add_input(self.max_rating)
-        self.override_max_overlapping_stressors = inputs.Text(
-            args_key='override_max_overlapping_stressors',
-            helptext="FILL ME IN",
-            label="Override Max # Overlapping Stressors",
-            validator=self.validator)
-        self.add_input(self.override_max_overlapping_stressors)
         self.risk_eq = inputs.Dropdown(
             args_key='risk_eq',
             helptext=(
@@ -87,6 +83,13 @@ class HabitatRiskAssessment(model.InVESTModel):
             label='Area of Interest (Vector)',
             validator=self.validator)
         self.add_input(self.aoi_vector_path)
+        self.n_overlapping_stressors = inputs.Text(
+            args_key='n_overlapping_stressors',
+            helptext=(
+                hra2.ARGS_SPEC['args']['n_overlapping_stressors']['about']),
+            label='Number of Overlapping Stressors',
+            validator=self.validator)
+        self.add_input(self.n_overlapping_stressors)
         self.visualize_outputs = inputs.Checkbox(
             args_key='visualize_outputs',
             helptext=(
@@ -109,8 +112,8 @@ class HabitatRiskAssessment(model.InVESTModel):
             self.max_rating.args_key: self.max_rating.value(),
             self.aoi_vector_path.args_key: self.aoi_vector_path.value(),
             self.visualize_outputs.args_key: self.visualize_outputs.value(),
-            self.override_max_overlapping_stressors.args_key:
-                self.override_max_overlapping_stressors.value(),
+            self.n_overlapping_stressors.args_key:
+                self.n_overlapping_stressors.value(),
         }
 
         return args
