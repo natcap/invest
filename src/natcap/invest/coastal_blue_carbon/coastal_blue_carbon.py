@@ -158,7 +158,7 @@ OUTPUT_DIR_NAME = 'output'
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["coastal_blue_carbon"].model_title,
     "pyname": MODEL_METADATA["coastal_blue_carbon"].pyname,
-    "userguide_html": MODEL_METADATA["coastal_blue_carbon"].userguide,
+    "userguide": MODEL_METADATA["coastal_blue_carbon"].userguide,
     "args": {
         "workspace_dir": spec_utils.WORKSPACE,
         "results_suffix": spec_utils.SUFFIX,

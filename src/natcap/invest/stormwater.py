@@ -25,7 +25,7 @@ UINT16_NODATA = 65535
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["stormwater"].model_title,
     "pyname": MODEL_METADATA["stormwater"].pyname,
-    "userguide_html": MODEL_METADATA["stormwater"].userguide,
+    "userguide": MODEL_METADATA["stormwater"].userguide,
     "args_with_spatial_overlap": {
         "spatial_keys": ["lulc_path", "soil_group_path", "precipitation_path",
                          "road_centerlines_path", "aggregate_areas_path"],

@@ -32,7 +32,7 @@ DUPLICATE_PATHS_MSG = _("Threat paths must be unique. Duplicates: ")
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["habitat_quality"].model_title,
     "pyname": MODEL_METADATA["habitat_quality"].pyname,
-    "userguide_html": MODEL_METADATA["habitat_quality"].userguide,
+    "userguide": MODEL_METADATA["habitat_quality"].userguide,
     "args_with_spatial_overlap": {
         "spatial_keys": [
             "lulc_cur_path", "lulc_fut_path", "lulc_bas_path",

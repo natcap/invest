@@ -33,7 +33,7 @@ NODATA_VALUE = -1
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["forest_carbon_edge_effect"].model_title,
     "pyname": MODEL_METADATA["forest_carbon_edge_effect"].pyname,
-    "userguide_html": MODEL_METADATA["forest_carbon_edge_effect"].userguide,
+    "userguide": MODEL_METADATA["forest_carbon_edge_effect"].userguide,
     "args_with_spatial_overlap": {
         "spatial_keys": ["aoi_vector_path", "lulc_raster_path"],
     },
