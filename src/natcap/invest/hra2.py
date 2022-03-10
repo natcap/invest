@@ -759,25 +759,6 @@ def execute(args):
             dependent_task_list=[all_habitats_mask_task]
         )
 
-        reclassified_recovery_path = os.path.join(
-            intermediate_dir, 'reclass_recovery_{habitat}{suffix}.tif')
-        reclassified_recovery_task = graph.add_task(
-            pygeoprocessing.raster_calculator,
-            kwargs={
-                'base_raster_path_band_const_list': [
-                    (aligned_habitat_raster_paths[habitat], 1),
-                    (max_pairwise_risk, 'raw'),  # TODO: verify this num.
-                    (recovery_score_path, 1)],
-                'local_op': _reclassify_score,
-                'target_raster_path': reclassified_recovery_path,
-                'datatype_target': _TARGET_GDAL_TYPE_FLOAT32,
-                'nodata_target': _TARGET_NODATA_FLOAT32,
-            },
-            task_name=f'Reclassify risk for {habitat}/{stressor}',
-            target_path_list=[reclassified_cumulative_risk_path],
-            dependent_task_list=[alignment_task, recovery_score_task]
-        )
-
     # TODO: visualize the graph of tasks to make sure it looks right
     # TODO: Make sure paths match what they're supposed to.
 
