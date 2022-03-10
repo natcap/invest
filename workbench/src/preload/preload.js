@@ -15,6 +15,7 @@ const { getLogger } = require('../main/logger');
 // but these channels are exceptions: renderer listens for them
 const ipcRendererChannels = [
   /invest-logging-*/,
+  /invest-stdout-*/,
   /invest-exit-*/,
 ];
 

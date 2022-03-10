@@ -56,7 +56,7 @@ export default class LogTab extends React.Component {
     const { logfile, executeClicked, jobID } = this.props;
     // This channel is replied to by the invest process stdout listener
     // And by the logfile reader.
-    ipcRenderer.on(`invest-stdout-${jobID}`, (event, data) => {
+    ipcRenderer.on(`invest-stdout-${jobID}`, (data) => {
       let { logdata } = this.state;
       logdata += data;
       this.setState({ logdata: logdata });
