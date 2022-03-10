@@ -26,12 +26,12 @@ icon_locations = {
     _invest_dirname: (220, 290),
     'Applications': (670, 290)
 }
-icon_size = 100
-text_size = 12
+# icon_size = 100
+# text_size = 12
 
 # Window Settings
-window_rect = ((100, 100), (900, 660))
-background = os.path.join(MAC_INSTALLER_DIR, 'background.png')
+# window_rect = ((100, 100), (900, 660))
+# background = os.path.join(MAC_INSTALLER_DIR, 'background.png')
 #background = 'builtin-arrow'
 default_view = 'icon-view'
 

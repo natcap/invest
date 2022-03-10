@@ -216,6 +216,7 @@ jobs:
 
             - name: Build binaries
               run: |
+                  brew install create-dmg
                   make install
                   make mac_dmg
 

@@ -353,7 +353,19 @@ $(WINDOWS_INSTALLER_FILE): $(INVEST_BINARIES_DIR) $(USERGUIDE_ZIP_FILE) build/vc
 DMG_CONFIG_FILE := installer/darwin/dmgconf.py
 mac_dmg: $(MAC_DISK_IMAGE_FILE)
 $(MAC_DISK_IMAGE_FILE): $(DIST_DIR) $(MAC_APPLICATION_BUNDLE) $(USERGUIDE_TARGET_DIR)
-	dmgbuild -Dinvestdir=$(MAC_APPLICATION_BUNDLE) -s $(DMG_CONFIG_FILE) "InVEST $(VERSION)" $(MAC_DISK_IMAGE_FILE)
+	create-dmg \
+	    --volname "InVEST $(VERSION)" \
+	    --volicon installer/darwin/invest.icns \
+	    --background installer/darwin/background.png \
+	    --window-pos 100 100 \
+	    --window-size 900 660 \
+	    --text-size 12 \
+	    --icon-size 100 \
+	    --icon installer/darwin/invest.icns 220 290 \
+	    --app-drop-link 670 290 \
+	    --eula LICENSE.txt \
+	    --format UDZO \
+	    $(MAC_DISK_IMAGE_FILE) $(MAC_APPLICATION_BUNDLE)
 
 mac_app: $(MAC_APPLICATION_BUNDLE)
 $(MAC_APPLICATION_BUNDLE): $(BUILD_DIR) $(INVEST_BINARIES_DIR) $(USERGUIDE_TARGET_DIR)
