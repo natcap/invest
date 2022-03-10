@@ -487,7 +487,7 @@ def describe_arg_from_name(module_name, *arg_keys):
 
     Returns:
         String describing the arg in RST format. Contains an anchor named
-        <module_name>-<arg_keys[0]>-<arg_keys[1]>...<arg_keys[n]>
+        <arg_keys[0]>-<arg_keys[1]>...-<arg_keys[n]>
         where underscores in arg keys are replaced with hyphens.
     """
     # import the specified module (that should have an ARGS_SPEC attribute)
@@ -516,8 +516,5 @@ def describe_arg_from_name(module_name, *arg_keys):
     # anchor names cannot contain underscores. sphinx will replace them
     # automatically, but lets explicitly replace them here
     anchor_name = '-'.join(arg_keys).replace('_', '-')
-    print(anchor_name)
     rst_description = '\n\n'.join(describe_arg_from_spec(arg_name, spec))
-    rst = f'.. _{anchor_name}:\n\n' + rst_description
-    print(rst)
-    return rst
+    return f'.. _{anchor_name}:\n\n' + rst_description
