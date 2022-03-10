@@ -329,7 +329,7 @@ def execute(args):
         args['results_suffix'] (string): (optional) string to append to any
             output files
         args['threshold_flow_accumulation'] (number): used when classifying
-            stream pixels from the DEM by thresholding the number of upstream
+            stream pixels from the DEM by thresholding the number of upslope
             cells that must flow into a cell before it's considered
             part of a stream.
         args['et0_dir'] (string): required if

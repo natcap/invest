@@ -403,7 +403,7 @@ cpdef calculate_local_recharge(
         target_li_avail_path (str): created by this call, path to raster
             indicating available recharge to a pixel.
         target_l_sum_avail_path (str): created by this call, the recursive
-            upstream accumulation of target_li_avail_path.
+            upslope accumulation of target_li_avail_path.
         target_aet_path (str): created by this call, the annual actual
             evapotranspiration.
 
@@ -560,13 +560,13 @@ cpdef calculate_local_recharge(
 
                     # Equation 7, calculate L_sum_avail_i if possible, skip
                     # otherwise
-                    upstream_defined = 1
+                    upslope_defined = 1
                     # initialize to 0 so we indicate we haven't tracked any
                     # mfd values yet
                     j_neighbor_end_index = 0
                     mfd_dir_sum = 0
                     for n_dir in xrange(8):
-                        if not upstream_defined:
+                        if not upslope_defined:
                             break
                         # searching around the pattern:
                         # 321
@@ -581,11 +581,11 @@ cpdef calculate_local_recharge(
                                 4 * FLOW_DIR_REVERSE_DIRECTION[n_dir])) & 0xF
                         if p_ij_base:
                             mfd_dir_sum += p_ij_base
-                            # pixel flows inward, check upstream
+                            # pixel flows inward, check upslope
                             l_sum_avail_j = target_l_sum_avail_raster.get(
                                 xj, yj)
                             if is_close(l_sum_avail_j, target_nodata):
-                                upstream_defined = 0
+                                upslope_defined = 0
                                 break
                             l_avail_j = target_li_avail_raster.get(
                                 xj, yj)
@@ -596,11 +596,11 @@ cpdef calculate_local_recharge(
                     # calculate l_sum_avail_i by summing all the valid
                     # directions then normalizing by the sum of the mfd
                     # direction weights (Equation 8)
-                    if upstream_defined:
+                    if upslope_defined:
                         l_sum_avail_i = 0.0
                         # Equation 7
                         if j_neighbor_end_index > 0:
-                            # we can have no upstream, and then why would we
+                            # we can have no upslope, and then why would we
                             # divide?
                             for index in range(j_neighbor_end_index):
                                 l_sum_avail_i += mfd_direction_array[index]
@@ -689,12 +689,12 @@ def route_baseflow_sum(
         l_path (string): path to local recharge raster.
         l_avail_path (string): path to local recharge raster that shows
             recharge available to the pixel.
-        l_sum_path (string): path to upstream sum of l_path.
+        l_sum_path (string): path to upslope sum of l_path.
         stream_path (string): path to stream raster, 1 stream, 0 no stream,
             and nodata.
         target_b_path (string): path to created raster for per-pixel baseflow.
         target_b_sum_path (string): path to created raster for per-pixel
-            upstream sum of baseflow.
+            upslope sum of baseflow.
 
     Returns:
         None.
@@ -792,13 +792,13 @@ def route_baseflow_sum(
 
                     b_sum_i = 0.0
                     mfd_dir_sum = 0
-                    downstream_defined = 1
+                    downslope_defined = 1
                     flow_dir_i = <int>flow_dir_mfd_raster.get(xi, yi)
                     if flow_dir_i == flow_dir_nodata:
                         LOGGER.error("flow dir nodata? this makes no sense")
                         continue
                     for n_dir in xrange(8):
-                        if not downstream_defined:
+                        if not downslope_defined:
                             break
                         # searching around the pattern:
                         # 321
@@ -819,7 +819,7 @@ def route_baseflow_sum(
                             else:
                                 b_sum_j = target_b_sum_raster.get(xj, yj)
                                 if is_close(b_sum_j, target_nodata):
-                                    downstream_defined = 0
+                                    downslope_defined = 0
                                     break
                                 l_j = l_raster.get(xj, yj)
                                 l_avail_j = l_avail_raster.get(xj, yj)
@@ -832,7 +832,7 @@ def route_baseflow_sum(
                                 else:
                                     b_sum_i += p_ij_base
 
-                    if not downstream_defined:
+                    if not downslope_defined:
                         continue
                     l_sum_i = l_sum_raster.get(xi, yi)
                     if mfd_dir_sum > 0:
@@ -848,7 +848,7 @@ def route_baseflow_sum(
                     current_pixel += 1
 
                     for n_dir in xrange(8):
-                        # searching upstream for pixels that flow in
+                        # searching upslope for pixels that flow in
                         # 321
                         # 4x0
                         # 567

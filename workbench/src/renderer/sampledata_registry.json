@@ -1,0 +1,128 @@
+{
+  "Annual Water Yield": {
+    "filename": "Annual_Water_Yield.zip",
+    "url": "https://storage.googleapis.com/natcap-dev-build-artifacts/invest/davemfish/3.9.2.post999+g9f6f8fbba.d20220202/data/Annual_Water_Yield.zip",
+    "filesize": 246603
+  },
+  "Carbon Storage and Sequestration": {
+    "filename": "Carbon.zip",
+    "url": "https://storage.googleapis.com/natcap-dev-build-artifacts/invest/davemfish/3.9.2.post999+g9f6f8fbba.d20220202/data/Carbon.zip",
+    "filesize": 1901795
+  },
+  "Coastal Blue Carbon": {
+    "filename": "CoastalBlueCarbon.zip",
+    "url": "https://storage.googleapis.com/natcap-dev-build-artifacts/invest/davemfish/3.9.2.post999+g9f6f8fbba.d20220202/data/CoastalBlueCarbon.zip",
+    "filesize": 81118
+  },
+  "Coastal Vulnerability": {
+    "filename": "CoastalVulnerability.zip",
+    "url": "https://storage.googleapis.com/natcap-dev-build-artifacts/invest/davemfish/3.9.2.post999+g9f6f8fbba.d20220202/data/CoastalVulnerability.zip",
+    "filesize": 39816081,
+    "labelSuffix": "(recommended to run model)"
+  },
+  "Crop Pollination": {
+    "filename": "pollination.zip",
+    "url": "https://storage.googleapis.com/natcap-dev-build-artifacts/invest/davemfish/3.9.2.post999+g9f6f8fbba.d20220202/data/pollination.zip",
+    "filesize": 635299
+  },
+  "Crop Production": {
+    "filename": "CropProduction.zip",
+    "url": "https://storage.googleapis.com/natcap-dev-build-artifacts/invest/davemfish/3.9.2.post999+g9f6f8fbba.d20220202/data/CropProduction.zip",
+    "filesize": 58726224,
+    "labelSuffix": "(required to run model)"
+  },
+  "DelineateIt": {
+    "filename": "DelineateIt.zip",
+    "url": "https://storage.googleapis.com/natcap-dev-build-artifacts/invest/davemfish/3.9.2.post999+g9f6f8fbba.d20220202/data/DelineateIt.zip",
+    "filesize": 530664
+  },
+  "Forest Carbon Edge Effect": {
+    "filename": "forest_carbon_edge_effect.zip",
+    "url": "https://storage.googleapis.com/natcap-dev-build-artifacts/invest/davemfish/3.9.2.post999+g9f6f8fbba.d20220202/data/forest_carbon_edge_effect.zip",
+    "filesize": 1037563,
+    "labelSuffix": "(required to run model)"
+  },
+  "GLOBIO": {
+    "filename": "globio.zip",
+    "url": "https://storage.googleapis.com/natcap-dev-build-artifacts/invest/davemfish/3.9.2.post999+g9f6f8fbba.d20220202/data/globio.zip",
+    "filesize": 2084162
+  },
+  "Habitat Quality": {
+    "filename": "HabitatQuality.zip",
+    "url": "https://storage.googleapis.com/natcap-dev-build-artifacts/invest/davemfish/3.9.2.post999+g9f6f8fbba.d20220202/data/HabitatQuality.zip",
+    "filesize": 1742466
+  },
+  "Habitat Risk Assessment": {
+    "filename": "HabitatRiskAssess.zip",
+    "url": "https://storage.googleapis.com/natcap-dev-build-artifacts/invest/davemfish/3.9.2.post999+g9f6f8fbba.d20220202/data/HabitatRiskAssess.zip",
+    "filesize": 3273797
+  },
+  "Nutrient Delivery Ratio": {
+    "filename": "NDR.zip",
+    "url": "https://storage.googleapis.com/natcap-dev-build-artifacts/invest/davemfish/3.9.2.post999+g9f6f8fbba.d20220202/data/NDR.zip",
+    "filesize": 704278
+  },
+  "RouteDEM": {
+    "filename": "RouteDEM.zip",
+    "url": "https://storage.googleapis.com/natcap-dev-build-artifacts/invest/davemfish/3.9.2.post999+g9f6f8fbba.d20220202/data/RouteDEM.zip",
+    "filesize": 526890
+  },
+  "Scenario Generator: Proximity Based": {
+    "filename": "scenario_proximity.zip",
+    "url": "https://storage.googleapis.com/natcap-dev-build-artifacts/invest/davemfish/3.9.2.post999+g9f6f8fbba.d20220202/data/scenario_proximity.zip",
+    "filesize": 928442
+  },
+  "Scenic Quality": {
+    "filename": "ScenicQuality.zip",
+    "url": "https://storage.googleapis.com/natcap-dev-build-artifacts/invest/davemfish/3.9.2.post999+g9f6f8fbba.d20220202/data/ScenicQuality.zip",
+    "filesize": 25074939
+  },
+  "Seasonal Water Yield": {
+    "filename": "Seasonal_Water_Yield.zip",
+    "url": "https://storage.googleapis.com/natcap-dev-build-artifacts/invest/davemfish/3.9.2.post999+g9f6f8fbba.d20220202/data/Seasonal_Water_Yield.zip",
+    "filesize": 708749
+  },
+  "Sediment Delivery Ratio": {
+    "filename": "SDR.zip",
+    "url": "https://storage.googleapis.com/natcap-dev-build-artifacts/invest/davemfish/3.9.2.post999+g9f6f8fbba.d20220202/data/SDR.zip",
+    "filesize": 728799
+  },
+  "Urban Stormwater Retention": {
+    "filename": "UrbanStormwater.zip",
+    "url": "https://storage.googleapis.com/natcap-dev-build-artifacts/invest/davemfish/3.9.2.post999+g9f6f8fbba.d20220202/data/UrbanStormwater.zip",
+    "filesize": 463644
+  },
+  "Urban Cooling": {
+    "filename": "UrbanCoolingModel.zip",
+    "url": "https://storage.googleapis.com/natcap-dev-build-artifacts/invest/davemfish/3.9.2.post999+g9f6f8fbba.d20220202/data/UrbanCoolingModel.zip",
+    "filesize": 1133854
+  },
+  "Urban Flood Risk Mitigation": {
+    "filename": "UrbanFloodMitigation.zip",
+    "url": "https://storage.googleapis.com/natcap-dev-build-artifacts/invest/davemfish/3.9.2.post999+g9f6f8fbba.d20220202/data/UrbanFloodMitigation.zip",
+    "filesize": 187385
+  },
+  "Visitation: Recreation and Tourism": {
+    "filename": "recreation.zip",
+    "url": "https://storage.googleapis.com/natcap-dev-build-artifacts/invest/davemfish/3.9.2.post999+g9f6f8fbba.d20220202/data/recreation.zip",
+    "filesize": 3700742
+  },
+  "Wave Energy Production": {
+    "filename": "WaveEnergy.zip",
+    "url": "https://storage.googleapis.com/natcap-dev-build-artifacts/invest/davemfish/3.9.2.post999+g9f6f8fbba.d20220202/data/WaveEnergy.zip",
+    "filesize": 77726331,
+    "labelSuffix": "(required to run model)"
+  },
+  "Wind Energy Production": {
+    "filename": "WindEnergy.zip",
+    "url": "https://storage.googleapis.com/natcap-dev-build-artifacts/invest/davemfish/3.9.2.post999+g9f6f8fbba.d20220202/data/WindEnergy.zip",
+    "filesize": 5444933,
+    "labelSuffix": "(required to run model)"
+  },
+  "Global DEM & Landmass Polygon": {
+    "filename": "Base_Data.zip",
+    "labelSuffix": "(required for Wind & Wave Energy)",
+    "url": "https://storage.googleapis.com/natcap-dev-build-artifacts/invest/davemfish/3.9.2.post999+g9f6f8fbba.d20220202/data/Base_Data.zip",
+    "filesize": 151372877
+  }
+}

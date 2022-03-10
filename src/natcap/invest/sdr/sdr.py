@@ -229,7 +229,7 @@ def execute(args):
         args['biophysical_table_path'] (string): path to CSV file with
             biophysical information of each land use classes.  contain the
             fields 'usle_c' and 'usle_p'
-        args['threshold_flow_accumulation'] (number): number of upstream pixels
+        args['threshold_flow_accumulation'] (number): number of upslope pixels
             on the dem to threshold to a stream.
         args['k_param'] (number): k calibration parameter
         args['sdr_max'] (number): max value the SDR
@@ -736,7 +736,7 @@ def _calculate_ls_factor(
 
     Args:
         flow_accumulation_path (string): path to raster, pixel values are the
-            contributing upstream area at that cell. Pixel size is square.
+            contributing upslope area at that cell. Pixel size is square.
         slope_path (string): path to slope raster as a percent
         avg_aspect_path (string): The path to to raster of the weighted average
             of aspects based on proportional flow.
@@ -765,7 +765,7 @@ def _calculate_ls_factor(
 
         Args:
             percent_slope (numpy.ndarray): slope in percent
-            flow_accumulation (numpy.ndarray): upstream pixels
+            flow_accumulation (numpy.ndarray): upslope pixels
             avg_aspect (numpy.ndarray): the weighted average aspect from MFD
             l_max (float): max L factor, clamp to this value if L exceeds it
 
@@ -1137,7 +1137,7 @@ def _calculate_d_up(
     def d_up_op(w_bar, s_bar, flow_accumulation):
         """Calculate the d_up index.
 
-        w_bar * s_bar * sqrt(upstream area)
+        w_bar * s_bar * sqrt(upslope area)
 
         """
         valid_mask = (
@@ -1169,7 +1169,7 @@ def _calculate_d_up_bare(
     def d_up_op(s_bar, flow_accumulation):
         """Calculate the bare d_up index.
 
-        s_bar * sqrt(upstream area)
+        s_bar * sqrt(upslope area)
 
         """
         valid_mask = (

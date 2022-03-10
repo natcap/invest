@@ -1,361 +1,536 @@
-name: Run Tests, Build Python Distributions
+name: Run Tests and Build
 
-on:
-    push:
-    pull_request:
+on: [push, pull_request]
+
+defaults:
+  run:
+    shell: bash -l {0}
+
+concurrency:
+  # make sure only one run of this workflow for a given PR or a given branch
+  # can happen at one time. previous queued or started runs will be cancelled.
+  # github.workflow is the workflow name
+  # github.ref is the ref that triggered the workflow run
+  # on push, this is refs/heads/<branch name>
+  # on pull request, this is refs/pull/<pull request number>/merge
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # build: dependency of make install
+  # nomkl: make sure numpy w/out mkl
+  # setuptools_scm: needed for versioning to work
+  CONDA_DEFAULT_DEPENDENCIES: build nomkl setuptools_scm
+  LATEST_SUPPORTED_PYTHON_VERSION: 3.9
 
 jobs:
-    # This job will check for obvious syntax errors.
-    # The other jobs in this file depend on this one and won't show up in the
-    # jobs list on actions until this one completes successfully.
-    # Best to run in linux ... windows won't honor nonzero exit statuses
-    # by default.
-    check-syntax-errors:
-        name: "Check for syntax errors"
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v2
-              with:
-                  # Fetch complete history for accurate versioning
-                  fetch-depth: 0
+  check-syntax-errors:
+    name: Check for syntax errors
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
 
-            - name: Set up python 3.9
-              uses: actions/setup-python@v1
-              with:
-                  python-version: 3.9
+      - name: Set up python
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
 
-            - name: Set up environment
-              run: python -m pip install --upgrade pip setuptools setuptools_scm flake8
+      # this is fast enough that it's not worth caching
+      - name: Set up environment
+        run: pip install flake8
 
-            - name: Lint with flake8
-              run: |
-                # stop the build if there are Python syntax errors or undefined names
-                python -m flake8 src --count --select=E9,F63,F7,F82 --show-source --statistics
-                # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-                python -m flake8 src --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+      - name: Lint with flake8
+        run: |
+          # stop the build if there are Python syntax errors or undefined names
+          python -m flake8 src --count --select=E9,F63,F7,F82 --show-source --statistics
+          # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+          python -m flake8 src --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
-    run-model-tests:
-        name: "Run model tests"
-        runs-on: ${{ matrix.os }}
-        needs: check-syntax-errors
-        strategy:
-            fail-fast: false
-            max-parallel: 4
-            matrix:
-                python-version: [3.7, 3.8, 3.9]
-                python-architecture: [x64]
-                os: [windows-latest, macos-latest]
-                include:
-                    - python-version: 3.7
-                      numpy: "numpy=1.15"  # fuzzy assertion in conda is single '='
-                      gdal: "gdal==3.1.2"
-                    - python-version: 3.8
-                      numpy: "numpy=1.16"
-                      gdal: "gdal==3.2.0"
-                    - python-version: 3.9
-                      numpy: "numpy=1.20"
-                      gdal: "gdal==3.3.1"
-        steps:
-            - uses: actions/checkout@v2
-              with:
-                  # Fetch complete history for accurate versioning
-                  fetch-depth: 0
+  run-model-tests:
+    name: Run model tests
+    runs-on: ${{ matrix.os }}
+    needs: check-syntax-errors
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [3.7, 3.8, 3.9]
+        os: [windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0 # Fetch complete history for accurate versioning
 
-              # Taken from https://github.com/actions/cache/blob/master/examples.md#python---pip
-            - name: Restore pip cache
-              uses: actions/cache@v2
-              with:
-                  path: ~\AppData\Local\pip\Cache
-                  key: ${{ runner.os }}-py${{ matrix.python-version }}-${{ matrix.python-architecture }}-pip-${{ hashFiles('**/requirements*.txt') }}-model-tests
+      # NOTE: It takes twice as long to save the sample data cache
+      # as it does to do a fresh clone (almost 5 minutes vs. 2.5 minutes)
+      # Test data is way, way faster by contrast (on the order of a few
+      # seconds to archive).
+      - name: Restore git-LFS test data cache
+        uses: actions/cache@v2
+        with:
+          path: data/invest-test-data
+          key: git-lfs-testdata-${{ hashfiles('Makefile') }}
 
-            # NOTE: It takes twice as long to save the sample data cache
-            # as it does to do a fresh clone (almost 5 minutes vs. 2.5 minutes)
-            # Test data is way, way faster by contrast (on the order of a few
-            # seconds to archive).
-            - name: Restore git-LFS test data cache
-              uses: actions/cache@v2
-              with:
-                  path: data/invest-test-data
-                  key: git-lfs-testdata-${{ hashfiles('Makefile') }}
+      - name: Set up python environment
+        uses: ./.github/actions/setup_env
+        with:
+          python-version: ${{ matrix.python-version }}
+          requirements-files: requirements.txt requirements-dev.txt requirements-gui.txt
+          requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }} twine
 
-            - name: Setup conda environment
-              uses: conda-incubator/setup-miniconda@v2
-              with:
-                  activate-environment: ${{ matrix.os }}-test-env
-                  auto-update-conda: true
-                  python-version: ${{ matrix.python-version }}
-                  channels: conda-forge
+      - name: Download previous conda environment.yml
+        continue-on-error: true
+        # Using 'dawidd6' since 'download-artifact' GH action doesn't
+        # support downloading artifacts from prior workflow runs
+        uses: dawidd6/action-download-artifact@v2
+        with:
+          workflow: build-and-test.yml
+          # Get frozen conda env artifact from last successful workflow
+          workflow_conclusion: success
+          name: Conda Env for ${{ matrix.os }} ${{ matrix.python-version }}
+          path: ./conda-env-artifact
 
-            - name: Install build dependencies
-              shell: bash -l {0}
-              run: |
-                  conda install nomkl # make sure numpy is w/out MKL
-                  conda upgrade -y pip setuptools
-                  conda install ${{ matrix.numpy }} ${{ matrix.gdal }} twine build
+      - name: Compare conda environments
+        continue-on-error: true
+        run: |
+          conda list --export > conda-env.txt
+          diff ./conda-env.txt ./conda-env-artifact/conda-env.txt
 
-            - name: Build wheel
-              shell: bash -l {0}
-              run: |
-                  python -m build --wheel
-                  python -m twine check dist/*
+      - name: Build and install wheel
+        run: |
+          python -m build --wheel
+          python -m twine check dist/*
+          pip install $(find dist -name "natcap.invest*.whl")
 
-            - name: Install runtime dependencies
-              shell: bash -l {0}
-              run: |
-                  python ./scripts/convert-requirements-to-conda-yml.py \
-                    requirements.txt requirements-dev.txt \
-                    requirements-gui.txt > requirements-all.yml
-                  conda env update --file requirements-all.yml
+      - name: Run model tests
+        run: make test
 
-            - name: Conda Environment Listing
-              shell: bash -l {0}
-              run: |
-                  conda list
-                  conda list --export > conda-env.txt
+      - name: Upload wheel artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: Wheel for ${{ matrix.os }} ${{ matrix.python-version }}
+          path: dist
 
-            - name: Download Conda Env Artifact
-              continue-on-error: true
-              # Using 'dawidd6' since 'download-artifact' GH action doesn't
-              # support downloading artifacts from prior workflow runs
-              uses: dawidd6/action-download-artifact@v2
-              with:
-                  workflow: build-and-test.yml
-                  # Get frozen conda env artifact from last successful workflow
-                  workflow_conclusion: success
-                  name: Conda Env for ${{ matrix.os }} ${{ matrix.python-version }} ${{ matrix.python-architecture }}
-                  path: ./conda-env-artifact
+      - name: Upload conda env artifact
+        uses: actions/upload-artifact@v2
+        continue-on-error: true
+        with:
+          name: Conda Env for ${{ matrix.os }} ${{ matrix.python-version }}
+          path: conda-env.txt
 
-            - name: Compare Conda Environments
-              continue-on-error: true
-              shell: bash -l {0}
-              run: |
-                  diff ./conda-env.txt ./conda-env-artifact/conda-env.txt
+      - name: Authenticate GCP
+        if: github.event_name != 'pull_request'
+        uses: google-github-actions/auth@v0
+        with:
+          credentials_json: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
 
-            - name: Run model tests
-              shell: bash -l {0}
-              run: |
-                  pip install $(find dist -name "natcap.invest*.whl")
-                  make test
+      - name: Set up GCP
+        if: github.event_name != 'pull_request'
+        uses: google-github-actions/setup-gcloud@v0
 
-            - uses: actions/upload-artifact@v2
-              with:
-                  name: Wheel for ${{ matrix.os }} ${{ matrix.python-version }} ${{ matrix.python-architecture }}
-                  path: dist
+      - name: Deploy artifacts to GCS
+        if: github.event_name != 'pull_request'
+        run: make deploy
 
-            - uses: actions/upload-artifact@v2
-              with:
-                  name: Conda Env for ${{ matrix.os }} ${{ matrix.python-version }} ${{ matrix.python-architecture }}
-                  path: ./conda-env.txt
+  test-source-distribution:
+    name: Check sdist
+    runs-on: ${{ matrix.os }}
+    needs: check-syntax-errors
+    strategy:
+      matrix:
+        python-version: [3.7, 3.8, 3.9]
+        os: [windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v2
 
-            - name: Authenticate GCP
-              # Secrets not available in PR so don't use GCP.
-              if: github.event_name != 'pull_request'
-              uses: google-github-actions/auth@v0
-              with:
-                credentials_json: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
+      - uses: ./.github/actions/setup_env
+        with:
+          python-version: ${{ matrix.python-version }}
+          requirements-files: requirements.txt
+          requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }} twine
 
-            - name: Set up GCP
-              if: github.event_name != 'pull_request'
-              uses: google-github-actions/setup-gcloud@v0
+      - name: Build source distribution
+        run: |
+          # Because we're using PEP518 build requirements, the user's
+          # computer is guaranteed to have cython available at build
+          # time.  Thus, it is no longer necessary to distribute the
+          # .cpp files in addition to the .pyx files.
+          python -m build --sdist
+          python -m twine check dist/*
 
-            - name: Deploy artifacts to GCS
-              # Secrets not available in PR so don't use GCP.
-              if: github.event_name != 'pull_request'
-              shell: bash -l {0}
-              run: |
-                  # Specify which python version we want to use (it's the one
-                  # we're using in actions/setup-miniconda)
-                  export CLOUDSDK_PYTHON=$(which python)
-                  export CLOUDSDK_GSUTIL_PYTHON=$(which python)
+      - name: Install from source distribution
+        run : |
+          # Prevent pip from thinking that CWD is a natcap.invest
+          # installation. It's not.
+          rm -r natcap.invest.egg-info
 
-                  # setup-gcloud action adds 'gsutil' to the PATH
-                  make GSUTIL="gsutil" deploy
+          # Install natcap.invest from the sdist in dist/
+          pip install $(find dist -name "natcap.invest*")
 
-    test-source-distribution:
-        name: "Check sdist"
-        runs-on: ${{ matrix.os }}
-        needs: check-syntax-errors
-        strategy:
-            matrix:
-                python-version: [3.7, 3.8, 3.9]
-                python-architecture: [x64]
-                os: [windows-latest, macos-latest]
-        steps:
-            - uses: actions/checkout@v2
+          # Model tests should cover model functionality, we just want
+          # to be sure that we can import `natcap.invest` here.
+          # The point here is to make sure that we can build
+          # natcap.invest from source and that it imports.
+          python -c "from natcap.invest import *"
 
-            - name: Fetch git tags
-              run: git fetch origin +refs/tags/*:refs/tags/*
+      - uses: actions/upload-artifact@v2
+        with:
+          name: Source distribution
+          path: dist
 
-            - name: Setup conda environment
-              uses: conda-incubator/setup-miniconda@v2
-              with:
-                  activate-environment: source-env
-                  auto-update-conda: true
-                  python-version: ${{ matrix.python-version }}
-                  channels: conda-forge
+        # Secrets not available in PR so don't use GCP.
+        # Only upload sdist in one of the matrix cases so we don't
+        # overwrite artifacts or have duplicates (mac/windows sdists have
+        # different extensions)
+      - name: Authenticate GCP
+        if: github.event_name != 'pull_request' && matrix.os == 'macos-latest' && matrix.python-version == env.LATEST_SUPPORTED_PYTHON_VERSION
+        uses: google-github-actions/auth@v0
+        with:
+          credentials_json: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
 
-            - name: Install dependencies
-              shell: bash -l {0}
-              run: |
-                  conda install nomkl # make sure numpy is w/out MKL
-                  conda upgrade -y pip setuptools
-                  conda install twine build
-                  python ./scripts/convert-requirements-to-conda-yml.py \
-                    requirements.txt > requirements-all.yml
-                  conda env update --file requirements-all.yml
+      - name: Set up GCP
+        if: github.event_name != 'pull_request' && matrix.os == 'macos-latest' && matrix.python-version == env.LATEST_SUPPORTED_PYTHON_VERSION
+        uses: google-github-actions/setup-gcloud@v0
 
-            - name: Build source distribution
-              shell: bash -l {0}
-              run: |
-                  # Because we're using PEP518 build requirements, the user's
-                  # computer is guaranteed to have cython available at build
-                  # time.  Thus, it is no longer necessary to distribute the
-                  # .cpp files in addition to the .pyx files.
-                  python -m build --sdist
-                  python -m twine check dist/*
+      - name: Deploy artifacts to GCS
+        if: github.event_name != 'pull_request' && matrix.os == 'macos-latest' && matrix.python-version == env.LATEST_SUPPORTED_PYTHON_VERSION
+        run: make deploy
 
-            - name: Install from source distribution
-              shell: bash -l {0}
-              run : |
-                  # Prevent pip from thinking that CWD is a natcap.invest
-                  # installation. It's not.
-                  rm -r natcap.invest.egg-info
+  validate-resources:
+    name: Validate Sampledata & User Guide
+    runs-on: windows-latest
+    needs: check-syntax-errors
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0 # Fetch complete history for accurate versioning
 
-                  # Install natcap.invest from the sdist in dist/
-                  pip install $(find dist -name "natcap.invest*")
+      - uses: ./.github/actions/setup_env
+        with:
+          python-version: ${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
+          requirements-files: requirements.txt
+          requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }} pytest
 
-                  # Model tests should cover model functionality, we just want
-                  # to be sure that we can import `natcap.invest` here.
-                  # The point here is to make sure that we can build
-                  # natcap.invest from source and that it imports.
-                  python -c "from natcap.invest import *"
+      - name: Make install
+        run: make install
 
-            - uses: actions/upload-artifact@v2
-              with:
-                  name: Source distribution
-                  path: dist
+      - name: Validate sample data
+        run: make validate_sampledata
 
-            - name: Authenticate GCP
-              # Secrets not available in PR so don't use GCP.
-              if: github.event_name != 'pull_request'
-              uses: google-github-actions/auth@v0
-              with:
-                credentials_json: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
+      - name: Validate user guide links
+        run: make validate_userguide_filenames
 
-            - name: Set up GCP
-              if: github.event_name != 'pull_request'
-              uses: google-github-actions/setup-gcloud@v0
+  run-ui-tests:
+    name: Run UI Tests
+    runs-on: windows-latest
+    needs: check-syntax-errors
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [3.7, 3.8, 3.9]
 
-            - name: Deploy artifacts to GCS
-              # Secrets not available in PR so don't use GCP.
-              # Only upload sdist in one of the matrix cases so we don't
-              # overwrite artifacts or have duplicates (mac/windows sdists have
-              # different extensions)
-              if: github.event_name != 'pull_request' && matrix.os == 'macos-latest' && matrix.python-version == '3.7'
-              shell: bash -l {0}
-              run: |
-                  # Specify which python version we want to use (it's the one
-                  # we're using in actions/setup-miniconda)
-                  export CLOUDSDK_PYTHON=$(which python)
-                  export CLOUDSDK_GSUTIL_PYTHON=$(which python)
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0 # Fetch complete history for accurate versioning
 
-                  # setup-gcloud action adds 'gsutil' to the PATH
-                  make GSUTIL="gsutil" deploy
+      - name: Restore git-LFS test data cache
+        uses: actions/cache@v2
+        with:
+          path: data/invest-test-data
+          key: git-lfs-testdata-${{ hashfiles('Makefile') }}
 
-    validate-resources:
-        name: "Validate Sampledata & User Guide"
-        runs-on: windows-latest
-        needs: check-syntax-errors
-        steps:
-            - uses: actions/checkout@v2
-              with:
-                  # Fetch complete history for accurate versioning
-                  fetch-depth: 0
+      - uses: ./.github/actions/setup_env
+        with:
+          python-version: ${{ matrix.python-version }}
+          requirements-files: requirements.txt requirements-dev.txt requirements-gui.txt
+          requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
 
-            - name: Restore pip cache
-              uses: actions/cache@v2
-              with:
-                  path: ~\AppData\Local\pip\Cache
-                  key: windows-py37-pipcache-sampledata-${{ hashfiles('requirements.txt') }}
+      - name: Make install
+        run: make install
 
-            - name: Setup conda environment
-              uses: conda-incubator/setup-miniconda@v2
-              with:
-                  activate-environment: validate-env
-                  auto-update-conda: true
-                  python-version: 3.9
-                  channels: conda-forge
+      - name: Run UI tests
+        timeout-minutes: 10  # tests usually take < 2 minutes, so 10 is generous.
+        run: make test_ui
 
-            - name: Install dependencies
-              shell: bash -l {0}
-              run: |
-                  conda install nomkl # make sure numpy w/out mkl
-                  conda install pytest requests build setuptools_scm
-                  conda upgrade -y pip wheel
-                  python ./scripts/convert-requirements-to-conda-yml.py requirements.txt > requirements.yml
-                  conda env update --file requirements.yml
-                  make install
+  run-workbench-tests:
+    name: Run Workbench Tests
+    runs-on: ${{ matrix.os }}
+    needs: check-syntax-errors
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        os: [windows-latest, macos-latest]
 
-            - name: Validate sample data
-              shell: bash -l {0}
-              run: make validate_sampledata
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0 # Fetch complete history for accurate versioning
 
-            - name: Validate user guide links
-              shell: bash -l {0}
-              run: make validate_userguide_filenames
+      - name: Set up python environment
+        uses: ./.github/actions/setup_env
+        with:
+          python-version: ${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
+          requirements-files: requirements.txt requirements-dev.txt requirements-gui.txt
+          requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
 
-    run-ui-tests:
-        name: "Run UI Tests"
-        runs-on: ${{ matrix.os }}
-        needs: check-syntax-errors
-        strategy:
-            fail-fast: False
-            max-parallel: 4
-            matrix:
-                python-version: [3.7, 3.8, 3.9]
-                python-architecture: [x64]
-                os: [windows-latest]
+      - name: Make install
+        run: make install
 
-        steps:
-            - uses: actions/checkout@v2
-              with:
-                  # Fetch complete history for accurate versioning
-                  fetch-depth: 0
+      - name: Set up node
+        uses: actions/setup-node@v2
+        with:
+          node-version: 14.x
 
-              # Taken from https://github.com/actions/cache/blob/master/examples.md#python---pip
-            - name: Restore pip cache
-              uses: actions/cache@v2
-              with:
-                  path: ~\AppData\Local\pip\Cache
-                  key: ${{ runner.os }}-py${{ matrix.python-version }}-${{ matrix.python-architecture }}-pip-${{ hashFiles('**/requirements*.txt') }}-ui-tests
+      - name: Restore node_modules cache
+        id: nodemodules-cache
+        uses: actions/cache@v2
+        with:
+          path: workbench/node_modules
+          key: ${{ runner.os }}-${{ hashFiles('workbench/yarn.lock') }}
 
-            - name: Restore git-LFS test data cache
-              uses: actions/cache@v2
-              with:
-                  path: data/invest-test-data
-                  key: git-lfs-testdata-${{ hashfiles('Makefile') }}
+      - name: Install workbench dependencies
+        if: steps.nodemodules-cache.outputs.cache-hit != 'true'
+        working-directory: workbench
+        run: |
+          yarn config set network-timeout 600000 -g
+          yarn install
 
-            - name: Setup conda environment
-              uses: conda-incubator/setup-miniconda@v2
-              with:
-                  activate-environment: ui-env
-                  auto-update-conda: true
-                  python-version: ${{ matrix.python-version }}
-                  channels: conda-forge
+      - name: Run workbench tests
+        working-directory: workbench
+        env:
+          CI: true
+        run: yarn test
 
-            - name: Install dependencies
-              shell: bash -l {0}
-              run: |
-                  conda install nomkl  # make sure numpy w/out mkl
-                  conda install requests
-                  conda upgrade -y pip setuptools
-                  python ./scripts/convert-requirements-to-conda-yml.py \
-                    requirements.txt requirements-dev.txt \
-                    requirements-gui.txt > requirements-all.yml
-                  conda env update --file requirements-all.yml
-                  python -m pip install .
+  build-binaries:
+    name: Build binaries
+    needs: check-syntax-errors
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-10.15, windows-latest]
+        include:
+          - os: macos-10.15
+            binary-make-command: mac_dmg
+            puppeteer-log: ~/Library/Logs/invest-workbench/
+            workspace-path: InVEST-failed-mac-workspace.tar
+            binary-extension: dmg
+          - os: windows-latest
+            binary-make-command: windows_installer
+            puppeteer-log: ~/AppData/Roaming/invest-workbench/logs/
+            workspace-path: ${{ github.workspace }}
+            binary-extension: exe
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0 # Fetch complete history for accurate versioning
 
-            - name: Run UI tests
-              shell: bash -l {0}
-              timeout-minutes: 10  # tests usually take < 2 minutes, so 10 is generous.
-              run: make test_ui
+        # Not caching chocolatey packages because the cache may not be reliable
+        # https://github.com/chocolatey/choco/issues/2134
+        # and this step only takes about 30 seconds.
+      - name: Install build dependencies (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: powershell
+        run: |
+          choco install zip unzip
+          $env:PATH += ";C:\ProgramData\chocolatey\bin"
+          refreshenv  # Choco-provided command to reload environment variables
+
+      - name: Restore cached NSIS plugins (Windows)
+        id: restore-nsis-cache
+        if: matrix.os == 'windows-latest'
+        uses: actions/cache@v2
+        with:
+          path: | # update this list of paths if windows-ci-binary-install.ps1 changes
+            C:\Program Files (x86)\NSIS\Plugins\x86-ansi\nsProcess.dll
+            C:\Program Files (x86)\NSIS\Include\nsProcess.nsh
+            C:\Program Files (x86)\NSIS\Plugins\x86-ansi\INetC.dll
+            C:\Program Files (x86)\NSIS\Plugins\x86-ansi\nsisunz.dll
+            C:\Program Files (x86)\NSIS\Plugins\x86-ansi\StdUtils.dll
+            C:\Program Files (x86)\NSIS\Plugins\x86-ansi\UAC.dll
+            C:\Program Files (x86)\NSIS\Include\NsisMultiUser.nsh
+            C:\Program Files (x86)\NSIS\Include\NsisMultiUserLang.nsh
+            C:\Program Files (x86)\NSIS\Include\StdUtils.nsh
+            C:\Program Files (x86)\NSIS\Include\UAC.nsh
+            C:\Program Files (x86)\NSIS\Include\Utils.nsh
+            C:\Program Files (x86)\NSIS\Include\un.Utils.nsh
+          key: NSIS-plugins--${{ hashFiles('ci/windows-ci-binary-install.ps1') }}
+
+      - name: Download NSIS plugins (Windows)  # only if they couldn't be restored from the cache
+        if: matrix.os == 'windows-latest' && steps.restore-nsis-cache.outputs.cache-hit != 'true'
+        shell: powershell
+        run: ./ci/windows-ci-binary-install.ps1
+
+      - name: Set up conda environment
+        uses: ./.github/actions/setup_env
+        with:
+          python-version: ${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
+          requirements-files: requirements.txt requirements-dev.txt requirements-gui.txt
+          requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }} pandoc
+
+      - name: Make install
+        run: make install
+
+      - name: Build binaries
+        run: make ${{ matrix.binary-make-command }}
+
+      - name: Install Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: 14.x
+
+      - name: Restore node_modules cache
+        id: nodemodules-cache
+        uses: actions/cache@v2
+        with:
+          path: workbench/node_modules
+          key: ${{ runner.os }}-${{ hashFiles('workbench/yarn.lock') }}
+
+      - name: Install Workbench Dependencies
+        if: steps.nodemodules-cache.outputs.cache-hit != 'true'
+        working-directory: workbench
+        run: |
+          yarn config set network-timeout 600000 -g
+          yarn install
+
+      - name: Build Workbench
+        working-directory: workbench
+        env:
+          GH_TOKEN: env.GITHUB_TOKEN
+          DEBUG: electron-builder
+          CSC_IDENTITY_AUTO_DISCOVERY: false  # disable electron-builder code signing
+        run: |
+          yarn run build
+          yarn run dist
+
+      - name: Test electron app with puppeteer
+        working-directory: workbench
+        run: npx cross-env CI=true yarn run test-electron-app
+
+      - name: Authenticate GCP
+        if: github.event_name != 'pull_request'
+        uses: google-github-actions/auth@v0
+        with:
+          credentials_json: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
+
+      - name: Set up GCP
+        if: github.event_name != 'pull_request'
+        uses: google-github-actions/setup-gcloud@v0
+
+      - name: Sign binaries (macOS)
+        if: github.event_name != 'pull_request' && matrix.os == 'macos-latest' # secrets not available in PR
+        env:
+          CERT_FILE: 2025-01-16-Expiry-AppStore-App.p12
+          CERT_PASS: ${{ secrets.MACOS_CODESIGN_CERT_PASS }}
+        run: |
+          INSTALLER_BINARY=$(find "$(pwd)/dist" -type f -name 'InVEST_*.dmg' | head -n 1)
+          WORKBENCH_BINARY=$(find "$(pwd)/workbench/dist" -type f -name 'invest_*.dmg' | head -n 1)
+          make BIN_TO_SIGN="$INSTALLER_BINARY" WORKBENCH_BIN_TO_SIGN="$WORKBENCH_BINARY" codesign_mac
+
+      - name: Sign binaries (Windows)
+        if: github.event_name != 'pull_request' && matrix.os == 'windows-latest' # secrets not available in PR
+        env:
+          CERT_FILE: Stanford-natcap-code-signing-cert-expires-2024-01-26.p12
+          CERT_PASS: ${{ secrets.WINDOWS_CODESIGN_CERT_PASS }}
+        run: |
+          # figure out the path to signtool.exe (it keeps changing with SDK updates)
+          SIGNTOOL_PATH=$(find 'C:\\Program Files (x86)\\Windows Kits\\10' -type f -name 'signtool.exe*' | head -n 1)
+          INSTALLER_BINARY=$(find "$(pwd)/dist" -type f -name 'InVEST_*.exe' | head -n 1)
+          WORKBENCH_BINARY=$(find "$(pwd)/workbench/dist" -type f -name 'invest_*.exe' | head -n 1)
+          make BIN_TO_SIGN="$INSTALLER_BINARY" WORKBENCH_BIN_TO_SIGN="$WORKBENCH_BINARY" SIGNTOOL="$SIGNTOOL_PATH" codesign_windows
+
+      - name: Deploy artifacts to GCS
+        if: github.event_name != 'pull_request'
+        run: make deploy
+
+      - name: Upload binary artifact
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: InVEST-${{ runner.os }}-binary
+          path: dist/*.${{ matrix.binary-extension }}
+
+      - name: Upload workbench binary artifact
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: Workbench-${{ runner.os }}-binary
+          path: workbench/dist/*.{{ matrix.binary-extension }}
+
+      - name: Upload user's guide artifact (Windows)
+        if: matrix.os == 'windows-latest'
+        uses: actions/upload-artifact@v2
+        with:
+          name: InVEST-user-guide
+          path: dist/InVEST_*_userguide.zip
+
+      - name: Upload workbench logging from puppeteer
+        uses: actions/upload-artifact@v2
+        if: always()
+        with:
+          name: ${{ runner.os }}_puppeteer_log.zip'
+          path: ${{ matrix.puppeteer-log }}
+
+      - name: Tar the workspace to preserve permissions (macOS)
+        if: failure() && matrix.os == 'macos-latest'
+        run: tar -cvf ${{ matrix.workspace-path}} ${{ github.workspace }}
+
+      - name: Upload workspace on failure
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: InVEST-failed-${{ runner.os }}-workspace
+          path: ${{ matrix.workspace-path}}
+
+  build-sampledata:
+    name: Build sampledata archives
+    needs: check-syntax-errors
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0 # Fetch complete history for accurate versioning
+
+      - uses: actions/setup-python@v2
+        with:
+          python-version: ${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
+
+      - name: Install dependencies
+        # dependencies of setup.py, needed to get the version string
+        run: pip install babel cython numpy setuptools setuptools_scm wheel
+
+      - run: make sampledata sampledata_single
+
+      - name: Install Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: 14.x
+
+      - name: Check sampledata registry links
+        if: github.event_name != 'pull_request' # no artifacts were deployed in a PR
+        working-directory: workbench
+        run: |
+          yarn add jest
+          yarn run test-sampledata-registry
+
+      - name: Upload sample data artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: InVEST-sample-data
+          path: dist/*.zip
+
+      - name: Authenticate GCP
+        if: github.event_name != 'pull_request'
+        uses: google-github-actions/auth@v0
+        with:
+          credentials_json: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
+
+      - name: Set up GCP
+        if: github.event_name != 'pull_request'
+        uses: google-github-actions/setup-gcloud@v0
+
+      - name: Deploy artifacts to GCS
+        if: github.event_name != 'pull_request'
+        run: make deploy
