@@ -486,7 +486,9 @@ def describe_arg_from_name(module_name, *arg_keys):
         *arg_keys: one or more strings that are nested arg keys.
 
     Returns:
-        String describing the arg in RST format
+        String describing the arg in RST format. Contains an anchor named
+        <module_name>-<arg_keys[0]>-<arg_keys[1]>...<arg_keys[n]>
+        where underscores in arg keys are replaced with hyphens.
     """
     # import the specified module (that should have an ARGS_SPEC attribute)
     module = importlib.import_module(module_name)
@@ -506,14 +508,18 @@ def describe_arg_from_name(module_name, *arg_keys):
                 f"{module_name} model's ARGS_SPEC")
 
     # format spec into an RST formatted description string
-    if isinstance(spec, dict):
-        if 'name' in spec:
-            arg_name = capitalize(spec['name'])
-        else:
-            arg_name = arg_keys[-1]
-        rst = '\n\n'.join(describe_arg_from_spec(arg_name, spec))
-    elif isinstance(spec, pint.Unit):
-        rst = format_unit(spec)
+    if 'name' in spec:
+        arg_name = capitalize(spec['name'])
     else:
-        rst = str(spec)
+        arg_name = arg_keys[-1]
+
+    # anchor names cannot contain underscores. sphinx will replace them
+    # automatically, but lets explicitly replace them here
+    last_module = module_name.split('.')[-1]
+    print(last_module)
+    anchor_name = f'{last_module}-{"-".join(arg_keys).replace("_", "-")}'
+    print(anchor_name)
+    rst_description = '\n\n'.join(describe_arg_from_spec(arg_name, spec))
+    rst = f'.. _{anchor_name}\n\n' + rst_description
+    print(rst)
     return rst
