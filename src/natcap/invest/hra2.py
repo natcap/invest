@@ -529,7 +529,7 @@ def execute(args):
             for criteria_type in ['E', 'C']:
                 criteria_raster_path = os.path.join(
                     intermediate_dir,
-                    f'{habitat}_{stressor}_{criteria_type}_score{suffix}.tif')
+                    f'{criteria_type}_{habitat}_{stressor}{suffix}.tif')
                 criteria_rasters[criteria_type] = criteria_raster_path
                 summary_data[
                     f'{criteria_type.lower()}_path'] = criteria_raster_path
@@ -579,7 +579,7 @@ def execute(args):
                     ])
 
             pairwise_risk_path = os.path.join(
-                intermediate_dir, f'risk_{habitat}_{stressor}{suffix}.tif')
+                intermediate_dir, f'RISK_{habitat}_{stressor}{suffix}.tif')
             pairwise_risk_paths.append(pairwise_risk_path)
 
             summary_data['risk_path'] = pairwise_risk_path
@@ -744,7 +744,7 @@ def execute(args):
             criteria_attributes_list.append(attrs)
 
         recovery_score_path = os.path.join(
-            intermediate_dir, f'recovery_{habitat}{suffix}.tif')
+            intermediate_dir, f'RECOVERY_{habitat}{suffix}.tif')
         recovery_score_task = graph.add_task(
             _calc_criteria,
             kwargs={
