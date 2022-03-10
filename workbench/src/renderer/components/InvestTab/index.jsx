@@ -96,7 +96,7 @@ export default class InvestTab extends React.Component {
     );
   }
 
-  investLogfileCallback(event, logfile) {
+  investLogfileCallback(logfile) {
     // Only now do we know for sure the process is running
     this.props.updateJobProperties(this.props.jobID, {
       logfile: logfile,
@@ -108,7 +108,7 @@ export default class InvestTab extends React.Component {
    *
    * @param {object} data - of shape { code: number, stdErr: string }
    */
-  investExitCallback(event, data) {
+  investExitCallback(data) {
     const {
       jobID,
       updateJobProperties,
