@@ -1069,7 +1069,8 @@ def _create_summary_statistics_file(
     Returns:
         ``None``
     """
-    json_data = json.load(open(aoi_raster_json_path))
+    with open(aoi_raster_json_path) as aoi_json_file:
+        json_data = json.load(aoi_json_file)
     subregion_names = json_data['subregion_names']
 
     def _read_stats_from_block(raster_path, block_info, mask_array):
