@@ -2000,7 +2000,14 @@ def _calc_criteria(attributes_list, habitat_mask_raster_path,
                     # fine to re-open the raster on each block iteration.
                     rating_raster = gdal.OpenEx(attribute_dict['rating'])
                     rating_band = rating_raster.GetRasterBand(1)
+                    rating_nodata = rating_band.GetNoDataValue()
                     rating = rating_band.ReadAsArray(**block_info)[valid_mask]
+
+                    # Any habitat pixels with a nodata rating (no rating
+                    # specified by the user) should be
+                    # interpreted as having a rating of 0.
+                    rating[utils.array_equals_nodata(
+                        rating, rating_nodata)] = 0
                 finally:
                     rating_band = None
                     rating_raster = None
@@ -2008,7 +2015,7 @@ def _calc_criteria(attributes_list, habitat_mask_raster_path,
             weight = attribute_dict['weight']
 
             # The (data_quality + weight) denominator running sum is
-            # re-calculated for each block.  While this is inefficient to
+            # re-calculated for each block.  While this is inefficient,
             # ``dq`` and ``weight`` are always scalars and so the wasted CPU
             # time is pretty trivial, even on large habitat/stressor matrices.
             # Plus, it's way easier to read and more maintainable to just have
