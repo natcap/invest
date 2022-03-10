@@ -3,15 +3,20 @@
 // of our "-r @babel/register" dev mode strategy.
 const {
   contextBridge,
-  dialog,
   ipcRenderer,
-  shell,
 } = require('electron');
 const crypto = require('crypto');
 const path = require('path');
 
 const { ipcMainChannels } = require('../main/ipcMainChannels');
 const { getLogger } = require('../main/logger');
+
+// Most IPC initiates in renderer and main does the listening,
+// but these channels are exceptions: renderer listens for them
+const ipcRendererChannels = [
+  /invest-logging-*/,
+  /invest-exit-*/,
+];
 
 contextBridge.exposeInMainWorld('Workbench', {
   // The gettext callable
@@ -46,12 +51,12 @@ contextBridge.exposeInMainWorld('Workbench', {
         }
       },
       on: (channel, func) => {
-        if (Object.values(ipcMainChannels).includes(channel)) {
+        if (ipcRendererChannels.some((regex) => regex.test(channel))) {
           ipcRenderer.on(channel, (event, ...args) => func(...args));
         }
       },
       removeListener: (channel, func) => {
-        if (Object.values(ipcMainChannels).includes(channel)) {
+        if (ipcRendererChannels.some((regex) => regex.test(channel))) {
           ipcRenderer.removeListener(channel, func);
         }
       },
