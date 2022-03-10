@@ -749,7 +749,8 @@ def execute(args):
             _calc_criteria,
             kwargs={
                 'attributes_list': criteria_attributes_list,
-                'habitat_mask_raster_path': all_habitats_mask_path,
+                'habitat_mask_raster_path':
+                    aligned_habitat_raster_paths[habitat],
                 'target_criterion_path': recovery_score_path,
                 'decayed_edt_raster_path': None,  # not a stressor so no EDT
             },
