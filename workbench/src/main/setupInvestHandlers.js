@@ -103,8 +103,10 @@ export function setupInvestRunHandlers(investExe) {
         if (`${data}`.match('Writing log messages to')) {
           investStarted = true;
           runningJobs[jobID] = investRun.pid;
-          const investLogfile = `${data}`.split(' ').pop().trim();
-          event.reply(`invest-logging-${jobID}`, investLogfile);
+          const investLogfile = `${data}`.substring(
+            `${data}`.indexOf('[') + 1, `${data}`.indexOf(']')
+          );
+          event.reply(`invest-logging-${jobID}`, path.resolve(investLogfile));
           if (!ELECTRON_DEV_MODE && !process.env.PUPPETEER) {
             usageLogger.start(pyModuleName, args);
           }
