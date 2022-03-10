@@ -515,11 +515,9 @@ def describe_arg_from_name(module_name, *arg_keys):
 
     # anchor names cannot contain underscores. sphinx will replace them
     # automatically, but lets explicitly replace them here
-    last_module = module_name.split('.')[-1]
-    print(last_module)
-    anchor_name = f'{last_module}-{"-".join(arg_keys).replace("_", "-")}'
+    anchor_name = '-'.join(arg_keys).replace('_', '-')
     print(anchor_name)
     rst_description = '\n\n'.join(describe_arg_from_spec(arg_name, spec))
-    rst = f'.. _{anchor_name}\n\n' + rst_description
+    rst = f'.. _{anchor_name}:\n\n' + rst_description
     print(rst)
     return rst
