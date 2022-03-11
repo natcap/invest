@@ -682,6 +682,9 @@ def execute(args):
 
     # total risk to the ecosystem is the sum of all cumulative risk rasters
     # across all habitats.
+    # InVEST 3.3.3 has this as the cumulative risk (a straight sum).
+    # InVEST 3.10.2 has this as the mean risk per habitat.
+    # This is currently implemented as mean risk per habitat.
     ecosystem_risk_path = os.path.join(
         output_dir, f'TOTAL_RISK_Ecosystem{suffix}.tif')
     ecosystem_risk_task = graph.add_task(
@@ -690,6 +693,7 @@ def execute(args):
             'raster_path_list': cumulative_risk_to_habitat_paths,
             'target_nodata': _TARGET_NODATA_FLOAT32,
             'target_result_path': ecosystem_risk_path,
+            'normalize': True,
         },
         task_name='Cumulative risk to ecosystem.',
         target_path_list=[ecosystem_risk_path],
@@ -2133,7 +2137,8 @@ def _maximum_reclassified_score(habitat_mask, *risk_classes):
     return target_matrix
 
 
-def _sum_rasters(raster_path_list, target_nodata, target_result_path):
+def _sum_rasters(raster_path_list, target_nodata, target_result_path,
+                 normalize=False):
     """Sum a stack of rasters.
 
     Where all rasters agree about nodata, the output raster will also be
@@ -2144,6 +2149,8 @@ def _sum_rasters(raster_path_list, target_nodata, target_result_path):
         raster_path_list (list): list of raster paths to sum
         target_nodata (float): desired target nodata value
         target_result_path (string): path to write out the sum raster
+        normalize=False (bool): whether to normalize each pixel value by the
+            number of valid pixels in the stack.  Defaults to False.
 
     Returns:
         ``None``
@@ -2154,12 +2161,16 @@ def _sum_rasters(raster_path_list, target_nodata, target_result_path):
     def _sum_op(*array_list):
         result = numpy.zeros(array_list[0].shape, dtype=numpy.float32)
         pixels_have_valid_values = numpy.zeros(result.shape, dtype=bool)
+        valid_pixel_count = numpy.zeros(result.shape, dtype=numpy.uint16)
         for array, nodata in zip(array_list, nodata_list):
             non_nodata_pixels = ~utils.array_equals_nodata(array, nodata)
             pixels_have_valid_values |= non_nodata_pixels
+            valid_pixel_count += non_nodata_pixels
 
             result[non_nodata_pixels] += array[non_nodata_pixels]
 
+        if normalize:
+            result[pixels_have_valid_values] /= valid_pixel_count[pixels_have_valid_values]
         result[~pixels_have_valid_values] = target_nodata
         return result
 
