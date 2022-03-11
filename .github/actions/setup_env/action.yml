@@ -1,24 +1,38 @@
 name: "Set up python and conda environment"
+description:
+  "This action creates a conda environment containing a given python version
+  and set of requirements. It caches the environment and restores it from
+  the cache when possible to minimize execution time. It uses a cache key
+  that includes the runner OS and architecture, python version, hash of all
+  requirements, and the number of the week in the year, so that the cache
+  refreshes weekly."
 inputs:
-  cache-id:
+  python-version:
+    description: "Python version to install"
+    required: true
+  requirements-files:
     description:
-      "Cache identifier used in the cache key. This should include any values
-      needed to uniquely identify the appropriate cache, such as python
-      version and operating system. The number of the current week in the
-      year, and a hash of all requirements files, are appended onto this
-      identifier to make the cache key. This way the cache will refresh each
-      week, or if the requirements change."
+      "List of requirements files to install from. May be separated by spaces
+      and/or newlines."
     required: false
     default: ""
-outputs:
-  cache-hit:
-    description: "True if a cache hit was found, false if not"
-    value: ${{ steps.condacache.outputs.cache-hit }}
+  requirements:
+    description:
+      "List of conda packages to install. May be separated by spaces and/or
+      newlines."
+    required: false
+    default: ""
 runs:
   using: "composite"
   steps:
-    # don't need to run setup-python because we'll always use the
-    # conda-managed python that'll be installed into this environment
+    # set up python that's used below to run convert-requirements-to-conda-yml.py
+    # after the environment is updated, 'python' will point to the
+    # conda-managed python and this python won't be used again
+    - name: Set up python
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ inputs.python-version }}
+
     - name: Setup conda environment
       uses: conda-incubator/setup-miniconda@v2
       with:
@@ -28,15 +42,42 @@ runs:
     # save week number to use in next step
     # save CONDA_PREFIX to GITHUB_ENV so it's accessible outside of shell commands
     - name: Set environment variables
+      shell: bash -l {0} # need login shell so that CONDA_PREFIX is set
       run: |
         echo "WEEK=$(date +%U)" >> $GITHUB_ENV
         echo "CONDA_PREFIX=$CONDA_PREFIX" >> $GITHUB_ENV
-      shell: bash -l {0}
+
+    - name: Copy requirements into file
+      shell: bash
+      run: |
+        # make sure each package is separated by a newline
+        echo "python=${{ inputs.python-version }}" > extra_requirements.txt
+        echo "${{ inputs.requirements }}" | xargs | tr " " "\n" >> extra_requirements.txt
+
+    - name: Combine all requirements into environment YML
+      shell: bash
+      run: |
+        # make sure each file is separated by a space
+        REQUIREMENTS_FILES=$(echo "${{ inputs.requirements-files }}" | xargs | tr "\n" " ")
+        python ./scripts/convert-requirements-to-conda-yml.py \
+          extra_requirements.txt $REQUIREMENTS_FILES \
+        > environment.yml
+        echo "Will update environment using this environment.yml:"
+        cat environment.yml
 
     # NOTE the post step that saves the cache will only run if the job succeeds
     - name: Restore conda environment cache
+      id: condacache
       uses: actions/cache@v2
       with:
         path: ${{ env.CONDA_PREFIX }}
-        key: ${{ inputs.cache-id }}-${{ env.WEEK }}-${{ hashFiles('**/requirements*.txt') }}
-      id: condacache
+        key: ${{ runner.os }}${{ runner.arch }}-${{ env.WEEK }}-${{ hashFiles('environment.yml') }}
+
+    - name: Update environment with dependencies
+      if: steps.condacache.outputs.cache-hit != 'true'
+      shell: bash -l {0} # conda only available in login shell
+      run: conda env update --file environment.yml
+
+    - name: List conda environment
+      shell: bash -l {0} # conda only available in login shell
+      run: conda list
