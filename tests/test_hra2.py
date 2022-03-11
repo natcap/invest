@@ -702,16 +702,16 @@ class HRAUnitTests(unittest.TestCase):
         habitat_mask_path = os.path.join(
             self.workspace_dir, 'habitat_mask.tif')
         habitat_mask_array = numpy.array([
-            [1, 1, 0, byte_nodata]], dtype=numpy.uint8)
+            [1, 1, 1, 0, byte_nodata]], dtype=numpy.uint8)
 
         float_nodata = hra2._TARGET_NODATA_FLOAT32
         exposure_path = os.path.join(self.workspace_dir, 'exposure.tif')
         exposure_array = numpy.array([
-            [0.1, 0.2, 0.3, float_nodata]], dtype=numpy.float32)
+            [0.1, 1.1, 1.2, 0.3, float_nodata]], dtype=numpy.float32)
 
         consequence_path = os.path.join(self.workspace_dir, 'consequence.tif')
         consequence_array = numpy.array([
-            [0.2, 0.3, 0.4, float_nodata]], dtype=numpy.float32)
+            [0.2, 1.2, 1.3, 0.4, float_nodata]], dtype=numpy.float32)
 
         for path, array, nodata in [
                 (habitat_mask_path, habitat_mask_array, byte_nodata),
@@ -727,7 +727,8 @@ class HRAUnitTests(unittest.TestCase):
             'multiplicative', multiplicative_risk_path)
 
         expected_multiplicative_array = numpy.array([
-            [0.02, 0.06, float_nodata, float_nodata]], dtype=numpy.float32)
+            [0.02, 1.32, 1.56, float_nodata, float_nodata]],
+            dtype=numpy.float32)
         numpy.testing.assert_allclose(
             expected_multiplicative_array,
             pygeoprocessing.raster_to_numpy_array(multiplicative_risk_path))
@@ -739,7 +740,7 @@ class HRAUnitTests(unittest.TestCase):
             euclidean_risk_path)
 
         expected_euclidean_array = numpy.array([
-            [1.2041595, 1.0630146, float_nodata, float_nodata]],
+            [0.0, 0.22360685, 0.36055511, float_nodata, float_nodata]],
             dtype=numpy.float32)
         numpy.testing.assert_allclose(
             expected_euclidean_array,

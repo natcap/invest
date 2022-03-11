@@ -2059,9 +2059,12 @@ def _calculate_pairwise_risk(habitat_mask_raster_path, exposure_raster_path,
             risk_array[habitat_pixels] = (
                 exposure[habitat_pixels] * consequence[habitat_pixels])
         else:  # risk_equation == 'euclidean':
+            # The numpy.maximum guards against low E, C values ending up less
+            # than 1 and, when squared, have positive, larger-than-reasonable
+            # risk values.
             risk_array[habitat_pixels] = numpy.sqrt(
-                (exposure[habitat_pixels] - 1) ** 2 +
-                (consequence[habitat_pixels] - 1) ** 2)
+                numpy.maximum(0, (exposure[habitat_pixels] - 1)) ** 2 +
+                numpy.maximum(0, (consequence[habitat_pixels] - 1)) ** 2)
         return risk_array
 
     pygeoprocessing.raster_calculator(
