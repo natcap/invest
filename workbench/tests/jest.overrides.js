@@ -42,7 +42,6 @@ Without this override:
 if (!process.env.PORT) {
   process.env.PORT = '56788';
 }
-
 if (global.window) {
   // Detected a jsdom env (as opposed to node). This means
   // we're running renderer tests, so need to mock the work

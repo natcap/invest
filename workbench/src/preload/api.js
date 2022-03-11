@@ -3,7 +3,6 @@ const {
 } = require('electron');
 const crypto = require('crypto');
 const path = require('path');
-
 const { ipcMainChannels } = require('../main/ipcMainChannels');
 const { getLogger } = require('../main/logger');
 
@@ -13,6 +12,7 @@ const ipcRendererChannels = [
   /invest-logging-*/,
   /invest-stdout-*/,
   /invest-exit-*/,
+  /download-status/,
 ];
 
 const api = {

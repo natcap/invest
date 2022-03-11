@@ -69,7 +69,7 @@ export default class App extends React.Component {
       showDownloadModal: this.props.isFirstRun,
     });
 
-    ipcRenderer.on('download-status', (event, downloadedNofN) => {
+    ipcRenderer.on('download-status', (downloadedNofN) => {
       this.setState({
         downloadedNofN: downloadedNofN,
       });

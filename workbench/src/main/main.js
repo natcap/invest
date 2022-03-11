@@ -49,7 +49,6 @@ export function destroyWindow() {
 
 /** Create an Electron browser window and start the flask application. */
 export const createWindow = async () => {
-  // console.log(import.meta.env)
   logger.info(`Running invest-workbench version ${pkg.version}`);
   nativeTheme.themeSource = 'light'; // override OS/browser setting
 
