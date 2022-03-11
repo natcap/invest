@@ -40,6 +40,7 @@ args = {
     'risk_eq': 'Euclidean',
     'visualize_outputs': True,
     'n_overlapping_stressors': 3,  # Now required for hra2.
+    'override_max_overlapping_stressors': 3, # force same calculations as hra2
     'workspace_dir': os.path.join(os.path.dirname(__file__), 'hra-sampledata'),
 }
 
