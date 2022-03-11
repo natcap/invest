@@ -10,7 +10,10 @@ import InputGroup from 'react-bootstrap/InputGroup';
 import Modal from 'react-bootstrap/Modal';
 import { MdFolderOpen, MdInfo } from 'react-icons/md';
 
-const base_userguide_url = "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest-userguide/latest/"
+import { ipcRenderer } from 'electron'; // eslint-disable-line import/no-extraneous-dependencies
+import { ipcMainChannels } from '../../../../main/ipcMainChannels';
+
+const baseUserguideURL = 'https://storage.googleapis.com/releases.naturalcapitalproject.org/invest-userguide/latest';
 
 /**
  * Filter a message that refers to many spatial inputs' bounding boxes.
@@ -372,9 +375,10 @@ class AboutModal extends React.PureComponent {
 
   render() {
     const { doc, arg } = this.props;
+    const { aboutShow } = this.state;
     // create link to users guide entry for this arg
     // anchor name is the arg name, with underscores replaced with hyphens
-    const userguide_url = `${base_userguide_url}/${doc}#${arg.name.replace(/_/g, '-')}`;
+    const userguideURL = `${baseUserguideURL}/${doc}#${arg.name.replace(/_/g, '-')}`;
     return (
       <React.Fragment>
         <Button
@@ -385,12 +389,18 @@ class AboutModal extends React.PureComponent {
         >
           <MdInfo />
         </Button>
-        <Modal show={this.state.aboutShow} onHide={this.handleAboutClose}>
+        <Modal show={aboutShow} onHide={this.handleAboutClose}>
           <Modal.Header>
             <Modal.Title>{arg.name}</Modal.Title>
-            </Modal.Header>
+          </Modal.Header>
           <Modal.Body>{arg.about}</Modal.Body>
-          <a href={userguide_url}>{_("More info")}</a>
+          <Button
+            onClick={() => {
+              ipcRenderer.invoke(ipcMainChannels.OPEN_EXTERNAL_LINK, userguideURL);
+            }}
+          >
+            {_('More info')}
+          </Button>
         </Modal>
       </React.Fragment>
     );

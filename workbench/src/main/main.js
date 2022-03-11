@@ -7,7 +7,8 @@ import {
   screen,
   nativeTheme,
   Menu,
-  ipcMain
+  ipcMain,
+  shell
 } from 'electron';
 
 import {
@@ -122,6 +123,10 @@ export const createWindow = async () => {
   setupContextMenu(mainWindow);
   setupGetNCPUs();
   setupSetLanguage();
+  ipcMain.handle(
+    ipcMainChannels.OPEN_EXTERNAL_LINK,
+    (_, url) => shell.openExternal(url)
+  );
   return Promise.resolve(); // lets tests await createWindow(), then assert
 };
 
