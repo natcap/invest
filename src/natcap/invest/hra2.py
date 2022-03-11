@@ -685,7 +685,7 @@ def execute(args):
     ecosystem_risk_path = os.path.join(
         output_dir, f'TOTAL_RISK_Ecosystem{suffix}.tif')
     ecosystem_risk_task = graph.add_task(
-        ndr._sum_rasters,
+        _sum_rasters,
         kwargs={
             'raster_path_list': cumulative_risk_to_habitat_paths,
             'target_nodata': _TARGET_NODATA_FLOAT32,
@@ -2128,6 +2128,41 @@ def _maximum_reclassified_score(habitat_mask, *risk_classes):
 
     target_matrix[~valid_pixels] = _TARGET_NODATA_BYTE
     return target_matrix
+
+
+def _sum_rasters(raster_path_list, target_nodata, target_result_path):
+    """Sum a stack of rasters.
+
+    Where all rasters agree about nodata, the output raster will also be
+    nodata.  Otherwise, pixel values will be the sum of the stack, where nodata
+    values are converted to 0.
+
+    Args:
+        raster_path_list (list): list of raster paths to sum
+        target_nodata (float): desired target nodata value
+        target_result_path (string): path to write out the sum raster
+
+    Returns:
+        ``None``
+    """
+    nodata_list = [pygeoprocessing.get_raster_info(
+        path)['nodata'][0] for path in raster_path_list]
+
+    def _sum_op(*array_list):
+        result = numpy.zeros(array_list[0].shape, dtype=numpy.float32)
+        pixels_have_valid_values = numpy.zeros(result.shape, dtype=bool)
+        for array, nodata in zip(array_list, nodata_list):
+            non_nodata_pixels = ~utils.array_equals_nodata(array, nodata)
+            pixels_have_valid_values |= non_nodata_pixels
+
+            result[non_nodata_pixels] += array[non_nodata_pixels]
+
+        result[~pixels_have_valid_values] = target_nodata
+        return result
+
+    pygeoprocessing.raster_calculator(
+        [(path, 1) for path in raster_path_list],
+        _sum_op, target_result_path, gdal.GDT_Float32, target_nodata)
 
 
 def build_datastack_archive(args, datastack_path):

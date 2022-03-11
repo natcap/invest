@@ -753,6 +753,40 @@ class HRAUnitTests(unittest.TestCase):
 
         self.assertIn('Invalid risk equation', str(cm.exception))
 
+    def test_sum_rasters(self):
+        from natcap.invest import hra2
+
+        nodata = -1
+        risk_array_1 = numpy.array([
+            [nodata, 1.3, 2.4]], dtype=numpy.float32)
+        risk_array_2 = numpy.array([
+            [0.6, nodata, 3.8]], dtype=numpy.float32)
+        risk_array_3 = numpy.array([
+            [0.1, 0.7, nodata]], dtype=numpy.float32)
+
+        raster_paths = []
+        for index, array in enumerate((risk_array_1,
+                                       risk_array_2,
+                                       risk_array_3)):
+            path = os.path.join(self.workspace_dir, f'{index}.tif')
+            raster_paths.append(path)
+            pygeoprocessing.numpy_array_to_raster(
+                array, nodata, (10, -10), ORIGIN, SRS_WKT, path)
+
+        target_nodata = hra2._TARGET_NODATA_FLOAT32
+        target_raster_path = os.path.join(self.workspace_dir, 'sum.tif')
+        hra2._sum_rasters(raster_paths, target_nodata, target_raster_path)
+
+        expected_array = numpy.array([
+            [0.7, 2.0, 6.2]], dtype=numpy.float32)
+        numpy.testing.assert_allclose(
+            pygeoprocessing.raster_to_numpy_array(target_raster_path),
+            expected_array)
+
+
+
+
+
 
 class HRAModelTests(unittest.TestCase):
     def setUp(self):
