@@ -774,16 +774,24 @@ class HRAUnitTests(unittest.TestCase):
             pygeoprocessing.numpy_array_to_raster(
                 array, nodata, (10, -10), ORIGIN, SRS_WKT, path)
 
+        # Test a straight sum
         target_nodata = hra2._TARGET_NODATA_FLOAT32
         target_raster_path = os.path.join(self.workspace_dir, 'sum.tif')
         hra2._sum_rasters(raster_paths, target_nodata, target_raster_path)
-
         expected_array = numpy.array([
             [0.7, 2.0, 6.2]], dtype=numpy.float32)
         numpy.testing.assert_allclose(
             pygeoprocessing.raster_to_numpy_array(target_raster_path),
             expected_array)
 
+        # Test with normalization.
+        hra2._sum_rasters(raster_paths, target_nodata, target_raster_path,
+                          normalize=True)
+        expected_array = numpy.array([
+            [0.35, 1.0, 3.1]], dtype=numpy.float32)
+        numpy.testing.assert_allclose(
+            pygeoprocessing.raster_to_numpy_array(target_raster_path),
+            expected_array)
 
 
 
