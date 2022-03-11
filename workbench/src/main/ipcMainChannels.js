@@ -11,5 +11,4 @@ export const ipcMainChannels = {
   GETTEXT: 'gettext',
   GET_N_CPUS: 'get-n-cpus',
   IS_DEV_MODE: 'is-dev-mode',
-  OPEN_EXTERNAL_LINK: 'open-external-link',
 };

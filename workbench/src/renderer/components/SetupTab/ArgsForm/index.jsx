@@ -42,7 +42,7 @@ export default class ArgsForm extends React.Component {
 
     const fileList = event.dataTransfer.files;
     if (fileList.length !== 1) {
-      alert(_('Only drop one file at a time.'));
+      alert(_('Only drop one file at a time.')); // eslint-disable-line no-alert
       return;
     }
     this.props.loadParametersFromFile(fileList[0].path);
@@ -53,7 +53,7 @@ export default class ArgsForm extends React.Component {
     event.preventDefault();
     event.stopPropagation();
     event.dataTransfer.dropEffect = 'copy';
-    this.dragDepth++;
+    this.dragDepth += 1;
     const formElement = this.formRef.current;
     if (!formElement.classList.contains('dragging')) {
       formElement.classList.add('dragging');
@@ -64,7 +64,7 @@ export default class ArgsForm extends React.Component {
   dragLeaveHandler(event) {
     event.preventDefault();
     event.stopPropagation();
-    this.dragDepth--;
+    this.dragDepth -= 1;
     const formElement = this.formRef.current;
     if (this.dragDepth <= 0) {
       formElement.classList.remove('dragging');
@@ -84,7 +84,7 @@ export default class ArgsForm extends React.Component {
     // TODO: could add more filters based on argType (e.g. only show .csv)
     const fileList = event.dataTransfer.files;
     if (fileList.length !== 1) {
-      alert(_('Only drop one file at a time.'));
+      alert(_('Only drop one file at a time.')); // eslint-disable-line no-alert
     } else if (fileList.length === 1) {
       this.props.updateArgValues(name, fileList[0].path);
     } else {
@@ -132,7 +132,7 @@ export default class ArgsForm extends React.Component {
       argsValidation,
       argsEnabled,
       argsDropdownOptions,
-      doc
+      userguide,
     } = this.props;
     const formItems = [];
     let k = 0;
@@ -144,7 +144,7 @@ export default class ArgsForm extends React.Component {
           <ArgInput
             argkey={argkey}
             argSpec={argsSpec[argkey]}
-            doc={doc}
+            userguide={userguide}
             dropdownOptions={argsDropdownOptions[argkey]}
             enabled={argsEnabled[argkey]}
             handleBoolChange={this.handleBoolChange}
@@ -189,24 +189,24 @@ ArgsForm.propTypes = {
     PropTypes.shape({
       value: PropTypes.oneOfType([PropTypes.string, PropTypes.bool]),
       touched: PropTypes.bool,
-    }),
+    })
   ).isRequired,
   argsValidation: PropTypes.objectOf(
     PropTypes.shape({
       validationMessage: PropTypes.string,
       valid: PropTypes.bool,
-    }),
+    })
   ).isRequired,
   argsSpec: PropTypes.objectOf(
     PropTypes.shape({
       name: PropTypes.string,
       type: PropTypes.string,
-    }),
+    })
   ).isRequired,
   argsOrder: PropTypes.arrayOf(
-    PropTypes.arrayOf(PropTypes.string),
+    PropTypes.arrayOf(PropTypes.string)
   ).isRequired,
-  doc: PropTypes.string.isRequired,
+  userguide: PropTypes.string.isRequired,
   updateArgValues: PropTypes.func.isRequired,
   loadParametersFromFile: PropTypes.func.isRequired,
 };
