@@ -328,6 +328,7 @@ jobs:
           fetch-depth: 0 # Fetch complete history for accurate versioning
 
       - name: Install build dependencies (macOS)
+        if: matrix.os == 'macos-latest'
         run: brew install create-dmg
 
         # Not caching chocolatey packages because the cache may not be reliable
