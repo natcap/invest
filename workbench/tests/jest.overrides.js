@@ -1,9 +1,6 @@
 const crypto = require('crypto');
-const {
-  ipcRenderer,
-  shell,
-} = require('electron');
 
+const { api } = require('../src/preload/api');
 // Cause tests to fail on console.error messages
 // Taken from https://stackoverflow.com/questions/28615293/is-there-a-jest-config-that-will-fail-tests-on-console-warn/50584643#50584643
 // let error = console.error;
@@ -50,28 +47,7 @@ if (global.window) {
   // Detected a jsdom env (as opposed to node). This means
   // we're running renderer tests, so need to mock the work
   // of preload.js here.
-  global.window.Workbench = {
-    PORT: process.env.PORT,
-    getLogger: jest.fn().mockReturnValue({
-      debug: jest.fn(),
-      verbose: jest.fn(),
-      info: jest.fn(),
-      warn: jest.fn(),
-      error: jest.fn(),
-      silly: jest.fn(),
-    }),
-    getWorkspaceHash: (x, y, z) => {
-      return crypto.createHash('sha1').update(
-        `${x}
-         ${JSON.stringify(y)}
-         ${JSON.stringify(z)}`
-      ).digest('hex');
-    },
-    electron: {
-      ipcRenderer: ipcRenderer,
-      shell: shell,
-    }
-  };
+  global.window.Workbench = api;
 
   // jsdom does not implement window.crypto
   global.window.crypto = {
@@ -81,5 +57,5 @@ if (global.window) {
   // mock out the global gettext function - avoid setting up translation
   global.window._ = (x) => x;
 
-  jest.mock('../src/logger');
+  // jest.mock('../src/main/logger');
 }
