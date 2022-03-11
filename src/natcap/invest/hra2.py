@@ -267,7 +267,7 @@ def execute(args):
     """
     intermediate_dir = os.path.join(args['workspace_dir'],
                                     'intermediate_outputs')
-    output_dir = os.path.join(args['workspace_dir'])
+    output_dir = os.path.join(args['workspace_dir'], 'outputs')
     taskgraph_working_dir = os.path.join(args['workspace_dir'], '.taskgraph')
     utils.make_directories([intermediate_dir, output_dir])
     suffix = utils.make_suffix_string(args, 'results_suffix')
@@ -624,14 +624,15 @@ def execute(args):
 
         # Sum the pairwise risk scores to get cumulative risk to the habitat.
         cumulative_risk_path = os.path.join(
-            intermediate_dir, f'total_risk_{habitat}{suffix}.tif')
+            output_dir, f'TOTAL_RISK_{habitat}{suffix}.tif')
         cumulative_risk_to_habitat_paths.append(cumulative_risk_path)
         cumulative_risk_task = graph.add_task(
-            ndr._sum_rasters,
+            _sum_rasters,
             kwargs={
                 'raster_path_list': pairwise_risk_paths,
                 'target_nodata': _TARGET_NODATA_FLOAT32,
                 'target_result_path': cumulative_risk_path,
+                'normalize': False,
             },
             task_name=f'Cumulative risk to {habitat}',
             target_path_list=[cumulative_risk_path],
@@ -660,7 +661,7 @@ def execute(args):
         )
 
         max_risk_classification_path = os.path.join(
-            output_dir, f'risk_{habitat}{suffix}.tif')
+            output_dir, f'RECLASS_RISK_{habitat}{suffix}.tif')
         _ = graph.add_task(
             pygeoprocessing.raster_calculator,
             kwargs={
