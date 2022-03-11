@@ -310,9 +310,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-10.15, windows-latest]
+        os: [macos-latest, windows-latest]
         include:
-          - os: macos-10.15
+          - os: macos-latest
             binary-make-command: mac_dmg
             puppeteer-log: ~/Library/Logs/invest-workbench/
             workspace-path: InVEST-failed-mac-workspace.tar
