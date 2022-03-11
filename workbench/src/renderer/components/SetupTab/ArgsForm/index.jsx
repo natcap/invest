@@ -131,7 +131,8 @@ export default class ArgsForm extends React.Component {
       argsValues,
       argsValidation,
       argsEnabled,
-      argsDropdownOptions
+      argsDropdownOptions,
+      doc
     } = this.props;
     const formItems = [];
     let k = 0;
@@ -141,20 +142,21 @@ export default class ArgsForm extends React.Component {
       groupArray.forEach((argkey) => {
         groupItems.push(
           <ArgInput
-            key={argkey}
             argkey={argkey}
             argSpec={argsSpec[argkey]}
-            value={argsValues[argkey].value}
-            enabled={argsEnabled[argkey]}
-            touched={argsValues[argkey].touched}
+            doc={doc}
             dropdownOptions={argsDropdownOptions[argkey]}
-            isValid={argsValidation[argkey].valid}
-            validationMessage={argsValidation[argkey].validationMessage}
+            enabled={argsEnabled[argkey]}
+            handleBoolChange={this.handleBoolChange}
             handleChange={this.handleChange}
             handleFocus={this.handleFocus}
             inputDropHandler={this.inputDropHandler}
-            handleBoolChange={this.handleBoolChange}
+            isValid={argsValidation[argkey].valid}
+            key={argkey}
             selectFile={this.selectFile}
+            touched={argsValues[argkey].touched}
+            validationMessage={argsValidation[argkey].validationMessage}
+            value={argsValues[argkey].value}
           />
         );
       });
@@ -204,6 +206,7 @@ ArgsForm.propTypes = {
   argsOrder: PropTypes.arrayOf(
     PropTypes.arrayOf(PropTypes.string),
   ).isRequired,
+  doc: PropTypes.string.isRequired,
   updateArgValues: PropTypes.func.isRequired,
   loadParametersFromFile: PropTypes.func.isRequired,
 };

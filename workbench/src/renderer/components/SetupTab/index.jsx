@@ -392,6 +392,7 @@ export default class SetupTab extends React.Component {
     if (argsValues) {
       const {
         argsSpec,
+        doc,
         sidebarSetupElementId,
         sidebarFooterElementId,
         executeClicked,
@@ -423,6 +424,7 @@ export default class SetupTab extends React.Component {
               argsEnabled={argsEnabled}
               argsDropdownOptions={argsDropdownOptions}
               argsOrder={uiSpec.order}
+              doc={doc}
               updateArgValues={this.updateArgValues}
               updateArgTouched={this.updateArgTouched}
               loadParametersFromFile={this.loadParametersFromFile}
@@ -469,6 +471,7 @@ export default class SetupTab extends React.Component {
 
 SetupTab.propTypes = {
   pyModuleName: PropTypes.string.isRequired,
+  doc: PropTypes.string.isRequired,
   modelName: PropTypes.string.isRequired,
   argsSpec: PropTypes.objectOf(
     PropTypes.shape({

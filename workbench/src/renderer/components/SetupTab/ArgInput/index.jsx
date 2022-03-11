@@ -10,6 +10,8 @@ import InputGroup from 'react-bootstrap/InputGroup';
 import Modal from 'react-bootstrap/Modal';
 import { MdFolderOpen, MdInfo } from 'react-icons/md';
 
+const base_userguide_url = "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest-userguide/latest/"
+
 /**
  * Filter a message that refers to many spatial inputs' bounding boxes.
  *
@@ -112,6 +114,7 @@ export default class ArgInput extends React.PureComponent {
     const {
       argkey,
       argSpec,
+      doc,
       enabled,
       handleBoolChange,
       handleChange,
@@ -174,7 +177,7 @@ export default class ArgInput extends React.PureComponent {
           <Col>
             <InputGroup>
               <div className="d-flex flex-nowrap w-100">
-                <AboutModal argument={argSpec} />
+                <AboutModal arg={argSpec} doc={doc} />
                 <Form.Control
                   id={argkey}
                   name={argkey}
@@ -247,7 +250,7 @@ export default class ArgInput extends React.PureComponent {
             required={argSpec.required}
           />
           <Col className="text-nowrap">
-            <AboutModal argument={argSpec} />
+            <AboutModal arg={argSpec} doc={doc} />
             <Form.Check
               id={argkey}
               inline
@@ -291,7 +294,7 @@ export default class ArgInput extends React.PureComponent {
           <Col>
             <InputGroup>
               <div className="d-flex flex-nowrap w-auto">
-                <AboutModal argument={argSpec} />
+                <AboutModal arg={argSpec} doc={doc} />
                 <Form.Control
                   id={argkey}
                   as="select"
@@ -329,6 +332,7 @@ export default class ArgInput extends React.PureComponent {
 ArgInput.propTypes = {
   argkey: PropTypes.string.isRequired,
   argSpec: PropTypes.object.isRequired,
+  doc: PropTypes.string.isRequired,
   value: PropTypes.oneOfType([PropTypes.string, PropTypes.bool]),
   touched: PropTypes.bool,
   isValid: PropTypes.bool,
@@ -367,10 +371,14 @@ class AboutModal extends React.PureComponent {
   }
 
   render() {
+    const { doc, arg } = this.props;
+    // create link to users guide entry for this arg
+    // anchor name is the arg name, with underscores replaced with hyphens
+    const userguide_url = `${base_userguide_url}/${doc}#${arg.name.replace(/_/g, '-')}`;
     return (
       <React.Fragment>
         <Button
-          aria-label={`info about ${this.props.argument.name}`}
+          aria-label={`info about ${arg.name}`}
           className="mr-2"
           onClick={this.handleAboutOpen}
           variant="outline-info"
@@ -379,9 +387,10 @@ class AboutModal extends React.PureComponent {
         </Button>
         <Modal show={this.state.aboutShow} onHide={this.handleAboutClose}>
           <Modal.Header>
-            <Modal.Title>{this.props.argument.name}</Modal.Title>
+            <Modal.Title>{arg.name}</Modal.Title>
             </Modal.Header>
-          <Modal.Body>{this.props.argument.about}</Modal.Body>
+          <Modal.Body>{arg.about}</Modal.Body>
+          <a href={userguide_url}>{_("More info")}</a>
         </Modal>
       </React.Fragment>
     );
@@ -389,8 +398,9 @@ class AboutModal extends React.PureComponent {
 }
 
 AboutModal.propTypes = {
-  argument: PropTypes.shape({
+  arg: PropTypes.shape({
     name: PropTypes.string,
     about: PropTypes.string,
   }).isRequired,
+  doc: PropTypes.string.isRequired,
 };

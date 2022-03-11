@@ -257,7 +257,7 @@ export default class InvestTab extends React.Component {
             <div className="sidebar-row">
               <ResourcesLinks
                 moduleName={modelRunName}
-                docs={modelSpec.userguide_html}
+                docs={modelSpec.userguide}
               />
             </div>
             <div
@@ -286,6 +286,7 @@ export default class InvestTab extends React.Component {
               >
                 <SetupTab
                   pyModuleName={modelSpec.pyname}
+                  doc={modelSpec.userguide}
                   modelName={modelRunName}
                   argsSpec={argsSpec}
                   uiSpec={uiSpec}
