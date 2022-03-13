@@ -68,6 +68,7 @@ export function setupInvestRunHandlers(investExe) {
         headers: { 'Content-Type': 'application/json' },
       });
       logger.debug(await response.text());
+      // logger.debug(response);
     } catch (error) {
       logger.error(error.stack);
     }

@@ -1,8 +1,10 @@
+import fs from 'fs';
 import path from 'path';
 import events from 'events';
 import { spawn, exec } from 'child_process';
 import Stream from 'stream';
 
+import fetch from 'node-fetch';
 import GettextJS from 'gettext.js';
 import React from 'react';
 import { ipcRenderer } from 'electron';
@@ -14,7 +16,7 @@ import '@testing-library/jest-dom';
 
 import App from '../../src/renderer/app';
 import {
-  getInvestModelNames, getSpec, fetchValidation, fetchDatastackFromFile
+  getInvestModelNames, getSpec, fetchValidation, fetchDatastackFromFile,
 } from '../../src/renderer/server_requests';
 import InvestJob from '../../src/renderer/InvestJob';
 import {
@@ -503,7 +505,7 @@ describe('InVEST subprocess testing', () => {
   const fakeWorkspace = 'foo_dir';
   const logfilePath = path.join(fakeWorkspace, 'invest-log.txt');
   // invest always emits this message, and the workbench always listens for it:
-  const stdOutLogfileSignal = `Writing log messages to ${logfilePath}`;
+  const stdOutLogfileSignal = `Writing log messages to [${logfilePath}]`;
   const stdOutText = 'hello from invest';
   const investExe = 'foo';
   let mockInvestProc;
@@ -523,6 +525,20 @@ describe('InVEST subprocess testing', () => {
     getInvestModelNames.mockResolvedValue(
       { Carbon: { model_name: modelName } }
     );
+    // mock the request to write the datastack file. Actually write it
+    // because the app will clean it up when invest exits.
+    // fetch.mockResolvedValue({ text: () => 'foo' });
+    fetch.mockImplementationOnce((url, content) => {
+      console.log(JSON.parse(content.body))
+      const { filepath } = JSON.parse(content.body)
+      fs.mkdtempSync(
+        path.join(path.dirname(filepath), 'data-')
+      );
+      fs.writeFileSync(filepath, 'foo');
+      // const TEMP_DIR = path.join(app.getPath('userData'), 'tmp');
+      return Promise.resolve({ text: () => 'foo' })
+    });
+    // and the clean
     const mockModelName = modelName;
     uiConfig.UI_SPEC = mockUISpec(spec, mockModelName);
 
@@ -598,7 +614,7 @@ describe('InVEST subprocess testing', () => {
     await getByRole('button', { name: 'InVEST' }).click();
     const homeTab = await getByRole('tabpanel', { name: 'home tab' });
     const cardText = await within(homeTab)
-      .findByText(`${path.resolve(fakeWorkspace)}`);
+      .findByText(fakeWorkspace);
     expect(cardText).toBeInTheDocument();
   });
 
@@ -655,7 +671,7 @@ describe('InVEST subprocess testing', () => {
     await getByRole('button', { name: 'InVEST' }).click();
     const homeTab = await getByRole('tabpanel', { name: 'home tab' });
     const cardText = await within(homeTab)
-      .findByText(`${path.resolve(fakeWorkspace)}`);
+      .findByText(fakeWorkspace);
     expect(cardText).toBeInTheDocument();
   });
 
@@ -703,7 +719,7 @@ describe('InVEST subprocess testing', () => {
     await getByRole('button', { name: 'InVEST' }).click();
     const homeTab = await getByRole('tabpanel', { name: 'home tab' });
     const cardText = await within(homeTab)
-      .findByText(`${path.resolve(fakeWorkspace)}`);
+      .findByText(fakeWorkspace);
     expect(cardText).toBeInTheDocument();
   });
 
