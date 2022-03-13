@@ -18,9 +18,13 @@ import InvestJob from '../../src/renderer/InvestJob';
 import setupDialogs from '../../src/main/setupDialogs';
 import { removeIpcMainListeners } from '../../src/main/main';
 
-jest.mock('../../src/renderer/server_requests');
+// It's quite a pain to dynamically mock a const from a module,
+// here we do it by importing as another object, then
+// we can overwrite the object we want to mock later
+// https://stackoverflow.com/questions/42977961/how-to-mock-an-exported-const-in-jest
+import * as uiConfig from '../../src/renderer/ui_config';
 
-const UI_CONFIG_PATH = '../../src/renderer/ui_config';
+jest.mock('../../src/renderer/server_requests');
 
 const DEFAULT_JOB = new InvestJob({
   modelRunName: 'carbon',
@@ -46,6 +50,13 @@ function renderInvestTab(job = DEFAULT_JOB) {
   return utils;
 }
 
+// Because we mock UI_SPEC without using jest's API
+// we alse need to a reset it without jest's API.
+const { UI_SPEC } = uiConfig;
+afterEach(() => {
+  uiConfig.UI_SPEC = UI_SPEC;
+});
+
 describe('Sidebar Alert renders with data from a recent run', () => {
   const spec = {
     pyname: 'natcap.invest.foo',
@@ -62,8 +73,7 @@ describe('Sidebar Alert renders with data from a recent run', () => {
   beforeEach(() => {
     getSpec.mockResolvedValue(spec);
     fetchValidation.mockResolvedValue([]);
-    const mockSpec = spec; // jest.mock not allowed to ref out-of-scope var
-    jest.mock(UI_CONFIG_PATH, () => mockUISpec(mockSpec));
+    uiConfig.UI_SPEC = mockUISpec(spec);
     setupDialogs();
   });
 
@@ -169,8 +179,7 @@ describe('Save InVEST Model Setup Buttons', () => {
   beforeEach(async () => {
     getSpec.mockResolvedValue(spec);
     fetchValidation.mockResolvedValue([]);
-    const mockSpec = spec;
-    jest.mock(UI_CONFIG_PATH, () => mockUISpec(mockSpec));
+    uiConfig.UI_SPEC = mockUISpec(spec);
   });
 
   test('Save to JSON: requests endpoint with correct payload', async () => {
@@ -364,8 +373,7 @@ describe('InVEST Run Button', () => {
 
   beforeEach(() => {
     getSpec.mockResolvedValue(spec);
-    const mockSpec = spec;
-    jest.mock(UI_CONFIG_PATH, () => mockUISpec(mockSpec));
+    uiConfig.UI_SPEC = mockUISpec(spec);
   });
 
   test('Changing inputs trigger validation & enable/disable Run', async () => {

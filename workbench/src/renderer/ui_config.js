@@ -393,4 +393,4 @@ const UI_SPEC = {
   },
 };
 
-export default UI_SPEC;
+export { UI_SPEC };

@@ -15,7 +15,7 @@ import LogTab from '../LogTab';
 import ResourcesLinks from '../ResourcesLinks';
 import Expire from '../Expire';
 import { getSpec } from '../../server_requests';
-import UI_SPEC from '../../ui_config';
+import { UI_SPEC } from '../../ui_config';
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
 const { ipcRenderer } = window.Workbench.electron;
