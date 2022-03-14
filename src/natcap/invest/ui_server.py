@@ -224,8 +224,7 @@ def build_datastack_archive():
 
     Body (JSON string):
         filepath: string - the target path to save the archive
-        moduleName: string (e.g. natcap.invest.carbon) the python
-            module name for which we are making the datastack.
+        moduleName: string (e.g. natcap.invest.carbon) the python module name
         args: JSON string of InVEST model args keys and values
 
     Returns:
