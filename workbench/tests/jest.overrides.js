@@ -1,6 +1,30 @@
 const crypto = require('crypto');
+const fetch = require('node-fetch');
 
+// a real port used to start the flask server for flaskapp.test.js,
+// but different from the port used when running the electron app
+// Set it before loading preload/api, as we would when running the real app.
+if (!process.env.PORT) {
+  process.env.PORT = '56788';
+}
 const { api } = require('../src/preload/api');
+
+if (global.window) {
+  // Detected a jsdom env (as opposed to node). This means
+  // we're running renderer tests.
+  // mock the work of preload.js here:
+  global.window.Workbench = api;
+
+  // mock out the global gettext function - avoid setting up translation
+  global.window._ = (x) => x;
+
+  // jsdom does not implement these APIs:
+  global.window.crypto = {
+    getRandomValues: () => [crypto.randomBytes(4).toString('hex')],
+  };
+  global.window.fetch = fetch;
+}
+
 // Cause tests to fail on console.error messages
 // Taken from https://stackoverflow.com/questions/28615293/is-there-a-jest-config-that-will-fail-tests-on-console-warn/50584643#50584643
 // let error = console.error;
@@ -36,25 +60,3 @@ Without this override:
       305 |                 />
       306 |               </TabPane>
 */
-
-// a real port used to start the flask server for flaskapp.test.js,
-// but different from the port used when running the electron app
-if (!process.env.PORT) {
-  process.env.PORT = '56788';
-}
-if (global.window) {
-  // Detected a jsdom env (as opposed to node). This means
-  // we're running renderer tests, so need to mock the work
-  // of preload.js here.
-  global.window.Workbench = api;
-
-  // jsdom does not implement window.crypto
-  global.window.crypto = {
-    getRandomValues: () => [crypto.randomBytes(4).toString('hex')],
-  };
-
-  // mock out the global gettext function - avoid setting up translation
-  global.window._ = (x) => x;
-
-  // jest.mock('../src/main/logger');
-}

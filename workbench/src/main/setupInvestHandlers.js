@@ -134,7 +134,6 @@ export function setupInvestRunHandlers(investExe) {
           if (e) { logger.error(e); }
         });
       });
-      // TODO: this is running in tests, should be devmode
       if (!ELECTRON_DEV_MODE && !process.env.PUPPETEER) {
         usageLogger.exit(investStdErr);
       }
