@@ -4,7 +4,6 @@ import events from 'events';
 import { spawn, exec } from 'child_process';
 import Stream from 'stream';
 
-import fetch from 'node-fetch';
 import GettextJS from 'gettext.js';
 import React from 'react';
 import { ipcRenderer } from 'electron';
@@ -16,7 +15,10 @@ import '@testing-library/jest-dom';
 
 import App from '../../src/renderer/app';
 import {
-  getInvestModelNames, getSpec, fetchValidation, fetchDatastackFromFile,
+  getInvestModelNames,
+  getSpec,
+  fetchValidation,
+  fetchDatastackFromFile
 } from '../../src/renderer/server_requests';
 import InvestJob from '../../src/renderer/InvestJob';
 import {
@@ -27,6 +29,7 @@ import {
   setupInvestRunHandlers,
   setupInvestLogReaderHandler,
 } from '../../src/main/setupInvestHandlers';
+import writeInvestParameters from '../../src/main/writeInvestParameters';
 import { removeIpcMainListeners } from '../../src/main/main';
 
 // It's quite a pain to dynamically mock a const from a module,
@@ -35,9 +38,10 @@ import { removeIpcMainListeners } from '../../src/main/main';
 // https://stackoverflow.com/questions/42977961/how-to-mock-an-exported-const-in-jest
 import * as uiConfig from '../../src/renderer/ui_config';
 
+jest.mock('node-fetch');
 jest.mock('child_process');
 jest.mock('../../src/renderer/server_requests');
-jest.mock('node-fetch');
+jest.mock('../../src/main/writeInvestParameters');
 
 const MOCK_MODEL_TITLE = 'Carbon';
 const MOCK_MODEL_RUN_NAME = 'carbon';
@@ -508,7 +512,32 @@ describe('InVEST subprocess testing', () => {
   const stdOutLogfileSignal = `Writing log messages to [${logfilePath}]`;
   const stdOutText = 'hello from invest';
   const investExe = 'foo';
-  let mockInvestProc;
+
+  // We need to mock child_process.spawn to return a mock invest process,
+  // And we also need an interface to that mocked process in each test
+  // so we can push to stdout, stderr, etc, just like invest would.
+  function getMockedInvestProcess() {
+    const mockInvestProc = new events.EventEmitter();
+    mockInvestProc.pid = -9999999; // not a plausible pid
+    mockInvestProc.stdout = new Stream.Readable({
+      read: () => {},
+    });
+    mockInvestProc.stderr = new Stream.Readable({
+      read: () => {},
+    });
+    if (process.platform !== 'win32') {
+      jest.spyOn(process, 'kill')
+        .mockImplementation(() => {
+          mockInvestProc.emit('exit', null);
+        });
+    } else {
+      exec.mockImplementation(() => {
+        mockInvestProc.emit('exit', null);
+      });
+    }
+    spawn.mockImplementation(() => mockInvestProc);
+    return mockInvestProc;
+  }
 
   beforeAll(() => {
     setupInvestRunHandlers(investExe);
@@ -525,52 +554,22 @@ describe('InVEST subprocess testing', () => {
     getInvestModelNames.mockResolvedValue(
       { Carbon: { model_name: modelName } }
     );
+    uiConfig.UI_SPEC = mockUISpec(spec, modelName);
     // mock the request to write the datastack file. Actually write it
     // because the app will clean it up when invest exits.
-    // fetch.mockResolvedValue({ text: () => 'foo' });
-    fetch.mockImplementationOnce((url, content) => {
-      console.log(JSON.parse(content.body))
-      const { filepath } = JSON.parse(content.body)
-      fs.mkdtempSync(
-        path.join(path.dirname(filepath), 'data-')
-      );
-      fs.writeFileSync(filepath, 'foo');
-      // const TEMP_DIR = path.join(app.getPath('userData'), 'tmp');
-      return Promise.resolve({ text: () => 'foo' })
+    writeInvestParameters.mockImplementation((payload) => {
+      fs.writeFileSync(payload.filepath, 'foo');
+      return Promise.resolve({ text: () => 'foo' });
     });
-    // and the clean
-    const mockModelName = modelName;
-    uiConfig.UI_SPEC = mockUISpec(spec, mockModelName);
-
-    mockInvestProc = new events.EventEmitter();
-    mockInvestProc.pid = -9999999; // a value that is not a plausible pid
-    mockInvestProc.stdout = new Stream.Readable({
-      read: () => {},
-    });
-    mockInvestProc.stderr = new Stream.Readable({
-      read: () => {},
-    });
-
-    spawn.mockImplementation(() => mockInvestProc);
-
-    if (process.platform !== 'win32') {
-      jest.spyOn(process, 'kill')
-        .mockImplementation(() => {
-          mockInvestProc.emit('exit', null);
-        });
-    } else {
-      exec.mockImplementation(() => {
-        mockInvestProc.emit('exit', null);
-      });
-    }
   });
 
   afterEach(async () => {
-    mockInvestProc = null;
+    // mockInvestProc = null;
     await InvestJob.clearStore();
   });
 
   test('exit without error - expect log display', async () => {
+    const mockInvestProc = getMockedInvestProcess();
     const {
       findByText,
       findByLabelText,
@@ -589,9 +588,7 @@ describe('InVEST subprocess testing', () => {
     userEvent.type(workspaceInput, fakeWorkspace);
     const execute = await findByRole('button', { name: /Run/ });
     userEvent.click(execute);
-    await waitFor(() => {
-      expect(execute).toBeDisabled();
-    });
+    await waitFor(() => expect(execute).toBeDisabled());
 
     // logfile signal on stdout listener is how app knows the process started
     mockInvestProc.stdout.push(stdOutText);
@@ -619,6 +616,7 @@ describe('InVEST subprocess testing', () => {
   });
 
   test('exit with error - expect log & alert display', async () => {
+    const mockInvestProc = getMockedInvestProcess();
     const {
       findByText,
       findByLabelText,
@@ -676,6 +674,7 @@ describe('InVEST subprocess testing', () => {
   });
 
   test('user terminates process - expect log & alert display', async () => {
+    const mockInvestProc = getMockedInvestProcess();
     const {
       findByText,
       findByLabelText,
@@ -724,6 +723,7 @@ describe('InVEST subprocess testing', () => {
   });
 
   test('Run & re-run a job - expect new log display', async () => {
+    const mockInvestProc = getMockedInvestProcess();
     const {
       findByText,
       findByLabelText,
@@ -757,31 +757,29 @@ describe('InVEST subprocess testing', () => {
     expect(await findByText('Open Workspace'))
       .toBeEnabled();
 
+    // Now the second invest process:
+    const anotherInvestProc = getMockedInvestProcess();
     // Now click away from Log, re-run, and expect the switch
     // back to the new log
     const setupTab = await findByText('Setup');
     userEvent.click(setupTab);
     userEvent.click(execute);
-    // firing execute re-assigns mockInvestProc via the spawn mock,
-    // but we need to wait for that before pushing to it's stdout.
-    // Since the production code cannot 'await spawn()',
-    // we do this manual timeout instead.
-    await new Promise((resolve) => setTimeout(resolve, 500));
     const newStdOutText = 'this is new stdout text';
-    mockInvestProc.stdout.push(newStdOutText);
-    mockInvestProc.stdout.push(stdOutLogfileSignal);
+    anotherInvestProc.stdout.push(newStdOutText);
+    anotherInvestProc.stdout.push(stdOutLogfileSignal);
     logTab = await findByText('Log');
     await waitFor(() => {
       expect(logTab.classList.contains('active')).toBeTruthy();
     });
     expect(await findByText(newStdOutText, { exact: false }))
       .toBeInTheDocument();
-    mockInvestProc.emit('exit', 0);
+    anotherInvestProc.emit('exit', 0);
     // Give it time to run the listener before unmounting.
     await new Promise((resolve) => setTimeout(resolve, 300));
   });
 
   test('Load Recent run & re-run it - expect new log display', async () => {
+    const mockInvestProc = getMockedInvestProcess();
     const argsValues = {
       workspace_dir: fakeWorkspace,
     };
@@ -815,11 +813,6 @@ describe('InVEST subprocess testing', () => {
     userEvent.click(setupTab);
     const execute = await findByRole('button', { name: /Run/ });
     userEvent.click(execute);
-    // firing execute re-assigns mockInvestProc via the spawn mock,
-    // but we need to wait for that before pushing to it's stdout.
-    // Since the production code cannot 'await spawn()',
-    // we do this manual timeout instead.
-    await new Promise((resolve) => setTimeout(resolve, 500));
     mockInvestProc.stdout.push(stdOutText);
     mockInvestProc.stdout.push(stdOutLogfileSignal);
     const logTab = await findByText('Log');

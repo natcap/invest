@@ -4,13 +4,13 @@ import os from 'os';
 import { spawn, exec } from 'child_process';
 
 import { app, ipcMain } from 'electron';
-import fetch from 'node-fetch';
 
 import { getLogger } from './logger';
 import { ipcMainChannels } from './ipcMainChannels';
 import ELECTRON_DEV_MODE from './isDevMode';
 import investUsageLogger from './investUsageLogger';
 import markupMessage from './investLogMarkup';
+import writeInvestParameters from './writeInvestParameters';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
@@ -22,7 +22,6 @@ const LOGLEVELMAP = {
   ERROR: '',
 };
 const TEMP_DIR = path.join(app.getPath('userData'), 'tmp');
-const HOSTNAME = 'http://localhost';
 
 export function setupInvestRunHandlers(investExe) {
   const runningJobs = {};
@@ -61,17 +60,7 @@ export function setupInvestRunHandlers(investExe) {
       relativePaths: false,
       args: JSON.stringify(args),
     };
-    try {
-      const response = await fetch(`${HOSTNAME}:${process.env.PORT}/api/write_parameter_set_file`, {
-        method: 'post',
-        body: JSON.stringify(payload),
-        headers: { 'Content-Type': 'application/json' },
-      });
-      logger.debug(await response.text());
-      // logger.debug(response);
-    } catch (error) {
-      logger.error(error.stack);
-    }
+    await writeInvestParameters(payload);
 
     const cmdArgs = [
       LOGLEVELMAP[loggingLevel],
@@ -145,6 +134,7 @@ export function setupInvestRunHandlers(investExe) {
           if (e) { logger.error(e); }
         });
       });
+      // TODO: this is running in tests, should be devmode
       if (!ELECTRON_DEV_MODE && !process.env.PUPPETEER) {
         usageLogger.exit(investStdErr);
       }
