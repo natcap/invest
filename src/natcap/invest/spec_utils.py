@@ -517,6 +517,4 @@ def describe_arg_from_name(module_name, *arg_keys):
     # automatically, but lets explicitly replace them here
     anchor_name = '-'.join(arg_keys).replace('_', '-')
     rst_description = '\n\n'.join(describe_arg_from_spec(arg_name, spec))
-    rst = f'.. _{anchor_name}:\n\n' + rst_description
-    print(rst)
-    return rst
+    return f'.. _{anchor_name}:\n\n' + rst_description

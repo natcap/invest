@@ -481,8 +481,8 @@ SetupTab.propTypes = {
   ).isRequired,
   uiSpec: PropTypes.shape({
     order: PropTypes.arrayOf(PropTypes.arrayOf(PropTypes.string)).isRequired,
-    enabledFunctions: PropTypes.objectOf(PropTypes.string),
-    dropdownFunctions: PropTypes.objectOf(PropTypes.string),
+    enabledFunctions: PropTypes.objectOf(PropTypes.func),
+    dropdownFunctions: PropTypes.objectOf(PropTypes.func),
   }).isRequired,
   argsInitValues: PropTypes.objectOf(PropTypes.string),
   investExecute: PropTypes.func.isRequired,

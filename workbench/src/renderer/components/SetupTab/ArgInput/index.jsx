@@ -83,7 +83,11 @@ Feedback.defaultProps = {
   message: '',
 };
 
-/** Prevent the default case for onDragOver so onDrop event will be fired. */
+/**
+ * Prevent the default case for onDragOver so onDrop event will be fired.
+ *
+ * @param {Event} event - dragover event
+ */
 function dragOverHandler(event) {
   event.preventDefault();
   event.stopPropagation();
@@ -313,8 +317,10 @@ ArgInput.defaultProps = {
 
 /**
  * Open the target href in the default web browser.
+ *
+ * @param {Event} event - event triggered by a click on the user's guide link
  */
-function handleMoreInfoClick(event) {
+function handleClickUsersGuideLink(event) {
   event.preventDefault();
   shell.openExternal(event.currentTarget.href);
 }
@@ -357,16 +363,18 @@ class AboutModal extends React.PureComponent {
           <Modal.Header>
             <Modal.Title>{arg.name}</Modal.Title>
           </Modal.Header>
-          <Modal.Body>{arg.about}</Modal.Body>
-          <a
-            href={userguideURL}
-            title={userguideURL}
-            aria-label="open user guide section for this input in web browser"
-            onClick={handleMoreInfoClick}
-          >
-            <MdOpenInNew className="mr-1" />
-            {_('More info')}
-          </a>
+          <Modal.Body>
+            {`${arg.about} `}
+            <a
+              href={userguideURL}
+              title={userguideURL}
+              aria-label="open user guide section for this input in web browser"
+              onClick={handleClickUsersGuideLink}
+            >
+              {_("User's guide entry")}
+              <MdOpenInNew className="mr-1" />
+            </a>
+          </Modal.Body>
         </Modal>
       </React.Fragment>
     );

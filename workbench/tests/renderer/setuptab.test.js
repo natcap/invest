@@ -1,4 +1,4 @@
-import { ipcRenderer } from 'electron';
+import { ipcRenderer, shell } from 'electron';
 import React from 'react';
 import {
   createEvent, fireEvent, render, waitFor, within
@@ -34,9 +34,11 @@ function renderSetupFromSpec(baseSpec, uiSpec) {
   const spec = { ...baseSpec };
   if (!spec.modelName) { spec.modelName = 'Eco Model'; }
   if (!spec.pyname) { spec.pyname = 'natcap.invest.dot'; }
+  if (!spec.userguide) { spec.userguide = 'foo.html'; }
   const { ...utils } = render(
     <SetupTab
       pyModuleName={spec.pyname}
+      userguide={spec.userguide}
       modelName={spec.modelName}
       argsSpec={spec.args}
       uiSpec={uiSpec}
@@ -130,6 +132,8 @@ describe('Arguments form input types', () => {
     const { findByText, findByRole } = renderSetupFromSpec(spec, UI_SPEC);
     userEvent.click(await findByRole('button', { name: /info about/ }));
     expect(await findByText(spec.args.arg.about)).toBeInTheDocument();
+    userEvent.click(await findByRole('link'));
+    expect(shell.openExternal).toHaveBeenCalled();
   });
 });
 
