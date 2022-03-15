@@ -146,7 +146,7 @@ export function setupInvestLogReaderHandler() {
     (event, logfile, channel) => {
       const fileStream = fs.createReadStream(logfile);
       fileStream.on('error', (err) => {
-        logger.error(err);
+        logger.info(err);
         event.reply(
           `invest-stdout-${channel}`,
           `Logfile is missing or unreadable: ${os.EOL}${logfile}`
