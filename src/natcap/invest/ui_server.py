@@ -176,7 +176,7 @@ def write_parameter_set_file():
     """Writes InVEST model args keys and values to a datastack JSON file.
 
     Body (JSON string):
-        parameterSetPath: string
+        filepath: string
         moduleName: string(e.g. natcap.invest.carbon)
         args: JSON string of InVEST model args keys and values
         relativePaths: boolean
@@ -185,7 +185,7 @@ def write_parameter_set_file():
         A string.
     """
     payload = request.get_json()
-    filepath = payload['parameterSetPath']
+    filepath = payload['filepath']
     modulename = payload['moduleName']
     args = json.loads(payload['args'])
     relative_paths = payload['relativePaths']
@@ -201,7 +201,7 @@ def save_to_python():
 
     Body (JSON string):
         filepath: string
-        modelname: string (e.g. carbon)
+        modelname: string (a key in natcap.invest.MODEL_METADATA)
         args_dict: JSON string of InVEST model args keys and values
 
     Returns:
@@ -216,6 +216,27 @@ def save_to_python():
         save_filepath, modelname, args_dict)
 
     return 'python script saved'
+
+
+@app.route('/build_datastack_archive', methods=['POST'])
+def build_datastack_archive():
+    """Writes a compressed archive of invest model input data.
+
+    Body (JSON string):
+        filepath: string - the target path to save the archive
+        moduleName: string (e.g. natcap.invest.carbon) the python module name
+        args: JSON string of InVEST model args keys and values
+
+    Returns:
+        A string.
+    """
+    payload = request.get_json()
+    datastack.build_datastack_archive(
+        json.loads(payload['args']),
+        payload['moduleName'],
+        payload['filepath'])
+
+    return 'datastack archive created'
 
 
 @app.route('/log_model_start', methods=['POST'])

@@ -109,7 +109,7 @@ class EndpointFunctionTests(unittest.TestCase):
         self.workspace_dir = tempfile.mkdtemp()
         filepath = os.path.join(self.workspace_dir, 'datastack.json')
         payload = {
-            'parameterSetPath': filepath,
+            'filepath': filepath,
             'moduleName': 'natcap.invest.carbon',
             'args': json.dumps({
                 'workspace_dir': 'foo'
@@ -138,6 +138,27 @@ class EndpointFunctionTests(unittest.TestCase):
         _ = test_client.post('/save_to_python', json=payload)
         # test_cli.py asserts the actual contents of the file
         self.assertTrue(os.path.exists(filepath))
+
+    def test_build_datastack_archive(self):
+        """UI server: build_datastack_archive endpoint."""
+        test_client = ui_server.app.test_client()
+        self.workspace_dir = tempfile.mkdtemp()
+        target_filepath = os.path.join(self.workspace_dir, 'data.tgz')
+        data_path = os.path.join(self.workspace_dir, 'data.csv')
+        with open(data_path, 'w') as file:
+            file.write('hello')
+
+        payload = {
+            'filepath': target_filepath,
+            'moduleName': 'natcap.invest.carbon',
+            'args': json.dumps({
+                'workspace_dir': 'foo',
+                'carbon_pools_path': data_path
+            }),
+        }
+        _ = test_client.post('/build_datastack_archive', json=payload)
+        # test_datastack.py asserts the actual archiving functionality
+        self.assertTrue(os.path.exists(target_filepath))
 
     @patch('natcap.invest.ui_server.usage.urlopen')
     def test_log_model_start(self, mock_urlopen):

@@ -87,7 +87,7 @@ describe('requests to flask endpoints', () => {
     const argsDict = argsDictFromObject(spec.args);
     const filepath = path.join(WORKSPACE, 'foo.json');
     const payload = {
-      parameterSetPath: filepath,
+      filepath: filepath,
       moduleName: spec.pyname,
       args: JSON.stringify(argsDict),
       relativePaths: true,
@@ -201,6 +201,7 @@ describe('Build each model UI from ARGS_SPEC', () => {
         sidebarSetupElementId="foo"
         sidebarFooterElementId="foo"
         executeClicked={false}
+        setSaveAlert={() => {}}
       />
     );
     expect(await findByRole('textbox', { name: /workspace/i }))
