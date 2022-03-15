@@ -37,17 +37,19 @@ function filterSpatialOverlapFeedback(message, filepath) {
 }
 
 function FormLabel(props) {
-  const { argkey, argname, required } = props;
+  const {
+    argkey, argname, required, units,
+  } = props;
   return (
     <Form.Label column sm="3" htmlFor={argkey}>
       <span>
         {argname}
-        <em>
-          {
-            (typeof required === 'boolean' && !required)
-              ? ' (optional)' : ''
-          }
-        </em>
+        {
+          (typeof required === 'boolean' && !required)
+            ? <em> (optional)</em>
+            : <React.Fragment />
+        }
+        { units ? <b>{units}</b> : <React.Fragment /> }
       </span>
     </Form.Label>
   );
@@ -58,6 +60,7 @@ FormLabel.propTypes = {
   required: PropTypes.oneOfType(
     [PropTypes.string, PropTypes.bool]
   ),
+  units: PropTypes.string,
 };
 
 function Feedback(props) {
@@ -193,6 +196,21 @@ export default class ArgInput extends React.PureComponent {
         placeholderText = _(argSpec.type);
     }
 
+    let units;
+    if (argSpec.type === 'number') {
+      units = argSpec.units;
+    } else if (argSpec.type === 'raster') {
+      if (argSpec.bands['1'].type === 'number') {
+        units = argSpec.bands['1'].units;
+      } else {
+        units = argSpec.bands['1'].type; // 'ratio' or 'percent' or 'integer'
+      }
+    }
+    if (units === 'none') { units = undefined; }
+
+    // display units at the end of the arg name, if applicable
+    const argName = units ? `${argSpec.name} (${units})` : argSpec.name;
+
     let form;
     if (argSpec.type === 'boolean') {
       form = (
@@ -270,7 +288,7 @@ export default class ArgInput extends React.PureComponent {
       >
         <FormLabel
           argkey={argkey}
-          argname={argSpec.name}
+          argname={argName}
           required={argSpec.required}
         />
         <Col>
@@ -293,6 +311,13 @@ ArgInput.propTypes = {
     name: PropTypes.string.isRequired,
     type: PropTypes.string.isRequired,
     required: PropTypes.oneOfType([PropTypes.string, PropTypes.bool]),
+    units: PropTypes.string, // numbers only
+    bands: PropTypes.shape({ // rasters only
+      1: PropTypes.shape({
+        type: PropTypes.string,
+        units: PropTypes.string, // numbers only
+      }),
+    }),
   }).isRequired,
   userguide: PropTypes.string.isRequired,
   value: PropTypes.oneOfType([PropTypes.string, PropTypes.bool]),
