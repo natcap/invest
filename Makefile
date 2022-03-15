@@ -126,10 +126,11 @@ USERGUIDE_BUILD_DIR := $(BUILD_DIR)/sphinx/userguide
 USERGUIDE_TARGET_DIR := $(DIST_DIR)/userguide
 USERGUIDE_ZIP_FILE := $(DIST_DIR)/InVEST_$(VERSION)_userguide.zip
 
-MAC_DISK_IMAGE_FILE := "$(DIST_DIR)/InVEST_$(VERSION).dmg"
-MAC_BINARIES_ZIP_FILE := "$(DIST_DIR)/InVEST-$(VERSION)-mac.zip"
-MAC_APPLICATION_BUNDLE_NAME := "InVEST.app"
-MAC_APPLICATION_BUNDLE := "$(BUILD_DIR)/mac_app_$(VERSION)/$(MAC_APPLICATION_BUNDLE_NAME)"
+MAC_DISK_IMAGE_FILE := $(DIST_DIR)/InVEST_$(VERSION).dmg
+MAC_BINARIES_ZIP_FILE := $(DIST_DIR)/InVEST-$(VERSION)-mac.zip
+MAC_APPLICATION_BUNDLE_NAME := InVEST.app
+MAC_APPLICATION_BUNDLE_DIR := $(BUILD_DIR)/mac_app_$(VERSION)
+MAC_APPLICATION_BUNDLE := $(MAC_APPLICATION_BUNDLE_DIR)/$(MAC_APPLICATION_BUNDLE_NAME)
 
 
 .PHONY: fetch install binaries apidocs userguide windows_installer mac_dmg sampledata sampledata_single test test_ui clean help check python_packages jenkins purge mac_zipfile deploy codesign_mac codesign_windows $(GIT_SAMPLE_DATA_REPO_PATH) $(GIT_TEST_DATA_REPO_PATH) $(GIT_UG_REPO_REV)
@@ -351,15 +352,10 @@ $(WINDOWS_INSTALLER_FILE): $(INVEST_BINARIES_DIR) $(USERGUIDE_ZIP_FILE) build/vc
 	-$(RM) $(WINDOWS_INSTALLER_FILE)
 	makensis /DVERSION=$(VERSION) /DBINDIR=$(INVEST_BINARIES_DIR) /DARCHITECTURE=$(PYTHON_ARCH) /DFORKNAME=$(INSTALLER_NAME_FORKUSER) /DDATA_LOCATION=$(DATA_BASE_URL) installer\windows\invest_installer.nsi
 
-CREATE_DMG_APP_DIR := $(BUILD_DIR)/mac_app_$(VERSION)/app
 mac_dmg: $(MAC_DISK_IMAGE_FILE)
 $(MAC_DISK_IMAGE_FILE): $(DIST_DIR) $(MAC_APPLICATION_BUNDLE) $(USERGUIDE_TARGET_DIR)
-	# create-dmg copies everything from the given source directory into the DMG,
-	# not just the app bundle that we want.
-	# so make a new directory that only contains the app bundle.
-	mkdir $(CREATE_DMG_APP_DIR)
-	cp -r $(MAC_APPLICATION_BUNDLE) $(CREATE_DMG_APP_DIR)
-	ls $(BUILD_DIR)/mac_app_$(VERSION)
+	# everything in the source directory $(MAC_APPLICATION_BUNDLE_DIR) will be copied into the DMG.
+	# so that directory should only contain the app bundle.
 	create-dmg \
 	    --volname "InVEST $(VERSION)" `# volume name, displayed in the top bar of the DMG window`\
 	    --volicon installer/darwin/invest.icns `# volume icon, displayed in the top bar of the DMG window`\
@@ -373,8 +369,7 @@ $(MAC_DISK_IMAGE_FILE): $(DIST_DIR) $(MAC_APPLICATION_BUNDLE) $(USERGUIDE_TARGET
 	    --eula LICENSE.txt `# license to display before DMG window opens`\
 	    --format UDZO `# disk image format`\
 	    $(MAC_DISK_IMAGE_FILE) `# path to create DMG at`\
-	    $(CREATE_DMG_APP_DIR) # directory containing the app bundle
-	rm -r $(CREATE_DMG_APP_DIR)
+	    $(MAC_APPLICATION_BUNDLE_DIR) # directory containing the app bundle
 
 mac_app: $(MAC_APPLICATION_BUNDLE)
 $(MAC_APPLICATION_BUNDLE): $(BUILD_DIR) $(INVEST_BINARIES_DIR) $(USERGUIDE_TARGET_DIR)
