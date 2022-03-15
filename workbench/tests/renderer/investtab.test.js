@@ -1,3 +1,5 @@
+import crypto from 'crypto';
+
 import React from 'react';
 import { ipcRenderer, shell } from 'electron';
 import { render, waitFor } from '@testing-library/react';
@@ -38,10 +40,11 @@ function mockUISpec(spec) {
 }
 
 function renderInvestTab(job = DEFAULT_JOB) {
+  const jobID = crypto.randomBytes(4).toString('hex');
   const { ...utils } = render(
     <InvestTab
       job={job}
-      jobID="carbon456asdf"
+      jobID={jobID}
       investSettings={{ nWorkers: '-1', loggingLevel: 'INFO' }}
       saveJob={() => {}}
       updateJobProperties={() => {}}
