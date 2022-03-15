@@ -361,32 +361,19 @@ $(MAC_DISK_IMAGE_FILE): $(DIST_DIR) $(MAC_APPLICATION_BUNDLE) $(USERGUIDE_TARGET
 	cp -r $(MAC_APPLICATION_BUNDLE) $(CREATE_DMG_APP_DIR)
 	ls $(BUILD_DIR)/mac_app_$(VERSION)
 	create-dmg \
-		# volume name, displayed in the top bar of the DMG window
-	    --volname "InVEST $(VERSION)" \
-	    # volume icon, displayed in the top bar of the DMG window
-	    --volicon installer/darwin/invest.icns \
-	    # background image of the DMG window
-	    --background installer/darwin/background.png \
-	    # DMG window location when first opened, in pixels relative to screen top left corner
-	    --window-pos 100 100 \
-	    # DMG window size in pixels
-	    --window-size 900 660 \
-	    # size of text in InVEST and Applications icon labels
-	    --text-size 12 \
-	    # size of InVEST and Applications icons, in pixels
-	    --icon-size 100 \
-	    # InVEST app bundle and location of its icon in pixels relative to window top left corner
-	    --icon $(MAC_APPLICATION_BUNDLE_NAME) 220 290 \
-	    # location of Applications icon in pixels relative to window top left corner
-	    --app-drop-link 670 290 \
-	    # license to display before DMG window opens
-	    --eula LICENSE.txt \
-	    # disk image format
-	    --format UDZO \
-	    # path to create DMG at
-	    $(MAC_DISK_IMAGE_FILE) \
-	    # directory containing the app bundle
-	    $(CREATE_DMG_APP_DIR)
+	    --volname "InVEST $(VERSION)" `# volume name, displayed in the top bar of the DMG window`\
+	    --volicon installer/darwin/invest.icns `# volume icon, displayed in the top bar of the DMG window`\
+	    --background installer/darwin/background.png `# background image of the DMG window`\
+	    --window-pos 100 100 `# DMG window location when first opened, in pixels relative to screen top left corner`\
+	    --window-size 900 660 `# DMG window size in pixels`\
+	    --text-size 12 `# size of text in InVEST and Applications icon labels`\
+	    --icon-size 100 `# size of InVEST and Applications icons, in pixels`\
+	    --icon $(MAC_APPLICATION_BUNDLE_NAME) 220 290 `# InVEST app bundle and location of its icon in pixels relative to window top left corner`\
+	    --app-drop-link 670 290 `# location of Applications icon in pixels relative to window top left corner`\
+	    --eula LICENSE.txt `# license to display before DMG window opens`\
+	    --format UDZO `# disk image format`\
+	    $(MAC_DISK_IMAGE_FILE) `# path to create DMG at`\
+	    $(CREATE_DMG_APP_DIR) # directory containing the app bundle
 	rm -r $(CREATE_DMG_APP_DIR)
 
 mac_app: $(MAC_APPLICATION_BUNDLE)
