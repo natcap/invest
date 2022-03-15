@@ -360,6 +360,7 @@ $(MAC_DISK_IMAGE_FILE): $(DIST_DIR) $(MAC_APPLICATION_BUNDLE) $(USERGUIDE_TARGET
 	# so make a new directory that only contains the app bundle.
 	mkdir $(CREATE_DMG_APP_DIR)
 	cp -r $(MAC_APPLICATION_BUNDLE) $(CREATE_DMG_APP_DIR)
+	ls $(BUILD_DIR)/mac_app_$(VERSION)
 	create-dmg \
 	    --volname "InVEST $(VERSION)" \  # volume name, displayed in the top bar of the DMG window
 	    --volicon installer/darwin/invest.icns \  # volume icon, displayed in the top bar of the DMG window
