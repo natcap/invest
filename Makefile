@@ -128,7 +128,8 @@ USERGUIDE_ZIP_FILE := $(DIST_DIR)/InVEST_$(VERSION)_userguide.zip
 
 MAC_DISK_IMAGE_FILE := "$(DIST_DIR)/InVEST_$(VERSION).dmg"
 MAC_BINARIES_ZIP_FILE := "$(DIST_DIR)/InVEST-$(VERSION)-mac.zip"
-MAC_APPLICATION_BUNDLE := "$(BUILD_DIR)/mac_app_$(VERSION)/InVEST.app"
+MAC_APPLICATION_BUNDLE_NAME := "InVEST.app"
+MAC_APPLICATION_BUNDLE := "$(BUILD_DIR)/mac_app_$(VERSION)/$(MAC_APPLICATION_BUNDLE_NAME)"
 
 
 .PHONY: fetch install binaries apidocs userguide windows_installer mac_dmg sampledata sampledata_single test test_ui clean help check python_packages jenkins purge mac_zipfile deploy codesign_mac codesign_windows $(GIT_SAMPLE_DATA_REPO_PATH) $(GIT_TEST_DATA_REPO_PATH) $(GIT_UG_REPO_REV)
@@ -351,21 +352,29 @@ $(WINDOWS_INSTALLER_FILE): $(INVEST_BINARIES_DIR) $(USERGUIDE_ZIP_FILE) build/vc
 	makensis /DVERSION=$(VERSION) /DBINDIR=$(INVEST_BINARIES_DIR) /DARCHITECTURE=$(PYTHON_ARCH) /DFORKNAME=$(INSTALLER_NAME_FORKUSER) /DDATA_LOCATION=$(DATA_BASE_URL) installer\windows\invest_installer.nsi
 
 DMG_CONFIG_FILE := installer/darwin/dmgconf.py
+CREATE_DMG_APP_DIR := $(BUILD_DIR)/mac_app_$(VERSION)/app
 mac_dmg: $(MAC_DISK_IMAGE_FILE)
 $(MAC_DISK_IMAGE_FILE): $(DIST_DIR) $(MAC_APPLICATION_BUNDLE) $(USERGUIDE_TARGET_DIR)
+	# create-dmg copies everything from the given source directory into the DMG,
+	# not just the app bundle that we want.
+	# so make a new directory that only contains the app bundle.
+	mkdir $(CREATE_DMG_APP_DIR)
+	cp -r $(MAC_APPLICATION_BUNDLE) $(CREATE_DMG_APP_DIR)
 	create-dmg \
-	    --volname "InVEST $(VERSION)" \
-	    --volicon installer/darwin/invest.icns \
-	    --background installer/darwin/background.png \
-	    --window-pos 100 100 \
-	    --window-size 900 660 \
-	    --text-size 12 \
-	    --icon-size 100 \
-	    --icon installer/darwin/invest.icns 220 290 \
-	    --app-drop-link 670 290 \
-	    --eula LICENSE.txt \
-	    --format UDZO \
-	    $(MAC_DISK_IMAGE_FILE) $(MAC_APPLICATION_BUNDLE)
+	    --volname "InVEST $(VERSION)" \  # volume name, displayed in the top bar of the DMG window
+	    --volicon installer/darwin/invest.icns \  # volume icon, displayed in the top bar of the DMG window
+	    --background installer/darwin/background.png \  # background image of the DMG window
+	    --window-pos 100 100 \  # DMG window location when first opened, in pixels relative to screen top left corner
+	    --window-size 900 660 \  # DMG window size in pixels
+	    --text-size 12 \  # size of text in InVEST and Applications icon labels
+	    --icon-size 100 \  # size of InVEST and Applications icons, in pixels
+	    --icon $(MAC_APPLICATION_BUNDLE_NAME) 220 290 \  # InVEST app bundle and location of its icon in pixels relative to window top left corner
+	    --app-drop-link 670 290 \  # location of Applications icon in pixels relative to window top left corner
+	    --eula LICENSE.txt \  # license to display before DMG window opens
+	    --format UDZO \  # disk image format
+	    $(MAC_DISK_IMAGE_FILE) \  # path to create DMG at
+	    $(CREATE_DMG_APP_DIR)  # directory containing the app bundle
+	rm -r $(CREATE_DMG_APP_DIR)
 
 mac_app: $(MAC_APPLICATION_BUNDLE)
 $(MAC_APPLICATION_BUNDLE): $(BUILD_DIR) $(INVEST_BINARIES_DIR) $(USERGUIDE_TARGET_DIR)
