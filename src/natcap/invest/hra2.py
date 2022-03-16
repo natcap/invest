@@ -999,7 +999,7 @@ def _polygonize(source_raster_path, mask_raster_path,
         target_polygonized_vector, 0, 0, 0, gdal.GDT_Unknown)
     layer_name = os.path.splitext(
         os.path.basename(target_polygonized_vector))[0]
-    layer = vector.CreateLayer(layer_name, raster_srs, ogr.wkbPolygon)
+    layer = vector.CreateLayer('', raster_srs, ogr.wkbPolygon)
 
     # Create an integer field that contains values from the raster
     field_defn = ogr.FieldDefn(str(field_name), ogr.OFTInteger)
