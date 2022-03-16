@@ -15,7 +15,8 @@
     "build-main": "babel --delete-dir-on-start src/main -d build/main --verbose --config-file ./babel.config.js --ignore **/__mocks__/* -s both",
     "build-preload": "babel --delete-dir-on-start src/preload -d build/preload --verbose --config-file ./babel.config.js --ignore **/__mocks__/* -s both",
     "build-renderer": "cd src/renderer && vite build",
-    "build": "yarn build-main && yarn build-preload && yarn build-renderer",
+    "build-static": "cp -r src/static build/static",
+    "build": "yarn build-main && yarn build-preload && yarn build-static && yarn build-renderer",
     "dist": "cross-env DEBUG=electron-builder electron-builder build --config electron-builder-config.js"
   },
   "jest": {
