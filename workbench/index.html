@@ -6,7 +6,11 @@
       content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
       charset="UTF-8"
     >
-    <!-- href are relative to the outDir in renderer/vite.config.js, I think -->
+    <!-- href are relative to the outDir in renderer/vite.config.js,
+    I think, despite the leading slash.
+    Leading slash works in dev because vite BASE_URL is /, not in build.
+    No slash fails in dev.
+  -->
     <link
       rel="stylesheet"
       href="/node_modules/bootstrap/dist/css/bootstrap.min.css"
@@ -20,6 +24,7 @@
   <body>
     <div id="App"></div>
   </body>
-  <script src="./index.jsx" type="module">
+  <!-- leading ./ is for some reason crucial, otherwise vite 'fails to resolve index.jsx'-->
+  <script src="./src/renderer/index.jsx" type="module">
   </script>
 </html>

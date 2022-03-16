@@ -60,8 +60,9 @@ export const createWindow = async () => {
     alwaysOnTop: false,
   });
   const splashURL = ELECTRON_DEV_MODE
+  // TODO: this entrypoint is missing from vite config?
     ? 'http://localhost:3000/src/renderer/static/splash.html'
-    : `file://${__dirname}/../renderer/static/splash.html`;
+    : `file://${__dirname}/../renderer/src/renderer/static/splash.html`;
   splashScreen.loadURL(splashURL);
   const investExe = findInvestBinaries(ELECTRON_DEV_MODE);
   createPythonFlaskProcess(investExe);
@@ -89,8 +90,9 @@ export const createWindow = async () => {
   );
   Menu.setApplicationMenu(menubar);
   const indexURL = ELECTRON_DEV_MODE
-    ? 'http://localhost:3000/src/renderer/index.html'
-    : `file://${__dirname}/../renderer/index.html`;
+    // ? 'http://localhost:3000/src/renderer/index.html'
+    ? 'http://localhost:3000/index.html'
+    : `file://${__dirname}/../index.html`;
   mainWindow.loadURL(indexURL);
 
   mainWindow.once('ready-to-show', () => {
@@ -109,7 +111,8 @@ export const createWindow = async () => {
   // https://bugs.chromium.org/p/chromium/issues/detail?id=1085215
   // https://github.com/electron/electron/issues/23662
   mainWindow.webContents.on('did-frame-finish-load', async () => {
-    if (ELECTRON_DEV_MODE) {
+    // if (ELECTRON_DEV_MODE) { TODO
+    if (true) {
       mainWindow.webContents.openDevTools();
     }
     // We use this stdout as a signal in a puppeteer test

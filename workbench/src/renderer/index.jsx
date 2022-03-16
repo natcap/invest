@@ -8,6 +8,9 @@ import { getSettingsValue } from './components/SettingsModal/SettingsStorage';
 const { ipcRenderer } = window.Workbench.electron;
 window._ = window.Workbench._; // for convenient use in all components
 
+console.log(import.meta.env.BASE_URL)
+console.log(import.meta.env.MODE)
+
 const language = await getSettingsValue('language');
 // call this before rendering the app so that _() is defined
 await ipcRenderer.invoke(ipcMainChannels.SET_LANGUAGE, language);

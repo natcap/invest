@@ -21,10 +21,12 @@ but with the same ECMAscript features and babel configurations:
 `node -r @babel/register script.js`.
 
 ## To package this app for distribution
-* `yarn run install`
-* `yarn run fetch-invest`
-* `yarn run build`
-* `yarn run dist`  - Configure the packaging in `electron-builder-config.js`.
+* from invest/:
+  - `make binaries`
+* from invest/workbench/:
+  - `yarn run install`
+  - `yarn run build`
+  - `yarn run dist`  - Configure the packaging in `electron-builder-config.js`.
 
 ## Testing with Jest
 #### Configuration

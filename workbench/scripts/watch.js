@@ -10,7 +10,8 @@ const sharedConfig = {
 async function watch() {
   const server = await createServer({
     ...sharedConfig,
-    configFile: path.join(__dirname, '../src/renderer/vite.config.js')
+    // configFile: path.join(__dirname, '../src/renderer/vite.config.js')
+    configFile: path.join(__dirname, '../vite.config.js')
   });
 
   await server.listen();

@@ -7,6 +7,10 @@ const fetch = require('node-fetch');
 if (!process.env.PORT) {
   process.env.PORT = '56788';
 }
+// debug logging is a bit noisy, not so useful during tests.
+if (!process.env.ELECTRON_LOG_LEVEL) {
+  process.env.ELECTRON_LOG_LEVEL = 'info';
+}
 const { api } = require('../src/preload/api');
 
 if (global.window) {
@@ -18,7 +22,7 @@ if (global.window) {
   // mock out the global gettext function - avoid setting up translation
   global.window._ = (x) => x;
 
-  // jsdom does not implement these APIs:
+  // jsdom does not implement these window APIs:
   global.window.crypto = {
     getRandomValues: () => [crypto.randomBytes(4).toString('hex')],
   };
