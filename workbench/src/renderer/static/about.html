@@ -6,10 +6,6 @@
       <h3>InVEST Version: </h3> 
     </span>
     <br/><br/>
-    <span id='workbench-version'>
-      <h3>Workbench Version: </h3> 
-    </span>
-    <br/> <br/>
 
     Documentation: 
     <a
@@ -34,18 +30,12 @@
       BSD 3-clause
     </a>
     <br/>
-    Project pages: 
+    Project page: 
     <br/>
     <a
       href="https://github.com/natcap/invest"
       onClick="handleClick(event)">
       github.com/natcap/invest
-    </a>
-    <br/>
-    <a
-      href="https://github.com/natcap/invest-workbench"
-      onClick="handleClick(event)">
-      github.com/natcap/invest-workbench
     </a>
     <br/>
 
@@ -139,13 +129,9 @@
     const { shell } = require('electron');
     const pkg = require('../../package.json');
 
-    const node1 = document.getElementById('invest-version');
-    const node2 = document.getElementById('workbench-version');
-    const text1 = document.createTextNode(pkg.invest.version)
-    const text2 = document.createTextNode(pkg.version)
-    node1.appendChild(text1)
-    node2.appendChild(text2)
-
+    const node = document.getElementById('invest-version');
+    const text = document.createTextNode(pkg.invest.version)
+    node.appendChild(text)
 
     function handleClick(event) {
       event.preventDefault();
