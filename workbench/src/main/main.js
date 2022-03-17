@@ -26,6 +26,7 @@ import {
 } from './setupInvestHandlers';
 import setupSetLanguage from './setLanguage';
 import setupGetNCPUs from './setupGetNCPUs';
+import setupOpenExternalUrl from './setupOpenExternalUrl';
 import { ipcMainChannels } from './ipcMainChannels';
 import menuTemplate from './menubar';
 import ELECTRON_DEV_MODE from './isDevMode';
@@ -47,7 +48,6 @@ let splashScreen;
 export function destroyWindow() {
   mainWindow = null;
 }
-console.log(BASE_URL)
 
 /** Create an Electron browser window and start the flask application. */
 export const createWindow = async () => {
@@ -130,6 +130,7 @@ export const createWindow = async () => {
   setupContextMenu(mainWindow);
   setupGetNCPUs();
   setupSetLanguage();
+  setupOpenExternalUrl();
   return Promise.resolve(); // lets tests await createWindow(), then assert
 };
 

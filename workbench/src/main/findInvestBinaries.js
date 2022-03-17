@@ -38,8 +38,10 @@ export default function findInvestBinaries(isDevMode) {
     logger.error('InVEST binaries are probably missing.');
     throw error;
   }
+  const investVersion = stdout.toString();
+  global.INVEST_VERSION = investVersion;
   logger.info(
-    `Found invest binaries ${investExe} for version ${stdout.toString()}`
+    `Found invest binaries ${investExe} for version ${investVersion}`
   );
   return investExe;
 }

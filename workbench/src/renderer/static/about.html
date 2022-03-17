@@ -3,7 +3,7 @@
   <body>
     <h1>About InVEST</h1>
     <span id='invest-version'>
-      <h3>InVEST Version: </h3> 
+      <h3>version: </h3> 
     </span>
     <br/><br/>
 
@@ -126,16 +126,16 @@
     </p>
   </body>
   <script>
-    const { shell } = require('electron');
-    const pkg = require('../../package.json');
-
+    const { investVersion } = window.About;
     const node = document.getElementById('invest-version');
-    const text = document.createTextNode(pkg.invest.version)
+    const text = document.createTextNode(investVersion);
     node.appendChild(text)
 
     function handleClick(event) {
       event.preventDefault();
-      shell.openExternal(event.currentTarget.href);
+      ipcRenderer.send(
+        ipcMainChannels.OPEN_EXTERNAL_URL, event.currentTarget.href
+      )
     }
   </script>
 </html>

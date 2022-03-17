@@ -116,10 +116,11 @@ function openAboutWindow(parentWindow, isDevMode) {
     height: 800,
     frame: true,
     webPreferences: {
-      contextIsolation: false,
-      enableRemoteModule: false,
+      contextIsolation: true,
       nodeIntegration: true,
       minimumFontSize: 18,
+      preload: path.join(__dirname, '../preload/preload_about.js'),
+      additionalArguments: [`INVEST_VERSION=${global.INVEST_VERSION}`],
     },
   });
   setupContextMenu(child);
@@ -137,8 +138,7 @@ function openReportWindow(parentWindow, isDevMode) {
     height: 800,
     frame: true,
     webPreferences: {
-      contextIsolation: false,
-      enableRemoteModule: false,
+      contextIsolation: true,
       nodeIntegration: true,
       minimumFontSize: 18,
       preload: path.join(__dirname, '..', 'preload.js'),
