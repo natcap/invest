@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
-import { builtinModules } from 'module';
+// import { builtinModules } from 'module';
 
 const PROJECT_ROOT = '.';
 
@@ -22,15 +22,20 @@ export default defineConfig({
     minify: process.env.MODE !== 'development',
     outDir: path.join(PROJECT_ROOT, 'build'),
     target: 'chrome98',
-    // rollupOptions: {
-    //   input: {
-    //     main: path.join(PROJECT_ROOT, 'src/index.html'),
-    //     splash: path.join(__dirname, 'static/splash.html'),
-    //   },
-    //   external: [
-    //     ...builtinModules,
-    //   ],
-    // },
+    rollupOptions: {
+      input: {
+        main: path.resolve(PROJECT_ROOT, 'index.html'),
+        splash: path.resolve(PROJECT_ROOT, 'src/renderer/static/splash.html'),
+        report: path.resolve(PROJECT_ROOT, 'src/renderer/static/report_a_problem.html'),
+        about: path.resolve(PROJECT_ROOT, 'src/renderer/static/about.html'),
+      },
+      // output: {
+      //   entryFileNames: 'splash-[name].html'
+      // },
+      // external: [
+      //   ...builtinModules,
+      // ],
+    },
     emptyOutDir: true,
   },
 });

@@ -29,6 +29,7 @@ import setupGetNCPUs from './setupGetNCPUs';
 import { ipcMainChannels } from './ipcMainChannels';
 import menuTemplate from './menubar';
 import ELECTRON_DEV_MODE from './isDevMode';
+import BASE_URL from './baseUrl';
 import { getLogger } from './logger';
 import pkg from '../../package.json';
 
@@ -46,6 +47,7 @@ let splashScreen;
 export function destroyWindow() {
   mainWindow = null;
 }
+console.log(BASE_URL)
 
 /** Create an Electron browser window and start the flask application. */
 export const createWindow = async () => {
@@ -59,11 +61,9 @@ export const createWindow = async () => {
     frame: false,
     alwaysOnTop: false,
   });
-  const splashURL = ELECTRON_DEV_MODE
-  // TODO: this entrypoint is missing from vite config?
-    ? 'http://localhost:3000/src/renderer/static/splash.html'
-    : `file://${__dirname}/../renderer/src/renderer/static/splash.html`;
-  splashScreen.loadURL(splashURL);
+  splashScreen.loadURL(path.join(
+    BASE_URL, 'src/renderer/static/splash.html'
+  ));
   const investExe = findInvestBinaries(ELECTRON_DEV_MODE);
   createPythonFlaskProcess(investExe);
   setupDialogs();
@@ -89,11 +89,7 @@ export const createWindow = async () => {
     menuTemplate(mainWindow, ELECTRON_DEV_MODE)
   );
   Menu.setApplicationMenu(menubar);
-  const indexURL = ELECTRON_DEV_MODE
-    // ? 'http://localhost:3000/src/renderer/index.html'
-    ? 'http://localhost:3000/index.html'
-    : `file://${__dirname}/../index.html`;
-  mainWindow.loadURL(indexURL);
+  mainWindow.loadURL(path.join(BASE_URL, 'index.html'));
 
   mainWindow.once('ready-to-show', () => {
     splashScreen.destroy();

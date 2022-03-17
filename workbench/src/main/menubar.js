@@ -3,6 +3,7 @@ import path from 'path';
 import { app, BrowserWindow } from 'electron'; // eslint-disable-line import/no-extraneous-dependencies
 
 import setupContextMenu from './setupContextMenu';
+import BASE_URL from './baseUrl';
 
 const isMac = process.platform === 'darwin';
 
@@ -123,7 +124,7 @@ function openAboutWindow(parentWindow, isDevMode) {
   });
   setupContextMenu(child);
   child.setMenu(null);
-  child.loadURL(`file://${__dirname}/../static/about.html`);
+  child.loadURL(path.join(BASE_URL, 'src/renderer/static/about.html'));
   if (isDevMode) {
     child.webContents.openDevTools();
   }
@@ -146,7 +147,7 @@ function openReportWindow(parentWindow, isDevMode) {
   });
   setupContextMenu(child);
   child.setMenu(null);
-  child.loadURL(`file://${__dirname}/../static/report_a_problem.html`);
+  child.loadURL(path.join(BASE_URL, 'src/renderer/static/report_a_problem.html'));
   if (isDevMode) {
     child.webContents.openDevTools();
   }
