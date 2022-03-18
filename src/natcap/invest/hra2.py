@@ -570,7 +570,8 @@ def execute(args):
                     except ValueError:
                         # When attrs['rating'] is not a number, we should
                         # assume it's a spatial file.
-                        attrs['rating'] = user_files_to_aligned_raster_paths[attrs['rating']]
+                        attrs['rating'] = user_files_to_aligned_raster_paths[
+                            attrs['rating']]
                     attributes_list.append(attrs)
 
                 criteria_tasks[criteria_type] = graph.add_task(
