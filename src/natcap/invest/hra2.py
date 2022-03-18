@@ -508,6 +508,11 @@ def execute(args):
             dependent_task_list=[alignment_task]
         )
 
+    # Save this dataframe to make indexing in this loop a little cheaper
+    # Resilience/recovery calculations are only done for Consequence criteria.
+    resilience_df = criteria_df[
+        (criteria_df['stressor'] == 'RESILIENCE') &
+        (criteria_df['e/c'] == 'C')]
     cumulative_risk_to_habitat_paths = []
     cumulative_risk_to_habitat_tasks = []
     reclassified_rasters = []  # For visualization geojson, if requested
@@ -545,16 +550,15 @@ def execute(args):
                     (criteria_df['e/c'] == criteria_type)]
 
                 # If we are doing consequence calculations, add in the
-                # resilience parameters for this habitat.
+                # resilience/recovery parameters for this habitat as additional
+                # criteria.
                 # Note that if a user provides an E-type RESILIENCE criterion,
                 # it will be ignored in all criteria calculations.
                 if criteria_type == 'C':
-                    resilience_df = criteria_df[
-                        (criteria_df['habitat'] == habitat) &
-                        (criteria_df['stressor'] == 'RESILIENCE') &
-                        (criteria_df['e/c'] == 'C')]
+                    local_resilience_df = resilience_df[
+                        (criteria_df['habitat'] == habitat)]
                     local_criteria_df = pandas.concat(
-                        [local_criteria_df, resilience_df])
+                        [local_criteria_df, local_resilience_df])
 
                 # This produces a list of dicts in the form:
                 # [{'rating': (score), 'weight': (score), 'dq': (score)}],
