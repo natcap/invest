@@ -1083,6 +1083,9 @@ def _create_summary_statistics_file(
         valid_pixels = block[
             ~utils.array_equals_nodata(block, nodata) & mask_array]
 
+        if valid_pixels.size == 0:
+            return (float('inf'), 0, 0, 0)
+
         return (numpy.min(valid_pixels),
                 numpy.max(valid_pixels),
                 numpy.sum(valid_pixels),
