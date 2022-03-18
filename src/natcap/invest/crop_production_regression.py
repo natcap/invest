@@ -99,11 +99,11 @@ ARGS_SPEC = {
                                     "type": "number",
                                     "units": u.metric_ton/u.hectare
                                 },
-                                'b_nut':  {"type": "number", "units": u.none},
-                                'b_k2o':  {"type": "number", "units": u.none},
-                                'c_n':    {"type": "number", "units": u.none},
-                                'c_p2o5': {"type": "number", "units": u.none},
-                                'c_k2o':  {"type": "number", "units": u.none}
+                                'b_nut':  {"type": "number", "units": None},
+                                'b_k2o':  {"type": "number", "units": None},
+                                'c_n':    {"type": "number", "units": None},
+                                'c_p2o5': {"type": "number", "units": None},
+                                'c_k2o':  {"type": "number", "units": None}
                             }
                         }
                     }

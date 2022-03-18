@@ -62,7 +62,7 @@ ARGS_SPEC = {
                     "about": _("LULC codes matching those in the LULC map.")},
                 "cn_[SOIL_GROUP]": {
                     "type": "number",
-                    "units": u.none,
+                    "units": None,
                     "about": _(
                         "The curve number value for this LULC type in each "
                         "hydrologic soil group. Replace [SOIL_GROUP] with the "

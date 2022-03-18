@@ -79,7 +79,9 @@ def get_invest_getspec():
     target_module = MODEL_METADATA[target_model].pyname
     model_module = importlib.reload(
         importlib.import_module(name=target_module))
-    return spec_utils.serialize_args_spec(model_module.ARGS_SPEC)
+    x = spec_utils.serialize_args_spec(model_module.ARGS_SPEC)
+    print(x)
+    return x
 
 
 @app.route('/validate', methods=['POST'])

@@ -40,16 +40,38 @@ function FormLabel(props) {
   const {
     argkey, argname, required, units,
   } = props;
+  console.log(argname, units);
+
+  let unitsLabel;
+  if (units === undefined) {
+    // units are undefined for non-number types
+    // because they have no 'units' property
+    unitsLabel = <React.Fragment />;
+  } else {
+    unitsLabel = (
+      <React.Fragment>
+        <span> (</span>
+        {/* units are null for unitless number types
+        because the 'units' property is there, but has no value */}
+        <b>{ units === null ? 'unitless' : units }</b>
+        <span>)</span>
+      </React.Fragment>
+    );
+  }
+
   return (
     <Form.Label column sm="3" htmlFor={argkey}>
-      <span>
+      <span id="argname">
         {argname}
+      </span>
+      <span>
         {
           (typeof required === 'boolean' && !required)
             ? <em> (optional)</em>
             : <React.Fragment />
         }
-        { units ? <b>{units}</b> : <React.Fragment /> }
+        {/* display units at the end of the arg name, if applicable */}
+        { unitsLabel }
       </span>
     </Form.Label>
   );
@@ -206,10 +228,6 @@ export default class ArgInput extends React.PureComponent {
         units = argSpec.bands['1'].type; // 'ratio' or 'percent' or 'integer'
       }
     }
-    if (units === 'none') { units = undefined; }
-
-    // display units at the end of the arg name, if applicable
-    const argName = units ? `${argSpec.name} (${units})` : argSpec.name;
 
     let form;
     if (argSpec.type === 'boolean') {
@@ -288,8 +306,9 @@ export default class ArgInput extends React.PureComponent {
       >
         <FormLabel
           argkey={argkey}
-          argname={argName}
+          argname={argSpec.name}
           required={argSpec.required}
+          units={units}
         />
         <Col>
           <InputGroup>

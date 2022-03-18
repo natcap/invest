@@ -110,7 +110,7 @@ ARGS_SPEC = {
                     "about": _("LULC code matching those in the LULC raster.")},
                 "cn_[SOIL_GROUP]": {
                     "type": "number",
-                    "units": u.none,
+                    "units": None,
                     "about": _(
                         "Curve number values for each combination of soil "
                         "group and LULC class. Replace [SOIL_GROUP] with each "
@@ -120,7 +120,7 @@ ARGS_SPEC = {
                 },
                 "kc_[MONTH]": {
                     "type": "number",
-                    "units": u.none,
+                    "units": None,
                     "about": _(
                         "Crop/vegetation coefficient (Kc) values for this "
                         "LULC class in each month. Replace [MONTH] with the "
@@ -139,14 +139,14 @@ ARGS_SPEC = {
             "columns": {
                 "month": {
                     "type": "number",
-                    "units": u.none,
+                    "units": None,
                     "about": _(
                         "Values are the numbers 1-12 corresponding to each "
                         "month, January (1) through December (12).")
                 },
                 "events": {
                     "type": "number",
-                    "units": u.none,
+                    "units": None,
                     "about": _("The number of rain events in that month.")
                 }
             },
@@ -219,7 +219,7 @@ ARGS_SPEC = {
                         "in the Climate Zones map.")},
                 "[MONTH]": {  # jan, feb, mar, etc.
                     "type": "number",
-                    "units": u.none,
+                    "units": None,
                     "about": _(
                         "The number of rain events that occur in each month "
                         "in this climate zone. Replace [MONTH] with the month "
@@ -255,14 +255,14 @@ ARGS_SPEC = {
             "columns": {
                 "month": {
                     "type": "number",
-                    "units": u.none,
+                    "units": None,
                     "about": _(
                         "Values are the numbers 1-12 corresponding to each "
                         "month.")
                 },
                 "alpha": {
                     "type": "number",
-                    "units": u.none,
+                    "units": None,
                     "about": _("The alpha value for that month.")
                 }
             },

@@ -51,7 +51,7 @@ ARGS_SPEC = {
             "type": "raster",
             "bands": {1: {
                 "type": "number",
-                "units": u.none
+                "units": None
             }},
             "about": _(
                 "Map of runoff potential, the capacity to transport "
@@ -136,7 +136,7 @@ ARGS_SPEC = {
         },
         "k_param": {
             "type": "number",
-            "units": u.none,
+            "units": None,
             "about": _(
                 "Calibration parameter that determines the shape of the "
                 "relationship between hydrologic connectivity (the degree of "

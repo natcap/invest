@@ -395,7 +395,7 @@ body {
 	align-items: center;
 }
 
-.args-form .form-label {
+#argname {
 	text-transform: capitalize;
 }
 

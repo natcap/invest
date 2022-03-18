@@ -74,7 +74,7 @@ ARGS_SPEC = {
         "n_fragmentation_steps": {
             "expression": "value > 0",
             "type": "number",
-            "units": u.none,
+            "units": None,
             "about": _(
                 "The number of steps that the simulation should take to "
                 "fragment the habitat of interest in the fragmentation "

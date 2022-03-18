@@ -199,7 +199,7 @@ ARGS_SPEC = {
         "half_saturation_constant": {
             "expression": "value > 0",
             "type": "number",
-            "units": u.none,
+            "units": None,
             "about": _(
                 "Half-saturation constant used in the degradation equation."),
             "name": _("half-saturation constant")

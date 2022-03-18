@@ -132,7 +132,7 @@ ARGS_SPEC = {
                 },
                 "kc": {
                     "type": "number",
-                    "units": u.none,
+                    "units": None,
                     "about": _("Crop coefficient for this LULC class.")}
             },
             "about": _(
@@ -144,7 +144,7 @@ ARGS_SPEC = {
         "seasonality_constant": {
             "expression": "value > 0",
             "type": "number",
-            "units": u.none,
+            "units": None,
             "about": _(
                 "The seasonality factor, representing hydrogeological "
                 "characterisitics and the seasonal distribution of "

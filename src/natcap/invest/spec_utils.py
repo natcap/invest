@@ -44,7 +44,7 @@ N_WORKERS = {
         "place asynchronously. Any other positive integer will cause that "
         "many processes to be spawned to execute tasks."),
     "type": "number",
-    "units": u.none,
+    "units": None,
     "required": False,
     "expression": "value >= -1"
 }

@@ -30,7 +30,7 @@ ARGS_SPEC = {
         "dem_band_index": {
             "type": "number",
             "expression": "value >= 1",
-            "units": u.none,
+            "units": None,
             "required": False,
             "about": _(
                 "Index of the raster band to use, for multi-band rasters."),

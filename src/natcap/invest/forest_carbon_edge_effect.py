@@ -44,7 +44,7 @@ ARGS_SPEC = {
         "n_nearest_model_points": {
             "expression": "value > 0 and value.is_integer()",
             "type": "number",
-            "units": u.none,
+            "units": None,
             "required": "compute_forest_edge_effects",
             "about": _(
                 "Number of closest regression models that are used when "
@@ -155,15 +155,15 @@ ARGS_SPEC = {
                 },
                 "theta1": {
                     "type": "number",
-                    "units": u.none,
+                    "units": None,
                     "about": _("θ₁ parameter for the regression equation.")},
                 "theta2": {
                     "type": "number",
-                    "units": u.none,
+                    "units": None,
                     "about": _("θ₂ parameter for the regression equation.")},
                 "theta3": {
                     "type": "number",
-                    "units": u.none,
+                    "units": None,
                     "about": _(
                         "θ₃ parameter for the regression equation. "
                         "Used only for the asymptotic model.")}

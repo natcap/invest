@@ -61,7 +61,7 @@ ARGS_SPEC = {
                         "LULC code corresponding to those in the LULC map.")},
                 "kc": {
                     "type": "number",
-                    "units": u.none,
+                    "units": None,
                     "about": _("Crop coefficient for this LULC class.")},
                 "green_area": {
                     "type": "boolean",

@@ -52,6 +52,7 @@ class ValidateArgsSpecs(unittest.TestCase):
         required_keys = {'model_name', 'pyname', 'userguide', 'args'}
         optional_spatial_key = 'args_with_spatial_overlap'
         for model_name, metadata in MODEL_METADATA.items():
+            print(model_name)
             # metadata is a collections.namedtuple, fields accessible by name
             model = importlib.import_module(metadata.pyname)
 
@@ -146,8 +147,9 @@ class ValidateArgsSpecs(unittest.TestCase):
                 elif t == 'number':
                     # number type should have a units property
                     self.assertTrue('units' in arg)
-                    # Undefined units should use the custom u.none unit
-                    self.assertTrue(isinstance(arg['units'], pint.Unit))
+                    # Undefined units should use None
+                    self.assertTrue(isinstance(arg['units'], pint.Unit) or
+                                    arg['units'] is None)
                     attrs.remove('units')
 
                     # number type may optionally have an 'expression' attribute
