@@ -544,6 +544,18 @@ def execute(args):
                     (criteria_df['stressor'] == stressor) &
                     (criteria_df['e/c'] == criteria_type)]
 
+                # If we are doing consequence calculations, add in the
+                # resilience parameters for this habitat.
+                # Note that if a user provides an E-type RESILIENCE criterion,
+                # it will be ignored in all criteria calculations.
+                if criteria_type == 'C':
+                    resilience_df = criteria_df[
+                        (criteria_df['habitat'] == habitat) &
+                        (criteria_df['stressor'] == 'RESILIENCE') &
+                        (criteria_df['e/c'] == 'C')]
+                    local_criteria_df = pandas.concat(
+                        [local_criteria_df, resilience_df])
+
                 # This produces a list of dicts in the form:
                 # [{'rating': (score), 'weight': (score), 'dq': (score)}],
                 # which is what _calc_criteria() expects.
