@@ -510,9 +510,6 @@ def execute(args):
 
     # Save this dataframe to make indexing in this loop a little cheaper
     # Resilience/recovery calculations are only done for Consequence criteria.
-    resilience_df = criteria_df[
-        (criteria_df['stressor'] == 'RESILIENCE') &
-        (criteria_df['e/c'] == 'C')]
     cumulative_risk_to_habitat_paths = []
     cumulative_risk_to_habitat_tasks = []
     reclassified_rasters = []  # For visualization geojson, if requested
@@ -555,8 +552,10 @@ def execute(args):
                 # Note that if a user provides an E-type RESILIENCE criterion,
                 # it will be ignored in all criteria calculations.
                 if criteria_type == 'C':
-                    local_resilience_df = resilience_df[
-                        (criteria_df['habitat'] == habitat)]
+                    local_resilience_df = criteria_df[
+                        (criteria_df['habitat'] == habitat) &
+                        (criteria_df['stressor'] == 'RESILIENCE') &
+                        (criteria_df['e/c'] == 'C')]
                     local_criteria_df = pandas.concat(
                         [local_criteria_df, local_resilience_df])
 
