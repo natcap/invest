@@ -5,7 +5,7 @@
       Please help us by reporting problems (nothing is too small or too large) to: 
       <a
         href="https://community.naturalcapitalproject.org/"
-        onClick="handleLinkClick(event)">
+      >
         https://community.naturalcapitalproject.org
       </a>
     </p>
@@ -14,7 +14,7 @@
       please see the guidelines here for reporting problems:
       <a
         href="https://community.naturalcapitalproject.org/t/guidelines-for-posting-software-support-questions/24"
-        onClick="handleLinkClick(event)">
+      >
         Guidelines for posting software support questions
       </a>
     </p>
@@ -25,30 +25,10 @@
       that you can find using the button below. There may be multiple files
       with a ".log" extension; please include all the log files.
     </p>
-    <button type="button" onclick="handleButtonClick()">
+    <button type="button">
       Find My Logs
     </button>
   </body>
-  <script>
-    const { ipcRenderer, shell } = require('electron');
-    const { ipcMainChannels } = require('../main/ipcMainChannels');
-
-    const logger = window.Workbench.getLogger(
-      __filename.split('/').slice(-1)[0]
-    );
-
-    logger.debug('PROBLEM REPORT: process dump');
-    logger.debug(JSON.stringify(process, null, 2));
-
-    function handleButtonClick() {
-      ipcRenderer.send(
-        ipcMainChannels.SHOW_ITEM_IN_FOLDER,
-        logger.transports.file.getFile().path
-      );
-    }
-    function handleLinkClick(event) {
-      event.preventDefault();
-      shell.openExternal(event.currentTarget.href);
-    }
+  <script src="./report.js" type="module">
   </script>
 </html>

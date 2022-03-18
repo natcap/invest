@@ -1,9 +1,13 @@
 import path from 'path';
+import util from 'util';
 
 import { app, BrowserWindow } from 'electron'; // eslint-disable-line import/no-extraneous-dependencies
 
 import setupContextMenu from './setupContextMenu';
 import BASE_URL from './baseUrl';
+import { getLogger } from './logger';
+
+const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
 const isMac = process.platform === 'darwin';
 
@@ -119,8 +123,7 @@ function openAboutWindow(parentWindow, isDevMode) {
       contextIsolation: true,
       nodeIntegration: true,
       minimumFontSize: 18,
-      preload: path.join(__dirname, '../preload/preload_about.js'),
-      additionalArguments: [`INVEST_VERSION=${global.INVEST_VERSION}`],
+      preload: path.join(__dirname, '../preload/preload.js'),
     },
   });
   setupContextMenu(child);
@@ -132,6 +135,13 @@ function openAboutWindow(parentWindow, isDevMode) {
 }
 
 function openReportWindow(parentWindow, isDevMode) {
+  logger.debug('PROBLEM REPORT: process dump');
+  // There are some circular references in process object, so can't
+  // stringify the whole object. Here's the useful bits.
+  logger.debug(JSON.stringify(process.versions, null, 2));
+  logger.debug(JSON.stringify(process.arch, null, 2));
+  logger.debug(JSON.stringify(process.platform, null, 2));
+  logger.debug(JSON.stringify(process.env, null, 2));
   const child = new BrowserWindow({
     parent: parentWindow,
     width: 700,
@@ -141,7 +151,7 @@ function openReportWindow(parentWindow, isDevMode) {
       contextIsolation: true,
       nodeIntegration: true,
       minimumFontSize: 18,
-      preload: path.join(__dirname, '..', 'preload.js'),
+      preload: path.join(__dirname, '..', 'preload/preload.js'),
       defaultEncoding: 'UTF-8',
     },
   });

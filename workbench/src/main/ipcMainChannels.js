@@ -5,6 +5,7 @@ export const ipcMainChannels = {
   INVEST_KILL: 'invest-kill',
   INVEST_READ_LOG: 'invest-read-log',
   INVEST_RUN: 'invest-run',
+  INVEST_VERSION: 'invest-version',
   IS_DEV_MODE: 'is-dev-mode',
   IS_FIRST_RUN: 'is-first-run',
   OPEN_EXTERNAL_URL: 'open-external-url',

@@ -6,6 +6,8 @@ const path = require('path');
 const { ipcMainChannels } = require('../main/ipcMainChannels');
 const { getLogger } = require('../main/logger');
 
+const logger = getLogger();
+
 // Most IPC initiates in renderer and main does the listening,
 // but these channels are exceptions: renderer listens for them
 const ipcRendererChannels = [
@@ -18,8 +20,8 @@ const ipcRendererChannels = [
 const api = {
   // The gettext callable
   _: ipcRenderer.sendSync.bind(null, ipcMainChannels.GETTEXT), // partially applied function
-  // Passing data from main to renderer for window.fetch
   PORT: process.env.PORT,
+  LOGFILE_PATH: logger.transports.file.getFile().path,
   getLogger: getLogger,
   // TODO: this next one feels out of place, just expose crypto.createHash
   // here instead?

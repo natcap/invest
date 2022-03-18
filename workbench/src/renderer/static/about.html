@@ -2,40 +2,40 @@
 <html lang="en">
   <body>
     <h1>About InVEST</h1>
-    <span id='invest-version'>
-      <h3>version: </h3> 
+    <span>
+      version: 
+      <em id='invest-version'></em>
     </span>
     <br/><br/>
 
     Documentation: 
     <a
       href="http://releases.naturalcapitalproject.org/invest-userguide/latest/"
-      onClick="handleClick(event)">
+    >
       http://releases.naturalcapitalproject.org/invest-userguide/latest/
     </a>
     <br/>
     Homepage: 
     <a
       href="https://naturalcapitalproject.stanford.edu/"
-      onClick="handleClick(event)">
+    >
       https://naturalcapitalproject.stanford.edu/
     </a>
     <br/>
-    Copyright 2021, The Natural Capital Project
+    Project page: 
+    <a
+      href="https://github.com/natcap/invest"
+    >
+      github.com/natcap/invest
+    </a>
+    <br/>
+    Copyright 2022, The Natural Capital Project
     <br/>
     License: 
     <a
       href="https://github.com/natcap/invest/blob/master/LICENSE.txt"
-      onClick="handleClick(event)">
+    >
       BSD 3-clause
-    </a>
-    <br/>
-    Project page: 
-    <br/>
-    <a
-      href="https://github.com/natcap/invest"
-      onClick="handleClick(event)">
-      github.com/natcap/invest
     </a>
     <br/>
 
@@ -47,7 +47,7 @@
           <td>
             <a
               href='http://pyinstaller.org'
-              onClick="handleClick(event)">
+            >
               http://pyinstaller.org
             </a>
           </td>
@@ -58,7 +58,7 @@
           <td>
             <a
               href='http://gdal.org'
-              onClick="handleClick(event)">
+            >
               http://gdal.org
             </a>
           </td>
@@ -69,7 +69,7 @@
           <td>
             <a
               href='http://numpy.org'
-              onClick="handleClick(event)">
+            >
               http://numpy.org
             </a>
           </td>
@@ -80,7 +80,7 @@
           <td>
             <a
               href='https://github.com/natcap/pygeoprocessing'
-              onClick="handleClick(event)">
+            >
               https://github.com/natcap/pygeoprocessing
             </a>
           </td>
@@ -91,7 +91,7 @@
           <td>
             <a
               href='http://toblerity.org/rtree/'
-              onClick="handleClick(event)">
+            >
               http://toblerity.org/rtree/
             </a>
           </td>
@@ -102,7 +102,7 @@
           <td>
             <a
               href='http://www.scipy.org/'
-              onClick="handleClick(event)">
+            >
               http://www.scipy.org/
             </a>
           </td>
@@ -113,7 +113,7 @@
           <td>
             <a
               href='http://github.com/Toblerity/Shapely'
-              onClick="handleClick(event)">
+            >
               http://github.com/Toblerity/Shapely
             </a>
           </td>
@@ -125,17 +125,6 @@
       component on your installation medium.
     </p>
   </body>
-  <script>
-    const { investVersion } = window.About;
-    const node = document.getElementById('invest-version');
-    const text = document.createTextNode(investVersion);
-    node.appendChild(text)
-
-    function handleClick(event) {
-      event.preventDefault();
-      ipcRenderer.send(
-        ipcMainChannels.OPEN_EXTERNAL_URL, event.currentTarget.href
-      )
-    }
-  </script>
+  <script src="./about.js" type="module">
+    </script>
 </html>

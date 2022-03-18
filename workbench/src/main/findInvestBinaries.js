@@ -1,6 +1,9 @@
 import path from 'path';
 import { spawnSync } from 'child_process';
 
+import { ipcMain } from 'electron';
+
+import { ipcMainChannels } from './ipcMainChannels';
 import { getLogger } from './logger';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
@@ -39,9 +42,12 @@ export default function findInvestBinaries(isDevMode) {
     throw error;
   }
   const investVersion = stdout.toString();
-  global.INVEST_VERSION = investVersion;
   logger.info(
     `Found invest binaries ${investExe} for version ${investVersion}`
+  );
+  // Allow renderer to ask for the invest version, for About page.
+  ipcMain.handle(
+    ipcMainChannels.INVEST_VERSION, () => investVersion
   );
   return investExe;
 }
