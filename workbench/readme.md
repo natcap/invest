@@ -7,18 +7,11 @@ InVEST models, and to be extensible to future models or common auxilary
 workflows of an InVEST user.
 
 ## To develop and launch this Application
-* `yarn install`
-* `yarn run fetch-invest`
-	+ fetches prebuilt invest binaries (see package.json invest property)
-	+ Alternatively, build your own local invest binaries:
-		* use invest's `make binaries`, then
-		* `cp -r invest/dist/invest/ invest-workbench/build/invest/`
-* `yarn run dev` (this process stays live, do it in a separate shell)
-* `yarn start`
-
-#### To run javascript outside the electron runtime,
-but with the same ECMAscript features and babel configurations:  
-`node -r @babel/register script.js`.
+* from invest/:
+  - activate a python environment and install `natcap.invest`
+* from invest/workbench/:
+	- `yarn install`
+	- `yarn start`
 
 ## To package this app for distribution
 * from invest/:
