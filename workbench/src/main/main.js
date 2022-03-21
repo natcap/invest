@@ -107,8 +107,7 @@ export const createWindow = async () => {
   // https://bugs.chromium.org/p/chromium/issues/detail?id=1085215
   // https://github.com/electron/electron/issues/23662
   mainWindow.webContents.on('did-frame-finish-load', async () => {
-    // if (ELECTRON_DEV_MODE) { TODO
-    if (true) {
+    if (ELECTRON_DEV_MODE) { TODO
       mainWindow.webContents.openDevTools();
     }
     // We use this stdout as a signal in a puppeteer test

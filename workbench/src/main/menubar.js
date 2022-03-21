@@ -121,7 +121,7 @@ function openAboutWindow(parentWindow, isDevMode) {
     frame: true,
     webPreferences: {
       contextIsolation: true,
-      nodeIntegration: true,
+      nodeIntegration: false,
       minimumFontSize: 18,
       preload: path.join(__dirname, '../preload/preload.js'),
     },
@@ -149,7 +149,7 @@ function openReportWindow(parentWindow, isDevMode) {
     frame: true,
     webPreferences: {
       contextIsolation: true,
-      nodeIntegration: true,
+      nodeIntegration: false,
       minimumFontSize: 18,
       preload: path.join(__dirname, '..', 'preload/preload.js'),
       defaultEncoding: 'UTF-8',
