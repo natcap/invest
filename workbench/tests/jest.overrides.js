@@ -3,12 +3,6 @@ import fetch from 'node-fetch';
 
 import api from '../src/preload/api';
 
-// a real port used to start the flask server for flaskapp.test.js,
-// but different from the port used when running the electron app
-// Set it before loading preload/api, as we would when running the real app.
-if (!process.env.PORT) {
-  process.env.PORT = '56788';
-}
 // debug logging is a bit noisy, not so useful during tests.
 if (!process.env.ELECTRON_LOG_LEVEL) {
   process.env.ELECTRON_LOG_LEVEL = 'info';
