@@ -485,6 +485,7 @@ describe('InVEST subprocess testing', () => {
     },
     model_name: 'EcoModel',
     pyname: 'natcap.invest.dot',
+    userguide: 'foo.html',
   };
   const modelName = 'carbon';
   // nothing is written to the fake workspace in these tests,

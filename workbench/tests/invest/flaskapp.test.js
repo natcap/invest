@@ -194,6 +194,7 @@ describe('Build each model UI from ARGS_SPEC', () => {
         pyModuleName={argsSpec.pyname}
         modelName={argsSpec.model_name}
         argsSpec={argsSpec.args}
+        userguide="foo.html"
         uiSpec={uiSpec}
         argsInitValues={undefined}
         investExecute={() => {}}

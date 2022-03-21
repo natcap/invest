@@ -40,7 +40,6 @@ function FormLabel(props) {
   const {
     argkey, argname, required, units,
   } = props;
-  console.log(argname, units);
 
   let unitsLabel;
   if (units === undefined) {
