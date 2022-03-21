@@ -1394,10 +1394,11 @@ def _align(raster_path_map, vector_path_map, target_pixel_size,
         pygeoprocessing.align_and_resize_raster_stack(
             base_raster_path_list=source_raster_paths,
             target_raster_path_list=aligned_raster_paths,
-            resample_method_list=['near'] * len(source_raster_paths),
+            resample_method_list=resample_method_list,
             target_pixel_size=target_pixel_size,
             bounding_box_mode=target_bounding_box,
-            target_projection_wkt=target_srs_wkt
+            target_projection_wkt=target_srs_wkt,
+            raster_align_index=0,  # just assume alignment with first raster
         )
 
     # Step 3: Rasterize vectors onto aligned rasters.
