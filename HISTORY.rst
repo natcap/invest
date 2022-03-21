@@ -34,6 +34,11 @@
 
 Unreleased Changes
 ------------------
+* DelineateIt
+    * Watersheds delineated with this tool will now always have a ``ws_id``
+      column containing integer watershed IDs for easier use within the routed
+      InVEST models.  Existing ``ws_id`` field values will be overwritten if
+      they are present.
 * RouteDEM
     * Rename the arg ``calculate_downstream_distance`` to
       ``calculate_downslope_distance``. This is meant to clarify that it
