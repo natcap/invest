@@ -623,10 +623,12 @@ class DelineateItTests(unittest.TestCase):
         layer = vector.GetLayer()
 
         points = []
+        ws_ids = []
         for feature in layer:
             geom = feature.GetGeometryRef()
             x, y, _ = geom.GetPoint()
             points.append((x, y))
+            ws_ids.append(feature.GetField('ws_id'))
         points.sort()
 
         expected_points = [
@@ -637,6 +639,7 @@ class DelineateItTests(unittest.TestCase):
         self.assertTrue(numpy.isclose(points[0][1], expected_points[0][1]))
         self.assertTrue(numpy.isclose(points[1][0], expected_points[1][0]))
         self.assertTrue(numpy.isclose(points[1][1], expected_points[1][1]))
+        self.assertEqual(ws_ids, [0, 1])
 
     def test_calculate_pour_point_array(self):
         """DelineateIt: Extract pour points."""

@@ -681,7 +681,7 @@ def detect_pour_points(flow_dir_raster_path_band, target_vector_path):
     # (e.g. table-joins) that is not the FID. FIDs are not stable across file
     # conversions that users might do.
     target_layer.CreateField(
-        ogr.FieldDefn('point_id', ogr.OFTInteger64))
+        ogr.FieldDefn('ws_id', ogr.OFTInteger64))
 
     # Add a feature to the layer for each point
     target_layer.StartTransaction()
@@ -690,7 +690,7 @@ def detect_pour_points(flow_dir_raster_path_band, target_vector_path):
         geometry.AddPoint(x, y)
         feature = ogr.Feature(target_defn)
         feature.SetGeometry(geometry)
-        feature.SetField('point_id', idx)
+        feature.SetField('ws_id', idx)
         target_layer.CreateFeature(feature)
     target_layer.CommitTransaction()
 
