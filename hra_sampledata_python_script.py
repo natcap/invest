@@ -35,7 +35,7 @@ args = {
     'decay_eq': 'Linear',
     'info_table_path': os.path.join(SAMPLEDATA, 'habitat_stressor_info.csv'),
     'max_rating': '3',
-    'resolution': '500',
+    'resolution': '50',  # 500
     'results_suffix': '',
     'risk_eq': 'Euclidean',
     'visualize_outputs': True,
@@ -49,11 +49,13 @@ if __name__ == '__main__':
         shutil.rmtree(WORKSPACE_BASE)
     start_time = time.time()
     args['workspace_dir'] = os.path.join(WORKSPACE_BASE, 'current_hra')
+    args['results_suffix'] = 'old'
     natcap.invest.hra.execute(args)
     old_hra_time = time.time() - start_time
 
     start_time = time.time()
     args['workspace_dir'] = os.path.join(WORKSPACE_BASE, 'new_hra')
+    args['results_suffix'] = 'new'
     natcap.invest.hra2.execute(args)
     print(f'old elapsed: {old_hra_time}')
     print(f'elapsed: {time.time() - start_time}')
