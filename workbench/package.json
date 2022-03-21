@@ -38,7 +38,6 @@
     "electron-log": "^4.3.5",
     "gettext-parser": "^4.2.0",
     "gettext.js": "^1.0.1",
-    "glob": "^7.1.6",
     "localforage": "^1.9.0",
     "node-fetch": "^2.6.7",
     "prop-types": "^15.7.2",
