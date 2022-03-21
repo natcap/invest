@@ -135,6 +135,34 @@ describe('Arguments form input types', () => {
     userEvent.click(await findByRole('link'));
     expect(shell.openExternal).toHaveBeenCalled();
   });
+
+  test('expect units to be displayed for numbers', async () => {
+    const spec = { ...BASE_ARGS_SPEC };
+    spec.args.arg.type = 'number';
+    spec.args.arg.units = 'foo/mm';
+    const { findByText } = renderSetupFromSpec(spec, UI_SPEC);
+    expect(await findByText(spec.args.arg.units)).toBeInTheDocument();
+
+    spec.args.arg.units = null;
+    const { findByText } = renderSetupFromSpec(spec, UI_SPEC);
+    expect(await findByText('unitless')).toBeInTheDocument();
+  });
+
+  test('expect units to be displayed for rasters', async () => {
+    const spec = { ...BASE_ARGS_SPEC };
+    spec.args.arg.type = 'raster';
+    spec.args.arg.bands = {1: {'type': 'number', 'units': 'foo/mm'}}
+    const { findByText } = renderSetupFromSpec(spec, UI_SPEC);
+    expect(await findByText(spec.args.arg.bands[1].units)).toBeInTheDocument();
+
+    spec.args.arg.bands = {1: {'type': 'number', 'units': null}}
+    const { findByText } = renderSetupFromSpec(spec, UI_SPEC);
+    expect(await findByText('unitless')).toBeInTheDocument();
+
+    spec.args.arg.bands = {1: {'type': 'ratio'}}
+    const { findByText } = renderSetupFromSpec(spec, UI_SPEC);
+    expect(await findByText('unitless')).toBeInTheDocument();
+  });
 });
 
 describe('Arguments form interactions', () => {
