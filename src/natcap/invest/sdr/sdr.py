@@ -560,7 +560,7 @@ def execute(args):
             f_reg['f_path'], f_reg['sdr_path'],
             f_reg['sed_deposition_path']),
         dependent_task_list=[e_prime_task, sdr_task, flow_dir_task],
-        target_path_list=[f_reg['sed_deposition_path']],
+        target_path_list=[f_reg['sed_deposition_path'], f_reg['f_path']],
         task_name='sediment deposition')
 
     _ = task_graph.add_task(

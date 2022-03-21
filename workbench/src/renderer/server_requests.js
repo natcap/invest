@@ -120,7 +120,36 @@ export function saveToPython(payload) {
       headers: { 'Content-Type': 'application/json' },
     })
       .then((response) => response.text())
-      .then((text) => logger.debug(text))
+      .then((text) => {
+        logger.debug(text);
+        return text;
+      })
+      .catch((error) => logger.error(error.stack))
+  );
+}
+
+/**
+ * Archive invest model input data.
+ *
+ * @param  {object} payload {
+ *   filepath: string
+ *   moduleName: string (e.g. natcap.invest.carbon)
+ *   args_dict: JSON string of InVEST model args keys and values
+ * }
+ * @returns {Promise} resolves undefined
+ */
+export function archiveDatastack(payload) {
+  return (
+    window.fetch(`${HOSTNAME}:${process.env.PORT}/build_datastack_archive`, {
+      method: 'post',
+      body: JSON.stringify(payload),
+      headers: { 'Content-Type': 'application/json' },
+    })
+      .then((response) => response.text())
+      .then((text) => {
+        logger.debug(text);
+        return text;
+      })
       .catch((error) => logger.error(error.stack))
   );
 }
@@ -129,7 +158,7 @@ export function saveToPython(payload) {
  * Write invest model arguments to a JSON file.
  *
  * @param  {object} payload {
- *   parameterSetPath: string
+ *   filepath: string
  *   moduleName: string (e.g. natcap.invest.carbon)
  *   args: JSON string of InVEST model args keys and values
  *   relativePaths: boolean
@@ -144,7 +173,10 @@ export function writeParametersToFile(payload) {
       headers: { 'Content-Type': 'application/json' },
     })
       .then((response) => response.text())
-      .then((text) => logger.debug(text))
+      .then((text) => {
+        logger.debug(text);
+        return text;
+      })
       .catch((error) => logger.error(error.stack))
   );
 }

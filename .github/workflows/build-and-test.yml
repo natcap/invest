@@ -310,9 +310,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-10.15, windows-latest]
+        os: [macos-latest, windows-latest]
         include:
-          - os: macos-10.15
+          - os: macos-latest
             binary-make-command: mac_dmg
             puppeteer-log: ~/Library/Logs/invest-workbench/
             workspace-path: InVEST-failed-mac-workspace.tar
@@ -326,6 +326,10 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 0 # Fetch complete history for accurate versioning
+
+      - name: Install build dependencies (macOS)
+        if: matrix.os == 'macos-latest'
+        run: brew install create-dmg
 
         # Not caching chocolatey packages because the cache may not be reliable
         # https://github.com/chocolatey/choco/issues/2134

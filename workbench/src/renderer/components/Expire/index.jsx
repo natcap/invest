@@ -6,10 +6,12 @@ export default function Expire(props) {
   const [visible, setVisible] = useState(true);
 
   useEffect(() => {
-    setTimeout(() => {
+    const timerId = setTimeout(() => {
       setVisible(false);
     }, props.delay);
-  }, [props.delay]);
+
+    return () => clearTimeout(timerId);
+  });
 
   return (
     visible

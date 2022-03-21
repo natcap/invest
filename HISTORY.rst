@@ -38,6 +38,9 @@ Unreleased Changes
     * Rename the arg ``calculate_downstream_distance`` to
       ``calculate_downslope_distance``. This is meant to clarify that it
       applies to pixels that are not part of a stream.
+* SDR
+    * Fixed an issue with SDR where ``f.tif`` might not be recalculated if the
+      file is modified or deleted after execution.
 
 3.10.2 (2022-02-08)
 -------------------
