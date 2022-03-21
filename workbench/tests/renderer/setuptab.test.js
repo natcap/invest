@@ -46,7 +46,6 @@ function renderSetupFromSpec(baseSpec, uiSpec) {
       sidebarSetupElementId="foo"
       sidebarFooterElementId="foo"
       executeClicked={false}
-      setSaveAlert={() => {}}
     />
   );
   return utils;

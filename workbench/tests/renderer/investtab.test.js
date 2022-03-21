@@ -60,7 +60,7 @@ afterEach(() => {
   uiConfig.UI_SPEC = UI_SPEC;
 });
 
-describe('Sidebar Alert renders with data from a recent run', () => {
+describe('Run status Alert renders with data from a recent run', () => {
   const spec = {
     pyname: 'natcap.invest.foo',
     model_name: 'Foo Model',
@@ -254,7 +254,7 @@ describe('Save InVEST Model Setup Buttons', () => {
         setTimeout(() => resolve(response), 100);
       }
     ));
-    const mockDialogData = { filePath: 'foo.py' };
+    const mockDialogData = { filePath: 'data.tgz' };
     ipcRenderer.invoke.mockResolvedValue(mockDialogData);
 
     const { findByText, findByRole, getByRole } = renderInvestTab();
@@ -285,6 +285,31 @@ describe('Save InVEST Model Setup Buttons', () => {
       expect(typeof args[key]).toBe('string');
     });
     expect(archiveDatastack).toHaveBeenCalledTimes(1);
+  });
+
+  test('Multiple Save Clicks: each triggers a unique alert', async () => {
+    const response = 'saved';
+    archiveDatastack.mockImplementation(() => new Promise(
+      (resolve) => {
+        setTimeout(() => resolve(response), 100);
+      }
+    ));
+    saveToPython.mockResolvedValue(response);
+    const mockDialogData = { filePath: 'foo' };
+    ipcRenderer.invoke.mockResolvedValue(mockDialogData);
+
+    const { findByText, getAllByRole, queryByRole } = renderInvestTab();
+
+    const saveDatastackButton = await findByText('Save datastack');
+    const savePythonButton = await findByText('Save to Python script');
+    userEvent.click(saveDatastackButton);
+    userEvent.click(savePythonButton);
+    await waitFor(() => {
+      expect(getAllByRole('alert')).toHaveLength(2);
+    });
+    await waitFor(() => {
+      expect(queryByRole('alert')).toBeNull();
+    }, { timeout: 3000 }); // alerts disappear after 2 seconds
   });
 
   test('Load parameters from file: loads parameters', async () => {
