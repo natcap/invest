@@ -1,5 +1,7 @@
-const crypto = require('crypto');
-const fetch = require('node-fetch');
+import crypto from 'crypto';
+import fetch from 'node-fetch';
+
+import api from '../src/preload/api';
 
 // a real port used to start the flask server for flaskapp.test.js,
 // but different from the port used when running the electron app
@@ -11,7 +13,6 @@ if (!process.env.PORT) {
 if (!process.env.ELECTRON_LOG_LEVEL) {
   process.env.ELECTRON_LOG_LEVEL = 'info';
 }
-const api = require('../src/preload/api');
 
 // Test for a jsdom env (as opposed to node), which means renderer tests.
 if (global.window) {
