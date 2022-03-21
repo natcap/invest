@@ -18,9 +18,10 @@ from natcap.invest import usage
 LOGGER = logging.getLogger(__name__)
 logging.getLogger('flask_cors').level = logging.DEBUG
 
+PREFIX = 'api'
 app = Flask(__name__)
 CORS(app, resources={
-    '/api/*': {
+    f'/{PREFIX}/*': {
         'origins': 'http://localhost:*'
     }
 })
@@ -29,8 +30,6 @@ PYNAME_TO_MODEL_NAME_MAP = {
     metadata.pyname: model_name
     for model_name, metadata in MODEL_METADATA.items()
 }
-
-PREFIX = 'api'
 
 
 def shutdown_server():
