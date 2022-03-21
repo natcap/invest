@@ -44,15 +44,12 @@ export default class InvestJob {
 
   static getWorkspaceHash(modelRunName, workspaceDir, resultsSuffix) {
     if (workspaceDir && modelRunName) {
-      // const workspaceHash = crypto.createHash('sha1').update(
-      //   `${modelRunName}
-      //    ${JSON.stringify(workspaceDir)}
-      //    ${JSON.stringify(resultsSuffix)}`
-      // ).digest('hex');
-      // return workspaceHash;
-      return window.Workbench.getWorkspaceHash(
-        modelRunName, workspaceDir, resultsSuffix
-      )
+      const workspaceHash = window.Workbench.crypto.createHash('sha1').update(
+        `${modelRunName}
+         ${JSON.stringify(workspaceDir)}
+         ${JSON.stringify(resultsSuffix)}`
+      ).digest('hex');
+      return workspaceHash;
     }
     throw Error(
       'Cannot hash a job that is missing workspace or modelRunName properties'

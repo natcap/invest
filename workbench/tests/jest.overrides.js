@@ -13,9 +13,8 @@ if (!process.env.ELECTRON_LOG_LEVEL) {
 }
 const { api } = require('../src/preload/api');
 
+// Test for a jsdom env (as opposed to node), which means renderer tests.
 if (global.window) {
-  // Detected a jsdom env (as opposed to node). This means
-  // we're running renderer tests.
   // mock the work of preload.js here:
   global.window.Workbench = api;
 

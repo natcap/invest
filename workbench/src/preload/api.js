@@ -1,10 +1,10 @@
-const {
-  ipcRenderer,
-} = require('electron');
-const crypto = require('crypto');
-const path = require('path');
-const { ipcMainChannels } = require('../main/ipcMainChannels');
-const { getLogger } = require('../main/logger');
+import crypto from 'crypto';
+
+// eslint-disable-next-line import/no-extraneous-dependencies
+import { ipcRenderer } from 'electron';
+
+import { ipcMainChannels } from '../main/ipcMainChannels';
+import { getLogger } from '../main/logger';
 
 const logger = getLogger();
 
@@ -18,19 +18,15 @@ const ipcRendererChannels = [
 ];
 
 const api = {
-  // The gettext callable
-  _: ipcRenderer.sendSync.bind(null, ipcMainChannels.GETTEXT), // partially applied function
+  // Port where the flask app is running
   PORT: process.env.PORT,
+  // Workbench logfile location, so Report window can open to it
   LOGFILE_PATH: logger.transports.file.getFile().path,
+  // The gettext callable; a partially applied function
+  _: ipcRenderer.sendSync.bind(null, ipcMainChannels.GETTEXT),
   getLogger: getLogger,
-  // TODO: this next one feels out of place, just expose crypto.createHash
-  // here instead?
-  getWorkspaceHash: (modelRunName, workspaceDir, resultsSuffix) => {
-    return crypto.createHash('sha1').update(
-      `${modelRunName}
-       ${JSON.stringify(path.resolve(workspaceDir))}
-       ${JSON.stringify(resultsSuffix)}`
-    ).digest('hex');
+  crypto: {
+    createHash: (algorithm) => crypto.createHash(algorithm)
   },
   electron: {
     ipcRenderer: {
@@ -38,6 +34,7 @@ const api = {
         if (Object.values(ipcMainChannels).includes(channel)) {
           return ipcRenderer.invoke(channel, ...args);
         }
+        return undefined;
       },
       send: (channel, ...args) => {
         if (Object.values(ipcMainChannels).includes(channel)) {
