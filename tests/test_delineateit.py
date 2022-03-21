@@ -1,23 +1,57 @@
 """Module for Testing DelineateIt."""
+import contextlib
+import logging
+import os
+import queue
+import shutil
+import tempfile
 import unittest
 from unittest import mock
-import tempfile
-import shutil
-import os
 
-import shapely.wkt
-import shapely.wkb
-from shapely.geometry import Point, MultiPoint, box
 import numpy
-from osgeo import osr
-from osgeo import ogr
-from osgeo import gdal
 import pygeoprocessing
-
+import shapely.wkb
+import shapely.wkt
+from osgeo import gdal
+from osgeo import ogr
+from osgeo import osr
+from shapely.geometry import box
+from shapely.geometry import MultiPoint
+from shapely.geometry import Point
 
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
     'delineateit')
+
+
+@contextlib.contextmanager
+def capture_logging(logger):
+    """Capture logging within a context manager.
+
+    Args:
+        logger (logging.Logger): The logger that should be monitored for
+            log records within the scope of the context manager.
+
+    Yields:
+        log_records (list): A list of logging.LogRecord objects.  This list is
+            yielded early in the execution, and may have logging progressively
+            added to it until the context manager is exited.
+    Returns:
+        ``None``
+    """
+    message_queue = queue.Queue()
+    queuehandler = logging.handlers.QueueHandler(message_queue)
+    logger.addHandler(queuehandler)
+    log_records = []
+    yield log_records
+    logger.removeHandler(queuehandler)
+
+    # Append log records to the existing log_records list.
+    while True:
+        try:
+            log_records.append(message_queue.get_nowait())
+        except queue.Empty:
+            break
 
 
 class DelineateItTests(unittest.TestCase):
@@ -109,8 +143,8 @@ class DelineateItTests(unittest.TestCase):
 
     def test_delineateit_validate(self):
         """DelineateIt: test validation function."""
-        from natcap.invest.delineateit import delineateit
         from natcap.invest import validation
+        from natcap.invest.delineateit import delineateit
         missing_keys = {}
         validation_warnings = delineateit.validate(missing_keys)
         self.assertEqual(len(validation_warnings), 2)
@@ -408,7 +442,7 @@ class DelineateItTests(unittest.TestCase):
         self.assertEqual(len(points), 1)
         self.assertEqual((points[0].x, points[0].y), (9, -11))
 
-    def test_check_geometries(self):
+    def test_preprocess_geometries(self):
         """DelineateIt: Check that we can reasonably repair geometries."""
         from natcap.invest.delineateit import delineateit
         srs = osr.SpatialReference()
@@ -463,6 +497,7 @@ class DelineateItTests(unittest.TestCase):
         outflow_layer = outflow_vector.CreateLayer(
             'outflow_layer', srs, ogr.wkbUnknown)
         outflow_layer.CreateField(ogr.FieldDefn('geom_id', ogr.OFTInteger))
+        outflow_layer.CreateField(ogr.FieldDefn('ws_id', ogr.OFTInteger))
 
         outflow_layer.StartTransaction()
         for index, geometry in enumerate((invalid_geometry,
@@ -476,6 +511,10 @@ class DelineateItTests(unittest.TestCase):
 
             outflow_feature = ogr.Feature(outflow_layer.GetLayerDefn())
             outflow_feature.SetField('geom_id', index)
+
+            # We'll be overwriting these values with actual WS_IDs
+            outflow_feature.SetField('ws_id', index*100)
+
             outflow_feature.SetGeometry(geometry)
             outflow_layer.CreateFeature(outflow_feature)
         outflow_layer.CommitTransaction()
@@ -487,16 +526,21 @@ class DelineateItTests(unittest.TestCase):
         target_vector_path = os.path.join(
             self.workspace_dir, 'checked_geometries.gpkg')
         with self.assertRaises(ValueError) as cm:
-            delineateit.check_geometries(
+            delineateit.preprocess_geometries(
                 outflow_vector_path, dem_raster_path, target_vector_path,
                 skip_invalid_geometry=False
             )
         self.assertTrue('is invalid' in str(cm.exception))
 
-        delineateit.check_geometries(
-            outflow_vector_path, dem_raster_path, target_vector_path,
-            skip_invalid_geometry=True
-        )
+        logger = logging.getLogger('natcap.invest.delineateit.delineateit')
+        with capture_logging(logger) as log_records:
+            delineateit.preprocess_geometries(
+                outflow_vector_path, dem_raster_path, target_vector_path,
+                skip_invalid_geometry=True
+            )
+        self.assertEqual(len(log_records), 6)
+        self.assertIn('named "ws_id". Field values will be overwritten',
+                      log_records[0].msg)
 
         # I only expect to see 1 feature in the output layer, as there's only 1
         # valid geometry.
@@ -509,10 +553,12 @@ class DelineateItTests(unittest.TestCase):
         self.assertEqual(
             target_layer.GetFeatureCount(), len(expected_geom_areas))
 
-        for feature in target_layer:
+        expected_ws_ids = [0]  # only 1 valid feature, so we start at 0
+        for ws_id, feature in zip(expected_ws_ids, target_layer):
             geom = feature.GetGeometryRef()
             self.assertAlmostEqual(
                 geom.Area(), expected_geom_areas[feature.GetField('geom_id')])
+            self.assertEqual(feature.GetField('ws_id'), ws_id)
 
         target_layer = None
         target_vector = None
@@ -549,7 +595,8 @@ class DelineateItTests(unittest.TestCase):
 
     def test_calculate_pour_point_array(self):
         """DelineateIt: Extract pour points."""
-        from natcap.invest.delineateit import delineateit, delineateit_core
+        from natcap.invest.delineateit import delineateit
+        from natcap.invest.delineateit import delineateit_core
 
         a = 100  # nodata value
 

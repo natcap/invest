@@ -1,26 +1,25 @@
 """DelineateIt wrapper for pygeoprocessing's watershed delineation routine."""
-import os
 import logging
+import os
 import time
 
-from osgeo import gdal
-from osgeo import ogr
-from osgeo import osr
-import shapely.errors
-import shapely.geometry
-import shapely.wkb
 import numpy
 import pygeoprocessing
 import pygeoprocessing.routing
+import shapely.errors
+import shapely.geometry
+import shapely.wkb
 import taskgraph
+from osgeo import gdal
+from osgeo import ogr
+from osgeo import osr
 
-from .. import utils
-from .. import spec_utils
-from ..spec_utils import u
-from .. import validation
 from .. import MODEL_METADATA
+from .. import spec_utils
+from .. import utils
+from .. import validation
+from ..spec_utils import u
 from . import delineateit_core
-
 
 LOGGER = logging.getLogger(__name__)
 
@@ -222,17 +221,17 @@ def execute(args):
         outlet_vector_path = file_registry['pour_points']
         geometry_task = pour_points_task
     else:
-        check_geometries_task = graph.add_task(
-            check_geometries,
+        preprocess_geometries_task = graph.add_task(
+            preprocess_geometries,
             args=(args['outlet_vector_path'],
                   file_registry['filled_dem'],
                   file_registry['preprocessed_geometries'],
                   args.get('skip_invalid_geometry', True)),
             dependent_task_list=[fill_pits_task],
             target_path_list=[file_registry['preprocessed_geometries']],
-            task_name='check_geometries')
+            task_name='preprocess_geometries')
         outlet_vector_path = file_registry['preprocessed_geometries']
-        geometry_task = check_geometries_task
+        geometry_task = preprocess_geometries_task
 
     delineation_dependent_tasks = [flow_dir_task, geometry_task]
     if 'snap_points' in args and args['snap_points']:
@@ -330,13 +329,14 @@ def _threshold_streams(flow_accum, src_nodata, out_nodata, threshold):
     return out_matrix
 
 
-def check_geometries(outlet_vector_path, dem_path, target_vector_path,
-                     skip_invalid_geometry=False):
-    """Perform reasonable checks and repairs on the incoming vector.
+def preprocess_geometries(outlet_vector_path, dem_path, target_vector_path,
+                          skip_invalid_geometry=False):
+    """Preprocess geometries in the incoming vector.
 
     This function will iterate through the vector at ``outlet_vector_path``
     and validate geometries, putting the geometries into a new geopackage
-    at ``target_vector_path``.
+    at ``target_vector_path``.  All output features will also have a `ws_id`
+    column created, containing a unique integer ID.
 
     The vector at ``target_vector_path`` will include features that:
 
@@ -385,11 +385,20 @@ def check_geometries(outlet_vector_path, dem_path, target_vector_path,
 
     outflow_vector = gdal.OpenEx(outlet_vector_path, gdal.OF_VECTOR)
     outflow_layer = outflow_vector.GetLayer()
-    LOGGER.info('Checking %s geometries from source vector',
-                outflow_layer.GetFeatureCount())
+    if 'ws_id' in set([field.GetName() for field in outflow_layer.schema]):
+        LOGGER.warning(
+            f'Layer {outflow_layer.GetName()} of vector '
+            f'{os.path.basename(outlet_vector_path)} already has a feature '
+            'named "ws_id". Field values will be overwritten.')
+    else:
+        target_layer.CreateField(ogr.FieldDefn('ws_id', ogr.OFTInteger64))
+
     target_layer.CreateFields(outflow_layer.schema)
 
+    LOGGER.info('Checking %s geometries from source vector',
+                outflow_layer.GetFeatureCount())
     target_layer.StartTransaction()
+    ws_id = 0
     for feature in outflow_layer:
         original_geometry = feature.GetGeometryRef()
 
@@ -438,6 +447,13 @@ def check_geometries(outlet_vector_path, dem_path, target_vector_path,
             simplified_geometry.wkb))
         for field_name, field_value in feature.items().items():
             new_feature.SetField(field_name, field_value)
+
+        # In case we're skipping features, ws_id field won't include any gaps
+        # in the numbers in this field.  I suspect this may save us some time
+        # on the forums later.
+        new_feature.SetField('ws_id', ws_id)
+        ws_id += 1
+
         target_layer.CreateFeature(new_feature)
 
     target_layer.CommitTransaction()
