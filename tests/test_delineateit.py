@@ -474,7 +474,7 @@ class DelineateItTests(unittest.TestCase):
         valid_line = ogr.CreateGeometryFromWkt(
             'LINESTRING (-100 100, 100 -100)')
 
-        # invalid polygon coult fixed by buffering by 0
+        # invalid polygon could fixed by buffering by 0
         invalid_bowtie_polygon = ogr.CreateGeometryFromWkt(
             'POLYGON ((2 -2, 6 -2, 2 -6, 6 -6, 2 -2))')
         self.assertFalse(invalid_bowtie_polygon.IsValid())
@@ -562,6 +562,51 @@ class DelineateItTests(unittest.TestCase):
 
         target_layer = None
         target_vector = None
+
+    def test_preprocess_geometries_added_ws_id(self):
+        """DelineateIt: Check that we add field ws_id when preprocessing."""
+        from natcap.invest.delineateit import delineateit
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(32731)  # WGS84/UTM zone 31s
+        projection_wkt = srs.ExportToWkt()
+
+        dem_matrix = numpy.array(
+            [[0, 1, 0, 0, 0, 0],
+             [0, 1, 0, 0, 0, 0],
+             [0, 1, 0, 0, 0, 0],
+             [0, 1, 0, 0, 0, 0],
+             [0, 1, 1, 1, 1, 1],
+             [0, 1, 0, 0, 0, 0],
+             [0, 1, 0, 0, 0, 0]], dtype=numpy.int8)
+        dem_raster_path = os.path.join(self.workspace_dir, 'dem.tif')
+        # byte datatype
+        pygeoprocessing.numpy_array_to_raster(
+            dem_matrix, 255, (2, -2), (2, -2), projection_wkt,
+            dem_raster_path)
+
+        source_features = [Point(9, -7), Point(10, -3)]
+        source_points_path = os.path.join(self.workspace_dir, 'source.geojson')
+
+        pygeoprocessing.shapely_geometry_to_vector(
+            source_features, source_points_path, projection_wkt, 'GeoJSON',
+            ogr_geom_type=ogr.wkbUnknown)
+
+        target_vector_path = os.path.join(self.workspace_dir, 'preprocessed.gpkg')
+        delineateit.preprocess_geometries(
+            source_points_path, dem_raster_path, target_vector_path,
+            skip_invalid_geometry=False)
+
+        target_vector = gdal.OpenEx(target_vector_path)
+        target_layer = target_vector.GetLayer()
+        self.assertEqual(target_layer.GetFeatureCount(), 2)
+
+        try:
+            for expected_ws_id, feature in zip([0, 1], target_layer):
+                self.assertEqual(feature.GetField('ws_id'), expected_ws_id)
+        finally:
+            target_layer = None
+            target_vector = None
 
     def test_detect_pour_points(self):
         """DelineateIt: low-level test for pour point detection."""
