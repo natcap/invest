@@ -17,7 +17,7 @@ const ipcRendererChannels = [
   /download-status/,
 ];
 
-const api = {
+export default {
   // Port where the flask app is running
   PORT: process.env.PORT,
   // Workbench logfile location, so Report window can open to it
@@ -64,5 +64,3 @@ const api = {
     },
   },
 };
-
-module.exports.api = api;

@@ -1,11 +1,6 @@
-// TODO: remove this comment and switch from require to import?
-// Dont' use ES6 features that require babel transpiling here
-// because the preload script seems to be outside the chain
-// of our "-r @babel/register" dev mode strategy.
-const {
-  contextBridge,
-} = require('electron');
+// eslint-disable-next-line import/no-extraneous-dependencies
+import { contextBridge } from 'electron';
 
-const { api } = require('./api');
+import api from './api';
 
 contextBridge.exposeInMainWorld('Workbench', api);

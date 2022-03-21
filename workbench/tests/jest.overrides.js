@@ -11,7 +11,7 @@ if (!process.env.PORT) {
 if (!process.env.ELECTRON_LOG_LEVEL) {
   process.env.ELECTRON_LOG_LEVEL = 'info';
 }
-const { api } = require('../src/preload/api');
+const api = require('../src/preload/api');
 
 // Test for a jsdom env (as opposed to node), which means renderer tests.
 if (global.window) {
