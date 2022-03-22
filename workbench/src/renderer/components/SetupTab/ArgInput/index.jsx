@@ -184,20 +184,18 @@ export default class ArgInput extends React.PureComponent {
     let fileSelector = <React.Fragment />;
     if (['csv', 'vector', 'raster', 'directory', 'file'].includes(argSpec.type)) {
       fileSelector = (
-        <InputGroup.Append>
-          <Button
-            aria-label={`browse for ${argSpec.name}`}
-            className="ml-2"
-            id={argkey}
-            variant="outline-dark"
-            value={argSpec.type} // dialog will limit options accordingly
-            name={argkey}
-            onClick={selectFile}
-            disabled={!enabled}
-          >
-            <MdFolderOpen />
-          </Button>
-        </InputGroup.Append>
+        <Button
+          aria-label={`browse for ${argSpec.name}`}
+          className="ml-2"
+          id={argkey}
+          variant="outline-dark"
+          value={argSpec.type} // dialog will limit options accordingly
+          name={argkey}
+          onClick={selectFile}
+          disabled={!enabled}
+        >
+          <MdFolderOpen />
+        </Button>
       );
     }
 
@@ -311,7 +309,7 @@ export default class ArgInput extends React.PureComponent {
         />
         <Col>
           <InputGroup>
-            <div className="d-flex flex-nowrap w-auto">
+            <div className="d-flex flex-nowrap w-100">
               <AboutModal arg={argSpec} userguide={userguide} argkey={argkey} />
               {form}
             </div>

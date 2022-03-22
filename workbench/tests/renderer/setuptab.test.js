@@ -1,7 +1,7 @@
-import { ipcRenderer,  } from 'electron';
+import { ipcRenderer } from 'electron';
 import React from 'react';
 import {
-  createEvent, fireEvent, render, waitFor, within,
+  createEvent, fireEvent, render, waitFor, within
 } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
@@ -16,18 +16,23 @@ jest.mock('../../src/renderer/server_requests');
 const MODULE = 'carbon';
 
 const VALIDATION_MESSAGE = 'invalid because';
-
 const BASE_ARGS_SPEC = {
   args: {
     arg: {
       name: 'foo',
       type: undefined, // varies by test
       required: undefined,
-      about: 'this is a description',
+      about: 'this is about foo',
     },
   },
 };
 
+/**
+ * Create a base args spec containing one arg of a given type.
+ *
+ * @param {string} type - any invest arg type
+ * @returns {object} - a simple args spec
+ */
 function baseArgsSpec(type) {
   const spec = { ...BASE_ARGS_SPEC };
   spec.args.arg.type = type;
@@ -42,6 +47,13 @@ function baseArgsSpec(type) {
 }
 const UI_SPEC = { order: [Object.keys(BASE_ARGS_SPEC.args)] };
 
+/**
+ * Render a SetupTab component given the necessary specs.
+ *
+ * @param {object} baseSpec - an invest args spec for a model
+ * @param {object} uiSpec - an invest UI spec for the same model
+ * @returns {object} - containing the test utility functions returned by render
+ */
 function renderSetupFromSpec(baseSpec, uiSpec) {
   // some ARGS_SPEC boilerplate that is not under test,
   // but is required by PropType-checking
@@ -95,8 +107,8 @@ describe('Arguments form input types', () => {
 
   test.each([
     ['freestyle_string'],
-    ['ratio'],
     ['number'],
+    ['ratio'],
     ['percent'],
     ['integer'],
   ])('render a text input for a %s', async (type) => {
@@ -255,9 +267,7 @@ describe('Arguments form interactions', () => {
     const spy = jest.spyOn(SetupTab.prototype, 'investValidate');
     const spec = baseArgsSpec('directory');
     spec.args.arg.required = true;
-    const {
-      findByLabelText
-    } = renderSetupFromSpec(spec, UI_SPEC);
+    const { findByLabelText } = renderSetupFromSpec(spec, UI_SPEC);
 
     const input = await findByLabelText(`${spec.args.arg.name}`);
     spy.mockClear(); // it was already called once on render
@@ -273,9 +283,7 @@ describe('Arguments form interactions', () => {
     const spy = jest.spyOn(SetupTab.prototype, 'investValidate');
     const spec = baseArgsSpec('directory');
     spec.args.arg.required = true;
-    const {
-      findByLabelText
-    } = renderSetupFromSpec(spec, UI_SPEC);
+    const { findByLabelText } = renderSetupFromSpec(spec, UI_SPEC);
 
     const input = await findByLabelText(`${spec.args.arg.name}`);
     spy.mockClear(); // it was already called once on render
@@ -407,15 +415,15 @@ describe('UI spec functionality', () => {
   });
 
   test('expect dropdown options can be dynamic', async () => {
-    const mockGetVectorColumnNames = ((state) => {
-      // the real getVectorColumnNames returns a Promise
-      return new Promise((resolve) => {
+    // the real getVectorColumnNames returns a Promise
+    const mockGetVectorColumnNames = ((state) => new Promise(
+      (resolve) => {
         if (state.argsValues.arg1.value) {
           resolve(['Field1']);
         }
         resolve([]);
-      });
-    });
+      }
+    ));
     const spec = {
       args: {
         arg1: {
@@ -910,7 +918,7 @@ describe('Form drag-and-drop', () => {
 
     const fileDropEvent = createEvent.drop(setupInput);
     Object.defineProperty(fileDropEvent, 'dataTransfer', {
-      value: { files: [fileValue] }
+      value: { files: [fileValue] },
     });
     fireEvent(setupInput, fileDropEvent);
 
