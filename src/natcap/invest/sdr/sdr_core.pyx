@@ -633,6 +633,7 @@ def calculate_sediment_deposition(
                     if e_prime_i == e_prime_nodata:
                         continue
 
+                    # This condition reflects property A in the user's guide.
                     if downslope_sdr_weighted_sum < sdr_i:
                         # i think this happens because of our low resolution
                         # flow direction, it's okay to zero out.
@@ -640,9 +641,16 @@ def calculate_sediment_deposition(
 
                     # these correspond to the full equations for
                     # dr_i, r_i, and f_i given in the docstring
-                    dr_i = (downslope_sdr_weighted_sum - sdr_i) / (1 - sdr_i)
-                    r_i = dr_i * (e_prime_i + f_j_weighted_sum)
-                    f_i = (1 - dr_i) * (e_prime_i + f_j_weighted_sum)
+                    if sdr_i == 1:
+                        # This reflects property B in the user's guide and is
+                        # an edge case to avoid division-by-zero.
+                        dr_i = 1
+                    else:
+                        dr_i = (downslope_sdr_weighted_sum - sdr_i) / (1 - sdr_i)
+
+                    # Lisa's modified equations
+                    r_i = dr_i * f_j_weighted_sum  # deposition
+                    f_i = (1 - dr_i) * f_j_weighted_sum + e_prime_i  # flux
 
                     sediment_deposition_raster.set(global_col, global_row, r_i)
                     f_raster.set(global_col, global_row, f_i)
