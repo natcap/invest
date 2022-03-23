@@ -34,6 +34,9 @@
 
 Unreleased Changes
 ------------------
+* General
+    * Updating the ``pyinstaller`` requirement to ``>=4.10`` to support the new
+      ``universal2`` wheel architecture offered by ``scipy>=1.8.0``.
 * RouteDEM
     * Rename the arg ``calculate_downstream_distance`` to
       ``calculate_downslope_distance``. This is meant to clarify that it
