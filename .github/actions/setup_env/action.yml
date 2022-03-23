@@ -38,6 +38,7 @@ runs:
       with:
         auto-update-conda: true
         channels: conda-forge
+        mamba-version: '*'
 
     # save week number to use in next step
     # save CONDA_PREFIX to GITHUB_ENV so it's accessible outside of shell commands
@@ -76,7 +77,7 @@ runs:
     - name: Update environment with dependencies
       if: steps.condacache.outputs.cache-hit != 'true'
       shell: bash -l {0} # conda only available in login shell
-      run: conda env update --file environment.yml
+      run: mamba env update --file environment.yml
 
     - name: List conda environment
       shell: bash -l {0} # conda only available in login shell
