@@ -23,12 +23,12 @@ function getUrlStatus(options) {
 }
 
 test.each(
-  Object.entries(sampledataRegistry)
-)('check url: %s', async (model, data) => {
+  Object.values(sampledataRegistry).map((item) => item.url)
+)('check url: %s', async (address) => {
   const options = {
     method: 'HEAD',
-    host: url.parse(data.url).host,
-    path: url.parse(data.url).pathname,
+    host: url.parse(address).host,
+    path: url.parse(address).pathname,
   };
   const status = await getUrlStatus(options);
   expect(status).toBe(200);
