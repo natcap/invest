@@ -512,13 +512,6 @@ jobs:
         with:
           node-version: 14.x
 
-      - name: Check sampledata registry links
-        if: github.event_name != 'pull_request' # no artifacts were deployed in a PR
-        working-directory: workbench
-        run: |
-          yarn add jest
-          yarn run test-sampledata-registry
-
       - name: Upload sample data artifact
         uses: actions/upload-artifact@v2
         with:
@@ -538,3 +531,10 @@ jobs:
       - name: Deploy artifacts to GCS
         if: github.event_name != 'pull_request'
         run: make deploy
+
+      - name: Check sampledata registry links after deploy
+        if: github.event_name != 'pull_request' # no artifacts were deployed in a PR
+        working-directory: workbench
+        run: |
+          yarn add jest
+          yarn run test-sampledata-registry
