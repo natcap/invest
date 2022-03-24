@@ -34,6 +34,9 @@
 
 Unreleased Changes
 ------------------
+* General
+    * Updating the ``pyinstaller`` requirement to ``>=4.10`` to support the new
+      ``universal2`` wheel architecture offered by ``scipy>=1.8.0``.
 * DelineateIt
     * Watersheds delineated with this tool will now always have a ``ws_id``
       column containing integer watershed IDs for easier use within the routed
