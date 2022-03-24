@@ -23,7 +23,7 @@ export class DataDownloadModal extends React.Component {
       allLinksArray: [],
       selectedLinksArray: [],
       dataListCheckBoxes: {},
-      sampledataRegistry: {},
+      sampledataRegistry: null,
     };
 
     this.handleSubmit = this.handleSubmit.bind(this);
@@ -39,7 +39,6 @@ export class DataDownloadModal extends React.Component {
       sampledataRegistry = await import('../../sampledata_registry.json');
     }
     delete sampledataRegistry.default; // the default property was added by import
-    console.log(sampledataRegistry)
     const linksArray = [];
     const dataListCheckBoxes = {};
     Object.entries(sampledataRegistry)
@@ -124,6 +123,9 @@ export class DataDownloadModal extends React.Component {
       selectedLinksArray,
       sampledataRegistry,
     } = this.state;
+    // Don't render until registry is loaded, since it loads async
+    if (!sampledataRegistry) { return <div />; }
+
     const downloadEnabled = Boolean(selectedLinksArray.length);
     const DatasetCheckboxRows = [];
     Object.keys(dataListCheckBoxes)
