@@ -160,6 +160,7 @@ _OUTPUT_BASE_FILES = {
     'usle_path': 'usle.tif',
     'watershed_results_sdr_path': 'watershed_results_sdr.shp',
     'total_retention_path': 'total_retention.tif',
+    'local_retention_path': 'local_retention.tif',
 }
 
 INTERMEDIATE_DIR_NAME = 'intermediate_outputs'
@@ -564,12 +565,21 @@ def execute(args):
         target_path_list=[f_reg['sed_deposition_path'], f_reg['f_path']],
         task_name='sediment deposition')
 
+    local_retention_task = task_graph.add_task(
+        func=_calculate_local_retention,
+        args=(
+            f_reg['rkls_path'], f_reg['usle_path'],
+            f_reg['local_retention_path']),
+        dependent_task_list=[rkls_task, usle_task],
+        target_path_list=[f_reg['local_retention_path']],
+        task_name='calculate local retention')
+
     _ = task_graph.add_task(
         func=_calculate_total_retention,
         args=(
-            f_reg['rkls_path'], f_reg['usle_path'], f_reg['sdr_path'],
+            f_reg['local_retention_path'], f_reg['sdr_path'],
             f_reg['sed_deposition_path'], f_reg['total_retention_path']),
-        dependent_task_list=[rkls_task, usle_task, sdr_task,
+        dependent_task_list=[local_retention_task, sdr_task,
                              sed_deposition_task],
         target_path_list=[f_reg['total_retention_path']],
         task_name='calculate total retention')
@@ -667,39 +677,55 @@ def execute(args):
 
 
 def _calculate_total_retention(
-    rkls_path, usle_path, sdr_path, sed_deposition_path,
+    local_retention_path, sdr_path, sed_deposition_path,
     target_total_retention_path):
-    """Calculate total retention.
-
-    TODO: complete the args.
-    """
-    rkls_nodata = pygeoprocessing.get_raster_info(rkls_path)['nodata'][0]
-    usle_nodata = pygeoprocessing.get_raster_info(usle_path)['nodata'][0]
+    local_retention_nodata = pygeoprocessing.get_raster_info(
+        local_retention_path)['nodata'][0]
     sdr_nodata = pygeoprocessing.get_raster_info(sdr_path)['nodata'][0]
     sed_deposition_nodata = pygeoprocessing.get_raster_info(
         sed_deposition_path)['nodata'][0]
 
-    def _total_retention_function(rkls, usle, sdr, sed_deposition):
-        """TODO: complete this."""
-        result = numpy.full(rkls.shape, _TARGET_NODATA, dtype=numpy.float32)
+    def _total_retention_function(local_retention, sdr, sed_deposition):
+        result = numpy.full(local_retention.shape, _TARGET_NODATA,
+                            dtype=numpy.float32)
         valid_mask = (
-            (~utils.array_equals_nodata(rkls, rkls_nodata)) &
-            (~utils.array_equals_nodata(usle, usle_nodata)) &
+            (~utils.array_equals_nodata(local_retention,
+                                        local_retention_nodata)) &
             (~utils.array_equals_nodata(sdr, sdr_nodata)) &
             (~utils.array_equals_nodata(sed_deposition,
                                         sed_deposition_nodata)))
 
-        # Per the user's guide, usle represents RKLSCP.
+        # local_retention represents RLKS - RKLSCP (where RKLSCP is also known
+        # as a modified USLE)
         result[valid_mask] = (
-            (rkls[valid_mask] - usle[valid_mask]) * sdr[valid_mask]
-            + sed_deposition[valid_mask])
+            local_retention[valid_mask] * sdr[valid_mask] +
+            sed_deposition[valid_mask])
         return result
 
     pygeoprocessing.raster_calculator(
-        [(rkls_path, 1), (usle_path, 1), (sdr_path, 1),
+        [(local_retention_path, 1), (sdr_path, 1),
          (sed_deposition_path, 1)],
         _total_retention_function, target_total_retention_path,
         gdal.GDT_Float32, _TARGET_NODATA)
+
+
+def _calculate_local_retention(rkls_path, usle_path,
+                               target_local_retention_path):
+    rkls_nodata = pygeoprocessing.get_raster_info(rkls_path)['nodata'][0]
+    usle_nodata = pygeoprocessing.get_raster_info(usle_path)['nodata'][0]
+
+    def _local_retention_function(rkls, usle):
+        result = numpy.full(rkls.shape, _TARGET_NODATA, dtype=numpy.float32)
+        valid_mask = (
+            (~utils.array_equals_nodata(rkls, rkls_nodata)) &
+            (~utils.array_equals_nodata(usle, usle_nodata)))
+
+        result[valid_mask] = rkls[valid_mask] - usle[valid_mask]
+        return result
+
+    pygeoprocessing.raster_calculator(
+        [(rkls_path, 1), (usle_path, 1)], _local_retention_function,
+        target_local_retention_path, gdal.GDT_Float32, _TARGET_NODATA)
 
 
 def _calculate_what_drains_to_stream(
