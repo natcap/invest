@@ -157,25 +157,34 @@ describe('Arguments form input types', () => {
 
   test('expect units to be displayed for numbers', async () => {
     const spec = baseArgsSpec('number');
-    let { findByText } = renderSetupFromSpec(spec, UI_SPEC);
+    const { findByText } = renderSetupFromSpec(spec, UI_SPEC);
     expect(await findByText(spec.args.arg.units)).toBeInTheDocument();
+  });
 
+  test('expect "unitless" to be displayed for unitless numbers', async () => {
+    const spec = baseArgsSpec('number');
     spec.args.arg.units = null;
-    ({ findByText } = renderSetupFromSpec(spec, UI_SPEC));
+    const { findByText } = renderSetupFromSpec(spec, UI_SPEC);
     expect(await findByText('unitless')).toBeInTheDocument();
   });
 
   test('expect units to be displayed for rasters', async () => {
     const spec = baseArgsSpec('raster');
-    let { findByText } = renderSetupFromSpec(spec, UI_SPEC);
+    const { findByText } = renderSetupFromSpec(spec, UI_SPEC);
     expect(await findByText(spec.args.arg.bands[1].units)).toBeInTheDocument();
+  });
 
+  test('expect "unitless" to be displayed for unitless rasters', async () => {
+    const spec = baseArgsSpec('raster');
     spec.args.arg.bands = { 1: { type: 'number', units: null } };
-    ({ findByText } = renderSetupFromSpec(spec, UI_SPEC));
+    const { findByText } = renderSetupFromSpec(spec, UI_SPEC);
     expect(await findByText('unitless')).toBeInTheDocument();
+  });
 
+  test('expect "ratio" to be displayed for ratio rasters', async () => {
+    const spec = baseArgsSpec('raster');
     spec.args.arg.bands = { 1: { type: 'ratio' } };
-    ({ findByText } = renderSetupFromSpec(spec, UI_SPEC));
+    const { findByText } = renderSetupFromSpec(spec, UI_SPEC);
     expect(await findByText('unitless')).toBeInTheDocument();
   });
 });

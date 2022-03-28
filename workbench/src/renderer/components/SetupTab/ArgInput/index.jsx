@@ -48,13 +48,13 @@ function FormLabel(props) {
     unitsLabel = <React.Fragment />;
   } else {
     unitsLabel = (
-      <React.Fragment>
-        <span> (</span>
+      <>
         {/* units are null for unitless number types
         because the 'units' property is there, but has no value */}
+        <> (</>
         <b>{ units === null ? 'unitless' : units }</b>
-        <span>)</span>
-      </React.Fragment>
+        <>)</>
+      </>
     );
   }
 
@@ -405,7 +405,8 @@ class AboutModal extends React.PureComponent {
             <Modal.Title>{arg.name}</Modal.Title>
           </Modal.Header>
           <Modal.Body>
-            {`${arg.about} `}
+            {arg.about}
+            <br />
             <a
               href={userguideURL}
               title={userguideURL}
