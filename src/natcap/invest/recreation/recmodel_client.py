@@ -129,7 +129,7 @@ ARGS_SPEC = {
         "start_year": {
             "type": "number",
             "expression": "value >= 2005",
-            "units": u.year,
+            "units": u.year_AD,
             "about": _(
                 "Year at which to start photo user-day calculations. "
                 "Calculations start on the first day of the year. Year "
@@ -140,7 +140,7 @@ ARGS_SPEC = {
         "end_year": {
             "type": "number",
             "expression": "value <= 2017",
-            "units": u.year,
+            "units": u.year_AD,
             "about": _(
                 "Year at which to end photo user-day calculations. "
                 "Calculations continue through the last day of the year. "

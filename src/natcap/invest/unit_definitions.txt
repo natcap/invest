@@ -15,6 +15,8 @@ pixel = [raster_area]
 
 linear_unit = []  # non-specific unit of length
 
+other = []  # for cases where no unit label should be displayed
+
 # add "us_survey_foot" on to the aliases because it's used in some rasters
 survey_foot = 1200 / 3937 * meter = sft = us_survey_foot
 
@@ -31,6 +33,11 @@ hour = 60 * minute = h = hr
 # the symbol 'yr' is english-specific and the international symbol 'a' may
 # not be well-known, so we will need to translate this
 year = 365.25 * day = _ = yr = a = julian_year
+
+# for inputs that are a year number, rather than a timespan measured in years
+# for instance, the carbon model input 'lulc_cur_year' is a year AD, such as 2017
+# while the coastal blue carbon 'biomass-half-life' is a span of years.
+year_AD = []
 
 # redefine degree to use ° symbol
 degree = π / 180 * radian = ° = deg = arcdeg = arcdegree = angular_degree

@@ -352,7 +352,7 @@ ARGS_SPEC = {
             "columns": {
                 "year": {
                     "type": "number",
-                    "units": u.year,
+                    "units": u.year_AD,
                     "about": _(
                         "Consecutive years for each year in the lifespan of "
                         "the wind farm. These may be the actual years: 2010, "

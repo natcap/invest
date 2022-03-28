@@ -122,7 +122,7 @@ ARGS_SPEC = {
         "lulc_cur_year": {
             "expression": "float(value).is_integer()",
             "type": "number",
-            "units": u.year,
+            "units": u.year_AD,
             "required": "do_valuation",
             "about": _(
                 "The calendar year of the current scenario depicted in the "
@@ -132,7 +132,7 @@ ARGS_SPEC = {
         "lulc_fut_year": {
             "expression": "float(value).is_integer()",
             "type": "number",
-            "units": u.year,
+            "units": u.year_AD,
             "required": "do_valuation",
             "about": _(
                 "The calendar year of the future scenario depicted in the "

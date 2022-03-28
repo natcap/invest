@@ -54,7 +54,7 @@ ARGS_SPEC = {
             "columns": {
                 "snapshot_year": {
                     "type": "number",
-                    "units": u.year,
+                    "units": u.year_AD,
                     "about": _("Year to snapshot.")},
                 "raster_path": {
                     "type": "raster",

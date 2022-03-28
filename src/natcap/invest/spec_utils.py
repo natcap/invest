@@ -172,7 +172,9 @@ def format_unit(unit):
         # pint always cancels units where it can, so add them back in here
         # this isn't a perfect solution
         # see https://github.com/hgrecco/pint/issues/1364
-        u.t * u.hr / (u.MJ * u.mm): 't · h · ha / (ha · MJ · mm)'
+        u.t * u.hr / (u.MJ * u.mm): 't · h · ha / (ha · MJ · mm)',
+        u.pixel: 'number of pixels'
+
     }
     if unit in custom_formats:
         return custom_formats[unit]
