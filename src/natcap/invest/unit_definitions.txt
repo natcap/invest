@@ -13,9 +13,9 @@ pixel = [raster_area]
 # elevation (length) but the specific units don't matter
 # and in the rec model for cell size
 
-linear_unit = []  # non-specific unit of length
-
-other = []  # for cases where no unit label should be displayed
+# for cases where no unit label should be displayed
+# such as inputs that can have any or multiple different units
+other = []
 
 # add "us_survey_foot" on to the aliases because it's used in some rasters
 survey_foot = 1200 / 3937 * meter = sft = us_survey_foot

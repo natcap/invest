@@ -172,7 +172,7 @@ ARGS_SPEC = {
         "cell_size": {
             "type": "number",
             "expression": "value > 0",
-            "units": u.linear_unit,  # any unit of length is ok
+            "units": u.other,  # any unit of length is ok
             "required": "grid_aoi",
             "about": _(
                 "Size of grid cells to make, measured in the projection units "

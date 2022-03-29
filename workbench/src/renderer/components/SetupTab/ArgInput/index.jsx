@@ -42,20 +42,19 @@ function FormLabel(props) {
   } = props;
 
   let unitsLabel;
-  if (units === undefined) {
-    // units are undefined for non-number types
-    // because they have no 'units' property
-    unitsLabel = <React.Fragment />;
-  } else {
+  if (units && units !== 'unitless') {
+    // for unitless numbers, don't display 'unitless' in the UI
+    // since it may not be helpful to see there.
+    // the user's guide entry will still mark the number as 'unitless'.
     unitsLabel = (
       <>
-        {/* units are null for unitless number types
-        because the 'units' property is there, but has no value */}
         <> (</>
-        <b>{ units === null ? 'unitless' : units }</b>
+        <b>{ units }</b>
         <>)</>
       </>
     );
+  } else {
+    unitsLabel = <React.Fragment />;
   }
 
   return (
@@ -215,17 +214,6 @@ export default class ArgInput extends React.PureComponent {
         placeholderText = _(argSpec.type);
     }
 
-    let units;
-    if (argSpec.type === 'number') {
-      units = argSpec.units;
-    } else if (argSpec.type === 'raster') {
-      if (argSpec.bands['1'].type === 'number') {
-        units = argSpec.bands['1'].units;
-      } else {
-        units = argSpec.bands['1'].type; // 'ratio' or 'percent' or 'integer'
-      }
-    }
-
     let form;
     if (argSpec.type === 'boolean') {
       form = (
@@ -305,7 +293,7 @@ export default class ArgInput extends React.PureComponent {
           argkey={argkey}
           argname={argSpec.name}
           required={argSpec.required}
-          units={units}
+          units={argSpec.units} // undefined for all types except number
         />
         <Col>
           <InputGroup>
@@ -327,13 +315,7 @@ ArgInput.propTypes = {
     name: PropTypes.string.isRequired,
     type: PropTypes.string.isRequired,
     required: PropTypes.oneOfType([PropTypes.string, PropTypes.bool]),
-    units: PropTypes.string, // numbers only
-    bands: PropTypes.shape({ // rasters only
-      1: PropTypes.shape({
-        type: PropTypes.string,
-        units: PropTypes.string, // numbers only
-      }),
-    }),
+    units: PropTypes.string, // for numbers only
   }).isRequired,
   userguide: PropTypes.string.isRequired,
   value: PropTypes.oneOfType([PropTypes.string, PropTypes.bool]),

@@ -160,21 +160,23 @@ def format_unit(unit):
     Returns:
         String describing the unit.
     """
-    if not isinstance(unit, pint.Unit):
+    if not isinstance(unit, pint.Unit) and unit is not None:
         raise TypeError(
             f'{unit} is of type {type(unit)}. '
             f'It should be an instance of pint.Unit')
 
     # Optionally use a pre-set format for a particular unit
     custom_formats = {
+        u.pixel: 'number of pixels',
+        u.year_AD: '',  # don't need to mention units for a year input
+        u.other: '',    # for inputs that can have any or multiple units
         # For soil erodibility (t*h*ha/(ha*MJ*mm)), by convention the ha's
         # are left on top and bottom and don't cancel out
         # pint always cancels units where it can, so add them back in here
         # this isn't a perfect solution
         # see https://github.com/hgrecco/pint/issues/1364
         u.t * u.hr / (u.MJ * u.mm): 't · h · ha / (ha · MJ · mm)',
-        u.pixel: 'number of pixels'
-
+        None: 'unitless'
     }
     if unit in custom_formats:
         return custom_formats[unit]
@@ -210,16 +212,22 @@ def serialize_args_spec(spec):
 
     def fallback_serializer(obj):
         """Serialize objects that are otherwise not JSON serializeable."""
-        if isinstance(obj, pint.Unit):
-            return format_unit(obj)
         # Sets are present in 'geometries' attributes of some args
         # We don't need to worry about deserializing back to a set/array
         # so casting to string is okay.
-        elif isinstance(obj, set):
+        if isinstance(obj, set):
             return str(obj)
         raise TypeError(f'fallback serializer is missing for {type(obj)}')
 
-    return json.dumps(spec, default=fallback_serializer)
+    def serialize_units(spec):
+        for key, val in spec.items():
+            if key == 'units':
+                spec[key] = format_unit(spec[key])
+            elif isinstance(val, dict):
+                spec[key] = serialize_units(val)
+        return spec
+
+    return json.dumps(serialize_units(spec), default=fallback_serializer)
 
 
 # accepted geometries for a vector will be displayed in this order
@@ -437,7 +445,7 @@ def describe_arg_from_spec(name, spec):
         units = spec['bands'][1]['units']
     if units:
         units_string = format_unit(units)
-        if units_string and units_string != 'none':
+        if units_string:
             in_parentheses.append(f'units: **{units_string}**')
 
     if spec['type'] == 'vector':

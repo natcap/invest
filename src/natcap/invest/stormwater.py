@@ -105,7 +105,7 @@ ARGS_SPEC = {
         },
         "retention_radius": {
             "type": "number",
-            "units": u.linear_unit,
+            "units": u.other,
             "required": "adjust_retention_ratios",
             "about": _(
                 "Radius around each pixel to adjust retention ratios. "
