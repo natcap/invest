@@ -128,7 +128,7 @@ function openAboutWindow(parentWindow, isDevMode) {
   });
   setupContextMenu(child);
   child.setMenu(null);
-  child.loadURL(path.join(BASE_URL, 'src/renderer/static/about.html'));
+  child.loadURL(path.join(BASE_URL, 'about.html'));
   if (true) {
     child.webContents.openDevTools();
   }
@@ -157,7 +157,7 @@ function openReportWindow(parentWindow, isDevMode) {
   });
   setupContextMenu(child);
   child.setMenu(null);
-  child.loadURL(path.join(BASE_URL, 'src/renderer/static/report_a_problem.html'));
+  child.loadURL(path.join(BASE_URL, 'report_a_problem.html'));
   if (isDevMode) {
     child.webContents.openDevTools();
   }

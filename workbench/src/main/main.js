@@ -61,12 +61,8 @@ export const createWindow = async () => {
     frame: false,
     alwaysOnTop: false,
   });
-  console.log(path.join(
-    BASE_URL, 'src/renderer/static/splash.html'
-  ));
-  splashScreen.loadURL(path.join(
-    BASE_URL, 'src/renderer/static/splash.html'
-  ));
+  splashScreen.loadURL(path.join(BASE_URL, 'splash.html'));
+
   const investExe = findInvestBinaries(ELECTRON_DEV_MODE);
   createPythonFlaskProcess(investExe);
   setupDialogs();

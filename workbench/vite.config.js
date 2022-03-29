@@ -34,9 +34,9 @@ export default defineConfig({
       // },
       input: [
         path.resolve(PROJECT_ROOT, 'index.html'),
-        path.resolve(PROJECT_ROOT, 'src/renderer/static/splash.html'),
-        path.resolve(PROJECT_ROOT, 'src/renderer/static/report_a_problem.html'),
-        path.resolve(PROJECT_ROOT, 'src/renderer/static/about.html'),
+        path.resolve(PROJECT_ROOT, 'splash.html'),
+        path.resolve(PROJECT_ROOT, 'report_a_problem.html'),
+        path.resolve(PROJECT_ROOT, 'about.html'),
       ],
       // external: [
       //   ...builtinModules,
