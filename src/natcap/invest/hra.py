@@ -85,7 +85,7 @@ ARGS_SPEC = {
                     "type": {"vector", "raster"},
                     "bands": {1: {
                         "type": "number",
-                        "units": None,
+                        "units": u.none,
                         "about": _(
                             "Pixel values are 1, indicating presence of the "
                             "habitat/stressor, or 0 indicating absence. Any "
@@ -148,7 +148,7 @@ ARGS_SPEC = {
             "about": _(
                 "The highest possible criteria score in the scoring system."),
             "type": "number",
-            "units": None,
+            "units": u.none,
             "expression": "value > 0"
         },
         "risk_eq": {

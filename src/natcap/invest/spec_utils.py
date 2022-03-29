@@ -44,7 +44,7 @@ N_WORKERS = {
         "place asynchronously. Any other positive integer will cause that "
         "many processes to be spawned to execute tasks."),
     "type": "number",
-    "units": None,
+    "units": u.none,
     "required": False,
     "expression": "value >= -1"
 }
@@ -160,7 +160,7 @@ def format_unit(unit):
     Returns:
         String describing the unit.
     """
-    if not isinstance(unit, pint.Unit) and unit is not None:
+    if not isinstance(unit, pint.Unit):
         raise TypeError(
             f'{unit} is of type {type(unit)}. '
             f'It should be an instance of pint.Unit')
@@ -176,7 +176,7 @@ def format_unit(unit):
         # this isn't a perfect solution
         # see https://github.com/hgrecco/pint/issues/1364
         u.t * u.hr / (u.MJ * u.mm): 't · h · ha / (ha · MJ · mm)',
-        None: 'unitless'
+        u.none: 'unitless'
     }
     if unit in custom_formats:
         return custom_formats[unit]
@@ -212,22 +212,16 @@ def serialize_args_spec(spec):
 
     def fallback_serializer(obj):
         """Serialize objects that are otherwise not JSON serializeable."""
+        if isinstance(obj, pint.Unit):
+            return format_unit(obj)
         # Sets are present in 'geometries' attributes of some args
         # We don't need to worry about deserializing back to a set/array
         # so casting to string is okay.
-        if isinstance(obj, set):
+        elif isinstance(obj, set):
             return str(obj)
         raise TypeError(f'fallback serializer is missing for {type(obj)}')
 
-    def serialize_units(spec):
-        for key, val in spec.items():
-            if key == 'units':
-                spec[key] = format_unit(spec[key])
-            elif isinstance(val, dict):
-                spec[key] = serialize_units(val)
-        return spec
-
-    return json.dumps(serialize_units(spec), default=fallback_serializer)
+    return json.dumps(spec, default=fallback_serializer)
 
 
 # accepted geometries for a vector will be displayed in this order

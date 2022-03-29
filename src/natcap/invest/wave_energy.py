@@ -299,7 +299,7 @@ ARGS_SPEC = {
                 },
                 "smlpm": {
                     "type": "number",
-                    "units": None,
+                    "units": u.none,
                     "about": _("Number of slack lines required per machine.")
                 }
 
@@ -313,7 +313,7 @@ ARGS_SPEC = {
         "number_of_machines": {
             "expression": "value > 0",
             "type": "number",
-            "units": None,
+            "units": u.none,
             "required": "valuation_container",
             "about": _(
                 "Number of wave machines to model. Required if Run Valuation "

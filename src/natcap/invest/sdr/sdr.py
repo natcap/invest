@@ -112,7 +112,7 @@ ARGS_SPEC = {
         "threshold_flow_accumulation": spec_utils.THRESHOLD_FLOW_ACCUMULATION,
         "k_param": {
             "type": "number",
-            "units": None,
+            "units": u.none,
             "about": _("Borselli k parameter."),
             "name": _("Borselli k parameter")
         },
@@ -123,14 +123,14 @@ ARGS_SPEC = {
         },
         "ic_0_param": {
             "type": "number",
-            "units": None,
+            "units": u.none,
             "about": _("Borselli IC0 parameter."),
             "name": _("Borselli IC0 parameter")
         },
         "l_max": {
             "type": "number",
             "expression": "value > 0",
-            "units": None,
+            "units": u.none,
             "about": _(
                 "The maximum allowed value of the slope length parameter (L) "
                 "in the LS factor."),
@@ -138,7 +138,7 @@ ARGS_SPEC = {
         },
         "drainage_path": {
             "type": "raster",
-            "bands": {1: {"type": "number", "units": None}},
+            "bands": {1: {"type": "number", "units": u.none}},
             "required": False,
             "about": _(
                 "Map of locations of artificial drainages that drain to the "

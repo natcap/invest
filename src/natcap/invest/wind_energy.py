@@ -60,14 +60,14 @@ ARGS_SPEC = {
                 },
                 "lam": {
                     "type": "number",
-                    "units": None,
+                    "units": u.none,
                     "about": _(
                         "Weibull scale factor at the reference hub height at "
                         "this point.")
                 },
                 "k": {
                     "type": "number",
-                    "units": None,
+                    "units": u.none,
                     "about": _("Weibull shape factor at this point.")
                 },
                 "ref": {
@@ -118,7 +118,7 @@ ARGS_SPEC = {
                     "about": _("Standard atmosphere air density.")},
                 "exponent_power_curve": {
                     "type": "number",
-                    "units": None,
+                    "units": u.none,
                     "about": _("Exponent to use in the power curve function.")},
                 "decommission_cost": {
                     "type": "ratio",
@@ -240,7 +240,7 @@ ARGS_SPEC = {
         "number_of_turbines": {
             "expression": "value > 0",
             "type": "number",
-            "units": None,
+            "units": u.none,
             "about": _("The number of wind turbines per wind farm."),
             "name": _("number of turbines")
         },

@@ -147,8 +147,7 @@ class ValidateArgsSpecs(unittest.TestCase):
                     # number type should have a units property
                     self.assertTrue('units' in arg)
                     # Undefined units should use None
-                    self.assertTrue(isinstance(arg['units'], pint.Unit) or
-                                    arg['units'] is None)
+                    self.assertTrue(isinstance(arg['units'], pint.Unit))
                     attrs.remove('units')
 
                     # number type may optionally have an 'expression' attribute

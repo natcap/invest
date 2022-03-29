@@ -53,7 +53,7 @@ predictor_table_columns = {
     "path": {
         "type": {"raster", "vector"},
         "about": _("A spatial file to use as a predictor."),
-        "bands": {1: {"type": "number", "units": None}},
+        "bands": {1: {"type": "number", "units": u.none}},
         "fields": {},
         "geometries": spec_utils.ALL_GEOMS
     },
@@ -119,7 +119,7 @@ ARGS_SPEC = {
         "port": {
             "type": "number",
             "expression": "value >= 0",
-            "units": None,
+            "units": u.none,
             "required": False,
             "about": _(
                 "the port on ``hostname`` to use for contacting the "

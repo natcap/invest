@@ -245,3 +245,27 @@ class TestSpecUtils(unittest.TestCase):
             carbon.ARGS_SPEC['args']['carbon_pools_path']['columns']['lucode']['about']
         )
         self.assertEqual(repr(out), repr(expected_rst))
+
+    def test_serialize_args_spec(self):
+        spec = {
+            'args': {
+                'foo': {
+                    'type': 'number',
+                    'units': u.meter
+                },
+                'bar': {
+                    'type': 'raster',
+                    'bands': {1: {'type': 'number', 'units': u.other}}
+                },
+                'baz': {
+                    'type': 'vector',
+                    'geometries': {"POLYGON", "LINESTRING"}
+                }
+            }
+        }
+
+        expected_json = (
+            "")
+        json = spec_utils.serialize_args_spec(spec)
+        print(json)
+

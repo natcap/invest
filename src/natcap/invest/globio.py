@@ -81,7 +81,7 @@ ARGS_SPEC = {
                         "presence of infrastrucutre. For vectors, any "
                         "geometries indicate the presence of infrastructure."),
                     "type": {"raster", "vector"},
-                    "bands": {1: {"type": "number", "units": None}},
+                    "bands": {1: {"type": "number", "units": u.none}},
                     "fields": {},
                     "geometries": spec_utils.ALL_GEOMS
                 }

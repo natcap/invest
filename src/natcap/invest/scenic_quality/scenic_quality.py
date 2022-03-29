@@ -82,7 +82,7 @@ ARGS_SPEC = {
                         "RADIUS2 for backwards compatibility.")},
                 "weight": {
                     "type": "number",
-                    "units": None,
+                    "units": u.none,
                     "required": False,
                     "about": _(
                         "Viewshed importance coefficient. If this field is "
@@ -138,14 +138,14 @@ ARGS_SPEC = {
         "a_coef": {
             "name": _("coefficient a"),
             "type": "number",
-            "units": None,
+            "units": u.none,
             "required": "do_valuation",
             "about": _("First coefficient ('a') used by the valuation function"),
         },
         "b_coef": {
             "name": _("coefficient b"),
             "type": "number",
-            "units": None,
+            "units": u.none,
             "required": "do_valuation",
             "about": _("Second coefficient ('b') used by the valuation function"),
         },
