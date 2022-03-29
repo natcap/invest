@@ -34,7 +34,10 @@ const BASE_ARGS_SPEC = {
  * @returns {object} - a simple args spec
  */
 function baseArgsSpec(type) {
+  // make a copy of each nested layer so we don't edit the original
   const spec = { ...BASE_ARGS_SPEC };
+  spec.args = { ...BASE_ARGS_SPEC.args };
+  spec.args.arg = { ...BASE_ARGS_SPEC.args.arg };
   spec.args.arg.type = type;
   if (type === 'number') {
     spec.args.arg.units = 'foo unit';
@@ -116,7 +119,7 @@ describe('Arguments form input types', () => {
   test('render a text input with unit label for a number', async () => {
     const spec = baseArgsSpec('number');
     const { findByLabelText } = renderSetupFromSpec(spec, UI_SPEC);
-    const input = await findByLabelText(RegExp(`^${spec.args.arg.name} (${spec.args.arg.units})$`));
+    const input = await findByLabelText(`${spec.args.arg.name} (${spec.args.arg.units})`);
     expect(input).toHaveAttribute('type', 'text');
   });
 
