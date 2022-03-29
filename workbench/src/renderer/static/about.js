@@ -1,6 +1,6 @@
 import { ipcMainChannels } from '../../main/ipcMainChannels';
 import { handleClick } from './handlers';
-
+console.log('loaded about.js')
 const { ipcRenderer } = window.Workbench.electron;
 
 async function getInvestVersion() {

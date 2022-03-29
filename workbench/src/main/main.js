@@ -61,6 +61,9 @@ export const createWindow = async () => {
     frame: false,
     alwaysOnTop: false,
   });
+  console.log(path.join(
+    BASE_URL, 'src/renderer/static/splash.html'
+  ));
   splashScreen.loadURL(path.join(
     BASE_URL, 'src/renderer/static/splash.html'
   ));
@@ -107,7 +110,7 @@ export const createWindow = async () => {
   // https://bugs.chromium.org/p/chromium/issues/detail?id=1085215
   // https://github.com/electron/electron/issues/23662
   mainWindow.webContents.on('did-frame-finish-load', async () => {
-    if (ELECTRON_DEV_MODE) {
+    if (true) {
       mainWindow.webContents.openDevTools();
     }
     // We use this stdout as a signal in a puppeteer test

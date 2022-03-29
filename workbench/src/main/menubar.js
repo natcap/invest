@@ -129,7 +129,7 @@ function openAboutWindow(parentWindow, isDevMode) {
   setupContextMenu(child);
   child.setMenu(null);
   child.loadURL(path.join(BASE_URL, 'src/renderer/static/about.html'));
-  if (isDevMode) {
+  if (true) {
     child.webContents.openDevTools();
   }
 }
