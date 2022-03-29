@@ -1,24 +1,23 @@
 """InVEST Seasonal Water Yield Model."""
-import os
-import logging
-import re
 import fractions
+import logging
+import os
+import re
 import warnings
 
-import scipy.special
 import numpy
-from osgeo import gdal
-from osgeo import ogr
 import pygeoprocessing
 import pygeoprocessing.routing
+import scipy.special
 import taskgraph
+from osgeo import gdal
+from osgeo import ogr
 
-from .. import utils
-from .. import spec_utils
-from ..spec_utils import u
-from .. import validation
 from .. import MODEL_METADATA
-
+from .. import spec_utils
+from .. import utils
+from .. import validation
+from ..spec_utils import u
 from . import seasonal_water_yield_core
 
 gdal.SetCacheMax(2**26)
@@ -741,12 +740,15 @@ def _execute(args):
                 file_registry['l_path'],
                 file_registry['l_avail_path'],
                 file_registry['l_sum_avail_path'],
-                file_registry['aet_path']),
+                file_registry['aet_path'],
+                file_registry['annual_precip_path']),
             target_path_list=[
                 file_registry['l_path'],
                 file_registry['l_avail_path'],
                 file_registry['l_sum_avail_path'],
-                file_registry['aet_path']],
+                file_registry['aet_path'],
+                file_registry['annual_precip_path'],
+            ],
             dependent_task_list=[
                 align_task, flow_dir_task, stream_threshold_task,
                 fill_pit_task, qf_task] + quick_flow_task_list,

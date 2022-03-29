@@ -44,6 +44,8 @@ Unreleased Changes
 * SDR
     * Fixed an issue with SDR where ``f.tif`` might not be recalculated if the
       file is modified or deleted after execution.
+* Seasonal Water Yield
+    * Added an output to the model representing total annual precipitation.
 
 3.10.2 (2022-02-08)
 -------------------

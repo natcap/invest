@@ -373,7 +373,7 @@ cpdef calculate_local_recharge(
         precip_path_list, et0_path_list, qf_m_path_list, flow_dir_mfd_path,
         kc_path_list, alpha_month_map, float beta_i, float gamma, stream_path,
         target_li_path, target_li_avail_path, target_l_sum_avail_path,
-        target_aet_path):
+        target_aet_path, target_pi_path):
     """
     Calculate the rasters defined by equations [3]-[7].
 
@@ -406,6 +406,8 @@ cpdef calculate_local_recharge(
             upslope accumulation of target_li_avail_path.
         target_aet_path (str): created by this call, the annual actual
             evapotranspiration.
+        target_pi_path (str): created by this call, the annual precipitation on
+            a pixel.
 
         Returns:
             None.
@@ -443,7 +445,7 @@ cpdef calculate_local_recharge(
 
     # make sure that user input nodata values are defined
     # set to -1 if not defined
-    # precipitation and evapotranspiration data should 
+    # precipitation and evapotranspiration data should
     # always be non-negative
     et0_m_raster_list = []
     et0_m_nodata_list = []
@@ -500,6 +502,12 @@ cpdef calculate_local_recharge(
         flow_dir_mfd_path, target_aet_path, gdal.GDT_Float32, [target_nodata],
         fill_value_list=[target_nodata])
     cdef _ManagedRaster target_aet_raster = _ManagedRaster(
+        target_aet_path, 1, 1)
+
+    pygeoprocessing.new_raster_from_base(
+        flow_dir_mfd_path, target_pi_path, gdal.GDT_Float32, [target_nodata],
+        fill_value_list=[target_nodata])
+    cdef _ManagedRaster target_pi_raster = _ManagedRaster(
         target_aet_path, 1, 1)
 
 
@@ -655,6 +663,8 @@ cpdef calculate_local_recharge(
                             pet_m,
                             p_m - qf_m +
                             alpha_month_array[m_index]*beta_i*l_sum_avail_i)
+
+                    target_pi_raster.set(xi, yi, p_i)
 
                     target_aet_raster.set(xi, yi, aet_i)
                     l_i = (p_i - qf_i - aet_i)
