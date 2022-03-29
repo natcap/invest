@@ -3,7 +3,9 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import { MdOpenInNew } from 'react-icons/md';
 
-const { shell } = window.Workbench.electron;
+import { ipcMainChannels } from '../../../main/ipcMainChannels';
+
+const { ipcRenderer } = window.Workbench.electron;
 
 const UG_ROOT = 'http://releases.naturalcapitalproject.org/invest-userguide/latest';
 const FORUM_ROOT = 'https://community.naturalcapitalproject.org';
@@ -38,7 +40,9 @@ const FORUM_TAGS = {
  */
 function handleClick(event) {
   event.preventDefault();
-  shell.openExternal(event.currentTarget.href);
+  ipcRenderer.send(
+    ipcMainChannels.OPEN_EXTERNAL_URL, event.currentTarget.href
+  );
 }
 
 /** Render model-relevant links to the User's Guide and Forum.
