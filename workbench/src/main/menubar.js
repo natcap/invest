@@ -1,5 +1,4 @@
 import path from 'path';
-import util from 'util';
 
 import { app, BrowserWindow } from 'electron'; // eslint-disable-line import/no-extraneous-dependencies
 
