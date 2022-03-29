@@ -38,10 +38,6 @@ function baseArgsSpec(type) {
   spec.args.arg.type = type;
   if (type === 'number') {
     spec.args.arg.units = 'foo unit';
-  } else if (type === 'raster') {
-    spec.args.arg.bands = {
-      1: { type: 'number', units: 'foo unit' },
-    };
   }
   return spec;
 }
@@ -107,14 +103,20 @@ describe('Arguments form input types', () => {
 
   test.each([
     ['freestyle_string'],
-    ['number'],
     ['ratio'],
     ['percent'],
     ['integer'],
   ])('render a text input for a %s', async (type) => {
     const spec = baseArgsSpec(type);
     const { findByLabelText } = renderSetupFromSpec(spec, UI_SPEC);
-    const input = await findByLabelText(RegExp(`^${spec.args.arg.name}`));
+    const input = await findByLabelText(RegExp(`^${spec.args.arg.name}$`));
+    expect(input).toHaveAttribute('type', 'text');
+  });
+
+  test('render a text input with unit label for a number', async () => {
+    const spec = baseArgsSpec('number');
+    const { findByLabelText } = renderSetupFromSpec(spec, UI_SPEC);
+    const input = await findByLabelText(RegExp(`^${spec.args.arg.name} (${spec.args.arg.units})$`));
     expect(input).toHaveAttribute('type', 'text');
   });
 
@@ -153,19 +155,6 @@ describe('Arguments form input types', () => {
     userEvent.click(await findByRole('button', { name: /info about/ }));
     expect(await findByText(spec.args.arg.about)).toBeInTheDocument();
     await findByRole('link', { name: /user guide/ });
-  });
-
-  test('expect units to be displayed for numbers', async () => {
-    const spec = baseArgsSpec('number');
-    const { findByText } = renderSetupFromSpec(spec, UI_SPEC);
-    expect(await findByText(spec.args.arg.units)).toBeInTheDocument();
-  });
-
-  test('expect "unitless" to be displayed for unitless numbers', async () => {
-    const spec = baseArgsSpec('number');
-    spec.args.arg.units = null;
-    const { findByText } = renderSetupFromSpec(spec, UI_SPEC);
-    expect(await findByText('unitless')).toBeInTheDocument();
   });
 });
 
@@ -292,7 +281,7 @@ describe('Arguments form interactions', () => {
       findByText, findByLabelText, queryByText,
     } = renderSetupFromSpec(spec, UI_SPEC);
 
-    const input = await findByLabelText(`${spec.args.arg.name}`);
+    const input = await findByLabelText(spec.args.arg.name);
     expect(input).toHaveClass('is-invalid');
     expect(queryByText(RegExp(VALIDATION_MESSAGE))).toBeNull();
 
@@ -551,7 +540,6 @@ describe('Misc form validation stuff', () => {
         raster: {
           name: 'rrrrrr',
           type: 'raster',
-          bands: { 1: { type: 'number', units: 'foo unit' } },
         },
       },
     };
