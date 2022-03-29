@@ -123,7 +123,6 @@ export default class App extends React.Component {
     const navID = window.crypto.getRandomValues(
       new Uint32Array(1)
     ).toString();
-    // const navID = crypto.randomBytes(16).toString('hex');
     const { openJobs, openNavIDs } = this.state;
     openNavIDs.push(navID);
     openJobs[navID] = job;
