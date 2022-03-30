@@ -403,6 +403,7 @@ body {
 
 #argname {
 	text-transform: capitalize;
+	font-weight: 600;
 }
 
 .args-form .form-control {

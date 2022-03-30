@@ -34,10 +34,8 @@ const BASE_ARGS_SPEC = {
  * @returns {object} - a simple args spec
  */
 function baseArgsSpec(type) {
-  // make a copy of each nested layer so we don't edit the original
-  const spec = { ...BASE_ARGS_SPEC };
-  spec.args = { ...BASE_ARGS_SPEC.args };
-  spec.args.arg = { ...BASE_ARGS_SPEC.args.arg };
+  // make a deep copy so we don't edit the original
+  const spec = JSON.parse(JSON.stringify(BASE_ARGS_SPEC));
   spec.args.arg.type = type;
   if (type === 'number') {
     spec.args.arg.units = 'foo unit';

@@ -41,22 +41,6 @@ function FormLabel(props) {
     argkey, argname, required, units,
   } = props;
 
-  let unitsLabel;
-  if (units && units !== 'unitless') {
-    // for unitless numbers, don't display 'unitless' in the UI
-    // since it may not be helpful to see there.
-    // the user's guide entry will still mark the number as 'unitless'.
-    unitsLabel = (
-      <>
-        <> (</>
-        <b>{ units }</b>
-        <>)</>
-      </>
-    );
-  } else {
-    unitsLabel = <React.Fragment />;
-  }
-
   return (
     <Form.Label column sm="3" htmlFor={argkey}>
       <span id="argname">
@@ -69,11 +53,12 @@ function FormLabel(props) {
             : <React.Fragment />
         }
         {/* display units at the end of the arg name, if applicable */}
-        { unitsLabel }
+        { (units && units !== 'unitless') ? ` (${units})` : <React.Fragment /> }
       </span>
     </Form.Label>
   );
 }
+
 FormLabel.propTypes = {
   argkey: PropTypes.string.isRequired,
   argname: PropTypes.string.isRequired,
