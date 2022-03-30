@@ -77,7 +77,7 @@ function mockUISpec(spec, modelName) {
 }
 
 // Because we mock UI_SPEC without using jest's API
-// we alse need to a reset it without jest's API.
+// we also need to reset it without jest's API.
 const { UI_SPEC } = uiConfig;
 afterEach(() => {
   uiConfig.UI_SPEC = UI_SPEC;
