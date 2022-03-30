@@ -7,16 +7,16 @@ InVEST models, and to be extensible to future models or common auxilary
 workflows of an InVEST user.
 
 ## To develop and launch this Application
-* from invest/:
+1. from invest/:
   - activate a python environment and install `natcap.invest`
-* from invest/workbench/:
+2. from invest/workbench/:
 	- `yarn install`
 	- `yarn start`
 
 ## To package this app for distribution
-* from invest/:
+1. from invest/:
   - `make binaries`
-* from invest/workbench/:
+2. from invest/workbench/:
   - `yarn run install`
   - `yarn run build`
   - `yarn run dist`  - Configure the packaging in `electron-builder-config.js`.
