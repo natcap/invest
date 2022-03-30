@@ -564,7 +564,6 @@ describe('InVEST subprocess testing', () => {
   });
 
   afterEach(async () => {
-    // mockInvestProc = null;
     await InvestJob.clearStore();
   });
 
