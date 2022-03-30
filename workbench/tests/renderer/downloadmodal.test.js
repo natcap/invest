@@ -167,8 +167,6 @@ describe('Integration tests with main process', () => {
       filePaths: ['foo/directory'],
     };
 
-    // TODO: do we really want to mock electron.ipcRenderer.invoke
-    // or preload's api.electron.ipcRenderer.invoke?
     ipcRenderer.invoke.mockResolvedValue(dialogData);
 
     const {
