@@ -10,8 +10,16 @@
 
 import http from 'http';
 import url from 'url';
+import fs from 'fs';
 
-import sampledataRegistry from '../../src/renderer/sampledata_registry.json';
+import defaultRegistry from '../../src/renderer/sampledata_registry.json';
+
+let productionRegistry;
+try {
+  productionRegistry = JSON.parse(
+    fs.readFileSync('../../src/renderer/sampledata_registry_production.json')
+  );
+} catch {}
 
 function getUrlStatus(options) {
   return new Promise((resolve) => {
@@ -23,13 +31,27 @@ function getUrlStatus(options) {
 }
 
 test.each(
-  Object.entries(sampledataRegistry)
-)('check url: %s', async (model, data) => {
+  Object.values(defaultRegistry).map((item) => item.url)
+)('check url: %s', async (address) => {
   const options = {
     method: 'HEAD',
-    host: url.parse(data.url).host,
-    path: url.parse(data.url).pathname,
+    host: url.parse(address).host,
+    path: url.parse(address).pathname,
   };
   const status = await getUrlStatus(options);
   expect(status).toBe(200);
 });
+
+if (productionRegistry) {
+  test.each(
+    Object.values(productionRegistry).map((item) => item.url)
+  )('check url: %s', async (address) => {
+    const options = {
+      method: 'HEAD',
+      host: url.parse(address).host,
+      path: url.parse(address).pathname,
+    };
+    const status = await getUrlStatus(options);
+    expect(status).toBe(200);
+  });
+}
