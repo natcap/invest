@@ -46,7 +46,7 @@ const config = {
   },
   files: [
     'build/**/*',
-    'node_modules/**/*', // TODO: probably should exclude any used by renderer.
+    'node_modules/**/*',
   ],
   publish: null // undocumented. does what you would expect ['never'] to do
 };
