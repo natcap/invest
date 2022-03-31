@@ -11,7 +11,7 @@ import Modal from 'react-bootstrap/Modal';
 import { MdFolderOpen, MdInfo, MdOpenInNew } from 'react-icons/md';
 import { shell } from 'electron';
 
-const baseUserguideURL = 'https://storage.googleapis.com/natcap-dev-build-artifacts/invest/emlys/3.9.1.post3250+g130227a76/userguide';
+const baseUserguideURL = 'https://storage.googleapis.com/releases.naturalcapitalproject.org/invest-userguide/latest';
 
 /**
  * Filter a message that refers to many spatial inputs' bounding boxes.
