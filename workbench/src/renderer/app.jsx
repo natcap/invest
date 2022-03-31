@@ -38,7 +38,7 @@ export default class App extends React.Component {
 
     this.state = {
       activeTab: 'home',
-      openNavIDs: [],
+      openTabIDs: [],
       openJobs: {},
       investList: null,
       recentJobs: [],
@@ -120,56 +120,56 @@ export default class App extends React.Component {
    * @param {InvestJob} job - as constructed by new InvestJob()
    */
   openInvestModel(job) {
-    const navID = window.crypto.getRandomValues(
+    const tabID = window.crypto.getRandomValues(
       new Uint32Array(1)
     ).toString();
-    const { openJobs, openNavIDs } = this.state;
-    openNavIDs.push(navID);
-    openJobs[navID] = job;
+    const { openJobs, openTabIDs } = this.state;
+    openTabIDs.push(tabID);
+    openJobs[tabID] = job;
     this.setState({
-      openNavIDs: openNavIDs,
+      openTabIDs: openTabIDs,
       openJobs: openJobs,
-    }, () => this.switchTabs(navID));
+    }, () => this.switchTabs(tabID));
   }
 
   /**
    * Click handler for the close-tab button on an Invest model tab.
    *
-   * @param  {string} navID - the eventKey of the tab containing the
+   * @param  {string} tabID - the eventKey of the tab containing the
    *   InvestTab component that will be removed.
    */
-  closeInvestModel(navID) {
+  closeInvestModel(tabID) {
     let index;
-    const { openNavIDs, openJobs } = this.state;
-    delete openJobs[navID];
-    openNavIDs.forEach((id) => {
-      if (id === navID) {
-        index = openNavIDs.indexOf(navID);
-        openNavIDs.splice(index, 1);
+    const { openTabIDs, openJobs } = this.state;
+    delete openJobs[tabID];
+    openTabIDs.forEach((id) => {
+      if (id === tabID) {
+        index = openTabIDs.indexOf(tabID);
+        openTabIDs.splice(index, 1);
       }
     });
     // Switch to the next tab if there is one, or the previous, or home.
     let switchTo = 'home';
-    if (openNavIDs[index]) {
-      switchTo = openNavIDs[index];
-    } else if (openNavIDs[index - 1]) {
-      switchTo = openNavIDs[index - 1];
+    if (openTabIDs[index]) {
+      switchTo = openTabIDs[index];
+    } else if (openTabIDs[index - 1]) {
+      switchTo = openTabIDs[index - 1];
     }
     this.switchTabs(switchTo);
     this.setState({
-      openNavIDs: openNavIDs,
+      openTabIDs: openTabIDs,
       openJobs: openJobs,
     });
   }
 
-  /** Update properties of an open Invest job.
+  /** Update properties of an open InvestTab.
    *
-   * @param {string} id - the unique identifier of an open job
+   * @param {string} tabID - the unique identifier of an open tab
    * @param {obj} jobObj - key-value pairs of any job properties to be updated
    */
-  updateJobProperties(id, jobObj) {
+  updateJobProperties(tabID, jobObj) {
     const { openJobs } = this.state;
-    openJobs[id] = { ...openJobs[id], ...jobObj };
+    openJobs[tabID] = { ...openJobs[tabID], ...jobObj };
     this.setState({
       openJobs: openJobs
     });
@@ -179,10 +179,10 @@ export default class App extends React.Component {
    *
    * And update the app's view of that store.
    *
-   * @param {string} jobID - the unique identifier of an open job.
+   * @param {string} tabID - the unique identifier of an open InvestTab.
    */
-  async saveJob(jobID) {
-    const job = this.state.openJobs[jobID];
+  async saveJob(tabID) {
+    const job = this.state.openJobs[tabID];
     const recentJobs = await InvestJob.saveJob(job);
     this.setState({
       recentJobs: recentJobs,
@@ -202,7 +202,7 @@ export default class App extends React.Component {
       investSettings,
       recentJobs,
       openJobs,
-      openNavIDs,
+      openTabIDs,
       activeTab,
       showDownloadModal,
       downloadedNofN,
@@ -210,7 +210,7 @@ export default class App extends React.Component {
 
     const investNavItems = [];
     const investTabPanes = [];
-    openNavIDs.forEach((id) => {
+    openTabIDs.forEach((id) => {
       const job = openJobs[id];
       let statusSymbol;
       switch (job.status) {
@@ -265,7 +265,7 @@ export default class App extends React.Component {
         >
           <InvestTab
             job={job}
-            jobID={id}
+            tabID={id}
             investSettings={investSettings}
             saveJob={this.saveJob}
             updateJobProperties={this.updateJobProperties}

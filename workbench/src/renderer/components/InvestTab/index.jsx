@@ -78,23 +78,23 @@ export default class InvestTab extends React.Component {
       argsSpec: argsSpec,
       uiSpec: uiSpec,
     }, () => { this.switchTabs('setup'); });
-    const { jobID } = this.props;
-    ipcRenderer.on(`invest-logging-${jobID}`, this.investLogfileCallback);
-    ipcRenderer.on(`invest-exit-${jobID}`, this.investExitCallback);
+    const { tabID } = this.props;
+    ipcRenderer.on(`invest-logging-${tabID}`, this.investLogfileCallback);
+    ipcRenderer.on(`invest-exit-${tabID}`, this.investExitCallback);
   }
 
   componentWillUnmount() {
     ipcRenderer.removeListener(
-      `invest-logging-${this.props.jobID}`, this.investLogfileCallback
+      `invest-logging-${this.props.tabID}`, this.investLogfileCallback
     );
     ipcRenderer.removeListener(
-      `invest-exit-${this.props.jobID}`, this.investExitCallback
+      `invest-exit-${this.props.tabID}`, this.investExitCallback
     );
   }
 
   investLogfileCallback(logfile) {
     // Only now do we know for sure the process is running
-    this.props.updateJobProperties(this.props.jobID, {
+    this.props.updateJobProperties(this.props.tabID, {
       logfile: logfile,
       status: 'running',
     });
@@ -106,7 +106,7 @@ export default class InvestTab extends React.Component {
    */
   investExitCallback(data) {
     const {
-      jobID,
+      tabID,
       updateJobProperties,
       saveJob,
     } = this.props;
@@ -127,11 +127,11 @@ export default class InvestTab extends React.Component {
       }
     }
     const status = (data.code === 0) ? 'success' : 'error';
-    updateJobProperties(jobID, {
+    updateJobProperties(tabID, {
       status: status,
       finalTraceback: finalTraceback,
     });
-    saveJob(jobID);
+    saveJob(tabID);
     this.setState({
       executeClicked: false,
       userTerminated: false,
@@ -155,13 +155,13 @@ export default class InvestTab extends React.Component {
     });
     const {
       job,
-      jobID,
+      tabID,
       investSettings,
       updateJobProperties,
     } = this.props;
     const args = { ...argsValues };
 
-    updateJobProperties(jobID, {
+    updateJobProperties(tabID, {
       argsValues: args,
       status: undefined, // in case of re-run, clear an old status
     });
@@ -173,7 +173,7 @@ export default class InvestTab extends React.Component {
       args,
       investSettings.loggingLevel,
       investSettings.language,
-      jobID
+      tabID
     );
     this.switchTabs('log');
   }
@@ -183,7 +183,7 @@ export default class InvestTab extends React.Component {
       userTerminated: true,
     }, () => {
       ipcRenderer.send(
-        ipcMainChannels.INVEST_KILL, this.props.jobID
+        ipcMainChannels.INVEST_KILL, this.props.tabID
       );
     });
   }
@@ -213,7 +213,7 @@ export default class InvestTab extends React.Component {
       logfile,
       finalTraceback,
     } = this.props.job;
-    const { jobID } = this.props;
+    const { tabID } = this.props;
 
     // Don't render the model setup & log until data has been fetched.
     if (!modelSpec) {
@@ -221,8 +221,8 @@ export default class InvestTab extends React.Component {
     }
 
     const logDisabled = !logfile;
-    const sidebarSetupElementId = `sidebar-setup-${jobID}`;
-    const sidebarFooterElementId = `sidebar-footer-${jobID}`;
+    const sidebarSetupElementId = `sidebar-setup-${tabID}`;
+    const sidebarFooterElementId = `sidebar-footer-${tabID}`;
 
     return (
       <TabContainer activeKey={activeTab} id="invest-tab">
@@ -298,7 +298,7 @@ export default class InvestTab extends React.Component {
                 <LogTab
                   logfile={logfile}
                   executeClicked={executeClicked}
-                  jobID={jobID}
+                  tabID={tabID}
                 />
               </TabPane>
             </TabContent>
@@ -318,7 +318,7 @@ InvestTab.propTypes = {
     status: PropTypes.string,
     finalTraceback: PropTypes.string,
   }).isRequired,
-  jobID: PropTypes.string.isRequired,
+  tabID: PropTypes.string.isRequired,
   investSettings: PropTypes.shape({
     nWorkers: PropTypes.string,
     loggingLevel: PropTypes.string,
