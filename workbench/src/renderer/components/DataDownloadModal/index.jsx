@@ -18,10 +18,6 @@ const logger = window.Workbench.getLogger(__filename.split('/').slice(-1)[0]);
 const BASE_URL = "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.10.2/data";
 const DEFAULT_FILESIZE = 0;
 
-function makeURL(filename) {
-  return `${BASE_URL}/${filename}`;
-}
-
 /** Render a dialog with a form for configuring global invest settings */
 export class DataDownloadModal extends React.Component {
   constructor(props) {
@@ -30,8 +26,9 @@ export class DataDownloadModal extends React.Component {
       allDataCheck: true,
       allLinksArray: [],
       selectedLinksArray: [],
-      dataListCheckBoxes: {},
+      modelCheckBoxState: {},
       sampledataRegistry: null,
+      baseURL: BASE_URL,
     };
 
     this.handleSubmit = this.handleSubmit.bind(this);
@@ -40,18 +37,21 @@ export class DataDownloadModal extends React.Component {
   }
 
   async componentDidMount() {
+    const tokenURL = await ipcRenderer.invoke(ipcMainChannels.GET_RELEASE_TOKEN);
+    const baseURL = tokenURL || BASE_URL;
     const linksArray = [];
-    const dataListCheckBoxes = {};
+    const modelCheckBoxState = {};
     Object.entries(sampledataRegistry)
       .forEach(([modelName, data]) => {
-        linksArray.push(makeURL(data.filename));
-        dataListCheckBoxes[modelName] = true;
+        linksArray.push(`${baseURL}/${data.filename}`);
+        modelCheckBoxState[modelName] = true;
       });
     this.setState({
       allLinksArray: linksArray,
       selectedLinksArray: linksArray,
-      dataListCheckBoxes: dataListCheckBoxes,
+      modelCheckBoxState: modelCheckBoxState,
       sampledataRegistry: sampledataRegistry,
+      baseURL: baseURL,
     });
   }
 
@@ -64,7 +64,6 @@ export class DataDownloadModal extends React.Component {
       { properties: ['openDirectory'] }
     );
     if (data.filePaths.length) {
-      console.log(this.state.selectedLinksArray)
       ipcRenderer.send(
         ipcMainChannels.DOWNLOAD_URL,
         this.state.selectedLinksArray,
@@ -77,11 +76,11 @@ export class DataDownloadModal extends React.Component {
 
   handleCheckAll(event) {
     const {
-      dataListCheckBoxes,
+      modelCheckBoxState,
       allLinksArray,
     } = this.state;
     const newCheckList = Object.fromEntries(
-      Object.entries(dataListCheckBoxes).map(
+      Object.entries(modelCheckBoxState).map(
         ([k, v]) => [k, event.currentTarget.checked]
       )
     );
@@ -93,7 +92,7 @@ export class DataDownloadModal extends React.Component {
     }
     this.setState({
       allDataCheck: event.currentTarget.checked,
-      dataListCheckBoxes: newCheckList,
+      modelCheckBoxState: newCheckList,
       selectedLinksArray: selectedLinks,
     });
   }
@@ -101,28 +100,28 @@ export class DataDownloadModal extends React.Component {
   handleCheckList(event, modelName) {
     let {
       selectedLinksArray,
-      dataListCheckBoxes,
+      modelCheckBoxState,
       sampledataRegistry,
+      baseURL,
     } = this.state;
-    const { filename } = sampledataRegistry[modelName];
-    const url = makeURL(filename);
+    const url = `${baseURL}/${sampledataRegistry[modelName].filename}`;
     if (event.currentTarget.checked) {
       selectedLinksArray.push(url);
-      dataListCheckBoxes[modelName] = true;
+      modelCheckBoxState[modelName] = true;
     } else {
       selectedLinksArray = selectedLinksArray.filter((val) => val !== url);
-      dataListCheckBoxes[modelName] = false;
+      modelCheckBoxState[modelName] = false;
     }
     this.setState({
       allDataCheck: false,
       selectedLinksArray: selectedLinksArray,
-      dataListCheckBoxes: dataListCheckBoxes,
+      modelCheckBoxState: modelCheckBoxState,
     });
   }
 
   render() {
     const {
-      dataListCheckBoxes,
+      modelCheckBoxState,
       selectedLinksArray,
       sampledataRegistry,
     } = this.state;
@@ -131,7 +130,7 @@ export class DataDownloadModal extends React.Component {
 
     const downloadEnabled = Boolean(selectedLinksArray.length);
     const DatasetCheckboxRows = [];
-    Object.keys(dataListCheckBoxes)
+    Object.keys(modelCheckBoxState)
       .forEach((modelName) => {
         const filesize = parseFloat(sampledataRegistry[modelName]) || DEFAULT_FILESIZE;
         const filesizeStr = `${(filesize / 1000000).toFixed(2)} MB`;
@@ -145,7 +144,7 @@ export class DataDownloadModal extends React.Component {
               >
                 <Form.Check.Input
                   type="checkbox"
-                  checked={dataListCheckBoxes[modelName]}
+                  checked={modelCheckBoxState[modelName]}
                   onChange={(event) => this.handleCheckList(
                     event, modelName
                   )}
