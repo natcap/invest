@@ -7,7 +7,7 @@
  * during the invest build process (`make sampledata`). This test will
  * run in GHA, post `make deploy`.
  * */
-
+// TODO: any need for this test suite now?
 import http from 'http';
 import url from 'url';
 import fs from 'fs';
