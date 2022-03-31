@@ -1,6 +1,6 @@
 import localforage from 'localforage';
 
-const { crypto } = window.Workbench;
+const { crypto, path } = window.Workbench;
 const logger = window.Workbench.getLogger('InvestJob.js');
 
 const HASH_ARRAY_KEY = 'workspaceHashes';
@@ -47,7 +47,7 @@ export default class InvestJob {
     if (workspaceDir && modelRunName) {
       const workspaceHash = crypto.sha1hash(
         `${modelRunName}
-         ${JSON.stringify(workspaceDir)}
+         ${JSON.stringify(path.resolve(workspaceDir))}
          ${JSON.stringify(resultsSuffix)}`
       );
       return workspaceHash;

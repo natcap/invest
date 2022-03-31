@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import path from 'path';
 
 // eslint-disable-next-line import/no-extraneous-dependencies
 import { ipcRenderer } from 'electron';
@@ -25,6 +26,9 @@ export default {
   // The gettext callable; a partially applied function
   _: ipcRenderer.sendSync.bind(null, ipcMainChannels.GETTEXT),
   getLogger: getLogger,
+  path: {
+    resolve: path.resolve,
+  },
   crypto: {
     sha1hash: (data) => crypto.createHash('sha1').update(data).digest('hex'),
   },
