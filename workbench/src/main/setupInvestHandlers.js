@@ -39,7 +39,7 @@ export function setupInvestRunHandlers(investExe) {
   });
 
   ipcMain.on(ipcMainChannels.INVEST_RUN, async (
-    event, modelRunName, pyModuleName, args, loggingLevel, language, jobID
+    event, modelRunName, pyModuleName, args, loggingLevel, language, tabID
   ) => {
     let investRun;
     let investStarted = false;
@@ -92,11 +92,11 @@ export function setupInvestRunHandlers(investExe) {
       if (!investStarted) {
         if (`${data}`.match('Writing log messages to')) {
           investStarted = true;
-          runningJobs[jobID] = investRun.pid;
+          runningJobs[tabID] = investRun.pid;
           const investLogfile = `${data}`.substring(
             `${data}`.indexOf('[') + 1, `${data}`.indexOf(']')
           );
-          event.reply(`invest-logging-${jobID}`, path.resolve(investLogfile));
+          event.reply(`invest-logging-${tabID}`, path.resolve(investLogfile));
           if (!ELECTRON_DEV_MODE && !process.env.PUPPETEER) {
             usageLogger.start(pyModuleName, args);
           }
@@ -105,7 +105,7 @@ export function setupInvestRunHandlers(investExe) {
       // python logging flushes with each message, so data here should
       // only be one logger message at a time.
       event.reply(
-        `invest-stdout-${jobID}`,
+        `invest-stdout-${tabID}`,
         markupMessage(`${data}`, pyModuleName)
       );
     };
@@ -122,8 +122,8 @@ export function setupInvestRunHandlers(investExe) {
     });
 
     investRun.on('exit', (code) => {
-      delete runningJobs[jobID];
-      event.reply(`invest-exit-${jobID}`, {
+      delete runningJobs[tabID];
+      event.reply(`invest-exit-${tabID}`, {
         code: code,
         stdErr: investStdErr,
       });
