@@ -22,7 +22,7 @@ LOGGER = logging.getLogger(__name__)
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["carbon"].model_title,
     "pyname": MODEL_METADATA["carbon"].pyname,
-    "userguide_html": MODEL_METADATA["carbon"].userguide,
+    "userguide": MODEL_METADATA["carbon"].userguide,
     "args_with_spatial_overlap": {
         "spatial_keys": ["lulc_cur_path", "lulc_fut_path", "lulc_redd_path"],
     },
@@ -122,7 +122,7 @@ ARGS_SPEC = {
         "lulc_cur_year": {
             "expression": "float(value).is_integer()",
             "type": "number",
-            "units": u.year,
+            "units": u.year_AD,
             "required": "do_valuation",
             "about": _(
                 "The calendar year of the current scenario depicted in the "
@@ -132,7 +132,7 @@ ARGS_SPEC = {
         "lulc_fut_year": {
             "expression": "float(value).is_integer()",
             "type": "number",
-            "units": u.year,
+            "units": u.year_AD,
             "required": "do_valuation",
             "about": _(
                 "The calendar year of the future scenario depicted in the "

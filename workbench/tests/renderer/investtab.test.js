@@ -50,6 +50,7 @@ describe('Run status Alert renders with data from a recent run', () => {
   const spec = {
     pyname: 'natcap.invest.foo',
     model_name: 'Foo Model',
+    userguide: 'foo.html',
     args: {
       workspace: {
         name: 'Workspace',
@@ -153,6 +154,7 @@ describe('Save InVEST Model Setup Buttons', () => {
   const spec = {
     pyname: 'natcap.invest.foo',
     model_name: 'Foo Model',
+    userguide: 'foo.html',
     args: {
       workspace: {
         name: 'Workspace',
@@ -371,6 +373,7 @@ describe('InVEST Run Button', () => {
   const spec = {
     pyname: 'natcap.invest.bar',
     model_name: 'Bar Model',
+    userguide: 'bar.html',
     args: {
       a: {
         name: 'abar',

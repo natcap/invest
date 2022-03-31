@@ -43,7 +43,7 @@ const MOCK_VALIDATION_VALUE = [[['workspace_dir'], 'invalid because']];
 const SAMPLE_SPEC = {
   model_name: MOCK_MODEL_TITLE,
   pyname: 'natcap.invest.carbon',
-  userguide_html: 'carbonstorage.html',
+  userguide: 'carbonstorage.html',
   args: {
     workspace_dir: {
       name: 'Workspace',
@@ -485,6 +485,7 @@ describe('InVEST subprocess testing', () => {
     },
     model_name: 'EcoModel',
     pyname: 'natcap.invest.dot',
+    userguide: 'foo.html',
   };
   const modelName = 'carbon';
   // nothing is written to the fake workspace in these tests,
