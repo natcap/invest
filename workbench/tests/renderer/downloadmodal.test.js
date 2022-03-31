@@ -49,11 +49,11 @@ describe('Sample Data Download Form', () => {
     expect(modalTitle).toBeNull();
   });
 
-  test('Checkbox initial state & interactions', () => {
+  test('Checkbox initial state & interactions', async () => {
     const {
       getByLabelText,
       getByRole,
-      getAllByRole,
+      findAllByRole,
     } = render(
       <DataDownloadModal
         show={true}
@@ -63,7 +63,7 @@ describe('Sample Data Download Form', () => {
     );
 
     // All checked initially
-    const allCheckBoxes = getAllByRole('checkbox');
+    const allCheckBoxes = await findAllByRole('checkbox');
     expect(allCheckBoxes).toHaveLength(nModels + 1); // +1 for Select All
     allCheckBoxes.forEach((box) => {
       expect(box).toBeChecked();
@@ -94,12 +94,12 @@ describe('Sample Data Download Form', () => {
     expect(modelCheckbox).toBeChecked();
   });
 
-  test('Checkbox list matches the sampledata registry', () => {
+  test('Checkbox list matches the sampledata registry', async () => {
     // The registry itself is validated during the build process
     // by the script called by `npm run fetch-invest`.
     const {
       getByLabelText,
-      getAllByRole,
+      findAllByRole,
     } = render(
       <DataDownloadModal
         show={true}
@@ -108,7 +108,7 @@ describe('Sample Data Download Form', () => {
       />
     );
 
-    const allCheckBoxes = getAllByRole('checkbox');
+    const allCheckBoxes = await findAllByRole('checkbox');
     expect(allCheckBoxes).toHaveLength(nModels + 1); // +1 for Select All
 
     // Each checkbox is labeled by the model's name
