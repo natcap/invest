@@ -1,13 +1,12 @@
 import localforage from 'localforage';
 
 const { crypto } = window.Workbench;
-console.log(crypto);
 const logger = window.Workbench.getLogger('InvestJob.js');
 
 const HASH_ARRAY_KEY = 'workspaceHashes';
 const MAX_CACHED_JOBS = 30;
 const investJobStore = localforage.createInstance({
-  name: "InvestJobs"
+  name: 'InvestJobs'
 });
 
 /**
@@ -46,11 +45,11 @@ export default class InvestJob {
 
   static getWorkspaceHash(modelRunName, workspaceDir, resultsSuffix) {
     if (workspaceDir && modelRunName) {
-      const workspaceHash = crypto.createHash('sha1').update(
+      const workspaceHash = crypto.sha1hash(
         `${modelRunName}
          ${JSON.stringify(workspaceDir)}
          ${JSON.stringify(resultsSuffix)}`
-      ).digest('hex');
+      );
       return workspaceHash;
     }
     throw Error(
@@ -59,18 +58,13 @@ export default class InvestJob {
   }
 
   static async saveJob(job) {
-    console.log(job.logfile);
-    job.workspaceHash = crypto.sha1hash(job.logfile);
-    // if (!job.workspaceHash) {
-    //   job.workspaceHash = crypto.sha1hash(job.logfile);
-    //   // job.workspaceHash = crypto.createHash('sha1')
-    //   //   .update(job.logfile).digest('hex');
-    //   // job.workspaceHash = this.getWorkspaceHash(
-    //   //   job.modelRunName,
-    //   //   job.argsValues.workspace_dir,
-    //   //   job.argsValues.resultsSuffix
-    //   // );
-    // }
+    if (!job.workspaceHash) {
+      job.workspaceHash = this.getWorkspaceHash(
+        job.modelRunName,
+        job.argsValues.workspace_dir,
+        job.argsValues.resultsSuffix
+      );
+    }
     const isoDate = new Date().toISOString().split('T')[0];
     const localTime = new Date().toTimeString().split(' ')[0];
     job.humanTime = `${isoDate} ${localTime}`;
