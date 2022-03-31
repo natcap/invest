@@ -40,11 +40,11 @@ function mockUISpec(spec) {
 }
 
 function renderInvestTab(job = DEFAULT_JOB) {
-  const jobID = crypto.randomBytes(4).toString('hex');
+  const tabID = crypto.randomBytes(4).toString('hex');
   const { ...utils } = render(
     <InvestTab
       job={job}
-      jobID={jobID}
+      tabID={tabID}
       investSettings={{ nWorkers: '-1', loggingLevel: 'INFO' }}
       saveJob={() => {}}
       updateJobProperties={() => {}}
