@@ -10,7 +10,7 @@ import ProgressBar from 'react-bootstrap/ProgressBar';
 import Table from 'react-bootstrap/Table';
 
 import Expire from '../Expire';
-import sampledataRegistry from '../../sampledata_registry.json';
+import sampledataRegistry from './sampledata_registry.json';
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
 const logger = window.Workbench.getLogger(__filename.split('/').slice(-1)[0]);
@@ -37,7 +37,7 @@ export class DataDownloadModal extends React.Component {
   }
 
   async componentDidMount() {
-    const tokenURL = await ipcRenderer.invoke(ipcMainChannels.GET_RELEASE_TOKEN);
+    const tokenURL = await ipcRenderer.invoke(ipcMainChannels.GET_STORAGE_TOKEN);
     const baseURL = tokenURL || BASE_URL;
     const linksArray = [];
     const modelCheckBoxState = {};

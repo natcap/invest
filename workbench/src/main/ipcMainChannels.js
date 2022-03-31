@@ -10,6 +10,6 @@ export const ipcMainChannels = {
   SET_LANGUAGE: 'set-language',
   GETTEXT: 'gettext',
   GET_N_CPUS: 'get-n-cpus',
-  GET_RELEASE_TOKEN: 'get-release-token',
+  GET_STORAGE_TOKEN: 'get-storage-token',
   IS_DEV_MODE: 'is-dev-mode',
 };

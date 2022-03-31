@@ -28,6 +28,10 @@ const config = {
       from: '../dist/invest',
       to: 'invest',
     },
+    {
+      from: 'resources/storage_token.txt',
+      to: 'storage_token.txt'
+    },
   ],
   appId: APP_ID,
   productName: PRODUCT_NAME,

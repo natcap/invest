@@ -20,7 +20,7 @@ import setupDownloadHandlers from './setupDownloadHandlers';
 import setupDialogs from './setupDialogs';
 import setupContextMenu from './setupContextMenu';
 import { setupCheckFirstRun } from './setupCheckFirstRun';
-import { setupCheckReleaseToken } from './setupCheckReleaseToken';
+import { setupCheckStorageToken } from './setupCheckStorageToken';
 import {
   setupInvestRunHandlers,
   setupInvestLogReaderHandler
@@ -62,7 +62,7 @@ export const createWindow = async () => {
   createPythonFlaskProcess(investExe);
   setupDialogs();
   setupCheckFirstRun();
-  setupCheckReleaseToken();
+  setupCheckStorageToken();
   await getFlaskIsReady();
 
   // Create the browser window.

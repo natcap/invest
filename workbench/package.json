@@ -13,7 +13,8 @@
     "postinstall": "electron-builder install-app-deps",
     "dev": "node ./scripts/clean-build-dir.js && babel src -d build --verbose --config-file ./babel.config.js --copy-files --ignore **/__mocks__/* --no-copy-ignored --watch -s both",
     "build": "node ./scripts/clean-build-dir.js && babel src -d build --verbose --config-file ./babel.config.js --copy-files --ignore **/__mocks__/* --no-copy-ignored",
-    "dist": "cross-env DEBUG=electron-builder electron-builder build --config electron-builder-config.js"
+    "token": "cd .. && make jprint-DATA_BASE_URL > workbench/resources/storage_token.txt",
+    "dist": "yarn run token && cross-env DEBUG=electron-builder electron-builder build --config electron-builder-config.js"
   },
   "jest": {
     "verbose": true,
