@@ -37,15 +37,29 @@ export class DataDownloadModal extends React.Component {
   }
 
   async componentDidMount() {
+    const registry = JSON.parse(JSON.stringify(sampledataRegistry));
     const tokenURL = await ipcRenderer.invoke(ipcMainChannels.GET_STORAGE_TOKEN);
     const baseURL = tokenURL || BASE_URL;
+    let filesizes;
+    try {
+      const response = await window.fetch(`${baseURL}/registry.json`, { method: 'get' });
+      filesizes = response.json();
+    } catch (error) {
+      logger.info(error);
+    }
+
     const linksArray = [];
     const modelCheckBoxState = {};
-    Object.entries(sampledataRegistry)
-      .forEach(([modelName, data]) => {
-        linksArray.push(`${baseURL}/${data.filename}`);
-        modelCheckBoxState[modelName] = true;
-      });
+    Object.entries(registry).forEach(([modelName, data]) => {
+      linksArray.push(`${baseURL}/${data.filename}`);
+      modelCheckBoxState[modelName] = true;
+      try {
+        registry.filesize = filesizes[data.filename];
+      } catch {
+        registry.filesize = DEFAULT_FILESIZE;
+      }
+    });
+
     this.setState({
       allLinksArray: linksArray,
       selectedLinksArray: linksArray,
