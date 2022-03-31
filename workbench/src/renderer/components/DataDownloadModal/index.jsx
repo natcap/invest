@@ -10,9 +10,17 @@ import ProgressBar from 'react-bootstrap/ProgressBar';
 import Table from 'react-bootstrap/Table';
 
 import Expire from '../Expire';
+import sampledataRegistry from '../../sampledata_registry.json';
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
 const logger = window.Workbench.getLogger(__filename.split('/').slice(-1)[0]);
+
+const BASE_URL = "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.10.2/data";
+const DEFAULT_FILESIZE = 0;
+
+function makeURL(filename) {
+  return `${BASE_URL}/${filename}`;
+}
 
 /** Render a dialog with a form for configuring global invest settings */
 export class DataDownloadModal extends React.Component {
@@ -32,18 +40,11 @@ export class DataDownloadModal extends React.Component {
   }
 
   async componentDidMount() {
-    let sampledataRegistry;
-    try {
-      sampledataRegistry = await import('../../sampledata_registry_production.json');
-    } catch {
-      sampledataRegistry = await import('../../sampledata_registry.json');
-    }
-    delete sampledataRegistry.default; // the default property was added by import
     const linksArray = [];
     const dataListCheckBoxes = {};
     Object.entries(sampledataRegistry)
       .forEach(([modelName, data]) => {
-        linksArray.push(data.url);
+        linksArray.push(makeURL(data.filename));
         dataListCheckBoxes[modelName] = true;
       });
     this.setState({
@@ -63,6 +64,7 @@ export class DataDownloadModal extends React.Component {
       { properties: ['openDirectory'] }
     );
     if (data.filePaths.length) {
+      console.log(this.state.selectedLinksArray)
       ipcRenderer.send(
         ipcMainChannels.DOWNLOAD_URL,
         this.state.selectedLinksArray,
@@ -102,7 +104,8 @@ export class DataDownloadModal extends React.Component {
       dataListCheckBoxes,
       sampledataRegistry,
     } = this.state;
-    const { url } = sampledataRegistry[modelName];
+    const { filename } = sampledataRegistry[modelName];
+    const url = makeURL(filename);
     if (event.currentTarget.checked) {
       selectedLinksArray.push(url);
       dataListCheckBoxes[modelName] = true;
@@ -130,9 +133,8 @@ export class DataDownloadModal extends React.Component {
     const DatasetCheckboxRows = [];
     Object.keys(dataListCheckBoxes)
       .forEach((modelName) => {
-        const filesize = parseFloat(
-          `${sampledataRegistry[modelName].filesize / 1000000}`
-        ).toFixed(2) + ' MB';
+        const filesize = parseFloat(sampledataRegistry[modelName]) || DEFAULT_FILESIZE;
+        const filesizeStr = `${(filesize / 1000000).toFixed(2)} MB`;
         const labelSuffix = sampledataRegistry[modelName].labelSuffix || '';
         DatasetCheckboxRows.push(
           <tr key={modelName}>
@@ -154,7 +156,7 @@ export class DataDownloadModal extends React.Component {
               </Form.Check>
             </td>
             <td><em>{labelSuffix}</em></td>
-            <td>{filesize}</td>
+            <td>{filesizeStr}</td>
           </tr>
         );
       });
