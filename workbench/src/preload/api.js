@@ -26,7 +26,7 @@ export default {
   _: ipcRenderer.sendSync.bind(null, ipcMainChannels.GETTEXT),
   getLogger: getLogger,
   crypto: {
-    createHash: (algorithm) => crypto.createHash(algorithm)
+    sha1hash: (data) => crypto.createHash('sha1').update(data).digest('hex'),
   },
   electron: {
     ipcRenderer: {
