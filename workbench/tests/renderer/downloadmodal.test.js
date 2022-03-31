@@ -10,7 +10,7 @@ import {
   DataDownloadModal,
   DownloadProgressBar
 } from '../../src/renderer/components/DataDownloadModal';
-import sampledata_registry from '../../src/renderer/sampledata_registry.json';
+import sampledata_registry from '../../src/renderer/components/DataDownloadModal/sampledata_registry.json';
 import { getInvestModelNames } from '../../src/renderer/server_requests';
 import App from '../../src/renderer/app';
 import {
@@ -96,8 +96,6 @@ describe('Sample Data Download Form', () => {
   });
 
   test('Checkbox list matches the sampledata registry', async () => {
-    // The registry itself is validated during the build process
-    // by the script called by `npm run fetch-invest`.
     const {
       getByLabelText,
       findAllByRole,
