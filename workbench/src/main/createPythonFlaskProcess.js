@@ -1,4 +1,4 @@
-import { spawn } from 'child_process';
+import { spawn, exec } from 'child_process';
 
 import fetch from 'node-fetch';
 
@@ -11,7 +11,7 @@ const HOSTNAME = 'http://localhost';
  * Spawn a child process running the Python Flask app.
  *
  * @param  {string} investExe - path to executeable that launches flask app.
- * @returns {undefined}
+ * @returns {number} - the process id that can be used to kill the process.
  */
 export function createPythonFlaskProcess(investExe) {
   // TODO: starting `invest serve` without any python logging
@@ -49,6 +49,8 @@ export function createPythonFlaskProcess(investExe) {
   pythonServerProcess.on('disconnect', () => {
     logger.debug(`Flask process disconnected`);
   });
+
+  return pythonServerProcess.pid;
 }
 
 /** Find out if the Flask server is online, waiting until it is.
@@ -81,17 +83,16 @@ export function getFlaskIsReady({ i = 0, retries = 21 } = {}) {
 }
 
 /**
- * Request the shutdown of the Flask app
+ * Kill the process running the Flask app
  *
- * @returns {Promise} resolves undefined
+ * @param {number} pid - the process id
+ * @returns {undefined}
  */
-export function shutdownPythonProcess() {
-  return (
-    fetch(`http://localhost:${process.env.PORT}/shutdown`, {
-      method: 'get',
-    })
-      .then((response) => response.text())
-      .then((text) => { logger.debug(text); })
-      .catch((error) => { logger.error(error.stack); })
-  );
+export function shutdownPythonProcess(pid) {
+  if (process.platform !== 'win32') {
+    // the '-' prefix on pid sends signal to children as well
+    process.kill(-pid, 'SIGTERM');
+  } else {
+    exec(`taskkill /pid ${pid} /t /f`);
+  }
 }
