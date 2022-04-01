@@ -15,7 +15,7 @@ import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
 const logger = window.Workbench.getLogger(__filename.split('/').slice(-1)[0]);
 
-const BASE_URL = "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.10.2/data";
+const BASE_URL = 'https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.10.2/data';
 const DEFAULT_FILESIZE = 0;
 
 /** Render a dialog with a form for configuring global invest settings */
@@ -43,7 +43,7 @@ export class DataDownloadModal extends React.Component {
     let filesizes;
     try {
       const response = await window.fetch(`${baseURL}/registry.json`, { method: 'get' });
-      filesizes = response.json();
+      filesizes = await response.json();
     } catch (error) {
       logger.info(error);
     }
@@ -54,9 +54,9 @@ export class DataDownloadModal extends React.Component {
       linksArray.push(`${baseURL}/${data.filename}`);
       modelCheckBoxState[modelName] = true;
       try {
-        registry.filesize = filesizes[data.filename];
+        registry[modelName].filesize = filesizes[data.filename];
       } catch {
-        registry.filesize = DEFAULT_FILESIZE;
+        registry[modelName].filesize = DEFAULT_FILESIZE;
       }
     });
 
@@ -64,7 +64,7 @@ export class DataDownloadModal extends React.Component {
       allLinksArray: linksArray,
       selectedLinksArray: linksArray,
       modelCheckBoxState: modelCheckBoxState,
-      sampledataRegistry: sampledataRegistry,
+      sampledataRegistry: registry,
       baseURL: baseURL,
     });
   }
@@ -146,7 +146,7 @@ export class DataDownloadModal extends React.Component {
     const DatasetCheckboxRows = [];
     Object.keys(modelCheckBoxState)
       .forEach((modelName) => {
-        const filesize = parseFloat(sampledataRegistry[modelName]) || DEFAULT_FILESIZE;
+        const filesize = parseFloat(sampledataRegistry[modelName].filesize);
         const filesizeStr = `${(filesize / 1000000).toFixed(2)} MB`;
         const labelSuffix = sampledataRegistry[modelName].labelSuffix || '';
         DatasetCheckboxRows.push(
