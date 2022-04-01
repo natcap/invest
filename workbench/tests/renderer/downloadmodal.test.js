@@ -19,6 +19,7 @@ import {
 } from '../../src/renderer/components/SettingsModal/SettingsStorage';
 import setupDownloadHandlers from '../../src/main/setupDownloadHandlers';
 import { removeIpcMainListeners } from '../../src/main/main';
+import { ipcMainChannels } from '../../src/main/ipcMainChannels';
 
 jest.mock('../../src/renderer/server_requests');
 
@@ -165,7 +166,12 @@ describe('Integration tests with main process', () => {
     const dialogData = {
       filePaths: ['foo/directory'],
     };
-    ipcRenderer.invoke.mockResolvedValue(dialogData);
+    ipcRenderer.invoke.mockImplementation((channel, options) => {
+      if (channel === ipcMainChannels.SHOW_OPEN_DIALOG) {
+        return Promise.resolve(dialogData);
+      }
+      return Promise.resolve(undefined);
+    });
 
     const {
       findByRole,

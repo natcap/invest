@@ -39,13 +39,15 @@ export class DataDownloadModal extends React.Component {
   async componentDidMount() {
     const registry = JSON.parse(JSON.stringify(sampledataRegistry));
     const tokenURL = await ipcRenderer.invoke(ipcMainChannels.GET_STORAGE_TOKEN);
+    console.log(tokenURL)
     const baseURL = tokenURL || BASE_URL;
     let filesizes;
     try {
       const response = await window.fetch(`${baseURL}/registry.json`, { method: 'get' });
+      // console.log(response)
       filesizes = await response.json();
     } catch (error) {
-      logger.info(error);
+      logger.debug(error);
     }
 
     const linksArray = [];
