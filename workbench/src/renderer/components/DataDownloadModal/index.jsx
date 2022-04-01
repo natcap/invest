@@ -148,7 +148,7 @@ export class DataDownloadModal extends React.Component {
       .forEach((modelName) => {
         const filesize = parseFloat(sampledataRegistry[modelName].filesize);
         const filesizeStr = `${(filesize / 1000000).toFixed(2)} MB`;
-        const labelSuffix = sampledataRegistry[modelName].labelSuffix || '';
+        const note = sampledataRegistry[modelName].note || '';
         DatasetCheckboxRows.push(
           <tr key={modelName}>
             <td>
@@ -168,7 +168,7 @@ export class DataDownloadModal extends React.Component {
                 </Form.Check.Label>
               </Form.Check>
             </td>
-            <td><em>{labelSuffix}</em></td>
+            <td><em>{note}</em></td>
             <td>{filesizeStr}</td>
           </tr>
         );

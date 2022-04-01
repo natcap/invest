@@ -10,21 +10,21 @@
   },
   "Coastal Vulnerability": {
     "filename": "CoastalVulnerability.zip",
-    "labelSuffix": "(recommended to run model)"
+    "note": "(recommended to run model)"
   },
   "Crop Pollination": {
     "filename": "pollination.zip"
   },
   "Crop Production": {
     "filename": "CropProduction.zip",
-    "labelSuffix": "(required to run model)"
+    "note": "(required to run model)"
   },
   "DelineateIt": {
     "filename": "DelineateIt.zip"
   },
   "Forest Carbon Edge Effect": {
     "filename": "forest_carbon_edge_effect.zip",
-    "labelSuffix": "(required to run model)"
+    "note": "(required to run model)"
   },
   "GLOBIO": {
     "filename": "globio.zip"
@@ -67,14 +67,14 @@
   },
   "Wave Energy Production": {
     "filename": "WaveEnergy.zip",
-    "labelSuffix": "(required to run model)"
+    "note": "(required to run model)"
   },
   "Wind Energy Production": {
     "filename": "WindEnergy.zip",
-    "labelSuffix": "(required to run model)"
+    "note": "(required to run model)"
   },
   "Global DEM & Landmass Polygon": {
     "filename": "Base_Data.zip",
-    "labelSuffix": "(required for Wind & Wave Energy)"
+    "note": "(required for Wind & Wave Energy)"
   }
 }
