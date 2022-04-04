@@ -139,6 +139,9 @@ afterAll(async () => {
   rimraf(TMP_DIR, (error) => { if (error) { throw error; } });
   ELECTRON_PROCESS.removeAllListeners();
   ELECTRON_PROCESS.kill();
+  // make sure jest does not exit before the subprocess exits
+  // otherwise jest complains about open handles and never exits.
+  await new Promise((resolve) => setTimeout(resolve, 1000));
 });
 
 test('Run a real invest model', async () => {
