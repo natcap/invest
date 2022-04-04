@@ -39,8 +39,9 @@ beforeAll(async () => {
   await getFlaskIsReady({ retries: 201 });
 });
 
-afterAll(() => {
+afterAll(async () => {
   shutdownPythonProcess(flaskPID);
+  await new Promise((resolve) => setTimeout(resolve, 5000));
 });
 
 describe('requests to flask endpoints', () => {

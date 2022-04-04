@@ -89,6 +89,7 @@ export function getFlaskIsReady({ i = 0, retries = 21 } = {}) {
  * @returns {undefined}
  */
 export function shutdownPythonProcess(pid) {
+  // builtin kill() method on a nodejs ChildProcess doesn't work on windows.
   try {
     if (process.platform !== 'win32') {
       // the '-' prefix on pid sends signal to children as well
