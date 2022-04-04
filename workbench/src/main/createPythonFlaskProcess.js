@@ -89,10 +89,15 @@ export function getFlaskIsReady({ i = 0, retries = 21 } = {}) {
  * @returns {undefined}
  */
 export function shutdownPythonProcess(pid) {
-  if (process.platform !== 'win32') {
-    // the '-' prefix on pid sends signal to children as well
-    process.kill(-pid, 'SIGTERM');
-  } else {
-    exec(`taskkill /pid ${pid} /t /f`);
+  try {
+    if (process.platform !== 'win32') {
+      // the '-' prefix on pid sends signal to children as well
+      process.kill(-pid, 'SIGTERM');
+    } else {
+      exec(`taskkill /pid ${pid} /t /f`);
+    }
+  } catch (error) {
+    // if the process was already killed by some other means
+    logger.debug(error);
   }
 }
