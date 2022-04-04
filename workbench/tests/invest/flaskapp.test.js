@@ -26,11 +26,11 @@ if (!process.env.PORT) {
 jest.setTimeout(250000); // This test is slow in CI
 global.window.fetch = fetch;
 
-let flaskPID;
+let flaskSubprocess;
 beforeAll(async () => {
   const isDevMode = true; // otherwise need to mock process.resourcesPath
   const investExe = findInvestBinaries(isDevMode);
-  flaskPID = createPythonFlaskProcess(investExe);
+  flaskSubprocess = createPythonFlaskProcess(investExe);
   // In the CI the flask app takes more than 10x as long to startup.
   // Especially so on macos.
   // So, allowing many retries, especially because the error
@@ -40,7 +40,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  shutdownPythonProcess(flaskPID);
+  shutdownPythonProcess(flaskSubprocess);
   await new Promise((resolve) => setTimeout(resolve, 5000));
 });
 

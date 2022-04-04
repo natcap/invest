@@ -11,7 +11,7 @@ const HOSTNAME = 'http://localhost';
  * Spawn a child process running the Python Flask app.
  *
  * @param  {string} investExe - path to executeable that launches flask app.
- * @returns {number} - the process id that can be used to kill the process.
+ * @returns {ChildProcess} - a reference to the subprocess.
  */
 export function createPythonFlaskProcess(investExe) {
   // TODO: starting `invest serve` without any python logging
@@ -50,7 +50,7 @@ export function createPythonFlaskProcess(investExe) {
     logger.debug(`Flask process disconnected`);
   });
 
-  return pythonServerProcess.pid;
+  return pythonServerProcess;
 }
 
 /** Find out if the Flask server is online, waiting until it is.
@@ -85,16 +85,16 @@ export function getFlaskIsReady({ i = 0, retries = 21 } = {}) {
 /**
  * Kill the process running the Flask app
  *
- * @param {number} pid - the process id
+ * @param {ChildProcess} subprocess - such as created by child_process.spawn
  * @returns {undefined}
  */
-export function shutdownPythonProcess(pid) {
+export function shutdownPythonProcess(subprocess) {
   // builtin kill() method on a nodejs ChildProcess doesn't work on windows.
   try {
     if (process.platform !== 'win32') {
-      // the '-' prefix on pid sends signal to children as well
-      process.kill(-pid, 'SIGTERM');
+      subprocess.kill();
     } else {
+      const { pid } = subprocess;
       exec(`taskkill /pid ${pid} /t /f`);
     }
   } catch (error) {

@@ -39,7 +39,7 @@ process.env.PORT = '56789';
 // be closed automatically when the JavaScript object is garbage collected.
 let mainWindow;
 let splashScreen;
-let flaskPID; // pid for subprocess running flask
+let flaskSubprocess;
 
 export function destroyWindow() {
   mainWindow = null;
@@ -59,7 +59,7 @@ export const createWindow = async () => {
   });
   splashScreen.loadURL(`file://${__dirname}/../static/splash.html`);
   const investExe = findInvestBinaries(ELECTRON_DEV_MODE);
-  flaskPID = createPythonFlaskProcess(investExe);
+  flaskSubprocess = createPythonFlaskProcess(investExe);
   setupDialogs();
   setupCheckFirstRun();
   await getFlaskIsReady();
@@ -179,7 +179,7 @@ export function main() {
     event.preventDefault();
     shuttingDown = true;
     removeIpcMainListeners();
-    shutdownPythonProcess(flaskPID);
+    shutdownPythonProcess(flaskSubprocess);
     app.quit();
   });
 }
