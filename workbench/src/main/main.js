@@ -179,7 +179,7 @@ export function main() {
     event.preventDefault();
     shuttingDown = true;
     removeIpcMainListeners();
-    shutdownPythonProcess(flaskSubprocess);
+    await shutdownPythonProcess(flaskSubprocess);
     app.quit();
   });
 }

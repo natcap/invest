@@ -86,9 +86,9 @@ export function getFlaskIsReady({ i = 0, retries = 21 } = {}) {
  * Kill the process running the Flask app
  *
  * @param {ChildProcess} subprocess - such as created by child_process.spawn
- * @returns {undefined}
+ * @returns {Promise}
  */
-export function shutdownPythonProcess(subprocess) {
+export async function shutdownPythonProcess(subprocess) {
   // builtin kill() method on a nodejs ChildProcess doesn't work on windows.
   try {
     if (process.platform !== 'win32') {
@@ -101,4 +101,20 @@ export function shutdownPythonProcess(subprocess) {
     // if the process was already killed by some other means
     logger.debug(error);
   }
+
+  // If we return too quickly, it seems the electron app is allowed
+  // to quit before the subprocess is killed, and the subprocess remains
+  // open. Here we poll a flask endpoint and resolve only when it
+  // gives ECONNREFUSED.
+  return fetch(`${HOSTNAME}:${process.env.PORT}/ready`, {
+    method: 'get',
+  })
+    .then(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      return shutdownPythonProcess(subprocess);
+    })
+    .catch(() => {
+      logger.debug('flask server is closed');
+      return Promise.resolve();
+    });
 }
