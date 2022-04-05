@@ -40,7 +40,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  shutdownPythonProcess(flaskSubprocess);
+  await shutdownPythonProcess(flaskSubprocess);
 });
 
 describe('requests to flask endpoints', () => {
