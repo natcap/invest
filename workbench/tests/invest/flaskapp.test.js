@@ -41,9 +41,6 @@ beforeAll(async () => {
 
 afterAll(async () => {
   shutdownPythonProcess(flaskSubprocess);
-  // make sure jest does not exit before the python process exits
-  // otherwise jest complains about open handles and never exits.
-  await new Promise((resolve) => setTimeout(resolve, 1000));
 });
 
 describe('requests to flask endpoints', () => {
