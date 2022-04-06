@@ -21,7 +21,7 @@ INVALID_BAND_INDEX_MSG = _('Must be between 1 and {maximum}')
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["routedem"].model_title,
     "pyname": MODEL_METADATA["routedem"].pyname,
-    "userguide_html": MODEL_METADATA["routedem"].userguide,
+    "userguide": MODEL_METADATA["routedem"].userguide,
     "args": {
         "workspace_dir": spec_utils.WORKSPACE,
         "results_suffix": spec_utils.SUFFIX,

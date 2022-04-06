@@ -62,7 +62,7 @@ describe('requests to flask endpoints', () => {
 
   test('fetch invest model args spec', async () => {
     const spec = await server_requests.getSpec('carbon');
-    const expectedKeys = ['model_name', 'pyname', 'userguide_html', 'args'];
+    const expectedKeys = ['model_name', 'pyname', 'userguide', 'args'];
     expectedKeys.forEach((key) => {
       expect(spec[key]).not.toBeUndefined();
     });
@@ -195,6 +195,7 @@ describe('Build each model UI from ARGS_SPEC', () => {
         pyModuleName={argsSpec.pyname}
         modelName={argsSpec.model_name}
         argsSpec={argsSpec.args}
+        userguide="foo.html"
         uiSpec={uiSpec}
         argsInitValues={undefined}
         investExecute={() => {}}

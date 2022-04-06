@@ -167,12 +167,16 @@ def format_unit(unit):
 
     # Optionally use a pre-set format for a particular unit
     custom_formats = {
+        u.pixel: 'number of pixels',
+        u.year_AD: '',  # don't need to mention units for a year input
+        u.other: '',    # for inputs that can have any or multiple units
         # For soil erodibility (t*h*ha/(ha*MJ*mm)), by convention the ha's
         # are left on top and bottom and don't cancel out
         # pint always cancels units where it can, so add them back in here
         # this isn't a perfect solution
         # see https://github.com/hgrecco/pint/issues/1364
-        u.t * u.hr / (u.MJ * u.mm): 't · h · ha / (ha · MJ · mm)'
+        u.t * u.hr / (u.MJ * u.mm): 't · h · ha / (ha · MJ · mm)',
+        u.none: 'unitless'
     }
     if unit in custom_formats:
         return custom_formats[unit]
@@ -435,7 +439,7 @@ def describe_arg_from_spec(name, spec):
         units = spec['bands'][1]['units']
     if units:
         units_string = format_unit(units)
-        if units_string and units_string != 'none':
+        if units_string:
             in_parentheses.append(f'units: **{units_string}**')
 
     if spec['type'] == 'vector':
@@ -486,7 +490,9 @@ def describe_arg_from_name(module_name, *arg_keys):
         *arg_keys: one or more strings that are nested arg keys.
 
     Returns:
-        String describing the arg in RST format
+        String describing the arg in RST format. Contains an anchor named
+        <arg_keys[0]>-<arg_keys[1]>...-<arg_keys[n]>
+        where underscores in arg keys are replaced with hyphens.
     """
     # import the specified module (that should have an ARGS_SPEC attribute)
     module = importlib.import_module(module_name)
@@ -506,14 +512,13 @@ def describe_arg_from_name(module_name, *arg_keys):
                 f"{module_name} model's ARGS_SPEC")
 
     # format spec into an RST formatted description string
-    if isinstance(spec, dict):
-        if 'name' in spec:
-            arg_name = capitalize(spec['name'])
-        else:
-            arg_name = arg_keys[-1]
-        rst = '\n\n'.join(describe_arg_from_spec(arg_name, spec))
-    elif isinstance(spec, pint.Unit):
-        rst = format_unit(spec)
+    if 'name' in spec:
+        arg_name = capitalize(spec['name'])
     else:
-        rst = str(spec)
-    return rst
+        arg_name = arg_keys[-1]
+
+    # anchor names cannot contain underscores. sphinx will replace them
+    # automatically, but lets explicitly replace them here
+    anchor_name = '-'.join(arg_keys).replace('_', '-')
+    rst_description = '\n\n'.join(describe_arg_from_spec(arg_name, spec))
+    return f'.. _{anchor_name}:\n\n{rst_description}'

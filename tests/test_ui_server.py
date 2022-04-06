@@ -61,7 +61,7 @@ class EndpointFunctionTests(unittest.TestCase):
         spec = json.loads(response.get_data(as_text=True))
         self.assertEqual(
             set(spec),
-            {'model_name', 'pyname', 'userguide_html',
+            {'model_name', 'pyname', 'userguide',
              'args_with_spatial_overlap', 'args'})
 
     def test_get_invest_validate(self):

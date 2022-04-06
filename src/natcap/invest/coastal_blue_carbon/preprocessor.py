@@ -20,7 +20,7 @@ LOGGER = logging.getLogger(__name__)
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["coastal_blue_carbon_preprocessor"].model_title,
     "pyname": MODEL_METADATA["coastal_blue_carbon_preprocessor"].pyname,
-    "userguide_html": MODEL_METADATA["coastal_blue_carbon_preprocessor"].userguide,
+    "userguide": MODEL_METADATA["coastal_blue_carbon_preprocessor"].userguide,
     "args": {
         "workspace_dir": spec_utils.WORKSPACE,
         "results_suffix": spec_utils.SUFFIX,
@@ -54,7 +54,7 @@ ARGS_SPEC = {
             "columns": {
                 "snapshot_year": {
                     "type": "number",
-                    "units": u.year,
+                    "units": u.year_AD,
                     "about": _("Year to snapshot.")},
                 "raster_path": {
                     "type": "raster",
