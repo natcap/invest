@@ -20,6 +20,7 @@ import setupDownloadHandlers from './setupDownloadHandlers';
 import setupDialogs from './setupDialogs';
 import setupContextMenu from './setupContextMenu';
 import { setupCheckFirstRun } from './setupCheckFirstRun';
+import { setupCheckStorageToken } from './setupCheckStorageToken';
 import {
   setupInvestRunHandlers,
   setupInvestLogReaderHandler
@@ -62,6 +63,7 @@ export const createWindow = async () => {
   flaskSubprocess = createPythonFlaskProcess(investExe);
   setupDialogs();
   setupCheckFirstRun();
+  setupCheckStorageToken();
   await getFlaskIsReady();
 
   // Create the browser window.
