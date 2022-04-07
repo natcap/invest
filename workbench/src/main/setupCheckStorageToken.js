@@ -33,6 +33,6 @@ export function checkStorageToken() {
 
 export function setupCheckStorageToken() {
   ipcMain.handle(
-    ipcMainChannels.GET_STORAGE_TOKEN, () => checkStorageToken()
+    ipcMainChannels.CHECK_STORAGE_TOKEN, () => checkStorageToken()
   );
 }
