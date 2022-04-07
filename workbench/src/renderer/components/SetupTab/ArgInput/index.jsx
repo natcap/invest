@@ -8,7 +8,10 @@ import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
 import InputGroup from 'react-bootstrap/InputGroup';
 import Modal from 'react-bootstrap/Modal';
-import { MdFolderOpen, MdInfo } from 'react-icons/md';
+import { MdFolderOpen, MdInfo, MdOpenInNew } from 'react-icons/md';
+import { shell } from 'electron';
+
+const baseUserguideURL = 'https://storage.googleapis.com/releases.naturalcapitalproject.org/invest-userguide/latest';
 
 /**
  * Filter a message that refers to many spatial inputs' bounding boxes.
@@ -34,38 +37,48 @@ function filterSpatialOverlapFeedback(message, filepath) {
 }
 
 function FormLabel(props) {
+  const {
+    argkey, argname, required, units,
+  } = props;
+
   return (
-    <Form.Label column sm="3" htmlFor={props.argkey}>
+    <Form.Label column sm="3" htmlFor={argkey}>
+      <span id="argname">
+        {argname}
+      </span>
       <span>
-        {props.argname}
-        <em>
-          {
-            (typeof props.required === 'boolean' && !props.required)
-              ? ' (optional)' : ''
-          }
-        </em>
+        {
+          (typeof required === 'boolean' && !required)
+            ? <em> (optional)</em>
+            : <React.Fragment />
+        }
+        {/* display units at the end of the arg name, if applicable */}
+        { (units && units !== 'unitless') ? ` (${units})` : <React.Fragment /> }
       </span>
     </Form.Label>
   );
 }
+
 FormLabel.propTypes = {
   argkey: PropTypes.string.isRequired,
   argname: PropTypes.string.isRequired,
   required: PropTypes.oneOfType(
     [PropTypes.string, PropTypes.bool]
   ),
+  units: PropTypes.string,
 };
 
 function Feedback(props) {
+  const { argkey, argtype, message } = props;
   return (
     // d-block class is needed because of a bootstrap bug
     // https://github.com/twbs/bootstrap/issues/29439
     <Form.Control.Feedback
       className="d-block"
       type="invalid"
-      id={`${props.argkey}-feedback`}
+      id={`${argkey}-feedback`}
     >
-      {`${props.argtype} : ${(props.message)}`}
+      {`${argtype} : ${(message)}`}
     </Form.Control.Feedback>
   );
 }
@@ -78,7 +91,11 @@ Feedback.defaultProps = {
   message: '',
 };
 
-/** Prevent the default case for onDragOver so onDrop event will be fired. */
+/**
+ * Prevent the default case for onDragOver so onDrop event will be fired.
+ *
+ * @param {Event} event - dragover event
+ */
 function dragOverHandler(event) {
   event.preventDefault();
   event.stopPropagation();
@@ -112,6 +129,7 @@ export default class ArgInput extends React.PureComponent {
     const {
       argkey,
       argSpec,
+      userguide,
       enabled,
       handleBoolChange,
       handleChange,
@@ -124,7 +142,6 @@ export default class ArgInput extends React.PureComponent {
       value,
     } = this.props;
     let { validationMessage } = this.props;
-    let Input;
     // Messages with this pattern include validation feedback about
     // multiple inputs, but the whole message is repeated for each input.
     // It's more readable if filtered on the individual input.
@@ -137,198 +154,155 @@ export default class ArgInput extends React.PureComponent {
 
     const className = enabled ? null : 'arg-disable';
 
-    // These types need a text input, and some also need a file browse button
-    if ([
-      'csv', 'vector', 'raster', 'directory', 'file',
-      'freestyle_string', 'number', 'integer', 'percent', 'ratio'
-    ].includes(argSpec.type)) {
-      // These types benefit from more descriptive placeholder text.
-      let placeholderText;
-      switch (argSpec.type) {
-        case 'freestyle_string':
-          placeholderText = _('text');
-          break;
-        case 'percent':
-          placeholderText = _('percent: a number from 0 - 100');
-          break;
-        case 'ratio':
-          placeholderText = _('ratio: a decimal from 0 - 1');
-          break;
-        default:
-          placeholderText = _(argSpec.type);
-      }
-
-      Input = (
-        <Form.Group
-          as={Row}
-          key={argkey}
-          data-testid={`group-${argkey}`}
-          // this grays out the label but doesn't actually disable the field
-          className={className}
-        >
-          <FormLabel
-            argkey={argkey}
-            argname={argSpec.name}
-            required={argSpec.required}
-          />
-          <Col>
-            <InputGroup>
-              <div className="d-flex flex-nowrap w-100">
-                <AboutModal argument={argSpec} />
-                <Form.Control
-                  id={argkey}
-                  name={argkey}
-                  type="text"
-                  placeholder={placeholderText}
-                  value={value || ''} // empty string is handled better than `undefined`
-                  onChange={handleChange}
-                  onFocus={handleFocus}
-                  isValid={enabled && touched && isValid}
-                  isInvalid={enabled && validationMessage}
-                  disabled={!enabled}
-                  onDrop={inputDropHandler}
-                  onDragOver={dragOverHandler}
-                  onDragEnter={dragEnterHandler}
-                  onDragLeave={dragLeavingHandler}
-                />
-                {
-                  ['csv', 'vector', 'raster', 'directory', 'file']
-                    .includes(argSpec.type)
-                    ? ( // add a file selector button
-                      <InputGroup.Append>
-                        <Button
-                          aria-label={`browse for ${argSpec.name}`}
-                          className="ml-2"
-                          id={argkey}
-                          variant="outline-dark"
-                          value={argSpec.type} // dialog will limit options accordingly
-                          name={argkey}
-                          onClick={selectFile}
-                          disabled={!enabled}
-                        >
-                          <MdFolderOpen />
-                        </Button>
-                      </InputGroup.Append>
-                    )
-                    : <React.Fragment />
-                }
-              </div>
-              {
-                (validationMessage && touched)
-                  ? (
-                    <Feedback
-                      argkey={argkey}
-                      argtype={argSpec.type}
-                      message={validationMessage}
-                    />
-                  )
-                  : <React.Fragment />
-              }
-            </InputGroup>
-          </Col>
-        </Form.Group>
-      );
-
-    // Radio select for boolean args
-    } else if (argSpec.type === 'boolean') {
-      // The `checked` property does not treat 'undefined' the same as false,
-      // instead React avoids setting the property altogether. Hence, !! to
-      // cast undefined to false.
-      Input = (
-        <Form.Group
-          as={Row}
-          key={argkey}
-          data-testid={`group-${argkey}`}
-          className={className}
-        >
-          <FormLabel
-            argkey={argkey}
-            argname={argSpec.name}
-            required={argSpec.required}
-          />
-          <Col className="text-nowrap">
-            <AboutModal argument={argSpec} />
-            <Form.Check
-              id={argkey}
-              inline
-              type="radio"
-              label="Yes"
-              value="true"
-              checked={!!value} // double bang casts undefined to false
-              onChange={handleBoolChange}
-              name={argkey}
-              disabled={!enabled}
-            />
-            <Form.Check
-              id={argkey}
-              inline
-              type="radio"
-              label="No"
-              value="false"
-              checked={!value} // undefined becomes true, that's okay
-              onChange={handleBoolChange}
-              name={argkey}
-              disabled={!enabled}
-            />
-          </Col>
-        </Form.Group>
-      );
-
-    // Dropdown menus for args with options
-    } else if (argSpec.type === 'option_string') {
-      Input = (
-        <Form.Group
-          as={Row}
-          key={argkey}
-          data-testid={`group-${argkey}`}
-          className={className}
-        >
-          <FormLabel
-            argkey={argkey}
-            argname={argSpec.name}
-            required={argSpec.required}
-          />
-          <Col>
-            <InputGroup>
-              <div className="d-flex flex-nowrap w-auto">
-                <AboutModal argument={argSpec} />
-                <Form.Control
-                  id={argkey}
-                  as="select"
-                  name={argkey}
-                  value={value}
-                  onChange={handleChange}
-                  onFocus={handleChange}
-                  disabled={!enabled}
-                >
-                  {dropdownOptions.map(
-                    (opt) => <option value={opt} key={opt}>{opt}</option>
-                  )}
-                </Form.Control>
-              </div>
-              {
-                (validationMessage && touched)
-                  ? (
-                    <Feedback
-                      argkey={argkey}
-                      argtype={argSpec.type}
-                      message={validationMessage}
-                    />
-                  )
-                  : <React.Fragment />
-              }
-            </InputGroup>
-          </Col>
-        </Form.Group>
+    let feedback = <React.Fragment />;
+    if (validationMessage && touched && argSpec.type !== 'boolean') {
+      feedback = (
+        <Feedback
+          argkey={argkey}
+          argtype={argSpec.type}
+          message={validationMessage}
+        />
       );
     }
-    return Input;
+
+    let fileSelector = <React.Fragment />;
+    if (['csv', 'vector', 'raster', 'directory', 'file'].includes(argSpec.type)) {
+      fileSelector = (
+        <Button
+          aria-label={`browse for ${argSpec.name}`}
+          className="ml-2"
+          id={argkey}
+          variant="outline-dark"
+          value={argSpec.type} // dialog will limit options accordingly
+          name={argkey}
+          onClick={selectFile}
+          disabled={!enabled}
+        >
+          <MdFolderOpen />
+        </Button>
+      );
+    }
+
+    // These types benefit from more descriptive placeholder text.
+    let placeholderText;
+    switch (argSpec.type) {
+      case 'freestyle_string':
+        placeholderText = _('text');
+        break;
+      case 'percent':
+        placeholderText = _('percent: a number from 0 - 100');
+        break;
+      case 'ratio':
+        placeholderText = _('ratio: a decimal from 0 - 1');
+        break;
+      default:
+        placeholderText = _(argSpec.type);
+    }
+
+    let form;
+    if (argSpec.type === 'boolean') {
+      form = (
+        <React.Fragment>
+          <Form.Check
+            id={argkey}
+            inline
+            type="radio"
+            label="Yes"
+            value="true"
+            checked={!!value} // double bang casts undefined to false
+            onChange={handleBoolChange}
+            name={argkey}
+            disabled={!enabled}
+          />
+          <Form.Check
+            id={argkey}
+            inline
+            type="radio"
+            label="No"
+            value="false"
+            checked={!value} // undefined becomes true, that's okay
+            onChange={handleBoolChange}
+            name={argkey}
+            disabled={!enabled}
+          />
+        </React.Fragment>
+      );
+    } else if (argSpec.type === 'option_string') {
+      form = (
+        <Form.Control
+          id={argkey}
+          as="select"
+          name={argkey}
+          value={value}
+          onChange={handleChange}
+          onFocus={handleChange}
+          disabled={!enabled}
+        >
+          {dropdownOptions.map(
+            (opt) => <option value={opt} key={opt}>{opt}</option>
+          )}
+        </Form.Control>
+      );
+    } else {
+      form = (
+        <React.Fragment>
+          <Form.Control
+            id={argkey}
+            name={argkey}
+            type="text"
+            placeholder={placeholderText}
+            value={value || ''} // empty string is handled better than `undefined`
+            onChange={handleChange}
+            onFocus={handleFocus}
+            isValid={enabled && touched && isValid}
+            isInvalid={enabled && validationMessage}
+            disabled={!enabled}
+            onDrop={inputDropHandler}
+            onDragOver={dragOverHandler}
+            onDragEnter={dragEnterHandler}
+            onDragLeave={dragLeavingHandler}
+          />
+          {fileSelector}
+        </React.Fragment>
+      );
+    }
+
+    return (
+      <Form.Group
+        as={Row}
+        key={argkey}
+        data-testid={`group-${argkey}`}
+        className={className} // this grays out the label but doesn't actually disable the field
+      >
+        <FormLabel
+          argkey={argkey}
+          argname={argSpec.name}
+          required={argSpec.required}
+          units={argSpec.units} // undefined for all types except number
+        />
+        <Col>
+          <InputGroup>
+            <div className="d-flex flex-nowrap w-100">
+              <AboutModal arg={argSpec} userguide={userguide} argkey={argkey} />
+              {form}
+            </div>
+            {feedback}
+          </InputGroup>
+        </Col>
+      </Form.Group>
+    );
   }
 }
 
 ArgInput.propTypes = {
   argkey: PropTypes.string.isRequired,
-  argSpec: PropTypes.object.isRequired,
+  argSpec: PropTypes.shape({
+    name: PropTypes.string.isRequired,
+    type: PropTypes.string.isRequired,
+    required: PropTypes.oneOfType([PropTypes.string, PropTypes.bool]),
+    units: PropTypes.string, // for numbers only
+  }).isRequired,
+  userguide: PropTypes.string.isRequired,
   value: PropTypes.oneOfType([PropTypes.string, PropTypes.bool]),
   touched: PropTypes.bool,
   isValid: PropTypes.bool,
@@ -339,20 +313,31 @@ ArgInput.propTypes = {
   selectFile: PropTypes.func.isRequired,
   enabled: PropTypes.bool.isRequired,
   dropdownOptions: PropTypes.arrayOf(PropTypes.string),
-  inputDropHandler:PropTypes.func.isRequired,
+  inputDropHandler: PropTypes.func.isRequired,
 };
 ArgInput.defaultProps = {
   value: undefined,
   touched: false,
   isValid: undefined,
   validationMessage: '',
+  dropdownOptions: undefined,
 };
+
+/**
+ * Open the target href in the default web browser.
+ *
+ * @param {Event} event - event triggered by a click on the user's guide link
+ */
+function handleClickUsersGuideLink(event) {
+  event.preventDefault();
+  shell.openExternal(event.currentTarget.href);
+}
 
 class AboutModal extends React.PureComponent {
   constructor(props) {
     super(props);
     this.state = {
-      aboutShow: false
+      aboutShow: false,
     };
     this.handleAboutOpen = this.handleAboutOpen.bind(this);
     this.handleAboutClose = this.handleAboutClose.bind(this);
@@ -367,21 +352,38 @@ class AboutModal extends React.PureComponent {
   }
 
   render() {
+    const { userguide, arg, argkey } = this.props;
+    const { aboutShow } = this.state;
+    // create link to users guide entry for this arg
+    // anchor name is the arg name, with underscores replaced with hyphens
+    const userguideURL = `${baseUserguideURL}/${userguide}#${argkey.replace(/_/g, '-')}`;
     return (
       <React.Fragment>
         <Button
-          aria-label={`info about ${this.props.argument.name}`}
+          aria-label={`info about ${arg.name}`}
           className="mr-2"
           onClick={this.handleAboutOpen}
           variant="outline-info"
         >
           <MdInfo />
         </Button>
-        <Modal show={this.state.aboutShow} onHide={this.handleAboutClose}>
+        <Modal show={aboutShow} onHide={this.handleAboutClose}>
           <Modal.Header>
-            <Modal.Title>{this.props.argument.name}</Modal.Title>
-            </Modal.Header>
-          <Modal.Body>{this.props.argument.about}</Modal.Body>
+            <Modal.Title>{arg.name}</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            {arg.about}
+            <br />
+            <a
+              href={userguideURL}
+              title={userguideURL}
+              aria-label="open user guide section for this input in web browser"
+              onClick={handleClickUsersGuideLink}
+            >
+              {_("User's guide entry")}
+              <MdOpenInNew className="mr-1" />
+            </a>
+          </Modal.Body>
         </Modal>
       </React.Fragment>
     );
@@ -389,8 +391,10 @@ class AboutModal extends React.PureComponent {
 }
 
 AboutModal.propTypes = {
-  argument: PropTypes.shape({
+  arg: PropTypes.shape({
     name: PropTypes.string,
     about: PropTypes.string,
   }).isRequired,
+  userguide: PropTypes.string.isRequired,
+  argkey: PropTypes.string.isRequired,
 };

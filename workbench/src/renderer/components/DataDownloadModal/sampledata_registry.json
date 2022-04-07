@@ -1,0 +1,80 @@
+{
+  "Annual Water Yield": {
+    "filename": "Annual_Water_Yield.zip"
+  },
+  "Carbon Storage and Sequestration": {
+    "filename": "Carbon.zip"
+  },
+  "Coastal Blue Carbon": {
+    "filename": "CoastalBlueCarbon.zip"
+  },
+  "Coastal Vulnerability": {
+    "filename": "CoastalVulnerability.zip",
+    "note": "(recommended to run model)"
+  },
+  "Crop Pollination": {
+    "filename": "pollination.zip"
+  },
+  "Crop Production": {
+    "filename": "CropProduction.zip",
+    "note": "(required to run model)"
+  },
+  "DelineateIt": {
+    "filename": "DelineateIt.zip"
+  },
+  "Forest Carbon Edge Effect": {
+    "filename": "forest_carbon_edge_effect.zip",
+    "note": "(required to run model)"
+  },
+  "GLOBIO": {
+    "filename": "globio.zip"
+  },
+  "Habitat Quality": {
+    "filename": "HabitatQuality.zip"
+  },
+  "Habitat Risk Assessment": {
+    "filename": "HabitatRiskAssess.zip"
+  },
+  "Nutrient Delivery Ratio": {
+    "filename": "NDR.zip"
+  },
+  "RouteDEM": {
+    "filename": "RouteDEM.zip"
+  },
+  "Scenario Generator: Proximity Based": {
+    "filename": "scenario_proximity.zip"
+  },
+  "Scenic Quality": {
+    "filename": "ScenicQuality.zip"
+  },
+  "Seasonal Water Yield": {
+    "filename": "Seasonal_Water_Yield.zip"
+  },
+  "Sediment Delivery Ratio": {
+    "filename": "SDR.zip"
+  },
+  "Urban Stormwater Retention": {
+    "filename": "UrbanStormwater.zip"
+  },
+  "Urban Cooling": {
+    "filename": "UrbanCoolingModel.zip"
+  },
+  "Urban Flood Risk Mitigation": {
+    "filename": "UrbanFloodMitigation.zip"
+  },
+  "Visitation: Recreation and Tourism": {
+    "filename": "recreation.zip"
+  },
+  "Wave Energy Production": {
+    "filename": "WaveEnergy.zip",
+    "note": "(required to run model)"
+  },
+  "Wind Energy Production": {
+    "filename": "WindEnergy.zip",
+    "note": "(required to run model)"
+  },
+  "Global DEM & Landmass Polygon": {
+    "filename": "Base_Data.zip",
+    "note": "(required for Wind & Wave Energy)"
+  }
+}

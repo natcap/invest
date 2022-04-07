@@ -10,7 +10,7 @@ GIT_TEST_DATA_REPO_REV      := ac7023d684478485fea89c68f8f4154163541e1d
 
 GIT_UG_REPO                 := https://github.com/natcap/invest.users-guide
 GIT_UG_REPO_PATH            := doc/users-guide
-GIT_UG_REPO_REV             := 53f8eb03396ea2bd8daee167f0bae1243fe325e4
+GIT_UG_REPO_REV             := 1544a629b415311a2ff4e508b583e100f7dc0f21
 
 ENV = "./env"
 ifeq ($(OS),Windows_NT)
@@ -332,7 +332,7 @@ ZIPDIRS = Annual_Water_Yield \
 ZIPTARGETS = $(foreach dirname,$(ZIPDIRS),$(addprefix $(DIST_DATA_DIR)/,$(dirname).zip))
 
 sampledata: $(ZIPTARGETS)
-	$(PYTHON) $(WORKBENCH)/scripts/build_sampledata_registry.py $(DATA_BASE_URL) $(CURDIR)/$(DIST_DATA_DIR)
+	$(PYTHON) scripts/build_sampledata_filesize_registry.py $(CURDIR)/$(DIST_DATA_DIR)
 $(DIST_DATA_DIR)/%.zip: $(DIST_DATA_DIR) $(GIT_SAMPLE_DATA_REPO_PATH)
 	cd $(GIT_SAMPLE_DATA_REPO_PATH); $(BASHLIKE_SHELL_COMMAND) "$(ZIP) -r $(addprefix ../../,$@) $(subst $(DIST_DATA_DIR)/,$(DATADIR),$(subst .zip,,$@))"
 

@@ -158,7 +158,7 @@ OUTPUT_DIR_NAME = 'output'
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["coastal_blue_carbon"].model_title,
     "pyname": MODEL_METADATA["coastal_blue_carbon"].pyname,
-    "userguide_html": MODEL_METADATA["coastal_blue_carbon"].userguide,
+    "userguide": MODEL_METADATA["coastal_blue_carbon"].userguide,
     "args": {
         "workspace_dir": spec_utils.WORKSPACE,
         "results_suffix": spec_utils.SUFFIX,
@@ -168,7 +168,7 @@ ARGS_SPEC = {
             "columns": {
                 "snapshot_year": {
                     "type": "number",
-                    "units": u.year,
+                    "units": u.year_AD,
                     "about": _(
                         "The snapshot year that this row's LULC raster "
                         "represents. Each year in this table must be unique.")
@@ -189,7 +189,7 @@ ARGS_SPEC = {
         },
         "analysis_year": {
             "type": "number",
-            "units": u.year,
+            "units": u.year_AD,
             "required": False,
             "name": _("analysis year"),
             "about": _(
@@ -383,7 +383,7 @@ ARGS_SPEC = {
             "columns": {
                 "year": {
                     "type": "number",
-                    "units": u.year,
+                    "units": u.year_AD,
                     "about": _(
                         "Each year from the snapshot year to analysis year.")},
                 "price": {

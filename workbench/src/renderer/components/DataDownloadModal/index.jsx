@@ -9,10 +9,14 @@ import ProgressBar from 'react-bootstrap/ProgressBar';
 import Table from 'react-bootstrap/Table';
 
 import Expire from '../Expire';
+import sampledataRegistry from './sampledata_registry.json';
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
 const { ipcRenderer } = window.Workbench.electron;
 const logger = window.Workbench.getLogger('DataDownloadModal');
+
+const BASE_URL = 'https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.10.2/data';
+const DEFAULT_FILESIZE = 0;
 
 /** Render a dialog with a form for configuring global invest settings */
 export class DataDownloadModal extends React.Component {
@@ -22,8 +26,9 @@ export class DataDownloadModal extends React.Component {
       allDataCheck: true,
       allLinksArray: [],
       selectedLinksArray: [],
-      dataListCheckBoxes: {},
+      modelCheckBoxState: {},
       sampledataRegistry: null,
+      baseURL: BASE_URL,
     };
 
     this.handleSubmit = this.handleSubmit.bind(this);
@@ -32,25 +37,35 @@ export class DataDownloadModal extends React.Component {
   }
 
   async componentDidMount() {
-    let sampledataRegistry;
+    const registry = JSON.parse(JSON.stringify(sampledataRegistry));
+    const tokenURL = await ipcRenderer.invoke(ipcMainChannels.CHECK_STORAGE_TOKEN);
+    const baseURL = tokenURL || BASE_URL;
+    let filesizes;
     try {
-      sampledataRegistry = await import('../../sampledata_registry_production.json');
-    } catch {
-      sampledataRegistry = await import('../../sampledata_registry.json');
+      const response = await window.fetch(`${baseURL}/registry.json`, { method: 'get' });
+      filesizes = await response.json();
+    } catch (error) {
+      logger.debug(error);
     }
-    delete sampledataRegistry.default; // the default property was added by import
+
     const linksArray = [];
-    const dataListCheckBoxes = {};
-    Object.entries(sampledataRegistry)
-      .forEach(([modelName, data]) => {
-        linksArray.push(data.url);
-        dataListCheckBoxes[modelName] = true;
-      });
+    const modelCheckBoxState = {};
+    Object.entries(registry).forEach(([modelName, data]) => {
+      linksArray.push(`${baseURL}/${data.filename}`);
+      modelCheckBoxState[modelName] = true;
+      try {
+        registry[modelName].filesize = filesizes[data.filename];
+      } catch {
+        registry[modelName].filesize = DEFAULT_FILESIZE;
+      }
+    });
+
     this.setState({
       allLinksArray: linksArray,
       selectedLinksArray: linksArray,
-      dataListCheckBoxes: dataListCheckBoxes,
-      sampledataRegistry: sampledataRegistry,
+      modelCheckBoxState: modelCheckBoxState,
+      sampledataRegistry: registry,
+      baseURL: baseURL,
     });
   }
 
@@ -75,11 +90,11 @@ export class DataDownloadModal extends React.Component {
 
   handleCheckAll(event) {
     const {
-      dataListCheckBoxes,
+      modelCheckBoxState,
       allLinksArray,
     } = this.state;
     const newCheckList = Object.fromEntries(
-      Object.entries(dataListCheckBoxes).map(
+      Object.entries(modelCheckBoxState).map(
         ([k, v]) => [k, event.currentTarget.checked]
       )
     );
@@ -91,7 +106,7 @@ export class DataDownloadModal extends React.Component {
     }
     this.setState({
       allDataCheck: event.currentTarget.checked,
-      dataListCheckBoxes: newCheckList,
+      modelCheckBoxState: newCheckList,
       selectedLinksArray: selectedLinks,
     });
   }
@@ -99,27 +114,28 @@ export class DataDownloadModal extends React.Component {
   handleCheckList(event, modelName) {
     let {
       selectedLinksArray,
-      dataListCheckBoxes,
+      modelCheckBoxState,
       sampledataRegistry,
+      baseURL,
     } = this.state;
-    const { url } = sampledataRegistry[modelName];
+    const url = `${baseURL}/${sampledataRegistry[modelName].filename}`;
     if (event.currentTarget.checked) {
       selectedLinksArray.push(url);
-      dataListCheckBoxes[modelName] = true;
+      modelCheckBoxState[modelName] = true;
     } else {
       selectedLinksArray = selectedLinksArray.filter((val) => val !== url);
-      dataListCheckBoxes[modelName] = false;
+      modelCheckBoxState[modelName] = false;
     }
     this.setState({
       allDataCheck: false,
       selectedLinksArray: selectedLinksArray,
-      dataListCheckBoxes: dataListCheckBoxes,
+      modelCheckBoxState: modelCheckBoxState,
     });
   }
 
   render() {
     const {
-      dataListCheckBoxes,
+      modelCheckBoxState,
       selectedLinksArray,
       sampledataRegistry,
     } = this.state;
@@ -128,12 +144,11 @@ export class DataDownloadModal extends React.Component {
 
     const downloadEnabled = Boolean(selectedLinksArray.length);
     const DatasetCheckboxRows = [];
-    Object.keys(dataListCheckBoxes)
+    Object.keys(modelCheckBoxState)
       .forEach((modelName) => {
-        const filesize = parseFloat(
-          `${sampledataRegistry[modelName].filesize / 1000000}`
-        ).toFixed(2) + ' MB';
-        const labelSuffix = sampledataRegistry[modelName].labelSuffix || '';
+        const filesize = parseFloat(sampledataRegistry[modelName].filesize);
+        const filesizeStr = `${(filesize / 1000000).toFixed(2)} MB`;
+        const note = sampledataRegistry[modelName].note || '';
         DatasetCheckboxRows.push(
           <tr key={modelName}>
             <td>
@@ -143,7 +158,7 @@ export class DataDownloadModal extends React.Component {
               >
                 <Form.Check.Input
                   type="checkbox"
-                  checked={dataListCheckBoxes[modelName]}
+                  checked={modelCheckBoxState[modelName]}
                   onChange={(event) => this.handleCheckList(
                     event, modelName
                   )}
@@ -153,8 +168,8 @@ export class DataDownloadModal extends React.Component {
                 </Form.Check.Label>
               </Form.Check>
             </td>
-            <td><em>{labelSuffix}</em></td>
-            <td>{filesize}</td>
+            <td><em>{note}</em></td>
+            <td>{filesizeStr}</td>
           </tr>
         );
       });

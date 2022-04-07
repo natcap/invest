@@ -20,7 +20,8 @@
     "build-static": "cp -r src/static build/static",
     "build-renderer": "vite --config vite.config.js build",
     "build": "yarn build-renderer && yarn build-main && yarn build-preload && yarn build-static",
-    "dist": "cross-env DEBUG=electron-builder electron-builder build --config electron-builder-config.js"
+    "token": "cd .. && make jprint-DATA_BASE_URL > workbench/resources/storage_token.txt",
+    "dist": "yarn run token && cross-env DEBUG=electron-builder electron-builder build --config electron-builder-config.js"
   },
   "jest": {
     "verbose": true,

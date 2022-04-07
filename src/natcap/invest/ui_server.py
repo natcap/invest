@@ -32,25 +32,10 @@ PYNAME_TO_MODEL_NAME_MAP = {
 }
 
 
-def shutdown_server():
-    """Shutdown the flask server."""
-    func = request.environ.get('werkzeug.server.shutdown')
-    if func is None:
-        raise RuntimeError('Not running with the Werkzeug Server')
-    func()
-
-
 @app.route(f'/{PREFIX}/ready', methods=['GET'])
 def get_is_ready():
     """Returns something simple to confirm the server is open."""
     return 'Flask ready'
-
-
-@app.route(f'/{PREFIX}/shutdown', methods=['GET'])
-def shutdown():
-    """A request to this endpoint shuts down the server."""
-    shutdown_server()
-    return 'Flask server shutting down...'
 
 
 @app.route(f'/{PREFIX}/models', methods=['GET'])

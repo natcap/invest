@@ -71,7 +71,7 @@ export default class InvestTab extends React.Component {
   async componentDidMount() {
     const { job } = this.props;
     const {
-      modelSpec, argsSpec, uiSpec
+      modelSpec, argsSpec, uiSpec,
     } = await investGetSpec(job.modelRunName);
     this.setState({
       modelSpec: modelSpec,
@@ -213,7 +213,8 @@ export default class InvestTab extends React.Component {
       logfile,
       finalTraceback,
     } = this.props.job;
-    const { tabID } = this.props;
+
+    const { tabID, investSettings } = this.props;
 
     // Don't render the model setup & log until data has been fetched.
     if (!modelSpec) {
@@ -238,20 +239,20 @@ export default class InvestTab extends React.Component {
               onSelect={this.switchTabs}
             >
               <Nav.Link eventKey="setup">
-                {_("Setup")}
+                {_('Setup')}
               </Nav.Link>
               <div
                 className="sidebar-setup"
                 id={sidebarSetupElementId}
               />
               <Nav.Link eventKey="log" disabled={logDisabled}>
-                {_("Log")}
+                {_('Log')}
               </Nav.Link>
             </Nav>
             <div className="sidebar-row">
               <ResourcesLinks
                 moduleName={modelRunName}
-                docs={modelSpec.userguide_html}
+                docs={modelSpec.userguide}
               />
             </div>
             <div
@@ -280,15 +281,16 @@ export default class InvestTab extends React.Component {
               >
                 <SetupTab
                   pyModuleName={modelSpec.pyname}
+                  userguide={modelSpec.userguide}
                   modelName={modelRunName}
                   argsSpec={argsSpec}
                   uiSpec={uiSpec}
                   argsInitValues={argsValues}
                   investExecute={this.investExecute}
-                  nWorkers={this.props.investSettings.nWorkers}
+                  nWorkers={investSettings.nWorkers}
                   sidebarSetupElementId={sidebarSetupElementId}
                   sidebarFooterElementId={sidebarFooterElementId}
-                  executeClicked={this.state.executeClicked}
+                  executeClicked={executeClicked}
                 />
               </TabPane>
               <TabPane

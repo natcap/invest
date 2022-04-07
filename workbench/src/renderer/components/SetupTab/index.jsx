@@ -195,7 +195,7 @@ export default class SetupTab extends React.Component {
   insertNWorkers(argsValues) {
     return {
       ...argsValues,
-      n_workers: { value: this.props.nWorkers }
+      n_workers: { value: this.props.nWorkers },
     };
   }
 
@@ -279,7 +279,7 @@ export default class SetupTab extends React.Component {
     if (datastack.module_name === this.props.pyModuleName) {
       this.batchUpdateArgs(datastack.args);
     } else {
-      alert(
+      alert( // eslint-disable-line no-alert
         _(`Datastack/Logfile for ${datastack.model_human_name} does not match this model.`)
       );
     }
@@ -312,7 +312,7 @@ export default class SetupTab extends React.Component {
     if (!argsValues[key].touched) {
       argsValues[key].touched = true;
       this.setState({
-        argsValues: argsValues
+        argsValues: argsValues,
       });
     }
   }
@@ -331,7 +331,7 @@ export default class SetupTab extends React.Component {
     const { argsValues } = this.state;
     argsValues[key].value = value;
     this.setState({
-      argsValues: argsValues
+      argsValues: argsValues,
     }, () => {
       this.debouncedValidate();
       this.callUISpecFunctions();
@@ -380,7 +380,7 @@ export default class SetupTab extends React.Component {
    */
   async investValidate() {
     const { argsSpec, pyModuleName } = this.props;
-    const { argsValues, argsValidation } = this.state;
+    const { argsValues, argsValidation, argsValid } = this.state;
     const keyset = new Set(Object.keys(argsSpec));
     const payload = {
       model_module: pyModuleName,
@@ -425,7 +425,7 @@ export default class SetupTab extends React.Component {
       // It's possible all args were already valid, in which case
       // no validation state has changed and this setState call can
       // be avoided entirely.
-      if (!this.state.argsValid && this._isMounted) {
+      if (!argsValid && this._isMounted) {
         this.setState({
           argsValidation: argsValidation,
           argsValid: true,
@@ -446,6 +446,7 @@ export default class SetupTab extends React.Component {
     if (argsValues) {
       const {
         argsSpec,
+        userguide,
         sidebarSetupElementId,
         sidebarFooterElementId,
         executeClicked,
@@ -476,7 +477,7 @@ export default class SetupTab extends React.Component {
         executeClicked
           ? (
             <span>
-              {_("Running")}
+              {_('Running')}
               <Spinner
                 animation="border"
                 size="sm"
@@ -485,7 +486,7 @@ export default class SetupTab extends React.Component {
               />
             </span>
           )
-          : <span>{_("Run")}</span>
+          : <span>{_('Run')}</span>
       );
       return (
         <Container fluid>
@@ -497,6 +498,7 @@ export default class SetupTab extends React.Component {
               argsEnabled={argsEnabled}
               argsDropdownOptions={argsDropdownOptions}
               argsOrder={uiSpec.order}
+              userguide={userguide}
               updateArgValues={this.updateArgValues}
               updateArgTouched={this.updateArgTouched}
               loadParametersFromFile={this.loadParametersFromFile}
@@ -508,7 +510,7 @@ export default class SetupTab extends React.Component {
               delay={{ show: 250, hide: 400 }}
               overlay={(
                 <Tooltip>
-                  {_("Browse to a datastack (.json, .tgz) or InVEST logfile (.txt)")}
+                  {_('Browse to a datastack (.json, .tgz) or InVEST logfile (.txt)')}
                 </Tooltip>
               )}
             >
@@ -517,7 +519,7 @@ export default class SetupTab extends React.Component {
                 variant="link"
               >
                 <MdFolderOpen className="mr-1" />
-                {_("Load parameters from file")}
+                {_('Load parameters from file')}
               </Button>
             </OverlayTrigger>
             <SaveParametersButtons
@@ -541,12 +543,13 @@ export default class SetupTab extends React.Component {
     }
     // The SetupTab remains disabled in this route, so no need
     // to render anything here.
-    return (<div>{_("No args to see here")}</div>);
+    return (<div>{_('No args to see here')}</div>);
   }
 }
 
 SetupTab.propTypes = {
   pyModuleName: PropTypes.string.isRequired,
+  userguide: PropTypes.string.isRequired,
   modelName: PropTypes.string.isRequired,
   argsSpec: PropTypes.objectOf(
     PropTypes.shape({
@@ -554,8 +557,12 @@ SetupTab.propTypes = {
       type: PropTypes.string,
     })
   ).isRequired,
-  uiSpec: PropTypes.object,
-  argsInitValues: PropTypes.object,
+  uiSpec: PropTypes.shape({
+    order: PropTypes.arrayOf(PropTypes.arrayOf(PropTypes.string)).isRequired,
+    enabledFunctions: PropTypes.objectOf(PropTypes.func),
+    dropdownFunctions: PropTypes.objectOf(PropTypes.func),
+  }).isRequired,
+  argsInitValues: PropTypes.objectOf(PropTypes.string),
   investExecute: PropTypes.func.isRequired,
   nWorkers: PropTypes.string.isRequired,
   sidebarSetupElementId: PropTypes.string.isRequired,

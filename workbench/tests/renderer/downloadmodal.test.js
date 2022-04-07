@@ -9,7 +9,7 @@ import {
   DataDownloadModal,
   DownloadProgressBar
 } from '../../src/renderer/components/DataDownloadModal';
-import sampledata_registry from '../../src/renderer/sampledata_registry.json';
+import sampledata_registry from '../../src/renderer/components/DataDownloadModal/sampledata_registry.json';
 import { getInvestModelNames } from '../../src/renderer/server_requests';
 import App from '../../src/renderer/app';
 import {
@@ -18,6 +18,7 @@ import {
 } from '../../src/renderer/components/SettingsModal/SettingsStorage';
 import setupDownloadHandlers from '../../src/main/setupDownloadHandlers';
 import { removeIpcMainListeners } from '../../src/main/main';
+import { ipcMainChannels } from '../../src/main/ipcMainChannels';
 
 jest.mock('../../src/renderer/server_requests');
 
@@ -95,8 +96,6 @@ describe('Sample Data Download Form', () => {
   });
 
   test('Checkbox list matches the sampledata registry', async () => {
-    // The registry itself is validated during the build process
-    // by the script called by `npm run fetch-invest`.
     const {
       getByLabelText,
       findAllByRole,
@@ -167,7 +166,12 @@ describe('Integration tests with main process', () => {
       filePaths: ['foo/directory'],
     };
 
-    ipcRenderer.invoke.mockResolvedValue(dialogData);
+    ipcRenderer.invoke.mockImplementation((channel, options) => {
+      if (channel === ipcMainChannels.SHOW_OPEN_DIALOG) {
+        return Promise.resolve(dialogData);
+      }
+      return Promise.resolve(undefined);
+    });
 
     const {
       findByRole,

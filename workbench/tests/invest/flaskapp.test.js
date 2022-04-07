@@ -19,10 +19,11 @@ import findInvestBinaries from '../../src/main/findInvestBinaries';
 
 jest.setTimeout(250000); // This test is slow in CI
 
+let flaskSubprocess;
 beforeAll(async () => {
   const isDevMode = true; // otherwise need to mock process.resourcesPath
   const investExe = findInvestBinaries(isDevMode);
-  createPythonFlaskProcess(investExe);
+  flaskSubprocess = createPythonFlaskProcess(investExe);
   // In the CI the flask app takes more than 10x as long to startup.
   // Especially so on macos.
   // So, allowing many retries, especially because the error
@@ -32,7 +33,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await shutdownPythonProcess();
+  await shutdownPythonProcess(flaskSubprocess);
 });
 
 describe('requests to flask endpoints', () => {
@@ -54,7 +55,7 @@ describe('requests to flask endpoints', () => {
 
   test('fetch invest model args spec', async () => {
     const spec = await server_requests.getSpec('carbon');
-    const expectedKeys = ['model_name', 'pyname', 'userguide_html', 'args'];
+    const expectedKeys = ['model_name', 'pyname', 'userguide', 'args'];
     expectedKeys.forEach((key) => {
       expect(spec[key]).not.toBeUndefined();
     });
@@ -187,6 +188,7 @@ describe('Build each model UI from ARGS_SPEC', () => {
         pyModuleName={argsSpec.pyname}
         modelName={argsSpec.model_name}
         argsSpec={argsSpec.args}
+        userguide="foo.html"
         uiSpec={uiSpec}
         argsInitValues={undefined}
         investExecute={() => {}}
