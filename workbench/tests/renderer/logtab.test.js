@@ -17,11 +17,11 @@ import markupMessage from '../../src/main/investLogMarkup';
 import { removeIpcMainListeners } from '../../src/main/main';
 
 function renderLogTab(logfilePath) {
-  const jobID = crypto.randomBytes(4).toString('hex');
+  const tabID = crypto.randomBytes(4).toString('hex');
   const { ...utils } = render(
     <LogTab
       executeClicked={false}
-      jobID={jobID}
+      tabID={tabID}
       logfile={logfilePath}
     />
   );
