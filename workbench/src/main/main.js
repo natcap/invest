@@ -81,8 +81,6 @@ export const createWindow = async () => {
     minWidth: 800,
     show: true, // see comment in 'ready-to-show' listener
     webPreferences: {
-      contextIsolation: true,
-      nodeIntegration: false,
       preload: path.join(__dirname, '../preload/preload.js'),
       defaultEncoding: 'UTF-8',
     },
