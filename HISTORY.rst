@@ -37,6 +37,8 @@ Unreleased Changes
 * General
     * Updating the ``pyinstaller`` requirement to ``>=4.10`` to support the new
       ``universal2`` wheel architecture offered by ``scipy>=1.8.0``.
+    * Require ``GDAL<3.4.2`` as a temporary fix until we understand the new
+      ``gdal.Warp`` behavior (https://github.com/OSGeo/gdal/issues/5578)
 * RouteDEM
     * Rename the arg ``calculate_downstream_distance`` to
       ``calculate_downslope_distance``. This is meant to clarify that it
