@@ -23,14 +23,13 @@ dependencies:
 - Rtree==0.9.4
 - setuptools>=8.0
 - Shapely>=1.7.1,<2.0.0
-- sphinx==3.3.1
+- sphinx==4.5.0
 - sphinx-intl
 - scipy>=1.6.0
 - taskgraph[niced_processes]>=0.10.2
 - virtualenv>=12.0.1
 - wheel>=0.27.0
 - xlrd>=1.2.0
-- jinja2<3.1
 - pint
 - xlwt
 - pip:
