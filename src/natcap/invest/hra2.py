@@ -812,7 +812,7 @@ def execute(args):
             'target_info_json': aoi_subregions_json,
         },
         task_name='Rasterize AOI regions',
-        dependent_task_list=[aoi_simplify_task],
+        dependent_task_list=[aoi_simplify_task, all_habitats_mask_task],
         target_path_list=[aoi_subregions_json]
     )
 
