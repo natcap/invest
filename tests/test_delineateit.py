@@ -539,8 +539,12 @@ class DelineateItTests(unittest.TestCase):
                 skip_invalid_geometry=True
             )
         self.assertEqual(len(log_records), 6)
-        self.assertIn('named "ws_id". Field values will be overwritten',
-                      log_records[0].msg)
+        self.assertEqual(
+            log_records[0].msg,
+            delineateit._WS_ID_OVERWRITE_WARNING.format(
+                layer_name='outflow_layer',
+                vector_basename=os.path.basename(outflow_vector_path))
+        )
 
         # I only expect to see 1 feature in the output layer, as there's only 1
         # valid geometry.

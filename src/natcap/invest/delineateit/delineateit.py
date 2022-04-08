@@ -111,6 +111,9 @@ _OUTPUT_FILES = {
     'watersheds': 'watersheds.gpkg',
     'pour_points': 'pour_points.gpkg'
 }
+_WS_ID_OVERWRITE_WARNING = (
+    'Layer {layer_name} of vector {vector_basename} already has a feature '
+    'named "ws_id". Field values will be overwritten.')
 
 
 def execute(args):
@@ -386,10 +389,9 @@ def preprocess_geometries(outlet_vector_path, dem_path, target_vector_path,
     outflow_vector = gdal.OpenEx(outlet_vector_path, gdal.OF_VECTOR)
     outflow_layer = outflow_vector.GetLayer()
     if 'ws_id' in set([field.GetName() for field in outflow_layer.schema]):
-        LOGGER.warning(
-            f'Layer {outflow_layer.GetName()} of vector '
-            f'{os.path.basename(outlet_vector_path)} already has a feature '
-            'named "ws_id". Field values will be overwritten.')
+        LOGGER.warning(_WS_ID_OVERWRITE_WARNING.format(
+            layer_name=outflow_layer.GetName(),
+            vector_basename=os.path.basename(outlet_vector_path)))
     else:
         target_layer.CreateField(ogr.FieldDefn('ws_id', ogr.OFTInteger64))
 
