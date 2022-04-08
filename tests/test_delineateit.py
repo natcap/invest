@@ -94,14 +94,18 @@ class DelineateItTests(unittest.TestCase):
             2: 474300.0,
             3: 3247200.0,
         }
-        areas_by_id = {}
+        expected_ws_ids_by_id = {
+            1: 2,
+            2: 1,
+            3: 0
+        }
         for feature in layer:
             geom = feature.GetGeometryRef()
-            areas_by_id[feature.GetField('id')] = geom.Area()
-
-        for id_key, expected_area in expected_areas_by_id.items():
-            self.assertAlmostEqual(expected_area, areas_by_id[id_key],
-                                   delta=1e-4)
+            id_value = feature.GetField('id')
+            self.assertEqual(
+                feature.GetField('ws_id'), expected_ws_ids_by_id[id_value])
+            self.assertAlmostEqual(
+                geom.Area(), expected_areas_by_id[id_value], delta=1e-4)
 
     def test_delineateit_willamette_detect_pour_points(self):
         """DelineateIt: regression testing full run with pour point detection."""
