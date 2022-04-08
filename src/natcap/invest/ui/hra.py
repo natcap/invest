@@ -61,7 +61,7 @@ class HabitatRiskAssessment(model.InVESTModel):
                 "equation. This will determine the numeric output of risk "
                 "for every habitat and stressor overlap area."),
             label='Risk Equation',
-            options=['Multiplicative', 'Euclidean'])
+            options=['multiplicative', 'euclidean'])
         self.add_input(self.risk_eq)
         self.decay_eq = inputs.Dropdown(
             args_key='decay_eq',
