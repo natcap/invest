@@ -34,8 +34,8 @@ dependencies:
 - pint
 - xlwt
 - pip:
-  - pygeoprocessing>=2.3.2 # pip-only
-  - PyInstaller==3.5 # pip-only
+  - pygeoprocessing>=2.3.2  # pip-only
+  - PyInstaller==3.5  # pip-only
   - Pyro4==4.77  # pip-only
   - PySide2!=5.15.0  # pip-only
   - qtawesome  # pip-only
