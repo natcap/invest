@@ -272,7 +272,7 @@ $(INVEST_BINARIES_DIR): | $(DIST_DIR) $(BUILD_DIR)
 # Documentation.
 # API docs are built in build/sphinx and copied to dist/apidocs
 apidocs: $(APIDOCS_TARGET_DIR) $(APIDOCS_ZIP_FILE)
-$(APIDOCS_TARGET_DIR): | $(DIST_DIR) $(APIDOCS_TARGET_DIR)
+$(APIDOCS_TARGET_DIR): | $(DIST_DIR)
 	# -a: always build all files
 	$(PYTHON) -m sphinx -a -b html \
 		-d $(APIDOCS_BUILD_DIR) \
