@@ -240,6 +240,7 @@ class TestSpecUtils(unittest.TestCase):
         out = spec_utils.describe_arg_from_name(
             'natcap.invest.carbon', 'carbon_pools_path', 'columns', 'lucode')
         expected_rst = (
+            '.. carbon-pools-path-columns-lucode:\n\n' +
             '**lucode** (`integer <input_types.html#integer>`__, *required*): ' +
             carbon.ARGS_SPEC['args']['carbon_pools_path']['columns']['lucode']['about']
         )

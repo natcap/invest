@@ -26,17 +26,42 @@ const BASE_ARGS_SPEC = {
     },
   },
 };
+
+/**
+ * Create a base args spec containing one arg of a given type.
+ *
+ * @param {string} type - any invest arg type
+ * @returns {object} - a simple args spec
+ */
+function baseArgsSpec(type) {
+  // make a deep copy so we don't edit the original
+  const spec = JSON.parse(JSON.stringify(BASE_ARGS_SPEC));
+  spec.args.arg.type = type;
+  if (type === 'number') {
+    spec.args.arg.units = 'foo unit';
+  }
+  return spec;
+}
 const UI_SPEC = { order: [Object.keys(BASE_ARGS_SPEC.args)] };
 
+/**
+ * Render a SetupTab component given the necessary specs.
+ *
+ * @param {object} baseSpec - an invest args spec for a model
+ * @param {object} uiSpec - an invest UI spec for the same model
+ * @returns {object} - containing the test utility functions returned by render
+ */
 function renderSetupFromSpec(baseSpec, uiSpec) {
   // some ARGS_SPEC boilerplate that is not under test,
   // but is required by PropType-checking
   const spec = { ...baseSpec };
   if (!spec.modelName) { spec.modelName = 'Eco Model'; }
   if (!spec.pyname) { spec.pyname = 'natcap.invest.dot'; }
+  if (!spec.userguide) { spec.userguide = 'foo.html'; }
   const { ...utils } = render(
     <SetupTab
       pyModuleName={spec.pyname}
+      userguide={spec.userguide}
       modelName={spec.modelName}
       argsSpec={spec.args}
       uiSpec={uiSpec}
@@ -65,14 +90,13 @@ describe('Arguments form input types', () => {
     ['raster'],
     ['file'],
   ])('render a text input & browse button for a %s', async (type) => {
-    const spec = { ...BASE_ARGS_SPEC };
-    spec.args.arg.type = type;
+    const spec = baseArgsSpec(type);
 
     const {
       findByLabelText, findByRole,
     } = renderSetupFromSpec(spec, UI_SPEC);
 
-    const input = await findByLabelText(`${spec.args.arg.name}`);
+    const input = await findByLabelText(RegExp(`^${spec.args.arg.name}`));
     expect(input).toHaveAttribute('type', 'text');
     expect(await findByRole('button', { name: /browse for/ }))
       .toBeInTheDocument();
@@ -80,21 +104,25 @@ describe('Arguments form input types', () => {
 
   test.each([
     ['freestyle_string'],
-    ['number'],
     ['ratio'],
     ['percent'],
     ['integer'],
   ])('render a text input for a %s', async (type) => {
-    const spec = { ...BASE_ARGS_SPEC };
-    spec.args.arg.type = type;
+    const spec = baseArgsSpec(type);
     const { findByLabelText } = renderSetupFromSpec(spec, UI_SPEC);
-    const input = await findByLabelText(`${spec.args.arg.name}`);
+    const input = await findByLabelText(RegExp(`^${spec.args.arg.name}$`));
+    expect(input).toHaveAttribute('type', 'text');
+  });
+
+  test('render a text input with unit label for a number', async () => {
+    const spec = baseArgsSpec('number');
+    const { findByLabelText } = renderSetupFromSpec(spec, UI_SPEC);
+    const input = await findByLabelText(`${spec.args.arg.name} (${spec.args.arg.units})`);
     expect(input).toHaveAttribute('type', 'text');
   });
 
   test('render an unchecked radio button for a boolean', async () => {
-    const spec = { ...BASE_ARGS_SPEC };
-    spec.args.arg.type = 'boolean';
+    const spec = baseArgsSpec('boolean');
     const { findByLabelText } = renderSetupFromSpec(spec, UI_SPEC);
     const input = await findByLabelText(`${spec.args.arg.name}`);
     expect(input).toHaveAttribute('type', 'radio');
@@ -102,8 +130,7 @@ describe('Arguments form input types', () => {
   });
 
   test('render a select input for an option_string dict', async () => {
-    const spec = { ...BASE_ARGS_SPEC };
-    spec.args.arg.type = 'option_string';
+    const spec = baseArgsSpec('option_string');
     spec.args.arg.options = {
       a: 'about a',
       b: 'about b',
@@ -115,8 +142,7 @@ describe('Arguments form input types', () => {
   });
 
   test('render a select input for an option_string list', async () => {
-    const spec = { ...BASE_ARGS_SPEC };
-    spec.args.arg.type = 'option_string';
+    const spec = baseArgsSpec('option_string');
     spec.args.arg.options = ['a', 'b'];
     const { findByLabelText } = renderSetupFromSpec(spec, UI_SPEC);
     const input = await findByLabelText(`${spec.args.arg.name}`);
@@ -125,11 +151,11 @@ describe('Arguments form input types', () => {
   });
 
   test('expect the info dialog contains text about input', async () => {
-    const spec = { ...BASE_ARGS_SPEC };
-    spec.args.arg.type = 'directory';
+    const spec = baseArgsSpec('directory');
     const { findByText, findByRole } = renderSetupFromSpec(spec, UI_SPEC);
     userEvent.click(await findByRole('button', { name: /info about/ }));
     expect(await findByText(spec.args.arg.about)).toBeInTheDocument();
+    await findByRole('link', { name: /user guide/ });
   });
 });
 
@@ -141,8 +167,7 @@ describe('Arguments form interactions', () => {
   });
 
   test('Browse button populates an input', async () => {
-    const spec = { ...BASE_ARGS_SPEC };
-    spec.args.arg.type = 'csv';
+    const spec = baseArgsSpec('csv');
     const {
       findByRole, findByLabelText,
     } = renderSetupFromSpec(spec, UI_SPEC);
@@ -171,8 +196,7 @@ describe('Arguments form interactions', () => {
   });
 
   test('Browse button populates an input - test click on child svg', async () => {
-    const spec = { ...BASE_ARGS_SPEC };
-    spec.args.arg.type = 'csv';
+    const spec = baseArgsSpec('csv');
     const {
       findByRole, findByLabelText,
     } = renderSetupFromSpec(spec, UI_SPEC);
@@ -189,8 +213,7 @@ describe('Arguments form interactions', () => {
   });
 
   test('Change value & get feedback on a required input', async () => {
-    const spec = { ...BASE_ARGS_SPEC };
-    spec.args.arg.type = 'directory';
+    const spec = baseArgsSpec('directory');
     spec.args.arg.required = true;
     const {
       findByText, findByLabelText, queryByText,
@@ -221,12 +244,9 @@ describe('Arguments form interactions', () => {
 
   test('Type fast & confirm validation waits for pause in typing', async () => {
     const spy = jest.spyOn(SetupTab.prototype, 'investValidate');
-    const spec = { ...BASE_ARGS_SPEC };
-    spec.args.arg.type = 'directory';
+    const spec = baseArgsSpec('directory');
     spec.args.arg.required = true;
-    const {
-      findByLabelText
-    } = renderSetupFromSpec(spec, UI_SPEC);
+    const { findByLabelText } = renderSetupFromSpec(spec, UI_SPEC);
 
     const input = await findByLabelText(`${spec.args.arg.name}`);
     spy.mockClear(); // it was already called once on render
@@ -240,12 +260,9 @@ describe('Arguments form interactions', () => {
 
   test('Type slow & confirm validation waits for pause in typing', async () => {
     const spy = jest.spyOn(SetupTab.prototype, 'investValidate');
-    const spec = { ...BASE_ARGS_SPEC };
-    spec.args.arg.type = 'directory';
+    const spec = baseArgsSpec('directory');
     spec.args.arg.required = true;
-    const {
-      findByLabelText
-    } = renderSetupFromSpec(spec, UI_SPEC);
+    const { findByLabelText } = renderSetupFromSpec(spec, UI_SPEC);
 
     const input = await findByLabelText(`${spec.args.arg.name}`);
     spy.mockClear(); // it was already called once on render
@@ -259,14 +276,13 @@ describe('Arguments form interactions', () => {
   });
 
   test('Focus on required input & get validation feedback', async () => {
-    const spec = { ...BASE_ARGS_SPEC };
-    spec.args.arg.type = 'csv';
+    const spec = baseArgsSpec('csv');
     spec.args.arg.required = true;
     const {
       findByText, findByLabelText, queryByText,
     } = renderSetupFromSpec(spec, UI_SPEC);
 
-    const input = await findByLabelText(`${spec.args.arg.name}`);
+    const input = await findByLabelText(spec.args.arg.name);
     expect(input).toHaveClass('is-invalid');
     expect(queryByText(RegExp(VALIDATION_MESSAGE))).toBeNull();
 
@@ -279,8 +295,7 @@ describe('Arguments form interactions', () => {
   });
 
   test('Focus on optional input & get valid display', async () => {
-    const spec = { ...BASE_ARGS_SPEC };
-    spec.args.arg.type = 'csv';
+    const spec = baseArgsSpec('csv');
     spec.args.arg.required = false;
     fetchValidation.mockResolvedValue([]);
     const { findByLabelText } = renderSetupFromSpec(spec, UI_SPEC);
@@ -379,15 +394,15 @@ describe('UI spec functionality', () => {
   });
 
   test('expect dropdown options can be dynamic', async () => {
-    const mockGetVectorColumnNames = ((state) => {
-      // the real getVectorColumnNames returns a Promise
-      return new Promise((resolve) => {
+    // the real getVectorColumnNames returns a Promise
+    const mockGetVectorColumnNames = ((state) => new Promise(
+      (resolve) => {
         if (state.argsValues.arg1.value) {
           resolve(['Field1']);
         }
         resolve([]);
-      });
-    });
+      }
+    ));
     const spec = {
       args: {
         arg1: {
@@ -542,7 +557,7 @@ describe('Misc form validation stuff', () => {
 
     const { findByLabelText } = renderSetupFromSpec(spec, uiSpec);
     const vectorInput = await findByLabelText(spec.args.vector.name);
-    const rasterInput = await findByLabelText(spec.args.raster.name);
+    const rasterInput = await findByLabelText(RegExp(`^${spec.args.raster.name}`));
     userEvent.type(vectorInput, vectorValue);
     userEvent.type(rasterInput, rasterValue);
 
@@ -881,7 +896,7 @@ describe('Form drag-and-drop', () => {
 
     const fileDropEvent = createEvent.drop(setupInput);
     Object.defineProperty(fileDropEvent, 'dataTransfer', {
-      value: { files: [fileValue] }
+      value: { files: [fileValue] },
     });
     fireEvent(setupInput, fileDropEvent);
 

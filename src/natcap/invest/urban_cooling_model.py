@@ -30,7 +30,7 @@ _LOGGING_PERIOD = 5.0
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["urban_cooling_model"].model_title,
     "pyname": MODEL_METADATA["urban_cooling_model"].pyname,
-    "userguide_html": MODEL_METADATA["urban_cooling_model"].userguide,
+    "userguide": MODEL_METADATA["urban_cooling_model"].userguide,
     "args_with_spatial_overlap": {
         "spatial_keys": ["lulc_raster_path", "ref_eto_raster_path",
                          "aoi_vector_path", "building_vector_path"],

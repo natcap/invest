@@ -35,7 +35,7 @@ speedups.enable()
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["wind_energy"].model_title,
     "pyname": MODEL_METADATA["wind_energy"].pyname,
-    "userguide_html": MODEL_METADATA["wind_energy"].userguide,
+    "userguide": MODEL_METADATA["wind_energy"].userguide,
     "args_with_spatial_overlap": {
         "spatial_keys": ['aoi_vector_path', 'bathymetry_path',
                          'land_polygon_vector_path'],
@@ -352,7 +352,7 @@ ARGS_SPEC = {
             "columns": {
                 "year": {
                     "type": "number",
-                    "units": u.year,
+                    "units": u.year_AD,
                     "about": _(
                         "Consecutive years for each year in the lifespan of "
                         "the wind farm. These may be the actual years: 2010, "

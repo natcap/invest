@@ -20,6 +20,7 @@ import setupDownloadHandlers from './setupDownloadHandlers';
 import setupDialogs from './setupDialogs';
 import setupContextMenu from './setupContextMenu';
 import { setupCheckFirstRun } from './setupCheckFirstRun';
+import { setupCheckStorageToken } from './setupCheckStorageToken';
 import {
   setupInvestRunHandlers,
   setupInvestLogReaderHandler
@@ -39,6 +40,7 @@ process.env.PORT = '56789';
 // be closed automatically when the JavaScript object is garbage collected.
 let mainWindow;
 let splashScreen;
+let flaskSubprocess;
 
 export function destroyWindow() {
   mainWindow = null;
@@ -58,9 +60,10 @@ export const createWindow = async () => {
   });
   splashScreen.loadURL(`file://${__dirname}/../static/splash.html`);
   const investExe = findInvestBinaries(ELECTRON_DEV_MODE);
-  createPythonFlaskProcess(investExe);
+  flaskSubprocess = createPythonFlaskProcess(investExe);
   setupDialogs();
   setupCheckFirstRun();
+  setupCheckStorageToken();
   await getFlaskIsReady();
 
   // Create the browser window.
@@ -178,7 +181,7 @@ export function main() {
     event.preventDefault();
     shuttingDown = true;
     removeIpcMainListeners();
-    await shutdownPythonProcess();
+    await shutdownPythonProcess(flaskSubprocess);
     app.quit();
   });
 }

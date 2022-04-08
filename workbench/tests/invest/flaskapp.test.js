@@ -26,10 +26,11 @@ if (!process.env.PORT) {
 jest.setTimeout(250000); // This test is slow in CI
 global.window.fetch = fetch;
 
+let flaskSubprocess;
 beforeAll(async () => {
   const isDevMode = true; // otherwise need to mock process.resourcesPath
   const investExe = findInvestBinaries(isDevMode);
-  createPythonFlaskProcess(investExe);
+  flaskSubprocess = createPythonFlaskProcess(investExe);
   // In the CI the flask app takes more than 10x as long to startup.
   // Especially so on macos.
   // So, allowing many retries, especially because the error
@@ -39,7 +40,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await shutdownPythonProcess();
+  await shutdownPythonProcess(flaskSubprocess);
 });
 
 describe('requests to flask endpoints', () => {
@@ -61,7 +62,7 @@ describe('requests to flask endpoints', () => {
 
   test('fetch invest model args spec', async () => {
     const spec = await server_requests.getSpec('carbon');
-    const expectedKeys = ['model_name', 'pyname', 'userguide_html', 'args'];
+    const expectedKeys = ['model_name', 'pyname', 'userguide', 'args'];
     expectedKeys.forEach((key) => {
       expect(spec[key]).not.toBeUndefined();
     });
@@ -87,7 +88,7 @@ describe('requests to flask endpoints', () => {
     const argsDict = argsDictFromObject(spec.args);
     const filepath = path.join(WORKSPACE, 'foo.json');
     const payload = {
-      parameterSetPath: filepath,
+      filepath: filepath,
       moduleName: spec.pyname,
       args: JSON.stringify(argsDict),
       relativePaths: true,
@@ -194,6 +195,7 @@ describe('Build each model UI from ARGS_SPEC', () => {
         pyModuleName={argsSpec.pyname}
         modelName={argsSpec.model_name}
         argsSpec={argsSpec.args}
+        userguide="foo.html"
         uiSpec={uiSpec}
         argsInitValues={undefined}
         investExecute={() => {}}
@@ -201,6 +203,7 @@ describe('Build each model UI from ARGS_SPEC', () => {
         sidebarSetupElementId="foo"
         sidebarFooterElementId="foo"
         executeClicked={false}
+        setSaveAlert={() => {}}
       />
     );
     expect(await findByRole('textbox', { name: /workspace/i }))

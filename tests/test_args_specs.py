@@ -49,7 +49,7 @@ class ValidateArgsSpecs(unittest.TestCase):
     def test_model_specs_are_valid(self):
         """ARGS_SPEC: test each spec meets the expected pattern."""
 
-        required_keys = {'model_name', 'pyname', 'userguide_html', 'args'}
+        required_keys = {'model_name', 'pyname', 'userguide', 'args'}
         optional_spatial_key = 'args_with_spatial_overlap'
         for model_name, metadata in MODEL_METADATA.items():
             # metadata is a collections.namedtuple, fields accessible by name

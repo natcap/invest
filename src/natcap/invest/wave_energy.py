@@ -28,7 +28,7 @@ LOGGER = logging.getLogger(__name__)
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["wave_energy"].model_title,
     "pyname": MODEL_METADATA["wave_energy"].pyname,
-    "userguide_html": MODEL_METADATA["wave_energy"].userguide,
+    "userguide": MODEL_METADATA["wave_energy"].userguide,
     "args": {
         "workspace_dir": spec_utils.WORKSPACE,
         "results_suffix": spec_utils.SUFFIX,
