@@ -31,7 +31,7 @@ INVALID_ID_MSG = _('{number} features have a non-integer ws_id field')
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["sdr"].model_title,
     "pyname": MODEL_METADATA["sdr"].pyname,
-    "userguide_html": MODEL_METADATA["sdr"].userguide,
+    "userguide": MODEL_METADATA["sdr"].userguide,
     "args_with_spatial_overlap": {
         "spatial_keys": ["dem_path", "erosivity_path", "erodibility_path",
                          "lulc_path", "drainage_path", "watersheds_path", ],
@@ -560,7 +560,7 @@ def execute(args):
             f_reg['f_path'], f_reg['sdr_path'],
             f_reg['sed_deposition_path']),
         dependent_task_list=[e_prime_task, sdr_task, flow_dir_task],
-        target_path_list=[f_reg['sed_deposition_path']],
+        target_path_list=[f_reg['sed_deposition_path'], f_reg['f_path']],
         task_name='sediment deposition')
 
     _ = task_graph.add_task(

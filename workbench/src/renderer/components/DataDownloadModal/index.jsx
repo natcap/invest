@@ -10,7 +10,6 @@ import ProgressBar from 'react-bootstrap/ProgressBar';
 import Table from 'react-bootstrap/Table';
 
 import Expire from '../Expire';
-import sampledataRegistry from '../../sampledata_registry.json';
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
 const logger = window.Workbench.getLogger(__filename.split('/').slice(-1)[0]);
@@ -24,6 +23,7 @@ export class DataDownloadModal extends React.Component {
       allLinksArray: [],
       selectedLinksArray: [],
       dataListCheckBoxes: {},
+      sampledataRegistry: null,
     };
 
     this.handleSubmit = this.handleSubmit.bind(this);
@@ -31,7 +31,14 @@ export class DataDownloadModal extends React.Component {
     this.handleCheckList = this.handleCheckList.bind(this);
   }
 
-  componentDidMount() {
+  async componentDidMount() {
+    let sampledataRegistry;
+    try {
+      sampledataRegistry = await import('../../sampledata_registry_production.json');
+    } catch {
+      sampledataRegistry = await import('../../sampledata_registry.json');
+    }
+    delete sampledataRegistry.default; // the default property was added by import
     const linksArray = [];
     const dataListCheckBoxes = {};
     Object.entries(sampledataRegistry)
@@ -43,6 +50,7 @@ export class DataDownloadModal extends React.Component {
       allLinksArray: linksArray,
       selectedLinksArray: linksArray,
       dataListCheckBoxes: dataListCheckBoxes,
+      sampledataRegistry: sampledataRegistry,
     });
   }
 
@@ -89,7 +97,11 @@ export class DataDownloadModal extends React.Component {
   }
 
   handleCheckList(event, modelName) {
-    let { selectedLinksArray, dataListCheckBoxes } = this.state;
+    let {
+      selectedLinksArray,
+      dataListCheckBoxes,
+      sampledataRegistry,
+    } = this.state;
     const { url } = sampledataRegistry[modelName];
     if (event.currentTarget.checked) {
       selectedLinksArray.push(url);
@@ -106,7 +118,14 @@ export class DataDownloadModal extends React.Component {
   }
 
   render() {
-    const { dataListCheckBoxes, selectedLinksArray } = this.state;
+    const {
+      dataListCheckBoxes,
+      selectedLinksArray,
+      sampledataRegistry,
+    } = this.state;
+    // Don't render until registry is loaded, since it loads async
+    if (!sampledataRegistry) { return <div />; }
+
     const downloadEnabled = Boolean(selectedLinksArray.length);
     const DatasetCheckboxRows = [];
     Object.keys(dataListCheckBoxes)

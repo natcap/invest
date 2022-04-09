@@ -27,7 +27,7 @@ LOGGER = logging.getLogger(__name__)
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["delineateit"].model_title,
     "pyname": MODEL_METADATA["delineateit"].pyname,
-    "userguide_html": MODEL_METADATA["delineateit"].userguide,
+    "userguide": MODEL_METADATA["delineateit"].userguide,
     "args_with_spatial_overlap": {
         "spatial_keys": ["dem_path", "outlet_vector_path"],
         "different_projections_ok": True,
