@@ -630,8 +630,8 @@ def execute(args):
                         (pairwise_risk_path, 1)],
                     'local_op': _reclassify_score,
                     'target_raster_path': reclassified_pairwise_risk_path,
-                    'datatype_target': _TARGET_GDAL_TYPE_FLOAT32,
-                    'nodata_target': _TARGET_NODATA_FLOAT32
+                    'datatype_target': _TARGET_GDAL_TYPE_BYTE,
+                    'nodata_target': _TARGET_NODATA_BYTE
                 },
                 task_name=f'Reclassify risk for {habitat}/{stressor}',
                 target_path_list=[reclassified_pairwise_risk_path],
@@ -2104,7 +2104,7 @@ def _reclassify_score(habitat_mask, max_pairwise_risk, scores):
     """Reclassify risk scores into high/medium/low.
 
     The output raster will break values into 3 buckets based on the
-    ``max_pairwise_risk`` (shortened to "MPR"):
+    ``max_pairwise_risk`` (shortened here to "MPR"):
 
         * Scores in the range [ 0, MPR*(1/3) ) have a value of 1
           indicating low risk.
