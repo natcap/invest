@@ -9,7 +9,10 @@ import Row from 'react-bootstrap/Row';
 import InputGroup from 'react-bootstrap/InputGroup';
 import Modal from 'react-bootstrap/Modal';
 import { MdFolderOpen, MdInfo, MdOpenInNew } from 'react-icons/md';
-import { shell } from 'electron';
+
+import { ipcMainChannels } from '../../../../main/ipcMainChannels';
+
+const { ipcRenderer } = window.Workbench;
 
 const baseUserguideURL = 'https://storage.googleapis.com/releases.naturalcapitalproject.org/invest-userguide/latest';
 
@@ -330,7 +333,9 @@ ArgInput.defaultProps = {
  */
 function handleClickUsersGuideLink(event) {
   event.preventDefault();
-  shell.openExternal(event.currentTarget.href);
+  ipcRenderer.send(
+    ipcMainChannels.OPEN_EXTERNAL_URL, event.currentTarget.href
+  );
 }
 
 class AboutModal extends React.PureComponent {

@@ -1,6 +1,5 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import { ipcRenderer } from 'electron';
 
 import Form from 'react-bootstrap/Form';
 import Button from 'react-bootstrap/Button';
@@ -13,7 +12,8 @@ import Expire from '../Expire';
 import sampledataRegistry from './sampledata_registry.json';
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
-const logger = window.Workbench.getLogger(__filename.split('/').slice(-1)[0]);
+const { ipcRenderer } = window.Workbench.electron;
+const logger = window.Workbench.getLogger('DataDownloadModal');
 
 const BASE_URL = 'https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.10.2/data';
 const DEFAULT_FILESIZE = 0;
@@ -27,13 +27,15 @@ export class DataDownloadModal extends React.Component {
       allLinksArray: [],
       selectedLinksArray: [],
       modelCheckBoxState: {},
-      sampledataRegistry: null,
+      dataRegistry: null,
       baseURL: BASE_URL,
     };
 
     this.handleSubmit = this.handleSubmit.bind(this);
     this.handleCheckAll = this.handleCheckAll.bind(this);
     this.handleCheckList = this.handleCheckList.bind(this);
+    this.controller = new AbortController();
+    this.signal = this.controller.signal;
   }
 
   async componentDidMount() {
@@ -42,9 +44,16 @@ export class DataDownloadModal extends React.Component {
     const baseURL = tokenURL || BASE_URL;
     let filesizes;
     try {
-      const response = await window.fetch(`${baseURL}/registry.json`, { method: 'get' });
+      const response = await window.fetch(
+        `${baseURL}/registry.json`, { signal: this.signal, method: 'get' }
+      );
       filesizes = await response.json();
     } catch (error) {
+      if (error.name === 'AbortError') {
+        // We aborted the fetch on unmount,
+        // return before trying to setState.
+        return;
+      }
       logger.debug(error);
     }
 
@@ -64,9 +73,13 @@ export class DataDownloadModal extends React.Component {
       allLinksArray: linksArray,
       selectedLinksArray: linksArray,
       modelCheckBoxState: modelCheckBoxState,
-      sampledataRegistry: registry,
+      dataRegistry: registry,
       baseURL: baseURL,
     });
+  }
+
+  componentWillUnmount() {
+    this.controller.abort();
   }
 
   async handleSubmit(event) {
@@ -115,10 +128,10 @@ export class DataDownloadModal extends React.Component {
     let {
       selectedLinksArray,
       modelCheckBoxState,
-      sampledataRegistry,
+      dataRegistry,
       baseURL,
     } = this.state;
-    const url = `${baseURL}/${sampledataRegistry[modelName].filename}`;
+    const url = `${baseURL}/${dataRegistry[modelName].filename}`;
     if (event.currentTarget.checked) {
       selectedLinksArray.push(url);
       modelCheckBoxState[modelName] = true;
@@ -137,18 +150,18 @@ export class DataDownloadModal extends React.Component {
     const {
       modelCheckBoxState,
       selectedLinksArray,
-      sampledataRegistry,
+      dataRegistry,
     } = this.state;
     // Don't render until registry is loaded, since it loads async
-    if (!sampledataRegistry) { return <div />; }
+    if (!dataRegistry) { return <div />; }
 
     const downloadEnabled = Boolean(selectedLinksArray.length);
     const DatasetCheckboxRows = [];
     Object.keys(modelCheckBoxState)
       .forEach((modelName) => {
-        const filesize = parseFloat(sampledataRegistry[modelName].filesize);
+        const filesize = parseFloat(dataRegistry[modelName].filesize);
         const filesizeStr = `${(filesize / 1000000).toFixed(2)} MB`;
-        const note = sampledataRegistry[modelName].note || '';
+        const note = dataRegistry[modelName].note || '';
         DatasetCheckboxRows.push(
           <tr key={modelName}>
             <td>

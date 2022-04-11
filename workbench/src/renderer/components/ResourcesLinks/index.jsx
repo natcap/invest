@@ -1,12 +1,14 @@
-import path from 'path';
 import React from 'react';
 
 import PropTypes from 'prop-types';
-import { shell } from 'electron'; // eslint-disable-line import/no-extraneous-dependencies
 import { MdOpenInNew } from 'react-icons/md';
 
-const UG_ROOT = 'http://releases.naturalcapitalproject.org/invest-userguide/latest/';
-const FORUM_ROOT = 'https://community.naturalcapitalproject.org/';
+import { ipcMainChannels } from '../../../main/ipcMainChannels';
+
+const { ipcRenderer } = window.Workbench.electron;
+
+const UG_ROOT = 'http://releases.naturalcapitalproject.org/invest-userguide/latest';
+const FORUM_ROOT = 'https://community.naturalcapitalproject.org';
 
 // map model names to forum tags:
 const FORUM_TAGS = {
@@ -38,7 +40,9 @@ const FORUM_TAGS = {
  */
 function handleClick(event) {
   event.preventDefault();
-  shell.openExternal(event.currentTarget.href);
+  ipcRenderer.send(
+    ipcMainChannels.OPEN_EXTERNAL_URL, event.currentTarget.href
+  );
 }
 
 /** Render model-relevant links to the User's Guide and Forum.
@@ -53,11 +57,11 @@ export default function ResourcesTab(props) {
   const { docs, moduleName } = props;
   const tagName = FORUM_TAGS[moduleName];
   if (docs) {
-    const docsName = path.basename(docs);
-    userGuideURL = `${path.join(UG_ROOT, docsName)}#data-needs`;
+    const docsName = docs;
+    userGuideURL = `${UG_ROOT}/${docsName}#data-needs`;
   }
   if (tagName) {
-    forumURL = path.join(FORUM_ROOT, 'tags', tagName);
+    forumURL = `${FORUM_ROOT}/tags/${tagName}`;
   }
   return (
     <React.Fragment>

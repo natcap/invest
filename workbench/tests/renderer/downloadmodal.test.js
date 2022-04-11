@@ -5,7 +5,6 @@ import {
 import '@testing-library/jest-dom';
 import userEvent from '@testing-library/user-event';
 import { ipcRenderer, BrowserWindow } from 'electron';
-
 import {
   DataDownloadModal,
   DownloadProgressBar
@@ -166,6 +165,7 @@ describe('Integration tests with main process', () => {
     const dialogData = {
       filePaths: ['foo/directory'],
     };
+
     ipcRenderer.invoke.mockImplementation((channel, options) => {
       if (channel === ipcMainChannels.SHOW_OPEN_DIALOG) {
         return Promise.resolve(dialogData);

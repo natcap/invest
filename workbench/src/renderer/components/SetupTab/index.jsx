@@ -1,4 +1,3 @@
-import { ipcRenderer } from 'electron';
 import React from 'react';
 import PropTypes from 'prop-types';
 
@@ -26,6 +25,8 @@ import {
 } from '../../server_requests';
 import { argsDictFromObject } from '../../utils';
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
+
+const { ipcRenderer } = window.Workbench.electron;
 
 /** Initialize values of InVEST args based on the model's UI Spec.
  *
