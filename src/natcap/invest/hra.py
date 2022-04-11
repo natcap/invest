@@ -1693,7 +1693,7 @@ def _write_stressors_count_file(
         ``None``
     """
     with open(target_filepath, 'w') as target_file:
-        json.dump(int(max_n_overlapping_stressors), target_file)
+        json.dump(float(max_n_overlapping_stressors), target_file)
 
 
 def _reclassify_hab_stressor_pair_risk(
