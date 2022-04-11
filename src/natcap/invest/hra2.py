@@ -1882,6 +1882,36 @@ def _calculate_decayed_distance(stressor_raster_path, decay_type,
     Raises:
         ``AssertionError``: When an invalid ``decay_type`` is provided.
     """
+    if buffer_distance == 0:
+        LOGGER.info(
+            f'Buffer distance for {target_edt_path} is 0, skipping distance '
+            'transform')
+        # The UG states that if the buffer distance is 0, then we don't do a
+        # buffer or decay at all.  A raster_calculator call will be cheaper and
+        # easier to compute.
+
+        def _no_buffer(stressor_presence_array):
+            """Trsnslate a stressor presence array to match an EDT.
+
+            Args:
+                stressor_presence_array (numpy.array): A numpy byte array with
+                    values of 1 indicating presence.  Absence is indicated by 0
+                    or nodata (or any value other than 1).
+
+            Returns:
+                A numpy array with values of 1 (stressor presence) or 0
+                (absence).  The array's type is float32.
+            """
+            result = numpy.full(stressor_presence_array.shape, 0,
+                                numpy.float32)
+            result[stressor_presence_array == 1] = 1
+            return result
+
+        pygeoprocessing.raster_calculator(
+            [(stressor_raster_path, 1)], _no_buffer, target_edt_path,
+            _TARGET_GDAL_TYPE_FLOAT32, _TARGET_NODATA_FLOAT32)
+        return
+
     pygeoprocessing.distance_transform_edt((stressor_raster_path, 1),
                                            target_edt_path)
     # We're assuming that we're working with square pixels
@@ -1900,44 +1930,37 @@ def _calculate_decayed_distance(stressor_raster_path, decay_type,
         # The pygeoprocessing target datatype for EDT is a float32
         decayed_edt = numpy.full(source_edt_block.shape, 0,
                                  dtype=numpy.float32)
-        # The UG states that if the buffer distance is 0, then we don't do a
-        # buffer or decay at all.
-        # Keeping this block here for consistency, even though the EDT is
-        # technically unnecessary.
-        if buffer_distance == 0:
-            decayed_edt[source_edt_block == 0] = 1
+        # The only valid pixels here are those that are within the buffer
+        # distance and also valid in the source edt.
+        pixels_within_buffer = (
+            source_edt_block < buffer_distance_in_pixels)
+        nodata_pixels = utils.array_equals_nodata(
+            source_edt_block, edt_nodata)
+        valid_pixels = ((~nodata_pixels) & pixels_within_buffer)
+
+        if decay_type == 'linear':
+            decayed_edt[valid_pixels] = (
+                1 - (source_edt_block[valid_pixels] /
+                     buffer_distance_in_pixels))
+        elif decay_type == 'exponential':
+            decayed_edt[valid_pixels] = numpy.exp(
+                -source_edt_block[valid_pixels])
+        elif decay_type == 'none':
+            # everything within the buffer distance has a value of 1
+            decayed_edt[valid_pixels] = 1
         else:
-            # The only valid pixels here are those that are within the buffer
-            # distance and also valid in the source edt.
-            pixels_within_buffer = (
-                source_edt_block < buffer_distance_in_pixels)
-            nodata_pixels = utils.array_equals_nodata(
-                source_edt_block, edt_nodata)
-            valid_pixels = ((~nodata_pixels) & pixels_within_buffer)
+            raise AssertionError(
+                f'Invalid decay type {decay_type} provided.')
 
-            if decay_type == 'linear':
-                decayed_edt[valid_pixels] = (
-                    1 - (source_edt_block[valid_pixels] /
-                         buffer_distance_in_pixels))
-            elif decay_type == 'exponential':
-                decayed_edt[valid_pixels] = numpy.exp(
-                    -source_edt_block[valid_pixels])
-            elif decay_type == 'none':
-                # everything within the buffer distance has a value of 1
-                decayed_edt[valid_pixels] = 1
-            else:
-                raise AssertionError(
-                    f'Invalid decay type {decay_type} provided.')
+        # Any values less than 1e-6 are numerically noise and should be 0.
+        # Mostly useful for exponential decay, but should also apply to
+        # linear decay.
+        numpy.where(decayed_edt[valid_pixels] < 1e-6,
+                    0.0,
+                    decayed_edt[valid_pixels])
 
-            # Any values less than 1e-6 are numerically noise and should be 0.
-            # Mostly useful for exponential decay, but should also apply to
-            # linear decay.
-            numpy.where(decayed_edt[valid_pixels] < 1e-6,
-                        0.0,
-                        decayed_edt[valid_pixels])
-
-            # Reset any nodata pixels that were in the original EDT block.
-            decayed_edt[nodata_pixels] = edt_nodata
+        # Reset any nodata pixels that were in the original EDT block.
+        decayed_edt[nodata_pixels] = edt_nodata
 
         target_edt_band.WriteArray(decayed_edt,
                                    xoff=block_info['xoff'],
