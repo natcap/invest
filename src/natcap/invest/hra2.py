@@ -682,7 +682,8 @@ def execute(args):
             pygeoprocessing.raster_calculator,
             kwargs={
                 'base_raster_path_band_const_list': [
-                    (aligned_habitat_raster_paths[habitat], 1)
+                    (aligned_habitat_raster_paths[habitat], 1),
+                    (reclassified_cumulative_risk_path, 1),
                 ] + [(path, 1) for path in reclassified_pairwise_risk_paths],
                 'local_op': _maximum_reclassified_score,
                 'target_raster_path': max_risk_classification_path,
