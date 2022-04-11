@@ -1,6 +1,5 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import { ipcRenderer } from 'electron';
 
 import Accordion from 'react-bootstrap/Accordion';
 import Col from 'react-bootstrap/Col';
@@ -17,6 +16,8 @@ import { BsChevronExpand } from 'react-icons/bs';
 
 import { getDefaultSettings } from './SettingsStorage';
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
+
+const { ipcRenderer } = window.Workbench.electron;
 
 // map display names to standard language codes
 const languageOptions = {

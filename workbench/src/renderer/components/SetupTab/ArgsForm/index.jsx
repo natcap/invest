@@ -1,12 +1,13 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import { ipcRenderer } from 'electron'; // eslint-disable-line import/no-extraneous-dependencies
 
 import Form from 'react-bootstrap/Form';
 
 import ArgInput from '../ArgInput';
 import { boolStringToBoolean } from '../../../utils';
 import { ipcMainChannels } from '../../../../main/ipcMainChannels';
+
+const { ipcRenderer } = window.Workbench.electron;
 
 /** Prevent the default case for onDragOver so onDrop event will be fired. */
 function dragOverHandler(event) {

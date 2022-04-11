@@ -5,7 +5,7 @@ import { ipcMain } from 'electron';
 
 import extractZipInplace from './extractZipInplace';
 import { ipcMainChannels } from './ipcMainChannels';
-import { getLogger } from '../logger';
+import { getLogger } from './logger';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 

@@ -27,14 +27,19 @@ import {
 } from './setupInvestHandlers';
 import setupSetLanguage from './setLanguage';
 import setupGetNCPUs from './setupGetNCPUs';
+import setupOpenExternalUrl from './setupOpenExternalUrl';
 import { ipcMainChannels } from './ipcMainChannels';
 import menuTemplate from './menubar';
 import ELECTRON_DEV_MODE from './isDevMode';
-import { getLogger } from '../logger';
+import BASE_URL from './baseUrl';
+import { getLogger } from './logger';
 import pkg from '../../package.json';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
-process.env.PORT = '56789';
+
+if (!process.env.PORT) {
+  process.env.PORT = '56789';
+}
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
@@ -58,7 +63,8 @@ export const createWindow = async () => {
     frame: false,
     alwaysOnTop: false,
   });
-  splashScreen.loadURL(`file://${__dirname}/../static/splash.html`);
+  splashScreen.loadURL(path.join(BASE_URL, 'splash.html'));
+
   const investExe = findInvestBinaries(ELECTRON_DEV_MODE);
   flaskSubprocess = createPythonFlaskProcess(investExe);
   setupDialogs();
@@ -75,9 +81,7 @@ export const createWindow = async () => {
     minWidth: 800,
     show: true, // see comment in 'ready-to-show' listener
     webPreferences: {
-      contextIsolation: false,
-      nodeIntegration: true,
-      preload: path.join(__dirname, '..', 'preload.js'),
+      preload: path.join(__dirname, '../preload/preload.js'),
       defaultEncoding: 'UTF-8',
     },
   });
@@ -85,7 +89,7 @@ export const createWindow = async () => {
     menuTemplate(mainWindow, ELECTRON_DEV_MODE)
   );
   Menu.setApplicationMenu(menubar);
-  mainWindow.loadURL(`file://${__dirname}/../renderer/index.html`);
+  mainWindow.loadURL(path.join(BASE_URL, 'index.html'));
 
   mainWindow.once('ready-to-show', () => {
     splashScreen.destroy();
@@ -125,6 +129,7 @@ export const createWindow = async () => {
   setupContextMenu(mainWindow);
   setupGetNCPUs();
   setupSetLanguage();
+  setupOpenExternalUrl();
   return Promise.resolve(); // lets tests await createWindow(), then assert
 };
 

@@ -1,6 +1,5 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import { ipcRenderer } from 'electron'; // eslint-disable-line import/no-extraneous-dependencies
 
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
@@ -8,6 +7,7 @@ import Container from 'react-bootstrap/Container';
 
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
+const { ipcRenderer } = window.Workbench.electron;
 const logger = window.Workbench.getLogger('LogTab');
 
 class LogDisplay extends React.Component {
@@ -53,10 +53,10 @@ export default class LogTab extends React.Component {
   }
 
   componentDidMount() {
-    const { logfile, executeClicked, jobID } = this.props;
+    const { logfile, executeClicked, tabID } = this.props;
     // This channel is replied to by the invest process stdout listener
     // And by the logfile reader.
-    ipcRenderer.on(`invest-stdout-${jobID}`, (event, data) => {
+    ipcRenderer.on(`invest-stdout-${tabID}`, (data) => {
       let { logdata } = this.state;
       logdata += data;
       this.setState({ logdata: logdata });
@@ -65,7 +65,7 @@ export default class LogTab extends React.Component {
       ipcRenderer.send(
         ipcMainChannels.INVEST_READ_LOG,
         logfile,
-        jobID,
+        tabID,
       );
     }
   }
@@ -79,7 +79,7 @@ export default class LogTab extends React.Component {
   }
 
   componentWillUnmount() {
-    ipcRenderer.removeAllListeners(`invest-stdout-${this.props.jobID}`);
+    ipcRenderer.removeAllListeners(`invest-stdout-${this.props.tabID}`);
   }
 
   render() {
@@ -96,5 +96,5 @@ export default class LogTab extends React.Component {
 LogTab.propTypes = {
   logfile: PropTypes.string,
   executeClicked: PropTypes.bool.isRequired,
-  jobID: PropTypes.string.isRequired,
+  tabID: PropTypes.string.isRequired,
 };
