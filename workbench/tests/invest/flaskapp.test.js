@@ -3,7 +3,6 @@ import os from 'os';
 import path from 'path';
 import readline from 'readline';
 
-import fetch from 'node-fetch';
 import React from 'react';
 import { render } from '@testing-library/react';
 import '@testing-library/jest-dom';
@@ -18,13 +17,7 @@ import {
 } from '../../src/main/createPythonFlaskProcess';
 import findInvestBinaries from '../../src/main/findInvestBinaries';
 
-// This could be optionally configured already in '.env'
-if (!process.env.PORT) {
-  process.env.PORT = 56788;
-}
-
 jest.setTimeout(250000); // This test is slow in CI
-global.window.fetch = fetch;
 
 let flaskSubprocess;
 beforeAll(async () => {
@@ -147,7 +140,7 @@ describe('requests to flask endpoints', () => {
 
 describe('validate the UI spec', () => {
   test('each model has a complete entry', async () => {
-    const uiSpec = require('../../src/renderer/ui_config');
+    const { UI_SPEC } = require('../../src/renderer/ui_config');
     const models = await server_requests.getInvestModelNames();
     const modelInternalNames = Object.keys(models)
       .map((key) => models[key].model_name);
@@ -159,22 +152,22 @@ describe('validate the UI spec', () => {
     argsSpecs.forEach((spec, idx) => {
       const modelName = modelInternalNames[idx];
       expect(spec.model_name).toBeDefined();
-      expect(Object.keys(uiSpec)).toContain(modelName);
-      expect(Object.keys(uiSpec[modelName])).toContain('order');
+      expect(Object.keys(UI_SPEC)).toContain(modelName);
+      expect(Object.keys(UI_SPEC[modelName])).toContain('order');
       // expect each ARGS_SPEC arg to exist in 'order' or 'hidden' property
-      const orderArray = uiSpec[modelName].order.flat();
+      const orderArray = UI_SPEC[modelName].order.flat();
       // 'hidden' is an optional property. It need not include 'n_workers',
       // but we should insert 'n_workers' here as it is present in ARGS_SPEC.
-      const hiddenArray = uiSpec[modelName].hidden || [];
+      const hiddenArray = UI_SPEC[modelName].hidden || [];
       const allArgs = orderArray.concat(hiddenArray.concat('n_workers'));
       const argsSet = new Set(allArgs);
       expect(allArgs).toHaveLength(argsSet.size); // no duplicates
       expect(argsSet).toEqual(new Set(Object.keys(spec.args)));
 
       // for other properties, expect each key is an arg
-      for (const property in uiSpec[modelName]) {
+      for (const property in UI_SPEC[modelName]) {
         if (!['order', 'hidden'].includes(property)) {
-          Object.keys(uiSpec[modelName][property]).forEach((arg) => {
+          Object.keys(UI_SPEC[modelName][property]).forEach((arg) => {
             expect(Object.keys(spec.args)).toContain(arg);
           });
         }
@@ -184,11 +177,11 @@ describe('validate the UI spec', () => {
 });
 
 describe('Build each model UI from ARGS_SPEC', () => {
-  const uiConfig = require('../../src/renderer/ui_config');
+  const { UI_SPEC } = require('../../src/renderer/ui_config');
 
-  test.each(Object.keys(uiConfig))('%s', async (model) => {
+  test.each(Object.keys(UI_SPEC))('%s', async (model) => {
     const argsSpec = await server_requests.getSpec(model);
-    const uiSpec = uiConfig[model];
+    const uiSpec = UI_SPEC[model];
 
     const { findByRole } = render(
       <SetupTab

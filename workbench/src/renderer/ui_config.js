@@ -55,7 +55,7 @@ function isNotSufficient(argkey, state) {
   return !isSufficient(argkey, state);
 }
 
-const uiSpec = {
+const UI_SPEC = {
   annual_water_yield: {
     order: [
       ['workspace_dir', 'results_suffix'],
@@ -393,4 +393,4 @@ const uiSpec = {
   },
 };
 
-module.exports = uiSpec;
+export { UI_SPEC };

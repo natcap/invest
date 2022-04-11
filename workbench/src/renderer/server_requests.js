@@ -1,7 +1,9 @@
 import { getSettingsValue } from './components/SettingsModal/SettingsStorage';
 
-const logger = window.Workbench.getLogger(__filename.split('/').slice(-1)[0]);
+const logger = window.Workbench.getLogger('server_requests.js');
 const HOSTNAME = 'http://localhost';
+const { PORT } = window.Workbench;
+const PREFIX = 'api';
 
 // The Flask server sends UTF-8 encoded responses by default
 // response.text() always decodes the response using UTF-8
@@ -17,7 +19,7 @@ const HOSTNAME = 'http://localhost';
 export async function getInvestModelNames() {
   const language = await getSettingsValue('language');
   return (
-    window.fetch(`${HOSTNAME}:${process.env.PORT}/models?language=${language}`, {
+    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/models?language=${language}`, {
       method: 'get',
     })
       .then((response) => response.json())
@@ -34,7 +36,7 @@ export async function getInvestModelNames() {
 export async function getSpec(payload) {
   const language = await getSettingsValue('language');
   return (
-    window.fetch(`${HOSTNAME}:${process.env.PORT}/getspec?language=${language}`, {
+    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/getspec?language=${language}`, {
       method: 'post',
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },
@@ -56,7 +58,7 @@ export async function getSpec(payload) {
 export async function fetchValidation(payload) {
   const language = await getSettingsValue('language');
   return (
-    window.fetch(`${HOSTNAME}:${process.env.PORT}/validate?language=${language}`, {
+    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/validate?language=${language}`, {
       method: 'post',
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },
@@ -80,7 +82,7 @@ export async function fetchValidation(payload) {
  */
 export function fetchDatastackFromFile(payload) {
   return (
-    window.fetch(`${HOSTNAME}:${process.env.PORT}/post_datastack_file`, {
+    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/post_datastack_file`, {
       method: 'post',
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },
@@ -98,7 +100,7 @@ export function fetchDatastackFromFile(payload) {
  */
 export function getVectorColumnNames(payload) {
   return (
-    window.fetch(`${HOSTNAME}:${process.env.PORT}/colnames`, {
+    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/colnames`, {
       method: 'post',
       body: JSON.stringify({vector_path: payload}),
       headers: { 'Content-Type': 'application/json' },
@@ -120,7 +122,7 @@ export function getVectorColumnNames(payload) {
  */
 export function saveToPython(payload) {
   return (
-    window.fetch(`${HOSTNAME}:${process.env.PORT}/save_to_python`, {
+    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/save_to_python`, {
       method: 'post',
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },
@@ -146,7 +148,7 @@ export function saveToPython(payload) {
  */
 export function archiveDatastack(payload) {
   return (
-    window.fetch(`${HOSTNAME}:${process.env.PORT}/build_datastack_archive`, {
+    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/build_datastack_archive`, {
       method: 'post',
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },
@@ -173,7 +175,7 @@ export function archiveDatastack(payload) {
  */
 export function writeParametersToFile(payload) {
   return (
-    window.fetch(`${HOSTNAME}:${process.env.PORT}/write_parameter_set_file`, {
+    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/write_parameter_set_file`, {
       method: 'post',
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },

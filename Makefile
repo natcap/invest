@@ -272,7 +272,7 @@ $(INVEST_BINARIES_DIR): | $(DIST_DIR) $(BUILD_DIR)
 # Documentation.
 # API docs are built in build/sphinx and copied to dist/apidocs
 apidocs: $(APIDOCS_TARGET_DIR) $(APIDOCS_ZIP_FILE)
-$(APIDOCS_TARGET_DIR): | $(DIST_DIR) $(APIDOCS_TARGET_DIR)
+$(APIDOCS_TARGET_DIR): | $(DIST_DIR)
 	# -a: always build all files
 	$(PYTHON) -m sphinx -a -b html \
 		-d $(APIDOCS_BUILD_DIR) \
@@ -332,7 +332,7 @@ ZIPDIRS = Annual_Water_Yield \
 ZIPTARGETS = $(foreach dirname,$(ZIPDIRS),$(addprefix $(DIST_DATA_DIR)/,$(dirname).zip))
 
 sampledata: $(ZIPTARGETS)
-	$(PYTHON) $(WORKBENCH)/scripts/build_sampledata_registry.py $(DATA_BASE_URL) $(CURDIR)/$(DIST_DATA_DIR)
+	$(PYTHON) scripts/build_sampledata_filesize_registry.py $(CURDIR)/$(DIST_DATA_DIR)
 $(DIST_DATA_DIR)/%.zip: $(DIST_DATA_DIR) $(GIT_SAMPLE_DATA_REPO_PATH)
 	cd $(GIT_SAMPLE_DATA_REPO_PATH); $(BASHLIKE_SHELL_COMMAND) "$(ZIP) -r $(addprefix ../../,$@) $(subst $(DIST_DATA_DIR)/,$(DATADIR),$(subst .zip,,$@))"
 

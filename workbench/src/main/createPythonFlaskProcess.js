@@ -2,7 +2,7 @@ import { spawn, exec } from 'child_process';
 
 import fetch from 'node-fetch';
 
-import { getLogger } from '../logger';
+import { getLogger } from './logger';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 const HOSTNAME = 'http://localhost';
@@ -59,9 +59,9 @@ export function createPythonFlaskProcess(investExe) {
  * @param {number} retries - number of recursive calls this function is allowed.
  * @returns { Promise } resolves text indicating success.
  */
-export function getFlaskIsReady({ i = 0, retries = 21 } = {}) {
+export function getFlaskIsReady({ i = 0, retries = 41 } = {}) {
   return (
-    fetch(`${HOSTNAME}:${process.env.PORT}/ready`, {
+    fetch(`${HOSTNAME}:${process.env.PORT}/api/ready`, {
       method: 'get',
     })
       .then((response) => response.text())
