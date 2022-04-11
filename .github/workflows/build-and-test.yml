@@ -75,7 +75,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           requirements-files: requirements.txt requirements-dev.txt requirements-gui.txt
-          requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }} twine
+          requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
 
       - name: Download previous conda environment.yml
         continue-on-error: true
@@ -145,8 +145,8 @@ jobs:
       - uses: ./.github/actions/setup_env
         with:
           python-version: ${{ matrix.python-version }}
-          requirements-files: requirements.txt
-          requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }} twine
+          requirements-files: requirements.txt requirements-dev.txt
+          requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
 
       - name: Build source distribution
         run: |

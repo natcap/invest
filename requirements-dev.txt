@@ -27,3 +27,4 @@ requests
 coverage
 xlwt
 build
+twine<4.0.0  # https://github.com/natcap/invest/issues/936
