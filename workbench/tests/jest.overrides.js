@@ -1,4 +1,27 @@
-const crypto = require('crypto');
+import crypto from 'crypto';
+import fetch from 'node-fetch';
+
+import api from '../src/preload/api';
+
+// debug logging is a bit noisy, not so useful during tests.
+if (!process.env.ELECTRON_LOG_LEVEL) {
+  process.env.ELECTRON_LOG_LEVEL = 'info';
+}
+
+// Test for a jsdom env (as opposed to node), which means renderer tests.
+if (global.window) {
+  // mock the work of preload.js here:
+  global.window.Workbench = api;
+
+  // mock out the global gettext function - avoid setting up translation
+  global.window._ = (x) => x;
+
+  // jsdom does not implement these window APIs:
+  global.window.crypto = {
+    getRandomValues: () => [crypto.randomBytes(4).toString('hex')],
+  };
+  global.window.fetch = fetch;
+}
 
 // Cause tests to fail on console.error messages
 // Taken from https://stackoverflow.com/questions/28615293/is-there-a-jest-config-that-will-fail-tests-on-console-warn/50584643#50584643
@@ -35,33 +58,3 @@ Without this override:
       305 |                 />
       306 |               </TabPane>
 */
-
-if (global.window) {
-  // Detected a jsdom env (as opposed to node). This means
-  // we're running renderer tests, so need to mock the work
-  // of preload.js here.
-  global.window.Workbench = {
-    getLogger: jest.fn().mockReturnValue({
-      debug: jest.fn(),
-      verbose: jest.fn(),
-      info: jest.fn(),
-      warn: jest.fn(),
-      error: jest.fn(),
-      silly: jest.fn(),
-    }),
-  };
-
-  // TODO: this serves as a global mock for the 'crypto' node module
-  // which is used in the renderer by app.jsx and InvestJob.js.
-  // A better solution is to avoid reliance on that node module
-  // in the renderer process.
-  // https://github.com/natcap/invest-workbench/issues/60
-  global.window.crypto = {
-    getRandomValues: () => [crypto.randomBytes(4).toString('hex')],
-  };
-
-  // mock out the global gettext function - avoid setting up translation
-  global.window._ = (x) => x;
-
-  jest.mock('../src/logger');
-}

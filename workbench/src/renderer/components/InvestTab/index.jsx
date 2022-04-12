@@ -1,7 +1,5 @@
-import path from 'path';
 import React from 'react';
 import PropTypes from 'prop-types';
-import { ipcRenderer } from 'electron';
 
 import TabPane from 'react-bootstrap/TabPane';
 import TabContent from 'react-bootstrap/TabContent';
@@ -15,9 +13,11 @@ import SetupTab from '../SetupTab';
 import LogTab from '../LogTab';
 import ResourcesLinks from '../ResourcesLinks';
 import { getSpec } from '../../server_requests';
+import { UI_SPEC } from '../../ui_config';
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
-const logger = window.Workbench.getLogger(__filename.split('/').slice(-1)[0]);
+const { ipcRenderer } = window.Workbench.electron;
+const logger = window.Workbench.getLogger('InvestTab');
 
 /** Get an invest model's ARGS_SPEC when a model button is clicked.
  *
@@ -29,8 +29,7 @@ async function investGetSpec(modelName) {
   const spec = await getSpec(modelName);
   if (spec) {
     const { args, ...modelSpec } = spec;
-    const uiSpecs = require('../../ui_config');
-    const uiSpec = uiSpecs[modelName];
+    const uiSpec = UI_SPEC[modelName];
     if (uiSpec) {
       return { modelSpec: modelSpec, argsSpec: args, uiSpec: uiSpec };
     }
@@ -79,23 +78,23 @@ export default class InvestTab extends React.Component {
       argsSpec: argsSpec,
       uiSpec: uiSpec,
     }, () => { this.switchTabs('setup'); });
-    const { jobID } = this.props;
-    ipcRenderer.on(`invest-logging-${jobID}`, this.investLogfileCallback);
-    ipcRenderer.on(`invest-exit-${jobID}`, this.investExitCallback);
+    const { tabID } = this.props;
+    ipcRenderer.on(`invest-logging-${tabID}`, this.investLogfileCallback);
+    ipcRenderer.on(`invest-exit-${tabID}`, this.investExitCallback);
   }
 
   componentWillUnmount() {
     ipcRenderer.removeListener(
-      `invest-logging-${this.props.jobID}`, this.investLogfileCallback
+      `invest-logging-${this.props.tabID}`, this.investLogfileCallback
     );
     ipcRenderer.removeListener(
-      `invest-exit-${this.props.jobID}`, this.investExitCallback
+      `invest-exit-${this.props.tabID}`, this.investExitCallback
     );
   }
 
-  investLogfileCallback(event, logfile) {
+  investLogfileCallback(logfile) {
     // Only now do we know for sure the process is running
-    this.props.updateJobProperties(this.props.jobID, {
+    this.props.updateJobProperties(this.props.tabID, {
       logfile: logfile,
       status: 'running',
     });
@@ -105,9 +104,9 @@ export default class InvestTab extends React.Component {
    *
    * @param {object} data - of shape { code: number, stdErr: string }
    */
-  investExitCallback(event, data) {
+  investExitCallback(data) {
     const {
-      jobID,
+      tabID,
       updateJobProperties,
       saveJob,
     } = this.props;
@@ -128,11 +127,11 @@ export default class InvestTab extends React.Component {
       }
     }
     const status = (data.code === 0) ? 'success' : 'error';
-    updateJobProperties(jobID, {
+    updateJobProperties(tabID, {
       status: status,
       finalTraceback: finalTraceback,
     });
-    saveJob(jobID);
+    saveJob(tabID);
     this.setState({
       executeClicked: false,
       userTerminated: false,
@@ -156,18 +155,13 @@ export default class InvestTab extends React.Component {
     });
     const {
       job,
-      jobID,
+      tabID,
       investSettings,
       updateJobProperties,
     } = this.props;
     const args = { ...argsValues };
-    // Not strictly necessary, but resolving to a complete path
-    // here to be extra certain we avoid unexpected collisions
-    // of workspaceHash, which uniquely ids a job in the database
-    // in part by it's workspace directory.
-    args.workspace_dir = path.resolve(argsValues.workspace_dir);
 
-    updateJobProperties(jobID, {
+    updateJobProperties(tabID, {
       argsValues: args,
       status: undefined, // in case of re-run, clear an old status
     });
@@ -179,7 +173,7 @@ export default class InvestTab extends React.Component {
       args,
       investSettings.loggingLevel,
       investSettings.language,
-      jobID
+      tabID
     );
     this.switchTabs('log');
   }
@@ -189,7 +183,7 @@ export default class InvestTab extends React.Component {
       userTerminated: true,
     }, () => {
       ipcRenderer.send(
-        ipcMainChannels.INVEST_KILL, this.props.jobID
+        ipcMainChannels.INVEST_KILL, this.props.tabID
       );
     });
   }
@@ -219,7 +213,8 @@ export default class InvestTab extends React.Component {
       logfile,
       finalTraceback,
     } = this.props.job;
-    const { jobID, investSettings } = this.props;
+
+    const { tabID, investSettings } = this.props;
 
     // Don't render the model setup & log until data has been fetched.
     if (!modelSpec) {
@@ -227,8 +222,8 @@ export default class InvestTab extends React.Component {
     }
 
     const logDisabled = !logfile;
-    const sidebarSetupElementId = `sidebar-setup-${jobID}`;
-    const sidebarFooterElementId = `sidebar-footer-${jobID}`;
+    const sidebarSetupElementId = `sidebar-setup-${tabID}`;
+    const sidebarFooterElementId = `sidebar-footer-${tabID}`;
 
     return (
       <TabContainer activeKey={activeTab} id="invest-tab">
@@ -305,7 +300,7 @@ export default class InvestTab extends React.Component {
                 <LogTab
                   logfile={logfile}
                   executeClicked={executeClicked}
-                  jobID={jobID}
+                  tabID={tabID}
                 />
               </TabPane>
             </TabContent>
@@ -325,7 +320,7 @@ InvestTab.propTypes = {
     status: PropTypes.string,
     finalTraceback: PropTypes.string,
   }).isRequired,
-  jobID: PropTypes.string.isRequired,
+  tabID: PropTypes.string.isRequired,
   investSettings: PropTypes.shape({
     nWorkers: PropTypes.string,
     loggingLevel: PropTypes.string,
