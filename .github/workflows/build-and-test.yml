@@ -98,7 +98,6 @@ jobs:
       - name: Build and install wheel
         run: |
           python -m build --wheel
-          python -m twine check dist/*
           pip install $(find dist -name "natcap.invest*.whl")
 
       - name: Run model tests
@@ -155,7 +154,6 @@ jobs:
           # time.  Thus, it is no longer necessary to distribute the
           # .cpp files in addition to the .pyx files.
           python -m build --sdist
-          python -m twine check dist/*
 
       - name: Install from source distribution
         run : |
