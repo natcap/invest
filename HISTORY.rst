@@ -35,15 +35,85 @@
 Unreleased Changes
 ------------------
 * General
+    * Updating the ``pyinstaller`` requirement to ``>=4.10`` to support the new
+      ``universal2`` wheel architecture offered by ``scipy>=1.8.0``.
+* RouteDEM
+    * Rename the arg ``calculate_downstream_distance`` to
+      ``calculate_downslope_distance``. This is meant to clarify that it
+      applies to pixels that are not part of a stream.
+* SDR
+    * Fixed an issue with SDR where ``f.tif`` might not be recalculated if the
+      file is modified or deleted after execution.
+
+3.10.2 (2022-02-08)
+-------------------
+* General
+    * The minimum ``setuptools_scm`` version has been increased to 6.4.0 in
+      order to bypass calling ``setup.py`` for version information.  The
+      version of this project can now be retrieved by calling ``python -m
+      setuptools_scm`` from the project root.
     * Fixed an issue where datastack archives would not include any spatial
       datasets that were linked to in CSV files.  This now works for all models
       except HRA.  If an HRA datastack archive is requested,
       ``NotImplementedError`` will be raised.  A fix for HRA is pending.
+    * Pinned ``numpy`` versions in ``pyproject.toml`` to the lowest compatible
+      version for each supported python version. This prevents issues when
+      ``natcap.invest`` is used in an environment with a lower numpy version
+      than it was built with (https://github.com/cython/cython/issues/4452).
 * DelineateIt
     * When snapping points to streams, if a point is equally near to more than
       one stream pixel, it will now snap to the stream pixel with a higher
       flow accumulation value. Before, it would snap to the stream pixel
       encountered first in the raster (though this was not guaranteed).
+* GLOBIO
+    * Gaussian decay kernels are now always tiled, which should result in a
+      minor improvement in model runtime when large decay distances are used.
+* Habitat Quality:
+    * Linear decay kernels are now always tiled, which should result in a minor
+      improvement in model runtime, particularly with large decay distances.
+* HRA
+    * Fixed a bug with how a pandas dataframe was instantiated. This bug did
+      not effect outputs though some might notice less trailing zeros in the
+      ``SUMMARY_STATISTICS.csv`` output.
+* NDR
+    * Changed some model inputs and outputs to clarify that subsurface
+      phosphorus is not modeled.
+
+        * Removed the inputs ``subsurface_critical_length_p`` and
+          ``subsurface_eff_p``
+        * Removed the output ``sub_ndr_p.tif``. The model no longer calculates
+          subsurface NDR for phosphorus.
+        * Removed the output ``sub_load_p.tif``. All pixels in this raster were
+          always 0, because the model assumed no subsurface phosphorus movement.
+        * Renamed the output ``p_export.tif`` to ``p_surface_export.tif`` to
+          clarify that it only models the surface export of phosphorus.
+        * Renamed the output ``n_export.tif`` to ``n_total_export.tif`` to
+          clarify that it is the total of surface and subsurface nitrogen export.
+        * Added the new outputs ``n_surface_export.tif`` and
+          ``n_subsurface_export.tif``, showing the surface and subsurface
+          components of the total nitrogen export.
+        * The aggregate vector output ``watershed_results_ndr.shp`` was changed to
+          a geopackage ``watershed_results_ndr.gpkg``.
+        * The aggregate vector fields were given more descriptive names, and
+          updated corresponding to the changed raster outputs:
+
+            * ``surf_p_ld`` was renamed to ``p_surface_load``
+            * ``surf_n_ld`` was renamed to ``n_surface_load``
+            * ``p_exp_tot`` was renamed to ``p_surface_export``
+            * ``sub_n_ld`` was renamed to ``n_subsurface_load``
+            * ``n_exp_tot`` was renamed to ``n_total_export``
+            * Added a new field ``n_surface_export``, representing the sum of
+              ``n_surface_export.tif``
+            * Added a new field ``n_subsurface_export``, representing the sum
+              of ``n_subsurface_export.tif``
+            * Removed the field ``sub_p_ld``, since ``sub_load_p.tif`` was removed.
+* Wind Energy
+    * Fixed a bug where distance was masking by pixel distance instead of
+      euclidean distance.
+    * Renamed the foundation cost label and help info to reflect it is no
+      longer measured in Millions of US dollars.
+    * Fixed a bug where running valuation with TaskGraph in asynchronous mode
+      would cause the model to error.
 
 3.10.1 (2022-01-06)
 -------------------

@@ -65,7 +65,7 @@ _DEFAULT_GTIFF_CREATION_OPTIONS = (
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["habitat_risk_assessment"].model_title,
     "pyname": MODEL_METADATA["habitat_risk_assessment"].pyname,
-    "userguide_html": MODEL_METADATA["habitat_risk_assessment"].userguide,
+    "userguide": MODEL_METADATA["habitat_risk_assessment"].userguide,
     "args": {
         "workspace_dir": spec_utils.WORKSPACE,
         "results_suffix": spec_utils.SUFFIX,
@@ -1183,7 +1183,7 @@ def _zonal_stats_to_csv(
         ['E_']*len_crit_cols + ['C_']*len_crit_cols + ['R_']*len_risk_cols,
         crit_stats_cols*2 + risk_stats_cols)
 
-    stats_df = pandas.DataFrame(index=overlap_df.index, columns=columns)
+    stats_df = pandas.DataFrame(index=overlap_df.index, columns=list(columns))
 
     # Add a ``SUBREGION`` column to the dataframe and update it with the
     # corresponding stats in each subregion

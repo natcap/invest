@@ -34,7 +34,7 @@ MONTH_ID_TO_LABEL = [
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["seasonal_water_yield"].model_title,
     "pyname": MODEL_METADATA["seasonal_water_yield"].pyname,
-    "userguide_html": MODEL_METADATA["seasonal_water_yield"].userguide,
+    "userguide": MODEL_METADATA["seasonal_water_yield"].userguide,
     "args_with_spatial_overlap": {
         "spatial_keys": ["dem_raster_path", "lulc_raster_path",
                          "soil_group_path", "aoi_path", "l_path",
@@ -329,7 +329,7 @@ def execute(args):
         args['results_suffix'] (string): (optional) string to append to any
             output files
         args['threshold_flow_accumulation'] (number): used when classifying
-            stream pixels from the DEM by thresholding the number of upstream
+            stream pixels from the DEM by thresholding the number of upslope
             cells that must flow into a cell before it's considered
             part of a stream.
         args['et0_dir'] (string): required if

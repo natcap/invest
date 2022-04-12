@@ -21,7 +21,7 @@ INVALID_BAND_INDEX_MSG = _('Must be between 1 and {maximum}')
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["routedem"].model_title,
     "pyname": MODEL_METADATA["routedem"].pyname,
-    "userguide_html": MODEL_METADATA["routedem"].userguide,
+    "userguide": MODEL_METADATA["routedem"].userguide,
     "args": {
         "workspace_dir": spec_utils.WORKSPACE,
         "results_suffix": spec_utils.SUFFIX,
@@ -48,7 +48,7 @@ ARGS_SPEC = {
                     "display_name": "MFD",
                     "description": _(
                         "Flow off a pixel is modeled fractionally so that "
-                        "water is split among multiple downstream pixels")}
+                        "water is split among multiple downslope pixels")}
             },
             "about": _("The routing algorithm to use."),
             "name": _("routing algorithm")
@@ -80,7 +80,7 @@ ARGS_SPEC = {
                 f"{spec_utils.THRESHOLD_FLOW_ACCUMULATION['about']} "
                 "Required if Calculate Streams is selected.")
         },
-        "calculate_downstream_distance": {
+        "calculate_downslope_distance": {
             "type": "boolean",
             "required": False,
             "about": _(
@@ -104,7 +104,7 @@ _TARGET_SLOPE_FILE_PATTERN = 'slope%s.tif'
 _TARGET_FLOW_DIRECTION_FILE_PATTERN = 'flow_direction%s.tif'
 _FLOW_ACCUMULATION_FILE_PATTERN = 'flow_accumulation%s.tif'
 _STREAM_MASK_FILE_PATTERN = 'stream_mask%s.tif'
-_DOWNSTREAM_DISTANCE_FILE_PATTERN = 'downstream_distance%s.tif'
+_DOWNSLOPE_DISTANCE_FILE_PATTERN = 'downslope_distance%s.tif'
 
 _ROUTING_FUNCS = {
     'D8': {
@@ -127,7 +127,7 @@ def _threshold_flow(flow_accum_pixels, threshold, in_nodata, out_nodata):
 
     Args:
         flow_accum_pixels (numpy.ndarray): Array representing the number of
-            pixels upstream of a given pixel.
+            pixels upslope of a given pixel.
         threshold (int or float): The threshold above which we have a stream.
         in_nodata (int or float): The nodata value of the flow accumulation
             raster.
@@ -170,7 +170,7 @@ def execute(args):
             If not provided, band index 1 is assumed.
         args['algorithm'] (string): The routing algorithm to use.  Must be
             one of 'D8' or 'MFD' (case-insensitive). Required when calculating
-            flow direction, flow accumulation, stream threshold, and downstream
+            flow direction, flow accumulation, stream threshold, and downslope
             distance.
         args['calculate_flow_direction'] (bool): If True, model will calculate
             flow direction for the filled DEM.
@@ -183,11 +183,11 @@ def execute(args):
             ``args['threshold_flow_accumulation']``.  Only applies when
             args['calculate_flow_accumulation'] and
             args['calculate_flow_direction'] are True.
-        args['threshold_flow_accumulation'] (int): The number of upstream
+        args['threshold_flow_accumulation'] (int): The number of upslope
             cells that must flow into a cell before it's classified as a
             stream.
-        args['calculate_downstream_distance'] (bool): If True, and a stream
-            threshold is calculated, model will calculate a downstream
+        args['calculate_downslope_distance'] (bool): If True, and a stream
+            threshold is calculated, model will calculate a downslope
             distance raster in units of pixels. Only applies when
             args['calculate_flow_accumulation'],
             args['calculate_flow_direction'], and
@@ -322,18 +322,18 @@ def execute(args):
                         task_name=['stream_extraction_MFD'],
                         dependent_task_list=[flow_accum_task])
 
-                if ('calculate_downstream_distance' in args and
-                        bool(args['calculate_downstream_distance'])):
+                if ('calculate_downslope_distance' in args and
+                        bool(args['calculate_downslope_distance'])):
                     distance_path = os.path.join(
                         args['workspace_dir'],
-                        _DOWNSTREAM_DISTANCE_FILE_PATTERN % file_suffix)
+                        _DOWNSLOPE_DISTANCE_FILE_PATTERN % file_suffix)
                     graph.add_task(
                         routing_funcs['distance_to_channel'],
                         args=((flow_dir_path, 1),
                               (stream_mask_path, 1),
                               distance_path),
                         target_path_list=[distance_path],
-                        task_name='downstream_distance_%s' % algorithm,
+                        task_name='downslope_distance_%s' % algorithm,
                         dependent_task_list=[stream_threshold_task])
     graph.join()
 

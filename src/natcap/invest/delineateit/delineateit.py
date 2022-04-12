@@ -27,7 +27,7 @@ LOGGER = logging.getLogger(__name__)
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["delineateit"].model_title,
     "pyname": MODEL_METADATA["delineateit"].pyname,
-    "userguide_html": MODEL_METADATA["delineateit"].userguide,
+    "userguide": MODEL_METADATA["delineateit"].userguide,
     "args_with_spatial_overlap": {
         "spatial_keys": ["dem_path", "outlet_vector_path"],
         "different_projections_ok": True,
@@ -151,8 +151,8 @@ def execute(args):
         args['snap_points'] (bool): Whether to snap point geometries to the
             nearest stream pixel.  If ``True``, ``args['flow_threshold']``
             and ``args['snap_distance']`` must also be defined.
-        args['flow_threshold'] (int):  The number of upstream cells that must
-            into a cell before it's considered part of a stream such that
+        args['flow_threshold'] (int):  The number of upslope cells that must
+            flow into a cell before it's considered part of a stream such that
             retention stops and the remaining export is exported to the stream.
             Used to define streams from the DEM.
         args['snap_distance'] (int):  Pixel Distance to Snap Outlet Points

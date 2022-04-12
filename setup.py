@@ -87,7 +87,7 @@ setup(
     },
     include_package_data=True,
     install_requires=_REQUIREMENTS,
-    setup_requires=['setuptools_scm', 'numpy', 'cython'],
+    python_requires='>=3.7,<3.10',
     license='BSD',
     long_description_content_type='text/x-rst',
     zip_safe=False,

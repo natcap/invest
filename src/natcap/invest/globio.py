@@ -27,7 +27,7 @@ SIGMA = 9.0
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["globio"].model_title,
     "pyname": MODEL_METADATA["globio"].pyname,
-    "userguide_html": MODEL_METADATA["globio"].userguide,
+    "userguide": MODEL_METADATA["globio"].userguide,
     "args_with_spatial_overlap": {
         "spatial_keys": [
             "lulc_path", "pasture_path", "potential_vegetation_path",

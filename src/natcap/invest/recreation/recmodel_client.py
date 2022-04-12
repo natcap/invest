@@ -99,7 +99,7 @@ predictor_table_columns = {
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["recreation"].model_title,
     "pyname": MODEL_METADATA["recreation"].pyname,
-    "userguide_html": MODEL_METADATA["recreation"].userguide,
+    "userguide": MODEL_METADATA["recreation"].userguide,
     "args": {
         "workspace_dir": spec_utils.WORKSPACE,
         "results_suffix": spec_utils.SUFFIX,
@@ -129,7 +129,7 @@ ARGS_SPEC = {
         "start_year": {
             "type": "number",
             "expression": "value >= 2005",
-            "units": u.year,
+            "units": u.year_AD,
             "about": _(
                 "Year at which to start photo user-day calculations. "
                 "Calculations start on the first day of the year. Year "
@@ -140,7 +140,7 @@ ARGS_SPEC = {
         "end_year": {
             "type": "number",
             "expression": "value <= 2017",
-            "units": u.year,
+            "units": u.year_AD,
             "about": _(
                 "Year at which to end photo user-day calculations. "
                 "Calculations continue through the last day of the year. "
@@ -172,7 +172,7 @@ ARGS_SPEC = {
         "cell_size": {
             "type": "number",
             "expression": "value > 0",
-            "units": u.linear_unit,  # any unit of length is ok
+            "units": u.other,  # any unit of length is ok
             "required": "grid_aoi",
             "about": _(
                 "Size of grid cells to make, measured in the projection units "
@@ -602,7 +602,7 @@ def _grid_vector(vector_path, grid_type, cell_size, out_grid_vector_path):
         original_vector_shapes.append(wkt_feat)
     vector_layer.ResetReading()
     original_polygon = shapely.prepared.prep(
-        shapely.ops.cascaded_union(original_vector_shapes))
+        shapely.ops.unary_union(original_vector_shapes))
 
     out_grid_vector = driver.Create(
         out_grid_vector_path, 0, 0, 0, gdal.GDT_Unknown)

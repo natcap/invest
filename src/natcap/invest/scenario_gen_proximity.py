@@ -31,7 +31,7 @@ MISSING_CONVERT_OPTION_MSG = _(
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["scenario_generator_proximity"].model_title,
     "pyname": MODEL_METADATA["scenario_generator_proximity"].pyname,
-    "userguide_html": MODEL_METADATA["scenario_generator_proximity"].userguide,
+    "userguide": MODEL_METADATA["scenario_generator_proximity"].userguide,
     "args": {
         "workspace_dir": spec_utils.WORKSPACE,
         "results_suffix": spec_utils.SUFFIX,

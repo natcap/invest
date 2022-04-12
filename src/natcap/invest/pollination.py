@@ -24,7 +24,7 @@ LOGGER = logging.getLogger(__name__)
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["pollination"].model_title,
     "pyname": MODEL_METADATA["pollination"].pyname,
-    "userguide_html": MODEL_METADATA["pollination"].userguide,
+    "userguide": MODEL_METADATA["pollination"].userguide,
     "args": {
         "workspace_dir": spec_utils.WORKSPACE,
         "results_suffix": spec_utils.SUFFIX,

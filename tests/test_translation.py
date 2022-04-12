@@ -123,7 +123,7 @@ class TranslationTests(unittest.TestCase):
         """Translation: test that /models endpoint is translated."""
         with patch('natcap.invest.LOCALE_DIR', self.test_locale_dir):
             test_client = ui_server.app.test_client()
-            response = test_client.get('/models')
+            response = test_client.get('api/models')
             result = json.loads(response.get_data(as_text=True))
         self.assertIn(
             TEST_MESSAGES['Carbon Storage and Sequestration'], result)
@@ -132,7 +132,7 @@ class TranslationTests(unittest.TestCase):
         """Translation: test that /getspec endpoint is translated."""
         with patch('natcap.invest.LOCALE_DIR', self.test_locale_dir):
             test_client = ui_server.app.test_client()
-            response = test_client.post('/getspec', json='carbon')
+            response = test_client.post('api/getspec', json='carbon')
             spec = json.loads(response.get_data(as_text=True))
         self.assertEqual(
             spec['args']['lulc_cur_path']['name'],
@@ -146,7 +146,7 @@ class TranslationTests(unittest.TestCase):
                 'model_module': carbon.ARGS_SPEC['pyname'],
                 'args': json.dumps({})
             }
-            response = test_client.post('/validate', json=payload)
+            response = test_client.post('api/validate', json=payload)
         results = json.loads(response.get_data(as_text=True))
         messages = [item[1] for item in results]
         self.assertIn(TEST_MESSAGES[missing_key_msg], messages)
