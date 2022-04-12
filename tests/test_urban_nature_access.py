@@ -69,7 +69,8 @@ def _build_model_args(workspace):
 
     with open(args['lulc_attribute_table'], 'w') as attr_table:
         attr_table.write(textwrap.dedent(
-            """lucode,greenspace
+            """\
+            lucode,greenspace
             0,0
             1,1
             2,0
@@ -405,7 +406,7 @@ class UNATests(unittest.TestCase):
             value: 30*value for value in range(1, 10, 2)}
         attribute_table['search_radius_m'] = attribute_table['lucode'].map(
             new_search_radius_values)
-        attribute_table.to_csv(args['lulc_attribute_table'])
+        attribute_table.to_csv(args['lulc_attribute_table'], index=False)
         # TODO: check with science team about enabling split greenspace.
         # The user's guide doesn't explicitly call for an enable/disable switch
         # for this.  The way this is worded in the UG allows for the search

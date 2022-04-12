@@ -6,6 +6,7 @@ import tempfile
 
 import numpy
 import numpy.testing
+import pandas
 import pygeoprocessing
 import taskgraph
 from natcap.invest import MODEL_METADATA
@@ -131,7 +132,6 @@ _INTERMEDIATE_BASE_FILES = {
     'aligned_population': 'aligned_population.tif',
     'aligned_lulc': 'aligned_lulc.tif',
     'greenspace_area': 'greenspace_area.tif',
-    'kernel': 'kernel.tif',
     'greenspace_population_ratio': 'greenspace_population_ratio.tif',
     'convolved_population': 'convolved_population.tif',
     'greenspace_budget': 'greenspace_budget.tif',
@@ -158,9 +158,14 @@ def execute(args):
         args['lulc_attribute_table'] (string): (required) A string path to a
             CSV with the following columns:
 
-            * ``lucode``: the integer landcover code represented.
-            * ``greenspace``: ``0`` or ``1`` indicating whether this landcover
+            * ``lucode``: (required) the integer landcover code represented.
+            * ``greenspace``: (required) ``0`` or ``1`` indicating whether this landcover
               code is (``1``) or is not (``0``) a greenspace pixel.
+            * ``search_radius_m``: (optional) the search radius for this
+              greenspace landcover in meters. Any rows with ``greenspace==1``
+              that do not have a value for ``search_radius_m`` will default to
+              using ``args['search_radius']`` as their ``search_radius_m``
+              value.
 
         args['population_raster_path'] (string): (required) A string path to a
             GDAL-compatible raster where pixels represent the population of
@@ -185,11 +190,11 @@ def execute(args):
     intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
     utils.make_directories([output_dir, intermediate_dir])
 
-    file_suffix = utils.make_suffix_string(args, 'results_suffix')
+    suffix = utils.make_suffix_string(args, 'results_suffix')
     file_registry = utils.build_file_registry(
         [(_OUTPUT_BASE_FILES, output_dir),
          (_INTERMEDIATE_BASE_FILES, intermediate_dir)],
-        file_suffix)
+        suffix)
 
     work_token_dir = os.path.join(intermediate_dir, '_taskgraph_working_dir')
     try:
@@ -201,7 +206,7 @@ def execute(args):
         n_workers = -1  # Synchronous execution
     graph = taskgraph.TaskGraph(work_token_dir, n_workers)
 
-    kernel_types = {
+    kernel_creation_functions = {
         'dichotomy': dichotomous_decay_kernel_raster,
         # "exponential" is more consistent with other InVEST models'
         # terminology.  "Power function" is used in the design doc.
@@ -211,15 +216,17 @@ def execute(args):
     }
     # Since we have these keys defined in two places, I want to be super sure
     # that the labels match.
-    assert sorted(kernel_types.keys()) == (
+    assert sorted(kernel_creation_functions.keys()) == (
         sorted(ARGS_SPEC['args']['decay_function']['options']))
 
     if 'kernel_type' not in args:
         kernel_type = 'dichotomy'
-    elif args['kernel_type'] not in kernel_types:
+        LOGGER.info(
+            'args["kernel_type"] not provided; defaulting to {kernel_type}')
+    elif args['kernel_type'] not in kernel_creation_functions:
         raise ValueError(
             f'Kernel type "{args["kernel_type"]}" is not recognized. '
-            f"Must be one of {', '.join(kernel_types.keys())}")
+            f"Must be one of {', '.join(kernel_creation_functions.keys())}")
     else:
         kernel_type = args['kernel_type']
 
@@ -263,18 +270,120 @@ def execute(args):
             'target_attr_table_path': file_registry['attribute_table'],
         },
         target_path_list=[file_registry['attribute_table']],
+        priority=10,  # higher-than-normal priority
         task_name='Preprocess the attribute table')
 
-    greenspace_reclassification_task = graph.add_task(
-        _reclassify_greenspace_area,
+    preprocess_attr_table_task.join()
+    attr_table = pandas.read_csv(file_registry['attribute_table'])
+    partial_greenspace_paths = []
+    partial_greenspace_tasks = []
+    for search_radius_m, group in attr_table[
+            attr_table['greenspace'] == 1].groupby('search_radius_m'):
+        matching_landuse_codes = group['lucode'].unique()
+
+        # reclassify greenspace needed for this kernel
+        greenspace_pixels_path = os.path.join(
+            intermediate_dir, f'greenspace_{search_radius_m}{suffix}.tif')
+        greenspace_reclassification_task = graph.add_task(
+            _reclassify_greenspace_area,
+            kwargs={
+                'lulc_raster_path': file_registry['aligned_lulc'],
+                'lulc_attribute_table': file_registry['attribute_table'],
+                'target_raster_path': greenspace_pixels_path,
+                'only_these_greenspace_codes': set(matching_landuse_codes),
+            },
+            target_path_list=[greenspace_pixels_path],
+            task_name=(
+                f'Identify area of greenspace in pixels {search_radius_m}'),
+            dependent_task_list=[
+                lulc_alignment_task, preprocess_attr_table_task]
+        )
+
+        search_radius_in_pixels = abs(
+            search_radius_m / squared_lulc_pixel_size[0])
+        kernel_path = os.path.join(
+            intermediate_dir, f'kernel_{search_radius_m}{suffix}.tif')
+        kernel_creation_task = graph.add_task(
+            # All kernel creation types have the same function signature
+            kernel_creation_functions[kernel_type],
+            args=(search_radius_in_pixels, kernel_path),
+            kwargs={'normalize': False},  # Model math calls for un-normalized
+            task_name=(
+                f'2SFCA - Create {kernel_type} kernel - {search_radius_m}m'),
+            target_path_list=[kernel_path]
+        )
+
+        # TODO: what about non-normalization for this convolution?
+        # probably should.
+        convolved_population_path = os.path.join(
+            intermediate_dir,
+            f'convolved_population_{search_radius_m}{suffix}.tif')
+        convolved_population_task = graph.add_task(
+            _convolve_and_set_lower_bounds_for_population,
+            kwargs={
+                'signal_path_band': (file_registry['aligned_population'], 1),
+                'kernel_path_band': (kernel_path, 1),
+                'target_path': convolved_population_path,
+                'working_dir': intermediate_dir,
+            },
+            task_name=f'2SFCA - Convolve population - {search_radius_m}m',
+            target_path_list=[convolved_population_path],
+            dependent_task_list=[
+                kernel_creation_task,
+                population_alignment_task,
+            ])
+
+        greenspace_population_ratio_path = os.path.join(
+            intermediate_dir,
+            f'greenspace_population_ratio_{search_radius_m}{suffix}.tif')
+        greenspace_population_ratio_task = graph.add_task(
+            _calculate_greenspace_population_ratio,
+            args=(greenspace_pixels_path, convolved_population_path,
+                  greenspace_population_ratio_path),
+            task_name=(
+                '2SFCA: Calculate R_j greenspace/population ratio - '
+                f'{search_radius_m}'),
+            target_path_list=[greenspace_population_ratio_path],
+            dependent_task_list=[
+                greenspace_reclassification_task,
+                convolved_population_task
+            ])
+
+        partial_greenspace_supply_path = os.path.join(
+            intermediate_dir,
+            f'greenspace_supply_{search_radius_m}{suffix}.tif')
+        convolved_greenspace_population_ratio_task = graph.add_task(
+            pygeoprocessing.convolve_2d,
+            kwargs={
+                'signal_path_band': (
+                    greenspace_population_ratio_path, 1),
+                'kernel_path_band': (kernel_path, 1),
+                'target_path': partial_greenspace_supply_path,
+                'working_dir': intermediate_dir,
+                # Insurance against future pygeoprocessing API changes.  The
+                # target nodata right now is the minimum possible numpy float32
+                # value, which is also what we use here as FLOAT32_NODATA.
+                'target_nodata': FLOAT32_NODATA,
+            },
+            task_name=f'2SFCA - greenspace supply - {search_radius_m}',
+            target_path_list=[partial_greenspace_supply_path],
+            dependent_task_list=[
+                kernel_creation_task,
+                greenspace_population_ratio_task,
+            ])
+        partial_greenspace_paths.append(partial_greenspace_supply_path)
+        partial_greenspace_tasks.append(
+            convolved_greenspace_population_ratio_task)
+
+    greenspace_supply_task = graph.add_task(
+        _sum_rasters,
         kwargs={
-            'lulc_raster_path': file_registry['aligned_lulc'],
-            'lulc_attribute_table': file_registry['attribute_table'],
-            'target_raster_path': file_registry['greenspace_area'],
+            'greenspace_supply_list': partial_greenspace_paths,
+            'target_sum_path': file_registry['greenspace_supply'],
         },
-        target_path_list=[file_registry['greenspace_area']],
-        task_name='Identify the area of greenspace in pixels',
-        dependent_task_list=[lulc_alignment_task, preprocess_attr_table_task]
+        task_name='2SFCA - greenspace supply total',
+        target_path_list=[file_registry['greenspace_supply']],
+        dependent_task_list=partial_greenspace_tasks
     )
 
     # for each unique search radius:
@@ -286,76 +395,6 @@ def execute(args):
     #       - copy the Ai_r raster to Ai
     #       - else, sum Ai_r rasters to Ai.
     #    - Remaining calculations then use the Ai_sum raster.
-
-    search_radius_in_pixels = abs(
-        float(args['search_radius']) / squared_lulc_pixel_size[0])
-    kernel_creation_task = graph.add_task(
-        # All kernel creation types have the same function signature
-        kernel_types[kernel_type],
-        args=(search_radius_in_pixels, file_registry['kernel']),
-        kwargs={'normalize': False},  # Model math calls for un-normalized
-        task_name=f'2SFCA - Create {kernel_type} kernel',
-        target_path_list=[file_registry['kernel']]
-    )
-
-    convolved_population_task = graph.add_task(
-        _convolve_and_set_lower_bounds_for_population,
-        kwargs={
-            'signal_path_band': (file_registry['aligned_population'], 1),
-            'kernel_path_band': (file_registry['kernel'], 1),
-            'target_path': file_registry['convolved_population'],
-            'working_dir': intermediate_dir,
-        },
-        task_name='2SFCA - Convolve population',
-        target_path_list=[file_registry['convolved_population']],
-        dependent_task_list=[
-            kernel_creation_task,
-            population_alignment_task,
-        ])
-
-    greenspace_nodata = pygeoprocessing.get_raster_info(
-        file_registry['greenspace_area'])['nodata'][0]
-    population_nodata = pygeoprocessing.get_raster_info(
-        file_registry['convolved_population'])['nodata'][0]
-    greenspace_population_ratio_task = graph.add_task(
-        pygeoprocessing.raster_calculator,
-        kwargs={
-            'base_raster_path_band_const_list': [
-                (file_registry['greenspace_area'], 1),
-                (file_registry['convolved_population'], 1),
-                (greenspace_nodata, 'raw'),
-                (population_nodata, 'raw')],
-            'local_op': _greenspace_population_ratio,
-            'target_raster_path': file_registry['greenspace_population_ratio'],
-            'datatype_target': gdal.GDT_Float32,
-            'nodata_target': FLOAT32_NODATA
-        },
-        task_name='2SFCA: Calculate R_j greenspace/population ratio',
-        target_path_list=[file_registry['greenspace_population_ratio']],
-        dependent_task_list=[
-            convolved_population_task,
-            greenspace_reclassification_task,
-        ])
-
-    convolved_greenspace_population_ratio_task = graph.add_task(
-        pygeoprocessing.convolve_2d,
-        kwargs={
-            'signal_path_band': (
-                file_registry['greenspace_population_ratio'], 1),
-            'kernel_path_band': (file_registry['kernel'], 1),
-            'target_path': file_registry['greenspace_supply'],
-            'working_dir': intermediate_dir,
-            # Insurance against future pygeoprocessing API changes.  The target
-            # nodata right now is the minimum possible numpy float32 value,
-            # which is also what we use here as FLOAT32_NODATA.
-            'target_nodata': FLOAT32_NODATA,
-        },
-        task_name='2SFCA - greenspace supply',
-        target_path_list=[file_registry['greenspace_supply']],
-        dependent_task_list=[
-            kernel_creation_task,
-            greenspace_population_ratio_task,
-        ])
 
     # This is "SUP_DEMi_cap" from the user's guide
     per_capita_greenspace_budget_task = graph.add_task(
@@ -373,7 +412,7 @@ def execute(args):
         task_name='Calculate per-capita greenspace budget',
         target_path_list=[file_registry['greenspace_budget']],
         dependent_task_list=[
-            convolved_greenspace_population_ratio_task
+            greenspace_supply_task,
         ])
 
     # This is "SUP_DEMi" from the user's guide
@@ -464,8 +503,28 @@ def execute(args):
     LOGGER.info('Finished Urban Nature Access Model')
 
 
+def _sum_rasters(greenspace_supply_list, target_sum_path):
+    def _sum_op(*greenspace_supply_arrays):
+        valid_mask = numpy.ones(greenspace_supply_arrays[0].shape, dtype=bool)
+        for array in greenspace_supply_arrays:
+            valid_mask &= ~utils.array_equals_nodata(array, FLOAT32_NODATA)
+
+        sum_array = numpy.zeros(valid_mask.shape, dtype=numpy.float32)
+        for array in greenspace_supply_arrays:
+            sum_array[valid_mask] += array[valid_mask]
+        result = numpy.full(valid_mask.shape, FLOAT32_NODATA,
+                            dtype=numpy.float32)
+        result[valid_mask] = sum_array[valid_mask]
+        return result
+
+    pygeoprocessing.raster_calculator(
+        [(path, 1) for path in greenspace_supply_list], _sum_op,
+        target_sum_path, gdal.GDT_Float32, FLOAT32_NODATA)
+
+
 def _reclassify_greenspace_area(
-        lulc_raster_path, lulc_attribute_table, target_raster_path):
+        lulc_raster_path, lulc_attribute_table, target_raster_path,
+        only_these_greenspace_codes=None):
     """Reclassify LULC pixels into the greenspace area they represent.
 
     Args:
@@ -474,6 +533,11 @@ def _reclassify_greenspace_area(
             LULC attributes.  Must have "lucode" and "greenspace" columns.
         target_raster_path (string): Where the reclassified greenspace raster
             should be written.
+        only_these_greenspace_codes=None (iterable or None): If ``None``, all
+            lucodes with a ``greenspace`` value of 1 will be reclassified to 1.
+            If an iterable, must be an iterable of landuse codes matching codes
+            in then lulc attribute table.  Only these landcover codes will have
+            greenspace area classified in the target raster path.
 
     Returns:
         ``None``
@@ -484,10 +548,20 @@ def _reclassify_greenspace_area(
     squared_pixel_area = abs(
         numpy.multiply(*_square_off_pixels(lulc_raster_path)))
 
-    greenspace_area_map = {
-        lucode: int(attributes['greenspace']) * squared_pixel_area
-        for lucode, attributes in attribute_table_dict.items()
-    }
+    if only_these_greenspace_codes:
+        valid_greenspace_codes = set(only_these_greenspace_codes)
+    else:
+        valid_greenspace_codes = set(
+            lucode for lucode, attributes in attribute_table_dict.items()
+            if (attributes['greenspace']) == 1)
+
+    greenspace_area_map = {}
+    for lucode, attributes in attribute_table_dict.items():
+        greenspace_area = 0
+        if lucode in valid_greenspace_codes:
+            greenspace_area = squared_pixel_area
+        greenspace_area_map[lucode] = greenspace_area
+
     lulc_raster_info = pygeoprocessing.get_raster_info(lulc_raster_path)
     greenspace_area_map[lulc_raster_info['nodata'][0]] = FLOAT32_NODATA
 
@@ -528,7 +602,7 @@ def _preprocess_lulc_attribute_table(
     """
     attr_dataframe = utils.read_csv_to_dataframe(
         source_attr_table_path, to_lower=True, sep=None, engine='python',
-        dtype={'greenspace': int})
+        dtype={'greenspace': int, 'search_radius_m': float})
 
     try:
         # If the search_radius_m column is present in the table but there are
@@ -710,63 +784,75 @@ def _greenspace_supply_demand_op(greenspace_budget, population):
     return supply_demand
 
 
-def _greenspace_population_ratio(
-        greenspace_area, convolved_population, greenspace_nodata,
-        population_nodata):
-    """Calculate the greenspace-population ratio R_j.
+def _calculate_greenspace_population_ratio(
+        greenspace_area_raster_path, convolved_population_raster_path,
+        target_ratio_raster_path):
+    greenspace_nodata = pygeoprocessing.get_raster_info(
+        greenspace_area_raster_path)['nodata'][0]
+    population_nodata = pygeoprocessing.get_raster_info(
+        convolved_population_raster_path)['nodata'][0]
 
-    Args:
-        greenspace_area (numpy.array): A numpy array representing the area of
-            greenspace in the pixel.  Pixel values will be ``0`` if there is no
-            greenspace.  Pixel values may also match ``greenspace_nodata``.
-        convolved_population (numpy.array): A numpy array where each pixel
-            represents the total number of people within a search radius of
-            each pixel, perhaps adjusted by a search kernel.
-        greenspace_nodata (int or float): The nodata value of the
-            ``greenspace_area`` matrix.
-        population_nodata (int or float): The nodata value of the
-            ``convolved_population`` matrix.
+    def _greenspace_population_ratio(greenspace_area, convolved_population):
+        """Calculate the greenspace-population ratio R_j.
 
-    Returns:
-        A numpy array with the ratio ``R_j`` representing the
-        greenspace-population ratio with the following constraints:
+        Args:
+            greenspace_area (numpy.array): A numpy array representing the area
+                of greenspace in the pixel.  Pixel values will be ``0`` if
+                there is no greenspace.  Pixel values may also match
+                ``greenspace_nodata``.
+            convolved_population (numpy.array): A numpy array where each pixel
+                represents the total number of people within a search radius of
+                each pixel, perhaps adjusted by a search kernel.
+            greenspace_nodata (int or float): The nodata value of the
+                ``greenspace_area`` matrix.
+            population_nodata (int or float): The nodata value of the
+                ``convolved_population`` matrix.
 
-            * ``convolved_population`` pixels that are numerically close to
-              ``0`` are snapped to ``0`` to avoid unrealistically small
-              denominators in the final ratio.
-            * Any non-greenspace pixels will have a value of ``0.0`` in the
-              output matrix.
-    """
-    # ASSUMPTION: population nodata value is not close to 0.
-    #  Shouldn't be if we're coming from convolution.
-    out_array = numpy.full(
-        greenspace_area.shape, FLOAT32_NODATA, dtype=numpy.float32)
+        Returns:
+            A numpy array with the ratio ``R_j`` representing the
+            greenspace-population ratio with the following constraints:
 
-    # Small negative values should already have been filtered out in another
-    # function after the convolution.
-    # This avoids divide-by-zero errors when taking the ratio.
-    valid_pixels = (convolved_population > 0)
+                * ``convolved_population`` pixels that are numerically close to
+                  ``0`` are snapped to ``0`` to avoid unrealistically small
+                  denominators in the final ratio.
+                * Any non-greenspace pixels will have a value of ``0.0`` in the
+                  output matrix.
+        """
+        # ASSUMPTION: population nodata value is not close to 0.
+        #  Shouldn't be if we're coming from convolution.
+        out_array = numpy.full(
+            greenspace_area.shape, FLOAT32_NODATA, dtype=numpy.float32)
 
-    # R_j is a ratio only calculated for the greenspace pixels.
-    greenspace_pixels = ~numpy.isclose(greenspace_area, 0.0)
-    valid_pixels &= greenspace_pixels
-    if population_nodata is not None:
-        valid_pixels &= ~numpy.isclose(
-            convolved_population, population_nodata)
+        # Small negative values should already have been filtered out in
+        # another function after the convolution.
+        # This avoids divide-by-zero errors when taking the ratio.
+        valid_pixels = (convolved_population > 0)
 
-    if greenspace_nodata is not None:
-        valid_pixels &= ~numpy.isclose(greenspace_area, greenspace_nodata)
+        # R_j is a ratio only calculated for the greenspace pixels.
+        greenspace_pixels = ~numpy.isclose(greenspace_area, 0.0)
+        valid_pixels &= greenspace_pixels
+        if population_nodata is not None:
+            valid_pixels &= ~numpy.isclose(
+                convolved_population, population_nodata)
 
-    # If the population in the search radius is numerically 0, the model
-    # specifies that the ratio should be set to the greenspace area.
-    population_close_to_zero = numpy.isclose(convolved_population, 0.0)
-    out_array[population_close_to_zero] = (
-        greenspace_pixels[population_close_to_zero])
-    out_array[~greenspace_pixels] = 0.0  # set non-greenspace non-nodata to 0
-    out_array[valid_pixels] = (
-        greenspace_area[valid_pixels] / convolved_population[valid_pixels])
+        if greenspace_nodata is not None:
+            valid_pixels &= ~numpy.isclose(greenspace_area, greenspace_nodata)
 
-    return out_array
+        # If the population in the search radius is numerically 0, the model
+        # specifies that the ratio should be set to the greenspace area.
+        population_close_to_zero = numpy.isclose(convolved_population, 0.0)
+        out_array[population_close_to_zero] = (
+            greenspace_pixels[population_close_to_zero])
+        out_array[~greenspace_pixels] = 0.0  # set non-greenspace non-nodata to 0
+        out_array[valid_pixels] = (
+            greenspace_area[valid_pixels] / convolved_population[valid_pixels])
+
+        return out_array
+
+    pygeoprocessing.raster_calculator(
+        [(greenspace_area_raster_path, 1), (convolved_population_raster_path, 1)],
+        _greenspace_population_ratio, target_ratio_raster_path,
+        gdal.GDT_Float32, FLOAT32_NODATA)
 
 
 def _convolve_and_set_lower_bounds_for_population(
