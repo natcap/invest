@@ -144,7 +144,7 @@ jobs:
       - uses: ./.github/actions/setup_env
         with:
           python-version: ${{ matrix.python-version }}
-          requirements-files: requirements.txt requirements-dev.txt
+          requirements-files: requirements.txt
           requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
 
       - name: Build source distribution
