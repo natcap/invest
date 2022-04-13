@@ -61,14 +61,14 @@ export default function ResourcesTab(props) {
     userGuideURL = `${UG_ROOT}/${docsName}#data-needs`;
   }
   if (tagName) {
-    forumURL = `${FORUM_ROOT}/tags/${tagName}`;
+    forumURL = `${FORUM_ROOT}/tag/${tagName}`;
   }
   return (
     <React.Fragment>
       <a
         href={userGuideURL}
         title={userGuideURL}
-        aria-label="go to user guide in web browser"
+        aria-label="go to user's guide in web browser"
         onClick={handleClick}
       >
         <MdOpenInNew className="mr-1" />
@@ -77,7 +77,7 @@ export default function ResourcesTab(props) {
       <a
         href={forumURL}
         title={forumURL}
-        aria-label="go to user support forum in web browser"
+        aria-label="go to frequently asked questions in web browser"
         onClick={handleClick}
       >
         <MdOpenInNew className="mr-1" />
