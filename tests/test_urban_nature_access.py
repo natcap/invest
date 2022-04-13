@@ -330,71 +330,88 @@ class UNATests(unittest.TestCase):
             pandas.read_csv(target_attr_table),
             pandas.read_csv(expected_csv_path))
 
-    def test_core_model(self):
-        """UNA: Run through the model with no optional parts."""
+    def test_core_model_and_base_cases_split_features(self):
+        """UNA: Run through the model with base data."""
         from natcap.invest import urban_nature_access
 
-        args = _build_model_args(self.workspace_dir)
-        urban_nature_access.execute(args)
+        for case in ('base', 'split_greenspace'):
+            args = _build_model_args(self.workspace_dir)
 
-        # Since we're doing a semi-manual alignment step, assert that the
-        # aligned LULC and population rasters have the same pixel sizes, origin
-        # and raster dimensions.
-        # TODO: Remove these assertions once we're using align_and_resize and
-        # it works as expected.
-        aligned_lulc_raster_info = pygeoprocessing.get_raster_info(
-            os.path.join(args['workspace_dir'], 'intermediate',
-                         f"aligned_lulc_{args['results_suffix']}.tif"))
-        aligned_population_raster_info = pygeoprocessing.get_raster_info(
-            os.path.join(args['workspace_dir'], 'intermediate',
-                         f"aligned_population_{args['results_suffix']}.tif"))
-        numpy.testing.assert_allclose(
-            aligned_lulc_raster_info['pixel_size'],
-            aligned_population_raster_info['pixel_size'])
-        numpy.testing.assert_allclose(
-            aligned_lulc_raster_info['raster_size'],
-            aligned_population_raster_info['raster_size'])
-        numpy.testing.assert_allclose(
-            aligned_lulc_raster_info['geotransform'],
-            aligned_population_raster_info['geotransform'])
-        numpy.testing.assert_allclose(
-            aligned_lulc_raster_info['bounding_box'],
-            aligned_population_raster_info['bounding_box'])
+            if case == 'split_greenspace':
+                # The base case for the split greenspace optional module is
+                # that all of the classes have the same search radius.  We've
+                # updated the model functionality to enable multiple radii, but
+                # we still want the core model to work the same.
+                attribute_table = pandas.read_csv(args['lulc_attribute_table'])
+                attribute_table['search_radius_m'] = args['search_radius']
+                attribute_table.to_csv(
+                    args['lulc_attribute_table'], index=False)
 
-        # Check that we're getting the appropriate summary values in the admin
-        # units vector.
-        admin_vector_path = os.path.join(
-            args['workspace_dir'], 'output',
-            f"admin_units_{args['results_suffix']}.gpkg")
-        admin_vector = gdal.OpenEx(admin_vector_path)
-        admin_layer = admin_vector.GetLayer()
-        self.assertEqual(admin_layer.GetFeatureCount(), 1)
+            urban_nature_access.execute(args)
 
-        admin_feature = admin_layer.GetFeature(1)
-        numpy.testing.assert_allclose(
-            admin_feature.GetField('SUP_DEMadm_cap'),
-            -17.9078)  # from eyeballing the results; random seed = 1
+            # Since we're doing a semi-manual alignment step, assert that the
+            # aligned LULC and population rasters have the same pixel sizes,
+            # origin and raster dimensions.
+            # TODO: Remove these assertions once we're using align_and_resize
+            # and it works as expected.
+            aligned_lulc_raster_info = pygeoprocessing.get_raster_info(
+                os.path.join(args['workspace_dir'], 'intermediate',
+                             f"aligned_lulc_{args['results_suffix']}.tif"))
+            aligned_population_raster_info = pygeoprocessing.get_raster_info(
+                os.path.join(
+                    args['workspace_dir'], 'intermediate',
+                    f"aligned_population_{args['results_suffix']}.tif"))
+            numpy.testing.assert_allclose(
+                aligned_lulc_raster_info['pixel_size'],
+                aligned_population_raster_info['pixel_size'])
+            numpy.testing.assert_allclose(
+                aligned_lulc_raster_info['raster_size'],
+                aligned_population_raster_info['raster_size'])
+            numpy.testing.assert_allclose(
+                aligned_lulc_raster_info['geotransform'],
+                aligned_population_raster_info['geotransform'])
+            numpy.testing.assert_allclose(
+                aligned_lulc_raster_info['bounding_box'],
+                aligned_population_raster_info['bounding_box'])
 
-        undersupplied_pop = admin_feature.GetField('Pund_adm')
-        numpy.testing.assert_allclose(
-            undersupplied_pop,
-            4094.012207)  # From eyeballing the results; random seed = 1
+            # Check that we're getting the appropriate summary values in the
+            # admin units vector.
+            admin_vector_path = os.path.join(
+                args['workspace_dir'], 'output',
+                f"admin_units_{args['results_suffix']}.gpkg")
+            admin_vector = gdal.OpenEx(admin_vector_path)
+            admin_layer = admin_vector.GetLayer()
+            self.assertEqual(admin_layer.GetFeatureCount(), 1)
 
-        oversupplied_pop = admin_feature.GetField('Povr_adm')
-        numpy.testing.assert_allclose(
-            oversupplied_pop,
-            981.987549)  # From eyeballing the results; random seed = 1
+            admin_feature = admin_layer.GetFeature(1)
+            numpy.testing.assert_allclose(
+                admin_feature.GetField('SUP_DEMadm_cap'),
+                -17.9078)  # from eyeballing the results; random seed = 1
 
-        # The sum of the under-and-oversupplied populations should be equal to
-        # the total population count.
-        population_array = pygeoprocessing.raster_to_numpy_array(
-            args['population_raster_path'])
-        numpy.testing.assert_allclose(
-            undersupplied_pop + oversupplied_pop,
-            population_array.sum())
+            undersupplied_pop = admin_feature.GetField('Pund_adm')
+            numpy.testing.assert_allclose(
+                undersupplied_pop,
+                4094.012207)  # From eyeballing the results; random seed = 1
 
-    def test_split_greenspace(self):
-        """UNA: Test the split greenspace optional feature."""
+            oversupplied_pop = admin_feature.GetField('Povr_adm')
+            numpy.testing.assert_allclose(
+                oversupplied_pop,
+                981.987549)  # From eyeballing the results; random seed = 1
+
+            # The sum of the under-and-oversupplied populations should be equal
+            # to the total population count.
+            population_array = pygeoprocessing.raster_to_numpy_array(
+                args['population_raster_path'])
+            numpy.testing.assert_allclose(
+                undersupplied_pop + oversupplied_pop,
+                population_array.sum())
+
+            admin_vector = None
+            admin_layer = None
+
+            shutil.rmtree(args['workspace_dir'])
+
+    def test_split_greenspace_unique_distances(self):
         from natcap.invest import urban_nature_access
 
         args = _build_model_args(self.workspace_dir)
