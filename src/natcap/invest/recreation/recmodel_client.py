@@ -176,9 +176,9 @@ ARGS_SPEC = {
             "required": "grid_aoi",
             "about": _(
                 "Size of grid cells to make, measured in the projection units "
-                "of the AOI. If the Grid Type is square, this is the length "
+                "of the AOI. If the Grid Type is 'square', this is the length "
                 "of each side of the square. If the Grid Type is 'hexagon', "
-                "this is the hexagon's diameter."),
+                "this is the hexagon's maximal diameter."),
             "name": _("cell size")
         },
         "compute_regression": {
