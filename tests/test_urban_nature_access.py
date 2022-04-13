@@ -431,3 +431,36 @@ class UNATests(unittest.TestCase):
         args['use_split_greenspace'] = True
 
         urban_nature_access.execute(args)
+
+        admin_vector_path = os.path.join(
+            args['workspace_dir'], 'output',
+            f"admin_units_{args['results_suffix']}.gpkg")
+        admin_vector = gdal.OpenEx(admin_vector_path)
+        admin_layer = admin_vector.GetLayer()
+        self.assertEqual(admin_layer.GetFeatureCount(), 1)
+
+        # expected field values from eyeballing the results; random seed = 1
+        expected_values = {
+            'SUP_DEMadm_cap': -17.9078,
+            'Pund_adm': 4014.246582,
+            'Povr_adm': 1061.753052,
+        }
+        admin_feature = admin_layer.GetFeature(1)
+        self.assertEqual(
+            expected_values.keys(),
+            admin_feature.items().keys()
+        )
+        for fieldname, expected_value in expected_values.items():
+            numpy.testing.assert_allclose(
+                admin_feature.GetField(fieldname), expected_value)
+
+        # The sum of the under-and-oversupplied populations should be equal
+        # to the total population count.
+        population_array = pygeoprocessing.raster_to_numpy_array(
+            args['population_raster_path'])
+        numpy.testing.assert_allclose(
+            (expected_values['Pund_adm'] + expected_values['Povr_adm']),
+            population_array.sum())
+
+        admin_vector = None
+        admin_layer = None
