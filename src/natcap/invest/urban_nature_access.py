@@ -280,6 +280,9 @@ def execute(args):
     for search_radius_m, group in attr_table[
             attr_table['greenspace'] == 1].groupby('search_radius_m'):
         matching_landuse_codes = group['lucode'].unique()
+        LOGGER.info(
+            f'Using search radius {search_radius_m} for lucodes '
+            f'{" ".join([str(c) for c in matching_landuse_codes])}')
 
         # reclassify greenspace needed for this kernel
         greenspace_pixels_path = os.path.join(
@@ -313,8 +316,9 @@ def execute(args):
             target_path_list=[kernel_path]
         )
 
-        # TODO: what about non-normalization for this convolution?
-        # probably should.
+        # Convolving the population within a non-normalized kernel gives us the
+        # number of people (possibly weighted, depending on the kernel) within
+        # the target search radius.
         convolved_population_path = os.path.join(
             intermediate_dir,
             f'convolved_population_{search_radius_m}{suffix}.tif')
@@ -802,11 +806,7 @@ def _calculate_greenspace_population_ratio(
                 ``greenspace_nodata``.
             convolved_population (numpy.array): A numpy array where each pixel
                 represents the total number of people within a search radius of
-                each pixel, perhaps adjusted by a search kernel.
-            greenspace_nodata (int or float): The nodata value of the
-                ``greenspace_area`` matrix.
-            population_nodata (int or float): The nodata value of the
-                ``convolved_population`` matrix.
+                each pixel, perhaps weighted by a search kernel.
 
         Returns:
             A numpy array with the ratio ``R_j`` representing the
@@ -843,14 +843,15 @@ def _calculate_greenspace_population_ratio(
         population_close_to_zero = numpy.isclose(convolved_population, 0.0)
         out_array[population_close_to_zero] = (
             greenspace_pixels[population_close_to_zero])
-        out_array[~greenspace_pixels] = 0.0  # set non-greenspace non-nodata to 0
+        out_array[~greenspace_pixels] = 0.0
         out_array[valid_pixels] = (
             greenspace_area[valid_pixels] / convolved_population[valid_pixels])
 
         return out_array
 
     pygeoprocessing.raster_calculator(
-        [(greenspace_area_raster_path, 1), (convolved_population_raster_path, 1)],
+        [(greenspace_area_raster_path, 1),
+         (convolved_population_raster_path, 1)],
         _greenspace_population_ratio, target_ratio_raster_path,
         gdal.GDT_Float32, FLOAT32_NODATA)
 
@@ -863,7 +864,8 @@ def _convolve_and_set_lower_bounds_for_population(
         signal_path_band (tuple): A 2-tuple of (signal_raster_path, band_index)
             to use as the signal raster in the convolution.
         kernel_path_band (tuple): A 2-tuple of (kernel_raster_path, band_index)
-            to use as the kernel raster in the convolution.
+            to use as the kernel raster in the convolution.  This kernel should
+            be non-normalized.
         target_path (string): Where the target raster should be written.
         working_dir (string): The working directory that
             ``pygeoprocessing.convolve_2d`` may use for its intermediate files.
