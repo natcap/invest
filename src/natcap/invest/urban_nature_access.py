@@ -63,6 +63,20 @@ ARGS_SPEC = {
                         "1 if this landcover code represents greenspace, 0 "
                         "if not."
                     ),
+                },
+                'search_radius_m': {
+                    'type': 'number',
+                    'units': u.meter,
+                    'about': (
+                        'The distance in meters to use as the search radius '
+                        'for this type of greenspace.  Values are only '
+                        'required in this column if the value of greenspace '
+                        'is 1.  If any greenspace values are left blank, the '
+                        'user-defined "search radius" input will be used as '
+                        'a default value.  If this column is missing, all '
+                        'types of greenspace will use the user-defined '
+                        '"search radius" input as their search radius.'
+                    ),
                 }
             },
             'about': (
@@ -105,7 +119,12 @@ ARGS_SPEC = {
             'name': 'search radius',
             'units': u.m,
             'expression': "value > 0",
-            'about': "",  # TODO, will know more about this when I implement.
+            'about': (
+                'The search radius to use for greenspace LULC '
+                'classifications. If the landuse attribute table has a '
+                '"search_radius_m" column, values in that column will '
+                'take precedence over the search radius defined here.'
+            ),
         },
         'decay_function': {
             'name': 'decay function',
@@ -159,8 +178,9 @@ def execute(args):
             CSV with the following columns:
 
             * ``lucode``: (required) the integer landcover code represented.
-            * ``greenspace``: (required) ``0`` or ``1`` indicating whether this landcover
-              code is (``1``) or is not (``0``) a greenspace pixel.
+            * ``greenspace``: (required) ``0`` or ``1`` indicating whether
+              this landcover code is (``1``) or is not (``0``) a greenspace
+              pixel.
             * ``search_radius_m``: (optional) the search radius for this
               greenspace landcover in meters. Any rows with ``greenspace==1``
               that do not have a value for ``search_radius_m`` will default to
