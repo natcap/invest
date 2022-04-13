@@ -8,6 +8,7 @@ import url from 'url';
 
 import React from 'react';
 import { render } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 
 import * as server_requests from '../../src/renderer/server_requests';
@@ -21,7 +22,7 @@ import {
 } from '../../src/main/createPythonFlaskProcess';
 import findInvestBinaries from '../../src/main/findInvestBinaries';
 
-jest.setTimeout(60000); // This test is slow in CI
+jest.setTimeout(120000); // This test is slow in CI
 
 let flaskSubprocess;
 beforeAll(async () => {
@@ -180,6 +181,36 @@ describe('validate the UI spec', () => {
   });
 });
 
+/** Some tests make http requests to check that links are status 200.
+ *
+ * @param {object} options - as passed to http.request or https.request
+ * @returns {Promise} - resolves status code of the request.
+ */
+function getUrlStatus(options) {
+  // the forum is served with https, the user guide is not.
+  const { request } = (options.host.startsWith('community')) ? https : http;
+  return new Promise((resolve) => {
+    const req = request(options, (response) => {
+      resolve(response.statusCode);
+    });
+    req.end();
+  });
+}
+
+// Need a custom matcher to get useful message back on test failure
+expect.extend({
+  toBeStatus200: (received, address) => {
+    const pass = received === 200;
+    if (pass) {
+      return { pass: true };
+    }
+    return {
+      pass: false,
+      message: () => `expected ${received} to be 200 for ${address}`,
+    };
+  },
+});
+
 describe('Build each model UI from ARGS_SPEC', () => {
   const { UI_SPEC } = require('../../src/renderer/ui_config');
 
@@ -187,7 +218,7 @@ describe('Build each model UI from ARGS_SPEC', () => {
     const argsSpec = await server_requests.getSpec(model);
     const uiSpec = UI_SPEC[model];
 
-    const { findByRole } = render(
+    const { findByRole, findAllByRole } = render(
       <SetupTab
         pyModuleName={argsSpec.pyname}
         modelName={argsSpec.model_name}
@@ -205,22 +236,27 @@ describe('Build each model UI from ARGS_SPEC', () => {
     );
     expect(await findByRole('textbox', { name: /workspace/i }))
       .toBeInTheDocument();
+
+    const infoButtons = await findAllByRole('button', { name: /info about/ });
+    /* eslint-disable no-restricted-syntax, no-await-in-loop */
+    for (const btn of infoButtons) {
+      userEvent.click(btn);
+      const link = await findByRole('link');
+      const address = link.getAttribute('href');
+      const options = {
+        method: 'HEAD',
+        host: url.parse(address).host,
+        path: url.parse(address).pathname,
+      };
+      const status = await getUrlStatus(options);
+      expect(status).toBeStatus200(address);
+    }
+    /* eslint-enable no-restricted-syntax, no-await-in-loop */
   });
 });
 
 describe('Check UG & Forum links for each model', () => {
   const { UI_SPEC } = require('../../src/renderer/ui_config');
-
-  function getUrlStatus(options) {
-    // the forum is served with https, the user guide is not.
-    const { request } = (options.host.startsWith('community')) ? https : http;
-    return new Promise((resolve) => {
-      const req = request(options, (response) => {
-        resolve(response.statusCode);
-      });
-      req.end();
-    });
-  }
 
   test.each(Object.keys(UI_SPEC))('%s - User Guide', async (model) => {
     const argsSpec = await server_requests.getSpec(model);
