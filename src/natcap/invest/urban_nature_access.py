@@ -26,7 +26,7 @@ BYTE_NODATA = 255
 ARGS_SPEC = {
     'model_name': MODEL_METADATA['urban_nature_access'].model_title,
     'pyname': MODEL_METADATA['urban_nature_access'].pyname,
-    'userguide_html': MODEL_METADATA['urban_nature_access'].userguide,
+    'userguide': MODEL_METADATA['urban_nature_access'].userguide,
     'args_with_spatial_overlap': {
         'spatial_keys': [
             'lulc_raster_path', 'population_raster_path',
