@@ -383,27 +383,27 @@ class UNATests(unittest.TestCase):
             admin_layer = admin_vector.GetLayer()
             self.assertEqual(admin_layer.GetFeatureCount(), 1)
 
+            # expected field values from eyeballing the results; random seed = 1
+            expected_values = {
+                'SUP_DEMadm_cap': -17.9078,
+                'Pund_adm': 4094.012207,
+                'Povr_adm': 981.987549,
+            }
             admin_feature = admin_layer.GetFeature(1)
-            numpy.testing.assert_allclose(
-                admin_feature.GetField('SUP_DEMadm_cap'),
-                -17.9078)  # from eyeballing the results; random seed = 1
-
-            undersupplied_pop = admin_feature.GetField('Pund_adm')
-            numpy.testing.assert_allclose(
-                undersupplied_pop,
-                4094.012207)  # From eyeballing the results; random seed = 1
-
-            oversupplied_pop = admin_feature.GetField('Povr_adm')
-            numpy.testing.assert_allclose(
-                oversupplied_pop,
-                981.987549)  # From eyeballing the results; random seed = 1
+            self.assertEqual(
+                expected_values.keys(),
+                admin_feature.items().keys()
+            )
+            for fieldname, expected_value in expected_values.items():
+                numpy.testing.assert_allclose(
+                    admin_feature.GetField(fieldname), expected_value)
 
             # The sum of the under-and-oversupplied populations should be equal
             # to the total population count.
             population_array = pygeoprocessing.raster_to_numpy_array(
                 args['population_raster_path'])
             numpy.testing.assert_allclose(
-                undersupplied_pop + oversupplied_pop,
+                (expected_values['Pund_adm'] + expected_values['Povr_adm']),
                 population_array.sum())
 
             admin_vector = None
