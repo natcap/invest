@@ -207,7 +207,7 @@ MODEL_METADATA = {
     'urban_nature_access': _MODELMETA(
         model_title='Urban Nature Access',
         pyname='natcap.invest.urban_nature_access',
-        gui='',  # TODO
+        gui='urban_nature_access.UrbanNatureAccess',
         userguide='',  # TODO,
         aliases=('una',)),
 }

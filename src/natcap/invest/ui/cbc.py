@@ -2,9 +2,11 @@
 
 import functools
 
-from natcap.invest.ui import model, inputs
-from natcap.invest.coastal_blue_carbon import coastal_blue_carbon, preprocessor
 from natcap.invest import MODEL_METADATA
+from natcap.invest.coastal_blue_carbon import coastal_blue_carbon
+from natcap.invest.coastal_blue_carbon import preprocessor
+from natcap.invest.ui import inputs
+from natcap.invest.ui import model
 
 
 def _create_input_kwargs_from_args_spec(
@@ -26,7 +28,7 @@ def _create_input_kwargs_from_args_spec(
     return {
         'args_key': args_key,
         'helptext': model_spec[args_key]['about'],
-        'label': model_spec[args_key]['name'],
+        'label': model_spec[args_key]['name'].capitalize(),
         'validator': validator,
     }
 
