@@ -290,7 +290,7 @@ def execute(args):
             'target_attr_table_path': file_registry['attribute_table'],
         },
         target_path_list=[file_registry['attribute_table']],
-        priority=10,  # higher-than-normal priority
+        priority=10,  # higher-than-normal priority to address sooner.
         task_name='Preprocess the attribute table')
 
     preprocess_attr_table_task.join()
@@ -410,16 +410,6 @@ def execute(args):
         dependent_task_list=partial_greenspace_tasks
     )
 
-    # for each unique search radius:
-    #    - Filter the landcover codes matching the search radius
-    #    - create the kernel with the target search radius
-    #    - convolve the population with the kernel
-    #    - do the whole 2SFCA pipeline
-    #    - if there is only 1 unique search radius:
-    #       - copy the Ai_r raster to Ai
-    #       - else, sum Ai_r rasters to Ai.
-    #    - Remaining calculations then use the Ai_sum raster.
-
     # This is "SUP_DEMi_cap" from the user's guide
     per_capita_greenspace_budget_task = graph.add_task(
         pygeoprocessing.raster_calculator,
@@ -528,7 +518,25 @@ def execute(args):
 
 
 def _sum_rasters(greenspace_supply_list, target_sum_path):
+    """Sum a stack of rasters.
+
+    This assumes that all rasters have the same nodata, equal to
+    ``FLOAT32_NODATA``.
+
+    Args:
+        greenspace_supply_list (list): A list of float32 raster paths, where
+            pixel values in these rasters will be summed along the 3rd
+            dimension.  Rasters in this stack must all perfectly align.
+        target_sum_path (string): The target path.
+
+    Returns:
+        ``None``
+    """
     def _sum_op(*greenspace_supply_arrays):
+        """Sum a stack of arrays that all use FLOAT32_NODATA as their nodata.
+
+        Returns a float32 numpy array.
+        """
         valid_mask = numpy.ones(greenspace_supply_arrays[0].shape, dtype=bool)
         for array in greenspace_supply_arrays:
             valid_mask &= ~utils.array_equals_nodata(array, FLOAT32_NODATA)
