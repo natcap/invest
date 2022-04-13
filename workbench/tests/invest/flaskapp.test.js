@@ -208,7 +208,7 @@ describe('Build each model UI from ARGS_SPEC', () => {
   });
 });
 
-describe.only('Check UG & Forum links for each model', () => {
+describe('Check UG & Forum links for each model', () => {
   const { UI_SPEC } = require('../../src/renderer/ui_config');
 
   function getUrlStatus(options) {
