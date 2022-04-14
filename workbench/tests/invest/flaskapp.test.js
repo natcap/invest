@@ -1,5 +1,4 @@
 import fs from 'fs';
-import http from 'http';
 import https from 'https';
 import os from 'os';
 import path from 'path';
@@ -183,14 +182,12 @@ describe('validate the UI spec', () => {
 
 /** Some tests make http requests to check that links are status 200.
  *
- * @param {object} options - as passed to http.request or https.request
+ * @param {object} options - as passed to https.request
  * @returns {Promise} - resolves status code of the request.
  */
 function getUrlStatus(options) {
-  // the forum is served with https, the user guide is not.
-  const { request } = (options.host.startsWith('community')) ? https : http;
   return new Promise((resolve) => {
-    const req = request(options, (response) => {
+    const req = https.request(options, (response) => {
       resolve(response.statusCode);
     });
     req.end();
@@ -275,7 +272,7 @@ describe('Check UG & Forum links for each model', () => {
       path: url.parse(address).pathname,
     };
     const status = await getUrlStatus(options);
-    expect(status).toBe(200);
+    expect(status).toBeStatus200(address);
   });
 
   test.each(Object.keys(UI_SPEC))('%s - Forum', async (model) => {
@@ -299,6 +296,6 @@ describe('Check UG & Forum links for each model', () => {
       path: url.parse(address).pathname,
     };
     const status = await getUrlStatus(options);
-    expect(status).toBe(200);
+    expect(status).toBeStatus200(address);
   });
 });
