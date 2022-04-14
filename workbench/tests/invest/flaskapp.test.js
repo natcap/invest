@@ -197,8 +197,7 @@ function getUrlStatus(options) {
 // Need a custom matcher to get useful message back on test failure
 expect.extend({
   toBeStatus200: (received, address) => {
-    const pass = received === 200;
-    if (pass) {
+    if (received === 200) {
       return { pass: true };
     }
     return {
