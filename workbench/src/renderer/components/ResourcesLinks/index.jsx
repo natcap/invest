@@ -3,11 +3,11 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import { MdOpenInNew } from 'react-icons/md';
 
+import UG_ROOT from '../../userguideURL';
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
 const { ipcRenderer } = window.Workbench.electron;
 
-const UG_ROOT = 'http://releases.naturalcapitalproject.org/invest-userguide/latest';
 const FORUM_ROOT = 'https://community.naturalcapitalproject.org';
 
 // map model names to forum tags:
@@ -56,16 +56,17 @@ function handleClick(event) {
  * e.g. https://community.naturalcapitalproject.org/tag/carbon
  */
 export default function ResourcesTab(props) {
-  let userGuideURL = UG_ROOT;
-  let forumURL = FORUM_ROOT;
   const { docs, moduleName } = props;
+
+  let forumURL = FORUM_ROOT;
   const tagName = FORUM_TAGS[moduleName];
-  if (docs) {
-    const docsName = docs;
-    userGuideURL = `${UG_ROOT}/${docsName}#data-needs`;
-  }
   if (tagName) {
     forumURL = `${FORUM_ROOT}/tag/${tagName}`;
+  }
+
+  let userGuideURL = `${UG_ROOT}/index.html`;
+  if (docs) {
+    userGuideURL = `${UG_ROOT}/${docs}#data-needs`;
   }
   return (
     <React.Fragment>
