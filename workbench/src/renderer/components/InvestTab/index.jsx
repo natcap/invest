@@ -172,6 +172,7 @@ export default class InvestTab extends React.Component {
       this.state.modelSpec.pyname,
       args,
       investSettings.loggingLevel,
+      investSettings.taskgraphLoggingLevel,
       investSettings.language,
       tabID
     );
@@ -323,6 +324,7 @@ InvestTab.propTypes = {
   tabID: PropTypes.string.isRequired,
   investSettings: PropTypes.shape({
     nWorkers: PropTypes.string,
+    taskgraphLoggingLevel: PropTypes.string,
     loggingLevel: PropTypes.string,
     language: PropTypes.string,
   }).isRequired,
