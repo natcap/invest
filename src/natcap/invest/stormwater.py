@@ -902,7 +902,7 @@ def aggregate_results(base_aggregate_areas_path, target_vector_path, srs_wkt,
     # save the aggregate vector layer and clean up references
     aggregate_layer.SyncToDisk()
     aggregate_layer = None
-    gdal.Dataset.__swig_destroy_gettext(aggregate_vector)
+    gdal.Dataset.__swig_destroy__(aggregate_vector)
     aggregate_vector = None
 
 

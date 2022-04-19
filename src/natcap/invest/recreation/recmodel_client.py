@@ -466,9 +466,9 @@ def _copy_aoi_no_grid(source_aoi_path, dest_aoi_path):
     driver = gdal.GetDriverByName('ESRI Shapefile')
     local_aoi_vector = driver.CreateCopy(
         dest_aoi_path, aoi_vector)
-    gdal.Dataset.__swig_destroy_gettext(local_aoi_vector)
+    gdal.Dataset.__swig_destroy__(local_aoi_vector)
     local_aoi_vector = None
-    gdal.Dataset.__swig_destroy_gettext(aoi_vector)
+    gdal.Dataset.__swig_destroy__(aoi_vector)
     aoi_vector = None
 
 

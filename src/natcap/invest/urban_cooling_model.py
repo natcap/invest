@@ -943,7 +943,7 @@ def calculate_energy_savings(
             the target vector that contains at least the field 'type'.
         target_building_vector_path (str): path to target vector that
             will contain the additional field 'energy_sav' calculated as
-            ``consumption.increase(b) * ((Tgettext(air,MAX)  - Tgettext(air,i)))``.
+            ``consumption.increase(b) * ((T_(air,MAX)  - T_(air,i)))``.
             This vector must be in a linearly projected spatial reference
             system.
 
@@ -1077,7 +1077,7 @@ def pickle_zonal_stats(
 
 
 def calc_t_air_nomix_op(t_ref_val, hm_array, uhi_max):
-    """Calculate air temperature Tgettext(air,i)=T_ref+(1-HM_i)*UHI_max.
+    """Calculate air temperature T_(air,i)=T_ref+(1-HM_i)*UHI_max.
 
     Args:
         t_ref_val (float): The user-defined reference air temperature in
@@ -1174,7 +1174,7 @@ def calculate_wbgt(
             raster.
 
     Returns:
-        WBGT_i  = 0.567 * Tgettext(air,i)  + 0.393 * e_i  + 3.94
+        WBGT_i  = 0.567 * T_(air,i)  + 0.393 * e_i  + 3.94
 
         where e_i:
             e_i  = RH/100*6.105*exp(17.27*T_air/(237.7+T_air))

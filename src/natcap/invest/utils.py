@@ -180,14 +180,14 @@ class ThreadFilter(logging.Filter):
     threadname provided to the constructor will be excluded.
     """
 
-    def __init_gettext(self, thread_name):
+    def __init__(self, thread_name):
         """Construct a ThreadFilter.
 
         Args:
             thread_name (string): The thread name to filter on.
 
         """
-        logging.Filter.__init_gettext(self)
+        logging.Filter.__init__(self)
         self.thread_name = thread_name
 
     def filter(self, record):

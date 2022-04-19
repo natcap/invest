@@ -102,7 +102,7 @@ class RecModel(object):
     """Class that manages RPCs for calculating photo user days."""
 
     @_try_except_wrapper("RecModel construction exited while multiprocessing.")
-    def __init_gettext(
+    def __init__(
             self, raw_csv_filename, min_year, max_year, cache_workspace,
             max_points_per_node=GLOBAL_MAX_POINTS_PER_NODE):
         """Initialize RecModel object.
@@ -389,7 +389,7 @@ class RecModel(object):
         pud_aoi_layer = pud_aoi_vector.GetLayer()
 
         aoi_layer = None
-        gdal.Dataset.__swig_destroy_gettext(aoi_vector)
+        gdal.Dataset.__swig_destroy__(aoi_vector)
         aoi_vector = None
 
         pud_id_suffix_list = [
@@ -459,7 +459,7 @@ class RecModel(object):
         LOGGER.info('done with polygon test, syncing to disk')
         pud_aoi_layer = None
         pud_aoi_vector.FlushCache()
-        gdal.Dataset.__swig_destroy_gettext(pud_aoi_vector)
+        gdal.Dataset.__swig_destroy__(pud_aoi_vector)
         pud_aoi_vector = None
 
         for polytest_process in polytest_process_list:
@@ -768,7 +768,7 @@ def _calc_poly_pud(
             pud_poly_feature_queue.put((poly_id, pud_averages, pud_monthly_set))
     pud_poly_feature_queue.put('STOP')
     aoi_layer = None
-    gdal.Dataset.__swig_destroy_gettext(aoi_vector)
+    gdal.Dataset.__swig_destroy__(aoi_vector)
     aoi_vector = None
 
 

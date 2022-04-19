@@ -815,7 +815,7 @@ def _execute(args):
     LOGGER.info('  (..  \\ ')
     LOGGER.info(' _/  )  \\______')
     LOGGER.info('(oo /\'\\        )`,')
-    LOGGER.info(' `--\' (v  _gettext( / ||')
+    LOGGER.info(' `--\' (v  __( / ||')
     LOGGER.info('       |||  ||| ||')
     LOGGER.info('      //_| //_|')
 
@@ -1167,7 +1167,7 @@ def _aggregate_recharge(
 
     driver = gdal.GetDriverByName('ESRI Shapefile')
     driver.CreateCopy(aggregate_vector_path, original_aoi_vector)
-    gdal.Dataset.__swig_destroy_gettext(original_aoi_vector)
+    gdal.Dataset.__swig_destroy__(original_aoi_vector)
     original_aoi_vector = None
     aggregate_vector = gdal.OpenEx(aggregate_vector_path, 1)
     aggregate_layer = aggregate_vector.GetLayer()
@@ -1203,7 +1203,7 @@ def _aggregate_recharge(
 
     aggregate_layer.SyncToDisk()
     aggregate_layer = None
-    gdal.Dataset.__swig_destroy_gettext(aggregate_vector)
+    gdal.Dataset.__swig_destroy__(aggregate_vector)
     aggregate_vector = None
 
 

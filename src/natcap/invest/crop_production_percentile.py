@@ -212,7 +212,7 @@ ARGS_SPEC = {
 
 _INTERMEDIATE_OUTPUT_DIR = 'intermediate_output'
 
-_YIELD_PERCENTILE_FIELD_PATTERN = 'yieldgettext([^_]+)'
+_YIELD_PERCENTILE_FIELD_PATTERN = 'yield_([^_]+)'
 _GLOBAL_OBSERVED_YIELD_FILE_PATTERN = os.path.join(
     'observed_yield', '%s_yield_map.tif')  # crop_name
 _EXTENDED_CLIMATE_BIN_FILE_PATTERN = os.path.join(

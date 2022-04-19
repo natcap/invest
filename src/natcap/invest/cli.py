@@ -153,7 +153,7 @@ class SelectModelAction(argparse.Action):
     interface detects that the user has attempted to select a model by name.
     """
 
-    def __call_gettext(self, parser, namespace, values, option_string=None):
+    def __call__(self, parser, namespace, values, option_string=None):
         """Given the user's input, determine which model they're referring to.
 
         When the user didn't provide a model name, we print the help and exit
@@ -520,7 +520,7 @@ def main(user_args=None):
         if args.subcommand == 'quickrun':
             quickrun = True
         model_form.run(quickrun=quickrun)
-        app_exitcode = inputs.QT_APP.execgettext()
+        app_exitcode = inputs.QT_APP.exec_()
 
         # Handle a graceful exit
         if model_form.form.run_dialog.messageArea.error:

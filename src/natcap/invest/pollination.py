@@ -182,13 +182,13 @@ ARGS_SPEC = {
 _INDEX_NODATA = -1.0
 
 # These patterns are expected in the biophysical table
-_NESTING_SUBSTRATE_PATTERN = 'nestinggettext([^_]+)_availability_index'
-_FLORAL_RESOURCES_AVAILABLE_PATTERN = 'floral_resourcesgettext([^_]+)_index'
+_NESTING_SUBSTRATE_PATTERN = 'nesting_([^_]+)_availability_index'
+_FLORAL_RESOURCES_AVAILABLE_PATTERN = 'floral_resources_([^_]+)_index'
 _EXPECTED_BIOPHYSICAL_HEADERS = [
     'lucode', _NESTING_SUBSTRATE_PATTERN, _FLORAL_RESOURCES_AVAILABLE_PATTERN]
 
 # These are patterns expected in the guilds table
-_NESTING_SUITABILITY_PATTERN = 'nesting_suitabilitygettext([^_]+)_index'
+_NESTING_SUITABILITY_PATTERN = 'nesting_suitability_([^_]+)_index'
 # replace with season
 _FORAGING_ACTIVITY_PATTERN = 'foraging_activity_%s_index'
 _FORAGING_ACTIVITY_RE_PATTERN = _FORAGING_ACTIVITY_PATTERN % '([^_]+)'
@@ -1238,7 +1238,7 @@ def _parse_scenario_variables(args):
 class _CalculateHabitatNestingIndex(object):
     """Closure for HN(x, s) = max_n(N(x, n) ns(s,n)) calculation."""
 
-    def __init_gettext(
+    def __init__(
             self, substrate_path_map, species_substrate_index_map,
             target_habitat_nesting_index_path):
         """Define parameters necessary for HN(x,s) calculation.
@@ -1275,7 +1275,7 @@ class _CalculateHabitatNestingIndex(object):
         self.target_habitat_nesting_index_path = (
             target_habitat_nesting_index_path)
 
-    def __call_gettext(self):
+    def __call__(self):
         """Calculate HN(x, s) = max_n(N(x, n) ns(s,n))."""
         def max_op(*substrate_index_arrays):
             """Return the max of index_array[n] * ns[n]."""
@@ -1297,7 +1297,7 @@ class _CalculateHabitatNestingIndex(object):
 class _SumRasters(object):
     """Sum all rasters where nodata is 0 unless the entire stack is nodata."""
 
-    def __init_gettext(self):
+    def __init__(self):
         # try to get the source code of __call__ so task graph will recompute
         # if the function has changed
         try:
@@ -1310,7 +1310,7 @@ class _SumRasters(object):
             self.__name__ = (
                 _SumRasters.__name__)
 
-    def __call_gettext(self, *array_list):
+    def __call__(self, *array_list):
         """Calculate sum of array_list and account for nodata."""
         valid_mask = numpy.zeros(array_list[0].shape, dtype=bool)
         result = numpy.empty_like(array_list[0])
@@ -1326,7 +1326,7 @@ class _SumRasters(object):
 class _PollinatorSupplyOp(object):
     """Calc PA=RA*fa/FR * convolve(PS)."""
 
-    def __init_gettext(self):
+    def __init__(self):
         # try to get the source code of __call__ so task graph will recompute
         # if the function has changed
         try:
@@ -1339,7 +1339,7 @@ class _PollinatorSupplyOp(object):
             self.__name__ = (
                 _PollinatorSupplyOp.__name__)
 
-    def __call_gettext(
+    def __call__(
             self, foraged_flowers_array, floral_resources_array,
             convolve_ps_array):
         """Calculating (RA*fa)/FR * convolve(PS)."""
@@ -1360,7 +1360,7 @@ class _PollinatorSupplyOp(object):
 class _PollinatorSupplyIndexOp(object):
     """Calculate PS(x,s) = FR(x,s) * HN(x,s) * sa(s)."""
 
-    def __init_gettext(self, species_abundance):
+    def __init__(self, species_abundance):
         """Create a closure for species abundance to multiply later.
 
         Args:
@@ -1384,7 +1384,7 @@ class _PollinatorSupplyIndexOp(object):
                 _PollinatorSupplyIndexOp.__name__)
         self.__name__ += str(species_abundance)
 
-    def __call_gettext(
+    def __call__(
             self, floral_resources_array, habitat_nesting_suitability_array):
         """Calculate f_r * h_n * self.species_abundance."""
         result = numpy.empty_like(floral_resources_array)
@@ -1400,7 +1400,7 @@ class _PollinatorSupplyIndexOp(object):
 class _MultByScalar(object):
     """Calculate a raster * scalar.  Mask through nodata."""
 
-    def __init_gettext(self, scalar):
+    def __init__(self, scalar):
         """Create a closure for multiplying an array by a scalar.
 
         Args:
@@ -1424,7 +1424,7 @@ class _MultByScalar(object):
                 _MultByScalar.__name__)
         self.__name__ += str(scalar)
 
-    def __call_gettext(self, array):
+    def __call__(self, array):
         """Return array * self.scalar accounting for nodata."""
         result = numpy.empty_like(array)
         result[:] = _INDEX_NODATA
@@ -1436,7 +1436,7 @@ class _MultByScalar(object):
 class _OnFarmPollinatorAbundance(object):
     """Calculate FP(x) = (PAT * (1 - h)) / (h * (1 - 2*pat)+pat))."""
 
-    def __init_gettext(self):
+    def __init__(self):
         # try to get the source code of __call__ so task graph will recompute
         # if the function has changed
         try:
@@ -1449,7 +1449,7 @@ class _OnFarmPollinatorAbundance(object):
             self.__name__ = (
                 _OnFarmPollinatorAbundance.__name__)
 
-    def __call_gettext(self, h_array, pat_array):
+    def __call__(self, h_array, pat_array):
         """Return (pad * (1 - h)) / (h * (1 - 2*pat)+pat)) tolerate nodata."""
         result = numpy.empty_like(h_array)
         result[:] = _INDEX_NODATA
@@ -1468,7 +1468,7 @@ class _OnFarmPollinatorAbundance(object):
 class _PYTOp(object):
     """Calculate PYT=min((mp+FP), 1)."""
 
-    def __init_gettext(self):
+    def __init__(self):
         # try to get the source code of __call__ so task graph will recompute
         # if the function has changed
         try:
@@ -1481,7 +1481,7 @@ class _PYTOp(object):
             self.__name__ = (
                 _PYTOp.__name__)
 
-    def __call_gettext(self, mp_array, FP_array):
+    def __call__(self, mp_array, FP_array):
         """Return min(mp_array+FP_array, 1) accounting for nodata."""
         valid_mask = ~utils.array_equals_nodata(mp_array, _INDEX_NODATA)
         result = numpy.empty_like(mp_array)
@@ -1495,7 +1495,7 @@ class _PYTOp(object):
 class _PYWOp(object):
     """Calculate PYW=max(0,PYT-mp)."""
 
-    def __init_gettext(self):
+    def __init__(self):
         # try to get the source code of __call__ so task graph will recompute
         # if the function has changed
         try:
@@ -1508,7 +1508,7 @@ class _PYWOp(object):
             self.__name__ = (
                 _PYWOp.__name__)
 
-    def __call_gettext(self, mp_array, PYT_array):
+    def __call__(self, mp_array, PYT_array):
         """Return max(0,PYT_array-mp_array) accounting for nodata."""
         valid_mask = ~utils.array_equals_nodata(mp_array, _INDEX_NODATA)
         result = numpy.empty_like(mp_array)
