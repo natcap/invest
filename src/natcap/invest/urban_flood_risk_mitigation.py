@@ -18,7 +18,9 @@ from . import spec_utils
 from .spec_utils import u
 from . import validation
 from . import MODEL_METADATA
+from . import install_locale
 
+gettext = install_locale()
 LOGGER = logging.getLogger(__name__)
 
 ARGS_SPEC = {
@@ -40,13 +42,13 @@ ARGS_SPEC = {
             "expression": "value > 0",
             "type": "number",
             "units": u.millimeter,
-            "about": _("Depth of rainfall for the design storm of interest."),
-            "name": _("rainfall depth")
+            "about": gettext("Depth of rainfall for the design storm of interest."),
+            "name": gettext("rainfall depth")
         },
         "lulc_path": {
             **spec_utils.LULC,
             "projected": True,
-            "about": _(
+            "about": gettext(
                 "Map of LULC. All values in this raster must have "
                 "corresponding entries in the Biophysical Table.")
         },
@@ -59,55 +61,55 @@ ARGS_SPEC = {
             "columns": {
                 "lucode": {
                     "type": "integer",
-                    "about": _("LULC codes matching those in the LULC map.")},
+                    "about": gettext("LULC codes matching those in the LULC map.")},
                 "cn_[SOIL_GROUP]": {
                     "type": "number",
                     "units": u.none,
-                    "about": _(
+                    "about": gettext(
                         "The curve number value for this LULC type in each "
                         "hydrologic soil group. Replace [SOIL_GROUP] with the "
                         "soil group codes A, B, C, D, so that there is a "
                         "column for each soil group.")
                 }
             },
-            "about": _(
+            "about": gettext(
                 "Table of curve number data for each LULC class. All LULC "
                 "codes in the LULC raster must have corresponding entries in "
                 "this table."),
-            "name": _("biophysical table")
+            "name": gettext("biophysical table")
         },
         "built_infrastructure_vector_path": {
             "type": "vector",
             "fields": {
                 "type": {
                     "type": "integer",
-                    "about": _(
+                    "about": gettext(
                         "Code indicating the building type. These codes "
                         "must match those in the Damage Loss Table."
                     )}},
             "geometries": spec_utils.POLYGONS,
             "required": False,
-            "about": _("Map of building footprints."),
-            "name": _("built infrastructure")
+            "about": gettext("Map of building footprints."),
+            "name": gettext("built infrastructure")
         },
         "infrastructure_damage_loss_table_path": {
             "type": "csv",
             "columns": {
                 "type": {
                     "type": "integer",
-                    "about": _("Building type code.")},
+                    "about": gettext("Building type code.")},
                 "damage": {
                     "type": "number",
                     "units": u.currency/(u.meter**2),
-                    "about": _("Potential damage loss for this building type.")}
+                    "about": gettext("Potential damage loss for this building type.")}
             },
             "required": "built_infrastructure_vector_path",
-            "about": _(
+            "about": gettext(
                 "Table of potential damage loss data for each building type. "
                 "All values in the Built Infrastructure vector 'type' field "
                 "must have corresponding entries in this table. Required if "
                 "the Built Infrastructure vector is provided."),
-            "name": _("damage loss table")
+            "name": gettext("damage loss table")
         }
     }
 }

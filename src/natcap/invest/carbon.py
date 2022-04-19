@@ -16,8 +16,10 @@ from . import utils
 from . import spec_utils
 from .spec_utils import u
 from . import MODEL_METADATA
+from . import install_locale
 
 LOGGER = logging.getLogger(__name__)
+gettext = install_locale()
 
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["carbon"].model_title,
@@ -34,28 +36,28 @@ ARGS_SPEC = {
             **spec_utils.LULC,
             "projected": True,
             "projection_units": u.meter,
-            "about": _(
+            "about": gettext(
                 "A map of LULC for the current scenario. "
                 "All values in this raster must have corresponding "
                 "entries in the Carbon Pools table."),
-            "name": _("current LULC")
+            "name": gettext("current LULC")
         },
         "calc_sequestration": {
             "type": "boolean",
             "required": "do_valuation | do_redd",
-            "about": _(
+            "about": gettext(
                 "Run sequestration analysis. This requires inputs "
                 "of LULC maps for both current and future "
                 "scenarios. Required if REDD scenario analysis or "
                 "run valuation model is selected."),
-            "name": _("calculate sequestration")
+            "name": gettext("calculate sequestration")
         },
         "lulc_fut_path": {
             **spec_utils.LULC,
             "projected": True,
             "projection_units": u.meter,
             "required": "calc_sequestration",
-            "about": _(
+            "about": gettext(
                 "A map of LULC for the future scenario. "
                 "If run valuation model is "
                 "selected, this should be the reference, or baseline, future "
@@ -63,36 +65,36 @@ ARGS_SPEC = {
                 "All values in this raster must have corresponding entries in "
                 "the Carbon Pools table. Required if Calculate Sequestration "
                 "is selected."),
-            "name": _("future LULC")
+            "name": gettext("future LULC")
         },
         "do_redd": {
             "type": "boolean",
             "required": False,
-            "about": _(
+            "about": gettext(
                 "Run REDD scenario analysis. This requires three "
                 "LULC maps: one for the current scenario, one "
                 "for the future baseline scenario, and one for the future "
                 "REDD policy scenario."),
-            "name": _("REDD scenario analysis")
+            "name": gettext("REDD scenario analysis")
         },
         "lulc_redd_path": {
             **spec_utils.LULC,
             "projected": True,
             "projection_units": u.meter,
             "required": "do_redd",
-            "about": _(
+            "about": gettext(
                 "A map of LULC for the REDD policy scenario. "
                 "All values in this raster must have corresponding entries in "
                 "the Carbon Pools table. Required if REDD Scenario Analysis "
                 "is selected."),
-            "name": _("REDD LULC")
+            "name": gettext("REDD LULC")
         },
         "carbon_pools_path": {
             "type": "csv",
             "columns": {
                 "lucode": {
                     "type": "integer",
-                    "about": _(
+                    "about": gettext(
                         "LULC code. Every value in the "
                         "LULC maps must have a corresponding entry in "
                         "this column.")
@@ -100,41 +102,41 @@ ARGS_SPEC = {
                 "c_above": {
                     "type": "number",
                     "units": u.metric_ton/u.hectare,
-                    "about": _("Carbon density of aboveground biomass.")},
+                    "about": gettext("Carbon density of aboveground biomass.")},
                 "c_below": {
                     "type": "number",
                     "units": u.metric_ton/u.hectare,
-                    "about": _("Carbon density of belowground biomass.")},
+                    "about": gettext("Carbon density of belowground biomass.")},
                 "c_soil": {
                     "type": "number",
                     "units": u.metric_ton/u.hectare,
-                    "about": _("Carbon density of soil.")},
+                    "about": gettext("Carbon density of soil.")},
                 "c_dead": {
                     "type": "number",
                     "units": u.metric_ton/u.hectare,
-                    "about": _("Carbon density of dead matter.")}
+                    "about": gettext("Carbon density of dead matter.")}
             },
-            "about": _(
+            "about": gettext(
                 "A table that maps each LULC code to carbon pool data for "
                 "that LULC type."),
-            "name": _("carbon pools")
+            "name": gettext("carbon pools")
         },
         "lulc_cur_year": {
             "expression": "float(value).is_integer()",
             "type": "number",
             "units": u.year_AD,
             "required": "do_valuation",
-            "about": _(
+            "about": gettext(
                 "The calendar year of the current scenario depicted in the "
                 "current LULC map. Required if Run Valuation model is selected."),
-            "name": _("current LULC year")
+            "name": gettext("current LULC year")
         },
         "lulc_fut_year": {
             "expression": "float(value).is_integer()",
             "type": "number",
             "units": u.year_AD,
             "required": "do_valuation",
-            "about": _(
+            "about": gettext(
                 "The calendar year of the future scenario depicted in the "
                 "future LULC map. Required if Run Valuation model is selected."),
             "name": f"future LULC year"
@@ -142,38 +144,38 @@ ARGS_SPEC = {
         "do_valuation": {
             "type": "boolean",
             "required": False,
-            "about": _(
+            "about": gettext(
                 "Calculate net present value for the future scenario, and the "
                 "REDD scenario if provided, and report it in the final HTML "
                 "document."),
-            "name": _("run valuation model")
+            "name": gettext("run valuation model")
         },
         "price_per_metric_ton_of_c": {
             "type": "number",
             "units": u.currency/u.metric_ton,
             "required": "do_valuation",
-            "about": _(
+            "about": gettext(
                 "The present value of carbon. "
                 "Required if Run Valuation model is selected."),
-            "name": _("price of carbon")
+            "name": gettext("price of carbon")
         },
         "discount_rate": {
             "type": "ratio",
             "required": "do_valuation",
-            "about": _(
+            "about": gettext(
                 "The annual market discount rate in the price of carbon, "
                 "which reflects society's preference for immediate benefits "
                 "over future benefits. Required if Run Valuation model is "
                 "selected."),
-            "name": _("annual market discount rate")
+            "name": gettext("annual market discount rate")
         },
         "rate_change": {
             "type": "ratio",
             "required": "do_valuation",
-            "about": _(
+            "about": gettext(
                 "The relative annual increase of the price of carbon. "
                 "Required if Run Valuation model is selected."),
-            "name": _("annual price change")
+            "name": gettext("annual price change")
         }
     }
 }

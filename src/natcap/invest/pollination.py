@@ -18,7 +18,9 @@ from . import spec_utils
 from .spec_utils import u
 from . import validation
 from . import MODEL_METADATA
+from . import install_locale
 
+gettext = install_locale()
 LOGGER = logging.getLogger(__name__)
 
 ARGS_SPEC = {
@@ -32,7 +34,7 @@ ARGS_SPEC = {
         "landcover_raster_path": {
             **spec_utils.LULC,
             "projected": True,
-            "about": _(
+            "about": gettext(
                 "Map of LULC codes. All values in this raster must have "
                 "corresponding entries in the Biophysical Table.")
         },
@@ -41,13 +43,13 @@ ARGS_SPEC = {
             "columns": {
                 "species": {
                     "type": "freestyle_string",
-                    "about": _(
+                    "about": gettext(
                         "Unique name or identifier for each pollinator "
                         "species or guild of interest.")
                 },
                 "nesting_suitability_[SUBSTRATE]_index": {
                     "type": "ratio",
-                    "about": _(
+                    "about": gettext(
                         "Utilization of the substrate by this species, where "
                         "1 indicates the nesting substrate is fully utilized "
                         "and 0 indicates it is not utilized at all. Replace "
@@ -57,7 +59,7 @@ ARGS_SPEC = {
                 },
                 "foraging_activity_[SEASON]_index": {
                     "type": "ratio",
-                    "about": _(
+                    "about": gettext(
                         "Pollinator activity for this species/guild in each "
                         "season. 1 indicates maximum activity for the "
                         "species/guild, and 0 indicates no activity. Replace "
@@ -68,41 +70,41 @@ ARGS_SPEC = {
                 "alpha": {
                     "type": "number",
                     "units": u.meters,
-                    "about": _(
+                    "about": gettext(
                         "Average distance that this species or guild travels "
                         "to forage on flowers.")
                 },
                 "relative_abundance": {
                     "type": "ratio",
-                    "about": _(
+                    "about": gettext(
                         "The proportion of total pollinator abundance that "
                         "consists of this species/guild.")
                 }
             },
-            "about": _(
+            "about": gettext(
                 "A table mapping each pollinator species or guild of interest "
                 "to its pollination-related parameters."),
-            "name": _("Guild Table")
+            "name": gettext("Guild Table")
         },
         "landcover_biophysical_table_path": {
             "type": "csv",
             "columns": {
                 "lucode": {
                     "type": "integer",
-                    "about": _(
+                    "about": gettext(
                         "LULC code representing this class in the LULC raster."
                     )
                 },
                 "nesting_[SUBSTRATE]_availability_index": {
                     "type": "ratio",
-                    "about": _(
+                    "about": gettext(
                         "Index of availability of the given substrate in this "
                         "LULC class. Replace [SUBSTRATE] with substrate names "
                         "matching those in the Guild Table, so that there is "
                         "a column for each substrate.")},
                 "floral_resources_[SEASON]_index": {
                     "type": "ratio",
-                    "about": _(
+                    "about": gettext(
                         "Abundance of flowers during the given season in this "
                         "LULC class. This is the proportion of land area "
                         "covered by flowers, multiplied by the proportion of "
@@ -111,24 +113,24 @@ ARGS_SPEC = {
                         "Guild Table, so that there is a column for each "
                         "season.")}
             },
-            "about": _(
+            "about": gettext(
                 "A table mapping each LULC class to nesting availability and "
                 "floral abundance data for each substrate and season in that "
                 "LULC class. All values in the LULC raster must have "
                 "corresponding entries in this table."),
-            "name": _("biophysical table")
+            "name": gettext("biophysical table")
         },
         "farm_vector_path": {
             "type": "vector",
             "fields": {
                 "crop_type": {
                     "type": "freestyle_string",
-                    "about": _(
+                    "about": gettext(
                         "Name of the crop grown on each polygon, e.g. "
                         "'blueberries', 'almonds', etc.")},
                 "half_sat": {
                     "type": "ratio",
-                    "about": _(
+                    "about": gettext(
                         "The half saturation coefficient for the crop grown "
                         "in this area. This is the wild pollinator abundance "
                         "(i.e. the proportion of all pollinators that are "
@@ -136,13 +138,13 @@ ARGS_SPEC = {
                         "pollinator-dependent yield.")},
                 "season": {
                     "type": "freestyle_string",
-                    "about": _(
+                    "about": gettext(
                         "The season in which the crop is pollinated. Season "
                         "names must match those in the Guild Table and "
                         "Biophysical Table.")},
                 "fr_[SEASON]": {  # floral resources for each season
                     "type": "ratio",
-                    "about": _(
+                    "about": gettext(
                         "The floral resources available at this farm for the "
                         "given season. Replace [SEASON] with season names "
                         "matching those in the Guild Table and Biophysical "
@@ -150,7 +152,7 @@ ARGS_SPEC = {
                 },
                 "n_[SUBSTRATE]": {  # nesting availabilities for each substrate
                     "type": "ratio",
-                    "about": _(
+                    "about": gettext(
                         "The nesting suitability for the given substrate at "
                         "this farm. given substrate. Replace [SUBSTRATE] with "
                         "substrate names matching those in the Guild Table "
@@ -158,21 +160,21 @@ ARGS_SPEC = {
                         "for each substrate.")},
                 "p_dep": {
                     "type": "ratio",
-                    "about": _(
+                    "about": gettext(
                         "The proportion of crop dependent on pollinators.")
                 },
                 "p_managed": {
                     "type": "ratio",
-                    "about": _(
+                    "about": gettext(
                         "The proportion of pollination required on the farm "
                         "that is provided by managed pollinators.")}
             },
             "geometries": spec_utils.POLYGONS,
             "required": False,
-            "about": _(
+            "about": gettext(
                 "Map of farm sites to be analyzed, with pollination data "
                 "specific to each farm."),
-            "name": _("farms map")
+            "name": gettext("farms map")
         }
     }
 }
@@ -180,13 +182,13 @@ ARGS_SPEC = {
 _INDEX_NODATA = -1.0
 
 # These patterns are expected in the biophysical table
-_NESTING_SUBSTRATE_PATTERN = 'nesting_([^_]+)_availability_index'
-_FLORAL_RESOURCES_AVAILABLE_PATTERN = 'floral_resources_([^_]+)_index'
+_NESTING_SUBSTRATE_PATTERN = 'nestinggettext([^_]+)_availability_index'
+_FLORAL_RESOURCES_AVAILABLE_PATTERN = 'floral_resourcesgettext([^_]+)_index'
 _EXPECTED_BIOPHYSICAL_HEADERS = [
     'lucode', _NESTING_SUBSTRATE_PATTERN, _FLORAL_RESOURCES_AVAILABLE_PATTERN]
 
 # These are patterns expected in the guilds table
-_NESTING_SUITABILITY_PATTERN = 'nesting_suitability_([^_]+)_index'
+_NESTING_SUITABILITY_PATTERN = 'nesting_suitabilitygettext([^_]+)_index'
 # replace with season
 _FORAGING_ACTIVITY_PATTERN = 'foraging_activity_%s_index'
 _FORAGING_ACTIVITY_RE_PATTERN = _FORAGING_ACTIVITY_PATTERN % '([^_]+)'
@@ -1236,7 +1238,7 @@ def _parse_scenario_variables(args):
 class _CalculateHabitatNestingIndex(object):
     """Closure for HN(x, s) = max_n(N(x, n) ns(s,n)) calculation."""
 
-    def __init__(
+    def __init_gettext(
             self, substrate_path_map, species_substrate_index_map,
             target_habitat_nesting_index_path):
         """Define parameters necessary for HN(x,s) calculation.
@@ -1273,7 +1275,7 @@ class _CalculateHabitatNestingIndex(object):
         self.target_habitat_nesting_index_path = (
             target_habitat_nesting_index_path)
 
-    def __call__(self):
+    def __call_gettext(self):
         """Calculate HN(x, s) = max_n(N(x, n) ns(s,n))."""
         def max_op(*substrate_index_arrays):
             """Return the max of index_array[n] * ns[n]."""
@@ -1295,7 +1297,7 @@ class _CalculateHabitatNestingIndex(object):
 class _SumRasters(object):
     """Sum all rasters where nodata is 0 unless the entire stack is nodata."""
 
-    def __init__(self):
+    def __init_gettext(self):
         # try to get the source code of __call__ so task graph will recompute
         # if the function has changed
         try:
@@ -1308,7 +1310,7 @@ class _SumRasters(object):
             self.__name__ = (
                 _SumRasters.__name__)
 
-    def __call__(self, *array_list):
+    def __call_gettext(self, *array_list):
         """Calculate sum of array_list and account for nodata."""
         valid_mask = numpy.zeros(array_list[0].shape, dtype=bool)
         result = numpy.empty_like(array_list[0])
@@ -1324,7 +1326,7 @@ class _SumRasters(object):
 class _PollinatorSupplyOp(object):
     """Calc PA=RA*fa/FR * convolve(PS)."""
 
-    def __init__(self):
+    def __init_gettext(self):
         # try to get the source code of __call__ so task graph will recompute
         # if the function has changed
         try:
@@ -1337,7 +1339,7 @@ class _PollinatorSupplyOp(object):
             self.__name__ = (
                 _PollinatorSupplyOp.__name__)
 
-    def __call__(
+    def __call_gettext(
             self, foraged_flowers_array, floral_resources_array,
             convolve_ps_array):
         """Calculating (RA*fa)/FR * convolve(PS)."""
@@ -1358,7 +1360,7 @@ class _PollinatorSupplyOp(object):
 class _PollinatorSupplyIndexOp(object):
     """Calculate PS(x,s) = FR(x,s) * HN(x,s) * sa(s)."""
 
-    def __init__(self, species_abundance):
+    def __init_gettext(self, species_abundance):
         """Create a closure for species abundance to multiply later.
 
         Args:
@@ -1382,7 +1384,7 @@ class _PollinatorSupplyIndexOp(object):
                 _PollinatorSupplyIndexOp.__name__)
         self.__name__ += str(species_abundance)
 
-    def __call__(
+    def __call_gettext(
             self, floral_resources_array, habitat_nesting_suitability_array):
         """Calculate f_r * h_n * self.species_abundance."""
         result = numpy.empty_like(floral_resources_array)
@@ -1398,7 +1400,7 @@ class _PollinatorSupplyIndexOp(object):
 class _MultByScalar(object):
     """Calculate a raster * scalar.  Mask through nodata."""
 
-    def __init__(self, scalar):
+    def __init_gettext(self, scalar):
         """Create a closure for multiplying an array by a scalar.
 
         Args:
@@ -1422,7 +1424,7 @@ class _MultByScalar(object):
                 _MultByScalar.__name__)
         self.__name__ += str(scalar)
 
-    def __call__(self, array):
+    def __call_gettext(self, array):
         """Return array * self.scalar accounting for nodata."""
         result = numpy.empty_like(array)
         result[:] = _INDEX_NODATA
@@ -1434,7 +1436,7 @@ class _MultByScalar(object):
 class _OnFarmPollinatorAbundance(object):
     """Calculate FP(x) = (PAT * (1 - h)) / (h * (1 - 2*pat)+pat))."""
 
-    def __init__(self):
+    def __init_gettext(self):
         # try to get the source code of __call__ so task graph will recompute
         # if the function has changed
         try:
@@ -1447,7 +1449,7 @@ class _OnFarmPollinatorAbundance(object):
             self.__name__ = (
                 _OnFarmPollinatorAbundance.__name__)
 
-    def __call__(self, h_array, pat_array):
+    def __call_gettext(self, h_array, pat_array):
         """Return (pad * (1 - h)) / (h * (1 - 2*pat)+pat)) tolerate nodata."""
         result = numpy.empty_like(h_array)
         result[:] = _INDEX_NODATA
@@ -1466,7 +1468,7 @@ class _OnFarmPollinatorAbundance(object):
 class _PYTOp(object):
     """Calculate PYT=min((mp+FP), 1)."""
 
-    def __init__(self):
+    def __init_gettext(self):
         # try to get the source code of __call__ so task graph will recompute
         # if the function has changed
         try:
@@ -1479,7 +1481,7 @@ class _PYTOp(object):
             self.__name__ = (
                 _PYTOp.__name__)
 
-    def __call__(self, mp_array, FP_array):
+    def __call_gettext(self, mp_array, FP_array):
         """Return min(mp_array+FP_array, 1) accounting for nodata."""
         valid_mask = ~utils.array_equals_nodata(mp_array, _INDEX_NODATA)
         result = numpy.empty_like(mp_array)
@@ -1493,7 +1495,7 @@ class _PYTOp(object):
 class _PYWOp(object):
     """Calculate PYW=max(0,PYT-mp)."""
 
-    def __init__(self):
+    def __init_gettext(self):
         # try to get the source code of __call__ so task graph will recompute
         # if the function has changed
         try:
@@ -1506,7 +1508,7 @@ class _PYWOp(object):
             self.__name__ = (
                 _PYWOp.__name__)
 
-    def __call__(self, mp_array, PYT_array):
+    def __call_gettext(self, mp_array, PYT_array):
         """Return max(0,PYT_array-mp_array) accounting for nodata."""
         valid_mask = ~utils.array_equals_nodata(mp_array, _INDEX_NODATA)
         result = numpy.empty_like(mp_array)

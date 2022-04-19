@@ -15,19 +15,21 @@ from . import spec_utils
 from . import utils
 from . import validation
 from .spec_utils import u
+from . import install_locale
 
+gettext = install_locale()
 LOGGER = logging.getLogger(__name__)
 
-MISSING_SENSITIVITY_TABLE_THREATS_MSG = _(
+MISSING_SENSITIVITY_TABLE_THREATS_MSG = gettext(
     'Threats {threats} does not match any column in the sensitivity table. '
     'Sensitivity columns: {column_names}')  # (set of missing threats, set of found columns)
-MISSING_COLUMN_MSG = _(
+MISSING_COLUMN_MSG = gettext(
     "The column '{column_name}' was not found in the Threat Data table for "
     "the corresponding input LULC scenario.")
-MISSING_THREAT_RASTER_MSG = _(
+MISSING_THREAT_RASTER_MSG = gettext(
     "A threat raster for threats: {threat_list} was not found or it "
     "could not be opened by GDAL.")
-DUPLICATE_PATHS_MSG = _("Threat paths must be unique. Duplicates: ")
+DUPLICATE_PATHS_MSG = gettext("Threat paths must be unique. Duplicates: ")
 
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["habitat_quality"].model_title,
@@ -45,46 +47,46 @@ ARGS_SPEC = {
         "lulc_cur_path": {
             **spec_utils.LULC,
             "projected": True,
-            "about": _(
+            "about": gettext(
                 "Map of LULC at present. All values in this raster must "
                 "have corresponding entries in the Sensitivity table."),
-            "name": _("current land cover")
+            "name": gettext("current land cover")
         },
         "lulc_fut_path": {
             **spec_utils.LULC,
             "projected": True,
             "required": False,
-            "about": _(
+            "about": gettext(
                 "Map of LULC in a future scenario. All values in this raster "
                 "must have corresponding entries in the Sensitivity "
                 "Table. Must use the same classification scheme and codes as "
                 "in the Current LULC map."),
-            "name": _("future land cover")
+            "name": gettext("future land cover")
         },
         "lulc_bas_path": {
             **spec_utils.LULC,
             "projected": True,
             "required": False,
-            "about": _(
+            "about": gettext(
                 "Map of LULC in a baseline scenario, when intensive landscape "
                 "management was relatively rare. All values in this raster "
                 "must have corresponding entries in the Sensitivity "
                 "table. Must use the same classification scheme and codes as "
                 "in the Current LULC map."),
-            "name": _("baseline land cover")
+            "name": gettext("baseline land cover")
         },
         "threats_table_path": {
             "type": "csv",
             "columns": {
                 "threat": {
                     "type": "freestyle_string",
-                    "about": _(
+                    "about": gettext(
                         "Name of the threat. Each threat name must have a "
                         "corresponding column in the Sensitivity table.")},
                 "max_dist": {
                     "type": "number",
                     "units": u.kilometer,
-                    "about": _(
+                    "about": gettext(
                         "The maximum distance over which each threat affects "
                         "habitat quality. The impact of each degradation "
                         "source will decline to zero at this maximum "
@@ -93,7 +95,7 @@ ARGS_SPEC = {
                 },
                 "weight": {
                     "type": "ratio",
-                    "about": _(
+                    "about": gettext(
                         "The impact of each threat on habitat quality, "
                         "relative to other threats.")
                 },
@@ -101,20 +103,20 @@ ARGS_SPEC = {
                     "type": "option_string",
                     "options": {
                         "linear": {
-                            "description": _(
+                            "description": gettext(
                                 "Effects of the threat decay linearly with "
                                 "distance from the threat.")},
                         "exponential": {
-                            "description": _(
+                            "description": gettext(
                                 "Effects of the threat decay exponentially "
                                 "with distance from the threat.")}
                     },
-                    "about": _("The type of decay over space for each threat.")
+                    "about": gettext("The type of decay over space for each threat.")
                 },
                 "cur_path": {
                     "type": "raster",
                     "bands": {1: {"type": "ratio"}},
-                    "about": _(
+                    "about": gettext(
                         "Map of the threat's distribution in the current "
                         "scenario. Each pixel value is the relative intensity "
                         "of the threat at that location. ")
@@ -123,7 +125,7 @@ ARGS_SPEC = {
                     "required": "lulc_fut_path",
                     "type": "raster",
                     "bands": {1: {"type": "ratio"}},
-                    "about": _(
+                    "about": gettext(
                         "Map of the threat's distribution in the future "
                         "scenario. Each pixel value is the relative intensity "
                         "of the threat at that location. "
@@ -133,18 +135,18 @@ ARGS_SPEC = {
                     "required": "lulc_bas_path",
                     "type": "raster",
                     "bands": {1: {"type": "ratio"}},
-                    "about": _(
+                    "about": gettext(
                         "Map of the threat's distribution in the baseline "
                         "scenario. Each pixel value is the relative intensity "
                         "of the threat at that location. "
                         "Required if Baseline LULC is provided.")
                 }
             },
-            "about": _(
+            "about": gettext(
                 "Table mapping each threat of interest to its properties and "
                 "distribution maps. Paths are relative to the threats "
                 "table path."),
-            "name": _("threats table")
+            "name": gettext("threats table")
         },
         "access_vector_path": {
             "type": "vector",
@@ -152,7 +154,7 @@ ARGS_SPEC = {
             "fields": {
                 "access": {
                     "type": "ratio",
-                    "about": _(
+                    "about": gettext(
                         "The region's relative accessibility to threats, "
                         "where 0 represents completely inaccessible and 1 "
                         "represents completely accessible.")
@@ -160,29 +162,29 @@ ARGS_SPEC = {
             },
             "geometries": spec_utils.POLYGONS,
             "required": False,
-            "about": _(
+            "about": gettext(
                 "Map of the relative protection that legal, institutional, "
                 "social, and physical barriers provide against threats. Any "
                 "cells not covered by a polygon will be set to 1."),
-            "name": _("accessibility to threats")
+            "name": gettext("accessibility to threats")
         },
         "sensitivity_table_path": {
             "type": "csv",
             "columns": {
                 "lulc": {
                     "type": "integer",
-                    "about": _("LULC codes corresponding to those in the LULC "
+                    "about": gettext("LULC codes corresponding to those in the LULC "
                                "rasters.")
                 },
                 "habitat": {
                     "type": "ratio",
-                    "about": _(
+                    "about": gettext(
                         "Suitability of this LULC class as habitat, where 0 "
                         "is not suitable and 1 is completely suitable.")
                 },
                 "[THREAT]": {
                     "type": "ratio",
-                    "about": _(
+                    "about": gettext(
                         "The relative sensitivity of each LULC class to each "
                         "type of threat, where 1 represents high sensitivity "
                         "and 0 represents that it is unaffected. There must "
@@ -190,19 +192,19 @@ ARGS_SPEC = {
                         "'threats' column of the Threats Table.")
                 }
             },
-            "about": _(
+            "about": gettext(
                 "Table mapping each LULC class to data about the species' "
                 "habitat preference and threat sensitivity in areas with that "
                 "LULC."),
-            "name": _("sensitivity table")
+            "name": gettext("sensitivity table")
         },
         "half_saturation_constant": {
             "expression": "value > 0",
             "type": "number",
             "units": u.none,
-            "about": _(
+            "about": gettext(
                 "Half-saturation constant used in the degradation equation."),
-            "name": _("half-saturation constant")
+            "name": gettext("half-saturation constant")
         },
     }
 }

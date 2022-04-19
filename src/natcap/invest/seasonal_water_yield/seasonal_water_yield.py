@@ -18,11 +18,11 @@ from .. import spec_utils
 from ..spec_utils import u
 from .. import validation
 from .. import MODEL_METADATA
-
+from .. import install_locale
 from . import seasonal_water_yield_core
 
 gdal.SetCacheMax(2**26)
-
+gettext = install_locale()
 LOGGER = logging.getLogger(__name__)
 
 TARGET_NODATA = -1
@@ -51,36 +51,36 @@ ARGS_SPEC = {
             "contents": {
                 # monthly et0 maps, each file ending in a number 1-12
                 "[MONTH]": {
-                    "about": _(
+                    "about": gettext(
                         "Twelve files, one for each month. File names must "
                         "end with the month number (1-12)."),
                     **spec_utils.ETO
                 }
             },
             "required": "not user_defined_local_recharge",
-            "about": _(
+            "about": gettext(
                 "Directory containing maps of reference evapotranspiration "
                 "for each month. Only .tif files should be in this folder "
                 "(no .tfw, .xml, etc files)."),
-            "name": _("ET0 directory")
+            "name": gettext("ET0 directory")
         },
         "precip_dir": {
             "type": "directory",
             "contents": {
                 # monthly precipitation maps, each file ending in a number 1-12
                 "[MONTH]": {
-                    "about": _(
+                    "about": gettext(
                         "Twelve files, one for each month. File names must end "
                         "with the month number (1-12)."),
                     **spec_utils.PRECIP
                 }
             },
             "required": "not user_defined_local_recharge",
-            "about": _(
+            "about": gettext(
                 "Directory containing maps of monthly precipitation for each "
                 "month. Only .tif files should be in this folder (no .tfw, "
                 ".xml, etc files)."),
-            "name": _("precipitation directory")
+            "name": gettext("precipitation directory")
         },
         "dem_raster_path": {
             **spec_utils.DEM,
@@ -89,7 +89,7 @@ ARGS_SPEC = {
         "lulc_raster_path": {
             **spec_utils.LULC,
             "projected": True,
-            "about": _(
+            "about": gettext(
                 f"{spec_utils.LULC['about']} All values in this raster MUST "
                 "have corresponding entries in the Biophysical Table.")
         },
@@ -107,11 +107,11 @@ ARGS_SPEC = {
             "columns": {
                 "lucode": {
                     "type": "integer",
-                    "about": _("LULC code matching those in the LULC raster.")},
+                    "about": gettext("LULC code matching those in the LULC raster.")},
                 "cn_[SOIL_GROUP]": {
                     "type": "number",
                     "units": u.none,
-                    "about": _(
+                    "about": gettext(
                         "Curve number values for each combination of soil "
                         "group and LULC class. Replace [SOIL_GROUP] with each "
                         "soil group code A, B, C, D so that there is one "
@@ -121,18 +121,18 @@ ARGS_SPEC = {
                 "kc_[MONTH]": {
                     "type": "number",
                     "units": u.none,
-                    "about": _(
+                    "about": gettext(
                         "Crop/vegetation coefficient (Kc) values for this "
                         "LULC class in each month. Replace [MONTH] with the "
                         "numbers 1 to 12 so that there is one column for each "
                         "month.")
                 }
             },
-            "about": _(
+            "about": gettext(
                 "A table mapping each LULC code to biophysical properties of "
                 "the corresponding LULC class. All values in the LULC raster "
                 "must have corresponding entries in this table."),
-            "name": _("biophysical table")
+            "name": gettext("biophysical table")
         },
         "rain_events_table_path": {
             "type": "csv",
@@ -140,54 +140,54 @@ ARGS_SPEC = {
                 "month": {
                     "type": "number",
                     "units": u.none,
-                    "about": _(
+                    "about": gettext(
                         "Values are the numbers 1-12 corresponding to each "
                         "month, January (1) through December (12).")
                 },
                 "events": {
                     "type": "number",
                     "units": u.none,
-                    "about": _("The number of rain events in that month.")
+                    "about": gettext("The number of rain events in that month.")
                 }
             },
             "required": (
                 "(not user_defined_local_recharge) & (not "
                 "user_defined_climate_zones)"),
-            "about": _(
+            "about": gettext(
                 "A table containing the number of rain events for each month. "
                 "Required if neither User-Defined Local Recharge nor User-"
                 "Defined Climate Zones is selected."),
-            "name": _("rain events table")
+            "name": gettext("rain events table")
         },
         "alpha_m": {
             "type": "freestyle_string",
             "required": "not monthly_alpha",
-            "about": _(
+            "about": gettext(
                 "The proportion of upslope annual available local recharge "
                 "that is available in each month. Required if Use Monthly "
                 "Alpha Table is not selected."),
-            "name": _("alpha_m parameter")
+            "name": gettext("alpha_m parameter")
         },
         "beta_i": {
             "type": "ratio",
-            "about": _(
+            "about": gettext(
                 "The proportion of the upgradient subsidy that is available "
                 "for downgradient evapotranspiration."),
-            "name": _("beta_i parameter")
+            "name": gettext("beta_i parameter")
         },
         "gamma": {
             "type": "ratio",
-            "about": _(
+            "about": gettext(
                 "The proportion of pixel local recharge that is available to "
                 "downgradient pixels."),
-            "name": _("gamma parameter")
+            "name": gettext("gamma parameter")
         },
         "user_defined_local_recharge": {
             "type": "boolean",
-            "about": _(
+            "about": gettext(
                 "Use user-defined local recharge data instead of calculating "
                 "local recharge from the other provided data."),
-            "name": _("user-defined recharge layer (advanced)")
+            "name": gettext("user-defined recharge layer (advanced)")
         },
         "l_path": {
             "type": "raster",
@@ -197,30 +197,30 @@ ARGS_SPEC = {
             }},
             "required": "user_defined_local_recharge",
             "projected": True,
-            "about": _(
+            "about": gettext(
                 "Map of local recharge data. Required if User-Defined Local "
                 "Recharge is selected."),
-            "name": _("local recharge")
+            "name": gettext("local recharge")
         },
         "user_defined_climate_zones": {
             "type": "boolean",
-            "about": _(
+            "about": gettext(
                 "Use user-defined climate zone data in lieu of a global rain "
                 "events table."),
-            "name": _("climate zones (advanced)")
+            "name": gettext("climate zones (advanced)")
         },
         "climate_zone_table_path": {
             "type": "csv",
             "columns": {
                 "cz_id": {
                     "type": "integer",
-                    "about": _(
+                    "about": gettext(
                         "Climate zone ID numbers, corresponding to the values "
                         "in the Climate Zones map.")},
                 "[MONTH]": {  # jan, feb, mar, etc.
                     "type": "number",
                     "units": u.none,
-                    "about": _(
+                    "about": gettext(
                         "The number of rain events that occur in each month "
                         "in this climate zone. Replace [MONTH] with the month "
                         "abbreviations: jan, feb, mar, apr, may, jun, jul, "
@@ -228,27 +228,27 @@ ARGS_SPEC = {
                         "for each month.")}
             },
             "required": "user_defined_climate_zones",
-            "about": _(
+            "about": gettext(
                 "Table of monthly precipitation events for each climate zone. "
                 "Required if User-Defined Climate Zones is selected."),
-            "name": _("climate zone table")
+            "name": gettext("climate zone table")
         },
         "climate_zone_raster_path": {
             "type": "raster",
             "bands": {1: {"type": "integer"}},
             "required": "user_defined_climate_zones",
             "projected": True,
-            "about": _(
+            "about": gettext(
                 "Map of climate zones. All values in this raster must have "
                 "corresponding entries in the Climate Zone Table."),
-            "name": _("climate zone map")
+            "name": gettext("climate zone map")
         },
         "monthly_alpha": {
             "type": "boolean",
-            "about": _(
+            "about": gettext(
                 "Use montly alpha values instead of a single value for the "
                 "whole year."),
-            "name": _("use monthly alpha table (advanced)")
+            "name": gettext("use monthly alpha table (advanced)")
         },
         "monthly_alpha_path": {
             "type": "csv",
@@ -256,21 +256,21 @@ ARGS_SPEC = {
                 "month": {
                     "type": "number",
                     "units": u.none,
-                    "about": _(
+                    "about": gettext(
                         "Values are the numbers 1-12 corresponding to each "
                         "month.")
                 },
                 "alpha": {
                     "type": "number",
                     "units": u.none,
-                    "about": _("The alpha value for that month.")
+                    "about": gettext("The alpha value for that month.")
                 }
             },
             "required": "monthly_alpha",
-            "about": _(
+            "about": gettext(
                 "Table of alpha values for each month. "
                 "Required if Use Monthly Alpha Table is selected."),
-            "name": _("monthly alpha table")
+            "name": gettext("monthly alpha table")
         }
     }
 }
@@ -815,7 +815,7 @@ def _execute(args):
     LOGGER.info('  (..  \\ ')
     LOGGER.info(' _/  )  \\______')
     LOGGER.info('(oo /\'\\        )`,')
-    LOGGER.info(' `--\' (v  __( / ||')
+    LOGGER.info(' `--\' (v  _gettext( / ||')
     LOGGER.info('       |||  ||| ||')
     LOGGER.info('      //_| //_|')
 
@@ -1167,7 +1167,7 @@ def _aggregate_recharge(
 
     driver = gdal.GetDriverByName('ESRI Shapefile')
     driver.CreateCopy(aggregate_vector_path, original_aoi_vector)
-    gdal.Dataset.__swig_destroy__(original_aoi_vector)
+    gdal.Dataset.__swig_destroy_gettext(original_aoi_vector)
     original_aoi_vector = None
     aggregate_vector = gdal.OpenEx(aggregate_vector_path, 1)
     aggregate_layer = aggregate_vector.GetLayer()
@@ -1203,7 +1203,7 @@ def _aggregate_recharge(
 
     aggregate_layer.SyncToDisk()
     aggregate_layer = None
-    gdal.Dataset.__swig_destroy__(aggregate_vector)
+    gdal.Dataset.__swig_destroy_gettext(aggregate_vector)
     aggregate_vector = None
 
 

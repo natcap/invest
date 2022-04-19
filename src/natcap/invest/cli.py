@@ -19,8 +19,9 @@ from natcap.invest import datastack
 from natcap.invest import ui_server
 from natcap.invest import utils
 from natcap.invest.ui import launcher, inputs
+from natcap.invest import install_locale
 
-
+gettext = install_locale()
 DEFAULT_EXIT_CODE = 1
 LOGGER = logging.getLogger(__name__)
 
@@ -52,7 +53,7 @@ def build_model_list_table():
     max_alias_name_length = max(len(', '.join(meta.aliases))
                                 for meta in natcap.invest.MODEL_METADATA.values()) + 3
     template_string = '    {model_name} {aliases} {model_title} {usage}'
-    strings = [_('Available models:')]
+    strings = [gettext('Available models:')]
     for model_name in model_names:
         usage_string = '(No GUI available)'
         if natcap.invest.MODEL_METADATA[model_name].gui is not None:
@@ -152,7 +153,7 @@ class SelectModelAction(argparse.Action):
     interface detects that the user has attempted to select a model by name.
     """
 
-    def __call__(self, parser, namespace, values, option_string=None):
+    def __call_gettext(self, parser, namespace, values, option_string=None):
         """Given the user's input, determine which model they're referring to.
 
         When the user didn't provide a model name, we print the help and exit
@@ -336,7 +337,7 @@ def main(user_args=None):
         help='Define a location for the saved .py file')
 
     args = parser.parse_args(user_args)
-    natcap.invest.install_language(args.language)
+    natcap.invest.install_locale(args.language)
 
     root_logger = logging.getLogger()
     handler = logging.StreamHandler(sys.stdout)
@@ -519,7 +520,7 @@ def main(user_args=None):
         if args.subcommand == 'quickrun':
             quickrun = True
         model_form.run(quickrun=quickrun)
-        app_exitcode = inputs.QT_APP.exec_()
+        app_exitcode = inputs.QT_APP.execgettext()
 
         # Handle a graceful exit
         if model_form.form.run_dialog.messageArea.error:
