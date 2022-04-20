@@ -1,4 +1,4 @@
-import { ipcRenderer } from 'electron';
+import { ipcRenderer, shell } from 'electron';
 import React from 'react';
 import {
   createEvent, fireEvent, render, waitFor, within
@@ -10,6 +10,8 @@ import SetupTab from '../../src/renderer/components/SetupTab';
 import {
   fetchDatastackFromFile, fetchValidation
 } from '../../src/renderer/server_requests';
+import setupOpenExternalUrl from '../../src/main/setupOpenExternalUrl';
+import { removeIpcMainListeners } from '../../src/main/main';
 
 jest.mock('../../src/renderer/server_requests');
 
@@ -149,14 +151,6 @@ describe('Arguments form input types', () => {
     expect(input).toHaveValue('a');
     expect(input).not.toHaveValue('b');
   });
-
-  test('expect the info dialog contains text about input', async () => {
-    const spec = baseArgsSpec('directory');
-    const { findByText, findByRole } = renderSetupFromSpec(spec, UI_SPEC);
-    userEvent.click(await findByRole('button', { name: /info about/ }));
-    expect(await findByText(spec.args.arg.about)).toBeInTheDocument();
-    await findByRole('link', { name: /user guide/ });
-  });
 });
 
 describe('Arguments form interactions', () => {
@@ -164,6 +158,11 @@ describe('Arguments form interactions', () => {
     fetchValidation.mockResolvedValue(
       [[Object.keys(BASE_ARGS_SPEC.args), VALIDATION_MESSAGE]]
     );
+    setupOpenExternalUrl();
+  });
+
+  afterEach(() => {
+    removeIpcMainListeners();
   });
 
   test('Browse button populates an input', async () => {
@@ -309,6 +308,18 @@ describe('Arguments form interactions', () => {
     await userEvent.click(input);
     await waitFor(() => {
       expect(input).toHaveClass('is-valid');
+    });
+  });
+
+  test('Open info dialog, expect text & link', async () => {
+    const spec = baseArgsSpec('directory');
+    const { findByText, findByRole } = renderSetupFromSpec(spec, UI_SPEC);
+    userEvent.click(await findByRole('button', { name: /info about/ }));
+    expect(await findByText(spec.args.arg.about)).toBeInTheDocument();
+    const link = await findByRole('link', { name: /user guide/ });
+    userEvent.click(link);
+    await waitFor(() => {
+      expect(shell.openExternal).toHaveBeenCalledTimes(1);
     });
   });
 });
