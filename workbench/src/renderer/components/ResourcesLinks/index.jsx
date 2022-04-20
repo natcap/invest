@@ -64,10 +64,8 @@ export default function ResourcesTab(props) {
     forumURL = `${FORUM_ROOT}/tag/${tagName}`;
   }
 
-  let userGuideURL = `${UG_ROOT}/index.html`;
-  if (docs) {
-    userGuideURL = `${UG_ROOT}/${docs}#data-needs`;
-  }
+  const userGuideURL = `${UG_ROOT}/${docs}#data-needs`;
+
   return (
     <React.Fragment>
       <a
