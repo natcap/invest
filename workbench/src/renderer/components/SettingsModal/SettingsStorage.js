@@ -17,7 +17,7 @@ const investSettingsStore = localforage.createInstance({
 export function getDefaultSettings() {
   const defaultSettings = {
     nWorkers: '-1',
-    taskgraphLoggingLevel: 'ERROR',
+    taskgraphLoggingLevel: 'INFO',
     loggingLevel: 'INFO',
     sampleDataDir: '',
     language: 'en'
