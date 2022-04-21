@@ -407,8 +407,8 @@ describe('InVEST global settings: dialog interactions', () => {
 
     userEvent.click(await findByRole('button', { name: 'settings' }));
     const nWorkersInput = getByLabelText(nWorkersLabelText, { exact: false });
-    const loggingInput = getByLabelText(loggingLabelText, { exact: true });
-    const tgLoggingInput = getByLabelText(tgLoggingLabelText, { exact: true });
+    const loggingInput = getByLabelText(loggingLabelText);
+    const tgLoggingInput = getByLabelText(tgLoggingLabelText);
     const languageInput = getByLabelText(languageLabelText, { exact: false });
 
     userEvent.selectOptions(nWorkersInput, [getByText(nWorkersLabel)]);
@@ -459,8 +459,8 @@ describe('InVEST global settings: dialog interactions', () => {
 
     userEvent.click(await findByRole('button', { name: 'settings' }));
     const nWorkersInput = getByLabelText(nWorkersLabelText, { exact: false });
-    const loggingInput = getByLabelText(loggingLabelText, { exact: true });
-    const tgLoggingInput = getByLabelText(tgLoggingLabelText, { exact: true });
+    const loggingInput = getByLabelText(loggingLabelText);
+    const tgLoggingInput = getByLabelText(tgLoggingLabelText);
     const languageInput = getByLabelText(languageLabelText, { exact: false });
 
     // Test that the invest settings were loaded in from store.
