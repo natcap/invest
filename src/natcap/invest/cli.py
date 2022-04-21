@@ -362,8 +362,7 @@ def main(user_args=None):
     LOGGER.info('Setting handler log level to %s', log_level)
 
     # Set the log level for taskgraph.
-    tg_logging_map = {'DEBUG': 10, 'INFO': 20, 'WARNING': 30, 'ERROR': 40}
-    taskgraph_log_level = tg_logging_map[args.taskgraph_log_level.upper()]
+    taskgraph_log_level = logging.getlevelName(args.taskgraph_log_level.upper())
     logging.getLogger('taskgraph').setLevel(taskgraph_log_level)
     LOGGER.info('Setting taskgraph log level to %s', taskgraph_log_level)
 
