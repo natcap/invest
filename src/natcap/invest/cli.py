@@ -364,7 +364,7 @@ def main(user_args=None):
     # Set the log level for taskgraph.
     taskgraph_log_level = logging.getlevelName(args.taskgraph_log_level.upper())
     logging.getLogger('taskgraph').setLevel(taskgraph_log_level)
-    LOGGER.info('Setting taskgraph log level to %s', taskgraph_log_level)
+    LOGGER.debug('Setting taskgraph log level to %s', taskgraph_log_level)
 
     # FYI: Root logger by default has a level of logging.WARNING.
     # To capture ALL logging produced in this system at runtime, use this:
