@@ -15,11 +15,10 @@ from . import validation
 from . import utils
 from . import spec_utils
 from .spec_utils import u
-from . import MODEL_METADATA
-from . import install_locale
+from .model_metadata import MODEL_METADATA
+from . import gettext
 
 LOGGER = logging.getLogger(__name__)
-gettext = install_locale()
 
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["carbon"].model_title,

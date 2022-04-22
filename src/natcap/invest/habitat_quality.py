@@ -10,14 +10,14 @@ import taskgraph
 from osgeo import gdal
 from osgeo import osr
 
-from . import MODEL_METADATA
+from .model_metadata import MODEL_METADATA
 from . import spec_utils
 from . import utils
 from . import validation
 from .spec_utils import u
-from . import install_locale
+from . import gettext
 
-gettext = install_locale()
+
 LOGGER = logging.getLogger(__name__)
 
 MISSING_SENSITIVITY_TABLE_THREATS_MSG = gettext(

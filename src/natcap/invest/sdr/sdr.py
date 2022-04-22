@@ -17,16 +17,15 @@ import taskgraph
 from osgeo import gdal
 from osgeo import ogr
 
-from .. import MODEL_METADATA
-from .. import install_locale
+from ..model_metadata import MODEL_METADATA
+from .. import gettext
 from .. import spec_utils
 from .. import utils
 from .. import validation
 from ..spec_utils import u
 from . import sdr_core
-from .. import install_locale
 
-gettext = install_locale()
+
 LOGGER = logging.getLogger(__name__)
 
 INVALID_ID_MSG = gettext('{number} features have a non-integer ws_id field')

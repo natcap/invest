@@ -19,10 +19,7 @@ import numpy
 
 from . import utils
 from . import spec_utils
-from . import install_locale
-
-gettext = install_locale()
-
+from . import gettext
 
 #: A flag to pass to the validation context manager indicating that all keys
 #: should be checked.

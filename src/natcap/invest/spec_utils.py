@@ -4,9 +4,7 @@ import os
 
 import pint
 
-from . import install_locale
-
-gettext = install_locale()
+from . import gettext
 
 # the same unit registry instance should be shared across everything
 # load from custom unit defintions file

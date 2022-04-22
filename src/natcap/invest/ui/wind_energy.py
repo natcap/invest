@@ -1,7 +1,8 @@
 # coding=UTF-8
 
 from natcap.invest.ui import model, inputs
-from natcap.invest import wind_energy, MODEL_METADATA
+from natcap.invest.model_metadata import MODEL_METADATA
+from natcap.invest import wind_energy
 
 
 class WindEnergy(model.InVESTModel):

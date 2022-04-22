@@ -14,11 +14,12 @@ import shapely.wkb
 import taskgraph
 from osgeo import gdal, ogr, osr
 
-from . import MODEL_METADATA, spec_utils, utils, validation
+from . import spec_utils, utils, validation
+from .model_metadata import MODEL_METADATA
 from .spec_utils import u
-from . import install_locale
+from . import gettext
 
-gettext = install_locale()
+
 LOGGER = logging.getLogger('natcap.invest.hra')
 
 # Parameters from the user-provided criteria and info tables

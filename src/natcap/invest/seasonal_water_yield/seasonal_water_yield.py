@@ -17,12 +17,12 @@ from .. import utils
 from .. import spec_utils
 from ..spec_utils import u
 from .. import validation
-from .. import MODEL_METADATA
-from .. import install_locale
+from ..model_metadata import MODEL_METADATA
+from .. import gettext
 from . import seasonal_water_yield_core
 
 gdal.SetCacheMax(2**26)
-gettext = install_locale()
+
 LOGGER = logging.getLogger(__name__)
 
 TARGET_NODATA = -1

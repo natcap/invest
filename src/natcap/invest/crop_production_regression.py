@@ -13,10 +13,10 @@ from .spec_utils import u
 from . import spec_utils
 from . import utils
 from . import validation
-from . import MODEL_METADATA
-from . import install_locale
+from .model_metadata import MODEL_METADATA
+from . import gettext
 
-gettext = install_locale()
+
 LOGGER = logging.getLogger(__name__)
 
 CROPS = {

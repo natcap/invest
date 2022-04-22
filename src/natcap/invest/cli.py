@@ -16,25 +16,25 @@ import warnings
 
 import natcap.invest
 from natcap.invest import datastack
+from natcap.invest import model_metadata
+from natcap.invest import set_locale
 from natcap.invest import ui_server
 from natcap.invest import utils
 from natcap.invest.ui import launcher, inputs
-from natcap.invest import install_locale
 
-gettext = install_locale()
+
 DEFAULT_EXIT_CODE = 1
 LOGGER = logging.getLogger(__name__)
 
 # Build up an index mapping aliases to model_name.
 # ``model_name`` is the key to the MODEL_METADATA dict.
 _MODEL_ALIASES = {}
-for model_name, meta in natcap.invest.MODEL_METADATA.items():
+for model_name, meta in model_metadata.MODEL_METADATA.items():
     for alias in meta.aliases:
         assert alias not in _MODEL_ALIASES, (
             'Alias %s already defined for model %s') % (
                 alias, _MODEL_ALIASES[alias])
         _MODEL_ALIASES[alias] = model_name
-
 
 def build_model_list_table():
     """Build a table of model names, aliases and other details.
@@ -46,27 +46,28 @@ def build_model_list_table():
     Returns:
         A string representation of the formatted table.
     """
-    model_names = sorted(natcap.invest.MODEL_METADATA.keys())
+    from natcap.invest import gettext
+    model_names = sorted(model_metadata.MODEL_METADATA.keys())
     max_model_name_length = max(len(name) for name in model_names)
 
     # Adding 3 to max alias name length for the parentheses plus some padding.
     max_alias_name_length = max(len(', '.join(meta.aliases))
-                                for meta in natcap.invest.MODEL_METADATA.values()) + 3
+                                for meta in model_metadata.MODEL_METADATA.values()) + 3
     template_string = '    {model_name} {aliases} {model_title} {usage}'
     strings = [gettext('Available models:')]
     for model_name in model_names:
         usage_string = '(No GUI available)'
-        if natcap.invest.MODEL_METADATA[model_name].gui is not None:
+        if model_metadata.MODEL_METADATA[model_name].gui is not None:
             usage_string = ''
 
-        alias_string = ', '.join(natcap.invest.MODEL_METADATA[model_name].aliases)
+        alias_string = ', '.join(model_metadata.MODEL_METADATA[model_name].aliases)
         if alias_string:
             alias_string = '(%s)' % alias_string
 
         strings.append(template_string.format(
             model_name=model_name.ljust(max_model_name_length),
             aliases=alias_string.ljust(max_alias_name_length),
-            model_title=natcap.invest.MODEL_METADATA[model_name].model_title,
+            model_title=model_metadata.MODEL_METADATA[model_name].model_title,
             usage=usage_string))
     return '\n'.join(strings) + '\n'
 
@@ -83,7 +84,7 @@ def build_model_list_json():
 
     """
     json_object = {}
-    for model_name, model_data in natcap.invest.MODEL_METADATA.items():
+    for model_name, model_data in model_metadata.MODEL_METADATA.items():
         json_object[model_data.model_title] = {
             'model_name': model_name,
             'aliases': model_data.aliases
@@ -122,7 +123,8 @@ def export_to_python(target_filepath, model, args_dict=None):
     """)
 
     if args_dict is None:
-        model_module = importlib.import_module(name=natcap.invest.MODEL_METADATA[model].pyname)
+        model_module = importlib.import_module(
+            name=model_metadata.MODEL_METADATA[model].pyname)
         spec = model_module.ARGS_SPEC
         cast_args = {key: '' for key in spec['args'].keys()}
     else:
@@ -141,8 +143,8 @@ def export_to_python(target_filepath, model, args_dict=None):
         py_file.write(script_template.format(
             invest_version=natcap.invest.__version__,
             today=datetime.datetime.now().strftime('%c'),
-            model_title=natcap.invest.MODEL_METADATA[model].model_title,
-            pyname=natcap.invest.MODEL_METADATA[model].pyname,
+            model_title=model_metadata.MODEL_METADATA[model].model_title,
+            pyname=model_metadata.MODEL_METADATA[model].pyname,
             model_args=args))
 
 
@@ -176,7 +178,7 @@ class SelectModelAction(argparse.Action):
 
         Overridden from argparse.Action.__call__.
         """
-        known_models = sorted(list(natcap.invest.MODEL_METADATA.keys()))
+        known_models = sorted(list(model_metadata.MODEL_METADATA.keys()))
 
         matching_models = [model for model in known_models if
                            model.startswith(values)]
@@ -337,7 +339,7 @@ def main(user_args=None):
         help='Define a location for the saved .py file')
 
     args = parser.parse_args(user_args)
-    natcap.invest.install_locale(args.language)
+    natcap.invest.set_locale(args.language)
 
     root_logger = logging.getLogger()
     handler = logging.StreamHandler(sys.stdout)
@@ -363,9 +365,8 @@ def main(user_args=None):
     logging.getLogger('natcap').setLevel(logging.DEBUG)
 
     if args.subcommand == 'list':
-        # reevaluate in the new language
-        # NOTE this only reevaluates natcap/invest/__init__.py, no other modules
-        importlib.reload(natcap.invest)
+        # reevaluate the model names in the new language
+        importlib.reload(model_metadata)
         if args.json:
             message = build_model_list_json()
         else:
@@ -420,7 +421,7 @@ def main(user_args=None):
         parser.exit(0)
 
     if args.subcommand == 'getspec':
-        target_model = natcap.invest.MODEL_METADATA[args.model].pyname
+        target_model = model_metadata.MODEL_METADATA[args.model].pyname
         model_module = importlib.reload(
             importlib.import_module(name=target_model))
         spec = model_module.ARGS_SPEC
@@ -451,7 +452,7 @@ def main(user_args=None):
         else:
             parsed_datastack.args['workspace_dir'] = args.workspace
 
-        target_model = natcap.invest.MODEL_METADATA[args.model].pyname
+        target_model = model_metadata.MODEL_METADATA[args.model].pyname
         model_module = importlib.import_module(name=target_model)
         LOGGER.info('Imported target %s from %s',
                     model_module.__name__, model_module)
@@ -490,7 +491,7 @@ def main(user_args=None):
                 "the application hangs on startup, set 'QT_MAC_WANTS_LAYER=1' "
                 "in the shell running this CLI.", RuntimeWarning)
 
-        gui_class = natcap.invest.MODEL_METADATA[args.model].gui
+        gui_class = model_metadata.MODEL_METADATA[args.model].gui
         module_name, classname = gui_class.split('.')
         module = importlib.import_module(
             name='.ui.%s' % module_name,

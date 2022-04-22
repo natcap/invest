@@ -11,16 +11,16 @@ import taskgraph
 from osgeo import gdal
 from osgeo import ogr
 
-from .. import MODEL_METADATA
+from ..model_metadata import MODEL_METADATA
 from .. import spec_utils
 from .. import utils
 from .. import validation
 from ..sdr import sdr
 from ..spec_utils import u
-from .. import install_locale
+from .. import gettext
 from . import ndr_core
 
-gettext = install_locale()
+
 LOGGER = logging.getLogger(__name__)
 
 MISSING_NUTRIENT_MSG = gettext('Either calc_n or calc_p must be True')
