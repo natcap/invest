@@ -21,6 +21,12 @@ const LOGLEVELMAP = {
   WARNING: '-v',
   ERROR: '',
 };
+const TGLOGLEVELMAP = {
+  DEBUG: '--taskgraph-log-level=DEBUG',
+  INFO: '--taskgraph-log-level=INFO',
+  WARNING: '--taskgraph-log-level=WARNING',
+  ERROR: '--taskgraph-log-level=ERROR',
+};
 const TEMP_DIR = path.join(app.getPath('userData'), 'tmp');
 
 export function setupInvestRunHandlers(investExe) {
@@ -39,7 +45,7 @@ export function setupInvestRunHandlers(investExe) {
   });
 
   ipcMain.on(ipcMainChannels.INVEST_RUN, async (
-    event, modelRunName, pyModuleName, args, loggingLevel, language, tabID
+    event, modelRunName, pyModuleName, args, loggingLevel, taskgraphLoggingLevel, language, tabID
   ) => {
     let investRun;
     let investStarted = false;
@@ -64,6 +70,7 @@ export function setupInvestRunHandlers(investExe) {
 
     const cmdArgs = [
       LOGLEVELMAP[loggingLevel],
+      TGLOGLEVELMAP[taskgraphLoggingLevel],
       `--language "${language}"`,
       'run',
       modelRunName,
