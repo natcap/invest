@@ -25,14 +25,6 @@ DATASTACKS = {
     'crop_production_regression': [
         'CropProduction/crop_production_regression_demo.invs.json'],
     'delineateit': ['DelineateIt/delineateit_gura.invs.json'],
-    'finfish_aquaculture': ['Aquaculture/atlantic_salmon_british_columbia.invs.json'],
-    'fisheries': [
-        'Fisheries/blue_crab_galveston_bay.invs.json',
-        'Fisheries/dungeness_crab_hood_canal.invs.json',
-        'Fisheries/spiny_lobster_belize.invs.json',
-        'Fisheries/white_shrimp_galveston_bay.invs.json',
-    ],
-    'fisheries_hst': ['Fisheries/fisheries_hst_demo.invs.json'],
     'forest_carbon_edge_effect': ['forest_carbon_edge_effect/forest_carbon_amazonia.invs.json'],
     'globio': ['globio/globio_demo.invs.json'],
     'habitat_quality': ['HabitatQuality/habitat_quality_willamette.invs.json'],
@@ -46,8 +38,9 @@ DATASTACKS = {
     'scenic_quality': ['ScenicQuality/wind_turbines_wcvi.invs.json'],
     'sdr': ['SDR/sdr_gura.invs.json'],
     'seasonal_water_yield': ['Seasonal_Water_Yield/seasonal_water_yield_gura.invs.json'],
-    'urban_flood_risk_mitigation': ['UrbanFloodMitigation/urban_flood_risk_mitigation.invs.json'],
+    'stormwater': ['UrbanStormwater/stormwater_datastack.invest.json'],
     'urban_cooling_model': ['UrbanCoolingModel/urban_cooling_model_datastack.invest.json'],
+    'urban_flood_risk_mitigation': ['UrbanFloodMitigation/urban_flood_risk_mitigation.invs.json'],
     'wind_energy': ['WindEnergy/wind_energy_new_england.invs.json'],
     'wave_energy': [
         'WaveEnergy/wave_energy_aquabuoy_wcvi.invs.json',

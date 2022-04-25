@@ -1,0 +1,54 @@
+{
+    "parser": "babel-eslint",
+    "env": {
+        "browser": true,
+        "es6": true,
+        "node": true
+    },
+    "parserOptions": {
+        "ecmaFeatures": {
+            "experimentalObjectRestSpread": true,
+            "jsx": true
+        },
+        "sourceType": "module"
+    },
+    "extends": [
+        "airbnb",
+        "plugin:jsdoc/recommended",
+        "plugin:react/recommended",
+        "plugin:jest/recommended",
+        "plugin:jest/style",
+    ],
+    "settings": {
+        "react": {
+        "createClass": "createReactClass", // Regex for Component Factory to use,
+                                         // default to "createReactClass"
+        "pragma": "React",  // Pragma to use, default to "React"
+        "version": "detect", // React version. "detect" automatically picks the version you have installed.
+                           // You can also use `16.0`, `16.3`, etc, if you want to override the detected value.
+                           // default to latest and warns if missing
+                           // It will default to "detect" in the future
+        },
+    },
+    "rules": {
+        "camelcase": ["warn", ],
+        "comma-dangle": ["warn", {
+            "arrays": "always-multiline",
+            "objects": "always-multiline",
+            "imports": "never",
+            "exports": "never",
+            "functions": "never"
+        }],
+        "import/no-extraneous-dependencies": [error, { devDependencies: true }],
+        "linebreak-style": ["off", ],
+        "max-classes-per-file": ["error", 2],
+        "object-shorthand": ["error", "never"],
+        "no-underscore-dangle": ["off", ],
+        "react/destructuring-assignment": ["warn", "always"],
+        "react/jsx-fragments": ["off", "syntax"],
+        "react/jsx-filename-extension": ["warn", { "extensions": [".js", ".jsx"] }]
+    },
+    "globals": {
+        "_": "writeable"
+    }
+}

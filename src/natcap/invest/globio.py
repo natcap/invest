@@ -27,7 +27,7 @@ SIGMA = 9.0
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["globio"].model_title,
     "pyname": MODEL_METADATA["globio"].pyname,
-    "userguide_html": MODEL_METADATA["globio"].userguide,
+    "userguide": MODEL_METADATA["globio"].userguide,
     "args_with_spatial_overlap": {
         "spatial_keys": [
             "lulc_path", "pasture_path", "potential_vegetation_path",
@@ -40,16 +40,16 @@ ARGS_SPEC = {
         "predefined_globio": {
             "type": "boolean",
             "required": False,
-            "about": (
+            "about": _(
                 "Use the predefined GLOBIO LULC map instead of providing "
                 "the LULC map."),
-            "name": "use predefined LULC"
+            "name": _("use predefined LULC")
         },
         "lulc_path": {
             **spec_utils.LULC,
             "projected": True,
             "required": "not predefined_globio",
-            "about": (
+            "about": _(
                 f"{spec_utils.LULC['about']} Each LULC code must have a "
                 "corresponding entry in the biophysical table. "
                 "Required if Use Predefined GLOBIO LULC is not selected.")
@@ -59,23 +59,23 @@ ARGS_SPEC = {
             "columns": {
                 "lucode": {
                     "type": "integer",
-                    "about": "LULC code from the LULC map input."},
+                    "about": _("LULC code from the LULC map input.")},
                 "globio_lucode": {
                     "type": "integer",
-                    "about": "Corresponding GLOBIO LULC code."}
+                    "about": _("Corresponding GLOBIO LULC code.")}
             },
             "required": "not predefined_globio",
-            "about": (
+            "about": _(
                 "A table mapping each LULC code in the LULC raster input to "
                 "the corresponding GLOBIO LULC code for the class. "
                 "Required if Use Predefined GLOBIO LULC is not selected."),
-            "name": "LULC to GLOBIO LULC Table"
+            "name": _("LULC to GLOBIO LULC Table")
         },
         "infrastructure_dir": {
             "type": "directory",
             "contents": {
                 "[INFRASTRUCTURE_MAP]": {  # may be named anything
-                    "about": (
+                    "about": _(
                         "Maps of the location of infrastructure. For rasters, "
                         "any valid value greater than zero indicates the "
                         "presence of infrastrucutre. For vectors, any "
@@ -86,28 +86,28 @@ ARGS_SPEC = {
                     "geometries": spec_utils.ALL_GEOMS
                 }
             },
-            "about": (
+            "about": _(
                 "Directory containing raster and/or vector map(s) any forms "
                 "of infrastructure to consider in the MSA calculation."),
-            "name": "infrastructure directory"
+            "name": _("infrastructure directory")
         },
         "pasture_path": {
             "type": "raster",
             "bands": {1: {"type": "ratio"}},
             "projected": True,
             "required": "not predefined_globio",
-            "about": (
+            "about": _(
                 "Map of the proportion of each pixel that is pasture. "
                 "Required if Use Predefined GLOBIO LULC is not selected."),
-            "name": "pasture"
+            "name": _("pasture")
         },
         "potential_vegetation_path": {
-            "name": "potential vegetation",
+            "name": _("potential vegetation"),
             "type": "raster",
             "bands": {1: {"type": "integer"}},
             "projected": True,
             "required": "not predefined_globio",
-            "about": (
+            "about": _(
                 "Map of potential vegetation classes from Ramankutty "
                 "and Foley (1999). "
                 "Required if Use Predefined GLOBIO LULC is not selected.")
@@ -115,29 +115,29 @@ ARGS_SPEC = {
         "pasture_threshold": {
             "type": "ratio",
             "required": "not predefined_globio",
-            "about": (
+            "about": _(
                 "Areas in the Pasture map with a pasture proportion greater "
                 "than or equal to this threshold are considered grassland or "
                 "livestock grazing areas. "
                 "Required if Use Predefined GLOBIO LULC is not selected."),
-            "name": "pasture threshold"
+            "name": _("pasture threshold")
         },
         "intensification_fraction": {
             "type": "ratio",
-            "about": (
+            "about": _(
                 "Proportion of total agriculture that is intensive. "),
-            "name": "proportion of intensified agriculture"
+            "name": _("proportion of intensified agriculture")
         },
         "primary_threshold": {
             "type": "ratio",
             "required": "not predefined_globio",
-            "about": (
+            "about": _(
                 "Forest ragmentation quality index threshold below which an "
                 "area is classified as secondary forest. Areas with FFQI "
                 "greater than or equal to this threshold are classified as "
                 "primary forest. "
                 "Required if Use Predefined GLOBIO LULC is not selected."),
-            "name": "primary threshold"
+            "name": _("primary threshold")
         },
         "msa_parameters_path": {
             "type": "csv",
@@ -145,27 +145,34 @@ ARGS_SPEC = {
                 "msa_type": {
                     "type": "option_string",
                     "options": {
-                        "msa_i_primary": (
-                            "This MSA value represents infrastructure impacts "
-                            "on primary vegetation. The value in the 'value' "
-                            "column is a distance range in meters."),
-                        "msa_i_other": (
-                            "This MSA value represents infrastructure impacts "
-                            "on non-primary vegetation. The value in the "
-                            "'value' column is a distance range in meters."),
-                        "msa_f": (
-                            "This MSA value represents fragmentation impacts."
-                            "The value in the 'value' column is an FFQI range."),
-                        "msa_lu": (
-                            "This MSA value represents land-use impacts. The "
-                            "value in the 'value' column is one of the GLOBIO-"
-                            "recognized LULC codes."),
+                        "msa_i_primary": {
+                            "description": _(
+                                "This MSA value represents infrastructure "
+                                "impacts on primary vegetation. The value in "
+                                "the 'value' column is a distance range in "
+                                "meters.")},
+                        "msa_i_other": {
+                            "description": _(
+                                "This MSA value represents infrastructure "
+                                "impacts on non-primary vegetation. The value "
+                                "in the 'value' column is a distance range in "
+                                "meters.")},
+                        "msa_f": {
+                            "description": _(
+                                "This MSA value represents fragmentation "
+                                "impacts. The value in the 'value' column is "
+                                "an FFQI range.")},
+                        "msa_lu": {
+                            "description": _(
+                                "This MSA value represents land-use impacts. "
+                                "The value in the 'value' column is one of "
+                                "the GLOBIO-recognized LULC codes.")},
                     },
-                    "about": "The type of MSA value in this row."
+                    "about": _("The type of MSA value in this row.")
                 },
                 "value": {
                     "type": "freestyle_string",
-                    "about": (
+                    "about": _(
                         "Indicates a number or range of a bin. This may be a "
                         "single number e.g. 1000, a range (two numbers "
                         "separated by a hyphen e.g. 1000-2000), or an upper "
@@ -173,15 +180,15 @@ ARGS_SPEC = {
                 },
                 "msa_x": {
                     "type": "ratio",
-                    "about": (
+                    "about": _(
                         "MSA value for the MSA type specified in the "
                         "'msa_type' column, when the impact value is within "
                         "the range given in the 'value' column.")}
             },
-            "about": (
+            "about": _(
                 "Table that sets the MSA values for each impact driver and "
                 "each range of impact values."),
-            "name": "MSA Parameter Table"
+            "name": _("MSA Parameter Table")
         },
         "aoi_path": {
             **spec_utils.AOI,
@@ -192,11 +199,11 @@ ARGS_SPEC = {
             **spec_utils.LULC,
             "projected": True,
             "required": "predefined_globio",
-            "about": (
+            "about": _(
                 "Predefined GLOBIO LULC map using the standard GLOBIO "
                 "classification scheme and codes. "
                 "Required if Use Predefined GLOBIO LULC is selected."),
-            "name": "GLOBIO Classified Land Use"
+            "name": _("GLOBIO Classified Land Use")
         }
     }
 }
@@ -502,7 +509,7 @@ def _primary_veg_mask_op(lulc_array, globio_nodata, primary_veg_mask_nodata):
     result[:] = primary_veg_mask_nodata
     valid_mask = slice(None)
     if globio_nodata is not None:
-        valid_mask = ~numpy.isclose(lulc_array, globio_nodata)
+        valid_mask = ~utils.array_equals_nodata(lulc_array, globio_nodata)
     result[valid_mask] = lulc_array[valid_mask] == 1
     return result
 
@@ -512,7 +519,8 @@ def _ffqi_op(forest_areas_array, smoothed_forest_areas, forest_areas_nodata):
     result = numpy.empty_like(forest_areas_array, dtype=numpy.float32)
     result[:] = forest_areas_nodata
     # forest_areas_array and _nodata are integer types and not user-defined
-    valid_mask = forest_areas_array != forest_areas_nodata
+    valid_mask = ~utils.array_equals_nodata(
+        forest_areas_array, forest_areas_nodata)
     result[valid_mask] = (
         forest_areas_array[valid_mask] * smoothed_forest_areas[valid_mask])
     return result
@@ -565,7 +573,7 @@ def _msa_f_calculation(
                 less_than[1])
 
         if msa_nodata is not None:
-            nodata_mask = numpy.isclose(
+            nodata_mask = utils.array_equals_nodata(
                 primary_veg_smooth, primary_veg_mask_nodata)
             msa_f[nodata_mask] = msa_nodata
 
@@ -634,7 +642,7 @@ def _msa_i_calculation(
             lulc_array, msa_nodata, dtype=numpy.float32)
         msa_i_other = numpy.full_like(
             lulc_array, msa_nodata, dtype=numpy.float32)
-        nodata_mask = numpy.isclose(lulc_array, lulc_nodata)
+        nodata_mask = utils.array_equals_nodata(lulc_array, lulc_nodata)
 
         if primary_greater_than:
             msa_i_primary[distance_to_infrastructure > primary_greater_than[0]] = (
@@ -691,7 +699,7 @@ def _msa_calculation(
         valid_mask = numpy.ones(msa_f.shape, dtype=bool)
         for msa_array, nodata_val in zip([msa_f, msa_lu, msa_i], nodata_array):
             if nodata_val is not None:
-                valid_mask &= ~numpy.isclose(msa_array, nodata_val)
+                valid_mask &= ~utils.array_equals_nodata(msa_array, nodata_val)
         result[valid_mask] = (
             msa_f[valid_mask] * msa_lu[valid_mask] * msa_i[valid_mask])
         return result
@@ -896,7 +904,7 @@ def _calculate_globio_lulc_map(
 def _forest_area_mask_op(lulc_array, globio_nodata, forest_areas_nodata):
     """Masking out forest areas."""
     # comparing integers, numpy.isclose not needed
-    valid_mask = lulc_array != globio_nodata
+    valid_mask = ~utils.array_equals_nodata(lulc_array, globio_nodata)
     # landcover code 130 represents all MODIS forest codes which originate
     # as 1-5
     result = numpy.empty_like(lulc_array, dtype=numpy.int16)
@@ -911,7 +919,7 @@ def _create_globio_lulc_op(
     """Construct GLOBIO lulc given relevant biophysical parameters."""
     result = numpy.empty_like(lulc_array, dtype=numpy.int16)
     result[:] = globio_nodata
-    valid_mask = lulc_array != globio_nodata
+    valid_mask = ~utils.array_equals_nodata(lulc_array, globio_nodata)
     valid_result = result[valid_mask]
 
     # Split Shrublands and grasslands into primary vegetations,
@@ -1041,8 +1049,9 @@ def _collapse_infrastructure_layers(
             infrastructure_mask |= infrastructure_array_list[index] > 0
             if infrastructure_nodata_list[index] is not None:
                 # update nodata mask: intersection with this layer
-                nodata_mask &= numpy.isclose(infrastructure_array_list[index],
-                                             infrastructure_nodata_list[index])
+                nodata_mask &= utils.array_equals_nodata(
+                    infrastructure_array_list[index],
+                    infrastructure_nodata_list[index])
             # if nodata is None, every pixel in this layer has data,
             # so the nodata_mask should be all False
             else:

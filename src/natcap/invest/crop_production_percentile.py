@@ -23,7 +23,7 @@ LOGGER = logging.getLogger(__name__)
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["crop_production_percentile"].model_title,
     "pyname": MODEL_METADATA["crop_production_percentile"].pyname,
-    "userguide_html": MODEL_METADATA["crop_production_percentile"].userguide,
+    "userguide": MODEL_METADATA["crop_production_percentile"].userguide,
     "args_with_spatial_overlap": {
         "spatial_keys": [
             "landcover_raster_path",
@@ -46,54 +46,57 @@ ARGS_SPEC = {
                 "lucode": {"type": "integer"},
                 "crop_name": {
                     "type": "option_string",
-                    "options": [
-                        "abaca", "agave", "alfalfa", "almond", "aniseetc",
-                        "apple", "apricot", "areca", "artichoke", "asparagus",
-                        "avocado", "bambara", "banana", "barley", "bean",
-                        "beetfor", "berrynes", "blueberry", "brazil",
-                        "canaryseed", "carob", "carrot", "carrotfor", "cashew",
-                        "broadbean", "buckwheat", "cabbage", "cabbagefor",
-                        "cashewapple", "cassava", "castor", "cauliflower",
-                        "cerealnes", "cherry", "chestnut", "chickpea",
-                        "chicory", "chilleetc", "cinnamon", "citrusnes",
-                        "clove", "clover", "cocoa", "coconut", "coffee",
-                        "cotton", "cowpea", "cranberry", "cucumberetc",
-                        "currant", "date", "eggplant", "fibrenes", "fig",
-                        "flax", "fonio", "fornes", "fruitnes", "garlic",
-                        "ginger", "gooseberry", "grape", "grapefruitetc",
-                        "grassnes", "greenbean", "greenbroadbean", "greencorn",
-                        "greenonion", "greenpea", "groundnut", "hazelnut",
-                        "hemp", "hempseed", "hop", "jute", "jutelikefiber",
-                        "kapokfiber", "kapokseed", "karite", "kiwi", "kolanut",
-                        "legumenes", "lemonlime", "lentil", "lettuce",
-                        "linseed", "lupin", "maize", "maizefor", "mango",
-                        "mate", "melonetc", "melonseed", "millet",
-                        "mixedgrain", "mixedgrass", "mushroom", "mustard",
-                        "nutmeg", "nutnes", "oats", "oilpalm", "oilseedfor",
-                        "oilseednes", "okra", "olive", "onion", "orange",
-                        "papaya", "pea", "peachetc", "pear", "pepper",
-                        "peppermint", "persimmon", "pigeonpea", "pimento",
-                        "pineapple", "pistachio", "plantain", "plum", "poppy",
-                        "potato", "pulsenes", "pumpkinetc", "pyrethrum",
-                        "quince", "quinoa", "ramie", "rapeseed", "rasberry",
-                        "rice", "rootnes", "rubber", "rye", "ryefor",
-                        "safflower", "sesame", "sisal", "sorghum",
-                        "sorghumfor", "sourcherry, soybean", "spicenes",
-                        "spinach", "stonefruitnes", "strawberry", "stringbean",
-                        "sugarbeet", "sugarcane", "sugarnes", "sunflower",
-                        "swedefor", "sweetpotato", "tangetc", "taro", "tea",
-                        "tobacco", "tomato", "triticale", "tropicalnes",
-                        "tung", "turnipfor", "vanilla", "vegetablenes",
-                        "vegfor", "vetch", "walnut", "watermelon", "wheat",
-                        "yam", "yautia"
-                    ]
+                    "options": {
+                        # TODO: use human-readable translatable crop names (#614)
+                        crop: {"description": crop} for crop in [
+                            "abaca", "agave", "alfalfa", "almond", "aniseetc",
+                            "apple", "apricot", "areca", "artichoke", "asparagus",
+                            "avocado", "bambara", "banana", "barley", "bean",
+                            "beetfor", "berrynes", "blueberry", "brazil",
+                            "canaryseed", "carob", "carrot", "carrotfor", "cashew",
+                            "broadbean", "buckwheat", "cabbage", "cabbagefor",
+                            "cashewapple", "cassava", "castor", "cauliflower",
+                            "cerealnes", "cherry", "chestnut", "chickpea",
+                            "chicory", "chilleetc", "cinnamon", "citrusnes",
+                            "clove", "clover", "cocoa", "coconut", "coffee",
+                            "cotton", "cowpea", "cranberry", "cucumberetc",
+                            "currant", "date", "eggplant", "fibrenes", "fig",
+                            "flax", "fonio", "fornes", "fruitnes", "garlic",
+                            "ginger", "gooseberry", "grape", "grapefruitetc",
+                            "grassnes", "greenbean", "greenbroadbean", "greencorn",
+                            "greenonion", "greenpea", "groundnut", "hazelnut",
+                            "hemp", "hempseed", "hop", "jute", "jutelikefiber",
+                            "kapokfiber", "kapokseed", "karite", "kiwi", "kolanut",
+                            "legumenes", "lemonlime", "lentil", "lettuce",
+                            "linseed", "lupin", "maize", "maizefor", "mango",
+                            "mate", "melonetc", "melonseed", "millet",
+                            "mixedgrain", "mixedgrass", "mushroom", "mustard",
+                            "nutmeg", "nutnes", "oats", "oilpalm", "oilseedfor",
+                            "oilseednes", "okra", "olive", "onion", "orange",
+                            "papaya", "pea", "peachetc", "pear", "pepper",
+                            "peppermint", "persimmon", "pigeonpea", "pimento",
+                            "pineapple", "pistachio", "plantain", "plum", "poppy",
+                            "potato", "pulsenes", "pumpkinetc", "pyrethrum",
+                            "quince", "quinoa", "ramie", "rapeseed", "rasberry",
+                            "rice", "rootnes", "rubber", "rye", "ryefor",
+                            "safflower", "sesame", "sisal", "sorghum",
+                            "sorghumfor", "sourcherry, soybean", "spicenes",
+                            "spinach", "stonefruitnes", "strawberry", "stringbean",
+                            "sugarbeet", "sugarcane", "sugarnes", "sunflower",
+                            "swedefor", "sweetpotato", "tangetc", "taro", "tea",
+                            "tobacco", "tomato", "triticale", "tropicalnes",
+                            "tung", "turnipfor", "vanilla", "vegetablenes",
+                            "vegfor", "vetch", "walnut", "watermelon", "wheat",
+                            "yam", "yautia"
+                        ]
+                    }
                 }
             },
-            "about": (
+            "about": _(
                 "A table that maps each LULC code from the LULC map to one of "
                 "the 175 canonical crop names representing the crop grown in "
                 "that LULC class."),
-            "name": "LULC to Crop Table"
+            "name": _("LULC to Crop Table")
         },
         "aggregate_polygon_path": {
             **spec_utils.AOI,
@@ -105,7 +108,7 @@ ARGS_SPEC = {
             "contents": {
                 "climate_percentile_yield_tables": {
                     "type": "directory",
-                    "about": (
+                    "about": _(
                         "Table mapping each climate bin to yield percentiles "
                         "for each crop."),
                     "contents": {
@@ -135,7 +138,7 @@ ARGS_SPEC = {
                 },
                 "extended_climate_bin_maps": {
                     "type": "directory",
-                    "about": "Maps of climate bins for each crop.",
+                    "about": _("Maps of climate bins for each crop."),
                     "contents": {
                         "extendedclimatebins[CROP]": {
                             "type": "raster",
@@ -145,7 +148,7 @@ ARGS_SPEC = {
                 },
                 "observed_yield": {
                     "type": "directory",
-                    "about": "Maps of actual observed yield for each crop.",
+                    "about": _("Maps of actual observed yield for each crop."),
                     "contents": {
                         "[CROP]_observed_yield.tif": {
                             "type": "raster",
@@ -200,8 +203,8 @@ ARGS_SPEC = {
                     }
                 }
             },
-            "about": "Path to the InVEST Crop Production Data directory.",
-            "name": "model data directory"
+            "about": _("Path to the InVEST Crop Production Data directory."),
+            "name": _("model data directory")
         }
     }
 }
@@ -633,9 +636,9 @@ def calculate_crop_production(lulc_path, yield_path, crop_lucode,
 
         valid_mask = numpy.full(lulc_array.shape, True)
         if lulc_nodata is not None:
-            valid_mask &= ~numpy.isclose(lulc_array, lulc_nodata)
+            valid_mask &= ~utils.array_equals_nodata(lulc_array, lulc_nodata)
         if yield_nodata is not None:
-            valid_mask &= ~numpy.isclose(yield_array, yield_nodata)
+            valid_mask &= ~utils.array_equals_nodata(yield_array, yield_nodata)
         result[valid_mask] = 0
 
         lulc_mask = lulc_array == crop_lucode
@@ -666,7 +669,7 @@ def _zero_observed_yield_op(observed_yield_array, observed_yield_nodata):
     result[:] = 0
     valid_mask = slice(None)
     if observed_yield_nodata is not None:
-        valid_mask = ~numpy.isclose(
+        valid_mask = ~utils.array_equals_nodata(
             observed_yield_array, observed_yield_nodata)
     result[valid_mask] = observed_yield_array[valid_mask]
     return result
@@ -692,7 +695,7 @@ def _mask_observed_yield_op(
     result = numpy.empty(lulc_array.shape, dtype=numpy.float32)
     if landcover_nodata is not None:
         result[:] = observed_yield_nodata
-        valid_mask = ~numpy.isclose(lulc_array, landcover_nodata)
+        valid_mask = ~utils.array_equals_nodata(lulc_array, landcover_nodata)
         result[valid_mask] = 0
     else:
         result[:] = 0
@@ -767,7 +770,7 @@ def tabulate_results(
                 # if nodata value undefined, assume all pixels are valid
                 valid_mask = slice(None)
                 if observed_yield_nodata is not None:
-                    valid_mask = ~numpy.isclose(
+                    valid_mask = ~utils.array_equals_nodata(
                         yield_block, observed_yield_nodata)
                 production_pixel_count += numpy.count_nonzero(
                     valid_mask & (yield_block > 0))
@@ -787,7 +790,7 @@ def tabulate_results(
                         (yield_percentile_raster_path, 1)):
                     # _NODATA_YIELD will always have a value (defined above)
                     yield_sum += numpy.sum(
-                        yield_block[~numpy.isclose(
+                        yield_block[~utils.array_equals_nodata(
                             yield_block, _NODATA_YIELD)])
                 production_lookup[yield_percentile_id] = yield_sum
                 result_table.write(",%f" % yield_sum)
@@ -814,7 +817,7 @@ def tabulate_results(
                 (landcover_raster_path, 1)):
             if landcover_nodata is not None:
                 total_area += numpy.count_nonzero(
-                    ~numpy.isclose(band_values, landcover_nodata))
+                    ~utils.array_equals_nodata(band_values, landcover_nodata))
             else:
                 total_area += band_values.size
         result_table.write(

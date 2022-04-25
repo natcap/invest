@@ -2,29 +2,27 @@
   Changes should be grouped for readability.
 
   InVEST model names:
-  - Carbon
+  - Annual Water Yield
+  - Carbon Storage and Sequestration
   - Coastal Blue Carbon
   - Coastal Vulnerability
+  - Crop Pollination
   - Crop Production
   - DelineateIt
-  - Finfish
-  - Fisheries
   - Forest Carbon Edge Effects
   - Globio
   - Habitat Quality
   - HRA
-  - Annual Water Yield
   - NDR
-  - Pollination
-  - Recreation
-  - Routedem
+  - Visitation: Recreation and Tourism
+  - RouteDEM
   - Scenario Generator
   - Scenic Quality
   - SDR
   - Seasonal Water Yield
-  - Stormwater
   - Urban Cooling
   - Urban Flood Risk
+  - Urban Stormwater Retention
   - Wave Energy
   - Wind Energy
 
@@ -34,10 +32,105 @@
 
 .. :changelog:
 
+Unreleased Changes
+------------------
+* General
+    * Updating the ``pyinstaller`` requirement to ``>=4.10`` to support the new
+      ``universal2`` wheel architecture offered by ``scipy>=1.8.0``.
+    * Expose taskgraph logging level for the cli with
+      ``--taskgraph-log-level``.
+* RouteDEM
+    * Rename the arg ``calculate_downstream_distance`` to
+      ``calculate_downslope_distance``. This is meant to clarify that it
+      applies to pixels that are not part of a stream.
+* SDR
+    * Fixed an issue with SDR where ``f.tif`` might not be recalculated if the
+      file is modified or deleted after execution.
 
-Unreleased Changes (3.10)
--------------------------
-* General:
+3.10.2 (2022-02-08)
+-------------------
+* General
+    * The minimum ``setuptools_scm`` version has been increased to 6.4.0 in
+      order to bypass calling ``setup.py`` for version information.  The
+      version of this project can now be retrieved by calling ``python -m
+      setuptools_scm`` from the project root.
+    * Fixed an issue where datastack archives would not include any spatial
+      datasets that were linked to in CSV files.  This now works for all models
+      except HRA.  If an HRA datastack archive is requested,
+      ``NotImplementedError`` will be raised.  A fix for HRA is pending.
+    * Pinned ``numpy`` versions in ``pyproject.toml`` to the lowest compatible
+      version for each supported python version. This prevents issues when
+      ``natcap.invest`` is used in an environment with a lower numpy version
+      than it was built with (https://github.com/cython/cython/issues/4452).
+* DelineateIt
+    * When snapping points to streams, if a point is equally near to more than
+      one stream pixel, it will now snap to the stream pixel with a higher
+      flow accumulation value. Before, it would snap to the stream pixel
+      encountered first in the raster (though this was not guaranteed).
+* GLOBIO
+    * Gaussian decay kernels are now always tiled, which should result in a
+      minor improvement in model runtime when large decay distances are used.
+* Habitat Quality:
+    * Linear decay kernels are now always tiled, which should result in a minor
+      improvement in model runtime, particularly with large decay distances.
+* HRA
+    * Fixed a bug with how a pandas dataframe was instantiated. This bug did
+      not effect outputs though some might notice less trailing zeros in the
+      ``SUMMARY_STATISTICS.csv`` output.
+* NDR
+    * Changed some model inputs and outputs to clarify that subsurface
+      phosphorus is not modeled.
+
+        * Removed the inputs ``subsurface_critical_length_p`` and
+          ``subsurface_eff_p``
+        * Removed the output ``sub_ndr_p.tif``. The model no longer calculates
+          subsurface NDR for phosphorus.
+        * Removed the output ``sub_load_p.tif``. All pixels in this raster were
+          always 0, because the model assumed no subsurface phosphorus movement.
+        * Renamed the output ``p_export.tif`` to ``p_surface_export.tif`` to
+          clarify that it only models the surface export of phosphorus.
+        * Renamed the output ``n_export.tif`` to ``n_total_export.tif`` to
+          clarify that it is the total of surface and subsurface nitrogen export.
+        * Added the new outputs ``n_surface_export.tif`` and
+          ``n_subsurface_export.tif``, showing the surface and subsurface
+          components of the total nitrogen export.
+        * The aggregate vector output ``watershed_results_ndr.shp`` was changed to
+          a geopackage ``watershed_results_ndr.gpkg``.
+        * The aggregate vector fields were given more descriptive names, and
+          updated corresponding to the changed raster outputs:
+
+            * ``surf_p_ld`` was renamed to ``p_surface_load``
+            * ``surf_n_ld`` was renamed to ``n_surface_load``
+            * ``p_exp_tot`` was renamed to ``p_surface_export``
+            * ``sub_n_ld`` was renamed to ``n_subsurface_load``
+            * ``n_exp_tot`` was renamed to ``n_total_export``
+            * Added a new field ``n_surface_export``, representing the sum of
+              ``n_surface_export.tif``
+            * Added a new field ``n_subsurface_export``, representing the sum
+              of ``n_subsurface_export.tif``
+            * Removed the field ``sub_p_ld``, since ``sub_load_p.tif`` was removed.
+* Wind Energy
+    * Fixed a bug where distance was masking by pixel distance instead of
+      euclidean distance.
+    * Renamed the foundation cost label and help info to reflect it is no
+      longer measured in Millions of US dollars.
+    * Fixed a bug where running valuation with TaskGraph in asynchronous mode
+      would cause the model to error.
+
+3.10.1 (2022-01-06)
+-------------------
+* Urban Stormwater Retention
+    * Fixed a bug where this model's sample data was not available via the
+      Windows installer.
+
+
+3.10.0 (2022-01-04)
+-------------------
+* General
+    * Add a ``--language`` argument to the command-line interface, which will
+      translate model names, specs, and validation messages.
+    * Accept a ``language`` query parameter at the UI server endpoints, which
+      will translate model names, specs, and validation messages.
     * Added ``invest serve`` entry-point to the CLI. This launches a Flask app
       and server on the localhost, to support the workbench.
     * Major updates to each model's ``ARGS_SPEC`` (and some related validation)
@@ -45,9 +138,40 @@ Unreleased Changes (3.10)
     * Standardized and de-duplicated text in ``ARGS_SPEC`` ``about`` and
       ``name`` strings.
     * Update to FontAwesome 5 icons in the QT interface.
-* Coastal Vulnerability:
+    * In response to the deprecation of ``setup.py``-based commands in Python
+      3.10, the recommended way to build python distributions of
+      ``natcap.invest`` is now with the ``build`` package, and installation
+      should be done via ``pip``.  The ``README`` has been updated to reflect
+      this change, and this should only be noticeable for those installing
+      ``natcap.invest`` from source.
+    * A bug has been fixed in ``make install`` so that now the current version
+      of ``natcap.invest`` is built and installed.  The former (buggy) version
+      of ``make install`` would install whatever the latest version was in your
+      ``dist`` folder.
+    * Updating the ``taskgraph`` requirement to ``0.11.0`` to resolve an issue
+      where modifying a file within a roughly 2-second window would fool
+      ``taskgraph`` into believing that the file had not been modified.
+    * Fixed a bug where some input rasters with NaN nodata values would go
+      undetected as nodata and yield unexpected behavior.
+* Annual Water Yield
+    * Renamed the Windows start menu shortcut from "Water Yield" to
+      "Annual Water Yield".
+* Coastal Vulnerability
     * Fixed bug where shore points were created on interior landmass holes
       (i.e. lakes).
+    * Added feature to accept raster (in addition to vector) habitat layers.
+    * Changed one intermediate output (geomorphology) from SHP to GPKG.
+    * Fixed bug where output vectors had coordinates with an unnecessary
+      z-dimension. Output vectors now have 2D geometry.
+* Crop Pollination
+    * Renamed the Windows start menu shortcut from "Pollination" to
+      "Crop Pollination".
+* Fisheries and Fisheries HST
+    * The Fisheries models were deprecated due to lack of use,
+      lack of scientific support staff, and maintenance costs.
+* Finfish
+    * The Finfish model was deprecated due to lack of use,
+      lack of scientific support staff, and maintenance costs.
 * Habitat Quality
     * Changed how Habitat Rarity outputs are calculated to be less confusing.
       Values now represent a 0 to 1 index where before there could be
@@ -57,6 +181,55 @@ Unreleased Changes (3.10)
       of 0.5 indicate same abundance between baseline and current/future
       LULC; values 0.5 to 1 indicate less abundance in current/future LULC
       and therefore higher rarity.
+* NDR
+    * Added a new raster to the model's workspace,
+      ``intermediate_outputs/what_drains_to_stream[suffix].tif``.  This raster
+      has pixel values of 1 where DEM pixels flow to an identified stream, and
+      0 where they do not.
+* Scenario Generator
+    * Changed an args key from ``replacment_lucode`` to ``replacement_lucode``.
+* Scenic Quality
+    * Simplify the ``valuation_function`` arg options. The options are now:
+      ``linear``, ``logarithmic``, ``exponential``. The names displayed in the
+      UI dropdown will stay the same as before. Datastacks or scripts will need
+      to be updated to use the new option values.
+    * Renamed the model title from
+      "Unobstructed Views: Scenic Quality Provision" to "Scenic Quality".
+* SDR
+    * Added a new raster to the model's workspace,
+      ``intermediate_outputs/what_drains_to_stream[suffix].tif``.  This raster
+      has pixel values of 1 where DEM pixels flow to an identified stream, and
+      0 where they do not.
+* Urban Flood Risk:
+    * Fixed broken documentation link in the user interface.
+* Urban Stormwater Retention
+    * Added this new model
+* Visitation: Recreation and Tourism
+    * Renamed the Windows start menu shortcut from "Recreation" to
+      "Visitation: Recreation and Tourism".
+* Wave Energy
+    * Rename the ``analysis_area_path`` arg to ``analysis_area``, since it is
+      not a path but an option string.
+    * Simplify the ``analysis_area`` arg options. The options are now:
+      ``westcoast``, ``eastcoast``, ``northsea4``, ``northsea10``,
+      ``australia``, ``global``. The names displayed in the UI dropdown will
+      stay the same as before. Datastacks and scripts will need to be updated
+      to use the new option values.
+* Wind Energy
+    * No model inputs or outputs are measured in "millions of" currency units
+      any more. Specifically:
+    * The ``mw_coef_ac`` and ``mw_coef_dc`` values in the Global Wind Energy
+      Parameters table were in millions of currency units per MW; now they
+      should be provided in currency units per MW.
+    * The ``infield_cable_cost``, ``cable_coef_ac``, and ``cable_coef_dc``
+      values in the Global Wind Energy Parameters table were in millions of
+      currency units per km; now they should be provided in currency units per km.
+    * The ``turbine_cost`` value in the Turbine Parameters table was in
+      millions of currency units; now it should be provided in currency units.
+    * The ``foundation_cost`` parameter was in millions of currency units; now
+      it should be provided in currency units.
+    * The NPV output, formerly ``npv_US_millions.tif``, is now ``npv.tif``.
+      It is now in currency units, not millions of currency units.
 
 3.9.2 (2021-10-29)
 ------------------
@@ -202,8 +375,6 @@ Unreleased Changes (3.10)
       ``e_prime``, ``sed_retention``, ``sed_retention_index``,
       ``sed_deposition``, ``sed_export``) are only defined for pixels that
       drain to a stream. They have nodata everywhere else.
-* Stormwater
-    * Added this new model
 * Urban Flood Risk
     * Fixed a bug where a String ``Type`` column in the infrastructure vector
       would cause the aggregation step of the model to crash, even with the

@@ -4,6 +4,7 @@ import contextlib
 import logging
 import math
 import os
+import re
 import shutil
 import tempfile
 import time
@@ -156,8 +157,8 @@ def prepare_workspace(
             logging.captureWarnings(True)
             # If invest is launched as a subprocess (e.g. the Workbench)
             # the parent process can rely on this announcement to know the
-            # logfile path, and to know the invest process has started.
-            LOGGER.log(100, 'Writing log messages to %s', logfile)
+            # logfile path (within []), and to know the invest process started.
+            LOGGER.log(100, 'Writing log messages to [%s]', logfile)
             start_time = time.time()
             try:
                 yield
@@ -817,6 +818,12 @@ def _assert_vectors_equal(
     Assert spatial reference, feature count, geometries, field names, and
     values are equal with no respect to order of field names or geometries.
 
+    Note: this assertion may fail incorrectly. The comparison algorithm
+    allows for float imprecision if geometry coords are in the same order. It
+    also allows coords to be in a different order if the numbers match exactly.
+    If the coords are in a different order and have float imprecision, the
+    assertion will fail.
+
     Args:
         actual_vector_path (string): path on disk to a gdal Vector dataset.
         expected_vector_path (string): path on disk to a gdal Vector dataset
@@ -911,18 +918,18 @@ def _assert_vectors_equal(
             actual_geom_wkt = actual_geom.ExportToWkt()
             expected_geom_shapely = loads(expected_geom_wkt)
             actual_geom_shapely = loads(actual_geom_wkt)
-            # Try comparing geoms exactly equal allowing for different
-            # geometry ordering
-            geoms_equal = expected_geom_shapely.equals(actual_geom_shapely)
+            # confusingly named, `equals` compares numbers exactly but
+            # allows coords to be in a different order.
+            # `equals_exact` compares numbers with a tolerance but
+            # coords must be in the same order.
+            geoms_equal = (
+                expected_geom_shapely.equals(actual_geom_shapely) or
+                expected_geom_shapely.equals_exact(actual_geom_shapely, 1e-6))
             if not geoms_equal:
-                # Try almost_equal allowing for precision differences
-                geoms_almost_eq = expected_geom_shapely.almost_equals(
-                    actual_geom_shapely)
-                if not geoms_almost_eq:
-                    raise AssertionError(
-                        "Vector geometry assertion fail. \n"
-                        f"Expected geometry: {expected_geom_wkt}. \n"
-                        f"Actual geometry: {actual_geom_wkt}. ")
+                raise AssertionError(
+                    "Vector geometry assertion fail. \n"
+                    f"Expected geometry: {expected_geom_wkt}. \n"
+                    f"Actual geometry: {actual_geom_wkt}. ")
 
             expected_feature = None
             actual_feature = None
@@ -1007,3 +1014,48 @@ def reclassify_raster(
             f" {raster_name} raster but not the table are:"
             f" {err.missing_values}.")
         raise ValueError(error_message)
+
+
+def array_equals_nodata(array, nodata):
+    """Check for the presence of ``nodata`` values in ``array``.
+
+    The comparison supports ``numpy.nan`` nodata values.
+
+    Args:
+        array (numpy array): the array to mask for nodata values.
+        nodata (number): the nodata value to check for. Supports ``numpy.nan``.
+
+    Returns:
+        A boolean numpy array with values of 1 where ``array`` is equal to
+        ``nodata`` and 0 otherwise.
+    """
+    # comparing an integer array against numpy.nan works correctly and is
+    # faster than using numpy.isclose().
+    if numpy.issubdtype(array.dtype, numpy.integer):
+        return array == nodata
+    return numpy.isclose(array, nodata, equal_nan=True)
+
+
+def matches_format_string(test_string, format_string):
+    """Assert that a given string matches a given format string.
+
+    This means that the given test string could be derived from the given
+    format string by replacing replacement fields with any text. For example,
+    the string 'Value "foo" is invalid.' matches the format string
+    'Value "{value}" is invalid.'
+
+    Args:
+        test_string (str): string to test.
+        format_string (str): format string, which may contain curly-brace
+            delimited replacement fields
+
+    Returns:
+        True if test_string matches format_string, False if not.
+    """
+    # replace all curly-braced substrings of the format string with '.*'
+    # to make a regular expression
+    pattern = re.sub(r'\{.*\}', '.*', format_string)
+    # check if the given string matches the format string pattern
+    if re.fullmatch(pattern, test_string):
+        return True
+    return False

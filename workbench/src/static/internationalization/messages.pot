@@ -1,0 +1,167 @@
+# Translations template for PROJECT.
+# Copyright (C) 2021 ORGANIZATION
+# This file is distributed under the same license as the PROJECT project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2021.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"Report-Msgid-Bugs-To: esoth@stanford.edu\n"
+"POT-Creation-Date: 2021-10-28 13:00-0700\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Bounding box does not intersect at least one other:"
+msgstr ""
+
+msgid "Browse"
+msgstr ""
+
+msgid "Browse to a datastack (.json) or InVEST logfile (.txt)"
+msgstr ""
+
+msgid "Cancel"
+msgstr ""
+
+msgid "Cancel Run"
+msgstr ""
+
+msgid "Clear"
+msgstr ""
+
+msgid "Clear Recent Jobs Shortcuts"
+msgstr ""
+
+msgid "csv"
+msgstr ""
+
+msgid "`Datastack/Logfile for ${datastack.model_human_name} does not match this model.`"
+msgstr ""
+
+msgid "DEBUG"
+msgstr ""
+
+msgid "directory"
+msgstr ""
+
+msgid "Download"
+msgstr ""
+
+msgid "Download Complete"
+msgstr ""
+
+msgid "Download InVEST sample data"
+msgstr ""
+
+msgid "Download Sample Data"
+msgstr ""
+
+msgid "`Downloading ${nComplete + 1} of ${nTotal}`"
+msgstr ""
+
+msgid "ERROR"
+msgstr ""
+
+msgid "file"
+msgstr ""
+
+msgid "Frequently Asked Questions"
+msgstr ""
+
+msgid "INFO"
+msgstr ""
+
+msgid "integer"
+msgstr ""
+
+msgid "InVEST"
+msgstr ""
+
+msgid "InVEST Settings"
+msgstr ""
+
+msgid "Language"
+msgstr ""
+
+msgid "Load parameters from file"
+msgstr ""
+
+msgid "Log"
+msgstr ""
+
+msgid "Logging threshold"
+msgstr ""
+
+msgid "Model Complete"
+msgstr ""
+
+msgid "No args to see here"
+msgstr ""
+
+msgid "(no InVEST workspaces will be deleted)"
+msgstr ""
+
+msgid "number"
+msgstr ""
+
+msgid "Only drop one file at a time."
+msgstr ""
+
+msgid "Open"
+msgstr ""
+
+msgid "Open Workspace"
+msgstr ""
+
+msgid "percent: a number from 0 - 100"
+msgstr ""
+
+msgid "raster"
+msgstr ""
+
+msgid "ratio: a decimal from 0 - 1"
+msgstr ""
+
+msgid "Recent runs:"
+msgstr ""
+
+msgid "Reset"
+msgstr ""
+
+msgid "Reset to Defaults"
+msgstr ""
+
+msgid "Run"
+msgstr ""
+
+msgid "Running"
+msgstr ""
+
+msgid "Save Changes"
+msgstr ""
+
+msgid "Save to Python script"
+msgstr ""
+
+msgid "Setup"
+msgstr ""
+
+msgid "Taskgraph n_workers parameter"
+msgstr ""
+
+msgid "text"
+msgstr ""
+
+msgid "User's Guide"
+msgstr ""
+
+msgid "vector"
+msgstr ""
+
+msgid "WARNING"
+msgstr ""

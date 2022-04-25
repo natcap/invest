@@ -47,44 +47,50 @@ Pyro4.config.SERIALIZER = 'marshal'
 predictor_table_columns = {
     "id": {
         "type": "freestyle_string",
-        "about": (
-            "A unique identifier for the predictor. Must be 10 characters or "
-            "less.")
+        "about": _("A unique identifier for the predictor (10 "
+                   "characters or less).")
     },
     "path": {
         "type": {"raster", "vector"},
-        "about": "A spatial file to use as a predictor.",
+        "about": _("A spatial file to use as a predictor."),
         "bands": {1: {"type": "number", "units": u.none}},
         "fields": {},
         "geometries": spec_utils.ALL_GEOMS
     },
     "type": {
         "type": "option_string",
-        "about": "The type of predictor file provided in the 'path' column.",
+        "about": _("The type of predictor file provided in the 'path' column."),
         "options": {
-            "raster_mean": (
-                "Predictor is a raster. Metric is the mean of values "
-                "within the AOI grid cell or polygon."),
-            "raster_sum": (
-                "Predictor is a raster. Metric is the sum of values within "
-                "the AOI grid cell or polygon."),
-            "point_count": (
-                "Predictor is a point vector. Metric is the number of points "
-                "within each AOI grid cell or polygon."),
-            "point_nearest_distance": (
-                "Predictor is a point vector. Metric is the Euclidean "
-                "distance between the center of each AOI grid cell and the "
-                "nearest point in this layer."),
-            "line_intersect_length": (
-                "Predictor is a line vector. Metric is the total length of "
-                "the lines that fall within each AOI grid cell."),
-            "polygon_area_coverage": (
-                "Predictor is a polygon vector. Metric is the area of overlap "
-                "between the polygon and each AOI grid cell."),
-            "polygon_percent_coverage": (
-                "Predictor is a polygon vector. Metric is the percentage "
-                "(0-100) of overlapping area between the polygon and each AOI "
-                "grid cell.")
+            "raster_mean": {
+                "description": _(
+                    "Predictor is a raster. Metric is the mean of values "
+                    "within the AOI grid cell or polygon.")},
+            "raster_sum": {
+                "description": _(
+                    "Predictor is a raster. Metric is the sum of values "
+                    "within the AOI grid cell or polygon.")},
+            "point_count": {
+                "description": _(
+                    "Predictor is a point vector. Metric is the number of "
+                    "points within each AOI grid cell or polygon.")},
+            "point_nearest_distance": {
+                "description": _(
+                    "Predictor is a point vector. Metric is the Euclidean "
+                    "distance between the center of each AOI grid cell and "
+                    "the nearest point in this layer.")},
+            "line_intersect_length": {
+                "description": _(
+                    "Predictor is a line vector. Metric is the total length "
+                    "of the lines that fall within each AOI grid cell.")},
+            "polygon_area_coverage": {
+                "description": _(
+                    "Predictor is a polygon vector. Metric is the area of "
+                    "overlap between the polygon and each AOI grid cell.")},
+            "polygon_percent_coverage": {
+                "description": _(
+                    "Predictor is a polygon vector. Metric is the percentage "
+                    "(0-100) of overlapping area between the polygon and each "
+                    "AOI grid cell.")}
         }
     }
 }
@@ -93,112 +99,115 @@ predictor_table_columns = {
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["recreation"].model_title,
     "pyname": MODEL_METADATA["recreation"].pyname,
-    "userguide_html": MODEL_METADATA["recreation"].userguide,
+    "userguide": MODEL_METADATA["recreation"].userguide,
     "args": {
         "workspace_dir": spec_utils.WORKSPACE,
         "results_suffix": spec_utils.SUFFIX,
         "n_workers": spec_utils.N_WORKERS,
         "aoi_path": {
             **spec_utils.AOI,
-            "about": "Map of area(s) over which to run the model."
+            "about": _("Map of area(s) over which to run the model.")
         },
         "hostname": {
             "type": "freestyle_string",
             "required": False,
-            "about": (
+            "about": _(
                 "FQDN to a recreation server.  If not provided, a default is "
                 "assumed."),
-            "name": "hostname"
+            "name": _("hostname")
         },
         "port": {
             "type": "number",
             "expression": "value >= 0",
             "units": u.none,
             "required": False,
-            "about": (
+            "about": _(
                 "the port on ``hostname`` to use for contacting the "
                 "recreation server."),
-            "name": "port"
+            "name": _("port")
         },
         "start_year": {
             "type": "number",
             "expression": "value >= 2005",
-            "units": u.year,
-            "about": (
+            "units": u.year_AD,
+            "about": _(
                 "Year at which to start photo user-day calculations. "
                 "Calculations start on the first day of the year. Year "
                 "must be in the range 2005 - 2017, and must be less than "
                 "or equal to the End Year."),
-            "name": "start year"
+            "name": _("start year")
         },
         "end_year": {
             "type": "number",
             "expression": "value <= 2017",
-            "units": u.year,
-            "about": (
+            "units": u.year_AD,
+            "about": _(
                 "Year at which to end photo user-day calculations. "
                 "Calculations continue through the last day of the year. "
                 "Year must be in the range 2005 - 2017, and must be "
                 "greater than or equal to the Start Year."),
-            "name": "end year"
+            "name": _("end year")
         },
         "grid_aoi": {
             "type": "boolean",
             "required": False,
-            "about": (
+            "about": _(
                 "Divide the AOI polygons into equal-sized grid cells, and "
                 "compute results for those cells instead of the original "
                 "polygons."),
-            "name": "grid the AOI"
+            "name": _("grid the AOI")
         },
         "grid_type": {
             "type": "option_string",
-            "options": ["square", "hexagon"],
+            "options": {
+                "square": {"display_name": _("square")},
+                "hexagon": {"display_name": _("hexagon")}
+            },
             "required": "grid_aoi",
-            "about": (
+            "about": _(
                 "The shape of grid cells to make within the AOI polygons. "
                 "Required if Grid AOI is selected."),
-            "name": "grid type"
+            "name": _("grid type")
         },
         "cell_size": {
             "type": "number",
             "expression": "value > 0",
-            "units": u.linear_unit,  # any unit of length is ok
+            "units": u.other,  # any unit of length is ok
             "required": "grid_aoi",
-            "about": (
+            "about": _(
                 "Size of grid cells to make, measured in the projection units "
-                "of the AOI. If the Grid Type is square, this is the length "
+                "of the AOI. If the Grid Type is 'square', this is the length "
                 "of each side of the square. If the Grid Type is 'hexagon', "
-                "this is the hexagon's diameter."),
-            "name": "cell size"
+                "this is the hexagon's maximal diameter."),
+            "name": _("cell size")
         },
         "compute_regression": {
             "type": "boolean",
             "required": False,
-            "about": (
+            "about": _(
                 "Run the regression model using the predictor table and "
                 "scenario table, if provided."),
-            "name": "compute regression"
+            "name": _("compute regression")
         },
         "predictor_table_path": {
             "type": "csv",
             "columns": predictor_table_columns,
             "required": "compute_regression",
-            "about": (
+            "about": _(
                 "A table that maps predictor IDs to spatial files and their "
                 "predictor metric types. The file paths can be absolute or "
                 "relative to the table."),
-            "name": "predictor table"
+            "name": _("predictor table")
         },
         "scenario_predictor_table_path": {
             "type": "csv",
             "columns": predictor_table_columns,
             "required": False,
-            "about": (
+            "about": _(
                 "A table of future or alternative scenario predictors. Maps "
                 "IDs to files and their types. The file paths can be absolute "
                 "or relative to the table."),
-            "name": "scenario predictor table"
+            "name": _("scenario predictor table")
         }
     }
 }
@@ -593,7 +602,7 @@ def _grid_vector(vector_path, grid_type, cell_size, out_grid_vector_path):
         original_vector_shapes.append(wkt_feat)
     vector_layer.ResetReading()
     original_polygon = shapely.prepared.prep(
-        shapely.ops.cascaded_union(original_vector_shapes))
+        shapely.ops.unary_union(original_vector_shapes))
 
     out_grid_vector = driver.Create(
         out_grid_vector_path, 0, 0, 0, gdal.GDT_Unknown)

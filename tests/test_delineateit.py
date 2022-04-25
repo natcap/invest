@@ -127,7 +127,7 @@ class DelineateItTests(unittest.TestCase):
         }
         validation_warnings = delineateit.validate(missing_values_args)
         self.assertEqual(len(validation_warnings), 1)
-        self.assertTrue('has no value' in validation_warnings[0][1])
+        self.assertEqual(validation_warnings[0][1], validation.MESSAGES['MISSING_VALUE'])
 
         file_not_found_args = {
             'workspace_dir': os.path.join(self.workspace_dir),
@@ -139,8 +139,8 @@ class DelineateItTests(unittest.TestCase):
         validation_warnings = delineateit.validate(file_not_found_args)
         self.assertEqual(
             validation_warnings,
-            [(['dem_path'], 'File not found'),
-             (['outlet_vector_path'], 'File not found')])
+            [(['dem_path'], validation.MESSAGES['FILE_NOT_FOUND']),
+             (['outlet_vector_path'], validation.MESSAGES['FILE_NOT_FOUND'])])
 
         bad_spatial_files_args = {
             'workspace_dir': self.workspace_dir,
@@ -159,13 +159,13 @@ class DelineateItTests(unittest.TestCase):
         validation_warnings = delineateit.validate(bad_spatial_files_args)
         self.assertEqual(
             validation_warnings,
-            [(['dem_path'], 'File could not be opened as a GDAL raster'),
-             (['flow_threshold'], 'Value does not meet condition value >= 0'),
-             (['outlet_vector_path'], (
-                 'File could not be opened as a GDAL vector')),
+            [(['dem_path'], validation.MESSAGES['NOT_GDAL_RASTER']),
+             (['flow_threshold'], validation.MESSAGES['INVALID_VALUE'].format(
+                condition='value >= 0')),
+             (['outlet_vector_path'], validation.MESSAGES['NOT_GDAL_VECTOR']),
              (['snap_distance'], (
-                validation.NOT_A_NUMBER_MSG %
-                bad_spatial_files_args['snap_distance']))])
+                validation.MESSAGES['NOT_A_NUMBER'].format(
+                    value=bad_spatial_files_args['snap_distance'])))])
 
     def test_point_snapping(self):
         """DelineateIt: test point snapping."""
@@ -185,9 +185,20 @@ class DelineateItTests(unittest.TestCase):
              [0, 1, 0, 0, 0, 0],
              [0, 1, 0, 0, 0, 0]], dtype=numpy.int8)
         stream_raster_path = os.path.join(self.workspace_dir, 'streams.tif')
+        flow_accum_array = numpy.array(
+            [[1, 5, 1, 1, 1, 1],
+             [1, 5, 1, 1, 1, 1],
+             [1, 5, 1, 1, 1, 1],
+             [1, 5, 1, 1, 1, 1],
+             [1, 5, 5, 5, 5, 5],
+             [1, 5, 1, 1, 1, 1],
+             [1, 5, 1, 1, 1, 1]], dtype=numpy.int8)
+        flow_accum_path = os.path.join(self.workspace_dir, 'flow_accum.tif')
         # byte datatype
         pygeoprocessing.numpy_array_to_raster(
             stream_matrix, 255, (2, -2), (2, -2), wkt, stream_raster_path)
+        pygeoprocessing.numpy_array_to_raster(
+            flow_accum_array, 255, (2, -2), (2, -2), wkt, flow_accum_path)
 
         source_points_path = os.path.join(self.workspace_dir,
                                           'source_features.geojson')
@@ -218,13 +229,13 @@ class DelineateItTests(unittest.TestCase):
         snap_distance = -1
         with self.assertRaises(ValueError) as cm:
             delineateit.snap_points_to_nearest_stream(
-                source_points_path, (stream_raster_path, 1),
+                source_points_path, stream_raster_path, flow_accum_path,
                 snap_distance, snapped_points_path)
         self.assertTrue('must be >= 0' in str(cm.exception))
 
         snap_distance = 10  # large enough to get multiple streams per point.
         delineateit.snap_points_to_nearest_stream(
-            source_points_path, (stream_raster_path, 1),
+            source_points_path, stream_raster_path, flow_accum_path,
             snap_distance, snapped_points_path)
 
         snapped_points_vector = gdal.OpenEx(snapped_points_path,
@@ -267,9 +278,20 @@ class DelineateItTests(unittest.TestCase):
              [0, 1, 0, 0, 0, 0],
              [0, 1, 0, 0, 0, 0]], dtype=numpy.int8)
         stream_raster_path = os.path.join(self.workspace_dir, 'streams.tif')
+        flow_accum_array = numpy.array(
+            [[1, 5, 1, 1, 1, 1],
+             [1, 5, 1, 1, 1, 1],
+             [1, 5, 1, 1, 1, 1],
+             [1, 5, 1, 1, 1, 1],
+             [1, 5, 5, 5, 5, 5],
+             [1, 5, 1, 1, 1, 1],
+             [1, 5, 1, 1, 1, 1]], dtype=numpy.int8)
+        flow_accum_path = os.path.join(self.workspace_dir, 'flow_accum.tif')
         # byte datatype
         pygeoprocessing.numpy_array_to_raster(
             stream_matrix, 255, (2, -2), (2, -2), wkt, stream_raster_path)
+        pygeoprocessing.numpy_array_to_raster(
+            flow_accum_array, 255, (2, -2), (2, -2), wkt, flow_accum_path)
 
         source_points_path = os.path.join(self.workspace_dir,
                                           'source_features.gpkg')
@@ -306,7 +328,7 @@ class DelineateItTests(unittest.TestCase):
                                            'snapped_points.gpkg')
         snap_distance = 10  # large enough to get multiple streams per point.
         delineateit.snap_points_to_nearest_stream(
-            source_points_path, (stream_raster_path, 1),
+            source_points_path, stream_raster_path, flow_accum_path,
             snap_distance, snapped_points_path)
 
         try:
@@ -325,6 +347,66 @@ class DelineateItTests(unittest.TestCase):
         finally:
             snapped_points_layer = None
             snapped_points_vector = None
+
+    def test_point_snapping_break_ties(self):
+        """DelineateIt: distance ties are broken using flow accumulation."""
+        from natcap.invest.delineateit import delineateit
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(32731)  # WGS84/UTM zone 31s
+        wkt = srs.ExportToWkt()
+
+        # need stream layer, points
+        stream_matrix = numpy.array(
+            [[0, 1, 0, 0, 0, 0],
+             [0, 1, 0, 0, 0, 0],
+             [0, 1, 0, 0, 0, 0],
+             [0, 1, 0, 0, 0, 0],
+             [0, 1, 1, 1, 1, 1],
+             [0, 1, 0, 0, 0, 0],
+             [0, 1, 0, 0, 0, 0]], dtype=numpy.int8)
+        stream_raster_path = os.path.join(self.workspace_dir, 'streams.tif')
+        flow_accum_array = numpy.array(
+            [[1, 5, 1, 1, 1, 1],
+             [1, 5, 1, 1, 1, 1],
+             [1, 5, 1, 1, 1, 1],
+             [1, 5, 1, 1, 1, 1],
+             [1, 5, 9, 9, 9, 9],
+             [1, 4, 1, 1, 1, 1],
+             [1, 4, 1, 1, 1, 1]], dtype=numpy.int8)
+        flow_accum_path = os.path.join(self.workspace_dir, 'flow_accum.tif')
+        pygeoprocessing.numpy_array_to_raster(
+            stream_matrix, 255, (2, -2), (2, -2), wkt, stream_raster_path)
+        pygeoprocessing.numpy_array_to_raster(
+            flow_accum_array, -1, (2, -2), (2, -2), wkt, flow_accum_path)
+
+        source_points_path = os.path.join(self.workspace_dir,
+                                          'source_features.geojson')
+        source_features = [Point(9, -7)]  # equidistant from two streams
+        pygeoprocessing.shapely_geometry_to_vector(
+            source_features, source_points_path, wkt, 'GeoJSON',
+            ogr_geom_type=ogr.wkbUnknown)
+
+        snapped_points_path = os.path.join(self.workspace_dir,
+                                           'snapped_points.gpkg')
+
+        snap_distance = 10  # large enough to get multiple streams per point.
+        delineateit.snap_points_to_nearest_stream(
+            source_points_path, stream_raster_path, flow_accum_path,
+            snap_distance, snapped_points_path)
+
+        snapped_points_vector = gdal.OpenEx(snapped_points_path,
+                                            gdal.OF_VECTOR)
+        snapped_points_layer = snapped_points_vector.GetLayer()
+
+        # should snap to stream point [4, 3] in the array above
+        # if not considering flow accumulation, it would snap to the
+        # nearest stream point found first in the array, at [2, 1]
+        points = [
+            shapely.wkb.loads(bytes(feature.GetGeometryRef().ExportToWkb()))
+            for feature in snapped_points_layer]
+        self.assertEqual(len(points), 1)
+        self.assertEqual((points[0].x, points[0].y), (9, -11))
 
     def test_check_geometries(self):
         """DelineateIt: Check that we can reasonably repair geometries."""

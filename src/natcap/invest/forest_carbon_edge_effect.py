@@ -33,7 +33,7 @@ NODATA_VALUE = -1
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["forest_carbon_edge_effect"].model_title,
     "pyname": MODEL_METADATA["forest_carbon_edge_effect"].pyname,
-    "userguide_html": MODEL_METADATA["forest_carbon_edge_effect"].userguide,
+    "userguide": MODEL_METADATA["forest_carbon_edge_effect"].userguide,
     "args_with_spatial_overlap": {
         "spatial_keys": ["aoi_vector_path", "lulc_raster_path"],
     },
@@ -46,7 +46,7 @@ ARGS_SPEC = {
             "type": "number",
             "units": u.none,
             "required": "compute_forest_edge_effects",
-            "about": (
+            "about": _(
                 "Number of closest regression models that are used when "
                 "calculating the total biomass. Each local model is linearly "
                 "weighted by distance such that the pixel's biomass is a "
@@ -54,7 +54,7 @@ ARGS_SPEC = {
                 "having the largest effect. Must be an integer greater than "
                 "0. Required if Compute Forest Edge Effects is selected."
             ),
-            "name": "number of points to average"
+            "name": _("number of points to average")
         },
         "aoi_vector_path": {
             **spec_utils.AOI,
@@ -66,19 +66,19 @@ ARGS_SPEC = {
             "columns": {
                 "lucode": {
                     "type": "integer",
-                    "about": (
+                    "about": _(
                         "Code for this LULC class from the LULC map. Every "
                         "value in the LULC raster must have a corresponding "
                         "entry in this column.")},
                 "is_tropical_forest": {
                     "type": "boolean",
-                    "about": (
+                    "about": _(
                         "Enter 1 if the LULC class is tropical forest, 0 if "
                         "it is not tropical forest.")},
                 "c_above": {
                     "type": "number",
                     "units": u.metric_ton/u.hectare,
-                    "about": (
+                    "about": _(
                         "Carbon density value for the aboveground carbon "
                         "pool.")
                 },
@@ -86,7 +86,7 @@ ARGS_SPEC = {
                     "type": "number",
                     "units": u.metric_ton/u.hectare,
                     "required": "pools_to_calculate == 'all'",
-                    "about": (
+                    "about": _(
                         "Carbon density value for the belowground carbon "
                         "pool. Required if calculating all pools.")
                 },
@@ -94,7 +94,7 @@ ARGS_SPEC = {
                     "type": "number",
                     "units": u.metric_ton/u.hectare,
                     "required": "pools_to_calculate == 'all'",
-                    "about": (
+                    "about": _(
                         "Carbon density value for the soil carbon pool. "
                         "Required if calculating all pools.")
                 },
@@ -102,19 +102,19 @@ ARGS_SPEC = {
                     "type": "number",
                     "units": u.metric_ton/u.hectare,
                     "required": "pools_to_calculate == 'all'",
-                    "about": (
+                    "about": _(
                         "Carbon density value for the dead matter carbon "
                         "pool. Required if calculating all pools.")
                 },
             },
-            "about": (
+            "about": _(
                 "A table mapping each LULC code from the LULC map to "
                 "biophysical data for that LULC class."),
-            "name": "biophysical table"
+            "name": _("biophysical table")
         },
         "lulc_raster_path": {
             **spec_utils.LULC,
-            "about": (
+            "about": _(
                 f"{spec_utils.LULC['about']} All values in this raster must "
                 "have corresponding entries in the Biophysical Table."),
             "projected": True
@@ -122,20 +122,24 @@ ARGS_SPEC = {
         "pools_to_calculate": {
             "type": "option_string",
             "options": {
-                "all": (
-                    "Use all pools (aboveground, belowground, soil, and dead "
-                    "matter) in the carbon pool calculation."),
-                "above_ground": (
-                    "Only use the aboveground pool in the carbon pool "
-                    "calculation.")
+                "all": {
+                    "display_name": _("all"),
+                    "description": _(
+                        "Use all pools (aboveground, belowground, soil, and "
+                        "dead matter) in the carbon pool calculation.")},
+                "above_ground": {
+                    "display_name": _("aboveground only"),
+                    "description": _(
+                        "Only use the aboveground pool in the carbon pool "
+                        "calculation.")}
             },
-            "about": "Which carbon pools to consider.",
-            "name": "carbon pools to calculate"
+            "about": _("Which carbon pools to consider."),
+            "name": _("carbon pools to calculate")
         },
         "compute_forest_edge_effects": {
             "type": "boolean",
-            "about": "Account for forest edge effects on aboveground carbon.",
-            "name": "compute forest edge effects"
+            "about": _("Account for forest edge effects on aboveground carbon."),
+            "name": _("compute forest edge effects")
         },
         "tropical_forest_edge_carbon_model_vector_path": {
             "type": "vector",
@@ -143,43 +147,43 @@ ARGS_SPEC = {
                 "method": {
                     "type": "option_string",
                     "options": {
-                        "1": "Asymptotic: biomass=θ₁-θ₂·exp(-θ₃·distance)",
-                        "2": "Logarithmic: biomass=θ₁+θ₂·ln(distance)",
-                        "3": "Linear: biomass=θ₁+θ₂·distance"
+                        "1": {"description": _("asymptotic")},
+                        "2": {"description": _("logarithmic")},
+                        "3": {"description": _("linear")}
                     },
-                    "about": "Optimal regression model for the area."
+                    "about": _("Optimal regression model for the area.")
                 },
                 "theta1": {
                     "type": "number",
                     "units": u.none,
-                    "about": "θ₁ parameter for the regression equation."},
+                    "about": _("θ₁ parameter for the regression equation.")},
                 "theta2": {
                     "type": "number",
                     "units": u.none,
-                    "about": "θ₂ parameter for the regression equation."},
+                    "about": _("θ₂ parameter for the regression equation.")},
                 "theta3": {
                     "type": "number",
                     "units": u.none,
-                    "about": (
+                    "about": _(
                         "θ₃ parameter for the regression equation. "
                         "Used only for the asymptotic model.")}
             },
             "geometries": spec_utils.POLYGONS,
             "required": "compute_forest_edge_effects",
-            "about": (
+            "about": _(
                 "Map storing the optimal regression model for each tropical "
                 "subregion and the corresponding theta parameters for that "
                 "regression equation. Default data is provided. Required if "
                 "Compute Forest Edge Effects is selected."),
-            "name": "global regression models"
+            "name": _("global regression models")
         },
         "biomass_to_carbon_conversion_factor": {
             "type": "ratio",
             "required": "compute_forest_edge_effects",
-            "about": (
+            "about": _(
                 "Proportion of forest edge biomass that is elemental carbon. "
                 "Required if Compute Forest Edge Effects is selected."),
-            "name": "forest edge biomass to carbon conversion factor"
+            "name": _("forest edge biomass to carbon conversion factor")
         }
     }
 }
@@ -458,7 +462,7 @@ def combine_carbon_maps(*carbon_maps):
     nodata_mask = numpy.empty(carbon_maps[0].shape, dtype=bool)
     nodata_mask[:] = True
     for carbon_map in carbon_maps:
-        valid_mask = carbon_map != NODATA_VALUE
+        valid_mask = ~utils.array_equals_nodata(carbon_map, NODATA_VALUE)
         nodata_mask &= ~valid_mask
         result[valid_mask] += carbon_map[valid_mask]
     result[nodata_mask] = NODATA_VALUE
@@ -692,10 +696,10 @@ def _map_distance_from_tropical_forest_edge(
         # where LULC has nodata, overwrite edge distance with nodata value
         lulc_block = lulc_band.ReadAsArray(**offset_dict)
         distance_block = edge_distance_band.ReadAsArray(**offset_dict)
-        masked_distance_block = numpy.where(
-            lulc_block == lulc_nodata, NODATA_VALUE, distance_block)
+        nodata_mask = utils.array_equals_nodata(lulc_block, lulc_nodata)
+        distance_block[nodata_mask] = lulc_nodata
         edge_distance_band.WriteArray(
-            masked_distance_block,
+            distance_block,
             xoff=offset_dict['xoff'],
             yoff=offset_dict['yoff'])
 

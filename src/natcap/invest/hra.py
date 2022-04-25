@@ -1,25 +1,21 @@
 """Habitat risk assessment (HRA) model for InVEST."""
 # -*- coding: UTF-8 -*-
-import os
 import logging
+import os
 import pickle
 import shutil
 import tempfile
 
 import numpy
-from osgeo import gdal, ogr, osr
 import pandas
+import pygeoprocessing
 import shapely.ops
 import shapely.wkb
 import taskgraph
-import pygeoprocessing
+from osgeo import gdal, ogr, osr
 
-from . import utils
-from . import spec_utils
+from . import MODEL_METADATA, spec_utils, utils, validation
 from .spec_utils import u
-from . import validation
-from . import MODEL_METADATA
-
 
 LOGGER = logging.getLogger('natcap.invest.hra')
 
@@ -69,29 +65,35 @@ _DEFAULT_GTIFF_CREATION_OPTIONS = (
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["habitat_risk_assessment"].model_title,
     "pyname": MODEL_METADATA["habitat_risk_assessment"].pyname,
-    "userguide_html": MODEL_METADATA["habitat_risk_assessment"].userguide,
+    "userguide": MODEL_METADATA["habitat_risk_assessment"].userguide,
     "args": {
         "workspace_dir": spec_utils.WORKSPACE,
         "results_suffix": spec_utils.SUFFIX,
         "n_workers": spec_utils.N_WORKERS,
         "info_table_path": {
-            "name": "habitat stressor table",
-            "about": "A table describing each habitat and stressor.",
+            "name": _("habitat stressor table"),
+            "about": _("A table describing each habitat and stressor."),
             "type": "csv",
             "columns": {
                 "name": {
                     "type": "freestyle_string",
-                    "about": (
+                    "about": _(
                         "A unique name for each habitat or stressor. These "
                         "names must match the habitat and stressor names in "
-                        "the Criteria Scores Table.")
-                },
+                        "the Criteria Scores Table.")},
                 "path": {
                     "type": {"vector", "raster"},
-                    "bands": {1: {"type": "number", "units": u.none}},
+                    "bands": {1: {
+                        "type": "number",
+                        "units": u.none,
+                        "about": _(
+                            "Pixel values are 1, indicating presence of the "
+                            "habitat/stressor, or 0 indicating absence. Any "
+                            "values besides 0 or 1 will be treated as 0.")
+                    }},
                     "fields": {},
                     "geometries": spec_utils.POLYGONS,
-                    "about": (
+                    "about": _(
                         "Map of where the habitat or stressor exists. For "
                         "rasters, a pixel value of 1 indicates presence of "
                         "the habitat or stressor. 0 (or any other value) "
@@ -101,13 +103,17 @@ ARGS_SPEC = {
                 },
                 "type": {
                     "type": "option_string",
-                    "options": ["habitat", "stressor"],
-                    "about": "Whether this row is for a habitat or a stressor."
+                    "options": {
+                        "habitat": {"description": _("habitat")},
+                        "stressor": {"description": _("stressor")}
+                    },
+                    "about": _(
+                        "Whether this row is for a habitat or a stressor.")
                 },
                 "stressor buffer (meters)": {
                     "type": "number",
                     "units": u.meter,
-                    "about": (
+                    "about": _(
                         "The desired buffer distance used to expand a given "
                         "stressor’s influence or footprint. This should be "
                         "left blank for habitats, but must be filled in for "
@@ -122,15 +128,15 @@ ARGS_SPEC = {
             "excel_ok": True
         },
         "criteria_table_path": {
-            "name": "criteria scores table",
-            "about": (
+            "name": _("criteria scores table"),
+            "about": _(
                 "A table of criteria scores for all habitats and stressors."),
             "type": "csv",
             "excel_ok": True,
         },
         "resolution": {
-            "name": "resolution of analysis",
-            "about": (
+            "name": _("resolution of analysis"),
+            "about": _(
                 "The resolution at which to run the analysis. The model "
                 "outputs will have this resolution."),
             "type": "number",
@@ -138,35 +144,45 @@ ARGS_SPEC = {
             "expression": "value > 0",
         },
         "max_rating": {
-            "name": "maximum criteria score",
-            "about": (
+            "name": _("maximum criteria score"),
+            "about": _(
                 "The highest possible criteria score in the scoring system."),
             "type": "number",
             "units": u.none,
             "expression": "value > 0"
         },
         "risk_eq": {
-            "name": "risk equation",
-            "about": (
+            "name": _("risk equation"),
+            "about": _(
                 "The equation to use to calculate risk from exposure and "
                 "consequence."),
             "type": "option_string",
-            "options": ["Multiplicative", "Euclidean"]
+            "options": {
+                "Multiplicative": {"display_name": _("multiplicative")},
+                "Euclidean": {"display_name": _("Euclidean")}
+            }
         },
         "decay_eq": {
-            "name": "decay equation",
-            "about": (
+            "name": _("decay equation"),
+            "about": _(
                 "The equation to model effects of stressors in buffer areas."),
             "type": "option_string",
             "options": {
-                "None": (
-                    "No decay. Stressor has full effect in the buffer area."),
-                "Linear": (
-                    "Stressor effects in the buffer area decay linearly with "
-                    "distance from the stressor."),
-                "Exponential": (
-                    "Stressor effects in the buffer area decay exponentially "
-                    "with distance from the stressor.")
+                "None": {
+                    "display_name": _("none"),
+                    "description": _(
+                        "No decay. Stressor has full effect in the buffer "
+                        "area.")},
+                "Linear": {
+                    "display_name": _("linear"),
+                    "description": _(
+                        "Stressor effects in the buffer area decay linearly "
+                        "with distance from the stressor.")},
+                "Exponential": {
+                    "display_name": _("exponential"),
+                    "description": _(
+                        "Stressor effects in the buffer area decay "
+                        "exponentially with distance from the stressor.")}
             }
         },
         "aoi_vector_path": {
@@ -177,18 +193,18 @@ ARGS_SPEC = {
                 "name": {
                     "required": False,
                     "type": "freestyle_string",
-                    "about": (
+                    "about": _(
                         "Uniquely identifies each feature. Required if "
                         "the vector contains more than one feature.")
                 }
             },
-            "about": (
+            "about": _(
                 "A GDAL-supported vector file containing feature containing "
                 "one or more planning regions or subregions."),
         },
         "visualize_outputs": {
-            "name": "Generate GeoJSONs",
-            "about": "Generate GeoJSON outputs for web visualization.",
+            "name": _("Generate GeoJSONs"),
+            "about": _("Generate GeoJSON outputs for web visualization."),
             "type": "boolean"
         }
     }
@@ -1092,7 +1108,9 @@ def _calc_and_pickle_zonal_stats(
         score_block = score_band.ReadAsArray(**score_offsets)
         zonal_block = zonal_band.ReadAsArray(**score_offsets)
 
-        valid_mask = (score_block != score_nodata) & (zonal_block == 1)
+        valid_mask = (
+            ~utils.array_equals_nodata(score_block, score_nodata) &
+            (zonal_block == 1))
         valid_score_block = score_block[valid_mask]
         if valid_score_block.size == 0:
             continue
@@ -1165,7 +1183,7 @@ def _zonal_stats_to_csv(
         ['E_']*len_crit_cols + ['C_']*len_crit_cols + ['R_']*len_risk_cols,
         crit_stats_cols*2 + risk_stats_cols)
 
-    stats_df = pandas.DataFrame(index=overlap_df.index, columns=columns)
+    stats_df = pandas.DataFrame(index=overlap_df.index, columns=list(columns))
 
     # Add a ``SUBREGION`` column to the dataframe and update it with the
     # corresponding stats in each subregion
@@ -1445,13 +1463,14 @@ def _ecosystem_risk_op(habitat_count_arr, *hab_risk_arrays):
     """
     ecosystem_risk_arr = numpy.full(
         habitat_count_arr.shape, _TARGET_NODATA_FLT, dtype=numpy.float32)
-    ecosystem_mask = (habitat_count_arr > 0) & (
-        habitat_count_arr != _TARGET_NODATA_INT)
+    ecosystem_mask = (habitat_count_arr > 0) & ~utils.array_equals_nodata(
+        habitat_count_arr, _TARGET_NODATA_INT)
     ecosystem_risk_arr[ecosystem_mask] = 0
 
     # Add up all the risks of each habitat
     for hab_risk_arr in hab_risk_arrays:
-        valid_risk_mask = (hab_risk_arr != _TARGET_NODATA_FLT)
+        valid_risk_mask = ~utils.array_equals_nodata(
+            hab_risk_arr, _TARGET_NODATA_FLT)
         ecosystem_risk_arr[valid_risk_mask] += hab_risk_arr[valid_risk_mask]
 
     # Divide risk score by the number of habitats in each pixel. This way we
@@ -1485,7 +1504,8 @@ def _reclassify_ecosystem_risk_op(ecosystem_risk_arr, max_rating):
     """
     reclass_ecosystem_risk_arr = numpy.full(
         ecosystem_risk_arr.shape, _TARGET_NODATA_INT, dtype=numpy.int8)
-    valid_pixel_mask = (ecosystem_risk_arr != _TARGET_NODATA_FLT)
+    valid_pixel_mask = ~utils.array_equals_nodata(
+        ecosystem_risk_arr, _TARGET_NODATA_FLT)
 
     # Divide risk score by (maximum possible risk score/3) to get an integer
     # ranging from 0 to 3, then return the ceiling of it
@@ -1513,7 +1533,8 @@ def _count_habitats_op(*habitat_arrays):
         habitat_arrays[0].shape, 0, dtype=numpy.int8)
 
     for habitat_arr in habitat_arrays:
-        habiat_mask = (habitat_arr != _TARGET_NODATA_INT)
+        habiat_mask = ~utils.array_equals_nodata(
+            habitat_arr, _TARGET_NODATA_INT)
         habitat_count_arr[habiat_mask] += habitat_arr.astype(
             numpy.int8)[habiat_mask]
 
@@ -1544,7 +1565,7 @@ def _reclassify_risk_op(risk_arr, max_rating):
     """
     reclass_arr = numpy.full(
         risk_arr.shape, _TARGET_NODATA_INT, dtype=numpy.int8)
-    valid_pixel_mask = (risk_arr != _TARGET_NODATA_FLT)
+    valid_pixel_mask = ~utils.array_equals_nodata(risk_arr, _TARGET_NODATA_FLT)
 
     # Return the ceiling of the continuous risk score
     reclass_arr[valid_pixel_mask] = numpy.ceil(
@@ -1577,11 +1598,13 @@ def _tot_risk_op(habitat_arr, *pair_risk_arrays):
     tot_risk_arr[habitat_mask] = 0
 
     for pair_risk_arr in pair_risk_arrays:
-        valid_pixel_mask = (pair_risk_arr != _TARGET_NODATA_FLT)
+        valid_pixel_mask = ~utils.array_equals_nodata(
+            pair_risk_arr, _TARGET_NODATA_FLT)
         tot_risk_arr[valid_pixel_mask] += pair_risk_arr[valid_pixel_mask]
 
     # Rescale total risk to 0 to max_rating
-    final_valid_mask = (tot_risk_arr != _TARGET_NODATA_FLT)
+    final_valid_mask = ~utils.array_equals_nodata(
+        tot_risk_arr, _TARGET_NODATA_FLT)
     tot_risk_arr[final_valid_mask] /= len(pair_risk_arrays)
 
     return tot_risk_arr
@@ -1620,8 +1643,9 @@ def _pair_risk_op(exposure_arr, consequence_arr, max_rating, risk_eq):
     risk_arr = numpy.full(
         exposure_arr.shape, _TARGET_NODATA_FLT, dtype=numpy.float32)
     zero_pixel_mask = (exposure_arr == 0) | (consequence_arr == 0)
-    valid_pixel_mask = (exposure_arr != _TARGET_NODATA_FLT) & (
-        consequence_arr != _TARGET_NODATA_FLT)
+    valid_pixel_mask = (
+        ~utils.array_equals_nodata(exposure_arr, _TARGET_NODATA_FLT) &
+        ~utils.array_equals_nodata(consequence_arr, _TARGET_NODATA_FLT))
     nonzero_valid_pixel_mask = ~zero_pixel_mask & valid_pixel_mask
 
     # Zero pixels are where non of the stressor exists in the habitat
@@ -1689,14 +1713,16 @@ def _total_exposure_op(habitat_arr, *num_denom_list):
 
     # Calculate the cumulative numerator and denominator values
     for num_arr in num_arr_list:
-        valid_num_mask = (num_arr != _TARGET_NODATA_FLT)
+        valid_num_mask = ~utils.array_equals_nodata(
+            num_arr, _TARGET_NODATA_FLT)
         tot_num_arr[valid_num_mask] += num_arr[valid_num_mask]
 
     for denom in denom_list:
         tot_denom += denom
 
     # If the numerator is nodata, do not divide the arrays
-    final_valid_mask = (tot_num_arr != _TARGET_NODATA_FLT)
+    final_valid_mask = ~utils.array_equals_nodata(
+        tot_num_arr, _TARGET_NODATA_FLT)
 
     tot_expo_arr[final_valid_mask] = tot_num_arr[
         final_valid_mask] / tot_denom
@@ -1749,14 +1775,16 @@ def _total_consequence_op(
 
     # Calculate the cumulative numerator and denominator values
     for num_arr in num_arr_list:
-        valid_num_mask = (num_arr != _TARGET_NODATA_FLT)
+        valid_num_mask = ~utils.array_equals_nodata(
+            num_arr, _TARGET_NODATA_FLT)
         tot_num_arr[valid_num_mask] += num_arr[valid_num_mask]
 
     for denom in denom_list:
         tot_denom += denom
 
     # If the numerator is nodata, do not divide the arrays
-    final_valid_mask = (tot_num_arr != _TARGET_NODATA_FLT)
+    final_valid_mask = ~utils.array_equals_nodata(
+        tot_num_arr, _TARGET_NODATA_FLT)
 
     tot_conseq_arr[final_valid_mask] = tot_num_arr[
         final_valid_mask] / tot_denom
@@ -1924,7 +1952,8 @@ def _pair_criteria_num_op(
             spatial_explicit_arr_const[2::4],
             spatial_explicit_arr_const[3::4]):
         # Mask pixels where both habitat, stressor, and spatial array exist
-        overlap_mask = hab_stress_buff_mask & (spatial_arr != nodata)
+        overlap_mask = hab_stress_buff_mask & ~utils.array_equals_nodata(
+                spatial_arr, nodata)
 
         # Compute the cumulative numerator score
         num_arr[overlap_mask] += spatial_arr[overlap_mask]/(dq*weight)
@@ -2117,7 +2146,8 @@ def _recovery_num_op(habitat_arr, num, *spatial_explicit_arr_const):
             spatial_explicit_arr_const[2::4],
             spatial_explicit_arr_const[3::4]):
         # Mask pixels where both habitat and resilience score exist
-        hab_res_overlap_mask = habitat_mask & (resilience_arr != nodata)
+        hab_res_overlap_mask = habitat_mask & ~utils.array_equals_nodata(
+                resilience_arr, nodata)
 
         # Compute cumulative numerator score
         num_arr[hab_res_overlap_mask] += resilience_arr[
@@ -3175,6 +3205,27 @@ def _simplify_geometry(
 
     target_simplified_layer = None
     target_simplified_vector = None
+
+
+def build_datastack_archive(args, datastack_path):
+    """Build a datastack-compliant archive of all spatial inputs to HRA.
+
+    This function is implemented here and not in natcap.invest.datastack
+    because HRA's inputs are too complicated to describe in ARGS_SPEC.  Because
+    the input table and its linked spatial inputs are too custom, it warrants a
+    custom datastack archive-generation function.
+
+    Args:
+        args (dict): The complete ``args`` dict to package up into a datastack
+            archive.
+        datastack_path (string): The path on disk to where the datastack should
+            be written.
+
+    Returns:
+        ``None``
+    """
+    # TODO: flesh this out
+    raise NotImplementedError()
 
 
 @validation.invest_validator

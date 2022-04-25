@@ -68,21 +68,21 @@ class RouteDEM(model.InVESTModel):
         self.threshold_flow_accumulation = inputs.Text(
             args_key='threshold_flow_accumulation',
             helptext=(
-                "The number of upstream cells that must flow into a "
+                "The number of upslope cells that must flow into a "
                 "cell before it's classified as a stream."),
             interactive=False,
             label='Threshold Flow Accumulation Limit',
             validator=self.validator)
         self.add_input(self.threshold_flow_accumulation)
-        self.calculate_downstream_distance = inputs.Checkbox(
-            args_key='calculate_downstream_distance',
+        self.calculate_downslope_distance = inputs.Checkbox(
+            args_key='calculate_downslope_distance',
             helptext=(
-                "If selected, creates a downstream distance raster "
+                "If selected, creates a downslope distance raster "
                 "based on the thresholded flow accumulation stream "
                 "classification."),
             interactive=False,
             label='Calculate Distance to stream')
-        self.add_input(self.calculate_downstream_distance)
+        self.add_input(self.calculate_downslope_distance)
 
         # Set interactivity, requirement as input sufficiency changes
         self.calculate_flow_direction.sufficiency_changed.connect(
@@ -92,7 +92,7 @@ class RouteDEM(model.InVESTModel):
         self.calculate_stream_threshold.sufficiency_changed.connect(
             self.threshold_flow_accumulation.set_interactive)
         self.calculate_stream_threshold.sufficiency_changed.connect(
-            self.calculate_downstream_distance.set_interactive)
+            self.calculate_downslope_distance.set_interactive)
 
     def assemble_args(self):
         args = {
@@ -110,7 +110,7 @@ class RouteDEM(model.InVESTModel):
                 self.calculate_stream_threshold.value(),
             self.threshold_flow_accumulation.args_key:
                 self.threshold_flow_accumulation.value(),
-            self.calculate_downstream_distance.args_key:
-                self.calculate_downstream_distance.value(),
+            self.calculate_downslope_distance.args_key:
+                self.calculate_downslope_distance.value(),
         }
         return args

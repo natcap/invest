@@ -181,7 +181,7 @@ class RouteDEMTests(unittest.TestCase):
             'calculate_flow_direction': True,
             'calculate_flow_accumulation': True,
             'calculate_stream_threshold': True,
-            'calculate_downstream_distance': True,
+            'calculate_downslope_distance': True,
             'calculate_slope': True,
             'threshold_flow_accumulation': 4,
         }
@@ -190,7 +190,7 @@ class RouteDEMTests(unittest.TestCase):
         routedem.execute(args)
 
         for expected_file in (
-                'downstream_distance_foo.tif',
+                'downslope_distance_foo.tif',
                 'filled_foo.tif',
                 'flow_accumulation_foo.tif',
                 'flow_direction_foo.tif',
@@ -248,19 +248,19 @@ class RouteDEMTests(unittest.TestCase):
                 'flow_direction_foo.tif')).ReadAsArray(),
             rtol=0, atol=1e-6)
 
-        expected_downstream_distance = numpy.empty(
+        expected_downslope_distance = numpy.empty(
             (10, 9), dtype=numpy.float64)
-        expected_downstream_distance[:, 0:5] = numpy.flipud(numpy.arange(5))
-        expected_downstream_distance[2:, 5:] = numpy.arange(1, 5)
-        expected_downstream_distance[0, 5:] = numpy.arange(4)
-        expected_downstream_distance[1, 5] = 1
-        expected_downstream_distance[1, 6:] = numpy.arange(1, 4) + 0.41421356
+        expected_downslope_distance[:, 0:5] = numpy.flipud(numpy.arange(5))
+        expected_downslope_distance[2:, 5:] = numpy.arange(1, 5)
+        expected_downslope_distance[0, 5:] = numpy.arange(4)
+        expected_downslope_distance[1, 5] = 1
+        expected_downslope_distance[1, 6:] = numpy.arange(1, 4) + 0.41421356
 
         numpy.testing.assert_allclose(
-            expected_downstream_distance,
+            expected_downslope_distance,
             gdal.OpenEx(os.path.join(
                 args['workspace_dir'], 
-                'downstream_distance_foo.tif')).ReadAsArray(),
+                'downslope_distance_foo.tif')).ReadAsArray(),
             rtol=0, atol=1e-6)
 
     def test_routedem_mfd(self):
@@ -275,7 +275,7 @@ class RouteDEMTests(unittest.TestCase):
             'calculate_flow_direction': True,
             'calculate_flow_accumulation': True,
             'calculate_stream_threshold': True,
-            'calculate_downstream_distance': True,
+            'calculate_downslope_distance': True,
             'calculate_slope': False,
             'threshold_flow_accumulation': 4,
         }
@@ -305,7 +305,7 @@ class RouteDEMTests(unittest.TestCase):
         for filename, expected_sum in (
                 ('flow_accumulation_foo.tif', 678.94551294),
                 ('flow_direction_foo.tif', 40968303668.0),
-                ('downstream_distance_foo.tif', 162.28624753707527)):
+                ('downslope_distance_foo.tif', 162.28624753707527)):
             raster_path = os.path.join(args['workspace_dir'], filename)
             raster = gdal.OpenEx(raster_path)
             if raster is None:

@@ -24,7 +24,7 @@ LOGGER = logging.getLogger(__name__)
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["pollination"].model_title,
     "pyname": MODEL_METADATA["pollination"].pyname,
-    "userguide_html": MODEL_METADATA["pollination"].userguide,
+    "userguide": MODEL_METADATA["pollination"].userguide,
     "args": {
         "workspace_dir": spec_utils.WORKSPACE,
         "results_suffix": spec_utils.SUFFIX,
@@ -32,7 +32,7 @@ ARGS_SPEC = {
         "landcover_raster_path": {
             **spec_utils.LULC,
             "projected": True,
-            "about": (
+            "about": _(
                 "Map of LULC codes. All values in this raster must have "
                 "corresponding entries in the Biophysical Table.")
         },
@@ -41,13 +41,13 @@ ARGS_SPEC = {
             "columns": {
                 "species": {
                     "type": "freestyle_string",
-                    "about": (
+                    "about": _(
                         "Unique name or identifier for each pollinator "
                         "species or guild of interest.")
                 },
                 "nesting_suitability_[SUBSTRATE]_index": {
                     "type": "ratio",
-                    "about": (
+                    "about": _(
                         "Utilization of the substrate by this species, where "
                         "1 indicates the nesting substrate is fully utilized "
                         "and 0 indicates it is not utilized at all. Replace "
@@ -57,7 +57,7 @@ ARGS_SPEC = {
                 },
                 "foraging_activity_[SEASON]_index": {
                     "type": "ratio",
-                    "about": (
+                    "about": _(
                         "Pollinator activity for this species/guild in each "
                         "season. 1 indicates maximum activity for the "
                         "species/guild, and 0 indicates no activity. Replace "
@@ -68,41 +68,41 @@ ARGS_SPEC = {
                 "alpha": {
                     "type": "number",
                     "units": u.meters,
-                    "about": (
+                    "about": _(
                         "Average distance that this species or guild travels "
                         "to forage on flowers.")
                 },
                 "relative_abundance": {
                     "type": "ratio",
-                    "about": (
+                    "about": _(
                         "The proportion of total pollinator abundance that "
                         "consists of this species/guild.")
                 }
             },
-            "about": (
+            "about": _(
                 "A table mapping each pollinator species or guild of interest "
                 "to its pollination-related parameters."),
-            "name": "Guild Table"
+            "name": _("Guild Table")
         },
         "landcover_biophysical_table_path": {
             "type": "csv",
             "columns": {
                 "lucode": {
                     "type": "integer",
-                    "about": (
+                    "about": _(
                         "LULC code representing this class in the LULC raster."
                     )
                 },
                 "nesting_[SUBSTRATE]_availability_index": {
                     "type": "ratio",
-                    "about": (
+                    "about": _(
                         "Index of availability of the given substrate in this "
                         "LULC class. Replace [SUBSTRATE] with substrate names "
                         "matching those in the Guild Table, so that there is "
                         "a column for each substrate.")},
                 "floral_resources_[SEASON]_index": {
                     "type": "ratio",
-                    "about": (
+                    "about": _(
                         "Abundance of flowers during the given season in this "
                         "LULC class. This is the proportion of land area "
                         "covered by flowers, multiplied by the proportion of "
@@ -111,24 +111,24 @@ ARGS_SPEC = {
                         "Guild Table, so that there is a column for each "
                         "season.")}
             },
-            "about": (
+            "about": _(
                 "A table mapping each LULC class to nesting availability and "
                 "floral abundance data for each substrate and season in that "
                 "LULC class. All values in the LULC raster must have "
                 "corresponding entries in this table."),
-            "name": "biophysical table"
+            "name": _("biophysical table")
         },
         "farm_vector_path": {
             "type": "vector",
             "fields": {
                 "crop_type": {
                     "type": "freestyle_string",
-                    "about": (
+                    "about": _(
                         "Name of the crop grown on each polygon, e.g. "
                         "'blueberries', 'almonds', etc.")},
                 "half_sat": {
                     "type": "ratio",
-                    "about": (
+                    "about": _(
                         "The half saturation coefficient for the crop grown "
                         "in this area. This is the wild pollinator abundance "
                         "(i.e. the proportion of all pollinators that are "
@@ -136,13 +136,13 @@ ARGS_SPEC = {
                         "pollinator-dependent yield.")},
                 "season": {
                     "type": "freestyle_string",
-                    "about": (
+                    "about": _(
                         "The season in which the crop is pollinated. Season "
                         "names must match those in the Guild Table and "
                         "Biophysical Table.")},
                 "fr_[SEASON]": {  # floral resources for each season
                     "type": "ratio",
-                    "about": (
+                    "about": _(
                         "The floral resources available at this farm for the "
                         "given season. Replace [SEASON] with season names "
                         "matching those in the Guild Table and Biophysical "
@@ -150,7 +150,7 @@ ARGS_SPEC = {
                 },
                 "n_[SUBSTRATE]": {  # nesting availabilities for each substrate
                     "type": "ratio",
-                    "about": (
+                    "about": _(
                         "The nesting suitability for the given substrate at "
                         "this farm. given substrate. Replace [SUBSTRATE] with "
                         "substrate names matching those in the Guild Table "
@@ -158,20 +158,21 @@ ARGS_SPEC = {
                         "for each substrate.")},
                 "p_dep": {
                     "type": "ratio",
-                    "about": "The proportion of crop dependent on pollinators."
+                    "about": _(
+                        "The proportion of crop dependent on pollinators.")
                 },
                 "p_managed": {
                     "type": "ratio",
-                    "about": (
+                    "about": _(
                         "The proportion of pollination required on the farm "
                         "that is provided by managed pollinators.")}
             },
             "geometries": spec_utils.POLYGONS,
             "required": False,
-            "about": (
+            "about": _(
                 "Map of farm sites to be analyzed, with pollination data "
                 "specific to each farm."),
-            "name": "farms map"
+            "name": _("farms map")
         }
     }
 }
@@ -1280,7 +1281,9 @@ class _CalculateHabitatNestingIndex(object):
                 numpy.stack([x.flatten() for x in substrate_index_arrays]) *
                 self.species_substrate_suitability_index_array, axis=0)
             result = result.reshape(substrate_index_arrays[0].shape)
-            result[substrate_index_arrays[0] == _INDEX_NODATA] = _INDEX_NODATA
+            nodata_mask = utils.array_equals_nodata(
+                substrate_index_arrays[0], _INDEX_NODATA)
+            result[nodata_mask] = _INDEX_NODATA
             return result
 
         pygeoprocessing.raster_calculator(
@@ -1311,7 +1314,7 @@ class _SumRasters(object):
         result = numpy.empty_like(array_list[0])
         result[:] = 0
         for array in array_list:
-            local_valid_mask = array != _INDEX_NODATA
+            local_valid_mask = ~utils.array_equals_nodata(array, _INDEX_NODATA)
             result[local_valid_mask] += array[local_valid_mask]
             valid_mask |= local_valid_mask
         result[~valid_mask] = _INDEX_NODATA
@@ -1338,7 +1341,8 @@ class _PollinatorSupplyOp(object):
             self, foraged_flowers_array, floral_resources_array,
             convolve_ps_array):
         """Calculating (RA*fa)/FR * convolve(PS)."""
-        valid_mask = foraged_flowers_array != _INDEX_NODATA
+        valid_mask = ~utils.array_equals_nodata(
+            foraged_flowers_array, _INDEX_NODATA)
         result = numpy.empty_like(foraged_flowers_array)
         result[:] = _INDEX_NODATA
         zero_mask = floral_resources_array == 0
@@ -1383,7 +1387,8 @@ class _PollinatorSupplyIndexOp(object):
         """Calculate f_r * h_n * self.species_abundance."""
         result = numpy.empty_like(floral_resources_array)
         result[:] = _INDEX_NODATA
-        valid_mask = floral_resources_array != _INDEX_NODATA
+        valid_mask = ~utils.array_equals_nodata(
+            floral_resources_array, _INDEX_NODATA)
         result[valid_mask] = (
             self.species_abundance * floral_resources_array[valid_mask] *
             habitat_nesting_suitability_array[valid_mask])
@@ -1421,7 +1426,7 @@ class _MultByScalar(object):
         """Return array * self.scalar accounting for nodata."""
         result = numpy.empty_like(array)
         result[:] = _INDEX_NODATA
-        valid_mask = array != _INDEX_NODATA
+        valid_mask = ~utils.array_equals_nodata(array, _INDEX_NODATA)
         result[valid_mask] = array[valid_mask] * self.scalar
         return result
 
@@ -1447,7 +1452,9 @@ class _OnFarmPollinatorAbundance(object):
         result = numpy.empty_like(h_array)
         result[:] = _INDEX_NODATA
 
-        valid_mask = (h_array != _INDEX_NODATA) & (pat_array != _INDEX_NODATA)
+        valid_mask = (
+            ~utils.array_equals_nodata(h_array, _INDEX_NODATA) &
+            ~utils.array_equals_nodata(pat_array, _INDEX_NODATA))
 
         result[valid_mask] = (
             (pat_array[valid_mask]*(1-h_array[valid_mask])) /
@@ -1474,7 +1481,7 @@ class _PYTOp(object):
 
     def __call__(self, mp_array, FP_array):
         """Return min(mp_array+FP_array, 1) accounting for nodata."""
-        valid_mask = mp_array != _INDEX_NODATA
+        valid_mask = ~utils.array_equals_nodata(mp_array, _INDEX_NODATA)
         result = numpy.empty_like(mp_array)
         result[:] = _INDEX_NODATA
         result[valid_mask] = mp_array[valid_mask]+FP_array[valid_mask]
@@ -1501,7 +1508,7 @@ class _PYWOp(object):
 
     def __call__(self, mp_array, PYT_array):
         """Return max(0,PYT_array-mp_array) accounting for nodata."""
-        valid_mask = mp_array != _INDEX_NODATA
+        valid_mask = ~utils.array_equals_nodata(mp_array, _INDEX_NODATA)
         result = numpy.empty_like(mp_array)
         result[:] = _INDEX_NODATA
         result[valid_mask] = PYT_array[valid_mask]-mp_array[valid_mask]

@@ -20,31 +20,31 @@ LOGGER = logging.getLogger(__name__)
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["coastal_blue_carbon_preprocessor"].model_title,
     "pyname": MODEL_METADATA["coastal_blue_carbon_preprocessor"].pyname,
-    "userguide_html": MODEL_METADATA["coastal_blue_carbon_preprocessor"].userguide,
+    "userguide": MODEL_METADATA["coastal_blue_carbon_preprocessor"].userguide,
     "args": {
         "workspace_dir": spec_utils.WORKSPACE,
         "results_suffix": spec_utils.SUFFIX,
         "n_workers": spec_utils.N_WORKERS,
         "lulc_lookup_table_path": {
-            "name": "LULC lookup table",
+            "name": _("LULC lookup table"),
             "type": "csv",
-            "about": (
+            "about": _(
                 "A table mapping LULC codes from the snapshot rasters to the "
                 "corresponding LULC class names, and whether or not the "
                 "class is a coastal blue carbon habitat."),
             "columns": {
                 "code": {
                     "type": "integer",
-                    "about": (
+                    "about": _(
                         "LULC code. Every value in the "
                         "snapshot LULC maps must have a corresponding entry "
                         "in this column.")},
                 "lulc-class": {
                     "type": "freestyle_string",
-                    "about": "Name of the LULC class."},
+                    "about": _("Name of the LULC class.")},
                 "is_coastal_blue_carbon_habitat": {
                     "type": "boolean",
-                    "about": (
+                    "about": _(
                         "Enter TRUE if this LULC class is a coastal blue "
                         "carbon habitat, FALSE if not.")}
             }
@@ -54,21 +54,21 @@ ARGS_SPEC = {
             "columns": {
                 "snapshot_year": {
                     "type": "number",
-                    "units": u.year,
-                    "about": "Year to snapshot."},
+                    "units": u.year_AD,
+                    "about": _("Year to snapshot.")},
                 "raster_path": {
                     "type": "raster",
                     "bands": {1: {"type": "integer"}},
-                    "about": (
+                    "about": _(
                         "Map of LULC in the snapshot year. "
                         "All values in this raster must have corresponding "
                         "entries in the LULC Lookup table.")
                 }
             },
-            "about": (
+            "about": _(
                 "A table mapping snapshot years to corresponding LULC maps "
                 "for each year."),
-            "name": "LULC snapshots table",
+            "name": _("LULC snapshots table"),
         },
     }
 }
@@ -224,8 +224,9 @@ def _create_transition_table(landcover_table, lulc_snapshot_list,
             # This comparison assumes that our landcover rasters are of an
             # integer type.  When int matrices, we can compare directly to
             # None.
-            valid_pixels = ((from_array != from_nodata) &
-                            (to_array != to_nodata))
+            valid_pixels = (
+                ~utils.array_equals_nodata(from_array, from_nodata) &
+                ~utils.array_equals_nodata(to_array, to_nodata))
             transition_pairs = transition_pairs.union(
                 set(zip(from_array[valid_pixels].flatten(),
                         to_array[valid_pixels].flatten())))

@@ -10,6 +10,8 @@ from natcap.invest import ui_server
 TEST_DATA_PATH = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data')
 
+ROUTE_PREFIX = 'api'
+
 
 class EndpointFunctionTests(unittest.TestCase):
     """Tests for UI server endpoint functions."""
@@ -28,19 +30,23 @@ class EndpointFunctionTests(unittest.TestCase):
         """UI server: get_vector_colnames endpoint."""
         test_client = ui_server.app.test_client()
         # an empty path
-        response = test_client.post('/colnames', json={'vector_path': ''})
+        response = test_client.post(
+            f'{ROUTE_PREFIX}/colnames', json={'vector_path': ''})
         colnames = json.loads(response.get_data(as_text=True))
         self.assertEqual(response.status_code, 422)
         self.assertEqual(colnames, [])
         # a vector with one column
         path = os.path.join(
-            TEST_DATA_PATH, 'aquaculture', 'Input', 'Finfish_Netpens.shp')
-        response = test_client.post('/colnames', json={'vector_path': path})
+            TEST_DATA_PATH, 'annual_water_yield', 'input',
+            'watersheds.shp')
+        response = test_client.post(
+            f'{ROUTE_PREFIX}/colnames', json={'vector_path': path})
         colnames = json.loads(response.get_data(as_text=True))
-        self.assertEqual(colnames, ['FarmID'])
+        self.assertEqual(colnames, ['ws_id'])
         # a non-vector file
         path = os.path.join(TEST_DATA_PATH, 'ndr', 'input', 'dem.tif')
-        response = test_client.post('/colnames', json={'vector_path': path})
+        response = test_client.post(
+            f'{ROUTE_PREFIX}/colnames', json={'vector_path': path})
         colnames = json.loads(response.get_data(as_text=True))
         self.assertEqual(response.status_code, 422)
         self.assertEqual(colnames, [])
@@ -48,7 +54,7 @@ class EndpointFunctionTests(unittest.TestCase):
     def test_get_invest_models(self):
         """UI server: get_invest_models endpoint."""
         test_client = ui_server.app.test_client()
-        response = test_client.get('/models')
+        response = test_client.get(f'{ROUTE_PREFIX}/models')
         models_dict = json.loads(response.get_data(as_text=True))
         for model in models_dict.values():
             self.assertEqual(set(model), {'model_name', 'aliases'})
@@ -56,11 +62,11 @@ class EndpointFunctionTests(unittest.TestCase):
     def test_get_invest_spec(self):
         """UI server: get_invest_spec endpoint."""
         test_client = ui_server.app.test_client()
-        response = test_client.post('/getspec', json='sdr')
+        response = test_client.post(f'{ROUTE_PREFIX}/getspec', json='sdr')
         spec = json.loads(response.get_data(as_text=True))
         self.assertEqual(
             set(spec),
-            {'model_name', 'pyname', 'userguide_html',
+            {'model_name', 'pyname', 'userguide',
              'args_with_spatial_overlap', 'args'})
 
     def test_get_invest_validate(self):
@@ -74,7 +80,7 @@ class EndpointFunctionTests(unittest.TestCase):
             'model_module': carbon.ARGS_SPEC['pyname'],
             'args': json.dumps(args)
         }
-        response = test_client.post('/validate', json=payload)
+        response = test_client.post(f'{ROUTE_PREFIX}/validate', json=payload)
         results = json.loads(response.get_data(as_text=True))
         expected = carbon.validate(args)
         # These differ only because a tuple was transformed to a list during
@@ -95,7 +101,8 @@ class EndpointFunctionTests(unittest.TestCase):
         filepath = os.path.join(self.workspace_dir, 'datastack.json')
         with open(filepath, 'w') as file:
             file.write(json.dumps(expected_datastack))
-        response = test_client.post('/post_datastack_file', json=filepath)
+        response = test_client.post(
+            f'{ROUTE_PREFIX}/post_datastack_file', json=filepath)
         response_data = json.loads(response.get_data(as_text=True))
         self.assertEqual(
             set(response_data),
@@ -108,14 +115,15 @@ class EndpointFunctionTests(unittest.TestCase):
         self.workspace_dir = tempfile.mkdtemp()
         filepath = os.path.join(self.workspace_dir, 'datastack.json')
         payload = {
-            'parameterSetPath': filepath,
+            'filepath': filepath,
             'moduleName': 'natcap.invest.carbon',
             'args': json.dumps({
                 'workspace_dir': 'foo'
             }),
             'relativePaths': True,
         }
-        _ = test_client.post('/write_parameter_set_file', json=payload)
+        _ = test_client.post(
+            f'{ROUTE_PREFIX}/write_parameter_set_file', json=payload)
         with open(filepath, 'r') as file:
             actual_data = json.loads(file.read())
         self.assertEqual(
@@ -134,9 +142,31 @@ class EndpointFunctionTests(unittest.TestCase):
                 'workspace_dir': 'foo'
             }),
         }
-        _ = test_client.post('/save_to_python', json=payload)
+        _ = test_client.post(f'{ROUTE_PREFIX}/save_to_python', json=payload)
         # test_cli.py asserts the actual contents of the file
         self.assertTrue(os.path.exists(filepath))
+
+    def test_build_datastack_archive(self):
+        """UI server: build_datastack_archive endpoint."""
+        test_client = ui_server.app.test_client()
+        self.workspace_dir = tempfile.mkdtemp()
+        target_filepath = os.path.join(self.workspace_dir, 'data.tgz')
+        data_path = os.path.join(self.workspace_dir, 'data.csv')
+        with open(data_path, 'w') as file:
+            file.write('hello')
+
+        payload = {
+            'filepath': target_filepath,
+            'moduleName': 'natcap.invest.carbon',
+            'args': json.dumps({
+                'workspace_dir': 'foo',
+                'carbon_pools_path': data_path
+            }),
+        }
+        _ = test_client.post(
+            f'{ROUTE_PREFIX}/build_datastack_archive', json=payload)
+        # test_datastack.py asserts the actual archiving functionality
+        self.assertTrue(os.path.exists(target_filepath))
 
     @patch('natcap.invest.ui_server.usage.urlopen')
     def test_log_model_start(self, mock_urlopen):
@@ -152,8 +182,9 @@ class EndpointFunctionTests(unittest.TestCase):
             }),
             'invest_interface': 'Workbench',
             'session_id': '12345'
-        }    
-        response = test_client.post('/log_model_start', json=payload)
+        }
+        response = test_client.post(
+            f'{ROUTE_PREFIX}/log_model_start', json=payload)
         self.assertEqual(response.get_data(as_text=True), 'OK')
 
     @patch('natcap.invest.ui_server.usage.urlopen')
@@ -167,5 +198,6 @@ class EndpointFunctionTests(unittest.TestCase):
             'session_id': '12345',
             'status': ''
         }
-        response = test_client.post('/log_model_exit', json=payload)
+        response = test_client.post(
+            f'{ROUTE_PREFIX}/log_model_exit', json=payload)
         self.assertEqual(response.get_data(as_text=True), 'OK')
