@@ -533,18 +533,21 @@ class FreestyleStringValidation(unittest.TestCase):
     def test_regexp(self):
         """Validation: test that we can check regex patterns on strings."""
         from natcap.invest import validation
+        from natcap.invest.spec_utils import SUFFIX
 
         self.assertEqual(None, validation.check_freestyle_string(
             1.234, regexp='^1.[0-9]+$'))
-
-        self.assertEqual(None, validation.check_freestyle_string(
-            'bar', regexp='BAR'))  # should be case-insensitive
 
         regexp = '^[a-zA-Z]+$'
         error_msg = validation.check_freestyle_string(
             'foobar12', regexp=regexp)
         self.assertEqual(
             error_msg, validation.MESSAGES['REGEXP_MISMATCH'].format(regexp=regexp))
+
+        error_msg = validation.check_freestyle_string(
+            '4/20', regexp=SUFFIX['regexp'])
+        self.assertEqual(
+            error_msg, validation.MESSAGES['REGEXP_MISMATCH'].format(regexp=SUFFIX['regexp']))
 
 
 class OptionStringValidation(unittest.TestCase):
