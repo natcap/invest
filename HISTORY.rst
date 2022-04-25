@@ -39,6 +39,8 @@ Unreleased Changes
       ``universal2`` wheel architecture offered by ``scipy>=1.8.0``.
     * Expose taskgraph logging level for the cli with
       ``--taskgraph-log-level``.
+    * Fixed bug in validation of ``results_suffix`` so that special characters
+      like path separators, etc, are not allowed.
 * RouteDEM
     * Rename the arg ``calculate_downstream_distance`` to
       ``calculate_downslope_distance``. This is meant to clarify that it
