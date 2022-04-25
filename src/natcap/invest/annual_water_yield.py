@@ -21,7 +21,7 @@ LOGGER = logging.getLogger(__name__)
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["annual_water_yield"].model_title,
     "pyname": MODEL_METADATA["annual_water_yield"].pyname,
-    "userguide_html": MODEL_METADATA["annual_water_yield"].userguide,
+    "userguide": MODEL_METADATA["annual_water_yield"].userguide,
     "args_with_spatial_overlap": {
         "spatial_keys": ["lulc_path",
                          "depth_to_root_rest_layer_path",
@@ -39,7 +39,7 @@ ARGS_SPEC = {
         "lulc_path": {
             **spec_utils.LULC,
             "projected": True,
-            "about": (
+            "about": _(
                 f"{spec_utils.LULC['about']} All values in this raster "
                 "must have corresponding entries in the Biophysical Table.")
         },
@@ -50,11 +50,11 @@ ARGS_SPEC = {
                 "units": u.millimeter
             }},
             "projected": True,
-            "about": (
+            "about": _(
                 "Map of root restricting layer depth, the soil depth at "
                 "which root penetration is strongly inhibited because of "
                 "physical or chemical characteristics."),
-            "name": "root restricting layer depth"
+            "name": _("root restricting layer depth")
         },
         "precipitation_path": {
             **spec_utils.PRECIP,
@@ -64,11 +64,11 @@ ARGS_SPEC = {
             "type": "raster",
             "bands": {1: {"type": "ratio"}},
             "projected": True,
-            "about": (
+            "about": _(
                 "Map of plant available water content, the fraction of "
                 "water that can be stored in the soil profile that is "
                 "available to plants."),
-            "name": "plant available water content"
+            "name": _("plant available water content")
         },
         "eto_path": {
             **spec_utils.ETO,
@@ -80,15 +80,15 @@ ARGS_SPEC = {
             "fields": {
                 "ws_id": {
                     "type": "integer",
-                    "about": "Unique identifier for each watershed."
+                    "about": _("Unique identifier for each watershed.")
                 }
             },
             "geometries": spec_utils.POLYGON,
-            "about": (
+            "about": _(
                 "Map of watershed boundaries, such that each watershed drains "
                 "to a point of interest where hydropower production will be "
                 "analyzed."),
-            "name": "watersheds"
+            "name": _("watersheds")
         },
         "sub_watersheds_path": {
             "projected": True,
@@ -96,27 +96,27 @@ ARGS_SPEC = {
             "fields": {
                 "subws_id": {
                     "type": "integer",
-                    "about": "Unique identifier for each subwatershed."
+                    "about": _("Unique identifier for each subwatershed.")
                 }
             },
             "geometries": spec_utils.POLYGONS,
             "required": False,
-            "about": (
+            "about": _(
                 "Map of subwatershed boundaries within each watershed in "
                 "the Watersheds map."),
-            "name": "sub-watersheds"
+            "name": _("sub-watersheds")
         },
         "biophysical_table_path": {
             "type": "csv",
             "columns": {
                 "lucode": {
                     "type": "integer",
-                    "about": (
+                    "about": _(
                         "LULC code corresponding to values in the LULC map.")
                 },
                 "lulc_veg": {
                     "type": "integer",
-                    "about": (
+                    "about": _(
                         "Code indicating whether the the LULC class is "
                         "vegetated for the purpose of AET. Enter 1 for all "
                         "vegetated classes except wetlands, and 0 for all "
@@ -126,58 +126,58 @@ ARGS_SPEC = {
                 "root_depth": {
                     "type": "number",
                     "units": u.millimeter,
-                    "about": (
+                    "about": _(
                         "Maximum root depth for plants in this LULC class. "
                         "Only used for classes with a 'lulc_veg' value of 1.")
                 },
                 "kc": {
                     "type": "number",
                     "units": u.none,
-                    "about": "Crop coefficient for this LULC class."}
+                    "about": _("Crop coefficient for this LULC class.")}
             },
-            "about": (
+            "about": _(
                 "Table of biophysical parameters for each LULC class. All "
                 "values in the LULC raster must have corresponding entries "
                 "in this table."),
-            "name": "biophysical table"
+            "name": _("biophysical table")
         },
         "seasonality_constant": {
             "expression": "value > 0",
             "type": "number",
             "units": u.none,
-            "about": (
+            "about": _(
                 "The seasonality factor, representing hydrogeological "
                 "characterisitics and the seasonal distribution of "
                 "precipitation. Values typically range from 1 - 30."),
-            "name": "z parameter"
+            "name": _("z parameter")
         },
         "demand_table_path": {
             "type": "csv",
             "columns": {
                 "lucode": {
-                    "about": "LULC code corresponding to the LULC raster",
+                    "about": _("LULC code corresponding to the LULC raster"),
                     "type": "integer"
                 },
                 "demand": {
-                    "about": (
+                    "about": _(
                         "Average consumptive water use in this LULC class."),
                     "type": "number",
                     "units": u.meter**3/u.year/u.pixel
                 }
             },
             "required": False,
-            "about": (
+            "about": _(
                 "A table of water demand for each LULC class. Each LULC code "
                 "in the LULC raster must have a corresponding row in this "
                 "table."),
-            "name": "water demand table"
+            "name": _("water demand table")
         },
         "valuation_table_path": {
             "type": "csv",
             "columns": {
                 "ws_id": {
                     "type": "integer",
-                    "about": (
+                    "about": _(
                         "Unique identifier for the hydropower station. This "
                         "must match the 'ws_id' value for the corresponding "
                         "watershed in the Watersheds vector. Each watershed "
@@ -186,21 +186,21 @@ ARGS_SPEC = {
                 },
                 "efficiency": {
                     "type": "ratio",
-                    "about": (
+                    "about": _(
                         "Turbine efficiency, the proportion of potential "
                         "energy captured and converted to electricity by the "
                         "turbine.")
                 },
                 "fraction": {
                     "type": "ratio",
-                    "about": (
+                    "about": _(
                         "The proportion of inflow water volume that is used "
                         "to generate energy.")
                 },
                 "height": {
                     "type": "number",
                     "units": u.meter,
-                    "about": (
+                    "about": _(
                         "The head, measured as the average annual effective "
                         "height of water behind each dam at the turbine "
                         "intake.")
@@ -208,14 +208,14 @@ ARGS_SPEC = {
                 "kw_price": {
                     "type": "number",
                     "units": u.currency/u.kilowatt_hour,
-                    "about": (
+                    "about": _(
                         "The price of power produced by the station. Must be "
                         "in the same currency used in the 'cost' column.")
                 },
                 "cost": {
                     "type": "number",
                     "units": u.currency/u.year,
-                    "about": (
+                    "about": _(
                         "Annual maintenance and operations cost of running "
                         "the hydropower station. Must be in the same currency "
                         "used in the 'kw_price' column.")
@@ -223,7 +223,7 @@ ARGS_SPEC = {
                 "time_span": {
                     "type": "number",
                     "units": u.year,
-                    "about": (
+                    "about": _(
                         "Number of years over which to value the "
                         "hydropower station. This is either the station's "
                         "expected lifespan or the duration of the land use "
@@ -231,16 +231,16 @@ ARGS_SPEC = {
                 },
                 "discount": {
                     "type": "percent",
-                    "about": (
+                    "about": _(
                         "The annual discount rate, applied for each year in "
                         "the time span.")
                 }
             },
             "required": False,
-            "about": (
+            "about": _(
                 "A table mapping each watershed to the associated valuation "
                 "parameters for its hydropower station."),
-            "name": "hydropower valuation table"
+            "name": _("hydropower valuation table")
         }
     }
 }
@@ -798,7 +798,7 @@ def aet_op(fractp, precip, precip_nodata, output_nodata):
     # and the nodata value is a large negative number.
     valid_mask = fractp >= 0
     if precip_nodata is not None:
-        valid_mask &= ~numpy.isclose(precip, precip_nodata)
+        valid_mask &= ~utils.array_equals_nodata(precip, precip_nodata)
     result[valid_mask] = fractp[valid_mask] * precip[valid_mask]
     return result
 
@@ -820,9 +820,9 @@ def wyield_op(fractp, precip, precip_nodata, output_nodata):
     result = numpy.empty_like(fractp)
     result[:] = output_nodata
     # output_nodata is defined above, should never be None
-    valid_mask = ~numpy.isclose(fractp, output_nodata)
+    valid_mask = ~utils.array_equals_nodata(fractp, output_nodata)
     if precip_nodata is not None:
-        valid_mask &= ~numpy.isclose(precip, precip_nodata)
+        valid_mask &= ~utils.array_equals_nodata(precip, precip_nodata)
     result[valid_mask] = (1.0 - fractp[valid_mask]) * precip[valid_mask]
     return result
 
@@ -863,18 +863,19 @@ def fractp_op(
     # and retain their original nodata values.
     # out_nodata is defined above and should never be None.
     valid_mask = (
-        ~numpy.isclose(Kc, nodata_dict['out_nodata']) &
-        ~numpy.isclose(root, nodata_dict['out_nodata']) &
-        ~numpy.isclose(veg, nodata_dict['out_nodata']) &
-        ~numpy.isclose(precip, 0.0))
+        ~utils.array_equals_nodata(Kc, nodata_dict['out_nodata']) &
+        ~utils.array_equals_nodata(root, nodata_dict['out_nodata']) &
+        ~utils.array_equals_nodata(veg, nodata_dict['out_nodata']) &
+        ~utils.array_equals_nodata(precip, 0.0))
     if nodata_dict['eto'] is not None:
-        valid_mask &= ~numpy.isclose(eto, nodata_dict['eto'])
+        valid_mask &= ~utils.array_equals_nodata(eto, nodata_dict['eto'])
     if nodata_dict['precip'] is not None:
-        valid_mask &= ~numpy.isclose(precip, nodata_dict['precip'])
+        valid_mask &= ~utils.array_equals_nodata(precip, nodata_dict['precip'])
     if nodata_dict['depth_root'] is not None:
-        valid_mask &= ~numpy.isclose(soil, nodata_dict['depth_root'])
+        valid_mask &= ~utils.array_equals_nodata(
+            soil, nodata_dict['depth_root'])
     if nodata_dict['pawc'] is not None:
-        valid_mask &= ~numpy.isclose(pawc, nodata_dict['pawc'])
+        valid_mask &= ~utils.array_equals_nodata(pawc, nodata_dict['pawc'])
 
     # Compute Budyko Dryness index
     # Use the original AET equation if the land cover type is vegetation
@@ -938,9 +939,9 @@ def pet_op(eto_pix, Kc_pix, eto_nodata, output_nodata):
     result = numpy.empty(eto_pix.shape, dtype=numpy.float32)
     result[:] = output_nodata
 
-    valid_mask = ~numpy.isclose(Kc_pix, output_nodata)
+    valid_mask = ~utils.array_equals_nodata(Kc_pix, output_nodata)
     if eto_nodata is not None:
-        valid_mask &= ~numpy.isclose(eto_pix, eto_nodata)
+        valid_mask &= ~utils.array_equals_nodata(eto_pix, eto_nodata)
     result[valid_mask] = eto_pix[valid_mask] * Kc_pix[valid_mask]
     return result
 

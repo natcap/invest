@@ -1,12 +1,12 @@
 """InVEST Wind Energy model."""
 import logging
+import math
 import os
 import pickle
 import shutil
 import tempfile
-import math
 
-import numpy as np
+import numpy
 import pandas
 from scipy import integrate
 
@@ -20,8 +20,8 @@ from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
 
-import taskgraph
 import pygeoprocessing
+import taskgraph
 from . import utils
 from . import spec_utils
 from .spec_utils import u
@@ -35,7 +35,7 @@ speedups.enable()
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["wind_energy"].model_title,
     "pyname": MODEL_METADATA["wind_energy"].pyname,
-    "userguide_html": MODEL_METADATA["wind_energy"].userguide,
+    "userguide": MODEL_METADATA["wind_energy"].userguide,
     "args_with_spatial_overlap": {
         "spatial_keys": ['aoi_vector_path', 'bathymetry_path',
                          'land_polygon_vector_path'],
@@ -51,42 +51,42 @@ ARGS_SPEC = {
                 "long": {
                     "type": "number",
                     "units": u.degree,
-                    "about": "Longitude of the data point."
+                    "about": _("Longitude of the data point.")
                 },
                 "lati": {
                     "type": "number",
                     "units": u.degree,
-                    "about": "Latitude of the data point."
+                    "about": _("Latitude of the data point.")
                 },
                 "lam": {
                     "type": "number",
                     "units": u.none,
-                    "about": (
+                    "about": _(
                         "Weibull scale factor at the reference hub height at "
                         "this point.")
                 },
                 "k": {
                     "type": "number",
                     "units": u.none,
-                    "about": "Weibull shape factor at this point."
+                    "about": _("Weibull shape factor at this point.")
                 },
                 "ref": {
                     "type": "number",
                     "units": u.meter,
-                    "about": (
+                    "about": _(
                         "The reference hub height at this point, at which "
                         "wind speed data was collected and LAM was estimated.")
                 }
             },
-            "about": "Table of Weibull parameters for each wind data point.",
-            "name": "wind data points"
+            "about": _("Table of Weibull parameters for each wind data point."),
+            "name": _("wind data points")
         },
         "aoi_vector_path": {
             **spec_utils.AOI,
             "projected": True,
             "projection_units": u.meter,
             "required": "valuation_container & grid_points_path",
-            "about": (
+            "about": _(
                 "Map of the area(s) of interest over which to run the model "
                 "and aggregate valuation results. Required if Run Valuation "
                 "is selected and the Grid Connection Points table is provided."
@@ -95,19 +95,19 @@ ARGS_SPEC = {
         "bathymetry_path": {
             "type": "raster",
             "bands": {1: {"type": "number", "units": u.meter}},
-            "about": "Map of ocean depth. Values should be negative.",
-            "name": "bathymetry"
+            "about": _("Map of ocean depth. Values should be negative."),
+            "name": _("bathymetry")
         },
         "land_polygon_vector_path": {
             "type": "vector",
             "fields": {},
             "geometries": {"POLYGON", "MULTIPOLYGON"},
             "required": "min_distance | max_distance | valuation_container",
-            "about": (
+            "about": _(
                 "Map of the coastlines of landmasses in the area of interest. "
                 "Required if the Minimum Distance and Maximum Distance inputs "
                 "are provided."),
-            "name": "land polygon"
+            "name": _("land polygon")
         },
         "global_wind_parameters_path": {
             "type": "csv",
@@ -115,61 +115,61 @@ ARGS_SPEC = {
                 "air_density": {
                     "type": "number",
                     "units": u.kilogram/(u.meter**3),
-                    "about": "Standard atmosphere air density."},
+                    "about": _("Standard atmosphere air density.")},
                 "exponent_power_curve": {
                     "type": "number",
                     "units": u.none,
-                    "about": "Exponent to use in the power curve function."},
+                    "about": _("Exponent to use in the power curve function.")},
                 "decommission_cost": {
                     "type": "ratio",
-                    "about": (
+                    "about": _(
                         "Cost to decommission a turbine as a proportion of "
                         "the total upfront costs (cables, foundations, "
                         "installation?)")
                 },
                 "operation_maintenance_cost": {
                     "type": "ratio",
-                    "about": (
+                    "about": _(
                         "The operations and maintenance costs as a proportion "
                         "of capex_arr")},
                 "miscellaneous_capex_cost": {
                     "type": "ratio",
-                    "about": (
+                    "about": _(
                         "The miscellaneous costs as a proportion of capex_arr")
                 },
                 "installation_cost": {
                     "type": "ratio",
-                    "about": (
+                    "about": _(
                         "The installation costs as a proportion of capex_arr")
                 },
                 "infield_cable_length": {
                     "type": "number",
                     "units": u.kilometer,
-                    "about": "The length of infield cable."},
+                    "about": _("The length of infield cable.")},
                 "infield_cable_cost": {
                     "type": "number",
-                    "units": u.megacurrency,
-                    "about": "The cost of infield cable."},
+                    "units": u.currency/u.kilometer,
+                    "about": _("The cost of infield cable.")},
                 "mw_coef_ac": {
                     "type": "number",
                     "units": u.currency/u.megawatt,
-                    "about": "Cost of AC cable that scales with capacity."},
+                    "about": _("Cost of AC cable that scales with capacity.")},
                 "mw_coef_dc": {
                     "type": "number",
                     "units": u.currency/u.megawatt,
-                    "about": "Cost of DC cable that scales with capacity."},
+                    "about": _("Cost of DC cable that scales with capacity.")},
                 "cable_coef_ac": {
                     "type": "number",
                     "units": u.currency/u.kilometer,
-                    "about": "Cost of AC cable that scales with length."},
+                    "about": _("Cost of AC cable that scales with length.")},
                 "cable_coef_dc": {
                     "type": "number",
                     "units": u.currency/u.kilometer,
-                    "about": "Cost of DC cable that scales with length."},
+                    "about": _("Cost of DC cable that scales with length.")},
                 "ac_dc_distance_break": {
                     "type": "number",
                     "units": u.kilometer,
-                    "about": (
+                    "about": _(
                         "The threshold above which a wind farm’s distance "
                         "from the grid requires a switch from AC to DC power "
                         "to overcome line losses which reduce the amount of "
@@ -177,28 +177,28 @@ ARGS_SPEC = {
                 "time_period": {
                     "type": "number",
                     "units": u.year,
-                    "about": "The expected lifetime of the facility"},
+                    "about": _("The expected lifetime of the facility")},
                 "carbon_coefficient": {
                     "type": "number",
                     "units": u.metric_ton/u.kilowatt_hour,
-                    "about": (
+                    "about": _(
                         "Factor that translates carbon-free wind power to a "
                         "corresponding amount of avoided CO2 emissions")},
                 "air_density_coefficient": {
                     "type": "number",
                     "units": u.kilogram/(u.meter**3 * u.meter),
-                    "about": (
+                    "about": _(
                         "The reduction in air density per meter above sea "
                         "level")},
                 "loss_parameter": {
                     "type": "ratio",
-                    "about": (
+                    "about": _(
                         "The fraction of energy lost due to downtime, power "
                         "conversion inefficiency, and electrical grid losses")}
             },
-            "about": (
+            "about": _(
                 "A table of wind energy infrastructure parameters."),
-            "name": "global wind energy parameters"
+            "name": _("global wind energy parameters")
         },
         "turbine_parameters_path": {
             "type": "csv",
@@ -206,152 +206,154 @@ ARGS_SPEC = {
                 "hub_height": {
                     "type": "number",
                     "units": u.meter,
-                    "about": "Height of the turbine hub above sea level."},
+                    "about": _("Height of the turbine hub above sea level.")},
                 "cut_in_wspd": {
                     "type": "number",
                     "units": u.meter/u.second,
-                    "about": (
+                    "about": _(
                         "Wind speed at which the turbine begins producing "
                         "power.")},
                 "rated_wspd": {
                     "type": "number",
                     "units": u.meter/u.second,
-                    "about": (
+                    "about": _(
                         "Minimum wind speed at which the turbine reaches its "
                         "rated power output.")},
                 "cut_out_wspd": {
                     "type": "number",
                     "units": u.meter/u.second,
-                    "about": (
+                    "about": _(
                         "Wind speed above which the turbine stops generating "
                         "power for safety reasons.")},
                 "turbine_rated_pwr": {
                     "type": "number",
                     "units": u.kilowatt,
-                    "about": "The turbine's rated power output."},
+                    "about": _("The turbine's rated power output.")},
                 "turbine_cost": {
                     "type": "number",
-                    "units": u.megacurrency,
-                    "about": "The cost of one turbine."}
+                    "units": u.currency,
+                    "about": _("The cost of one turbine.")}
             },
-            "about": "A table of parameters specific to the type of turbine.",
-            "name": "turbine parameters"
+            "about": _("A table of parameters specific to the type of turbine."),
+            "name": _("turbine parameters")
         },
         "number_of_turbines": {
             "expression": "value > 0",
             "type": "number",
             "units": u.none,
-            "about": "The number of wind turbines per wind farm.",
-            "name": "number of turbines"
+            "about": _("The number of wind turbines per wind farm."),
+            "name": _("number of turbines")
         },
         "min_depth": {
             "type": "number",
             "units": u.meter,
-            "about": "Minimum depth for the offshore wind farm installation.",
-            "name": "minimum depth"
+            "about": _("Minimum depth for offshore wind farm installation."),
+            "name": _("minimum depth")
         },
         "max_depth": {
             "type": "number",
             "units": u.meter,
-            "about": "Maximum depth for the offshore wind farm installation.",
-            "name": "maximum depth"
+            "about": _("Maximum depth for offshore wind farm installation."),
+            "name": _("maximum depth")
         },
         "min_distance": {
             "type": "number",
             "units": u.meter,
             "required": "valuation_container",
-            "about": (
-                "Minimum distance from shore for the offshore wind farm "
+            "about": _(
+                "Minimum distance from shore for offshore wind farm "
                 "installation. Required if Run Valuation is selected."),
-            "name": "minimum distance"
+            "name": _("minimum distance")
         },
         "max_distance": {
             "type": "number",
             "units": u.meter,
             "required": "valuation_container",
-            "about": (
-                "Maximum distance from shore for the offshore wind farm "
+            "about": _(
+                "Maximum distance from shore for offshore wind farm "
                 "installation. Required if Run Valuation is selected."),
-            "name": "maximum distance"
+            "name": _("maximum distance")
         },
         "valuation_container": {
             "type": "boolean",
             "required": False,
-            "about": "Run the valuation component of the model.",
-            "name": "run valuation"
+            "about": _("Run the valuation component of the model."),
+            "name": _("run valuation")
         },
         "foundation_cost": {
             "type": "number",
-            "units": u.megacurrency,
+            "units": u.currency,
             "required": "valuation_container",
-            "about": "The cost of the foundation for one turbine.",
-            "name": "foundation cost"
+            "about": _("The cost of the foundation for one turbine."),
+            "name": _("foundation cost")
         },
         "discount_rate": {
             "type": "ratio",
             "required": "valuation_container",
-            "about": "Annual discount rate to apply to valuation.",
-            "name": "discount rate"
+            "about": _("Annual discount rate to apply to valuation."),
+            "name": _("discount rate")
         },
         "grid_points_path": {
             "type": "csv",
             "columns": {
                 "id": {
                     "type": "integer",
-                    "about": "Unique identifier for each point."},
+                    "about": _("Unique identifier for each point.")},
                 "type": {
                     "type": "option_string",
                     "options": {
-                        "LAND": "a land connection point",
-                        "GRID": "a grid connection point"
+                        "LAND": {"description": _(
+                            "This is a land connection point")},
+                        "GRID": {"description": _(
+                            "This is a grid connection point")},
                     },
-                    "about": "The type of connection at this point."
+                    "about": _("The type of connection at this point.")
                 },
                 "lati": {
                     "type": "number",
                     "units": u.degree,
-                    "about": "Latitude of the connection point."
+                    "about": _("Latitude of the connection point.")
                 },
                 "long": {
                     "type": "number",
                     "units": u.degree,
-                    "about": "Longitude of the connection point."
+                    "about": _("Longitude of the connection point.")
                 }
             },
             "required": "valuation_container & (not avg_grid_distance)",
-            "about": (
+            "about": _(
                 "Table of grid and land connection points to which cables "
                 "will connect. Required if Run Valuation is selected and "
                 "Average Shore-to-Grid Distance is not provided."),
-            "name": "grid connection points"
+            "name": _("grid connection points")
         },
         "avg_grid_distance": {
             "expression": "value > 0",
             "type": "number",
             "units": u.kilometer,
             "required": "valuation_container & (not grid_points_path)",
-            "about": (
+            "about": _(
                 "Average distance to the onshore grid from coastal cable "
                 "landing points. Required if Run Valuation is selected and "
                 "the Grid Connection Points table is not provided."),
-            "name": "average shore-to-grid distance"
+            "name": _("average shore-to-grid distance")
         },
         "price_table": {
             "type": "boolean",
             "required": "valuation_container",
-            "about": (
+            "about": _(
                 "Use a Wind Energy Price Table instead of calculating annual "
                 "prices from the initial Energy Price and Rate of Price Change "
                 "inputs."),
-            "name": "use price table"
+            "name": _("use price table")
         },
         "wind_schedule": {
             "type": "csv",
             "columns": {
                 "year": {
                     "type": "number",
-                    "units": u.year,
-                    "about": (
+                    "units": u.year_AD,
+                    "about": _(
                         "Consecutive years for each year in the lifespan of "
                         "the wind farm. These may be the actual years: 2010, "
                         "2011, 2012..., or the number of the years after the "
@@ -360,35 +362,35 @@ ARGS_SPEC = {
                 "price": {
                     "type": "number",
                     "units": u.currency/u.kilowatt_hour,
-                    "about": "Price of energy for each year."
+                    "about": _("Price of energy for each year.")
                 }
             },
             "required": "valuation_container & price_table",
-            "about": (
+            "about": _(
                 "Table of yearly prices for wind energy. There must be a row "
                 "for each year in the lifespan given in the 'time_period' "
                 "column in the Global Wind Energy Parameters table. Required "
                 "if Run Valuation and Use Price Table are selected."),
-            "name": "wind energy price table"
+            "name": _("wind energy price table")
         },
         "wind_price": {
             "type": "number",
             "units": u.currency/u.kilowatt_hour,
             "required": "valuation_container & (not price_table)",
-            "about": (
+            "about": _(
                 "The initial price of wind energy, at the first year in the "
                 "wind energy farm lifespan. Required if Run Valuation is "
                 "selected and Use Price Table is not selected."),
-            "name": "price of energy"
+            "name": _("price of energy")
         },
         "rate_change": {
             "type": "ratio",
             "required": "valuation_container & (not price_table)",
-            "about": (
+            "about": _(
                 "The annual rate of change in the price of wind energy. "
                 "Required if Run Valuation is selected and Use Price Table "
                 "is not selected."),
-            "name": "rate of price change"
+            "name": _("rate of price change")
         }
     }
 }
@@ -403,7 +405,7 @@ _SCALE_KEY = 'LAM'
 _SHAPE_KEY = 'K'
 
 # Set the raster nodata value and data type to use throughout the model
-_TARGET_NODATA = -64329.0
+_TARGET_NODATA = -64329
 _TARGET_DATA_TYPE = gdal.GDT_Float32
 
 # The harvested energy is on a per year basis
@@ -545,7 +547,7 @@ def execute(args):
             inter_dir, 'bathymetry_resampled%s.tif' % suffix)
 
         # Get the minimum absolute value from the bathymetry pixel size tuple
-        mean_pixel_size = np.min(np.absolute(bathy_pixel_size))
+        mean_pixel_size = numpy.min(numpy.absolute(bathy_pixel_size))
         # Use it as the target pixel size for resampling and warping rasters
         target_pixel_size = (mean_pixel_size, -mean_pixel_size)
         LOGGER.debug('Target pixel size: %s' % (target_pixel_size,))
@@ -779,8 +781,8 @@ def execute(args):
                 task_name='create_aoi_raster_from_vector')
 
             # Rasterize land polygon onto AOI and calculate distance transform
-            dist_trans_path = os.path.join(inter_dir,
-                                           'distance_trans%s.tif' % suffix)
+            dist_trans_path = os.path.join(
+                inter_dir, 'distance_trans%s.tif' % suffix)
             create_distance_raster_task = task_graph.add_task(
                 func=_create_distance_raster,
                 args=(aoi_raster_path, land_poly_proj_vector_path,
@@ -835,8 +837,8 @@ def execute(args):
 
     # Get the min and max depth values from the arguments and set to a negative
     # value indicating below sea level
-    min_depth = abs(float(args['min_depth'])) * -1.0
-    max_depth = abs(float(args['max_depth'])) * -1.0
+    min_depth = abs(float(args['min_depth'])) * -1
+    max_depth = abs(float(args['max_depth'])) * -1
 
     # Create a mask for any values that are out of the range of the depth
     # values
@@ -968,7 +970,7 @@ def execute(args):
         dependent_task_list=[align_and_resize_density_and_harvest_task])
 
     LOGGER.info('Mask out depth and [distance] areas from Harvested raster')
-    task_graph.add_task(
+    masked_harvested_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=([(path, 1) for path in aligned_harvested_mask_list],
               _mask_out_depth_dist, harvested_masked_path, _TARGET_DATA_TYPE,
@@ -1011,8 +1013,8 @@ def execute(args):
         land_df.set_index('id', inplace=True)
         land_dict = land_df.to_dict('index')
 
-        grid_vector_path = os.path.join(inter_dir,
-                                        'val_grid_points%s.shp' % suffix)
+        grid_vector_path = os.path.join(
+            inter_dir, 'val_grid_points%s.shp' % suffix)
 
         # Create a point shapefile from the grid point dictionary.
         # This makes it easier for future distance calculations and provides a
@@ -1127,9 +1129,9 @@ def execute(args):
             if calc_grid_dist_without_land:
                 # Calculate distance raster without land points provided
                 final_dist_task = task_graph.add_task(
-                    func=_calculate_grid_dist_on_raster,
-                    args=(grid_projected_vector_path,
-                          harvested_masked_path,
+                    func=_create_distance_raster,
+                    args=(harvested_masked_path,
+                          grid_projected_vector_path,
                           final_dist_raster_path,
                           inter_dir),
                     target_path_list=[final_dist_raster_path],
@@ -1147,7 +1149,7 @@ def execute(args):
         # Since the grid points were not provided use the land polygon to get
         # near shore distances
         # The average land cable distance in km converted to meters
-        avg_grid_distance = float(args['avg_grid_distance']) * 1000.0
+        avg_grid_distance = float(args['avg_grid_distance']) * 1000
 
         land_poly_dist_raster_path = os.path.join(
             inter_dir, 'land_poly_dist%s.tif' % suffix)
@@ -1157,19 +1159,21 @@ def execute(args):
             args=(harvested_masked_path, land_poly_proj_vector_path,
                   land_poly_dist_raster_path, inter_dir),
             target_path_list=[land_poly_dist_raster_path],
+            dependent_task_list=[masked_harvested_task],
             task_name='create_land_poly_dist_raster')
 
         final_dist_task = task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
-            args=([(land_poly_dist_raster_path, 1), (mean_pixel_size, 'raw'),
-                   (avg_grid_distance, 'raw')], _add_avg_dist_op,
-                  final_dist_raster_path, _TARGET_DATA_TYPE, _TARGET_NODATA),
+            args=(
+                [(land_poly_dist_raster_path, 1), (avg_grid_distance, 'raw')],
+                _add_avg_dist_op, final_dist_raster_path, _TARGET_DATA_TYPE,
+                _TARGET_NODATA),
             target_path_list=[final_dist_raster_path],
             task_name='calculate_final_distance_in_meters',
             dependent_task_list=[land_poly_dist_raster_task])
 
     # Create output NPV and levelized rasters
-    npv_raster_path = os.path.join(out_dir, 'npv_US_millions%s.tif' % suffix)
+    npv_raster_path = os.path.join(out_dir, 'npv%s.tif' % suffix)
     levelized_raster_path = os.path.join(
         out_dir, 'levelized_cost_price_per_kWh%s.tif' % suffix)
 
@@ -1194,6 +1198,7 @@ def execute(args):
               _calculate_carbon_op, carbon_path, _TARGET_DATA_TYPE,
               _TARGET_NODATA),
         target_path_list=[carbon_path],
+        dependent_task_list=[masked_harvested_task],
         task_name='calculate_carbon_raster')
 
     task_graph.close()
@@ -1255,11 +1260,11 @@ def _calculate_npv_levelized_rasters(
     # Get constants from val_parameters_dict to make it more readable
     # The length of infield cable in km
     infield_length = float(val_parameters_dict['infield_cable_length'])
-    # The cost of infield cable in millions of currency units per km
+    # The cost of infield cable in currency units per km
     infield_cost = float(val_parameters_dict['infield_cable_cost'])
-    # The cost of the foundation in millions of currency units
+    # The cost of the foundation in currency units
     foundation_cost = float(args['foundation_cost'])
-    # The cost of each turbine unit in millions of currency units
+    # The cost of each turbine unit in currency units
     unit_cost = float(val_parameters_dict['turbine_cost'])
     # The installation cost as a decimal
     install_cost = float(val_parameters_dict['installation_cost'])
@@ -1301,7 +1306,7 @@ def _calculate_npv_levelized_rasters(
     LOGGER.debug('cap_less_dist : %s', cap_less_dist)
 
     # Discount rate plus one to get that constant
-    disc_const = discount_rate + 1.0
+    disc_const = discount_rate + 1
     LOGGER.debug('discount_rate : %s', disc_const)
 
     # Discount constant raised to the total time, a constant found in the NPV
@@ -1314,20 +1319,21 @@ def _calculate_npv_levelized_rasters(
             pygeoprocessing.iterblocks((base_dist_raster_path, 1))):
 
         target_arr_shape = harvest_block_data.shape
-        target_nodata_mask = (harvest_block_data == _TARGET_NODATA)
+        target_nodata_mask = utils.array_equals_nodata(
+            harvest_block_data, _TARGET_NODATA)
 
         # Total cable distance converted to kilometers
-        cable_dist_arr = dist_block_data / 1000.0
+        cable_dist_arr = dist_block_data / 1000
 
         # The energy value converted from MWhr/yr (Mega Watt hours as output
         # from CK's biophysical model equations) to kWhr/yr for the
         # valuation model
-        energy_val_arr = harvest_block_data * 1000.0
+        energy_val_arr = harvest_block_data * 1000
 
         # Calculate cable cost. The break at 'circuit_break' indicates the
         # difference in using AC and DC current systems
         circuit_mask = (cable_dist_arr <= circuit_break)
-        cable_cost_arr = np.full(target_arr_shape, 0.0, dtype=np.float32)
+        cable_cost_arr = numpy.full(target_arr_shape, 0, dtype=numpy.float32)
 
         # Calculate AC cable cost
         cable_cost_arr[circuit_mask] = cable_dist_arr[
@@ -1343,7 +1349,7 @@ def _calculate_npv_levelized_rasters(
 
         # Nominal total capital costs including installation and
         # miscellaneous costs (capex_arr)
-        capex_arr = cap_arr / (1.0 - install_cost - misc_capex_cost)
+        capex_arr = cap_arr / (1 - install_cost - misc_capex_cost)
 
         # The ongoing cost of the farm
         ongoing_capex_arr = op_maint_cost * capex_arr
@@ -1353,17 +1359,17 @@ def _calculate_npv_levelized_rasters(
 
         # Initialize the summation of the revenue less the ongoing costs,
         # adjusted for discount rate
-        npv_arr = np.full(
-            target_arr_shape, 0.0, dtype=np.float32)
+        npv_arr = numpy.full(
+            target_arr_shape, 0, dtype=numpy.float32)
 
         # Initialize the numerator summation part of the levelized cost
-        levelized_num_arr = np.full(
-            target_arr_shape, 0.0, dtype=np.float32)
+        levelized_num_arr = numpy.full(
+            target_arr_shape, 0, dtype=numpy.float32)
 
         # Initialize and calculate the denominator summation value for
         # levelized cost of energy at year 0
-        levelized_denom_arr = np.full(
-            target_arr_shape, 0.0, dtype=np.float32)
+        levelized_denom_arr = numpy.full(
+            target_arr_shape, 0, dtype=numpy.float32)
         levelized_denom_arr = energy_val_arr / disc_const**0
 
         # Calculate the total NPV and the levelized cost over the lifespan of
@@ -1372,13 +1378,8 @@ def _calculate_npv_levelized_rasters(
             # currency units per kilowatt-hour of that year
             currency_per_kwh = float(price_list[year])
 
-            # The price per kWh for energy converted to units of millions of
-            # currency units to correspond to the units for valuation costs
-            mill_currency_per_kwh = currency_per_kwh / 1000000.0
-
-            # The revenue in millions of currency units for the wind farm. The
-            # energy_val_arr is in kWh/yr
-            rev_arr = energy_val_arr * mill_currency_per_kwh
+            # The revenue for the wind farm. The energy_val_arr is in kWh/yr
+            rev_arr = energy_val_arr * currency_per_kwh
 
             # Calculate the net present value (NPV), the summation of the net
             # revenue from power generation, adjusted for discount rate
@@ -1400,11 +1401,10 @@ def _calculate_npv_levelized_rasters(
             decommish_capex_arr[~target_nodata_mask] -
             capex_arr[~target_nodata_mask])
 
-        # Calculate the levelized cost of energy, converting from millions of
-        # currency units to currency units
+        # Calculate the levelized cost of energy
         levelized_arr = (
             (levelized_num_arr + decommish_capex_arr + capex_arr) /
-            levelized_denom_arr) * 1000000.0
+            levelized_denom_arr)
         levelized_arr[target_nodata_mask] = _TARGET_NODATA
 
         npv_band.WriteArray(npv_arr,
@@ -1491,39 +1491,36 @@ def _depth_op(bath, min_depth, max_depth):
         _TARGET_NODATA (int or float): a nodata value set above
 
     Returns:
-        out_array (np.array): an array where values are _TARGET_NODATA
+        out_array (numpy.array): an array where values are _TARGET_NODATA
             if 'bath' does not fall within the range, or 'bath' if it does.
 
     """
-    out_array = np.full(
-        bath.shape, _TARGET_NODATA, dtype=np.float32)
+    out_array = numpy.full(
+        bath.shape, _TARGET_NODATA, dtype=numpy.float32)
     valid_pixels_mask = ((bath >= max_depth) & (bath <= min_depth) &
-                         (bath != _TARGET_NODATA))
+                         ~utils.array_equals_nodata(bath, _TARGET_NODATA))
     out_array[
         valid_pixels_mask] = bath[valid_pixels_mask]
     return out_array
 
 
-def _add_avg_dist_op(tmp_dist, mean_pixel_size, avg_grid_distance):
-    """Convert distances to meters and add in avg_grid_distance.
+def _add_avg_dist_op(tmp_dist, avg_grid_distance):
+    """Add in avg_grid_distance.
 
     Args:
-        tmp_dist (np.array): an array of distances
-        mean_pixel_size (float): the minimum absolute value of a pixel in
-            meters
-        avg_grid_distance (float): the average land cable distance in km
-            converted to meters
+        tmp_dist (numpy.array): an array of distances in meters
+        avg_grid_distance (float): the average land cable distance in meters
 
     Returns:
-        out_array (np.array): distance values in meters with average
+        out_array (numpy.array): distance values in meters with average
             grid to land distance factored in
 
     """
-    out_array = np.full(
-        tmp_dist.shape, _TARGET_NODATA, dtype=np.float32)
-    valid_pixels_mask = (tmp_dist != _TARGET_NODATA)
-    out_array[valid_pixels_mask] = tmp_dist[
-        valid_pixels_mask] * mean_pixel_size + avg_grid_distance
+    out_array = numpy.full(
+        tmp_dist.shape, _TARGET_NODATA, dtype=numpy.float32)
+    valid_pixels_mask = ~utils.array_equals_nodata(tmp_dist, _TARGET_NODATA)
+    out_array[valid_pixels_mask] = (
+        tmp_dist[valid_pixels_mask] + avg_grid_distance)
     return out_array
 
 
@@ -1581,14 +1578,15 @@ def _mask_out_depth_dist(*rasters):
             rasters[2] - the distance mask value (optional)
 
     Returns:
-        out_array (np.array): an array of either _TARGET_NODATA or density
+        out_array (numpy.array): an array of either _TARGET_NODATA or density
             values from rasters[0]
 
     """
-    out_array = np.full(rasters[0].shape, _TARGET_NODATA, dtype=np.float32)
-    nodata_mask = np.full(rasters[0].shape, False, dtype=bool)
+    out_array = numpy.full(rasters[0].shape, _TARGET_NODATA, dtype=numpy.float32)
+    nodata_mask = numpy.full(rasters[0].shape, False, dtype=bool)
     for array in rasters:
-        nodata_mask = nodata_mask | (array == _TARGET_NODATA)
+        nodata_mask = nodata_mask | utils.array_equals_nodata(
+                array, _TARGET_NODATA)
     out_array[~nodata_mask] = rasters[0][~nodata_mask]
     return out_array
 
@@ -1597,23 +1595,24 @@ def _calculate_carbon_op(harvested_arr, carbon_coef):
     """Calculate the carbon offset from harvested array.
 
     Args:
-        harvested_arr (np.array): an array of harvested energy values
+        harvested_arr (numpy.array): an array of harvested energy values
         carbon_coef (float): the amount of CO2 not released into the
                 atmosphere
 
     Returns:
-        out_array (np.array): an array of carbon offset values
+        out_array (numpy.array): an array of carbon offset values
 
     """
-    out_array = np.full(
-        harvested_arr.shape, _TARGET_NODATA, dtype=np.float32)
-    valid_pixels_mask = (harvested_arr != _TARGET_NODATA)
+    out_array = numpy.full(
+        harvested_arr.shape, _TARGET_NODATA, dtype=numpy.float32)
+    valid_pixels_mask = ~utils.array_equals_nodata(
+        harvested_arr, _TARGET_NODATA)
 
     # The energy value converted from MWhr/yr (Mega Watt hours as output
     # from CK's biophysical model equations) to kWhr for the
     # valuation model
     out_array[valid_pixels_mask] = (
-        harvested_arr[valid_pixels_mask] * carbon_coef * 1000.0)
+        harvested_arr[valid_pixels_mask] * carbon_coef * 1000)
     return out_array
 
 
@@ -1686,7 +1685,7 @@ def _calculate_land_to_grid_distance(
         shapely_land_point = shapely.wkt.loads(land_point_wkt)
         # Get the distance in meters and convert to km
         land_to_grid_dist = shapely_land_point.distance(
-            grid_point_collection) / 1000.0
+            grid_point_collection) / 1000
         # Add the distance value to the new field and set to the feature
         land_point_feat.SetField(dist_field_name, land_to_grid_dist)
         target_land_layer.SetFeature(land_point_feat)
@@ -1735,7 +1734,7 @@ def _mask_by_distance(base_raster_path, min_dist, max_dist, out_nodata,
     """Create a raster whose pixel values are bound by min and max distances.
 
     Args:
-        base_raster_path (str): path to a raster with distance values.
+        base_raster_path (str): path to a raster with euclidean distance values in meters
         min_dist (int): the minimum distance allowed in meters.
         max_dist (int): the maximum distance allowed in meters.
         target_raster_path (str): path output to the raster masked by distance
@@ -1747,17 +1746,16 @@ def _mask_by_distance(base_raster_path, min_dist, max_dist, out_nodata,
 
     """
     raster_info = pygeoprocessing.get_raster_info(base_raster_path)
-    mean_pixel_size, _ = utils.mean_pixel_size_and_area(
-        raster_info['pixel_size'])
     raster_nodata = raster_info['nodata'][0]
 
     def _dist_mask_op(dist_arr):
-        """Mask & multiply distance values by min/max values & cell size."""
-        out_array = np.full(dist_arr.shape, out_nodata, dtype=np.float32)
-        valid_pixels_mask = ((dist_arr != raster_nodata) &
-                             (dist_arr >= min_dist) & (dist_arr <= max_dist))
+        """Mask distance values by min/max values."""
+        out_array = numpy.full(dist_arr.shape, out_nodata, dtype=numpy.float32)
+        valid_pixels_mask = (
+            ~utils.array_equals_nodata(dist_arr, raster_nodata) &
+            (dist_arr >= min_dist) & (dist_arr <= max_dist))
         out_array[
-            valid_pixels_mask] = dist_arr[valid_pixels_mask] * mean_pixel_size
+            valid_pixels_mask] = dist_arr[valid_pixels_mask]
         return out_array
 
     pygeoprocessing.raster_calculator([(base_raster_path, 1)], _dist_mask_op,
@@ -1770,7 +1768,8 @@ def _create_distance_raster(base_raster_path, base_vector_path,
     """Create and rasterize vector onto a raster, and calculate dist transform.
 
     Create a raster where the pixel values represent the euclidean distance to
-    the vector.
+    the vector. The distance inherits units from ``base_raster_path`` pixel
+    dimensions.
 
     Args:
         base_raster_path (str): path to raster to create a new raster from.
@@ -1784,6 +1783,9 @@ def _create_distance_raster(base_raster_path, base_vector_path,
     """
     LOGGER.info("Starting _create_distance_raster")
     temp_dir = tempfile.mkdtemp(dir=work_dir, prefix='dist-raster-')
+
+    base_raster_info = pygeoprocessing.get_raster_info(base_raster_path)
+    pixel_xy_scale = tuple([abs(p) for p in base_raster_info['pixel_size']])
 
     rasterized_raster_path = os.path.join(temp_dir, 'rasterized_raster.tif')
 
@@ -1804,8 +1806,9 @@ def _create_distance_raster(base_raster_path, base_vector_path,
         option_list=["ALL_TOUCHED=TRUE"])
 
     # Calculate euclidean distance transform
-    pygeoprocessing.distance_transform_edt((rasterized_raster_path, 1),
-                                           target_dist_raster_path)
+    pygeoprocessing.distance_transform_edt(
+        (rasterized_raster_path, 1), target_dist_raster_path,
+        sampling_distance=pixel_xy_scale)
 
     # Set the nodata value of output raster to _TARGET_NODATA
     target_dist_raster = gdal.OpenEx(
@@ -1985,7 +1988,7 @@ def _compute_density_harvested_fields(
 
         # Convert harvested energy from Whr/yr to MWhr/yr by dividing by
         # 1,000,000
-        harvested_wind_energy = harvested_wind_energy / 1000000.00
+        harvested_wind_energy = harvested_wind_energy / 1000000
 
         # Now factor in the percent losses due to turbine
         # downtime (mechanical failure, storm damage, etc.)
@@ -2147,7 +2150,7 @@ def _get_suitable_projection_params(
         target_pixel_size = _convert_degree_pixel_size_to_square_meters(
             base_raster_info['pixel_size'], centroid_y)
 
-        utm_code = (math.floor((centroid_x + 180.0) / 6) % 60) + 1
+        utm_code = (math.floor((centroid_x + 180) / 6) % 60) + 1
         lat_code = 6 if centroid_y > 0 else 7
         epsg_code = int('32%d%02d' % (lat_code, utm_code))
         target_srs = osr.SpatialReference()
@@ -2174,7 +2177,7 @@ def _get_suitable_projection_params(
             'intersection')
 
         # Get the minimum square pixel size
-        min_pixel_size = np.min(np.absolute(base_raster_info['pixel_size']))
+        min_pixel_size = numpy.min(numpy.absolute(base_raster_info['pixel_size']))
         target_pixel_size = (min_pixel_size, -min_pixel_size)
 
     with open(target_pickle_path, 'wb') as pickle_file:
@@ -2250,8 +2253,8 @@ def _convert_degree_pixel_size_to_square_meters(pixel_size, center_lat):
     x_meter_size = longlen * pixel_size[0]
     y_meter_size = latlen * pixel_size[1]
     meter_pixel_size_tuple = (x_meter_size, y_meter_size)
-    if not np.isclose(x_meter_size, y_meter_size):
-        min_meter_size = np.min(np.absolute(meter_pixel_size_tuple))
+    if not numpy.isclose(x_meter_size, y_meter_size):
+        min_meter_size = numpy.min(numpy.absolute(meter_pixel_size_tuple))
         meter_pixel_size_tuple = (min_meter_size, -min_meter_size)
 
     return meter_pixel_size_tuple
@@ -2533,11 +2536,6 @@ def _calculate_distances_land_grid(base_point_vector_path, base_raster_path,
     # A list to hold the individual distance transform path's in order
     land_point_dist_raster_path_list = []
 
-    # Get the mean pixel size to calculate minimum distance from land to grid
-    pixel_size = pygeoprocessing.get_raster_info(base_raster_path)[
-        'pixel_size']
-    mean_pixel_size, _ = utils.mean_pixel_size_and_area(pixel_size)
-
     # Get the original layer definition which holds needed attribute values
     base_layer_defn = base_point_layer.GetLayerDefn()
     file_ext, driver_name = _get_file_ext_and_driver_name(
@@ -2596,7 +2594,7 @@ def _calculate_distances_land_grid(base_point_vector_path, base_raster_path,
     target_vector = None
     base_point_layer = None
     base_point_vector = None
-    l2g_dist_array = np.array(l2g_dist)
+    l2g_dist_array = numpy.array(l2g_dist)
 
     def _min_land_ocean_dist(*grid_distances):
         """Aggregate each features distance transform output and create one
@@ -2612,9 +2610,9 @@ def _calculate_distances_land_grid(base_point_vector_path, base_raster_path,
         """
         # Get the shape of the incoming numpy arrays
         # Initialize with land to grid distances from the first array
-        min_distances = np.min(grid_distances, axis=0)
-        min_land_grid_dist = l2g_dist_array[np.argmin(grid_distances, axis=0)]
-        return min_distances * mean_pixel_size + min_land_grid_dist
+        min_distances = numpy.min(grid_distances, axis=0)
+        min_land_grid_dist = l2g_dist_array[numpy.argmin(grid_distances, axis=0)]
+        return min_distances + min_land_grid_dist
 
     pygeoprocessing.raster_calculator(
         [(path, 1)
@@ -2624,65 +2622,6 @@ def _calculate_distances_land_grid(base_point_vector_path, base_raster_path,
     shutil.rmtree(temp_dir, ignore_errors=True)
 
     LOGGER.info('Finished _calculate_distances_land_grid.')
-
-
-def _calculate_grid_dist_on_raster(grid_vector_path, harvested_masked_path,
-                                   final_dist_raster_path, work_dir):
-    """Creates a distance transform raster from an OGR shapefile.
-
-    The function first burns the features from 'grid_vector_path' onto a raster
-    using 'harvested_masked_path' as the base for that raster. It then does a
-    distance transform from those locations and converts from pixel distances
-    to distance in meters.
-
-    Args:
-        grid_vector_path (str) a path to an OGR shapefile that has the
-            desired features to get the distance from.
-        harvested_masked_path (str): a path to a GDAL raster that is used to
-            get the proper extents and configuration for new rasters.
-        final_dist_raster_path (str) a path to a GDAL raster for the final
-            distance transform raster output.
-        work_dir (str): path to create a temp folder for saving files.
-
-    Returns:
-        None
-
-    """
-    LOGGER.info('Starting _calculate_grid_dist_on_raster.')
-    temp_dir = tempfile.mkdtemp(dir=work_dir, prefix='calc-grid-dist-')
-
-    raster_info = pygeoprocessing.get_raster_info(harvested_masked_path)
-    # Get nodata value to use in raster creation and masking
-    out_nodata = raster_info['nodata'][0]
-    # Get pixel size from biophysical output
-    mean_pixel_size, _ = utils.mean_pixel_size_and_area(
-        raster_info['pixel_size'])
-
-    grid_poly_dist_raster_path = os.path.join(temp_dir, 'grid_poly_dist.tif')
-
-    _create_distance_raster(harvested_masked_path, grid_vector_path,
-                            grid_poly_dist_raster_path, work_dir)
-
-    def _dist_meters_op(tmp_dist):
-        """Multiply the pixel value of a raster by the mean pixel size.
-
-        Args:
-            tmp_dist (np.array): an nd numpy array
-
-        Returns:
-            out_array (np.array): an array multiplied by a pixel size
-        """
-        out_array = np.full(tmp_dist.shape, out_nodata, dtype=np.float32)
-        valid_pixels_mask = (tmp_dist != out_nodata)
-        out_array[
-            valid_pixels_mask] = tmp_dist[valid_pixels_mask] * mean_pixel_size
-        return out_array
-
-    pygeoprocessing.raster_calculator([(grid_poly_dist_raster_path, 1)],
-                                      _dist_meters_op, final_dist_raster_path,
-                                      _TARGET_DATA_TYPE, out_nodata)
-
-    shutil.rmtree(temp_dir, ignore_errors=True)
 
 
 @validation.invest_validator

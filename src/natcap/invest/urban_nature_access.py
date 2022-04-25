@@ -8,11 +8,11 @@ import numpy
 import numpy.testing
 import pygeoprocessing
 import taskgraph
+from natcap.invest import MODEL_METADATA
 from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
 
-from natcap.invest import MODEL_METADATA
 from . import spec_utils
 from . import utils
 from . import validation
@@ -25,7 +25,7 @@ BYTE_NODATA = 255
 ARGS_SPEC = {
     'model_name': MODEL_METADATA['urban_nature_access'].model_title,
     'pyname': MODEL_METADATA['urban_nature_access'].pyname,
-    'userguide_html': MODEL_METADATA['urban_nature_access'].userguide,
+    'userguide': MODEL_METADATA['urban_nature_access'].userguide,
     'args_with_spatial_overlap': {
         'spatial_keys': [
             'lulc_raster_path', 'population_raster_path',
@@ -110,12 +110,12 @@ ARGS_SPEC = {
             'name': 'decay function',
             'type': 'option_string',
             'required': False,
-            'options': [
-                'dichotomy',
-                'exponential',
-                'gaussian',
-                'density',
-            ],
+            'options': {
+                'dichotomy': {"description": _("dichotomy")},
+                'exponential': {"description": _("exponential")},
+                'gaussian': {"description": _("gaussian")},
+                'density': {"description": _("density")},
+            },
             'about': '',  # TODO
         }
     }

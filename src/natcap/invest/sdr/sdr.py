@@ -7,27 +7,31 @@ The SDR method in this model is based on:
     large watersheds." Journal of Soil and Water Conservation 63.3 (2008):
     105-111.
 """
-import os
 import logging
+import os
 
-from osgeo import gdal, ogr
 import numpy
 import pygeoprocessing
 import pygeoprocessing.routing
 import taskgraph
-from .. import utils
-from .. import spec_utils
-from ..spec_utils import u
-from .. import validation
+from osgeo import gdal
+from osgeo import ogr
+
 from .. import MODEL_METADATA
+from .. import spec_utils
+from .. import utils
+from .. import validation
+from ..spec_utils import u
 from . import sdr_core
 
 LOGGER = logging.getLogger(__name__)
 
+INVALID_ID_MSG = _('{number} features have a non-integer ws_id field')
+
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["sdr"].model_title,
     "pyname": MODEL_METADATA["sdr"].pyname,
-    "userguide_html": MODEL_METADATA["sdr"].userguide,
+    "userguide": MODEL_METADATA["sdr"].userguide,
     "args_with_spatial_overlap": {
         "spatial_keys": ["dem_path", "erosivity_path", "erodibility_path",
                          "lulc_path", "drainage_path", "watersheds_path", ],
@@ -47,10 +51,10 @@ ARGS_SPEC = {
                 "type": "number",
                 "units": u.megajoule*u.millimeter/(u.hectare*u.hour*u.year)}},
             "projected": True,
-            "about": (
+            "about": _(
                 "Map of rainfall erosivity, reflecting the intensity and "
                 "duration of rainfall in the area of interest."),
-            "name": "erosivity"
+            "name": _("erosivity")
         },
         "erodibility_path": {
             "type": "raster",
@@ -58,16 +62,16 @@ ARGS_SPEC = {
                 "type": "number",
                 "units": u.metric_ton*u.hectare*u.hour/(u.hectare*u.megajoule*u.millimeter)}},
             "projected": True,
-            "about": (
+            "about": _(
                 "Map of soil erodibility, the susceptibility of soil "
                 "particles to detachment and transport by rainfall and "
                 "runoff."),
-            "name": "soil erodibility"
+            "name": _("soil erodibility")
         },
         "lulc_path": {
             **spec_utils.LULC,
             "projected": True,
-            "about": (
+            "about": _(
                 f"{spec_utils.LULC['about']} All values in this raster must "
                 "have corresponding entries in the Biophysical Table.")
         },
@@ -76,73 +80,71 @@ ARGS_SPEC = {
             "fields": {
                 "ws_id": {
                     "type": "integer",
-                    "about": "Unique identifier for the watershed."}
+                    "about": _("Unique identifier for the watershed.")}
             },
             "geometries": spec_utils.POLYGONS,
             "projected": True,
-            "about": (
+            "about": _(
                 "Map of the boundaries of the watershed(s) over which to "
                 "aggregate results. Each watershed should contribute to a "
                 "point of interest where water quality will be analyzed."),
-            "name": "Watersheds"
+            "name": _("Watersheds")
         },
         "biophysical_table_path": {
             "type": "csv",
             "columns": {
                 "lucode": {
                     "type": "integer",
-                    "about": "LULC code from the LULC raster."},
+                    "about": _("LULC code from the LULC raster.")},
                 "usle_c": {
                     "type": "ratio",
-                    "about": "Cover-management factor for the USLE"},
+                    "about": _("Cover-management factor for the USLE")},
                 "usle_p": {
                     "type": "ratio",
-                    "about": "Support practice factor for the USLE"}
+                    "about": _("Support practice factor for the USLE")}
             },
-            "about": (
+            "about": _(
                 "A table mapping each LULC code to biophysical properties of "
                 "that LULC class. All values in the LULC raster must have "
                 "corresponding entries in this table."),
-            "name": "Biophysical Table"
+            "name": _("biophysical table")
         },
-        "threshold_flow_accumulation": {
-            **spec_utils.THRESHOLD_FLOW_ACCUMULATION
-        },
+        "threshold_flow_accumulation": spec_utils.THRESHOLD_FLOW_ACCUMULATION,
         "k_param": {
             "type": "number",
             "units": u.none,
-            "about": "Borselli k parameter.",
-            "name": "Borselli k parameter"
+            "about": _("Borselli k parameter."),
+            "name": _("Borselli k parameter")
         },
         "sdr_max": {
             "type": "ratio",
-            "about": "The maximum SDR value that a pixel can have.",
-            "name": "maximum SDR value"
+            "about": _("The maximum SDR value that a pixel can have."),
+            "name": _("maximum SDR value")
         },
         "ic_0_param": {
             "type": "number",
             "units": u.none,
-            "about": "Borselli IC0 parameter.",
-            "name": "Borselli IC0 parameter"
+            "about": _("Borselli IC0 parameter."),
+            "name": _("Borselli IC0 parameter")
         },
         "l_max": {
             "type": "number",
             "expression": "value > 0",
             "units": u.none,
-            "about": (
+            "about": _(
                 "The maximum allowed value of the slope length parameter (L) "
                 "in the LS factor."),
-            "name": "maximum l value",
+            "name": _("maximum l value"),
         },
         "drainage_path": {
             "type": "raster",
             "bands": {1: {"type": "number", "units": u.none}},
             "required": False,
-            "about": (
+            "about": _(
                 "Map of locations of artificial drainages that drain to the "
                 "watershed. Pixels with 1 are drainages and are treated like "
                 "streams. Pixels with 0 are not drainages."),
-            "name": "drainages"
+            "name": _("drainages")
         }
     }
 }
@@ -187,7 +189,8 @@ _INTERMEDIATE_BASE_FILES = {
     'w_path': 'w.tif',
     'ws_inverse_path': 'ws_inverse.tif',
     'e_prime_path': 'e_prime.tif',
-    'weighted_avg_aspect_path': 'weighted_avg_aspect.tif'
+    'weighted_avg_aspect_path': 'weighted_avg_aspect.tif',
+    'drainage_mask': 'what_drains_to_stream.tif',
 }
 
 _TMP_BASE_FILES = {
@@ -201,6 +204,7 @@ _TMP_BASE_FILES = {
 # Target nodata is for general rasters that are positive, and _IC_NODATA are
 # for rasters that are any range
 _TARGET_NODATA = -1.0
+_BYTE_NODATA = 255
 _IC_NODATA = float(numpy.finfo('float32').min)
 
 
@@ -225,7 +229,7 @@ def execute(args):
         args['biophysical_table_path'] (string): path to CSV file with
             biophysical information of each land use classes.  contain the
             fields 'usle_c' and 'usle_p'
-        args['threshold_flow_accumulation'] (number): number of upstream pixels
+        args['threshold_flow_accumulation'] (number): number of upslope pixels
             on the dem to threshold to a stream.
         args['k_param'] (number): k calibration parameter
         args['sdr_max'] (number): max value the SDR
@@ -556,7 +560,7 @@ def execute(args):
             f_reg['f_path'], f_reg['sdr_path'],
             f_reg['sed_deposition_path']),
         dependent_task_list=[e_prime_task, sdr_task, flow_dir_task],
-        target_path_list=[f_reg['sed_deposition_path']],
+        target_path_list=[f_reg['sed_deposition_path'], f_reg['f_path']],
         task_name='sediment deposition')
 
     _ = task_graph.add_task(
@@ -629,6 +633,14 @@ def execute(args):
         task_name='calculate sediment retention')
 
     _ = task_graph.add_task(
+        func=_calculate_what_drains_to_stream,
+        args=(f_reg['flow_direction_path'], f_reg['d_dn_path'],
+              f_reg['drainage_mask']),
+        target_path_list=[f_reg['drainage_mask']],
+        dependent_task_list=[flow_dir_task, d_dn_task],
+        task_name='write mask of what drains to stream')
+
+    _ = task_graph.add_task(
         func=_generate_report,
         args=(
             args['watersheds_path'], f_reg['usle_path'],
@@ -641,6 +653,73 @@ def execute(args):
 
     task_graph.close()
     task_graph.join()
+
+
+def _calculate_what_drains_to_stream(
+        flow_dir_mfd_path, dist_to_channel_mfd_path, target_mask_path):
+    """Create a mask indicating regions that do or do not drain to a stream.
+
+    This is useful because ``pygeoprocessing.distance_to_stream_mfd`` may leave
+    some unexpected regions as nodata if they do not drain to a stream.  This
+    may be confusing behavior, so this mask is intended to locate what drains
+    to a stream and what does not. A pixel doesn't drain to a stream if it has
+    a defined flow direction but undefined distance to stream.
+
+    Args:
+        flow_dir_mfd_path (string): The path to an MFD flow direction raster.
+            This raster must have a nodata value defined.
+        dist_to_channel_mfd_path (string): The path to an MFD
+            distance-to-channel raster.  This raster must have a nodata value
+            defined.
+        target_mask_path (string): The path to where the mask raster should be
+            written.
+
+    Returns:
+        ``None``
+    """
+    flow_dir_mfd_nodata = pygeoprocessing.get_raster_info(
+        flow_dir_mfd_path)['nodata'][0]
+    dist_to_channel_nodata = pygeoprocessing.get_raster_info(
+        dist_to_channel_mfd_path)['nodata'][0]
+
+    def _what_drains_to_stream(flow_dir_mfd, dist_to_channel):
+        """Determine which pixels do and do not drain to a stream.
+
+        Args:
+            flow_dir_mfd (numpy.array): A numpy array of MFD flow direction
+                values.
+            dist_to_channel (numpy.array): A numpy array of calculated
+                distances to the nearest channel.
+
+        Returns:
+            A ``numpy.array`` of dtype ``numpy.uint8`` with pixels where:
+
+                * ``255`` where ``flow_dir_mfd`` is nodata (and thus
+                  ``dist_to_channel`` is also nodata).
+                * ``0`` where ``flow_dir_mfd`` has data and ``dist_to_channel``
+                  does not
+                * ``1`` where ``flow_dir_mfd`` has data, and
+                  ``dist_to_channel`` also has data.
+        """
+        drains_to_stream = numpy.full(
+            flow_dir_mfd.shape, _BYTE_NODATA, dtype=numpy.uint8)
+        valid_flow_dir = ~utils.array_equals_nodata(
+            flow_dir_mfd, flow_dir_mfd_nodata)
+        valid_dist_to_channel = (
+            ~utils.array_equals_nodata(
+                dist_to_channel, dist_to_channel_nodata) &
+            valid_flow_dir)
+
+        # Nodata where both flow_dir and dist_to_channel are nodata
+        # 1 where flow_dir and dist_to_channel have values (drains to stream)
+        # 0 where flow_dir has data and dist_to_channel doesn't (doesn't drain)
+        drains_to_stream[valid_flow_dir & valid_dist_to_channel] = 1
+        drains_to_stream[valid_flow_dir & ~valid_dist_to_channel] = 0
+        return drains_to_stream
+
+    pygeoprocessing.raster_calculator(
+        [(flow_dir_mfd_path, 1), (dist_to_channel_mfd_path, 1)],
+        _what_drains_to_stream, target_mask_path, gdal.GDT_Byte, _BYTE_NODATA)
 
 
 def _calculate_ls_factor(
@@ -657,7 +736,7 @@ def _calculate_ls_factor(
 
     Args:
         flow_accumulation_path (string): path to raster, pixel values are the
-            contributing upstream area at that cell. Pixel size is square.
+            contributing upslope area at that cell. Pixel size is square.
         slope_path (string): path to slope raster as a percent
         avg_aspect_path (string): The path to to raster of the weighted average
             of aspects based on proportional flow.
@@ -686,7 +765,7 @@ def _calculate_ls_factor(
 
         Args:
             percent_slope (numpy.ndarray): slope in percent
-            flow_accumulation (numpy.ndarray): upstream pixels
+            flow_accumulation (numpy.ndarray): upslope pixels
             avg_aspect (numpy.ndarray): the weighted average aspect from MFD
             l_max (float): max L factor, clamp to this value if L exceeds it
 
@@ -697,9 +776,10 @@ def _calculate_ls_factor(
         # avg aspect intermediate output should always have a defined
         # nodata value from pygeoprocessing
         valid_mask = (
-            (~numpy.isclose(avg_aspect, avg_aspect_nodata)) &
-            (percent_slope != slope_nodata) &
-            (flow_accumulation != flow_accumulation_nodata))
+            (~utils.array_equals_nodata(avg_aspect, avg_aspect_nodata)) &
+            ~utils.array_equals_nodata(percent_slope, slope_nodata) &
+            ~utils.array_equals_nodata(
+                flow_accumulation, flow_accumulation_nodata))
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         result[:] = _TARGET_NODATA
 
@@ -802,11 +882,14 @@ def _calculate_rkls(
         """
         rkls = numpy.empty(ls_factor.shape, dtype=numpy.float32)
         nodata_mask = (
-            (ls_factor != _TARGET_NODATA) & (stream != stream_nodata))
+            ~utils.array_equals_nodata(ls_factor, _TARGET_NODATA) &
+            ~utils.array_equals_nodata(stream, stream_nodata))
         if erosivity_nodata is not None:
-            nodata_mask &= ~numpy.isclose(erosivity, erosivity_nodata)
+            nodata_mask &= ~utils.array_equals_nodata(
+                erosivity, erosivity_nodata)
         if erodibility_nodata is not None:
-            nodata_mask &= ~numpy.isclose(erodibility, erodibility_nodata)
+            nodata_mask &= ~utils.array_equals_nodata(
+                erodibility, erodibility_nodata)
 
         valid_mask = nodata_mask & (stream == 0)
         rkls[:] = _TARGET_NODATA
@@ -848,7 +931,7 @@ def _threshold_slope(slope_path, out_thresholded_slope_path):
 
         As desribed in Cavalli et al., 2013.
         """
-        valid_slope = slope != slope_nodata
+        valid_slope = ~utils.array_equals_nodata(slope, slope_nodata)
         slope_m = slope[valid_slope] / 100.0
         slope_m[slope_m < 0.005] = 0.005
         slope_m[slope_m > 1.0] = 1.0
@@ -927,7 +1010,7 @@ def _calculate_w(
     def threshold_w(w_val):
         """Threshold w to 0.001."""
         w_val_copy = w_val.copy()
-        nodata_mask = w_val == _TARGET_NODATA
+        nodata_mask = utils.array_equals_nodata(w_val, _TARGET_NODATA)
         w_val_copy[w_val < 0.001] = 0.001
         w_val_copy[nodata_mask] = _TARGET_NODATA
         return w_val_copy
@@ -977,7 +1060,9 @@ def _calculate_usle(
         """Calculate USLE."""
         result = numpy.empty(rkls.shape, dtype=numpy.float32)
         result[:] = _TARGET_NODATA
-        valid_mask = (rkls != _TARGET_NODATA) & (cp_factor != _TARGET_NODATA)
+        valid_mask = (
+            ~utils.array_equals_nodata(rkls, _TARGET_NODATA) &
+            ~utils.array_equals_nodata(cp_factor, _TARGET_NODATA))
         result[valid_mask] = rkls[valid_mask] * cp_factor[valid_mask] * (
             1 - drainage[valid_mask])
         return result
@@ -1029,8 +1114,9 @@ def _calculate_bar_factor(
         # flow accumulation intermediate output should always have a defined
         # nodata value from pygeoprocessing
         valid_mask = ~(
-            numpy.isclose(base_accumulation, _TARGET_NODATA) |
-            numpy.isclose(flow_accumulation, flow_accumulation_nodata))
+            utils.array_equals_nodata(base_accumulation, _TARGET_NODATA) |
+            utils.array_equals_nodata(
+                flow_accumulation, flow_accumulation_nodata))
         result[:] = _TARGET_NODATA
         result[valid_mask] = (
             base_accumulation[valid_mask] / flow_accumulation[valid_mask])
@@ -1051,12 +1137,14 @@ def _calculate_d_up(
     def d_up_op(w_bar, s_bar, flow_accumulation):
         """Calculate the d_up index.
 
-        w_bar * s_bar * sqrt(upstream area)
+        w_bar * s_bar * sqrt(upslope area)
 
         """
         valid_mask = (
-            (w_bar != _TARGET_NODATA) & (s_bar != _TARGET_NODATA) &
-            (flow_accumulation != flow_accumulation_nodata))
+            ~utils.array_equals_nodata(w_bar, _TARGET_NODATA) &
+            ~utils.array_equals_nodata(s_bar, _TARGET_NODATA) &
+            ~utils.array_equals_nodata(
+                flow_accumulation, flow_accumulation_nodata))
         d_up_array = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         d_up_array[:] = _TARGET_NODATA
         d_up_array[valid_mask] = (
@@ -1081,12 +1169,13 @@ def _calculate_d_up_bare(
     def d_up_op(s_bar, flow_accumulation):
         """Calculate the bare d_up index.
 
-        s_bar * sqrt(upstream area)
+        s_bar * sqrt(upslope area)
 
         """
         valid_mask = (
-            (flow_accumulation != flow_accumulation_nodata) &
-            (s_bar != _TARGET_NODATA))
+            ~utils.array_equals_nodata(
+                flow_accumulation, flow_accumulation_nodata) &
+            ~utils.array_equals_nodata(s_bar, _TARGET_NODATA))
         d_up_array = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         d_up_array[:] = _TARGET_NODATA
         d_up_array[valid_mask] = (
@@ -1108,7 +1197,9 @@ def _calculate_inverse_ws_factor(
 
     def ws_op(w_factor, s_factor):
         """Calculate the inverse ws factor."""
-        valid_mask = (w_factor != _TARGET_NODATA) & (s_factor != slope_nodata)
+        valid_mask = (
+            ~utils.array_equals_nodata(w_factor, _TARGET_NODATA) &
+            ~utils.array_equals_nodata(s_factor, slope_nodata))
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         result[:] = _TARGET_NODATA
         result[valid_mask] = (
@@ -1128,7 +1219,7 @@ def _calculate_inverse_s_factor(
 
     def s_op(s_factor):
         """Calculate the inverse s factor."""
-        valid_mask = (s_factor != slope_nodata)
+        valid_mask = ~utils.array_equals_nodata(s_factor, slope_nodata)
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         result[:] = _TARGET_NODATA
         result[valid_mask] = 1.0 / s_factor[valid_mask]
@@ -1147,7 +1238,8 @@ def _calculate_ic(d_up_path, d_dn_path, out_ic_factor_path):
     def ic_op(d_up, d_dn):
         """Calculate IC factor."""
         valid_mask = (
-            (d_up != _TARGET_NODATA) & (d_dn != d_dn_nodata) & (d_dn != 0) &
+            ~utils.array_equals_nodata(d_up, _TARGET_NODATA) &
+            ~utils.array_equals_nodata(d_dn, d_dn_nodata) & (d_dn != 0) &
             (d_up != 0))
         ic_array = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         ic_array[:] = _IC_NODATA
@@ -1166,7 +1258,7 @@ def _calculate_sdr(
     def sdr_op(ic_factor, stream):
         """Calculate SDR factor."""
         valid_mask = (
-            (ic_factor != _IC_NODATA) & (stream != 1))
+            ~utils.array_equals_nodata(ic_factor, _IC_NODATA) & (stream != 1))
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         result[:] = _TARGET_NODATA
         result[valid_mask] = (
@@ -1183,7 +1275,9 @@ def _calculate_sed_export(usle_path, sdr_path, target_sed_export_path):
     """Calculate USLE * SDR."""
     def sed_export_op(usle, sdr):
         """Sediment export."""
-        valid_mask = (usle != _TARGET_NODATA) & (sdr != _TARGET_NODATA)
+        valid_mask = (
+            ~utils.array_equals_nodata(usle, _TARGET_NODATA) &
+            ~utils.array_equals_nodata(sdr, _TARGET_NODATA))
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         result[:] = _TARGET_NODATA
         result[valid_mask] = usle[valid_mask] * sdr[valid_mask]
@@ -1198,7 +1292,9 @@ def _calculate_e_prime(usle_path, sdr_path, target_e_prime):
     """Calculate USLE * (1-SDR)."""
     def e_prime_op(usle, sdr):
         """Wash that does not reach stream."""
-        valid_mask = (usle != _TARGET_NODATA) & (sdr != _TARGET_NODATA)
+        valid_mask = (
+            ~utils.array_equals_nodata(usle, _TARGET_NODATA) &
+            ~utils.array_equals_nodata(sdr, _TARGET_NODATA))
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         result[:] = _TARGET_NODATA
         result[valid_mask] = usle[valid_mask] * (1-sdr[valid_mask])
@@ -1216,8 +1312,9 @@ def _calculate_sed_retention_index(
     def sediment_index_op(rkls, usle, sdr_factor):
         """Calculate sediment retention index."""
         valid_mask = (
-            (rkls != _TARGET_NODATA) & (usle != _TARGET_NODATA) &
-            (sdr_factor != _TARGET_NODATA))
+            ~utils.array_equals_nodata(rkls, _TARGET_NODATA) &
+            ~utils.array_equals_nodata(usle, _TARGET_NODATA) &
+            ~utils.array_equals_nodata(sdr_factor, _TARGET_NODATA))
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         result[:] = _TARGET_NODATA
         result[valid_mask] = (
@@ -1262,11 +1359,11 @@ def _calculate_sed_retention(
             rkls, usle, stream_factor, sdr_factor, sdr_factor_bare_soil):
         """Subtract bare soil export from real landcover."""
         valid_mask = (
-            (rkls != _TARGET_NODATA) &
-            (usle != _TARGET_NODATA) &
-            (stream_factor != stream_nodata) &
-            (sdr_factor != _TARGET_NODATA) &
-            (sdr_factor_bare_soil != _TARGET_NODATA))
+            ~utils.array_equals_nodata(rkls, _TARGET_NODATA) &
+            ~utils.array_equals_nodata(usle, _TARGET_NODATA) &
+            ~utils.array_equals_nodata(stream_factor, stream_nodata) &
+            ~utils.array_equals_nodata(sdr_factor, _TARGET_NODATA) &
+            ~utils.array_equals_nodata(sdr_factor_bare_soil, _TARGET_NODATA))
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         result[:] = _TARGET_NODATA
         result[valid_mask] = (
@@ -1359,15 +1456,14 @@ def validate(args, limit_to=None):
         n_invalid_features = 0
         for feature in layer:
             try:
-                _ = int(feature.GetFieldAsString('ws_id'))
+                int(feature.GetFieldAsString('ws_id'))
             except ValueError:
                 n_invalid_features += 1
 
         if n_invalid_features:
             validation_warnings.append((
                 ['watersheds_path'],
-                ('%s features have a non-integer ws_id field' %
-                    n_invalid_features)))
+                INVALID_ID_MSG.format(number=n_invalid_features)))
             invalid_keys.add('watersheds_path')
 
     return validation_warnings

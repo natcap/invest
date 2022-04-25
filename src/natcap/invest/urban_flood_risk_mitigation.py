@@ -24,7 +24,7 @@ LOGGER = logging.getLogger(__name__)
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["urban_flood_risk_mitigation"].model_title,
     "pyname": MODEL_METADATA["urban_flood_risk_mitigation"].pyname,
-    "userguide_html": MODEL_METADATA["urban_flood_risk_mitigation"].userguide,
+    "userguide": MODEL_METADATA["urban_flood_risk_mitigation"].userguide,
     "args_with_spatial_overlap": {
         "spatial_keys": ["aoi_watersheds_path", "lulc_path",
                          "built_infrastructure_vector_path",
@@ -40,13 +40,13 @@ ARGS_SPEC = {
             "expression": "value > 0",
             "type": "number",
             "units": u.millimeter,
-            "about": "Depth of rainfall for the design storm of interest.",
-            "name": "rainfall depth"
+            "about": _("Depth of rainfall for the design storm of interest."),
+            "name": _("rainfall depth")
         },
         "lulc_path": {
             **spec_utils.LULC,
             "projected": True,
-            "about": (
+            "about": _(
                 "Map of LULC. All values in this raster must have "
                 "corresponding entries in the Biophysical Table.")
         },
@@ -59,55 +59,55 @@ ARGS_SPEC = {
             "columns": {
                 "lucode": {
                     "type": "integer",
-                    "about": "LULC codes matching those in the LULC map."},
+                    "about": _("LULC codes matching those in the LULC map.")},
                 "cn_[SOIL_GROUP]": {
                     "type": "number",
                     "units": u.none,
-                    "about": (
+                    "about": _(
                         "The curve number value for this LULC type in each "
                         "hydrologic soil group. Replace [SOIL_GROUP] with the "
                         "soil group codes A, B, C, D, so that there is a "
                         "column for each soil group.")
                 }
             },
-            "about": (
+            "about": _(
                 "Table of curve number data for each LULC class. All LULC "
                 "codes in the LULC raster must have corresponding entries in "
                 "this table."),
-            "name": "biophysical table"
+            "name": _("biophysical table")
         },
         "built_infrastructure_vector_path": {
             "type": "vector",
             "fields": {
                 "type": {
                     "type": "integer",
-                    "about": (
+                    "about": _(
                         "Code indicating the building type. These codes "
                         "must match those in the Damage Loss Table."
                     )}},
             "geometries": spec_utils.POLYGONS,
             "required": False,
-            "about": "Map of building footprints.",
-            "name": "built infrastructure"
+            "about": _("Map of building footprints."),
+            "name": _("built infrastructure")
         },
         "infrastructure_damage_loss_table_path": {
             "type": "csv",
             "columns": {
                 "type": {
                     "type": "integer",
-                    "about": "Building type code."},
+                    "about": _("Building type code.")},
                 "damage": {
                     "type": "number",
                     "units": u.currency/(u.meter**2),
-                    "about": "Potential damage loss for this building type."}
+                    "about": _("Potential damage loss for this building type.")}
             },
             "required": "built_infrastructure_vector_path",
-            "about": (
+            "about": _(
                 "Table of potential damage loss data for each building type. "
                 "All values in the Built Infrastructure vector 'type' field "
                 "must have corresponding entries in this table. Required if "
                 "the Built Infrastructure vector is provided."),
-            "name": "damage loss table"
+            "name": _("damage loss table")
         }
     }
 }
@@ -633,7 +633,7 @@ def _flood_vol_op(
     """
     result = numpy.empty(q_pi_array.shape, dtype=numpy.float32)
     result[:] = target_nodata
-    valid_mask = q_pi_array != q_pi_nodata
+    valid_mask = ~utils.array_equals_nodata(q_pi_array, q_pi_nodata)
     # 0.001 converts mm (quickflow) to m (pixel area units)
     result[valid_mask] = (
         q_pi_array[valid_mask] * pixel_area * 0.001)
@@ -658,7 +658,8 @@ def _runoff_retention_vol_op(
     """
     result = numpy.empty(runoff_retention_array.shape, dtype=numpy.float32)
     result[:] = target_nodata
-    valid_mask = runoff_retention_array != runoff_retention_nodata
+    valid_mask = ~utils.array_equals_nodata(
+        runoff_retention_array, runoff_retention_nodata)
     # the 1e-3 converts the mm of p_value to meters.
     result[valid_mask] = (
         runoff_retention_array[valid_mask] * p_value * cell_area * 1e-3)
@@ -683,7 +684,7 @@ def _runoff_retention_op(q_pi_array, p_value, q_pi_nodata, result_nodata):
     result[:] = result_nodata
     valid_mask = numpy.ones(q_pi_array.shape, dtype=bool)
     if q_pi_nodata is not None:
-        valid_mask[:] = ~numpy.isclose(q_pi_array, q_pi_nodata)
+        valid_mask[:] = ~utils.array_equals_nodata(q_pi_array, q_pi_nodata)
     result[valid_mask] = 1.0 - (q_pi_array[valid_mask] / p_value)
     return result
 
@@ -708,7 +709,8 @@ def _q_pi_op(p_value, s_max_array, s_max_nodata, result_nodata):
     zero_mask = (p_value <= lam * s_max_array)
     non_nodata_mask = numpy.ones(s_max_array.shape, dtype=bool)
     if s_max_nodata is not None:
-        non_nodata_mask[:] = ~numpy.isclose(s_max_array, s_max_nodata)
+        non_nodata_mask[:] = ~utils.array_equals_nodata(
+            s_max_array, s_max_nodata)
 
     # valid if not nodata and not going to be set to 0.
     valid_mask = non_nodata_mask & ~zero_mask
@@ -737,7 +739,7 @@ def _s_max_op(cn_array, cn_nodata, result_nodata):
     zero_mask = cn_array == 0
     valid_mask = ~zero_mask
     if cn_nodata is not None:
-        valid_mask[:] &= ~numpy.isclose(cn_array, cn_nodata)
+        valid_mask[:] &= ~utils.array_equals_nodata(cn_array, cn_nodata)
     result[valid_mask] = 25400.0 / cn_array[valid_mask] - 254.0
     result[zero_mask] = 0.0
     return result
@@ -765,9 +767,11 @@ def _lu_to_cn_op(
     result[:] = cn_nodata
     valid_mask = numpy.ones(lucode_array.shape, dtype=bool)
     if lucode_nodata is not None:
-        valid_mask[:] &= ~numpy.isclose(lucode_array, lucode_nodata)
+        valid_mask[:] &= ~utils.array_equals_nodata(
+            lucode_array, lucode_nodata)
     if soil_type_nodata is not None:
-        valid_mask[:] &= ~numpy.isclose(soil_type_array, soil_type_nodata)
+        valid_mask[:] &= ~utils.array_equals_nodata(
+            soil_type_array, soil_type_nodata)
 
     # this is an array where each column represents a valid landcover
     # pixel and the rows are the curve number index for the landcover

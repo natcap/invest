@@ -24,10 +24,14 @@ from .spec_utils import u
 
 LOGGER = logging.getLogger(__name__)
 
+MISSING_CONVERT_OPTION_MSG = _(
+    'One or more of "convert_nearest_to_edge" or "convert_farthest_from_edge" '
+    'must be selected')
+
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["scenario_generator_proximity"].model_title,
     "pyname": MODEL_METADATA["scenario_generator_proximity"].pyname,
-    "userguide_html": MODEL_METADATA["scenario_generator_proximity"].userguide,
+    "userguide": MODEL_METADATA["scenario_generator_proximity"].userguide,
     "args": {
         "workspace_dir": spec_utils.WORKSPACE,
         "results_suffix": spec_utils.SUFFIX,
@@ -35,43 +39,43 @@ ARGS_SPEC = {
         "base_lulc_path": {
             **spec_utils.LULC,
             "projected": True,
-            "about": "Base map from which to generate scenarios.",
-            "name": "base LULC map"
+            "about": _("Base map from which to generate scenarios."),
+            "name": _("base LULC map")
         },
-        "replacment_lucode": {
+        "replacement_lucode": {
             "type": "integer",
-            "about": "The LULC code to which habitat will be converted.",
-            "name": "replacement landcover code"
+            "about": _("The LULC code to which habitat will be converted."),
+            "name": _("replacement landcover code")
         },
         "area_to_convert": {
             "expression": "value > 0",
             "type": "number",
             "units": u.hectare,
-            "about": "Maximum area to be converted to agriculture.",
-            "name": "maximum area to convert"
+            "about": _("Maximum area to be converted to agriculture."),
+            "name": _("maximum area to convert")
         },
         "focal_landcover_codes": {
             "type": "freestyle_string",
             "regexp": "[0-9 ]+",
-            "about": (
+            "about": _(
                 "A space-separated list of LULC codes that are used to "
                 "determine the proximity when referring to 'towards' or "
                 "'away' from the base landcover codes"),
-            "name": "focal landcover codes"
+            "name": _("focal landcover codes")
         },
         "convertible_landcover_codes": {
             "type": "freestyle_string",
             "regexp": "[0-9 ]+",
-            "about": (
+            "about": _(
                 "A space-separated list of LULC codes that can be "
                 "converted to be converted to agriculture."),
-            "name": "convertible landcover codes"
+            "name": _("convertible landcover codes")
         },
         "n_fragmentation_steps": {
             "expression": "value > 0",
             "type": "number",
             "units": u.none,
-            "about": (
+            "about": _(
                 "The number of steps that the simulation should take to "
                 "fragment the habitat of interest in the fragmentation "
                 "scenario. This parameter is used to divide the conversion "
@@ -79,30 +83,30 @@ ARGS_SPEC = {
                 "During each sub-step the distance transform is recalculated "
                 "from the base landcover codes.  This can affect the final "
                 "result if the base types are also convertible types."),
-            "name": "number of conversion steps"
+            "name": _("number of conversion steps")
         },
         "aoi_path": {
             **spec_utils.AOI,
             "required": False,
-            "about": (
+            "about": _(
                 "Area over which to run the conversion. Provide this input if "
                 "change is only desired in a subregion of the Base LULC map."),
         },
         "convert_farthest_from_edge": {
             "type": "boolean",
-            "about": (
+            "about": _(
                 "Convert the 'convertible' landcover codes starting at the "
                 "furthest pixel from the 'focal' land cover areas "
                 "and working inwards."),
-            "name": "convert farthest from edge"
+            "name": _("convert farthest from edge")
         },
         "convert_nearest_to_edge": {
             "type": "boolean",
-            "about": (
+            "about": _(
                 "Convert the 'convertible' landcover codes starting at the "
                 "nearest pixels to the 'focal' land cover areas "
                 "and working outwards."),
-            "name": "convert nearest to edge"
+            "name": _("convert nearest to edge")
         }
     }
 }
@@ -129,7 +133,7 @@ def execute(args):
         args['results_suffix'] (string): (optional) string to append to any
             output files
         args['base_lulc_path'] (string): path to the base landcover map
-        args['replacment_lucode'] (string or int): code to replace when
+        args['replacement_lucode'] (string or int): code to replace when
             converting pixels
         args['area_to_convert'] (string or float): max area (Ha) to convert
         args['focal_landcover_codes'] (string): a space separated string of
@@ -188,7 +192,7 @@ def execute(args):
     task_graph = taskgraph.TaskGraph(work_token_dir, n_workers)
 
     area_to_convert = float(args['area_to_convert'])
-    replacement_lucode = int(args['replacment_lucode'])
+    replacement_lucode = int(args['replacement_lucode'])
 
     # convert all the input strings to lists of ints
     convertible_type_list = numpy.array([
@@ -418,7 +422,7 @@ def _convert_landscape(
                 if invert_mask:
                     base_mask = ~base_mask
                 return numpy.where(
-                    lulc_array == lulc_nodata,
+                    utils.array_equals_nodata(lulc_array, lulc_nodata),
                     mask_nodata, base_mask)
             pygeoprocessing.raster_calculator(
                 [(output_landscape_raster_path, 1)], _mask_base_op,
@@ -825,7 +829,6 @@ def validate(args, limit_to=None):
                 not args['convert_farthest_from_edge']):
             validation_warnings.append((
                 ['convert_nearest_to_edge', 'convert_farthest_from_edge'],
-                ('One or more of "convert_nearest_to_edge" or '
-                 '"convert_farthest_from_edge" must be selected')))
+                MISSING_CONVERT_OPTION_MSG))
 
     return validation_warnings

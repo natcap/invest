@@ -1,22 +1,23 @@
 # coding=utf-8
-import unittest
+import contextlib
 import functools
-import warnings
-import threading
+import importlib
+import json
 import logging
 import logging.handlers
-import contextlib
-import sys
 import os
 import queue
-import requests
-import time
-import tempfile
 import shutil
+import sys
+import tempfile
 import textwrap
-import importlib
+import threading
+import time
+import unittest
 import uuid
-import json
+import warnings
+
+import requests
 
 if sys.version_info >= (3,):
     # Need to force PySide2 import in python3.  It's the only set of bindings I
@@ -32,15 +33,20 @@ except ImportError:
     import PySide2
 
 import faulthandler
+
 faulthandler.enable()
 import qtpy
+import six
 from qtpy import QtCore
 from qtpy import QtGui
 from qtpy import QtWidgets
 from qtpy.QtTest import QTest
-import six
 
 LOGGER = logging.getLogger(__name__)
+_TEST_FILE_CWD = os.path.dirname(os.path.abspath(__file__))
+# Allow our tests to import the test modules in the test directory.
+sys.path.append(os.path.join(_TEST_FILE_CWD, '..', 'tests'))
+
 
 @contextlib.contextmanager
 def wait_on_signal(qt_app, signal, timeout=250):
@@ -1283,7 +1289,8 @@ class FolderButtonTest(_QtTest):
 
 class FileDialogTest(_SettingsSandbox):
     def test_save_file_title_and_last_selection(self):
-        from natcap.invest.ui.inputs import FileDialog, INVEST_SETTINGS
+        from natcap.invest.ui.inputs import FileDialog
+        from natcap.invest.ui.inputs import INVEST_SETTINGS
         dialog = FileDialog()
         dialog.file_dialog.getSaveFileName = mock.Mock(
             spec=dialog.file_dialog.getSaveFileName,
@@ -1315,7 +1322,8 @@ class FileDialogTest(_SettingsSandbox):
         self.assertEqual(out_file, os.path.join('/new', 'file'))
 
     def test_open_file_qt5(self):
-        from natcap.invest.ui.inputs import FileDialog, INVEST_SETTINGS
+        from natcap.invest.ui.inputs import FileDialog
+        from natcap.invest.ui.inputs import INVEST_SETTINGS
         dialog = FileDialog()
 
         # patch up the Qt method to get the path to the file to open
@@ -1340,7 +1348,8 @@ class FileDialogTest(_SettingsSandbox):
         self.assertEqual(INVEST_SETTINGS.value('last_dir', ''), '/new')
 
     def test_open_file_qt4(self):
-        from natcap.invest.ui.inputs import FileDialog, INVEST_SETTINGS
+        from natcap.invest.ui.inputs import FileDialog
+        from natcap.invest.ui.inputs import INVEST_SETTINGS
         dialog = FileDialog()
 
         # patch up the Qt method to get the path to the file to open
@@ -1365,7 +1374,8 @@ class FileDialogTest(_SettingsSandbox):
         self.assertEqual(INVEST_SETTINGS.value('last_dir', ''), '/new')
 
     def test_open_folder(self):
-        from natcap.invest.ui.inputs import FileDialog, INVEST_SETTINGS
+        from natcap.invest.ui.inputs import FileDialog
+        from natcap.invest.ui.inputs import INVEST_SETTINGS
         dialog = FileDialog()
 
         # patch up the Qt method to get the path to the file to open
@@ -1804,8 +1814,8 @@ class IntegrationTests(_QtTest):
 class OptionsDialogTest(_QtTest):
     def test_postprocess_not_implemented_coverage(self):
         """UI OptionsDialog: Coverage for postprocess method."""
-        from natcap.invest.ui import model
         from natcap.invest.ui import inputs
+        from natcap.invest.ui import model
 
         options_dialog = model.OptionsDialog()
         options_dialog.open()
@@ -1841,8 +1851,8 @@ class SettingsDialogTest(_SettingsSandbox):
 
     def test_cache_dir_setting_set_correctly(self):
         """UI SettingsDialog: check settings values when input changed."""
-        from natcap.invest.ui import model
         from natcap.invest.ui import inputs
+        from natcap.invest.ui import model
 
         settings_dialog = model.SettingsDialog()
         settings_dialog.show()
@@ -1987,8 +1997,8 @@ class DatastackOptionsDialogTests(_QtTest):
 
     def test_dialog_return_value(self):
         """UI Datastack Options: Verify return value of dialog."""
-        from natcap.invest.ui import model
         from natcap.invest.ui import inputs
+        from natcap.invest.ui import model
 
         options_dialog = model.DatastackOptionsDialog(
             paramset_basename='test_model')
@@ -2027,8 +2037,8 @@ class DatastackOptionsDialogTests(_QtTest):
 
     def test_dialog_cancelled(self):
         """UI Datastack Options: Verify return value when dialog cancelled."""
-        from natcap.invest.ui import model
         from natcap.invest.ui import inputs
+        from natcap.invest.ui import model
 
         options_dialog = model.DatastackOptionsDialog(
             paramset_basename='test_model')
@@ -2059,8 +2069,8 @@ class ModelTests(_QtTest):
 
     @staticmethod
     def build_model(validate_func=None, target_func=None):
-        from natcap.invest.ui import model
         from natcap.invest import validation
+        from natcap.invest.ui import model
 
         if target_func is None:
             def _target(args):
@@ -2409,8 +2419,9 @@ class ModelTests(_QtTest):
 
     def test_execute_error_with_n_workers(self):
         """UI Model: Check that model fails with n_workers parameter."""
-        from natcap.invest.ui import inputs, model
         from natcap.invest import validation
+        from natcap.invest.ui import inputs
+        from natcap.invest.ui import model
 
         n_workers_setting = inputs.INVEST_SETTINGS.value(
             'taskgraph/n_workers', 1)
@@ -3192,8 +3203,8 @@ class ModelTests(_QtTest):
 
     def test_reject_on_modelname_mismatch(self):
         """UI Model: confirm when datastack modelname != model modelname."""
-        from natcap.invest.ui import model
         from natcap.invest import datastack
+        from natcap.invest.ui import model
 
         filepath = os.path.join(self.workspace, 'paramset.json')
         args = {'foo': 'foo', 'bar': 'bar'}
@@ -3282,8 +3293,8 @@ class IsProbablyDatastackTests(unittest.TestCase):
 
     def test_parameter_set(self):
         """Model UI datastack: a parameter set should be a datastack."""
-        from natcap.invest.ui import model
         from natcap.invest import datastack
+        from natcap.invest.ui import model
 
         filepath = os.path.join(self.workspace, 'paramset.json')
         args = {'foo': 'foo', 'bar': 'bar'}
@@ -3293,12 +3304,13 @@ class IsProbablyDatastackTests(unittest.TestCase):
 
     def test_parameter_archive(self):
         """Model UI datastack: a parameter archive should be a datastack."""
-        from natcap.invest.ui import model
         from natcap.invest import datastack
+        from natcap.invest.ui import model
 
         filepath = os.path.join(self.workspace, 'paramset.tar.gz')
         args = {'foo': 'foo', 'bar': 'bar'}
-        datastack.build_datastack_archive(args, 'test_model', filepath)
+        datastack.build_datastack_archive(
+            args, 'test_datastack_modules.ui_parameter_archive', filepath)
 
         self.assertTrue(model.is_probably_datastack(filepath))
 

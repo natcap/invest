@@ -3,12 +3,7 @@
 
 import sys
 import argparse
-import pkg_resources
 
-import requests
-
-
-FEEDSTOCK_URL = 'https://github.com/conda-forge/{package}-feedstock'
 YML_TEMPLATE = """channels:
 - conda-forge
 - defaults
@@ -16,11 +11,6 @@ dependencies:
 {conda_dependencies}
 {pip_dependencies}
 """
-
-SCM_MAP = {
-    'hg': 'mercurial',
-    'git': 'git',
-}
 
 
 def build_environment_from_requirements(cli_args):
@@ -45,7 +35,7 @@ def build_environment_from_requirements(cli_args):
         ``None``
     """
     parser = argparse.ArgumentParser(description=(
-        'Convert a ser of pip requirements.txt files into an environment '
+        'Convert a set of pip requirements.txt files into an environment '
         'file for use by `conda create`.'
     ), prog=__file__)
 
@@ -55,38 +45,27 @@ def build_environment_from_requirements(cli_args):
     args = parser.parse_args(cli_args)
     requirements_files = args.req
 
-    pip_requirements = set([])
+    pip_requirements = set()
     # conda likes it when you list pip if you're using pip.
     conda_requirements = set(['pip'])
     for requirement_file in requirements_files:
-        for line in open(requirement_file):
-            line = line.strip()
+        with open(requirement_file) as file:
+            for line in file:
+                line = line.strip()
 
-            # Blank line or comment
-            if len(line) == 0 or line.startswith('#'):
-                continue
+                # Blank line or comment
+                if len(line) == 0 or line.startswith('#'):
+                    continue
 
-            # Checked out from scm
-            if line.startswith(tuple(SCM_MAP.keys())):
-                pip_requirements.add(line)
-                conda_requirements.add(SCM_MAP[line.split('+')[0]])
-                continue
+                if line.endswith('# pip-only'):
+                    pip_requirements.add(line)
+                else:
+                    conda_requirements.add(line)
 
-            requirement = pkg_resources.Requirement.parse(line)
-            conda_forge_url = FEEDSTOCK_URL.format(
-                package=requirement.project_name.lower())
-            if (requests.get(conda_forge_url).status_code == 200 and not
-                    line.endswith('# pip-only')):
-                conda_requirements.add(line)
-            else:
-                pip_requirements.add(line)
-
-    conda_deps_string = '\n'.join(['- %s' % dep for dep in
-                                   sorted(conda_requirements,
-                                          key=lambda x: x.lower())])
-    pip_deps_string = '- pip:\n' + '\n'.join(['  - %s' % dep for dep in
-                                              sorted(pip_requirements,
-                                                     key=lambda x: x.lower())])
+    conda_deps_string = '\n'.join(
+        [f'- {dep}' for dep in sorted(conda_requirements, key=str.casefold)])
+    pip_deps_string = '- pip:\n' + '\n'.join(
+        ['  - %s' % dep for dep in sorted(pip_requirements, key=str.casefold)])
     print(YML_TEMPLATE.format(
         conda_dependencies=conda_deps_string,
         pip_dependencies=pip_deps_string))

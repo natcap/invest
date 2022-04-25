@@ -27,8 +27,6 @@ kwargs = {
         'natcap.invest',
         'natcap.invest.ui.launcher',
         'yaml',
-        'distutils',
-        'distutils.dist',
         'rtree',  # mac builds aren't picking up rtree by default.
         'pkg_resources.py2_warn',
         'cmath',
