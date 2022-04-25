@@ -45,7 +45,7 @@ function renderInvestTab(job = DEFAULT_JOB) {
     <InvestTab
       job={job}
       tabID={tabID}
-      investSettings={{ nWorkers: '-1', loggingLevel: 'INFO' }}
+      investSettings={{ nWorkers: '-1', loggingLevel: 'INFO', taskgraphLoggingLevel: 'ERROR' }}
       saveJob={() => {}}
       updateJobProperties={() => {}}
     />

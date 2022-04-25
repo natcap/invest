@@ -3,6 +3,7 @@ import re
 import unittest
 
 import pint
+from natcap.invest import cli
 from natcap.invest import MODEL_METADATA
 
 valid_nested_types = {
@@ -101,6 +102,7 @@ class ValidateArgsSpecs(unittest.TestCase):
             attrs = set(arg.keys())
             for t in types:
                 self.assertIn(t, valid_nested_types[parent_type])
+
                 if t == 'option_string':
                     # option_string type should have an options property that
                     # describes the valid options
