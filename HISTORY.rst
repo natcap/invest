@@ -45,6 +45,9 @@ Unreleased Changes
     * Rename the arg ``calculate_downstream_distance`` to
       ``calculate_downslope_distance``. This is meant to clarify that it
       applies to pixels that are not part of a stream.
+* Crop Production
+    * Fixed a bug in both crop production models where the model would error if
+      an observed yield raster had no nodata value.
 * SDR
     * Fixed an issue with SDR where ``f.tif`` might not be recalculated if the
       file is modified or deleted after execution.
