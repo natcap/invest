@@ -388,19 +388,14 @@ def check_freestyle_string(value, regexp=None, **kwargs):
 
     Args:
         value: The value to check.  Must be able to be cast to a string.
-        regexp=None (dict): A dict representing validation parameters for a
-            regular expression.  ``regexp['pattern']`` is required, and its
-            value must be a string regular expression.
-            ``regexp['case_sensitive']`` may also be provided and is expected
-            to be a boolean value.  If ``True`` or truthy, the regular
-            expression will ignore case.
+        regexp=None (string): a string interpreted as a regular expression.
 
     Returns:
         A string error message if an error was found.  ``None`` otherwise.
 
     """
     if regexp:
-        matches = re.findall(regexp, str(value), re.IGNORECASE)
+        matches = re.fullmatch(regexp, str(value))
         if not matches:
             return MESSAGES['REGEXP_MISMATCH'].format(regexp=regexp)
     return None
