@@ -75,6 +75,10 @@ export default function setupDownloadHandlers(mainWindow) {
         );
       } else {
         logger.info(`download failed: ${state}`);
+        mainWindow.webContents.send(
+          'download-status',
+          ['failed', 'failed'] // ProgressBar expects array length 2
+        );
       }
       if (!downloadQueue.length) {
         logger.info('all downloads complete');
