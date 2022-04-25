@@ -823,7 +823,7 @@ def tabulate_regression_results(
 
                 # make a valid mask showing which pixels are not nodata
                 # if nodata value undefined, assume all pixels are valid
-                valid_mask = slice(None)
+                valid_mask = numpy.full(yield_block.shape, True)
                 if observed_yield_nodata is not None:
                     valid_mask = ~utils.array_equals_nodata(
                         yield_block, observed_yield_nodata)
