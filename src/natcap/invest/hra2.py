@@ -21,7 +21,6 @@ from . import MODEL_METADATA
 from . import spec_utils
 from . import utils
 from . import validation
-from .ndr import ndr
 from .spec_utils import u
 
 LOGGER = logging.getLogger(__name__)
@@ -363,7 +362,8 @@ def execute(args):
         gis_type = pygeoprocessing.get_gis_type(source_filepath)
         aligned_raster_path = os.path.join(
             intermediate_dir, f'aligned_{name}{suffix}.tif')
-        user_files_to_aligned_raster_paths[source_filepath] = aligned_raster_path
+        user_files_to_aligned_raster_paths[
+            source_filepath] = aligned_raster_path
 
         # If the input is already a raster, run it through raster_calculator to
         # ensure we know the nodata value and pixel values.
@@ -762,7 +762,8 @@ def execute(args):
             except ValueError:
                 # When attrs['rating'] is not a number, we should assume it's a
                 # spatial file.
-                attrs['rating'] = user_files_to_aligned_raster_paths[attrs['rating']]
+                attrs['rating'] = user_files_to_aligned_raster_paths[
+                    attrs['rating']]
             criteria_attributes_list.append(attrs)
 
         recovery_score_path = os.path.join(
@@ -913,17 +914,7 @@ def execute(args):
     graph.close()
     graph.join()
 
-    # TODO: check the task graph - AST most likely
-    # TODO: tables - support excel and also CSV.
-    # TODO: docstrings
-    # TODO: contructed tests.
-    # TODO: function to build a datastack archive.
     # TODO: proposed plan for migrating relevant functions to pygeoprocessing.
-
-    # import sys
-    # sys.path.insert(0, os.getcwd())
-    # import make_graph
-    # make_graph.doit(graph)
 
 
 def _create_mask_for_polygonization(source_raster_path, target_raster_path):
@@ -953,7 +944,8 @@ def _create_mask_for_polygonization(source_raster_path, target_raster_path):
 
         Returns:
             out_array (numpy.array): An unsigned byte mask with pixel values of
-            0 (on nodata pixels) or 1 (on non-nodata pixels)."""
+            0 (on nodata pixels) or 1 (on non-nodata pixels).
+        """
         return (raster_values != nodata).astype(numpy.uint8)
 
     pygeoprocessing.raster_calculator(
@@ -974,7 +966,8 @@ def _convert_to_binary_mask(source_raster_path, target_raster_path,
 
         Returns:
             out_array (numpy.array): An unsigned byte mask with pixel values of
-            0 (on nodata pixels) or 1 (on non-nodata pixels)."""
+            0 (on nodata pixels) or 1 (on non-nodata pixels).
+        """
         return (raster_values != nodata).astype(numpy.uint8)
 
     pygeoprocessing.raster_calculator(
@@ -2224,7 +2217,8 @@ def _sum_rasters(raster_path_list, target_nodata, target_result_path,
             result[non_nodata_pixels] += array[non_nodata_pixels]
 
         if normalize:
-            result[pixels_have_valid_values] /= valid_pixel_count[pixels_have_valid_values]
+            result[pixels_have_valid_values] /= valid_pixel_count[
+                pixels_have_valid_values]
         result[~pixels_have_valid_values] = target_nodata
         return result
 
