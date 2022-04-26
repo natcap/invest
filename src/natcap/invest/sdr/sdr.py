@@ -241,19 +241,14 @@ def execute(args):
             processes should be used in parallel processing. -1 indicates
             single process mode, 0 is single process but non-blocking mode,
             and >= 1 is number of processes.
-        args['biophysical_table_lucode_field'] (str): optional, if exists
-            use this instead of 'lucode'.
 
     Returns:
         None.
 
     """
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
-    lufield_id = 'lucode'
-    if 'biophysical_table_lucode_field' in args:
-        lufield_id = args['biophysical_table_lucode_field']
     biophysical_table = utils.build_lookup_from_csv(
-        args['biophysical_table_path'], lufield_id)
+        args['biophysical_table_path'], 'lucode')
 
     # Test to see if c or p values are outside of 0..1
     for table_key in ['usle_c', 'usle_p']:
