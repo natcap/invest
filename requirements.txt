@@ -12,7 +12,7 @@
 # scripts/convert-requirements-to-conda-yml.py as though it can only be found
 # on pip.
 
-GDAL>=3.1.2,!=3.3.0  # 3.3.0 had a bug that broke our windows builds: https://github.com/OSGeo/gdal/issues/3898
+GDAL>=3.1.2,!=3.3.0,<3.4.1  # https://github.com/OSGeo/gdal/issues/3898 https://github.com/natcap/invest/issues/905
 Pyro4==4.77  # pip-only
 pandas>=1.2.1
 numpy>=1.11.0,!=1.16.0

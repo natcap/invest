@@ -37,10 +37,13 @@ Unreleased Changes
 * General
     * Updating the ``pyinstaller`` requirement to ``>=4.10`` to support the new
       ``universal2`` wheel architecture offered by ``scipy>=1.8.0``.
-* RouteDEM
-    * Rename the arg ``calculate_downstream_distance`` to
-      ``calculate_downslope_distance``. This is meant to clarify that it
-      applies to pixels that are not part of a stream.
+    * Expose taskgraph logging level for the cli with
+      ``--taskgraph-log-level``.
+    * Fixed bug in validation of ``results_suffix`` so that special characters
+      like path separators, etc, are not allowed.
+* Crop Production
+    * Fixed a bug in both crop production models where the model would error if
+      an observed yield raster had no nodata value.
 * HRA
     * Fixed an issue with risk calculations where risk values would be much
       lower than they should be.  Risk values are now correctly calculated.
@@ -54,9 +57,15 @@ Unreleased Changes
       also include spatial criteria in the archive.
     * Various improvements to the model have resulted in a modest (~33%)
       speedup in runtime.
+* RouteDEM
+    * Rename the arg ``calculate_downstream_distance`` to
+      ``calculate_downslope_distance``. This is meant to clarify that it
+      applies to pixels that are not part of a stream.
 * SDR
     * Fixed an issue with SDR where ``f.tif`` might not be recalculated if the
       file is modified or deleted after execution.
+    * Added basic type-checking for the ``lucode`` column of the biophysical
+      table. This avoids cryptic numpy errors later in runtime.
 
 3.10.2 (2022-02-08)
 -------------------

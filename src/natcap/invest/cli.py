@@ -246,6 +246,13 @@ def main(user_args=None):
         action='store_const', const=logging.DEBUG,
         help='Enable debug logging. Alias for -vvv')
 
+    parser.add_argument(
+        '--taskgraph-log-level', dest='taskgraph_log_level', default='ERROR',
+        type=str, choices=['DEBUG', 'INFO', 'WARNING', 'ERROR'],
+        help=('Set the logging level for Taskgraph. Affects how much logging '
+              'Taskgraph prints to the console and (if running in headless '
+              'mode) how much is written to the logfile.'))
+
     # list the language code and corresponding language name (in that language)
     supported_languages_string = ', '.join([
         f'{locale} ({display_name})'
@@ -353,6 +360,11 @@ def main(user_args=None):
     handler.setLevel(max(log_level, logging.DEBUG))  # don't go below DEBUG
     root_logger.addHandler(handler)
     LOGGER.info('Setting handler log level to %s', log_level)
+
+    # Set the log level for taskgraph.
+    taskgraph_log_level = logging.getLevelName(args.taskgraph_log_level.upper())
+    logging.getLogger('taskgraph').setLevel(taskgraph_log_level)
+    LOGGER.debug('Setting taskgraph log level to %s', taskgraph_log_level)
 
     # FYI: Root logger by default has a level of logging.WARNING.
     # To capture ALL logging produced in this system at runtime, use this:

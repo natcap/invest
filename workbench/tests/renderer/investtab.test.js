@@ -18,6 +18,7 @@ import {
 } from '../../src/renderer/server_requests';
 import InvestJob from '../../src/renderer/InvestJob';
 import setupDialogs from '../../src/main/setupDialogs';
+import setupOpenExternalUrl from '../../src/main/setupOpenExternalUrl';
 import { removeIpcMainListeners } from '../../src/main/main';
 
 // It's quite a pain to dynamically mock a const from a module,
@@ -45,7 +46,7 @@ function renderInvestTab(job = DEFAULT_JOB) {
     <InvestTab
       job={job}
       tabID={tabID}
-      investSettings={{ nWorkers: '-1', loggingLevel: 'INFO' }}
+      investSettings={{ nWorkers: '-1', loggingLevel: 'INFO', taskgraphLoggingLevel: 'ERROR' }}
       saveJob={() => {}}
       updateJobProperties={() => {}}
     />
@@ -163,7 +164,7 @@ describe('Run status Alert renders with data from a recent run', () => {
   });
 });
 
-describe('Save InVEST Model Setup Buttons', () => {
+describe('Sidebar Buttons', () => {
   const spec = {
     pyname: 'natcap.invest.foo',
     model_name: 'Foo Model',
@@ -185,6 +186,11 @@ describe('Save InVEST Model Setup Buttons', () => {
     getSpec.mockResolvedValue(spec);
     fetchValidation.mockResolvedValue([]);
     uiConfig.UI_SPEC = mockUISpec(spec);
+    setupOpenExternalUrl();
+  });
+
+  afterEach(() => {
+    removeIpcMainListeners();
   });
 
   test('Save to JSON: requests endpoint with correct payload', async () => {
@@ -377,6 +383,24 @@ describe('Save InVEST Model Setup Buttons', () => {
     userEvent.unhover(loadButton);
     await waitFor(() => {
       expect(queryByRole('tooltip')).toBeNull();
+    });
+  });
+
+  test('User Guide link opens externally', async () => {
+    const { findByRole } = renderInvestTab();
+    const link = await findByRole('link', { name: /user's guide/i });
+    userEvent.click(link);
+    await waitFor(() => {
+      expect(shell.openExternal).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  test('Forum link opens externally', async () => {
+    const { findByRole } = renderInvestTab();
+    const link = await findByRole('link', { name: /frequently asked questions/i });
+    userEvent.click(link);
+    await waitFor(() => {
+      expect(shell.openExternal).toHaveBeenCalledTimes(1);
     });
   });
 });

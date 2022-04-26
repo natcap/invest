@@ -336,8 +336,11 @@ class SDRTests(unittest.TestCase):
         args['biophysical_table_path'] = os.path.join(
             REGRESSION_DATA, 'biophysical_table_too_large.csv')
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ValueError) as context:
             sdr.execute(args)
+        self.assertIn(
+            f'A value in the biophysical table is not a number '
+            f'within range 0..1.', str(context.exception))
 
     def test_base_usle_p_nan(self):
         """SDR test expected exception for USLE_P not a number."""
@@ -349,8 +352,33 @@ class SDRTests(unittest.TestCase):
         args['biophysical_table_path'] = os.path.join(
             REGRESSION_DATA, 'biophysical_table_invalid_value.csv')
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ValueError) as context:
             sdr.execute(args)
+        self.assertIn(
+            f'A value in the biophysical table is not a number '
+            f'within range 0..1.', str(context.exception))
+
+    def test_lucode_not_a_number(self):
+        """SDR test expected exception for invalid data in lucode column."""
+        from natcap.invest.sdr import sdr
+
+        # use predefined directory so test can clean up files during teardown
+        args = SDRTests.generate_base_args(
+            self.workspace_dir)
+        args['biophysical_table_path'] = os.path.join(
+            self.workspace_dir, 'biophysical_table_invalid_lucode.csv')
+
+        invalid_value = 'forest'
+        with open(args['biophysical_table_path'], 'w') as file:
+            file.write(
+                f'desc,lucode,usle_p,usle_c\n'
+                f'0,{invalid_value},0.5,0.5\n')
+
+        with self.assertRaises(ValueError) as context:
+            sdr.execute(args)
+        self.assertIn(
+            f'Value "{invalid_value}" from the "lucode" column of the '
+            f'biophysical table is not a number.', str(context.exception))
 
     def test_missing_lulc_value(self):
         """SDR test for ValueError when LULC value not found in table."""
@@ -372,10 +400,9 @@ class SDRTests(unittest.TestCase):
 
         with self.assertRaises(ValueError) as context:
             sdr.execute(args)
-        self.assertTrue(
+        self.assertIn(
             "The missing values found in the LULC raster but not the table"
-            " are: [2.]" in str(context.exception),
-            f'error does not match {str(context.exception)}')
+            " are: [2.]", str(context.exception))
 
     def test_what_drains_to_stream(self):
         """SDR test for what pixels drain to a stream."""
