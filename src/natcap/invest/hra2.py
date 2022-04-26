@@ -727,7 +727,7 @@ def execute(args):
     # use max_pairwise_risk * n_habitats.
     reclassified_ecosystem_risk_path = os.path.join(
         output_dir, f'RECLASS_RISK_Ecosystem{suffix}.tif')
-    reclassified_ecosystem_risk_task = graph.add_task(
+    _ = graph.add_task(
         pygeoprocessing.raster_calculator,
         kwargs={
             'base_raster_path_band_const_list': [
@@ -768,7 +768,7 @@ def execute(args):
 
         recovery_score_path = os.path.join(
             intermediate_dir, f'RECOVERY_{habitat}{suffix}.tif')
-        recovery_score_task = graph.add_task(
+        _ = graph.add_task(
             _calc_criteria,
             kwargs={
                 'attributes_list': criteria_attributes_list,
@@ -820,7 +820,7 @@ def execute(args):
 
     summary_csv_path = os.path.join(
         output_dir, f'SUMMARY_STATISTICS{suffix}.csv')
-    summary_stats_csv_task = graph.add_task(
+    _ = graph.add_task(
         func=_create_summary_statistics_file,
         kwargs={
             'aoi_raster_json_path': aoi_subregions_json,
@@ -953,28 +953,6 @@ def _create_mask_for_polygonization(source_raster_path, target_raster_path):
         gdal.GDT_Byte, 0)
 
 
-def _convert_to_binary_mask(source_raster_path, target_raster_path,
-                            target_nodata):
-    nodata = pygeoprocessing.get_raster_info(source_raster_path)['nodata'][0]
-
-    def _rewrite(*raster_values):
-        """Convert any non-nodata values to 1, all other values to 0.
-
-        Args:
-            raster_values (numpy.array): Integer pixel values from the source
-                raster.
-
-        Returns:
-            out_array (numpy.array): An unsigned byte mask with pixel values of
-            0 (on nodata pixels) or 1 (on non-nodata pixels).
-        """
-        return (raster_values != nodata).astype(numpy.uint8)
-
-    pygeoprocessing.raster_calculator(
-        [(source_raster_path, 1)], _rewrite, target_raster_path,
-        gdal.GDT_Byte, target_nodata)
-
-
 def _polygonize(source_raster_path, mask_raster_path,
                 target_polygonized_vector, field_name):
     """Polygonize a raster.
@@ -1007,8 +985,6 @@ def _polygonize(source_raster_path, mask_raster_path,
     driver = gdal.GetDriverByName('GPKG')
     vector = driver.Create(
         target_polygonized_vector, 0, 0, 0, gdal.GDT_Unknown)
-    layer_name = os.path.splitext(
-        os.path.basename(target_polygonized_vector))[0]
     layer = vector.CreateLayer('', raster_srs, ogr.wkbPolygon)
 
     # Create an integer field that contains values from the raster
