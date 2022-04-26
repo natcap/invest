@@ -264,14 +264,13 @@ def execute(args):
                 float_value = float(table[table_key])
                 if float_value < 0 or float_value > 1:
                     raise ValueError(
-                        'Value should be within range 0..1 offending value '
-                        'table %s, lulc_code %s, value %s' % (
-                            table_key, str(lulc_code), str(float_value)))
+                        f'{float_value} is not within range 0..1')
             except ValueError:
                 raise ValueError(
-                    'Value is not a floating point value within range 0..1 '
-                    'offending value table %s, lulc_code %s, value %s' % (
-                        table_key, str(lulc_code), table[table_key]))
+                    f'A value in the biophysical table is not a number '
+                    f'within range 0..1. The offending value is in '
+                    f'column "{table_key}", lucode row "{lulc_code}", '
+                    f'and has value "{table[table_key]}"')
 
     intermediate_output_dir = os.path.join(
         args['workspace_dir'], INTERMEDIATE_DIR_NAME)
