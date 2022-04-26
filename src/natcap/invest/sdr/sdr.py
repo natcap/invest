@@ -241,35 +241,36 @@ def execute(args):
             processes should be used in parallel processing. -1 indicates
             single process mode, 0 is single process but non-blocking mode,
             and >= 1 is number of processes.
-        args['biophysical_table_lucode_field'] (str): optional, if exists
-            use this instead of 'lucode'.
 
     Returns:
         None.
 
     """
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
-    lufield_id = 'lucode'
-    if 'biophysical_table_lucode_field' in args:
-        lufield_id = args['biophysical_table_lucode_field']
     biophysical_table = utils.build_lookup_from_csv(
-        args['biophysical_table_path'], lufield_id)
+        args['biophysical_table_path'], 'lucode')
 
     # Test to see if c or p values are outside of 0..1
     for table_key in ['usle_c', 'usle_p']:
         for (lulc_code, table) in biophysical_table.items():
             try:
+                float(lulc_code)
+            except ValueError:
+                raise ValueError(
+                    f'Value "{lulc_code}" from the "lucode" column of the '
+                    f'biophysical table is not a number. Please check the '
+                    f'formatting of {args["biophysical_table_path"]}')
+            try:
                 float_value = float(table[table_key])
                 if float_value < 0 or float_value > 1:
                     raise ValueError(
-                        'Value should be within range 0..1 offending value '
-                        'table %s, lulc_code %s, value %s' % (
-                            table_key, str(lulc_code), str(float_value)))
+                        f'{float_value} is not within range 0..1')
             except ValueError:
                 raise ValueError(
-                    'Value is not a floating point value within range 0..1 '
-                    'offending value table %s, lulc_code %s, value %s' % (
-                        table_key, str(lulc_code), table[table_key]))
+                    f'A value in the biophysical table is not a number '
+                    f'within range 0..1. The offending value is in '
+                    f'column "{table_key}", lucode row "{lulc_code}", '
+                    f'and has value "{table[table_key]}"')
 
     intermediate_output_dir = os.path.join(
         args['workspace_dir'], INTERMEDIATE_DIR_NAME)

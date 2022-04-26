@@ -51,6 +51,8 @@ Unreleased Changes
 * SDR
     * Fixed an issue with SDR where ``f.tif`` might not be recalculated if the
       file is modified or deleted after execution.
+    * Added basic type-checking for the ``lucode`` column of the biophysical
+      table. This avoids cryptic numpy errors later in runtime.
 
 3.10.2 (2022-02-08)
 -------------------
