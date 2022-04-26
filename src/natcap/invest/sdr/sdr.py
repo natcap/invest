@@ -254,6 +254,13 @@ def execute(args):
     for table_key in ['usle_c', 'usle_p']:
         for (lulc_code, table) in biophysical_table.items():
             try:
+                float(lulc_code)
+            except ValueError:
+                raise ValueError(
+                    f'Value "{lulc_code}" from the "lucode" column of the '
+                    f'biophysical table is not a number. Please check the '
+                    f'formatting of {args["biophysical_table_path"]}')
+            try:
                 float_value = float(table[table_key])
                 if float_value < 0 or float_value > 1:
                     raise ValueError(
