@@ -53,8 +53,6 @@ Unreleased Changes
       stressors to use in risk reclassification calculations.  This input
       affects the numerical boundaries between high, medium and low risk
       classifications.
-    * HRA now has a function to build a functioning datastack archive that will
-      also include spatial criteria in the archive.
     * Various improvements to the model have resulted in a modest (~33%)
       speedup in runtime.
 * RouteDEM
