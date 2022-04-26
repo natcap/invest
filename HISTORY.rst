@@ -35,6 +35,9 @@
 Unreleased Changes
 ------------------
 * General
+    * Add support for python 3.10, and drop support for python 3.7.
+    * Fixed a bug where the model window would fail to open when using the
+      ``natcap.invest`` package with python 3.9.0 - 3.9.3.
     * Updating the ``pyinstaller`` requirement to ``>=4.10`` to support the new
       ``universal2`` wheel architecture offered by ``scipy>=1.8.0``.
     * Expose taskgraph logging level for the cli with
