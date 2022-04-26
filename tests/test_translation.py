@@ -49,7 +49,6 @@ class TranslationTests(unittest.TestCase):
     """Tests for translation."""
 
     def setUp(self):
-        print('start setup test')
         self.workspace_dir = tempfile.mkdtemp()
         test_locale_dir = os.path.join(self.workspace_dir, 'locales')
         mo_path = os.path.join(
@@ -67,15 +66,12 @@ class TranslationTests(unittest.TestCase):
         self.locales_patcher = patch('natcap.invest.LOCALES', [TEST_LANG, 'en'])
         self.locale_dir_patcher.start()
         self.locales_patcher.start()
-        print('end setup test')
 
     def tearDown(self):
-        print('start teardown test')
         reset_locale()  # reset after each test case
         self.locale_dir_patcher.stop()
         self.locales_patcher.stop()
         shutil.rmtree(self.workspace_dir)
-        print('end teardown test')
 
     def test_invest_list(self):
         """Translation: test that CLI list output is translated."""
@@ -151,7 +147,8 @@ class TranslationTests(unittest.TestCase):
         self.assertIn(TEST_MESSAGES[missing_key_msg], messages)
 
     def test_translate_formatted_string(self):
-        set_locale('ll')
+        """Translation: test that f-string can be translated."""
+        set_locale(TEST_LANG)
         importlib.reload(validation)
         importlib.reload(carbon)
         args = {'n_workers': 'not a number'}
