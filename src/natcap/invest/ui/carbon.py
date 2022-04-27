@@ -1,7 +1,8 @@
 # coding=UTF-8
 
 from natcap.invest.ui import model, inputs
-from natcap.invest import carbon, MODEL_METADATA
+from natcap.invest.model_metadata import MODEL_METADATA
+from natcap.invest import carbon
 
 
 class Carbon(model.InVESTModel):

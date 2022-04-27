@@ -4,7 +4,7 @@ import functools
 
 from natcap.invest.ui import model, inputs
 from natcap.invest.coastal_blue_carbon import coastal_blue_carbon, preprocessor
-from natcap.invest import MODEL_METADATA
+from natcap.invest.model_metadata import MODEL_METADATA
 
 
 def _create_input_kwargs_from_args_spec(

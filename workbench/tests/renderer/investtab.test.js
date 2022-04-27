@@ -1,3 +1,5 @@
+import crypto from 'crypto';
+
 import React from 'react';
 import { ipcRenderer, shell } from 'electron';
 import { render, waitFor } from '@testing-library/react';
@@ -16,11 +18,16 @@ import {
 } from '../../src/renderer/server_requests';
 import InvestJob from '../../src/renderer/InvestJob';
 import setupDialogs from '../../src/main/setupDialogs';
+import setupOpenExternalUrl from '../../src/main/setupOpenExternalUrl';
 import { removeIpcMainListeners } from '../../src/main/main';
 
-jest.mock('../../src/renderer/server_requests');
+// It's quite a pain to dynamically mock a const from a module,
+// here we do it by importing as another object, then
+// we can overwrite the object we want to mock later
+// https://stackoverflow.com/questions/42977961/how-to-mock-an-exported-const-in-jest
+import * as uiConfig from '../../src/renderer/ui_config';
 
-const UI_CONFIG_PATH = '../../src/renderer/ui_config';
+jest.mock('../../src/renderer/server_requests');
 
 const DEFAULT_JOB = new InvestJob({
   modelRunName: 'carbon',
@@ -34,11 +41,12 @@ function mockUISpec(spec) {
 }
 
 function renderInvestTab(job = DEFAULT_JOB) {
+  const tabID = crypto.randomBytes(4).toString('hex');
   const { ...utils } = render(
     <InvestTab
       job={job}
-      jobID="carbon456asdf"
-      investSettings={{ nWorkers: '-1', loggingLevel: 'INFO' }}
+      tabID={tabID}
+      investSettings={{ nWorkers: '-1', loggingLevel: 'INFO', taskgraphLoggingLevel: 'ERROR' }}
       saveJob={() => {}}
       updateJobProperties={() => {}}
     />
@@ -46,10 +54,18 @@ function renderInvestTab(job = DEFAULT_JOB) {
   return utils;
 }
 
+// Because we mock UI_SPEC without using jest's API
+// we alse need to a reset it without jest's API.
+const { UI_SPEC } = uiConfig;
+afterEach(() => {
+  uiConfig.UI_SPEC = UI_SPEC;
+});
+
 describe('Run status Alert renders with data from a recent run', () => {
   const spec = {
     pyname: 'natcap.invest.foo',
     model_name: 'Foo Model',
+    userguide: 'foo.html',
     args: {
       workspace: {
         name: 'Workspace',
@@ -62,8 +78,7 @@ describe('Run status Alert renders with data from a recent run', () => {
   beforeEach(() => {
     getSpec.mockResolvedValue(spec);
     fetchValidation.mockResolvedValue([]);
-    const mockSpec = spec; // jest.mock not allowed to ref out-of-scope var
-    jest.mock(UI_CONFIG_PATH, () => mockUISpec(mockSpec));
+    uiConfig.UI_SPEC = mockUISpec(spec);
     setupDialogs();
   });
 
@@ -149,10 +164,11 @@ describe('Run status Alert renders with data from a recent run', () => {
   });
 });
 
-describe('Save InVEST Model Setup Buttons', () => {
+describe('Sidebar Buttons', () => {
   const spec = {
     pyname: 'natcap.invest.foo',
     model_name: 'Foo Model',
+    userguide: 'foo.html',
     args: {
       workspace: {
         name: 'Workspace',
@@ -169,8 +185,12 @@ describe('Save InVEST Model Setup Buttons', () => {
   beforeEach(async () => {
     getSpec.mockResolvedValue(spec);
     fetchValidation.mockResolvedValue([]);
-    const mockSpec = spec;
-    jest.mock(UI_CONFIG_PATH, () => mockUISpec(mockSpec));
+    uiConfig.UI_SPEC = mockUISpec(spec);
+    setupOpenExternalUrl();
+  });
+
+  afterEach(() => {
+    removeIpcMainListeners();
   });
 
   test('Save to JSON: requests endpoint with correct payload', async () => {
@@ -365,12 +385,31 @@ describe('Save InVEST Model Setup Buttons', () => {
       expect(queryByRole('tooltip')).toBeNull();
     });
   });
+
+  test('User Guide link opens externally', async () => {
+    const { findByRole } = renderInvestTab();
+    const link = await findByRole('link', { name: /user's guide/i });
+    userEvent.click(link);
+    await waitFor(() => {
+      expect(shell.openExternal).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  test('Forum link opens externally', async () => {
+    const { findByRole } = renderInvestTab();
+    const link = await findByRole('link', { name: /frequently asked questions/i });
+    userEvent.click(link);
+    await waitFor(() => {
+      expect(shell.openExternal).toHaveBeenCalledTimes(1);
+    });
+  });
 });
 
 describe('InVEST Run Button', () => {
   const spec = {
     pyname: 'natcap.invest.bar',
     model_name: 'Bar Model',
+    userguide: 'bar.html',
     args: {
       a: {
         name: 'abar',
@@ -389,8 +428,7 @@ describe('InVEST Run Button', () => {
 
   beforeEach(() => {
     getSpec.mockResolvedValue(spec);
-    const mockSpec = spec;
-    jest.mock(UI_CONFIG_PATH, () => mockUISpec(mockSpec));
+    uiConfig.UI_SPEC = mockUISpec(spec);
   });
 
   test('Changing inputs trigger validation & enable/disable Run', async () => {

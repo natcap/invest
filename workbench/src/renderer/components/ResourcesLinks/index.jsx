@@ -1,36 +1,42 @@
-import path from 'path';
 import React from 'react';
 
 import PropTypes from 'prop-types';
-import { shell } from 'electron'; // eslint-disable-line import/no-extraneous-dependencies
 import { MdOpenInNew } from 'react-icons/md';
 
-const UG_ROOT = 'http://releases.naturalcapitalproject.org/invest-userguide/latest/';
-const FORUM_ROOT = 'https://community.naturalcapitalproject.org/';
+import UG_ROOT from '../../userguideURL';
+import { ipcMainChannels } from '../../../main/ipcMainChannels';
+
+const { ipcRenderer } = window.Workbench.electron;
+
+const FORUM_ROOT = 'https://community.naturalcapitalproject.org';
 
 // map model names to forum tags:
 const FORUM_TAGS = {
-  sdr: 'sdr',
-  ndr: 'ndr',
-  habitat_quality: 'habitat-quality',
-  seasonal_water_yield: 'seasonal-water-yield',
-  carbon: 'carbon',
   annual_water_yield: 'annual-water-yield',
-  habitat_risk_assessment: 'hra',
-  recreation: 'recreation',
+  carbon: 'carbon',
   coastal_vulnerability: 'coastal-vulnerability',
   coastal_blue_carbon: 'blue-carbon',
+  coastal_blue_carbon_preprocessor: 'blue-carbon',
   crop_production_percentile: 'crop-production',
   crop_production_regression: 'crop-production',
-  pollination: 'pollination',
-  forest_carbon_edge_effect: 'carbon-edge-effects',
   delineateit: 'delineateit',
-  fisheries: 'fisheries',
-  fisheries_hst: 'fisheries',
-  urban_flood_risk_mitigation: 'urban-flood',
-  wind_energy: 'wind-energy',
+  forest_carbon_edge_effect: 'carbon-edge-effects',
+  globio: 'globio',
+  habitat_quality: 'habitat-quality',
+  habitat_risk_assessment: 'hra',
+  ndr: 'ndr',
+  pollination: 'pollination',
+  recreation: 'recreation',
+  routedem: 'routedem',
   scenario_generator_proximity: 'scenario-generator',
+  scenic_quality: 'scenic-quality',
+  sdr: 'sdr',
+  seasonal_water_yield: 'seasonal-water-yield',
+  stormwater: 'urban-stormwater',
+  urban_cooling_model: 'urban-cooling',
+  urban_flood_risk_mitigation: 'urban-flood',
   wave_energy: 'wave-energy',
+  wind_energy: 'wind-energy',
 };
 
 /**
@@ -38,7 +44,9 @@ const FORUM_TAGS = {
  */
 function handleClick(event) {
   event.preventDefault();
-  shell.openExternal(event.currentTarget.href);
+  ipcRenderer.send(
+    ipcMainChannels.OPEN_EXTERNAL_URL, event.currentTarget.href
+  );
 }
 
 /** Render model-relevant links to the User's Guide and Forum.
@@ -48,23 +56,22 @@ function handleClick(event) {
  * e.g. https://community.naturalcapitalproject.org/tag/carbon
  */
 export default function ResourcesTab(props) {
-  let userGuideURL = UG_ROOT;
-  let forumURL = FORUM_ROOT;
   const { docs, moduleName } = props;
+
+  let forumURL = FORUM_ROOT;
   const tagName = FORUM_TAGS[moduleName];
-  if (docs) {
-    const docsName = path.basename(docs);
-    userGuideURL = `${path.join(UG_ROOT, docsName)}#data-needs`;
-  }
   if (tagName) {
-    forumURL = path.join(FORUM_ROOT, 'tags', tagName);
+    forumURL = `${FORUM_ROOT}/tag/${tagName}`;
   }
+
+  const userGuideURL = `${UG_ROOT}/${docs}#data-needs`;
+
   return (
     <React.Fragment>
       <a
         href={userGuideURL}
         title={userGuideURL}
-        aria-label="go to user guide in web browser"
+        aria-label="go to user's guide in web browser"
         onClick={handleClick}
       >
         <MdOpenInNew className="mr-1" />
@@ -73,7 +80,7 @@ export default function ResourcesTab(props) {
       <a
         href={forumURL}
         title={forumURL}
-        aria-label="go to user support forum in web browser"
+        aria-label="go to frequently asked questions in web browser"
         onClick={handleClick}
       >
         <MdOpenInNew className="mr-1" />

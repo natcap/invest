@@ -1,7 +1,8 @@
 import logging
 
 from natcap.invest.ui import inputs, model
-from natcap.invest import pollination, MODEL_METADATA
+from natcap.invest.model_metadata import MODEL_METADATA
+from natcap.invest import pollination
 
 LOGGER = logging.getLogger(__name__)
 

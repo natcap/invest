@@ -12,39 +12,40 @@ from .. import utils
 from .. import spec_utils
 from ..spec_utils import u
 from .. import validation
-from .. import MODEL_METADATA
+from ..model_metadata import MODEL_METADATA
+from .. import gettext
 from . import coastal_blue_carbon
 
-
 LOGGER = logging.getLogger(__name__)
+
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["coastal_blue_carbon_preprocessor"].model_title,
     "pyname": MODEL_METADATA["coastal_blue_carbon_preprocessor"].pyname,
-    "userguide_html": MODEL_METADATA["coastal_blue_carbon_preprocessor"].userguide,
+    "userguide": MODEL_METADATA["coastal_blue_carbon_preprocessor"].userguide,
     "args": {
         "workspace_dir": spec_utils.WORKSPACE,
         "results_suffix": spec_utils.SUFFIX,
         "n_workers": spec_utils.N_WORKERS,
         "lulc_lookup_table_path": {
-            "name": _("LULC lookup table"),
+            "name": gettext("LULC lookup table"),
             "type": "csv",
-            "about": _(
+            "about": gettext(
                 "A table mapping LULC codes from the snapshot rasters to the "
                 "corresponding LULC class names, and whether or not the "
                 "class is a coastal blue carbon habitat."),
             "columns": {
                 "code": {
                     "type": "integer",
-                    "about": _(
+                    "about": gettext(
                         "LULC code. Every value in the "
                         "snapshot LULC maps must have a corresponding entry "
                         "in this column.")},
                 "lulc-class": {
                     "type": "freestyle_string",
-                    "about": _("Name of the LULC class.")},
+                    "about": gettext("Name of the LULC class.")},
                 "is_coastal_blue_carbon_habitat": {
                     "type": "boolean",
-                    "about": _(
+                    "about": gettext(
                         "Enter TRUE if this LULC class is a coastal blue "
                         "carbon habitat, FALSE if not.")}
             }
@@ -54,21 +55,21 @@ ARGS_SPEC = {
             "columns": {
                 "snapshot_year": {
                     "type": "number",
-                    "units": u.year,
-                    "about": _("Year to snapshot.")},
+                    "units": u.year_AD,
+                    "about": gettext("Year to snapshot.")},
                 "raster_path": {
                     "type": "raster",
                     "bands": {1: {"type": "integer"}},
-                    "about": _(
+                    "about": gettext(
                         "Map of LULC in the snapshot year. "
                         "All values in this raster must have corresponding "
                         "entries in the LULC Lookup table.")
                 }
             },
-            "about": _(
+            "about": gettext(
                 "A table mapping snapshot years to corresponding LULC maps "
                 "for each year."),
-            "name": _("LULC snapshots table"),
+            "name": gettext("LULC snapshots table"),
         },
     }
 }

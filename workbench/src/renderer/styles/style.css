@@ -401,8 +401,9 @@ body {
 	align-items: center;
 }
 
-.args-form .form-label {
+#argname {
 	text-transform: capitalize;
+	font-weight: 600;
 }
 
 .args-form .form-control {

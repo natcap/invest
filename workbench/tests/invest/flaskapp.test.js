@@ -1,16 +1,19 @@
 import fs from 'fs';
+import https from 'https';
 import os from 'os';
 import path from 'path';
 import readline from 'readline';
+import url from 'url';
 
-import fetch from 'node-fetch';
 import React from 'react';
 import { render } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 
 import * as server_requests from '../../src/renderer/server_requests';
 import { argsDictFromObject } from '../../src/renderer/utils';
 import SetupTab from '../../src/renderer/components/SetupTab';
+import ResourcesLinks from '../../src/renderer/components/ResourcesLinks';
 import {
   createPythonFlaskProcess,
   shutdownPythonProcess,
@@ -18,18 +21,13 @@ import {
 } from '../../src/main/createPythonFlaskProcess';
 import findInvestBinaries from '../../src/main/findInvestBinaries';
 
-// This could be optionally configured already in '.env'
-if (!process.env.PORT) {
-  process.env.PORT = 56788;
-}
+jest.setTimeout(120000); // This test is slow in CI
 
-jest.setTimeout(250000); // This test is slow in CI
-global.window.fetch = fetch;
-
+let flaskSubprocess;
 beforeAll(async () => {
   const isDevMode = true; // otherwise need to mock process.resourcesPath
   const investExe = findInvestBinaries(isDevMode);
-  createPythonFlaskProcess(investExe);
+  flaskSubprocess = createPythonFlaskProcess(investExe);
   // In the CI the flask app takes more than 10x as long to startup.
   // Especially so on macos.
   // So, allowing many retries, especially because the error
@@ -39,7 +37,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await shutdownPythonProcess();
+  await shutdownPythonProcess(flaskSubprocess);
 });
 
 describe('requests to flask endpoints', () => {
@@ -61,7 +59,7 @@ describe('requests to flask endpoints', () => {
 
   test('fetch invest model args spec', async () => {
     const spec = await server_requests.getSpec('carbon');
-    const expectedKeys = ['model_name', 'pyname', 'userguide_html', 'args'];
+    const expectedKeys = ['model_name', 'pyname', 'userguide', 'args'];
     expectedKeys.forEach((key) => {
       expect(spec[key]).not.toBeUndefined();
     });
@@ -146,7 +144,7 @@ describe('requests to flask endpoints', () => {
 
 describe('validate the UI spec', () => {
   test('each model has a complete entry', async () => {
-    const uiSpec = require('../../src/renderer/ui_config');
+    const { UI_SPEC } = require('../../src/renderer/ui_config');
     const models = await server_requests.getInvestModelNames();
     const modelInternalNames = Object.keys(models)
       .map((key) => models[key].model_name);
@@ -158,22 +156,22 @@ describe('validate the UI spec', () => {
     argsSpecs.forEach((spec, idx) => {
       const modelName = modelInternalNames[idx];
       expect(spec.model_name).toBeDefined();
-      expect(Object.keys(uiSpec)).toContain(modelName);
-      expect(Object.keys(uiSpec[modelName])).toContain('order');
+      expect(Object.keys(UI_SPEC)).toContain(modelName);
+      expect(Object.keys(UI_SPEC[modelName])).toContain('order');
       // expect each ARGS_SPEC arg to exist in 'order' or 'hidden' property
-      const orderArray = uiSpec[modelName].order.flat();
+      const orderArray = UI_SPEC[modelName].order.flat();
       // 'hidden' is an optional property. It need not include 'n_workers',
       // but we should insert 'n_workers' here as it is present in ARGS_SPEC.
-      const hiddenArray = uiSpec[modelName].hidden || [];
+      const hiddenArray = UI_SPEC[modelName].hidden || [];
       const allArgs = orderArray.concat(hiddenArray.concat('n_workers'));
       const argsSet = new Set(allArgs);
       expect(allArgs).toHaveLength(argsSet.size); // no duplicates
       expect(argsSet).toEqual(new Set(Object.keys(spec.args)));
 
       // for other properties, expect each key is an arg
-      for (const property in uiSpec[modelName]) {
+      for (const property in UI_SPEC[modelName]) {
         if (!['order', 'hidden'].includes(property)) {
-          Object.keys(uiSpec[modelName][property]).forEach((arg) => {
+          Object.keys(UI_SPEC[modelName][property]).forEach((arg) => {
             expect(Object.keys(spec.args)).toContain(arg);
           });
         }
@@ -182,18 +180,46 @@ describe('validate the UI spec', () => {
   });
 });
 
+/** Some tests make http requests to check that links are status 200.
+ *
+ * @param {object} options - as passed to https.request
+ * @returns {Promise} - resolves status code of the request.
+ */
+function getUrlStatus(options) {
+  return new Promise((resolve) => {
+    const req = https.request(options, (response) => {
+      resolve(response.statusCode);
+    });
+    req.end();
+  });
+}
+
+// Need a custom matcher to get useful message back on test failure
+expect.extend({
+  toBeStatus200: (received, address) => {
+    if (received === 200) {
+      return { pass: true };
+    }
+    return {
+      pass: false,
+      message: () => `expected ${received} to be 200 for ${address}`,
+    };
+  },
+});
+
 describe('Build each model UI from ARGS_SPEC', () => {
-  const uiConfig = require('../../src/renderer/ui_config');
+  const { UI_SPEC } = require('../../src/renderer/ui_config');
 
-  test.each(Object.keys(uiConfig))('%s', async (model) => {
+  test.each(Object.keys(UI_SPEC))('%s', async (model) => {
     const argsSpec = await server_requests.getSpec(model);
-    const uiSpec = uiConfig[model];
+    const uiSpec = UI_SPEC[model];
 
-    const { findByRole } = render(
+    const { findByRole, findAllByRole } = render(
       <SetupTab
         pyModuleName={argsSpec.pyname}
         modelName={argsSpec.model_name}
         argsSpec={argsSpec.args}
+        userguide={argsSpec.userguide}
         uiSpec={uiSpec}
         argsInitValues={undefined}
         investExecute={() => {}}
@@ -206,5 +232,69 @@ describe('Build each model UI from ARGS_SPEC', () => {
     );
     expect(await findByRole('textbox', { name: /workspace/i }))
       .toBeInTheDocument();
+
+    const infoButtons = await findAllByRole('button', { name: /info about/ });
+    /* eslint-disable no-restricted-syntax, no-await-in-loop */
+    for (const btn of infoButtons) {
+      userEvent.click(btn);
+      const link = await findByRole('link');
+      const address = link.getAttribute('href');
+      const options = {
+        method: 'HEAD',
+        host: url.parse(address).host,
+        path: url.parse(address).pathname,
+      };
+      const status = await getUrlStatus(options);
+      expect(status).toBeStatus200(address);
+    }
+    /* eslint-enable no-restricted-syntax, no-await-in-loop */
+  });
+});
+
+describe('Check UG & Forum links for each model', () => {
+  const { UI_SPEC } = require('../../src/renderer/ui_config');
+
+  test.each(Object.keys(UI_SPEC))('%s - User Guide', async (model) => {
+    const argsSpec = await server_requests.getSpec(model);
+
+    const { findByRole } = render(
+      <ResourcesLinks
+        moduleName={model}
+        docs={argsSpec.userguide}
+      />
+    );
+    const link = await findByRole('link', { name: /user's guide/i });
+    const address = link.getAttribute('href');
+    const options = {
+      method: 'HEAD',
+      host: url.parse(address).host,
+      path: url.parse(address).pathname,
+    };
+    const status = await getUrlStatus(options);
+    expect(status).toBeStatus200(address);
+  });
+
+  test.each(Object.keys(UI_SPEC))('%s - Forum', async (model) => {
+    const argsSpec = await server_requests.getSpec(model);
+
+    const { findByRole } = render(
+      <ResourcesLinks
+        moduleName={model}
+        docs={argsSpec.userguide}
+      />
+    );
+    const link = await findByRole('link', { name: /frequently asked questions/i });
+    const address = link.getAttribute('href');
+    // If a model has no tag, the link defaults to the forum homepage,
+    // This will pass the urlStatus check, but we want to know if that happened,
+    // so check url text first,
+    expect(address).toContain('/tag/');
+    const options = {
+      method: 'HEAD',
+      host: url.parse(address).host,
+      path: url.parse(address).pathname,
+    };
+    const status = await getUrlStatus(options);
+    expect(status).toBeStatus200(address);
   });
 });

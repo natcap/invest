@@ -1,7 +1,10 @@
 import path from 'path';
 import { spawnSync } from 'child_process';
 
-import { getLogger } from '../logger';
+import { ipcMain } from 'electron';
+
+import { ipcMainChannels } from './ipcMainChannels';
+import { getLogger } from './logger';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
@@ -38,8 +41,13 @@ export default function findInvestBinaries(isDevMode) {
     logger.error('InVEST binaries are probably missing.');
     throw error;
   }
+  const investVersion = stdout.toString();
   logger.info(
-    `Found invest binaries ${investExe} for version ${stdout.toString()}`
+    `Found invest binaries ${investExe} for version ${investVersion}`
+  );
+  // Allow renderer to ask for the invest version, for About page.
+  ipcMain.handle(
+    ipcMainChannels.INVEST_VERSION, () => investVersion
   );
   return investExe;
 }
