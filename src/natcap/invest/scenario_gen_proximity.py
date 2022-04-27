@@ -20,11 +20,13 @@ from . import utils
 from . import spec_utils
 from .spec_utils import u
 from . import validation
-from . import MODEL_METADATA
+from .model_metadata import MODEL_METADATA
+from . import gettext
+
 
 LOGGER = logging.getLogger(__name__)
 
-MISSING_CONVERT_OPTION_MSG = _(
+MISSING_CONVERT_OPTION_MSG = gettext(
     'One or more of "convert_nearest_to_edge" or "convert_farthest_from_edge" '
     'must be selected')
 
@@ -39,43 +41,43 @@ ARGS_SPEC = {
         "base_lulc_path": {
             **spec_utils.LULC,
             "projected": True,
-            "about": _("Base map from which to generate scenarios."),
-            "name": _("base LULC map")
+            "about": gettext("Base map from which to generate scenarios."),
+            "name": gettext("base LULC map")
         },
         "replacement_lucode": {
             "type": "integer",
-            "about": _("The LULC code to which habitat will be converted."),
-            "name": _("replacement landcover code")
+            "about": gettext("The LULC code to which habitat will be converted."),
+            "name": gettext("replacement landcover code")
         },
         "area_to_convert": {
             "expression": "value > 0",
             "type": "number",
             "units": u.hectare,
-            "about": _("Maximum area to be converted to agriculture."),
-            "name": _("maximum area to convert")
+            "about": gettext("Maximum area to be converted to agriculture."),
+            "name": gettext("maximum area to convert")
         },
         "focal_landcover_codes": {
             "type": "freestyle_string",
             "regexp": "[0-9 ]+",
-            "about": _(
+            "about": gettext(
                 "A space-separated list of LULC codes that are used to "
                 "determine the proximity when referring to 'towards' or "
                 "'away' from the base landcover codes"),
-            "name": _("focal landcover codes")
+            "name": gettext("focal landcover codes")
         },
         "convertible_landcover_codes": {
             "type": "freestyle_string",
             "regexp": "[0-9 ]+",
-            "about": _(
+            "about": gettext(
                 "A space-separated list of LULC codes that can be "
                 "converted to be converted to agriculture."),
-            "name": _("convertible landcover codes")
+            "name": gettext("convertible landcover codes")
         },
         "n_fragmentation_steps": {
             "expression": "value > 0",
             "type": "number",
             "units": u.none,
-            "about": _(
+            "about": gettext(
                 "The number of steps that the simulation should take to "
                 "fragment the habitat of interest in the fragmentation "
                 "scenario. This parameter is used to divide the conversion "
@@ -83,30 +85,30 @@ ARGS_SPEC = {
                 "During each sub-step the distance transform is recalculated "
                 "from the base landcover codes.  This can affect the final "
                 "result if the base types are also convertible types."),
-            "name": _("number of conversion steps")
+            "name": gettext("number of conversion steps")
         },
         "aoi_path": {
             **spec_utils.AOI,
             "required": False,
-            "about": _(
+            "about": gettext(
                 "Area over which to run the conversion. Provide this input if "
                 "change is only desired in a subregion of the Base LULC map."),
         },
         "convert_farthest_from_edge": {
             "type": "boolean",
-            "about": _(
+            "about": gettext(
                 "Convert the 'convertible' landcover codes starting at the "
                 "furthest pixel from the 'focal' land cover areas "
                 "and working inwards."),
-            "name": _("convert farthest from edge")
+            "name": gettext("convert farthest from edge")
         },
         "convert_nearest_to_edge": {
             "type": "boolean",
-            "about": _(
+            "about": gettext(
                 "Convert the 'convertible' landcover codes starting at the "
                 "nearest pixels to the 'focal' land cover areas "
                 "and working outwards."),
-            "name": _("convert nearest to edge")
+            "name": gettext("convert nearest to edge")
         }
     }
 }

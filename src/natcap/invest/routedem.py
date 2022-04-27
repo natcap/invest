@@ -12,11 +12,13 @@ from . import utils
 from . import spec_utils
 from .spec_utils import u
 from . import validation
-from . import MODEL_METADATA
+from .model_metadata import MODEL_METADATA
+from . import gettext
+
 
 LOGGER = logging.getLogger(__name__)
 
-INVALID_BAND_INDEX_MSG = _('Must be between 1 and {maximum}')
+INVALID_BAND_INDEX_MSG = gettext('Must be between 1 and {maximum}')
 
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["routedem"].model_title,
@@ -32,67 +34,67 @@ ARGS_SPEC = {
             "expression": "value >= 1",
             "units": u.none,
             "required": False,
-            "about": _(
+            "about": gettext(
                 "Index of the raster band to use, for multi-band rasters."),
-            "name": _("band index")
+            "name": gettext("band index")
         },
         "algorithm": {
             "type": "option_string",
             "options": {
                 "D8": {
                     "display_name": "D8",
-                    "description": _(
+                    "description": gettext(
                         "All water on a pixel flows into the most downhill of "
                         "its 8 surrounding pixels")},
                 "MFD": {
                     "display_name": "MFD",
-                    "description": _(
+                    "description": gettext(
                         "Flow off a pixel is modeled fractionally so that "
                         "water is split among multiple downslope pixels")}
             },
-            "about": _("The routing algorithm to use."),
-            "name": _("routing algorithm")
+            "about": gettext("The routing algorithm to use."),
+            "name": gettext("routing algorithm")
         },
         "calculate_flow_direction": {
             "type": "boolean",
             "required": False,
-            "about": _("Calculate flow direction from the provided DEM."),
-            "name": _("calculate flow direction")
+            "about": gettext("Calculate flow direction from the provided DEM."),
+            "name": gettext("calculate flow direction")
         },
         "calculate_flow_accumulation": {
             "type": "boolean",
             "required": False,
-            "about": _(
+            "about": gettext(
                 "Calculate flow accumulation from the flow direction output."),
-            "name": _("calculate flow accumulation")
+            "name": gettext("calculate flow accumulation")
         },
         "calculate_stream_threshold": {
             "type": "boolean",
             "required": False,
-            "about": _(
+            "about": gettext(
                 "Calculate streams from the flow accumulation output. "),
-            "name": _("calculate streams")
+            "name": gettext("calculate streams")
         },
         "threshold_flow_accumulation": {
             **spec_utils.THRESHOLD_FLOW_ACCUMULATION,
             "required": "calculate_stream_threshold",
-            "about": _(
+            "about": gettext(
                 f"{spec_utils.THRESHOLD_FLOW_ACCUMULATION['about']} "
                 "Required if Calculate Streams is selected.")
         },
         "calculate_downslope_distance": {
             "type": "boolean",
             "required": False,
-            "about": _(
+            "about": gettext(
                 "Calculate flow distance from each pixel to a stream as "
                 "defined in the Calculate Streams output."),
-            "name": _("calculate distance to stream")
+            "name": gettext("calculate distance to stream")
         },
         "calculate_slope": {
             "type": "boolean",
             "required": False,
-            "about": _("Calculate percent slope from the provided DEM."),
-            "name": _("calculate slope")
+            "about": gettext("Calculate percent slope from the provided DEM."),
+            "name": gettext("calculate slope")
         }
     }
 }
