@@ -11,11 +11,13 @@ from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
 
-from . import MODEL_METADATA
+from .model_metadata import MODEL_METADATA
 from . import spec_utils
 from . import utils
 from . import validation
 from .spec_utils import u
+from . import gettext
+
 
 LOGGER = logging.getLogger(__name__)
 
@@ -27,7 +29,7 @@ SIGMA = 9.0
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["globio"].model_title,
     "pyname": MODEL_METADATA["globio"].pyname,
-    "userguide_html": MODEL_METADATA["globio"].userguide,
+    "userguide": MODEL_METADATA["globio"].userguide,
     "args_with_spatial_overlap": {
         "spatial_keys": [
             "lulc_path", "pasture_path", "potential_vegetation_path",
@@ -40,16 +42,16 @@ ARGS_SPEC = {
         "predefined_globio": {
             "type": "boolean",
             "required": False,
-            "about": _(
+            "about": gettext(
                 "Use the predefined GLOBIO LULC map instead of providing "
                 "the LULC map."),
-            "name": _("use predefined LULC")
+            "name": gettext("use predefined LULC")
         },
         "lulc_path": {
             **spec_utils.LULC,
             "projected": True,
             "required": "not predefined_globio",
-            "about": _(
+            "about": gettext(
                 f"{spec_utils.LULC['about']} Each LULC code must have a "
                 "corresponding entry in the biophysical table. "
                 "Required if Use Predefined GLOBIO LULC is not selected.")
@@ -59,23 +61,23 @@ ARGS_SPEC = {
             "columns": {
                 "lucode": {
                     "type": "integer",
-                    "about": _("LULC code from the LULC map input.")},
+                    "about": gettext("LULC code from the LULC map input.")},
                 "globio_lucode": {
                     "type": "integer",
-                    "about": _("Corresponding GLOBIO LULC code.")}
+                    "about": gettext("Corresponding GLOBIO LULC code.")}
             },
             "required": "not predefined_globio",
-            "about": _(
+            "about": gettext(
                 "A table mapping each LULC code in the LULC raster input to "
                 "the corresponding GLOBIO LULC code for the class. "
                 "Required if Use Predefined GLOBIO LULC is not selected."),
-            "name": _("LULC to GLOBIO LULC Table")
+            "name": gettext("LULC to GLOBIO LULC Table")
         },
         "infrastructure_dir": {
             "type": "directory",
             "contents": {
                 "[INFRASTRUCTURE_MAP]": {  # may be named anything
-                    "about": _(
+                    "about": gettext(
                         "Maps of the location of infrastructure. For rasters, "
                         "any valid value greater than zero indicates the "
                         "presence of infrastrucutre. For vectors, any "
@@ -86,28 +88,28 @@ ARGS_SPEC = {
                     "geometries": spec_utils.ALL_GEOMS
                 }
             },
-            "about": _(
+            "about": gettext(
                 "Directory containing raster and/or vector map(s) any forms "
                 "of infrastructure to consider in the MSA calculation."),
-            "name": _("infrastructure directory")
+            "name": gettext("infrastructure directory")
         },
         "pasture_path": {
             "type": "raster",
             "bands": {1: {"type": "ratio"}},
             "projected": True,
             "required": "not predefined_globio",
-            "about": _(
+            "about": gettext(
                 "Map of the proportion of each pixel that is pasture. "
                 "Required if Use Predefined GLOBIO LULC is not selected."),
-            "name": _("pasture")
+            "name": gettext("pasture")
         },
         "potential_vegetation_path": {
-            "name": _("potential vegetation"),
+            "name": gettext("potential vegetation"),
             "type": "raster",
             "bands": {1: {"type": "integer"}},
             "projected": True,
             "required": "not predefined_globio",
-            "about": _(
+            "about": gettext(
                 "Map of potential vegetation classes from Ramankutty "
                 "and Foley (1999). "
                 "Required if Use Predefined GLOBIO LULC is not selected.")
@@ -115,29 +117,29 @@ ARGS_SPEC = {
         "pasture_threshold": {
             "type": "ratio",
             "required": "not predefined_globio",
-            "about": _(
+            "about": gettext(
                 "Areas in the Pasture map with a pasture proportion greater "
                 "than or equal to this threshold are considered grassland or "
                 "livestock grazing areas. "
                 "Required if Use Predefined GLOBIO LULC is not selected."),
-            "name": _("pasture threshold")
+            "name": gettext("pasture threshold")
         },
         "intensification_fraction": {
             "type": "ratio",
-            "about": _(
+            "about": gettext(
                 "Proportion of total agriculture that is intensive. "),
-            "name": _("proportion of intensified agriculture")
+            "name": gettext("proportion of intensified agriculture")
         },
         "primary_threshold": {
             "type": "ratio",
             "required": "not predefined_globio",
-            "about": _(
+            "about": gettext(
                 "Forest ragmentation quality index threshold below which an "
                 "area is classified as secondary forest. Areas with FFQI "
                 "greater than or equal to this threshold are classified as "
                 "primary forest. "
                 "Required if Use Predefined GLOBIO LULC is not selected."),
-            "name": _("primary threshold")
+            "name": gettext("primary threshold")
         },
         "msa_parameters_path": {
             "type": "csv",
@@ -146,33 +148,33 @@ ARGS_SPEC = {
                     "type": "option_string",
                     "options": {
                         "msa_i_primary": {
-                            "description": _(
+                            "description": gettext(
                                 "This MSA value represents infrastructure "
                                 "impacts on primary vegetation. The value in "
                                 "the 'value' column is a distance range in "
                                 "meters.")},
                         "msa_i_other": {
-                            "description": _(
+                            "description": gettext(
                                 "This MSA value represents infrastructure "
                                 "impacts on non-primary vegetation. The value "
                                 "in the 'value' column is a distance range in "
                                 "meters.")},
                         "msa_f": {
-                            "description": _(
+                            "description": gettext(
                                 "This MSA value represents fragmentation "
                                 "impacts. The value in the 'value' column is "
                                 "an FFQI range.")},
                         "msa_lu": {
-                            "description": _(
+                            "description": gettext(
                                 "This MSA value represents land-use impacts. "
                                 "The value in the 'value' column is one of "
                                 "the GLOBIO-recognized LULC codes.")},
                     },
-                    "about": _("The type of MSA value in this row.")
+                    "about": gettext("The type of MSA value in this row.")
                 },
                 "value": {
                     "type": "freestyle_string",
-                    "about": _(
+                    "about": gettext(
                         "Indicates a number or range of a bin. This may be a "
                         "single number e.g. 1000, a range (two numbers "
                         "separated by a hyphen e.g. 1000-2000), or an upper "
@@ -180,15 +182,15 @@ ARGS_SPEC = {
                 },
                 "msa_x": {
                     "type": "ratio",
-                    "about": _(
+                    "about": gettext(
                         "MSA value for the MSA type specified in the "
                         "'msa_type' column, when the impact value is within "
                         "the range given in the 'value' column.")}
             },
-            "about": _(
+            "about": gettext(
                 "Table that sets the MSA values for each impact driver and "
                 "each range of impact values."),
-            "name": _("MSA Parameter Table")
+            "name": gettext("MSA Parameter Table")
         },
         "aoi_path": {
             **spec_utils.AOI,
@@ -199,11 +201,11 @@ ARGS_SPEC = {
             **spec_utils.LULC,
             "projected": True,
             "required": "predefined_globio",
-            "about": _(
+            "about": gettext(
                 "Predefined GLOBIO LULC map using the standard GLOBIO "
                 "classification scheme and codes. "
                 "Required if Use Predefined GLOBIO LULC is selected."),
-            "name": _("GLOBIO Classified Land Use")
+            "name": gettext("GLOBIO Classified Land Use")
         }
     }
 }

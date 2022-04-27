@@ -1,6 +1,5 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import { ipcRenderer } from 'electron';
 
 import Accordion from 'react-bootstrap/Accordion';
 import Col from 'react-bootstrap/Col';
@@ -17,6 +16,8 @@ import { BsChevronExpand } from 'react-icons/bs';
 
 import { getDefaultSettings } from './SettingsStorage';
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
+
+const { ipcRenderer } = window.Workbench.electron;
 
 // map display names to standard language codes
 const languageOptions = {
@@ -155,6 +156,24 @@ export default class SettingsModal extends React.Component {
                 </Form.Control>
               </Col>
             </Form.Group>
+            <Form.Group as={Row}>
+              <Form.Label column sm="6" htmlFor="taskgraph-logging-select">
+                {_('Taskgraph logging threshold')}
+              </Form.Label>
+              <Col sm="6">
+                <Form.Control
+                  id="taskgraph-logging-select"
+                  as="select"
+                  name="taskgraphLoggingLevel"
+                  value={investSettings.taskgraphLoggingLevel}
+                  onChange={this.handleChange}
+                >
+                  {logLevelOptions.map(
+                    (opt) => <option value={opt} key={opt}>{_(opt)}</option>
+                  )}
+                </Form.Control>
+              </Col>
+            </Form.Group>
             {
               (nWorkersOptions)
                 ? (
@@ -247,6 +266,7 @@ SettingsModal.propTypes = {
   clearJobsStorage: PropTypes.func.isRequired,
   investSettings: PropTypes.shape({
     nWorkers: PropTypes.string,
+    taskgraphLoggingLevel: PropTypes.string,
     loggingLevel: PropTypes.string,
     sampleDataDir: PropTypes.string,
     language: PropTypes.string,
