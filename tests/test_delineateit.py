@@ -25,12 +25,14 @@ REGRESSION_DATA = os.path.join(
 
 
 @contextlib.contextmanager
-def capture_logging(logger):
+def capture_logging(logger, level=logging.NOTSET):
     """Capture logging within a context manager.
 
     Args:
         logger (logging.Logger): The logger that should be monitored for
             log records within the scope of the context manager.
+        level (int): The log level to set for the new handler.  Defaults to
+            ``logging.NOTSET``.
 
     Yields:
         log_records (list): A list of logging.LogRecord objects.  This list is
@@ -41,6 +43,7 @@ def capture_logging(logger):
     """
     message_queue = queue.Queue()
     queuehandler = logging.handlers.QueueHandler(message_queue)
+    queuehandler.setLevel(level)
     logger.addHandler(queuehandler)
     log_records = []
     yield log_records
@@ -536,8 +539,9 @@ class DelineateItTests(unittest.TestCase):
             )
         self.assertTrue('is invalid' in str(cm.exception))
 
+        # The only messages we care about for this test are WARNINGs
         logger = logging.getLogger('natcap.invest.delineateit.delineateit')
-        with capture_logging(logger) as log_records:
+        with capture_logging(logger, logging.WARNING) as log_records:
             delineateit.preprocess_geometries(
                 outflow_vector_path, dem_raster_path, target_vector_path,
                 skip_invalid_geometry=True
