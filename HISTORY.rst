@@ -35,12 +35,18 @@
 Unreleased Changes
 ------------------
 * General
+    * ``spec_utils.ETO`` has been renamed to ``spec_utils.ET0`` (with a zero).
     * Updating the ``pyinstaller`` requirement to ``>=4.10`` to support the new
       ``universal2`` wheel architecture offered by ``scipy>=1.8.0``.
+    * Fixing a small bug where drag-and-drop events in the Qt UI were not being
+      handled correctly and were being ignored by the UI.
     * Expose taskgraph logging level for the cli with
       ``--taskgraph-log-level``.
     * Fixed bug in validation of ``results_suffix`` so that special characters
       like path separators, etc, are not allowed.
+* Crop Production
+    * Fixed a bug in both crop production models where the model would error if
+      an observed yield raster had no nodata value.
 * DelineateIt
     * Watersheds delineated with this tool will now always have a ``ws_id``
       column containing integer watershed IDs for easier use within the routed
@@ -50,12 +56,16 @@ Unreleased Changes
     * Rename the arg ``calculate_downstream_distance`` to
       ``calculate_downslope_distance``. This is meant to clarify that it
       applies to pixels that are not part of a stream.
-* Crop Production
-    * Fixed a bug in both crop production models where the model would error if
-      an observed yield raster had no nodata value.
+* Seasonal Water Yield
+    * Fixed an issue with the documentation for ET0 and Precip directories,
+      where a module-specific informational string was being overridden by a
+      default value.
 * SDR
     * Fixed an issue with SDR where ``f.tif`` might not be recalculated if the
       file is modified or deleted after execution.
+    * Fixed an issue in ``sed_deposition.tif`` and ``f.tif`` where pixel values
+      could have very small, negative values for ``r_i`` and ``f_i``.  These
+      values are now clamped to 0.
     * Added basic type-checking for the ``lucode`` column of the biophysical
       table. This avoids cryptic numpy errors later in runtime.
 

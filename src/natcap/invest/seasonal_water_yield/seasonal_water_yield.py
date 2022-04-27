@@ -1,24 +1,24 @@
 """InVEST Seasonal Water Yield Model."""
-import os
-import logging
-import re
 import fractions
+import logging
+import os
+import re
 import warnings
 
-import scipy.special
 import numpy
-from osgeo import gdal
-from osgeo import ogr
 import pygeoprocessing
 import pygeoprocessing.routing
+import scipy.special
 import taskgraph
+from osgeo import gdal
+from osgeo import ogr
 
-from .. import utils
+from .. import gettext
 from .. import spec_utils
-from ..spec_utils import u
+from .. import utils
 from .. import validation
 from ..model_metadata import MODEL_METADATA
-from .. import gettext
+from ..spec_utils import u
 from . import seasonal_water_yield_core
 
 gdal.SetCacheMax(2**26)
@@ -51,11 +51,14 @@ ARGS_SPEC = {
             "contents": {
                 # monthly et0 maps, each file ending in a number 1-12
                 "[MONTH]": {
+                    **spec_utils.ET0,
                     "about": gettext(
                         "Twelve files, one for each month. File names must "
-                        "end with the month number (1-12)."),
-                    **spec_utils.ETO
-                }
+                        "end with the month number (1-12). For example, "
+                        "the filenames 'et0_1.tif' "
+                        "'evapotranspiration1.tif' are both valid for the "
+                        "month of January."),
+                },
             },
             "required": "not user_defined_local_recharge",
             "about": gettext(
@@ -69,11 +72,13 @@ ARGS_SPEC = {
             "contents": {
                 # monthly precipitation maps, each file ending in a number 1-12
                 "[MONTH]": {
+                    **spec_utils.PRECIP,
                     "about": gettext(
-                        "Twelve files, one for each month. File names must end "
-                        "with the month number (1-12)."),
-                    **spec_utils.PRECIP
-                }
+                        "Twelve files, one for each month. File names must "
+                        "end with the month number (1-12). For example, "
+                        "the filenames 'precip_1.tif' and 'precip1.tif' are "
+                        "both valid names for the month of January."),
+                },
             },
             "required": "not user_defined_local_recharge",
             "about": gettext(

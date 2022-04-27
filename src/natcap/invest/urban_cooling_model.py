@@ -51,7 +51,7 @@ ARGS_SPEC = {
                 "raster must have corresponding entries in the Biophysical "
                 "Table.")
         },
-        "ref_eto_raster_path": spec_utils.ETO,
+        "ref_eto_raster_path": spec_utils.ET0,
         "aoi_vector_path": spec_utils.AOI,
         "biophysical_table_path": {
             "name": gettext("biophysical table"),
@@ -367,7 +367,7 @@ def execute(args):
     # ensure raster has square pixels by picking the smallest dimension
     cell_size = numpy.min(numpy.abs(lulc_raster_info['pixel_size']))
 
-    # Reproject and align inputs to the intersection of the AOI, ETO and LULC,
+    # Reproject and align inputs to the intersection of the AOI, ET0 and LULC,
     # with target raster sizes matching those of the LULC.
     aligned_raster_path_list = [
         aligned_lulc_raster_path, aligned_ref_eto_raster_path]
