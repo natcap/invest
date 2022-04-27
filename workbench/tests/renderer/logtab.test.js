@@ -5,6 +5,7 @@ like how starting and stopping invest subprocesses trigger log updates.
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
+import crypto from 'crypto';
 
 import React from 'react';
 import { render } from '@testing-library/react';
@@ -16,10 +17,11 @@ import markupMessage from '../../src/main/investLogMarkup';
 import { removeIpcMainListeners } from '../../src/main/main';
 
 function renderLogTab(logfilePath) {
+  const tabID = crypto.randomBytes(4).toString('hex');
   const { ...utils } = render(
     <LogTab
       executeClicked={false}
-      jobID="foo"
+      tabID={tabID}
       logfile={logfilePath}
     />
   );

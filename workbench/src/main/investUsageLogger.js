@@ -2,7 +2,7 @@ import crypto from 'crypto';
 
 import fetch from 'node-fetch';
 
-import { getLogger } from '../logger';
+import { getLogger } from './logger';
 import pkg from '../../package.json';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);

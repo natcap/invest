@@ -44,7 +44,7 @@ git diff
 git add src/natcap/invest/internationalization/messages.pot src/natcap/invest/internationalization/locales/<LANG>/LC_MESSAGES/messages.po
 git commit -m "extract message catalog template and update <LANG> catalog from it"
 ```
-This looks through the source code for strings wrapped in the `_(...)` function and writes them to the message catalog template. Then it updates the message catalog for the specificed language. New strings that don't yet have a translation will have an empty `msgstr` value. Previously translated messages that are no longer needed will be commented out but remain in the file. This will save translator time if they're needed again in the future.
+This looks through the source code for strings wrapped in the `gettext(...)` function and writes them to the message catalog template. Then it updates the message catalog for the specificed language. New strings that don't yet have a translation will have an empty `msgstr` value. Previously translated messages that are no longer needed will be commented out but remain in the file. This will save translator time if they're needed again in the future.
 
 3. Send `src/natcap/invest/internationalization/locales/<LANG>/LC_MESSAGES/messages.po` to the translator and wait to get it back. The translator will fill in the `msgstr` values for any new or edited messages.
 

@@ -5,12 +5,11 @@ import {
 import '@testing-library/jest-dom';
 import userEvent from '@testing-library/user-event';
 import { ipcRenderer, BrowserWindow } from 'electron';
-
 import {
   DataDownloadModal,
   DownloadProgressBar
 } from '../../src/renderer/components/DataDownloadModal';
-import sampledata_registry from '../../src/renderer/sampledata_registry.json';
+import sampledata_registry from '../../src/renderer/components/DataDownloadModal/sampledata_registry.json';
 import { getInvestModelNames } from '../../src/renderer/server_requests';
 import App from '../../src/renderer/app';
 import {
@@ -19,6 +18,7 @@ import {
 } from '../../src/renderer/components/SettingsModal/SettingsStorage';
 import setupDownloadHandlers from '../../src/main/setupDownloadHandlers';
 import { removeIpcMainListeners } from '../../src/main/main';
+import { ipcMainChannels } from '../../src/main/ipcMainChannels';
 
 jest.mock('../../src/renderer/server_requests');
 
@@ -50,11 +50,11 @@ describe('Sample Data Download Form', () => {
     expect(modalTitle).toBeNull();
   });
 
-  test('Checkbox initial state & interactions', () => {
+  test('Checkbox initial state & interactions', async () => {
     const {
       getByLabelText,
       getByRole,
-      getAllByRole,
+      findAllByRole,
     } = render(
       <DataDownloadModal
         show={true}
@@ -64,7 +64,7 @@ describe('Sample Data Download Form', () => {
     );
 
     // All checked initially
-    const allCheckBoxes = getAllByRole('checkbox');
+    const allCheckBoxes = await findAllByRole('checkbox');
     expect(allCheckBoxes).toHaveLength(nModels + 1); // +1 for Select All
     allCheckBoxes.forEach((box) => {
       expect(box).toBeChecked();
@@ -95,12 +95,10 @@ describe('Sample Data Download Form', () => {
     expect(modelCheckbox).toBeChecked();
   });
 
-  test('Checkbox list matches the sampledata registry', () => {
-    // The registry itself is validated during the build process
-    // by the script called by `npm run fetch-invest`.
+  test('Checkbox list matches the sampledata registry', async () => {
     const {
       getByLabelText,
-      getAllByRole,
+      findAllByRole,
     } = render(
       <DataDownloadModal
         show={true}
@@ -109,7 +107,7 @@ describe('Sample Data Download Form', () => {
       />
     );
 
-    const allCheckBoxes = getAllByRole('checkbox');
+    const allCheckBoxes = await findAllByRole('checkbox');
     expect(allCheckBoxes).toHaveLength(nModels + 1); // +1 for Select All
 
     // Each checkbox is labeled by the model's name
@@ -150,6 +148,22 @@ describe('DownloadProgressBar', () => {
       expect(alert).not.toBeInTheDocument();
     });
   });
+
+  test('Displays message on fail, then disappears', async () => {
+    const nComplete = 'failed';
+    const nTotal = 'failed';
+    const { getByText } = render(
+      <DownloadProgressBar
+        downloadedNofN={[nComplete, nTotal]}
+        expireAfter={1000}
+      />
+    );
+    const alert = getByText('Download Failed');
+    expect(alert).toBeInTheDocument();
+    await waitFor(() => {
+      expect(alert).not.toBeInTheDocument();
+    });
+  });
 });
 
 describe('Integration tests with main process', () => {
@@ -167,7 +181,13 @@ describe('Integration tests with main process', () => {
     const dialogData = {
       filePaths: ['foo/directory'],
     };
-    ipcRenderer.invoke.mockResolvedValue(dialogData);
+
+    ipcRenderer.invoke.mockImplementation((channel, options) => {
+      if (channel === ipcMainChannels.SHOW_OPEN_DIALOG) {
+        return Promise.resolve(dialogData);
+      }
+      return Promise.resolve(undefined);
+    });
 
     const {
       findByRole,

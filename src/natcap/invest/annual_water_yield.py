@@ -14,14 +14,15 @@ from . import utils
 from . import spec_utils
 from .spec_utils import u
 from . import validation
-from . import MODEL_METADATA
+from .model_metadata import MODEL_METADATA
+from . import gettext
 
 LOGGER = logging.getLogger(__name__)
 
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["annual_water_yield"].model_title,
     "pyname": MODEL_METADATA["annual_water_yield"].pyname,
-    "userguide_html": MODEL_METADATA["annual_water_yield"].userguide,
+    "userguide": MODEL_METADATA["annual_water_yield"].userguide,
     "args_with_spatial_overlap": {
         "spatial_keys": ["lulc_path",
                          "depth_to_root_rest_layer_path",
@@ -39,7 +40,7 @@ ARGS_SPEC = {
         "lulc_path": {
             **spec_utils.LULC,
             "projected": True,
-            "about": _(
+            "about": gettext(
                 f"{spec_utils.LULC['about']} All values in this raster "
                 "must have corresponding entries in the Biophysical Table.")
         },
@@ -50,11 +51,11 @@ ARGS_SPEC = {
                 "units": u.millimeter
             }},
             "projected": True,
-            "about": _(
+            "about": gettext(
                 "Map of root restricting layer depth, the soil depth at "
                 "which root penetration is strongly inhibited because of "
                 "physical or chemical characteristics."),
-            "name": _("root restricting layer depth")
+            "name": gettext("root restricting layer depth")
         },
         "precipitation_path": {
             **spec_utils.PRECIP,
@@ -64,11 +65,11 @@ ARGS_SPEC = {
             "type": "raster",
             "bands": {1: {"type": "ratio"}},
             "projected": True,
-            "about": _(
+            "about": gettext(
                 "Map of plant available water content, the fraction of "
                 "water that can be stored in the soil profile that is "
                 "available to plants."),
-            "name": _("plant available water content")
+            "name": gettext("plant available water content")
         },
         "eto_path": {
             **spec_utils.ETO,
@@ -80,15 +81,15 @@ ARGS_SPEC = {
             "fields": {
                 "ws_id": {
                     "type": "integer",
-                    "about": _("Unique identifier for each watershed.")
+                    "about": gettext("Unique identifier for each watershed.")
                 }
             },
             "geometries": spec_utils.POLYGON,
-            "about": _(
+            "about": gettext(
                 "Map of watershed boundaries, such that each watershed drains "
                 "to a point of interest where hydropower production will be "
                 "analyzed."),
-            "name": _("watersheds")
+            "name": gettext("watersheds")
         },
         "sub_watersheds_path": {
             "projected": True,
@@ -96,27 +97,27 @@ ARGS_SPEC = {
             "fields": {
                 "subws_id": {
                     "type": "integer",
-                    "about": _("Unique identifier for each subwatershed.")
+                    "about": gettext("Unique identifier for each subwatershed.")
                 }
             },
             "geometries": spec_utils.POLYGONS,
             "required": False,
-            "about": _(
+            "about": gettext(
                 "Map of subwatershed boundaries within each watershed in "
                 "the Watersheds map."),
-            "name": _("sub-watersheds")
+            "name": gettext("sub-watersheds")
         },
         "biophysical_table_path": {
             "type": "csv",
             "columns": {
                 "lucode": {
                     "type": "integer",
-                    "about": _(
+                    "about": gettext(
                         "LULC code corresponding to values in the LULC map.")
                 },
                 "lulc_veg": {
                     "type": "integer",
-                    "about": _(
+                    "about": gettext(
                         "Code indicating whether the the LULC class is "
                         "vegetated for the purpose of AET. Enter 1 for all "
                         "vegetated classes except wetlands, and 0 for all "
@@ -126,58 +127,58 @@ ARGS_SPEC = {
                 "root_depth": {
                     "type": "number",
                     "units": u.millimeter,
-                    "about": _(
+                    "about": gettext(
                         "Maximum root depth for plants in this LULC class. "
                         "Only used for classes with a 'lulc_veg' value of 1.")
                 },
                 "kc": {
                     "type": "number",
                     "units": u.none,
-                    "about": _("Crop coefficient for this LULC class.")}
+                    "about": gettext("Crop coefficient for this LULC class.")}
             },
-            "about": _(
+            "about": gettext(
                 "Table of biophysical parameters for each LULC class. All "
                 "values in the LULC raster must have corresponding entries "
                 "in this table."),
-            "name": _("biophysical table")
+            "name": gettext("biophysical table")
         },
         "seasonality_constant": {
             "expression": "value > 0",
             "type": "number",
             "units": u.none,
-            "about": _(
+            "about": gettext(
                 "The seasonality factor, representing hydrogeological "
                 "characterisitics and the seasonal distribution of "
                 "precipitation. Values typically range from 1 - 30."),
-            "name": _("z parameter")
+            "name": gettext("z parameter")
         },
         "demand_table_path": {
             "type": "csv",
             "columns": {
                 "lucode": {
-                    "about": _("LULC code corresponding to the LULC raster"),
+                    "about": gettext("LULC code corresponding to the LULC raster"),
                     "type": "integer"
                 },
                 "demand": {
-                    "about": _(
+                    "about": gettext(
                         "Average consumptive water use in this LULC class."),
                     "type": "number",
                     "units": u.meter**3/u.year/u.pixel
                 }
             },
             "required": False,
-            "about": _(
+            "about": gettext(
                 "A table of water demand for each LULC class. Each LULC code "
                 "in the LULC raster must have a corresponding row in this "
                 "table."),
-            "name": _("water demand table")
+            "name": gettext("water demand table")
         },
         "valuation_table_path": {
             "type": "csv",
             "columns": {
                 "ws_id": {
                     "type": "integer",
-                    "about": _(
+                    "about": gettext(
                         "Unique identifier for the hydropower station. This "
                         "must match the 'ws_id' value for the corresponding "
                         "watershed in the Watersheds vector. Each watershed "
@@ -186,21 +187,21 @@ ARGS_SPEC = {
                 },
                 "efficiency": {
                     "type": "ratio",
-                    "about": _(
+                    "about": gettext(
                         "Turbine efficiency, the proportion of potential "
                         "energy captured and converted to electricity by the "
                         "turbine.")
                 },
                 "fraction": {
                     "type": "ratio",
-                    "about": _(
+                    "about": gettext(
                         "The proportion of inflow water volume that is used "
                         "to generate energy.")
                 },
                 "height": {
                     "type": "number",
                     "units": u.meter,
-                    "about": _(
+                    "about": gettext(
                         "The head, measured as the average annual effective "
                         "height of water behind each dam at the turbine "
                         "intake.")
@@ -208,14 +209,14 @@ ARGS_SPEC = {
                 "kw_price": {
                     "type": "number",
                     "units": u.currency/u.kilowatt_hour,
-                    "about": _(
+                    "about": gettext(
                         "The price of power produced by the station. Must be "
                         "in the same currency used in the 'cost' column.")
                 },
                 "cost": {
                     "type": "number",
                     "units": u.currency/u.year,
-                    "about": _(
+                    "about": gettext(
                         "Annual maintenance and operations cost of running "
                         "the hydropower station. Must be in the same currency "
                         "used in the 'kw_price' column.")
@@ -223,7 +224,7 @@ ARGS_SPEC = {
                 "time_span": {
                     "type": "number",
                     "units": u.year,
-                    "about": _(
+                    "about": gettext(
                         "Number of years over which to value the "
                         "hydropower station. This is either the station's "
                         "expected lifespan or the duration of the land use "
@@ -231,16 +232,16 @@ ARGS_SPEC = {
                 },
                 "discount": {
                     "type": "percent",
-                    "about": _(
+                    "about": gettext(
                         "The annual discount rate, applied for each year in "
                         "the time span.")
                 }
             },
             "required": False,
-            "about": _(
+            "about": gettext(
                 "A table mapping each watershed to the associated valuation "
                 "parameters for its hydropower station."),
-            "name": _("hydropower valuation table")
+            "name": gettext("hydropower valuation table")
         }
     }
 }

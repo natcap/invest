@@ -1,3 +1,4 @@
+import fs from 'fs';
 import path from 'path';
 import events from 'events';
 import { spawn, exec } from 'child_process';
@@ -14,7 +15,10 @@ import '@testing-library/jest-dom';
 
 import App from '../../src/renderer/app';
 import {
-  getInvestModelNames, getSpec, fetchValidation, fetchDatastackFromFile
+  getInvestModelNames,
+  getSpec,
+  fetchValidation,
+  fetchDatastackFromFile
 } from '../../src/renderer/server_requests';
 import InvestJob from '../../src/renderer/InvestJob';
 import {
@@ -25,11 +29,19 @@ import {
   setupInvestRunHandlers,
   setupInvestLogReaderHandler,
 } from '../../src/main/setupInvestHandlers';
+import writeInvestParameters from '../../src/main/writeInvestParameters';
 import { removeIpcMainListeners } from '../../src/main/main';
 
+// It's quite a pain to dynamically mock a const from a module,
+// here we do it by importing as another object, then
+// we can overwrite the object we want to mock later
+// https://stackoverflow.com/questions/42977961/how-to-mock-an-exported-const-in-jest
+import * as uiConfig from '../../src/renderer/ui_config';
+
+jest.mock('node-fetch');
 jest.mock('child_process');
 jest.mock('../../src/renderer/server_requests');
-jest.mock('node-fetch');
+jest.mock('../../src/main/writeInvestParameters');
 
 const MOCK_MODEL_TITLE = 'Carbon';
 const MOCK_MODEL_RUN_NAME = 'carbon';
@@ -43,7 +55,7 @@ const MOCK_VALIDATION_VALUE = [[['workspace_dir'], 'invalid because']];
 const SAMPLE_SPEC = {
   model_name: MOCK_MODEL_TITLE,
   pyname: 'natcap.invest.carbon',
-  userguide_html: 'carbonstorage.html',
+  userguide: 'carbonstorage.html',
   args: {
     workspace_dir: {
       name: 'Workspace',
@@ -58,20 +70,25 @@ const SAMPLE_SPEC = {
   },
 };
 
-const UI_CONFIG_PATH = '../../src/renderer/ui_config';
 function mockUISpec(spec, modelName) {
   return {
     [modelName]: { order: [Object.keys(spec.args)] },
   };
 }
 
+// Because we mock UI_SPEC without using jest's API
+// we also need to reset it without jest's API.
+const { UI_SPEC } = uiConfig;
+afterEach(() => {
+  uiConfig.UI_SPEC = UI_SPEC;
+});
+
 describe('Various ways to open and close InVEST models', () => {
   beforeEach(async () => {
     getInvestModelNames.mockResolvedValue(MOCK_INVEST_LIST);
     getSpec.mockResolvedValue(SAMPLE_SPEC);
     fetchValidation.mockResolvedValue(MOCK_VALIDATION_VALUE);
-    const mockSpec = SAMPLE_SPEC; // jest.mock not allowed to ref out-of-scope var
-    jest.mock(UI_CONFIG_PATH, () => mockUISpec(mockSpec, MOCK_MODEL_RUN_NAME));
+    uiConfig.UI_SPEC = mockUISpec(SAMPLE_SPEC, MOCK_MODEL_RUN_NAME);
   });
 
   afterEach(async () => {
@@ -362,6 +379,7 @@ describe('Display recently executed InVEST jobs on Home tab', () => {
 describe('InVEST global settings: dialog interactions', () => {
   const nWorkersLabelText = 'Taskgraph n_workers parameter';
   const loggingLabelText = 'Logging threshold';
+  const tgLoggingLabelText = 'Taskgraph logging threshold';
   const languageLabelText = 'Language';
 
   beforeEach(async () => {
@@ -378,6 +396,7 @@ describe('InVEST global settings: dialog interactions', () => {
     const nWorkersLabel = 'Threaded task management (0)';
     const nWorkersValue = '0';
     const loggingLevel = 'DEBUG';
+    const tgLoggingLevel = 'DEBUG';
     const languageValue = 'es';
 
     const {
@@ -388,13 +407,16 @@ describe('InVEST global settings: dialog interactions', () => {
 
     userEvent.click(await findByRole('button', { name: 'settings' }));
     const nWorkersInput = getByLabelText(nWorkersLabelText, { exact: false });
-    const loggingInput = getByLabelText(loggingLabelText, { exact: false });
+    const loggingInput = getByLabelText(loggingLabelText);
+    const tgLoggingInput = getByLabelText(tgLoggingLabelText);
     const languageInput = getByLabelText(languageLabelText, { exact: false });
 
     userEvent.selectOptions(nWorkersInput, [getByText(nWorkersLabel)]);
     await waitFor(() => { expect(nWorkersInput).toHaveValue(nWorkersValue); });
     userEvent.selectOptions(loggingInput, [loggingLevel]);
     await waitFor(() => { expect(loggingInput).toHaveValue(loggingLevel); });
+    userEvent.selectOptions(tgLoggingInput, [tgLoggingLevel]);
+    await waitFor(() => { expect(tgLoggingInput).toHaveValue(tgLoggingLevel); });
     userEvent.selectOptions(languageInput, [languageValue]);
     await waitFor(() => { expect(languageInput).toHaveValue(languageValue); });
     userEvent.click(getByRole('button', { name: 'close settings' }));
@@ -404,10 +426,12 @@ describe('InVEST global settings: dialog interactions', () => {
     await waitFor(() => {
       expect(nWorkersInput).toHaveValue(nWorkersValue);
       expect(loggingInput).toHaveValue(loggingLevel);
+      expect(tgLoggingInput).toHaveValue(tgLoggingLevel);
       expect(languageInput).toHaveValue(languageValue);
     });
     expect(await getSettingsValue('nWorkers')).toBe(nWorkersValue);
     expect(await getSettingsValue('loggingLevel')).toBe(loggingLevel);
+    expect(await getSettingsValue('taskgraphLoggingLevel')).toBe(tgLoggingLevel);
     expect(await getSettingsValue('language')).toBe(languageValue);
   });
 
@@ -415,11 +439,13 @@ describe('InVEST global settings: dialog interactions', () => {
     const defaultSettings = {
       nWorkers: '-1',
       loggingLevel: 'INFO',
+      taskgraphLoggingLevel: 'ERROR',
       language: 'en',
     };
     const expectedSettings = {
       nWorkers: '0',
       loggingLevel: 'ERROR',
+      taskgraphLoggingLevel: 'INFO',
       language: 'es',
     };
 
@@ -433,13 +459,15 @@ describe('InVEST global settings: dialog interactions', () => {
 
     userEvent.click(await findByRole('button', { name: 'settings' }));
     const nWorkersInput = getByLabelText(nWorkersLabelText, { exact: false });
-    const loggingInput = getByLabelText(loggingLabelText, { exact: false });
+    const loggingInput = getByLabelText(loggingLabelText);
+    const tgLoggingInput = getByLabelText(tgLoggingLabelText);
     const languageInput = getByLabelText(languageLabelText, { exact: false });
 
     // Test that the invest settings were loaded in from store.
     await waitFor(() => {
       expect(nWorkersInput).toHaveValue(expectedSettings.nWorkers);
       expect(loggingInput).toHaveValue(expectedSettings.loggingLevel);
+      expect(tgLoggingInput).toHaveValue(expectedSettings.tgLoggingLevel);
       expect(languageInput).toHaveValue(expectedSettings.language);
     });
 
@@ -448,6 +476,7 @@ describe('InVEST global settings: dialog interactions', () => {
     await waitFor(() => {
       expect(nWorkersInput).toHaveValue(defaultSettings.nWorkers);
       expect(loggingInput).toHaveValue(defaultSettings.loggingLevel);
+      expect(tgLoggingInput).toHaveValue(defaultSettings.tgLoggingLevel);
       expect(languageInput).toHaveValue(defaultSettings.language);
     });
   });
@@ -485,6 +514,7 @@ describe('InVEST subprocess testing', () => {
     },
     model_name: 'EcoModel',
     pyname: 'natcap.invest.dot',
+    userguide: 'foo.html',
   };
   const modelName = 'carbon';
   // nothing is written to the fake workspace in these tests,
@@ -492,10 +522,35 @@ describe('InVEST subprocess testing', () => {
   const fakeWorkspace = 'foo_dir';
   const logfilePath = path.join(fakeWorkspace, 'invest-log.txt');
   // invest always emits this message, and the workbench always listens for it:
-  const stdOutLogfileSignal = `Writing log messages to ${logfilePath}`;
+  const stdOutLogfileSignal = `Writing log messages to [${logfilePath}]`;
   const stdOutText = 'hello from invest';
   const investExe = 'foo';
-  let mockInvestProc;
+
+  // We need to mock child_process.spawn to return a mock invest process,
+  // And we also need an interface to that mocked process in each test
+  // so we can push to stdout, stderr, etc, just like invest would.
+  function getMockedInvestProcess() {
+    const mockInvestProc = new events.EventEmitter();
+    mockInvestProc.pid = -9999999; // not a plausible pid
+    mockInvestProc.stdout = new Stream.Readable({
+      read: () => {},
+    });
+    mockInvestProc.stderr = new Stream.Readable({
+      read: () => {},
+    });
+    if (process.platform !== 'win32') {
+      jest.spyOn(process, 'kill')
+        .mockImplementation(() => {
+          mockInvestProc.emit('exit', null);
+        });
+    } else {
+      exec.mockImplementation(() => {
+        mockInvestProc.emit('exit', null);
+      });
+    }
+    spawn.mockImplementation(() => mockInvestProc);
+    return mockInvestProc;
+  }
 
   beforeAll(() => {
     setupInvestRunHandlers(investExe);
@@ -512,39 +567,21 @@ describe('InVEST subprocess testing', () => {
     getInvestModelNames.mockResolvedValue(
       { Carbon: { model_name: modelName } }
     );
-    const mockSpec = spec;
-    const mockModelName = modelName;
-    jest.mock(UI_CONFIG_PATH, () => mockUISpec(mockSpec, mockModelName));
-
-    mockInvestProc = new events.EventEmitter();
-    mockInvestProc.pid = -9999999; // a value that is not a plausible pid
-    mockInvestProc.stdout = new Stream.Readable({
-      read: () => {},
+    uiConfig.UI_SPEC = mockUISpec(spec, modelName);
+    // mock the request to write the datastack file. Actually write it
+    // because the app will clean it up when invest exits.
+    writeInvestParameters.mockImplementation((payload) => {
+      fs.writeFileSync(payload.filepath, 'foo');
+      return Promise.resolve({ text: () => 'foo' });
     });
-    mockInvestProc.stderr = new Stream.Readable({
-      read: () => {},
-    });
-
-    spawn.mockImplementation(() => mockInvestProc);
-
-    if (process.platform !== 'win32') {
-      jest.spyOn(process, 'kill')
-        .mockImplementation(() => {
-          mockInvestProc.emit('exit', null);
-        });
-    } else {
-      exec.mockImplementation(() => {
-        mockInvestProc.emit('exit', null);
-      });
-    }
   });
 
   afterEach(async () => {
-    mockInvestProc = null;
     await InvestJob.clearStore();
   });
 
   test('exit without error - expect log display', async () => {
+    const mockInvestProc = getMockedInvestProcess();
     const {
       findByText,
       findByLabelText,
@@ -563,9 +600,7 @@ describe('InVEST subprocess testing', () => {
     userEvent.type(workspaceInput, fakeWorkspace);
     const execute = await findByRole('button', { name: /Run/ });
     userEvent.click(execute);
-    await waitFor(() => {
-      expect(execute).toBeDisabled();
-    });
+    await waitFor(() => expect(execute).toBeDisabled());
 
     // logfile signal on stdout listener is how app knows the process started
     mockInvestProc.stdout.push(stdOutText);
@@ -588,11 +623,12 @@ describe('InVEST subprocess testing', () => {
     await getByRole('button', { name: 'InVEST' }).click();
     const homeTab = await getByRole('tabpanel', { name: 'home tab' });
     const cardText = await within(homeTab)
-      .findByText(`${path.resolve(fakeWorkspace)}`);
+      .findByText(fakeWorkspace);
     expect(cardText).toBeInTheDocument();
   });
 
   test('exit with error - expect log & alert display', async () => {
+    const mockInvestProc = getMockedInvestProcess();
     const {
       findByText,
       findByLabelText,
@@ -645,11 +681,12 @@ describe('InVEST subprocess testing', () => {
     await getByRole('button', { name: 'InVEST' }).click();
     const homeTab = await getByRole('tabpanel', { name: 'home tab' });
     const cardText = await within(homeTab)
-      .findByText(`${path.resolve(fakeWorkspace)}`);
+      .findByText(fakeWorkspace);
     expect(cardText).toBeInTheDocument();
   });
 
   test('user terminates process - expect log & alert display', async () => {
+    const mockInvestProc = getMockedInvestProcess();
     const {
       findByText,
       findByLabelText,
@@ -693,11 +730,12 @@ describe('InVEST subprocess testing', () => {
     await getByRole('button', { name: 'InVEST' }).click();
     const homeTab = await getByRole('tabpanel', { name: 'home tab' });
     const cardText = await within(homeTab)
-      .findByText(`${path.resolve(fakeWorkspace)}`);
+      .findByText(fakeWorkspace);
     expect(cardText).toBeInTheDocument();
   });
 
   test('Run & re-run a job - expect new log display', async () => {
+    const mockInvestProc = getMockedInvestProcess();
     const {
       findByText,
       findByLabelText,
@@ -731,31 +769,29 @@ describe('InVEST subprocess testing', () => {
     expect(await findByText('Open Workspace'))
       .toBeEnabled();
 
+    // Now the second invest process:
+    const anotherInvestProc = getMockedInvestProcess();
     // Now click away from Log, re-run, and expect the switch
     // back to the new log
     const setupTab = await findByText('Setup');
     userEvent.click(setupTab);
     userEvent.click(execute);
-    // firing execute re-assigns mockInvestProc via the spawn mock,
-    // but we need to wait for that before pushing to it's stdout.
-    // Since the production code cannot 'await spawn()',
-    // we do this manual timeout instead.
-    await new Promise((resolve) => setTimeout(resolve, 500));
     const newStdOutText = 'this is new stdout text';
-    mockInvestProc.stdout.push(newStdOutText);
-    mockInvestProc.stdout.push(stdOutLogfileSignal);
+    anotherInvestProc.stdout.push(newStdOutText);
+    anotherInvestProc.stdout.push(stdOutLogfileSignal);
     logTab = await findByText('Log');
     await waitFor(() => {
       expect(logTab.classList.contains('active')).toBeTruthy();
     });
     expect(await findByText(newStdOutText, { exact: false }))
       .toBeInTheDocument();
-    mockInvestProc.emit('exit', 0);
+    anotherInvestProc.emit('exit', 0);
     // Give it time to run the listener before unmounting.
     await new Promise((resolve) => setTimeout(resolve, 300));
   });
 
   test('Load Recent run & re-run it - expect new log display', async () => {
+    const mockInvestProc = getMockedInvestProcess();
     const argsValues = {
       workspace_dir: fakeWorkspace,
     };
@@ -789,11 +825,6 @@ describe('InVEST subprocess testing', () => {
     userEvent.click(setupTab);
     const execute = await findByRole('button', { name: /Run/ });
     userEvent.click(execute);
-    // firing execute re-assigns mockInvestProc via the spawn mock,
-    // but we need to wait for that before pushing to it's stdout.
-    // Since the production code cannot 'await spawn()',
-    // we do this manual timeout instead.
-    await new Promise((resolve) => setTimeout(resolve, 500));
     mockInvestProc.stdout.push(stdOutText);
     mockInvestProc.stdout.push(stdOutLogfileSignal);
     const logTab = await findByText('Log');
