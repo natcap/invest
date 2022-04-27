@@ -56,6 +56,9 @@ Unreleased Changes
 * SDR
     * Fixed an issue with SDR where ``f.tif`` might not be recalculated if the
       file is modified or deleted after execution.
+    * Fixed an issue in ``sed_deposition.tif`` and ``f.tif`` where pixel values
+      could have very small, negative values for ``r_i`` and ``f_i``.  These
+      values are now clamped to 0.
     * Added basic type-checking for the ``lucode`` column of the biophysical
       table. This avoids cryptic numpy errors later in runtime.
 
