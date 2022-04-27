@@ -38,6 +38,8 @@ Unreleased Changes
     * ``spec_utils.ETO`` has been renamed to ``spec_utils.ET0`` (with a zero).
     * Updating the ``pyinstaller`` requirement to ``>=4.10`` to support the new
       ``universal2`` wheel architecture offered by ``scipy>=1.8.0``.
+    * Fixing a small bug where drag-and-drop events in the Qt UI were not being
+      handled correctly and were being ignored by the UI.
     * Expose taskgraph logging level for the cli with
       ``--taskgraph-log-level``.
     * Fixed bug in validation of ``results_suffix`` so that special characters
