@@ -16,7 +16,6 @@ from natcap.invest import spec_utils
 from natcap.invest import usage
 
 LOGGER = logging.getLogger(__name__)
-logging.getLogger('flask_cors').level = logging.DEBUG
 
 PREFIX = 'api'
 app = Flask(__name__)
