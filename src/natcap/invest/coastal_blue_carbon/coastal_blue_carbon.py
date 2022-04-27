@@ -106,14 +106,16 @@ from .. import utils
 from .. import spec_utils
 from ..spec_utils import u
 from .. import validation
-from .. import MODEL_METADATA
+from ..model_metadata import MODEL_METADATA
+from .. import gettext
+
 
 LOGGER = logging.getLogger(__name__)
 
-INVALID_ANALYSIS_YEAR_MSG = _(
+INVALID_ANALYSIS_YEAR_MSG = gettext(
     "Analysis year {analysis_year} must be >= the latest snapshot year "
     "({latest_year})")
-INVALID_SNAPSHOT_RASTER_MSG = _(
+INVALID_SNAPSHOT_RASTER_MSG = gettext(
     "Raster for snapshot {snapshot_year} could not be validated.")
 
 POOL_SOIL = 'soil'
@@ -158,7 +160,7 @@ OUTPUT_DIR_NAME = 'output'
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["coastal_blue_carbon"].model_title,
     "pyname": MODEL_METADATA["coastal_blue_carbon"].pyname,
-    "userguide_html": MODEL_METADATA["coastal_blue_carbon"].userguide,
+    "userguide": MODEL_METADATA["coastal_blue_carbon"].userguide,
     "args": {
         "workspace_dir": spec_utils.WORKSPACE,
         "results_suffix": spec_utils.SUFFIX,
@@ -168,31 +170,31 @@ ARGS_SPEC = {
             "columns": {
                 "snapshot_year": {
                     "type": "number",
-                    "units": u.year,
-                    "about": _(
+                    "units": u.year_AD,
+                    "about": gettext(
                         "The snapshot year that this row's LULC raster "
                         "represents. Each year in this table must be unique.")
                 },
                 "raster_path": {
                     "type": "raster",
                     "bands": {1: {"type": "integer"}},
-                    "about": _(
+                    "about": gettext(
                         "Map of LULC in the given snapshot "
                         "year. All values in this raster must have "
                         "corresponding entries in the Biophysical Table and "
                         "Landcover Transitions Table.")
                 }
             },
-            "about": _(
+            "about": gettext(
                 "A table mapping snapshot years to corresponding LULC maps."),
-            "name": _("landcover snapshots table"),
+            "name": gettext("landcover snapshots table"),
         },
         "analysis_year": {
             "type": "number",
-            "units": u.year,
+            "units": u.year_AD,
             "required": False,
-            "name": _("analysis year"),
-            "about": _(
+            "name": gettext("analysis year"),
+            "about": gettext(
                 "A year that may be used to extend the analysis beyond the "
                 "last snapshot year. If used, the model assumes that carbon "
                 "will continue to accumulate or emit after the last snapshot "
@@ -200,130 +202,130 @@ ARGS_SPEC = {
                 "than the final snapshot year."),
         },
         "biophysical_table_path": {
-            "name": _("biophysical table"),
+            "name": gettext("biophysical table"),
             "type": "csv",
             "columns": {
                 "code": {
                     "type": "integer",
-                    "about": _(
+                    "about": gettext(
                         "The LULC code that represents this LULC "
                         "class in the LULC snapshot rasters.")},
                 "lulc-class": {
                     "type": "freestyle_string",
-                    "about": _(
+                    "about": gettext(
                         "Name of the LULC class. This label must be "
                         "unique among the all the LULC classes.")},
                 "biomass-initial": {
                     "type": "number",
                     "units": u.megatonne/u.hectare,
-                    "about": _(
+                    "about": gettext(
                         "The initial carbon stocks in the biomass pool for "
                         "this LULC class.")},
                 "soil-initial": {
                     "type": "number",
                     "units": u.megatonne/u.hectare,
-                    "about": _(
+                    "about": gettext(
                         "The initial carbon stocks in the soil pool for this "
                         "LULC class.")},
                 "litter-initial": {
                     "type": "number",
                     "units": u.megatonne/u.hectare,
-                    "about": _(
+                    "about": gettext(
                         "The initial carbon stocks in the litter pool for "
                         "this LULC class.")},
                 "biomass-half-life": {
                     "type": "number",
                     "units": u.year,
                     "expression": "value > 0",
-                    "about": _("The half-life of carbon in the biomass pool.")},
+                    "about": gettext("The half-life of carbon in the biomass pool.")},
                 "biomass-low-impact-disturb": {
                     "type": "ratio",
-                    "about": _(
+                    "about": gettext(
                         "Proportion of carbon stock in the biomass pool that "
                         "is disturbed when a cell transitions away from this "
                         " LULC class in a low-impact disturbance.")},
                 "biomass-med-impact-disturb": {
                     "type": "ratio",
-                    "about": _(
+                    "about": gettext(
                         "Proportion of carbon stock in the biomass pool that "
                         "is disturbed when a cell transitions away from this "
                         "LULC class in a medium-impact disturbance.")},
                 "biomass-high-impact-disturb": {
                     "type": "ratio",
-                    "about": _(
+                    "about": gettext(
                         "Proportion of carbon stock in the biomass pool that "
                         "is disturbed when a cell transitions away from this "
                         "LULC class in a high-impact disturbance.")},
                 "biomass-yearly-accumulation": {
                     "type": "number",
                     "units": u.megatonne/u.hectare/u.year,
-                    "about": _(
+                    "about": gettext(
                         "Annual rate of CO2E accumulation in the biomass pool.")},
                 "soil-half-life": {
                     "type": "number",
                     "units": u.year,
                     "expression": "value > 0",
-                    "about": _("The half-life of carbon in the soil pool.")},
+                    "about": gettext("The half-life of carbon in the soil pool.")},
                 "soil-low-impact-disturb": {
                     "type": "ratio",
-                    "about": _(
+                    "about": gettext(
                         "Proportion of carbon stock in the soil pool that "
                         "is disturbed when a cell transitions away from this "
                         "LULC class in a low-impact disturbance.")},
                 "soil-med-impact-disturb": {
                     "type": "ratio",
-                    "about": _(
+                    "about": gettext(
                         "Proportion of carbon stock in the soil pool that "
                         "is disturbed when a cell transitions away from this "
                         "LULC class in a medium-impact disturbance.")},
                 "soil-high-impact-disturb": {
                     "type": "ratio",
-                    "about": _(
+                    "about": gettext(
                         "Proportion of carbon stock in the soil pool that "
                         "is disturbed when a cell transitions away from this "
                         "LULC class in a high-impact disturbance.")},
                 "soil-yearly-accumulation": {
                     "type": "number",
                     "units": u.megatonne/u.hectare/u.year,
-                    "about": _(
+                    "about": gettext(
                         "Annual rate of CO2E accumulation in the soil pool.")},
                 "litter-yearly-accumulation": {
                     "type": "number",
                     "units": u.megatonne/u.hectare/u.year,
-                    "about": _(
+                    "about": gettext(
                         "Annual rate of CO2E accumulation in the litter pool.")}
             },
-            "about": _("Table of biophysical properties for each LULC class.")
+            "about": gettext("Table of biophysical properties for each LULC class.")
         },
         "landcover_transitions_table": {
-            "name": _("landcover transitions table"),
+            "name": gettext("landcover transitions table"),
             "type": "csv",
             "columns": {
                 "lulc-class": {
                     "type": "integer",
-                    "about": _(
+                    "about": gettext(
                         "LULC codes matching the codes in the biophysical "
                         "table.")},
                 "[LULC CODE]": {
                     "type": "option_string",
                     "options": {
                         "accum": {
-                            "description": _("a state of carbon accumulation")
+                            "description": gettext("a state of carbon accumulation")
                         },
                         "high-impact-disturb": {
-                            "description": _("high carbon disturbance rate")
+                            "description": gettext("high carbon disturbance rate")
                         },
                         "med-impact-disturb": {
-                            "description": _("medium carbon disturbance rate")
+                            "description": gettext("medium carbon disturbance rate")
                         },
                         "low-impact-disturb": {
-                            "description": _("low carbon disturbance rate")
+                            "description": gettext("low carbon disturbance rate")
                         },
                         "NCC": {
-                            "description": _("no change in carbon")
+                            "description": gettext("no change in carbon")
                         }
                     },
-                    "about": _(
+                    "about": gettext(
                         "A transition matrix describing the type of carbon "
                         "action that occurs when each LULC type transitions "
                         "to each other type. Values in the first column, "
@@ -338,69 +340,69 @@ ARGS_SPEC = {
                         "'lulc-class' column. A cell may be left empty if "
                         "the transition never occurs.")}
             },
-            "about": _(
+            "about": gettext(
                 "A transition matrix mapping the type of carbon action "
                 "undergone when one LULC type transitions to another."),
         },
         "do_economic_analysis": {
-            "name": _("run valuation"),
+            "name": gettext("run valuation"),
             "type": "boolean",
             "required": False,
-            "about": _(
+            "about": gettext(
                 "Enable net present valuation analysis based on "
                 "carbon prices from either a yearly price table, or an "
                 "initial price and yearly interest rate."),
         },
         "use_price_table": {
-            "name": _("use price table"),
+            "name": gettext("use price table"),
             "type": "boolean",
             "required": False,
-            "about": _(
+            "about": gettext(
                 "Use a yearly price table, rather than an initial "
                 "price and interest rate, to indicate carbon value over time."),
         },
         "price": {
-            "name": _("price"),
+            "name": gettext("price"),
             "type": "number",
             "units": u.currency/u.megatonne,
             "required": "do_economic_analysis and (not use_price_table)",
-            "about": _(
+            "about": gettext(
                 "The price of CO2E at the baseline year. Required if Do "
                 "Valuation is selected and Use Price Table is not selected."),
         },
         "inflation_rate": {
-            "name": _("interest rate"),
+            "name": gettext("interest rate"),
             "type": "percent",
             "required": "do_economic_analysis and (not use_price_table)",
-            "about": _(
+            "about": gettext(
                 "Annual increase in the price of CO2E. Required if Do "
                 "Valuation is selected and Use Price Table is not selected.")
         },
         "price_table_path": {
-            "name": _("price table"),
+            "name": gettext("price table"),
             "type": "csv",
             "required": "use_price_table",
             "columns": {
                 "year": {
                     "type": "number",
-                    "units": u.year,
-                    "about": _(
+                    "units": u.year_AD,
+                    "about": gettext(
                         "Each year from the snapshot year to analysis year.")},
                 "price": {
                     "type": "number",
                     "units": u.currency/u.megatonne,
-                    "about": _("Price of CO2E in that year.")}
+                    "about": gettext("Price of CO2E in that year.")}
             },
-            "about": _(
+            "about": gettext(
                 "Table of annual CO2E prices for each year from the baseline "
                 "year to the final snapshot or analysis year. Required if Do "
                 "Valuation is selected and Use Price Table is selected."),
         },
         "discount_rate": {
-            "name": _("discount rate"),
+            "name": gettext("discount rate"),
             "type": "percent",
             "required": "do_economic_analysis",
-            "about": _(
+            "about": gettext(
                 "Annual discount rate on the price of carbon. This is "
                 "compounded each year after the baseline year. "
                 "Required if Run Valuation is selected."),

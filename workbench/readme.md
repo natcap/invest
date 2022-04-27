@@ -7,24 +7,28 @@ InVEST models, and to be extensible to future models or common auxilary
 workflows of an InVEST user.
 
 ## To develop and launch this Application
-* `yarn install`
-* `yarn run fetch-invest`
-	+ fetches prebuilt invest binaries (see package.json invest property)
-	+ Alternatively, build your own local invest binaries:
-		* use invest's `make binaries`, then
-		* `cp -r invest/dist/invest/ invest-workbench/build/invest/`
-* `yarn run dev` (this process stays live, do it in a separate shell)
-* `yarn start`
-
-#### To run javascript outside the electron runtime,
-but with the same ECMAscript features and babel configurations:  
-`node -r @babel/register script.js`.
+1. from invest/:
+  - activate a python environment and install `natcap.invest`
+2. from invest/workbench/:
+	- `yarn install`
+	- `yarn start`
 
 ## To package this app for distribution
-* `yarn run install`
-* `yarn run fetch-invest`
-* `yarn run build`
-* `yarn run dist`  - Configure the packaging in `electron-builder-config.js`.
+1. from invest/:
+  - `make binaries`
+2. from invest/workbench/:
+  - `yarn run install`
+  - `yarn run build`
+  - `yarn run dist`  - Configure the packaging in `electron-builder-config.js`.
+
+## Dependency management in package.json
+`dependencies` should only include node modules used by the 
+main and preload processes. 
+
+Renderer process dependencies (`react`, `boostrap`, etc) belong in `devDependencies`. 
+They are required in production, but we want electron-builder to ignore them
+because they are already packaged via the vite bundle.
+electron-builder will package everything under `dependencies` and nothing under `devDependencies`.  
 
 ## Testing with Jest
 #### Configuration

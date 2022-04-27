@@ -3,6 +3,10 @@ import path from 'path';
 import { app, BrowserWindow } from 'electron'; // eslint-disable-line import/no-extraneous-dependencies
 
 import setupContextMenu from './setupContextMenu';
+import BASE_URL from './baseUrl';
+import { getLogger } from './logger';
+
+const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
 const isMac = process.platform === 'darwin';
 
@@ -115,38 +119,40 @@ function openAboutWindow(parentWindow, isDevMode) {
     height: 800,
     frame: true,
     webPreferences: {
-      contextIsolation: false,
-      enableRemoteModule: false,
-      nodeIntegration: true,
       minimumFontSize: 18,
+      preload: path.join(__dirname, '../preload/preload.js'),
     },
   });
   setupContextMenu(child);
   child.setMenu(null);
-  child.loadURL(`file://${__dirname}/../static/about.html`);
+  child.loadURL(path.join(BASE_URL, 'about.html'));
   if (isDevMode) {
     child.webContents.openDevTools();
   }
 }
 
 function openReportWindow(parentWindow, isDevMode) {
+  logger.debug('PROBLEM REPORT: process dump');
+  // There are some circular references in process object, so can't
+  // stringify the whole object. Here's the useful bits.
+  logger.debug(JSON.stringify(process.versions, null, 2));
+  logger.debug(JSON.stringify(process.arch, null, 2));
+  logger.debug(JSON.stringify(process.platform, null, 2));
+  logger.debug(JSON.stringify(process.env, null, 2));
   const child = new BrowserWindow({
     parent: parentWindow,
     width: 700,
     height: 800,
     frame: true,
     webPreferences: {
-      contextIsolation: false,
-      enableRemoteModule: false,
-      nodeIntegration: true,
       minimumFontSize: 18,
-      preload: path.join(__dirname, '..', 'preload.js'),
+      preload: path.join(__dirname, '..', 'preload/preload.js'),
       defaultEncoding: 'UTF-8',
     },
   });
   setupContextMenu(child);
   child.setMenu(null);
-  child.loadURL(`file://${__dirname}/../static/report_a_problem.html`);
+  child.loadURL(path.join(BASE_URL, 'report_a_problem.html'));
   if (isDevMode) {
     child.webContents.openDevTools();
   }

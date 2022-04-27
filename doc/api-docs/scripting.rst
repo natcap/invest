@@ -310,28 +310,13 @@ If you use the InVEST python API to access model names, ``ARGS_SPEC``s, or valid
 
 .. code-block:: python
 
-    import gettext
-    import pkg_resources
+    from natcap.invest import set_locale
 
     # replace with your desired ISO 639-1 language code
     # see https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes
-    language_code = 'en'
-
-    # locate the internationalization data included with the invest package
-    # for languages supported by invest
-    # or alternatively, provide your own
-    locale_dir = pkg_resources.resource_filename('natcap.invest', 'internationalization/locales/')
-
-    language = gettext.translation(
-        'messages',
-        languages=[language_code],
-        localedir=locale_dir)
-    language.install()
-
+    set_locale('en')
     import natcap.invest.carbon
     ...
-
-Note that ``natcap.invest`` defines the ``_(...)`` function globally in ``builtins``. When you import anything from ``natcap.invest``, ``_`` is first defined to return the default English. This way everything works whether or not the client sets up ``gettext``.
 
 See the `GNU gettext manual <https://www.gnu.org/software/gettext/manual/gettext.html>`_ and the `Python gettext documentation <https://docs.python.org/3/library/gettext.html>`_ for more information.
 

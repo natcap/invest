@@ -10,7 +10,7 @@ import Row from 'react-bootstrap/Row';
 import OpenButton from '../OpenButton';
 import InvestJob from '../../InvestJob';
 
-const logger = window.Workbench.getLogger(__filename.split('/').slice(-2).join('/'));
+const logger = window.Workbench.getLogger('HomeTab');
 
 /**
  * Renders a table of buttons for each invest model and

@@ -4,13 +4,13 @@ import os from 'os';
 import { spawn, exec } from 'child_process';
 
 import { app, ipcMain } from 'electron';
-import fetch from 'node-fetch';
 
-import { getLogger } from '../logger';
+import { getLogger } from './logger';
 import { ipcMainChannels } from './ipcMainChannels';
 import ELECTRON_DEV_MODE from './isDevMode';
 import investUsageLogger from './investUsageLogger';
 import markupMessage from './investLogMarkup';
+import writeInvestParameters from './writeInvestParameters';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
@@ -21,8 +21,13 @@ const LOGLEVELMAP = {
   WARNING: '-v',
   ERROR: '',
 };
+const TGLOGLEVELMAP = {
+  DEBUG: '--taskgraph-log-level=DEBUG',
+  INFO: '--taskgraph-log-level=INFO',
+  WARNING: '--taskgraph-log-level=WARNING',
+  ERROR: '--taskgraph-log-level=ERROR',
+};
 const TEMP_DIR = path.join(app.getPath('userData'), 'tmp');
-const HOSTNAME = 'http://localhost';
 
 export function setupInvestRunHandlers(investExe) {
   const runningJobs = {};
@@ -40,7 +45,7 @@ export function setupInvestRunHandlers(investExe) {
   });
 
   ipcMain.on(ipcMainChannels.INVEST_RUN, async (
-    event, modelRunName, pyModuleName, args, loggingLevel, language, jobID
+    event, modelRunName, pyModuleName, args, loggingLevel, taskgraphLoggingLevel, language, tabID
   ) => {
     let investRun;
     let investStarted = false;
@@ -56,24 +61,16 @@ export function setupInvestRunHandlers(investExe) {
     );
     const datastackPath = path.join(tempDatastackDir, 'datastack.json');
     const payload = {
-      parameterSetPath: datastackPath,
+      filepath: datastackPath,
       moduleName: pyModuleName,
       relativePaths: false,
       args: JSON.stringify(args),
     };
-    try {
-      const response = await fetch(`${HOSTNAME}:${process.env.PORT}/write_parameter_set_file`, {
-        method: 'post',
-        body: JSON.stringify(payload),
-        headers: { 'Content-Type': 'application/json' },
-      });
-      logger.debug(await response.text());
-    } catch (error) {
-      logger.error(error.stack);
-    }
+    await writeInvestParameters(payload);
 
     const cmdArgs = [
       LOGLEVELMAP[loggingLevel],
+      TGLOGLEVELMAP[taskgraphLoggingLevel],
       `--language "${language}"`,
       'run',
       modelRunName,
@@ -102,9 +99,11 @@ export function setupInvestRunHandlers(investExe) {
       if (!investStarted) {
         if (`${data}`.match('Writing log messages to')) {
           investStarted = true;
-          runningJobs[jobID] = investRun.pid;
-          const investLogfile = `${data}`.split(' ').pop().trim();
-          event.reply(`invest-logging-${jobID}`, investLogfile);
+          runningJobs[tabID] = investRun.pid;
+          const investLogfile = `${data}`.substring(
+            `${data}`.indexOf('[') + 1, `${data}`.indexOf(']')
+          );
+          event.reply(`invest-logging-${tabID}`, path.resolve(investLogfile));
           if (!ELECTRON_DEV_MODE && !process.env.PUPPETEER) {
             usageLogger.start(pyModuleName, args);
           }
@@ -113,7 +112,7 @@ export function setupInvestRunHandlers(investExe) {
       // python logging flushes with each message, so data here should
       // only be one logger message at a time.
       event.reply(
-        `invest-stdout-${jobID}`,
+        `invest-stdout-${tabID}`,
         markupMessage(`${data}`, pyModuleName)
       );
     };
@@ -130,8 +129,8 @@ export function setupInvestRunHandlers(investExe) {
     });
 
     investRun.on('exit', (code) => {
-      delete runningJobs[jobID];
-      event.reply(`invest-exit-${jobID}`, {
+      delete runningJobs[tabID];
+      event.reply(`invest-exit-${tabID}`, {
         code: code,
         stdErr: investStdErr,
       });
@@ -154,7 +153,7 @@ export function setupInvestLogReaderHandler() {
     (event, logfile, channel) => {
       const fileStream = fs.createReadStream(logfile);
       fileStream.on('error', (err) => {
-        logger.error(err);
+        logger.info(err);
         event.reply(
           `invest-stdout-${channel}`,
           `Logfile is missing or unreadable: ${os.EOL}${logfile}`

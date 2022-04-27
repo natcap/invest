@@ -36,6 +36,15 @@ Unreleased Changes
 ------------------
 * General
     * ``spec_utils.ETO`` has been renamed to ``spec_utils.ET0`` (with a zero).
+    * Updating the ``pyinstaller`` requirement to ``>=4.10`` to support the new
+      ``universal2`` wheel architecture offered by ``scipy>=1.8.0``.
+    * Expose taskgraph logging level for the cli with
+      ``--taskgraph-log-level``.
+    * Fixed bug in validation of ``results_suffix`` so that special characters
+      like path separators, etc, are not allowed.
+* Crop Production
+    * Fixed a bug in both crop production models where the model would error if
+      an observed yield raster had no nodata value.
 * RouteDEM
     * Rename the arg ``calculate_downstream_distance`` to
       ``calculate_downslope_distance``. This is meant to clarify that it
@@ -44,6 +53,11 @@ Unreleased Changes
     * Fixed an issue with the documentation for ET0 and Precip directories,
       where a module-specific informational string was being overridden by a
       default value.
+* SDR
+    * Fixed an issue with SDR where ``f.tif`` might not be recalculated if the
+      file is modified or deleted after execution.
+    * Added basic type-checking for the ``lucode`` column of the biophysical
+      table. This avoids cryptic numpy errors later in runtime.
 
 3.10.2 (2022-02-08)
 -------------------

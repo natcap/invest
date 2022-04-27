@@ -1,3 +1,5 @@
+import crypto from 'crypto';
+
 import React from 'react';
 import { ipcRenderer, shell } from 'electron';
 import { render, waitFor } from '@testing-library/react';
@@ -7,6 +9,7 @@ import userEvent from '@testing-library/user-event';
 import InvestTab from '../../src/renderer/components/InvestTab';
 import SetupTab from '../../src/renderer/components/SetupTab';
 import {
+  archiveDatastack,
   getSpec,
   saveToPython,
   writeParametersToFile,
@@ -15,11 +18,16 @@ import {
 } from '../../src/renderer/server_requests';
 import InvestJob from '../../src/renderer/InvestJob';
 import setupDialogs from '../../src/main/setupDialogs';
+import setupOpenExternalUrl from '../../src/main/setupOpenExternalUrl';
 import { removeIpcMainListeners } from '../../src/main/main';
 
-jest.mock('../../src/renderer/server_requests');
+// It's quite a pain to dynamically mock a const from a module,
+// here we do it by importing as another object, then
+// we can overwrite the object we want to mock later
+// https://stackoverflow.com/questions/42977961/how-to-mock-an-exported-const-in-jest
+import * as uiConfig from '../../src/renderer/ui_config';
 
-const UI_CONFIG_PATH = '../../src/renderer/ui_config';
+jest.mock('../../src/renderer/server_requests');
 
 const DEFAULT_JOB = new InvestJob({
   modelRunName: 'carbon',
@@ -33,11 +41,12 @@ function mockUISpec(spec) {
 }
 
 function renderInvestTab(job = DEFAULT_JOB) {
+  const tabID = crypto.randomBytes(4).toString('hex');
   const { ...utils } = render(
     <InvestTab
       job={job}
-      jobID="carbon456asdf"
-      investSettings={{ nWorkers: '-1', loggingLevel: 'INFO' }}
+      tabID={tabID}
+      investSettings={{ nWorkers: '-1', loggingLevel: 'INFO', taskgraphLoggingLevel: 'ERROR' }}
       saveJob={() => {}}
       updateJobProperties={() => {}}
     />
@@ -45,10 +54,18 @@ function renderInvestTab(job = DEFAULT_JOB) {
   return utils;
 }
 
-describe('Sidebar Alert renders with data from a recent run', () => {
+// Because we mock UI_SPEC without using jest's API
+// we alse need to a reset it without jest's API.
+const { UI_SPEC } = uiConfig;
+afterEach(() => {
+  uiConfig.UI_SPEC = UI_SPEC;
+});
+
+describe('Run status Alert renders with data from a recent run', () => {
   const spec = {
     pyname: 'natcap.invest.foo',
     model_name: 'Foo Model',
+    userguide: 'foo.html',
     args: {
       workspace: {
         name: 'Workspace',
@@ -61,8 +78,7 @@ describe('Sidebar Alert renders with data from a recent run', () => {
   beforeEach(() => {
     getSpec.mockResolvedValue(spec);
     fetchValidation.mockResolvedValue([]);
-    const mockSpec = spec; // jest.mock not allowed to ref out-of-scope var
-    jest.mock(UI_CONFIG_PATH, () => mockUISpec(mockSpec));
+    uiConfig.UI_SPEC = mockUISpec(spec);
     setupDialogs();
   });
 
@@ -148,10 +164,11 @@ describe('Sidebar Alert renders with data from a recent run', () => {
   });
 });
 
-describe('Save InVEST Model Setup Buttons', () => {
+describe('Sidebar Buttons', () => {
   const spec = {
     pyname: 'natcap.invest.foo',
     model_name: 'Foo Model',
+    userguide: 'foo.html',
     args: {
       workspace: {
         name: 'Workspace',
@@ -165,85 +182,145 @@ describe('Save InVEST Model Setup Buttons', () => {
     },
   };
 
-  // args expected to be in the saved JSON / Python dictionary
-  const expectedArgKeys = ['workspace', 'n_workers'];
-
   beforeEach(async () => {
     getSpec.mockResolvedValue(spec);
     fetchValidation.mockResolvedValue([]);
-    const mockSpec = spec;
-    jest.mock(UI_CONFIG_PATH, () => mockUISpec(mockSpec));
+    uiConfig.UI_SPEC = mockUISpec(spec);
+    setupOpenExternalUrl();
   });
 
-  test('SaveParametersButton: requests endpoint with correct payload', async () => {
-    // mock the server call, instead just returning
-    // the payload. At least we can assert the payload is what
-    // the flask endpoint needs to build the json file.
-    writeParametersToFile.mockImplementation(
-      (payload) => payload
-    );
+  afterEach(() => {
+    removeIpcMainListeners();
+  });
+
+  test('Save to JSON: requests endpoint with correct payload', async () => {
+    const response = 'saved';
+    writeParametersToFile.mockResolvedValue(response);
     const mockDialogData = { filePath: 'foo.json' };
     ipcRenderer.invoke.mockResolvedValueOnce(mockDialogData);
 
-    const { findByText } = renderInvestTab();
+    const { findByText, findByRole } = renderInvestTab();
     const saveButton = await findByText('Save to JSON');
     userEvent.click(saveButton);
 
-    await waitFor(() => {
-      const results = writeParametersToFile.mock.results[0].value;
-      expect(Object.keys(results)).toEqual(expect.arrayContaining(
-        ['parameterSetPath', 'moduleName', 'relativePaths', 'args']
-      ));
-      Object.keys(results).forEach((key) => {
-        expect(results[key]).not.toBeUndefined();
-      });
-      const args = JSON.parse(results.args);
-      const argKeys = Object.keys(args);
-      expect(argKeys).toEqual(expect.arrayContaining(expectedArgKeys));
-      argKeys.forEach((key) => {
-        expect(typeof args[key]).toBe('string');
-      });
-      expect(writeParametersToFile).toHaveBeenCalledTimes(1);
+    expect(await findByRole('alert')).toHaveTextContent(response);
+    const payload = writeParametersToFile.mock.calls[0][0];
+    expect(Object.keys(payload)).toEqual(expect.arrayContaining(
+      ['filepath', 'moduleName', 'relativePaths', 'args']
+    ));
+    Object.keys(payload).forEach((key) => {
+      expect(payload[key]).not.toBeUndefined();
     });
+    const args = JSON.parse(payload.args);
+    const argKeys = Object.keys(args);
+    expect(argKeys).toEqual(
+      expect.arrayContaining(Object.keys(spec.args).concat('n_workers'))
+    );
+    argKeys.forEach((key) => {
+      expect(typeof args[key]).toBe('string');
+    });
+    expect(writeParametersToFile).toHaveBeenCalledTimes(1);
   });
 
-  test('SavePythonButton: requests endpoint with correct payload', async () => {
-    // mock the server call, instead just returning
-    // the payload. At least we can assert the payload is what
-    // the flask endpoint needs to build the python script.
-    saveToPython.mockImplementation(
-      (payload) => payload
-    );
+  test('Save to Python script: requests endpoint with correct payload', async () => {
+    const response = 'saved';
+    saveToPython.mockResolvedValue(response);
     const mockDialogData = { filePath: 'foo.py' };
     ipcRenderer.invoke.mockResolvedValue(mockDialogData);
 
-    const { findByText } = renderInvestTab();
+    const { findByText, findByRole } = renderInvestTab();
 
     const saveButton = await findByText('Save to Python script');
     userEvent.click(saveButton);
 
-    await waitFor(() => {
-      const results = saveToPython.mock.results[0].value;
-      expect(Object.keys(results)).toEqual(expect.arrayContaining(
-        ['filepath', 'modelname', 'args']
-      ));
-      expect(typeof results.filepath).toBe('string');
-      expect(typeof results.modelname).toBe('string');
-      // guard against a common mistake of passing a model title
-      expect(results.modelname.split(' ')).toHaveLength(1);
+    expect(await findByRole('alert')).toHaveTextContent(response);
+    const payload = saveToPython.mock.calls[0][0];
+    expect(Object.keys(payload)).toEqual(expect.arrayContaining(
+      ['filepath', 'modelname', 'args']
+    ));
+    expect(typeof payload.filepath).toBe('string');
+    expect(typeof payload.modelname).toBe('string');
+    // guard against a common mistake of passing a model title
+    expect(payload.modelname.split(' ')).toHaveLength(1);
 
-      expect(results.args).not.toBeUndefined();
-      const args = JSON.parse(results.args);
-      const argKeys = Object.keys(args);
-      expect(argKeys).toEqual(expect.arrayContaining(expectedArgKeys));
-      argKeys.forEach((key) => {
-        expect(typeof args[key]).toBe('string');
-      });
-      expect(saveToPython).toHaveBeenCalledTimes(1);
+    expect(payload.args).not.toBeUndefined();
+    const args = JSON.parse(payload.args);
+    const argKeys = Object.keys(args);
+    expect(argKeys).toEqual(
+      expect.arrayContaining(Object.keys(spec.args).concat('n_workers'))
+    );
+    argKeys.forEach((key) => {
+      expect(typeof args[key]).toBe('string');
     });
+    expect(saveToPython).toHaveBeenCalledTimes(1);
   });
 
-  test('Load Parameters Button: loads parameters', async () => {
+  test('Save datastack: requests endpoint with correct payload', async () => {
+    const response = 'saved';
+    archiveDatastack.mockImplementation(() => new Promise(
+      (resolve) => {
+        setTimeout(() => resolve(response), 100);
+      }
+    ));
+    const mockDialogData = { filePath: 'data.tgz' };
+    ipcRenderer.invoke.mockResolvedValue(mockDialogData);
+
+    const { findByText, findByRole, getByRole } = renderInvestTab();
+
+    const saveButton = await findByText('Save datastack');
+    userEvent.click(saveButton);
+
+    expect(await findByRole('alert')).toHaveTextContent('archiving...');
+    await waitFor(() => {
+      expect(getByRole('alert')).toHaveTextContent(response);
+    });
+    const payload = archiveDatastack.mock.calls[0][0];
+    expect(Object.keys(payload)).toEqual(expect.arrayContaining(
+      ['filepath', 'moduleName', 'args']
+    ));
+    expect(typeof payload.filepath).toBe('string');
+    expect(typeof payload.moduleName).toBe('string');
+    // guard against a common mistake of passing a model title
+    expect(payload.moduleName.split(' ')).toHaveLength(1);
+
+    expect(payload.args).not.toBeUndefined();
+    const args = JSON.parse(payload.args);
+    const argKeys = Object.keys(args);
+    expect(argKeys).toEqual(
+      expect.arrayContaining(Object.keys(spec.args))
+    );
+    argKeys.forEach((key) => {
+      expect(typeof args[key]).toBe('string');
+    });
+    expect(archiveDatastack).toHaveBeenCalledTimes(1);
+  });
+
+  test('Multiple Save Clicks: each triggers a unique alert', async () => {
+    const response = 'saved';
+    archiveDatastack.mockImplementation(() => new Promise(
+      (resolve) => {
+        setTimeout(() => resolve(response), 100);
+      }
+    ));
+    saveToPython.mockResolvedValue(response);
+    const mockDialogData = { filePath: 'foo' };
+    ipcRenderer.invoke.mockResolvedValue(mockDialogData);
+
+    const { findByText, getAllByRole, queryByRole } = renderInvestTab();
+
+    const saveDatastackButton = await findByText('Save datastack');
+    const savePythonButton = await findByText('Save to Python script');
+    userEvent.click(saveDatastackButton);
+    userEvent.click(savePythonButton);
+    await waitFor(() => {
+      expect(getAllByRole('alert')).toHaveLength(2);
+    });
+    await waitFor(() => {
+      expect(queryByRole('alert')).toBeNull();
+    }, { timeout: 3000 }); // alerts disappear after 2 seconds
+  });
+
+  test('Load parameters from file: loads parameters', async () => {
     const mockDatastack = {
       module_name: spec.pyname,
       args: {
@@ -256,17 +333,9 @@ describe('Save InVEST Model Setup Buttons', () => {
       filePaths: ['foo.json']
     };
     ipcRenderer.invoke.mockResolvedValue(mockDialogData);
-    const { findByText, findByLabelText, queryByText } = renderInvestTab();
+    const { findByText, findByLabelText } = renderInvestTab();
 
     const loadButton = await findByText('Load parameters from file');
-    // test the tooltip before we click
-    userEvent.hover(loadButton);
-    const hoverText = 'Browse to a datastack (.json) or InVEST logfile (.txt)';
-    expect(await findByText(hoverText)).toBeInTheDocument();
-    userEvent.unhover(loadButton);
-    await waitFor(() => {
-      expect(queryByText(hoverText)).toBeNull();
-    });
     userEvent.click(loadButton);
 
     const input1 = await findByLabelText(spec.args.workspace.name);
@@ -275,58 +344,64 @@ describe('Save InVEST Model Setup Buttons', () => {
     expect(input2).toHaveValue(mockDatastack.args.port);
   });
 
-  test('SaveParametersButton: Dialog callback does nothing when canceled', async () => {
-    // this resembles the callback data if the dialog is canceled instead of
-    // a save file selected.
-    const mockDialogData = {
-      filePath: ''
-    };
-    ipcRenderer.invoke.mockResolvedValue(mockDialogData);
-    const spy = jest.spyOn(SetupTab.prototype, 'saveJsonFile');
-
-    const { findByText } = renderInvestTab();
-
-    const saveButton = await findByText('Save to JSON');
-    userEvent.click(saveButton);
-
-    // These are the calls that would have triggered if a file was selected
-    expect(spy).toHaveBeenCalledTimes(0);
-  });
-
-  test('SavePythonButton: Dialog callback does nothing when canceled', async () => {
-    // this resembles the callback data if the dialog is canceled instead of
-    // a save file selected.
-    const mockDialogData = {
-      filePath: ''
-    };
-    ipcRenderer.invoke.mockResolvedValue(mockDialogData);
-    const spy = jest.spyOn(SetupTab.prototype, 'savePythonScript');
-
-    const { findByText } = renderInvestTab();
-
-    const saveButton = await findByText('Save to Python script');
-    userEvent.click(saveButton);
-
-    // These are the calls that would have triggered if a file was selected
-    expect(spy).toHaveBeenCalledTimes(0);
-  });
-
-  test('Load Parameters Button: does nothing when canceled', async () => {
-    // this resembles the callback data if the dialog is canceled instead of
-    // a save file selected.
+  test.each([
+    ['Load parameters from file', 'loadParametersFromFile'],
+    ['Save to Python script', 'savePythonScript'],
+    ['Save to JSON', 'saveJsonFile'],
+    ['Save datastack', 'saveDatastack']
+  ])('%s: does nothing when canceled', async (label, method) => {
+    // callback data if the OS dialog was canceled
     const mockDialogData = {
       filePaths: ['']
     };
     ipcRenderer.invoke.mockResolvedValue(mockDialogData);
-    const spy = jest.spyOn(SetupTab.prototype, 'loadParametersFromFile');
+    const spy = jest.spyOn(SetupTab.prototype, method);
 
     const { findByText } = renderInvestTab();
 
-    const loadButton = await findByText('Load parameters from file');
+    const loadButton = await findByText(label);
     userEvent.click(loadButton);
 
-    // These are the calls that would have triggered if a file was selected
+    // Calls that would have triggered if a file was selected
     expect(spy).toHaveBeenCalledTimes(0);
+  });
+
+  test.each([
+    ['Load parameters from file'],
+    ['Save to Python script'],
+    ['Save to JSON'],
+    ['Save datastack'],
+  ])('%s: has hover text', async (label) => {
+    const {
+      findByText,
+      findByRole,
+      queryByRole,
+    } = renderInvestTab();
+    const loadButton = await findByText(label);
+    userEvent.hover(loadButton);
+    expect(await findByRole('tooltip')).toBeInTheDocument();
+    userEvent.unhover(loadButton);
+    await waitFor(() => {
+      expect(queryByRole('tooltip')).toBeNull();
+    });
+  });
+
+  test('User Guide link opens externally', async () => {
+    const { findByRole } = renderInvestTab();
+    const link = await findByRole('link', { name: /user's guide/i });
+    userEvent.click(link);
+    await waitFor(() => {
+      expect(shell.openExternal).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  test('Forum link opens externally', async () => {
+    const { findByRole } = renderInvestTab();
+    const link = await findByRole('link', { name: /frequently asked questions/i });
+    userEvent.click(link);
+    await waitFor(() => {
+      expect(shell.openExternal).toHaveBeenCalledTimes(1);
+    });
   });
 });
 
@@ -334,6 +409,7 @@ describe('InVEST Run Button', () => {
   const spec = {
     pyname: 'natcap.invest.bar',
     model_name: 'Bar Model',
+    userguide: 'bar.html',
     args: {
       a: {
         name: 'abar',
@@ -352,8 +428,7 @@ describe('InVEST Run Button', () => {
 
   beforeEach(() => {
     getSpec.mockResolvedValue(spec);
-    const mockSpec = spec;
-    jest.mock(UI_CONFIG_PATH, () => mockUISpec(mockSpec));
+    uiConfig.UI_SPEC = mockUISpec(spec);
   });
 
   test('Changing inputs trigger validation & enable/disable Run', async () => {

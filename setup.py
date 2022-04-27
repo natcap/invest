@@ -87,6 +87,7 @@ setup(
     },
     include_package_data=True,
     install_requires=_REQUIREMENTS,
+    python_requires='>=3.7,<3.10',
     license='BSD',
     long_description_content_type='text/x-rst',
     zip_safe=False,

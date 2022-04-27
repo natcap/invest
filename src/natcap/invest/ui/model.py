@@ -28,7 +28,8 @@ import natcap.invest
 
 from . import inputs
 from . import execution
-from .. import cli, MODEL_METADATA, utils
+from ..model_metadata import MODEL_METADATA
+from .. import cli, utils
 from .. import datastack
 from .. import usage
 from .. import utils

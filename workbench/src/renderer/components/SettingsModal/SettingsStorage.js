@@ -1,6 +1,6 @@
 import localforage from 'localforage';
 
-const logger = window.Workbench.getLogger(__filename.split('/').slice(-1)[0]);
+const logger = window.Workbench.getLogger('SettingsStorage.js');
 
 const investSettingsStore = localforage.createInstance({
   name: 'InvestSettings',
@@ -10,12 +10,14 @@ const investSettingsStore = localforage.createInstance({
  *
  * @returns {object} to destructure into:
  *     {String} nWorkers - TaskGraph number of workers
+ *     {String} taskgraphLoggingLevel - InVEST taskgraph logging level
  *     {String} loggingLevel - InVEST model logging level
  *     {String} sampleDataDir - default location for sample datastack downloads
  */
 export function getDefaultSettings() {
   const defaultSettings = {
     nWorkers: '-1',
+    taskgraphLoggingLevel: 'INFO',
     loggingLevel: 'INFO',
     sampleDataDir: '',
     language: 'en'

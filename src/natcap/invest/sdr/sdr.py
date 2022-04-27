@@ -17,21 +17,23 @@ import taskgraph
 from osgeo import gdal
 from osgeo import ogr
 
-from .. import MODEL_METADATA
+from ..model_metadata import MODEL_METADATA
+from .. import gettext
 from .. import spec_utils
 from .. import utils
 from .. import validation
 from ..spec_utils import u
 from . import sdr_core
 
+
 LOGGER = logging.getLogger(__name__)
 
-INVALID_ID_MSG = _('{number} features have a non-integer ws_id field')
+INVALID_ID_MSG = gettext('{number} features have a non-integer ws_id field')
 
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["sdr"].model_title,
     "pyname": MODEL_METADATA["sdr"].pyname,
-    "userguide_html": MODEL_METADATA["sdr"].userguide,
+    "userguide": MODEL_METADATA["sdr"].userguide,
     "args_with_spatial_overlap": {
         "spatial_keys": ["dem_path", "erosivity_path", "erodibility_path",
                          "lulc_path", "drainage_path", "watersheds_path", ],
@@ -51,10 +53,10 @@ ARGS_SPEC = {
                 "type": "number",
                 "units": u.megajoule*u.millimeter/(u.hectare*u.hour*u.year)}},
             "projected": True,
-            "about": _(
+            "about": gettext(
                 "Map of rainfall erosivity, reflecting the intensity and "
                 "duration of rainfall in the area of interest."),
-            "name": _("erosivity")
+            "name": gettext("erosivity")
         },
         "erodibility_path": {
             "type": "raster",
@@ -62,16 +64,16 @@ ARGS_SPEC = {
                 "type": "number",
                 "units": u.metric_ton*u.hectare*u.hour/(u.hectare*u.megajoule*u.millimeter)}},
             "projected": True,
-            "about": _(
+            "about": gettext(
                 "Map of soil erodibility, the susceptibility of soil "
                 "particles to detachment and transport by rainfall and "
                 "runoff."),
-            "name": _("soil erodibility")
+            "name": gettext("soil erodibility")
         },
         "lulc_path": {
             **spec_utils.LULC,
             "projected": True,
-            "about": _(
+            "about": gettext(
                 f"{spec_utils.LULC['about']} All values in this raster must "
                 "have corresponding entries in the Biophysical Table.")
         },
@@ -80,71 +82,71 @@ ARGS_SPEC = {
             "fields": {
                 "ws_id": {
                     "type": "integer",
-                    "about": _("Unique identifier for the watershed.")}
+                    "about": gettext("Unique identifier for the watershed.")}
             },
             "geometries": spec_utils.POLYGONS,
             "projected": True,
-            "about": _(
+            "about": gettext(
                 "Map of the boundaries of the watershed(s) over which to "
                 "aggregate results. Each watershed should contribute to a "
                 "point of interest where water quality will be analyzed."),
-            "name": _("Watersheds")
+            "name": gettext("Watersheds")
         },
         "biophysical_table_path": {
             "type": "csv",
             "columns": {
                 "lucode": {
                     "type": "integer",
-                    "about": _("LULC code from the LULC raster.")},
+                    "about": gettext("LULC code from the LULC raster.")},
                 "usle_c": {
                     "type": "ratio",
-                    "about": _("Cover-management factor for the USLE")},
+                    "about": gettext("Cover-management factor for the USLE")},
                 "usle_p": {
                     "type": "ratio",
-                    "about": _("Support practice factor for the USLE")}
+                    "about": gettext("Support practice factor for the USLE")}
             },
-            "about": _(
+            "about": gettext(
                 "A table mapping each LULC code to biophysical properties of "
                 "that LULC class. All values in the LULC raster must have "
                 "corresponding entries in this table."),
-            "name": _("biophysical table")
+            "name": gettext("biophysical table")
         },
         "threshold_flow_accumulation": spec_utils.THRESHOLD_FLOW_ACCUMULATION,
         "k_param": {
             "type": "number",
             "units": u.none,
-            "about": _("Borselli k parameter."),
-            "name": _("Borselli k parameter")
+            "about": gettext("Borselli k parameter."),
+            "name": gettext("Borselli k parameter")
         },
         "sdr_max": {
             "type": "ratio",
-            "about": _("The maximum SDR value that a pixel can have."),
-            "name": _("maximum SDR value")
+            "about": gettext("The maximum SDR value that a pixel can have."),
+            "name": gettext("maximum SDR value")
         },
         "ic_0_param": {
             "type": "number",
             "units": u.none,
-            "about": _("Borselli IC0 parameter."),
-            "name": _("Borselli IC0 parameter")
+            "about": gettext("Borselli IC0 parameter."),
+            "name": gettext("Borselli IC0 parameter")
         },
         "l_max": {
             "type": "number",
             "expression": "value > 0",
             "units": u.none,
-            "about": _(
+            "about": gettext(
                 "The maximum allowed value of the slope length parameter (L) "
                 "in the LS factor."),
-            "name": _("maximum l value"),
+            "name": gettext("maximum l value"),
         },
         "drainage_path": {
             "type": "raster",
             "bands": {1: {"type": "number", "units": u.none}},
             "required": False,
-            "about": _(
+            "about": gettext(
                 "Map of locations of artificial drainages that drain to the "
                 "watershed. Pixels with 1 are drainages and are treated like "
                 "streams. Pixels with 0 are not drainages."),
-            "name": _("drainages")
+            "name": gettext("drainages")
         }
     }
 }
@@ -241,35 +243,36 @@ def execute(args):
             processes should be used in parallel processing. -1 indicates
             single process mode, 0 is single process but non-blocking mode,
             and >= 1 is number of processes.
-        args['biophysical_table_lucode_field'] (str): optional, if exists
-            use this instead of 'lucode'.
 
     Returns:
         None.
 
     """
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
-    lufield_id = 'lucode'
-    if 'biophysical_table_lucode_field' in args:
-        lufield_id = args['biophysical_table_lucode_field']
     biophysical_table = utils.build_lookup_from_csv(
-        args['biophysical_table_path'], lufield_id)
+        args['biophysical_table_path'], 'lucode')
 
     # Test to see if c or p values are outside of 0..1
     for table_key in ['usle_c', 'usle_p']:
         for (lulc_code, table) in biophysical_table.items():
             try:
+                float(lulc_code)
+            except ValueError:
+                raise ValueError(
+                    f'Value "{lulc_code}" from the "lucode" column of the '
+                    f'biophysical table is not a number. Please check the '
+                    f'formatting of {args["biophysical_table_path"]}')
+            try:
                 float_value = float(table[table_key])
                 if float_value < 0 or float_value > 1:
                     raise ValueError(
-                        'Value should be within range 0..1 offending value '
-                        'table %s, lulc_code %s, value %s' % (
-                            table_key, str(lulc_code), str(float_value)))
+                        f'{float_value} is not within range 0..1')
             except ValueError:
                 raise ValueError(
-                    'Value is not a floating point value within range 0..1 '
-                    'offending value table %s, lulc_code %s, value %s' % (
-                        table_key, str(lulc_code), table[table_key]))
+                    f'A value in the biophysical table is not a number '
+                    f'within range 0..1. The offending value is in '
+                    f'column "{table_key}", lucode row "{lulc_code}", '
+                    f'and has value "{table[table_key]}"')
 
     intermediate_output_dir = os.path.join(
         args['workspace_dir'], INTERMEDIATE_DIR_NAME)
@@ -560,7 +563,7 @@ def execute(args):
             f_reg['f_path'], f_reg['sdr_path'],
             f_reg['sed_deposition_path']),
         dependent_task_list=[e_prime_task, sdr_task, flow_dir_task],
-        target_path_list=[f_reg['sed_deposition_path']],
+        target_path_list=[f_reg['sed_deposition_path'], f_reg['f_path']],
         task_name='sediment deposition')
 
     _ = task_graph.add_task(

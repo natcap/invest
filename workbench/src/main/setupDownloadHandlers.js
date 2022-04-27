@@ -5,7 +5,7 @@ import { ipcMain } from 'electron';
 
 import extractZipInplace from './extractZipInplace';
 import { ipcMainChannels } from './ipcMainChannels';
-import { getLogger } from '../logger';
+import { getLogger } from './logger';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
@@ -75,6 +75,10 @@ export default function setupDownloadHandlers(mainWindow) {
         );
       } else {
         logger.info(`download failed: ${state}`);
+        mainWindow.webContents.send(
+          'download-status',
+          ['failed', 'failed'] // ProgressBar expects array length 2
+        );
       }
       if (!downloadQueue.length) {
         logger.info('all downloads complete');
