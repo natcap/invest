@@ -96,7 +96,7 @@ PRECIP = {
     "about": gettext("Map of average annual precipitation."),
     "name": gettext("precipitation")
 }
-ETO = {
+ET0 = {
     "name": gettext("evapotranspiration"),
     "type": "raster",
     "bands": {
