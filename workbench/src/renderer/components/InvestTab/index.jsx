@@ -247,16 +247,16 @@ export default class InvestTab extends React.Component {
                 {_('Setup')}
                 <MdKeyboardArrowRight />
               </Nav.Link>
-              <div
-                className="sidebar-setup"
-                id={sidebarSetupElementId}
-              />
               <Nav.Link eventKey="log" disabled={logDisabled}>
                 {_('Log')}
                 <MdKeyboardArrowRight />
               </Nav.Link>
             </Nav>
-            <div className="sidebar-row">
+            <div
+              className="sidebar-row sidebar-buttons"
+              id={sidebarSetupElementId}
+            />
+            <div className="sidebar-row sidebar-links">
               <ResourcesLinks
                 moduleName={modelRunName}
                 docs={modelSpec.userguide}

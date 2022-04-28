@@ -310,29 +310,35 @@ body {
 	border-radius: 0;
 }
 
-.sidebar-setup {
-	display: flex;
-	flex-direction: column;
-	flex-wrap: nowrap;
-	align-items: flex-start;
-	padding-left: 1.5rem;
-}
-
-.sidebar-setup .btn {
-	white-space: nowrap;
-}
-
-/* Resources Links */
 .sidebar-row {
 	display: flex;
 	flex-direction: column;
 	font-size: 1.0rem;
-	padding-left: inherit;
+	padding-left: 1.0rem;
 	padding-right: 1rem;
 }
 
-.sidebar-row .alert {
+.sidebar-buttons {
+	display: flex;
+	flex-direction: column;
+	flex-wrap: nowrap;
+	align-items: flex-start;
+}
+
+.sidebar-buttons .btn {
+	white-space: nowrap;
+	background: none;
+	border: none;
+	color: black;
+	padding-left: 0;
+}
+
+.sidebar-buttons .alert {
 	margin-top: 1rem;
+}
+
+.sidebar-links a {
+	padding-top: 0.5rem;
 }
 
 .sidebar-footer {
