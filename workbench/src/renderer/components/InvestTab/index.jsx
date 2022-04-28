@@ -244,9 +244,7 @@ export default class InvestTab extends React.Component {
               onSelect={this.switchTabs}
             >
               <Nav.Link eventKey="setup">
-                <span>
-                {_('Setup ')}
-                </span>
+                {_('Setup')}
                 <MdKeyboardArrowRight />
               </Nav.Link>
               <div
@@ -254,7 +252,7 @@ export default class InvestTab extends React.Component {
                 id={sidebarSetupElementId}
               />
               <Nav.Link eventKey="log" disabled={logDisabled}>
-                {_('Log ')}
+                {_('Log')}
                 <MdKeyboardArrowRight />
               </Nav.Link>
             </Nav>
