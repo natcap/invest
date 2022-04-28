@@ -6,34 +6,3 @@ body {
 	font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji";
   margin: 2rem;
 }
-
-#header {
-	text-align: center;
-}
-
-#invest-version span {
-  font-weight: bold;
-  font-size: 1.2rem;
-}
-
-#invest-version p {
-  margin: 0.1rem;
-  font-size: 0.8rem;
-}
-
-#invest-copywrite {
-  font-size: 0.8rem;
-}
-
-#links p {
-  margin-top: 0.1rem;
-  margin-bottom: 0.1rem;
-}
-
-#licenses h4 {
-  margin-bottom: 0.1rem;
-}
-
-#licenses td {
-  padding-right: 1rem;
-}
