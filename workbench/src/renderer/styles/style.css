@@ -283,10 +283,20 @@ body {
 	background-color: #fff;
 	font-size: 1.3rem;
 	font-weight: 550;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding-right: 0;
+}
+
+.invest-sidebar-col .nav-link svg {
+	font-size: 2rem;
 }
 
 .invest-sidebar-col .nav-link:hover, .invest-sidebar-col .nav-link:focus {
-	background-color: ghostwhite;
+	background-color: rgb(230, 230, 230);
+	text-decoration-line: underline;
+	text-decoration-thickness: 3px;
 }
 
 .invest-sidebar-col .nav-link.disabled {

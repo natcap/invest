@@ -7,6 +7,10 @@ import TabContainer from 'react-bootstrap/TabContainer';
 import Nav from 'react-bootstrap/Nav';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
+import {
+  MdKeyboardArrowRight,
+  MdArrowRight
+} from 'react-icons/md';
 
 import ModelStatusAlert from './ModelStatusAlert';
 import SetupTab from '../SetupTab';
@@ -240,14 +244,18 @@ export default class InvestTab extends React.Component {
               onSelect={this.switchTabs}
             >
               <Nav.Link eventKey="setup">
-                {_('Setup')}
+                <span>
+                {_('Setup ')}
+                </span>
+                <MdKeyboardArrowRight />
               </Nav.Link>
               <div
                 className="sidebar-setup"
                 id={sidebarSetupElementId}
               />
               <Nav.Link eventKey="log" disabled={logDisabled}>
-                {_('Log')}
+                {_('Log ')}
+                <MdKeyboardArrowRight />
               </Nav.Link>
             </Nav>
             <div className="sidebar-row">
