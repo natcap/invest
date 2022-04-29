@@ -314,8 +314,8 @@ body {
 .sidebar-row {
 	display: flex;
 	flex-direction: column;
-	font-size: 1.0rem;
-	padding-left: 1.0rem;
+	font-size: 1rem;
+	padding-left: 1rem;
 	padding-right: 1rem;
 }
 

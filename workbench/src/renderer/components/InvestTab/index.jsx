@@ -9,7 +9,6 @@ import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import {
   MdKeyboardArrowRight,
-  MdArrowRight
 } from 'react-icons/md';
 
 import ModelStatusAlert from './ModelStatusAlert';
