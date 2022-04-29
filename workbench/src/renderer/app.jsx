@@ -10,7 +10,7 @@ import Button from 'react-bootstrap/Button';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import Spinner from 'react-bootstrap/Spinner';
-import { MdClose } from 'react-icons/md';
+import { MdClose, MdHome } from 'react-icons/md';
 
 import HomeTab from './components/HomeTab';
 import InvestTab from './components/InvestTab';
@@ -295,6 +295,7 @@ export default class App extends React.Component {
                     onSelect={this.switchTabs}
                     eventKey="home"
                   >
+                    <MdHome />
                     {_("InVEST")}
                   </Nav.Link>
                 </Navbar.Brand>
