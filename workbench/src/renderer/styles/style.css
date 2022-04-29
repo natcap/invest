@@ -48,6 +48,7 @@ body {
 	font-size: 2.0rem;
 	letter-spacing: 1px;
 	padding-bottom: 0;
+	padding-left: 0.7rem;
 	display: flex;
 	align-items: center;
 }
@@ -158,6 +159,7 @@ body {
 .invest-list-container {
 	height: 87vh;
 	overflow-y: auto;
+	padding-left: 0;
 }
 
 .invest-list-group {
@@ -200,7 +202,8 @@ body {
 	flex-direction: column;
 	height: 87vh;
 	overflow-y: auto;
-	margin-top: 15px;
+	padding-top: 0.5rem;
+	padding-right: 0;
 }
 
 .recent-job-card {
@@ -283,6 +286,7 @@ body {
 	display: flex;
 	flex-direction: column;
 	padding-right: 0;
+	padding-left: 0;
 }
 
 .invest-sidebar-col .nav-link {
