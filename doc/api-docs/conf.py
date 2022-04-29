@@ -37,6 +37,8 @@ for path in os.listdir(INVEST_BUILD_DIR):
     if path.startswith('lib'):
         INVEST_LIB_DIR = os.path.join(INVEST_BUILD_DIR, path)
         break
+else:
+    raise ValueError(f'lib directory not found in {INVEST_BUILD_DIR}')
 
 # -- General configuration ------------------------------------------------
 
@@ -267,15 +269,10 @@ for _loader, name, _is_pkg in itertools.chain(
 # Write sphinx autodoc function for each entrypoint
 with open(MODEL_ENTRYPOINTS_FILE, 'w') as models_rst:
     models_rst.write(MODEL_RST_TEMPLATE)
-    for name, module_title in sorted(all_modules.items(),
-                                     key=lambda x: x[1]):
-        models_rst.write((
-            '{module_title}\n'
-            '{underline}\n'
-            '.. autofunction:: {modname}.execute\n'
-            '   :noindex:\n\n').format(
-                module_title=module_title,
-                underline=''.join(['=']*len(module_title)),
-                modname=name
-            )
-        )
+    for name, module_title in sorted(all_modules.items(), key=lambda x: x[1]):
+        underline = ''.join(['=']*len(module_title))
+        models_rst.write(
+            f'{module_title}\n'
+            f'{underline}\n'
+            f'.. autofunction:: {name}.execute\n'
+            '   :noindex:\n\n')
