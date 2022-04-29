@@ -280,7 +280,8 @@ body {
 
 .invest-sidebar-col .nav-link {
 	color: #000;
-	background-color: #fff;
+	border-right: 5px solid transparent;
+	border-radius: 0;
 	font-size: 1.3rem;
 	font-weight: 550;
 	display: flex;
@@ -295,6 +296,8 @@ body {
 
 .invest-sidebar-col .nav-link:hover, .invest-sidebar-col .nav-link:focus {
 	background-color: rgb(240, 240, 240);
+	border-right: 5px solid rgb(240, 240, 240);
+	border-radius: 0;
 }
 
 .invest-sidebar-col .nav-link.disabled {
