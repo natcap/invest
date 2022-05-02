@@ -209,22 +209,39 @@ exceed 100% of window.*/
 	font-weight: 600;
 }
 
+.open-button-col {
+	max-width: fit-content;
+	padding-right: 0;
+}
+
+.recent-header-col {
+	padding-left: 0;
+}
+
 .recent-job-card-col {
 	display: flex;
 	flex-wrap: nowrap;
 	flex-direction: column;
 	height: 87vh;
 	overflow-y: auto;
-	padding-top: 0.5rem;
-	padding-right: 0;
+	/*padding-top: 0.5rem;*/
+	padding-right: 0.5rem;
+	/*margin-right: 16px;*/
+}
+
+.recent-job-card-col .container {
+	padding-top: 0.25rem;
+	padding-bottom: 0.25rem;
+	padding-right: 0.5rem;
 }
 
 .recent-job-card {
-	flex: 1 0 auto!important;
-	flex-direction: row;
+	/*flex: 1 0 auto!important;*/
+	/*flex-direction: row;*/
 	width: inherit; 
-	margin-bottom: 15px!important;
+	margin-bottom: 1rem;
 	padding: 0;
+	height: fit-content;
 }
 
 .card-body {
