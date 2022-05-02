@@ -209,6 +209,11 @@ exceed 100% of window.*/
 	padding-left: 0;
 }
 
+.recent-header-col .default-text {
+	padding-left: 0;
+	text-align: right;
+}
+
 .recent-job-card-col {
 	display: flex;
 	flex-wrap: nowrap;
@@ -222,6 +227,10 @@ exceed 100% of window.*/
 	padding-top: 0.25rem;
 	padding-bottom: 0.25rem;
 	padding-right: 0.5rem;
+}
+
+.recent-job-card-col .container .row {
+	align-items: center;
 }
 
 .recent-job-card {

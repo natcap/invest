@@ -170,7 +170,7 @@ class RecentInvestJobs extends React.Component {
                   </h4>
                 )
                 : (
-                  <div>
+                  <div className="default-text">
                     {_(`Setup a model from a sample datastack file (.json)
                         or from an InVEST model's logfile (.txt): `)}
                   </div>
