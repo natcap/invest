@@ -597,9 +597,7 @@ def execute(args):
             pairwise_risk_path = os.path.join(
                 intermediate_dir, f'RISK_{habitat}_{stressor}{suffix}.tif')
             pairwise_risk_paths.append(pairwise_risk_path)
-
             summary_data['risk_path'] = pairwise_risk_path
-            pairwise_summary_data.append(summary_data)
 
             pairwise_risk_task = graph.add_task(
                 _calculate_pairwise_risk,
@@ -637,6 +635,9 @@ def execute(args):
                 target_path_list=[reclassified_pairwise_risk_path],
                 dependent_task_list=[pairwise_risk_task]
             ))
+            summary_data['classification_path'] = (
+                reclassified_pairwise_risk_path)
+            pairwise_summary_data.append(summary_data)
 
         # Sum the pairwise risk scores to get cumulative risk to the habitat.
         cumulative_risk_path = os.path.join(
@@ -1034,6 +1035,7 @@ def _create_summary_statistics_file(
                 * ``"e_path"`` the exposure criteria score raster.
                 * ``"c_path"`` the consequence criteria score raster.
                 * ``"risk_path"`` the raster of calculated risk.
+                * ``"classification_path"`` the High/Med/Low classified risk.
 
         target_summary_csv_path (string): The path to where the summary CSV
             should be written
@@ -1045,7 +1047,7 @@ def _create_summary_statistics_file(
         json_data = json.load(aoi_json_file)
     subregion_names = json_data['subregion_names']
 
-    def _read_stats_from_block(raster_path, block_info, mask_array):
+    def _read_block(raster_path, block_info, mask_array):
         raster = gdal.OpenEx(raster_path, gdal.OF_RASTER)
         band = raster.GetRasterBand(1)
         nodata = band.GetNoDataValue()
@@ -1053,13 +1055,7 @@ def _create_summary_statistics_file(
         valid_pixels = block[
             ~utils.array_equals_nodata(block, nodata) & mask_array]
 
-        if valid_pixels.size == 0:
-            return (float('inf'), 0, 0, 0)
-
-        return (numpy.min(valid_pixels),
-                numpy.max(valid_pixels),
-                numpy.sum(valid_pixels),
-                valid_pixels.size)
+        return valid_pixels
 
     pairwise_data = {}
     habitats = set()
@@ -1083,6 +1079,8 @@ def _create_summary_statistics_file(
         e_raster = pairwise_data[habitat, stressor]['e_path']
         c_raster = pairwise_data[habitat, stressor]['c_path']
         r_raster = pairwise_data[habitat, stressor]['risk_path']
+        classes_raster = (
+            pairwise_data[habitat, stressor]['classification_path'])
 
         subregion_stats = {}
 
@@ -1120,12 +1118,25 @@ def _create_summary_statistics_file(
                                     ('SUM', 0), ('N_PIXELS', 0)]:
                                 stats[f'{prefix}_{suffix}'] = initial_value
 
+                            for r_stat in ('R_N_HIGH', 'R_N_MEDIUM', 'R_N_LOW',
+                                           'R_N_ANY'):
+                                stats[r_stat] = 0
+
                     for prefix, raster in [('E', e_raster),
                                            ('C', c_raster),
                                            ('R', r_raster)]:
-                        pixel_min, pixel_max, pixel_sum, n_pixels = (
-                            _read_stats_from_block(raster, block_info,
-                                                   subregion_mask))
+                        valid_pixels = _read_block(raster, block_info,
+                                                   subregion_mask)
+                        if valid_pixels.size == 0:
+                            # If no valid pixels, fall back to defaults.
+                            pixel_min = float('inf')
+                            pixel_max, pixel_sum, n_pixels = 0
+                        else:
+                            pixel_min = numpy.min(valid_pixels)
+                            pixel_max = numpy.max(valid_pixels)
+                            pixel_sum = numpy.sum(valid_pixels)
+                            n_pixels = valid_pixels.size
+
                         if pixel_min < stats[f'{prefix}_MIN']:
                             stats[f'{prefix}_MIN'] = pixel_min
 
@@ -1134,13 +1145,31 @@ def _create_summary_statistics_file(
 
                         stats[f'{prefix}_SUM'] += pixel_sum
                         stats[f'{prefix}_N_PIXELS'] += n_pixels
+
+                    # the percentage of high/medium/low classification is a
+                    # per-category count.
+                    classes_block = _read_block(classes_raster, block_info,
+                                                subregion_mask)
+                    stats['R_N_HIGH'] += numpy.count_nonzero(classes_block == 3)
+                    stats['R_N_MEDIUM'] += numpy.count_nonzero(classes_block == 2)
+
+                    # Old HRA included 0-value pixels in  the R_%_LOW bucket so we
+                    # do here as well.
+                    stats['R_N_LOW'] += numpy.count_nonzero(classes_block <= 1)
+                    stats['R_N_ANY'] += classes_block.size
                     subregion_stats[subregion_id] = stats
 
         for subregion_id, stats in subregion_stats.items():
+            # Avoid dividing by zero.  If this is 0, then the other counts must
+            # all also be 0.
+            reclassified_count = max(stats['R_N_ANY'], 1)
             record = {
                 'HABITAT': habitat,
                 'STRESSOR': stressor,
                 'SUBREGION': subregion_names[str(subregion_id)],
+                'R_%HIGH': (stats['R_N_HIGH'] / reclassified_count) * 100,
+                'R_%MEDIUM': (stats['R_N_MEDIUM'] / reclassified_count) * 100,
+                'R_%LOW': (stats['R_N_LOW'] / reclassified_count) * 100,
             }
             for prefix in ('E', 'C', 'R'):
                 record[f'{prefix}_MIN'] = float(stats[f'{prefix}_MIN'])
@@ -1154,7 +1183,9 @@ def _create_summary_statistics_file(
             'HABITAT', 'STRESSOR', 'SUBREGION',
             'E_MIN', 'E_MAX', 'E_MEAN',
             'C_MIN', 'C_MAX', 'C_MEAN',
-            'R_MIN', 'R_MAX', 'R_MEAN'])
+            'R_MIN', 'R_MAX', 'R_MEAN',
+            'R_%HIGH', 'R_%MEDIUM', 'R_%LOW',
+        ])
     out_dataframe.to_csv(target_summary_csv_path, index=False)
 
 
