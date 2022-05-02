@@ -6,26 +6,18 @@ body {
 	--invest-green: #148F68;
 	background-color: rgba(0,0,0,0);
 	margin: 0;
-	/*padding: 1rem;*/
 	overflow-y: hidden;
 }
 
 /*Top Navigation*/
 
 .navbar {
-	/*height: 3rem;*/
-	/*align-items: end;*/
-	/*padding-bottom: 0;*/
 	border-bottom: 3px solid var(--invest-green);
-	/*background-color: #fff*/
 	padding: 0;
 }
 
 .navbar .row {
 	align-items: end;
-	/*padding-bottom: 0;
-	border-bottom: 3px solid var(--invest-green);
-	background-color: #fff*/
 }
 
 .navbar-brand {
@@ -172,7 +164,6 @@ exceed 100% of window.*/
 .invest-list-container {
 	height: 87vh;
 	overflow-y: auto;
-	/*padding-left: 0;*/
 }
 
 .invest-list-group {
@@ -224,9 +215,7 @@ exceed 100% of window.*/
 	flex-direction: column;
 	height: 87vh;
 	overflow-y: auto;
-	/*padding-top: 0.5rem;*/
 	padding-right: 0.5rem;
-	/*margin-right: 16px;*/
 }
 
 .recent-job-card-col .container {
@@ -236,8 +225,6 @@ exceed 100% of window.*/
 }
 
 .recent-job-card {
-	/*flex: 1 0 auto!important;*/
-	/*flex-direction: row;*/
 	width: inherit; 
 	margin-bottom: 1rem;
 	padding: 0;
@@ -317,7 +304,6 @@ exceed 100% of window.*/
 	display: flex;
 	flex-direction: column;
 	padding-right: 0;
-	/*padding-left: 1rem;*/
 }
 
 .invest-sidebar-col .nav-link {
@@ -515,7 +501,6 @@ input[type=text]::placeholder {
 	overflow: auto;
 	white-space: pre-wrap;
 	height: 85vh;
-	/*background-color: #191919;*/
 }
 
 #log-text {
