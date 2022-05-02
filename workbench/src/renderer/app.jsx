@@ -299,7 +299,7 @@ export default class App extends React.Component {
                   </Nav.Link>
                 </Navbar.Brand>
               </Col>
-              <Col className="pl-1 pr-0 navbar-middle">
+              <Col className="navbar-middle">
                 <Nav
                   justify
                   variant="tabs"
@@ -310,7 +310,7 @@ export default class App extends React.Component {
                   {investNavItems}
                 </Nav>
               </Col>
-              <Col className="px-0 text-right navbar-right">
+              <Col className="text-right navbar-right">
                 {
                   (downloadedNofN)
                     ? (

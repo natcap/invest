@@ -40,12 +40,16 @@ body {
 .navbar-middle {
 	flex-shrink: 1;
 	min-width: 0;
+	padding-left: 0;
+	padding-right: 0;
 }
 
 .navbar-right {
 	/*max-width: fit-content;
 	margin-left: 0.5rem;*/
 	margin-right: -15px;
+	padding-left: 0;
+	padding-right: 0;
 }
 
 .navbar-brand .nav-link {
