@@ -287,7 +287,7 @@ export default class App extends React.Component {
             onDragOver={dragOverHandlerNone}
           >
             <Row
-              className="w-100 flex-nowrap mr-0"
+              className="w-100 flex-nowrap"
             >
               <Col sm={3} className="px-0">
                 <Navbar.Brand>

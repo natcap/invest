@@ -6,7 +6,7 @@ body {
 	--invest-green: #148F68;
 	background-color: rgba(0,0,0,0);
 	margin: 0;
-	padding: 1rem;
+	/*padding: 1rem;*/
 	overflow-y: hidden;
 }
 
@@ -14,13 +14,17 @@ body {
 
 .navbar {
 	/*height: 3rem;*/
+	/*align-items: end;*/
+	/*padding-bottom: 0;*/
+	border-bottom: 3px solid var(--invest-green);
+	/*background-color: #fff*/
 }
 
 .navbar .row {
 	align-items: end;
-	padding-bottom: 0;
+	/*padding-bottom: 0;
 	border-bottom: 3px solid var(--invest-green);
-	background-color: #fff
+	background-color: #fff*/
 }
 
 .navbar-brand {
@@ -38,8 +42,9 @@ body {
 }
 
 .navbar-right {
-	max-width: fit-content;
-	margin-left: 0.5rem;
+	/*max-width: fit-content;
+	margin-left: 0.5rem;*/
+	margin-right: -15px;
 }
 
 .navbar-brand .nav-link {
