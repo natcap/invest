@@ -13,7 +13,7 @@ body {
 /*Top Navigation*/
 
 .navbar {
-	height: 3rem;
+	/*height: 3rem;*/
 }
 
 .navbar .row {
@@ -151,7 +151,7 @@ body {
 }
 
 .tab-content {
-	padding-top:  10px;
+	/*padding-top:  10px;*/
 }
 
 /* Home Tab */
@@ -490,8 +490,9 @@ input[type=text]::placeholder {
 
 #log-text {
 	font-family: monospace;
-	font-size:1.0rem;
+	font-size:1rem;
 	color: #000;
+	margin-top: 1rem;
 }
 
 #log-text .invest-log-primary {
