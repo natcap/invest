@@ -159,7 +159,7 @@ class RecentInvestJobs extends React.Component {
     });
 
     return (
-      <Container>
+      <>
         <div className="mb-1">
           {recentButtons.length
             ? (
@@ -182,7 +182,7 @@ class RecentInvestJobs extends React.Component {
         <React.Fragment>
           {recentButtons}
         </React.Fragment>
-      </Container>
+      </>
     );
   }
 }
