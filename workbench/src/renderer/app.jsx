@@ -342,7 +342,7 @@ export default class App extends React.Component {
           </Navbar>
 
           <TabContent
-            id="top-tab-content"
+            id="home-tab-content"
             onDragOver={dragOverHandlerNone}
           >
             <TabPane

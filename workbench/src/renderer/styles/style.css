@@ -155,8 +155,11 @@ body {
 	margin-right: 0.2rem;
 }
 
-.tab-content {
-	/*padding-top:  10px;*/
+/* add padding to accomodate the width of a scroll bar
+otherwise the bar will make overall width of content
+exceed 100% of window.*/
+#home-tab-content {
+	padding-right:  16px;
 }
 
 /* Home Tab */
