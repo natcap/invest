@@ -18,6 +18,7 @@ body {
 	/*padding-bottom: 0;*/
 	border-bottom: 3px solid var(--invest-green);
 	/*background-color: #fff*/
+	padding: 0;
 }
 
 .navbar .row {
@@ -167,7 +168,7 @@ exceed 100% of window.*/
 .invest-list-container {
 	height: 87vh;
 	overflow-y: auto;
-	padding-left: 0;
+	/*padding-left: 0;*/
 }
 
 .invest-list-group {
@@ -295,7 +296,7 @@ exceed 100% of window.*/
 	display: flex;
 	flex-direction: column;
 	padding-right: 0;
-	padding-left: 0;
+	/*padding-left: 1rem;*/
 }
 
 .invest-sidebar-col .nav-link {

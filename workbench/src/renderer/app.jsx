@@ -283,13 +283,12 @@ export default class App extends React.Component {
         />
         <TabContainer activeKey={activeTab}>
           <Navbar
-            className="px-0 py-0"
             onDragOver={dragOverHandlerNone}
           >
             <Row
               className="w-100 flex-nowrap"
             >
-              <Col sm={3} className="px-0">
+              <Col sm={3}>
                 <Navbar.Brand>
                   <Nav.Link
                     onSelect={this.switchTabs}
