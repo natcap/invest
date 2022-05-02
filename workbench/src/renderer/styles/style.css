@@ -271,6 +271,7 @@ body {
 	 /* main col can grow & shrink, sidebar cannot. */
 	flex:  1 1 0;
 	padding-left: 0;
+	padding-right: 0;
 	height: 85vh;
 }
 
