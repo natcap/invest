@@ -480,9 +480,7 @@ def _write_summary_vector(
         layer_name, source_srs, source_geom_type)
 
     target_fields = ['rnf_rt_idx', 'rnf_rt_m3', 'flood_vol']
-    if not damage_per_aoi_stats:
-        damage_per_aoi_stats = {}
-    else:
+    if damage_per_aoi_stats is not None:
         target_fields += ['aff_bld', 'serv_blt']
 
     for field_name in target_fields:
@@ -499,19 +497,17 @@ def _write_summary_vector(
         target_feature.SetGeometry(base_geom_ref.Clone())
         base_geom_ref = None
 
-        if feature_id in runoff_ret_stats:
-            pixel_count = runoff_ret_stats[feature_id]['count']
-            if pixel_count > 0:
-                mean_value = (
-                    runoff_ret_stats[feature_id]['sum'] / float(pixel_count))
-                target_feature.SetField('rnf_rt_idx', float(mean_value))
+        pixel_count = runoff_ret_stats[feature_id]['count']
+        if pixel_count > 0:
+            mean_value = (
+                runoff_ret_stats[feature_id]['sum'] / float(pixel_count))
+            target_feature.SetField('rnf_rt_idx', float(mean_value))
 
-        if feature_id in runoff_ret_vol_stats:
-            target_feature.SetField(
-                'rnf_rt_m3', float(
-                    runoff_ret_vol_stats[feature_id]['sum']))
+        target_feature.SetField(
+            'rnf_rt_m3', float(
+                runoff_ret_vol_stats[feature_id]['sum']))
 
-        if feature_id in damage_per_aoi_stats:
+        if damage_per_aoi_stats is not None:
             pixel_count = runoff_ret_vol_stats[feature_id]['count']
             if pixel_count > 0:
                 damage_sum = damage_per_aoi_stats[feature_id]
@@ -522,9 +518,8 @@ def _write_summary_vector(
                     'serv_blt', (
                         damage_sum * runoff_ret_vol_stats[feature_id]['sum']))
 
-        if feature_id in flood_volume_stats:
-            target_feature.SetField(
-                'flood_vol', float(flood_volume_stats[feature_id]['sum']))
+        target_feature.SetField(
+            'flood_vol', float(flood_volume_stats[feature_id]['sum']))
 
         target_watershed_layer.CreateFeature(target_feature)
     target_watershed_layer.SyncToDisk()
