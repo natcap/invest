@@ -4,7 +4,7 @@ import unittest
 
 import pint
 from natcap.invest import cli
-from natcap.invest import MODEL_METADATA
+from natcap.invest.model_metadata import MODEL_METADATA
 
 valid_nested_types = {
     None: {  # if no parent type (arg is top-level), then all types are valid

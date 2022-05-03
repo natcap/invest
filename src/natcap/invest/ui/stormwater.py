@@ -1,5 +1,6 @@
 from natcap.invest.ui import model, inputs
-from natcap.invest import MODEL_METADATA, stormwater
+from natcap.invest.model_metadata import MODEL_METADATA
+from natcap.invest import stormwater
 
 
 class Stormwater(model.InVESTModel):

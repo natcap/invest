@@ -2,9 +2,9 @@
 
 import functools
 
-from natcap.invest import MODEL_METADATA
 from natcap.invest.coastal_blue_carbon import coastal_blue_carbon
 from natcap.invest.coastal_blue_carbon import preprocessor
+from natcap.invest.model_metadata import MODEL_METADATA
 from natcap.invest.ui import inputs
 from natcap.invest.ui import model
 

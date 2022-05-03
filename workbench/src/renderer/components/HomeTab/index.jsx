@@ -159,30 +159,35 @@ class RecentInvestJobs extends React.Component {
     });
 
     return (
-      <Container>
-        <div className="mb-1">
-          {recentButtons.length
-            ? (
-              <h4 className="d-inline-block">
-                {_("Recent runs:")}
-              </h4>
-            )
-            : (
-              <div className="d-inline-block">
-                {_(`Try the <b>Open</b> button to setup a model from a sample
-                    datastack file (.json) or from an InVEST model's logfile (.txt)`)}
-              </div>
-            )}
-          <OpenButton
-            className="float-right"
-            openInvestModel={this.props.openInvestModel}
-            batchUpdateArgs={this.props.batchUpdateArgs}
-          />
-        </div>
+      <>
+        <Container>
+          <Row>
+            <Col className="recent-header-col">
+              {recentButtons.length
+                ? (
+                  <h4>
+                    {_('Recent runs:')}
+                  </h4>
+                )
+                : (
+                  <div className="default-text">
+                    {_(`Setup a model from a sample datastack file (.json)
+                        or from an InVEST model's logfile (.txt): `)}
+                  </div>
+                )}
+            </Col>
+            <Col className="open-button-col">
+              <OpenButton
+                className="mr-2"
+                openInvestModel={this.props.openInvestModel}
+              />
+            </Col>
+          </Row>
+        </Container>
         <React.Fragment>
           {recentButtons}
         </React.Fragment>
-      </Container>
+      </>
     );
   }
 }

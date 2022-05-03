@@ -2,7 +2,7 @@
 
 from natcap.invest.ui import model, inputs
 from natcap.invest.seasonal_water_yield import seasonal_water_yield
-from natcap.invest import MODEL_METADATA
+from natcap.invest.model_metadata import MODEL_METADATA
 
 
 class SeasonalWaterYield(model.InVESTModel):

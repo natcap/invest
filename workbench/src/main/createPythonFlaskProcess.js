@@ -14,14 +14,9 @@ const HOSTNAME = 'http://localhost';
  * @returns {ChildProcess} - a reference to the subprocess.
  */
 export function createPythonFlaskProcess(investExe) {
-  // TODO: starting `invest serve` without any python logging
-  // because of https://github.com/natcap/invest/issues/563
-  // & https://github.com/natcap/invest-workbench/issues/144
-  // Once those are resolved, we probably want some logging here,
-  // maybe --debug if devMode, -vvv if production?
   const pythonServerProcess = spawn(
     investExe,
-    ['serve', '--port', process.env.PORT],
+    ['--debug', 'serve', '--port', process.env.PORT],
     { shell: true } // necessary in dev mode & relying on a conda env
   );
 

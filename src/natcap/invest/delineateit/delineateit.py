@@ -18,7 +18,8 @@ from .. import utils
 from .. import spec_utils
 from ..spec_utils import u
 from .. import validation
-from .. import MODEL_METADATA
+from ..model_metadata import MODEL_METADATA
+from .. import gettext
 from . import delineateit_core
 
 
@@ -43,26 +44,26 @@ ARGS_SPEC = {
         "detect_pour_points": {
             "type": "boolean",
             "required": False,
-            "about": _(
+            "about": gettext(
                 "Detect pour points (watershed outlets) based on "
                 "the DEM, and use these instead of a user-provided outlet "
                 "features vector."),
-            "name": _("detect pour points")
+            "name": gettext("detect pour points")
         },
         "outlet_vector_path": {
             "type": "vector",
             "fields": {},
             "geometries": spec_utils.ALL_GEOMS,
             "required": "not detect_pour_points",
-            "about": _(
+            "about": gettext(
                 "A map of watershed outlets from which to delineate the "
                 "watersheds. Required if Detect Pour Points is not checked."),
-            "name": _("watershed outlets")
+            "name": gettext("watershed outlets")
         },
         "snap_points": {
             "type": "boolean",
             "required": False,
-            "about": _(
+            "about": gettext(
                 "Whether to snap point geometries to the nearest stream "
                 "pixel.  If ``True``, ``args['flow_threshold']`` and "
                 "``args['snap_distance']`` must also be defined. If a point "
@@ -70,12 +71,12 @@ ARGS_SPEC = {
                 "snapped to the stream pixel with the highest flow "
                 "accumulation value. This has no effect if Detect Pour Points "
                 "is selected."),
-            "name": _("snap points to the nearest stream")
+            "name": gettext("snap points to the nearest stream")
         },
         "flow_threshold": {
             **spec_utils.THRESHOLD_FLOW_ACCUMULATION,
             "required": "snap_points",
-            "about": _(
+            "about": gettext(
                 spec_utils.THRESHOLD_FLOW_ACCUMULATION["about"] +
                 " Required if Snap Points is selected."),
         },
@@ -84,20 +85,20 @@ ARGS_SPEC = {
             "type": "number",
             "units": u.pixels,
             "required": "snap_points",
-            "about": _(
+            "about": gettext(
                 "Maximum distance to relocate watershed outlet points in "
                 "order to snap them to a stream. Required if Snap Points "
                 "is selected."),
-            "name": _("snap distance")
+            "name": gettext("snap distance")
         },
         "skip_invalid_geometry": {
             "type": "boolean",
             "required": False,
-            "about": _(
+            "about": gettext(
                 "Skip delineation for any invalid geometries found in the "
                 "Outlet Features. Otherwise, an invalid geometry will cause "
                 "the model to crash."),
-            "name": _("skip invalid geometries")
+            "name": gettext("skip invalid geometries")
         }
     }
 }

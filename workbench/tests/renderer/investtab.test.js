@@ -18,6 +18,7 @@ import {
 } from '../../src/renderer/server_requests';
 import InvestJob from '../../src/renderer/InvestJob';
 import setupDialogs from '../../src/main/setupDialogs';
+import setupOpenExternalUrl from '../../src/main/setupOpenExternalUrl';
 import { removeIpcMainListeners } from '../../src/main/main';
 
 // It's quite a pain to dynamically mock a const from a module,
@@ -163,7 +164,7 @@ describe('Run status Alert renders with data from a recent run', () => {
   });
 });
 
-describe('Save InVEST Model Setup Buttons', () => {
+describe('Sidebar Buttons', () => {
   const spec = {
     pyname: 'natcap.invest.foo',
     model_name: 'Foo Model',
@@ -185,6 +186,11 @@ describe('Save InVEST Model Setup Buttons', () => {
     getSpec.mockResolvedValue(spec);
     fetchValidation.mockResolvedValue([]);
     uiConfig.UI_SPEC = mockUISpec(spec);
+    setupOpenExternalUrl();
+  });
+
+  afterEach(() => {
+    removeIpcMainListeners();
   });
 
   test('Save to JSON: requests endpoint with correct payload', async () => {
@@ -327,10 +333,25 @@ describe('Save InVEST Model Setup Buttons', () => {
       filePaths: ['foo.json']
     };
     ipcRenderer.invoke.mockResolvedValue(mockDialogData);
-    const { findByText, findByLabelText } = renderInvestTab();
 
+    // Render with a completed model run so we can navigate to Log Tab
+    // and assert that Loading new params toggles back to Setup Tab
+    const job = new InvestJob({
+      modelRunName: 'carbon',
+      modelHumanName: 'Carbon Model',
+      status: 'success',
+      argsValues: {},
+      logfile: 'foo.txt',
+      finalTraceback: '',
+    });
+    const { findByText, findByLabelText, findByRole } = renderInvestTab(job);
+
+    userEvent.click(await findByRole('tab', { name: 'Log' }));
     const loadButton = await findByText('Load parameters from file');
     userEvent.click(loadButton);
+
+    const setupTab = await findByRole('tab', { name: 'Setup' });
+    expect(setupTab.classList.contains('active')).toBeTruthy();
 
     const input1 = await findByLabelText(spec.args.workspace.name);
     expect(input1).toHaveValue(mockDatastack.args.workspace);
@@ -377,6 +398,24 @@ describe('Save InVEST Model Setup Buttons', () => {
     userEvent.unhover(loadButton);
     await waitFor(() => {
       expect(queryByRole('tooltip')).toBeNull();
+    });
+  });
+
+  test('User Guide link opens externally', async () => {
+    const { findByRole } = renderInvestTab();
+    const link = await findByRole('link', { name: /user's guide/i });
+    userEvent.click(link);
+    await waitFor(() => {
+      expect(shell.openExternal).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  test('Forum link opens externally', async () => {
+    const { findByRole } = renderInvestTab();
+    const link = await findByRole('link', { name: /frequently asked questions/i });
+    userEvent.click(link);
+    await waitFor(() => {
+      expect(shell.openExternal).toHaveBeenCalledTimes(1);
     });
   });
 });
