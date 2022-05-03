@@ -38,8 +38,6 @@ export default class OpenButton extends React.Component {
     const tipText = _('Browse to a datastack (.json) or InVEST logfile (.txt)');
     return (
       <OverlayTrigger
-        // defaultShow={this.props.defaultShow}
-        // flip={this.props.defaultShow}
         placement="left"
         delay={{ show: 250, hide: 400 }}
         overlay={<Tooltip>{tipText}</Tooltip>}
