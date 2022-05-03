@@ -329,7 +329,7 @@ def execute(args):
     LOGGER.info('Validating arguments')
     invalid_parameters = validate(args)
     if invalid_parameters:
-        raise ValueError("Invalid parameters passed: %s" % invalid_parameters)
+        raise ValueError(f'Invalid parameters passed: {invalid_parameters}')
 
     # valuation_params is passed to create_vector_output()
     # which computes valuation if valuation_params is not None.
@@ -356,8 +356,8 @@ def execute(args):
             raise ValueError(
                 'The following `ws_id`s exist in the watershed vector file '
                 'but are not found in the valuation table. Check your '
-                'valuation table to see if they are missing: "%s"' % (
-                    ', '.join(str(x) for x in sorted(missing_ws_ids))))
+                'valuation table to see if they are missing: '
+                f'"{", ".join(str(x) for x in sorted(missing_ws_ids))}"')
 
     # Construct folder paths
     workspace_dir = args['workspace_dir']
@@ -374,26 +374,26 @@ def execute(args):
 
     # Paths for targets of align_and_resize_raster_stack
     clipped_lulc_path = os.path.join(
-        intermediate_dir, 'clipped_lulc%s.tif' % file_suffix)
-    eto_path = os.path.join(intermediate_dir, 'eto%s.tif' % file_suffix)
-    precip_path = os.path.join(intermediate_dir, 'precip%s.tif' % file_suffix)
+        intermediate_dir, f'clipped_lulc{file_suffix}.tif')
+    eto_path = os.path.join(intermediate_dir, f'eto{file_suffix}.tif')
+    precip_path = os.path.join(intermediate_dir, f'precip{file_suffix}.tif')
     depth_to_root_rest_layer_path = os.path.join(
-        intermediate_dir, 'depth_to_root_rest_layer%s.tif' % file_suffix)
-    pawc_path = os.path.join(intermediate_dir, 'pawc%s.tif' % file_suffix)
-    tmp_pet_path = os.path.join(intermediate_dir, 'pet%s.tif' % file_suffix)
+        intermediate_dir, f'depth_to_root_rest_layer{file_suffix}.tif')
+    pawc_path = os.path.join(intermediate_dir, f'pawc{file_suffix}.tif')
+    tmp_pet_path = os.path.join(intermediate_dir, f'pet{file_suffix}.tif')
 
     # Paths for output rasters
     fractp_path = os.path.join(
-        per_pixel_output_dir, 'fractp%s.tif' % file_suffix)
+        per_pixel_output_dir, f'fractp{file_suffix}.tif')
     wyield_path = os.path.join(
-        per_pixel_output_dir, 'wyield%s.tif' % file_suffix)
-    aet_path = os.path.join(per_pixel_output_dir, 'aet%s.tif' % file_suffix)
+        per_pixel_output_dir, f'wyield{file_suffix}.tif')
+    aet_path = os.path.join(per_pixel_output_dir, f'aet{file_suffix}.tif')
 
-    demand_path = os.path.join(intermediate_dir, 'demand%s.tif' % file_suffix)
+    demand_path = os.path.join(intermediate_dir, f'demand{file_suffix}.tif')
 
     watersheds_path = args['watersheds_path']
     watershed_results_vector_path = os.path.join(
-        output_dir, 'watershed_results_wyield%s.shp' % file_suffix)
+        output_dir, f'watershed_results_wyield{file_suffix}.shp')
     watershed_paths_list = [
         (watersheds_path, 'ws_id', watershed_results_vector_path)]
 
@@ -401,7 +401,7 @@ def execute(args):
     if 'sub_watersheds_path' in args and args['sub_watersheds_path'] != '':
         sub_watersheds_path = args['sub_watersheds_path']
         subwatershed_results_vector_path = os.path.join(
-            output_dir, 'subwatershed_results_wyield%s.shp' % file_suffix)
+            output_dir, f'subwatershed_results_wyield{file_suffix}.shp')
         watershed_paths_list.append(
             (sub_watersheds_path, 'subws_id',
              subwatershed_results_vector_path))
@@ -462,7 +462,7 @@ def execute(args):
         args['biophysical_table_path'], 'lucode', to_lower=True)
     bio_lucodes = set(bio_dict.keys())
     bio_lucodes.add(nodata_dict['lulc'])
-    LOGGER.debug('bio_lucodes %s', bio_lucodes)
+    LOGGER.debug(f'bio_lucodes: {bio_lucodes}')
 
     if 'demand_table_path' in args and args['demand_table_path'] != '':
         demand_dict = utils.build_lookup_from_csv(
@@ -472,7 +472,7 @@ def execute(args):
              for lucode in demand_dict])
         demand_lucodes = set(demand_dict.keys())
         demand_lucodes.add(nodata_dict['lulc'])
-        LOGGER.debug('demand_lucodes %s', demand_lucodes)
+        LOGGER.debug(f'demand_lucodes: {demand_lucodes}', )
     else:
         demand_lucodes = None
 
@@ -494,8 +494,8 @@ def execute(args):
         except ValueError:
             # If the user provided an invalid LULC_veg value, raise an
             # informative error.
-            raise ValueError('LULC_veg value must be either 1 or 0, not %s',
-                             lulc_veg_value)
+            raise ValueError(
+                f'LULC_veg value must be either 1 or 0, not {lulc_veg_value}')
 
         # If LULC_veg value is 1 get root depth value
         if vegetated_dict[lulc_code] == 1.0:
@@ -648,7 +648,7 @@ def execute(args):
         for key_name, rast_path in raster_names_paths_list:
             target_stats_pickle = os.path.join(
                 pickle_dir,
-                '%s_%s%s.pickle' % (ws_id_name, key_name, file_suffix))
+                f'{ws_id_name}_{key_name}{file_suffix}.pickle')
             zonal_stats_pickle_list.append((target_stats_pickle, key_name))
             zonal_stats_task_list.append(graph.add_task(
                 func=zonal_stats_tofile,
@@ -657,7 +657,7 @@ def execute(args):
                 dependent_task_list=[
                     *dependent_tasks_for_watersheds_list,
                     copy_watersheds_vector_task],
-                task_name='%s_%s_zonalstats' % (ws_id_name, key_name)))
+                task_name=f'{ws_id_name}_{key_name}_zonalstats'))
 
         # Create copies of the input shapefiles in the output workspace.
         # Add the zonal stats data to the attribute tables.
@@ -669,7 +669,7 @@ def execute(args):
             target_path_list=[target_ws_path],
             dependent_task_list=[
                 *zonal_stats_task_list, copy_watersheds_vector_task],
-            task_name='create_%s_vector_output' % ws_id_name)
+            task_name=f'create_{ws_id_name}_vector_output')
 
         # Export a CSV with all the fields present in the output vector
         target_basename = os.path.splitext(target_ws_path)[0]
@@ -679,7 +679,7 @@ def execute(args):
             args=(target_ws_path, target_csv_path),
             target_path_list=[target_csv_path],
             dependent_task_list=[write_output_vector_attributes_task],
-            task_name='create_%s_table_output' % ws_id_name)
+            task_name=f'create_{ws_id_name}_table_output')
 
     graph.join()
 
