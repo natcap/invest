@@ -634,6 +634,12 @@ def execute(args):
     # scarcity and valuation calculations.
     for base_ws_path, ws_id_name, target_ws_path in watershed_paths_list:
 
+        copy_watersheds_vector_task = graph.add_task(
+            func=copy_vector,
+            args=[base_ws_path, target_ws_path],
+            target_path_list=[target_ws_path],
+            task_name='create copy of watersheds vector')
+
         zonal_stats_task_list = []
         zonal_stats_pickle_list = []
 
@@ -646,20 +652,23 @@ def execute(args):
             zonal_stats_pickle_list.append((target_stats_pickle, key_name))
             zonal_stats_task_list.append(graph.add_task(
                 func=zonal_stats_tofile,
-                args=(base_ws_path, rast_path, target_stats_pickle),
+                args=(target_ws_path, rast_path, target_stats_pickle),
                 target_path_list=[target_stats_pickle],
-                dependent_task_list=dependent_tasks_for_watersheds_list,
+                dependent_task_list=[
+                    *dependent_tasks_for_watersheds_list,
+                    copy_watersheds_vector_task],
                 task_name='%s_%s_zonalstats' % (ws_id_name, key_name)))
 
         # Create copies of the input shapefiles in the output workspace.
         # Add the zonal stats data to the attribute tables.
         # Compute optional scarcity and valuation
-        create_output_vector_task = graph.add_task(
-            func=create_vector_output,
-            args=(base_ws_path, target_ws_path, ws_id_name,
-                  zonal_stats_pickle_list, valuation_params),
+        write_output_vector_attributes_task = graph.add_task(
+            func=write_output_vector_attributes,
+            args=(target_ws_path, ws_id_name, zonal_stats_pickle_list,
+                  valuation_params),
             target_path_list=[target_ws_path],
-            dependent_task_list=zonal_stats_task_list,
+            dependent_task_list=[
+                *zonal_stats_task_list, copy_watersheds_vector_task],
             task_name='create_%s_vector_output' % ws_id_name)
 
         # Export a CSV with all the fields present in the output vector
@@ -669,25 +678,37 @@ def execute(args):
             func=convert_vector_to_csv,
             args=(target_ws_path, target_csv_path),
             target_path_list=[target_csv_path],
-            dependent_task_list=[create_output_vector_task],
+            dependent_task_list=[write_output_vector_attributes_task],
             task_name='create_%s_table_output' % ws_id_name)
 
     graph.join()
 
 
-def create_vector_output(
-        base_vector_path, target_vector_path, ws_id_name,
-        stats_path_list, valuation_params):
-    """Create the main vector outputs of this model.
+def copy_vector(base_vector_path, target_vector_path):
+    """Wrapper around CreateCopy that handles opening & closing the dataset.
+
+    Args:
+        base_vector_path: path to the vector to copy
+        target_vector_path: path to copy the vector to
+
+    Returns:
+        None
+    """
+    esri_shapefile_driver = gdal.GetDriverByName('ESRI Shapefile')
+    base_dataset = gdal.OpenEx(base_vector_path, gdal.OF_VECTOR)
+    esri_shapefile_driver.CreateCopy(target_vector_path, base_dataset)
+    base_dataset = None
+
+
+def write_output_vector_attributes(target_vector_path, ws_id_name,
+                                   stats_path_list, valuation_params):
+    """Add data attributes to the vector outputs of this model.
 
     Join results of zonal stats to copies of the watershed shapefiles.
     Also do optional scarcity and valuation calculations.
 
     Args:
-        base_vector_path (string): Path to a watershed shapefile provided in
-            the args dictionary.
-        target_vector_path (string): Path where base_vector_path will be copied
-            to in the output workspace.
+        target_vector_path (string): Path to the watersheds vector to modify
         ws_id_name (string): Either 'ws_id' or 'subws_id', which are required
             names of a unique ID field in the watershed and subwatershed
             shapefiles, respectively. Used to determine if the polygons
@@ -702,11 +723,6 @@ def create_vector_output(
         None
 
     """
-    esri_shapefile_driver = gdal.GetDriverByName('ESRI Shapefile')
-    watershed_vector = gdal.OpenEx(base_vector_path, gdal.OF_VECTOR)
-    esri_shapefile_driver.CreateCopy(target_vector_path, watershed_vector)
-    watershed_vector = None
-
     for pickle_path, key_name in stats_path_list:
         with open(pickle_path, 'rb') as picklefile:
             ws_stats_dict = pickle.load(picklefile)
