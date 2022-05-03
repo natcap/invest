@@ -37,6 +37,8 @@ Unreleased Changes
 * General
     * Updating the ``pyinstaller`` requirement to ``>=4.10`` to support the new
       ``universal2`` wheel architecture offered by ``scipy>=1.8.0``.
+    * Now removing leading / trailing whitespaces from table input values as
+      well as columns in most InVEST models.
 * RouteDEM
     * Rename the arg ``calculate_downstream_distance`` to
       ``calculate_downslope_distance``. This is meant to clarify that it
