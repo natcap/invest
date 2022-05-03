@@ -498,33 +498,12 @@ def _aggregate_carbon_map(
 
     if os.path.exists(target_aggregate_vector_path):
         os.remove(target_aggregate_vector_path)
-    target_aggregate_vector = driver.CreateCopy(
-        target_aggregate_vector_path, aoi_vector)
+    driver.CreateCopy(target_aggregate_vector_path, aoi_vector)
     aoi_vector = None
-    target_aggregate_layer = target_aggregate_vector.GetLayer()
 
-    # make an identifying id per polygon that can be used for aggregation
-    while True:
-        serviceshed_defn = target_aggregate_layer.GetLayerDefn()
-        poly_id_field = str(uuid.uuid4())[-8:]
-        if serviceshed_defn.GetFieldIndex(poly_id_field) == -1:
-            break
-    layer_id_field = ogr.FieldDefn(poly_id_field, ogr.OFTInteger)
-    target_aggregate_layer.CreateField(layer_id_field)
-    target_aggregate_layer.StartTransaction()
-    for poly_index, poly_feat in enumerate(target_aggregate_layer):
-        poly_feat.SetField(poly_id_field, poly_index)
-        target_aggregate_layer.SetFeature(poly_feat)
-    target_aggregate_layer.CommitTransaction()
-    target_aggregate_layer.SyncToDisk()
-
-    # aggregate carbon stocks by the new ID field
+    # aggregate carbon stocks by the FID
     serviceshed_stats = pygeoprocessing.zonal_statistics(
         (carbon_map_path, 1), target_aggregate_vector_path)
-
-    # don't need a random poly id anymore
-    target_aggregate_layer.DeleteField(
-        serviceshed_defn.GetFieldIndex(poly_id_field))
 
     carbon_sum_field = ogr.FieldDefn('c_sum', ogr.OFTReal)
     carbon_sum_field.SetWidth(24)
@@ -533,6 +512,9 @@ def _aggregate_carbon_map(
     carbon_mean_field.SetWidth(24)
     carbon_mean_field.SetPrecision(11)
 
+    target_aggregate_vector = gdal.OpenEx(
+        target_aggregate_vector_path, gdal.OF_UPDATE)
+    target_aggregate_layer = target_aggregate_vector.GetLayer()
     target_aggregate_layer.CreateField(carbon_sum_field)
     target_aggregate_layer.CreateField(carbon_mean_field)
 
@@ -552,6 +534,7 @@ def _aggregate_carbon_map(
 
         target_aggregate_layer.SetFeature(poly_feat)
     target_aggregate_layer.CommitTransaction()
+    target_aggregate_layer, target_aggregate_vector = None, None
 
 
 def _calculate_lulc_carbon_map(
