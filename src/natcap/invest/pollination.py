@@ -964,12 +964,13 @@ def _create_farm_result_vector(
 
     Args:
         base_vector_path (string): path to vector to copy
-        target_vector_path (string): path to target vector that is a copy
-            of the base, except for the new `fid_field_id` field that has
-            unique integer IDs for each feature.  This path must not already
-            exist.  It also has new entries for all the result fields:
-                _TOTAL_FARM_YIELD_FIELD_ID
-                _WILD_POLLINATOR_FARM_YIELD_FIELD_ID
+        target_vector_path (string): path to target vector. This path must
+            not already exist. Vector will be created at this path that is
+            a copy of the base vector with result fields added:
+                pollination._POLLINATOR_ABUNDANCE_FARM_FIELD_ID,
+                pollination._TOTAL_FARM_YIELD_FIELD_ID,
+                pollination._POLLINATOR_PROPORTION_FARM_YIELD_FIELD_ID,
+                pollination._WILD_POLLINATOR_FARM_YIELD_FIELD_ID
 
     Returns:
         None.
@@ -978,8 +979,7 @@ def _create_farm_result_vector(
     base_vector = gdal.OpenEx(base_vector_path, gdal.OF_VECTOR)
 
     driver = gdal.GetDriverByName('ESRI Shapefile')
-    target_vector = driver.CreateCopy(
-        target_vector_path, base_vector)
+    target_vector = driver.CreateCopy(target_vector_path, base_vector)
     target_layer = target_vector.GetLayer()
 
     farm_pollinator_abundance_defn = ogr.FieldDefn(
