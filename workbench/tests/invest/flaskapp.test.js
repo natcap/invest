@@ -227,7 +227,7 @@ describe('Build each model UI from ARGS_SPEC', () => {
         sidebarSetupElementId="foo"
         sidebarFooterElementId="foo"
         executeClicked={false}
-        setSaveAlert={() => {}}
+        switchTabs={() => {}}
       />
     );
     expect(await findByRole('textbox', { name: /workspace/i }))

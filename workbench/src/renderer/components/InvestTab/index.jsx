@@ -292,6 +292,7 @@ export default class InvestTab extends React.Component {
                   sidebarSetupElementId={sidebarSetupElementId}
                   sidebarFooterElementId={sidebarFooterElementId}
                   executeClicked={executeClicked}
+                  switchTabs={this.switchTabs}
                 />
               </TabPane>
               <TabPane

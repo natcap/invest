@@ -73,6 +73,7 @@ function renderSetupFromSpec(baseSpec, uiSpec) {
       sidebarSetupElementId="foo"
       sidebarFooterElementId="foo"
       executeClicked={false}
+      switchTabs={() => {}}
     />
   );
   return utils;
