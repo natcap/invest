@@ -9,7 +9,7 @@ import numpy.testing
 import pandas
 import pygeoprocessing
 import taskgraph
-from natcap.invest import MODEL_METADATA
+from natcap.invest.model_metadata import MODEL_METADATA
 from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
@@ -69,13 +69,7 @@ ARGS_SPEC = {
                     'units': u.meter,
                     'about': (
                         'The distance in meters to use as the search radius '
-                        'for this type of greenspace.  Values are only '
-                        'required in this column if the value of greenspace '
-                        'is 1.  If any greenspace values are left blank, the '
-                        'user-defined "search radius" input will be used as '
-                        'a default value.  If this column is missing, all '
-                        'types of greenspace will use the user-defined '
-                        '"search radius" input as their search radius.'
+                        'for this type of greenspace. Values must be >= 0.'
                     ),
                 }
             },
@@ -113,18 +107,6 @@ ARGS_SPEC = {
                 "access to. This is often defined by local urban planning "
                 "documents."
             )
-        },
-        'search_radius': {
-            'type': 'number',
-            'name': 'search radius',
-            'units': u.m,
-            'expression': "value > 0",
-            'about': (
-                'The search radius to use for greenspace LULC '
-                'classifications. If the landuse attribute table has a '
-                '"search_radius_m" column, values in that column will '
-                'take precedence over the search radius defined here.'
-            ),
         },
         'decay_function': {
             'name': 'decay function',
@@ -282,19 +264,7 @@ def execute(args):
         target_path_list=[file_registry['aligned_population']],
         task_name='Resample population to LULC resolution')
 
-    preprocess_attr_table_task = graph.add_task(
-        _preprocess_lulc_attribute_table,
-        kwargs={
-            'source_attr_table_path': args['lulc_attribute_table'],
-            'default_radius': float(args['search_radius']),
-            'target_attr_table_path': file_registry['attribute_table'],
-        },
-        target_path_list=[file_registry['attribute_table']],
-        priority=10,  # higher-than-normal priority to address sooner.
-        task_name='Preprocess the attribute table')
-
-    preprocess_attr_table_task.join()
-    attr_table = pandas.read_csv(file_registry['attribute_table'])
+    attr_table = pandas.read_csv(args['lulc_attribute_table'])
     partial_greenspace_paths = []
     partial_greenspace_tasks = []
     for search_radius_m, group in attr_table[
@@ -311,15 +281,14 @@ def execute(args):
             _reclassify_greenspace_area,
             kwargs={
                 'lulc_raster_path': file_registry['aligned_lulc'],
-                'lulc_attribute_table': file_registry['attribute_table'],
+                'lulc_attribute_table': args['lulc_attribute_table'],
                 'target_raster_path': greenspace_pixels_path,
                 'only_these_greenspace_codes': set(matching_landuse_codes),
             },
             target_path_list=[greenspace_pixels_path],
             task_name=(
                 f'Identify area of greenspace in pixels {search_radius_m}'),
-            dependent_task_list=[
-                lulc_alignment_task, preprocess_attr_table_task]
+            dependent_task_list=[lulc_alignment_task]
         )
 
         search_radius_in_pixels = abs(
@@ -609,53 +578,6 @@ def _reclassify_greenspace_area(
             'table_name': ARGS_SPEC['args']['lulc_attribute_table']['name'],
         }
     )
-
-
-def _preprocess_lulc_attribute_table(
-        source_attr_table_path, default_radius, target_attr_table_path):
-    """Preprocess the LULC attribute table.
-
-    This function ensures that we have an attribute table where a radius is
-    defined for every greenspace landcover classification.  For classifications
-    where the radius is not defined, the user-defined default radius is used
-    instead.
-
-    Args:
-        source_attr_table_path (string): The path to a CSV on disk.  Must
-            contain the "lucode" and "greenspace" columns.  May contain a
-            "search_radius_m" column.
-        default_radius (number): The default radius to use when
-            "search_radius_m" is not defined.
-        target_attr_table_path (string): The location on disk where the
-            preprocessed attribute table is written.
-
-    Returns:
-        ``None``
-    """
-    attr_dataframe = utils.read_csv_to_dataframe(
-        source_attr_table_path, to_lower=True, sep=None, engine='python',
-        dtype={'greenspace': int, 'search_radius_m': float})
-
-    try:
-        # If the search_radius_m column is present in the table but there are
-        # undefined search radii for some lucodes, fill them in with a default
-        # radius.
-        attr_dataframe.loc[
-            (attr_dataframe['greenspace'] == 1 &
-             attr_dataframe['search_radius_m'].isna()),
-            'search_radius_m'] = default_radius
-    except KeyError:
-        # If the search_radius_m column is not in the table, set the default
-        # radius for any greenspace lucodes.
-        attr_dataframe.loc[
-            attr_dataframe['greenspace'] == 1, 'search_radius_m'] = (
-                default_radius)
-
-    # Re-export the preprocessed CSV with only the columns that we need.
-    attr_dataframe.to_csv(
-        target_attr_table_path,
-        header=['lucode', 'greenspace', 'search_radius_m'],
-        index=False)
 
 
 def _filter_population(population, greenspace_budget, numpy_filter_op):

@@ -31,7 +31,6 @@ def _build_model_args(workspace):
         'lulc_attribute_table': os.path.join(
             workspace, 'lulc_attributes.csv'),
         'decay_function': 'gaussian',
-        'search_radius': 100.0,  # meters
         'greenspace_demand': 100,  # square meters
         'admin_unit_vector_path': os.path.join(
             workspace, 'admin_units.geojson'),
@@ -70,17 +69,17 @@ def _build_model_args(workspace):
     with open(args['lulc_attribute_table'], 'w') as attr_table:
         attr_table.write(textwrap.dedent(
             """\
-            lucode,greenspace
-            0,0
-            1,1
-            2,0
-            3,1
-            4,0
-            5,1
-            6,0
-            7,1
-            8,0
-            9,1"""))
+            lucode,greenspace,search_radius_m
+            0,0,100
+            1,1,100
+            2,0,100
+            3,1,100
+            4,0,100
+            5,1,100
+            6,0,100
+            7,1,100
+            8,0,100
+            9,1,100"""))
 
     admin_geom = [
         shapely.geometry.box(
@@ -268,84 +267,12 @@ class UNATests(unittest.TestCase):
         numpy.testing.assert_allclose(
             supply_demand, expected_supply_demand)
 
-    def test_preprocess_attr_table_no_radius_column(self):
-        """UNA: Test attr table preprocessing without a radius column."""
-        from natcap.invest import urban_nature_access
-
-        attr_table_path = os.path.join(self.workspace_dir, 'test.csv')
-        with open(attr_table_path, 'w') as csv_file:
-            csv_file.write(textwrap.dedent(
-                """lucode,greenspace
-                0,0
-                1,1
-                2,0
-                3,1"""))
-
-        target_attr_table = os.path.join(self.workspace_dir, 'target.csv')
-        default_radius = 555
-        urban_nature_access._preprocess_lulc_attribute_table(
-            attr_table_path, default_radius, target_attr_table)
-
-        expected_csv_path = os.path.join(self.workspace_dir, 'expected.csv')
-        with open(expected_csv_path, 'w') as csv_file:
-            csv_file.write(textwrap.dedent(
-                """lucode,greenspace,search_radius_m
-                0,0,
-                1,1,555
-                2,0,
-                3,1,555"""))
-
-        pandas.testing.assert_frame_equal(
-            pandas.read_csv(target_attr_table),
-            pandas.read_csv(expected_csv_path))
-
-    def test_preprocess_attr_table_with_radius_column(self):
-        """UNA: Test attr table preprocessing with a radius column."""
-        from natcap.invest import urban_nature_access
-
-        attr_table_path = os.path.join(self.workspace_dir, 'test.csv')
-        with open(attr_table_path, 'w') as csv_file:
-            csv_file.write(textwrap.dedent(
-                """lucode,greenspace,search_radius_m
-                0,0,
-                1,1,555
-                2,0,
-                3,1,"""))
-
-        target_attr_table = os.path.join(self.workspace_dir, 'target.csv')
-        default_radius = 555
-        urban_nature_access._preprocess_lulc_attribute_table(
-            attr_table_path, default_radius, target_attr_table)
-
-        expected_csv_path = os.path.join(self.workspace_dir, 'expected.csv')
-        with open(expected_csv_path, 'w') as csv_file:
-            csv_file.write(textwrap.dedent(
-                """lucode,greenspace,search_radius_m
-                0,0,
-                1,1,555
-                2,0,
-                3,1,555"""))
-
-        pandas.testing.assert_frame_equal(
-            pandas.read_csv(target_attr_table),
-            pandas.read_csv(expected_csv_path))
-
     def test_core_model_and_base_cases_split_features(self):
         """UNA: Run through the model with base data."""
         from natcap.invest import urban_nature_access
 
         for case in ('base', 'split_greenspace'):
             args = _build_model_args(self.workspace_dir)
-
-            if case == 'split_greenspace':
-                # The base case for the split greenspace optional module is
-                # that all of the classes have the same search radius.  We've
-                # updated the model functionality to enable multiple radii, but
-                # we still want the core model to work the same.
-                attribute_table = pandas.read_csv(args['lulc_attribute_table'])
-                attribute_table['search_radius_m'] = args['search_radius']
-                attribute_table.to_csv(
-                    args['lulc_attribute_table'], index=False)
 
             urban_nature_access.execute(args)
 
