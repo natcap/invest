@@ -692,7 +692,7 @@ def _schedule_predictor_data_processing(
     Args:
         response_vector_path (string): path to a single layer polygon vector.
         response_polygons_pickle_path (string): path to pickle that stores a
-            dictionary which maps FIDs to shapely geometry.
+            dict which maps each response vector FID to its shapely geometry.
         prepare_response_polygons_task (Taskgraph.Task object):
             A Task needed for dependent_task_lists in this scope.
         predictor_table_path (string): path to a CSV file with three columns
@@ -946,13 +946,13 @@ def _polygon_area(
             the metric that's output.  'area' is the area covered in projected
             units while 'percent' is percent of the total response area
             covered.
-        response_polygons_lookup (dictionary): maps feature ID to
-            prepared shapely.Polygon.
+        response_polygons_pickle_path (str): path to a pickled dictionary which
+            maps response polygon feature ID to prepared shapely.Polygon.
         polygon_vector_path (string): path to a single layer polygon vector
             object.
         predictor_target_path (string): path to json file to store result,
             which is a dictionary mapping feature IDs from
-            ``response_polygons_lookup`` to polygon area coverage.
+            ``response_polygons_pickle_path`` to polygon area coverage.
 
     Returns:
         None
@@ -1004,13 +1004,13 @@ def _line_intersect_length(
     """Calculate the length of the intersecting lines on the response polygon.
 
     Args:
-        response_polygons_lookup (dictionary): maps feature ID to
-            prepared shapely.Polygon.
+        response_polygons_pickle_path (str): path to a pickled dictionary which
+            maps response polygon feature ID to prepared shapely.Polygon.
         line_vector_path (string): path to a single layer line vector
             object.
         predictor_target_path (string): path to json file to store result,
             which is a dictionary mapping feature IDs from
-            ``response_polygons_lookup`` to line intersect length.
+            ``response_polygons_pickle_path`` to line intersect length.
 
     Returns:
         None
@@ -1052,13 +1052,13 @@ def _point_nearest_distance(
     """Calculate distance to nearest point for all polygons.
 
     Args:
-        response_polygons_lookup (dictionary): maps feature ID to
-            prepared shapely.Polygon.
+        response_polygons_pickle_path (str): path to a pickled dictionary which
+            maps response polygon feature ID to prepared shapely.Polygon.
         point_vector_path (string): path to a single layer point vector
             object.
         predictor_target_path (string): path to json file to store result,
             which is a dictionary mapping feature IDs from
-            ``response_polygons_lookup`` to distance to nearest point.
+            ``response_polygons_pickle_path`` to distance to nearest point.
 
     Returns:
         None
@@ -1092,13 +1092,14 @@ def _point_count(
     """Calculate number of points contained in each response polygon.
 
     Args:
-        response_polygons_lookup (dictionary): maps feature ID to
-            prepared shapely.Polygon.
+        response_polygons_pickle_path (str): path to a pickled dictionary which
+            maps response polygon feature ID to prepared shapely.Polygon.
         point_vector_path (string): path to a single layer point vector
             object.
         predictor_target_path (string): path to json file to store result,
             which is a dictionary mapping feature IDs from
-            ``response_polygons_lookup`` to number of points in that polygon.
+            ``response_polygons_pickle_path`` to the number of points in that
+            polygon.
 
     Returns:
         None
@@ -1390,8 +1391,8 @@ def _calculate_scenario(
 
     y_intercept = predictor_estimates.pop("(Intercept)")
 
-    for feature_id in range(scenario_coefficient_layer.GetFeatureCount()):
-        feature = scenario_coefficient_layer.GetFeature(feature_id)
+    for feature in scenario_coefficient_layer:
+        feature_id = feature.GetFID()
         response_value = 0.0
         try:
             for predictor_id, coefficient in predictor_estimates.items():
