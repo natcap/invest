@@ -5,11 +5,11 @@
 
 /*
 --header-height: fixed height applied to the top navbar.
---content-height: fixed height of the remaining viewport.
+--content-height: height of the remaining viewport.
   Apply this height to any container that should fill the
   available window height and also have a scrollbar appear
   when the content overflows. I could never get a scrollbar
-  to appear with height: 100%, even when parent has this fixed height;
+  to appear with height: 100%, even when parent has a fixed height;
 */
 body {
 	--invest-green: #148F68;
@@ -308,7 +308,6 @@ exceed 100% of window.*/
 	flex:  1 1 0;
 	padding-left: 0;
 	padding-right: 0;
-	height: var(--content-height);
 }
 
 .invest-main-col .tab-content {
