@@ -313,8 +313,7 @@ def execute(args):
                 'only_these_greenspace_codes': set(matching_landuse_codes),
             },
             target_path_list=[greenspace_pixels_path],
-            task_name=(
-                f'Identify area of greenspace in pixels {search_radius_m}'),
+            task_name=f'Identify greenspace areas',
             dependent_task_list=[lulc_alignment_task]
         )
 
