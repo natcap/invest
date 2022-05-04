@@ -10,6 +10,7 @@ from qtpy import QtGui
 
 
 import natcap.invest
+from natcap.invest.model_metadata import MODEL_METADATA
 
 LOGGER = logging.getLogger(__name__)
 
@@ -57,7 +58,7 @@ def main():
     scroll_area.setWidget(main_widget)
 
     labels_and_buttons = []
-    for model_name, model_data in sorted(natcap.invest.MODEL_METADATA.items(),
+    for model_name, model_data in sorted(MODEL_METADATA.items(),
             # sort alphabetically by display name
             key=lambda item: item[1].model_title):
         row = layout.rowCount()
