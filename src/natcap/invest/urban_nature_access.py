@@ -113,12 +113,39 @@ ARGS_SPEC = {
             'type': 'option_string',
             'required': False,
             'options': {
-                'dichotomy': {'display_name': 'dichotomy'},
-                'exponential': {'display_name': 'exponential'},
-                'gaussian': {'display_name': 'gaussian'},
-                'density': {'display_name': 'density'},
+                'dichotomy': {
+                    'display_name': 'dichotomy',
+                    'description': (
+                        'All pixels within the search radius contribute '
+                        'equally to a greenspace pixel.'),
+                },
+                'exponential': {
+                    'display_name': 'exponential',
+                    'description': (
+                        'Contributions to a greenspace pixel decrease '
+                        'exponentially, where '
+                        '"weight = e^(-pixel_dist / search_radius)"'),
+                },
+                'gaussian': {
+                    'display_name': 'gaussian',
+                    'description': (
+                        'Contributions to a greenspace pixel decrease '
+                        'according to a normal ("gaussian") distribution '
+                        'with a sigma of 3.'),
+                },
+                'density': {
+                    'display_name': 'density',
+                    'description': (
+                        'Contributions to a greenspace pixel decrease '
+                        'faster as distances approach the search radius. '
+                        'Weights are calculated by '
+                        '"weight = 0.75 * (1-(pixel_dist / search_radius)^2)"'),
+                },
             },
-            'about': '',  # TODO
+            'about': (
+                'Pixels within the search radius of a greenspace pixel '
+                'have a distance-weighted contribution to a greenspace '
+                'pixel according to the selected decay function.'),
         }
     }
 }
