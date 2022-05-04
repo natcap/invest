@@ -856,12 +856,12 @@ def calculate_uhi_result_vector(
     target_uhi_layer.StartTransaction()
     for feature in target_uhi_layer:
         feature_id = feature.GetFID()
-        if feature_id in cc_stats and cc_stats[feature_id]['count'] > 0:
+        if cc_stats[feature_id]['count'] > 0:
             mean_cc = (
                 cc_stats[feature_id]['sum'] / cc_stats[feature_id]['count'])
             feature.SetField('avg_cc', mean_cc)
         mean_t_air = None
-        if feature_id in t_air_stats and t_air_stats[feature_id]['count'] > 0:
+        if t_air_stats[feature_id]['count'] > 0:
             mean_t_air = (
                 t_air_stats[feature_id]['sum'] /
                 t_air_stats[feature_id]['count'])
@@ -871,23 +871,20 @@ def calculate_uhi_result_vector(
             feature.SetField(
                 'avg_tmp_an', mean_t_air-t_ref_val)
 
-        if wbgt_stats and feature_id in wbgt_stats and (
-                wbgt_stats[feature_id]['count'] > 0):
+        if wbgt_stats and wbgt_stats[feature_id]['count'] > 0:
             wbgt = (
                 wbgt_stats[feature_id]['sum'] /
                 wbgt_stats[feature_id]['count'])
             feature.SetField('avg_wbgt_v', wbgt)
 
-        if light_loss_stats and feature_id in light_loss_stats and (
-                light_loss_stats[feature_id]['count'] > 0):
+        if light_loss_stats and light_loss_stats[feature_id]['count'] > 0:
             light_loss = (
                 light_loss_stats[feature_id]['sum'] /
                 light_loss_stats[feature_id]['count'])
             LOGGER.debug("Average light loss: %s", light_loss)
             feature.SetField('avg_ltls_v', float(light_loss))
 
-        if heavy_loss_stats and feature_id in heavy_loss_stats and (
-                heavy_loss_stats[feature_id]['count'] > 0):
+        if heavy_loss_stats and heavy_loss_stats[feature_id]['count'] > 0:
             heavy_loss = (
                 heavy_loss_stats[feature_id]['sum'] /
                 heavy_loss_stats[feature_id]['count'])
