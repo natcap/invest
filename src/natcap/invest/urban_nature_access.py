@@ -736,6 +736,21 @@ def _greenspace_supply_demand_op(greenspace_budget, population):
 def _calculate_greenspace_population_ratio(
         greenspace_area_raster_path, convolved_population_raster_path,
         target_ratio_raster_path):
+    """Calculate the greenspace-population ratio R_j.
+
+    Args:
+        greenspace_area_raster_path (string): The path to a raster representing
+            the area of the pixel that represents greenspace.  Pixel values
+            will be ``0`` if there is no greenspace.
+        convolved_population_raster_path (string): The path to a raster
+            representing population counts that have been convolved over some
+            search kernel and perhaps weighted.
+        target_ratio_raster_path (string): The path to where the target
+            greenspace-population raster should be written.
+
+    Returns:
+        ``None``.
+    """
     greenspace_nodata = pygeoprocessing.get_raster_info(
         greenspace_area_raster_path)['nodata'][0]
     population_nodata = pygeoprocessing.get_raster_info(
