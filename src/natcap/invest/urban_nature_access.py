@@ -10,6 +10,7 @@ import pandas
 import pygeoprocessing
 import taskgraph
 from natcap.invest.model_metadata import MODEL_METADATA
+from natcap.invest.ndr import ndr
 from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
@@ -395,10 +396,11 @@ def execute(args):
             convolved_greenspace_population_ratio_task)
 
     greenspace_supply_task = graph.add_task(
-        _sum_rasters,
+        ndr._sum_rasters,
         kwargs={
-            'greenspace_supply_list': partial_greenspace_paths,
-            'target_sum_path': file_registry['greenspace_supply'],
+            'raster_path_list': partial_greenspace_paths,
+            'target_nodata': FLOAT32_NODATA,
+            'target_result_path': file_registry['greenspace_supply'],
         },
         task_name='2SFCA - greenspace supply total',
         target_path_list=[file_registry['greenspace_supply']],
@@ -510,43 +512,6 @@ def execute(args):
     graph.close()
     graph.join()
     LOGGER.info('Finished Urban Nature Access Model')
-
-
-def _sum_rasters(greenspace_supply_list, target_sum_path):
-    """Sum a stack of rasters.
-
-    This assumes that all rasters have the same nodata, equal to
-    ``FLOAT32_NODATA``.
-
-    Args:
-        greenspace_supply_list (list): A list of float32 raster paths, where
-            pixel values in these rasters will be summed along the 3rd
-            dimension.  Rasters in this stack must all perfectly align.
-        target_sum_path (string): The target path.
-
-    Returns:
-        ``None``
-    """
-    def _sum_op(*greenspace_supply_arrays):
-        """Sum a stack of arrays that all use FLOAT32_NODATA as their nodata.
-
-        Returns a float32 numpy array.
-        """
-        valid_mask = numpy.ones(greenspace_supply_arrays[0].shape, dtype=bool)
-        for array in greenspace_supply_arrays:
-            valid_mask &= ~utils.array_equals_nodata(array, FLOAT32_NODATA)
-
-        sum_array = numpy.zeros(valid_mask.shape, dtype=numpy.float32)
-        for array in greenspace_supply_arrays:
-            sum_array[valid_mask] += array[valid_mask]
-        result = numpy.full(valid_mask.shape, FLOAT32_NODATA,
-                            dtype=numpy.float32)
-        result[valid_mask] = sum_array[valid_mask]
-        return result
-
-    pygeoprocessing.raster_calculator(
-        [(path, 1) for path in greenspace_supply_list], _sum_op,
-        target_sum_path, gdal.GDT_Float32, FLOAT32_NODATA)
 
 
 def _reclassify_greenspace_area(
