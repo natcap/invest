@@ -221,8 +221,8 @@ ARGS_SPEC = {
 # format: http://www.gdal.org/drv_shapefile.html
 _ESRI_SHAPEFILE_EXTENSIONS = ['.prj', '.shp', '.shx', '.dbf', '.sbn', '.sbx']
 
-# Have 5.0 seconds between timed progress outputs
-LOGGER_TIME_DELAY = 5.0
+# Have 5 seconds between timed progress outputs
+LOGGER_TIME_DELAY = 5
 
 # For now, this is the field name we use to mark the photo user "days"
 RESPONSE_ID = 'PUD_YR_AVG'
@@ -692,7 +692,8 @@ def _schedule_predictor_data_processing(
     Args:
         response_vector_path (string): path to a single layer polygon vector.
         response_polygons_pickle_path (string): path to pickle that stores a
-            dict which maps each response vector FID to its shapely geometry.
+            dict which maps each feature FID from ``response_vector_path`` to
+            its shapely geometry.
         prepare_response_polygons_task (Taskgraph.Task object):
             A Task needed for dependent_task_lists in this scope.
         predictor_table_path (string): path to a CSV file with three columns
@@ -824,7 +825,7 @@ def _json_to_shp_table(
         predictor_json_list (list): list of json filenames, one for each
             predictor dataset. A json file will look like this,
             {0: 0.0, 1: 0.0}
-            Keys match FIDs of 'vector_path'.
+            Keys match FIDs of ``response_vector_path``.
 
     Returns:
         None
@@ -970,10 +971,10 @@ def _polygon_area(
 
     for index, (feature_id, geometry) in enumerate(
             response_polygons_lookup.items()):
-        if time.time() - start_time > 5.0:
+        if time.time() - start_time > 5:
             LOGGER.info(
                 f"{os.path.basename(polygon_vector_path)} polygon area: "
-                f"{(100.0*index)/len(response_polygons_lookup):.2f}% complete")
+                f"{(100*index)/len(response_polygons_lookup):.2f}% complete")
             start_time = time.time()
 
         potential_intersecting_poly_ids = polygon_spatial_index.intersection(
@@ -990,7 +991,7 @@ def _polygon_area(
             polygon_coverage_lookup[feature_id] = polygon_area_coverage
         elif mode == 'polygon_percent_coverage':
             polygon_coverage_lookup[str(feature_id)] = (
-                polygon_area_coverage / geometry.area * 100.0)
+                polygon_area_coverage / geometry.area * 100)
     LOGGER.info(f"{os.path.basename(polygon_vector_path)} polygon area: "
                 f"100.00% complete")
 
@@ -1032,7 +1033,7 @@ def _line_intersect_length(
         last_time = delay_op(
             last_time, LOGGER_TIME_DELAY, lambda: LOGGER.info(
                 f"{os.path.basename(line_vector_path)} line intersect length: "
-                f"{(100.0 * feature_count)/len(response_polygons_lookup):.2f}% complete"))
+                f"{(100 * feature_count)/len(response_polygons_lookup):.2f}% complete"))
         potential_intersecting_lines = line_spatial_index.intersection(
             geometry.bounds)
         line_length = sum([
@@ -1074,9 +1075,9 @@ def _point_nearest_distance(
     for index, (feature_id, geometry) in enumerate(
             response_polygons_lookup.items()):
         last_time = delay_op(
-            last_time, 5.0, lambda: LOGGER.info(
+            last_time, 5, lambda: LOGGER.info(
                 f"{os.path.basename(point_vector_path)} point distance: "
-                f"{(100.0*index)/len(response_polygons_lookup):.2f}% complete"))
+                f"{(100*index)/len(response_polygons_lookup):.2f}% complete"))
 
         point_distance_lookup[str(feature_id)] = min([
             geometry.distance(point) for point in points])
@@ -1117,7 +1118,7 @@ def _point_count(
         last_time = delay_op(
             last_time, LOGGER_TIME_DELAY, lambda: LOGGER.info(
                 f"{os.path.basename(point_vector_path)} point count: "
-                f"{(100.0*index)/len(response_polygons_lookup):.2f}% complete"))
+                f"{(100*index)/len(response_polygons_lookup):.2f}% complete"))
         point_count = len([
             point for point in points if geometry.contains(point)])
         point_count_lookup[str(feature_id)] = point_count
@@ -1320,12 +1321,12 @@ def _build_regression(
     sstot = numpy.sum((
         numpy.average(y_factors) - y_factors) ** 2)
     dof = n_features - n_predictors - 1
-    if sstot == 0.0 or dof <= 0.0:
+    if sstot == 0 or dof <= 0:
         # this can happen if there is only one sample
-        r_sq = 1.0
-        r_sq_adj = 1.0
+        r_sq = 1
+        r_sq_adj = 1
     else:
-        r_sq = 1. - ssres / sstot
+        r_sq = 1 - ssres / sstot
         r_sq_adj = 1 - (1 - r_sq) * (n_features - 1) / dof
 
     if dof > 0:
@@ -1393,7 +1394,7 @@ def _calculate_scenario(
 
     for feature in scenario_coefficient_layer:
         feature_id = feature.GetFID()
-        response_value = 0.0
+        response_value = 0
         try:
             for predictor_id, coefficient in predictor_estimates.items():
                 response_value += (
