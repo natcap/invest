@@ -2,7 +2,8 @@
 import logging
 
 from natcap.invest.ui import model, inputs
-from natcap.invest import scenario_gen_proximity, MODEL_METADATA
+from natcap.invest.model_metadata import MODEL_METADATA
+from natcap.invest import scenario_gen_proximity
 
 
 LOGGER = logging.getLogger(__name__)

@@ -14,8 +14,11 @@ import shapely.wkb
 import taskgraph
 from osgeo import gdal, ogr, osr
 
-from . import MODEL_METADATA, spec_utils, utils, validation
+from . import spec_utils, utils, validation
+from .model_metadata import MODEL_METADATA
 from .spec_utils import u
+from . import gettext
+
 
 LOGGER = logging.getLogger('natcap.invest.hra')
 
@@ -71,13 +74,13 @@ ARGS_SPEC = {
         "results_suffix": spec_utils.SUFFIX,
         "n_workers": spec_utils.N_WORKERS,
         "info_table_path": {
-            "name": _("habitat stressor table"),
-            "about": _("A table describing each habitat and stressor."),
+            "name": gettext("habitat stressor table"),
+            "about": gettext("A table describing each habitat and stressor."),
             "type": "csv",
             "columns": {
                 "name": {
                     "type": "freestyle_string",
-                    "about": _(
+                    "about": gettext(
                         "A unique name for each habitat or stressor. These "
                         "names must match the habitat and stressor names in "
                         "the Criteria Scores Table.")},
@@ -86,14 +89,14 @@ ARGS_SPEC = {
                     "bands": {1: {
                         "type": "number",
                         "units": u.none,
-                        "about": _(
+                        "about": gettext(
                             "Pixel values are 1, indicating presence of the "
                             "habitat/stressor, or 0 indicating absence. Any "
                             "values besides 0 or 1 will be treated as 0.")
                     }},
                     "fields": {},
                     "geometries": spec_utils.POLYGONS,
-                    "about": _(
+                    "about": gettext(
                         "Map of where the habitat or stressor exists. For "
                         "rasters, a pixel value of 1 indicates presence of "
                         "the habitat or stressor. 0 (or any other value) "
@@ -104,16 +107,16 @@ ARGS_SPEC = {
                 "type": {
                     "type": "option_string",
                     "options": {
-                        "habitat": {"description": _("habitat")},
-                        "stressor": {"description": _("stressor")}
+                        "habitat": {"description": gettext("habitat")},
+                        "stressor": {"description": gettext("stressor")}
                     },
-                    "about": _(
+                    "about": gettext(
                         "Whether this row is for a habitat or a stressor.")
                 },
                 "stressor buffer (meters)": {
                     "type": "number",
                     "units": u.meter,
-                    "about": _(
+                    "about": gettext(
                         "The desired buffer distance used to expand a given "
                         "stressor’s influence or footprint. This should be "
                         "left blank for habitats, but must be filled in for "
@@ -128,15 +131,15 @@ ARGS_SPEC = {
             "excel_ok": True
         },
         "criteria_table_path": {
-            "name": _("criteria scores table"),
-            "about": _(
+            "name": gettext("criteria scores table"),
+            "about": gettext(
                 "A table of criteria scores for all habitats and stressors."),
             "type": "csv",
             "excel_ok": True,
         },
         "resolution": {
-            "name": _("resolution of analysis"),
-            "about": _(
+            "name": gettext("resolution of analysis"),
+            "about": gettext(
                 "The resolution at which to run the analysis. The model "
                 "outputs will have this resolution."),
             "type": "number",
@@ -144,43 +147,43 @@ ARGS_SPEC = {
             "expression": "value > 0",
         },
         "max_rating": {
-            "name": _("maximum criteria score"),
-            "about": _(
+            "name": gettext("maximum criteria score"),
+            "about": gettext(
                 "The highest possible criteria score in the scoring system."),
             "type": "number",
             "units": u.none,
             "expression": "value > 0"
         },
         "risk_eq": {
-            "name": _("risk equation"),
-            "about": _(
+            "name": gettext("risk equation"),
+            "about": gettext(
                 "The equation to use to calculate risk from exposure and "
                 "consequence."),
             "type": "option_string",
             "options": {
-                "Multiplicative": {"display_name": _("multiplicative")},
-                "Euclidean": {"display_name": _("Euclidean")}
+                "Multiplicative": {"display_name": gettext("multiplicative")},
+                "Euclidean": {"display_name": gettext("Euclidean")}
             }
         },
         "decay_eq": {
-            "name": _("decay equation"),
-            "about": _(
+            "name": gettext("decay equation"),
+            "about": gettext(
                 "The equation to model effects of stressors in buffer areas."),
             "type": "option_string",
             "options": {
                 "None": {
-                    "display_name": _("none"),
-                    "description": _(
+                    "display_name": gettext("none"),
+                    "description": gettext(
                         "No decay. Stressor has full effect in the buffer "
                         "area.")},
                 "Linear": {
-                    "display_name": _("linear"),
-                    "description": _(
+                    "display_name": gettext("linear"),
+                    "description": gettext(
                         "Stressor effects in the buffer area decay linearly "
                         "with distance from the stressor.")},
                 "Exponential": {
-                    "display_name": _("exponential"),
-                    "description": _(
+                    "display_name": gettext("exponential"),
+                    "description": gettext(
                         "Stressor effects in the buffer area decay "
                         "exponentially with distance from the stressor.")}
             }
@@ -193,18 +196,18 @@ ARGS_SPEC = {
                 "name": {
                     "required": False,
                     "type": "freestyle_string",
-                    "about": _(
+                    "about": gettext(
                         "Uniquely identifies each feature. Required if "
                         "the vector contains more than one feature.")
                 }
             },
-            "about": _(
+            "about": gettext(
                 "A GDAL-supported vector file containing feature containing "
                 "one or more planning regions or subregions."),
         },
         "visualize_outputs": {
-            "name": _("Generate GeoJSONs"),
-            "about": _("Generate GeoJSON outputs for web visualization."),
+            "name": gettext("Generate GeoJSONs"),
+            "about": gettext("Generate GeoJSON outputs for web visualization."),
             "type": "boolean"
         }
     }

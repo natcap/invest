@@ -148,6 +148,22 @@ describe('DownloadProgressBar', () => {
       expect(alert).not.toBeInTheDocument();
     });
   });
+
+  test('Displays message on fail, then disappears', async () => {
+    const nComplete = 'failed';
+    const nTotal = 'failed';
+    const { getByText } = render(
+      <DownloadProgressBar
+        downloadedNofN={[nComplete, nTotal]}
+        expireAfter={1000}
+      />
+    );
+    const alert = getByText('Download Failed');
+    expect(alert).toBeInTheDocument();
+    await waitFor(() => {
+      expect(alert).not.toBeInTheDocument();
+    });
+  });
 });
 
 describe('Integration tests with main process', () => {

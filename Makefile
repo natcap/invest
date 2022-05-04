@@ -10,7 +10,7 @@ GIT_TEST_DATA_REPO_REV      := ac7023d684478485fea89c68f8f4154163541e1d
 
 GIT_UG_REPO                 := https://github.com/natcap/invest.users-guide
 GIT_UG_REPO_PATH            := doc/users-guide
-GIT_UG_REPO_REV             := 1544a629b415311a2ff4e508b583e100f7dc0f21
+GIT_UG_REPO_REV             := 26af6a8100fde263d1dc7fd705f0244e71c7ad1b
 
 ENV = "./env"
 ifeq ($(OS),Windows_NT)
@@ -188,6 +188,7 @@ clean:
 	-$(RMDIR) $(BUILD_DIR)
 	-$(RMDIR) natcap.invest.egg-info
 	-$(RMDIR) cover
+	-$(RMDIR) doc/api-docs/api
 	-$(RM) coverage.xml
 
 purge: clean
@@ -272,11 +273,12 @@ $(INVEST_BINARIES_DIR): | $(DIST_DIR) $(BUILD_DIR)
 # Documentation.
 # API docs are built in build/sphinx and copied to dist/apidocs
 apidocs: $(APIDOCS_TARGET_DIR) $(APIDOCS_ZIP_FILE)
-$(APIDOCS_TARGET_DIR): | $(DIST_DIR)
+
+$(APIDOCS_BUILD_DIR): install  # need contents of build/lib to build apidocs
 	# -a: always build all files
-	$(PYTHON) -m sphinx -a -b html \
-		-d $(APIDOCS_BUILD_DIR) \
-		doc/api-docs $(APIDOCS_BUILD_DIR)
+	$(PYTHON) -m sphinx -a -b html -d $(APIDOCS_BUILD_DIR)/doctrees doc/api-docs $(APIDOCS_BUILD_DIR)/html
+
+$(APIDOCS_TARGET_DIR): $(APIDOCS_BUILD_DIR) | $(DIST_DIR)
 	# only copy over the built html files, not the doctrees
 	$(COPYDIR) $(APIDOCS_BUILD_DIR)/html $(APIDOCS_TARGET_DIR)
 
