@@ -41,10 +41,6 @@ class UrbanNatureAccess(model.InVESTModel):
             **_ui_keys('greenspace_demand'))
         self.add_input(self.greenspace_demand)
 
-        self.search_radius = inputs.Text(
-            **_ui_keys('search_radius'))
-        self.add_input(self.search_radius)
-
         decay_function_spec = urban_nature_access.ARGS_SPEC[
             'args']['decay_function']
         self.decay_function = inputs.Dropdown(
@@ -65,7 +61,6 @@ class UrbanNatureAccess(model.InVESTModel):
             self.population.args_key: self.population.value(),
             self.admin_units.args_key: self.admin_units.value(),
             self.greenspace_demand.args_key: self.greenspace_demand.value(),
-            self.search_radius.args_key: self.search_radius.value(),
             self.decay_function.args_key: self.decay_function.value(),
         }
         return args
