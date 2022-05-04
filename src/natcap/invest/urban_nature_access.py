@@ -568,7 +568,7 @@ def _reclassify_greenspace_area(
         only_these_greenspace_codes=None (iterable or None): If ``None``, all
             lucodes with a ``greenspace`` value of 1 will be reclassified to 1.
             If an iterable, must be an iterable of landuse codes matching codes
-            in then lulc attribute table.  Only these landcover codes will have
+            in the lulc attribute table.  Only these landcover codes will have
             greenspace area classified in the target raster path.
 
     Returns:
