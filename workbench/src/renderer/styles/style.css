@@ -2,8 +2,20 @@
 	font-size: 16px;
 }
 
+
+/*
+--header-height: fixed height applied to the top navbar.
+--content-height: height of the remaining viewport.
+  Apply this height to any container that should fill the
+  available window height and also have a scrollbar appear
+  when the content overflows. I could never get a scrollbar
+  to appear with height: 100%, even when parent has a fixed height;
+*/
 body {
 	--invest-green: #148F68;
+	--header-height: 64px;
+	--content-height: calc(100vh - var(--header-height));
+	min-height: 100vh;
 	background-color: rgba(0,0,0,0);
 	margin: 0;
 	overflow-y: hidden;
@@ -14,6 +26,7 @@ body {
 .navbar {
 	border-bottom: 3px solid var(--invest-green);
 	padding: 0;
+	height: var(--header-height)
 }
 
 .navbar .row {
@@ -162,7 +175,7 @@ exceed 100% of window.*/
 /* Home Tab */
 
 .invest-list-container {
-	height: 87vh;
+	height: var(--content-height);
 	overflow-y: auto;
 }
 
@@ -215,10 +228,7 @@ exceed 100% of window.*/
 }
 
 .recent-job-card-col {
-	display: flex;
-	flex-wrap: nowrap;
-	flex-direction: column;
-	height: 87vh;
+	height: var(--content-height);
 	overflow-y: auto;
 	padding-right: 0.5rem;
 }
@@ -298,7 +308,6 @@ exceed 100% of window.*/
 	flex:  1 1 0;
 	padding-left: 0;
 	padding-right: 0;
-	height: 85vh;
 }
 
 .invest-main-col .tab-content {
@@ -313,6 +322,7 @@ exceed 100% of window.*/
 	display: flex;
 	flex-direction: column;
 	padding-right: 0;
+	padding-bottom: 1rem;
 }
 
 .invest-sidebar-col .nav-link {
@@ -415,7 +425,7 @@ exceed 100% of window.*/
 
 /* InVEST Setup Tab */
 .args-form {
-	height: 85vh;
+	height: var(--content-height);
 	width: 100%;
 	overflow-y: auto;
 	overflow-x: hidden;
@@ -509,7 +519,7 @@ input[type=text]::placeholder {
 #log-display {
 	overflow: auto;
 	white-space: pre-wrap;
-	height: 85vh;
+	height: var(--content-height);
 }
 
 #log-text {
@@ -517,6 +527,7 @@ input[type=text]::placeholder {
 	font-size:1rem;
 	color: #000;
 	margin-top: 1rem;
+	margin-bottom: 1rem;
 }
 
 #log-text .invest-log-primary {
