@@ -267,76 +267,73 @@ class UNATests(unittest.TestCase):
         numpy.testing.assert_allclose(
             supply_demand, expected_supply_demand)
 
-    def test_core_model_and_base_cases_split_features(self):
+    def test_core_model(self):
         """UNA: Run through the model with base data."""
         from natcap.invest import urban_nature_access
 
-        for case in ('base', 'split_greenspace'):
-            args = _build_model_args(self.workspace_dir)
+        args = _build_model_args(self.workspace_dir)
 
-            urban_nature_access.execute(args)
+        urban_nature_access.execute(args)
 
-            # Since we're doing a semi-manual alignment step, assert that the
-            # aligned LULC and population rasters have the same pixel sizes,
-            # origin and raster dimensions.
-            # TODO: Remove these assertions once we're using align_and_resize
-            # and it works as expected.
-            aligned_lulc_raster_info = pygeoprocessing.get_raster_info(
-                os.path.join(args['workspace_dir'], 'intermediate',
-                             f"aligned_lulc_{args['results_suffix']}.tif"))
-            aligned_population_raster_info = pygeoprocessing.get_raster_info(
-                os.path.join(
-                    args['workspace_dir'], 'intermediate',
-                    f"aligned_population_{args['results_suffix']}.tif"))
+        # Since we're doing a semi-manual alignment step, assert that the
+        # aligned LULC and population rasters have the same pixel sizes,
+        # origin and raster dimensions.
+        # TODO: Remove these assertions once we're using align_and_resize
+        # and it works as expected.
+        aligned_lulc_raster_info = pygeoprocessing.get_raster_info(
+            os.path.join(args['workspace_dir'], 'intermediate',
+                         f"aligned_lulc_{args['results_suffix']}.tif"))
+        aligned_population_raster_info = pygeoprocessing.get_raster_info(
+            os.path.join(
+                args['workspace_dir'], 'intermediate',
+                f"aligned_population_{args['results_suffix']}.tif"))
+        numpy.testing.assert_allclose(
+            aligned_lulc_raster_info['pixel_size'],
+            aligned_population_raster_info['pixel_size'])
+        numpy.testing.assert_allclose(
+            aligned_lulc_raster_info['raster_size'],
+            aligned_population_raster_info['raster_size'])
+        numpy.testing.assert_allclose(
+            aligned_lulc_raster_info['geotransform'],
+            aligned_population_raster_info['geotransform'])
+        numpy.testing.assert_allclose(
+            aligned_lulc_raster_info['bounding_box'],
+            aligned_population_raster_info['bounding_box'])
+
+        # Check that we're getting the appropriate summary values in the
+        # admin units vector.
+        admin_vector_path = os.path.join(
+            args['workspace_dir'], 'output',
+            f"admin_units_{args['results_suffix']}.gpkg")
+        admin_vector = gdal.OpenEx(admin_vector_path)
+        admin_layer = admin_vector.GetLayer()
+        self.assertEqual(admin_layer.GetFeatureCount(), 1)
+
+        # expected field values from eyeballing the results; random seed = 1
+        expected_values = {
+            'SUP_DEMadm_cap': -17.9078,
+            'Pund_adm': 4094.012207,
+            'Povr_adm': 981.987549,
+        }
+        admin_feature = admin_layer.GetFeature(1)
+        self.assertEqual(
+            expected_values.keys(),
+            admin_feature.items().keys()
+        )
+        for fieldname, expected_value in expected_values.items():
             numpy.testing.assert_allclose(
-                aligned_lulc_raster_info['pixel_size'],
-                aligned_population_raster_info['pixel_size'])
-            numpy.testing.assert_allclose(
-                aligned_lulc_raster_info['raster_size'],
-                aligned_population_raster_info['raster_size'])
-            numpy.testing.assert_allclose(
-                aligned_lulc_raster_info['geotransform'],
-                aligned_population_raster_info['geotransform'])
-            numpy.testing.assert_allclose(
-                aligned_lulc_raster_info['bounding_box'],
-                aligned_population_raster_info['bounding_box'])
+                admin_feature.GetField(fieldname), expected_value)
 
-            # Check that we're getting the appropriate summary values in the
-            # admin units vector.
-            admin_vector_path = os.path.join(
-                args['workspace_dir'], 'output',
-                f"admin_units_{args['results_suffix']}.gpkg")
-            admin_vector = gdal.OpenEx(admin_vector_path)
-            admin_layer = admin_vector.GetLayer()
-            self.assertEqual(admin_layer.GetFeatureCount(), 1)
+        # The sum of the under-and-oversupplied populations should be equal
+        # to the total population count.
+        population_array = pygeoprocessing.raster_to_numpy_array(
+            args['population_raster_path'])
+        numpy.testing.assert_allclose(
+            (expected_values['Pund_adm'] + expected_values['Povr_adm']),
+            population_array.sum())
 
-            # expected field values from eyeballing the results; random seed = 1
-            expected_values = {
-                'SUP_DEMadm_cap': -17.9078,
-                'Pund_adm': 4094.012207,
-                'Povr_adm': 981.987549,
-            }
-            admin_feature = admin_layer.GetFeature(1)
-            self.assertEqual(
-                expected_values.keys(),
-                admin_feature.items().keys()
-            )
-            for fieldname, expected_value in expected_values.items():
-                numpy.testing.assert_allclose(
-                    admin_feature.GetField(fieldname), expected_value)
-
-            # The sum of the under-and-oversupplied populations should be equal
-            # to the total population count.
-            population_array = pygeoprocessing.raster_to_numpy_array(
-                args['population_raster_path'])
-            numpy.testing.assert_allclose(
-                (expected_values['Pund_adm'] + expected_values['Povr_adm']),
-                population_array.sum())
-
-            admin_vector = None
-            admin_layer = None
-
-            shutil.rmtree(args['workspace_dir'])
+        admin_vector = None
+        admin_layer = None
 
     def test_split_greenspace_unique_distances(self):
         from natcap.invest import urban_nature_access
