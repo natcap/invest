@@ -44,6 +44,9 @@ Unreleased Changes
       ``--taskgraph-log-level``.
     * Fixed bug in validation of ``results_suffix`` so that special characters
       like path separators, etc, are not allowed.
+* Annual Water Yield
+    * Fixed a bug where the model would error when the watersheds/subwatersheds
+      input was in geopackage format.
 * Crop Production
     * Fixed a bug in both crop production models where the model would error if
       an observed yield raster had no nodata value.
