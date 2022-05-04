@@ -23,6 +23,10 @@ LOGGER = logging.getLogger(__name__)
 UINT32_NODATA = int(numpy.iinfo(numpy.uint32).max)
 FLOAT32_NODATA = float(numpy.finfo(numpy.float32).min)
 BYTE_NODATA = 255
+KERNEL_LABEL_DICHOTOMY = 'dichotomy'
+KERNEL_LABEL_EXPONENTIAL = 'exponential'
+KERNEL_LABEL_GAUSSIAN = 'gaussian'
+KERNEL_LABEL_DENSITY = 'density'
 ARGS_SPEC = {
     'model_name': MODEL_METADATA['urban_nature_access'].model_title,
     'pyname': MODEL_METADATA['urban_nature_access'].pyname,
@@ -113,27 +117,27 @@ ARGS_SPEC = {
             'type': 'option_string',
             'required': False,
             'options': {
-                'dichotomy': {
+                KERNEL_LABEL_DICHOTOMY: {
                     'display_name': 'dichotomy',
                     'description': (
                         'All pixels within the search radius contribute '
                         'equally to a greenspace pixel.'),
                 },
-                'exponential': {
+                KERNEL_LABEL_EXPONENTIAL: {
                     'display_name': 'exponential',
                     'description': (
                         'Contributions to a greenspace pixel decrease '
                         'exponentially, where '
                         '"weight = e^(-pixel_dist / search_radius)"'),
                 },
-                'gaussian': {
+                KERNEL_LABEL_GAUSSIAN: {
                     'display_name': 'gaussian',
                     'description': (
                         'Contributions to a greenspace pixel decrease '
                         'according to a normal ("gaussian") distribution '
                         'with a sigma of 3.'),
                 },
-                'density': {
+                KERNEL_LABEL_DENSITY: {
                     'display_name': 'density',
                     'description': (
                         'Contributions to a greenspace pixel decrease '
@@ -236,12 +240,12 @@ def execute(args):
     graph = taskgraph.TaskGraph(work_token_dir, n_workers)
 
     kernel_creation_functions = {
-        'dichotomy': dichotomous_decay_kernel_raster,
+        KERNEL_LABEL_DICHOTOMY: dichotomous_decay_kernel_raster,
         # "exponential" is more consistent with other InVEST models'
         # terminology.  "Power function" is used in the design doc.
-        'exponential': utils.exponential_decay_kernel_raster,
-        'gaussian': utils.gaussian_decay_kernel_raster,
-        'density': density_decay_kernel_raster,
+        KERNEL_LABEL_EXPONENTIAL: utils.exponential_decay_kernel_raster,
+        KERNEL_LABEL_GAUSSIAN: utils.gaussian_decay_kernel_raster,
+        KERNEL_LABEL_DENSITY: density_decay_kernel_raster,
     }
     # Since we have these keys defined in two places, I want to be super sure
     # that the labels match.
