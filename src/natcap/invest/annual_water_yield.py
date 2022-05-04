@@ -449,7 +449,7 @@ def execute(args):
     align_raster_stack_task.join()
 
     nodata_dict = {
-        'out_nodata': -1.0,
+        'out_nodata': -1,
         'precip': pygeoprocessing.get_raster_info(precip_path)['nodata'][0],
         'eto': pygeoprocessing.get_raster_info(eto_path)['nodata'][0],
         'depth_root': pygeoprocessing.get_raster_info(
@@ -498,13 +498,13 @@ def execute(args):
                 f'LULC_veg value must be either 1 or 0, not {lulc_veg_value}')
 
         # If LULC_veg value is 1 get root depth value
-        if vegetated_dict[lulc_code] == 1.0:
+        if vegetated_dict[lulc_code] == 1:
             root_dict[lulc_code] = bio_dict[lulc_code]['root_depth']
         # If LULC_veg value is 0 then we do not care about root
-        # depth value so will just substitute in a 1.0 . This
+        # depth value so will just substitute in a 1. This
         # value will not end up being used.
         else:
-            root_dict[lulc_code] = 1.0
+            root_dict[lulc_code] = 1
 
     reclass_error_details = {
         'raster_name': 'LULC', 'column_name': 'lucode',
@@ -840,7 +840,7 @@ def wyield_op(fractp, precip, precip_nodata, output_nodata):
     valid_mask = ~utils.array_equals_nodata(fractp, output_nodata)
     if precip_nodata is not None:
         valid_mask &= ~utils.array_equals_nodata(precip, precip_nodata)
-    result[valid_mask] = (1.0 - fractp[valid_mask]) * precip[valid_mask]
+    result[valid_mask] = (1 - fractp[valid_mask]) * precip[valid_mask]
     return result
 
 
@@ -883,7 +883,7 @@ def fractp_op(
         ~utils.array_equals_nodata(Kc, nodata_dict['out_nodata']) &
         ~utils.array_equals_nodata(root, nodata_dict['out_nodata']) &
         ~utils.array_equals_nodata(veg, nodata_dict['out_nodata']) &
-        ~utils.array_equals_nodata(precip, 0.0))
+        ~utils.array_equals_nodata(precip, 0))
     if nodata_dict['eto'] is not None:
         valid_mask &= ~utils.array_equals_nodata(eto, nodata_dict['eto'])
     if nodata_dict['precip'] is not None:
@@ -908,29 +908,29 @@ def fractp_op(
         soil[valid_mask]) * pawc[valid_mask]
     climate_w = (
         (awc / precip[valid_mask]) * seasonality_constant) + 1.25
-    # Capping to 5.0 to set to upper limit if exceeded
-    climate_w[climate_w > 5.0] = 5.0
+    # Capping to 5 to set to upper limit if exceeded
+    climate_w[climate_w > 5] = 5
 
     # Compute evapotranspiration partition of the water balance
     aet_p = (
-        1.0 + (pet / precip[valid_mask])) - (
-            (1.0 + (pet / precip[valid_mask]) ** climate_w) ** (
-                1.0 / climate_w))
+        1 + (pet / precip[valid_mask])) - (
+            (1 + (pet / precip[valid_mask]) ** climate_w) ** (
+                1 / climate_w))
 
     # We take the minimum of the following values (phi, aet_p)
     # to determine the evapotranspiration partition of the
     # water balance (see users guide)
     veg_result = numpy.where(phi < aet_p, phi, aet_p)
-    # Take the minimum of precip and Kc * ETo to avoid x / p > 1.0
+    # Take the minimum of precip and Kc * ETo to avoid x / p > 1
     nonveg_result = Kc[valid_mask] * eto[valid_mask]
     nonveg_mask = precip[valid_mask] < Kc[valid_mask] * eto[valid_mask]
     nonveg_result[nonveg_mask] = precip[valid_mask][nonveg_mask]
     nonveg_result_fract = nonveg_result / precip[valid_mask]
 
-    # If veg is 1.0 use the result for vegetated areas else use result
+    # If veg is 1 use the result for vegetated areas else use result
     # for non veg areas
     result = numpy.where(
-        veg[valid_mask] == 1.0,
+        veg[valid_mask] == 1,
         veg_result, nonveg_result_fract)
 
     fractp = numpy.empty(valid_mask.shape, dtype=numpy.float32)
@@ -1014,15 +1014,15 @@ def compute_watershed_valuation(watershed_results_vector_path, val_dict):
                 val_row['efficiency'] * val_row['fraction'] *
                 val_row['height'] * rsupply_vl * 0.00272)
 
-            dsum = 0.
+            dsum = 0
             # Divide by 100 because it is input at a percent and we need
             # decimal value
-            disc = val_row['discount'] / 100.0
+            disc = val_row['discount'] / 100
             # To calculate the summation of the discount rate term over the life
             # span of the dam we can use a geometric series
-            ratio = 1. / (1. + disc)
-            if ratio != 1.:
-                dsum = (1. - math.pow(ratio, val_row['time_span'])) / (1. - ratio)
+            ratio = 1 / (1 + disc)
+            if ratio != 1:
+                dsum = (1 - math.pow(ratio, val_row['time_span'])) / (1 - ratio)
 
             npv = ((val_row['kw_price'] * energy) - val_row['cost']) * dsum
 
@@ -1125,7 +1125,7 @@ def compute_water_yield_volume(watershed_results_vector_path):
             geom = feat.GetGeometryRef()
             # Calculate water yield volume,
             # 1000 is for converting the mm of wyield to meters
-            vol = wyield_mn * geom.Area() / 1000.0
+            vol = wyield_mn * geom.Area() / 1000
             # Get the volume field index and add value
             feat.SetField(vol_name, vol)
 
