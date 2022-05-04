@@ -519,6 +519,10 @@ def _reclassify_greenspace_area(
         only_these_greenspace_codes=None):
     """Reclassify LULC pixels into the greenspace area they represent.
 
+    After execution, greenspace pixels will have values representing the
+    pixel's area, while non-greenspace pixels will have a pixel value of 0.
+    Nodata values will propagate to the output raster.
+
     Args:
         lulc_raster_path (string): The path to a land-use/land-cover raster.
         lulc_attribute_table (string): The path to a CSV table representing
