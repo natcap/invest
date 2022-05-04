@@ -256,10 +256,6 @@ def execute(args):
         kernel_type = 'dichotomy'
         LOGGER.info(
             'args["kernel_type"] not provided; defaulting to {kernel_type}')
-    elif args['kernel_type'] not in kernel_creation_functions:
-        raise ValueError(
-            f'Kernel type "{args["kernel_type"]}" is not recognized. '
-            f"Must be one of {', '.join(kernel_creation_functions.keys())}")
     else:
         kernel_type = args['kernel_type']
 
