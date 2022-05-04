@@ -552,7 +552,7 @@ class AboutDialog(QtWidgets.QDialog):
                  'https://github.com/natcap/pygeoprocessing'),
                 ('PyQt', 'GPL',
                  'https://riverbankcomputing.com/software/pyqt/intro'),
-                ('rtree', 'LGPL', 'http://toblerity.org/rtree/'),
+                ('rtree', 'MIT', 'https://github.com/Toblerity/rtree'),
                 ('scipy', 'BSD', 'http://www.scipy.org/'),
                 ('shapely', 'BSD', 'http://github.com/Toblerity/Shapely')]:
             label_text += (
