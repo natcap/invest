@@ -31,7 +31,7 @@ class HRAUnitTests(unittest.TestCase):
         shutil.rmtree(self.workspace_dir)
 
     def test_calc_criteria(self):
-        from natcap.invest import hra2
+        from natcap.invest import hra
 
         habitat_mask = numpy.array([
             [0, 1, 1]], dtype=numpy.uint8)
@@ -62,12 +62,12 @@ class HRAUnitTests(unittest.TestCase):
             {'rating': 0, 'dq': 3, 'weight': 3},
         ]
         target_exposure_path = os.path.join(self.workspace_dir, 'exposure.tif')
-        hra2._calc_criteria(attributes_list, habitat_mask_path,
+        hra._calc_criteria(attributes_list, habitat_mask_path,
                             target_exposure_path, decayed_distance_raster_path)
 
         exposure_array = pygeoprocessing.raster_to_numpy_array(
             target_exposure_path)
-        nodata = hra2._TARGET_NODATA_FLOAT32
+        nodata = hra._TARGET_NODATA_FLOAT32
         # These expected values were calculated by hand based on the equation
         # for criteria scores in the user's guide.
         expected_exposure_array = numpy.array([
@@ -76,7 +76,7 @@ class HRAUnitTests(unittest.TestCase):
             exposure_array, expected_exposure_array)
 
     def test_decayed_distance_linear(self):
-        from natcap.invest import hra2
+        from natcap.invest import hra
 
         stressor_mask = numpy.array([
             [1, 0, 0, 0, 0, 0]], dtype=numpy.uint8)
@@ -88,7 +88,7 @@ class HRAUnitTests(unittest.TestCase):
         # buffer distance is 4*pixelwidth
         buffer_distance = 4*30
         decayed_edt_path = os.path.join(self.workspace_dir, 'decayed_edt.tif')
-        hra2._calculate_decayed_distance(
+        hra._calculate_decayed_distance(
             stressor_raster_path, 'linear', buffer_distance, decayed_edt_path)
 
         expected_array = numpy.array([
@@ -98,7 +98,7 @@ class HRAUnitTests(unittest.TestCase):
             pygeoprocessing.raster_to_numpy_array(decayed_edt_path))
 
     def test_decayed_distance_exponential(self):
-        from natcap.invest import hra2
+        from natcap.invest import hra
 
         stressor_mask = numpy.array([
             [1, 0, 0, 0, 0, 0]], dtype=numpy.uint8)
@@ -110,7 +110,7 @@ class HRAUnitTests(unittest.TestCase):
         # buffer distance is 4*pixelwidth
         buffer_distance = 4*30
         decayed_edt_path = os.path.join(self.workspace_dir, 'decayed_edt.tif')
-        hra2._calculate_decayed_distance(
+        hra._calculate_decayed_distance(
             stressor_raster_path, 'exponential', buffer_distance,
             decayed_edt_path)
 
@@ -124,7 +124,7 @@ class HRAUnitTests(unittest.TestCase):
             pygeoprocessing.raster_to_numpy_array(decayed_edt_path))
 
     def test_decayed_distance_no_decay(self):
-        from natcap.invest import hra2
+        from natcap.invest import hra
 
         stressor_mask = numpy.array([
             [1, 0, 0, 0, 0, 0]], dtype=numpy.uint8)
@@ -136,7 +136,7 @@ class HRAUnitTests(unittest.TestCase):
         # buffer distance is 4*pixelwidth
         buffer_distance = 4*30
         decayed_edt_path = os.path.join(self.workspace_dir, 'decayed_edt.tif')
-        hra2._calculate_decayed_distance(
+        hra._calculate_decayed_distance(
             stressor_raster_path, 'None', buffer_distance,
             decayed_edt_path)
 
@@ -149,7 +149,7 @@ class HRAUnitTests(unittest.TestCase):
             pygeoprocessing.raster_to_numpy_array(decayed_edt_path))
 
     def test_info_table_parsing(self):
-        from natcap.invest import hra2
+        from natcap.invest import hra
 
         info_table_path = os.path.join(self.workspace_dir, 'info_table.csv')
         with open(info_table_path, 'w') as info_table:
@@ -167,7 +167,7 @@ class HRAUnitTests(unittest.TestCase):
                     transportation,stressors/transport.shp,stressor,100"""
                 ))
 
-        habitats, stressors = hra2._parse_info_table(info_table_path)
+        habitats, stressors = hra._parse_info_table(info_table_path)
 
         workspace = self.workspace_dir.replace('\\', '/')
         expected_habitats = {
@@ -190,7 +190,7 @@ class HRAUnitTests(unittest.TestCase):
         self.assertEqual(stressors, expected_stressors)
 
     def test_criteria_table_parsing(self):
-        from natcap.invest import hra2
+        from natcap.invest import hra
 
         criteria_table_path = os.path.join(self.workspace_dir, 'criteria.csv')
         with open(criteria_table_path, 'w') as criteria_table:
@@ -214,7 +214,7 @@ class HRAUnitTests(unittest.TestCase):
                 ))
         target_composite_csv_path = os.path.join(self.workspace_dir,
                                                  'composite.csv')
-        habitats, stressors = hra2._parse_criteria_table(
+        habitats, stressors = hra._parse_criteria_table(
             criteria_table_path, target_composite_csv_path)
         self.assertEqual(habitats, {'eelgrass', 'hardbottom'})
         self.assertEqual(stressors, {'oil', 'fishing'})
@@ -243,9 +243,9 @@ class HRAUnitTests(unittest.TestCase):
             expected_composite_dataframe, composite_dataframe)
 
     def test_maximum_reclassified_score(self):
-        from natcap.invest import hra2
+        from natcap.invest import hra
 
-        nodata = hra2._TARGET_NODATA_BYTE
+        nodata = hra._TARGET_NODATA_BYTE
 
         habitat_mask = numpy.array(
             [[0, 1, nodata, 1, 1]], dtype=numpy.uint8)
@@ -256,7 +256,7 @@ class HRAUnitTests(unittest.TestCase):
                 [[nodata, 2, nodata, 2, 1]],
                 [[nodata, 3, nodata, 1, 1]]]
         ]
-        reclassified_score = hra2._maximum_reclassified_score(
+        reclassified_score = hra._maximum_reclassified_score(
             habitat_mask, *risk_classes)
 
         expected_risk_classes = numpy.array(
@@ -265,7 +265,7 @@ class HRAUnitTests(unittest.TestCase):
             reclassified_score, expected_risk_classes)
 
     def test_simplify(self):
-        from natcap.invest import hra2
+        from natcap.invest import hra
 
         geoms = [
             shapely.geometry.Point(
@@ -280,7 +280,7 @@ class HRAUnitTests(unittest.TestCase):
 
         target_vector_path = os.path.join(self.workspace_dir,
                                           'target_vector.shp')
-        hra2._simplify(source_vector_path, 20, target_vector_path)
+        hra._simplify(source_vector_path, 20, target_vector_path)
 
         # Expected areas are from eyeballing that the resulting geometry look
         # correctly simplified.
@@ -293,7 +293,7 @@ class HRAUnitTests(unittest.TestCase):
             self.assertAlmostEqual(expected_area, feature_geom.Area())
 
     def test_polygonize(self):
-        from natcap.invest import hra2
+        from natcap.invest import hra
 
         source_raster_path = os.path.join(self.workspace_dir, 'source.tif')
         source_array = numpy.array([
@@ -310,7 +310,7 @@ class HRAUnitTests(unittest.TestCase):
                 array, 255, (30, -30), ORIGIN, SRS_WKT, target_path)
 
         target_vector_path = os.path.join(self.workspace_dir, 'target.gpkg')
-        hra2._polygonize(source_raster_path, mask_raster_path,
+        hra._polygonize(source_raster_path, mask_raster_path,
                          target_vector_path, 'source_id')
 
         try:
@@ -337,7 +337,7 @@ class HRAUnitTests(unittest.TestCase):
             vector = None
 
     def test_polygonize_mask(self):
-        from natcap.invest import hra2
+        from natcap.invest import hra
 
         source_raster_path = os.path.join(self.workspace_dir, 'source.tif')
         nodata = 255
@@ -351,7 +351,7 @@ class HRAUnitTests(unittest.TestCase):
 
         mask_raster_path = os.path.join(self.workspace_dir, 'mask.tif')
 
-        hra2._create_mask_for_polygonization(
+        hra._create_mask_for_polygonization(
             source_raster_path, mask_raster_path)
 
         numpy.testing.assert_allclose(
@@ -364,7 +364,7 @@ class HRAUnitTests(unittest.TestCase):
         pass
 
     def test_rasterize_aoi_regions(self):
-        from natcap.invest import hra2
+        from natcap.invest import hra
 
         habitat_mask_path = os.path.join(
             self.workspace_dir, 'habitat_mask.tif')
@@ -391,7 +391,7 @@ class HRAUnitTests(unittest.TestCase):
         # subregion raster produced.
         pygeoprocessing.shapely_geometry_to_vector(
             aoi_geometries, source_vector_path, SRS_WKT, 'ESRI Shapefile')
-        hra2._rasterize_aoi_regions(
+        hra._rasterize_aoi_regions(
             source_vector_path, habitat_mask_path, target_raster_dir,
             target_json)
         self.assertEqual(
@@ -415,7 +415,7 @@ class HRAUnitTests(unittest.TestCase):
                 {'NamE': 'subregion_2'},
                 {'NamE': 'subregion_3'},
             ])
-        hra2._rasterize_aoi_regions(
+        hra._rasterize_aoi_regions(
             source_vector_path, habitat_mask_path, target_raster_dir,
             target_json)
         self.assertEqual(
@@ -434,7 +434,7 @@ class HRAUnitTests(unittest.TestCase):
         )
 
     def test_create_raster_from_bounding_box(self):
-        from natcap.invest import hra2
+        from natcap.invest import hra
 
         # [minx, miny, maxx, maxy]
         bounding_box = [
@@ -445,7 +445,7 @@ class HRAUnitTests(unittest.TestCase):
         ]
         pixel_size = (30, -30)
         target_raster_path = os.path.join(self.workspace_dir, 'raster.tif')
-        hra2._create_raster_from_bounding_box(
+        hra._create_raster_from_bounding_box(
             target_raster_path, bounding_box, pixel_size, gdal.GDT_Byte,
             SRS_WKT, target_nodata=2, fill_value=2)
 
@@ -467,7 +467,7 @@ class HRAUnitTests(unittest.TestCase):
             raster = None
 
     def test_prep_input_criterion_raster(self):
-        from natcap.invest import hra2
+        from natcap.invest import hra
 
         nodata = -1
         source_matrix = numpy.array([
@@ -479,21 +479,21 @@ class HRAUnitTests(unittest.TestCase):
             source_matrix, nodata, (30, -30), ORIGIN, SRS_WKT, source_filepath)
 
         target_filepath = os.path.join(self.workspace_dir, 'target.tif')
-        hra2._prep_input_criterion_raster(
+        hra._prep_input_criterion_raster(
             source_filepath, target_filepath)
 
         converted_array = pygeoprocessing.raster_to_numpy_array(
             target_filepath)
         expected_array = numpy.array([
-            [hra2._TARGET_NODATA_FLOAT32, hra2._TARGET_NODATA_FLOAT32, 1.3],
+            [hra._TARGET_NODATA_FLOAT32, hra._TARGET_NODATA_FLOAT32, 1.3],
             [2.2, 2, 1]], dtype=numpy.float32)
         numpy.testing.assert_allclose(converted_array, expected_array)
         self.assertEqual(
             pygeoprocessing.get_raster_info(target_filepath)['nodata'][0],
-            hra2._TARGET_NODATA_FLOAT32)
+            hra._TARGET_NODATA_FLOAT32)
 
     def test_align(self):
-        from natcap.invest import hra2
+        from natcap.invest import hra
 
         habitat_raster_path = os.path.join(
             self.workspace_dir, 'habitat_raster.tif')
@@ -504,7 +504,7 @@ class HRAUnitTests(unittest.TestCase):
         # pixel size is slightly smaller than the target pixel size in order to
         # force resampling.
         pygeoprocessing.numpy_array_to_raster(
-            habitat_array, hra2._TARGET_NODATA_BYTE, (29, -29), ORIGIN,
+            habitat_array, hra._TARGET_NODATA_BYTE, (29, -29), ORIGIN,
             SRS_WKT, habitat_raster_path)
 
         criterion_raster_path = os.path.join(
@@ -515,7 +515,7 @@ class HRAUnitTests(unittest.TestCase):
             [1.1, 1, 0.9, 0.8, 0.7],
             [1.1, 1, 0.9, 0.8, 0.7]], dtype=numpy.float32)
         pygeoprocessing.numpy_array_to_raster(
-            criterion_array, hra2._TARGET_NODATA_FLOAT32, (30, -30), ORIGIN,
+            criterion_array, hra._TARGET_NODATA_FLOAT32, (30, -30), ORIGIN,
             SRS_WKT, criterion_raster_path)
 
         habitat_vector_path = os.path.join(
@@ -551,7 +551,7 @@ class HRAUnitTests(unittest.TestCase):
                 self.workspace_dir, 'aligned_criterion_vector.tif'),
         }
 
-        hra2._align(raster_path_map, vector_path_map, (30, -30), SRS_WKT)
+        hra._align(raster_path_map, vector_path_map, (30, -30), SRS_WKT)
 
         # Calculated by hand given the above spatial inputs and
         # (30, -30) pixels.  All rasters should share the same extents and
@@ -589,7 +589,7 @@ class HRAUnitTests(unittest.TestCase):
 
         # The aligned criterion raster should have been rasterized from the
         # rating column.
-        ndta = hra2._TARGET_NODATA_FLOAT32
+        ndta = hra._TARGET_NODATA_FLOAT32
         expected_criterion_array = numpy.array([
             [0.12, 0.12, 0.12, 0.12, 0.12, 0.12, ndta, ndta, ndta, ndta],
             [0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, ndta, ndta, ndta],
@@ -607,7 +607,7 @@ class HRAUnitTests(unittest.TestCase):
             aligned_criterion_array, expected_criterion_array)
 
     def test_prep_criterion_raster(self):
-        from natcap.invest import hra2
+        from natcap.invest import hra
 
         # Test what happens when the raster has a defined nodata value.
         nodata = 255
@@ -619,10 +619,10 @@ class HRAUnitTests(unittest.TestCase):
             criterion_array_with_nodata, nodata, (30, -30), ORIGIN, SRS_WKT,
             raster_path)
         target_raster_path = os.path.join(self.workspace_dir, 'target.tif')
-        hra2._prep_input_criterion_raster(raster_path, target_raster_path)
+        hra._prep_input_criterion_raster(raster_path, target_raster_path)
         expected_array = numpy.array([
-            [hra2._TARGET_NODATA_FLOAT32, 0, 1.67,
-             hra2._TARGET_NODATA_FLOAT32]], dtype=numpy.float32)
+            [hra._TARGET_NODATA_FLOAT32, 0, 1.67,
+             hra._TARGET_NODATA_FLOAT32]], dtype=numpy.float32)
         numpy.testing.assert_allclose(
             pygeoprocessing.raster_to_numpy_array(target_raster_path),
             expected_array)
@@ -637,15 +637,15 @@ class HRAUnitTests(unittest.TestCase):
             criterion_array_without_nodata, None, (30, -30), ORIGIN, SRS_WKT,
             raster_path)
         target_raster_path = os.path.join(self.workspace_dir, 'target.tif')
-        hra2._prep_input_criterion_raster(raster_path, target_raster_path)
+        hra._prep_input_criterion_raster(raster_path, target_raster_path)
         expected_array = numpy.array([
-            [hra2._TARGET_NODATA_FLOAT32, 0, 0.33, 2]], dtype=numpy.float32)
+            [hra._TARGET_NODATA_FLOAT32, 0, 0.33, 2]], dtype=numpy.float32)
         numpy.testing.assert_allclose(
             pygeoprocessing.raster_to_numpy_array(target_raster_path),
             expected_array)
 
     def test_mask_binary_values(self):
-        from natcap.invest import hra2
+        from natcap.invest import hra
 
         mask_array_1 = numpy.array([
             [0, 1, 255]], dtype=numpy.uint8)
@@ -665,7 +665,7 @@ class HRAUnitTests(unittest.TestCase):
                 array, nodata, (30, -30), ORIGIN, SRS_WKT, path)
 
         mask_path = os.path.join(self.workspace_dir, 'mask.tif')
-        hra2._mask_binary_presence_absence_rasters(source_paths, mask_path)
+        hra._mask_binary_presence_absence_rasters(source_paths, mask_path)
 
         expected_mask_array = numpy.array([
             [1, 1, 1]], dtype=numpy.uint8)
@@ -675,7 +675,7 @@ class HRAUnitTests(unittest.TestCase):
             expected_mask_array)
 
     def test_table_format_loading(self):
-        from natcap.invest import hra2
+        from natcap.invest import hra
 
         # No matter the supported file format, make sure we have consistent
         # table headings.
@@ -692,19 +692,19 @@ class HRAUnitTests(unittest.TestCase):
             full_filepath = os.path.join(self.workspace_dir, filename)
             func(full_filepath, index=False)
 
-            opened_df = hra2._open_table_as_dataframe(full_filepath)
+            opened_df = hra._open_table_as_dataframe(full_filepath)
             pandas.testing.assert_frame_equal(expected_df, opened_df)
 
     def test_pairwise_risk(self):
-        from natcap.invest import hra2
+        from natcap.invest import hra
 
-        byte_nodata = hra2._TARGET_NODATA_BYTE
+        byte_nodata = hra._TARGET_NODATA_BYTE
         habitat_mask_path = os.path.join(
             self.workspace_dir, 'habitat_mask.tif')
         habitat_mask_array = numpy.array([
             [1, 1, 1, 0, byte_nodata]], dtype=numpy.uint8)
 
-        float_nodata = hra2._TARGET_NODATA_FLOAT32
+        float_nodata = hra._TARGET_NODATA_FLOAT32
         exposure_path = os.path.join(self.workspace_dir, 'exposure.tif')
         exposure_array = numpy.array([
             [0.1, 1.1, 1.2, 0.3, float_nodata]], dtype=numpy.float32)
@@ -722,7 +722,7 @@ class HRAUnitTests(unittest.TestCase):
 
         multiplicative_risk_path = os.path.join(
             self.workspace_dir, 'multiplicative.tif')
-        hra2._calculate_pairwise_risk(
+        hra._calculate_pairwise_risk(
             habitat_mask_path, exposure_path, consequence_path,
             'multiplicative', multiplicative_risk_path)
 
@@ -735,7 +735,7 @@ class HRAUnitTests(unittest.TestCase):
 
         euclidean_risk_path = os.path.join(
             self.workspace_dir, 'euclidean.tif')
-        hra2._calculate_pairwise_risk(
+        hra._calculate_pairwise_risk(
             habitat_mask_path, exposure_path, consequence_path, 'euclidean',
             euclidean_risk_path)
 
@@ -748,14 +748,14 @@ class HRAUnitTests(unittest.TestCase):
         )
 
         with self.assertRaises(AssertionError) as cm:
-            hra2._calculate_pairwise_risk(
+            hra._calculate_pairwise_risk(
                 habitat_mask_path, exposure_path, consequence_path,
                 'bad_risk_type', euclidean_risk_path)
 
         self.assertIn('Invalid risk equation', str(cm.exception))
 
     def test_sum_rasters(self):
-        from natcap.invest import hra2
+        from natcap.invest import hra
 
         nodata = -1
         risk_array_1 = numpy.array([
@@ -775,9 +775,9 @@ class HRAUnitTests(unittest.TestCase):
                 array, nodata, (10, -10), ORIGIN, SRS_WKT, path)
 
         # Test a straight sum
-        target_nodata = hra2._TARGET_NODATA_FLOAT32
+        target_nodata = hra._TARGET_NODATA_FLOAT32
         target_raster_path = os.path.join(self.workspace_dir, 'sum.tif')
-        hra2._sum_rasters(raster_paths, target_nodata, target_raster_path)
+        hra._sum_rasters(raster_paths, target_nodata, target_raster_path)
         expected_array = numpy.array([
             [0.7, 2.0, 6.2]], dtype=numpy.float32)
         numpy.testing.assert_allclose(
@@ -785,7 +785,7 @@ class HRAUnitTests(unittest.TestCase):
             expected_array)
 
         # Test with normalization.
-        hra2._sum_rasters(raster_paths, target_nodata, target_raster_path,
+        hra._sum_rasters(raster_paths, target_nodata, target_raster_path,
                           normalize=True)
         expected_array = numpy.array([
             [0.35, 1.0, 3.1]], dtype=numpy.float32)
@@ -805,7 +805,7 @@ class HRAModelTests(unittest.TestCase):
         shutil.rmtree(self.workspace_dir)
 
     def test_model(self):
-        from natcap.invest import hra2
+        from natcap.invest import hra
 
         args = {
             'workspace_dir': os.path.join(self.workspace_dir, 'workspace'),
@@ -885,7 +885,7 @@ class HRAModelTests(unittest.TestCase):
                     array, 255, (10, -10), (ORIGIN[0] - 50, ORIGIN[1] - 50),
                     SRS_WKT, full_path)
 
-        hra2.execute(args)
+        hra.execute(args)
 
         # Ecosystem risk is the sum of all risk values.
 
@@ -898,7 +898,7 @@ class HRAModelTests(unittest.TestCase):
 
 
     def test_model_habitat_mismatch(self):
-        from natcap.invest import hra2
+        from natcap.invest import hra
 
         criteria_table_path = os.path.join(self.workspace_dir, 'criteria.csv')
         with open(criteria_table_path, 'w') as criteria_table:
@@ -946,7 +946,7 @@ class HRAModelTests(unittest.TestCase):
             aoi_geoms, args['aoi_vector_path'], SRS_WKT, 'ESRI Shapefile')
 
         with self.assertRaises(ValueError) as cm:
-            hra2.execute(args)
+            hra.execute(args)
 
         self.assertIn('habitats', str(cm.exception))
         self.assertIn("Missing from info table: eelgrass, hardbottom",
@@ -955,7 +955,7 @@ class HRAModelTests(unittest.TestCase):
                       str(cm.exception))
 
     def test_model_stressor_mismatch(self):
-        from natcap.invest import hra2
+        from natcap.invest import hra
 
         criteria_table_path = os.path.join(self.workspace_dir, 'criteria.csv')
         with open(criteria_table_path, 'w') as criteria_table:
@@ -1004,7 +1004,7 @@ class HRAModelTests(unittest.TestCase):
             aoi_geoms, args['aoi_vector_path'], SRS_WKT, 'ESRI Shapefile')
 
         with self.assertRaises(ValueError) as cm:
-            hra2.execute(args)
+            hra.execute(args)
 
         self.assertIn('stressors', str(cm.exception))
         self.assertIn("Missing from info table: fishing",

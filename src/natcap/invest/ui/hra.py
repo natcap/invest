@@ -1,5 +1,5 @@
 # coding=UTF-8
-from natcap.invest import hra2
+from natcap.invest import hra
 from natcap.invest import MODEL_METADATA
 from natcap.invest.ui import inputs
 from natcap.invest.ui import model
@@ -10,8 +10,8 @@ class HabitatRiskAssessment(model.InVESTModel):
         model.InVESTModel.__init__(
             self,
             label=MODEL_METADATA['habitat_risk_assessment'].model_title,
-            target=hra2.execute,
-            validator=hra2.validate,
+            target=hra.execute,
+            validator=hra.validate,
             localdoc=MODEL_METADATA['habitat_risk_assessment'].userguide)
 
         self.info_table_path = inputs.File(
@@ -86,7 +86,7 @@ class HabitatRiskAssessment(model.InVESTModel):
         self.n_overlapping_stressors = inputs.Text(
             args_key='n_overlapping_stressors',
             helptext=(
-                hra2.ARGS_SPEC['args']['n_overlapping_stressors']['about']),
+                hra.ARGS_SPEC['args']['n_overlapping_stressors']['about']),
             label='Number of Overlapping Stressors',
             validator=self.validator)
         self.add_input(self.n_overlapping_stressors)
