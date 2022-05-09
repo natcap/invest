@@ -45,6 +45,8 @@ class SpatialOverlapTest(unittest.TestCase):
 
         error_msg = validation.check_spatial_overlap([filepath_1, filepath_2])
         self.assertTrue(validation.MESSAGES['BBOX_NOT_INTERSECT'] in error_msg)
+        self.assertTrue(filepath_1 in error_msg)
+        self.assertTrue(filepath_2 in error_msg)
 
     def test_overlap(self):
         """Validation: verify overlap."""
