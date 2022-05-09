@@ -28,11 +28,14 @@ class SpatialOverlapTest(unittest.TestCase):
     def test_no_overlap(self):
         """Validation: verify lack of overlap."""
         from natcap.invest import validation
+        import pygeoprocessing
 
         driver = gdal.GetDriverByName('GTiff')
         filepath_1 = os.path.join(self.workspace_dir, 'raster_1.tif')
         filepath_2 = os.path.join(self.workspace_dir, 'raster_2.tif')
 
+        filepath_list = []
+        bbox_list = []
         for filepath, geotransform in (
                 (filepath_1, [1, 1, 0, 1, 0, 1]),
                 (filepath_2, [100, 1, 0, 100, 0, 1])):
@@ -42,11 +45,15 @@ class SpatialOverlapTest(unittest.TestCase):
             raster.SetProjection(wgs84_srs.ExportToWkt())
             raster.SetGeoTransform(geotransform)
             raster = None
+            filepath_list.append(filepath)
+            bbox_list.append(
+                pygeoprocessing.get_raster_info(filepath)['bounding_box'])
 
         error_msg = validation.check_spatial_overlap([filepath_1, filepath_2])
-        self.assertTrue(validation.MESSAGES['BBOX_NOT_INTERSECT'] in error_msg)
-        self.assertTrue(filepath_1 in error_msg)
-        self.assertTrue(filepath_2 in error_msg)
+        formatted_lists = validation._format_bbox_list(
+            filepath_list, bbox_list)
+        self.assertTrue(validation.MESSAGES['BBOX_NOT_INTERSECT'].format(
+            bboxes=formatted_lists) in error_msg)
 
     def test_overlap(self):
         """Validation: verify overlap."""
@@ -1232,8 +1239,10 @@ class TestValidationFromSpec(unittest.TestCase):
                          'different_projections_ok': True})
         self.assertEqual(len(validation_warnings), 1)
         self.assertEqual(set(args.keys()), set(validation_warnings[0][0]))
+        formatted_bbox_list = ''  # allows str matching w/o real bbox str
         self.assertTrue(
-            validation.MESSAGES['BBOX_NOT_INTERSECT'] in validation_warnings[0][1])
+            validation.MESSAGES['BBOX_NOT_INTERSECT'].format(
+                bboxes=formatted_bbox_list) in validation_warnings[0][1])
 
     def test_spatial_overlap_error_undefined_projection(self):
         """Validation: check spatial overlap message when no projection"""
@@ -1339,8 +1348,10 @@ class TestValidationFromSpec(unittest.TestCase):
             args, spec, {'spatial_keys': list(spec.keys()),
                          'different_projections_ok': True})
         self.assertEqual(len(validation_warnings), 1)
+        formatted_bbox_list = ''  # allows str matching w/o real bbox str
         self.assertTrue(
-            validation.MESSAGES['BBOX_NOT_INTERSECT'] in validation_warnings[0][1])
+            validation.MESSAGES['BBOX_NOT_INTERSECT'].format(
+                bboxes=formatted_bbox_list) in validation_warnings[0][1])
         self.assertEqual(set(args.keys()), set(validation_warnings[0][0]))
 
     def test_allow_extra_keys(self):
