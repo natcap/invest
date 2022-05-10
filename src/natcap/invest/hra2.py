@@ -1170,12 +1170,16 @@ def _create_summary_statistics_file(
                 'R_%HIGH': (stats['R_N_HIGH'] / reclassified_count) * 100,
                 'R_%MEDIUM': (stats['R_N_MEDIUM'] / reclassified_count) * 100,
                 'R_%LOW': (stats['R_N_LOW'] / reclassified_count) * 100,
+                'R_N_PIXELS': reclassified_count,
             }
             for prefix in ('E', 'C', 'R'):
                 record[f'{prefix}_MIN'] = float(stats[f'{prefix}_MIN'])
                 record[f'{prefix}_MAX'] = float(stats[f'{prefix}_MAX'])
                 record[f'{prefix}_MEAN'] = float(
                     stats[f'{prefix}_SUM'] / stats[f'{prefix}_N_PIXELS'])
+
+                record[f'{prefix}_SUM'] = stats[f'{prefix}_SUM']
+                record[f'{prefix}_N_PIXELS'] = stats[f'{prefix}_N_PIXELS']
             records.append(record)
 
     out_dataframe = pandas.DataFrame.from_records(
@@ -1186,6 +1190,35 @@ def _create_summary_statistics_file(
             'R_MIN', 'R_MAX', 'R_MEAN',
             'R_%HIGH', 'R_%MEDIUM', 'R_%LOW',
         ])
+
+    # TODO: the total risk classifications stats appear to be taken from the
+    # cumulative risk raster to a habitat.  So,{E,C,R}_{MIN,MAX,MEAN} are
+    # calculated in this function and R_% is calculated separately as it is
+    # now.
+
+
+    summary_records = []
+    for habitat in habitats:
+        summary_record = {
+            'HABITAT': habitat,
+            'STRESSOR': '(FROM ALL STRESSORS)',
+            'SUBREGION': None,
+        }
+        habitat_df = out_dataframe['HABITAT' == habitat]
+        for prefix in ('E', 'C', 'R'):
+            summary_record[f'{prefix}_MIN'] = numpy.min(
+                habitat_df[f'{prefix}_MIN'])
+            summary_record[f'{prefix}_MAX'] = numpy.max(
+                habitat_df[f'{prefix}_MAX'])
+            summary_record[f'{prefix}_MEAN'] = (
+                numpy.sum(habitat_df[f'{prefix}_SUM']) /
+                numpy.sum(habitat_df[f'{prefix}_N_PIXELS']))
+
+
+        summary_record['R_%HIGH'] = summary_record['R']
+
+
+    # TODO: sort by habitat and then stressor
     out_dataframe.to_csv(target_summary_csv_path, index=False)
 
 
@@ -1837,7 +1870,7 @@ def _parse_criteria_table(criteria_table_path, target_composite_csv_path):
                     if not os.path.isabs(attribute_value):
                         attribute_value = os.path.join(
                             os.path.dirname(criteria_table_path),
-                            attribute_value).replace('\\', '/')
+                            attribute_value)
                 stressor_habitat_data[
                     attribute_name.lower()] = attribute_value
             # Keep the copy() unless you want to all of the 'records' dicts to
