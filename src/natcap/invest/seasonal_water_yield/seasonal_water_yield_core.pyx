@@ -508,7 +508,7 @@ cpdef calculate_local_recharge(
         flow_dir_mfd_path, target_pi_path, gdal.GDT_Float32, [target_nodata],
         fill_value_list=[target_nodata])
     cdef _ManagedRaster target_pi_raster = _ManagedRaster(
-        target_aet_path, 1, 1)
+        target_pi_path, 1, 1)
 
 
     for offset_dict in pygeoprocessing.iterblocks(
