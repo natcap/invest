@@ -633,7 +633,8 @@ def execute(args):
     # Aggregate results to watershed polygons, and do the optional
     # scarcity and valuation calculations.
     for base_ws_path, ws_id_name, target_ws_path in watershed_paths_list:
-
+        # make a copy so we don't modify the original
+        # do zonal stats with the copy so that FIDS are correct
         copy_watersheds_vector_task = graph.add_task(
             func=copy_vector,
             args=[base_ws_path, target_ws_path],
@@ -659,8 +660,7 @@ def execute(args):
                     copy_watersheds_vector_task],
                 task_name=f'{ws_id_name}_{key_name}_zonalstats'))
 
-        # Create copies of the input shapefiles in the output workspace.
-        # Add the zonal stats data to the attribute tables.
+        # Add the zonal stats data to the output vector's attribute table
         # Compute optional scarcity and valuation
         write_output_vector_attributes_task = graph.add_task(
             func=write_output_vector_attributes,
