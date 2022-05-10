@@ -49,6 +49,8 @@ Unreleased Changes
       ``--taskgraph-log-level``.
     * Fixed bug in validation of ``results_suffix`` so that special characters
       like path separators, etc, are not allowed.
+    * Fixed a bug in validation where a warning about non-overlapping spatial
+      layers was missing info about the offending bounding boxes.
 * Crop Production
     * Fixed a bug in both crop production models where the model would error if
       an observed yield raster had no nodata value.
