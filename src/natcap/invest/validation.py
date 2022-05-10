@@ -55,7 +55,7 @@ MESSAGES = {
     'NOT_AN_INTEGER': gettext('Value "{value}" does not represent an integer'),
     'NOT_BOOLEAN': gettext("Value must be either True or False, not {value}"),
     'NO_PROJECTION': gettext('Spatial file {filepath} has no projection'),
-    'BBOX_NOT_INTERSECT': gettext("Bounding boxes do not intersect:"),
+    'BBOX_NOT_INTERSECT': gettext("Bounding boxes do not intersect: {bboxes}"),
     'NEED_PERMISSION': gettext('You must have {permission} access to this file'),
 }
 
@@ -677,11 +677,16 @@ def check_spatial_overlap(spatial_filepaths_list,
         pygeoprocessing.merge_bounding_box_list(bounding_boxes, 'intersection')
     except ValueError as error:
         LOGGER.debug(error)
-        formatted_lists = ' | '.join(
-            [a + ': ' + str(b) for a, b in zip(
-                checked_file_list, bounding_boxes)])
+        formatted_lists = _format_bbox_list(checked_file_list, bounding_boxes)
         return MESSAGES['BBOX_NOT_INTERSECT'].format(bboxes=formatted_lists)
     return None
+
+
+def _format_bbox_list(file_list, bbox_list):
+    """Format two lists of equal length into one string."""
+    return ' | '.join(
+            [a + ': ' + str(b) for a, b in zip(
+                file_list, bbox_list)])
 
 
 def timeout(func, *args, timeout=5, **kwargs):

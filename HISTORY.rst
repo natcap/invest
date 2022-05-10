@@ -35,21 +35,33 @@
 Unreleased Changes
 ------------------
 * General
+    * Add support for python 3.10, and drop support for python 3.7.
+    * Fixed a bug where the model window would fail to open when using the
+      ``natcap.invest`` package with python 3.9.0 - 3.9.3.
     * ``spec_utils.ETO`` has been renamed to ``spec_utils.ET0`` (with a zero).
     * Updating the ``pyinstaller`` requirement to ``>=4.10`` to support the new
       ``universal2`` wheel architecture offered by ``scipy>=1.8.0``.
+    * Now removing leading / trailing whitespaces from table input values as
+      well as columns in most InVEST models.
     * Fixing a small bug where drag-and-drop events in the Qt UI were not being
       handled correctly and were being ignored by the UI.
     * Expose taskgraph logging level for the cli with
       ``--taskgraph-log-level``.
     * Fixed bug in validation of ``results_suffix`` so that special characters
       like path separators, etc, are not allowed.
+    * Fixed a bug in validation where a warning about non-overlapping spatial
+      layers was missing info about the offending bounding boxes.
 * Annual Water Yield
     * Fixed a bug where the model would error when the watersheds/subwatersheds
       input was in geopackage format.
 * Crop Production
     * Fixed a bug in both crop production models where the model would error if
       an observed yield raster had no nodata value.
+* DelineateIt
+    * Watersheds delineated with this tool will now always have a ``ws_id``
+      column containing integer watershed IDs for easier use within the routed
+      InVEST models.  Existing ``ws_id`` field values in the outlets vector
+      will be overwritten if they are present.
 * RouteDEM
     * Rename the arg ``calculate_downstream_distance`` to
       ``calculate_downslope_distance``. This is meant to clarify that it

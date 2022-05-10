@@ -7,6 +7,9 @@ import TabContainer from 'react-bootstrap/TabContainer';
 import Nav from 'react-bootstrap/Nav';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
+import {
+  MdKeyboardArrowRight,
+} from 'react-icons/md';
 
 import ModelStatusAlert from './ModelStatusAlert';
 import SetupTab from '../SetupTab';
@@ -241,16 +244,18 @@ export default class InvestTab extends React.Component {
             >
               <Nav.Link eventKey="setup">
                 {_('Setup')}
+                <MdKeyboardArrowRight />
               </Nav.Link>
-              <div
-                className="sidebar-setup"
-                id={sidebarSetupElementId}
-              />
               <Nav.Link eventKey="log" disabled={logDisabled}>
                 {_('Log')}
+                <MdKeyboardArrowRight />
               </Nav.Link>
             </Nav>
-            <div className="sidebar-row">
+            <div
+              className="sidebar-row sidebar-buttons"
+              id={sidebarSetupElementId}
+            />
+            <div className="sidebar-row sidebar-links">
               <ResourcesLinks
                 moduleName={modelRunName}
                 docs={modelSpec.userguide}
@@ -292,6 +297,7 @@ export default class InvestTab extends React.Component {
                   sidebarSetupElementId={sidebarSetupElementId}
                   sidebarFooterElementId={sidebarFooterElementId}
                   executeClicked={executeClicked}
+                  switchTabs={this.switchTabs}
                 />
               </TabPane>
               <TabPane
