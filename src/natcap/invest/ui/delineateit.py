@@ -2,7 +2,7 @@
 
 from natcap.invest.ui import model, inputs
 from natcap.invest.delineateit import delineateit
-from natcap.invest import MODEL_METADATA
+from natcap.invest.model_metadata import MODEL_METADATA
 
 
 class Delineateit(model.InVESTModel):

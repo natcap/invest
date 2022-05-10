@@ -21,7 +21,7 @@ env:
   # nomkl: make sure numpy w/out mkl
   # setuptools_scm: needed for versioning to work
   CONDA_DEFAULT_DEPENDENCIES: build nomkl setuptools_scm
-  LATEST_SUPPORTED_PYTHON_VERSION: 3.9
+  LATEST_SUPPORTED_PYTHON_VERSION: "3.10"
 
 jobs:
   check-syntax-errors:
@@ -53,7 +53,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [3.7, 3.8, 3.9]
+        python-version: [3.8, 3.9, "3.10"]
         os: [windows-latest, macos-latest]
     steps:
       - uses: actions/checkout@v2
@@ -75,7 +75,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           requirements-files: requirements.txt requirements-dev.txt requirements-gui.txt
-          requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }} twine
+          requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
 
       - name: Download previous conda environment.yml
         continue-on-error: true
@@ -98,7 +98,6 @@ jobs:
       - name: Build and install wheel
         run: |
           python -m build --wheel
-          python -m twine check dist/*
           pip install $(find dist -name "natcap.invest*.whl")
 
       - name: Run model tests
@@ -137,7 +136,7 @@ jobs:
     needs: check-syntax-errors
     strategy:
       matrix:
-        python-version: [3.7, 3.8, 3.9]
+        python-version: [3.8, 3.9, "3.10"]
         os: [windows-latest, macos-latest]
     steps:
       - uses: actions/checkout@v2
@@ -146,7 +145,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           requirements-files: requirements.txt
-          requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }} twine
+          requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
 
       - name: Build source distribution
         run: |
@@ -155,7 +154,6 @@ jobs:
           # time.  Thus, it is no longer necessary to distribute the
           # .cpp files in addition to the .pyx files.
           python -m build --sdist
-          python -m twine check dist/*
 
       - name: Install from source distribution
         run : |
@@ -226,7 +224,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [3.7, 3.8, 3.9]
+        python-version: [3.8, 3.9, "3.10"]
 
     steps:
       - uses: actions/checkout@v2
@@ -461,7 +459,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: Workbench-${{ runner.os }}-binary
-          path: workbench/dist/*.{{ matrix.binary-extension }}
+          path: workbench/dist/*.${{ matrix.binary-extension }}
 
       - name: Upload user's guide artifact (Windows)
         if: matrix.os == 'windows-latest'
@@ -506,18 +504,6 @@ jobs:
         run: pip install babel cython numpy setuptools setuptools_scm wheel
 
       - run: make sampledata sampledata_single
-
-      - name: Install Node.js
-        uses: actions/setup-node@v2
-        with:
-          node-version: 14.x
-
-      - name: Check sampledata registry links
-        if: github.event_name != 'pull_request' # no artifacts were deployed in a PR
-        working-directory: workbench
-        run: |
-          yarn add jest
-          yarn run test-sampledata-registry
 
       - name: Upload sample data artifact
         uses: actions/upload-artifact@v2

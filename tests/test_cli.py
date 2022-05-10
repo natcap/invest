@@ -389,7 +389,7 @@ class CLIUnitTests(unittest.TestCase):
 
     def test_export_to_python_default_args(self):
         """Export a python script w/ default args for a model."""
-        from natcap.invest import cli, MODEL_METADATA
+        from natcap.invest import cli, model_metadata
 
         filename = 'foo.py'
         target_filepath = os.path.join(self.workspace_dir, filename)
@@ -399,7 +399,7 @@ class CLIUnitTests(unittest.TestCase):
 
         self.assertTrue(os.path.exists(target_filepath))
 
-        target_model = MODEL_METADATA[target_model].pyname
+        target_model = model_metadata.MODEL_METADATA[target_model].pyname
         model_module = importlib.import_module(name=target_model)
         spec = model_module.ARGS_SPEC
         expected_args = {key: '' for key in spec['args'].keys()}

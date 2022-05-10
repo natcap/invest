@@ -158,8 +158,8 @@ def prepare_workspace(
             logging.captureWarnings(True)
             # If invest is launched as a subprocess (e.g. the Workbench)
             # the parent process can rely on this announcement to know the
-            # logfile path, and to know the invest process has started.
-            LOGGER.log(100, 'Writing log messages to %s', logfile)
+            # logfile path (within []), and to know the invest process started.
+            LOGGER.log(100, 'Writing log messages to [%s]', logfile)
             start_time = time.time()
             try:
                 yield
@@ -599,7 +599,8 @@ def read_csv_to_dataframe(
     Wrapper around ``pandas.read_csv`` that standardizes the column names by
     stripping leading/trailing whitespace and optionally making all lowercase.
     This helps avoid common errors caused by user-supplied CSV files with
-    column names that don't exactly match the specification.
+    column names that don't exactly match the specification. Strips
+    leading/trailing whitespace from data entries as well.
 
     Args:
         path (string): path to a CSV file
@@ -638,6 +639,10 @@ def read_csv_to_dataframe(
     dataframe.columns = dataframe.columns.str.strip()
     if to_lower:
         dataframe.columns = dataframe.columns.str.lower()
+
+    # Remove values with leading ('^ +') and trailing (' +$') whitespace.
+    # Regular expressions using 'replace' only substitute on strings.
+    dataframe = dataframe.replace(r"^ +| +$", r"", regex=True)
 
     return dataframe
 

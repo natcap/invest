@@ -3,7 +3,7 @@ from natcap.invest.ui import model, inputs
 
 import natcap.invest.crop_production_percentile
 import natcap.invest.crop_production_regression
-from natcap.invest import MODEL_METADATA
+from natcap.invest.model_metadata import MODEL_METADATA
 
 
 class CropProductionPercentile(model.InVESTModel):

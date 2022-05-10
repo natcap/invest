@@ -2,7 +2,7 @@
 
 from natcap.invest.ui import model, inputs
 from natcap.invest.scenic_quality import scenic_quality
-from natcap.invest import MODEL_METADATA
+from natcap.invest.model_metadata import MODEL_METADATA
 
 
 class ScenicQuality(model.InVESTModel):

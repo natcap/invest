@@ -1680,6 +1680,8 @@ class _Path(Text):
 
             LOGGER.info('Accepting drop event with path: "%s"', path)
             event.accept()
+            if isinstance(path, bytes):
+                path = path.decode('utf-8')
             self.setText(path)
 
         @QtCore.Slot(bool)

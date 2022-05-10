@@ -34,7 +34,9 @@ from .. import utils
 from .. import spec_utils
 from ..spec_utils import u
 from .. import validation
-from .. import MODEL_METADATA
+from ..model_metadata import MODEL_METADATA
+from .. import gettext
+
 
 LOGGER = logging.getLogger(__name__)
 
@@ -47,47 +49,47 @@ Pyro4.config.SERIALIZER = 'marshal'
 predictor_table_columns = {
     "id": {
         "type": "freestyle_string",
-        "about": _("A unique identifier for the predictor (10 "
+        "about": gettext("A unique identifier for the predictor (10 "
                    "characters or less).")
     },
     "path": {
         "type": {"raster", "vector"},
-        "about": _("A spatial file to use as a predictor."),
+        "about": gettext("A spatial file to use as a predictor."),
         "bands": {1: {"type": "number", "units": u.none}},
         "fields": {},
         "geometries": spec_utils.ALL_GEOMS
     },
     "type": {
         "type": "option_string",
-        "about": _("The type of predictor file provided in the 'path' column."),
+        "about": gettext("The type of predictor file provided in the 'path' column."),
         "options": {
             "raster_mean": {
-                "description": _(
+                "description": gettext(
                     "Predictor is a raster. Metric is the mean of values "
                     "within the AOI grid cell or polygon.")},
             "raster_sum": {
-                "description": _(
+                "description": gettext(
                     "Predictor is a raster. Metric is the sum of values "
                     "within the AOI grid cell or polygon.")},
             "point_count": {
-                "description": _(
+                "description": gettext(
                     "Predictor is a point vector. Metric is the number of "
                     "points within each AOI grid cell or polygon.")},
             "point_nearest_distance": {
-                "description": _(
+                "description": gettext(
                     "Predictor is a point vector. Metric is the Euclidean "
                     "distance between the center of each AOI grid cell and "
                     "the nearest point in this layer.")},
             "line_intersect_length": {
-                "description": _(
+                "description": gettext(
                     "Predictor is a line vector. Metric is the total length "
                     "of the lines that fall within each AOI grid cell.")},
             "polygon_area_coverage": {
-                "description": _(
+                "description": gettext(
                     "Predictor is a polygon vector. Metric is the area of "
                     "overlap between the polygon and each AOI grid cell.")},
             "polygon_percent_coverage": {
-                "description": _(
+                "description": gettext(
                     "Predictor is a polygon vector. Metric is the percentage "
                     "(0-100) of overlapping area between the polygon and each "
                     "AOI grid cell.")}
@@ -99,115 +101,115 @@ predictor_table_columns = {
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["recreation"].model_title,
     "pyname": MODEL_METADATA["recreation"].pyname,
-    "userguide_html": MODEL_METADATA["recreation"].userguide,
+    "userguide": MODEL_METADATA["recreation"].userguide,
     "args": {
         "workspace_dir": spec_utils.WORKSPACE,
         "results_suffix": spec_utils.SUFFIX,
         "n_workers": spec_utils.N_WORKERS,
         "aoi_path": {
             **spec_utils.AOI,
-            "about": _("Map of area(s) over which to run the model.")
+            "about": gettext("Map of area(s) over which to run the model.")
         },
         "hostname": {
             "type": "freestyle_string",
             "required": False,
-            "about": _(
+            "about": gettext(
                 "FQDN to a recreation server.  If not provided, a default is "
                 "assumed."),
-            "name": _("hostname")
+            "name": gettext("hostname")
         },
         "port": {
             "type": "number",
             "expression": "value >= 0",
             "units": u.none,
             "required": False,
-            "about": _(
+            "about": gettext(
                 "the port on ``hostname`` to use for contacting the "
                 "recreation server."),
-            "name": _("port")
+            "name": gettext("port")
         },
         "start_year": {
             "type": "number",
             "expression": "value >= 2005",
-            "units": u.year,
-            "about": _(
+            "units": u.year_AD,
+            "about": gettext(
                 "Year at which to start photo user-day calculations. "
                 "Calculations start on the first day of the year. Year "
                 "must be in the range 2005 - 2017, and must be less than "
                 "or equal to the End Year."),
-            "name": _("start year")
+            "name": gettext("start year")
         },
         "end_year": {
             "type": "number",
             "expression": "value <= 2017",
-            "units": u.year,
-            "about": _(
+            "units": u.year_AD,
+            "about": gettext(
                 "Year at which to end photo user-day calculations. "
                 "Calculations continue through the last day of the year. "
                 "Year must be in the range 2005 - 2017, and must be "
                 "greater than or equal to the Start Year."),
-            "name": _("end year")
+            "name": gettext("end year")
         },
         "grid_aoi": {
             "type": "boolean",
             "required": False,
-            "about": _(
+            "about": gettext(
                 "Divide the AOI polygons into equal-sized grid cells, and "
                 "compute results for those cells instead of the original "
                 "polygons."),
-            "name": _("grid the AOI")
+            "name": gettext("grid the AOI")
         },
         "grid_type": {
             "type": "option_string",
             "options": {
-                "square": {"display_name": _("square")},
-                "hexagon": {"display_name": _("hexagon")}
+                "square": {"display_name": gettext("square")},
+                "hexagon": {"display_name": gettext("hexagon")}
             },
             "required": "grid_aoi",
-            "about": _(
+            "about": gettext(
                 "The shape of grid cells to make within the AOI polygons. "
                 "Required if Grid AOI is selected."),
-            "name": _("grid type")
+            "name": gettext("grid type")
         },
         "cell_size": {
             "type": "number",
             "expression": "value > 0",
-            "units": u.linear_unit,  # any unit of length is ok
+            "units": u.other,  # any unit of length is ok
             "required": "grid_aoi",
-            "about": _(
+            "about": gettext(
                 "Size of grid cells to make, measured in the projection units "
-                "of the AOI. If the Grid Type is square, this is the length "
+                "of the AOI. If the Grid Type is 'square', this is the length "
                 "of each side of the square. If the Grid Type is 'hexagon', "
-                "this is the hexagon's diameter."),
-            "name": _("cell size")
+                "this is the hexagon's maximal diameter."),
+            "name": gettext("cell size")
         },
         "compute_regression": {
             "type": "boolean",
             "required": False,
-            "about": _(
+            "about": gettext(
                 "Run the regression model using the predictor table and "
                 "scenario table, if provided."),
-            "name": _("compute regression")
+            "name": gettext("compute regression")
         },
         "predictor_table_path": {
             "type": "csv",
             "columns": predictor_table_columns,
             "required": "compute_regression",
-            "about": _(
+            "about": gettext(
                 "A table that maps predictor IDs to spatial files and their "
                 "predictor metric types. The file paths can be absolute or "
                 "relative to the table."),
-            "name": _("predictor table")
+            "name": gettext("predictor table")
         },
         "scenario_predictor_table_path": {
             "type": "csv",
             "columns": predictor_table_columns,
             "required": False,
-            "about": _(
+            "about": gettext(
                 "A table of future or alternative scenario predictors. Maps "
                 "IDs to files and their types. The file paths can be absolute "
                 "or relative to the table."),
-            "name": _("scenario predictor table")
+            "name": gettext("scenario predictor table")
         }
     }
 }

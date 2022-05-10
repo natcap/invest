@@ -2,7 +2,7 @@
 
 from natcap.invest.ui import model, inputs
 import natcap.invest.sdr.sdr
-from natcap.invest import MODEL_METADATA
+from natcap.invest.model_metadata import MODEL_METADATA
 
 
 class SDR(model.InVESTModel):
