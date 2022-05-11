@@ -376,6 +376,10 @@ jobs:
         run: make install
 
       - name: Build binaries
+        # Due to a create-dmg issue, sometimes we wait a very long time
+        # for a disk to unmount, and it fails to do so. Instead of waiting
+        # for an inevitable failure, set timeout-minutes.
+        timeout-minutes: 15
         run: make ${{ matrix.binary-make-command }}
 
       - name: Install Node.js
