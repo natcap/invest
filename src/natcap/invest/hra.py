@@ -1073,6 +1073,8 @@ def _create_summary_statistics_file(
     # the right order as they are declared.
     records = []
 
+    all_subregion_stats = {}
+
     # itertools.product is roughly the equivalent of a nested for-loop.
     for habitat, stressor in itertools.product(sorted(habitats),
                                                sorted(stressors)):
@@ -1083,7 +1085,6 @@ def _create_summary_statistics_file(
             pairwise_data[habitat, stressor]['classification_path'])
 
         subregion_stats = {}
-
         for subregion_raster_path in json_data['subregion_rasters']:
             subregion_raster = gdal.OpenEx(subregion_raster_path,
                                            gdal.OF_RASTER)
@@ -1130,7 +1131,7 @@ def _create_summary_statistics_file(
                         if valid_pixels.size == 0:
                             # If no valid pixels, fall back to defaults.
                             pixel_min = float('inf')
-                            pixel_max, pixel_sum, n_pixels = 0
+                            pixel_max = pixel_sum = n_pixels = 0
                         else:
                             pixel_min = numpy.min(valid_pixels)
                             pixel_max = numpy.max(valid_pixels)
@@ -1176,6 +1177,53 @@ def _create_summary_statistics_file(
                 record[f'{prefix}_MAX'] = float(stats[f'{prefix}_MAX'])
                 record[f'{prefix}_MEAN'] = float(
                     stats[f'{prefix}_SUM'] / stats[f'{prefix}_N_PIXELS'])
+            records.append(record)
+            all_subregion_stats[(habitat, stressor, subregion_id)] = stats
+
+    # I know this is a second loop through the rows, but it's easier to grok
+    # with all of this in a separate block.
+    for habitat in habitats:
+        for subregion_id, stats in subregion_stats.items():
+            record = {
+                'HABITAT': habitat,
+                'STRESSOR': stressor,
+                'SUBREGION': subregion_names[str(subregion_id)],
+            }
+
+            # Default value for the int type is 0.
+            sums_across_stressors = collections.defaultdict(int)
+            for stressor in stressors:
+                stats = all_subregion_stats[(habitat, stressor, subregion_id)]
+                for classification in ('HIGH', 'MEDIUM', 'LOW', 'ANY'):
+                    key = f'R_N_{classification}'
+                    sums_across_stressors[key] += stats[key]
+
+                for prefix in ('E', 'C', 'R'):
+                    for key, func in (
+                            (f'{prefix}_MIN', min),
+                            (f'{prefix}_MAX', max),
+                            (f'{prefix}_SUM', sum),
+                            (f'{prefix}_N_PIXELS', sum)):
+                        assert key in stats
+                        try:
+                            record[key] = func([record[key], stats[key]])
+                        except KeyError:
+                            record[key] = stats[key]
+
+            reclassified_count = max(sums_across_stressors['R_N_ANY'], 1)
+            record['R_%HIGH'] = (
+                sums_across_stressors['R_N_HIGH'] / reclassified_count) * 100
+            record['R_%MEDIUM'] = (
+                sums_across_stressors['R_N_MEDIUM'] / reclassified_count) * 100
+            record['R_%LOW'] = (
+                sums_across_stressors['R_N_LOW'] / reclassified_count) * 100
+
+            for prefix in ('E', 'C', 'R'):
+                record[f'{prefix}_MEAN'] = (
+                    record[f'{prefix}_SUM'] / record[f'{prefix}_N_PIXELS'])
+                del record[f'{prefix}_SUM']
+                del record[f'{prefix}_N_PIXELS']
+
             records.append(record)
 
     out_dataframe = pandas.DataFrame.from_records(
