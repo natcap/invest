@@ -1186,7 +1186,7 @@ def _create_summary_statistics_file(
         for subregion_id, stats in subregion_stats.items():
             record = {
                 'HABITAT': habitat,
-                'STRESSOR': stressor,
+                'STRESSOR': '(FROM ALL STRESSORS)',
                 'SUBREGION': subregion_names[str(subregion_id)],
             }
 
@@ -1234,6 +1234,8 @@ def _create_summary_statistics_file(
             'R_MIN', 'R_MAX', 'R_MEAN',
             'R_%HIGH', 'R_%MEDIUM', 'R_%LOW',
         ])
+    out_dataframe.sort_values(['HABITAT', 'STRESSOR'],
+                              inplace=True)
     out_dataframe.to_csv(target_summary_csv_path, index=False)
 
 
