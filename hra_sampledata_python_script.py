@@ -55,7 +55,7 @@ if __name__ == '__main__':
 
     start_time = time.time()
     args['workspace_dir'] = os.path.join(WORKSPACE_BASE, 'new_hra')
-    args['results_suffix'] = 'new'
+    #args['results_suffix'] = 'new'
     natcap.invest.hra.execute(args)
     #print(f'old elapsed: {old_hra_time}')
     print(f'elapsed: {time.time() - start_time}')

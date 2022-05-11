@@ -890,6 +890,7 @@ def execute(args):
                     'mask_raster_path': polygonize_mask_raster_path,
                     'target_polygonized_vector': polygonized_gpkg,
                     'field_name': fieldname,
+                    'layer_name': f'{geojson_prefix}_{basename}',
                 },
                 task_name=f'Polygonizing {basename}',
                 target_path_list=[polygonized_gpkg],
@@ -911,6 +912,9 @@ def execute(args):
                 target_path_list=[target_geojson_path],
                 dependent_task_list=[polygonize_task]
             )
+    LOGGER.info(
+        'HRA model completed. Please visit http://marineapps.'
+        'naturalcapitalproject.org/ to visualize your outputs.')
 
     graph.close()
     graph.join()
@@ -955,7 +959,7 @@ def _create_mask_for_polygonization(source_raster_path, target_raster_path):
 
 
 def _polygonize(source_raster_path, mask_raster_path,
-                target_polygonized_vector, field_name):
+                target_polygonized_vector, field_name, layer_name):
     """Polygonize a raster.
 
     Args:
@@ -970,6 +974,7 @@ def _polygonize(source_raster_path, mask_raster_path,
             region's numerical value should be recorded.  A new field with this
             name will be created in ``target_polygonized_vector``, and with an
             Integer field type.
+        layer_name (string): The layer name to use in the target vector.
 
     Returns:
         ``None``
@@ -986,7 +991,7 @@ def _polygonize(source_raster_path, mask_raster_path,
     driver = gdal.GetDriverByName('GPKG')
     vector = driver.Create(
         target_polygonized_vector, 0, 0, 0, gdal.GDT_Unknown)
-    layer = vector.CreateLayer('', raster_srs, ogr.wkbPolygon)
+    layer = vector.CreateLayer(layer_name, raster_srs, ogr.wkbPolygon)
 
     # Create an integer field that contains values from the raster
     field_defn = ogr.FieldDefn(str(field_name), ogr.OFTInteger)
