@@ -10,7 +10,7 @@ import sys
 import time
 
 import natcap.invest.hra
-import natcap.invest.hra2
+##import natcap.invest.hra2
 import natcap.invest.utils
 
 LOGGER = logging.getLogger(__name__)
@@ -47,17 +47,17 @@ args = {
 if __name__ == '__main__':
     if os.path.exists(WORKSPACE_BASE):
         shutil.rmtree(WORKSPACE_BASE)
-    start_time = time.time()
-    args['workspace_dir'] = os.path.join(WORKSPACE_BASE, 'current_hra')
-    args['results_suffix'] = 'old'
-    natcap.invest.hra.execute(args)
-    old_hra_time = time.time() - start_time
+    #start_time = time.time()
+    #args['workspace_dir'] = os.path.join(WORKSPACE_BASE, 'current_hra')
+    #args['results_suffix'] = 'old'
+    #natcap.invest.hra.execute(args)
+    #old_hra_time = time.time() - start_time
 
     start_time = time.time()
     args['workspace_dir'] = os.path.join(WORKSPACE_BASE, 'new_hra')
     args['results_suffix'] = 'new'
-    natcap.invest.hra2.execute(args)
-    print(f'old elapsed: {old_hra_time}')
+    natcap.invest.hra.execute(args)
+    #print(f'old elapsed: {old_hra_time}')
     print(f'elapsed: {time.time() - start_time}')
     # 13.286s for the 3.10.2 HRA
     # 8.3932s for the reimplementation.
