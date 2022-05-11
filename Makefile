@@ -358,7 +358,8 @@ mac_dmg: $(MAC_DISK_IMAGE_FILE)
 $(MAC_DISK_IMAGE_FILE): $(DIST_DIR) $(MAC_APPLICATION_BUNDLE) $(USERGUIDE_TARGET_DIR)
 	# everything in the source directory $(MAC_APPLICATION_BUNDLE_DIR) will be copied into the DMG.
 	# so that directory should only contain the app bundle.
-	create-dmg \
+	# '-' prefix because https://github.com/natcap/invest/issues/984
+	-create-dmg \
 	    --volname "InVEST $(VERSION)" `# volume name, displayed in the top bar of the DMG window`\
 	    --volicon installer/darwin/invest.icns `# volume icon, displayed in the top bar of the DMG window`\
 	    --background installer/darwin/background.png `# background image of the DMG window`\
