@@ -1,27 +1,26 @@
 """DelineateIt wrapper for pygeoprocessing's watershed delineation routine."""
-import os
 import logging
+import os
 import time
 
-from osgeo import gdal
-from osgeo import ogr
-from osgeo import osr
-import shapely.errors
-import shapely.geometry
-import shapely.wkb
 import numpy
 import pygeoprocessing
 import pygeoprocessing.routing
+import shapely.errors
+import shapely.geometry
+import shapely.wkb
 import taskgraph
+from osgeo import gdal
+from osgeo import ogr
+from osgeo import osr
 
-from .. import utils
+from .. import gettext
 from .. import spec_utils
-from ..spec_utils import u
+from .. import utils
 from .. import validation
 from ..model_metadata import MODEL_METADATA
-from .. import gettext
+from ..spec_utils import u
 from . import delineateit_core
-
 
 LOGGER = logging.getLogger(__name__)
 
@@ -113,6 +112,9 @@ _OUTPUT_FILES = {
     'watersheds': 'watersheds.gpkg',
     'pour_points': 'pour_points.gpkg'
 }
+_WS_ID_OVERWRITE_WARNING = (
+    'Layer {layer_name} of vector {vector_basename} already has a feature '
+    'named "ws_id". Field values will be overwritten.')
 
 
 def execute(args):
@@ -223,17 +225,17 @@ def execute(args):
         outlet_vector_path = file_registry['pour_points']
         geometry_task = pour_points_task
     else:
-        check_geometries_task = graph.add_task(
-            check_geometries,
+        preprocess_geometries_task = graph.add_task(
+            preprocess_geometries,
             args=(args['outlet_vector_path'],
                   file_registry['filled_dem'],
                   file_registry['preprocessed_geometries'],
                   args.get('skip_invalid_geometry', True)),
             dependent_task_list=[fill_pits_task],
             target_path_list=[file_registry['preprocessed_geometries']],
-            task_name='check_geometries')
+            task_name='preprocess_geometries')
         outlet_vector_path = file_registry['preprocessed_geometries']
-        geometry_task = check_geometries_task
+        geometry_task = preprocess_geometries_task
 
     delineation_dependent_tasks = [flow_dir_task, geometry_task]
     if 'snap_points' in args and args['snap_points']:
@@ -331,13 +333,14 @@ def _threshold_streams(flow_accum, src_nodata, out_nodata, threshold):
     return out_matrix
 
 
-def check_geometries(outlet_vector_path, dem_path, target_vector_path,
-                     skip_invalid_geometry=False):
-    """Perform reasonable checks and repairs on the incoming vector.
+def preprocess_geometries(outlet_vector_path, dem_path, target_vector_path,
+                          skip_invalid_geometry=False):
+    """Preprocess geometries in the incoming vector.
 
     This function will iterate through the vector at ``outlet_vector_path``
     and validate geometries, putting the geometries into a new geopackage
-    at ``target_vector_path``.
+    at ``target_vector_path``.  All output features will also have a `ws_id`
+    column created, containing a unique integer ID.
 
     The vector at ``target_vector_path`` will include features that:
 
@@ -386,11 +389,19 @@ def check_geometries(outlet_vector_path, dem_path, target_vector_path,
 
     outflow_vector = gdal.OpenEx(outlet_vector_path, gdal.OF_VECTOR)
     outflow_layer = outflow_vector.GetLayer()
-    LOGGER.info('Checking %s geometries from source vector',
-                outflow_layer.GetFeatureCount())
+    if 'ws_id' in set([field.GetName() for field in outflow_layer.schema]):
+        LOGGER.warning(_WS_ID_OVERWRITE_WARNING.format(
+            layer_name=outflow_layer.GetName(),
+            vector_basename=os.path.basename(outlet_vector_path)))
+    else:
+        target_layer.CreateField(ogr.FieldDefn('ws_id', ogr.OFTInteger64))
+
     target_layer.CreateFields(outflow_layer.schema)
 
+    LOGGER.info('Checking %s geometries from source vector',
+                outflow_layer.GetFeatureCount())
     target_layer.StartTransaction()
+    ws_id = 0
     for feature in outflow_layer:
         original_geometry = feature.GetGeometryRef()
 
@@ -439,6 +450,13 @@ def check_geometries(outlet_vector_path, dem_path, target_vector_path,
             simplified_geometry.wkb))
         for field_name, field_value in feature.items().items():
             new_feature.SetField(field_name, field_value)
+
+        # In case we're skipping features, ws_id field won't include any gaps
+        # in the numbers in this field.  I suspect this may save us some time
+        # on the forums later.
+        new_feature.SetField('ws_id', ws_id)
+        ws_id += 1
+
         target_layer.CreateFeature(new_feature)
 
     target_layer.CommitTransaction()
@@ -666,7 +684,7 @@ def detect_pour_points(flow_dir_raster_path_band, target_vector_path):
     # (e.g. table-joins) that is not the FID. FIDs are not stable across file
     # conversions that users might do.
     target_layer.CreateField(
-        ogr.FieldDefn('point_id', ogr.OFTInteger64))
+        ogr.FieldDefn('ws_id', ogr.OFTInteger64))
 
     # Add a feature to the layer for each point
     target_layer.StartTransaction()
@@ -675,7 +693,7 @@ def detect_pour_points(flow_dir_raster_path_band, target_vector_path):
         geometry.AddPoint(x, y)
         feature = ogr.Feature(target_defn)
         feature.SetGeometry(geometry)
-        feature.SetField('point_id', idx)
+        feature.SetField('ws_id', idx)
         target_layer.CreateFeature(feature)
     target_layer.CommitTransaction()
 

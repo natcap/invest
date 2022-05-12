@@ -1,0 +1,21 @@
+#header {
+  font-size: 1.5rem;
+}
+
+#footer {
+  margin-top: 2rem;
+  text-align: center;
+}
+
+#footer img {
+  padding: 1rem;
+}
+
+button {
+  display:  block;
+  margin-top: 1rem;
+}
+
+li {
+  margin: 1rem;
+}
