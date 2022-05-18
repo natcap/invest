@@ -100,6 +100,8 @@ SetFile -a C "$MOUNT_DIR"
 # Delete unnecessary file system events log if possible
 rm -rf "$MOUNT_DIR/.fseventsd" || true
 
+sleep 60
+
 # Unmount
 unmounting_attempts=0
 until
