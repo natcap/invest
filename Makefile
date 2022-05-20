@@ -358,20 +358,7 @@ mac_dmg: $(MAC_DISK_IMAGE_FILE)
 $(MAC_DISK_IMAGE_FILE): $(DIST_DIR) $(MAC_APPLICATION_BUNDLE) $(USERGUIDE_TARGET_DIR)
 	# everything in the source directory $(MAC_APPLICATION_BUNDLE_DIR) will be copied into the DMG.
 	# so that directory should only contain the app bundle.
-	create-dmg \
-	    --volname "InVEST $(VERSION)" `# volume name, displayed in the top bar of the DMG window`\
-	    --volicon installer/darwin/invest.icns `# volume icon, displayed in the top bar of the DMG window`\
-	    --background installer/darwin/background.png `# background image of the DMG window`\
-	    --window-pos 100 100 `# DMG window location when first opened, in pixels relative to screen top left corner`\
-	    --window-size 900 660 `# DMG window size in pixels`\
-	    --text-size 12 `# size of text in InVEST and Applications icon labels`\
-	    --icon-size 100 `# size of InVEST and Applications icons, in pixels`\
-	    --icon $(MAC_APPLICATION_BUNDLE_NAME) 220 290 `# InVEST app bundle and location of its icon in pixels relative to window top left corner`\
-	    --app-drop-link 670 290 `# location of Applications icon in pixels relative to window top left corner`\
-	    --eula LICENSE.txt `# license to display before DMG window opens`\
-	    --format UDZO `# disk image format`\
-	    $(MAC_DISK_IMAGE_FILE) `# path to create DMG at`\
-	    $(MAC_APPLICATION_BUNDLE_DIR) # directory containing the app bundle
+	installer/darwin/create_dmg.sh "InVEST $(VERSION)" $(MAC_APPLICATION_BUNDLE_DIR) $(MAC_DISK_IMAGE_FILE)
 
 mac_app: $(MAC_APPLICATION_BUNDLE)
 $(MAC_APPLICATION_BUNDLE): $(BUILD_DIR) $(INVEST_BINARIES_DIR) $(USERGUIDE_TARGET_DIR)
