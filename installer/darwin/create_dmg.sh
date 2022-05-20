@@ -100,23 +100,18 @@ SetFile -a C "$MOUNT_DIR"
 # Delete unnecessary file system events log if possible
 rm -rf "$MOUNT_DIR/.fseventsd" || true
 
-sleep 60
+sleep 5
 
 # Unmount
 unmounting_attempts=0
-until
-  echo "Unmounting disk image..."
-  (( unmounting_attempts++ ))
-  hdiutil detach $DEV_NAME
-    exit_code=$?
-    (( exit_code ==  0 )) && break            # nothing goes wrong
-    (( exit_code != 16 )) && exit $exit_code  # exit with the original exit code
-    # The above statement returns 1 if test failed (exit_code == 16).
-    #   It can make the code in the {do... done} block to be executed
+exit_code=1
+until [[ $exit_code -eq 0 || $unmounting_attempts -gt 10 ]]
 do
-  (( unmounting_attempts == 3 )) && exit 16  # patience exhausted, exit with code EBUSY
-    echo "Wait a moment..."
-  sleep $(( 1 * (2 ** unmounting_attempts) ))
+    echo "Unmounting disk image..."
+    hdiutil detach $DEV_NAME
+    exit_code=$?
+    ((unmounting_attempts=unmounting_attempts+1))
+    sleep $(( 1 * (2 ** unmounting_attempts) ))
 done
 unset unmounting_attempts
 
