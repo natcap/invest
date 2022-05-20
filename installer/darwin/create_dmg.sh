@@ -86,7 +86,7 @@ ln -s /Applications "$MOUNT_DIR/Applications"
 cp $VOLUME_ICON_FILE "$MOUNT_DIR/.VolumeIcon.icns"
 SetFile -c icnC "$MOUNT_DIR/.VolumeIcon.icns"
 
-sleep 2 # pause to workaround occasional "Can’t get disk" (-1728) issues  
+sleep 2 # pause to workaround occasional "Can’t get disk" (-1728) issues
 # Run AppleScript to do all the Finder cosmetic stuff
 /usr/bin/osascript installer/darwin/customize_dmg.applescript "$VOLUME_NAME"
 sleep 4
@@ -108,10 +108,10 @@ exit_code=1
 until [[ $exit_code -eq 0 || $unmounting_attempts -gt 10 ]]
 do
     echo "Unmounting disk image..."
-    hdiutil detach $DEV_NAME
+    hdiutil detach $DEV_NAME && break
     exit_code=$?
     ((unmounting_attempts=unmounting_attempts+1))
-    sleep $(( 1 * (2 ** unmounting_attempts) ))
+    sleep 2
 done
 unset unmounting_attempts
 
@@ -128,7 +128,10 @@ EULA_RESOURCES_FILE=$(mktemp -t createdmg.tmp.XXXXXXXXXX)
 # Encode the EULA to base64
 EULA_DATA=$(base64 -b 52 $EULA | sed s$'/^\(.*\)$/\t\t\t\\1/')
 # Fill the template with the custom EULA contents
-eval "cat > \"${EULA_RESOURCES_FILE}\" <<EOF$(<installer/darwin/eula_resources_template.xml)EOF"
+eval "cat > \"${EULA_RESOURCES_FILE}\" <<EOF
+$(<installer/darwin/eula_resources_template.xml)
+EOF
+"
 # Add the license
 hdiutil udifrez -xml $EULA_RESOURCES_FILE '' $DMG_DIR/$DMG_NAME
-rm EULA_RESOURCES_FILE
+rm $EULA_RESOURCES_FILE
