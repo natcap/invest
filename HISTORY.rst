@@ -66,10 +66,6 @@ Unreleased Changes
     * Rename the arg ``calculate_downstream_distance`` to
       ``calculate_downslope_distance``. This is meant to clarify that it
       applies to pixels that are not part of a stream.
-* Seasonal Water Yield
-    * Fixed an issue with the documentation for ET0 and Precip directories,
-      where a module-specific informational string was being overridden by a
-      default value.
 * SDR
     * Fixed an issue with SDR where ``f.tif`` might not be recalculated if the
       file is modified or deleted after execution.
@@ -78,6 +74,11 @@ Unreleased Changes
       values are now clamped to 0.
     * Added basic type-checking for the ``lucode`` column of the biophysical
       table. This avoids cryptic numpy errors later in runtime.
+* Seasonal Water Yield
+    * Added an output to the model representing total annual precipitation.
+    * Fixed an issue with the documentation for ET0 and Precip directories,
+      where a module-specific informational string was being overridden by a
+      default value.
 
 3.10.2 (2022-02-08)
 -------------------
