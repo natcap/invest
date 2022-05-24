@@ -37,7 +37,7 @@
   ------------------
 
 3.11.0 (2022-05-24)
------------------
+-------------------
 * General
     * InVEST Workbench released! A new desktop interface for InVEST models.
     * Add support for python 3.10, and drop support for python 3.7.
