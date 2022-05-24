@@ -69,18 +69,7 @@ setup(
     maintainer='James Douglass',
     maintainer_email='jdouglass@stanford.edu',
     url='http://github.com/natcap/invest',
-    packages=[
-        'natcap',
-        'natcap.invest',
-        'natcap.invest.coastal_blue_carbon',
-        'natcap.invest.delineateit',
-        'natcap.invest.ui',
-        'natcap.invest.ndr',
-        'natcap.invest.sdr',
-        'natcap.invest.recreation',
-        'natcap.invest.scenic_quality',
-        'natcap.invest.seasonal_water_yield',
-    ],
+    packages=find_namespace_packages('src'),
     package_dir={
         'natcap': 'src/natcap'
     },
@@ -167,10 +156,5 @@ setup(
     },
     extras_require={
         'ui': _GUI_REQUIREMENTS,
-    },
-    package_data={
-        'natcap.invest': [
-            'internationalization/locales/en/.gitignore'
-        ]
     }
 )
