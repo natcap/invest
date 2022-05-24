@@ -346,7 +346,7 @@ describe('Display recently executed InVEST jobs on Home tab', () => {
       <App />
     );
 
-    const node = await findByText(/Setup a model from a sample datastack file/);
+    const node = await findByText(/Set up a model from a sample datastack file/);
     expect(node).toBeInTheDocument();
   });
 
@@ -371,7 +371,7 @@ describe('Display recently executed InVEST jobs on Home tab', () => {
     });
     userEvent.click(getByRole('button', { name: 'settings' }));
     userEvent.click(getByText('Clear Recent Jobs'));
-    const node = await findByText(/Setup a model from a sample datastack file/);
+    const node = await findByText(/Set up a model from a sample datastack file/);
     expect(node).toBeInTheDocument();
   });
 });
