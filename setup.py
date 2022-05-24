@@ -14,7 +14,7 @@ import subprocess
 
 import Cython.Build
 import numpy
-from setuptools import setup
+from setuptools import find_namespace_packages, setup
 from setuptools.command.build_py import build_py as _build_py
 from setuptools.extension import Extension
 
