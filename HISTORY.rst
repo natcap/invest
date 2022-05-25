@@ -32,9 +32,14 @@
 
 .. :changelog:
 
-Unreleased Changes
-------------------
+..
+  Unreleased Changes
+  ------------------
+
+3.11.0 (2022-05-24)
+-------------------
 * General
+    * InVEST Workbench released! A new desktop interface for InVEST models.
     * Add support for python 3.10, and drop support for python 3.7.
     * Fixed a bug where the model window would fail to open when using the
       ``natcap.invest`` package with python 3.9.0 - 3.9.3.
