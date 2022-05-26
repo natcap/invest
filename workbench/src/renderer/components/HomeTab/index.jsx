@@ -128,7 +128,7 @@ class RecentInvestJobs extends React.Component {
         <Card
           className="text-left recent-job-card"
           as="button"
-          key={job.workspaceHash}
+          key={job.hash}
           onClick={() => this.handleClick(job)}
         >
           <Card.Body>
@@ -146,10 +146,10 @@ class RecentInvestJobs extends React.Component {
             <Card.Text>{job.description || <em>no description</em>}</Card.Text>
             <Card.Footer className="text-muted">
               <span className="timestamp">{job.humanTime}</span>
-              <span className="status-traceback">
+              <span className="status">
                 {(job.status === 'success'
-                  ? '\u{2705}'
-                  : <em>{job.finalTraceback || ''}</em>
+                  ? <span className="status-success">{_('Model Complete')}</span>
+                  : <span className="status-error">{job.finalTraceback || ''}</span>
                 )}
               </span>
             </Card.Footer>

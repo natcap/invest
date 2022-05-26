@@ -322,7 +322,7 @@ describe('Display recently executed InVEST jobs on Home tab', () => {
         expect(within(card).getByText(job.argsValues.workspace_dir))
           .toBeInTheDocument();
         if (job.status === 'success') {
-          expect(getByText('\u{2705}'))
+          expect(getByText('Model Complete'))
             .toBeInTheDocument();
         }
         if (job.status === 'error' && job.finalTraceback) {

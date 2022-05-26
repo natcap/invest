@@ -291,10 +291,22 @@ exceed 100% of window.*/
 	white-space: nowrap;
 }
 
-.card-footer .status-traceback {
+.card-footer .status {
+	overflow: hidden;
+	font-style: italic;
+}
+
+.card-footer .status-error {
+	display: inline-block;
 	color: red;
 	overflow: hidden;
-	text-overflow: ellipsis;	
+	text-overflow: ellipsis;
+	width: 100%;
+	white-space: nowrap;
+}
+
+.card-footer .status-success {
+	color: var(--invest-green);
 }
 
 .card-footer .timestamp {
