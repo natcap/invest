@@ -178,6 +178,7 @@ apidoc.main([
     '--templatedir', os.path.join(DOCS_SOURCE_DIR, 'templates'),  # use custom templates
     '--separate',  # make a separate page for each module
     '--no-toc',  # table of contents page is redundant
+    '--implicit-namespaces',
     INVEST_LIB_DIR,
     '/*.so'  # must be absolute path, see https://github.com/sphinx-doc/sphinx/issues/10200
 ])
