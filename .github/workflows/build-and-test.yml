@@ -376,12 +376,6 @@ jobs:
         run: make install
 
       - name: Build binaries
-        # Due to a create-dmg issue, sometimes we wait a very long time
-        # for a disk to unmount, and it fails to do so. Instead of waiting
-        # for an inevitable failure, set timeout-minutes and allow continuation
-        # https://github.com/natcap/invest/issues/984
-        timeout-minutes: 30
-        continue-on-error: true
         run: make ${{ matrix.binary-make-command }}
 
       - name: Install Node.js

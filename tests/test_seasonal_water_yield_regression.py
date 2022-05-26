@@ -1,14 +1,14 @@
 """InVEST Seasonal water yield model tests that use the InVEST sample data."""
-import unittest
-import tempfile
-import shutil
 import os
+import shutil
+import tempfile
+import unittest
 
 import numpy
+import pygeoprocessing
 from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
-import pygeoprocessing
 
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
@@ -781,8 +781,8 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         when a climate zone raster value is not present in the climate
         zone table.
         """
-        from natcap.invest.seasonal_water_yield import seasonal_water_yield
         import pandas
+        from natcap.invest.seasonal_water_yield import seasonal_water_yield
 
         # use predefined directory so test can clean up files during teardown
         args = SeasonalWaterYieldRegressionTests.generate_base_args(
@@ -820,8 +820,8 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
 
     def test_biophysical_table_missing_lucode(self):
         """SWY test bad biophysical table with missing LULC value."""
-        from natcap.invest.seasonal_water_yield import seasonal_water_yield
         import pygeoprocessing
+        from natcap.invest.seasonal_water_yield import seasonal_water_yield
 
         # use predefined directory so test can clean up files during teardown
         args = SeasonalWaterYieldRegressionTests.generate_base_args(
@@ -1001,7 +1001,8 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
 
     def test_local_recharge_undefined_nodata(self):
         """Test `calculate_local_recharge` with undefined nodata values"""
-        from natcap.invest.seasonal_water_yield import seasonal_water_yield_core
+        from natcap.invest.seasonal_water_yield import \
+            seasonal_water_yield_core
 
         # set up tiny raster arrays to test
         precip_array = numpy.array([
@@ -1059,7 +1060,8 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
             os.path.join(self.workspace_dir, 'target_li_path.tif'),
             os.path.join(self.workspace_dir, 'target_li_avail_path.tif'),
             os.path.join(self.workspace_dir, 'target_l_sum_avail_path.tif'),
-            os.path.join(self.workspace_dir, 'target_aet_path.tif'))
+            os.path.join(self.workspace_dir, 'target_aet_path.tif'),
+            os.path.join(self.workspace_dir, 'target_precip_path.tif'))
 
 
 class SWYValidationTests(unittest.TestCase):
@@ -1093,8 +1095,8 @@ class SWYValidationTests(unittest.TestCase):
 
     def test_missing_keys(self):
         """SWY Validate: assert missing required keys."""
-        from natcap.invest.seasonal_water_yield import seasonal_water_yield
         from natcap.invest import validation
+        from natcap.invest.seasonal_water_yield import seasonal_water_yield
 
         # empty args dict.
         validation_errors = seasonal_water_yield.validate({})
@@ -1104,8 +1106,8 @@ class SWYValidationTests(unittest.TestCase):
 
     def test_missing_keys_climate_zones(self):
         """SWY Validate: assert missing required keys given climate zones."""
-        from natcap.invest.seasonal_water_yield import seasonal_water_yield
         from natcap.invest import validation
+        from natcap.invest.seasonal_water_yield import seasonal_water_yield
 
         validation_errors = seasonal_water_yield.validate(
             {'user_defined_climate_zones': True})
@@ -1119,8 +1121,8 @@ class SWYValidationTests(unittest.TestCase):
 
     def test_missing_keys_local_recharge(self):
         """SWY Validate: assert missing required keys given local recharge."""
-        from natcap.invest.seasonal_water_yield import seasonal_water_yield
         from natcap.invest import validation
+        from natcap.invest.seasonal_water_yield import seasonal_water_yield
 
         validation_errors = seasonal_water_yield.validate(
             {'user_defined_local_recharge': True})
@@ -1137,8 +1139,8 @@ class SWYValidationTests(unittest.TestCase):
 
     def test_missing_keys_monthly_alpha_table(self):
         """SWY Validate: assert missing required keys given monthly alpha."""
-        from natcap.invest.seasonal_water_yield import seasonal_water_yield
         from natcap.invest import validation
+        from natcap.invest.seasonal_water_yield import seasonal_water_yield
 
         validation_errors = seasonal_water_yield.validate(
             {'monthly_alpha': True})
