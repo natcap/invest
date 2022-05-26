@@ -156,5 +156,10 @@ setup(
     },
     extras_require={
         'ui': _GUI_REQUIREMENTS,
+    },
+    package_data={
+        'natcap.invest': [
+            'internationalization/locales/en/.gitignore'
+        ]
     }
 )
