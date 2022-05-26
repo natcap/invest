@@ -143,7 +143,6 @@ class RecentInvestJobs extends React.Component {
               <span className="text-heading">{'Suffix: '}</span>
               <span className="text-mono">{job.argsValues.results_suffix}</span>
             </Card.Title>
-            <Card.Text>{job.description || <em>no description</em>}</Card.Text>
             <Card.Footer className="text-muted">
               <span className="timestamp">{job.humanTime}</span>
               <span className="status">
