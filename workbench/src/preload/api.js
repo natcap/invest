@@ -1,4 +1,3 @@
-import crypto from 'crypto';
 import path from 'path';
 
 // eslint-disable-next-line import/no-extraneous-dependencies
@@ -28,9 +27,6 @@ export default {
   getLogger: getLogger,
   path: {
     resolve: path.resolve,
-  },
-  crypto: {
-    sha1hash: (data) => crypto.createHash('sha1').update(data).digest('hex'),
   },
   electron: {
     ipcRenderer: {

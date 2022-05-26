@@ -1,6 +1,5 @@
 import localforage from 'localforage';
 
-const { crypto } = window.Workbench;
 const logger = window.Workbench.getLogger('InvestJob.js');
 
 const HASH_ARRAY_KEY = 'jobHashes';
@@ -44,10 +43,12 @@ export default class InvestJob {
   }
 
   static async saveJob(job) {
+    job.hash = window.crypto.getRandomValues(
+      new Uint32Array(1)
+    ).toString();
     const isoDate = new Date().toISOString().split('T')[0];
     const localTime = new Date().toTimeString().split(' ')[0];
     job.humanTime = `${isoDate} ${localTime}`;
-    job.hash = crypto.sha1hash(job.humanTime);
     let sortedJobHashes = await investJobStore.getItem(HASH_ARRAY_KEY);
     if (!sortedJobHashes) {
       await InvestJob.initDB();
