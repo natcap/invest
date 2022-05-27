@@ -56,6 +56,8 @@
       like path separators, etc, are not allowed.
     * Fixed a bug in validation where a warning about non-overlapping spatial
       layers was missing info about the offending bounding boxes.
+    * Fixed an issue with usage logging that caused SSL errors to appear in the
+      Qt interface logging window.
 * Annual Water Yield
     * Fixed a bug where the model would error when the watersheds/subwatersheds
       input was in geopackage format.
