@@ -64,6 +64,10 @@
 * Crop Production
     * Fixed a bug in both crop production models where the model would error if
       an observed yield raster had no nodata value.
+* Coastal Vulnerability
+    * Fixed a bug that would cause an error if the user's bathymetry layer did
+      not have a defined nodata value.  The user's bathymetry layer should now
+      be correctly preprocessed with or without a nodata value.
 * DelineateIt
     * Watersheds delineated with this tool will now always have a ``ws_id``
       column containing integer watershed IDs for easier use within the routed
