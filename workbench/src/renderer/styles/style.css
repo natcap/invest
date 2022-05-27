@@ -248,6 +248,7 @@ exceed 100% of window.*/
 	margin-bottom: 1rem;
 	padding: 0;
 	height: fit-content;
+	filter: drop-shadow(2px 2px 2px grey);
 }
 
 .card-body {
@@ -258,6 +259,9 @@ exceed 100% of window.*/
 .card-header {
 	background-color: var(--invest-green);
 	filter: opacity(0.75);
+	margin-bottom: 1rem;
+	margin-left: -0.1rem;
+	margin-right: -0.05rem;
 }
 
 .card-header .header-title {
@@ -268,7 +272,6 @@ exceed 100% of window.*/
 }
 
 .card-title {
-	padding-top: 1rem;
 	padding-left: 1.25rem;
 }
 
@@ -281,14 +284,15 @@ exceed 100% of window.*/
 	font-size: 1.2rem;
 }
 
-.card-text {
-	padding-left: 1.25rem;
-}
-
 .card-footer {
 	display: flex;
 	justify-content: space-between;
 	white-space: nowrap;
+	padding-right: 1rem;
+}
+
+.card-footer span {
+	text-overflow: ellipsis;
 }
 
 .card-footer .status {
@@ -297,12 +301,7 @@ exceed 100% of window.*/
 }
 
 .card-footer .status-error {
-	display: inline-block;
 	color: red;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	width: 100%;
-	white-space: nowrap;
 }
 
 .card-footer .status-success {
