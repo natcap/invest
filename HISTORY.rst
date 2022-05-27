@@ -26,15 +26,20 @@
   - Wave Energy
   - Wind Energy
 
+  Workbench fixes/enhancements:
+  - Workbench
+
   Everything else:
   - General
 
-
 .. :changelog:
 
-..
-  Unreleased Changes
-  ------------------
+Unreleased Changes
+------------------
+* General
+* Workbench
+    * Fixed a bug where some model runs would not generate a new item
+      in the list of recent runs.
 
 3.11.0 (2022-05-24)
 -------------------
