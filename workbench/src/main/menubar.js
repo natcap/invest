@@ -119,7 +119,7 @@ function openAboutWindow(parentWindow, isDevMode) {
     height: 800,
     frame: true,
     webPreferences: {
-      minimumFontSize: 18,
+      minimumFontSize: 12,
       preload: path.join(__dirname, '../preload/preload.js'),
     },
   });
@@ -145,7 +145,7 @@ function openReportWindow(parentWindow, isDevMode) {
     height: 800,
     frame: true,
     webPreferences: {
-      minimumFontSize: 18,
+      minimumFontSize: 12,
       preload: path.join(__dirname, '..', 'preload/preload.js'),
       defaultEncoding: 'UTF-8',
     },

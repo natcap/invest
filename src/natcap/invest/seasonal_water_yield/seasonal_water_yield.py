@@ -746,12 +746,15 @@ def _execute(args):
                 file_registry['l_path'],
                 file_registry['l_avail_path'],
                 file_registry['l_sum_avail_path'],
-                file_registry['aet_path']),
+                file_registry['aet_path'],
+                file_registry['annual_precip_path']),
             target_path_list=[
                 file_registry['l_path'],
                 file_registry['l_avail_path'],
                 file_registry['l_sum_avail_path'],
-                file_registry['aet_path']],
+                file_registry['aet_path'],
+                file_registry['annual_precip_path'],
+            ],
             dependent_task_list=[
                 align_task, flow_dir_task, stream_threshold_task,
                 fill_pit_task, qf_task] + quick_flow_task_list,

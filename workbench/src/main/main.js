@@ -73,13 +73,9 @@ export const createWindow = async () => {
   await getFlaskIsReady();
 
   // Create the browser window.
-  const { width, height } = screen.getPrimaryDisplay().workAreaSize;
   mainWindow = new BrowserWindow({
-    width: width,
-    height: height,
-    useContentSize: true,
     minWidth: 800,
-    show: true, // see comment in 'ready-to-show' listener
+    show: false,
     webPreferences: {
       preload: path.join(__dirname, '../preload/preload.js'),
       defaultEncoding: 'UTF-8',
@@ -93,12 +89,8 @@ export const createWindow = async () => {
 
   mainWindow.once('ready-to-show', () => {
     splashScreen.destroy();
-    // We should be able to hide mainWindow until it's ready,
-    // but there's a bug where a window initialized with { show: false }
-    // will load with invisible elements until it's touched/resized, etc.
-    // https://github.com/electron/electron/issues/27353
-    // So for now, we have mainWindow showing the whole time, w/ splash on top.
-    // If this bug is fixed, we'll need an explicit mainWindow.show() here.
+    mainWindow.maximize();
+    mainWindow.show();
   });
 
   // Open the DevTools.

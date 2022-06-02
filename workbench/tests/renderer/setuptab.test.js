@@ -564,6 +564,9 @@ describe('Misc form validation stuff', () => {
     const expectedVal2 = '-79.0198012081401';
     const rasterBox = `[${expectedVal2}, 26.481559513537064, -78.37173806200593, 27.268061760228512]`;
     const message = `Bounding boxes do not intersect: ${vectorValue}: ${vectorBox} | ${rasterValue}: ${rasterBox}`;
+    const newPrefix = 'Bounding box does not intersect at least one other:';
+    const vectorMessage = new RegExp(`${newPrefix}\\s*\\[${expectedVal1}`);
+    const rasterMessage = new RegExp(`${newPrefix}\\s*\\[${expectedVal2}`);
 
     fetchValidation.mockResolvedValue([[Object.keys(spec.args), message]]);
 
@@ -577,17 +580,17 @@ describe('Misc form validation stuff', () => {
     // of that single input.
     const vectorGroup = vectorInput.closest('.input-group');
     await waitFor(() => {
-      expect(within(vectorGroup).getByText(RegExp(expectedVal1)))
+      expect(within(vectorGroup).getByText(vectorMessage))
         .toBeInTheDocument();
-      expect(within(vectorGroup).queryByText(RegExp(expectedVal2)))
+      expect(within(vectorGroup).queryByText(rasterMessage))
         .toBeNull();
     });
 
     const rasterGroup = rasterInput.closest('.input-group');
     await waitFor(() => {
-      expect(within(rasterGroup).getByText(RegExp(expectedVal2)))
+      expect(within(rasterGroup).getByText(rasterMessage))
         .toBeInTheDocument();
-      expect(within(rasterGroup).queryByText(RegExp(expectedVal1)))
+      expect(within(rasterGroup).queryByText(vectorMessage))
         .toBeNull();
     });
   });

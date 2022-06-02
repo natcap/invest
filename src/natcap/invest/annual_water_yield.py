@@ -329,7 +329,7 @@ def execute(args):
     LOGGER.info('Validating arguments')
     invalid_parameters = validate(args)
     if invalid_parameters:
-        raise ValueError("Invalid parameters passed: %s" % invalid_parameters)
+        raise ValueError(f'Invalid parameters passed: {invalid_parameters}')
 
     # valuation_params is passed to create_vector_output()
     # which computes valuation if valuation_params is not None.
@@ -356,8 +356,8 @@ def execute(args):
             raise ValueError(
                 'The following `ws_id`s exist in the watershed vector file '
                 'but are not found in the valuation table. Check your '
-                'valuation table to see if they are missing: "%s"' % (
-                    ', '.join(str(x) for x in sorted(missing_ws_ids))))
+                'valuation table to see if they are missing: '
+                f'"{", ".join(str(x) for x in sorted(missing_ws_ids))}"')
 
     # Construct folder paths
     workspace_dir = args['workspace_dir']
@@ -374,26 +374,26 @@ def execute(args):
 
     # Paths for targets of align_and_resize_raster_stack
     clipped_lulc_path = os.path.join(
-        intermediate_dir, 'clipped_lulc%s.tif' % file_suffix)
-    eto_path = os.path.join(intermediate_dir, 'eto%s.tif' % file_suffix)
-    precip_path = os.path.join(intermediate_dir, 'precip%s.tif' % file_suffix)
+        intermediate_dir, f'clipped_lulc{file_suffix}.tif')
+    eto_path = os.path.join(intermediate_dir, f'eto{file_suffix}.tif')
+    precip_path = os.path.join(intermediate_dir, f'precip{file_suffix}.tif')
     depth_to_root_rest_layer_path = os.path.join(
-        intermediate_dir, 'depth_to_root_rest_layer%s.tif' % file_suffix)
-    pawc_path = os.path.join(intermediate_dir, 'pawc%s.tif' % file_suffix)
-    tmp_pet_path = os.path.join(intermediate_dir, 'pet%s.tif' % file_suffix)
+        intermediate_dir, f'depth_to_root_rest_layer{file_suffix}.tif')
+    pawc_path = os.path.join(intermediate_dir, f'pawc{file_suffix}.tif')
+    tmp_pet_path = os.path.join(intermediate_dir, f'pet{file_suffix}.tif')
 
     # Paths for output rasters
     fractp_path = os.path.join(
-        per_pixel_output_dir, 'fractp%s.tif' % file_suffix)
+        per_pixel_output_dir, f'fractp{file_suffix}.tif')
     wyield_path = os.path.join(
-        per_pixel_output_dir, 'wyield%s.tif' % file_suffix)
-    aet_path = os.path.join(per_pixel_output_dir, 'aet%s.tif' % file_suffix)
+        per_pixel_output_dir, f'wyield{file_suffix}.tif')
+    aet_path = os.path.join(per_pixel_output_dir, f'aet{file_suffix}.tif')
 
-    demand_path = os.path.join(intermediate_dir, 'demand%s.tif' % file_suffix)
+    demand_path = os.path.join(intermediate_dir, f'demand{file_suffix}.tif')
 
     watersheds_path = args['watersheds_path']
     watershed_results_vector_path = os.path.join(
-        output_dir, 'watershed_results_wyield%s.shp' % file_suffix)
+        output_dir, f'watershed_results_wyield{file_suffix}.shp')
     watershed_paths_list = [
         (watersheds_path, 'ws_id', watershed_results_vector_path)]
 
@@ -401,7 +401,7 @@ def execute(args):
     if 'sub_watersheds_path' in args and args['sub_watersheds_path'] != '':
         sub_watersheds_path = args['sub_watersheds_path']
         subwatershed_results_vector_path = os.path.join(
-            output_dir, 'subwatershed_results_wyield%s.shp' % file_suffix)
+            output_dir, f'subwatershed_results_wyield{file_suffix}.shp')
         watershed_paths_list.append(
             (sub_watersheds_path, 'subws_id',
              subwatershed_results_vector_path))
@@ -449,7 +449,7 @@ def execute(args):
     align_raster_stack_task.join()
 
     nodata_dict = {
-        'out_nodata': -1.0,
+        'out_nodata': -1,
         'precip': pygeoprocessing.get_raster_info(precip_path)['nodata'][0],
         'eto': pygeoprocessing.get_raster_info(eto_path)['nodata'][0],
         'depth_root': pygeoprocessing.get_raster_info(
@@ -462,7 +462,7 @@ def execute(args):
         args['biophysical_table_path'], 'lucode', to_lower=True)
     bio_lucodes = set(bio_dict.keys())
     bio_lucodes.add(nodata_dict['lulc'])
-    LOGGER.debug('bio_lucodes %s', bio_lucodes)
+    LOGGER.debug(f'bio_lucodes: {bio_lucodes}')
 
     if 'demand_table_path' in args and args['demand_table_path'] != '':
         demand_dict = utils.build_lookup_from_csv(
@@ -472,7 +472,7 @@ def execute(args):
              for lucode in demand_dict])
         demand_lucodes = set(demand_dict.keys())
         demand_lucodes.add(nodata_dict['lulc'])
-        LOGGER.debug('demand_lucodes %s', demand_lucodes)
+        LOGGER.debug(f'demand_lucodes: {demand_lucodes}', )
     else:
         demand_lucodes = None
 
@@ -494,17 +494,17 @@ def execute(args):
         except ValueError:
             # If the user provided an invalid LULC_veg value, raise an
             # informative error.
-            raise ValueError('LULC_veg value must be either 1 or 0, not %s',
-                             lulc_veg_value)
+            raise ValueError(
+                f'LULC_veg value must be either 1 or 0, not {lulc_veg_value}')
 
         # If LULC_veg value is 1 get root depth value
-        if vegetated_dict[lulc_code] == 1.0:
+        if vegetated_dict[lulc_code] == 1:
             root_dict[lulc_code] = bio_dict[lulc_code]['root_depth']
         # If LULC_veg value is 0 then we do not care about root
-        # depth value so will just substitute in a 1.0 . This
+        # depth value so will just substitute in a 1. This
         # value will not end up being used.
         else:
-            root_dict[lulc_code] = 1.0
+            root_dict[lulc_code] = 1
 
     reclass_error_details = {
         'raster_name': 'LULC', 'column_name': 'lucode',
@@ -633,6 +633,13 @@ def execute(args):
     # Aggregate results to watershed polygons, and do the optional
     # scarcity and valuation calculations.
     for base_ws_path, ws_id_name, target_ws_path in watershed_paths_list:
+        # make a copy so we don't modify the original
+        # do zonal stats with the copy so that FIDS are correct
+        copy_watersheds_vector_task = graph.add_task(
+            func=copy_vector,
+            args=[base_ws_path, target_ws_path],
+            target_path_list=[target_ws_path],
+            task_name='create copy of watersheds vector')
 
         zonal_stats_task_list = []
         zonal_stats_pickle_list = []
@@ -642,25 +649,27 @@ def execute(args):
         for key_name, rast_path in raster_names_paths_list:
             target_stats_pickle = os.path.join(
                 pickle_dir,
-                '%s_%s%s.pickle' % (ws_id_name, key_name, file_suffix))
+                f'{ws_id_name}_{key_name}{file_suffix}.pickle')
             zonal_stats_pickle_list.append((target_stats_pickle, key_name))
             zonal_stats_task_list.append(graph.add_task(
                 func=zonal_stats_tofile,
-                args=(base_ws_path, rast_path, target_stats_pickle),
+                args=(target_ws_path, rast_path, target_stats_pickle),
                 target_path_list=[target_stats_pickle],
-                dependent_task_list=dependent_tasks_for_watersheds_list,
-                task_name='%s_%s_zonalstats' % (ws_id_name, key_name)))
+                dependent_task_list=[
+                    *dependent_tasks_for_watersheds_list,
+                    copy_watersheds_vector_task],
+                task_name=f'{ws_id_name}_{key_name}_zonalstats'))
 
-        # Create copies of the input shapefiles in the output workspace.
-        # Add the zonal stats data to the attribute tables.
+        # Add the zonal stats data to the output vector's attribute table
         # Compute optional scarcity and valuation
-        create_output_vector_task = graph.add_task(
-            func=create_vector_output,
-            args=(base_ws_path, target_ws_path, ws_id_name,
-                  zonal_stats_pickle_list, valuation_params),
+        write_output_vector_attributes_task = graph.add_task(
+            func=write_output_vector_attributes,
+            args=(target_ws_path, ws_id_name, zonal_stats_pickle_list,
+                  valuation_params),
             target_path_list=[target_ws_path],
-            dependent_task_list=zonal_stats_task_list,
-            task_name='create_%s_vector_output' % ws_id_name)
+            dependent_task_list=[
+                *zonal_stats_task_list, copy_watersheds_vector_task],
+            task_name=f'create_{ws_id_name}_vector_output')
 
         # Export a CSV with all the fields present in the output vector
         target_basename = os.path.splitext(target_ws_path)[0]
@@ -669,25 +678,37 @@ def execute(args):
             func=convert_vector_to_csv,
             args=(target_ws_path, target_csv_path),
             target_path_list=[target_csv_path],
-            dependent_task_list=[create_output_vector_task],
-            task_name='create_%s_table_output' % ws_id_name)
+            dependent_task_list=[write_output_vector_attributes_task],
+            task_name=f'create_{ws_id_name}_table_output')
 
     graph.join()
 
 
-def create_vector_output(
-        base_vector_path, target_vector_path, ws_id_name,
-        stats_path_list, valuation_params):
-    """Create the main vector outputs of this model.
+def copy_vector(base_vector_path, target_vector_path):
+    """Wrapper around CreateCopy that handles opening & closing the dataset.
+
+    Args:
+        base_vector_path: path to the vector to copy
+        target_vector_path: path to copy the vector to
+
+    Returns:
+        None
+    """
+    esri_shapefile_driver = gdal.GetDriverByName('ESRI Shapefile')
+    base_dataset = gdal.OpenEx(base_vector_path, gdal.OF_VECTOR)
+    esri_shapefile_driver.CreateCopy(target_vector_path, base_dataset)
+    base_dataset = None
+
+
+def write_output_vector_attributes(target_vector_path, ws_id_name,
+                                   stats_path_list, valuation_params):
+    """Add data attributes to the vector outputs of this model.
 
     Join results of zonal stats to copies of the watershed shapefiles.
     Also do optional scarcity and valuation calculations.
 
     Args:
-        base_vector_path (string): Path to a watershed shapefile provided in
-            the args dictionary.
-        target_vector_path (string): Path where base_vector_path will be copied
-            to in the output workspace.
+        target_vector_path (string): Path to the watersheds vector to modify
         ws_id_name (string): Either 'ws_id' or 'subws_id', which are required
             names of a unique ID field in the watershed and subwatershed
             shapefiles, respectively. Used to determine if the polygons
@@ -702,11 +723,6 @@ def create_vector_output(
         None
 
     """
-    esri_shapefile_driver = gdal.GetDriverByName('ESRI Shapefile')
-    watershed_vector = gdal.OpenEx(base_vector_path, gdal.OF_VECTOR)
-    esri_shapefile_driver.CreateCopy(target_vector_path, watershed_vector)
-    watershed_vector = None
-
     for pickle_path, key_name in stats_path_list:
         with open(pickle_path, 'rb') as picklefile:
             ws_stats_dict = pickle.load(picklefile)
@@ -824,7 +840,7 @@ def wyield_op(fractp, precip, precip_nodata, output_nodata):
     valid_mask = ~utils.array_equals_nodata(fractp, output_nodata)
     if precip_nodata is not None:
         valid_mask &= ~utils.array_equals_nodata(precip, precip_nodata)
-    result[valid_mask] = (1.0 - fractp[valid_mask]) * precip[valid_mask]
+    result[valid_mask] = (1 - fractp[valid_mask]) * precip[valid_mask]
     return result
 
 
@@ -867,7 +883,7 @@ def fractp_op(
         ~utils.array_equals_nodata(Kc, nodata_dict['out_nodata']) &
         ~utils.array_equals_nodata(root, nodata_dict['out_nodata']) &
         ~utils.array_equals_nodata(veg, nodata_dict['out_nodata']) &
-        ~utils.array_equals_nodata(precip, 0.0))
+        ~utils.array_equals_nodata(precip, 0))
     if nodata_dict['eto'] is not None:
         valid_mask &= ~utils.array_equals_nodata(eto, nodata_dict['eto'])
     if nodata_dict['precip'] is not None:
@@ -892,29 +908,29 @@ def fractp_op(
         soil[valid_mask]) * pawc[valid_mask]
     climate_w = (
         (awc / precip[valid_mask]) * seasonality_constant) + 1.25
-    # Capping to 5.0 to set to upper limit if exceeded
-    climate_w[climate_w > 5.0] = 5.0
+    # Capping to 5 to set to upper limit if exceeded
+    climate_w[climate_w > 5] = 5
 
     # Compute evapotranspiration partition of the water balance
     aet_p = (
-        1.0 + (pet / precip[valid_mask])) - (
-            (1.0 + (pet / precip[valid_mask]) ** climate_w) ** (
-                1.0 / climate_w))
+        1 + (pet / precip[valid_mask])) - (
+            (1 + (pet / precip[valid_mask]) ** climate_w) ** (
+                1 / climate_w))
 
     # We take the minimum of the following values (phi, aet_p)
     # to determine the evapotranspiration partition of the
     # water balance (see users guide)
     veg_result = numpy.where(phi < aet_p, phi, aet_p)
-    # Take the minimum of precip and Kc * ETo to avoid x / p > 1.0
+    # Take the minimum of precip and Kc * ETo to avoid x / p > 1
     nonveg_result = Kc[valid_mask] * eto[valid_mask]
     nonveg_mask = precip[valid_mask] < Kc[valid_mask] * eto[valid_mask]
     nonveg_result[nonveg_mask] = precip[valid_mask][nonveg_mask]
     nonveg_result_fract = nonveg_result / precip[valid_mask]
 
-    # If veg is 1.0 use the result for vegetated areas else use result
+    # If veg is 1 use the result for vegetated areas else use result
     # for non veg areas
     result = numpy.where(
-        veg[valid_mask] == 1.0,
+        veg[valid_mask] == 1,
         veg_result, nonveg_result_fract)
 
     fractp = numpy.empty(valid_mask.shape, dtype=numpy.float32)
@@ -998,15 +1014,15 @@ def compute_watershed_valuation(watershed_results_vector_path, val_dict):
                 val_row['efficiency'] * val_row['fraction'] *
                 val_row['height'] * rsupply_vl * 0.00272)
 
-            dsum = 0.
+            dsum = 0
             # Divide by 100 because it is input at a percent and we need
             # decimal value
-            disc = val_row['discount'] / 100.0
+            disc = val_row['discount'] / 100
             # To calculate the summation of the discount rate term over the life
             # span of the dam we can use a geometric series
-            ratio = 1. / (1. + disc)
-            if ratio != 1.:
-                dsum = (1. - math.pow(ratio, val_row['time_span'])) / (1. - ratio)
+            ratio = 1 / (1 + disc)
+            if ratio != 1:
+                dsum = (1 - math.pow(ratio, val_row['time_span'])) / (1 - ratio)
 
             npv = ((val_row['kw_price'] * energy) - val_row['cost']) * dsum
 
@@ -1109,7 +1125,7 @@ def compute_water_yield_volume(watershed_results_vector_path):
             geom = feat.GetGeometryRef()
             # Calculate water yield volume,
             # 1000 is for converting the mm of wyield to meters
-            vol = wyield_mn * geom.Area() / 1000.0
+            vol = wyield_mn * geom.Area() / 1000
             # Get the volume field index and add value
             feat.SetField(vol_name, vol)
 

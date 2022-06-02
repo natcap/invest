@@ -1,23 +1,60 @@
 """Module for Testing DelineateIt."""
+import contextlib
+import logging
+import os
+import queue
+import shutil
+import tempfile
 import unittest
 from unittest import mock
-import tempfile
-import shutil
-import os
 
-import shapely.wkt
-import shapely.wkb
-from shapely.geometry import Point, MultiPoint, box
 import numpy
-from osgeo import osr
-from osgeo import ogr
-from osgeo import gdal
 import pygeoprocessing
-
+import shapely.wkb
+import shapely.wkt
+from osgeo import gdal
+from osgeo import ogr
+from osgeo import osr
+from shapely.geometry import box
+from shapely.geometry import MultiPoint
+from shapely.geometry import Point
 
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
     'delineateit')
+
+
+@contextlib.contextmanager
+def capture_logging(logger, level=logging.NOTSET):
+    """Capture logging within a context manager.
+
+    Args:
+        logger (logging.Logger): The logger that should be monitored for
+            log records within the scope of the context manager.
+        level (int): The log level to set for the new handler.  Defaults to
+            ``logging.NOTSET``.
+
+    Yields:
+        log_records (list): A list of logging.LogRecord objects.  This list is
+            yielded early in the execution, and may have logging progressively
+            added to it until the context manager is exited.
+    Returns:
+        ``None``
+    """
+    message_queue = queue.Queue()
+    queuehandler = logging.handlers.QueueHandler(message_queue)
+    queuehandler.setLevel(level)
+    logger.addHandler(queuehandler)
+    log_records = []
+    yield log_records
+    logger.removeHandler(queuehandler)
+
+    # Append log records to the existing log_records list.
+    while True:
+        try:
+            log_records.append(message_queue.get_nowait())
+        except queue.Empty:
+            break
 
 
 class DelineateItTests(unittest.TestCase):
@@ -60,14 +97,18 @@ class DelineateItTests(unittest.TestCase):
             2: 474300.0,
             3: 3247200.0,
         }
-        areas_by_id = {}
+        expected_ws_ids_by_id = {
+            1: 2,
+            2: 1,
+            3: 0
+        }
         for feature in layer:
             geom = feature.GetGeometryRef()
-            areas_by_id[feature.GetField('id')] = geom.Area()
-
-        for id_key, expected_area in expected_areas_by_id.items():
-            self.assertAlmostEqual(expected_area, areas_by_id[id_key],
-                                   delta=1e-4)
+            id_value = feature.GetField('id')
+            self.assertEqual(
+                feature.GetField('ws_id'), expected_ws_ids_by_id[id_value])
+            self.assertAlmostEqual(
+                geom.Area(), expected_areas_by_id[id_value], delta=1e-4)
 
     def test_delineateit_willamette_detect_pour_points(self):
         """DelineateIt: regression testing full run with pour point detection."""
@@ -109,8 +150,8 @@ class DelineateItTests(unittest.TestCase):
 
     def test_delineateit_validate(self):
         """DelineateIt: test validation function."""
-        from natcap.invest.delineateit import delineateit
         from natcap.invest import validation
+        from natcap.invest.delineateit import delineateit
         missing_keys = {}
         validation_warnings = delineateit.validate(missing_keys)
         self.assertEqual(len(validation_warnings), 2)
@@ -408,7 +449,7 @@ class DelineateItTests(unittest.TestCase):
         self.assertEqual(len(points), 1)
         self.assertEqual((points[0].x, points[0].y), (9, -11))
 
-    def test_check_geometries(self):
+    def test_preprocess_geometries(self):
         """DelineateIt: Check that we can reasonably repair geometries."""
         from natcap.invest.delineateit import delineateit
         srs = osr.SpatialReference()
@@ -440,7 +481,7 @@ class DelineateItTests(unittest.TestCase):
         valid_line = ogr.CreateGeometryFromWkt(
             'LINESTRING (-100 100, 100 -100)')
 
-        # invalid polygon coult fixed by buffering by 0
+        # invalid polygon could fixed by buffering by 0
         invalid_bowtie_polygon = ogr.CreateGeometryFromWkt(
             'POLYGON ((2 -2, 6 -2, 2 -6, 6 -6, 2 -2))')
         self.assertFalse(invalid_bowtie_polygon.IsValid())
@@ -463,6 +504,7 @@ class DelineateItTests(unittest.TestCase):
         outflow_layer = outflow_vector.CreateLayer(
             'outflow_layer', srs, ogr.wkbUnknown)
         outflow_layer.CreateField(ogr.FieldDefn('geom_id', ogr.OFTInteger))
+        outflow_layer.CreateField(ogr.FieldDefn('ws_id', ogr.OFTInteger))
 
         outflow_layer.StartTransaction()
         for index, geometry in enumerate((invalid_geometry,
@@ -476,6 +518,10 @@ class DelineateItTests(unittest.TestCase):
 
             outflow_feature = ogr.Feature(outflow_layer.GetLayerDefn())
             outflow_feature.SetField('geom_id', index)
+
+            # We'll be overwriting these values with actual WS_IDs
+            outflow_feature.SetField('ws_id', index*100)
+
             outflow_feature.SetGeometry(geometry)
             outflow_layer.CreateFeature(outflow_feature)
         outflow_layer.CommitTransaction()
@@ -487,15 +533,25 @@ class DelineateItTests(unittest.TestCase):
         target_vector_path = os.path.join(
             self.workspace_dir, 'checked_geometries.gpkg')
         with self.assertRaises(ValueError) as cm:
-            delineateit.check_geometries(
+            delineateit.preprocess_geometries(
                 outflow_vector_path, dem_raster_path, target_vector_path,
                 skip_invalid_geometry=False
             )
         self.assertTrue('is invalid' in str(cm.exception))
 
-        delineateit.check_geometries(
-            outflow_vector_path, dem_raster_path, target_vector_path,
-            skip_invalid_geometry=True
+        # The only messages we care about for this test are WARNINGs
+        logger = logging.getLogger('natcap.invest.delineateit.delineateit')
+        with capture_logging(logger, logging.WARNING) as log_records:
+            delineateit.preprocess_geometries(
+                outflow_vector_path, dem_raster_path, target_vector_path,
+                skip_invalid_geometry=True
+            )
+        self.assertEqual(len(log_records), 6)
+        self.assertEqual(
+            log_records[0].msg,
+            delineateit._WS_ID_OVERWRITE_WARNING.format(
+                layer_name='outflow_layer',
+                vector_basename=os.path.basename(outflow_vector_path))
         )
 
         # I only expect to see 1 feature in the output layer, as there's only 1
@@ -509,13 +565,60 @@ class DelineateItTests(unittest.TestCase):
         self.assertEqual(
             target_layer.GetFeatureCount(), len(expected_geom_areas))
 
-        for feature in target_layer:
+        expected_ws_ids = [0]  # only 1 valid feature, so we start at 0
+        for ws_id, feature in zip(expected_ws_ids, target_layer):
             geom = feature.GetGeometryRef()
             self.assertAlmostEqual(
                 geom.Area(), expected_geom_areas[feature.GetField('geom_id')])
+            self.assertEqual(feature.GetField('ws_id'), ws_id)
 
         target_layer = None
         target_vector = None
+
+    def test_preprocess_geometries_added_ws_id(self):
+        """DelineateIt: Check that we add field ws_id when preprocessing."""
+        from natcap.invest.delineateit import delineateit
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(32731)  # WGS84/UTM zone 31s
+        projection_wkt = srs.ExportToWkt()
+
+        dem_matrix = numpy.array(
+            [[0, 1, 0, 0, 0, 0],
+             [0, 1, 0, 0, 0, 0],
+             [0, 1, 0, 0, 0, 0],
+             [0, 1, 0, 0, 0, 0],
+             [0, 1, 1, 1, 1, 1],
+             [0, 1, 0, 0, 0, 0],
+             [0, 1, 0, 0, 0, 0]], dtype=numpy.int8)
+        dem_raster_path = os.path.join(self.workspace_dir, 'dem.tif')
+        # byte datatype
+        pygeoprocessing.numpy_array_to_raster(
+            dem_matrix, 255, (2, -2), (2, -2), projection_wkt,
+            dem_raster_path)
+
+        source_features = [Point(9, -7), Point(10, -3)]
+        source_points_path = os.path.join(self.workspace_dir, 'source.geojson')
+
+        pygeoprocessing.shapely_geometry_to_vector(
+            source_features, source_points_path, projection_wkt, 'GeoJSON',
+            ogr_geom_type=ogr.wkbUnknown)
+
+        target_vector_path = os.path.join(self.workspace_dir, 'preprocessed.gpkg')
+        delineateit.preprocess_geometries(
+            source_points_path, dem_raster_path, target_vector_path,
+            skip_invalid_geometry=False)
+
+        target_vector = gdal.OpenEx(target_vector_path)
+        target_layer = target_vector.GetLayer()
+        self.assertEqual(target_layer.GetFeatureCount(), 2)
+
+        try:
+            for expected_ws_id, feature in zip([0, 1], target_layer):
+                self.assertEqual(feature.GetField('ws_id'), expected_ws_id)
+        finally:
+            target_layer = None
+            target_vector = None
 
     def test_detect_pour_points(self):
         """DelineateIt: low-level test for pour point detection."""
@@ -532,10 +635,12 @@ class DelineateItTests(unittest.TestCase):
         layer = vector.GetLayer()
 
         points = []
+        ws_ids = []
         for feature in layer:
             geom = feature.GetGeometryRef()
             x, y, _ = geom.GetPoint()
             points.append((x, y))
+            ws_ids.append(feature.GetField('ws_id'))
         points.sort()
 
         expected_points = [
@@ -546,10 +651,12 @@ class DelineateItTests(unittest.TestCase):
         self.assertTrue(numpy.isclose(points[0][1], expected_points[0][1]))
         self.assertTrue(numpy.isclose(points[1][0], expected_points[1][0]))
         self.assertTrue(numpy.isclose(points[1][1], expected_points[1][1]))
+        self.assertEqual(ws_ids, [0, 1])
 
     def test_calculate_pour_point_array(self):
         """DelineateIt: Extract pour points."""
-        from natcap.invest.delineateit import delineateit, delineateit_core
+        from natcap.invest.delineateit import delineateit
+        from natcap.invest.delineateit import delineateit_core
 
         a = 100  # nodata value
 
