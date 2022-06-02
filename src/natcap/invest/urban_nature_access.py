@@ -293,18 +293,82 @@ def execute(args):
         task_name='Resample population to LULC resolution')
 
     attr_table = pandas.read_csv(args['lulc_attribute_table'])
+    convolved_population_paths = {}  # search radius: convolved_population path
+    convolved_population_tasks = {}  # search radius: convolved_population task
+    kernel_paths = {}  # search_radius, kernel path
+    kernel_tasks = {}  # search_radius, kernel task
+    search_radii = attr_table['search_radius_m'].unique()
+    for search_radius_m in search_radii:
+        search_radius_in_pixels = abs(
+            search_radius_m / squared_lulc_pixel_size[0])
+        kernel_paths[search_radius_m] = os.path.join(
+            intermediate_dir, f'kernel_{search_radius_m}{suffix}.tif')
+        kernel_tasks[search_radius_m] = graph.add_task(
+            # All kernel creation types have the same function signature
+            kernel_creation_functions[kernel_type],
+            args=(search_radius_in_pixels, kernel_paths[search_radius_m]),
+            kwargs={'normalize': False},  # Model math calls for un-normalized
+            task_name=(
+                f'Create {kernel_type} kernel - {search_radius_m}m'),
+            target_path_list=[kernel_paths[search_radius_m]]
+        )
+
+        # Convolving the population within a non-normalized kernel gives us the
+        # number of people (possibly weighted, depending on the kernel) within
+        # the target search radius.
+        convolved_population_paths[search_radius_m] = os.path.join(
+            intermediate_dir,
+            f'convolved_population_{search_radius_m}{suffix}.tif')
+        convolved_population_tasks[search_radius_m] = graph.add_task(
+            _convolve_and_set_lower_bounds_for_population,
+            kwargs={
+                'signal_path_band': (file_registry['aligned_population'], 1),
+                'kernel_path_band': (kernel_paths[search_radius_m], 1),
+                'target_path': convolved_population_paths[search_radius_m],
+                'working_dir': intermediate_dir,
+            },
+            task_name=f'Convolve population - {search_radius_m}m',
+            target_path_list=[convolved_population_paths[search_radius_m]],
+            dependent_task_list=[
+                kernel_tasks[search_radius_m],
+                population_alignment_task,
+            ])
+
+    search_groups = attr_table[
+        attr_table['greenspace'] == 1].groupby('search_radius_m')
+    if len(search_groups) == 1:
+        LOGGER.info(
+            'Only 1 greenspace search radius found. '
+            'Running 2SFCA in unified greenspace mode, calculating '
+            'greenspace supply once for all LULC classes.')
+    else:
+        LOGGER.info(
+            'Multiple search radii found. '
+            'Running 2SFCA in split greenspace mode, calculating greenspace '
+            'supply per LULC class.')
+        new_search_groups = []
+        for search_radius_m, lulc_group in search_groups:
+            for lucode in lulc_group['lucode'].unique():
+                new_search_groups.append(
+                    (search_radius_m, {'lucode': numpy.array([lucode])}))
+        search_groups = new_search_groups
+
     partial_greenspace_paths = []
     partial_greenspace_tasks = []
-    for search_radius_m, group in attr_table[
-            attr_table['greenspace'] == 1].groupby('search_radius_m'):
-        matching_landuse_codes = group['lucode'].unique()
+    for search_radius_m, group in search_groups:
+        matching_landuse_codes = group['lucode']
+        if len(matching_landuse_codes) == 1:
+            lucode = matching_landuse_codes[0]
+        else:
+            lucode = 'all'
         LOGGER.info(
             f'Using search radius {search_radius_m} for lucodes '
             f'{" ".join([str(c) for c in matching_landuse_codes])}')
 
         # reclassify greenspace needed for this kernel
         greenspace_pixels_path = os.path.join(
-            intermediate_dir, f'greenspace_{search_radius_m}{suffix}.tif')
+            intermediate_dir,
+            f'greenspace_{lucode}_{search_radius_m}{suffix}.tif')
         greenspace_reclassification_task = graph.add_task(
             _reclassify_greenspace_area,
             kwargs={
@@ -314,51 +378,17 @@ def execute(args):
                 'only_these_greenspace_codes': set(matching_landuse_codes),
             },
             target_path_list=[greenspace_pixels_path],
-            task_name=f'Identify greenspace areas',
+            task_name='Identify greenspace areas',
             dependent_task_list=[lulc_alignment_task]
         )
 
-        search_radius_in_pixels = abs(
-            search_radius_m / squared_lulc_pixel_size[0])
-        kernel_path = os.path.join(
-            intermediate_dir, f'kernel_{search_radius_m}{suffix}.tif')
-        kernel_creation_task = graph.add_task(
-            # All kernel creation types have the same function signature
-            kernel_creation_functions[kernel_type],
-            args=(search_radius_in_pixels, kernel_path),
-            kwargs={'normalize': False},  # Model math calls for un-normalized
-            task_name=(
-                f'2SFCA - Create {kernel_type} kernel - {search_radius_m}m'),
-            target_path_list=[kernel_path]
-        )
-
-        # Convolving the population within a non-normalized kernel gives us the
-        # number of people (possibly weighted, depending on the kernel) within
-        # the target search radius.
-        convolved_population_path = os.path.join(
-            intermediate_dir,
-            f'convolved_population_{search_radius_m}{suffix}.tif')
-        convolved_population_task = graph.add_task(
-            _convolve_and_set_lower_bounds_for_population,
-            kwargs={
-                'signal_path_band': (file_registry['aligned_population'], 1),
-                'kernel_path_band': (kernel_path, 1),
-                'target_path': convolved_population_path,
-                'working_dir': intermediate_dir,
-            },
-            task_name=f'2SFCA - Convolve population - {search_radius_m}m',
-            target_path_list=[convolved_population_path],
-            dependent_task_list=[
-                kernel_creation_task,
-                population_alignment_task,
-            ])
-
         greenspace_population_ratio_path = os.path.join(
             intermediate_dir,
-            f'greenspace_population_ratio_{search_radius_m}{suffix}.tif')
+            f'greenspace_population_ratio_{lucode}_{search_radius_m}{suffix}.tif')
         greenspace_population_ratio_task = graph.add_task(
             _calculate_greenspace_population_ratio,
-            args=(greenspace_pixels_path, convolved_population_path,
+            args=(greenspace_pixels_path,
+                  convolved_population_paths[search_radius_m],
                   greenspace_population_ratio_path),
             task_name=(
                 '2SFCA: Calculate R_j greenspace/population ratio - '
@@ -366,18 +396,18 @@ def execute(args):
             target_path_list=[greenspace_population_ratio_path],
             dependent_task_list=[
                 greenspace_reclassification_task,
-                convolved_population_task
+                convolved_population_tasks[search_radius_m],
             ])
 
         partial_greenspace_supply_path = os.path.join(
             intermediate_dir,
-            f'greenspace_supply_{search_radius_m}{suffix}.tif')
+            f'greenspace_supply_{lucode}_{search_radius_m}{suffix}.tif')
         convolved_greenspace_population_ratio_task = graph.add_task(
             pygeoprocessing.convolve_2d,
             kwargs={
                 'signal_path_band': (
                     greenspace_population_ratio_path, 1),
-                'kernel_path_band': (kernel_path, 1),
+                'kernel_path_band': (kernel_paths[search_radius_m], 1),
                 'target_path': partial_greenspace_supply_path,
                 'working_dir': intermediate_dir,
                 # Insurance against future pygeoprocessing API changes.  The
@@ -385,10 +415,11 @@ def execute(args):
                 # value, which is also what we use here as FLOAT32_NODATA.
                 'target_nodata': FLOAT32_NODATA,
             },
-            task_name=f'2SFCA - greenspace supply - {search_radius_m}',
+            task_name=(
+                f'2SFCA - greenspace supply - {lucode}, {search_radius_m}m'),
             target_path_list=[partial_greenspace_supply_path],
             dependent_task_list=[
-                kernel_creation_task,
+                kernel_tasks[search_radius_m],
                 greenspace_population_ratio_task,
             ])
         partial_greenspace_paths.append(partial_greenspace_supply_path)
