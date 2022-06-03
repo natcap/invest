@@ -297,7 +297,8 @@ def execute(args):
     convolved_population_tasks = {}  # search radius: convolved_population task
     kernel_paths = {}  # search_radius, kernel path
     kernel_tasks = {}  # search_radius, kernel task
-    search_radii = attr_table['search_radius_m'].unique()
+    search_radii = attr_table[
+        attr_table['greenspace'] == 1]['search_radius_m'].unique()
     for search_radius_m in search_radii:
         search_radius_in_pixels = abs(
             search_radius_m / squared_lulc_pixel_size[0])
