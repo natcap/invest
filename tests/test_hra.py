@@ -310,12 +310,13 @@ class HRAUnitTests(unittest.TestCase):
                 array, 255, (30, -30), ORIGIN, SRS_WKT, target_path)
 
         target_vector_path = os.path.join(self.workspace_dir, 'target.gpkg')
+        layer_name = 'my_layer'
         hra._polygonize(source_raster_path, mask_raster_path,
-                         target_vector_path, 'source_id')
+                        target_vector_path, 'source_id', layer_name)
 
         try:
             vector = gdal.OpenEx(target_vector_path, gdal.OF_VECTOR)
-            layer = vector.GetLayer()
+            layer = vector.GetLayer(layer_name)
             self.assertEqual(
                 [field.GetName() for field in layer.schema],
                 ['source_id'])
@@ -792,9 +793,6 @@ class HRAUnitTests(unittest.TestCase):
         numpy.testing.assert_allclose(
             pygeoprocessing.raster_to_numpy_array(target_raster_path),
             expected_array)
-
-
-
 
 
 class HRAModelTests(unittest.TestCase):
