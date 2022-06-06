@@ -1454,7 +1454,7 @@ def _align(raster_path_map, vector_path_map, target_pixel_size,
             target_pixel_size=target_pixel_size,
             bounding_box_mode=target_bounding_box,
             target_projection_wkt=target_srs_wkt,
-            raster_align_index=0,  # just assume alignment with first raster
+            raster_align_index=None,  # Calculate precise intersection.
         )
 
     # Step 3: Rasterize vectors onto aligned rasters.

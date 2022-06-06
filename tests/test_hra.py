@@ -563,6 +563,14 @@ class HRAUnitTests(unittest.TestCase):
             ORIGIN[0] + 150,
             ORIGIN[1] + 150
         ]
+
+        # Keeping this in here for debugging, although it's not used for the
+        # test.
+        pygeoprocessing.geoprocessing.shapely_geometry_to_vector(
+            [shapely.geometry.box(*expected_bounding_box)],
+            os.path.join(self.workspace_dir, 'expected_bbox.shp'),
+            SRS_WKT, vector_format='ESRI Shapefile')
+
         for aligned_raster_path in itertools.chain(raster_path_map.values(),
                                                    vector_path_map.values()):
             raster_info = pygeoprocessing.get_raster_info(aligned_raster_path)
