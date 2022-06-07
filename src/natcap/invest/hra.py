@@ -8,6 +8,7 @@ import math
 import os
 import re
 import shutil
+import tempfile
 
 import numpy
 import pandas
@@ -17,6 +18,7 @@ from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
 
+from . import datastack
 from . import MODEL_METADATA
 from . import spec_utils
 from . import utils
@@ -2289,7 +2291,31 @@ def _sum_rasters(raster_path_list, target_nodata, target_result_path,
         _sum_op, target_result_path, gdal.GDT_Float32, target_nodata)
 
 
-def build_datastack_archive(args, datastack_path):
+def _override_datastack_archive_criteria_table_path(
+        current_args_value, data_dir, known_files):
+    # current_args_value - the current value of args[criteria_table_path]
+    # data_dir - where output files should be stored.  So if current_args_value
+    #       maps to a CSV, the CSV should be written into the data dir, and
+    #       there should _also_ be a new directory for that CSV within the
+    #       data_dir for any files referred to by the CSV.
+    # files_found - a dict mapping source_path: rewritten_path (in data_dir)
+    #       Used for avoiding duplicate copies into the data directory.
+    #       This dict _is_ mutable, and files discovered by this function
+    #       should be added to this dict.
+    criteria_table_array = _open_table_as_dataframe(
+        args['criteria_table_path'], header=None).to_numpy()
+
+    # we can ignore the first column, and MOST other column values that have a
+    # value can be checked to see if they look like a file (either relative or
+    # absolute).
+    # Those files found, assume they are spatial (that's the expectation) and
+    # copy them into the data dir and log them in known_files.
+    # Then write out the resulting table into the data dir as a CSV and return
+    # the path to the CSV.
+
+
+
+def prepare_datastack_archive(args, datastack_path, working_dir=None):
     """Build a datastack-compliant archive of all spatial inputs to HRA.
 
     This function is implemented here and not in natcap.invest.datastack
@@ -2302,11 +2328,52 @@ def build_datastack_archive(args, datastack_path):
             archive.
         datastack_path (string): The path on disk to where the datastack should
             be written.
+        working_dir=None (string): The path to a directory on disk where
+            temporary files should be written.  A folder will be created within
+            this directory for temporary files.  If ``None``, python's default
+            temporary directory locations will be used.
 
     Returns:
         ``None``
     """
-    # TODO: flesh this out
+    # TODO: we don't want to reinvent the wheel ... all we actually need to do
+    # is _PREPARE_ the args (which in our case is to process the criteria
+    # table, the only table that's nonconformant.  Everything else can be
+    # handled by the normal
+    scratch_dir = tempfile.mkdtemp(prefix='hra_datastack_', dir=working_dir)
+    data_dir = os.path.join(scratch_dir, 'data')
+    os.makedirs(data_dir)
+    rewritten_args = {}
+
+    info_table_array = _open_table_as_dataframe(
+        args['info_table_path'], header=None).to_numpy()
+    filepath_col_index = list(info_table_array[0]).index('PATH')
+    for row_idx in range(len(info_table_array)):
+        path = info_table_array[row_idx, filepath_col_index]
+        if os.path.isabs(path):
+            new_path = datastack._copy_spatial_files(path, data_dir)
+            info_table_array[row_idx, filepath_col_index] = new_path
+
+    target_info_csv = os.path.join(data_dir, 'info_table.csv')
+    rewritten_args['info_table_path'] = target_info_csv
+    pandas.DataFrame(data=info_table_array[1:, 1:],
+                     index=info_table_array[1:, 0],
+                     columns=info_table_array[0, 1:]).to_csv(target_info_csv)
+
+
+
+
+    # for each csv in args (info_table_path, criteria_table_path)
+    #   read the csv as a numpy array.
+    #   for each RATING column:
+    #       Iterate down through the end of the file.
+    #       If the cell looks like a file and exists (relative or absolute):
+    #           Copy the file into a new directory.
+    #           Rewrite the table value to be relative to the new csv path.
+    #       Otherwise, leave the value as-is.
+    #   write out the CSV.
+    # For each other arg, process it as needed.
+    # Write out the datastack archive file.
     raise NotImplementedError()
 
 

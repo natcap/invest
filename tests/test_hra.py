@@ -795,7 +795,7 @@ class HRAUnitTests(unittest.TestCase):
 
         # Test with normalization.
         hra._sum_rasters(raster_paths, target_nodata, target_raster_path,
-                          normalize=True)
+                         normalize=True)
         expected_array = numpy.array([
             [0.35, 1.0, 3.1]], dtype=numpy.float32)
         numpy.testing.assert_allclose(
@@ -891,6 +891,11 @@ class HRAModelTests(unittest.TestCase):
                     array, 255, (10, -10), (ORIGIN[0] - 50, ORIGIN[1] - 50),
                     SRS_WKT, full_path)
 
+        # using the existing args, create a datastack archive.
+        # Unzip the archive.
+        # Run the model
+        # Assert the outputs.
+
         hra.execute(args)
 
         # Ecosystem risk is the sum of all risk values.
@@ -899,9 +904,6 @@ class HRAModelTests(unittest.TestCase):
         # names.
 
         # TODO: add a spatial criterion (non-resilience/recovery)
-
-
-
 
     def test_model_habitat_mismatch(self):
         from natcap.invest import hra

@@ -194,12 +194,6 @@ def build_datastack_archive(args, model_name, datastack_path):
     """
     module = importlib.import_module(name=model_name)
 
-    # Allow the model to override the common datastack function.  This is
-    # useful for tables (like HRA) that are too complicated to describe in the
-    # ARGS_SPEC format.
-    if hasattr(module, 'build_datastack_archive'):
-        return module.build_datastack_archive(args, datastack_path)
-
     args = args.copy()
     temp_workspace = tempfile.mkdtemp(prefix='datastack_')
     data_dir = os.path.join(temp_workspace, 'data')
@@ -223,6 +217,18 @@ def build_datastack_archive(args, model_name, datastack_path):
     file_based_types = spatial_types.union({'csv', 'file', 'directory'})
     rewritten_args = {}
     for key in args:
+        # Allow the model to override specific arguments in datastack archive
+        # prep.  This is useful for tables (like HRA) that are too complicated
+        # to describe in the ARGS_SPEC format, but use a common specification
+        # for the other args keys.
+        override_funcname = f'_override_datastack_archive_{key}'
+        if hasattr(module, override_funcname):
+            LOGGER.info(f'Using model override function for key {key}')
+            # output_value is the returned value for this args key.
+            # Note that the called function may modify files_found.
+            rewritten_args[key] = getattr(
+                module, override_funcname)(args[key], data_dir, files_found)
+
         # We don't want to accidentally archive a user's complete workspace
         # directory, complete with prior runs there.
         if key == 'workspace_dir':
