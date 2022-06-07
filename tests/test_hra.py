@@ -279,7 +279,7 @@ class HRAUnitTests(unittest.TestCase):
             geoms, source_vector_path, SRS_WKT, 'ESRI Shapefile')
 
         target_vector_path = os.path.join(self.workspace_dir,
-                                          'target_vector.shp')
+                                          'target_vector.gpkg')
         hra._simplify(source_vector_path, 20, target_vector_path)
 
         # Expected areas are from eyeballing that the resulting geometry look
@@ -904,6 +904,82 @@ class HRAModelTests(unittest.TestCase):
         # names.
 
         # TODO: add a spatial criterion (non-resilience/recovery)
+
+    def test_datastack_criteria_table_override(self):
+        """HRA: verify we store all data referenced in the criteria table."""
+        from natcap.invest import hra
+
+        criteria_table_path = os.path.join(
+            self.workspace_dir, 'criteria_table.csv')
+        with open(criteria_table_path, 'w') as criteria_table:
+            criteria_table.write(textwrap.dedent(
+                """\
+                HABITAT NAME,eelgrass,,,hardbottom,,,CRITERIA TYPE
+                HABITAT RESILIENCE ATTRIBUTES,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
+                recruitment rate,2,2,2,2,2,2,C
+                connectivity rate,eelgrass_connectivity.shp,2,2,2,2,2,C
+                ,,,,,,,
+                HABITAT STRESSOR OVERLAP PROPERTIES,,,,,,,
+                oil,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
+                frequency of disturbance,2,2,3,2,2,3,C
+                management effectiveness,2,2,1,my_data/mgmt1.tif,2,1,E
+                ,,,,,,,
+                fishing,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
+                frequency of disturbance,2,2,3,2,2,3,C
+                management effectiveness,2,2,1,2,2,1,E
+                ,,,,,,,
+                transportation,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
+                frequency of disturbance,2,2,3,2,2,3,C
+                management effectiveness,2,2,1,my_data/mgmt2.tif,2,1,E
+                """
+            ))
+
+        eelgrass_path = os.path.join(
+            self.workspace_dir, 'eelgrass_connectivity.shp')
+        geoms = [shapely.geometry.Point(ORIGIN).buffer(100)]
+        pygeoprocessing.shapely_geometry_to_vector(
+            geoms, eelgrass_path, SRS_WKT, 'ESRI Shapefile')
+
+        mgmt_path_1 = os.path.join(
+            self.workspace_dir, 'my_data', 'mgmt1.tif')
+        mgmt_path_2 = os.path.join(
+            self.workspace_dir, 'my_data', 'mgmt2.tif')
+        for mgmt_path in (mgmt_path_1, mgmt_path_2):
+            os.makedirs(os.path.dirname(mgmt_path), exist_ok=True)
+            array = numpy.ones((20, 20), dtype=numpy.uint8)
+            pygeoprocessing.numpy_array_to_raster(
+                array, 255, (10, -10), (ORIGIN[0] - 50, ORIGIN[1] - 50),
+                SRS_WKT, mgmt_path)
+
+        data_dir = os.path.join(self.workspace_dir, 'datastack_data')
+        known_files = {}
+
+        new_csv_path = hra._override_datastack_archive_criteria_table_path(
+            criteria_table_path, data_dir, known_files)
+        self.assertEqual(
+            new_csv_path, os.path.join(data_dir, 'criteria_table_path.csv'))
+        output_criteria_data_dir = os.path.join(
+            data_dir, 'criteria_table_path_data')
+        self.assertEqual(
+            known_files, {
+                eelgrass_path: os.path.join(
+                    output_criteria_data_dir, 'eelgrass_connectivity',
+                    'eelgrass_connectivity.shp'),
+                mgmt_path_1: os.path.join(
+                    output_criteria_data_dir, 'mgmt1', 'mgmt1.tif'),
+                mgmt_path_2: os.path.join(
+                    output_criteria_data_dir, 'mgmt2', 'mgmt2.tif'),
+            }
+        )
+        for copied_filepath in known_files.values():
+            self.assertEqual(True, os.path.exists(copied_filepath))
+            try:
+                spatial_file = gdal.OpenEx(copied_filepath)
+                if spatial_file is None:
+                    self.fail('Filepath could not be opened by GDAL: '
+                              f'{copied_filepath}')
+            finally:
+                spatial_file = None
 
     def test_model_habitat_mismatch(self):
         from natcap.invest import hra

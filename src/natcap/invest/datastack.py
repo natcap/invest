@@ -65,7 +65,8 @@ def _copy_spatial_files(spatial_filepath, target_dir):
     Args:
         spatial_filepath (str): The filepath to a GDAL-supported file.
         target_dir (str): The directory where all component files of
-            ``spatial_filepath`` should be copied.
+            ``spatial_filepath`` should be copied.  If this directory does not
+            exist, it will be created.
 
     Returns:
         filepath (str): The path to a representative file copied into the
@@ -224,10 +225,15 @@ def build_datastack_archive(args, model_name, datastack_path):
         override_funcname = f'_override_datastack_archive_{key}'
         if hasattr(module, override_funcname):
             LOGGER.info(f'Using model override function for key {key}')
-            # output_value is the returned value for this args key.
-            # Note that the called function may modify files_found.
-            rewritten_args[key] = getattr(
-                module, override_funcname)(args[key], data_dir, files_found)
+            # Notes about the override function:
+            #   * Function may modify files_found
+            #   * If this function copies data into the data dir, it _should_
+            #     be within its own folder (e.g.
+            #     {data_dir}/criteria_table_path_data/) to minimize chances of
+            #     stomping on other data.  But this is up to the function to
+            #     decide.
+            rewritten_args[key] = getattr(module, override_funcname)(
+                args[key], data_dir, files_found)
 
         # We don't want to accidentally archive a user's complete workspace
         # directory, complete with prior runs there.

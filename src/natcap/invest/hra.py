@@ -2292,49 +2292,67 @@ def _sum_rasters(raster_path_list, target_nodata, target_result_path,
 
 
 def _override_datastack_archive_criteria_table_path(
-        current_args_value, data_dir, known_files):
+        criteria_table_path, data_dir, known_files):
     # current_args_value - the current value of args[criteria_table_path]
     # data_dir - where output files should be stored.  So if current_args_value
     #       maps to a CSV, the CSV should be written into the data dir, and
     #       there should _also_ be a new directory for that CSV within the
     #       data_dir for any files referred to by the CSV.
+    #       It is up to this function (or a function called by this function)
+    #       to create this directory.
     # files_found - a dict mapping source_path: rewritten_path (in data_dir)
     #       Used for avoiding duplicate copies into the data directory.
     #       This dict _is_ mutable, and files discovered by this function
     #       should be added to this dict.
-    criteria_table_array = _open_table_as_dataframe(
-        current_args_value, header=None).to_numpy()
+    args_key = 'criteria_table_path'
+    extension = os.path.splitext(criteria_table_path)[1].lower()
+    if extension in {'.xls', '.xlsx'}:
+        df = pandas.read_excel(criteria_table_path, header=None)
+    else:
+        df = pandas.read_csv(criteria_table_path, header=None, sep=None,
+                             engine='python')
+    criteria_table_array = df.to_numpy()
+    contained_data_dir = os.path.join(data_dir, f'{args_key}_data')
 
-    # we can ignore the first column, and MOST other column values that have a
-    # value can be checked to see if they look like a file (either relative or
-    # absolute).
-    # Those files found, assume they are spatial (that's the expectation) and
-    # copy them into the data dir and log them in known_files.
-    # Then write out the resulting table into the data dir as a CSV and return
-    # the path to the CSV.
-    for row in range(1, len(criteria_table_array[0])):  # skip named habitats
-        known_rating_cols = set()
-        for col in range(1, len(criteria_table_array)):  # skip attributes col
+    known_rating_cols = set()
+    for row in range(1, len(criteria_table_array)):  # skip named habitats
+        # When we encounter an empty row, reset the known ratings columns in
+        # case one of the sub-tables changes the order around.
+        try:
+            if numpy.all(numpy.isnan(criteria_table_array[row])):
+                known_rating_cols = set()
+                continue
+        except TypeError:
+            # TypeError when there are any string values in the row
+            pass
+
+        for col in range(1, len(criteria_table_array[0])):  # skip attrs col
             if criteria_table_array[row, col] == 'RATING':
                 known_rating_cols.add(col)
 
         for col in known_rating_cols:
             value = criteria_table_array[row, col]
+            if not isinstance(value, str):
+                continue
             if not os.path.isabs(value):
                 value = os.path.join(
-                    os.path.dirname(current_args_value), value)
+                    os.path.dirname(criteria_table_path), value)
             if not os.path.exists(value):
                 continue
             if value in known_files:
                 criteria_table_array[row, col] = known_files[value]
             else:
-                new_path = datastack._copy_spatial_files(value, data_dir)
+                dir_for_this_spatial_data = os.path.join(
+                    contained_data_dir,
+                    os.path.splitext(os.path.basename(value))[0])
+                new_path = datastack._copy_spatial_files(
+                    value, dir_for_this_spatial_data)
                 criteria_table_array[row, col] = new_path
                 known_files[value] = new_path
 
-    target_output_path = os.path.join(data_dir, 'criteria_table_path.csv'),
+    target_output_path = os.path.join(data_dir, f'{args_key}.csv')
     numpy.savetxt(target_output_path, criteria_table_array, delimiter=',',
-                  encoding="UTF-8")
+                  fmt="%s", encoding="UTF-8")
     return target_output_path
 
 
