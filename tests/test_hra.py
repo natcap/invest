@@ -1,3 +1,4 @@
+import glob
 import io
 import itertools
 import json
@@ -908,12 +909,26 @@ class HRAModelTests(unittest.TestCase):
 
         hra.execute(unarchived_args)
 
-        # Ecosystem risk is the sum of all risk values.
+        # Ecosystem risk is the sum of all risk values, so a good indicator of
+        # whether the model has changed.
+        numpy.testing.assert_allclose(
+            numpy.array([[10.25], [3.125]], dtype=numpy.float32),
+            pygeoprocessing.geoprocessing.raster_to_numpy_array(
+                os.path.join(unarchived_args['workspace_dir'], 'outputs',
+                             'TOTAL_RISK_Ecosystem.tif')))
 
-        # Check that expected GeoJSONs are there, in web mercator, with correct
-        # names.
-
-        # TODO: add a spatial criterion (non-resilience/recovery)
+        # Make sure we have some valid geojson files in the viz dir.
+        n_geojson_files = 0
+        for geojson_file in glob.glob(
+                os.path.join(unarchived_args['workspace_dir'],
+                             'visualization_outputs', '*.geojson')):
+            try:
+                vector = gdal.OpenEx(geojson_file)
+                self.assertNotEqual(vector, None)
+            finally:
+                vector = None
+            n_geojson_files += 1
+        self.assertEqual(n_geojson_files, 6)
 
     def test_datastack_criteria_table_override(self):
         """HRA: verify we store all data referenced in the criteria table."""
