@@ -161,18 +161,18 @@ ARGS_SPEC = {
                 "The equation to model effects of stressors in buffer areas."),
             "type": "option_string",
             "options": {
-                "None": {
-                    "display_name": _("none"),
+                "none": {
+                    "display_name": _("None"),
                     "description": _(
                         "No decay. Stressor has full effect in the buffer "
                         "area.")},
-                "Linear": {
-                    "display_name": _("linear"),
+                "linear": {
+                    "display_name": _("Linear"),
                     "description": _(
                         "Stressor effects in the buffer area decay linearly "
                         "with distance from the stressor.")},
-                "Exponential": {
-                    "display_name": _("exponential"),
+                "exponential": {
+                    "display_name": _("Exponential"),
                     "description": _(
                         "Stressor effects in the buffer area decay "
                         "exponentially with distance from the stressor.")}

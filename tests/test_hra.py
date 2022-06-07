@@ -811,6 +811,7 @@ class HRAModelTests(unittest.TestCase):
         shutil.rmtree(self.workspace_dir)
 
     def test_model(self):
+        from natcap.invest import datastack
         from natcap.invest import hra
 
         args = {
@@ -820,7 +821,7 @@ class HRAModelTests(unittest.TestCase):
                                                 'criteria.csv'),
             'resolution': 250,
             'max_rating': 3,
-            'risk_eq': 'Multiplicative',
+            'risk_eq': 'multiplicative',
             'decay_eq': 'linear',
             'aoi_vector_path': os.path.join(self.workspace_dir, 'aoi.shp'),
             'n_overlapping_stressors': 2,
@@ -891,12 +892,21 @@ class HRAModelTests(unittest.TestCase):
                     array, 255, (10, -10), (ORIGIN[0] - 50, ORIGIN[1] - 50),
                     SRS_WKT, full_path)
 
-        # using the existing args, create a datastack archive.
-        # Unzip the archive.
-        # Run the model
-        # Assert the outputs.
+        archive_path = os.path.join(self.workspace_dir, 'datstack.tar.gz')
+        datastack.build_datastack_archive(
+            args, 'natcap.invest.hra', archive_path)
 
-        hra.execute(args)
+        unarchived_path = os.path.join(self.workspace_dir, 'unarchived_data')
+        unarchived_args = datastack.extract_datastack_archive(
+            archive_path, unarchived_path)
+        unarchived_args['workspace_dir'] = os.path.join(
+            self.workspace_dir, 'workspace')
+
+        # Confirm no validation warnings
+        validation_warnings = hra.validate(unarchived_args)
+        self.assertEqual(validation_warnings, [])
+
+        hra.execute(unarchived_args)
 
         # Ecosystem risk is the sum of all risk values.
 
