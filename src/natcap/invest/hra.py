@@ -2303,7 +2303,7 @@ def _override_datastack_archive_criteria_table_path(
     #       This dict _is_ mutable, and files discovered by this function
     #       should be added to this dict.
     criteria_table_array = _open_table_as_dataframe(
-        args['criteria_table_path'], header=None).to_numpy()
+        current_args_value, header=None).to_numpy()
 
     # we can ignore the first column, and MOST other column values that have a
     # value can be checked to see if they look like a file (either relative or
@@ -2312,7 +2312,30 @@ def _override_datastack_archive_criteria_table_path(
     # copy them into the data dir and log them in known_files.
     # Then write out the resulting table into the data dir as a CSV and return
     # the path to the CSV.
+    for row in range(1, len(criteria_table_array[0])):  # skip named habitats
+        known_rating_cols = set()
+        for col in range(1, len(criteria_table_array)):  # skip attributes col
+            if criteria_table_array[row, col] == 'RATING':
+                known_rating_cols.add(col)
 
+        for col in known_rating_cols:
+            value = criteria_table_array[row, col]
+            if not os.path.isabs(value):
+                value = os.path.join(
+                    os.path.dirname(current_args_value), value)
+            if not os.path.exists(value):
+                continue
+            if value in known_files:
+                criteria_table_array[row, col] = known_files[value]
+            else:
+                new_path = datastack._copy_spatial_files(value, data_dir)
+                criteria_table_array[row, col] = new_path
+                known_files[value] = new_path
+
+    target_output_path = os.path.join(data_dir, 'criteria_table_path.csv'),
+    numpy.savetxt(target_output_path, criteria_table_array, delimiter=',',
+                  encoding="UTF-8")
+    return target_output_path
 
 
 def prepare_datastack_archive(args, datastack_path, working_dir=None):
