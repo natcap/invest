@@ -232,8 +232,11 @@ def build_datastack_archive(args, model_name, datastack_path):
             #     {data_dir}/criteria_table_path_data/) to minimize chances of
             #     stomping on other data.  But this is up to the function to
             #     decide.
+            #   * The override function is responsible for logging whatever is
+            #     useful to include in the logfile.
             rewritten_args[key] = getattr(module, override_funcname)(
                 args[key], data_dir, files_found)
+            continue
 
         # We don't want to accidentally archive a user's complete workspace
         # directory, complete with prior runs there.

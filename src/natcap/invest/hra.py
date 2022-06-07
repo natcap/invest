@@ -2326,25 +2326,38 @@ def _override_datastack_archive_criteria_table_path(
             # TypeError when there are any string values in the row
             pass
 
-        for col in range(1, len(criteria_table_array[0])):  # skip attrs col
-            if criteria_table_array[row, col] == 'RATING':
-                known_rating_cols.add(col)
+        if not known_rating_cols:
+            for col in range(1, len(criteria_table_array[0])):
+                if criteria_table_array[row, col] == 'RATING':
+                    known_rating_cols.add(col)
+            continue  # skip the RATING headers row.
 
         for col in known_rating_cols:
             value = criteria_table_array[row, col]
-            if not isinstance(value, str):
+            try:
+                float(value)
                 continue
+            except ValueError:
+                # When value is obviously not a number.
+                pass
+
             if not os.path.isabs(value):
                 value = os.path.join(
                     os.path.dirname(criteria_table_path), value)
+            value = value.replace("\\", "/")
             if not os.path.exists(value):
                 continue
             if value in known_files:
+                LOGGER.info(
+                    f"File {value} already known, perhaps from another "
+                    f"cell or table.  Reusing {known_files[value]}")
                 criteria_table_array[row, col] = known_files[value]
             else:
                 dir_for_this_spatial_data = os.path.join(
                     contained_data_dir,
                     os.path.splitext(os.path.basename(value))[0])
+                LOGGER.info(f"Copying spatial file {value} --> "
+                            f"{dir_for_this_spatial_data}")
                 new_path = datastack._copy_spatial_files(
                     value, dir_for_this_spatial_data)
                 criteria_table_array[row, col] = new_path
