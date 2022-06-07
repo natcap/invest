@@ -921,8 +921,6 @@ def execute(args):
     graph.close()
     graph.join()
 
-    # TODO: proposed plan for migrating relevant functions to pygeoprocessing.
-
 
 def _create_mask_for_polygonization(source_raster_path, target_raster_path):
     """Create a mask of non-nodata pixels.
@@ -2293,17 +2291,26 @@ def _sum_rasters(raster_path_list, target_nodata, target_result_path,
 
 def _override_datastack_archive_criteria_table_path(
         criteria_table_path, data_dir, known_files):
-    # current_args_value - the current value of args[criteria_table_path]
-    # data_dir - where output files should be stored.  So if current_args_value
-    #       maps to a CSV, the CSV should be written into the data dir, and
-    #       there should _also_ be a new directory for that CSV within the
-    #       data_dir for any files referred to by the CSV.
-    #       It is up to this function (or a function called by this function)
-    #       to create this directory.
-    # files_found - a dict mapping source_path: rewritten_path (in data_dir)
-    #       Used for avoiding duplicate copies into the data directory.
-    #       This dict _is_ mutable, and files discovered by this function
-    #       should be added to this dict.
+    """Prepare the HRA criteria_table_path input for archiving in a datastack.
+
+    This function rewrites a criteria table (which may contain spatial ratings
+    layers), copying any spatial layers into the data directory provided, which
+    will be included in the datastack archive.
+
+    Args:
+        criteria_table_path (string): The path to the criteria table provided
+            by the user.
+        data_dir (string): the path to where data files will be written.
+        known_files (dict): a dict mapping original source files to their
+            location within the ``data_dir``.
+
+    Note:
+        The ``known_files`` dict may be modified by this function.
+
+    Returns:
+        The path to where the rewritten criteria table path is located within
+        the data dir.
+    """
     args_key = 'criteria_table_path'
     extension = os.path.splitext(criteria_table_path)[1].lower()
     if extension in {'.xls', '.xlsx'}:
@@ -2367,68 +2374,6 @@ def _override_datastack_archive_criteria_table_path(
     numpy.savetxt(target_output_path, criteria_table_array, delimiter=',',
                   fmt="%s", encoding="UTF-8")
     return target_output_path
-
-
-def prepare_datastack_archive(args, datastack_path, working_dir=None):
-    """Build a datastack-compliant archive of all spatial inputs to HRA.
-
-    This function is implemented here and not in natcap.invest.datastack
-    because HRA's inputs are too complicated to describe in ARGS_SPEC.  Because
-    the input table and its linked spatial inputs are too custom, it warrants a
-    custom datastack archive-generation function.
-
-    Args:
-        args (dict): The complete ``args`` dict to package up into a datastack
-            archive.
-        datastack_path (string): The path on disk to where the datastack should
-            be written.
-        working_dir=None (string): The path to a directory on disk where
-            temporary files should be written.  A folder will be created within
-            this directory for temporary files.  If ``None``, python's default
-            temporary directory locations will be used.
-
-    Returns:
-        ``None``
-    """
-    # TODO: we don't want to reinvent the wheel ... all we actually need to do
-    # is _PREPARE_ the args (which in our case is to process the criteria
-    # table, the only table that's nonconformant.  Everything else can be
-    # handled by the normal
-    scratch_dir = tempfile.mkdtemp(prefix='hra_datastack_', dir=working_dir)
-    data_dir = os.path.join(scratch_dir, 'data')
-    os.makedirs(data_dir)
-    rewritten_args = {}
-
-    info_table_array = _open_table_as_dataframe(
-        args['info_table_path'], header=None).to_numpy()
-    filepath_col_index = list(info_table_array[0]).index('PATH')
-    for row_idx in range(len(info_table_array)):
-        path = info_table_array[row_idx, filepath_col_index]
-        if os.path.isabs(path):
-            new_path = datastack._copy_spatial_files(path, data_dir)
-            info_table_array[row_idx, filepath_col_index] = new_path
-
-    target_info_csv = os.path.join(data_dir, 'info_table.csv')
-    rewritten_args['info_table_path'] = target_info_csv
-    pandas.DataFrame(data=info_table_array[1:, 1:],
-                     index=info_table_array[1:, 0],
-                     columns=info_table_array[0, 1:]).to_csv(target_info_csv)
-
-
-
-
-    # for each csv in args (info_table_path, criteria_table_path)
-    #   read the csv as a numpy array.
-    #   for each RATING column:
-    #       Iterate down through the end of the file.
-    #       If the cell looks like a file and exists (relative or absolute):
-    #           Copy the file into a new directory.
-    #           Rewrite the table value to be relative to the new csv path.
-    #       Otherwise, leave the value as-is.
-    #   write out the CSV.
-    # For each other arg, process it as needed.
-    # Write out the datastack archive file.
-    raise NotImplementedError()
 
 
 @validation.invest_validator
