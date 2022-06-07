@@ -749,10 +749,6 @@ def execute(args):
 
     # Recovery attributes are calculated with the same numerical method as
     # other criteria, but are unweighted by distance to a stressor.
-    #
-    # TODO: verify with Katie, Jess and Jade that this is correct.
-    # It's hard to tell from the UG how recovery is supposed to be calculated
-    # and what it's supposed to represent.
     for habitat in habitats:
         resilience_criteria_df = criteria_df[
             (criteria_df['habitat'] == habitat) &
@@ -784,9 +780,6 @@ def execute(args):
             target_path_list=[recovery_score_path],
             dependent_task_list=[all_habitats_mask_task]
         )
-
-    # TODO: visualize the graph of tasks to make sure it looks right
-    # TODO: Make sure paths match what they're supposed to.
 
     simplified_aoi_path = os.path.join(
         intermediate_dir, 'simplified_aoi.gpkg')
@@ -1325,9 +1318,6 @@ def _rasterize_aoi_regions(source_aoi_vector_path, habitat_mask_raster,
     # If we've reached this point, then the user provided a name field and we
     # need to rasterize the sets of non-overlapping polygons.
     # If 2 features have the same name, they should have the same ID.
-    # TODO: if 2 features have the same name, they should have the same Id.
-    # should they, though?  If they have overlapping area, then we need to be
-    # able to handle that too.
     for set_index, disjoint_fid_set in enumerate(
             pygeoprocessing.calculate_disjoint_polygon_set(
                 source_aoi_vector_path)):
@@ -1729,7 +1719,6 @@ def _mask_binary_presence_absence_rasters(
         _TARGET_GDAL_TYPE_BYTE, _TARGET_NODATA_BYTE)
 
 
-# TODO: figure out if we really need this shared function.
 def _open_table_as_dataframe(table_path, **kwargs):
     extension = os.path.splitext(table_path)[1].lower()
     # Technically, pandas.read_excel can handle xls, xlsx, xlsm, xlsb, odf, ods
