@@ -8,7 +8,6 @@ import math
 import os
 import re
 import shutil
-import tempfile
 
 import numpy
 import pandas
@@ -1149,11 +1148,13 @@ def _create_summary_statistics_file(
                     # per-category count.
                     classes_block = _read_block(classes_raster, block_info,
                                                 subregion_mask)
-                    stats['R_N_HIGH'] += numpy.count_nonzero(classes_block == 3)
-                    stats['R_N_MEDIUM'] += numpy.count_nonzero(classes_block == 2)
+                    stats['R_N_HIGH'] += numpy.count_nonzero(
+                        classes_block == 3)
+                    stats['R_N_MEDIUM'] += numpy.count_nonzero(
+                        classes_block == 2)
 
-                    # Old HRA included 0-value pixels in  the R_%_LOW bucket so we
-                    # do here as well.
+                    # Old HRA included 0-value pixels in  the R_%_LOW bucket so
+                    # we do here as well.
                     stats['R_N_LOW'] += numpy.count_nonzero(classes_block <= 1)
                     stats['R_N_ANY'] += classes_block.size
                     subregion_stats[subregion_id] = stats
