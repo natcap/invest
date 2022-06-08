@@ -333,10 +333,25 @@ describe('Sidebar Buttons', () => {
       filePaths: ['foo.json']
     };
     ipcRenderer.invoke.mockResolvedValue(mockDialogData);
-    const { findByText, findByLabelText } = renderInvestTab();
 
+    // Render with a completed model run so we can navigate to Log Tab
+    // and assert that Loading new params toggles back to Setup Tab
+    const job = new InvestJob({
+      modelRunName: 'carbon',
+      modelHumanName: 'Carbon Model',
+      status: 'success',
+      argsValues: {},
+      logfile: 'foo.txt',
+      finalTraceback: '',
+    });
+    const { findByText, findByLabelText, findByRole } = renderInvestTab(job);
+
+    userEvent.click(await findByRole('tab', { name: 'Log' }));
     const loadButton = await findByText('Load parameters from file');
     userEvent.click(loadButton);
+
+    const setupTab = await findByRole('tab', { name: 'Setup' });
+    expect(setupTab.classList.contains('active')).toBeTruthy();
 
     const input1 = await findByLabelText(spec.args.workspace.name);
     expect(input1).toHaveValue(mockDatastack.args.workspace);

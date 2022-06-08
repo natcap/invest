@@ -17,7 +17,9 @@ from . import utils
 from . import spec_utils
 from .spec_utils import u
 from . import validation
-from . import MODEL_METADATA
+from .model_metadata import MODEL_METADATA
+from . import gettext
+
 
 LOGGER = logging.getLogger(__name__)
 
@@ -40,13 +42,13 @@ ARGS_SPEC = {
             "expression": "value > 0",
             "type": "number",
             "units": u.millimeter,
-            "about": _("Depth of rainfall for the design storm of interest."),
-            "name": _("rainfall depth")
+            "about": gettext("Depth of rainfall for the design storm of interest."),
+            "name": gettext("rainfall depth")
         },
         "lulc_path": {
             **spec_utils.LULC,
             "projected": True,
-            "about": _(
+            "about": gettext(
                 "Map of LULC. All values in this raster must have "
                 "corresponding entries in the Biophysical Table.")
         },
@@ -59,55 +61,55 @@ ARGS_SPEC = {
             "columns": {
                 "lucode": {
                     "type": "integer",
-                    "about": _("LULC codes matching those in the LULC map.")},
+                    "about": gettext("LULC codes matching those in the LULC map.")},
                 "cn_[SOIL_GROUP]": {
                     "type": "number",
                     "units": u.none,
-                    "about": _(
+                    "about": gettext(
                         "The curve number value for this LULC type in each "
                         "hydrologic soil group. Replace [SOIL_GROUP] with the "
                         "soil group codes A, B, C, D, so that there is a "
                         "column for each soil group.")
                 }
             },
-            "about": _(
+            "about": gettext(
                 "Table of curve number data for each LULC class. All LULC "
                 "codes in the LULC raster must have corresponding entries in "
                 "this table."),
-            "name": _("biophysical table")
+            "name": gettext("biophysical table")
         },
         "built_infrastructure_vector_path": {
             "type": "vector",
             "fields": {
                 "type": {
                     "type": "integer",
-                    "about": _(
+                    "about": gettext(
                         "Code indicating the building type. These codes "
                         "must match those in the Damage Loss Table."
                     )}},
             "geometries": spec_utils.POLYGONS,
             "required": False,
-            "about": _("Map of building footprints."),
-            "name": _("built infrastructure")
+            "about": gettext("Map of building footprints."),
+            "name": gettext("built infrastructure")
         },
         "infrastructure_damage_loss_table_path": {
             "type": "csv",
             "columns": {
                 "type": {
                     "type": "integer",
-                    "about": _("Building type code.")},
+                    "about": gettext("Building type code.")},
                 "damage": {
                     "type": "number",
                     "units": u.currency/(u.meter**2),
-                    "about": _("Potential damage loss for this building type.")}
+                    "about": gettext("Potential damage loss for this building type.")}
             },
             "required": "built_infrastructure_vector_path",
-            "about": _(
+            "about": gettext(
                 "Table of potential damage loss data for each building type. "
                 "All values in the Built Infrastructure vector 'type' field "
                 "must have corresponding entries in this table. Required if "
                 "the Built Infrastructure vector is provided."),
-            "name": _("damage loss table")
+            "name": gettext("damage loss table")
         }
     }
 }
@@ -155,7 +157,7 @@ def execute(args):
     """
     invalid_parameters = validate(args)
     if invalid_parameters:
-        raise ValueError("Invalid parameters passed: %s" % invalid_parameters)
+        raise ValueError(f"Invalid parameters passed: {invalid_parameters}")
 
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
 
@@ -177,10 +179,10 @@ def execute(args):
 
     # Align LULC with soils
     aligned_lulc_path = os.path.join(
-        temporary_working_dir, 'aligned_lulc%s.tif' % file_suffix)
+        temporary_working_dir, f'aligned_lulc{file_suffix}.tif')
     aligned_soils_path = os.path.join(
         temporary_working_dir,
-        'aligned_soils_hydrological_group%s.tif' % file_suffix)
+        f'aligned_soils_hydrological_group{file_suffix}.tif')
 
     lulc_raster_info = pygeoprocessing.get_raster_info(
         args['lulc_path'])
@@ -216,7 +218,7 @@ def execute(args):
     col_ind = []
     for lucode in cn_table:
         data.extend([
-            cn_table[lucode]['cn_%s' % soil_id]
+            cn_table[lucode][f'cn_{soil_id}']
             for soil_id in ['a', 'b', 'c', 'd']])
         row_ind.extend([int(lucode)] * 4)
     col_ind = [0, 1, 2, 3] * (len(row_ind) // 4)
@@ -227,7 +229,7 @@ def execute(args):
     soil_type_nodata = soil_raster_info['nodata'][0]
 
     cn_raster_path = os.path.join(
-        temporary_working_dir, 'cn_raster%s.tif' % file_suffix)
+        temporary_working_dir, f'cn_raster{file_suffix}.tif')
     align_raster_stack_task.join()
 
     cn_raster_task = task_graph.add_task(
@@ -244,7 +246,7 @@ def execute(args):
     # Generate S_max
     s_max_nodata = -9999
     s_max_raster_path = os.path.join(
-        temporary_working_dir, 's_max%s.tif' % file_suffix)
+        temporary_working_dir, f's_max{file_suffix}.tif')
     s_max_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=(
@@ -255,9 +257,9 @@ def execute(args):
         task_name='create S_max')
 
     # Generate Qpi
-    q_pi_nodata = -9999.
+    q_pi_nodata = -9999
     q_pi_raster_path = os.path.join(
-        args['workspace_dir'], 'Q_mm%s.tif' % file_suffix)
+        args['workspace_dir'], f'Q_mm{file_suffix}.tif')
     q_pi_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=(
@@ -269,9 +271,9 @@ def execute(args):
         task_name='create Q_mm.tif')
 
     # Generate Runoff Retention
-    runoff_retention_nodata = -9999.
+    runoff_retention_nodata = -9999
     runoff_retention_raster_path = os.path.join(
-        args['workspace_dir'], 'Runoff_retention%s.tif' % file_suffix)
+        args['workspace_dir'], f'Runoff_retention{file_suffix}.tif')
     runoff_retention_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=([
@@ -285,7 +287,7 @@ def execute(args):
 
     # calculate runoff retention volume
     runoff_retention_vol_raster_path = os.path.join(
-        args['workspace_dir'], 'Runoff_retention_m3%s.tif' % file_suffix)
+        args['workspace_dir'], f'Runoff_retention_m3{file_suffix}.tif')
     runoff_retention_vol_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=([
@@ -302,7 +304,7 @@ def execute(args):
 
     # calculate flood vol raster
     flood_vol_raster_path = os.path.join(
-        intermediate_dir, 'Q_m3%s.tif' % file_suffix)
+        intermediate_dir, f'Q_m3{file_suffix}.tif')
     flood_vol_nodata = -1
     flood_vol_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
@@ -396,7 +398,7 @@ def execute(args):
         summary_tasks.append(damage_to_infrastructure_in_aoi_task)
 
     summary_vector_path = os.path.join(
-        args['workspace_dir'], 'flood_risk_service%s.shp' % file_suffix)
+        args['workspace_dir'], f'flood_risk_service{file_suffix}.shp')
     _ = task_graph.add_task(
         func=_write_summary_vector,
         args=(reprojected_aoi_path,
@@ -473,14 +475,12 @@ def _write_summary_vector(
         target_vector_path, 0, 0, 0, gdal.GDT_Unknown)
     layer_name = os.path.splitext(os.path.basename(
         target_vector_path))[0]
-    LOGGER.debug("creating layer %s", layer_name)
+    LOGGER.debug(f"creating layer {layer_name}")
     target_watershed_layer = target_watershed_vector.CreateLayer(
         layer_name, source_srs, source_geom_type)
 
     target_fields = ['rnf_rt_idx', 'rnf_rt_m3', 'flood_vol']
-    if not damage_per_aoi_stats:
-        damage_per_aoi_stats = {}
-    else:
+    if damage_per_aoi_stats is not None:
         target_fields += ['aff_bld', 'serv_blt']
 
     for field_name in target_fields:
@@ -497,19 +497,17 @@ def _write_summary_vector(
         target_feature.SetGeometry(base_geom_ref.Clone())
         base_geom_ref = None
 
-        if feature_id in runoff_ret_stats:
-            pixel_count = runoff_ret_stats[feature_id]['count']
-            if pixel_count > 0:
-                mean_value = (
-                    runoff_ret_stats[feature_id]['sum'] / float(pixel_count))
-                target_feature.SetField('rnf_rt_idx', float(mean_value))
+        pixel_count = runoff_ret_stats[feature_id]['count']
+        if pixel_count > 0:
+            mean_value = (
+                runoff_ret_stats[feature_id]['sum'] / float(pixel_count))
+            target_feature.SetField('rnf_rt_idx', float(mean_value))
 
-        if feature_id in runoff_ret_vol_stats:
-            target_feature.SetField(
-                'rnf_rt_m3', float(
-                    runoff_ret_vol_stats[feature_id]['sum']))
+        target_feature.SetField(
+            'rnf_rt_m3', float(
+                runoff_ret_vol_stats[feature_id]['sum']))
 
-        if feature_id in damage_per_aoi_stats:
+        if damage_per_aoi_stats is not None:
             pixel_count = runoff_ret_vol_stats[feature_id]['count']
             if pixel_count > 0:
                 damage_sum = damage_per_aoi_stats[feature_id]
@@ -520,9 +518,8 @@ def _write_summary_vector(
                     'serv_blt', (
                         damage_sum * runoff_ret_vol_stats[feature_id]['sum']))
 
-        if feature_id in flood_volume_stats:
-            target_feature.SetField(
-                'flood_vol', float(flood_volume_stats[feature_id]['sum']))
+        target_feature.SetField(
+            'flood_vol', float(flood_volume_stats[feature_id]['sum']))
 
         target_watershed_layer.CreateFeature(target_feature)
     target_watershed_layer.SyncToDisk()
@@ -566,7 +563,7 @@ def _calculate_damage_to_infrastructure_in_aoi(
 
     if type_index == -1:
         raise ValueError(
-            "Could not find field 'Type' in %s" % structures_vector_path)
+            f"Could not find field 'Type' in {structures_vector_path}")
 
     structures_index = rtree.index.Index(interleaved=True)
     for infrastructure_feature in infrastructure_layer:
@@ -577,8 +574,8 @@ def _calculate_damage_to_infrastructure_in_aoi(
         # allows us to handle these in the model run itself.
         if not infrastructure_geometry:
             LOGGER.debug(
-                'Infrastructure feature %s has no geometry; skipping.',
-                infrastructure_feature.GetFID())
+                f'Infrastructure feature {infrastructure_feature.GetFID()} has '
+                'no geometry; skipping.')
             continue
 
         shapely_geometry = shapely.wkb.loads(
@@ -597,7 +594,7 @@ def _calculate_damage_to_infrastructure_in_aoi(
             bytes(aoi_geometry.ExportToWkb()))
         aoi_geometry_prep = shapely.prepared.prep(aoi_geometry_shapely)
 
-        total_damage = 0.0
+        total_damage = 0
         for infrastructure_fid in structures_index.intersection(
                 aoi_geometry_shapely.bounds):
             infrastructure_feature = infrastructure_layer.GetFeature(
@@ -677,7 +674,7 @@ def _runoff_retention_op(q_pi_array, p_value, q_pi_nodata, result_nodata):
         target_nodata (float): output nodata value.
 
     Returns:
-        1.0 - q_pi/p
+        1 - q_pi/p
 
     """
     result = numpy.empty_like(q_pi_array)
@@ -685,7 +682,7 @@ def _runoff_retention_op(q_pi_array, p_value, q_pi_nodata, result_nodata):
     valid_mask = numpy.ones(q_pi_array.shape, dtype=bool)
     if q_pi_nodata is not None:
         valid_mask[:] = ~utils.array_equals_nodata(q_pi_array, q_pi_nodata)
-    result[valid_mask] = 1.0 - (q_pi_array[valid_mask] / p_value)
+    result[valid_mask] = 1 - (q_pi_array[valid_mask] / p_value)
     return result
 
 
@@ -715,10 +712,10 @@ def _q_pi_op(p_value, s_max_array, s_max_nodata, result_nodata):
     # valid if not nodata and not going to be set to 0.
     valid_mask = non_nodata_mask & ~zero_mask
     result[valid_mask] = (
-        p_value - lam * s_max_array[valid_mask])**2.0 / (
+        p_value - lam * s_max_array[valid_mask])**2 / (
             p_value + (1 - lam) * s_max_array[valid_mask])
     # any non-nodata result that should be zero is set so.
-    result[zero_mask & non_nodata_mask] = 0.0
+    result[zero_mask & non_nodata_mask] = 0
     return result
 
 
@@ -740,8 +737,8 @@ def _s_max_op(cn_array, cn_nodata, result_nodata):
     valid_mask = ~zero_mask
     if cn_nodata is not None:
         valid_mask[:] &= ~utils.array_equals_nodata(cn_array, cn_nodata)
-    result[valid_mask] = 25400.0 / cn_array[valid_mask] - 254.0
-    result[zero_mask] = 0.0
+    result[valid_mask] = 25400 / cn_array[valid_mask] - 254
+    result[zero_mask] = 0
     return result
 
 
@@ -809,7 +806,7 @@ def _lu_to_cn_op(
     soil_choose_array = (
         soil_type_array[valid_mask].astype(numpy.int8))-1
 
-    # soil arrays are 1.0 - 4.0, remap to 0 - 3 and choose from the per
+    # soil arrays are 1 - 4, remap to 0 - 3 and choose from the per
     # pixel CN array
     try:
         result[valid_mask] = numpy.choose(

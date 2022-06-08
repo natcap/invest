@@ -12,12 +12,10 @@ import traceback
 import uuid
 import importlib
 
-from urllib.request import urlopen, Request
-from urllib.parse import urlencode
-
 from osgeo import osr
 import natcap.invest
 import pygeoprocessing
+import requests
 
 from . import utils
 
@@ -155,8 +153,8 @@ def _calculate_args_bounding_box(args, args_spec):
                 # All kinds of exceptions from bad transforms or CSV files
                 # or dbf files could get us to this point, just don't
                 # bother with the local_bb at all
-                LOGGER.exception('Error when transforming coordinates: %s',
-                                 transform_error)
+                LOGGER.exception(
+                    f'Error when transforming coordinates: {transform_error}')
         else:
             LOGGER.debug(f'Arg {key} of type {args_spec["args"][key]["type"]} '
                           'excluded from bounding box calculation')
@@ -177,24 +175,18 @@ def _log_exit_status(session_id, status):
     Returns:
         None
     """
-    logger = logging.getLogger('natcap.invest.ui.usage._log_exit_status')
+    logger = logging.getLogger('natcap.invest.usage._log_exit_status')
 
     try:
-        payload = {
+        log_finish_url = requests.get(_ENDPOINTS_INDEX_URL).json()['FINISH']
+        requests.post(log_finish_url, data={
             'session_id': session_id,
             'status': status,
-        }
-        log_finish_url = json.loads(urlopen(
-            _ENDPOINTS_INDEX_URL).read().strip())['FINISH']
-
-        # The data must be a python string of bytes. This will be ``bytes``
-        # in python3.
-        urlopen(Request(log_finish_url, urlencode(payload).encode('utf-8')))
+        })
     except Exception as exception:
         # An exception was thrown, we don't care.
         logger.warning(
-            'an exception encountered when _log_exit_status %s',
-            str(exception))
+            f'an exception encountered in _log_exit_status: {str(exception)}')
 
 
 def _log_model(pyname, model_args, invest_interface, session_id=None):
@@ -209,7 +201,7 @@ def _log_model(pyname, model_args, invest_interface, session_id=None):
     Returns:
         None
     """
-    logger = logging.getLogger('natcap.invest.ui.usage._log_model')
+    logger = logging.getLogger('natcap.invest.usage._log_model')
 
     def _node_hash():
         """Return a hash for the current computational node."""
@@ -229,8 +221,8 @@ def _log_model(pyname, model_args, invest_interface, session_id=None):
     try:
         bounding_box_intersection, bounding_box_union = (
             _calculate_args_bounding_box(model_args, args_spec))
-
-        payload = {
+        log_start_url = requests.get(_ENDPOINTS_INDEX_URL).json()['START']
+        requests.post(log_start_url, data={
             'model_name': pyname,
             'invest_release': natcap.invest.__version__,
             'invest_interface': invest_interface,
@@ -241,14 +233,8 @@ def _log_model(pyname, model_args, invest_interface, session_id=None):
             'bounding_box_intersection': str(bounding_box_intersection),
             'bounding_box_union': str(bounding_box_union),
             'session_id': session_id,
-        }
-        log_start_url = json.loads(urlopen(
-            _ENDPOINTS_INDEX_URL).read().strip())['START']
-
-        # The data must be a python string of bytes. This will be ``bytes``
-        # in python3.
-        urlopen(Request(log_start_url, urlencode(payload).encode('utf-8')))
+        })
     except Exception as exception:
         # An exception was thrown, we don't care.
         logger.warning(
-            'an exception encountered when logging %s', repr(exception))
+            f'an exception encountered when logging: {repr(exception)}')

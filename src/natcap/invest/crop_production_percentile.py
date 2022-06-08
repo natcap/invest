@@ -15,7 +15,8 @@ from . import utils
 from . import spec_utils
 from .spec_utils import u
 from . import validation
-from . import MODEL_METADATA
+from .model_metadata import MODEL_METADATA
+from . import gettext
 
 
 LOGGER = logging.getLogger(__name__)
@@ -92,11 +93,11 @@ ARGS_SPEC = {
                     }
                 }
             },
-            "about": _(
+            "about": gettext(
                 "A table that maps each LULC code from the LULC map to one of "
                 "the 175 canonical crop names representing the crop grown in "
                 "that LULC class."),
-            "name": _("LULC to Crop Table")
+            "name": gettext("LULC to Crop Table")
         },
         "aggregate_polygon_path": {
             **spec_utils.AOI,
@@ -108,7 +109,7 @@ ARGS_SPEC = {
             "contents": {
                 "climate_percentile_yield_tables": {
                     "type": "directory",
-                    "about": _(
+                    "about": gettext(
                         "Table mapping each climate bin to yield percentiles "
                         "for each crop."),
                     "contents": {
@@ -138,7 +139,7 @@ ARGS_SPEC = {
                 },
                 "extended_climate_bin_maps": {
                     "type": "directory",
-                    "about": _("Maps of climate bins for each crop."),
+                    "about": gettext("Maps of climate bins for each crop."),
                     "contents": {
                         "extendedclimatebins[CROP]": {
                             "type": "raster",
@@ -148,7 +149,7 @@ ARGS_SPEC = {
                 },
                 "observed_yield": {
                     "type": "directory",
-                    "about": _("Maps of actual observed yield for each crop."),
+                    "about": gettext("Maps of actual observed yield for each crop."),
                     "contents": {
                         "[CROP]_observed_yield.tif": {
                             "type": "raster",
@@ -203,8 +204,8 @@ ARGS_SPEC = {
                     }
                 }
             },
-            "about": _("Path to the InVEST Crop Production Data directory."),
-            "name": _("model data directory")
+            "about": gettext("Path to the InVEST Crop Production Data directory."),
+            "name": gettext("model data directory")
         }
     }
 }

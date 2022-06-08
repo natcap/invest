@@ -13,7 +13,7 @@ document.querySelectorAll('a').forEach(
     element.addEventListener('click', handleClick);
   }
 );
-const node = document.getElementById('invest-version');
+const node = document.getElementById('version-string');
 const investVersion = await getInvestVersion();
 const text = document.createTextNode(investVersion);
 node.appendChild(text);

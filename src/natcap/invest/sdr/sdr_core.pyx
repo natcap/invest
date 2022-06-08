@@ -543,7 +543,7 @@ def calculate_sediment_deposition(
                             # get the proportion of the neighbor's flow that
                             # flows into the original pixel
                             p_val = neighbor_flow_weight / neighbor_flow_sum
-                            # add the neighbor's flux value, weighted by the 
+                            # add the neighbor's flux value, weighted by the
                             # flow proportion
                             f_j_weighted_sum += p_val * f_j
 
@@ -643,6 +643,16 @@ def calculate_sediment_deposition(
                     dr_i = (downslope_sdr_weighted_sum - sdr_i) / (1 - sdr_i)
                     r_i = dr_i * (e_prime_i + f_j_weighted_sum)
                     f_i = (1 - dr_i) * (e_prime_i + f_j_weighted_sum)
+
+                    # On large flow paths, it's possible for r_i and f_i to
+                    # have very small negative values that are numerically
+                    # equivalent to 0. These negative values were raising
+                    # questions on the forums and it's easier to clamp the
+                    # values here than to explain IEEE 754.
+                    if r_i < 0:
+                        r_i = 0
+                    if f_i < 0:
+                        f_i = 0
 
                     sediment_deposition_raster.set(global_col, global_row, r_i)
                     f_raster.set(global_col, global_row, f_i)

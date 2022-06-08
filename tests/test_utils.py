@@ -987,6 +987,29 @@ class ReadCSVToDataframeTests(unittest.TestCase):
         self.assertEqual(df.columns[0], '1')
         self.assertEqual(df['1'][0], 'a')
 
+    def test_removal_whitespace(self):
+        """utils: test that leading/trailing whitespace is removed."""
+        from natcap.invest import utils
+
+        csv_file = os.path.join(self.workspace_dir, 'csv.csv')
+
+        with open(csv_file, 'w') as file_obj:
+            file_obj.write(" Col1, Col2 ,Col3 \n")
+            file_obj.write(" val1, val2 ,val3 \n")
+            file_obj.write(" , 2 1 ,  ")
+        df = utils.read_csv_to_dataframe(csv_file)
+        # header should have no leading / trailing whitespace
+        self.assertEqual(df.columns[0], 'Col1')
+        self.assertEqual(df.columns[1], 'Col2')
+        self.assertEqual(df.columns[2], 'Col3')
+        # values should have no leading / trailing whitespace
+        self.assertEqual(df['Col1'][0], 'val1')
+        self.assertEqual(df['Col2'][0], 'val2')
+        self.assertEqual(df['Col3'][0], 'val3')
+        self.assertEqual(df['Col1'][1], '')
+        self.assertEqual(df['Col2'][1], '2 1')
+        self.assertEqual(df['Col3'][1], '')
+
 
 class CreateCoordinateTransformationTests(unittest.TestCase):
     """Tests for natcap.invest.utils.create_coordinate_transformer."""

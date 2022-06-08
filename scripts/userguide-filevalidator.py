@@ -16,7 +16,7 @@ def main(userguide_dir):
     Raises:
         OSError if any models reference files that do not exist.
     """
-    from natcap.invest import MODEL_METADATA
+    from natcap.invest.model_metadata import MODEL_METADATA
 
     missing_files = []
     userguide_dir_source = os.path.join(userguide_dir, 'source')

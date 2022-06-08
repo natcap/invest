@@ -1,4 +1,3 @@
-import os from 'os';
 import React from 'react';
 import PropTypes from 'prop-types';
 
@@ -35,7 +34,7 @@ function filterSpatialOverlapFeedback(message, filepath) {
   const bboxFormatted = bbox.split(' ').map(
     (str) => str.padEnd(22, ' ')
   ).join('').trim();
-  return `${newPrefix}${os.EOL}${bboxFormatted}`;
+  return `${newPrefix}\n${bboxFormatted}`;
 }
 
 function FormLabel(props) {

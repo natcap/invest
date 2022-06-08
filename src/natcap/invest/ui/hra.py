@@ -1,6 +1,6 @@
 # coding=UTF-8
 from natcap.invest import hra
-from natcap.invest import MODEL_METADATA
+from natcap.invest.model_metadata import MODEL_METADATA
 from natcap.invest.ui import inputs
 from natcap.invest.ui import model
 

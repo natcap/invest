@@ -2,25 +2,35 @@
 	font-size: 16px;
 }
 
+
+/*
+--header-height: fixed height applied to the top navbar.
+--content-height: height of the remaining viewport.
+  Apply this height to any container that should fill the
+  available window height and also have a scrollbar appear
+  when the content overflows. I could never get a scrollbar
+  to appear with height: 100%, even when parent has a fixed height;
+*/
 body {
 	--invest-green: #148F68;
+	--header-height: 64px;
+	--content-height: calc(100vh - var(--header-height));
+	min-height: 100vh;
 	background-color: rgba(0,0,0,0);
 	margin: 0;
-	padding: 1rem;
 	overflow-y: hidden;
 }
 
 /*Top Navigation*/
 
 .navbar {
-	height: 3rem;
+	border-bottom: 3px solid var(--invest-green);
+	padding: 0;
+	height: var(--header-height)
 }
 
 .navbar .row {
 	align-items: end;
-	padding-bottom: 0;
-	border-bottom: 3px solid var(--invest-green);
-	background-color: #fff
 }
 
 .navbar-brand {
@@ -35,11 +45,16 @@ body {
 .navbar-middle {
 	flex-shrink: 1;
 	min-width: 0;
+	padding-left: 0;
+	padding-right: 0;
 }
 
 .navbar-right {
 	max-width: fit-content;
 	margin-left: 0.5rem;
+	margin-right: -15px;
+	padding-left: 0;
+	padding-right: 0;
 }
 
 .navbar-brand .nav-link {
@@ -48,6 +63,14 @@ body {
 	font-size: 2.0rem;
 	letter-spacing: 1px;
 	padding-bottom: 0;
+	padding-left: 0.7rem;
+	display: flex;
+	align-items: center;
+}
+
+/*tricky to align icon with text*/
+.navbar-brand .nav-link svg {
+	margin-bottom: -0.2rem;
 }
 
 .navbar-nav.nav-tabs {
@@ -142,14 +165,17 @@ body {
 	margin-right: 0.2rem;
 }
 
-.tab-content {
-	padding-top:  10px;
+/* add padding to accomodate the width of a scroll bar
+otherwise the bar will make overall width of content
+exceed 100% of window.*/
+#home-tab-content {
+	padding-right:  16px;
 }
 
 /* Home Tab */
 
 .invest-list-container {
-	height: 87vh;
+	height: var(--content-height);
 	overflow-y: auto;
 }
 
@@ -187,21 +213,41 @@ body {
 	font-weight: 600;
 }
 
+.open-button-col {
+	max-width: fit-content;
+	padding-right: 0;
+}
+
+.recent-header-col {
+	padding-left: 0;
+}
+
+.recent-header-col .default-text {
+	padding-left: 0;
+	text-align: right;
+}
+
 .recent-job-card-col {
-	display: flex;
-	flex-wrap: nowrap;
-	flex-direction: column;
-	height: 87vh;
+	height: var(--content-height);
 	overflow-y: auto;
-	margin-top: 15px;
+	padding-right: 0.5rem;
+}
+
+.recent-job-card-col .container {
+	padding-top: 0.25rem;
+	padding-bottom: 0.25rem;
+	padding-right: 0.5rem;
+}
+
+.recent-job-card-col .container .row {
+	align-items: center;
 }
 
 .recent-job-card {
-	flex: 1 0 auto!important;
-	flex-direction: row;
 	width: inherit; 
-	margin-bottom: 15px!important;
+	margin-bottom: 1rem;
 	padding: 0;
+	height: fit-content;
 }
 
 .card-body {
@@ -261,7 +307,7 @@ body {
 	 /* main col can grow & shrink, sidebar cannot. */
 	flex:  1 1 0;
 	padding-left: 0;
-	height: 85vh;
+	padding-right: 0;
 }
 
 .invest-main-col .tab-content {
@@ -276,21 +322,33 @@ body {
 	display: flex;
 	flex-direction: column;
 	padding-right: 0;
+	padding-bottom: 1rem;
 }
 
 .invest-sidebar-col .nav-link {
 	color: #000;
-	background-color: #fff;
+	border-right: 5px solid transparent;
+	border-radius: 0;
 	font-size: 1.3rem;
 	font-weight: 550;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding-right: 0;
+}
+
+.invest-sidebar-col .nav-link svg {
+	font-size: 2rem;
 }
 
 .invest-sidebar-col .nav-link:hover, .invest-sidebar-col .nav-link:focus {
-	background-color: ghostwhite;
+	background-color: rgb(240, 240, 240);
+	border-right: 5px solid rgb(240, 240, 240);
+	border-radius: 0;
 }
 
 .invest-sidebar-col .nav-link.disabled {
-	color: #6c757d;
+	color: #888888;
 }
 
 .invest-sidebar-col .nav-link.active {
@@ -300,33 +358,39 @@ body {
 	border-radius: 0;
 }
 
-.sidebar-setup {
+.sidebar-row {
+	display: flex;
+	flex-direction: column;
+	font-size: 1rem;
+	padding-left: 1rem;
+	padding-right: 1rem;
+}
+
+.sidebar-buttons {
 	display: flex;
 	flex-direction: column;
 	flex-wrap: nowrap;
 	align-items: flex-start;
-	padding-left: 1.5rem;
 }
 
-.sidebar-setup .btn {
+.sidebar-buttons .btn {
 	white-space: nowrap;
+	background: none;
+	border: none;
+	color: black;
+	padding-left: 0;
 }
 
-/* Resources Links */
-.sidebar-row {
-	display: flex;
-	flex-direction: column;
-	font-size: 1.0rem;
-	padding-left: inherit;
-	padding-right: 1rem;
-}
-
-.sidebar-row .alert {
+.sidebar-buttons .alert {
 	margin-top: 1rem;
 }
 
+.sidebar-links a {
+	padding-top: 0.5rem;
+}
+
 .sidebar-footer {
-    margin-top: auto;
+  margin-top: auto;
 }
 
 /* Model Status Alert */
@@ -361,7 +425,7 @@ body {
 
 /* InVEST Setup Tab */
 .args-form {
-	height: 85vh;
+	height: var(--content-height);
 	width: 100%;
 	overflow-y: auto;
 	overflow-x: hidden;
@@ -455,14 +519,15 @@ input[type=text]::placeholder {
 #log-display {
 	overflow: auto;
 	white-space: pre-wrap;
-	height: 85vh;
-	/*background-color: #191919;*/
+	height: var(--content-height);
 }
 
 #log-text {
 	font-family: monospace;
-	font-size:1.0rem;
+	font-size:1rem;
 	color: #000;
+	margin-top: 1rem;
+	margin-bottom: 1rem;
 }
 
 #log-text .invest-log-primary {

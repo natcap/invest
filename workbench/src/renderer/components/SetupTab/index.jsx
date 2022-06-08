@@ -278,6 +278,7 @@ export default class SetupTab extends React.Component {
 
     if (datastack.module_name === this.props.pyModuleName) {
       this.batchUpdateArgs(datastack.args);
+      this.props.switchTabs('setup');
     } else {
       alert( // eslint-disable-line no-alert
         _(`Datastack/Logfile for ${datastack.model_human_name} does not match this model.`)
@@ -568,4 +569,5 @@ SetupTab.propTypes = {
   sidebarSetupElementId: PropTypes.string.isRequired,
   sidebarFooterElementId: PropTypes.string.isRequired,
   executeClicked: PropTypes.bool.isRequired,
+  switchTabs: PropTypes.func.isRequired,
 };

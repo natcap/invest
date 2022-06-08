@@ -168,12 +168,14 @@ class EndpointFunctionTests(unittest.TestCase):
         # test_datastack.py asserts the actual archiving functionality
         self.assertTrue(os.path.exists(target_filepath))
 
-    @patch('natcap.invest.ui_server.usage.urlopen')
-    def test_log_model_start(self, mock_urlopen):
+    @patch('natcap.invest.ui_server.usage.requests.post')
+    @patch('natcap.invest.ui_server.usage.requests.get')
+    def test_log_model_start(self, mock_get, mock_post):
         """UI server: log_model_start endpoint."""
         mock_response = Mock()
-        mock_response.read.return_value = '{"START": "http://foo.org/bar.html"}'
-        mock_urlopen.return_value = mock_response
+        mock_url = 'http://foo.org/bar.html'
+        mock_response.json.return_value = {'START': mock_url}
+        mock_get.return_value = mock_response
         test_client = ui_server.app.test_client()
         payload = {
             'model_pyname': 'natcap.invest.carbon',
@@ -186,13 +188,27 @@ class EndpointFunctionTests(unittest.TestCase):
         response = test_client.post(
             f'{ROUTE_PREFIX}/log_model_start', json=payload)
         self.assertEqual(response.get_data(as_text=True), 'OK')
+        mock_get.assert_called_once()
+        mock_post.assert_called_once()
+        self.assertEqual(mock_post.call_args.args[0], mock_url)
+        self.assertEqual(
+            mock_post.call_args.kwargs['data']['model_name'],
+            payload['model_pyname'])
+        self.assertEqual(
+            mock_post.call_args.kwargs['data']['invest_interface'],
+            payload['invest_interface'])
+        self.assertEqual(
+            mock_post.call_args.kwargs['data']['session_id'],
+            payload['session_id'])
 
-    @patch('natcap.invest.ui_server.usage.urlopen')
-    def test_log_model_exit(self, mock_urlopen):
+    @patch('natcap.invest.ui_server.usage.requests.post')
+    @patch('natcap.invest.ui_server.usage.requests.get')
+    def test_log_model_exit(self, mock_get, mock_post):
         """UI server: log_model_start endpoint."""
         mock_response = Mock()
-        mock_response.read.return_value = '{"FINISH": "http://foo.org/bar.html"}'
-        mock_urlopen.return_value = mock_response
+        mock_url = 'http://foo.org/bar.html'
+        mock_response.json.return_value = {'FINISH': mock_url}
+        mock_get.return_value = mock_response
         test_client = ui_server.app.test_client()
         payload = {
             'session_id': '12345',
@@ -201,3 +217,7 @@ class EndpointFunctionTests(unittest.TestCase):
         response = test_client.post(
             f'{ROUTE_PREFIX}/log_model_exit', json=payload)
         self.assertEqual(response.get_data(as_text=True), 'OK')
+        mock_get.assert_called_once()
+        mock_post.assert_called_once()
+        self.assertEqual(mock_post.call_args.args[0], mock_url)
+        self.assertEqual(mock_post.call_args.kwargs['data'], payload)
