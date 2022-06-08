@@ -254,7 +254,9 @@ class HRAUnitTests(unittest.TestCase):
         self.assertEqual(stressors, {'oil', 'fishing'})
 
         # We expect the backslash to have been converted to a forward slash.
-        eelgrass_path = f'{self.workspace_dir}/foo/eelgrass_connectivity.shp'
+        eelgrass_path = (
+            f'{self.workspace_dir}/foo/eelgrass_connectivity.shp'.replace(
+                '\\', '/'))
         expected_composite_dataframe = pandas.read_csv(
             io.StringIO(textwrap.dedent(
                 f"""\
@@ -1001,15 +1003,20 @@ class HRAModelTests(unittest.TestCase):
             new_csv_path, os.path.join(data_dir, 'criteria_table_path.csv'))
         output_criteria_data_dir = os.path.join(
             data_dir, 'criteria_table_path_data')
+        self.maxDiff = None
+
+        def _rewrite(path):
+            return path.replace('\\', '/')
+
         self.assertEqual(
             known_files, {
-                eelgrass_path: os.path.join(
+                eelgrass_path: _rewrite(os.path.join(
                     output_criteria_data_dir, 'eelgrass_connectivity',
-                    'eelgrass_connectivity.shp'),
-                mgmt_path_1: os.path.join(
-                    output_criteria_data_dir, 'mgmt1', 'mgmt1.tif'),
-                mgmt_path_2: os.path.join(
-                    output_criteria_data_dir, 'mgmt2', 'mgmt2.tif'),
+                    'eelgrass_connectivity.shp')),
+                mgmt_path_1: _rewrite(os.path.join(
+                    output_criteria_data_dir, 'mgmt1', 'mgmt1.tif')),
+                mgmt_path_2: _rewrite(os.path.join(
+                    output_criteria_data_dir, 'mgmt2', 'mgmt2.tif')),
             }
         )
         for copied_filepath in known_files.values():
