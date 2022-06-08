@@ -2387,7 +2387,7 @@ def _override_datastack_archive_criteria_table_path(
                 new_path = datastack._copy_spatial_files(
                     value, dir_for_this_spatial_data)
                 criteria_table_array[row, col] = new_path
-                known_files[value] = new_path
+                known_files[value] = new_path.replace('\\', '/')
 
     target_output_path = os.path.join(data_dir, f'{args_key}.csv')
     numpy.savetxt(target_output_path, criteria_table_array, delimiter=',',

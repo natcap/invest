@@ -1010,12 +1010,12 @@ class HRAModelTests(unittest.TestCase):
 
         self.assertEqual(
             known_files, {
-                eelgrass_path: _rewrite(os.path.join(
+                _rewrite(eelgrass_path): _rewrite(os.path.join(
                     output_criteria_data_dir, 'eelgrass_connectivity',
                     'eelgrass_connectivity.shp')),
-                mgmt_path_1: _rewrite(os.path.join(
+                _rewrite(mgmt_path_1): _rewrite(os.path.join(
                     output_criteria_data_dir, 'mgmt1', 'mgmt1.tif')),
-                mgmt_path_2: _rewrite(os.path.join(
+                _rewrite(mgmt_path_2): _rewrite(os.path.join(
                     output_criteria_data_dir, 'mgmt2', 'mgmt2.tif')),
             }
         )
