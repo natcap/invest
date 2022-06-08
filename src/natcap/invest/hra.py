@@ -1788,8 +1788,29 @@ def _parse_info_table(info_table_path):
     return (habitats, stressors)
 
 
-# TODO: validate spatial criteria can be opened by GDAL.
 def _parse_criteria_table(criteria_table_path, target_composite_csv_path):
+    """Parse the criteria table.
+
+    The criteria table is a single table that's really representing a
+    multidimensional dataset, where each combination of habitat, stressor and
+    criterion has a RATING, DQ (data quality) and WEIGHT.  Criteria are further
+    divided into Exposure and Consequence categories.  Habitat Resilience
+    consequence criteria are also defined in a similar structure and are also
+    included in this table.
+
+    Args:
+        criteria_table_path (string): The path to a CSV, XLS or XLSX file on
+            disk.
+        target_composite_csv_path (string): The path to where a new CSV should
+            be written containing similar information but in a more easily
+            parseable (for a program) format.
+
+    Returns:
+        ``None``, but the table written out to ``target_composite_csv_path`` is
+        a table with fields for habitat, stressor, criterion name, rating, dq
+        and weight, where the primary key is (habitat, stressor, criterion
+        name).
+    """
     # This function requires that the table is read as a numpy array, so it's
     # easiest to read the table directly.
     extension = os.path.splitext(criteria_table_path)[1].lower()
