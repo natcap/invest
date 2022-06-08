@@ -32,6 +32,7 @@ class HRAUnitTests(unittest.TestCase):
         shutil.rmtree(self.workspace_dir)
 
     def test_calc_criteria(self):
+        """HRA: test criteria calculations are correct."""
         from natcap.invest import hra
 
         habitat_mask = numpy.array([
@@ -64,7 +65,7 @@ class HRAUnitTests(unittest.TestCase):
         ]
         target_exposure_path = os.path.join(self.workspace_dir, 'exposure.tif')
         hra._calc_criteria(attributes_list, habitat_mask_path,
-                            target_exposure_path, decayed_distance_raster_path)
+                           target_exposure_path, decayed_distance_raster_path)
 
         exposure_array = pygeoprocessing.raster_to_numpy_array(
             target_exposure_path)
@@ -77,6 +78,7 @@ class HRAUnitTests(unittest.TestCase):
             exposure_array, expected_exposure_array)
 
     def test_decayed_distance_linear(self):
+        """HRA: linear decay over a distance."""
         from natcap.invest import hra
 
         stressor_mask = numpy.array([
@@ -99,6 +101,7 @@ class HRAUnitTests(unittest.TestCase):
             pygeoprocessing.raster_to_numpy_array(decayed_edt_path))
 
     def test_decayed_distance_exponential(self):
+        """HRA: exponential decay over a distance."""
         from natcap.invest import hra
 
         stressor_mask = numpy.array([
@@ -125,6 +128,7 @@ class HRAUnitTests(unittest.TestCase):
             pygeoprocessing.raster_to_numpy_array(decayed_edt_path))
 
     def test_decayed_distance_no_decay(self):
+        """HRA: weight with no decay out to a distance."""
         from natcap.invest import hra
 
         stressor_mask = numpy.array([
@@ -150,6 +154,7 @@ class HRAUnitTests(unittest.TestCase):
             pygeoprocessing.raster_to_numpy_array(decayed_edt_path))
 
     def test_info_table_parsing(self):
+        """HRA: check info table parsing."""
         from natcap.invest import hra
 
         info_table_path = os.path.join(self.workspace_dir, 'info_table.csv')
@@ -191,6 +196,7 @@ class HRAUnitTests(unittest.TestCase):
         self.assertEqual(stressors, expected_stressors)
 
     def test_info_table_overlapping_habs_stressors(self):
+        """HRA: error when info table has overlapping habitats, stressors."""
         from natcap.invest import hra
 
         info_table_path = os.path.join(self.workspace_dir, 'info_table.csv')
@@ -217,6 +223,7 @@ class HRAUnitTests(unittest.TestCase):
                       str(cm.exception))
 
     def test_criteria_table_parsing(self):
+        """HRA: check parsing of the criteria table."""
         from natcap.invest import hra
 
         criteria_table_path = os.path.join(self.workspace_dir, 'criteria.csv')
@@ -270,6 +277,7 @@ class HRAUnitTests(unittest.TestCase):
             expected_composite_dataframe, composite_dataframe)
 
     def test_maximum_reclassified_score(self):
+        """HRA: check maximum reclassed score given a stack of scores."""
         from natcap.invest import hra
 
         nodata = hra._TARGET_NODATA_BYTE
@@ -292,6 +300,7 @@ class HRAUnitTests(unittest.TestCase):
             reclassified_score, expected_risk_classes)
 
     def test_simplify(self):
+        """HRA: check geometry simplification routine."""
         from natcap.invest import hra
 
         geoms = [
@@ -320,6 +329,7 @@ class HRAUnitTests(unittest.TestCase):
             self.assertAlmostEqual(expected_area, feature_geom.Area())
 
     def test_polygonize(self):
+        """HRA: test polygonization."""
         from natcap.invest import hra
 
         source_raster_path = os.path.join(self.workspace_dir, 'source.tif')
@@ -365,6 +375,7 @@ class HRAUnitTests(unittest.TestCase):
             vector = None
 
     def test_polygonize_mask(self):
+        """HRA: test the polygonization mask."""
         from natcap.invest import hra
 
         source_raster_path = os.path.join(self.workspace_dir, 'source.tif')
@@ -387,11 +398,8 @@ class HRAUnitTests(unittest.TestCase):
             (source_array != nodata).astype(numpy.uint8)
         )
 
-    def test_summary_statistics_file(self):
-        # TODO: test this in the model test?
-        pass
-
     def test_rasterize_aoi_regions(self):
+        """HRA: test rasterization of AOI regions."""
         from natcap.invest import hra
 
         habitat_mask_path = os.path.join(
@@ -462,6 +470,7 @@ class HRAUnitTests(unittest.TestCase):
         )
 
     def test_create_raster_from_bounding_box(self):
+        """HRA: test creation of a raster from a bbox."""
         from natcap.invest import hra
 
         # [minx, miny, maxx, maxy]
@@ -494,33 +503,8 @@ class HRAUnitTests(unittest.TestCase):
             band = None
             raster = None
 
-    def test_prep_input_criterion_raster(self):
-        from natcap.invest import hra
-
-        nodata = -1
-        source_matrix = numpy.array([
-            [nodata, -2, 1.3],
-            [2.2, 2, 1]], dtype=numpy.float32)
-        source_filepath = os.path.join(self.workspace_dir, 'source.tif')
-
-        pygeoprocessing.numpy_array_to_raster(
-            source_matrix, nodata, (30, -30), ORIGIN, SRS_WKT, source_filepath)
-
-        target_filepath = os.path.join(self.workspace_dir, 'target.tif')
-        hra._prep_input_criterion_raster(
-            source_filepath, target_filepath)
-
-        converted_array = pygeoprocessing.raster_to_numpy_array(
-            target_filepath)
-        expected_array = numpy.array([
-            [hra._TARGET_NODATA_FLOAT32, hra._TARGET_NODATA_FLOAT32, 1.3],
-            [2.2, 2, 1]], dtype=numpy.float32)
-        numpy.testing.assert_allclose(converted_array, expected_array)
-        self.assertEqual(
-            pygeoprocessing.get_raster_info(target_filepath)['nodata'][0],
-            hra._TARGET_NODATA_FLOAT32)
-
     def test_align(self):
+        """HRA: test alignment function."""
         from natcap.invest import hra
 
         habitat_raster_path = os.path.join(
@@ -643,6 +627,7 @@ class HRAUnitTests(unittest.TestCase):
             aligned_criterion_array, expected_criterion_array)
 
     def test_prep_criterion_raster(self):
+        """HRA: Test processing of user inputs for consistency."""
         from natcap.invest import hra
 
         # Test what happens when the raster has a defined nodata value.
@@ -681,6 +666,7 @@ class HRAUnitTests(unittest.TestCase):
             expected_array)
 
     def test_mask_binary_values(self):
+        """HRA: test masking of presence/absence."""
         from natcap.invest import hra
 
         mask_array_1 = numpy.array([
@@ -711,6 +697,7 @@ class HRAUnitTests(unittest.TestCase):
             expected_mask_array)
 
     def test_table_format_loading(self):
+        """HRA: check that we can open various table formats."""
         from natcap.invest import hra
 
         # No matter the supported file format, make sure we have consistent
@@ -732,6 +719,7 @@ class HRAUnitTests(unittest.TestCase):
             pandas.testing.assert_frame_equal(expected_df, opened_df)
 
     def test_pairwise_risk(self):
+        """HRA: check pairwise risk calculations."""
         from natcap.invest import hra
 
         byte_nodata = hra._TARGET_NODATA_BYTE
@@ -791,6 +779,7 @@ class HRAUnitTests(unittest.TestCase):
         self.assertIn('Invalid risk equation', str(cm.exception))
 
     def test_sum_rasters(self):
+        """HRA: check summing of rasters."""
         from natcap.invest import hra
 
         nodata = -1
@@ -838,6 +827,7 @@ class HRAModelTests(unittest.TestCase):
         shutil.rmtree(self.workspace_dir)
 
     def test_model(self):
+        """HRA: end-to-end test of the model, including datastack."""
         from natcap.invest import datastack
         from natcap.invest import hra
 
@@ -1033,6 +1023,7 @@ class HRAModelTests(unittest.TestCase):
                 spatial_file = None
 
     def test_model_habitat_mismatch(self):
+        """HRA: check errors when habitats are mismatched."""
         from natcap.invest import hra
 
         criteria_table_path = os.path.join(self.workspace_dir, 'criteria.csv')
@@ -1090,6 +1081,7 @@ class HRAModelTests(unittest.TestCase):
                       str(cm.exception))
 
     def test_model_stressor_mismatch(self):
+        """HRA: check stressor mismatch."""
         from natcap.invest import hra
 
         criteria_table_path = os.path.join(self.workspace_dir, 'criteria.csv')
