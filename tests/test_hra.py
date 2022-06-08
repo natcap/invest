@@ -190,6 +190,32 @@ class HRAUnitTests(unittest.TestCase):
         }
         self.assertEqual(stressors, expected_stressors)
 
+    def test_info_table_overlapping_habs_stressors(self):
+        from natcap.invest import hra
+
+        info_table_path = os.path.join(self.workspace_dir, 'info_table.csv')
+        with open(info_table_path, 'w') as info_table:
+            info_table.write(
+                textwrap.dedent(
+                    # This leading backslash is important for dedent to parse
+                    # the right number of leading spaces from the following
+                    # rows.
+                    # The paths don't actually need to exist for this test -
+                    # this function is merely parsing the table contents.
+                    """\
+                    NAME,PATH,TYPE,STRESSOR BUFFER (meters)
+                    corals,habitat/corals.shp,habitat,
+                    oil,stressors/oil.shp,stressor,1000
+                    corals,stressors/corals.shp,stressor,1000
+                    transportation,stressors/transport.shp,stressor,100"""
+                ))
+
+        with self.assertRaises(ValueError) as cm:
+            habitats, stressors = hra._parse_info_table(info_table_path)
+
+        self.assertIn("Habitat and stressor names may not overlap",
+                      str(cm.exception))
+
     def test_criteria_table_parsing(self):
         from natcap.invest import hra
 

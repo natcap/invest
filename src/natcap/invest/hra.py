@@ -1776,7 +1776,14 @@ def _parse_info_table(info_table_path):
     stressors = table.loc[table['type'] == 'stressor'].drop(
         columns=['type']).to_dict(orient='index')
 
-    # TODO: check that habitats and stressor names are nonoverlapping sets.
+    # habitats and stressors must be nonoverlapping sets.
+    repeated_habitats_stressors = set(
+        habitats.keys()).intersection(stressors.keys())
+    if repeated_habitats_stressors:
+        raise ValueError(
+            "Habitat and stressor names may not overlap. These names are "
+            "both habitats and stressors: "
+            f"{', '.join(repeated_habitats_stressors)}")
 
     return (habitats, stressors)
 
