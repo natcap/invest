@@ -18,10 +18,11 @@ from osgeo import ogr
 from osgeo import osr
 
 from . import datastack
-from . import MODEL_METADATA
+from . import gettext
 from . import spec_utils
 from . import utils
 from . import validation
+from .model_metadata import MODEL_METADATA
 from .spec_utils import u
 
 LOGGER = logging.getLogger(__name__)
@@ -57,19 +58,19 @@ _DEFAULT_GTIFF_CREATION_OPTIONS = (
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["habitat_risk_assessment"].model_title,
     "pyname": MODEL_METADATA["habitat_risk_assessment"].pyname,
-    "userguide_html": MODEL_METADATA["habitat_risk_assessment"].userguide,
+    "userguide": MODEL_METADATA["habitat_risk_assessment"].userguide,
     "args": {
         "workspace_dir": spec_utils.WORKSPACE,
         "results_suffix": spec_utils.SUFFIX,
         "n_workers": spec_utils.N_WORKERS,
         "info_table_path": {
-            "name": _("habitat stressor table"),
-            "about": _("A table describing each habitat and stressor."),
+            "name": gettext("habitat stressor table"),
+            "about": gettext("A table describing each habitat and stressor."),
             "type": "csv",
             "columns": {
                 "name": {
                     "type": "freestyle_string",
-                    "about": _(
+                    "about": gettext(
                         "A unique name for each habitat or stressor. These "
                         "names must match the habitat and stressor names in "
                         "the Criteria Scores Table.")},
@@ -78,14 +79,14 @@ ARGS_SPEC = {
                     "bands": {1: {
                         "type": "number",
                         "units": u.none,
-                        "about": _(
+                        "about": gettext(
                             "Pixel values are 1, indicating presence of the "
                             "habitat/stressor, or 0 indicating absence. Any "
                             "values besides 0 or 1 will be treated as 0.")
                     }},
                     "fields": {},
                     "geometries": spec_utils.POLYGONS,
-                    "about": _(
+                    "about": gettext(
                         "Map of where the habitat or stressor exists. For "
                         "rasters, a pixel value of 1 indicates presence of "
                         "the habitat or stressor. 0 (or any other value) "
@@ -96,16 +97,16 @@ ARGS_SPEC = {
                 "type": {
                     "type": "option_string",
                     "options": {
-                        "habitat": {"description": _("habitat")},
-                        "stressor": {"description": _("stressor")}
+                        "habitat": {"description": gettext("habitat")},
+                        "stressor": {"description": gettext("stressor")}
                     },
-                    "about": _(
+                    "about": gettext(
                         "Whether this row is for a habitat or a stressor.")
                 },
                 "stressor buffer (meters)": {
                     "type": "number",
                     "units": u.meter,
-                    "about": _(
+                    "about": gettext(
                         "The desired buffer distance used to expand a given "
                         "stressor’s influence or footprint. This should be "
                         "left blank for habitats, but must be filled in for "
@@ -120,15 +121,15 @@ ARGS_SPEC = {
             "excel_ok": True
         },
         "criteria_table_path": {
-            "name": _("criteria scores table"),
-            "about": _(
+            "name": gettext("criteria scores table"),
+            "about": gettext(
                 "A table of criteria scores for all habitats and stressors."),
             "type": "csv",
             "excel_ok": True,
         },
         "resolution": {
-            "name": _("resolution of analysis"),
-            "about": _(
+            "name": gettext("resolution of analysis"),
+            "about": gettext(
                 "The resolution at which to run the analysis. The model "
                 "outputs will have this resolution."),
             "type": "number",
@@ -136,43 +137,43 @@ ARGS_SPEC = {
             "expression": "value > 0",
         },
         "max_rating": {
-            "name": _("maximum criteria score"),
-            "about": _(
+            "name": gettext("maximum criteria score"),
+            "about": gettext(
                 "The highest possible criteria score in the scoring system."),
             "type": "number",
             "units": u.none,
             "expression": "value > 0"
         },
         "risk_eq": {
-            "name": _("risk equation"),
-            "about": _(
+            "name": gettext("risk equation"),
+            "about": gettext(
                 "The equation to use to calculate risk from exposure and "
                 "consequence."),
             "type": "option_string",
             "options": {
-                "multiplicative": {"display_name": _("Multiplicative")},
-                "euclidean": {"display_name": _("Euclidean")}
+                "multiplicative": {"display_name": gettext("Multiplicative")},
+                "euclidean": {"display_name": gettext("Euclidean")}
             }
         },
         "decay_eq": {
-            "name": _("decay equation"),
-            "about": _(
+            "name": gettext("decay equation"),
+            "about": gettext(
                 "The equation to model effects of stressors in buffer areas."),
             "type": "option_string",
             "options": {
                 "none": {
-                    "display_name": _("None"),
-                    "description": _(
+                    "display_name": gettext("None"),
+                    "description": gettext(
                         "No decay. Stressor has full effect in the buffer "
                         "area.")},
                 "linear": {
-                    "display_name": _("Linear"),
-                    "description": _(
+                    "display_name": gettext("Linear"),
+                    "description": gettext(
                         "Stressor effects in the buffer area decay linearly "
                         "with distance from the stressor.")},
                 "exponential": {
-                    "display_name": _("Exponential"),
-                    "description": _(
+                    "display_name": gettext("Exponential"),
+                    "description": gettext(
                         "Stressor effects in the buffer area decay "
                         "exponentially with distance from the stressor.")}
             }
@@ -185,20 +186,20 @@ ARGS_SPEC = {
                 "name": {
                     "required": False,
                     "type": "freestyle_string",
-                    "about": _(
+                    "about": gettext(
                         "Uniquely identifies each feature. Required if "
                         "the vector contains more than one feature.")
                 }
             },
-            "about": _(
+            "about": gettext(
                 "A GDAL-supported vector file containing feature containing "
                 "one or more planning regions or subregions."),
         },
         "n_overlapping_stressors": {
-            "name": _("Number of Overlapping Stressors"),
+            "name": gettext("Number of Overlapping Stressors"),
             "type": "number",
             "required": True,
-            "about": _(
+            "about": gettext(
                 "The number of overlapping stressors to consider as "
                 "'maximum' when reclassifying risk scores into "
                 "high/medium/low.  Affects the breaks between risk "
@@ -207,8 +208,8 @@ ARGS_SPEC = {
             "expression": "value > 0",
         },
         "visualize_outputs": {
-            "name": _("Generate GeoJSONs"),
-            "about": _("Generate GeoJSON outputs for web visualization."),
+            "name": gettext("Generate GeoJSONs"),
+            "about": gettext("Generate GeoJSON outputs for web visualization."),
             "type": "boolean"
         }
     }
