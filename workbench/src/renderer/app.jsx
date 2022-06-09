@@ -10,7 +10,7 @@ import Button from 'react-bootstrap/Button';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import Spinner from 'react-bootstrap/Spinner';
-import { MdClose } from 'react-icons/md';
+import { MdClose, MdHome } from 'react-icons/md';
 
 import HomeTab from './components/HomeTab';
 import InvestTab from './components/InvestTab';
@@ -283,23 +283,23 @@ export default class App extends React.Component {
         />
         <TabContainer activeKey={activeTab}>
           <Navbar
-            className="px-0 py-0"
             onDragOver={dragOverHandlerNone}
           >
             <Row
-              className="w-100 flex-nowrap mr-0"
+              className="w-100 flex-nowrap"
             >
-              <Col sm={3} className="px-0">
+              <Col sm={3}>
                 <Navbar.Brand>
                   <Nav.Link
                     onSelect={this.switchTabs}
                     eventKey="home"
                   >
+                    <MdHome />
                     {_("InVEST")}
                   </Nav.Link>
                 </Navbar.Brand>
               </Col>
-              <Col className="pl-1 pr-0 navbar-middle">
+              <Col className="navbar-middle">
                 <Nav
                   justify
                   variant="tabs"
@@ -310,7 +310,7 @@ export default class App extends React.Component {
                   {investNavItems}
                 </Nav>
               </Col>
-              <Col className="px-0 text-right navbar-right">
+              <Col className="text-right navbar-right">
                 {
                   (downloadedNofN)
                     ? (
@@ -341,7 +341,7 @@ export default class App extends React.Component {
           </Navbar>
 
           <TabContent
-            id="top-tab-content"
+            id="home-tab-content"
             onDragOver={dragOverHandlerNone}
           >
             <TabPane

@@ -19,7 +19,7 @@ import numpy
 
 from . import utils
 from . import spec_utils
-
+from . import gettext
 
 #: A flag to pass to the validation context manager indicating that all keys
 #: should be checked.
@@ -27,36 +27,36 @@ CHECK_ALL_KEYS = None
 LOGGER = logging.getLogger(__name__)
 
 MESSAGES = {
-    'MISSING_KEY': _('Key is missing from the args dict'),
-    'MISSING_VALUE': _('Input is required but has no value'),
-    'MATCHED_NO_HEADERS': _('Expected the {header} "{header_name}" but did '
+    'MISSING_KEY': gettext('Key is missing from the args dict'),
+    'MISSING_VALUE': gettext('Input is required but has no value'),
+    'MATCHED_NO_HEADERS': gettext('Expected the {header} "{header_name}" but did '
                             'not find it'),
-    'DUPLICATE_HEADER': _('Expected the {header} "{header_name}" only once '
+    'DUPLICATE_HEADER': gettext('Expected the {header} "{header_name}" only once '
                           'but found it {number} times'),
-    'NOT_A_NUMBER': _('Value "{value}" could not be interpreted as a number'),
-    'WRONG_PROJECTION_UNIT': _('Layer must be projected in this unit: '
+    'NOT_A_NUMBER': gettext('Value "{value}" could not be interpreted as a number'),
+    'WRONG_PROJECTION_UNIT': gettext('Layer must be projected in this unit: '
                                '"{unit_a}" but found this unit: "{unit_b}"'),
-    'UNEXPECTED_ERROR': _('An unexpected error occurred in validation'),
-    'DIR_NOT_FOUND': _('Directory not found'),
-    'NOT_A_DIR': _('Path must be a directory'),
-    'FILE_NOT_FOUND': _('File not found'),
-    'INVALID_PROJECTION': _('Dataset must have a valid projection.'),
-    'NOT_PROJECTED': _('Dataset must be projected in linear units.'),
-    'NOT_GDAL_RASTER': _('File could not be opened as a GDAL raster'),
-    'OVR_FILE': _('File found to be an overview ".ovr" file.'),
-    'NOT_GDAL_VECTOR': _('File could not be opened as a GDAL vector'),
-    'NOT_CSV_OR_EXCEL': _('File could not be opened as a CSV or Excel file.'),
-    'NOT_CSV': _('File could not be opened as a CSV. File must be encoded as '
+    'UNEXPECTED_ERROR': gettext('An unexpected error occurred in validation'),
+    'DIR_NOT_FOUND': gettext('Directory not found'),
+    'NOT_A_DIR': gettext('Path must be a directory'),
+    'FILE_NOT_FOUND': gettext('File not found'),
+    'INVALID_PROJECTION': gettext('Dataset must have a valid projection.'),
+    'NOT_PROJECTED': gettext('Dataset must be projected in linear units.'),
+    'NOT_GDAL_RASTER': gettext('File could not be opened as a GDAL raster'),
+    'OVR_FILE': gettext('File found to be an overview ".ovr" file.'),
+    'NOT_GDAL_VECTOR': gettext('File could not be opened as a GDAL vector'),
+    'NOT_CSV_OR_EXCEL': gettext('File could not be opened as a CSV or Excel file.'),
+    'NOT_CSV': gettext('File could not be opened as a CSV. File must be encoded as '
                  'a UTF-8 CSV.'),
-    'REGEXP_MISMATCH': _("Value did not match expected pattern {regexp}"),
-    'INVALID_OPTION': _("Value must be one of: {option_list}"),
-    'INVALID_VALUE': _('Value does not meet condition {condition}'),
-    'NOT_WITHIN_RANGE': _('Value {value} is not in the range {range}'),
-    'NOT_AN_INTEGER': _('Value "{value}" does not represent an integer'),
-    'NOT_BOOLEAN': _("Value must be either True or False, not {value}"),
-    'NO_PROJECTION': _('Spatial file {filepath} has no projection'),
-    'BBOX_NOT_INTERSECT': _("Bounding boxes do not intersect:"),
-    'NEED_PERMISSION': _('You must have {permission} access to this file'),
+    'REGEXP_MISMATCH': gettext("Value did not match expected pattern {regexp}"),
+    'INVALID_OPTION': gettext("Value must be one of: {option_list}"),
+    'INVALID_VALUE': gettext('Value does not meet condition {condition}'),
+    'NOT_WITHIN_RANGE': gettext('Value {value} is not in the range {range}'),
+    'NOT_AN_INTEGER': gettext('Value "{value}" does not represent an integer'),
+    'NOT_BOOLEAN': gettext("Value must be either True or False, not {value}"),
+    'NO_PROJECTION': gettext('Spatial file {filepath} has no projection'),
+    'BBOX_NOT_INTERSECT': gettext("Bounding boxes do not intersect: {bboxes}"),
+    'NEED_PERMISSION': gettext('You must have {permission} access to this file'),
 }
 
 
@@ -388,19 +388,14 @@ def check_freestyle_string(value, regexp=None, **kwargs):
 
     Args:
         value: The value to check.  Must be able to be cast to a string.
-        regexp=None (dict): A dict representing validation parameters for a
-            regular expression.  ``regexp['pattern']`` is required, and its
-            value must be a string regular expression.
-            ``regexp['case_sensitive']`` may also be provided and is expected
-            to be a boolean value.  If ``True`` or truthy, the regular
-            expression will ignore case.
+        regexp=None (string): a string interpreted as a regular expression.
 
     Returns:
         A string error message if an error was found.  ``None`` otherwise.
 
     """
     if regexp:
-        matches = re.findall(regexp, str(value), re.IGNORECASE)
+        matches = re.fullmatch(regexp, str(value))
         if not matches:
             return MESSAGES['REGEXP_MISMATCH'].format(regexp=regexp)
     return None
@@ -682,11 +677,16 @@ def check_spatial_overlap(spatial_filepaths_list,
         pygeoprocessing.merge_bounding_box_list(bounding_boxes, 'intersection')
     except ValueError as error:
         LOGGER.debug(error)
-        formatted_lists = ' | '.join(
-            [a + ': ' + str(b) for a, b in zip(
-                checked_file_list, bounding_boxes)])
+        formatted_lists = _format_bbox_list(checked_file_list, bounding_boxes)
         return MESSAGES['BBOX_NOT_INTERSECT'].format(bboxes=formatted_lists)
     return None
+
+
+def _format_bbox_list(file_list, bbox_list):
+    """Format two lists of equal length into one string."""
+    return ' | '.join(
+            [a + ': ' + str(b) for a, b in zip(
+                file_list, bbox_list)])
 
 
 def timeout(func, *args, timeout=5, **kwargs):

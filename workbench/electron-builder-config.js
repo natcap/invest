@@ -30,9 +30,13 @@ const config = {
     },
     {
       from: 'resources/storage_token.txt',
-      to: 'storage_token.txt'
+      to: 'storage_token.txt',
     },
   ],
+  extraFiles: [{
+    from: '../LICENSE.txt',
+    to: 'LICENSE.txt',
+  }],
   appId: APP_ID,
   productName: PRODUCT_NAME,
   artifactName: ARTIFACT_NAME,

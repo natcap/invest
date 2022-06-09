@@ -251,6 +251,21 @@ DataDownloadModal.propTypes = {
 
 export function DownloadProgressBar(props) {
   const [nComplete, nTotal] = props.downloadedNofN;
+  if (nComplete === 'failed') {
+    return (
+      <Expire
+        className="d-inline"
+        delay={props.expireAfter}
+      >
+        <Alert
+          className="d-inline"
+          variant="danger"
+        >
+          {_("Download Failed")}
+        </Alert>
+      </Expire>
+    );
+  }
   if (nComplete === nTotal) {
     return (
       <Expire
@@ -277,6 +292,8 @@ export function DownloadProgressBar(props) {
 }
 
 DownloadProgressBar.propTypes = {
-  downloadedNofN: PropTypes.arrayOf(PropTypes.number).isRequired,
+  downloadedNofN: PropTypes.arrayOf(
+    PropTypes.oneOfType([PropTypes.number, PropTypes.string])
+  ).isRequired,
   expireAfter: PropTypes.number.isRequired,
 };

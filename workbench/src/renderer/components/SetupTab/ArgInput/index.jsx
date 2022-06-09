@@ -1,4 +1,3 @@
-import os from 'os';
 import React from 'react';
 import PropTypes from 'prop-types';
 
@@ -10,11 +9,10 @@ import InputGroup from 'react-bootstrap/InputGroup';
 import Modal from 'react-bootstrap/Modal';
 import { MdFolderOpen, MdInfo, MdOpenInNew } from 'react-icons/md';
 
+import baseUserguideURL from '../../../userguideURL';
 import { ipcMainChannels } from '../../../../main/ipcMainChannels';
 
-const { ipcRenderer } = window.Workbench;
-
-const baseUserguideURL = 'https://storage.googleapis.com/releases.naturalcapitalproject.org/invest-userguide/latest';
+const { ipcRenderer } = window.Workbench.electron;
 
 /**
  * Filter a message that refers to many spatial inputs' bounding boxes.
@@ -36,7 +34,7 @@ function filterSpatialOverlapFeedback(message, filepath) {
   const bboxFormatted = bbox.split(' ').map(
     (str) => str.padEnd(22, ' ')
   ).join('').trim();
-  return `${newPrefix}${os.EOL}${bboxFormatted}`;
+  return `${newPrefix}\n${bboxFormatted}`;
 }
 
 function FormLabel(props) {
