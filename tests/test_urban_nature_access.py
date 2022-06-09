@@ -335,7 +335,7 @@ class UNATests(unittest.TestCase):
         admin_vector = None
         admin_layer = None
 
-    def test_split_greenspace_unique_distances(self):
+    def test_split_greenspace(self):
         from natcap.invest import urban_nature_access
 
         args = _build_model_args(self.workspace_dir)
@@ -345,14 +345,10 @@ class UNATests(unittest.TestCase):
         attribute_table = pandas.read_csv(args['lulc_attribute_table'])
         new_search_radius_values = {
             value: 30*value for value in range(1, 10, 2)}
+        new_search_radius_values[7] = 30 * 9  # make one a duplicate distance.
         attribute_table['search_radius_m'] = attribute_table['lucode'].map(
             new_search_radius_values)
         attribute_table.to_csv(args['lulc_attribute_table'], index=False)
-        # TODO: check with science team about enabling split greenspace.
-        # The user's guide doesn't explicitly call for an enable/disable switch
-        # for this.  The way this is worded in the UG allows for the search
-        # radius to fall back to the default search radius if it isn't defined.
-        args['use_split_greenspace'] = True
 
         urban_nature_access.execute(args)
 
@@ -366,8 +362,8 @@ class UNATests(unittest.TestCase):
         # expected field values from eyeballing the results; random seed = 1
         expected_values = {
             'SUP_DEMadm_cap': -17.9078,
-            'Pund_adm': 4014.246582,
-            'Povr_adm': 1061.753052,
+            'Pund_adm': 3938.370361,
+            'Povr_adm': 1137.629639,
         }
         admin_feature = admin_layer.GetFeature(1)
         self.assertEqual(
