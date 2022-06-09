@@ -2,6 +2,7 @@ import dataclasses
 
 from natcap.invest import gettext
 
+
 @dataclasses.dataclass
 class _MODELMETA:
     """Dataclass to store frequently used model metadata."""
@@ -162,4 +163,10 @@ MODEL_METADATA = {
         gui='urban_cooling_model.UrbanCoolingModel',
         userguide='urban_cooling_model.html',
         aliases=('ucm',)),
+    'urban_nature_access': _MODELMETA(
+        model_title=gettext('Urban Nature Access'),
+        pyname='natcap.invest.urban_nature_access',
+        gui='urban_nature_access.UrbanNatureAccess',
+        userguide='urban_nature_access.html',
+        aliases=('una',)),
 }
