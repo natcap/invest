@@ -116,7 +116,6 @@ ARGS_SPEC = {
         'decay_function': {
             'name': 'decay function',
             'type': 'option_string',
-            'required': False,
             'options': {
                 KERNEL_LABEL_DICHOTOMY: {
                     'display_name': 'dichotomy',
@@ -211,9 +210,8 @@ def execute(args):
             number indicating the required greenspace, in m² per capita.
         args['search_radius'] (number): (required) A positive, nonzero number
             indicating the maximum distance that people travel for recreation.
-        args['kernel_type'] (string): (optional) The selected kernel type.
-            Must be one of the keys in ``KERNEL_TYPES``.  If not provided, the
-            ``'dichotomy'`` kernel will be used.
+        args['decay_function'] (string): (required) The selected kernel type.
+            Must be one of the keys in ``KERNEL_TYPES``.
 
     Returns:
         ``None``
@@ -253,12 +251,8 @@ def execute(args):
     assert sorted(kernel_creation_functions.keys()) == (
         sorted(ARGS_SPEC['args']['decay_function']['options']))
 
-    if 'kernel_type' not in args:
-        kernel_type = 'dichotomy'
-        LOGGER.info(
-            'args["kernel_type"] not provided; defaulting to {kernel_type}')
-    else:
-        kernel_type = args['kernel_type']
+    decay_function = args['decay_function']
+    LOGGER.info('Using decay function {decay_function}')
 
     # Align the population raster to the LULC.
     lulc_raster_info = pygeoprocessing.get_raster_info(
@@ -306,11 +300,11 @@ def execute(args):
             intermediate_dir, f'kernel_{search_radius_m}{suffix}.tif')
         kernel_tasks[search_radius_m] = graph.add_task(
             # All kernel creation types have the same function signature
-            kernel_creation_functions[kernel_type],
+            kernel_creation_functions[decay_function],
             args=(search_radius_in_pixels, kernel_paths[search_radius_m]),
             kwargs={'normalize': False},  # Model math calls for un-normalized
             task_name=(
-                f'Create {kernel_type} kernel - {search_radius_m}m'),
+                f'Create {decay_function} kernel - {search_radius_m}m'),
             target_path_list=[kernel_paths[search_radius_m]]
         )
 
