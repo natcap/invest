@@ -644,7 +644,7 @@ def _filter_population(population, greenspace_budget, numpy_filter_op):
     population_matching_filter[valid_pixels] = numpy.where(
         numpy_filter_op(greenspace_budget[valid_pixels], 0),
         population[valid_pixels],  # If condition is true, use population
-        0.0  # If condition is false, use 0
+        0  # If condition is false, use 0
     )
     return population_matching_filter
 
@@ -816,7 +816,7 @@ def _calculate_greenspace_population_ratio(
                 * ``convolved_population`` pixels that are numerically close to
                   ``0`` are snapped to ``0`` to avoid unrealistically small
                   denominators in the final ratio.
-                * Any non-greenspace pixels will have a value of ``0.0`` in the
+                * Any non-greenspace pixels will have a value of ``0`` in the
                   output matrix.
         """
         # ASSUMPTION: population nodata value is not close to 0.
@@ -830,7 +830,7 @@ def _calculate_greenspace_population_ratio(
         valid_pixels = (convolved_population > 0)
 
         # R_j is a ratio only calculated for the greenspace pixels.
-        greenspace_pixels = ~numpy.isclose(greenspace_area, 0.0)
+        greenspace_pixels = ~numpy.isclose(greenspace_area, 0)
         valid_pixels &= greenspace_pixels
         if population_nodata is not None:
             valid_pixels &= ~numpy.isclose(
@@ -851,7 +851,7 @@ def _calculate_greenspace_population_ratio(
         population_close_to_zero = (convolved_population <= 1.0)
         out_array[population_close_to_zero] = (
             greenspace_pixels[population_close_to_zero])
-        out_array[~greenspace_pixels] = 0.0
+        out_array[~greenspace_pixels] = 0
         out_array[valid_pixels] = (
             greenspace_area[valid_pixels] / convolved_population[valid_pixels])
 
@@ -899,7 +899,7 @@ def _convolve_and_set_lower_bounds_for_population(
         valid_pixels = slice(None)
         if target_nodata is not None:
             valid_pixels = ~numpy.isclose(block, target_nodata)
-        block[(block < 0.0) & valid_pixels] = 0.0
+        block[(block < 0) & valid_pixels] = 0
         target_band.WriteArray(
             block, xoff=block_data['xoff'], yoff=block_data['yoff'])
 
@@ -1113,7 +1113,7 @@ def dichotomous_decay_kernel_raster(expected_distance, kernel_filepath,
     kernel_band = kernel_raster.GetRasterBand(1)
     band_x_size = kernel_band.XSize
     band_y_size = kernel_band.YSize
-    running_sum = 0.0
+    running_sum = 0
     for block_data in pygeoprocessing.iterblocks(
             (kernel_filepath, 1), offset_only=True):
         array_xmin = block_data['xoff'] - pixel_radius
@@ -1198,7 +1198,7 @@ def density_decay_kernel_raster(expected_distance, kernel_filepath,
     kernel_band = kernel_raster.GetRasterBand(1)
     band_x_size = kernel_band.XSize
     band_y_size = kernel_band.YSize
-    running_sum = 0.0
+    running_sum = 0
     for block_data in pygeoprocessing.iterblocks(
             (kernel_filepath, 1), offset_only=True):
         array_xmin = block_data['xoff'] - pixel_radius
