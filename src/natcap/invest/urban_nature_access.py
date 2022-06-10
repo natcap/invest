@@ -375,7 +375,7 @@ def execute(args):
             f'Using search radius {search_radius_m} for lucodes '
             f'{" ".join([str(c) for c in lucodes])}')
 
-        # reclassify greenspace needed for this kernel
+        # reclassify landcover to greenspace area needed for this kernel
         greenspace_pixels_path = os.path.join(
             intermediate_dir,
             f'greenspace_{lucode_str}_{search_radius_m}{suffix}.tif')
