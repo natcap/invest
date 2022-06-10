@@ -72,6 +72,7 @@ ARGS_SPEC = {
                 'search_radius_m': {
                     'type': 'number',
                     'units': u.meter,
+                    'expression': 'value >= 0',
                     'about': (
                         'The distance in meters to use as the search radius '
                         'for this type of greenspace. Values must be >= 0.'
