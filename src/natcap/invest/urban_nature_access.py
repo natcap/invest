@@ -112,10 +112,18 @@ ARGS_SPEC = {
             'type': 'option_string',
             'required': False,
             'options': {
-                'dichotomy': {"description": gettext("dichotomy")},
-                'exponential': {"description": gettext("exponential")},
-                'gaussian': {"description": gettext("gaussian")},
-                'density': {"description": gettext("density")},
+                'dichotomy': {
+                    "display_name": "Dichotomy",
+                    "description": gettext("dichotomy")},
+                'exponential': {
+                    "display_name": "Exponential",
+                    "description": gettext("exponential")},
+                'gaussian': {
+                    "display_name": "Gaussian",
+                    "description": gettext("gaussian")},
+                'density': {
+                    "display_name": "Density",
+                    "description": gettext("density")},
             },
             'about': '',  # TODO
         }
