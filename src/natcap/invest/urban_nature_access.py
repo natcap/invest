@@ -839,14 +839,16 @@ def _calculate_greenspace_population_ratio(
         if greenspace_nodata is not None:
             valid_pixels &= ~numpy.isclose(greenspace_area, greenspace_nodata)
 
-        # If the population in the search radius is numerically 0, the model
-        # specifies that the ratio should be set to the greenspace area.
-        # Because the convolution happens in float64 space and is
-        # non-normalized, kicking the atol up to 0.1 feels necessary to
-        # eliminate the possibility of accumulation of numerical noise.
-        # JD picked 0.1 out of my back pocket.
-        population_close_to_zero = numpy.isclose(
-            convolved_population, 0.0, atol=0.1)
+        # The user's guide specifies that if the population in the search
+        # radius is numerically 0, the greenspace/population ratio should be
+        # set to the greenspace area.
+        # A consequence of this is that as the population approaches 0 from the
+        # positive side, the ratio will approach infinity.  Maybe this is
+        # desirable, but until we check with the science team, we'll set this
+        # so that the greenspace/population ratio will be set to the greenspace
+        # area at populations <= 1.
+        # TODO: see what the science team thinks is right to do.
+        population_close_to_zero = (convolved_population <= 1.0)
         out_array[population_close_to_zero] = (
             greenspace_pixels[population_close_to_zero])
         out_array[~greenspace_pixels] = 0.0
