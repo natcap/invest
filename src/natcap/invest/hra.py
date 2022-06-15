@@ -661,7 +661,6 @@ def execute(args):
 
         reclassified_cumulative_risk_path = os.path.join(
             intermediate_dir, f'reclass_total_risk_{habitat}{suffix}.tif')
-        reclassified_rasters.append(reclassified_cumulative_risk_path)
         reclassified_cumulative_risk_task = graph.add_task(
             pygeoprocessing.raster_calculator,
             kwargs={
@@ -681,6 +680,7 @@ def execute(args):
 
         max_risk_classification_path = os.path.join(
             output_dir, f'RECLASS_RISK_{habitat}{suffix}.tif')
+        reclassified_rasters.append(max_risk_classification_path)
         _ = graph.add_task(
             pygeoprocessing.raster_calculator,
             kwargs={
@@ -859,8 +859,7 @@ def execute(args):
 
             # clean up the filename to what the viz webapp expects.
             for pattern in (f'^{geojson_prefix}_',
-                            '^aligned_',
-                            '^reclass_total_risk_'):
+                            '^aligned_'):
                 basename = re.sub(pattern, '', basename)
 
             polygonize_mask_raster_path = os.path.join(
@@ -972,6 +971,8 @@ def _polygonize(source_raster_path, mask_raster_path,
     Returns:
         ``None``
     """
+    LOGGER.info(f'Polygonizing {source_raster_path} --> '
+                f'{target_polygonized_vector} using mask {mask_raster_path}')
     raster = gdal.OpenEx(source_raster_path, gdal.OF_RASTER)
     band = raster.GetRasterBand(1)
 
