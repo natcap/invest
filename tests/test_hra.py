@@ -948,6 +948,47 @@ class HRAModelTests(unittest.TestCase):
             n_geojson_files += 1
         self.assertEqual(n_geojson_files, 6)
 
+        # verify that the rasterized vectors match the source rasters.
+        output_dir = os.path.join(args['workspace_dir'], 'outputs')
+        intermediate_dir = os.path.join(
+            args['workspace_dir'], 'intermediate_outputs')
+        viz_dir = os.path.join(args['workspace_dir'], 'visualization_outputs')
+        raster_and_vector_versions = {
+            os.path.join(output_dir, 'RECLASS_RISK_Ecosystem.tif'):
+                (os.path.join(viz_dir, 'RECLASS_RISK_Ecosystem.geojson'),
+                 'Risk Score'),
+            os.path.join(output_dir, 'RECLASS_RISK_eelgrass.tif'):
+                (os.path.join(viz_dir, 'RECLASS_RISK_eelgrass.geojson'),
+                 'Risk Score'),
+            os.path.join(output_dir, 'RECLASS_RISK_hardbottom.tif'):
+                (os.path.join(viz_dir, 'RECLASS_RISK_hardbottom.geojson'),
+                 'Risk Score'),
+            os.path.join(intermediate_dir, 'aligned_oil.tif'):
+                (os.path.join(viz_dir, 'STRESSOR_oil.geojson'),
+                 'Stressor'),
+            os.path.join(intermediate_dir, 'aligned_fishing.tif'):
+                (os.path.join(viz_dir, 'STRESSOR_fishing.geojson'),
+                 'Stressor'),
+            os.path.join(intermediate_dir, 'aligned_transportation.tif'):
+                (os.path.join(viz_dir, 'STRESSOR_transportation.geojson'),
+                 'Stressor'),
+        }
+        for source_raster, (target_vector, attribute) in raster_and_vector_versions.items():
+            rasterized_path = os.path.join(
+                self.workspace_dir, 'temp_rasterized.tif')
+            pygeoprocessing.geoprocessing.new_raster_from_base(
+                source_raster, rasterized_path, gdal.GDT_Byte, [255], [255])
+            pygeoprocessing.geoprocessing.rasterize(
+                target_vector, rasterized_path,
+                option_list=[f'ATTRIBUTE={attribute}'])
+
+            numpy.testing.assert_array_equal(
+                pygeoprocessing.geoprocessing.raster_to_numpy_array(
+                    source_raster),
+                pygeoprocessing.geoprocessing.raster_to_numpy_array(
+                    rasterized_path))
+
+
     def test_datastack_criteria_table_override(self):
         """HRA: verify we store all data referenced in the criteria table."""
         from natcap.invest import hra

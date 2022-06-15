@@ -71,7 +71,7 @@ class HabitatRiskAssessment(model.InVESTModel):
                 "desired, this equation will determine the rate at which "
                 "stressor data is reduced."),
             label='Decay Equation',
-            options=['None', 'Linear', 'Exponential'])
+            options=['none', 'linear', 'exponential'])
         self.add_input(self.decay_eq)
         self.aoi_vector_path = inputs.File(
             args_key='aoi_vector_path',
