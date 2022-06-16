@@ -40,6 +40,8 @@ Unreleased Changes
 * Workbench
     * Fixed a bug where some model runs would not generate a new item
       in the list of recent runs.
+* NDR
+    * Added parameters to the sample data to support nitrogen calculations.
 
 3.11.0 (2022-05-24)
 -------------------
