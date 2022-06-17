@@ -32,13 +32,47 @@
 
 .. :changelog:
 
-Unreleased Changes
-------------------
+..
+  Unreleased Changes
+  ------------------
+
+3.11.0 (2022-05-24)
+-------------------
 * General
+    * InVEST Workbench released! A new desktop interface for InVEST models.
+    * Add support for python 3.10, and drop support for python 3.7.
+    * Fixed a bug where the model window would fail to open when using the
+      ``natcap.invest`` package with python 3.9.0 - 3.9.3.
+    * ``spec_utils.ETO`` has been renamed to ``spec_utils.ET0`` (with a zero).
     * Updating the ``pyinstaller`` requirement to ``>=4.10`` to support the new
       ``universal2`` wheel architecture offered by ``scipy>=1.8.0``.
+    * Now removing leading / trailing whitespaces from table input values as
+      well as columns in most InVEST models.
+    * Fixing a small bug where drag-and-drop events in the Qt UI were not being
+      handled correctly and were being ignored by the UI.
     * Expose taskgraph logging level for the cli with
       ``--taskgraph-log-level``.
+    * Fixed bug in validation of ``results_suffix`` so that special characters
+      like path separators, etc, are not allowed.
+    * Fixed a bug in validation where a warning about non-overlapping spatial
+      layers was missing info about the offending bounding boxes.
+    * Fixed an issue with usage logging that caused SSL errors to appear in the
+      Qt interface logging window.
+* Annual Water Yield
+    * Fixed a bug where the model would error when the watersheds/subwatersheds
+      input was in geopackage format.
+* Crop Production
+    * Fixed a bug in both crop production models where the model would error if
+      an observed yield raster had no nodata value.
+* Coastal Vulnerability
+    * Fixed a bug that would cause an error if the user's bathymetry layer did
+      not have a defined nodata value.  The user's bathymetry layer should now
+      be correctly preprocessed with or without a nodata value.
+* DelineateIt
+    * Watersheds delineated with this tool will now always have a ``ws_id``
+      column containing integer watershed IDs for easier use within the routed
+      InVEST models.  Existing ``ws_id`` field values in the outlets vector
+      will be overwritten if they are present.
 * RouteDEM
     * Rename the arg ``calculate_downstream_distance`` to
       ``calculate_downslope_distance``. This is meant to clarify that it
@@ -46,6 +80,16 @@ Unreleased Changes
 * SDR
     * Fixed an issue with SDR where ``f.tif`` might not be recalculated if the
       file is modified or deleted after execution.
+    * Fixed an issue in ``sed_deposition.tif`` and ``f.tif`` where pixel values
+      could have very small, negative values for ``r_i`` and ``f_i``.  These
+      values are now clamped to 0.
+    * Added basic type-checking for the ``lucode`` column of the biophysical
+      table. This avoids cryptic numpy errors later in runtime.
+* Seasonal Water Yield
+    * Added an output to the model representing total annual precipitation.
+    * Fixed an issue with the documentation for ET0 and Precip directories,
+      where a module-specific informational string was being overridden by a
+      default value.
 
 3.10.2 (2022-02-08)
 -------------------

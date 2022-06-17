@@ -1,4 +1,4 @@
-import { ipcRenderer } from 'electron';
+import { ipcRenderer, shell } from 'electron';
 import React from 'react';
 import {
   createEvent, fireEvent, render, waitFor, within
@@ -10,6 +10,8 @@ import SetupTab from '../../src/renderer/components/SetupTab';
 import {
   fetchDatastackFromFile, fetchValidation
 } from '../../src/renderer/server_requests';
+import setupOpenExternalUrl from '../../src/main/setupOpenExternalUrl';
+import { removeIpcMainListeners } from '../../src/main/main';
 
 jest.mock('../../src/renderer/server_requests');
 
@@ -71,6 +73,7 @@ function renderSetupFromSpec(baseSpec, uiSpec) {
       sidebarSetupElementId="foo"
       sidebarFooterElementId="foo"
       executeClicked={false}
+      switchTabs={() => {}}
     />
   );
   return utils;
@@ -149,14 +152,6 @@ describe('Arguments form input types', () => {
     expect(input).toHaveValue('a');
     expect(input).not.toHaveValue('b');
   });
-
-  test('expect the info dialog contains text about input', async () => {
-    const spec = baseArgsSpec('directory');
-    const { findByText, findByRole } = renderSetupFromSpec(spec, UI_SPEC);
-    userEvent.click(await findByRole('button', { name: /info about/ }));
-    expect(await findByText(spec.args.arg.about)).toBeInTheDocument();
-    await findByRole('link', { name: /user guide/ });
-  });
 });
 
 describe('Arguments form interactions', () => {
@@ -164,6 +159,11 @@ describe('Arguments form interactions', () => {
     fetchValidation.mockResolvedValue(
       [[Object.keys(BASE_ARGS_SPEC.args), VALIDATION_MESSAGE]]
     );
+    setupOpenExternalUrl();
+  });
+
+  afterEach(() => {
+    removeIpcMainListeners();
   });
 
   test('Browse button populates an input', async () => {
@@ -309,6 +309,18 @@ describe('Arguments form interactions', () => {
     await userEvent.click(input);
     await waitFor(() => {
       expect(input).toHaveClass('is-valid');
+    });
+  });
+
+  test('Open info dialog, expect text & link', async () => {
+    const spec = baseArgsSpec('directory');
+    const { findByText, findByRole } = renderSetupFromSpec(spec, UI_SPEC);
+    userEvent.click(await findByRole('button', { name: /info about/ }));
+    expect(await findByText(spec.args.arg.about)).toBeInTheDocument();
+    const link = await findByRole('link', { name: /user guide/ });
+    userEvent.click(link);
+    await waitFor(() => {
+      expect(shell.openExternal).toHaveBeenCalledTimes(1);
     });
   });
 });
@@ -552,6 +564,9 @@ describe('Misc form validation stuff', () => {
     const expectedVal2 = '-79.0198012081401';
     const rasterBox = `[${expectedVal2}, 26.481559513537064, -78.37173806200593, 27.268061760228512]`;
     const message = `Bounding boxes do not intersect: ${vectorValue}: ${vectorBox} | ${rasterValue}: ${rasterBox}`;
+    const newPrefix = 'Bounding box does not intersect at least one other:';
+    const vectorMessage = new RegExp(`${newPrefix}\\s*\\[${expectedVal1}`);
+    const rasterMessage = new RegExp(`${newPrefix}\\s*\\[${expectedVal2}`);
 
     fetchValidation.mockResolvedValue([[Object.keys(spec.args), message]]);
 
@@ -565,17 +580,17 @@ describe('Misc form validation stuff', () => {
     // of that single input.
     const vectorGroup = vectorInput.closest('.input-group');
     await waitFor(() => {
-      expect(within(vectorGroup).getByText(RegExp(expectedVal1)))
+      expect(within(vectorGroup).getByText(vectorMessage))
         .toBeInTheDocument();
-      expect(within(vectorGroup).queryByText(RegExp(expectedVal2)))
+      expect(within(vectorGroup).queryByText(rasterMessage))
         .toBeNull();
     });
 
     const rasterGroup = rasterInput.closest('.input-group');
     await waitFor(() => {
-      expect(within(rasterGroup).getByText(RegExp(expectedVal2)))
+      expect(within(rasterGroup).getByText(rasterMessage))
         .toBeInTheDocument();
-      expect(within(rasterGroup).queryByText(RegExp(expectedVal1)))
+      expect(within(rasterGroup).queryByText(vectorMessage))
         .toBeNull();
     });
   });

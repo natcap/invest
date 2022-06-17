@@ -19,7 +19,9 @@ from .. import utils
 from .. import spec_utils
 from ..spec_utils import u
 from .. import validation
-from .. import MODEL_METADATA
+from ..model_metadata import MODEL_METADATA
+from .. import gettext
+
 
 LOGGER = logging.getLogger(__name__)
 _VALUATION_NODATA = -99999  # largish negative nodata value.
@@ -63,7 +65,7 @@ ARGS_SPEC = {
             **spec_utils.AOI,
         },
         "structure_path": {
-            "name": _("features impacting scenic quality"),
+            "name": gettext("features impacting scenic quality"),
             "type": "vector",
             "geometries": spec_utils.POINT,
             "fields": {
@@ -71,7 +73,7 @@ ARGS_SPEC = {
                     "type": "number",
                     "units": u.meter,
                     "required": False,
-                    "about": _(
+                    "about": gettext(
                         "Maximum length of the line of sight originating from "
                         "a viewpoint. The value can either be positive "
                         "(preferred) or negative (kept for backwards "
@@ -84,7 +86,7 @@ ARGS_SPEC = {
                     "type": "number",
                     "units": u.none,
                     "required": False,
-                    "about": _(
+                    "about": gettext(
                         "Viewshed importance coefficient. If this field is "
                         "provided, the values are used to weight each "
                         "feature's viewshed impacts. If not provided, all "
@@ -93,12 +95,12 @@ ARGS_SPEC = {
                     "type": "number",
                     "units": u.meter,
                     "required": False,
-                    "about": _(
+                    "about": gettext(
                         "Viewpoint height, the elevation above the ground of "
                         "each feature. If this field is not provided, "
                         "defaults to 0.")}
             },
-            "about": _(
+            "about": gettext(
                 "Map of locations of objects that negatively affect scenic "
                 "quality. This must have the same projection as the DEM.")
         },
@@ -108,54 +110,54 @@ ARGS_SPEC = {
             "projection_units": u.meter
         },
         "refraction": {
-            "name": _("refractivity coefficient"),
+            "name": gettext("refractivity coefficient"),
             "type": "ratio",
-            "about": _(
+            "about": gettext(
                 "The refractivity coefficient corrects for the curvature of "
                 "the earth and refraction of visible light in air.")
         },
         "do_valuation": {
-            "name": _("run valuation"),
+            "name": gettext("run valuation"),
             "type": "boolean",
             "required": False,
-            "about": _("Run the valuation model.")
+            "about": gettext("Run the valuation model.")
         },
         "valuation_function": {
-            "name": _("Valuation function"),
+            "name": gettext("Valuation function"),
             "type": "option_string",
             "required": "do_valuation",
             "options": {
-                "linear": {"display_name": _("linear: a + bx")},
-                "logarithmic": {"display_name": _(
+                "linear": {"display_name": gettext("linear: a + bx")},
+                "logarithmic": {"display_name": gettext(
                     "logarithmic: a + b log(x+1)")},
-                "exponential": {"display_name": _("exponential: a * e^(-bx)")}
+                "exponential": {"display_name": gettext("exponential: a * e^(-bx)")}
             },
-            "about": _(
+            "about": gettext(
                 "Valuation function used to calculate the visual impact of "
                 "each feature, given distance from the feature 'x' and "
                 "parameters 'a' and 'b'."),
         },
         "a_coef": {
-            "name": _("coefficient a"),
+            "name": gettext("coefficient a"),
             "type": "number",
             "units": u.none,
             "required": "do_valuation",
-            "about": _("First coefficient ('a') used by the valuation function"),
+            "about": gettext("First coefficient ('a') used by the valuation function"),
         },
         "b_coef": {
-            "name": _("coefficient b"),
+            "name": gettext("coefficient b"),
             "type": "number",
             "units": u.none,
             "required": "do_valuation",
-            "about": _("Second coefficient ('b') used by the valuation function"),
+            "about": gettext("Second coefficient ('b') used by the valuation function"),
         },
         "max_valuation_radius": {
-            "name": _("maximum valuation radius"),
+            "name": gettext("maximum valuation radius"),
             "type": "number",
             "units": u.meter,
             "required": False,
             "expression": "value > 0",
-            "about": _(
+            "about": gettext(
                 "Valuation will only be computed for cells that fall within "
                 "this radius of a feature impacting scenic quality."),
         },

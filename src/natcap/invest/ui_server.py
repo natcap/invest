@@ -10,13 +10,12 @@ from flask_cors import CORS
 import natcap.invest
 from natcap.invest import cli
 from natcap.invest import datastack
-from natcap.invest import install_language
-from natcap.invest import MODEL_METADATA
+from natcap.invest import set_locale
+from natcap.invest.model_metadata import MODEL_METADATA
 from natcap.invest import spec_utils
 from natcap.invest import usage
 
 LOGGER = logging.getLogger(__name__)
-logging.getLogger('flask_cors').level = logging.DEBUG
 
 PREFIX = 'api'
 app = Flask(__name__)
@@ -50,7 +49,7 @@ def get_invest_models():
         A JSON string
     """
     LOGGER.debug('get model list')
-    install_language(request.args.get('language', 'en'))
+    set_locale(request.args.get('language', 'en'))
     importlib.reload(natcap.invest)
     return cli.build_model_list_json()
 
@@ -67,7 +66,7 @@ def get_invest_getspec():
     Returns:
         A JSON string.
     """
-    install_language(request.args.get('language', 'en'))
+    set_locale(request.args.get('language', 'en'))
     target_model = request.get_json()
     target_module = MODEL_METADATA[target_model].pyname
     model_module = importlib.reload(
@@ -97,7 +96,7 @@ def get_invest_validate():
     except KeyError:
         limit_to = None
 
-    install_language(request.args.get('language', 'en'))
+    set_locale(request.args.get('language', 'en'))
     importlib.reload(natcap.invest.validation)
     model_module = importlib.reload(
         importlib.import_module(name=payload['model_module']))

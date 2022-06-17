@@ -11,17 +11,19 @@ import taskgraph
 from osgeo import gdal
 from osgeo import ogr
 
-from .. import MODEL_METADATA
+from ..model_metadata import MODEL_METADATA
 from .. import spec_utils
 from .. import utils
 from .. import validation
 from ..sdr import sdr
 from ..spec_utils import u
+from .. import gettext
 from . import ndr_core
+
 
 LOGGER = logging.getLogger(__name__)
 
-MISSING_NUTRIENT_MSG = _('Either calc_n or calc_p must be True')
+MISSING_NUTRIENT_MSG = gettext('Either calc_n or calc_p must be True')
 
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["ndr"].model_title,
@@ -43,7 +45,7 @@ ARGS_SPEC = {
         "lulc_path": {
             **spec_utils.LULC,
             "projected": True,
-            "about": _(
+            "about": gettext(
                 f"{spec_utils.LULC['about']} All values in this raster must "
                 "have corresponding entries in the Biophysical table.")
         },
@@ -53,47 +55,47 @@ ARGS_SPEC = {
                 "type": "number",
                 "units": u.none
             }},
-            "about": _(
+            "about": gettext(
                 "Map of runoff potential, the capacity to transport "
                 "nutrients downslope. This can be a quickflow index "
                 "or annual precipitation. Any units are allowed since "
                 "the values will be normalized by their average."),
-            "name": _("nutrient runoff proxy")
+            "name": gettext("nutrient runoff proxy")
         },
         "watersheds_path": {
             "type": "vector",
             "projected": True,
             "geometries": spec_utils.POLYGONS,
             "fields": {},
-            "about": _(
+            "about": gettext(
                 "Map of the boundaries of the watershed(s) over which to "
                 "aggregate the model results."),
-            "name": _("watersheds")
+            "name": gettext("watersheds")
         },
         "biophysical_table_path": {
             "type": "csv",
             "columns": {
                 "lucode": {
                     "type": "integer",
-                    "about": _(
+                    "about": gettext(
                         "LULC code for this class corresponding to values in "
                         "the LULC raster.")
                 },
                 "load_[NUTRIENT]": {  # nitrogen or phosphorus nutrient loads
                     "type": "number",
                     "units": u.kilogram/u.hectare/u.year,
-                    "about": _(
+                    "about": gettext(
                         "The nutrient loading for this land use class.")},
                 "eff_[NUTRIENT]": {  # nutrient retention capacities
                     "type": "ratio",
-                    "about": _(
+                    "about": gettext(
                         "Maximum nutrient retention efficiency. This is the "
                         "maximum proportion of the nutrient that is retained "
                         "on this LULC class.")},
                 "crit_len_[NUTRIENT]": {  # nutrient critical lengths
                     "type": "number",
                     "units": u.meter,
-                    "about": _(
+                    "about": gettext(
                         "The distance after which it is assumed that this "
                         "LULC type retains the nutrient at its maximum "
                         "capacity. If nutrients travel a shorter distance "
@@ -103,14 +105,14 @@ ARGS_SPEC = {
                 "proportion_subsurface_n": {
                     "type": "ratio",
                     "required": "calc_n",
-                    "about": _(
+                    "about": gettext(
                         "The proportion of the total amount of nitrogen that "
                         "are dissolved into the subsurface. By default, this "
                         "value should be set to 0, indicating that all "
                         "nutrients are delivered via surface flow. There is "
                         "no equivalent of this for phosphorus.")}
             },
-            "about": _(
+            "about": gettext(
                 "A table mapping each LULC class to its biophysical "
                 "properties related to nutrient load and retention. Replace "
                 "'[NUTRIENT]' in the column names with 'n' or 'p' for "
@@ -119,17 +121,17 @@ ARGS_SPEC = {
                 "must be provided if Calculate Phosphorus is selected. All "
                 "LULC codes in the LULC raster must have corresponding "
                 "entries in this table."),
-            "name": _("biophysical table")
+            "name": gettext("biophysical table")
         },
         "calc_p": {
             "type": "boolean",
-            "about": _("Calculate phosphorus retention and export."),
-            "name": _("calculate phosphorus")
+            "about": gettext("Calculate phosphorus retention and export."),
+            "name": gettext("calculate phosphorus")
         },
         "calc_n": {
             "type": "boolean",
-            "about": _("Calculate nitrogen retention and export."),
-            "name": _("calculate nitrogen")
+            "about": gettext("Calculate nitrogen retention and export."),
+            "name": gettext("calculate nitrogen")
         },
         "threshold_flow_accumulation": {
             **spec_utils.THRESHOLD_FLOW_ACCUMULATION
@@ -137,20 +139,20 @@ ARGS_SPEC = {
         "k_param": {
             "type": "number",
             "units": u.none,
-            "about": _(
+            "about": gettext(
                 "Calibration parameter that determines the shape of the "
                 "relationship between hydrologic connectivity (the degree of "
                 "connection from patches of land to the stream) and the "
                 "nutrient delivery ratio (percentage of nutrient that "
                 "actually reaches the stream)."),
-            "name": _("Borselli k parameter"),
+            "name": gettext("Borselli k parameter"),
         },
         "subsurface_critical_length_n": {
             "type": "number",
             "units": u.meter,
             "required": "calc_n",
-            "name": _("subsurface critical length (nitrogen)"),
-            "about": _(
+            "name": gettext("subsurface critical length (nitrogen)"),
+            "about": gettext(
                 "The distance traveled (subsurface and downslope) after which "
                 "it is assumed that soil retains nitrogen at its maximum "
                 "capacity. Required if Calculate Nitrogen is selected."),
@@ -158,8 +160,8 @@ ARGS_SPEC = {
         "subsurface_eff_n": {
             "type": "ratio",
             "required": "calc_n",
-            "name": _("subsurface maximum retention efficiency (nitrogen)"),
-            "about": _(
+            "name": gettext("subsurface maximum retention efficiency (nitrogen)"),
+            "about": gettext(
                 "The maximum nitrogen retention efficiency that can be "
                 "reached through subsurface flow. This characterizes the "
                 "retention due to biochemical degradation in soils. Required "

@@ -351,6 +351,14 @@ const UI_SPEC = {
       ['built_infrastructure_vector_path', 'infrastructure_damage_loss_table_path'],
     ],
   },
+  urban_nature_access: {
+    order: [
+      ['workspace_dir', 'results_suffix'],
+      ['lulc_raster_path', 'lulc_attribute_table'],
+      ['population_raster_path', 'admin_unit_vector_path', 'greenspace_demand',
+       'search_radius', 'decay_function'],
+    ],
+  },
   wave_energy: {
     order: [
       ['workspace_dir', 'results_suffix'],

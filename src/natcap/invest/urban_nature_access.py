@@ -8,11 +8,12 @@ import numpy
 import numpy.testing
 import pygeoprocessing
 import taskgraph
-from natcap.invest import MODEL_METADATA
+from natcap.invest.model_metadata import MODEL_METADATA
 from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
 
+from . import gettext
 from . import spec_utils
 from . import utils
 from . import validation
@@ -111,10 +112,18 @@ ARGS_SPEC = {
             'type': 'option_string',
             'required': False,
             'options': {
-                'dichotomy': {"description": _("dichotomy")},
-                'exponential': {"description": _("exponential")},
-                'gaussian': {"description": _("gaussian")},
-                'density': {"description": _("density")},
+                'dichotomy': {
+                    "display_name": "Dichotomy",
+                    "description": gettext("dichotomy")},
+                'exponential': {
+                    "display_name": "Exponential",
+                    "description": gettext("exponential")},
+                'gaussian': {
+                    "display_name": "Gaussian",
+                    "description": gettext("gaussian")},
+                'density': {
+                    "display_name": "Density",
+                    "description": gettext("density")},
             },
             'about': '',  # TODO
         }
