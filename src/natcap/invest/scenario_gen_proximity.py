@@ -14,7 +14,6 @@ import pygeoprocessing
 import scipy
 import taskgraph
 from osgeo import gdal
-from osgeo import osr
 
 from . import gettext
 from . import spec_utils

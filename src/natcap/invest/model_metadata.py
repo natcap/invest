@@ -12,6 +12,7 @@ class _MODELMETA:
     userguide: str    # name of the corresponding built userguide file
     aliases: tuple    # alternate names for the model, if any
 
+
 MODEL_METADATA = {
     'annual_water_yield': _MODELMETA(
         model_title=gettext('Annual Water Yield'),
@@ -164,9 +165,9 @@ MODEL_METADATA = {
         userguide='urban_cooling_model.html',
         aliases=('ucm',)),
     'urban_nature_access': _MODELMETA(
-        model_title='Urban Nature Access',
+        model_title=gettext('Urban Nature Access'),
         pyname='natcap.invest.urban_nature_access',
         gui='urban_nature_access.UrbanNatureAccess',
-        userguide='',  # TODO,
+        userguide='urban_nature_access.html',
         aliases=('una',)),
 }

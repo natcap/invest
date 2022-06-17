@@ -1,6 +1,4 @@
 """init module for natcap.invest."""
-import builtins
-import dataclasses
 import logging
 import os
 import sys
@@ -29,6 +27,7 @@ LOCALES = sorted(set(os.listdir(LOCALE_DIR) + ['en']))
 LOCALE_NAME_MAP = {
     locale: babel.Locale(locale).display_name for locale in LOCALES
 }
+
 
 def set_locale(locale_code):
     """Set the `gettext` attribute of natcap.invest.
@@ -61,8 +60,10 @@ def set_locale(locale_code):
         fallback=True).gettext
     setattr(this_module, 'gettext', gettext)
 
+
 # create natcap.invest.gettext, the default translation function
 set_locale('en')
+
 
 def local_dir(source_file):
     """Return the path to where `source_file` would be on disk.
