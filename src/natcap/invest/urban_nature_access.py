@@ -73,6 +73,7 @@ ARGS_SPEC = {
                 'search_radius_m': {
                     'type': 'number',
                     'units': u.meter,
+                    'expression': 'value >= 0',
                     'about': (
                         'The distance in meters to use as the search radius '
                         'for this type of greenspace. Values must be >= 0.'
@@ -117,7 +118,6 @@ ARGS_SPEC = {
         'decay_function': {
             'name': 'decay function',
             'type': 'option_string',
-            'required': False,
             'options': {
                 KERNEL_LABEL_DICHOTOMY: {
                     'display_name': 'Dichotomy',
@@ -213,9 +213,8 @@ def execute(args):
             number indicating the required greenspace, in m² per capita.
         args['search_radius'] (number): (required) A positive, nonzero number
             indicating the maximum distance that people travel for recreation.
-        args['kernel_type'] (string): (optional) The selected kernel type.
-            Must be one of the keys in ``KERNEL_TYPES``.  If not provided, the
-            ``'dichotomy'`` kernel will be used.
+        args['decay_function'] (string): (required) The selected kernel type.
+            Must be one of the keys in ``KERNEL_TYPES``.
 
     Returns:
         ``None``
@@ -255,12 +254,8 @@ def execute(args):
     assert sorted(kernel_creation_functions.keys()) == (
         sorted(ARGS_SPEC['args']['decay_function']['options']))
 
-    if 'kernel_type' not in args:
-        kernel_type = 'dichotomy'
-        LOGGER.info(
-            'args["kernel_type"] not provided; defaulting to {kernel_type}')
-    else:
-        kernel_type = args['kernel_type']
+    decay_function = args['decay_function']
+    LOGGER.info('Using decay function {decay_function}')
 
     # Align the population raster to the LULC.
     lulc_raster_info = pygeoprocessing.get_raster_info(
@@ -308,11 +303,11 @@ def execute(args):
             intermediate_dir, f'kernel_{search_radius_m}{suffix}.tif')
         kernel_tasks[search_radius_m] = graph.add_task(
             # All kernel creation types have the same function signature
-            kernel_creation_functions[kernel_type],
+            kernel_creation_functions[decay_function],
             args=(search_radius_in_pixels, kernel_paths[search_radius_m]),
             kwargs={'normalize': False},  # Model math calls for un-normalized
             task_name=(
-                f'Create {kernel_type} kernel - {search_radius_m}m'),
+                f'Create {decay_function} kernel - {search_radius_m}m'),
             target_path_list=[kernel_paths[search_radius_m]]
         )
 
@@ -377,7 +372,7 @@ def execute(args):
             f'Using search radius {search_radius_m} for lucodes '
             f'{" ".join([str(c) for c in lucodes])}')
 
-        # reclassify greenspace needed for this kernel
+        # reclassify landcover to greenspace area needed for this kernel
         greenspace_pixels_path = os.path.join(
             intermediate_dir,
             f'greenspace_{lucode_str}_{search_radius_m}{suffix}.tif')
@@ -646,7 +641,7 @@ def _filter_population(population, greenspace_budget, numpy_filter_op):
     population_matching_filter[valid_pixels] = numpy.where(
         numpy_filter_op(greenspace_budget[valid_pixels], 0),
         population[valid_pixels],  # If condition is true, use population
-        0.0  # If condition is false, use 0
+        0  # If condition is false, use 0
     )
     return population_matching_filter
 
@@ -818,7 +813,7 @@ def _calculate_greenspace_population_ratio(
                 * ``convolved_population`` pixels that are numerically close to
                   ``0`` are snapped to ``0`` to avoid unrealistically small
                   denominators in the final ratio.
-                * Any non-greenspace pixels will have a value of ``0.0`` in the
+                * Any non-greenspace pixels will have a value of ``0`` in the
                   output matrix.
         """
         # ASSUMPTION: population nodata value is not close to 0.
@@ -832,7 +827,7 @@ def _calculate_greenspace_population_ratio(
         valid_pixels = (convolved_population > 0)
 
         # R_j is a ratio only calculated for the greenspace pixels.
-        greenspace_pixels = ~numpy.isclose(greenspace_area, 0.0)
+        greenspace_pixels = ~numpy.isclose(greenspace_area, 0)
         valid_pixels &= greenspace_pixels
         if population_nodata is not None:
             valid_pixels &= ~numpy.isclose(
@@ -841,17 +836,19 @@ def _calculate_greenspace_population_ratio(
         if greenspace_nodata is not None:
             valid_pixels &= ~numpy.isclose(greenspace_area, greenspace_nodata)
 
-        # If the population in the search radius is numerically 0, the model
-        # specifies that the ratio should be set to the greenspace area.
-        # Because the convolution happens in float64 space and is
-        # non-normalized, kicking the atol up to 0.1 feels necessary to
-        # eliminate the possibility of accumulation of numerical noise.
-        # JD picked 0.1 out of my back pocket.
-        population_close_to_zero = numpy.isclose(
-            convolved_population, 0.0, atol=0.1)
+        # The user's guide specifies that if the population in the search
+        # radius is numerically 0, the greenspace/population ratio should be
+        # set to the greenspace area.
+        # A consequence of this is that as the population approaches 0 from the
+        # positive side, the ratio will approach infinity.  Maybe this is
+        # desirable, but until we check with the science team, we'll set this
+        # so that the greenspace/population ratio will be set to the greenspace
+        # area at populations <= 1.
+        # TODO: see what the science team thinks is right to do.
+        population_close_to_zero = (convolved_population <= 1.0)
         out_array[population_close_to_zero] = (
             greenspace_pixels[population_close_to_zero])
-        out_array[~greenspace_pixels] = 0.0
+        out_array[~greenspace_pixels] = 0
         out_array[valid_pixels] = (
             greenspace_area[valid_pixels] / convolved_population[valid_pixels])
 
@@ -899,7 +896,7 @@ def _convolve_and_set_lower_bounds_for_population(
         valid_pixels = slice(None)
         if target_nodata is not None:
             valid_pixels = ~numpy.isclose(block, target_nodata)
-        block[(block < 0.0) & valid_pixels] = 0.0
+        block[(block < 0) & valid_pixels] = 0
         target_band.WriteArray(
             block, xoff=block_data['xoff'], yoff=block_data['yoff'])
 
@@ -1113,7 +1110,7 @@ def dichotomous_decay_kernel_raster(expected_distance, kernel_filepath,
     kernel_band = kernel_raster.GetRasterBand(1)
     band_x_size = kernel_band.XSize
     band_y_size = kernel_band.YSize
-    running_sum = 0.0
+    running_sum = 0
     for block_data in pygeoprocessing.iterblocks(
             (kernel_filepath, 1), offset_only=True):
         array_xmin = block_data['xoff'] - pixel_radius
@@ -1198,7 +1195,7 @@ def density_decay_kernel_raster(expected_distance, kernel_filepath,
     kernel_band = kernel_raster.GetRasterBand(1)
     band_x_size = kernel_band.XSize
     band_y_size = kernel_band.YSize
-    running_sum = 0.0
+    running_sum = 0
     for block_data in pygeoprocessing.iterblocks(
             (kernel_filepath, 1), offset_only=True):
         array_xmin = block_data['xoff'] - pixel_radius

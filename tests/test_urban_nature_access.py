@@ -312,8 +312,8 @@ class UNATests(unittest.TestCase):
         # expected field values from eyeballing the results; random seed = 1
         expected_values = {
             'SUP_DEMadm_cap': -17.9078,
-            'Pund_adm': 4094.012207,
-            'Povr_adm': 981.987549,
+            'Pund_adm': 4660.111328,
+            'Povr_adm': 415.888885,
         }
         admin_feature = admin_layer.GetFeature(1)
         self.assertEqual(
@@ -362,8 +362,8 @@ class UNATests(unittest.TestCase):
         # expected field values from eyeballing the results; random seed = 1
         expected_values = {
             'SUP_DEMadm_cap': -17.9078,
-            'Pund_adm': 3938.370361,
-            'Povr_adm': 1137.629639,
+            'Pund_adm': 4353.370117,
+            'Povr_adm': 722.629639,
         }
         admin_feature = admin_layer.GetFeature(1)
         self.assertEqual(
