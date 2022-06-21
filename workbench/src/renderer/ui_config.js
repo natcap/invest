@@ -356,7 +356,7 @@ const UI_SPEC = {
       ['workspace_dir', 'results_suffix'],
       ['lulc_raster_path', 'lulc_attribute_table'],
       ['population_raster_path', 'admin_unit_vector_path', 'greenspace_demand',
-       'search_radius', 'decay_function'],
+       'decay_function'],
     ],
   },
   wave_energy: {

@@ -197,11 +197,9 @@ def execute(args):
             * ``greenspace``: (required) ``0`` or ``1`` indicating whether
               this landcover code is (``1``) or is not (``0``) a greenspace
               pixel.
-            * ``search_radius_m``: (optional) the search radius for this
-              greenspace landcover in meters. Any rows with ``greenspace==1``
-              that do not have a value for ``search_radius_m`` will default to
-              using ``args['search_radius']`` as their ``search_radius_m``
-              value.
+            * ``search_radius_m``: (required) the search radius for this
+              greenspace landcover in meters. Required for all greenspace
+              lucodes.
 
         args['population_raster_path'] (string): (required) A string path to a
             GDAL-compatible raster where pixels represent the population of
@@ -211,8 +209,6 @@ def execute(args):
             boundaries.
         args['greenspace_demand'] (number): (required) A positive, nonzero
             number indicating the required greenspace, in m² per capita.
-        args['search_radius'] (number): (required) A positive, nonzero number
-            indicating the maximum distance that people travel for recreation.
         args['decay_function'] (string): (required) The selected kernel type.
             Must be one of the keys in ``KERNEL_TYPES``.
 
