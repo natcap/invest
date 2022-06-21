@@ -349,8 +349,7 @@ def execute(args):
         # If there are varying search radii, we run 2SFCA once for each
         # radius:lucode combination so that modelers can see the contribution
         # of each landcover code to the total greenspace supply.  This comes at
-        # the cost of more convolutions and more runtime (and disk space), but
-        # it's what the UNA science team wants.
+        # the cost of more convolutions and more runtime (and disk space).
         radius_to_lucodes = [
             (search_radius_m, [lucode])
             for ((search_radius_m, lucode), _) in
