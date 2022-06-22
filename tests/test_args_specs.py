@@ -94,7 +94,7 @@ class ValidateArgsSpecs(unittest.TestCase):
         with self.subTest(nested_arg_name=name):
             if parent_type is None:  # all top-level args must have these attrs
                 for attr in ['name', 'about']:
-                    self.assertTrue(attr in arg)
+                    self.assertIn(attr, arg)
 
             # arg['type'] can be either a string or a set of strings
             types = arg['type'] if isinstance(

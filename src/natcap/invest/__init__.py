@@ -1,6 +1,4 @@
 """init module for natcap.invest."""
-import builtins
-import dataclasses
 import logging
 import os
 import sys
@@ -33,6 +31,11 @@ LOCALE_NAME_MAP = {
 
 def set_locale(locale_code):
     """Set the `gettext` attribute of natcap.invest.
+
+    This is the locale that will be used for translation. The `gettext`
+    function returned by `install_locale` will translate to this locale.
+    To change the language of a natcap.invest module, call this function
+    with the desired language code, then reload the module.
 
     Args:
         locale_code (str): ISO 639-1 locale code for a language supported

@@ -454,6 +454,7 @@ Section "InVEST Tools" Section_InVEST_Tools
         !insertmacro StartMenuLink "${SMPATH}\Urban Flood Risk Mitigation" "ufrm"
         !insertmacro StartMenuLink "${SMPATH}\Urban Cooling" "ucm"
         !insertmacro StartMenuLink "${SMPATH}\Urban Stormwater Retention" "stormwater"
+        !insertmacro StartMenuLink "${SMPATH}\Urban Nature Access" "una"
         !insertmacro StartMenuLink "${SMPATH}\Habitat Risk Assessment" "hra"
 
         !define COASTALBLUECARBON "${SMPATH}\Coastal Blue Carbon"

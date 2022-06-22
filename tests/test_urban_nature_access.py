@@ -9,6 +9,8 @@ import textwrap
 import unittest
 
 import numpy
+import pandas
+import pandas.testing
 import pygeoprocessing
 import shapely.geometry
 from osgeo import gdal
@@ -17,6 +19,77 @@ from osgeo import osr
 _DEFAULT_ORIGIN = (444720, 3751320)
 _DEFAULT_PIXEL_SIZE = (30, -30)
 _DEFAULT_EPSG = 3116
+
+
+def _build_model_args(workspace):
+    args = {
+        'workspace_dir': os.path.join(workspace, 'workspace'),
+        'results_suffix': 'suffix',
+        'population_raster_path': os.path.join(
+            workspace, 'population.tif'),
+        'lulc_raster_path': os.path.join(workspace, 'lulc.tif'),
+        'lulc_attribute_table': os.path.join(
+            workspace, 'lulc_attributes.csv'),
+        'decay_function': 'gaussian',
+        'greenspace_demand': 100,  # square meters
+        'admin_unit_vector_path': os.path.join(
+            workspace, 'admin_units.geojson'),
+    }
+
+    random.seed(-1)  # for our random number generation
+    population_pixel_size = (90, -90)
+    population_array_shape = (10, 10)
+    population_array = numpy.array(
+        random.choices(range(0, 100), k=100),
+        dtype=numpy.int32).reshape(population_array_shape)
+    population_srs = osr.SpatialReference()
+    population_srs.ImportFromEPSG(_DEFAULT_EPSG)
+    population_wkt = population_srs.ExportToWkt()
+    pygeoprocessing.numpy_array_to_raster(
+        base_array=population_array,
+        target_nodata=-1,
+        pixel_size=population_pixel_size,
+        origin=_DEFAULT_ORIGIN,
+        projection_wkt=population_wkt,
+        target_path=args['population_raster_path'])
+
+    lulc_pixel_size = _DEFAULT_PIXEL_SIZE
+    lulc_array_shape = (30, 30)
+    lulc_array = numpy.array(
+        random.choices(range(0, 10), k=900),
+        dtype=numpy.int32).reshape(lulc_array_shape)
+    pygeoprocessing.numpy_array_to_raster(
+        base_array=lulc_array,
+        target_nodata=-1,
+        pixel_size=lulc_pixel_size,
+        origin=_DEFAULT_ORIGIN,
+        projection_wkt=population_wkt,
+        target_path=args['lulc_raster_path'])
+
+    with open(args['lulc_attribute_table'], 'w') as attr_table:
+        attr_table.write(textwrap.dedent(
+            """\
+            lucode,greenspace,search_radius_m
+            0,0,100
+            1,1,100
+            2,0,100
+            3,1,100
+            4,0,100
+            5,1,100
+            6,0,100
+            7,1,100
+            8,0,100
+            9,1,100"""))
+
+    admin_geom = [
+        shapely.geometry.box(
+            *pygeoprocessing.get_raster_info(
+                args['lulc_raster_path'])['bounding_box'])]
+    pygeoprocessing.shapely_geometry_to_vector(
+        admin_geom, args['admin_unit_vector_path'],
+        population_wkt, 'GeoJSON')
+
+    return args
 
 
 class UNATests(unittest.TestCase):
@@ -194,90 +267,26 @@ class UNATests(unittest.TestCase):
         numpy.testing.assert_allclose(
             supply_demand, expected_supply_demand)
 
-    def test_model(self):
-        """UNA: Run through the model."""
+    def test_core_model(self):
+        """UNA: Run through the model with base data."""
         from natcap.invest import urban_nature_access
 
-        args = {
-            'workspace_dir': os.path.join(self.workspace_dir, 'workspace'),
-            'results_suffix': 'suffix',
-            'population_raster_path': os.path.join(
-                self.workspace_dir, 'population.tif'),
-            'lulc_raster_path': os.path.join(self.workspace_dir, 'lulc.tif'),
-            'lulc_attribute_table': os.path.join(
-                self.workspace_dir, 'lulc_attributes.csv'),
-            'decay_function': 'gaussian',
-            'search_radius': 100.0,  # meters
-            'greenspace_demand': 100,  # square meters
-            'admin_unit_vector_path': os.path.join(
-                self.workspace_dir, 'admin_units.geojson'),
-        }
-
-        random.seed(-1)  # for our random number generation
-        population_pixel_size = (90, -90)
-        population_array_shape = (10, 10)
-        population_array = numpy.array(
-            random.choices(range(0, 100), k=100),
-            dtype=numpy.int32).reshape(population_array_shape)
-        population_srs = osr.SpatialReference()
-        population_srs.ImportFromEPSG(_DEFAULT_EPSG)
-        population_wkt = population_srs.ExportToWkt()
-        pygeoprocessing.numpy_array_to_raster(
-            base_array=population_array,
-            target_nodata=-1,
-            pixel_size=population_pixel_size,
-            origin=_DEFAULT_ORIGIN,
-            projection_wkt=population_wkt,
-            target_path=args['population_raster_path'])
-
-        lulc_pixel_size = _DEFAULT_PIXEL_SIZE
-        lulc_array_shape = (30, 30)
-        lulc_array = numpy.array(
-            random.choices(range(0, 10), k=900),
-            dtype=numpy.int32).reshape(lulc_array_shape)
-        pygeoprocessing.numpy_array_to_raster(
-            base_array=lulc_array,
-            target_nodata=-1,
-            pixel_size=lulc_pixel_size,
-            origin=_DEFAULT_ORIGIN,
-            projection_wkt=population_wkt,
-            target_path=args['lulc_raster_path'])
-
-        with open(args['lulc_attribute_table'], 'w') as attr_table:
-            attr_table.write(textwrap.dedent(
-                """lucode,greenspace
-                0,0
-                1,1
-                2,0
-                3,1
-                4,0
-                5,1
-                6,0
-                7,1
-                8,0
-                9,1"""))
-
-        admin_geom = [
-            shapely.geometry.box(
-                *pygeoprocessing.get_raster_info(
-                    args['lulc_raster_path'])['bounding_box'])]
-        pygeoprocessing.shapely_geometry_to_vector(
-            admin_geom, args['admin_unit_vector_path'],
-            population_wkt, 'GeoJSON')
+        args = _build_model_args(self.workspace_dir)
 
         urban_nature_access.execute(args)
 
         # Since we're doing a semi-manual alignment step, assert that the
-        # aligned LULC and population rasters have the same pixel sizes, origin
-        # and raster dimensions.
-        # TODO: Remove these assertions once we're using align_and_resize and
-        # it works as expected.
+        # aligned LULC and population rasters have the same pixel sizes,
+        # origin and raster dimensions.
+        # TODO: Remove these assertions once we're using align_and_resize
+        # and it works as expected.
         aligned_lulc_raster_info = pygeoprocessing.get_raster_info(
             os.path.join(args['workspace_dir'], 'intermediate',
                          f"aligned_lulc_{args['results_suffix']}.tif"))
         aligned_population_raster_info = pygeoprocessing.get_raster_info(
-            os.path.join(args['workspace_dir'], 'intermediate',
-                         f"aligned_population_{args['results_suffix']}.tif"))
+            os.path.join(
+                args['workspace_dir'], 'intermediate',
+                f"aligned_population_{args['results_suffix']}.tif"))
         numpy.testing.assert_allclose(
             aligned_lulc_raster_info['pixel_size'],
             aligned_population_raster_info['pixel_size'])
@@ -291,8 +300,8 @@ class UNATests(unittest.TestCase):
             aligned_lulc_raster_info['bounding_box'],
             aligned_population_raster_info['bounding_box'])
 
-        # Check that we're getting the appropriate summary values in the admin
-        # units vector.
+        # Check that we're getting the appropriate summary values in the
+        # admin units vector.
         admin_vector_path = os.path.join(
             args['workspace_dir'], 'output',
             f"admin_units_{args['results_suffix']}.gpkg")
@@ -300,23 +309,78 @@ class UNATests(unittest.TestCase):
         admin_layer = admin_vector.GetLayer()
         self.assertEqual(admin_layer.GetFeatureCount(), 1)
 
+        # expected field values from eyeballing the results; random seed = 1
+        expected_values = {
+            'SUP_DEMadm_cap': -17.9078,
+            'Pund_adm': 4660.111328,
+            'Povr_adm': 415.888885,
+        }
         admin_feature = admin_layer.GetFeature(1)
-        numpy.testing.assert_allclose(
-            admin_feature.GetField('SUP_DEMadm_cap'),
-            -17.9078)  # from eyeballing the results; random seed = 1
+        self.assertEqual(
+            expected_values.keys(),
+            admin_feature.items().keys()
+        )
+        for fieldname, expected_value in expected_values.items():
+            numpy.testing.assert_allclose(
+                admin_feature.GetField(fieldname), expected_value)
 
-        undersupplied_pop = admin_feature.GetField('Pund_adm')
+        # The sum of the under-and-oversupplied populations should be equal
+        # to the total population count.
+        population_array = pygeoprocessing.raster_to_numpy_array(
+            args['population_raster_path'])
         numpy.testing.assert_allclose(
-            undersupplied_pop,
-            4094.012207)  # From eyeballing the results; random seed = 1
-
-        oversupplied_pop = admin_feature.GetField('Povr_adm')
-        numpy.testing.assert_allclose(
-            oversupplied_pop,
-            981.987549)  # From eyeballing the results; random seed = 1
-
-        # The sum of the under-and-oversupplied populations should be equal to
-        # the total population count.
-        numpy.testing.assert_allclose(
-            undersupplied_pop + oversupplied_pop,
+            (expected_values['Pund_adm'] + expected_values['Povr_adm']),
             population_array.sum())
+
+        admin_vector = None
+        admin_layer = None
+
+    def test_split_greenspace(self):
+        from natcap.invest import urban_nature_access
+
+        args = _build_model_args(self.workspace_dir)
+
+        # The split greenspace feature requires an extra column in the
+        # attribute table.
+        attribute_table = pandas.read_csv(args['lulc_attribute_table'])
+        new_search_radius_values = {
+            value: 30*value for value in range(1, 10, 2)}
+        new_search_radius_values[7] = 30 * 9  # make one a duplicate distance.
+        attribute_table['search_radius_m'] = attribute_table['lucode'].map(
+            new_search_radius_values)
+        attribute_table.to_csv(args['lulc_attribute_table'], index=False)
+
+        urban_nature_access.execute(args)
+
+        admin_vector_path = os.path.join(
+            args['workspace_dir'], 'output',
+            f"admin_units_{args['results_suffix']}.gpkg")
+        admin_vector = gdal.OpenEx(admin_vector_path)
+        admin_layer = admin_vector.GetLayer()
+        self.assertEqual(admin_layer.GetFeatureCount(), 1)
+
+        # expected field values from eyeballing the results; random seed = 1
+        expected_values = {
+            'SUP_DEMadm_cap': -17.9078,
+            'Pund_adm': 4353.370117,
+            'Povr_adm': 722.629639,
+        }
+        admin_feature = admin_layer.GetFeature(1)
+        self.assertEqual(
+            expected_values.keys(),
+            admin_feature.items().keys()
+        )
+        for fieldname, expected_value in expected_values.items():
+            numpy.testing.assert_allclose(
+                admin_feature.GetField(fieldname), expected_value)
+
+        # The sum of the under-and-oversupplied populations should be equal
+        # to the total population count.
+        population_array = pygeoprocessing.raster_to_numpy_array(
+            args['population_raster_path'])
+        numpy.testing.assert_allclose(
+            (expected_values['Pund_adm'] + expected_values['Povr_adm']),
+            population_array.sum())
+
+        admin_vector = None
+        admin_layer = None

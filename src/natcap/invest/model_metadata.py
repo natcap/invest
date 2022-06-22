@@ -12,6 +12,7 @@ class _MODELMETA:
     userguide: str    # name of the corresponding built userguide file
     aliases: tuple    # alternate names for the model, if any
 
+
 MODEL_METADATA = {
     'annual_water_yield': _MODELMETA(
         model_title=gettext('Annual Water Yield'),
