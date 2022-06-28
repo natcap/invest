@@ -574,7 +574,7 @@ def execute(args):
         target_path_list=[f_reg['avoided_erosion_path']],
         task_name='calculate local retention')
 
-    _ = task_graph.add_task(
+    total_retention_task = task_graph.add_task(
         func=_calculate_total_retention,
         args=(
             f_reg['avoided_erosion_path'], f_reg['sdr_path'],
@@ -639,7 +639,8 @@ def execute(args):
             f_reg['watershed_results_sdr_path']),
         target_path_list=[f_reg['watershed_results_sdr_path']],
         dependent_task_list=[
-            usle_task, sed_export_task],  #TODO: fixup tasks
+            usle_task, sed_export_task, total_retention_task,
+            sed_deposition_task, avoided_erosion_task],
         task_name='generate report')
 
     task_graph.close()
