@@ -679,8 +679,22 @@ def execute(args):
 
 
 def _calculate_total_retention(
-    avoided_erosion_path, sdr_path, sed_deposition_path,
-    target_total_retention_path):
+        avoided_erosion_path, sdr_path, sed_deposition_path,
+        target_total_retention_path):
+    """Calculate total retention.
+
+    Args:
+        avoided_erosion_path (string): The string path to an avoided erosion
+            raster.
+        sdr_path (string): The path to a raster containing computed SDR values.
+        sed_deposition_path (string): The path to a raster containing computed
+            sediment deposition values.
+        target_total_retention_path (string): The path to the calculated total
+            retention raster, produced by this function.
+
+    Returns:
+        ``None``
+    """
     avoided_erosion_nodata = pygeoprocessing.get_raster_info(
         avoided_erosion_path)['nodata'][0]
     sdr_nodata = pygeoprocessing.get_raster_info(sdr_path)['nodata'][0]
@@ -688,6 +702,17 @@ def _calculate_total_retention(
         sed_deposition_path)['nodata'][0]
 
     def _total_retention_function(avoided_erosion, sdr, sed_deposition):
+        """Calculate total retention.
+
+        Args:
+            avoided_erosion (numpy.array): Avoided erosion values.
+            sdr (numpy.array): SDR values.
+            sed_deposition (numpy.array): Sediment deposition values.
+
+        Returns:
+            A ``numpy.array`` of computed total retention matching the shape of
+            the input numpy arrays.
+        """
         result = numpy.full(avoided_erosion.shape, _TARGET_NODATA,
                             dtype=numpy.float32)
         valid_mask = (
@@ -728,6 +753,16 @@ def _calculate_avoided_erosion(rkls_path, usle_path,
     usle_nodata = pygeoprocessing.get_raster_info(usle_path)['nodata'][0]
 
     def _avoided_erosion_function(rkls, usle):
+        """Calculate avoided erosion.
+
+        Args:
+            rkls (numpy.array): Computed RKLS values.
+            usle (numpy.array): Computed USLE values.
+
+        Returns:
+            A ``numpy.array`` of the same size and shape of the input numpy
+            arrays containing computed avoided erosion values.
+        """
         result = numpy.full(rkls.shape, _TARGET_NODATA, dtype=numpy.float32)
         valid_mask = (
             (~utils.array_equals_nodata(rkls, rkls_nodata)) &
