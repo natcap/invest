@@ -207,6 +207,15 @@ describe('createWindow', () => {
 });
 
 describe('investUsageLogger', () => {
+  beforeEach(() => {
+    // the expected response
+    const response = {
+      ok: true,
+      text: async () => 'foo',
+    };
+    fetch.mockResolvedValue(response);
+  });
+
   test('sends requests with correct payload', () => {
     const modelPyname = 'natcap.invest.carbon';
     const args = {
