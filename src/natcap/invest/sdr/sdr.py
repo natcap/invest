@@ -153,8 +153,6 @@ ARGS_SPEC = {
 _OUTPUT_BASE_FILES = {
     'rkls_path': 'rkls.tif',
     'sed_export_path': 'sed_export.tif',
-    'sed_retention_index_path': 'sed_retention_index.tif',
-    'sed_retention_path': 'sed_retention.tif',
     'sed_deposition_path': 'sed_deposition.tif',
     'stream_and_drainage_path': 'stream_and_drainage.tif',
     'stream_path': 'stream.tif',
@@ -586,15 +584,6 @@ def execute(args):
         target_path_list=[f_reg['total_retention_path']],
         task_name='calculate total retention')
 
-    _ = task_graph.add_task(
-        func=_calculate_sed_retention_index,
-        args=(
-            f_reg['rkls_path'], f_reg['usle_path'], f_reg['sdr_path'],
-            float(args['sdr_max']), f_reg['sed_retention_index_path']),
-        target_path_list=[f_reg['sed_retention_index_path']],
-        dependent_task_list=[rkls_task, usle_task, sdr_task],
-        task_name='calculate sediment retention index')
-
     # This next section is for calculating the bare soil part.
     s_inverse_task = task_graph.add_task(
         func=_calculate_inverse_s_factor,
@@ -633,28 +622,6 @@ def execute(args):
         dependent_task_list=[d_up_bare_task, d_dn_bare_task],
         task_name='calculate bare soil ic')
 
-    sdr_bare_task = task_graph.add_task(
-        func=_calculate_sdr,
-        args=(
-            float(args['k_param']), float(args['ic_0_param']),
-            float(args['sdr_max']), f_reg['ic_bare_soil_path'],
-            drainage_raster_path_task[0], f_reg['sdr_bare_soil_path']),
-        target_path_list=[f_reg['sdr_bare_soil_path']],
-        dependent_task_list=[ic_bare_task, drainage_raster_path_task[1]],
-        task_name='calculate bare SDR')
-
-    sed_retention_task = task_graph.add_task(
-        func=_calculate_sed_retention,
-        args=(
-            f_reg['rkls_path'], f_reg['usle_path'],
-            drainage_raster_path_task[0], f_reg['sdr_path'],
-            f_reg['sdr_bare_soil_path'], f_reg['sed_retention_path']),
-        target_path_list=[f_reg['sed_retention_path']],
-        dependent_task_list=[
-            rkls_task, usle_task, drainage_raster_path_task[1], sdr_task,
-            sdr_bare_task],
-        task_name='calculate sediment retention')
-
     _ = task_graph.add_task(
         func=_calculate_what_drains_to_stream,
         args=(f_reg['flow_direction_path'], f_reg['d_dn_path'],
@@ -672,7 +639,7 @@ def execute(args):
             f_reg['watershed_results_sdr_path']),
         target_path_list=[f_reg['watershed_results_sdr_path']],
         dependent_task_list=[
-            usle_task, sed_export_task, sed_retention_task],
+            usle_task, sed_export_task],  #TODO: fixup tasks
         task_name='generate report')
 
     task_graph.close()
@@ -1424,80 +1391,6 @@ def _calculate_e_prime(usle_path, sdr_path, target_e_prime):
 
     pygeoprocessing.raster_calculator(
         [(usle_path, 1), (sdr_path, 1)], e_prime_op, target_e_prime,
-        gdal.GDT_Float32, _TARGET_NODATA)
-
-
-def _calculate_sed_retention_index(
-        rkls_path, usle_path, sdr_path, sdr_max,
-        out_sed_retention_index_path):
-    """Calculate (rkls-usle) * sdr  / sdr_max."""
-    def sediment_index_op(rkls, usle, sdr_factor):
-        """Calculate sediment retention index."""
-        valid_mask = (
-            ~utils.array_equals_nodata(rkls, _TARGET_NODATA) &
-            ~utils.array_equals_nodata(usle, _TARGET_NODATA) &
-            ~utils.array_equals_nodata(sdr_factor, _TARGET_NODATA))
-        result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
-        result[:] = _TARGET_NODATA
-        result[valid_mask] = (
-            (rkls[valid_mask] - usle[valid_mask]) *
-            sdr_factor[valid_mask] / sdr_max)
-        return result
-
-    pygeoprocessing.raster_calculator(
-        [(path, 1) for path in [rkls_path, usle_path, sdr_path]],
-        sediment_index_op, out_sed_retention_index_path, gdal.GDT_Float32,
-        _TARGET_NODATA)
-
-
-def _calculate_sed_retention(
-        rkls_path, usle_path, stream_path, sdr_path, sdr_bare_soil_path,
-        out_sed_ret_bare_soil_path):
-    """Difference in exported sediments on basic and bare watershed.
-
-    Calculates the difference of sediment export on the real landscape and
-    a bare soil landscape given that SDR has been calculated for bare soil.
-    Essentially:
-
-        RKLS * SDR_bare - USLE * SDR
-
-    Args:
-        rkls_path (string): path to RKLS raster
-        usle_path (string): path to USLE raster
-        stream_path (string): path to stream/drainage mask
-        sdr_path (string): path to SDR raster
-        sdr_bare_soil_path (string): path to SDR raster calculated for a bare
-            watershed
-        out_sed_ret_bare_soil_path (string): path to output raster indicating
-            where sediment is retained
-
-    Returns:
-        None
-
-    """
-    stream_nodata = pygeoprocessing.get_raster_info(stream_path)['nodata'][0]
-
-    def sediment_retention_bare_soil_op(
-            rkls, usle, stream_factor, sdr_factor, sdr_factor_bare_soil):
-        """Subtract bare soil export from real landcover."""
-        valid_mask = (
-            ~utils.array_equals_nodata(rkls, _TARGET_NODATA) &
-            ~utils.array_equals_nodata(usle, _TARGET_NODATA) &
-            ~utils.array_equals_nodata(stream_factor, stream_nodata) &
-            ~utils.array_equals_nodata(sdr_factor, _TARGET_NODATA) &
-            ~utils.array_equals_nodata(sdr_factor_bare_soil, _TARGET_NODATA))
-        result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
-        result[:] = _TARGET_NODATA
-        result[valid_mask] = (
-            rkls[valid_mask] * sdr_factor_bare_soil[valid_mask] -
-            usle[valid_mask] * sdr_factor[valid_mask]) * (
-                1 - stream_factor[valid_mask])
-        return result
-
-    pygeoprocessing.raster_calculator(
-        [(path, 1) for path in [
-            rkls_path, usle_path, stream_path, sdr_path, sdr_bare_soil_path]],
-        sediment_retention_bare_soil_op, out_sed_ret_bare_soil_path,
         gdal.GDT_Float32, _TARGET_NODATA)
 
 
