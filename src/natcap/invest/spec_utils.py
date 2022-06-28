@@ -4,6 +4,7 @@ import os
 
 import pint
 
+from . import gettext
 
 # the same unit registry instance should be shared across everything
 # load from custom unit defintions file
@@ -14,8 +15,8 @@ u.load_definitions(os.path.join(
 
 # Specs for common arg types ##################################################
 WORKSPACE = {
-    "name": _("workspace"),
-    "about": _(
+    "name": gettext("workspace"),
+    "about": gettext(
         "The folder where all the model's output files will be written. If "
         "this folder does not exist, it will be created. If data already "
         "exists in the folder, it will be overwritten."),
@@ -26,8 +27,8 @@ WORKSPACE = {
 }
 
 SUFFIX = {
-    "name": _("file suffix"),
-    "about": _(
+    "name": gettext("file suffix"),
+    "about": gettext(
         "Suffix that will be appended to all output file names. Useful to "
         "differentiate between model runs."),
     "type": "freestyle_string",
@@ -36,8 +37,8 @@ SUFFIX = {
 }
 
 N_WORKERS = {
-    "name": _("taskgraph n_workers parameter"),
-    "about": _(
+    "name": gettext("taskgraph n_workers parameter"),
+    "about": gettext(
         "The n_workers parameter to provide to taskgraph. "
         "-1 will cause all jobs to run synchronously. "
         "0 will run all jobs in the same process, but scheduling will take "
@@ -62,16 +63,16 @@ AOI = {
     "type": "vector",
     "fields": {},
     "geometries": {"POLYGON", "MULTIPOLYGON"},
-    "name": _("area of interest"),
-    "about": _(
+    "name": gettext("area of interest"),
+    "about": gettext(
         "A map of areas over which to aggregate and "
         "summarize the final results."),
 }
 LULC = {
     "type": "raster",
     "bands": {1: {"type": "integer"}},
-    "about": _("Map of land use/land cover codes."),
-    "name": _("land use/land cover")
+    "about": gettext("Map of land use/land cover codes."),
+    "name": gettext("land use/land cover")
 }
 DEM = {
     "type": "raster",
@@ -81,8 +82,8 @@ DEM = {
             "units": u.meter
         }
     },
-    "about": _("Map of elevation above sea level."),
-    "name": _("digital elevation model")
+    "about": gettext("Map of elevation above sea level."),
+    "name": gettext("digital elevation model")
 }
 PRECIP = {
     "type": "raster",
@@ -92,11 +93,11 @@ PRECIP = {
             "units": u.millimeter/u.year
         }
     },
-    "about": _("Map of average annual precipitation."),
-    "name": _("precipitation")
+    "about": gettext("Map of average annual precipitation."),
+    "name": gettext("precipitation")
 }
-ETO = {
-    "name": _("evapotranspiration"),
+ET0 = {
+    "name": gettext("evapotranspiration"),
     "type": "raster",
     "bands": {
         1: {
@@ -104,24 +105,24 @@ ETO = {
             "units": u.millimeter
         }
     },
-    "about": _("Map of evapotranspiration values.")
+    "about": gettext("Map of evapotranspiration values.")
 }
 SOIL_GROUP = {
     "type": "raster",
     "bands": {1: {"type": "integer"}},
-    "about": _(
+    "about": gettext(
         "Map of soil hydrologic groups. Pixels may have values 1, 2, 3, or 4, "
         "corresponding to soil hydrologic groups A, B, C, or D, respectively."),
-    "name": _("soil hydrologic group")
+    "name": gettext("soil hydrologic group")
 }
 THRESHOLD_FLOW_ACCUMULATION = {
     "expression": "value >= 0",
     "type": "number",
     "units": u.pixel,
-    "about": _(
+    "about": gettext(
         "The number of upslope pixels that must flow into a pixel "
         "before it is classified as a stream."),
-    "name": _("threshold flow accumulation")
+    "name": gettext("threshold flow accumulation")
 }
 
 # geometry types ##############################################################
@@ -167,12 +168,16 @@ def format_unit(unit):
 
     # Optionally use a pre-set format for a particular unit
     custom_formats = {
+        u.pixel: 'number of pixels',
+        u.year_AD: '',  # don't need to mention units for a year input
+        u.other: '',    # for inputs that can have any or multiple units
         # For soil erodibility (t*h*ha/(ha*MJ*mm)), by convention the ha's
         # are left on top and bottom and don't cancel out
         # pint always cancels units where it can, so add them back in here
         # this isn't a perfect solution
         # see https://github.com/hgrecco/pint/issues/1364
-        u.t * u.hr / (u.MJ * u.mm): 't · h · ha / (ha · MJ · mm)'
+        u.t * u.hr / (u.MJ * u.mm): 't · h · ha / (ha · MJ · mm)',
+        u.none: 'unitless'
     }
     if unit in custom_formats:
         return custom_formats[unit]
@@ -222,12 +227,12 @@ def serialize_args_spec(spec):
 
 # accepted geometries for a vector will be displayed in this order
 GEOMETRY_ORDER = [
-    _('POINT'),
-    _('MULTIPOINT'),
-    _('LINESTRING'),
-    _('MULTILINESTRING'),
-    _('POLYGON'),
-    _('MULTIPOLYGON')]
+    gettext('POINT'),
+    gettext('MULTIPOINT'),
+    gettext('LINESTRING'),
+    gettext('MULTILINESTRING'),
+    gettext('POLYGON'),
+    gettext('MULTIPOLYGON')]
 
 INPUT_TYPES_HTML_FILE = 'input_types.html'
 
@@ -243,12 +248,12 @@ def format_required_string(required):
         string
     """
     if required is None or required is True:
-        return _('required')
+        return gettext('required')
     elif required is False:
-        return _('optional')
+        return gettext('optional')
     else:
         # assume that the about text will describe the conditional
-        return _('conditionally required')
+        return gettext('conditionally required')
 
 
 def format_geometries_string(geometries):
@@ -278,11 +283,11 @@ def format_permissions_string(permissions):
     """
     permissions_strings = []
     if 'r' in permissions:
-        permissions_strings.append(_('read'))
+        permissions_strings.append(gettext('read'))
     if 'w' in permissions:
-        permissions_strings.append(_('write'))
+        permissions_strings.append(gettext('write'))
     if 'x' in permissions:
-        permissions_strings.append(_('execute'))
+        permissions_strings.append(gettext('execute'))
     return ', '.join(permissions_strings)
 
 
@@ -355,18 +360,18 @@ def format_type_string(arg_type):
     # some types need a more user-friendly name
     # all types are listed here so that they can be marked up for translation
     type_names = {
-        'boolean': _('true/false'),
-        'csv': _('CSV'),
-        'directory': _('directory'),
-        'file': _('file'),
-        'freestyle_string': _('text'),
-        'integer': _('integer'),
-        'number': _('number'),
-        'option_string': _('option'),
-        'percent': _('percent'),
-        'raster': _('raster'),
-        'ratio': _('ratio'),
-        'vector': _('vector')
+        'boolean': gettext('true/false'),
+        'csv': gettext('CSV'),
+        'directory': gettext('directory'),
+        'file': gettext('file'),
+        'freestyle_string': gettext('text'),
+        'integer': gettext('integer'),
+        'number': gettext('number'),
+        'option_string': gettext('option'),
+        'percent': gettext('percent'),
+        'raster': gettext('raster'),
+        'ratio': gettext('ratio'),
+        'vector': gettext('vector')
     }
 
     def format_single_type(arg_type):
@@ -435,7 +440,7 @@ def describe_arg_from_spec(name, spec):
         units = spec['bands'][1]['units']
     if units:
         units_string = format_unit(units)
-        if units_string and units_string != 'none':
+        if units_string:
             in_parentheses.append(f'units: **{units_string}**')
 
     if spec['type'] == 'vector':
@@ -463,15 +468,15 @@ def describe_arg_from_spec(name, spec):
         # dynamically generated. don't try to document them.
         if spec['options']:
             if isinstance(spec['options'], dict):
-                indented_block.append(_('Options:'))
+                indented_block.append(gettext('Options:'))
                 indented_block += format_options_string_from_dict(spec['options'])
             else:
                 formatted_options = format_options_string_from_list(spec['options'])
-                indented_block.append(_('Options:') + f' {formatted_options}')
+                indented_block.append(gettext('Options:') + f' {formatted_options}')
 
     elif spec['type'] == 'csv':
         if 'columns' not in spec and 'rows' not in spec:
-            first_line += _(
+            first_line += gettext(
                 ' Please see the sample data table for details on the format.')
 
     # prepend the indent to each line in the indented block
@@ -486,7 +491,9 @@ def describe_arg_from_name(module_name, *arg_keys):
         *arg_keys: one or more strings that are nested arg keys.
 
     Returns:
-        String describing the arg in RST format
+        String describing the arg in RST format. Contains an anchor named
+        <arg_keys[0]>-<arg_keys[1]>...-<arg_keys[n]>
+        where underscores in arg keys are replaced with hyphens.
     """
     # import the specified module (that should have an ARGS_SPEC attribute)
     module = importlib.import_module(module_name)
@@ -506,14 +513,13 @@ def describe_arg_from_name(module_name, *arg_keys):
                 f"{module_name} model's ARGS_SPEC")
 
     # format spec into an RST formatted description string
-    if isinstance(spec, dict):
-        if 'name' in spec:
-            arg_name = capitalize(spec['name'])
-        else:
-            arg_name = arg_keys[-1]
-        rst = '\n\n'.join(describe_arg_from_spec(arg_name, spec))
-    elif isinstance(spec, pint.Unit):
-        rst = format_unit(spec)
+    if 'name' in spec:
+        arg_name = capitalize(spec['name'])
     else:
-        rst = str(spec)
-    return rst
+        arg_name = arg_keys[-1]
+
+    # anchor names cannot contain underscores. sphinx will replace them
+    # automatically, but lets explicitly replace them here
+    anchor_name = '-'.join(arg_keys).replace('_', '-')
+    rst_description = '\n\n'.join(describe_arg_from_spec(arg_name, spec))
+    return f'.. _{anchor_name}:\n\n{rst_description}'

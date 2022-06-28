@@ -1,8 +1,8 @@
-import { spawn } from 'child_process';
+import { spawn, exec } from 'child_process';
 
 import fetch from 'node-fetch';
 
-import { getLogger } from '../logger';
+import { getLogger } from './logger';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 const HOSTNAME = 'http://localhost';
@@ -11,17 +11,12 @@ const HOSTNAME = 'http://localhost';
  * Spawn a child process running the Python Flask app.
  *
  * @param  {string} investExe - path to executeable that launches flask app.
- * @returns {undefined}
+ * @returns {ChildProcess} - a reference to the subprocess.
  */
 export function createPythonFlaskProcess(investExe) {
-  // TODO: starting `invest serve` without any python logging
-  // because of https://github.com/natcap/invest/issues/563
-  // & https://github.com/natcap/invest-workbench/issues/144
-  // Once those are resolved, we probably want some logging here,
-  // maybe --debug if devMode, -vvv if production?
   const pythonServerProcess = spawn(
     investExe,
-    ['serve', '--port', process.env.PORT],
+    ['--debug', 'serve', '--port', process.env.PORT],
     { shell: true } // necessary in dev mode & relying on a conda env
   );
 
@@ -49,6 +44,8 @@ export function createPythonFlaskProcess(investExe) {
   pythonServerProcess.on('disconnect', () => {
     logger.debug(`Flask process disconnected`);
   });
+
+  return pythonServerProcess;
 }
 
 /** Find out if the Flask server is online, waiting until it is.
@@ -57,9 +54,9 @@ export function createPythonFlaskProcess(investExe) {
  * @param {number} retries - number of recursive calls this function is allowed.
  * @returns { Promise } resolves text indicating success.
  */
-export function getFlaskIsReady({ i = 0, retries = 21 } = {}) {
+export function getFlaskIsReady({ i = 0, retries = 41 } = {}) {
   return (
-    fetch(`${HOSTNAME}:${process.env.PORT}/ready`, {
+    fetch(`${HOSTNAME}:${process.env.PORT}/api/ready`, {
       method: 'get',
     })
       .then((response) => response.text())
@@ -81,17 +78,38 @@ export function getFlaskIsReady({ i = 0, retries = 21 } = {}) {
 }
 
 /**
- * Request the shutdown of the Flask app
+ * Kill the process running the Flask app
  *
- * @returns {Promise} resolves undefined
+ * @param {ChildProcess} subprocess - such as created by child_process.spawn
+ * @returns {Promise}
  */
-export function shutdownPythonProcess() {
-  return (
-    fetch(`http://localhost:${process.env.PORT}/shutdown`, {
-      method: 'get',
+export async function shutdownPythonProcess(subprocess) {
+  // builtin kill() method on a nodejs ChildProcess doesn't work on windows.
+  try {
+    if (process.platform !== 'win32') {
+      subprocess.kill();
+    } else {
+      const { pid } = subprocess;
+      exec(`taskkill /pid ${pid} /t /f`);
+    }
+  } catch (error) {
+    // if the process was already killed by some other means
+    logger.debug(error);
+  }
+
+  // If we return too quickly, it seems the electron app is allowed
+  // to quit before the subprocess is killed, and the subprocess remains
+  // open. Here we poll a flask endpoint and resolve only when it
+  // gives ECONNREFUSED.
+  return fetch(`${HOSTNAME}:${process.env.PORT}/ready`, {
+    method: 'get',
+  })
+    .then(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      return shutdownPythonProcess(subprocess);
     })
-      .then((response) => response.text())
-      .then((text) => { logger.debug(text); })
-      .catch((error) => { logger.error(error.stack); })
-  );
+    .catch(() => {
+      logger.debug('flask server is closed');
+      return Promise.resolve();
+    });
 }

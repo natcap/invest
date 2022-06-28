@@ -5,9 +5,11 @@ import tempfile
 import unittest
 
 import numpy
-from natcap.invest import utils
 import pygeoprocessing
-from osgeo import gdal, ogr, osr
+from natcap.invest import utils
+from osgeo import gdal
+from osgeo import ogr
+from osgeo import osr
 
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'sdr')
@@ -128,7 +130,8 @@ class SDRTests(unittest.TestCase):
 
     def test_sdr_validation_watershed_missing_ws_id(self):
         """SDR test validation notices missing `ws_id` field on watershed."""
-        from natcap.invest import sdr, validation
+        from natcap.invest import sdr
+        from natcap.invest import validation
 
         vector_driver = ogr.GetDriverByName("ESRI Shapefile")
         test_watershed_path = os.path.join(
@@ -228,6 +231,20 @@ class SDRTests(unittest.TestCase):
                 os.path.join(
                     args['workspace_dir'], 'intermediate_outputs',
                     'what_drains_to_stream.tif')))
+
+        # Check that sed_deposition does not have any negative, non-nodata
+        # values, even if they are very small.
+        sed_deposition_path = os.path.join(args['workspace_dir'],
+                                           'sed_deposition.tif')
+        sed_dep_nodata = pygeoprocessing.get_raster_info(
+            sed_deposition_path)['nodata'][0]
+        sed_dep_array = pygeoprocessing.raster_to_numpy_array(
+            sed_deposition_path)
+        negative_non_nodata_mask = (
+            (~numpy.isclose(sed_dep_array, sed_dep_nodata)) &
+            (sed_dep_array < 0))
+        self.assertEqual(
+            numpy.count_nonzero(sed_dep_array[negative_non_nodata_mask]), 0)
 
     def test_regression_with_undefined_nodata(self):
         """SDR base regression test with undefined nodata values.
@@ -336,8 +353,11 @@ class SDRTests(unittest.TestCase):
         args['biophysical_table_path'] = os.path.join(
             REGRESSION_DATA, 'biophysical_table_too_large.csv')
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ValueError) as context:
             sdr.execute(args)
+        self.assertIn(
+            f'A value in the biophysical table is not a number '
+            f'within range 0..1.', str(context.exception))
 
     def test_base_usle_p_nan(self):
         """SDR test expected exception for USLE_P not a number."""
@@ -349,8 +369,33 @@ class SDRTests(unittest.TestCase):
         args['biophysical_table_path'] = os.path.join(
             REGRESSION_DATA, 'biophysical_table_invalid_value.csv')
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ValueError) as context:
             sdr.execute(args)
+        self.assertIn(
+            f'A value in the biophysical table is not a number '
+            f'within range 0..1.', str(context.exception))
+
+    def test_lucode_not_a_number(self):
+        """SDR test expected exception for invalid data in lucode column."""
+        from natcap.invest.sdr import sdr
+
+        # use predefined directory so test can clean up files during teardown
+        args = SDRTests.generate_base_args(
+            self.workspace_dir)
+        args['biophysical_table_path'] = os.path.join(
+            self.workspace_dir, 'biophysical_table_invalid_lucode.csv')
+
+        invalid_value = 'forest'
+        with open(args['biophysical_table_path'], 'w') as file:
+            file.write(
+                f'desc,lucode,usle_p,usle_c\n'
+                f'0,{invalid_value},0.5,0.5\n')
+
+        with self.assertRaises(ValueError) as context:
+            sdr.execute(args)
+        self.assertIn(
+            f'Value "{invalid_value}" from the "lucode" column of the '
+            f'biophysical table is not a number.', str(context.exception))
 
     def test_missing_lulc_value(self):
         """SDR test for ValueError when LULC value not found in table."""
@@ -372,10 +417,9 @@ class SDRTests(unittest.TestCase):
 
         with self.assertRaises(ValueError) as context:
             sdr.execute(args)
-        self.assertTrue(
+        self.assertIn(
             "The missing values found in the LULC raster but not the table"
-            " are: [2.]" in str(context.exception),
-            f'error does not match {str(context.exception)}')
+            " are: [2.]", str(context.exception))
 
     def test_what_drains_to_stream(self):
         """SDR test for what pixels drain to a stream."""
@@ -418,97 +462,3 @@ class SDRTests(unittest.TestCase):
         what_drains = pygeoprocessing.raster_to_numpy_array(
             target_what_drains_path)
         numpy.testing.assert_allclose(what_drains, expected_drainage)
-
-    @staticmethod
-    def _assert_regression_results_equal(
-            workspace_dir, file_list_path, result_vector_path,
-            agg_results_path):
-        """Test workspace state against expected aggregate results.
-
-        Args:
-            workspace_dir (string): path to the completed model workspace
-            file_list_path (string): path to a file that has a list of all
-                the expected files relative to the workspace base
-            result_vector_path (string): path to the summary shapefile
-                produced by the SWY model.
-            agg_results_path (string): path to a csv file that has the
-                expected aggregated_results.shp table in the form of
-                fid,vri_sum,qb_val per line
-
-        Return:
-            ``None``
-
-        Raise:
-            AssertionError if any files are missing or results are out of
-            range by `tolerance_places`
-        """
-        # test that the workspace has the same files as we expect
-        SDRTests._test_same_files(
-            file_list_path, workspace_dir)
-
-        # we expect a file called 'aggregated_results.shp'
-        result_vector = ogr.Open(result_vector_path)
-        result_layer = result_vector.GetLayer()
-
-        # The relative tolerance 1e-6 was determined by
-        # experimentation on the application with the given range of numbers.
-        # This is an apparently reasonable approach as described by ChrisF:
-        # http://stackoverflow.com/a/3281371/42897
-        # and even more reading about picking numerical tolerance (it's hard):
-        # https://randomascii.wordpress.com/2012/02/25/comparing-floating-point-numbers-2012-edition/
-        rel_tol = 1e-6
-
-        with open(agg_results_path, 'rb') as agg_result_file:
-            error_list = []
-            for line in agg_result_file:
-                fid, sed_retent, sed_export, usle_tot = [
-                    float(x) for x in line.split(',')]
-                feature = result_layer.GetFeature(int(fid))
-                for field, value in [
-                        ('sed_retent', sed_retent),
-                        ('sed_export', sed_export),
-                        ('usle_tot', usle_tot)]:
-                    if not numpy.isclose(
-                            feature.GetField(field), value, rtol=rel_tol):
-                        error_list.append(
-                            "FID %d %s expected %f, got %f" % (
-                                fid, field, value, feature.GetField(field)))
-                ogr.Feature.__swig_destroy__(feature)
-                feature = None
-
-        result_layer = None
-        ogr.DataSource.__swig_destroy__(result_vector)
-        result_vector = None
-
-        if error_list:
-            raise AssertionError('\n'.join(error_list))
-
-    @staticmethod
-    def _test_same_files(base_list_path, directory_path):
-        """Assert files in `base_list_path` are in `directory_path`.
-
-        Args:
-            base_list_path (string): a path to a file that has one relative
-                file path per line.
-            directory_path (string): a path to a directory whose contents will
-                be checked against the files listed in `base_list_file`
-
-        Return:
-            ``None``
-
-        Raise:
-            AssertionError when there are files listed in `base_list_file`
-                that don't exist in the directory indicated by `path`
-        """
-        missing_files = []
-        with open(base_list_path, 'r') as file_list:
-            for file_path in file_list:
-                full_path = os.path.join(directory_path, file_path.rstrip())
-                if full_path == '':
-                    continue
-                if not os.path.isfile(full_path):
-                    missing_files.append(full_path)
-        if len(missing_files) > 0:
-            raise AssertionError(
-                "The following files were expected but not found: " +
-                '\n'.join(missing_files))

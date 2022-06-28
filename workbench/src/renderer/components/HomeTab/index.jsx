@@ -10,7 +10,7 @@ import Row from 'react-bootstrap/Row';
 import OpenButton from '../OpenButton';
 import InvestJob from '../../InvestJob';
 
-const logger = window.Workbench.getLogger(__filename.split('/').slice(-2).join('/'));
+const logger = window.Workbench.getLogger('HomeTab');
 
 /**
  * Renders a table of buttons for each invest model and
@@ -128,7 +128,7 @@ class RecentInvestJobs extends React.Component {
         <Card
           className="text-left recent-job-card"
           as="button"
-          key={job.workspaceHash}
+          key={job.hash}
           onClick={() => this.handleClick(job)}
         >
           <Card.Body>
@@ -143,13 +143,12 @@ class RecentInvestJobs extends React.Component {
               <span className="text-heading">{'Suffix: '}</span>
               <span className="text-mono">{job.argsValues.results_suffix}</span>
             </Card.Title>
-            <Card.Text>{job.description || <em>no description</em>}</Card.Text>
             <Card.Footer className="text-muted">
               <span className="timestamp">{job.humanTime}</span>
-              <span className="status-traceback">
+              <span className="status">
                 {(job.status === 'success'
-                  ? '\u{2705}'
-                  : <em>{job.finalTraceback || ''}</em>
+                  ? <span className="status-success">{_('Model Complete')}</span>
+                  : <span className="status-error">{job.finalTraceback || ''}</span>
                 )}
               </span>
             </Card.Footer>
@@ -159,30 +158,35 @@ class RecentInvestJobs extends React.Component {
     });
 
     return (
-      <Container>
-        <div className="mb-1">
-          {recentButtons.length
-            ? (
-              <h4 className="d-inline-block">
-                {_("Recent runs:")}
-              </h4>
-            )
-            : (
-              <div className="d-inline-block">
-                {_(`Try the <b>Open</b> button to setup a model from a sample
-                    datastack file (.json) or from an InVEST model's logfile (.txt)`)}
-              </div>
-            )}
-          <OpenButton
-            className="float-right"
-            openInvestModel={this.props.openInvestModel}
-            batchUpdateArgs={this.props.batchUpdateArgs}
-          />
-        </div>
+      <>
+        <Container>
+          <Row>
+            <Col className="recent-header-col">
+              {recentButtons.length
+                ? (
+                  <h4>
+                    {_('Recent runs:')}
+                  </h4>
+                )
+                : (
+                  <div className="default-text">
+                    {_(`Set up a model from a sample datastack file (.json)
+                        or from an InVEST model's logfile (.txt): `)}
+                  </div>
+                )}
+            </Col>
+            <Col className="open-button-col">
+              <OpenButton
+                className="mr-2"
+                openInvestModel={this.props.openInvestModel}
+              />
+            </Col>
+          </Row>
+        </Container>
         <React.Fragment>
           {recentButtons}
         </React.Fragment>
-      </Container>
+      </>
     );
   }
 }

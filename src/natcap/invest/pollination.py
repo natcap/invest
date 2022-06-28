@@ -17,14 +17,16 @@ from . import utils
 from . import spec_utils
 from .spec_utils import u
 from . import validation
-from . import MODEL_METADATA
+from .model_metadata import MODEL_METADATA
+from . import gettext
+
 
 LOGGER = logging.getLogger(__name__)
 
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["pollination"].model_title,
     "pyname": MODEL_METADATA["pollination"].pyname,
-    "userguide_html": MODEL_METADATA["pollination"].userguide,
+    "userguide": MODEL_METADATA["pollination"].userguide,
     "args": {
         "workspace_dir": spec_utils.WORKSPACE,
         "results_suffix": spec_utils.SUFFIX,
@@ -32,7 +34,7 @@ ARGS_SPEC = {
         "landcover_raster_path": {
             **spec_utils.LULC,
             "projected": True,
-            "about": _(
+            "about": gettext(
                 "Map of LULC codes. All values in this raster must have "
                 "corresponding entries in the Biophysical Table.")
         },
@@ -41,13 +43,13 @@ ARGS_SPEC = {
             "columns": {
                 "species": {
                     "type": "freestyle_string",
-                    "about": _(
+                    "about": gettext(
                         "Unique name or identifier for each pollinator "
                         "species or guild of interest.")
                 },
                 "nesting_suitability_[SUBSTRATE]_index": {
                     "type": "ratio",
-                    "about": _(
+                    "about": gettext(
                         "Utilization of the substrate by this species, where "
                         "1 indicates the nesting substrate is fully utilized "
                         "and 0 indicates it is not utilized at all. Replace "
@@ -57,7 +59,7 @@ ARGS_SPEC = {
                 },
                 "foraging_activity_[SEASON]_index": {
                     "type": "ratio",
-                    "about": _(
+                    "about": gettext(
                         "Pollinator activity for this species/guild in each "
                         "season. 1 indicates maximum activity for the "
                         "species/guild, and 0 indicates no activity. Replace "
@@ -68,41 +70,41 @@ ARGS_SPEC = {
                 "alpha": {
                     "type": "number",
                     "units": u.meters,
-                    "about": _(
+                    "about": gettext(
                         "Average distance that this species or guild travels "
                         "to forage on flowers.")
                 },
                 "relative_abundance": {
                     "type": "ratio",
-                    "about": _(
+                    "about": gettext(
                         "The proportion of total pollinator abundance that "
                         "consists of this species/guild.")
                 }
             },
-            "about": _(
+            "about": gettext(
                 "A table mapping each pollinator species or guild of interest "
                 "to its pollination-related parameters."),
-            "name": _("Guild Table")
+            "name": gettext("Guild Table")
         },
         "landcover_biophysical_table_path": {
             "type": "csv",
             "columns": {
                 "lucode": {
                     "type": "integer",
-                    "about": _(
+                    "about": gettext(
                         "LULC code representing this class in the LULC raster."
                     )
                 },
                 "nesting_[SUBSTRATE]_availability_index": {
                     "type": "ratio",
-                    "about": _(
+                    "about": gettext(
                         "Index of availability of the given substrate in this "
                         "LULC class. Replace [SUBSTRATE] with substrate names "
                         "matching those in the Guild Table, so that there is "
                         "a column for each substrate.")},
                 "floral_resources_[SEASON]_index": {
                     "type": "ratio",
-                    "about": _(
+                    "about": gettext(
                         "Abundance of flowers during the given season in this "
                         "LULC class. This is the proportion of land area "
                         "covered by flowers, multiplied by the proportion of "
@@ -111,24 +113,24 @@ ARGS_SPEC = {
                         "Guild Table, so that there is a column for each "
                         "season.")}
             },
-            "about": _(
+            "about": gettext(
                 "A table mapping each LULC class to nesting availability and "
                 "floral abundance data for each substrate and season in that "
                 "LULC class. All values in the LULC raster must have "
                 "corresponding entries in this table."),
-            "name": _("biophysical table")
+            "name": gettext("biophysical table")
         },
         "farm_vector_path": {
             "type": "vector",
             "fields": {
                 "crop_type": {
                     "type": "freestyle_string",
-                    "about": _(
+                    "about": gettext(
                         "Name of the crop grown on each polygon, e.g. "
                         "'blueberries', 'almonds', etc.")},
                 "half_sat": {
                     "type": "ratio",
-                    "about": _(
+                    "about": gettext(
                         "The half saturation coefficient for the crop grown "
                         "in this area. This is the wild pollinator abundance "
                         "(i.e. the proportion of all pollinators that are "
@@ -136,13 +138,13 @@ ARGS_SPEC = {
                         "pollinator-dependent yield.")},
                 "season": {
                     "type": "freestyle_string",
-                    "about": _(
+                    "about": gettext(
                         "The season in which the crop is pollinated. Season "
                         "names must match those in the Guild Table and "
                         "Biophysical Table.")},
                 "fr_[SEASON]": {  # floral resources for each season
                     "type": "ratio",
-                    "about": _(
+                    "about": gettext(
                         "The floral resources available at this farm for the "
                         "given season. Replace [SEASON] with season names "
                         "matching those in the Guild Table and Biophysical "
@@ -150,7 +152,7 @@ ARGS_SPEC = {
                 },
                 "n_[SUBSTRATE]": {  # nesting availabilities for each substrate
                     "type": "ratio",
-                    "about": _(
+                    "about": gettext(
                         "The nesting suitability for the given substrate at "
                         "this farm. given substrate. Replace [SUBSTRATE] with "
                         "substrate names matching those in the Guild Table "
@@ -158,26 +160,26 @@ ARGS_SPEC = {
                         "for each substrate.")},
                 "p_dep": {
                     "type": "ratio",
-                    "about": _(
+                    "about": gettext(
                         "The proportion of crop dependent on pollinators.")
                 },
                 "p_managed": {
                     "type": "ratio",
-                    "about": _(
+                    "about": gettext(
                         "The proportion of pollination required on the farm "
                         "that is provided by managed pollinators.")}
             },
             "geometries": spec_utils.POLYGONS,
             "required": False,
-            "about": _(
+            "about": gettext(
                 "Map of farm sites to be analyzed, with pollination data "
                 "specific to each farm."),
-            "name": _("farms map")
+            "name": gettext("farms map")
         }
     }
 }
 
-_INDEX_NODATA = -1.0
+_INDEX_NODATA = -1
 
 # These patterns are expected in the biophysical table
 _NESTING_SUBSTRATE_PATTERN = 'nesting_([^_]+)_availability_index'
@@ -296,11 +298,11 @@ def execute(args):
                     be referred to in other tables and the model will output
                     analyses per species.
                 * one or more columns matching _NESTING_SUITABILITY_PATTERN
-                    with values in the range [0.0, 1.0] indicating the
+                    with values in the range [0, 1] indicating the
                     suitability of the given species to nest in a particular
                     substrate.
                 * one or more columns matching _FORAGING_ACTIVITY_RE_PATTERN
-                    with values in the range [0.0, 1.0] indicating the
+                    with values in the range [0, 1] indicating the
                     relative level of foraging activity for that species
                     during a particular season.
                 * _ALPHA_HEADER the sigma average flight distance of that bee
@@ -316,7 +318,7 @@ def execute(args):
             on that landcover type per season in the bee activity columns of
             the guild table.
 
-            All indexes are in the range [0.0, 1.0].
+            All indexes are in the range [0, 1].
 
             Columns in the table must be at least
                 * 'lucode': representing all the unique landcover codes in
@@ -336,10 +338,10 @@ def execute(args):
             * season (string): season in which the farm needs pollination
             * crop_type (string): a text field to identify the crop type for
                 summary statistics.
-            * half_sat (float): a real in the range [0.0, 1.0] representing
+            * half_sat (float): a real in the range [0, 1] representing
                 the proportion of wild pollinators to achieve a 50% yield
                 of that crop.
-            * p_dep (float): a number in the range [0.0, 1.0]
+            * p_dep (float): a number in the range [0, 1]
                 representing the proportion of yield dependent on pollinators.
             * p_managed (float): proportion of pollinators that come from
                 non-native/managed hives.
@@ -420,7 +422,7 @@ def execute(args):
             nesting_substrate_index_path)
 
         landcover_substrate_index_tasks[substrate] = task_graph.add_task(
-            task_name='reclassify_to_substrate_%s' % substrate,
+            task_name=f'reclassify_to_substrate_{substrate}',
             func=utils.reclassify_raster,
             args=(
                 (args['landcover_raster_path'], 1),
@@ -446,7 +448,7 @@ def execute(args):
                 substrate] = farm_nesting_substrate_index_path
             farm_substrate_rasterize_task_list.append(
                 task_graph.add_task(
-                    task_name='rasterize_nesting_substrate_%s' % substrate,
+                    task_name=f'rasterize_nesting_substrate_{substrate}',
                     func=_rasterize_vector_onto_base,
                     args=(
                         scenario_variables['nesting_substrate_index_path'][
@@ -482,7 +484,7 @@ def execute(args):
             scenario_variables['habitat_nesting_index_path'][species])
 
         habitat_nesting_tasks[species] = task_graph.add_task(
-            task_name='calculate_habitat_nesting_%s' % species,
+            task_name=f'calculate_habitat_nesting_{species}',
             func=calculate_habitat_nesting_index_op,
             dependent_task_list=dependent_task_list,
             target_path_list=[
@@ -502,7 +504,7 @@ def execute(args):
                 season, file_suffix))
 
         relative_floral_abudance_task = task_graph.add_task(
-            task_name='reclassify_to_floral_abundance_%s' % season,
+            task_name=f'reclassify_to_floral_abundance_{season}',
             func=utils.reclassify_raster,
             args=(
                 (args['landcover_raster_path'], 1),
@@ -525,7 +527,7 @@ def execute(args):
 
             # override the relative floral task because we'll need this one
             relative_floral_abudance_task = task_graph.add_task(
-                task_name='relative_floral_abudance_task_%s' % season,
+                task_name=f'relative_floral_abudance_task_{season}',
                 func=_rasterize_vector_onto_base,
                 args=(
                     relative_floral_abundance_index_path,
@@ -563,8 +565,7 @@ def execute(args):
                     (species, season)])
             foraged_flowers_index_task_map[(species, season)] = (
                 task_graph.add_task(
-                    task_name='calculate_foraged_flowers_%s_%s' % (
-                        species, season),
+                    task_name=f'calculate_foraged_flowers_{species}_{season}',
                     func=pygeoprocessing.raster_calculator,
                     args=(
                         [(relative_abundance_path, 1)],
@@ -593,7 +594,7 @@ def execute(args):
                 species, file_suffix))
 
         local_foraging_effectiveness_task = task_graph.add_task(
-            task_name='local_foraging_effectiveness_%s' % species,
+            task_name=f'local_foraging_effectiveness_{species}',
             func=pygeoprocessing.raster_calculator,
             args=(
                 foraged_flowers_path_band_list,
@@ -613,9 +614,9 @@ def execute(args):
             landcover_mean_pixel_size = numpy.min(numpy.absolute(
                 landcover_pixel_size_tuple))
             LOGGER.debug(
-                'Land Cover Raster has unequal x, y pixel sizes: %s. Using'
-                '%s as the mean pixel size.' % (
-                    landcover_pixel_size_tuple, landcover_mean_pixel_size))
+                'Land Cover Raster has unequal x, y pixel sizes: '
+                f'{landcover_pixel_size_tuple}. Using'
+                f'{landcover_mean_pixel_size} as the mean pixel size.')
         # create a convolution kernel for the species flight range
         alpha = (
             scenario_variables['alpha_value'][species] /
@@ -625,7 +626,7 @@ def execute(args):
                 alpha, file_suffix))
 
         alpha_kernel_raster_task = task_graph.add_task(
-            task_name='decay_kernel_raster_%s' % alpha,
+            task_name=f'decay_kernel_raster_{alpha}',
             func=utils.exponential_decay_kernel_raster,
             args=(alpha, kernel_path),
             target_path_list=[kernel_path])
@@ -637,7 +638,7 @@ def execute(args):
         floral_resources_index_path_map[species] = floral_resources_index_path
 
         floral_resources_task = task_graph.add_task(
-            task_name='convolve_%s' % species,
+            task_name=f'convolve_{species}',
             func=pygeoprocessing.convolve_2d,
             args=(
                 (local_foraging_effectiveness_path, 1), (kernel_path, 1),
@@ -660,7 +661,7 @@ def execute(args):
         ps_index_op = _PollinatorSupplyIndexOp(
             scenario_variables['species_abundance'][species])
         pollinator_supply_task = task_graph.add_task(
-            task_name='calculate_pollinator_supply_%s' % species,
+            task_name=f'calculate_pollinator_supply_{species}',
             func=pygeoprocessing.raster_calculator,
             args=(
                 [(scenario_variables['habitat_nesting_index_path'][species],
@@ -678,7 +679,7 @@ def execute(args):
                 species, file_suffix))
 
         convolve_ps_task = task_graph.add_task(
-            task_name='convolve_ps_%s' % species,
+            task_name=f'convolve_ps_{species}',
             func=pygeoprocessing.convolve_2d,
             args=(
                 (pollinator_supply_index_path, 1), (kernel_path, 1),
@@ -703,7 +704,7 @@ def execute(args):
                     species, season, file_suffix))
             pollinator_abundance_task_map[(species, season)] = (
                 task_graph.add_task(
-                    task_name='calculate_poll_abudance_%s' % species,
+                    task_name=f'calculate_poll_abudance_{species}',
                     func=pygeoprocessing.raster_calculator,
                     args=(
                         [(foraged_flowers_index_path, 1),
@@ -732,7 +733,7 @@ def execute(args):
             for species in scenario_variables['species_list']]
 
         total_pollinator_abundance_task[season] = task_graph.add_task(
-            task_name='calculate_poll_abudnce_%s_%s' % (species, season),
+            task_name=f'calculate_poll_abudnce_{species}_{season}',
             func=pygeoprocessing.raster_calculator,
             args=(
                 pollinator_abundance_season_path_band_list, _SumRasters(),
@@ -769,12 +770,12 @@ def execute(args):
             intermediate_output_dir, _HALF_SATURATION_FILE_PATTERN % (
                 season, file_suffix))
         half_saturation_task = task_graph.add_task(
-            task_name='half_saturation_rasterize_%s' % season,
+            task_name=f'half_saturation_rasterize_{season}',
             func=_rasterize_vector_onto_base,
             args=(
                 blank_raster_path, farm_vector_path,
                 _HALF_SATURATION_FARM_HEADER, half_saturation_raster_path),
-            kwargs={'filter_string': "%s='%s'" % (_FARM_SEASON_FIELD, season)},
+            kwargs={'filter_string': f"{_FARM_SEASON_FIELD}='{season}'"},
             dependent_task_list=[blank_raster_task],
             target_path_list=[half_saturation_raster_path])
 
@@ -783,7 +784,7 @@ def execute(args):
             intermediate_output_dir, _FARM_POLLINATOR_SEASON_FILE_PATTERN % (
                 season, file_suffix))
         farm_pollinator_season_task_list.append(task_graph.add_task(
-            task_name='farm_pollinator_%s' % season,
+            task_name=f'farm_pollinator_{season}',
             func=pygeoprocessing.raster_calculator,
             args=(
                 [(half_saturation_raster_path, 1),
@@ -949,7 +950,7 @@ def _rasterize_vector_onto_base(
         layer.SetAttributeFilter(str(filter_string))
     gdal.RasterizeLayer(
         target_raster, [1], layer,
-        options=['ATTRIBUTE=%s' % attribute_id])
+        options=[f'ATTRIBUTE={attribute_id}'])
     target_raster.FlushCache()
     target_raster = None
     layer = None
@@ -962,12 +963,13 @@ def _create_farm_result_vector(
 
     Args:
         base_vector_path (string): path to vector to copy
-        target_vector_path (string): path to target vector that is a copy
-            of the base, except for the new `fid_field_id` field that has
-            unique integer IDs for each feature.  This path must not already
-            exist.  It also has new entries for all the result fields:
-                _TOTAL_FARM_YIELD_FIELD_ID
-                _WILD_POLLINATOR_FARM_YIELD_FIELD_ID
+        target_vector_path (string): path to target vector. This path must
+            not already exist. Vector will be created at this path that is
+            a copy of the base vector with result fields added:
+                pollination._POLLINATOR_ABUNDANCE_FARM_FIELD_ID,
+                pollination._TOTAL_FARM_YIELD_FIELD_ID,
+                pollination._POLLINATOR_PROPORTION_FARM_YIELD_FIELD_ID,
+                pollination._WILD_POLLINATOR_FARM_YIELD_FIELD_ID
 
     Returns:
         None.
@@ -976,8 +978,7 @@ def _create_farm_result_vector(
     base_vector = gdal.OpenEx(base_vector_path, gdal.OF_VECTOR)
 
     driver = gdal.GetDriverByName('ESRI Shapefile')
-    target_vector = driver.CreateCopy(
-        target_vector_path, base_vector)
+    target_vector = driver.CreateCopy(target_vector_path, base_vector)
     target_layer = target_vector.GetLayer()
 
     farm_pollinator_abundance_defn = ogr.FieldDefn(
@@ -1051,10 +1052,8 @@ def _parse_scenario_variables(args):
         if len(matches) == 0:
             raise ValueError(
                 "Expected a header in guild table that matched the pattern "
-                "'%s' but was unable to find one.  Here are all the headers "
-                "from %s: %s" % (
-                    header, guild_table_path,
-                    guild_headers))
+                f"'{header}' but was unable to find one. Here are all the "
+                f"headers from {guild_table_path}: {guild_headers}")
 
     landcover_biophysical_table = utils.build_lookup_from_csv(
         landcover_biophysical_table_path, 'lucode', to_lower=True)
@@ -1065,10 +1064,9 @@ def _parse_scenario_variables(args):
         if len(matches) == 0:
             raise ValueError(
                 "Expected a header in biophysical table that matched the "
-                "pattern '%s' but was unable to find one.  Here are all the "
-                "headers from %s: %s" % (
-                    header, landcover_biophysical_table_path,
-                    biophysical_table_headers))
+                f"pattern '{header}' but was unable to find one. Here are all "
+                f"the headers from {landcover_biophysical_table_path}: "
+                f"{biophysical_table_headers}")
 
     # this dict to dict will map seasons to guild/biophysical headers
     # ex season_to_header['spring']['guilds']
@@ -1104,9 +1102,9 @@ def _parse_scenario_variables(args):
             matches = re.findall(header, " ".join(farm_headers))
             if not matches:
                 raise ValueError(
-                    "Missing an expected headers '%s'from %s.\n"
-                    "Got these headers instead %s" % (
-                        header, farm_vector_path, farm_headers))
+                    f"Missing an expected headers '{header}' from "
+                    f"{farm_vector_path}.\n"
+                    f"Got these headers instead: {farm_headers}")
 
         for header in farm_headers:
             match = re.match(_FARM_FLORAL_RESOURCES_PATTERN, header)
@@ -1132,18 +1130,16 @@ def _parse_scenario_variables(args):
             season_to_header.items(), substrate_to_header.items()):
         if len(lookup_table) != 3 and farm_vector is not None:
             raise ValueError(
-                "Expected a biophysical, guild, and farm entry for '%s' but "
-                "instead found only %s. Ensure there are corresponding "
-                "entries of '%s' in both the guilds, biophysical "
-                "table, and farm fields." % (
-                    table_type, lookup_table, table_type))
+                "Expected a biophysical, guild, and farm entry for "
+                f"'{table_type}' but instead found only {lookup_table}. "
+                f"Ensure there are corresponding entries of '{table_type}' in "
+                "both the guilds, biophysical table, and farm fields.")
         elif len(lookup_table) != 2 and farm_vector is None:
             raise ValueError(
-                "Expected a biophysical, and guild entry for '%s' but "
-                "instead found only %s. Ensure there are corresponding "
-                "entries of '%s' in both the guilds and biophysical "
-                "table." % (
-                    table_type, lookup_table, table_type))
+                f"Expected a biophysical, and guild entry for '{table_type}' "
+                f"but instead found only {lookup_table}. Ensure there are "
+                f"corresponding entries of '{table_type}' in both the guilds "
+                "and biophysical table.")
 
     if farm_vector_path is not None:
         farm_season_set = set()
@@ -1152,10 +1148,10 @@ def _parse_scenario_variables(args):
 
         if len(farm_season_set.difference(season_to_header)) > 0:
             raise ValueError(
-                "Found seasons in farm polygon that were not specified in the"
-                "biophysical table: %s.  Expected only these: %s" % (
-                    farm_season_set.difference(season_to_header),
-                    season_to_header))
+                "Found seasons in farm polygon that were not specified in the "
+                "biophysical table: "
+                f"{farm_season_set.difference(season_to_header)}. Expected "
+                f"only these: {season_to_header}")
 
     result = {}
     # * season_list (list of string)
@@ -1346,7 +1342,7 @@ class _PollinatorSupplyOp(object):
         result = numpy.empty_like(foraged_flowers_array)
         result[:] = _INDEX_NODATA
         zero_mask = floral_resources_array == 0
-        result[zero_mask & valid_mask] = 0.0
+        result[zero_mask & valid_mask] = 0
         result_mask = valid_mask & ~zero_mask
         result[result_mask] = (
             foraged_flowers_array[result_mask] /
@@ -1485,8 +1481,8 @@ class _PYTOp(object):
         result = numpy.empty_like(mp_array)
         result[:] = _INDEX_NODATA
         result[valid_mask] = mp_array[valid_mask]+FP_array[valid_mask]
-        min_mask = valid_mask & (result > 1.0)
-        result[min_mask] = 1.0
+        min_mask = valid_mask & (result > 1)
+        result[min_mask] = 1
         return result
 
 
@@ -1512,8 +1508,8 @@ class _PYWOp(object):
         result = numpy.empty_like(mp_array)
         result[:] = _INDEX_NODATA
         result[valid_mask] = PYT_array[valid_mask]-mp_array[valid_mask]
-        max_mask = valid_mask & (result < 0.0)
-        result[max_mask] = 0.0
+        max_mask = valid_mask & (result < 0)
+        result[max_mask] = 0
         return result
 
 

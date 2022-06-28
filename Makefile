@@ -2,7 +2,7 @@
 DATA_DIR := data
 GIT_SAMPLE_DATA_REPO        := https://bitbucket.org/natcap/invest-sample-data.git
 GIT_SAMPLE_DATA_REPO_PATH   := $(DATA_DIR)/invest-sample-data
-GIT_SAMPLE_DATA_REPO_REV    := 1ba3d13680caff0b8382de22987a4ac118ec98a6
+GIT_SAMPLE_DATA_REPO_REV    := a9c2ace13789ac888f928d6ca9aaefb8782b0d5c
 
 GIT_TEST_DATA_REPO          := https://bitbucket.org/natcap/invest-test-data.git
 GIT_TEST_DATA_REPO_PATH     := $(DATA_DIR)/invest-test-data
@@ -10,7 +10,7 @@ GIT_TEST_DATA_REPO_REV      := ac7023d684478485fea89c68f8f4154163541e1d
 
 GIT_UG_REPO                 := https://github.com/natcap/invest.users-guide
 GIT_UG_REPO_PATH            := doc/users-guide
-GIT_UG_REPO_REV             := 53f8eb03396ea2bd8daee167f0bae1243fe325e4
+GIT_UG_REPO_REV             := eef0643feea534db130198e81a69a0590c1a8480
 
 ENV = "./env"
 ifeq ($(OS),Windows_NT)
@@ -188,6 +188,7 @@ clean:
 	-$(RMDIR) $(BUILD_DIR)
 	-$(RMDIR) natcap.invest.egg-info
 	-$(RMDIR) cover
+	-$(RMDIR) doc/api-docs/api
 	-$(RM) coverage.xml
 
 purge: clean
@@ -272,11 +273,12 @@ $(INVEST_BINARIES_DIR): | $(DIST_DIR) $(BUILD_DIR)
 # Documentation.
 # API docs are built in build/sphinx and copied to dist/apidocs
 apidocs: $(APIDOCS_TARGET_DIR) $(APIDOCS_ZIP_FILE)
-$(APIDOCS_TARGET_DIR): | $(DIST_DIR) $(APIDOCS_TARGET_DIR)
+
+$(APIDOCS_BUILD_DIR): install  # need contents of build/lib to build apidocs
 	# -a: always build all files
-	$(PYTHON) -m sphinx -a -b html \
-		-d $(APIDOCS_BUILD_DIR) \
-		doc/api-docs $(APIDOCS_BUILD_DIR)
+	$(PYTHON) -m sphinx -a -b html -d $(APIDOCS_BUILD_DIR)/doctrees doc/api-docs $(APIDOCS_BUILD_DIR)/html
+
+$(APIDOCS_TARGET_DIR): $(APIDOCS_BUILD_DIR) | $(DIST_DIR)
 	# only copy over the built html files, not the doctrees
 	$(COPYDIR) $(APIDOCS_BUILD_DIR)/html $(APIDOCS_TARGET_DIR)
 
@@ -314,7 +316,6 @@ ZIPDIRS = Annual_Water_Yield \
 		  GridSeascape \
 		  HabitatQuality \
 		  HabitatRiskAssess \
-		  Malaria \
 		  NDR \
 		  pollination \
 		  recreation \
@@ -332,7 +333,7 @@ ZIPDIRS = Annual_Water_Yield \
 ZIPTARGETS = $(foreach dirname,$(ZIPDIRS),$(addprefix $(DIST_DATA_DIR)/,$(dirname).zip))
 
 sampledata: $(ZIPTARGETS)
-	$(PYTHON) $(WORKBENCH)/scripts/build_sampledata_registry.py $(DATA_BASE_URL) $(CURDIR)/$(DIST_DATA_DIR)
+	$(PYTHON) scripts/build_sampledata_filesize_registry.py $(CURDIR)/$(DIST_DATA_DIR)
 $(DIST_DATA_DIR)/%.zip: $(DIST_DATA_DIR) $(GIT_SAMPLE_DATA_REPO_PATH)
 	cd $(GIT_SAMPLE_DATA_REPO_PATH); $(BASHLIKE_SHELL_COMMAND) "$(ZIP) -r $(addprefix ../../,$@) $(subst $(DIST_DATA_DIR)/,$(DATADIR),$(subst .zip,,$@))"
 
@@ -356,20 +357,7 @@ mac_dmg: $(MAC_DISK_IMAGE_FILE)
 $(MAC_DISK_IMAGE_FILE): $(DIST_DIR) $(MAC_APPLICATION_BUNDLE) $(USERGUIDE_TARGET_DIR)
 	# everything in the source directory $(MAC_APPLICATION_BUNDLE_DIR) will be copied into the DMG.
 	# so that directory should only contain the app bundle.
-	create-dmg \
-	    --volname "InVEST $(VERSION)" `# volume name, displayed in the top bar of the DMG window`\
-	    --volicon installer/darwin/invest.icns `# volume icon, displayed in the top bar of the DMG window`\
-	    --background installer/darwin/background.png `# background image of the DMG window`\
-	    --window-pos 100 100 `# DMG window location when first opened, in pixels relative to screen top left corner`\
-	    --window-size 900 660 `# DMG window size in pixels`\
-	    --text-size 12 `# size of text in InVEST and Applications icon labels`\
-	    --icon-size 100 `# size of InVEST and Applications icons, in pixels`\
-	    --icon $(MAC_APPLICATION_BUNDLE_NAME) 220 290 `# InVEST app bundle and location of its icon in pixels relative to window top left corner`\
-	    --app-drop-link 670 290 `# location of Applications icon in pixels relative to window top left corner`\
-	    --eula LICENSE.txt `# license to display before DMG window opens`\
-	    --format UDZO `# disk image format`\
-	    $(MAC_DISK_IMAGE_FILE) `# path to create DMG at`\
-	    $(MAC_APPLICATION_BUNDLE_DIR) # directory containing the app bundle
+	installer/darwin/create_dmg.sh "InVEST $(VERSION)" $(MAC_APPLICATION_BUNDLE_DIR) $(MAC_DISK_IMAGE_FILE)
 
 mac_app: $(MAC_APPLICATION_BUNDLE)
 $(MAC_APPLICATION_BUNDLE): $(BUILD_DIR) $(INVEST_BINARIES_DIR) $(USERGUIDE_TARGET_DIR)

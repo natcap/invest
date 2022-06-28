@@ -1,6 +1,5 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import { ipcRenderer } from 'electron';
 
 import Form from 'react-bootstrap/Form';
 import Button from 'react-bootstrap/Button';
@@ -10,10 +9,14 @@ import ProgressBar from 'react-bootstrap/ProgressBar';
 import Table from 'react-bootstrap/Table';
 
 import Expire from '../Expire';
-import sampledataRegistry from '../../sampledata_registry.json';
+import sampledataRegistry from './sampledata_registry.json';
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
-const logger = window.Workbench.getLogger(__filename.split('/').slice(-1)[0]);
+const { ipcRenderer } = window.Workbench.electron;
+const logger = window.Workbench.getLogger('DataDownloadModal');
+
+const BASE_URL = 'https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.10.2/data';
+const DEFAULT_FILESIZE = 0;
 
 /** Render a dialog with a form for configuring global invest settings */
 export class DataDownloadModal extends React.Component {
@@ -23,27 +26,60 @@ export class DataDownloadModal extends React.Component {
       allDataCheck: true,
       allLinksArray: [],
       selectedLinksArray: [],
-      dataListCheckBoxes: {},
+      modelCheckBoxState: {},
+      dataRegistry: null,
+      baseURL: BASE_URL,
     };
 
     this.handleSubmit = this.handleSubmit.bind(this);
     this.handleCheckAll = this.handleCheckAll.bind(this);
     this.handleCheckList = this.handleCheckList.bind(this);
+    this.controller = new AbortController();
+    this.signal = this.controller.signal;
   }
 
-  componentDidMount() {
+  async componentDidMount() {
+    const registry = JSON.parse(JSON.stringify(sampledataRegistry));
+    const tokenURL = await ipcRenderer.invoke(ipcMainChannels.CHECK_STORAGE_TOKEN);
+    const baseURL = tokenURL || BASE_URL;
+    let filesizes;
+    try {
+      const response = await window.fetch(
+        `${baseURL}/registry.json`, { signal: this.signal, method: 'get' }
+      );
+      filesizes = await response.json();
+    } catch (error) {
+      if (error.name === 'AbortError') {
+        // We aborted the fetch on unmount,
+        // return before trying to setState.
+        return;
+      }
+      logger.debug(error);
+    }
+
     const linksArray = [];
-    const dataListCheckBoxes = {};
-    Object.entries(sampledataRegistry)
-      .forEach(([modelName, data]) => {
-        linksArray.push(data.url);
-        dataListCheckBoxes[modelName] = true;
-      });
+    const modelCheckBoxState = {};
+    Object.entries(registry).forEach(([modelName, data]) => {
+      linksArray.push(`${baseURL}/${data.filename}`);
+      modelCheckBoxState[modelName] = true;
+      try {
+        registry[modelName].filesize = filesizes[data.filename];
+      } catch {
+        registry[modelName].filesize = DEFAULT_FILESIZE;
+      }
+    });
+
     this.setState({
       allLinksArray: linksArray,
       selectedLinksArray: linksArray,
-      dataListCheckBoxes: dataListCheckBoxes,
+      modelCheckBoxState: modelCheckBoxState,
+      dataRegistry: registry,
+      baseURL: baseURL,
     });
+  }
+
+  componentWillUnmount() {
+    this.controller.abort();
   }
 
   async handleSubmit(event) {
@@ -67,11 +103,11 @@ export class DataDownloadModal extends React.Component {
 
   handleCheckAll(event) {
     const {
-      dataListCheckBoxes,
+      modelCheckBoxState,
       allLinksArray,
     } = this.state;
     const newCheckList = Object.fromEntries(
-      Object.entries(dataListCheckBoxes).map(
+      Object.entries(modelCheckBoxState).map(
         ([k, v]) => [k, event.currentTarget.checked]
       )
     );
@@ -83,38 +119,49 @@ export class DataDownloadModal extends React.Component {
     }
     this.setState({
       allDataCheck: event.currentTarget.checked,
-      dataListCheckBoxes: newCheckList,
+      modelCheckBoxState: newCheckList,
       selectedLinksArray: selectedLinks,
     });
   }
 
   handleCheckList(event, modelName) {
-    let { selectedLinksArray, dataListCheckBoxes } = this.state;
-    const { url } = sampledataRegistry[modelName];
+    let {
+      selectedLinksArray,
+      modelCheckBoxState,
+      dataRegistry,
+      baseURL,
+    } = this.state;
+    const url = `${baseURL}/${dataRegistry[modelName].filename}`;
     if (event.currentTarget.checked) {
       selectedLinksArray.push(url);
-      dataListCheckBoxes[modelName] = true;
+      modelCheckBoxState[modelName] = true;
     } else {
       selectedLinksArray = selectedLinksArray.filter((val) => val !== url);
-      dataListCheckBoxes[modelName] = false;
+      modelCheckBoxState[modelName] = false;
     }
     this.setState({
       allDataCheck: false,
       selectedLinksArray: selectedLinksArray,
-      dataListCheckBoxes: dataListCheckBoxes,
+      modelCheckBoxState: modelCheckBoxState,
     });
   }
 
   render() {
-    const { dataListCheckBoxes, selectedLinksArray } = this.state;
+    const {
+      modelCheckBoxState,
+      selectedLinksArray,
+      dataRegistry,
+    } = this.state;
+    // Don't render until registry is loaded, since it loads async
+    if (!dataRegistry) { return <div />; }
+
     const downloadEnabled = Boolean(selectedLinksArray.length);
     const DatasetCheckboxRows = [];
-    Object.keys(dataListCheckBoxes)
+    Object.keys(modelCheckBoxState)
       .forEach((modelName) => {
-        const filesize = parseFloat(
-          `${sampledataRegistry[modelName].filesize / 1000000}`
-        ).toFixed(2) + ' MB';
-        const labelSuffix = sampledataRegistry[modelName].labelSuffix || '';
+        const filesize = parseFloat(dataRegistry[modelName].filesize);
+        const filesizeStr = `${(filesize / 1000000).toFixed(2)} MB`;
+        const note = dataRegistry[modelName].note || '';
         DatasetCheckboxRows.push(
           <tr key={modelName}>
             <td>
@@ -124,7 +171,7 @@ export class DataDownloadModal extends React.Component {
               >
                 <Form.Check.Input
                   type="checkbox"
-                  checked={dataListCheckBoxes[modelName]}
+                  checked={modelCheckBoxState[modelName]}
                   onChange={(event) => this.handleCheckList(
                     event, modelName
                   )}
@@ -134,8 +181,8 @@ export class DataDownloadModal extends React.Component {
                 </Form.Check.Label>
               </Form.Check>
             </td>
-            <td><em>{labelSuffix}</em></td>
-            <td>{filesize}</td>
+            <td><em>{note}</em></td>
+            <td>{filesizeStr}</td>
           </tr>
         );
       });
@@ -204,6 +251,21 @@ DataDownloadModal.propTypes = {
 
 export function DownloadProgressBar(props) {
   const [nComplete, nTotal] = props.downloadedNofN;
+  if (nComplete === 'failed') {
+    return (
+      <Expire
+        className="d-inline"
+        delay={props.expireAfter}
+      >
+        <Alert
+          className="d-inline"
+          variant="danger"
+        >
+          {_("Download Failed")}
+        </Alert>
+      </Expire>
+    );
+  }
   if (nComplete === nTotal) {
     return (
       <Expire
@@ -230,6 +292,8 @@ export function DownloadProgressBar(props) {
 }
 
 DownloadProgressBar.propTypes = {
-  downloadedNofN: PropTypes.arrayOf(PropTypes.number).isRequired,
+  downloadedNofN: PropTypes.arrayOf(
+    PropTypes.oneOfType([PropTypes.number, PropTypes.string])
+  ).isRequired,
   expireAfter: PropTypes.number.isRequired,
 };

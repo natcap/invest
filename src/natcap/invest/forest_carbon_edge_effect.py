@@ -20,7 +20,9 @@ from . import utils
 from . import spec_utils
 from .spec_utils import u
 from . import validation
-from . import MODEL_METADATA
+from .model_metadata import MODEL_METADATA
+from . import gettext
+
 
 LOGGER = logging.getLogger(__name__)
 
@@ -33,7 +35,7 @@ NODATA_VALUE = -1
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["forest_carbon_edge_effect"].model_title,
     "pyname": MODEL_METADATA["forest_carbon_edge_effect"].pyname,
-    "userguide_html": MODEL_METADATA["forest_carbon_edge_effect"].userguide,
+    "userguide": MODEL_METADATA["forest_carbon_edge_effect"].userguide,
     "args_with_spatial_overlap": {
         "spatial_keys": ["aoi_vector_path", "lulc_raster_path"],
     },
@@ -46,7 +48,7 @@ ARGS_SPEC = {
             "type": "number",
             "units": u.none,
             "required": "compute_forest_edge_effects",
-            "about": _(
+            "about": gettext(
                 "Number of closest regression models that are used when "
                 "calculating the total biomass. Each local model is linearly "
                 "weighted by distance such that the pixel's biomass is a "
@@ -54,7 +56,7 @@ ARGS_SPEC = {
                 "having the largest effect. Must be an integer greater than "
                 "0. Required if Compute Forest Edge Effects is selected."
             ),
-            "name": _("number of points to average")
+            "name": gettext("number of points to average")
         },
         "aoi_vector_path": {
             **spec_utils.AOI,
@@ -66,19 +68,19 @@ ARGS_SPEC = {
             "columns": {
                 "lucode": {
                     "type": "integer",
-                    "about": _(
+                    "about": gettext(
                         "Code for this LULC class from the LULC map. Every "
                         "value in the LULC raster must have a corresponding "
                         "entry in this column.")},
                 "is_tropical_forest": {
                     "type": "boolean",
-                    "about": _(
+                    "about": gettext(
                         "Enter 1 if the LULC class is tropical forest, 0 if "
                         "it is not tropical forest.")},
                 "c_above": {
                     "type": "number",
                     "units": u.metric_ton/u.hectare,
-                    "about": _(
+                    "about": gettext(
                         "Carbon density value for the aboveground carbon "
                         "pool.")
                 },
@@ -86,7 +88,7 @@ ARGS_SPEC = {
                     "type": "number",
                     "units": u.metric_ton/u.hectare,
                     "required": "pools_to_calculate == 'all'",
-                    "about": _(
+                    "about": gettext(
                         "Carbon density value for the belowground carbon "
                         "pool. Required if calculating all pools.")
                 },
@@ -94,7 +96,7 @@ ARGS_SPEC = {
                     "type": "number",
                     "units": u.metric_ton/u.hectare,
                     "required": "pools_to_calculate == 'all'",
-                    "about": _(
+                    "about": gettext(
                         "Carbon density value for the soil carbon pool. "
                         "Required if calculating all pools.")
                 },
@@ -102,19 +104,19 @@ ARGS_SPEC = {
                     "type": "number",
                     "units": u.metric_ton/u.hectare,
                     "required": "pools_to_calculate == 'all'",
-                    "about": _(
+                    "about": gettext(
                         "Carbon density value for the dead matter carbon "
                         "pool. Required if calculating all pools.")
                 },
             },
-            "about": _(
+            "about": gettext(
                 "A table mapping each LULC code from the LULC map to "
                 "biophysical data for that LULC class."),
-            "name": _("biophysical table")
+            "name": gettext("biophysical table")
         },
         "lulc_raster_path": {
             **spec_utils.LULC,
-            "about": _(
+            "about": gettext(
                 f"{spec_utils.LULC['about']} All values in this raster must "
                 "have corresponding entries in the Biophysical Table."),
             "projected": True
@@ -123,23 +125,23 @@ ARGS_SPEC = {
             "type": "option_string",
             "options": {
                 "all": {
-                    "display_name": _("all"),
-                    "description": _(
+                    "display_name": gettext("all"),
+                    "description": gettext(
                         "Use all pools (aboveground, belowground, soil, and "
                         "dead matter) in the carbon pool calculation.")},
                 "above_ground": {
-                    "display_name": _("aboveground only"),
-                    "description": _(
+                    "display_name": gettext("aboveground only"),
+                    "description": gettext(
                         "Only use the aboveground pool in the carbon pool "
                         "calculation.")}
             },
-            "about": _("Which carbon pools to consider."),
-            "name": _("carbon pools to calculate")
+            "about": gettext("Which carbon pools to consider."),
+            "name": gettext("carbon pools to calculate")
         },
         "compute_forest_edge_effects": {
             "type": "boolean",
-            "about": _("Account for forest edge effects on aboveground carbon."),
-            "name": _("compute forest edge effects")
+            "about": gettext("Account for forest edge effects on aboveground carbon."),
+            "name": gettext("compute forest edge effects")
         },
         "tropical_forest_edge_carbon_model_vector_path": {
             "type": "vector",
@@ -147,43 +149,43 @@ ARGS_SPEC = {
                 "method": {
                     "type": "option_string",
                     "options": {
-                        "1": {"description": _("asymptotic")},
-                        "2": {"description": _("logarithmic")},
-                        "3": {"description": _("linear")}
+                        "1": {"description": gettext("asymptotic")},
+                        "2": {"description": gettext("logarithmic")},
+                        "3": {"description": gettext("linear")}
                     },
-                    "about": _("Optimal regression model for the area.")
+                    "about": gettext("Optimal regression model for the area.")
                 },
                 "theta1": {
                     "type": "number",
                     "units": u.none,
-                    "about": _("θ₁ parameter for the regression equation.")},
+                    "about": gettext("θ₁ parameter for the regression equation.")},
                 "theta2": {
                     "type": "number",
                     "units": u.none,
-                    "about": _("θ₂ parameter for the regression equation.")},
+                    "about": gettext("θ₂ parameter for the regression equation.")},
                 "theta3": {
                     "type": "number",
                     "units": u.none,
-                    "about": _(
+                    "about": gettext(
                         "θ₃ parameter for the regression equation. "
                         "Used only for the asymptotic model.")}
             },
             "geometries": spec_utils.POLYGONS,
             "required": "compute_forest_edge_effects",
-            "about": _(
+            "about": gettext(
                 "Map storing the optimal regression model for each tropical "
                 "subregion and the corresponding theta parameters for that "
                 "regression equation. Default data is provided. Required if "
                 "Compute Forest Edge Effects is selected."),
-            "name": _("global regression models")
+            "name": gettext("global regression models")
         },
         "biomass_to_carbon_conversion_factor": {
             "type": "ratio",
             "required": "compute_forest_edge_effects",
-            "about": _(
+            "about": gettext(
                 "Proportion of forest edge biomass that is elemental carbon. "
                 "Required if Compute Forest Edge Effects is selected."),
-            "name": _("forest edge biomass to carbon conversion factor")
+            "name": gettext("forest edge biomass to carbon conversion factor")
         }
     }
 }
@@ -284,7 +286,7 @@ def execute(args):
         aoi_vector = gdal.OpenEx(args['aoi_vector_path'], gdal.OF_VECTOR)
         if not aoi_vector:
             raise ValueError(
-                "Unable to open aoi at: %s" % args['aoi_vector_path'])
+                f"Unable to open aoi at: {args['aoi_vector_path']}")
         else:
             aoi_vector = None
             lulc_raster_bb = pygeoprocessing.get_raster_info(
@@ -294,12 +296,11 @@ def execute(args):
             try:
                 merged_bb = pygeoprocessing.merge_bounding_box_list(
                     [lulc_raster_bb, aoi_vector_bb], 'intersection')
-                LOGGER.debug("merged bounding boxes: %s", merged_bb)
+                LOGGER.debug(f"merged bounding boxes: {merged_bb}")
             except ValueError:
                 raise ValueError(
-                    "The landcover raster %s and AOI %s do not touch each "
-                    "other." % (args['lulc_raster_path'], args[
-                        'aoi_vector_path']))
+                    f"The landcover raster {args['lulc_raster_path']} and AOI "
+                    f"{args['aoi_vector_path']} do not touch each other.")
 
     output_dir = args['workspace_dir']
     intermediate_dir = os.path.join(
@@ -322,31 +323,31 @@ def execute(args):
     # used to keep track of files generated by this module
     output_file_registry = {
         'c_above_map': os.path.join(
-            intermediate_dir, 'c_above_carbon_stocks%s.tif' % file_suffix),
+            intermediate_dir, f'c_above_carbon_stocks{file_suffix}.tif'),
         'carbon_map': os.path.join(
-            output_dir, 'carbon_map%s.tif' % file_suffix),
+            output_dir, f'carbon_map{file_suffix}.tif'),
         'aggregated_result_vector': os.path.join(
-            output_dir, 'aggregated_carbon_stocks%s.shp' % file_suffix)
+            output_dir, f'aggregated_carbon_stocks{file_suffix}.shp')
     }
 
     if args['pools_to_calculate'] == 'all':
         output_file_registry['c_below_map'] = os.path.join(
-            intermediate_dir, 'c_below_carbon_stocks%s.tif' % file_suffix)
+            intermediate_dir, f'c_below_carbon_stocks{file_suffix}.tif')
         output_file_registry['c_soil_map'] = os.path.join(
-            intermediate_dir, 'c_soil_carbon_stocks%s.tif' % file_suffix)
+            intermediate_dir, f'c_soil_carbon_stocks{file_suffix}.tif')
         output_file_registry['c_dead_map'] = os.path.join(
-            intermediate_dir, 'c_dead_carbon_stocks%s.tif' % file_suffix)
+            intermediate_dir, f'c_dead_carbon_stocks{file_suffix}.tif')
 
     if args['compute_forest_edge_effects']:
         output_file_registry['spatial_index_pickle'] = os.path.join(
-            intermediate_dir, 'spatial_index%s.pickle' % file_suffix)
+            intermediate_dir, f'spatial_index{file_suffix}.pickle')
         output_file_registry['edge_distance'] = os.path.join(
-            intermediate_dir, 'edge_distance%s.tif' % file_suffix)
+            intermediate_dir, f'edge_distance{file_suffix}.tif')
         output_file_registry['tropical_forest_edge_carbon_map'] = os.path.join(
-            intermediate_dir, 'tropical_forest_edge_carbon_stocks%s.tif' %
-            file_suffix)
+            intermediate_dir,
+            f'tropical_forest_edge_carbon_stocks{file_suffix}.tif')
         output_file_registry['non_forest_mask'] = os.path.join(
-            intermediate_dir, 'non_forest_mask%s.tif' % file_suffix)
+            intermediate_dir, f'non_forest_mask{file_suffix}.tif')
 
     # Map non-forest landcover codes to carbon biomasses
     LOGGER.info('Calculating direct mapped carbon stocks')
@@ -369,7 +370,7 @@ def execute(args):
                       carbon_pool_type, ignore_tropical_type,
                       args['compute_forest_edge_effects'], carbon_maps[-1]),
                 target_path_list=[carbon_maps[-1]],
-                task_name='calculate_lulc_%s_map' % carbon_pool_type)
+                task_name=f'calculate_lulc_{carbon_pool_type}_map')
 
     if args['compute_forest_edge_effects']:
         # generate a map of pixel distance to forest edge from the landcover
@@ -496,33 +497,12 @@ def _aggregate_carbon_map(
 
     if os.path.exists(target_aggregate_vector_path):
         os.remove(target_aggregate_vector_path)
-    target_aggregate_vector = driver.CreateCopy(
-        target_aggregate_vector_path, aoi_vector)
+    driver.CreateCopy(target_aggregate_vector_path, aoi_vector)
     aoi_vector = None
-    target_aggregate_layer = target_aggregate_vector.GetLayer()
 
-    # make an identifying id per polygon that can be used for aggregation
-    while True:
-        serviceshed_defn = target_aggregate_layer.GetLayerDefn()
-        poly_id_field = str(uuid.uuid4())[-8:]
-        if serviceshed_defn.GetFieldIndex(poly_id_field) == -1:
-            break
-    layer_id_field = ogr.FieldDefn(poly_id_field, ogr.OFTInteger)
-    target_aggregate_layer.CreateField(layer_id_field)
-    target_aggregate_layer.StartTransaction()
-    for poly_index, poly_feat in enumerate(target_aggregate_layer):
-        poly_feat.SetField(poly_id_field, poly_index)
-        target_aggregate_layer.SetFeature(poly_feat)
-    target_aggregate_layer.CommitTransaction()
-    target_aggregate_layer.SyncToDisk()
-
-    # aggregate carbon stocks by the new ID field
+    # aggregate carbon stocks by the FID
     serviceshed_stats = pygeoprocessing.zonal_statistics(
         (carbon_map_path, 1), target_aggregate_vector_path)
-
-    # don't need a random poly id anymore
-    target_aggregate_layer.DeleteField(
-        serviceshed_defn.GetFieldIndex(poly_id_field))
 
     carbon_sum_field = ogr.FieldDefn('c_sum', ogr.OFTReal)
     carbon_sum_field.SetWidth(24)
@@ -531,6 +511,9 @@ def _aggregate_carbon_map(
     carbon_mean_field.SetWidth(24)
     carbon_mean_field.SetPrecision(11)
 
+    target_aggregate_vector = gdal.OpenEx(
+        target_aggregate_vector_path, gdal.OF_UPDATE)
+    target_aggregate_layer = target_aggregate_vector.GetLayer()
     target_aggregate_layer.CreateField(carbon_sum_field)
     target_aggregate_layer.CreateField(carbon_mean_field)
 
@@ -550,6 +533,7 @@ def _aggregate_carbon_map(
 
         target_aggregate_layer.SetFeature(poly_feat)
     target_aggregate_layer.CommitTransaction()
+    target_aggregate_layer, target_aggregate_vector = None, None
 
 
 def _calculate_lulc_carbon_map(
@@ -586,7 +570,7 @@ def _calculate_lulc_carbon_map(
     lucode_to_per_cell_carbon = {}
     cell_size = pygeoprocessing.get_raster_info(
         lulc_raster_path)['pixel_size']  # in meters
-    cell_area_ha = abs(cell_size[0]) * abs(cell_size[1]) / 10000.0
+    cell_area_ha = abs(cell_size[0]) * abs(cell_size[1]) / 10000
 
     # Build a lookup table
     for lucode in biophysical_table:
@@ -605,9 +589,8 @@ def _calculate_lulc_carbon_map(
             except ValueError:
                 raise ValueError(
                     "Could not interpret carbon pool value as a number. "
-                    "lucode: %s, pool_type: %s, value: %s" %
-                    (lucode, carbon_pool_type,
-                     biophysical_table[lucode][carbon_pool_type]))
+                    f"lucode: {lucode}, pool_type: {carbon_pool_type}, "
+                    f"value: {biophysical_table[lucode][carbon_pool_type]}")
 
     # map aboveground carbon from table to lulc that is not forest
     reclass_error_details = {
@@ -770,7 +753,7 @@ def _build_spatial_index(
 
     LOGGER.info('Building kd_tree')
     kd_tree = scipy.spatial.cKDTree(kd_points)
-    LOGGER.info('Done building kd_tree with %d points', len(kd_points))
+    LOGGER.info(f'Done building kd_tree with {len(kd_points)} points')
 
     with open(target_spatial_index_pickle_path, 'wb') as picklefile:
         picklefile.write(
@@ -840,18 +823,17 @@ def _calculate_tropical_forest_edge_carbon_map(
 
     cell_xsize, cell_ysize = pygeoprocessing.get_raster_info(
         edge_distance_path)['pixel_size']
-    cell_size_km = (abs(cell_xsize) + abs(cell_ysize))/2 / 1000.0
-    cell_area_ha = (abs(cell_xsize) * abs(cell_ysize)) / 10000.0
+    cell_size_km = (abs(cell_xsize) + abs(cell_ysize))/2 / 1000
+    cell_area_ha = (abs(cell_xsize) * abs(cell_ysize)) / 10000
 
     # Loop memory block by memory block, calculating the forest edge carbon
     # for every forest pixel.
     for edge_distance_data, edge_distance_block in pygeoprocessing.iterblocks(
             (edge_distance_path, 1), largest_block=2**12):
         current_time = time.time()
-        if current_time - last_time > 5.0:
-            LOGGER.info(
-                'Carbon edge calculation approx. %.2f%% complete',
-                (n_cells_processed / float(n_cells) * 100.0))
+        if current_time - last_time > 5:
+            LOGGER.info('Carbon edge calculation approx. '
+                        f'{n_cells_processed / n_cells * 100:.2f} complete')
             last_time = current_time
         n_cells_processed += (
             edge_distance_data['win_xsize'] * edge_distance_data['win_ysize'])

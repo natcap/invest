@@ -84,5 +84,6 @@ export const screen = {
 };
 
 export const shell = {
-  showItemInFolder: jest.fn()
+  showItemInFolder: jest.fn(),
+  openExternal: jest.fn(),
 };

@@ -21,16 +21,18 @@ from . import utils
 from . import spec_utils
 from .spec_utils import u
 from . import validation
-from . import MODEL_METADATA
+from .model_metadata import MODEL_METADATA
+from . import gettext
+
 
 LOGGER = logging.getLogger(__name__)
 TARGET_NODATA = -1
-_LOGGING_PERIOD = 5.0
+_LOGGING_PERIOD = 5
 
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["urban_cooling_model"].model_title,
     "pyname": MODEL_METADATA["urban_cooling_model"].pyname,
-    "userguide_html": MODEL_METADATA["urban_cooling_model"].userguide,
+    "userguide": MODEL_METADATA["urban_cooling_model"].userguide,
     "args_with_spatial_overlap": {
         "spatial_keys": ["lulc_raster_path", "ref_eto_raster_path",
                          "aoi_vector_path", "building_vector_path"],
@@ -44,35 +46,35 @@ ARGS_SPEC = {
             **spec_utils.LULC,
             "projected": True,
             "projection_units": u.meter,
-            "about": _(
+            "about": gettext(
                 "Map of LULC for the area of interest. All values in this "
                 "raster must have corresponding entries in the Biophysical "
                 "Table.")
         },
-        "ref_eto_raster_path": spec_utils.ETO,
+        "ref_eto_raster_path": spec_utils.ET0,
         "aoi_vector_path": spec_utils.AOI,
         "biophysical_table_path": {
-            "name": _("biophysical table"),
+            "name": gettext("biophysical table"),
             "type": "csv",
             "columns": {
                 "lucode": {
                     "type": "integer",
-                    "about": _(
+                    "about": gettext(
                         "LULC code corresponding to those in the LULC map.")},
                 "kc": {
                     "type": "number",
                     "units": u.none,
-                    "about": _("Crop coefficient for this LULC class.")},
+                    "about": gettext("Crop coefficient for this LULC class.")},
                 "green_area": {
                     "type": "boolean",
-                    "about": _(
+                    "about": gettext(
                         "Enter 1 to indicate that the LULC is considered a "
                         "green area. Enter 0 to indicate that the LULC is not "
                         "considered a green area.")},
                 "shade":  {
                     "type": "ratio",
                     "required": "cc_method == factors",
-                    "about": _(
+                    "about": gettext(
                         "The proportion of area in this LULC class that is "
                         "covered by tree canopy at least 2 meters high. "
                         "Required if the 'factors' option is selected for "
@@ -80,7 +82,7 @@ ARGS_SPEC = {
                 "albedo": {
                     "type": "ratio",
                     "required": "cc_method == factors",
-                    "about": _(
+                    "about": gettext(
                         "The proportion of solar radiation that is directly "
                         "reflected by this LULC class. Required if the "
                         "'factors' option is selected for the Cooling "
@@ -88,13 +90,13 @@ ARGS_SPEC = {
                 "building_intensity": {
                     "type": "ratio",
                     "required": "cc_method == intensity",
-                    "about": _(
+                    "about": gettext(
                         "The ratio of building floor area to footprint "
                         "area, normalized between 0 and 1. Required if the "
                         "'intensity' option is selected for the Cooling "
                         "Capacity Calculation Method.")}
             },
-            "about": _(
+            "about": gettext(
                 "A table mapping each LULC code to biophysical data for that "
                 "LULC class. All values in the LULC raster must have "
                 "corresponding entries in this table."),
@@ -103,8 +105,8 @@ ARGS_SPEC = {
             "type": "number",
             "units": u.meter,
             "expression": "value >= 0",
-            "name": _("maximum cooling distance"),
-            "about": _(
+            "name": gettext("maximum cooling distance"),
+            "about": gettext(
                 "Distance over which green areas larger than 2 hectares have "
                 "a cooling effect."),
         },
@@ -112,76 +114,76 @@ ARGS_SPEC = {
             "type": "number",
             "units": u.meter,
             "expression": "value >= 0",
-            "name": _("air blending distance"),
-            "about": _(
+            "name": gettext("air blending distance"),
+            "about": gettext(
                 "Radius over which to average air temperatures to account for "
                 "air mixing.")
         },
         "t_ref": {
-            "name": _("reference air temperature"),
+            "name": gettext("reference air temperature"),
             "type": "number",
             "units": u.degree_Celsius,
-            "about": _(
+            "about": gettext(
                 "Air temperature in a rural reference area where the urban "
                 "heat island effect is not observed.")
         },
         "uhi_max": {
-            "name": _("UHI effect"),
+            "name": gettext("UHI effect"),
             "type": "number",
             "units": u.degree_Celsius,
-            "about": _(
+            "about": gettext(
                 "The magnitude of the urban heat island effect, i.e., the "
                 "difference between the rural reference temperature and the "
                 "maximum temperature observed in the city.")
         },
         "do_energy_valuation": {
-            "name": _("run energy savings valuation"),
+            "name": gettext("run energy savings valuation"),
             "type": "boolean",
-            "about": _("Run the energy savings valuation model.")
+            "about": gettext("Run the energy savings valuation model.")
         },
         "do_productivity_valuation": {
-            "name": _("run work productivity valuation"),
+            "name": gettext("run work productivity valuation"),
             "type": "boolean",
-            "about": _("Run the work productivity valuation model.")
+            "about": gettext("Run the work productivity valuation model.")
         },
         "avg_rel_humidity": {
-            "name": _("average relative humidity"),
+            "name": gettext("average relative humidity"),
             "type": "percent",
             "required": "do_productivity_valuation",
-            "about": _(
+            "about": gettext(
                 "The average relative humidity over the time period of "
                 "interest. Required if Run Work Productivity Valuation is "
                 "selected."),
         },
         "building_vector_path": {
-            "name": _("buildings"),
+            "name": gettext("buildings"),
             "type": "vector",
             "fields": {
                 "type": {
                     "type": "integer",
-                    "about": _(
+                    "about": gettext(
                         "Code indicating the building type. These codes must "
                         "match those in the Energy Consumption Table.")}},
             "geometries": spec_utils.POLYGONS,
             "required": "do_energy_valuation",
-            "about": _(
+            "about": gettext(
                 "A map of built infrastructure footprints. Required if Run "
                 "Energy Savings Valuation is selected.")
         },
         "energy_consumption_table_path": {
-            "name": _("energy consumption table"),
+            "name": gettext("energy consumption table"),
             "type": "csv",
             "columns": {
                 "type": {
                     "type": "integer",
-                    "about": _(
+                    "about": gettext(
                         "Building type codes matching those in the Buildings "
                         "vector.")
                 },
                 "consumption": {
                     "type": "number",
                     "units": u.kilowatt_hour/(u.degree_Celsius * u.meter**2),
-                    "about": _(
+                    "about": gettext(
                         "Energy consumption by footprint area for this "
                         "building type.")
                 },
@@ -189,7 +191,7 @@ ARGS_SPEC = {
                     "type": "number",
                     "units": u.currency/u.kilowatt_hour,
                     "required": False,
-                    "about": _(
+                    "about": gettext(
                         "The cost of electricity for this building type. "
                         "If this column is provided, the energy savings "
                         "outputs will be in the this currency unit rather "
@@ -197,48 +199,48 @@ ARGS_SPEC = {
                 }
             },
             "required": "do_energy_valuation",
-            "about": _(
+            "about": gettext(
                 "A table of energy consumption data for each building type. "
                 "Required if Run Energy Savings Valuation is selected.")
         },
         "cc_method": {
-            "name": _("cooling capacity calculation method"),
+            "name": gettext("cooling capacity calculation method"),
             "type": "option_string",
             "options": {
                 "factors": {
-                    "display_name": _("factors"),
-                    "description": _(
+                    "display_name": gettext("factors"),
+                    "description": gettext(
                         "Use the weighted shade, albedo, and ETI factors as a "
                         "temperature predictor (for daytime temperatures).")},
                 "intensity": {
-                    "display_name": _("intensity"),
-                    "description": _(
+                    "display_name": gettext("intensity"),
+                    "description": gettext(
                         "Use building intensity as a temperature predictor "
                         "(for nighttime temperatures).")}
             },
-            "about": _("The air temperature predictor method to use.")
+            "about": gettext("The air temperature predictor method to use.")
         },
         "cc_weight_shade": {
-            "name": _("shade weight"),
+            "name": gettext("shade weight"),
             "type": "ratio",
             "required": False,
-            "about": _(
+            "about": gettext(
                 "The relative weight to apply to shade when calculating the "
                 "cooling capacity index. If not provided, defaults to 0.6."),
         },
         "cc_weight_albedo": {
-            "name": _("albedo weight"),
+            "name": gettext("albedo weight"),
             "type": "ratio",
             "required": False,
-            "about": _(
+            "about": gettext(
                 "The relative weight to apply to albedo when calculating the "
                 "cooling capacity index. If not provided, defaults to 0.2."),
         },
         "cc_weight_eti": {
-            "name": _("evapotranspiration weight"),
+            "name": gettext("evapotranspiration weight"),
             "type": "ratio",
             "required": False,
-            "about": _(
+            "about": gettext(
                 "The relative weight to apply to ETI when calculating the "
                 "cooling capacity index. If not provided, defaults to 0.2.")
         },
@@ -356,16 +358,16 @@ def execute(args):
 
     # align all the input rasters.
     aligned_lulc_raster_path = os.path.join(
-        intermediate_dir, 'lulc%s.tif' % file_suffix)
+        intermediate_dir, f'lulc{file_suffix}.tif')
     aligned_ref_eto_raster_path = os.path.join(
-        intermediate_dir, 'ref_eto%s.tif' % file_suffix)
+        intermediate_dir, f'ref_eto{file_suffix}.tif')
 
     lulc_raster_info = pygeoprocessing.get_raster_info(
         args['lulc_raster_path'])
     # ensure raster has square pixels by picking the smallest dimension
     cell_size = numpy.min(numpy.abs(lulc_raster_info['pixel_size']))
 
-    # Reproject and align inputs to the intersection of the AOI, ETO and LULC,
+    # Reproject and align inputs to the intersection of the AOI, ET0 and LULC,
     # with target raster sizes matching those of the LULC.
     aligned_raster_path_list = [
         aligned_lulc_raster_path, aligned_ref_eto_raster_path]
@@ -399,7 +401,7 @@ def execute(args):
             for lucode, x in biophysical_lucode_map.items())
 
         prop_raster_path = os.path.join(
-            intermediate_dir, '%s%s.tif' % (prop, file_suffix))
+            intermediate_dir, f'{prop}{file_suffix}.tif')
         prop_task = task_graph.add_task(
             func=utils.reclassify_raster,
             args=(
@@ -407,13 +409,13 @@ def execute(args):
                 gdal.GDT_Float32, TARGET_NODATA, reclass_error_details),
             target_path_list=[prop_raster_path],
             dependent_task_list=[align_task],
-            task_name='reclassify to %s' % prop)
+            task_name=f'reclassify to {prop}')
         task_path_prop_map[prop] = (prop_task, prop_raster_path)
 
     green_area_decay_kernel_distance = int(numpy.round(
         float(args['green_area_cooling_distance']) / cell_size))
     cc_park_raster_path = os.path.join(
-        intermediate_dir, 'cc_park%s.tif' % file_suffix)
+        intermediate_dir, f'cc_park{file_suffix}.tif')
     cc_park_task = task_graph.add_task(
         func=convolve_2d_by_exponential,
         args=(
@@ -427,7 +429,7 @@ def execute(args):
 
     # Calculate the area of greenspace within a search radius of each pixel.
     area_kernel_path = os.path.join(
-        intermediate_dir, 'area_kernel%s.tif' % file_suffix)
+        intermediate_dir, f'area_kernel{file_suffix}.tif')
     area_kernel_task = task_graph.add_task(
         func=flat_disk_kernel,
         args=(green_area_decay_kernel_distance, area_kernel_path),
@@ -435,7 +437,7 @@ def execute(args):
         task_name='area kernel')
 
     green_area_sum_raster_path = os.path.join(
-        intermediate_dir, 'green_area_sum%s.tif' % file_suffix)
+        intermediate_dir, f'green_area_sum{file_suffix}.tif')
     green_area_sum_task = task_graph.add_task(
         func=pygeoprocessing.convolve_2d,
         args=(
@@ -453,8 +455,7 @@ def execute(args):
 
     align_task.join()
 
-    cc_raster_path = os.path.join(
-        intermediate_dir, 'cc%s.tif' % file_suffix)
+    cc_raster_path = os.path.join(intermediate_dir, f'cc{file_suffix}.tif')
     if args['cc_method'] == 'factors':
         LOGGER.info('Calculating Cooling Coefficient from factors')
         # Evapotranspiration index (Equation #1)
@@ -469,7 +470,7 @@ def execute(args):
         eto_nodata = pygeoprocessing.get_raster_info(
             args['ref_eto_raster_path'])['nodata'][0]
         eti_raster_path = os.path.join(
-            intermediate_dir, 'eti%s.tif' % file_suffix)
+            intermediate_dir, f'eti{file_suffix}.tif')
         eti_task = task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
             args=(
@@ -518,7 +519,7 @@ def execute(args):
     # convert 2 hectares to number of pixels
     green_area_threshold = 2e4 / cell_size**2
     hm_raster_path = os.path.join(
-        args['workspace_dir'], 'hm%s.tif' % file_suffix)
+        args['workspace_dir'], f'hm{file_suffix}.tif')
     hm_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=([
@@ -532,7 +533,7 @@ def execute(args):
         task_name='calculate HM index')
 
     t_air_nomix_raster_path = os.path.join(
-        intermediate_dir, 'T_air_nomix%s.tif' % file_suffix)
+        intermediate_dir, f'T_air_nomix{file_suffix}.tif')
     t_air_nomix_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=([(t_ref_raw, 'raw'),
@@ -547,7 +548,7 @@ def execute(args):
     decay_kernel_distance = int(numpy.round(
         t_air_average_radius_raw / cell_size))
     t_air_raster_path = os.path.join(
-        intermediate_dir, 'T_air%s.tif' % file_suffix)
+        intermediate_dir, f'T_air{file_suffix}.tif')
     t_air_task = task_graph.add_task(
         func=convolve_2d_by_exponential,
         args=(
@@ -559,7 +560,7 @@ def execute(args):
         task_name='calculate T air')
 
     intermediate_aoi_vector_path = os.path.join(
-        intermediate_dir, 'reprojected_aoi%s.shp' % file_suffix)
+        intermediate_dir, f'reprojected_aoi{file_suffix}.shp')
     intermediate_uhi_result_vector_task = task_graph.add_task(
         func=pygeoprocessing.reproject_vector,
         args=(
@@ -599,7 +600,7 @@ def execute(args):
         LOGGER.info('Starting work productivity valuation')
         # work productivity
         wbgt_raster_path = os.path.join(
-            intermediate_dir, 'wbgt%s.tif' % file_suffix)
+            intermediate_dir, f'wbgt{file_suffix}.tif')
         wbgt_task = task_graph.add_task(
             func=calculate_wbgt,
             args=(
@@ -611,10 +612,10 @@ def execute(args):
 
         light_work_loss_raster_path = os.path.join(
             intermediate_dir,
-            'light_work_loss_percent%s.tif' % file_suffix)
+            f'light_work_loss_percent{file_suffix}.tif')
         heavy_work_loss_raster_path = os.path.join(
             intermediate_dir,
-            'heavy_work_loss_percent%s.tif' % file_suffix)
+            f'heavy_work_loss_percent{file_suffix}.tif')
 
         loss_task_path_map = {}
         for loss_type, temp_map, loss_raster_path in [
@@ -627,7 +628,7 @@ def execute(args):
                 args=(temp_map, wbgt_raster_path, loss_raster_path),
                 target_path_list=[loss_raster_path],
                 dependent_task_list=[wbgt_task],
-                task_name='work loss: %s' % os.path.basename(loss_raster_path))
+                task_name=f'work loss: {os.path.basename(loss_raster_path)}')
             loss_task_path_map[loss_type] = (work_loss_task, loss_raster_path)
 
         # pickle WBGT
@@ -673,7 +674,7 @@ def execute(args):
         LOGGER.info('Starting energy savings valuation')
         intermediate_building_vector_path = os.path.join(
             intermediate_dir,
-            'reprojected_buildings%s.shp' % file_suffix)
+            f'reprojected_buildings{file_suffix}.shp')
         intermediate_building_vector_task = task_graph.add_task(
             func=pygeoprocessing.reproject_vector,
             args=(
@@ -698,7 +699,7 @@ def execute(args):
             task_name='pickle t-air stats over buildings')
 
         energy_consumption_vector_path = os.path.join(
-            args['workspace_dir'], 'buildings_with_stats%s.shp' % file_suffix)
+            args['workspace_dir'], f'buildings_with_stats{file_suffix}.shp')
         _ = task_graph.add_task(
             func=calculate_energy_savings,
             args=(
@@ -716,7 +717,7 @@ def execute(args):
     task_graph.join()
 
     target_uhi_vector_path = os.path.join(
-        args['workspace_dir'], 'uhi_results%s.shp' % file_suffix)
+        args['workspace_dir'], f'uhi_results{file_suffix}.shp')
     _ = task_graph.add_task(
         func=calculate_uhi_result_vector,
         args=(
@@ -777,9 +778,8 @@ def calculate_uhi_result_vector(
         None.
 
     """
-    LOGGER.info(
-        "Calculate UHI summary results %s", os.path.basename(
-            target_uhi_vector_path))
+    LOGGER.info("Calculate UHI summary results for "
+                f"{os.path.basename(target_uhi_vector_path)}")
 
     LOGGER.info("Loading t_air_stats")
     with open(t_air_stats_pickle_path, 'rb') as t_air_stats_pickle_file:
@@ -816,7 +816,7 @@ def calculate_uhi_result_vector(
     except FileNotFoundError:
         pass
 
-    LOGGER.info("Creating %s", os.path.basename(target_uhi_vector_path))
+    LOGGER.info(f"Creating {os.path.basename(target_uhi_vector_path)}")
     shapefile_driver.CreateCopy(
         target_uhi_vector_path, base_aoi_vector)
     base_aoi_vector = None
@@ -854,12 +854,12 @@ def calculate_uhi_result_vector(
     target_uhi_layer.StartTransaction()
     for feature in target_uhi_layer:
         feature_id = feature.GetFID()
-        if feature_id in cc_stats and cc_stats[feature_id]['count'] > 0:
+        if cc_stats[feature_id]['count'] > 0:
             mean_cc = (
                 cc_stats[feature_id]['sum'] / cc_stats[feature_id]['count'])
             feature.SetField('avg_cc', mean_cc)
         mean_t_air = None
-        if feature_id in t_air_stats and t_air_stats[feature_id]['count'] > 0:
+        if t_air_stats[feature_id]['count'] > 0:
             mean_t_air = (
                 t_air_stats[feature_id]['sum'] /
                 t_air_stats[feature_id]['count'])
@@ -869,27 +869,24 @@ def calculate_uhi_result_vector(
             feature.SetField(
                 'avg_tmp_an', mean_t_air-t_ref_val)
 
-        if wbgt_stats and feature_id in wbgt_stats and (
-                wbgt_stats[feature_id]['count'] > 0):
+        if wbgt_stats and wbgt_stats[feature_id]['count'] > 0:
             wbgt = (
                 wbgt_stats[feature_id]['sum'] /
                 wbgt_stats[feature_id]['count'])
             feature.SetField('avg_wbgt_v', wbgt)
 
-        if light_loss_stats and feature_id in light_loss_stats and (
-                light_loss_stats[feature_id]['count'] > 0):
+        if light_loss_stats and light_loss_stats[feature_id]['count'] > 0:
             light_loss = (
                 light_loss_stats[feature_id]['sum'] /
                 light_loss_stats[feature_id]['count'])
-            LOGGER.debug("Average light loss: %s", light_loss)
+            LOGGER.debug(f"Average light loss: {light_loss}")
             feature.SetField('avg_ltls_v', float(light_loss))
 
-        if heavy_loss_stats and feature_id in heavy_loss_stats and (
-                heavy_loss_stats[feature_id]['count'] > 0):
+        if heavy_loss_stats and heavy_loss_stats[feature_id]['count'] > 0:
             heavy_loss = (
                 heavy_loss_stats[feature_id]['sum'] /
                 heavy_loss_stats[feature_id]['count'])
-            LOGGER.debug("Average heavy loss: %s", heavy_loss)
+            LOGGER.debug(f"Average heavy loss: {heavy_loss}")
             feature.SetField('avg_hvls_v', float(heavy_loss))
 
         if energy_consumption_vector_path:
@@ -898,19 +895,18 @@ def calculate_uhi_result_vector(
                 bytes(aoi_geometry.ExportToWkb()))
             aoi_shapely_geometry_prep = shapely.prepared.prep(
                 aoi_shapely_geometry)
-            avd_eng_cn = 0.0
-            for building_id in poly_rtree_index.intersection(
+            avd_eng_cn = 0
+            for building_fid in poly_rtree_index.intersection(
                     aoi_shapely_geometry.bounds):
                 if aoi_shapely_geometry_prep.intersects(
-                        building_shapely_polygon_lookup[building_id]):
+                        building_shapely_polygon_lookup[building_fid]):
                     energy_consumption_value = (
                         energy_consumption_layer.GetFeature(
-                            building_id).GetField('energy_sav'))
+                            building_fid).GetField('energy_sav'))
                     if energy_consumption_value:
                         # this step lets us skip values that might be in
                         # nodata ranges that we can't help.
-                        avd_eng_cn += float(
-                            energy_consumption_value)
+                        avd_eng_cn += float(energy_consumption_value)
             feature.SetField('avd_eng_cn', avd_eng_cn)
 
         target_uhi_layer.SetFeature(feature)
@@ -949,8 +945,7 @@ def calculate_energy_savings(
         None.
 
     """
-    LOGGER.info(
-        "Calculate energy savings for %s", target_building_vector_path)
+    LOGGER.info(f"Calculate energy savings for {target_building_vector_path}")
     LOGGER.info("Loading t_air_stats")
     with open(t_air_stats_pickle_path, 'rb') as t_air_stats_pickle_file:
         t_air_stats = pickle.load(t_air_stats_pickle_file)
@@ -958,7 +953,7 @@ def calculate_energy_savings(
     base_building_vector = gdal.OpenEx(
         base_building_vector_path, gdal.OF_VECTOR)
     shapefile_driver = gdal.GetDriverByName('ESRI Shapefile')
-    LOGGER.info("Creating %s", os.path.basename(target_building_vector_path))
+    LOGGER.info(f"Creating {os.path.basename(target_building_vector_path)}")
     try:
         # can't make a shapefile on top of an existing one
         os.remove(target_building_vector_path)
@@ -993,7 +988,7 @@ def calculate_energy_savings(
         last_time = _invoke_timed_callback(
             last_time, lambda: LOGGER.info(
                 "energy savings approximately %.1f%% complete ",
-                100.0 * float(target_index + 1) /
+                100 * float(target_index + 1) /
                 target_building_layer.GetFeatureCount()),
             _LOGGING_PERIOD)
 
@@ -1014,12 +1009,10 @@ def calculate_energy_savings(
             target_building_layer = None
             target_building_vector = None
             raise ValueError(
-                "Encountered a building 'type' of: '%s' in "
-                "FID: %d in the building vector layer that has no "
-                "corresponding entry in the energy consumption table "
-                "at %s" % (
-                    target_type, target_feature.GetFID(),
-                    energy_consumption_table_path))
+                f"Encountered a building 'type' of: '{target_type}' in "
+                f"FID: {target_feature.GetFID()} in the building vector layer "
+                "that has no corresponding entry in the energy consumption "
+                f"table at {energy_consumption_table_path}")
 
         consumption_increase = float(
             energy_consumption_table[target_type]['consumption'])
@@ -1033,7 +1026,7 @@ def calculate_energy_savings(
                 energy_consumption_table[target_type]['cost'])
         except KeyError:
             # KeyError when cost column not present.
-            building_cost = 1.0
+            building_cost = 1
 
         # Calculate Equations 8, 9: Energy Savings.
         # We'll only calculate energy savings if there were polygons with valid
@@ -1065,8 +1058,8 @@ def pickle_zonal_stats(
         None.
 
     """
-    LOGGER.info('Taking zonal statistics of %s over %s',
-                base_vector_path, base_raster_path)
+    LOGGER.info(f'Taking zonal statistics of {base_vector_path} '
+                f'over {base_raster_path}')
     zonal_stats = pygeoprocessing.zonal_statistics(
         (base_raster_path, 1), base_vector_path,
         polygons_might_overlap=True)
@@ -1143,7 +1136,7 @@ def calc_cc_op_intensity(intensity_array):
     result = numpy.empty(intensity_array.shape, dtype=numpy.float32)
     result[:] = TARGET_NODATA
     valid_mask = ~utils.array_equals_nodata(intensity_array, TARGET_NODATA)
-    result[valid_mask] = 1.0 - intensity_array[valid_mask]
+    result[valid_mask] = 1 - intensity_array[valid_mask]
     return result
 
 
@@ -1191,7 +1184,7 @@ def calculate_wbgt(
         wbgt[:] = TARGET_NODATA
         t_air_valid = t_air_array[valid_mask]
         e_i = (
-            (avg_rel_humidity / 100.0) * 6.105 * numpy.exp(
+            (avg_rel_humidity / 100) * 6.105 * numpy.exp(
                 17.27 * (t_air_valid / (237.7 + t_air_valid))))
         wbgt[valid_mask] = 0.567 * t_air_valid + 0.393 * e_i + 3.94
         return wbgt
@@ -1218,8 +1211,8 @@ def flat_disk_kernel(max_distance, kernel_filepath):
         None
 
     """
-    LOGGER.info('Creating a disk kernel of distance %s at %s',
-                max_distance, kernel_filepath)
+    LOGGER.info(f'Creating a disk kernel of distance {max_distance} at '
+                f'{kernel_filepath}')
     kernel_size = int(numpy.round(max_distance * 2 + 1))
 
     driver = gdal.GetDriverByName('GTiff')
@@ -1326,8 +1319,8 @@ def map_work_loss(
         None.
 
     """
-    LOGGER.info('Calculating work loss using thresholds: %s',
-                work_temp_threshold_array)
+    LOGGER.info(
+        f'Calculating work loss using thresholds: {work_temp_threshold_array}')
     byte_target_nodata = 255
 
     def classify_to_percent_op(temperature_array):
@@ -1398,8 +1391,8 @@ def convolve_2d_by_exponential(
         None.
 
     """
-    LOGGER.info("Starting a convolution over %s with a decay "
-                "distance of %s", signal_raster_path, decay_kernel_distance)
+    LOGGER.info(f"Starting a convolution over {signal_raster_path} with a "
+                f"decay distance of {decay_kernel_distance}")
     temporary_working_dir = tempfile.mkdtemp(
         dir=os.path.dirname(target_convolve_raster_path))
     exponential_kernel_path = os.path.join(

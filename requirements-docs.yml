@@ -14,6 +14,7 @@ dependencies:
 - Cython
 - GDAL>=3.1.2,!=3.3.0
 - Flask
+- flask_cors
 - numpy>=1.11.0,!=1.16.0
 - pandas>=1.0,<1.2.0
 - pip
@@ -30,10 +31,12 @@ dependencies:
 - virtualenv>=12.0.1
 - wheel>=0.27.0
 - xlrd>=1.2.0
+- jinja2<3.1
+- pint
 - xlwt
 - pip:
-  - pygeoprocessing>=2.3.2 # pip-only
-  - PyInstaller==3.5 # pip-only
+  - pygeoprocessing>=2.3.2  # pip-only
+  - PyInstaller==3.5  # pip-only
   - Pyro4==4.77  # pip-only
   - PySide2!=5.15.0  # pip-only
   - qtawesome  # pip-only

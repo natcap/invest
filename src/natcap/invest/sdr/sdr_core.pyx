@@ -652,6 +652,18 @@ def calculate_sediment_deposition(
                     t_i = dr_i * f_j_weighted_sum  # deposition
                     f_i = (1 - dr_i) * f_j_weighted_sum + e_prime_i  # flux
 
+                    # On large flow paths, it's possible for dr_i, f_i and t_i
+                    # to have very small negative values that are numerically
+                    # equivalent to 0. These negative values were raising
+                    # questions on the forums and it's easier to clamp the
+                    # values here than to explain IEEE 754.
+                    if dr_i < 0:
+                        dr_i = 0
+                    if t_i < 0:
+                        t_i = 0
+                    if f_i < 0:
+                        f_i = 0
+
                     sediment_deposition_raster.set(global_col, global_row, t_i)
                     f_raster.set(global_col, global_row, f_i)
 
