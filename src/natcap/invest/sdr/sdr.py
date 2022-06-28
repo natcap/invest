@@ -667,8 +667,9 @@ def execute(args):
         func=_generate_report,
         args=(
             args['watersheds_path'], f_reg['usle_path'],
-            f_reg['sed_export_path'], f_reg['sed_retention_path'],
-            f_reg['sed_deposition_path'], f_reg['watershed_results_sdr_path']),
+            f_reg['sed_export_path'], f_reg['sed_deposition_path'],
+            f_reg['total_retention_path'], f_reg['avoided_erosion_path'],
+            f_reg['watershed_results_sdr_path']),
         target_path_list=[f_reg['watershed_results_sdr_path']],
         dependent_task_list=[
             usle_task, sed_export_task, sed_retention_task],
@@ -1501,9 +1502,26 @@ def _calculate_sed_retention(
 
 
 def _generate_report(
-        watersheds_path, usle_path, sed_export_path, sed_retention_path,
-        sed_deposition_path, watershed_results_sdr_path):
-    """Create shapefile with USLE, sed export, retention, and deposition."""
+        watersheds_path, usle_path, sed_export_path,
+        sed_deposition_path, total_retention_path, avoided_erosion_path,
+        watershed_results_sdr_path):
+    """Create summary vector with totals for rasters.
+
+    Args:
+        watersheds_path (string): The path to the watersheds vector.
+        usle_path (string): The path to the computed USLE raster.
+        sed_export_path (string): The path to the sediment export raster.
+        sed_deposition_path (string): The path to the sediment deposition
+            raster.
+        total_retention_path (string): The path to the total retention raster.
+        avoided_erosion_path (string): The path to the avoided erosion raster.
+        watershed_results_sdr_path (string): The path to where the watersheds
+            vector will be created.  This path must end in ``.shp`` as it will
+            be written as an ESRI Shapefile.
+
+    Returns:
+        ``None``
+    """
     original_datasource = gdal.OpenEx(watersheds_path, gdal.OF_VECTOR)
     if os.path.exists(watershed_results_sdr_path):
         LOGGER.warning(f'overwriting results at {watershed_results_sdr_path}')
@@ -1520,10 +1538,12 @@ def _generate_report(
             (usle_path, 1), watershed_results_sdr_path),
         'sed_export': pygeoprocessing.zonal_statistics(
             (sed_export_path, 1), watershed_results_sdr_path),
-        'sed_retent': pygeoprocessing.zonal_statistics(
-            (sed_retention_path, 1), watershed_results_sdr_path),
         'sed_dep': pygeoprocessing.zonal_statistics(
             (sed_deposition_path, 1), watershed_results_sdr_path),
+        'tot_retent': pygeoprocessing.zonal_statistics(
+            (total_retention_path, 1), watershed_results_sdr_path),
+        'avoid_eros': pygeoprocessing.zonal_statistics(
+            (avoided_erosion_path, 1), watershed_results_sdr_path),
     }
 
     for field_name in field_summaries:
