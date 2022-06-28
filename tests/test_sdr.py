@@ -214,10 +214,10 @@ class SDRTests(unittest.TestCase):
 
         sdr.execute(args)
         expected_results = {
-            'usle_tot': 14.25030517578,
+            'usle_tot': 13.90210914612,
             'sed_retent': 308382.125,
-            'sed_export': 0.60502111912,
-            'sed_dep': 9.05251502991
+            'sed_export': 0.55185163021,
+            'sed_dep': 8.80130577087,
         }
 
         vector_path = os.path.join(
@@ -286,8 +286,8 @@ class SDRTests(unittest.TestCase):
         sdr.execute(args)
         expected_results = {
             'sed_retent': 308382.125,
-            'sed_export': 0.60502111912,
-            'usle_tot': 14.25030517578,
+            'sed_export': 0.55185163021,
+            'usle_tot': 13.90210914612,
         }
 
         vector_path = os.path.join(
@@ -335,8 +335,8 @@ class SDRTests(unittest.TestCase):
 
         expected_results = {
             'sed_retent': 476649.875,
-            'sed_export': 1.02959537506,
-            'usle_tot': 12.97211265564,
+            'sed_export': 0.97192692757,
+            'usle_tot': 12.68887424469,
         }
 
         vector_path = os.path.join(
