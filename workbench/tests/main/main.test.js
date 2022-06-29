@@ -207,6 +207,7 @@ describe('createWindow', () => {
 });
 
 describe('investUsageLogger', () => {
+  const expectedURL = `http://localhost:${process.env.PORT}/api/log_model_start`;
   beforeEach(() => {
     // the expected response
     const response = {
@@ -227,6 +228,7 @@ describe('investUsageLogger', () => {
 
     usageLogger.start(modelPyname, args);
     expect(fetch.mock.calls).toHaveLength(1);
+    expect(fetch.mock.calls[0][0]).toBe(expectedURL);
     const startPayload = JSON.parse(fetch.mock.calls[0][1].body);
 
     usageLogger.exit(investStdErr);
