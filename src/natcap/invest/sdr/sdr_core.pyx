@@ -649,7 +649,7 @@ def calculate_sediment_deposition(
                         dr_i = (downslope_sdr_weighted_sum - sdr_i) / (1 - sdr_i)
 
                     # Lisa's modified equations
-                    t_i = dr_i * f_j_weighted_sum  # deposition
+                    t_i = dr_i * f_j_weighted_sum  # deposition, a.k.a trapped sediment
                     f_i = (1 - dr_i) * f_j_weighted_sum + e_prime_i  # flux
 
                     # On large flow paths, it's possible for dr_i, f_i and t_i
