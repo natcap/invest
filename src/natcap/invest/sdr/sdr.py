@@ -572,7 +572,7 @@ def execute(args):
             f_reg['avoided_erosion_path']),
         dependent_task_list=[rkls_task, usle_task],
         target_path_list=[f_reg['avoided_erosion_path']],
-        task_name='calculate local retention')
+        task_name='calculate avoided erosion / local retention')
 
     total_retention_task = task_graph.add_task(
         func=_calculate_total_retention,
