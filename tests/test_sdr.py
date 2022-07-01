@@ -217,7 +217,7 @@ class SDRTests(unittest.TestCase):
             'usle_tot': 13.90210914612,
             'sed_export': 0.55185163021,
             'sed_dep': 8.80130577087,
-            'tot_retent': 57971.87890625,
+            'avoid_exp': 57971.87890625,
             'avoid_eros': 1458232.5,
         }
 
@@ -288,7 +288,7 @@ class SDRTests(unittest.TestCase):
         expected_results = {
             'sed_export': 0.55185163021,
             'usle_tot': 13.90210914612,
-            'tot_retent': 57971.87890625,
+            'avoid_exp': 57971.87890625,
             'avoid_eros': 1458232.5,
         }
 
@@ -313,7 +313,7 @@ class SDRTests(unittest.TestCase):
         expected_results = {
             'sed_export': 0.67064666748,
             'usle_tot': 12.6965303421,
-            'tot_retent': 69130.8203125,
+            'avoid_exp': 69130.8203125,
             'avoid_eros': 1317588.375,
         }
 
@@ -339,7 +339,7 @@ class SDRTests(unittest.TestCase):
         expected_results = {
             'sed_export': 0.97192692757,
             'usle_tot': 12.68887424469,
-            'tot_retent': 100960.9609375,
+            'avoid_exp': 100960.9609375,
             'avoid_eros': 1329122.0,
         }
 
