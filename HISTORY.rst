@@ -43,7 +43,8 @@ Unreleased Changes
 * NDR
     * Added parameters to the sample data to support nitrogen calculations.
 * SDR
-    * We have made a significant update to the SDR model's outputs:
+    * We have made a significant update to the SDR model's outputs described
+      here: https://github.com/natcap/peps/blob/main/pep-0010.md :
       * Legacy outputs ``sed_retention_index.tif`` and ``sed_retention.tif``
         have been removed from the model.
       * Two new output rasters have been added:
