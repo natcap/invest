@@ -159,7 +159,7 @@ _OUTPUT_BASE_FILES = {
     'usle_path': 'usle.tif',
     'watershed_results_sdr_path': 'watershed_results_sdr.shp',
     'total_retention_path': 'total_retention.tif',
-    'avoided_erosion_path': 'avoided_erosion.tif',
+    'avoided_local_erosion_path': 'avoided_local_erosion.tif',
 }
 
 INTERMEDIATE_DIR_NAME = 'intermediate_outputs'
@@ -565,21 +565,21 @@ def execute(args):
         target_path_list=[f_reg['sed_deposition_path'], f_reg['f_path']],
         task_name='sediment deposition')
 
-    avoided_erosion_task = task_graph.add_task(
-        func=_calculate_avoided_erosion,
+    avoided_local_erosion_task = task_graph.add_task(
+        func=_calculate_avoided_local_erosion,
         args=(
             f_reg['rkls_path'], f_reg['usle_path'],
-            f_reg['avoided_erosion_path']),
+            f_reg['avoided_local_erosion_path']),
         dependent_task_list=[rkls_task, usle_task],
-        target_path_list=[f_reg['avoided_erosion_path']],
-        task_name='calculate avoided erosion / local retention')
+        target_path_list=[f_reg['avoided_local_erosion_path']],
+        task_name='calculate avoided local erosion')
 
     total_retention_task = task_graph.add_task(
         func=_calculate_total_retention,
         args=(
-            f_reg['avoided_erosion_path'], f_reg['sdr_path'],
+            f_reg['avoided_local_erosion_path'], f_reg['sdr_path'],
             f_reg['sed_deposition_path'], f_reg['total_retention_path']),
-        dependent_task_list=[avoided_erosion_task, sdr_task,
+        dependent_task_list=[avoided_local_erosion_task, sdr_task,
                              sed_deposition_task],
         target_path_list=[f_reg['total_retention_path']],
         task_name='calculate total retention')
@@ -635,12 +635,12 @@ def execute(args):
         args=(
             args['watersheds_path'], f_reg['usle_path'],
             f_reg['sed_export_path'], f_reg['sed_deposition_path'],
-            f_reg['total_retention_path'], f_reg['avoided_erosion_path'],
+            f_reg['total_retention_path'], f_reg['avoided_local_erosion_path'],
             f_reg['watershed_results_sdr_path']),
         target_path_list=[f_reg['watershed_results_sdr_path']],
         dependent_task_list=[
             usle_task, sed_export_task, total_retention_task,
-            sed_deposition_task, avoided_erosion_task],
+            sed_deposition_task, avoided_local_erosion_task],
         task_name='generate report')
 
     task_graph.close()
@@ -648,13 +648,13 @@ def execute(args):
 
 
 def _calculate_total_retention(
-        avoided_erosion_path, sdr_path, sed_deposition_path,
+        avoided_local_erosion_path, sdr_path, sed_deposition_path,
         target_total_retention_path):
     """Calculate total retention.
 
     Args:
-        avoided_erosion_path (string): The string path to an avoided erosion
-            raster.
+        avoided_local_erosion_path (string): The string path to an avoided
+            local erosion raster.
         sdr_path (string): The path to a raster containing computed SDR values.
         sed_deposition_path (string): The path to a raster containing computed
             sediment deposition values.
@@ -664,17 +664,17 @@ def _calculate_total_retention(
     Returns:
         ``None``
     """
-    avoided_erosion_nodata = pygeoprocessing.get_raster_info(
-        avoided_erosion_path)['nodata'][0]
+    avoided_local_erosion_nodata = pygeoprocessing.get_raster_info(
+        avoided_local_erosion_path)['nodata'][0]
     sdr_nodata = pygeoprocessing.get_raster_info(sdr_path)['nodata'][0]
     sed_deposition_nodata = pygeoprocessing.get_raster_info(
         sed_deposition_path)['nodata'][0]
 
-    def _total_retention_function(avoided_erosion, sdr, sed_deposition):
+    def _total_retention_function(avoided_local_erosion, sdr, sed_deposition):
         """Calculate total retention.
 
         Args:
-            avoided_erosion (numpy.array): Avoided erosion values.
+            avoided_local_erosion (numpy.array): Avoided erosion values.
             sdr (numpy.array): SDR values.
             sed_deposition (numpy.array): Sediment deposition values.
 
@@ -682,38 +682,39 @@ def _calculate_total_retention(
             A ``numpy.array`` of computed total retention matching the shape of
             the input numpy arrays.
         """
-        result = numpy.full(avoided_erosion.shape, _TARGET_NODATA,
+        result = numpy.full(avoided_local_erosion.shape, _TARGET_NODATA,
                             dtype=numpy.float32)
         valid_mask = (
-            (~utils.array_equals_nodata(avoided_erosion,
-                                        avoided_erosion_nodata)) &
+            (~utils.array_equals_nodata(avoided_local_erosion,
+                                        avoided_local_erosion_nodata)) &
             (~utils.array_equals_nodata(sdr, sdr_nodata)) &
             (~utils.array_equals_nodata(sed_deposition,
                                         sed_deposition_nodata)))
 
-        # avoided_erosion represents RLKS - RKLSCP (where RKLSCP is also known
-        # as a modified USLE)
+        # avoided_local_erosion represents RLKS - RKLSCP (where RKLSCP is also
+        # known as a modified USLE)
         result[valid_mask] = (
-            avoided_erosion[valid_mask] * sdr[valid_mask] +
+            avoided_local_erosion[valid_mask] * sdr[valid_mask] +
             sed_deposition[valid_mask])
         return result
 
     pygeoprocessing.raster_calculator(
-        [(avoided_erosion_path, 1), (sdr_path, 1),
+        [(avoided_local_erosion_path, 1), (sdr_path, 1),
          (sed_deposition_path, 1)],
         _total_retention_function, target_total_retention_path,
         gdal.GDT_Float32, _TARGET_NODATA)
 
 
-def _calculate_avoided_erosion(rkls_path, usle_path,
-                               target_avoided_erosion_path):
-    """Calculate "local retention" / "avoided erosion".
+def _calculate_avoided_local_erosion(
+        rkls_path, usle_path, target_avoided_local_erosion_path):
+    """Calculate avoided local erosion.
+
 
     Args:
         rkls_path (string): The path to the RKLS raster on disk.
         usle_path (string): The path to the USLE raster on disk.
-        target_avoided_erosion_path (string): The path to the target local
-            retention raster, created by this function.
+        target_avoided_local_erosion_path (string): The path to the target
+            local retention raster, created by this function.
 
     Returns:
         ``None``
@@ -721,8 +722,8 @@ def _calculate_avoided_erosion(rkls_path, usle_path,
     rkls_nodata = pygeoprocessing.get_raster_info(rkls_path)['nodata'][0]
     usle_nodata = pygeoprocessing.get_raster_info(usle_path)['nodata'][0]
 
-    def _avoided_erosion_function(rkls, usle):
-        """Calculate avoided erosion.
+    def _avoided_local_erosion_function(rkls, usle):
+        """Calculate avoided local erosion.
 
         Args:
             rkls (numpy.array): Computed RKLS values.
@@ -730,7 +731,7 @@ def _calculate_avoided_erosion(rkls_path, usle_path,
 
         Returns:
             A ``numpy.array`` of the same size and shape of the input numpy
-            arrays containing computed avoided erosion values.
+            arrays containing computed avoided local erosion values.
         """
         result = numpy.full(rkls.shape, _TARGET_NODATA, dtype=numpy.float32)
         valid_mask = (
@@ -741,8 +742,8 @@ def _calculate_avoided_erosion(rkls_path, usle_path,
         return result
 
     pygeoprocessing.raster_calculator(
-        [(rkls_path, 1), (usle_path, 1)], _avoided_erosion_function,
-        target_avoided_erosion_path, gdal.GDT_Float32, _TARGET_NODATA)
+        [(rkls_path, 1), (usle_path, 1)], _avoided_local_erosion_function,
+        target_avoided_local_erosion_path, gdal.GDT_Float32, _TARGET_NODATA)
 
 
 def _calculate_what_drains_to_stream(
@@ -1397,7 +1398,7 @@ def _calculate_e_prime(usle_path, sdr_path, target_e_prime):
 
 def _generate_report(
         watersheds_path, usle_path, sed_export_path,
-        sed_deposition_path, total_retention_path, avoided_erosion_path,
+        sed_deposition_path, total_retention_path, avoided_local_erosion_path,
         watershed_results_sdr_path):
     """Create summary vector with totals for rasters.
 
@@ -1408,7 +1409,8 @@ def _generate_report(
         sed_deposition_path (string): The path to the sediment deposition
             raster.
         total_retention_path (string): The path to the total retention raster.
-        avoided_erosion_path (string): The path to the avoided erosion raster.
+        avoided_local_erosion_path (string): The path to the avoided local
+            erosion raster.
         watershed_results_sdr_path (string): The path to where the watersheds
             vector will be created.  This path must end in ``.shp`` as it will
             be written as an ESRI Shapefile.
@@ -1437,7 +1439,7 @@ def _generate_report(
         'tot_retent': pygeoprocessing.zonal_statistics(
             (total_retention_path, 1), watershed_results_sdr_path),
         'avoid_eros': pygeoprocessing.zonal_statistics(
-            (avoided_erosion_path, 1), watershed_results_sdr_path),
+            (avoided_local_erosion_path, 1), watershed_results_sdr_path),
     }
 
     for field_name in field_summaries:
