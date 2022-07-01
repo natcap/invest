@@ -4,6 +4,7 @@ import events from 'events';
 import { spawn, exec } from 'child_process';
 import Stream from 'stream';
 
+import fetch from 'node-fetch';
 import GettextJS from 'gettext.js';
 import React from 'react';
 import { ipcRenderer } from 'electron';
@@ -555,6 +556,12 @@ describe('InVEST subprocess testing', () => {
   beforeAll(() => {
     setupInvestRunHandlers(investExe);
     setupInvestLogReaderHandler();
+    // mock request/response for invest usage-logging
+    const response = {
+      ok: true,
+      text: async () => 'foo',
+    };
+    fetch.mockResolvedValue(response);
   });
 
   afterAll(() => {
