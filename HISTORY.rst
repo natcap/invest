@@ -40,6 +40,10 @@ Unreleased Changes
 * Workbench
     * Fixed a bug where some model runs would not generate a new item
       in the list of recent runs.
+* Coastal Blue Carbon
+    * Fixed a bug where using unaligned rasters in the preprocessor would cause
+      an error.  The preprocessor will now correctly align input landcover
+      rasters and determine transitions from the aligned rasters.
 * NDR
     * Added parameters to the sample data to support nitrogen calculations.
 
