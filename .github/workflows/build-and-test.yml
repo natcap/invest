@@ -101,6 +101,7 @@ jobs:
           # uninstall InVEST if it was already in the restored cache
           python -m pip uninstall -y natcap.invest
           python -m build --wheel
+          ls -la dist
           pip install $(find dist -name "natcap.invest*.whl")
 
       - name: Run model tests
