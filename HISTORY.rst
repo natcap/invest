@@ -46,6 +46,26 @@ Unreleased Changes
       rasters and determine transitions from the aligned rasters.
 * NDR
     * Added parameters to the sample data to support nitrogen calculations.
+* SDR
+    * We have made a significant update to the SDR model's outputs described
+      here: https://github.com/natcap/peps/blob/main/pep-0010.md :
+      * Legacy outputs ``sed_retention_index.tif`` and ``sed_retention.tif``
+        have been removed from the model.
+      * Two new output rasters have been added:
+        * ``avoided_export.tif``, indicating vegetation's contribution to
+          avoided local erosion.
+        * ``avoided_local_erosion.tif``, indicating avoided soil loss on a pixel.
+      * The summary watersheds vector no longer includes the ``sed_retent``
+        field and two fields have been added:
+        * ``avoid_exp`` representing the sum of avoided export in the
+          watershed.
+        * ``avoid_eros`` representing the sum of avoided local erosion in the
+          watershed.
+      * Sediment deposition, ``sed_deposition.tif``, has been clarified to
+        indicate the sediment that erodes from a pixel goes into the next
+        downstream pixel(s) where it is either trapped or exported.  This
+        update removes a form of double-counting.
+
 
 3.11.0 (2022-05-24)
 -------------------
