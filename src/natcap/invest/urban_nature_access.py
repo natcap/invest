@@ -1,6 +1,7 @@
 import logging
 import math
 import os
+import re
 import shutil
 import tempfile
 
@@ -173,6 +174,7 @@ _INTERMEDIATE_BASE_FILES = {
     'greenspace_supply_demand_budget': 'greenspace_supply_demand_budget.tif',
     'undersupplied_population': 'undersupplied_population.tif',
     'oversupplied_population': 'oversupplied_population.tif',
+    'admin_unit_ids': 'admin_unit_ids.tif',
 }
 
 
@@ -251,7 +253,7 @@ def execute(args):
         sorted(ARGS_SPEC['args']['decay_function']['options']))
 
     decay_function = args['decay_function']
-    LOGGER.info('Using decay function {decay_function}')
+    LOGGER.info(f'Using decay function {decay_function}')
 
     # Align the population raster to the LULC.
     lulc_raster_info = pygeoprocessing.get_raster_info(
@@ -520,6 +522,35 @@ def execute(args):
             population_alignment_task,
         ])
 
+    # only do split population if there are population group fields in the
+    # admin units vector
+    split_population_fields = list(
+        filter(lambda x: re.match('^pop_', x),
+               validation.load_fields_from_vector(
+                   args['admin_unit_vector_path'])))
+    if split_population_fields:
+        LOGGER.info(
+            "Split population groups found: "
+            f"{', '.join(split_population_fields)}, starting split "
+            "population optional module.")
+
+        rasterization_task = graph.add_task(
+            _rasterize_admin_units,
+            kwargs={
+                'base_raster_path': file_registry['aligned_lulc'],
+                'admin_units_vector_path': args['admin_unit_vector_path'],
+                'target_raster_path': file_registry['admin_unit_ids'],
+            },
+            task_name='Rasterize the admin units vector',
+            target_path_list=[file_registry['admin_unit_ids']],
+            dependent_task_list=[lulc_alignment_task]
+        )
+
+    # rasterize the admin units IDs
+    # for each population field:
+    #    reclassify the admin units to the target admin unit ID
+    #    multiply the reclassed raster by the oversupply, undersupplied raster
+
     aggregate_admin_units_task = graph.add_task(
         _admin_level_supply_demand,
         kwargs={
@@ -545,6 +576,31 @@ def execute(args):
     graph.close()
     graph.join()
     LOGGER.info('Finished Urban Nature Access Model')
+
+
+def _rasterize_admin_units(base_raster_path, admin_units_vector_path,
+                           target_raster_path):
+    """Rasterize the admin units vector onto a new raster.
+
+    Args:
+        base_raster_path (string): The string path to a raster on disk to be
+            used as a template raster.
+        admin_units_vector_path (string): The path to a vector on disk of
+            administrative units.  The FID of the features in this vector will
+            be rasterized onto a new raster.
+        target_raster_path (string): The path to a new UInt32 raster created on
+            disk with new values burned into it.
+
+    Returns:
+        ``None``
+    """
+    pygeoprocessing.new_raster_from_base(
+        base_raster_path, target_raster_path, gdal.GDT_UInt32,
+        [UINT32_NODATA], [UINT32_NODATA])
+
+    pygeoprocessing.rasterize(
+        admin_units_vector_path, target_raster_path,
+        option_list=["ATTRIBUTE=FID"])
 
 
 def _reclassify_greenspace_area(
@@ -1060,7 +1116,7 @@ def _resample_population_raster(
 
 
 def dichotomous_decay_kernel_raster(expected_distance, kernel_filepath,
-        normalize=False):
+                                    normalize=False):
     """Create a raster-based, discontinuous decay kernel based on a dichotomy.
 
     This kernel has a value of ``1`` for all pixels within
@@ -1149,7 +1205,7 @@ def dichotomous_decay_kernel_raster(expected_distance, kernel_filepath,
 
 
 def density_decay_kernel_raster(expected_distance, kernel_filepath,
-        normalize=False):
+                                normalize=False):
     """Create a raster-based density decay kernel.
 
     Args:

@@ -14,6 +14,7 @@ import pandas.testing
 import pygeoprocessing
 import shapely.geometry
 from osgeo import gdal
+from osgeo import ogr
 from osgeo import osr
 
 _DEFAULT_ORIGIN = (444720, 3751320)
@@ -384,3 +385,34 @@ class UNATests(unittest.TestCase):
 
         admin_vector = None
         admin_layer = None
+
+    def test_split_population(self):
+        """UNA: test split population optional module."""
+        from natcap.invest import urban_nature_access
+
+        args = _build_model_args(self.workspace_dir)
+
+        admin_geom = [
+            shapely.geometry.box(
+                *pygeoprocessing.get_raster_info(
+                    args['lulc_raster_path'])['bounding_box'])]
+        fields = {
+            'pop_female': ogr.OFTReal,
+            'pop_male': ogr.OFTReal,
+        }
+        attributes = [
+            {'pop_female': 0.56, 'pop_male': 0.44}
+        ]
+        pygeoprocessing.shapely_geometry_to_vector(
+            admin_geom, args['admin_unit_vector_path'],
+            pygeoprocessing.get_raster_info(
+                args['population_raster_path'])['projection_wkt'],
+            'GeoJSON', fields, attributes)
+
+        urban_nature_access.execute(args)
+
+        # verify additional rasters exist and have reasonable values relative
+        # to the total rasters
+        #   undersupply of greenspace
+        #   opversupply of greenspace
+        # Also, fields must exist in output vector and have correct values.
