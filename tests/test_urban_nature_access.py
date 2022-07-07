@@ -1,5 +1,6 @@
 # coding=UTF-8
 """Tests for the Urban Nature Access Model."""
+import itertools
 import math
 import os
 import random
@@ -13,6 +14,7 @@ import pandas
 import pandas.testing
 import pygeoprocessing
 import shapely.geometry
+from natcap.invest import utils
 from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
@@ -315,6 +317,7 @@ class UNATests(unittest.TestCase):
             'SUP_DEMadm_cap': -17.9078,
             'Pund_adm': 4660.111328,
             'Povr_adm': 415.888885,
+            urban_nature_access.ID_FIELDNAME: 0,
         }
         admin_feature = admin_layer.GetFeature(1)
         self.assertEqual(
@@ -365,6 +368,7 @@ class UNATests(unittest.TestCase):
             'SUP_DEMadm_cap': -17.9078,
             'Pund_adm': 4353.370117,
             'Povr_adm': 722.629639,
+            urban_nature_access.ID_FIELDNAME: 0,
         }
         admin_feature = admin_layer.GetFeature(1)
         self.assertEqual(
@@ -391,6 +395,7 @@ class UNATests(unittest.TestCase):
         from natcap.invest import urban_nature_access
 
         args = _build_model_args(self.workspace_dir)
+        del args['results_suffix']
 
         admin_geom = [
             shapely.geometry.box(
@@ -410,6 +415,42 @@ class UNATests(unittest.TestCase):
             'GeoJSON', fields, attributes)
 
         urban_nature_access.execute(args)
+
+        summary_vector = gdal.OpenEx(
+            os.path.join(args['workspace_dir'], 'output', 'admin_units.gpkg'))
+        summary_layer = summary_vector.GetLayer()
+        self.assertEqual(summary_layer.GetFeatureCount(), 1)
+        summary_feature = summary_layer.GetFeature(1)
+
+        def _read_and_sum_raster(path):
+            array = pygeoprocessing.raster_to_numpy_array(path)
+            nodata = pygeoprocessing.get_raster_info(path)['nodata'][0]
+            return numpy.sum(array[~utils.array_equals_nodata(array, nodata)])
+
+        intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
+        for (supply_type, supply_field), fieldname in itertools.product(
+                [('over', 'Povr_adm'), ('under', 'Pund_adm')], fields.keys()):
+            groupname = fieldname.replace('pop_', '')
+            supply_raster_path = os.path.join(
+                 intermediate_dir,
+                 f'{supply_type}supplied_population.tif')
+            group_supply_raster_path = os.path.join(
+                 intermediate_dir,
+                 f'{supply_type}supplied_population_{groupname}.tif')
+            pop_proportion = summary_feature.GetField(fieldname)
+            computed_value = summary_feature.GetField(
+                f'{supply_field}_{groupname}')
+
+            numpy.testing.assert_allclose(
+                computed_value,
+                _read_and_sum_raster(supply_raster_path) * pop_proportion,
+                rtol=1e-6
+            )
+            numpy.testing.assert_allclose(
+                computed_value,
+                _read_and_sum_raster(group_supply_raster_path),
+                rtol=1e-6
+            )
 
         # verify additional rasters exist and have reasonable values relative
         # to the total rasters

@@ -30,6 +30,8 @@ KERNEL_LABEL_DICHOTOMY = 'dichotomy'
 KERNEL_LABEL_EXPONENTIAL = 'exponential'
 KERNEL_LABEL_GAUSSIAN = 'gaussian'
 KERNEL_LABEL_DENSITY = 'density'
+POP_FIELD_REGEX = '^pop_'
+ID_FIELDNAME = 'adm_unit_id'
 ARGS_SPEC = {
     'model_name': MODEL_METADATA['urban_nature_access'].model_title,
     'pyname': MODEL_METADATA['urban_nature_access'].pyname,
@@ -174,6 +176,7 @@ _INTERMEDIATE_BASE_FILES = {
     'greenspace_supply_demand_budget': 'greenspace_supply_demand_budget.tif',
     'undersupplied_population': 'undersupplied_population.tif',
     'oversupplied_population': 'oversupplied_population.tif',
+    'reprojected_admin_units': 'reprojected_admin_units.gpkg',
     'admin_unit_ids': 'admin_unit_ids.tif',
 }
 
@@ -286,6 +289,20 @@ def execute(args):
         },
         target_path_list=[file_registry['aligned_population']],
         task_name='Resample population to LULC resolution')
+
+    admin_unit_reprojection_task = graph.add_task(
+        _reproject_and_identify,
+        kwargs={
+            'base_vector_path': args['admin_unit_vector_path'],
+            'target_projection_wkt': lulc_raster_info['projection_wkt'],
+            'target_path': file_registry['reprojected_admin_units'],
+            'driver_name': 'GPKG',
+            'id_fieldname': ID_FIELDNAME,
+        },
+        task_name='Reproject admin units',
+        target_path_list=[file_registry['reprojected_admin_units']],
+        dependent_task_list=[lulc_alignment_task]
+    )
 
     attr_table = pandas.read_csv(args['lulc_attribute_table'])
     convolved_population_paths = {}  # search radius: convolved_population path
@@ -421,7 +438,8 @@ def execute(args):
                 'target_nodata': FLOAT32_NODATA,
             },
             task_name=(
-                f'2SFCA - greenspace supply - {lucode_str}, {search_radius_m}m'),
+                f'2SFCA - greenspace supply - {lucode_str}, {search_radius_m}m'
+            ),
             target_path_list=[partial_greenspace_supply_path],
             dependent_task_list=[
                 kernel_tasks[search_radius_m],
@@ -526,9 +544,9 @@ def execute(args):
     # only do split population if there are population group fields in the
     # admin units vector
     split_population_fields = list(
-        filter(lambda x: re.match('^pop_', x),
+        filter(lambda x: re.match(POP_FIELD_REGEX, x),
                validation.load_fields_from_vector(
-                   args['admin_unit_vector_path'])))
+                   file_registry['reprojected_admin_units'])))
     if split_population_fields:
         LOGGER.info(
             "Split population groups found: "
@@ -539,17 +557,21 @@ def execute(args):
             _rasterize_admin_units,
             kwargs={
                 'base_raster_path': file_registry['aligned_lulc'],
-                'admin_units_vector_path': args['admin_unit_vector_path'],
+                'admin_units_vector_path':
+                    file_registry['reprojected_admin_units'],
                 'target_raster_path': file_registry['admin_unit_ids'],
+                'id_fieldname': ID_FIELDNAME,
             },
             task_name='Rasterize the admin units vector',
             target_path_list=[file_registry['admin_unit_ids']],
-            dependent_task_list=[lulc_alignment_task]
+            dependent_task_list=[
+                admin_unit_reprojection_task, lulc_alignment_task]
         )
 
         for pop_field in split_population_fields:
             field_value_map = _read_field_from_vector(
-                args['admin_unit_vector_path'], pop_field)
+                file_registry['reprojected_admin_units'],
+                ID_FIELDNAME, pop_field)
             for supply_type, supply_filepath in (
                     ('under', file_registry['undersupplied_population']),
                     ('over', file_registry['oversupplied_population'])):
@@ -574,13 +596,13 @@ def execute(args):
                     dependent_task_list=[admin_units_rasterization_task]
                 )
 
-    aggregate_admin_units_task = graph.add_task(
+    _ = graph.add_task(
         _admin_level_supply_demand,
         kwargs={
             'greenspace_budget_path': file_registry[
                 'greenspace_supply_demand_budget'],
             'population_path': file_registry['aligned_population'],
-            'admin_unit_vector_path': args['admin_unit_vector_path'],
+            'admin_unit_vector_path': file_registry['reprojected_admin_units'],
             'target_admin_unit_vector_path': file_registry['admin_units'],
             'undersupplied_populations_path': file_registry[
                 'undersupplied_population'],
@@ -599,6 +621,44 @@ def execute(args):
     graph.close()
     graph.join()
     LOGGER.info('Finished Urban Nature Access Model')
+
+
+def _reproject_and_identify(base_vector_path, target_projection_wkt,
+                            target_path, driver_name, id_fieldname):
+    """Reproject a vector and add an ID field.
+
+    Args:
+        base_vector_path (string): The string path to the source vector.
+        target_projection_wkt (string): The WKT of the target projection.
+        target_path (string): The string path to where the new vector should be
+            saved.
+        driver_name (string): The GDAL driver name of the target vector.
+        id_fieldname (string): The name of the ID field.  A new field with this
+            name and an integer type will be created in the target vector.
+            Each feature in the target vector will be assigned a unique integer
+            ID.
+
+    Returns:
+        ``None``
+    """
+    pygeoprocessing.reproject_vector(
+        base_vector_path, target_projection_wkt, target_path,
+        driver_name=driver_name)
+
+    vector = gdal.OpenEx(target_path, gdal.GA_Update)
+    layer = vector.GetLayer()
+    field = ogr.FieldDefn(id_fieldname, ogr.OFTInteger)
+    layer.CreateField(field)
+
+    layer.StartTransaction()
+    field_id = 0
+    for feature in layer:
+        feature.SetField(id_fieldname, field_id)
+        field_id += 1
+        layer.SetFeature(feature)
+    layer.CommitTransaction()
+    layer = None
+    vector = None
 
 
 def _reclassify_and_multiply(
@@ -654,38 +714,44 @@ def _reclassify_and_multiply(
     supply_raster = None
 
 
-def _read_field_from_vector(vector_path, fieldname):
+def _read_field_from_vector(vector_path, key_field, value_field):
     """Read a field from a vector's first layer.
 
     Args:
         vector_path (string): The string path to a vector.
-        fieldname (string): The string field to access within the vector.
-            ``fieldname`` must exist within the vector at ``vector_path``.
-            ``fieldname`` is case-sensitive.
+        key_field (string): The string key field within the vector.
+            ``key_field`` must exist within the vector at ``vector_path``.
+            ``key_field`` is case-sensitive.
+        value_field (string): The string value field within the vector.
+            ``value_field`` must exist within the vector at ``vector_path``.
+            ``value_field`` is case-sensitive.
 
     Returns:
-        attribute_map (dict): A dict mapping ``FID`` to ``fieldname`` value.
+        attribute_map (dict): A dict mapping ``key_field`` to
+            ``value_field`` value.
     """
     vector = gdal.OpenEx(vector_path)
     layer = vector.GetLayer()
     attribute_map = {}
     for feature in layer:
-        attribute_map[feature.GetFID()] = feature.GetField(fieldname)
+        attribute_map[
+            feature.GetField(key_field)] = feature.GetField(value_field)
     return attribute_map
 
 
 def _rasterize_admin_units(base_raster_path, admin_units_vector_path,
-                           target_raster_path):
+                           target_raster_path, id_fieldname):
     """Rasterize the admin units vector onto a new raster.
 
     Args:
         base_raster_path (string): The string path to a raster on disk to be
             used as a template raster.
         admin_units_vector_path (string): The path to a vector on disk of
-            administrative units.  The FID of the features in this vector will
-            be rasterized onto a new raster.
+            administrative units.  The ``id_fieldname`` feature of the features
+            in this vector will be rasterized onto a new raster.
         target_raster_path (string): The path to a new UInt32 raster created on
             disk with new values burned into it.
+        id_fieldname (string): The fieldname of the ID field to rasterize.
 
     Returns:
         ``None``
@@ -696,7 +762,7 @@ def _rasterize_admin_units(base_raster_path, admin_units_vector_path,
 
     pygeoprocessing.rasterize(
         admin_units_vector_path, target_raster_path,
-        option_list=["ATTRIBUTE=FID"])
+        option_list=[f"ATTRIBUTE={id_fieldname}"])
 
 
 def _reclassify_greenspace_area(
@@ -816,14 +882,10 @@ def _admin_level_supply_demand(
     Returns:
         ``None``
     """
-    raster_info = pygeoprocessing.get_raster_info(greenspace_budget_path)
-
-    # Reprojecting the vector here within this function allows us to produce
-    # the vector where it is used.  Otherwise, we'd be reprojecting in a
-    # separate task and then copying it to another filepath.
-    pygeoprocessing.reproject_vector(
-        admin_unit_vector_path, raster_info['projection_wkt'],
-        target_admin_unit_vector_path, driver_name='GPKG')
+    source_vector = ogr.Open(admin_unit_vector_path)
+    driver = ogr.GetDriverByName('GPKG')
+    driver.CopyDataSource(source_vector, target_admin_unit_vector_path)
+    source_vector = None
 
     target_vector = gdal.OpenEx(target_admin_unit_vector_path, gdal.GA_Update)
     target_layer = target_vector.GetLayer()
@@ -831,9 +893,21 @@ def _admin_level_supply_demand(
     supply_sum_fieldname = 'SUP_DEMadm_cap'
     undersupply_fieldname = 'Pund_adm'
     oversupply_fieldname = 'Povr_adm'
+    target_fieldnames = []
+    population_groupnames = []
+    for defn in target_layer.schema:
+        name = defn.GetName()
+        if not re.match(POP_FIELD_REGEX, name):
+            continue
+        groupname = re.sub(POP_FIELD_REGEX, '', name)
+        population_groupnames.append(groupname)
+        target_fieldnames.append(f'{oversupply_fieldname}_{groupname}')
+        target_fieldnames.append(f'{undersupply_fieldname}_{groupname}')
+
     for fieldname in (supply_sum_fieldname,
                       undersupply_fieldname,
-                      oversupply_fieldname):
+                      oversupply_fieldname,
+                      *target_fieldnames):
         field = ogr.FieldDefn(fieldname, ogr.OFTReal)
         field.SetWidth(24)
         field.SetPrecision(11)
@@ -856,10 +930,18 @@ def _admin_level_supply_demand(
             greenspace_stats[feature_id]['sum'] /
             population_stats[feature_id]['sum'])
         feature.SetField(supply_sum_fieldname, avg_greenspace_supply_demand)
-        feature.SetField(
-            undersupply_fieldname, undersupplied_stats[feature_id]['sum'])
-        feature.SetField(
-            oversupply_fieldname, oversupplied_stats[feature_id]['sum'])
+        undersupply = undersupplied_stats[feature_id]['sum']
+        oversupply = oversupplied_stats[feature_id]['sum']
+        feature.SetField(undersupply_fieldname, undersupply)
+        feature.SetField(oversupply_fieldname, oversupply)
+        for pop_groupname in population_groupnames:
+            group_proportion = feature.GetField(f'pop_{pop_groupname}')
+            feature.SetField(
+                f'{oversupply_fieldname}_{pop_groupname}',
+                oversupply * group_proportion)
+            feature.SetField(
+                f'{undersupply_fieldname}_{pop_groupname}',
+                undersupply * group_proportion)
         target_layer.SetFeature(feature)
     target_layer.CommitTransaction()
 
