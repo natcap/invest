@@ -415,4 +415,5 @@ class UNATests(unittest.TestCase):
         # to the total rasters
         #   undersupply of greenspace
         #   opversupply of greenspace
-        # Also, fields must exist in output vector and have correct values.
+        # Also, fields must exist in output vector and have correct values,
+        # whicih should also match the raster.

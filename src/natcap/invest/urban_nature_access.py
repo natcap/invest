@@ -388,7 +388,8 @@ def execute(args):
 
         greenspace_population_ratio_path = os.path.join(
             intermediate_dir,
-            f'greenspace_population_ratio_{lucode_str}_{search_radius_m}{suffix}.tif')
+            ('greenspace_population_ratio_'
+             f'{lucode_str}_{search_radius_m}{suffix}.tif'))
         greenspace_population_ratio_task = graph.add_task(
             _calculate_greenspace_population_ratio,
             args=(greenspace_pixels_path,
@@ -534,7 +535,7 @@ def execute(args):
             f"{', '.join(split_population_fields)}, starting split "
             "population optional module.")
 
-        rasterization_task = graph.add_task(
+        admin_units_rasterization_task = graph.add_task(
             _rasterize_admin_units,
             kwargs={
                 'base_raster_path': file_registry['aligned_lulc'],
@@ -546,10 +547,32 @@ def execute(args):
             dependent_task_list=[lulc_alignment_task]
         )
 
-    # rasterize the admin units IDs
-    # for each population field:
-    #    reclassify the admin units to the target admin unit ID
-    #    multiply the reclassed raster by the oversupply, undersupplied raster
+        for pop_field in split_population_fields:
+            field_value_map = _read_field_from_vector(
+                args['admin_unit_vector_path'], pop_field)
+            for supply_type, supply_filepath in (
+                    ('under', file_registry['undersupplied_population']),
+                    ('over', file_registry['oversupplied_population'])):
+                groupname = pop_field.replace('pop_', '')
+                supply_to_group_filepath = os.path.join(
+                    intermediate_dir,
+                    f'{supply_type}supplied_population_{groupname}{suffix}.tif'
+                )
+                _ = graph.add_task(
+                    _reclassify_and_multiply,
+                    kwargs={
+                        'admin_units_raster_path':
+                            file_registry['admin_unit_ids'],
+                        'reclassification_map': field_value_map,
+                        'supply_raster_path': supply_filepath,
+                        'target_raster_path': supply_to_group_filepath,
+                    },
+                    task_name=(
+                        f'Map proportion of {supply_type}supplied for'
+                        f'{groupname}'),
+                    target_path_list=[supply_filepath],
+                    dependent_task_list=[admin_units_rasterization_task]
+                )
 
     aggregate_admin_units_task = graph.add_task(
         _admin_level_supply_demand,
@@ -576,6 +599,79 @@ def execute(args):
     graph.close()
     graph.join()
     LOGGER.info('Finished Urban Nature Access Model')
+
+
+def _reclassify_and_multiply(
+        admin_units_raster_path, reclassification_map, supply_raster_path,
+        target_raster_path):
+    """Reclassify the admin units and multiply by greenspace supply.
+
+    Args:
+        admin_units_raster_path (string): The path to a raster of integers
+            identifying which admin unit a pixel belongs to.
+        reclassification_map (dict): A dict mapping integer admin unit IDs to
+            float population proportions (values 0-1) for a given population
+            group.
+        supply_raster_path (string): A string path to a raster of greenspace
+            supply values for the total population.
+        target_raster_path (string): The string path to where the resulting
+            supply-to-group raster should be written.
+
+    Returns:
+        ``None``
+    """
+    pygeoprocessing.reclassify_raster(
+        (admin_units_raster_path, 1), reclassification_map, target_raster_path,
+        gdal.GDT_Float32, FLOAT32_NODATA)
+
+    pop_group_raster = gdal.OpenEx(target_raster_path,
+                                   gdal.GA_Update | gdal.OF_RASTER)
+    pop_group_band = pop_group_raster.GetRasterBand(1)
+    pop_group_nodata = pop_group_band.GetNoDataValue()
+    supply_raster = gdal.OpenEx(supply_raster_path,
+                                gdal.GA_ReadOnly | gdal.OF_RASTER)
+    supply_band = supply_raster.GetRasterBand(1)
+    supply_nodata = supply_band.GetNoDataValue()
+    for block_info in pygeoprocessing.iterblocks((target_raster_path, 1),
+                                                 offset_only=True):
+        pop_group_proportion_block = pop_group_band.ReadAsArray(**block_info)
+        supply_block = supply_band.ReadAsArray(**block_info)
+
+        valid_mask = (
+            ~utils.array_equals_nodata(
+                pop_group_proportion_block, pop_group_nodata) &
+            ~utils.array_equals_nodata(supply_block, supply_nodata))
+        target_block = numpy.full(supply_block.shape, FLOAT32_NODATA,
+                                  dtype=numpy.float32)
+        target_block[valid_mask] = (
+            pop_group_proportion_block[valid_mask] * supply_block[valid_mask])
+        pop_group_band.WriteArray(
+            target_block, xoff=block_info['xoff'], yoff=block_info['yoff'])
+
+    pop_group_band = None
+    pop_group_raster = None
+    supply_band = None
+    supply_raster = None
+
+
+def _read_field_from_vector(vector_path, fieldname):
+    """Read a field from a vector's first layer.
+
+    Args:
+        vector_path (string): The string path to a vector.
+        fieldname (string): The string field to access within the vector.
+            ``fieldname`` must exist within the vector at ``vector_path``.
+            ``fieldname`` is case-sensitive.
+
+    Returns:
+        attribute_map (dict): A dict mapping ``FID`` to ``fieldname`` value.
+    """
+    vector = gdal.OpenEx(vector_path)
+    layer = vector.GetLayer()
+    attribute_map = {}
+    for feature in layer:
+        attribute_map[feature.GetFID()] = feature.GetField(fieldname)
+    return attribute_map
 
 
 def _rasterize_admin_units(base_raster_path, admin_units_vector_path,
