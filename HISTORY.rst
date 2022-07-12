@@ -26,15 +26,24 @@
   - Wave Energy
   - Wind Energy
 
+  Workbench fixes/enhancements:
+  - Workbench
+
   Everything else:
   - General
 
-
 .. :changelog:
-
 
 Unreleased Changes
 ------------------
+* General
+* Workbench
+    * Fixed a bug where some model runs would not generate a new item
+      in the list of recent runs.
+* Coastal Blue Carbon
+    * Fixed a bug where using unaligned rasters in the preprocessor would cause
+      an error.  The preprocessor will now correctly align input landcover
+      rasters and determine transitions from the aligned rasters.
 * HRA
     * Fixed an issue with risk calculations where risk values would be much
       lower than they should be.  Risk values are now correctly calculated.
@@ -46,7 +55,8 @@ Unreleased Changes
       classifications.
     * Various improvements to the model have resulted in a modest (~33%)
       speedup in runtime.
-
+* NDR
+    * Added parameters to the sample data to support nitrogen calculations.
 
 3.11.0 (2022-05-24)
 -------------------
