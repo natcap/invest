@@ -217,6 +217,7 @@ ARGS_SPEC = {
 }
 
 _VALID_RISK_EQS = set(ARGS_SPEC['args']['risk_eq']['options'].keys())
+_VALID_DECAY_TYPES = set(ARGS_SPEC['args']['decay_eq']['options'].keys())
 
 
 def execute(args):
@@ -1957,6 +1958,10 @@ def _calculate_decayed_distance(stressor_raster_path, decay_type,
     Raises:
         ``AssertionError``: When an invalid ``decay_type`` is provided.
     """
+    decay_type = decay_type.lower()
+    if decay_type not in _VALID_DECAY_TYPES:
+        raise AssertionError(f'Invalid decay type {decay_type} provided.')
+
     if buffer_distance == 0:
         LOGGER.info(
             f'Buffer distance for {target_edt_path} is 0, skipping distance '
@@ -1997,7 +2002,6 @@ def _calculate_decayed_distance(stressor_raster_path, decay_type,
     target_edt_raster = gdal.OpenEx(target_edt_path, gdal.GA_Update)
     target_edt_band = target_edt_raster.GetRasterBand(1)
     edt_nodata = target_edt_band.GetNoDataValue()
-    decay_type = decay_type.lower()
     for block_info in pygeoprocessing.iterblocks((target_edt_path, 1),
                                                  offset_only=True):
         source_edt_block = target_edt_band.ReadAsArray(**block_info)
@@ -2023,9 +2027,6 @@ def _calculate_decayed_distance(stressor_raster_path, decay_type,
         elif decay_type == 'none':
             # everything within the buffer distance has a value of 1
             decayed_edt[valid_pixels] = 1
-        else:
-            raise AssertionError(
-                f'Invalid decay type {decay_type} provided.')
 
         # Any values less than 1e-6 are numerically noise and should be 0.
         # Mostly useful for exponential decay, but should also apply to

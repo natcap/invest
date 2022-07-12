@@ -1223,3 +1223,20 @@ class HRAModelTests(unittest.TestCase):
         numpy.testing.assert_allclose(
             pygeoprocessing.raster_to_numpy_array(target_path),
             stressor_array.astype(numpy.float32))
+
+    def test_exception_invalid_decay(self):
+        """HRA: Test invalid decay type."""
+        from natcap.invest import hra
+        nodata = -1
+        shape = (20, 20)
+        stressor_array = numpy.ones(shape, dtype=numpy.uint8)
+        stressor_path = os.path.join(self.workspace_dir, 'stressor.tif')
+        pygeoprocessing.numpy_array_to_raster(
+            stressor_array, nodata, (10, -10), ORIGIN, SRS_WKT, stressor_path)
+
+        target_path = os.path.join(self.workspace_dir, 'decayed.tif')
+        with self.assertRaises(AssertionError) as cm:
+            hra._calculate_decayed_distance(stressor_path, 'bad decay type', 0,
+                                            target_path)
+        self.assertIn('Invalid decay type bad decay type provided',
+                      str(cm.exception))
