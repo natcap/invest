@@ -844,7 +844,7 @@ class HRAModelTests(unittest.TestCase):
             'decay_eq': 'linear',
             'aoi_vector_path': os.path.join(self.workspace_dir, 'aoi.shp'),
             'n_overlapping_stressors': 2,
-            'visualize_outputs': True,
+            'visualize_outputs': False,
         }
         aoi_geoms = [shapely.geometry.box(
             *shapely.geometry.Point(ORIGIN).buffer(1000).bounds)]
@@ -862,7 +862,7 @@ class HRAModelTests(unittest.TestCase):
                 HABITAT STRESSOR OVERLAP PROPERTIES,,,,,,,
                 oil,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
                 frequency of disturbance,2,2,3,2,2,3,C
-                management effectiveness,2,2,1,2,2,1,E
+                management effectiveness,mgmt_effect.tif,2,1,2,2,1,E
                 ,,,,,,,
                 fishing,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
                 frequency of disturbance,2,2,3,2,2,3,C
@@ -891,6 +891,7 @@ class HRAModelTests(unittest.TestCase):
             pandas.read_csv(args['info_table_path'])[['PATH']].itertuples(
                 index=False)]
         spatial_files_to_make.append('eelgrass_connectivity.shp')
+        spatial_files_to_make.append('mgmt_effect.tif')
 
         for path in spatial_files_to_make:
             full_path = os.path.join(self.workspace_dir, path)
@@ -907,6 +908,8 @@ class HRAModelTests(unittest.TestCase):
                 # Raster is centered on the origin, spanning 50m on either
                 # side.
                 array = numpy.ones((20, 20), dtype=numpy.uint8)
+                if path == 'mgmt_effect.tif':
+                    array *= 2  # fill with twos
                 pygeoprocessing.numpy_array_to_raster(
                     array, 255, (10, -10), (ORIGIN[0] - 50, ORIGIN[1] - 50),
                     SRS_WKT, full_path)
@@ -934,6 +937,15 @@ class HRAModelTests(unittest.TestCase):
             pygeoprocessing.geoprocessing.raster_to_numpy_array(
                 os.path.join(unarchived_args['workspace_dir'], 'outputs',
                              'TOTAL_RISK_Ecosystem.tif')))
+
+        self.assertFalse(os.path.exists(
+            os.path.join(unarchived_args['workspace_dir'],
+                         'visualization_outputs')))
+
+        # Re-run with vizualizations
+        # Also tests the task graph
+        unarchived_args['visualize_outputs'] = True
+        hra.execute(unarchived_args)
 
         # Make sure we have some valid geojson files in the viz dir.
         n_geojson_files = 0
