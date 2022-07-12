@@ -2346,11 +2346,12 @@ def _override_datastack_archive_criteria_table_path(
         # When we encounter an empty row, reset the known ratings columns in
         # case one of the sub-tables changes the order around.
         try:
-            if numpy.all(numpy.isnan(criteria_table_array[row])):
+            if numpy.all(numpy.isnan(
+                    criteria_table_array[row].astype(numpy.float32))):
                 known_rating_cols = set()
                 continue
-        except TypeError:
-            # TypeError when there are any string values in the row
+        except ValueError:
+            # ValueError when there are any string values in the row
             pass
 
         if not known_rating_cols:
@@ -2373,6 +2374,7 @@ def _override_datastack_archive_criteria_table_path(
                     os.path.dirname(criteria_table_path), value)
             value = value.replace("\\", "/")
             if not os.path.exists(value):
+                LOGGER.warning(f'File not found: {value}')
                 continue
             if value in known_files:
                 LOGGER.info(

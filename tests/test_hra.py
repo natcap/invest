@@ -1020,8 +1020,8 @@ class HRAModelTests(unittest.TestCase):
                 management effectiveness,2,2,1,my_data/mgmt1.tif,2,1,E
                 ,,,,,,,
                 fishing,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
-                frequency of disturbance,2,2,3,2,2,3,C
-                management effectiveness,2,2,1,2,2,1,E
+                frequency of disturbance,filenotfound,2,3,2,2,3,C
+                management effectiveness,my_data/mgmt1.tif,2,1,2,2,1,E
                 ,,,,,,,
                 transportation,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
                 frequency of disturbance,2,2,3,2,2,3,C
