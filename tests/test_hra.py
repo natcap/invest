@@ -1000,7 +1000,6 @@ class HRAModelTests(unittest.TestCase):
                 pygeoprocessing.geoprocessing.raster_to_numpy_array(
                     rasterized_path))
 
-
     def test_datastack_criteria_table_override(self):
         """HRA: verify we store all data referenced in the criteria table."""
         from natcap.invest import hra
@@ -1207,3 +1206,20 @@ class HRAModelTests(unittest.TestCase):
 
         self.assertIn("must be either 'Multiplicative' or 'Euclidean'",
                       str(cm.exception))
+
+    def test_none_decay_distance(self):
+        """HRA: Test 0 buffer distance."""
+        from natcap.invest import hra
+        nodata = -1
+        shape = (20, 20)
+        stressor_array = numpy.ones(shape, dtype=numpy.uint8)
+        stressor_path = os.path.join(self.workspace_dir, 'stressor.tif')
+        pygeoprocessing.numpy_array_to_raster(
+            stressor_array, nodata, (10, -10), ORIGIN, SRS_WKT, stressor_path)
+
+        target_path = os.path.join(self.workspace_dir, 'decayed.tif')
+        hra._calculate_decayed_distance(stressor_path, 'none', 0,  target_path)
+
+        numpy.testing.assert_allclose(
+            pygeoprocessing.raster_to_numpy_array(target_path),
+            stressor_array.astype(numpy.float32))
