@@ -1111,6 +1111,7 @@ class HRAModelTests(unittest.TestCase):
             'max_rating': 3,
             'n_overlapping_stressors': 3,
             'risk_eq': 'multiplicative',
+            'decay_eq': 'linear',
             'aoi_vector_path': os.path.join(self.workspace_dir, 'aoi.shp'),
         }
 
@@ -1170,6 +1171,7 @@ class HRAModelTests(unittest.TestCase):
             'max_rating': 3,
             'n_overlapping_stressors': 3,
             'risk_eq': 'multiplicative',
+            'decay_eq': 'linear',
             'aoi_vector_path': os.path.join(self.workspace_dir, 'aoi.shp'),
         }
 

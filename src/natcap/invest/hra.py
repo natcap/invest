@@ -210,7 +210,8 @@ ARGS_SPEC = {
         "visualize_outputs": {
             "name": gettext("Generate GeoJSONs"),
             "about": gettext("Generate GeoJSON outputs for web visualization."),
-            "type": "boolean"
+            "type": "boolean",
+            "required": False,
         }
     }
 }
