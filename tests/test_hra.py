@@ -1170,7 +1170,7 @@ class HRAModelTests(unittest.TestCase):
             'resolution': 250,
             'max_rating': 3,
             'n_overlapping_stressors': 3,
-            'risk_eq': 'multiplicative',
+            'risk_eq': 'euclidean',
             'decay_eq': 'linear',
             'aoi_vector_path': os.path.join(self.workspace_dir, 'aoi.shp'),
         }
@@ -1187,4 +1187,11 @@ class HRAModelTests(unittest.TestCase):
         self.assertIn("Missing from info table: fishing",
                       str(cm.exception))
         self.assertIn("Missing from criteria table: transportation",
+                      str(cm.exception))
+
+        args['risk_eq'] = 'some other risk eq'
+        with self.assertRaises(ValueError) as cm:
+            hra.execute(args)
+
+        self.assertIn("must be either 'Multiplicative' or 'Euclidean'",
                       str(cm.exception))
