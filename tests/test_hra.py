@@ -902,8 +902,17 @@ class HRAModelTests(unittest.TestCase):
                 # Make a point that sits at the center of the AOI, buffered by
                 # 100m
                 geoms = [shapely.geometry.Point(ORIGIN).buffer(100)]
+
+                field_defns = {}
+                field_values = [{}]
+                if path == 'eelgrass_connectivity.shp':
+                    # Make sure we can test field preservation
+                    field_defns = {'rating': ogr.OFTInteger}
+                    field_values = [{'rating': 1}]
+
                 pygeoprocessing.shapely_geometry_to_vector(
-                    geoms, full_path, SRS_WKT, 'ESRI Shapefile')
+                    geoms, full_path, SRS_WKT, 'ESRI Shapefile',
+                    fields=field_defns, attribute_list=field_values)
             else:  # Assume geotiff
                 # Raster is centered on the origin, spanning 50m on either
                 # side.

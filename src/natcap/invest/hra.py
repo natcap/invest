@@ -1624,6 +1624,10 @@ def _simplify(source_vector_path, tolerance, target_vector_path,
         else:
             # If the simplification didn't work for whatever reason, fall back
             # to the original geometry.
+            LOGGER.warning(
+                f"Simplification of {os.path.basename(source_vector_path)} "
+                f"feature FID:{source_feature.GetFID()} failed; falling back "
+                "to original geometry")
             target_geom = source_geom
 
         for fieldname in [field.GetName() for field in target_layer.schema]:
