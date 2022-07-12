@@ -331,10 +331,8 @@ def execute(args):
     for (habitat, stressor, criterion, rating) in criteria_df[
             ['habitat', 'stressor', 'criterion',
              'rating']].itertuples(index=False):
-        if isinstance(rating, (int, float)):
-            continue  # obviously a numeric rating
         try:
-            float(rating)
+            float(rating)  # numeric rating
             continue
         except ValueError:
             # If we can't cast it to a float, assume it's a string and
