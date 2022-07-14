@@ -14,22 +14,15 @@
 
 from datetime import datetime
 import importlib
-import itertools
 import os
 import pkgutil
-import subprocess
 import sys
 from unittest.mock import MagicMock
 
 import natcap.invest
 from sphinx.ext import apidoc
 
-# If extensions (or modules to document with autodoc) are in another directory,
-# add these directories to sys.path here. If the directory is relative to the
-# documentation root, use os.path.abspath to make it absolute, like shown here.
 DOCS_SOURCE_DIR = os.path.dirname(__file__)
-INVEST_ROOT_DIR = os.path.join(DOCS_SOURCE_DIR, '..', '..')
-INVEST_BUILD_DIR = os.path.join(INVEST_ROOT_DIR, 'build')
 # get the directory that the natcap package lives in
 INVEST_LIB_DIR = os.path.dirname(os.path.dirname(natcap.invest.__file__))
 
@@ -228,33 +221,22 @@ see :ref:`CreatingSamplePythonScripts`.
 
 """
 
-EXCLUDED_MODULES = [
-    '_core',  # anything ending in '_core'
-    'recmodel_server',
-    'recmodel_workspace_fetcher',
-    'natcap.invest.ui'
-]
 MODEL_ENTRYPOINTS_FILE = os.path.join(DOCS_SOURCE_DIR, 'models.rst')
 # Find all importable modules with an execute function
 # write out to a file models.rst in the source directory
-all_modules = {}
+invest_model_modules = {}
 for _, name, _ in pkgutil.walk_packages(path=[INVEST_LIB_DIR],
                                         prefix='natcap.'):
-    if any(x in name for x in EXCLUDED_MODULES):
-        continue
-
     module = importlib.import_module(name)
-
-    if not hasattr(module, 'execute'):
-        continue
-    # all modules with an execute function should have an ARGS_SPEC
-    model_title = module.ARGS_SPEC['model_name']
-    all_modules[model_title] = name
+    # any module with an ARGS_SPEC is an invest model
+    if hasattr(module, 'ARGS_SPEC'):
+        model_title = module.ARGS_SPEC['model_name']
+        invest_model_modules[model_title] = name
 
 # Write sphinx autodoc function for each entrypoint
 with open(MODEL_ENTRYPOINTS_FILE, 'w') as models_rst:
     models_rst.write(MODEL_RST_TEMPLATE)
-    for model_title, name in sorted(all_modules.items()):
+    for model_title, name in sorted(invest_model_modules.items()):
         underline = ''.join(['=']*len(model_title))
         models_rst.write(
             f'{model_title}\n'
