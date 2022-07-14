@@ -14,7 +14,7 @@ import subprocess
 
 import Cython.Build
 import numpy
-from setuptools import setup
+from setuptools import find_namespace_packages, setup
 from setuptools.command.build_py import build_py as _build_py
 from setuptools.extension import Extension
 
@@ -69,19 +69,7 @@ setup(
     maintainer='James Douglass',
     maintainer_email='jdouglass@stanford.edu',
     url='http://github.com/natcap/invest',
-    namespace_packages=['natcap'],
-    packages=[
-        'natcap',
-        'natcap.invest',
-        'natcap.invest.coastal_blue_carbon',
-        'natcap.invest.delineateit',
-        'natcap.invest.ui',
-        'natcap.invest.ndr',
-        'natcap.invest.sdr',
-        'natcap.invest.recreation',
-        'natcap.invest.scenic_quality',
-        'natcap.invest.seasonal_water_yield',
-    ],
+    packages=find_namespace_packages('src'),
     package_dir={
         'natcap': 'src/natcap'
     },
