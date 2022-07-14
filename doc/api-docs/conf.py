@@ -188,8 +188,8 @@ InVEST Model Entry Points
 
 All InVEST models share a consistent python API:
 
-    - Every InVEST model has a corresponding module in the ``natcap.invest``
-      package
+    - Every InVEST model has a corresponding module or subpackage in the 
+      ``natcap.invest`` package
     - The model modules contain a function called ``execute``
     - The ``execute`` function takes a single argument (``args``), a dictionary
       that stores all data inputs and configuration options for the model
