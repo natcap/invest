@@ -662,7 +662,12 @@ def _reproject_and_identify(base_vector_path, target_projection_wkt,
 def _reclassify_and_multiply(
         admin_units_raster_path, reclassification_map, supply_raster_path,
         target_raster_path):
-    """Reclassify AOI ids to population group ratios and multiply by greenspace supply.
+    """Create a raster of greenspace supply given areas of interest.
+
+    This is done by:
+
+        1. Reclassifying AOI IDs to population group ratios and then
+        2. Multiplying the population group ratios by the greenspace supply.
 
     Args:
         admin_units_raster_path (string): The path to a raster of integers
