@@ -1,3 +1,40 @@
+[project]
+name = "natcap.invest"
+description = "InVEST Ecosystem Service models"
+readme = "README_PYTHON.rst"
+requires-python = ">=3.8,<3.11"
+license = {file = "LICENSE.txt"}
+maintainers = [
+    {name = "James Douglass", email = "jdouglass@stanford.edu"}
+]
+keywords = ["gis", "invest"]
+classifiers = [
+    "Intended Audience :: Developers",
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Science/Research",
+    "Natural Language :: English",
+    "Operating System :: MacOS :: MacOS X",
+    "Operating System :: Microsoft",
+    "Operating System :: POSIX",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Cython",
+    "License :: OSI Approved :: BSD License",
+    "Topic :: Scientific/Engineering :: GIS"
+]
+# the version is provided dynamically by setuptools_scm
+# `dependencies` and `optional-dependencies` are provided by setuptools
+# using the corresponding setup args `install_requires` and `extras_require`
+dynamic = ["version", "dependencies", "optional-dependencies"]
+
+[project.urls]
+homepage = "http://github.com/natcap/invest"
+
+[project.scripts]
+invest = "natcap.invest.cli:main"
+
 [build-system]
 # these are the minimum packages needed in order to execute the natcap.invest
 # build.
@@ -17,3 +54,6 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools_scm]
 version_scheme = "post-release"
 local_scheme = "node-and-date"
+
+[tool.setuptools.packages.find]
+where = ["src"]
