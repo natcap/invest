@@ -35,8 +35,8 @@ def _build_model_args(workspace):
             workspace, 'lulc_attributes.csv'),
         'decay_function': 'gaussian',
         'greenspace_demand': 100,  # square meters
-        'admin_unit_vector_path': os.path.join(
-            workspace, 'admin_units.geojson'),
+        'aoi_vector_path': os.path.join(
+            workspace, 'aois.geojson'),
     }
 
     random.seed(-1)  # for our random number generation
@@ -89,7 +89,7 @@ def _build_model_args(workspace):
             *pygeoprocessing.get_raster_info(
                 args['lulc_raster_path'])['bounding_box'])]
     pygeoprocessing.shapely_geometry_to_vector(
-        admin_geom, args['admin_unit_vector_path'],
+        admin_geom, args['aoi_vector_path'],
         population_wkt, 'GeoJSON')
 
     return args
@@ -307,7 +307,7 @@ class UNATests(unittest.TestCase):
         # admin units vector.
         admin_vector_path = os.path.join(
             args['workspace_dir'], 'output',
-            f"admin_units_{args['results_suffix']}.gpkg")
+            f"aois_{args['results_suffix']}.gpkg")
         admin_vector = gdal.OpenEx(admin_vector_path)
         admin_layer = admin_vector.GetLayer()
         self.assertEqual(admin_layer.GetFeatureCount(), 1)
@@ -358,7 +358,7 @@ class UNATests(unittest.TestCase):
 
         admin_vector_path = os.path.join(
             args['workspace_dir'], 'output',
-            f"admin_units_{args['results_suffix']}.gpkg")
+            f"aois_{args['results_suffix']}.gpkg")
         admin_vector = gdal.OpenEx(admin_vector_path)
         admin_layer = admin_vector.GetLayer()
         self.assertEqual(admin_layer.GetFeatureCount(), 1)
@@ -409,7 +409,7 @@ class UNATests(unittest.TestCase):
             {'pop_female': 0.56, 'pop_male': 0.44}
         ]
         pygeoprocessing.shapely_geometry_to_vector(
-            admin_geom, args['admin_unit_vector_path'],
+            admin_geom, args['aoi_vector_path'],
             pygeoprocessing.get_raster_info(
                 args['population_raster_path'])['projection_wkt'],
             'GeoJSON', fields, attributes)
@@ -417,7 +417,7 @@ class UNATests(unittest.TestCase):
         urban_nature_access.execute(args)
 
         summary_vector = gdal.OpenEx(
-            os.path.join(args['workspace_dir'], 'output', 'admin_units.gpkg'))
+            os.path.join(args['workspace_dir'], 'output', 'aois.gpkg'))
         summary_layer = summary_vector.GetLayer()
         self.assertEqual(summary_layer.GetFeatureCount(), 1)
         summary_feature = summary_layer.GetFeature(1)

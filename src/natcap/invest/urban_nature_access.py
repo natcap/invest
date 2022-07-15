@@ -39,7 +39,7 @@ ARGS_SPEC = {
     'args_with_spatial_overlap': {
         'spatial_keys': [
             'lulc_raster_path', 'population_raster_path',
-            'admin_unit_vector_path'],
+            'aoi_vector_path'],
         'different_projections_ok': True,
     },
     'args': {
@@ -100,19 +100,34 @@ ARGS_SPEC = {
                 "pixel."
             ),
         },
-        'admin_unit_vector_path': {
+        'aoi_vector_path': {
             'type': 'vector',
             'name': 'administrative boundaries',
             'geometries': spec_utils.POLYGONS,
-            'fields': {},  # TODO, complete required fields (if any)
-            'about': "",  # TODO, will know more about this when I implement.
+            'fields': {
+                "pop_[POP_GROUP]": {
+                    "type": "number",
+                    "units": u.none,
+                    "required": False,
+                    "about": gettext(
+                        "The proportion (numeric values in the range 0-1) of "
+                        "the population within this region belonging to the "
+                        "identified population group."
+                    ),
+                }
+            },
+            'about': gettext(
+                "Non-overlapping regions (typically administrative "
+                "boundaries) within which population supply and demand are "
+                "summarized."
+            ),
         },
         'greenspace_demand': {
             'type': 'number',
             'name': 'greenspace demand per capita',
             'units': u.m**2,  # defined as m² per capita
             'expression': "value > 0",
-            'about': (
+            'about': gettext(
                 "The amount of greenspace that each resident should have "
                 "access to. This is often defined by local urban planning "
                 "documents."
@@ -163,7 +178,7 @@ ARGS_SPEC = {
 
 _OUTPUT_BASE_FILES = {
     'greenspace_supply': 'greenspace_supply.tif',
-    'admin_units': 'admin_units.gpkg',
+    'aois': 'aois.gpkg',
 }
 _INTERMEDIATE_BASE_FILES = {
     'attribute_table': 'attribute_table.csv',
@@ -176,8 +191,8 @@ _INTERMEDIATE_BASE_FILES = {
     'greenspace_supply_demand_budget': 'greenspace_supply_demand_budget.tif',
     'undersupplied_population': 'undersupplied_population.tif',
     'oversupplied_population': 'oversupplied_population.tif',
-    'reprojected_admin_units': 'reprojected_admin_units.gpkg',
-    'admin_unit_ids': 'admin_unit_ids.tif',
+    'reprojected_aois': 'reprojected_aois.gpkg',
+    'aois_ids': 'aois_ids.tif',
 }
 
 
@@ -209,9 +224,9 @@ def execute(args):
         args['population_raster_path'] (string): (required) A string path to a
             GDAL-compatible raster where pixels represent the population of
             that pixel.  Must be linearly projected in meters.
-        args['admin_unit_vector_path'] (string): (required) A string path to a
-            GDAL-compatible vector containing polygon administrative
-            boundaries.
+        args['aoi_vector_path'] (string): (required) A string path to a
+            GDAL-compatible vector containing polygon areas of interest,
+            typically administrative boundaries.
         args['greenspace_demand'] (number): (required) A positive, nonzero
             number indicating the required greenspace, in m² per capita.
         args['decay_function'] (string): (required) The selected kernel type.
@@ -290,17 +305,17 @@ def execute(args):
         target_path_list=[file_registry['aligned_population']],
         task_name='Resample population to LULC resolution')
 
-    admin_unit_reprojection_task = graph.add_task(
+    aoi_reprojection_task = graph.add_task(
         _reproject_and_identify,
         kwargs={
-            'base_vector_path': args['admin_unit_vector_path'],
+            'base_vector_path': args['aoi_vector_path'],
             'target_projection_wkt': lulc_raster_info['projection_wkt'],
-            'target_path': file_registry['reprojected_admin_units'],
+            'target_path': file_registry['reprojected_aois'],
             'driver_name': 'GPKG',
             'id_fieldname': ID_FIELDNAME,
         },
         task_name='Reproject admin units',
-        target_path_list=[file_registry['reprojected_admin_units']],
+        target_path_list=[file_registry['reprojected_aois']],
         dependent_task_list=[lulc_alignment_task]
     )
 
@@ -546,36 +561,36 @@ def execute(args):
     split_population_fields = list(
         filter(lambda x: re.match(POP_FIELD_REGEX, x),
                validation.load_fields_from_vector(
-                   file_registry['reprojected_admin_units'])))
+                   file_registry['reprojected_aois'])))
     if split_population_fields:
         LOGGER.info(
             "Split population groups found: "
             f"{', '.join(split_population_fields)}, starting split "
             "population optional module.")
 
-        admin_units_rasterization_task = graph.add_task(
-            _rasterize_admin_units,
+        aois_rasterization_task = graph.add_task(
+            _rasterize_aois,
             kwargs={
                 'base_raster_path': file_registry['aligned_lulc'],
-                'admin_units_vector_path':
-                    file_registry['reprojected_admin_units'],
-                'target_raster_path': file_registry['admin_unit_ids'],
+                'aois_vector_path':
+                    file_registry['reprojected_aois'],
+                'target_raster_path': file_registry['aois_ids'],
                 'id_fieldname': ID_FIELDNAME,
             },
             task_name='Rasterize the admin units vector',
-            target_path_list=[file_registry['admin_unit_ids']],
+            target_path_list=[file_registry['aois_ids']],
             dependent_task_list=[
-                admin_unit_reprojection_task, lulc_alignment_task]
+                aoi_reprojection_task, lulc_alignment_task]
         )
 
         for pop_field in split_population_fields:
             field_value_map = _read_field_from_vector(
-                file_registry['reprojected_admin_units'],
+                file_registry['reprojected_aois'],
                 ID_FIELDNAME, pop_field)
             for supply_type, supply_filepath in (
                     ('under', file_registry['undersupplied_population']),
                     ('over', file_registry['oversupplied_population'])):
-                groupname = pop_field.replace('pop_', '')
+                groupname = re.sub(POP_FIELD_REGEX, '', pop_field)
                 supply_to_group_filepath = os.path.join(
                     intermediate_dir,
                     f'{supply_type}supplied_population_{groupname}{suffix}.tif'
@@ -583,8 +598,8 @@ def execute(args):
                 _ = graph.add_task(
                     _reclassify_and_multiply,
                     kwargs={
-                        'admin_units_raster_path':
-                            file_registry['admin_unit_ids'],
+                        'aois_raster_path':
+                            file_registry['aois_ids'],
                         'reclassification_map': field_value_map,
                         'supply_raster_path': supply_filepath,
                         'target_raster_path': supply_to_group_filepath,
@@ -593,7 +608,7 @@ def execute(args):
                         f'Map proportion of {supply_type}supplied for'
                         f'{groupname}'),
                     target_path_list=[supply_filepath],
-                    dependent_task_list=[admin_units_rasterization_task]
+                    dependent_task_list=[aois_rasterization_task]
                 )
 
     _ = graph.add_task(
@@ -602,15 +617,15 @@ def execute(args):
             'greenspace_budget_path': file_registry[
                 'greenspace_supply_demand_budget'],
             'population_path': file_registry['aligned_population'],
-            'admin_unit_vector_path': file_registry['reprojected_admin_units'],
-            'target_admin_unit_vector_path': file_registry['admin_units'],
+            'aoi_vector_path': file_registry['reprojected_aois'],
+            'target_aoi_vector_path': file_registry['aois'],
             'undersupplied_populations_path': file_registry[
                 'undersupplied_population'],
             'oversupplied_populations_path': file_registry[
                 'oversupplied_population'],
         },
         task_name='Aggregate supply-demand to the admin units',
-        target_path_list=[file_registry['admin_units']],
+        target_path_list=[file_registry['aois']],
         dependent_task_list=[
             greenspace_supply_demand_task,
             population_alignment_task,
@@ -660,7 +675,7 @@ def _reproject_and_identify(base_vector_path, target_projection_wkt,
 
 
 def _reclassify_and_multiply(
-        admin_units_raster_path, reclassification_map, supply_raster_path,
+        aois_raster_path, reclassification_map, supply_raster_path,
         target_raster_path):
     """Create a raster of greenspace supply given areas of interest.
 
@@ -670,7 +685,7 @@ def _reclassify_and_multiply(
         2. Multiplying the population group ratios by the greenspace supply.
 
     Args:
-        admin_units_raster_path (string): The path to a raster of integers
+        aois_raster_path (string): The path to a raster of integers
             identifying which admin unit a pixel belongs to.
         reclassification_map (dict): A dict mapping integer admin unit IDs to
             float population proportions (values 0-1) for a given population
@@ -684,7 +699,7 @@ def _reclassify_and_multiply(
         ``None``
     """
     pygeoprocessing.reclassify_raster(
-        (admin_units_raster_path, 1), reclassification_map, target_raster_path,
+        (aois_raster_path, 1), reclassification_map, target_raster_path,
         gdal.GDT_Float32, FLOAT32_NODATA)
 
     pop_group_raster = gdal.OpenEx(target_raster_path,
@@ -742,16 +757,17 @@ def _read_field_from_vector(vector_path, key_field, value_field):
     return attribute_map
 
 
-def _rasterize_admin_units(base_raster_path, admin_units_vector_path,
+def _rasterize_aois(base_raster_path, aois_vector_path,
                            target_raster_path, id_fieldname):
     """Rasterize the admin units vector onto a new raster.
 
     Args:
         base_raster_path (string): The string path to a raster on disk to be
             used as a template raster.
-        admin_units_vector_path (string): The path to a vector on disk of
-            administrative units.  The ``id_fieldname`` feature of the features
-            in this vector will be rasterized onto a new raster.
+        aois_vector_path (string): The path to a vector on disk of areas of
+            interest, typically administrative units.  The ``id_fieldname``
+            feature of the features in this vector will be rasterized onto a
+            new raster.
         target_raster_path (string): The path to a new UInt32 raster created on
             disk with new values burned into it.
         id_fieldname (string): The fieldname of the ID field to rasterize.
@@ -764,7 +780,7 @@ def _rasterize_admin_units(base_raster_path, admin_units_vector_path,
         [UINT32_NODATA], [UINT32_NODATA])
 
     pygeoprocessing.rasterize(
-        admin_units_vector_path, target_raster_path,
+        aois_vector_path, target_raster_path,
         option_list=[f"ATTRIBUTE={id_fieldname}"])
 
 
@@ -863,8 +879,8 @@ def _filter_population(population, greenspace_budget, numpy_filter_op):
 
 
 def _admin_level_supply_demand(
-        greenspace_budget_path, population_path, admin_unit_vector_path,
-        target_admin_unit_vector_path, undersupplied_populations_path,
+        greenspace_budget_path, population_path, aoi_vector_path,
+        target_aoi_vector_path, undersupplied_populations_path,
         oversupplied_populations_path):
     """Calculate average greenspace supply per admin unit.
 
@@ -877,20 +893,20 @@ def _admin_level_supply_demand(
         greenspace_budget_path (string): The path to the greenspace budget
             raster on disk.
         population_path (string): The path to the population raster on disk.
-        admin_unit_vector_path (string): The path to the administrative units
-            vector.
-        target_admin_unit_vector_path (string): The path to where the target
-            administrative units vector will be created on disk.
+        aoi_vector_path (string): The path to a vector of areas of interest,
+            typically administrative units.
+        target_aoi_vector_path (string): The path to where the target
+            aoi/admin units vector will be created on disk.
 
     Returns:
         ``None``
     """
-    source_vector = ogr.Open(admin_unit_vector_path)
+    source_vector = ogr.Open(aoi_vector_path)
     driver = ogr.GetDriverByName('GPKG')
-    driver.CopyDataSource(source_vector, target_admin_unit_vector_path)
+    driver.CopyDataSource(source_vector, target_aoi_vector_path)
     source_vector = None
 
-    target_vector = gdal.OpenEx(target_admin_unit_vector_path, gdal.GA_Update)
+    target_vector = gdal.OpenEx(target_aoi_vector_path, gdal.GA_Update)
     target_layer = target_vector.GetLayer()
 
     supply_sum_fieldname = 'SUP_DEMadm_cap'
@@ -917,13 +933,13 @@ def _admin_level_supply_demand(
         target_layer.CreateField(field)
 
     greenspace_stats = pygeoprocessing.zonal_statistics(
-        (greenspace_budget_path, 1), target_admin_unit_vector_path)
+        (greenspace_budget_path, 1), target_aoi_vector_path)
     population_stats = pygeoprocessing.zonal_statistics(
-        (population_path, 1), target_admin_unit_vector_path)
+        (population_path, 1), target_aoi_vector_path)
     undersupplied_stats = pygeoprocessing.zonal_statistics(
-        (undersupplied_populations_path, 1), target_admin_unit_vector_path)
+        (undersupplied_populations_path, 1), target_aoi_vector_path)
     oversupplied_stats = pygeoprocessing.zonal_statistics(
-        (oversupplied_populations_path, 1), target_admin_unit_vector_path)
+        (oversupplied_populations_path, 1), target_aoi_vector_path)
 
     target_layer.StartTransaction()
     for feature in target_layer:
