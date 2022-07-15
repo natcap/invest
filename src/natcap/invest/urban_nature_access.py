@@ -651,10 +651,8 @@ def _reproject_and_identify(base_vector_path, target_projection_wkt,
     layer.CreateField(field)
 
     layer.StartTransaction()
-    field_id = 0
-    for feature in layer:
+    for field_id, feature in enumerate(layer):
         feature.SetField(id_fieldname, field_id)
-        field_id += 1
         layer.SetFeature(feature)
     layer.CommitTransaction()
     layer = None
