@@ -70,9 +70,7 @@ setup(
     maintainer_email='jdouglass@stanford.edu',
     url='http://github.com/natcap/invest',
     packages=find_namespace_packages('src'),
-    package_dir={
-        'natcap': 'src/natcap'
-    },
+    package_dir={'': 'src'},
     include_package_data=True,
     install_requires=_REQUIREMENTS,
     python_requires='>=3.8,<3.11',
@@ -156,10 +154,5 @@ setup(
     },
     extras_require={
         'ui': _GUI_REQUIREMENTS,
-    },
-    package_data={
-        'natcap.invest': [
-            'internationalization/locales/en/.gitignore'
-        ]
     }
 )
