@@ -745,8 +745,8 @@ def _read_field_from_vector(vector_path, key_field, value_field):
             ``value_field`` is case-sensitive.
 
     Returns:
-        attribute_map (dict): A dict mapping ``key_field`` to
-            ``value_field`` value.
+        attribute_map (dict): A dict mapping each ``key_field`` key to
+            the corresponding ``value_field`` value.
     """
     vector = gdal.OpenEx(vector_path)
     layer = vector.GetLayer()
@@ -758,7 +758,7 @@ def _read_field_from_vector(vector_path, key_field, value_field):
 
 
 def _rasterize_aois(base_raster_path, aois_vector_path,
-                           target_raster_path, id_fieldname):
+                    target_raster_path, id_fieldname):
     """Rasterize the admin units vector onto a new raster.
 
     Args:
