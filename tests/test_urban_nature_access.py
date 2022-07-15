@@ -22,6 +22,8 @@ from osgeo import osr
 _DEFAULT_ORIGIN = (444720, 3751320)
 _DEFAULT_PIXEL_SIZE = (30, -30)
 _DEFAULT_EPSG = 3116
+_DEFAULT_SRS = osr.SpatialReference()
+_DEFAULT_SRS.ImportFromEPSG(_DEFAULT_EPSG)
 
 
 def _build_model_args(workspace):
@@ -269,6 +271,47 @@ class UNATests(unittest.TestCase):
             [25 * 40.75, nodata]], dtype=numpy.float32)
         numpy.testing.assert_allclose(
             supply_demand, expected_supply_demand)
+
+    def test_reclassify_and_multpliy(self):
+        """UNA: test reclassification/multiplication function."""
+        from natcap.invest import urban_nature_access
+
+        nodata = 255
+        aois_array = numpy.array([
+            [nodata, 1, 2, 3],
+            [nodata, 1, 2, 3],
+            [nodata, 1, 2, 3],
+            [nodata, nodata, 2, 3]], dtype=numpy.uint8)
+        reclassification_map = {
+            1: 0.1,
+            2: 0.3,
+            3: 0.5,
+        }
+        supply_array = numpy.full(aois_array.shape, 3, dtype=numpy.float32)
+        supply_array[1, 3] = 255
+
+        aois_path = os.path.join(self.workspace_dir, 'aois.tif')
+        supply_path = os.path.join(self.workspace_dir, 'supply.tif')
+
+        for array, target_path in [(aois_array, aois_path),
+                                   (supply_array, supply_path)]:
+            pygeoprocessing.geoprocessing.numpy_array_to_raster(
+                array, nodata, _DEFAULT_PIXEL_SIZE, _DEFAULT_ORIGIN,
+                _DEFAULT_SRS.ExportToWkt(), target_path)
+
+        target_raster_path = os.path.join(self.workspace_dir, 'target.tif')
+        urban_nature_access._reclassify_and_multiply(
+            aois_path, reclassification_map, supply_path, target_raster_path)
+
+        float_nodata = urban_nature_access.FLOAT32_NODATA
+        expected_array = numpy.array([
+            [float_nodata, 0.3, 0.9, 1.5],
+            [float_nodata, 0.3, 0.9, float_nodata],
+            [float_nodata, 0.3, 0.9, 1.5],
+            [float_nodata, float_nodata, 0.9, 1.5]], dtype=numpy.float32)
+        numpy.testing.assert_allclose(
+            expected_array,
+            pygeoprocessing.raster_to_numpy_array(target_raster_path))
 
     def test_core_model(self):
         """UNA: Run through the model with base data."""
