@@ -451,10 +451,3 @@ class UNATests(unittest.TestCase):
                 _read_and_sum_raster(group_supply_raster_path),
                 rtol=1e-6
             )
-
-        # verify additional rasters exist and have reasonable values relative
-        # to the total rasters
-        #   undersupply of greenspace
-        #   opversupply of greenspace
-        # Also, fields must exist in output vector and have correct values,
-        # whicih should also match the raster.
