@@ -37,6 +37,8 @@
 Unreleased Changes
 ------------------
 * General
+    * Update python packaging settings to exclude a few config files and the
+      workbench from source distributions and wheels
 * Workbench
     * Fixed a bug where some model runs would not generate a new item
       in the list of recent runs.
@@ -46,6 +48,9 @@ Unreleased Changes
       rasters and determine transitions from the aligned rasters.
 * NDR
     * Added parameters to the sample data to support nitrogen calculations.
+* Urban Flood Risk
+    * Validation of the curve number table will now catch missing ``CN_*``
+      columns and warn the user about the missing column.
 
 3.11.0 (2022-05-24)
 -------------------

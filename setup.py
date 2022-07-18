@@ -62,9 +62,7 @@ class build_py(_build_py):
 
 setup(
     packages=find_namespace_packages('src'),
-    package_dir={
-        'natcap': 'src/natcap'
-    },
+    package_dir={'': 'src'},
     include_package_data=True,
     install_requires=_REQUIREMENTS,
     zip_safe=False,
@@ -123,10 +121,5 @@ setup(
         'build_py': build_py},
     extras_require={
         'ui': _GUI_REQUIREMENTS,
-    },
-    package_data={
-        'natcap.invest': [
-            'internationalization/locales/en/.gitignore'
-        ]
     }
 )
