@@ -1,5 +1,7 @@
+exclude .flake8
+exclude .readthedocs.yml
 prune .github
 prune ci
-prune doc/users-guide
 prune exe
 prune installer
+prune workbench
