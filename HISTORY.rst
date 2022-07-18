@@ -65,6 +65,9 @@ Unreleased Changes
         indicate the sediment that erodes from a pixel goes into the next
         downstream pixel(s) where it is either trapped or exported.  This
         update removes a form of double-counting.
+* Urban Flood Risk
+    * Validation of the curve number table will now catch missing ``CN_*``
+      columns and warn the user about the missing column.
 
 
 3.11.0 (2022-05-24)
