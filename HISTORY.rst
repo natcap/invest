@@ -48,19 +48,24 @@ Unreleased Changes
     * Added parameters to the sample data to support nitrogen calculations.
 * SDR
     * We have made a significant update to the SDR model's outputs described
-      here: https://github.com/natcap/peps/blob/main/pep-0010.md :
-      * Legacy outputs ``sed_retention_index.tif`` and ``sed_retention.tif``
-        have been removed from the model.
-      * Two new output rasters have been added:
-        * ``avoided_export.tif``, indicating vegetation's contribution to
-          avoided local erosion.
-        * ``avoided_local_erosion.tif``, indicating avoided soil loss on a pixel.
+      here: https://github.com/natcap/peps/blob/main/pep-0010.md.
+
+          * Legacy outputs ``sed_retention_index.tif`` and ``sed_retention.tif``
+            have been removed from the model.
+          * Two new output rasters have been added, specifically
+
+               * ``avoided_export.tif``, indicating vegetation's contribution to
+                 avoided local erosion.
+               * ``avoided_local_erosion.tif``, indicating avoided soil loss on a pixel.
+
       * The summary watersheds vector no longer includes the ``sed_retent``
         field and two fields have been added:
-        * ``avoid_exp`` representing the sum of avoided export in the
-          watershed.
-        * ``avoid_eros`` representing the sum of avoided local erosion in the
-          watershed.
+
+          * ``avoid_exp`` representing the sum of avoided export in the
+            watershed.
+          * ``avoid_eros`` representing the sum of avoided local erosion in the
+            watershed.
+
       * Sediment deposition, ``sed_deposition.tif``, has been clarified to
         indicate the sediment that erodes from a pixel goes into the next
         downstream pixel(s) where it is either trapped or exported.  This
@@ -2093,6 +2098,7 @@ This is a minor release which fixes the following defects:
 
 -A truncation error was fixed on nutrient retention and sedimentation model that involved division by the number of cells in a watershed.  Now correctly calculates floating point division.
 -Minor typos were fixed across the user's guide.
+
 
 2.1 Beta (2011-05-11)
 ---------------------
