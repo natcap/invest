@@ -106,13 +106,11 @@ ARGS_SPEC = {
             'geometries': spec_utils.POLYGONS,
             'fields': {
                 "pop_[POP_GROUP]": {
-                    "type": "number",
-                    "units": u.none,
+                    "type": "ratio",
                     "required": False,
                     "about": gettext(
-                        "The proportion (numeric values in the range 0-1) of "
-                        "the population within this region belonging to the "
-                        "identified population group."
+                        "The proportion of the population within this region "
+                        "belonging to the identified population group."
                     ),
                 }
             },
