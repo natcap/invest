@@ -37,6 +37,7 @@
 Unreleased Changes
 ------------------
 * General
+    * Update packaging settings to exclude a few config files and the workbench
 * Workbench
     * Fixed a bug where some model runs would not generate a new item
       in the list of recent runs.
