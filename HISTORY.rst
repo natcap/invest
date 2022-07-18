@@ -49,6 +49,7 @@ Unreleased Changes
 * SDR
     * We have made a significant update to the SDR model's outputs described
       here: https://github.com/natcap/peps/blob/main/pep-0010.md.
+
         * Legacy outputs ``sed_retention_index.tif`` and ``sed_retention.tif``
           have been removed from the model.
         * Two new output rasters have been added, specifically
@@ -57,6 +58,7 @@ Unreleased Changes
             * ``avoided_local_erosion.tif``, indicating avoided soil loss on a pixel.
         * The summary watersheds vector no longer includes the ``sed_retent``
           field and two fields have been added:
+
             * ``avoid_exp`` representing the sum of avoided export in the
               watershed.
             * ``avoid_eros`` representing the sum of avoided local erosion in the
