@@ -574,6 +574,10 @@ def execute(args):
             file_registry['reprojected_aois'])
         for aoi_group_index, disjoint_fid_group in enumerate(
                 disjoint_population_groups):
+            LOGGER.info(
+                "Split populations: "
+                f"Processing AOI group {aoi_group_index+1} of "
+                f"{len(disjoint_population_groups)}")
             rasterized_aoi_ids_path = file_registry[
                 'aois_ids'].format(group=aoi_group_index)
             aois_rasterization_task = graph.add_task(
