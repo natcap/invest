@@ -115,9 +115,8 @@ ARGS_SPEC = {
                 }
             },
             'about': gettext(
-                "Non-overlapping regions (typically administrative "
-                "boundaries) within which population supply and demand are "
-                "summarized."
+                "Regions (typically administrative boundaries) within "
+                "which population supply and demand are summarized."
             ),
         },
         'greenspace_demand': {
@@ -190,7 +189,7 @@ _INTERMEDIATE_BASE_FILES = {
     'undersupplied_population': 'undersupplied_population.tif',
     'oversupplied_population': 'oversupplied_population.tif',
     'reprojected_aois': 'reprojected_aois.gpkg',
-    'aois_ids': 'aois_ids.tif',
+    'aois_ids': 'aois_ids_group{group}.tif',
 }
 
 
@@ -566,48 +565,60 @@ def execute(args):
             f"{', '.join(split_population_fields)}, starting split "
             "population optional module.")
 
-        aois_rasterization_task = graph.add_task(
-            _rasterize_aois,
-            kwargs={
-                'base_raster_path': file_registry['aligned_lulc'],
-                'aois_vector_path':
-                    file_registry['reprojected_aois'],
-                'target_raster_path': file_registry['aois_ids'],
-                'id_fieldname': ID_FIELDNAME,
-            },
-            task_name='Rasterize the admin units vector',
-            target_path_list=[file_registry['aois_ids']],
-            dependent_task_list=[
-                aoi_reprojection_task, lulc_alignment_task]
-        )
+        disjoint_population_groups = (
+            pygeoprocessing.calculate_disjoint_polygon_set(
+                file_registry['reprojected_aois']))
+        for aoi_group_index, disjoint_fid_group in enumerate(
+                disjoint_population_groups):
+            rasterized_aoi_ids_path = file_registry[
+                'aois_ids'].format(group=aoi_group_index)
+            aois_rasterization_task = graph.add_task(
+                _rasterize_aois,
+                kwargs={
+                    'base_raster_path': file_registry['aligned_lulc'],
+                    'aois_vector_path':
+                        file_registry['reprojected_aois'],
+                    'target_raster_path': rasterized_aoi_ids_path,
+                    'id_fieldname': ID_FIELDNAME,
+                    'matching_fids': disjoint_fid_group,
+                    'working_dir': intermediate_dir,
+                },
+                task_name=(
+                    f'Rasterize group {aoi_group_index} of the aois vector'),
+                target_path_list=[rasterized_aoi_ids_path],
+                dependent_task_list=[
+                    aoi_reprojection_task, lulc_alignment_task]
+            )
 
-        for pop_field in split_population_fields:
-            field_value_map = _read_field_from_vector(
-                file_registry['reprojected_aois'],
-                ID_FIELDNAME, pop_field)
-            for supply_type, supply_filepath in (
-                    ('under', file_registry['undersupplied_population']),
-                    ('over', file_registry['oversupplied_population'])):
-                groupname = re.sub(POP_FIELD_REGEX, '', pop_field)
-                supply_to_group_filepath = os.path.join(
-                    intermediate_dir,
-                    f'{supply_type}supplied_population_{groupname}{suffix}.tif'
-                )
-                _ = graph.add_task(
-                    _reclassify_and_multiply,
-                    kwargs={
-                        'aois_raster_path':
-                            file_registry['aois_ids'],
-                        'reclassification_map': field_value_map,
-                        'supply_raster_path': supply_filepath,
-                        'target_raster_path': supply_to_group_filepath,
-                    },
-                    task_name=(
-                        f'Map proportion of {supply_type}supplied for'
-                        f'{groupname}'),
-                    target_path_list=[supply_filepath],
-                    dependent_task_list=[aois_rasterization_task]
-                )
+            for pop_field in split_population_fields:
+                # TODO: rework this loop so that we're not re-reading this in
+                # for each disjoint aoi group?
+                field_value_map = _read_field_from_vector(
+                    file_registry['reprojected_aois'],
+                    ID_FIELDNAME, pop_field)
+                for supply_type, supply_filepath in (
+                        ('under', file_registry['undersupplied_population']),
+                        ('over', file_registry['oversupplied_population'])):
+                    groupname = re.sub(POP_FIELD_REGEX, '', pop_field)
+                    supply_to_group_filepath = os.path.join(
+                        intermediate_dir, (
+                            f'{supply_type}supplied_population_'
+                            f'{groupname}_{aoi_group_index}{suffix}.tif')
+                    )
+                    _ = graph.add_task(
+                        _reclassify_and_multiply,
+                        kwargs={
+                            'aois_raster_path': rasterized_aoi_ids_path,
+                            'reclassification_map': field_value_map,
+                            'supply_raster_path': supply_filepath,
+                            'target_raster_path': supply_to_group_filepath,
+                        },
+                        task_name=(
+                            f'Map proportion of {supply_type}supplied '
+                            f'for {groupname}'),
+                        target_path_list=[supply_filepath],
+                        dependent_task_list=[aois_rasterization_task]
+                    )
 
     _ = graph.add_task(
         _admin_level_supply_demand,
@@ -756,7 +767,8 @@ def _read_field_from_vector(vector_path, key_field, value_field):
 
 
 def _rasterize_aois(base_raster_path, aois_vector_path,
-                    target_raster_path, id_fieldname):
+                    target_raster_path, id_fieldname, matching_fids,
+                    working_dir=None):
     """Rasterize the admin units vector onto a new raster.
 
     Args:
@@ -769,17 +781,52 @@ def _rasterize_aois(base_raster_path, aois_vector_path,
         target_raster_path (string): The path to a new UInt32 raster created on
             disk with new values burned into it.
         id_fieldname (string): The fieldname of the ID field to rasterize.
+        matching_fids (set): An iterable of integer FIDs from the vector at
+            ``aois_vector_path`` that should be included in this raster.
+            These feature geometries are assumed to be nonoverlapping, such as
+            from ``pygeoprocessing.calculate_disjoint_polygon_set()``.
+        working_dir=None (string): The path to where to write temporary files.
 
     Returns:
         ``None``
     """
+    working_dir = tempfile.mkdtemp(
+        prefix='rasterize-subset-', dir=working_dir)
+
+    driver = ogr.GetDriverByName('GPKG')
+
+    source_vector = ogr.Open(aois_vector_path)
+    source_layer = source_vector.GetLayer()
+
+    target_vector_path = os.path.join(working_dir, 'subset.gpkg')
+    target_vector = driver.CreateDataSource(target_vector_path)
+    target_layer = target_vector.CreateLayer(
+        'subset', source_layer.GetSpatialRef(), source_layer.GetGeomType())
+    target_layer.CreateField(ogr.FieldDefn(id_fieldname, ogr.OFTInteger))
+
+    target_layer.StartTransaction()
+    for source_feature in source_layer:
+        if source_feature.GetFID() in matching_fids:
+            target_feature = ogr.Feature(target_layer.GetLayerDefn())
+            target_feature.SetGeometry(source_feature.GetGeometryRef())
+            target_feature.SetField(
+                id_fieldname, source_feature.GetField(id_fieldname))
+            target_layer.CreateFeature(target_feature)
+    target_layer.CommitTransaction()
+    source_layer = None
+    source_vector = None
+    target_layer = None
+    target_vector = None
+
     pygeoprocessing.new_raster_from_base(
         base_raster_path, target_raster_path, gdal.GDT_UInt32,
         [UINT32_NODATA], [UINT32_NODATA])
 
     pygeoprocessing.rasterize(
-        aois_vector_path, target_raster_path,
+        target_vector_path, target_raster_path,
         option_list=[f"ATTRIBUTE={id_fieldname}"])
+
+    shutil.rmtree(working_dir, ignore_errors=True)
 
 
 def _reclassify_greenspace_area(
