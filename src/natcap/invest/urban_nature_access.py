@@ -9,6 +9,8 @@ import numpy
 import numpy.testing
 import pandas
 import pygeoprocessing
+import shapely.ops
+import shapely.wkt
 import taskgraph
 from osgeo import gdal
 from osgeo import ogr
@@ -565,9 +567,8 @@ def execute(args):
             f"{', '.join(split_population_fields)}, starting split "
             "population optional module.")
 
-        disjoint_population_groups = (
-            pygeoprocessing.calculate_disjoint_polygon_set(
-                file_registry['reprojected_aois']))
+        disjoint_population_groups = _find_disjoint_polygon_groups(
+            file_registry['reprojected_aois'])
         for aoi_group_index, disjoint_fid_group in enumerate(
                 disjoint_population_groups):
             rasterized_aoi_ids_path = file_registry[
@@ -645,6 +646,39 @@ def execute(args):
     graph.close()
     graph.join()
     LOGGER.info('Finished Urban Nature Access Model')
+
+
+def _find_disjoint_polygon_groups(aoi_vector_path):
+    """Identify truly disjoint polygon groups.
+
+    Pygeoprocessing's calculate_disjoint_polygon_set() uses any form of
+    intersection (even if polygons touch but do not overlap) in determining
+    whether polygons are disjoint.  When a user provides a vector of AOIs that
+    touch but do NOT overlap, we do not need to use pygeoprocessing's set of
+    disjoint polygons, which makes more sense visually.
+
+    Args:
+        aoi_vector_path (string): A path to the AOI vector on disk.
+
+    Returns:
+        A list of lists of disjoint FIDs.
+    """
+    all_geometries = []
+    vector = ogr.Open(aoi_vector_path)
+    layer = vector.GetLayer()
+    area_sum = 0
+    all_fids = []
+    for feature in layer:
+        geom = feature.GetGeometryRef()
+        all_geometries.append(shapely.wkt.loads(geom.ExportToWkt()))
+        area_sum += geom.Area()
+        all_fids.append(feature.GetFID())
+
+    union_geom = shapely.ops.unary_union(all_geometries)
+    if math.isclose(union_geom.area, area_sum):
+        return [all_fids]
+    return pygeoprocessing.calculate_disjoint_polygon_set(
+        aoi_vector_path)
 
 
 def _reproject_and_identify(base_vector_path, target_projection_wkt,
