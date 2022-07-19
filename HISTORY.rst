@@ -37,6 +37,8 @@
 Unreleased Changes
 ------------------
 * General
+    * Update python packaging settings to exclude a few config files and the
+      workbench from source distributions and wheels
 * Workbench
     * Fixed a bug where some model runs would not generate a new item
       in the list of recent runs.
