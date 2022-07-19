@@ -1,14 +1,17 @@
+import collections
 import logging
 import math
 import os
 import re
 import shutil
 import tempfile
+import time
 
 import numpy
 import numpy.testing
 import pandas
 import pygeoprocessing
+import rtree
 import shapely.ops
 import shapely.wkt
 import taskgraph
@@ -683,8 +686,157 @@ def _find_disjoint_polygon_groups(aoi_vector_path):
         f"Some admin units overlap by {abs(union_area - area_sum)} square "
         "units. Falling back to disjoint polygon sets."
     )
-    return pygeoprocessing.calculate_disjoint_polygon_set(
-        aoi_vector_path)
+    return calculate_disjoint_polygon_set(
+        aoi_vector_path, ok_for_geometries_to_touch=True)
+
+
+def calculate_disjoint_polygon_set(
+        vector_path, layer_id=0, bounding_box=None,
+        ok_for_geometries_to_touch=False):
+    """Create a sequence of sets of polygons that don't overlap.
+
+    Determining the minimal number of those sets is an np-complete problem so
+    this is an approximation that builds up sets of maximal subsets.
+
+    Adapted from pygeoprocessing==2.3.3
+
+    Args:
+        vector_path (string): a path to an OGR vector.
+        layer_id (str/int): name or index of underlying layer in
+            ``vector_path`` to calculate disjoint set. Defaults to 0.
+        bounding_box (sequence): sequence of floats representing a bounding
+            box to filter any polygons by. If a feature in ``vector_path``
+            does not intersect this bounding box it will not be considered
+            in the disjoint calculation. Coordinates are in the order
+            [minx, miny, maxx, maxy].
+        ok_for_geometries_to_touch=False (bool): If ``True``, two geometries
+            with boundaries that touch but have nonoverlapping interiors are
+            NOT considered disjoint and may therefore be in the same set.
+            If ``False``, two geometries with touching boundaries are
+            considered intersecting and may not be in the same set.
+
+    Return:
+        subset_list (sequence): sequence of sets of FIDs from vector_path
+
+    """
+    vector = gdal.OpenEx(vector_path, gdal.OF_VECTOR)
+    vector_layer = vector.GetLayer(layer_id)
+    feature_count = vector_layer.GetFeatureCount()
+
+    if feature_count == 0:
+        raise RuntimeError('Vector must have geometries but does not: %s'
+                           % vector_path)
+
+    last_time = time.time()
+    LOGGER.info("build shapely polygon list")
+
+    if bounding_box is None:
+        bounding_box = pygeoprocessing.get_vector_info(
+            vector_path)['bounding_box']
+    bounding_box = shapely.prepared.prep(shapely.geometry.box(*bounding_box))
+
+    shapely_polygon_lookup = {}
+    for poly_feat in vector_layer:
+        poly_geom_ref = poly_feat.GetGeometryRef()
+        if poly_geom_ref is None:
+            LOGGER.warning(
+                f'no geometry in {vector_path} FID: {poly_feat.GetFID()}, '
+                'skipping...')
+            continue
+        if poly_geom_ref.IsEmpty():
+            LOGGER.warning(
+                f'empty geometry in {vector_path} FID: {poly_feat.GetFID()}, '
+                'skipping...')
+            continue
+        # with GDAL>=3.3.0 ExportToWkb returns a bytearray instead of bytes
+        shapely_polygon_lookup[poly_feat.GetFID()] = (
+            shapely.wkb.loads(bytes(poly_geom_ref.ExportToWkb())))
+        poly_geom_ref = None
+    poly_feat = None
+
+    LOGGER.info("build shapely rtree index")
+    r_tree_index_stream = [
+        (poly_fid, poly.bounds, None)
+        for poly_fid, poly in shapely_polygon_lookup.items()
+        if bounding_box.intersects(poly)]
+    if r_tree_index_stream:
+        poly_rtree_index = rtree.index.Index(r_tree_index_stream)
+    else:
+        LOGGER.warning("no polygons intersected the bounding box")
+        return []
+
+    vector_layer = None
+    vector = None
+    LOGGER.info(
+        'poly feature lookup 100.0%% complete on %s',
+        os.path.basename(vector_path))
+
+    LOGGER.info('build poly intersection lookup')
+    poly_intersect_lookup = collections.defaultdict(set)
+    for poly_index, (poly_fid, poly_geom) in enumerate(
+            shapely_polygon_lookup.items()):
+        last_time = pygeoprocessing.geoprocessing._invoke_timed_callback(
+            last_time, lambda: LOGGER.info(
+                "poly intersection lookup approximately %.1f%% complete "
+                "on %s", 100.0 * float(poly_index+1) / len(
+                    shapely_polygon_lookup), os.path.basename(vector_path)),
+            pygeoprocessing.geoprocessing._LOGGING_PERIOD)
+        possible_intersection_set = list(poly_rtree_index.intersection(
+            poly_geom.bounds))
+        # no reason to prep the polygon to intersect itself
+        if len(possible_intersection_set) > 1:
+            polygon = shapely.prepared.prep(poly_geom)
+        else:
+            polygon = poly_geom
+        for intersect_poly_fid in possible_intersection_set:
+            # If geometries touch (share 1+ boundary points), then do not count
+            # as an intersection.
+            if ok_for_geometries_to_touch and polygon.touches(
+                    shapely_polygon_lookup[intersect_poly_fid]):
+                continue
+
+            if intersect_poly_fid == poly_fid or polygon.intersects(
+                    shapely_polygon_lookup[intersect_poly_fid]):
+                poly_intersect_lookup[poly_fid].add(intersect_poly_fid)
+        polygon = None
+    LOGGER.info(
+        'poly intersection feature lookup 100.0%% complete on %s',
+        os.path.basename(vector_path))
+
+    # Build maximal subsets
+    subset_list = []
+    while len(poly_intersect_lookup) > 0:
+        # sort polygons by increasing number of intersections
+        intersections_list = [
+            (len(poly_intersect_set), poly_fid, poly_intersect_set)
+            for poly_fid, poly_intersect_set in
+            poly_intersect_lookup.items()]
+        intersections_list.sort()
+
+        # build maximal subset
+        maximal_set = set()
+        for _, poly_fid, poly_intersect_set in intersections_list:
+            last_time = pygeoprocessing.geoprocessing._invoke_timed_callback(
+                last_time, lambda: LOGGER.info(
+                    "maximal subset build approximately %.1f%% complete "
+                    "on %s", 100.0 * float(
+                        feature_count - len(poly_intersect_lookup)) /
+                    feature_count, os.path.basename(vector_path)),
+                pygeoprocessing.geoprocessing._LOGGING_PERIOD)
+            if not poly_intersect_set.intersection(maximal_set):
+                # no intersection, add poly_fid to the maximal set and remove
+                # the polygon from the lookup
+                maximal_set.add(poly_fid)
+                del poly_intersect_lookup[poly_fid]
+        # remove all the polygons from intersections once they're computed
+        for poly_fid, poly_intersect_set in poly_intersect_lookup.items():
+            poly_intersect_lookup[poly_fid] = (
+                poly_intersect_set.difference(maximal_set))
+        subset_list.append(maximal_set)
+    LOGGER.info(
+        'maximal subset build 100.0%% complete on %s',
+        os.path.basename(vector_path))
+    return subset_list
 
 
 def _reproject_and_identify(base_vector_path, target_projection_wkt,
