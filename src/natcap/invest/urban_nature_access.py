@@ -675,8 +675,14 @@ def _find_disjoint_polygon_groups(aoi_vector_path):
         all_fids.append(feature.GetFID())
 
     union_geom = shapely.ops.unary_union(all_geometries)
-    if math.isclose(union_geom.area, area_sum):
+    union_area = union_geom.area
+    if math.isclose(union_area, area_sum):
         return [all_fids]
+
+    LOGGER.warning(
+        f"Some admin units overlap by {abs(union_area - area_sum)} square "
+        "units. Falling back to disjoint polygon sets."
+    )
     return pygeoprocessing.calculate_disjoint_polygon_set(
         aoi_vector_path)
 
