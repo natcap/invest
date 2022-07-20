@@ -365,7 +365,7 @@ jobs:
         uses: ./.github/actions/setup_env
         with:
           python-version: ${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
-          requirements-files: requirements.txt requirements-dev.txt requirements-gui.txt
+          requirements-files: requirements.txt requirements-dev.txt requirements-docs.txt requirements-gui.txt
           requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }} pandoc
 
       - name: Make install
