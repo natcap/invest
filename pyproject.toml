@@ -7,7 +7,7 @@ license = {file = "LICENSE.txt"}
 maintainers = [
     {name = "Natural Capital Project Software Team", email = "natcap-software@lists.stanford.edu"}
 ]
-keywords = ["gis", "invest"]
+keywords = ["gis", "invest", "ecosystem services"]
 classifiers = [
     "Intended Audience :: Developers",
     "Development Status :: 5 - Production/Stable",
