@@ -1,0 +1,17 @@
+# requirements-docs.yml
+# ---------------------
+# This file records the packages needed to build on readthedocs.org.
+# It assumes that the natcap.invest package is being
+# installed to the readthedocs virtualenv separately.
+channels:
+- conda-forge
+# set nodefaults to remove the default channels
+# this is needed to keep memory use below RTD limit due to conda bug:
+# https://github.com/conda/conda/issues/5003
+- nodefaults
+dependencies:
+- gdal
+- pip
+- pip:
+  - -r requirements.txt
+  - -r requirements-docs.txt
