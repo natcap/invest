@@ -10,7 +10,7 @@ channels:
 # https://github.com/conda/conda/issues/5003
 - nodefaults
 dependencies:
-- gdal
+- gdal>=3.1.2,!=3.3.0,<3.4.1
 - pip
 - pip:
   - -r requirements.txt
