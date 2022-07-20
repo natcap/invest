@@ -5,7 +5,7 @@ readme = "README_PYTHON.rst"
 requires-python = ">=3.8,<3.11"
 license = {file = "LICENSE.txt"}
 maintainers = [
-    {name = "James Douglass", email = "jdouglass@stanford.edu"}
+    {name = "Natural Capital Project Software Team", email = "natcap-software@lists.stanford.edu"}
 ]
 keywords = ["gis", "invest"]
 classifiers = [
