@@ -166,21 +166,16 @@ INTERMEDIATE_DIR_NAME = 'intermediate_outputs'
 
 _INTERMEDIATE_BASE_FILES = {
     'cp_factor_path': 'cp.tif',
-    'd_dn_bare_soil_path': 'd_dn_bare_soil.tif',
     'd_dn_path': 'd_dn.tif',
-    'd_up_bare_soil_path': 'd_up_bare_soil.tif',
     'd_up_path': 'd_up.tif',
     'f_path': 'f.tif',
     'flow_accumulation_path': 'flow_accumulation.tif',
     'flow_direction_path': 'flow_direction.tif',
-    'ic_bare_soil_path': 'ic_bare_soil.tif',
     'ic_path': 'ic.tif',
     'ls_path': 'ls.tif',
     'pit_filled_dem_path': 'pit_filled_dem.tif',
     's_accumulation_path': 's_accumulation.tif',
     's_bar_path': 's_bar.tif',
-    's_inverse_path': 's_inverse.tif',
-    'sdr_bare_soil_path': 'sdr_bare_soil.tif',
     'sdr_path': 'sdr_factor.tif',
     'slope_path': 'slope.tif',
     'thresholded_slope_path': 'slope_threshold.tif',
@@ -583,44 +578,6 @@ def execute(args):
                              sed_deposition_task],
         target_path_list=[f_reg['avoided_export_path']],
         task_name='calculate total retention')
-
-    # This next section is for calculating the bare soil part.
-    s_inverse_task = task_graph.add_task(
-        func=_calculate_inverse_s_factor,
-        args=(f_reg['thresholded_slope_path'], f_reg['s_inverse_path']),
-        target_path_list=[f_reg['s_inverse_path']],
-        dependent_task_list=[threshold_slope_task],
-        task_name='calculate S factor')
-
-    d_dn_bare_task = task_graph.add_task(
-        func=pygeoprocessing.routing.distance_to_channel_mfd,
-        args=(
-            (f_reg['flow_direction_path'], 1),
-            (drainage_raster_path_task[0], 1),
-            f_reg['d_dn_bare_soil_path']),
-        kwargs={'weight_raster_path_band': (f_reg['s_inverse_path'], 1)},
-        target_path_list=[f_reg['d_dn_bare_soil_path']],
-        dependent_task_list=[
-            flow_dir_task, drainage_raster_path_task[1], s_inverse_task],
-        task_name='calculating d_dn soil')
-
-    d_up_bare_task = task_graph.add_task(
-        func=_calculate_d_up_bare,
-        args=(
-            f_reg['s_bar_path'], f_reg['flow_accumulation_path'],
-            f_reg['d_up_bare_soil_path']),
-        target_path_list=[f_reg['d_up_bare_soil_path']],
-        dependent_task_list=[bar_task_map['s_bar'], flow_accumulation_task],
-        task_name='calculating d_up bare soil')
-
-    ic_bare_task = task_graph.add_task(
-        func=_calculate_ic,
-        args=(
-            f_reg['d_up_bare_soil_path'], f_reg['d_dn_bare_soil_path'],
-            f_reg['ic_bare_soil_path']),
-        target_path_list=[f_reg['ic_bare_soil_path']],
-        dependent_task_list=[d_up_bare_task, d_dn_bare_task],
-        task_name='calculate bare soil ic')
 
     _ = task_graph.add_task(
         func=_calculate_what_drains_to_stream,
