@@ -18,5 +18,5 @@ build:
   tools:
     python: "3.10"
   jobs:
-    post_create_environment:
+    post_install:
       - pip install .
