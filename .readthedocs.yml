@@ -13,13 +13,10 @@ sphinx:
 conda:
   environment: .readthedocs_environment.yml
 
-# Optionally set the version of Python and requirements required to build your docs
-python:
-  install:
-    - method: pip  # install natcap.invest using pip install
-      path: .
-
 build:
   os: ubuntu-22.04
   tools:
     python: "3.10"
+  jobs:
+    post_create_environment:
+      - pip install .
