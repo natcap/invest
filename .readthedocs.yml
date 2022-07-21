@@ -15,7 +15,11 @@ conda:
 
 # Optionally set the version of Python and requirements required to build your docs
 python:
-  version: 3.7
   install:
-    - method: setuptools  # install natcap.invest using python setup.py install
+    - method: pip  # install natcap.invest using pip install
       path: .
+
+build:
+  os: ubuntu-22.04
+  tools:
+    python: "3.10"
