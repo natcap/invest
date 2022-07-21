@@ -19,4 +19,4 @@ build:
     python: miniconda3-4.7
   jobs:
     post_install:
-      - pip install .
+      - make install

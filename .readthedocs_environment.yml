@@ -2,7 +2,7 @@
 # ---------------------
 # This file records the packages needed to build on readthedocs.org.
 # It assumes that the natcap.invest package is being
-# installed to the readthedocs virtualenv separately.
+# installed to the readthedocs environment separately.
 channels:
 - conda-forge
 # set nodefaults to remove the default channels

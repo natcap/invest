@@ -10,17 +10,16 @@
 # scripts/convert-requirements-to-conda-yml.py as though it can only be found
 # on pip.
 
-# build python distribution
 Cython
-wheel>=0.27.0
-build
-setuptools>=8.0
-setuptools_scm>=6.4.0
-
-# build pyinstaller distribution
-PyInstaller>=4.10
-
-# test
+virtualenv>=12.0.1
 pytest
 pytest-subtests
+wheel>=0.27.0
+pypiwin32; sys_platform == 'win32'  # pip-only
+setuptools>=8.0
+PyInstaller>=4.10
+setuptools_scm>=6.4.0
+requests
 coverage
+xlwt
+build
