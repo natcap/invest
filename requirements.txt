@@ -15,7 +15,6 @@
 GDAL>=3.1.2,!=3.3.0,<3.4.1  # https://github.com/OSGeo/gdal/issues/3898 https://github.com/natcap/invest/issues/905
 Pyro4==4.77  # pip-only
 pandas>=1.2.1
-openpyxl  # pandas optional dependency to read/write xlsx files
 numpy>=1.11.0,!=1.16.0
 Rtree>=0.8.2,!=0.9.1
 shapely>=1.7.1,<1.8.2  # https://github.com/shapely/shapely/issues/1385
@@ -24,8 +23,6 @@ pygeoprocessing>=2.3.2  # pip-only
 taskgraph[niced_processes]>=0.11.0  # pip-only
 psutil>=5.6.6
 chardet>=3.0.4
+openpyxl
 pint
 Babel
-requests
-flask
-flask_cors
