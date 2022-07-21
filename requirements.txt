@@ -26,3 +26,5 @@ chardet>=3.0.4
 pint
 Babel
 requests
+flask
+flask_cors
