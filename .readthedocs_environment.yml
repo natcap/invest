@@ -17,4 +17,3 @@ dependencies:
   - -r requirements.txt
   - -r requirements-docs.txt
   - -r requirements-gui.txt
-
