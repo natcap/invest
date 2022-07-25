@@ -238,7 +238,7 @@ def execute(args):
             contains the set of criteria ranking of each stressor on each
             habitat.
         args['resolution'] (int): a number representing the desired pixel
-            #dimensions of output rasters in meters.
+            dimensions of output rasters in meters.
         args['max_rating'] (str, int or float): a number representing the
             highest potential value that should be represented in rating in the
             criteria scores table.
