@@ -1823,10 +1823,10 @@ def _parse_criteria_table(criteria_table_path, target_composite_csv_path):
             parseable (for a program) format.
 
     Returns:
-        ``None``, but the table written out to ``target_composite_csv_path`` is
-        a table with fields for habitat, stressor, criterion name, rating, dq
-        and weight, where the primary key is (habitat, stressor, criterion
-        name).
+        criteria_habitats (set): A set of string names of habitats found in the
+            criteria table.
+        criteria_stressors (set): A set of string names of stressors found in
+            the criteria table.
     """
     # This function requires that the table is read as a numpy array, so it's
     # easiest to read the table directly.
