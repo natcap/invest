@@ -192,8 +192,8 @@ ARGS_SPEC = {
                 }
             },
             "about": gettext(
-                "A GDAL-supported vector file containing feature containing "
-                "one or more planning regions or subregions."),
+                "A GDAL-supported vector file containing features "
+                "representing one or more planning regions or subregions."),
         },
         "n_overlapping_stressors": {
             "name": gettext("Number of Overlapping Stressors"),
