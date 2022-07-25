@@ -253,9 +253,9 @@ def execute(args):
             each habitat-stressor combination over each area. Optionally, if
             each of the shapefile features contain a 'name' field, it will
             be used as a way of identifying each individual shape.
-        args['n_overlapping_stressors'] (number): If provided, this
-            number will be used in risk reclassification instead of the
-            calculated maximum number of stressor layers that overlap.
+        args['n_overlapping_stressors'] (number): This number will be used
+            in risk reclassification instead of the calculated maximum
+            number of stressor layers that overlap.
         args['n_workers'] (int): the number of worker processes to
             use for processing this model.  If omitted, computation will take
             place in the current process. (optional)
