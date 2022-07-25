@@ -224,7 +224,7 @@ def build_datastack_archive(args, model_name, datastack_path):
         # for the other args keys.
         override_funcname = f'_override_datastack_archive_{key}'
         if hasattr(module, override_funcname):
-            LOGGER.info(f'Using model override function for key {key}')
+            LOGGER.debug(f'Using model override function for key {key}')
             # Notes about the override function:
             #   * Function may modify files_found
             #   * If this function copies data into the data dir, it _should_
