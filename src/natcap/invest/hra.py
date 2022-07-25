@@ -516,6 +516,7 @@ def execute(args):
     cumulative_risk_to_habitat_tasks = []
     reclassified_rasters = []  # For visualization geojson, if requested
     pairwise_summary_data = []  # for the later summary statistics.
+    all_pairwise_risk_tasks = []
     for habitat in habitats:
         pairwise_risk_tasks = []
         pairwise_risk_paths = []
@@ -700,6 +701,8 @@ def execute(args):
                 *reclassified_pairwise_risk_tasks,
             ]
         )
+        all_pairwise_risk_tasks.extend(pairwise_risk_tasks)
+        all_pairwise_risk_tasks.extend(reclassified_pairwise_risk_tasks)
 
     # total risk to the ecosystem is the sum of all cumulative risk rasters
     # across all habitats.
@@ -826,12 +829,11 @@ def execute(args):
         },
         task_name='Create summary statistics table',
         target_path_list=[summary_csv_path],
-        dependent_task_list=list(
-            itertools.chain(
-                [rasterize_aoi_regions_task, all_habitats_mask_task],
-                reclassified_pairwise_risk_tasks,
-                pairwise_risk_tasks)
-        )
+        dependent_task_list=[
+            rasterize_aoi_regions_task,
+            all_habitats_mask_task,
+            *all_pairwise_risk_tasks
+        ]
     )
 
     graph.join()
