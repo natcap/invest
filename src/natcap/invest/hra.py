@@ -290,6 +290,9 @@ def execute(args):
         raise ValueError(
             "args['risk_eq'] must be either 'Multiplicative' or 'Euclidean' "
             f"not {args['risk_eq']}")
+    LOGGER.info(
+        f"The maximum pairwise risk score for {args['risk_eq'].lower()} "
+        f"risk is {max_pairwise_risk}")
 
     try:
         n_workers = int(args['n_workers'])
