@@ -303,8 +303,8 @@ def execute(args):
         n_workers = -1  # single process mode.
     graph = taskgraph.TaskGraph(taskgraph_working_dir, n_workers)
 
-    # parse the info table and get habitats, stressors
-    habitats, stressors = _parse_info_table(args['info_table_path'])
+    # parse the info table and get info dicts for habitats, stressors.
+    habitats_info, stressors_info = _parse_info_table(args['info_table_path'])
 
     # parse the criteria table to get the composite table
     composite_criteria_table_path = os.path.join(
@@ -314,8 +314,8 @@ def execute(args):
 
     # Validate that habitats and stressors match precisely.
     for label, info_set, criteria_set in [
-            ('habitats', set(habitats.keys()), criteria_habitats),
-            ('stressors', set(stressors.keys()), criteria_stressors)]:
+            ('habitats', set(habitats_info.keys()), criteria_habitats),
+            ('stressors', set(stressors_info.keys()), criteria_stressors)]:
         if info_set != criteria_set:
             missing_from_info_table = ", ".join(
                 sorted(criteria_set - info_set))
@@ -360,8 +360,8 @@ def execute(args):
     alignment_dependent_tasks = []
     aligned_habitat_raster_paths = {}
     aligned_stressor_raster_paths = {}
-    for name, attributes in itertools.chain(habitats.items(),
-                                            stressors.items(),
+    for name, attributes in itertools.chain(habitats_info.items(),
+                                            stressors_info.items(),
                                             spatial_criteria_attrs.items()):
         source_filepath = attributes['path']
         gis_type = pygeoprocessing.get_gis_type(source_filepath)
@@ -459,9 +459,9 @@ def execute(args):
 
         # Later operations make use of the habitats rasters or the stressors
         # rasters, so it's useful to collect those here now.
-        if name in habitats:
+        if name in habitats_info:
             aligned_habitat_raster_paths[name] = aligned_raster_path
-        elif name in stressors:
+        elif name in stressors_info:
             aligned_stressor_raster_paths[name] = aligned_raster_path
 
     alignment_task = graph.add_task(
@@ -505,7 +505,7 @@ def execute(args):
             kwargs={
                 'stressor_raster_path': stressor_path,
                 'decay_type': args['decay_eq'],
-                'buffer_distance': stressors[stressor]['buffer'],
+                'buffer_distance': stressors_info[stressor]['buffer'],
                 'target_edt_path': decayed_edt_paths[stressor],
             },
             task_name=f'Make decayed EDT for {stressor}',
@@ -520,13 +520,13 @@ def execute(args):
     reclassified_rasters = []  # For visualization geojson, if requested
     pairwise_summary_data = []  # for the later summary statistics.
     all_pairwise_risk_tasks = []
-    for habitat in habitats:
+    for habitat in habitats_info:
         pairwise_risk_tasks = []
         pairwise_risk_paths = []
         reclassified_pairwise_risk_paths = []
         reclassified_pairwise_risk_tasks = []
 
-        for stressor in stressors:
+        for stressor in stressors_info:
             criteria_tasks = {}  # {criteria type: task}
             criteria_rasters = {}  # {criteria type: score raster path}
             summary_data = {
@@ -741,7 +741,7 @@ def execute(args):
         kwargs={
             'base_raster_path_band_const_list': [
                 (all_habitats_mask_path, 1),
-                (max_pairwise_risk * len(habitats), 'raw'),
+                (max_pairwise_risk * len(habitats_info), 'raw'),
                 (ecosystem_risk_path, 1)],
             'local_op': _reclassify_score,
             'target_raster_path': reclassified_ecosystem_risk_path,
@@ -755,7 +755,7 @@ def execute(args):
 
     # Recovery attributes are calculated with the same numerical method as
     # other criteria, but are unweighted by distance to a stressor.
-    for habitat in habitats:
+    for habitat in habitats_info:
         resilience_criteria_df = criteria_df[
             (criteria_df['habitat'] == habitat) &
             (criteria_df['stressor'] == 'RESILIENCE')]
