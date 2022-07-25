@@ -826,7 +826,12 @@ def execute(args):
         },
         task_name='Create summary statistics table',
         target_path_list=[summary_csv_path],
-        dependent_task_list=[rasterize_aoi_regions_task]
+        dependent_task_list=list(
+            itertools.chain(
+                [rasterize_aoi_regions_task, all_habitats_mask_task],
+                reclassified_pairwise_risk_tasks,
+                pairwise_risk_tasks)
+        )
     )
 
     graph.join()
