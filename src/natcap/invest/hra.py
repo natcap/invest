@@ -750,7 +750,7 @@ def execute(args):
             'datatype_target': _TARGET_GDAL_TYPE_BYTE,
             'nodata_target': _TARGET_NODATA_BYTE,
         },
-        task_name=f'Reclassify risk for {habitat}/{stressor}',
+        task_name=f'Reclassify risk to the Ecosystem',
         target_path_list=[reclassified_cumulative_risk_path],
         dependent_task_list=[all_habitats_mask_task, ecosystem_risk_task]
     )
