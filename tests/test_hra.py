@@ -248,6 +248,17 @@ class HRAUnitTests(unittest.TestCase):
                 ))
         target_composite_csv_path = os.path.join(self.workspace_dir,
                                                  'composite.csv')
+        geoms = [
+            shapely.geometry.Point(
+                (ORIGIN[0] + 50, ORIGIN[1] + 50)).buffer(100),
+            shapely.geometry.Point(
+                (ORIGIN[0] + 25, ORIGIN[1] + 25)).buffer(50),
+        ]
+        source_vector_path = os.path.join(self.workspace_dir, 'foo',
+                                          'eelgrass_connectivity.shp')
+        os.makedirs(os.path.dirname(source_vector_path))
+        pygeoprocessing.shapely_geometry_to_vector(
+            geoms, source_vector_path, SRS_WKT, 'ESRI Shapefile')
         habitats, stressors = hra._parse_criteria_table(
             criteria_table_path, target_composite_csv_path)
         self.assertEqual(habitats, {'eelgrass', 'hardbottom'})
@@ -277,6 +288,38 @@ class HRAUnitTests(unittest.TestCase):
         composite_dataframe = pandas.read_csv(target_composite_csv_path)
         pandas.testing.assert_frame_equal(
             expected_composite_dataframe, composite_dataframe)
+
+    def test_criteria_table_file_not_found(self):
+        """HRA: criteria table - spatial file not found."""
+        from natcap.invest import hra
+
+        criteria_table_path = os.path.join(self.workspace_dir, 'criteria.csv')
+        with open(criteria_table_path, 'w') as criteria_table:
+            criteria_table.write(
+                textwrap.dedent(
+                    """\
+                    HABITAT NAME,eelgrass,,,hardbottom,,,CRITERIA TYPE
+                    HABITAT RESILIENCE ATTRIBUTES,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
+                    recruitment rate,2,2,2,2,2,2,C
+                    connectivity rate,foo\\eelgrass_connectivity.shp,2,2,2,2,2,C
+                    ,,,,,,,
+                    HABITAT STRESSOR OVERLAP PROPERTIES,,,,,,,
+                    oil,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
+                    frequency of disturbance,2,2,3,2,2,3,C
+                    management effectiveness,2,2,1,2,2,1,E
+                    ,,,,,,,
+                    fishing,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
+                    frequency of disturbance,2,2,3,2,2,3,C
+                    management effectiveness,2,2,1,2,2,1,E
+                    """
+                ))
+        target_composite_csv_path = os.path.join(self.workspace_dir,
+                                                 'composite.csv')
+        with self.assertRaises(ValueError) as cm:
+            habitats, stressors = hra._parse_criteria_table(
+                criteria_table_path, target_composite_csv_path)
+        self.assertIn("Criterion could not be opened as a spatial file",
+                      str(cm.exception))
 
     def test_maximum_reclassified_score(self):
         """HRA: check maximum reclassed score given a stack of scores."""
@@ -1114,6 +1157,12 @@ class HRAModelTests(unittest.TestCase):
                 """
             ))
 
+        eelgrass_path = os.path.join(
+            self.workspace_dir, 'eelgrass_connectivity.shp')
+        geoms = [shapely.geometry.Point(ORIGIN).buffer(100)]
+        pygeoprocessing.shapely_geometry_to_vector(
+            geoms, eelgrass_path, SRS_WKT, 'ESRI Shapefile')
+
         info_table_path = os.path.join(self.workspace_dir, 'info.csv')
         with open(info_table_path, 'w') as info_table:
             info_table.write(textwrap.dedent(
@@ -1172,6 +1221,12 @@ class HRAModelTests(unittest.TestCase):
                 management effectiveness,2,2,1,2,2,1,E
                 """
             ))
+
+        eelgrass_path = os.path.join(
+            self.workspace_dir, 'eelgrass_connectivity.shp')
+        geoms = [shapely.geometry.Point(ORIGIN).buffer(100)]
+        pygeoprocessing.shapely_geometry_to_vector(
+            geoms, eelgrass_path, SRS_WKT, 'ESRI Shapefile')
 
         info_table_path = os.path.join(self.workspace_dir, 'info.csv')
         with open(info_table_path, 'w') as info_table:

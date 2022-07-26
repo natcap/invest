@@ -343,13 +343,13 @@ def execute(args):
             # therefore spatial.
             pass
 
-        # If the rating is non-numeric, assume it's a spatial criterion.
+        # If the rating is non-numeric, it should be a spatial criterion.
         # this dict matches the structure of the outputs for habitat/stressor
         # dicts, from _parse_info_table
         name = f'{habitat}-{stressor}-{criterion}'
         spatial_criteria_attrs[name] = {
             'name': name,
-            'path': rating,  # Previously validated to be a GIS type.
+            'path': rating,  # verified gdal file in _parse_criteria_table
         }
 
     # Preprocess habitat, stressor spatial criteria datasets.
@@ -1927,6 +1927,22 @@ def _parse_criteria_table(criteria_table_path, target_composite_csv_path):
                         attribute_value = os.path.join(
                             os.path.dirname(criteria_table_path),
                             attribute_value).replace('\\', '/')
+
+                    spatial_file_ok = True
+                    try:
+                        if (pygeoprocessing.get_gis_type(attribute_value) ==
+                                pygeoprocessing.UNKNOWN_TYPE):
+                            # File is not a spatial file
+                            spatial_file_ok = False
+                    except ValueError:
+                        # file not found
+                        spatial_file_ok = False
+
+                    if not spatial_file_ok:
+                        raise ValueError(
+                            "Criterion could not be opened as a spatial "
+                            f"file {attribute_value}")
+
                 stressor_habitat_data[
                     attribute_name.lower()] = attribute_value
             # Keep the copy() unless you want to all of the 'records' dicts to
