@@ -313,14 +313,14 @@ def execute(args):
         args['criteria_table_path'], composite_criteria_table_path)
 
     # Validate that habitats and stressors match precisely.
-    for label, info_set, criteria_set in [
+    for label, info_table_set, criteria_table_set in [
             ('habitats', set(habitats_info.keys()), criteria_habitats),
             ('stressors', set(stressors_info.keys()), criteria_stressors)]:
-        if info_set != criteria_set:
+        if info_table_set != criteria_table_set:
             missing_from_info_table = ", ".join(
-                sorted(criteria_set - info_set))
+                sorted(criteria_table_set - info_table_set))
             missing_from_criteria_table = ", ".join(
-                sorted(info_set - criteria_set))
+                sorted(info_table_set - criteria_table_set))
             raise ValueError(
                 f"The {label} in the info and criteria tables do not match:\n"
                 f"  Missing from info table: {missing_from_info_table}\n"
