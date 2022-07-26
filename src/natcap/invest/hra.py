@@ -654,6 +654,7 @@ def execute(args):
             kwargs={
                 'raster_path_list': pairwise_risk_paths,
                 'target_nodata': _TARGET_NODATA_FLOAT32,
+                'target_datatype': _TARGET_GDAL_TYPE_FLOAT32,
                 'target_result_path': cumulative_risk_path,
                 'normalize': False,
             },
@@ -719,6 +720,7 @@ def execute(args):
         kwargs={
             'raster_path_list': cumulative_risk_to_habitat_paths,
             'target_nodata': _TARGET_NODATA_FLOAT32,
+            'target_datatype': _TARGET_GDAL_TYPE_FLOAT32,
             'target_result_path': ecosystem_risk_path,
             'normalize': True,
         },
@@ -2296,8 +2298,8 @@ def _maximum_reclassified_score(habitat_mask, *risk_classes):
     return target_matrix
 
 
-def _sum_rasters(raster_path_list, target_nodata, target_result_path,
-                 normalize=False):
+def _sum_rasters(raster_path_list, target_nodata, target_datatype,
+                 target_result_path, normalize=False):
     """Sum a stack of rasters.
 
     Where all rasters agree about nodata, the output raster will also be
@@ -2307,6 +2309,7 @@ def _sum_rasters(raster_path_list, target_nodata, target_result_path,
     Args:
         raster_path_list (list): list of raster paths to sum
         target_nodata (float): desired target nodata value
+        target_datatype (int): The GDAL ``GDT_*`` type of the output raster
         target_result_path (string): path to write out the sum raster
         normalize=False (bool): whether to normalize each pixel value by the
             number of valid pixels in the stack.  Defaults to False.
@@ -2336,7 +2339,7 @@ def _sum_rasters(raster_path_list, target_nodata, target_result_path,
 
     pygeoprocessing.raster_calculator(
         [(path, 1) for path in raster_path_list],
-        _sum_op, target_result_path, gdal.GDT_Float32, target_nodata)
+        _sum_op, target_result_path, target_datatype, target_nodata)
 
 
 def _override_datastack_archive_criteria_table_path(

@@ -846,8 +846,10 @@ class HRAUnitTests(unittest.TestCase):
 
         # Test a straight sum
         target_nodata = hra._TARGET_NODATA_FLOAT32
+        target_datatype = hra._TARGET_GDAL_TYPE_FLOAT32
         target_raster_path = os.path.join(self.workspace_dir, 'sum.tif')
-        hra._sum_rasters(raster_paths, target_nodata, target_raster_path)
+        hra._sum_rasters(
+            raster_paths, target_nodata, target_datatype, target_raster_path)
         expected_array = numpy.array([
             [0.7, 2.0, 6.2]], dtype=numpy.float32)
         numpy.testing.assert_allclose(
@@ -855,8 +857,8 @@ class HRAUnitTests(unittest.TestCase):
             expected_array)
 
         # Test with normalization.
-        hra._sum_rasters(raster_paths, target_nodata, target_raster_path,
-                         normalize=True)
+        hra._sum_rasters(raster_paths, target_nodata, target_datatype,
+                         target_raster_path, normalize=True)
         expected_array = numpy.array([
             [0.35, 1.0, 3.1]], dtype=numpy.float32)
         numpy.testing.assert_allclose(
