@@ -1013,6 +1013,14 @@ def _polygonize(source_raster_path, mask_raster_path,
     gdal.Polygonize(band, mask_band, layer, 0)
     layer.CommitTransaction()
 
+    layer = None
+    vector = None
+    driver = None
+    band = None
+    raster = None
+    mask_band = None
+    mask_raster = None
+
 
 def _create_summary_statistics_file(
         aoi_raster_json_path, habitat_mask_raster_path, pairwise_raster_dicts,
