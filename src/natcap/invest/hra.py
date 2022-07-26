@@ -813,7 +813,7 @@ def execute(args):
         func=_rasterize_aoi_regions,
         kwargs={
             'source_aoi_vector_path': simplified_aoi_path,
-            'habitat_mask_raster': all_habitats_mask_path,
+            'base_raster_path': all_habitats_mask_path,
             'target_raster_dir': aoi_subregions_dir,
             'target_info_json': aoi_subregions_json,
         },
@@ -1252,7 +1252,7 @@ def _create_summary_statistics_file(
     out_dataframe.to_csv(target_summary_csv_path, index=False)
 
 
-def _rasterize_aoi_regions(source_aoi_vector_path, habitat_mask_raster,
+def _rasterize_aoi_regions(source_aoi_vector_path, base_raster_path,
                            target_raster_dir, target_info_json):
     """Rasterize AOI subregions.
 
@@ -1272,9 +1272,8 @@ def _rasterize_aoi_regions(source_aoi_vector_path, habitat_mask_raster,
         source_aoi_vector_path (string): The path to the source AOI vector
             containing AOI geometries and (optionally) a "NAME" column
             (case-insensitive).
-        habitat_mask_path (string): The path to a raster where pixel values of
-            1 indicate the presence of habitats and pixel values of 0 or nodata
-            indicate the absence of habitats.
+        base_raster_path (string): The path to a raster to use as a base
+            raster for rasterization.  Pixel values will not be changed.
         target_raster_dir (string): The path to a directory where rasterized
             AOI subregions should be stored.
         target_info_json (string): The path to where a target info JSON file
@@ -1319,7 +1318,7 @@ def _rasterize_aoi_regions(source_aoi_vector_path, habitat_mask_raster,
         target_raster_path = os.path.join(
             target_raster_dir, 'subregion_set_0.tif')
         pygeoprocessing.new_raster_from_base(
-            habitat_mask_raster, target_raster_path, _TARGET_GDAL_TYPE_BYTE,
+            base_raster_path, target_raster_path, _TARGET_GDAL_TYPE_BYTE,
             [_TARGET_NODATA_BYTE])
         burn_value = 0  # burning onto a nodata mask (nodata=255)
         pygeoprocessing.rasterize(
@@ -1340,7 +1339,7 @@ def _rasterize_aoi_regions(source_aoi_vector_path, habitat_mask_raster,
             target_raster_dir, f'subregion_set_{set_index}.tif')
         subregion_rasters.append(disjoint_set_raster_path)
         pygeoprocessing.new_raster_from_base(
-            habitat_mask_raster, disjoint_set_raster_path, gdal.GDT_Int32,
+            base_raster_path, disjoint_set_raster_path, gdal.GDT_Int32,
             [-1])
         fid_raster = gdal.OpenEx(disjoint_set_raster_path, gdal.GA_Update)
 
