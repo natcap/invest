@@ -11,11 +11,9 @@ channels:
 - nodefaults
 dependencies:
 - python>=3.8
-- gdal>=3.1.2,!=3.3.0,<3.4.1
-- build
-- setuptools_scm
 - pip
 - pip:
   - -r requirements.txt
+  - -r requirements-dev.txt
   - -r requirements-docs.txt
   - -r requirements-gui.txt
