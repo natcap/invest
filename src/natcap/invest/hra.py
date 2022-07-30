@@ -12,6 +12,7 @@ import shutil
 import numpy
 import pandas
 import pygeoprocessing
+import shapely.wkt
 import taskgraph
 from osgeo import gdal
 from osgeo import ogr
@@ -1020,6 +1021,81 @@ def _polygonize(source_raster_path, mask_raster_path,
     raster = None
     mask_band = None
     mask_raster = None
+
+
+def _group_vector_features_by_field(
+        source_vector_path, target_vector_path):
+    """Consolidate geometries in a vector by its 'NAME' field.
+
+    If the source vector does not have a 'NAME' (case insensitive) field, then
+    all features are assumed to be in the same region with the assumed name
+    "Total Region".  The region name will be written to the target vector with
+    a field called "NAME".
+
+    This is effectively the equivalent of an SQL GROUPBY('NAME'), where we're
+    taking the union of all geometries being grouped.
+
+    Args:
+        source_vector_path (string): The path to the source vector.
+        target_vector_path (string): The path to where the new vector should be
+            stored.
+
+    Returns
+        ``None``
+    """
+    source_vector = ogr.Open(source_vector_path)
+    source_layer = source_vector.GetLayer()
+
+    fgb_driver = ogr.GetDriverByName('FlatGeoBuf')
+    target_vector = fgb_driver.CreateDataSource(target_vector_path)
+    target_layer = target_vector.CreateLayer(
+        'features_grouped_by_field', source_layer.GetSpatialRef(),
+        ogr.wkbMultiPolygon)
+    region_name_field = 'NAME'
+    target_layer.CreateField(ogr.FieldDefn(region_name_field, ogr.OFTString))
+
+    source_fieldname = None
+    for field in source_layer.schema:
+        fieldname = field.GetName()
+        if fieldname.lower() == 'NAME':
+            source_fieldname = fieldname
+            break
+
+    names_and_geometries = collections.defaultdict(list)
+    for feature in source_layer:
+        feature_geom = feature.GetGeometryRef()
+        if feature_geom.IsEmpty():
+            LOGGER.warning(
+                f"Geometry in {os.path.basename(source_vector_path)} at "
+                f"feature {feature.GetFID()} is empty; skipping.")
+            continue
+
+        if source_fieldname is None:
+            region_name = 'Total Region'
+        else:
+            region_name = feature.GetName('NAME')
+        names_and_geometries[region_name].append(
+            shapely.wkt.loads(feature_geom.ExportToWkt()))
+
+    target_layer.StartTransaction()
+    for region_name, geometries_in_region in names_and_geometries.items():
+        new_feature = ogr.Feature(target_layer.GetLayerDefn())
+        new_geometry = ogr.CreateGeometryFromWkb(
+            shapely.ops.unary_union(geometries_in_region).wkb)
+        new_feature.SetGeometry(new_geometry)
+        new_feature.SetField(region_name_field, region_name)
+        target_layer.CreateFeature(new_feature)
+    target_layer.CommitTransaction()
+
+    target_layer = None
+    target_vector = None
+    source_layer = None
+    source_vector = None
+
+
+def _create_summary_statistics_table(
+        aoi_vector_path, pairwise_raster_dicts, target_summary_csv_path):
+    pass
 
 
 def _create_summary_statistics_file(
