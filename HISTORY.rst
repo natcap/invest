@@ -46,6 +46,9 @@ Unreleased Changes
     * Fixed a bug where using unaligned rasters in the preprocessor would cause
       an error.  The preprocessor will now correctly align input landcover
       rasters and determine transitions from the aligned rasters.
+* Coastal Vulnerability
+    * Fixed a bug where redundant vertices in the landmass polygon could
+      raise an error during shore point creation.
 * NDR
     * Added parameters to the sample data to support nitrogen calculations.
 * SDR
