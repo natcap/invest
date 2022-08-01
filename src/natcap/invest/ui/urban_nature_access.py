@@ -1,8 +1,8 @@
 # coding=UTF-8
 import functools
 
-from natcap.invest import MODEL_METADATA
 from natcap.invest import urban_nature_access
+from natcap.invest.model_metadata import MODEL_METADATA
 from natcap.invest.ui import cbc
 from natcap.invest.ui import inputs
 from natcap.invest.ui import model
