@@ -1648,7 +1648,7 @@ def _simplify(source_vector_path, tolerance, target_vector_path,
         else:
             # If the simplification didn't work for whatever reason, fall back
             # to the original geometry.
-            LOGGER.warning(
+            LOGGER.debug(
                 f"Simplification of {os.path.basename(source_vector_path)} "
                 f"feature FID:{source_feature.GetFID()} failed; falling back "
                 "to original geometry")
