@@ -1332,7 +1332,7 @@ def _rasterize_aoi_regions(source_aoi_vector_path, base_raster_path,
         burn_value = 0  # burning onto a nodata mask (nodata=255)
         pygeoprocessing.rasterize(
             source_aoi_vector_path, target_raster_path,
-            burn_values=[0], option_list=['ALL_TOUCHED=TRUE'])
+            burn_values=[0], option_list=['ALL_TOUCHED=FALSE'])
         _write_info_json(
             subregion_rasters_list=[target_raster_path],
             subregion_ids_to_names={burn_value: 'Total Region'})
