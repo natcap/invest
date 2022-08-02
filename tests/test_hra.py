@@ -865,6 +865,121 @@ class HRAUnitTests(unittest.TestCase):
             pygeoprocessing.raster_to_numpy_array(target_raster_path),
             expected_array)
 
+    def test_datastack_criteria_table_override(self):
+        """HRA: verify we store all data referenced in the criteria table."""
+        from natcap.invest import hra
+
+        criteria_table_path = os.path.join(
+            self.workspace_dir, 'criteria_table.csv')
+        with open(criteria_table_path, 'w') as criteria_table:
+            criteria_table.write(textwrap.dedent(
+                """\
+                HABITAT NAME,eelgrass,,,hardbottom,,,CRITERIA TYPE
+                HABITAT RESILIENCE ATTRIBUTES,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
+                recruitment rate,2,2,2,2,2,2,C
+                connectivity rate,eelgrass_connectivity.shp,2,2,2,2,2,C
+                ,,,,,,,
+                HABITAT STRESSOR OVERLAP PROPERTIES,,,,,,,
+                oil,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
+                frequency of disturbance,2,2,3,2,2,3,C
+                management effectiveness,2,2,1,my_data/mgmt1.tif,2,1,E
+                ,,,,,,,
+                fishing,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
+                frequency of disturbance,filenotfound,2,3,2,2,3,C
+                management effectiveness,my_data/mgmt1.tif,2,1,2,2,1,E
+                ,,,,,,,
+                transportation,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
+                frequency of disturbance,2,2,3,2,2,3,C
+                management effectiveness,2,2,1,my_data/mgmt2.tif,2,1,E
+                """
+            ))
+
+        eelgrass_path = os.path.join(
+            self.workspace_dir, 'eelgrass_connectivity.shp')
+        geoms = [shapely.geometry.Point(ORIGIN).buffer(100)]
+        pygeoprocessing.shapely_geometry_to_vector(
+            geoms, eelgrass_path, SRS_WKT, 'ESRI Shapefile')
+
+        mgmt_path_1 = os.path.join(
+            self.workspace_dir, 'my_data', 'mgmt1.tif')
+        mgmt_path_2 = os.path.join(
+            self.workspace_dir, 'my_data', 'mgmt2.tif')
+        for mgmt_path in (mgmt_path_1, mgmt_path_2):
+            os.makedirs(os.path.dirname(mgmt_path), exist_ok=True)
+            array = numpy.ones((20, 20), dtype=numpy.uint8)
+            pygeoprocessing.numpy_array_to_raster(
+                array, 255, (10, -10), (ORIGIN[0] - 50, ORIGIN[1] - 50),
+                SRS_WKT, mgmt_path)
+
+        data_dir = os.path.join(self.workspace_dir, 'datastack_data')
+        known_files = {}
+
+        new_csv_path = hra._override_datastack_archive_criteria_table_path(
+            criteria_table_path, data_dir, known_files)
+        self.assertEqual(
+            new_csv_path, os.path.join(data_dir, 'criteria_table_path.csv'))
+        output_criteria_data_dir = os.path.join(
+            data_dir, 'criteria_table_path_data')
+        self.maxDiff = None
+
+        def _rewrite(path):
+            return path.replace('\\', '/')
+
+        self.assertEqual(
+            known_files, {
+                _rewrite(eelgrass_path): _rewrite(os.path.join(
+                    output_criteria_data_dir, 'eelgrass_connectivity',
+                    'eelgrass_connectivity.shp')),
+                _rewrite(mgmt_path_1): _rewrite(os.path.join(
+                    output_criteria_data_dir, 'mgmt1', 'mgmt1.tif')),
+                _rewrite(mgmt_path_2): _rewrite(os.path.join(
+                    output_criteria_data_dir, 'mgmt2', 'mgmt2.tif')),
+            }
+        )
+        for copied_filepath in known_files.values():
+            self.assertEqual(True, os.path.exists(copied_filepath))
+            try:
+                spatial_file = gdal.OpenEx(copied_filepath)
+                if spatial_file is None:
+                    self.fail('Filepath could not be opened by GDAL: '
+                              f'{copied_filepath}')
+            finally:
+                spatial_file = None
+
+    def test_none_decay_distance(self):
+        """HRA: Test 0 buffer distance."""
+        from natcap.invest import hra
+        nodata = -1
+        shape = (20, 20)
+        stressor_array = numpy.ones(shape, dtype=numpy.uint8)
+        stressor_path = os.path.join(self.workspace_dir, 'stressor.tif')
+        pygeoprocessing.numpy_array_to_raster(
+            stressor_array, nodata, (10, -10), ORIGIN, SRS_WKT, stressor_path)
+
+        target_path = os.path.join(self.workspace_dir, 'decayed.tif')
+        hra._calculate_decayed_distance(stressor_path, 'none', 0,  target_path)
+
+        numpy.testing.assert_allclose(
+            pygeoprocessing.raster_to_numpy_array(target_path),
+            stressor_array.astype(numpy.float32))
+
+    def test_exception_invalid_decay(self):
+        """HRA: Test invalid decay type."""
+        from natcap.invest import hra
+        nodata = -1
+        shape = (20, 20)
+        stressor_array = numpy.ones(shape, dtype=numpy.uint8)
+        stressor_path = os.path.join(self.workspace_dir, 'stressor.tif')
+        pygeoprocessing.numpy_array_to_raster(
+            stressor_array, nodata, (10, -10), ORIGIN, SRS_WKT, stressor_path)
+
+        target_path = os.path.join(self.workspace_dir, 'decayed.tif')
+        with self.assertRaises(AssertionError) as cm:
+            hra._calculate_decayed_distance(stressor_path, 'bad decay type', 0,
+                                            target_path)
+        self.assertIn('Invalid decay type bad decay type provided',
+                      str(cm.exception))
+
 
 class HRAModelTests(unittest.TestCase):
     def setUp(self):
@@ -1054,86 +1169,6 @@ class HRAModelTests(unittest.TestCase):
                 pygeoprocessing.geoprocessing.raster_to_numpy_array(
                     rasterized_path))
 
-    def test_datastack_criteria_table_override(self):
-        """HRA: verify we store all data referenced in the criteria table."""
-        from natcap.invest import hra
-
-        criteria_table_path = os.path.join(
-            self.workspace_dir, 'criteria_table.csv')
-        with open(criteria_table_path, 'w') as criteria_table:
-            criteria_table.write(textwrap.dedent(
-                """\
-                HABITAT NAME,eelgrass,,,hardbottom,,,CRITERIA TYPE
-                HABITAT RESILIENCE ATTRIBUTES,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
-                recruitment rate,2,2,2,2,2,2,C
-                connectivity rate,eelgrass_connectivity.shp,2,2,2,2,2,C
-                ,,,,,,,
-                HABITAT STRESSOR OVERLAP PROPERTIES,,,,,,,
-                oil,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
-                frequency of disturbance,2,2,3,2,2,3,C
-                management effectiveness,2,2,1,my_data/mgmt1.tif,2,1,E
-                ,,,,,,,
-                fishing,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
-                frequency of disturbance,filenotfound,2,3,2,2,3,C
-                management effectiveness,my_data/mgmt1.tif,2,1,2,2,1,E
-                ,,,,,,,
-                transportation,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
-                frequency of disturbance,2,2,3,2,2,3,C
-                management effectiveness,2,2,1,my_data/mgmt2.tif,2,1,E
-                """
-            ))
-
-        eelgrass_path = os.path.join(
-            self.workspace_dir, 'eelgrass_connectivity.shp')
-        geoms = [shapely.geometry.Point(ORIGIN).buffer(100)]
-        pygeoprocessing.shapely_geometry_to_vector(
-            geoms, eelgrass_path, SRS_WKT, 'ESRI Shapefile')
-
-        mgmt_path_1 = os.path.join(
-            self.workspace_dir, 'my_data', 'mgmt1.tif')
-        mgmt_path_2 = os.path.join(
-            self.workspace_dir, 'my_data', 'mgmt2.tif')
-        for mgmt_path in (mgmt_path_1, mgmt_path_2):
-            os.makedirs(os.path.dirname(mgmt_path), exist_ok=True)
-            array = numpy.ones((20, 20), dtype=numpy.uint8)
-            pygeoprocessing.numpy_array_to_raster(
-                array, 255, (10, -10), (ORIGIN[0] - 50, ORIGIN[1] - 50),
-                SRS_WKT, mgmt_path)
-
-        data_dir = os.path.join(self.workspace_dir, 'datastack_data')
-        known_files = {}
-
-        new_csv_path = hra._override_datastack_archive_criteria_table_path(
-            criteria_table_path, data_dir, known_files)
-        self.assertEqual(
-            new_csv_path, os.path.join(data_dir, 'criteria_table_path.csv'))
-        output_criteria_data_dir = os.path.join(
-            data_dir, 'criteria_table_path_data')
-        self.maxDiff = None
-
-        def _rewrite(path):
-            return path.replace('\\', '/')
-
-        self.assertEqual(
-            known_files, {
-                _rewrite(eelgrass_path): _rewrite(os.path.join(
-                    output_criteria_data_dir, 'eelgrass_connectivity',
-                    'eelgrass_connectivity.shp')),
-                _rewrite(mgmt_path_1): _rewrite(os.path.join(
-                    output_criteria_data_dir, 'mgmt1', 'mgmt1.tif')),
-                _rewrite(mgmt_path_2): _rewrite(os.path.join(
-                    output_criteria_data_dir, 'mgmt2', 'mgmt2.tif')),
-            }
-        )
-        for copied_filepath in known_files.values():
-            self.assertEqual(True, os.path.exists(copied_filepath))
-            try:
-                spatial_file = gdal.OpenEx(copied_filepath)
-                if spatial_file is None:
-                    self.fail('Filepath could not be opened by GDAL: '
-                              f'{copied_filepath}')
-            finally:
-                spatial_file = None
 
     def test_model_habitat_mismatch(self):
         """HRA: check errors when habitats are mismatched."""
@@ -1271,38 +1306,4 @@ class HRAModelTests(unittest.TestCase):
             hra.execute(args)
 
         self.assertIn("must be either 'Multiplicative' or 'Euclidean'",
-                      str(cm.exception))
-
-    def test_none_decay_distance(self):
-        """HRA: Test 0 buffer distance."""
-        from natcap.invest import hra
-        nodata = -1
-        shape = (20, 20)
-        stressor_array = numpy.ones(shape, dtype=numpy.uint8)
-        stressor_path = os.path.join(self.workspace_dir, 'stressor.tif')
-        pygeoprocessing.numpy_array_to_raster(
-            stressor_array, nodata, (10, -10), ORIGIN, SRS_WKT, stressor_path)
-
-        target_path = os.path.join(self.workspace_dir, 'decayed.tif')
-        hra._calculate_decayed_distance(stressor_path, 'none', 0,  target_path)
-
-        numpy.testing.assert_allclose(
-            pygeoprocessing.raster_to_numpy_array(target_path),
-            stressor_array.astype(numpy.float32))
-
-    def test_exception_invalid_decay(self):
-        """HRA: Test invalid decay type."""
-        from natcap.invest import hra
-        nodata = -1
-        shape = (20, 20)
-        stressor_array = numpy.ones(shape, dtype=numpy.uint8)
-        stressor_path = os.path.join(self.workspace_dir, 'stressor.tif')
-        pygeoprocessing.numpy_array_to_raster(
-            stressor_array, nodata, (10, -10), ORIGIN, SRS_WKT, stressor_path)
-
-        target_path = os.path.join(self.workspace_dir, 'decayed.tif')
-        with self.assertRaises(AssertionError) as cm:
-            hra._calculate_decayed_distance(stressor_path, 'bad decay type', 0,
-                                            target_path)
-        self.assertIn('Invalid decay type bad decay type provided',
                       str(cm.exception))
