@@ -1407,6 +1407,10 @@ def _align(raster_path_map, vector_path_map, target_pixel_size,
     matches the union of the bounding boxes of all spatial inputs to this
     function, and with the target pixel size and SRS.
 
+    To be safe, this function assumes that the source SRS of any dataset might
+    be different from the target SRS, and so all source bounding boxes are
+    transformed into the target SRS before the target bounding box is computed.
+
     Args:
         raster_path_map (dict): A dict mapping source raster paths to aligned
             raster paths.  This dict may be empty.
@@ -1423,8 +1427,7 @@ def _align(raster_path_map, vector_path_map, target_pixel_size,
         ``None``
     """
     # Step 1: Create a bounding box of the union of all input spatial rasters
-    # and vectors.  To be safe, we're assuming that the source SRS of a dataset
-    # might be different from the target SRS and this is taken into account.
+    # and vectors.
     bounding_box_list = []
     source_raster_paths = []
     aligned_raster_paths = []
