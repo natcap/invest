@@ -1176,9 +1176,9 @@ def _create_summary_statistics_file(
                     stats['R_N_MEDIUM'] += numpy.count_nonzero(
                         classes_block == 2)
 
-                    # Old HRA included 0-value pixels in  the R_%_LOW bucket so
+                    # Old HRA included 0-value pixels in the R_%_LOW bucket so
                     # we do here as well.
-                    stats['R_N_LOW'] += numpy.count_nonzero(classes_block <= 1)
+                    stats['R_N_LOW'] += numpy.sum(classes_block <= 1)
                     stats['R_N_ANY'] += classes_block.size
                     subregion_stats[subregion_id] = stats
 
