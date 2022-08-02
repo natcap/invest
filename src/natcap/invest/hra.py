@@ -1397,8 +1397,9 @@ def _align(raster_path_map, vector_path_map, target_pixel_size,
     precisely aligned and rasterized, while minimizing sampling error in
     rasterization.
 
-    Rasters passed in to this function will be aligned and resampled using
-    nearest-neighbor interpolation.
+    Rasters passed in to this function will be aligned and resampled using a
+    datatype-appropriate interpolation function: nearest-neighbor for integer
+    rasters, bilinear for floating-point.
 
     Vectors passed in to this function will be rasterized onto new rasters that
     align with the rest of the stack.
