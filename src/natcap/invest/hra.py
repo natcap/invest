@@ -1608,6 +1608,8 @@ def _simplify(source_vector_path, tolerance, target_vector_path,
     Returns:
         ``None``.
     """
+    LOGGER.info(
+        f'Simplifying vector with tolerance {tolerance}: {source_vector_path}')
     if preserve_columns is None:
         preserve_columns = []
     preserve_columns = set(name.lower() for name in preserve_columns)
