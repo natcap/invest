@@ -46,6 +46,9 @@ Unreleased Changes
       rasters and determine transitions from the aligned rasters.
 * NDR
     * Added parameters to the sample data to support nitrogen calculations.
+    * Effective retention calculations have been reworked so that the source
+      code more closely matches the mathematical definition in the NDR User's
+      Guide.  There should be no difference in outputs.
 
 3.11.0 (2022-05-24)
 -------------------
