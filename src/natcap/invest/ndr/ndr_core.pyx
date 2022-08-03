@@ -529,18 +529,24 @@ def ndr_eff_calculation(
 
                     neighbor_effective_retention = (
                         effective_retention_raster.get(ds_col, ds_row))
-                    if neighbor_effective_retention >= retention_eff_lulc:
-                        working_retention_eff += (
-                            neighbor_effective_retention) * outflow_weight
-                    else:
+
+                    # Case 1: downstream neighbor is a stream pixel
+                    if neighbor_effective_retention == 0:
                         intermediate_retention = (
-                            (neighbor_effective_retention *
-                             current_step_factor) +
-                            retention_eff_lulc * (1 - current_step_factor))
-                        if intermediate_retention > retention_eff_lulc:
-                            intermediate_retention = retention_eff_lulc
-                        working_retention_eff += (
-                            intermediate_retention * outflow_weight)
+                            retention_eff_lulc * ( 1 - current_step_factor))
+
+                    # Case 2: the current LULC's retention exceeds the neighbor's retention.
+                    elif retention_eff_lulc > neighbor_effective_retention:
+                        intermediate_retention = (
+                            (neighbor_effective_retention * current_step_factor) +
+                            (retention_eff_lulc * (1 - current_step_factor)))
+
+                    # Case 3: the other 2 cases have not been hit.
+                    else:
+                        intermediate_retention = neighbor_effective_retention
+
+                    working_retention_eff += intermediate_retention * outflow_weight
+
                 if outflow_weight_sum > 0:
                     working_retention_eff /= float(outflow_weight_sum)
                     effective_retention_raster.set(
