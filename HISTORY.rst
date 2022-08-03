@@ -37,6 +37,8 @@
 Unreleased Changes
 ------------------
 * General
+    * Update python packaging settings to exclude a few config files and the
+      workbench from source distributions and wheels
 * Workbench
     * Fixed a bug where some model runs would not generate a new item
       in the list of recent runs.
@@ -44,11 +46,17 @@ Unreleased Changes
     * Fixed a bug where using unaligned rasters in the preprocessor would cause
       an error.  The preprocessor will now correctly align input landcover
       rasters and determine transitions from the aligned rasters.
+* Coastal Vulnerability
+    * Fixed a bug where redundant vertices in the landmass polygon could
+      raise an error during shore point creation.
 * NDR
     * Added parameters to the sample data to support nitrogen calculations.
     * Effective retention calculations have been reworked so that the source
       code more closely matches the mathematical definition in the NDR User's
       Guide.  There should be no difference in outputs.
+* Urban Flood Risk
+    * Validation of the curve number table will now catch missing ``CN_*``
+      columns and warn the user about the missing column.
 
 3.11.0 (2022-05-24)
 -------------------

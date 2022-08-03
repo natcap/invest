@@ -10,7 +10,7 @@ GIT_TEST_DATA_REPO_REV      := ac7023d684478485fea89c68f8f4154163541e1d
 
 GIT_UG_REPO                 := https://github.com/natcap/invest.users-guide
 GIT_UG_REPO_PATH            := doc/users-guide
-GIT_UG_REPO_REV             := eef0643feea534db130198e81a69a0590c1a8480
+GIT_UG_REPO_REV             := 2dface5230ec06128450b5ca59d334fb57c14352
 
 ENV = "./env"
 ifeq ($(OS),Windows_NT)
@@ -214,16 +214,16 @@ $(GIT_SAMPLE_DATA_REPO_PATH): | $(DATA_DIR)
 	-git clone $(GIT_SAMPLE_DATA_REPO) $(GIT_SAMPLE_DATA_REPO_PATH)
 	git -C $(GIT_SAMPLE_DATA_REPO_PATH) fetch
 	git -C $(GIT_SAMPLE_DATA_REPO_PATH) lfs install
-	git -C $(GIT_SAMPLE_DATA_REPO_PATH) lfs fetch
 	git -C $(GIT_SAMPLE_DATA_REPO_PATH) checkout $(GIT_SAMPLE_DATA_REPO_REV)
+	git -C $(GIT_SAMPLE_DATA_REPO_PATH) lfs fetch
 	git -C $(GIT_SAMPLE_DATA_REPO_PATH) lfs checkout
 
 $(GIT_TEST_DATA_REPO_PATH): | $(DATA_DIR)
 	-git clone $(GIT_TEST_DATA_REPO) $(GIT_TEST_DATA_REPO_PATH)
 	git -C $(GIT_TEST_DATA_REPO_PATH) fetch
 	git -C $(GIT_TEST_DATA_REPO_PATH) lfs install
-	git -C $(GIT_TEST_DATA_REPO_PATH) lfs fetch
 	git -C $(GIT_TEST_DATA_REPO_PATH) checkout $(GIT_TEST_DATA_REPO_REV)
+	git -C $(GIT_TEST_DATA_REPO_PATH) lfs fetch
 	git -C $(GIT_TEST_DATA_REPO_PATH) lfs checkout
 
 fetch: $(GIT_UG_REPO_PATH) $(GIT_SAMPLE_DATA_REPO_PATH) $(GIT_TEST_DATA_REPO_PATH)
