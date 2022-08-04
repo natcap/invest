@@ -51,6 +51,9 @@ Unreleased Changes
       raise an error during shore point creation.
 * NDR
     * Added parameters to the sample data to support nitrogen calculations.
+    * Effective retention calculations have been reworked so that the source
+      code more closely matches the mathematical definition in the NDR User's
+      Guide.  There should be no difference in outputs.
 * SDR
     * We have made a significant update to the SDR model's outputs described
       here: https://github.com/natcap/peps/blob/main/pep-0010.md.

@@ -38,6 +38,8 @@ cdef double PI = 3.141592653589793238462643383279502884
 cdef int BLOCK_BITS = 8
 # Number of raster blocks to hold in memory at once per Managed Raster
 cdef int MANAGED_RASTER_N_BLOCKS = 2**6
+# Within a stream, the effective retention is 0
+cdef int STREAM_EFFECTIVE_RETENTION = 0
 
 cdef int is_close(double x, double y):
     return abs(x-y) <= (1e-8+1e-05*abs(y))
@@ -495,7 +497,7 @@ def ndr_eff_calculation(
                     global_col, global_row)
             if stream_raster.get(global_col, global_row) == 1:
                 # if it's a stream effective retention is 0.
-                effective_retention_raster.set(global_col, global_row, 0)
+                effective_retention_raster.set(global_col, global_row, STREAM_EFFECTIVE_RETENTION)
             elif (is_close(crit_len, crit_len_nodata) or
                   is_close(retention_eff_lulc, retention_eff_nodata) or
                   flow_dir == 0):
@@ -529,18 +531,24 @@ def ndr_eff_calculation(
 
                     neighbor_effective_retention = (
                         effective_retention_raster.get(ds_col, ds_row))
-                    if neighbor_effective_retention >= retention_eff_lulc:
-                        working_retention_eff += (
-                            neighbor_effective_retention) * outflow_weight
-                    else:
+
+                    # Case 1: downslope neighbor is a stream pixel
+                    if neighbor_effective_retention == STREAM_EFFECTIVE_RETENTION:
                         intermediate_retention = (
-                            (neighbor_effective_retention *
-                             current_step_factor) +
-                            retention_eff_lulc * (1 - current_step_factor))
-                        if intermediate_retention > retention_eff_lulc:
-                            intermediate_retention = retention_eff_lulc
-                        working_retention_eff += (
-                            intermediate_retention * outflow_weight)
+                            retention_eff_lulc * ( 1 - current_step_factor))
+
+                    # Case 2: the current LULC's retention exceeds the neighbor's retention.
+                    elif retention_eff_lulc > neighbor_effective_retention:
+                        intermediate_retention = (
+                            (neighbor_effective_retention * current_step_factor) +
+                            (retention_eff_lulc * (1 - current_step_factor)))
+
+                    # Case 3: the other 2 cases have not been hit.
+                    else:
+                        intermediate_retention = neighbor_effective_retention
+
+                    working_retention_eff += intermediate_retention * outflow_weight
+
                 if outflow_weight_sum > 0:
                     working_retention_eff /= float(outflow_weight_sum)
                     effective_retention_raster.set(
