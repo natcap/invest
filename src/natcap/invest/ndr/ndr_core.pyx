@@ -530,7 +530,7 @@ def ndr_eff_calculation(
                     neighbor_effective_retention = (
                         effective_retention_raster.get(ds_col, ds_row))
 
-                    # Case 1: downstream neighbor is a stream pixel
+                    # Case 1: downslope neighbor is a stream pixel
                     if neighbor_effective_retention == 0:
                         intermediate_retention = (
                             retention_eff_lulc * ( 1 - current_step_factor))
