@@ -2,11 +2,11 @@
 DATA_DIR := data
 GIT_SAMPLE_DATA_REPO        := https://bitbucket.org/natcap/invest-sample-data.git
 GIT_SAMPLE_DATA_REPO_PATH   := $(DATA_DIR)/invest-sample-data
-GIT_SAMPLE_DATA_REPO_REV    := a9c2ace13789ac888f928d6ca9aaefb8782b0d5c
+GIT_SAMPLE_DATA_REPO_REV    := bca86363ef3b478d314f2e8828d9c9007734bce8
 
 GIT_TEST_DATA_REPO          := https://bitbucket.org/natcap/invest-test-data.git
 GIT_TEST_DATA_REPO_PATH     := $(DATA_DIR)/invest-test-data
-GIT_TEST_DATA_REPO_REV      := ac7023d684478485fea89c68f8f4154163541e1d
+GIT_TEST_DATA_REPO_REV      := 0cf8f32bce1d3997bea84a60cfc18b303a8f7a1e
 
 GIT_UG_REPO                 := https://github.com/natcap/invest.users-guide
 GIT_UG_REPO_PATH            := doc/users-guide
@@ -246,7 +246,7 @@ env:
 # of pip don't think CWD is a valid package.
 install: $(DIST_DIR)/natcap.invest%.whl
 	-$(RMDIR) natcap.invest.egg-info
-	$(PIP) install --isolated --upgrade --no-index --only-binary natcap.invest --find-links=dist "natcap.invest==$(VERSION)"
+	$(PIP) install --no-deps --isolated --upgrade --no-index --only-binary natcap.invest --find-links=dist "natcap.invest==$(VERSION)"
 
 
 # Build python packages and put them in dist/

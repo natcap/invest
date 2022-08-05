@@ -1,22 +1,21 @@
 """InVEST specific code utils."""
 import codecs
-import math
-import os
 import contextlib
 import logging
+import math
+import os
 import re
-import tempfile
 import shutil
-from datetime import datetime
+import tempfile
 import time
+from datetime import datetime
 
-import pandas
 import numpy
-from shapely.wkt import loads
+import pandas
+import pygeoprocessing
 from osgeo import gdal
 from osgeo import osr
-import pygeoprocessing
-
+from shapely.wkt import loads
 
 LOGGER = logging.getLogger(__name__)
 _OSGEO_LOGGER = logging.getLogger('osgeo')
@@ -933,7 +932,7 @@ def reclassify_raster(
 def array_equals_nodata(array, nodata):
     """Check for the presence of ``nodata`` values in ``array``.
 
-    The comparison supports ``numpy.nan`` nodata values.
+    The comparison supports ``numpy.nan`` and unset (``None``) nodata values.
 
     Args:
         array (numpy array): the array to mask for nodata values.
@@ -943,6 +942,10 @@ def array_equals_nodata(array, nodata):
         A boolean numpy array with values of 1 where ``array`` is equal to
         ``nodata`` and 0 otherwise.
     """
+    # If nodata is undefined, nothing matches nodata.
+    if nodata is None:
+        return numpy.zeros(array.shape, dtype=bool)
+
     # comparing an integer array against numpy.nan works correctly and is
     # faster than using numpy.isclose().
     if numpy.issubdtype(array.dtype, numpy.integer):

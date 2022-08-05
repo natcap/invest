@@ -46,6 +46,17 @@ Unreleased Changes
     * Fixed a bug where using unaligned rasters in the preprocessor would cause
       an error.  The preprocessor will now correctly align input landcover
       rasters and determine transitions from the aligned rasters.
+* HRA
+    * Fixed an issue with risk calculations where risk values would be much
+      lower than they should be.  Risk values are now correctly calculated.
+    * Fixed an issue with risk reclassifications where most pixels would end up
+      classified as medium risk.
+    * Added an input field to the model to indicate the number of overlapping
+      stressors to use in risk reclassification calculations.  This input
+      affects the numerical boundaries between high, medium and low risk
+      classifications.
+    * Various improvements to the model have resulted in a modest (~33%)
+      speedup in runtime.
 * Coastal Vulnerability
     * Fixed a bug where redundant vertices in the landmass polygon could
       raise an error during shore point creation.
