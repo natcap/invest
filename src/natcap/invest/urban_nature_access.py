@@ -13,6 +13,8 @@ import taskgraph
 from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
+import shapely.ops
+import shapely.wkb
 
 from . import gettext
 from . import spec_utils
@@ -556,6 +558,7 @@ def execute(args):
 
     # only do split population if there are population group fields in the
     # admin units vector
+    aoi_reprojection_task.join()
     split_population_fields = list(
         filter(lambda x: re.match(POP_FIELD_REGEX, x),
                validation.load_fields_from_vector(
@@ -565,6 +568,13 @@ def execute(args):
             "Split population groups found: "
             f"{', '.join(split_population_fields)}, starting split "
             "population optional module.")
+
+        if _geometries_overlap(file_registry['reprojected_aois']):
+            LOGGER.warning(
+                "Some administrative boundaries overlap, which will affect "
+                "the accuracy of supply rasters per population group. "
+                "Summary statistics in "
+                f"{os.path.basename(file_registry['aois'])} are unaffected.")
 
         aois_rasterization_task = graph.add_task(
             _rasterize_aois,
@@ -634,6 +644,36 @@ def execute(args):
     graph.close()
     graph.join()
     LOGGER.info('Finished Urban Nature Access Model')
+
+
+def _geometries_overlap(vector_path):
+    """Check if the geometries of the vector's first layer overlap.
+
+    Args:
+        vector_path (string): The path to a GDAL vector.
+
+    Returns:
+        overlaps (bool): Whether there's numerically significant overlap
+            between polygons in the first layer.
+
+    """
+    vector = gdal.OpenEx(vector_path)
+    layer = vector.GetLayer()
+    area_sum = 0;
+    geometries = []
+    for feature in layer:
+        ogr_geom = feature.GetGeometryRef()
+        area_sum += ogr_geom.Area()
+        shapely_geom = shapely.wkb.loads(bytes(ogr_geom.ExportToWkb()))
+        geometries.append(shapely_geom)
+
+    layer = None
+    vector = None
+
+    union_area = shapely.ops.unary_union(geometries).area
+    if math.isclose(union_area, area_sum):
+        return False
+    return True
 
 
 def _reproject_and_identify(base_vector_path, target_projection_wkt,
