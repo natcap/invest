@@ -356,7 +356,7 @@ const UI_SPEC = {
     order: [
       ['workspace_dir', 'results_suffix'],
       ['lulc_raster_path', 'lulc_attribute_table'],
-      ['population_raster_path', 'admin_unit_vector_path', 'greenspace_demand',
+      ['population_raster_path', 'aoi_vector_path', 'greenspace_demand',
        'decay_function'],
     ],
   },
