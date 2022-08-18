@@ -1,16 +1,17 @@
 # coding=UTF-8
 """Tests for Urban Flood Risk Mitigation Model."""
-import unittest
-import tempfile
-import shutil
 import os
+import shutil
+import tempfile
+import unittest
 
-from osgeo import gdal
-from osgeo import osr
-from osgeo import ogr
 import numpy
+import pandas
 import pygeoprocessing
 import shapely.geometry
+from osgeo import gdal
+from osgeo import ogr
+from osgeo import osr
 
 
 class UFRMTests(unittest.TestCase):
@@ -284,7 +285,8 @@ class UFRMTests(unittest.TestCase):
 
     def test_validate(self):
         """UFRM: test validate function."""
-        from natcap.invest import urban_flood_risk_mitigation, validation
+        from natcap.invest import urban_flood_risk_mitigation
+        from natcap.invest import validation
         args = self._make_args()
         validation_warnings = urban_flood_risk_mitigation.validate(args)
         self.assertEqual(len(validation_warnings), 0)
@@ -324,3 +326,16 @@ class UFRMTests(unittest.TestCase):
             result,
             [(['infrastructure_damage_loss_table_path'],
                 validation.MESSAGES['MISSING_KEY'])])
+
+        args = self._make_args()
+        cn_table = pandas.read_csv(args['curve_number_table_path'])
+        cn_table = cn_table.drop(columns=[f'CN_{code}' for code in 'ABCD'])
+        new_cn_path = os.path.join(self.workspace_dir, 'new_cn_table.csv')
+        cn_table.to_csv(new_cn_path, index=False)
+        args['curve_number_table_path'] = new_cn_path
+        result = urban_flood_risk_mitigation.validate(args)
+        self.assertEqual(
+            result,
+            [(['curve_number_table_path'],
+              validation.MESSAGES['MATCHED_NO_HEADERS'].format(
+                  header='column', header_name='cn_a'))])

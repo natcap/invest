@@ -1024,7 +1024,7 @@ def reclassify_raster(
 def array_equals_nodata(array, nodata):
     """Check for the presence of ``nodata`` values in ``array``.
 
-    The comparison supports ``numpy.nan`` nodata values.
+    The comparison supports ``numpy.nan`` and unset (``None``) nodata values.
 
     Args:
         array (numpy array): the array to mask for nodata values.
@@ -1034,6 +1034,10 @@ def array_equals_nodata(array, nodata):
         A boolean numpy array with values of 1 where ``array`` is equal to
         ``nodata`` and 0 otherwise.
     """
+    # If nodata is undefined, nothing matches nodata.
+    if nodata is None:
+        return numpy.zeros(array.shape, dtype=bool)
+
     # comparing an integer array against numpy.nan works correctly and is
     # faster than using numpy.isclose().
     if numpy.issubdtype(array.dtype, numpy.integer):

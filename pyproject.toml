@@ -1,3 +1,40 @@
+[project]
+name = "natcap.invest"
+description = "InVEST Ecosystem Service models"
+readme = "README_PYTHON.rst"
+requires-python = ">=3.8,<3.11"
+license = {file = "LICENSE.txt"}
+maintainers = [
+    {name = "Natural Capital Project Software Team"}
+]
+keywords = ["gis", "invest", "ecosystem services"]
+classifiers = [
+    "Intended Audience :: Developers",
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Science/Research",
+    "Natural Language :: English",
+    "Operating System :: MacOS :: MacOS X",
+    "Operating System :: Microsoft",
+    "Operating System :: POSIX",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Cython",
+    "License :: OSI Approved :: BSD License",
+    "Topic :: Scientific/Engineering :: GIS"
+]
+# the version is provided dynamically by setuptools_scm
+# `dependencies` and `optional-dependencies` are provided by setuptools
+# using the corresponding setup args `install_requires` and `extras_require`
+dynamic = ["version", "dependencies", "optional-dependencies"]
+
+[project.urls]
+homepage = "http://github.com/natcap/invest"
+
+[project.scripts]
+invest = "natcap.invest.cli:main"
+
 [build-system]
 # these are the minimum packages needed in order to execute the natcap.invest
 # build.
@@ -37,3 +74,6 @@ force_single_line = true
 # LOCALFOLDER (relative imports, e.g. "from . import validation) section.
 sections = 'FUTURE,STDLIB,THIRDPARTY,FIRSTPARTY,LOCALFOLDER'
 no_lines_before = 'LOCALFOLDER'
+
+[tool.setuptools.packages.find]
+where = ["src"]

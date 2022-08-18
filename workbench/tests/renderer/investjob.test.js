@@ -22,45 +22,6 @@ describe('InvestJob', () => {
       .toThrow(errorMessage);
   });
 
-  test('workspaceHash collisions only when expected', async () => {
-    const modelName = 'foo';
-    const job1 = new InvestJob({
-      modelRunName: modelName,
-      modelHumanName: 'Foo',
-      argsValues: baseArgsValues,
-    });
-    InvestJob.saveJob(job1);
-    const job2 = new InvestJob({
-      modelRunName: modelName,
-      modelHumanName: 'Foo',
-      argsValues: baseArgsValues,
-    });
-    let storedJobs = await InvestJob.saveJob(job2);
-    // Identical workspace, suffix, and modelRunName mean there should
-    // only be one saved job.
-    expect(storedJobs).toHaveLength(1);
-
-    const job3 = new InvestJob({
-      modelRunName: 'carbon',
-      modelHumanName: 'Foo',
-      argsValues: baseArgsValues,
-    });
-    storedJobs = await InvestJob.saveJob(job3);
-    // A different model with the same workspace should not collide
-    expect(storedJobs).toHaveLength(2);
-  });
-
-  test('save method errors if no workspace is set', async () => {
-    const job = new InvestJob({
-      modelRunName: 'foo',
-      modelHumanName: 'Foo',
-      argsValues: { results_suffix: 'foo' },
-    });
-    await expect(InvestJob.saveJob(job)).rejects.toThrow(
-      'Cannot hash a job that is missing workspace or modelRunName properties'
-    );
-  });
-
   test('save method works with no pre-existing database', async () => {
     const job = new InvestJob({
       modelRunName: 'foo',
@@ -91,10 +52,10 @@ describe('InvestJob', () => {
     expect(recentJobs[0]).toBe(job2);
     recentJobs = await InvestJob.saveJob(job1);
     expect(recentJobs[0]).toBe(job1);
-    expect(recentJobs).toHaveLength(2);
+    expect(recentJobs).toHaveLength(3);
   });
 
-  test('save on the same instance overwrites entry', async () => {
+  test('save on the same job adds new entry', async () => {
     const job1 = new InvestJob({
       modelRunName: 'foo',
       modelHumanName: 'Foo',
@@ -103,7 +64,7 @@ describe('InvestJob', () => {
     let recentJobs = await InvestJob.saveJob(job1);
     expect(recentJobs).toHaveLength(1);
     recentJobs = await InvestJob.saveJob(job1);
-    expect(recentJobs).toHaveLength(1);
+    expect(recentJobs).toHaveLength(2);
   });
 
   test('save never accumulates more jobs than max allowed', async () => {

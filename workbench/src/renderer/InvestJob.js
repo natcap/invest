@@ -1,9 +1,8 @@
 import localforage from 'localforage';
 
-const { crypto, path } = window.Workbench;
 const logger = window.Workbench.getLogger('InvestJob.js');
 
-const HASH_ARRAY_KEY = 'workspaceHashes';
+const HASH_ARRAY_KEY = 'jobHashes';
 const MAX_CACHED_JOBS = 30;
 const investJobStore = localforage.createInstance({
   name: 'InvestJobs'
@@ -20,8 +19,8 @@ export default class InvestJob {
 
   /* If none exists, init an empty array for the sorted workspace hashes */
   static async initDB() {
-    const workspaceHashes = await investJobStore.getItem(HASH_ARRAY_KEY);
-    if (!workspaceHashes) {
+    const jobHashes = await investJobStore.getItem(HASH_ARRAY_KEY);
+    if (!jobHashes) {
       investJobStore.setItem(HASH_ARRAY_KEY, []);
     }
   }
@@ -29,9 +28,9 @@ export default class InvestJob {
   /* Return an array of job metadata objects, ordered by most recently saved */
   static async getJobStore() {
     let jobArray = [];
-    const sortedWorkspaceHashes = await investJobStore.getItem(HASH_ARRAY_KEY);
-    if (sortedWorkspaceHashes) {
-      jobArray = await Promise.all(sortedWorkspaceHashes.map(
+    const sortedJobHashes = await investJobStore.getItem(HASH_ARRAY_KEY);
+    if (sortedJobHashes) {
+      jobArray = await Promise.all(sortedJobHashes.map(
         (key) => investJobStore.getItem(key)
       ));
     }
@@ -43,50 +42,26 @@ export default class InvestJob {
     return InvestJob.getJobStore();
   }
 
-  static getWorkspaceHash(modelRunName, workspaceDir, resultsSuffix) {
-    if (workspaceDir && modelRunName) {
-      const workspaceHash = crypto.sha1hash(
-        `${modelRunName}
-         ${JSON.stringify(path.resolve(workspaceDir))}
-         ${JSON.stringify(resultsSuffix)}`
-      );
-      return workspaceHash;
-    }
-    throw Error(
-      'Cannot hash a job that is missing workspace or modelRunName properties'
-    );
-  }
-
   static async saveJob(job) {
-    if (!job.workspaceHash) {
-      job.workspaceHash = this.getWorkspaceHash(
-        job.modelRunName,
-        job.argsValues.workspace_dir,
-        job.argsValues.resultsSuffix
-      );
-    }
+    job.hash = window.crypto.getRandomValues(
+      new Uint32Array(1)
+    ).toString();
     const isoDate = new Date().toISOString().split('T')[0];
     const localTime = new Date().toTimeString().split(' ')[0];
     job.humanTime = `${isoDate} ${localTime}`;
-    let sortedWorkspaceHashes = await investJobStore.getItem(HASH_ARRAY_KEY);
-    if (!sortedWorkspaceHashes) {
+    let sortedJobHashes = await investJobStore.getItem(HASH_ARRAY_KEY);
+    if (!sortedJobHashes) {
       await InvestJob.initDB();
-      sortedWorkspaceHashes = await investJobStore.getItem(HASH_ARRAY_KEY);
+      sortedJobHashes = await investJobStore.getItem(HASH_ARRAY_KEY);
     }
-    // If this key already exists, make sure not to duplicate it,
-    // and make sure to move it to the front
-    const idx = sortedWorkspaceHashes.indexOf(job.workspaceHash);
-    if (idx > -1) {
-      sortedWorkspaceHashes.splice(idx, 1);
-    }
-    sortedWorkspaceHashes.unshift(job.workspaceHash);
-    if (sortedWorkspaceHashes.length > MAX_CACHED_JOBS) {
+    sortedJobHashes.unshift(job.hash);
+    if (sortedJobHashes.length > MAX_CACHED_JOBS) {
       // only 1 key is ever added at a time, so only 1 item to remove
-      const lastKey = sortedWorkspaceHashes.pop();
+      const lastKey = sortedJobHashes.pop();
       investJobStore.removeItem(lastKey);
     }
-    await investJobStore.setItem(HASH_ARRAY_KEY, sortedWorkspaceHashes);
-    await investJobStore.setItem(job.workspaceHash, job);
+    await investJobStore.setItem(HASH_ARRAY_KEY, sortedJobHashes);
+    await investJobStore.setItem(job.hash, job);
     return InvestJob.getJobStore();
   }
 
@@ -119,6 +94,6 @@ export default class InvestJob {
     this.logfile = logfile;
     this.status = status;
     this.finalTraceback = finalTraceback;
-    this.workspaceHash = null;
+    this.hash = null;
   }
 }

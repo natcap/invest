@@ -1,7 +1,8 @@
 # coding=UTF-8
-from natcap.invest.ui import model, inputs
-from natcap.invest.model_metadata import MODEL_METADATA
 from natcap.invest import hra
+from natcap.invest.model_metadata import MODEL_METADATA
+from natcap.invest.ui import inputs
+from natcap.invest.ui import model
 
 
 class HabitatRiskAssessment(model.InVESTModel):
@@ -60,7 +61,7 @@ class HabitatRiskAssessment(model.InVESTModel):
                 "equation. This will determine the numeric output of risk "
                 "for every habitat and stressor overlap area."),
             label='Risk Equation',
-            options=['Multiplicative', 'Euclidean'])
+            options=['multiplicative', 'euclidean'])
         self.add_input(self.risk_eq)
         self.decay_eq = inputs.Dropdown(
             args_key='decay_eq',
@@ -70,7 +71,7 @@ class HabitatRiskAssessment(model.InVESTModel):
                 "desired, this equation will determine the rate at which "
                 "stressor data is reduced."),
             label='Decay Equation',
-            options=['None', 'Linear', 'Exponential'])
+            options=['none', 'linear', 'exponential'])
         self.add_input(self.decay_eq)
         self.aoi_vector_path = inputs.File(
             args_key='aoi_vector_path',
@@ -82,6 +83,13 @@ class HabitatRiskAssessment(model.InVESTModel):
             label='Area of Interest (Vector)',
             validator=self.validator)
         self.add_input(self.aoi_vector_path)
+        self.n_overlapping_stressors = inputs.Text(
+            args_key='n_overlapping_stressors',
+            helptext=(
+                hra.ARGS_SPEC['args']['n_overlapping_stressors']['about']),
+            label='Number of Overlapping Stressors',
+            validator=self.validator)
+        self.add_input(self.n_overlapping_stressors)
         self.visualize_outputs = inputs.Checkbox(
             args_key='visualize_outputs',
             helptext=(
@@ -96,13 +104,16 @@ class HabitatRiskAssessment(model.InVESTModel):
             self.workspace.args_key: self.workspace.value(),
             self.suffix.args_key: self.suffix.value(),
             self.info_table_path.args_key: self.info_table_path.value(),
-            self.criteria_table_path.args_key: self.criteria_table_path.value(),
+            self.criteria_table_path.args_key:
+                self.criteria_table_path.value(),
             self.resolution.args_key: self.resolution.value(),
             self.risk_eq.args_key: self.risk_eq.value(),
             self.decay_eq.args_key: self.decay_eq.value(),
             self.max_rating.args_key: self.max_rating.value(),
             self.aoi_vector_path.args_key: self.aoi_vector_path.value(),
             self.visualize_outputs.args_key: self.visualize_outputs.value(),
+            self.n_overlapping_stressors.args_key:
+                self.n_overlapping_stressors.value(),
         }
 
         return args
