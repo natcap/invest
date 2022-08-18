@@ -653,13 +653,13 @@ def _geometries_overlap(vector_path):
         vector_path (string): The path to a GDAL vector.
 
     Returns:
-        overlaps (bool): Whether there's numerically significant overlap
-            between polygons in the first layer.
+        bool: Whether there's numerically significant overlap between polygons
+            in the first layer.
 
     """
     vector = gdal.OpenEx(vector_path)
     layer = vector.GetLayer()
-    area_sum = 0;
+    area_sum = 0
     geometries = []
     for feature in layer:
         ogr_geom = feature.GetGeometryRef()
