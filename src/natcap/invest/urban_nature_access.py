@@ -1133,11 +1133,12 @@ def _calculate_greenspace_population_ratio(
         greenspace_pixels = ~numpy.isclose(greenspace_area, 0)
         valid_pixels &= greenspace_pixels
         if population_nodata is not None:
-            valid_pixels &= ~numpy.isclose(
+            valid_pixels &= ~utils.array_equals_nodata(
                 convolved_population, population_nodata)
 
         if greenspace_nodata is not None:
-            valid_pixels &= ~numpy.isclose(greenspace_area, greenspace_nodata)
+            valid_pixels &= ~utils.array_equals_nodata(
+                greenspace_area, greenspace_nodata)
 
         # The user's guide specifies that if the population in the search
         # radius is numerically 0, the greenspace/population ratio should be
