@@ -12,33 +12,19 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
+from datetime import datetime
 import importlib
-import itertools
 import os
 import pkgutil
-import subprocess
 import sys
-
-from datetime import datetime
-from sphinx.ext import apidoc
 from unittest.mock import MagicMock
 
+import natcap.invest
+from sphinx.ext import apidoc
 
-# If extensions (or modules to document with autodoc) are in another directory,
-# add these directories to sys.path here. If the directory is relative to the
-# documentation root, use os.path.abspath to make it absolute, like shown here.
 DOCS_SOURCE_DIR = os.path.dirname(__file__)
-INVEST_ROOT_DIR = os.path.join(DOCS_SOURCE_DIR, '..', '..')
-INVEST_BUILD_DIR = os.path.join(INVEST_ROOT_DIR, 'build')
-
-# get name of build/lib directory; this depends on the OS and python version
-# e.g. lib.macosx-10.9-x86_64-3.8
-for path in os.listdir(INVEST_BUILD_DIR):
-    if path.startswith('lib'):
-        INVEST_LIB_DIR = os.path.join(INVEST_BUILD_DIR, path)
-        break
-else:
-    raise ValueError(f'lib directory not found in {INVEST_BUILD_DIR}')
+# get the directory that the natcap package lives in
+INVEST_LIB_DIR = os.path.dirname(os.path.dirname(natcap.invest.__file__))
 
 # -- General configuration ------------------------------------------------
 
@@ -67,7 +53,6 @@ master_doc = 'index'
 project = 'InVEST'
 copyright = f'{datetime.now().year}, The Natural Capital Project'
 
-import natcap.invest
 # The full version, including alpha/beta/rc tags.
 release = natcap.invest.__version__
 version = release.split('+')[0]
@@ -77,7 +62,7 @@ version = release.split('+')[0]
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+language = 'en'
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -186,6 +171,7 @@ apidoc.main([
     '--templatedir', os.path.join(DOCS_SOURCE_DIR, 'templates'),  # use custom templates
     '--separate',  # make a separate page for each module
     '--no-toc',  # table of contents page is redundant
+    '--implicit-namespaces',
     INVEST_LIB_DIR,
     '/*.so'  # must be absolute path, see https://github.com/sphinx-doc/sphinx/issues/10200
 ])
@@ -202,29 +188,32 @@ InVEST Model Entry Points
 
 All InVEST models share a consistent python API:
 
-    1) The model has a function called ``execute`` that takes a single python
-       dict (``"args"``) as its argument.
-    2) This arguments dict contains an entry, ``'workspace_dir'``, which
-       points to the folder on disk where all files created by the model
-       should be saved.
+    - Every InVEST model has a corresponding module or subpackage in the 
+      ``natcap.invest`` package
+    - The model modules contain a function called ``execute``
+    - The ``execute`` function takes a single argument (``args``), a dictionary
+      that stores all data inputs and configuration options for the model
+    - This dictionary contains an entry, ``'workspace_dir'``, which is a path
+      to the folder where the model will create its output files
+    - Other required and optional entries in the dictionary are specific to
+      each model
 
-Calling a model requires importing the model's execute function and then
-calling the model with the correct parameters.  For example, if you were
-to call the Carbon Storage and Sequestration model, your script might
-include
+To run a model, import the model's ``execute`` function and then call it with
+the correct parameters. For example, a script for the Carbon model might look
+like
 
 .. code-block:: python
 
-    import natcap.invest.carbon.carbon_combined
+    import natcap.invest.carbon
     args = {
         'workspace_dir': 'path/to/workspace'
         # Other arguments, as needed for Carbon.
     }
 
-    natcap.invest.carbon.carbon_combined.execute(args)
+    natcap.invest.carbon.execute(args)
 
-For examples of scripts that could be created around a model run,
-or multiple successive model runs, see :ref:`CreatingSamplePythonScripts`.
+For examples of scripting a model run, or multiple successive model runs,
+see :ref:`CreatingSamplePythonScripts`.
 
 
 .. contents:: Available Models and Tools:
@@ -232,48 +221,25 @@ or multiple successive model runs, see :ref:`CreatingSamplePythonScripts`.
 
 """
 
-EXCLUDED_MODULES = [
-    '_core',  # anything ending in '_core'
-    'recmodel_server',
-    'recmodel_workspace_fetcher'
-]
 MODEL_ENTRYPOINTS_FILE = os.path.join(DOCS_SOURCE_DIR, 'models.rst')
-
 # Find all importable modules with an execute function
 # write out to a file models.rst in the source directory
-all_modules = {}
-for _loader, name, _is_pkg in itertools.chain(
-        pkgutil.walk_packages(path=[INVEST_LIB_DIR]),  # catch packages
-        pkgutil.iter_modules(path=[INVEST_LIB_DIR])):  # catch modules
-
-    if (any([name.endswith(x) for x in EXCLUDED_MODULES]) or
-        name.startswith('natcap.invest.ui')):
-        continue
-
-    try:
-        module = importlib.import_module(name)
-    except Exception as ex:
-        print(ex)
-        continue
-
-    if not hasattr(module, 'execute'):
-        continue
-
-    try:
-        module_title = module.execute.__doc__.strip().split('\n')[0]
-        if module_title.endswith('.'):
-            module_title = module_title[:-1]
-    except AttributeError:
-        module_title = None
-    all_modules[name] = module_title
+invest_model_modules = {}
+for _, name, _ in pkgutil.walk_packages(path=[INVEST_LIB_DIR],
+                                        prefix='natcap.'):
+    module = importlib.import_module(name)
+    # any module with an ARGS_SPEC is an invest model
+    if hasattr(module, 'ARGS_SPEC'):
+        model_title = module.ARGS_SPEC['model_name']
+        invest_model_modules[model_title] = name
 
 # Write sphinx autodoc function for each entrypoint
 with open(MODEL_ENTRYPOINTS_FILE, 'w') as models_rst:
     models_rst.write(MODEL_RST_TEMPLATE)
-    for name, module_title in sorted(all_modules.items(), key=lambda x: x[1]):
-        underline = ''.join(['=']*len(module_title))
+    for model_title, name in sorted(invest_model_modules.items()):
+        underline = ''.join(['=']*len(model_title))
         models_rst.write(
-            f'{module_title}\n'
+            f'{model_title}\n'
             f'{underline}\n'
             f'.. autofunction:: {name}.execute\n'
             '   :noindex:\n\n')

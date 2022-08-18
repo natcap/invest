@@ -1,19 +1,19 @@
 # -*- coding: utf-8 -*-
 """Coastal Blue Carbon Preprocessor."""
-import time
-import os
 import logging
+import os
+import time
 
-from osgeo import gdal
 import pygeoprocessing
 import taskgraph
+from osgeo import gdal
 
-from .. import utils
+from .. import gettext
 from .. import spec_utils
-from ..spec_utils import u
+from .. import utils
 from .. import validation
 from ..model_metadata import MODEL_METADATA
-from .. import gettext
+from ..spec_utils import u
 from . import coastal_blue_carbon
 
 LOGGER = logging.getLogger(__name__)
@@ -124,7 +124,8 @@ def execute(args):
     min_pixel_size = float('inf')
     source_snapshot_paths = []
     aligned_snapshot_paths = []
-    for snapshot_year, raster_path in snapshots_dict.items():
+    for snapshot_year, raster_path in sorted(
+            snapshots_dict.items(), key=lambda x: x[0]):
         source_snapshot_paths.append(raster_path)
         aligned_snapshot_paths.append(os.path.join(
             output_dir, ALIGNED_LULC_RASTER_TEMPLATE.format(
@@ -155,7 +156,7 @@ def execute(args):
     _ = task_graph.add_task(
         func=_create_transition_table,
         args=(landcover_table,
-              sorted(snapshots_dict.values(), key=lambda x: [0]),
+              aligned_snapshot_paths,
               target_transition_table),
         target_path_list=[target_transition_table],
         dependent_task_list=[alignment_task],

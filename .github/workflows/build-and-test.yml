@@ -157,10 +157,6 @@ jobs:
 
       - name: Install from source distribution
         run : |
-          # Prevent pip from thinking that CWD is a natcap.invest
-          # installation. It's not.
-          rm -r natcap.invest.egg-info
-
           # Install natcap.invest from the sdist in dist/
           pip install $(find dist -name "natcap.invest*")
 

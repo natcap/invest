@@ -1,13 +1,7 @@
-include README.rst
-include README_PYTHON.rst
-include HISTORY.rst
-include LICENSE.txt
-include pyproject.toml
-include requirements.txt
-include requirements-dev.txt
-include requirements-gui.txt
+exclude .flake8
+exclude .readthedocs.yml
 prune .github
 prune ci
 prune exe
 prune installer
-prune doc/users-guide
+prune workbench

@@ -1,20 +1,20 @@
 # -*- coding: utf-8 -*-
 """Tests for Coastal Blue Carbon Functions."""
+import glob
 import logging
 import os
 import pprint
 import shutil
 import tempfile
+import textwrap
 import unittest
-import glob
 
 import numpy
-from osgeo import gdal, osr
 import pygeoprocessing
 from natcap.invest import utils
-
 from natcap.invest.coastal_blue_carbon import coastal_blue_carbon
-
+from osgeo import gdal
+from osgeo import osr
 
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
@@ -32,6 +32,88 @@ class TestPreprocessor(unittest.TestCase):
     def tearDown(self):
         """Remove workspace."""
         shutil.rmtree(self.workspace_dir)
+
+    def test_constructed_data(self):
+        """CBC Preprocessor: Test on constructed data."""
+        from natcap.invest.coastal_blue_carbon import preprocessor
+
+        pixelsize = (10, -10)
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(4326)
+        wkt = srs.ExportToWkt()
+        nodata = -1
+        origin_2000 = (30, -50)
+        lulc_2000_array = numpy.array([
+            [nodata, nodata, 1, 2],
+            [nodata, nodata, 2, 2],
+            [nodata, nodata, 2, 1]], dtype=numpy.int32)
+        origin_2010 = (50, -50)
+        lulc_2010_array = numpy.array([
+            [2, 2],
+            [2, 2],
+            [2, 2]], dtype=numpy.int32)
+
+        lulc_2000_path = os.path.join(self.workspace_dir, '2000.tif')
+        lulc_2010_path = os.path.join(self.workspace_dir, '2010.tif')
+        for (array, origin, target_path) in [
+                (lulc_2000_array, origin_2000, lulc_2000_path),
+                (lulc_2010_array, origin_2010, lulc_2010_path)]:
+            pygeoprocessing.geoprocessing.numpy_array_to_raster(
+                array, nodata, pixelsize, origin, wkt, target_path)
+
+        snapshot_csv_path = os.path.join(self.workspace_dir, 'snapshots.csv')
+        with open(snapshot_csv_path, 'w') as snapshots_table:
+            snapshots_table.write(textwrap.dedent(
+                """\
+                snapshot_year,raster_path
+                2010,2010.tif
+                2000,2000.tif
+                """))
+
+        lulc_attributes_path = os.path.join(self.workspace_dir,
+                                            'lulc-attributes.csv')
+        with open(lulc_attributes_path, 'w') as attributes_table:
+            attributes_table.write(textwrap.dedent(
+                """\
+                lulc-class,code,is_coastal_blue_carbon_habitat
+                mangrove,1,TRUE
+                parkinglot,2,FALSE
+                """))
+
+        args = {
+            'workspace_dir': os.path.join(self.workspace_dir, 'workspace'),
+            'lulc_lookup_table_path': lulc_attributes_path,
+            'landcover_snapshot_csv': snapshot_csv_path,
+        }
+        preprocessor.execute(args)
+
+        # Verify output raster dimensions.
+        dimensions = set()
+        for year in (2000, 2010):
+            lulc_path = os.path.join(
+                args['workspace_dir'], 'outputs_preprocessor',
+                f'aligned_lulc_{year}.tif')
+            dimensions.add(
+                pygeoprocessing.get_raster_info(lulc_path)['raster_size'])
+        self.assertEqual(dimensions, {(2, 3)})
+
+        transition_table_path = os.path.join(
+            args['workspace_dir'], 'outputs_preprocessor',
+            'carbon_pool_transition_template.csv')
+        with open(transition_table_path) as transition_table:
+            self.assertEqual(
+                transition_table.readline(),
+                'lulc-class,mangrove,parkinglot\n')
+            self.assertEqual(
+                transition_table.readline(),
+                'mangrove,,disturb\n')
+            self.assertEqual(
+                transition_table.readline(),
+                'parkinglot,,NCC\n')
+
+            # After the above lines is a blank line, then the legend.
+            # Deliberately not testing the legend.
+            self.assertEqual(transition_table.readline(), '\n')
 
     def test_sample_data(self):
         """CBC Preprocessor: Test on sample data."""
