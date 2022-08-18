@@ -9,12 +9,12 @@ import numpy
 import numpy.testing
 import pandas
 import pygeoprocessing
-import shapely.ops
-import shapely.wkb
 import taskgraph
 from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
+import shapely.ops
+import shapely.wkb
 
 from . import gettext
 from . import spec_utils
@@ -278,49 +278,32 @@ def execute(args):
         args['lulc_raster_path'])
 
     squared_lulc_pixel_size = _square_off_pixels(args['lulc_raster_path'])
-    #lulc_alignment_task = graph.add_task(
-    #    pygeoprocessing.warp_raster,
-    #    kwargs={
-    #        'base_raster_path': args['lulc_raster_path'],
-    #        'target_pixel_size': squared_lulc_pixel_size,
-    #        'target_bb': lulc_raster_info['bounding_box'],
-    #        'target_raster_path': file_registry['aligned_lulc'],
-    #        'resample_method': 'nearest',
-    #    },
-    #    target_path_list=[file_registry['aligned_lulc']],
-    #    task_name='Resample LULC to have square pixels'
-    #)
-
-    #population_alignment_task = graph.add_task(
-    #    _resample_population_raster,
-    #    kwargs={
-    #        'source_population_raster_path': args['population_raster_path'],
-    #        'target_population_raster_path': file_registry[
-    #            'aligned_population'],
-    #        'lulc_pixel_size': squared_lulc_pixel_size,
-    #        'lulc_bb': lulc_raster_info['bounding_box'],
-    #        'lulc_projection_wkt': lulc_raster_info['projection_wkt'],
-    #        'working_dir': intermediate_dir,
-    #    },
-    #    target_path_list=[file_registry['aligned_population']],
-    #    task_name='Resample population to LULC resolution')
-
-    align_and_mask_rasters_task = graph.add_task(
-        _align_and_mask_rasters,
+    lulc_alignment_task = graph.add_task(
+        pygeoprocessing.warp_raster,
         kwargs={
-            'source_lulc_path': args['lulc_raster_path'],
-            'target_lulc_path': file_registry['aligned_lulc'],
-            'source_population_path': args['population_raster_path'],
-            'target_population_path': file_registry['aligned_population'],
+            'base_raster_path': args['lulc_raster_path'],
             'target_pixel_size': squared_lulc_pixel_size,
+            'target_bb': lulc_raster_info['bounding_box'],
+            'target_raster_path': file_registry['aligned_lulc'],
+            'resample_method': 'nearest',
+        },
+        target_path_list=[file_registry['aligned_lulc']],
+        task_name='Resample LULC to have square pixels'
+    )
+
+    population_alignment_task = graph.add_task(
+        _resample_population_raster,
+        kwargs={
+            'source_population_raster_path': args['population_raster_path'],
+            'target_population_raster_path': file_registry[
+                'aligned_population'],
+            'lulc_pixel_size': squared_lulc_pixel_size,
+            'lulc_bb': lulc_raster_info['bounding_box'],
+            'lulc_projection_wkt': lulc_raster_info['projection_wkt'],
             'working_dir': intermediate_dir,
         },
-        target_path_list=[
-            file_registry['aligned_lulc'],
-            file_registry['aligned_population'],
-        ],
-        task_name='Align and mask rasters'
-    )
+        target_path_list=[file_registry['aligned_population']],
+        task_name='Resample population to LULC resolution')
 
     aoi_reprojection_task = graph.add_task(
         _reproject_and_identify,
@@ -333,7 +316,7 @@ def execute(args):
         },
         task_name='Reproject admin units',
         target_path_list=[file_registry['reprojected_aois']],
-        dependent_task_list=[align_and_mask_rasters_task]
+        dependent_task_list=[lulc_alignment_task]
     )
 
     attr_table = pandas.read_csv(args['lulc_attribute_table'])
@@ -376,7 +359,7 @@ def execute(args):
             target_path_list=[convolved_population_paths[search_radius_m]],
             dependent_task_list=[
                 kernel_tasks[search_radius_m],
-                align_and_mask_rasters_task,
+                population_alignment_task,
             ])
 
     greenspace_attrs = attr_table[attr_table['greenspace'] == 1]
@@ -432,7 +415,7 @@ def execute(args):
             },
             target_path_list=[greenspace_pixels_path],
             task_name='Identify greenspace areas',
-            dependent_task_list=[align_and_mask_rasters_task]
+            dependent_task_list=[lulc_alignment_task]
         )
 
         greenspace_population_ratio_path = os.path.join(
@@ -530,7 +513,7 @@ def execute(args):
         target_path_list=[file_registry['greenspace_supply_demand_budget']],
         dependent_task_list=[
              per_capita_greenspace_budget_task,
-             align_and_mask_rasters_task,
+             population_alignment_task,
         ])
 
     undersupplied_population_task = graph.add_task(
@@ -550,7 +533,7 @@ def execute(args):
         target_path_list=[file_registry['undersupplied_population']],
         dependent_task_list=[
             greenspace_supply_demand_task,
-            align_and_mask_rasters_task,
+            population_alignment_task,
         ])
 
     oversupplied_population_task = graph.add_task(
@@ -570,7 +553,7 @@ def execute(args):
         target_path_list=[file_registry['oversupplied_population']],
         dependent_task_list=[
             greenspace_supply_demand_task,
-            align_and_mask_rasters_task,
+            population_alignment_task,
         ])
 
     # only do split population if there are population group fields in the
@@ -605,7 +588,7 @@ def execute(args):
             task_name='Rasterize the admin units vector',
             target_path_list=[file_registry['aois_ids']],
             dependent_task_list=[
-                aoi_reprojection_task, align_and_mask_rasters_task]
+                aoi_reprojection_task, lulc_alignment_task]
         )
 
         for pop_field in split_population_fields:
@@ -653,7 +636,7 @@ def execute(args):
         target_path_list=[file_registry['aois']],
         dependent_task_list=[
             greenspace_supply_demand_task,
-            align_and_mask_rasters_task,
+            population_alignment_task,
             undersupplied_population_task,
             oversupplied_population_task,
         ])
@@ -676,7 +659,7 @@ def _geometries_overlap(vector_path):
     """
     vector = gdal.OpenEx(vector_path)
     layer = vector.GetLayer()
-    area_sum = 0
+    area_sum = 0;
     geometries = []
     for feature in layer:
         ogr_geom = feature.GetGeometryRef()
@@ -1366,58 +1349,6 @@ def _resample_population_raster(
         target_population_raster_path, gdal.GDT_Float32, FLOAT32_NODATA)
 
     shutil.rmtree(tmp_working_dir, ignore_errors=True)
-
-
-def _align_and_mask_rasters(
-        source_lulc_path, source_population_path, target_lulc_path,
-        target_population_path, target_pixel_size, working_dir):
-    lulc_raster_info = pygeoprocessing.get_raster_info(source_lulc_path)
-    pygeoprocessing.warp_raster(
-        base_raster_path=source_lulc_path,
-        target_pixel_size=target_pixel_size,
-        target_bb=lulc_raster_info['bounding_box'],
-        target_raster_path=target_lulc_path,
-        resample_method='nearest'
-    )
-
-    _resample_population_raster(
-        source_population_raster_path=source_population_path,
-        target_population_raster_path=target_population_path,
-        lulc_pixel_size=target_pixel_size,
-        lulc_bb=lulc_raster_info['bounding_box'],
-        lulc_projection_wkt=lulc_raster_info['projection_wkt'],
-        working_dir=working_dir
-    )
-
-    lulc_nodata = pygeoprocessing.get_raster_info(
-        target_lulc_path)['nodata'][0]
-    population_nodata = pygeoprocessing.get_raster_info(
-        target_population_path)['nodata'][0]
-    lulc_raster = gdal.Open(target_lulc_path, gdal.GA_Update)
-    lulc_band = lulc_raster.GetRasterBand(1)
-    lulc_nodata = lulc_band.GetNoDataValue()
-    population_raster = gdal.Open(target_population_path, gdal.GA_Update)
-    population_band = population_raster.GetRasterBand(1)
-    population_nodata = population_band.GetNoDataValue()
-    for block_info in pygeoprocessing.iterblocks((target_lulc_path, 1),
-                                                 offset_only=True):
-        lulc_block = lulc_band.ReadAsArray(**block_info)
-        population_block = population_band.ReadAsArray(**block_info)
-        valid_pixels = (
-            ~utils.array_equals_nodata(lulc_block, lulc_nodata) &
-            ~utils.array_equals_nodata(population_block, population_nodata))
-        lulc_block[~valid_pixels] = lulc_nodata
-        population_block[~valid_pixels] = population_nodata
-
-        lulc_band.WriteArray(
-            lulc_block, xoff=block_info['xoff'], yoff=block_info['yoff'])
-        population_band.WriteArray(
-            population_block, xoff=block_info['xoff'], yoff=block_info['yoff'])
-
-    population_band = None
-    population_raster = None
-    lulc_band = None
-    lulc_raster = None
 
 
 def dichotomous_decay_kernel_raster(expected_distance, kernel_filepath,
