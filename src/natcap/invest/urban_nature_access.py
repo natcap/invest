@@ -9,12 +9,12 @@ import numpy
 import numpy.testing
 import pandas
 import pygeoprocessing
+import shapely.ops
+import shapely.wkb
 import taskgraph
 from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
-import shapely.ops
-import shapely.wkb
 
 from . import gettext
 from . import spec_utils
@@ -557,7 +557,7 @@ def execute(args):
         ])
 
     # only do split population if there are population group fields in the
-    # admin units vector
+    # AOIs/admin units vector
     aoi_reprojection_task.join()
     split_population_fields = list(
         filter(lambda x: re.match(POP_FIELD_REGEX, x),
