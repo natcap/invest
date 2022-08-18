@@ -1144,11 +1144,11 @@ def _calculate_greenspace_population_ratio(
         # radius is numerically 0, the greenspace/population ratio should be
         # set to the greenspace area.
         # A consequence of this is that as the population approaches 0 from the
-        # positive side, the ratio will approach infinity.  Maybe this is
-        # desirable, but until we check with the science team, we'll set this
-        # so that the greenspace/population ratio will be set to the greenspace
-        # area at populations <= 1.
-        # TODO: see what the science team thinks is right to do.
+        # positive side, the ratio will approach infinity.
+        # After checking with the science team, we decided that where the
+        # population is less than or equal to 1, the calculated
+        # greenspace/population ratio would be set to the available greenspace
+        # on that pixel.
         population_close_to_zero = (convolved_population <= 1.0)
         out_array[population_close_to_zero] = (
             greenspace_pixels[population_close_to_zero])
