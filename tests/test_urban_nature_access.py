@@ -479,7 +479,7 @@ class UNATests(unittest.TestCase):
                  f'{supply_type}supplied_population.tif')
             group_supply_raster_path = os.path.join(
                  intermediate_dir,
-                 f'{supply_type}supplied_population_{groupname}_0.tif')
+                 f'{supply_type}supplied_population_{groupname}.tif')
             pop_proportion = summary_feature.GetField(fieldname)
             computed_value = summary_feature.GetField(
                 f'{supply_field}_{groupname}')
@@ -494,3 +494,25 @@ class UNATests(unittest.TestCase):
                 _read_and_sum_raster(group_supply_raster_path),
                 rtol=1e-6
             )
+
+    def test_polygon_overlap(self):
+        """UNA: Test that we can check if polygons overlap."""
+        from natcap.invest import urban_nature_access
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(_DEFAULT_EPSG)
+        wkt = srs.ExportToWkt()
+
+        origin_x, origin_y = _DEFAULT_ORIGIN
+        polygon_1 = shapely.geometry.Point(origin_x, origin_y).buffer(10)
+        polygon_2 = shapely.geometry.Point(origin_x+20, origin_y+20).buffer(50)
+        polygon_3 = shapely.geometry.Point(origin_x+50, origin_y+50).buffer(10)
+
+        vector_path = os.path.join(self.workspace_dir, 'vector_nonoverlapping.geojson')
+        pygeoprocessing.shapely_geometry_to_vector(
+            [polygon_1, polygon_3], vector_path, wkt, 'GeoJSON')
+        self.assertFalse(urban_nature_access._geometries_overlap(vector_path))
+
+        vector_path = os.path.join(self.workspace_dir, 'vector_overlapping.geojson')
+        pygeoprocessing.shapely_geometry_to_vector(
+            [polygon_1, polygon_2, polygon_3], vector_path, wkt, 'GeoJSON')
+        self.assertTrue(urban_nature_access._geometries_overlap(vector_path))

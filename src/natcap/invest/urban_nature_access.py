@@ -1,23 +1,20 @@
-import collections
 import logging
 import math
 import os
 import re
 import shutil
 import tempfile
-import time
 
 import numpy
 import numpy.testing
 import pandas
 import pygeoprocessing
-import rtree
-import shapely.ops
-import shapely.wkt
 import taskgraph
 from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
+import shapely.ops
+import shapely.wkb
 
 from . import gettext
 from . import spec_utils
@@ -120,8 +117,9 @@ ARGS_SPEC = {
                 }
             },
             'about': gettext(
-                "Regions (typically administrative boundaries) within "
-                "which population supply and demand are summarized."
+                "Non-overlapping regions (typically administrative "
+                "boundaries) within which population supply and demand are "
+                "summarized."
             ),
         },
         'greenspace_demand': {
@@ -194,7 +192,7 @@ _INTERMEDIATE_BASE_FILES = {
     'undersupplied_population': 'undersupplied_population.tif',
     'oversupplied_population': 'oversupplied_population.tif',
     'reprojected_aois': 'reprojected_aois.gpkg',
-    'aois_ids': 'aois_ids_group{group}.tif',
+    'aois_ids': 'aois_ids.tif',
 }
 
 
@@ -560,6 +558,7 @@ def execute(args):
 
     # only do split population if there are population group fields in the
     # admin units vector
+    aoi_reprojection_task.join()
     split_population_fields = list(
         filter(lambda x: re.match(POP_FIELD_REGEX, x),
                validation.load_fields_from_vector(
@@ -570,63 +569,55 @@ def execute(args):
             f"{', '.join(split_population_fields)}, starting split "
             "population optional module.")
 
-        disjoint_population_groups = _find_disjoint_polygon_groups(
-            file_registry['reprojected_aois'])
-        for aoi_group_index, disjoint_fid_group in enumerate(
-                disjoint_population_groups):
-            LOGGER.info(
-                "Split populations: "
-                f"Processing AOI group {aoi_group_index+1} of "
-                f"{len(disjoint_population_groups)}")
-            rasterized_aoi_ids_path = file_registry[
-                'aois_ids'].format(group=aoi_group_index)
-            aois_rasterization_task = graph.add_task(
-                _rasterize_aois,
-                kwargs={
-                    'base_raster_path': file_registry['aligned_lulc'],
-                    'aois_vector_path':
-                        file_registry['reprojected_aois'],
-                    'target_raster_path': rasterized_aoi_ids_path,
-                    'id_fieldname': ID_FIELDNAME,
-                    'matching_fids': disjoint_fid_group,
-                    'working_dir': intermediate_dir,
-                },
-                task_name=(
-                    f'Rasterize group {aoi_group_index} of the aois vector'),
-                target_path_list=[rasterized_aoi_ids_path],
-                dependent_task_list=[
-                    aoi_reprojection_task, lulc_alignment_task]
-            )
+        if _geometries_overlap(file_registry['reprojected_aois']):
+            LOGGER.warning(
+                "Some administrative boundaries overlap, which will affect "
+                "the accuracy of supply rasters per population group. "
+                "Summary statistics in "
+                f"{os.path.basename(file_registry['aois'])} are unaffected.")
 
-            for pop_field in split_population_fields:
-                # TODO: rework this loop so that we're not re-reading this in
-                # for each disjoint aoi group?
-                field_value_map = _read_field_from_vector(
+        aois_rasterization_task = graph.add_task(
+            _rasterize_aois,
+            kwargs={
+                'base_raster_path': file_registry['aligned_lulc'],
+                'aois_vector_path':
                     file_registry['reprojected_aois'],
-                    ID_FIELDNAME, pop_field)
-                for supply_type, supply_filepath in (
-                        ('under', file_registry['undersupplied_population']),
-                        ('over', file_registry['oversupplied_population'])):
-                    groupname = re.sub(POP_FIELD_REGEX, '', pop_field)
-                    supply_to_group_filepath = os.path.join(
-                        intermediate_dir, (
-                            f'{supply_type}supplied_population_'
-                            f'{groupname}_{aoi_group_index}{suffix}.tif')
-                    )
-                    _ = graph.add_task(
-                        _reclassify_and_multiply,
-                        kwargs={
-                            'aois_raster_path': rasterized_aoi_ids_path,
-                            'reclassification_map': field_value_map,
-                            'supply_raster_path': supply_filepath,
-                            'target_raster_path': supply_to_group_filepath,
-                        },
-                        task_name=(
-                            f'Map proportion of {supply_type}supplied '
-                            f'for {groupname}'),
-                        target_path_list=[supply_filepath],
-                        dependent_task_list=[aois_rasterization_task]
-                    )
+                'target_raster_path': file_registry['aois_ids'],
+                'id_fieldname': ID_FIELDNAME,
+            },
+            task_name='Rasterize the admin units vector',
+            target_path_list=[file_registry['aois_ids']],
+            dependent_task_list=[
+                aoi_reprojection_task, lulc_alignment_task]
+        )
+
+        for pop_field in split_population_fields:
+            field_value_map = _read_field_from_vector(
+                file_registry['reprojected_aois'],
+                ID_FIELDNAME, pop_field)
+            for supply_type, supply_filepath in (
+                    ('under', file_registry['undersupplied_population']),
+                    ('over', file_registry['oversupplied_population'])):
+                groupname = re.sub(POP_FIELD_REGEX, '', pop_field)
+                supply_to_group_filepath = os.path.join(
+                    intermediate_dir,
+                    f'{supply_type}supplied_population_{groupname}{suffix}.tif'
+                )
+                _ = graph.add_task(
+                    _reclassify_and_multiply,
+                    kwargs={
+                        'aois_raster_path':
+                            file_registry['aois_ids'],
+                        'reclassification_map': field_value_map,
+                        'supply_raster_path': supply_filepath,
+                        'target_raster_path': supply_to_group_filepath,
+                    },
+                    task_name=(
+                        f'Map proportion of {supply_type}supplied for'
+                        f'{groupname}'),
+                    target_path_list=[supply_filepath],
+                    dependent_task_list=[aois_rasterization_task]
+                )
 
     _ = graph.add_task(
         _admin_level_supply_demand,
@@ -655,192 +646,34 @@ def execute(args):
     LOGGER.info('Finished Urban Nature Access Model')
 
 
-def _find_disjoint_polygon_groups(aoi_vector_path):
-    """Identify truly disjoint polygon groups.
-
-    Pygeoprocessing's calculate_disjoint_polygon_set() uses any form of
-    intersection (even if polygons touch but do not overlap) in determining
-    whether polygons are disjoint.  When a user provides a vector of AOIs that
-    touch but do NOT overlap, we do not need to use pygeoprocessing's set of
-    disjoint polygons, which makes more sense visually.
+def _geometries_overlap(vector_path):
+    """Check if the geometries of the vector's first layer overlap.
 
     Args:
-        aoi_vector_path (string): A path to the AOI vector on disk.
+        vector_path (string): The path to a GDAL vector.
 
     Returns:
-        A list of lists of disjoint FIDs.
+        overlaps (bool): Whether there's numerically significant overlap
+            between polygons in the first layer.
+
     """
-    all_geometries = []
-    vector = ogr.Open(aoi_vector_path)
+    vector = gdal.OpenEx(vector_path)
     layer = vector.GetLayer()
-    area_sum = 0
-    all_fids = []
+    area_sum = 0;
+    geometries = []
     for feature in layer:
-        geom = feature.GetGeometryRef()
-        all_geometries.append(shapely.wkt.loads(geom.ExportToWkt()))
-        area_sum += geom.Area()
-        all_fids.append(feature.GetFID())
+        ogr_geom = feature.GetGeometryRef()
+        area_sum += ogr_geom.Area()
+        shapely_geom = shapely.wkb.loads(bytes(ogr_geom.ExportToWkb()))
+        geometries.append(shapely_geom)
 
-    union_geom = shapely.ops.unary_union(all_geometries)
-    union_area = union_geom.area
-    if math.isclose(union_area, area_sum):
-        return [all_fids]
-
-    LOGGER.warning(
-        f"Some admin units overlap by {abs(union_area - area_sum)} square "
-        "units. Falling back to disjoint polygon sets."
-    )
-    return calculate_disjoint_polygon_set(
-        aoi_vector_path, ok_for_geometries_to_touch=True)
-
-
-def calculate_disjoint_polygon_set(
-        vector_path, layer_id=0, bounding_box=None,
-        ok_for_geometries_to_touch=False):
-    """Create a sequence of sets of polygons that don't overlap.
-
-    Determining the minimal number of those sets is an np-complete problem so
-    this is an approximation that builds up sets of maximal subsets.
-
-    Adapted from pygeoprocessing==2.3.3
-
-    Args:
-        vector_path (string): a path to an OGR vector.
-        layer_id (str/int): name or index of underlying layer in
-            ``vector_path`` to calculate disjoint set. Defaults to 0.
-        bounding_box (sequence): sequence of floats representing a bounding
-            box to filter any polygons by. If a feature in ``vector_path``
-            does not intersect this bounding box it will not be considered
-            in the disjoint calculation. Coordinates are in the order
-            [minx, miny, maxx, maxy].
-        ok_for_geometries_to_touch=False (bool): If ``True``, two geometries
-            with boundaries that touch but have nonoverlapping interiors are
-            NOT considered disjoint and may therefore be in the same set.
-            If ``False``, two geometries with touching boundaries are
-            considered intersecting and may not be in the same set.
-
-    Return:
-        subset_list (sequence): sequence of sets of FIDs from vector_path
-
-    """
-    vector = gdal.OpenEx(vector_path, gdal.OF_VECTOR)
-    vector_layer = vector.GetLayer(layer_id)
-    feature_count = vector_layer.GetFeatureCount()
-
-    if feature_count == 0:
-        raise RuntimeError('Vector must have geometries but does not: %s'
-                           % vector_path)
-
-    last_time = time.time()
-    LOGGER.info("build shapely polygon list")
-
-    if bounding_box is None:
-        bounding_box = pygeoprocessing.get_vector_info(
-            vector_path)['bounding_box']
-    bounding_box = shapely.prepared.prep(shapely.geometry.box(*bounding_box))
-
-    shapely_polygon_lookup = {}
-    for poly_feat in vector_layer:
-        poly_geom_ref = poly_feat.GetGeometryRef()
-        if poly_geom_ref is None:
-            LOGGER.warning(
-                f'no geometry in {vector_path} FID: {poly_feat.GetFID()}, '
-                'skipping...')
-            continue
-        if poly_geom_ref.IsEmpty():
-            LOGGER.warning(
-                f'empty geometry in {vector_path} FID: {poly_feat.GetFID()}, '
-                'skipping...')
-            continue
-        # with GDAL>=3.3.0 ExportToWkb returns a bytearray instead of bytes
-        shapely_polygon_lookup[poly_feat.GetFID()] = (
-            shapely.wkb.loads(bytes(poly_geom_ref.ExportToWkb())))
-        poly_geom_ref = None
-    poly_feat = None
-
-    LOGGER.info("build shapely rtree index")
-    r_tree_index_stream = [
-        (poly_fid, poly.bounds, None)
-        for poly_fid, poly in shapely_polygon_lookup.items()
-        if bounding_box.intersects(poly)]
-    if r_tree_index_stream:
-        poly_rtree_index = rtree.index.Index(r_tree_index_stream)
-    else:
-        LOGGER.warning("no polygons intersected the bounding box")
-        return []
-
-    vector_layer = None
+    layer = None
     vector = None
-    LOGGER.info(
-        'poly feature lookup 100.0%% complete on %s',
-        os.path.basename(vector_path))
 
-    LOGGER.info('build poly intersection lookup')
-    poly_intersect_lookup = collections.defaultdict(set)
-    for poly_index, (poly_fid, poly_geom) in enumerate(
-            shapely_polygon_lookup.items()):
-        last_time = pygeoprocessing.geoprocessing._invoke_timed_callback(
-            last_time, lambda: LOGGER.info(
-                "poly intersection lookup approximately %.1f%% complete "
-                "on %s", 100.0 * float(poly_index+1) / len(
-                    shapely_polygon_lookup), os.path.basename(vector_path)),
-            pygeoprocessing.geoprocessing._LOGGING_PERIOD)
-        possible_intersection_set = list(poly_rtree_index.intersection(
-            poly_geom.bounds))
-        # no reason to prep the polygon to intersect itself
-        if len(possible_intersection_set) > 1:
-            polygon = shapely.prepared.prep(poly_geom)
-        else:
-            polygon = poly_geom
-        for intersect_poly_fid in possible_intersection_set:
-            # If geometries touch (share 1+ boundary points), then do not count
-            # as an intersection.
-            if ok_for_geometries_to_touch and polygon.touches(
-                    shapely_polygon_lookup[intersect_poly_fid]):
-                continue
-
-            if intersect_poly_fid == poly_fid or polygon.intersects(
-                    shapely_polygon_lookup[intersect_poly_fid]):
-                poly_intersect_lookup[poly_fid].add(intersect_poly_fid)
-        polygon = None
-    LOGGER.info(
-        'poly intersection feature lookup 100.0%% complete on %s',
-        os.path.basename(vector_path))
-
-    # Build maximal subsets
-    subset_list = []
-    while len(poly_intersect_lookup) > 0:
-        # sort polygons by increasing number of intersections
-        intersections_list = [
-            (len(poly_intersect_set), poly_fid, poly_intersect_set)
-            for poly_fid, poly_intersect_set in
-            poly_intersect_lookup.items()]
-        intersections_list.sort()
-
-        # build maximal subset
-        maximal_set = set()
-        for _, poly_fid, poly_intersect_set in intersections_list:
-            last_time = pygeoprocessing.geoprocessing._invoke_timed_callback(
-                last_time, lambda: LOGGER.info(
-                    "maximal subset build approximately %.1f%% complete "
-                    "on %s", 100.0 * float(
-                        feature_count - len(poly_intersect_lookup)) /
-                    feature_count, os.path.basename(vector_path)),
-                pygeoprocessing.geoprocessing._LOGGING_PERIOD)
-            if not poly_intersect_set.intersection(maximal_set):
-                # no intersection, add poly_fid to the maximal set and remove
-                # the polygon from the lookup
-                maximal_set.add(poly_fid)
-                del poly_intersect_lookup[poly_fid]
-        # remove all the polygons from intersections once they're computed
-        for poly_fid, poly_intersect_set in poly_intersect_lookup.items():
-            poly_intersect_lookup[poly_fid] = (
-                poly_intersect_set.difference(maximal_set))
-        subset_list.append(maximal_set)
-    LOGGER.info(
-        'maximal subset build 100.0%% complete on %s',
-        os.path.basename(vector_path))
-    return subset_list
+    union_area = shapely.ops.unary_union(geometries).area
+    if math.isclose(union_area, area_sum):
+        return False
+    return True
 
 
 def _reproject_and_identify(base_vector_path, target_projection_wkt,
@@ -963,8 +796,7 @@ def _read_field_from_vector(vector_path, key_field, value_field):
 
 
 def _rasterize_aois(base_raster_path, aois_vector_path,
-                    target_raster_path, id_fieldname, matching_fids,
-                    working_dir=None):
+                    target_raster_path, id_fieldname):
     """Rasterize the admin units vector onto a new raster.
 
     Args:
@@ -977,52 +809,17 @@ def _rasterize_aois(base_raster_path, aois_vector_path,
         target_raster_path (string): The path to a new UInt32 raster created on
             disk with new values burned into it.
         id_fieldname (string): The fieldname of the ID field to rasterize.
-        matching_fids (set): An iterable of integer FIDs from the vector at
-            ``aois_vector_path`` that should be included in this raster.
-            These feature geometries are assumed to be nonoverlapping, such as
-            from ``pygeoprocessing.calculate_disjoint_polygon_set()``.
-        working_dir=None (string): The path to where to write temporary files.
 
     Returns:
         ``None``
     """
-    working_dir = tempfile.mkdtemp(
-        prefix='rasterize-subset-', dir=working_dir)
-
-    driver = ogr.GetDriverByName('GPKG')
-
-    source_vector = ogr.Open(aois_vector_path)
-    source_layer = source_vector.GetLayer()
-
-    target_vector_path = os.path.join(working_dir, 'subset.gpkg')
-    target_vector = driver.CreateDataSource(target_vector_path)
-    target_layer = target_vector.CreateLayer(
-        'subset', source_layer.GetSpatialRef(), source_layer.GetGeomType())
-    target_layer.CreateField(ogr.FieldDefn(id_fieldname, ogr.OFTInteger))
-
-    target_layer.StartTransaction()
-    for source_feature in source_layer:
-        if source_feature.GetFID() in matching_fids:
-            target_feature = ogr.Feature(target_layer.GetLayerDefn())
-            target_feature.SetGeometry(source_feature.GetGeometryRef())
-            target_feature.SetField(
-                id_fieldname, source_feature.GetField(id_fieldname))
-            target_layer.CreateFeature(target_feature)
-    target_layer.CommitTransaction()
-    source_layer = None
-    source_vector = None
-    target_layer = None
-    target_vector = None
-
     pygeoprocessing.new_raster_from_base(
         base_raster_path, target_raster_path, gdal.GDT_UInt32,
         [UINT32_NODATA], [UINT32_NODATA])
 
     pygeoprocessing.rasterize(
-        target_vector_path, target_raster_path,
+        aois_vector_path, target_raster_path,
         option_list=[f"ATTRIBUTE={id_fieldname}"])
-
-    shutil.rmtree(working_dir, ignore_errors=True)
 
 
 def _reclassify_greenspace_area(
@@ -1319,24 +1116,25 @@ def _calculate_greenspace_population_ratio(
         greenspace_pixels = ~numpy.isclose(greenspace_area, 0)
         valid_pixels &= greenspace_pixels
         if population_nodata is not None:
-            valid_pixels &= ~numpy.isclose(
+            valid_pixels &= ~utils.array_equals_nodata(
                 convolved_population, population_nodata)
 
         if greenspace_nodata is not None:
-            valid_pixels &= ~numpy.isclose(greenspace_area, greenspace_nodata)
+            valid_pixels &= ~utils.array_equals_nodata(
+                greenspace_area, greenspace_nodata)
 
         # The user's guide specifies that if the population in the search
         # radius is numerically 0, the greenspace/population ratio should be
         # set to the greenspace area.
         # A consequence of this is that as the population approaches 0 from the
-        # positive side, the ratio will approach infinity.  Maybe this is
-        # desirable, but until we check with the science team, we'll set this
-        # so that the greenspace/population ratio will be set to the greenspace
-        # area at populations <= 1.
-        # TODO: see what the science team thinks is right to do.
+        # positive side, the ratio will approach infinity.
+        # After checking with the science team, we decided that where the
+        # population is less than or equal to 1, the calculated
+        # greenspace/population ratio would be set to the available greenspace
+        # on that pixel.
         population_close_to_zero = (convolved_population <= 1.0)
         out_array[population_close_to_zero] = (
-            greenspace_pixels[population_close_to_zero])
+            greenspace_area[population_close_to_zero])
         out_array[~greenspace_pixels] = 0
         out_array[valid_pixels] = (
             greenspace_area[valid_pixels] / convolved_population[valid_pixels])

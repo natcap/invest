@@ -1,8 +1,8 @@
 # coding=UTF-8
 import functools
 
-from natcap.invest import MODEL_METADATA
 from natcap.invest import urban_nature_access
+from natcap.invest.model_metadata import MODEL_METADATA
 from natcap.invest.ui import cbc
 from natcap.invest.ui import inputs
 from natcap.invest.ui import model
@@ -34,7 +34,7 @@ class UrbanNatureAccess(model.InVESTModel):
         self.add_input(self.population)
 
         self.admin_units = inputs.File(
-            **_ui_keys('admin_unit_vector_path'))
+            **_ui_keys('aoi_vector_path'))
         self.add_input(self.admin_units)
 
         self.greenspace_demand = inputs.Text(
