@@ -46,6 +46,9 @@ Unreleased Changes
     * Fixed a bug where using unaligned rasters in the preprocessor would cause
       an error.  The preprocessor will now correctly align input landcover
       rasters and determine transitions from the aligned rasters.
+* Habitat Quality
+    * Removed a warning about an undefined nodata value in threat rasters
+      because it is okay for a threat raster to have an undefined nodata value.
 * HRA
     * Fixed an issue with risk calculations where risk values would be much
       lower than they should be.  Risk values are now correctly calculated.
