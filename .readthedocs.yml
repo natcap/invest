@@ -16,7 +16,7 @@ conda:
 build:
   os: ubuntu-22.04
   tools:
-    python: "3.9"
+    python: "mambaforge-4.10"
   jobs:
     post_install:
       - make install
