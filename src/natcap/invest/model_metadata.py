@@ -2,6 +2,7 @@ import dataclasses
 
 from natcap.invest import gettext
 
+
 @dataclasses.dataclass
 class _MODELMETA:
     """Dataclass to store frequently used model metadata."""
@@ -10,6 +11,7 @@ class _MODELMETA:
     gui: str          # importable python class for the corresponding Qt UI
     userguide: str    # name of the corresponding built userguide file
     aliases: tuple    # alternate names for the model, if any
+
 
 MODEL_METADATA = {
     'annual_water_yield': _MODELMETA(

@@ -1,26 +1,25 @@
 """Module for testing the natcap.invest.utils module.."""
 import codecs
-import unittest
-import os
-import tempfile
-import shutil
+import glob
 import logging
 import logging.handlers
-import threading
-import warnings
-import re
-import glob
-import textwrap
+import os
 import queue
+import re
+import shutil
+import tempfile
+import textwrap
+import threading
+import unittest
+import warnings
 
 import numpy
+import pygeoprocessing
 from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
-from shapely.geometry import Polygon
 from shapely.geometry import Point
-
-import pygeoprocessing
+from shapely.geometry import Polygon
 
 
 class SuffixUtilsTests(unittest.TestCase):
@@ -1530,6 +1529,7 @@ class ReclassifyRasterOpTests(unittest.TestCase):
         self.assertTrue(
             expected_message in str(context.exception), str(context.exception))
 
+
 class ArrayEqualsNodataTests(unittest.TestCase):
     """Tests for natcap.invest.utils.array_equals_nodata."""
 
@@ -1559,3 +1559,13 @@ class ArrayEqualsNodataTests(unittest.TestCase):
 
         result_array = utils.array_equals_nodata(array, numpy.nan)
         numpy.testing.assert_array_equal(result_array, expected_array)
+
+    def test_none_nodata(self):
+        """Utils: if nodata is undefined (None), everything is valid."""
+        from natcap.invest import utils
+
+        array = numpy.array(
+            [[4, 2, numpy.nan], [1, numpy.nan, 3], [numpy.nan, 6, 1]])
+        result_array = utils.array_equals_nodata(array, None)
+        numpy.testing.assert_array_equal(
+            result_array, numpy.zeros(array.shape, dtype=bool))

@@ -39,6 +39,10 @@ Unreleased Changes
 * General
     * Update python packaging settings to exclude a few config files and the
       workbench from source distributions and wheels
+    * Updating SDR test values due to an update in GDAL's mode resampling
+      algorithm. See https://github.com/natcap/invest/issues/905
+    * Updated our ``scipy`` requirement to fix a bug where invest crashed
+      if a Windows user had a non-Latin character in their Windows username.
 * Workbench
     * Fixed a bug where some model runs would not generate a new item
       in the list of recent runs.
@@ -46,8 +50,25 @@ Unreleased Changes
     * Fixed a bug where using unaligned rasters in the preprocessor would cause
       an error.  The preprocessor will now correctly align input landcover
       rasters and determine transitions from the aligned rasters.
+* HRA
+    * Fixed an issue with risk calculations where risk values would be much
+      lower than they should be.  Risk values are now correctly calculated.
+    * Fixed an issue with risk reclassifications where most pixels would end up
+      classified as medium risk.
+    * Added an input field to the model to indicate the number of overlapping
+      stressors to use in risk reclassification calculations.  This input
+      affects the numerical boundaries between high, medium and low risk
+      classifications.
+    * Various improvements to the model have resulted in a modest (~33%)
+      speedup in runtime.
+* Coastal Vulnerability
+    * Fixed a bug where redundant vertices in the landmass polygon could
+      raise an error during shore point creation.
 * NDR
     * Added parameters to the sample data to support nitrogen calculations.
+    * Effective retention calculations have been reworked so that the source
+      code more closely matches the mathematical definition in the NDR User's
+      Guide.  There should be no difference in outputs.
 * SDR
     * We have made a significant update to the SDR model's outputs described
       here: https://github.com/natcap/peps/blob/main/pep-0010.md.
