@@ -232,7 +232,7 @@ fetch: $(GIT_UG_REPO_PATH) $(GIT_SAMPLE_DATA_REPO_PATH) $(GIT_TEST_DATA_REPO_PAT
 # Python conda environment management
 env:
 	@echo "NOTE: requires 'requests' be installed in base Python"
-	$(PYTHON) ./scripts/convert-requirements-to-conda-yml.py requirements.txt requirements-dev.txt requirements-gui.txt > requirements-all.yml
+	$(PYTHON) ./scripts/convert-requirements-to-conda-yml.py requirements.txt requirements-dev.txt requirements-docs.txt requirements-gui.txt > requirements-all.yml
 	$(CONDA) create -p $(ENV) -y -c conda-forge python=3.8 nomkl
 	$(CONDA) env update -p $(ENV) --file requirements-all.yml
 	@echo "----------------------------"

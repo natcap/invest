@@ -11,11 +11,12 @@ sphinx:
   fail_on_warning: true
 
 conda:
-  environment: requirements-docs.yml
+  environment: .readthedocs_environment.yml
 
-# Optionally set the version of Python and requirements required to build your docs
-python:
-  version: 3.7
-  install:
-    - method: setuptools  # install natcap.invest using python setup.py install
-      path: .
+build:
+  os: ubuntu-22.04
+  tools:
+    python: "mambaforge-4.10"
+  jobs:
+    post_install:
+      - make install
