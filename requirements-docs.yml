@@ -12,7 +12,7 @@ channels:
 dependencies:
 - chardet>=3.0.4
 - Cython
-- GDAL>=3.1.2,!=3.3.0,<3.4.1
+- GDAL>=3.4.2
 - Flask
 - flask_cors
 - numpy>=1.11.0,!=1.16.0
