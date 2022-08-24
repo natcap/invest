@@ -39,6 +39,10 @@ Unreleased Changes
 * General
     * Update python packaging settings to exclude a few config files and the
       workbench from source distributions and wheels
+    * Updating SDR test values due to an update in GDAL's mode resampling
+      algorithm. See https://github.com/natcap/invest/issues/905
+    * Updated our ``scipy`` requirement to fix a bug where invest crashed
+      if a Windows user had a non-Latin character in their Windows username.
 * Workbench
     * Fixed a bug where some model runs would not generate a new item
       in the list of recent runs.
