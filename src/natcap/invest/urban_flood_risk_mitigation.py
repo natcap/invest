@@ -2,24 +2,23 @@
 import logging
 import os
 
+import numpy
+import pygeoprocessing
+import rtree
+import scipy
+import shapely.prepared
+import shapely.wkb
+import taskgraph
 from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
-import pygeoprocessing
-import taskgraph
-import numpy
-import scipy
-import rtree
-import shapely.wkb
-import shapely.prepared
 
-from . import utils
+from . import gettext
 from . import spec_utils
-from .spec_utils import u
+from . import utils
 from . import validation
 from .model_metadata import MODEL_METADATA
-from . import gettext
-
+from .spec_utils import u
 
 LOGGER = logging.getLogger(__name__)
 
@@ -62,20 +61,16 @@ ARGS_SPEC = {
                 "lucode": {
                     "type": "integer",
                     "about": gettext("LULC codes matching those in the LULC map.")},
-                "cn_[SOIL_GROUP]": {
-                    "type": "number",
-                    "units": u.none,
-                    "about": gettext(
-                        "The curve number value for this LULC type in each "
-                        "hydrologic soil group. Replace [SOIL_GROUP] with the "
-                        "soil group codes A, B, C, D, so that there is a "
-                        "column for each soil group.")
-                }
+                **{f"cn_{soilgroup.lower()}": {
+                    "type": "number", "units": u.none, "about": gettext(
+                        "The curve number value for this LULC type in the "
+                        f"soil group code {soilgroup}.")}
+                    for soilgroup in "ABCD"}
             },
             "about": gettext(
                 "Table of curve number data for each LULC class. All LULC "
                 "codes in the LULC raster must have corresponding entries in "
-                "this table."),
+                "this table for each soil group."),
             "name": gettext("biophysical table")
         },
         "built_infrastructure_vector_path": {
