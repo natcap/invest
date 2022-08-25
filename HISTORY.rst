@@ -80,14 +80,17 @@ Unreleased Changes
           have been removed from the model.
         * Two new output rasters have been added, specifically
             * ``avoided_export.tif``, indicating vegetation's contribution to
-              avoided local erosion.
-            * ``avoided_local_erosion.tif``, indicating avoided soil loss on a pixel.
+              reducing erosion on a pixel, as well as trapping of sediment
+              originating upslope of the pixel, so that neither of these
+              proceed downslope to enter a stream.
+            * ``avoided_erosion.tif``, vegetation’s contribution to reducing
+              erosion from a pixel.
         * The summary watersheds vector no longer includes the ``sed_retent``
           field and two fields have been added:
 
             * ``avoid_exp`` representing the sum of avoided export in the
               watershed.
-            * ``avoid_eros`` representing the sum of avoided local erosion in the
+            * ``avoid_eros`` representing the sum of avoided erosion in the
               watershed.
         * Sediment deposition, ``sed_deposition.tif``, has been clarified to
           indicate the sediment that erodes from a pixel goes into the next
