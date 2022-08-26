@@ -1008,14 +1008,15 @@ class HRAModelTests(unittest.TestCase):
         }
         aoi_geoms = [
             shapely.geometry.box(  # This geometry covers all areas
-                *shapely.geometry.Point(ORIGIN).buffer(1000).bounds),
-            shapely.geometry.box(  # This geometry covers no areas
+                *shapely.geometry.Point(ORIGIN).buffer(100).bounds),
+            shapely.geometry.box(  # Geometry covers only 1 stressor
                 *shapely.geometry.Point(
-                    (ORIGIN[0]-1000000,
-                     ORIGIN[1] - 1000000)).buffer(100).bounds)
+                    (ORIGIN[0], ORIGIN[1]-200)).buffer(100).bounds)
         ]
         pygeoprocessing.shapely_geometry_to_vector(
-            aoi_geoms, args['aoi_vector_path'], SRS_WKT, 'ESRI Shapefile')
+            aoi_geoms, args['aoi_vector_path'], SRS_WKT, 'ESRI Shapefile',
+            fields={'name': ogr.OFTString}, attribute_list=[
+                {'name': 'wholearea'}, {'name': 'noarea'}])
 
         with open(args['criteria_table_path'], 'w') as criteria_table:
             criteria_table.write(textwrap.dedent(
