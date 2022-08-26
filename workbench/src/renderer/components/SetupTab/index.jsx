@@ -89,6 +89,7 @@ export default class SetupTab extends React.Component {
       argsEnabled: null,
       argsDropdownOptions: null,
       saveAlerts: {},
+      scrollEventCount: 0,
     };
 
     this.saveDatastack = this.saveDatastack.bind(this);
@@ -105,6 +106,7 @@ export default class SetupTab extends React.Component {
     this.callUISpecFunctions = this.callUISpecFunctions.bind(this);
     this.browseForDatastack = this.browseForDatastack.bind(this);
     this.loadParametersFromFile = this.loadParametersFromFile.bind(this);
+    this.triggerScrollEvent = this.triggerScrollEvent.bind(this);
   }
 
   componentDidMount() {
@@ -152,6 +154,19 @@ export default class SetupTab extends React.Component {
   componentWillUnmount() {
     this._isMounted = false;
     clearTimeout(this.validationTimer);
+  }
+
+  /**
+   * Update scrollEventCount, which is being observed by a useEffect
+   * in ArgInput in order to trigger horizontal scrolls in text boxes.
+   * Call this during events that fill text boxes by means other than typing.
+   *
+   * @returns {undefined}
+   */
+  triggerScrollEvent() {
+    this.setState((prevState, props) => ({
+      scrollEventCount: prevState.updateEvent + 1
+    }));
   }
 
   /**
@@ -279,6 +294,7 @@ export default class SetupTab extends React.Component {
     if (datastack.module_name === this.props.pyModuleName) {
       this.batchUpdateArgs(datastack.args);
       this.props.switchTabs('setup');
+      this.triggerScrollEvent();
     } else {
       alert( // eslint-disable-line no-alert
         _(`Datastack/Logfile for ${datastack.model_human_name} does not match this model.`)
@@ -443,6 +459,7 @@ export default class SetupTab extends React.Component {
       argsEnabled,
       argsDropdownOptions,
       saveAlerts,
+      scrollEventCount,
     } = this.state;
     if (argsValues) {
       const {
@@ -503,6 +520,8 @@ export default class SetupTab extends React.Component {
               updateArgValues={this.updateArgValues}
               updateArgTouched={this.updateArgTouched}
               loadParametersFromFile={this.loadParametersFromFile}
+              scrollEventCount={scrollEventCount}
+              triggerScrollEvent={this.triggerScrollEvent}
             />
           </Row>
           <Portal elId={sidebarSetupElementId}>

@@ -487,11 +487,9 @@ exceed 100% of window.*/
 }
 
 .args-form .form-control[type=text] {
-	/* In order to keep the important part of long filepaths visible
-	https://stackoverflow.com/questions/38222696/issue-with-the-direction-rtl-css-property */
-	direction: rtl;
-	text-align: left;
-	unicode-bidi: plaintext;
+	/*always hold space for a validation mark so the rightmost
+	text is never hidden by the mark when it appears.*/
+	padding-right: 2em;
 }
 
 input.input-dragging {

@@ -91,6 +91,8 @@ export default class ArgsForm extends React.Component {
     } else {
       throw new Error('Error handling input file drop');
     }
+    event.currentTarget.focus();
+    this.props.triggerScrollEvent();
   }
 
   handleFocus(event) {
@@ -122,6 +124,7 @@ export default class ArgsForm extends React.Component {
     if (data.filePaths.length) {
       // dialog defaults allow only 1 selection
       this.props.updateArgValues(name, data.filePaths[0]);
+      this.props.triggerScrollEvent();
     }
   }
 
@@ -134,6 +137,7 @@ export default class ArgsForm extends React.Component {
       argsEnabled,
       argsDropdownOptions,
       userguide,
+      scrollEventCount,
     } = this.props;
     const formItems = [];
     let k = 0;
@@ -158,6 +162,7 @@ export default class ArgsForm extends React.Component {
             touched={argsValues[argkey].touched}
             validationMessage={argsValidation[argkey].validationMessage}
             value={argsValues[argkey].value}
+            scrollEventCount={scrollEventCount}
           />
         );
       });
@@ -210,4 +215,10 @@ ArgsForm.propTypes = {
   userguide: PropTypes.string.isRequired,
   updateArgValues: PropTypes.func.isRequired,
   loadParametersFromFile: PropTypes.func.isRequired,
+  scrollEventCount: PropTypes.number,
+  triggerScrollEvent: PropTypes.func.isRequired,
+};
+
+ArgsForm.defaultProps = {
+  scrollEventCount: 0,
 };
