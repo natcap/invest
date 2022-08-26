@@ -1197,8 +1197,11 @@ def _create_summary_statistics_file(
             for prefix in ('E', 'C', 'R'):
                 record[f'{prefix}_MIN'] = float(stats[f'{prefix}_MIN'])
                 record[f'{prefix}_MAX'] = float(stats[f'{prefix}_MAX'])
-                record[f'{prefix}_MEAN'] = float(
-                    stats[f'{prefix}_SUM'] / stats[f'{prefix}_N_PIXELS'])
+                mean = 0
+                if stats[f'{prefix}_N_PIXELS'] > 0:  # avoid dividing by 0
+                    mean = float(
+                        stats[f'{prefix}_SUM'] / stats[f'{prefix}_N_PIXELS'])
+                record[f'{prefix}_MEAN'] = mean
             records.append(record)
             all_subregion_stats[(habitat, stressor, subregion_id)] = stats
 
@@ -1241,8 +1244,11 @@ def _create_summary_statistics_file(
                 sums_across_stressors['R_N_LOW'] / reclassified_count) * 100
 
             for prefix in ('E', 'C', 'R'):
-                record[f'{prefix}_MEAN'] = (
-                    record[f'{prefix}_SUM'] / record[f'{prefix}_N_PIXELS'])
+                mean = 0
+                if record[f'{prefix}_N_PIXELS'] > 0:
+                    mean = (
+                        record[f'{prefix}_SUM'] / record[f'{prefix}_N_PIXELS'])
+                record[f'{prefix}_MEAN'] = mean
                 del record[f'{prefix}_SUM']
                 del record[f'{prefix}_N_PIXELS']
 
