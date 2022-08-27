@@ -47,6 +47,8 @@
 * Workbench
     * Fixed a bug where some model runs would not generate a new item
       in the list of recent runs.
+    * Enhanced model input forms so that text boxes always show the
+      rightmost end of the filepath when they overflow the box.
 * Coastal Blue Carbon
     * Fixed a bug where using unaligned rasters in the preprocessor would cause
       an error.  The preprocessor will now correctly align input landcover
