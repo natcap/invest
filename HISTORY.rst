@@ -35,7 +35,7 @@
 .. :changelog:
 
 
-3.12.0 (2022-08-26)
+3.12.0 (2022-08-31)
 -------------------
 * General
     * Update python packaging settings to exclude a few config files and the
