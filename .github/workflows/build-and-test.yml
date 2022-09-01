@@ -28,7 +28,7 @@ jobs:
     name: Check for syntax errors
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Set up python
         uses: actions/setup-python@v2
@@ -56,9 +56,10 @@ jobs:
         python-version: [3.8, 3.9, "3.10"]
         os: [windows-latest, macos-latest]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0 # Fetch complete history for accurate versioning
+
 
       # NOTE: It takes twice as long to save the sample data cache
       # as it does to do a fresh clone (almost 5 minutes vs. 2.5 minutes)
@@ -97,7 +98,10 @@ jobs:
 
       - name: Build and install wheel
         run: |
+          # uninstall InVEST if it was already in the restored cache
+          python -m pip uninstall -y natcap.invest
           python -m build --wheel
+          ls -la dist
           pip install $(find dist -name "natcap.invest*.whl")
 
       - name: Run model tests
@@ -139,7 +143,7 @@ jobs:
         python-version: [3.8, 3.9, "3.10"]
         os: [windows-latest, macos-latest]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - uses: ./.github/actions/setup_env
         with:

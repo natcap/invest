@@ -17,14 +17,13 @@ import taskgraph
 from osgeo import gdal
 from osgeo import ogr
 
-from ..model_metadata import MODEL_METADATA
 from .. import gettext
 from .. import spec_utils
 from .. import utils
 from .. import validation
+from ..model_metadata import MODEL_METADATA
 from ..spec_utils import u
 from . import sdr_core
-
 
 LOGGER = logging.getLogger(__name__)
 
@@ -154,34 +153,29 @@ ARGS_SPEC = {
 _OUTPUT_BASE_FILES = {
     'rkls_path': 'rkls.tif',
     'sed_export_path': 'sed_export.tif',
-    'sed_retention_index_path': 'sed_retention_index.tif',
-    'sed_retention_path': 'sed_retention.tif',
     'sed_deposition_path': 'sed_deposition.tif',
     'stream_and_drainage_path': 'stream_and_drainage.tif',
     'stream_path': 'stream.tif',
     'usle_path': 'usle.tif',
     'watershed_results_sdr_path': 'watershed_results_sdr.shp',
+    'avoided_export_path': 'avoided_export.tif',
+    'avoided_erosion_path': 'avoided_erosion.tif',
 }
 
 INTERMEDIATE_DIR_NAME = 'intermediate_outputs'
 
 _INTERMEDIATE_BASE_FILES = {
     'cp_factor_path': 'cp.tif',
-    'd_dn_bare_soil_path': 'd_dn_bare_soil.tif',
     'd_dn_path': 'd_dn.tif',
-    'd_up_bare_soil_path': 'd_up_bare_soil.tif',
     'd_up_path': 'd_up.tif',
     'f_path': 'f.tif',
     'flow_accumulation_path': 'flow_accumulation.tif',
     'flow_direction_path': 'flow_direction.tif',
-    'ic_bare_soil_path': 'ic_bare_soil.tif',
     'ic_path': 'ic.tif',
     'ls_path': 'ls.tif',
     'pit_filled_dem_path': 'pit_filled_dem.tif',
     's_accumulation_path': 's_accumulation.tif',
     's_bar_path': 's_bar.tif',
-    's_inverse_path': 's_inverse.tif',
-    'sdr_bare_soil_path': 'sdr_bare_soil.tif',
     'sdr_path': 'sdr_factor.tif',
     'slope_path': 'slope.tif',
     'thresholded_slope_path': 'slope_threshold.tif',
@@ -556,7 +550,7 @@ def execute(args):
         dependent_task_list=[usle_task, sdr_task],
         task_name='calculate export prime')
 
-    _ = task_graph.add_task(
+    sed_deposition_task = task_graph.add_task(
         func=sdr_core.calculate_sediment_deposition,
         args=(
             f_reg['flow_direction_path'], f_reg['e_prime_path'],
@@ -566,74 +560,24 @@ def execute(args):
         target_path_list=[f_reg['sed_deposition_path'], f_reg['f_path']],
         task_name='sediment deposition')
 
-    _ = task_graph.add_task(
-        func=_calculate_sed_retention_index,
-        args=(
-            f_reg['rkls_path'], f_reg['usle_path'], f_reg['sdr_path'],
-            float(args['sdr_max']), f_reg['sed_retention_index_path']),
-        target_path_list=[f_reg['sed_retention_index_path']],
-        dependent_task_list=[rkls_task, usle_task, sdr_task],
-        task_name='calculate sediment retention index')
-
-    # This next section is for calculating the bare soil part.
-    s_inverse_task = task_graph.add_task(
-        func=_calculate_inverse_s_factor,
-        args=(f_reg['thresholded_slope_path'], f_reg['s_inverse_path']),
-        target_path_list=[f_reg['s_inverse_path']],
-        dependent_task_list=[threshold_slope_task],
-        task_name='calculate S factor')
-
-    d_dn_bare_task = task_graph.add_task(
-        func=pygeoprocessing.routing.distance_to_channel_mfd,
-        args=(
-            (f_reg['flow_direction_path'], 1),
-            (drainage_raster_path_task[0], 1),
-            f_reg['d_dn_bare_soil_path']),
-        kwargs={'weight_raster_path_band': (f_reg['s_inverse_path'], 1)},
-        target_path_list=[f_reg['d_dn_bare_soil_path']],
-        dependent_task_list=[
-            flow_dir_task, drainage_raster_path_task[1], s_inverse_task],
-        task_name='calculating d_dn soil')
-
-    d_up_bare_task = task_graph.add_task(
-        func=_calculate_d_up_bare,
-        args=(
-            f_reg['s_bar_path'], f_reg['flow_accumulation_path'],
-            f_reg['d_up_bare_soil_path']),
-        target_path_list=[f_reg['d_up_bare_soil_path']],
-        dependent_task_list=[bar_task_map['s_bar'], flow_accumulation_task],
-        task_name='calculating d_up bare soil')
-
-    ic_bare_task = task_graph.add_task(
-        func=_calculate_ic,
-        args=(
-            f_reg['d_up_bare_soil_path'], f_reg['d_dn_bare_soil_path'],
-            f_reg['ic_bare_soil_path']),
-        target_path_list=[f_reg['ic_bare_soil_path']],
-        dependent_task_list=[d_up_bare_task, d_dn_bare_task],
-        task_name='calculate bare soil ic')
-
-    sdr_bare_task = task_graph.add_task(
-        func=_calculate_sdr,
-        args=(
-            float(args['k_param']), float(args['ic_0_param']),
-            float(args['sdr_max']), f_reg['ic_bare_soil_path'],
-            drainage_raster_path_task[0], f_reg['sdr_bare_soil_path']),
-        target_path_list=[f_reg['sdr_bare_soil_path']],
-        dependent_task_list=[ic_bare_task, drainage_raster_path_task[1]],
-        task_name='calculate bare SDR')
-
-    sed_retention_task = task_graph.add_task(
-        func=_calculate_sed_retention,
+    avoided_erosion_task = task_graph.add_task(
+        func=_calculate_avoided_erosion,
         args=(
             f_reg['rkls_path'], f_reg['usle_path'],
-            drainage_raster_path_task[0], f_reg['sdr_path'],
-            f_reg['sdr_bare_soil_path'], f_reg['sed_retention_path']),
-        target_path_list=[f_reg['sed_retention_path']],
-        dependent_task_list=[
-            rkls_task, usle_task, drainage_raster_path_task[1], sdr_task,
-            sdr_bare_task],
-        task_name='calculate sediment retention')
+            f_reg['avoided_erosion_path']),
+        dependent_task_list=[rkls_task, usle_task],
+        target_path_list=[f_reg['avoided_erosion_path']],
+        task_name='calculate avoided erosion')
+
+    avoided_export_task = task_graph.add_task(
+        func=_calculate_avoided_export,
+        args=(
+            f_reg['avoided_erosion_path'], f_reg['sdr_path'],
+            f_reg['sed_deposition_path'], f_reg['avoided_export_path']),
+        dependent_task_list=[avoided_erosion_task, sdr_task,
+                             sed_deposition_task],
+        target_path_list=[f_reg['avoided_export_path']],
+        task_name='calculate total retention')
 
     _ = task_graph.add_task(
         func=_calculate_what_drains_to_stream,
@@ -647,15 +591,116 @@ def execute(args):
         func=_generate_report,
         args=(
             args['watersheds_path'], f_reg['usle_path'],
-            f_reg['sed_export_path'], f_reg['sed_retention_path'],
-            f_reg['sed_deposition_path'], f_reg['watershed_results_sdr_path']),
+            f_reg['sed_export_path'], f_reg['sed_deposition_path'],
+            f_reg['avoided_export_path'], f_reg['avoided_erosion_path'],
+            f_reg['watershed_results_sdr_path']),
         target_path_list=[f_reg['watershed_results_sdr_path']],
         dependent_task_list=[
-            usle_task, sed_export_task, sed_retention_task],
+            usle_task, sed_export_task, avoided_export_task,
+            sed_deposition_task, avoided_erosion_task],
         task_name='generate report')
 
     task_graph.close()
     task_graph.join()
+
+
+def _calculate_avoided_export(
+        avoided_erosion_path, sdr_path, sed_deposition_path,
+        target_avoided_export_path):
+    """Calculate total retention.
+
+    Args:
+        avoided_erosion_path (string): The string path to an avoided erosion
+            raster.
+        sdr_path (string): The path to a raster containing computed SDR values.
+        sed_deposition_path (string): The path to a raster containing computed
+            sediment deposition values.
+        target_avoided_export_path (string): The path to the calculated total
+            retention raster, produced by this function.
+
+    Returns:
+        ``None``
+    """
+    avoided_erosion_nodata = pygeoprocessing.get_raster_info(
+        avoided_erosion_path)['nodata'][0]
+    sdr_nodata = pygeoprocessing.get_raster_info(sdr_path)['nodata'][0]
+    sed_deposition_nodata = pygeoprocessing.get_raster_info(
+        sed_deposition_path)['nodata'][0]
+
+    def _avoided_export_function(avoided_erosion, sdr, sed_deposition):
+        """Calculate total retention.
+
+        Args:
+            avoided_erosion (numpy.array): Avoided erosion values.
+            sdr (numpy.array): SDR values.
+            sed_deposition (numpy.array): Sediment deposition values.
+
+        Returns:
+            A ``numpy.array`` of computed total retention matching the shape of
+            the input numpy arrays.
+        """
+        result = numpy.full(avoided_erosion.shape, _TARGET_NODATA,
+                            dtype=numpy.float32)
+        valid_mask = (
+            (~utils.array_equals_nodata(avoided_erosion,
+                                        avoided_erosion_nodata)) &
+            (~utils.array_equals_nodata(sdr, sdr_nodata)) &
+            (~utils.array_equals_nodata(sed_deposition,
+                                        sed_deposition_nodata)))
+
+        # avoided_erosion represents RLKS - RKLSCP (where RKLSCP is also
+        # known as a modified USLE)
+        result[valid_mask] = (
+            avoided_erosion[valid_mask] * sdr[valid_mask] +
+            sed_deposition[valid_mask])
+        return result
+
+    pygeoprocessing.raster_calculator(
+        [(avoided_erosion_path, 1), (sdr_path, 1),
+         (sed_deposition_path, 1)],
+        _avoided_export_function, target_avoided_export_path,
+        gdal.GDT_Float32, _TARGET_NODATA)
+
+
+def _calculate_avoided_erosion(
+        rkls_path, usle_path, target_avoided_erosion_path):
+    """Calculate avoided erosion.
+
+
+    Args:
+        rkls_path (string): The path to the RKLS raster on disk.
+        usle_path (string): The path to the USLE raster on disk.
+        target_avoided_erosion_path (string): The path to the target
+            local retention raster, created by this function.
+
+    Returns:
+        ``None``
+    """
+    rkls_nodata = pygeoprocessing.get_raster_info(rkls_path)['nodata'][0]
+    usle_nodata = pygeoprocessing.get_raster_info(usle_path)['nodata'][0]
+
+    def _avoided_erosion_function(rkls, usle):
+        """Calculate avoided erosion.
+
+        Args:
+            rkls (numpy.array): Computed RKLS values.
+            usle (numpy.array): Computed USLE values.
+
+        Returns:
+            A ``numpy.array`` of the same size and shape of the input numpy
+            arrays containing computed avoided erosion values.
+        """
+        result = numpy.full(rkls.shape, _TARGET_NODATA, dtype=numpy.float32)
+        valid_mask = (
+            (~utils.array_equals_nodata(rkls, rkls_nodata)) &
+            (~utils.array_equals_nodata(usle, usle_nodata)))
+
+        result[valid_mask] = rkls[valid_mask] - usle[valid_mask]
+        return result
+
+    pygeoprocessing.raster_calculator(
+        [(rkls_path, 1), (usle_path, 1)], _avoided_erosion_function,
+        target_avoided_erosion_path, gdal.GDT_Float32, _TARGET_NODATA)
 
 
 def _calculate_what_drains_to_stream(
@@ -1308,84 +1353,28 @@ def _calculate_e_prime(usle_path, sdr_path, target_e_prime):
         gdal.GDT_Float32, _TARGET_NODATA)
 
 
-def _calculate_sed_retention_index(
-        rkls_path, usle_path, sdr_path, sdr_max,
-        out_sed_retention_index_path):
-    """Calculate (rkls-usle) * sdr  / sdr_max."""
-    def sediment_index_op(rkls, usle, sdr_factor):
-        """Calculate sediment retention index."""
-        valid_mask = (
-            ~utils.array_equals_nodata(rkls, _TARGET_NODATA) &
-            ~utils.array_equals_nodata(usle, _TARGET_NODATA) &
-            ~utils.array_equals_nodata(sdr_factor, _TARGET_NODATA))
-        result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
-        result[:] = _TARGET_NODATA
-        result[valid_mask] = (
-            (rkls[valid_mask] - usle[valid_mask]) *
-            sdr_factor[valid_mask] / sdr_max)
-        return result
-
-    pygeoprocessing.raster_calculator(
-        [(path, 1) for path in [rkls_path, usle_path, sdr_path]],
-        sediment_index_op, out_sed_retention_index_path, gdal.GDT_Float32,
-        _TARGET_NODATA)
-
-
-def _calculate_sed_retention(
-        rkls_path, usle_path, stream_path, sdr_path, sdr_bare_soil_path,
-        out_sed_ret_bare_soil_path):
-    """Difference in exported sediments on basic and bare watershed.
-
-    Calculates the difference of sediment export on the real landscape and
-    a bare soil landscape given that SDR has been calculated for bare soil.
-    Essentially:
-
-        RKLS * SDR_bare - USLE * SDR
+def _generate_report(
+        watersheds_path, usle_path, sed_export_path,
+        sed_deposition_path, avoided_export_path, avoided_erosion_path,
+        watershed_results_sdr_path):
+    """Create summary vector with totals for rasters.
 
     Args:
-        rkls_path (string): path to RKLS raster
-        usle_path (string): path to USLE raster
-        stream_path (string): path to stream/drainage mask
-        sdr_path (string): path to SDR raster
-        sdr_bare_soil_path (string): path to SDR raster calculated for a bare
-            watershed
-        out_sed_ret_bare_soil_path (string): path to output raster indicating
-            where sediment is retained
+        watersheds_path (string): The path to the watersheds vector.
+        usle_path (string): The path to the computed USLE raster.
+        sed_export_path (string): The path to the sediment export raster.
+        sed_deposition_path (string): The path to the sediment deposition
+            raster.
+        avoided_export_path (string): The path to the total retention raster.
+        avoided_erosion_path (string): The path to the avoided local
+            erosion raster.
+        watershed_results_sdr_path (string): The path to where the watersheds
+            vector will be created.  This path must end in ``.shp`` as it will
+            be written as an ESRI Shapefile.
 
     Returns:
-        None
-
+        ``None``
     """
-    stream_nodata = pygeoprocessing.get_raster_info(stream_path)['nodata'][0]
-
-    def sediment_retention_bare_soil_op(
-            rkls, usle, stream_factor, sdr_factor, sdr_factor_bare_soil):
-        """Subtract bare soil export from real landcover."""
-        valid_mask = (
-            ~utils.array_equals_nodata(rkls, _TARGET_NODATA) &
-            ~utils.array_equals_nodata(usle, _TARGET_NODATA) &
-            ~utils.array_equals_nodata(stream_factor, stream_nodata) &
-            ~utils.array_equals_nodata(sdr_factor, _TARGET_NODATA) &
-            ~utils.array_equals_nodata(sdr_factor_bare_soil, _TARGET_NODATA))
-        result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
-        result[:] = _TARGET_NODATA
-        result[valid_mask] = (
-            rkls[valid_mask] * sdr_factor_bare_soil[valid_mask] -
-            usle[valid_mask] * sdr_factor[valid_mask]) * (
-                1 - stream_factor[valid_mask])
-        return result
-
-    pygeoprocessing.raster_calculator(
-        [(path, 1) for path in [
-            rkls_path, usle_path, stream_path, sdr_path, sdr_bare_soil_path]],
-        sediment_retention_bare_soil_op, out_sed_ret_bare_soil_path,
-        gdal.GDT_Float32, _TARGET_NODATA)
-
-
-def _generate_report(
-        watersheds_path, usle_path, sed_export_path, sed_retention_path,
-        sed_deposition_path, watershed_results_sdr_path):
-    """Create shapefile with USLE, sed export, retention, and deposition."""
     original_datasource = gdal.OpenEx(watersheds_path, gdal.OF_VECTOR)
     if os.path.exists(watershed_results_sdr_path):
         LOGGER.warning(f'overwriting results at {watershed_results_sdr_path}')
@@ -1402,10 +1391,12 @@ def _generate_report(
             (usle_path, 1), watershed_results_sdr_path),
         'sed_export': pygeoprocessing.zonal_statistics(
             (sed_export_path, 1), watershed_results_sdr_path),
-        'sed_retent': pygeoprocessing.zonal_statistics(
-            (sed_retention_path, 1), watershed_results_sdr_path),
         'sed_dep': pygeoprocessing.zonal_statistics(
             (sed_deposition_path, 1), watershed_results_sdr_path),
+        'avoid_exp': pygeoprocessing.zonal_statistics(
+            (avoided_export_path, 1), watershed_results_sdr_path),
+        'avoid_eros': pygeoprocessing.zonal_statistics(
+            (avoided_erosion_path, 1), watershed_results_sdr_path),
     }
 
     for field_name in field_summaries:
