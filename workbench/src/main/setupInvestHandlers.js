@@ -113,7 +113,8 @@ export function setupInvestRunHandlers(investExe) {
       // only be one logger message at a time.
       event.reply(
         `invest-stdout-${tabID}`,
-        markupMessage(`${data}`, pyModuleName)
+        `${data}`
+        // markupMessage(`${data}`, pyModuleName)
       );
     };
     investRun.stdout.on('data', stdOutCallback);

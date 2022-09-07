@@ -531,14 +531,24 @@ input[type=text]::placeholder {
 	overflow: auto;
 	white-space: pre-wrap;
 	height: var(--content-height);
+/*	overflow-y: scroll;
+	overscroll-behavior-y: contain;
+	scroll-snap-type: y;*/
 }
 
+/*#log-display.scroll-snap {
+	overflow-y: scroll;
+	overscroll-behavior-y: contain;
+	scroll-snap-type: y;
+}
+*/
 #log-text {
 	font-family: monospace;
 	font-size:1rem;
 	color: #000;
 	margin-top: 1rem;
 	margin-bottom: 1rem;
+	/*scroll-snap-align: end;*/
 }
 
 #log-text .invest-log-primary {

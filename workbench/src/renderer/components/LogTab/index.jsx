@@ -5,6 +5,8 @@ import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import Container from 'react-bootstrap/Container';
 
+import { Virtuoso } from 'react-virtuoso';
+
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
 const { ipcRenderer } = window.Workbench.electron;
@@ -13,11 +15,6 @@ const logger = window.Workbench.getLogger('LogTab');
 class LogDisplay extends React.Component {
   constructor(props) {
     super(props);
-    this.content = React.createRef();
-  }
-
-  componentDidUpdate() {
-    this.content.current.scrollTop = this.content.current.scrollHeight;
   }
 
   render() {
@@ -27,13 +24,16 @@ class LogDisplay extends React.Component {
     through sanitize-html. */
     return (
       <Col
-        className="text-break"
+        className={`text-break`}
         id="log-display"
-        ref={this.content}
       >
-        <div
-          id="log-text"
-          dangerouslySetInnerHTML={{ __html: this.props.logdata }}
+        <Virtuoso
+          followOutput
+          style={{ height: '100%' }}
+          totalCount={this.props.logdata.length}
+          itemContent={
+            (index) => <div>{this.props.logdata[index]}</div>
+          }
         />
       </Col>
     );
@@ -41,14 +41,14 @@ class LogDisplay extends React.Component {
 }
 
 LogDisplay.propTypes = {
-  logdata: PropTypes.string,
+  logdata: PropTypes.Array,
 };
 
 export default class LogTab extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      logdata: '',
+      logdata: [],
     };
   }
 
@@ -57,9 +57,12 @@ export default class LogTab extends React.Component {
     // This channel is replied to by the invest process stdout listener
     // And by the logfile reader.
     ipcRenderer.on(`invest-stdout-${tabID}`, (data) => {
-      let { logdata } = this.state;
-      logdata += data;
-      this.setState({ logdata: logdata });
+      // let { logdata } = this.state;
+      // logdata += data;
+      // this.setState({ logdata: logdata });
+      this.setState((state) => ({
+        logdata: [...state.logdata, data]
+      }));
     });
     if (!executeClicked && logfile) {
       ipcRenderer.send(
@@ -74,7 +77,7 @@ export default class LogTab extends React.Component {
     // If we're re-running a model after loading a recent run,
     // we should clear out the logdata when the new run is launched.
     if (this.props.executeClicked && !prevProps.executeClicked) {
-      this.setState({ logdata: '' });
+      this.setState({ logdata: [] });
     }
   }
 

@@ -45,6 +45,7 @@
     "localforage": "^1.9.0",
     "node-fetch": "^2.6.7",
     "prop-types": "^15.7.2",
+    "react-virtuoso": "^2.18.0",
     "sanitize-html": "^2.2.0",
     "yauzl": "^2.10.0"
   },
