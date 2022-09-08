@@ -531,36 +531,29 @@ input[type=text]::placeholder {
 	overflow: auto;
 	white-space: pre-wrap;
 	height: var(--content-height);
-/*	overflow-y: scroll;
-	overscroll-behavior-y: contain;
-	scroll-snap-type: y;*/
 }
 
-/*#log-display.scroll-snap {
-	overflow-y: scroll;
-	overscroll-behavior-y: contain;
-	scroll-snap-type: y;
-}
-*/
-#log-text {
+#log-display {
 	font-family: monospace;
 	font-size:1rem;
 	color: #000;
-	margin-top: 1rem;
-	margin-bottom: 1rem;
-	/*scroll-snap-align: end;*/
+	padding-right: 0;
 }
 
-#log-text .invest-log-primary {
+.log-footer {
+	padding-bottom: 1rem;
+}
+
+#log-display .invest-log-primary {
 	color: #000;
 	font-weight: bold;
 }
 
-#log-text .invest-log-primary-warning {
+#log-display .invest-log-primary-warning {
 	color: #f13232;
 }
 
-#log-text .invest-log-error {
+#log-display .invest-log-error {
 	color: #f13232;
 	font-weight: bold;
 }
