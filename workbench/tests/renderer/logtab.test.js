@@ -7,7 +7,7 @@ import fs from 'fs';
 import os from 'os';
 import crypto from 'crypto';
 
-import React from 'react';
+import React, { Component as mockComponent } from 'react';
 import { render } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
@@ -15,6 +15,21 @@ import LogTab from '../../src/renderer/components/LogTab';
 import { setupInvestLogReaderHandler } from '../../src/main/setupInvestHandlers';
 import markupMessage from '../../src/main/investLogMarkup';
 import { removeIpcMainListeners } from '../../src/main/main';
+
+jest.mock('react-virtuoso', () => {
+  const { Virtuoso } = jest.requireActual('react-virtuoso')
+  const mockVirtuoso = (WrappedVirtuoso) => {
+    (props) => {
+      return (
+        <WrappedVirtuoso
+          initialItemCount={props.totalCount}
+          {...props}
+        />
+      );
+    };
+  };
+  return { Virtuoso: mockVirtuoso(Virtuoso) }
+});
 
 function renderLogTab(logfilePath) {
   const tabID = crypto.randomBytes(4).toString('hex');
@@ -80,7 +95,7 @@ ValueError: Values in the LULC raster were found that are not represented under 
     fs.rmSync(workspace, { recursive: true, force: true });
   });
 
-  test('Text in logfile is rendered', async () => {
+  test.only('Text in logfile is rendered', async () => {
     const { findByText } = renderLogTab(logfilePath);
 
     const log = await findByText(new RegExp(uniqueText));
