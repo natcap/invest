@@ -22,7 +22,7 @@ function LogDisplay(props) {
       className="text-break"
       id="log-display"
     >
-      <Virtuoso
+      {/*<Virtuoso
         followOutput
         atBottomThreshold={1000} // no adverse effect from large value
         overscan={{ main: 400, reverse: 400 }}
@@ -41,7 +41,17 @@ function LogDisplay(props) {
             </div>
           )
         }
-      />
+      />*/}
+      {
+        props.logdata.map(([line, cls], idx) => (
+          <div
+            className={cls}
+            key={idx}
+          >
+            {line}
+          </div>
+        ))
+      }
     </Col>
   );
 }
