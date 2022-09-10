@@ -1081,6 +1081,7 @@ def _create_summary_statistics_file(
                     'R_SUM': 0,
                     'R_COUNT': 0,
                     'R_N_PIXELS': 0,
+                    'R_N_NONE': 0,
                     'R_N_LOW': 0, 'R_N_MEDIUM': 0, 'R_N_HIGH': 0})
 
             for prefix, raster_path in (
@@ -1112,7 +1113,7 @@ def _create_summary_statistics_file(
                 feature_name = subregion_fid_to_name[feature_id]
                 subregion_stats = subregion_stats_by_name[feature_name]
                 for classified_value, field in (
-                        (1, 'LOW'), (2, 'MEDIUM'), (3, 'HIGH')):
+                        (0, 'NONE'), (1, 'LOW'), (2, 'MEDIUM'), (3, 'HIGH')):
                     subregion_stats[f'R_N_{field}'] += counts[
                         classified_value]
                     subregion_stats['R_N_PIXELS'] += counts[classified_value]
@@ -1136,7 +1137,7 @@ def _create_summary_statistics_file(
                         subregion_stats[f'{prefix}_COUNT'])
 
                 n_pixels = subregion_stats['R_N_PIXELS']
-                for classification in ('LOW', 'MEDIUM', 'HIGH'):
+                for classification in ('NONE', 'LOW', 'MEDIUM', 'HIGH'):
                     percent_classified = 0
                     if n_pixels > 0:
                         percent_classified = (
@@ -1166,6 +1167,7 @@ def _create_summary_statistics_file(
                 'HABITAT': habitat,
                 'STRESSOR': all_stressors_id,
                 'SUBREGION': subregion_name,
+                'R_%NONE': (class_counts[0] / n_pixels) * 100,
                 'R_%LOW': (class_counts[1] / n_pixels) * 100,
                 'R_%MEDIUM': (class_counts[2] / n_pixels) * 100,
                 'R_%HIGH': (class_counts[3] / n_pixels) * 100,
@@ -1190,7 +1192,7 @@ def _create_summary_statistics_file(
             'E_MIN', 'E_MAX', 'E_MEAN',
             'C_MIN', 'C_MAX', 'C_MEAN',
             'R_MIN', 'R_MAX', 'R_MEAN',
-            'R_%HIGH', 'R_%MEDIUM', 'R_%LOW',
+            'R_%HIGH', 'R_%MEDIUM', 'R_%LOW', 'R_%NONE',
         ])
     out_dataframe.sort_values(['HABITAT', 'STRESSOR', 'SUBREGION'],
                               inplace=True)
