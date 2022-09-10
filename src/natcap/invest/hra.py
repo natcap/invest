@@ -828,9 +828,9 @@ def execute(args):
     _ = graph.add_task(
         func=_create_summary_statistics_file,
         kwargs={
-            'aoi_raster_json_path': aoi_subregions_json,
-            'habitat_mask_raster_path': all_habitats_mask_path,
+            'subregions_vector_path': simplified_aoi_path,
             'pairwise_raster_dicts': pairwise_summary_data,
+            'per_habitat_rasters_dict': {},
             'target_summary_csv_path': summary_csv_path,
         },
         task_name='Create summary statistics table',
@@ -1024,6 +1024,158 @@ def _polygonize(source_raster_path, mask_raster_path,
 
 
 def _create_summary_statistics_file(
+        subregions_vector_path,
+        pairwise_raster_dicts,
+        per_habitat_classification_dict,
+        target_summary_csv_path):
+    subregions_vector = gdal.OpenEx(subregions_vector_path)
+    subregions_layer = subregions_vector.GetLayer()
+    name_field = None
+    for field_defn in subregions_layer.schema:
+        source_fieldname = field_defn.GetName()
+        if source_fieldname.lower() == 'name':
+            name_field = source_fieldname
+            break
+    subregion_fid_to_name = {}
+    for feature in subregions_layer:
+        if name_field is None:
+            subregion_name = 'Total Region'
+        else:
+            subregion_name = feature.GetField(name_field)
+        subregion_fid_to_name[feature.GetFID()] = subregion_name
+    subregions_layer = None
+    subregions_vector = None
+
+    pairwise_data = {}
+    habitats = set()
+    stressors = set()
+    for info_dict in pairwise_raster_dicts:
+        pairwise_data[info_dict['habitat'], info_dict['stressor']] = info_dict
+        habitats.add(info_dict['habitat'])
+        stressors.add(info_dict['stressor'])
+
+    records = []
+    for habitat in sorted(habitats):
+        for stressor in sorted(stressors):
+            e_raster = pairwise_data[habitat, stressor]['e_path']
+            c_raster = pairwise_data[habitat, stressor]['c_path']
+            r_raster = pairwise_data[habitat, stressor]['risk_path']
+            classes_raster = (
+                pairwise_data[habitat, stressor]['classification_path'])
+
+            subregion_stats_by_name = collections.defaultdict(
+                {'min': float('inf'), 'max': 0, 'sum': 0, 'n_pixels': 0,
+                 'R_N_LOW': 0, 'R_N_MEDIUM': 0, 'R_N_HIGH': 0})
+
+            for prefix, raster_path in (
+                    ('E', e_raster),
+                    ('C', c_raster),
+                    ('R', r_raster)):
+                raster_stats = pygeoprocessing.zonal_statistics(
+                    (raster_path, 1), subregions_vector_path)
+
+                for feature_id, stats_under_feature in raster_stats:
+                    feature_name = subregion_fid_to_name[feature_id]
+                    subregion_stats = subregion_stats_by_name[feature_name]
+
+                    for opname, reduce_func in (
+                            ('MIN', min), ('MAX', max), ('SUM', sum),
+                            ('COUNT', sum)):
+                        fieldname = f'{prefix}_{opname}'
+                        subregion_stats[fieldname] = reduce_func(
+                            subregion_stats[fieldname],
+                            stats_under_feature[fieldname])
+                    subregion_stats_by_name[feature_name] = subregion_stats
+
+            raster_stats = pygeoprocessing.zonal_statistics(
+                (classes_raster, 1), subregions_vector_path,
+                include_value_counts=True)
+            for feature_id, stats_under_feature in raster_stats:
+                counts = collections.defaultdict(int)
+                counts.update(stats_under_feature['value_counts'])
+                feature_name = subregion_fid_to_name[feature_id]
+                subregion_stats = subregion_stats_by_name[feature_name]
+                for classified_value, field in (
+                        (1, 'LOW'), (2, 'MEDIUM'), (3, 'HIGH')):
+                    subregion_stats[f'R_N_{field}'] += counts[
+                        classified_value]
+                    subregion_stats['R_N_PIXELS'] += counts[classified_value]
+                subregion_stats_by_name[feature_name] = subregion_stats
+
+            for subregion_name, subregion_stats in (
+                    subregion_stats_by_name.items()):
+                record = {
+                    'HABITAT': habitat,
+                    'STRESSOR': stressor,
+                    'SUBREGION': subregion_name,
+                }
+                for prefix in ('E', 'C', 'R'):
+                    # Copying over SUM and COUNT for per-habitat summary
+                    # statistics later.
+                    for op in ('MIN', 'MAX', 'SUM', 'COUNT'):
+                        key = f'{prefix}_{op}'
+                        record[key] = subregion_stats[key]
+                    record[f'{prefix}_MEAN'] = (
+                        subregion_stats['SUM'] / subregion_stats['COUNT'])
+
+                n_pixels = subregion_stats['R_N_PIXELS']
+                for classification in ('LOW', 'MEDIUM', 'HIGH'):
+                    record[f'R_%{classification}'] = (
+                        subregion_stats[f'R_N_{classification}'] / n_pixels)
+                records.append(record)
+
+    pairwise_df = pandas.DataFrame.from_records(records)
+
+    all_stressors_id = '(FROM ALL STRESSORS)'
+    for habitat, classified_path in per_habitat_classification_dict.items():
+        stats = pygeoprocessing.zonal_statistics(
+            (classified_path, 1), subregions_vector_path,
+            include_value_counts=True)
+        subregion_stats_by_name = collections.defaultdict(
+            {0: 0, 1: 0, 2: 0, 3: 0})
+        for feature_id, stats_under_feature in stats.items():
+            feature_name = subregion_fid_to_name[feature_id]
+            subregion_stats = subregion_stats_by_name[feature_name]
+            for key, count in stats_under_feature['value_counts'].items():
+                subregion_stats_by_name[feature_name][key] += count
+
+        for subregion_name, class_counts in subregion_stats_by_name.items():
+            n_pixels = sum(class_counts.values())
+            record = {
+                'HABITAT': habitat,
+                'STRESSOR': all_stressors_id,
+                'R_%LOW': (class_counts[1] / n_pixels) * 100,
+                'R_%MEDIUM': (class_counts[2] / n_pixels) * 100,
+                'R_%HIGH': (class_counts[3] / n_pixels) * 100,
+            }
+            matching_df = pairwise_df[
+                (pairwise_df['HABITAT'] == habitat) &
+                (pairwise_df['SUBREGION'] == subregion_name)]
+            for prefix in ('E', 'C', 'R'):
+                record[f'{prefix}_MIN'] = matching_df[
+                    f'{prefix}_MIN'].min()
+                record[f'{prefix}_MAX'] = matching_df[
+                    f'{prefix}_MAX'].max()
+                record[f'{prefix}_MEAN'] = matching_df[
+                    f'{prefix}_SUM'].sum() / matching_df[
+                        f'{prefix}_COUNT'].sum()
+
+            records.append(record)
+
+    out_dataframe = pandas.DataFrame.from_records(
+        records, columns=[
+            'HABITAT', 'STRESSOR', 'SUBREGION',
+            'E_MIN', 'E_MAX', 'E_MEAN',
+            'C_MIN', 'C_MAX', 'C_MEAN',
+            'R_MIN', 'R_MAX', 'R_MEAN',
+            'R_%HIGH', 'R_%MEDIUM', 'R_%LOW',
+        ])
+    out_dataframe.sort_values(['HABITAT', 'STRESSOR'],
+                              inplace=True)
+    out_dataframe.to_csv(target_summary_csv_path, index=False)
+
+
+def _create_summary_statistics_file_old(
         aoi_raster_json_path, habitat_mask_raster_path, pairwise_raster_dicts,
         target_summary_csv_path):
     """Summarize pairwise habitat/stressor rasters by AOI subregions.
