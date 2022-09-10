@@ -516,6 +516,7 @@ def execute(args):
 
     # Save this dataframe to make indexing in this loop a little cheaper
     # Resilience/recovery calculations are only done for Consequence criteria.
+    reclassed_habitat_risk_paths = {}
     cumulative_risk_to_habitat_paths = []
     cumulative_risk_to_habitat_tasks = []
     reclassified_rasters = []  # For visualization geojson, if requested
@@ -667,6 +668,8 @@ def execute(args):
 
         reclassified_cumulative_risk_path = os.path.join(
             intermediate_dir, f'reclass_total_risk_{habitat}{suffix}.tif')
+        reclassed_habitat_risk_paths[
+            habitat] = reclassified_cumulative_risk_path
         reclassified_cumulative_risk_task = graph.add_task(
             pygeoprocessing.raster_calculator,
             kwargs={
@@ -830,7 +833,7 @@ def execute(args):
         kwargs={
             'subregions_vector_path': simplified_aoi_path,
             'pairwise_raster_dicts': pairwise_summary_data,
-            'per_habitat_rasters_dict': {},
+            'per_habitat_classification_dict': reclassed_habitat_risk_paths,
             'target_summary_csv_path': summary_csv_path,
         },
         task_name='Create summary statistics table',
@@ -1064,8 +1067,21 @@ def _create_summary_statistics_file(
                 pairwise_data[habitat, stressor]['classification_path'])
 
             subregion_stats_by_name = collections.defaultdict(
-                {'min': float('inf'), 'max': 0, 'sum': 0, 'n_pixels': 0,
-                 'R_N_LOW': 0, 'R_N_MEDIUM': 0, 'R_N_HIGH': 0})
+                lambda: {
+                    'E_MIN': float('inf'),
+                    'E_MAX': 0,
+                    'E_SUM': 0,
+                    'E_COUNT': 0,
+                    'C_MIN': float('inf'),
+                    'C_MAX': 0,
+                    'C_SUM': 0,
+                    'C_COUNT': 0,
+                    'R_MIN': float('inf'),
+                    'R_MAX': 0,
+                    'R_SUM': 0,
+                    'R_COUNT': 0,
+                    'R_N_PIXELS': 0,
+                    'R_N_LOW': 0, 'R_N_MEDIUM': 0, 'R_N_HIGH': 0})
 
             for prefix, raster_path in (
                     ('E', e_raster),
@@ -1074,7 +1090,7 @@ def _create_summary_statistics_file(
                 raster_stats = pygeoprocessing.zonal_statistics(
                     (raster_path, 1), subregions_vector_path)
 
-                for feature_id, stats_under_feature in raster_stats:
+                for feature_id, stats_under_feature in raster_stats.items():
                     feature_name = subregion_fid_to_name[feature_id]
                     subregion_stats = subregion_stats_by_name[feature_name]
 
@@ -1082,15 +1098,15 @@ def _create_summary_statistics_file(
                             ('MIN', min), ('MAX', max), ('SUM', sum),
                             ('COUNT', sum)):
                         fieldname = f'{prefix}_{opname}'
-                        subregion_stats[fieldname] = reduce_func(
+                        subregion_stats[fieldname] = reduce_func([
                             subregion_stats[fieldname],
-                            stats_under_feature[fieldname])
+                            stats_under_feature[opname.lower()]])
                     subregion_stats_by_name[feature_name] = subregion_stats
 
             raster_stats = pygeoprocessing.zonal_statistics(
                 (classes_raster, 1), subregions_vector_path,
                 include_value_counts=True)
-            for feature_id, stats_under_feature in raster_stats:
+            for feature_id, stats_under_feature in raster_stats.items():
                 counts = collections.defaultdict(int)
                 counts.update(stats_under_feature['value_counts'])
                 feature_name = subregion_fid_to_name[feature_id]
@@ -1116,12 +1132,17 @@ def _create_summary_statistics_file(
                         key = f'{prefix}_{op}'
                         record[key] = subregion_stats[key]
                     record[f'{prefix}_MEAN'] = (
-                        subregion_stats['SUM'] / subregion_stats['COUNT'])
+                        subregion_stats[f'{prefix}_SUM'] /
+                        subregion_stats[f'{prefix}_COUNT'])
 
                 n_pixels = subregion_stats['R_N_PIXELS']
                 for classification in ('LOW', 'MEDIUM', 'HIGH'):
-                    record[f'R_%{classification}'] = (
-                        subregion_stats[f'R_N_{classification}'] / n_pixels)
+                    percent_classified = 0
+                    if n_pixels > 0:
+                        percent_classified = (
+                            subregion_stats[f'R_N_{classification}'] /
+                            n_pixels) * 100
+                    record[f'R_%{classification}'] = percent_classified
                 records.append(record)
 
     pairwise_df = pandas.DataFrame.from_records(records)
@@ -1132,7 +1153,7 @@ def _create_summary_statistics_file(
             (classified_path, 1), subregions_vector_path,
             include_value_counts=True)
         subregion_stats_by_name = collections.defaultdict(
-            {0: 0, 1: 0, 2: 0, 3: 0})
+            lambda: {0: 0, 1: 0, 2: 0, 3: 0})
         for feature_id, stats_under_feature in stats.items():
             feature_name = subregion_fid_to_name[feature_id]
             subregion_stats = subregion_stats_by_name[feature_name]
@@ -1144,6 +1165,7 @@ def _create_summary_statistics_file(
             record = {
                 'HABITAT': habitat,
                 'STRESSOR': all_stressors_id,
+                'SUBREGION': subregion_name,
                 'R_%LOW': (class_counts[1] / n_pixels) * 100,
                 'R_%MEDIUM': (class_counts[2] / n_pixels) * 100,
                 'R_%HIGH': (class_counts[3] / n_pixels) * 100,
@@ -1170,7 +1192,7 @@ def _create_summary_statistics_file(
             'R_MIN', 'R_MAX', 'R_MEAN',
             'R_%HIGH', 'R_%MEDIUM', 'R_%LOW',
         ])
-    out_dataframe.sort_values(['HABITAT', 'STRESSOR'],
+    out_dataframe.sort_values(['HABITAT', 'STRESSOR', 'SUBREGION'],
                               inplace=True)
     out_dataframe.to_csv(target_summary_csv_path, index=False)
 
