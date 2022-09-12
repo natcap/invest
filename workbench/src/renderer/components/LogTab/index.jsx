@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
 
 import Row from 'react-bootstrap/Row';
@@ -17,10 +17,40 @@ const logger = window.Workbench.getLogger('LogTab');
  * of arbitrarily long lists of text data, like an invest logfile.
  */
 function LogDisplay(props) {
+  // TODO useEffect and useRef to scroll on updates....
+  const [scrollTop, setScrollTop] = useState(0);
+  const [isScrolledUp, setIsScrolledUp] = useState(false);
+  const ref = useRef();
+
+  useEffect(() => {
+    ref.current.addEventListener('scroll', (event) => {
+      if (!isScrolledUp) {
+        // check if it went up
+        console.log(ref.current.scrollTop);
+        console.log(scrollTop)
+        if (ref.current.scrollTop < scrollTop) {
+          // console.log(ref.current.scrollTop);
+          // console.log(scrollTop)
+          setIsScrolledUp(true)
+        }
+      }
+    });
+  }, []);
+
+  useEffect(() => {
+    console.log(isScrolledUp)
+    // const isScrolledToBottom = ref.current.scrollHeight - ref.current.clientHeight <= ref.current.scrollTop - 200;
+    if (!isScrolledUp) {
+      ref.current.scrollTop = ref.current.scrollHeight - ref.current.clientHeight;
+      setIsScrolledUp(false);
+      setScrollTop(ref.current.scrollTop);
+    }
+  }, [props.logdata]);
   return (
     <Col
       className="text-break"
       id="log-display"
+      ref={ref}
     >
       {/*<Virtuoso
         followOutput
@@ -121,7 +151,6 @@ export default class LogTab extends React.Component {
   }
 
   render() {
-    console.log(this.state.logdata)
     return (
       <Container fluid>
         <Row>
