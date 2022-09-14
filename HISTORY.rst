@@ -34,6 +34,13 @@
 
 .. :changelog:
 
+Unreleased Changes
+------------------
+* Urban Cooling
+    * Updated the text for the ``building_intensity`` column in the biophysical
+      table to clarify that the values of this column should be normalized
+      relative to one another to be between 0 and 1.
+
 
 3.12.0 (2022-08-31)
 -------------------
