@@ -2,7 +2,6 @@
 # -*- coding: UTF-8 -*-
 import collections
 import itertools
-import json
 import logging
 import math
 import os
@@ -12,7 +11,6 @@ import shutil
 import numpy
 import pandas
 import pygeoprocessing
-import shapely.wkt
 import taskgraph
 from osgeo import gdal
 from osgeo import ogr
@@ -210,7 +208,8 @@ ARGS_SPEC = {
         },
         "visualize_outputs": {
             "name": gettext("Generate GeoJSONs"),
-            "about": gettext("Generate GeoJSON outputs for web visualization."),
+            "about": gettext(
+                "Generate GeoJSON outputs for web visualization."),
             "type": "boolean",
             "required": False,
         }
@@ -756,7 +755,7 @@ def execute(args):
             'datatype_target': _TARGET_GDAL_TYPE_BYTE,
             'nodata_target': _TARGET_NODATA_BYTE,
         },
-        task_name=f'Reclassify risk to the Ecosystem',
+        task_name='Reclassify risk to the Ecosystem',
         target_path_list=[reclassified_cumulative_risk_path],
         dependent_task_list=[all_habitats_mask_task, ecosystem_risk_task]
     )
@@ -1155,7 +1154,7 @@ def _create_summary_statistics_file(
                 n_pixels = subregion_stats['R_N_PIXELS']
                 for classification in ('NONE', 'LOW', 'MEDIUM', 'HIGH'):
                     percent_classified = 0
-                    if n_pixels > 0:
+                    if n_pixels > 0:  # avoid a division by 0
                         percent_classified = (
                             subregion_stats[f'R_N_{classification}'] /
                             n_pixels) * 100
