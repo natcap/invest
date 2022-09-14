@@ -1096,7 +1096,7 @@ def _create_summary_statistics_file(
                     **{f"{prefix}_SUM": 0 for prefix in "ECR"},
                     **{f"{prefix}_COUNT": 0 for prefix in "ECR"},
                     **{f"R_N_{tally}": 0 for tally in (
-                        "PIXELS", "LOW", "MEDIUM", "HIGH")}
+                        "PIXELS", "NONE", "LOW", "MEDIUM", "HIGH")}
                 })
 
             for prefix, raster_path in (
@@ -1114,9 +1114,15 @@ def _create_summary_statistics_file(
                             ('MIN', min), ('MAX', max), ('SUM', sum),
                             ('COUNT', sum)):
                         fieldname = f'{prefix}_{opname}'
-                        subregion_stats[fieldname] = reduce_func([
-                            subregion_stats[fieldname],
-                            stats_under_feature[opname.lower()]])
+                        try:
+                            subregion_stats[fieldname] = reduce_func([
+                                subregion_stats[fieldname],
+                                stats_under_feature[opname.lower()]])
+                        except TypeError:
+                            # TypeError when stats_under_feature[op] is None,
+                            # which happens when the polygon is entirely over
+                            # nodata
+                            pass
                     subregion_stats_by_name[feature_name] = subregion_stats
 
             raster_stats = pygeoprocessing.zonal_statistics(
@@ -1147,9 +1153,12 @@ def _create_summary_statistics_file(
                     for op in ('MIN', 'MAX', 'SUM', 'COUNT'):
                         key = f'{prefix}_{op}'
                         record[key] = subregion_stats[key]
-                    record[f'{prefix}_MEAN'] = (
-                        subregion_stats[f'{prefix}_SUM'] /
-                        subregion_stats[f'{prefix}_COUNT'])
+                    try:
+                        record[f'{prefix}_MEAN'] = (
+                            subregion_stats[f'{prefix}_SUM'] /
+                            subregion_stats[f'{prefix}_COUNT'])
+                    except ZeroDivisionError:
+                        record[f'{prefix}_MEAN'] = 0
 
                 n_pixels = subregion_stats['R_N_PIXELS']
                 for classification in ('NONE', 'LOW', 'MEDIUM', 'HIGH'):
@@ -1177,7 +1186,7 @@ def _create_summary_statistics_file(
                 subregion_stats_by_name[feature_name][key] += count
 
         for subregion_name, class_counts in subregion_stats_by_name.items():
-            n_pixels = sum(class_counts.values())
+            n_pixels = max(sum(class_counts.values()), 1)  # avoid div-by-0
             record = {
                 'HABITAT': habitat,
                 'STRESSOR': all_stressors_id,
@@ -1195,9 +1204,13 @@ def _create_summary_statistics_file(
                     f'{prefix}_MIN'].min()
                 record[f'{prefix}_MAX'] = matching_df[
                     f'{prefix}_MAX'].max()
-                record[f'{prefix}_MEAN'] = matching_df[
-                    f'{prefix}_SUM'].sum() / matching_df[
-                        f'{prefix}_COUNT'].sum()
+
+                # Handle division-by-zero in mean calculation
+                count_sum = matching_df[f'{prefix}_COUNT'].sum()
+                mean = 0
+                if count_sum > 0:
+                    mean = matching_df[f'{prefix}_SUM'].sum() / count_sum
+                record[f'{prefix}_MEAN'] = mean
 
             records.append(record)
 
