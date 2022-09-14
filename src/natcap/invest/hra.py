@@ -1017,6 +1017,44 @@ def _create_summary_statistics_file(
         pairwise_raster_dicts,
         per_habitat_classification_dict,
         target_summary_csv_path):
+    """Create summary statistics table.
+
+    This table tracks for each habitat, stressor and subregion the min, max and
+    mean Exposure, Criteria and Risk score.  Additionally, the percentage of
+    risk scores in each classification category (HIGH, MEDIUM, LOW, NONE) are
+    also recorded.  If subregion names are not provided by user input, a single
+    subregion is assumed, called "Total Region".
+
+    If multiple subregions have the same name, they are treated as a single
+    subregion.
+
+    Args:
+        subregions_vector_path (string): The path to a vector of subregions.
+            If this vector has a ``"NAME"`` column (case-insensitive), it will
+            be used to uniquely identify the subregion.
+        pairwise_raster_dicts (list): A list of dicts, each of which containing
+            the following keys:
+
+                * ``habitat`` - the string habitat name
+                * ``stressor`` - the string stressor name
+                * ``e_path`` - absolute path to the raster of exposure scores
+                    for this habitat/stressor pair.
+                * ``c_path`` - absolute path to the raster of criteria scores
+                    for this habitat/stressor pair.
+                * ``risk_path`` - absolute path to the raster of risk scores
+                    for this habitat/stressor pair.
+                * ``classification_path`` - absolute path to the raster of
+                    classified risk scores for this habitat/stressor pair.
+        per_habitat_classification_dict (dict): A dictionary mapping string
+            habitat names to a raster of risk classifications that have been
+            classified from rasters of cumulative risk scores across all
+            stressors for the given habitat.
+        target_summary_csv_path (string): The path to where the target CSV
+            should be written on disk.
+
+    Returns:
+        ``None``
+    """
     subregions_vector = gdal.OpenEx(subregions_vector_path)
     subregions_layer = subregions_vector.GetLayer()
     name_field = None
