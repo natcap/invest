@@ -1092,21 +1092,13 @@ def _create_summary_statistics_file(
 
             subregion_stats_by_name = collections.defaultdict(
                 lambda: {
-                    'E_MIN': float('inf'),
-                    'E_MAX': 0,
-                    'E_SUM': 0,
-                    'E_COUNT': 0,
-                    'C_MIN': float('inf'),
-                    'C_MAX': 0,
-                    'C_SUM': 0,
-                    'C_COUNT': 0,
-                    'R_MIN': float('inf'),
-                    'R_MAX': 0,
-                    'R_SUM': 0,
-                    'R_COUNT': 0,
-                    'R_N_PIXELS': 0,
-                    'R_N_NONE': 0,
-                    'R_N_LOW': 0, 'R_N_MEDIUM': 0, 'R_N_HIGH': 0})
+                    **{f"{prefix}_MIN": float('inf') for prefix in "ECR"},
+                    **{f"{prefix}_MAX": 0 for prefix in "ECR"},
+                    **{f"{prefix}_SUM": 0 for prefix in "ECR"},
+                    **{f"{prefix}_COUNT": 0 for prefix in "ECR"},
+                    **{f"R_N_{tally}": 0 for tally in (
+                        "PIXELS", "LOW", "MEDIUM", "HIGH")}
+                })
 
             for prefix, raster_path in (
                     ('E', e_raster),
