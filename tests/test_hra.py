@@ -909,6 +909,147 @@ class HRAUnitTests(unittest.TestCase):
         self.assertIn('Invalid decay type bad decay type provided',
                       str(cm.exception))
 
+    def test_summary_stats(self):
+        """HRA: test summary stats table."""
+        from natcap.invest import hra
+        e_array = numpy.array([[0, 1, 2, 3]], dtype=numpy.float32)
+        c_array = numpy.array([[0.5, 1.5, 2.5, 3.5]], dtype=numpy.float32)
+        risk_array = numpy.array([[0, 1.1, 2.2, 3.3]], dtype=numpy.float32)
+        classes_array = numpy.array([[0, 1, 2, 3]], dtype=numpy.int8)
+
+        pairwise_raster_dicts = [{
+            'habitat': 'life',
+            'stressor': 'industry',
+            'e_path': os.path.join(self.workspace_dir, 'e.tif'),
+            'c_path': os.path.join(self.workspace_dir, 'c.tif'),
+            'risk_path': os.path.join(self.workspace_dir, 'risk.tif'),
+            'classification_path': os.path.join(self.workspace_dir,
+                                                'classes.tif'),
+        }]
+        nodata = -1
+        for array, key in [
+                (e_array, 'e_path'),
+                (c_array, 'c_path'),
+                (risk_array, 'risk_path'),
+                (classes_array, 'classification_path')]:
+            pygeoprocessing.numpy_array_to_raster(
+                array, nodata, (10, -10), ORIGIN, SRS_WKT,
+                pairwise_raster_dicts[0][key])
+
+        # For the sake of testing this function more rigorously, creating a new
+        # classification path for the per-habitat summary classification
+        # raster.
+        per_habitat_classifications = {
+            pairwise_raster_dicts[0]['habitat']: os.path.join(
+                self.workspace_dir, 'summary_classes.tif')
+        }
+        pygeoprocessing.numpy_array_to_raster(
+            numpy.array([[2, 3, 2, 3]], dtype=numpy.int8),
+            nodata, (10, -10), ORIGIN, SRS_WKT,
+            list(per_habitat_classifications.values())[0])
+
+        target_summary_csv_path = os.path.join(
+            self.workspace_dir, 'summary.csv')
+        aoi_vector_path = os.path.join(self.workspace_dir, 'aoi.shp')
+        subregion_bounding_box = pygeoprocessing.get_raster_info(
+            list(per_habitat_classifications.values())[0])['bounding_box']
+        subregion_geom = shapely.geometry.box(*subregion_bounding_box)
+
+        # This is a standard record in the summary table, used in both subtests
+        # below.
+        std_record = {
+            'HABITAT': pairwise_raster_dicts[0]['habitat'],
+            'STRESSOR': pairwise_raster_dicts[0]['stressor'],
+            'E_MIN': numpy.min(e_array),
+            'E_MAX': numpy.max(e_array),
+            'E_MEAN': numpy.sum(e_array) / 4,
+            'C_MIN': numpy.min(c_array),
+            'C_MAX': numpy.max(c_array),
+            'C_MEAN': numpy.sum(c_array) / 4,
+            'R_MIN': numpy.min(risk_array),
+            'R_MAX': numpy.max(risk_array),
+            'R_MEAN': numpy.sum(risk_array) / 4,
+            'R_%HIGH': 25.0,
+            'R_%MEDIUM': 25.0,
+            'R_%LOW': 25.0,
+            'R_%NONE': 25.0,
+        }
+
+        with self.subTest("multiple subregion names"):
+            # 3 subregions, 2 of which have the same name.
+            # In cases of overlap, the function double-counts.
+            pygeoprocessing.shapely_geometry_to_vector(
+                [subregion_geom] * 3, aoi_vector_path, SRS_WKT, 'ESRI Shapefile',
+                fields={'name': ogr.OFTString}, attribute_list=[
+                    {'name': 'first region'},
+                    {'name': 'first region'},
+                    {'name': 'second region'}
+                ])
+            hra._create_summary_statistics_file(
+                aoi_vector_path, pairwise_raster_dicts,
+                per_habitat_classifications, target_summary_csv_path)
+            expected_records = [
+                {**std_record,
+                 **{'SUBREGION': 'first region',
+                    'STRESSOR': '(FROM ALL STRESSORS)'},
+                    'R_%HIGH': 50.0,
+                    'R_%MEDIUM': 50.0,
+                    'R_%LOW': 0,
+                    'R_%NONE': 0,
+                },
+                {**std_record,
+                 **{'SUBREGION': 'second region',
+                    'STRESSOR': '(FROM ALL STRESSORS)'},
+                    'R_%HIGH': 50.0,
+                    'R_%MEDIUM': 50.0,
+                    'R_%LOW': 0,
+                    'R_%NONE': 0,
+                },
+                {**std_record,
+                 **{'SUBREGION': 'first region'},
+                },
+                {**std_record,
+                 **{'SUBREGION': 'second region'}
+                },
+            ]
+            created_dataframe = pandas.read_csv(target_summary_csv_path)
+            expected_dataframe = pandas.DataFrame.from_records(
+                expected_records).reindex(columns=created_dataframe.columns)
+            pandas.testing.assert_frame_equal(
+                expected_dataframe, created_dataframe,
+                check_dtype=False  # ignore float32/float64 type difference.
+            )
+
+        with self.subTest("no subregion names"):
+            # When no subregion names provided, all subregions are assumed to
+            # be in the same region: "Total Region".
+            pygeoprocessing.shapely_geometry_to_vector(
+                [subregion_geom] * 3, aoi_vector_path, SRS_WKT,
+                'ESRI Shapefile')
+            hra._create_summary_statistics_file(
+                aoi_vector_path, pairwise_raster_dicts,
+                per_habitat_classifications, target_summary_csv_path)
+            expected_records = [
+                {**std_record,
+                 **{'SUBREGION': 'Total Region',
+                    'STRESSOR': '(FROM ALL STRESSORS)'},
+                    'R_%HIGH': 50.0,
+                    'R_%MEDIUM': 50.0,
+                    'R_%LOW': 0,
+                    'R_%NONE': 0,
+                },
+                {**std_record,
+                 **{'SUBREGION': 'Total Region'},
+                },
+            ]
+            created_dataframe = pandas.read_csv(target_summary_csv_path)
+            expected_dataframe = pandas.DataFrame.from_records(
+                expected_records).reindex(columns=created_dataframe.columns)
+            pandas.testing.assert_frame_equal(
+                expected_dataframe, created_dataframe,
+                check_dtype=False  # ignore float32/float64 type difference.
+            )
+
 
 class HRAModelTests(unittest.TestCase):
     def setUp(self):
