@@ -34,6 +34,16 @@
 
 .. :changelog:
 
+Unreleased Changes
+------------------
+* HRA
+    * Fixed an issue with the results table, ``SUMMARY_STATISTICS.csv`` where
+      the percentages of high, medium and low risk classifications were not
+      correctly reported.
+    * Added a column to the ``SUMMARY_STATISTICS.csv`` output table to also
+      report the percentage of pixels within each subregion that have no risk
+      classification (a risk classification of 0).
+
 
 3.12.0 (2022-08-31)
 -------------------
