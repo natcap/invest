@@ -43,6 +43,10 @@ Unreleased Changes
     * Added a column to the ``SUMMARY_STATISTICS.csv`` output table to also
       report the percentage of pixels within each subregion that have no risk
       classification (a risk classification of 0).
+* Urban Cooling
+    * Updated the text for the ``building_intensity`` column in the biophysical
+      table to clarify that the values of this column should be normalized
+      relative to one another to be between 0 and 1.
 
 
 3.12.0 (2022-08-31)
