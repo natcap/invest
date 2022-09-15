@@ -1081,94 +1081,94 @@ def _create_summary_statistics_file(
         stressors.add(info_dict['stressor'])
 
     records = []
-    for habitat in sorted(habitats):
-        for stressor in sorted(stressors):
-            e_raster = pairwise_data[habitat, stressor]['e_path']
-            c_raster = pairwise_data[habitat, stressor]['c_path']
-            r_raster = pairwise_data[habitat, stressor]['risk_path']
-            classes_raster = (
-                pairwise_data[habitat, stressor]['classification_path'])
+    for habitat, stressor in itertools.product(sorted(habitats),
+                                               sorted(stressors)):
+        e_raster = pairwise_data[habitat, stressor]['e_path']
+        c_raster = pairwise_data[habitat, stressor]['c_path']
+        r_raster = pairwise_data[habitat, stressor]['risk_path']
+        classes_raster = (
+            pairwise_data[habitat, stressor]['classification_path'])
 
-            subregion_stats_by_name = collections.defaultdict(
-                lambda: {
-                    **{f"{prefix}_MIN": float('inf') for prefix in "ECR"},
-                    **{f"{prefix}_MAX": 0 for prefix in "ECR"},
-                    **{f"{prefix}_SUM": 0 for prefix in "ECR"},
-                    **{f"{prefix}_COUNT": 0 for prefix in "ECR"},
-                    **{f"R_N_{tally}": 0 for tally in (
-                        "PIXELS", "NONE", "LOW", "MEDIUM", "HIGH")}
-                })
+        subregion_stats_by_name = collections.defaultdict(
+            lambda: {
+                **{f"{prefix}_MIN": float('inf') for prefix in "ECR"},
+                **{f"{prefix}_MAX": 0 for prefix in "ECR"},
+                **{f"{prefix}_SUM": 0 for prefix in "ECR"},
+                **{f"{prefix}_COUNT": 0 for prefix in "ECR"},
+                **{f"R_N_{tally}": 0 for tally in (
+                    "PIXELS", "NONE", "LOW", "MEDIUM", "HIGH")}
+            })
 
-            for prefix, raster_path in (
-                    ('E', e_raster),
-                    ('C', c_raster),
-                    ('R', r_raster)):
-                raster_stats = pygeoprocessing.zonal_statistics(
-                    (raster_path, 1), subregions_vector_path)
-
-                for feature_id, stats_under_feature in raster_stats.items():
-                    feature_name = subregion_fid_to_name[feature_id]
-                    subregion_stats = subregion_stats_by_name[feature_name]
-
-                    for opname, reduce_func in (
-                            ('MIN', min), ('MAX', max), ('SUM', sum),
-                            ('COUNT', sum)):
-                        fieldname = f'{prefix}_{opname}'
-                        try:
-                            subregion_stats[fieldname] = reduce_func([
-                                subregion_stats[fieldname],
-                                stats_under_feature[opname.lower()]])
-                        except TypeError:
-                            # TypeError when stats_under_feature[op] is None,
-                            # which happens when the polygon is entirely over
-                            # nodata
-                            pass
-                    subregion_stats_by_name[feature_name] = subregion_stats
-
+        for prefix, raster_path in (
+                ('E', e_raster),
+                ('C', c_raster),
+                ('R', r_raster)):
             raster_stats = pygeoprocessing.zonal_statistics(
-                (classes_raster, 1), subregions_vector_path,
-                include_value_counts=True)
+                (raster_path, 1), subregions_vector_path)
+
             for feature_id, stats_under_feature in raster_stats.items():
-                counts = collections.defaultdict(int)
-                counts.update(stats_under_feature['value_counts'])
                 feature_name = subregion_fid_to_name[feature_id]
                 subregion_stats = subregion_stats_by_name[feature_name]
-                for classified_value, field in (
-                        (0, 'NONE'), (1, 'LOW'), (2, 'MEDIUM'), (3, 'HIGH')):
-                    subregion_stats[f'R_N_{field}'] += counts[
-                        classified_value]
-                    subregion_stats['R_N_PIXELS'] += counts[classified_value]
+
+                for opname, reduce_func in (
+                        ('MIN', min), ('MAX', max), ('SUM', sum),
+                        ('COUNT', sum)):
+                    fieldname = f'{prefix}_{opname}'
+                    try:
+                        subregion_stats[fieldname] = reduce_func([
+                            subregion_stats[fieldname],
+                            stats_under_feature[opname.lower()]])
+                    except TypeError:
+                        # TypeError when stats_under_feature[op] is None,
+                        # which happens when the polygon is entirely over
+                        # nodata
+                        pass
                 subregion_stats_by_name[feature_name] = subregion_stats
 
-            for subregion_name, subregion_stats in (
-                    subregion_stats_by_name.items()):
-                record = {
-                    'HABITAT': habitat,
-                    'STRESSOR': stressor,
-                    'SUBREGION': subregion_name,
-                }
-                for prefix in ('E', 'C', 'R'):
-                    # Copying over SUM and COUNT for per-habitat summary
-                    # statistics later.
-                    for op in ('MIN', 'MAX', 'SUM', 'COUNT'):
-                        key = f'{prefix}_{op}'
-                        record[key] = subregion_stats[key]
-                    try:
-                        record[f'{prefix}_MEAN'] = (
-                            subregion_stats[f'{prefix}_SUM'] /
-                            subregion_stats[f'{prefix}_COUNT'])
-                    except ZeroDivisionError:
-                        record[f'{prefix}_MEAN'] = 0
+        raster_stats = pygeoprocessing.zonal_statistics(
+            (classes_raster, 1), subregions_vector_path,
+            include_value_counts=True)
+        for feature_id, stats_under_feature in raster_stats.items():
+            counts = collections.defaultdict(int)
+            counts.update(stats_under_feature['value_counts'])
+            feature_name = subregion_fid_to_name[feature_id]
+            subregion_stats = subregion_stats_by_name[feature_name]
+            for classified_value, field in (
+                    (0, 'NONE'), (1, 'LOW'), (2, 'MEDIUM'), (3, 'HIGH')):
+                subregion_stats[f'R_N_{field}'] += counts[
+                    classified_value]
+                subregion_stats['R_N_PIXELS'] += counts[classified_value]
+            subregion_stats_by_name[feature_name] = subregion_stats
 
-                n_pixels = subregion_stats['R_N_PIXELS']
-                for classification in ('NONE', 'LOW', 'MEDIUM', 'HIGH'):
-                    percent_classified = 0
-                    if n_pixels > 0:  # avoid a division by 0
-                        percent_classified = (
-                            subregion_stats[f'R_N_{classification}'] /
-                            n_pixels) * 100
-                    record[f'R_%{classification}'] = percent_classified
-                records.append(record)
+        for subregion_name, subregion_stats in (
+                subregion_stats_by_name.items()):
+            record = {
+                'HABITAT': habitat,
+                'STRESSOR': stressor,
+                'SUBREGION': subregion_name,
+            }
+            for prefix in ('E', 'C', 'R'):
+                # Copying over SUM and COUNT for per-habitat summary
+                # statistics later.
+                for op in ('MIN', 'MAX', 'SUM', 'COUNT'):
+                    key = f'{prefix}_{op}'
+                    record[key] = subregion_stats[key]
+                try:
+                    record[f'{prefix}_MEAN'] = (
+                        subregion_stats[f'{prefix}_SUM'] /
+                        subregion_stats[f'{prefix}_COUNT'])
+                except ZeroDivisionError:
+                    record[f'{prefix}_MEAN'] = 0
+
+            n_pixels = subregion_stats['R_N_PIXELS']
+            for classification in ('NONE', 'LOW', 'MEDIUM', 'HIGH'):
+                percent_classified = 0
+                if n_pixels > 0:  # avoid a division by 0
+                    percent_classified = (
+                        subregion_stats[f'R_N_{classification}'] /
+                        n_pixels) * 100
+                record[f'R_%{classification}'] = percent_classified
+            records.append(record)
 
     pairwise_df = pandas.DataFrame.from_records(records)
 
