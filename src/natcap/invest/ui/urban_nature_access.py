@@ -34,7 +34,7 @@ class UrbanNatureAccess(model.InVESTModel):
         self.add_input(self.population)
 
         self.admin_units = inputs.File(
-            **_ui_keys('admin_unit_vector_path'))
+            **_ui_keys('aoi_vector_path'))
         self.add_input(self.admin_units)
 
         self.greenspace_demand = inputs.Text(

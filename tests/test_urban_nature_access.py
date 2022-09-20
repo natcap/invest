@@ -1,5 +1,6 @@
 # coding=UTF-8
 """Tests for the Urban Nature Access Model."""
+import itertools
 import math
 import os
 import random
@@ -13,12 +14,16 @@ import pandas
 import pandas.testing
 import pygeoprocessing
 import shapely.geometry
+from natcap.invest import utils
 from osgeo import gdal
+from osgeo import ogr
 from osgeo import osr
 
 _DEFAULT_ORIGIN = (444720, 3751320)
 _DEFAULT_PIXEL_SIZE = (30, -30)
 _DEFAULT_EPSG = 3116
+_DEFAULT_SRS = osr.SpatialReference()
+_DEFAULT_SRS.ImportFromEPSG(_DEFAULT_EPSG)
 
 
 def _build_model_args(workspace):
@@ -32,8 +37,8 @@ def _build_model_args(workspace):
             workspace, 'lulc_attributes.csv'),
         'decay_function': 'gaussian',
         'greenspace_demand': 100,  # square meters
-        'admin_unit_vector_path': os.path.join(
-            workspace, 'admin_units.geojson'),
+        'aoi_vector_path': os.path.join(
+            workspace, 'aois.geojson'),
     }
 
     random.seed(-1)  # for our random number generation
@@ -86,7 +91,7 @@ def _build_model_args(workspace):
             *pygeoprocessing.get_raster_info(
                 args['lulc_raster_path'])['bounding_box'])]
     pygeoprocessing.shapely_geometry_to_vector(
-        admin_geom, args['admin_unit_vector_path'],
+        admin_geom, args['aoi_vector_path'],
         population_wkt, 'GeoJSON')
 
     return args
@@ -267,6 +272,47 @@ class UNATests(unittest.TestCase):
         numpy.testing.assert_allclose(
             supply_demand, expected_supply_demand)
 
+    def test_reclassify_and_multpliy(self):
+        """UNA: test reclassification/multiplication function."""
+        from natcap.invest import urban_nature_access
+
+        nodata = 255
+        aois_array = numpy.array([
+            [nodata, 1, 2, 3],
+            [nodata, 1, 2, 3],
+            [nodata, 1, 2, 3],
+            [nodata, nodata, 2, 3]], dtype=numpy.uint8)
+        reclassification_map = {
+            1: 0.1,
+            2: 0.3,
+            3: 0.5,
+        }
+        supply_array = numpy.full(aois_array.shape, 3, dtype=numpy.float32)
+        supply_array[1, 3] = 255
+
+        aois_path = os.path.join(self.workspace_dir, 'aois.tif')
+        supply_path = os.path.join(self.workspace_dir, 'supply.tif')
+
+        for array, target_path in [(aois_array, aois_path),
+                                   (supply_array, supply_path)]:
+            pygeoprocessing.geoprocessing.numpy_array_to_raster(
+                array, nodata, _DEFAULT_PIXEL_SIZE, _DEFAULT_ORIGIN,
+                _DEFAULT_SRS.ExportToWkt(), target_path)
+
+        target_raster_path = os.path.join(self.workspace_dir, 'target.tif')
+        urban_nature_access._reclassify_and_multiply(
+            aois_path, reclassification_map, supply_path, target_raster_path)
+
+        float_nodata = urban_nature_access.FLOAT32_NODATA
+        expected_array = numpy.array([
+            [float_nodata, 0.3, 0.9, 1.5],
+            [float_nodata, 0.3, 0.9, float_nodata],
+            [float_nodata, 0.3, 0.9, 1.5],
+            [float_nodata, float_nodata, 0.9, 1.5]], dtype=numpy.float32)
+        numpy.testing.assert_allclose(
+            expected_array,
+            pygeoprocessing.raster_to_numpy_array(target_raster_path))
+
     def test_core_model(self):
         """UNA: Run through the model with base data."""
         from natcap.invest import urban_nature_access
@@ -304,7 +350,7 @@ class UNATests(unittest.TestCase):
         # admin units vector.
         admin_vector_path = os.path.join(
             args['workspace_dir'], 'output',
-            f"admin_units_{args['results_suffix']}.gpkg")
+            f"aois_{args['results_suffix']}.gpkg")
         admin_vector = gdal.OpenEx(admin_vector_path)
         admin_layer = admin_vector.GetLayer()
         self.assertEqual(admin_layer.GetFeatureCount(), 1)
@@ -314,6 +360,7 @@ class UNATests(unittest.TestCase):
             'SUP_DEMadm_cap': -17.9078,
             'Pund_adm': 4660.111328,
             'Povr_adm': 415.888885,
+            urban_nature_access.ID_FIELDNAME: 0,
         }
         admin_feature = admin_layer.GetFeature(1)
         self.assertEqual(
@@ -354,7 +401,7 @@ class UNATests(unittest.TestCase):
 
         admin_vector_path = os.path.join(
             args['workspace_dir'], 'output',
-            f"admin_units_{args['results_suffix']}.gpkg")
+            f"aois_{args['results_suffix']}.gpkg")
         admin_vector = gdal.OpenEx(admin_vector_path)
         admin_layer = admin_vector.GetLayer()
         self.assertEqual(admin_layer.GetFeatureCount(), 1)
@@ -364,6 +411,7 @@ class UNATests(unittest.TestCase):
             'SUP_DEMadm_cap': -17.9078,
             'Pund_adm': 4353.370117,
             'Povr_adm': 722.629639,
+            urban_nature_access.ID_FIELDNAME: 0,
         }
         admin_feature = admin_layer.GetFeature(1)
         self.assertEqual(
@@ -384,3 +432,87 @@ class UNATests(unittest.TestCase):
 
         admin_vector = None
         admin_layer = None
+
+    def test_split_population(self):
+        """UNA: test split population optional module."""
+        from natcap.invest import urban_nature_access
+
+        args = _build_model_args(self.workspace_dir)
+        del args['results_suffix']
+
+        admin_geom = [
+            shapely.geometry.box(
+                *pygeoprocessing.get_raster_info(
+                    args['lulc_raster_path'])['bounding_box'])]
+        fields = {
+            'pop_female': ogr.OFTReal,
+            'pop_male': ogr.OFTReal,
+        }
+        attributes = [
+            {'pop_female': 0.56, 'pop_male': 0.44}
+        ]
+        pygeoprocessing.shapely_geometry_to_vector(
+            admin_geom, args['aoi_vector_path'],
+            pygeoprocessing.get_raster_info(
+                args['population_raster_path'])['projection_wkt'],
+            'GeoJSON', fields, attributes)
+
+        urban_nature_access.execute(args)
+
+        summary_vector = gdal.OpenEx(
+            os.path.join(args['workspace_dir'], 'output', 'aois.gpkg'))
+        summary_layer = summary_vector.GetLayer()
+        self.assertEqual(summary_layer.GetFeatureCount(), 1)
+        summary_feature = summary_layer.GetFeature(1)
+
+        def _read_and_sum_raster(path):
+            array = pygeoprocessing.raster_to_numpy_array(path)
+            nodata = pygeoprocessing.get_raster_info(path)['nodata'][0]
+            return numpy.sum(array[~utils.array_equals_nodata(array, nodata)])
+
+        intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
+        for (supply_type, supply_field), fieldname in itertools.product(
+                [('over', 'Povr_adm'), ('under', 'Pund_adm')], fields.keys()):
+            groupname = fieldname.replace('pop_', '')
+            supply_raster_path = os.path.join(
+                 intermediate_dir,
+                 f'{supply_type}supplied_population.tif')
+            group_supply_raster_path = os.path.join(
+                 intermediate_dir,
+                 f'{supply_type}supplied_population_{groupname}.tif')
+            pop_proportion = summary_feature.GetField(fieldname)
+            computed_value = summary_feature.GetField(
+                f'{supply_field}_{groupname}')
+
+            numpy.testing.assert_allclose(
+                computed_value,
+                _read_and_sum_raster(supply_raster_path) * pop_proportion,
+                rtol=1e-6
+            )
+            numpy.testing.assert_allclose(
+                computed_value,
+                _read_and_sum_raster(group_supply_raster_path),
+                rtol=1e-6
+            )
+
+    def test_polygon_overlap(self):
+        """UNA: Test that we can check if polygons overlap."""
+        from natcap.invest import urban_nature_access
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(_DEFAULT_EPSG)
+        wkt = srs.ExportToWkt()
+
+        origin_x, origin_y = _DEFAULT_ORIGIN
+        polygon_1 = shapely.geometry.Point(origin_x, origin_y).buffer(10)
+        polygon_2 = shapely.geometry.Point(origin_x+20, origin_y+20).buffer(50)
+        polygon_3 = shapely.geometry.Point(origin_x+50, origin_y+50).buffer(10)
+
+        vector_path = os.path.join(self.workspace_dir, 'vector_nonoverlapping.geojson')
+        pygeoprocessing.shapely_geometry_to_vector(
+            [polygon_1, polygon_3], vector_path, wkt, 'GeoJSON')
+        self.assertFalse(urban_nature_access._geometries_overlap(vector_path))
+
+        vector_path = os.path.join(self.workspace_dir, 'vector_overlapping.geojson')
+        pygeoprocessing.shapely_geometry_to_vector(
+            [polygon_1, polygon_2, polygon_3], vector_path, wkt, 'GeoJSON')
+        self.assertTrue(urban_nature_access._geometries_overlap(vector_path))
