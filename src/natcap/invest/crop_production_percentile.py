@@ -21,7 +21,7 @@ from . import gettext
 
 LOGGER = logging.getLogger(__name__)
 
-ARGS_SPEC = {
+MODEL_SPEC = {
     "model_name": MODEL_METADATA["crop_production_percentile"].model_title,
     "pyname": MODEL_METADATA["crop_production_percentile"].pyname,
     "userguide": MODEL_METADATA["crop_production_percentile"].userguide,
@@ -206,6 +206,29 @@ ARGS_SPEC = {
             },
             "about": gettext("Path to the InVEST Crop Production Data directory."),
             "name": gettext("model data directory")
+        }
+    },
+    "outputs": {
+        "aggregate_results.csv": {
+            "type": "csv",
+            "about": "If an Aggregate Results Polygon shapefile is provided, a table is produced that summarizes total observed/percentile/modeled production and nutrient information within each polygon."
+        },
+        "result_table.csv": {
+            "type": "csv",
+            "about": "Table listing all of the crops modeled in the run, the area covered, percentile or modeled production, observed production, and nutrient information for each crop. It is the primary output of the model."
+        },
+        "[CROP]_observed_production.tif": {},
+        "[CROP]_yield_[PERCENTILE]_production.tif": {},
+        "intermediate": {
+            "type": "directory",
+            "contents": {
+                "clipped_[CROP]_climate_bin_map.tif": {},
+                "[CROP]_clipped_observed_yield.tif": {},
+                "[CROP]_interpolated_observed_yield.tif": {},
+                "[CROP]_yield_[PERCENTILE]_coarse_yield.tif": {},
+                "[CROP]_yield_[PERCENTILE]_interpolated_yield.tif": {},
+                "[CROP]_zeroed_observed_yield.tif": {}
+            }
         }
     }
 }
