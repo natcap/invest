@@ -32,7 +32,7 @@ CROPS = {
 }
 
 
-ARGS_SPEC = {
+MODEL_SPEC = {
     "model_name": MODEL_METADATA["crop_production_regression"].model_title,
     "pyname": MODEL_METADATA["crop_production_regression"].pyname,
     "userguide": MODEL_METADATA["crop_production_regression"].userguide,
@@ -155,6 +155,28 @@ ARGS_SPEC = {
             },
             "about": gettext("The Crop Production datasets provided with the model."),
             "name": gettext("model data")
+        }
+    },
+    "outputs": {
+        "aggregate_results.csv": {
+            "type": "csv",
+            "about": "If an Aggregate Results Polygon shapefile is provided, a table is produced that summarizes total observed/percentile/modeled production and nutrient information within each polygon."
+        },
+        "result_table.csv": {
+            "type": "csv",
+            "about": "Table listing all of the crops modeled in the run, the area covered, percentile or modeled production, observed production, and nutrient information for each crop. It is the primary output of the model."
+        },
+        "[CROP]_observed_production.tif": {},
+        "[CROP]_regression_production.tif": {},
+        "intermediate": {
+            "aggregate_vector.shp": {},
+            "clipped_[CROP]_climate_bin_map.tif": {},
+            "[CROP]_[PARAMETER]_coarse_regression_parameter.tif": {},
+            "[CROP]_[PARAMETER]_interpolated_regression_parameter.tif": {},
+            "[CROP]_clipped_observed_yield.tif": {},
+            "[CROP]_interpolated_observed_yield.tif": {},
+            "[CROP]_[FERTILIZER]_yield.tif": {},
+            "[CROP]_zeroed_observed_yield.tif": {}
         }
     }
 }
