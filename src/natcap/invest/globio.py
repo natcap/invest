@@ -26,7 +26,7 @@ LOGGER = logging.getLogger(__name__)
 # I don't have any other documentation than his original code base.
 SIGMA = 9.0
 
-ARGS_SPEC = {
+MODEL_SPEC = {
     "model_name": MODEL_METADATA["globio"].model_title,
     "pyname": MODEL_METADATA["globio"].pyname,
     "userguide": MODEL_METADATA["globio"].userguide,
@@ -207,7 +207,80 @@ ARGS_SPEC = {
                 "Required if Use Predefined GLOBIO LULC is selected."),
             "name": gettext("GLOBIO Classified Land Use")
         }
-    }
+    },
+    "outputs": {
+        "aoi_summary.shp": {
+            "type": "vector",
+            "about": "A shapefile summarizing the average MSA for each zone defined in the area of interest."
+        },
+        "msa.tif": {
+            "type": "raster",
+            "about": (
+                "A raster of the overall MSA (mean species abundance) value, defined as "
+                "“the average abundances of originally occurring species relative to their "
+                "abundance in the original, pristine or mature state as the basis.” This "
+                "index is on a scale of 0 to 1, with 1 being the pristine condition, "
+                "calculated as the product of the MSALU, MSAF, and MSAI below."),
+            "bands": {1: {"type": "ratio"}}
+        },
+        "msa_lu.tif": {
+            "type": "raster",
+            "about": "A raster of MSA calculated for impacts of land-use only.",
+            "bands": {1: {"type": "ratio"}}
+        },
+        "msa_f.tif": {
+            "type": "raster",
+            "about": "A raster of MSA calculated for impacts of fragmentation only.",
+            "bands": {1: {"type": "ratio"}}
+        },
+        "msa_i.tif": {
+            "type": "raster",
+            "about": "A raster of MSA calculated for impacts of infrastructure only.",
+            "bands": {1: {"type": "ratio"}}
+        },
+        "intermediate": {
+            "type": "directory",
+            "contents": {
+                "distance_to_infrastructure.tif": {
+                    "about": "Map of distance from each pixel to the nearest infrastructure.",
+                    "bands": {1: {
+                        "type": "number",
+                        "units": u.pixel
+                    }}
+                },
+                "globio_lulc.tif": {
+                    "about": "The final land use map converted to GLOBIO classification.",
+                    "bands": {1: {"type": "integer"}}
+                },
+                "primary_veg_smooth.tif": {
+                    "about": "A Gaussian-filtered (“smoothed”) map of primary vegetation (identified in globio_lulc), used to compute MSAF."
+                    "bands": {1: {"type": "ratio"}}
+                },
+                "tmp": {
+                    "type": "directory",
+                    "contents": {
+                        "canals.tif": {},
+                        "combined_infrastructure.tif": {
+                            "about": "A map joining all the infrastructure files in the infrastructure directory (input 2 above). If there is only one file in that directory, it should be identical to that file."
+                        },
+                        "ffqi.tif": {
+                            "about": "A map of the forest fragmentation quality index (ffqi), used to differentiate between primary and secondary forest in the GLOBIO land use classification.",
+                            "bands": {1: {"type": "ratio"}}
+                        },
+                        "forest_areas.tif": {},
+                        "gaussian_kernel.tif": {},
+                        "highways.tif": {},
+                        "intermediate_globio_lulc.tif": {},
+                        "pasture.tif": {},
+                        "potential_vegetation.tif": {},
+                        "primary_veg_mask.tif": {},
+                        "roads.tif": {},
+                        "smoothed_forest_areas.tif": {},
+                        "smoothed_primary_veg_mask.tif": {},
+                        "transmission_lines.tif": {}
+                    }
+                }
+            }
 }
 
 
