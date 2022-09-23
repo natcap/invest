@@ -18,7 +18,7 @@ from . import coastal_blue_carbon
 
 LOGGER = logging.getLogger(__name__)
 
-ARGS_SPEC = {
+MODEL_SPEC = {
     "model_name": MODEL_METADATA["coastal_blue_carbon_preprocessor"].model_title,
     "pyname": MODEL_METADATA["coastal_blue_carbon_preprocessor"].pyname,
     "userguide": MODEL_METADATA["coastal_blue_carbon_preprocessor"].userguide,
@@ -71,6 +71,43 @@ ARGS_SPEC = {
                 "for each year."),
             "name": gettext("LULC snapshots table"),
         },
+    },
+    "outputs": {
+        "transitions.csv": {
+            "type": "csv",
+            "about": (
+                "CSV (.csv, Comma Separated Value) format table, which is a transition "
+                "matrix indicating whether disturbance or accumulation occurs in a transition "
+                "from one LULC class to another. If the cell is left blank, then no transition "
+                "of that kind occurs between the input Land Use/Land Cover Rasters. The left-most "
+                "column (lulc-class) represents the source LULC class, and the top row (<lulc1>, <lulc2>…) "
+                "represents the destination LULC classes. Depending on the transition type, a cell will be "
+                "pre-populated with one of the following: empty if no such transition occurs, ‘NCC’ "
+                "(for no carbon change), ‘accum’ (for accumulation) or ‘disturb’ (for disturbance). "
+                "You must edit the ‘disturb’ cells with the degree to which disturbance occurs due to "
+                "the LULC change. This is done by changing ‘disturb’ to either ‘low-impact-disturb’, "
+                "‘med-impact-disturb’, or ‘high-impact-disturb’.")
+        },
+        "carbon_pool_transient_template.csv": {
+            "type": "csv",
+            "about": (
+                "    CSV (.csv, Comma Separated Value) format table, mapping each LULC type to impact and "
+                "accumulation information. You must fill in all columns of this table except the ‘lulc-class’ "
+                "and ‘code’ columns, which will be pre-populated by the model. See Step 2. The Main Model for "
+                "more information. Accumulation units are (Megatonnes of CO2 e/ha-yr), half-life is in integer years, "
+                "and disturbance is in integer percent. The edited table is used as input to the main Coastal Blue "
+                "Carbon model as the Biophysical Table."),
+            "columns": {
+                **coastal_blue_carbon.MODEL_SPEC['args']['biophysical_table_path']['columns']
+            }
+        }
+        "aligned_lulc_[YEAR].tif": {
+            "type": "raster",
+            "about": (
+                "Rasters that are the result of aligning all of the input LULC rasters with each other. All rasters are "
+                "resampled to the minimum resolution of the input rasters and cropped to the intersection of their bounding boxes. "
+                "Any resampling needed is done using nearest-neighbor interpolation. You generally don’t need to do anything with these files.")
+        }
     }
 }
 
