@@ -322,56 +322,99 @@ ARGS_SPEC = {
         }
     },
     "outputs": {
-        "per_pixel": {
+        "output": {
             "type": "directory",
-            "about": "Outputs in the per_pixel folder can be useful for intermediate calculations but should NOT be interpreted at the pixel level, as model assumptions are based on processes understood at the subwatershed scale.",
             "contents": {
-                "fractp.tif": {
-                    "type": "raster",
-                    "about": (
-                        "Estimated actual evapotranspiration fraction of precipitation per pixel (Actual Evapotranspiration / Precipitation). It is the mean fraction of precipitation that actually evapotranspires at the pixel level.")
+                "watershed_results_wyield.shp": {
+                    "type": "vector",
+                    "fields": {**WATERSHED_OUTPUT_FIELDS},
+                    "about": "Shapefile containing biophysical output values per watershed."
                 },
-                "aet.tif": {
-                    "type": "raster",
-                    "about": "Estimated actual evapotranspiration per pixel.",
-                    "bands": {
-                        1: {
-                            "type": "number",
-                            "units": u.mm
+                "watershed_results_wyield.csv": {
+                    "type": "csv",
+                    "fields": {**WATERSHED_OUTPUT_FIELDS},
+                    "about": "Table containing biophysical output values per watershed."
+                },
+                "subwatershed_results_wyield.shp": {
+                    "type": "vector",
+                    "fields": {**SUBWATERSHED_OUTPUT_FIELDS},
+                    "about": "Shapefile containing biophysical output values per subwatershed."
+                },
+                "subwatershed_results_wyield.csv": {
+                    "type": "csv",
+                    "fields": {**SUBWATERSHED_OUTPUT_FIELDS},
+                    "about": "Table containing biophysical output values per subwatershed."
+                },
+                "per_pixel": {
+                    "type": "directory",
+                    "about": "Outputs in the per_pixel folder can be useful for intermediate calculations but should NOT be interpreted at the pixel level, as model assumptions are based on processes understood at the subwatershed scale.",
+                    "contents": {
+                        "fractp.tif": {
+                            "type": "raster",
+                            "about": (
+                                "Estimated actual evapotranspiration fraction of precipitation per pixel (Actual Evapotranspiration / Precipitation). It is the mean fraction of precipitation that actually evapotranspires at the pixel level.")
+                        },
+                        "aet.tif": {
+                            "type": "raster",
+                            "about": "Estimated actual evapotranspiration per pixel.",
+                            "bands": {
+                                1: {
+                                    "type": "number",
+                                    "units": u.mm
+                                }
+                            }
+                        },
+                        "wyield.tif": {
+                            "type": "raster",
+                            "about": "Estimated water yield per pixel.",
+                            "bands": {
+                                1: {
+                                    "type": "number",
+                                    "units": u.mm
+                                }
+                            }
                         }
                     }
                 },
-                "wyield.tif": {
-                    "type": "raster",
-                    "about": "Estimated water yield per pixel.",
-                    "bands": {
-                        1: {
-                            "type": "number",
-                            "units": u.mm
-                        }
+                "intermediate": {
+                    "clipped_lulc.tif": {
+                        "type": "raster",
+                        "about": "Aligned and clipped copy of LULC input."
+                    },
+                    "depth_to_root_rest_layer.tif": {
+                        "type": "raster",
+                        "about": "Aligned and clipped copy of root restricting layer depth input."
+                    },
+                    "eto.tif": {
+                        "type": "raster",
+                        "about": "Aligned and clipped copy of ET0 input."
+                    },
+                    "kc_raster.tif": {
+                        "type": "raster",
+                        "about": "Map of KC values."
+                    },
+                    "pawc.tif": {
+                        "type": "raster",
+                        "about": "Aligned and clipped copy of PAWC input."
+                    },
+                    "pet.tif": {
+                        "type": "raster",
+                        "about": "Map of potential evapotranspiration."
+                    },
+                    "precip.tif": {
+                        "type": "raster",
+                        "about": "Aligned and clipped copy of precipitation input."
+                    },
+                    "root_depth.tif": {
+                        "type": "raster",
+                        "about": "Map of root depth."
+                    },
+                    "veg.tif": {
+                        "type": "raster",
+                        "about": "Map of vegetated state."
                     }
                 }
             }
-        },
-        "watershed_results_wyield.shp": {
-            "type": "vector",
-            "fields": {**WATERSHED_OUTPUT_FIELDS},
-            "about": "Shapefile containing biophysical output values per watershed."
-        }
-        "watershed_results_wyield.csv": {
-            "type": "csv",
-            "fields": {**WATERSHED_OUTPUT_FIELDS},
-            "about": "Table containing biophysical output values per watershed."
-        }
-        "subwatershed_results_wyield.shp": {
-            "type": "vector",
-            "fields": {**SUBWATERSHED_OUTPUT_FIELDS},
-            "about": "Shapefile containing biophysical output values per subwatershed."
-        }
-        "subwatershed_results_wyield.csv": {
-            "type": "csv",
-            "fields": {**SUBWATERSHED_OUTPUT_FIELDS},
-            "about": "Table containing biophysical output values per subwatershed."
         }
     }
 }
