@@ -29,7 +29,7 @@ LOGGER = logging.getLogger(__name__)
 
 INVALID_ID_MSG = gettext('{number} features have a non-integer ws_id field')
 
-ARGS_SPEC = {
+MODEL_SPEC = {
     "model_name": MODEL_METADATA["sdr"].model_title,
     "pyname": MODEL_METADATA["sdr"].pyname,
     "userguide": MODEL_METADATA["sdr"].userguide,
@@ -146,6 +146,168 @@ ARGS_SPEC = {
                 "watershed. Pixels with 1 are drainages and are treated like "
                 "streams. Pixels with 0 are not drainages."),
             "name": gettext("drainages")
+        }
+    },
+    "outputs": {
+        "rkls.tif": {
+            "bands": {1: {
+                "type": "number",
+                "units": u.metric_ton/u.pixel
+            }},
+            "about": "Total potential soil loss per pixel in the original land cover from the RKLS equation. Equivalent to the soil loss for bare soil. (Eq. (68), without applying the C or P factors)."
+        },
+        "sed_export.tif": {
+            "about": "The total amount of sediment exported from each pixel that reaches the stream. (Eq. (76))",
+            "bands": {1: {
+                "type": "number",
+                "units": u.metric_ton/u.pixel
+            }}
+        },
+        "sediment_deposition.tif": {
+            "about": "The total amount of sediment deposited on the pixel from upslope sources as a result of trapping. (Eq. (80))",
+            "bands": {1: {
+                "type": "number",
+                "units": u.metric_ton/u.pixel
+            }}
+        },
+        "stream.tif": {
+            "about": "Stream network, created using flow direction and flow accumulation derived from the DEM and Threshold Flow Accumulation. Values of 1 represent streams, values of 0 are non-stream pixels.",
+            "bands": {1: {
+                "type": "integer"
+            }}
+        },
+        "stream_and_drainage.tif": {
+            "created_if": "drainage_path",
+            "about": "This raster is the union of that layer with the calculated stream layer(Eq. (85)). Values of 1 represent streams, values of 0 are non-stream pixels."
+        },
+        "usle.tif": {
+            "about": "Total potential soil loss per pixel in the original land cover calculated from the USLE equation. (Eq. (68))",
+            "bands": {1: {
+                "type": "number",
+                "units": u.metric_ton/u.pixel
+            }}
+        },
+        "avoided_erosion.tif": {
+            "about": "The contribution of vegetation to keeping soil from eroding from each pixel. (Eq. (82))",
+            "bands": {1: {
+                "type": "number",
+                "units": u.metric_ton/u.pixel
+            }}
+        },
+        "avoided_export.tif": {
+            "about": "The contribution of vegetation to keeping erosion from entering a stream. This combines local/on-pixel sediment retention with trapping of erosion from upslope of the pixel. (Eq. (83))",
+            "bands": {1: {
+                "type": "number",
+                "units": u.metric_ton/u.pixel
+            }}
+        },
+        "watershed_results_sdr.shp": {
+            "about": "Table containing biophysical values for each watershed",
+            "fields": {
+                "sed_export": {
+                    "type": "number",
+                    "units": u.metric_ton,
+                    "about": "Total amount of sediment exported to the stream per watershed. (Eq. (77) with sum calculated over the watershed area)"
+                },
+                "usle_tot": {
+                    "type": "number",
+                    "units": u.metric_ton,
+                    "about": "Total amount of potential soil loss in each watershed calculated by the USLE equation. (Sum of USLE from (68) over the watershed area)"
+                },
+                "avoid_exp": {
+                    "type": "number",
+                    "units": u.metric_ton,
+                    "about": "The sum of avoided export in the watershed."
+                },
+                "avoid_eros": {
+                    "type": "number",
+                    "units": u.metric_ton,
+                    "about": "The sum of avoided local erosion in the watershed"
+                },
+                "sed_dep": {
+                    "type": "number",
+                    "units": u.metric_ton,
+                    "about": "Total amount of sediment deposited on the landscape in each watershed, which does not enter the stream."
+                }
+            }
+        },
+        "intermediate_outputs": {
+            "type": "directory",
+            "contents": {
+                "cp.tif": {
+                    "about": "factor (Eq. (68)), derived by mapping usle_c and usle_p from the biophysical table to the LULC raster."
+                },
+                "d_dn.tif": {
+                    "about": "downslope factor of the index of connectivity (Eq. (74))"
+                },
+                "d_up.tif": {
+                    "about": "upslope factor of the index of connectivity (Eq. (73))"
+                },
+                "e_prime.tif": {
+                    "about": "sediment downslope deposition, the amount of sediment from a given pixel that does not reach a stream (Eq. (78))"
+                },
+                "f.tif": {
+                    "about": "sediment flux for sediment that does not reach the stream (Eq. (81))"
+                },
+                "flow_accumulation.tif": {
+                    "about": "flow accumulation, derived from flow direction"
+                },
+                "flow_direction.tif": {
+                    "about": "MFD flow direction. Note: the pixel values should not be interpreted directly. Each 32-bit number consists of 8 4-bit numbers. Each 4-bit number represents the proportion of flow into one of the eight neighboring pixels."
+                },
+                "ic.tif": {
+                    "about": "index of connectivity (Eq. (70))"
+                },
+                "ls.tif": {
+                    "about": "LS factor for USLE (Eq. (69))"
+                },
+                "pit_filled_dem.tif": {
+                    "about": "DEM after any pits are filled"
+                },
+                "s_accumulation.tif": {
+                    "about": "flow accumulation weighted by the thresholded slope. Used in calculating s_bar."
+                },
+                "s_bar.tif": {
+                    "about": "mean thresholded slope gradient of the upslope contributing area (in eq. (73))"
+                },
+                "s_inverse.tif": {
+                    "about": "inverse of the thresholded slope (in eq. (74))"
+                },
+                "sdr_factor.tif": {
+                    "about": "sediment delivery ratio (Eq. (75))"
+                },
+                "slope.tif": {
+                    "about": "slope in radians, calculated from the pit-filled DEM"
+                },
+                "slope_threshold.tif": {
+                    "about": "slope, thresholded to be no less than 0.005 and no greater than 1 (eq. (71))",
+                    "bands": {1: {
+                        "type": "number",
+                        "units": u.radian
+                    }}
+                },
+                "w_threshold.tif": {
+                    "about": "cover-management factor thresholded to be no less than 0.001 (eq. (72))"
+                },
+                "w_accumulation.tif": {
+                    "about": "flow accumulation weighted by the thresholded cover-management factor. Used in calculating w_bar."
+                },
+                "w_bar.tif": {
+                    "about": "mean thresholded cover-management factor for upslope contributing area (in eq. (73))"
+                },
+                "w.tif": {
+                    "about": "cover-management factor derived by mapping usle_c from the biophysical table to the LULC raster"
+                },
+                "what_drains_to_stream.tif": {
+                    "about": "Map of which pixels drain to a stream. A value of 1 means that at least some of the runoff from that pixel drains to a stream in stream.tif. A value of 0 means that it does not drain at all to any stream in stream.tif."
+                },
+                "weighted_avg_aspect.tif": {
+                    "about": "average aspect weighted by flow direction(in eq. (69))"
+                },
+                "ws_inverse.tif": {
+                    "about": "Inverse of the thresholded cover-management factor times the thresholded slope (in eq. (74))"
+                }
+            }
         }
     }
 }
