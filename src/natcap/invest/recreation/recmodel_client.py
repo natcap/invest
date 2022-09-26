@@ -98,7 +98,7 @@ predictor_table_columns = {
 }
 
 
-ARGS_SPEC = {
+MODEL_SPEC = {
     "model_name": MODEL_METADATA["recreation"].model_title,
     "pyname": MODEL_METADATA["recreation"].pyname,
     "userguide": MODEL_METADATA["recreation"].userguide,
@@ -210,6 +210,34 @@ ARGS_SPEC = {
                 "IDs to files and their types. The file paths can be absolute "
                 "or relative to the table."),
             "name": gettext("scenario predictor table")
+        },
+        "outputs": {
+            "pud_results.shp": {
+                "about": "The features of this polygon shapefile match the original AOI shapefile, or the gridded version of the AOI if the “Grid the AOI” option was selected. The attributes include all attribute columns present in the original AOI shapefile, along with others.",
+                "fields": {
+                    "PUD_YR_AVG" : {
+                        "about": "the average photo-user-days per year (Photo User Days). This corresponds to the average PUD described in Wood et al. (2013)."
+                    },
+                    "PUD_[MONTH]": {
+                        "about": "the average photo-user-days for each month."
+                    }
+                }
+            },
+            "monthly_table.csv": {
+                "about": "This table contains the total photo-user-days counted in each cell for each month of the chosen date range. Each row in this table is a unique AOI grid cell or polygon. Columns represent months (“2005-1” is January 2005, “2014-12” is December 2014)."
+            },
+            "predictor_data.shp": {
+                "created_if": "compute_regression",
+                "about": "This shapefile has polygons matching those in “pud_results.shp” and it has fields defined by the ids given in the Predictor Table. The values of those fields are the metric calculated per response feature."
+            },
+            "regression_coefficients.txt": {
+                "created_if": "compute_regression",
+                "about": "This is a text file output of the regression analysis. It includes estimates for each predictor variable (see How it Works). It also contains a “server id hash” value which can be used to correlate the PUD result with the data available on the PUD server. If these results are used in publication this hash should be included with the results for reproducibility."
+            },
+            "scenario_results.shp": {
+                "created_if": "compute_regression",
+                "about": "This shapefile matches “predictor_data.shp”, but its fields come from the predictors defined in the Scenario Predictor Table and there is an additional field “PUD_EST” which is the estimated PUD_YR_AVG per polygon."
+            }
         }
     }
 }
