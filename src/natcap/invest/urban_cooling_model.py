@@ -28,7 +28,7 @@ LOGGER = logging.getLogger(__name__)
 TARGET_NODATA = -1
 _LOGGING_PERIOD = 5
 
-ARGS_SPEC = {
+MODEL_SPEC = {
     "model_name": MODEL_METADATA["urban_cooling_model"].model_title,
     "pyname": MODEL_METADATA["urban_cooling_model"].pyname,
     "userguide": MODEL_METADATA["urban_cooling_model"].userguide,
@@ -244,6 +244,90 @@ ARGS_SPEC = {
                 "The relative weight to apply to ETI when calculating the "
                 "cooling capacity index. If not provided, defaults to 0.2.")
         },
+    },
+    "outputs": {
+        "hm.tif": {
+            "about": "The calculated HMI."
+        },
+        "uhi_results.shp": {
+            "about": "A copy of the input vector “Area of Interest” with additional fields.",
+            "fields": {
+                "avg_cc": {
+                    "about": "Average CC value"
+                    "type": "number",
+                    "units": None
+                },
+                "avg_tmp_v": {
+                    "about": "Average temperature value",
+                    "type": "number",
+                    "units": u.degree_Celsius
+                },
+                "avg_tmp_an": {
+                    "about": "Average temperature anomaly",
+                    "type": "number",
+                    "units": u.degree_Celsius
+                },
+                "avd_eng_cn": {
+                    "about": "Avoided energy consumption (kWh or $ if optional energy cost input column was provided in the Energy Consumption Table).",
+                    "type": "number",
+                    "units": None
+                },
+                "avg_wbgt_v": {
+                    "about": "Average WBGT.",
+                    "type": "number",
+                    "units": u.degree_Celsius
+                },
+                "avg_ltls_v": {
+                    "about": "Light work productivity loss",
+                    "type": "percent"
+                },
+                "avg_hvls_v": {
+                    "about": "Heavy work productivity loss",
+                    "type": "percent"
+                }
+            }
+        },
+        "buildings_with_stats.shp": {
+            "about": "A copy of the input vector “Building Footprints” with additional fields.",
+            "fields": {
+                "energy_sav": {
+                    "about": "Energy savings value (kWh or currency if optional energy cost input column was provided in the Energy Consumption Table). Savings are relative to a theoretical scenario where the city contains NO natural areas nor green spaces; where CC = 0 for all LULC classes.",
+                    "type": "number",
+                    "units": None
+                },
+                "mean_t_air": {
+                    "about": "Average temperature value in building.",
+                    "type": "number",
+                    "units": u.degree_Celsius
+                }
+            }
+        },
+        "intermediate": {
+            "type": "directory",
+            "contents": {
+                "cc.tif": {
+                    "about": "Raster of CC values."
+                },
+                "T_air.tif": {
+                    "about": "Raster of estimated air temperature values."
+                },
+                "T_air_nomix.tif": {
+                    "about": "Raster of estimated air temperature values prior to air mixing (i.e. before applying the moving average algorithm)."
+                },
+                "eti.tif": {
+                    "about": "Raster of values of actual evapotranspiration (reference evapotranspiration times crop coefficient “Kc”)."
+                },
+                "wbgt.tif": {
+                    "about": "Raster of the calculated WBGT."
+                },
+                "reprojected_aoi.shp": {
+                    "about": "The user-defined Area of Interest, reprojected to the Spatial Reference of the LULC."
+                },
+                "reprojected_buildings.shp": {
+                    "about": "The user-defined buildings vector, reprojected to the Spatial Reference of the LULC."
+                }
+            }
+        }
     }
 }
 
