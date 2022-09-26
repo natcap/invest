@@ -30,7 +30,7 @@ MISSING_CONVERT_OPTION_MSG = gettext(
     'One or more of "convert_nearest_to_edge" or "convert_farthest_from_edge" '
     'must be selected')
 
-ARGS_SPEC = {
+MODEL_SPEC = {
     "model_name": MODEL_METADATA["scenario_generator_proximity"].model_title,
     "pyname": MODEL_METADATA["scenario_generator_proximity"].pyname,
     "userguide": MODEL_METADATA["scenario_generator_proximity"].userguide,
@@ -109,6 +109,32 @@ ARGS_SPEC = {
                 "nearest pixels to the 'focal' land cover areas "
                 "and working outwards."),
             "name": gettext("convert nearest to edge")
+        }
+    },
+    "outputs": {
+        "nearest_to_edge.tif": {
+            "about": "LULC raster for the scenario of conversion nearest to the edge of the focal habitat."
+        },
+        "farthest_from_edge.tif": {
+            "about": "LULC raster for the scenario of conversion farthest from the edge of the focal habitat."
+        },
+        "nearest_to__edge.csv": {
+            "about": "table listing the area (in hectares) and number of pixels for different land cover types converted for the scenario of conversion nearest to the edge of the focal habitat."
+        },
+        "farthest_from_edge.csv": {
+            "about": "table listing the area (in hectares) and number of pixels for different land cover types converted for the scenario of conversion nearest to the edge of the focal habitat."
+        },
+        "intermediate": {
+            "type": "directory",
+            "contents": {
+                "aoi_masked_lulc.tif": {},
+                "farthest_from_edge_distance.tif": {
+                    "about": "This raster shows the distance (in number of pixels) of each pixel to the nearest edge of the focal landcover."
+                },
+                "nearest_to_edge_distance.tif": {
+                    "about": "This raster shows the distance (in number of pixels) of each pixel to the nearest edge of the focal landcover."
+                }
+            }
         }
     }
 }
