@@ -31,7 +31,7 @@ MONTH_ID_TO_LABEL = [
     'jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct',
     'nov', 'dec']
 
-ARGS_SPEC = {
+MODEL_SPEC = {
     "model_name": MODEL_METADATA["seasonal_water_yield"].model_title,
     "pyname": MODEL_METADATA["seasonal_water_yield"].pyname,
     "userguide": MODEL_METADATA["seasonal_water_yield"].userguide,
@@ -276,6 +276,111 @@ ARGS_SPEC = {
                 "Table of alpha values for each month. "
                 "Required if Use Monthly Alpha Table is selected."),
             "name": gettext("monthly alpha table")
+        }
+    },
+    "outputs": {
+        "B.tif": {
+            "about": "Map of baseflow values, the contribution of a pixel to slow release flow (which is not evapotranspired before it reaches the stream)",
+            "bands": {1: {
+                "type": "number",
+                "units": u.millimeter
+            }}
+        },
+        "B_sum.tif": {
+            "about": "Map of B_sum values, the flow through a pixel, contributed by all upslope pixels, that is not evapotranspirated before it reaches the stream",
+            "bands": {1: {
+                "type": "number",
+                "units": u.millimeter
+            }}
+        },
+        "CN.tif": {
+            "about": "Map of curve number values"
+        },
+        "L_avail.tif": {
+            "about": "Map of available local recharge",
+            "bands": {1: {
+                "type": "number",
+                "units": u.millimeter
+            }}
+        },
+        "L.tif": {
+            "about": "Map of local recharge values",
+            "bands": {1: {
+                "type": "number",
+                "units": u.millimeter
+            }}
+        },
+        "L_sum_avail.tif": {
+            "about": "Map of values, the available water to a pixel, contributed by all upslope pixels, that is available for evapotranspiration by this pixel",
+            "bands": {1: {
+                "type": "number",
+                "units": u.millimeter
+            }}
+        },
+        "L_sum.tif": {
+            "about": "Map of values, the flow through a pixel, contributed by all upslope pixels, that is available for evapotranspiration to downslope pixels",
+            "bands": {1: {
+                "type": "number",
+                "units": u.millimeter
+            }}
+        },
+        "QF.tif": {
+            "about": "Map of quickflow (QF) values"
+        },
+        !!"P.tif": {
+            "about": "The total precipitation across all months on this pixel.",
+            "bands": {1: {
+                "type": "number",
+                "units": u.millimeter/u.year
+            }}
+        },
+        "Vri.tif": {
+            "about": "Map of the values of recharge (contribution, positive or negative), to the total recharge",
+            "bands": {1: {
+                "type": "number",
+                "units": u.millimeter
+            }}
+        },
+        "aggregated_results_swy.shp": {
+            "about": "Table containing biophysical values for each watershed",
+            "fields": {
+                "qb": {
+                    "about": "Mean local recharge value within the watershed",
+                    "type": "number",
+                    "units": u.millimeter
+                },
+                "vri_sum": {
+                    "about": "total recharge contribution, (positive or negative) within the watershed. The sum of Vri.tif pixel values within the watershed.",
+                    "type": "number",
+                    "units": u.millimeter
+                }
+            }
+        },
+        "intermediate_outputs": {
+            "type": "directory",
+            "contents": {
+                "aet.tif": {
+                    "about": "Map of actual evapotranspiration (AET)",
+                    "bands": {1: {
+                        "type": "number",
+                        "units": u.millimeter
+                    }}
+                },
+                "flow_dir_mfd.tif": {},
+                "qf_[MONTH].tif": {
+                    "about": "Maps of monthly quickflow (1 = January… 12 = December)",
+                    "bands": {1: {
+                        "type": "number",
+                        "units": u.millimeter
+                    }}
+                },
+                "stream.tif": {
+                    "about": "Stream network generated from the input DEM and Threshold Flow Accumulation. Values of 1 represent streams, values of 0 are non-stream pixels.",
+                    "bands": {1: {
+                        "type": "integer"
+                    }}
+                }
+            }
         }
     }
 }
