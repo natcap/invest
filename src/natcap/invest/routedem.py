@@ -20,7 +20,7 @@ LOGGER = logging.getLogger(__name__)
 
 INVALID_BAND_INDEX_MSG = gettext('Must be between 1 and {maximum}')
 
-ARGS_SPEC = {
+MODEL_SPEC = {
     "model_name": MODEL_METADATA["routedem"].model_title,
     "pyname": MODEL_METADATA["routedem"].pyname,
     "userguide": MODEL_METADATA["routedem"].userguide,
@@ -96,6 +96,13 @@ ARGS_SPEC = {
             "about": gettext("Calculate percent slope from the provided DEM."),
             "name": gettext("calculate slope")
         }
+    },
+    "outputs": {
+        "filled.tif": {},
+        "flow_accumulation.tif": {},
+        "flow_direction.tif": {},
+        "slope.tif": {},
+        "stream_mask.tif": {}
     }
 }
 
