@@ -33,7 +33,7 @@ from . import gettext
 LOGGER = logging.getLogger(__name__)
 speedups.enable()
 
-ARGS_SPEC = {
+MODEL_SPEC = {
     "model_name": MODEL_METADATA["wind_energy"].model_title,
     "pyname": MODEL_METADATA["wind_energy"].pyname,
     "userguide": MODEL_METADATA["wind_energy"].userguide,
@@ -392,6 +392,67 @@ ARGS_SPEC = {
                 "Required if Run Valuation is selected and Use Price Table "
                 "is not selected."),
             "name": gettext("rate of price change")
+        }
+    },
+    "outputs": {
+        "output": {
+            "type": "directory",
+            "contents": {
+                "carbon_emissions_tons.tif": {
+                    "about": "a GeoTIFF raster file that represents offset carbon emissions for a farm built centered on a pixel",
+                    "bands": {1: {
+                        "type": "number",
+                        "units": u.metric_ton/u.year
+                    }}
+                },
+                "density_W_per_m2.tif": {
+                    "about": "a GeoTIFF raster file that represents power density centered on a pixel.",
+                    "bands": {1: {
+                        "type": "number",
+                        "units": u.watt/u.meter**2
+                    }}
+                },
+                "harvested_energy_MWhr_per_yr.tif": {
+                    "about": "a GeoTIFF raster file that represents the annual harvested energy from a farm centered on that pixel.",
+                    "bands": {1: {
+                        "type": "number",
+                        "units": u.megawatt_hour/u.year
+                    }}
+                },
+                "levelized_cost_price_per_kWh.tif": {
+                    "about": "a GeoTIFF raster file that represents the unit price of energy that would be required to set the present value of the farm centered at that pixel equal to zero.",
+                    "bands": {1: {
+                        "type": "number",
+                        "units": u.currency/u.kilowatt_hour
+                    }}
+                },
+                "npv.tif": {
+                    "about": "a GeoTIFF raster file that represents the net present value of a farm centered on that pixel."
+                },
+                "wind_energy_points.shp": {
+                    "about": "an ESRI Shapefile that summarizes the above outputs for each point."
+                }
+            }
+        },
+        "intermediate": {
+            "type": "directory",
+            "contents": {
+                "aoi_raster.tif": {},
+                "bathymetry_projected.tif": {},
+                "depth_mask_aligned.tif": {},
+                "depth_mask.tif": {},
+                "distance_mask_aligned.tif": {},
+                "distance_mask.tif": {},
+                "distance_trans.tif": {},
+                "projected_clipped_land_poly.shp": {},
+                "projection_params.pickle": {},
+                "temp_density_aligned.tif": {},
+                "temp_density.tif": {},
+                "temp_harveseted_aligned.tif": {},
+                "temp_harvested.tif": {},
+                "wind_data.pickle": {},
+                "wind_energy_points_from_data.shp": {}
+            }
         }
     }
 }
