@@ -401,15 +401,23 @@ MODEL_SPEC = {
                     "about": "These point layers from the selected wave data grid are based on inputs #2-4.",
                     "fields": {
                         "I": {
+                            "type": "number",
+                            "units": u.none,
                             "about": "index value for the wave input grid points"
                         },
                         "J": {
+                            "type": "number",
+                            "units": u.none,
                             "about": "index value for the wave input grid points"
                         },
                         "LONG": {
+                            "type": "number",
+                            "units": u.degree,
                             "about": "longitude of the grid points"
                         },
                         "LAT": {
+                            "type": "number",
+                            "units": u.degree,
                             "about": "latitude of the grid points"
                         },
                         "HSAVG_M": {
@@ -443,7 +451,9 @@ MODEL_SPEC = {
                             "units": u.meter
                         },
                         "LAND_ID": {
-                            "about": "ID of the closest landing connection point"
+                            "about": "ID of the closest landing connection point",
+                            "type": "number",
+                            "units": u.none
                         },
                         "L2G_MDIST": {
                             "about": "Euclidean distance from LAND_ID to the nearest power grid connection",
@@ -452,7 +462,8 @@ MODEL_SPEC = {
                         },
                         "UNITS": {
                             "about": "number of WEC devices assumed to be at this WEC facility site",
-                            "type": "integer"
+                            "type": "number",
+                            "units": u.none,
                         },
                         "CAPWE_ALL": {
                             "about": "total captured wave energy for all machines at site",

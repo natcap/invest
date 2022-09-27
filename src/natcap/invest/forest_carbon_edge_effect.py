@@ -218,35 +218,38 @@ MODEL_SPEC = {
             }
         },
         "intermediate_outputs": {
-            "c_above_carbon_stocks.tif": {
-                "type": "raster",
-                "about": "Carbon stored in the aboveground biomass carbon pool."
-            },
-            "c_below_carbon_stocks.tif": {
-                "type": "raster",
-                "about": "Carbon stored in the belowground biomass carbon pool."
-            },
-            "c_dead_carbon_stocks.tif": {
-                "type": "raster",
-                "about": "Carbon stored in the dead matter biomass carbon pool."
-            },
-            "c_soil_carbon_stocks.tif": {
-                "type": "raster",
-                "about": "Carbon stored in the soil biomass carbon pool."
-            },
-            "local_carbon_shape.shp": {
-                "type": "vector",
-                "about": "The regression parameters reprojected to match your study area."
-            },
-            "edge_distance.tif": {
-                "type": "raster",
-                "about": "The distance of each forest pixel to the nearest forest edge"
-            },
-            "tropical_forest_edge_carbon_stocks.tif": {
-                "type": "raster",
-                "about": "A map of carbon in the forest only, according to the regression method."
-            },
-            "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
+            "type": "directory",
+            "contents": {
+                "c_above_carbon_stocks.tif": {
+                    "type": "raster",
+                    "about": "Carbon stored in the aboveground biomass carbon pool."
+                },
+                "c_below_carbon_stocks.tif": {
+                    "type": "raster",
+                    "about": "Carbon stored in the belowground biomass carbon pool."
+                },
+                "c_dead_carbon_stocks.tif": {
+                    "type": "raster",
+                    "about": "Carbon stored in the dead matter biomass carbon pool."
+                },
+                "c_soil_carbon_stocks.tif": {
+                    "type": "raster",
+                    "about": "Carbon stored in the soil biomass carbon pool."
+                },
+                "local_carbon_shape.shp": {
+                    "type": "vector",
+                    "about": "The regression parameters reprojected to match your study area."
+                },
+                "edge_distance.tif": {
+                    "type": "raster",
+                    "about": "The distance of each forest pixel to the nearest forest edge"
+                },
+                "tropical_forest_edge_carbon_stocks.tif": {
+                    "type": "raster",
+                    "about": "A map of carbon in the forest only, according to the regression method."
+                },
+                "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
+            }
         }
     }
 }

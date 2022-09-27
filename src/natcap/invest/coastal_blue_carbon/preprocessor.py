@@ -18,6 +18,9 @@ from . import coastal_blue_carbon
 
 LOGGER = logging.getLogger(__name__)
 
+BIOPHYSICAL_COLUMNS_SPEC = coastal_blue_carbon.MODEL_SPEC[
+    'args']['biophysical_table_path']['columns']
+
 MODEL_SPEC = {
     "model_name": MODEL_METADATA["coastal_blue_carbon_preprocessor"].model_title,
     "pyname": MODEL_METADATA["coastal_blue_carbon_preprocessor"].pyname,
@@ -98,7 +101,16 @@ MODEL_SPEC = {
                 "and disturbance is in integer percent. The edited table is used as input to the main Coastal Blue "
                 "Carbon model as the Biophysical Table."),
             "columns": {
-                **coastal_blue_carbon.MODEL_SPEC['args']['biophysical_table_path']['columns']
+                **BIOPHYSICAL_COLUMNS_SPEC,
+                # remove "expression" property which doesn't go in output spec
+                "biomass-half-life": dict(
+                    set(BIOPHYSICAL_COLUMNS_SPEC["biomass-half-life"].items()) -
+                    {("expression", "value > 0")}
+                ),
+                "soil-half-life": dict(
+                    set(BIOPHYSICAL_COLUMNS_SPEC["soil-half-life"].items()) -
+                    {("expression", "value > 0")}
+                )
             }
         },
         "aligned_lulc_[YEAR].tif": {

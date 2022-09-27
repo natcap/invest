@@ -377,43 +377,46 @@ MODEL_SPEC = {
                     }
                 },
                 "intermediate": {
-                    "clipped_lulc.tif": {
-                        "type": "raster",
-                        "about": "Aligned and clipped copy of LULC input."
-                    },
-                    "depth_to_root_rest_layer.tif": {
-                        "type": "raster",
-                        "about": "Aligned and clipped copy of root restricting layer depth input."
-                    },
-                    "eto.tif": {
-                        "type": "raster",
-                        "about": "Aligned and clipped copy of ET0 input."
-                    },
-                    "kc_raster.tif": {
-                        "type": "raster",
-                        "about": "Map of KC values."
-                    },
-                    "pawc.tif": {
-                        "type": "raster",
-                        "about": "Aligned and clipped copy of PAWC input."
-                    },
-                    "pet.tif": {
-                        "type": "raster",
-                        "about": "Map of potential evapotranspiration."
-                    },
-                    "precip.tif": {
-                        "type": "raster",
-                        "about": "Aligned and clipped copy of precipitation input."
-                    },
-                    "root_depth.tif": {
-                        "type": "raster",
-                        "about": "Map of root depth."
-                    },
-                    "veg.tif": {
-                        "type": "raster",
-                        "about": "Map of vegetated state."
-                    },
-                    "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
+                    "type": "directory",
+                    "contents": {
+                        "clipped_lulc.tif": {
+                            "type": "raster",
+                            "about": "Aligned and clipped copy of LULC input."
+                        },
+                        "depth_to_root_rest_layer.tif": {
+                            "type": "raster",
+                            "about": "Aligned and clipped copy of root restricting layer depth input."
+                        },
+                        "eto.tif": {
+                            "type": "raster",
+                            "about": "Aligned and clipped copy of ET0 input."
+                        },
+                        "kc_raster.tif": {
+                            "type": "raster",
+                            "about": "Map of KC values."
+                        },
+                        "pawc.tif": {
+                            "type": "raster",
+                            "about": "Aligned and clipped copy of PAWC input."
+                        },
+                        "pet.tif": {
+                            "type": "raster",
+                            "about": "Map of potential evapotranspiration."
+                        },
+                        "precip.tif": {
+                            "type": "raster",
+                            "about": "Aligned and clipped copy of precipitation input."
+                        },
+                        "root_depth.tif": {
+                            "type": "raster",
+                            "about": "Map of root depth."
+                        },
+                        "veg.tif": {
+                            "type": "raster",
+                            "about": "Map of vegetated state."
+                        },
+                        "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
+                    }
                 }
             }
         }

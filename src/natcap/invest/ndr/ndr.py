@@ -357,9 +357,9 @@ MODEL_SPEC = {
                     "bands": {1: {
                         "type": "integer"
                     }}
-                }
-            },
-            "cache_dir": spec_utils.TASKGRAPH_DIR
+                },
+                "cache_dir": spec_utils.TASKGRAPH_DIR
+            }
         }
     }
 }

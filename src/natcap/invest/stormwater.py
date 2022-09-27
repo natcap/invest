@@ -202,31 +202,44 @@ MODEL_SPEC = {
                 },
                 "total_retention_volume": {
                     "type": "number",
+                    "units": u.meter**3/u.year,
                     "about": "Total retention volume over this polygon"
                 },
                 "mean_runoff_ratio": {
+                    "type": "ratio",
                     "about": "Average runoff coefficient over this polygon"
                 },
                 "total_runoff_volume": {
+                    "type": "number",
+                    "units": u.meter**3/u.year,
                     "about": "Total runoff volume over this polygon"
                 },
                 "mean_percolation_ratio": {
                     "created_if": "percolation",
-                    "about": "Average percolation (recharge) ratio over this polygon"
+                    "about": "Average percolation (recharge) ratio over this polygon",
+                    "type": "ratio"
                 },
                 "total_percolation_volume": {
                     "created_if": "percolation",
-                    "about": "Total volume of potential aquifer recharge over this polygon"
+                    "about": "Total volume of potential aquifer recharge over this polygon",
+                    "type": "number",
+                    "units": u.meter**3/u.year
                 },
                 "[POLLUTANT]_total_avoided_load": {
-                    "about": "Total avoided (retained) amount of pollutant over this polygon"
+                    "about": "Total avoided (retained) amount of pollutant over this polygon",
+                    "type": "number",
+                    "units": u.kilogram/u.year
                 },
                 "[POLLUTANT]_total_load": {
-                    "about": "Total amount of pollutant in runoff over this polygon"
+                    "about": "Total amount of pollutant in runoff over this polygon",
+                    "type": "number",
+                    "units": u.kilogram/u.year
                 },
                 "total_retention_value": {
                     "created_if": "replacement_cost",
-                    "about": "Total value of the retained volume of water over this polygon"
+                    "about": "Total value of the retained volume of water over this polygon",
+                    "type": "number",
+                    "units": u.currency/u.year
                 }
             }
         },

@@ -236,22 +236,25 @@ MODEL_SPEC = {
             }
         },
         "intermediate": {
-            "access_layer.tif": {},
-            "access_layer_[AREA].tif": {},
-            "[HABITAT]_[SCENARIO]_aligned.tif": {},
-            "[HABITAT]_[SCENARIO]_aligned_[AREA].tif": {},
-            "filtered_[HABITAT]_[SCENARIO]_aligned.tif": {},
-            "filtered_[HABITAT]_[SCENARIO]_aligned_[AREA].tif": {},
-            "lulc_[SCENARIO]_[AREA]_aligned.tif": {},
-            "lulc_[SCENARIO]_[AREA]_aligned_[AREA}.tif": {},
-            "kernels": {
-                "type": "directory",
-                "contents": {
-                    "kernel_[HABITAT]_[SCENARIO].tif": {},
-                    "kernel_[HABITAT]_[SCENARIO]_[AREA].tif": {}
-                }
-            },
-            "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
+            "type": "directory",
+            "contents": {
+                "access_layer.tif": {},
+                "access_layer_[AREA].tif": {},
+                "[HABITAT]_[SCENARIO]_aligned.tif": {},
+                "[HABITAT]_[SCENARIO]_aligned_[AREA].tif": {},
+                "filtered_[HABITAT]_[SCENARIO]_aligned.tif": {},
+                "filtered_[HABITAT]_[SCENARIO]_aligned_[AREA].tif": {},
+                "lulc_[SCENARIO]_[AREA]_aligned.tif": {},
+                "lulc_[SCENARIO]_[AREA]_aligned_[AREA}.tif": {},
+                "kernels": {
+                    "type": "directory",
+                    "contents": {
+                        "kernel_[HABITAT]_[SCENARIO].tif": {},
+                        "kernel_[HABITAT]_[SCENARIO]_[AREA].tif": {}
+                    }
+                },
+                "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
+            }
         }
     }
 }

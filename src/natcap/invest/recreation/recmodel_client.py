@@ -217,10 +217,14 @@ MODEL_SPEC = {
             "about": "The features of this polygon shapefile match the original AOI shapefile, or the gridded version of the AOI if the “Grid the AOI” option was selected. The attributes include all attribute columns present in the original AOI shapefile, along with others.",
             "fields": {
                 "PUD_YR_AVG" : {
-                    "about": "the average photo-user-days per year (Photo User Days). This corresponds to the average PUD described in Wood et al. (2013)."
+                    "about": "the average photo-user-days per year (Photo User Days). This corresponds to the average PUD described in Wood et al. (2013).",
+                    "type": "number",
+                    "units": u.none
                 },
                 "PUD_[MONTH]": {
-                    "about": "the average photo-user-days for each month."
+                    "about": "the average photo-user-days for each month.",
+                    "type": "number",
+                    "units": u.none
                 }
             }
         },

@@ -112,7 +112,7 @@ MODEL_SPEC = {
             "about": "raster with runoff retention values. Calculated from equation (119).",
             "bands": {1: {
                 "type": "number",
-                "units": None
+                "units": u.none
             }}
         },
         "Runoff_retention_m3.tif": {
@@ -135,7 +135,7 @@ MODEL_SPEC = {
                 "rnf_rt_idx": {
                     "about": "average of runoff retention values per watershed",
                     "type": "number",
-                    "units": None
+                    "units": u.none
                 },
                 "rnf_rt_m3": {
                     "about": "sum of runoff retention volumes per watershed.",
@@ -162,16 +162,22 @@ MODEL_SPEC = {
             }
         },
         "intermediate_files": {
-            "Q_m3.tif": {},
-            "reprojected_aoi.gpkg": {},
-            "structures_reprojected.gpkg": {}
+            "type": "directory",
+            "contents": {
+                "Q_m3.tif": {},
+                "reprojected_aoi.gpkg": {},
+                "structures_reprojected.gpkg": {}
+            }
         },
         "temp_working_dir_not_for_humans": {
-            "aligned_lulc.tif": {},
-            "aligned_soils_hydrological_group.tif": {},
-            "cn_raster.tif": {},
-            "s_max.tif": {},
-            "taskgraph_data.db": {}
+            "type": "directory",
+            "contents": {
+                "aligned_lulc.tif": {},
+                "aligned_soils_hydrological_group.tif": {},
+                "cn_raster.tif": {},
+                "s_max.tif": {},
+                "taskgraph_data.db": {}
+            }
         }
     }
 }

@@ -255,7 +255,7 @@ MODEL_SPEC = {
                 "avg_cc": {
                     "about": "Average CC value",
                     "type": "number",
-                    "units": None
+                    "units": u.none
                 },
                 "avg_tmp_v": {
                     "about": "Average temperature value",
@@ -270,7 +270,7 @@ MODEL_SPEC = {
                 "avd_eng_cn": {
                     "about": "Avoided energy consumption (kWh or $ if optional energy cost input column was provided in the Energy Consumption Table).",
                     "type": "number",
-                    "units": None
+                    "units": u.none
                 },
                 "avg_wbgt_v": {
                     "about": "Average WBGT.",
@@ -293,7 +293,7 @@ MODEL_SPEC = {
                 "energy_sav": {
                     "about": "Energy savings value (kWh or currency if optional energy cost input column was provided in the Energy Consumption Table). Savings are relative to a theoretical scenario where the city contains NO natural areas nor green spaces; where CC = 0 for all LULC classes.",
                     "type": "number",
-                    "units": None
+                    "units": u.none
                 },
                 "mean_t_air": {
                     "about": "Average temperature value in building.",

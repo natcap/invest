@@ -235,13 +235,16 @@ MODEL_SPEC = {
                     "about": "This CSV file contains mean, minimum, and maximum exposure, consequence, and risk scores for each habitat-stressor pair, as well as habitat-specific scores in each subregion. If the “name” field is not given in the AOI vector, a “Total Region” value will be used to represent the entire AOI extent in the “SUBREGION” column on the table.",
                     "columns": {
                         "R_%HIGH": {
-                            "about": "the percentage of high risk areas."
+                            "about": "the percentage of high risk areas.",
+                            "type": "percent"
                         },
                         "R_%MEDIUM": {
-                            "about": "the percentage of medium risk areas."
+                            "about": "the percentage of medium risk areas.",
+                            "type": "percent"
                         },
                         "R_%LOW": {
-                            "about": "the percentage of low risk areas."
+                            "about": "the percentage of low risk areas.",
+                            "type": "percent"
                         }
                     }
                 }

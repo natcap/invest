@@ -183,16 +183,20 @@ MODEL_SPEC = {
             "about": "A copy of the input farm polygon vector file with additional fields",
             "fields": {
                 "p_abund": {
-                    "about": "average pollinator abundance on the farm for the active season"
+                    "about": "average pollinator abundance on the farm for the active season",
+                    "type": "number"
                 },
                 "y_tot": {
-                    "about": "total yield index, including wild and managed pollinators and pollinator independent yield."
+                    "about": "total yield index, including wild and managed pollinators and pollinator independent yield.",
+                    "type": "number"
                 },
                 "pdep_y_w": {
-                    "about": "index of potential pollination dependent yield attributable to wild pollinators."
+                    "about": "index of potential pollination dependent yield attributable to wild pollinators.",
+                    "type": "number"
                 },
                 "y_wild": {
-                    "about": "index of the total yield attributable to wild pollinators."
+                    "about": "index of the total yield attributable to wild pollinators.",
+                    "type": "number"
                 }
             }
         },
@@ -219,22 +223,25 @@ MODEL_SPEC = {
             "about": "Per-pixel pollinator yield index for pixels that overlap farms, for wild-pollinators only."
         },
         "intermediate_outputs": {
-            "blank_raster.tif": {},
-            "convolve_ps_[SPECIES].tif": {},
-            "farm_nesting_substrate_index_[SUBSTRATE].tif": {},
-            "farm_pollinator_[SEASON].tif": {},
-            "farm_relative_floral_abundance_index_[SEASON].tif": {},
-            "floral_resources_[SPECIES].tif": {},
-            "foraged_flower_index_[SPECIES]_[SEASON].tif": {},
-            "habitat_nesting_index_[SPECIES].tif": {},
-            "half_saturation_[SEASON].tif": {},
-            "kernel_[ALPHA].tif": {},
-            "local_foraging_effectiveness_[SPECIES].tif": {},
-            "managed_pollinators.tif": {},
-            "nesting_substrate_index_[SUBSTRATE].tif": {},
-            "relative_floral_abundance_index_[SEASON].tif": {},
-            "reprojected_farm_vector.shp": {},
-            "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
+            "type": "directory",
+            "contents": {
+                "blank_raster.tif": {},
+                "convolve_ps_[SPECIES].tif": {},
+                "farm_nesting_substrate_index_[SUBSTRATE].tif": {},
+                "farm_pollinator_[SEASON].tif": {},
+                "farm_relative_floral_abundance_index_[SEASON].tif": {},
+                "floral_resources_[SPECIES].tif": {},
+                "foraged_flower_index_[SPECIES]_[SEASON].tif": {},
+                "habitat_nesting_index_[SPECIES].tif": {},
+                "half_saturation_[SEASON].tif": {},
+                "kernel_[ALPHA].tif": {},
+                "local_foraging_effectiveness_[SPECIES].tif": {},
+                "managed_pollinators.tif": {},
+                "nesting_substrate_index_[SUBSTRATE].tif": {},
+                "relative_floral_abundance_index_[SEASON].tif": {},
+                "reprojected_farm_vector.shp": {},
+                "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
+            }
         }
     }
 }
