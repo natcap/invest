@@ -131,7 +131,8 @@ MODEL_SPEC = {
         },
         "pour_points.gpkg": {
             "type": "vector"
-        }
+        },
+        "_work_tokens": spec_utils.TASKGRAPH_DIR
     }
 }
 

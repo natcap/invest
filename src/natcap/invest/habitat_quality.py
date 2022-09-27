@@ -250,7 +250,8 @@ MODEL_SPEC = {
                     "kernel_[HABITAT]_[SCENARIO].tif": {},
                     "kernel_[HABITAT]_[SCENARIO]_[AREA].tif": {}
                 }
-            }
+            },
+            "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
         }
     }
 }

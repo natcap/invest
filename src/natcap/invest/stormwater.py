@@ -268,7 +268,8 @@ MODEL_SPEC = {
                 },
                 "ratio_average.tif": {
                     "about": "A raster where each pixel’s value is the average of its neighborhood of pixels in the retention_ratio map, calculated by convolving the search kernel with the retention ratio raster"
-                }
+                },
+                "cache_dir": spec_utils.TASKGRAPH_DIR
             }
         }
     }

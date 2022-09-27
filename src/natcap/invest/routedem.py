@@ -102,7 +102,8 @@ MODEL_SPEC = {
         "flow_accumulation.tif": {},
         "flow_direction.tif": {},
         "slope.tif": {},
-        "stream_mask.tif": {}
+        "stream_mask.tif": {},
+        "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
     }
 }
 

@@ -107,7 +107,8 @@ MODEL_SPEC = {
                 "Rasters that are the result of aligning all of the input LULC rasters with each other. All rasters are "
                 "resampled to the minimum resolution of the input rasters and cropped to the intersection of their bounding boxes. "
                 "Any resampling needed is done using nearest-neighbor interpolation. You generally don’t need to do anything with these files.")
-        }
+        },
+        "task_cache": spec_utils.TASKGRAPH_DIR
     }
 }
 

@@ -125,6 +125,17 @@ THRESHOLD_FLOW_ACCUMULATION = {
     "name": gettext("threshold flow accumulation")
 }
 
+# Specs for common outputs ####################################################
+TASKGRAPH_DIR = {
+    "type": "directory",
+    "about": (
+        "Cache that stores data between model runs. This directory contains no "
+        "human-readable data and you may ignore it."),
+    "contents": {
+        "taskgraph.db": {}
+    }
+}
+
 # geometry types ##############################################################
 # the full list of ogr geometry types is in an enum in
 # https://github.com/OSGeo/gdal/blob/master/gdal/ogr/ogr_core.h

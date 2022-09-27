@@ -133,7 +133,8 @@ MODEL_SPEC = {
                 },
                 "nearest_to_edge_distance.tif": {
                     "about": "This raster shows the distance (in number of pixels) of each pixel to the nearest edge of the focal landcover."
-                }
+                },
+                "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
             }
         }
     }

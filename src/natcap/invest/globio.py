@@ -279,7 +279,8 @@ MODEL_SPEC = {
                         "smoothed_primary_veg_mask.tif": {},
                         "transmission_lines.tif": {}
                     }
-                }
+                },
+                "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
             }
         }
     }

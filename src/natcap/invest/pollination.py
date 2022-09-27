@@ -233,7 +233,8 @@ MODEL_SPEC = {
             "managed_pollinators.tif": {},
             "nesting_substrate_index_[SUBSTRATE].tif": {},
             "relative_floral_abundance_index_[SEASON].tif": {},
-            "reprojected_farm_vector.shp": {}
+            "reprojected_farm_vector.shp": {},
+            "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
         }
     }
 }

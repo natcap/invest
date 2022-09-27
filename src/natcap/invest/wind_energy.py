@@ -451,7 +451,8 @@ MODEL_SPEC = {
                 "temp_harveseted_aligned.tif": {},
                 "temp_harvested.tif": {},
                 "wind_data.pickle": {},
-                "wind_energy_points_from_data.shp": {}
+                "wind_energy_points_from_data.shp": {},
+                "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
             }
         }
     }

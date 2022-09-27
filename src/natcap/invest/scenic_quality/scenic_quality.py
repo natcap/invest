@@ -196,7 +196,8 @@ MODEL_SPEC = {
                 },
                 "visibility_[FEATURE_ID].tif": {
                     "about": "The visibility raster for a given structures viewpoint. This raster has pixel values of 0 (not visible), 1 (visible), or nodata (where the DEM is nodata)."
-                }
+                },
+                "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
             }
         }
     }

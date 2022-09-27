@@ -473,7 +473,8 @@ MODEL_SPEC = {
                 "LandPts.txt": {
                     "created_if": "valuation_container",
                     "about": "This text file logs records of the landing point coordinates."
-                }
+                },
+                "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
             }
         }
     }

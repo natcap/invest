@@ -531,7 +531,8 @@ MODEL_SPEC = {
                     }}
                 }
             }
-        }
+        },
+        "task_cache": spec_utils.TASKGRAPH_DIR
     }
 }
 

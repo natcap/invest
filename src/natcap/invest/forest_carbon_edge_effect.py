@@ -245,7 +245,8 @@ MODEL_SPEC = {
             "tropical_forest_edge_carbon_stocks.tif": {
                 "type": "raster",
                 "about": "A map of carbon in the forest only, according to the regression method."
-            }
+            },
+            "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
         }
     }
 }

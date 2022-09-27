@@ -227,7 +227,8 @@ MODEL_SPEC = {
                 "[CROP]_interpolated_observed_yield.tif": {},
                 "[CROP]_yield_[PERCENTILE]_coarse_yield.tif": {},
                 "[CROP]_yield_[PERCENTILE]_interpolated_yield.tif": {},
-                "[CROP]_zeroed_observed_yield.tif": {}
+                "[CROP]_zeroed_observed_yield.tif": {},
+                "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
             }
         }
     }

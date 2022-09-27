@@ -314,7 +314,8 @@ MODEL_SPEC = {
                     "about": "Any habitat, stressor or spatial criteria layers provided are simplified to 1/2 the user-defined raster resolution in order to speed up rasterization."
                 }
             }
-        }
+        },
+        ".taskgraph": spec_utils.TASKGRAPH_DIR
     }
 }
 

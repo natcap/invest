@@ -412,7 +412,8 @@ MODEL_SPEC = {
                     "veg.tif": {
                         "type": "raster",
                         "about": "Map of vegetated state."
-                    }
+                    },
+                    "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
                 }
             }
         }

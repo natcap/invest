@@ -358,7 +358,8 @@ MODEL_SPEC = {
                         "type": "integer"
                     }}
                 }
-            }
+            },
+            "cache_dir": spec_utils.TASKGRAPH_DIR
         }
     }
 }

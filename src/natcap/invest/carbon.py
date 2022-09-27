@@ -268,7 +268,10 @@ MODEL_SPEC = {
         },
         "intermediate": {
             "type": "directory",
-            "contents": {**CARBON_OUTPUTS}
+            "contents": {
+                **CARBON_OUTPUTS,
+                "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
+            }
         }
     }
 }

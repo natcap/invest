@@ -306,7 +306,8 @@ MODEL_SPEC = {
                 },
                 "ws_inverse.tif": {
                     "about": "Inverse of the thresholded cover-management factor times the thresholded slope (in eq. (74))"
-                }
+                },
+                "churn_dir_not_for_humans": spec_utils.TASKGRAPH_DIR
             }
         }
     }

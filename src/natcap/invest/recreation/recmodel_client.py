@@ -238,6 +238,24 @@ MODEL_SPEC = {
         "scenario_results.shp": {
             "created_if": "compute_regression",
             "about": "This shapefile matches “predictor_data.shp”, but its fields come from the predictors defined in the Scenario Predictor Table and there is an additional field “PUD_EST” which is the estimated PUD_YR_AVG per polygon."
+        },
+        "intermediate": {
+            "type": "directory",
+            "contents": {
+                "aoi.shp": {},
+                "[PREDICTOR].json": {},
+                "predictor_estimates.json": {},
+                "pud.zip": {},
+                "response_polygons_lookup.pickle": {},
+                "scenario": {
+                    "type": "directory",
+                    "contents": {
+                        "[PREDICTOR].json": {}
+                    }
+                },
+                "server_version.pickle": {},
+                "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
+            }
         }
     }
 }

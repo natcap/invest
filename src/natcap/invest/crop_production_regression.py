@@ -169,14 +169,18 @@ MODEL_SPEC = {
         "[CROP]_observed_production.tif": {},
         "[CROP]_regression_production.tif": {},
         "intermediate": {
-            "aggregate_vector.shp": {},
-            "clipped_[CROP]_climate_bin_map.tif": {},
-            "[CROP]_[PARAMETER]_coarse_regression_parameter.tif": {},
-            "[CROP]_[PARAMETER]_interpolated_regression_parameter.tif": {},
-            "[CROP]_clipped_observed_yield.tif": {},
-            "[CROP]_interpolated_observed_yield.tif": {},
-            "[CROP]_[FERTILIZER]_yield.tif": {},
-            "[CROP]_zeroed_observed_yield.tif": {}
+            "type": "directory",
+            "contents": {
+                "aggregate_vector.shp": {},
+                "clipped_[CROP]_climate_bin_map.tif": {},
+                "[CROP]_[PARAMETER]_coarse_regression_parameter.tif": {},
+                "[CROP]_[PARAMETER]_interpolated_regression_parameter.tif": {},
+                "[CROP]_clipped_observed_yield.tif": {},
+                "[CROP]_interpolated_observed_yield.tif": {},
+                "[CROP]_[FERTILIZER]_yield.tif": {},
+                "[CROP]_zeroed_observed_yield.tif": {},
+                "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
+            }
         }
     }
 }

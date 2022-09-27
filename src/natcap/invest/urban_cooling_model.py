@@ -325,7 +325,8 @@ MODEL_SPEC = {
                 },
                 "reprojected_buildings.shp": {
                     "about": "The user-defined buildings vector, reprojected to the Spatial Reference of the LULC."
-                }
+                },
+                "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
             }
         }
     }
