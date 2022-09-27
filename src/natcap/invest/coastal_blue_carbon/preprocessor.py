@@ -69,8 +69,8 @@ MODEL_SPEC = {
             "about": gettext(
                 "A table mapping snapshot years to corresponding LULC maps "
                 "for each year."),
-            "name": gettext("LULC snapshots table"),
-        },
+            "name": gettext("LULC snapshots table")
+        }
     },
     "outputs": {
         "transitions.csv": {
@@ -91,7 +91,7 @@ MODEL_SPEC = {
         "carbon_pool_transient_template.csv": {
             "type": "csv",
             "about": (
-                "    CSV (.csv, Comma Separated Value) format table, mapping each LULC type to impact and "
+                "CSV (.csv, Comma Separated Value) format table, mapping each LULC type to impact and "
                 "accumulation information. You must fill in all columns of this table except the ‘lulc-class’ "
                 "and ‘code’ columns, which will be pre-populated by the model. See Step 2. The Main Model for "
                 "more information. Accumulation units are (Megatonnes of CO2 e/ha-yr), half-life is in integer years, "
@@ -100,7 +100,7 @@ MODEL_SPEC = {
             "columns": {
                 **coastal_blue_carbon.MODEL_SPEC['args']['biophysical_table_path']['columns']
             }
-        }
+        },
         "aligned_lulc_[YEAR].tif": {
             "type": "raster",
             "about": (

@@ -9,7 +9,7 @@ class ScenicQuality(model.InVESTModel):
     def __init__(self):
         val_func_options = {
             val['display_name']: key for key, val in
-            scenic_quality.ARGS_SPEC['args']['valuation_function']['options'].items()
+            scenic_quality.MODEL_SPEC['args']['valuation_function']['options'].items()
         }
         model.InVESTModel.__init__(
             self,

@@ -327,7 +327,7 @@ MODEL_SPEC = {
         "QF.tif": {
             "about": "Map of quickflow (QF) values"
         },
-        !!"P.tif": {
+        "P.tif": {
             "about": "The total precipitation across all months on this pixel.",
             "bands": {1: {
                 "type": "number",

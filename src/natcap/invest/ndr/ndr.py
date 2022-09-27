@@ -181,6 +181,7 @@ MODEL_SPEC = {
                     "type": "number",
                     "units": u.kilogram/u.year,
                     "about": "Total nitrogen loads (sources) in the watershed, i.e. the sum of the nutrient contribution from all surface LULC without filtering by the landscape."
+                },
                 "n_subsurface_load": {
                     "type": "number",
                     "units": u.kilogram/u.year,
@@ -323,7 +324,7 @@ MODEL_SPEC = {
                 },
                 "stream.tif": {
                     "about": "Stream network created from the DEM, with 0 representing land pixels, and 1 representing stream pixels."
-                }
+                },
                 "sub_load_n.tif": {
                     "about": "Nitrogen loads for subsurface transport",
                     "bands": {1: {
@@ -352,7 +353,7 @@ MODEL_SPEC = {
                     "about": "Raster with slope values thresholded for correct calculation of IC."
                 },
                 "what_drains_to_stream.tif": {
-                    "about": "Map of which pixels drain to a stream. A value of 1 means that at least some of the runoff from that pixel drains to a stream in stream.tif. A value of 0 means that it does not drain at all to any stream in stream.tif."
+                    "about": "Map of which pixels drain to a stream. A value of 1 means that at least some of the runoff from that pixel drains to a stream in stream.tif. A value of 0 means that it does not drain at all to any stream in stream.tif.",
                     "bands": {1: {
                         "type": "integer"
                     }}

@@ -253,7 +253,7 @@ MODEL_SPEC = {
                     "bands": {1: {"type": "integer"}}
                 },
                 "primary_veg_smooth.tif": {
-                    "about": "A Gaussian-filtered (“smoothed”) map of primary vegetation (identified in globio_lulc), used to compute MSAF."
+                    "about": "A Gaussian-filtered (“smoothed”) map of primary vegetation (identified in globio_lulc), used to compute MSAF.",
                     "bands": {1: {"type": "ratio"}}
                 },
                 "tmp": {
@@ -281,6 +281,8 @@ MODEL_SPEC = {
                     }
                 }
             }
+        }
+    }
 }
 
 

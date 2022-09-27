@@ -9,7 +9,7 @@ class WaveEnergy(model.InVESTModel):
     def __init__(self):
         analysis_area_options = {
             val['display_name']: key for key, val in
-            wave_energy.ARGS_SPEC['args']['analysis_area']['options'].items()
+            wave_energy.MODEL_SPEC['args']['analysis_area']['options'].items()
         }
         model.InVESTModel.__init__(
             self,

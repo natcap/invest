@@ -253,7 +253,7 @@ MODEL_SPEC = {
             "about": "A copy of the input vector “Area of Interest” with additional fields.",
             "fields": {
                 "avg_cc": {
-                    "about": "Average CC value"
+                    "about": "Average CC value",
                     "type": "number",
                     "units": None
                 },

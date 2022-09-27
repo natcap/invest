@@ -148,7 +148,7 @@ MODEL_SPEC = {
                     "units": u.meter**3
                 },
                 "aff_bld": {
-                    "about": "potential damage to built infrastructure per watershed."
+                    "about": "potential damage to built infrastructure per watershed.",
                     "created_if": "built_infrastructure_vector_path",
                     "type": "number",
                     "units": u.currency

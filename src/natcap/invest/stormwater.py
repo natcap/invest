@@ -161,7 +161,7 @@ MODEL_SPEC = {
         },
         "percolation_ratio.tif": {
             "created_if": "percolation",
-            "about": "Raster map of percolation ratios derived by cross-referencing the LULC and soil group rasters with the biophysical table"
+            "about": "Raster map of percolation ratios derived by cross-referencing the LULC and soil group rasters with the biophysical table",
             "bands": {1: {
                 "type": "ratio"
             }}

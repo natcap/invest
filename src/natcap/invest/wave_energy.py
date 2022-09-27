@@ -364,7 +364,7 @@ MODEL_SPEC = {
                     "about": "depicts net present value in thousands of units of currency over the 25 year life-span of a WEC facility for the user-specified extent.",
                     "bands": {1: {
                         "type": "number",
-                        "units": u.currency*1000
+                        "units": u.kilocurrency
                     }}
                 },
                 "wp_kw.tif": {
@@ -412,67 +412,64 @@ MODEL_SPEC = {
                         "LAT": {
                             "about": "latitude of the grid points"
                         },
-
                         "HSAVG_M": {
                             "about": "wave height average",
                             "type": "number",
                             "units": u.meter
                         },
                         "TPAVG_S": {
-                            "about": "wave period average"
+                            "about": "wave period average",
                             "type": "number",
                             "units": u.second
                         },
                         "DEPTH_M": {
-                            "about": "depth"
+                            "about": "depth",
                             "type": "number",
                             "units": u.meter
                         },
-
                         "WE_KWM": {
-                            "about": "potential wave power"
+                            "about": "potential wave power",
                             "type": "number",
                             "units": u.kilowatt/u.meter
                         },
                         "CAPWE_MWHY": {
-                            "about": "captured wave energy per device"
+                            "about": "captured wave energy per device",
                             "type": "number",
                             "units": u.megawatt_hour/u.year
                         },
                         "W2L_MDIST": {
-                            "about": "Euclidean distance to the nearest landing connection point"
+                            "about": "Euclidean distance to the nearest landing connection point",
                             "type": "number",
                             "units": u.meter
                         },
                         "LAND_ID": {
                             "about": "ID of the closest landing connection point"
                         },
-
                         "L2G_MDIST": {
-                            "about": "Euclidean distance from LAND_ID to the nearest power grid connection"
+                            "about": "Euclidean distance from LAND_ID to the nearest power grid connection",
                             "type": "number",
                             "units": u.meter
                         },
                         "UNITS": {
-                            "about": "number of WEC devices assumed to be at this WEC facility site"
+                            "about": "number of WEC devices assumed to be at this WEC facility site",
                             "type": "integer"
                         },
                         "CAPWE_ALL": {
-                            "about": "total captured wave energy for all machines at site"
+                            "about": "total captured wave energy for all machines at site",
                             "type": "number",
                             "units": u.megawatt_hour/u.year
                         },
                         "NPV_25Y": {
-                            "about": "net present value of 25 year period"
+                            "about": "net present value of 25 year period",
                             "type": "number",
-                            "units": u.currency*1000
+                            "units": u.kilocurrency
                         }
                     }
                 },
                 "GridPt.txt": {
                     "created_if": "valuation_container",
                     "about": "This text file logs records of the grid point coordinates."
-                }
+                },
                 "LandPts.txt": {
                     "created_if": "valuation_container",
                     "about": "This text file logs records of the landing point coordinates."

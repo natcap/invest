@@ -463,7 +463,7 @@ MODEL_SPEC = {
             "contents": {
                 "stocks-[POOL]-[YEAR].tif": {
                     "type": "raster",
-                    "about": "The carbon stocks available at the beginning of the year noted in the filename."
+                    "about": "The carbon stocks available at the beginning of the year noted in the filename.",
                     "bands": {1: {
                         "type": "number",
                         "units": u.megatonne/u.hectare
@@ -471,7 +471,7 @@ MODEL_SPEC = {
                 },
                 "accumulation-[POOL]-[YEAR].tif": {
                     "type": "raster",
-                    "about": "The spatial distribution of rates of carbon accumulation in the given pool at the given year. Years will represent the snapshot years in which the accumulation raster takes effect."
+                    "about": "The spatial distribution of rates of carbon accumulation in the given pool at the given year. Years will represent the snapshot years in which the accumulation raster takes effect.",
                     "bands": {1: {
                         "type": "number",
                         "units": u.megatonne/u.hectare
@@ -479,7 +479,7 @@ MODEL_SPEC = {
                 },
                 "halflife-[POOL]-[YEAR].tif": {
                     "type": "raster",
-                    "about": "A raster of the spatial distribution of the half-lives of carbon in the pool mentioned at the given snapshot year."
+                    "about": "A raster of the spatial distribution of the half-lives of carbon in the pool mentioned at the given snapshot year.",
                     "bands": {1: {
                         "type": "number",
                         "units": u.year

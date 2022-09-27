@@ -75,13 +75,13 @@ SCARCITY_OUTPUT_FIELDS = {
 VALUATION_OUTPUT_FIELDS = {
     "hp_energy": {
         "type": "number",
-        "units": u.kwh,
+        "units": u.kilowatt_hour,
         "created_if": "valuation_table_path",
         "about": "The amount of ecosystem service in energy production terms. This is the amount of energy produced annually by the hydropower station that can be attributed to each watershed based on the watershed’s water yield contribution.",
     },
     "hp_val": {
         "type": "number",
-        "units": u.currency/timespan,
+        "units": u.currency,
         "created_if": "valuation_table_path",
         "about": "The amount of ecosystem service in economic terms. This shows the value of the landscape per watershed according to its ability to yield water for hydropower production over the specified timespan, and with respect to the discount rate.",
     }
@@ -96,7 +96,7 @@ WATERSHED_OUTPUT_FIELDS = {
     **VALUATION_OUTPUT_FIELDS
 }
 
-ARGS_SPEC = {
+MODEL_SPEC = {
     "model_name": MODEL_METADATA["annual_water_yield"].model_title,
     "pyname": MODEL_METADATA["annual_water_yield"].pyname,
     "userguide": MODEL_METADATA["annual_water_yield"].userguide,

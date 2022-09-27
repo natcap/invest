@@ -42,13 +42,13 @@ valid_nested_types = {
 }
 
 
-class ValidateArgsSpecs(unittest.TestCase):
-    """Validate the contract for patterns and types in ARGS_SPEC."""
+class ValidateModelSpecs(unittest.TestCase):
+    """Validate the contract for patterns and types in MODEL_SPEC."""
 
     def test_model_specs_are_valid(self):
-        """ARGS_SPEC: test each spec meets the expected pattern."""
+        """MODEL_SPEC: test each spec meets the expected pattern."""
 
-        required_keys = {'model_name', 'pyname', 'userguide', 'args'}
+        required_keys = {'model_name', 'pyname', 'userguide', 'args', 'outputs'}
         optional_spatial_key = 'args_with_spatial_overlap'
         for model_name, metadata in MODEL_METADATA.items():
             # metadata is a collections.namedtuple, fields accessible by name
@@ -57,29 +57,32 @@ class ValidateArgsSpecs(unittest.TestCase):
             # Validate top-level keys are correct
             with self.subTest(metadata.pyname):
                 self.assertTrue(
-                    required_keys.issubset(model.ARGS_SPEC),
-                    ("Required key(s) missing from ARGS_SPEC: "
-                     f"{set(required_keys).difference(model.ARGS_SPEC)}"))
-                extra_keys = set(model.ARGS_SPEC).difference(required_keys)
+                    required_keys.issubset(model.MODEL_SPEC),
+                    ("Required key(s) missing from MODEL_SPEC: "
+                     f"{set(required_keys).difference(model.MODEL_SPEC)}"))
+                extra_keys = set(model.MODEL_SPEC).difference(required_keys)
                 if (extra_keys):
                     self.assertEqual(extra_keys, set([optional_spatial_key]))
                     self.assertTrue(
-                        set(model.ARGS_SPEC[optional_spatial_key]).issubset(
+                        set(model.MODEL_SPEC[optional_spatial_key]).issubset(
                             {'spatial_keys', 'different_projections_ok'}))
 
             # validate that each arg meets the expected pattern
             # save up errors to report at the end
-            for key, arg in model.ARGS_SPEC['args'].items():
+            for key, arg in model.MODEL_SPEC['args'].items():
                 # the top level should have 'name' and 'about' attrs
                 # but they aren't required at nested levels
                 self.validate(arg, f'{model_name}.{key}')
 
+            for key, spec in model.MODEL_SPEC['outputs'].items():
+                pass
+
     def validate(self, arg, name, parent_type=None, is_pattern=False):
         """
-        Recursively validate nested args against the ARGS_SPEC standard.
+        Recursively validate nested args against the arg spec standard.
 
         Args:
-            arg (dict): any nested arg component of an ARGS_SPEC
+            arg (dict): any nested arg component of an MODEL_SPEC
             name (str): name to use in error messages to identify the arg
             parent_type (str): the type of this arg's parent arg (or None if
                 no parent).
@@ -338,17 +341,17 @@ class ValidateArgsSpecs(unittest.TestCase):
             valid_letters.remove(letter)
 
     def test_model_specs_serialize(self):
-        """ARGS_SPEC: test each ARGS_SPEC can serialize to JSON."""
+        """MODEL_SPEC: test each arg spec can serialize to JSON."""
         from natcap.invest import spec_utils
 
         for model_name, metadata in MODEL_METADATA.items():
             model = importlib.import_module(metadata.pyname)
             try:
-                _ = spec_utils.serialize_args_spec(model.ARGS_SPEC)
+                _ = spec_utils.serialize_args_spec(model.MODEL_SPEC)
             except TypeError as error:
                 self.fail(
                     f'Failed to avoid TypeError when serializing '
-                    f'{metadata.pyname}.ARGS_SPEC: \n'
+                    f'{metadata.pyname}.MODEL_SPEC: \n'
                     f'{error}')
 
 

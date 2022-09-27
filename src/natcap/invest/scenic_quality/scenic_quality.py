@@ -193,7 +193,7 @@ MODEL_SPEC = {
                 },
                 "value_[FEATURE_ID].tif": {
                     "about": "The calculated value of the viewshed amenity/disamenity given the distances (in meters) of pixels from the structures viewpoint, the weight of the viewpoint, the valuation function, and the a and b coefficients. The viewshed’s value is only evaluated for visible pixels. If an underlying DEM pixel is undefined (has a nodata value), so does the valuation raster."
-                }
+                },
                 "visibility_[FEATURE_ID].tif": {
                     "about": "The visibility raster for a given structures viewpoint. This raster has pixel values of 0 (not visible), 1 (visible), or nodata (where the DEM is nodata)."
                 }
