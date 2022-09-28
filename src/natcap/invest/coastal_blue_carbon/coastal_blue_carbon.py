@@ -567,7 +567,7 @@ def execute(args):
             Required if ``args['do_economic_analysis']``.
         args['biophysical_table_path'] (string): The path to the biophysical
             table on disk.  This table has many required columns.  See
-            ``ARGS_SPEC`` for the required columns.
+            ``MODEL_SPEC`` for the required columns.
         args['landcover_transitions_table'] (string): The path to the landcover
             transitions table, indicating the behavior of carbon when the
             landscape undergoes a transition.
@@ -2282,7 +2282,7 @@ def validate(args, limit_to=None):
         message applies to and tuple[1] is the string validation warning.
     """
     validation_warnings = validation.validate(
-        args, ARGS_SPEC['args'])
+        args, MODEL_SPEC['args'])
 
     sufficient_keys = validation.get_sufficient_keys(args)
     invalid_keys = validation.get_invalid_keys(validation_warnings)

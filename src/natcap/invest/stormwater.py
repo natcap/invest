@@ -1198,5 +1198,5 @@ def validate(args, limit_to=None):
             the error message in the second part of the tuple. This should
             be an empty list if validation succeeds.
     """
-    return validation.validate(args, ARGS_SPEC['args'],
-                               ARGS_SPEC['args_with_spatial_overlap'])
+    return validation.validate(args, MODEL_SPEC['args'],
+                               MODEL_SPEC['args_with_spatial_overlap'])

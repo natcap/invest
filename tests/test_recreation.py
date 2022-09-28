@@ -1190,7 +1190,7 @@ class RecreationRegressionTests(unittest.TestCase):
 
 
 class RecreationValidationTests(unittest.TestCase):
-    """Tests for the Recreation Model ARGS_SPEC and validation."""
+    """Tests for the Recreation Model MODEL_SPEC and validation."""
 
     def setUp(self):
         """Create a temporary workspace."""

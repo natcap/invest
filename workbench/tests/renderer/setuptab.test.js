@@ -18,7 +18,7 @@ jest.mock('../../src/renderer/server_requests');
 const MODULE = 'carbon';
 
 const VALIDATION_MESSAGE = 'invalid because';
-const BASE_ARGS_SPEC = {
+const BASE_MODEL_SPEC = {
   args: {
     arg: {
       name: 'foo',
@@ -37,14 +37,14 @@ const BASE_ARGS_SPEC = {
  */
 function baseArgsSpec(type) {
   // make a deep copy so we don't edit the original
-  const spec = JSON.parse(JSON.stringify(BASE_ARGS_SPEC));
+  const spec = JSON.parse(JSON.stringify(BASE_MODEL_SPEC));
   spec.args.arg.type = type;
   if (type === 'number') {
     spec.args.arg.units = 'foo unit';
   }
   return spec;
 }
-const UI_SPEC = { order: [Object.keys(BASE_ARGS_SPEC.args)] };
+const UI_SPEC = { order: [Object.keys(BASE_MODEL_SPEC.args)] };
 
 /**
  * Render a SetupTab component given the necessary specs.
@@ -54,7 +54,7 @@ const UI_SPEC = { order: [Object.keys(BASE_ARGS_SPEC.args)] };
  * @returns {object} - containing the test utility functions returned by render
  */
 function renderSetupFromSpec(baseSpec, uiSpec) {
-  // some ARGS_SPEC boilerplate that is not under test,
+  // some MODEL_SPEC boilerplate that is not under test,
   // but is required by PropType-checking
   const spec = { ...baseSpec };
   if (!spec.modelName) { spec.modelName = 'Eco Model'; }
@@ -82,7 +82,7 @@ function renderSetupFromSpec(baseSpec, uiSpec) {
 describe('Arguments form input types', () => {
   beforeEach(() => {
     fetchValidation.mockResolvedValue(
-      [[Object.keys(BASE_ARGS_SPEC.args), VALIDATION_MESSAGE]]
+      [[Object.keys(BASE_MODEL_SPEC.args), VALIDATION_MESSAGE]]
     );
   });
 
@@ -157,7 +157,7 @@ describe('Arguments form input types', () => {
 describe('Arguments form interactions', () => {
   beforeEach(() => {
     fetchValidation.mockResolvedValue(
-      [[Object.keys(BASE_ARGS_SPEC.args), VALIDATION_MESSAGE]]
+      [[Object.keys(BASE_MODEL_SPEC.args), VALIDATION_MESSAGE]]
     );
     setupOpenExternalUrl();
   });

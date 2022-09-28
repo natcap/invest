@@ -209,10 +209,10 @@ def format_unit(unit):
 
 
 def serialize_args_spec(spec):
-    """Serialize an ARGS_SPEC dict to a JSON string.
+    """Serialize an MODEL_SPEC dict to a JSON string.
 
     Args:
-        spec (dict): An invest model's ARGS_SPEC.
+        spec (dict): An invest model's MODEL_SPEC.
 
     Raises:
         TypeError if any object type within the spec is not handled by
@@ -506,11 +506,11 @@ def describe_arg_from_name(module_name, *arg_keys):
         <arg_keys[0]>-<arg_keys[1]>...-<arg_keys[n]>
         where underscores in arg keys are replaced with hyphens.
     """
-    # import the specified module (that should have an ARGS_SPEC attribute)
+    # import the specified module (that should have an MODEL_SPEC attribute)
     module = importlib.import_module(module_name)
     # start with the spec for all args
     # narrow down to the nested spec indicated by the sequence of arg keys
-    spec = module.ARGS_SPEC['args']
+    spec = module.MODEL_SPEC['args']
     for i, key in enumerate(arg_keys):
         # convert raster band numbers to ints
         if arg_keys[i - 1] == 'bands':
@@ -521,7 +521,7 @@ def describe_arg_from_name(module_name, *arg_keys):
             keys_so_far = '.'.join(arg_keys[:i + 1])
             raise ValueError(
                 f"Could not find the key '{keys_so_far}' in the "
-                f"{module_name} model's ARGS_SPEC")
+                f"{module_name} model's MODEL_SPEC")
 
     # format spec into an RST formatted description string
     if 'name' in spec:

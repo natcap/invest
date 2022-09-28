@@ -1601,4 +1601,4 @@ def validate(args, limit_to=None):
     # Deliberately not validating the interrelationship of the columns between
     # the biophysical table and the guilds table as the model itself already
     # does extensive checking for this.
-    return validation.validate(args, ARGS_SPEC['args'])
+    return validation.validate(args, MODEL_SPEC['args'])

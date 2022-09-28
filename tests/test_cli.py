@@ -401,7 +401,7 @@ class CLIUnitTests(unittest.TestCase):
 
         target_model = model_metadata.MODEL_METADATA[target_model].pyname
         model_module = importlib.import_module(name=target_model)
-        spec = model_module.ARGS_SPEC
+        spec = model_module.MODEL_SPEC
         expected_args = {key: '' for key in spec['args'].keys()}
 
         module_name = str(uuid.uuid4()) + 'testscript'

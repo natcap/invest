@@ -77,26 +77,23 @@ class ValidateModelSpecs(unittest.TestCase):
             for key, spec in model.MODEL_SPEC['outputs'].items():
                 self.validate_output(spec, f'{model_name}.outputs.{key}')
 
-    def validate_output(self, spec, key, parent_type=None, is_pattern=False):
+    def validate_output(self, spec, key, parent_type=None):
         """
-        Recursively validate nested spec s against the arg spec standard.
+        Recursively validate nested output specs against the output spec standard.
 
         Args:
-            spec (dict): any nested spec component of an MODEL_SPEC
-            name (str): name to use in error messages to identify the spec
-            parent_type (str): the type of this spec's parent arg (or None if
+            spec (dict): any nested output spec component of a MODEL_SPEC
+            key (str): key to identify the spec by in error messages
+            parent_type (str): the type of this output's parent output (or None if
                 no parent).
-            is_pattern (bool): if True, the arg is validated as a pattern (such
-                as for user-defined  CSV headers, vector fields, or directory
-                paths).
 
         Returns:
             None
 
         Raises:
-            AssertionError if the arg violates the standard
+            AssertionError if the output spec violates the standard
         """
-        with self.subTest(nested_arg_name=key):
+        with self.subTest(output=key):
             # if parent_type is None:  # all top-level args must have these attrs
             #     for attr in ['about']:
             #         self.assertIn(attr, spec)
@@ -113,7 +110,8 @@ class ValidateModelSpecs(unittest.TestCase):
                     t = 'vector'
                 elif file_extension == 'csv':
                     t = 'csv'
-                elif file_extension in {'json', 'txt', 'pickle', 'db', 'zip', 'dat', 'idx'}:
+                elif file_extension in {'json', 'txt', 'pickle', 'db', 'zip',
+                                        'dat', 'idx'}:
                     t = 'file'
                 else:
                     raise Warning(
@@ -228,7 +226,7 @@ class ValidateModelSpecs(unittest.TestCase):
                                      'expected for its type')
 
 
-    def validate(self, arg, name, parent_type=None, is_pattern=False):
+    def validate(self, arg, name, parent_type=None):
         """
         Recursively validate nested args against the arg spec standard.
 
@@ -237,9 +235,6 @@ class ValidateModelSpecs(unittest.TestCase):
             name (str): name to use in error messages to identify the arg
             parent_type (str): the type of this arg's parent arg (or None if
                 no parent).
-            is_pattern (bool): if True, the arg is validated as a pattern (such
-                as for user-defined  CSV headers, vector fields, or directory
-                paths).
 
         Returns:
             None

@@ -1059,7 +1059,7 @@ def calculate_energy_savings(
 
     # Find the index of the 'type' column in a case-insensitive way.
     # We can assume that the field exists because we're checking for it in
-    # validation as defined in ARGS_SPEC.
+    # validation as defined in MODEL_SPEC.
     fieldnames = [field.GetName().lower()
                   for field in target_building_layer.schema]
     type_field_index = fieldnames.index('type')
@@ -1511,7 +1511,7 @@ def validate(args, limit_to=None):
 
     """
     validation_warnings = validation.validate(
-        args, ARGS_SPEC['args'], ARGS_SPEC['args_with_spatial_overlap'])
+        args, MODEL_SPEC['args'], MODEL_SPEC['args_with_spatial_overlap'])
 
     invalid_keys = validation.get_invalid_keys(validation_warnings)
     if ('biophysical_table_path' not in invalid_keys and
@@ -1523,7 +1523,7 @@ def validate(args, limit_to=None):
             # If args['cc_method'] isn't one of these two allowed values
             # ('intensity' or 'factors'), it'll be caught by
             # validation.validate due to the allowed values stated in
-            # ARGS_SPEC.
+            # MODEL_SPEC.
             extra_biophysical_keys = ['building_intensity']
 
         error_msg = validation.check_csv(

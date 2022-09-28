@@ -1114,7 +1114,7 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
     """
     validation_warnings = validation.validate(
-        args, ARGS_SPEC['args'], ARGS_SPEC['args_with_spatial_overlap'])
+        args, MODEL_SPEC['args'], MODEL_SPEC['args_with_spatial_overlap'])
 
     invalid_keys = validation.get_invalid_keys(validation_warnings)
 

@@ -258,7 +258,7 @@ def execute(args):
             'b': float(args['b_coef']),
         }
         if (args['valuation_function'] not in
-                ARGS_SPEC['args']['valuation_function']['options']):
+                MODEL_SPEC['args']['valuation_function']['options']):
             raise ValueError('Valuation function type %s not recognized' %
                              args['valuation_function'])
         max_valuation_radius = float(args['max_valuation_radius'])
@@ -1092,4 +1092,4 @@ def validate(args, limit_to=None):
 
     """
     return validation.validate(
-        args, ARGS_SPEC['args'], ARGS_SPEC['args_with_spatial_overlap'])
+        args, MODEL_SPEC['args'], MODEL_SPEC['args_with_spatial_overlap'])

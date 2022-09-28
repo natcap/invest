@@ -368,7 +368,7 @@ def _create_biophysical_table(landcover_table, target_biophysical_table_path):
         ``None``
     """
     target_column_names = [
-        colname.lower() for colname in coastal_blue_carbon.ARGS_SPEC['args'][
+        colname.lower() for colname in coastal_blue_carbon.MODEL_SPEC['args'][
             'biophysical_table_path']['columns']]
 
     with open(target_biophysical_table_path, 'w') as bio_table:
@@ -400,4 +400,4 @@ def validate(args, limit_to=None):
         A list of tuples where tuple[0] is an iterable of keys that the error
         message applies to and tuple[1] is the string validation warning.
     """
-    return validation.validate(args, ARGS_SPEC['args'])
+    return validation.validate(args, MODEL_SPEC['args'])

@@ -158,10 +158,10 @@ describe('validate the UI spec', () => {
       expect(spec.model_name).toBeDefined();
       expect(Object.keys(UI_SPEC)).toContain(modelName);
       expect(Object.keys(UI_SPEC[modelName])).toContain('order');
-      // expect each ARGS_SPEC arg to exist in 'order' or 'hidden' property
+      // expect each MODEL_SPEC arg to exist in 'order' or 'hidden' property
       const orderArray = UI_SPEC[modelName].order.flat();
       // 'hidden' is an optional property. It need not include 'n_workers',
-      // but we should insert 'n_workers' here as it is present in ARGS_SPEC.
+      // but we should insert 'n_workers' here as it is present in MODEL_SPEC.
       const hiddenArray = UI_SPEC[modelName].hidden || [];
       const allArgs = orderArray.concat(hiddenArray.concat('n_workers'));
       const argsSet = new Set(allArgs);
@@ -207,7 +207,7 @@ expect.extend({
   },
 });
 
-describe('Build each model UI from ARGS_SPEC', () => {
+describe('Build each model UI from MODEL_SPEC', () => {
   const { UI_SPEC } = require('../../src/renderer/ui_config');
 
   test.each(Object.keys(UI_SPEC))('%s', async (model) => {

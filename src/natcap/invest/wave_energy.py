@@ -2340,4 +2340,4 @@ def validate(args, limit_to=None):
             validation warning.
 
     """
-    return validation.validate(args, ARGS_SPEC['args'])
+    return validation.validate(args, MODEL_SPEC['args'])

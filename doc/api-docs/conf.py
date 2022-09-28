@@ -228,9 +228,9 @@ invest_model_modules = {}
 for _, name, _ in pkgutil.walk_packages(path=[INVEST_LIB_DIR],
                                         prefix='natcap.'):
     module = importlib.import_module(name)
-    # any module with an ARGS_SPEC is an invest model
-    if hasattr(module, 'ARGS_SPEC'):
-        model_title = module.ARGS_SPEC['model_name']
+    # any module with a MODEL_SPEC is an invest model
+    if hasattr(module, 'MODEL_SPEC'):
+        model_title = module.MODEL_SPEC['model_name']
         invest_model_modules[model_title] = name
 
 # Write sphinx autodoc function for each entrypoint

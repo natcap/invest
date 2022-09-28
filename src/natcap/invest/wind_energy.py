@@ -2703,5 +2703,5 @@ def validate(args, limit_to=None):
         message applies to and tuple[1] is the str validation warning.
 
     """
-    return validation.validate(args, ARGS_SPEC['args'],
-                               ARGS_SPEC['args_with_spatial_overlap'])
+    return validation.validate(args, MODEL_SPEC['args'],
+                               MODEL_SPEC['args_with_spatial_overlap'])
