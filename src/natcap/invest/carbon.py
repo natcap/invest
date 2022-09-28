@@ -22,7 +22,6 @@ LOGGER = logging.getLogger(__name__)
 
 CARBON_OUTPUTS = {
     f"c_{scenario}_{pool}.tif": {
-        "type": "raster",
         "about": (
             f"Raster of {pool_name} carbon values in the {scenario_name} "
             "scenario, mapped from the Carbon Pools table to the LULC."),
@@ -201,11 +200,9 @@ MODEL_SPEC = {
     },
     "outputs": {
         "report.html": {
-            "type": "file",
             "about": "This file presents a summary of all data computed by the model. It also includes descriptions of all other output files produced by the model, so it is a good place to begin exploring and understanding model results. Because this is an HTML file, it can be opened with any web browser."
         },
         "tot_c_cur.tif": {
-            "type": "raster",
             "about": "Raster showing the amount of carbon stored in each pixel for the current scenario. It is a sum of all of the carbon pools provided by the biophysical table.",
             "bands": {1: {
                 "type": "number",
@@ -213,7 +210,6 @@ MODEL_SPEC = {
             }}
         },
         "tot_c_fut.tif": {
-            "type": "raster",
             "about": "Raster showing the amount of carbon stored in each pixel for the future scenario. It is a sum of all of the carbon pools provided by the biophysical table.",
             "bands": {1: {
                 "type": "number",
@@ -222,7 +218,6 @@ MODEL_SPEC = {
             "created_if": "lulc_fut_path"
         },
         "tot_c_redd.tif": {
-            "type": "raster",
             "about": "Raster showing the amount of carbon stored in each pixel for the REDD scenario. It is a sum of all of the carbon pools provided by the biophysical table.",
             "bands": {1: {
                 "type": "number",
@@ -231,7 +226,6 @@ MODEL_SPEC = {
             "created_if": "lulc_redd_path"
         },
         "delta_cur_fut.tif": {
-            "type": "raster",
             "about": "Raster showing the difference in carbon stored between the future landscape and the current landscape. In this map some values may be negative and some positive. Positive values indicate sequestered carbon, negative values indicate carbon that was lost.",
             "bands": {1: {
                 "type": "number",
@@ -240,7 +234,6 @@ MODEL_SPEC = {
             "created_if": "lulc_fut_path"
         },
         "delta_cur_redd.tif": {
-            "type": "raster",
             "about": "Raster showing the difference in carbon stored between the REDD landscape and the current landscape. In this map some values may be negative and some positive. Positive values indicate sequestered carbon, negative values indicate carbon that was lost.",
             "bands": {1: {
                 "type": "number",
@@ -249,7 +242,6 @@ MODEL_SPEC = {
             "created_if": "lulc_redd_path"
         },
         "npv_fut.tif": {
-            "type": "raster",
             "about": "Rasters showing the economic value of carbon sequestered between the current and the future landscape dates.",
             "bands": {1: {
                 "type": "number",
@@ -258,7 +250,6 @@ MODEL_SPEC = {
             "created_if": "lulc_fut_path"
         },
         "npv_redd.tif": {
-            "type": "raster",
             "about": "Rasters showing the economic value of carbon sequestered between the current and the REDD landscape dates.",
             "bands": {1: {
                 "type": "number",

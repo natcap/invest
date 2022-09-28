@@ -410,7 +410,6 @@ MODEL_SPEC = {
     },
     "outputs": {
         "carbon-accumulation-between-[YEAR1]-and-[YEAR2].tif": {
-            "type": "raster",
             "about": "Amount of CO2E accumulated between the two specified years.",
             "bands": {1: {
                 "type": "number",
@@ -418,7 +417,6 @@ MODEL_SPEC = {
             }}
         },
         "carbon-emissions-between-[YEAR1]-and-[YEAR2].tif": {
-            "type": "raster",
             "about": "Amount of CO2E lost to disturbance between the two specified years.",
             "bands": {1: {
                 "type": "number",
@@ -426,7 +424,6 @@ MODEL_SPEC = {
             }}
         },
         "carbon-stock-at-[YEAR].tif": {
-            "type": "raster",
             "about": "Sum of the 3 carbon pools for each LULC for the specified year",
             "bands": {1: {
                 "type": "number",
@@ -435,7 +432,6 @@ MODEL_SPEC = {
         },
 
         "total-net-carbon-sequestion-between-[YEAR1]-and-[YEAR2].tif": {
-            "type": "raster",
             "about": "Total carbon sequestration between the two specified years, based on accumulation minus emissions during that time period.",
             "bands": {1: {
                 "type": "number",
@@ -443,7 +439,6 @@ MODEL_SPEC = {
             }}
         },
         "total-net-carbon-sequestration.tif": {
-            "type": "raster",
             "about": "Total carbon sequestration over the whole time period between the Baseline and either the latest Snapshot Year or the Analysis Year, based on accumulation minus emissions.",
             "bands": {1: {
                 "type": "number",
@@ -451,7 +446,6 @@ MODEL_SPEC = {
             }}
         },
         "net-present-value.tif": {
-            "type": "raster",
             "about": "Monetary value of carbon sequestration.",
             "bands": {1: {
                 "type": "number",
@@ -462,7 +456,6 @@ MODEL_SPEC = {
             "type": "directory",
             "contents": {
                 "stocks-[POOL]-[YEAR].tif": {
-                    "type": "raster",
                     "about": "The carbon stocks available at the beginning of the year noted in the filename.",
                     "bands": {1: {
                         "type": "number",
@@ -470,7 +463,6 @@ MODEL_SPEC = {
                     }}
                 },
                 "accumulation-[POOL]-[YEAR].tif": {
-                    "type": "raster",
                     "about": "The spatial distribution of rates of carbon accumulation in the given pool at the given year. Years will represent the snapshot years in which the accumulation raster takes effect.",
                     "bands": {1: {
                         "type": "number",
@@ -478,7 +470,6 @@ MODEL_SPEC = {
                     }}
                 },
                 "halflife-[POOL]-[YEAR].tif": {
-                    "type": "raster",
                     "about": "A raster of the spatial distribution of the half-lives of carbon in the pool mentioned at the given snapshot year.",
                     "bands": {1: {
                         "type": "number",
@@ -486,14 +477,12 @@ MODEL_SPEC = {
                     }}
                 },
                 "disturbance-magnitude-[POOL]-[YEAR].tif": {
-                    "type": "raster",
                     "about": "The proportion of carbon disturbed in the given pool in the given snapshot year.",
                     "bands": {1: {
                         "type": "ratio"
                     }}
                 },
                 "disturbance-volume-[POOL]-[YEAR].tif": {
-                    "type": "raster",
                     "about": "the volume of the carbon disturbed in the snapshot year. This is a function of the carbon stocks at the year prior and the disturbance magnitude in the given snapshot year.",
                     "bands": {1: {
                         "type": "number",
@@ -501,21 +490,18 @@ MODEL_SPEC = {
                     }}
                 },
                 "year-of-latest-disturbance-[POOL]-[YEAR].tif": {
-                    "type": "raster",
                     "about": "each cell indicates the most recent year in which the cell underwent a landcover transition.",
                     "bands": {1: {
                         "type": "integer"
                     }}
                 },
                 "aligned-lulc-[SNAPSHOT TYPE]-[YEAR].tif": {
-                    "type": "raster",
                     "about": "The snapshot landcover raster of the given year, aligned to the intersection of the bounding boxes of all snapshot rasters, and with consistent cell sizes. The cell size of the aligned landcover rasters is the minimum of the incoming cell sizes.",
                     "bands": {1: {
                         "type": "integer"
                     }}
                 },
                 "net-sequestration-[POOL]-[YEAR].tif": {
-                    "type": "raster",
                     "about": "the net sequestration in the given pool in the given year.",
                     "bands": {1: {
                         "type": "number",
@@ -523,7 +509,6 @@ MODEL_SPEC = {
                     }}
                 },
                 "total-carbon-stocks-[YEAR].tif": {
-                    "type": "raster",
                     "about": "the sum of the stocks present across all three carbon pool at the given year.",
                     "bands": {1: {
                         "type": "number",

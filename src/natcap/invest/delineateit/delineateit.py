@@ -102,35 +102,27 @@ MODEL_SPEC = {
     },
     "outputs": {
         "filled_dem.tif": {
-            "type": "raster",
             "about": "The DEM, but with hydrological sinks filled."
         },
         "flow_direction.tif": {
-            "type": "raster",
             "about": "The D8 flow direction raster, created from the filled DEM."
         },
         "flow_accumulation.tif": {
-            "type": "raster",
             "about": "The D8 flow accumulation raster, created from flow_direction.tif."
         },
         "preprocessed_geometries.gpkg": {
-            "type": "vector",
             "about": "A vector containing only those geometries that the model can verify are valid. The geometries appearing in this vector will be the ones passed to watershed delineation."
         },
         "streams.tif": {
-            "type": "raster",
             "about": "The raster stream layer used to snap outlet points, produced from the DEM and Threshold Flow Accumulation value."
         },
         "snapped_outlets.gpkg": {
-            "type": "vector",
             "about": "A vector that indicates where outlet points (point geometries only) were snapped to based on the values of Threshold Flow Accumulation and Pixel Distance to Snap Outlet Points. Any non-point geometries will also have been copied over to this vector, but will not have been altered."
         },
         "watersheds.gpkg": {
-            "type": "vector",
             "about": "A GeoPackage vector defining the areas that are upstream from the snapped outlet points, where upstream area is defined by the D8 flow algorithm implementation in PyGeoprocessing."
         },
         "pour_points.gpkg": {
-            "type": "vector"
         },
         "_work_tokens": spec_utils.TASKGRAPH_DIR
     }

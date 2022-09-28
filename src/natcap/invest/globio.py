@@ -210,11 +210,9 @@ MODEL_SPEC = {
     },
     "outputs": {
         "aoi_summary.shp": {
-            "type": "vector",
             "about": "A shapefile summarizing the average MSA for each zone defined in the area of interest."
         },
         "msa.tif": {
-            "type": "raster",
             "about": (
                 "A raster of the overall MSA (mean species abundance) value, defined as "
                 "“the average abundances of originally occurring species relative to their "
@@ -224,17 +222,14 @@ MODEL_SPEC = {
             "bands": {1: {"type": "ratio"}}
         },
         "msa_lu.tif": {
-            "type": "raster",
             "about": "A raster of MSA calculated for impacts of land-use only.",
             "bands": {1: {"type": "ratio"}}
         },
         "msa_f.tif": {
-            "type": "raster",
             "about": "A raster of MSA calculated for impacts of fragmentation only.",
             "bands": {1: {"type": "ratio"}}
         },
         "msa_i.tif": {
-            "type": "raster",
             "about": "A raster of MSA calculated for impacts of infrastructure only.",
             "bands": {1: {"type": "ratio"}}
         },

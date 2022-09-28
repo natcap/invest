@@ -77,7 +77,6 @@ MODEL_SPEC = {
     },
     "outputs": {
         "transitions.csv": {
-            "type": "csv",
             "about": (
                 "CSV (.csv, Comma Separated Value) format table, which is a transition "
                 "matrix indicating whether disturbance or accumulation occurs in a transition "
@@ -92,7 +91,6 @@ MODEL_SPEC = {
                 "‘med-impact-disturb’, or ‘high-impact-disturb’.")
         },
         "carbon_pool_transient_template.csv": {
-            "type": "csv",
             "about": (
                 "CSV (.csv, Comma Separated Value) format table, mapping each LULC type to impact and "
                 "accumulation information. You must fill in all columns of this table except the ‘lulc-class’ "
@@ -114,7 +112,6 @@ MODEL_SPEC = {
             }
         },
         "aligned_lulc_[YEAR].tif": {
-            "type": "raster",
             "about": (
                 "Rasters that are the result of aligning all of the input LULC rasters with each other. All rasters are "
                 "resampled to the minimum resolution of the input rasters and cropped to the intersection of their bounding boxes. "

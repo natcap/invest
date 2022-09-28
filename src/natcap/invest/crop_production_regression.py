@@ -159,11 +159,9 @@ MODEL_SPEC = {
     },
     "outputs": {
         "aggregate_results.csv": {
-            "type": "csv",
             "about": "If an Aggregate Results Polygon shapefile is provided, a table is produced that summarizes total observed/percentile/modeled production and nutrient information within each polygon."
         },
         "result_table.csv": {
-            "type": "csv",
             "about": "Table listing all of the crops modeled in the run, the area covered, percentile or modeled production, observed production, and nutrient information for each crop. It is the primary output of the model."
         },
         "[CROP]_observed_production.tif": {},
