@@ -22,7 +22,8 @@ import { ipcMainChannels } from '../../../main/ipcMainChannels';
 const { ipcRenderer } = window.Workbench.electron;
 const logger = window.Workbench.getLogger('InvestTab');
 
-/** Get an invest model's spec when a model button is clicked.
+/** Get an invest model's MODEL_SPEC when a model button is clicked.
+
  *
  * @param {string} modelName - as in a model name appearing in `invest list`
  * @returns {object} destructures to:
