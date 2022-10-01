@@ -112,7 +112,8 @@ ARGS_SPEC = {
                     "required": False,
                     "about": gettext(
                         "The proportion of the population within this region "
-                        "belonging to the identified population group."
+                        "belonging to the identified population group "
+                        "(POP_GROUP)."
                     ),
                 }
             },
@@ -172,6 +173,22 @@ ARGS_SPEC = {
                 'have a distance-weighted contribution to a greenspace '
                 'pixel according to the selected decay function.'),
         }
+        'population_group_radii_table': {
+            'name': 'population group radii table',
+            'type': 'csv',
+            'columns': {
+                "pop_[POP_GROUP]": {
+                    "type": "ratio",
+                    "required": False,
+                    "about": gettext(
+                        "The proportion of the population within this region "
+                        "belonging to the identified population group "
+                        "(POP_GROUP)."
+                    ),
+                }
+            },
+            'about': gettext('TBD'),
+        }
     }
 }
 
@@ -226,11 +243,22 @@ def execute(args):
             that pixel.  Must be linearly projected in meters.
         args['aoi_vector_path'] (string): (required) A string path to a
             GDAL-compatible vector containing polygon areas of interest,
-            typically administrative boundaries.
+            typically administrative boundaries.  If this vector has any fields
+            with fieldnames beginning with ``"pop_"``, these will be treated
+            as representing the proportion of the population within an admin
+            unit belonging to the given population group.  The name of the
+            population group (everything other than a leading ``"pop_"``) must
+            uniquely identify the group.
         args['greenspace_demand'] (number): (required) A positive, nonzero
             number indicating the required greenspace, in m² per capita.
         args['decay_function'] (string): (required) The selected kernel type.
             Must be one of the keys in ``KERNEL_TYPES``.
+        args['population_group_radii_table'] (string): (optional) A table
+            associating population groups with a search radius for that
+            population group.
+
+            TODO: must these group names match the admin unit vector
+            groupnames?
 
     Returns:
         ``None``
