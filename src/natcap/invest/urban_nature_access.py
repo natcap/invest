@@ -172,7 +172,7 @@ ARGS_SPEC = {
                 'Pixels within the search radius of a greenspace pixel '
                 'have a distance-weighted contribution to a greenspace '
                 'pixel according to the selected decay function.'),
-        }
+        },
         'population_group_radii_table': {
             'name': 'population group radii table',
             'type': 'csv',
