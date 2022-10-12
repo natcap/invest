@@ -16,21 +16,6 @@ import { setupInvestLogReaderHandler } from '../../src/main/setupInvestHandlers'
 import markupMessage from '../../src/main/investLogMarkup';
 import { removeIpcMainListeners } from '../../src/main/main';
 
-jest.mock('react-virtuoso', () => {
-  const { Virtuoso } = jest.requireActual('react-virtuoso')
-  const mockVirtuoso = (WrappedVirtuoso) => {
-    (props) => {
-      return (
-        <WrappedVirtuoso
-          initialItemCount={props.totalCount}
-          {...props}
-        />
-      );
-    };
-  };
-  return { Virtuoso: mockVirtuoso(Virtuoso) }
-});
-
 function renderLogTab(logfilePath) {
   const tabID = crypto.randomBytes(4).toString('hex');
   const { ...utils } = render(
@@ -95,7 +80,7 @@ ValueError: Values in the LULC raster were found that are not represented under 
     fs.rmSync(workspace, { recursive: true, force: true });
   });
 
-  test.only('Text in logfile is rendered', async () => {
+  test('Text in logfile is rendered', async () => {
     const { findByText } = renderLogTab(logfilePath);
 
     const log = await findByText(new RegExp(uniqueText));
@@ -136,41 +121,25 @@ describe('Unit tests for invest logger message markup', () => {
 
   test('Message from the invest model gets primary class attribute', () => {
     const message = `2021-01-15 07:14:37,148 (${pyModuleName}) ... INFO`;
-    const markup = markupMessage(message, pyModuleName);
-    // Rendering and using DOM matchers adds confidence that we have valid html
-    // Render the same way we do in LogDisplay component:
-    const { getByText } = render(
-      <div dangerouslySetInnerHTML={{ __html: markup }} />
-    );
-    expect(getByText(message)).toHaveClass('invest-log-primary');
+    const cls = markupMessage(message, pyModuleName);
+    expect(cls).toBe('invest-log-primary');
   });
 
   test('Warning from the invest model gets primary-warning class attribute', () => {
     const message = `2021-01-15 07:14:37,148 (${pyModuleName}) ... WARNING`;
-    const markup = markupMessage(message, pyModuleName);
-    // Rendering and using DOM matchers adds confidence that we have valid html
-    // Render the same way we do in LogDisplay component:
-    const { getByText } = render(
-      <div dangerouslySetInnerHTML={{ __html: markup }} />
-    );
-    expect(getByText(message)).toHaveClass('invest-log-primary-warning');
+    const cls = markupMessage(message, pyModuleName);
+    expect(cls).toBe('invest-log-primary-warning');
   });
 
   test('Error from any any module gets error class attribute', () => {
     const message = '... (osgeo.gdal) ... ERROR';
-    const markup = markupMessage(message, pyModuleName);
-    const { getByText } = render(
-      <div dangerouslySetInnerHTML={{ __html: markup }} />
-    );
-    expect(getByText(message)).toHaveClass('invest-log-error');
+    const cls = markupMessage(message, pyModuleName);
+    expect(cls).toBe('invest-log-error');
   });
 
   test('All other messages do not get markup', () => {
     const message = '2021-01-15 07:14:37,148 (foo.bar) ... INFO';
-    const markup = markupMessage(message, pyModuleName);
-    const { getByText } = render(
-      <div dangerouslySetInnerHTML={{ __html: markup }} />
-    );
-    expect(getByText(message)).not.toHaveClass();
+    const cls = markupMessage(message, pyModuleName);
+    expect(cls).toBe('');
   });
 });
