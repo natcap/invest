@@ -36,6 +36,9 @@
 
 Unreleased Changes
 ------------------
+* Workbench
+    * Fixed a bug where the Workbench would become unresponsive during an
+      InVEST model run if the model emitted a very high volume of log messages.
 * Urban Cooling
     * Updated the text for the ``building_intensity`` column in the biophysical
       table to clarify that the values of this column should be normalized
