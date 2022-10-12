@@ -2,9 +2,8 @@ import importlib
 import re
 import unittest
 
-from natcap.invest.model_metadata import MODEL_METADATA
 import pint
-
+from natcap.invest.model_metadata import MODEL_METADATA
 
 valid_nested_types = {
     None: {  # if no parent type (arg is top-level), then all types are valid
@@ -57,7 +56,10 @@ class ValidateArgsSpecs(unittest.TestCase):
 
             # Validate top-level keys are correct
             with self.subTest(metadata.pyname):
-                self.assertTrue(required_keys.issubset(model.ARGS_SPEC))
+                self.assertTrue(
+                    required_keys.issubset(model.ARGS_SPEC),
+                    ("Required key(s) missing from ARGS_SPEC: "
+                     f"{set(required_keys).difference(model.ARGS_SPEC)}"))
                 extra_keys = set(model.ARGS_SPEC).difference(required_keys)
                 if (extra_keys):
                     self.assertEqual(extra_keys, set([optional_spatial_key]))

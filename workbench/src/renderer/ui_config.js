@@ -209,6 +209,7 @@ const UI_SPEC = {
       ['resolution', 'max_rating'],
       ['risk_eq', 'decay_eq'],
       ['aoi_vector_path'],
+      ['n_overlapping_stressors'],
       ['visualize_outputs'],
     ],
   },

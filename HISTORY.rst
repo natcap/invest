@@ -36,6 +36,14 @@
 
 Unreleased Changes
 ------------------
+* Urban Cooling
+    * Updated the text for the ``building_intensity`` column in the biophysical
+      table to clarify that the values of this column should be normalized
+      relative to one another to be between 0 and 1.
+
+
+3.12.0 (2022-08-31)
+-------------------
 * General
     * Update python packaging settings to exclude a few config files and the
       workbench from source distributions and wheels
@@ -46,10 +54,26 @@ Unreleased Changes
 * Workbench
     * Fixed a bug where some model runs would not generate a new item
       in the list of recent runs.
+    * Enhanced model input forms so that text boxes always show the
+      rightmost end of the filepath when they overflow the box.
 * Coastal Blue Carbon
     * Fixed a bug where using unaligned rasters in the preprocessor would cause
       an error.  The preprocessor will now correctly align input landcover
       rasters and determine transitions from the aligned rasters.
+* Habitat Quality
+    * Removed a warning about an undefined nodata value in threat rasters
+      because it is okay for a threat raster to have an undefined nodata value.
+* HRA
+    * Fixed an issue with risk calculations where risk values would be much
+      lower than they should be.  Risk values are now correctly calculated.
+    * Fixed an issue with risk reclassifications where most pixels would end up
+      classified as medium risk.
+    * Added an input field to the model to indicate the number of overlapping
+      stressors to use in risk reclassification calculations.  This input
+      affects the numerical boundaries between high, medium and low risk
+      classifications.
+    * Various improvements to the model have resulted in a modest (~33%)
+      speedup in runtime.
 * Coastal Vulnerability
     * Fixed a bug where redundant vertices in the landmass polygon could
       raise an error during shore point creation.
@@ -58,9 +82,34 @@ Unreleased Changes
     * Effective retention calculations have been reworked so that the source
       code more closely matches the mathematical definition in the NDR User's
       Guide.  There should be no difference in outputs.
+* SDR
+    * We have made a significant update to the SDR model's outputs described
+      here: https://github.com/natcap/peps/blob/main/pep-0010.md.
+
+        * Legacy outputs ``sed_retention_index.tif`` and ``sed_retention.tif``
+          have been removed from the model.
+        * Two new output rasters have been added, specifically
+            * ``avoided_export.tif``, indicating vegetation's contribution to
+              reducing erosion on a pixel, as well as trapping of sediment
+              originating upslope of the pixel, so that neither of these
+              proceed downslope to enter a stream.
+            * ``avoided_erosion.tif``, vegetation’s contribution to reducing
+              erosion from a pixel.
+        * The summary watersheds vector no longer includes the ``sed_retent``
+          field and two fields have been added:
+
+            * ``avoid_exp`` representing the sum of avoided export in the
+              watershed.
+            * ``avoid_eros`` representing the sum of avoided erosion in the
+              watershed.
+        * Sediment deposition, ``sed_deposition.tif``, has been clarified to
+          indicate the sediment that erodes from a pixel goes into the next
+          downstream pixel(s) where it is either trapped or exported.  This
+          update removes a form of double-counting.
 * Urban Flood Risk
     * Validation of the curve number table will now catch missing ``CN_*``
       columns and warn the user about the missing column.
+
 
 3.11.0 (2022-05-24)
 -------------------
@@ -1662,7 +1711,7 @@ for any issues relating to software:
   - *new* Sediment 3.0 Beta:
       - This is a standalone model that executes an order of magnitude faster
         than the original ArcGIS model, but may have memory issues with
-	larger datasets. This fix is scheduled for the 2.5.1 release of InVEST.
+        larger datasets. This fix is scheduled for the 2.5.1 release of InVEST.
       - Uses a d-infinity flow algorithm (ArcGIS version uses D8).
       - Includes a more accurate LS factor.
       - Outputs are now summarized by polygon rather than rasterized polygons.
@@ -1671,7 +1720,7 @@ for any issues relating to software:
   - *new* Nutrient 3.0 Beta:
       - This is a standalone model that executes an order of magnitude faster
         than the original ArcGIS model, but may have memory issues with
-	larger datasets. This fix is scheduled for the 2.5.1 release of InVEST.
+        larger datasets. This fix is scheduled for the 2.5.1 release of InVEST.
       - Uses a d-infinity flow algorithm (ArcGIS version uses D8).
       - Includes a more accurate LS factor.
       - Outputs are now summarized by polygon rather than rasterized polygons.
@@ -1687,8 +1736,8 @@ for any issues relating to software:
   - *new* Habitat Risk Assessment 3.0 Alpha:
       - This is a working demo of our soon to be released 3.0 version of habitat
         risk assessment.  The model itself is incomplete and should only
-    	be used as a demo or by NatCap partners that know what they're doing.
-    	Users that need to use the habitat risk assessment should use the
+        be used as a demo or by NatCap partners that know what they're doing.
+        Users that need to use the habitat risk assessment should use the
         ArcGIS version of this model.
 
   - Improvements to the InVEST 2.x ArcGIS-based toolset:
@@ -2086,6 +2135,7 @@ This is a minor release which fixes the following defects:
 -A truncation error was fixed on nutrient retention and sedimentation model that involved division by the number of cells in a watershed.  Now correctly calculates floating point division.
 -Minor typos were fixed across the user's guide.
 
+
 2.1 Beta (2011-05-11)
 ---------------------
 Updates to InVEST Beta
@@ -2096,9 +2146,9 @@ Changes in InVEST 2.1
 
 General:
 
-1.	InVEST versioning
+1. InVEST versioning
 We have altered our versioning scheme.  Integer changes will reflect major changes (e.g. the addition of marine models warranted moving from 1.x to 2.0).  An increment in the digit after the primary decimal indicates major new features (e.g the addition of a new model) or major revisions.  For example, this release is numbered InVEST 2.1 because two new models are included).  We will add another decimal to reflect minor feature revisions or bug fixes.  For example, InVEST 2.1.1 will likely be out soon as we are continually working to improve our tool.
-2.	HTML guide
+2. HTML guide
 With this release, we have migrated the entire InVEST users. guide to an HTML format.  The HTML version will output a pdf version for use off-line, printing, etc.
 
 

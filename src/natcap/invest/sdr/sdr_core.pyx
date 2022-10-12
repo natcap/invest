@@ -358,9 +358,9 @@ def calculate_sediment_deposition(
         target_sediment_deposition_path):
     """Calculate sediment deposition layer.
 
-    This algorithm outputs both sediment deposition (r_i) and flux (f_i)::
+    This algorithm outputs both sediment deposition (t_i) and flux (f_i)::
 
-        r_i  =      dr_i  * (sum over j ∈ J of f_j * p(i,j)) + E'_i
+        t_i  =      dr_i  * (sum over j ∈ J of f_j * p(i,j)) + E'_i
 
         f_i  = (1 - dr_i) * (sum over j ∈ J of f_j * p(i,j)) + E'_i
 
@@ -509,7 +509,7 @@ def calculate_sediment_deposition(
                     global_row = flat_index // n_cols
                     global_col = flat_index % n_cols
 
-                    # (sum over j ∈ J of f_j * p(i,j) in the equation for r_i)
+                    # (sum over j ∈ J of f_j * p(i,j) in the equation for t_i)
                     # calculate the upslope f_j contribution to this pixel,
                     # the weighted sum of flux flowing onto this pixel from
                     # all neighbors
@@ -633,28 +633,38 @@ def calculate_sediment_deposition(
                     if e_prime_i == e_prime_nodata:
                         continue
 
+                    # This condition reflects property A in the user's guide.
                     if downslope_sdr_weighted_sum < sdr_i:
                         # i think this happens because of our low resolution
                         # flow direction, it's okay to zero out.
                         downslope_sdr_weighted_sum = sdr_i
 
                     # these correspond to the full equations for
-                    # dr_i, r_i, and f_i given in the docstring
-                    dr_i = (downslope_sdr_weighted_sum - sdr_i) / (1 - sdr_i)
-                    r_i = dr_i * (e_prime_i + f_j_weighted_sum)
-                    f_i = (1 - dr_i) * (e_prime_i + f_j_weighted_sum)
+                    # dr_i, t_i, and f_i given in the docstring
+                    if sdr_i == 1:
+                        # This reflects property B in the user's guide and is
+                        # an edge case to avoid division-by-zero.
+                        dr_i = 1
+                    else:
+                        dr_i = (downslope_sdr_weighted_sum - sdr_i) / (1 - sdr_i)
 
-                    # On large flow paths, it's possible for r_i and f_i to
-                    # have very small negative values that are numerically
+                    # Lisa's modified equations
+                    t_i = dr_i * f_j_weighted_sum  # deposition, a.k.a trapped sediment
+                    f_i = (1 - dr_i) * f_j_weighted_sum + e_prime_i  # flux
+
+                    # On large flow paths, it's possible for dr_i, f_i and t_i
+                    # to have very small negative values that are numerically
                     # equivalent to 0. These negative values were raising
                     # questions on the forums and it's easier to clamp the
                     # values here than to explain IEEE 754.
-                    if r_i < 0:
-                        r_i = 0
+                    if dr_i < 0:
+                        dr_i = 0
+                    if t_i < 0:
+                        t_i = 0
                     if f_i < 0:
                         f_i = 0
 
-                    sediment_deposition_raster.set(global_col, global_row, r_i)
+                    sediment_deposition_raster.set(global_col, global_row, t_i)
                     f_raster.set(global_col, global_row, f_i)
 
     LOGGER.info('Sediment deposition 100% complete')
