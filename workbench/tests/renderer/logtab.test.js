@@ -7,7 +7,7 @@ import fs from 'fs';
 import os from 'os';
 import crypto from 'crypto';
 
-import React, { Component as mockComponent } from 'react';
+import React from 'react';
 import { render } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
