@@ -92,6 +92,12 @@ export default class LogTab extends React.Component {
     this.cache = [];
   }
 
+  /*
+   * Cache incoming logger messages in real-time, then move them to react state
+   * in batches, at some longer interval. This limits the number of renders in
+   * the event of very high volume logging, while still allowing the browser to
+   * appear that it is updating in real-time.
+   */
   debouncedLogUpdate(data) {
     if (this.validationTimer) {
       clearTimeout(this.validationTimer);
