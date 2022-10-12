@@ -17,35 +17,12 @@ const logger = window.Workbench.getLogger('LogTab');
  * of arbitrarily long lists of text data, like an invest logfile.
  */
 function LogDisplay(props) {
-  // TODO useEffect and useRef to scroll on updates....
-  const [scrollTop, setScrollTop] = useState(0);
-  const [isScrolledUp, setIsScrolledUp] = useState(false);
   const ref = useRef();
 
   useEffect(() => {
-    ref.current.addEventListener('scroll', (event) => {
-      if (!isScrolledUp) {
-        // check if it went up
-        console.log(ref.current.scrollTop);
-        console.log(scrollTop)
-        if (ref.current.scrollTop < scrollTop) {
-          // console.log(ref.current.scrollTop);
-          // console.log(scrollTop)
-          setIsScrolledUp(true)
-        }
-      }
-    });
-  }, []);
-
-  useEffect(() => {
-    console.log(isScrolledUp)
-    // const isScrolledToBottom = ref.current.scrollHeight - ref.current.clientHeight <= ref.current.scrollTop - 200;
-    if (!isScrolledUp) {
-      ref.current.scrollTop = ref.current.scrollHeight - ref.current.clientHeight;
-      setIsScrolledUp(false);
-      setScrollTop(ref.current.scrollTop);
-    }
+    ref.current.scrollTop = ref.current.scrollHeight;
   }, [props.logdata]);
+
   return (
     <Col
       className="text-break"
