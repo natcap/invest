@@ -540,10 +540,6 @@ input[type=text]::placeholder {
 	padding-right: 0;
 }
 
-.log-footer {
-	padding-bottom: 1rem;
-}
-
 #log-display .invest-log-primary {
 	color: #000;
 	font-weight: bold;
