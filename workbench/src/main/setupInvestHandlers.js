@@ -157,7 +157,7 @@ export function setupInvestLogReaderHandler() {
         logger.info(err);
         event.reply(
           `invest-stdout-${channel}`,
-          `Logfile is missing or unreadable: ${os.EOL}${logfile}`
+          [`Logfile is missing or unreadable: ${os.EOL}${logfile}`, '']
         );
       });
 
