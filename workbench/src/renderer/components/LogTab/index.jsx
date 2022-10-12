@@ -1,21 +1,15 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
 
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import Container from 'react-bootstrap/Container';
 
-import { Virtuoso } from 'react-virtuoso';
-
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
 const { ipcRenderer } = window.Workbench.electron;
 const logger = window.Workbench.getLogger('LogTab');
 
-/**
- * A component wrapping a virtualized list for optimal renders
- * of arbitrarily long lists of text data, like an invest logfile.
- */
 function LogDisplay(props) {
   const ref = useRef();
 
@@ -29,26 +23,6 @@ function LogDisplay(props) {
       id="log-display"
       ref={ref}
     >
-      {/*<Virtuoso
-        followOutput
-        atBottomThreshold={1000} // no adverse effect from large value
-        overscan={{ main: 400, reverse: 400 }}
-        // 3 props above all help keep scroll at bottom during rapid updates
-        style={{ height: '100%' }}
-        totalCount={props.logdata.length}
-        components={{
-          Footer: () => <div className="log-footer" />
-        }}
-        itemContent={
-          (index) => (
-            <div
-              className={props.logdata[index][1]}
-            >
-              {props.logdata[index][0]}
-            </div>
-          )
-        }
-      />*/}
       {
         props.logdata.map(([line, cls], idx) => (
           <div
