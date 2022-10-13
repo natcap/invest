@@ -179,6 +179,7 @@ describe('createWindow', () => {
       ipcMainChannels.IS_DEV_MODE,
       ipcMainChannels.INVEST_VERSION,
       ipcMainChannels.CHECK_STORAGE_TOKEN,
+      ipcMainChannels.CHECK_FILE_PERMISSIONS,
     ];
     const expectedOnChannels = [
       ipcMainChannels.DOWNLOAD_URL,

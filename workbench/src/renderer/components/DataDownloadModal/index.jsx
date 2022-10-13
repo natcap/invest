@@ -91,14 +91,24 @@ export class DataDownloadModal extends React.Component {
       { properties: ['openDirectory'] }
     );
     if (data.filePaths.length) {
-      ipcRenderer.send(
-        ipcMainChannels.DOWNLOAD_URL,
-        this.state.selectedLinksArray,
-        data.filePaths[0]
+      const writable = await ipcRenderer.invoke(
+        ipcMainChannels.CHECK_FILE_PERMISSIONS, data.filePaths[0]
       );
-      this.props.storeDownloadDir(data.filePaths[0]);
+      if (!writable) {
+        alert(
+          `This application does not have permission to write to folder:\n\n
+          ${data.filePaths[0]}\n\nPlease choose a different location.`
+        );
+      } else {
+        ipcRenderer.send(
+          ipcMainChannels.DOWNLOAD_URL,
+          this.state.selectedLinksArray,
+          data.filePaths[0]
+        );
+        this.props.storeDownloadDir(data.filePaths[0]);
+        this.props.closeModal();
+      }
     }
-    this.props.closeModal();
   }
 
   handleCheckAll(event) {
