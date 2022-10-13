@@ -45,6 +45,7 @@ export default function setupDownloadHandlers(mainWindow) {
     const itemURL = item.getURL();
     item.on('updated', (event, state) => {
       if (state === 'interrupted') {
+        item.cancel(); // we're never attempting to resume, so cancel.
         logger.info('download interrupted');
       } else if (state === 'progressing') {
         if (item.isPaused()) {

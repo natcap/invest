@@ -19,7 +19,7 @@ import findInvestBinaries from './findInvestBinaries';
 import setupDownloadHandlers from './setupDownloadHandlers';
 import setupDialogs from './setupDialogs';
 import setupContextMenu from './setupContextMenu';
-import { setupCheckFilePermissions } from './setupCheckFilePermissions';
+import setupCheckFilePermissions from './setupCheckFilePermissions';
 import { setupCheckFirstRun } from './setupCheckFirstRun';
 import { setupCheckStorageToken } from './setupCheckStorageToken';
 import {
