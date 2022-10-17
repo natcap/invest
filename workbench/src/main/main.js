@@ -42,7 +42,7 @@ process.on('uncaughtException', (err) => {
   process.exit(1);
 });
 process.on('unhandledRejection', (err, promise) => {
-  logger.error(`unhandled rejection at promise: ${promise}`);
+  logger.error(`unhandled rejection at: ${promise}`);
   logger.error(err);
   process.exit(1);
 });
