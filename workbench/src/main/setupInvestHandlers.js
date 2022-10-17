@@ -120,7 +120,6 @@ export function setupInvestRunHandlers(investExe) {
 
     const stdErrCallback = (data) => {
       logger.debug(`${data}`);
-      investStdErr += `${data}`;
     };
     investRun.stderr.on('data', stdErrCallback);
 
@@ -132,7 +131,6 @@ export function setupInvestRunHandlers(investExe) {
       delete runningJobs[tabID];
       event.reply(`invest-exit-${tabID}`, {
         code: code,
-        stdErr: investStdErr,
       });
       logger.debug(code);
       fs.unlink(datastackPath, (err) => {

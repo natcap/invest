@@ -105,7 +105,7 @@ export default class InvestTab extends React.Component {
 
   /** Receive data about the exit status of the invest process.
    *
-   * @param {object} data - of shape { code: number, stdErr: string }
+   * @param {object} data - of shape { code: number }
    */
   investExitCallback(data) {
     const {
