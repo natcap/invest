@@ -201,7 +201,6 @@ export default class InvestTab extends React.Component {
       modelRunName,
       argsValues,
       logfile,
-      finalTraceback,
     } = this.props.job;
 
     const { tabID, investSettings } = this.props;
@@ -310,7 +309,6 @@ InvestTab.propTypes = {
     argsValues: PropTypes.object,
     logfile: PropTypes.string,
     status: PropTypes.string,
-    finalTraceback: PropTypes.string,
   }).isRequired,
   tabID: PropTypes.string.isRequired,
   investSettings: PropTypes.shape({

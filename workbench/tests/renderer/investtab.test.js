@@ -61,7 +61,7 @@ afterEach(() => {
   uiConfig.UI_SPEC = UI_SPEC;
 });
 
-describe('Run status Alert renders with data from a recent run', () => {
+describe('Run status Alert renders with status from a recent run', () => {
   const spec = {
     pyname: 'natcap.invest.foo',
     model_name: 'Foo Model',
@@ -86,73 +86,31 @@ describe('Run status Alert renders with data from a recent run', () => {
     removeIpcMainListeners();
   });
 
-  test('final Traceback displays', async () => {
+  test.each([
+    ['success', 'Model Complete'],
+    ['error', 'Error: see log for details'],
+    ['canceled', 'Run Canceled'],
+  ])('status message displays on %s', async (status, message) => {
     const job = new InvestJob({
       modelRunName: 'carbon',
       modelHumanName: 'Carbon Model',
-      status: 'error',
-      argsValues: {},
-      logfile: 'foo.txt',
-      finalTraceback: 'ValueError:',
-    });
-
-    const { findByRole } = renderInvestTab(job);
-    expect(await findByRole('alert'))
-      .toHaveTextContent(job.finalTraceback);
-  });
-
-  test('Model Complete displays if status was success', async () => {
-    const job = new InvestJob({
-      modelRunName: 'carbon',
-      modelHumanName: 'Carbon Model',
-      status: 'success',
-      argsValues: {},
-      logfile: 'foo.txt',
-      finalTraceback: '',
-    });
-
-    const { findByRole } = renderInvestTab(job);
-    expect(await findByRole('alert'))
-      .toHaveTextContent('Model Complete');
-  });
-
-  test('Model Complete displays even with non-fatal stderr', async () => {
-    const job = new InvestJob({
-      modelRunName: 'carbon',
-      modelHumanName: 'Carbon Model',
-      status: 'success',
-      argsValues: {},
-      logfile: 'foo.txt',
-      finalTraceback: 'Error that did not actually raise an exception',
-    });
-
-    const { findByRole, queryByText } = renderInvestTab(job);
-    expect(await findByRole('alert'))
-      .toHaveTextContent('Model Complete');
-    expect(queryByText(job.finalTraceback))
-      .toBeNull();
-  });
-
-  test('Open Workspace button is available on success', async () => {
-    const job = new InvestJob({
-      modelRunName: 'carbon',
-      modelHumanName: 'Carbon Model',
-      status: 'success',
+      status: status,
       argsValues: {},
       logfile: 'foo.txt',
     });
 
     const { findByRole } = renderInvestTab(job);
-    const openWorkspace = await findByRole('button', { name: 'Open Workspace' })
-    openWorkspace.click();
-    expect(shell.showItemInFolder).toHaveBeenCalledTimes(1);
+    expect(await findByRole('alert'))
+      .toHaveTextContent(message);
   });
 
-  test('Open Workspace button is available on error', async () => {
+  test.each([
+    'success', 'error', 'canceled',
+  ])('Open Workspace button is available on %s', async (status) => {
     const job = new InvestJob({
       modelRunName: 'carbon',
       modelHumanName: 'Carbon Model',
-      status: 'error',
+      status: status,
       argsValues: {},
       logfile: 'foo.txt',
     });
@@ -342,7 +300,6 @@ describe('Sidebar Buttons', () => {
       status: 'success',
       argsValues: {},
       logfile: 'foo.txt',
-      finalTraceback: '',
     });
     const { findByText, findByLabelText, findByRole } = renderInvestTab(job);
 
