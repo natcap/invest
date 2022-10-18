@@ -298,6 +298,7 @@ exceed 100% of window.*/
 .card-footer .status {
 	overflow: hidden;
 	font-style: italic;
+	text-transform: capitalize;
 }
 
 .card-footer .status-error {

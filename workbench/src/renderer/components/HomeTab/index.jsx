@@ -148,7 +148,7 @@ class RecentInvestJobs extends React.Component {
               <span className="status">
                 {(job.status === 'success'
                   ? <span className="status-success">{_('Model Complete')}</span>
-                  : <span className="status-error">{job.finalTraceback || ''}</span>
+                  : <span className="status-error">{job.status}</span>
                 )}
               </span>
             </Card.Footer>
