@@ -105,7 +105,7 @@ export default class InvestTab extends React.Component {
 
   /** Receive data about the exit status of the invest process.
    *
-   * @param {object} data - of shape { code: number, stdErr: string }
+   * @param {object} data - of shape { code: number }
    */
   investExitCallback(data) {
     const {
@@ -113,26 +113,12 @@ export default class InvestTab extends React.Component {
       updateJobProperties,
       saveJob,
     } = this.props;
-    let finalTraceback = '';
+    let status = (data.code === 0) ? 'success' : 'error';
     if (this.state.userTerminated) {
-      finalTraceback = 'Run Canceled';
-    } else if (data.stdErr) {
-      // Get the last meaningful line of stderr for display in an Alert.
-      // The PyInstaller exe will always emit a final 'Failed ...' message
-      // after an uncaught exception.
-      const stdErrLines = data.stdErr.split(/\r\n|\r|\n/);
-      while (
-        !finalTraceback || finalTraceback.includes(
-          "Failed to execute script 'cli' due to unhandled exception!"
-        )
-      ) {
-        finalTraceback = stdErrLines.pop();
-      }
+      status = 'canceled';
     }
-    const status = (data.code === 0) ? 'success' : 'error';
     updateJobProperties(tabID, {
       status: status,
-      finalTraceback: finalTraceback,
     });
     saveJob(tabID);
     this.setState({
@@ -215,7 +201,6 @@ export default class InvestTab extends React.Component {
       modelRunName,
       argsValues,
       logfile,
-      finalTraceback,
     } = this.props.job;
 
     const { tabID, investSettings } = this.props;
@@ -270,7 +255,6 @@ export default class InvestTab extends React.Component {
                   ? (
                     <ModelStatusAlert
                       status={status}
-                      finalTraceback={finalTraceback}
                       handleOpenWorkspace={() => handleOpenWorkspace(logfile)}
                       terminateInvestProcess={this.terminateInvestProcess}
                     />
@@ -325,7 +309,6 @@ InvestTab.propTypes = {
     argsValues: PropTypes.object,
     logfile: PropTypes.string,
     status: PropTypes.string,
-    finalTraceback: PropTypes.string,
   }).isRequired,
   tabID: PropTypes.string.isRequired,
   investSettings: PropTypes.shape({
