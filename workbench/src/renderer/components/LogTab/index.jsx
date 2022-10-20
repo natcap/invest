@@ -102,7 +102,7 @@ export default class LogTab extends React.Component {
     if (this.validationTimer) {
       clearTimeout(this.validationTimer);
     }
-    this.cache = [...this.cache, data];
+    this.cache.push(data);
     // updates every 10ms will appear to be real-time
     this.validationTimer = setTimeout(this.updateState, 10);
   }
