@@ -37,8 +37,10 @@
 Unreleased Changes
 ------------------
 * Workbench
-    * Fixed a bug where the workbench could crash if there was too much
-      std error from an invest model.
+    * Fixed a bug where the Workbench would become unresponsive during an
+      InVEST model run if the model emitted a very high volume of log messages.
+    * Fixed a bug where the Workbench could crash if there was too much
+      standard error emitted from an invest model.
 * Urban Cooling
     * Updated the text for the ``building_intensity`` column in the biophysical
       table to clarify that the values of this column should be normalized
