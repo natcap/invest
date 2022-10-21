@@ -121,41 +121,25 @@ describe('Unit tests for invest logger message markup', () => {
 
   test('Message from the invest model gets primary class attribute', () => {
     const message = `2021-01-15 07:14:37,148 (${pyModuleName}) ... INFO`;
-    const markup = markupMessage(message, pyModuleName);
-    // Rendering and using DOM matchers adds confidence that we have valid html
-    // Render the same way we do in LogDisplay component:
-    const { getByText } = render(
-      <div dangerouslySetInnerHTML={{ __html: markup }} />
-    );
-    expect(getByText(message)).toHaveClass('invest-log-primary');
+    const cls = markupMessage(message, pyModuleName);
+    expect(cls).toBe('invest-log-primary');
   });
 
   test('Warning from the invest model gets primary-warning class attribute', () => {
     const message = `2021-01-15 07:14:37,148 (${pyModuleName}) ... WARNING`;
-    const markup = markupMessage(message, pyModuleName);
-    // Rendering and using DOM matchers adds confidence that we have valid html
-    // Render the same way we do in LogDisplay component:
-    const { getByText } = render(
-      <div dangerouslySetInnerHTML={{ __html: markup }} />
-    );
-    expect(getByText(message)).toHaveClass('invest-log-primary-warning');
+    const cls = markupMessage(message, pyModuleName);
+    expect(cls).toBe('invest-log-primary-warning');
   });
 
   test('Error from any any module gets error class attribute', () => {
     const message = '... (osgeo.gdal) ... ERROR';
-    const markup = markupMessage(message, pyModuleName);
-    const { getByText } = render(
-      <div dangerouslySetInnerHTML={{ __html: markup }} />
-    );
-    expect(getByText(message)).toHaveClass('invest-log-error');
+    const cls = markupMessage(message, pyModuleName);
+    expect(cls).toBe('invest-log-error');
   });
 
   test('All other messages do not get markup', () => {
     const message = '2021-01-15 07:14:37,148 (foo.bar) ... INFO';
-    const markup = markupMessage(message, pyModuleName);
-    const { getByText } = render(
-      <div dangerouslySetInnerHTML={{ __html: markup }} />
-    );
-    expect(getByText(message)).not.toHaveClass();
+    const cls = markupMessage(message, pyModuleName);
+    expect(cls).toBe('');
   });
 });

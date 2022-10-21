@@ -308,7 +308,6 @@ describe('Display recently executed InVEST jobs on Home tab', () => {
         results_suffix: 'suffix',
       },
       status: 'error',
-      finalTraceback: 'ValueError ...',
     });
     const recentJobs = await InvestJob.saveJob(job2);
     const initialJobs = [job1, job2];
@@ -326,8 +325,8 @@ describe('Display recently executed InVEST jobs on Home tab', () => {
           expect(getByText('Model Complete'))
             .toBeInTheDocument();
         }
-        if (job.status === 'error' && job.finalTraceback) {
-          expect(getByText(job.finalTraceback))
+        if (job.status === 'error') {
+          expect(getByText(job.status))
             .toBeInTheDocument();
         }
         if (job.argsValues.results_suffix) {
@@ -655,15 +654,9 @@ describe('InVEST subprocess testing', () => {
     const execute = await findByRole('button', { name: /Run/ });
     userEvent.click(execute);
 
-    // To test that we can parse the finalTraceback even after extra data
-    const someStdErr = 'something went wrong';
-    const finalTraceback = 'ValueError';
-    const pyInstallerErr = "[12345] Failed to execute script 'cli' due to unhandled exception!";
-    const allStdErr = `${someStdErr}\n${finalTraceback}\n${pyInstallerErr}\n`;
-
     mockInvestProc.stdout.push(stdOutText);
     mockInvestProc.stdout.push(stdOutLogfileSignal);
-    mockInvestProc.stderr.push(allStdErr);
+    mockInvestProc.stderr.push('some error');
     const logTab = await findByText('Log');
     await waitFor(() => {
       expect(logTab.classList.contains('active')).toBeTruthy();
@@ -674,11 +667,9 @@ describe('InVEST subprocess testing', () => {
 
     mockInvestProc.emit('exit', 1); // 1 - exit w/ error
 
-    // Only finalTraceback text should be rendered in a red alert
     const alert = await findByRole('alert');
     await waitFor(() => {
-      expect(alert).toHaveTextContent(new RegExp(`^${finalTraceback}`));
-      expect(alert).not.toHaveTextContent(someStdErr);
+      expect(alert).toHaveTextContent('Error: see log for details');
       expect(alert).toHaveClass('alert-danger');
     });
     expect(await findByRole('button', { name: 'Open Workspace' }))

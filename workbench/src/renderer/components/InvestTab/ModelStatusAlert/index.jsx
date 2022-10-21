@@ -6,13 +6,15 @@ import Button from 'react-bootstrap/Button';
 
 /* Render different Alert contents depending on an InVEST run status */
 export default function ModelStatusAlert(props) {
+  const { status } = props;
+
   const WorkspaceButton = (
     <Button
       variant="outline-dark"
       onClick={props.handleOpenWorkspace}
       disabled={props.status === 'running'}
     >
-      {_("Open Workspace")}
+      {_('Open Workspace')}
     </Button>
   );
 
@@ -21,42 +23,46 @@ export default function ModelStatusAlert(props) {
       variant="outline-dark"
       onClick={props.terminateInvestProcess}
     >
-      {_("Cancel Run")}
+      {_('Cancel Run')}
     </Button>
   );
 
-  if (props.status === 'running') {
+  if (status === 'running') {
     return (
       <Alert variant="secondary">
         {CancelButton}
       </Alert>
     );
   }
-  if (props.status === 'error') {
-    return (
-      <Alert
-        className="text-break"
-        variant="danger"
-      >
-        {props.finalTraceback}
-        {WorkspaceButton}
-      </Alert>
-    );
+
+  let alertVariant;
+  let alertMessage;
+  if (status === 'success') {
+    alertVariant = 'success';
+    alertMessage = _('Model Complete');
+  } else if (status === 'error') {
+    alertVariant = 'danger';
+    alertMessage = _('Error: see log for details');
+  } else if (status === 'canceled') {
+    alertVariant = 'danger';
+    alertMessage = _('Run Canceled');
   }
-  if (props.status === 'success') {
-    return (
-      <Alert variant="success">
-        {_("Model Complete")}
-        {WorkspaceButton}
-      </Alert>
-    );
-  }
-  return null;
+
+  return (
+    <Alert
+      className="text-break"
+      variant={alertVariant}
+    >
+      {alertMessage}
+      {WorkspaceButton}
+    </Alert>
+  );
 }
 
 ModelStatusAlert.propTypes = {
-  status: PropTypes.oneOf(['running', 'error', 'success']).isRequired,
-  finalTraceback: PropTypes.string,
+  status: PropTypes.oneOf(
+    ['running', 'error', 'success', 'canceled']
+  ).isRequired,
   terminateInvestProcess: PropTypes.func.isRequired,
   handleOpenWorkspace: PropTypes.func.isRequired,
 };

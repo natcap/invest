@@ -37,6 +37,16 @@ import pkg from '../../package.json';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
+process.on('uncaughtException', (err) => {
+  logger.error(err);
+  process.exit(1);
+});
+process.on('unhandledRejection', (err, promise) => {
+  logger.error(`unhandled rejection at: ${promise}`);
+  logger.error(err);
+  process.exit(1);
+});
+
 if (!process.env.PORT) {
   process.env.PORT = '56789';
 }
