@@ -3,26 +3,25 @@
 An implementation of the model described in 'Degradation in carbon stocks
 near tropical forest edges', by Chaplin-Kramer et. al (2015).
 """
-import os
 import logging
+import os
+import pickle
 import time
 import uuid
 
-import pickle
 import numpy
-from osgeo import gdal
-from osgeo import ogr
 import pygeoprocessing
 import scipy.spatial
 import taskgraph
+from osgeo import gdal
+from osgeo import ogr
 
-from . import utils
+from . import gettext
 from . import spec_utils
-from .spec_utils import u
+from . import utils
 from . import validation
 from .model_metadata import MODEL_METADATA
-from . import gettext
-
+from .spec_utils import u
 
 LOGGER = logging.getLogger(__name__)
 
@@ -116,8 +115,8 @@ ARGS_SPEC = {
         },
         "lulc_raster_path": {
             **spec_utils.LULC,
-            "about": gettext(
-                f"{spec_utils.LULC['about']} All values in this raster must "
+            "about": spec_utils.LULC['about'] + " " + gettext(
+                "All values in this raster must "
                 "have corresponding entries in the Biophysical Table."),
             "projected": True
         },
