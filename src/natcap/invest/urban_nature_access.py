@@ -347,7 +347,8 @@ def execute(args):
         dependent_task_list=[lulc_alignment_task]
     )
 
-    attr_table = pandas.read_csv(args['lulc_attribute_table'])
+    attr_table = utils.read_csv_to_dataframe(
+        args['lulc_attribute_table'], to_lower=True)
     convolved_population_paths = {}  # search radius: convolved_population path
     convolved_population_tasks = {}  # search radius: convolved_population task
     kernel_paths = {}  # search_radius, kernel path
