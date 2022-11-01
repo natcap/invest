@@ -1164,8 +1164,15 @@ def _calculate_greenspace_population_ratio(
         out_array[population_close_to_zero] = (
             greenspace_area[population_close_to_zero])
         out_array[~greenspace_pixels] = 0
-        out_array[valid_pixels] = (
-            greenspace_area[valid_pixels] / convolved_population[valid_pixels])
+
+        valid_pixels_with_population = (
+            valid_pixels & (~population_close_to_zero))
+        out_array[valid_pixels_with_population] = (
+            greenspace_area[valid_pixels_with_population] /
+            convolved_population[valid_pixels_with_population])
+
+        # eliminate pixel values < 0
+        out_array[valid_pixels & (out_array < 0)] = 0
 
         return out_array
 
