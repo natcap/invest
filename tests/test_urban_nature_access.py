@@ -410,7 +410,7 @@ class UNATests(unittest.TestCase):
         expected_values = {
             'SUP_DEMadm_cap': -18.044228,
             'Pund_adm': 4357.321289,
-            'Povr_adm': 722.629639,
+            'Povr_adm': 718.679077,
             urban_nature_access.ID_FIELDNAME: 0,
         }
         admin_feature = admin_layer.GetFeature(1)
