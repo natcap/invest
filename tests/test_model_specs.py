@@ -72,7 +72,7 @@ class ValidateModelSpecs(unittest.TestCase):
             for key, arg in model.MODEL_SPEC['args'].items():
                 # the top level should have 'name' and 'about' attrs
                 # but they aren't required at nested levels
-                self.validate(arg, f'{model_name}.args.{key}')
+                self.validate_args(arg, f'{model_name}.args.{key}')
 
             for key, spec in model.MODEL_SPEC['outputs'].items():
                 self.validate_output(spec, f'{model_name}.outputs.{key}')
@@ -226,7 +226,7 @@ class ValidateModelSpecs(unittest.TestCase):
                                      'expected for its type')
 
 
-    def validate(self, arg, name, parent_type=None):
+    def validate_args(self, arg, name, parent_type=None):
         """
         Recursively validate nested args against the arg spec standard.
 
@@ -318,7 +318,7 @@ class ValidateModelSpecs(unittest.TestCase):
                     self.assertIsInstance(arg['bands'], dict)
                     for band in arg['bands']:
                         self.assertIsInstance(band, int)
-                        self.validate(
+                        self.validate_args(
                             arg['bands'][band],
                             f'{name}.bands.{band}',
                             parent_type=t)
@@ -348,7 +348,7 @@ class ValidateModelSpecs(unittest.TestCase):
                     self.assertIsInstance(arg['fields'], dict)
                     for field in arg['fields']:
                         self.assertIsInstance(field, str)
-                        self.validate(
+                        self.validate_args(
                             arg['fields'][field],
                             f'{name}.fields.{field}',
                             parent_type=t)
@@ -392,7 +392,7 @@ class ValidateModelSpecs(unittest.TestCase):
 
                         for header in headers:
                             self.assertIsInstance(header, str)
-                            self.validate(
+                            self.validate_args(
                                 headers[header],
                                 f'{name}.{direction}.{header}',
                                 parent_type=t)
@@ -413,7 +413,7 @@ class ValidateModelSpecs(unittest.TestCase):
                     self.assertIsInstance(arg['contents'], dict)
                     for path in arg['contents']:
                         self.assertIsInstance(path, str)
-                        self.validate(
+                        self.validate_args(
                             arg['contents'][path],
                             f'{name}.contents.{path}',
                             parent_type=t)
