@@ -111,7 +111,7 @@ class ValidateModelSpecs(unittest.TestCase):
                 elif file_extension == 'csv':
                     t = 'csv'
                 elif file_extension in {'json', 'txt', 'pickle', 'db', 'zip',
-                                        'dat', 'idx'}:
+                                        'dat', 'idx', 'html'}:
                     t = 'file'
                 else:
                     raise Warning(

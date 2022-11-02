@@ -118,7 +118,7 @@ MODEL_SPEC = {
         "farthest_from_edge.tif": {
             "about": "LULC raster for the scenario of conversion farthest from the edge of the focal habitat."
         },
-        "nearest_to__edge.csv": {
+        "nearest_to_edge.csv": {
             "about": "table listing the area (in hectares) and number of pixels for different land cover types converted for the scenario of conversion nearest to the edge of the focal habitat."
         },
         "farthest_from_edge.csv": {

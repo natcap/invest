@@ -252,6 +252,7 @@ MODEL_SPEC = {
         },
         "visualization_outputs": {
             "type": "directory",
+            "created_if": "visualize_outputs",
             "contents": {
                 "RECLASS_RISK_[HABITAT].geojson": {
                     "about": "This vector layer allows users to visualize reclassified habitat-specific risk from all the stressors into four categories, where 0 = No Risk, 1 = Low Risk, 2 = Medium Risk, and 3 = High Risk, in gradient color from white to red on a map."
@@ -2082,7 +2083,6 @@ def _parse_criteria_table(criteria_table_path, target_composite_csv_path):
         records, columns=['habitat', 'stressor', 'criterion', 'rating', 'dq',
                           'weight', 'e/c'])
     overlap_df.to_csv(target_composite_csv_path, index=False)
-    print(target_composite_csv_path)
 
     return (known_habitats, known_stressors)
 
