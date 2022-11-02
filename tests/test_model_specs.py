@@ -211,8 +211,8 @@ class ValidateModelSpecs(unittest.TestCase):
                 self.assertIsInstance(spec['about'], str)
                 attrs.remove('about')
             if 'created_if' in attrs:
-                # required value may be True, False, or a string that can be
-                # parsed as a python statement that evaluates to True or False
+                # should be an arg key indicating that the output is
+                # created if that arg is provided or checked
                 self.assertIsInstance(spec['created_if'], str)
                 attrs.remove('created_if')
             if 'type' in attrs:
