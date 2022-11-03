@@ -408,9 +408,9 @@ class UNATests(unittest.TestCase):
 
         # expected field values from eyeballing the results; random seed = 1
         expected_values = {
-            'SUP_DEMadm_cap': -17.9078,
-            'Pund_adm': 4353.370117,
-            'Povr_adm': 722.629639,
+            'SUP_DEMadm_cap': -18.044228,
+            'Pund_adm': 4357.321289,
+            'Povr_adm': 718.679077,
             urban_nature_access.ID_FIELDNAME: 0,
         }
         admin_feature = admin_layer.GetFeature(1)
