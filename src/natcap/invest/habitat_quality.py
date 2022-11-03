@@ -150,7 +150,7 @@ ARGS_SPEC = {
         },
         "access_vector_path": {
             "type": "vector",
-            "projected": True,
+            "projected": False,
             "fields": {
                 "access": {
                     "type": "ratio",
