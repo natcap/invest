@@ -688,8 +688,6 @@ def _execute(args):
                 func=_calculate_monthly_quick_flow,
                 args=(
                     file_registry['precip_path_aligned_list'][month_index],
-                    file_registry['lulc_aligned_path'],
-                    file_registry['cn_path'],
                     file_registry['n_events_path_list'][month_index],
                     file_registry['stream_path'],
                     file_registry['si_path'],
@@ -897,15 +895,13 @@ def _calculate_annual_qfi(qfm_path_list, target_qf_path):
         qfi_sum_op, target_qf_path, gdal.GDT_Float32, qf_nodata)
 
 
-def _calculate_monthly_quick_flow(
-        precip_path, lulc_raster_path, cn_path, n_events_raster_path,
+def _calculate_monthly_quick_flow(precip_path, n_events_raster_path,
         stream_path, si_path, qf_monthly_path):
     """Calculate quick flow for a month.
 
     Args:
         precip_path (string): path to file that correspond to monthly
             precipitation
-        lulc_raster_path (string): path to landcover raster
         cn_path (string): path to curve number raster
         n_events_raster_path (string): a path to a raster where each pixel
             indicates the number of rain events.
@@ -919,13 +915,12 @@ def _calculate_monthly_quick_flow(
     Returns:
         None
     """
-    si_nodata = pygeoprocessing.get_raster_info(si_path)['nodata'][0]
-
-    qf_nodata = -1
     p_nodata = pygeoprocessing.get_raster_info(precip_path)['nodata'][0]
     n_events_nodata = pygeoprocessing.get_raster_info(
         n_events_raster_path)['nodata'][0]
     stream_nodata = pygeoprocessing.get_raster_info(stream_path)['nodata'][0]
+    si_nodata = pygeoprocessing.get_raster_info(si_path)['nodata'][0]
+    qf_nodata = -1
 
     def qf_op(p_im, s_i, n_events, stream_array):
         """Calculate quick flow as in Eq [1] in user's guide.
@@ -940,33 +935,23 @@ def _calculate_monthly_quick_flow(
 
         Returns:
             quick flow (numpy.array)
-
         """
-        # s_i is an intermediate output which will always have a defined
-        # nodata value
-        valid_mask = ((p_im != 0.0) &
+        # stream_nodata is the only input that carries over nodata values from
+        # the aligned DEM.
+        valid_mask = ((p_im != 0) &
                       (stream_array != 1) &
                       (n_events > 0) &
+                      ~utils.array_equals_nodata(p_im, p_nodata) &
+                      ~utils.array_equals_nodata(n_events, n_events_nodata) &
+                      ~utils.array_equals_nodata(stream_array, stream_nodata) &
                       ~utils.array_equals_nodata(s_i, si_nodata))
-        if p_nodata is not None:
-            valid_mask &= ~utils.array_equals_nodata(p_im, p_nodata)
-        if n_events_nodata is not None:
-            valid_mask &= ~utils.array_equals_nodata(n_events, n_events_nodata)
-        # stream_nodata is the only input that carry over nodata values from
-        # the aligned DEM.
-        if stream_nodata is not None:
-            valid_mask &= ~utils.array_equals_nodata(
-                stream_array, stream_nodata)
 
-        valid_n_events = n_events[valid_mask]
         valid_si = s_i[valid_mask]
 
         # a_im is the mean rain depth on a rainy day at pixel i on month m
         # the 25.4 converts inches to mm since Si is in inches
-        a_im = numpy.empty(valid_n_events.shape)
-        a_im = p_im[valid_mask] / (valid_n_events * 25.4)
-        qf_im = numpy.empty(p_im.shape)
-        qf_im[:] = qf_nodata
+        a_im = p_im[valid_mask] / (n_events[valid_mask] * 25.4)
+        qf_im = numpy.full(p_im.shape, qf_nodata)
 
         # Precompute the last two terms in quickflow so we can handle a
         # numerical instability when s_i is large and/or a_im is small
@@ -982,12 +967,12 @@ def _calculate_monthly_quick_flow(
             numpy.log(E1[nonzero_e1_mask]))
 
         # qf_im is the quickflow at pixel i on month m Eq. [1]
-        qf_im[valid_mask] = (25.4 * valid_n_events * (
+        qf_im[valid_mask] = (25.4 * n_events[valid_mask] * (
             (a_im - valid_si) * numpy.exp(-0.2 * valid_si / a_im) +
             valid_si ** 2 / a_im * exp_result))
 
         # if precip is 0, then QF should be zero
-        qf_im[(p_im == 0) | (n_events == 0)] = 0.0
+        qf_im[(p_im == 0) | (n_events == 0)] = 0
         # if we're on a stream, set quickflow to the precipitation
         valid_stream_precip_mask = stream_array == 1
         if p_nodata is not None:
@@ -999,7 +984,7 @@ def _calculate_monthly_quick_flow(
         # their landcover raster. It otherwise crashes later with some NaNs.
         # more intermediate outputs with nodata values guaranteed to be defined
         qf_im[utils.array_equals_nodata(qf_im, qf_nodata) &
-              ~utils.array_equals_nodata(stream_array, stream_nodata)] = 0.0
+              ~utils.array_equals_nodata(stream_array, stream_nodata)] = 0
         return qf_im
 
     pygeoprocessing.raster_calculator(
