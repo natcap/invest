@@ -20,6 +20,14 @@ If it becomes burdensome to keep up with manually editing the POT file, we can l
    ```
    where `<string>` is replaced with your string.
 
+Alternatively, run this bash command (created using BSD toolchain on mac) from the repo root to format the body of the POT file:
+
+   ```bash
+   grep -rho _\(\[\'\"\].\*\[\'\"\]\) . | sort | uniq | sed "s|_[(][\'\"]\(.*\)[\'\"][)]|msgid \"\1\"\nmsgstr \"\"\n|"
+   ```
+
+Insert the result into the POT file.
+
 ### Modifying or removing a translated string that already exists
 1. Manually edit or remove the entry for the string in `messages.pot`.
 
