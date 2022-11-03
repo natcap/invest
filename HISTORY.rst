@@ -37,7 +37,7 @@
 Unreleased Changes
 ------------------
 * Habitat Quality
-    * All spacial inputs including the access vector and threat rasters are
+    * All spatial inputs including the access vector and threat rasters are
       now reprojected to the ``lulc_cur_path`` raster. This fixes a bug where
       rasters with a different SRS would appear to not intersect the
       ``lulc_cur_path`` even if they did.
