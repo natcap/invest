@@ -408,10 +408,13 @@ def execute(args):
     # and store them in the intermediate folder
     align_task = task_graph.add_task(
         func=pygeoprocessing.align_and_resize_raster_stack,
-        args=(
-            lulc_and_threat_raster_list, aligned_raster_list,
-            ['near']*len(lulc_and_threat_raster_list), pixel_size,
-            lulc_bbox, target_projection_wkt=lulc_wkt),
+        kwargs={
+            'base_raster_path_list': lulc_and_threat_raster_list,
+            'target_raster_path_list': aligned_raster_list,
+            'resample_method_list': ['near']*len(lulc_and_threat_raster_list),
+            'target_pixel_size': pixel_size,
+            'bounding_box_mode': lulc_bbox,
+            'target_projection_wkt': lulc_wkt},
         target_path_list=aligned_raster_list,
         task_name='align_input_rasters')
 
@@ -465,7 +468,7 @@ def execute(args):
                 'base_vector_path': args['access_vector_path'],
                 'target_projection_wkt': lulc_wkt,
                 'target_path': reprojected_access_path,
-                'driver_name': 'GPKG')
+                'driver_name': 'GPKG'
             },
             target_path_list=[reprojected_access_path],
             task_name='reproject_access_vector')
