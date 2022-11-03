@@ -109,52 +109,53 @@ MODEL_SPEC = {
     },
     "outputs": {
         "Runoff_retention.tif": {
-            "about": "raster with runoff retention values. Calculated from equation (119).",
+            "about": "Map of runoff retention index.",
             "bands": {1: {
                 "type": "number",
                 "units": u.none
             }}
         },
         "Runoff_retention_m3.tif": {
-            "about": "raster with runoff retention values. Calculated from equation (120).",
+            "about": "Map of runoff retention volume.",
             "bands": {1: {
                 "type": "number",
                 "units": u.meter**3
             }}
         },
         "Q_mm.tif": {
-            "about": "raster with runoff values. Calculated from equation (117).",
+            "about": "Map of runoff.",
             "bands": {1: {
                 "type": "number",
                 "units": u.millimeter
             }}
         },
         "flood_risk_service.shp": {
-            "about": "Shapefile with results in the attribute table",
+            "about": "Aggregated results for each area of interest.",
+            "geometries": spec_utils.POLYGONS,
             "fields": {
                 "rnf_rt_idx": {
-                    "about": "average of runoff retention values per watershed",
+                    "about": "Average runoff retention index.",
                     "type": "number",
                     "units": u.none
                 },
                 "rnf_rt_m3": {
-                    "about": "sum of runoff retention volumes per watershed.",
+                    "about": "Average runoff retention volume.",
                     "type": "number",
                     "units": u.meter**3
                 },
                 "flood_vol": {
-                    "about": "The flood volume per watershed.",
+                    "about": "Total flood volume",
                     "type": "number",
                     "units": u.meter**3
                 },
                 "aff_bld": {
-                    "about": "potential damage to built infrastructure per watershed.",
+                    "about": "Total potential damage to built infrastructure.",
                     "created_if": "built_infrastructure_vector_path",
                     "type": "number",
                     "units": u.currency
                 },
                 "serv_blt": {
-                    "about": "Built infrastructure service values for this watershed (see equation (123)). An indicator of the runoff retention service for the watershed.",
+                    "about": "Total service value of built infrastructure.",
                     "created_if": "built_infrastructure_vector_path",
                     "type": "number",
                     "units": u.currency*u.meter**3
@@ -164,18 +165,43 @@ MODEL_SPEC = {
         "intermediate_files": {
             "type": "directory",
             "contents": {
-                "Q_m3.tif": {},
-                "reprojected_aoi.gpkg": {},
-                "structures_reprojected.gpkg": {}
+                "Q_m3.tif": {
+                    "about": "Map of runoff volume.",
+                    "bands": {1: {"type": "number", "units": u.meter**3}}
+                },
+                "reprojected_aoi.gpkg": {
+                    "about": (
+                        "Copy of AOI vector reprojected to the same spatial "
+                        "reference as the LULC."),
+                    "fields": {}
+                },
+                "structures_reprojected.gpkg": {
+                    "about": (
+                        "Copy of built infrastructure vector reprojected to "
+                        "the same spatial reference as the LULC."),
+                    "fields": {}
+                }
             }
         },
         "temp_working_dir_not_for_humans": {
             "type": "directory",
             "contents": {
-                "aligned_lulc.tif": {},
-                "aligned_soils_hydrological_group.tif": {},
-                "cn_raster.tif": {},
-                "s_max.tif": {},
+                "aligned_lulc.tif": {
+                    "about": "Aligned and clipped copy of the LULC.",
+                    "bands": {1: {"type": "integer"}}
+                },
+                "aligned_soils_hydrological_group.tif": {
+                    "about": "Aligned and clipped copy of the soils map.",
+                    "bands": {1: {"type": "integer"}}
+                },
+                "cn_raster.tif": {
+                    "about": "Map of curve number.",
+                    "bands": {1: {"type": "number", "units": u.none}}
+                },
+                "s_max.tif": {
+                    "about": "Map of potential retention.",
+                    "bands": {1: {"type": "number", "units": u.millimeter}}
+                },
                 "taskgraph_data.db": {}
             }
         }

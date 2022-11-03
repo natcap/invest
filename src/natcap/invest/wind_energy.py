@@ -430,28 +430,29 @@ MODEL_SPEC = {
                     "about": "a GeoTIFF raster file that represents the net present value of a farm centered on that pixel."
                 },
                 "wind_energy_points.shp": {
-                    "about": "an ESRI Shapefile that summarizes the above outputs for each point."
+                    "about": "an ESRI Shapefile that summarizes the above outputs for each point.",
+                    "geometries": spec_utils.POINT,
                 }
             }
         },
         "intermediate": {
             "type": "directory",
             "contents": {
-                "aoi_raster.tif": {},
-                "bathymetry_projected.tif": {},
-                "depth_mask_aligned.tif": {},
-                "depth_mask.tif": {},
-                "distance_mask_aligned.tif": {},
-                "distance_mask.tif": {},
-                "distance_trans.tif": {},
-                "projected_clipped_land_poly.shp": {},
-                "projection_params.pickle": {},
-                "temp_density_aligned.tif": {},
-                "temp_density.tif": {},
-                "temp_harveseted_aligned.tif": {},
-                "temp_harvested.tif": {},
-                "wind_data.pickle": {},
-                "wind_energy_points_from_data.shp": {},
+                "aoi_raster.tif": {"docs": False},
+                "bathymetry_projected.tif": {"docs": False},
+                "depth_mask_aligned.tif": {"docs": False},
+                "depth_mask.tif": {"docs": False},
+                "distance_mask_aligned.tif": {"docs": False},
+                "distance_mask.tif": {"docs": False},
+                "distance_trans.tif": {"docs": False},
+                "projected_clipped_land_poly.shp": {"docs": False},
+                "projection_params.pickle": {"docs": False},
+                "temp_density_aligned.tif": {"docs": False},
+                "temp_density.tif": {"docs": False},
+                "temp_harveseted_aligned.tif": {"docs": False},
+                "temp_harvested.tif": {"docs": False},
+                "wind_data.pickle": {"docs": False},
+                "wind_energy_points_from_data.shp": {"docs": False},
                 "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
             }
         }
