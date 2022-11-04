@@ -24,7 +24,7 @@ from . import delineateit_core
 
 LOGGER = logging.getLogger(__name__)
 
-ARGS_SPEC = {
+MODEL_SPEC = {
     "model_name": MODEL_METADATA["delineateit"].model_title,
     "pyname": MODEL_METADATA["delineateit"].pyname,
     "userguide": MODEL_METADATA["delineateit"].userguide,
@@ -99,6 +99,32 @@ ARGS_SPEC = {
                 "the model to crash."),
             "name": gettext("skip invalid geometries")
         }
+    },
+    "outputs": {
+        "filled_dem.tif": {
+            "about": "The DEM, but with hydrological sinks filled."
+        },
+        "flow_direction.tif": {
+            "about": "The D8 flow direction raster, created from the filled DEM."
+        },
+        "flow_accumulation.tif": {
+            "about": "The D8 flow accumulation raster, created from flow_direction.tif."
+        },
+        "preprocessed_geometries.gpkg": {
+            "about": "A vector containing only those geometries that the model can verify are valid. The geometries appearing in this vector will be the ones passed to watershed delineation."
+        },
+        "streams.tif": {
+            "about": "The raster stream layer used to snap outlet points, produced from the DEM and Threshold Flow Accumulation value."
+        },
+        "snapped_outlets.gpkg": {
+            "about": "A vector that indicates where outlet points (point geometries only) were snapped to based on the values of Threshold Flow Accumulation and Pixel Distance to Snap Outlet Points. Any non-point geometries will also have been copied over to this vector, but will not have been altered."
+        },
+        "watersheds.gpkg": {
+            "about": "A GeoPackage vector defining the areas that are upstream from the snapped outlet points, where upstream area is defined by the D8 flow algorithm implementation in PyGeoprocessing."
+        },
+        "pour_points.gpkg": {
+        },
+        "_work_tokens": spec_utils.TASKGRAPH_DIR
     }
 }
 
@@ -786,4 +812,4 @@ def validate(args, limit_to=None):
 
     """
     return validation.validate(
-        args, ARGS_SPEC['args'], ARGS_SPEC['args_with_spatial_overlap'])
+        args, MODEL_SPEC['args'], MODEL_SPEC['args_with_spatial_overlap'])

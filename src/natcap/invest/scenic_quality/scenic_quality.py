@@ -44,12 +44,11 @@ _INTERMEDIATE_BASE_FILES = {
     'structures_clipped': 'structures_clipped.shp',
     'structures_reprojected': 'structures_reprojected.shp',
     'visibility_pattern': 'visibility_{id}.tif',
-    'auxiliary_pattern': 'auxiliary_{id}.tif',  # Retained for debugging.
     'value_pattern': 'value_{id}.tif',
 }
 
 
-ARGS_SPEC = {
+MODEL_SPEC = {
     "model_name": MODEL_METADATA["scenic_quality"].model_title,
     "pyname": MODEL_METADATA["scenic_quality"].pyname,
     "userguide": MODEL_METADATA["scenic_quality"].userguide,
@@ -161,6 +160,46 @@ ARGS_SPEC = {
                 "Valuation will only be computed for cells that fall within "
                 "this radius of a feature impacting scenic quality."),
         },
+    },
+    "outputs": {
+        "output": {
+            "type": "directory",
+            "contents": {
+                "vshed_qual.tif": {
+                    "about": "This raster layer contains a field that classifies based on quartiles the visual quality within the AOI. The visual quality classes include: unaffected (no visual impact), high (low visual impact), medium (moderate visual impact), low (high visual impact), and very low (very high visual impact)."
+                },
+                "vshed.tif": {
+                    "about": "This raster layer contains the weighted sum of all visibility rasters. If no weight column is provided in the structures point vector, this raster will represent a count of the number of structure points that are visible from each pixel."
+                },
+                "vshed_value.tif": {
+                    "about": "This raster layer contains the weighted sum of the valuation rasters created for each point."
+                }
+            }
+        },
+        "intermediate": {
+            "type": "directory",
+            "contents": {
+                "aoi_reprojected.shp": {
+                    "about": "This vector is the AOI, reprojected to the DEM’s spatial reference and projection."
+                },
+                "dem_clipped.tif": {
+                    "about": "This raster layer is a version of the DEM that has been clipped and masked to the AOI and tiled. This is the DEM file that is used for the viewshed analysis."
+                },
+                "structures_clipped.shp": {
+                    "about": "This vector contains all viewpoints that intersect with the AOI."
+                },
+                "structures_reprojected.shp": {
+                    "about": "This is the structures vector, reprojected to the DEM’s spatial reference and projection."
+                },
+                "value_[FEATURE_ID].tif": {
+                    "about": "The calculated value of the viewshed amenity/disamenity given the distances (in meters) of pixels from the structures viewpoint, the weight of the viewpoint, the valuation function, and the a and b coefficients. The viewshed’s value is only evaluated for visible pixels. If an underlying DEM pixel is undefined (has a nodata value), so does the valuation raster."
+                },
+                "visibility_[FEATURE_ID].tif": {
+                    "about": "The visibility raster for a given structures viewpoint. This raster has pixel values of 0 (not visible), 1 (visible), or nodata (where the DEM is nodata)."
+                },
+                "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
+            }
+        }
     }
 }
 
@@ -219,7 +258,7 @@ def execute(args):
             'b': float(args['b_coef']),
         }
         if (args['valuation_function'] not in
-                ARGS_SPEC['args']['valuation_function']['options']):
+                MODEL_SPEC['args']['valuation_function']['options']):
             raise ValueError('Valuation function type %s not recognized' %
                              args['valuation_function'])
         max_valuation_radius = float(args['max_valuation_radius'])
@@ -1053,4 +1092,4 @@ def validate(args, limit_to=None):
 
     """
     return validation.validate(
-        args, ARGS_SPEC['args'], ARGS_SPEC['args_with_spatial_overlap'])
+        args, MODEL_SPEC['args'], MODEL_SPEC['args_with_spatial_overlap'])

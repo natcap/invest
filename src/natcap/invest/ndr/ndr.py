@@ -25,7 +25,7 @@ LOGGER = logging.getLogger(__name__)
 
 MISSING_NUTRIENT_MSG = gettext('Either calc_n or calc_p must be True')
 
-ARGS_SPEC = {
+MODEL_SPEC = {
     "model_name": MODEL_METADATA["ndr"].model_title,
     "pyname": MODEL_METADATA["ndr"].pyname,
     "userguide": MODEL_METADATA["ndr"].userguide,
@@ -166,6 +166,200 @@ ARGS_SPEC = {
                 "reached through subsurface flow. This characterizes the "
                 "retention due to biochemical degradation in soils. Required "
                 "if Calculate Nitrogen is selected.")
+        }
+    },
+    "outputs": {
+        "watershed_results_ndr.gpkg": {
+            "about": "Vector with aggregated nutrient model results per watershed.",
+            "fields": {
+                "p_surface_load": {
+                    "type": "number",
+                    "units": u.kilogram/u.year,
+                    "about": "Total phosphorus loads (sources) in the watershed, i.e. the sum of the nutrient contribution from all surface LULC without filtering by the landscape."
+                },
+                "n_surface_load": {
+                    "type": "number",
+                    "units": u.kilogram/u.year,
+                    "about": "Total nitrogen loads (sources) in the watershed, i.e. the sum of the nutrient contribution from all surface LULC without filtering by the landscape."
+                },
+                "n_subsurface_load": {
+                    "type": "number",
+                    "units": u.kilogram/u.year,
+                    "about": "Total subsurface nitrogen loads in the watershed."
+                },
+                "p_surface_export": {
+                    "type": "number",
+                    "units": u.kilogram/u.year,
+                    "about": "Total phosphorus export from the watershed by surface flow."
+                },
+                "n_surface_export": {
+                    "type": "number",
+                    "units": u.kilogram/u.year,
+                    "about": "Total nitrogen export from the watershed by surface flow."
+                },
+                "n_subsurface_export": {
+                    "type": "number",
+                    "units": u.kilogram/u.year,
+                    "about": "Total nitrogen export from the watershed by subsurface flow."
+                },
+                "n_total_export": {
+                    "type": "number",
+                    "units": u.kilogram/u.year,
+                    "about": "Total nitrogen export from the watershed by surface and subsurface flow."
+                }
+            }
+        },
+        "p_surface_export.tif": {
+            "about": "A pixel level map showing how much phosphorus from each pixel eventually reaches the stream by surface flow.",
+            "bands": {1: {
+                "type": "number",
+                "units": u.kilogram/u.pixel
+            }}
+        },
+        "n_surface_export.tif": {
+            "about": "A pixel level map showing how much nitrogen from each pixel eventually reaches the stream by surface flow.",
+            "bands": {1: {
+                "type": "number",
+                "units": u.kilogram/u.pixel
+            }}
+        },
+        "n_subsurface_export.tif": {
+            "about": "A pixel level map showing how much nitrogen from each pixel eventually reaches the stream by subsurface flow.",
+            "bands": {1: {
+                "type": "number",
+                "units": u.kilogram/u.pixel
+            }}
+        },
+        "n_total_export.tif": {
+            "about": "A pixel level map showing how much nitrogen from each pixel eventually reaches the stream by either flow.",
+            "bands": {1: {
+                "type": "number",
+                "units": u.kilogram/u.pixel
+            }}
+        },
+        "intermediate_outputs": {
+            "type": "directory",
+            "contents": {
+                "crit_len_n.tif": {
+                    "about": "Retention length values, crit_len, found in the biophysical table"
+                },
+                "crit_len_p.tif": {
+                    "about": "Retention length values, crit_len, found in the biophysical table"
+                },
+                "d_dn.tif": {
+                    "about": "Downslope factor of the index of connectivity"
+                },
+                "d_up.tif": {
+                    "about": "Upslope factor of the index of connectivity"
+                },
+                "dist_to_channel.tif": {
+                    "about": "Average downslope distance from a pixel to the stream"
+                },
+                "eff_n.tif": {
+                    "about": "Raw per-landscape cover retention efficiency for nitrogen."
+                },
+                "eff_p.tif": {
+                    "about": "Raw per-landscape cover retention efficiency for phosphorus"
+                },
+                "effective_retention_n.tif": {
+                    "about": "Effective nitrogen retention provided by the downslope flow path for each pixel"
+                },
+                "effective_retention_p.tif": {
+                    "about": "Effective phosphorus retention provided by the downslope flow path for each pixel"
+                },
+                "flow_accumulation.tif": {
+                    "about": "Flow accumulation created from the DEM"
+                },
+                "flow_direction.tif": {
+                    "about": "Flow direction created from the DEM"
+                },
+                "ic_factor.tif": {
+                    "about": "Index of connectivity"
+                },
+                "load_n.tif": {
+                    "about": "Nitrogen load (for surface transport) per pixel",
+                    "bands": {1: {
+                        "type": "number",
+                        "units": u.kilogram/u.year
+                    }}
+                },
+                "load_p.tif": {
+                    "about": "Phosphorus load (for surface transport) per pixel",
+                    "bands": {1: {
+                        "type": "number",
+                        "units": u.kilogram/u.year
+                    }}
+                },
+                "modified_load_n.tif": {
+                    "about": "Raw nitrogen load scaled by the runoff proxy index.",
+                    "bands": {1: {
+                        "type": "number",
+                        "units": u.kilogram/u.year
+                    }}
+                },
+                "modified_load_p.tif": {
+                    "about": "Raw phosphorus load scaled by the runoff proxy index.",
+                    "bands": {1: {
+                        "type": "number",
+                        "units": u.kilogram/u.year
+                    }}
+                },
+                "ndr_n.tif": {
+                    "about": "NDR values"
+                },
+                "ndr_p.tif": {
+                    "about": "NDR values"
+                },
+                "runoff_proxy_index.tif": {
+                    "about": "Normalized values for the Runoff Proxy input to the model"
+                },
+                "s_accumulation.tif": {
+                    "about": "Slope parameter for the IC equation found in the Nutrient Delivery section"
+                },
+                "s_bar.tif": {
+                    "about": "Slope parameter for the IC equation found in the Nutrient Delivery section"
+                },
+                "s_factor_inverse.tif": {
+                    "about": "Slope parameter for the IC equation found in the Nutrient Delivery section"
+                },
+                "stream.tif": {
+                    "about": "Stream network created from the DEM, with 0 representing land pixels, and 1 representing stream pixels."
+                },
+                "sub_load_n.tif": {
+                    "about": "Nitrogen loads for subsurface transport",
+                    "bands": {1: {
+                        "type": "number",
+                        "units": u.kilogram/u.year
+                    }}
+                },
+                "sub_ndr_n.tif": {
+                    "about": "Subsurface nitrogen NDR values"
+                },
+                "surface_load_n.tif": {
+                    "about": "Above ground nitrogen loads",
+                    "bands": {1: {
+                        "type": "number",
+                        "units": u.kilogram/u.year
+                    }}
+                },
+                "surface_load_p.tif": {
+                    "about": "Above ground phosphorus loads",
+                    "bands": {1: {
+                        "type": "number",
+                        "units": u.kilogram/u.year
+                    }}
+                },
+                "thresholded_slope.tif": {
+                    "about": "Raster with slope values thresholded for correct calculation of IC."
+                },
+                "what_drains_to_stream.tif": {
+                    "about": "Map of which pixels drain to a stream. A value of 1 means that at least some of the runoff from that pixel drains to a stream in stream.tif. A value of 0 means that it does not drain at all to any stream in stream.tif.",
+                    "bands": {1: {
+                        "type": "integer"
+                    }}
+                },
+                "cache_dir": spec_utils.TASKGRAPH_DIR
+            }
         }
     }
 }
@@ -829,7 +1023,7 @@ def validate(args, limit_to=None):
 
     """
     validation_warnings = validation.validate(
-        args, ARGS_SPEC['args'], ARGS_SPEC['args_with_spatial_overlap'])
+        args, MODEL_SPEC['args'], MODEL_SPEC['args_with_spatial_overlap'])
 
     invalid_keys = validation.get_invalid_keys(validation_warnings)
 

@@ -136,7 +136,7 @@ class TranslationTests(unittest.TestCase):
         """Translation: test that /validate endpoint is translated."""
         test_client = ui_server.app.test_client()
         payload = {
-            'model_module': carbon.ARGS_SPEC['pyname'],
+            'model_module': carbon.MODEL_SPEC['pyname'],
             'args': json.dumps({})
         }
         response = test_client.post(

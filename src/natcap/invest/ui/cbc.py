@@ -14,7 +14,7 @@ def _create_input_kwargs_from_args_spec(
     Args:
         args_key: The args key of the input from which a kwargs
             dict is being built.
-        args_spec: The ARGS_SPEC object to reference.
+        args_spec: The MODEL_SPEC object to reference.
         validator: The validator callable to provide to the ``validator`` kwarg
             for the input.
 
@@ -42,7 +42,7 @@ class CoastalBlueCarbonPreprocessor(model.InVESTModel):
 
         _ui_keys = functools.partial(
             _create_input_kwargs_from_args_spec,
-            args_spec=preprocessor.ARGS_SPEC,
+            args_spec=preprocessor.MODEL_SPEC,
             validator=self.validator)
 
         self.lulc_snapshot_csv = inputs.File(
@@ -75,7 +75,7 @@ class CoastalBlueCarbon(model.InVESTModel):
 
         _ui_keys = functools.partial(
             _create_input_kwargs_from_args_spec,
-            args_spec=coastal_blue_carbon.ARGS_SPEC,
+            args_spec=coastal_blue_carbon.MODEL_SPEC,
             validator=self.validator)
 
         self.snapshots_table = inputs.File(

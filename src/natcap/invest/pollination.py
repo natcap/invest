@@ -23,7 +23,7 @@ from . import gettext
 
 LOGGER = logging.getLogger(__name__)
 
-ARGS_SPEC = {
+MODEL_SPEC = {
     "model_name": MODEL_METADATA["pollination"].model_title,
     "pyname": MODEL_METADATA["pollination"].pyname,
     "userguide": MODEL_METADATA["pollination"].userguide,
@@ -175,6 +175,73 @@ ARGS_SPEC = {
                 "Map of farm sites to be analyzed, with pollination data "
                 "specific to each farm."),
             "name": gettext("farms map")
+        }
+    },
+    "outputs": {
+        "farm_results.shp": {
+            "created_if": "farm_vector_path",
+            "about": "A copy of the input farm polygon vector file with additional fields",
+            "fields": {
+                "p_abund": {
+                    "about": "average pollinator abundance on the farm for the active season",
+                    "type": "number"
+                },
+                "y_tot": {
+                    "about": "total yield index, including wild and managed pollinators and pollinator independent yield.",
+                    "type": "number"
+                },
+                "pdep_y_w": {
+                    "about": "index of potential pollination dependent yield attributable to wild pollinators.",
+                    "type": "number"
+                },
+                "y_wild": {
+                    "about": "index of the total yield attributable to wild pollinators.",
+                    "type": "number"
+                }
+            }
+        },
+        "farm_pollinators.tif": {
+            "created_if": "farm_vector_path",
+            "about": "Per-pixel total pollinator abundance across all species per season, clipped to the geometry of the farm vector’s polygons."
+        },
+        "pollinator_abundance_[SPECIES]_[SEASON].tif": {
+            "about": "Per-pixel abundance of pollinator SPECIES in season SEASON."
+        },
+        "pollinator_supply_[SPECIES].tif": {
+            "about": "Per-pixel index of pollinator SPECIES that could be on a pixel given its arbitrary abundance factor from the table, multiplied by the habitat suitability for that species at that pixel, multiplied by the available floral resources that a pollinator could fly to from that pixel."
+        },
+        "total_pollinator_abundance_[SEASON].tif": {
+            "created_if": "farm_vector_path",
+            "about": "Per-pixel total pollinator abundance across all species per season."
+        },
+        "total_pollinator_yield.tif": {
+            "created_if": "farm_vector_path",
+            "about": "Per-pixel total pollinator yield index for pixels that overlap farms, including wild and managed pollinators."
+        },
+        "wild_pollinator_yield.tif": {
+            "created_if": "farm_vector_path",
+            "about": "Per-pixel pollinator yield index for pixels that overlap farms, for wild-pollinators only."
+        },
+        "intermediate_outputs": {
+            "type": "directory",
+            "contents": {
+                "blank_raster.tif": {},
+                "convolve_ps_[SPECIES].tif": {},
+                "farm_nesting_substrate_index_[SUBSTRATE].tif": {},
+                "farm_pollinator_[SEASON].tif": {},
+                "farm_relative_floral_abundance_index_[SEASON].tif": {},
+                "floral_resources_[SPECIES].tif": {},
+                "foraged_flower_index_[SPECIES]_[SEASON].tif": {},
+                "habitat_nesting_index_[SPECIES].tif": {},
+                "half_saturation_[SEASON].tif": {},
+                "kernel_[ALPHA].tif": {},
+                "local_foraging_effectiveness_[SPECIES].tif": {},
+                "managed_pollinators.tif": {},
+                "nesting_substrate_index_[SUBSTRATE].tif": {},
+                "relative_floral_abundance_index_[SEASON].tif": {},
+                "reprojected_farm_vector.shp": {},
+                "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
+            }
         }
     }
 }
@@ -1534,4 +1601,4 @@ def validate(args, limit_to=None):
     # Deliberately not validating the interrelationship of the columns between
     # the biophysical table and the guilds table as the model itself already
     # does extensive checking for this.
-    return validation.validate(args, ARGS_SPEC['args'])
+    return validation.validate(args, MODEL_SPEC['args'])

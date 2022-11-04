@@ -395,7 +395,7 @@ class GLOBIOTests(unittest.TestCase):
 
 
 class GlobioValidationTests(unittest.TestCase):
-    """Tests for the GLOBIO Model ARGS_SPEC and validation."""
+    """Tests for the GLOBIO Model MODEL_SPEC and validation."""
 
     def setUp(self):
         """Create a temporary workspace."""

@@ -23,7 +23,7 @@ FLOAT_NODATA = -1
 UINT8_NODATA = 255
 UINT16_NODATA = 65535
 
-ARGS_SPEC = {
+MODEL_SPEC = {
     "model_name": MODEL_METADATA["stormwater"].model_title,
     "pyname": MODEL_METADATA["stormwater"].pyname,
     "userguide": MODEL_METADATA["stormwater"].userguide,
@@ -142,6 +142,148 @@ ARGS_SPEC = {
             "required": False,
             "about": gettext("Replacement cost of stormwater retention devices"),
             "name": gettext("Replacement cost")
+        }
+    },
+    "outputs": {
+        "retention_ratio.tif": {
+            "about": "A raster derived from the LULC raster and biophysical table RC_x columns, where each pixel’s value is the stormwater retention ratio in that area"
+        },
+        "adjusted_retention_ratio.tif": {
+            "created_if": "adjust_retention_ratios",
+            "about": "A raster of adjusted retention ratios, calculated according to equation (124) from the ‘retention_ratio, ratio_average, near_road’, and ‘near_impervious_lulc’ intermediate outputs"
+        },
+        "retention_volume.tif": {
+            "about": "Raster map of retention volumes",
+            "bands": {1: {
+                "type": "number",
+                "units": u.meter**3/u.year
+            }}
+        },
+        "percolation_ratio.tif": {
+            "created_if": "percolation",
+            "about": "Raster map of percolation ratios derived by cross-referencing the LULC and soil group rasters with the biophysical table",
+            "bands": {1: {
+                "type": "ratio"
+            }}
+        },
+        "percolation_volume.tif": {
+            "created_if": "percolation",
+            "about": "Raster map of percolation (potential aquifer recharge) volumes",
+            "bands": {1: {
+                "type": "number",
+                "units": u.meter**3/u.year
+            }}
+        },
+        "runoff_ratio.tif": {
+            "about": "A raster derived from the retention ratio raster, where each pixel’s value is the stormwater runoff ratio in that area. This is the inverse of ‘retention_ratio.tif’"
+        },
+        "runoff_volume.tif": {
+            "about": "Raster map of runoff volumes",
+            "bands": {1: {
+                "type": "number",
+                "units": u.meter**3/u.year
+            }}
+        },
+        "retention_value.tif": {
+            "created_if": "replacement_cost",
+            "about": "Raster map of the value of the water retained on each pixel",
+            "bands": {1: {
+                "type": "number",
+                "units": u.currency/u.year
+            }}
+        },
+        "aggregate.gpkg": {
+            "created_if": "aggregate_areas_path",
+            "about": "Vector map of aggregate data. This is identical to the aggregate areas input vector, but each polygon is given additional fields with the aggregate data.",
+            "fields": {
+                "mean_retention_ratio": {
+                    "type": "ratio",
+                    "about": "Average retention ratio over this polygon"
+                },
+                "total_retention_volume": {
+                    "type": "number",
+                    "units": u.meter**3/u.year,
+                    "about": "Total retention volume over this polygon"
+                },
+                "mean_runoff_ratio": {
+                    "type": "ratio",
+                    "about": "Average runoff coefficient over this polygon"
+                },
+                "total_runoff_volume": {
+                    "type": "number",
+                    "units": u.meter**3/u.year,
+                    "about": "Total runoff volume over this polygon"
+                },
+                "mean_percolation_ratio": {
+                    "created_if": "percolation",
+                    "about": "Average percolation (recharge) ratio over this polygon",
+                    "type": "ratio"
+                },
+                "total_percolation_volume": {
+                    "created_if": "percolation",
+                    "about": "Total volume of potential aquifer recharge over this polygon",
+                    "type": "number",
+                    "units": u.meter**3/u.year
+                },
+                "[POLLUTANT]_total_avoided_load": {
+                    "about": "Total avoided (retained) amount of pollutant over this polygon",
+                    "type": "number",
+                    "units": u.kilogram/u.year
+                },
+                "[POLLUTANT]_total_load": {
+                    "about": "Total amount of pollutant in runoff over this polygon",
+                    "type": "number",
+                    "units": u.kilogram/u.year
+                },
+                "total_retention_value": {
+                    "created_if": "replacement_cost",
+                    "about": "Total value of the retained volume of water over this polygon",
+                    "type": "number",
+                    "units": u.currency/u.year
+                }
+            }
+        },
+        "intermediate": {
+            "type": "directory",
+            "contents": {
+                "lulc_aligned.tif": {
+                    "about": "Copy of the soil group raster input, cropped to the intersection of the three raster inputs"
+                },
+                "soil_group_aligned.tif": {
+                    "about": "Copy of the soil group raster input, aligned to the LULC raster and cropped to the intersection of the three raster inputs"
+                },
+                "precipitation_aligned.tif": {
+                    "about": "Copy of the precipitation raster input, aligned to the LULC raster and cropped to the intersection of the three raster inputs"
+                },
+                "reprojected_centerlines.gpkg": {
+                    "about": "Copy of the road centerlines vector input, reprojected to the LULC raster projection"
+                },
+                "rasterized_centerlines.tif": {
+                    "about": "A rasterized version of the reprojected centerlines vector, where 1 means the pixel is a road and 0 means it isn’t"
+                },
+                "is_connected_lulc.tif": {
+                    "about": "A binary raster derived from the LULC raster and biophysical table is_connected column, where 1 means the pixel has a directly-connected impervious LULC type, and 0 means it does not"
+                },
+                "road_distance.tif": {
+                    "about": "A raster derived from the rasterized centerlines map, where each pixel’s value is its minimum distance to a road pixel (measured centerpoint-to-centerpoint)"
+                },
+                "connected_lulc_distance.tif": {
+                    "about": "A raster derived from the is_connected_lulc map, where each pixel’s value is its minimum distance to a connected impervious LULC pixel (measured centerpoint-to-centerpoint)"
+                },
+                "near_road.tif": {
+                    "about": "A binary raster derived from the road_distance map, where 1 means the pixel is within the retention radius of a road pixel, and 0 means it isn’t"
+                },
+                "near_connected_lulc.tif": {
+                    "about": "A binary raster derived from the connected_lulc_distance map, where 1 means the pixel is within the retention radius of a connected impervious LULC pixel, and 0 means it isn’t"
+                },
+                "search_kernel.tif": {
+                    "about": "A binary raster representing the search kernel that is convolved with the retention_ratio raster to calculate the averaged retention ratio within the retention radius of each pixel"
+                },
+                "ratio_average.tif": {
+                    "about": "A raster where each pixel’s value is the average of its neighborhood of pixels in the retention_ratio map, calculated by convolving the search kernel with the retention ratio raster"
+                },
+                "cache_dir": spec_utils.TASKGRAPH_DIR
+            }
         }
     }
 }
@@ -1056,5 +1198,5 @@ def validate(args, limit_to=None):
             the error message in the second part of the tuple. This should
             be an empty list if validation succeeds.
     """
-    return validation.validate(args, ARGS_SPEC['args'],
-                               ARGS_SPEC['args_with_spatial_overlap'])
+    return validation.validate(args, MODEL_SPEC['args'],
+                               MODEL_SPEC['args_with_spatial_overlap'])

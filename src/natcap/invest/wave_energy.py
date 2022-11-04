@@ -27,7 +27,7 @@ from . import gettext
 
 LOGGER = logging.getLogger(__name__)
 
-ARGS_SPEC = {
+MODEL_SPEC = {
     "model_name": MODEL_METADATA["wave_energy"].model_title,
     "pyname": MODEL_METADATA["wave_energy"].pyname,
     "userguide": MODEL_METADATA["wave_energy"].userguide,
@@ -321,6 +321,172 @@ ARGS_SPEC = {
                 "Number of wave machines to model. Required if Run Valuation "
                 "is selected."),
             "name": gettext("number of machines")
+        }
+    },
+    "outputs": {
+        "output": {
+            "type": "directory",
+            "contents": {
+                "capwe_mwh.tif": {
+                    "about": "depicts captured wave energy in MWh/yr per WEC device for the user-specified extent.",
+                    "bands": {1: {
+                        "type": "number",
+                        "units": u.megawatt_hour/u.year
+                    }}
+                },
+                "capwe_rc.tif": {
+                    "about": "depicts captured wave energy per WEC device for the user-specified extent, reclassified by quantiles (1 = < 25%, 2 = 25-50%, 3 = 50-75%, 4 = 75-90%, 5 = > 90%).",
+                    "bands": {1: {
+                        "type": "integer"
+                    }}
+                },
+                "capwe_rc.csv": {
+                    "about": "a csv file that shows the value ranges for each captured wave energy quantile group as well as the number of pixels for each group."
+                },
+                "GridPt_prj.shp": {
+                    "created_if": "valuation_container",
+                    "about": "contains information on power grid connection points."
+                },
+                "LandPts_prj.shp": {
+                    "created_if": "valuation_container",
+                    "about": "contains information on underwater cable landing location"
+                },
+                "npv_rc.tif": {
+                    "about": "depicts positive values of net present value over the 25 year life-span of a WEC facility for the user-specified extent, reclassified by quantiles (1 = < 25%, 2 = 25-50%, 3 = 50-75%, 4 = 75-90%, 5 = > 90%).",
+                    "bands": {1: {
+                        "type": "integer"
+                    }}
+                },
+                "npv_rc.csv": {
+                    "about": "a csv file that shows the value ranges for each net present value quantile group as well as the number of pixels for each group."
+                },
+                "npv_usd.tif": {
+                    "about": "depicts net present value in thousands of units of currency over the 25 year life-span of a WEC facility for the user-specified extent.",
+                    "bands": {1: {
+                        "type": "number",
+                        "units": u.kilocurrency
+                    }}
+                },
+                "wp_kw.tif": {
+                    "about": "This raster layer depicts potential wave power in kW/m for the user-specified extent.",
+                    "bands": {1: {
+                        "type": "number",
+                        "units": u.kilowatt/u.meter
+                    }}
+                },
+                "wp_rc.tif": {
+                    "about": "This raster layer depicts potential wave power reclassified by quantiles (1 = < 25%, 2 = 25-50%, 3 = 50-75%, 4 = 75-90%, 5 = > 90%).",
+                    "bands": {1: {
+                        "type": "integer"
+                    }}
+                },
+                "wp_rc.csv": {
+                    "about": "a csv file that shows the value ranges for each wave power quantile group as well as the number of pixels for each group."
+                }
+            }
+        },
+        "intermediate": {
+            "type": "directory",
+            "contents": {
+                "aoi_clipped_to_extract_path.shp": {},
+                "Captured_WEM_InputOutput_Pts.shp": {},
+                "Final_WEM_InputOutput_Pts.shp": {},
+                "Indexed_WEM_InputOutput_Pts.shp": {},
+                "interpolated_capwe_mwh.tif": {},
+                "interpolated_wp_kw.tif": {},
+                "npv_not_clipped.tif": {},
+                "unclipped_capwe_mwh.tif": {},
+                "unclipped_wp_kw.tif": {},
+                "WEM_InputOutput_Pts.shp": {
+                    "about": "These point layers from the selected wave data grid are based on inputs #2-4.",
+                    "fields": {
+                        "I": {
+                            "type": "number",
+                            "units": u.none,
+                            "about": "index value for the wave input grid points"
+                        },
+                        "J": {
+                            "type": "number",
+                            "units": u.none,
+                            "about": "index value for the wave input grid points"
+                        },
+                        "LONG": {
+                            "type": "number",
+                            "units": u.degree,
+                            "about": "longitude of the grid points"
+                        },
+                        "LAT": {
+                            "type": "number",
+                            "units": u.degree,
+                            "about": "latitude of the grid points"
+                        },
+                        "HSAVG_M": {
+                            "about": "wave height average",
+                            "type": "number",
+                            "units": u.meter
+                        },
+                        "TPAVG_S": {
+                            "about": "wave period average",
+                            "type": "number",
+                            "units": u.second
+                        },
+                        "DEPTH_M": {
+                            "about": "depth",
+                            "type": "number",
+                            "units": u.meter
+                        },
+                        "WE_KWM": {
+                            "about": "potential wave power",
+                            "type": "number",
+                            "units": u.kilowatt/u.meter
+                        },
+                        "CAPWE_MWHY": {
+                            "about": "captured wave energy per device",
+                            "type": "number",
+                            "units": u.megawatt_hour/u.year
+                        },
+                        "W2L_MDIST": {
+                            "about": "Euclidean distance to the nearest landing connection point",
+                            "type": "number",
+                            "units": u.meter
+                        },
+                        "LAND_ID": {
+                            "about": "ID of the closest landing connection point",
+                            "type": "number",
+                            "units": u.none
+                        },
+                        "L2G_MDIST": {
+                            "about": "Euclidean distance from LAND_ID to the nearest power grid connection",
+                            "type": "number",
+                            "units": u.meter
+                        },
+                        "UNITS": {
+                            "about": "number of WEC devices assumed to be at this WEC facility site",
+                            "type": "number",
+                            "units": u.none,
+                        },
+                        "CAPWE_ALL": {
+                            "about": "total captured wave energy for all machines at site",
+                            "type": "number",
+                            "units": u.megawatt_hour/u.year
+                        },
+                        "NPV_25Y": {
+                            "about": "net present value of 25 year period",
+                            "type": "number",
+                            "units": u.kilocurrency
+                        }
+                    }
+                },
+                "GridPt.txt": {
+                    "created_if": "valuation_container",
+                    "about": "This text file logs records of the grid point coordinates."
+                },
+                "LandPts.txt": {
+                    "created_if": "valuation_container",
+                    "about": "This text file logs records of the landing point coordinates."
+                },
+                "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
+            }
         }
     }
 }
@@ -2174,4 +2340,4 @@ def validate(args, limit_to=None):
             validation warning.
 
     """
-    return validation.validate(args, ARGS_SPEC['args'])
+    return validation.validate(args, MODEL_SPEC['args'])

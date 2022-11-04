@@ -22,7 +22,8 @@ import { ipcMainChannels } from '../../../main/ipcMainChannels';
 const { ipcRenderer } = window.Workbench.electron;
 const logger = window.Workbench.getLogger('InvestTab');
 
-/** Get an invest model's ARGS_SPEC when a model button is clicked.
+/** Get an invest model's MODEL_SPEC when a model button is clicked.
+
  *
  * @param {string} modelName - as in a model name appearing in `invest list`
  * @returns {object} destructures to:
@@ -57,8 +58,8 @@ export default class InvestTab extends React.Component {
     super(props);
     this.state = {
       activeTab: 'setup',
-      modelSpec: null, // ARGS_SPEC dict with all keys except ARGS_SPEC.args
-      argsSpec: null, // ARGS_SPEC.args, the immutable args stuff
+      modelSpec: null, // MODEL_SPEC dict with all keys except MODEL_SPEC.args
+      argsSpec: null, // MODEL_SPEC.args, the immutable args stuff
       uiSpec: null,
       userTerminated: false,
       executeClicked: false,

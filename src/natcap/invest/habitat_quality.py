@@ -31,7 +31,7 @@ MISSING_THREAT_RASTER_MSG = gettext(
     "could not be opened by GDAL.")
 DUPLICATE_PATHS_MSG = gettext("Threat paths must be unique. Duplicates: ")
 
-ARGS_SPEC = {
+MODEL_SPEC = {
     "model_name": MODEL_METADATA["habitat_quality"].model_title,
     "pyname": MODEL_METADATA["habitat_quality"].pyname,
     "userguide": MODEL_METADATA["habitat_quality"].userguide,
@@ -206,6 +206,56 @@ ARGS_SPEC = {
                 "Half-saturation constant used in the degradation equation."),
             "name": gettext("half-saturation constant")
         },
+    },
+    "outputs": {
+        "output": {
+            "type": "directory",
+            "contents": {
+                "deg_sum_out_c.tif": {
+                    "about": "Relative level of habitat degradation on the current landscape."
+                },
+                "deg_sum_out_f.tif": {
+                    "about": "Relative level of habitat degradation on the future landscape.",
+                    "created_if": "lulc_fut_path"
+                },
+                "quality_out_c.tif": {
+                    "about": "Relative level of habitat quality on the current landscape."
+                },
+                "quality_out_f.tif": {
+                    "about": "Relative level of habitat quality on the future landscape.",
+                    "created_if": "lulc_fut_path"
+                },
+                "rarity_out_c.tif": {
+                    "about": "Relative habitat rarity on the current landscape vis-a-vis the baseline map. The grid cell’s values are defined between a range of 0 and 1 where 0.5 indicates no abundance change between the baseline and current or projected map. Values between 0 and 0.5 indicate a habitat is more abundant and the closer the value is to 0 the lesser the likelihood that the preservation of that habitat type on the current or future landscape is important to biodiversity conservation. Values between 0.5 and 1 indicate a habitat is less abundant and the closer the value is to 1 the greater the likelihood that the preservation of that habitat type on the current or future landscape is important to biodiversity conservation.",
+                    "created_if": "lulc_bas_path"
+                },
+                "rarity_out_f.tif": {
+                    "about": "Relative habitat rarity on the future landscape vis-a-vis the baseline map. The grid cell’s values are defined between a range of 0 and 1 where 0.5 indicates no abundance change between the baseline and current or projected map. Values between 0 and 0.5 indicate a habitat is more abundant and the closer the value is to 0 the lesser the likelihood that the preservation of that habitat type on the current or future landscape is important to biodiversity conservation. Values between 0.5 and 1 indicate a habitat is less abundant and the closer the value is to 1 the greater the likelihood that the preservation of that habitat type on the current or future landscape is important to biodiversity conservation.",
+                    "created_if": "lulc_bas_path and lulc_fut_path"
+                },
+            }
+        },
+        "intermediate": {
+            "type": "directory",
+            "contents": {
+                "access_layer.tif": {},
+                "access_layer_[AREA].tif": {},
+                "[HABITAT]_[SCENARIO]_aligned.tif": {},
+                "[HABITAT]_[SCENARIO]_aligned_[AREA].tif": {},
+                "filtered_[HABITAT]_[SCENARIO]_aligned.tif": {},
+                "filtered_[HABITAT]_[SCENARIO]_aligned_[AREA].tif": {},
+                "lulc_[SCENARIO]_[AREA]_aligned.tif": {},
+                "lulc_[SCENARIO]_[AREA]_aligned_[AREA}.tif": {},
+                "kernels": {
+                    "type": "directory",
+                    "contents": {
+                        "kernel_[HABITAT]_[SCENARIO].tif": {},
+                        "kernel_[HABITAT]_[SCENARIO]_[AREA].tif": {}
+                    }
+                },
+                "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
+            }
+        }
     }
 }
 # All out rasters besides rarity should be gte to 0. Set nodata accordingly.
@@ -1064,7 +1114,7 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
     """
     validation_warnings = validation.validate(
-        args, ARGS_SPEC['args'], ARGS_SPEC['args_with_spatial_overlap'])
+        args, MODEL_SPEC['args'], MODEL_SPEC['args_with_spatial_overlap'])
 
     invalid_keys = validation.get_invalid_keys(validation_warnings)
 

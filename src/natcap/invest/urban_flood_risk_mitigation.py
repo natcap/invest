@@ -22,7 +22,7 @@ from .spec_utils import u
 
 LOGGER = logging.getLogger(__name__)
 
-ARGS_SPEC = {
+MODEL_SPEC = {
     "model_name": MODEL_METADATA["urban_flood_risk_mitigation"].model_title,
     "pyname": MODEL_METADATA["urban_flood_risk_mitigation"].pyname,
     "userguide": MODEL_METADATA["urban_flood_risk_mitigation"].userguide,
@@ -105,6 +105,79 @@ ARGS_SPEC = {
                 "must have corresponding entries in this table. Required if "
                 "the Built Infrastructure vector is provided."),
             "name": gettext("damage loss table")
+        }
+    },
+    "outputs": {
+        "Runoff_retention.tif": {
+            "about": "raster with runoff retention values. Calculated from equation (119).",
+            "bands": {1: {
+                "type": "number",
+                "units": u.none
+            }}
+        },
+        "Runoff_retention_m3.tif": {
+            "about": "raster with runoff retention values. Calculated from equation (120).",
+            "bands": {1: {
+                "type": "number",
+                "units": u.meter**3
+            }}
+        },
+        "Q_mm.tif": {
+            "about": "raster with runoff values. Calculated from equation (117).",
+            "bands": {1: {
+                "type": "number",
+                "units": u.millimeter
+            }}
+        },
+        "flood_risk_service.shp": {
+            "about": "Shapefile with results in the attribute table",
+            "fields": {
+                "rnf_rt_idx": {
+                    "about": "average of runoff retention values per watershed",
+                    "type": "number",
+                    "units": u.none
+                },
+                "rnf_rt_m3": {
+                    "about": "sum of runoff retention volumes per watershed.",
+                    "type": "number",
+                    "units": u.meter**3
+                },
+                "flood_vol": {
+                    "about": "The flood volume per watershed.",
+                    "type": "number",
+                    "units": u.meter**3
+                },
+                "aff_bld": {
+                    "about": "potential damage to built infrastructure per watershed.",
+                    "created_if": "built_infrastructure_vector_path",
+                    "type": "number",
+                    "units": u.currency
+                },
+                "serv_blt": {
+                    "about": "Built infrastructure service values for this watershed (see equation (123)). An indicator of the runoff retention service for the watershed.",
+                    "created_if": "built_infrastructure_vector_path",
+                    "type": "number",
+                    "units": u.currency*u.meter**3
+                }
+            }
+        },
+        "intermediate_files": {
+            "type": "directory",
+            "contents": {
+                "Q_m3.tif": {},
+                "reprojected_aoi.gpkg": {},
+                "structures_reprojected.gpkg": {}
+            }
+        },
+        "temp_working_dir_not_for_humans": {
+            "type": "directory",
+            "contents": {
+                "aligned_lulc.tif": {},
+                "aligned_soils_hydrological_group.tif": {},
+                "cn_raster.tif": {},
+                "s_max.tif": {},
+                "taskgraph_data.db": {}
+            }
         }
     }
 }
@@ -835,5 +908,5 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
-    return validation.validate(args, ARGS_SPEC['args'],
-                               ARGS_SPEC['args_with_spatial_overlap'])
+    return validation.validate(args, MODEL_SPEC['args'],
+                               MODEL_SPEC['args_with_spatial_overlap'])

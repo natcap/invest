@@ -65,7 +65,7 @@ Then follow the "Process to update translations" instructions above, starting fr
 ## Which messages are translated?
 
 * Model titles
-* `ARGS_SPEC` `name` and `about` text
+* `MODEL_SPEC` `name` and `about` text
 * Validation messages
 * Strings that appear in the UI, such as button labels and tooltip text
 

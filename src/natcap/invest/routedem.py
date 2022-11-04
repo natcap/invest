@@ -20,7 +20,7 @@ LOGGER = logging.getLogger(__name__)
 
 INVALID_BAND_INDEX_MSG = gettext('Must be between 1 and {maximum}')
 
-ARGS_SPEC = {
+MODEL_SPEC = {
     "model_name": MODEL_METADATA["routedem"].model_title,
     "pyname": MODEL_METADATA["routedem"].pyname,
     "userguide": MODEL_METADATA["routedem"].userguide,
@@ -96,6 +96,14 @@ ARGS_SPEC = {
             "about": gettext("Calculate percent slope from the provided DEM."),
             "name": gettext("calculate slope")
         }
+    },
+    "outputs": {
+        "filled.tif": {},
+        "flow_accumulation.tif": {},
+        "flow_direction.tif": {},
+        "slope.tif": {},
+        "stream_mask.tif": {},
+        "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
     }
 }
 
@@ -358,7 +366,7 @@ def validate(args, limit_to=None):
             the error message in the second part of the tuple. This should
             be an empty list if validation succeeds.
     """
-    validation_warnings = validation.validate(args, ARGS_SPEC['args'])
+    validation_warnings = validation.validate(args, MODEL_SPEC['args'])
 
     invalid_keys = validation.get_invalid_keys(validation_warnings)
     sufficient_keys = validation.get_sufficient_keys(args)

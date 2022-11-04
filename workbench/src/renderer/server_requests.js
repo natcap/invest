@@ -28,7 +28,7 @@ export async function getInvestModelNames() {
 }
 
 /**
- * Get the ARGS_SPEC dict from an invest model as a JSON.
+ * Get the MODEL_SPEC dict from an invest model as a JSON.
  *
  * @param {string} payload - model name as given by `invest list`
  * @returns {Promise} resolves object

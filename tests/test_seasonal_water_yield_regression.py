@@ -1065,7 +1065,7 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
 
 
 class SWYValidationTests(unittest.TestCase):
-    """Tests for the SWY Model ARGS_SPEC and validation."""
+    """Tests for the SWY Model MODEL_SPEC and validation."""
 
     def setUp(self):
         """Create a temporary workspace."""

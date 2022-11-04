@@ -32,7 +32,7 @@ const { ipcRenderer } = window.Workbench.electron;
  *
  * Values initialize with either a complete args dict, or with empty/default values.
  *
- * @param {object} argsSpec - an InVEST model's ARGS_SPEC.args
+ * @param {object} argsSpec - an InVEST model's MODEL_SPEC.args
  * @param {object} uiSpec - the model's UI Spec.
  * @param {object} argsDict - key: value pairs of InVEST model arguments, or {}.
  *

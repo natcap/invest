@@ -1355,7 +1355,7 @@ class TestValidationFromSpec(unittest.TestCase):
         self.assertEqual(set(args.keys()), set(validation_warnings[0][0]))
 
     def test_allow_extra_keys(self):
-        """Including extra keys in args that aren't in ARGS_SPEC should work"""
+        """Including extra keys in args that aren't in MODEL_SPEC should work"""
         from natcap.invest import validation
 
         args = {'a': 'a', 'b': 'b'}
@@ -1367,7 +1367,7 @@ class TestValidationFromSpec(unittest.TestCase):
                 'required': True
             }
         }
-        message = 'DEBUG:natcap.invest.validation:Provided key b does not exist in ARGS_SPEC'
+        message = 'DEBUG:natcap.invest.validation:Provided key b does not exist in MODEL_SPEC'
 
         with self.assertLogs('natcap.invest.validation', level='DEBUG') as cm:
             validation.validate(args, spec)

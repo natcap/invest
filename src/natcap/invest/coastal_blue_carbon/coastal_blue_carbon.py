@@ -157,7 +157,7 @@ INTERMEDIATE_DIR_NAME = 'intermediate'
 TASKGRAPH_CACHE_DIR_NAME = 'task_cache'
 OUTPUT_DIR_NAME = 'output'
 
-ARGS_SPEC = {
+MODEL_SPEC = {
     "model_name": MODEL_METADATA["coastal_blue_carbon"].model_title,
     "pyname": MODEL_METADATA["coastal_blue_carbon"].pyname,
     "userguide": MODEL_METADATA["coastal_blue_carbon"].userguide,
@@ -407,6 +407,117 @@ ARGS_SPEC = {
                 "compounded each year after the baseline year. "
                 "Required if Run Valuation is selected."),
         },
+    },
+    "outputs": {
+        "carbon-accumulation-between-[YEAR1]-and-[YEAR2].tif": {
+            "about": "Amount of CO2E accumulated between the two specified years.",
+            "bands": {1: {
+                "type": "number",
+                "units": u.megatonne/u.hectare
+            }}
+        },
+        "carbon-emissions-between-[YEAR1]-and-[YEAR2].tif": {
+            "about": "Amount of CO2E lost to disturbance between the two specified years.",
+            "bands": {1: {
+                "type": "number",
+                "units": u.megatonne/u.hectare
+            }}
+        },
+        "carbon-stock-at-[YEAR].tif": {
+            "about": "Sum of the 3 carbon pools for each LULC for the specified year",
+            "bands": {1: {
+                "type": "number",
+                "units": u.megatonne/u.hectare
+            }}
+        },
+
+        "total-net-carbon-sequestion-between-[YEAR1]-and-[YEAR2].tif": {
+            "about": "Total carbon sequestration between the two specified years, based on accumulation minus emissions during that time period.",
+            "bands": {1: {
+                "type": "number",
+                "units": u.megatonne/u.hectare
+            }}
+        },
+        "total-net-carbon-sequestration.tif": {
+            "about": "Total carbon sequestration over the whole time period between the Baseline and either the latest Snapshot Year or the Analysis Year, based on accumulation minus emissions.",
+            "bands": {1: {
+                "type": "number",
+                "units": u.megatonne/u.hectare
+            }}
+        },
+        "net-present-value.tif": {
+            "about": "Monetary value of carbon sequestration.",
+            "bands": {1: {
+                "type": "number",
+                "units": u.currency/u.hectare
+            }}
+        },
+        "intermediate": {
+            "type": "directory",
+            "contents": {
+                "stocks-[POOL]-[YEAR].tif": {
+                    "about": "The carbon stocks available at the beginning of the year noted in the filename.",
+                    "bands": {1: {
+                        "type": "number",
+                        "units": u.megatonne/u.hectare
+                    }}
+                },
+                "accumulation-[POOL]-[YEAR].tif": {
+                    "about": "The spatial distribution of rates of carbon accumulation in the given pool at the given year. Years will represent the snapshot years in which the accumulation raster takes effect.",
+                    "bands": {1: {
+                        "type": "number",
+                        "units": u.megatonne/u.hectare
+                    }}
+                },
+                "halflife-[POOL]-[YEAR].tif": {
+                    "about": "A raster of the spatial distribution of the half-lives of carbon in the pool mentioned at the given snapshot year.",
+                    "bands": {1: {
+                        "type": "number",
+                        "units": u.year
+                    }}
+                },
+                "disturbance-magnitude-[POOL]-[YEAR].tif": {
+                    "about": "The proportion of carbon disturbed in the given pool in the given snapshot year.",
+                    "bands": {1: {
+                        "type": "ratio"
+                    }}
+                },
+                "disturbance-volume-[POOL]-[YEAR].tif": {
+                    "about": "the volume of the carbon disturbed in the snapshot year. This is a function of the carbon stocks at the year prior and the disturbance magnitude in the given snapshot year.",
+                    "bands": {1: {
+                        "type": "number",
+                        "units": u.megatonne/u.hectare
+                    }}
+                },
+                "year-of-latest-disturbance-[POOL]-[YEAR].tif": {
+                    "about": "each cell indicates the most recent year in which the cell underwent a landcover transition.",
+                    "bands": {1: {
+                        "type": "integer"
+                    }}
+                },
+                "aligned-lulc-[SNAPSHOT TYPE]-[YEAR].tif": {
+                    "about": "The snapshot landcover raster of the given year, aligned to the intersection of the bounding boxes of all snapshot rasters, and with consistent cell sizes. The cell size of the aligned landcover rasters is the minimum of the incoming cell sizes.",
+                    "bands": {1: {
+                        "type": "integer"
+                    }}
+                },
+                "net-sequestration-[POOL]-[YEAR].tif": {
+                    "about": "the net sequestration in the given pool in the given year.",
+                    "bands": {1: {
+                        "type": "number",
+                        "units": u.megatonne/u.hectare
+                    }}
+                },
+                "total-carbon-stocks-[YEAR].tif": {
+                    "about": "the sum of the stocks present across all three carbon pool at the given year.",
+                    "bands": {1: {
+                        "type": "number",
+                        "units": u.megatonne/u.hectare
+                    }}
+                }
+            }
+        },
+        "task_cache": spec_utils.TASKGRAPH_DIR
     }
 }
 
@@ -441,7 +552,7 @@ def execute(args):
             Required if ``args['do_economic_analysis']``.
         args['biophysical_table_path'] (string): The path to the biophysical
             table on disk.  This table has many required columns.  See
-            ``ARGS_SPEC`` for the required columns.
+            ``MODEL_SPEC`` for the required columns.
         args['landcover_transitions_table'] (string): The path to the landcover
             transitions table, indicating the behavior of carbon when the
             landscape undergoes a transition.
@@ -2156,7 +2267,7 @@ def validate(args, limit_to=None):
         message applies to and tuple[1] is the string validation warning.
     """
     validation_warnings = validation.validate(
-        args, ARGS_SPEC['args'])
+        args, MODEL_SPEC['args'])
 
     sufficient_keys = validation.get_sufficient_keys(args)
     invalid_keys = validation.get_invalid_keys(validation_warnings)
