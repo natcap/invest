@@ -254,6 +254,7 @@ MODEL_SPEC = {
             "about": (
                 "A copy of the input Area of Interest vector with "
                 "additional fields."),
+            "geometries": spec_utils.POLYGONS,
             "fields": {
                 "avg_cc": {
                     "about": "Average CC value",

@@ -173,12 +173,14 @@ MODEL_SPEC = {
                     "about": (
                         "Copy of AOI vector reprojected to the same spatial "
                         "reference as the LULC."),
+                    "geometries": spec_utils.POLYGONS,
                     "fields": {}
                 },
                 "structures_reprojected.gpkg": {
                     "about": (
                         "Copy of built infrastructure vector reprojected to "
                         "the same spatial reference as the LULC."),
+                    "geometries": spec_utils.POLYGONS,
                     "fields": {}
                 }
             }

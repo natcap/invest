@@ -33,6 +33,68 @@ from . import gettext
 LOGGER = logging.getLogger(__name__)
 speedups.enable()
 
+INPUT_WIND_DATA_FIELDS = {
+    "long": {
+        "type": "number",
+        "units": u.degree,
+        "about": gettext("Longitude of the data point.")
+    },
+    "lati": {
+        "type": "number",
+        "units": u.degree,
+        "about": gettext("Latitude of the data point.")
+    },
+    "lam": {
+        "type": "number",
+        "units": u.none,
+        "about": gettext(
+            "Weibull scale factor at the reference hub height at "
+            "this point.")
+    },
+    "k": {
+        "type": "number",
+        "units": u.none,
+        "about": gettext("Weibull shape factor at this point.")
+    },
+    "ref": {
+        "type": "number",
+        "units": u.meter,
+        "about": gettext(
+            "The reference hub height at this point, at which "
+            "wind speed data was collected and LAM was estimated.")
+    }
+}
+
+OUTPUT_WIND_DATA_FIELDS = {
+    **INPUT_WIND_DATA_FIELDS,
+    "lam": {
+        "type": "number",
+        "units": u.none,
+        "about": gettext(
+            "Weibull scale factor calculated for the "
+            "proposed hub height at this point.")
+    },
+    "ref_lam": {
+        "type": "number",
+        "units": u.degree,
+        "about": gettext(
+            "Weibull scale factor at the reference hub height at "
+            "this point.")
+    },
+    "Dens_W/m2": {
+        "type": "number",
+        "units": u.watt/u.meter**2,
+        "about": gettext("Power density at this point.")
+    },
+    "Harv_MWhr": {
+        "type": "number",
+        "units": u.megawatt_hour/u.year,
+        "about": gettext(
+            "Predicted energy harvested from a wind "
+            "farm centered on this point.")
+    }
+}
+
 MODEL_SPEC = {
     "model_name": MODEL_METADATA["wind_energy"].model_title,
     "pyname": MODEL_METADATA["wind_energy"].pyname,
@@ -48,37 +110,7 @@ MODEL_SPEC = {
         "n_workers": spec_utils.N_WORKERS,
         "wind_data_path": {
             "type": "csv",
-            "columns": {
-                "long": {
-                    "type": "number",
-                    "units": u.degree,
-                    "about": gettext("Longitude of the data point.")
-                },
-                "lati": {
-                    "type": "number",
-                    "units": u.degree,
-                    "about": gettext("Latitude of the data point.")
-                },
-                "lam": {
-                    "type": "number",
-                    "units": u.none,
-                    "about": gettext(
-                        "Weibull scale factor at the reference hub height at "
-                        "this point.")
-                },
-                "k": {
-                    "type": "number",
-                    "units": u.none,
-                    "about": gettext("Weibull shape factor at this point.")
-                },
-                "ref": {
-                    "type": "number",
-                    "units": u.meter,
-                    "about": gettext(
-                        "The reference hub height at this point, at which "
-                        "wind speed data was collected and LAM was estimated.")
-                }
-            },
+            "columns": INPUT_WIND_DATA_FIELDS,
             "about": gettext("Table of Weibull parameters for each wind data point."),
             "name": gettext("wind data points")
         },
@@ -399,39 +431,48 @@ MODEL_SPEC = {
             "type": "directory",
             "contents": {
                 "carbon_emissions_tons.tif": {
-                    "about": "a GeoTIFF raster file that represents offset carbon emissions for a farm built centered on a pixel",
+                    "about": gettext(
+                        "Map of offset carbon emissions for a farm centered "
+                        "on each pixel"),
                     "bands": {1: {
                         "type": "number",
                         "units": u.metric_ton/u.year
                     }}
                 },
                 "density_W_per_m2.tif": {
-                    "about": "a GeoTIFF raster file that represents power density centered on a pixel.",
+                    "about": gettext("Map of power density."),
                     "bands": {1: {
                         "type": "number",
                         "units": u.watt/u.meter**2
                     }}
                 },
                 "harvested_energy_MWhr_per_yr.tif": {
-                    "about": "a GeoTIFF raster file that represents the annual harvested energy from a farm centered on that pixel.",
+                    "about": gettext(
+                        "Map of energy harvested from a farm centered on each pixel."),
                     "bands": {1: {
                         "type": "number",
                         "units": u.megawatt_hour/u.year
                     }}
                 },
                 "levelized_cost_price_per_kWh.tif": {
-                    "about": "a GeoTIFF raster file that represents the unit price of energy that would be required to set the present value of the farm centered at that pixel equal to zero.",
+                    "about": gettext(
+                        "Map of the energy price that would be required to "
+                        "set the present value of a farm centered on each "
+                        "pixel equal to zero."),
                     "bands": {1: {
                         "type": "number",
                         "units": u.currency/u.kilowatt_hour
                     }}
                 },
                 "npv.tif": {
-                    "about": "a GeoTIFF raster file that represents the net present value of a farm centered on that pixel."
+                    "about": gettext(
+                        "Map of the net present value of a farm centered on each pixel."),
+                    "bands": {1: {"type": "number", "units": u.currency}}
                 },
                 "wind_energy_points.shp": {
-                    "about": "an ESRI Shapefile that summarizes the above outputs for each point.",
+                    "about": gettext("Map of summarized data at each point."),
                     "geometries": spec_utils.POINT,
+                    "fields": OUTPUT_WIND_DATA_FIELDS
                 }
             }
         },

@@ -27,6 +27,24 @@ from . import gettext
 
 LOGGER = logging.getLogger(__name__)
 
+
+PERCENTILE_TABLE_FIELDS = {
+    "Percentile Group": {
+        "type": "integer",
+        "about": gettext("Index of this percentile bin.")
+    },
+    "Percentile Range": {
+        "type": "freestyle_string",
+        "about": gettext("Percentile range within this bin.")
+    },
+    "Pixel Count": {
+        "type": "integer",
+        "about": gettext(
+            "Number of pixels whose wave energy values "
+            "fall into this percentile bin.")
+    }
+}
+
 MODEL_SPEC = {
     "model_name": MODEL_METADATA["wave_energy"].model_title,
     "pyname": MODEL_METADATA["wave_energy"].pyname,
@@ -328,20 +346,32 @@ MODEL_SPEC = {
             "type": "directory",
             "contents": {
                 "capwe_mwh.tif": {
-                    "about": "depicts captured wave energy in MWh/yr per WEC device for the user-specified extent.",
+                    "about": gettext(
+                        "Map of captured wave energy per WEC device."),
                     "bands": {1: {
                         "type": "number",
                         "units": u.megawatt_hour/u.year
                     }}
                 },
                 "capwe_rc.tif": {
-                    "about": "depicts captured wave energy per WEC device for the user-specified extent, reclassified by quantiles (1 = < 25%, 2 = 25-50%, 3 = 50-75%, 4 = 75-90%, 5 = > 90%).",
-                    "bands": {1: {
-                        "type": "integer"
-                    }}
+                    "about": gettext(
+                        "Map of captured wave energy per WEC device "
+                        "reclassified by quantiles (1 = < 25%, 2 = 25-50%, "
+                        "3 = 50-75%, 4 = 75-90%, 5 = > 90%)."),
+                    "bands": {1: {"type": "integer"}}
                 },
                 "capwe_rc.csv": {
-                    "about": "a csv file that shows the value ranges for each captured wave energy quantile group as well as the number of pixels for each group."
+                    "about": "Table of value ranges for each captured wave energy quantile group as well as the number of pixels for each group."
+                    "columns": {
+                        **PERCENTILE_TABLE_FIELDS,
+                        "Value Range (megawatt hours per year, MWh/yr)": {
+                            "type": "number",
+                            "units": u.megawatt_hour/u.year,
+                            "about": gettext(
+                                "Range of wave energy values within this "
+                                "percentile bin.")
+                        }
+                    }
                 },
                 "GridPt_prj.shp": {
                     "created_if": "valuation_container",
@@ -352,53 +382,84 @@ MODEL_SPEC = {
                     "about": "contains information on underwater cable landing location"
                 },
                 "npv_rc.tif": {
-                    "about": "depicts positive values of net present value over the 25 year life-span of a WEC facility for the user-specified extent, reclassified by quantiles (1 = < 25%, 2 = 25-50%, 3 = 50-75%, 4 = 75-90%, 5 = > 90%).",
-                    "bands": {1: {
-                        "type": "integer"
-                    }}
+                    "about": gettext(
+                        "Map of positive values of net present value over the "
+                        "25-year lifespan of a wave energy facility, "
+                        "reclassified by quantiles (1 = < 25%, 2 = 25-50%, "
+                        "3 = 50-75%, 4 = 75-90%, 5 = > 90%)."),
+                    "bands": {1: {"type": "integer"}}
                 },
                 "npv_rc.csv": {
-                    "about": "a csv file that shows the value ranges for each net present value quantile group as well as the number of pixels for each group."
+                    "about": gettext(
+                        "Table of value ranges for each net present value "
+                        "quantile group as well as the number of pixels for "
+                        "each group."),
+                    "columns": {
+                        **PERCENTILE_TABLE_FIELDS,
+                        "Value Range (thousands of currency units, currency)": {
+                            "type": "number",
+                            "units": u.currency,
+                            "about": gettext(
+                                "Range of net present values within this "
+                                "percentile bin.")
+                        }
+                    }
                 },
                 "npv_usd.tif": {
-                    "about": "depicts net present value in thousands of units of currency over the 25 year life-span of a WEC facility for the user-specified extent.",
+                    "about": gettext(
+                        "Map of net present value over the 25-year lifespan "
+                        "of a wave energy facility."),
                     "bands": {1: {
                         "type": "number",
                         "units": u.kilocurrency
                     }}
                 },
                 "wp_kw.tif": {
-                    "about": "This raster layer depicts potential wave power in kW/m for the user-specified extent.",
+                    "about": gettext("Map of potential wave power."),
                     "bands": {1: {
                         "type": "number",
                         "units": u.kilowatt/u.meter
                     }}
                 },
                 "wp_rc.tif": {
-                    "about": "This raster layer depicts potential wave power reclassified by quantiles (1 = < 25%, 2 = 25-50%, 3 = 50-75%, 4 = 75-90%, 5 = > 90%).",
-                    "bands": {1: {
-                        "type": "integer"
-                    }}
+                    "about": gettext(
+                        "Map of potential wave power classified into "
+                        "quantiles (1 = < 25%, 2 = 25-50%, 3 = 50-75%, "
+                        "4 = 75-90%, 5 = > 90%)."),
+                    "bands": {1: {"type": "integer"}}
                 },
                 "wp_rc.csv": {
-                    "about": "a csv file that shows the value ranges for each wave power quantile group as well as the number of pixels for each group."
+                    "about": gettext(
+                        "Table of value ranges for each wave power quantile "
+                        "group as well as the number of pixels for each group."),
+                    "columns": {
+                        **PERCENTILE_TABLE_FIELDS,
+                        "Value Range (wave power per unit width of wave crest length, kW/m)": {
+                            "type": "number",
+                            "units": u.kilowatt/u.meter,
+                            "about": gettext(
+                                "Range of potential wave power values within this "
+                                "percentile bin.")
+                        }
+                    }
                 }
             }
         },
         "intermediate": {
             "type": "directory",
             "contents": {
-                "aoi_clipped_to_extract_path.shp": {},
-                "Captured_WEM_InputOutput_Pts.shp": {},
-                "Final_WEM_InputOutput_Pts.shp": {},
-                "Indexed_WEM_InputOutput_Pts.shp": {},
-                "interpolated_capwe_mwh.tif": {},
-                "interpolated_wp_kw.tif": {},
-                "npv_not_clipped.tif": {},
-                "unclipped_capwe_mwh.tif": {},
-                "unclipped_wp_kw.tif": {},
+                "aoi_clipped_to_extract_path.shp": {"docs": False},
+                "Captured_WEM_InputOutput_Pts.shp": {"docs": False},
+                "Final_WEM_InputOutput_Pts.shp": {"docs": False},
+                "Indexed_WEM_InputOutput_Pts.shp": {"docs": False},
+                "interpolated_capwe_mwh.tif": {"docs": False},
+                "interpolated_wp_kw.tif": {"docs": False},
+                "npv_not_clipped.tif": {"docs": False},
+                "unclipped_capwe_mwh.tif": {"docs": False},
+                "unclipped_wp_kw.tif": {"docs": False},
                 "WEM_InputOutput_Pts.shp": {
-                    "about": "These point layers from the selected wave data grid are based on inputs #2-4.",
+                    "about": "Map of wave data points.",
+                    "geometries": spec_utils.POINT,
                     "fields": {
                         "I": {
                             "type": "number",
