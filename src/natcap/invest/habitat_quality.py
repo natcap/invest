@@ -39,6 +39,7 @@ ARGS_SPEC = {
         "spatial_keys": [
             "lulc_cur_path", "lulc_fut_path", "lulc_bas_path",
             "access_vector_path"],
+        "different_projections_ok": True,
     },
     "args": {
         "workspace_dir": spec_utils.WORKSPACE,
