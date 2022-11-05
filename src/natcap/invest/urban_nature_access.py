@@ -110,6 +110,7 @@ ARGS_SPEC = {
                 "pop_[POP_GROUP]": {
                     "type": "ratio",
                     "required": False,
+                    "expression": "value >= 0 and value <= 1",
                     "about": gettext(
                         "The proportion of the population within this region "
                         "belonging to the identified population group "
@@ -177,15 +178,25 @@ ARGS_SPEC = {
             'name': 'population group radii table',
             'type': 'csv',
             'columns': {
-                "pop_[POP_GROUP]": {
+                "pop_group": {
                     "type": "ratio",
                     "required": False,
                     "about": gettext(
                         "The proportion of the population within this region "
-                        "belonging to the identified population group "
-                        "(POP_GROUP)."
+                        "belonging to the identified population group. "
+                        "Values in this column must match those population "
+                        "groups in the administrative vector."
                     ),
-                }
+                },
+                'search_radius_m': {
+                    'type': 'number',
+                    'units': u.meter,
+                    'expression': 'value >= 0',
+                    'about': gettext(
+                        "The distance in meters to use as the search radius "
+                        "for this population group.  Values must be >= 0."
+                    ),
+                },
             },
             'about': gettext('TBD'),
         }
@@ -355,6 +366,16 @@ def execute(args):
     kernel_tasks = {}  # search_radius, kernel task
     search_radii = attr_table[
         attr_table['greenspace'] == 1]['search_radius_m'].unique()
+
+    pop_group_table = None
+    if ('population_group_radii_table' in args and
+        args['population_group_radii_table'] not in ('', None)):
+        pop_group_table = utils.read_csv_to_dataframe(
+            args['population_group_radii_table'])
+        pop_group_radii = set(pop_group_table['search_radius_m'].unique())
+        search_radii = sorted(set(search_radii).union(pop_group_radii))
+        LOGGER.info("Population groups have defined search radii.")
+
     for search_radius_m in search_radii:
         search_radius_in_pixels = abs(
             search_radius_m / squared_lulc_pixel_size[0])
@@ -592,11 +613,17 @@ def execute(args):
         filter(lambda x: re.match(POP_FIELD_REGEX, x),
                validation.load_fields_from_vector(
                    file_registry['reprojected_aois'])))
+
     if split_population_fields:
         LOGGER.info(
             "Split population groups found: "
             f"{', '.join(split_population_fields)}, starting split "
             "population optional module.")
+
+        if pop_group_table:
+            LOGGER.info(
+                "Radii have been defined per population group, starting split "
+                "population and radii module.")
 
         if _geometries_overlap(file_registry['reprojected_aois']):
             LOGGER.warning(
@@ -1568,5 +1595,6 @@ def density_decay_kernel_raster(expected_distance, kernel_filepath,
 
 
 def validate(args, limit_to=None):
+    # TODO: validate that split population groups match everywhere defined.
     return validation.validate(
         args, ARGS_SPEC['args'], ARGS_SPEC['args_with_spatial_overlap'])
