@@ -361,7 +361,10 @@ MODEL_SPEC = {
                     "bands": {1: {"type": "integer"}}
                 },
                 "capwe_rc.csv": {
-                    "about": "Table of value ranges for each captured wave energy quantile group as well as the number of pixels for each group."
+                    "about": gettext(
+                        "Table of value ranges for each captured wave energy "
+                        "quantile group as well as the number of pixels for "
+                        "each group."),
                     "columns": {
                         **PERCENTILE_TABLE_FIELDS,
                         "Value Range (megawatt hours per year, MWh/yr)": {
@@ -379,7 +382,7 @@ MODEL_SPEC = {
                 },
                 "LandPts_prj.shp": {
                     "created_if": "valuation_container",
-                    "about": "contains information on underwater cable landing location"
+                    "about": "contains information on underwater cable landing location",
                 },
                 "npv_rc.tif": {
                     "about": gettext(

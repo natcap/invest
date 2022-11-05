@@ -156,7 +156,8 @@ MODEL_SPEC = {
             "about": gettext(
                 "Map of the adjusted retention ratio, calculated according to "
                 "equation (124) from the ‘retention_ratio, ratio_average, "
-                "near_road’, and ‘near_impervious_lulc’ intermediate outputs.")
+                "near_road’, and ‘near_impervious_lulc’ intermediate outputs."),
+            "bands": {1: {"type": "ratio"}}
         },
         "retention_volume.tif": {
             "about": gettext("Map of retention volume."),
@@ -207,6 +208,7 @@ MODEL_SPEC = {
                 "Map of aggregate data. This is identical to the aggregate "
                 "areas input vector, but each polygon is given additional "
                 "fields with the aggregate data."),
+            "geometries": spec_utils.POLYGONS,
             "fields": {
                 "mean_retention_ratio": {
                     "type": "ratio",
@@ -321,7 +323,7 @@ MODEL_SPEC = {
                         "A raster derived from the is_connected_lulc map, where "
                         "each pixel’s value is its minimum distance to a "
                         "connected impervious LULC pixel "
-                        "(measured centerpoint-to-centerpoint).")
+                        "(measured centerpoint-to-centerpoint)."),
                     "bands": {1: {
                         "type": "number",
                         "units": u.pixel

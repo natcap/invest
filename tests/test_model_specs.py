@@ -20,7 +20,7 @@ valid_nested_types = {
         'ratio',
         'vector',
     },
-    'raster': {'integer', 'number', 'ratio'},
+    'raster': {'integer', 'number', 'ratio', 'percent'},
     'vector': {
         'integer',
         'freestyle_string',
@@ -97,6 +97,9 @@ class ValidateModelSpecs(unittest.TestCase):
             # if parent_type is None:  # all top-level args must have these attrs
             #     for attr in ['about']:
             #         self.assertIn(attr, spec)
+            if 'docs' in spec and spec['docs'] == False:
+                print(f'output {key} is undocumented!')
+                return
 
             attrs = set(spec.keys())
 
