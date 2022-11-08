@@ -1006,10 +1006,17 @@ class HRAModelTests(unittest.TestCase):
             'n_overlapping_stressors': 2,
             'visualize_outputs': False,
         }
-        aoi_geoms = [shapely.geometry.box(
-            *shapely.geometry.Point(ORIGIN).buffer(1000).bounds)]
+        aoi_geoms = [
+            shapely.geometry.box(  # This geometry covers all areas
+                *shapely.geometry.Point(ORIGIN).buffer(100).bounds),
+            shapely.geometry.box(  # Geometry covers only 1 stressor
+                *shapely.geometry.Point(
+                    (ORIGIN[0], ORIGIN[1]-200)).buffer(100).bounds)
+        ]
         pygeoprocessing.shapely_geometry_to_vector(
-            aoi_geoms, args['aoi_vector_path'], SRS_WKT, 'ESRI Shapefile')
+            aoi_geoms, args['aoi_vector_path'], SRS_WKT, 'ESRI Shapefile',
+            fields={'name': ogr.OFTString}, attribute_list=[
+                {'name': 'wholearea'}, {'name': 'noarea'}])
 
         with open(args['criteria_table_path'], 'w') as criteria_table:
             criteria_table.write(textwrap.dedent(
@@ -1168,7 +1175,6 @@ class HRAModelTests(unittest.TestCase):
                     source_raster),
                 pygeoprocessing.geoprocessing.raster_to_numpy_array(
                     rasterized_path))
-
 
     def test_model_habitat_mismatch(self):
         """HRA: check errors when habitats are mismatched."""

@@ -17,156 +17,137 @@ msgstr ""
 "Language: zh\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-msgid "Bounding box does not intersect at least one other:"
-msgstr "Bounding box does not intersect at least one other:"
-
-msgid "Browse"
-msgstr "Browse"
-
-msgid "Browse to a datastack (.json) or InVEST logfile (.txt)"
-msgstr "Browse to a datastack (.json) or InVEST logfile (.txt)"
-
 msgid "Cancel"
-msgstr "Cancel"
-
-msgid "Cancel Run"
-msgstr "Cancel Run"
-
-msgid "Clear"
-msgstr "Clear"
-
-msgid "Clear Recent Jobs Shortcuts"
-msgstr "Clear Recent Jobs Shortcuts"
-
-msgid "csv"
-msgstr "csv"
-
-msgid ""
-"`Datastack/Logfile for ${datastack.model_human_name} does not match this "
-"model.`"
 msgstr ""
-"`Datastack/Logfile for ${datastack.model_human_name} does not match this "
-"model.`"
-
-msgid "DEBUG"
-msgstr "DEBUG"
-
-msgid "directory"
-msgstr "directory"
-
-msgid "Download"
-msgstr "Download"
 
 msgid "Download Complete"
-msgstr "Download Complete"
+msgstr ""
+
+msgid "Download Failed"
+msgstr ""
 
 msgid "Download InVEST sample data"
-msgstr "Download InVEST sample data"
+msgstr ""
 
-msgid "Download Sample Data"
-msgstr "Download Sample Data"
+msgid "Download"
+msgstr ""
 
-msgid "`Downloading ${nComplete + 1} of ${nTotal}`"
-msgstr "`Downloading ${nComplete + 1} of ${nTotal}`"
-
-msgid "ERROR"
-msgstr "ERROR"
-
-msgid "file"
-msgstr "file"
+msgid "Export all input data to a compressed archive"
+msgstr ""
 
 msgid "Frequently Asked Questions"
-msgstr "Frequently Asked Questions"
-
-msgid "INFO"
-msgstr "INFO"
-
-msgid "integer"
-msgstr "integer"
+msgstr ""
 
 msgid "InVEST"
-msgstr "InVEST"
-
-msgid "InVEST Settings"
-msgstr "InVEST Settings"
-
-msgid "Language"
-msgstr "Language"
-
-msgid "Load parameters from file"
-msgstr "Load parameters from file"
-
-msgid "Log"
-msgstr "Log"
-
-msgid "Logging threshold"
-msgstr "Logging threshold"
-
-msgid "Model Complete"
-msgstr "Model Complete"
-
-msgid "No args to see here"
-msgstr "No args to see here"
-
-msgid "(no InVEST workspaces will be deleted)"
-msgstr "(no InVEST workspaces will be deleted)"
-
-msgid "number"
-msgstr "number"
-
-msgid "Only drop one file at a time."
-msgstr "Only drop one file at a time."
+msgstr ""
 
 msgid "Open"
-msgstr "Open"
+msgstr ""
 
-msgid "Open Workspace"
-msgstr "Open Workspace"
+msgid "Save datastack"
+msgstr ""
 
-msgid "percent: a number from 0 - 100"
-msgstr "percent: a number from 0 - 100"
+msgid "Save model setup to a JSON file"
+msgstr ""
 
-msgid "raster"
-msgstr "raster"
+msgid "Save model setup to a Python script"
+msgstr ""
 
-msgid "ratio: a decimal from 0 - 1"
-msgstr "ratio: a decimal from 0 - 1"
-
-msgid "Recent runs:"
-msgstr "Recent runs:"
-
-msgid "Reset"
-msgstr "Reset"
-
-msgid "Reset to Defaults"
-msgstr "Reset to Defaults"
-
-msgid "Run"
-msgstr "Run"
-
-msgid "Running"
-msgstr "Running"
-
-msgid "Save Changes"
-msgstr "Save Changes"
+msgid "Save to JSON"
+msgstr ""
 
 msgid "Save to Python script"
-msgstr "Save to Python script"
-
-msgid "Setup"
-msgstr "Setup"
-
-msgid "Taskgraph n_workers parameter"
-msgstr "Taskgraph n_workers parameter"
-
-msgid "text"
-msgstr "text"
+msgstr ""
 
 msgid "User's Guide"
-msgstr "User's Guide"
+msgstr ""
 
-msgid "vector"
-msgstr "vector"
+msgid "User's guide entry"
+msgstr ""
 
-msgid "WARNING"
-msgstr "WARNING"
+msgid "Bounding box does not intersect at least one other:"
+msgstr ""
+
+msgid "Browse to a datastack (.json) or InVEST logfile (.txt)"
+msgstr ""
+
+msgid "Browse to a datastack (.json, .tgz) or InVEST logfile (.txt)"
+msgstr ""
+
+msgid "Cancel Run"
+msgstr ""
+
+msgid "Clear Recent Jobs"
+msgstr ""
+
+msgid "Download Sample Data"
+msgstr ""
+
+msgid "Error: see log for details"
+msgstr ""
+
+msgid "InVEST Settings"
+msgstr ""
+
+msgid "Language"
+msgstr ""
+
+msgid "Load parameters from file"
+msgstr ""
+
+msgid "Log"
+msgstr ""
+
+msgid "Logging threshold"
+msgstr ""
+
+msgid "Model Complete"
+msgstr ""
+
+msgid "No args to see here"
+msgstr ""
+
+msgid "Only drop one file at a time."
+msgstr ""
+
+msgid "Open Workspace"
+msgstr ""
+
+msgid "Recent runs:"
+msgstr ""
+
+msgid "Reset to Defaults"
+msgstr ""
+
+msgid "Run Canceled"
+msgstr ""
+
+msgid "Run"
+msgstr ""
+
+msgid "Running"
+msgstr ""
+
+msgid "Setup"
+msgstr ""
+
+msgid "Taskgraph logging threshold"
+msgstr ""
+
+msgid "Taskgraph n_workers parameter"
+msgstr ""
+
+msgid "no invest workspaces will be deleted"
+msgstr ""
+
+msgid "percent: a number from 0 - 100"
+msgstr ""
+
+msgid "ratio: a decimal from 0 - 1"
+msgstr ""
+
+msgid "synchronous task execution is most reliable"
+msgstr ""
+
+msgid "text"
+msgstr ""

@@ -4,17 +4,18 @@ import math
 import os
 
 import numpy
-from osgeo import gdal, ogr, osr
 import pygeoprocessing
 import taskgraph
+from osgeo import gdal
+from osgeo import ogr
+from osgeo import osr
 
+from . import gettext
 from . import spec_utils
-from .spec_utils import u
 from . import utils
 from . import validation
 from .model_metadata import MODEL_METADATA
-from . import gettext
-
+from .spec_utils import u
 
 LOGGER = logging.getLogger(__name__)
 
@@ -60,15 +61,20 @@ ARGS_SPEC = {
                 **{
                     f"rc_{soil_group}": {
                         "type": "ratio",
-                        "about": gettext("Stormwater runoff coefficient for soil "
-                                  f"group {soil_group.upper()}")
+                        "about": (
+                            gettext(
+                                "Stormwater runoff coefficient for soil group")
+                            + f" {soil_group.upper()}"),
                     } for soil_group in ["a", "b", "c", "d"]
                 },
                 **{
                     f"pe_{soil_group}": {
                         "type": "ratio",
-                        "about": gettext("Stormwater percolation coefficient for "
-                                  f"soil group {soil_group.upper()}"),
+                        "about": (
+                            gettext(
+                                "Stormwater percolation coefficient "
+                                "for soil group") +
+                            f" {soil_group.upper()}"),
                         "required": False
                     } for soil_group in ["a", "b", "c", "d"]
                 },

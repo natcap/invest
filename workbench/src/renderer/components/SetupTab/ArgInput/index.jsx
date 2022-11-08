@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
 
 import Form from 'react-bootstrap/Form';
@@ -125,174 +125,188 @@ function dragLeavingHandler(event) {
   event.currentTarget.classList.remove('input-dragging');
 }
 
-export default class ArgInput extends React.PureComponent {
-  render() {
-    const {
-      argkey,
-      argSpec,
-      userguide,
-      enabled,
-      handleBoolChange,
-      handleChange,
-      handleFocus,
-      inputDropHandler,
-      isValid,
-      selectFile,
-      touched,
-      dropdownOptions,
-      value,
-    } = this.props;
-    let { validationMessage } = this.props;
-    // Messages with this pattern include validation feedback about
-    // multiple inputs, but the whole message is repeated for each input.
-    // It's more readable if filtered on the individual input.
-    const pattern = 'Bounding boxes do not intersect';
-    if (validationMessage.startsWith(pattern)) {
-      validationMessage = filterSpatialOverlapFeedback(
-        validationMessage, value
-      );
+export default function ArgInput(props) {
+  const inputRef = useRef();
+
+  const {
+    argkey,
+    argSpec,
+    userguide,
+    enabled,
+    handleBoolChange,
+    handleChange,
+    handleFocus,
+    inputDropHandler,
+    isValid,
+    selectFile,
+    touched,
+    dropdownOptions,
+    value,
+    scrollEventCount,
+  } = props;
+  let { validationMessage } = props;
+
+  // Occasionaly we want to force a scroll to the end of input fields
+  // so that the most important part of a filepath is visible.
+  // scrollEventCount changes on drop events and on use of the browse button.
+  // Also depend on [value] so we don't scroll before the value updated.
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.scrollLeft = inputRef.current.scrollWidth;
     }
+  }, [scrollEventCount, value]);
 
-    const className = enabled ? null : 'arg-disable';
-
-    let feedback = <React.Fragment />;
-    if (validationMessage && touched && argSpec.type !== 'boolean') {
-      feedback = (
-        <Feedback
-          argkey={argkey}
-          argtype={argSpec.type}
-          message={validationMessage}
-        />
-      );
-    }
-
-    let fileSelector = <React.Fragment />;
-    if (['csv', 'vector', 'raster', 'directory', 'file'].includes(argSpec.type)) {
-      fileSelector = (
-        <Button
-          aria-label={`browse for ${argSpec.name}`}
-          className="ml-2"
-          id={argkey}
-          variant="outline-dark"
-          value={argSpec.type} // dialog will limit options accordingly
-          name={argkey}
-          onClick={selectFile}
-          disabled={!enabled}
-        >
-          <MdFolderOpen />
-        </Button>
-      );
-    }
-
-    // These types benefit from more descriptive placeholder text.
-    let placeholderText;
-    switch (argSpec.type) {
-      case 'freestyle_string':
-        placeholderText = _('text');
-        break;
-      case 'percent':
-        placeholderText = _('percent: a number from 0 - 100');
-        break;
-      case 'ratio':
-        placeholderText = _('ratio: a decimal from 0 - 1');
-        break;
-      default:
-        placeholderText = _(argSpec.type);
-    }
-
-    let form;
-    if (argSpec.type === 'boolean') {
-      form = (
-        <React.Fragment>
-          <Form.Check
-            id={argkey}
-            inline
-            type="radio"
-            label="Yes"
-            value="true"
-            checked={!!value} // double bang casts undefined to false
-            onChange={handleBoolChange}
-            name={argkey}
-            disabled={!enabled}
-          />
-          <Form.Check
-            id={argkey}
-            inline
-            type="radio"
-            label="No"
-            value="false"
-            checked={!value} // undefined becomes true, that's okay
-            onChange={handleBoolChange}
-            name={argkey}
-            disabled={!enabled}
-          />
-        </React.Fragment>
-      );
-    } else if (argSpec.type === 'option_string') {
-      form = (
-        <Form.Control
-          id={argkey}
-          as="select"
-          name={argkey}
-          value={value}
-          onChange={handleChange}
-          onFocus={handleChange}
-          disabled={!enabled}
-        >
-          {dropdownOptions.map(
-            (opt) => <option value={opt} key={opt}>{opt}</option>
-          )}
-        </Form.Control>
-      );
-    } else {
-      form = (
-        <React.Fragment>
-          <Form.Control
-            id={argkey}
-            name={argkey}
-            type="text"
-            placeholder={placeholderText}
-            value={value || ''} // empty string is handled better than `undefined`
-            onChange={handleChange}
-            onFocus={handleFocus}
-            isValid={enabled && touched && isValid}
-            isInvalid={enabled && validationMessage}
-            disabled={!enabled}
-            onDrop={inputDropHandler}
-            onDragOver={dragOverHandler}
-            onDragEnter={dragEnterHandler}
-            onDragLeave={dragLeavingHandler}
-          />
-          {fileSelector}
-        </React.Fragment>
-      );
-    }
-
-    return (
-      <Form.Group
-        as={Row}
-        key={argkey}
-        data-testid={`group-${argkey}`}
-        className={className} // this grays out the label but doesn't actually disable the field
-      >
-        <FormLabel
-          argkey={argkey}
-          argname={argSpec.name}
-          required={argSpec.required}
-          units={argSpec.units} // undefined for all types except number
-        />
-        <Col>
-          <InputGroup>
-            <div className="d-flex flex-nowrap w-100">
-              <AboutModal arg={argSpec} userguide={userguide} argkey={argkey} />
-              {form}
-            </div>
-            {feedback}
-          </InputGroup>
-        </Col>
-      </Form.Group>
+  // Messages with this pattern include validation feedback about
+  // multiple inputs, but the whole message is repeated for each input.
+  // It's more readable if filtered on the individual input.
+  const pattern = 'Bounding boxes do not intersect';
+  if (validationMessage.startsWith(pattern)) {
+    validationMessage = filterSpatialOverlapFeedback(
+      validationMessage, value
     );
   }
+
+  const className = enabled ? null : 'arg-disable';
+
+  let feedback = <React.Fragment />;
+  if (validationMessage && touched && argSpec.type !== 'boolean') {
+    feedback = (
+      <Feedback
+        argkey={argkey}
+        argtype={argSpec.type}
+        message={validationMessage}
+      />
+    );
+  }
+
+  let fileSelector = <React.Fragment />;
+  if (['csv', 'vector', 'raster', 'directory', 'file'].includes(argSpec.type)) {
+    fileSelector = (
+      <Button
+        aria-label={`browse for ${argSpec.name}`}
+        className="ml-2"
+        id={argkey}
+        variant="outline-dark"
+        value={argSpec.type} // dialog will limit options accordingly
+        name={argkey}
+        onClick={selectFile}
+        disabled={!enabled}
+      >
+        <MdFolderOpen />
+      </Button>
+    );
+  }
+
+  // These types benefit from more descriptive placeholder text.
+  let placeholderText;
+  switch (argSpec.type) {
+    case 'freestyle_string':
+      placeholderText = _('text');
+      break;
+    case 'percent':
+      placeholderText = _('percent: a number from 0 - 100');
+      break;
+    case 'ratio':
+      placeholderText = _('ratio: a decimal from 0 - 1');
+      break;
+    default:
+      placeholderText = _(argSpec.type);
+  }
+
+  let form;
+  if (argSpec.type === 'boolean') {
+    form = (
+      <React.Fragment>
+        <Form.Check
+          id={argkey}
+          inline
+          type="radio"
+          label="Yes"
+          value="true"
+          checked={!!value} // double bang casts undefined to false
+          onChange={handleBoolChange}
+          name={argkey}
+          disabled={!enabled}
+        />
+        <Form.Check
+          id={argkey}
+          inline
+          type="radio"
+          label="No"
+          value="false"
+          checked={!value} // undefined becomes true, that's okay
+          onChange={handleBoolChange}
+          name={argkey}
+          disabled={!enabled}
+        />
+      </React.Fragment>
+    );
+  } else if (argSpec.type === 'option_string') {
+    form = (
+      <Form.Control
+        id={argkey}
+        as="select"
+        name={argkey}
+        value={value}
+        onChange={handleChange}
+        onFocus={handleChange}
+        disabled={!enabled}
+      >
+        {dropdownOptions.map(
+          (opt) => <option value={opt} key={opt}>{opt}</option>
+        )}
+      </Form.Control>
+    );
+  } else {
+    form = (
+      <React.Fragment>
+        <Form.Control
+          ref={inputRef}
+          id={argkey}
+          name={argkey}
+          type="text"
+          placeholder={placeholderText}
+          value={value || ''} // empty string is handled better than `undefined`
+          onChange={handleChange}
+          onFocus={handleFocus}
+          onBlur={(e) => e.target.scrollLeft = e.target.scrollWidth}
+          isValid={enabled && touched && isValid}
+          isInvalid={enabled && validationMessage}
+          disabled={!enabled}
+          onDrop={inputDropHandler}
+          onDragOver={dragOverHandler}
+          onDragEnter={dragEnterHandler}
+          onDragLeave={dragLeavingHandler}
+        />
+        {fileSelector}
+      </React.Fragment>
+    );
+  }
+
+  return (
+    <Form.Group
+      as={Row}
+      key={argkey}
+      data-testid={`group-${argkey}`}
+      className={className} // this grays out the label but doesn't actually disable the field
+    >
+      <FormLabel
+        argkey={argkey}
+        argname={argSpec.name}
+        required={argSpec.required}
+        units={argSpec.units} // undefined for all types except number
+      />
+      <Col>
+        <InputGroup>
+          <div className="d-flex flex-nowrap w-100">
+            <AboutModal arg={argSpec} userguide={userguide} argkey={argkey} />
+            {form}
+          </div>
+          {feedback}
+        </InputGroup>
+      </Col>
+    </Form.Group>
+  );
 }
 
 ArgInput.propTypes = {
@@ -315,6 +329,7 @@ ArgInput.propTypes = {
   enabled: PropTypes.bool.isRequired,
   dropdownOptions: PropTypes.arrayOf(PropTypes.string),
   inputDropHandler: PropTypes.func.isRequired,
+  scrollEventCount: PropTypes.number,
 };
 ArgInput.defaultProps = {
   value: undefined,
@@ -322,6 +337,7 @@ ArgInput.defaultProps = {
   isValid: undefined,
   validationMessage: '',
   dropdownOptions: undefined,
+  scrollEventCount: 0,
 };
 
 /**

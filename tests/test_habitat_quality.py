@@ -181,67 +181,6 @@ class HabitatQualityTests(unittest.TestCase):
         """Override tearDown function to remove temporary directory."""
         shutil.rmtree(self.workspace_dir)
 
-    def test_habitat_quality_regression(self):
-        """Habitat Quality: base regression test with simplified data."""
-        from natcap.invest import habitat_quality
-
-        args = {
-            'half_saturation_constant': '0.5',
-            'results_suffix': 'regression',
-            'workspace_dir': self.workspace_dir,
-            'n_workers': -1,
-        }
-
-        args['access_vector_path'] = os.path.join(
-            args['workspace_dir'], 'access_samp.shp')
-        make_access_shp(args['access_vector_path'])
-
-        scenarios = ['_bas_', '_cur_', '_fut_']
-        for lulc_val, scenario in enumerate(scenarios, start=1):
-            lulc_array = numpy.ones((100, 100), dtype=numpy.int8)
-            lulc_array[50:, :] = lulc_val
-            args['lulc' + scenario + 'path'] = os.path.join(
-                args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
-            make_raster_from_array(
-                lulc_array, args['lulc' + scenario + 'path'])
-
-        args['sensitivity_table_path'] = os.path.join(
-            args['workspace_dir'], 'sensitivity_samp.csv')
-        make_sensitivity_samp_csv(args['sensitivity_table_path'])
-
-        make_threats_raster(
-            args['workspace_dir'], threat_values=[0.5, 1.0],
-            dtype=numpy.float32, gdal_type=gdal.GDT_Float32)
-
-        args['threats_table_path'] = os.path.join(
-            args['workspace_dir'], 'threats_samp.csv')
-
-        with open(args['threats_table_path'], 'w') as open_table:
-            open_table.write(
-                'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
-            open_table.write(
-                '0.04,0.7,threat_1,linear,,threat_1_c.tif,threat_1_f.tif\n')
-            open_table.write(
-                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
-                'threat_2_f.tif\n')
-
-        habitat_quality.execute(args)
-
-        # Assert values were obtained by summing each output raster.
-        for output_filename, assert_value in {
-                'deg_sum_c_regression.tif': 18.91135,
-                'deg_sum_f_regression.tif': 33.931896,
-                'quality_c_regression.tif': 7499.983,
-                'quality_f_regression.tif': 4999.9893,
-                'rarity_c_regression.tif': 3333.3335,
-                'rarity_f_regression.tif': 3333.3335}.items():
-            raster_path = os.path.join(args['workspace_dir'], output_filename)
-            # Check that the raster's computed values are what we expect.
-            # In this case, the LULC and threat rasters should have been
-            # expanded to be beyond the bounds of the original threat values,
-            # so we should exclude those new nodata pixel values.
-            assert_array_sum(raster_path, assert_value, include_nodata=False)
-
     def test_habitat_quality_presence_absence_regression(self):
         """Habitat Quality: base regression test with simplified data.
 
@@ -297,6 +236,87 @@ class HabitatQualityTests(unittest.TestCase):
                 'deg_sum_f_regression.tif': 46.279358,
                 'quality_c_regression.tif': 7499.9414,
                 'quality_f_regression.tif': 4999.955,
+                'rarity_c_regression.tif': 3333.3335,
+                'rarity_f_regression.tif': 3333.3335}.items():
+            raster_path = os.path.join(args['workspace_dir'], output_filename)
+            # Check that the raster's computed values are what we expect.
+            # In this case, the LULC and threat rasters should have been
+            # expanded to be beyond the bounds of the original threat values,
+            # so we should exclude those new nodata pixel values.
+            assert_array_sum(raster_path, assert_value, include_nodata=False)
+
+    def test_habitat_quality_regression_different_projections(self):
+        """Habitat Quality: base regression test with simplified data."""
+        from natcap.invest import habitat_quality
+
+        args = {
+            'half_saturation_constant': '0.5',
+            'results_suffix': 'regression',
+            'workspace_dir': self.workspace_dir,
+            'n_workers': -1,
+        }
+
+        access_vector_path = os.path.join(
+            args['workspace_dir'], 'access_samp.shp')
+        make_access_shp('access_vector_path')
+        # reproject access vector to WGS84 EPSG 4326
+        access_wgs84_path = os.path.join(
+            args['workspace_dir'], 'access_samp_wgs84.shp')
+        wgs84_srs = osr.SpatialReference()
+        wgs84_srs.ImportFromEPSG(4326)
+        target_access_wkt = wgs84_srs.ExportToWkt()
+        pygeoprocessing.reproject_vector(
+            'access_vector_path', target_access_wkt, access_wgs84_path)
+        args['access_vector_path'] = access_wgs84_path
+
+        scenarios = ['_bas_', '_cur_', '_fut_']
+        for lulc_val, scenario in enumerate(scenarios, start=1):
+            lulc_array = numpy.ones((100, 100), dtype=numpy.int8)
+            lulc_array[50:, :] = lulc_val
+            args['lulc' + scenario + 'path'] = os.path.join(
+                args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
+            make_raster_from_array(
+                lulc_array, args['lulc' + scenario + 'path'])
+
+        args['sensitivity_table_path'] = os.path.join(
+            args['workspace_dir'], 'sensitivity_samp.csv')
+        make_sensitivity_samp_csv(args['sensitivity_table_path'])
+
+        make_threats_raster(
+            args['workspace_dir'], threat_values=[0.5, 1.0],
+            dtype=numpy.float32, gdal_type=gdal.GDT_Float32)
+        # reproject a threat raster
+        threat_path = os.path.join(args['workspace_dir'], 'threat_1_c.tif')
+        threat_info = pygeoprocessing.get_raster_info(threat_path)
+        threat_reproject_path = os.path.join(
+            args['workspace_dir'], 'threat_reprojected_1_c.tif')
+        oregon_south_srs = osr.SpatialReference()
+        oregon_south_srs.ImportFromEPSG(32127)
+        target_threat_wkt = oregon_south_srs.ExportToWkt()
+        pygeoprocessing.warp_raster(
+            threat_path, threat_info['pixel_size'], threat_reproject_path,
+            'near', target_projection_wkt=target_threat_wkt)
+
+        args['threats_table_path'] = os.path.join(
+            args['workspace_dir'], 'threats_samp.csv')
+
+        with open(args['threats_table_path'], 'w') as open_table:
+            open_table.write(
+                'MAX_DIST,WEIGHT,THREAT,DECAY,BASE_PATH,CUR_PATH,FUT_PATH\n')
+            open_table.write(
+                '0.04,0.7,threat_1,linear,,threat_reprojected_1_c.tif,threat_1_f.tif\n')
+            open_table.write(
+                '0.07,1.0,threat_2,exponential,,threat_2_c.tif,'
+                'threat_2_f.tif\n')
+
+        habitat_quality.execute(args)
+
+        # Assert values were obtained by summing each output raster.
+        for output_filename, assert_value in {
+                'deg_sum_c_regression.tif': 18.91135,
+                'deg_sum_f_regression.tif': 33.931896,
+                'quality_c_regression.tif': 7499.983,
+                'quality_f_regression.tif': 4999.9893,
                 'rarity_c_regression.tif': 3333.3335,
                 'rarity_f_regression.tif': 3333.3335}.items():
             raster_path = os.path.join(args['workspace_dir'], output_filename)
