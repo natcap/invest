@@ -127,9 +127,7 @@ class DatastackArchiveTests(unittest.TestCase):
         datastack.build_datastack_archive(
             params, 'test_datastack_modules.simple_parameters', archive_path)
         out_directory = os.path.join(self.workspace, 'extracted_archive')
-
-        with tarfile.open(archive_path) as tar:
-            tar.extractall(out_directory)
+        datastack._tarfile_safe_extract(archive_path, out_directory)
 
         self.assertEqual(len(os.listdir(out_directory)), 3)
 
@@ -158,9 +156,7 @@ class DatastackArchiveTests(unittest.TestCase):
 
             # extract the archive
             out_directory = os.path.join(self.workspace, 'extracted_archive')
-
-            with tarfile.open(archive_path) as tar:
-                tar.extractall(out_directory)
+            datastack._tarfile_safe_extract(archive_path, out_directory)
 
             archived_params = json.load(
                 open(os.path.join(
@@ -202,8 +198,7 @@ class DatastackArchiveTests(unittest.TestCase):
 
             # extract the archive
             out_directory = os.path.join(dest_dir, 'extracted_archive')
-            with tarfile.open(archive_path) as tar:
-                tar.extractall(out_directory)
+            datastack._tarfile_safe_extract(archive_path, out_directory)
 
             archived_params = json.load(
                 open(os.path.join(
@@ -245,8 +240,7 @@ class DatastackArchiveTests(unittest.TestCase):
 
         # extract the archive
         out_directory = os.path.join(self.workspace, 'extracted_archive')
-        with tarfile.open(archive_path) as tar:
-            tar.extractall(out_directory)
+        datastack._tarfile_safe_extract(archive_path, out_directory)
 
         archived_params = json.load(
             open(os.path.join(out_directory,
@@ -283,8 +277,7 @@ class DatastackArchiveTests(unittest.TestCase):
 
         # extract the archive
         out_directory = os.path.join(self.workspace, 'extracted_archive')
-        with tarfile.open(archive_path) as tar:
-            tar.extractall(out_directory)
+        datastack._tarfile_safe_extract(archive_path, out_directory)
 
         archived_params = json.load(
             open(os.path.join(out_directory,

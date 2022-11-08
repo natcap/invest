@@ -486,8 +486,7 @@ def extract_datastack_archive(datastack_path, dest_dir_path):
     LOGGER.info('Extracting archive %s to %s', datastack_path, dest_dir_path)
     dest_dir_path = os.path.abspath(dest_dir_path)
     # extract the archive to the workspace
-    with tarfile.open(datastack_path) as tar:
-        tar.extractall(dest_dir_path)
+    _tarfile_safe_extract(datastack_path, dest_dir_path)
 
     # get the arguments dictionary
     arguments_dict = json.load(open(
