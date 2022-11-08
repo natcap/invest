@@ -407,7 +407,7 @@ class ThreadFilterTests(unittest.TestCase):
             args=(),
             exc_info=None,
             func='test_thread_filter_same_thread')
-        filterer = ThreadFilter(threading.currentThread().name)
+        filterer = ThreadFilter(threading.current_thread().name)
 
         # The record comes from the same thread.
         self.assertEqual(filterer.filter(record), False)
