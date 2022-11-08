@@ -40,6 +40,11 @@ Unreleased Changes
     * Fixed a possible path traversal vulnerability when working with datastack
       archives.  This patches CVE-2007-4559, reported to us by Trellix.
       https://github.com/natcap/invest/issues/1113
+* Habitat Quality
+    * All spatial inputs including the access vector and threat rasters are
+      now reprojected to the ``lulc_cur_path`` raster. This fixes a bug where
+      rasters with a different SRS would appear to not intersect the
+      ``lulc_cur_path`` even if they did. (https://github.com/natcap/invest/issues/1093)
 * Workbench
     * Fixed a bug where the Workbench would become unresponsive during an
       InVEST model run if the model emitted a very high volume of log messages.
