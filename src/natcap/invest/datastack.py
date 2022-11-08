@@ -59,6 +59,41 @@ ParameterSet = collections.namedtuple('ParameterSet',
                                       'args model_name invest_version')
 
 
+def _tarfile_safe_extract(archive_path, dest_dir_path):
+    """Extract a tarfile in a safe way.
+
+    This function avoids the CVE-2007-4559 exploit that's been a vulnerability
+    in the python stdlib for at least 15 years now and should really be patched
+    upstream.
+
+    Args:
+        archive_path (string): The path to a tarfile, such as a datastack
+            archive created by InVEST.
+        dest_dir_path (string): The path to the destination directory, where
+            the contents should be unzipped.
+
+    Returns:
+        ``None``
+    """
+    # The guts of this function are taken from Trellix's PR to InVEST.  See
+    # https://github.com/natcap/invest/pull/1099 for details.
+    with tarfile.open(archive_path) as tar:
+        def is_within_directory(directory, target):
+            abs_directory = os.path.abspath(directory)
+            abs_target = os.path.abspath(target)
+            prefix = os.path.commonprefix([abs_directory, abs_target])
+            return prefix == abs_directory
+
+        def safe_extract(tar, path=".", members=None, *, numeric_owner=False):
+            for member in tar.getmembers():
+                member_path = os.path.join(path, member.name)
+                if not is_within_directory(path, member_path):
+                    raise Exception("Attempted Path Traversal in Tar File")
+            tar.extractall(path, members, numeric_owner=numeric_owner)
+
+        safe_extract(tar, dest_dir_path)
+
+
 def _copy_spatial_files(spatial_filepath, target_dir):
     """Copy spatial files to a new directory.
 
