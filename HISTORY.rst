@@ -36,6 +36,10 @@
 
 Unreleased Changes
 ------------------
+* General
+    * Fixed a possible path traversal vulnerability when working with datastack
+      archives.  This patches CVE-2007-4559, reported to us by Trellix.
+      https://github.com/natcap/invest/issues/1113
 * Workbench
     * Fixed a bug where the Workbench would become unresponsive during an
       InVEST model run if the model emitted a very high volume of log messages.
