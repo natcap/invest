@@ -902,7 +902,6 @@ def _calculate_monthly_quick_flow(precip_path, n_events_raster_path,
     Args:
         precip_path (string): path to file that correspond to monthly
             precipitation
-        cn_path (string): path to curve number raster
         n_events_raster_path (string): a path to a raster where each pixel
             indicates the number of rain events.
         stream_path (string): path to stream mask raster where 1 indicates a
@@ -936,58 +935,50 @@ def _calculate_monthly_quick_flow(precip_path, n_events_raster_path,
         Returns:
             quick flow (numpy.array)
         """
+        precip_mask = (p_im > 0) & (n_events > 0)
+        stream_mask = stream_array == 1
         # stream_nodata is the only input that carries over nodata values from
         # the aligned DEM.
-        valid_mask = ((p_im != 0) &
-                      (stream_array != 1) &
-                      (n_events > 0) &
-                      ~utils.array_equals_nodata(p_im, p_nodata) &
-                      ~utils.array_equals_nodata(n_events, n_events_nodata) &
-                      ~utils.array_equals_nodata(stream_array, stream_nodata) &
-                      ~utils.array_equals_nodata(s_i, si_nodata))
-
-        valid_si = s_i[valid_mask]
-
-        # a_im is the mean rain depth on a rainy day at pixel i on month m
-        # the 25.4 converts inches to mm since Si is in inches
-        a_im = p_im[valid_mask] / (n_events[valid_mask] * 25.4)
+        valid_mask = (
+          ~utils.array_equals_nodata(p_im, p_nodata) &
+          ~utils.array_equals_nodata(n_events, n_events_nodata) &
+          ~utils.array_equals_nodata(stream_array, stream_nodata) &
+          ~utils.array_equals_nodata(s_i, si_nodata))
 
         qf_im = numpy.full(p_im.shape, qf_nodata)
 
-        # Precompute the last two terms in quickflow so we can handle a
-        # numerical instability when s_i is large and/or a_im is small
-        # on large valid_si/a_im this number will be zero and the latter
-        # exponent will also be zero because of a divide by zero. rather than
-        # raise that numerical warning, just handle it manually
-        #
-        # the exponential integral, E_1
-        E1 = scipy.special.exp1(valid_si / a_im)
-        E1[valid_si == 0] = 0
-        exp_result = numpy.zeros(valid_si.shape)
-        exp_result = numpy.exp((0.8 * valid_si) / a_im) * E1
+        # Case 1: there is no precipitation, QF = 0
+        case_1_mask = valid_mask & ~precip_mask
+        qf_im[case_1_mask] = 0
+
+        # Case 2: there is precipitation and we're on a stream, QF = P
+        case_2_mask = valid_mask & precip_mask & stream_mask
+        qf_im[case_2_mask] = p_im[case_2_mask]
+
+        # Case 3: there is precipitation and we're not on a stream,
+        # use the quickflow equation
+        case_3_mask = valid_mask & precip_mask & ~stream_mask
+
+        # a_im is the mean rain depth on a rainy day at pixel i on month m
+        # the 25.4 converts inches to mm since Si is in inches
+        a_im = p_im[case_3_mask] / (n_events[case_3_mask] * 25.4)
+
+        # Calculate the last term separately to handle an edge case when si = 0
+        # exp1(0) is -∞, which introduces NaNs when multiplied.
+        # Per conversation with Rafa, when si is 0, this whole term should be 0
+        exp_result = numpy.zeros(a_im.shape)
+        exp_result[s_i[case_3_mask] != 0] = numpy.exp(
+            (0.8 * s_i[case_3_mask]) / a_im) *
+            scipy.special.exp1(s_i[case_3_mask] / a_im)
 
         # qf_im is the quickflow at pixel i on month m
-        qf_im[valid_mask] = (
-            25.4 * n_events[valid_mask] * (
-                (a_im - valid_si) * numpy.exp(-0.2 * valid_si / a_im) +
-                valid_si ** 2 / a_im * exp_result
+        qf_im[case_3_mask] = (
+            25.4 * n_events[case_3_mask] * (
+                (a_im - s_i[case_3_mask]) *
+                numpy.exp(-0.2 * s_i[case_3_mask] / a_im) +
+                s_i[case_3_mask] ** 2 / a_im * exp_result
             )
         )
-
-        # if precip is 0, then QF should be zero
-        qf_im[(p_im == 0) | (n_events == 0)] = 0
-
-        # if we're on a stream, set quickflow to the precipitation
-        valid_stream_precip_mask = (
-            (stream_array == 1) &
-            ~utils.array_equals_nodata(p_im, p_nodata))
-        qf_im[valid_stream_precip_mask] = p_im[valid_stream_precip_mask]
-
-        # this handles some user cases where they don't have data defined on
-        # their landcover raster. It otherwise crashes later with some NaNs.
-        qf_im[utils.array_equals_nodata(qf_im, qf_nodata) &
-              ~utils.array_equals_nodata(stream_array, stream_nodata)] = 0
-
         return qf_im
 
     pygeoprocessing.raster_calculator(
