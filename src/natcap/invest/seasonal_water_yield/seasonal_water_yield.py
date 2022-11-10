@@ -484,7 +484,7 @@ def _execute(args):
         # TypeError when n_workers is None.
         n_workers = -1  # Synchronous mode.
     task_graph = taskgraph.TaskGraph(
-        cache_dir, n_workers, reporting_interval=5.0)
+        cache_dir, n_workers, reporting_interval=5)
 
     LOGGER.info('Building file registry')
     file_registry = utils.build_file_registry(
@@ -631,14 +631,13 @@ def _execute(args):
                 climate_zone_rain_events_month = dict([
                     (cz_id, cz_rain_events_lookup[cz_id][month_label]) for
                     cz_id in cz_rain_events_lookup])
-                n_events_nodata = -1
                 n_events_task = task_graph.add_task(
                     func=utils.reclassify_raster,
                     args=(
                         (file_registry['cz_aligned_raster_path'], 1),
                         climate_zone_rain_events_month,
                         file_registry['n_events_path_list'][month_id],
-                        gdal.GDT_Float32, n_events_nodata,
+                        gdal.GDT_Float32, TARGET_NODATA,
                         reclass_error_details),
                     target_path_list=[
                         file_registry['n_events_path_list'][month_id]],
@@ -717,13 +716,12 @@ def _execute(args):
             kc_lookup = dict([
                 (lucode, biophysical_table[lucode]['kc_%d' % (month_index+1)])
                 for lucode in biophysical_table])
-            kc_nodata = -1  # a reasonable nodata value
             kc_task = task_graph.add_task(
                 func=utils.reclassify_raster,
                 args=(
                     (file_registry['lulc_aligned_path'], 1), kc_lookup,
                     file_registry['kc_path_list'][month_index],
-                    gdal.GDT_Float32, kc_nodata, reclass_error_details),
+                    gdal.GDT_Float32, TARGET_NODATA, reclass_error_details),
                 target_path_list=[file_registry['kc_path_list'][month_index]],
                 dependent_task_list=[align_task],
                 task_name='classify kc month %d' % month_index)
@@ -837,7 +835,7 @@ def _calculate_vri(l_path, target_vri_path):
         None.
 
     """
-    qb_sum = 0.0
+    qb_sum = 0
     qb_valid_count = 0
     l_nodata = pygeoprocessing.get_raster_info(l_path)['nodata'][0]
 
@@ -877,22 +875,21 @@ def _calculate_annual_qfi(qfm_path_list, target_qf_path):
         None.
 
     """
-    qf_nodata = -1
 
     def qfi_sum_op(*qf_values):
         """Sum the monthly qfis."""
         qf_sum = numpy.zeros(qf_values[0].shape)
-        valid_mask = ~utils.array_equals_nodata(qf_values[0], qf_nodata)
+        valid_mask = ~utils.array_equals_nodata(qf_values[0], TARGET_NODATA)
         valid_qf_sum = qf_sum[valid_mask]
         for index in range(len(qf_values)):
             valid_qf_sum += qf_values[index][valid_mask]
-        qf_sum[:] = qf_nodata
+        qf_sum[:] = TARGET_NODATA
         qf_sum[valid_mask] = valid_qf_sum
         return qf_sum
 
     pygeoprocessing.raster_calculator(
         [(path, 1) for path in qfm_path_list],
-        qfi_sum_op, target_qf_path, gdal.GDT_Float32, qf_nodata)
+        qfi_sum_op, target_qf_path, gdal.GDT_Float32, TARGET_NODATA)
 
 
 def _calculate_monthly_quick_flow(precip_path, n_events_raster_path,
@@ -919,7 +916,6 @@ def _calculate_monthly_quick_flow(precip_path, n_events_raster_path,
         n_events_raster_path)['nodata'][0]
     stream_nodata = pygeoprocessing.get_raster_info(stream_path)['nodata'][0]
     si_nodata = pygeoprocessing.get_raster_info(si_path)['nodata'][0]
-    qf_nodata = -1
 
     def qf_op(p_im, s_i, n_events, stream_array):
         """Calculate quick flow as in Eq [1] in user's guide.
@@ -945,7 +941,7 @@ def _calculate_monthly_quick_flow(precip_path, n_events_raster_path,
           ~utils.array_equals_nodata(stream_array, stream_nodata) &
           ~utils.array_equals_nodata(s_i, si_nodata))
 
-        qf_im = numpy.full(p_im.shape, qf_nodata)
+        qf_im = numpy.full(p_im.shape, TARGET_NODATA)
 
         # Case 1: there is no precipitation, QF = 0
         case_1_mask = valid_mask & ~precip_mask
@@ -984,7 +980,7 @@ def _calculate_monthly_quick_flow(precip_path, n_events_raster_path,
     pygeoprocessing.raster_calculator(
         [(path, 1) for path in [
             precip_path, si_path, n_events_raster_path, stream_path]], qf_op,
-        qf_monthly_path, gdal.GDT_Float32, qf_nodata)
+        qf_monthly_path, gdal.GDT_Float32, TARGET_NODATA)
 
 
 def _calculate_curve_number_raster(
@@ -1015,7 +1011,6 @@ def _calculate_curve_number_raster(
         4: 'cn_d',
     }
     # curve numbers are always positive so -1 a good nodata choice
-    cn_nodata = -1
     lulc_to_soil = {}
     lulc_nodata = pygeoprocessing.get_raster_info(
         lulc_raster_path)['nodata'][0]
@@ -1038,7 +1033,7 @@ def _calculate_curve_number_raster(
             else:
                 # handle the lulc nodata with cn nodata
                 lulc_to_soil[soil_id]['lulc_values'].append(lulc_nodata)
-                lulc_to_soil[soil_id]['cn_values'].append(cn_nodata)
+                lulc_to_soil[soil_id]['cn_values'].append(TARGET_NODATA)
 
         # Making the landcover array a float32 in case the user provides a
         # float landcover map like Kate did.
@@ -1055,7 +1050,7 @@ def _calculate_curve_number_raster(
     def cn_op(lulc_array, soil_group_array):
         """Map lulc code and soil to a curve number."""
         cn_result = numpy.empty(lulc_array.shape)
-        cn_result[:] = cn_nodata
+        cn_result[:] = TARGET_NODATA
 
         # if lulc_array value not in lulc_to_soil[soil_group_id]['lulc_values']
         # then numpy.digitize will not bin properly and cause an IndexError
@@ -1084,10 +1079,9 @@ def _calculate_curve_number_raster(
             cn_result[current_soil_mask] = cn_values[current_soil_mask]
         return cn_result
 
-    cn_nodata = -1
     pygeoprocessing.raster_calculator(
         [(lulc_raster_path, 1), (soil_group_path, 1)], cn_op, cn_path,
-        gdal.GDT_Float32, cn_nodata)
+        gdal.GDT_Float32, TARGET_NODATA)
 
 
 def _calculate_si_raster(cn_path, stream_path, si_path):
@@ -1101,7 +1095,6 @@ def _calculate_si_raster(cn_path, stream_path, si_path):
     Returns:
         None
     """
-    si_nodata = -1
     cn_nodata = pygeoprocessing.get_raster_info(cn_path)['nodata'][0]
 
     def si_op(ci_factor, stream_mask):
@@ -1110,17 +1103,17 @@ def _calculate_si_raster(cn_path, stream_path, si_path):
             ~utils.array_equals_nodata(ci_factor, cn_nodata) &
             (ci_factor > 0))
         si_array = numpy.empty(ci_factor.shape)
-        si_array[:] = si_nodata
+        si_array[:] = TARGET_NODATA
         # multiply by the stream mask != 1 so we get 0s on the stream and
         # unaffected results everywhere else
         si_array[valid_mask] = (
-            (1000.0 / ci_factor[valid_mask] - 10) * (
+            (1000 / ci_factor[valid_mask] - 10) * (
                 stream_mask[valid_mask] != 1))
         return si_array
 
     pygeoprocessing.raster_calculator(
         [(cn_path, 1), (stream_path, 1)], si_op, si_path, gdal.GDT_Float32,
-        si_nodata)
+        TARGET_NODATA)
 
 
 def _aggregate_recharge(
@@ -1182,7 +1175,7 @@ def _aggregate_recharge(
                         "no coverage for polygon %s", ', '.join(
                             [str(poly_feat.GetField(_)) for _ in range(
                                 poly_feat.GetFieldCount())]))
-                    value = 0.0
+                    value = 0
             elif op_type == 'sum':
                 value = aggregate_stats[poly_index]['sum']
             poly_feat.SetField(aggregate_field_id, float(value))
