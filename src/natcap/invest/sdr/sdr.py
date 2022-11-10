@@ -149,44 +149,6 @@ MODEL_SPEC = {
         }
     },
     "outputs": {
-        "rkls.tif": {
-            "bands": {1: {
-                "type": "number",
-                "units": u.metric_ton/u.pixel
-            }},
-            "about": "Total potential soil loss per pixel in the original land cover from the RKLS equation. Equivalent to the soil loss for bare soil. (Eq. (68), without applying the C or P factors)."
-        },
-        "sed_export.tif": {
-            "about": "The total amount of sediment exported from each pixel that reaches the stream. (Eq. (76))",
-            "bands": {1: {
-                "type": "number",
-                "units": u.metric_ton/u.pixel
-            }}
-        },
-        "sediment_deposition.tif": {
-            "about": "The total amount of sediment deposited on the pixel from upslope sources as a result of trapping. (Eq. (80))",
-            "bands": {1: {
-                "type": "number",
-                "units": u.metric_ton/u.pixel
-            }}
-        },
-        "stream.tif": {
-            "about": "Stream network, created using flow direction and flow accumulation derived from the DEM and Threshold Flow Accumulation. Values of 1 represent streams, values of 0 are non-stream pixels.",
-            "bands": {1: {
-                "type": "integer"
-            }}
-        },
-        "stream_and_drainage.tif": {
-            "created_if": "drainage_path",
-            "about": "This raster is the union of that layer with the calculated stream layer(Eq. (85)). Values of 1 represent streams, values of 0 are non-stream pixels."
-        },
-        "usle.tif": {
-            "about": "Total potential soil loss per pixel in the original land cover calculated from the USLE equation. (Eq. (68))",
-            "bands": {1: {
-                "type": "number",
-                "units": u.metric_ton/u.pixel
-            }}
-        },
         "avoided_erosion.tif": {
             "about": "The contribution of vegetation to keeping soil from eroding from each pixel. (Eq. (82))",
             "bands": {1: {
@@ -201,8 +163,46 @@ MODEL_SPEC = {
                 "units": u.metric_ton/u.pixel
             }}
         },
+        "rkls.tif": {
+            "bands": {1: {
+                "type": "number",
+                "units": u.metric_ton/u.pixel
+            }},
+            "about": "Total potential soil loss per pixel in the original land cover from the RKLS equation. Equivalent to the soil loss for bare soil. (Eq. (68), without applying the C or P factors)."
+        },
+        "sed_deposition.tif": {
+            "about": "The total amount of sediment deposited on the pixel from upslope sources as a result of trapping. (Eq. (80))",
+            "bands": {1: {
+                "type": "number",
+                "units": u.metric_ton/u.pixel
+            }}
+        },
+        "sed_export.tif": {
+            "about": "The total amount of sediment exported from each pixel that reaches the stream. (Eq. (76))",
+            "bands": {1: {
+                "type": "number",
+                "units": u.metric_ton/u.pixel
+            }}
+        },
+        "stream.tif": {
+            "about": "Stream network, created using flow direction and flow accumulation derived from the DEM and Threshold Flow Accumulation. Values of 1 represent streams, values of 0 are non-stream pixels.",
+            "bands": {1: {"type": "integer"}}
+        },
+        "stream_and_drainage.tif": {
+            "created_if": "drainage_path",
+            "about": "This raster is the union of that layer with the calculated stream layer(Eq. (85)). Values of 1 represent streams, values of 0 are non-stream pixels.",
+            "bands": {1: {"type": "integer"}}
+        },
+        "usle.tif": {
+            "about": "Total potential soil loss per pixel in the original land cover calculated from the USLE equation. (Eq. (68))",
+            "bands": {1: {
+                "type": "number",
+                "units": u.metric_ton/u.pixel
+            }}
+        },
         "watershed_results_sdr.shp": {
             "about": "Table containing biophysical values for each watershed",
+            "geometries": spec_utils.POLYGONS,
             "fields": {
                 "sed_export": {
                     "type": "number",
@@ -276,7 +276,13 @@ MODEL_SPEC = {
                     }}
                 },
                 "flow_direction.tif": {
-                    "about": "MFD flow direction. Note: the pixel values should not be interpreted directly. Each 32-bit number consists of 8 4-bit numbers. Each 4-bit number represents the proportion of flow into one of the eight neighboring pixels."
+                    "about": gettext(
+                        "MFD flow direction. Note: the pixel values should not "
+                        "be interpreted directly. Each 32-bit number consists "
+                        "of 8 4-bit numbers. Each 4-bit number represents the "
+                        "proportion of flow into one of the eight neighboring "
+                        "pixels."),
+                    "bands": {1: {"type": "integer"}}
                 },
                 "ic.tif": {
                     "about": gettext("Index of connectivity (Eq. (70))"),
@@ -317,11 +323,9 @@ MODEL_SPEC = {
                         "units": u.none
                     }}
                 },
-                "s_inverse.tif": {
-                    "about": "inverse of the thresholded slope (in eq. (74))"
-                },
                 "sdr_factor.tif": {
-                    "about": "sediment delivery ratio (Eq. (75))"
+                    "about": gettext("Sediment delivery ratio (Eq. (75))"),
+                    "bands": {1: {"type": "ratio"}}
                 },
                 "slope.tif": {
                     "about": gettext(
@@ -334,12 +338,6 @@ MODEL_SPEC = {
                         "Percent slope, thresholded to be no less than 0.005 "
                         "and no greater than 1 (eq. (71)). 1 is equivalent to "
                         "a 45 degree slope."),
-                    "bands": {1: {"type": "ratio"}}
-                },
-                "w_threshold.tif": {
-                    "about": gettext(
-                        "Cover-management factor thresholded to be no less "
-                        "than 0.001 (eq. (72))"),
                     "bands": {1: {"type": "ratio"}}
                 },
                 "w_accumulation.tif": {
@@ -363,6 +361,17 @@ MODEL_SPEC = {
                         "from the biophysical table to the LULC raster."),
                     "bands": {1: {"type": "ratio"}}
                 },
+                "w_threshold.tif": {
+                    "about": gettext(
+                        "Cover-management factor thresholded to be no less "
+                        "than 0.001 (eq. (72))"),
+                    "bands": {1: {"type": "ratio"}}
+                },
+                "weighted_avg_aspect.tif": {
+                    "about": gettext(
+                        "Average aspect weighted by flow direction (in eq. (69))"),
+                    "bands": {1: {"type": "number", "units": u.none}}
+                },
                 "what_drains_to_stream.tif": {
                     "about": gettext(
                         "Map of which pixels drain to a stream. A value of "
@@ -371,11 +380,6 @@ MODEL_SPEC = {
                         "means that it does not drain at all to any stream "
                         "in stream.tif."),
                     "bands": {1: {"type": "integer"}}
-                },
-                "weighted_avg_aspect.tif": {
-                    "about": gettext(
-                        "Average aspect weighted by flow direction (in eq. (69))"),
-                    "bands": {1: {"type": "number", "units": u.none}}
                 },
                 "ws_inverse.tif": {
                     "about": gettext(

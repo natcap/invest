@@ -45,6 +45,36 @@ PERCENTILE_TABLE_FIELDS = {
     }
 }
 
+LAND_GRID_POINT_FIELDS = {
+    "id": {
+        "type": "integer",
+        "about": gettext("Unique identifier for each point.")},
+    "type": {
+        "type": "option_string",
+        "options": {
+            "LAND": {"description": gettext(
+                "This is a land connection point")},
+            "GRID": {"description": gettext(
+                "This is a grid connection point")}
+        },
+        "about": gettext("The type of connection at this point.")
+    },
+    "lat": {
+        "type": "number",
+        "units": u.degree,
+        "about": gettext("Latitude of the connection point.")
+    },
+    "long": {
+        "type": "number",
+        "units": u.degree,
+        "about": gettext("Longitude of the connection point.")
+    },
+    "location": {
+        "type": "freestyle_string",
+        "about": gettext("Name for the connection point location.")
+    }
+}
+
 MODEL_SPEC = {
     "model_name": MODEL_METADATA["wave_energy"].model_title,
     "pyname": MODEL_METADATA["wave_energy"].pyname,
@@ -240,35 +270,7 @@ MODEL_SPEC = {
         },
         "land_gridPts_path": {
             "type": "csv",
-            "columns": {
-                "id": {
-                    "type": "integer",
-                    "about": gettext("Unique identifier for each point.")},
-                "type": {
-                    "type": "option_string",
-                    "options": {
-                        "LAND": {"description": gettext(
-                            "This is a land connection point")},
-                        "GRID": {"description": gettext(
-                            "This is a grid connection point")}
-                    },
-                    "about": gettext("The type of connection at this point.")
-                },
-                "lat": {
-                    "type": "number",
-                    "units": u.degree,
-                    "about": gettext("Latitude of the connection point.")
-                },
-                "long": {
-                    "type": "number",
-                    "units": u.degree,
-                    "about": gettext("Longitude of the connection point.")
-                },
-                "location": {
-                    "type": "freestyle_string",
-                    "about": gettext("Name for the connection point location.")
-                }
-            },
+            "columns": LAND_GRID_POINT_FIELDS,
             "required": "valuation_container",
             "about": gettext(
                 "A table of data for each connection point. Required if "
@@ -378,11 +380,15 @@ MODEL_SPEC = {
                 },
                 "GridPt_prj.shp": {
                     "created_if": "valuation_container",
-                    "about": "contains information on power grid connection points."
+                    "about": gettext("Vector map of the provided grid points"),
+                    "fields": LAND_GRID_POINT_FIELDS,
+                    "geometries": {"POINT"}
                 },
                 "LandPts_prj.shp": {
                     "created_if": "valuation_container",
-                    "about": "contains information on underwater cable landing location",
+                    "about": gettext("Vector map of the provided land points"),
+                    "fields": LAND_GRID_POINT_FIELDS,
+                    "geometries": {"POINT"}
                 },
                 "npv_rc.tif": {
                     "about": gettext(

@@ -47,7 +47,6 @@ _INTERMEDIATE_BASE_FILES = {
     'value_pattern': 'value_{id}.tif',
 }
 
-
 MODEL_SPEC = {
     "model_name": MODEL_METADATA["scenic_quality"].model_title,
     "pyname": MODEL_METADATA["scenic_quality"].pyname,
@@ -166,13 +165,17 @@ MODEL_SPEC = {
             "type": "directory",
             "contents": {
                 "vshed_qual.tif": {
-                    "about": "This raster layer contains a field that classifies based on quartiles the visual quality within the AOI. The visual quality classes include: unaffected (no visual impact), high (low visual impact), medium (moderate visual impact), low (high visual impact), and very low (very high visual impact)."
+                    "about": gettext(
+                        "Map of visual quality classified into quartiles."),
+                    "bands": {1: {"type": "integer"}}
                 },
                 "vshed.tif": {
-                    "about": "This raster layer contains the weighted sum of all visibility rasters. If no weight column is provided in the structures point vector, this raster will represent a count of the number of structure points that are visible from each pixel."
+                    "about": gettext("This raster layer contains the weighted sum of all visibility rasters. If no weight column is provided in the structures point vector, this raster will represent a count of the number of structure points that are visible from each pixel."),
+                    "bands": {1: {"type": "number", "units": u.none}}
                 },
                 "vshed_value.tif": {
-                    "about": "This raster layer contains the weighted sum of the valuation rasters created for each point."
+                    "about": gettext("This raster layer contains the weighted sum of the valuation rasters created for each point."),
+                    "bands": {1: {"type": "number", "units": u.none}}
                 }
             }
         },
@@ -180,22 +183,32 @@ MODEL_SPEC = {
             "type": "directory",
             "contents": {
                 "aoi_reprojected.shp": {
-                    "about": "This vector is the AOI, reprojected to the DEM’s spatial reference and projection."
+                    "about": gettext("This vector is the AOI, reprojected to the DEM’s spatial reference and projection."),
+                    "geometries": spec_utils.POLYGONS,
+                    "fields": {}
                 },
                 "dem_clipped.tif": {
-                    "about": "This raster layer is a version of the DEM that has been clipped and masked to the AOI and tiled. This is the DEM file that is used for the viewshed analysis."
+                    "about": gettext("This raster layer is a version of the DEM that has been clipped and masked to the AOI and tiled. This is the DEM file that is used for the viewshed analysis."),
+                    "bands": {1: {"type": "number", "units": u.meter}}
                 },
                 "structures_clipped.shp": {
-                    "about": "This vector contains all viewpoints that intersect with the AOI."
+                    "about": gettext(
+                        "Copy of the structures vector, clipped to the AOI extent."),
+                    "geometries": spec_utils.POINT,
+                    "fields": {}
                 },
                 "structures_reprojected.shp": {
-                    "about": "This is the structures vector, reprojected to the DEM’s spatial reference and projection."
+                    "about": gettext("Copy of the structures vector, reprojected to the DEM’s spatial reference and projection."),
+                    "geometries": spec_utils.POINT,
+                    "fields": {}
                 },
                 "value_[FEATURE_ID].tif": {
-                    "about": "The calculated value of the viewshed amenity/disamenity given the distances (in meters) of pixels from the structures viewpoint, the weight of the viewpoint, the valuation function, and the a and b coefficients. The viewshed’s value is only evaluated for visible pixels. If an underlying DEM pixel is undefined (has a nodata value), so does the valuation raster."
+                    "about": gettext("The calculated value of the viewshed amenity/disamenity given the distances of pixels from the structure's viewpoint, the weight of the viewpoint, the valuation function, and the a and b coefficients. The viewshed’s value is only evaluated for visible pixels."),
+                    "bands": {1: {"type": "number", "units": u.none}}
                 },
                 "visibility_[FEATURE_ID].tif": {
-                    "about": "The visibility raster for a given structures viewpoint. This raster has pixel values of 0 (not visible), 1 (visible), or nodata (where the DEM is nodata)."
+                    "about": gettext("Map of visibility for a given structure's viewpoint. This raster has pixel values of 0 (not visible), 1 (visible), or nodata (where the DEM is nodata)."),
+                    "bands": {1: {"type": "integer"}}
                 },
                 "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
             }
