@@ -878,11 +878,11 @@ def _calculate_annual_qfi(qfm_path_list, target_qf_path):
     def qfi_sum_op(*qf_values):
         """Sum the monthly qfis."""
         # only calculate the sum where data is available for all 12 months
-        valid_mask = numpy.ones(qf_values[0].shape)
+        valid_mask = numpy.full(qf_values[0].shape, True)
         for i in range(len(qf_values)):
             valid_mask &= ~utils.array_equals_nodata(qf_values[i], TARGET_NODATA)
 
-        qf_sum = numpy.full(qf_values[0].shape, TARGET_NODATA)
+        qf_sum = numpy.full(qf_values[0].shape, TARGET_NODATA, dtype=numpy.float32)
         qf_sum[valid_mask] = 0
         for index in range(len(qf_values)):
             qf_sum[valid_mask] += qf_values[index][valid_mask]
@@ -943,7 +943,7 @@ def _calculate_monthly_quick_flow(precip_path, n_events_raster_path,
           ~utils.array_equals_nodata(stream_array, stream_nodata) &
           ~utils.array_equals_nodata(s_i, si_nodata))
 
-        qf_im = numpy.full(p_im.shape, TARGET_NODATA)
+        qf_im = numpy.full(p_im.shape, TARGET_NODATA, dtype=numpy.float64)
 
         # Case 1: there is no precipitation, QF = 0
         case_1_mask = valid_mask & ~precip_mask
@@ -962,19 +962,62 @@ def _calculate_monthly_quick_flow(precip_path, n_events_raster_path,
         a_im = p_im[case_3_mask] / (n_events[case_3_mask] * 25.4)
 
         # Calculate the last term separately to handle an edge case when si = 0
-        # exp1(0) is -∞, which introduces NaNs when multiplied.
+        # E1(0) = -∞, which introduces NaNs when multiplied.
         # Per conversation with Rafa, when si is 0, this whole term should be 0
-        exp_result = numpy.zeros(a_im.shape)
-        exp_result[s_i[case_3_mask] != 0] = numpy.exp(
-            (0.8 * s_i[case_3_mask]) / a_im) *
-            scipy.special.exp1(s_i[case_3_mask] / a_im)
+        #
+        # s_i^2 / a_im * exp(0.8 * s_i / a_im) * E1(s_i / a_im)
+        #
+        #
+        # When the ratio s_i / a_im becomes large, this term as a whole approaches 0.
+        # The exp() term becomes very large, while the E1() term becomes very small.
+        #
+        #
+        # Edge cases:
+        #
+        # 1. When s_i = 0, E1(s_i / a_im) = infinity. In this case the whole term
+        #    should equal 0 because it's later multiplied by s_i.
+        #    Preemptively set the result to 0 where s_i = 0 in order to avoid
+        #    computational issues later (0 * infinity = NaN).
+        #
+        # 2. When (s_i / a_im) > 880 ish, exp(0.8 * s_i / a_im) will overflow
+        #    and round up to infinity.
+        #
+        #    This approach gets around the overflow warning but it causes
+        #    another edge case:
+        #
+        #    When (s_i / a_im) > 730 ish, E1((s_i / a_im)) becomes so small
+        #    that it rounds down to 0. Then ln(E1((s_i / a_im))) = -infinity.
+
+        term_result = numpy.full(
+            s_i[case_3_mask].shape, TARGET_NODATA, dtype=numpy.float64)
+        # 1st edge case: set the whole term to 0 when s_i = 0
+        first_edge_case = s_i[case_3_mask] == 0
+        term_result[first_edge_case] = 0
+
+        # 2nd edge case: set the whole term to 0 when exp() overflows
+        with numpy.errstate(over='ignore'):
+            exp_result = numpy.exp((0.8 * s_i[case_3_mask]) / a_im)
+        second_edge_case = ~first_edge_case & numpy.isinf(exp_result)
+        term_result[second_edge_case] = 0
+
+        # otherwise, evaluate the term as usual
+        # s_i^2 / a_im * exp(0.8 * s_i / a_im) * E1(s_i / a_im)
+        no_edge_case = ~(first_edge_case | second_edge_case)
+        term_result[no_edge_case] = (
+            s_i[case_3_mask][no_edge_case] ** 2 / a_im[no_edge_case] *
+            exp_result[no_edge_case] *
+            scipy.special.exp1(
+                s_i[case_3_mask][no_edge_case] / a_im[no_edge_case]
+            )
+        )
+        print(term_result)
 
         # qf_im is the quickflow at pixel i on month m
         qf_im[case_3_mask] = (
             25.4 * n_events[case_3_mask] * (
                 (a_im - s_i[case_3_mask]) *
                 numpy.exp(-0.2 * s_i[case_3_mask] / a_im) +
-                s_i[case_3_mask] ** 2 / a_im * exp_result
+                term_result
             )
         )
         return qf_im

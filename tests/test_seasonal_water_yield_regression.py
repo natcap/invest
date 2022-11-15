@@ -943,12 +943,6 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         precip_array = numpy.array([
             [10, 10],
             [10, 10]], dtype=numpy.float32)
-        lulc_array = numpy.array([
-            [1, 1],
-            [2, 2]], dtype=numpy.float32)
-        cn_array = numpy.array([
-            [40, 40],
-            [80, 80]], dtype=numpy.float32)
         si_array = numpy.array([
             [15, 15],
             [2.5, 2.5]], dtype=numpy.float32)
@@ -959,13 +953,12 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
             [0, 0],
             [0, 0]], dtype=numpy.float32)
 
+        # results calculated by wolfram alpha
         expected_quickflow_array = numpy.array([
-            [-4.82284552e-36, -4.82284552e-36],
-            [ 6.19275831e-01,  6.19275831e-01]])
+            [4.20212e-35, 4.20212e-35],
+            [0.61928378,  0.61928378]])
 
         precip_path = os.path.join(self.workspace_dir, 'precip.tif')
-        lulc_path = os.path.join(self.workspace_dir, 'lulc.tif')
-        cn_path = os.path.join(self.workspace_dir, 'cn.tif')
         si_path = os.path.join(self.workspace_dir, 'si.tif')
         n_events_path = os.path.join(self.workspace_dir, 'n_events.tif')
         stream_path = os.path.join(self.workspace_dir, 'stream.tif')
@@ -977,13 +970,11 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
 
         # write all the test arrays to raster files
         for array, path in [(precip_array, precip_path),
-                            (lulc_array, lulc_path),
                             (n_events_array, n_events_path)]:
             # make the nodata value undefined for user inputs
             pygeoprocessing.numpy_array_to_raster(
                 array, None, (1, -1), (1180000, 690000), project_wkt, path)
-        for array, path in [(cn_array, cn_path),
-                            (si_array, si_path),
+        for array, path in [(si_array, si_path),
                             (stream_mask, stream_path)]:
             # define a nodata value for intermediate outputs
             pygeoprocessing.numpy_array_to_raster(
@@ -991,13 +982,12 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
 
         # save the quickflow results raster to quickflow.tif
         seasonal_water_yield._calculate_monthly_quick_flow(
-            precip_path, lulc_path, cn_path, n_events_path, stream_path,
-            si_path, output_path)
+            precip_path, n_events_path, stream_path, si_path, output_path)
         # read the raster output back in to a numpy array
         quickflow_array = pygeoprocessing.raster_to_numpy_array(output_path)
         # assert each element is close to the expected value
-        self.assertTrue(numpy.isclose(
-            quickflow_array, expected_quickflow_array).all())
+        numpy.testing.assert_allclose(
+            quickflow_array, expected_quickflow_array, atol=1e-5)
 
     def test_local_recharge_undefined_nodata(self):
         """Test `calculate_local_recharge` with undefined nodata values"""
