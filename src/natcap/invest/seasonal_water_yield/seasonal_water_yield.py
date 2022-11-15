@@ -894,138 +894,159 @@ def _calculate_annual_qfi(qfm_path_list, target_qf_path):
         qfi_sum_op, target_qf_path, gdal.GDT_Float32, TARGET_NODATA)
 
 
-def _calculate_monthly_quick_flow(precip_path, n_events_raster_path,
-        stream_path, si_path, qf_monthly_path):
+def _calculate_monthly_quick_flow(precip_path, n_events_path, stream_path,
+        si_path, qf_monthly_path):
     """Calculate quick flow for a month.
 
     Args:
-        precip_path (string): path to file that correspond to monthly
-            precipitation
-        n_events_raster_path (string): a path to a raster where each pixel
+        precip_path (string): path to monthly precipitation raster
+        n_events_path (string): a path to a raster where each pixel
             indicates the number of rain events.
         stream_path (string): path to stream mask raster where 1 indicates a
             stream pixel, 0 is a non-stream but otherwise valid area from the
             original DEM, and nodata indicates areas outside the valid DEM.
         si_path (string): path to raster that has potential maximum retention
-        qf_monthly_path_list (list of string): list of paths to output monthly
-            rasters.
+        qf_monthly_path (string): path to output monthly QF raster.
 
     Returns:
         None
     """
     p_nodata = pygeoprocessing.get_raster_info(precip_path)['nodata'][0]
-    n_events_nodata = pygeoprocessing.get_raster_info(
-        n_events_raster_path)['nodata'][0]
+    n_nodata = pygeoprocessing.get_raster_info(n_events_path)['nodata'][0]
     stream_nodata = pygeoprocessing.get_raster_info(stream_path)['nodata'][0]
     si_nodata = pygeoprocessing.get_raster_info(si_path)['nodata'][0]
 
-    def qf_op(p_im, s_i, n_events, stream_array):
+    def qf_op(p_im, s_i, n_m, stream):
         """Calculate quick flow as in Eq [1] in user's guide.
 
         Args:
             p_im (numpy.array): precipitation at pixel i on month m
             s_i (numpy.array): factor that is 1000/CN_i - 10
-                (Equation 1b from user's guide)
-            n_events (numpy.array): number of rain events on the pixel
-            stream_mask (numpy.array): 1 if stream, otherwise not a stream
-                pixel.
+            n_m (numpy.array): number of rain events on pixel i in month m
+            stream (numpy.array): 1 if stream, otherwise not a stream pixel.
 
         Returns:
             quick flow (numpy.array)
         """
-        precip_mask = (p_im > 0) & (n_events > 0)
-        stream_mask = stream_array == 1
+        valid_p_mask = ~utils.array_equals_nodata(p_im, p_nodata)
+        valid_n_mask = ~utils.array_equals_nodata(n_m, n_nodata)
+        # precip mask: both p_im and n_m are defined and greater than 0
+        precip_mask = valid_p_mask & valid_n_mask & (p_im > 0) & (n_m > 0)
+        stream_mask = stream == 1
         # stream_nodata is the only input that carries over nodata values from
         # the aligned DEM.
         valid_mask = (
-          ~utils.array_equals_nodata(p_im, p_nodata) &
-          ~utils.array_equals_nodata(n_events, n_events_nodata) &
-          ~utils.array_equals_nodata(stream_array, stream_nodata) &
+          valid_p_mask &
+          valid_n_mask &
+          ~utils.array_equals_nodata(stream, stream_nodata) &
           ~utils.array_equals_nodata(s_i, si_nodata))
 
-        qf_im = numpy.full(p_im.shape, TARGET_NODATA, dtype=numpy.float64)
+        # QF is defined in terms of three cases:
+        #
+        # 1. Where there is no precipitation, QF = 0
+        #    (even if stream or s_i is undefined)
+        #
+        # 2. Where there is precipitation and we're on a stream, QF = P
+        #    (even if s_i is undefined)
+        #
+        # 3. Where there is precipitation and we're not on a stream, use the
+        #    quickflow equation (only if all four inputs are defined):
+        #    QF_im = 25.4 * n_m * (
+        #       (a_im - s_i) * exp(-0.2 * s_i / a_im) +
+        #       s_i^2 / a_im * exp(0.8 * s_i / a_im) * E1(s_i / a_im)
+        #    )
+        #
+        # When evaluating case 3, there are a couple of edge cases related
+        # to the last term of the quickflow equation:
+        #
+        #       s_i^2 / a_im * exp(0.8 * s_i / a_im) * E1(s_i / a_im)
+        #
+        # 3a. Where s_i = 0, this term should equal 0 (per conversation with
+        #     Rafa). But, evaluating in numpy you get NaN and a warning
+        #     because E1(0 / a_im) = infinity.
+        #
+        #     Solution: Preemptively set the result to 0 where s_i = 0 in
+        #     order to avoid calculations with infinity.
+        #
+        # 3b. When the ratio s_i / a_im becomes large, this term approaches 0.
+        #     [NOTE: I don't know how to prove this mathematically, but it
+        #     holds true when I tested with reasonable values of s_i and a_im].
+        #     The exp() term becomes very large, while the E1() term becomes
+        #     very small. When (s_i / a_im) > 880 ish, exp(0.8 * s_i / a_im)
+        #     will overflow and round up to infinity. Meanwhile, E1(s_i / a_im)
+        #     will become so small that it rounds down to 0.
+        #
+        #     Solution: Catch the overflow warning, and set the term to 0
+        #     anywhere that overflow happens.
+        #
+        # 3c. Otherwise, evaluate the term as usual.
 
-        # Case 1: there is no precipitation, QF = 0
-        case_1_mask = valid_mask & ~precip_mask
+        # qf_im is the quickflow at pixel i on month m
+        qf_im = numpy.full(p_im.shape, TARGET_NODATA, dtype=numpy.float32)
+
+        # case 1: there is no precipitation where both p_im and n_m are
+        # defined and equal to zero.
+        case_1_mask = ~precip_mask
         qf_im[case_1_mask] = 0
 
-        # Case 2: there is precipitation and we're on a stream, QF = P
-        case_2_mask = valid_mask & precip_mask & stream_mask
+        # case 2: there is precipitation where both p_im and n_m are
+        # defined and greater than zero.
+        case_2_mask = precip_mask & stream_mask
         qf_im[case_2_mask] = p_im[case_2_mask]
 
-        # Case 3: there is precipitation and we're not on a stream,
-        # use the quickflow equation
+        # case 3
+        # only where all four inputs are defined
         case_3_mask = valid_mask & precip_mask & ~stream_mask
+
+        term_result = numpy.full(
+            qf_im[case_3_mask].shape, TARGET_NODATA, dtype=numpy.float32)
 
         # a_im is the mean rain depth on a rainy day at pixel i on month m
         # the 25.4 converts inches to mm since Si is in inches
-        a_im = p_im[case_3_mask] / (n_events[case_3_mask] * 25.4)
+        a_im = p_im[case_3_mask] / (n_m[case_3_mask] * 25.4)
 
-        # Calculate the last term separately to handle an edge case when si = 0
-        # E1(0) = -∞, which introduces NaNs when multiplied.
-        # Per conversation with Rafa, when si is 0, this whole term should be 0
-        #
-        # s_i^2 / a_im * exp(0.8 * s_i / a_im) * E1(s_i / a_im)
-        #
-        #
-        # When the ratio s_i / a_im becomes large, this term as a whole approaches 0.
-        # The exp() term becomes very large, while the E1() term becomes very small.
-        #
-        #
-        # Edge cases:
-        #
-        # 1. When s_i = 0, E1(s_i / a_im) = infinity. In this case the whole term
-        #    should equal 0 because it's later multiplied by s_i.
-        #    Preemptively set the result to 0 where s_i = 0 in order to avoid
-        #    computational issues later (0 * infinity = NaN).
-        #
-        # 2. When (s_i / a_im) > 880 ish, exp(0.8 * s_i / a_im) will overflow
-        #    and round up to infinity.
-        #
-        #    This approach gets around the overflow warning but it causes
-        #    another edge case:
-        #
-        #    When (s_i / a_im) > 730 ish, E1((s_i / a_im)) becomes so small
-        #    that it rounds down to 0. Then ln(E1((s_i / a_im))) = -infinity.
-
-        term_result = numpy.full(
-            s_i[case_3_mask].shape, TARGET_NODATA, dtype=numpy.float64)
-        # 1st edge case: set the whole term to 0 when s_i = 0
-        first_edge_case = s_i[case_3_mask] == 0
-        term_result[first_edge_case] = 0
-
-        # 2nd edge case: set the whole term to 0 when exp() overflows
+        # don't raise a warning on overflow
         with numpy.errstate(over='ignore'):
             exp_result = numpy.exp((0.8 * s_i[case_3_mask]) / a_im)
-        second_edge_case = ~first_edge_case & numpy.isinf(exp_result)
-        term_result[second_edge_case] = 0
 
-        # otherwise, evaluate the term as usual
+        # edge case 3a: set the whole term to 0 when s_i = 0
+        subcase_a_mask = s_i[case_3_mask] == 0
+        term_result[subcase_a_mask] = 0
+
+        # edge case 3b: set the whole term to 0 when exp() overflows
+        subcase_b_mask = numpy.isinf(exp_result)
+        term_result[subcase_b_mask] = 0
+
+        # case 3c: evaluate the term as usual
         # s_i^2 / a_im * exp(0.8 * s_i / a_im) * E1(s_i / a_im)
-        no_edge_case = ~(first_edge_case | second_edge_case)
-        term_result[no_edge_case] = (
-            s_i[case_3_mask][no_edge_case] ** 2 / a_im[no_edge_case] *
-            exp_result[no_edge_case] *
+        subcase_c_mask = ~(subcase_a_mask | subcase_b_mask)
+        term_result[subcase_c_mask] = (
+            s_i[case_3_mask][subcase_c_mask] ** 2 / a_im[subcase_c_mask] *
+            exp_result[subcase_c_mask] *
             scipy.special.exp1(
-                s_i[case_3_mask][no_edge_case] / a_im[no_edge_case]
+                s_i[case_3_mask][subcase_c_mask] / a_im[subcase_c_mask]
             )
         )
-        print(term_result)
 
-        # qf_im is the quickflow at pixel i on month m
         qf_im[case_3_mask] = (
-            25.4 * n_events[case_3_mask] * (
+            25.4 * n_m[case_3_mask] * (
                 (a_im - s_i[case_3_mask]) *
                 numpy.exp(-0.2 * s_i[case_3_mask] / a_im) +
                 term_result
             )
         )
+
+        # this handles some user cases where they don't have data defined on
+        # their landcover raster. It otherwise crashes later with some NaNs.
+        # more intermediate outputs with nodata values guaranteed to be defined
+        qf_im[utils.array_equals_nodata(qf_im, TARGET_NODATA) &
+              ~utils.array_equals_nodata(stream, stream_nodata)] = 0
         return qf_im
 
     pygeoprocessing.raster_calculator(
         [(path, 1) for path in [
-            precip_path, si_path, n_events_raster_path, stream_path]], qf_op,
-        qf_monthly_path, gdal.GDT_Float32, TARGET_NODATA)
+            precip_path, si_path, n_events_path, stream_path]],
+        qf_op, qf_monthly_path, gdal.GDT_Float32, TARGET_NODATA)
 
 
 def _calculate_curve_number_raster(
