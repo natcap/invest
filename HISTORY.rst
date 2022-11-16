@@ -36,6 +36,15 @@
 
 Unreleased Changes
 ------------------
+* General
+    * Fixed a possible path traversal vulnerability when working with datastack
+      archives.  This patches CVE-2007-4559, reported to us by Trellix.
+      https://github.com/natcap/invest/issues/1113
+* Habitat Quality
+    * All spatial inputs including the access vector and threat rasters are
+      now reprojected to the ``lulc_cur_path`` raster. This fixes a bug where
+      rasters with a different SRS would appear to not intersect the
+      ``lulc_cur_path`` even if they did. (https://github.com/natcap/invest/issues/1093)
 * Seasonal Water Yield
     * Fixed a bug where monthy quickflow nodata pixels were not being passed
       on to the total quickflow raster (`#1105 <https://github.com/natcap/invest/issues/1105>`_)
