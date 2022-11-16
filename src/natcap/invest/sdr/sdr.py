@@ -184,10 +184,7 @@ MODEL_SPEC = {
                 "units": u.metric_ton/u.pixel
             }}
         },
-        "stream.tif": {
-            "about": "Stream network, created using flow direction and flow accumulation derived from the DEM and Threshold Flow Accumulation. Values of 1 represent streams, values of 0 are non-stream pixels.",
-            "bands": {1: {"type": "integer"}}
-        },
+        "stream.tif": spec_utils.STREAM,
         "stream_and_drainage.tif": {
             "created_if": "drainage_path",
             "about": "This raster is the union of that layer with the calculated stream layer(Eq. (85)). Values of 1 represent streams, values of 0 are non-stream pixels.",
@@ -268,22 +265,8 @@ MODEL_SPEC = {
                         "units": u.metric_ton/(u.hectare*u.year)
                     }}
                 },
-                "flow_accumulation.tif": {
-                    "about": gettext("Map of flow accumulation"),
-                    "bands": {1: {
-                        "type": "number",
-                        "units": u.none
-                    }}
-                },
-                "flow_direction.tif": {
-                    "about": gettext(
-                        "MFD flow direction. Note: the pixel values should not "
-                        "be interpreted directly. Each 32-bit number consists "
-                        "of 8 4-bit numbers. Each 4-bit number represents the "
-                        "proportion of flow into one of the eight neighboring "
-                        "pixels."),
-                    "bands": {1: {"type": "integer"}}
-                },
+                "flow_accumulation.tif": spec_utils.FLOW_ACCUMULATION,
+                "flow_direction.tif": spec_utils.FLOW_DIRECTION,
                 "ic.tif": {
                     "about": gettext("Index of connectivity (Eq. (70))"),
                     "bands": {1: {
@@ -298,13 +281,7 @@ MODEL_SPEC = {
                         "units": u.none
                     }}
                 },
-                "pit_filled_dem.tif": {
-                    "about": gettext("Map of elevation after any pits are filled"),
-                    "bands": {1: {
-                        "type": "number",
-                        "units": u.meter
-                    }}
-                },
+                "pit_filled_dem.tif": spec_utils.FILLED_DEM,
                 "s_accumulation.tif": {
                     "about": gettext(
                         "Flow accumulation weighted by the thresholded slope. "
@@ -327,12 +304,7 @@ MODEL_SPEC = {
                     "about": gettext("Sediment delivery ratio (Eq. (75))"),
                     "bands": {1: {"type": "ratio"}}
                 },
-                "slope.tif": {
-                    "about": gettext(
-                        "Percent slope, calculated from the pit-filled "
-                        "DEM. 100 is equivalent to a 45 degree slope."),
-                    "bands": {1: {"type": "percent"}}
-                },
+                "slope.tif": spec_utils.SLOPE,
                 "slope_threshold.tif": {
                     "about": gettext(
                         "Percent slope, thresholded to be no less than 0.005 "

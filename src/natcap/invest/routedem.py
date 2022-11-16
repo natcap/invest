@@ -98,11 +98,11 @@ MODEL_SPEC = {
         }
     },
     "outputs": {
-        "filled.tif": {},
-        "flow_accumulation.tif": {},
-        "flow_direction.tif": {},
-        "slope.tif": {},
-        "stream_mask.tif": {},
+        "filled.tif": spec_utils.FILLED_DEM,
+        "flow_accumulation.tif": spec_utils.FLOW_ACCUMULATION,
+        "flow_direction.tif": spec_utils.FLOW_DIRECTION,
+        "slope.tif": spec_utils.SLOPE,
+        "stream_mask.tif": spec_utils.STREAM,
         "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
     }
 }

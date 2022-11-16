@@ -214,50 +214,118 @@ MODEL_SPEC = {
     },
     "outputs": {
         "pud_results.shp": {
-            "about": "The features of this polygon shapefile match the original AOI shapefile, or the gridded version of the AOI if the “Grid the AOI” option was selected. The attributes include all attribute columns present in the original AOI shapefile, along with others.",
+            "about": gettext(
+                "Copy of the the AOI vector with aggregate attributes added."),
+            "geometries": spec_utils.POLYGONS,
             "fields": {
                 "PUD_YR_AVG" : {
-                    "about": "the average photo-user-days per year (Photo User Days). This corresponds to the average PUD described in Wood et al. (2013).",
+                    "about": gettext(
+                        "The average photo-user-days per year"),
                     "type": "number",
                     "units": u.none
                 },
                 "PUD_[MONTH]": {
-                    "about": "the average photo-user-days for each month.",
+                    "about": gettext(
+                        "The average photo-user-days for each month."),
                     "type": "number",
                     "units": u.none
                 }
             }
         },
         "monthly_table.csv": {
-            "about": "This table contains the total photo-user-days counted in each cell for each month of the chosen date range. Each row in this table is a unique AOI grid cell or polygon. Columns represent months (“2005-1” is January 2005, “2014-12” is December 2014)."
+            "about": gettext("Table of monthly photo-user-days."),
+            "columns": {
+                "[YEAR]-[MONTH]": {
+                    "about": gettext(
+                        "Total photo-user-days counted in each cell in the "
+                        "given month."),
+                    "type": "number",
+                    "units": u.none
+                }
+            }
         },
         "predictor_data.shp": {
             "created_if": "compute_regression",
-            "about": "This shapefile has polygons matching those in “pud_results.shp” and it has fields defined by the ids given in the Predictor Table. The values of those fields are the metric calculated per response feature."
+            "about": gettext(
+                "AOI polygons with their corresponding predictor attributes."),
+            "geometries": spec_utils.POLYGONS,
+            "fields": {
+                "[PREDICTOR]": {
+                    "type": "number",
+                    "units": u.none,
+                    "about": gettext(
+                        "Predictor attribute value for each polygon.")
+                }
+            }
         },
         "regression_coefficients.txt": {
             "created_if": "compute_regression",
-            "about": "This is a text file output of the regression analysis. It includes estimates for each predictor variable (see How it Works). It also contains a “server id hash” value which can be used to correlate the PUD result with the data available on the PUD server. If these results are used in publication this hash should be included with the results for reproducibility."
+            "about": gettext(
+                "This is a text file output of the regression analysis. It "
+                "includes estimates for each predictor variable. It also "
+                "contains a “server id hash” value which can be used to "
+                "correlate the PUD result with the data available on the PUD "
+                "server. If these results are used in publication this hash "
+                "should be included with the results for reproducibility.")
         },
         "scenario_results.shp": {
-            "created_if": "compute_regression",
-            "about": "This shapefile matches “predictor_data.shp”, but its fields come from the predictors defined in the Scenario Predictor Table and there is an additional field “PUD_EST” which is the estimated PUD_YR_AVG per polygon."
+            "created_if": "scenario_predictor_table_path",
+            "about": gettext(
+                "AOI polygons with their corresponding predictor attributes "
+                "in the scenario."),
+            "geometries": spec_utils.POLYGONS,
+            "fields": {
+                "[PREDICTOR]": {
+                    "type": "number",
+                    "units": u.none,
+                    "about": gettext(
+                        "Predictor attribute value for each polygon.")
+                },
+                "PUD_EST": {
+                    "type": "number",
+                    "units": u.none,
+                    "about": gettext("The estimated PUD_YR_AVG per polygon.")
+                }
+            }
         },
         "intermediate": {
             "type": "directory",
             "contents": {
-                "aoi.shp": {},
-                "[PREDICTOR].json": {},
-                "predictor_estimates.json": {},
-                "pud.zip": {},
-                "response_polygons_lookup.pickle": {},
+                "aoi.shp": {
+                    "about": gettext(
+                        "Copy of the input AOI, gridded if applicable."),
+                    "fields": {},
+                    "geometries": spec_utils.POLYGONS
+                },
+                "aoi.zip": {
+                    "about": gettext("Compressed AOI")
+                },
+                "[PREDICTOR].json": {
+                    "about": gettext(
+                        "aggregated predictor values within each polygon")
+                },
+                "predictor_estimates.json": {
+                    "about": gettext("Predictor estimates")
+                },
+                "pud.zip": {
+                    "about": gettext("Compressed photo-user-day data")},
+                "response_polygons_lookup.pickle": {
+                    "about": gettext(
+                        "Pickled dictionary mapping FIDs to shapely geometries")
+                },
                 "scenario": {
                     "type": "directory",
                     "contents": {
-                        "[PREDICTOR].json": {}
+                        "[PREDICTOR].json": {
+                            "about": gettext(
+                                "aggregated scenario predictor values within "
+                                "each polygon")
+                        }
                     }
                 },
-                "server_version.pickle": {},
+                "server_version.pickle": {
+                    "about": gettext("Server version info")
+                },
                 "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
             }
         }
