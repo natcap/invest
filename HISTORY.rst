@@ -36,6 +36,9 @@
 
 Unreleased Changes
 ------------------
+* Seasonal Water Yield
+    * Fixed a bug where monthy quickflow nodata pixels were not being passed
+      on to the total quickflow raster (`#1105 <https://github.com/natcap/invest/issues/1105>`_)
 * Workbench
     * Fixed a bug where the Workbench would become unresponsive during an
       InVEST model run if the model emitted a very high volume of log messages.
