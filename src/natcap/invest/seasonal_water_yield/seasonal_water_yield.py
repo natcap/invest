@@ -990,7 +990,7 @@ def _calculate_monthly_quick_flow(precip_path, n_events_path, stream_path,
         qf_im[case_1_mask] = 0
 
         # case 2: there is precipitation where both p_im and n_m are
-        # defined and greater than zero.
+        # defined and greater than zero, and we're on a stream.
         case_2_mask = precip_mask & stream_mask
         qf_im[case_2_mask] = p_im[case_2_mask]
 
