@@ -614,17 +614,7 @@ def execute(args):
                validation.load_fields_from_vector(
                    file_registry['reprojected_aois'])))
 
-    if split_population_fields:
-        LOGGER.info(
-            "Split population groups found: "
-            f"{', '.join(split_population_fields)}, starting split "
-            "population optional module.")
-
-        if pop_group_table:
-            LOGGER.info(
-                "Radii have been defined per population group, starting split "
-                "population and radii module.")
-
+    if split_population_fields or pop_group_table:
         if _geometries_overlap(file_registry['reprojected_aois']):
             LOGGER.warning(
                 "Some administrative boundaries overlap, which will affect "
@@ -646,6 +636,12 @@ def execute(args):
             dependent_task_list=[
                 aoi_reprojection_task, lulc_alignment_task]
         )
+
+    if split_population_fields:
+        LOGGER.info(
+            "Split population groups found: "
+            f"{', '.join(split_population_fields)}, starting split "
+            "population optional module.")
 
         for pop_field in split_population_fields:
             field_value_map = _read_field_from_vector(
@@ -674,6 +670,67 @@ def execute(args):
                     target_path_list=[supply_filepath],
                     dependent_task_list=[aois_rasterization_task]
                 )
+
+    if pop_group_table:
+        LOGGER.info("Search radii for population groups provided, "
+                    "starting split population radii module.")
+
+        for pop_group, pop_group_radius in pop_group_table[
+                ['pop_group', 'search_radius_m']].itertuples(index=False):
+            field_value_map = _read_field_from_vector(
+                file_registry['reprojected_aois'],
+                ID_FIELDNAME, pop_group)
+            _ = graph.add_task(
+                _reclassify_and_multiply,
+                kwargs={
+                    'aois_raster_path':
+                        file_registry['aois_ids'],
+                    'reclassification_map': field_value_map,
+                    'supply_raster_path': supply_filepath,
+                    'target_raster_path': supply_to_group_filepath,
+                },
+                task_name=(
+                    f'Map proportion of {supply_type}supplied for'
+                    f'{groupname}'),
+                target_path_list=[supply_filepath],
+                dependent_task_list=[aois_rasterization_task]
+            )
+
+            _ = graph.add_task(
+                pygeoprocessing.raster_calculator,
+                kwargs={
+                    "base_raster_path_band_const_list": None,
+                    "local_op": None,
+                    "target_raster_path": None,
+                    "datatype_target": None,
+                    "nodata_target": None,
+                    "calc_raster_stats": True,
+                    "use_shared_memory": False,
+                    "largest_block": 65536,
+                    "max_timeout": 60.0,
+                    "raster_driver_creation_tuple": ['GTIFF', ['TILED=YES', 'BIGTIFF=YES', 'COMPRESS=LZW', 'BLOCKXSIZE=256', 'BLOCKYSIZE=256']],
+                },
+                task_name='',
+                target_path_list=[],
+                dependent_task_list=[]
+            )
+
+            convolve_2d()
+            # JUST DO THE DAMN THING THAT NEEDS TO BE DONE
+            # GET IT WORKING, OPTIMIZE LATER
+            # * Multiply population raster by the pop group proportion
+            # * convolve the population proportions with the pop group search
+            #   radius
+
+        # * sum all of the populations created in the pop group loop.
+        # * calculate a new R_j (greenspace/population ratio) that uses
+        #   per-popgroup search radii
+        # * for each population group:
+        #   * calculate Ai,gn (greenspace supply to the population group)
+        # * Sum all Ai,gn*(pop_group proportion) to get a new Ai (total greenspace supply)
+        # * Calculate new per-capita greenspace budget SUP_DEMi_cap (raster) from new Ai
+        # * Calculate new per-capita greenspace budget for the group SUP_DEMi_cap,gn
+        # * etc.
 
     _ = graph.add_task(
         _admin_level_supply_demand,
