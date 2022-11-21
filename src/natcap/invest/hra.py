@@ -361,6 +361,7 @@ def execute(args):
     alignment_dependent_tasks = []
     aligned_habitat_raster_paths = {}
     aligned_stressor_raster_paths = {}
+    habitat_stressor_vectors = set([])
     for name, attributes in itertools.chain(habitats_info.items(),
                                             stressors_info.items(),
                                             spatial_criteria_attrs.items()):
@@ -415,6 +416,10 @@ def execute(args):
         # If the input is a vector, reproject to the AOI SRS and simplify.
         # Rasterization happens in the alignment step.
         elif gis_type == pygeoprocessing.VECTOR_TYPE:
+            # Habitats and stressors are rasterized with ALL_TOUCHED=TRUE
+            if name in habitats_info or name in stressors_info:
+                habitat_stressor_vectors.add(source_filepath)
+
             # Using Shapefile here because its driver appears to not raise a
             # warning if a MultiPolygon geometry is inserted into a Polygon
             # layer, which was happening on a real-world sample dataset while
@@ -472,6 +477,7 @@ def execute(args):
             'vector_path_map': alignment_source_vector_paths,
             'target_pixel_size': (resolution, -resolution),
             'target_srs_wkt': target_srs_wkt,
+            'all_touched_vectors': habitat_stressor_vectors,
         },
         task_name='Align raster stack',
         target_path_list=list(itertools.chain(
@@ -1395,7 +1401,7 @@ def _rasterize_aoi_regions(source_aoi_vector_path, base_raster_path,
 
 
 def _align(raster_path_map, vector_path_map, target_pixel_size,
-           target_srs_wkt):
+           target_srs_wkt, all_touched_vectors=None):
     """Align a stack of rasters and/or vectors.
 
     In HRA, habitats and stressors (and optionally criteria) may be defined as
@@ -1429,6 +1435,9 @@ def _align(raster_path_map, vector_path_map, target_pixel_size,
         target_pixel_size (tuple): The pixel size of the target rasters, in
             the form (x, y), expressed in meters.
         target_srs_wkt (string): The target SRS of the aligned rasters.
+        all_touched_vectors=None (set): A set of vector paths found in
+            ``vector_path_map`` that should be rasterized with
+            ``ALL_TOUCHED=TRUE``.
 
     Returns:
         ``None``
@@ -1485,6 +1494,8 @@ def _align(raster_path_map, vector_path_map, target_pixel_size,
     # that align with the bounding box we determined earlier.
     # This approach yields more precise rasters than resampling an
     # already-rasterized vector through align_and_resize_raster_stack.
+    if all_touched_vectors is None:
+        all_touched_vectors = set([])
     if vector_path_map:
         LOGGER.info(f'Aligning {len(vector_path_map)} vectors')
         for source_vector_path, target_raster_path in vector_path_map.items():
@@ -1495,7 +1506,12 @@ def _align(raster_path_map, vector_path_map, target_pixel_size,
             raster_type = _TARGET_GDAL_TYPE_BYTE
             nodata_value = _TARGET_NODATA_BYTE
             burn_values = [1]
-            rasterize_option_list = ['ALL_TOUCHED=TRUE']
+            rasterize_option_list = []
+
+            # Only rasterize with ALL_TOUCHED=TRUE if we know it should be
+            # rasterized as such (habitats/stressors)
+            if source_vector_path in all_touched_vectors:
+                rasterize_option_list.append('ALL_TOUCHED=TRUE')
 
             for field in layer.schema:
                 fieldname = field.GetName()
