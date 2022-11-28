@@ -221,7 +221,7 @@ MODEL_SPEC = {
                     "about": (
                         "Relative level of habitat degradation on the future "
                         "landscape."),
-                    "bands": {1: {"type": "ratio"}}
+                    "bands": {1: {"type": "ratio"}},
                     "created_if": "lulc_fut_path"
                 },
                 "quality_out_c.tif": {
@@ -234,7 +234,7 @@ MODEL_SPEC = {
                     "about": (
                         "Relative level of habitat quality on the future "
                         "landscape."),
-                    "bands": {1: {"type": "ratio"}}
+                    "bands": {1: {"type": "ratio"}},
                     "created_if": "lulc_fut_path"
                 },
                 "rarity_out_c.tif": {

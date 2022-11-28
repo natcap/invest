@@ -17,6 +17,7 @@ from .spec_utils import u
 from . import validation
 from .model_metadata import MODEL_METADATA
 from . import gettext
+from .crop_production_regression import NUTRIENTS
 
 
 LOGGER = logging.getLogger(__name__)
@@ -210,22 +211,142 @@ MODEL_SPEC = {
     },
     "outputs": {
         "aggregate_results.csv": {
-            "about": "If an Aggregate Results Polygon shapefile is provided, a table is produced that summarizes total observed/percentile/modeled production and nutrient information within each polygon."
+            "created_if": "aggregate_polygon_path",
+            "about": "Model results aggregated to AOI polygons",
+            "columns": {
+                "FID": {
+                    "type": "integer",
+                    "about": "FID of the AOI polygon"
+                },
+                "[CROP]_observed": {
+                    "type": "number",
+                    "units": u.metric_ton,
+                    "about": (
+                        "Observed production of the given crop within the polygon")
+                },
+                "[CROP]_yield_[PERCENTILE]": {
+                    "type": "number",
+                    "units": u.metric_ton,
+                    "about": (
+                        "Modeled production of the given crop within the "
+                        "polygon at the given percentile")
+                },
+                **{
+                    f"{nutrient_code}_observed": {
+                        "about": f"Observed {nutrient} production within the polygon",
+                        "type": "number",
+                        "units": units
+                    } for nutrient_code, nutrient, units in NUTRIENTS
+                },
+                **{
+                    f"{nutrient_code}_[PERCENTILE]": {
+                        "about": (
+                            f"Modeled {nutrient} production within the polygon at"
+                            "the given percentile"),
+                        "type": "number",
+                        "units": units
+                    } for nutrient_code, nutrient, units in NUTRIENTS
+                }
+            }
         },
         "result_table.csv": {
-            "about": "Table listing all of the crops modeled in the run, the area covered, percentile or modeled production, observed production, and nutrient information for each crop. It is the primary output of the model."
+            "about": "Model results aggregated by crop",
+            "columns": {
+                "crop": {
+                    "type": "freestyle_string",
+                    "about": "Name of the crop"
+                },
+                "area (ha)": {
+                    "type": "number",
+                    "units": u.hectare,
+                    "about": "Area covered by the crop"
+                },
+                "production_observed": {
+                    "type": "number",
+                    "units": u.metric_ton,
+                    "about": "Observed crop production"
+                },
+                "production_[PERCENTILE]": {
+                    "type": "number",
+                    "units": u.metric_ton,
+                    "about": "Modeled crop production at the given percentile"
+                },
+                **{
+                    f"{nutrient_code}_observed": {
+                        "about": f"Observed {nutrient} production from the crop",
+                        "type": "number",
+                        "units": units
+                    } for nutrient_code, nutrient, units in NUTRIENTS
+                },
+                **{
+                    f"{nutrient_code}_[PERCENTILE]": {
+                        "about": (
+                            f"Modeled {nutrient} production from the crop at"
+                            "the given percentile"),
+                        "type": "number",
+                        "units": units
+                    } for nutrient_code, nutrient, units in NUTRIENTS
+                }
+            }
         },
-        "[CROP]_observed_production.tif": {},
-        "[CROP]_yield_[PERCENTILE]_production.tif": {},
+        "[CROP]_observed_production.tif": {
+            "about": "Observed yield for the given crop",
+            "bands": {1: {"type": "number", "units": u.metric_ton/u.hectare}}
+        },
+        "[CROP]_yield_[PERCENTILE]_production.tif": {
+            "about": (
+                "Modeled yield for the given crop at the given percentile"),
+            "bands": {1: {"type": "number", "units": u.metric_ton/u.hectare}}
+        },
         "intermediate": {
             "type": "directory",
             "contents": {
-                "clipped_[CROP]_climate_bin_map.tif": {},
-                "[CROP]_clipped_observed_yield.tif": {},
-                "[CROP]_interpolated_observed_yield.tif": {},
-                "[CROP]_yield_[PERCENTILE]_coarse_yield.tif": {},
-                "[CROP]_yield_[PERCENTILE]_interpolated_yield.tif": {},
-                "[CROP]_zeroed_observed_yield.tif": {},
+                "clipped_[CROP]_climate_bin_map.tif": {
+                    "about": (
+                        "Climate bin map for the given crop, clipped to the "
+                        "LULC extent"),
+                    "bands": {1: {"type": "integer"}}
+                },
+                "[CROP]_clipped_observed_yield.tif": {
+                    "about": (
+                        "Observed yield for the given crop, clipped to the "
+                        "extend of the landcover map"),
+                    "bands": {1: {
+                        "type": "number", "units": u.metric_ton/u.hectare
+                    }}
+                },
+                "[CROP]_interpolated_observed_yield.tif": {
+                    "about": (
+                        "Observed yield for the given crop, interpolated to "
+                        "the resolution of the landcover map"),
+                    "bands": {1: {
+                        "type": "number", "units": u.metric_ton/u.hectare
+                    }}
+                },
+                "[CROP]_yield_[PERCENTILE]_coarse_yield.tif": {
+                    "about": (
+                        "Percentile yield of the given crop, at the coarse "
+                        "resolution of the climate bin map"),
+                    "bands": {1: {
+                        "type": "number", "units": u.metric_ton/u.hectare
+                    }}
+                },
+                "[CROP]_yield_[PERCENTILE]_interpolated_yield.tif": {
+                    "about": (
+                        "Percentile yield of the given crop, interpolated to "
+                        "the resolution of the landcover map"),
+                    "bands": {1: {
+                        "type": "number", "units": u.metric_ton/u.hectare
+                    }}
+                },
+                "[CROP]_zeroed_observed_yield.tif": {
+                    "about": (
+                        "Observed yield for the given crop, with nodata "
+                        "converted to 0"),
+                    "bands": {1: {
+                        "type": "number", "units": u.metric_ton/u.hectare
+                    }}
+                },
                 "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
             }
         }

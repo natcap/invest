@@ -275,23 +275,23 @@ MODEL_SPEC = {
                         "gaussian_kernel.tif": {
                             "about": "Kernel",
                             "bands": {1: {"type": "ratio"}}
-                        }
+                        },
                         "highways.tif": {
                             "about": "Highways",
                             "bands": {1: {"type": "ratio"}}
-                        }
+                        },
                         "intermediate_globio_lulc.tif": {
                             "about": "LULC",
                             "bands": {1: {"type": "ratio"}}
-                        }
+                        },
                         "pasture.tif": {
                             "about": "Pasture",
                             "bands": {1: {"type": "ratio"}}
-                        }
+                        },
                         "potential_vegetation.tif": {
                             "about": "Potential vegetation",
                             "bands": {1: {"type": "ratio"}}
-                        }
+                        },
                         "primary_veg_mask.tif": {
                             "about": "Mask",
                             "bands": {1: {"type": "ratio"}}

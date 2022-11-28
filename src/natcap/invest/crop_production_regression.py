@@ -31,6 +31,41 @@ CROPS = {
     "wheat": {"description": gettext("wheat")}
 }
 
+NUTRIENTS = [
+    ("protein", "protein", u.gram/u.hectogram),
+    ("lipid", "total lipid", u.gram/u.hectogram),
+    ("energy", "energy", u.kilojoule/u.hectogram),
+    ("ca", "calcium", u.milligram/u.hectogram),
+    ("fe", "iron", u.milligram/u.hectogram),
+    ("mg", "magnesium", u.milligram/u.hectogram),
+    ("ph", "phosphorus", u.milligram/u.hectogram),
+    ("k", "potassium", u.milligram/u.hectogram),
+    ("na", "sodium", u.milligram/u.hectogram),
+    ("zn", "zinc", u.milligram/u.hectogram),
+    ("cu", "copper", u.milligram/u.hectogram),
+    ("fl", "fluoride", u.microgram/u.hectogram),
+    ("mn", "manganese", u.milligram/u.hectogram),
+    ("se", "selenium", u.microgram/u.hectogram),
+    ("vita", "vitamin A", u.IU/u.hectogram),
+    ("betac", "beta carotene", u.microgram/u.hectogram),
+    ("alphac", "alpha carotene", u.microgram/u.hectogram),
+    ("vite", "vitamin E", u.milligram/u.hectogram),
+    ("crypto", "cryptoxanthin", u.microgram/u.hectogram),
+    ("lycopene", "lycopene", u.microgram/u.hectogram),
+    ("lutein", "lutein and zeaxanthin", u.microgram/u.hectogram),
+    ("betaT", "beta tocopherol", u.milligram/u.hectogram),
+    ("gammaT", "gamma tocopherol", u.milligram/u.hectogram),
+    ("deltaT", "delta tocopherol", u.milligram/u.hectogram),
+    ("vitc", "vitamin C", u.milligram/u.hectogram),
+    ("thiamin", "thiamin", u.milligram/u.hectogram),
+    ("riboflavin", "riboflavin", u.milligram/u.hectogram),
+    ("niacin", "niacin", u.milligram/u.hectogram),
+    ("pantothenic", "pantothenic acid", u.milligram/u.hectogram),
+    ("vitb6", "vitamin B6", u.milligram/u.hectogram),
+    ("folate", "folate", u.microgram/u.hectogram),
+    ("vitb12", "vitamin B12", u.microgram/u.hectogram),
+    ("vitk", "vitamin K", u.microgram/u.hectogram)
+]
 
 MODEL_SPEC = {
     "model_name": MODEL_METADATA["crop_production_regression"].model_title,
@@ -113,43 +148,10 @@ MODEL_SPEC = {
                     "type": "csv",
                     "columns": {
                         nutrient: {
+                            "about": about,
                             "type": "number",
                             "units": units
-                        } for nutrient, units in {
-                            "protein":     u.gram/u.hectogram,
-                            "lipid":       u.gram/u.hectogram,       # total lipid
-                            "energy":      u.kilojoule/u.hectogram,
-                            "ca":          u.milligram/u.hectogram,  # calcium
-                            "fe":          u.milligram/u.hectogram,  # iron
-                            "mg":          u.milligram/u.hectogram,  # magnesium
-                            "ph":          u.milligram/u.hectogram,  # phosphorus
-                            "k":           u.milligram/u.hectogram,  # potassium
-                            "na":          u.milligram/u.hectogram,  # sodium
-                            "zn":          u.milligram/u.hectogram,  # zinc
-                            "cu":          u.milligram/u.hectogram,  # copper
-                            "fl":          u.microgram/u.hectogram,  # fluoride
-                            "mn":          u.milligram/u.hectogram,  # manganese
-                            "se":          u.microgram/u.hectogram,  # selenium
-                            "vita":        u.IU/u.hectogram,         # vitamin A
-                            "betac":       u.microgram/u.hectogram,  # beta carotene
-                            "alphac":      u.microgram/u.hectogram,  # alpha carotene
-                            "vite":        u.milligram/u.hectogram,  # vitamin e
-                            "crypto":      u.microgram/u.hectogram,  # cryptoxanthin
-                            "lycopene":    u.microgram/u.hectogram,  # lycopene
-                            "lutein":      u.microgram/u.hectogram,  # lutein + zeaxanthin
-                            "betaT":       u.milligram/u.hectogram,  # beta tocopherol
-                            "gammaT":      u.milligram/u.hectogram,  # gamma tocopherol
-                            "deltaT":      u.milligram/u.hectogram,  # delta tocopherol
-                            "vitc":        u.milligram/u.hectogram,  # vitamin C
-                            "thiamin":     u.milligram/u.hectogram,
-                            "riboflavin":  u.milligram/u.hectogram,
-                            "niacin":      u.milligram/u.hectogram,
-                            "pantothenic": u.milligram/u.hectogram,  # pantothenic acid
-                            "vitb6":       u.milligram/u.hectogram,  # vitamin B6
-                            "folate":      u.microgram/u.hectogram,
-                            "vitb12":      u.microgram/u.hectogram,  # vitamin B12
-                            "vitk":        u.microgram/u.hectogram,  # vitamin K
-                        }.items()
+                        } for nutrient, about, units in NUTRIENTS
                     }
                 },
                 "extended_climate_bin_maps": {
@@ -183,17 +185,63 @@ MODEL_SPEC = {
     "outputs": {
         "aggregate_results.csv": {
             "created_if": "aggregate_polygon_path",
-            "about": "Table that summarizes total observed/percentile/modeled production and nutrient information ",
+            "about": "Table of results aggregated by ",
             "columns": {
-                "FID"
-                "[CROP]_modeled"
-                "[CROP]_observed"
-                "[NUTRIENT]_modeled"
-                "[NUTRIENT]_observed"
+                "FID": {
+                    "type": "integer",
+                    "about": "FID of the AOI polygon"
+                },
+                "[CROP]_modeled": {
+                    "type": "number",
+                    "units": u.metric_ton,
+                    "about": "Modeled production of the given crop within the polygon"
+                },
+                "[CROP]_observed": {
+                    "type": "number",
+                    "units": u.metric_ton,
+                    "about": "Observed production of the given crop within the polygon"
+                },
+                **{
+                    f"{nutrient}_{x}": {
+                        "about": f"{x} {name} production within the polygon",
+                        "type": "number",
+                        "units": units
+                    } for nutrient, name, units in NUTRIENTS
+                      for x in ["modeled", "observed"]
+                }
             }
         },
         "result_table.csv": {
-            "about": "Table listing all of the crops modeled in the run, the area covered, percentile or modeled production, observed production, and nutrient information for each crop. It is the primary output of the model."
+            "about": "Table of results aggregated by crop",
+            "columns": {
+                "crop": {
+                    "type": "freestyle_string",
+                    "about": "Name of the crop"
+                },
+                "area (ha)": {
+                    "type": "number",
+                    "units": u.hectare,
+                    "about": "Area covered by the crop"
+                },
+                "production_modeled": {
+                    "type": "number",
+                    "units": u.metric_ton,
+                    "about": "Modeled crop production"
+                },
+                "production_observed": {
+                    "type": "number",
+                    "units": u.metric_ton,
+                    "about": "Observed crop production"
+                },
+                **{
+                    f"{nutrient}_{x}": {
+                        "about": f"{x} {name} production from the crop",
+                        "type": "number",
+                        "units": units
+                    } for nutrient, name, units in NUTRIENTS
+                      for x in ["modeled", "observed"]
+                }
+            }
         },
         "[CROP]_observed_production.tif": {
             "about": "Observed yield for the given crop",
