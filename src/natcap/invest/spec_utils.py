@@ -158,6 +158,11 @@ FLOW_DIRECTION = {
         "pixels."),
     "bands": {1: {"type": "integer"}}
 }
+FLOW_DIRECTION_D8 = {
+    "about": gettext(
+        "D8 flow direction."),
+    "bands": {1: {"type": "integer"}}
+}
 SLOPE = {
     "about": gettext(
         "Percent slope, calculated from the pit-filled "

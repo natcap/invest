@@ -151,6 +151,29 @@ MODEL_SPEC = {
                             "vitk":        u.microgram/u.hectogram,  # vitamin K
                         }.items()
                     }
+                },
+                "extended_climate_bin_maps": {
+                    "type": "directory",
+                    "about": gettext("Maps of climate bins for each crop."),
+                    "contents": {
+                        "extendedclimatebins[CROP]": {
+                            "type": "raster",
+                            "bands": {1: {"type": "integer"}},
+                        }
+                    }
+                },
+                "observed_yield": {
+                    "type": "directory",
+                    "about": gettext("Maps of actual observed yield for each crop."),
+                    "contents": {
+                        "[CROP]_observed_yield.tif": {
+                            "type": "raster",
+                            "bands": {1: {
+                                "type": "number",
+                                "units": u.metric_ton/u.hectare
+                            }}
+                        }
+                    }
                 }
             },
             "about": gettext("The Crop Production datasets provided with the model."),
@@ -159,24 +182,83 @@ MODEL_SPEC = {
     },
     "outputs": {
         "aggregate_results.csv": {
-            "about": "If an Aggregate Results Polygon shapefile is provided, a table is produced that summarizes total observed/percentile/modeled production and nutrient information within each polygon."
+            "created_if": "aggregate_polygon_path",
+            "about": "Table that summarizes total observed/percentile/modeled production and nutrient information ",
+            "columns": {
+                "FID"
+                "[CROP]_modeled"
+                "[CROP]_observed"
+                "[NUTRIENT]_modeled"
+                "[NUTRIENT]_observed"
+            }
         },
         "result_table.csv": {
             "about": "Table listing all of the crops modeled in the run, the area covered, percentile or modeled production, observed production, and nutrient information for each crop. It is the primary output of the model."
         },
-        "[CROP]_observed_production.tif": {},
-        "[CROP]_regression_production.tif": {},
+        "[CROP]_observed_production.tif": {
+            "about": "Observed yield for the given crop",
+            "bands": {1: {"type": "number", "units": u.metric_ton/u.hectare}}
+        },
+        "[CROP]_regression_production.tif": {
+            "about": "Modeled yield for the given crop",
+            "bands": {1: {"type": "number", "units": u.metric_ton/u.hectare}}
+        },
         "intermediate": {
             "type": "directory",
             "contents": {
-                "aggregate_vector.shp": {},
-                "clipped_[CROP]_climate_bin_map.tif": {},
-                "[CROP]_[PARAMETER]_coarse_regression_parameter.tif": {},
-                "[CROP]_[PARAMETER]_interpolated_regression_parameter.tif": {},
-                "[CROP]_clipped_observed_yield.tif": {},
-                "[CROP]_interpolated_observed_yield.tif": {},
-                "[CROP]_[FERTILIZER]_yield.tif": {},
-                "[CROP]_zeroed_observed_yield.tif": {},
+                "aggregate_vector.shp": {
+                    "about": "Copy of input AOI vector",
+                    "geometries": spec_utils.POLYGONS,
+                    "fields": {}
+                },
+                "clipped_[CROP]_climate_bin_map.tif": {
+                    "about": (
+                        "Climate bin map for the given crop, clipped to the "
+                        "LULC extent"),
+                    "bands": {1: {"type": "integer"}}
+                },
+                "[CROP]_[PARAMETER]_coarse_regression_parameter.tif": {
+                    "about": (
+                        "Regression parameter for the given crop at the "
+                        "coarse resolution of the climate bin map"),
+                    "bands": {1: {"type": "number", "units": u.none}}
+                },
+                "[CROP]_[PARAMETER]_interpolated_regression_parameter.tif": {
+                    "about": (
+                        "Regression parameter for the given crop, "
+                        "interpolated to the resolution of the landcover map"),
+                    "bands": {1: {"type": "number", "units": u.none}}
+                },
+                "[CROP]_clipped_observed_yield.tif": {
+                    "about": (
+                        "Observed yield for the given crop, clipped to the "
+                        "extend of the landcover map"),
+                    "bands": {1: {
+                        "type": "number", "units": u.metric_ton/u.hectare
+                    }}
+                },
+                "[CROP]_interpolated_observed_yield.tif": {
+                    "about": (
+                        "Observed yield for the given crop, interpolated to "
+                        "the resolution of the landcover map"),
+                    "bands": {1: {
+                        "type": "number", "units": u.metric_ton/u.hectare
+                    }}
+                },
+                "[CROP]_[NUTRIENT]_yield.tif": {
+                    "about": "Nutrient-dependent crop yield",
+                    "bands": {1: {
+                        "type": "number", "units": u.metric_ton/u.hectare
+                    }}
+                },
+                "[CROP]_zeroed_observed_yield.tif": {
+                    "about": (
+                        "Observed yield for the given crop, with nodata "
+                        "converted to 0"),
+                    "bands": {1: {
+                        "type": "number", "units": u.metric_ton/u.hectare
+                    }}
+                },
                 "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
             }
         }
@@ -719,7 +801,7 @@ def _x_yield_op(
     result = numpy.empty(b_x.shape, dtype=numpy.float32)
     result[:] = _NODATA_YIELD
     valid_mask = (
-        ~utils.array_equals_nodata(y_max,  _NODATA_YIELD) &
+        ~utils.array_equals_nodata(y_max, _NODATA_YIELD) &
         ~utils.array_equals_nodata(b_x, _NODATA_YIELD) &
         ~utils.array_equals_nodata(c_x, _NODATA_YIELD) &
         (lulc_array == crop_lucode))
@@ -977,10 +1059,10 @@ def aggregate_regression_results_to_polygons(
                     '%s_observed' % crop_name]:
                 total_nutrient_table[
                     nutrient_id]['observed'][fid_index] += (
-                        nutrient_factor *
+                        nutrient_factor * # percent crop used * 1000 [100g per Mg]
                         total_yield_lookup[
                             '%s_observed' % crop_name][fid_index]['sum'] *
-                        nutrient_table[crop_name][nutrient_id])
+                        nutrient_table[crop_name][nutrient_id])  # nutrient unit per 100g crop
 
     # report everything to a table
     aggregate_table_path = os.path.join(

@@ -101,28 +101,41 @@ MODEL_SPEC = {
         }
     },
     "outputs": {
-        "filled_dem.tif": {
-            "about": "The DEM, but with hydrological sinks filled."
-        },
-        "flow_direction.tif": {
-            "about": "The D8 flow direction raster, created from the filled DEM."
-        },
-        "flow_accumulation.tif": {
-            "about": "The D8 flow accumulation raster, created from flow_direction.tif."
-        },
+        "filled_dem.tif": spec_utils.FILLED_DEM,
+        "flow_direction.tif": spec_utils.FLOW_DIRECTION_D8,
+        "flow_accumulation.tif": spec_utils.FLOW_ACCUMULATION,
         "preprocessed_geometries.gpkg": {
-            "about": "A vector containing only those geometries that the model can verify are valid. The geometries appearing in this vector will be the ones passed to watershed delineation."
+            "about": (
+                "A vector containing only those geometries that the model can "
+                "verify are valid. The geometries appearing in this vector "
+                "will be the ones passed to watershed delineation."),
+            "geometries": spec_utils.ALL_GEOMS,
+            "fields": {}
         },
-        "streams.tif": {
-            "about": "The raster stream layer used to snap outlet points, produced from the DEM and Threshold Flow Accumulation value."
-        },
+        "streams.tif": spec_utils.STREAM,
         "snapped_outlets.gpkg": {
-            "about": "A vector that indicates where outlet points (point geometries only) were snapped to based on the values of Threshold Flow Accumulation and Pixel Distance to Snap Outlet Points. Any non-point geometries will also have been copied over to this vector, but will not have been altered."
+            "about": (
+                "A vector that indicates where outlet points (point "
+                "geometries only) were snapped to based on the values of "
+                "Threshold Flow Accumulation and Pixel Distance to Snap "
+                "Outlet Points. Any non-point geometries will also have been "
+                "copied over to this vector, but will not have been altered."),
+            "geometries": spec_utils.POINT,
+            "fields": {}
         },
         "watersheds.gpkg": {
-            "about": "A GeoPackage vector defining the areas that are upstream from the snapped outlet points, where upstream area is defined by the D8 flow algorithm implementation in PyGeoprocessing."
+            "about": (
+                "A vector defining the areas that are upstream from the "
+                "snapped outlet points, where upstream area is defined by the "
+                "D8 flow algorithm implementation in PyGeoprocessing."),
+            "geometries": spec_utils.POLYGON,
+            "fields": {}
         },
         "pour_points.gpkg": {
+            "about": (
+                "Points where water flows off the defined area of the map."),
+            "geometries": spec_utils.POINT,
+            "fields": {}
         },
         "_work_tokens": spec_utils.TASKGRAPH_DIR
     }

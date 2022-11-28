@@ -210,7 +210,9 @@ MODEL_SPEC = {
     },
     "outputs": {
         "aoi_summary.shp": {
-            "about": "A shapefile summarizing the average MSA for each zone defined in the area of interest."
+            "about": "A shapefile summarizing the average MSA for each zone defined in the area of interest.",
+            "fields": {},
+            "geometries": spec_utils.POLYGONS
         },
         "msa.tif": {
             "about": (
@@ -254,25 +256,62 @@ MODEL_SPEC = {
                 "tmp": {
                     "type": "directory",
                     "contents": {
-                        "canals.tif": {},
+                        "canals.tif": {
+                            "about": "Canals",
+                            "bands": {1: {"type": "ratio"}}
+                        },
                         "combined_infrastructure.tif": {
-                            "about": "A map joining all the infrastructure files in the infrastructure directory (input 2 above). If there is only one file in that directory, it should be identical to that file."
+                            "about": "A map joining all the infrastructure files in the infrastructure directory (input 2 above). If there is only one file in that directory, it should be identical to that file.",
+                            "bands": {1: {"type": "ratio"}}
                         },
                         "ffqi.tif": {
                             "about": "A map of the forest fragmentation quality index (ffqi), used to differentiate between primary and secondary forest in the GLOBIO land use classification.",
                             "bands": {1: {"type": "ratio"}}
                         },
-                        "forest_areas.tif": {},
-                        "gaussian_kernel.tif": {},
-                        "highways.tif": {},
-                        "intermediate_globio_lulc.tif": {},
-                        "pasture.tif": {},
-                        "potential_vegetation.tif": {},
-                        "primary_veg_mask.tif": {},
-                        "roads.tif": {},
-                        "smoothed_forest_areas.tif": {},
-                        "smoothed_primary_veg_mask.tif": {},
-                        "transmission_lines.tif": {}
+                        "forest_areas.tif": {
+                            "about": "Forest areas",
+                            "bands": {1: {"type": "ratio"}}
+                        },
+                        "gaussian_kernel.tif": {
+                            "about": "Kernel",
+                            "bands": {1: {"type": "ratio"}}
+                        }
+                        "highways.tif": {
+                            "about": "Highways",
+                            "bands": {1: {"type": "ratio"}}
+                        }
+                        "intermediate_globio_lulc.tif": {
+                            "about": "LULC",
+                            "bands": {1: {"type": "ratio"}}
+                        }
+                        "pasture.tif": {
+                            "about": "Pasture",
+                            "bands": {1: {"type": "ratio"}}
+                        }
+                        "potential_vegetation.tif": {
+                            "about": "Potential vegetation",
+                            "bands": {1: {"type": "ratio"}}
+                        }
+                        "primary_veg_mask.tif": {
+                            "about": "Mask",
+                            "bands": {1: {"type": "ratio"}}
+                        },
+                        "roads.tif": {
+                            "about": "Roads",
+                            "bands": {1: {"type": "ratio"}}
+                        },
+                        "smoothed_forest_areas.tif": {
+                            "about": "Forest areas",
+                            "bands": {1: {"type": "ratio"}}
+                        },
+                        "smoothed_primary_veg_mask.tif": {
+                            "about": "Mask",
+                            "bands": {1: {"type": "ratio"}}
+                        },
+                        "transmission_lines.tif": {
+                            "about": "Transmission lines",
+                            "bands": {1: {"type": "ratio"}}
+                        }
                     }
                 },
                 "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
