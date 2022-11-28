@@ -537,7 +537,8 @@ class HRAUnitTests(unittest.TestCase):
                 self.workspace_dir, 'aligned_criterion_vector.tif'),
         }
 
-        hra._align(raster_path_map, vector_path_map, (30, -30), SRS_WKT)
+        hra._align(raster_path_map, vector_path_map, (30, -30), SRS_WKT,
+                  all_touched_vectors=set([habitat_vector_path]))
 
         # Calculated by hand given the above spatial inputs and
         # (30, -30) pixels.  All rasters should share the same extents and
@@ -583,15 +584,16 @@ class HRAUnitTests(unittest.TestCase):
 
         # The aligned criterion raster should have been rasterized from the
         # rating column.
+        # This is an ALL_TOUCHED=FALSE rasterization.
         ndta = hra._TARGET_NODATA_FLOAT32
         expected_criterion_array = numpy.array([
-            [0.12, 0.12, 0.12, 0.12, 0.12, 0.12, ndta, ndta, ndta, ndta],
-            [0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, ndta, ndta, ndta],
-            [0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, ndta, ndta, ndta],
-            [0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, ndta, ndta, ndta],
-            [0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, ndta, ndta, ndta],
-            [0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, ndta, ndta, ndta],
+            [ndta, ndta, 0.12, 0.12, 0.12, ndta, ndta, ndta, ndta, ndta],
             [ndta, 0.12, 0.12, 0.12, 0.12, 0.12, ndta, ndta, ndta, ndta],
+            [0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, ndta, ndta, ndta],
+            [0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, ndta, ndta, ndta],
+            [0.12, 0.12, 0.12, 0.12, 0.12, 0.12, ndta, ndta, ndta, ndta],
+            [ndta, 0.12, 0.12, 0.12, 0.12, 0.12, ndta, ndta, ndta, ndta],
+            [ndta, ndta, 0.12, 0.12, ndta, ndta, ndta, ndta, ndta, ndta],
             [ndta, ndta, ndta, ndta, ndta, ndta, ndta, ndta, ndta, ndta],
             [ndta, ndta, ndta, ndta, ndta, ndta, ndta, ndta, ndta, ndta]],
             dtype=numpy.float32)

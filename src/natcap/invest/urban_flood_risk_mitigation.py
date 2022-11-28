@@ -64,7 +64,7 @@ ARGS_SPEC = {
                 **{f"cn_{soilgroup.lower()}": {
                     "type": "number", "units": u.none, "about": gettext(
                         "The curve number value for this LULC type in the "
-                        f"soil group code {soilgroup}.")}
+                        f"soil group code") + f" {soilgroup}."}
                     for soilgroup in "ABCD"}
             },
             "about": gettext(

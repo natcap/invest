@@ -20,7 +20,7 @@ env:
   # build: dependency of make install
   # nomkl: make sure numpy w/out mkl
   # setuptools_scm: needed for versioning to work
-  CONDA_DEFAULT_DEPENDENCIES: build nomkl setuptools_scm
+  CONDA_DEFAULT_DEPENDENCIES: python-build nomkl setuptools_scm
   LATEST_SUPPORTED_PYTHON_VERSION: "3.10"
 
 jobs:

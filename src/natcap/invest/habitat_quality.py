@@ -39,6 +39,7 @@ ARGS_SPEC = {
         "spatial_keys": [
             "lulc_cur_path", "lulc_fut_path", "lulc_bas_path",
             "access_vector_path"],
+        "different_projections_ok": True,
     },
     "args": {
         "workspace_dir": spec_utils.WORKSPACE,
@@ -150,7 +151,7 @@ ARGS_SPEC = {
         },
         "access_vector_path": {
             "type": "vector",
-            "projected": True,
+            "projected": False,
             "fields": {
                 "access": {
                     "type": "ratio",
@@ -377,13 +378,16 @@ def execute(args):
                 f"Threat: {values['path']} for column: {values['table_col']}",
                 " had values outside of this range.")
 
-    LOGGER.info('Aligning and resizing land cover and threat rasters')
+    LOGGER.info(
+        'Aligning, resizing, and reprojecting raster inputs to that of the'
+        ' current land cover.')
     lulc_raster_info = pygeoprocessing.get_raster_info(args['lulc_cur_path'])
     # ensure that the pixel size used is square
     lulc_pixel_size = lulc_raster_info['pixel_size']
     min_pixel_size = min([abs(x) for x in lulc_pixel_size])
     pixel_size = (min_pixel_size, -min_pixel_size)
     lulc_bbox = lulc_raster_info['bounding_box']
+    lulc_wkt = lulc_raster_info['projection_wkt']
 
     # create paths for aligned rasters checking for the case the raster path
     # is a folder
@@ -405,10 +409,13 @@ def execute(args):
     # and store them in the intermediate folder
     align_task = task_graph.add_task(
         func=pygeoprocessing.align_and_resize_raster_stack,
-        args=(
-            lulc_and_threat_raster_list, aligned_raster_list,
-            ['near']*len(lulc_and_threat_raster_list), pixel_size,
-            lulc_bbox),
+        kwargs={
+            'base_raster_path_list': lulc_and_threat_raster_list,
+            'target_raster_path_list': aligned_raster_list,
+            'resample_method_list': ['near']*len(lulc_and_threat_raster_list),
+            'target_pixel_size': pixel_size,
+            'bounding_box_mode': lulc_bbox,
+            'target_projection_wkt': lulc_wkt},
         target_path_list=aligned_raster_list,
         task_name='align_input_rasters')
 
@@ -453,7 +460,20 @@ def execute(args):
     access_task_list = [create_access_raster_task]
 
     if 'access_vector_path' in args and args['access_vector_path']:
-        LOGGER.debug("Rasterize Access vector")
+        LOGGER.debug("Reproject and rasterize Access vector")
+        reprojected_access_path = os.path.join(
+            intermediate_output_dir, 'access_projected_to_lulc_cur.gpkg')
+        reproject_access_task = task_graph.add_task(
+            func=pygeoprocessing.reproject_vector,
+            kwargs={
+                'base_vector_path': args['access_vector_path'],
+                'target_projection_wkt': lulc_wkt,
+                'target_path': reprojected_access_path,
+                'driver_name': 'GPKG'
+            },
+            target_path_list=[reprojected_access_path],
+            task_name='reproject_access_vector')
+
         rasterize_access_task = task_graph.add_task(
             func=pygeoprocessing.rasterize,
             args=(args['access_vector_path'], access_raster_path),
@@ -462,7 +482,8 @@ def execute(args):
                 'burn_values': None
             },
             target_path_list=[access_raster_path],
-            dependent_task_list=[create_access_raster_task],
+            dependent_task_list=[
+                create_access_raster_task, reproject_access_task],
             task_name='rasterize_access')
         access_task_list.append(rasterize_access_task)
 

@@ -36,7 +36,21 @@
 
 Unreleased Changes
 ------------------
+* General
+    * Fixed a possible path traversal vulnerability when working with datastack
+      archives.  This patches CVE-2007-4559, reported to us by Trellix.
+      https://github.com/natcap/invest/issues/1113
+* Habitat Quality
+    * All spatial inputs including the access vector and threat rasters are
+      now reprojected to the ``lulc_cur_path`` raster. This fixes a bug where
+      rasters with a different SRS would appear to not intersect the
+      ``lulc_cur_path`` even if they did. (https://github.com/natcap/invest/issues/1093)
 * HRA
+    * Fixed a regression relative to InVEST 3.9.0 outputs where spatial
+      criteria vectors were being rasterized with the ``ALL_TOUCHED=TRUE``
+      flag, leading to a perceived buffering of spatial criteria in certain
+      cases.  In InVEST 3.9.0, these were rasterized with ``ALL_TOUCHED=FALSE``.
+      https://github.com/natcap/invest/issues/1120
     * Fixed an issue with the results table, ``SUMMARY_STATISTICS.csv`` where
       the percentages of high, medium and low risk classifications were not
       correctly reported.
