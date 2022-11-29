@@ -75,6 +75,62 @@ LAND_GRID_POINT_FIELDS = {
     }
 }
 
+WEM_FIELDS = {
+    "I": {
+        "type": "number",
+        "units": u.none,
+        "about": "index value for the wave input grid points"
+    },
+    "J": {
+        "type": "number",
+        "units": u.none,
+        "about": "index value for the wave input grid points"
+    },
+    "LONG": {
+        "type": "number",
+        "units": u.degree,
+        "about": "longitude of the grid points"
+    },
+    "LATI": {
+        "type": "number",
+        "units": u.degree,
+        "about": "latitude of the grid points"
+    },
+    "HSAVG_M": {
+        "about": "wave height average",
+        "type": "number",
+        "units": u.meter
+    },
+    "TPAVG_S": {
+        "about": "wave period average",
+        "type": "number",
+        "units": u.second
+    }
+}
+
+INDEXED_WEM_FIELDS = {
+    **WEM_FIELDS,
+    "DEPTH_M": {
+        "about": "depth",
+        "type": "number",
+        "units": u.meter
+    }
+}
+
+CAPTURED_WEM_FIELDS = {
+    **INDEXED_WEM_FIELDS,
+    "CAPWE_MWHY": {
+        "about": "captured wave energy per device",
+        "type": "number",
+        "units": u.megawatt_hour/u.year
+    },
+    "WE_KWM": {
+        "about": "potential wave power",
+        "type": "number",
+        "units": u.kilowatt/u.meter
+    }
+}
+
 MODEL_SPEC = {
     "model_name": MODEL_METADATA["wave_energy"].model_title,
     "pyname": MODEL_METADATA["wave_energy"].pyname,
@@ -457,66 +513,28 @@ MODEL_SPEC = {
         "intermediate": {
             "type": "directory",
             "contents": {
-                "aoi_clipped_to_extract_path.shp": {"docs": False},
-                "Captured_WEM_InputOutput_Pts.shp": {"docs": False},
-                "Final_WEM_InputOutput_Pts.shp": {"docs": False},
-                "Indexed_WEM_InputOutput_Pts.shp": {"docs": False},
-                "interpolated_capwe_mwh.tif": {"docs": False},
-                "interpolated_wp_kw.tif": {"docs": False},
-                "npv_not_clipped.tif": {"docs": False},
-                "unclipped_capwe_mwh.tif": {"docs": False},
-                "unclipped_wp_kw.tif": {"docs": False},
-                "WEM_InputOutput_Pts.shp": {
+                "aoi_clipped_to_extract_path.shp": {
+                    "about": "AOI clipped to the analysis area",
+                    "geometries": spec_utils.POLYGON,
+                    "fields": {}
+                },
+                "Captured_WEM_InputOutput_Pts.shp": {
+                    "about": "Map of wave data points.",
+                    "geometries": spec_utils.POINT,
+                    "fields": CAPTURED_WEM_FIELDS
+                },
+                "Final_WEM_InputOutput_Pts.shp": {
                     "about": "Map of wave data points.",
                     "geometries": spec_utils.POINT,
                     "fields": {
-                        "I": {
-                            "type": "number",
-                            "units": u.none,
-                            "about": "index value for the wave input grid points"
-                        },
-                        "J": {
-                            "type": "number",
-                            "units": u.none,
-                            "about": "index value for the wave input grid points"
-                        },
-                        "LONG": {
-                            "type": "number",
-                            "units": u.degree,
-                            "about": "longitude of the grid points"
-                        },
-                        "LAT": {
-                            "type": "number",
-                            "units": u.degree,
-                            "about": "latitude of the grid points"
-                        },
-                        "HSAVG_M": {
-                            "about": "wave height average",
-                            "type": "number",
-                            "units": u.meter
-                        },
-                        "TPAVG_S": {
-                            "about": "wave period average",
-                            "type": "number",
-                            "units": u.second
-                        },
-                        "DEPTH_M": {
-                            "about": "depth",
-                            "type": "number",
-                            "units": u.meter
-                        },
-                        "WE_KWM": {
-                            "about": "potential wave power",
-                            "type": "number",
-                            "units": u.kilowatt/u.meter
-                        },
-                        "CAPWE_MWHY": {
-                            "about": "captured wave energy per device",
-                            "type": "number",
-                            "units": u.megawatt_hour/u.year
-                        },
+                        **CAPTURED_WEM_FIELDS,
                         "W2L_MDIST": {
                             "about": "Euclidean distance to the nearest landing connection point",
+                            "type": "number",
+                            "units": u.meter
+                        },
+                        "L2G_MDIST": {
+                            "about": "Euclidean distance from LAND_ID to the nearest power grid connection",
                             "type": "number",
                             "units": u.meter
                         },
@@ -525,27 +543,52 @@ MODEL_SPEC = {
                             "type": "number",
                             "units": u.none
                         },
-                        "L2G_MDIST": {
-                            "about": "Euclidean distance from LAND_ID to the nearest power grid connection",
+                        "NPV_25Y": {
+                            "about": "net present value of 25 year period",
                             "type": "number",
-                            "units": u.meter
-                        },
-                        "UNITS": {
-                            "about": "number of WEC devices assumed to be at this WEC facility site",
-                            "type": "number",
-                            "units": u.none,
+                            "units": u.kilocurrency
                         },
                         "CAPWE_ALL": {
                             "about": "total captured wave energy for all machines at site",
                             "type": "number",
                             "units": u.megawatt_hour/u.year
                         },
-                        "NPV_25Y": {
-                            "about": "net present value of 25 year period",
+                        "UNITS": {
+                            "about": "number of WEC devices assumed to be at this WEC facility site",
                             "type": "number",
-                            "units": u.kilocurrency
+                            "units": u.none,
                         }
                     }
+                },
+                "Indexed_WEM_InputOutput_Pts.shp": {
+                    "about": "Map of wave data points.",
+                    "fields": INDEXED_WEM_FIELDS,
+                    "geometries": spec_utils.POINT
+                },
+                "interpolated_capwe_mwh.tif": {
+                    "about": "Interpolated wave energy",
+                    "bands": {1: {"type": "number", "units": u.megawatt_hour/u.year}}
+                },
+                "interpolated_wp_kw.tif": {
+                    "about": "Interpolated wave power",
+                    "bands": {1: {"type": "number", "units": u.kilowatt/u.meter}}
+                },
+                "npv_not_clipped.tif": {
+                    "about": "Interpolated net present value",
+                    "bands": {1: {"type": "number", "units": u.kilocurrency}}
+                },
+                "unclipped_capwe_mwh.tif": {
+                    "about": "Blank raster showing the extent of the AOI",
+                    "bands": {1: {"type": "number", "units": u.none}}
+                },
+                "unclipped_wp_kw.tif": {
+                    "about": "Blank raster showing the extent of the AOI",
+                    "bands": {1: {"type": "number", "units": u.none}}
+                },
+                "WEM_InputOutput_Pts.shp": {
+                    "about": "Map of wave data points.",
+                    "geometries": spec_utils.POINT,
+                    "fields": WEM_FIELDS
                 },
                 "GridPt.txt": {
                     "created_if": "valuation_container",

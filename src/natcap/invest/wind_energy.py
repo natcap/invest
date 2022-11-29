@@ -479,21 +479,52 @@ MODEL_SPEC = {
         "intermediate": {
             "type": "directory",
             "contents": {
-                "aoi_raster.tif": {"docs": False},
-                "bathymetry_projected.tif": {"docs": False},
-                "depth_mask_aligned.tif": {"docs": False},
-                "depth_mask.tif": {"docs": False},
-                "distance_mask_aligned.tif": {"docs": False},
-                "distance_mask.tif": {"docs": False},
-                "distance_trans.tif": {"docs": False},
-                "projected_clipped_land_poly.shp": {"docs": False},
-                "projection_params.pickle": {"docs": False},
-                "temp_density_aligned.tif": {"docs": False},
-                "temp_density.tif": {"docs": False},
-                "temp_harveseted_aligned.tif": {"docs": False},
-                "temp_harvested.tif": {"docs": False},
-                "wind_data.pickle": {"docs": False},
-                "wind_energy_points_from_data.shp": {"docs": False},
+                "aoi_raster.tif": {
+                    "about": "Empty raster covering the extent of the AOI",
+                    "bands": {1: {"type": "integer"}}
+                },
+                "bathymetry_projected.tif": {
+                    "about": "Clipped and reprojected bathymetry map",
+                    "bands": {1: {"type": "number", "units": u.meter}}
+                },
+                "depth_mask.tif": {
+                    "about": (
+                        "Bathymetry map masked to show only the pixels that "
+                        "fall within the allowed depth range"),
+                    "bands": {1: {"type": "number", "units": u.meter}}
+                },
+                "distance_mask.tif": {
+                    "about": (
+                        "Distance to shore, masked to show only the pixels "
+                        "that fall within the allowed distance range"),
+                    "bands": {1: {"type": "number", "units": u.meter}}
+                },
+                "distance_trans.tif": {
+                    "about": "Distance to shore from each pixel",
+                    "bands": {1: {"type": "number", "units": u.meter}}
+                },
+                "projected_clipped_land_poly.shp": {
+                    "about": "Clipped and reprojected land polygon vector",
+                    "fields": {},
+                    "geometries": {"POLYGON", "MULTIPOLYGON"}
+                },
+                "projection_params.pickle": {
+                    "about": "Pickled bathymetry reprojection parameters"
+                },
+                "temp_density.tif": {
+                    "about": "Interpolated wind power density",
+                    "bands": {1: {"type": "number", "units": u.watt/u.meter**2}}
+                },
+                "temp_harvested.tif": {
+                    "about": "Interpolated harvested wind energy",
+                    "bands": {1: {"type": "number", "units": u.megawatt_hour/u.year}}
+                },
+                "wind_data.pickle": {"about": "Pickled wind data dictionary"},
+                "wind_energy_points_from_data.shp": {
+                    "about": "Wind data",
+                    "geometries": spec_utils.POINT,
+                    "fields": OUTPUT_WIND_DATA_FIELDS
+                },
                 "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
             }
         }
