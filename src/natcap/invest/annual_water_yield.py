@@ -327,18 +327,20 @@ MODEL_SPEC = {
             "contents": {
                 "watershed_results_wyield.shp": {
                     "fields": {**WATERSHED_OUTPUT_FIELDS},
+                    "geometries": spec_utils.POLYGON,
                     "about": "Shapefile containing biophysical output values per watershed."
                 },
                 "watershed_results_wyield.csv": {
-                    "fields": {**WATERSHED_OUTPUT_FIELDS},
+                    "columns": {**WATERSHED_OUTPUT_FIELDS},
                     "about": "Table containing biophysical output values per watershed."
                 },
                 "subwatershed_results_wyield.shp": {
                     "fields": {**SUBWATERSHED_OUTPUT_FIELDS},
+                    "geometries": spec_utils.POLYGON,
                     "about": "Shapefile containing biophysical output values per subwatershed."
                 },
                 "subwatershed_results_wyield.csv": {
-                    "fields": {**SUBWATERSHED_OUTPUT_FIELDS},
+                    "columns": {**SUBWATERSHED_OUTPUT_FIELDS},
                     "about": "Table containing biophysical output values per subwatershed."
                 },
                 "per_pixel": {
@@ -347,24 +349,20 @@ MODEL_SPEC = {
                     "contents": {
                         "fractp.tif": {
                             "about": (
-                                "Estimated actual evapotranspiration fraction of precipitation per pixel (Actual Evapotranspiration / Precipitation). It is the mean fraction of precipitation that actually evapotranspires at the pixel level.")
+                                "The fraction of precipitation that actually "
+                                "evapotranspires at the pixel level."),
+                            "bands": {1: {"type": "ratio"}}
                         },
                         "aet.tif": {
                             "about": "Estimated actual evapotranspiration per pixel.",
                             "bands": {
-                                1: {
-                                    "type": "number",
-                                    "units": u.mm
-                                }
+                                1: {"type": "number", "units": u.millimeter}
                             }
                         },
                         "wyield.tif": {
                             "about": "Estimated water yield per pixel.",
                             "bands": {
-                                1: {
-                                    "type": "number",
-                                    "units": u.mm
-                                }
+                                1: {"type": "number", "units": u.millimeter}
                             }
                         }
                     }
@@ -373,31 +371,54 @@ MODEL_SPEC = {
                     "type": "directory",
                     "contents": {
                         "clipped_lulc.tif": {
-                            "about": "Aligned and clipped copy of LULC input."
+                            "about": "Aligned and clipped copy of LULC input.",
+                            "bands": {1: {"type": "integer"}}
                         },
                         "depth_to_root_rest_layer.tif": {
-                            "about": "Aligned and clipped copy of root restricting layer depth input."
+                            "about": (
+                                "Aligned and clipped copy of root restricting "
+                                "layer depth input."),
+                            "bands": {
+                                1: {"type": "number", "units": u.millimeter}
+                            }
                         },
                         "eto.tif": {
-                            "about": "Aligned and clipped copy of ET0 input."
+                            "about": "Aligned and clipped copy of ET0 input.",
+                            "bands": {
+                                1: {"type": "number", "units": u.millimeter}
+                            }
                         },
                         "kc_raster.tif": {
-                            "about": "Map of KC values."
+                            "about": "Map of KC values.",
+                            "bands": {
+                                1: {"type": "number", "units": u.none}
+                            }
                         },
                         "pawc.tif": {
-                            "about": "Aligned and clipped copy of PAWC input."
+                            "about": "Aligned and clipped copy of PAWC input.",
+                            "bands": {1: {"type": "ratio"}},
                         },
                         "pet.tif": {
-                            "about": "Map of potential evapotranspiration."
+                            "about": "Map of potential evapotranspiration.",
+                            "bands": {
+                                1: {"type": "number", "units": u.millimeter}
+                            }
                         },
                         "precip.tif": {
-                            "about": "Aligned and clipped copy of precipitation input."
+                            "about": "Aligned and clipped copy of precipitation input.",
+                            "bands": {
+                                1: {"type": "number", "units": u.millimeter}
+                            }
                         },
                         "root_depth.tif": {
-                            "about": "Map of root depth."
+                            "about": "Map of root depth.",
+                            "bands": {
+                                1: {"type": "number", "units": u.millimeter}
+                            }
                         },
                         "veg.tif": {
-                            "about": "Map of vegetated state."
+                            "about": "Map of vegetated state.",
+                            "bands": {1: {"type": "integer"}},
                         },
                         "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
                     }
