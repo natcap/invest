@@ -285,21 +285,27 @@ MODEL_SPEC = {
                     "about": "Rasterized access map",
                     "bands": {1: {"type": "ratio"}}
                 },
-                "access_layer_[AREA].tif": {
-                    "about": "Rasterized access for a given area",
-                    "bands": {1: {"type": "ratio"}}
+                "[LULC]_aligned.tif": {
+                    "about": "Aligned copy of each LULC raster",
+                    "bands": {1: {"type": "integer"}},
                 },
-                "[PATH]_aligned.tif": {"docs": False},
-                "[HABITAT]_[SCENARIO]_aligned_[AREA].tif": {"docs": False},
-                "filtered_[HABITAT]_[SCENARIO]_aligned.tif": {"docs": False},
-                "filtered_[HABITAT]_[SCENARIO]_aligned_[AREA].tif": {"docs": False},
-                "lulc_[SCENARIO]_[AREA]_aligned.tif": {"docs": False},
-                "lulc_[SCENARIO]_[AREA]_aligned_[AREA}.tif": {"docs": False},
+                "[THREAT]_aligned.tif": {
+                    "about": "Aligned copy of each threat raster",
+                    "bands": {1: {"type": "ratio"}},
+                },
+                "filtered_[THREAT]_aligned.tif": {
+                    "about": "Filtered threat raster",
+                    "bands": {1: {"type": "ratio"}},
+                },
                 "kernels": {
                     "type": "directory",
                     "contents": {
-                        "kernel_[HABITAT]_[SCENARIO].tif": {"docs": False},
-                        "kernel_[HABITAT]_[SCENARIO]_[AREA].tif": {"docs": False},
+                        "kernel_[HABITAT]_[SCENARIO].tif": {
+                            "about": (
+                                "Convolution kernel for the given habitat and "
+                                "scenario"),
+                            "bands": {1: {"type": "integer"}}
+                        }
                     }
                 },
                 "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
