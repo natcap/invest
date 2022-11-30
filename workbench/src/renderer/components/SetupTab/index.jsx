@@ -14,7 +14,7 @@ import Expire from '../Expire';
 import Portal from '../Portal';
 import ArgsForm from './ArgsForm';
 import {
-  RunButton, SaveParametersButtons
+  RunButton, SaveAsButton
 } from './SetupButtons';
 import {
   archiveDatastack,
@@ -542,7 +542,7 @@ export default class SetupTab extends React.Component {
                 {_('Load parameters from file')}
               </Button>
             </OverlayTrigger>
-            <SaveParametersButtons
+            <SaveAsButton
               savePythonScript={this.savePythonScript}
               saveJsonFile={this.saveJsonFile}
               saveDatastack={this.saveDatastack}

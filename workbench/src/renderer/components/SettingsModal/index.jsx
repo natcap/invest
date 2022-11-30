@@ -72,8 +72,10 @@ export default class SettingsModal extends React.Component {
   }
 
   handleChange(event) {
+    console.log(event.currentTarget);
     const newSettings = { ...this.props.investSettings };
     const { name, value } = event.currentTarget;
+    console.log(name, value);
     newSettings[name] = value;
     this.props.saveSettings(newSettings);
   }

@@ -423,6 +423,20 @@ exceed 100% of window.*/
 	letter-spacing: 0.03rem;
 }
 
+/* Save As modal */
+.save-as-toggle-button {
+	text-align: left;
+}
+
+/*.save-as-toggle-button:not(:disabled):not(.disabled).active {
+	background-color: ghostwhite;
+}*/
+
+/*.save-as-toggle-button:hover {
+	border-width: medium;
+	background-color: white;
+}
+*/
 /* The Run button */
 .sidebar-footer .btn-primary {
 	font-size: 1.5rem;
