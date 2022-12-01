@@ -75,6 +75,20 @@ function initializeArgValues(argsSpec, uiSpec, argsDict) {
   });
 }
 
+export function RunButton(props) {
+  return (
+    <Button
+      block
+      variant="primary"
+      size="lg"
+      onClick={props.wrapInvestExecute}
+      disabled={props.disabled}
+    >
+      {props.buttonText}
+    </Button>
+  );
+}
+
 /** Renders an arguments form, execute button, and save buttons. */
 export default class SetupTab extends React.Component {
   constructor(props) {

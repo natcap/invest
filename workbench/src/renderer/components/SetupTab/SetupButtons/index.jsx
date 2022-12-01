@@ -3,45 +3,17 @@ import React from 'react';
 import Button from 'react-bootstrap/Button';
 import ToggleButton from 'react-bootstrap/ToggleButton';
 import ButtonGroup from 'react-bootstrap/ButtonGroup';
-import ToggleButtonGroup from 'react-bootstrap/ToggleButtonGroup';
-import Col from 'react-bootstrap/Col';
-import Row from 'react-bootstrap/Row';
 import Form from 'react-bootstrap/Form';
 import Modal from 'react-bootstrap/Modal';
-import OverlayTrigger from 'react-bootstrap/OverlayTrigger';
-import Tooltip from 'react-bootstrap/Tooltip';
-import { MdSave, MdSettings, MdClose } from 'react-icons/md';
+import { MdSave, MdClose } from 'react-icons/md';
 
-import SaveFileButton from '../../SaveFileButton';
 import { ipcMainChannels } from '../../../../main/ipcMainChannels';
 
 const { ipcRenderer } = window.Workbench.electron;
 
 
-function HoverText(props) {
-  return (
-    <OverlayTrigger
-      placement="right"
-      delay={{ show: 250, hide: 400 }}
-      overlay={(
-        <Tooltip>
-          {props.hoverText}
-        </Tooltip>
-      )}
-    >
-      {/* the first child must be a DOM element, not a custom component,
-      so that event handlers from OverlayTrigger make it to DOM
-      https://github.com/react-bootstrap/react-bootstrap/issues/2208 */}
-      <div>
-        {props.children}
-      </div>
-    </OverlayTrigger>
-  );
-}
-
-
 /** Render a dialog with a form for configuring global invest settings */
-export class SaveAsButton extends React.Component {
+export class SaveAsModal extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
@@ -204,19 +176,4 @@ export class SaveAsButton extends React.Component {
       </React.Fragment>
     );
   }
-}
-
-
-export function RunButton(props) {
-  return (
-    <Button
-      block
-      variant="primary"
-      size="lg"
-      onClick={props.wrapInvestExecute}
-      disabled={props.disabled}
-    >
-      {props.buttonText}
-    </Button>
-  );
 }
