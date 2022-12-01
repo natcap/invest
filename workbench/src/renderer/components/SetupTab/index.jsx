@@ -13,9 +13,7 @@ import { MdFolderOpen } from 'react-icons/md';
 import Expire from '../Expire';
 import Portal from '../Portal';
 import ArgsForm from './ArgsForm';
-import {
-  RunButton, SaveAsButton
-} from './SetupButtons';
+import SaveAsModal from '../SaveAsModal';
 import {
   archiveDatastack,
   fetchDatastackFromFile,
@@ -557,7 +555,7 @@ export default class SetupTab extends React.Component {
                 {_('Load parameters from file')}
               </Button>
             </OverlayTrigger>
-            <SaveAsButton
+            <SaveAsModal
               savePythonScript={this.savePythonScript}
               saveJsonFile={this.saveJsonFile}
               saveDatastack={this.saveDatastack}
