@@ -236,6 +236,7 @@ export default class SetupTab extends React.Component {
   }
 
   async saveJsonFile(datastackPath, relativePaths) {
+    console.log(datastackPath, relativePaths);
     const {
       pyModuleName,
     } = this.props;
@@ -248,7 +249,7 @@ export default class SetupTab extends React.Component {
       relativePaths: relativePaths,
       args: JSON.stringify(args),
     };
-    const response = await writeParametersToFile(payload);
+    const response = await writeParametersToFile(payload, relativePaths);
     this.setSaveAlert(response);
   }
 

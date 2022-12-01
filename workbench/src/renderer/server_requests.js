@@ -174,6 +174,7 @@ export function archiveDatastack(payload) {
  * @returns {Promise} resolves undefined
  */
 export function writeParametersToFile(payload) {
+  console.log(payload);
   return (
     window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/write_parameter_set_file`, {
       method: 'post',

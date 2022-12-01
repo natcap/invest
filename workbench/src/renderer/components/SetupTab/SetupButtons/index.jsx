@@ -10,9 +10,13 @@ import Form from 'react-bootstrap/Form';
 import Modal from 'react-bootstrap/Modal';
 import OverlayTrigger from 'react-bootstrap/OverlayTrigger';
 import Tooltip from 'react-bootstrap/Tooltip';
+import { MdSave, MdSettings, MdClose } from 'react-icons/md';
 
 import SaveFileButton from '../../SaveFileButton';
-import { MdSave, MdSettings, MdClose } from 'react-icons/md';
+import { ipcMainChannels } from '../../../../main/ipcMainChannels';
+
+const { ipcRenderer } = window.Workbench.electron;
+
 
 function HoverText(props) {
   return (
@@ -35,6 +39,7 @@ function HoverText(props) {
   );
 }
 
+
 /** Render a dialog with a form for configuring global invest settings */
 export class SaveAsButton extends React.Component {
   constructor(props) {
@@ -47,8 +52,32 @@ export class SaveAsButton extends React.Component {
     this.handleShow = this.handleShow.bind(this);
     this.handleClose = this.handleClose.bind(this);
     this.handleChange = this.handleChange.bind(this);
-    this.handleSave = this.handleSave.bind(this);
     this.handleRelativePathsCheckbox = this.handleRelativePathsCheckbox.bind(this);
+    this.browseSaveFile = this.browseSaveFile.bind(this);
+  }
+
+  async browseSaveFile(event) {
+    const defaultTargetPaths = {
+      json: "invest_args.json",
+      tgz: "invest_datastack.tgz",
+      py: "execute_invest.py",
+    }
+
+    const data = await ipcRenderer.invoke(
+      ipcMainChannels.SHOW_SAVE_DIALOG,
+      { defaultPath: defaultTargetPaths[this.state.datastackType] }
+    );
+    if (data.filePath) {
+      switch (this.state.datastackType) {
+        case "json":
+          this.props.saveJsonFile(data.filePath, this.state.relativePaths);
+        case "tgz":
+          this.props.saveDatastack(data.filePath);
+        case "py":
+          this.props.savePythonScript(data.filePath);
+      }
+    }
+    this.handleClose();
   }
 
   handleClose() {
@@ -70,18 +99,6 @@ export class SaveAsButton extends React.Component {
     const newState = { ...this.state };
     newState.relativePaths = event.target.checked;
     this.setState(newState);
-  }
-
-  handleSave(event) {
-    const { saveJsonFile, savePythonScript, saveDatastack } = this.props;
-    switch (this.state.datastackType) {
-      case "json":
-        saveJsonFile(relativePaths);
-      case "tgz":
-        saveDatastack();
-      case "py":
-        savePythonScript();
-    }
   }
 
   render() {
@@ -176,11 +193,11 @@ export class SaveAsButton extends React.Component {
               </ToggleButton>
             </ButtonGroup>
             <Button
-              onClick={this.handleSave}
-              className="w-50"
+              onClick={this.browseSaveFile}
+              variant="link"
             >
               <MdSave className="mr-1" />
-              {_('Save')}
+              {this.props.title}
             </Button>
           </Modal.Body>
         </Modal>
@@ -189,39 +206,6 @@ export class SaveAsButton extends React.Component {
   }
 }
 
-export function SaveParametersButtons(props) {
-  return (
-    <React.Fragment>
-      <HoverText
-        hoverText={_("Save model setup to a JSON file")}
-      >
-        <SaveFileButton
-          title={_("Save to JSON")}
-          defaultTargetPath="invest_args.json"
-          func={props.saveJsonFile}
-        />
-      </HoverText>
-      <HoverText
-        hoverText={_("Save model setup to a Python script")}
-      >
-        <SaveFileButton
-          title={_("Save to Python script")}
-          defaultTargetPath="execute_invest.py"
-          func={props.savePythonScript}
-        />
-      </HoverText>
-      <HoverText
-        hoverText={_("Export all input data to a compressed archive")}
-      >
-        <SaveFileButton
-          title={_("Save datastack")}
-          defaultTargetPath="invest_datastack.tgz"
-          func={props.saveDatastack}
-        />
-      </HoverText>
-    </React.Fragment>
-  );
-}
 
 export function RunButton(props) {
   return (
