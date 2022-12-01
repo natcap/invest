@@ -7,18 +7,18 @@ import Form from 'react-bootstrap/Form';
 import Modal from 'react-bootstrap/Modal';
 import { MdSave, MdClose } from 'react-icons/md';
 
-import { ipcMainChannels } from '../../../../main/ipcMainChannels';
+import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
 const { ipcRenderer } = window.Workbench.electron;
 
 
 /** Render a dialog with a form for configuring global invest settings */
-export class SaveAsModal extends React.Component {
+export default class SaveAsModal extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
       show: false,
-      datastackType: 'JSON file',
+      datastackType: 'json', // default to the JSON option
       relativePaths: false,
     };
     this.handleShow = this.handleShow.bind(this);
@@ -43,8 +43,10 @@ export class SaveAsModal extends React.Component {
       switch (this.state.datastackType) {
         case "json":
           this.props.saveJsonFile(data.filePath, this.state.relativePaths);
+          break;
         case "tgz":
           this.props.saveDatastack(data.filePath);
+          break;
         case "py":
           this.props.savePythonScript(data.filePath);
       }
@@ -79,8 +81,7 @@ export class SaveAsModal extends React.Component {
     return (
       <React.Fragment>
         <Button
-          aria-label="settings"
-          className="settings-icon-btn"
+          aria-label="save-as"
           onClick={this.handleShow}
         >
           <MdSave className="mr-1" />
@@ -88,7 +89,7 @@ export class SaveAsModal extends React.Component {
         </Button>
 
         <Modal
-          className="settings-modal"
+          className="save-as-modal"
           show={show}
           onHide={this.handleClose}
         >
@@ -98,7 +99,7 @@ export class SaveAsModal extends React.Component {
               variant="secondary-outline"
               onClick={this.handleClose}
               className="float-right"
-              aria-label="close settings"
+              aria-label="close save-as dialog"
             >
               <MdClose />
             </Button>
@@ -164,12 +165,9 @@ export class SaveAsModal extends React.Component {
               </Form.Text>
               </ToggleButton>
             </ButtonGroup>
-            <Button
-              onClick={this.browseSaveFile}
-              variant="link"
-            >
+            <Button onClick={this.browseSaveFile}>
               <MdSave className="mr-1" />
-              {this.props.title}
+              Save
             </Button>
           </Modal.Body>
         </Modal>

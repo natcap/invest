@@ -248,7 +248,6 @@ export default class SetupTab extends React.Component {
   }
 
   async saveJsonFile(datastackPath, relativePaths) {
-    console.log(datastackPath, relativePaths);
     const {
       pyModuleName,
     } = this.props;
