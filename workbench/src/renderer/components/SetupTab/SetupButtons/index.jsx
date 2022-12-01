@@ -42,12 +42,13 @@ export class SaveAsButton extends React.Component {
     this.state = {
       show: false,
       datastackType: 'JSON file',
-      useRelativePaths: false,
+      relativePaths: false,
     };
     this.handleShow = this.handleShow.bind(this);
     this.handleClose = this.handleClose.bind(this);
     this.handleChange = this.handleChange.bind(this);
     this.handleSave = this.handleSave.bind(this);
+    this.handleRelativePathsCheckbox = this.handleRelativePathsCheckbox.bind(this);
   }
 
   handleClose() {
@@ -60,9 +61,14 @@ export class SaveAsButton extends React.Component {
 
   handleChange(event) {
     const { name, value } = event.currentTarget;
-    console.log(name, value);
     const newState = { ...this.state };
-    newState.datastackType = value;
+    newState[name] = value;
+    this.setState(newState);
+  }
+
+  handleRelativePathsCheckbox(event) {
+    const newState = { ...this.state };
+    newState.relativePaths = event.target.checked;
     this.setState(newState);
   }
 
@@ -70,7 +76,7 @@ export class SaveAsButton extends React.Component {
     const { saveJsonFile, savePythonScript, saveDatastack } = this.props;
     switch (this.state.datastackType) {
       case "json":
-        saveJsonFile();
+        saveJsonFile(relativePaths);
       case "tgz":
         saveDatastack();
       case "py":
@@ -79,7 +85,7 @@ export class SaveAsButton extends React.Component {
   }
 
   render() {
-    const { show, datastackType, useRelativePaths } = this.state;
+    const { show, datastackType, relativePaths } = this.state;
 
     return (
       <React.Fragment>
@@ -109,45 +115,40 @@ export class SaveAsButton extends React.Component {
             </Button>
           </Modal.Header>
           <Modal.Body>
-            <ButtonGroup
-              vertical
-              name="datastackType"
-              value={datastackType} >
+            <ButtonGroup vertical>
               <ToggleButton
                 type="radio"
                 value="json"
                 checked={datastackType === "json"}
                 name="datastackType"
-                className="save-as-toggle-button"
-                variant="outline-primary"
+                className="text-left"
+                variant="light"
                 onChange={this.handleChange}
               >
-              Parameters only
+              <span className="ml-2">Parameters only</span>
               <Form.Text muted>
                 {_(`Save your parameters in a JSON file.
                 This includes the paths to your input data, but not the data itself.
                 Open this file in InVEST to restore your parameters.`)}
               </Form.Text>
               <Form.Check
-                id="useRelativePaths"
+                id="relativePaths"
                 label="Use relative paths"
-                value="true"
-                checked={useRelativePaths}
-                name="useRelativePaths"
+                name="relativePaths"
                 disabled={datastackType !== "json"}
+                onChange={this.handleRelativePathsCheckbox}
               />
               </ToggleButton>
               <ToggleButton
                 type="radio"
-                label="Parameters and data"
                 value="tgz"
                 checked={datastackType === "tgz"}
                 name="datastackType"
-                className="save-as-toggle-button"
-                variant="outline-primary"
+                className="text-left"
+                variant="light"
                 onChange={this.handleChange}
               >
-              Parameters and data
+              <span className="ml-2">Parameters and data</span>
               <Form.Text muted>
                 {_(`Save your parameters and input data in a compressed archive.
                 This archive contains the same JSON file produced by the "Parameters
@@ -158,15 +159,14 @@ export class SaveAsButton extends React.Component {
               </ToggleButton>
               <ToggleButton
                 type="radio"
-                label="Python script"
                 value="py"
                 checked={datastackType === "py"}
                 name="datastackType"
-                className="save-as-toggle-button"
-                variant="outline-primary"
+                className="text-left"
+                variant="light"
                 onChange={this.handleChange}
               >
-              <Form.Label>Python script</Form.Label>
+              <span className="ml-2">Python script</span>
               <Form.Text muted>
                 {_(`Save your parameters in a python script. This includes the
                 paths to your input data, but not the data itself. Running the python script
