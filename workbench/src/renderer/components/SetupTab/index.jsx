@@ -467,6 +467,7 @@ export default class SetupTab extends React.Component {
         sidebarFooterElementId,
         executeClicked,
         uiSpec,
+        modelName
       } = this.props;
 
       const SaveAlerts = [];
@@ -541,6 +542,7 @@ export default class SetupTab extends React.Component {
               </Button>
             </OverlayTrigger>
             <SaveAsModal
+              modelName={modelName}
               savePythonScript={this.savePythonScript}
               saveJsonFile={this.saveJsonFile}
               saveDatastack={this.saveDatastack}
@@ -551,11 +553,11 @@ export default class SetupTab extends React.Component {
           </Portal>
           <Portal elId={sidebarFooterElementId}>
             <Button
-            block
-            variant="primary"
-            size="lg"
-            onClick={this.wrapInvestExecute}
-            disabled={!argsValid || executeClicked}
+              block
+              variant="primary"
+              size="lg"
+              onClick={this.wrapInvestExecute}
+              disabled={!argsValid || executeClicked}
             >
               {buttonText}
             </Button>
