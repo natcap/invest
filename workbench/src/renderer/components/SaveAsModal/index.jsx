@@ -76,12 +76,13 @@ export default class SaveAsModal extends React.Component {
   }
 
   render() {
-    const { show, datastackType, relativePaths } = this.state;
+    const { show, datastackType } = this.state;
 
     return (
       <React.Fragment>
         <Button
           aria-label="save-as"
+          variant="link"
           onClick={this.handleShow}
         >
           <MdSave className="mr-1" />
@@ -115,19 +116,19 @@ export default class SaveAsModal extends React.Component {
                 variant="light"
                 onChange={this.handleChange}
               >
-              <span className="ml-2">Parameters only</span>
-              <Form.Text muted>
-                {_(`Save your parameters in a JSON file.
-                This includes the paths to your input data, but not the data itself.
-                Open this file in InVEST to restore your parameters.`)}
-              </Form.Text>
-              <Form.Check
-                id="relativePaths"
-                label="Use relative paths"
-                name="relativePaths"
-                disabled={datastackType !== "json"}
-                onChange={this.handleRelativePathsCheckbox}
-              />
+                <span className="ml-2">Parameters only</span>
+                <Form.Text muted>
+                  {_(`Save your parameters in a JSON file.
+                  This includes the paths to your input data, but not the data itself.
+                  Open this file in InVEST to restore your parameters.`)}
+                </Form.Text>
+                <Form.Check
+                  id="relativePaths"
+                  label="Use relative paths"
+                  name="relativePaths"
+                  disabled={datastackType !== "json"}
+                  onChange={this.handleRelativePathsCheckbox}
+                />
               </ToggleButton>
               <ToggleButton
                 type="radio"
@@ -138,14 +139,14 @@ export default class SaveAsModal extends React.Component {
                 variant="light"
                 onChange={this.handleChange}
               >
-              <span className="ml-2">Parameters and data</span>
-              <Form.Text muted>
-                {_(`Save your parameters and input data in a compressed archive.
-                This archive contains the same JSON file produced by the "Parameters
-                only" option, plus the data. You can open this file in InVEST to restore your
-                parameters. This option is useful to copy all the necessary data to a
-                different location.`)}
-              </Form.Text>
+                <span className="ml-2">Parameters and data</span>
+                <Form.Text muted>
+                  {_(`Save your parameters and input data in a compressed archive.
+                  This archive contains the same JSON file produced by the "Parameters
+                  only" option, plus the data. You can open this file in InVEST to restore your
+                  parameters. This option is useful to copy all the necessary data to a
+                  different location.`)}
+                </Form.Text>
               </ToggleButton>
               <ToggleButton
                 type="radio"
@@ -156,13 +157,13 @@ export default class SaveAsModal extends React.Component {
                 variant="light"
                 onChange={this.handleChange}
               >
-              <span className="ml-2">Python script</span>
-              <Form.Text muted>
-                {_(`Save your parameters in a python script. This includes the
-                paths to your input data, but not the data itself. Running the python script
-                will programmatically run the model with your parameters. Use this as a
-                starting point for batch scripts.`)}
-              </Form.Text>
+                <span className="ml-2">Python script</span>
+                <Form.Text muted>
+                  {_(`Save your parameters in a python script. This includes the
+                  paths to your input data, but not the data itself. Running the python script
+                  will programmatically run the model with your parameters. Use this as a
+                  starting point for batch scripts.`)}
+                </Form.Text>
               </ToggleButton>
             </ButtonGroup>
             <Button onClick={this.browseSaveFile}>
