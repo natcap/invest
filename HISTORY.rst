@@ -40,6 +40,8 @@ Unreleased Changes
     * Fixed a possible path traversal vulnerability when working with datastack
       archives.  This patches CVE-2007-4559, reported to us by Trellix.
       https://github.com/natcap/invest/issues/1113
+    * Updating descriptions for LULC about text and biophysical table for
+      clarity in model specs. https://github.com/natcap/invest/issues/1077
 * Habitat Quality
     * All spatial inputs including the access vector and threat rasters are
       now reprojected to the ``lulc_cur_path`` raster. This fixes a bug where
