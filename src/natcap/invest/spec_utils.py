@@ -71,7 +71,9 @@ AOI = {
 LULC = {
     "type": "raster",
     "bands": {1: {"type": "integer"}},
-    "about": gettext("Map of land use/land cover codes."),
+    "about": gettext(
+        "Map of land use/land cover codes. Each land use/land cover type "
+        "must be assigned a unique integer code."),
     "name": gettext("land use/land cover")
 }
 DEM = {
