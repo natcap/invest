@@ -750,11 +750,12 @@ class HRAUnitTests(unittest.TestCase):
         # No matter the supported file format, make sure we have consistent
         # table headings.
         source_df = pandas.read_csv(io.StringIO(textwrap.dedent("""\
-                FOO,bar,BaZ
-                1, 2, 3""")))
+                FOO,bar,BaZ,path
+                1, 2, 3,foo.tif""")))
 
         expected_df = source_df.copy()  # defaults to a deepcopy.
         expected_df.columns = expected_df.columns.str.lower()
+        expected_df['path'] = [os.path.join(self.workspace_dir, 'foo.tif')]
 
         for filename, func in [('target.csv', source_df.to_csv),
                                ('target.xls', source_df.to_excel),

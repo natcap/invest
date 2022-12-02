@@ -1782,10 +1782,13 @@ def _open_table_as_dataframe(table_path, **kwargs):
     if extension in {'.xls', '.xlsx'}:
         excel_df = pandas.read_excel(table_path, **kwargs)
         excel_df.columns = excel_df.columns.str.lower()
+        excel_df['path'] = excel_df['path'].apply(
+            lambda p: utils.expand_path(p, table_path))
         return excel_df
     else:
         return utils.read_csv_to_dataframe(
-            table_path, sep=None, to_lower=True, engine='python', **kwargs)
+            table_path, sep=None, to_lower=True, engine='python',
+            expand_path_cols=['path'], **kwargs)
 
 
 def _parse_info_table(info_table_path):
@@ -1813,15 +1816,6 @@ def _parse_info_table(info_table_path):
     table = _open_table_as_dataframe(info_table_path)
     table = table.set_index('name')
     table = table.rename(columns={'stressor buffer (meters)': 'buffer'})
-
-    def _make_abspath(row):
-        path = row['path'].replace('\\', '/')
-        if os.path.isabs(path):
-            return path
-        return os.path.join(
-            os.path.dirname(info_table_path), path).replace('\\', '/')
-
-    table['path'] = table.apply(lambda row: _make_abspath(row), axis=1)
 
     # Drop the buffer column from the habitats list; we don't need it.
     habitats = table.loc[table['type'] == 'habitat'].drop(

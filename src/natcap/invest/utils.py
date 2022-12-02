@@ -8,6 +8,7 @@ import re
 import shutil
 import tempfile
 import time
+from collections import defaultdict
 from datetime import datetime
 
 import numpy
@@ -489,7 +490,8 @@ def build_file_registry(base_file_path_list, file_suffix):
 
 
 def build_lookup_from_csv(
-        table_path, key_field, column_list=None, to_lower=True):
+        table_path, key_field, column_list=None, to_lower=True,
+        expand_path_cols=[]):
     """Read a CSV table into a dictionary indexed by ``key_field``.
 
     Creates a dictionary from a CSV whose keys are unique entries in the CSV
@@ -510,6 +512,10 @@ def build_lookup_from_csv(
         to_lower (bool): if True, converts all unicode in the CSV,
             including headers and values to lowercase, otherwise uses raw
             string values. default=True.
+        expand_path_cols (list[string])): if provided, a list of the names of
+            columns that contain paths to expand. Any relative paths in these
+            columns will be expanded to absolute paths. It is assumed that
+            relative paths are relative to the CSV's path.
 
     Returns:
         lookup_dict (dict): a dictionary of the form
@@ -534,7 +540,7 @@ def build_lookup_from_csv(
 
     table = read_csv_to_dataframe(
         table_path, to_lower=to_lower, sep=None, index_col=False,
-        engine='python')
+        engine='python', expand_path_cols=expand_path_cols)
 
     # if 'to_lower`, case handling is done before trying to access the data.
     # the columns are stripped of leading/trailing whitespace in
@@ -590,9 +596,27 @@ def build_lookup_from_csv(
     return lookup_dict
 
 
+def expand_path(path, base_path):
+    """Check if a path is relative, and if so, expand it using the base path.
+
+    Args:
+        path (string): path to check and expand if necessary
+        base_path: path to expand the first path relative to
+
+    Returns:
+        path as an absolute path
+    """
+    print(path, not path)
+    if not path:
+        return None
+    if os.path.isabs(path):
+        return path
+    return os.path.abspath(os.path.join(os.path.dirname(base_path), path))
+
+
 def read_csv_to_dataframe(
         path, to_lower=False, sep=None, encoding=None, engine='python',
-        **kwargs):
+        expand_path_cols=[], **kwargs):
     """Return a dataframe representation of the CSV.
 
     Wrapper around ``pandas.read_csv`` that standardizes the column names by
@@ -615,6 +639,11 @@ def read_csv_to_dataframe(
             set to 'utf-8-sig'; otherwise the BOM causes an error.
         engine (string): kwarg for pandas.read_csv: 'c', 'python', or None.
             Defaults to 'python' (see note about encoding).
+        expand_path_cols (list[string])): if provided, a list of the names of
+            columns that contain paths to expand. Any relative paths in these
+            columns will be expanded to absolute paths. It is assumed that
+            relative paths are relative to the CSV's path.
+
         **kwargs: any kwargs that are valid for ``pandas.read_csv``
 
     Returns:
@@ -626,8 +655,9 @@ def read_csv_to_dataframe(
     if not encoding and has_utf8_bom(path):
         encoding = 'utf-8-sig'
     try:
-        dataframe = pandas.read_csv(path, engine=engine, encoding=encoding,
-                                    sep=sep, **kwargs)
+        dataframe = pandas.read_csv(
+            path, engine=engine, encoding=encoding, sep=sep, **kwargs)
+        print(dataframe)
     except UnicodeDecodeError as error:
         LOGGER.error(
             f'{path} must be encoded as utf-8 or ASCII')
@@ -642,6 +672,15 @@ def read_csv_to_dataframe(
     # Remove values with leading ('^ +') and trailing (' +$') whitespace.
     # Regular expressions using 'replace' only substitute on strings.
     dataframe = dataframe.replace(r"^ +| +$", r"", regex=True)
+
+    if expand_path_cols:
+        for col in expand_path_cols:
+            # allow for the case where a column is optional
+            if col in dataframe:
+                dataframe[col] = dataframe[col].apply(
+                    # if the whole column is empty, cells will be parsed as NaN
+                    # catch that before trying to expand them as paths
+                    lambda p: '' if pandas.isna(p) else expand_path(p, path))
 
     return dataframe
 
