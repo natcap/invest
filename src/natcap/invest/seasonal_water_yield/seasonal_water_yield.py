@@ -112,7 +112,9 @@ ARGS_SPEC = {
             "columns": {
                 "lucode": {
                     "type": "integer",
-                    "about": gettext("LULC code matching those in the LULC raster.")},
+                    "about": gettext(
+                        "LULC codes from the LULC raster. Each code must be "
+                        "a unique integer.")},
                 "cn_[SOIL_GROUP]": {
                     "type": "number",
                     "units": u.none,

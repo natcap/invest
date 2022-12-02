@@ -60,7 +60,9 @@ ARGS_SPEC = {
             "columns": {
                 "lucode": {
                     "type": "integer",
-                    "about": gettext("LULC code from the LULC map input.")},
+                    "about": gettext(
+                        "LULC codes from the LULC raster. Each code must be "
+                        "a unique integer.")},
                 "globio_lucode": {
                     "type": "integer",
                     "about": gettext("Corresponding GLOBIO LULC code.")}

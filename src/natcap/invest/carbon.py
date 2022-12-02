@@ -94,9 +94,8 @@ ARGS_SPEC = {
                 "lucode": {
                     "type": "integer",
                     "about": gettext(
-                        "LULC code. Every value in the "
-                        "LULC maps must have a corresponding entry in "
-                        "this column.")
+                        "LULC codes from the LULC raster. Each code must be "
+                        "a unique integer.")
                 },
                 "c_above": {
                     "type": "number",

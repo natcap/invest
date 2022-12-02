@@ -113,7 +113,8 @@ ARGS_SPEC = {
                 "lucode": {
                     "type": "integer",
                     "about": gettext(
-                        "LULC code corresponding to values in the LULC map.")
+                        "LULC codes from the LULC raster. Each code must be "
+                        "a unique integer.")
                 },
                 "lulc_veg": {
                     "type": "integer",

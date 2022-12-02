@@ -96,7 +96,9 @@ ARGS_SPEC = {
             "columns": {
                 "lucode": {
                     "type": "integer",
-                    "about": gettext("LULC code from the LULC raster.")},
+                    "about": gettext(
+                        "LULC codes from the LULC raster. Each code must be "
+                        "a unique integer.")},
                 "usle_c": {
                     "type": "ratio",
                     "about": gettext("Cover-management factor for the USLE")},

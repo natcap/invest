@@ -92,7 +92,8 @@ ARGS_SPEC = {
                 "lucode": {
                     "type": "integer",
                     "about": gettext(
-                        "LULC code representing this class in the LULC raster."
+                        "LULC codes from the LULC raster. Each code must be "
+                        "a unique integer.")
                     )
                 },
                 "nesting_[SUBSTRATE]_availability_index": {

@@ -174,8 +174,9 @@ ARGS_SPEC = {
             "columns": {
                 "lulc": {
                     "type": "integer",
-                    "about": gettext("LULC codes corresponding to those in the LULC "
-                               "rasters.")
+                    "about": gettext(
+                        "LULC codes from the LULC rasters. Each code must be "
+                        "a unique integer.")
                 },
                 "habitat": {
                     "type": "ratio",

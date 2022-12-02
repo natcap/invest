@@ -77,8 +77,8 @@ ARGS_SPEC = {
                 "lucode": {
                     "type": "integer",
                     "about": gettext(
-                        "LULC code for this class corresponding to values in "
-                        "the LULC raster.")
+                        "LULC codes from the LULC raster. Each code must be "
+                        "a unique integer.")
                 },
                 "load_[NUTRIENT]": {  # nitrogen or phosphorus nutrient loads
                     "type": "number",

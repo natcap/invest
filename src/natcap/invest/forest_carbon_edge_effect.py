@@ -68,9 +68,8 @@ ARGS_SPEC = {
                 "lucode": {
                     "type": "integer",
                     "about": gettext(
-                        "Code for this LULC class from the LULC map. Every "
-                        "value in the LULC raster must have a corresponding "
-                        "entry in this column.")},
+                        "LULC codes from the LULC raster. Each code must be "
+                        "a unique integer.")},
                 "is_tropical_forest": {
                     "type": "boolean",
                     "about": gettext(
