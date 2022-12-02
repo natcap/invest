@@ -120,7 +120,6 @@ class RecentInvestJobs extends React.Component {
   }
 
   render() {
-    throw new Error('help')
     // Buttons to load each recently saved state
     const recentButtons = [];
     const { recentJobs } = this.props;
