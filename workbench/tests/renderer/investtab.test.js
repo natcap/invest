@@ -224,7 +224,7 @@ describe('Sidebar Buttons', () => {
     const response = 'saved';
     archiveDatastack.mockImplementation(() => new Promise(
       (resolve) => {
-        setTimeout(() => resolve(response), 1000);
+        setTimeout(() => resolve(response), 100);
       }
     ));
     const mockDialogData = { filePath: 'data.tgz' };
@@ -233,8 +233,8 @@ describe('Sidebar Buttons', () => {
     const { findByText, findByLabelText, findByRole, getByRole} = renderInvestTab();
     const saveAsButton = await findByText('Save as...');
     userEvent.click(saveAsButton);
-    const jsonOption = await findByLabelText((content, element) => content.startsWith('Parameters and data'));
-    userEvent.click(jsonOption);
+    const datastackOption = await findByLabelText((content, element) => content.startsWith('Parameters and data'));
+    userEvent.click(datastackOption);
     const saveButton = await findByRole('button', { name: 'Save' });
     userEvent.click(saveButton);
 
@@ -261,6 +261,39 @@ describe('Sidebar Buttons', () => {
       expect(typeof args[key]).toBe('string');
     });
     expect(archiveDatastack).toHaveBeenCalledTimes(1);
+  });
+
+  test('Multiple Save Clicks: each triggers a unique alert', async () => {
+    const response = 'saved';
+    archiveDatastack.mockImplementation(() => new Promise(
+      (resolve) => {
+        setTimeout(() => resolve(response), 100);
+      }
+    ));
+    saveToPython.mockResolvedValue(response);
+    const mockDialogData = { filePath: 'foo' };
+    ipcRenderer.invoke.mockResolvedValue(mockDialogData);
+
+    const { findByText, findByLabelText, findByRole, getAllByRole, queryByRole } = renderInvestTab();
+    const saveAsButton = await findByText('Save as...');
+    userEvent.click(saveAsButton);
+    const pythonOption = await findByLabelText((content, element) => content.startsWith('Python script'));
+    const datastackOption = await findByLabelText((content, element) => content.startsWith('Parameters and data'));
+    const saveButton = await findByRole('button', { name: 'Save' });
+
+    userEvent.click(datastackOption);
+    userEvent.click(saveButton);
+
+    userEvent.click(saveAsButton);
+    userEvent.click(pythonOption)
+    userEvent.click(saveButton);
+
+    await waitFor(() => {
+      expect(getAllByRole('alert')).toHaveLength(2);
+    });
+    await waitFor(() => {
+      expect(queryByRole('alert')).toBeNull();
+    }, { timeout: 3000 }); // alerts disappear after 2 seconds
   });
 
   test('Load parameters from file: loads parameters', async () => {
