@@ -66,6 +66,9 @@ Unreleased Changes
       InVEST model run if the model emitted a very high volume of log messages.
     * Fixed a bug where the Workbench could crash if there was too much
       standard error emitted from an invest model.
+    * Added a new "Save as" dialog window to handle different save options, and
+      allow the option to use relative paths in a JSON datastack
+      (`#1088 <https://github.com/natcap/invest/issues/1088>`_)
 
 
 3.12.0 (2022-08-31)
