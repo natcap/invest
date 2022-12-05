@@ -273,7 +273,6 @@ export default class App extends React.Component {
         </TabPane>
       );
     });
-    throw new Error('hhh')
     return (
       <React.Fragment>
         <DataDownloadModal
