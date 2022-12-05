@@ -571,6 +571,11 @@ input[type=text]::placeholder {
 	max-width: 600px;
 }
 
+/* Save As modal */
+.save-as-modal svg {
+	margin-bottom: 0.2rem;
+}
+
 .error-boundary {
 	max-width:600px;
 	margin: 0 auto;

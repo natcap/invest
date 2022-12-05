@@ -45,11 +45,20 @@ Unreleased Changes
       now reprojected to the ``lulc_cur_path`` raster. This fixes a bug where
       rasters with a different SRS would appear to not intersect the
       ``lulc_cur_path`` even if they did. (https://github.com/natcap/invest/issues/1093)
+* HRA
+    * Fixed a regression relative to InVEST 3.9.0 outputs where spatial
+      criteria vectors were being rasterized with the ``ALL_TOUCHED=TRUE``
+      flag, leading to a perceived buffering of spatial criteria in certain
+      cases.  In InVEST 3.9.0, these were rasterized with ``ALL_TOUCHED=FALSE``.
+      https://github.com/natcap/invest/issues/1120
 * Workbench
     * Fixed a bug where the Workbench would become unresponsive during an
       InVEST model run if the model emitted a very high volume of log messages.
     * Fixed a bug where the Workbench could crash if there was too much
       standard error emitted from an invest model.
+    * Added a new "Save as" dialog window to handle different save options, and
+      allow the option to use relative paths in a JSON datastack
+      (`#1088 <https://github.com/natcap/invest/issues/1088>`_)
 * Urban Cooling
     * Updated the text for the ``building_intensity`` column in the biophysical
       table to clarify that the values of this column should be normalized
