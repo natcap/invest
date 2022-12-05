@@ -97,10 +97,6 @@ class ValidateModelSpecs(unittest.TestCase):
             # if parent_type is None:  # all top-level args must have these attrs
             #     for attr in ['about']:
             #         self.assertIn(attr, spec)
-            if 'docs' in spec and spec['docs'] == False:
-                print(f'output {key} is undocumented!')
-                return
-
             attrs = set(spec.keys())
 
             if 'type' in spec:
@@ -202,7 +198,6 @@ class ValidateModelSpecs(unittest.TestCase):
                         self.assertTrue(
                             isinstance(option, str) or
                             isinstance(option, int))
-                        # self.assertIsInstance(description, str)
                     attrs.remove('options')
 
             elif t == 'file':
