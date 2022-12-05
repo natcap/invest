@@ -26,7 +26,7 @@ export default class ErrorBoundary extends React.Component {
     if (this.state.hasError) {
       return (
         <Alert className="error-boundary">
-          <h2>Something went wrong {String.fromCharCode(2)}</h2>
+          <h2>{'\u{1F986}'}  Something went wrong</h2>
           <p>
             <em>Please help us fix this by reporting the problem.
             You may follow these steps:</em>
