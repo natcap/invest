@@ -25,15 +25,15 @@ export default class ErrorBoundary extends React.Component {
   render() {
     if (this.state.hasError) {
       return (
-        <Alert variant="dark">
-          <h2>Something went wrong.</h2>
+        <Alert className="error-boundary">
+          <h2>Something went wrong {String.fromCharCode(2)}</h2>
           <p>
-            Please help us fix this by reporting the problem.
-            Follow these steps:
+            <em>Please help us fix this by reporting the problem.
+            You may follow these steps:</em>
           </p>
           <ol>
             <li>
-              Find the Workbench log files using the button below.
+              <b>Find the Workbench log files</b> using the button below.
               There may be multiple files with a ".log" extension.
             </li>
             <Button
@@ -44,7 +44,7 @@ export default class ErrorBoundary extends React.Component {
             <br />
             <br />
             <li>
-              Create a post on our forum and upload all the log files, along with a
+              <b>Create a post on our forum</b> and upload all the log files, along with a
               brief description of what happened before you saw this message.
               <br />
               <a

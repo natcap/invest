@@ -570,3 +570,15 @@ input[type=text]::placeholder {
 	at 800px when we create it.*/
 	max-width: 600px;
 }
+
+.error-boundary {
+	max-width:600px;
+	margin: 0 auto;
+	margin-top: 5rem;
+	border-color: black;
+	border-style: dotted;
+}
+
+.error-boundary .btn {
+	margin: 1rem;
+}
