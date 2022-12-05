@@ -197,7 +197,6 @@ export default class App extends React.Component {
   }
 
   render() {
-    throw new Error('help')
     const {
       investList,
       investSettings,
