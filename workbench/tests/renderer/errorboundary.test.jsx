@@ -15,7 +15,7 @@ test('Error Boundary: displays useful content', async () => {
     </ErrorBoundary>
   );
 
-  expect(getByText('Something went wrong.')).toBeInTheDocument();
+  expect(getByText(/Something went wrong/)).toBeInTheDocument();
   expect(getByRole('button', { name: 'Find My Logs' })).toBeInTheDocument();
   expect(getByRole('link')).toHaveTextContent('community.naturalcapitalproject.org');
 });
