@@ -2128,11 +2128,14 @@ def _extract_snapshots_from_table(csv_path):
 
     """
     table = utils.read_csv_to_dataframe(
-        csv_path, index_col=False, expand_path_cols=['raster_path'])
-    table.columns = table.columns.str.lower()
+        csv_path, to_lower=True, index_col=False,
+        expand_path_cols=['raster_path'])
 
     output_dict = {}
     table.set_index("snapshot_year", drop=False, inplace=True)
+
+    for index, row in table.iterrows():
+        output_dict[int(index)] = row['raster_path']
     return output_dict
 
 
