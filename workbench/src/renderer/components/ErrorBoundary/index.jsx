@@ -26,26 +26,30 @@ export default class ErrorBoundary extends React.Component {
     if (this.state.hasError) {
       return (
         <Alert className="error-boundary">
-          <h2>{'\u{1F986}'}  Something went wrong</h2>
+          <h2>{`\u{1F986}  ${_('Something went wrong')}`}</h2>
           <p>
-            <em>Please help us fix this by reporting the problem.
-            You may follow these steps:</em>
+            <em>
+              {_(`Please help us fix this by reporting the problem. 
+                  You may follow these steps:`)}
+            </em>
           </p>
           <ol>
             <li>
-              <b>Find the Workbench log files</b> using the button below.
-              There may be multiple files with a ".log" extension.
+              <b>{_('Find the Workbench log files ')}</b>
+              {_(`using the button below. 
+                 There may be multiple files with a ".log" extension.`)}
             </li>
             <Button
               onClick={handleClickFindLogfiles}
             >
-              Find My Logs
+              {_('Find My Logs')}
             </Button>
             <br />
             <br />
             <li>
-              <b>Create a post on our forum</b> and upload all the log files, along with a
-              brief description of what happened before you saw this message.
+              <b>{_('Create a post on our forum ')}</b>
+              {_(`and upload all the log files, along with a brief description
+                  of what happened before you saw this message.`)}
               <br />
               <a
                 href="https://community.naturalcapitalproject.org/"
