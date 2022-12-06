@@ -265,7 +265,8 @@ class HRAUnitTests(unittest.TestCase):
         self.assertEqual(habitats, {'eelgrass', 'hardbottom'})
         self.assertEqual(stressors, {'oil', 'fishing'})
 
-        eelgrass_abspath = os.path.join(self.workspace_dir, eelgrass_relpath)
+        eelgrass_abspath = os.path.abspath(
+            os.path.join(self.workspace_dir, eelgrass_relpath))
         expected_composite_dataframe = pandas.read_csv(
             io.StringIO(textwrap.dedent(
                 f"""\
