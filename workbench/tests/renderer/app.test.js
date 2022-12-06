@@ -385,9 +385,6 @@ describe('InVEST global settings: dialog interactions', () => {
   beforeEach(async () => {
     getInvestModelNames.mockResolvedValue({});
     ipcRenderer.invoke.mockImplementation((channel) => {
-      if (channel === ipcMainChannels.IS_DEV_MODE) {
-        return Promise.resolve(true); // mock dev mode so that language dropdown is rendered
-      }
       return Promise.resolve();
     });
   });
@@ -859,9 +856,6 @@ describe('Translation', () => {
     ipcRenderer.invoke.mockImplementation((channel, arg) => {
       if (channel === ipcMainChannels.SET_LANGUAGE) {
         i18n.setLocale(arg);
-      }
-      if (channel === ipcMainChannels.IS_DEV_MODE) {
-        return Promise.resolve(true); // mock dev mode so that language dropdown is rendered
       }
       return Promise.resolve();
     });

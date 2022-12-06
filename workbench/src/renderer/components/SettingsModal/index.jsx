@@ -34,7 +34,6 @@ export default class SettingsModal extends React.Component {
       show: false,
       nWorkersOptions: null,
     };
-    this.isDevMode = false;
     this.handleShow = this.handleShow.bind(this);
     this.handleClose = this.handleClose.bind(this);
     this.handleChange = this.handleChange.bind(this);
@@ -52,7 +51,6 @@ export default class SettingsModal extends React.Component {
     this.setState({
       nWorkersOptions: nWorkersOptions,
     });
-    this.isDevMode = await ipcRenderer.invoke(ipcMainChannels.IS_DEV_MODE);
   }
 
   handleClose() {
@@ -86,28 +84,6 @@ export default class SettingsModal extends React.Component {
   render() {
     const { show, nWorkersOptions } = this.state;
     const { investSettings, clearJobsStorage } = this.props;
-    const languageFragment = this.isDevMode ? (
-      <Form.Group as={Row}>
-        <Form.Label column sm="8" htmlFor="language-select">
-          <MdTranslate className="language-icon" />
-          {_('Language')}
-        </Form.Label>
-        <Col sm="4">
-          <Form.Control
-            id="language-select"
-            as="select"
-            name="language"
-            value={investSettings.language}
-            onChange={this.handleChange}
-          >
-            {Object.entries(languageOptions).map((entry) => {
-              const [displayName, value] = entry;
-              return <option value={value} key={value}>{displayName}</option>;
-            })}
-          </Form.Control>
-        </Col>
-      </Form.Group>
-    ) : <React.Fragment />;
     return (
       <React.Fragment>
         <Button
@@ -137,7 +113,26 @@ export default class SettingsModal extends React.Component {
             </Button>
           </Modal.Header>
           <Modal.Body>
-            {languageFragment}
+            <Form.Group as={Row}>
+              <Form.Label column sm="8" htmlFor="language-select">
+                <MdTranslate className="language-icon" />
+                {_('Language')}
+              </Form.Label>
+              <Col sm="4">
+                <Form.Control
+                  id="language-select"
+                  as="select"
+                  name="language"
+                  value={investSettings.language}
+                  onChange={this.handleChange}
+                >
+                  {Object.entries(languageOptions).map((entry) => {
+                    const [displayName, value] = entry;
+                    return <option value={value} key={value}>{displayName}</option>;
+                  })}
+                </Form.Control>
+              </Col>
+            </Form.Group>
             <Form.Group as={Row}>
               <Form.Label column sm="6" htmlFor="logging-select">
                 {_('Logging threshold')}
