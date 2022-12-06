@@ -175,21 +175,20 @@ class HRAUnitTests(unittest.TestCase):
 
         habitats, stressors = hra._parse_info_table(info_table_path)
 
-        workspace = self.workspace_dir.replace('\\', '/')
         expected_habitats = {
             'corals': {
-                'path': f'{workspace}/habitat/corals.shp',
+                'path': f'{self.workspace_dir}/habitat/corals.shp',
             }
         }
         self.assertEqual(habitats, expected_habitats)
 
         expected_stressors = {
             'oil': {
-                'path': f'{workspace}/stressors/oil.shp',
+                'path': f'{self.workspace_dir}/stressors/oil.shp',
                 'buffer': 1000,
             },
             'transportation': {
-                'path': f'{workspace}/stressors/transport.shp',
+                'path': f'{self.workspace_dir}/stressors/transport.shp',
                 'buffer': 100,
             }
         }
@@ -234,7 +233,7 @@ class HRAUnitTests(unittest.TestCase):
                     HABITAT NAME,eelgrass,,,hardbottom,,,CRITERIA TYPE
                     HABITAT RESILIENCE ATTRIBUTES,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
                     recruitment rate,2,2,2,2,2,2,C
-                    connectivity rate,foo\\eelgrass_connectivity.shp,2,2,2,2,2,C
+                    connectivity rate,foo/eelgrass_connectivity.shp,2,2,2,2,2,C
                     ,,,,,,,
                     HABITAT STRESSOR OVERLAP PROPERTIES,,,,,,,
                     oil,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
@@ -264,10 +263,7 @@ class HRAUnitTests(unittest.TestCase):
         self.assertEqual(habitats, {'eelgrass', 'hardbottom'})
         self.assertEqual(stressors, {'oil', 'fishing'})
 
-        # We expect the backslash to have been converted to a forward slash.
-        eelgrass_path = (
-            f'{self.workspace_dir}/foo/eelgrass_connectivity.shp'.replace(
-                '\\', '/'))
+        eelgrass_path = f'{self.workspace_dir}/foo/eelgrass_connectivity.shp'
         expected_composite_dataframe = pandas.read_csv(
             io.StringIO(textwrap.dedent(
                 f"""\
@@ -301,7 +297,7 @@ class HRAUnitTests(unittest.TestCase):
                     HABITAT NAME,eelgrass,,,hardbottom,,,CRITERIA TYPE
                     HABITAT RESILIENCE ATTRIBUTES,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
                     recruitment rate,2,2,2,2,2,2,C
-                    connectivity rate,foo\\eelgrass_connectivity.shp,2,2,2,2,2,C
+                    connectivity rate,foo/eelgrass_connectivity.shp,2,2,2,2,2,C
                     ,,,,,,,
                     HABITAT STRESSOR OVERLAP PROPERTIES,,,,,,,
                     oil,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
@@ -925,18 +921,15 @@ class HRAUnitTests(unittest.TestCase):
             data_dir, 'criteria_table_path_data')
         self.maxDiff = None
 
-        def _rewrite(path):
-            return path.replace('\\', '/')
-
         self.assertEqual(
             known_files, {
-                _rewrite(eelgrass_path): _rewrite(os.path.join(
+                eelgrass_path: os.path.join(
                     output_criteria_data_dir, 'eelgrass_connectivity',
-                    'eelgrass_connectivity.shp')),
-                _rewrite(mgmt_path_1): _rewrite(os.path.join(
-                    output_criteria_data_dir, 'mgmt1', 'mgmt1.tif')),
-                _rewrite(mgmt_path_2): _rewrite(os.path.join(
-                    output_criteria_data_dir, 'mgmt2', 'mgmt2.tif')),
+                    'eelgrass_connectivity.shp'),
+                mgmt_path_1: os.path.join(
+                    output_criteria_data_dir, 'mgmt1', 'mgmt1.tif'),
+                mgmt_path_2: os.path.join(
+                    output_criteria_data_dir, 'mgmt2', 'mgmt2.tif')
             }
         )
         for copied_filepath in known_files.values():

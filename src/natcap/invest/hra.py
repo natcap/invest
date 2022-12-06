@@ -1954,11 +1954,10 @@ def _parse_criteria_table(criteria_table_path, target_composite_csv_path):
                 except ValueError:
                     # If we can't cast it to a float, assume it's a string path
                     # to a raster or vector.
-                    attribute_value = attribute_value.replace('\\', '/')
                     if not os.path.isabs(attribute_value):
                         attribute_value = os.path.join(
                             os.path.dirname(criteria_table_path),
-                            attribute_value).replace('\\', '/')
+                            attribute_value)
 
                     spatial_file_ok = True
                     try:
@@ -2432,10 +2431,8 @@ def _override_datastack_archive_criteria_table_path(
                 # When value is obviously not a number.
                 pass
 
-            if not os.path.isabs(value):
-                value = os.path.join(
-                    os.path.dirname(criteria_table_path), value)
-            value = value.replace("\\", "/")
+            # Expand the path if it's not absolute
+            value = utils.expand_path(value, criteria_table_path)
             if not os.path.exists(value):
                 LOGGER.warning(f'File not found: {value}')
                 continue
@@ -2453,7 +2450,7 @@ def _override_datastack_archive_criteria_table_path(
                 new_path = datastack._copy_spatial_files(
                     value, dir_for_this_spatial_data)
                 criteria_table_array[row, col] = new_path
-                known_files[value] = new_path.replace('\\', '/')
+                known_files[value] = new_path
 
     target_output_path = os.path.join(data_dir, f'{args_key}.csv')
     numpy.savetxt(target_output_path, criteria_table_array, delimiter=',',

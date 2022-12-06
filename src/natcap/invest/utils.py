@@ -606,7 +606,6 @@ def expand_path(path, base_path):
     Returns:
         path as an absolute path
     """
-    print(path, not path)
     if not path:
         return None
     if os.path.isabs(path):
@@ -657,7 +656,6 @@ def read_csv_to_dataframe(
     try:
         dataframe = pandas.read_csv(
             path, engine=engine, encoding=encoding, sep=sep, **kwargs)
-        print(dataframe)
     except UnicodeDecodeError as error:
         LOGGER.error(
             f'{path} must be encoded as utf-8 or ASCII')
