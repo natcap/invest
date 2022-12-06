@@ -8,7 +8,6 @@ import re
 import shutil
 import tempfile
 import time
-from collections import defaultdict
 from datetime import datetime
 
 import numpy

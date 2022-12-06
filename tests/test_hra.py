@@ -225,15 +225,17 @@ class HRAUnitTests(unittest.TestCase):
         """HRA: check parsing of the criteria table."""
         from natcap.invest import hra
 
+        eelgrass_relpath = 'foo/eelgrass_connectivity.shp'
+
         criteria_table_path = os.path.join(self.workspace_dir, 'criteria.csv')
         with open(criteria_table_path, 'w') as criteria_table:
             criteria_table.write(
                 textwrap.dedent(
-                    """\
+                    f"""\
                     HABITAT NAME,eelgrass,,,hardbottom,,,CRITERIA TYPE
                     HABITAT RESILIENCE ATTRIBUTES,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
                     recruitment rate,2,2,2,2,2,2,C
-                    connectivity rate,foo/eelgrass_connectivity.shp,2,2,2,2,2,C
+                    connectivity rate,{eelgrass_relpath},2,2,2,2,2,C
                     ,,,,,,,
                     HABITAT STRESSOR OVERLAP PROPERTIES,,,,,,,
                     oil,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
@@ -263,14 +265,14 @@ class HRAUnitTests(unittest.TestCase):
         self.assertEqual(habitats, {'eelgrass', 'hardbottom'})
         self.assertEqual(stressors, {'oil', 'fishing'})
 
-        eelgrass_path = f'{self.workspace_dir}/foo/eelgrass_connectivity.shp'
+        eelgrass_abspath = os.path.join(self.workspace_dir, eelgrass_relpath)
         expected_composite_dataframe = pandas.read_csv(
             io.StringIO(textwrap.dedent(
                 f"""\
                 habitat,stressor,criterion,rating,dq,weight,e/c
                 eelgrass,RESILIENCE,recruitment rate,2,2,2,C
                 hardbottom,RESILIENCE,recruitment rate,2,2,2,C
-                eelgrass,RESILIENCE,connectivity rate,{eelgrass_path},2,2,C
+                eelgrass,RESILIENCE,connectivity rate,{eelgrass_abspath},2,2,C
                 hardbottom,RESILIENCE,connectivity rate,2,2,2,C
                 eelgrass,oil,frequency of disturbance,2,2,3,C
                 hardbottom,oil,frequency of disturbance,2,2,3,C
