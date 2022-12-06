@@ -124,6 +124,7 @@ class RecentInvestJobs extends React.Component {
     const recentButtons = [];
     const { recentJobs } = this.props;
     recentJobs.forEach((job) => {
+      if (!job.argsValues) { return; }
       recentButtons.push(
         <Card
           className="text-left recent-job-card"
