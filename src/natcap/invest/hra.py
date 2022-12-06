@@ -1954,11 +1954,8 @@ def _parse_criteria_table(criteria_table_path, target_composite_csv_path):
                 except ValueError:
                     # If we can't cast it to a float, assume it's a string path
                     # to a raster or vector.
-                    if not os.path.isabs(attribute_value):
-                        attribute_value = os.path.join(
-                            os.path.dirname(criteria_table_path),
-                            attribute_value)
-
+                    attribute_value = utils.expand_path(
+                        attribute_value, criteria_table_path)
                     spatial_file_ok = True
                     try:
                         if (pygeoprocessing.get_gis_type(attribute_value) ==
@@ -2032,7 +2029,7 @@ def _calculate_decayed_distance(stressor_raster_path, decay_type,
         # easier to compute.
 
         def _no_buffer(stressor_presence_array):
-            """Trsnslate a stressor presence array to match an EDT.
+            """Translate a stressor presence array to match an EDT.
 
             Args:
                 stressor_presence_array (numpy.array): A numpy byte array with
