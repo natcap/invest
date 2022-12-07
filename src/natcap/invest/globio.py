@@ -58,11 +58,7 @@ ARGS_SPEC = {
         "lulc_to_globio_table_path": {
             "type": "csv",
             "columns": {
-                "lucode": {
-                    "type": "integer",
-                    "about": gettext(
-                        "LULC codes from the LULC raster. Each code must be "
-                        "a unique integer.")},
+                "lucode": spec_utils.LULC_TABLE_COLUMN,
                 "globio_lucode": {
                     "type": "integer",
                     "about": gettext("Corresponding GLOBIO LULC code.")}

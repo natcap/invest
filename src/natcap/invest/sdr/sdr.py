@@ -94,11 +94,7 @@ ARGS_SPEC = {
         "biophysical_table_path": {
             "type": "csv",
             "columns": {
-                "lucode": {
-                    "type": "integer",
-                    "about": gettext(
-                        "LULC codes from the LULC raster. Each code must be "
-                        "a unique integer.")},
+                "lucode": spec_utils.LULC_TABLE_COLUMN,
                 "usle_c": {
                     "type": "ratio",
                     "about": gettext("Cover-management factor for the USLE")},

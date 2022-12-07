@@ -110,11 +110,7 @@ ARGS_SPEC = {
         "biophysical_table_path": {
             "type": "csv",
             "columns": {
-                "lucode": {
-                    "type": "integer",
-                    "about": gettext(
-                        "LULC codes from the LULC raster. Each code must be "
-                        "a unique integer.")},
+                "lucode": spec_utils.LULC_TABLE_COLUMN,
                 "cn_[SOIL_GROUP]": {
                     "type": "number",
                     "units": u.none,

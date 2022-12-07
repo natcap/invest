@@ -172,12 +172,7 @@ ARGS_SPEC = {
         "sensitivity_table_path": {
             "type": "csv",
             "columns": {
-                "lulc": {
-                    "type": "integer",
-                    "about": gettext(
-                        "LULC codes from the LULC rasters. Each code must be "
-                        "a unique integer.")
-                },
+                "lulc": spec_utils.LULC_TABLE_COLUMN,
                 "habitat": {
                     "type": "ratio",
                     "about": gettext(

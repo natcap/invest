@@ -126,6 +126,12 @@ THRESHOLD_FLOW_ACCUMULATION = {
         "before it is classified as a stream."),
     "name": gettext("threshold flow accumulation")
 }
+LULC_TABLE_COLUMN = {
+    "type": "integer",
+    "about": gettext(
+        "LULC codes from the LULC raster. Each code must be a unique "
+        "integer.")
+}
 
 # geometry types ##############################################################
 # the full list of ogr geometry types is in an enum in
