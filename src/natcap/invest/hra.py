@@ -220,20 +220,54 @@ MODEL_SPEC = {
             "type": "directory",
             "contents": {
                 "TOTAL_RISK_[HABITAT].tif": {
-                    "about": "This raster layer depicts the habitat-specific cumulative risk from all the stressors in a grid cell.",
+                    "about": (
+                        "Habitat-specific cumulative risk from all the stressors"),
+                    "bands": {1: {"type": "number", "units": u.none}}
                 },
                 "TOTAL_RISK_Ecosystem.tif": {
-                    "about": "This raster layer depicts the sum of habitat cumulative risk scores divided by the number of habitats occurring in each cell."
+                    "about": (
+                        "Sum of habitat cumulative risk scores divided by the "
+                        "number of habitats occurring in each cell."),
+                    "bands": {1: {"type": "number", "units": u.none}}
                 },
                 "RECLASS_RISK_[HABITAT].tif": {
-                    "about": "This raster layer depicts the reclassified habitat-specific risk from all the stressors in a grid cell into four categories, where 0 = No Risk, 1 = Low Risk, 2 = Medium Risk, and 3 = High Risk."
+                    "about": (
+                        "Reclassified habitat-specific risk from all the "
+                        "stressors in a grid cell into four categories, where "
+                        "0 = No Risk, 1 = Low Risk, 2 = Medium Risk, and "
+                        "3 = High Risk."),
+                    "bands": {1: {"type": "integer"}}
                 },
                 "RECLASS_RISK_Ecosystem.tif": {
-                    "about": "This raster layer depicts the reclassified ecosystem risk in each cell."
+                    "about": "Reclassified ecosystem risk in each cell.",
+                    "bands": {1: {"type": "integer"}}
                 },
                 "SUMMARY_STATISTICS.csv": {
-                    "about": "This CSV file contains mean, minimum, and maximum exposure, consequence, and risk scores for each habitat-stressor pair, as well as habitat-specific scores in each subregion. If the “name” field is not given in the AOI vector, a “Total Region” value will be used to represent the entire AOI extent in the “SUBREGION” column on the table.",
+                    "about": (
+                        "Table of summary statistics for each combination of "
+                        "habitat, stressor, and subregion"),
                     "columns": {
+                        "HABITAT": {"type": "freestyle_string", "about": "Habitat name"},
+                        "STRESSOR": {"type": "freestyle_string", "about": "Stressor name"},
+                        "SUBREGION": {"type": "freestyle_string", "about": "Subregion name"},
+                        "E_MEAN": {
+                            "type": "number", "units": u.none, "about": "Mean exposure score"},
+                        "E_MIN": {
+                            "type": "number", "units": u.none, "about": "Minimum exposure score"},
+                        "E_MAX": {
+                            "type": "number", "units": u.none, "about": "Maximum exposure score"},
+                        "C_MEAN": {
+                            "type": "number", "units": u.none, "about": "Mean consequence score"},
+                        "C_MIN": {
+                            "type": "number", "units": u.none, "about": "Minimum consequence score"},
+                        "C_MAX": {
+                            "type": "number", "units": u.none, "about": "Maximum consequence score"},
+                        "R_MEAN": {
+                            "type": "number", "units": u.none, "about": "Mean risk score"},
+                        "R_MIN": {
+                            "type": "number", "units": u.none, "about": "Minimum risk score"},
+                        "R_MAX": {
+                            "type": "number", "units": u.none, "about": "Maximum risk score"},
                         "R_%HIGH": {
                             "about": "the percentage of high risk areas.",
                             "type": "percent"
@@ -255,16 +289,47 @@ MODEL_SPEC = {
             "created_if": "visualize_outputs",
             "contents": {
                 "RECLASS_RISK_[HABITAT].geojson": {
-                    "about": "This vector layer allows users to visualize reclassified habitat-specific risk from all the stressors into four categories, where 0 = No Risk, 1 = Low Risk, 2 = Medium Risk, and 3 = High Risk, in gradient color from white to red on a map."
+                    "about": (
+                        "Map of habitat-specific risk visualized in gradient "
+                        "color from white to red on a map."),
+                    "geometries": spec_utils.POLYGON,
+                    "fields": {
+                        "Risk Score": {
+                            "type": "integer",
+                            "about": (
+                                "Habitat risk from all stressors where 0 = "
+                                "No Risk, 1 = Low Risk, 2 = Medium Risk, and "
+                                "3 = High Risk.")
+                        }
+                    }
                 },
-                "RECLASS_RISK_Ecosystem.tif": {
-                    "about": "This vector layer allows users to visualize reclassified ecosystem risk in each cell into four categories, where 0 = No Risk, 1 = Low Risk, 2 = Medium Risk, and 3 = High Risk, in gradient color from white to red on a map."
+                "RECLASS_RISK_Ecosystem.geojson": {
+                    "about": (
+                        "Map of ecosystem risk visualized in gradient "
+                        "color from white to red on a map."),
+                    "geometries": spec_utils.POLYGON,
+                    "fields": {
+                        "Risk Score": {
+                            "type": "integer",
+                            "about": (
+                                "Ecosystem risk from all stressors where 0 = "
+                                "No Risk, 1 = Low Risk, 2 = Medium Risk, and "
+                                "3 = High Risk.")
+                        }
+                    }
                 },
                 "STRESSOR_[STRESSOR].geojson": {
-                    "about": "This vector layer allows users to visualize stressor extent with orange color on a map."
+                    "about": "Map of stressor extent visualized in orange color.",
+                    "geometries": spec_utils.POLYGON,
+                    "fields": {}
                 },
                 "SUMMARY_STATISTICS.csv": {
-                    "about": "This is the same file from one in the Output Folder. It is copied here so users can just upload the visualization outputs folder to the HRA web application, with all the files in one place."
+                    "about": (
+                        "This is the same file from one in the Output Folder. "
+                        "It is copied here so users can just upload the "
+                        "visualization outputs folder to the HRA web "
+                        "application, with all the files in one place."),
+                    "columns": {}
                 }
             }
         },
@@ -272,50 +337,104 @@ MODEL_SPEC = {
             "type": "directory",
             "contents": {
                 "aligned_[HABITAT/STRESSOR/CRITERIA].tif": {
-                    "about": "A raster file aligned with all the other input layers, so they share the same projection, pixel size, dimensions, and bounding box."
+                    "about": "Copy of the input, aligned to the same projection and extent",
+                    "bands": {1: {"type": "number", "units": u.none}}
                 },
                 "aoi_subregions": {
                     "type": "directory",
                     "contents": {
-                        "subregion_set_[N].tif": {},
-                        "subregions.json": {}
+                        "subregion_set_[N].tif": {
+                            "about": "The Nth non-intersecting set of subregions",
+                            "bands": {1: {"type": "integer"}}
+                        },
+                        "subregions.json": {"about": "Subregion data"}
                     }
                 },
                 "C_[HABITAT]_[STRESSOR].tif": {
-                    "about": "A raster file aligned with all other input layers of the calculated consequence score for a particular habitat/stressor combination."
+                    "about": (
+                        "Consequence score for a particular habitat/stressor combination."),
+                    "bands": {1: {"type": "number", "units": u.none}}
                 },
                 "composite_criteria.csv": {
-                    "about": "A processed CSV derived from the user’s criteria table tracking each combination of habitat, stressor, criterion, rating, data quality, weight and whether the score applies to exposure or consequence."
+                    "about": (
+                        "Table tracking each combination of habitat, stressor, "
+                        "criterion, rating, data quality, weight and whether "
+                        "the score applies to exposure or consequence."),
+                    "columns": {
+                        "habitat": {"about": "Habitat name", "type": "freestyle_string"},
+                        "stressor": {"about": "Stressor name", "type": "freestyle_string"},
+                        "criterion": {"about": "Criterion name", "type": "freestyle_string"},
+                        "rating": {"about": "Rating value or path to raster", "type": "freestyle_string"},
+                        "dq": {"about": "Data quality", "type": "integer"},
+                        "weight": {"about": "Weight", "type": "integer"},
+                        "e/c": {"about": "Exposure (E) or consequence (C)", "type": "freestyle_string"},
+                    }
                 },
                 "decayed_edt_[STRESSOR].tif": {
-                    "about": "A raster indicating the distance-weighted influence of a stressor."
+                    "about": "Distance-weighted influence of the given stressor.",
+                    "bands": {1: {"type": "ratio"}}
                 },
                 "E_[HABITAT]_[STRESSOR].tif": {
-                    "about": "A raster file aligned with all other input layers of the calculated exposure score for a particular habitat/stressor combination."
+                    "about": (
+                        "Exposure score for a particular habitat/stressor combination."),
+                    "bands": {1: {"type": "number", "units": u.none}}
                 },
                 "habitat_mask.tif": {
-                    "about": "A raster indicating which pixels contain one or more habitats."
+                    "about": "Presence of one or more habitats.",
+                    "bands": {1: {"type": "integer"}}
                 },
-                "polygonize_mask_[HABITAT/STRESSOR].tif": {},
-                "polygonized_[HABITAT/STRESSOR].gpkg": {},
+                "polygonize_mask_[HABITAT/STRESSOR].tif": {
+                    "about": "Map of which pixels to polygonize.",
+                    "bands": {1: {"type": "integer"}}
+                },
+                "polygonized_[HABITAT/STRESSOR].gpkg": {
+                    "about": "Polygonized habitat or stressor map",
+                    "fields": {},
+                    "geometries": spec_utils.POLYGON
+                },
                 "reclass_[HABITAT]_[STRESSOR].tif": {
-                    "about": "The reclassified (high/medium/low) risk of the given stressor to the given habitat."
+                    "about": (
+                        "The reclassified (high/medium/low) risk of the given "
+                        "stressor to the given habitat."),
+                    "bands": {1: {"type": "integer"}}
                 },
-                "reclass_total_risk_[HABITAT].tif": {},
+                "reclass_total_risk_[HABITAT].tif": {
+                    "about": "The reclassified (high/medium/low) total risk",
+                    "bands": {1: {"type": "integer"}}
+                },
                 "RECOVERY_[HABITAT].tif": {
-                    "about": "A raster file depicting the resilience or recovery potential for the given habitat or species for each cell."
+                    "about": (
+                        "The resilience or recovery potential for the given "
+                        "habitat"),
+                    "bands": {1: {"type": "number", "units": u.none}}
                 },
                 "reprojected_[HABITAT/STRESSOR/CRITERIA].shp": {
-                    "about": "If any habitat, stressor or spatial criteria layers were provided in a spatial vector format, it will be reprojected to the projection of the user’s Area of Interest and written as an ESRI Shapefile at this filepath."
+                    "about": (
+                        "If any habitat, stressor or spatial criteria layers "
+                        "were provided in a spatial vector format, it will be "
+                        "reprojected to the AOI projection."),
+                    "fields": {},
+                    "geometries": spec_utils.POLYGONS
                 },
                 "rewritten_[HABITAT/STRESSOR/CRITERIA].tif": {
-                    "about": "If any habitat, stressor or spatial criteria layers were provided in a spatial raster format, it will be reprojected to the projection of the user’s Area of Interest and written as GeoTiff at this filepath."
+                    "about": (
+                        "If any habitat, stressor or spatial criteria layers "
+                        "were provided in a spatial raster format, it will be "
+                        "reprojected to the projection of the user’s Area of "
+                        "Interest and written as GeoTiff at this filepath."),
+                    "bands": {1: {"type": "number", "units": u.none}}
                 },
                 "RISK_[HABITAT]_[STRESSOR].tif": {
-                    "about": "A raster file indicating the risk score for a habitat-stressor pair."
+                    "about": "Risk score for the given habitat-stressor pair.",
+                    "bands": {1: {"type": "number", "units": u.none}}
                 },
                 "simplified_[HABITAT/STRESSOR/CRITERIA].gpkg": {
-                    "about": "Any habitat, stressor or spatial criteria layers provided are simplified to 1/2 the user-defined raster resolution in order to speed up rasterization."
+                    "about": (
+                        "Any habitat, stressor or spatial criteria layers "
+                        "provided are simplified to 1/2 the user-defined "
+                        "raster resolution in order to speed up rasterization."),
+                    "fields": {},
+                    "geometries": spec_utils.POLYGONS
                 }
             }
         },

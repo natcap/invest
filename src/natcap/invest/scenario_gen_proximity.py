@@ -113,26 +113,70 @@ MODEL_SPEC = {
     },
     "outputs": {
         "nearest_to_edge.tif": {
-            "about": "LULC raster for the scenario of conversion nearest to the edge of the focal habitat."
+            "about": gettext("Map of the nearest-to-edge conversion scenario."),
+            "bands": {1: {"type": "integer"}}
         },
         "farthest_from_edge.tif": {
-            "about": "LULC raster for the scenario of conversion farthest from the edge of the focal habitat."
+            "about": gettext("Map of the farthest-from-edge conversion scenario."),
+            "bands": {1: {"type": "integer"}}
         },
         "nearest_to_edge.csv": {
-            "about": "table listing the area (in hectares) and number of pixels for different land cover types converted for the scenario of conversion nearest to the edge of the focal habitat."
+            "about": gettext(
+                "Table of land cover classes and the amount of each that was converted for the nearest-to-edge conversion scenario."),
+            "columns": {
+                "lucode": {
+                    "type": "integer",
+                    "about": "LULC code of the land cover class"
+                },
+                "area converted (Ha)": {
+                    "type": "number",
+                    "units": u.hectare,
+                    "about": "Total area converted from this land cover class"
+                },
+                "pixels converted": {
+                    "type": "integer",
+                    "about": "Number of pixels converted from this land cover class"
+                }
+            }
         },
         "farthest_from_edge.csv": {
-            "about": "table listing the area (in hectares) and number of pixels for different land cover types converted for the scenario of conversion nearest to the edge of the focal habitat."
+            "about": gettext(
+                "Table of land cover classes and the amount of each that was converted for the nearest-to-edge conversion scenario."),
+            "columns": {
+                "lucode": {
+                    "type": "integer",
+                    "about": "LULC code of the land cover class"
+                },
+                "area converted (Ha)": {
+                    "type": "number",
+                    "units": u.hectare,
+                    "about": "Total area converted from this land cover class"
+                },
+                "pixels converted": {
+                    "type": "integer",
+                    "about": "Number of pixels converted from this land cover class"
+                }
+            }
         },
         "intermediate": {
             "type": "directory",
             "contents": {
-                "aoi_masked_lulc.tif": {},
+                "aoi_masked_lulc.tif": {
+                    "about": gettext(
+                        "Copy of the LULC raster masked to the AOI extent."),
+                    "bands": {1: {"type": "integer"}}
+                },
                 "farthest_from_edge_distance.tif": {
-                    "about": "This raster shows the distance (in number of pixels) of each pixel to the nearest edge of the focal landcover."
+                    "about": gettext(
+                        "Map of the distance from each pixel to the farthest "
+                        "edge of the focal landcover."),
+                    "bands": {1: {"type": "number", "units": u.pixel}}
                 },
                 "nearest_to_edge_distance.tif": {
-                    "about": "This raster shows the distance (in number of pixels) of each pixel to the nearest edge of the focal landcover."
+                    "about": gettext(
+                        "Map of the distance from each pixel to the nearest "
+                        "edge of the focal landcover."),
+                    "bands": {1: {"type": "number", "units": u.pixel}}
                 },
                 "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
             }

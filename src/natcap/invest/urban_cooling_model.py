@@ -247,10 +247,14 @@ MODEL_SPEC = {
     },
     "outputs": {
         "hm.tif": {
-            "about": "The calculated HMI."
+            "about": "Map of heat mitigation index.",
+            "bands": {1: {"type": "ratio"}}
         },
         "uhi_results.shp": {
-            "about": "A copy of the input vector “Area of Interest” with additional fields.",
+            "about": (
+                "A copy of the input Area of Interest vector with "
+                "additional fields."),
+            "geometries": spec_utils.POLYGONS,
             "fields": {
                 "avg_cc": {
                     "about": "Average CC value",
@@ -273,22 +277,23 @@ MODEL_SPEC = {
                     "units": u.none
                 },
                 "avg_wbgt_v": {
-                    "about": "Average WBGT.",
+                    "about": "Average wet bulb globe temperature.",
                     "type": "number",
                     "units": u.degree_Celsius
                 },
                 "avg_ltls_v": {
-                    "about": "Light work productivity loss",
+                    "about": "Average light work productivity loss",
                     "type": "percent"
                 },
                 "avg_hvls_v": {
-                    "about": "Heavy work productivity loss",
+                    "about": "Average heavy work productivity loss",
                     "type": "percent"
                 }
             }
         },
         "buildings_with_stats.shp": {
             "about": "A copy of the input vector “Building Footprints” with additional fields.",
+            "geometries": spec_utils.POLYGONS,
             "fields": {
                 "energy_sav": {
                     "about": "Energy savings value (kWh or currency if optional energy cost input column was provided in the Energy Consumption Table). Savings are relative to a theoretical scenario where the city contains NO natural areas nor green spaces; where CC = 0 for all LULC classes.",
@@ -306,25 +311,38 @@ MODEL_SPEC = {
             "type": "directory",
             "contents": {
                 "cc.tif": {
-                    "about": "Raster of CC values."
+                    "about": "Map of cooling capacity",
+                    "bands": {1: {"type": "ratio"}}
                 },
                 "T_air.tif": {
-                    "about": "Raster of estimated air temperature values."
+                    "about": "Map of air temperature with air mixing.",
+                    "bands": {1: {"type": "number", "units": u.degree_Celsius}}
                 },
                 "T_air_nomix.tif": {
-                    "about": "Raster of estimated air temperature values prior to air mixing (i.e. before applying the moving average algorithm)."
+                    "about": "Map of air temperature without air mixing.",
+                    "bands": {1: {"type": "number", "units": u.degree_Celsius}}
                 },
                 "eti.tif": {
-                    "about": "Raster of values of actual evapotranspiration (reference evapotranspiration times crop coefficient “Kc”)."
+                    "about": "Map of the evapotranspiration index.",
+                    "bands": {1: {"type": "ratio"}}
                 },
                 "wbgt.tif": {
-                    "about": "Raster of the calculated WBGT."
+                    "about": "Map of wet bulb globe temperature.",
+                    "bands": {1: {"type": "number", "units": u.degree_Celsius}}
                 },
                 "reprojected_aoi.shp": {
-                    "about": "The user-defined Area of Interest, reprojected to the Spatial Reference of the LULC."
+                    "about": (
+                        "The Area of Interest vector reprojected to the "
+                        "spatial reference of the LULC."),
+                    "geometries": spec_utils.POLYGONS,
+                    "fields": {}
                 },
                 "reprojected_buildings.shp": {
-                    "about": "The user-defined buildings vector, reprojected to the Spatial Reference of the LULC."
+                    "about": (
+                        "The buildings vector reprojected to the spatial "
+                        "reference of the LULC."),
+                    "geometries": spec_utils.POLYGONS,
+                    "fields": {}
                 },
                 "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
             }

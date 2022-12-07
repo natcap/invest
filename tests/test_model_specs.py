@@ -20,7 +20,7 @@ valid_nested_types = {
         'ratio',
         'vector',
     },
-    'raster': {'integer', 'number', 'ratio'},
+    'raster': {'integer', 'number', 'ratio', 'percent'},
     'vector': {
         'integer',
         'freestyle_string',
@@ -97,7 +97,6 @@ class ValidateModelSpecs(unittest.TestCase):
             # if parent_type is None:  # all top-level args must have these attrs
             #     for attr in ['about']:
             #         self.assertIn(attr, spec)
-
             attrs = set(spec.keys())
 
             if 'type' in spec:
@@ -199,7 +198,6 @@ class ValidateModelSpecs(unittest.TestCase):
                         self.assertTrue(
                             isinstance(option, str) or
                             isinstance(option, int))
-                        self.assertIsInstance(description, str)
                     attrs.remove('options')
 
             elif t == 'file':

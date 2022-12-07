@@ -180,66 +180,142 @@ MODEL_SPEC = {
     "outputs": {
         "farm_results.shp": {
             "created_if": "farm_vector_path",
-            "about": "A copy of the input farm polygon vector file with additional fields",
+            "about": gettext(
+                "A copy of the input farm polygon vector file with additional fields"),
+            "geometries": spec_utils.POLYGONS,
             "fields": {
                 "p_abund": {
-                    "about": "average pollinator abundance on the farm for the active season",
-                    "type": "number"
+                    "about": (
+                        "Average pollinator abundance on the farm for the "
+                        "active season"),
+                    "type": "ratio"
                 },
                 "y_tot": {
-                    "about": "total yield index, including wild and managed pollinators and pollinator independent yield.",
-                    "type": "number"
+                    "about": (
+                        "Total yield index, including wild and managed "
+                        "pollinators and pollinator independent yield."),
+                    "type": "ratio"
                 },
                 "pdep_y_w": {
-                    "about": "index of potential pollination dependent yield attributable to wild pollinators.",
-                    "type": "number"
+                    "about": (
+                        "Proportion of potential pollination-dependent yield "
+                        "attributable to wild pollinators."),
+                    "type": "ratio"
                 },
                 "y_wild": {
-                    "about": "index of the total yield attributable to wild pollinators.",
-                    "type": "number"
+                    "about": (
+                        "Proportion of the total yield attributable to wild "
+                        "pollinators."),
+                    "type": "ratio"
                 }
             }
         },
         "farm_pollinators.tif": {
             "created_if": "farm_vector_path",
-            "about": "Per-pixel total pollinator abundance across all species per season, clipped to the geometry of the farm vector’s polygons."
+            "about": gettext(
+                "Total pollinator abundance across all species per season, "
+                "clipped to the geometry of the farm vector’s polygons."),
+            "bands": {1: {"type": "ratio"}}
         },
         "pollinator_abundance_[SPECIES]_[SEASON].tif": {
-            "about": "Per-pixel abundance of pollinator SPECIES in season SEASON."
+            "about": gettext("Abundance of pollinator SPECIES in season SEASON."),
+            "bands": {1: {"type": "ratio"}}
         },
         "pollinator_supply_[SPECIES].tif": {
-            "about": "Per-pixel index of pollinator SPECIES that could be on a pixel given its arbitrary abundance factor from the table, multiplied by the habitat suitability for that species at that pixel, multiplied by the available floral resources that a pollinator could fly to from that pixel."
+            "about": gettext(
+                "Index of pollinator SPECIES that could be on a pixel given "
+                "its arbitrary abundance factor from the table, multiplied by "
+                "the habitat suitability for that species at that pixel, "
+                "multiplied by the available floral resources that a "
+                "pollinator could fly to from that pixel."),
+            "bands": {1: {"type": "ratio"}}
         },
         "total_pollinator_abundance_[SEASON].tif": {
             "created_if": "farm_vector_path",
-            "about": "Per-pixel total pollinator abundance across all species per season."
+            "about": gettext(
+                "Total pollinator abundance across all species per season."),
+            "bands": {1: {"type": "ratio"}}
         },
         "total_pollinator_yield.tif": {
             "created_if": "farm_vector_path",
-            "about": "Per-pixel total pollinator yield index for pixels that overlap farms, including wild and managed pollinators."
+            "about": gettext(
+                "Total pollinator yield index for pixels that overlap farms, "
+                "including wild and managed pollinators."),
+            "bands": {1: {"type": "ratio"}}
         },
         "wild_pollinator_yield.tif": {
             "created_if": "farm_vector_path",
-            "about": "Per-pixel pollinator yield index for pixels that overlap farms, for wild-pollinators only."
+            "about": gettext(
+                "Pollinator yield index for pixels that overlap farms, for "
+                "wild pollinators only."),
+            "bands": {1: {"type": "ratio"}}
         },
         "intermediate_outputs": {
             "type": "directory",
             "contents": {
-                "blank_raster.tif": {},
-                "convolve_ps_[SPECIES].tif": {},
-                "farm_nesting_substrate_index_[SUBSTRATE].tif": {},
-                "farm_pollinator_[SEASON].tif": {},
-                "farm_relative_floral_abundance_index_[SEASON].tif": {},
-                "floral_resources_[SPECIES].tif": {},
-                "foraged_flower_index_[SPECIES]_[SEASON].tif": {},
-                "habitat_nesting_index_[SPECIES].tif": {},
-                "half_saturation_[SEASON].tif": {},
-                "kernel_[ALPHA].tif": {},
-                "local_foraging_effectiveness_[SPECIES].tif": {},
-                "managed_pollinators.tif": {},
-                "nesting_substrate_index_[SUBSTRATE].tif": {},
-                "relative_floral_abundance_index_[SEASON].tif": {},
-                "reprojected_farm_vector.shp": {},
+                "blank_raster.tif": {
+                    "about": (
+                        "Blank raster used for rasterizing all the farm parameters/fields later"),
+                    "bands": {1: {"type": "integer"}}
+                },
+                "convolve_ps_[SPECIES].tif": {
+                    "about": "Convolved pollinator supply",
+                    "bands": {1: {"type": "ratio"}}
+                },
+                "farm_nesting_substrate_index_[SUBSTRATE].tif": {
+                    "about": "Rasterized substrate availability",
+                    "bands": {1: {"type": "ratio"}}
+                },
+                "farm_pollinator_[SEASON].tif": {
+                    "about": "On-farm pollinator abundance",
+                    "bands": {1: {"type": "ratio"}}
+                },
+                "farm_relative_floral_abundance_index_[SEASON].tif": {
+                    "about": "On-farm relative floral abundance",
+                    "bands": {1: {"type": "ratio"}}
+                },
+                "floral_resources_[SPECIES].tif": {
+                    "about": "Floral resources available to the species",
+                    "bands": {1: {"type": "ratio"}}
+                },
+                "foraged_flowers_index_[SPECIES]_[SEASON].tif": {
+                    "about": (
+                        "Foraged flowers index for the given species and season"),
+                    "bands": {1: {"type": "ratio"}}
+                },
+                "habitat_nesting_index_[SPECIES].tif": {
+                    "about": "Habitat nesting index for the given species",
+                    "bands": {1: {"type": "ratio"}}
+                },
+                "half_saturation_[SEASON].tif": {
+                    "about": "Half saturation constant for the given season",
+                    "bands": {1: {"type": "ratio"}}
+                },
+                "kernel_[ALPHA].tif": {
+                    "about": "Exponential decay kernel for the given radius",
+                    "bands": {1: {"type": "ratio"}}
+                },
+                "local_foraging_effectiveness_[SPECIES].tif": {
+                    "about": "Foraging effectiveness for the given species",
+                    "bands": {1: {"type": "ratio"}}
+                },
+                "managed_pollinators.tif": {
+                    "about": "Managed pollinators rasterized from the farm vector",
+                    "bands": {1: {"type": "ratio"}}
+                },
+                "nesting_substrate_index_[SUBSTRATE].tif": {
+                    "about": "Nesting substrate index for the given substrate",
+                    "bands": {1: {"type": "ratio"}}
+                },
+                "relative_floral_abundance_index_[SEASON].tif": {
+                    "about": "Floral abundance index in the given season",
+                    "bands": {1: {"type": "ratio"}}
+                },
+                "reprojected_farm_vector.shp": {
+                    "about": "Farm vector reprojected to the LULC projection",
+                    "fields": {},
+                    "geometries": spec_utils.POLYGONS
+                },
                 "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
             }
         }

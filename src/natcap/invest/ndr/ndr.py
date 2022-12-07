@@ -171,6 +171,7 @@ MODEL_SPEC = {
     "outputs": {
         "watershed_results_ndr.gpkg": {
             "about": "Vector with aggregated nutrient model results per watershed.",
+            "geometries": spec_utils.POLYGONS,
             "fields": {
                 "p_surface_load": {
                     "type": "number",
@@ -241,40 +242,48 @@ MODEL_SPEC = {
             "type": "directory",
             "contents": {
                 "crit_len_n.tif": {
-                    "about": "Retention length values, crit_len, found in the biophysical table"
+                    "about": (
+                        "Nitrogen retention length, found in the biophysical table"),
+                    "bands": {1: {"type": "number", "units": u.meter}}
                 },
                 "crit_len_p.tif": {
-                    "about": "Retention length values, crit_len, found in the biophysical table"
+                    "about": (
+                        "Phosphorus retention length, found in the biophysical table"),
+                    "bands": {1: {"type": "number", "units": u.meter}}
                 },
                 "d_dn.tif": {
-                    "about": "Downslope factor of the index of connectivity"
+                    "about": "Downslope factor of the index of connectivity",
+                    "bands": {1: {"type": "number", "units": u.none}}
                 },
                 "d_up.tif": {
-                    "about": "Upslope factor of the index of connectivity"
+                    "about": "Upslope factor of the index of connectivity",
+                    "bands": {1: {"type": "number", "units": u.none}}
                 },
                 "dist_to_channel.tif": {
-                    "about": "Average downslope distance from a pixel to the stream"
+                    "about": "Average downslope distance from a pixel to the stream",
+                    "bands": {1: {"type": "number", "units": u.pixel}}
                 },
                 "eff_n.tif": {
-                    "about": "Raw per-landscape cover retention efficiency for nitrogen."
+                    "about": "Raw per-landscape cover retention efficiency for nitrogen.",
+                    "bands": {1: {"type": "ratio"}}
                 },
                 "eff_p.tif": {
-                    "about": "Raw per-landscape cover retention efficiency for phosphorus"
+                    "about": "Raw per-landscape cover retention efficiency for phosphorus",
+                    "bands": {1: {"type": "ratio"}}
                 },
                 "effective_retention_n.tif": {
-                    "about": "Effective nitrogen retention provided by the downslope flow path for each pixel"
+                    "about": "Effective nitrogen retention provided by the downslope flow path for each pixel",
+                    "bands": {1: {"type": "ratio"}}
                 },
                 "effective_retention_p.tif": {
-                    "about": "Effective phosphorus retention provided by the downslope flow path for each pixel"
+                    "about": "Effective phosphorus retention provided by the downslope flow path for each pixel",
+                    "bands": {1: {"type": "ratio"}}
                 },
-                "flow_accumulation.tif": {
-                    "about": "Flow accumulation created from the DEM"
-                },
-                "flow_direction.tif": {
-                    "about": "Flow direction created from the DEM"
-                },
+                "flow_accumulation.tif": spec_utils.FLOW_ACCUMULATION,
+                "flow_direction.tif": spec_utils.FLOW_DIRECTION,
                 "ic_factor.tif": {
-                    "about": "Index of connectivity"
+                    "about": "Index of connectivity",
+                    "bands": {1: {"type": "ratio"}}
                 },
                 "load_n.tif": {
                     "about": "Nitrogen load (for surface transport) per pixel",
@@ -305,26 +314,30 @@ MODEL_SPEC = {
                     }}
                 },
                 "ndr_n.tif": {
-                    "about": "NDR values"
+                    "about": "NDR values for nitrogen",
+                    "bands": {1: {"type": "ratio"}}
                 },
                 "ndr_p.tif": {
-                    "about": "NDR values"
+                    "about": "NDR values for phosphorus",
+                    "bands": {1: {"type": "ratio"}}
                 },
                 "runoff_proxy_index.tif": {
-                    "about": "Normalized values for the Runoff Proxy input to the model"
+                    "about": "Normalized values for the Runoff Proxy input to the model",
+                    "bands": {1: {"type": "ratio"}}
                 },
                 "s_accumulation.tif": {
-                    "about": "Slope parameter for the IC equation found in the Nutrient Delivery section"
+                    "about": "Flow accumulation weighted by slope",
+                    "bands": {1: {"type": "number", "units": u.none}}
                 },
                 "s_bar.tif": {
-                    "about": "Slope parameter for the IC equation found in the Nutrient Delivery section"
+                    "about": "Average slope gradient of the upslope contributing area",
+                    "bands": {1: {"type": "ratio"}}
                 },
                 "s_factor_inverse.tif": {
-                    "about": "Slope parameter for the IC equation found in the Nutrient Delivery section"
+                    "about": "Inverse of slope",
+                    "bands": {1: {"type": "number", "units": u.none}}
                 },
-                "stream.tif": {
-                    "about": "Stream network created from the DEM, with 0 representing land pixels, and 1 representing stream pixels."
-                },
+                "stream.tif": spec_utils.STREAM,
                 "sub_load_n.tif": {
                     "about": "Nitrogen loads for subsurface transport",
                     "bands": {1: {
@@ -333,7 +346,8 @@ MODEL_SPEC = {
                     }}
                 },
                 "sub_ndr_n.tif": {
-                    "about": "Subsurface nitrogen NDR values"
+                    "about": "Subsurface nitrogen NDR values",
+                    "bands": {1: {"type": "ratio"}}
                 },
                 "surface_load_n.tif": {
                     "about": "Above ground nitrogen loads",
@@ -350,15 +364,66 @@ MODEL_SPEC = {
                     }}
                 },
                 "thresholded_slope.tif": {
-                    "about": "Raster with slope values thresholded for correct calculation of IC."
+                    "about": (
+                        "Percent slope thresholded for correct calculation of IC."),
+                    "bands": {1: {"type": "percent"}}
                 },
                 "what_drains_to_stream.tif": {
-                    "about": "Map of which pixels drain to a stream. A value of 1 means that at least some of the runoff from that pixel drains to a stream in stream.tif. A value of 0 means that it does not drain at all to any stream in stream.tif.",
+                    "about": (
+                        "Map of which pixels drain to a stream. A value of 1 "
+                        "means that at least some of the runoff from that "
+                        "pixel drains to a stream in stream.tif. A value of 0 "
+                        "means that it does not drain at all to any stream in "
+                        "stream.tif."),
                     "bands": {1: {
                         "type": "integer"
                     }}
                 },
-                "cache_dir": spec_utils.TASKGRAPH_DIR
+                "cache_dir": {
+                    "type": "directory",
+                    "contents": {
+                        "aligned_dem.tif": {
+                            "about": "Copy of the DEM clipped to the extent of the other inputs",
+                            "bands": {1: {"type": "number", "units": u.meter}}
+                        },
+                        "aligned_lulc.tif": {
+                            "about": (
+                                "Copy of the LULC clipped to the extent of the other inputs "
+                                "and reprojected to the DEM projection"),
+                            "bands": {1: {"type": "integer"}}
+                        },
+                        "aligned_runoff_proxy.tif": {
+                            "about": (
+                                "Copy of the runoff proxy clipped to the extent of the other inputs "
+                                "and reprojected to the DEM projection"),
+                            "bands": {1: {"type": "number", "units": u.none}}
+                        },
+                        "filled_dem.tif": spec_utils.FILLED_DEM,
+                        "slope.tif": spec_utils.SLOPE,
+                        "subsurface_export_n.pickle": {
+                            "about": "Pickled zonal statistics of nitrogen subsurface export"
+                        },
+                        "subsurface_load_n.pickle": {
+                            "about": "Pickled zonal statistics of nitrogen subsurface load"
+                        },
+                        "surface_export_n.pickle": {
+                            "about": "Pickled zonal statistics of nitrogen surface export"
+                        },
+                        "surface_export_p.pickle": {
+                            "about": "Pickled zonal statistics of phosphorus surface export"
+                        },
+                        "surface_load_n.pickle": {
+                            "about": "Pickled zonal statistics of nitrogen surface load"
+                        },
+                        "surface_load_p.pickle": {
+                            "about": "Pickled zonal statistics of phosphorus surface load"
+                        },
+                        "total_export_n.pickle": {
+                            "about": "Pickled zonal statistics of total nitrogen export"
+                        },
+                        "taskgraph.db": {}
+                    }
+                }
             }
         }
     }
@@ -412,7 +477,6 @@ _CACHE_BASE_FILES = {
     'slope_path': 'slope.tif',
     'aligned_lulc_path': 'aligned_lulc.tif',
     'aligned_runoff_proxy_path': 'aligned_runoff_proxy.tif',
-    'runoff_mean_pickle_path': 'runoff_mean.pickle',
     'surface_load_n_pickle_path': 'surface_load_n.pickle',
     'surface_load_p_pickle_path': 'surface_load_p.pickle',
     'subsurface_load_n_pickle_path': 'subsurface_load_n.pickle',

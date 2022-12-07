@@ -139,7 +139,7 @@ MODEL_SPEC = {
         },
         "drainage_path": {
             "type": "raster",
-            "bands": {1: {"type": "number", "units": u.none}},
+            "bands": {1: {"type": "integer"}},
             "required": False,
             "about": gettext(
                 "Map of locations of artificial drainages that drain to the "
@@ -149,44 +149,6 @@ MODEL_SPEC = {
         }
     },
     "outputs": {
-        "rkls.tif": {
-            "bands": {1: {
-                "type": "number",
-                "units": u.metric_ton/u.pixel
-            }},
-            "about": "Total potential soil loss per pixel in the original land cover from the RKLS equation. Equivalent to the soil loss for bare soil. (Eq. (68), without applying the C or P factors)."
-        },
-        "sed_export.tif": {
-            "about": "The total amount of sediment exported from each pixel that reaches the stream. (Eq. (76))",
-            "bands": {1: {
-                "type": "number",
-                "units": u.metric_ton/u.pixel
-            }}
-        },
-        "sediment_deposition.tif": {
-            "about": "The total amount of sediment deposited on the pixel from upslope sources as a result of trapping. (Eq. (80))",
-            "bands": {1: {
-                "type": "number",
-                "units": u.metric_ton/u.pixel
-            }}
-        },
-        "stream.tif": {
-            "about": "Stream network, created using flow direction and flow accumulation derived from the DEM and Threshold Flow Accumulation. Values of 1 represent streams, values of 0 are non-stream pixels.",
-            "bands": {1: {
-                "type": "integer"
-            }}
-        },
-        "stream_and_drainage.tif": {
-            "created_if": "drainage_path",
-            "about": "This raster is the union of that layer with the calculated stream layer(Eq. (85)). Values of 1 represent streams, values of 0 are non-stream pixels."
-        },
-        "usle.tif": {
-            "about": "Total potential soil loss per pixel in the original land cover calculated from the USLE equation. (Eq. (68))",
-            "bands": {1: {
-                "type": "number",
-                "units": u.metric_ton/u.pixel
-            }}
-        },
         "avoided_erosion.tif": {
             "about": "The contribution of vegetation to keeping soil from eroding from each pixel. (Eq. (82))",
             "bands": {1: {
@@ -201,8 +163,43 @@ MODEL_SPEC = {
                 "units": u.metric_ton/u.pixel
             }}
         },
+        "rkls.tif": {
+            "bands": {1: {
+                "type": "number",
+                "units": u.metric_ton/u.pixel
+            }},
+            "about": "Total potential soil loss per pixel in the original land cover from the RKLS equation. Equivalent to the soil loss for bare soil. (Eq. (68), without applying the C or P factors)."
+        },
+        "sed_deposition.tif": {
+            "about": "The total amount of sediment deposited on the pixel from upslope sources as a result of trapping. (Eq. (80))",
+            "bands": {1: {
+                "type": "number",
+                "units": u.metric_ton/u.pixel
+            }}
+        },
+        "sed_export.tif": {
+            "about": "The total amount of sediment exported from each pixel that reaches the stream. (Eq. (76))",
+            "bands": {1: {
+                "type": "number",
+                "units": u.metric_ton/u.pixel
+            }}
+        },
+        "stream.tif": spec_utils.STREAM,
+        "stream_and_drainage.tif": {
+            "created_if": "drainage_path",
+            "about": "This raster is the union of that layer with the calculated stream layer(Eq. (85)). Values of 1 represent streams, values of 0 are non-stream pixels.",
+            "bands": {1: {"type": "integer"}}
+        },
+        "usle.tif": {
+            "about": "Total potential soil loss per pixel in the original land cover calculated from the USLE equation. (Eq. (68))",
+            "bands": {1: {
+                "type": "number",
+                "units": u.metric_ton/u.pixel
+            }}
+        },
         "watershed_results_sdr.shp": {
             "about": "Table containing biophysical values for each watershed",
+            "geometries": spec_utils.POLYGONS,
             "fields": {
                 "sed_export": {
                     "type": "number",
@@ -235,87 +232,180 @@ MODEL_SPEC = {
             "type": "directory",
             "contents": {
                 "cp.tif": {
-                    "about": "factor (Eq. (68)), derived by mapping usle_c and usle_p from the biophysical table to the LULC raster."
+                    "about": gettext(
+                        "CP factor derived by mapping usle_c and usle_p from "
+                        "the biophysical table to the LULC raster."),
+                    "bands": {1: {"type": "ratio"}}
                 },
                 "d_dn.tif": {
-                    "about": "downslope factor of the index of connectivity (Eq. (74))"
+                    "about": gettext(
+                        "Downslope factor of the index of connectivity (Eq. (74))"),
+                    "bands": {1: {"type": "number", "units": u.none}}
                 },
                 "d_up.tif": {
-                    "about": "upslope factor of the index of connectivity (Eq. (73))"
+                    "about": gettext(
+                        "Upslope factor of the index of connectivity (Eq. (73))"),
+                    "bands": {1: {"type": "number", "units": u.none}}
                 },
                 "e_prime.tif": {
-                    "about": "sediment downslope deposition, the amount of sediment from a given pixel that does not reach a stream (Eq. (78))"
-                },
-                "f.tif": {
-                    "about": "sediment flux for sediment that does not reach the stream (Eq. (81))"
-                },
-                "flow_accumulation.tif": {
-                    "about": "flow accumulation, derived from flow direction"
-                },
-                "flow_direction.tif": {
-                    "about": "MFD flow direction. Note: the pixel values should not be interpreted directly. Each 32-bit number consists of 8 4-bit numbers. Each 4-bit number represents the proportion of flow into one of the eight neighboring pixels."
-                },
-                "ic.tif": {
-                    "about": "index of connectivity (Eq. (70))"
-                },
-                "ls.tif": {
-                    "about": "LS factor for USLE (Eq. (69))"
-                },
-                "pit_filled_dem.tif": {
-                    "about": "DEM after any pits are filled"
-                },
-                "s_accumulation.tif": {
-                    "about": "flow accumulation weighted by the thresholded slope. Used in calculating s_bar."
-                },
-                "s_bar.tif": {
-                    "about": "mean thresholded slope gradient of the upslope contributing area (in eq. (73))"
-                },
-                "s_inverse.tif": {
-                    "about": "inverse of the thresholded slope (in eq. (74))"
-                },
-                "sdr_factor.tif": {
-                    "about": "sediment delivery ratio (Eq. (75))"
-                },
-                "slope.tif": {
-                    "about": "slope in radians, calculated from the pit-filled DEM"
-                },
-                "slope_threshold.tif": {
-                    "about": "slope, thresholded to be no less than 0.005 and no greater than 1 (eq. (71))",
+                    "about": gettext(
+                        "Sediment downslope deposition, the amount of sediment "
+                        "from a given pixel that does not reach a stream (Eq. (78))"),
                     "bands": {1: {
                         "type": "number",
-                        "units": u.radian
+                        "units": u.metric_ton/(u.hectare*u.year)
                     }}
                 },
-                "w_threshold.tif": {
-                    "about": "cover-management factor thresholded to be no less than 0.001 (eq. (72))"
+                "f.tif": {
+                    "about": gettext(
+                        "Map of sediment flux for sediment that does not "
+                        "reach the stream (Eq. (81))"),
+                    "bands": {1: {
+                        "type": "number",
+                        "units": u.metric_ton/(u.hectare*u.year)
+                    }}
+                },
+                "flow_accumulation.tif": spec_utils.FLOW_ACCUMULATION,
+                "flow_direction.tif": spec_utils.FLOW_DIRECTION,
+                "ic.tif": {
+                    "about": gettext("Index of connectivity (Eq. (70))"),
+                    "bands": {1: {
+                        "type": "number",
+                        "units": u.none
+                    }}
+                },
+                "ls.tif": {
+                    "about": gettext("LS factor for USLE (Eq. (69))"),
+                    "bands": {1: {
+                        "type": "number",
+                        "units": u.none
+                    }}
+                },
+                "pit_filled_dem.tif": spec_utils.FILLED_DEM,
+                "s_accumulation.tif": {
+                    "about": gettext(
+                        "Flow accumulation weighted by the thresholded slope. "
+                        "Used in calculating s_bar."),
+                    "bands": {1: {
+                        "type": "number",
+                        "units": u.none
+                    }}
+                },
+                "s_bar.tif": {
+                    "about": gettext(
+                        "Mean thresholded slope gradient of the upslope "
+                        "contributing area (in eq. (73))"),
+                    "bands": {1: {
+                        "type": "number",
+                        "units": u.none
+                    }}
+                },
+                "sdr_factor.tif": {
+                    "about": gettext("Sediment delivery ratio (Eq. (75))"),
+                    "bands": {1: {"type": "ratio"}}
+                },
+                "slope.tif": spec_utils.SLOPE,
+                "slope_threshold.tif": {
+                    "about": gettext(
+                        "Percent slope, thresholded to be no less than 0.005 "
+                        "and no greater than 1 (eq. (71)). 1 is equivalent to "
+                        "a 45 degree slope."),
+                    "bands": {1: {"type": "ratio"}}
                 },
                 "w_accumulation.tif": {
-                    "about": "flow accumulation weighted by the thresholded cover-management factor. Used in calculating w_bar."
+                    "about": gettext(
+                        "Flow accumulation weighted by the thresholded "
+                        "cover-management factor. Used in calculating w_bar."),
+                    "bands": {1: {
+                        "type": "number",
+                        "units": u.none
+                    }}
                 },
                 "w_bar.tif": {
-                    "about": "mean thresholded cover-management factor for upslope contributing area (in eq. (73))"
+                    "about": gettext(
+                        "Mean thresholded cover-management factor for upslope "
+                        "contributing area (in eq. (73))"),
+                    "bands": {1: {"type": "ratio"}}
                 },
                 "w.tif": {
-                    "about": "cover-management factor derived by mapping usle_c from the biophysical table to the LULC raster"
+                    "about": gettext(
+                        "Cover-management factor derived by mapping usle_c "
+                        "from the biophysical table to the LULC raster."),
+                    "bands": {1: {"type": "ratio"}}
                 },
-                "what_drains_to_stream.tif": {
-                    "about": "Map of which pixels drain to a stream. A value of 1 means that at least some of the runoff from that pixel drains to a stream in stream.tif. A value of 0 means that it does not drain at all to any stream in stream.tif."
+                "w_threshold.tif": {
+                    "about": gettext(
+                        "Cover-management factor thresholded to be no less "
+                        "than 0.001 (eq. (72))"),
+                    "bands": {1: {"type": "ratio"}}
                 },
                 "weighted_avg_aspect.tif": {
-                    "about": "average aspect weighted by flow direction(in eq. (69))"
+                    "about": gettext(
+                        "Average aspect weighted by flow direction (in eq. (69))"),
+                    "bands": {1: {"type": "number", "units": u.none}}
+                },
+                "what_drains_to_stream.tif": {
+                    "about": gettext(
+                        "Map of which pixels drain to a stream. A value of "
+                        "1 means that at least some of the runoff from that "
+                        "pixel drains to a stream in stream.tif. A value of 0 "
+                        "means that it does not drain at all to any stream "
+                        "in stream.tif."),
+                    "bands": {1: {"type": "integer"}}
                 },
                 "ws_inverse.tif": {
-                    "about": "Inverse of the thresholded cover-management factor times the thresholded slope (in eq. (74))"
+                    "about": gettext(
+                        "Inverse of the thresholded cover-management factor "
+                        "times the thresholded slope (in eq. (74))"),
+                    "bands": {1: {"type": "ratio"}}
                 },
                 "churn_dir_not_for_humans": {
                     "type": "directory",
                     "contents": {
-                        'aligned_dem.tif': {},
-                        'aligned_drainage.tif': {},
-                        'aligned_erodibility.tif': {},
-                        'aligned_erosivity.tif': {},
-                        'aligned_lulc.tif': {},
-                        'taskgraph.db': {}
+                        "aligned_dem.tif": {
+                            "about": gettext(
+                                "Copy of the input DEM, clipped to the extent "
+                                "of the other raster inputs."),
+                            "bands": {1: {
+                                "type": "number",
+                                "units": u.meter
+                            }}
+                        },
+                        "aligned_drainage.tif": {
+                            "about": gettext(
+                                "Copy of the input drainage map, clipped to "
+                                "the extent of the other raster inputs and "
+                                "aligned to the DEM."),
+                            "bands": {1: {"type": "integer"}},
+                        },
+                        "aligned_erodibility.tif": {
+                            "about": gettext(
+                                "Copy of the input erodibility map, clipped to "
+                                "the extent of the other raster inputs and "
+                                "aligned to the DEM."),
+                            "bands": {1: {
+                                "type": "number",
+                                "units": u.metric_ton*u.hectare*u.hour/(u.hectare*u.megajoule*u.millimeter)
+                            }}
+                        },
+                        "aligned_erosivity.tif": {
+                            "about": gettext(
+                                "Copy of the input erosivity map, clipped to "
+                                "the extent of the other raster inputs and "
+                                "aligned to the DEM."),
+                            "bands": {1: {
+                                "type": "number",
+                                "units": u.megajoule*u.millimeter/(u.hectare*u.hour*u.year)
+                            }}
+                        },
+                        "aligned_lulc.tif": {
+                            "about": gettext(
+                                "Copy of the input drainage map, clipped to "
+                                "the extent of the other raster inputs and "
+                                "aligned to the DEM."),
+                            "bands": {1: {"type": "integer"}},
+                        },
+                        "taskgraph.db": {}
                     }
                 }
             }

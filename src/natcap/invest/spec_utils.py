@@ -135,6 +135,44 @@ TASKGRAPH_DIR = {
         "taskgraph.db": {}
     }
 }
+FILLED_DEM = {
+    "about": gettext("Map of elevation after any pits are filled"),
+    "bands": {1: {
+        "type": "number",
+        "units": u.meter
+    }}
+}
+FLOW_ACCUMULATION = {
+    "about": gettext("Map of flow accumulation"),
+    "bands": {1: {
+        "type": "number",
+        "units": u.none
+    }}
+}
+FLOW_DIRECTION = {
+    "about": gettext(
+        "MFD flow direction. Note: the pixel values should not "
+        "be interpreted directly. Each 32-bit number consists "
+        "of 8 4-bit numbers. Each 4-bit number represents the "
+        "proportion of flow into one of the eight neighboring "
+        "pixels."),
+    "bands": {1: {"type": "integer"}}
+}
+FLOW_DIRECTION_D8 = {
+    "about": gettext(
+        "D8 flow direction."),
+    "bands": {1: {"type": "integer"}}
+}
+SLOPE = {
+    "about": gettext(
+        "Percent slope, calculated from the pit-filled "
+        "DEM. 100 is equivalent to a 45 degree slope."),
+    "bands": {1: {"type": "percent"}}
+}
+STREAM = {
+    "about": "Stream network, created using flow direction and flow accumulation derived from the DEM and Threshold Flow Accumulation. Values of 1 represent streams, values of 0 are non-stream pixels.",
+    "bands": {1: {"type": "integer"}}
+}
 
 # geometry types ##############################################################
 # the full list of ogr geometry types is in an enum in

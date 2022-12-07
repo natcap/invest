@@ -202,6 +202,7 @@ MODEL_SPEC = {
         },
         "aggregated_carbon_stocks.shp": {
             "about": "AOI map with aggregated carbon statistics.",
+            "geometries": spec_utils.POLYGONS,
             "fields": {
                 "c_sum": {
                     "type": "number",
@@ -219,25 +220,41 @@ MODEL_SPEC = {
             "type": "directory",
             "contents": {
                 "c_above_carbon_stocks.tif": {
-                    "about": "Carbon stored in the aboveground biomass carbon pool."
+                    "about": "Carbon stored in the aboveground biomass carbon pool.",
+                    "bands": {1: {"type": "number", "units": u.metric_ton}}
                 },
                 "c_below_carbon_stocks.tif": {
-                    "about": "Carbon stored in the belowground biomass carbon pool."
+                    "about": "Carbon stored in the belowground biomass carbon pool.",
+                    "bands": {1: {"type": "number", "units": u.metric_ton}}
                 },
                 "c_dead_carbon_stocks.tif": {
-                    "about": "Carbon stored in the dead matter biomass carbon pool."
+                    "about": "Carbon stored in the dead matter biomass carbon pool.",
+                    "bands": {1: {"type": "number", "units": u.metric_ton}}
                 },
                 "c_soil_carbon_stocks.tif": {
-                    "about": "Carbon stored in the soil biomass carbon pool."
+                    "about": "Carbon stored in the soil biomass carbon pool.",
+                    "bands": {1: {"type": "number", "units": u.metric_ton}}
                 },
                 "local_carbon_shape.shp": {
-                    "about": "The regression parameters reprojected to match your study area."
+                    "about": (
+                        "The regression parameters reprojected to match your "
+                        "study area."),
+                    "geometries": spec_utils.POLYGONS,
+                    "fields": {}
                 },
                 "edge_distance.tif": {
-                    "about": "The distance of each forest pixel to the nearest forest edge"
+                    "about": (
+                        "The distance of each forest pixel to the nearest "
+                        "forest edge"),
+                    "bands": {1: {"type": "number", "units": u.pixel}}
                 },
                 "tropical_forest_edge_carbon_stocks.tif": {
-                    "about": "A map of carbon in the forest only, according to the regression method."
+                    "about": (
+                        "A map of carbon in the forest only, according to the "
+                        "regression method."),
+                    "bands": {1: {
+                        "type": "number", "units": u.metric_ton/u.hectare
+                    }}
                 },
                 "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
             }

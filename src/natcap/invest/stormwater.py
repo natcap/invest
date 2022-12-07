@@ -146,14 +146,21 @@ MODEL_SPEC = {
     },
     "outputs": {
         "retention_ratio.tif": {
-            "about": "A raster derived from the LULC raster and biophysical table RC_x columns, where each pixel’s value is the stormwater retention ratio in that area"
+            "about": gettext(
+                "Map of the stormwater retention ratio, derived from the LULC "
+                "raster and biophysical table RC_x columns."),
+            "bands": {1: {"type": "ratio"}}
         },
         "adjusted_retention_ratio.tif": {
             "created_if": "adjust_retention_ratios",
-            "about": "A raster of adjusted retention ratios, calculated according to equation (124) from the ‘retention_ratio, ratio_average, near_road’, and ‘near_impervious_lulc’ intermediate outputs"
+            "about": gettext(
+                "Map of the adjusted retention ratio, calculated according to "
+                "equation (124) from the ‘retention_ratio, ratio_average, "
+                "near_road’, and ‘near_impervious_lulc’ intermediate outputs."),
+            "bands": {1: {"type": "ratio"}}
         },
         "retention_volume.tif": {
-            "about": "Raster map of retention volumes",
+            "about": gettext("Map of retention volume."),
             "bands": {1: {
                 "type": "number",
                 "units": u.meter**3/u.year
@@ -161,24 +168,27 @@ MODEL_SPEC = {
         },
         "percolation_ratio.tif": {
             "created_if": "percolation",
-            "about": "Raster map of percolation ratios derived by cross-referencing the LULC and soil group rasters with the biophysical table",
-            "bands": {1: {
-                "type": "ratio"
-            }}
+            "about": gettext(
+                "Map of percolation ratio derived by cross-referencing the "
+                "LULC and soil group rasters with the biophysical table."),
+            "bands": {1: {"type": "ratio"}}
         },
         "percolation_volume.tif": {
             "created_if": "percolation",
-            "about": "Raster map of percolation (potential aquifer recharge) volumes",
+            "about": gettext("Map of percolation (potential aquifer recharge) volume."),
             "bands": {1: {
                 "type": "number",
                 "units": u.meter**3/u.year
             }}
         },
         "runoff_ratio.tif": {
-            "about": "A raster derived from the retention ratio raster, where each pixel’s value is the stormwater runoff ratio in that area. This is the inverse of ‘retention_ratio.tif’"
+            "about": gettext(
+                "Map of the stormwater runoff ratio. This is the inverse of "
+                "‘retention_ratio.tif’"),
+            "bands": {1: {"type": "ratio"}}
         },
         "runoff_volume.tif": {
-            "about": "Raster map of runoff volumes",
+            "about": gettext("Map of runoff volume."),
             "bands": {1: {
                 "type": "number",
                 "units": u.meter**3/u.year
@@ -186,7 +196,7 @@ MODEL_SPEC = {
         },
         "retention_value.tif": {
             "created_if": "replacement_cost",
-            "about": "Raster map of the value of the water retained on each pixel",
+            "about": gettext("Map of the value of water retained."),
             "bands": {1: {
                 "type": "number",
                 "units": u.currency/u.year
@@ -194,50 +204,54 @@ MODEL_SPEC = {
         },
         "aggregate.gpkg": {
             "created_if": "aggregate_areas_path",
-            "about": "Vector map of aggregate data. This is identical to the aggregate areas input vector, but each polygon is given additional fields with the aggregate data.",
+            "about": gettext(
+                "Map of aggregate data. This is identical to the aggregate "
+                "areas input vector, but each polygon is given additional "
+                "fields with the aggregate data."),
+            "geometries": spec_utils.POLYGONS,
             "fields": {
                 "mean_retention_ratio": {
                     "type": "ratio",
-                    "about": "Average retention ratio over this polygon"
+                    "about": gettext("Average retention ratio over this polygon")
                 },
                 "total_retention_volume": {
                     "type": "number",
                     "units": u.meter**3/u.year,
-                    "about": "Total retention volume over this polygon"
+                    "about": gettext("Total retention volume over this polygon")
                 },
                 "mean_runoff_ratio": {
                     "type": "ratio",
-                    "about": "Average runoff coefficient over this polygon"
+                    "about": gettext("Average runoff coefficient over this polygon")
                 },
                 "total_runoff_volume": {
                     "type": "number",
                     "units": u.meter**3/u.year,
-                    "about": "Total runoff volume over this polygon"
+                    "about": gettext("Total runoff volume over this polygon")
                 },
                 "mean_percolation_ratio": {
                     "created_if": "percolation",
-                    "about": "Average percolation (recharge) ratio over this polygon",
+                    "about": gettext("Average percolation (recharge) ratio over this polygon"),
                     "type": "ratio"
                 },
                 "total_percolation_volume": {
                     "created_if": "percolation",
-                    "about": "Total volume of potential aquifer recharge over this polygon",
+                    "about": gettext("Total volume of potential aquifer recharge over this polygon"),
                     "type": "number",
                     "units": u.meter**3/u.year
                 },
                 "[POLLUTANT]_total_avoided_load": {
-                    "about": "Total avoided (retained) amount of pollutant over this polygon",
+                    "about": gettext("Total avoided (retained) amount of pollutant over this polygon"),
                     "type": "number",
                     "units": u.kilogram/u.year
                 },
                 "[POLLUTANT]_total_load": {
-                    "about": "Total amount of pollutant in runoff over this polygon",
+                    "about": gettext("Total amount of pollutant in runoff over this polygon"),
                     "type": "number",
                     "units": u.kilogram/u.year
                 },
                 "total_retention_value": {
                     "created_if": "replacement_cost",
-                    "about": "Total value of the retained volume of water over this polygon",
+                    "about": gettext("Total value of the retained volume of water over this polygon"),
                     "type": "number",
                     "units": u.currency/u.year
                 }
@@ -247,40 +261,104 @@ MODEL_SPEC = {
             "type": "directory",
             "contents": {
                 "lulc_aligned.tif": {
-                    "about": "Copy of the soil group raster input, cropped to the intersection of the three raster inputs"
+                    "about": gettext(
+                        "Copy of the soil group raster input, cropped to the "
+                        "intersection of the three raster inputs."),
+                    "bands": {1: {"type": "integer"}}
                 },
                 "soil_group_aligned.tif": {
-                    "about": "Copy of the soil group raster input, aligned to the LULC raster and cropped to the intersection of the three raster inputs"
+                    "about": gettext(
+                        "Copy of the soil group raster input, aligned to the "
+                        "LULC raster and cropped to the intersection of the "
+                        "three raster inputs."),
+                    "bands": {1: {"type": "integer"}}
                 },
                 "precipitation_aligned.tif": {
-                    "about": "Copy of the precipitation raster input, aligned to the LULC raster and cropped to the intersection of the three raster inputs"
+                    "about": gettext(
+                        "Copy of the precipitation raster input, aligned to "
+                        "the LULC raster and cropped to the intersection of "
+                        "the three raster inputs."),
+                    "bands": {
+                        1: {
+                            "type": "number",
+                            "units": u.millimeter/u.year
+                        }
+                    }
                 },
                 "reprojected_centerlines.gpkg": {
-                    "about": "Copy of the road centerlines vector input, reprojected to the LULC raster projection"
+                    "about": gettext(
+                        "Copy of the road centerlines vector input, "
+                        "reprojected to the LULC raster projection."),
+                    "fields": {},
+                    "geometries": spec_utils.LINES
+
                 },
                 "rasterized_centerlines.tif": {
-                    "about": "A rasterized version of the reprojected centerlines vector, where 1 means the pixel is a road and 0 means it isn’t"
+                    "about": gettext(
+                        "A rasterized version of the reprojected centerlines "
+                        "vector, where 1 means the pixel is a road and 0 "
+                        "means it isn’t."),
+                    "bands": {1: {"type": "integer"}}
                 },
                 "is_connected_lulc.tif": {
-                    "about": "A binary raster derived from the LULC raster and biophysical table is_connected column, where 1 means the pixel has a directly-connected impervious LULC type, and 0 means it does not"
+                    "about": gettext(
+                        "A binary raster derived from the LULC raster and "
+                        "biophysical table is_connected column, where 1 means "
+                        "the pixel has a directly-connected impervious LULC "
+                        "type, and 0 means it does not."),
+                    "bands": {1: {"type": "integer"}}
                 },
                 "road_distance.tif": {
-                    "about": "A raster derived from the rasterized centerlines map, where each pixel’s value is its minimum distance to a road pixel (measured centerpoint-to-centerpoint)"
+                    "about": gettext(
+                        "A raster derived from the rasterized centerlines map, "
+                        "where each pixel’s value is its minimum distance to a "
+                        "road pixel (measured centerpoint-to-centerpoint)."),
+                    "bands": {1: {
+                        "type": "number",
+                        "units": u.pixel
+                    }}
                 },
                 "connected_lulc_distance.tif": {
-                    "about": "A raster derived from the is_connected_lulc map, where each pixel’s value is its minimum distance to a connected impervious LULC pixel (measured centerpoint-to-centerpoint)"
+                    "about": gettext(
+                        "A raster derived from the is_connected_lulc map, where "
+                        "each pixel’s value is its minimum distance to a "
+                        "connected impervious LULC pixel "
+                        "(measured centerpoint-to-centerpoint)."),
+                    "bands": {1: {
+                        "type": "number",
+                        "units": u.pixel
+                    }}
                 },
                 "near_road.tif": {
-                    "about": "A binary raster derived from the road_distance map, where 1 means the pixel is within the retention radius of a road pixel, and 0 means it isn’t"
+                    "about": gettext(
+                        "A binary raster derived from the road_distance map, "
+                        "where 1 means the pixel is within the retention radius "
+                        "of a road pixel, and 0 means it isn’t."),
+                    "bands": {1: {"type": "integer"}}
                 },
                 "near_connected_lulc.tif": {
-                    "about": "A binary raster derived from the connected_lulc_distance map, where 1 means the pixel is within the retention radius of a connected impervious LULC pixel, and 0 means it isn’t"
+                    "about": gettext(
+                        "A binary raster derived from the "
+                        "connected_lulc_distance map, where 1 means the pixel "
+                        "is within the retention radius of a connected "
+                        "impervious LULC pixel, and 0 means it isn’t."),
+                    "bands": {1: {"type": "integer"}}
                 },
                 "search_kernel.tif": {
-                    "about": "A binary raster representing the search kernel that is convolved with the retention_ratio raster to calculate the averaged retention ratio within the retention radius of each pixel"
+                    "about": gettext(
+                        "A binary raster representing the search kernel that "
+                        "is convolved with the retention_ratio raster to "
+                        "calculate the averaged retention ratio within the "
+                        "retention radius of each pixel."),
+                    "bands": {1: {"type": "integer"}}
                 },
                 "ratio_average.tif": {
-                    "about": "A raster where each pixel’s value is the average of its neighborhood of pixels in the retention_ratio map, calculated by convolving the search kernel with the retention ratio raster"
+                    "about": gettext(
+                        "A raster where each pixel’s value is the average of "
+                        "its neighborhood of pixels in the retention_ratio map, "
+                        "calculated by convolving the search kernel with the "
+                        "retention ratio raster."),
+                    "bands": {1: {"type": "ratio"}}
                 },
                 "cache_dir": spec_utils.TASKGRAPH_DIR
             }
