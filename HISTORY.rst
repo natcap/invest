@@ -42,6 +42,17 @@ Unreleased Changes
       https://github.com/natcap/invest/issues/1113
     * Updating descriptions for LULC about text and biophysical table for
       clarity in model specs. https://github.com/natcap/invest/issues/1077
+* Workbench
+    * Fixed a bug where the Workbench would become unresponsive during an
+      InVEST model run if the model emitted a very high volume of log messages.
+    * Fixed a bug where the Workbench could crash if there was too much
+      standard error emitted from an invest model.
+    * Added a new "Save as" dialog window to handle different save options, and
+      allow the option to use relative paths in a JSON datastack
+      (`#1088 <https://github.com/natcap/invest/issues/1088>`_)
+    * Fixed a bug where uncaught exceptions in the React tree would result in
+      a blank browser window.
+      (`#1119 <https://github.com/natcap/invest/issues/1119>`_)
 * Habitat Quality
     * All spatial inputs including the access vector and threat rasters are
       now reprojected to the ``lulc_cur_path`` raster. This fixes a bug where
@@ -53,11 +64,6 @@ Unreleased Changes
       flag, leading to a perceived buffering of spatial criteria in certain
       cases.  In InVEST 3.9.0, these were rasterized with ``ALL_TOUCHED=FALSE``.
       https://github.com/natcap/invest/issues/1120
-* Workbench
-    * Fixed a bug where the Workbench would become unresponsive during an
-      InVEST model run if the model emitted a very high volume of log messages.
-    * Fixed a bug where the Workbench could crash if there was too much
-      standard error emitted from an invest model.
 * Urban Cooling
     * Updated the text for the ``building_intensity`` column in the biophysical
       table to clarify that the values of this column should be normalized

@@ -157,8 +157,12 @@ describe('Sidebar Buttons', () => {
     const mockDialogData = { filePath: 'foo.json' };
     ipcRenderer.invoke.mockResolvedValueOnce(mockDialogData);
 
-    const { findByText, findByRole } = renderInvestTab();
-    const saveButton = await findByText('Save to JSON');
+    const { findByText, findByLabelText, findByRole } = renderInvestTab();
+    const saveAsButton = await findByText('Save as...');
+    userEvent.click(saveAsButton);
+    const jsonOption = await findByLabelText((content, element) => content.startsWith('Parameters only'));
+    userEvent.click(jsonOption);
+    const saveButton = await findByRole('button', { name: 'Save' });
     userEvent.click(saveButton);
 
     expect(await findByRole('alert')).toHaveTextContent(response);
@@ -186,9 +190,12 @@ describe('Sidebar Buttons', () => {
     const mockDialogData = { filePath: 'foo.py' };
     ipcRenderer.invoke.mockResolvedValue(mockDialogData);
 
-    const { findByText, findByRole } = renderInvestTab();
-
-    const saveButton = await findByText('Save to Python script');
+    const { findByText, findByLabelText, findByRole } = renderInvestTab();
+    const saveAsButton = await findByText('Save as...');
+    userEvent.click(saveAsButton);
+    const pythonOption = await findByLabelText((content, element) => content.startsWith('Python script'));
+    userEvent.click(pythonOption);
+    const saveButton = await findByRole('button', { name: 'Save' });
     userEvent.click(saveButton);
 
     expect(await findByRole('alert')).toHaveTextContent(response);
@@ -217,15 +224,18 @@ describe('Sidebar Buttons', () => {
     const response = 'saved';
     archiveDatastack.mockImplementation(() => new Promise(
       (resolve) => {
-        setTimeout(() => resolve(response), 100);
+        setTimeout(() => resolve(response), 1000);
       }
     ));
     const mockDialogData = { filePath: 'data.tgz' };
     ipcRenderer.invoke.mockResolvedValue(mockDialogData);
 
-    const { findByText, findByRole, getByRole } = renderInvestTab();
-
-    const saveButton = await findByText('Save datastack');
+    const { findByText, findByLabelText, findByRole, getByRole} = renderInvestTab();
+    const saveAsButton = await findByText('Save as...');
+    userEvent.click(saveAsButton);
+    const datastackOption = await findByLabelText((content, element) => content.startsWith('Parameters and data'));
+    userEvent.click(datastackOption);
+    const saveButton = await findByRole('button', { name: 'Save' });
     userEvent.click(saveButton);
 
     expect(await findByRole('alert')).toHaveTextContent('archiving...');
@@ -264,12 +274,20 @@ describe('Sidebar Buttons', () => {
     const mockDialogData = { filePath: 'foo' };
     ipcRenderer.invoke.mockResolvedValue(mockDialogData);
 
-    const { findByText, getAllByRole, queryByRole } = renderInvestTab();
+    const { findByText, findByLabelText, findByRole, getAllByRole, queryByRole } = renderInvestTab();
+    const saveAsButton = await findByText('Save as...');
+    userEvent.click(saveAsButton);
+    const pythonOption = await findByLabelText((content, element) => content.startsWith('Python script'));
+    const datastackOption = await findByLabelText((content, element) => content.startsWith('Parameters and data'));
+    const saveButton = await findByRole('button', { name: 'Save' });
 
-    const saveDatastackButton = await findByText('Save datastack');
-    const savePythonButton = await findByText('Save to Python script');
-    userEvent.click(saveDatastackButton);
-    userEvent.click(savePythonButton);
+    userEvent.click(datastackOption);
+    userEvent.click(saveButton);
+
+    userEvent.click(saveAsButton);
+    userEvent.click(pythonOption)
+    userEvent.click(saveButton);
+
     await waitFor(() => {
       expect(getAllByRole('alert')).toHaveLength(2);
     });
@@ -316,11 +334,27 @@ describe('Sidebar Buttons', () => {
     expect(input2).toHaveValue(mockDatastack.args.port);
   });
 
+  test('Load parameters from file does nothing when canceled', async () => {
+    // callback data if the OS dialog was canceled
+    const mockDialogData = {
+      filePaths: ['']
+    };
+    ipcRenderer.invoke.mockResolvedValue(mockDialogData);
+    const spy = jest.spyOn(SetupTab.prototype, 'loadParametersFromFile');
+
+    const { findByText } = renderInvestTab();
+
+    const loadButton = await findByText('Load parameters from file');
+    userEvent.click(loadButton);
+
+    // Calls that would have triggered if a file was selected
+    expect(spy).toHaveBeenCalledTimes(0);
+  });
+
   test.each([
-    ['Load parameters from file', 'loadParametersFromFile'],
-    ['Save to Python script', 'savePythonScript'],
-    ['Save to JSON', 'saveJsonFile'],
-    ['Save datastack', 'saveDatastack']
+    ['Parameters only', 'saveJsonFile'],
+    ['Parameters and data', 'saveDatastack'],
+    ['Python script', 'savePythonScript']
   ])('%s: does nothing when canceled', async (label, method) => {
     // callback data if the OS dialog was canceled
     const mockDialogData = {
@@ -329,27 +363,25 @@ describe('Sidebar Buttons', () => {
     ipcRenderer.invoke.mockResolvedValue(mockDialogData);
     const spy = jest.spyOn(SetupTab.prototype, method);
 
-    const { findByText } = renderInvestTab();
-
-    const loadButton = await findByText(label);
-    userEvent.click(loadButton);
+    const { findByText, findByLabelText, findByRole } = renderInvestTab();
+    const saveAsButton = await findByText('Save as...');
+    userEvent.click(saveAsButton);
+    const option = await findByLabelText((content, element) => content.startsWith(label));
+    userEvent.click(option);
+    const saveButton = await findByRole('button', { name: 'Save' });
+    userEvent.click(saveButton);
 
     // Calls that would have triggered if a file was selected
     expect(spy).toHaveBeenCalledTimes(0);
   });
 
-  test.each([
-    ['Load parameters from file'],
-    ['Save to Python script'],
-    ['Save to JSON'],
-    ['Save datastack'],
-  ])('%s: has hover text', async (label) => {
+  test('Load parameters button has hover text', async () => {
     const {
       findByText,
       findByRole,
       queryByRole,
     } = renderInvestTab();
-    const loadButton = await findByText(label);
+    const loadButton = await findByText('Load parameters from file');
     userEvent.hover(loadButton);
     expect(await findByRole('tooltip')).toBeInTheDocument();
     userEvent.unhover(loadButton);

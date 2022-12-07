@@ -1,5 +1,5 @@
 import { ipcMainChannels } from '../../main/ipcMainChannels';
-import { handleClick } from './handlers';
+import { handleClickExternalURL } from './handlers';
 
 const { ipcRenderer } = window.Workbench.electron;
 
@@ -10,7 +10,7 @@ async function getInvestVersion() {
 
 document.querySelectorAll('a').forEach(
   (element) => {
-    element.addEventListener('click', handleClick);
+    element.addEventListener('click', handleClickExternalURL);
   }
 );
 const node = document.getElementById('version-string');
