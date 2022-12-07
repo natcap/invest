@@ -72,7 +72,7 @@ export default class InvestTab extends React.Component {
   }
 
   async componentDidMount() {
-    const { job } = this.props;
+    const { job, investSettings } = this.props;
     const {
       modelSpec, argsSpec, uiSpec,
     } = await investGetSpec(job.modelRunName);
@@ -84,6 +84,21 @@ export default class InvestTab extends React.Component {
     const { tabID } = this.props;
     ipcRenderer.on(`invest-logging-${tabID}`, this.investLogfileCallback);
     ipcRenderer.on(`invest-exit-${tabID}`, this.investExitCallback);
+  }
+
+  async componentDidUpdate(prevProps) {
+    // if language has changed, request spec in new language
+    const { job, investSettings } = this.props;
+    if (investSettings.language !== prevProps.investSettings.language) {
+      const {
+      modelSpec, argsSpec, uiSpec,
+      } = await investGetSpec(job.modelRunName);
+      this.setState({
+        modelSpec: modelSpec,
+        argsSpec: argsSpec,
+        uiSpec: uiSpec,
+      });
+    }
   }
 
   componentWillUnmount() {
