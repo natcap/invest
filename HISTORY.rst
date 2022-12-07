@@ -40,6 +40,8 @@ Unreleased Changes
     * Fixed a possible path traversal vulnerability when working with datastack
       archives.  This patches CVE-2007-4559, reported to us by Trellix.
       https://github.com/natcap/invest/issues/1113
+    * Updating descriptions for LULC about text and biophysical table for
+      clarity in model specs. https://github.com/natcap/invest/issues/1077
 * Workbench
     * Fixed a bug where the Workbench would become unresponsive during an
       InVEST model run if the model emitted a very high volume of log messages.
