@@ -250,3 +250,8 @@ def log_model_exit():
         payload['session_id'],
         payload['status'])
     return 'OK'
+
+@app.route(f'/{PREFIX}/languages', methods=['GET'])
+def get_supported_languages():
+    """Return a mapping of supported languages to their display names."""
+    return json.dumps(natcap.invest.LOCALE_NAME_MAP)

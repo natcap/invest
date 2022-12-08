@@ -72,7 +72,7 @@ export default class InvestTab extends React.Component {
   }
 
   async componentDidMount() {
-    const { job, investSettings } = this.props;
+    const { job } = this.props;
     const {
       modelSpec, argsSpec, uiSpec,
     } = await investGetSpec(job.modelRunName);

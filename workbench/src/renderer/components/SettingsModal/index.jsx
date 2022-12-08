@@ -16,14 +16,10 @@ import { BsChevronExpand } from 'react-icons/bs';
 
 import { getDefaultSettings } from './SettingsStorage';
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
+import { getSupportedLanguages } from '../../server_requests';
 
 const { ipcRenderer } = window.Workbench.electron;
 
-// map display names to standard language codes
-const languageOptions = {
-  English: 'en',
-  Español: 'es',
-};
 const logLevelOptions = ['DEBUG', 'INFO', 'WARNING', 'ERROR'];
 
 /** Render a dialog with a form for configuring global invest settings */
@@ -33,6 +29,7 @@ export default class SettingsModal extends React.Component {
     this.state = {
       show: false,
       nWorkersOptions: null,
+      languageOptions: null,
     };
     this.handleShow = this.handleShow.bind(this);
     this.handleClose = this.handleClose.bind(this);
@@ -48,8 +45,10 @@ export default class SettingsModal extends React.Component {
     for (let i = 1; i <= this.props.nCPU; i += 1) {
       nWorkersOptions.push([i, `${i} CPUs`]);
     }
+    const languageOptions = await getSupportedLanguages();
     this.setState({
       nWorkersOptions: nWorkersOptions,
+      languageOptions: languageOptions,
     });
   }
 
@@ -82,7 +81,7 @@ export default class SettingsModal extends React.Component {
   }
 
   render() {
-    const { show, nWorkersOptions } = this.state;
+    const { show, nWorkersOptions, languageOptions } = this.state;
     const { investSettings, clearJobsStorage } = this.props;
     return (
       <React.Fragment>
@@ -113,26 +112,30 @@ export default class SettingsModal extends React.Component {
             </Button>
           </Modal.Header>
           <Modal.Body>
-            <Form.Group as={Row}>
-              <Form.Label column sm="8" htmlFor="language-select">
-                <MdTranslate className="language-icon" />
-                {_('Language')}
-              </Form.Label>
-              <Col sm="4">
-                <Form.Control
-                  id="language-select"
-                  as="select"
-                  name="language"
-                  value={investSettings.language}
-                  onChange={this.handleChange}
-                >
-                  {Object.entries(languageOptions).map((entry) => {
-                    const [displayName, value] = entry;
-                    return <option value={value} key={value}>{displayName}</option>;
-                  })}
-                </Form.Control>
-              </Col>
-            </Form.Group>
+            {
+              (languageOptions) ? (
+                <Form.Group as={Row}>
+                  <Form.Label column sm="8" htmlFor="language-select">
+                    <MdTranslate className="language-icon" />
+                    {_('Language')}
+                  </Form.Label>
+                  <Col sm="4">
+                    <Form.Control
+                      id="language-select"
+                      as="select"
+                      name="language"
+                      value={investSettings.language}
+                      onChange={this.handleChange}
+                    >
+                      {Object.entries(languageOptions).map((entry) => {
+                        const [value, displayName] = entry;
+                        return <option value={value} key={value}>{displayName}</option>;
+                      })}
+                    </Form.Control>
+                  </Col>
+                </Form.Group>
+              ) : <React.Fragment />
+            }
             <Form.Group as={Row}>
               <Form.Label column sm="6" htmlFor="logging-select">
                 {_('Logging threshold')}
