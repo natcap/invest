@@ -19,7 +19,8 @@ import {
   getInvestModelNames,
   getSpec,
   fetchValidation,
-  fetchDatastackFromFile
+  fetchDatastackFromFile,
+  getSupportedLanguages
 } from '../../src/renderer/server_requests';
 import InvestJob from '../../src/renderer/InvestJob';
 import {
@@ -384,9 +385,8 @@ describe('InVEST global settings: dialog interactions', () => {
 
   beforeEach(async () => {
     getInvestModelNames.mockResolvedValue({});
-    ipcRenderer.invoke.mockImplementation((channel) => {
-      return Promise.resolve();
-    });
+    getSupportedLanguages.mockResolvedValue({ en: 'english', es: 'spanish' });
+    ipcRenderer.invoke.mockImplementation(() => Promise.resolve());
   });
 
   test('Invest settings save on change', async () => {
@@ -849,6 +849,7 @@ describe('Translation', () => {
 
   beforeAll(async () => {
     getInvestModelNames.mockResolvedValue({});
+    getSupportedLanguages.mockResolvedValue({ en: 'english', es: 'spanish' });
 
     i18n.loadJSON(messageCatalog, 'messages');
 
