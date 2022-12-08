@@ -342,6 +342,30 @@ describe('Display recently executed InVEST jobs on Home tab', () => {
     });
   });
 
+  test('Recent Jobs: a job with incomplete data is skipped', async () => {
+    const job1 = new InvestJob({
+      modelRunName: 'carbon',
+      modelHumanName: 'invest A',
+      argsValues: {
+        workspace_dir: 'dir',
+      },
+      status: 'success',
+    });
+    const job2 = new InvestJob({
+      // argsValues is missing
+      modelRunName: 'sdr',
+      modelHumanName: 'invest B',
+      status: 'success',
+    });
+    await InvestJob.saveJob(job1);
+    await InvestJob.saveJob(job2);
+
+    const { findByText, queryByText } = render(<App />);
+
+    expect(await findByText(job1.modelHumanName)).toBeInTheDocument();
+    expect(queryByText(job2.modelHumanName)).toBeNull();
+  });
+
   test('Recent Jobs: placeholder if there are no recent jobs', async () => {
     const { findByText } = render(
       <App />
