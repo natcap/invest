@@ -38,7 +38,7 @@ class build_py(_build_py):
         locale_dir = os.path.abspath(os.path.join(
             os.path.dirname(__file__),
             'src/natcap/invest/internationalization/locales'))
-        for locale in ['es']:
+        for locale in os.listdir(locale_dir):
             subprocess.run([
                 'pybabel',
                 'compile',
