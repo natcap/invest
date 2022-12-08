@@ -86,21 +86,6 @@ export default class InvestTab extends React.Component {
     ipcRenderer.on(`invest-exit-${tabID}`, this.investExitCallback);
   }
 
-  async componentDidUpdate(prevProps) {
-    // if language has changed, request spec in new language
-    const { job, investSettings } = this.props;
-    if (investSettings.language !== prevProps.investSettings.language) {
-      const {
-      modelSpec, argsSpec, uiSpec,
-      } = await investGetSpec(job.modelRunName);
-      this.setState({
-        modelSpec: modelSpec,
-        argsSpec: argsSpec,
-        uiSpec: uiSpec,
-      });
-    }
-  }
-
   componentWillUnmount() {
     ipcRenderer.removeListener(
       `invest-logging-${this.props.tabID}`, this.investLogfileCallback
@@ -293,7 +278,6 @@ export default class InvestTab extends React.Component {
                   argsInitValues={argsValues}
                   investExecute={this.investExecute}
                   nWorkers={investSettings.nWorkers}
-                  language={investSettings.language}
                   sidebarSetupElementId={sidebarSetupElementId}
                   sidebarFooterElementId={sidebarFooterElementId}
                   executeClicked={executeClicked}

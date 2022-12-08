@@ -149,14 +149,6 @@ export default class SetupTab extends React.Component {
     });
   }
 
-  async componentDidUpdate(prevProps) {
-    // if language has changed, request any validation messages in new language
-    const { language } = this.props;
-    if (language !== prevProps.language) {
-      this.investValidate();
-    }
-  }
-
   componentWillUnmount() {
     this._isMounted = false;
     clearTimeout(this.validationTimer);

@@ -25,6 +25,22 @@ export default class HomeTab extends React.Component {
     this.handleClick = this.handleClick.bind(this);
   }
 
+  componentDidMount() {
+    // sort the model list alphabetically, by the model title,
+    // and with special placement of CBC Preprocessor before CBC model.
+    const sortedModels = Object.keys(this.props.investList).sort();
+    const cbcpElement = 'Coastal Blue Carbon Preprocessor';
+    const cbcIdx = sortedModels.indexOf('Coastal Blue Carbon');
+    const cbcpIdx = sortedModels.indexOf(cbcpElement);
+    if (cbcIdx > -1 && cbcpIdx > -1) {
+      sortedModels.splice(cbcpIdx, 1); // remove it
+      sortedModels.splice(cbcIdx, 0, cbcpElement); // insert it
+    }
+    this.setState({
+      sortedModels: sortedModels
+    });
+  }
+
   handleClick(value) {
     const { investList, openInvestModel } = this.props;
     const modelRunName = investList[value].model_name;
@@ -36,18 +52,8 @@ export default class HomeTab extends React.Component {
   }
 
   render() {
-    const { recentJobs, investList } = this.props;
-    // sort the model list alphabetically, by the model title,
-    // and with special placement of CBC Preprocessor before CBC model.
-    const sortedModels = Object.keys(investList).sort();
-    const cbcpElement = 'Coastal Blue Carbon Preprocessor';
-    const cbcIdx = sortedModels.indexOf('Coastal Blue Carbon');
-    const cbcpIdx = sortedModels.indexOf(cbcpElement);
-    if (cbcIdx > -1 && cbcpIdx > -1) {
-      sortedModels.splice(cbcpIdx, 1); // remove it
-      sortedModels.splice(cbcIdx, 0, cbcpElement); // insert it
-    }
-
+    const { recentJobs } = this.props;
+    const { sortedModels } = this.state;
     // A button in a table row for each model
     const investButtons = [];
     sortedModels.forEach((model) => {

@@ -91,15 +91,16 @@ export default class App extends React.Component {
   }
 
   saveSettings(settings) {
+    const { investSettings } = this.state;
     ipcRenderer.invoke(
       ipcMainChannels.SET_LANGUAGE, settings.language
     ).then(() => saveSettingsStore(settings)
-    ).then(() => getInvestModelNames()
-    ).then((investList) => {
-      this.setState({
-        investSettings: settings,
-        investList: investList
-      });
+    ).then(() => {
+      this.setState({ investSettings: settings });
+      // if language has changed, refresh the app
+      if (settings.language !== investSettings.language) {
+        window.location.reload();
+      }
     });
   }
 

@@ -10,7 +10,8 @@ import Modal from 'react-bootstrap/Modal';
 import {
   MdSettings,
   MdClose,
-  MdTranslate
+  MdTranslate,
+  MdWarningAmber,
 } from 'react-icons/md';
 import { BsChevronExpand } from 'react-icons/bs';
 
@@ -118,6 +119,10 @@ export default class SettingsModal extends React.Component {
                   <Form.Label column sm="8" htmlFor="language-select">
                     <MdTranslate className="language-icon" />
                     {_('Language')}
+                    <Form.Text className="text-nowrap" muted>
+                      <MdWarningAmber className="align-text-bottom ml-3" />
+                      Changing this setting will refresh the app and close all tabs
+                    </Form.Text>
                   </Form.Label>
                   <Col sm="4">
                     <Form.Control
