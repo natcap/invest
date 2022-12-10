@@ -177,18 +177,18 @@ class HRAUnitTests(unittest.TestCase):
 
         expected_habitats = {
             'corals': {
-                'path': f'{self.workspace_dir}/habitat/corals.shp',
+                'path': os.path.abspath(f'{self.workspace_dir}/habitat/corals.shp'),
             }
         }
         self.assertEqual(habitats, expected_habitats)
 
         expected_stressors = {
             'oil': {
-                'path': f'{self.workspace_dir}/stressors/oil.shp',
+                'path': os.path.abspath(f'{self.workspace_dir}/stressors/oil.shp'),
                 'buffer': 1000,
             },
             'transportation': {
-                'path': f'{self.workspace_dir}/stressors/transport.shp',
+                'path': os.path.abspath(f'{self.workspace_dir}/stressors/transport.shp'),
                 'buffer': 100,
             }
         }
