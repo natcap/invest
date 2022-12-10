@@ -798,6 +798,34 @@ class StormwaterTests(unittest.TestCase):
             if arg_list[0] in ['retention_radius', 'road_centerlines_path']:
                 self.assertEqual(message, validation.MESSAGES['MISSING_VALUE'])
 
+    def test_validate_noninteger_soil_raster(self):
+        """Stormwater: test arg validation."""
+        from natcap.invest import stormwater, validation
+
+        soil_array = numpy.array([[1, 2], [3, 4]], dtype=numpy.float32)
+        soil_path = os.path.join(self.workspace_dir, 'soils.tif')
+        to_raster(soil_array, soil_path, pixel_size=(10, -10))
+
+        # test args missing necessary values for adjust ratios
+        args = {
+            'workspace_dir': self.workspace_dir,
+            'lulc_path': 'x',
+            'soil_group_path': soil_path,
+            'precipitation_path': 'x',
+            'biophysical_table': 'x',
+            'adjust_retention_ratios': True,
+            'retention_radius': None,
+            'road_centerlines_path': None,
+            'aggregate_areas_path': None,
+            'replacement_cost': None
+        }
+        messages = stormwater.validate(args)
+        messages = {tuple(k): v for k, v in messages}
+        self.assertIn(('soil_group_path',), messages)
+        self.assertEqual(
+            messages[('soil_group_path',)],
+            stormwater.NONINTEGER_SOILS_RASTER_MESSAGE)
+
     def test_lulc_signed_byte(self):
         """Stormwater: regression test for handling signed byte LULC input."""
         from natcap.invest import stormwater
