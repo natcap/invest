@@ -56,10 +56,7 @@ ARGS_SPEC = {
             "name": gettext("biophysical table"),
             "type": "csv",
             "columns": {
-                "lucode": {
-                    "type": "integer",
-                    "about": gettext(
-                        "LULC code corresponding to those in the LULC map.")},
+                "lucode": spec_utils.LULC_TABLE_COLUMN,
                 "kc": {
                     "type": "number",
                     "units": u.none,
