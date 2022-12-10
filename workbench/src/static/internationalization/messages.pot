@@ -31,9 +31,6 @@ msgstr ""
 msgid "Download"
 msgstr ""
 
-msgid "Export all input data to a compressed archive"
-msgstr ""
-
 msgid "Frequently Asked Questions"
 msgstr ""
 
@@ -43,19 +40,7 @@ msgstr ""
 msgid "Open"
 msgstr ""
 
-msgid "Save datastack"
-msgstr ""
-
-msgid "Save model setup to a JSON file"
-msgstr ""
-
-msgid "Save model setup to a Python script"
-msgstr ""
-
-msgid "Save to JSON"
-msgstr ""
-
-msgid "Save to Python script"
+msgid "Save as..."
 msgstr ""
 
 msgid "User's Guide"
@@ -79,10 +64,22 @@ msgstr ""
 msgid "Clear Recent Jobs"
 msgstr ""
 
+msgid "Create a post on our forum "
+msgstr ""
+
+msgid "Datastack options"
+msgstr ""
+
 msgid "Download Sample Data"
 msgstr ""
 
 msgid "Error: see log for details"
+msgstr ""
+
+msgid "Find My Logs"
+msgstr ""
+
+msgid "Find the Workbench log files "
 msgstr ""
 
 msgid "InVEST Settings"
@@ -130,6 +127,9 @@ msgstr ""
 msgid "Setup"
 msgstr ""
 
+msgid "Something went wrong"
+msgstr ""
+
 msgid "Taskgraph logging threshold"
 msgstr ""
 
@@ -150,3 +150,4 @@ msgstr ""
 
 msgid "text"
 msgstr ""
+
