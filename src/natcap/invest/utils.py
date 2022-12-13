@@ -600,7 +600,7 @@ def expand_path(path, base_path):
 
     Args:
         path (string): path to check and expand if necessary
-        base_path: path to expand the first path relative to
+        base_path (string): path to expand the first path relative to
 
     Returns:
         path as an absolute path
