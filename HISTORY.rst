@@ -64,7 +64,7 @@ Unreleased Changes
       flag, leading to a perceived buffering of spatial criteria in certain
       cases.  In InVEST 3.9.0, these were rasterized with ``ALL_TOUCHED=FALSE``.
       https://github.com/natcap/invest/issues/1120
-* Stormwater
+* Urban Stormwater Retention
     * Added validation to check that the input soil groups raster has an
       integer data type
 * Urban Cooling

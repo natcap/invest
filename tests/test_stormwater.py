@@ -806,7 +806,6 @@ class StormwaterTests(unittest.TestCase):
         soil_path = os.path.join(self.workspace_dir, 'soils.tif')
         to_raster(soil_array, soil_path, pixel_size=(10, -10))
 
-        # test args missing necessary values for adjust ratios
         args = {
             'workspace_dir': self.workspace_dir,
             'lulc_path': 'x',
