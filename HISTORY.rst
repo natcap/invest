@@ -40,6 +40,8 @@ Unreleased Changes
     * Fixed a possible path traversal vulnerability when working with datastack
       archives.  This patches CVE-2007-4559, reported to us by Trellix.
       https://github.com/natcap/invest/issues/1113
+    * Updating descriptions for LULC about text and biophysical table for
+      clarity in model specs. https://github.com/natcap/invest/issues/1077
 * Workbench
     * Fixed a bug where the Workbench would become unresponsive during an
       InVEST model run if the model emitted a very high volume of log messages.
@@ -75,6 +77,9 @@ Unreleased Changes
     * Added a column to the ``SUMMARY_STATISTICS.csv`` output table to also
       report the percentage of pixels within each subregion that have no risk
       classification (a risk classification of 0).
+* Urban Stormwater Retention
+    * Added validation to check that the input soil groups raster has an
+      integer data type
 * Urban Cooling
     * Updated the text for the ``building_intensity`` column in the biophysical
       table to clarify that the values of this column should be normalized

@@ -65,12 +65,7 @@ ARGS_SPEC = {
         "biophysical_table_path": {
             "type": "csv",
             "columns": {
-                "lucode": {
-                    "type": "integer",
-                    "about": gettext(
-                        "Code for this LULC class from the LULC map. Every "
-                        "value in the LULC raster must have a corresponding "
-                        "entry in this column.")},
+                "lucode": spec_utils.LULC_TABLE_COLUMN,
                 "is_tropical_forest": {
                     "type": "boolean",
                     "about": gettext(
