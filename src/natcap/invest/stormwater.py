@@ -23,6 +23,7 @@ LOGGER = logging.getLogger(__name__)
 FLOAT_NODATA = -1
 UINT8_NODATA = 255
 UINT16_NODATA = 65535
+NONINTEGER_SOILS_RASTER_MESSAGE = 'Soil group raster data type must be integer'
 
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["stormwater"].model_title,
@@ -1059,5 +1060,14 @@ def validate(args, limit_to=None):
             the error message in the second part of the tuple. This should
             be an empty list if validation succeeds.
     """
-    return validation.validate(args, ARGS_SPEC['args'],
+    validation_warnings = validation.validate(args, ARGS_SPEC['args'],
                                ARGS_SPEC['args_with_spatial_overlap'])
+    invalid_keys = validation.get_invalid_keys(validation_warnings)
+    if 'soil_group_path' not in invalid_keys:
+        # check that soil group raster has integer type
+        soil_group_dtype = pygeoprocessing.get_raster_info(
+            args['soil_group_path'])['numpy_type']
+        if not numpy.issubdtype(soil_group_dtype, numpy.integer):
+            validation_warnings.append(
+                (['soil_group_path'], NONINTEGER_SOILS_RASTER_MESSAGE))
+    return validation_warnings
