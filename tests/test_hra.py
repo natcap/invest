@@ -175,21 +175,20 @@ class HRAUnitTests(unittest.TestCase):
 
         habitats, stressors = hra._parse_info_table(info_table_path)
 
-        workspace = self.workspace_dir.replace('\\', '/')
         expected_habitats = {
             'corals': {
-                'path': f'{workspace}/habitat/corals.shp',
+                'path': os.path.abspath(f'{self.workspace_dir}/habitat/corals.shp'),
             }
         }
         self.assertEqual(habitats, expected_habitats)
 
         expected_stressors = {
             'oil': {
-                'path': f'{workspace}/stressors/oil.shp',
+                'path': os.path.abspath(f'{self.workspace_dir}/stressors/oil.shp'),
                 'buffer': 1000,
             },
             'transportation': {
-                'path': f'{workspace}/stressors/transport.shp',
+                'path': os.path.abspath(f'{self.workspace_dir}/stressors/transport.shp'),
                 'buffer': 100,
             }
         }
@@ -226,15 +225,17 @@ class HRAUnitTests(unittest.TestCase):
         """HRA: check parsing of the criteria table."""
         from natcap.invest import hra
 
+        eelgrass_relpath = 'foo/eelgrass_connectivity.shp'
+
         criteria_table_path = os.path.join(self.workspace_dir, 'criteria.csv')
         with open(criteria_table_path, 'w') as criteria_table:
             criteria_table.write(
                 textwrap.dedent(
-                    """\
+                    f"""\
                     HABITAT NAME,eelgrass,,,hardbottom,,,CRITERIA TYPE
                     HABITAT RESILIENCE ATTRIBUTES,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
                     recruitment rate,2,2,2,2,2,2,C
-                    connectivity rate,foo\\eelgrass_connectivity.shp,2,2,2,2,2,C
+                    connectivity rate,{eelgrass_relpath},2,2,2,2,2,C
                     ,,,,,,,
                     HABITAT STRESSOR OVERLAP PROPERTIES,,,,,,,
                     oil,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
@@ -264,17 +265,15 @@ class HRAUnitTests(unittest.TestCase):
         self.assertEqual(habitats, {'eelgrass', 'hardbottom'})
         self.assertEqual(stressors, {'oil', 'fishing'})
 
-        # We expect the backslash to have been converted to a forward slash.
-        eelgrass_path = (
-            f'{self.workspace_dir}/foo/eelgrass_connectivity.shp'.replace(
-                '\\', '/'))
+        eelgrass_abspath = os.path.abspath(
+            os.path.join(self.workspace_dir, eelgrass_relpath))
         expected_composite_dataframe = pandas.read_csv(
             io.StringIO(textwrap.dedent(
                 f"""\
                 habitat,stressor,criterion,rating,dq,weight,e/c
                 eelgrass,RESILIENCE,recruitment rate,2,2,2,C
                 hardbottom,RESILIENCE,recruitment rate,2,2,2,C
-                eelgrass,RESILIENCE,connectivity rate,{eelgrass_path},2,2,C
+                eelgrass,RESILIENCE,connectivity rate,{eelgrass_abspath},2,2,C
                 hardbottom,RESILIENCE,connectivity rate,2,2,2,C
                 eelgrass,oil,frequency of disturbance,2,2,3,C
                 hardbottom,oil,frequency of disturbance,2,2,3,C
@@ -301,7 +300,7 @@ class HRAUnitTests(unittest.TestCase):
                     HABITAT NAME,eelgrass,,,hardbottom,,,CRITERIA TYPE
                     HABITAT RESILIENCE ATTRIBUTES,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
                     recruitment rate,2,2,2,2,2,2,C
-                    connectivity rate,foo\\eelgrass_connectivity.shp,2,2,2,2,2,C
+                    connectivity rate,foo/eelgrass_connectivity.shp,2,2,2,2,2,C
                     ,,,,,,,
                     HABITAT STRESSOR OVERLAP PROPERTIES,,,,,,,
                     oil,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
@@ -750,11 +749,12 @@ class HRAUnitTests(unittest.TestCase):
         # No matter the supported file format, make sure we have consistent
         # table headings.
         source_df = pandas.read_csv(io.StringIO(textwrap.dedent("""\
-                FOO,bar,BaZ
-                1, 2, 3""")))
+                FOO,bar,BaZ,path
+                1, 2, 3,foo.tif""")))
 
         expected_df = source_df.copy()  # defaults to a deepcopy.
         expected_df.columns = expected_df.columns.str.lower()
+        expected_df['path'] = [os.path.join(self.workspace_dir, 'foo.tif')]
 
         for filename, func in [('target.csv', source_df.to_csv),
                                ('target.xls', source_df.to_excel),
@@ -924,18 +924,15 @@ class HRAUnitTests(unittest.TestCase):
             data_dir, 'criteria_table_path_data')
         self.maxDiff = None
 
-        def _rewrite(path):
-            return path.replace('\\', '/')
-
         self.assertEqual(
             known_files, {
-                _rewrite(eelgrass_path): _rewrite(os.path.join(
+                eelgrass_path: os.path.join(
                     output_criteria_data_dir, 'eelgrass_connectivity',
-                    'eelgrass_connectivity.shp')),
-                _rewrite(mgmt_path_1): _rewrite(os.path.join(
-                    output_criteria_data_dir, 'mgmt1', 'mgmt1.tif')),
-                _rewrite(mgmt_path_2): _rewrite(os.path.join(
-                    output_criteria_data_dir, 'mgmt2', 'mgmt2.tif')),
+                    'eelgrass_connectivity.shp'),
+                mgmt_path_1: os.path.join(
+                    output_criteria_data_dir, 'mgmt1', 'mgmt1.tif'),
+                mgmt_path_2: os.path.join(
+                    output_criteria_data_dir, 'mgmt2', 'mgmt2.tif')
             }
         )
         for copied_filepath in known_files.values():

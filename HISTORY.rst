@@ -58,6 +58,8 @@ Unreleased Changes
       now reprojected to the ``lulc_cur_path`` raster. This fixes a bug where
       rasters with a different SRS would appear to not intersect the
       ``lulc_cur_path`` even if they did. (https://github.com/natcap/invest/issues/1093)
+    * Paths in the threats table may now be either absolute or relative to the
+      threats table.
 * HRA
     * Fixed a regression relative to InVEST 3.9.0 outputs where spatial
       criteria vectors were being rasterized with the ``ALL_TOUCHED=TRUE``
