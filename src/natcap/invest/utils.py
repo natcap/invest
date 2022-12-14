@@ -608,7 +608,7 @@ def expand_path(path, base_path):
     if not path:
         return None
     if os.path.isabs(path):
-        return path
+        return os.path.abspath(path)  # normalize path separators
     return os.path.abspath(os.path.join(os.path.dirname(base_path), path))
 
 

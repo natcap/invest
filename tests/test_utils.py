@@ -861,7 +861,7 @@ class BuildLookupFromCSVTests(unittest.TestCase):
             utils.expand_path('foo\\bar.txt', base_path))
         self.assertEqual(
             f'{self.workspace_dir}{os.sep}foo.txt',
-            utils.expand_path(f'{self.workspace_dir}/foo.txt', base_path))
+            utils.expand_path(f'{self.workspace_dir}{os.sep}foo.txt', base_path))
 
     def test_expand_path_columns(self):
         """utils: test path expansion feature of read_csv_to_dataframe."""
