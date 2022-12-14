@@ -851,16 +851,16 @@ class BuildLookupFromCSVTests(unittest.TestCase):
         from natcap.invest import utils
         base_path = os.path.join(self.workspace_dir, 'csv.csv')
         self.assertEqual(
-            os.path.abspath(f'{self.workspace_dir}/foo.txt'),
+            f'{self.workspace_dir}{os.sep}foo.txt',
             utils.expand_path('foo.txt', base_path))
         self.assertEqual(
-            os.path.abspath(f'{self.workspace_dir}/foo/bar.txt'),
+            f'{self.workspace_dir}{os.sep}foo{os.sep}bar.txt',
             utils.expand_path('foo/bar.txt', base_path))
         self.assertEqual(
-            os.path.abspath(f'{self.workspace_dir}/foo\\bar.txt'),
+            f'{self.workspace_dir}{os.sep}foo\\bar.txt',
             utils.expand_path('foo\\bar.txt', base_path))
         self.assertEqual(
-            os.path.abspath(f'{self.workspace_dir}/foo.txt'),
+            f'{self.workspace_dir}{os.sep}foo.txt',
             utils.expand_path(f'{self.workspace_dir}/foo.txt', base_path))
 
     def test_expand_path_columns(self):
@@ -880,16 +880,16 @@ class BuildLookupFromCSVTests(unittest.TestCase):
             ).strip())
         df = utils.read_csv_to_dataframe(csv_file, expand_path_cols=['path'])
         self.assertEqual(
-            os.path.abspath(f'{self.workspace_dir}/foo.txt'),
+            f'{self.workspace_dir}{os.sep}foo.txt',
             df['path'][0])
         self.assertEqual(
-            os.path.abspath(f'{self.workspace_dir}/foo/bar.txt'),
+            f'{self.workspace_dir}{os.sep}foo{os.sep}bar.txt',
             df['path'][1])
         self.assertEqual(
-            os.path.abspath(f'{self.workspace_dir}/foo\\bar.txt'),
+            f'{self.workspace_dir}{os.sep}foo\\bar.txt',
             df['path'][2])
         self.assertEqual(
-            os.path.abspath(f'{self.workspace_dir}/foo.txt'),
+            f'{self.workspace_dir}{os.sep}foo.txt',
             df['path'][3])
 
 
