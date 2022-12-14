@@ -1033,7 +1033,7 @@ def _validate_threat_path(threat_path, lulc_key):
     """
     # Checking threat path exists to control custom error messages
     # for user readability.
-    if os.path.exists(threat_path):
+    try:
         threat_gis_type = pygeoprocessing.get_gis_type(threat_path)
         if threat_gis_type != pygeoprocessing.RASTER_TYPE:
             # Raise a value error with custom message to help users
@@ -1045,7 +1045,7 @@ def _validate_threat_path(threat_path, lulc_key):
                 return None
         else:
             return threat_path
-    else:
+    except ValueError:
         if lulc_key != '_b':
             return "error"
         else:

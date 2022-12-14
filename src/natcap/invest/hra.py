@@ -1956,17 +1956,11 @@ def _parse_criteria_table(criteria_table_path, target_composite_csv_path):
                     # to a raster or vector.
                     attribute_value = utils.expand_path(
                         attribute_value, criteria_table_path)
-                    spatial_file_ok = True
-                    try:
-                        if (pygeoprocessing.get_gis_type(attribute_value) ==
-                                pygeoprocessing.UNKNOWN_TYPE):
-                            # File is not a spatial file
-                            spatial_file_ok = False
-                    except ValueError:
-                        # file not found
-                        spatial_file_ok = False
 
-                    if not spatial_file_ok:
+                    try:
+                        _ = pygeoprocessing.get_gis_type(attribute_value)
+                    except ValueError:
+                        # File is not a spatial file or file not found
                         raise ValueError(
                             "Criterion could not be opened as a spatial "
                             f"file {attribute_value}")
