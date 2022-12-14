@@ -1782,10 +1782,13 @@ def _open_table_as_dataframe(table_path, **kwargs):
     if extension in {'.xls', '.xlsx'}:
         excel_df = pandas.read_excel(table_path, **kwargs)
         excel_df.columns = excel_df.columns.str.lower()
+        excel_df['path'] = excel_df['path'].apply(
+            lambda p: utils.expand_path(p, table_path))
         return excel_df
     else:
         return utils.read_csv_to_dataframe(
-            table_path, sep=None, to_lower=True, engine='python', **kwargs)
+            table_path, sep=None, to_lower=True, engine='python',
+            expand_path_cols=['path'], **kwargs)
 
 
 def _parse_info_table(info_table_path):
@@ -1813,15 +1816,6 @@ def _parse_info_table(info_table_path):
     table = _open_table_as_dataframe(info_table_path)
     table = table.set_index('name')
     table = table.rename(columns={'stressor buffer (meters)': 'buffer'})
-
-    def _make_abspath(row):
-        path = row['path'].replace('\\', '/')
-        if os.path.isabs(path):
-            return path
-        return os.path.join(
-            os.path.dirname(info_table_path), path).replace('\\', '/')
-
-    table['path'] = table.apply(lambda row: _make_abspath(row), axis=1)
 
     # Drop the buffer column from the habitats list; we don't need it.
     habitats = table.loc[table['type'] == 'habitat'].drop(
@@ -1960,11 +1954,8 @@ def _parse_criteria_table(criteria_table_path, target_composite_csv_path):
                 except ValueError:
                     # If we can't cast it to a float, assume it's a string path
                     # to a raster or vector.
-                    attribute_value = attribute_value.replace('\\', '/')
-                    if not os.path.isabs(attribute_value):
-                        attribute_value = os.path.join(
-                            os.path.dirname(criteria_table_path),
-                            attribute_value).replace('\\', '/')
+                    attribute_value = utils.expand_path(
+                        attribute_value, criteria_table_path)
 
                     try:
                         _ = pygeoprocessing.get_gis_type(attribute_value)
@@ -2032,7 +2023,7 @@ def _calculate_decayed_distance(stressor_raster_path, decay_type,
         # easier to compute.
 
         def _no_buffer(stressor_presence_array):
-            """Trsnslate a stressor presence array to match an EDT.
+            """Translate a stressor presence array to match an EDT.
 
             Args:
                 stressor_presence_array (numpy.array): A numpy byte array with
@@ -2431,10 +2422,8 @@ def _override_datastack_archive_criteria_table_path(
                 # When value is obviously not a number.
                 pass
 
-            if not os.path.isabs(value):
-                value = os.path.join(
-                    os.path.dirname(criteria_table_path), value)
-            value = value.replace("\\", "/")
+            # Expand the path if it's not absolute
+            value = utils.expand_path(value, criteria_table_path)
             if not os.path.exists(value):
                 LOGGER.warning(f'File not found: {value}')
                 continue
@@ -2452,7 +2441,7 @@ def _override_datastack_archive_criteria_table_path(
                 new_path = datastack._copy_spatial_files(
                     value, dir_for_this_spatial_data)
                 criteria_table_array[row, col] = new_path
-                known_files[value] = new_path.replace('\\', '/')
+                known_files[value] = new_path
 
     target_output_path = os.path.join(data_dir, f'{args_key}.csv')
     numpy.savetxt(target_output_path, criteria_table_array, delimiter=',',

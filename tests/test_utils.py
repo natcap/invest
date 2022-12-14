@@ -846,6 +846,53 @@ class BuildLookupFromCSVTests(unittest.TestCase):
         self.assertEqual(lookup_dict[4]['header 3'], 'foo')
         self.assertEqual(lookup_dict[1]['header 1'], 1)
 
+    def test_expand_path(self):
+        """utils: test path expansion function."""
+        from natcap.invest import utils
+        base_path = os.path.join(self.workspace_dir, 'csv.csv')
+        self.assertEqual(
+            f'{self.workspace_dir}{os.sep}foo.txt',
+            utils.expand_path('foo.txt', base_path))
+        self.assertEqual(
+            f'{self.workspace_dir}{os.sep}foo{os.sep}bar.txt',
+            utils.expand_path('foo/bar.txt', base_path))
+        self.assertEqual(
+            f'{self.workspace_dir}{os.sep}foo\\bar.txt',
+            utils.expand_path('foo\\bar.txt', base_path))
+        self.assertEqual(
+            f'{self.workspace_dir}{os.sep}foo.txt',
+            utils.expand_path(f'{self.workspace_dir}{os.sep}foo.txt', base_path))
+
+    def test_expand_path_columns(self):
+        """utils: test path expansion feature of read_csv_to_dataframe."""
+        from natcap.invest import utils
+
+        csv_file = os.path.join(self.workspace_dir, 'csv.csv')
+        with open(csv_file, 'w') as file_obj:
+            file_obj.write(textwrap.dedent(
+                f"""
+                bar,path
+                1,foo.txt
+                2,foo/bar.txt
+                3,foo\\bar.txt
+                4,{self.workspace_dir}/foo.txt
+                """
+            ).strip())
+        df = utils.read_csv_to_dataframe(csv_file, expand_path_cols=['path'])
+        self.assertEqual(
+            f'{self.workspace_dir}{os.sep}foo.txt',
+            df['path'][0])
+        self.assertEqual(
+            f'{self.workspace_dir}{os.sep}foo{os.sep}bar.txt',
+            df['path'][1])
+        self.assertEqual(
+            f'{self.workspace_dir}{os.sep}foo\\bar.txt',
+            df['path'][2])
+        self.assertEqual(
+            f'{self.workspace_dir}{os.sep}foo.txt',
+            df['path'][3])
+
+
 
 class ReadCSVToDataframeTests(unittest.TestCase):
     """Tests for natcap.invest.utils.read_csv_to_dataframe."""
