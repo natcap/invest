@@ -72,8 +72,8 @@ ARGS_SPEC = {
         "lulc_path": {
             **spec_utils.LULC,
             "projected": True,
-            "about": gettext(
-                f"{spec_utils.LULC['about']} All values in this raster must "
+            "about": spec_utils.LULC['about'] + " " + gettext(
+                "All values in this raster must "
                 "have corresponding entries in the Biophysical Table.")
         },
         "watersheds_path": {
@@ -94,9 +94,7 @@ ARGS_SPEC = {
         "biophysical_table_path": {
             "type": "csv",
             "columns": {
-                "lucode": {
-                    "type": "integer",
-                    "about": gettext("LULC code from the LULC raster.")},
+                "lucode": spec_utils.LULC_TABLE_COLUMN,
                 "usle_c": {
                     "type": "ratio",
                     "about": gettext("Cover-management factor for the USLE")},

@@ -11,13 +11,12 @@ from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
 
-from .model_metadata import MODEL_METADATA
+from . import gettext
 from . import spec_utils
 from . import utils
 from . import validation
+from .model_metadata import MODEL_METADATA
 from .spec_utils import u
-from . import gettext
-
 
 LOGGER = logging.getLogger(__name__)
 
@@ -51,17 +50,15 @@ ARGS_SPEC = {
             **spec_utils.LULC,
             "projected": True,
             "required": "not predefined_globio",
-            "about": gettext(
-                f"{spec_utils.LULC['about']} Each LULC code must have a "
+            "about": spec_utils.LULC['about'] + " " + gettext(
+                "Each LULC code must have a "
                 "corresponding entry in the biophysical table. "
                 "Required if Use Predefined GLOBIO LULC is not selected.")
         },
         "lulc_to_globio_table_path": {
             "type": "csv",
             "columns": {
-                "lucode": {
-                    "type": "integer",
-                    "about": gettext("LULC code from the LULC map input.")},
+                "lucode": spec_utils.LULC_TABLE_COLUMN,
                 "globio_lucode": {
                     "type": "integer",
                     "about": gettext("Corresponding GLOBIO LULC code.")}

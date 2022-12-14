@@ -13,9 +13,7 @@ import { MdFolderOpen } from 'react-icons/md';
 import Expire from '../Expire';
 import Portal from '../Portal';
 import ArgsForm from './ArgsForm';
-import {
-  RunButton, SaveParametersButtons
-} from './SetupButtons';
+import SaveAsModal from '../SaveAsModal';
 import {
   archiveDatastack,
   fetchDatastackFromFile,
@@ -235,7 +233,7 @@ export default class SetupTab extends React.Component {
     this.setSaveAlert(response);
   }
 
-  async saveJsonFile(datastackPath) {
+  async saveJsonFile(datastackPath, relativePaths) {
     const {
       pyModuleName,
     } = this.props;
@@ -245,7 +243,7 @@ export default class SetupTab extends React.Component {
     const payload = {
       filepath: datastackPath,
       moduleName: pyModuleName,
-      relativePaths: false,
+      relativePaths: relativePaths,
       args: JSON.stringify(args),
     };
     const response = await writeParametersToFile(payload);
@@ -469,6 +467,7 @@ export default class SetupTab extends React.Component {
         sidebarFooterElementId,
         executeClicked,
         uiSpec,
+        modelName
       } = this.props;
 
       const SaveAlerts = [];
@@ -542,7 +541,8 @@ export default class SetupTab extends React.Component {
                 {_('Load parameters from file')}
               </Button>
             </OverlayTrigger>
-            <SaveParametersButtons
+            <SaveAsModal
+              modelName={modelName}
               savePythonScript={this.savePythonScript}
               saveJsonFile={this.saveJsonFile}
               saveDatastack={this.saveDatastack}
@@ -552,11 +552,15 @@ export default class SetupTab extends React.Component {
             </React.Fragment>
           </Portal>
           <Portal elId={sidebarFooterElementId}>
-            <RunButton
+            <Button
+              block
+              variant="primary"
+              size="lg"
+              onClick={this.wrapInvestExecute}
               disabled={!argsValid || executeClicked}
-              wrapInvestExecute={this.wrapInvestExecute}
-              buttonText={buttonText}
-            />
+            >
+              {buttonText}
+            </Button>
           </Portal>
         </Container>
       );

@@ -71,7 +71,9 @@ AOI = {
 LULC = {
     "type": "raster",
     "bands": {1: {"type": "integer"}},
-    "about": gettext("Map of land use/land cover codes."),
+    "about": gettext(
+        "Map of land use/land cover codes. Each land use/land cover type "
+        "must be assigned a unique integer code."),
     "name": gettext("land use/land cover")
 }
 DEM = {
@@ -123,6 +125,12 @@ THRESHOLD_FLOW_ACCUMULATION = {
         "The number of upslope pixels that must flow into a pixel "
         "before it is classified as a stream."),
     "name": gettext("threshold flow accumulation")
+}
+LULC_TABLE_COLUMN = {
+    "type": "integer",
+    "about": gettext(
+        "LULC codes from the LULC raster. Each code must be a unique "
+        "integer.")
 }
 
 # geometry types ##############################################################
