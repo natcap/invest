@@ -53,13 +53,6 @@ Unreleased Changes
     * Fixed a bug where uncaught exceptions in the React tree would result in
       a blank browser window.
       (`#1119 <https://github.com/natcap/invest/issues/1119>`_)
-    * Fixed a bug where the Workbench would become unresponsive during an
-      InVEST model run if the model emitted a very high volume of log messages.
-    * Fixed a bug where the Workbench could crash if there was too much
-      standard error emitted from an invest model.
-    * Added a new "Save as" dialog window to handle different save options, and
-      allow the option to use relative paths in a JSON datastack
-      (`#1088 <https://github.com/natcap/invest/issues/1088>`_)
 * Habitat Quality
     * All spatial inputs including the access vector and threat rasters are
       now reprojected to the ``lulc_cur_path`` raster. This fixes a bug where
