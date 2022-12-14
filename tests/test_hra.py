@@ -941,13 +941,20 @@ class HRAUnitTests(unittest.TestCase):
         # For the sake of testing this function more rigorously, creating a new
         # classification path for the per-habitat summary classification
         # raster.
+        #
+        # NOTE that if we were running this in the real world with only 1
+        # pairwise risk raster, the cumulative risk would match the pairwise
+        # risk.  I'm providing a different cumulative risk raster here for the
+        # sole purpose of checking table construction, not to provide
+        # real-world model results.
         per_habitat_classifications = {
             pairwise_raster_dicts[0]['habitat']: os.path.join(
-                self.workspace_dir, 'summary_classes.tif')
+                self.workspace_dir, 'cumulative_classes.tif')
         }
-        summary_classes_array = numpy.array([[2, 3, 2, 3]], dtype=numpy.uint8)
+        cumulative_classes_array = numpy.array(
+            [[2, 3, 2, 3]], dtype=numpy.uint8)
         pygeoprocessing.numpy_array_to_raster(
-            summary_classes_array, nodata, (10, -10), ORIGIN, SRS_WKT,
+            cumulative_classes_array, nodata, (10, -10), ORIGIN, SRS_WKT,
             list(per_habitat_classifications.values())[0])
 
         target_summary_csv_path = os.path.join(
@@ -1009,25 +1016,25 @@ class HRAUnitTests(unittest.TestCase):
                  **{'SUBREGION': 'first region',
                     'STRESSOR': '(FROM ALL STRESSORS)'},
                     'R_%HIGH': percent_with_risk_class(
-                        summary_classes_array, 3),
+                        cumulative_classes_array, 3),
                     'R_%MEDIUM': percent_with_risk_class(
-                        summary_classes_array, 2),
+                        cumulative_classes_array, 2),
                     'R_%LOW': percent_with_risk_class(
-                        summary_classes_array, 1),
+                        cumulative_classes_array, 1),
                     'R_%NONE': percent_with_risk_class(
-                        summary_classes_array, 0),
+                        cumulative_classes_array, 0),
                 },
                 {**std_record,
                  **{'SUBREGION': 'second region',
                     'STRESSOR': '(FROM ALL STRESSORS)'},
                     'R_%HIGH': percent_with_risk_class(
-                        summary_classes_array, 3),
+                        cumulative_classes_array, 3),
                     'R_%MEDIUM': percent_with_risk_class(
-                        summary_classes_array, 2),
+                        cumulative_classes_array, 2),
                     'R_%LOW': percent_with_risk_class(
-                        summary_classes_array, 1),
+                        cumulative_classes_array, 1),
                     'R_%NONE': percent_with_risk_class(
-                        summary_classes_array, 0),
+                        cumulative_classes_array, 0),
                 },
                 {**std_record,
                  **{'SUBREGION': 'first region'},
