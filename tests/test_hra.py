@@ -917,7 +917,7 @@ class HRAUnitTests(unittest.TestCase):
         e_array = numpy.array([[0, 1, 2, 3]], dtype=numpy.float32)
         c_array = numpy.array([[0.5, 1.5, 2.5, 3.5]], dtype=numpy.float32)
         risk_array = numpy.array([[0, 1.1, 2.2, 3.3]], dtype=numpy.float32)
-        classes_array = numpy.array([[0, 1, 2, 3]], dtype=numpy.int8)
+        pairwise_classes_array = numpy.array([[0, 1, 2, 3]], dtype=numpy.int8)
 
         pairwise_raster_dicts = [{
             'habitat': 'life',
@@ -933,7 +933,7 @@ class HRAUnitTests(unittest.TestCase):
                 (e_array, 'e_path'),
                 (c_array, 'c_path'),
                 (risk_array, 'risk_path'),
-                (classes_array, 'classification_path')]:
+                (pairwise_classes_array, 'classification_path')]:
             pygeoprocessing.numpy_array_to_raster(
                 array, nodata, (10, -10), ORIGIN, SRS_WKT,
                 pairwise_raster_dicts[0][key])
@@ -945,9 +945,9 @@ class HRAUnitTests(unittest.TestCase):
             pairwise_raster_dicts[0]['habitat']: os.path.join(
                 self.workspace_dir, 'summary_classes.tif')
         }
+        summary_classes_array = numpy.array([[2, 3, 2, 3]], dtype=numpy.uint8)
         pygeoprocessing.numpy_array_to_raster(
-            numpy.array([[2, 3, 2, 3]], dtype=numpy.int8),
-            nodata, (10, -10), ORIGIN, SRS_WKT,
+            summary_classes_array, nodata, (10, -10), ORIGIN, SRS_WKT,
             list(per_habitat_classifications.values())[0])
 
         target_summary_csv_path = os.path.join(
@@ -956,6 +956,19 @@ class HRAUnitTests(unittest.TestCase):
         subregion_bounding_box = pygeoprocessing.get_raster_info(
             list(per_habitat_classifications.values())[0])['bounding_box']
         subregion_geom = shapely.geometry.box(*subregion_bounding_box)
+
+        def percent_with_risk_class(array, risk_class):
+            """Calculate the percent of risk class pixels matching a class.
+
+            Args:
+                array (numpy.array): A risk classification array.
+                risk_class (int): The integer risk class of interest
+
+            Returns:
+                The percentage (0-100) of pixels in ``array`` that match the
+                risk class ``risk_class``.
+            """
+            return (array[array == risk_class].size / array.size) * 100
 
         # This is a standard record in the summary table, used in both subtests
         # below.
@@ -971,18 +984,19 @@ class HRAUnitTests(unittest.TestCase):
             'R_MIN': numpy.min(risk_array),
             'R_MAX': numpy.max(risk_array),
             'R_MEAN': numpy.sum(risk_array) / 4,
-            'R_%HIGH': 25.0,
-            'R_%MEDIUM': 25.0,
-            'R_%LOW': 25.0,
-            'R_%NONE': 25.0,
+            'R_%HIGH': percent_with_risk_class(pairwise_classes_array, 3),
+            'R_%MEDIUM': percent_with_risk_class(pairwise_classes_array, 2),
+            'R_%LOW': percent_with_risk_class(pairwise_classes_array, 1),
+            'R_%NONE': percent_with_risk_class(pairwise_classes_array, 0),
         }
 
         with self.subTest("multiple subregion names"):
             # 3 subregions, 2 of which have the same name.
             # In cases of overlap, the function double-counts.
             pygeoprocessing.shapely_geometry_to_vector(
-                [subregion_geom] * 3, aoi_vector_path, SRS_WKT, 'ESRI Shapefile',
-                fields={'name': ogr.OFTString}, attribute_list=[
+                [subregion_geom] * 3, aoi_vector_path, SRS_WKT,
+                'ESRI Shapefile', fields={'name': ogr.OFTString},
+                attribute_list=[
                     {'name': 'first region'},
                     {'name': 'first region'},
                     {'name': 'second region'}
@@ -994,18 +1008,26 @@ class HRAUnitTests(unittest.TestCase):
                 {**std_record,
                  **{'SUBREGION': 'first region',
                     'STRESSOR': '(FROM ALL STRESSORS)'},
-                    'R_%HIGH': 50.0,
-                    'R_%MEDIUM': 50.0,
-                    'R_%LOW': 0,
-                    'R_%NONE': 0,
+                    'R_%HIGH': percent_with_risk_class(
+                        summary_classes_array, 3),
+                    'R_%MEDIUM': percent_with_risk_class(
+                        summary_classes_array, 2),
+                    'R_%LOW': percent_with_risk_class(
+                        summary_classes_array, 1),
+                    'R_%NONE': percent_with_risk_class(
+                        summary_classes_array, 0),
                 },
                 {**std_record,
                  **{'SUBREGION': 'second region',
                     'STRESSOR': '(FROM ALL STRESSORS)'},
-                    'R_%HIGH': 50.0,
-                    'R_%MEDIUM': 50.0,
-                    'R_%LOW': 0,
-                    'R_%NONE': 0,
+                    'R_%HIGH': percent_with_risk_class(
+                        summary_classes_array, 3),
+                    'R_%MEDIUM': percent_with_risk_class(
+                        summary_classes_array, 2),
+                    'R_%LOW': percent_with_risk_class(
+                        summary_classes_array, 1),
+                    'R_%NONE': percent_with_risk_class(
+                        summary_classes_array, 0),
                 },
                 {**std_record,
                  **{'SUBREGION': 'first region'},
