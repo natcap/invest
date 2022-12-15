@@ -2,7 +2,6 @@
 # -*- coding: UTF-8 -*-
 import collections
 import itertools
-import json
 import logging
 import math
 import os
@@ -12,7 +11,6 @@ import shutil
 import numpy
 import pandas
 import pygeoprocessing
-import shapely.wkt
 import taskgraph
 from osgeo import gdal
 from osgeo import ogr
@@ -210,7 +208,8 @@ ARGS_SPEC = {
         },
         "visualize_outputs": {
             "name": gettext("Generate GeoJSONs"),
-            "about": gettext("Generate GeoJSON outputs for web visualization."),
+            "about": gettext(
+                "Generate GeoJSON outputs for web visualization."),
             "type": "boolean",
             "required": False,
         }
@@ -522,6 +521,8 @@ def execute(args):
 
     # Save this dataframe to make indexing in this loop a little cheaper
     # Resilience/recovery calculations are only done for Consequence criteria.
+    reclassed_habitat_risk_paths = {}
+    reclassed_habitat_risk_tasks = []
     cumulative_risk_to_habitat_paths = []
     cumulative_risk_to_habitat_tasks = []
     reclassified_rasters = []  # For visualization geojson, if requested
@@ -673,6 +674,8 @@ def execute(args):
 
         reclassified_cumulative_risk_path = os.path.join(
             intermediate_dir, f'reclass_total_risk_{habitat}{suffix}.tif')
+        reclassed_habitat_risk_paths[
+            habitat] = reclassified_cumulative_risk_path
         reclassified_cumulative_risk_task = graph.add_task(
             pygeoprocessing.raster_calculator,
             kwargs={
@@ -689,6 +692,7 @@ def execute(args):
             target_path_list=[reclassified_cumulative_risk_path],
             dependent_task_list=[cumulative_risk_task]
         )
+        reclassed_habitat_risk_tasks.append(reclassified_cumulative_risk_task)
 
         max_risk_classification_path = os.path.join(
             output_dir, f'RECLASS_RISK_{habitat}{suffix}.tif')
@@ -757,7 +761,7 @@ def execute(args):
             'datatype_target': _TARGET_GDAL_TYPE_BYTE,
             'nodata_target': _TARGET_NODATA_BYTE,
         },
-        task_name=f'Reclassify risk to the Ecosystem',
+        task_name='Reclassify risk to the Ecosystem',
         target_path_list=[reclassified_cumulative_risk_path],
         dependent_task_list=[all_habitats_mask_task, ecosystem_risk_task]
     )
@@ -811,45 +815,28 @@ def execute(args):
         dependent_task_list=[]
     )
 
-    # --> Rasterize the AOI regions for summary stats.
-    aoi_subregions_dir = os.path.join(
-        intermediate_dir, f'aoi_subregions{suffix}')
-    aoi_subregions_json = os.path.join(
-        aoi_subregions_dir, f'subregions{suffix}.json')
-    rasterize_aoi_regions_task = graph.add_task(
-        func=_rasterize_aoi_regions,
-        kwargs={
-            'source_aoi_vector_path': simplified_aoi_path,
-            'base_raster_path': all_habitats_mask_path,
-            'target_raster_dir': aoi_subregions_dir,
-            'target_info_json': aoi_subregions_json,
-        },
-        task_name='Rasterize AOI regions',
-        dependent_task_list=[aoi_simplify_task, all_habitats_mask_task],
-        target_path_list=[aoi_subregions_json]
-    )
-
     summary_csv_path = os.path.join(
         output_dir, f'SUMMARY_STATISTICS{suffix}.csv')
     _ = graph.add_task(
         func=_create_summary_statistics_file,
         kwargs={
-            'aoi_raster_json_path': aoi_subregions_json,
-            'habitat_mask_raster_path': all_habitats_mask_path,
+            'subregions_vector_path': simplified_aoi_path,
             'pairwise_raster_dicts': pairwise_summary_data,
+            'per_habitat_classification_dict': reclassed_habitat_risk_paths,
             'target_summary_csv_path': summary_csv_path,
         },
         task_name='Create summary statistics table',
         target_path_list=[summary_csv_path],
         dependent_task_list=[
-            rasterize_aoi_regions_task,
-            all_habitats_mask_task,
-            *all_pairwise_risk_tasks
+            aoi_simplify_task,
+            *all_pairwise_risk_tasks,
+            *reclassed_habitat_risk_tasks,
         ]
     )
 
     graph.join()
     if not args.get('visualize_outputs', False):
+        LOGGER.info('HRA complete!')
         graph.close()
         return
 
@@ -931,6 +918,7 @@ def execute(args):
 
     graph.close()
     graph.join()
+    LOGGER.info('HRA complete!')
 
 
 def _create_mask_for_polygonization(source_raster_path, target_raster_path):
@@ -1030,58 +1018,65 @@ def _polygonize(source_raster_path, mask_raster_path,
 
 
 def _create_summary_statistics_file(
-        aoi_raster_json_path, habitat_mask_raster_path, pairwise_raster_dicts,
+        subregions_vector_path,
+        pairwise_raster_dicts,
+        per_habitat_classification_dict,
         target_summary_csv_path):
-    """Summarize pairwise habitat/stressor rasters by AOI subregions.
+    """Create summary statistics table.
 
-    Functionally, this is a modified version of
-    ``pygeoprocessing.zonal_statistics`` that doesn't force re-rasterization of
-    subregions.
+    This table tracks for each habitat, stressor and subregion the min, max and
+    mean Exposure, Criteria and Risk score.  Additionally, the percentage of
+    risk scores in each classification category (HIGH, MEDIUM, LOW, NONE) are
+    also recorded.  If subregion names are not provided by user input, a single
+    subregion is assumed, called "Total Region".
+
+    If multiple subregions have the same name, they are treated as a single
+    subregion.
 
     Args:
-        aoi_raster_json_path (string): The path to a JSON file with information
-            about the provided AOI subregions.  The following keys must exist
-            in the dict:
+        subregions_vector_path (string): The path to a vector of subregions.
+            If this vector has a ``"NAME"`` column (case-insensitive), it will
+            be used to uniquely identify the subregion.
+        pairwise_raster_dicts (list): A list of dicts, each of which containing
+            the following keys:
 
-                * ``subregion_names``: A mapping of integer subregion IDs to
-                  string names identifying the subregion.
-                * ``subregion_rasters``: A list of rasters containing
-                  disjoint sets of rasterized AOI geometries, where each
-                  geometry has been rasterized with a unique integer subregion
-                  ID that is also identified in ``subregion_names``.
-
-        habitat_mask_raster_path (string): The path to a raster with 1s
-            indicating the presence of habitats (any number) and 0 or nodata
-            otherwise.
-        pairwise_raster_dicts (list): A list of dicts for each habitat/stressor
-            pair containing the following keys:
-
-                * ``"habitat"`` the string habitat name.
-                * ``"stressor"`` the string stressor name.
-                * ``"e_path"`` the exposure criteria score raster.
-                * ``"c_path"`` the consequence criteria score raster.
-                * ``"risk_path"`` the raster of calculated risk.
-                * ``"classification_path"`` the High/Med/Low classified risk.
-
-        target_summary_csv_path (string): The path to where the summary CSV
-            should be written
+                * ``habitat`` - the string habitat name
+                * ``stressor`` - the string stressor name
+                * ``e_path`` - absolute path to the raster of exposure scores
+                    for this habitat/stressor pair.
+                * ``c_path`` - absolute path to the raster of criteria scores
+                    for this habitat/stressor pair.
+                * ``risk_path`` - absolute path to the raster of risk scores
+                    for this habitat/stressor pair.
+                * ``classification_path`` - absolute path to the raster of
+                    classified risk scores for this habitat/stressor pair.
+        per_habitat_classification_dict (dict): A dictionary mapping string
+            habitat names to a raster of risk classifications that have been
+            classified from rasters of cumulative risk scores across all
+            stressors for the given habitat.
+        target_summary_csv_path (string): The path to where the target CSV
+            should be written on disk.
 
     Returns:
         ``None``
     """
-    with open(aoi_raster_json_path) as aoi_json_file:
-        json_data = json.load(aoi_json_file)
-    subregion_names = json_data['subregion_names']
-
-    def _read_block(raster_path, block_info, mask_array):
-        raster = gdal.OpenEx(raster_path, gdal.OF_RASTER)
-        band = raster.GetRasterBand(1)
-        nodata = band.GetNoDataValue()
-        block = band.ReadAsArray(**block_info)
-        valid_pixels = block[
-            ~utils.array_equals_nodata(block, nodata) & mask_array]
-
-        return valid_pixels
+    subregions_vector = gdal.OpenEx(subregions_vector_path)
+    subregions_layer = subregions_vector.GetLayer()
+    name_field = None
+    for field_defn in subregions_layer.schema:
+        source_fieldname = field_defn.GetName()
+        if source_fieldname.lower() == 'name':
+            name_field = source_fieldname
+            break
+    subregion_fid_to_name = {}
+    for feature in subregions_layer:
+        if name_field is None:
+            subregion_name = 'Total Region'
+        else:
+            subregion_name = feature.GetField(name_field)
+        subregion_fid_to_name[feature.GetFID()] = subregion_name
+    subregions_layer = None
+    subregions_vector = None
 
     pairwise_data = {}
     habitats = set()
@@ -1091,17 +1086,7 @@ def _create_summary_statistics_file(
         habitats.add(info_dict['habitat'])
         stressors.add(info_dict['stressor'])
 
-    habitat_mask_raster = gdal.OpenEx(habitat_mask_raster_path, gdal.OF_RASTER)
-    habitat_mask_band = habitat_mask_raster.GetRasterBand(1)
-
-    # Track the table data as a list of dicts, to be written out later.
-    # Helps reduce human errors in having to write out the columns in precisely
-    # the right order as they are declared.
     records = []
-
-    all_subregion_stats = {}
-
-    # itertools.product is roughly the equivalent of a nested for-loop.
     for habitat, stressor in itertools.product(sorted(habitats),
                                                sorted(stressors)):
         e_raster = pairwise_data[habitat, stressor]['e_path']
@@ -1110,153 +1095,128 @@ def _create_summary_statistics_file(
         classes_raster = (
             pairwise_data[habitat, stressor]['classification_path'])
 
-        subregion_stats = {}
-        for subregion_raster_path in json_data['subregion_rasters']:
-            subregion_raster = gdal.OpenEx(subregion_raster_path,
-                                           gdal.OF_RASTER)
-            subregion_band = subregion_raster.GetRasterBand(1)
-            subregion_nodata = subregion_band.GetNoDataValue()
-            LOGGER.info(f'{habitat} {stressor} {subregion_raster_path}')
+        subregion_stats_by_name = collections.defaultdict(
+            lambda: {
+                **{f"{prefix}_MIN": float('inf') for prefix in "ECR"},
+                **{f"{prefix}_MAX": 0 for prefix in "ECR"},
+                **{f"{prefix}_SUM": 0 for prefix in "ECR"},
+                **{f"{prefix}_COUNT": 0 for prefix in "ECR"},
+                **{f"R_N_{tally}": 0 for tally in (
+                    "PIXELS", "NONE", "LOW", "MEDIUM", "HIGH")}
+            })
 
-            for block_info in pygeoprocessing.iterblocks(
-                    (subregion_raster_path, 1), offset_only=True):
-                habitat_mask_block = habitat_mask_band.ReadAsArray(
-                    **block_info)
-                habitat_mask = (habitat_mask_block == 1)
-                subregion_block = subregion_band.ReadAsArray(**block_info)
+        for prefix, raster_path in (
+                ('E', e_raster),
+                ('C', c_raster),
+                ('R', r_raster)):
+            raster_stats = pygeoprocessing.zonal_statistics(
+                (raster_path, 1), subregions_vector_path)
 
-                local_unique_subregions = numpy.unique(
-                    subregion_block[
-                        (~utils.array_equals_nodata(
-                            subregion_block, subregion_nodata)) &
-                        habitat_mask])
+            for feature_id, stats_under_feature in raster_stats.items():
+                feature_name = subregion_fid_to_name[feature_id]
+                subregion_stats = subregion_stats_by_name[feature_name]
 
-                for subregion_id in local_unique_subregions:
-                    subregion_mask = (subregion_block == subregion_id)
+                for opname, reduce_func in (
+                        ('MIN', min), ('MAX', max), ('SUM', sum),
+                        ('COUNT', sum)):
+                    fieldname = f'{prefix}_{opname}'
                     try:
-                        stats = subregion_stats[subregion_id]
-                    except KeyError:
-                        # If subregion_id is not in the subregion_stats dict,
-                        # we need to initialize it.
-                        stats = {}
-                        for prefix in ('E', 'C', 'R'):
-                            for suffix, initial_value in [
-                                    ('MIN', float('inf')), ('MAX', 0),
-                                    ('SUM', 0), ('N_PIXELS', 0)]:
-                                stats[f'{prefix}_{suffix}'] = initial_value
+                        subregion_stats[fieldname] = reduce_func([
+                            subregion_stats[fieldname],
+                            stats_under_feature[opname.lower()]])
+                    except TypeError:
+                        # TypeError when stats_under_feature[op] is None,
+                        # which happens when the polygon is entirely over
+                        # nodata
+                        pass
+                subregion_stats_by_name[feature_name] = subregion_stats
 
-                            for r_stat in ('R_N_HIGH', 'R_N_MEDIUM', 'R_N_LOW',
-                                           'R_N_ANY'):
-                                stats[r_stat] = 0
+        raster_stats = pygeoprocessing.zonal_statistics(
+            (classes_raster, 1), subregions_vector_path,
+            include_value_counts=True)
+        for feature_id, stats_under_feature in raster_stats.items():
+            counts = collections.defaultdict(int)
+            counts.update(stats_under_feature['value_counts'])
+            feature_name = subregion_fid_to_name[feature_id]
+            subregion_stats = subregion_stats_by_name[feature_name]
+            for classified_value, field in (
+                    (0, 'NONE'), (1, 'LOW'), (2, 'MEDIUM'), (3, 'HIGH')):
+                subregion_stats[f'R_N_{field}'] += counts[
+                    classified_value]
+                subregion_stats['R_N_PIXELS'] += counts[classified_value]
+            subregion_stats_by_name[feature_name] = subregion_stats
 
-                    for prefix, raster in [('E', e_raster),
-                                           ('C', c_raster),
-                                           ('R', r_raster)]:
-                        valid_pixels = _read_block(raster, block_info,
-                                                   subregion_mask)
-                        if valid_pixels.size == 0:
-                            # If no valid pixels, fall back to defaults.
-                            pixel_min = float('inf')
-                            pixel_max = pixel_sum = n_pixels = 0
-                        else:
-                            pixel_min = numpy.min(valid_pixels)
-                            pixel_max = numpy.max(valid_pixels)
-                            pixel_sum = numpy.sum(valid_pixels)
-                            n_pixels = valid_pixels.size
-
-                        if pixel_min < stats[f'{prefix}_MIN']:
-                            stats[f'{prefix}_MIN'] = pixel_min
-
-                        if pixel_max > stats[f'{prefix}_MAX']:
-                            stats[f'{prefix}_MAX'] = pixel_max
-
-                        stats[f'{prefix}_SUM'] += pixel_sum
-                        stats[f'{prefix}_N_PIXELS'] += n_pixels
-
-                    # the percentage of high/medium/low classification is a
-                    # per-category count.
-                    classes_block = _read_block(classes_raster, block_info,
-                                                subregion_mask)
-                    stats['R_N_HIGH'] += numpy.count_nonzero(
-                        classes_block == 3)
-                    stats['R_N_MEDIUM'] += numpy.count_nonzero(
-                        classes_block == 2)
-
-                    # Old HRA included 0-value pixels in the R_%_LOW bucket so
-                    # we do here as well.
-                    stats['R_N_LOW'] += numpy.sum(classes_block <= 1)
-                    stats['R_N_ANY'] += classes_block.size
-                    subregion_stats[subregion_id] = stats
-
-        for subregion_id, stats in subregion_stats.items():
-            # Avoid dividing by zero.  If this is 0, then the other counts must
-            # all also be 0.
-            reclassified_count = max(stats['R_N_ANY'], 1)
+        for subregion_name, subregion_stats in (
+                subregion_stats_by_name.items()):
             record = {
                 'HABITAT': habitat,
                 'STRESSOR': stressor,
-                'SUBREGION': subregion_names[str(subregion_id)],
-                'R_%HIGH': (stats['R_N_HIGH'] / reclassified_count) * 100,
-                'R_%MEDIUM': (stats['R_N_MEDIUM'] / reclassified_count) * 100,
-                'R_%LOW': (stats['R_N_LOW'] / reclassified_count) * 100,
+                'SUBREGION': subregion_name,
             }
             for prefix in ('E', 'C', 'R'):
-                record[f'{prefix}_MIN'] = float(stats[f'{prefix}_MIN'])
-                record[f'{prefix}_MAX'] = float(stats[f'{prefix}_MAX'])
-                mean = 0
-                if stats[f'{prefix}_N_PIXELS'] > 0:  # avoid dividing by 0
-                    mean = float(
-                        stats[f'{prefix}_SUM'] / stats[f'{prefix}_N_PIXELS'])
-                record[f'{prefix}_MEAN'] = mean
-            records.append(record)
-            all_subregion_stats[(habitat, stressor, subregion_id)] = stats
+                # Copying over SUM and COUNT for per-habitat summary
+                # statistics later.
+                for op in ('MIN', 'MAX', 'SUM', 'COUNT'):
+                    key = f'{prefix}_{op}'
+                    record[key] = subregion_stats[key]
+                try:
+                    record[f'{prefix}_MEAN'] = (
+                        subregion_stats[f'{prefix}_SUM'] /
+                        subregion_stats[f'{prefix}_COUNT'])
+                except ZeroDivisionError:
+                    record[f'{prefix}_MEAN'] = 0
 
-    # I know this is a second loop through the rows, but it's easier to grok
-    # with all of this in a separate block.
-    for habitat in habitats:
-        for subregion_id, stats in subregion_stats.items():
+            n_pixels = subregion_stats['R_N_PIXELS']
+            for classification in ('NONE', 'LOW', 'MEDIUM', 'HIGH'):
+                percent_classified = 0
+                if n_pixels > 0:  # avoid a division by 0
+                    percent_classified = (
+                        subregion_stats[f'R_N_{classification}'] /
+                        n_pixels) * 100
+                record[f'R_%{classification}'] = percent_classified
+            records.append(record)
+
+    pairwise_df = pandas.DataFrame.from_records(records)
+
+    all_stressors_id = '(FROM ALL STRESSORS)'
+    for habitat, classified_path in per_habitat_classification_dict.items():
+        stats = pygeoprocessing.zonal_statistics(
+            (classified_path, 1), subregions_vector_path,
+            include_value_counts=True)
+        subregion_stats_by_name = collections.defaultdict(
+            lambda: {0: 0, 1: 0, 2: 0, 3: 0})
+        for feature_id, stats_under_feature in stats.items():
+            feature_name = subregion_fid_to_name[feature_id]
+            subregion_stats = subregion_stats_by_name[feature_name]
+            for key, count in stats_under_feature['value_counts'].items():
+                subregion_stats_by_name[feature_name][key] += count
+
+        for subregion_name, class_counts in subregion_stats_by_name.items():
+            n_pixels = max(sum(class_counts.values()), 1)  # avoid div-by-0
             record = {
                 'HABITAT': habitat,
-                'STRESSOR': '(FROM ALL STRESSORS)',
-                'SUBREGION': subregion_names[str(subregion_id)],
+                'STRESSOR': all_stressors_id,
+                'SUBREGION': subregion_name,
+                'R_%NONE': (class_counts[0] / n_pixels) * 100,
+                'R_%LOW': (class_counts[1] / n_pixels) * 100,
+                'R_%MEDIUM': (class_counts[2] / n_pixels) * 100,
+                'R_%HIGH': (class_counts[3] / n_pixels) * 100,
             }
-
-            # Default value for the int type is 0.
-            sums_across_stressors = collections.defaultdict(int)
-            for stressor in stressors:
-                stats = all_subregion_stats[(habitat, stressor, subregion_id)]
-                for classification in ('HIGH', 'MEDIUM', 'LOW', 'ANY'):
-                    key = f'R_N_{classification}'
-                    sums_across_stressors[key] += stats[key]
-
-                for prefix in ('E', 'C', 'R'):
-                    for key, func in (
-                            (f'{prefix}_MIN', min),
-                            (f'{prefix}_MAX', max),
-                            (f'{prefix}_SUM', sum),
-                            (f'{prefix}_N_PIXELS', sum)):
-                        assert key in stats
-                        try:
-                            record[key] = func([record[key], stats[key]])
-                        except KeyError:
-                            record[key] = stats[key]
-
-            reclassified_count = max(sums_across_stressors['R_N_ANY'], 1)
-            record['R_%HIGH'] = (
-                sums_across_stressors['R_N_HIGH'] / reclassified_count) * 100
-            record['R_%MEDIUM'] = (
-                sums_across_stressors['R_N_MEDIUM'] / reclassified_count) * 100
-            record['R_%LOW'] = (
-                sums_across_stressors['R_N_LOW'] / reclassified_count) * 100
-
+            matching_df = pairwise_df[
+                (pairwise_df['HABITAT'] == habitat) &
+                (pairwise_df['SUBREGION'] == subregion_name)]
             for prefix in ('E', 'C', 'R'):
+                record[f'{prefix}_MIN'] = matching_df[
+                    f'{prefix}_MIN'].min()
+                record[f'{prefix}_MAX'] = matching_df[
+                    f'{prefix}_MAX'].max()
+
+                # Handle division-by-zero in mean calculation
+                count_sum = matching_df[f'{prefix}_COUNT'].sum()
                 mean = 0
-                if record[f'{prefix}_N_PIXELS'] > 0:
-                    mean = (
-                        record[f'{prefix}_SUM'] / record[f'{prefix}_N_PIXELS'])
+                if count_sum > 0:
+                    mean = matching_df[f'{prefix}_SUM'].sum() / count_sum
                 record[f'{prefix}_MEAN'] = mean
-                del record[f'{prefix}_SUM']
-                del record[f'{prefix}_N_PIXELS']
 
             records.append(record)
 
@@ -1266,138 +1226,11 @@ def _create_summary_statistics_file(
             'E_MIN', 'E_MAX', 'E_MEAN',
             'C_MIN', 'C_MAX', 'C_MEAN',
             'R_MIN', 'R_MAX', 'R_MEAN',
-            'R_%HIGH', 'R_%MEDIUM', 'R_%LOW',
+            'R_%HIGH', 'R_%MEDIUM', 'R_%LOW', 'R_%NONE',
         ])
-    out_dataframe.sort_values(['HABITAT', 'STRESSOR'],
+    out_dataframe.sort_values(['HABITAT', 'STRESSOR', 'SUBREGION'],
                               inplace=True)
     out_dataframe.to_csv(target_summary_csv_path, index=False)
-
-
-def _rasterize_aoi_regions(source_aoi_vector_path, base_raster_path,
-                           target_raster_dir, target_info_json):
-    """Rasterize AOI subregions.
-
-    If the source AOI vector has a "NAME" field (case-insensitive), then
-    non-overlapping sets of polygons are rasterized onto as many rasters as are
-    needed to cover all of the AOI's subregions.
-
-    If the source AOI vector does not have a "NAME" field (case-insensitive),
-    then all AOI features are considered to be in the same region and all
-    features are rasterized onto a single raster.  In this case, the subregion
-    name is "Total Region".
-
-    In both cases, an output JSON file is written with information about the
-    rasters created and the names of the target subregions.
-
-    Args:
-        source_aoi_vector_path (string): The path to the source AOI vector
-            containing AOI geometries and (optionally) a "NAME" column
-            (case-insensitive).
-        base_raster_path (string): The path to a raster to use as a base
-            raster for rasterization.  Pixel values will not be changed.
-        target_raster_dir (string): The path to a directory where rasterized
-            AOI subregions should be stored.
-        target_info_json (string): The path to where a target info JSON file
-            should be written.
-
-    Returns:
-        ``None``
-    """
-    source_aoi_vector = gdal.OpenEx(source_aoi_vector_path, gdal.OF_VECTOR)
-    source_aoi_layer = source_aoi_vector.GetLayer()
-
-    driver = ogr.GetDriverByName('MEMORY')
-    disjoint_vector = driver.CreateDataSource('disjoint_vector')
-    spat_ref = source_aoi_layer.GetSpatialRef()
-
-    subregion_rasters = []
-    subregion_names = {}  # {rasterized id: name}
-
-    # locate the "name" field, case-insensitive.
-    field_index = None
-    for index, fieldname in enumerate([info.GetName() for info in
-                                       source_aoi_layer.schema]):
-        if fieldname.lower() == 'name':
-            field_index = index
-            break
-
-    def _write_info_json(subregion_rasters_list, subregion_ids_to_names):
-        """Write an info JSON file.  Abstracted into a function for DRY."""
-        info_dict = {
-            'subregion_rasters': subregion_rasters_list,
-            'subregion_names': subregion_ids_to_names,
-        }
-        with open(target_info_json, 'w') as target_json:
-            json.dump(info_dict, target_json, indent=4)
-
-    # If the user did not provide a 'name' field (case-insensitive), then we
-    # treat all features as though they're in the same region.
-    if field_index is None:
-        LOGGER.info(
-            'Field "name" (case-insensitive) not found; all features will '
-            'be treated as one region')
-        target_raster_path = os.path.join(
-            target_raster_dir, 'subregion_set_0.tif')
-        pygeoprocessing.new_raster_from_base(
-            base_raster_path, target_raster_path, _TARGET_GDAL_TYPE_BYTE,
-            [_TARGET_NODATA_BYTE])
-        burn_value = 0  # burning onto a nodata mask (nodata=255)
-        pygeoprocessing.rasterize(
-            source_aoi_vector_path, target_raster_path,
-            burn_values=[0], option_list=['ALL_TOUCHED=FALSE'])
-        _write_info_json(
-            subregion_rasters_list=[target_raster_path],
-            subregion_ids_to_names={burn_value: 'Total Region'})
-        return
-
-    # If we've reached this point, then the user provided a name field and we
-    # need to rasterize the sets of non-overlapping polygons.
-    # If 2 features have the same name, they should have the same ID.
-    for set_index, disjoint_fid_set in enumerate(
-            pygeoprocessing.calculate_disjoint_polygon_set(
-                source_aoi_vector_path)):
-        disjoint_set_raster_path = os.path.join(
-            target_raster_dir, f'subregion_set_{set_index}.tif')
-        subregion_rasters.append(disjoint_set_raster_path)
-        pygeoprocessing.new_raster_from_base(
-            base_raster_path, disjoint_set_raster_path, gdal.GDT_Int32,
-            [-1])
-        fid_raster = gdal.OpenEx(disjoint_set_raster_path, gdal.GA_Update)
-
-        disjoint_layer = disjoint_vector.CreateLayer(
-            'disjoint_vector', spat_ref, ogr.wkbPolygon)
-        disjoint_layer.CreateField(
-            ogr.FieldDefn('FID', ogr.OFTInteger))
-        disjoint_layer_defn = disjoint_layer.GetLayerDefn()
-        disjoint_layer.StartTransaction()
-        for source_fid in disjoint_fid_set:
-            source_feature = source_aoi_layer.GetFeature(source_fid)
-            source_geometry = source_feature.GetGeometryRef()
-            new_feature = ogr.Feature(disjoint_layer_defn)
-            new_feature.SetGeometry(source_geometry.Clone())
-            source_geometry = None
-
-            new_feature.SetField('FID', source_fid)
-            if field_index is None:
-                subregion_name = source_fid
-            else:
-                subregion_name = source_feature.GetField(field_index)
-            subregion_names[source_fid] = subregion_name
-
-            disjoint_layer.CreateFeature(new_feature)
-        disjoint_layer.CommitTransaction()
-        gdal.RasterizeLayer(
-            fid_raster, [1], disjoint_layer,
-            options=["ALL_TOUCHED=FALSE", "ATTRIBUTE=FID"])
-        fid_raster.FlushCache()
-        fid_raster = None
-
-        disjoint_layer = None
-        disjoint_vector.DeleteLayer(0)
-
-    _write_info_json(
-        subregion_rasters_list=subregion_rasters,
-        subregion_ids_to_names=subregion_names)
 
 
 def _align(raster_path_map, vector_path_map, target_pixel_size,

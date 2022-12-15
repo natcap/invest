@@ -66,6 +66,12 @@ Unreleased Changes
       flag, leading to a perceived buffering of spatial criteria in certain
       cases.  In InVEST 3.9.0, these were rasterized with ``ALL_TOUCHED=FALSE``.
       https://github.com/natcap/invest/issues/1120
+    * Fixed an issue with the results table, ``SUMMARY_STATISTICS.csv`` where
+      the percentages of high, medium and low risk classifications were not
+      correctly reported.
+    * Added a column to the ``SUMMARY_STATISTICS.csv`` output table to also
+      report the percentage of pixels within each subregion that have no risk
+      classification (a risk classification of 0).
 * Urban Stormwater Retention
     * Added validation to check that the input soil groups raster has an
       integer data type
@@ -73,6 +79,7 @@ Unreleased Changes
     * Updated the text for the ``building_intensity`` column in the biophysical
       table to clarify that the values of this column should be normalized
       relative to one another to be between 0 and 1.
+
 
 
 3.12.0 (2022-08-31)
