@@ -148,6 +148,32 @@ msgstr ""
 msgid "synchronous task execution is most reliable"
 msgstr ""
 
+msgid "threaded task management: tasks execute only in the main process, using multiple threads."
+msgstr ""
+
+msgid "n CPUs: depending on the InVEST model, tasks may execute in parallel using up to this many processes."
+msgstr ""
+
+msgid "Please help us fix this by reporting the problem. You may follow these steps:"
+msgstr ""
+
+msgid "using the button below. There may be multiple files with a ".log" extension."
+msgstr ""
+
+msgid "and upload all the log files, along with a brief description of what happened before you saw this message."
+msgstr ""
+
 msgid "text"
 msgstr ""
 
+msgid "Save your parameters in a JSON file. This includes the paths to your input data, but not the data itself. Open this file in InVEST to restore your parameters."
+msgstr ""
+
+msgid "Save your parameters and input data in a compressed archive. This archive contains the same JSON file produced by the "Parameters only" option, plus the data. You can open this file in InVEST to restore your parameters. This option is useful to copy all the necessary data to a different location."
+msgstr ""
+
+msgid "Save your parameters in a python script. This includes the paths to your input data, but not the data itself. Running the python script will programmatically run the model with your parameters. Use this as a starting point for batch scripts."
+msgstr ""
+
+msgid "Set up a model from a sample datastack file (.json) or from an InVEST model's logfile (.txt): "
+msgstr ""
