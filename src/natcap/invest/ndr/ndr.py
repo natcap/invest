@@ -17,7 +17,7 @@ from .. import utils
 from .. import validation
 from ..model_metadata import MODEL_METADATA
 from ..sdr import sdr
-from ..spec_utils import u
+from ..unit_registry import u
 from . import ndr_core
 
 LOGGER = logging.getLogger(__name__)
