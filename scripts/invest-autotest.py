@@ -26,7 +26,6 @@ DATASTACKS = {
         'CropProduction/crop_production_regression_demo.invs.json'],
     'delineateit': ['DelineateIt/delineateit_gura.invs.json'],
     'forest_carbon_edge_effect': ['forest_carbon_edge_effect/forest_carbon_amazonia.invs.json'],
-    'globio': ['globio/globio_demo.invs.json'],
     'habitat_quality': ['HabitatQuality/habitat_quality_willamette.invs.json'],
     'hra': ['HabitatRiskAssess/hra_wcvi.invs.json'],
     'annual_water_yield': ['Annual_Water_Yield/annual_water_yield_gura.invs.json'],

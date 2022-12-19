@@ -2,15 +2,15 @@
 DATA_DIR := data
 GIT_SAMPLE_DATA_REPO        := https://bitbucket.org/natcap/invest-sample-data.git
 GIT_SAMPLE_DATA_REPO_PATH   := $(DATA_DIR)/invest-sample-data
-GIT_SAMPLE_DATA_REPO_REV    := 6505a0b76de9b9b59924b896441a95a94fef6b67
+GIT_SAMPLE_DATA_REPO_REV    := 5a39a92a1b32adcdbe71ddbb754bab4ab8f00b69
 
 GIT_TEST_DATA_REPO          := https://bitbucket.org/natcap/invest-test-data.git
 GIT_TEST_DATA_REPO_PATH     := $(DATA_DIR)/invest-test-data
-GIT_TEST_DATA_REPO_REV      := f5e651c9ba0a012dc033b9c1d12d51e42f6f87b0
+GIT_TEST_DATA_REPO_REV      := 29d8da596ff197d3cc6e355e7cd4313945b89b71
 
 GIT_UG_REPO                 := https://github.com/natcap/invest.users-guide
 GIT_UG_REPO_PATH            := doc/users-guide
-GIT_UG_REPO_REV             := 90b0e96e717894a0fe9e9ef701e1585e5cb8649f
+GIT_UG_REPO_REV             := b6b6e30387f398dbcc53b39a64aafe029c8d5ee6
 
 ENV = "./env"
 ifeq ($(OS),Windows_NT)
@@ -312,7 +312,6 @@ ZIPDIRS = Annual_Water_Yield \
 		  CropProduction \
 		  DelineateIt \
 		  forest_carbon_edge_effect \
-		  globio \
 		  GridSeascape \
 		  HabitatQuality \
 		  HabitatRiskAssess \
