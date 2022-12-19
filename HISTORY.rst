@@ -34,8 +34,12 @@
 
 .. :changelog:
 
-Unreleased Changes
-------------------
+..
+  Unreleased Changes
+  ------------------
+
+3.12.1 (2022-12-16)
+-------------------
 * General
     * Fixed a possible path traversal vulnerability when working with datastack
       archives.  This patches CVE-2007-4559, reported to us by Trellix.
