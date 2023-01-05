@@ -308,7 +308,6 @@ describe('Display recently executed InVEST jobs on Home tab', () => {
         results_suffix: 'suffix',
       },
       status: 'error',
-      finalTraceback: 'ValueError ...',
     });
     const recentJobs = await InvestJob.saveJob(job2);
     const initialJobs = [job1, job2];
@@ -326,8 +325,8 @@ describe('Display recently executed InVEST jobs on Home tab', () => {
           expect(getByText('Model Complete'))
             .toBeInTheDocument();
         }
-        if (job.status === 'error' && job.finalTraceback) {
-          expect(getByText(job.finalTraceback))
+        if (job.status === 'error') {
+          expect(getByText(job.status))
             .toBeInTheDocument();
         }
         if (job.argsValues.results_suffix) {
@@ -340,6 +339,30 @@ describe('Display recently executed InVEST jobs on Home tab', () => {
           .toBeInTheDocument();
       });
     });
+  });
+
+  test('Recent Jobs: a job with incomplete data is skipped', async () => {
+    const job1 = new InvestJob({
+      modelRunName: 'carbon',
+      modelHumanName: 'invest A',
+      argsValues: {
+        workspace_dir: 'dir',
+      },
+      status: 'success',
+    });
+    const job2 = new InvestJob({
+      // argsValues is missing
+      modelRunName: 'sdr',
+      modelHumanName: 'invest B',
+      status: 'success',
+    });
+    await InvestJob.saveJob(job1);
+    await InvestJob.saveJob(job2);
+
+    const { findByText, queryByText } = render(<App />);
+
+    expect(await findByText(job1.modelHumanName)).toBeInTheDocument();
+    expect(queryByText(job2.modelHumanName)).toBeNull();
   });
 
   test('Recent Jobs: placeholder if there are no recent jobs', async () => {
@@ -655,15 +678,9 @@ describe('InVEST subprocess testing', () => {
     const execute = await findByRole('button', { name: /Run/ });
     userEvent.click(execute);
 
-    // To test that we can parse the finalTraceback even after extra data
-    const someStdErr = 'something went wrong';
-    const finalTraceback = 'ValueError';
-    const pyInstallerErr = "[12345] Failed to execute script 'cli' due to unhandled exception!";
-    const allStdErr = `${someStdErr}\n${finalTraceback}\n${pyInstallerErr}\n`;
-
     mockInvestProc.stdout.push(stdOutText);
     mockInvestProc.stdout.push(stdOutLogfileSignal);
-    mockInvestProc.stderr.push(allStdErr);
+    mockInvestProc.stderr.push('some error');
     const logTab = await findByText('Log');
     await waitFor(() => {
       expect(logTab.classList.contains('active')).toBeTruthy();
@@ -674,11 +691,9 @@ describe('InVEST subprocess testing', () => {
 
     mockInvestProc.emit('exit', 1); // 1 - exit w/ error
 
-    // Only finalTraceback text should be rendered in a red alert
     const alert = await findByRole('alert');
     await waitFor(() => {
-      expect(alert).toHaveTextContent(new RegExp(`^${finalTraceback}`));
-      expect(alert).not.toHaveTextContent(someStdErr);
+      expect(alert).toHaveTextContent('Error: see log for details');
       expect(alert).toHaveClass('alert-danger');
     });
     expect(await findByRole('button', { name: 'Open Workspace' }))

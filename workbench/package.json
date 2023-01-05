@@ -45,7 +45,6 @@
     "localforage": "^1.9.0",
     "node-fetch": "^2.6.7",
     "prop-types": "^15.7.2",
-    "sanitize-html": "^2.2.0",
     "yauzl": "^2.10.0"
   },
   "devDependencies": {
@@ -86,17 +85,5 @@
     "rimraf": "^3.0.2",
     "vite": "^2.8.3",
     "yazl": "^2.5.1"
-  },
-  "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
   }
 }

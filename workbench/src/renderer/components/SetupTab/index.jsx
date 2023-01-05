@@ -13,9 +13,7 @@ import { MdFolderOpen } from 'react-icons/md';
 import Expire from '../Expire';
 import Portal from '../Portal';
 import ArgsForm from './ArgsForm';
-import {
-  RunButton, SaveParametersButtons
-} from './SetupButtons';
+import SaveAsModal from '../SaveAsModal';
 import {
   archiveDatastack,
   fetchDatastackFromFile,
@@ -89,6 +87,7 @@ export default class SetupTab extends React.Component {
       argsEnabled: null,
       argsDropdownOptions: null,
       saveAlerts: {},
+      scrollEventCount: 0,
     };
 
     this.saveDatastack = this.saveDatastack.bind(this);
@@ -105,6 +104,7 @@ export default class SetupTab extends React.Component {
     this.callUISpecFunctions = this.callUISpecFunctions.bind(this);
     this.browseForDatastack = this.browseForDatastack.bind(this);
     this.loadParametersFromFile = this.loadParametersFromFile.bind(this);
+    this.triggerScrollEvent = this.triggerScrollEvent.bind(this);
   }
 
   componentDidMount() {
@@ -152,6 +152,19 @@ export default class SetupTab extends React.Component {
   componentWillUnmount() {
     this._isMounted = false;
     clearTimeout(this.validationTimer);
+  }
+
+  /**
+   * Update scrollEventCount, which is being observed by a useEffect
+   * in ArgInput in order to trigger horizontal scrolls in text boxes.
+   * Call this during events that fill text boxes by means other than typing.
+   *
+   * @returns {undefined}
+   */
+  triggerScrollEvent() {
+    this.setState((prevState, props) => ({
+      scrollEventCount: prevState.updateEvent + 1
+    }));
   }
 
   /**
@@ -220,7 +233,7 @@ export default class SetupTab extends React.Component {
     this.setSaveAlert(response);
   }
 
-  async saveJsonFile(datastackPath) {
+  async saveJsonFile(datastackPath, relativePaths) {
     const {
       pyModuleName,
     } = this.props;
@@ -230,7 +243,7 @@ export default class SetupTab extends React.Component {
     const payload = {
       filepath: datastackPath,
       moduleName: pyModuleName,
-      relativePaths: false,
+      relativePaths: relativePaths,
       args: JSON.stringify(args),
     };
     const response = await writeParametersToFile(payload);
@@ -279,6 +292,7 @@ export default class SetupTab extends React.Component {
     if (datastack.module_name === this.props.pyModuleName) {
       this.batchUpdateArgs(datastack.args);
       this.props.switchTabs('setup');
+      this.triggerScrollEvent();
     } else {
       alert( // eslint-disable-line no-alert
         _(`Datastack/Logfile for ${datastack.model_human_name} does not match this model.`)
@@ -443,6 +457,7 @@ export default class SetupTab extends React.Component {
       argsEnabled,
       argsDropdownOptions,
       saveAlerts,
+      scrollEventCount,
     } = this.state;
     if (argsValues) {
       const {
@@ -452,6 +467,7 @@ export default class SetupTab extends React.Component {
         sidebarFooterElementId,
         executeClicked,
         uiSpec,
+        modelName
       } = this.props;
 
       const SaveAlerts = [];
@@ -503,6 +519,8 @@ export default class SetupTab extends React.Component {
               updateArgValues={this.updateArgValues}
               updateArgTouched={this.updateArgTouched}
               loadParametersFromFile={this.loadParametersFromFile}
+              scrollEventCount={scrollEventCount}
+              triggerScrollEvent={this.triggerScrollEvent}
             />
           </Row>
           <Portal elId={sidebarSetupElementId}>
@@ -523,7 +541,8 @@ export default class SetupTab extends React.Component {
                 {_('Load parameters from file')}
               </Button>
             </OverlayTrigger>
-            <SaveParametersButtons
+            <SaveAsModal
+              modelName={modelName}
               savePythonScript={this.savePythonScript}
               saveJsonFile={this.saveJsonFile}
               saveDatastack={this.saveDatastack}
@@ -533,11 +552,15 @@ export default class SetupTab extends React.Component {
             </React.Fragment>
           </Portal>
           <Portal elId={sidebarFooterElementId}>
-            <RunButton
+            <Button
+              block
+              variant="primary"
+              size="lg"
+              onClick={this.wrapInvestExecute}
               disabled={!argsValid || executeClicked}
-              wrapInvestExecute={this.wrapInvestExecute}
-              buttonText={buttonText}
-            />
+            >
+              {buttonText}
+            </Button>
           </Portal>
         </Container>
       );

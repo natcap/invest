@@ -1,29 +1,28 @@
 """Urban Cooling Model."""
-import shutil
-import tempfile
-import math
 import logging
+import math
 import os
 import pickle
+import shutil
+import tempfile
 import time
 
+import numpy
+import pygeoprocessing
+import rtree
+import shapely.prepared
+import shapely.wkb
+import taskgraph
 from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
-import pygeoprocessing
-import taskgraph
-import numpy
-import shapely.wkb
-import shapely.prepared
-import rtree
 
-from . import utils
+from . import gettext
 from . import spec_utils
-from .spec_utils import u
+from . import utils
 from . import validation
 from .model_metadata import MODEL_METADATA
-from . import gettext
-
+from .spec_utils import u
 
 LOGGER = logging.getLogger(__name__)
 TARGET_NODATA = -1
@@ -57,10 +56,7 @@ ARGS_SPEC = {
             "name": gettext("biophysical table"),
             "type": "csv",
             "columns": {
-                "lucode": {
-                    "type": "integer",
-                    "about": gettext(
-                        "LULC code corresponding to those in the LULC map.")},
+                "lucode": spec_utils.LULC_TABLE_COLUMN,
                 "kc": {
                     "type": "number",
                     "units": u.none,
@@ -92,9 +88,10 @@ ARGS_SPEC = {
                     "required": "cc_method == intensity",
                     "about": gettext(
                         "The ratio of building floor area to footprint "
-                        "area, normalized between 0 and 1. Required if the "
-                        "'intensity' option is selected for the Cooling "
-                        "Capacity Calculation Method.")}
+                        "area, with all values in this column normalized "
+                        "between 0 and 1. Required if the 'intensity' option "
+                        "is selected for the Cooling Capacity Calculation "
+                        "Method.")}
             },
             "about": gettext(
                 "A table mapping each LULC code to biophysical data for that "

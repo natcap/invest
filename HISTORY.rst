@@ -34,18 +34,79 @@
 
 .. :changelog:
 
-Unreleased Changes
-------------------
+..
+  Unreleased Changes
+  ------------------
+
+3.12.1 (2022-12-16)
+-------------------
+* General
+    * Fixed a possible path traversal vulnerability when working with datastack
+      archives.  This patches CVE-2007-4559, reported to us by Trellix.
+      https://github.com/natcap/invest/issues/1113
+    * Updating descriptions for LULC about text and biophysical table for
+      clarity in model specs. https://github.com/natcap/invest/issues/1077
+* Workbench
+    * Fixed a bug where the Workbench would become unresponsive during an
+      InVEST model run if the model emitted a very high volume of log messages.
+    * Fixed a bug where the Workbench could crash if there was too much
+      standard error emitted from an invest model.
+    * Added a new "Save as" dialog window to handle different save options, and
+      allow the option to use relative paths in a JSON datastack
+      (`#1088 <https://github.com/natcap/invest/issues/1088>`_)
+    * Fixed a bug where uncaught exceptions in the React tree would result in
+      a blank browser window.
+      (`#1119 <https://github.com/natcap/invest/issues/1119>`_)
+* Habitat Quality
+    * All spatial inputs including the access vector and threat rasters are
+      now reprojected to the ``lulc_cur_path`` raster. This fixes a bug where
+      rasters with a different SRS would appear to not intersect the
+      ``lulc_cur_path`` even if they did. (https://github.com/natcap/invest/issues/1093)
+    * Paths in the threats table may now be either absolute or relative to the
+      threats table.
+* HRA
+    * Fixed a regression relative to InVEST 3.9.0 outputs where spatial
+      criteria vectors were being rasterized with the ``ALL_TOUCHED=TRUE``
+      flag, leading to a perceived buffering of spatial criteria in certain
+      cases.  In InVEST 3.9.0, these were rasterized with ``ALL_TOUCHED=FALSE``.
+      https://github.com/natcap/invest/issues/1120
+    * Fixed an issue with the results table, ``SUMMARY_STATISTICS.csv`` where
+      the percentages of high, medium and low risk classifications were not
+      correctly reported.
+    * Added a column to the ``SUMMARY_STATISTICS.csv`` output table to also
+      report the percentage of pixels within each subregion that have no risk
+      classification (a risk classification of 0).
+* Urban Stormwater Retention
+    * Added validation to check that the input soil groups raster has an
+      integer data type
+* Urban Cooling
+    * Updated the text for the ``building_intensity`` column in the biophysical
+      table to clarify that the values of this column should be normalized
+      relative to one another to be between 0 and 1.
+
+
+
+3.12.0 (2022-08-31)
+-------------------
 * General
     * Update python packaging settings to exclude a few config files and the
       workbench from source distributions and wheels
+    * Updating SDR test values due to an update in GDAL's mode resampling
+      algorithm. See https://github.com/natcap/invest/issues/905
+    * Updated our ``scipy`` requirement to fix a bug where invest crashed
+      if a Windows user had a non-Latin character in their Windows username.
 * Workbench
     * Fixed a bug where some model runs would not generate a new item
       in the list of recent runs.
+    * Enhanced model input forms so that text boxes always show the
+      rightmost end of the filepath when they overflow the box.
 * Coastal Blue Carbon
     * Fixed a bug where using unaligned rasters in the preprocessor would cause
       an error.  The preprocessor will now correctly align input landcover
       rasters and determine transitions from the aligned rasters.
+* Habitat Quality
+    * Removed a warning about an undefined nodata value in threat rasters
+      because it is okay for a threat raster to have an undefined nodata value.
 * HRA
     * Fixed an issue with risk calculations where risk values would be much
       lower than they should be.  Risk values are now correctly calculated.
@@ -73,14 +134,17 @@ Unreleased Changes
           have been removed from the model.
         * Two new output rasters have been added, specifically
             * ``avoided_export.tif``, indicating vegetation's contribution to
-              avoided local erosion.
-            * ``avoided_local_erosion.tif``, indicating avoided soil loss on a pixel.
+              reducing erosion on a pixel, as well as trapping of sediment
+              originating upslope of the pixel, so that neither of these
+              proceed downslope to enter a stream.
+            * ``avoided_erosion.tif``, vegetation’s contribution to reducing
+              erosion from a pixel.
         * The summary watersheds vector no longer includes the ``sed_retent``
           field and two fields have been added:
 
             * ``avoid_exp`` representing the sum of avoided export in the
               watershed.
-            * ``avoid_eros`` representing the sum of avoided local erosion in the
+            * ``avoid_eros`` representing the sum of avoided erosion in the
               watershed.
         * Sediment deposition, ``sed_deposition.tif``, has been clarified to
           indicate the sediment that erodes from a pixel goes into the next
