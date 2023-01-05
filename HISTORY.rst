@@ -57,6 +57,9 @@
     * Fixed a bug where uncaught exceptions in the React tree would result in
       a blank browser window.
       (`#1119 <https://github.com/natcap/invest/issues/1119>`_)
+* DelineateIt
+    * DelineateIt now uses ``pygeoprocessing.routing.extract_streams_d8`` for D8
+      stream thresholding. https://github.com/natcap/invest/issues/1143
 * Habitat Quality
     * All spatial inputs including the access vector and threat rasters are
       now reprojected to the ``lulc_cur_path`` raster. This fixes a bug where
@@ -76,6 +79,9 @@
     * Added a column to the ``SUMMARY_STATISTICS.csv`` output table to also
       report the percentage of pixels within each subregion that have no risk
       classification (a risk classification of 0).
+* RouteDEM
+    * RouteDEM now uses ``pygeoprocessing.routing.extract_streams_d8`` for D8
+      stream thresholding. https://github.com/natcap/invest/issues/1143
 * Urban Stormwater Retention
     * Added validation to check that the input soil groups raster has an
       integer data type
