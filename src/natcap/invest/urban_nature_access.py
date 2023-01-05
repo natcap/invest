@@ -369,7 +369,7 @@ def execute(args):
 
     pop_group_table = None
     if ('population_group_radii_table' in args and
-        args['population_group_radii_table'] not in ('', None)):
+            args['population_group_radii_table'] not in ('', None)):
         pop_group_table = utils.read_csv_to_dataframe(
             args['population_group_radii_table'])
         pop_group_radii = set(pop_group_table['search_radius_m'].unique())
