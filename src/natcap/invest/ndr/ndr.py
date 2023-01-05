@@ -74,12 +74,7 @@ ARGS_SPEC = {
         "biophysical_table_path": {
             "type": "csv",
             "columns": {
-                "lucode": {
-                    "type": "integer",
-                    "about": gettext(
-                        "LULC code for this class corresponding to values in "
-                        "the LULC raster.")
-                },
+                "lucode": spec_utils.LULC_TABLE_COLUMN,
                 "load_[NUTRIENT]": {  # nitrogen or phosphorus nutrient loads
                     "type": "number",
                     "units": u.kilogram/u.hectare/u.year,

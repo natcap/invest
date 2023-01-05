@@ -172,11 +172,7 @@ ARGS_SPEC = {
         "sensitivity_table_path": {
             "type": "csv",
             "columns": {
-                "lulc": {
-                    "type": "integer",
-                    "about": gettext("LULC codes corresponding to those in the LULC "
-                               "rasters.")
-                },
+                "lulc": spec_utils.LULC_TABLE_COLUMN,
                 "habitat": {
                     "type": "ratio",
                     "about": gettext(
@@ -282,13 +278,10 @@ def execute(args):
     # Get CSVs as dictionaries and ensure the key is a string for threats.
     threat_dict = {
         str(key): value for key, value in utils.build_lookup_from_csv(
-            args['threats_table_path'], 'THREAT', to_lower=True).items()}
+            args['threats_table_path'], 'THREAT', to_lower=True,
+            expand_path_cols=['cur_path', 'fut_path', 'base_path']).items()}
     sensitivity_dict = utils.build_lookup_from_csv(
         args['sensitivity_table_path'], 'LULC', to_lower=True)
-
-    # Get the directory path for the Threats CSV, used for locating threat
-    # rasters, which are relative to this path
-    threat_csv_dirpath = os.path.dirname(args['threats_table_path'])
 
     half_saturation_constant = float(args['half_saturation_constant'])
 
@@ -324,24 +317,17 @@ def execute(args):
             # raster which should be found relative to the Threat CSV
             for threat in threat_dict:
                 LOGGER.debug(f"Validating path for threat: {threat}")
-                # Build absolute threat path from threat table
                 threat_table_path_col = _THREAT_SCENARIO_MAP[lulc_key]
-                threat_path_relative = (
-                    threat_dict[threat][threat_table_path_col])
-                threat_path = os.path.join(
-                    threat_csv_dirpath, threat_path_relative)
-
-                threat_path_err_msg = (
-                    'There was an Error locating a threat raster from '
-                    'the path in CSV for column: '
-                    f'{_THREAT_SCENARIO_MAP[lulc_key]} and threat: '
-                    f'{threat}. The path in the CSV column should be '
-                    'relative to the threat CSV table.')
+                threat_path = threat_dict[threat][threat_table_path_col]
 
                 threat_validate_result = _validate_threat_path(
                     threat_path, lulc_key)
                 if threat_validate_result == 'error':
-                    raise ValueError(threat_path_err_msg)
+                    raise ValueError(
+                        'There was an Error locating a threat raster from '
+                        'the path in CSV for column: '
+                        f'{_THREAT_SCENARIO_MAP[lulc_key]} and threat: '
+                        f'{threat}.')
 
                 threat_path = threat_validate_result
 
@@ -364,7 +350,7 @@ def execute(args):
                         task_name=f'check_threat_values{lulc_key}_{threat}')
                     threat_values_task_lookup[threat_values_task.task_name] = {
                         'task': threat_values_task,
-                        'path': threat_path_relative,
+                        'path': threat_path,
                         'table_col': threat_table_path_col}
 
     LOGGER.info("Checking threat raster values are valid ( 0 <= x <= 1 ).")
@@ -1047,7 +1033,7 @@ def _validate_threat_path(threat_path, lulc_key):
     """
     # Checking threat path exists to control custom error messages
     # for user readability.
-    if os.path.exists(threat_path):
+    try:
         threat_gis_type = pygeoprocessing.get_gis_type(threat_path)
         if threat_gis_type != pygeoprocessing.RASTER_TYPE:
             # Raise a value error with custom message to help users
@@ -1059,7 +1045,7 @@ def _validate_threat_path(threat_path, lulc_key):
                 return None
         else:
             return threat_path
-    else:
+    except ValueError:
         if lulc_key != '_b':
             return "error"
         else:
@@ -1096,7 +1082,8 @@ def validate(args, limit_to=None):
         # Get CSVs as dictionaries and ensure the key is a string for threats.
         threat_dict = {
             str(key): value for key, value in utils.build_lookup_from_csv(
-                args['threats_table_path'], 'THREAT', to_lower=True).items()}
+                args['threats_table_path'], 'THREAT', to_lower=True,
+                expand_path_cols=['cur_path', 'fut_path', 'base_path']).items()}
         sensitivity_dict = utils.build_lookup_from_csv(
             args['sensitivity_table_path'], 'LULC', to_lower=True)
 
@@ -1114,10 +1101,6 @@ def validate(args, limit_to=None):
                     column_names=sens_header_set)))
 
             invalid_keys.add('sensitivity_table_path')
-
-        # Get the directory path for the Threats CSV, used for locating threat
-        # rasters, which are relative to this path
-        threat_csv_dirpath = os.path.dirname(args['threats_table_path'])
 
         # Validate threat raster paths and their nodata values
         bad_threat_paths = []
@@ -1138,9 +1121,7 @@ def validate(args, limit_to=None):
                         break
 
                     # Threat path from threat CSV is relative to CSV
-                    threat_path = os.path.join(
-                        threat_csv_dirpath,
-                        threat_dict[threat][threat_table_path_col])
+                    threat_path = threat_dict[threat][threat_table_path_col]
 
                     threat_validate_result = _validate_threat_path(
                         threat_path, lulc_key)
