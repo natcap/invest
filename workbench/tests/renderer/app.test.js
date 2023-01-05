@@ -97,7 +97,7 @@ describe('Various ways to open and close InVEST models', () => {
   });
 
   test('Clicking an invest model button renders SetupTab', async () => {
-    const { findByText, findByRole } = render(
+    const { findByText, getByTestId, findByRole } = render(
       <App />
     );
 
@@ -110,6 +110,9 @@ describe('Various ways to open and close InVEST models', () => {
     const setupTab = await findByText('Setup');
     expect(setupTab.classList.contains('active')).toBeTruthy();
     expect(getSpec).toHaveBeenCalledTimes(1);
+    const navTab = await findByRole('tab', { name: MOCK_MODEL_TITLE });
+    userEvent.hover(navTab);
+    getByTestId('tab-tooltip');
   });
 
   test('Clicking a recent job renders SetupTab', async () => {
