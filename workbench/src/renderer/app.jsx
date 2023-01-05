@@ -238,7 +238,7 @@ export default class App extends React.Component {
       }
       investNavItems.push(
         <OverlayTrigger
-          key={`${job.modelHumanName}-tooltip`}
+          key={`${id}-tooltip`}
           placement="bottom"
           overlay={(
             <Tooltip data-testid="tab-tooltip">
