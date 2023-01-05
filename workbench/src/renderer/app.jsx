@@ -90,18 +90,17 @@ export default class App extends React.Component {
     );
   }
 
-  saveSettings(settings) {
+  async saveSettings(settings) {
     const { investSettings } = this.state;
-    ipcRenderer.invoke(
+    await ipcRenderer.invoke(
       ipcMainChannels.SET_LANGUAGE, settings.language
-    ).then(() => saveSettingsStore(settings)
-    ).then(() => {
-      this.setState({ investSettings: settings });
-      // if language has changed, refresh the app
-      if (settings.language !== investSettings.language) {
-        window.location.reload();
-      }
-    });
+    );
+    await saveSettingsStore(settings);
+    this.setState({ investSettings: settings });
+    // if language has changed, refresh the app
+    if (settings.language !== investSettings.language) {
+      window.location.reload();
+    }
   }
 
   /** Store a sampledata filepath in localforage.
