@@ -32,6 +32,9 @@ KERNEL_LABEL_DICHOTOMY = 'dichotomy'
 KERNEL_LABEL_EXPONENTIAL = 'exponential'
 KERNEL_LABEL_GAUSSIAN = 'gaussian'
 KERNEL_LABEL_DENSITY = 'density'
+RADIUS_OPT_UNIFORM = 'radius_uniform'
+RADIUS_OPT_GREENSPACE = 'radius_per_greenspace_class'
+RADIUS_OPT_POP_GROUP = 'radius_per_pop_group'
 POP_FIELD_REGEX = '^pop_'
 ID_FIELDNAME = 'adm_unit_id'
 ARGS_SPEC = {
@@ -78,6 +81,8 @@ ARGS_SPEC = {
                 'search_radius_m': {
                     'type': 'number',
                     'units': u.meter,
+                    'required':
+                        f'search_radius_mode == {RADIUS_OPT_GREENSPACE}',
                     'expression': 'value >= 0',
                     'about': (
                         'The distance in meters to use as the search radius '
@@ -109,8 +114,6 @@ ARGS_SPEC = {
             'fields': {
                 "pop_[POP_GROUP]": {
                     "type": "ratio",
-                    "required": False,
-                    "expression": "value >= 0 and value <= 1",
                     "about": gettext(
                         "The proportion of the population within this region "
                         "belonging to the identified population group "
@@ -174,6 +177,42 @@ ARGS_SPEC = {
                 'have a distance-weighted contribution to a greenspace '
                 'pixel according to the selected decay function.'),
         },
+        'search_radius_mode': {
+            'name': 'search radius mode',
+            'type': 'option_string',
+            'about': gettext(
+                'The type of search radius to use.'
+            ),
+            'options': {
+                RADIUS_OPT_UNIFORM: {
+                    'display_name': 'Uniform radius',
+                    'description': gettext(
+                        'The search radius is the same for all greenspace '
+                        'types.'),
+                },
+                RADIUS_OPT_GREENSPACE: {
+                    'display_name': 'Radius defined per greenspace class',
+                    'description': gettext(
+                        'The search radius is defined for each distinct '
+                        'greenspace LULC classification.'),
+                },
+                RADIUS_OPT_POP_GROUP: {
+                    'display_name': 'Radius defined per population group',
+                    'description': gettext(
+                        'The search radius is defined for each distinct '
+                        'population group.'),
+                },
+            },
+        },
+        'search_radius': {
+            'type': 'number',
+            'name': 'uniform search radius',
+            'units': u.m,
+            'expression': 'value > 0',
+            'about': gettext(
+                'The search radius to use when running the model under a '
+                'uniform search radius'),
+        },
         'population_group_radii_table': {
             'name': 'population group radii table',
             'type': 'csv',
@@ -191,6 +230,8 @@ ARGS_SPEC = {
                 'search_radius_m': {
                     'type': 'number',
                     'units': u.meter,
+                    'required':
+                        f'search_radius_mode == {RADIUS_OPT_POP_GROUP}',
                     'expression': 'value >= 0',
                     'about': gettext(
                         "The distance in meters to use as the search radius "
