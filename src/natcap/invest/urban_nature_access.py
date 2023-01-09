@@ -566,45 +566,29 @@ def execute(args):
              population_alignment_task,
         ])
 
-    undersupplied_population_task = graph.add_task(
-        pygeoprocessing.raster_calculator,
-        kwargs={
-            'base_raster_path_band_const_list': [
-                (file_registry['aligned_population'], 1),
-                (file_registry['greenspace_budget'], 1),
-                (numpy.less, 'raw'),  # element-wise less-than
-            ],
-            'local_op': _filter_population,
-            'target_raster_path': file_registry['undersupplied_population'],
-            'datatype_target': gdal.GDT_Float32,
-            'nodata_target': FLOAT32_NODATA,
-        },
-        task_name='Determine undersupplied populations',
-        target_path_list=[file_registry['undersupplied_population']],
-        dependent_task_list=[
-            greenspace_supply_demand_task,
-            population_alignment_task,
-        ])
-
-    oversupplied_population_task = graph.add_task(
-        pygeoprocessing.raster_calculator,
-        kwargs={
-            'base_raster_path_band_const_list': [
-                (file_registry['aligned_population'], 1),
-                (file_registry['greenspace_budget'], 1),
-                (numpy.greater, 'raw'),  # element-wise greater-than
-            ],
-            'local_op': _filter_population,
-            'target_raster_path': file_registry['oversupplied_population'],
-            'datatype_target': gdal.GDT_Float32,
-            'nodata_target': FLOAT32_NODATA,
-        },
-        task_name='Determine oversupplied populations',
-        target_path_list=[file_registry['oversupplied_population']],
-        dependent_task_list=[
-            greenspace_supply_demand_task,
-            population_alignment_task,
-        ])
+    supply_population_tasks = []
+    for supply_type, op in [('under', numpy.less), ('over', numpy.greater)]:
+        supply_population_tasks.append(graph.add_task(
+            pygeoprocessing.raster_calculator,
+            kwargs={
+                'base_raster_path_band_const_list': [
+                    (file_registry['aligned_population'], 1),
+                    (file_registry['greenspace_budget'], 1),
+                    (op, 'raw'),  # numpy element-wise comparator
+                ],
+                'local_op': _filter_population,
+                'target_raster_path':
+                    file_registry[f'{supply_type}supplied_population'],
+                'datatype_target': gdal.GDT_Float32,
+                'nodata_target': FLOAT32_NODATA,
+            },
+            task_name=f'Determine {supply_type}supplied populations',
+            target_path_list=[
+                file_registry[f'{supply_type}supplied_population']],
+            dependent_task_list=[
+                greenspace_supply_demand_task,
+                population_alignment_task,
+            ]))
 
     # only do split population if there are population group fields in the
     # AOIs/admin units vector
@@ -750,8 +734,7 @@ def execute(args):
         dependent_task_list=[
             greenspace_supply_demand_task,
             population_alignment_task,
-            undersupplied_population_task,
-            oversupplied_population_task,
+            *supply_population_tasks
         ])
 
     graph.close()
