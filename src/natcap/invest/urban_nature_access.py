@@ -180,6 +180,7 @@ ARGS_SPEC = {
         'search_radius_mode': {
             'name': 'search radius mode',
             'type': 'option_string',
+            'required': True,
             'about': gettext(
                 'The type of search radius to use.'
             ),
@@ -312,6 +313,8 @@ def execute(args):
             TODO: must these group names match the admin unit vector
             groupnames?
 
+        TODO: make sure the docstring matches actual requirements.
+
     Returns:
         ``None``
     """
@@ -405,17 +408,108 @@ def execute(args):
     convolved_population_tasks = {}  # search radius: convolved_population task
     kernel_paths = {}  # search_radius, kernel path
     kernel_tasks = {}  # search_radius, kernel task
-    search_radii = attr_table[
-        attr_table['greenspace'] == 1]['search_radius_m'].unique()
 
-    pop_group_table = None
-    if ('population_group_radii_table' in args and
-            args['population_group_radii_table'] not in ('', None)):
+    if args['search_radius_mode'] == RADIUS_OPT_UNIFORM:
+        search_radii = set([float(args['search_radius'])])
+    elif args['search_radius_mode'] == RADIUS_OPT_GREENSPACE:
+        search_radii = set(attr_table[
+            attr_table['greenspace'] == 1]['search_radius_m'].unique())
+    elif args['search_radius_mode'] == RADIUS_OPT_POP_GROUP:
         pop_group_table = utils.read_csv_to_dataframe(
             args['population_group_radii_table'])
-        pop_group_radii = set(pop_group_table['search_radius_m'].unique())
-        search_radii = sorted(set(search_radii).union(pop_group_radii))
-        LOGGER.info("Population groups have defined search radii.")
+        search_radii = set(pop_group_table['search_radius_m'].unique())
+    else:
+        valid_options = ', '.join(
+            ARGS_SPEC['args']['search_radius_mode']['options'].keys())
+        raise ValueError(
+            "Invalid search radius mode provided: "
+            f"{args['search_radius_mode']}; must be one of {valid_options}")
+
+    for search_radius_m in search_radii:
+        search_radius_in_pixels = abs(
+            search_radius_m / squared_lulc_pixel_size[0])
+        kernel_path = os.path.join(
+            intermediate_dir, f'kernel_{search_radius_m}{suffix}.tif')
+        kernel_paths[search_radius_m] = kernel_path
+        kernel_tasks[search_radius_m] = graph.add_task(
+            # All kernel creation types have the same function signature
+            kernel_creation_functions[decay_function],
+            args=(search_radius_in_pixels, kernel_path),
+            kwargs={'normalize': False},  # Model math calls for un-normalized
+            task_name=(
+                f'Create {decay_function} kernel - {search_radius_m}m'),
+            target_path_list=[kernel_path]
+        )
+
+    if args['search_radius_mode'] == RADIUS_OPT_UNIFORM:
+        search_radius_m = list(search_radii)[0]
+
+        decayed_population_path = os.path.join(
+            intermediate_dir,
+            f'decayed_population_within_{search_radius_m}{suffix}.tif')
+        decayed_population_task = graph.add_task(
+            _convolve_and_set_lower_bounds_for_population,
+            kwargs={
+                'signal_path_band': (file_registry['aligned_population'], 1),
+                'kernel_path_band': (kernel_paths[search_radius_m], 1),
+                'target_path': convolved_population_paths[search_radius_m],
+                'working_dir': intermediate_dir,
+            },
+            task_name=f'Convolve population - {search_radius_m}m',
+            target_path_list=[decayed_population_path],
+            dependent_task_list=[
+                kernel_tasks[search_radius_m], population_alignment_task])
+
+        greenspace_pixels_path = os.path.join(
+            intermediate_dir, f'greenspace_area{suffix}.tif')
+        greenspace_reclassification_task = graph.add_task(
+            _reclassify_greenspace_area,
+            kwargs={
+                'lulc_raster_path': file_registry['aligned_lulc'],
+                'lulc_attribute_table': args['lulc_attribute_table'],
+                'target_raster_path': greenspace_pixels_path,
+            },
+            target_path_list=[greenspace_pixels_path],
+            task_name='Identify greenspace areas',
+            dependent_task_list=[lulc_alignment_task]
+        )
+
+        greenspace_population_ratio_path = os.path.join(
+            intermediate_dir,
+            ('greenspace_population_ratio{suffix}.tif'))
+        greenspace_population_ratio_task = graph.add_task(
+            _calculate_greenspace_population_ratio,
+            args=(greenspace_pixels_path,
+                  decayed_population_task,
+                  greenspace_population_ratio_path),
+            task_name=(
+                '2SFCA: Calculate R_j greenspace/population ratio - '
+                f'{search_radius_m}'),
+            target_path_list=[greenspace_population_ratio_path],
+            dependent_task_list=[
+                greenspace_reclassification_task, decayed_population_task,
+            ])
+
+        greenspace_supply_path = os.path.join(
+            intermediate_dir, f'greenspace_supply{suffix}.tif')
+        greenspace_supply_task = graph.add_task(
+            pygeoprocessing.convolve_2d,
+            kwargs={
+                'signal_path_band': (
+                    greenspace_population_ratio_path, 1),
+                'kernel_path_band': (kernel_path, 1),
+                'target_path': greenspace_supply_path,
+                'working_dir': intermediate_dir,
+                # Insurance against future pygeoprocessing API changes.  The
+                # target nodata right now is the minimum possible numpy float32
+                # value, which is also what we use here as FLOAT32_NODATA.
+                'target_nodata': FLOAT32_NODATA,
+            },
+            task_name=f'2SFCA - greenspace supply',
+            target_path_list=[greenspace_supply_path],
+            dependent_task_list=[
+                kernel_task, greenspace_population_ratio_task])
+
 
     for search_radius_m in search_radii:
         search_radius_in_pixels = abs(
@@ -437,7 +531,7 @@ def execute(args):
         # the target search radius.
         convolved_population_paths[search_radius_m] = os.path.join(
             intermediate_dir,
-            f'convolved_population_{search_radius_m}{suffix}.tif')
+            f'decayed_population_within_{search_radius_m}{suffix}.tif')
         convolved_population_tasks[search_radius_m] = graph.add_task(
             _convolve_and_set_lower_bounds_for_population,
             kwargs={
