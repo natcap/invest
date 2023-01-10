@@ -418,6 +418,7 @@ def execute(args):
         pop_group_table = utils.read_csv_to_dataframe(
             args['population_group_radii_table'])
         search_radii = set(pop_group_table['search_radius_m'].unique())
+
     else:
         valid_options = ', '.join(
             ARGS_SPEC['args']['search_radius_mode']['options'].keys())
@@ -508,7 +509,76 @@ def execute(args):
             task_name=f'2SFCA - greenspace supply',
             target_path_list=[greenspace_supply_path],
             dependent_task_list=[
-                kernel_task, greenspace_population_ratio_task])
+                kernel_tasks[search_radius_m],
+                greenspace_population_ratio_task])
+    elif args['search_radius_mode'] == RADIUS_OPT_GREENSPACE:
+        pass
+    elif args['search_radius_mode'] == RADIUS_OPT_POP_GROUP:
+        aoi_reprojection_task.join()
+        split_population_fields = list(
+            filter(lambda x: re.match(POP_FIELD_REGEX, x),
+                   validation.load_fields_from_vector(
+                       file_registry['reprojected_aois'])))
+
+        if _geometries_overlap(file_registry['reprojected_aois']):
+            LOGGER.warning(
+                "Some administrative boundaries overlap, which will affect "
+                "the accuracy of supply rasters per population group. "
+                "Summary statistics in "
+                f"{os.path.basename(file_registry['aois'])} are unaffected.")
+        aois_rasterization_task = graph.add_task(
+            _rasterize_aois,
+            kwargs={
+                'base_raster_path': file_registry['aligned_lulc'],
+                'aois_vector_path':
+                    file_registry['reprojected_aois'],
+                'target_raster_path': file_registry['aois_ids'],
+                'id_fieldname': ID_FIELDNAME,
+            },
+            task_name='Rasterize the admin units vector',
+            target_path_list=[file_registry['aois_ids']],
+            dependent_task_list=[
+                aoi_reprojection_task, lulc_alignment_task]
+        )
+        population_rasters = []
+        for pop_group in split_population_fields:
+            field_value_map = _read_field_from_vector(
+                file_registry['reprojected_aois'], ID_FIELDNAME, pop_group)
+            proportional_population_path = os.path.join(
+                intermediate_dir, f'population_in_{pop_group}{suffix}.tif')
+            population_rasters.append(proportional_population_path)
+            proportional_population_task = graph.add_task(
+                _reclassify_and_multiply,
+                kwargs={
+                    'aois_raster_path': file_registry['aois_ids'],
+                    'reclassification_map': field_value_map,
+                    'supply_raster_path': file_registry['aligned_population'],
+                    'target_raster_path': proportional_population_path,
+                },
+                task_name=f"Population proportion in pop group {pop_group}",
+                target_path_list=[proportional_population_path],
+                dependent_task_list=[
+                    aois_rasterization_task, population_alignment_task]
+            )
+
+            for search_radius_m in search_radii:
+                decayed_population_in_group_task = graph.add_task(
+                    _convolve_and_set_lower_bounds_for_population,
+                    kwargs={
+                        'signal_path_band': (
+                            file_registry['aligned_population'], 1),
+                        'kernel_path_band': (
+                            kernel_paths[search_radius_m], 1),
+                        'target_path': convolved_population_paths[
+                            search_radius_m],
+                        'working_dir': intermediate_dir,
+                    },
+                    task_name=f'Convolve population - {search_radius_m}m',
+                    target_path_list=[decayed_population_path],
+                    dependent_task_list=[
+                        kernel_tasks[search_radius_m], population_alignment_task])
+
+
 
 
     for search_radius_m in search_radii:
