@@ -442,6 +442,7 @@ def execute(args):
             target_path_list=[kernel_path]
         )
 
+    # Search radius mode 1: the same search radius applies to everything
     if args['search_radius_mode'] == RADIUS_OPT_UNIFORM:
         search_radius_m = list(search_radii)[0]
 
@@ -511,8 +512,99 @@ def execute(args):
             dependent_task_list=[
                 kernel_tasks[search_radius_m],
                 greenspace_population_ratio_task])
+
+    # Search radius mode 2: Search radii are defined per greenspace lulc class.
     elif args['search_radius_mode'] == RADIUS_OPT_GREENSPACE:
-        pass
+        decayed_population_tasks = {}
+        decayed_population_paths = {}
+        for search_radius_m in search_radii:
+            decayed_population_paths[search_radius_m] = os.path.join(
+                intermediate_dir,
+                f'decayed_population_within_{search_radius_m}{suffix}.tif')
+            decayed_population_tasks[search_radius_m] = graph.add_task(
+                _convolve_and_set_lower_bounds_for_population,
+                kwargs={
+                    'signal_path_band': (
+                        file_registry['aligned_population'], 1),
+                    'kernel_path_band': (kernel_paths[search_radius_m], 1),
+                    'target_path': decayed_population_paths[search_radius_m],
+                    'working_dir': intermediate_dir,
+                },
+                task_name=f'Convolve population - {search_radius_m}m',
+                target_path_list=[decayed_population_paths[search_radius_m]],
+                dependent_task_list=[
+                    kernel_tasks[search_radius_m], population_alignment_task])
+
+        partial_greenspace_supply_paths = []
+        partial_greenspace_supply_tasks = []
+        for lucode, search_radius_m in attr_table[
+                ['lucode', 'search_radius_m']].itertuples(
+                    index=False, name=None):  # get iterable of plain tuples
+            greenspace_pixels_path = os.path.join(
+                intermediate_dir,
+                f'greenspace_area_lucode_{lucode}{suffix}.tif')
+            greenspace_reclassification_task = graph.add_task(
+                _reclassify_greenspace_area,
+                kwargs={
+                    'lulc_raster_path': file_registry['aligned_lulc'],
+                    'lulc_attribute_table': args['lulc_attribute_table'],
+                    'target_raster_path': greenspace_pixels_path,
+                    'only_these_greenspace_codes': set([lucode]),
+                },
+                target_path_list=[greenspace_pixels_path],
+                task_name=f'Identify greenspace areas with lucode {lucode}',
+                dependent_task_list=[lulc_alignment_task]
+            )
+
+            greenspace_population_ratio_path = os.path.join(
+                intermediate_dir,
+                'greenspace_population_ratio_lucode_{lucode}{suffix}.tif')
+            greenspace_population_ratio_task = graph.add_task(
+                _calculate_greenspace_population_ratio,
+                args=(greenspace_pixels_path,
+                      decayed_population_paths[search_radius_m],
+                      greenspace_population_ratio_path),
+                task_name=(
+                    '2SFCA: Calculate R_j greenspace/population ratio - '
+                    f'{search_radius_m}'),
+                target_path_list=[greenspace_population_ratio_path],
+                dependent_task_list=[
+                    greenspace_reclassification_task,
+                    decayed_population_tasks[search_radius_m],
+                ])
+
+            greenspace_supply_path = os.path.join(
+                intermediate_dir,
+                f'greenspace_supply_lucode_{lucode}{suffix}.tif')
+            partial_greenspace_supply_paths.append(greenspace_supply_path)
+            partial_greenspace_supply_tasks.append(graph.add_task(
+                pygeoprocessing.convolve_2d,
+                kwargs={
+                    'signal_path_band': (
+                        greenspace_population_ratio_path, 1),
+                    'kernel_path_band': (kernel_paths[search_radius_m], 1),
+                    'target_path': greenspace_supply_path,
+                    'working_dir': intermediate_dir,
+                },
+                task_name=f'2SFCA - greenspace supply for lucode {lucode}',
+                target_path_list=[greenspace_supply_path],
+                dependent_task_list=[
+                    kernel_tasks[search_radius_m],
+                    greenspace_population_ratio_task]))
+
+        greenspace_supply_task = graph.add_task(
+            ndr._sum_rasters,
+            kwargs={
+                'raster_path_list': partial_greenspace_supply_paths,
+                'target_nodata': FLOAT32_NODATA,
+                'target_result_path': file_registry['greenspace_supply'],
+            },
+            task_name='2SFCA - greenspace supply total',
+            target_path_list=[file_registry['greenspace_supply']],
+            dependent_task_list=partial_greenspace_supply_tasks
+        )
+        # TODO: figure out how the summary vector needs to be written.
+
     elif args['search_radius_mode'] == RADIUS_OPT_POP_GROUP:
         aoi_reprojection_task.join()
         split_population_fields = list(
@@ -635,7 +727,7 @@ def execute(args):
             'Running 2SFCA in split greenspace mode, calculating greenspace '
             'supply per LULC class.')
 
-        # If there are varying search radii, we run 2SFCA once for each
+        # Ifs[search_radius_m] there are varying search radii, we run 2SFCA once for each
         # radius:lucode combination so that modelers can see the contribution
         # of each landcover code to the total greenspace supply.  This comes at
         # the cost of more convolutions and more runtime (and disk space).
