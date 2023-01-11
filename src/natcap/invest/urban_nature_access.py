@@ -641,14 +641,31 @@ def execute(args):
             dependent_task_list=[
                 aoi_reprojection_task, lulc_alignment_task]
         )
-        population_rasters = []
+
+        greenspace_pixels_path = os.path.join(
+            intermediate_dir, f'greenspace_area{suffix}.tif')
+        greenspace_reclassification_task = graph.add_task(
+            _reclassify_greenspace_area,
+            kwargs={
+                'lulc_raster_path': file_registry['aligned_lulc'],
+                'lulc_attribute_table': args['lulc_attribute_table'],
+                'target_raster_path': greenspace_pixels_path,
+            },
+            target_path_list=[greenspace_pixels_path],
+            task_name='Identify greenspace areas',
+            dependent_task_list=[lulc_alignment_task]
+        )
+
+        proportional_population_paths = {}
+        proportional_population_tasks = []
         for pop_group in split_population_fields:
             field_value_map = _read_field_from_vector(
                 file_registry['reprojected_aois'], ID_FIELDNAME, pop_group)
             proportional_population_path = os.path.join(
                 intermediate_dir, f'population_in_{pop_group}{suffix}.tif')
-            population_rasters.append(proportional_population_path)
-            proportional_population_task = graph.add_task(
+            proportional_population_paths[
+                pop_group] = proportional_population_path
+            proportional_population_tasks.append(graph.add_task(
                 _reclassify_and_multiply,
                 kwargs={
                     'aois_raster_path': file_registry['aois_ids'],
@@ -660,24 +677,105 @@ def execute(args):
                 target_path_list=[proportional_population_path],
                 dependent_task_list=[
                     aois_rasterization_task, population_alignment_task]
-            )
+            ))
 
-            for search_radius_m in search_radii:
-                decayed_population_in_group_task = graph.add_task(
-                    _convolve_and_set_lower_bounds_for_population,
-                    kwargs={
-                        'signal_path_band': (
-                            file_registry['aligned_population'], 1),
-                        'kernel_path_band': (
-                            kernel_paths[search_radius_m], 1),
-                        'target_path': convolved_population_paths[
-                            search_radius_m],
-                        'working_dir': intermediate_dir,
-                    },
-                    task_name=f'Convolve population - {search_radius_m}m',
-                    target_path_list=[decayed_population_path],
-                    dependent_task_list=[
-                        kernel_tasks[search_radius_m], population_alignment_task])
+        decayed_population_in_group_paths = []
+        decayed_population_in_group_tasks = []
+        for search_radius_m in search_radii:
+            decayed_population_in_group_path = os.path.join(
+                intermediate_dir,
+                f'decayed_population_in_{pop_group}{suffix}.tif')
+            decayed_population_in_group_paths.append(
+                decayed_population_in_group_path)
+            decayed_population_in_group_tasks.append(graph.add_task(
+                _convolve_and_set_lower_bounds_for_population,
+                kwargs={
+                    'signal_path_band': (
+                        proportional_population_path, 1),
+                    'kernel_path_band': (
+                        kernel_paths[search_radius_m], 1),
+                    'target_path': convolved_population_paths[
+                        search_radius_m],
+                    'working_dir': intermediate_dir,
+                },
+                task_name=f'Convolve population - {search_radius_m}m',
+                target_path_list=[decayed_population_path],
+                dependent_task_list=[
+                    kernel_tasks[search_radius_m], population_alignment_task]
+            ))
+
+        sum_of_decayed_population_path = os.path.join(
+            intermediate_dir,
+            f'decayed_population_all_groups{suffix}.tif')
+        sum_of_decayed_population_task = graph.add_task(
+            ndr._sum_rasters,
+            kwargs={
+                'raster_path_list': decayed_population_in_group_paths,
+                'target_nodata': FLOAT32_NODATA,
+                'target_result_path': sum_of_decayed_population_path,
+            },
+            task_name='2SFCA - greenspace supply total',
+            target_path_list=[sum_of_decayed_population_path],
+            dependent_task_list=decayed_population_in_group_tasks
+        )
+
+        greenspace_population_ratio_task = graph.add_task(
+            _calculate_greenspace_population_ratio,
+            args=(greenspace_pixels_path,
+                  sum_of_decayed_population_path,
+                  file_registry['greenspace_population_ratio']),
+            task_name=(
+                '2SFCA: Calculate R_j greenspace/population ratio - '
+                f'{search_radius_m}'),
+            target_path_list=[
+                file_registry['greenspace_population_ratio']],
+            dependent_task_list=[
+                greenspace_reclassification_task,
+                sum_of_decayed_population_task,
+            ])
+
+        # Create a dict of {pop_group: search_radius_m}
+        search_radii = dict(
+            attr_table[['pop_group', 'search_radius_m']].itertuples(
+                index=False, name=None))
+        greenspace_supply_by_group_paths = {}
+        greenspace_supply_by_group_tasks = []
+        for pop_group, proportional_pop_path in (
+                proportional_population_paths.items()):
+            search_radius_m = search_radii[pop_group]
+            greenspace_supply_to_group_path = os.path.join(
+                intermediate_dir,
+                f'greenspace_supply_to_{pop_group}{suffix}.tif')
+            greenspace_supply_by_group_paths.append(
+                greenspace_supply_to_group_path)
+            greenspace_supply_by_group_tasks.append(graph.add_task(
+                pygeoprocessing.convolve_2d,
+                kwargs={
+                    'signal_path_band': (
+                        file_registry['greenspace_population_ratio'], 1),
+                    'kernel_path_band': (kernel_paths[search_radius_m], 1),
+                    'target_path': greenspace_supply_to_group_path,
+                    'working_dir': intermediate_dir,
+                },
+                task_name=f'2SFCA - greenspace supply for lucode {lucode}',
+                target_path_list=[greenspace_supply_path],
+                dependent_task_list=[
+                    kernel_tasks[search_radius_m],
+                    greenspace_population_ratio_task]))
+
+        greenspace_supply_task = graph.add_task(
+            ndr._sum_rasters,
+            kwargs={
+                'raster_path_list': greenspace_supply_by_group_paths,
+                'target_nodata': FLOAT32_NODATA,
+                'target_result_path': file_registry['greenspace_supply'],
+            },
+            task_name='2SFCA - greenspace supply total',
+            target_path_list=[file_registry['greenspace_supply']],
+            dependent_task_list=greenspace_supply_by_group_tasks
+        )
+
+
 
 
 
