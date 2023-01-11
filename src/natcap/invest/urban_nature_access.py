@@ -444,6 +444,8 @@ def execute(args):
 
     # Search radius mode 1: the same search radius applies to everything
     if args['search_radius_mode'] == RADIUS_OPT_UNIFORM:
+        LOGGER.info("Running model with search radius mode "
+                    f"{RADIUS_OPT_UNIFORM}")
         search_radius_m = list(search_radii)[0]
 
         decayed_population_path = os.path.join(
@@ -515,6 +517,8 @@ def execute(args):
 
     # Search radius mode 2: Search radii are defined per greenspace lulc class.
     elif args['search_radius_mode'] == RADIUS_OPT_GREENSPACE:
+        LOGGER.info("Running model with search radius mode "
+                    f"{RADIUS_OPT_GREENSPACE}")
         decayed_population_tasks = {}
         decayed_population_paths = {}
         for search_radius_m in search_radii:
@@ -605,7 +609,10 @@ def execute(args):
         )
         # TODO: figure out how the summary vector needs to be written.
 
+    # Search radius mode 3: search radii are defined per population group.
     elif args['search_radius_mode'] == RADIUS_OPT_POP_GROUP:
+        LOGGER.info("Running model with search radius mode "
+                    f"{RADIUS_OPT_POP_GROUP}")
         aoi_reprojection_task.join()
         split_population_fields = list(
             filter(lambda x: re.match(POP_FIELD_REGEX, x),
@@ -617,7 +624,9 @@ def execute(args):
                 "Some administrative boundaries overlap, which will affect "
                 "the accuracy of supply rasters per population group. "
                 "Summary statistics in "
+                # TODO: is this path correct?
                 f"{os.path.basename(file_registry['aois'])} are unaffected.")
+
         aois_rasterization_task = graph.add_task(
             _rasterize_aois,
             kwargs={
