@@ -949,7 +949,7 @@ def execute(args):
                 ]))
 
         _ = graph.add_task(
-            _uniform_radius_supply_demand_vector,
+            _supply_demand_vector_for_single_raster_modes,
             kwargs={
                 'source_aoi_vector_path': file_registry['reprojected_aois'],
                 'target_aoi_vector_path': file_registry['aois'],
@@ -1705,14 +1705,14 @@ def _admin_level_supply_demand(
     target_vector = None
 
 
-def _uniform_radius_supply_demand_vector(
+def _supply_demand_vector_for_single_raster_modes(
         source_aoi_vector_path,
         target_aoi_vector_path,
         greenspace_budget_path,
         population_path,
         undersupplied_populations_path,
         oversupplied_populations_path):
-    """Create a supply/demand summary vector for the Uniform Radius mode.
+    """Create summary vector for modes with single-raster summary stats.
 
     Args:
         source_aoi_vector_path (str): Path to the source aois vector.
