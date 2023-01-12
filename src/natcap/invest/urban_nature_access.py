@@ -414,8 +414,13 @@ def execute(args):
     if args['search_radius_mode'] == RADIUS_OPT_UNIFORM:
         search_radii = set([float(args['search_radius'])])
     elif args['search_radius_mode'] == RADIUS_OPT_GREENSPACE:
-        search_radii = set(attr_table[
-            attr_table['greenspace'] == 1]['search_radius_m'].unique())
+        greenspace_attrs = attr_table[attr_table['greenspace'] == 1]
+        search_radii = set(greenspace_attrs['search_radius_m'].unique())
+
+        # Build an iterable of plain tuples: (lucode, search_radius_m)
+        lucode_to_search_radii = list(
+            greenspace_attrs[['lucode', 'search_radius_m']].itertuples(
+                index=False, name=None))
     elif args['search_radius_mode'] == RADIUS_OPT_POP_GROUP:
         pop_group_table = utils.read_csv_to_dataframe(
             args['population_group_radii_table'])
@@ -543,9 +548,7 @@ def execute(args):
 
         partial_greenspace_supply_paths = []
         partial_greenspace_supply_tasks = []
-        for lucode, search_radius_m in attr_table[
-                ['lucode', 'search_radius_m']].itertuples(
-                    index=False, name=None):  # get iterable of plain tuples
+        for lucode, search_radius_m in lucode_to_search_radii:
             greenspace_pixels_path = os.path.join(
                 intermediate_dir,
                 f'greenspace_area_lucode_{lucode}{suffix}.tif')
