@@ -618,7 +618,7 @@ def execute(args):
             args=(deg_raster_list, deg_sum_raster_path, weight_list),
             target_path_list=[deg_sum_raster_path],
             dependent_task_list=[
-                *threat_convolve_task_list, *sensitivity_task_list,
+                *threat_decay_task_list, *sensitivity_task_list,
                 *access_task_list],
             task_name=f'tot_degradation_{decay_type}{lulc_key}_{threat}')
 
@@ -945,11 +945,10 @@ def _decay_distance(dist_raster_path, max_dist, decay_type, target_path):
         valid_mask = ~utils.array_equals_nodata(dist, _OUT_NODATA)
         result = numpy.empty(dist.shape, dtype=numpy.float32)
         result[:] = _OUT_NODATA
-        result[valid_mask] = usle[valid_mask] * (1-sdr[valid_mask])
 
         result[valid_mask] = numpy.where(
             dist[valid_mask] > max_dist_pixel, 0.0,
-            (max_dist_pixel - dist) / max_dist_pixel)
+            (max_dist_pixel - dist[valid_mask]) / max_dist_pixel)
         return result
 
     def exp_op(dist):
@@ -957,7 +956,6 @@ def _decay_distance(dist_raster_path, max_dist, decay_type, target_path):
         valid_mask = ~utils.array_equals_nodata(dist, _OUT_NODATA)
         result = numpy.empty(dist.shape, dtype=numpy.float32)
         result[:] = _OUT_NODATA
-        result[valid_mask] = usle[valid_mask] * (1-sdr[valid_mask])
 
         # 2.99 constant helps drive the decay towards 0 at max_dist
         result[valid_mask] = numpy.where(
