@@ -7,7 +7,6 @@ import tempfile
 
 import numpy
 import numpy.testing
-import pandas
 import pygeoprocessing
 import shapely.ops
 import shapely.wkb
@@ -204,6 +203,17 @@ ARGS_SPEC = {
                         'population group.'),
                 },
             },
+        },
+        'aggregate_by_pop_group': {
+            'type': 'boolean',
+            'name': 'Aggregate by population groups',
+            'about': gettext(
+                'Whether to aggregate statistics by population group '
+                'within each administrative unit. If selected, population '
+                'groups will be read from the fields of the user-defined '
+                'admin units vector. This option is implied if the search '
+                'radii are defined by population groups.'
+            )
         },
         'search_radius': {
             'type': 'number',
@@ -425,7 +435,6 @@ def execute(args):
         pop_group_table = utils.read_csv_to_dataframe(
             args['population_group_radii_table'])
         search_radii = set(pop_group_table['search_radius_m'].unique())
-
     else:
         valid_options = ', '.join(
             ARGS_SPEC['args']['search_radius_mode']['options'].keys())
