@@ -2,8 +2,8 @@
 """InVEST Habitat Quality model."""
 import collections
 import logging
-import os
 import math
+import os
 
 import numpy
 import pygeoprocessing
@@ -266,8 +266,7 @@ def execute(args):
     output_dir = args['workspace_dir']
     intermediate_output_dir = os.path.join(
         args['workspace_dir'], 'intermediate')
-    kernel_dir = os.path.join(intermediate_output_dir, 'kernels')
-    utils.make_directories([intermediate_output_dir, output_dir, kernel_dir])
+    utils.make_directories([intermediate_output_dir, output_dir])
 
     taskgraph_working_dir = os.path.join(
         intermediate_output_dir, '_taskgraph_working_dir')
@@ -484,7 +483,7 @@ def execute(args):
     for lulc_key, lulc_path in lulc_path_dict.items():
         LOGGER.info(f'Calculating habitat quality for landuse: {lulc_path}')
 
-        threat_convolve_task_list = []
+        threat_decay_task_list = []
         sensitivity_task_list = []
 
         # Create raster of habitat based on habitat field
@@ -536,75 +535,32 @@ def execute(args):
                     f"The max distance for threat: '{threat}' is less than"
                     " or equal to 0. MAX_DIST should be a positive value.")
 
-            kernel_path = os.path.join(
-                kernel_dir, f'kernel_{threat}{lulc_key}{file_suffix}.tif')
+            distance_raster_path = os.path.join(
+                intermediate_output_dir,
+                f'{threat}_distance_transform{lulc_key}{file_suffix}.tif')
+
+            dist_edt_task = task_graph.add_task(
+                func=pygeoprocessing.distance_transform_edt,
+                args=((threat_raster_path, 1), distance_raster_path),
+                target_path_list=[distance_raster_path],
+                dependent_task_list=[align_task],
+                task_name=f'distance edt {lulc_key} {threat}')
 
             decay_type = threat_data['decay']
-            if 'euclidean' in decay_type:
-                distance_raster_path = os.path.join(
-                    kernel_dir, f'edt_{threat}{lulc_key}{file_suffix}.tif')
 
-                dist_edt_task = task_graph.add_task(
-                    func=pygeoprocessing.distance_transform_edt,
-                    args=((threat_raster_path, 1), distance_raster_path),
-                    target_path_list=[distance_raster_path],
-                    dependent_task_list=[align_task],
-                    task_name=f'distance edt {lulc_key} {threat}')
+            filtered_threat_raster_path = os.path.join(
+                intermediate_output_dir,
+                f'filtered_{decay_type}_{threat}{lulc_key}{file_suffix}.tif')
 
-                if decay_type == 'euclidean-exponential':
-                    ### Decay using distance transform w/ exponential scalar ###
-                    filtered_threat_raster_path = os.path.join(
-                        intermediate_output_dir,
-                        f'filtered_{decay_type}_{threat}{lulc_key}{file_suffix}.tif')
-
-                    dist_exp_task = task_graph.add_task(
-                        func=dist_edt_exp,
-                        args=(
-                            distance_raster_path, 2.99, threat_data['max_dist'],
-                            filtered_threat_raster_path),
-                        target_path_list=[filtered_threat_raster_path],
-                        dependent_task_list=[dist_edt_task],
-                        task_name=f'distance exp {lulc_key} {threat}')
-                    threat_convolve_task_list.append(dist_exp_task)
-                elif decay_type == 'euclidean-linear':
-                    ### Decay using distance transform w/ exponential scalar ###
-                    filtered_threat_raster_path = os.path.join(
-                        intermediate_output_dir,
-                        f'filtered_{decay_type}_{threat}{lulc_key}{file_suffix}.tif')
-
-                    dist_exp_task = task_graph.add_task(
-                        func=dist_edt_linear,
-                        args=(distance_raster_path, threat_data['max_dist'], filtered_threat_raster_path),
-                        target_path_list=[filtered_threat_raster_path],
-                        dependent_task_list=[dist_edt_task],
-                        task_name='distance exp')
-                    threat_convolve_task_list.append(dist_exp_task)
-            else:
-                create_kernel_task = task_graph.add_task(
-                    func=_create_decay_kernel,
-                    args=((threat_raster_path, 1), kernel_path, decay_type,
-                          threat_data['max_dist']),
-                    target_path_list=[kernel_path],
-                    dependent_task_list=[align_task],
-                    task_name=f'decay_kernel_{decay_type}{lulc_key}_{threat}')
-
-                filtered_threat_raster_path = os.path.join(
-                    intermediate_output_dir,
-                    f'filtered_{threat}{lulc_key}{file_suffix}.tif')
-
-                convolve_task = task_graph.add_task(
-                    func=pygeoprocessing.convolve_2d,
-                    args=((threat_raster_path, 1), (kernel_path, 1),
-                          filtered_threat_raster_path),
-                    kwargs={
-                        'target_nodata': _OUT_NODATA,
-                        'ignore_nodata_and_edges': False,
-                        'mask_nodata': False
-                    },
-                    target_path_list=[filtered_threat_raster_path],
-                    dependent_task_list=[create_kernel_task],
-                    task_name=f'convolve_{decay_type}{lulc_key}_{threat}')
-                threat_convolve_task_list.append(convolve_task)
+            dist_decay_task = task_graph.add_task(
+                func=_decay_distance,
+                args=(
+                    distance_raster_path, threat_data['max_dist'],
+                    decay_type, filtered_threat_raster_path),
+                target_path_list=[filtered_threat_raster_path],
+                dependent_task_list=[dist_edt_task],
+                task_name=f'distance decay {lulc_key} {threat}')
+            threat_decay_task_list.append(dist_decay_task)
 
             # create sensitivity raster based on threat
             sens_raster_path = os.path.join(
@@ -902,50 +858,6 @@ def _compute_rarity_operation(
                 f' {os.path.basename(lulc_path_band[0])} land cover.')
 
 
-def _create_decay_kernel(raster_path_band, kernel_path, decay_type, max_dist):
-    """Create a decay kernel as a raster.
-
-    Args:
-        raster_path_band (tuple): a 2 tuple of the form
-            (filepath to raster, band index) for raster to decay.
-        kernel_path (string): path to output kernel raster.
-        decay_type (string): type of decay kernel to create, either
-            'linear' | 'exponentional'.
-        max_dist (float): max distance of threat in KM.
-
-    Returns:
-        None
-    """
-    # need the pixel size for the raster so we can create an appropriate
-    # kernel for convolution
-    threat_pixel_size = pygeoprocessing.get_raster_info(
-        raster_path_band[0])['pixel_size']
-
-    # convert max distance (given in KM) to meters
-    max_dist_m = max_dist * 1000.0
-
-    # convert max distance from meters to the number of pixels that
-    # represents on the raster
-    max_dist_pixel = max_dist_m / abs(threat_pixel_size[0])
-    LOGGER.debug(f'Max distance in pixels: {max_dist_pixel}')
-
-    # blur the raster based on the decay type
-    if decay_type == 'linear':
-        decay_func = _make_linear_decay_kernel_path
-    elif decay_type == 'exponential':
-        decay_func = utils.exponential_decay_kernel_raster
-    elif decay_type == 'exponential-scalar':
-        decay_func = _exponential_decay_scalar_kernel_raster
-    else:
-        raise ValueError(
-            "Unknown type of decay in biophysical table, should be"
-            f" either 'linear' or 'exponential'. Input was {decay_type}"
-            " for threat"
-            f" {os.path.splitext(os.path.basename(raster_path_band[0]))[0]}")
-
-    decay_func(max_dist_pixel, kernel_path)
-
-
 def _raster_pixel_count(raster_path_band):
     """Count unique pixel values in single band raster.
 
@@ -968,60 +880,6 @@ def _raster_pixel_count(raster_path_band):
                 continue
             counts[value] += count
     return counts
-
-
-def _make_linear_decay_kernel_path(max_distance, kernel_path):
-    """Create a linear decay kernel as a raster.
-
-    Pixels in raster are equal to d / max_distance where d is the distance to
-    the center of the raster in number of pixels.
-
-    Args:
-        max_distance (int): number of pixels out until the decay is 0.
-        kernel_path (string): path to output raster whose values are in (0,1)
-            representing distance to edge.
-            Size is (``max_distance`` * 2 + 1)
-
-    Returns:
-        None
-    """
-    kernel_size = int(numpy.round(max_distance * 2 + 1))
-
-    driver = gdal.GetDriverByName('GTiff')
-    kernel_dataset = driver.Create(
-        kernel_path.encode('utf-8'), kernel_size, kernel_size, 1,
-        gdal.GDT_Float32, options=[
-            'BIGTIFF=IF_SAFER', 'TILED=YES', 'BLOCKXSIZE=256',
-            'BLOCKYSIZE=256'])
-
-    # Make some kind of geotransform, it doesn't matter what but
-    # will make GIS libraries behave better if it's all defined
-    kernel_dataset.SetGeoTransform([444720, 30, 0, 3751320, 0, -30])
-    srs = osr.SpatialReference()
-    srs.SetUTM(11, 1)
-    srs.SetWellKnownGeogCS('NAD27')
-    kernel_dataset.SetProjection(srs.ExportToWkt())
-
-    kernel_band = kernel_dataset.GetRasterBand(1)
-    kernel_band.SetNoDataValue(-9999)
-
-    col_index = numpy.array(range(kernel_size))
-    integration = 0.0
-    for row_index in range(kernel_size):
-        distance_kernel_row = numpy.sqrt(
-            (row_index - max_distance) ** 2 +
-            (col_index - max_distance) ** 2).reshape(1, kernel_size)
-        kernel = numpy.where(
-            distance_kernel_row > max_distance, 0.0,
-            (max_distance - distance_kernel_row) / max_distance)
-        integration += numpy.sum(kernel)
-        kernel_band.WriteArray(kernel, xoff=0, yoff=row_index)
-
-    for row_index in range(kernel_size):
-        kernel_row = kernel_band.ReadAsArray(
-            xoff=0, yoff=row_index, win_xsize=kernel_size, win_ysize=1)
-        kernel_row /= integration
-        kernel_band.WriteArray(kernel_row, 0, row_index)
 
 
 def _raster_values_in_bounds(raster_path_band, lower_bound, upper_bound):
@@ -1053,6 +911,73 @@ def _raster_values_in_bounds(raster_path_band, lower_bound, upper_bound):
             break
 
     return values_valid
+
+
+def _decay_distance(dist_raster_path, max_dist, decay_type, target_path):
+    """Apply an exponential or linear decay to a distance transform raster.
+
+    Args:
+        dist_raster_path (string): a filepath for the raster to decay.
+            The raster is expected to be a euclidean distance transform with
+            values meauring distance in pixels.
+        max_dist (float): max distance of threat in KM.
+        decay_type (string): a string defining which decay method to use.
+            Options include: 'linear' | 'exponential'
+        target_path (string): a filepath for a float output raster.
+
+    Returns:
+        None
+    """
+    # get raster pixel size to determine how many pixels max_dist covers
+    threat_pixel_size = pygeoprocessing.get_raster_info(
+        dist_raster_path)['pixel_size']
+
+    # convert max distance (given in KM) to meters
+    max_dist_m = max_dist * 1000.0
+
+    # convert max distance from meters to the number of pixels that
+    # represents on the raster
+    max_dist_pixel = max_dist_m / abs(threat_pixel_size[0])
+    LOGGER.debug(f'Max distance in pixels: {max_dist_pixel}')
+
+    def linear_op(dist):
+        """Linear decay operation."""
+        valid_mask = ~utils.array_equals_nodata(dist, _OUT_NODATA)
+        result = numpy.empty(dist.shape, dtype=numpy.float32)
+        result[:] = _OUT_NODATA
+        result[valid_mask] = usle[valid_mask] * (1-sdr[valid_mask])
+
+        result[valid_mask] = numpy.where(
+            dist[valid_mask] > max_dist_pixel, 0.0,
+            (max_dist_pixel - dist) / max_dist_pixel)
+        return result
+
+    def exp_op(dist):
+        """Exponential decay operation."""
+        valid_mask = ~utils.array_equals_nodata(dist, _OUT_NODATA)
+        result = numpy.empty(dist.shape, dtype=numpy.float32)
+        result[:] = _OUT_NODATA
+        result[valid_mask] = usle[valid_mask] * (1-sdr[valid_mask])
+
+        # 2.99 constant helps drive the decay towards 0 at max_dist
+        result[valid_mask] = numpy.where(
+            dist[valid_mask] > max_dist_pixel, 0.0,
+            numpy.exp((-dist[valid_mask] * 2.99) / max_dist_pixel))
+        return result
+
+    if decay_type == 'linear':
+        decay_op = linear_op
+    elif decay_type == 'exponential':
+        decay_op = exp_op
+    else:
+        raise ValueError(
+            "Unknown type of decay in threat table, should be"
+            f" either 'linear' or 'exponential'. Input was '{decay_type}' for"
+            f" output raster path : '{target_path}'")
+
+    pygeoprocessing.raster_calculator(
+        [(dist_raster_path, 1)], decay_op, target_path, gdal.GDT_Float32,
+        _OUT_NODATA)
 
 
 def _validate_threat_path(threat_path, lulc_key):
@@ -1205,150 +1130,3 @@ def validate(args, limit_to=None):
 
     return validation_warnings
 
-
-def _exponential_decay_scalar_kernel_raster(expected_distance, kernel_filepath):
-    """Create a raster-based exponential decay kernel.
-
-    The raster created will be a tiled GeoTiff, with 256x256 memory blocks.
-
-    Args:
-        expected_distance (int or float): The distance (in pixels) of the
-            kernel's radius, the distance at which the value of the decay
-            function is equal to `1/e`.
-        kernel_filepath (string): The path to the file on disk where this
-            kernel should be stored.  If this file exists, it will be
-            overwritten.
-
-    Returns:
-        None
-    """
-    max_distance = expected_distance * 5
-    kernel_size = int(numpy.round(max_distance * 2 + 1))
-
-    driver = gdal.GetDriverByName('GTiff')
-    kernel_dataset = driver.Create(
-        kernel_filepath.encode('utf-8'), kernel_size, kernel_size, 1,
-        gdal.GDT_Float32, options=[
-            'BIGTIFF=IF_SAFER', 'TILED=YES', 'BLOCKXSIZE=256',
-            'BLOCKYSIZE=256'])
-
-    # Make some kind of geotransform, it doesn't matter what but
-    # will make GIS libraries behave better if it's all defined
-    kernel_dataset.SetGeoTransform([0, 1, 0, 0, 0, -1])
-    srs = osr.SpatialReference()
-    srs.SetWellKnownGeogCS('WGS84')
-    kernel_dataset.SetProjection(srs.ExportToWkt())
-
-    kernel_band = kernel_dataset.GetRasterBand(1)
-    kernel_band.SetNoDataValue(-9999)
-
-    cols_per_block, rows_per_block = kernel_band.GetBlockSize()
-
-    n_cols = kernel_dataset.RasterXSize
-    n_rows = kernel_dataset.RasterYSize
-
-    n_col_blocks = int(math.ceil(n_cols / float(cols_per_block)))
-    n_row_blocks = int(math.ceil(n_rows / float(rows_per_block)))
-
-    integration = 0.0
-    for row_block_index in range(n_row_blocks):
-        row_offset = row_block_index * rows_per_block
-        row_block_width = n_rows - row_offset
-        if row_block_width > rows_per_block:
-            row_block_width = rows_per_block
-
-        for col_block_index in range(n_col_blocks):
-            col_offset = col_block_index * cols_per_block
-            col_block_width = n_cols - col_offset
-            if col_block_width > cols_per_block:
-                col_block_width = cols_per_block
-
-            # Numpy creates index rasters as ints by default, which sometimes
-            # creates problems on 32-bit builds when we try to add Int32
-            # matrices to float64 matrices.
-            row_indices, col_indices = numpy.indices((row_block_width,
-                                                      col_block_width),
-                                                     dtype=float)
-
-            row_indices += float(row_offset - max_distance)
-            col_indices += float(col_offset - max_distance)
-
-            kernel_index_distances = numpy.hypot(
-                row_indices, col_indices)
-            kernel = numpy.where(
-                kernel_index_distances > max_distance, 0.0,
-                numpy.exp(
-                    (-kernel_index_distances * 2.99) / expected_distance))
-            integration += numpy.sum(kernel)
-
-            kernel_band.WriteArray(kernel, xoff=col_offset,
-                                   yoff=row_offset)
-
-    # Need to flush the kernel's cache to disk before opening up a new Dataset
-    # object in interblocks()
-    kernel_band.FlushCache()
-    kernel_dataset.FlushCache()
-
-    for block_data in pygeoprocessing.iterblocks(
-            (kernel_filepath, 1), offset_only=True):
-        kernel_block = kernel_band.ReadAsArray(**block_data)
-        kernel_block /= integration
-        kernel_band.WriteArray(kernel_block, xoff=block_data['xoff'],
-                               yoff=block_data['yoff'])
-
-    kernel_band.FlushCache()
-    kernel_dataset.FlushCache()
-    kernel_band = None
-    kernel_dataset = None
-
-
-def dist_edt_exp(dist_raster_path, scalar, max_dist, target_path):
-    # need the pixel size for the raster so we can create an appropriate
-    # kernel for convolution
-    threat_pixel_size = pygeoprocessing.get_raster_info(
-        dist_raster_path)['pixel_size']
-
-    # convert max distance (given in KM) to meters
-    max_dist_m = max_dist * 1000.0
-
-    # convert max distance from meters to the number of pixels that
-    # represents on the raster
-    max_dist_pixel = max_dist_m / abs(threat_pixel_size[0])
-    LOGGER.debug(f'Max distance in pixels: {max_dist_pixel}')
-
-    def exp_op(dist):
-        out_array = numpy.empty_like(dist)
-
-        out_array = numpy.where(
-            dist > max_dist_pixel, 0.0,
-            numpy.exp((-dist * scalar) / max_dist_pixel))
-        return out_array
-
-    pygeoprocessing.raster_calculator(
-        [(dist_raster_path, 1)], exp_op, target_path, gdal.GDT_Float32, -1)
-
-
-def dist_edt_linear(dist_raster_path, max_dist, target_path):
-    # need the pixel size for the raster so we can create an appropriate
-    # kernel for convolution
-    threat_pixel_size = pygeoprocessing.get_raster_info(
-        dist_raster_path)['pixel_size']
-
-    # convert max distance (given in KM) to meters
-    max_dist_m = max_dist * 1000.0
-
-    # convert max distance from meters to the number of pixels that
-    # represents on the raster
-    max_dist_pixel = max_dist_m / abs(threat_pixel_size[0])
-    LOGGER.debug(f'Max distance in pixels: {max_dist_pixel}')
-
-    def linear_op(dist):
-        out_array = numpy.empty_like(dist)
-
-        out_array = numpy.where(
-            dist > max_dist_pixel, 0.0,
-            (max_dist_pixel - dist) / max_dist_pixel)
-        return out_array
-
-    pygeoprocessing.raster_calculator(
-        [(dist_raster_path, 1)], linear_op, target_path, gdal.GDT_Float32, -1)
