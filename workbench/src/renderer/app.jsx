@@ -241,7 +241,7 @@ export default class App extends React.Component {
           key={`${id}-tooltip`}
           placement="bottom"
           overlay={(
-            <Tooltip data-testid="tab-tooltip">
+            <Tooltip>
               {job.modelHumanName}
             </Tooltip>
           )}

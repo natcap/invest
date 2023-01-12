@@ -11,6 +11,7 @@ import { ipcRenderer } from 'electron';
 import {
   render, waitFor, within
 } from '@testing-library/react';
+import { act } from 'react-dom/test-utils';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 
@@ -97,7 +98,7 @@ describe('Various ways to open and close InVEST models', () => {
   });
 
   test('Clicking an invest model button renders SetupTab', async () => {
-    const { findByText, getByTestId, findByRole } = render(
+    const { findByText, findByTestId, findByRole } = render(
       <App />
     );
 
@@ -111,8 +112,10 @@ describe('Various ways to open and close InVEST models', () => {
     expect(setupTab.classList.contains('active')).toBeTruthy();
     expect(getSpec).toHaveBeenCalledTimes(1);
     const navTab = await findByRole('tab', { name: MOCK_MODEL_TITLE });
-    userEvent.hover(navTab);
-    getByTestId('tab-tooltip');
+    act(() => {
+      userEvent.hover(navTab);
+    });
+    await findByRole('tooltip', { name: MOCK_MODEL_TITLE });
   });
 
   test('Clicking a recent job renders SetupTab', async () => {
