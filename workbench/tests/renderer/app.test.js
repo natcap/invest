@@ -98,7 +98,7 @@ describe('Various ways to open and close InVEST models', () => {
   });
 
   test('Clicking an invest model button renders SetupTab', async () => {
-    const { findByText, findByTestId, findByRole } = render(
+    const { findByText, findByRole } = render(
       <App />
     );
 
