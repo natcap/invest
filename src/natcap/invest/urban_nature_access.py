@@ -773,7 +773,6 @@ def execute(args):
             per_cap_greenspace_budget_pop_group_path = os.path.join(
                 intermediate_dir,
                 f'greenspace_budget_{pop_group}{suffix}.tif')
-
             per_cap_greenspace_budget_pop_group_task = graph.add_task(
                 pygeoprocessing.raster_calculator,
                 kwargs={
@@ -815,11 +814,41 @@ def execute(args):
                 },
                 task_name='Calculate per-capita greenspace supply-demand',
                 target_path_list=[
-                    file_registry['greenspace_supply_demand_budget']],
+                    greenspace_supply_demand_by_group_path],
                 dependent_task_list=[
                     per_cap_greenspace_budget_pop_group_task,
                     proportional_population_tasks[pop_group],
                 ]))
+
+            supply_population_paths = []
+            supply_population_tasks = []
+            for supply_type, op in [('under', numpy.less),
+                                    ('over', numpy.greater)]:
+                supply_population_path = os.path.join(
+                    intermediate_dir,
+                    f'{supply_type}supplied_population_{pop_group}{suffix}.tif')
+                supply_population_paths.append(supply_population_path)
+                supply_population_tasks.append(graph.add_task(
+                    pygeoprocessing.raster_calculator,
+                    kwargs={
+                        'base_raster_path_band_const_list': [
+                            (proportional_pop_path, 1),
+                            (per_cap_greenspace_budget_pop_group_path, 1),
+                            (op, 'raw'),  # numpy element-wise comparator
+                        ],
+                        'local_op': _filter_population,
+                        'target_raster_path': supply_population_path,
+                        'datatype_target': gdal.GDT_Float32,
+                        'nodata_target': FLOAT32_NODATA,
+                    },
+                    task_name=(
+                        f'Determine {supply_type}supplied populations to '
+                        f'{pop_group}'),
+                    target_path_list=[supply_population_path],
+                    dependent_task_list=[
+                        per_cap_greenspace_budget_pop_group_task,
+                        proportional_population_tasks[pop_group],
+                    ]))
 
         greenspace_supply_task = graph.add_task(
             ndr._sum_rasters,
@@ -846,6 +875,11 @@ def execute(args):
                 file_registry['greenspace_supply_demand_budget']],
             dependent_task_list=greenspace_supply_demand_by_group_tasks
         )
+
+        # TODO: add fields to the target vector:
+        #  SUP_DEMadm_cap_{pop_group} = (
+        #   greenspace_sup_dem_budget / (pop_group population within admin
+        #   unit)
 
 
 
