@@ -1640,6 +1640,67 @@ def _admin_level_supply_demand(
     target_vector = None
 
 
+def _uniform_radius_supply_demand_vector(
+        source_aoi_vector_path,
+        target_aoi_vector_path,
+        greenspace_budget_path,
+        population_path,
+        undersupplied_populations_path,
+        oversupplied_populations_path):
+
+    def _get_zonal_stats(raster_path):
+        return pygeoprocessing.zonal_statistics(
+            (raster_path, 1), source_aoi_vector_path)
+
+    greenspace_budget_stats = _get_zonal_stats(greenspace_budget_path)
+    population_stats = _get_zonal_stats(population_path)
+    undersupplied_stats = _get_zonal_stats(undersupplied_populations_path)
+    oversupplied_stats = _get_zonal_stats(oversupplied_populations_path)
+
+    stats_by_feature = {}
+    for fid in greenspace_budget_stats.keys():
+        stats_by_feature[fid] = {
+            'SUP_DEMadm_cap': (
+                greenspace_budget_stats[fid]['sum'] /
+                population_stats[fid]['sum']),
+            'Pund_adm': undersupplied_stats[fid]['sum'],
+            'Povr_adm': oversupplied_stats[fid]['sum'],
+        }
+
+    _write_supply_demand_vector(
+        source_aoi_vector_path, stats_by_feature, target_aoi_vector_path)
+
+
+
+
+
+
+def _write_supply_demand_vector(source_aoi_vector_path, feature_attrs,
+                                target_aoi_vector_path):
+    source_vector = ogr.Open(source_aoi_vector_path)
+    driver = ogr.GetDriverByName('GPKG')
+    driver.CopyDataSource(source_vector, target_aoi_vector_path)
+    source_vector = None
+
+    target_vector = gdal.OpenEx(target_aoi_vector_path, gdal.GA_Update)
+    target_layer = target_vector.GetLayer()
+
+    for fieldname in next(iter(feature_attrs.values())).keys():
+        field = ogr.FieldDefn(fieldname, ogr.OFTReal)
+        field.SetWidth(24)
+        field.SetPrecision(11)
+        target_layer.CreateField(field)
+
+    target_layer.StartTransaction()
+    for feature in target_layer:
+        feature_id = feature.GetFID()
+        for attr_name, attr_value in feature_attrs[feature_id].items():
+            feature.SetField(attr_name, attr_value)
+
+        target_layer.SetFeature(feature)
+    target_layer.CommitTransaction()
+
+
 def _greenspace_budget_op(greenspace_supply, greenspace_demand):
     """Calculate the per-capita greenspace budget.
 
