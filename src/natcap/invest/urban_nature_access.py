@@ -1732,7 +1732,23 @@ def _uniform_radius_supply_demand_vector(
         population_path,
         undersupplied_populations_path,
         oversupplied_populations_path):
+    """Create a supply/demand summary vector for the Uniform Radius mode.
 
+    Args:
+        source_aoi_vector_path (str): Path to the source aois vector.
+        target_aoi_vector_path (str): Path to where the target aois vector
+            should be written.
+        greenspace_budget_path (str): Path to a raster of greenspace
+            supply/demand budget.
+        population_path (str): Path to a population raster.
+        undersupplied_populations_path (str): Path to a raster of oversupplied
+            population per pixel.
+        oversupplied_populations_path (str): Path to a raster of undersupplied
+            population per pixel.
+
+    Returns:
+        ``None``
+    """
     def _get_zonal_stats(raster_path):
         return pygeoprocessing.zonal_statistics(
             (raster_path, 1), source_aoi_vector_path)
