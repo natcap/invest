@@ -516,96 +516,6 @@ def execute(args):
                 kernel_tasks[search_radius_m],
                 greenspace_population_ratio_task])
 
-        # This is "SUP_DEMi_cap" from the user's guide
-        per_capita_greenspace_budget_task = graph.add_task(
-            pygeoprocessing.raster_calculator,
-            kwargs={
-                'base_raster_path_band_const_list': [
-                    (file_registry['greenspace_supply'], 1),
-                    (float(args['greenspace_demand']), 'raw')
-                ],
-                'local_op': _greenspace_budget_op,
-                'target_raster_path': file_registry['greenspace_budget'],
-                'datatype_target': gdal.GDT_Float32,
-                'nodata_target': FLOAT32_NODATA
-            },
-            task_name='Calculate per-capita greenspace budget',
-            target_path_list=[file_registry['greenspace_budget']],
-            dependent_task_list=[
-                greenspace_supply_task,
-            ])
-
-        # This is "SUP_DEMi" from the user's guide
-        greenspace_supply_demand_task = graph.add_task(
-            pygeoprocessing.raster_calculator,
-            kwargs={
-                'base_raster_path_band_const_list': [
-                    (file_registry['greenspace_budget'], 1),
-                    (file_registry['aligned_population'], 1)
-                ],
-                'local_op': _greenspace_supply_demand_op,
-                'target_raster_path': (
-                    file_registry['greenspace_supply_demand_budget']),
-                'datatype_target': gdal.GDT_Float32,
-                'nodata_target': FLOAT32_NODATA
-            },
-            task_name='Calculate per-capita greenspace supply-demand',
-            target_path_list=[
-                file_registry['greenspace_supply_demand_budget']],
-            dependent_task_list=[
-                 per_capita_greenspace_budget_task,
-                 population_alignment_task,
-            ])
-
-        supply_population_tasks = []
-        for supply_type, op in [('under', numpy.less),
-                                ('over', numpy.greater)]:
-            supply_population_tasks.append(graph.add_task(
-                pygeoprocessing.raster_calculator,
-                kwargs={
-                    'base_raster_path_band_const_list': [
-                        (file_registry['aligned_population'], 1),
-                        (file_registry['greenspace_budget'], 1),
-                        (op, 'raw'),  # numpy element-wise comparator
-                    ],
-                    'local_op': _filter_population,
-                    'target_raster_path':
-                        file_registry[f'{supply_type}supplied_population'],
-                    'datatype_target': gdal.GDT_Float32,
-                    'nodata_target': FLOAT32_NODATA,
-                },
-                task_name=f'Determine {supply_type}supplied populations',
-                target_path_list=[
-                    file_registry[f'{supply_type}supplied_population']],
-                dependent_task_list=[
-                    greenspace_supply_demand_task,
-                    population_alignment_task,
-                ]))
-
-        _ = graph.add_task(
-            _uniform_radius_supply_demand_vector,
-            kwargs={
-                'source_aoi_vector_path': file_registry['reprojected_aois'],
-                'target_aoi_vector_path': file_registry['aois'],
-
-                'greenspace_budget_path': file_registry[
-                    'greenspace_supply_demand_budget'],
-                'population_path': file_registry['aligned_population'],
-                'undersupplied_populations_path': file_registry[
-                    'undersupplied_population'],
-                'oversupplied_populations_path': file_registry[
-                    'oversupplied_population'],
-            },
-            task_name=(
-                'Aggregate supply-demand to admin units (uniform radii)'),
-            target_path_list=[file_registry['aois']],
-            dependent_task_list=[
-                population_alignment_task,
-                aoi_reprojection_task,
-                greenspace_supply_demand_task,
-                *supply_population_tasks
-            ])
-
     # Search radius mode 2: Search radii are defined per greenspace lulc class.
     elif args['search_radius_mode'] == RADIUS_OPT_GREENSPACE:
         LOGGER.info("Running model with search radius mode "
@@ -968,28 +878,98 @@ def execute(args):
         #   greenspace_sup_dem_budget / (pop_group population within admin
         #   unit)
 
+    # Greenspace budget, supply/demand and over/undersupply rasters are the
+    # same for uniform radius and for split greenspace modes.
+    if args['search_radius_mode'] in (RADIUS_OPT_UNIFORM,
+                                      RADIUS_OPT_GREENSPACE):
+        # This is "SUP_DEMi_cap" from the user's guide
+        per_capita_greenspace_budget_task = graph.add_task(
+            pygeoprocessing.raster_calculator,
+            kwargs={
+                'base_raster_path_band_const_list': [
+                    (file_registry['greenspace_supply'], 1),
+                    (float(args['greenspace_demand']), 'raw')
+                ],
+                'local_op': _greenspace_budget_op,
+                'target_raster_path': file_registry['greenspace_budget'],
+                'datatype_target': gdal.GDT_Float32,
+                'nodata_target': FLOAT32_NODATA
+            },
+            task_name='Calculate per-capita greenspace budget',
+            target_path_list=[file_registry['greenspace_budget']],
+            dependent_task_list=[
+                greenspace_supply_task,
+            ])
 
-    graph.join()  # TODO: improve this
-    _ = graph.add_task(
-        _admin_level_supply_demand,
-        kwargs={
-            'greenspace_budget_path': file_registry[
-                'greenspace_supply_demand_budget'],
-            'population_path': file_registry['aligned_population'],
-            'aoi_vector_path': file_registry['reprojected_aois'],
-            'target_aoi_vector_path': file_registry['aois'],
-            'undersupplied_populations_path': file_registry[
-                'undersupplied_population'],
-            'oversupplied_populations_path': file_registry[
-                'oversupplied_population'],
-        },
-        task_name='Aggregate supply-demand to the admin units',
-        target_path_list=[file_registry['aois']],
-        dependent_task_list=[
-            #greenspace_supply_demand_task,
-            #population_alignment_task,
-            #*supply_population_tasks
-        ])
+        # This is "SUP_DEMi" from the user's guide
+        greenspace_supply_demand_task = graph.add_task(
+            pygeoprocessing.raster_calculator,
+            kwargs={
+                'base_raster_path_band_const_list': [
+                    (file_registry['greenspace_budget'], 1),
+                    (file_registry['aligned_population'], 1)
+                ],
+                'local_op': _greenspace_supply_demand_op,
+                'target_raster_path': (
+                    file_registry['greenspace_supply_demand_budget']),
+                'datatype_target': gdal.GDT_Float32,
+                'nodata_target': FLOAT32_NODATA
+            },
+            task_name='Calculate per-capita greenspace supply-demand',
+            target_path_list=[
+                file_registry['greenspace_supply_demand_budget']],
+            dependent_task_list=[
+                 per_capita_greenspace_budget_task,
+                 population_alignment_task,
+            ])
+
+        supply_population_tasks = []
+        for supply_type, op in [('under', numpy.less),
+                                ('over', numpy.greater)]:
+            supply_population_tasks.append(graph.add_task(
+                pygeoprocessing.raster_calculator,
+                kwargs={
+                    'base_raster_path_band_const_list': [
+                        (file_registry['aligned_population'], 1),
+                        (file_registry['greenspace_budget'], 1),
+                        (op, 'raw'),  # numpy element-wise comparator
+                    ],
+                    'local_op': _filter_population,
+                    'target_raster_path':
+                        file_registry[f'{supply_type}supplied_population'],
+                    'datatype_target': gdal.GDT_Float32,
+                    'nodata_target': FLOAT32_NODATA,
+                },
+                task_name=f'Determine {supply_type}supplied populations',
+                target_path_list=[
+                    file_registry[f'{supply_type}supplied_population']],
+                dependent_task_list=[
+                    greenspace_supply_demand_task,
+                    population_alignment_task,
+                ]))
+
+        _ = graph.add_task(
+            _uniform_radius_supply_demand_vector,
+            kwargs={
+                'source_aoi_vector_path': file_registry['reprojected_aois'],
+                'target_aoi_vector_path': file_registry['aois'],
+                'greenspace_budget_path': file_registry[
+                    'greenspace_supply_demand_budget'],
+                'population_path': file_registry['aligned_population'],
+                'undersupplied_populations_path': file_registry[
+                    'undersupplied_population'],
+                'oversupplied_populations_path': file_registry[
+                    'oversupplied_population'],
+            },
+            task_name=(
+                'Aggregate supply-demand to admin units (uniform radii)'),
+            target_path_list=[file_registry['aois']],
+            dependent_task_list=[
+                population_alignment_task,
+                aoi_reprojection_task,
+                greenspace_supply_demand_task,
+                *supply_population_tasks
+            ])
 
     graph.close()
     graph.join()
