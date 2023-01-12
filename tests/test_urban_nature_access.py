@@ -318,6 +318,8 @@ class UNATests(unittest.TestCase):
         from natcap.invest import urban_nature_access
 
         args = _build_model_args(self.workspace_dir)
+        args['search_radius_mode'] = urban_nature_access.RADIUS_OPT_UNIFORM
+        args['search_radius'] = 100
 
         urban_nature_access.execute(args)
 
@@ -386,6 +388,7 @@ class UNATests(unittest.TestCase):
         from natcap.invest import urban_nature_access
 
         args = _build_model_args(self.workspace_dir)
+        args['search_radius_mode'] = urban_nature_access.RADIUS_OPT_GREENSPACE
 
         # The split greenspace feature requires an extra column in the
         # attribute table.
@@ -438,6 +441,8 @@ class UNATests(unittest.TestCase):
         from natcap.invest import urban_nature_access
 
         args = _build_model_args(self.workspace_dir)
+        args['search_radius_mode'] = urban_nature_access.RADIUS_OPT_UNIFORM
+        args['search_radius'] = 100
         del args['results_suffix']
 
         admin_geom = [

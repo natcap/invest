@@ -232,7 +232,7 @@ ARGS_SPEC = {
                     'type': 'number',
                     'units': u.meter,
                     'required':
-                        f'search_radius_mode == {RADIUS_OPT_POP_GROUP}',
+                        f'search_radius_mode == "{RADIUS_OPT_POP_GROUP}"',
                     'expression': 'value >= 0',
                     'about': gettext(
                         "The distance in meters to use as the search radius "
@@ -458,7 +458,7 @@ def execute(args):
             kwargs={
                 'signal_path_band': (file_registry['aligned_population'], 1),
                 'kernel_path_band': (kernel_paths[search_radius_m], 1),
-                'target_path': convolved_population_paths[search_radius_m],
+                'target_path': decayed_population_path,
                 'working_dir': intermediate_dir,
             },
             task_name=f'Convolve population - {search_radius_m}m',
@@ -486,7 +486,7 @@ def execute(args):
         greenspace_population_ratio_task = graph.add_task(
             _calculate_greenspace_population_ratio,
             args=(greenspace_pixels_path,
-                  decayed_population_task,
+                  decayed_population_path,
                   greenspace_population_ratio_path),
             task_name=(
                 '2SFCA: Calculate R_j greenspace/population ratio - '
@@ -881,7 +881,31 @@ def execute(args):
         #   greenspace_sup_dem_budget / (pop_group population within admin
         #   unit)
 
+    graph.join()  # TODO: improve this
+    _ = graph.add_task(
+        _admin_level_supply_demand,
+        kwargs={
+            'greenspace_budget_path': file_registry[
+                'greenspace_supply_demand_budget'],
+            'population_path': file_registry['aligned_population'],
+            'aoi_vector_path': file_registry['reprojected_aois'],
+            'target_aoi_vector_path': file_registry['aois'],
+            'undersupplied_populations_path': file_registry[
+                'undersupplied_population'],
+            'oversupplied_populations_path': file_registry[
+                'oversupplied_population'],
+        },
+        task_name='Aggregate supply-demand to the admin units',
+        target_path_list=[file_registry['aois']],
+        dependent_task_list=[
+            #greenspace_supply_demand_task,
+            #population_alignment_task,
+            #*supply_population_tasks
+        ])
 
+    graph.close()
+    graph.join()
+    return
 
 
 
