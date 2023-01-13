@@ -443,6 +443,7 @@ class UNATests(unittest.TestCase):
         args = _build_model_args(self.workspace_dir)
         args['search_radius_mode'] = urban_nature_access.RADIUS_OPT_UNIFORM
         args['search_radius'] = 100
+        args['aggregate_by_pop_group'] = True
         del args['results_suffix']
 
         admin_geom = [

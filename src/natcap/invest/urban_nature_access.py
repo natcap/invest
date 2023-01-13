@@ -1,3 +1,4 @@
+import collections
 import logging
 import math
 import os
@@ -414,6 +415,62 @@ def execute(args):
         dependent_task_list=[lulc_alignment_task]
     )
 
+    # If we're doing anything with population groups, rasterize the AOIs and
+    # create the proportional population rasters.
+    proportional_population_paths = {}
+    proportional_population_tasks = []
+    if (args['search_radius_mode'] == RADIUS_OPT_POP_GROUP or
+            args.get('aggregate_by_pop_group', False)):
+        aoi_reprojection_task.join()
+        split_population_fields = list(
+            filter(lambda x: re.match(POP_FIELD_REGEX, x),
+                   validation.load_fields_from_vector(
+                       file_registry['reprojected_aois'])))
+
+        if _geometries_overlap(file_registry['reprojected_aois']):
+            LOGGER.warning(
+                "Some administrative boundaries overlap, which will affect "
+                "the accuracy of supply rasters per population group. "
+                "Summary statistics in "
+                # TODO: is this path correct?
+                f"{os.path.basename(file_registry['aois'])} are unaffected.")
+
+        aois_rasterization_task = graph.add_task(
+            _rasterize_aois,
+            kwargs={
+                'base_raster_path': file_registry['aligned_lulc'],
+                'aois_vector_path':
+                    file_registry['reprojected_aois'],
+                'target_raster_path': file_registry['aois_ids'],
+                'id_fieldname': ID_FIELDNAME,
+            },
+            task_name='Rasterize the admin units vector',
+            target_path_list=[file_registry['aois_ids']],
+            dependent_task_list=[
+                aoi_reprojection_task, lulc_alignment_task]
+        )
+
+        for pop_group in split_population_fields:
+            field_value_map = _read_field_from_vector(
+                file_registry['reprojected_aois'], ID_FIELDNAME, pop_group)
+            proportional_population_path = os.path.join(
+                intermediate_dir, f'population_in_{pop_group}{suffix}.tif')
+            proportional_population_paths[
+                pop_group] = proportional_population_path
+            proportional_population_tasks.append(graph.add_task(
+                _reclassify_and_multiply,
+                kwargs={
+                    'aois_raster_path': file_registry['aois_ids'],
+                    'reclassification_map': field_value_map,
+                    'supply_raster_path': file_registry['aligned_population'],
+                    'target_raster_path': proportional_population_path,
+                },
+                task_name=f"Population proportion in pop group {pop_group}",
+                target_path_list=[proportional_population_path],
+                dependent_task_list=[
+                    aois_rasterization_task, population_alignment_task]
+            ))
+
     attr_table = utils.read_csv_to_dataframe(
         args['lulc_attribute_table'], to_lower=True)
     convolved_population_paths = {}  # search radius: convolved_population path
@@ -426,7 +483,6 @@ def execute(args):
     elif args['search_radius_mode'] == RADIUS_OPT_GREENSPACE:
         greenspace_attrs = attr_table[attr_table['greenspace'] == 1]
         search_radii = set(greenspace_attrs['search_radius_m'].unique())
-
         # Build an iterable of plain tuples: (lucode, search_radius_m)
         lucode_to_search_radii = list(
             greenspace_attrs[['lucode', 'search_radius_m']].itertuples(
@@ -496,7 +552,7 @@ def execute(args):
 
         greenspace_population_ratio_path = os.path.join(
             intermediate_dir,
-            ('greenspace_population_ratio{suffix}.tif'))
+            f'greenspace_population_ratio{suffix}.tif')
         greenspace_population_ratio_task = graph.add_task(
             _calculate_greenspace_population_ratio,
             args=(greenspace_pixels_path,
@@ -621,35 +677,6 @@ def execute(args):
     elif args['search_radius_mode'] == RADIUS_OPT_POP_GROUP:
         LOGGER.info("Running model with search radius mode "
                     f"{RADIUS_OPT_POP_GROUP}")
-        aoi_reprojection_task.join()
-        split_population_fields = list(
-            filter(lambda x: re.match(POP_FIELD_REGEX, x),
-                   validation.load_fields_from_vector(
-                       file_registry['reprojected_aois'])))
-
-        if _geometries_overlap(file_registry['reprojected_aois']):
-            LOGGER.warning(
-                "Some administrative boundaries overlap, which will affect "
-                "the accuracy of supply rasters per population group. "
-                "Summary statistics in "
-                # TODO: is this path correct?
-                f"{os.path.basename(file_registry['aois'])} are unaffected.")
-
-        aois_rasterization_task = graph.add_task(
-            _rasterize_aois,
-            kwargs={
-                'base_raster_path': file_registry['aligned_lulc'],
-                'aois_vector_path':
-                    file_registry['reprojected_aois'],
-                'target_raster_path': file_registry['aois_ids'],
-                'id_fieldname': ID_FIELDNAME,
-            },
-            task_name='Rasterize the admin units vector',
-            target_path_list=[file_registry['aois_ids']],
-            dependent_task_list=[
-                aoi_reprojection_task, lulc_alignment_task]
-        )
-
         greenspace_pixels_path = os.path.join(
             intermediate_dir, f'greenspace_area{suffix}.tif')
         greenspace_reclassification_task = graph.add_task(
@@ -663,29 +690,6 @@ def execute(args):
             task_name='Identify greenspace areas',
             dependent_task_list=[lulc_alignment_task]
         )
-
-        proportional_population_paths = {}
-        proportional_population_tasks = []
-        for pop_group in split_population_fields:
-            field_value_map = _read_field_from_vector(
-                file_registry['reprojected_aois'], ID_FIELDNAME, pop_group)
-            proportional_population_path = os.path.join(
-                intermediate_dir, f'population_in_{pop_group}{suffix}.tif')
-            proportional_population_paths[
-                pop_group] = proportional_population_path
-            proportional_population_tasks.append(graph.add_task(
-                _reclassify_and_multiply,
-                kwargs={
-                    'aois_raster_path': file_registry['aois_ids'],
-                    'reclassification_map': field_value_map,
-                    'supply_raster_path': file_registry['aligned_population'],
-                    'target_raster_path': proportional_population_path,
-                },
-                task_name=f"Population proportion in pop group {pop_group}",
-                target_path_list=[proportional_population_path],
-                dependent_task_list=[
-                    aois_rasterization_task, population_alignment_task]
-            ))
 
         decayed_population_in_group_paths = []
         decayed_population_in_group_tasks = []
@@ -933,29 +937,44 @@ def execute(args):
             ])
 
         supply_population_tasks = []
-        for supply_type, op in [('under', numpy.less),
-                                ('over', numpy.greater)]:
-            supply_population_tasks.append(graph.add_task(
-                pygeoprocessing.raster_calculator,
-                kwargs={
-                    'base_raster_path_band_const_list': [
-                        (file_registry['aligned_population'], 1),
-                        (file_registry['greenspace_budget'], 1),
-                        (op, 'raw'),  # numpy element-wise comparator
-                    ],
-                    'local_op': _filter_population,
-                    'target_raster_path':
-                        file_registry[f'{supply_type}supplied_population'],
-                    'datatype_target': gdal.GDT_Float32,
-                    'nodata_target': FLOAT32_NODATA,
-                },
-                task_name=f'Determine {supply_type}supplied populations',
-                target_path_list=[
-                    file_registry[f'{supply_type}supplied_population']],
-                dependent_task_list=[
-                    greenspace_supply_demand_task,
-                    population_alignment_task,
-                ]))
+        pop_paths = [(None, file_registry['aligned_population'])]
+        if args.get('aggregate_by_pop_group', False):
+            pop_paths.extend(list(proportional_population_paths.items()))
+
+        for pop_group, proportional_pop_path in pop_paths:
+            if pop_group is not None:
+                pop_group = pop_group[4:]  # trim leading 'pop_'
+            for supply_type, op in [('under', numpy.less),
+                                    ('over', numpy.greater)]:
+                if pop_group is None:
+                    supply_population_path = os.path.join(
+                        intermediate_dir,
+                        f'{supply_type}supplied_population{suffix}.tif')
+                else:
+                    supply_population_path = os.path.join(
+                        intermediate_dir,
+                        f'{supply_type}supplied_population_{pop_group}{suffix}.tif')
+
+                supply_population_tasks.append(graph.add_task(
+                    pygeoprocessing.raster_calculator,
+                    kwargs={
+                        'base_raster_path_band_const_list': [
+                            (proportional_pop_path, 1),
+                            (file_registry['greenspace_budget'], 1),
+                            (op, 'raw'),  # numpy element-wise comparator
+                        ],
+                        'local_op': _filter_population,
+                        'target_raster_path': supply_population_path,
+                        'datatype_target': gdal.GDT_Float32,
+                        'nodata_target': FLOAT32_NODATA,
+                    },
+                    task_name=f'Determine {supply_type}supplied populations',
+                    target_path_list=[supply_population_path],
+                    dependent_task_list=[
+                        greenspace_supply_demand_task,
+                        population_alignment_task,
+                        *proportional_population_tasks
+                    ]))
 
         _ = graph.add_task(
             _supply_demand_vector_for_single_raster_modes,
@@ -969,9 +988,11 @@ def execute(args):
                     'undersupplied_population'],
                 'oversupplied_populations_path': file_registry[
                     'oversupplied_population'],
+                'include_pop_groups':
+                    args.get('aggregate_by_pop_group', False),
             },
             task_name=(
-                'Aggregate supply-demand to admin units (uniform radii)'),
+                'Aggregate supply-demand to admin units (single rasters)'),
             target_path_list=[file_registry['aois']],
             dependent_task_list=[
                 population_alignment_task,
@@ -979,6 +1000,10 @@ def execute(args):
                 greenspace_supply_demand_task,
                 *supply_population_tasks
             ])
+    else:
+        # RADIUS_OPT_POP_GROUP
+        pass
+
 
     graph.close()
     graph.join()
@@ -1498,8 +1523,11 @@ def _read_field_from_vector(vector_path, key_field, value_field):
     layer = vector.GetLayer()
     attribute_map = {}
     for feature in layer:
-        attribute_map[
-            feature.GetField(key_field)] = feature.GetField(value_field)
+        if key_field == 'FID':
+            key = feature.GetFID()
+        else:
+            key = feature.GetField(key_field)
+        attribute_map[key] = feature.GetField(value_field)
     return attribute_map
 
 
@@ -1714,13 +1742,23 @@ def _admin_level_supply_demand(
     target_vector = None
 
 
+def _supply_demand_vector_for_pop_groups(
+        source_aoi_vector_path,
+        target_aoi_vector_path,
+        greenspace_budget_path,
+        population_path):
+    pass
+
+
+
 def _supply_demand_vector_for_single_raster_modes(
         source_aoi_vector_path,
         target_aoi_vector_path,
         greenspace_budget_path,
         population_path,
         undersupplied_populations_path,
-        oversupplied_populations_path):
+        oversupplied_populations_path,
+        include_pop_groups=False):
     """Create summary vector for modes with single-raster summary stats.
 
     Args:
@@ -1734,6 +1772,8 @@ def _supply_demand_vector_for_single_raster_modes(
             population per pixel.
         oversupplied_populations_path (str): Path to a raster of undersupplied
             population per pixel.
+        include_pop_groups=False (bool): Whether to include population groups
+            if they are present in the source AOI vector.
 
     Returns:
         ``None``
@@ -1747,15 +1787,38 @@ def _supply_demand_vector_for_single_raster_modes(
     undersupplied_stats = _get_zonal_stats(undersupplied_populations_path)
     oversupplied_stats = _get_zonal_stats(oversupplied_populations_path)
 
+    pop_group_fields = []
+    group_names = {}  # {fieldname: groupname}
+    pop_proportions_by_fid = collections.defaultdict(dict)
+    if include_pop_groups:
+        pop_group_fields = list(
+            filter(lambda x: re.match(POP_FIELD_REGEX, x),
+                   validation.load_fields_from_vector(source_aoi_vector_path)))
+        for pop_group_field in pop_group_fields:
+            for id_field, value in _read_field_from_vector(
+                    source_aoi_vector_path, 'FID',
+                    pop_group_field).items():
+                group = pop_group_field[4:]  # trim leading 'pop_'
+                group_names[pop_group_field] = group
+                pop_proportions_by_fid[id_field][group] = value
+
     stats_by_feature = {}
     for fid in greenspace_budget_stats.keys():
-        stats_by_feature[fid] = {
+        stats = {
             'SUP_DEMadm_cap': (
                 greenspace_budget_stats[fid]['sum'] /
                 population_stats[fid]['sum']),
             'Pund_adm': undersupplied_stats[fid]['sum'],
             'Povr_adm': oversupplied_stats[fid]['sum'],
         }
+        for pop_group_field in pop_group_fields:
+            group = group_names[pop_group_field]
+            group_proportion = pop_proportions_by_fid[fid][group]
+            for prefix, supply_stats in [('Pund', undersupplied_stats),
+                                         ('Povr', oversupplied_stats)]:
+                stats[f'{prefix}_adm_{group}'] = (
+                    supply_stats[fid]['sum'] * group_proportion)
+        stats_by_feature[fid] = stats
 
     _write_supply_demand_vector(
         source_aoi_vector_path, stats_by_feature, target_aoi_vector_path)
