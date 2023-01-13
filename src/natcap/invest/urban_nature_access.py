@@ -418,7 +418,7 @@ def execute(args):
     # If we're doing anything with population groups, rasterize the AOIs and
     # create the proportional population rasters.
     proportional_population_paths = {}
-    proportional_population_tasks = []
+    proportional_population_tasks = {}
     if (args['search_radius_mode'] == RADIUS_OPT_POP_GROUP or
             args.get('aggregate_by_pop_group', False)):
         aoi_reprojection_task.join()
@@ -457,7 +457,7 @@ def execute(args):
                 intermediate_dir, f'population_in_{pop_group}{suffix}.tif')
             proportional_population_paths[
                 pop_group] = proportional_population_path
-            proportional_population_tasks.append(graph.add_task(
+            proportional_population_tasks[pop_group] = graph.add_task(
                 _reclassify_and_multiply,
                 kwargs={
                     'aois_raster_path': file_registry['aois_ids'],
@@ -469,7 +469,7 @@ def execute(args):
                 target_path_list=[proportional_population_path],
                 dependent_task_list=[
                     aois_rasterization_task, population_alignment_task]
-            ))
+            )
 
     attr_table = utils.read_csv_to_dataframe(
         args['lulc_attribute_table'], to_lower=True)
@@ -706,12 +706,11 @@ def execute(args):
                         proportional_population_path, 1),
                     'kernel_path_band': (
                         kernel_paths[search_radius_m], 1),
-                    'target_path': convolved_population_paths[
-                        search_radius_m],
+                    'target_path': decayed_population_in_group_path,
                     'working_dir': intermediate_dir,
                 },
                 task_name=f'Convolve population - {search_radius_m}m',
-                target_path_list=[decayed_population_path],
+                target_path_list=[decayed_population_in_group_path],
                 dependent_task_list=[
                     kernel_tasks[search_radius_m], population_alignment_task]
             ))
@@ -747,8 +746,10 @@ def execute(args):
             ])
 
         # Create a dict of {pop_group: search_radius_m}
+        group_radii_table = utils.read_csv_to_dataframe(
+            args['population_group_radii_table'])
         search_radii = dict(
-            attr_table[['pop_group', 'search_radius_m']].itertuples(
+            group_radii_table[['pop_group', 'search_radius_m']].itertuples(
                 index=False, name=None))
         greenspace_supply_by_group_paths = {}
         greenspace_supply_by_group_tasks = []
@@ -760,8 +761,8 @@ def execute(args):
             greenspace_supply_to_group_path = os.path.join(
                 intermediate_dir,
                 f'greenspace_supply_to_{pop_group}{suffix}.tif')
-            greenspace_supply_by_group_paths.append(
-                greenspace_supply_to_group_path)
+            greenspace_supply_by_group_paths[
+                pop_group] = greenspace_supply_to_group_path
             greenspace_supply_by_group_task = graph.add_task(
                 pygeoprocessing.convolve_2d,
                 kwargs={
@@ -771,13 +772,13 @@ def execute(args):
                     'target_path': greenspace_supply_to_group_path,
                     'working_dir': intermediate_dir,
                 },
-                task_name=f'2SFCA - greenspace supply for lucode {lucode}',
-                target_path_list=[greenspace_supply_path],
+                task_name=f'2SFCA - greenspace supply for {pop_group}',
+                target_path_list=[greenspace_supply_to_group_path],
                 dependent_task_list=[
                     kernel_tasks[search_radius_m],
                     greenspace_population_ratio_task])
             greenspace_supply_by_group_tasks.append(
-                greenspace_supply_by_group_tasks)
+                greenspace_supply_by_group_task)
 
             # Calculate SUP_DEMi_cap for each population group.
             per_cap_greenspace_budget_pop_group_path = os.path.join(
@@ -863,7 +864,7 @@ def execute(args):
         greenspace_supply_task = graph.add_task(
             ndr._sum_rasters,
             kwargs={
-                'raster_path_list': greenspace_supply_by_group_paths,
+                'raster_path_list': greenspace_supply_by_group_paths.values(),
                 'target_nodata': FLOAT32_NODATA,
                 'target_result_path': file_registry['greenspace_supply'],
             },
@@ -973,7 +974,7 @@ def execute(args):
                     dependent_task_list=[
                         greenspace_supply_demand_task,
                         population_alignment_task,
-                        *proportional_population_tasks
+                        *list(proportional_population_tasks.values()),
                     ]))
 
         _ = graph.add_task(
@@ -1001,7 +1002,7 @@ def execute(args):
                 *supply_population_tasks
             ])
     else:
-        # RADIUS_OPT_POP_GROUP
+        # Summary stats for RADIUS_OPT_POP_GROUP
         pass
 
 
