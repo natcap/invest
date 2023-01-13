@@ -501,6 +501,78 @@ class UNATests(unittest.TestCase):
                 rtol=1e-6
             )
 
+    def test_radii_by_pop_group(self):
+        """UNA: Test defining radii by population group."""
+        from natcap.invest import urban_nature_access
+
+        args = _build_model_args(self.workspace_dir)
+        args['search_radius_mode'] = urban_nature_access.RADIUS_OPT_POP_GROUP
+        args['population_group_radii_table'] = os.path.join(
+            self.workspace_dir, 'pop_group_radii.csv')
+        del args['results_suffix']
+
+        with open(args['population_group_radii_table'], 'w') as pop_grp_table:
+            pop_grp_table.write(
+                textwrap.dedent("""\
+                    pop_group,search_radius_m
+                    pop_female,100
+                    pop_male,100"""))
+
+        admin_geom = [
+            shapely.geometry.box(
+                *pygeoprocessing.get_raster_info(
+                    args['lulc_raster_path'])['bounding_box'])]
+        fields = {
+            'pop_female': ogr.OFTReal,
+            'pop_male': ogr.OFTReal,
+        }
+        attributes = [
+            {'pop_female': 0.56, 'pop_male': 0.44}
+        ]
+        pygeoprocessing.shapely_geometry_to_vector(
+            admin_geom, args['aoi_vector_path'],
+            pygeoprocessing.get_raster_info(
+                args['population_raster_path'])['projection_wkt'],
+            'GeoJSON', fields, attributes)
+
+        urban_nature_access.execute(args)
+
+        summary_vector = gdal.OpenEx(
+            os.path.join(args['workspace_dir'], 'output', 'aois.gpkg'))
+        summary_layer = summary_vector.GetLayer()
+        self.assertEqual(summary_layer.GetFeatureCount(), 1)
+        summary_feature = summary_layer.GetFeature(1)
+
+        def _read_and_sum_raster(path):
+            array = pygeoprocessing.raster_to_numpy_array(path)
+            nodata = pygeoprocessing.get_raster_info(path)['nodata'][0]
+            return numpy.sum(array[~utils.array_equals_nodata(array, nodata)])
+
+        intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
+        for (supply_type, supply_field), fieldname in itertools.product(
+                [('over', 'Povr_adm'), ('under', 'Pund_adm')], fields.keys()):
+            groupname = fieldname.replace('pop_', '')
+            supply_raster_path = os.path.join(
+                 intermediate_dir,
+                 f'{supply_type}supplied_population.tif')
+            group_supply_raster_path = os.path.join(
+                 intermediate_dir,
+                 f'{supply_type}supplied_population_{groupname}.tif')
+            pop_proportion = summary_feature.GetField(fieldname)
+            computed_value = summary_feature.GetField(
+                f'{supply_field}_{groupname}')
+
+            numpy.testing.assert_allclose(
+                computed_value,
+                _read_and_sum_raster(supply_raster_path) * pop_proportion,
+                rtol=1e-6
+            )
+            numpy.testing.assert_allclose(
+                computed_value,
+                _read_and_sum_raster(group_supply_raster_path),
+                rtol=1e-6
+            )
+
     def test_polygon_overlap(self):
         """UNA: Test that we can check if polygons overlap."""
         from natcap.invest import urban_nature_access
