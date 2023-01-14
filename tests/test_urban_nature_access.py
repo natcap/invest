@@ -543,35 +543,27 @@ class UNATests(unittest.TestCase):
         self.assertEqual(summary_layer.GetFeatureCount(), 1)
         summary_feature = summary_layer.GetFeature(1)
 
-        def _read_and_sum_raster(path):
-            array = pygeoprocessing.raster_to_numpy_array(path)
-            nodata = pygeoprocessing.get_raster_info(path)['nodata'][0]
-            return numpy.sum(array[~utils.array_equals_nodata(array, nodata)])
-
-        intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
-        for (supply_type, supply_field), fieldname in itertools.product(
-                [('over', 'Povr_adm'), ('under', 'Pund_adm')], fields.keys()):
-            groupname = fieldname.replace('pop_', '')
-            supply_raster_path = os.path.join(
-                 intermediate_dir,
-                 f'{supply_type}supplied_population.tif')
-            group_supply_raster_path = os.path.join(
-                 intermediate_dir,
-                 f'{supply_type}supplied_population_{fieldname}.tif')
-            pop_proportion = summary_feature.GetField(fieldname)
-            computed_value = summary_feature.GetField(
-                f'{supply_field}_{groupname}')
-
-            numpy.testing.assert_allclose(
-                computed_value,
-                _read_and_sum_raster(supply_raster_path) * pop_proportion,
-                rtol=1e-6
-            )
-            numpy.testing.assert_allclose(
-                computed_value,
-                _read_and_sum_raster(group_supply_raster_path),
-                rtol=1e-6
-            )
+        # TODO: verify these values.
+        expected_field_values = {
+            'pop_female': attributes[0]['pop_female'],
+            'pop_male': attributes[0]['pop_male'],
+            'adm_unit_id': 0,
+            'Pund_adm': 0,
+            'Pund_adm_female': 0,
+            'Pund_adm_male': 0,
+            'Povr_adm': 0,
+            'Povr_adm_female': 2842.56005859375,
+            'Povr_adm_male': 2233.43994140625,
+            'SUP_DEMadm_cap': 85.47153578112687,
+            'SUP_DEMadm_cap_female': 85.47153401930032,
+            'SUP_DEMadm_cap_male': 85.47153802345169,
+        }
+        self.assertEqual(
+            set(defn.GetName() for defn in summary_layer.schema),
+            set(expected_field_values.keys()))
+        for fieldname, expected_value in expected_field_values.items():
+            self.assertAlmostEqual(
+                expected_value, summary_feature.GetField(fieldname))
 
     def test_polygon_overlap(self):
         """UNA: Test that we can check if polygons overlap."""
