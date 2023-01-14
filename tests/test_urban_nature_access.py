@@ -557,7 +557,7 @@ class UNATests(unittest.TestCase):
                  f'{supply_type}supplied_population.tif')
             group_supply_raster_path = os.path.join(
                  intermediate_dir,
-                 f'{supply_type}supplied_population_{groupname}.tif')
+                 f'{supply_type}supplied_population_{fieldname}.tif')
             pop_proportion = summary_feature.GetField(fieldname)
             computed_value = summary_feature.GetField(
                 f'{supply_field}_{groupname}')

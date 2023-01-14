@@ -753,8 +753,10 @@ def execute(args):
                 index=False, name=None))
         greenspace_supply_by_group_paths = {}
         greenspace_supply_by_group_tasks = []
-        greenspace_supply_demand_by_group_paths = []
+        greenspace_supply_demand_by_group_paths = {}
         greenspace_supply_demand_by_group_tasks = []
+        supply_population_paths = {'over': {}, 'under': {}}
+        supply_population_tasks = {'over': {}, 'under': {}}
         for pop_group, proportional_pop_path in (
                 proportional_population_paths.items()):
             search_radius_m = search_radii[pop_group]
@@ -808,8 +810,8 @@ def execute(args):
             greenspace_supply_demand_by_group_path = os.path.join(
                 intermediate_dir,
                 f'greenspace_supply_demand_budget_{pop_group}{suffix}.tif')
-            greenspace_supply_demand_by_group_paths.append(
-                greenspace_supply_demand_by_group_path)
+            greenspace_supply_demand_by_group_paths[
+                pop_group] = greenspace_supply_demand_by_group_path
             greenspace_supply_demand_by_group_tasks.append(graph.add_task(
                 pygeoprocessing.raster_calculator,
                 kwargs={
@@ -831,15 +833,15 @@ def execute(args):
                     proportional_population_tasks[pop_group],
                 ]))
 
-            supply_population_paths = []
-            supply_population_tasks = []
             for supply_type, op in [('under', numpy.less),
                                     ('over', numpy.greater)]:
                 supply_population_path = os.path.join(
                     intermediate_dir,
-                    f'{supply_type}supplied_population_{pop_group}{suffix}.tif')
-                supply_population_paths.append(supply_population_path)
-                supply_population_tasks.append(graph.add_task(
+                    f'{supply_type}supplied_population_{pop_group[4:]}{suffix}.tif')
+                supply_population_paths[
+                    supply_type][pop_group] = supply_population_path
+                supply_population_tasks[
+                    supply_type][pop_group] = graph.add_task(
                     pygeoprocessing.raster_calculator,
                     kwargs={
                         'base_raster_path_band_const_list': [
@@ -859,12 +861,13 @@ def execute(args):
                     dependent_task_list=[
                         per_cap_greenspace_budget_pop_group_task,
                         proportional_population_tasks[pop_group],
-                    ]))
+                    ])
 
         greenspace_supply_task = graph.add_task(
             ndr._sum_rasters,
             kwargs={
-                'raster_path_list': greenspace_supply_by_group_paths.values(),
+                'raster_path_list':
+                    list(greenspace_supply_by_group_paths.values()),
                 'target_nodata': FLOAT32_NODATA,
                 'target_result_path': file_registry['greenspace_supply'],
             },
@@ -876,7 +879,8 @@ def execute(args):
         greenspace_supply_demand_budget_task = graph.add_task(
             ndr._sum_rasters,
             kwargs={
-                'raster_path_list': greenspace_supply_demand_by_group_paths,
+                'raster_path_list':
+                    list(greenspace_supply_demand_by_group_paths.values()),
                 'target_nodata': FLOAT32_NODATA,
                 'target_result_path':
                     file_registry['greenspace_supply_demand_budget'],
@@ -887,10 +891,29 @@ def execute(args):
             dependent_task_list=greenspace_supply_demand_by_group_tasks
         )
 
-        # TODO: add fields to the target vector:
-        #  SUP_DEMadm_cap_{pop_group} = (
-        #   greenspace_sup_dem_budget / (pop_group population within admin
-        #   unit)
+        # Summary stats for RADIUS_OPT_POP_GROUP
+        _ = graph.add_task(
+            _supply_demand_vector_for_pop_groups,
+            kwargs={
+                'source_aoi_vector_path': file_registry['reprojected_aois'],
+                'target_aoi_vector_path': file_registry['aois'],
+                'greenspace_sup_dem_paths_by_pop_group':
+                    greenspace_supply_demand_by_group_paths,
+                'proportional_pop_paths_by_pop_group':
+                    proportional_population_paths,
+                'undersupply_by_pop_group': supply_population_paths['under'],
+                'oversupply_by_pop_group': supply_population_paths['over'],
+            },
+            task_name=(
+                'Aggregate supply-demand to admin units (by pop groups)'),
+            target_path_list=[file_registry['aois']],
+            dependent_task_list=[
+                aoi_reprojection_task,
+                *greenspace_supply_demand_by_group_tasks,
+                *proportional_population_tasks.values(),
+                *supply_population_tasks['under'].values(),
+                *supply_population_tasks['over'].values(),
+            ])
 
     # Greenspace budget, supply/demand and over/undersupply rasters are the
     # same for uniform radius and for split greenspace modes.
@@ -1001,9 +1024,6 @@ def execute(args):
                 greenspace_supply_demand_task,
                 *supply_population_tasks
             ])
-    else:
-        # Summary stats for RADIUS_OPT_POP_GROUP
-        pass
 
 
     graph.close()
@@ -1746,10 +1766,74 @@ def _admin_level_supply_demand(
 def _supply_demand_vector_for_pop_groups(
         source_aoi_vector_path,
         target_aoi_vector_path,
-        greenspace_budget_path,
-        population_path):
-    pass
+        greenspace_sup_dem_paths_by_pop_group,
+        proportional_pop_paths_by_pop_group,
+        undersupply_by_pop_group,
+        oversupply_by_pop_group):
 
+    def _get_zonal_stats(raster_path):
+        return pygeoprocessing.zonal_statistics(
+            (raster_path, 1), source_aoi_vector_path)
+
+    pop_group_fields = []
+    feature_ids = set()
+    vector = gdal.OpenEx(source_aoi_vector_path)
+    layer = vector.GetLayer()
+    for feature in layer:
+        feature_ids.add(feature.GetFID())
+    pop_group_fields = []
+    for field_defn in layer.schema:
+        fieldname = field_defn.GetName()
+        if re.match(POP_FIELD_REGEX, fieldname):
+            pop_group_fields.append(fieldname)
+    layer = None
+    vector = None
+
+    sums = {
+        'supply-demand': collections.defaultdict(float),
+        'population': collections.defaultdict(float),
+        'oversupply': collections.defaultdict(float),
+        'undersupply': collections.defaultdict(float),
+    }
+    stats_by_feature = collections.defaultdict(
+        lambda: collections.defaultdict(float))
+    for pop_group_field in pop_group_fields:
+        # trim the leading
+        groupname = re.sub(POP_FIELD_REGEX, '', pop_group_field)
+
+        greenspace_sup_dem_stats = _get_zonal_stats(
+            greenspace_sup_dem_paths_by_pop_group[pop_group_field])
+        proportional_pop_stats = _get_zonal_stats(
+            proportional_pop_paths_by_pop_group[pop_group_field])
+        undersupply_stats = _get_zonal_stats(
+            undersupply_by_pop_group[pop_group_field])
+        oversupply_stats = _get_zonal_stats(
+            oversupply_by_pop_group[pop_group_field])
+
+        for feature_id in feature_ids:
+            group_population_in_region = proportional_pop_stats[
+                feature_id]['sum']
+            group_sup_dem_in_region = greenspace_sup_dem_stats[
+                feature_id]['sum']
+            stats_by_feature[feature_id][f'SUP_DEMadm_cap_{groupname}'] = (
+                group_sup_dem_in_region / group_population_in_region)
+            stats_by_feature[feature_id][f'Pund_adm_{groupname}'] = (
+                undersupply_stats[feature_id]['sum'])
+            stats_by_feature[feature_id][f'Povr_adm_{groupname}'] = (
+                oversupply_stats[feature_id]['sum'])
+            sums['supply-demand'][feature_id] += group_sup_dem_in_region
+            sums['population'][feature_id] += group_population_in_region
+
+    for feature_id in feature_ids:
+        stats_by_feature[feature_id]['SUP_DEMadm_cap'] = (
+            sums['supply-demand'][feature_id] / sums['population'][feature_id])
+        stats_by_feature[feature_id]['Pund_adm'] = (
+            sums['undersupply'][feature_id])
+        stats_by_feature[feature_id]['Povr_adm'] = (
+            sums['oversupply'][feature_id])
+
+    _write_supply_demand_vector(
+        source_aoi_vector_path, stats_by_feature, target_aoi_vector_path)
 
 
 def _supply_demand_vector_for_single_raster_modes(
@@ -1823,10 +1907,6 @@ def _supply_demand_vector_for_single_raster_modes(
 
     _write_supply_demand_vector(
         source_aoi_vector_path, stats_by_feature, target_aoi_vector_path)
-
-
-
-
 
 
 def _write_supply_demand_vector(source_aoi_vector_path, feature_attrs,
