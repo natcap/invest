@@ -473,8 +473,6 @@ def execute(args):
 
     attr_table = utils.read_csv_to_dataframe(
         args['lulc_attribute_table'], to_lower=True)
-    convolved_population_paths = {}  # search radius: convolved_population path
-    convolved_population_tasks = {}  # search radius: convolved_population task
     kernel_paths = {}  # search_radius, kernel path
     kernel_tasks = {}  # search_radius, kernel task
 
@@ -1310,7 +1308,24 @@ def _supply_demand_vector_for_pop_groups(
         proportional_pop_paths_by_pop_group,
         undersupply_by_pop_group,
         oversupply_by_pop_group):
+    """Write a supply-demand vector when rasters are by population group.
 
+    Args:
+        source_aoi_vector_path (str): The source AOI vector path.
+        target_aoi_vector_path (str): The target AOI vector path.
+        greenspace_sup_dem_paths_by_pop_group (dict): A dict mapping population
+            group names to rasters of greenspace supply/demand for the given
+            group.
+        proportional_pop_paths_by_pop_group (dict): A dict mapping population
+            group names to rasters of the population of that group.
+        undersupply_by_pop_group (dict): A dict mapping population group names
+            to rasters of undersupplied populations per pixel.
+        oversupply_by_pop_group (dict): A dict mapping population group names
+            to rasters of oversupplied populations per pixel.
+
+    Returns:
+        ``None``
+    """
     def _get_zonal_stats(raster_path):
         return pygeoprocessing.zonal_statistics(
             (raster_path, 1), source_aoi_vector_path)
@@ -1451,6 +1466,18 @@ def _supply_demand_vector_for_single_raster_modes(
 
 def _write_supply_demand_vector(source_aoi_vector_path, feature_attrs,
                                 target_aoi_vector_path):
+    """Write data to a copy of en existing AOI vector.
+
+    Args:
+        source_aoi_vector_path (str): The source AOI vector path.
+        feature_attrs (dict): A dict mapping int feature IDs (GDAL FIDs) to
+            dicts mapping fieldnames to field values.
+        target_aoi_vector_path (str): The path to where the target vector
+            should be written.
+
+    Returns:
+        ``None``
+    """
     source_vector = ogr.Open(source_aoi_vector_path)
     driver = ogr.GetDriverByName('GPKG')
     driver.CopyDataSource(source_vector, target_aoi_vector_path)
