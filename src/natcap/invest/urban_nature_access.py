@@ -624,7 +624,7 @@ def execute(args):
 
             greenspace_population_ratio_path = os.path.join(
                 intermediate_dir,
-                'greenspace_population_ratio_lucode_{lucode}{suffix}.tif')
+                f'greenspace_population_ratio_lucode_{lucode}{suffix}.tif')
             greenspace_population_ratio_task = graph.add_task(
                 _calculate_greenspace_population_ratio,
                 args=(greenspace_pixels_path,
