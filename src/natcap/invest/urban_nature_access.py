@@ -514,15 +514,15 @@ def execute(args):
 
     # Search radius mode 1: the same search radius applies to everything
     if args['search_radius_mode'] == RADIUS_OPT_UNIFORM:
-        LOGGER.info("Running model with search radius mode "
-                    f"{RADIUS_OPT_UNIFORM}")
         search_radius_m = list(search_radii)[0]
+        LOGGER.info("Running model with search radius mode "
+                    f"{RADIUS_OPT_UNIFORM}, radius {search_radius_m}")
 
         decayed_population_path = os.path.join(
             intermediate_dir,
             f'decayed_population_within_{search_radius_m}{suffix}.tif')
         decayed_population_task = graph.add_task(
-            _convolve_and_set_lower_bounds_for_population,
+            _convolve_and_set_lower_bound,
             kwargs={
                 'signal_path_band': (file_registry['aligned_population'], 1),
                 'kernel_path_band': (kernel_paths[search_radius_m], 1),
@@ -565,7 +565,7 @@ def execute(args):
             ])
 
         greenspace_supply_task = graph.add_task(
-            pygeoprocessing.convolve_2d,
+            _convolve_and_set_lower_bound,
             kwargs={
                 'signal_path_band': (
                     greenspace_population_ratio_path, 1),
@@ -590,7 +590,7 @@ def execute(args):
                 intermediate_dir,
                 f'decayed_population_within_{search_radius_m}{suffix}.tif')
             decayed_population_tasks[search_radius_m] = graph.add_task(
-                _convolve_and_set_lower_bounds_for_population,
+                _convolve_and_set_lower_bound,
                 kwargs={
                     'signal_path_band': (
                         file_registry['aligned_population'], 1),
@@ -698,7 +698,7 @@ def execute(args):
             decayed_population_in_group_paths.append(
                 decayed_population_in_group_path)
             decayed_population_in_group_tasks.append(graph.add_task(
-                _convolve_and_set_lower_bounds_for_population,
+                _convolve_and_set_lower_bound,
                 kwargs={
                     'signal_path_band': (
                         proportional_population_path, 1),
@@ -1651,7 +1651,7 @@ def _calculate_greenspace_population_ratio(
         gdal.GDT_Float32, FLOAT32_NODATA)
 
 
-def _convolve_and_set_lower_bounds_for_population(
+def _convolve_and_set_lower_bound(
         signal_path_band, kernel_path_band, target_path, working_dir):
     """Convolve a raster and set all values below 0 to 0.
 
