@@ -430,10 +430,7 @@ def execute(args):
         if _geometries_overlap(file_registry['reprojected_aois']):
             LOGGER.warning(
                 "Some administrative boundaries overlap, which will affect "
-                "the accuracy of supply rasters per population group. "
-                "Summary statistics in "
-                # TODO: is this path correct?
-                f"{os.path.basename(file_registry['aois'])} are unaffected.")
+                "the accuracy of supply rasters per population group. ")
 
         aois_rasterization_task = graph.add_task(
             _rasterize_aois,
@@ -1053,6 +1050,10 @@ def _geometries_overlap(vector_path):
     vector = None
 
     union_area = shapely.ops.unary_union(geometries).area
+    LOGGER.debug(
+        f"Vector has a union area of {union_area} and area sum of "
+        f"{area_sum},so about {round((1-(union_area/area_sum))*100, 2)}% of "
+        f"the area overlaps in vector {vector_path}")
     if math.isclose(union_area, area_sum):
         return False
     return True
