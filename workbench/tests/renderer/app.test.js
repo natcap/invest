@@ -407,6 +407,14 @@ describe('InVEST global settings: dialog interactions', () => {
   const tgLoggingLabelText = 'Taskgraph logging threshold';
   const languageLabelText = 'Language';
 
+  beforeAll(() => {
+    delete global.window.location;
+    Object.defineProperty(global.window, 'location', {
+      configurable: true,
+      value: { reload: jest.fn() },
+    });
+  });
+
   beforeEach(async () => {
     getInvestModelNames.mockResolvedValue({});
     getSupportedLanguages.mockResolvedValue({ en: 'english', es: 'spanish' });
@@ -895,6 +903,11 @@ describe('Translation', () => {
     // this is the same setup that's done in src/renderer/index.js (out of test scope)
     ipcRenderer.invoke(ipcMainChannels.SET_LANGUAGE, 'en');
     global.window._ = ipcRenderer.sendSync.bind(null, ipcMainChannels.GETTEXT);
+    delete global.window.location;
+    Object.defineProperty(global.window, 'location', {
+      configurable: true,
+      value: { reload: jest.fn() },
+    })
   });
 
   test('Text rerenders in new language when language setting changes', async () => {
@@ -913,6 +926,7 @@ describe('Translation', () => {
     // text within the settings modal component should be translated
     languageInput = await findByLabelText(messageCatalog.Language, { exact: false });
     expect(languageInput).toHaveValue(testLanguage);
+    expect(global.window.location.reload).toHaveBeenCalled();
 
     // text should also be translated in other components
     // such as the Open button (visible in background)
