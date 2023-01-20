@@ -419,6 +419,8 @@ def execute(args):
     # create the proportional population rasters.
     proportional_population_paths = {}
     proportional_population_tasks = {}
+    pop_group_proportion_paths = {}
+    pop_group_proportion_tasks = {}
     if (args['search_radius_mode'] == RADIUS_OPT_POP_GROUP or
             args.get('aggregate_by_pop_group', False)):
         aoi_reprojection_task.join()
@@ -466,6 +468,25 @@ def execute(args):
                 target_path_list=[proportional_population_path],
                 dependent_task_list=[
                     aois_rasterization_task, population_alignment_task]
+            )
+
+            pop_group_proportion_paths[pop_group] = os.path.join(
+                intermediate_dir,
+                f'proportion_of_aoi_in_{pop_group}{suffix}.tif')
+            pop_group_proportion_tasks[pop_group] = graph.add_task(
+                _rasterize_aois,
+                kwargs={
+                    'base_raster_path': file_registry['aligned_lulc'],
+                    'aois_vector_path':
+                        file_registry['reprojected_aois'],
+                    'target_raster_path':
+                        pop_group_proportion_paths[pop_group],
+                    'id_fieldname': pop_group,
+                },
+                task_name=f'Rasterize proportion of admin units as {pop_group}',
+                target_path_list=[pop_group_proportion_paths[pop_group]],
+                dependent_task_list=[
+                    aoi_reprojection_task, lulc_alignment_task]
             )
 
     attr_table = utils.read_csv_to_dataframe(
@@ -859,17 +880,22 @@ def execute(args):
                     ])
 
         greenspace_supply_task = graph.add_task(
-            ndr._sum_rasters,
+            _weighted_sum,
             kwargs={
                 'raster_path_list':
-                    list(greenspace_supply_by_group_paths.values()),
-                'target_nodata': FLOAT32_NODATA,
-                'target_result_path': file_registry['greenspace_supply'],
+                    [greenspace_supply_by_group_paths[group] for group in
+                     sorted(split_population_fields)],
+                'weight_raster_list':
+                    [pop_group_proportion_paths[group] for group in
+                     sorted(split_population_fields)],
+                'target_path': file_registry['greenspace_supply'],
             },
             task_name='2SFCA - greenspace supply total',
             target_path_list=[file_registry['greenspace_supply']],
-            dependent_task_list=greenspace_supply_by_group_tasks
-        )
+            dependent_task_list=[
+                *greenspace_supply_by_group_tasks,
+                *pop_group_proportion_tasks.values(),
+            ])
 
         greenspace_supply_demand_budget_task = graph.add_task(
             ndr._sum_rasters,
@@ -1093,6 +1119,45 @@ def _reproject_and_identify(base_vector_path, target_projection_wkt,
     layer.CommitTransaction()
     layer = None
     vector = None
+
+
+def _weighted_sum(raster_path_list, weight_raster_list, target_path):
+    """Create a spatially-weighted sum.
+
+    Args:
+        raster_path_list (list): A list of raster paths containing values to
+            weight and sum.
+        weight_raster_list (list): A list of raster paths containing weights.
+        target_path (str): The path to where the output raster should be
+            stored.
+
+    Returns
+        ``None``
+    """
+    assert len(raster_path_list) == len(weight_raster_list)
+
+    nodata_list = [pygeoprocessing.get_raster_info(path)['nodata'][0]
+                   for path in raster_path_list]
+
+    def _weight_and_sum(*args):
+        pixel_arrays = args[:int(len(args)/2 + 1)]
+        weight_arrays = args[int(len(args)/2):]
+
+        target_array = numpy.zeros(pixel_arrays[0].shape, dtype=numpy.float32)
+        touched_pixels = numpy.zeros(target_array.shape, dtype=bool)
+        for array, weight, nodata in zip(
+                pixel_arrays, weight_arrays, nodata_list):
+            valid_pixels = ~utils.array_equals_nodata(array, nodata)
+            touched_pixels |= valid_pixels
+            target_array[valid_pixels] += array[valid_pixels]
+
+        # Any pixels that were not touched, set them to nodata.
+        target_array[~touched_pixels] = FLOAT32_NODATA
+        return target_array
+
+    pygeoprocessing.raster_calculator(
+        [(path, 1) for path in raster_path_list],
+        _weight_and_sum, target_path, gdal.GDT_Float32, FLOAT32_NODATA)
 
 
 def _reclassify_and_multiply(
