@@ -40,6 +40,8 @@ def _build_model_args(workspace):
         'aoi_vector_path': os.path.join(
             workspace, 'aois.geojson'),
     }
+    if not os.path.exists(workspace):
+        os.makedirs(workspace)
 
     random.seed(-1)  # for our random number generation
     population_pixel_size = (90, -90)
@@ -437,7 +439,11 @@ class UNATests(unittest.TestCase):
         admin_layer = None
 
     def test_split_population(self):
-        """UNA: test split population optional module."""
+        """UNA: test split population optional module.
+
+        Split population is not a radius mode, it's a summary statistics mode.
+        Therefore, we test with another mode, such as uniform search radius.
+        """
         from natcap.invest import urban_nature_access
 
         args = _build_model_args(self.workspace_dir)
@@ -564,6 +570,89 @@ class UNATests(unittest.TestCase):
         for fieldname, expected_value in expected_field_values.items():
             self.assertAlmostEqual(
                 expected_value, summary_feature.GetField(fieldname))
+
+    def test_modes_same_radii_same_results(self):
+        """UNA: all modes have same results when consistent radii.
+
+        Although the different modes have different ways of defining their
+        search radii, the greenspace_supply raster should be numerically
+        equivalent if they all use the same search radii.
+
+        This is a good gut-check of basic model behavior across modes.
+        """
+        from natcap.invest import urban_nature_access
+
+        # This radius will be the same across all model runs.
+        search_radius = 1000
+        uniform_args = _build_model_args(
+            os.path.join(self.workspace_dir, 'radius_uniform'))
+        uniform_args['results_suffix'] = 'uniform'
+        uniform_args['workspace_dir'] = os.path.join(
+            self.workspace_dir, 'radius_uniform')
+        uniform_args['search_radius_mode'] = (
+            urban_nature_access.RADIUS_OPT_UNIFORM)
+        uniform_args['search_radius'] = search_radius
+
+        # build args for split greenspace mode
+        split_greenspace_args = _build_model_args(
+            os.path.join(self.workspace_dir, 'radius_greenspace'))
+        split_greenspace_args['results_suffix'] = 'greenspace'
+        split_greenspace_args['search_radius_mode'] = (
+            urban_nature_access.RADIUS_OPT_GREENSPACE)
+        attribute_table = pandas.read_csv(
+            split_greenspace_args['lulc_attribute_table'])
+        new_search_radius_values = dict(
+            (lucode, search_radius) for lucode in attribute_table['lucode'])
+        attribute_table['search_radius_m'] = attribute_table['lucode'].map(
+            new_search_radius_values)
+        attribute_table.to_csv(
+            split_greenspace_args['lulc_attribute_table'], index=False)
+
+        # build args for split population group mode
+        pop_group_args = _build_model_args(
+            os.path.join(self.workspace_dir, 'radius_pop_group'))
+        pop_group_args['results_suffix'] = 'pop_group'
+        pop_group_args['search_radius_mode'] = (
+            urban_nature_access.RADIUS_OPT_POP_GROUP)
+        pop_group_args['population_group_radii_table'] = os.path.join(
+            self.workspace_dir, 'pop_group_radii.csv')
+
+        with (open(pop_group_args['population_group_radii_table'], 'w')
+                as pop_grp_table):
+            pop_grp_table.write(
+                textwrap.dedent(f"""\
+                    pop_group,search_radius_m
+                    pop_female,{search_radius}
+                    pop_male,{search_radius}"""))
+        admin_geom = [
+            shapely.geometry.box(
+                *pygeoprocessing.get_raster_info(
+                    pop_group_args['lulc_raster_path'])['bounding_box'])]
+        fields = {f'pop_{group}': ogr.OFTReal for group in ('female', 'male')}
+        attributes = [{'pop_female': 0.56, 'pop_male': 0.44}]
+        pygeoprocessing.shapely_geometry_to_vector(
+            admin_geom, pop_group_args['aoi_vector_path'],
+            pygeoprocessing.get_raster_info(
+                pop_group_args['population_raster_path'])['projection_wkt'],
+            'GeoJSON', fields, attributes)
+
+        for args in (uniform_args, split_greenspace_args, pop_group_args):
+            urban_nature_access.execute(args)
+
+        uniform_radius_supply = pygeoprocessing.raster_to_numpy_array(
+            os.path.join(uniform_args['workspace_dir'], 'output',
+                         'greenspace_supply_uniform.tif'))
+        split_greenspace_supply = pygeoprocessing.raster_to_numpy_array(
+            os.path.join(split_greenspace_args['workspace_dir'], 'output',
+                         'greenspace_supply_greenspace.tif'))
+        split_pop_groups_supply = pygeoprocessing.raster_to_numpy_array(
+            os.path.join(pop_group_args['workspace_dir'], 'output',
+                         'greenspace_supply_pop_group.tif'))
+
+        numpy.testing.assert_allclose(
+            uniform_radius_supply, split_greenspace_supply, rtol=1e-6)
+        numpy.testing.assert_allclose(
+            uniform_radius_supply, split_pop_groups_supply, rtol=1e-6)
 
     def test_polygon_overlap(self):
         """UNA: Test that we can check if polygons overlap."""
