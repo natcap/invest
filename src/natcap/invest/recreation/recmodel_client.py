@@ -32,7 +32,7 @@ if shapely.speedups.available:
 # installed and we import the global version of it rather than the local
 from .. import utils
 from .. import spec_utils
-from ..spec_utils import u
+from ..unit_registry import u
 from .. import validation
 from ..model_metadata import MODEL_METADATA
 from .. import gettext

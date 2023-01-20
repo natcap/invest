@@ -1,7 +1,7 @@
 import unittest
 
 from natcap.invest import spec_utils
-from natcap.invest.spec_utils import u
+from natcap.invest.unit_registry import u
 
 
 class TestSpecUtils(unittest.TestCase):
