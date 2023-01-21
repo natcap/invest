@@ -691,3 +691,20 @@ class UNATests(unittest.TestCase):
             valid_mode_string = getattr(urban_nature_access,
                                         f'RADIUS_OPT_{mode_suffix}')
             self.assertIn(valid_mode_string, str(cm.exception))
+
+    def test_square_pixels(self):
+        from natcap.invest import urban_nature_access
+
+        raster_path = os.path.join(self.workspace_dir, 'raster.tif')
+        nodata = 255
+        for (pixel_size, expected_pixel_size) in (
+                ((10, -10), (10, -10)),
+                ((-10, 10), (-10, 10)),
+                ((5, -10), (7.5, -7.5)),
+                ((-5, -10), (-7.5, -7.5))):
+            pygeoprocessing.numpy_array_to_raster(
+                numpy.ones((10, 10), dtype=numpy.uint8), nodata, pixel_size,
+                _DEFAULT_ORIGIN, _DEFAULT_SRS.ExportToWkt(), raster_path)
+            computed_pixel_size = (
+                urban_nature_access._square_off_pixels(raster_path))
+            self.assertEqual(computed_pixel_size, expected_pixel_size)
