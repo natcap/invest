@@ -236,7 +236,7 @@ ARGS_SPEC = {
                         "The proportion of the population within this region "
                         "belonging to the identified population group. "
                         "Values in this column must match those population "
-                        "groups in the administrative vector."
+                        "group field names in the AOI vector."
                     ),
                 },
                 'search_radius_m': {
@@ -251,7 +251,10 @@ ARGS_SPEC = {
                     ),
                 },
             },
-            'about': gettext('TBD'),
+            'about': gettext(
+                'A table associating population groups with the distance '
+                'in meters that members of the population group will, on '
+                'average, travel to find greenspace'),
         }
     }
 }
@@ -300,9 +303,10 @@ def execute(args):
             * ``greenspace``: (required) ``0`` or ``1`` indicating whether
               this landcover code is (``1``) or is not (``0``) a greenspace
               pixel.
-            * ``search_radius_m``: (required) the search radius for this
-              greenspace landcover in meters. Required for all greenspace
-              lucodes.
+            * ``search_radius_m``: (conditionally required) the search radius
+              for this greenspace landcover in meters. Required for all
+              greenspace lucodes if ``args['search_radius_mode'] ==
+              RADIUS_OPT_GREENSPACE``
 
         args['population_raster_path'] (string): (required) A string path to a
             GDAL-compatible raster where pixels represent the population of
@@ -319,14 +323,16 @@ def execute(args):
             number indicating the required greenspace, in m² per capita.
         args['decay_function'] (string): (required) The selected kernel type.
             Must be one of the keys in ``KERNEL_TYPES``.
+        args['search_radius_mode'] (string): (required).  The selected search
+            radius mode.  Must be one of ``RADIUS_OPT_UNIFORM``,
+            ``RADIUS_OPT_GREENSPACE``, or ``RADIUS_OPT_POP_GROUP``.
+        args['search_radius'] (number): Required if
+            ``args['search_radius_mode'] == RADIUS_OPT_UNIFORM``.  The search
+            radius in meters to use in the analysis.
         args['population_group_radii_table'] (string): (optional) A table
             associating population groups with a search radius for that
-            population group.
-
-            TODO: must these group names match the admin unit vector
-            groupnames?
-
-        TODO: make sure the docstring matches actual requirements.
+            population group.  Population group fieldnames must match
+            population group fieldnames in the aoi vector.
 
     Returns:
         ``None``
@@ -2101,6 +2107,5 @@ def density_decay_kernel_raster(expected_distance, kernel_filepath,
 
 
 def validate(args, limit_to=None):
-    # TODO: validate that split population groups match everywhere defined.
     return validation.validate(
         args, ARGS_SPEC['args'], ARGS_SPEC['args_with_spatial_overlap'])
