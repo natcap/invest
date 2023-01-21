@@ -675,3 +675,19 @@ class UNATests(unittest.TestCase):
         pygeoprocessing.shapely_geometry_to_vector(
             [polygon_1, polygon_2, polygon_3], vector_path, wkt, 'GeoJSON')
         self.assertTrue(urban_nature_access._geometries_overlap(vector_path))
+
+    def test_invalid_search_radius_mode(self):
+        """UNA: Assert an exception when invalid radius mode provided."""
+        from natcap.invest import urban_nature_access
+
+        args = _build_model_args(self.workspace_dir)
+        args['search_radius_mode'] = 'some invalid mode'
+
+        with self.assertRaises(ValueError) as cm:
+            urban_nature_access.execute(args)
+
+        self.assertIn('Invalid search radius mode provided', str(cm.exception))
+        for mode_suffix in ('UNIFORM', 'GREENSPACE', 'POP_GROUP'):
+            valid_mode_string = getattr(urban_nature_access,
+                                        f'RADIUS_OPT_{mode_suffix}')
+            self.assertIn(valid_mode_string, str(cm.exception))
