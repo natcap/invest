@@ -265,7 +265,6 @@ _OUTPUT_BASE_FILES = {
     'aois': 'aois.gpkg',
 }
 
-# TODO: look into templating these for the various modes
 _INTERMEDIATE_BASE_FILES = {
     'attribute_table': 'attribute_table.csv',
     'aligned_population': 'aligned_population.tif',
@@ -693,7 +692,6 @@ def execute(args):
             target_path_list=[file_registry['greenspace_supply']],
             dependent_task_list=partial_greenspace_supply_tasks
         )
-        # TODO: figure out how the summary vector needs to be written.
 
     # Search radius mode 3: search radii are defined per population group.
     elif args['search_radius_mode'] == RADIUS_OPT_POP_GROUP:
@@ -1797,7 +1795,6 @@ def _square_off_pixels(raster_path):
     return pixel_tuple
 
 
-# TODO: refactor this into raster_calculator and align_and_resize...
 def _resample_population_raster(
         source_population_raster_path, target_population_raster_path,
         lulc_pixel_size, lulc_bb, lulc_projection_wkt, working_dir):
