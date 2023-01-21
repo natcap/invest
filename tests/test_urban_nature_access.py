@@ -170,7 +170,7 @@ class UNATests(unittest.TestCase):
                     rtol=1e-3)
 
     def test_dichotomous_decay_simple(self):
-        """UNA: Test dichotomous decay on a simple case."""
+        """UNA: Test dichotomous decay kernel on a simple case."""
         from natcap.invest import urban_nature_access
 
         expected_distance = 5
@@ -195,6 +195,35 @@ class UNATests(unittest.TestCase):
         extracted_kernel_array = pygeoprocessing.raster_to_numpy_array(
             kernel_filepath)
         numpy.testing.assert_array_equal(
+            expected_array, extracted_kernel_array)
+
+    def test_dichotomous_decay_normalized(self):
+        """UNA: Test normalized dichotomous kernel."""
+        from natcap.invest import urban_nature_access
+
+        expected_distance = 5
+        kernel_filepath = os.path.join(self.workspace_dir, 'kernel.tif')
+
+        urban_nature_access.dichotomous_decay_kernel_raster(
+            expected_distance, kernel_filepath, normalize=True)
+
+        expected_array = numpy.array([
+            [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+            [0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0],
+            [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+            [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+            [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+            [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+            [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+            [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+            [0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0],
+            [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0]], dtype=numpy.float32)
+        expected_array /= numpy.sum(expected_array)
+
+        extracted_kernel_array = pygeoprocessing.raster_to_numpy_array(
+            kernel_filepath)
+        numpy.testing.assert_allclose(
             expected_array, extracted_kernel_array)
 
     def test_dichotomous_decay_large(self):
