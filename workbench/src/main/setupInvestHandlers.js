@@ -96,12 +96,13 @@ export function setupInvestRunHandlers(investExe) {
     // 2. parse the logfile path from stdout.
     // 3. log the model run for invest usage stats.
     const stdOutCallback = async (data) => {
+      const strData = `${data}`;
       if (!investStarted) {
-        if (`${data}`.match('Writing log messages to')) {
+        if (strData.match('Writing log messages to')) {
           investStarted = true;
           runningJobs[tabID] = investRun.pid;
-          const investLogfile = `${data}`.substring(
-            `${data}`.indexOf('[') + 1, `${data}`.indexOf(']')
+          const investLogfile = strData.substring(
+            strData.indexOf('[') + 1, strData.indexOf(']')
           );
           event.reply(`invest-logging-${tabID}`, path.resolve(investLogfile));
           if (!ELECTRON_DEV_MODE && !process.env.PUPPETEER) {
@@ -113,14 +114,13 @@ export function setupInvestRunHandlers(investExe) {
       // only be one logger message at a time.
       event.reply(
         `invest-stdout-${tabID}`,
-        markupMessage(`${data}`, pyModuleName)
+        [strData, markupMessage(strData, pyModuleName)]
       );
     };
     investRun.stdout.on('data', stdOutCallback);
 
     const stdErrCallback = (data) => {
       logger.debug(`${data}`);
-      investStdErr += `${data}`;
     };
     investRun.stderr.on('data', stdErrCallback);
 
@@ -132,7 +132,6 @@ export function setupInvestRunHandlers(investExe) {
       delete runningJobs[tabID];
       event.reply(`invest-exit-${tabID}`, {
         code: code,
-        stdErr: investStdErr,
       });
       logger.debug(code);
       fs.unlink(datastackPath, (err) => {
@@ -156,12 +155,12 @@ export function setupInvestLogReaderHandler() {
         logger.info(err);
         event.reply(
           `invest-stdout-${channel}`,
-          `Logfile is missing or unreadable: ${os.EOL}${logfile}`
+          [`Logfile is missing or unreadable: ${os.EOL}${logfile}`, '']
         );
       });
 
       fileStream.on('data', (data) => {
-        event.reply(`invest-stdout-${channel}`, `${data}`);
+        event.reply(`invest-stdout-${channel}`, [`${data}`, '']);
       });
     });
 }
