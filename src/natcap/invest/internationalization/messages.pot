@@ -7,7 +7,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: InVEST 3.12\n"
-"Report-Msgid-Bugs-To: jdouglass@stanford.edu\n"
+"Report-Msgid-Bugs-To: natcap-software@lists.stanford.edu\n"
 "POT-Creation-Date: 2022-10-21 13:17-0700\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"

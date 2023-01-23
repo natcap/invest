@@ -176,7 +176,6 @@ describe('createWindow', () => {
       ipcMainChannels.IS_FIRST_RUN,
       ipcMainChannels.SET_LANGUAGE,
       ipcMainChannels.GET_N_CPUS,
-      ipcMainChannels.IS_DEV_MODE,
       ipcMainChannels.INVEST_VERSION,
       ipcMainChannels.CHECK_STORAGE_TOKEN,
     ];
