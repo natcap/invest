@@ -1,4 +1,5 @@
 import collections
+import functools
 import logging
 import math
 import os
@@ -365,13 +366,14 @@ def execute(args):
     graph = taskgraph.TaskGraph(work_token_dir, n_workers)
 
     kernel_creation_functions = {
-        KERNEL_LABEL_DICHOTOMY: dichotomous_decay_kernel_raster,
-        # "exponential" is more consistent with other InVEST models'
-        # terminology.  "Power function" is used in the design doc.
-        KERNEL_LABEL_EXPONENTIAL: utils.exponential_decay_kernel_raster,
-        KERNEL_LABEL_GAUSSIAN: utils.gaussian_decay_kernel_raster,
-        KERNEL_LABEL_DENSITY: density_decay_kernel_raster,
-        KERNEL_LABEL_POWER: power_kernel_raster,
+        KERNEL_LABEL_DICHOTOMY: _kernel_dichotomy,
+        KERNEL_LABEL_EXPONENTIAL: _kernel_exponential,
+        KERNEL_LABEL_GAUSSIAN: _kernel_gaussian,
+        KERNEL_LABEL_DENSITY: _kernel_density,
+        # Use the user-provided beta args parameter if the user has provided
+        # it.  Helpful to have a consistent kernel creation API.
+        KERNEL_LABEL_POWER: functools.partial(
+            _kernel_power, beta=args.get('beta', None)),
     }
     # Since we have these keys defined in two places, I want to be super sure
     # that the labels match.
@@ -519,6 +521,10 @@ def execute(args):
         pop_group_table = utils.read_csv_to_dataframe(
             args['population_group_radii_table'])
         search_radii = set(pop_group_table['search_radius_m'].unique())
+        # Build a dict of {pop_group: search_radius_m}
+        search_radii_by_pop_group = dict(
+            pop_group_table[['pop_group', 'search_radius_m']].itertuples(
+                index=False, name=None))
     else:
         valid_options = ', '.join(
             ARGS_SPEC['args']['search_radius_mode']['options'].keys())
@@ -533,10 +539,12 @@ def execute(args):
             intermediate_dir, f'kernel_{search_radius_m}{suffix}.tif')
         kernel_paths[search_radius_m] = kernel_path
         kernel_tasks[search_radius_m] = graph.add_task(
-            # All kernel creation types have the same function signature
-            kernel_creation_functions[decay_function],
-            args=(search_radius_in_pixels, kernel_path),
-            kwargs={'normalize': False},  # Model math calls for un-normalized
+            _create_kernel_raster,
+            kwargs={
+                'kernel_function': kernel_creation_functions[decay_function],
+                'expected_distance': search_radius_in_pixels,
+                'kernel_filepath': kernel_path,
+                'normalize': False},  # Model math calls for un-normalized
             task_name=(
                 f'Create {decay_function} kernel - {search_radius_m}m'),
             target_path_list=[kernel_path]
@@ -720,7 +728,8 @@ def execute(args):
 
         decayed_population_in_group_paths = []
         decayed_population_in_group_tasks = []
-        for search_radius_m in search_radii:
+        for pop_group in split_population_fields:
+            search_radius_m = search_radii_by_pop_group[pop_group]
             decayed_population_in_group_path = os.path.join(
                 intermediate_dir,
                 f'decayed_population_in_{pop_group}{suffix}.tif')
@@ -730,7 +739,7 @@ def execute(args):
                 _convolve_and_set_lower_bound,
                 kwargs={
                     'signal_path_band': (
-                        proportional_population_path, 1),
+                        proportional_population_paths[pop_group], 1),
                     'kernel_path_band': (
                         kernel_paths[search_radius_m], 1),
                     'target_path': decayed_population_in_group_path,
@@ -1930,100 +1939,109 @@ def _resample_population_raster(
     shutil.rmtree(tmp_working_dir, ignore_errors=True)
 
 
-def dichotomous_decay_kernel_raster(expected_distance, kernel_filepath,
-                                    normalize=False):
-    """Create a raster-based, discontinuous decay kernel based on a dichotomy.
+def _kernel_dichotomy(distance, max_distance):
+    """Create a dichotomous kernel.
 
-    This kernel has a value of ``1`` for all pixels within
-    ``expected_distance`` from the center of the kernel.  All values outside of
-    this distance are ``0``.
+    All pixels within ``max_distance`` have a value of 1.
 
     Args:
-        expected_distance (int or float): The distance (in pixels) after which
-            the kernel becomes 0.
-        kernel_filepath (string): The string path on disk to where this kernel
-            should be stored.
-        normalize=False (bool): Whether to divide the kernel values by the sum
-            of all values in the kernel.
+        distance (numpy.array): An array of euclidean distances (in pixels)
+            from the center of the kernel.
+        max_distance (float): The maximum distance of the kernel.  Pixels that
+            are more than this number of pixels will have a value of 0.
 
     Returns:
-        ``None``
+        ``numpy.array`` with dtype of numpy.float32 and same shape as
+        ``distance.
     """
-    pixel_radius = math.ceil(expected_distance)
-    kernel_size = pixel_radius * 2 + 1  # allow for a center pixel
-    driver = gdal.GetDriverByName('GTiff')
-    kernel_dataset = driver.Create(
-        kernel_filepath.encode('utf-8'), kernel_size, kernel_size, 1,
-        gdal.GDT_Float32, options=[
-            'BIGTIFF=IF_SAFER', 'TILED=YES', 'BLOCKXSIZE=256',
-            'BLOCKYSIZE=256'])
-
-    # Make some kind of geotransform, it doesn't matter what but
-    # will make GIS libraries behave better if it's all defined
-    kernel_dataset.SetGeoTransform([0, 1, 0, 0, 0, -1])
-    srs = osr.SpatialReference()
-    srs.SetWellKnownGeogCS('WGS84')
-    kernel_dataset.SetProjection(srs.ExportToWkt())
-
-    kernel_band = kernel_dataset.GetRasterBand(1)
-    kernel_nodata = FLOAT32_NODATA
-    kernel_band.SetNoDataValue(kernel_nodata)
-
-    kernel_band = None
-    kernel_dataset = None
-
-    kernel_raster = gdal.OpenEx(kernel_filepath, gdal.GA_Update)
-    kernel_band = kernel_raster.GetRasterBand(1)
-    band_x_size = kernel_band.XSize
-    band_y_size = kernel_band.YSize
-    running_sum = 0
-    for block_data in pygeoprocessing.iterblocks(
-            (kernel_filepath, 1), offset_only=True):
-        array_xmin = block_data['xoff'] - pixel_radius
-        array_xmax = min(
-            array_xmin + block_data['win_xsize'],
-            band_x_size - pixel_radius)
-        array_ymin = block_data['yoff'] - pixel_radius
-        array_ymax = min(
-            array_ymin + block_data['win_ysize'],
-            band_y_size - pixel_radius)
-
-        pixel_dist_from_center = numpy.hypot(
-            *numpy.mgrid[
-                array_ymin:array_ymax,
-                array_xmin:array_xmax])
-        search_kernel = numpy.array(
-            pixel_dist_from_center <= expected_distance, dtype=numpy.uint8)
-        running_sum += search_kernel.sum()
-        kernel_band.WriteArray(
-            search_kernel,
-            yoff=block_data['yoff'],
-            xoff=block_data['xoff'])
-
-    kernel_raster.FlushCache()
-    kernel_band = None
-    kernel_raster = None
-
-    if normalize:
-        kernel_raster = gdal.OpenEx(kernel_filepath, gdal.GA_Update)
-        kernel_band = kernel_raster.GetRasterBand(1)
-        for block_data, kernel_block in pygeoprocessing.iterblocks(
-                (kernel_filepath, 1)):
-            # divide by sum to normalize
-            kernel_block /= running_sum
-            kernel_band.WriteArray(
-                kernel_block, xoff=block_data['xoff'], yoff=block_data['yoff'])
-
-        kernel_raster.FlushCache()
-        kernel_band = None
-        kernel_raster = None
+    return (distance <= max_distance).astype(numpy.float32)
 
 
-def density_decay_kernel_raster(expected_distance, kernel_filepath,
-                                normalize=False):
-    """Create a raster-based density decay kernel.
+def _kernel_exponential(distance, max_distance):
+    """Create an exponential-decay kernel.
 
     Args:
+        distance (numpy.array): An array of euclidean distances (in pixels)
+            from the center of the kernel.
+        max_distance (float): The maximum distance of the kernel.  Pixels that
+            are more than this number of pixels will have a value of 0.
+
+    Returns:
+        ``numpy.array`` with dtype of numpy.float32 and same shape as
+        ``distance.
+    """
+    kernel = numpy.zeros(distance.shape, dtype=numpy.float32)
+    pixels_in_radius = (distance <= max_distance)
+    kernel[pixels_in_radius] = numpy.exp(-distance / max_distance)
+    return kernel
+
+
+def _kernel_power(distance, max_distance, beta):
+    """Create a power kernel with user-defined beta.
+
+    Args:
+        distance (numpy.array): An array of euclidean distances (in pixels)
+            from the center of the kernel.
+        max_distance (float): The maximum distance of the kernel.  Pixels that
+            are more than this number of pixels will have a value of 0.
+
+    Returns:
+        ``numpy.array`` with dtype of numpy.float32 and same shape as
+        ``distance.
+    """
+    kernel = numpy.zeros(distance.shape, dtype=numpy.float32)
+    pixels_in_radius = (distance <= max_distance)
+    kernel[pixels_in_radius] = distance[pixels_in_radius] ** beta
+    return kernel
+
+
+def _kernel_gaussian(distance, max_distance):
+    """Create a gaussian kernel.
+
+    Args:
+        distance (numpy.array): An array of euclidean distances (in pixels)
+            from the center of the kernel.
+        max_distance (float): The maximum distance of the kernel.  Pixels that
+            are more than this number of pixels will have a value of 0.
+
+    Returns:
+        ``numpy.array`` with dtype of numpy.float32 and same shape as
+        ``distance.
+    """
+    kernel = numpy.zeros(distance.shape, dtype=numpy.float32)
+    pixels_in_radius = (distance <= max_distance)
+    kernel[pixels_in_radius] = (
+        (numpy.e ** (-0.5 * ((distance[pixels_in_radius] / max_distance) ** 2))
+         - numpy.e ** (-0.5)) / (1 - numpy.e ** (-0.5)))
+    return kernel
+
+
+def _kernel_density(distance, max_distance):
+    """Create a kernel based on density.
+
+    Args:
+        distance (numpy.array): An array of euclidean distances (in pixels)
+            from the center of the kernel.
+        max_distance (float): The maximum distance of the kernel.  Pixels that
+            are more than this number of pixels will have a value of 0.
+
+    Returns:
+        ``numpy.array`` with dtype of numpy.float32 and same shape as
+        ``distance.
+    """
+    kernel = numpy.zeros(distance.shape, dtype=numpy.float32)
+    pixels_in_radius = (distance <= max_distance)
+    kernel[pixels_in_radius] = (
+        0.75 * (1 - (distance[pixels_in_radius] / max_distance) ** 2))
+    return kernel
+
+
+def _create_kernel_raster(
+        kernel_function, expected_distance, kernel_filepath, normalize=False):
+    """Create a raster distance-weighted decay kernel from a function.
+
+    Args:
+        kernel_function (callable): The kernel function to use.
         expected_distance (int or float): The distance (in pixels) after which
             the kernel becomes 0.
         kernel_filepath (string): The string path on disk to where this kernel
@@ -2078,16 +2096,13 @@ def density_decay_kernel_raster(expected_distance, kernel_filepath,
                 array_ymin:array_ymax,
                 array_xmin:array_xmax])
 
-        density = numpy.zeros(
-            pixel_dist_from_center.shape, dtype=numpy.float32)
-        pixels_in_radius = (pixel_dist_from_center <= expected_distance)
-        density[pixels_in_radius] = (
-            0.75 * (1 - (pixel_dist_from_center[
-                pixels_in_radius] / expected_distance) ** 2))
-        running_sum += density.sum()
+        kernel = kernel_function(distance=pixel_dist_from_center,
+                                 max_distance=expected_distance)
+        if normalize:
+            running_sum += kernel.sum()
 
         kernel_band.WriteArray(
-            density,
+            kernel,
             yoff=block_data['yoff'],
             xoff=block_data['xoff'])
 

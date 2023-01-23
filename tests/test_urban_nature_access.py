@@ -176,8 +176,9 @@ class UNATests(unittest.TestCase):
         expected_distance = 5
         kernel_filepath = os.path.join(self.workspace_dir, 'kernel.tif')
 
-        urban_nature_access.dichotomous_decay_kernel_raster(
-            expected_distance, kernel_filepath)
+        urban_nature_access._create_kernel_raster(
+            urban_nature_access._kernel_dichotomy, expected_distance,
+            kernel_filepath)
 
         expected_array = numpy.array([
             [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
@@ -204,7 +205,8 @@ class UNATests(unittest.TestCase):
         expected_distance = 5
         kernel_filepath = os.path.join(self.workspace_dir, 'kernel.tif')
 
-        urban_nature_access.dichotomous_decay_kernel_raster(
+        urban_nature_access._create_kernel_raster(
+            urban_nature_access._kernel_dichotomy,
             expected_distance, kernel_filepath, normalize=True)
 
         expected_array = numpy.array([
@@ -236,7 +238,8 @@ class UNATests(unittest.TestCase):
         expected_distance = 2**13
         kernel_filepath = os.path.join(self.workspace_dir, 'kernel.tif')
 
-        urban_nature_access.dichotomous_decay_kernel_raster(
+        urban_nature_access._create_kernel_raster(
+            urban_nature_access._kernel_dichotomy,
             expected_distance, kernel_filepath)
 
         expected_shape = (expected_distance*2+1, expected_distance*2+1)
@@ -260,7 +263,8 @@ class UNATests(unittest.TestCase):
         expected_distance = 200
         kernel_filepath = os.path.join(self.workspace_dir, 'kernel.tif')
 
-        urban_nature_access.density_decay_kernel_raster(
+        urban_nature_access._create_kernel_raster(
+            urban_nature_access._kernel_density,
             expected_distance, kernel_filepath)
 
         expected_shape = (expected_distance*2+1,) * 2
@@ -280,7 +284,8 @@ class UNATests(unittest.TestCase):
         expected_distance = 200
         kernel_filepath = os.path.join(self.workspace_dir, 'kernel.tif')
 
-        urban_nature_access.density_decay_kernel_raster(
+        urban_nature_access._create_kernel_raster(
+            urban_nature_access._kernel_density,
             expected_distance, kernel_filepath, normalize=True)
 
         expected_shape = (expected_distance*2+1,) * 2
@@ -409,8 +414,8 @@ class UNATests(unittest.TestCase):
         # expected field values from eyeballing the results; random seed = 1
         expected_values = {
             'SUP_DEMadm_cap': -17.9078,
-            'Pund_adm': 4660.111328,
-            'Povr_adm': 415.888885,
+            'Pund_adm': 3991.827148,
+            'Povr_adm': 1084.172852,
             urban_nature_access.ID_FIELDNAME: 0,
         }
         admin_feature = admin_layer.GetFeature(1)
@@ -460,9 +465,9 @@ class UNATests(unittest.TestCase):
 
         # expected field values from eyeballing the results; random seed = 1
         expected_values = {
-            'SUP_DEMadm_cap': -18.044228,
-            'Pund_adm': 4357.321289,
-            'Povr_adm': 718.679077,
+            'SUP_DEMadm_cap': -18.045702,
+            'Pund_adm': 4475.123047,
+            'Povr_adm': 600.876587,
             urban_nature_access.ID_FIELDNAME: 0,
         }
         admin_feature = admin_layer.GetFeature(1)
@@ -596,20 +601,19 @@ class UNATests(unittest.TestCase):
         self.assertEqual(summary_layer.GetFeatureCount(), 1)
         summary_feature = summary_layer.GetFeature(1)
 
-        # TODO: verify these values.
         expected_field_values = {
             'pop_female': attributes[0]['pop_female'],
             'pop_male': attributes[0]['pop_male'],
             'adm_unit_id': 0,
             'Pund_adm': 0,
-            'Pund_adm_female': 0,
-            'Pund_adm_male': 0,
+            'Pund_adm_female': 2235.423095703125,
+            'Pund_adm_male': 1756.404052734375,
             'Povr_adm': 0,
-            'Povr_adm_female': 2842.56005859375,
-            'Povr_adm_male': 2233.43994140625,
-            'SUP_DEMadm_cap': 85.47153578112687,
-            'SUP_DEMadm_cap_female': 85.47153401930032,
-            'SUP_DEMadm_cap_male': 85.47153802345169,
+            'Povr_adm_female': 607.13671875,
+            'Povr_adm_male': 477.0360107421875,
+            'SUP_DEMadm_cap': -17.90779987933412,
+            'SUP_DEMadm_cap_female': -17.907799675104435,
+            'SUP_DEMadm_cap_male': -17.907800139262825,
         }
         self.assertEqual(
             set(defn.GetName() for defn in summary_layer.schema),
@@ -657,8 +661,8 @@ class UNATests(unittest.TestCase):
 
         # build args for split population group mode
         pop_group_args = _build_model_args(
-            os.path.join(self.workspace_dir, 'radius_pop_group'))
-        pop_group_args['results_suffix'] = 'pop_group'
+            os.path.join(self.workspace_dir, 'radius_popgroup'))
+        pop_group_args['results_suffix'] = 'popgroup'
         pop_group_args['search_radius_mode'] = (
             urban_nature_access.RADIUS_OPT_POP_GROUP)
         pop_group_args['population_group_radii_table'] = os.path.join(
@@ -694,7 +698,7 @@ class UNATests(unittest.TestCase):
                          'greenspace_supply_greenspace.tif'))
         split_pop_groups_supply = pygeoprocessing.raster_to_numpy_array(
             os.path.join(pop_group_args['workspace_dir'], 'output',
-                         'greenspace_supply_pop_group.tif'))
+                         'greenspace_supply_popgroup.tif'))
 
         numpy.testing.assert_allclose(
             uniform_radius_supply, split_greenspace_supply, rtol=1e-6)
