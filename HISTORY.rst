@@ -36,6 +36,11 @@
 
 Unreleased Changes
 ------------------
+* General
+    * During builds of the InVEST documentation, the packages
+      ``sphinx-rtd-theme`` and ``sphinx-reredirects`` will be pulled from
+      conda-forge instead of PyPI.
+      (`#1151 <https://github.com/natcap/invest/issues/1151>`_)
 * Workbench
     * Added tooltips to the model tabs so that they can be identified even when
       several tabs are open (`#1071 <https://github.com/natcap/invest/issues/1088>`_)
