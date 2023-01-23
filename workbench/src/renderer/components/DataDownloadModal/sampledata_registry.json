@@ -26,9 +26,6 @@
     "filename": "forest_carbon_edge_effect.zip",
     "note": "(required to run model)"
   },
-  "GLOBIO": {
-    "filename": "globio.zip"
-  },
   "Habitat Quality": {
     "filename": "HabitatQuality.zip"
   },

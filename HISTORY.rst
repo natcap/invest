@@ -36,6 +36,12 @@
 
 Unreleased Changes
 ------------------
+* Workbench
+    * Added tooltips to the model tabs so that they can be identified even when
+      several tabs are open (`#1071 <https://github.com/natcap/invest/issues/1088>`_)
+
+3.12.1 (2022-12-16)
+-------------------
 * General
     * Fixed a possible path traversal vulnerability when working with datastack
       archives.  This patches CVE-2007-4559, reported to us by Trellix.
@@ -55,6 +61,9 @@ Unreleased Changes
     * Fixed a bug where uncaught exceptions in the React tree would result in
       a blank browser window.
       (`#1119 <https://github.com/natcap/invest/issues/1119>`_)
+* GLOBIO
+    * Deprecated the GLOBIO model
+      (`#1131 <https://github.com/natcap/invest/issues/1131>`_)
 * Habitat Quality
     * All spatial inputs including the access vector and threat rasters are
       now reprojected to the ``lulc_cur_path`` raster. This fixes a bug where

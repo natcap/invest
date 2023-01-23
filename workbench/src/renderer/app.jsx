@@ -10,6 +10,8 @@ import Button from 'react-bootstrap/Button';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import Spinner from 'react-bootstrap/Spinner';
+import Tooltip from 'react-bootstrap/Tooltip';
+import OverlayTrigger from 'react-bootstrap/OverlayTrigger';
 import { MdClose, MdHome } from 'react-icons/md';
 
 import HomeTab from './components/HomeTab';
@@ -239,27 +241,37 @@ export default class App extends React.Component {
           statusSymbol = '';
       }
       investNavItems.push(
-        <Nav.Item
-          key={id}
-          className={id === activeTab ? 'active' : ''}
+        <OverlayTrigger
+          key={`${id}-tooltip`}
+          placement="bottom"
+          overlay={(
+            <Tooltip>
+              {job.modelHumanName}
+            </Tooltip>
+          )}
         >
-          <Nav.Link eventKey={id}>
-            {statusSymbol}
-            {` ${job.modelHumanName}`}
-          </Nav.Link>
-          <Button
-            aria-label={`close ${job.modelHumanName} tab`}
-            className="close-tab"
-            variant="outline-dark"
-            onClick={(event) => {
-              event.stopPropagation();
-              this.closeInvestModel(id);
-            }}
-            onDragOver={dragOverHandlerNone}
+          <Nav.Item
+            key={id}
+            className={id === activeTab ? 'active' : ''}
           >
-            <MdClose />
-          </Button>
-        </Nav.Item>
+            <Nav.Link eventKey={id}>
+              {statusSymbol}
+              {` ${job.modelHumanName}`}
+            </Nav.Link>
+            <Button
+              aria-label={`close ${job.modelHumanName} tab`}
+              className="close-tab"
+              variant="outline-dark"
+              onClick={(event) => {
+                event.stopPropagation();
+                this.closeInvestModel(id);
+              }}
+              onDragOver={dragOverHandlerNone}
+            >
+              <MdClose />
+            </Button>
+          </Nav.Item>
+        </OverlayTrigger>
       );
       investTabPanes.push(
         <TabPane
