@@ -32,6 +32,7 @@ KERNEL_LABEL_DICHOTOMY = 'dichotomy'
 KERNEL_LABEL_EXPONENTIAL = 'exponential'
 KERNEL_LABEL_GAUSSIAN = 'gaussian'
 KERNEL_LABEL_DENSITY = 'density'
+KERNEL_LABEL_POWER = 'power'
 RADIUS_OPT_UNIFORM = 'radius_uniform'
 RADIUS_OPT_GREENSPACE = 'radius_per_greenspace_class'
 RADIUS_OPT_POP_GROUP = 'radius_per_pop_group'
@@ -171,6 +172,11 @@ ARGS_SPEC = {
                         '"weight = 0.75 * (1-(pixel_dist / search_radius)^2)"'
                     ),
                 },
+                # TODO: user must define beta parameter for power kernel
+                KERNEL_LABEL_POWER: {
+                    'display_name': 'Power',
+                    'description': gettext('TBD'),
+                }
             },
             'about': (
                 'Pixels within the search radius of a greenspace pixel '
@@ -365,6 +371,7 @@ def execute(args):
         KERNEL_LABEL_EXPONENTIAL: utils.exponential_decay_kernel_raster,
         KERNEL_LABEL_GAUSSIAN: utils.gaussian_decay_kernel_raster,
         KERNEL_LABEL_DENSITY: density_decay_kernel_raster,
+        KERNEL_LABEL_POWER: power_kernel_raster,
     }
     # Since we have these keys defined in two places, I want to be super sure
     # that the labels match.
