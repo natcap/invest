@@ -39,6 +39,7 @@ ARGS_SPEC = {
         "spatial_keys": [
             "lulc_cur_path", "lulc_fut_path", "lulc_bas_path",
             "access_vector_path"],
+        "different_projections_ok": True,
     },
     "args": {
         "workspace_dir": spec_utils.WORKSPACE,
@@ -150,7 +151,7 @@ ARGS_SPEC = {
         },
         "access_vector_path": {
             "type": "vector",
-            "projected": True,
+            "projected": False,
             "fields": {
                 "access": {
                     "type": "ratio",
@@ -171,11 +172,7 @@ ARGS_SPEC = {
         "sensitivity_table_path": {
             "type": "csv",
             "columns": {
-                "lulc": {
-                    "type": "integer",
-                    "about": gettext("LULC codes corresponding to those in the LULC "
-                               "rasters.")
-                },
+                "lulc": spec_utils.LULC_TABLE_COLUMN,
                 "habitat": {
                     "type": "ratio",
                     "about": gettext(
@@ -281,13 +278,10 @@ def execute(args):
     # Get CSVs as dictionaries and ensure the key is a string for threats.
     threat_dict = {
         str(key): value for key, value in utils.build_lookup_from_csv(
-            args['threats_table_path'], 'THREAT', to_lower=True).items()}
+            args['threats_table_path'], 'THREAT', to_lower=True,
+            expand_path_cols=['cur_path', 'fut_path', 'base_path']).items()}
     sensitivity_dict = utils.build_lookup_from_csv(
         args['sensitivity_table_path'], 'LULC', to_lower=True)
-
-    # Get the directory path for the Threats CSV, used for locating threat
-    # rasters, which are relative to this path
-    threat_csv_dirpath = os.path.dirname(args['threats_table_path'])
 
     half_saturation_constant = float(args['half_saturation_constant'])
 
@@ -323,24 +317,17 @@ def execute(args):
             # raster which should be found relative to the Threat CSV
             for threat in threat_dict:
                 LOGGER.debug(f"Validating path for threat: {threat}")
-                # Build absolute threat path from threat table
                 threat_table_path_col = _THREAT_SCENARIO_MAP[lulc_key]
-                threat_path_relative = (
-                    threat_dict[threat][threat_table_path_col])
-                threat_path = os.path.join(
-                    threat_csv_dirpath, threat_path_relative)
-
-                threat_path_err_msg = (
-                    'There was an Error locating a threat raster from '
-                    'the path in CSV for column: '
-                    f'{_THREAT_SCENARIO_MAP[lulc_key]} and threat: '
-                    f'{threat}. The path in the CSV column should be '
-                    'relative to the threat CSV table.')
+                threat_path = threat_dict[threat][threat_table_path_col]
 
                 threat_validate_result = _validate_threat_path(
                     threat_path, lulc_key)
                 if threat_validate_result == 'error':
-                    raise ValueError(threat_path_err_msg)
+                    raise ValueError(
+                        'There was an Error locating a threat raster from '
+                        'the path in CSV for column: '
+                        f'{_THREAT_SCENARIO_MAP[lulc_key]} and threat: '
+                        f'{threat}.')
 
                 threat_path = threat_validate_result
 
@@ -363,7 +350,7 @@ def execute(args):
                         task_name=f'check_threat_values{lulc_key}_{threat}')
                     threat_values_task_lookup[threat_values_task.task_name] = {
                         'task': threat_values_task,
-                        'path': threat_path_relative,
+                        'path': threat_path,
                         'table_col': threat_table_path_col}
 
     LOGGER.info("Checking threat raster values are valid ( 0 <= x <= 1 ).")
@@ -377,13 +364,16 @@ def execute(args):
                 f"Threat: {values['path']} for column: {values['table_col']}",
                 " had values outside of this range.")
 
-    LOGGER.info('Aligning and resizing land cover and threat rasters')
+    LOGGER.info(
+        'Aligning, resizing, and reprojecting raster inputs to that of the'
+        ' current land cover.')
     lulc_raster_info = pygeoprocessing.get_raster_info(args['lulc_cur_path'])
     # ensure that the pixel size used is square
     lulc_pixel_size = lulc_raster_info['pixel_size']
     min_pixel_size = min([abs(x) for x in lulc_pixel_size])
     pixel_size = (min_pixel_size, -min_pixel_size)
     lulc_bbox = lulc_raster_info['bounding_box']
+    lulc_wkt = lulc_raster_info['projection_wkt']
 
     # create paths for aligned rasters checking for the case the raster path
     # is a folder
@@ -405,10 +395,13 @@ def execute(args):
     # and store them in the intermediate folder
     align_task = task_graph.add_task(
         func=pygeoprocessing.align_and_resize_raster_stack,
-        args=(
-            lulc_and_threat_raster_list, aligned_raster_list,
-            ['near']*len(lulc_and_threat_raster_list), pixel_size,
-            lulc_bbox),
+        kwargs={
+            'base_raster_path_list': lulc_and_threat_raster_list,
+            'target_raster_path_list': aligned_raster_list,
+            'resample_method_list': ['near']*len(lulc_and_threat_raster_list),
+            'target_pixel_size': pixel_size,
+            'bounding_box_mode': lulc_bbox,
+            'target_projection_wkt': lulc_wkt},
         target_path_list=aligned_raster_list,
         task_name='align_input_rasters')
 
@@ -453,7 +446,20 @@ def execute(args):
     access_task_list = [create_access_raster_task]
 
     if 'access_vector_path' in args and args['access_vector_path']:
-        LOGGER.debug("Rasterize Access vector")
+        LOGGER.debug("Reproject and rasterize Access vector")
+        reprojected_access_path = os.path.join(
+            intermediate_output_dir, 'access_projected_to_lulc_cur.gpkg')
+        reproject_access_task = task_graph.add_task(
+            func=pygeoprocessing.reproject_vector,
+            kwargs={
+                'base_vector_path': args['access_vector_path'],
+                'target_projection_wkt': lulc_wkt,
+                'target_path': reprojected_access_path,
+                'driver_name': 'GPKG'
+            },
+            target_path_list=[reprojected_access_path],
+            task_name='reproject_access_vector')
+
         rasterize_access_task = task_graph.add_task(
             func=pygeoprocessing.rasterize,
             args=(args['access_vector_path'], access_raster_path),
@@ -462,7 +468,8 @@ def execute(args):
                 'burn_values': None
             },
             target_path_list=[access_raster_path],
-            dependent_task_list=[create_access_raster_task],
+            dependent_task_list=[
+                create_access_raster_task, reproject_access_task],
             task_name='rasterize_access')
         access_task_list.append(rasterize_access_task)
 
@@ -994,14 +1001,6 @@ def _raster_values_in_bounds(raster_path_band, lower_bound, upper_bound):
     """
     raster_info = pygeoprocessing.get_raster_info(raster_path_band[0])
     raster_nodata = raster_info['nodata'][0]
-
-    if raster_nodata is None:
-        LOGGER.warning(
-            f"Raster has undefined NODATA value for {raster_path_band[0]}.")
-        # If raster nodata is None then set to _OUT_NODATA to use for masking
-        # where in this case nodata_mask will be all False.
-        raster_nodata = _OUT_NODATA
-
     values_valid = True
 
     for _, raster_block in pygeoprocessing.iterblocks(raster_path_band):
@@ -1034,7 +1033,7 @@ def _validate_threat_path(threat_path, lulc_key):
     """
     # Checking threat path exists to control custom error messages
     # for user readability.
-    if os.path.exists(threat_path):
+    try:
         threat_gis_type = pygeoprocessing.get_gis_type(threat_path)
         if threat_gis_type != pygeoprocessing.RASTER_TYPE:
             # Raise a value error with custom message to help users
@@ -1046,7 +1045,7 @@ def _validate_threat_path(threat_path, lulc_key):
                 return None
         else:
             return threat_path
-    else:
+    except ValueError:
         if lulc_key != '_b':
             return "error"
         else:
@@ -1083,7 +1082,8 @@ def validate(args, limit_to=None):
         # Get CSVs as dictionaries and ensure the key is a string for threats.
         threat_dict = {
             str(key): value for key, value in utils.build_lookup_from_csv(
-                args['threats_table_path'], 'THREAT', to_lower=True).items()}
+                args['threats_table_path'], 'THREAT', to_lower=True,
+                expand_path_cols=['cur_path', 'fut_path', 'base_path']).items()}
         sensitivity_dict = utils.build_lookup_from_csv(
             args['sensitivity_table_path'], 'LULC', to_lower=True)
 
@@ -1101,10 +1101,6 @@ def validate(args, limit_to=None):
                     column_names=sens_header_set)))
 
             invalid_keys.add('sensitivity_table_path')
-
-        # Get the directory path for the Threats CSV, used for locating threat
-        # rasters, which are relative to this path
-        threat_csv_dirpath = os.path.dirname(args['threats_table_path'])
 
         # Validate threat raster paths and their nodata values
         bad_threat_paths = []
@@ -1125,9 +1121,7 @@ def validate(args, limit_to=None):
                         break
 
                     # Threat path from threat CSV is relative to CSV
-                    threat_path = os.path.join(
-                        threat_csv_dirpath,
-                        threat_dict[threat][threat_table_path_col])
+                    threat_path = threat_dict[threat][threat_table_path_col]
 
                     threat_validate_result = _validate_threat_path(
                         threat_path, lulc_key)

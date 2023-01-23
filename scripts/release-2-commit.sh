@@ -27,7 +27,7 @@ then
     echo "To push to your fork via SSH:"
     echo "  $ git push git@github.com:$ORIGIN_REPO.git $VERSION $AUTORELEASE_BRANCH"
     echo ""
-    echo "To push to your fork via HTTPS:
+    echo "To push to your fork via HTTPS:"
     echo "  $ git push https://github.com/$ORIGIN_REPO.git $VERSION $AUTORELEASE_BRANCH"
 fi
 

@@ -94,8 +94,8 @@ ARGS_SPEC = {
         "lulc_raster_path": {
             **spec_utils.LULC,
             "projected": True,
-            "about": gettext(
-                f"{spec_utils.LULC['about']} All values in this raster MUST "
+            "about": spec_utils.LULC['about'] + " " + gettext(
+                "All values in this raster MUST "
                 "have corresponding entries in the Biophysical Table.")
         },
         "soil_group_path": {
@@ -110,9 +110,7 @@ ARGS_SPEC = {
         "biophysical_table_path": {
             "type": "csv",
             "columns": {
-                "lucode": {
-                    "type": "integer",
-                    "about": gettext("LULC code matching those in the LULC raster.")},
+                "lucode": spec_utils.LULC_TABLE_COLUMN,
                 "cn_[SOIL_GROUP]": {
                     "type": "number",
                     "units": u.none,
