@@ -4,6 +4,20 @@
 #
 set -e  # Exit the script immediately if any subshell has a nonzero exit code.
 
+# - Create autorelease branch
+# - Update HISTORY.rst
+# - Commit the changes to HISTORY.rst
+# - Tag the commit
+# - Push the tag
+# - Build workflows run on push, wait for them to finish
+# - Download the build artifacts
+# - Create a github release for the tag
+#   - Attach release notes
+#   - Attach the build artifacts
+# - Create a pull request from the autorelease branch into main
+# - Create a pypi release
+#   - Attach the build artifacts
+
 VERSION=$1
 
 : "${VERSION:?'The version string is needed as parameter 1.'}"
@@ -40,24 +54,17 @@ then
     exit 3
 fi
 
-python increment-userguide-revision.py
 python update-history.py "$VERSION" "$(date '+%Y-%m-%d')"
 
 echo ""
 echo "Changes have been made to the following files:"
 echo "  * HISTORY.rst has been updated with the release version and today's date"
-echo "  * Makefile has been updated with the latest user's guide revision"
-echo ""
-echo "To continue with the release:"
-echo "  $ ./scripts/release-2-commit.sh $VERSION"
-
-
 
 # Members of the natcap software team can push to the autorelease branch on
 # natcap/invest; this branch is a special case for our release process.
 
 git checkout -b "$AUTORELEASE_BRANCH"
-git add Makefile HISTORY.rst
+git add HISTORY.rst
 git commit -m "Committing the $VERSION release."
 git tag "$VERSION"
 
@@ -69,7 +76,7 @@ echo ""
 echo "After pushing, wait for builds to finish before continuing."
 echo "    See https://github.com/natcap/invest/wiki/Bugfix-Release-Checklist#wait-for-builds-to-complete"
 
-RUN_ID=$(gh run list --repo natcap/invest | awk -F '\t' '{ if ($5 == "release/3.13.0") { print $7 } }')
+RUN_ID=$(gh run list --repo natcap/invest | awk -F '\t' '{ if ($5 == "$AUTORELEASE_BRANCH") { print $7 } }')
 
 if (( ${#RUN_ID} > 10 ))
 then
