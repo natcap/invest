@@ -744,6 +744,7 @@ class UNATests(unittest.TestCase):
             self.assertIn(valid_mode_string, str(cm.exception))
 
     def test_square_pixels(self):
+        """UNA: Assert we can make square pixels as expected."""
         from natcap.invest import urban_nature_access
 
         raster_path = os.path.join(self.workspace_dir, 'raster.tif')
@@ -759,3 +760,10 @@ class UNATests(unittest.TestCase):
             computed_pixel_size = (
                 urban_nature_access._square_off_pixels(raster_path))
             self.assertEqual(computed_pixel_size, expected_pixel_size)
+
+    def test_validate(self):
+        """UNA: Basic test for validation."""
+        from natcap.invest import urban_nature_access
+        args = _build_model_args(self.workspace_dir)
+        args['search_radius_mode'] = urban_nature_access.RADIUS_OPT_GREENSPACE
+        self.assertEqual(urban_nature_access.validate(args), [])

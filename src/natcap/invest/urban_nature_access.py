@@ -219,6 +219,7 @@ ARGS_SPEC = {
         'aggregate_by_pop_group': {
             'type': 'boolean',
             'name': 'Aggregate by population groups',
+            'required': False,
             'about': gettext(
                 'Whether to aggregate statistics by population group '
                 'within each administrative unit. If selected, population '
@@ -232,6 +233,7 @@ ARGS_SPEC = {
             'name': 'uniform search radius',
             'units': u.m,
             'expression': 'value > 0',
+            'required': f'search_radius_mode == "{RADIUS_OPT_UNIFORM}"',
             'about': gettext(
                 'The search radius to use when running the model under a '
                 'uniform search radius'),
@@ -239,6 +241,7 @@ ARGS_SPEC = {
         'population_group_radii_table': {
             'name': 'population group radii table',
             'type': 'csv',
+            'required': f'search_radius_mode == "{RADIUS_OPT_POP_GROUP}"',
             'columns': {
                 "pop_group": {
                     "type": "ratio",
@@ -401,6 +404,8 @@ def execute(args):
     decay_function = args['decay_function']
     LOGGER.info(f'Using decay function {decay_function}')
 
+    aggregate_by_pop_groups = args.get('aggregate_by_pop_group', False)
+
     # Align the population raster to the LULC.
     lulc_raster_info = pygeoprocessing.get_raster_info(
         args['lulc_raster_path'])
@@ -453,8 +458,8 @@ def execute(args):
     proportional_population_tasks = {}
     pop_group_proportion_paths = {}
     pop_group_proportion_tasks = {}
-    if (args['search_radius_mode'] == RADIUS_OPT_POP_GROUP or
-            args.get('aggregate_by_pop_group', False)):
+    if (args['search_radius_mode'] == RADIUS_OPT_POP_GROUP
+            or aggregate_by_pop_groups):
         aoi_reprojection_task.join()
         split_population_fields = list(
             filter(lambda x: re.match(POP_FIELD_REGEX, x),
@@ -1021,7 +1026,7 @@ def execute(args):
 
         supply_population_tasks = []
         pop_paths = [(None, file_registry['aligned_population'])]
-        if args.get('aggregate_by_pop_group', False):
+        if aggregate_by_pop_groups:
             pop_paths.extend(list(proportional_population_paths.items()))
 
         for pop_group, proportional_pop_path in pop_paths:
@@ -1071,8 +1076,7 @@ def execute(args):
                     'undersupplied_population'],
                 'oversupplied_populations_path': file_registry[
                     'oversupplied_population'],
-                'include_pop_groups':
-                    args.get('aggregate_by_pop_group', False),
+                'include_pop_groups': aggregate_by_pop_groups,
             },
             task_name=(
                 'Aggregate supply-demand to admin units (single rasters)'),
