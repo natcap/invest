@@ -356,11 +356,31 @@ const UI_SPEC = {
     order: [
       ['workspace_dir', 'results_suffix'],
       ['lulc_raster_path', 'lulc_attribute_table'],
-      ['population_raster_path', 'aoi_vector_path', 'greenspace_demand',
-       'decay_function', 'search_radius_mode', 'aggregate_by_pop_group',
-       'decay_function_power_beta', 'search_radius',
-       'population_group_radii_table'],
+      [
+        'population_raster_path',
+        'aoi_vector_path',
+        'population_group_radii_table',
+        'greenspace_demand',
+        'aggregate_by_pop_group',
+      ],
+      [
+        'search_radius_mode',
+        'decay_function',
+        'decay_function_power_beta',
+        'search_radius',
+      ],
     ],
+    enabledFunctions: {
+      search_radius: ((state) => (
+        isSufficient('search_radius_mode', state)
+        && state.argsValues.search_radius_mode.value === 'radius_uniform')),
+      decay_function_power_beta: ((state) => (
+        isSufficient('decay_function', state)
+        && state.argsValues.decay_function.value === 'power')),
+      population_group_radii_table: ((state) => (
+        isSufficient('search_radius_mode', state)
+        && state.argsValues.search_radius_mode.value === 'radius_per_pop_group')),
+    },
   },
   wave_energy: {
     order: [

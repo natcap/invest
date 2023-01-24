@@ -116,6 +116,9 @@ ARGS_SPEC = {
             'fields': {
                 "pop_[POP_GROUP]": {
                     "type": "ratio",
+                    "required": (
+                        f"(search_radius_mode == {RADIUS_OPT_POP_GROUP}) "
+                        "or aggregate_by_pop_group"),
                     "about": gettext(
                         "The proportion of the population within this region "
                         "belonging to the identified population group "
@@ -396,6 +399,10 @@ def execute(args):
         KERNEL_LABEL_POWER: functools.partial(
             _kernel_power, beta=args.get('decay_function_power_beta', None)),
     }
+    # Taskgraph needs a __name__ attribute, so adding one here.
+    kernel_creation_functions[KERNEL_LABEL_POWER].__name__ = (
+        'functools_partial_decay_power')
+
     # Since we have these keys defined in two places, I want to be super sure
     # that the labels match.
     assert sorted(kernel_creation_functions.keys()) == (
@@ -535,7 +542,12 @@ def execute(args):
         search_radii = set([float(args['search_radius'])])
     elif args['search_radius_mode'] == RADIUS_OPT_GREENSPACE:
         greenspace_attrs = attr_table[attr_table['greenspace'] == 1]
-        search_radii = set(greenspace_attrs['search_radius_m'].unique())
+        try:
+            search_radii = set(greenspace_attrs['search_radius_m'].unique())
+        except KeyError as missing_key:
+            raise ValueError(
+                f"The column {str(missing_key)} is missing from the LULC "
+                f"attribute table {args['lulc_attribute_table']}")
         # Build an iterable of plain tuples: (lucode, search_radius_m)
         lucode_to_search_radii = list(
             greenspace_attrs[['lucode', 'search_radius_m']].itertuples(
@@ -2012,8 +2024,13 @@ def _kernel_power(distance, max_distance, beta):
         ``distance.
     """
     kernel = numpy.zeros(distance.shape, dtype=numpy.float32)
-    pixels_in_radius = (distance <= max_distance)
-    kernel[pixels_in_radius] = distance[pixels_in_radius] ** beta
+
+    # NOTE: The UG expects beta to be negative, but we cannot raise a distance
+    # of 0 to a negative exponent.  So, assume that the kernel value at
+    # distance == 0 is 1.
+    pixels_in_radius = (distance <= max_distance) & (distance > 0)
+    kernel[pixels_in_radius] = distance[pixels_in_radius] ** float(beta)
+    kernel[distance == 0] = 1
     return kernel
 
 
