@@ -62,6 +62,9 @@ def sh(command, capture=True):
 
 def run_model(modelname, binary, workspace, datastack):
     """Run an InVEST model, checking the error code of the process."""
+    # Posix slashes in the exe are not acceptable on windows
+    if platform.system() == 'Windows':
+        binary = binary.replace('/', '\\')
     # Using a list here allows subprocess to handle escaping of paths.
     command = [binary, 'run', '--workspace', workspace,
                '--datastack', datastack, '--headless', modelname]
