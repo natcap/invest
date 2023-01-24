@@ -13,6 +13,11 @@ VERSION=$1
 check_required_programs.sh pandoc twine gsutil gh envsubst
 
 REPO="natcap/invest"
+AUTORELEASE_BRANCH=autorelease/$VERSION
+BUCKET="$(make jprint-RELEASES_BUCKET)/invest"
+RELEASE_MESSAGE_FILE=build/release_message.md
+PR_MESSAGE_FILE=build/pr_msg_text_$VERSION.txt
+
 
 if ! git diff --exit-code > /dev/null  # fail if uncommitted, unstaged changes
 then
@@ -50,7 +55,7 @@ echo "  $ ./scripts/release-2-commit.sh $VERSION"
 
 # Members of the natcap software team can push to the autorelease branch on
 # natcap/invest; this branch is a special case for our release process.
-AUTORELEASE_BRANCH=autorelease/$VERSION
+
 git checkout -b "$AUTORELEASE_BRANCH"
 git add Makefile HISTORY.rst
 git commit -m "Committing the $VERSION release."
@@ -72,21 +77,25 @@ then
     exit 4
 fi
 
-gh run watch $RUN_ID
-
-BUCKET="$(make jprint-RELEASES_BUCKET)/invest"
-
-source RELEASE_MANAGER.env
-
+gh --repo $REPO run watch $RUN_ID
 
 # Using -p here to not fail the command if the directory already exists.
 mkdir -p dist build
+
+gh --repo $REPO run download --dir dist \
+    --name InVEST-Windows-binary.zip \
+    --name InVEST-macOS-binary.zip \
+    --name Workbench-Windows-binary.zip \
+    --name Workbench-macOS-binary.zip \
+    --name InVEST-sample-data.zip \
+    --name InVEST-user-guide.zip \
+    --name "Source distribution.zip" \
+    --name "Wheel for *.zip"
 
 gsutil cp "$BUCKET/$VERSION/*.zip" dist  # UG, sampledata, mac binaries
 gsutil cp "$BUCKET/$VERSION/*.exe" dist  # Windows installer
 gsutil cp "$BUCKET/$VERSION/natcap.invest*" dist  # Grab python distributions
 
-RELEASE_MESSAGE_FILE=build/release_message.md
 build-release-text-from-history.sh > $RELEASE_MESSAGE_FILE
 gh release create $VERSION \
     --repo $REPO \
@@ -94,12 +103,11 @@ gh release create $VERSION \
     --verify-tag \
     dist/*
 
-PR_MESSAGE_FILE=build/pr_msg_text_$VERSION.txt
 
 # Explicitly setting the environment variables we need in envsubst.  The only
 # other alternative is to `export` them all, which then pollutes the shell as a
 # side effect.
-SOURCE_BRANCH="main" BUGFIX_VERSION="$VERSION" GITHUB_REPOSITORY="$REPO" \
+BUGFIX_VERSION="$VERSION" GITHUB_REPOSITORY="$REPO" \
     envsubst < bugfix-autorelease-branch-pr-body.md > "$PR_MESSAGE_FILE"
 
 # Create a pull request from the autorelease branch into main
