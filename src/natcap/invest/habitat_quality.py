@@ -916,13 +916,15 @@ def _raster_values_in_bounds(raster_path_band, lower_bound, upper_bound):
 def _decay_distance(dist_raster_path, max_dist, decay_type, target_path):
     """Apply an exponential or linear decay to a distance transform raster.
 
+    The function will set pixles greater than ``max_dist`` to 0.
+
     Args:
         dist_raster_path (string): a filepath for the raster to decay.
             The raster is expected to be a euclidean distance transform with
             values meauring distance in pixels.
         max_dist (float): max distance of threat in KM.
         decay_type (string): a string defining which decay method to use.
-            Options include: 'linear' | 'exponential'
+            Options include: 'linear' | 'exponential'.
         target_path (string): a filepath for a float output raster.
 
     Returns:
@@ -957,7 +959,12 @@ def _decay_distance(dist_raster_path, max_dist, decay_type, target_path):
         result = numpy.empty(dist.shape, dtype=numpy.float32)
         result[:] = _OUT_NODATA
 
-        # 2.99 constant helps drive the decay towards 0 at max_dist
+        # Some background on where the 2.99 constant comes from:
+        # With the constant of 2.99, the impact of the threat is reduced by
+        # 95% (to 5%) at the specified max threat distance. So I suspect it's
+        # based on the traditional 95% cutoff that is used in statistics. We
+        # could tweak this cutoff (e.g., 99% decay at max distance), if we
+        # wanted. - Lisa Mandle
         result[valid_mask] = numpy.where(
             dist[valid_mask] > max_dist_pixel, 0.0,
             numpy.exp((-dist[valid_mask] * 2.99) / max_dist_pixel))
