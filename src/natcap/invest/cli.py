@@ -7,12 +7,9 @@ import importlib
 import json
 import logging
 import multiprocessing
-import os
-import platform
 import pprint
 import sys
 import textwrap
-import warnings
 
 import natcap.invest
 from natcap.invest import datastack
@@ -20,7 +17,6 @@ from natcap.invest import model_metadata
 from natcap.invest import set_locale
 from natcap.invest import ui_server
 from natcap.invest import utils
-from natcap.invest.ui import launcher, inputs
 
 
 DEFAULT_EXIT_CODE = 1
@@ -35,6 +31,7 @@ for model_name, meta in model_metadata.MODEL_METADATA.items():
             'Alias %s already defined for model %s') % (
                 alias, _MODEL_ALIASES[alias])
         _MODEL_ALIASES[alias] = model_name
+
 
 def build_model_list_table():
     """Build a table of model names, aliases and other details.
@@ -275,15 +272,11 @@ def main(user_args=None):
     listmodels_subparser.add_argument(
         '--json', action='store_true', help='Write output as a JSON object')
 
-    subparsers.add_parser(
-        'launch', help='Start the InVEST launcher window')
-
     run_subparser = subparsers.add_parser(
         'run', help='Run an InVEST model')
     run_subparser.add_argument(
         '-l', '--headless', action='store_true',
-        help=('Run an InVEST model without its GUI. '
-              'Requires a datastack and a workspace.'))
+        help=argparse.SUPPRESS)
     run_subparser.add_argument(
         '-d', '--datastack', default=None, nargs='?',
         help=('Run the specified model with this JSON datastack. '
@@ -296,21 +289,6 @@ def main(user_args=None):
         'model', action=SelectModelAction,  # Assert valid model name
         help=('The model to run.  Use "invest list" to list the available '
               'models.'))
-
-    quickrun_subparser = subparsers.add_parser(
-        'quickrun', help=(
-            'Run through a model with a specific datastack, exiting '
-            'immediately upon completion. This subcommand is only intended '
-            'to be used by automated testing scripts.'))
-    quickrun_subparser.add_argument(
-        'model', action=SelectModelAction,  # Assert valid model name
-        help=('The model to run.  Use "invest list" to list the available '
-              'models.'))
-    quickrun_subparser.add_argument(
-        'datastack', help=('Run the model with this JSON datastack.'))
-    quickrun_subparser.add_argument(
-        '-w', '--workspace', default=None, nargs='?',
-        help=('The workspace in which outputs will be saved.'))
 
     validate_subparser = subparsers.add_parser(
         'validate', help=(
@@ -387,9 +365,6 @@ def main(user_args=None):
         sys.stdout.write(message)
         parser.exit()
 
-    if args.subcommand == 'launch':
-        parser.exit(launcher.main())
-
     if args.subcommand == 'validate':
         try:
             parsed_datastack = datastack.extract_parameter_set(args.datastack)
@@ -445,9 +420,9 @@ def main(user_args=None):
         sys.stdout.write(message)
         parser.exit(0)
 
-    if args.subcommand == 'run' and args.headless:
+    if args.subcommand == 'run':
         if not args.datastack:
-            parser.exit(1, 'Datastack required for headless execution.')
+            parser.exit(1, 'Datastack required for execution.')
 
         try:
             parsed_datastack = datastack.extract_parameter_set(args.datastack)
@@ -484,65 +459,6 @@ def main(user_args=None):
             # written to stdout if this exception is uncaught.  This is by
             # design.
             model_module.execute(parsed_datastack.args)
-
-    # If we're running in a GUI (either through ``invest run`` or
-    # ``invest quickrun``), we'll need to load the Model's GUI class,
-    # populate parameters and then (if in a quickrun) exit when the model
-    # completes.  Quickrun functionality is primarily useful for automated
-    # testing of the model interfaces.
-    if (args.subcommand == 'run' and not args.headless or
-            args.subcommand == 'quickrun'):
-
-        # Creating this warning for future us to alert us to potential issues
-        # if/when we forget to define QT_MAC_WANTS_LAYER at runtime.
-        if (platform.system() == "Darwin" and
-                "QT_MAC_WANTS_LAYER" not in os.environ):
-            warnings.warn(
-                "Mac OS X Big Sur may require the 'QT_MAC_WANTS_LAYER' "
-                "environment variable to be defined in order to run. If "
-                "the application hangs on startup, set 'QT_MAC_WANTS_LAYER=1' "
-                "in the shell running this CLI.", RuntimeWarning)
-
-        gui_class = model_metadata.MODEL_METADATA[args.model].gui
-        module_name, classname = gui_class.split('.')
-        module = importlib.import_module(
-            name='.ui.%s' % module_name,
-            package='natcap.invest')
-
-        # Instantiate the form
-        model_form = getattr(module, classname)()
-
-        # load the datastack if one was provided
-        try:
-            if args.datastack:
-                model_form.load_datastack(args.datastack)
-        except Exception as error:
-            # If we encounter an exception while loading the datastack, log the
-            # exception (so it can be seen if we're running with appropriate
-            # verbosity) and exit the argparse application with exit code 1 and
-            # a helpful error message.
-            LOGGER.exception('Could not load datastack')
-            parser.exit(DEFAULT_EXIT_CODE,
-                        'Could not load datastack: %s\n' % str(error))
-
-        if args.workspace:
-            model_form.workspace.set_value(args.workspace)
-
-        # Run the UI's event loop
-        quickrun = False
-        if args.subcommand == 'quickrun':
-            quickrun = True
-        model_form.run(quickrun=quickrun)
-        app_exitcode = inputs.QT_APP.exec_()
-
-        # Handle a graceful exit
-        if model_form.form.run_dialog.messageArea.error:
-            parser.exit(DEFAULT_EXIT_CODE,
-                        'Model %s: run failed\n' % args.model)
-
-        if app_exitcode != 0:
-            parser.exit(app_exitcode,
-                        'App terminated with exit code %s\n' % app_exitcode)
 
     if args.subcommand == 'serve':
         ui_server.app.run(port=args.port)
