@@ -20,18 +20,10 @@ set -e  # Exit the script immediately if any subshell has a nonzero exit code.
 
 VERSION=$1
 
+# Validate inputs and environment
 : "${VERSION:?'The version string is needed as parameter 1.'}"
-
 : "${GITHUB_TOKEN:?'The GITHUB_TOKEN environment variable must be defined and have repo write permissions.'}"
-
 check_required_programs.sh pandoc twine gsutil gh envsubst
-
-REPO="natcap/invest"
-AUTORELEASE_BRANCH=autorelease/$VERSION
-BUCKET="$(make jprint-RELEASES_BUCKET)/invest"
-RELEASE_MESSAGE_FILE=build/release_message.md
-PR_MESSAGE_FILE=build/pr_msg_text_$VERSION.txt
-
 
 if ! git diff --exit-code > /dev/null  # fail if uncommitted, unstaged changes
 then
@@ -54,36 +46,54 @@ then
     exit 3
 fi
 
-python update-history.py "$VERSION" "$(date '+%Y-%m-%d')"
+# Define variables
+REPO="natcap/invest"
+AUTORELEASE_BRANCH=autorelease/$VERSION
+BUCKET="$(make jprint-RELEASES_BUCKET)/invest"
+RELEASE_MESSAGE_FILE=build/release_message.md
+PR_MESSAGE_FILE=build/pr_msg_text_$VERSION.txt
 
-echo ""
-echo "Changes have been made to the following files:"
-echo "  * HISTORY.rst has been updated with the release version and today's date"
-
+# On a new branch, update HISTORY, commit the change, tag it, and push
+#
 # Members of the natcap software team can push to the autorelease branch on
 # natcap/invest; this branch is a special case for our release process.
-
 git checkout -b "$AUTORELEASE_BRANCH"
+
+# Replace
+#
+# Unreleased Changes
+# ------------------
+#
+# with
+#
+# ..
+#   Unreleased Changes
+#   ------------------
+#
+# X.X.X (XXXX-XX-XX)
+# ------------------
+
+HEADER="$VERSION $(date '+%Y-%m-%d')"
+HEADER_LENGTH=${#HISTORY_HEADER}
+UNDERLINE=${for i in $(seq 1 $N); do echo -n "="; done}
+perl -0777 -i -pe \
+    's/Unreleased Changes\n------------------/..\n  Unreleased Changes\n  ------------------\n\n${HEADER}\n${UNDERLINE}\n/g' \
+    HISTORY.rst
+
 git add HISTORY.rst
 git commit -m "Committing the $VERSION release."
 git tag "$VERSION"
-
-# Push the tag
 git push https://github.com/natcap/invest.git $VERSION $AUTORELEASE_BRANCH
 
-
-echo ""
-echo "After pushing, wait for builds to finish before continuing."
-echo "    See https://github.com/natcap/invest/wiki/Bugfix-Release-Checklist#wait-for-builds-to-complete"
-
+# Find the ID of the github actions run triggered by this push
 RUN_ID=$(gh run list --repo natcap/invest | awk -F '\t' '{ if ($5 == "$AUTORELEASE_BRANCH") { print $7 } }')
-
 if (( ${#RUN_ID} > 10 ))
 then
     echo "Multiple run IDs found: ${RUN_ID}"
     exit 4
 fi
 
+# Wait for the github actions run to succeed
 gh --repo $REPO run watch $RUN_ID
 
 # Using -p here to not fail the command if the directory already exists.
@@ -103,21 +113,23 @@ gsutil cp "$BUCKET/$VERSION/*.zip" dist  # UG, sampledata, mac binaries
 gsutil cp "$BUCKET/$VERSION/*.exe" dist  # Windows installer
 gsutil cp "$BUCKET/$VERSION/natcap.invest*" dist  # Grab python distributions
 
-build-release-text-from-history.sh > $RELEASE_MESSAGE_FILE
+# Create a release on Github
+build-release-text-from-history.sh > $RELEASE_MESSAGE_FILE  # Create the release message
 gh release create $VERSION \
     --repo $REPO \
     --notes-file $RELEASE_MESSAGE_FILE \
     --verify-tag \
     dist/*
 
-
-# Explicitly setting the environment variables we need in envsubst.  The only
-# other alternative is to `export` them all, which then pollutes the shell as a
-# side effect.
-BUGFIX_VERSION="$VERSION" GITHUB_REPOSITORY="$REPO" \
-    envsubst < bugfix-autorelease-branch-pr-body.md > "$PR_MESSAGE_FILE"
+# Create a release on PyPI
+twine upload dist/natcap.invest.*
 
 # Create a pull request from the autorelease branch into main
+#
+# Create the PR message, substituting in variables
+# Use envsubst to avoid polluting the shell
+BUGFIX_VERSION="$VERSION" GITHUB_REPOSITORY="$REPO" \
+    envsubst < bugfix-autorelease-branch-pr-body.md > "$PR_MESSAGE_FILE"
 gh pr create \
     --base "${REPO}:main" \
     --head "${REPO}:autorelease/$VERSION" \
@@ -126,5 +138,3 @@ gh pr create \
     --reviewer "@me" \
     --assign "@me" \
     --labels "auto"
-
-twine upload dist/natcap.invest.*
