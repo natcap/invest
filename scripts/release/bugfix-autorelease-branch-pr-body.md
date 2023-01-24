@@ -1,4 +1,4 @@
-Release $BUGFIX_VERSION and merge into $SOURCE_BRANCH
+Release $BUGFIX_VERSION and merge into main
 
 # Release $BUGFIX_VERSION
 
@@ -37,7 +37,7 @@ https://github.com/$GITHUB_REPOSITORY/releases/tag/$BUGFIX_VERSION.
    ```
    Re-tagging and pushing the files to `$TARGET_BRANCH` will cause the release
    binaries to be rebuilt and re-uploaded to the release object.
-5. Submit a PR from `$GITHUB_REPOSITORY:$TARGET_BRANCH` into `$GITHUB_REPOSITORY:$SOURCE_BRANCH`.
+5. Submit a PR from `$GITHUB_REPOSITORY:$TARGET_BRANCH` into `$GITHUB_REPOSITORY:main`.
 
 
 ## If everything looks OK
