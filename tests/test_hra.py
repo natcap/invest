@@ -442,77 +442,6 @@ class HRAUnitTests(unittest.TestCase):
             (source_array != nodata).astype(numpy.uint8)
         )
 
-    def test_rasterize_aoi_regions(self):
-        """HRA: test rasterization of AOI regions."""
-        from natcap.invest import hra
-
-        habitat_mask_path = os.path.join(
-            self.workspace_dir, 'habitat_mask.tif')
-        nodata = 255
-        habitat_mask_array = numpy.array([
-            [0, 1, 1],
-            [0, 1, 255],
-            [255, 1, 1]], dtype=numpy.uint8)
-        pygeoprocessing.numpy_array_to_raster(
-            habitat_mask_array, nodata, (30, -30), ORIGIN, SRS_WKT,
-            habitat_mask_path)
-
-        bounding_box = pygeoprocessing.get_raster_info(
-            habitat_mask_path)['bounding_box']
-
-        # 3 overlapping AOI regions
-        aoi_geometries = [shapely.geometry.box(*bounding_box)] * 3
-        source_vector_path = os.path.join(self.workspace_dir, 'aoi.shp')
-
-        target_raster_dir = os.path.join(self.workspace_dir, 'rasters')
-        target_json = os.path.join(self.workspace_dir, 'aoi_rasters.json')
-
-        # First test: with no subregion names provided, there's only 1
-        # subregion raster produced.
-        pygeoprocessing.shapely_geometry_to_vector(
-            aoi_geometries, source_vector_path, SRS_WKT, 'ESRI Shapefile')
-        hra._rasterize_aoi_regions(
-            source_vector_path, habitat_mask_path, target_raster_dir,
-            target_json)
-        self.assertEqual(
-            os.listdir(target_raster_dir),
-            ['subregion_set_0.tif'])
-
-        self.assertEqual(
-            json.load(open(target_json)),
-            {'subregion_rasters': [
-                os.path.join(target_raster_dir, 'subregion_set_0.tif')],
-             'subregion_names': {'0': 'Total Region'}})
-
-        # Second test: when subregion names are provided, subregions should be
-        # treated as distinct, nonoverlapping regions.
-        pygeoprocessing.shapely_geometry_to_vector(
-            aoi_geometries, source_vector_path, SRS_WKT,
-            vector_format='ESRI Shapefile',
-            fields={'NamE': ogr.OFTString},
-            attribute_list=[
-                {'NamE': 'subregion_1'},
-                {'NamE': 'subregion_2'},
-                {'NamE': 'subregion_3'},
-            ])
-        hra._rasterize_aoi_regions(
-            source_vector_path, habitat_mask_path, target_raster_dir,
-            target_json)
-        self.assertEqual(
-            os.listdir(target_raster_dir),
-            [f'subregion_set_{n}.tif' for n in (0, 1, 2)])
-        self.assertEqual(
-            json.load(open(target_json)),
-            {'subregion_rasters': [
-                os.path.join(target_raster_dir, f'subregion_set_{n}.tif')
-                for n in (0, 1, 2)],
-             'subregion_names': {
-                 '0': 'subregion_1',
-                 '1': 'subregion_2',
-                 '2': 'subregion_3',
-             }}
-        )
-
     def test_create_raster_from_bounding_box(self):
         """HRA: test creation of a raster from a bbox."""
         from natcap.invest import hra
@@ -978,6 +907,176 @@ class HRAUnitTests(unittest.TestCase):
                                             target_path)
         self.assertIn('Invalid decay type bad decay type provided',
                       str(cm.exception))
+
+    def test_summary_stats(self):
+        """HRA: test summary stats table."""
+        from natcap.invest import hra
+        e_array = numpy.array([[0, 1, 2, 3]], dtype=numpy.float32)
+        c_array = numpy.array([[0.5, 1.5, 2.5, 3.5]], dtype=numpy.float32)
+        risk_array = numpy.array([[0, 1.1, 2.2, 3.3]], dtype=numpy.float32)
+        pairwise_classes_array = numpy.array([[0, 1, 2, 3]], dtype=numpy.int8)
+
+        pairwise_raster_dicts = [{
+            'habitat': 'life',
+            'stressor': 'industry',
+            'e_path': os.path.join(self.workspace_dir, 'e.tif'),
+            'c_path': os.path.join(self.workspace_dir, 'c.tif'),
+            'risk_path': os.path.join(self.workspace_dir, 'risk.tif'),
+            'classification_path': os.path.join(self.workspace_dir,
+                                                'classes.tif'),
+        }]
+        nodata = -1
+        for array, key in [
+                (e_array, 'e_path'),
+                (c_array, 'c_path'),
+                (risk_array, 'risk_path'),
+                (pairwise_classes_array, 'classification_path')]:
+            pygeoprocessing.numpy_array_to_raster(
+                array, nodata, (10, -10), ORIGIN, SRS_WKT,
+                pairwise_raster_dicts[0][key])
+
+        # For the sake of testing this function more rigorously, creating a new
+        # classification path for the per-habitat summary classification
+        # raster.
+        #
+        # NOTE that if we were running this in the real world with only 1
+        # pairwise risk raster, the cumulative risk would match the pairwise
+        # risk.  I'm providing a different cumulative risk raster here for the
+        # sole purpose of checking table construction, not to provide
+        # real-world model results.
+        per_habitat_classifications = {
+            pairwise_raster_dicts[0]['habitat']: os.path.join(
+                self.workspace_dir, 'cumulative_classes.tif')
+        }
+        cumulative_classes_array = numpy.array(
+            [[2, 3, 2, 3]], dtype=numpy.uint8)
+        pygeoprocessing.numpy_array_to_raster(
+            cumulative_classes_array, nodata, (10, -10), ORIGIN, SRS_WKT,
+            list(per_habitat_classifications.values())[0])
+
+        target_summary_csv_path = os.path.join(
+            self.workspace_dir, 'summary.csv')
+        aoi_vector_path = os.path.join(self.workspace_dir, 'aoi.shp')
+        subregion_bounding_box = pygeoprocessing.get_raster_info(
+            list(per_habitat_classifications.values())[0])['bounding_box']
+        subregion_geom = shapely.geometry.box(*subregion_bounding_box)
+
+        def percent_with_risk_class(array, risk_class):
+            """Calculate the percent of risk class pixels matching a class.
+
+            Args:
+                array (numpy.array): A risk classification array.
+                risk_class (int): The integer risk class of interest
+
+            Returns:
+                The percentage (0-100) of pixels in ``array`` that match the
+                risk class ``risk_class``.
+            """
+            return (array[array == risk_class].size / array.size) * 100
+
+        # This is a standard record in the summary table, used in both subtests
+        # below.
+        std_record = {
+            'HABITAT': pairwise_raster_dicts[0]['habitat'],
+            'STRESSOR': pairwise_raster_dicts[0]['stressor'],
+            'E_MIN': numpy.min(e_array),
+            'E_MAX': numpy.max(e_array),
+            'E_MEAN': numpy.sum(e_array) / 4,
+            'C_MIN': numpy.min(c_array),
+            'C_MAX': numpy.max(c_array),
+            'C_MEAN': numpy.sum(c_array) / 4,
+            'R_MIN': numpy.min(risk_array),
+            'R_MAX': numpy.max(risk_array),
+            'R_MEAN': numpy.sum(risk_array) / 4,
+            'R_%HIGH': percent_with_risk_class(pairwise_classes_array, 3),
+            'R_%MEDIUM': percent_with_risk_class(pairwise_classes_array, 2),
+            'R_%LOW': percent_with_risk_class(pairwise_classes_array, 1),
+            'R_%NONE': percent_with_risk_class(pairwise_classes_array, 0),
+        }
+
+        with self.subTest("multiple subregion names"):
+            # 3 subregions, 2 of which have the same name.
+            # In cases of overlap, the function double-counts.
+            pygeoprocessing.shapely_geometry_to_vector(
+                [subregion_geom] * 3, aoi_vector_path, SRS_WKT,
+                'ESRI Shapefile', fields={'name': ogr.OFTString},
+                attribute_list=[
+                    {'name': 'first region'},
+                    {'name': 'first region'},
+                    {'name': 'second region'}
+                ])
+            hra._create_summary_statistics_file(
+                aoi_vector_path, pairwise_raster_dicts,
+                per_habitat_classifications, target_summary_csv_path)
+            expected_records = [
+                {**std_record,
+                 **{'SUBREGION': 'first region',
+                    'STRESSOR': '(FROM ALL STRESSORS)'},
+                    'R_%HIGH': percent_with_risk_class(
+                        cumulative_classes_array, 3),
+                    'R_%MEDIUM': percent_with_risk_class(
+                        cumulative_classes_array, 2),
+                    'R_%LOW': percent_with_risk_class(
+                        cumulative_classes_array, 1),
+                    'R_%NONE': percent_with_risk_class(
+                        cumulative_classes_array, 0),
+                },
+                {**std_record,
+                 **{'SUBREGION': 'second region',
+                    'STRESSOR': '(FROM ALL STRESSORS)'},
+                    'R_%HIGH': percent_with_risk_class(
+                        cumulative_classes_array, 3),
+                    'R_%MEDIUM': percent_with_risk_class(
+                        cumulative_classes_array, 2),
+                    'R_%LOW': percent_with_risk_class(
+                        cumulative_classes_array, 1),
+                    'R_%NONE': percent_with_risk_class(
+                        cumulative_classes_array, 0),
+                },
+                {**std_record,
+                 **{'SUBREGION': 'first region'},
+                },
+                {**std_record,
+                 **{'SUBREGION': 'second region'}
+                },
+            ]
+            created_dataframe = pandas.read_csv(target_summary_csv_path)
+            expected_dataframe = pandas.DataFrame.from_records(
+                expected_records).reindex(columns=created_dataframe.columns)
+            pandas.testing.assert_frame_equal(
+                expected_dataframe, created_dataframe,
+                check_dtype=False  # ignore float32/float64 type difference.
+            )
+
+        with self.subTest("no subregion names"):
+            # When no subregion names provided, all subregions are assumed to
+            # be in the same region: "Total Region".
+            pygeoprocessing.shapely_geometry_to_vector(
+                [subregion_geom] * 3, aoi_vector_path, SRS_WKT,
+                'ESRI Shapefile')
+            hra._create_summary_statistics_file(
+                aoi_vector_path, pairwise_raster_dicts,
+                per_habitat_classifications, target_summary_csv_path)
+            expected_records = [
+                {**std_record,
+                 **{'SUBREGION': 'Total Region',
+                    'STRESSOR': '(FROM ALL STRESSORS)'},
+                    'R_%HIGH': 50.0,
+                    'R_%MEDIUM': 50.0,
+                    'R_%LOW': 0,
+                    'R_%NONE': 0,
+                },
+                {**std_record,
+                 **{'SUBREGION': 'Total Region'},
+                },
+            ]
+            created_dataframe = pandas.read_csv(target_summary_csv_path)
+            expected_dataframe = pandas.DataFrame.from_records(
+                expected_records).reindex(columns=created_dataframe.columns)
+            pandas.testing.assert_frame_equal(
+                expected_dataframe, created_dataframe,
+                check_dtype=False  # ignore float32/float64 type difference.
+            )
 
 
 class HRAModelTests(unittest.TestCase):

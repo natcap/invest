@@ -37,6 +37,17 @@
 Unreleased Changes
 ------------------
 * General
+    * During builds of the InVEST documentation, the packages
+      ``sphinx-rtd-theme`` and ``sphinx-reredirects`` will be pulled from
+      conda-forge instead of PyPI.
+      (`#1151 <https://github.com/natcap/invest/issues/1151>`_)
+* Workbench
+    * Added tooltips to the model tabs so that they can be identified even when
+      several tabs are open (`#1071 <https://github.com/natcap/invest/issues/1088>`_)
+
+3.12.1 (2022-12-16)
+-------------------
+* General
     * Fixed a possible path traversal vulnerability when working with datastack
       archives.  This patches CVE-2007-4559, reported to us by Trellix.
       https://github.com/natcap/invest/issues/1113
@@ -66,6 +77,12 @@ Unreleased Changes
       flag, leading to a perceived buffering of spatial criteria in certain
       cases.  In InVEST 3.9.0, these were rasterized with ``ALL_TOUCHED=FALSE``.
       https://github.com/natcap/invest/issues/1120
+    * Fixed an issue with the results table, ``SUMMARY_STATISTICS.csv`` where
+      the percentages of high, medium and low risk classifications were not
+      correctly reported.
+    * Added a column to the ``SUMMARY_STATISTICS.csv`` output table to also
+      report the percentage of pixels within each subregion that have no risk
+      classification (a risk classification of 0).
 * Urban Stormwater Retention
     * Added validation to check that the input soil groups raster has an
       integer data type
@@ -73,6 +90,7 @@ Unreleased Changes
     * Updated the text for the ``building_intensity`` column in the biophysical
       table to clarify that the values of this column should be normalized
       relative to one another to be between 0 and 1.
+
 
 
 3.12.0 (2022-08-31)
