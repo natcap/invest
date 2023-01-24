@@ -668,8 +668,8 @@ class UNATests(unittest.TestCase):
         pop_group_args['population_group_radii_table'] = os.path.join(
             self.workspace_dir, 'pop_group_radii.csv')
 
-        with (open(pop_group_args['population_group_radii_table'], 'w')
-                as pop_grp_table):
+        table_path = pop_group_args['population_group_radii_table']
+        with open(table_path, 'w') as pop_grp_table:
             pop_grp_table.write(
                 textwrap.dedent(f"""\
                     pop_group,search_radius_m
