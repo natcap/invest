@@ -173,10 +173,14 @@ ARGS_SPEC = {
                         '"weight = 0.75 * (1-(pixel_dist / search_radius)^2)"'
                     ),
                 },
-                # TODO: user must define beta parameter for power kernel
                 KERNEL_LABEL_POWER: {
                     'display_name': 'Power',
-                    'description': gettext('TBD'),
+                    'description': gettext(
+                        'Contributions to a greenspace pixel decrease '
+                        'according to a user-defined negative power function '
+                        'of the form "weight = pixel_dist^beta", where beta '
+                        'is expected to be negative and defined by the user.'
+                    ),
                 }
             },
             'about': (
@@ -262,6 +266,17 @@ ARGS_SPEC = {
                 'A table associating population groups with the distance '
                 'in meters that members of the population group will, on '
                 'average, travel to find greenspace'),
+        },
+        'decay_function_power_beta': {
+            'name': 'power function beta parameter',
+            'type': 'number',
+            'units': u.none,
+            'expression': 'float(value)',
+            'required': f'decay_function == "{KERNEL_LABEL_POWER}"',
+            'about': gettext(
+                'The beta parameter used for creating a power search '
+                'kernel.  Required when using the Power search kernel.'
+            ),
         }
     }
 }
@@ -339,6 +354,9 @@ def execute(args):
             associating population groups with a search radius for that
             population group.  Population group fieldnames must match
             population group fieldnames in the aoi vector.
+        args['decay_function_power_beta'] (number) The beta parameter used
+            during creation of a power kernel. Required when the selected
+            kernel is KERNEL_LABEL_POWER.
 
     Returns:
         ``None``
@@ -373,7 +391,7 @@ def execute(args):
         # Use the user-provided beta args parameter if the user has provided
         # it.  Helpful to have a consistent kernel creation API.
         KERNEL_LABEL_POWER: functools.partial(
-            _kernel_power, beta=args.get('beta', None)),
+            _kernel_power, beta=args.get('decay_function_power_beta', None)),
     }
     # Since we have these keys defined in two places, I want to be super sure
     # that the labels match.
