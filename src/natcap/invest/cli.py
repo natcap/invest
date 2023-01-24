@@ -274,6 +274,8 @@ def main(user_args=None):
 
     run_subparser = subparsers.add_parser(
         'run', help='Run an InVEST model')
+    # Recognize '--headless' for backwards compatibility.
+    # This arg is otherwise unused.
     run_subparser.add_argument(
         '-l', '--headless', action='store_true',
         help=argparse.SUPPRESS)
