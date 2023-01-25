@@ -180,7 +180,7 @@ ARGS_SPEC = {
                         'of the form "weight = pixel_dist^beta", where beta '
                         'is expected to be negative and defined by the user.'
                     ),
-                }
+                },
             },
             'about': (
                 'Pixels within the search radius of a greenspace pixel '
@@ -408,17 +408,24 @@ def execute(args):
 
     aggregate_by_pop_groups = args.get('aggregate_by_pop_group', False)
 
-    # Align the population raster to the LULC.
+    # Align the population and LULC rasters to the intersection of their
+    # bounding boxes.
     lulc_raster_info = pygeoprocessing.get_raster_info(
         args['lulc_raster_path'])
+    pop_raster_info = pygeoprocessing.get_raster_info(
+        args['population_raster_path'])
+    target_bounding_box = pygeoprocessing.merge_bounding_box_list(
+        [lulc_raster_info['bounding_box'], pop_raster_info['bounding_box']],
+        'intersection')
 
     squared_lulc_pixel_size = _square_off_pixels(args['lulc_raster_path'])
+
     lulc_alignment_task = graph.add_task(
         pygeoprocessing.warp_raster,
         kwargs={
             'base_raster_path': args['lulc_raster_path'],
             'target_pixel_size': squared_lulc_pixel_size,
-            'target_bb': lulc_raster_info['bounding_box'],
+            'target_bb': target_bounding_box,
             'target_raster_path': file_registry['aligned_lulc'],
             'resample_method': 'nearest',
         },
@@ -433,7 +440,7 @@ def execute(args):
             'target_population_raster_path': file_registry[
                 'aligned_population'],
             'lulc_pixel_size': squared_lulc_pixel_size,
-            'lulc_bb': lulc_raster_info['bounding_box'],
+            'lulc_bb': target_bounding_box,
             'lulc_projection_wkt': lulc_raster_info['projection_wkt'],
             'working_dir': intermediate_dir,
         },
