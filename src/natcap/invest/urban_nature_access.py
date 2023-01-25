@@ -66,12 +66,7 @@ ARGS_SPEC = {
             'name': 'LULC attribute table',
             'type': 'csv',
             'columns': {
-                'lucode': {
-                    'type': 'integer',
-                    'about': (
-                        "LULC code.  Every value in the LULC map must have a "
-                        "corresponding entry in this column."),
-                },
+                'lucode': spec_utils.LULC_TABLE_COLUMN,
                 'greenspace': {
                     'type': 'number',
                     'units': u.none,
@@ -102,6 +97,7 @@ ARGS_SPEC = {
             'bands': {
                 1: {'type': 'number', 'units': u.none}
             },
+            'units': u.count,
             'projected': True,
             'projection_units': u.meter,
             'about': (
@@ -294,7 +290,6 @@ _OUTPUT_BASE_FILES = {
 }
 
 _INTERMEDIATE_BASE_FILES = {
-    'attribute_table': 'attribute_table.csv',
     'aligned_population': 'aligned_population.tif',
     'aligned_lulc': 'aligned_lulc.tif',
     'greenspace_area': 'greenspace_area.tif',
