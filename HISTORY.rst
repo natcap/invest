@@ -51,8 +51,8 @@ Unreleased Changes
     * Fixed a possible path traversal vulnerability when working with datastack
       archives.  This patches CVE-2007-4559, reported to us by Trellix.
       https://github.com/natcap/invest/issues/1113
-    * Added a Spanish translation of user-facing text and an interface to switch
-      languages in the workbench UI.
+    * Added Spanish and Chinese translations of user-facing text and an interface
+      to switch languages in the workbench UI.
     * Updating descriptions for LULC about text and biophysical table for
       clarity in model specs. https://github.com/natcap/invest/issues/1077
 * Workbench
