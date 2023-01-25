@@ -150,5 +150,50 @@ msgstr "比率：一个从0-1的小数"
 msgid "synchronous task execution is most reliable"
 msgstr "同步任务的执行是最可靠的"
 
+#: src/natcap/invest/spec_utils.py:363
+msgid "true/false"
+msgstr "真/假"
+
+#: src/natcap/invest/spec_utils.py:364
+msgid "CSV"
+msgstr "CSV"
+
+#: src/natcap/invest/spec_utils.py:365
+msgid "directory"
+msgstr "模型数据目录"
+
+#: src/natcap/invest/spec_utils.py:366
+msgid "file"
+msgstr "文件后缀"
+
+#: src/natcap/invest/spec_utils.py:367
 msgid "text"
 msgstr "文本"
+
+#: src/natcap/invest/spec_utils.py:368
+msgid "integer"
+msgstr "整数"
+
+#: src/natcap/invest/spec_utils.py:369
+msgid "number"
+msgstr "数量"
+
+#: src/natcap/invest/spec_utils.py:370
+msgid "option"
+msgstr "选项"
+
+#: src/natcap/invest/spec_utils.py:371
+msgid "percent"
+msgstr "百分比"
+
+#: src/natcap/invest/spec_utils.py:372
+msgid "raster"
+msgstr "栅格"
+
+#: src/natcap/invest/spec_utils.py:373
+msgid "ratio"
+msgstr "比例"
+
+#: src/natcap/invest/spec_utils.py:374
+msgid "vector"
+msgstr "向量"
