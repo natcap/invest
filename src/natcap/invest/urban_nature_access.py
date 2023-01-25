@@ -291,7 +291,10 @@ _OUTPUT_BASE_FILES = {
 
 _INTERMEDIATE_BASE_FILES = {
     'aligned_population': 'aligned_population.tif',
+    'masked_population': 'masked_population.tif',
     'aligned_lulc': 'aligned_lulc.tif',
+    'masked_lulc': 'masked_lulc.tif',
+    'aligned_mask': 'aligned_mask.tif',
     'greenspace_area': 'greenspace_area.tif',
     'greenspace_population_ratio': 'greenspace_population_ratio.tif',
     'convolved_population': 'convolved_population.tif',
@@ -447,6 +450,47 @@ def execute(args):
         target_path_list=[file_registry['aligned_population']],
         task_name='Resample population to LULC resolution')
 
+    mutual_mask_task = graph.add_task(
+        _create_mutual_nodata_mask,
+        kwargs={
+            'raster_list': [
+                file_registry['aligned_lulc'],
+                file_registry['aligned_population'],
+            ],
+            'target_mask_path': file_registry['aligned_mask'],
+        },
+        task_name='Create a mutual nodata mask from lulc and population',
+        target_path_list=[file_registry['aligned_mask']],
+        dependent_task_list=[
+            lulc_alignment_task, population_alignment_task]
+    )
+
+    population_mask_task = graph.add_task(
+        _mask_raster,
+        kwargs={
+            'source_raster_path': file_registry['aligned_population'],
+            'mask_raster_path': file_registry['aligned_mask'],
+            'target_raster_path': file_registry['masked_population'],
+        },
+        task_name='Mask population to the mutually valid pixels',
+        target_path_list=[file_registry['masked_population']],
+        dependent_task_list=[
+            population_alignment_task, mutual_mask_task]
+    )
+
+    lulc_mask_task = graph.add_task(
+        _mask_raster,
+        kwargs={
+            'source_raster_path': file_registry['aligned_lulc'],
+            'mask_raster_path': file_registry['aligned_mask'],
+            'target_raster_path': file_registry['masked_lulc'],
+        },
+        task_name='Mask population to the mutually valid pixels',
+        target_path_list=[file_registry['masked_lulc']],
+        dependent_task_list=[
+            lulc_alignment_task, mutual_mask_task]
+    )
+
     aoi_reprojection_task = graph.add_task(
         _reproject_and_identify,
         kwargs={
@@ -483,7 +527,7 @@ def execute(args):
         aois_rasterization_task = graph.add_task(
             _rasterize_aois,
             kwargs={
-                'base_raster_path': file_registry['aligned_lulc'],
+                'base_raster_path': file_registry['masked_lulc'],
                 'aois_vector_path':
                     file_registry['reprojected_aois'],
                 'target_raster_path': file_registry['aois_ids'],
@@ -492,7 +536,7 @@ def execute(args):
             task_name='Rasterize the admin units vector',
             target_path_list=[file_registry['aois_ids']],
             dependent_task_list=[
-                aoi_reprojection_task, lulc_alignment_task]
+                aoi_reprojection_task, lulc_mask_task]
         )
 
         for pop_group in split_population_fields:
@@ -507,13 +551,13 @@ def execute(args):
                 kwargs={
                     'aois_raster_path': file_registry['aois_ids'],
                     'reclassification_map': field_value_map,
-                    'supply_raster_path': file_registry['aligned_population'],
+                    'supply_raster_path': file_registry['masked_population'],
                     'target_raster_path': proportional_population_path,
                 },
                 task_name=f"Population proportion in pop group {pop_group}",
                 target_path_list=[proportional_population_path],
                 dependent_task_list=[
-                    aois_rasterization_task, population_alignment_task]
+                    aois_rasterization_task, population_mask_task]
             )
 
             pop_group_proportion_paths[pop_group] = os.path.join(
@@ -522,7 +566,7 @@ def execute(args):
             pop_group_proportion_tasks[pop_group] = graph.add_task(
                 _rasterize_aois,
                 kwargs={
-                    'base_raster_path': file_registry['aligned_lulc'],
+                    'base_raster_path': file_registry['masked_lulc'],
                     'aois_vector_path':
                         file_registry['reprojected_aois'],
                     'target_raster_path':
@@ -532,7 +576,7 @@ def execute(args):
                 task_name=f'Rasterize proportion of admin units as {pop_group}',
                 target_path_list=[pop_group_proportion_paths[pop_group]],
                 dependent_task_list=[
-                    aoi_reprojection_task, lulc_alignment_task]
+                    aoi_reprojection_task, lulc_mask_task]
             )
 
     attr_table = utils.read_csv_to_dataframe(
@@ -599,7 +643,7 @@ def execute(args):
         decayed_population_task = graph.add_task(
             _convolve_and_set_lower_bound,
             kwargs={
-                'signal_path_band': (file_registry['aligned_population'], 1),
+                'signal_path_band': (file_registry['masked_population'], 1),
                 'kernel_path_band': (kernel_paths[search_radius_m], 1),
                 'target_path': decayed_population_path,
                 'working_dir': intermediate_dir,
@@ -607,20 +651,20 @@ def execute(args):
             task_name=f'Convolve population - {search_radius_m}m',
             target_path_list=[decayed_population_path],
             dependent_task_list=[
-                kernel_tasks[search_radius_m], population_alignment_task])
+                kernel_tasks[search_radius_m], population_mask_task])
 
         greenspace_pixels_path = os.path.join(
             intermediate_dir, f'greenspace_area{suffix}.tif')
         greenspace_reclassification_task = graph.add_task(
             _reclassify_greenspace_area,
             kwargs={
-                'lulc_raster_path': file_registry['aligned_lulc'],
+                'lulc_raster_path': file_registry['masked_lulc'],
                 'lulc_attribute_table': args['lulc_attribute_table'],
                 'target_raster_path': greenspace_pixels_path,
             },
             target_path_list=[greenspace_pixels_path],
             task_name='Identify greenspace areas',
-            dependent_task_list=[lulc_alignment_task]
+            dependent_task_list=[lulc_mask_task]
         )
 
         greenspace_population_ratio_path = os.path.join(
@@ -668,7 +712,7 @@ def execute(args):
                 _convolve_and_set_lower_bound,
                 kwargs={
                     'signal_path_band': (
-                        file_registry['aligned_population'], 1),
+                        file_registry['masked_population'], 1),
                     'kernel_path_band': (kernel_paths[search_radius_m], 1),
                     'target_path': decayed_population_paths[search_radius_m],
                     'working_dir': intermediate_dir,
@@ -676,7 +720,7 @@ def execute(args):
                 task_name=f'Convolve population - {search_radius_m}m',
                 target_path_list=[decayed_population_paths[search_radius_m]],
                 dependent_task_list=[
-                    kernel_tasks[search_radius_m], population_alignment_task])
+                    kernel_tasks[search_radius_m], population_mask_task])
 
         partial_greenspace_supply_paths = []
         partial_greenspace_supply_tasks = []
@@ -687,14 +731,14 @@ def execute(args):
             greenspace_reclassification_task = graph.add_task(
                 _reclassify_greenspace_area,
                 kwargs={
-                    'lulc_raster_path': file_registry['aligned_lulc'],
+                    'lulc_raster_path': file_registry['masked_lulc'],
                     'lulc_attribute_table': args['lulc_attribute_table'],
                     'target_raster_path': greenspace_pixels_path,
                     'only_these_greenspace_codes': set([lucode]),
                 },
                 target_path_list=[greenspace_pixels_path],
                 task_name=f'Identify greenspace areas with lucode {lucode}',
-                dependent_task_list=[lulc_alignment_task]
+                dependent_task_list=[lulc_mask_task]
             )
 
             greenspace_population_ratio_path = os.path.join(
@@ -754,13 +798,13 @@ def execute(args):
         greenspace_reclassification_task = graph.add_task(
             _reclassify_greenspace_area,
             kwargs={
-                'lulc_raster_path': file_registry['aligned_lulc'],
+                'lulc_raster_path': file_registry['masked_lulc'],
                 'lulc_attribute_table': args['lulc_attribute_table'],
                 'target_raster_path': greenspace_pixels_path,
             },
             target_path_list=[greenspace_pixels_path],
             task_name='Identify greenspace areas',
-            dependent_task_list=[lulc_alignment_task]
+            dependent_task_list=[lulc_mask_task]
         )
 
         decayed_population_in_group_paths = []
@@ -785,7 +829,8 @@ def execute(args):
                 task_name=f'Convolve population - {search_radius_m}m',
                 target_path_list=[decayed_population_in_group_path],
                 dependent_task_list=[
-                    kernel_tasks[search_radius_m], population_alignment_task]
+                    kernel_tasks[search_radius_m],
+                    proportional_population_tasks[pop_group]]
             ))
 
         sum_of_decayed_population_path = os.path.join(
@@ -1022,7 +1067,7 @@ def execute(args):
             kwargs={
                 'base_raster_path_band_const_list': [
                     (file_registry['greenspace_budget'], 1),
-                    (file_registry['aligned_population'], 1)
+                    (file_registry['masked_population'], 1)
                 ],
                 'local_op': _greenspace_supply_demand_op,
                 'target_raster_path': (
@@ -1035,11 +1080,11 @@ def execute(args):
                 file_registry['greenspace_supply_demand_budget']],
             dependent_task_list=[
                  per_capita_greenspace_budget_task,
-                 population_alignment_task,
+                 population_mask_task,
             ])
 
         supply_population_tasks = []
-        pop_paths = [(None, file_registry['aligned_population'])]
+        pop_paths = [(None, file_registry['masked_population'])]
         if aggregate_by_pop_groups:
             pop_paths.extend(list(proportional_population_paths.items()))
 
@@ -1074,7 +1119,7 @@ def execute(args):
                     target_path_list=[supply_population_path],
                     dependent_task_list=[
                         greenspace_supply_demand_task,
-                        population_alignment_task,
+                        population_mask_task,
                         *list(proportional_population_tasks.values()),
                     ]))
 
@@ -1085,7 +1130,7 @@ def execute(args):
                 'target_aoi_vector_path': file_registry['aois'],
                 'greenspace_budget_path': file_registry[
                     'greenspace_supply_demand_budget'],
-                'population_path': file_registry['aligned_population'],
+                'population_path': file_registry['masked_population'],
                 'undersupplied_populations_path': file_registry[
                     'undersupplied_population'],
                 'oversupplied_populations_path': file_registry[
@@ -1096,7 +1141,7 @@ def execute(args):
                 'Aggregate supply-demand to admin units (single rasters)'),
             target_path_list=[file_registry['aois']],
             dependent_task_list=[
-                population_alignment_task,
+                population_mask_task,
                 aoi_reprojection_task,
                 greenspace_supply_demand_task,
                 *supply_population_tasks
@@ -2164,6 +2209,64 @@ def _create_kernel_raster(
         kernel_raster.FlushCache()
         kernel_band = None
         kernel_raster = None
+
+
+def _create_mutual_nodata_mask(raster_list, target_mask_path):
+    """Create a mutual mask of nodata values across a stack of aligned rasters.
+
+    The target raster will have pixel values of 0 where nodata was found
+    somewhere in the pixel stack, 1 where no nodata was found.
+
+    Args:
+        raster_list (list): A list of string paths to single-band rasters.
+        target_mask_path (str): A string path to where the new mask raster
+            should be written.
+
+    Returns:
+        ``None``
+    """
+    nodatas = [
+        pygeoprocessing.get_raster_info(path)['nodata'][0]
+        for path in raster_list]
+
+    def _create_mask(*raster_arrays):
+        valid_pixels_mask = numpy.ones(raster_arrays[0].shape, dtype=bool)
+        for nodata, array in zip(nodatas, raster_arrays):
+            valid_pixels_mask &= ~utils.array_equals_nodata(array, nodata)
+
+        return valid_pixels_mask
+
+    pygeoprocessing.raster_calculator(
+        [(path, 1) for path in raster_list],
+        _create_mask, target_mask_path, gdal.GDT_Byte, nodata_target=255)
+
+
+def _mask_raster(source_raster_path, mask_raster_path, target_raster_path):
+    """Convert pixels to nodata given an existing mask raster.
+
+    Args:
+        source_raster_path (str): The path to a source raster.
+        mask_raster_path (str): The path to a mask raster.  Pixel values must
+            be either 0 (invalid) or 1 (valid).
+        target_raster_path (str): The path to a new raster on disk.  Pixels
+            marked as 0 in the mask raster will be written out as nodata.
+
+    Returns:
+        ``None``
+    """
+    source_raster_info = pygeoprocessing.get_raster_info(source_raster_path)
+    source_raster_nodata = source_raster_info['nodata'][0]
+
+    def _mask(array, valid_mask):
+        array = array.copy()
+        array[valid_mask == 0] = source_raster_nodata
+        return array
+
+    pygeoprocessing.raster_calculator(
+        [(source_raster_path, 1), (mask_raster_path, 1)], _mask,
+        target_raster_path,
+        datatype_target=source_raster_info['datatype'],
+        nodata_target=source_raster_nodata)
 
 
 def validate(args, limit_to=None):
