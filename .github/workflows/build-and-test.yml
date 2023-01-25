@@ -381,7 +381,7 @@ jobs:
       - name: Run invest-autotest with binaries
         if : |
           github.event_name == 'push' &&
-          (contains(github.ref, 'task') || github.ref == 'refs/heads/main')
+          (contains(github.ref, 'release') || github.ref == 'refs/heads/main')
         run: make invest_autotest
 
       - name: Install Node.js
