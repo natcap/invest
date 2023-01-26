@@ -50,7 +50,7 @@ function FormLabel(props) {
       <span>
         {
           (typeof required === 'boolean' && !required)
-            ? <em> (optional)</em>
+            ? <em> ({_('optional')})</em>
             : <React.Fragment />
         }
         {/* display units at the end of the arg name, if applicable */}
@@ -79,7 +79,7 @@ function Feedback(props) {
       type="invalid"
       id={`${argkey}-feedback`}
     >
-      {`${argtype} : ${(message)}`}
+      {`${_(argtype)} : ${(message)}`}
     </Form.Control.Feedback>
   );
 }

@@ -41,7 +41,9 @@ function readMessageCatalog(messageCatalogPath) {
 function loadMessageCatalogs() {
   // load each language's message catalog PO file into an object
   // for easy access when we switch languages
-  const languages = fs.readdirSync(`${__dirname}/../static/internationalization/locales`);
+  const languages = fs.readdirSync(
+    `${__dirname}/../static/internationalization/locales`
+  ).filter((lang) => lang.length === 2);  // filter out any extra contents like .DS_Store
   if (languages) {
     languages.forEach((language) => {
       const messageCatalogPath = `${__dirname}/../static/internationalization/locales/${language}/LC_MESSAGES/messages.po`;
