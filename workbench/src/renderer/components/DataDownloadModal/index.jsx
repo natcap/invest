@@ -154,6 +154,7 @@ class DataDownloadModal extends React.Component {
       selectedLinksArray,
       dataRegistry,
     } = this.state;
+    const { t } = this.props;
     // Don't render until registry is loaded, since it loads async
     if (!dataRegistry) { return <div />; }
 
@@ -251,11 +252,9 @@ DataDownloadModal.propTypes = {
   storeDownloadDir: PropTypes.func.isRequired,
 };
 
-export withTranslation()(DataDownloadModal);
-
-export function DownloadProgressBar(props) {
-  const { t, i18n } = useTranslation();
+function DownloadProgressBar(props) {
   const [nComplete, nTotal] = props.downloadedNofN;
+  const { t, i18n } = useTranslation();
   if (nComplete === 'failed') {
     return (
       <Expire
@@ -302,3 +301,7 @@ DownloadProgressBar.propTypes = {
   ).isRequired,
   expireAfter: PropTypes.number.isRequired,
 };
+
+const translated = withTranslation()(DataDownloadModal)
+
+export { translated as "DataDownloadModal", DownloadProgressBar as "DownloadProgressBar" }

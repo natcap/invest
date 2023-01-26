@@ -124,7 +124,7 @@ class RecentInvestJobsClass extends React.Component {
   render() {
     // Buttons to load each recently saved state
     const recentButtons = [];
-    const { recentJobs } = this.props;
+    const { recentJobs, t } = this.props;
     recentJobs.forEach((job) => {
       if (!job.argsValues) { return; }
       recentButtons.push(
@@ -194,6 +194,8 @@ class RecentInvestJobsClass extends React.Component {
   }
 }
 
+const RecentInvestJobs = withTranslation()(RecentInvestJobsClass);
+
 RecentInvestJobs.propTypes = {
   recentJobs: PropTypes.arrayOf(
     PropTypes.shape({
@@ -207,4 +209,3 @@ RecentInvestJobs.propTypes = {
   openInvestModel: PropTypes.func.isRequired,
 };
 
-const RecentInvestJobs = withTranslation()(RecentInvestJobsClass);

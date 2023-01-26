@@ -12,7 +12,7 @@ import { MdFolderOpen, MdInfo, MdOpenInNew } from 'react-icons/md';
 import baseUserguideURL from '../../../userguideURL';
 import { ipcMainChannels } from '../../../../main/ipcMainChannels';
 import { useTranslation } from 'react-i18next';
-import i18next from './i18n'
+import i18next from '../../../i18n'
 
 const { ipcRenderer } = window.Workbench.electron;
 

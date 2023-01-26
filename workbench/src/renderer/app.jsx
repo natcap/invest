@@ -27,6 +27,7 @@ import { getInvestModelNames } from './server_requests';
 import InvestJob from './InvestJob';
 import { dragOverHandlerNone } from './utils';
 import { ipcMainChannels } from '../main/ipcMainChannels';
+import i18next from './i18n';
 
 const { ipcRenderer } = window.Workbench.electron;
 const logger = window.Workbench.getLogger('app.jsx');
@@ -94,9 +95,7 @@ export default class App extends React.Component {
 
   async saveSettings(settings) {
     const { investSettings } = this.state;
-    await ipcRenderer.invoke(
-      ipcMainChannels.SET_LANGUAGE, settings.language
-    );
+    await i18next.changeLanguage(settings.language);
     await saveSettingsStore(settings);
     this.setState({ investSettings: settings });
     // if language has changed, refresh the app
@@ -311,7 +310,7 @@ export default class App extends React.Component {
                     eventKey="home"
                   >
                     <MdHome />
-                    {_("InVEST")}
+                    InVEST
                   </Nav.Link>
                 </Navbar.Brand>
               </Col>

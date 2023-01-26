@@ -25,7 +25,6 @@ import {
   setupInvestRunHandlers,
   setupInvestLogReaderHandler
 } from './setupInvestHandlers';
-import setupSetLanguage from './setLanguage';
 import setupGetNCPUs from './setupGetNCPUs';
 import setupOpenExternalUrl from './setupOpenExternalUrl';
 import { ipcMainChannels } from './ipcMainChannels';
@@ -34,6 +33,7 @@ import ELECTRON_DEV_MODE from './isDevMode';
 import BASE_URL from './baseUrl';
 import { getLogger } from './logger';
 import pkg from '../../package.json';
+import i18next from 'i18next';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
@@ -130,7 +130,6 @@ export const createWindow = async () => {
   setupInvestLogReaderHandler();
   setupContextMenu(mainWindow);
   setupGetNCPUs();
-  setupSetLanguage();
   setupOpenExternalUrl();
   return Promise.resolve(); // lets tests await createWindow(), then assert
 };
