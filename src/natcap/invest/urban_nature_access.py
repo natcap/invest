@@ -95,9 +95,8 @@ ARGS_SPEC = {
             'type': 'raster',
             'name': 'population raster',
             'bands': {
-                1: {'type': 'number', 'units': u.none}
+                1: {'type': 'number', 'units': u.count}
             },
-            'units': u.count,
             'projected': True,
             'projection_units': u.meter,
             'about': (
