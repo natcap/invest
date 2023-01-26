@@ -11,6 +11,8 @@ import { MdFolderOpen, MdInfo, MdOpenInNew } from 'react-icons/md';
 
 import baseUserguideURL from '../../../userguideURL';
 import { ipcMainChannels } from '../../../../main/ipcMainChannels';
+import { useTranslation } from 'react-i18next';
+import i18next from './i18n'
 
 const { ipcRenderer } = window.Workbench.electron;
 
@@ -29,7 +31,7 @@ const { ipcRenderer } = window.Workbench.electron;
  * @returns {string} - the filtered and formatted part of the message
  */
 function filterSpatialOverlapFeedback(message, filepath) {
-  const newPrefix = _('Bounding box does not intersect at least one other:');
+  const newPrefix = i18next.t('Bounding box does not intersect at least one other:');
   const bbox = message.split(`${filepath}:`).pop().split('|')[0];
   const bboxFormatted = bbox.split(' ').map(
     (str) => str.padEnd(22, ' ')
@@ -50,7 +52,7 @@ function FormLabel(props) {
       <span>
         {
           (typeof required === 'boolean' && !required)
-            ? <em> ({_('optional')})</em>
+            ? <em> ({i18next.t('optional')})</em>
             : <React.Fragment />
         }
         {/* display units at the end of the arg name, if applicable */}
@@ -79,7 +81,7 @@ function Feedback(props) {
       type="invalid"
       id={`${argkey}-feedback`}
     >
-      {`${_(argtype)} : ${(message)}`}
+      {`${i18next.t(argtype)} : ${(message)}`}
     </Form.Control.Feedback>
   );
 }
@@ -146,6 +148,8 @@ export default function ArgInput(props) {
   } = props;
   let { validationMessage } = props;
 
+  const { t, i18n } = useTranslation();
+
   // Occasionaly we want to force a scroll to the end of input fields
   // so that the most important part of a filepath is visible.
   // scrollEventCount changes on drop events and on use of the browse button.
@@ -201,16 +205,16 @@ export default function ArgInput(props) {
   let placeholderText;
   switch (argSpec.type) {
     case 'freestyle_string':
-      placeholderText = _('text');
+      placeholderText = t('text');
       break;
     case 'percent':
-      placeholderText = _('percent: a number from 0 - 100');
+      placeholderText = t('percent: a number from 0 - 100');
       break;
     case 'ratio':
-      placeholderText = _('ratio: a decimal from 0 - 1');
+      placeholderText = t('ratio: a decimal from 0 - 1');
       break;
     default:
-      placeholderText = _(argSpec.type);
+      placeholderText = t(argSpec.type);
   }
 
   let form;
@@ -399,7 +403,7 @@ class AboutModal extends React.PureComponent {
               aria-label="open user guide section for this input in web browser"
               onClick={handleClickUsersGuideLink}
             >
-              {_("User's guide entry")}
+              {t("User's guide entry")}
               <MdOpenInNew className="mr-1" />
             </a>
           </Modal.Body>

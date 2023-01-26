@@ -6,6 +6,7 @@ import ButtonGroup from 'react-bootstrap/ButtonGroup';
 import Form from 'react-bootstrap/Form';
 import Modal from 'react-bootstrap/Modal';
 import { MdSave, MdClose } from 'react-icons/md';
+import { withTranslation } from 'react-i18next';
 
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
@@ -13,7 +14,7 @@ const { ipcRenderer } = window.Workbench.electron;
 
 
 /** Render a dialog with a form for configuring global invest settings */
-export default class SaveAsModal extends React.Component {
+class SaveAsModal extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
@@ -88,7 +89,7 @@ export default class SaveAsModal extends React.Component {
           onClick={this.handleShow}
         >
           <MdSave className="mr-1" />
-          {_("Save as...")}
+          {t("Save as...")}
         </Button>
 
         <Modal
@@ -97,7 +98,7 @@ export default class SaveAsModal extends React.Component {
           onHide={this.handleClose}
         >
           <Modal.Header>
-            <Modal.Title>{_('Datastack options')}</Modal.Title>
+            <Modal.Title>{t('Datastack options')}</Modal.Title>
             <Button
               variant="secondary-outline"
               onClick={this.handleClose}
@@ -120,7 +121,7 @@ export default class SaveAsModal extends React.Component {
               >
                 <span className="ml-2">Parameters only</span>
                 <Form.Text muted>
-                  {_(`Save your parameters in a JSON file.
+                  {t(`Save your parameters in a JSON file.
                   This includes the paths to your input data, but not the data itself.
                   Open this file in InVEST to restore your parameters.`)}
                 </Form.Text>
@@ -143,7 +144,7 @@ export default class SaveAsModal extends React.Component {
               >
                 <span className="ml-2">Parameters and data</span>
                 <Form.Text muted>
-                  {_(`Save your parameters and input data in a compressed archive.
+                  {t(`Save your parameters and input data in a compressed archive.
                   This archive contains the same JSON file produced by the "Parameters
                   only" option, plus the data. You can open this file in InVEST to restore your
                   parameters. This option is useful to copy all the necessary data to a
@@ -161,7 +162,7 @@ export default class SaveAsModal extends React.Component {
               >
                 <span className="ml-2">Python script</span>
                 <Form.Text muted>
-                  {_(`Save your parameters in a python script. This includes the
+                  {t(`Save your parameters in a python script. This includes the
                   paths to your input data, but not the data itself. Running the python script
                   will programmatically run the model with your parameters. Use this as a
                   starting point for batch scripts.`)}
@@ -178,3 +179,6 @@ export default class SaveAsModal extends React.Component {
     );
   }
 }
+
+export default withTranslation()(SaveAsModal);
+

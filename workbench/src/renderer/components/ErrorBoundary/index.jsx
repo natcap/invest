@@ -2,12 +2,13 @@ import React from 'react';
 
 import Alert from 'react-bootstrap/Alert';
 import Button from 'react-bootstrap/Button';
+import { withTranslation } from 'react-i18next';
 
 import { handleClickFindLogfiles } from '../../menubar/handlers';
 
 const logger = window.Workbench.getLogger('ErrorBoundary');
 
-export default class ErrorBoundary extends React.Component {
+class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
     this.state = { hasError: false };
@@ -26,29 +27,29 @@ export default class ErrorBoundary extends React.Component {
     if (this.state.hasError) {
       return (
         <Alert className="error-boundary">
-          <h2>{`\u{1F986}  ${_('Something went wrong')}`}</h2>
+          <h2>{`\u{1F986}  ${t('Something went wrong')}`}</h2>
           <p>
             <em>
-              {_(`Please help us fix this by reporting the problem. 
+              {t(`Please help us fix this by reporting the problem.
                   You may follow these steps:`)}
             </em>
           </p>
           <ol>
             <li>
-              <b>{_('Find the Workbench log files ')}</b>
-              {_(`using the button below. 
+              <b>{t('Find the Workbench log files ')}</b>
+              {t(`using the button below.
                  There may be multiple files with a ".log" extension.`)}
             </li>
             <Button
               onClick={handleClickFindLogfiles}
             >
-              {_('Find My Logs')}
+              {t('Find My Logs')}
             </Button>
             <br />
             <br />
             <li>
-              <b>{_('Create a post on our forum ')}</b>
-              {_(`and upload all the log files, along with a brief description
+              <b>{t('Create a post on our forum ')}</b>
+              {t(`and upload all the log files, along with a brief description
                   of what happened before you saw this message.`)}
               <br />
               <a
@@ -64,3 +65,6 @@ export default class ErrorBoundary extends React.Component {
     return this.props.children;
   }
 }
+
+export default withTranslation()(ErrorBoundary);
+

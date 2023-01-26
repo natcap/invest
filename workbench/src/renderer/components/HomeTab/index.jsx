@@ -6,6 +6,7 @@ import Card from 'react-bootstrap/Card';
 import Container from 'react-bootstrap/Container';
 import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
+import { withTranslation } from 'react-i18next';
 
 import OpenButton from '../OpenButton';
 import InvestJob from '../../InvestJob';
@@ -106,10 +107,11 @@ HomeTab.propTypes = {
   ).isRequired,
 };
 
+
 /**
  * Renders a button for each recent invest job.
  */
-class RecentInvestJobs extends React.Component {
+class RecentInvestJobsClass extends React.Component {
   constructor(props) {
     super(props);
     this.handleClick = this.handleClick.bind(this);
@@ -148,7 +150,7 @@ class RecentInvestJobs extends React.Component {
               <span className="timestamp">{job.humanTime}</span>
               <span className="status">
                 {(job.status === 'success'
-                  ? <span className="status-success">{_('Model Complete')}</span>
+                  ? <span className="status-success">{t('Model Complete')}</span>
                   : <span className="status-error">{job.status}</span>
                 )}
               </span>
@@ -166,12 +168,12 @@ class RecentInvestJobs extends React.Component {
               {recentButtons.length
                 ? (
                   <h4>
-                    {_('Recent runs:')}
+                    {t('Recent runs:')}
                   </h4>
                 )
                 : (
                   <div className="default-text">
-                    {_(`Set up a model from a sample datastack file (.json)
+                    {t(`Set up a model from a sample datastack file (.json)
                         or from an InVEST model's logfile (.txt): `)}
                   </div>
                 )}
@@ -204,3 +206,5 @@ RecentInvestJobs.propTypes = {
   ).isRequired,
   openInvestModel: PropTypes.func.isRequired,
 };
+
+const RecentInvestJobs = withTranslation()(RecentInvestJobsClass);

@@ -7,6 +7,8 @@ import Modal from 'react-bootstrap/Modal';
 import Alert from 'react-bootstrap/Alert';
 import ProgressBar from 'react-bootstrap/ProgressBar';
 import Table from 'react-bootstrap/Table';
+import { withTranslation } from 'react-i18next';
+import { useTranslation } from 'react-i18next';
 
 import Expire from '../Expire';
 import sampledataRegistry from './sampledata_registry.json';
@@ -19,7 +21,7 @@ const BASE_URL = 'https://storage.googleapis.com/releases.naturalcapitalproject.
 const DEFAULT_FILESIZE = 0;
 
 /** Render a dialog with a form for configuring global invest settings */
-export class DataDownloadModal extends React.Component {
+class DataDownloadModal extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
@@ -195,7 +197,7 @@ export class DataDownloadModal extends React.Component {
       >
         <Form>
           <Modal.Header>
-            <Modal.Title>{_("Download InVEST sample data")}</Modal.Title>
+            <Modal.Title>{t("Download InVEST sample data")}</Modal.Title>
           </Modal.Header>
           <Modal.Body>
             <Table
@@ -227,14 +229,14 @@ export class DataDownloadModal extends React.Component {
               variant="secondary"
               onClick={this.props.closeModal}
             >
-              {_("Cancel")}
+              {t("Cancel")}
             </Button>
             <Button
               variant="primary"
               onClick={this.handleSubmit}
               disabled={!downloadEnabled}
             >
-              {_("Download")}
+              {t("Download")}
             </Button>
           </Modal.Footer>
         </Form>
@@ -249,7 +251,10 @@ DataDownloadModal.propTypes = {
   storeDownloadDir: PropTypes.func.isRequired,
 };
 
+export withTranslation()(DataDownloadModal);
+
 export function DownloadProgressBar(props) {
+  const { t, i18n } = useTranslation();
   const [nComplete, nTotal] = props.downloadedNofN;
   if (nComplete === 'failed') {
     return (
@@ -261,7 +266,7 @@ export function DownloadProgressBar(props) {
           className="d-inline"
           variant="danger"
         >
-          {_("Download Failed")}
+          {t("Download Failed")}
         </Alert>
       </Expire>
     );
@@ -276,7 +281,7 @@ export function DownloadProgressBar(props) {
           className="d-inline"
           variant="success"
         >
-          {_("Download Complete")}
+          {t("Download Complete")}
         </Alert>
       </Expire>
     );
@@ -286,7 +291,7 @@ export function DownloadProgressBar(props) {
       animated
       max={1}
       now={(nComplete + 1) / nTotal}
-      label={_(`Downloading ${nComplete + 1} of ${nTotal}`)}
+      label={t(`Downloading ${nComplete + 1} of ${nTotal}`)}
     />
   );
 }

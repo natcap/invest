@@ -127,7 +127,7 @@ class SettingsModal extends React.Component {
                     {t('Language')}
                     <Form.Text className="text-nowrap" muted>
                       <MdWarningAmber className="align-text-bottom ml-3" />
-                      Changing this setting will refresh the app and close all tabs
+                      {t('Changing this setting will refresh the app and close all tabs')}
                     </Form.Text>
                   </Form.Label>
                   <Col sm="4">

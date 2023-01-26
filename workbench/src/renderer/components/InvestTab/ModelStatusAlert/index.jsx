@@ -3,10 +3,12 @@ import PropTypes from 'prop-types';
 
 import Alert from 'react-bootstrap/Alert';
 import Button from 'react-bootstrap/Button';
+import { useTranslation } from 'react-i18next';
 
 /* Render different Alert contents depending on an InVEST run status */
 export default function ModelStatusAlert(props) {
   const { status } = props;
+  const { t, i18n } = useTranslation();
 
   const WorkspaceButton = (
     <Button
@@ -14,7 +16,7 @@ export default function ModelStatusAlert(props) {
       onClick={props.handleOpenWorkspace}
       disabled={props.status === 'running'}
     >
-      {_('Open Workspace')}
+      {t('Open Workspace')}
     </Button>
   );
 
@@ -23,7 +25,7 @@ export default function ModelStatusAlert(props) {
       variant="outline-dark"
       onClick={props.terminateInvestProcess}
     >
-      {_('Cancel Run')}
+      {t('Cancel Run')}
     </Button>
   );
 
@@ -39,13 +41,13 @@ export default function ModelStatusAlert(props) {
   let alertMessage;
   if (status === 'success') {
     alertVariant = 'success';
-    alertMessage = _('Model Complete');
+    alertMessage = t('Model Complete');
   } else if (status === 'error') {
     alertVariant = 'danger';
-    alertMessage = _('Error: see log for details');
+    alertMessage = t('Error: see log for details');
   } else if (status === 'canceled') {
     alertVariant = 'danger';
-    alertMessage = _('Run Canceled');
+    alertMessage = t('Run Canceled');
   }
 
   return (

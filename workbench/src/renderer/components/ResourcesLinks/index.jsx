@@ -65,6 +65,8 @@ export default function ResourcesTab(props) {
 
   const userGuideURL = `${UG_ROOT}/${docs}#data-needs`;
 
+  const { t, i18n } = useTranslation();
+
   return (
     <React.Fragment>
       <a
@@ -74,7 +76,7 @@ export default function ResourcesTab(props) {
         onClick={handleClick}
       >
         <MdOpenInNew className="mr-1" />
-        {_("User's Guide")}
+        {t("User's Guide")}
       </a>
       <a
         href={forumURL}
@@ -83,7 +85,7 @@ export default function ResourcesTab(props) {
         onClick={handleClick}
       >
         <MdOpenInNew className="mr-1" />
-        {_("Frequently Asked Questions")}
+        {t("Frequently Asked Questions")}
       </a>
     </React.Fragment>
   );
