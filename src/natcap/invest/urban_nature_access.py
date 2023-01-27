@@ -484,7 +484,7 @@ def execute(args):
             'mask_raster_path': file_registry['aligned_mask'],
             'target_raster_path': file_registry['masked_lulc'],
         },
-        task_name='Mask population to the mutually valid pixels',
+        task_name='Mask lulc to the mutually valid pixels',
         target_path_list=[file_registry['masked_lulc']],
         dependent_task_list=[
             lulc_alignment_task, mutual_mask_task]
