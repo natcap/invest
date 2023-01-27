@@ -5,6 +5,7 @@ import { MdOpenInNew } from 'react-icons/md';
 
 import UG_ROOT from '../../userguideURL';
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
+import { useTranslation } from 'react-i18next';
 
 const { ipcRenderer } = window.Workbench.electron;
 

@@ -204,7 +204,7 @@ class InvestTab extends React.Component {
       logfile,
     } = this.props.job;
 
-    const { tabID, investSettings } = this.props;
+    const { tabID, investSettings, t } = this.props;
 
     // Don't render the model setup & log until data has been fetched.
     if (!modelSpec) {

@@ -460,6 +460,7 @@ class SetupTab extends React.Component {
       saveAlerts,
       scrollEventCount,
     } = this.state;
+    const { t } = this.props;
     if (argsValues) {
       const {
         argsSpec,
@@ -468,7 +469,7 @@ class SetupTab extends React.Component {
         sidebarFooterElementId,
         executeClicked,
         uiSpec,
-        modelName
+        modelName,
       } = this.props;
 
       const SaveAlerts = [];

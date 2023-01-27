@@ -8,6 +8,7 @@ import Row from 'react-bootstrap/Row';
 import InputGroup from 'react-bootstrap/InputGroup';
 import Modal from 'react-bootstrap/Modal';
 import { MdFolderOpen, MdInfo, MdOpenInNew } from 'react-icons/md';
+import { withTranslation } from 'react-i18next';
 
 import baseUserguideURL from '../../../userguideURL';
 import { ipcMainChannels } from '../../../../main/ipcMainChannels';
@@ -356,7 +357,7 @@ function handleClickUsersGuideLink(event) {
   );
 }
 
-class AboutModal extends React.PureComponent {
+class AboutModalClass extends React.PureComponent {
   constructor(props) {
     super(props);
     this.state = {
@@ -375,7 +376,7 @@ class AboutModal extends React.PureComponent {
   }
 
   render() {
-    const { userguide, arg, argkey } = this.props;
+    const { userguide, arg, argkey, t } = this.props;
     const { aboutShow } = this.state;
     // create link to users guide entry for this arg
     // anchor name is the arg name, with underscores replaced with hyphens
@@ -412,6 +413,7 @@ class AboutModal extends React.PureComponent {
     );
   }
 }
+const AboutModal = withTranslation()(AboutModalClass);
 
 AboutModal.propTypes = {
   arg: PropTypes.shape({
@@ -421,3 +423,4 @@ AboutModal.propTypes = {
   userguide: PropTypes.string.isRequired,
   argkey: PropTypes.string.isRequired,
 };
+

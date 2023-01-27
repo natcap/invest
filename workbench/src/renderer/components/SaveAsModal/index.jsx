@@ -80,6 +80,7 @@ class SaveAsModal extends React.Component {
 
   render() {
     const { show, datastackType } = this.state;
+    const { t } = this.props;
 
     return (
       <React.Fragment>
