@@ -569,7 +569,7 @@ def execute(args):
 
             pop_group_proportion_paths[pop_group] = os.path.join(
                 intermediate_dir,
-                f'proportion_of_aoi_in_{pop_group}{suffix}.tif')
+                f'proportion_of_population_in_{pop_group}{suffix}.tif')
             pop_group_proportion_tasks[pop_group] = graph.add_task(
                 _rasterize_aois,
                 kwargs={
