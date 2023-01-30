@@ -83,7 +83,9 @@ ARGS_SPEC = {
                     'expression': 'value >= 0',
                     'about': (
                         'The distance in meters to use as the search radius '
-                        'for this type of greenspace. Values must be >= 0.'
+                        'for this type of greenspace. Values must be >= 0. '
+                        'Required when running the model with search radii '
+                        'defined per greenspace class.'
                     ),
                 }
             },
@@ -117,7 +119,8 @@ ARGS_SPEC = {
                     "about": gettext(
                         "The proportion of the population within this region "
                         "belonging to the identified population group "
-                        "(POP_GROUP)."
+                        "(POP_GROUP). This column is required when "
+                        "aggregating output by population groups."
                     ),
                 }
             },
@@ -234,7 +237,8 @@ ARGS_SPEC = {
             'required': f'search_radius_mode == "{RADIUS_OPT_UNIFORM}"',
             'about': gettext(
                 'The search radius to use when running the model under a '
-                'uniform search radius'),
+                'uniform search radius. Required when running the model '
+                'with a uniform search radius.'),
         },
         'population_group_radii_table': {
             'name': 'population group radii table',
@@ -266,7 +270,9 @@ ARGS_SPEC = {
             'about': gettext(
                 'A table associating population groups with the distance '
                 'in meters that members of the population group will, on '
-                'average, travel to find greenspace'),
+                'average, travel to find greenspace.  Required when running '
+                'the model with search radii defined per population group.'
+            ),
         },
         'decay_function_power_beta': {
             'name': 'power function beta parameter',
