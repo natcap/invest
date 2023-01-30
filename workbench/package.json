@@ -42,7 +42,7 @@
     "electron-log": "^4.3.5",
     "i18next": "^22.4.9",
     "i18next-conv": "^13.1.0",
-    "i18next-fs-backend": "^2.1.1",
+    "i18next-parser": "^7.6.0",
     "localforage": "^1.9.0",
     "node-fetch": "^2.6.7",
     "prop-types": "^15.7.2",

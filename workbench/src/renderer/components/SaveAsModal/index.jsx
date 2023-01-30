@@ -122,9 +122,9 @@ class SaveAsModal extends React.Component {
               >
                 <span className="ml-2">Parameters only</span>
                 <Form.Text muted>
-                  {t(`Save your parameters in a JSON file.
-                  This includes the paths to your input data, but not the data itself.
-                  Open this file in InVEST to restore your parameters.`)}
+                  {t('Save your parameters in a JSON file. This includes the' +
+                     'paths to your input data, but not the data itself. ' +
+                     'Open this file in InVEST to restore your parameters.')}
                 </Form.Text>
                 <Form.Check
                   id="relativePaths"
@@ -145,11 +145,11 @@ class SaveAsModal extends React.Component {
               >
                 <span className="ml-2">Parameters and data</span>
                 <Form.Text muted>
-                  {t(`Save your parameters and input data in a compressed archive.
-                  This archive contains the same JSON file produced by the "Parameters
-                  only" option, plus the data. You can open this file in InVEST to restore your
-                  parameters. This option is useful to copy all the necessary data to a
-                  different location.`)}
+                  {t('Save your parameters and input data in a compressed archive. ' +
+                     'This archive contains the same JSON file produced by the ' +
+                     '"Parameters only" option, plus the data. You can open this ' +
+                     'file in InVEST to restore your parameters. This option is ' +
+                     'useful to copy all the necessary data to a different location.')}
                 </Form.Text>
               </ToggleButton>
               <ToggleButton
@@ -163,16 +163,16 @@ class SaveAsModal extends React.Component {
               >
                 <span className="ml-2">Python script</span>
                 <Form.Text muted>
-                  {t(`Save your parameters in a python script. This includes the
-                  paths to your input data, but not the data itself. Running the python script
-                  will programmatically run the model with your parameters. Use this as a
-                  starting point for batch scripts.`)}
+                  {t('Save your parameters in a python script. This includes the ' +
+                     'paths to your input data, but not the data itself. Running ' +
+                     'the python script will programmatically run the model with ' +
+                     'your parameters. Use this as a starting point for batch scripts.')}
                 </Form.Text>
               </ToggleButton>
             </ButtonGroup>
             <Button onClick={this.browseSaveFile}>
               <MdSave className="mr-1" />
-              Save
+              {t('Save')}
             </Button>
           </Modal.Body>
         </Modal>

@@ -906,13 +906,13 @@ describe('Translation', () => {
 
     // text within the settings modal component should be translated
     languageInput = await findByLabelText(
-      mockI18n.options.resources.ll.translationsNS.Language, { exact: false });
+      mockI18n.options.resources.ll.translation.Language, { exact: false });
     expect(languageInput).toHaveValue(testLanguage);
     expect(global.window.location.reload).toHaveBeenCalled();
 
     // text should also be translated in other components
     // such as the Open button (visible in background)
-    await findByText(mockI18n.options.resources.ll.translationsNS.Open);
+    await findByText(mockI18n.options.resources.ll.translation.Open);
 
     // text without a translation in the message catalog should display in the default English
     expect(getByText('Logging threshold')).toBeDefined();

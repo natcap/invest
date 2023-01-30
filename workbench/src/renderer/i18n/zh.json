@@ -1,4 +1,4 @@
-export default {
+{
     "Cancel": "取消",
     "Download Complete": "下载完整版",
     "Download Failed": "下载失败",
@@ -55,4 +55,4 @@ export default {
     "raster": "栅格",
     "ratio": "比例",
     "vector": "向量"
-};
+}

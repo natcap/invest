@@ -1,4 +1,4 @@
-export default {
+{
     "Cancel": "Cancelar",
     "Download Complete": "Descarga completa",
     "Download Failed": "Falló la descarga",
@@ -53,4 +53,4 @@ export default {
     "Save your parameters and input data in a compressed archive. This archive contains the same JSON file produced by the \"Parameters only\" option, plus the data. You can open this file in InVEST to restore your parameters. This option is useful to copy all the necessary data to a different location.": "Guarde sus parámetros y datos de entrada en un archivo comprimido. Este archivo contiene el mismo archivo JSON producido por la opción \"Sólo parámetros\", además de los datos. Puede abrir este archivo en InVEST para restaurar sus parámetros. Esta opción es útil para copiar todos los datos necesarios en una ubicación diferente.",
     "Save your parameters in a python script. This includes the paths to your input data, but not the data itself. Running the python script will programmatically run the model with your parameters. Use this as a starting point for batch scripts.": "Guarde sus parámetros en un script de Python. Esto incluye las rutas a los datos de entrada, pero no los datos en sí. Al ejecutar el script de Python, el modelo se ejecutará mediante programación con sus parámetros. Utilícelo como punto de partida para scripts por lotes.",
     "Set up a model from a sample datastack file (.json) or from an InVEST model's logfile (.txt): ": "Configure un modelo a partir de un archivo Datastack de ejemplo (.json) o del archivo de registro de un modelo InVEST (.txt)"
-};
+}
