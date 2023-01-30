@@ -106,9 +106,7 @@ class SettingsModal extends React.Component {
           onHide={this.handleClose}
         >
           <Modal.Header>
-            <Modal.Title>
-              <h1>{t('Welcome to React')}</h1>
-            </Modal.Title>
+            <Modal.Title>{t('InVEST Settings')}</Modal.Title>
             <Button
               variant="secondary-outline"
               onClick={this.handleClose}
@@ -220,12 +218,12 @@ class SettingsModal extends React.Component {
                         <ul>
                           <li>{t('synchronous task execution is most reliable')}</li>
                           <li>
-                            {t(`threaded task management: tasks execute only in the
-                            main process, using multiple threads.`)}
+                            {t('threaded task management: tasks execute only ' +
+                               'in the main process, using multiple threads.')}
                           </li>
                           <li>
-                            {t(`n CPUs: depending on the InVEST model, tasks may execute
-                            in parallel using up to this many processes.`)}
+                            {t('n CPUs: depending on the InVEST model, tasks ' +
+                               'may execute in parallel using up to this many processes.')}
                           </li>
                         </ul>
                       </Accordion.Collapse>

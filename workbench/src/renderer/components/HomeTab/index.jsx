@@ -107,7 +107,6 @@ HomeTab.propTypes = {
   ).isRequired,
 };
 
-
 /**
  * Renders a button for each recent invest job.
  */
@@ -173,8 +172,8 @@ class RecentInvestJobsClass extends React.Component {
                 )
                 : (
                   <div className="default-text">
-                    {t(`Set up a model from a sample datastack file (.json)
-                        or from an InVEST model's logfile (.txt): `)}
+                    {t("Set up a model from a sample datastack file (.json) " +
+                       "or from an InVEST model's logfile (.txt): ")}
                   </div>
                 )}
             </Col>

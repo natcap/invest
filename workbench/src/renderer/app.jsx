@@ -71,7 +71,7 @@ export default class App extends React.Component {
       investSettings: investSettings,
       showDownloadModal: this.props.isFirstRun,
     });
-
+    i18next.changeLanguage(investSettings.language);
     ipcRenderer.on('download-status', (downloadedNofN) => {
       this.setState({
         downloadedNofN: downloadedNofN,

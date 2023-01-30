@@ -5,7 +5,6 @@ import { spawn, exec } from 'child_process';
 import Stream from 'stream';
 
 import fetch from 'node-fetch';
-import GettextJS from 'gettext.js';
 import React from 'react';
 import { ipcRenderer } from 'electron';
 import {
@@ -14,6 +13,7 @@ import {
 import { act } from 'react-dom/test-utils';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
+import mockI18n from './i18n-test';
 
 import App from '../../src/renderer/app';
 import {
@@ -34,6 +34,10 @@ import {
 } from '../../src/main/setupInvestHandlers';
 import writeInvestParameters from '../../src/main/writeInvestParameters';
 import { removeIpcMainListeners } from '../../src/main/main';
+
+
+import i18n from '../../src/renderer/i18n';
+jest.mock('../../src/renderer/i18n', () => mockI18n);
 
 // It's quite a pain to dynamically mock a const from a module,
 // here we do it by importing as another object, then
@@ -874,41 +878,12 @@ describe('InVEST subprocess testing', () => {
 });
 
 describe('Translation', () => {
-  const i18n = new GettextJS();
-  const testLanguage = 'es';
-  const messageCatalog = {
-    '': {
-      language: testLanguage,
-      'plural-forms': 'nplurals=2; plural=(n!=1);',
-    },
-    Open: 'σρєи',
-    Language: 'ℓαиgυαgє',
-  };
+  const testLanguage = 'll';
 
   beforeAll(async () => {
     getInvestModelNames.mockResolvedValue({});
-    getSupportedLanguages.mockResolvedValue({ en: 'english', es: 'spanish' });
+    getSupportedLanguages.mockResolvedValue({ en: 'english', ll: 'foo' });
 
-    i18n.loadJSON(messageCatalog, 'messages');
-
-    // mock out the relevant IPC channels
-    ipcRenderer.invoke.mockImplementation((channel, arg) => {
-      if (channel === ipcMainChannels.SET_LANGUAGE) {
-        i18n.setLocale(arg);
-      }
-      return Promise.resolve();
-    });
-
-    ipcRenderer.sendSync.mockImplementation((channel, arg) => {
-      if (channel === ipcMainChannels.GETTEXT) {
-        return i18n.gettext(arg);
-      }
-      return undefined;
-    });
-
-    // this is the same setup that's done in src/renderer/index.js (out of test scope)
-    ipcRenderer.invoke(ipcMainChannels.SET_LANGUAGE, 'en');
-    global.window._ = ipcRenderer.sendSync.bind(null, ipcMainChannels.GETTEXT);
     delete global.window.location;
     Object.defineProperty(global.window, 'location', {
       configurable: true,
@@ -930,13 +905,14 @@ describe('Translation', () => {
     userEvent.selectOptions(languageInput, testLanguage);
 
     // text within the settings modal component should be translated
-    languageInput = await findByLabelText(messageCatalog.Language, { exact: false });
+    languageInput = await findByLabelText(
+      mockI18n.options.resources.ll.translationsNS.Language, { exact: false });
     expect(languageInput).toHaveValue(testLanguage);
     expect(global.window.location.reload).toHaveBeenCalled();
 
     // text should also be translated in other components
     // such as the Open button (visible in background)
-    await findByText(messageCatalog.Open);
+    await findByText(mockI18n.options.resources.ll.translationsNS.Open);
 
     // text without a translation in the message catalog should display in the default English
     expect(getByText('Logging threshold')).toBeDefined();

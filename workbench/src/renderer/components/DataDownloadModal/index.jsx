@@ -290,7 +290,11 @@ function DownloadProgressBar(props) {
       animated
       max={1}
       now={(nComplete + 1) / nTotal}
-      label={t(`Downloading ${nComplete + 1} of ${nTotal}`)}
+      label={
+        t('Downloading {{nComplete}} of {{nTotal}}',
+          {number: nComplete + 1, nTotal: nTotal}
+        )
+      }
     />
   );
 }
