@@ -119,8 +119,9 @@ ARGS_SPEC = {
                     "about": gettext(
                         "The proportion of the population within this region "
                         "belonging to the identified population group "
-                        "(POP_GROUP). This column is required when "
-                        "aggregating output by population groups."
+                        "(POP_GROUP). At least one column with the prefix "
+                        "'pop_' is required when aggregating output by "
+                        "population groups."
                     ),
                 }
             },
