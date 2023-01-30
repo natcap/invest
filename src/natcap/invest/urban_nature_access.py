@@ -226,8 +226,8 @@ ARGS_SPEC = {
                 'Whether to aggregate statistics by population group '
                 'within each administrative unit. If selected, population '
                 'groups will be read from the fields of the user-defined '
-                'admin units vector. This option is implied if the search '
-                'radii are defined by population groups.'
+                'administrative boundaries vector. This option is implied '
+                'if the search radii are defined by population groups.'
             )
         },
         'search_radius': {
@@ -253,7 +253,8 @@ ARGS_SPEC = {
                         "The proportion of the population within this region "
                         "belonging to the identified population group. "
                         "Values in this column must match those population "
-                        "group field names in the AOI vector."
+                        "group field names in the administrative boundaries "
+                        "vector."
                     ),
                 },
                 'search_radius_m': {
@@ -292,7 +293,7 @@ ARGS_SPEC = {
 
 _OUTPUT_BASE_FILES = {
     'greenspace_supply': 'greenspace_supply.tif',
-    'aois': 'aois.gpkg',
+    'aois': 'admin_boundaries.gpkg',
 }
 
 _INTERMEDIATE_BASE_FILES = {
