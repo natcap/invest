@@ -46,7 +46,7 @@ ARGS_SPEC = {
     'args_with_spatial_overlap': {
         'spatial_keys': [
             'lulc_raster_path', 'population_raster_path',
-            'aoi_vector_path'],
+            'admin_boundaries_vector_path'],
         'different_projections_ok': True,
     },
     'args': {
@@ -106,7 +106,7 @@ ARGS_SPEC = {
                 "pixel."
             ),
         },
-        'aoi_vector_path': {
+        'admin_boundaries_vector_path': {
             'type': 'vector',
             'name': 'administrative boundaries',
             'geometries': spec_utils.POLYGONS,
@@ -293,7 +293,7 @@ ARGS_SPEC = {
 
 _OUTPUT_BASE_FILES = {
     'greenspace_supply': 'greenspace_supply.tif',
-    'aois': 'admin_boundaries.gpkg',
+    'admin_boundaries': 'admin_boundaries.gpkg',
 }
 
 _INTERMEDIATE_BASE_FILES = {
@@ -309,8 +309,8 @@ _INTERMEDIATE_BASE_FILES = {
     'greenspace_supply_demand_budget': 'greenspace_supply_demand_budget.tif',
     'undersupplied_population': 'undersupplied_population.tif',
     'oversupplied_population': 'oversupplied_population.tif',
-    'reprojected_aois': 'reprojected_aois.gpkg',
-    'aois_ids': 'aois_ids.tif',
+    'reprojected_admin_boundaries': 'reprojected_admin_boundaries.gpkg',
+    'admin_boundaries_ids': 'admin_boundaries_ids.tif',
 }
 
 
@@ -343,7 +343,7 @@ def execute(args):
         args['population_raster_path'] (string): (required) A string path to a
             GDAL-compatible raster where pixels represent the population of
             that pixel.  Must be linearly projected in meters.
-        args['aoi_vector_path'] (string): (required) A string path to a
+        args['admin_boundaries_vector_path'] (string): (required) A string path to a
             GDAL-compatible vector containing polygon areas of interest,
             typically administrative boundaries.  If this vector has any fields
             with fieldnames beginning with ``"pop_"``, these will be treated
@@ -501,14 +501,14 @@ def execute(args):
     aoi_reprojection_task = graph.add_task(
         _reproject_and_identify,
         kwargs={
-            'base_vector_path': args['aoi_vector_path'],
+            'base_vector_path': args['admin_boundaries_vector_path'],
             'target_projection_wkt': lulc_raster_info['projection_wkt'],
-            'target_path': file_registry['reprojected_aois'],
+            'target_path': file_registry['reprojected_admin_boundaries'],
             'driver_name': 'GPKG',
             'id_fieldname': ID_FIELDNAME,
         },
         task_name='Reproject admin units',
-        target_path_list=[file_registry['reprojected_aois']],
+        target_path_list=[file_registry['reprojected_admin_boundaries']],
         dependent_task_list=[lulc_alignment_task]
     )
 
@@ -524,9 +524,9 @@ def execute(args):
         split_population_fields = list(
             filter(lambda x: re.match(POP_FIELD_REGEX, x),
                    validation.load_fields_from_vector(
-                       file_registry['reprojected_aois'])))
+                       file_registry['reprojected_admin_boundaries'])))
 
-        if _geometries_overlap(file_registry['reprojected_aois']):
+        if _geometries_overlap(file_registry['reprojected_admin_boundaries']):
             LOGGER.warning(
                 "Some administrative boundaries overlap, which will affect "
                 "the accuracy of supply rasters per population group. ")
@@ -536,19 +536,19 @@ def execute(args):
             kwargs={
                 'base_raster_path': file_registry['masked_lulc'],
                 'aois_vector_path':
-                    file_registry['reprojected_aois'],
-                'target_raster_path': file_registry['aois_ids'],
+                    file_registry['reprojected_admin_boundaries'],
+                'target_raster_path': file_registry['admin_boundaries_ids'],
                 'id_fieldname': ID_FIELDNAME,
             },
             task_name='Rasterize the admin units vector',
-            target_path_list=[file_registry['aois_ids']],
+            target_path_list=[file_registry['admin_boundaries_ids']],
             dependent_task_list=[
                 aoi_reprojection_task, lulc_mask_task]
         )
 
         for pop_group in split_population_fields:
             field_value_map = _read_field_from_vector(
-                file_registry['reprojected_aois'], ID_FIELDNAME, pop_group)
+                file_registry['reprojected_admin_boundaries'], ID_FIELDNAME, pop_group)
             proportional_population_path = os.path.join(
                 intermediate_dir, f'population_in_{pop_group}{suffix}.tif')
             proportional_population_paths[
@@ -556,7 +556,7 @@ def execute(args):
             proportional_population_tasks[pop_group] = graph.add_task(
                 _reclassify_and_multiply,
                 kwargs={
-                    'aois_raster_path': file_registry['aois_ids'],
+                    'aois_raster_path': file_registry['admin_boundaries_ids'],
                     'reclassification_map': field_value_map,
                     'supply_raster_path': file_registry['masked_population'],
                     'target_raster_path': proportional_population_path,
@@ -575,7 +575,7 @@ def execute(args):
                 kwargs={
                     'base_raster_path': file_registry['masked_lulc'],
                     'aois_vector_path':
-                        file_registry['reprojected_aois'],
+                        file_registry['reprojected_admin_boundaries'],
                     'target_raster_path':
                         pop_group_proportion_paths[pop_group],
                     'id_fieldname': pop_group,
@@ -1025,8 +1025,8 @@ def execute(args):
         _ = graph.add_task(
             _supply_demand_vector_for_pop_groups,
             kwargs={
-                'source_aoi_vector_path': file_registry['reprojected_aois'],
-                'target_aoi_vector_path': file_registry['aois'],
+                'source_aoi_vector_path': file_registry['reprojected_admin_boundaries'],
+                'target_aoi_vector_path': file_registry['admin_boundaries'],
                 'greenspace_sup_dem_paths_by_pop_group':
                     greenspace_supply_demand_by_group_paths,
                 'proportional_pop_paths_by_pop_group':
@@ -1036,7 +1036,7 @@ def execute(args):
             },
             task_name=(
                 'Aggregate supply-demand to admin units (by pop groups)'),
-            target_path_list=[file_registry['aois']],
+            target_path_list=[file_registry['admin_boundaries']],
             dependent_task_list=[
                 aoi_reprojection_task,
                 *greenspace_supply_demand_by_group_tasks,
@@ -1133,8 +1133,8 @@ def execute(args):
         _ = graph.add_task(
             _supply_demand_vector_for_single_raster_modes,
             kwargs={
-                'source_aoi_vector_path': file_registry['reprojected_aois'],
-                'target_aoi_vector_path': file_registry['aois'],
+                'source_aoi_vector_path': file_registry['reprojected_admin_boundaries'],
+                'target_aoi_vector_path': file_registry['admin_boundaries'],
                 'greenspace_budget_path': file_registry[
                     'greenspace_supply_demand_budget'],
                 'population_path': file_registry['masked_population'],
@@ -1146,7 +1146,7 @@ def execute(args):
             },
             task_name=(
                 'Aggregate supply-demand to admin units (single rasters)'),
-            target_path_list=[file_registry['aois']],
+            target_path_list=[file_registry['admin_boundaries']],
             dependent_task_list=[
                 population_mask_task,
                 aoi_reprojection_task,

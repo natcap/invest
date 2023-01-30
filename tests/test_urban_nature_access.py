@@ -37,7 +37,7 @@ def _build_model_args(workspace):
             workspace, 'lulc_attributes.csv'),
         'decay_function': 'gaussian',
         'greenspace_demand': 100,  # square meters
-        'aoi_vector_path': os.path.join(
+        'admin_boundaries_vector_path': os.path.join(
             workspace, 'aois.geojson'),
     }
     if not os.path.exists(workspace):
@@ -93,7 +93,7 @@ def _build_model_args(workspace):
             *pygeoprocessing.get_raster_info(
                 args['lulc_raster_path'])['bounding_box'])]
     pygeoprocessing.shapely_geometry_to_vector(
-        admin_geom, args['aoi_vector_path'],
+        admin_geom, args['admin_boundaries_vector_path'],
         population_wkt, 'GeoJSON')
 
     return args
@@ -406,7 +406,7 @@ class UNATests(unittest.TestCase):
         # admin units vector.
         admin_vector_path = os.path.join(
             args['workspace_dir'], 'output',
-            f"aois_{args['results_suffix']}.gpkg")
+            f"admin_boundaries_{args['results_suffix']}.gpkg")
         admin_vector = gdal.OpenEx(admin_vector_path)
         admin_layer = admin_vector.GetLayer()
         self.assertEqual(admin_layer.GetFeatureCount(), 1)
@@ -458,7 +458,7 @@ class UNATests(unittest.TestCase):
 
         admin_vector_path = os.path.join(
             args['workspace_dir'], 'output',
-            f"aois_{args['results_suffix']}.gpkg")
+            f"admin_boundaries_{args['results_suffix']}.gpkg")
         admin_vector = gdal.OpenEx(admin_vector_path)
         admin_layer = admin_vector.GetLayer()
         self.assertEqual(admin_layer.GetFeatureCount(), 1)
@@ -516,7 +516,7 @@ class UNATests(unittest.TestCase):
             {'pop_female': 0.56, 'pop_male': 0.44}
         ]
         pygeoprocessing.shapely_geometry_to_vector(
-            admin_geom, args['aoi_vector_path'],
+            admin_geom, args['admin_boundaries_vector_path'],
             pygeoprocessing.get_raster_info(
                 args['population_raster_path'])['projection_wkt'],
             'GeoJSON', fields, attributes)
@@ -524,7 +524,7 @@ class UNATests(unittest.TestCase):
         urban_nature_access.execute(args)
 
         summary_vector = gdal.OpenEx(
-            os.path.join(args['workspace_dir'], 'output', 'aois.gpkg'))
+            os.path.join(args['workspace_dir'], 'output', 'admin_boundaries.gpkg'))
         summary_layer = summary_vector.GetLayer()
         self.assertEqual(summary_layer.GetFeatureCount(), 1)
         summary_feature = summary_layer.GetFeature(1)
@@ -588,7 +588,7 @@ class UNATests(unittest.TestCase):
             {'pop_female': 0.56, 'pop_male': 0.44}
         ]
         pygeoprocessing.shapely_geometry_to_vector(
-            admin_geom, args['aoi_vector_path'],
+            admin_geom, args['admin_boundaries_vector_path'],
             pygeoprocessing.get_raster_info(
                 args['population_raster_path'])['projection_wkt'],
             'GeoJSON', fields, attributes)
@@ -596,7 +596,7 @@ class UNATests(unittest.TestCase):
         urban_nature_access.execute(args)
 
         summary_vector = gdal.OpenEx(
-            os.path.join(args['workspace_dir'], 'output', 'aois.gpkg'))
+            os.path.join(args['workspace_dir'], 'output', 'admin_boundaries.gpkg'))
         summary_layer = summary_vector.GetLayer()
         self.assertEqual(summary_layer.GetFeatureCount(), 1)
         summary_feature = summary_layer.GetFeature(1)
@@ -682,7 +682,7 @@ class UNATests(unittest.TestCase):
         fields = {f'pop_{group}': ogr.OFTReal for group in ('female', 'male')}
         attributes = [{'pop_female': 0.56, 'pop_male': 0.44}]
         pygeoprocessing.shapely_geometry_to_vector(
-            admin_geom, pop_group_args['aoi_vector_path'],
+            admin_geom, pop_group_args['admin_boundaries_vector_path'],
             pygeoprocessing.get_raster_info(
                 pop_group_args['population_raster_path'])['projection_wkt'],
             'GeoJSON', fields, attributes)
