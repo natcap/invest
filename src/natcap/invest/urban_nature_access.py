@@ -301,7 +301,7 @@ _INTERMEDIATE_BASE_FILES = {
     'masked_population': 'masked_population.tif',
     'aligned_lulc': 'aligned_lulc.tif',
     'masked_lulc': 'masked_lulc.tif',
-    'aligned_mask': 'aligned_mask.tif',
+    'aligned_mask': 'aligned_valid_pixels_mask.tif',
     'greenspace_area': 'greenspace_area.tif',
     'greenspace_population_ratio': 'greenspace_population_ratio.tif',
     'convolved_population': 'convolved_population.tif',
@@ -461,8 +461,8 @@ def execute(args):
         target_path_list=[file_registry['aligned_population']],
         task_name='Resample population to LULC resolution')
 
-    mutual_mask_task = graph.add_task(
-        _create_mutual_nodata_mask,
+    valid_pixels_mask_task = graph.add_task(
+        _create_valid_pixels_nodata_mask,
         kwargs={
             'raster_list': [
                 file_registry['aligned_lulc'],
@@ -470,7 +470,7 @@ def execute(args):
             ],
             'target_mask_path': file_registry['aligned_mask'],
         },
-        task_name='Create a mutual nodata mask from lulc and population',
+        task_name='Create a valid pixels mask from lulc and population',
         target_path_list=[file_registry['aligned_mask']],
         dependent_task_list=[
             lulc_alignment_task, population_alignment_task]
@@ -483,10 +483,10 @@ def execute(args):
             'mask_raster_path': file_registry['aligned_mask'],
             'target_raster_path': file_registry['masked_population'],
         },
-        task_name='Mask population to the mutually valid pixels',
+        task_name='Mask population to the known valid pixels',
         target_path_list=[file_registry['masked_population']],
         dependent_task_list=[
-            population_alignment_task, mutual_mask_task]
+            population_alignment_task, valid_pixels_mask_task]
     )
 
     lulc_mask_task = graph.add_task(
@@ -496,10 +496,10 @@ def execute(args):
             'mask_raster_path': file_registry['aligned_mask'],
             'target_raster_path': file_registry['masked_lulc'],
         },
-        task_name='Mask population to the mutually valid pixels',
+        task_name='Mask population to the known valid pixels',
         target_path_list=[file_registry['masked_lulc']],
         dependent_task_list=[
-            lulc_alignment_task, mutual_mask_task]
+            lulc_alignment_task, valid_pixels_mask_task]
     )
 
     aoi_reprojection_task = graph.add_task(
@@ -552,7 +552,8 @@ def execute(args):
 
         for pop_group in split_population_fields:
             field_value_map = _read_field_from_vector(
-                file_registry['reprojected_admin_boundaries'], ID_FIELDNAME, pop_group)
+                file_registry['reprojected_admin_boundaries'], ID_FIELDNAME,
+                pop_group)
             proportional_population_path = os.path.join(
                 intermediate_dir, f'population_in_{pop_group}{suffix}.tif')
             proportional_population_paths[
@@ -2222,8 +2223,8 @@ def _create_kernel_raster(
         kernel_raster = None
 
 
-def _create_mutual_nodata_mask(raster_list, target_mask_path):
-    """Create a mutual mask of nodata values across a stack of aligned rasters.
+def _create_valid_pixels_nodata_mask(raster_list, target_mask_path):
+    """Create a valid pixels mask across a stack of aligned rasters.
 
     The target raster will have pixel values of 0 where nodata was found
     somewhere in the pixel stack, 1 where no nodata was found.
