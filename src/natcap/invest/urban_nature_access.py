@@ -1862,9 +1862,7 @@ def _convolve_and_set_lower_bound(
     for block_data in pygeoprocessing.iterblocks(
             (target_path, 1), offset_only=True):
         block = target_band.ReadAsArray(**block_data)
-        valid_pixels = slice(None)
-        if target_nodata is not None:
-            valid_pixels = ~numpy.isclose(block, target_nodata)
+        valid_pixels = ~utils.array_equals_nodata(block, target_nodata)
         block[(block < 0) & valid_pixels] = 0
         target_band.WriteArray(
             block, xoff=block_data['xoff'], yoff=block_data['yoff'])
@@ -1968,11 +1966,7 @@ def _resample_population_raster(
             """
         out_array = numpy.full(
             population.shape, FLOAT32_NODATA, dtype=numpy.float32)
-
-        valid_mask = slice(None)
-        if population_nodata is not None:
-            valid_mask = ~numpy.isclose(population, population_nodata)
-
+        valid_mask = ~utils.array_equals_nodata(population, population_nodata)
         out_array[valid_mask] = population[valid_mask] / population_pixel_area
         return out_array
 
