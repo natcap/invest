@@ -358,7 +358,7 @@ const UI_SPEC = {
       ['lulc_raster_path', 'lulc_attribute_table'],
       [
         'population_raster_path',
-        'aoi_vector_path',
+        'admin_boundaries_vector_path',
         'population_group_radii_table',
         'greenspace_demand',
         'aggregate_by_pop_group',
