@@ -1859,9 +1859,8 @@ def _convolve_and_set_lower_bound(
     target_raster = gdal.OpenEx(target_path, gdal.GA_Update)
     target_band = target_raster.GetRasterBand(1)
     target_nodata = target_band.GetNoDataValue()
-    for block_data in pygeoprocessing.iterblocks(
-            (target_path, 1), offset_only=True):
-        block = target_band.ReadAsArray(**block_data)
+    for block_data, block in pygeoprocessing.iterblocks(
+            (target_path, 1)):
         valid_pixels = ~utils.array_equals_nodata(block, target_nodata)
         block[(block < 0) & valid_pixels] = 0
         target_band.WriteArray(
