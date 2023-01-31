@@ -365,9 +365,13 @@ def execute(args):
             associating population groups with a search radius for that
             population group.  Population group fieldnames must match
             population group fieldnames in the aoi vector.
-        args['decay_function_power_beta'] (number) The beta parameter used
+        args['decay_function_power_beta'] (number): The beta parameter used
             during creation of a power kernel. Required when the selected
             kernel is KERNEL_LABEL_POWER.
+        args['aggregate_by_pop_group'] (bool): Whether to aggregate statistics
+            by population groups in the target vector.  This is implied when
+            running the model with ``args['search_radius_mode'] ==
+            RADIUS_OPT_POP_GROUP``
 
     Returns:
         ``None``
