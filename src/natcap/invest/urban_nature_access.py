@@ -1253,23 +1253,24 @@ def _weighted_sum(raster_path_list, weight_raster_list, target_path):
                    for path in raster_path_list]
 
     def _weight_and_sum(*args):
-        pixel_arrays = args[:int(len(args)/2 + 1)]
+        pixel_arrays = args[:int(len(args)/2)]
         weight_arrays = args[int(len(args)/2):]
 
         target_array = numpy.zeros(pixel_arrays[0].shape, dtype=numpy.float32)
         touched_pixels = numpy.zeros(target_array.shape, dtype=bool)
-        for array, weight, nodata in zip(
+        for source_array, weight_array, nodata in zip(
                 pixel_arrays, weight_arrays, nodata_list):
-            valid_pixels = ~utils.array_equals_nodata(array, nodata)
+            valid_pixels = ~utils.array_equals_nodata(source_array, nodata)
             touched_pixels |= valid_pixels
-            target_array[valid_pixels] += array[valid_pixels]
+            target_array[valid_pixels] += (
+                source_array[valid_pixels] * weight_array[valid_pixels])
 
         # Any pixels that were not touched, set them to nodata.
         target_array[~touched_pixels] = FLOAT32_NODATA
         return target_array
 
     pygeoprocessing.raster_calculator(
-        [(path, 1) for path in raster_path_list],
+        [(path, 1) for path in raster_path_list + weight_raster_list],
         _weight_and_sum, target_path, gdal.GDT_Float32, FLOAT32_NODATA)
 
 
