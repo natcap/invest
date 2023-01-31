@@ -496,7 +496,7 @@ def execute(args):
             'mask_raster_path': file_registry['aligned_mask'],
             'target_raster_path': file_registry['masked_lulc'],
         },
-        task_name='Mask population to the known valid pixels',
+        task_name='Mask lulc to the known valid pixels',
         target_path_list=[file_registry['masked_lulc']],
         dependent_task_list=[
             lulc_alignment_task, valid_pixels_mask_task]
@@ -1646,7 +1646,7 @@ def _supply_demand_vector_for_single_raster_modes(
 
 def _write_supply_demand_vector(source_aoi_vector_path, feature_attrs,
                                 target_aoi_vector_path):
-    """Write data to a copy of en existing AOI vector.
+    """Write data to a copy of an existing AOI vector.
 
     Args:
         source_aoi_vector_path (str): The source AOI vector path.
