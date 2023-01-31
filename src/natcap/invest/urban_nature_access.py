@@ -1662,6 +1662,7 @@ def _write_supply_demand_vector(source_aoi_vector_path, feature_attrs,
     driver = ogr.GetDriverByName('GPKG')
     driver.CopyDataSource(source_vector, target_aoi_vector_path)
     source_vector = None
+    driver = None
 
     target_vector = gdal.OpenEx(target_aoi_vector_path, gdal.GA_Update)
     target_layer = target_vector.GetLayer()
@@ -1680,6 +1681,9 @@ def _write_supply_demand_vector(source_aoi_vector_path, feature_attrs,
 
         target_layer.SetFeature(feature)
     target_layer.CommitTransaction()
+
+    target_layer = None
+    target_vector = None
 
 
 def _greenspace_budget_op(greenspace_supply, greenspace_demand):
