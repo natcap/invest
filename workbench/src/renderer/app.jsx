@@ -96,6 +96,9 @@ export default class App extends React.Component {
   async saveSettings(settings) {
     const { investSettings } = this.state;
     await i18next.changeLanguage(settings.language);
+    await ipcRenderer.invoke(
+      ipcMainChannels.CHANGE_LANGUAGE, settings.language
+    );
     await saveSettingsStore(settings);
     this.setState({ investSettings: settings });
     // if language has changed, refresh the app

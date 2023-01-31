@@ -11,4 +11,5 @@ export const ipcMainChannels = {
   SHOW_ITEM_IN_FOLDER: 'show-item-in-folder',
   SHOW_OPEN_DIALOG: 'show-open-dialog',
   SHOW_SAVE_DIALOG: 'show-save-dialog',
+  CHANGE_LANGUAGE: 'change-language',
 };

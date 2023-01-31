@@ -27,6 +27,7 @@ import {
 } from './setupInvestHandlers';
 import setupGetNCPUs from './setupGetNCPUs';
 import setupOpenExternalUrl from './setupOpenExternalUrl';
+import setupChangeLanguage from './setupChangeLanguage';
 import { ipcMainChannels } from './ipcMainChannels';
 import menuTemplate from './menubar';
 import ELECTRON_DEV_MODE from './isDevMode';
@@ -91,10 +92,19 @@ export const createWindow = async () => {
       defaultEncoding: 'UTF-8',
     },
   });
-  const menubar = Menu.buildFromTemplate(
-    menuTemplate(mainWindow, ELECTRON_DEV_MODE)
+  Menu.setApplicationMenu(
+    Menu.buildFromTemplate(
+      menuTemplate(mainWindow, ELECTRON_DEV_MODE, i18next)
+    )
   );
-  Menu.setApplicationMenu(menubar);
+  // when language changes, rebuild the menu bar in new language
+  i18next.on('languageChanged', (lng) => {
+    Menu.setApplicationMenu(
+      Menu.buildFromTemplate(
+        menuTemplate(mainWindow, ELECTRON_DEV_MODE, i18next)
+      )
+    );
+  });
   mainWindow.loadURL(path.join(BASE_URL, 'index.html'));
 
   mainWindow.once('ready-to-show', () => {
@@ -131,6 +141,7 @@ export const createWindow = async () => {
   setupContextMenu(mainWindow);
   setupGetNCPUs();
   setupOpenExternalUrl();
+  setupChangeLanguage();
   return Promise.resolve(); // lets tests await createWindow(), then assert
 };
 
