@@ -513,7 +513,7 @@ def execute(args):
         },
         task_name='Reproject admin units',
         target_path_list=[file_registry['reprojected_admin_boundaries']],
-        dependent_task_list=[lulc_alignment_task]
+        dependent_task_list=[]
     )
 
     # If we're doing anything with population groups, rasterize the AOIs and
