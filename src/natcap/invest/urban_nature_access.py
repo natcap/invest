@@ -114,7 +114,7 @@ ARGS_SPEC = {
                 "pop_[POP_GROUP]": {
                     "type": "ratio",
                     "required": (
-                        f"(search_radius_mode == {RADIUS_OPT_POP_GROUP}) "
+                        f"(search_radius_mode == '{RADIUS_OPT_POP_GROUP}') "
                         "or aggregate_by_pop_group"),
                     "about": gettext(
                         "The proportion of the population within this region "
