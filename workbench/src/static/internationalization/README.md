@@ -2,48 +2,43 @@
 
 See the internationalization readme in the invest repo.
 
-The only difference is that here in the workbench, the POT file is edited manually instead of generated automatically.
+We are using the javascript internationalization package `i18next` and its react extension `react-i18next`. `i18next` takes in translation resources as a javascript object. It's convenient to store translations in JSON format. Vite automatically serves JSON files as Javascript modules, so we can directly import translations from JSON.
 
-This is because:
-* There are a small number of messages so it was easy to create the POT file manually.
-* The standard message extraction tool, `xgettext`, supports JavaScript but did not work perfectly here. It probably got thrown off by the JSX syntax.
-* Changes to message strings will likely be small and infrequent.
+The translations for each language live in `workbench/src/renderer/i18n/xx.json`. The JSON object in each file maps English messages to translations.
 
-If it becomes burdensome to keep up with manually editing the POT file, we can look for a message extraction tool that supports JSX syntax or write our own script for it. For now, we'll need to manually update the POT file whenever we change a message string. It makes sense to do this at the same time, rather than all in one batch before translating, so that we don't forget any.
-
-### Adding a new string that should be translated
-
-1. Manually add an entry for the string in `messages.pot`. An entry has the format
-   ```
-   msgid "<string>"
-   msgstr ""
-   ```
-   where `<string>` is replaced with your string.
-
-Alternatively, run this bash command (created using BSD toolchain on mac) from the repo root to format the body of the POT file:
-
-   ```bash
-   grep -rho _\(\[\'\"\].\*\[\'\"\]\) . | sort | uniq | sed "s|_[(][\'\"]\(.*\)[\'\"][)]|msgid \"\1\"\nmsgstr \"\"\n|"
-   ```
-
-Insert the result into the POT file.
-
-### Modifying or removing a translated string that already exists
-1. Manually edit or remove the entry for the string in `messages.pot`.
-
-Do *not* remove the entry from the PO files. When we update them with `msgmerge`, entries that are no longer needed will be commented out but remain in the files. This will save translator time if we need them again in the future.
+Nothing needs to be done during routine development. As we make changes to the workbench text, it will inevitably get out of sync with the translations, and that's okay. Strings that have no translation will fall back to English. When it's time to update our translations, this is the process:
 
 ## Getting a new batch of translations
 
-See the InVEST internationalization README. The only difference is to use `msgmerge` instead of `pybabel` to update the PO file:
-```
-$ msgmerge internationalization/locales/<LANG>/LC_MESSAGES/messages.po internationalization/messages.pot
-```
+1. Extract messages from the source code:
+   `i18next "src/**/*.{js,jsx}" --output out.json`
+   This command is provided by the `i18next-parser` package and configured by `workbench/i18next-parser.config.mjs`. `out.json` should contain a JSON object mapping each translated message from the source code to an empty string.
 
-## Adding support for a new language
-```
-$ mkdir -p internationalization/locales/<LANG>/LC_MESSAGES
+2. Merge into the existing translation file:
+   `jq -s add src/renderer/i18n/<LANG>.json out.json > src/renderer/i18n/<LANG>.json`
+   This will add new keys from `out.json` into `src/renderer/i18n/<LANG>.json` and leave those that already have translations:
+   ```
+   {
+      "text that's already been translated": "translation",
+      "new text that doesn't have a translation yet": ""
+   }
+   ```
+4. Commit the changes:
+   ```
+   git add src/renderer/i18n/<LANG>.json
+   git commit -m "add new messages into <LANG> translation file"
+   ```
+3. (if the translator uses PO format) Convert JSON to PO
 
-$ msginit --no-translator --input internationalization/messages.pot --output-file internationalization/locales/<LANG>/LC_MESSAGES/messages.po
-```
+4. Send `src/renderer/i18n/<LANG>.[json,po]` to the translator and wait to receive a copy with translations added.
 
+5. (if the translator uses PO format) Convert PO to JSON
+   If the translator works with PO files, we can convert them to JSON using this tool: https://github.com/i18next/i18next-gettext-converter
+
+6. Replace `src/renderer/i18n/<LANG>.json` with the new copy received from the translator
+
+7. Commit the changes:
+   ```
+   git add src/renderer/i18n/<LANG>.json
+   git commit -m "add translations for <LANG>"
+   ```
