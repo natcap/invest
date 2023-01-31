@@ -79,7 +79,7 @@ ARGS_SPEC = {
                     'type': 'number',
                     'units': u.meter,
                     'required':
-                        f'search_radius_mode == {RADIUS_OPT_GREENSPACE}',
+                        f'search_radius_mode == "{RADIUS_OPT_GREENSPACE}"',
                     'expression': 'value >= 0',
                     'about': (
                         'The distance in meters to use as the search radius '
