@@ -5,7 +5,7 @@
   "main": "build/main/main.js",
   "homepage": "./",
   "scripts": {
-    "start": "yarn build-main && yarn build-preload && yarn build-static && concurrently --kill-others \"yarn serve\" \"electron .\"",
+    "start": "yarn build-main && yarn build-preload && yarn build-shared && concurrently --kill-others \"yarn serve\" \"electron .\"",
     "serve": "cross-env MODE=development node scripts/watch.js",
     "lint": "eslint --cache --color --ext .jsx,.js src",
     "test": "cross-env PORT=56788 jest --runInBand --testPathIgnorePatterns /tests/binary_tests/ /tests/sampledata_linkcheck/",
@@ -17,9 +17,9 @@
     "postinstall": "electron-builder install-app-deps",
     "build-main": "babel --delete-dir-on-start src/main -d build/main --verbose --config-file ./babel.config.js --ignore **/__mocks__/* -s both",
     "build-preload": "babel --delete-dir-on-start src/preload -d build/preload --verbose --config-file ./babel.config.js --ignore **/__mocks__/* -s both",
-    "build-static": "cp -r src/static build/static",
     "build-renderer": "vite --config vite.config.js build",
-    "build": "yarn build-renderer && yarn build-main && yarn build-preload && yarn build-static",
+    "build-shared": "babel --delete-dir-on-start src/shared -d build/shared --verbose --config-file ./babel.config.js --ignore **/__mocks__/* -s both && cp src/shared/*.json build/shared",
+    "build": "yarn build-renderer && yarn build-main && yarn build-preload && yarn build-shared",
     "token": "cd .. && make jprint-DATA_BASE_URL > workbench/resources/storage_token.txt",
     "dist": "yarn run token && cross-env DEBUG=electron-builder electron-builder build --config electron-builder-config.js"
   },

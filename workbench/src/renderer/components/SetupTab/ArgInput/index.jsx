@@ -13,7 +13,7 @@ import { withTranslation } from 'react-i18next';
 import baseUserguideURL from '../../../userguideURL';
 import { ipcMainChannels } from '../../../../main/ipcMainChannels';
 import { useTranslation } from 'react-i18next';
-import i18next from '../../../i18n'
+import i18next from '../../../../shared/i18n';
 
 const { ipcRenderer } = window.Workbench.electron;
 

@@ -19,8 +19,6 @@ import { getDefaultSettings } from './SettingsStorage';
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
 import { getSupportedLanguages } from '../../server_requests';
 
-import { Translation } from 'react-i18next';
-import { Trans } from 'react-i18next';
 import { withTranslation } from 'react-i18next';
 
 const { ipcRenderer } = window.Workbench.electron;
@@ -212,7 +210,7 @@ class SettingsModal extends React.Component {
                         className="pt-0"
                       >
                         <BsChevronExpand className="mx-1" />
-                        <span className="small"><u>more info</u></span>
+                        <span className="small"><u>{t('more info')}</u></span>
                       </Accordion.Toggle>
                       <Accordion.Collapse eventKey="0" className="pr-1">
                         <ul>
