@@ -1533,7 +1533,7 @@ def _supply_demand_vector_for_pop_groups(
     stats_by_feature = collections.defaultdict(
         lambda: collections.defaultdict(float))
     for pop_group_field in pop_group_fields:
-        # trim the leading
+        # trim the leading 'pop_'
         groupname = re.sub(POP_FIELD_REGEX, '', pop_group_field)
 
         greenspace_sup_dem_stats = _get_zonal_stats(
