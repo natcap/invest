@@ -8,7 +8,6 @@ import Alert from 'react-bootstrap/Alert';
 import ProgressBar from 'react-bootstrap/ProgressBar';
 import Table from 'react-bootstrap/Table';
 import { withTranslation } from 'react-i18next';
-import { useTranslation } from 'react-i18next';
 
 import Expire from '../Expire';
 import sampledataRegistry from './sampledata_registry.json';

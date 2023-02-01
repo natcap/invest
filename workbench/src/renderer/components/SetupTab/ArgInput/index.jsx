@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
 
 import Form from 'react-bootstrap/Form';
@@ -357,63 +357,49 @@ function handleClickUsersGuideLink(event) {
   );
 }
 
-class AboutModalClass extends React.PureComponent {
-  constructor(props) {
-    super(props);
-    this.state = {
-      aboutShow: false,
-    };
-    this.handleAboutOpen = this.handleAboutOpen.bind(this);
-    this.handleAboutClose = this.handleAboutClose.bind(this);
-  }
+function AboutModal(props) {
 
-  handleAboutClose() {
-    this.setState({ aboutShow: false });
-  }
+  const [aboutShow, setAboutShow] = useState(false);
+  const handleAboutClose = () => setAboutShow(false);
+  const handleAboutOpen = () => setAboutShow(true);
 
-  handleAboutOpen() {
-    this.setState({ aboutShow: true });
-  }
+  const { userguide, arg, argkey } = props;
+  const { t, i18n } = useTranslation();
 
-  render() {
-    const { userguide, arg, argkey, t } = this.props;
-    const { aboutShow } = this.state;
-    // create link to users guide entry for this arg
-    // anchor name is the arg name, with underscores replaced with hyphens
-    const userguideURL = `${baseUserguideURL}/${userguide}#${argkey.replace(/_/g, '-')}`;
-    return (
-      <React.Fragment>
-        <Button
-          aria-label={`info about ${arg.name}`}
-          className="mr-2"
-          onClick={this.handleAboutOpen}
-          variant="outline-info"
-        >
-          <MdInfo />
-        </Button>
-        <Modal show={aboutShow} onHide={this.handleAboutClose}>
-          <Modal.Header>
-            <Modal.Title>{arg.name}</Modal.Title>
-          </Modal.Header>
-          <Modal.Body>
-            {arg.about}
-            <br />
-            <a
-              href={userguideURL}
-              title={userguideURL}
-              aria-label="open user guide section for this input in web browser"
-              onClick={handleClickUsersGuideLink}
-            >
-              {t("User's guide entry")}
-              <MdOpenInNew className="mr-1" />
-            </a>
-          </Modal.Body>
-        </Modal>
-      </React.Fragment>
-    );
-  }
+  // create link to users guide entry for this arg
+  // anchor name is the arg name, with underscores replaced with hyphens
+  const userguideURL = `${baseUserguideURL}/${userguide}#${argkey.replace(/_/g, '-')}`;
+  return (
+    <React.Fragment>
+      <Button
+        aria-label={`info about ${arg.name}`}
+        className="mr-2"
+        onClick={handleAboutOpen}
+        variant="outline-info"
+      >
+        <MdInfo />
+      </Button>
+      <Modal show={aboutShow} onHide={handleAboutClose}>
+        <Modal.Header>
+          <Modal.Title>{arg.name}</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {arg.about}
+          <br />
+          <a
+            href={userguideURL}
+            title={userguideURL}
+            aria-label="open user guide section for this input in web browser"
+            onClick={handleClickUsersGuideLink}
+          >
+            {t("User's guide entry")}
+            <MdOpenInNew className="mr-1" />
+          </a>
+        </Modal.Body>
+      </Modal>
+    </React.Fragment>
+  );
 }
-const AboutModal = withTranslation()(AboutModalClass);
 
 AboutModal.propTypes = {
   arg: PropTypes.shape({
@@ -423,4 +409,3 @@ AboutModal.propTypes = {
   userguide: PropTypes.string.isRequired,
   argkey: PropTypes.string.isRequired,
 };
-
