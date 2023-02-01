@@ -27,7 +27,7 @@ import { getInvestModelNames } from './server_requests';
 import InvestJob from './InvestJob';
 import { dragOverHandlerNone } from './utils';
 import { ipcMainChannels } from '../main/ipcMainChannels';
-import i18next from '../shared/i18n';
+import i18n from '../shared/i18n';
 
 const { ipcRenderer } = window.Workbench.electron;
 const logger = window.Workbench.getLogger('app.jsx');
@@ -71,7 +71,10 @@ export default class App extends React.Component {
       investSettings: investSettings,
       showDownloadModal: this.props.isFirstRun,
     });
-    i18next.changeLanguage(investSettings.language);
+    await i18n.changeLanguage(investSettings.language);
+    await ipcRenderer.invoke(
+      ipcMainChannels.CHANGE_LANGUAGE, investSettings.language
+    );
     ipcRenderer.on('download-status', (downloadedNofN) => {
       this.setState({
         downloadedNofN: downloadedNofN,
@@ -95,14 +98,17 @@ export default class App extends React.Component {
 
   async saveSettings(settings) {
     const { investSettings } = this.state;
-    await i18next.changeLanguage(settings.language);
-    await ipcRenderer.invoke(
-      ipcMainChannels.CHANGE_LANGUAGE, settings.language
-    );
     await saveSettingsStore(settings);
     this.setState({ investSettings: settings });
     // if language has changed, refresh the app
     if (settings.language !== investSettings.language) {
+      // change language in the renderer process
+      await i18n.changeLanguage(settings.language);
+      // change language in the main process
+      await ipcRenderer.invoke(
+        ipcMainChannels.CHANGE_LANGUAGE, settings.language
+      );
+      // rerender for changes to take effect
       window.location.reload();
     }
   }

@@ -5,7 +5,7 @@ import es_messages from './es.json';
 import zh_messages from './zh.json';
 
 i18n
-  .use(initReactI18next) // passes i18n down to react-i18next
+  .use(initReactI18next)
   .init({
     resources: {
       es: {
@@ -15,11 +15,12 @@ i18n
         translation: zh_messages
       },
     },
-    lng: 'es',
     interpolation: {
-      escapeValue: false // react already safes from xss
+      escapeValue: false // react already safe from xss
     },
+    keySeparator: false,
+    nsSeparator: false,
     saveMissing: true,
-  }).then(function(t) { console.log(t('Open')); });
+  });
 
 export default i18n;

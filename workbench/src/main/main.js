@@ -34,7 +34,7 @@ import ELECTRON_DEV_MODE from './isDevMode';
 import BASE_URL from './baseUrl';
 import { getLogger } from './logger';
 import pkg from '../../package.json';
-import i18next from 'i18next';
+import i18n from '../shared/i18n';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
@@ -81,6 +81,7 @@ export const createWindow = async () => {
   setupDialogs();
   setupCheckFirstRun();
   setupCheckStorageToken();
+  setupChangeLanguage();
   await getFlaskIsReady();
 
   // Create the browser window.
@@ -94,14 +95,14 @@ export const createWindow = async () => {
   });
   Menu.setApplicationMenu(
     Menu.buildFromTemplate(
-      menuTemplate(mainWindow, ELECTRON_DEV_MODE, i18next)
+      menuTemplate(mainWindow, ELECTRON_DEV_MODE, i18n)
     )
   );
   // when language changes, rebuild the menu bar in new language
-  i18next.on('languageChanged', (lng) => {
+  i18n.on('languageChanged', (lng) => {
     Menu.setApplicationMenu(
       Menu.buildFromTemplate(
-        menuTemplate(mainWindow, ELECTRON_DEV_MODE, i18next)
+        menuTemplate(mainWindow, ELECTRON_DEV_MODE, i18n)
       )
     );
   });
@@ -141,7 +142,6 @@ export const createWindow = async () => {
   setupContextMenu(mainWindow);
   setupGetNCPUs();
   setupOpenExternalUrl();
-  setupChangeLanguage();
   return Promise.resolve(); // lets tests await createWindow(), then assert
 };
 

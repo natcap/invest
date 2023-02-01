@@ -1,4 +1,4 @@
-import i18next from '../shared/i18n';
+import i18n from '../shared/i18n';
 import { ipcMain } from 'electron';
 import { getLogger } from './logger';
 import { ipcMainChannels } from './ipcMainChannels';
@@ -10,7 +10,7 @@ export default function setupChangeLanguage() {
     ipcMainChannels.CHANGE_LANGUAGE,
     (e, languageCode) => {
       logger.debug('changing language to', languageCode);
-      i18next.changeLanguage(languageCode);
+      i18n.changeLanguage(languageCode);
     }
   );
 }
