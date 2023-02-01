@@ -56,8 +56,8 @@ class OpenButton extends React.Component {
   }
 }
 
-export default withTranslation()(OpenButton);
-
 OpenButton.propTypes = {
   openInvestModel: PropTypes.func.isRequired,
 };
+
+export default withTranslation()(OpenButton);

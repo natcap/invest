@@ -323,4 +323,3 @@ InvestTab.propTypes = {
 };
 
 export default withTranslation()(InvestTab);
-

@@ -17,9 +17,8 @@ import { MdClose, MdHome } from 'react-icons/md';
 import HomeTab from './components/HomeTab';
 import InvestTab from './components/InvestTab';
 import SettingsModal from './components/SettingsModal';
-import {
-  DataDownloadModal, DownloadProgressBar
-} from './components/DataDownloadModal';
+import DataDownloadModal from './components/DataDownloadModal';
+import DownloadProgressBar from './components/DownloadProgressBar';
 import {
   saveSettingsStore, getAllSettings,
 } from './components/SettingsModal/SettingsStorage';

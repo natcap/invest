@@ -14,12 +14,11 @@ import {
   MdWarningAmber,
 } from 'react-icons/md';
 import { BsChevronExpand } from 'react-icons/bs';
+import { withTranslation } from 'react-i18next';
 
 import { getDefaultSettings } from './SettingsStorage';
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
 import { getSupportedLanguages } from '../../server_requests';
-
-import { withTranslation } from 'react-i18next';
 
 const { ipcRenderer } = window.Workbench.electron;
 
@@ -266,8 +265,6 @@ class SettingsModal extends React.Component {
   }
 }
 
-export default withTranslation()(SettingsModal);
-
 SettingsModal.propTypes = {
   saveSettings: PropTypes.func.isRequired,
   clearJobsStorage: PropTypes.func.isRequired,
@@ -281,3 +278,5 @@ SettingsModal.propTypes = {
   showDownloadModal: PropTypes.func.isRequired,
   nCPU: PropTypes.number.isRequired,
 };
+
+export default withTranslation()(SettingsModal);
