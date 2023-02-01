@@ -8,12 +8,11 @@ import Row from 'react-bootstrap/Row';
 import InputGroup from 'react-bootstrap/InputGroup';
 import Modal from 'react-bootstrap/Modal';
 import { MdFolderOpen, MdInfo, MdOpenInNew } from 'react-icons/md';
-import { withTranslation } from 'react-i18next';
 
 import baseUserguideURL from '../../../userguideURL';
 import { ipcMainChannels } from '../../../../main/ipcMainChannels';
 import { useTranslation } from 'react-i18next';
-import i18next from '../../../../shared/i18n';
+import i18n from '../../../../shared/i18n';
 
 const { ipcRenderer } = window.Workbench.electron;
 
@@ -32,7 +31,7 @@ const { ipcRenderer } = window.Workbench.electron;
  * @returns {string} - the filtered and formatted part of the message
  */
 function filterSpatialOverlapFeedback(message, filepath) {
-  const newPrefix = i18next.t('Bounding box does not intersect at least one other:');
+  const newPrefix = i18n.t('Bounding box does not intersect at least one other:');
   const bbox = message.split(`${filepath}:`).pop().split('|')[0];
   const bboxFormatted = bbox.split(' ').map(
     (str) => str.padEnd(22, ' ')
@@ -53,7 +52,7 @@ function FormLabel(props) {
       <span>
         {
           (typeof required === 'boolean' && !required)
-            ? <em> ({i18next.t('optional')})</em>
+            ? <em> ({i18n.t('optional')})</em>
             : <React.Fragment />
         }
         {/* display units at the end of the arg name, if applicable */}
@@ -82,7 +81,7 @@ function Feedback(props) {
       type="invalid"
       id={`${argkey}-feedback`}
     >
-      {`${i18next.t(argtype)} : ${(message)}`}
+      {`${i18n.t(argtype)} : ${(message)}`}
     </Form.Control.Feedback>
   );
 }

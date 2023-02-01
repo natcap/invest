@@ -190,7 +190,6 @@ class ArgsForm extends React.Component {
     );
   }
 }
-export default withTranslation()(ArgsForm);
 
 ArgsForm.propTypes = {
   argsValues: PropTypes.objectOf(
@@ -224,3 +223,5 @@ ArgsForm.propTypes = {
 ArgsForm.defaultProps = {
   scrollEventCount: 0,
 };
+
+export default withTranslation()(ArgsForm);
