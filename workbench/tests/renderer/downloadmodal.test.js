@@ -3,7 +3,6 @@ import {
   render, waitFor
 } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { act } from 'react-dom/test-utils';
 import userEvent from '@testing-library/user-event';
 import { ipcRenderer, BrowserWindow } from 'electron';
 import DataDownloadModal from '../../src/renderer/components/DataDownloadModal';
