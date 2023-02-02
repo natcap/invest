@@ -1,3 +1,4 @@
+import React from 'react';
 import PropTypes from 'prop-types';
 import Alert from 'react-bootstrap/Alert';
 import { withTranslation } from 'react-i18next';
@@ -45,7 +46,7 @@ export default function DownloadProgressBar(props) {
       max={1}
       now={(nComplete + 1) / nTotal}
       label={
-        t('Downloading {{nComplete}} of {{nTotal}}',
+        t('Downloading {{number}} of {{nTotal}}',
           {number: nComplete + 1, nTotal: nTotal}
         )
       }

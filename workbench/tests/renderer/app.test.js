@@ -13,7 +13,6 @@ import {
 import { act } from 'react-dom/test-utils';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
-import mockI18n from './i18n-test';
 
 import App from '../../src/renderer/app';
 import {
@@ -35,9 +34,6 @@ import {
 import writeInvestParameters from '../../src/main/writeInvestParameters';
 import { removeIpcMainListeners } from '../../src/main/main';
 
-
-import i18n from '../../src/renderer/i18n';
-jest.mock('../../src/renderer/i18n', () => mockI18n);
 
 // It's quite a pain to dynamically mock a const from a module,
 // here we do it by importing as another object, then
@@ -905,14 +901,13 @@ describe('Translation', () => {
     userEvent.selectOptions(languageInput, testLanguage);
 
     // text within the settings modal component should be translated
-    languageInput = await findByLabelText(
-      mockI18n.options.resources.ll.translation.Language, { exact: false });
+    languageInput = await findByLabelText('ℓαиgυαgє', { exact: false });
     expect(languageInput).toHaveValue(testLanguage);
     expect(global.window.location.reload).toHaveBeenCalled();
 
     // text should also be translated in other components
     // such as the Open button (visible in background)
-    await findByText(mockI18n.options.resources.ll.translation.Open);
+    await findByText('σρєи');
 
     // text without a translation in the message catalog should display in the default English
     expect(getByText('Logging threshold')).toBeDefined();

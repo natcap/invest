@@ -126,7 +126,7 @@ function RecentInvestJobs(props) {
         className="text-left recent-job-card"
         as="button"
         key={job.hash}
-        onClick={() => this.handleClick(job)}
+        onClick={() => handleClick(job)}
       >
         <Card.Body>
           <Card.Header>
