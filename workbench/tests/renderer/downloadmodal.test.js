@@ -29,13 +29,6 @@ describe('Sample Data Download Form', () => {
     getInvestModelNames.mockResolvedValue({});
   });
 
-  test('Modal does not display when app has been run before', async () => {
-    const { findByText, queryByText } = render(<App isFirstRun />);
-    await findByText("InVEST");  // wait for page to load before querying
-    const modalTitle = queryByText('Download InVEST sample data');
-    expect(modalTitle).toBeNull();
-  });
-
   test('Modal displays immediately on user`s first run', async () => {
     const {
       findByText,
@@ -48,6 +41,13 @@ describe('Sample Data Download Form', () => {
     await waitFor(() => {
       expect(modalTitle).not.toBeInTheDocument();
     });
+  });
+
+  test('Modal does not display when app has been run before', async () => {
+    const { findByText, queryByText } = render(<App isFirstRun />);
+    await findByText("InVEST");  // wait for page to load before querying
+    const modalTitle = queryByText('Download InVEST sample data');
+    expect(modalTitle).toBeNull();
   });
 
   test('Checkbox initial state & interactions', async () => {
