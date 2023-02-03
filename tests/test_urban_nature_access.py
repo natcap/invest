@@ -323,6 +323,20 @@ class UNATests(unittest.TestCase):
         numpy.testing.assert_allclose(
             expected_array, kernel)
 
+    def test_gaussian_kernel(self):
+        """UNA: Test the gaussian decay kernel."""
+        from natcap.invest import urban_nature_access
+
+        max_distance = 3
+        distance = numpy.array([0, 1, 2, 3, 4])
+        kernel = urban_nature_access._kernel_gaussian(
+            distance, max_distance)
+        # Regression values are calculated by hand
+        expected_array = numpy.array(
+            [1, 0.8626563, 0.4935753, 0, 0])
+        numpy.testing.assert_allclose(
+            expected_array, kernel)
+
     def test_greenspace_budgets(self):
         """UNA: Test the per-capita greenspace budgets functions."""
         from natcap.invest import urban_nature_access
