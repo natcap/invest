@@ -2063,7 +2063,8 @@ def _kernel_exponential(distance, max_distance):
     """
     kernel = numpy.zeros(distance.shape, dtype=numpy.float32)
     pixels_in_radius = (distance <= max_distance)
-    kernel[pixels_in_radius] = numpy.exp(-distance / max_distance)
+    kernel[pixels_in_radius] = numpy.exp(
+        -distance[pixels_in_radius] / max_distance)
     return kernel
 
 
