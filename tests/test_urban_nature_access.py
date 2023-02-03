@@ -11,7 +11,6 @@ import unittest
 
 import numpy
 import pandas
-import pandas.testing
 import pygeoprocessing
 import shapely.geometry
 from natcap.invest import utils
@@ -295,6 +294,20 @@ class UNATests(unittest.TestCase):
         numpy.testing.assert_allclose(1, kernel_array.sum())
         self.assertAlmostEqual(1.5915502e-05, kernel_array.max())
         self.assertEqual(0, kernel_array.min())
+
+    def test_power_kernel(self):
+        """UNA: Test the power kernel."""
+        from natcap.invest import urban_nature_access
+
+        beta = -5
+        max_distance = 3
+        distance = numpy.array([0, 1, 2, 3, 4])
+        kernel = urban_nature_access._kernel_power(
+            distance, max_distance, beta)
+        # These regression values are calculated by hand
+        expected_array = numpy.array([1, 1, (1/32), (1/243), 0])
+        numpy.testing.assert_allclose(
+            expected_array, kernel)
 
     def test_greenspace_budgets(self):
         """UNA: Test the per-capita greenspace budgets functions."""
