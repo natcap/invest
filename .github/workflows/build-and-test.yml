@@ -378,6 +378,12 @@ jobs:
       - name: Build binaries
         run: make ${{ matrix.binary-make-command }}
 
+      - name: Run invest-autotest with binaries
+        if : |
+          github.event_name == 'push' &&
+          (contains(github.ref, 'release') || github.ref == 'refs/heads/main')
+        run: make invest_autotest
+
       - name: Install Node.js
         uses: actions/setup-node@v2
         with:
