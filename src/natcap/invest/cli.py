@@ -10,6 +10,7 @@ import multiprocessing
 import pprint
 import sys
 import textwrap
+import warnings
 
 import natcap.invest
 from natcap.invest import datastack
@@ -423,6 +424,11 @@ def main(user_args=None):
         parser.exit(0)
 
     if args.subcommand == 'run':
+        if args.headless:
+            warnings.warn(
+                '--headless (-l) is now the default (and only) behavior '
+                'for `invest run`. This flag will not be recognized '
+                'in the future.', FutureWarning, stacklevel=2)  # 2 for brevity
         if not args.datastack:
             parser.exit(1, 'Datastack required for execution.')
 
