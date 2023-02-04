@@ -150,9 +150,13 @@ def prepare_workspace(
             modelname=modelname,
             timestamp=datetime.now().strftime("%Y-%m-%d--%H_%M_%S")))
 
-    with capture_gdal_logging(), log_to_file(logfile,
-                                             exclude_threads=exclude_threads,
-                                             logging_level=logging_level):
+    # Use GDAL's logging handler.
+    # Enabling debug logging will produce a TON of GDAL logging, but this is
+    # good for the debugging we need to do.
+    gdal.ConfigurePythonLogging('osgeo.gdal', enable_debug=True)
+
+    with log_to_file(logfile, exclude_threads=exclude_threads,
+                     logging_level=logging_level):
         with sandbox_tempdir(dir=workspace):
             logging.captureWarnings(True)
             # If invest is launched as a subprocess (e.g. the Workbench)
