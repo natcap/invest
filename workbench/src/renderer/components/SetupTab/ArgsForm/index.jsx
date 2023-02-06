@@ -48,7 +48,7 @@ class ArgsForm extends React.Component {
       alert(t('Only drop one file at a time.')); // eslint-disable-line no-alert
       return;
     }
-    loadParameters(fileList[0].path);
+    loadParametersFromFile(fileList[0].path);
   }
 
   /** Handle drag enter events for the Form elements. */
