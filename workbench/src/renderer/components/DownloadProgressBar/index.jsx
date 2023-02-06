@@ -1,7 +1,6 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import Alert from 'react-bootstrap/Alert';
-import { withTranslation } from 'react-i18next';
 import { useTranslation } from 'react-i18next';
 import ProgressBar from 'react-bootstrap/ProgressBar';
 

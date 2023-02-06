@@ -289,10 +289,10 @@ class SetupTab extends React.Component {
 
   async loadParametersFromFile(filepath) {
     const datastack = await fetchDatastackFromFile(filepath);
-
-    if (datastack.module_name === this.props.pyModuleName) {
+    const { pyModuleName, switchTabs, t } = this.props;
+    if (datastack.module_name === pyModuleName) {
       this.batchUpdateArgs(datastack.args);
-      this.props.switchTabs('setup');
+      switchTabs('setup');
       this.triggerScrollEvent();
     } else {
       alert( // eslint-disable-line no-alert
