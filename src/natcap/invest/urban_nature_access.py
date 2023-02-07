@@ -294,6 +294,7 @@ ARGS_SPEC = {
 _OUTPUT_BASE_FILES = {
     'greenspace_supply': 'greenspace_supply.tif',
     'admin_boundaries': 'admin_boundaries.gpkg',
+    'greenspace_balance': 'greenspace_balance.tif',
 }
 
 _INTERMEDIATE_BASE_FILES = {
@@ -305,7 +306,6 @@ _INTERMEDIATE_BASE_FILES = {
     'greenspace_area': 'greenspace_area.tif',
     'greenspace_population_ratio': 'greenspace_population_ratio.tif',
     'convolved_population': 'convolved_population.tif',
-    'greenspace_balance': 'greenspace_balance.tif',
     'greenspace_supply_demand_budget': 'greenspace_supply_demand_budget.tif',
     'undersupplied_population': 'undersupplied_population.tif',
     'oversupplied_population': 'oversupplied_population.tif',
@@ -914,7 +914,7 @@ def execute(args):
 
             # Calculate SUP_DEMi_cap for each population group.
             per_cap_greenspace_balance_pop_group_path = os.path.join(
-                intermediate_dir,
+                output_dir,
                 f'greenspace_balance_{pop_group}{suffix}.tif')
             per_cap_greenspace_balance_pop_group_task = graph.add_task(
                 pygeoprocessing.raster_calculator,
@@ -1710,11 +1710,11 @@ def _greenspace_balance_op(greenspace_supply, greenspace_demand):
     return balance
 
 
-def _greenspace_supply_demand_op(greenspace_budget, population):
+def _greenspace_supply_demand_op(greenspace_balance, population):
     """Calculate the supply/demand of greenspace per person.
 
     Args:
-        greenspace_budget (numpy.array): The area of greenspace budgeted to
+        greenspace_balance (numpy.array): The area of greenspace budgeted to
             each person, relative to a minimum required per-person area of
             greenspace.  This matrix must have ``FLOAT32_NODATA`` as its nodata
             value.  This matrix must be the same size and shape as
@@ -1729,12 +1729,12 @@ def _greenspace_supply_demand_op(greenspace_budget, population):
         to each individual in each pixel.
     """
     supply_demand = numpy.full(
-        greenspace_budget.shape, FLOAT32_NODATA, dtype=numpy.float32)
+        greenspace_balance.shape, FLOAT32_NODATA, dtype=numpy.float32)
     valid_pixels = (
-        ~numpy.isclose(greenspace_budget, FLOAT32_NODATA) &
+        ~numpy.isclose(greenspace_balance, FLOAT32_NODATA) &
         ~numpy.isclose(population, FLOAT32_NODATA))
     supply_demand[valid_pixels] = (
-        greenspace_budget[valid_pixels] * population[valid_pixels])
+        greenspace_balance[valid_pixels] * population[valid_pixels])
     return supply_demand
 
 
