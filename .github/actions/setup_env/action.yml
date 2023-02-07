@@ -70,4 +70,4 @@ runs:
 
     - name: List conda environment
       shell: bash -l {0} # conda only available in login shell
-      run: mamba list
+      run: micromamba list

@@ -93,7 +93,7 @@ jobs:
       - name: Compare conda environments
         continue-on-error: true
         run: |
-          conda list --export > conda-env.txt
+          micromamba list --export > conda-env.txt
           diff ./conda-env.txt ./conda-env-artifact/conda-env.txt
 
       - name: Build and install wheel
