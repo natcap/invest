@@ -376,7 +376,7 @@ jobs:
         run: make install
 
       - name: Build binaries
-        run: make ${{ matrix.binary-make-command }}
+        run: make CONDA=micromamba ${{ matrix.binary-make-command }}
 
       - name: Install Node.js
         uses: actions/setup-node@v2
