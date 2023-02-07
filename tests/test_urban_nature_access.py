@@ -337,8 +337,8 @@ class UNATests(unittest.TestCase):
         numpy.testing.assert_allclose(
             expected_array, kernel)
 
-    def test_greenspace_budgets(self):
-        """UNA: Test the per-capita greenspace budgets functions."""
+    def test_greenspace_balance(self):
+        """UNA: Test the per-capita greenspace balance functions."""
         from natcap.invest import urban_nature_access
 
         nodata = urban_nature_access.FLOAT32_NODATA
@@ -351,7 +351,7 @@ class UNATests(unittest.TestCase):
             [50, 100],
             [40.75, nodata]], dtype=numpy.float32)
 
-        greenspace_budget = urban_nature_access._greenspace_budget_op(
+        greenspace_budget = urban_nature_access._greenspace_balance_op(
                 greenspace_supply, greenspace_demand)
         expected_greenspace_budget = numpy.array([
             [nodata, 50.5],
