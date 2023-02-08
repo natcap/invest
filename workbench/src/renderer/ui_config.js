@@ -366,7 +366,7 @@ const UI_SPEC = {
       [
         'search_radius_mode',
         'decay_function',
-        'decay_function_power_beta',
+        //'decay_function_power_beta',
         'search_radius',
       ],
     ],
@@ -374,9 +374,9 @@ const UI_SPEC = {
       search_radius: ((state) => (
         isSufficient('search_radius_mode', state)
         && state.argsValues.search_radius_mode.value === 'radius_uniform')),
-      decay_function_power_beta: ((state) => (
-        isSufficient('decay_function', state)
-        && state.argsValues.decay_function.value === 'power')),
+      // decay_function_power_beta: ((state) => (
+      //   isSufficient('decay_function', state)
+      //   && state.argsValues.decay_function.value === 'power')),
       population_group_radii_table: ((state) => (
         isSufficient('search_radius_mode', state)
         && state.argsValues.search_radius_mode.value === 'radius_per_pop_group')),

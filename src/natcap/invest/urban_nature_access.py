@@ -33,7 +33,7 @@ KERNEL_LABEL_DICHOTOMY = 'dichotomy'
 KERNEL_LABEL_EXPONENTIAL = 'exponential'
 KERNEL_LABEL_GAUSSIAN = 'gaussian'
 KERNEL_LABEL_DENSITY = 'density'
-KERNEL_LABEL_POWER = 'power'
+# KERNEL_LABEL_POWER = 'power'
 RADIUS_OPT_UNIFORM = 'uniform_radius'
 RADIUS_OPT_GREENSPACE = 'radius_per_greenspace_class'
 RADIUS_OPT_POP_GROUP = 'radius_per_pop_group'
@@ -175,15 +175,15 @@ ARGS_SPEC = {
                         '"weight = 0.75 * (1-(pixel_dist / search_radius)^2)"'
                     ),
                 },
-                KERNEL_LABEL_POWER: {
-                    'display_name': 'Power',
-                    'description': gettext(
-                        'Contributions to a greenspace pixel decrease '
-                        'according to a user-defined negative power function '
-                        'of the form "weight = pixel_dist^beta", where beta '
-                        'is expected to be negative and defined by the user.'
-                    ),
-                },
+                # KERNEL_LABEL_POWER: {
+                #     'display_name': 'Power',
+                #     'description': gettext(
+                #         'Contributions to a greenspace pixel decrease '
+                #         'according to a user-defined negative power function '
+                #         'of the form "weight = pixel_dist^beta", where beta '
+                #         'is expected to be negative and defined by the user.'
+                #     ),
+                # },
             },
             'about': (
                 'Pixels within the search radius of a greenspace pixel '
@@ -276,17 +276,17 @@ ARGS_SPEC = {
                 'the model with search radii defined per population group.'
             ),
         },
-        'decay_function_power_beta': {
-            'name': 'power function beta parameter',
-            'type': 'number',
-            'units': u.none,
-            'expression': 'float(value)',
-            'required': f'decay_function == "{KERNEL_LABEL_POWER}"',
-            'about': gettext(
-                'The beta parameter used for creating a power search '
-                'kernel.  Required when using the Power search kernel.'
-            ),
-        }
+        # 'decay_function_power_beta': {
+        #     'name': 'power function beta parameter',
+        #     'type': 'number',
+        #     'units': u.none,
+        #     'expression': 'float(value)',
+        #     'required': f'decay_function == "{KERNEL_LABEL_POWER}"',
+        #     'about': gettext(
+        #         'The beta parameter used for creating a power search '
+        #         'kernel.  Required when using the Power search kernel.'
+        #     ),
+        # }
     }
 }
 
@@ -365,9 +365,6 @@ def execute(args):
             associating population groups with a search radius for that
             population group.  Population group fieldnames must match
             population group fieldnames in the aoi vector.
-        args['decay_function_power_beta'] (number): The beta parameter used
-            during creation of a power kernel. Required when the selected
-            kernel is KERNEL_LABEL_POWER.
         args['aggregate_by_pop_group'] (bool): Whether to aggregate statistics
             by population groups in the target vector.  This is implied when
             running the model with ``args['search_radius_mode'] ==
@@ -376,6 +373,10 @@ def execute(args):
     Returns:
         ``None``
     """
+    #    args['decay_function_power_beta'] (number): The beta parameter used
+    #        during creation of a power kernel. Required when the selected
+    #        kernel is KERNEL_LABEL_POWER.
+
     LOGGER.info('Starting Urban Nature Access Model')
 
     output_dir = os.path.join(args['workspace_dir'], 'output')
@@ -405,12 +406,12 @@ def execute(args):
         KERNEL_LABEL_DENSITY: _kernel_density,
         # Use the user-provided beta args parameter if the user has provided
         # it.  Helpful to have a consistent kernel creation API.
-        KERNEL_LABEL_POWER: functools.partial(
-            _kernel_power, beta=args.get('decay_function_power_beta', None)),
+        # KERNEL_LABEL_POWER: functools.partial(
+        #     _kernel_power, beta=args.get('decay_function_power_beta', None)),
     }
     # Taskgraph needs a __name__ attribute, so adding one here.
-    kernel_creation_functions[KERNEL_LABEL_POWER].__name__ = (
-        'functools_partial_decay_power')
+    # kernel_creation_functions[KERNEL_LABEL_POWER].__name__ = (
+    #     'functools_partial_decay_power')
 
     # Since we have these keys defined in two places, I want to be super sure
     # that the labels match.
