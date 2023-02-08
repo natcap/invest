@@ -69,5 +69,5 @@ runs:
         cache-env-key: ${{ runner.os }}${{ runner.arch }}-${{ env.WEEK }}-${{ hashFiles('environment.yml') }}
 
     - name: List conda environment
-      shell: bash -l {0} # conda only available in login shell
+      shell: bash -l {0}
       run: micromamba list
