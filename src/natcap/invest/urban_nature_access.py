@@ -294,7 +294,7 @@ ARGS_SPEC = {
 _OUTPUT_BASE_FILES = {
     'greenspace_supply': 'greenspace_supply.tif',
     'admin_boundaries': 'admin_boundaries.gpkg',
-    'greenspace_balance': 'greenspace_balance.tif',
+    'greenspace_balance_percapita': 'greenspace_balance_percapita.tif',
 }
 
 _INTERMEDIATE_BASE_FILES = {
@@ -916,7 +916,7 @@ def execute(args):
             # Calculate SUP_DEMi_cap for each population group.
             per_cap_greenspace_balance_pop_group_path = os.path.join(
                 output_dir,
-                f'greenspace_balance_{pop_group}{suffix}.tif')
+                f'greenspace_balance_percapita_{pop_group}{suffix}.tif')
             per_cap_greenspace_balance_pop_group_task = graph.add_task(
                 pygeoprocessing.raster_calculator,
                 kwargs={
@@ -924,7 +924,7 @@ def execute(args):
                         (greenspace_supply_to_group_path, 1),
                         (float(args['greenspace_demand']), 'raw')
                     ],
-                    'local_op': _greenspace_balance_op,
+                    'local_op': _greenspace_balance_percapita_op,
                     'target_raster_path':
                         per_cap_greenspace_balance_pop_group_path,
                     'datatype_target': gdal.GDT_Float32,
@@ -1012,6 +1012,25 @@ def execute(args):
                 *pop_group_proportion_tasks.values(),
             ])
 
+        per_capita_greenspace_balance_task = graph.add_task(
+            pygeoprocessing.raster_calculator,
+            kwargs={
+                'base_raster_path_band_const_list': [
+                    (file_registry['greenspace_supply'], 1),
+                    (float(args['greenspace_demand']), 'raw')
+                ],
+                'local_op': _greenspace_balance_percapita_op,
+                'target_raster_path':
+                    file_registry['greenspace_balance_percapita'],
+                'datatype_target': gdal.GDT_Float32,
+                'nodata_target': FLOAT32_NODATA
+            },
+            task_name='Calculate per-capita greenspace balance',
+            target_path_list=[file_registry['greenspace_balance_percapita']],
+            dependent_task_list=[
+                greenspace_supply_task,
+            ])
+
         greenspace_supply_demand_budget_task = graph.add_task(
             ndr._sum_rasters,
             kwargs={
@@ -1063,13 +1082,14 @@ def execute(args):
                     (file_registry['greenspace_supply'], 1),
                     (float(args['greenspace_demand']), 'raw')
                 ],
-                'local_op': _greenspace_balance_op,
-                'target_raster_path': file_registry['greenspace_balance'],
+                'local_op': _greenspace_balance_percapita_op,
+                'target_raster_path':
+                    file_registry['greenspace_balance_percapita'],
                 'datatype_target': gdal.GDT_Float32,
                 'nodata_target': FLOAT32_NODATA
             },
             task_name='Calculate per-capita greenspace balance',
-            target_path_list=[file_registry['greenspace_balance']],
+            target_path_list=[file_registry['greenspace_balance_percapita']],
             dependent_task_list=[
                 greenspace_supply_task,
             ])
@@ -1079,7 +1099,7 @@ def execute(args):
             pygeoprocessing.raster_calculator,
             kwargs={
                 'base_raster_path_band_const_list': [
-                    (file_registry['greenspace_balance'], 1),
+                    (file_registry['greenspace_balance_percapita'], 1),
                     (file_registry['masked_population'], 1)
                 ],
                 'local_op': _greenspace_supply_demand_op,
@@ -1120,7 +1140,7 @@ def execute(args):
                     kwargs={
                         'base_raster_path_band_const_list': [
                             (proportional_pop_path, 1),
-                            (file_registry['greenspace_balance'], 1),
+                            (file_registry['greenspace_balance_percapita'], 1),
                             (op, 'raw'),  # numpy element-wise comparator
                         ],
                         'local_op': _filter_population,
@@ -1687,7 +1707,7 @@ def _write_supply_demand_vector(source_aoi_vector_path, feature_attrs,
     target_vector = None
 
 
-def _greenspace_balance_op(greenspace_supply, greenspace_demand):
+def _greenspace_balance_percapita_op(greenspace_supply, greenspace_demand):
     """Calculate the per-capita greenspace balance.
 
     This is the amount of greenspace that each pixel has above (positive

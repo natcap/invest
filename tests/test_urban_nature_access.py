@@ -337,7 +337,7 @@ class UNATests(unittest.TestCase):
         numpy.testing.assert_allclose(
             expected_array, kernel)
 
-    def test_greenspace_balance(self):
+    def test_greenspace_balance_percapita(self):
         """UNA: Test the per-capita greenspace balance functions."""
         from natcap.invest import urban_nature_access
 
@@ -351,8 +351,9 @@ class UNATests(unittest.TestCase):
             [50, 100],
             [40.75, nodata]], dtype=numpy.float32)
 
-        greenspace_budget = urban_nature_access._greenspace_balance_op(
-                greenspace_supply, greenspace_demand)
+        greenspace_budget = (
+            urban_nature_access._greenspace_balance_percapita_op(
+                greenspace_supply, greenspace_demand))
         expected_greenspace_budget = numpy.array([
             [nodata, 50.5],
             [25, 50]], dtype=numpy.float32)
@@ -565,7 +566,8 @@ class UNATests(unittest.TestCase):
         urban_nature_access.execute(args)
 
         summary_vector = gdal.OpenEx(
-            os.path.join(args['workspace_dir'], 'output', 'admin_boundaries.gpkg'))
+            os.path.join(args['workspace_dir'], 'output',
+                         'admin_boundaries.gpkg'))
         summary_layer = summary_vector.GetLayer()
         self.assertEqual(summary_layer.GetFeatureCount(), 1)
         summary_feature = summary_layer.GetFeature(1)
@@ -637,7 +639,8 @@ class UNATests(unittest.TestCase):
         urban_nature_access.execute(args)
 
         summary_vector = gdal.OpenEx(
-            os.path.join(args['workspace_dir'], 'output', 'admin_boundaries.gpkg'))
+            os.path.join(args['workspace_dir'], 'output',
+                         'admin_boundaries.gpkg'))
         summary_layer = summary_vector.GetLayer()
         self.assertEqual(summary_layer.GetFeatureCount(), 1)
         summary_feature = summary_layer.GetFeature(1)
@@ -730,6 +733,16 @@ class UNATests(unittest.TestCase):
 
         for args in (uniform_args, split_greenspace_args, pop_group_args):
             urban_nature_access.execute(args)
+
+            # make sure the output dir contains the correct files.
+            for output_filename in (
+                    urban_nature_access._OUTPUT_BASE_FILES.values()):
+                basename, ext = os.path.splitext(
+                    os.path.basename(output_filename))
+                suffix = args['results_suffix']
+                filepath = os.path.join(args['workspace_dir'], 'output',
+                                        f'{basename}_{suffix}{ext}')
+                self.assertTrue(os.path.exists(filepath))
 
         uniform_radius_supply = pygeoprocessing.raster_to_numpy_array(
             os.path.join(uniform_args['workspace_dir'], 'output',
