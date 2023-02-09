@@ -10,6 +10,7 @@ import tempfile
 import numpy
 import numpy.testing
 import pygeoprocessing
+import pygeoprocessing.symbolic
 import shapely.ops
 import shapely.wkb
 import taskgraph
@@ -295,6 +296,7 @@ _OUTPUT_BASE_FILES = {
     'greenspace_supply': 'greenspace_supply.tif',
     'admin_boundaries': 'admin_boundaries.gpkg',
     'greenspace_balance_percapita': 'greenspace_balance_percapita.tif',
+    'greenspace_demand': 'greenspace_demand.tif',
 }
 
 _INTERMEDIATE_BASE_FILES = {
@@ -515,6 +517,23 @@ def execute(args):
         task_name='Reproject admin units',
         target_path_list=[file_registry['reprojected_admin_boundaries']],
         dependent_task_list=[]
+    )
+
+    # This _could_ be a raster_calculator operation, but the math is so simple
+    # that it seems like this could suffice.
+    _ = graph.add_task(
+        pygeoprocessing.symbolic.evaluate_raster_calculator_expression,
+        kwargs={
+            'expression': f"population * {float(args['greenspace_demand'])}",
+            'symbol_to_path_band_map': {
+                'population': (file_registry['masked_population'], 1),
+            },
+            'target_nodata': FLOAT32_NODATA,
+            'target_raster_path': file_registry['greenspace_demand'],
+        },
+        task_name='Calculate greenspace demand',
+        target_path_list=[file_registry['greenspace_demand']],
+        dependent_task_list=[population_mask_task]
     )
 
     # If we're doing anything with population groups, rasterize the AOIs and

@@ -744,6 +744,20 @@ class UNATests(unittest.TestCase):
                                         f'{basename}_{suffix}{ext}')
                 self.assertTrue(os.path.exists(filepath))
 
+            # check the greenspace demand raster
+            population = pygeoprocessing.raster_to_numpy_array(
+                os.path.join(args['workspace_dir'], 'intermediate',
+                             f'masked_population_{suffix}.tif'))
+            demand = pygeoprocessing.raster_to_numpy_array(
+                os.path.join(args['workspace_dir'], 'output',
+                             f'greenspace_demand_{suffix}.tif'))
+            nodata = urban_nature_access.FLOAT32_NODATA
+            valid_pixels = ~utils.array_equals_nodata(population, nodata)
+            numpy.testing.assert_allclose(
+                (population[valid_pixels].sum() *
+                    float(args['greenspace_demand'])),
+                demand[valid_pixels].sum())
+
         uniform_radius_supply = pygeoprocessing.raster_to_numpy_array(
             os.path.join(uniform_args['workspace_dir'], 'output',
                          'greenspace_supply_uniform.tif'))
