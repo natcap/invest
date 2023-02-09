@@ -360,7 +360,7 @@ class UNATests(unittest.TestCase):
         numpy.testing.assert_allclose(
             greenspace_budget, expected_greenspace_budget)
 
-        supply_demand = urban_nature_access._greenspace_supply_demand_op(
+        supply_demand = urban_nature_access._greenspace_balance_totalpop_op(
             greenspace_budget, population)
         expected_supply_demand = numpy.array([
             [nodata, 100 * 50.5],
@@ -757,6 +757,18 @@ class UNATests(unittest.TestCase):
                 (population[valid_pixels].sum() *
                     float(args['greenspace_demand'])),
                 demand[valid_pixels].sum())
+
+            # check the total-population greenspace balance
+            per_capita_balance = pygeoprocessing.raster_to_numpy_array(
+                os.path.join(args['workspace_dir'], 'output',
+                             f'greenspace_balance_percapita_{suffix}.tif'))
+            totalpop_balance = pygeoprocessing.raster_to_numpy_array(
+                os.path.join(args['workspace_dir'], 'output',
+                             f'greenspace_balance_totalpop_{suffix}.tif'))
+            numpy.testing.assert_allclose(
+                per_capita_balance[valid_pixels] * population[valid_pixels],
+                totalpop_balance[valid_pixels],
+                rtol=1e-5)  # accommodate accumulation of numerical error
 
         uniform_radius_supply = pygeoprocessing.raster_to_numpy_array(
             os.path.join(uniform_args['workspace_dir'], 'output',

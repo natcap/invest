@@ -296,6 +296,7 @@ _OUTPUT_BASE_FILES = {
     'greenspace_supply': 'greenspace_supply.tif',
     'admin_boundaries': 'admin_boundaries.gpkg',
     'greenspace_balance_percapita': 'greenspace_balance_percapita.tif',
+    'greenspace_balance_totalpop': 'greenspace_balance_totalpop.tif',
     'greenspace_demand': 'greenspace_demand.tif',
 }
 
@@ -308,7 +309,6 @@ _INTERMEDIATE_BASE_FILES = {
     'greenspace_area': 'greenspace_area.tif',
     'greenspace_population_ratio': 'greenspace_population_ratio.tif',
     'convolved_population': 'convolved_population.tif',
-    'greenspace_supply_demand_budget': 'greenspace_supply_demand_budget.tif',
     'undersupplied_population': 'undersupplied_population.tif',
     'oversupplied_population': 'oversupplied_population.tif',
     'reprojected_admin_boundaries': 'reprojected_admin_boundaries.gpkg',
@@ -903,8 +903,8 @@ def execute(args):
                 index=False, name=None))
         greenspace_supply_by_group_paths = {}
         greenspace_supply_by_group_tasks = []
-        greenspace_supply_demand_by_group_paths = {}
-        greenspace_supply_demand_by_group_tasks = []
+        greenspace_balance_totalpop_by_group_paths = {}
+        greenspace_balance_totalpop_by_group_tasks = []
         supply_population_paths = {'over': {}, 'under': {}}
         supply_population_tasks = {'over': {}, 'under': {}}
         for pop_group, proportional_pop_path in (
@@ -957,27 +957,27 @@ def execute(args):
                     greenspace_supply_by_group_task,
                 ])
 
-            greenspace_supply_demand_by_group_path = os.path.join(
-                intermediate_dir,
-                f'greenspace_supply_demand_budget_{pop_group}{suffix}.tif')
-            greenspace_supply_demand_by_group_paths[
-                pop_group] = greenspace_supply_demand_by_group_path
-            greenspace_supply_demand_by_group_tasks.append(graph.add_task(
+            greenspace_balance_totalpop_by_group_path = os.path.join(
+                output_dir,
+                f'greenspace_balance_totalpop_{pop_group}{suffix}.tif')
+            greenspace_balance_totalpop_by_group_paths[
+                pop_group] = greenspace_balance_totalpop_by_group_path
+            greenspace_balance_totalpop_by_group_tasks.append(graph.add_task(
                 pygeoprocessing.raster_calculator,
                 kwargs={
                     'base_raster_path_band_const_list': [
                         (per_cap_greenspace_balance_pop_group_path, 1),
                         (proportional_pop_path, 1)
                     ],
-                    'local_op': _greenspace_supply_demand_op,
+                    'local_op': _greenspace_balance_totalpop_op,
                     'target_raster_path': (
-                        greenspace_supply_demand_by_group_path),
+                        greenspace_balance_totalpop_by_group_path),
                     'datatype_target': gdal.GDT_Float32,
                     'nodata_target': FLOAT32_NODATA
                 },
                 task_name='Calculate per-capita greenspace supply-demand',
                 target_path_list=[
-                    greenspace_supply_demand_by_group_path],
+                    greenspace_balance_totalpop_by_group_path],
                 dependent_task_list=[
                     per_cap_greenspace_balance_pop_group_task,
                     proportional_population_tasks[pop_group],
@@ -1050,19 +1050,19 @@ def execute(args):
                 greenspace_supply_task,
             ])
 
-        greenspace_supply_demand_budget_task = graph.add_task(
+        greenspace_balance_totalpop_task = graph.add_task(
             ndr._sum_rasters,
             kwargs={
                 'raster_path_list':
-                    list(greenspace_supply_demand_by_group_paths.values()),
+                    list(greenspace_balance_totalpop_by_group_paths.values()),
                 'target_nodata': FLOAT32_NODATA,
                 'target_result_path':
-                    file_registry['greenspace_supply_demand_budget'],
+                    file_registry['greenspace_balance_totalpop'],
             },
-            task_name='2SFCA - greenspace supply-demand budget',
+            task_name='2SFCA - greenspace balance - total population',
             target_path_list=[
-                file_registry['greenspace_supply_demand_budget']],
-            dependent_task_list=greenspace_supply_demand_by_group_tasks
+                file_registry['greenspace_balance_totalpop']],
+            dependent_task_list=greenspace_balance_totalpop_by_group_tasks
         )
 
         # Summary stats for RADIUS_OPT_POP_GROUP
@@ -1072,7 +1072,7 @@ def execute(args):
                 'source_aoi_vector_path': file_registry['reprojected_admin_boundaries'],
                 'target_aoi_vector_path': file_registry['admin_boundaries'],
                 'greenspace_sup_dem_paths_by_pop_group':
-                    greenspace_supply_demand_by_group_paths,
+                    greenspace_balance_totalpop_by_group_paths,
                 'proportional_pop_paths_by_pop_group':
                     proportional_population_paths,
                 'undersupply_by_pop_group': supply_population_paths['under'],
@@ -1083,7 +1083,7 @@ def execute(args):
             target_path_list=[file_registry['admin_boundaries']],
             dependent_task_list=[
                 aoi_reprojection_task,
-                *greenspace_supply_demand_by_group_tasks,
+                *greenspace_balance_totalpop_by_group_tasks,
                 *proportional_population_tasks.values(),
                 *supply_population_tasks['under'].values(),
                 *supply_population_tasks['over'].values(),
@@ -1114,22 +1114,22 @@ def execute(args):
             ])
 
         # This is "SUP_DEMi" from the user's guide
-        greenspace_supply_demand_task = graph.add_task(
+        greenspace_balance_totalpop = graph.add_task(
             pygeoprocessing.raster_calculator,
             kwargs={
                 'base_raster_path_band_const_list': [
                     (file_registry['greenspace_balance_percapita'], 1),
                     (file_registry['masked_population'], 1)
                 ],
-                'local_op': _greenspace_supply_demand_op,
+                'local_op': _greenspace_balance_totalpop_op,
                 'target_raster_path': (
-                    file_registry['greenspace_supply_demand_budget']),
+                    file_registry['greenspace_balance_totalpop']),
                 'datatype_target': gdal.GDT_Float32,
                 'nodata_target': FLOAT32_NODATA
             },
-            task_name='Calculate per-capita greenspace supply-demand',
+            task_name='Calculate greenspace balance for the total population',
             target_path_list=[
-                file_registry['greenspace_supply_demand_budget']],
+                file_registry['greenspace_balance_totalpop']],
             dependent_task_list=[
                  per_capita_greenspace_balance_task,
                  population_mask_task,
@@ -1170,7 +1170,7 @@ def execute(args):
                     task_name=f'Determine {supply_type}supplied populations',
                     target_path_list=[supply_population_path],
                     dependent_task_list=[
-                        greenspace_supply_demand_task,
+                        per_capita_greenspace_balance_task,
                         population_mask_task,
                         *list(proportional_population_tasks.values()),
                     ]))
@@ -1181,7 +1181,7 @@ def execute(args):
                 'source_aoi_vector_path': file_registry['reprojected_admin_boundaries'],
                 'target_aoi_vector_path': file_registry['admin_boundaries'],
                 'greenspace_budget_path': file_registry[
-                    'greenspace_supply_demand_budget'],  # TODO: is this the correct raster?
+                    'greenspace_balance_totalpop'],
                 'population_path': file_registry['masked_population'],
                 'undersupplied_populations_path': file_registry[
                     'undersupplied_population'],
@@ -1195,7 +1195,7 @@ def execute(args):
             dependent_task_list=[
                 population_mask_task,
                 aoi_reprojection_task,
-                greenspace_supply_demand_task,
+                greenspace_balance_totalpop,
                 *supply_population_tasks
             ])
 
@@ -1750,8 +1750,8 @@ def _greenspace_balance_percapita_op(greenspace_supply, greenspace_demand):
     return balance
 
 
-def _greenspace_supply_demand_op(greenspace_balance, population):
-    """Calculate the supply/demand of greenspace per person.
+def _greenspace_balance_totalpop_op(greenspace_balance, population):
+    """Calculate the greenspace balance for the total population.
 
     Args:
         greenspace_balance (numpy.array): The area of greenspace budgeted to
