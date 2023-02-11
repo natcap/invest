@@ -33,12 +33,6 @@ runs:
       with:
         python-version: ${{ inputs.python-version }}
 
-    - name: Setup conda environment
-      uses: conda-incubator/setup-miniconda@v2
-      with:
-        auto-update-conda: true
-        channels: conda-forge
-
     # save week number to use in next step
     # save CONDA_PREFIX to GITHUB_ENV so it's accessible outside of shell commands
     - name: Set environment variables
@@ -65,19 +59,15 @@ runs:
         echo "Will update environment using this environment.yml:"
         cat environment.yml
 
-    # NOTE the post step that saves the cache will only run if the job succeeds
-    - name: Restore conda environment cache
-      id: condacache
-      uses: actions/cache@v2
+    - name: Setup conda environment
+      uses: mamba-org/provision-with-micromamba@main
       with:
-        path: ${{ env.CONDA_PREFIX }}
-        key: ${{ runner.os }}${{ runner.arch }}-${{ env.WEEK }}-${{ hashFiles('environment.yml') }}
-
-    - name: Update environment with dependencies
-      if: steps.condacache.outputs.cache-hit != 'true'
-      shell: bash -l {0} # conda only available in login shell
-      run: conda env update --file environment.yml
+        environment-file: environment.yml
+        environment-name: env
+        channels: conda-forge
+        cache-env: true
+        cache-env-key: ${{ runner.os }}${{ runner.arch }}-${{ env.WEEK }}-${{ hashFiles('environment.yml') }}
 
     - name: List conda environment
-      shell: bash -l {0} # conda only available in login shell
-      run: conda list
+      shell: bash -l {0}
+      run: micromamba list
