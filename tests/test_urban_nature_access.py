@@ -75,7 +75,7 @@ def _build_model_args(workspace):
     with open(args['lulc_attribute_table'], 'w') as attr_table:
         attr_table.write(textwrap.dedent(
             """\
-            lucode,greenspace,search_radius_m
+            lucode,urban_nature,search_radius_m
             0,0,100
             1,1,100
             2,0,100
@@ -483,7 +483,7 @@ class UNATests(unittest.TestCase):
         from natcap.invest import urban_nature_access
 
         args = _build_model_args(self.workspace_dir)
-        args['search_radius_mode'] = urban_nature_access.RADIUS_OPT_GREENSPACE
+        args['search_radius_mode'] = urban_nature_access.RADIUS_OPT_URBAN_NATURE
 
         # The split greenspace feature requires an extra column in the
         # attribute table.
@@ -690,7 +690,7 @@ class UNATests(unittest.TestCase):
             os.path.join(self.workspace_dir, 'radius_greenspace'))
         split_greenspace_args['results_suffix'] = 'greenspace'
         split_greenspace_args['search_radius_mode'] = (
-            urban_nature_access.RADIUS_OPT_GREENSPACE)
+            urban_nature_access.RADIUS_OPT_URBAN_NATURE)
         attribute_table = pandas.read_csv(
             split_greenspace_args['lulc_attribute_table'])
         new_search_radius_values = dict(
@@ -779,7 +779,7 @@ class UNATests(unittest.TestCase):
             urban_nature_access.execute(args)
 
         self.assertIn('Invalid search radius mode provided', str(cm.exception))
-        for mode_suffix in ('UNIFORM', 'GREENSPACE', 'POP_GROUP'):
+        for mode_suffix in ('UNIFORM', 'URBAN_NATURE', 'POP_GROUP'):
             valid_mode_string = getattr(urban_nature_access,
                                         f'RADIUS_OPT_{mode_suffix}')
             self.assertIn(valid_mode_string, str(cm.exception))
@@ -806,5 +806,5 @@ class UNATests(unittest.TestCase):
         """UNA: Basic test for validation."""
         from natcap.invest import urban_nature_access
         args = _build_model_args(self.workspace_dir)
-        args['search_radius_mode'] = urban_nature_access.RADIUS_OPT_GREENSPACE
+        args['search_radius_mode'] = urban_nature_access.RADIUS_OPT_URBAN_NATURE
         self.assertEqual(urban_nature_access.validate(args), [])
