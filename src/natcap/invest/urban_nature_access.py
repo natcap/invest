@@ -35,7 +35,7 @@ KERNEL_LABEL_GAUSSIAN = 'gaussian'
 KERNEL_LABEL_DENSITY = 'density'
 # KERNEL_LABEL_POWER = 'power'
 RADIUS_OPT_UNIFORM = 'uniform_radius'
-RADIUS_OPT_GREENSPACE = 'radius_per_greenspace_class'
+RADIUS_OPT_URBAN_NATURE = 'radius_per_urban_nature_class'
 RADIUS_OPT_POP_GROUP = 'radius_per_pop_group'
 POP_FIELD_REGEX = '^pop_'
 ID_FIELDNAME = 'adm_unit_id'
@@ -79,7 +79,7 @@ ARGS_SPEC = {
                     'type': 'number',
                     'units': u.meter,
                     'required':
-                        f'search_radius_mode == "{RADIUS_OPT_GREENSPACE}"',
+                        f'search_radius_mode == "{RADIUS_OPT_URBAN_NATURE}"',
                     'expression': 'value >= 0',
                     'about': (
                         'The distance in meters to use as the search radius '
@@ -204,7 +204,7 @@ ARGS_SPEC = {
                         'The search radius is the same for all greenspace '
                         'types.'),
                 },
-                RADIUS_OPT_GREENSPACE: {
+                RADIUS_OPT_URBAN_NATURE: {
                     'display_name': 'Radius defined per greenspace class',
                     'description': gettext(
                         'The search radius is defined for each distinct '
@@ -338,7 +338,7 @@ def execute(args):
             * ``search_radius_m``: (conditionally required) the search radius
               for this greenspace landcover in meters. Required for all
               greenspace lucodes if ``args['search_radius_mode'] ==
-              RADIUS_OPT_GREENSPACE``
+              RADIUS_OPT_URBAN_NATURE``
 
         args['population_raster_path'] (string): (required) A string path to a
             GDAL-compatible raster where pixels represent the population of
@@ -357,7 +357,7 @@ def execute(args):
             Must be one of the keys in ``KERNEL_TYPES``.
         args['search_radius_mode'] (string): (required).  The selected search
             radius mode.  Must be one of ``RADIUS_OPT_UNIFORM``,
-            ``RADIUS_OPT_GREENSPACE``, or ``RADIUS_OPT_POP_GROUP``.
+            ``RADIUS_OPT_URBAN_NATURE``, or ``RADIUS_OPT_POP_GROUP``.
         args['search_radius'] (number): Required if
             ``args['search_radius_mode'] == RADIUS_OPT_UNIFORM``.  The search
             radius in meters to use in the analysis.
@@ -599,7 +599,7 @@ def execute(args):
 
     if args['search_radius_mode'] == RADIUS_OPT_UNIFORM:
         search_radii = set([float(args['search_radius'])])
-    elif args['search_radius_mode'] == RADIUS_OPT_GREENSPACE:
+    elif args['search_radius_mode'] == RADIUS_OPT_URBAN_NATURE:
         greenspace_attrs = attr_table[attr_table['greenspace'] == 1]
         try:
             search_radii = set(greenspace_attrs['search_radius_m'].unique())
@@ -712,9 +712,9 @@ def execute(args):
                 greenspace_population_ratio_task])
 
     # Search radius mode 2: Search radii are defined per greenspace lulc class.
-    elif args['search_radius_mode'] == RADIUS_OPT_GREENSPACE:
+    elif args['search_radius_mode'] == RADIUS_OPT_URBAN_NATURE:
         LOGGER.info("Running model with search radius mode "
-                    f"{RADIUS_OPT_GREENSPACE}")
+                    f"{RADIUS_OPT_URBAN_NATURE}")
         decayed_population_tasks = {}
         decayed_population_paths = {}
         for search_radius_m in search_radii:
@@ -1054,7 +1054,7 @@ def execute(args):
     # Greenspace budget, supply/demand and over/undersupply rasters are the
     # same for uniform radius and for split greenspace modes.
     if args['search_radius_mode'] in (RADIUS_OPT_UNIFORM,
-                                      RADIUS_OPT_GREENSPACE):
+                                      RADIUS_OPT_URBAN_NATURE):
         # This is "SUP_DEMi_cap" from the user's guide
         per_capita_greenspace_balance_task = graph.add_task(
             pygeoprocessing.raster_calculator,
