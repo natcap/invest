@@ -2,7 +2,7 @@ import React from 'react';
 import ReactDom from 'react-dom';
 
 import App from './app';
-import '../shared/i18n';
+import './i18n/i18n';
 import ErrorBoundary from './components/ErrorBoundary';
 import { ipcMainChannels } from '../main/ipcMainChannels';
 import { getSettingsValue } from './components/SettingsModal/SettingsStorage';
