@@ -35,7 +35,7 @@ def _build_model_args(workspace):
         'lulc_attribute_table': os.path.join(
             workspace, 'lulc_attributes.csv'),
         'decay_function': 'gaussian',
-        'greenspace_demand': 100,  # square meters
+        'urban_nature_demand': 100,  # square meters
         'admin_boundaries_vector_path': os.path.join(
             workspace, 'aois.geojson'),
     }
@@ -337,30 +337,30 @@ class UNATests(unittest.TestCase):
         numpy.testing.assert_allclose(
             expected_array, kernel)
 
-    def test_greenspace_balance(self):
-        """UNA: Test the per-capita greenspace balance functions."""
+    def test_urban_nature_balance(self):
+        """UNA: Test the per-capita urban_nature balance functions."""
         from natcap.invest import urban_nature_access
 
         nodata = urban_nature_access.FLOAT32_NODATA
-        greenspace_supply = numpy.array([
+        urban_nature_supply = numpy.array([
             [nodata, 100.5],
             [75, 100]], dtype=numpy.float32)
-        greenspace_demand = 50
+        urban_nature_demand = 50
 
         population = numpy.array([
             [50, 100],
             [40.75, nodata]], dtype=numpy.float32)
 
-        greenspace_budget = urban_nature_access._greenspace_balance_op(
-                greenspace_supply, greenspace_demand)
-        expected_greenspace_budget = numpy.array([
+        urban_nature_budget = urban_nature_access._urban_nature_balance_op(
+                urban_nature_supply, urban_nature_demand)
+        expected_urban_nature_budget = numpy.array([
             [nodata, 50.5],
             [25, 50]], dtype=numpy.float32)
         numpy.testing.assert_allclose(
-            greenspace_budget, expected_greenspace_budget)
+            urban_nature_budget, expected_urban_nature_budget)
 
-        supply_demand = urban_nature_access._greenspace_supply_demand_op(
-            greenspace_budget, population)
+        supply_demand = urban_nature_access._urban_nature_supply_demand_op(
+            urban_nature_budget, population)
         expected_supply_demand = numpy.array([
             [nodata, 100 * 50.5],
             [25 * 40.75, nodata]], dtype=numpy.float32)
@@ -479,13 +479,13 @@ class UNATests(unittest.TestCase):
         admin_vector = None
         admin_layer = None
 
-    def test_split_greenspace(self):
+    def test_split_urban_nature(self):
         from natcap.invest import urban_nature_access
 
         args = _build_model_args(self.workspace_dir)
         args['search_radius_mode'] = urban_nature_access.RADIUS_OPT_URBAN_NATURE
 
-        # The split greenspace feature requires an extra column in the
+        # The split urban_nature feature requires an extra column in the
         # attribute table.
         attribute_table = pandas.read_csv(args['lulc_attribute_table'])
         new_search_radius_values = {
@@ -667,7 +667,7 @@ class UNATests(unittest.TestCase):
         """UNA: all modes have same results when consistent radii.
 
         Although the different modes have different ways of defining their
-        search radii, the greenspace_supply raster should be numerically
+        search radii, the urban_nature_supply raster should be numerically
         equivalent if they all use the same search radii.
 
         This is a good gut-check of basic model behavior across modes.
@@ -685,20 +685,20 @@ class UNATests(unittest.TestCase):
             urban_nature_access.RADIUS_OPT_UNIFORM)
         uniform_args['search_radius'] = search_radius
 
-        # build args for split greenspace mode
-        split_greenspace_args = _build_model_args(
-            os.path.join(self.workspace_dir, 'radius_greenspace'))
-        split_greenspace_args['results_suffix'] = 'greenspace'
-        split_greenspace_args['search_radius_mode'] = (
+        # build args for split urban_nature mode
+        split_urban_nature_args = _build_model_args(
+            os.path.join(self.workspace_dir, 'radius_urban_nature'))
+        split_urban_nature_args['results_suffix'] = 'urban_nature'
+        split_urban_nature_args['search_radius_mode'] = (
             urban_nature_access.RADIUS_OPT_URBAN_NATURE)
         attribute_table = pandas.read_csv(
-            split_greenspace_args['lulc_attribute_table'])
+            split_urban_nature_args['lulc_attribute_table'])
         new_search_radius_values = dict(
             (lucode, search_radius) for lucode in attribute_table['lucode'])
         attribute_table['search_radius_m'] = attribute_table['lucode'].map(
             new_search_radius_values)
         attribute_table.to_csv(
-            split_greenspace_args['lulc_attribute_table'], index=False)
+            split_urban_nature_args['lulc_attribute_table'], index=False)
 
         # build args for split population group mode
         pop_group_args = _build_model_args(
@@ -728,21 +728,21 @@ class UNATests(unittest.TestCase):
                 pop_group_args['population_raster_path'])['projection_wkt'],
             'GeoJSON', fields, attributes)
 
-        for args in (uniform_args, split_greenspace_args, pop_group_args):
+        for args in (uniform_args, split_urban_nature_args, pop_group_args):
             urban_nature_access.execute(args)
 
         uniform_radius_supply = pygeoprocessing.raster_to_numpy_array(
             os.path.join(uniform_args['workspace_dir'], 'output',
-                         'greenspace_supply_uniform.tif'))
-        split_greenspace_supply = pygeoprocessing.raster_to_numpy_array(
-            os.path.join(split_greenspace_args['workspace_dir'], 'output',
-                         'greenspace_supply_greenspace.tif'))
+                         'urban_nature_supply_uniform.tif'))
+        split_urban_nature_supply = pygeoprocessing.raster_to_numpy_array(
+            os.path.join(split_urban_nature_args['workspace_dir'], 'output',
+                         'urban_nature_supply_urban_nature.tif'))
         split_pop_groups_supply = pygeoprocessing.raster_to_numpy_array(
             os.path.join(pop_group_args['workspace_dir'], 'output',
-                         'greenspace_supply_popgroup.tif'))
+                         'urban_nature_supply_popgroup.tif'))
 
         numpy.testing.assert_allclose(
-            uniform_radius_supply, split_greenspace_supply, rtol=1e-6)
+            uniform_radius_supply, split_urban_nature_supply, rtol=1e-6)
         numpy.testing.assert_allclose(
             uniform_radius_supply, split_pop_groups_supply, rtol=1e-6)
 
