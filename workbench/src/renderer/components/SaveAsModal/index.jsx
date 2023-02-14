@@ -122,7 +122,7 @@ class SaveAsModal extends React.Component {
               >
                 <span className="ml-2">Parameters only</span>
                 <Form.Text muted>
-                  {t('Save your parameters in a JSON file. This includes the' +
+                  {t('Save your parameters in a JSON file. This includes the ' +
                      'paths to your input data, but not the data itself. ' +
                      'Open this file in InVEST to restore your parameters.')}
                 </Form.Text>

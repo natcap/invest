@@ -31,15 +31,14 @@ class ErrorBoundary extends React.Component {
           <h2>{`\u{1F986}  ${t('Something went wrong')}`}</h2>
           <p>
             <em>
-              {t(`Please help us fix this by reporting the problem.
-                  You may follow these steps:`)}
+              {t('Please help us fix this by reporting the problem.' +
+                  'You may follow these steps:')}
             </em>
           </p>
           <ol>
             <li>
-              <b>{t('Find the Workbench log files ')}</b>
-              {t(`using the button below.
-                 There may be multiple files with a ".log" extension.`)}
+              <b>{t('Find the Workbench log files using the button below.')}</b>
+              {t('There may be multiple files with a ".log" extension.')}
             </li>
             <Button
               onClick={handleClickFindLogfiles}
@@ -50,8 +49,8 @@ class ErrorBoundary extends React.Component {
             <br />
             <li>
               <b>{t('Create a post on our forum ')}</b>
-              {t(`and upload all the log files, along with a brief description
-                  of what happened before you saw this message.`)}
+              {t('and upload all the log files, along with a brief description ' +
+                 'of what happened before you saw this message.')}
               <br />
               <a
                 href="https://community.naturalcapitalproject.org/"
