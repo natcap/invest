@@ -91,10 +91,11 @@ jobs:
           path: ./conda-env-artifact
 
       - name: Compare conda environments
-        continue-on-error: true
         run: |
           micromamba list > conda-env.txt
-          diff ./conda-env.txt ./conda-env-artifact/conda-env.txt
+          # make sure that the exit code is always 0
+          # otherwise, an error appears in the action annotations
+          diff ./conda-env.txt ./conda-env-artifact/conda-env.txt || true
 
       - name: Build and install wheel
         run: |
