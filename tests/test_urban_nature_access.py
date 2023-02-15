@@ -351,15 +351,16 @@ class UNATests(unittest.TestCase):
             [50, 100],
             [40.75, nodata]], dtype=numpy.float32)
 
-        urban_nature_budget = urban_nature_access._urban_nature_balance_op(
-                urban_nature_supply, urban_nature_demand)
+        urban_nature_budget = (
+            urban_nature_access._urban_nature_balance_percapita_op(
+                urban_nature_supply, urban_nature_demand))
         expected_urban_nature_budget = numpy.array([
             [nodata, 50.5],
             [25, 50]], dtype=numpy.float32)
         numpy.testing.assert_allclose(
             urban_nature_budget, expected_urban_nature_budget)
 
-        supply_demand = urban_nature_access._urban_nature_supply_demand_op(
+        supply_demand = urban_nature_access._urban_nature_balance_totalpop_op(
             urban_nature_budget, population)
         expected_supply_demand = numpy.array([
             [nodata, 100 * 50.5],
@@ -565,7 +566,8 @@ class UNATests(unittest.TestCase):
         urban_nature_access.execute(args)
 
         summary_vector = gdal.OpenEx(
-            os.path.join(args['workspace_dir'], 'output', 'admin_boundaries.gpkg'))
+            os.path.join(args['workspace_dir'], 'output',
+                         'admin_boundaries.gpkg'))
         summary_layer = summary_vector.GetLayer()
         self.assertEqual(summary_layer.GetFeatureCount(), 1)
         summary_feature = summary_layer.GetFeature(1)
@@ -637,7 +639,8 @@ class UNATests(unittest.TestCase):
         urban_nature_access.execute(args)
 
         summary_vector = gdal.OpenEx(
-            os.path.join(args['workspace_dir'], 'output', 'admin_boundaries.gpkg'))
+            os.path.join(args['workspace_dir'], 'output',
+                         'admin_boundaries.gpkg'))
         summary_layer = summary_vector.GetLayer()
         self.assertEqual(summary_layer.GetFeatureCount(), 1)
         summary_feature = summary_layer.GetFeature(1)
@@ -730,6 +733,42 @@ class UNATests(unittest.TestCase):
 
         for args in (uniform_args, split_urban_nature_args, pop_group_args):
             urban_nature_access.execute(args)
+
+            # make sure the output dir contains the correct files.
+            for output_filename in (
+                    urban_nature_access._OUTPUT_BASE_FILES.values()):
+                basename, ext = os.path.splitext(
+                    os.path.basename(output_filename))
+                suffix = args['results_suffix']
+                filepath = os.path.join(args['workspace_dir'], 'output',
+                                        f'{basename}_{suffix}{ext}')
+                self.assertTrue(os.path.exists(filepath))
+
+            # check the urban_nature demand raster
+            population = pygeoprocessing.raster_to_numpy_array(
+                os.path.join(args['workspace_dir'], 'intermediate',
+                             f'masked_population_{suffix}.tif'))
+            demand = pygeoprocessing.raster_to_numpy_array(
+                os.path.join(args['workspace_dir'], 'output',
+                             f'urban_nature_demand_{suffix}.tif'))
+            nodata = urban_nature_access.FLOAT32_NODATA
+            valid_pixels = ~utils.array_equals_nodata(population, nodata)
+            numpy.testing.assert_allclose(
+                (population[valid_pixels].sum() *
+                    float(args['urban_nature_demand'])),
+                demand[valid_pixels].sum())
+
+            # check the total-population urban_nature balance
+            per_capita_balance = pygeoprocessing.raster_to_numpy_array(
+                os.path.join(args['workspace_dir'], 'output',
+                             f'urban_nature_balance_percapita_{suffix}.tif'))
+            totalpop_balance = pygeoprocessing.raster_to_numpy_array(
+                os.path.join(args['workspace_dir'], 'output',
+                             f'urban_nature_balance_totalpop_{suffix}.tif'))
+            numpy.testing.assert_allclose(
+                per_capita_balance[valid_pixels] * population[valid_pixels],
+                totalpop_balance[valid_pixels],
+                rtol=1e-5)  # accommodate accumulation of numerical error
 
         uniform_radius_supply = pygeoprocessing.raster_to_numpy_array(
             os.path.join(uniform_args['workspace_dir'], 'output',
