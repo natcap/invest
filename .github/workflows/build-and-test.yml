@@ -108,13 +108,13 @@ jobs:
         run: make test
 
       - name: Upload wheel artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: Wheel for ${{ matrix.os }} ${{ matrix.python-version }}
           path: dist
 
       - name: Upload conda env artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         continue-on-error: true
         with:
           name: Conda Env for ${{ matrix.os }} ${{ matrix.python-version }}
@@ -170,7 +170,7 @@ jobs:
           # natcap.invest from source and that it imports.
           python -c "from natcap.invest import *"
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: Source distribution
           path: dist
@@ -277,7 +277,7 @@ jobs:
         run: make install
 
       - name: Set up node
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v3
         with:
           node-version: 14.x
 
@@ -379,7 +379,7 @@ jobs:
         run: make CONDA=micromamba ${{ matrix.binary-make-command }}
 
       - name: Install Node.js
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v3
         with:
           node-version: 14.x
 
@@ -449,27 +449,27 @@ jobs:
 
       - name: Upload binary artifact
         if: always()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: InVEST-${{ runner.os }}-binary
           path: dist/*.${{ matrix.binary-extension }}
 
       - name: Upload workbench binary artifact
         if: always()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: Workbench-${{ runner.os }}-binary
           path: workbench/dist/*.${{ matrix.binary-extension }}
 
       - name: Upload user's guide artifact (Windows)
         if: matrix.os == 'windows-latest'
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: InVEST-user-guide
           path: dist/InVEST_*_userguide.zip
 
       - name: Upload workbench logging from puppeteer
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         if: always()
         with:
           name: ${{ runner.os }}_puppeteer_log.zip'
@@ -481,7 +481,7 @@ jobs:
 
       - name: Upload workspace on failure
         if: ${{ failure() }}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: InVEST-failed-${{ runner.os }}-workspace
           path: ${{ matrix.workspace-path}}
@@ -506,7 +506,7 @@ jobs:
       - run: make sampledata sampledata_single
 
       - name: Upload sample data artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: InVEST-sample-data
           path: dist/*.zip
