@@ -48,6 +48,9 @@ Unreleased Changes
     * Any points over nodata (and therefore excluded from the viewshed
       analysis) will now correctly have their FID reported in the logging.
       https://github.com/natcap/invest/issues/1188
+    * Clarifying where the visual quality calculations' disk-based sorting
+      cache should be located, which addresses an interesting crash experienced
+      by some users on Windows. https://github.com/natcap/invest/issues/1189
 
 3.12.1 (2022-12-16)
 -------------------
