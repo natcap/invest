@@ -1,17 +1,20 @@
 """Module for Regression Testing the InVEST Scenic Quality module."""
-import unittest
-import tempfile
-import shutil
-import os
+import contextlib
 import glob
+import logging
+import os
+import queue
+import shutil
+import tempfile
+import unittest
 
-from osgeo import gdal
-from osgeo import osr
-from osgeo import ogr
-import pygeoprocessing
-from shapely.geometry import Polygon, Point
 import numpy
-
+import pygeoprocessing
+from osgeo import gdal
+from osgeo import ogr
+from osgeo import osr
+from shapely.geometry import Point
+from shapely.geometry import Polygon
 
 _SRS = osr.SpatialReference()
 _SRS.ImportFromEPSG(32731)  # WGS84 / UTM zone 31s
@@ -197,8 +200,8 @@ class ScenicQualityTests(unittest.TestCase):
         quality_matrix = gdal.OpenEx(
             visual_quality_raster, gdal.OF_RASTER).ReadAsArray()
         numpy.testing.assert_allclose(expected_visual_quality,
-                                          quality_matrix,
-                                          rtol=0, atol=1e-6)
+                                      quality_matrix,
+                                      rtol=0, atol=1e-6)
 
     def test_invalid_valuation_function(self):
         """SQ: model raises exception with invalid valuation function."""
@@ -498,7 +501,8 @@ class ScenicQualityTests(unittest.TestCase):
         value_matrix = pygeoprocessing.raster_to_numpy_array(
             os.path.join(args['workspace_dir'], 'output', 'vshed_value.tif'))
 
-        numpy.testing.assert_allclose(expected_value, value_matrix, rtol=0, atol=1e-6)
+        numpy.testing.assert_allclose(expected_value, value_matrix, rtol=0,
+                                      atol=1e-6)
 
     def test_logarithmic_valuation(self):
         """SQ: verify values on logarithmic valuation."""
@@ -687,8 +691,8 @@ class ScenicQualityValidationTests(unittest.TestCase):
 
     def test_missing_keys(self):
         """SQ Validate: assert missing keys."""
-        from natcap.invest.scenic_quality import scenic_quality
         from natcap.invest import validation
+        from natcap.invest.scenic_quality import scenic_quality
 
         validation_errors = scenic_quality.validate({})  # empty args dict.
         invalid_keys = validation.get_invalid_keys(validation_errors)
@@ -703,8 +707,8 @@ class ScenicQualityValidationTests(unittest.TestCase):
 
     def test_polynomial_required_keys(self):
         """SQ Validate: assert polynomial required keys."""
-        from natcap.invest.scenic_quality import scenic_quality
         from natcap.invest import validation
+        from natcap.invest.scenic_quality import scenic_quality
 
         args = {
             'valuation_function': 'polynomial',
@@ -727,8 +731,8 @@ class ScenicQualityValidationTests(unittest.TestCase):
 
     def test_novaluation_required_keys(self):
         """SQ Validate: assert required keys without valuation."""
-        from natcap.invest.scenic_quality import scenic_quality
         from natcap.invest import validation
+        from natcap.invest.scenic_quality import scenic_quality
         args = {}
         validation_errors = scenic_quality.validate(args)
         invalid_keys = validation.get_invalid_keys(validation_errors)
@@ -743,8 +747,8 @@ class ScenicQualityValidationTests(unittest.TestCase):
 
     def test_bad_values(self):
         """SQ Validate: Assert we can catch various validation errors."""
-        from natcap.invest.scenic_quality import scenic_quality
         from natcap.invest import validation
+        from natcap.invest.scenic_quality import scenic_quality
 
         # AOI path is missing
         args = {
@@ -775,11 +779,14 @@ class ScenicQualityValidationTests(unittest.TestCase):
             single_key_errors['a_coef'],
             validation.MESSAGES['NOT_A_NUMBER'].format(value=args['a_coef']))
         self.assertEqual(
-            single_key_errors['dem_path'], validation.MESSAGES['FILE_NOT_FOUND'])
+            single_key_errors['dem_path'],
+            validation.MESSAGES['FILE_NOT_FOUND'])
         self.assertEqual(
-            single_key_errors['structure_path'], validation.MESSAGES['FILE_NOT_FOUND'])
+            single_key_errors['structure_path'],
+            validation.MESSAGES['FILE_NOT_FOUND'])
         self.assertEqual(
-            single_key_errors['aoi_path'], validation.MESSAGES['FILE_NOT_FOUND'])
+            single_key_errors['aoi_path'],
+            validation.MESSAGES['FILE_NOT_FOUND'])
         self.assertEqual(
             single_key_errors['valuation_function'],
             validation.MESSAGES['INVALID_OPTION'].format(
@@ -790,8 +797,8 @@ class ScenicQualityValidationTests(unittest.TestCase):
 
     def test_dem_projected_in_m(self):
         """SQ Validate: the DEM must be projected in meters."""
-        from natcap.invest.scenic_quality import scenic_quality
         from natcap.invest import validation
+        from natcap.invest.scenic_quality import scenic_quality
 
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(4326)  # WGS84 is not projected.
