@@ -44,6 +44,13 @@ Unreleased Changes
 * Workbench
     * Added tooltips to the model tabs so that they can be identified even when
       several tabs are open (`#1071 <https://github.com/natcap/invest/issues/1088>`_)
+* HRA
+    * Fixed an issue where a cryptic exception was being thrown if the criteria
+      table's sections were not spelled exactly as expected.  There is now a
+      much more readable error if a section is obviously missing.  Leading and
+      trailing whitespace is also now removed from all string fields in the
+      criteria table, which should also help reduce the chance of errors.
+      https://github.com/natcap/invest/issues/1191
 * Scenic Quality
     * Any points over nodata (and therefore excluded from the viewshed
       analysis) will now correctly have their FID reported in the logging.

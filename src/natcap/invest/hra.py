@@ -1703,12 +1703,32 @@ def _parse_criteria_table(criteria_table_path, target_composite_csv_path):
                              engine='python')
     table = df.to_numpy()
 
+    # clean up any leading or trailing whitespace.
+    for row_num in range(table.shape[0]):
+        for col_num in range(table.shape[1]):
+            value = table[row_num][col_num]
+            if isinstance(value, str):
+                table[row_num][col_num] = value.strip()
+
+    # Some fields are required and will lead to cryptic errors if not found or
+    # slightly misspelled.
+    habitat_name_header = 'HABITAT NAME'
+    overlap_section_header = 'HABITAT STRESSOR OVERLAP PROPERTIES'
+    habitat_resilience_header = 'HABITAT RESILIENCE ATTRIBUTES'
+    required_section_headers = {
+        habitat_name_header, overlap_section_header,
+        habitat_resilience_header}
+    missing_sections = required_section_headers - set(table[:, 0])
+    if missing_sections:
+        raise AssertionError(
+            "The criteria table is missing these section headers: "
+            f"{', '.join(required_section_headers)}")
+
     # Habitats are loaded from the top row (table[0])
     known_habitats = set(table[0]).difference(
-        {'HABITAT NAME', numpy.nan, 'CRITERIA TYPE'})
+        {habitat_name_header, numpy.nan, 'CRITERIA TYPE'})
 
     # Stressors are loaded from the first column (table[:, 0])
-    overlap_section_header = 'HABITAT STRESSOR OVERLAP PROPERTIES'
     known_stressors = set()
     for row_index, value in enumerate(table[:, 0]):
         try:
@@ -1731,7 +1751,7 @@ def _parse_criteria_table(criteria_table_path, target_composite_csv_path):
     criteria_col = None
     habitats = set()
     for col_index, value in enumerate(table[0]):
-        if value == 'HABITAT NAME':
+        if value == habitat_name_header:
             continue
         if value == 'CRITERIA TYPE':
             criteria_col = col_index
@@ -1753,8 +1773,8 @@ def _parse_criteria_table(criteria_table_path, target_composite_csv_path):
             continue
 
         if (row[0] in known_stressors or
-                row[0] == 'HABITAT RESILIENCE ATTRIBUTES'):
-            if row[0] == 'HABITAT RESILIENCE ATTRIBUTES':
+                row[0] == habitat_resilience_header):
+            if row[0] == habitat_resilience_header:
                 row[0] = 'RESILIENCE'  # Shorten for convenience
             current_stressor = row[0]
             current_stressor_header_row = row_index
