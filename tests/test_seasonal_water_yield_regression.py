@@ -875,6 +875,7 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         soil_array = band.ReadAsArray()
         soil_array[50, 50] = 6  # invalid value
         soil_array[51, 51] = 7  # invalid value
+        soil_array[52, 52] = band.GetNoDataValue()  # valid, excluded
         band.WriteArray(soil_array)
         band = None
         raster = None
