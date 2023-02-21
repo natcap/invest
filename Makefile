@@ -312,7 +312,6 @@ ZIPDIRS = Annual_Water_Yield \
 		  CropProduction \
 		  DelineateIt \
 		  forest_carbon_edge_effect \
-		  globio \
 		  GridSeascape \
 		  HabitatQuality \
 		  HabitatRiskAssess \
