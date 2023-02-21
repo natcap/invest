@@ -360,7 +360,7 @@ const UI_SPEC = {
         'population_raster_path',
         'admin_boundaries_vector_path',
         'population_group_radii_table',
-        'greenspace_demand',
+        'urban_nature_demand',
         'aggregate_by_pop_group',
       ],
       [
