@@ -2743,7 +2743,7 @@ msgstr ""
 
 #: src/natcap/invest/urban_cooling_model.py:240
 msgid "evapotranspiration weight"
-msgstr "ponderación  de la evapotranspiración"
+msgstr "ponderación de la evapotranspiración"
 
 #: src/natcap/invest/urban_cooling_model.py:243
 msgid ""
