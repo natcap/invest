@@ -1,22 +1,22 @@
-import i18n from "i18next";
-import { initReactI18next } from "react-i18next";
+import i18n from 'i18next';
+import { initReactI18next } from 'react-i18next';
 
-import es_messages from './es.json';
-import zh_messages from './zh.json';
+import esMessages from './es.json';
+import zhMessages from './zh.json';
 
 i18n
   .use(initReactI18next)
   .init({
     resources: {
       es: {
-        translation: es_messages
+        translation: esMessages,
       },
       zh: {
-        translation: zh_messages
+        translation: zhMessages,
       },
     },
     interpolation: {
-      escapeValue: false // react already safe from xss
+      escapeValue: false, // react already safe from xss
     },
     keySeparator: false,
     nsSeparator: false,

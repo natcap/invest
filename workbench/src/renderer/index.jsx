@@ -5,7 +5,6 @@ import App from './app';
 import './i18n/i18n';
 import ErrorBoundary from './components/ErrorBoundary';
 import { ipcMainChannels } from '../main/ipcMainChannels';
-import { getSettingsValue } from './components/SettingsModal/SettingsStorage';
 
 const { ipcRenderer } = window.Workbench.electron;
 

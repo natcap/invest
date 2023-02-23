@@ -108,7 +108,6 @@ export default class App extends React.Component {
         ipcMainChannels.CHANGE_LANGUAGE, settings.language
       );
       // rerender for changes to take effect
-      console.log(window.location.reload);
       window.location.reload();
     }
   }
