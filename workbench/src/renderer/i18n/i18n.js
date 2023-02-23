@@ -20,7 +20,9 @@ i18n
     },
     keySeparator: false,
     nsSeparator: false,
+    returnEmptyString: false,
     saveMissing: true,
+    lng: 'en',
   });
 
 export default i18n;

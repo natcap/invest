@@ -2,7 +2,7 @@ import crypto from 'crypto';
 import fetch from 'node-fetch';
 
 import api from '../src/preload/api';
-import mockI18n from 'i18next';
+// import mockI18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 
 // debug logging is a bit noisy, not so useful during tests.
@@ -25,24 +25,24 @@ if (global.window) {
   global.window.fetch = fetch;
 }
 
-mockI18n
-  .use(initReactI18next)
-  .init({
-    lng: 'en',
-    interpolation: {
-      escapeValue: false,
-    },
-    resources: {
-      ll: {
-        translation: {
-          Open: 'σρєи',
-          Language: 'ℓαиgυαgє'
-        }
-      }
-    },
-  });
+// mockI18n
+//   .use(initReactI18next)
+//   .init({
+//     lng: 'en',
+//     interpolation: {
+//       escapeValue: false,
+//     },
+//     resources: {
+//       ll: {
+//         translation: {
+//           Open: 'σρєи',
+//           Language: 'ℓαиgυαgє'
+//         }
+//       }
+//     },
+//   });
 
-jest.mock('../src/shared/i18n', () => mockI18n);
+// jest.mock('../src/shared/i18n', () => mockI18n);
 
 // Cause tests to fail on console.error messages
 // Taken from https://stackoverflow.com/questions/28615293/is-there-a-jest-config-that-will-fail-tests-on-console-warn/50584643#50584643

@@ -18,6 +18,7 @@ i18n
     },
     keySeparator: false,
     nsSeparator: false,
+    returnEmptyString: false,
     saveMissing: true,
   });
 
