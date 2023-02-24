@@ -916,12 +916,12 @@ def _raster_values_in_bounds(raster_path_band, lower_bound, upper_bound):
 def _decay_distance(dist_raster_path, max_dist, decay_type, target_path):
     """Apply an exponential or linear decay to a distance transform raster.
 
-    The function will set pixles greater than ``max_dist`` to 0.
+    The function will set pixels greater than ``max_dist`` to 0.
 
     Args:
         dist_raster_path (string): a filepath for the raster to decay.
             The raster is expected to be a euclidean distance transform with
-            values meauring distance in pixels.
+            values measuring distance in pixels.
         max_dist (float): max distance of threat in KM.
         decay_type (string): a string defining which decay method to use.
             Options include: 'linear' | 'exponential'.
