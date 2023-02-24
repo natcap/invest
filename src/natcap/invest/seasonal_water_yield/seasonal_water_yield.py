@@ -1070,6 +1070,7 @@ def _calculate_curve_number_raster(
 
     # Use set of table lucodes in cn_op
     lucodes_set = set(lucodes)
+    valid_soil_groups = set([soil_nodata, *map_soil_type_to_header.keys()])
 
     def cn_op(lulc_array, soil_group_array):
         """Map lulc code and soil to a curve number."""
@@ -1090,7 +1091,17 @@ def _calculate_curve_number_raster(
                 f" raster but not the table are: {missing_lulc_values}.")
             raise ValueError(error_message)
 
-        for soil_group_id in numpy.unique(soil_group_array):
+        unique_soil_groups = numpy.unique(soil_group_array)
+        invalid_soil_groups = set(unique_soil_groups) - valid_soil_groups
+        if invalid_soil_groups:
+            invalid_soil_groups = [str(group) for group in invalid_soil_groups]
+            raise ValueError(
+                "The soil group raster must only have groups 1, 2, 3 or 4. "
+                f"Invalid group(s) {', '.join(invalid_soil_groups)} were "
+                f"found in soil group raster {soil_group_path} "
+                f"(nodata value: {soil_nodata})")
+
+        for soil_group_id in unique_soil_groups:
             if soil_group_id == soil_nodata:
                 continue
             current_soil_mask = (soil_group_array == soil_group_id)
