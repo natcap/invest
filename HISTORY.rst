@@ -44,7 +44,7 @@ Unreleased Changes
 * Habitat Quality
     * The model now uses an euclidean distance implementation for decaying
       threat rasters both linearly and exponentially. Since InVEST 3.3.0 a
-      convolution implemenation has been used, which reflected how
+      convolution implementation has been used, which reflected how
       the density of a threat or surrounding threat pixels could have an
       even greater, cumulative impact and degradation over space. However, this
       was never properly documented in the User's Guide and is not the approach
