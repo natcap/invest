@@ -59,12 +59,12 @@ class CLIHeadlessTests(unittest.TestCase):
                 'run',
                 'coastal_blue_carbon',  # uses an exact modelname
                 '--datastack', new_parameter_set_path,
-                '--headless',
+                '--headless',  # unused, but recognized for backwards compat
             ])
         patched_model.assert_called_once()
 
     def test_run_coastal_blue_carbon(self):
-        """CLI: Run a model through the cli."""
+        """CLI: Run a model with cli-defined workspace."""
         from natcap.invest import cli
         parameter_set_path = os.path.join(
             os.path.dirname(__file__), '..', 'data', 'invest-test-data',
@@ -77,7 +77,6 @@ class CLIHeadlessTests(unittest.TestCase):
                 'run',
                 'coastal_blue_carbon',  # uses an exact modelname
                 '--datastack', parameter_set_path,
-                '--headless',
                 '--workspace', self.workspace_dir,
             ])
         patched_model.assert_called_once()
@@ -94,7 +93,6 @@ class CLIHeadlessTests(unittest.TestCase):
                 'run',
                 'coastal_blue_carbon',  # uses an exact modelname
                 '--datastack', parameter_set_path,
-                '--headless',
             ])
         self.assertEqual(exit_cm.exception.code, 1)
 
@@ -106,7 +104,6 @@ class CLIHeadlessTests(unittest.TestCase):
             cli.main([
                 'run',
                 'coastal_blue_carbon',  # uses an exact modelname
-                '--headless',
                 '--workspace', self.workspace_dir,
             ])
         self.assertEqual(exit_cm.exception.code, 1)
@@ -125,7 +122,6 @@ class CLIHeadlessTests(unittest.TestCase):
                 'run',
                 'coastal_blue_carbon',  # uses an exact modelname
                 '--datastack', parameter_set_path,
-                '--headless',
             ])
         self.assertEqual(exit_cm.exception.code, 1)
 
@@ -141,7 +137,6 @@ class CLIHeadlessTests(unittest.TestCase):
                 'run',
                 'coastal',  # ambiguous substring
                 '--datastack', parameter_set_path,
-                '--headless',
                 '--workspace', self.workspace_dir,
             ])
             self.assertEqual(exit_cm.exception.code, 1)
@@ -161,7 +156,6 @@ class CLIHeadlessTests(unittest.TestCase):
                 'run',
                 'cbc',  # uses an alias
                 '--datastack', parameter_set_path,
-                '--headless',
                 '--workspace', self.workspace_dir,
             ])
         patched_model.assert_called_once()

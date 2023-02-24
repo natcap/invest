@@ -20,7 +20,8 @@ import {
   getInvestModelNames,
   getSpec,
   fetchValidation,
-  fetchDatastackFromFile
+  fetchDatastackFromFile,
+  getSupportedLanguages
 } from '../../src/renderer/server_requests';
 import InvestJob from '../../src/renderer/InvestJob';
 import {
@@ -412,14 +413,18 @@ describe('InVEST global settings: dialog interactions', () => {
   const tgLoggingLabelText = 'Taskgraph logging threshold';
   const languageLabelText = 'Language';
 
+  beforeAll(() => {
+    delete global.window.location;
+    Object.defineProperty(global.window, 'location', {
+      configurable: true,
+      value: { reload: jest.fn() },
+    });
+  });
+
   beforeEach(async () => {
     getInvestModelNames.mockResolvedValue({});
-    ipcRenderer.invoke.mockImplementation((channel) => {
-      if (channel === ipcMainChannels.IS_DEV_MODE) {
-        return Promise.resolve(true); // mock dev mode so that language dropdown is rendered
-      }
-      return Promise.resolve();
-    });
+    getSupportedLanguages.mockResolvedValue({ en: 'english', es: 'spanish' });
+    ipcRenderer.invoke.mockImplementation(() => Promise.resolve());
   });
 
   test('Invest settings save on change', async () => {
@@ -882,6 +887,7 @@ describe('Translation', () => {
 
   beforeAll(async () => {
     getInvestModelNames.mockResolvedValue({});
+    getSupportedLanguages.mockResolvedValue({ en: 'english', es: 'spanish' });
 
     i18n.loadJSON(messageCatalog, 'messages');
 
@@ -889,9 +895,6 @@ describe('Translation', () => {
     ipcRenderer.invoke.mockImplementation((channel, arg) => {
       if (channel === ipcMainChannels.SET_LANGUAGE) {
         i18n.setLocale(arg);
-      }
-      if (channel === ipcMainChannels.IS_DEV_MODE) {
-        return Promise.resolve(true); // mock dev mode so that language dropdown is rendered
       }
       return Promise.resolve();
     });
@@ -906,6 +909,11 @@ describe('Translation', () => {
     // this is the same setup that's done in src/renderer/index.js (out of test scope)
     ipcRenderer.invoke(ipcMainChannels.SET_LANGUAGE, 'en');
     global.window._ = ipcRenderer.sendSync.bind(null, ipcMainChannels.GETTEXT);
+    delete global.window.location;
+    Object.defineProperty(global.window, 'location', {
+      configurable: true,
+      value: { reload: jest.fn() },
+    })
   });
 
   test('Text rerenders in new language when language setting changes', async () => {
@@ -924,6 +932,7 @@ describe('Translation', () => {
     // text within the settings modal component should be translated
     languageInput = await findByLabelText(messageCatalog.Language, { exact: false });
     expect(languageInput).toHaveValue(testLanguage);
+    expect(global.window.location.reload).toHaveBeenCalled();
 
     // text should also be translated in other components
     // such as the Open button (visible in background)

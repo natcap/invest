@@ -68,9 +68,4 @@ export default function setupSetLanguage() {
       event.returnValue = i18n.gettext(message);
     }
   );
-
-  ipcMain.handle(
-    ipcMainChannels.IS_DEV_MODE,
-    () => ELECTRON_DEV_MODE
-  );
 }

@@ -26,7 +26,6 @@ DATASTACKS = {
         'CropProduction/crop_production_regression_demo.invs.json'],
     'delineateit': ['DelineateIt/delineateit_gura.invs.json'],
     'forest_carbon_edge_effect': ['forest_carbon_edge_effect/forest_carbon_amazonia.invs.json'],
-    'globio': ['globio/globio_demo.invs.json'],
     'habitat_quality': ['HabitatQuality/habitat_quality_willamette.invs.json'],
     'hra': ['HabitatRiskAssess/hra_wcvi.invs.json'],
     'annual_water_yield': ['Annual_Water_Yield/annual_water_yield_gura.invs.json'],
@@ -61,15 +60,14 @@ def sh(command, capture=True):
         return p_stdout
 
 
-def run_model(modelname, binary, workspace, datastack, headless=False):
+def run_model(modelname, binary, workspace, datastack):
     """Run an InVEST model, checking the error code of the process."""
+    # Posix slashes in the exe are not acceptable on windows
+    if platform.system() == 'Windows':
+        binary = binary.replace('/', '\\')
     # Using a list here allows subprocess to handle escaping of paths.
-    if headless:
-        command = [binary, 'run', '--workspace', workspace,
-                   '--datastack', datastack, '--headless', modelname]
-    else:
-        command = [binary, 'quickrun', '--workspace', workspace,
-                   modelname, datastack]
+    command = [binary, 'run', '--workspace', workspace,
+               '--datastack', datastack, '--headless', modelname]
 
     # Subprocess on linux/mac seems to prefer a list of args, but path escaping
     # (by passing the command as a list) seems to work better on Windows.
@@ -145,31 +143,22 @@ def main(user_args=None):
     for modelname, datastack, datastack_index in pairs:
         datastack = os.path.join(args.cwd, datastack)
 
-        for headless in (True, False):
-            headless_string = ''
-            if headless:
-                headless_string = 'headless'
-            else:
-                headless_string = 'gui'
-            workspace = os.path.join(os.path.abspath(args.workspace),
-                                     'autorun_%s_%s_%s' % (modelname,
-                                                           headless_string,
-                                                           datastack_index))
-            process = pool.apply_async(run_model, (modelname,
-                                                   args.binary,
-                                                   workspace,
-                                                   datastack,
-                                                   headless))
-            processes.append((process, datastack, headless, workspace))
+        workspace = os.path.join(os.path.abspath(args.workspace),
+                                 'autorun_%s_%s' % (modelname,
+                                                       datastack_index))
+        process = pool.apply_async(run_model, (modelname,
+                                               args.binary,
+                                               workspace,
+                                               datastack))
+        processes.append((process, datastack, workspace))
 
     # get() blocks until the result is ready.
     model_results = {}
-    for _process, _datastack, _headless, _workspace in processes:
+    for _process, _datastack, _workspace in processes:
         result = _process.get()
-        model_results[(result[0], _datastack, _headless, _workspace)] = result[1:]
+        model_results[(result[0], _datastack, _workspace)] = result[1:]
 
-    # add 10 for ' (headless)'
-    max_width = max([len(key[0])+11 for key in model_results.keys()])
+    max_width = max([len(key[0]) for key in model_results.keys()])
     failures = 0
 
     datastack_width = max([len(key[1]) for key in model_results.keys()])
@@ -181,10 +170,8 @@ def main(user_args=None):
         'MODELNAME'.ljust(max_width+1),
         'EXIT CODE'.ljust(10),  # len('EXIT CODE')+1
         'DATASTACK')
-    for (modelname, datastack, headless, _), exitcode in sorted(
+    for (modelname, datastack, _), exitcode in sorted(
             model_results.items(), key=lambda x: x[0]):
-        if headless:
-            modelname += ' (headless)'
         status_messages += "%s %s %s\n" % (
             modelname.ljust(max_width+1),
             str(exitcode[0]).ljust(10),
@@ -200,12 +187,10 @@ def main(user_args=None):
             'DATASTACK'.ljust(datastack_width),
             'WORKSPACE'
         )
-        for (modelname, datastack, headless, workspace), exitcode in sorted(
+        for (modelname, datastack, workspace), exitcode in sorted(
                 [(k, v) for (k, v) in model_results.items()
                  if v[0] != 0],
                 key=lambda x: x[0]):
-            if headless:
-                modelname += ' (headless)'
             status_messages += "%s %s %s %s\n" % (
                 modelname.ljust(max_width+1),
                 str(exitcode[0]).ljust(10),
