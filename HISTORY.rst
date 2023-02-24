@@ -44,6 +44,10 @@ Unreleased Changes
 * Workbench
     * Added tooltips to the model tabs so that they can be identified even when
       several tabs are open (`#1071 <https://github.com/natcap/invest/issues/1088>`_)
+* Scenic Quality
+    * Any points over nodata (and therefore excluded from the viewshed
+      analysis) will now correctly have their FID reported in the logging.
+      https://github.com/natcap/invest/issues/1188
 * Seasonal Water Yield
     * If a soil group raster contains any pixels that are not in the set of
       allowed soil groups (anything other than 1, 2, 3 or 4), a human readable
