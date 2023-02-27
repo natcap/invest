@@ -1049,8 +1049,6 @@ class HabitatQualityTests(unittest.TestCase):
 
         # Reasonable to just check quality out in this case
         #assert_array_sum(
-        #    os.path.join(args['workspace_dir'], 'quality_c.tif'),
-        #    5852.088)
         assert_array_sum(
             os.path.join(args['workspace_dir'], 'quality_c.tif'),
             5852.088)
