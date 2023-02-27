@@ -52,6 +52,10 @@ Unreleased Changes
     * If a soil group raster contains any pixels that are not in the set of
       allowed soil groups (anything other than 1, 2, 3 or 4), a human readable
       exception will now be raised. https://github.com/natcap/invest/issues/1193
+* Visitation: Recreation and Tourism
+    * Fixed a ``FutureWarning`` when reading in CSVs. This fix does not
+      otherwise affect model behavior. https://github.com/natcap/invest/issues/1202
+
 
 3.12.1 (2022-12-16)
 -------------------
