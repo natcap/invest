@@ -266,7 +266,7 @@ class HabitatQualityTests(unittest.TestCase):
         wgs84_srs.ImportFromEPSG(4326)
         target_access_wkt = wgs84_srs.ExportToWkt()
         pygeoprocessing.reproject_vector(
-            'access_vector_path', target_access_wkt, access_wgs84_path)
+            access_vector_path, target_access_wkt, access_wgs84_path)
         args['access_vector_path'] = access_wgs84_path
 
         scenarios = ['_bas_', '_cur_', '_fut_']
