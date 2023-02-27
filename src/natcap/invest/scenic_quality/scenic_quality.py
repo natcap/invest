@@ -1,27 +1,26 @@
 """InVEST Scenic Quality Model."""
-import os
-import math
 import logging
-import tempfile
+import math
+import os
 import shutil
+import tempfile
 import time
 
 import numpy
-from osgeo import gdal
-from osgeo import osr
-import taskgraph
 import pygeoprocessing
 import rtree
 import shapely.geometry
-
+import taskgraph
 from natcap.invest.scenic_quality.viewshed import viewshed
-from .. import utils
+from osgeo import gdal
+from osgeo import osr
+
+from .. import gettext
 from .. import spec_utils
-from ..spec_utils import u
+from .. import utils
 from .. import validation
 from ..model_metadata import MODEL_METADATA
-from .. import gettext
-
+from ..spec_utils import u
 
 LOGGER = logging.getLogger(__name__)
 _VALUATION_NODATA = -99999  # largish negative nodata value.
@@ -549,6 +548,7 @@ def _determine_valid_viewpoints(dem_path, structures_path):
         dem_block = dem_band.ReadAsArray(**block_data)
         for item in intersecting_points:
             viewpoint = (item.bounds[0], item.bounds[2])
+            feature_id = item.id
             metadata = item.object
             ix_viewpoint = int(
                 (viewpoint[0] - dem_gt[0]) // dem_gt[1]) - block_data['xoff']
@@ -559,7 +559,7 @@ def _determine_valid_viewpoints(dem_path, structures_path):
                     dem_nodata).any():
                 LOGGER.info(
                     'Feature %s in layer %s is over nodata; skipping.',
-                    point.GetFID(), layer_name)
+                    feature_id, layer_name)
                 continue
 
             if viewpoint in valid_structures:
