@@ -12,6 +12,7 @@ GIT_UG_REPO                 := https://github.com/natcap/invest.users-guide
 GIT_UG_REPO_PATH            := doc/users-guide
 GIT_UG_REPO_REV             := 20bce284cb58ff4508a634cd2becde6ad175f7e1
 
+
 ENV = "./env"
 ifeq ($(OS),Windows_NT)
 	# Double $$ indicates windows environment variable

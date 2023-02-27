@@ -36,7 +36,7 @@ KERNEL_LABEL_GAUSSIAN = 'gaussian'
 KERNEL_LABEL_DENSITY = 'density'
 # KERNEL_LABEL_POWER = 'power'
 RADIUS_OPT_UNIFORM = 'uniform_radius'
-RADIUS_OPT_GREENSPACE = 'radius_per_greenspace_class'
+RADIUS_OPT_URBAN_NATURE = 'radius_per_urban_nature_class'
 RADIUS_OPT_POP_GROUP = 'radius_per_pop_group'
 POP_FIELD_REGEX = '^pop_'
 ID_FIELDNAME = 'adm_unit_id'
@@ -68,11 +68,11 @@ ARGS_SPEC = {
             'type': 'csv',
             'columns': {
                 'lucode': spec_utils.LULC_TABLE_COLUMN,
-                'greenspace': {
+                'urban_nature': {
                     'type': 'number',
                     'units': u.none,
                     'about': (
-                        "1 if this landcover code represents greenspace, 0 "
+                        "1 if this LULC code represents urban nature, 0 "
                         "if not."
                     ),
                 },
@@ -80,18 +80,18 @@ ARGS_SPEC = {
                     'type': 'number',
                     'units': u.meter,
                     'required':
-                        f'search_radius_mode == "{RADIUS_OPT_GREENSPACE}"',
+                        f'search_radius_mode == "{RADIUS_OPT_URBAN_NATURE}"',
                     'expression': 'value >= 0',
                     'about': (
                         'The distance in meters to use as the search radius '
-                        'for this type of greenspace. Values must be >= 0. '
+                        'for this type of urban nature. Values must be >= 0. '
                         'Required when running the model with search radii '
-                        'defined per greenspace class.'
+                        'defined per urban nature class.'
                     ),
                 }
             },
             'about': (
-                "A table identifying which LULC codes represent greenspace."
+                "A table identifying which LULC codes represent urban nature."
             ),
         },
         'population_raster_path': {
@@ -132,13 +132,13 @@ ARGS_SPEC = {
                 "summarized."
             ),
         },
-        'greenspace_demand': {
+        'urban_nature_demand': {
             'type': 'number',
-            'name': 'greenspace demand per capita',
+            'name': 'urban nature demand per capita',
             'units': u.m**2,  # defined as m² per capita
             'expression': "value > 0",
             'about': gettext(
-                "The amount of greenspace that each resident should have "
+                "The amount of urban nature that each resident should have "
                 "access to. This is often defined by local urban planning "
                 "documents."
             )
@@ -151,26 +151,26 @@ ARGS_SPEC = {
                     'display_name': 'Dichotomy',
                     'description': gettext(
                         'All pixels within the search radius contribute '
-                        'equally to a greenspace pixel.'),
+                        'equally to an urban nature pixel.'),
                 },
                 KERNEL_LABEL_EXPONENTIAL: {
                     'display_name': 'Exponential',
                     'description': gettext(
-                        'Contributions to a greenspace pixel decrease '
+                        'Contributions to an urban nature pixel decrease '
                         'exponentially, where '
                         '"weight = e^(-pixel_dist / search_radius)"'),
                 },
                 KERNEL_LABEL_GAUSSIAN: {
                     'display_name': 'Gaussian',
                     'description': gettext(
-                        'Contributions to a greenspace pixel decrease '
+                        'Contributions to an urban nature pixel decrease '
                         'according to a normal ("gaussian") distribution '
                         'with a sigma of 3.'),
                 },
                 KERNEL_LABEL_DENSITY: {
                     'display_name': 'Density',
                     'description': gettext(
-                        'Contributions to a greenspace pixel decrease '
+                        'Contributions to an urban nature pixel decrease '
                         'faster as distances approach the search radius. '
                         'Weights are calculated by '
                         '"weight = 0.75 * (1-(pixel_dist / search_radius)^2)"'
@@ -179,7 +179,7 @@ ARGS_SPEC = {
                 # KERNEL_LABEL_POWER: {
                 #     'display_name': 'Power',
                 #     'description': gettext(
-                #         'Contributions to a greenspace pixel decrease '
+                #         'Contributions to an urban nature pixel decrease '
                 #         'according to a user-defined negative power function '
                 #         'of the form "weight = pixel_dist^beta", where beta '
                 #         'is expected to be negative and defined by the user.'
@@ -187,8 +187,8 @@ ARGS_SPEC = {
                 # },
             },
             'about': (
-                'Pixels within the search radius of a greenspace pixel '
-                'have a distance-weighted contribution to a greenspace '
+                'Pixels within the search radius of an urban nature pixel '
+                'have a distance-weighted contribution to an urban nature '
                 'pixel according to the selected decay function.'),
         },
         'search_radius_mode': {
@@ -202,14 +202,14 @@ ARGS_SPEC = {
                 RADIUS_OPT_UNIFORM: {
                     'display_name': 'Uniform radius',
                     'description': gettext(
-                        'The search radius is the same for all greenspace '
-                        'types.'),
+                        'The search radius is the same for all types of '
+                        'urban nature.'),
                 },
-                RADIUS_OPT_GREENSPACE: {
-                    'display_name': 'Radius defined per greenspace class',
+                RADIUS_OPT_URBAN_NATURE: {
+                    'display_name': 'Radius defined per urban nature class',
                     'description': gettext(
                         'The search radius is defined for each distinct '
-                        'greenspace LULC classification.'),
+                        'urban nature LULC classification.'),
                 },
                 RADIUS_OPT_POP_GROUP: {
                     'display_name': 'Radius defined per population group',
@@ -273,8 +273,9 @@ ARGS_SPEC = {
             'about': gettext(
                 'A table associating population groups with the distance '
                 'in meters that members of the population group will, on '
-                'average, travel to find greenspace.  Required when running '
-                'the model with search radii defined per population group.'
+                'average, travel to find urban nature.  Required when '
+                'running the model with search radii defined per population '
+                'group.'
             ),
         },
         # 'decay_function_power_beta': {
@@ -293,11 +294,11 @@ ARGS_SPEC = {
 
 
 _OUTPUT_BASE_FILES = {
-    'greenspace_supply': 'greenspace_supply.tif',
+    'urban_nature_supply': 'urban_nature_supply.tif',
     'admin_boundaries': 'admin_boundaries.gpkg',
-    'greenspace_balance_percapita': 'greenspace_balance_percapita.tif',
-    'greenspace_balance_totalpop': 'greenspace_balance_totalpop.tif',
-    'greenspace_demand': 'greenspace_demand.tif',
+    'urban_nature_balance_percapita': 'urban_nature_balance_percapita.tif',
+    'urban_nature_balance_totalpop': 'urban_nature_balance_totalpop.tif',
+    'urban_nature_demand': 'urban_nature_demand.tif',
 }
 
 _INTERMEDIATE_BASE_FILES = {
@@ -306,8 +307,8 @@ _INTERMEDIATE_BASE_FILES = {
     'aligned_lulc': 'aligned_lulc.tif',
     'masked_lulc': 'masked_lulc.tif',
     'aligned_mask': 'aligned_valid_pixels_mask.tif',
-    'greenspace_area': 'greenspace_area.tif',
-    'greenspace_population_ratio': 'greenspace_population_ratio.tif',
+    'urban_nature_area': 'urban_nature_area.tif',
+    'urban_nature_population_ratio': 'urban_nature_population_ratio.tif',
     'convolved_population': 'convolved_population.tif',
     'undersupplied_population': 'undersupplied_population.tif',
     'oversupplied_population': 'oversupplied_population.tif',
@@ -334,13 +335,13 @@ def execute(args):
             CSV with the following columns:
 
             * ``lucode``: (required) the integer landcover code represented.
-            * ``greenspace``: (required) ``0`` or ``1`` indicating whether
-              this landcover code is (``1``) or is not (``0``) a greenspace
+            * ``urban_nature``: (required) ``0`` or ``1`` indicating whether
+              this landcover code is (``1``) or is not (``0``) an urban nature
               pixel.
             * ``search_radius_m``: (conditionally required) the search radius
-              for this greenspace landcover in meters. Required for all
-              greenspace lucodes if ``args['search_radius_mode'] ==
-              RADIUS_OPT_GREENSPACE``
+              for this urban nature LULC class in meters. Required for all
+              urban nature LULC codes if ``args['search_radius_mode'] ==
+              RADIUS_OPT_URBAN_NATURE``
 
         args['population_raster_path'] (string): (required) A string path to a
             GDAL-compatible raster where pixels represent the population of
@@ -353,13 +354,13 @@ def execute(args):
             unit belonging to the given population group.  The name of the
             population group (everything other than a leading ``"pop_"``) must
             uniquely identify the group.
-        args['greenspace_demand'] (number): (required) A positive, nonzero
-            number indicating the required greenspace, in m² per capita.
+        args['urban_nature_demand'] (number): (required) A positive, nonzero
+            number indicating the required urban_nature, in m² per capita.
         args['decay_function'] (string): (required) The selected kernel type.
             Must be one of the keys in ``KERNEL_TYPES``.
         args['search_radius_mode'] (string): (required).  The selected search
             radius mode.  Must be one of ``RADIUS_OPT_UNIFORM``,
-            ``RADIUS_OPT_GREENSPACE``, or ``RADIUS_OPT_POP_GROUP``.
+            ``RADIUS_OPT_URBAN_NATURE``, or ``RADIUS_OPT_POP_GROUP``.
         args['search_radius'] (number): Required if
             ``args['search_radius_mode'] == RADIUS_OPT_UNIFORM``.  The search
             radius in meters to use in the analysis.
@@ -524,15 +525,15 @@ def execute(args):
     _ = graph.add_task(
         pygeoprocessing.symbolic.evaluate_raster_calculator_expression,
         kwargs={
-            'expression': f"population * {float(args['greenspace_demand'])}",
+            'expression': f"population * {float(args['urban_nature_demand'])}",
             'symbol_to_path_band_map': {
                 'population': (file_registry['masked_population'], 1),
             },
             'target_nodata': FLOAT32_NODATA,
-            'target_raster_path': file_registry['greenspace_demand'],
+            'target_raster_path': file_registry['urban_nature_demand'],
         },
-        task_name='Calculate greenspace demand',
-        target_path_list=[file_registry['greenspace_demand']],
+        task_name='Calculate urban nature demand',
+        target_path_list=[file_registry['urban_nature_demand']],
         dependent_task_list=[population_mask_task]
     )
 
@@ -618,17 +619,17 @@ def execute(args):
 
     if args['search_radius_mode'] == RADIUS_OPT_UNIFORM:
         search_radii = set([float(args['search_radius'])])
-    elif args['search_radius_mode'] == RADIUS_OPT_GREENSPACE:
-        greenspace_attrs = attr_table[attr_table['greenspace'] == 1]
+    elif args['search_radius_mode'] == RADIUS_OPT_URBAN_NATURE:
+        urban_nature_attrs = attr_table[attr_table['urban_nature'] == 1]
         try:
-            search_radii = set(greenspace_attrs['search_radius_m'].unique())
+            search_radii = set(urban_nature_attrs['search_radius_m'].unique())
         except KeyError as missing_key:
             raise ValueError(
                 f"The column {str(missing_key)} is missing from the LULC "
                 f"attribute table {args['lulc_attribute_table']}")
         # Build an iterable of plain tuples: (lucode, search_radius_m)
         lucode_to_search_radii = list(
-            greenspace_attrs[['lucode', 'search_radius_m']].itertuples(
+            urban_nature_attrs[['lucode', 'search_radius_m']].itertuples(
                 index=False, name=None))
     elif args['search_radius_mode'] == RADIUS_OPT_POP_GROUP:
         pop_group_table = utils.read_csv_to_dataframe(
@@ -685,55 +686,55 @@ def execute(args):
             dependent_task_list=[
                 kernel_tasks[search_radius_m], population_mask_task])
 
-        greenspace_pixels_path = os.path.join(
-            intermediate_dir, f'greenspace_area{suffix}.tif')
-        greenspace_reclassification_task = graph.add_task(
-            _reclassify_greenspace_area,
+        urban_nature_pixels_path = os.path.join(
+            intermediate_dir, f'urban_nature_area{suffix}.tif')
+        urban_nature_reclassification_task = graph.add_task(
+            _reclassify_urban_nature_area,
             kwargs={
                 'lulc_raster_path': file_registry['masked_lulc'],
                 'lulc_attribute_table': args['lulc_attribute_table'],
-                'target_raster_path': greenspace_pixels_path,
+                'target_raster_path': urban_nature_pixels_path,
             },
-            target_path_list=[greenspace_pixels_path],
-            task_name='Identify greenspace areas',
+            target_path_list=[urban_nature_pixels_path],
+            task_name='Identify urban nature areas',
             dependent_task_list=[lulc_mask_task]
         )
 
-        greenspace_population_ratio_path = os.path.join(
+        urban_nature_population_ratio_path = os.path.join(
             intermediate_dir,
-            f'greenspace_population_ratio{suffix}.tif')
-        greenspace_population_ratio_task = graph.add_task(
-            _calculate_greenspace_population_ratio,
-            args=(greenspace_pixels_path,
+            f'urban_nature_population_ratio{suffix}.tif')
+        urban_nature_population_ratio_task = graph.add_task(
+            _calculate_urban_nature_population_ratio,
+            args=(urban_nature_pixels_path,
                   decayed_population_path,
-                  greenspace_population_ratio_path),
+                  urban_nature_population_ratio_path),
             task_name=(
-                '2SFCA: Calculate R_j greenspace/population ratio - '
+                '2SFCA: Calculate R_j urban nature/population ratio - '
                 f'{search_radius_m}'),
-            target_path_list=[greenspace_population_ratio_path],
+            target_path_list=[urban_nature_population_ratio_path],
             dependent_task_list=[
-                greenspace_reclassification_task, decayed_population_task,
+                urban_nature_reclassification_task, decayed_population_task,
             ])
 
-        greenspace_supply_task = graph.add_task(
+        urban_nature_supply_task = graph.add_task(
             _convolve_and_set_lower_bound,
             kwargs={
                 'signal_path_band': (
-                    greenspace_population_ratio_path, 1),
+                    urban_nature_population_ratio_path, 1),
                 'kernel_path_band': (kernel_path, 1),
-                'target_path': file_registry['greenspace_supply'],
+                'target_path': file_registry['urban_nature_supply'],
                 'working_dir': intermediate_dir,
             },
-            task_name='2SFCA - greenspace supply',
-            target_path_list=[file_registry['greenspace_supply']],
+            task_name='2SFCA - urban nature supply',
+            target_path_list=[file_registry['urban_nature_supply']],
             dependent_task_list=[
                 kernel_tasks[search_radius_m],
-                greenspace_population_ratio_task])
+                urban_nature_population_ratio_task])
 
     # Search radius mode 2: Search radii are defined per greenspace lulc class.
-    elif args['search_radius_mode'] == RADIUS_OPT_GREENSPACE:
+    elif args['search_radius_mode'] == RADIUS_OPT_URBAN_NATURE:
         LOGGER.info("Running model with search radius mode "
-                    f"{RADIUS_OPT_GREENSPACE}")
+                    f"{RADIUS_OPT_URBAN_NATURE}")
         decayed_population_tasks = {}
         decayed_population_paths = {}
         for search_radius_m in search_radii:
@@ -754,88 +755,88 @@ def execute(args):
                 dependent_task_list=[
                     kernel_tasks[search_radius_m], population_mask_task])
 
-        partial_greenspace_supply_paths = []
-        partial_greenspace_supply_tasks = []
+        partial_urban_nature_supply_paths = []
+        partial_urban_nature_supply_tasks = []
         for lucode, search_radius_m in lucode_to_search_radii:
-            greenspace_pixels_path = os.path.join(
+            urban_nature_pixels_path = os.path.join(
                 intermediate_dir,
-                f'greenspace_area_lucode_{lucode}{suffix}.tif')
-            greenspace_reclassification_task = graph.add_task(
-                _reclassify_greenspace_area,
+                f'urban_nature_area_lucode_{lucode}{suffix}.tif')
+            urban_nature_reclassification_task = graph.add_task(
+                _reclassify_urban_nature_area,
                 kwargs={
                     'lulc_raster_path': file_registry['masked_lulc'],
                     'lulc_attribute_table': args['lulc_attribute_table'],
-                    'target_raster_path': greenspace_pixels_path,
-                    'only_these_greenspace_codes': set([lucode]),
+                    'target_raster_path': urban_nature_pixels_path,
+                    'only_these_urban_nature_codes': set([lucode]),
                 },
-                target_path_list=[greenspace_pixels_path],
-                task_name=f'Identify greenspace areas with lucode {lucode}',
+                target_path_list=[urban_nature_pixels_path],
+                task_name=f'Identify urban nature areas with lucode {lucode}',
                 dependent_task_list=[lulc_mask_task]
             )
 
-            greenspace_population_ratio_path = os.path.join(
+            urban_nature_population_ratio_path = os.path.join(
                 intermediate_dir,
-                f'greenspace_population_ratio_lucode_{lucode}{suffix}.tif')
-            greenspace_population_ratio_task = graph.add_task(
-                _calculate_greenspace_population_ratio,
-                args=(greenspace_pixels_path,
+                f'urban_nature_population_ratio_lucode_{lucode}{suffix}.tif')
+            urban_nature_population_ratio_task = graph.add_task(
+                _calculate_urban_nature_population_ratio,
+                args=(urban_nature_pixels_path,
                       decayed_population_paths[search_radius_m],
-                      greenspace_population_ratio_path),
+                      urban_nature_population_ratio_path),
                 task_name=(
-                    '2SFCA: Calculate R_j greenspace/population ratio - '
+                    '2SFCA: Calculate R_j urban nature/population ratio - '
                     f'{search_radius_m}'),
-                target_path_list=[greenspace_population_ratio_path],
+                target_path_list=[urban_nature_population_ratio_path],
                 dependent_task_list=[
-                    greenspace_reclassification_task,
+                    urban_nature_reclassification_task,
                     decayed_population_tasks[search_radius_m],
                 ])
 
-            greenspace_supply_path = os.path.join(
+            urban_nature_supply_path = os.path.join(
                 intermediate_dir,
-                f'greenspace_supply_lucode_{lucode}{suffix}.tif')
-            partial_greenspace_supply_paths.append(greenspace_supply_path)
-            partial_greenspace_supply_tasks.append(graph.add_task(
+                f'urban_nature_supply_lucode_{lucode}{suffix}.tif')
+            partial_urban_nature_supply_paths.append(urban_nature_supply_path)
+            partial_urban_nature_supply_tasks.append(graph.add_task(
                 pygeoprocessing.convolve_2d,
                 kwargs={
                     'signal_path_band': (
-                        greenspace_population_ratio_path, 1),
+                        urban_nature_population_ratio_path, 1),
                     'kernel_path_band': (kernel_paths[search_radius_m], 1),
-                    'target_path': greenspace_supply_path,
+                    'target_path': urban_nature_supply_path,
                     'working_dir': intermediate_dir,
                 },
-                task_name=f'2SFCA - greenspace supply for lucode {lucode}',
-                target_path_list=[greenspace_supply_path],
+                task_name=f'2SFCA - urban_nature supply for lucode {lucode}',
+                target_path_list=[urban_nature_supply_path],
                 dependent_task_list=[
                     kernel_tasks[search_radius_m],
-                    greenspace_population_ratio_task]))
+                    urban_nature_population_ratio_task]))
 
-        greenspace_supply_task = graph.add_task(
+        urban_nature_supply_task = graph.add_task(
             ndr._sum_rasters,
             kwargs={
-                'raster_path_list': partial_greenspace_supply_paths,
+                'raster_path_list': partial_urban_nature_supply_paths,
                 'target_nodata': FLOAT32_NODATA,
-                'target_result_path': file_registry['greenspace_supply'],
+                'target_result_path': file_registry['urban_nature_supply'],
             },
-            task_name='2SFCA - greenspace supply total',
-            target_path_list=[file_registry['greenspace_supply']],
-            dependent_task_list=partial_greenspace_supply_tasks
+            task_name='2SFCA - urban nature supply total',
+            target_path_list=[file_registry['urban_nature_supply']],
+            dependent_task_list=partial_urban_nature_supply_tasks
         )
 
     # Search radius mode 3: search radii are defined per population group.
     elif args['search_radius_mode'] == RADIUS_OPT_POP_GROUP:
         LOGGER.info("Running model with search radius mode "
                     f"{RADIUS_OPT_POP_GROUP}")
-        greenspace_pixels_path = os.path.join(
-            intermediate_dir, f'greenspace_area{suffix}.tif')
-        greenspace_reclassification_task = graph.add_task(
-            _reclassify_greenspace_area,
+        urban_nature_pixels_path = os.path.join(
+            intermediate_dir, f'urban_nature_area{suffix}.tif')
+        urban_nature_reclassification_task = graph.add_task(
+            _reclassify_urban_nature_area,
             kwargs={
                 'lulc_raster_path': file_registry['masked_lulc'],
                 'lulc_attribute_table': args['lulc_attribute_table'],
-                'target_raster_path': greenspace_pixels_path,
+                'target_raster_path': urban_nature_pixels_path,
             },
-            target_path_list=[greenspace_pixels_path],
-            task_name='Identify greenspace areas',
+            target_path_list=[urban_nature_pixels_path],
+            task_name='Identify urban nature areas',
             dependent_task_list=[lulc_mask_task]
         )
 
@@ -875,23 +876,23 @@ def execute(args):
                 'target_nodata': FLOAT32_NODATA,
                 'target_result_path': sum_of_decayed_population_path,
             },
-            task_name='2SFCA - greenspace supply total',
+            task_name='2SFCA - urban nature supply total',
             target_path_list=[sum_of_decayed_population_path],
             dependent_task_list=decayed_population_in_group_tasks
         )
 
-        greenspace_population_ratio_task = graph.add_task(
-            _calculate_greenspace_population_ratio,
-            args=(greenspace_pixels_path,
+        urban_nature_population_ratio_task = graph.add_task(
+            _calculate_urban_nature_population_ratio,
+            args=(urban_nature_pixels_path,
                   sum_of_decayed_population_path,
-                  file_registry['greenspace_population_ratio']),
+                  file_registry['urban_nature_population_ratio']),
             task_name=(
-                '2SFCA: Calculate R_j greenspace/population ratio - '
+                '2SFCA: Calculate R_j urban nature/population ratio - '
                 f'{search_radius_m}'),
             target_path_list=[
-                file_registry['greenspace_population_ratio']],
+                file_registry['urban_nature_population_ratio']],
             dependent_task_list=[
-                greenspace_reclassification_task,
+                urban_nature_reclassification_task,
                 sum_of_decayed_population_task,
             ])
 
@@ -901,85 +902,85 @@ def execute(args):
         search_radii = dict(
             group_radii_table[['pop_group', 'search_radius_m']].itertuples(
                 index=False, name=None))
-        greenspace_supply_by_group_paths = {}
-        greenspace_supply_by_group_tasks = []
-        greenspace_balance_totalpop_by_group_paths = {}
-        greenspace_balance_totalpop_by_group_tasks = []
+        urban_nature_supply_by_group_paths = {}
+        urban_nature_supply_by_group_tasks = []
+        urban_nature_balance_totalpop_by_group_paths = {}
+        urban_nature_balance_totalpop_by_group_tasks = []
         supply_population_paths = {'over': {}, 'under': {}}
         supply_population_tasks = {'over': {}, 'under': {}}
         for pop_group, proportional_pop_path in (
                 proportional_population_paths.items()):
             search_radius_m = search_radii[pop_group]
-            greenspace_supply_to_group_path = os.path.join(
+            urban_nature_supply_to_group_path = os.path.join(
                 intermediate_dir,
-                f'greenspace_supply_to_{pop_group}{suffix}.tif')
-            greenspace_supply_by_group_paths[
-                pop_group] = greenspace_supply_to_group_path
-            greenspace_supply_by_group_task = graph.add_task(
+                f'urban_nature_supply_to_{pop_group}{suffix}.tif')
+            urban_nature_supply_by_group_paths[
+                pop_group] = urban_nature_supply_to_group_path
+            urban_nature_supply_by_group_task = graph.add_task(
                 pygeoprocessing.convolve_2d,
                 kwargs={
                     'signal_path_band': (
-                        file_registry['greenspace_population_ratio'], 1),
+                        file_registry['urban_nature_population_ratio'], 1),
                     'kernel_path_band': (kernel_paths[search_radius_m], 1),
-                    'target_path': greenspace_supply_to_group_path,
+                    'target_path': urban_nature_supply_to_group_path,
                     'working_dir': intermediate_dir,
                 },
-                task_name=f'2SFCA - greenspace supply for {pop_group}',
-                target_path_list=[greenspace_supply_to_group_path],
+                task_name=f'2SFCA - urban nature supply for {pop_group}',
+                target_path_list=[urban_nature_supply_to_group_path],
                 dependent_task_list=[
                     kernel_tasks[search_radius_m],
-                    greenspace_population_ratio_task])
-            greenspace_supply_by_group_tasks.append(
-                greenspace_supply_by_group_task)
+                    urban_nature_population_ratio_task])
+            urban_nature_supply_by_group_tasks.append(
+                urban_nature_supply_by_group_task)
 
             # Calculate SUP_DEMi_cap for each population group.
-            per_cap_greenspace_balance_pop_group_path = os.path.join(
+            per_cap_urban_nature_balance_pop_group_path = os.path.join(
                 output_dir,
-                f'greenspace_balance_percapita_{pop_group}{suffix}.tif')
-            per_cap_greenspace_balance_pop_group_task = graph.add_task(
+                f'urban_nature_balance_percapita_{pop_group}{suffix}.tif')
+            per_cap_urban_nature_balance_pop_group_task = graph.add_task(
                 pygeoprocessing.raster_calculator,
                 kwargs={
                     'base_raster_path_band_const_list': [
-                        (greenspace_supply_to_group_path, 1),
-                        (float(args['greenspace_demand']), 'raw')
+                        (urban_nature_supply_to_group_path, 1),
+                        (float(args['urban_nature_demand']), 'raw')
                     ],
-                    'local_op': _greenspace_balance_percapita_op,
+                    'local_op': _urban_nature_balance_percapita_op,
                     'target_raster_path':
-                        per_cap_greenspace_balance_pop_group_path,
+                        per_cap_urban_nature_balance_pop_group_path,
                     'datatype_target': gdal.GDT_Float32,
                     'nodata_target': FLOAT32_NODATA
                 },
                 task_name=(
-                    f'Calculate per-capita greenspace balance - {pop_group}'),
+                    f'Calculate per-capita urban nature balance - {pop_group}'),
                 target_path_list=[
-                    per_cap_greenspace_balance_pop_group_path],
+                    per_cap_urban_nature_balance_pop_group_path],
                 dependent_task_list=[
-                    greenspace_supply_by_group_task,
+                    urban_nature_supply_by_group_task,
                 ])
 
-            greenspace_balance_totalpop_by_group_path = os.path.join(
-                output_dir,
-                f'greenspace_balance_totalpop_{pop_group}{suffix}.tif')
-            greenspace_balance_totalpop_by_group_paths[
-                pop_group] = greenspace_balance_totalpop_by_group_path
-            greenspace_balance_totalpop_by_group_tasks.append(graph.add_task(
+            urban_nature_balance_totalpop_by_group_path = os.path.join(
+                intermediate_dir,
+                f'urban_nature_balance_totalpop_{pop_group}{suffix}.tif')
+            urban_nature_balance_totalpop_by_group_paths[
+                pop_group] = urban_nature_balance_totalpop_by_group_path
+            urban_nature_balance_totalpop_by_group_tasks.append(graph.add_task(
                 pygeoprocessing.raster_calculator,
                 kwargs={
                     'base_raster_path_band_const_list': [
-                        (per_cap_greenspace_balance_pop_group_path, 1),
+                        (per_cap_urban_nature_balance_pop_group_path, 1),
                         (proportional_pop_path, 1)
                     ],
-                    'local_op': _greenspace_balance_totalpop_op,
+                    'local_op': _urban_nature_balance_totalpop_op,
                     'target_raster_path': (
-                        greenspace_balance_totalpop_by_group_path),
+                        urban_nature_balance_totalpop_by_group_path),
                     'datatype_target': gdal.GDT_Float32,
                     'nodata_target': FLOAT32_NODATA
                 },
-                task_name='Calculate per-capita greenspace supply-demand',
+                task_name='Calculate per-capita urban nature supply-demand',
                 target_path_list=[
-                    greenspace_balance_totalpop_by_group_path],
+                    urban_nature_balance_totalpop_by_group_path],
                 dependent_task_list=[
-                    per_cap_greenspace_balance_pop_group_task,
+                    per_cap_urban_nature_balance_pop_group_task,
                     proportional_population_tasks[pop_group],
                 ]))
 
@@ -996,7 +997,7 @@ def execute(args):
                     kwargs={
                         'base_raster_path_band_const_list': [
                             (proportional_pop_path, 1),
-                            (per_cap_greenspace_balance_pop_group_path, 1),
+                            (per_cap_urban_nature_balance_pop_group_path, 1),
                             (op, 'raw'),  # numpy element-wise comparator
                         ],
                         'local_op': _filter_population,
@@ -1009,60 +1010,60 @@ def execute(args):
                         f'{pop_group}'),
                     target_path_list=[supply_population_path],
                     dependent_task_list=[
-                        per_cap_greenspace_balance_pop_group_task,
+                        per_cap_urban_nature_balance_pop_group_task,
                         proportional_population_tasks[pop_group],
                     ])
 
-        greenspace_supply_task = graph.add_task(
+        urban_nature_supply_task = graph.add_task(
             _weighted_sum,
             kwargs={
                 'raster_path_list':
-                    [greenspace_supply_by_group_paths[group] for group in
+                    [urban_nature_supply_by_group_paths[group] for group in
                      sorted(split_population_fields)],
                 'weight_raster_list':
                     [pop_group_proportion_paths[group] for group in
                      sorted(split_population_fields)],
-                'target_path': file_registry['greenspace_supply'],
+                'target_path': file_registry['urban_nature_supply'],
             },
-            task_name='2SFCA - greenspace supply total',
-            target_path_list=[file_registry['greenspace_supply']],
+            task_name='2SFCA - urban nature supply total',
+            target_path_list=[file_registry['urban_nature_supply']],
             dependent_task_list=[
-                *greenspace_supply_by_group_tasks,
+                *urban_nature_supply_by_group_tasks,
                 *pop_group_proportion_tasks.values(),
             ])
 
-        per_capita_greenspace_balance_task = graph.add_task(
+        per_capita_urban_nature_balance_task = graph.add_task(
             pygeoprocessing.raster_calculator,
             kwargs={
                 'base_raster_path_band_const_list': [
-                    (file_registry['greenspace_supply'], 1),
-                    (float(args['greenspace_demand']), 'raw')
+                    (file_registry['urban_nature_supply'], 1),
+                    (float(args['urban_nature_demand']), 'raw')
                 ],
-                'local_op': _greenspace_balance_percapita_op,
+                'local_op': _urban_nature_balance_percapita_op,
                 'target_raster_path':
-                    file_registry['greenspace_balance_percapita'],
+                    file_registry['urban_nature_balance_percapita'],
                 'datatype_target': gdal.GDT_Float32,
                 'nodata_target': FLOAT32_NODATA
             },
-            task_name='Calculate per-capita greenspace balance',
-            target_path_list=[file_registry['greenspace_balance_percapita']],
+            task_name='Calculate per-capita urban nature balance',
+            target_path_list=[file_registry['urban_nature_balance_percapita']],
             dependent_task_list=[
-                greenspace_supply_task,
+                urban_nature_supply_task,
             ])
 
-        greenspace_balance_totalpop_task = graph.add_task(
+        urban_nature_balance_totalpop_task = graph.add_task(
             ndr._sum_rasters,
             kwargs={
                 'raster_path_list':
-                    list(greenspace_balance_totalpop_by_group_paths.values()),
+                    list(urban_nature_balance_totalpop_by_group_paths.values()),
                 'target_nodata': FLOAT32_NODATA,
                 'target_result_path':
-                    file_registry['greenspace_balance_totalpop'],
+                    file_registry['urban_nature_balance_totalpop'],
             },
-            task_name='2SFCA - greenspace balance - total population',
+            task_name='2SFCA - urban nature - total population',
             target_path_list=[
-                file_registry['greenspace_balance_totalpop']],
-            dependent_task_list=greenspace_balance_totalpop_by_group_tasks
+                file_registry['urban_nature_balance_totalpop']],
+            dependent_task_list=urban_nature_balance_totalpop_by_group_tasks
         )
 
         # Summary stats for RADIUS_OPT_POP_GROUP
@@ -1071,8 +1072,8 @@ def execute(args):
             kwargs={
                 'source_aoi_vector_path': file_registry['reprojected_admin_boundaries'],
                 'target_aoi_vector_path': file_registry['admin_boundaries'],
-                'greenspace_sup_dem_paths_by_pop_group':
-                    greenspace_balance_totalpop_by_group_paths,
+                'urban_nature_sup_dem_paths_by_pop_group':
+                    urban_nature_balance_totalpop_by_group_paths,
                 'proportional_pop_paths_by_pop_group':
                     proportional_population_paths,
                 'undersupply_by_pop_group': supply_population_paths['under'],
@@ -1083,55 +1084,55 @@ def execute(args):
             target_path_list=[file_registry['admin_boundaries']],
             dependent_task_list=[
                 aoi_reprojection_task,
-                *greenspace_balance_totalpop_by_group_tasks,
+                *urban_nature_balance_totalpop_by_group_tasks,
                 *proportional_population_tasks.values(),
                 *supply_population_tasks['under'].values(),
                 *supply_population_tasks['over'].values(),
             ])
 
     # Greenspace budget, supply/demand and over/undersupply rasters are the
-    # same for uniform radius and for split greenspace modes.
+    # same for uniform radius and for split urban_nature modes.
     if args['search_radius_mode'] in (RADIUS_OPT_UNIFORM,
-                                      RADIUS_OPT_GREENSPACE):
+                                      RADIUS_OPT_URBAN_NATURE):
         # This is "SUP_DEMi_cap" from the user's guide
-        per_capita_greenspace_balance_task = graph.add_task(
+        per_capita_urban_nature_balance_task = graph.add_task(
             pygeoprocessing.raster_calculator,
             kwargs={
                 'base_raster_path_band_const_list': [
-                    (file_registry['greenspace_supply'], 1),
-                    (float(args['greenspace_demand']), 'raw')
+                    (file_registry['urban_nature_supply'], 1),
+                    (float(args['urban_nature_demand']), 'raw')
                 ],
-                'local_op': _greenspace_balance_percapita_op,
+                'local_op': _urban_nature_balance_percapita_op,
                 'target_raster_path':
-                    file_registry['greenspace_balance_percapita'],
+                    file_registry['urban_nature_balance_percapita'],
                 'datatype_target': gdal.GDT_Float32,
                 'nodata_target': FLOAT32_NODATA
             },
-            task_name='Calculate per-capita greenspace balance',
-            target_path_list=[file_registry['greenspace_balance_percapita']],
+            task_name='Calculate per-capita urban nature balance',
+            target_path_list=[file_registry['urban_nature_balance_percapita']],
             dependent_task_list=[
-                greenspace_supply_task,
+                urban_nature_supply_task,
             ])
 
         # This is "SUP_DEMi" from the user's guide
-        greenspace_balance_totalpop = graph.add_task(
+        urban_nature_balance_totalpop_task = graph.add_task(
             pygeoprocessing.raster_calculator,
             kwargs={
                 'base_raster_path_band_const_list': [
-                    (file_registry['greenspace_balance_percapita'], 1),
+                    (file_registry['urban_nature_balance_percapita'], 1),
                     (file_registry['masked_population'], 1)
                 ],
-                'local_op': _greenspace_balance_totalpop_op,
+                'local_op': _urban_nature_balance_totalpop_op,
                 'target_raster_path': (
-                    file_registry['greenspace_balance_totalpop']),
+                    file_registry['urban_nature_balance_totalpop']),
                 'datatype_target': gdal.GDT_Float32,
                 'nodata_target': FLOAT32_NODATA
             },
-            task_name='Calculate greenspace balance for the total population',
+            task_name='Calculate urban nature balance for the total population',
             target_path_list=[
-                file_registry['greenspace_balance_totalpop']],
+                file_registry['urban_nature_balance_totalpop']],
             dependent_task_list=[
-                 per_capita_greenspace_balance_task,
+                 per_capita_urban_nature_balance_task,
                  population_mask_task,
             ])
 
@@ -1159,7 +1160,7 @@ def execute(args):
                     kwargs={
                         'base_raster_path_band_const_list': [
                             (proportional_pop_path, 1),
-                            (file_registry['greenspace_balance_percapita'], 1),
+                            (file_registry['urban_nature_balance_percapita'], 1),
                             (op, 'raw'),  # numpy element-wise comparator
                         ],
                         'local_op': _filter_population,
@@ -1170,7 +1171,7 @@ def execute(args):
                     task_name=f'Determine {supply_type}supplied populations',
                     target_path_list=[supply_population_path],
                     dependent_task_list=[
-                        per_capita_greenspace_balance_task,
+                        per_capita_urban_nature_balance_task,
                         population_mask_task,
                         *list(proportional_population_tasks.values()),
                     ]))
@@ -1180,8 +1181,8 @@ def execute(args):
             kwargs={
                 'source_aoi_vector_path': file_registry['reprojected_admin_boundaries'],
                 'target_aoi_vector_path': file_registry['admin_boundaries'],
-                'greenspace_budget_path': file_registry[
-                    'greenspace_balance_totalpop'],
+                'urban_nature_budget_path': file_registry[
+                    'urban_nature_balance_totalpop'],
                 'population_path': file_registry['masked_population'],
                 'undersupplied_populations_path': file_registry[
                     'undersupplied_population'],
@@ -1195,7 +1196,7 @@ def execute(args):
             dependent_task_list=[
                 population_mask_task,
                 aoi_reprojection_task,
-                greenspace_balance_totalpop,
+                urban_nature_balance_totalpop_task,
                 *supply_population_tasks
             ])
 
@@ -1317,12 +1318,12 @@ def _weighted_sum(raster_path_list, weight_raster_list, target_path):
 def _reclassify_and_multiply(
         aois_raster_path, reclassification_map, supply_raster_path,
         target_raster_path):
-    """Create a raster of greenspace supply given areas of interest.
+    """Create a raster of urban nature supply given areas of interest.
 
     This is done by:
 
         1. Reclassifying AOI IDs to population group ratios and then
-        2. Multiplying the population group ratios by the greenspace supply.
+        2. Multiplying the population group ratios by the urban nature supply.
 
     Args:
         aois_raster_path (string): The path to a raster of integers
@@ -1330,7 +1331,7 @@ def _reclassify_and_multiply(
         reclassification_map (dict): A dict mapping integer admin unit IDs to
             float population proportions (values 0-1) for a given population
             group.
-        supply_raster_path (string): A string path to a raster of greenspace
+        supply_raster_path (string): A string path to a raster of urban nature
             supply values for the total population.
         target_raster_path (string): The string path to where the resulting
             supply-to-group raster should be written.
@@ -1427,26 +1428,26 @@ def _rasterize_aois(base_raster_path, aois_vector_path,
         option_list=[f"ATTRIBUTE={id_fieldname}"])
 
 
-def _reclassify_greenspace_area(
+def _reclassify_urban_nature_area(
         lulc_raster_path, lulc_attribute_table, target_raster_path,
-        only_these_greenspace_codes=None):
-    """Reclassify LULC pixels into the greenspace area they represent.
+        only_these_urban_nature_codes=None):
+    """Reclassify LULC pixels into the urban nature area they represent.
 
-    After execution, greenspace pixels will have values representing the
-    pixel's area, while non-greenspace pixels will have a pixel value of 0.
-    Nodata values will propagate to the output raster.
+    After execution, urban nature pixels will have values representing the
+    pixel's area, while pixels that are not urban nature will have a pixel
+    value of 0.  Nodata values will propagate to the output raster.
 
     Args:
         lulc_raster_path (string): The path to a land-use/land-cover raster.
         lulc_attribute_table (string): The path to a CSV table representing
-            LULC attributes.  Must have "lucode" and "greenspace" columns.
-        target_raster_path (string): Where the reclassified greenspace raster
+            LULC attributes.  Must have "lucode" and "urban_nature" columns.
+        target_raster_path (string): Where the reclassified urban nature raster
             should be written.
-        only_these_greenspace_codes=None (iterable or None): If ``None``, all
-            lucodes with a ``greenspace`` value of 1 will be reclassified to 1.
-            If an iterable, must be an iterable of landuse codes matching codes
-            in the lulc attribute table.  Only these landcover codes will have
-            greenspace area classified in the target raster path.
+        only_these_urban_nature_codes=None (iterable or None): If ``None``, all
+            lucodes with a ``urban_nature`` value of 1 will be reclassified to
+            1.  If an iterable, must be an iterable of landuse codes matching
+            codes in the lulc attribute table.  Only these landcover codes will
+            have urban nature area classified in the target raster path.
 
     Returns:
         ``None``
@@ -1457,47 +1458,47 @@ def _reclassify_greenspace_area(
     squared_pixel_area = abs(
         numpy.multiply(*_square_off_pixels(lulc_raster_path)))
 
-    if only_these_greenspace_codes:
-        valid_greenspace_codes = set(only_these_greenspace_codes)
+    if only_these_urban_nature_codes:
+        valid_urban_nature_codes = set(only_these_urban_nature_codes)
     else:
-        valid_greenspace_codes = set(
+        valid_urban_nature_codes = set(
             lucode for lucode, attributes in attribute_table_dict.items()
-            if (attributes['greenspace']) == 1)
+            if (attributes['urban_nature']) == 1)
 
-    greenspace_area_map = {}
+    urban_nature_area_map = {}
     for lucode, attributes in attribute_table_dict.items():
-        greenspace_area = 0
-        if lucode in valid_greenspace_codes:
-            greenspace_area = squared_pixel_area
-        greenspace_area_map[lucode] = greenspace_area
+        urban_nature_area = 0
+        if lucode in valid_urban_nature_codes:
+            urban_nature_area = squared_pixel_area
+        urban_nature_area_map[lucode] = urban_nature_area
 
     lulc_raster_info = pygeoprocessing.get_raster_info(lulc_raster_path)
-    greenspace_area_map[lulc_raster_info['nodata'][0]] = FLOAT32_NODATA
+    urban_nature_area_map[lulc_raster_info['nodata'][0]] = FLOAT32_NODATA
 
     utils.reclassify_raster(
         raster_path_band=(lulc_raster_path, 1),
-        value_map=greenspace_area_map,
+        value_map=urban_nature_area_map,
         target_raster_path=target_raster_path,
         target_datatype=gdal.GDT_Float32,
         target_nodata=FLOAT32_NODATA,
         error_details={
             'raster_name': ARGS_SPEC['args']['lulc_raster_path']['name'],
-            'column_name': 'greenspace',
+            'column_name': 'urban_nature',
             'table_name': ARGS_SPEC['args']['lulc_attribute_table']['name'],
         }
     )
 
 
-def _filter_population(population, greenspace_budget, numpy_filter_op):
-    """Filter the population by a defined op and the greenspace budget.
+def _filter_population(population, urban_nature_budget, numpy_filter_op):
+    """Filter the population by a defined op and the urban nature budget.
 
     Note:
-        The ``population`` and ``greenspace_budget`` inputs must have the same
+        The ``population`` and ``urban_nature_budget`` inputs must have the same
         shape and must both use ``FLOAT32_NODATA`` as their nodata value.
 
     Args:
         population (numpy.array): A numpy array with population counts.
-        greenspace_budget (numpy.array): A numpy array with the greenspace
+        urban_nature_budget (numpy.array): A numpy array with the urban nature
             budget values.
         numpy_filter_op (callable): A function that takes a numpy array as
             parameter 1 and a scalar value as parameter 2.  This function must
@@ -1505,16 +1506,16 @@ def _filter_population(population, greenspace_budget, numpy_filter_op):
 
     Returns:
         A ``numpy.array`` with the population values where the
-        ``greenspace_budget`` pixels match the ``numpy_filter_op``.
+        ``urban_nature_budget`` pixels match the ``numpy_filter_op``.
     """
     population_matching_filter = numpy.full(
         population.shape, FLOAT32_NODATA, dtype=numpy.float32)
     valid_pixels = (
-        ~numpy.isclose(greenspace_budget, FLOAT32_NODATA) &
+        ~numpy.isclose(urban_nature_budget, FLOAT32_NODATA) &
         ~numpy.isclose(population, FLOAT32_NODATA))
 
     population_matching_filter[valid_pixels] = numpy.where(
-        numpy_filter_op(greenspace_budget[valid_pixels], 0),
+        numpy_filter_op(urban_nature_budget[valid_pixels], 0),
         population[valid_pixels],  # If condition is true, use population
         0  # If condition is false, use 0
     )
@@ -1524,7 +1525,7 @@ def _filter_population(population, greenspace_budget, numpy_filter_op):
 def _supply_demand_vector_for_pop_groups(
         source_aoi_vector_path,
         target_aoi_vector_path,
-        greenspace_sup_dem_paths_by_pop_group,
+        urban_nature_sup_dem_paths_by_pop_group,
         proportional_pop_paths_by_pop_group,
         undersupply_by_pop_group,
         oversupply_by_pop_group):
@@ -1533,8 +1534,8 @@ def _supply_demand_vector_for_pop_groups(
     Args:
         source_aoi_vector_path (str): The source AOI vector path.
         target_aoi_vector_path (str): The target AOI vector path.
-        greenspace_sup_dem_paths_by_pop_group (dict): A dict mapping population
-            group names to rasters of greenspace supply/demand for the given
+        urban_nature_sup_dem_paths_by_pop_group (dict): A dict mapping population
+            group names to rasters of urban nature supply/demand for the given
             group.
         proportional_pop_paths_by_pop_group (dict): A dict mapping population
             group names to rasters of the population of that group.
@@ -1576,8 +1577,8 @@ def _supply_demand_vector_for_pop_groups(
         # trim the leading 'pop_'
         groupname = re.sub(POP_FIELD_REGEX, '', pop_group_field)
 
-        greenspace_sup_dem_stats = _get_zonal_stats(
-            greenspace_sup_dem_paths_by_pop_group[pop_group_field])
+        urban_nature_sup_dem_stats = _get_zonal_stats(
+            urban_nature_sup_dem_paths_by_pop_group[pop_group_field])
         proportional_pop_stats = _get_zonal_stats(
             proportional_pop_paths_by_pop_group[pop_group_field])
         undersupply_stats = _get_zonal_stats(
@@ -1588,7 +1589,7 @@ def _supply_demand_vector_for_pop_groups(
         for feature_id in feature_ids:
             group_population_in_region = proportional_pop_stats[
                 feature_id]['sum']
-            group_sup_dem_in_region = greenspace_sup_dem_stats[
+            group_sup_dem_in_region = urban_nature_sup_dem_stats[
                 feature_id]['sum']
             stats_by_feature[feature_id][f'SUP_DEMadm_cap_{groupname}'] = (
                 group_sup_dem_in_region / group_population_in_region)
@@ -1614,7 +1615,7 @@ def _supply_demand_vector_for_pop_groups(
 def _supply_demand_vector_for_single_raster_modes(
         source_aoi_vector_path,
         target_aoi_vector_path,
-        greenspace_budget_path,
+        urban_nature_budget_path,
         population_path,
         undersupplied_populations_path,
         oversupplied_populations_path,
@@ -1625,7 +1626,7 @@ def _supply_demand_vector_for_single_raster_modes(
         source_aoi_vector_path (str): Path to the source aois vector.
         target_aoi_vector_path (str): Path to where the target aois vector
             should be written.
-        greenspace_budget_path (str): Path to a raster of greenspace
+        urban_nature_budget_path (str): Path to a raster of urban nature
             supply/demand budget.
         population_path (str): Path to a population raster.
         undersupplied_populations_path (str): Path to a raster of oversupplied
@@ -1642,7 +1643,7 @@ def _supply_demand_vector_for_single_raster_modes(
         return pygeoprocessing.zonal_statistics(
             (raster_path, 1), source_aoi_vector_path)
 
-    greenspace_budget_stats = _get_zonal_stats(greenspace_budget_path)
+    urban_nature_budget_stats = _get_zonal_stats(urban_nature_budget_path)
     population_stats = _get_zonal_stats(population_path)
     undersupplied_stats = _get_zonal_stats(undersupplied_populations_path)
     oversupplied_stats = _get_zonal_stats(oversupplied_populations_path)
@@ -1663,10 +1664,10 @@ def _supply_demand_vector_for_single_raster_modes(
                 pop_proportions_by_fid[id_field][group] = value
 
     stats_by_feature = {}
-    for fid in greenspace_budget_stats.keys():
+    for fid in urban_nature_budget_stats.keys():
         stats = {
             'SUP_DEMadm_cap': (
-                greenspace_budget_stats[fid]['sum'] /
+                urban_nature_budget_stats[fid]['sum'] /
                 population_stats[fid]['sum']),
             'Pund_adm': undersupplied_stats[fid]['sum'],
             'Povr_adm': oversupplied_stats[fid]['sum'],
@@ -1726,142 +1727,142 @@ def _write_supply_demand_vector(source_aoi_vector_path, feature_attrs,
     target_vector = None
 
 
-def _greenspace_balance_percapita_op(greenspace_supply, greenspace_demand):
-    """Calculate the per-capita greenspace balance.
+def _urban_nature_balance_percapita_op(urban_nature_supply, urban_nature_demand):
+    """Calculate the per-capita urban nature balance.
 
-    This is the amount of greenspace that each pixel has above (positive
-    values) or below (negative values) the user-defined ``greenspace_demand``
+    This is the amount of urban nature that each pixel has above (positive
+    values) or below (negative values) the user-defined ``urban_nature_demand``
     value.
 
     Args:
-        greenspace_supply (numpy.array): The supply of greenspace available to
+        urban_nature_supply (numpy.array): The supply of urban nature available to
             each person in the population.  This is ``Ai`` in the User's Guide.
             This matrix must have ``FLOAT32_NODATA`` as its nodata value.
-        greenspace_demand (float): The policy-defined greenspace requirement,
+        urban_nature_demand (float): The policy-defined urban nature requirement,
             in square meters per person.
 
     Returns:
-        A ``numpy.array`` of the calculated greenspace budget.
+        A ``numpy.array`` of the calculated urban nature budget.
     """
     balance = numpy.full(
-        greenspace_supply.shape, FLOAT32_NODATA, dtype=numpy.float32)
-    valid_pixels = ~numpy.isclose(greenspace_supply, FLOAT32_NODATA)
-    balance[valid_pixels] = greenspace_supply[valid_pixels] - greenspace_demand
+        urban_nature_supply.shape, FLOAT32_NODATA, dtype=numpy.float32)
+    valid_pixels = ~numpy.isclose(urban_nature_supply, FLOAT32_NODATA)
+    balance[valid_pixels] = urban_nature_supply[valid_pixels] - urban_nature_demand
     return balance
 
 
-def _greenspace_balance_totalpop_op(greenspace_balance, population):
-    """Calculate the greenspace balance for the total population.
+def _urban_nature_balance_totalpop_op(urban_nature_balance, population):
+    """Calculate the total population urban nature balance.
 
     Args:
-        greenspace_balance (numpy.array): The area of greenspace budgeted to
+        urban_nature_balance (numpy.array): The area of urban nature budgeted to
             each person, relative to a minimum required per-person area of
-            greenspace.  This matrix must have ``FLOAT32_NODATA`` as its nodata
+            urban nature.  This matrix must have ``FLOAT32_NODATA`` as its nodata
             value.  This matrix must be the same size and shape as
             ``population``.
         population (numpy.array): Pixel values represent the population count
             of the pixel.  This matrix must be the same size and shape as
-            ``greenspace_budget``, and must have ``FLOAT32_NODATA`` as its
+            ``urban_nature_budget``, and must have ``FLOAT32_NODATA`` as its
             nodata value.
 
     Returns:
-        A ``numpy.array`` of the area (in square meters) of greenspace supplied
-        to each individual in each pixel.
+        A ``numpy.array`` of the area (in square meters) of urban nature
+        supplied to each individual in each pixel.
     """
     supply_demand = numpy.full(
-        greenspace_balance.shape, FLOAT32_NODATA, dtype=numpy.float32)
+        urban_nature_balance.shape, FLOAT32_NODATA, dtype=numpy.float32)
     valid_pixels = (
-        ~numpy.isclose(greenspace_balance, FLOAT32_NODATA) &
+        ~numpy.isclose(urban_nature_balance, FLOAT32_NODATA) &
         ~numpy.isclose(population, FLOAT32_NODATA))
     supply_demand[valid_pixels] = (
-        greenspace_balance[valid_pixels] * population[valid_pixels])
+        urban_nature_balance[valid_pixels] * population[valid_pixels])
     return supply_demand
 
 
-def _calculate_greenspace_population_ratio(
-        greenspace_area_raster_path, convolved_population_raster_path,
+def _calculate_urban_nature_population_ratio(
+        urban_nature_area_raster_path, convolved_population_raster_path,
         target_ratio_raster_path):
-    """Calculate the greenspace-population ratio R_j.
+    """Calculate the urban nature-population ratio R_j.
 
     Args:
-        greenspace_area_raster_path (string): The path to a raster representing
-            the area of the pixel that represents greenspace.  Pixel values
-            will be ``0`` if there is no greenspace.
+        urban_nature_area_raster_path (string): The path to a raster representing
+            the area of the pixel that represents urban nature.  Pixel values
+            will be ``0`` if there is no urban nature.
         convolved_population_raster_path (string): The path to a raster
             representing population counts that have been convolved over some
             search kernel and perhaps weighted.
         target_ratio_raster_path (string): The path to where the target
-            greenspace-population raster should be written.
+            urban nature-population raster should be written.
 
     Returns:
         ``None``.
     """
-    greenspace_nodata = pygeoprocessing.get_raster_info(
-        greenspace_area_raster_path)['nodata'][0]
+    urban_nature_nodata = pygeoprocessing.get_raster_info(
+        urban_nature_area_raster_path)['nodata'][0]
     population_nodata = pygeoprocessing.get_raster_info(
         convolved_population_raster_path)['nodata'][0]
 
-    def _greenspace_population_ratio(greenspace_area, convolved_population):
-        """Calculate the greenspace-population ratio R_j.
+    def _urban_nature_population_ratio(urban_nature_area, convolved_population):
+        """Calculate the urban nature-population ratio R_j.
 
         Args:
-            greenspace_area (numpy.array): A numpy array representing the area
-                of greenspace in the pixel.  Pixel values will be ``0`` if
-                there is no greenspace.  Pixel values may also match
-                ``greenspace_nodata``.
+            urban_nature_area (numpy.array): A numpy array representing the area
+                of urban nature in the pixel.  Pixel values will be ``0`` if
+                there is no urban nature.  Pixel values may also match
+                ``urban_nature_nodata``.
             convolved_population (numpy.array): A numpy array where each pixel
                 represents the total number of people within a search radius of
                 each pixel, perhaps weighted by a search kernel.
 
         Returns:
             A numpy array with the ratio ``R_j`` representing the
-            greenspace-population ratio with the following constraints:
+            urban nature-population ratio with the following constraints:
 
                 * ``convolved_population`` pixels that are numerically close to
                   ``0`` are snapped to ``0`` to avoid unrealistically small
                   denominators in the final ratio.
-                * Any non-greenspace pixels will have a value of ``0`` in the
+                * Any non-urban nature pixels will have a value of ``0`` in the
                   output matrix.
         """
         # ASSUMPTION: population nodata value is not close to 0.
         #  Shouldn't be if we're coming from convolution.
         out_array = numpy.full(
-            greenspace_area.shape, FLOAT32_NODATA, dtype=numpy.float32)
+            urban_nature_area.shape, FLOAT32_NODATA, dtype=numpy.float32)
 
         # Small negative values should already have been filtered out in
         # another function after the convolution.
         # This avoids divide-by-zero errors when taking the ratio.
         valid_pixels = (convolved_population > 0)
 
-        # R_j is a ratio only calculated for the greenspace pixels.
-        greenspace_pixels = ~numpy.isclose(greenspace_area, 0)
-        valid_pixels &= greenspace_pixels
+        # R_j is a ratio only calculated for the urban nature pixels.
+        urban_nature_pixels = ~numpy.isclose(urban_nature_area, 0)
+        valid_pixels &= urban_nature_pixels
         if population_nodata is not None:
             valid_pixels &= ~utils.array_equals_nodata(
                 convolved_population, population_nodata)
 
-        if greenspace_nodata is not None:
+        if urban_nature_nodata is not None:
             valid_pixels &= ~utils.array_equals_nodata(
-                greenspace_area, greenspace_nodata)
+                urban_nature_area, urban_nature_nodata)
 
         # The user's guide specifies that if the population in the search
-        # radius is numerically 0, the greenspace/population ratio should be
-        # set to the greenspace area.
+        # radius is numerically 0, the urban nature/population ratio should be
+        # set to the urban nature area.
         # A consequence of this is that as the population approaches 0 from the
         # positive side, the ratio will approach infinity.
         # After checking with the science team, we decided that where the
         # population is less than or equal to 1, the calculated
-        # greenspace/population ratio would be set to the available greenspace
-        # on that pixel.
+        # urban nature/population ratio would be set to the available urban
+        # nature on that pixel.
         population_close_to_zero = (convolved_population <= 1.0)
         out_array[population_close_to_zero] = (
-            greenspace_area[population_close_to_zero])
-        out_array[~greenspace_pixels] = 0
+            urban_nature_area[population_close_to_zero])
+        out_array[~urban_nature_pixels] = 0
 
         valid_pixels_with_population = (
             valid_pixels & (~population_close_to_zero))
         out_array[valid_pixels_with_population] = (
-            greenspace_area[valid_pixels_with_population] /
+            urban_nature_area[valid_pixels_with_population] /
             convolved_population[valid_pixels_with_population])
 
         # eliminate pixel values < 0
@@ -1870,9 +1871,9 @@ def _calculate_greenspace_population_ratio(
         return out_array
 
     pygeoprocessing.raster_calculator(
-        [(greenspace_area_raster_path, 1),
+        [(urban_nature_area_raster_path, 1),
          (convolved_population_raster_path, 1)],
-        _greenspace_population_ratio, target_ratio_raster_path,
+        _urban_nature_population_ratio, target_ratio_raster_path,
         gdal.GDT_Float32, FLOAT32_NODATA)
 
 
