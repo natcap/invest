@@ -1722,7 +1722,7 @@ def _parse_criteria_table(criteria_table_path, target_composite_csv_path):
     if missing_sections:
         raise AssertionError(
             "The criteria table is missing these section headers: "
-            f"{', '.join(required_section_headers)}")
+            f"{', '.join(missing_sections)}")
 
     # Habitats are loaded from the top row (table[0])
     known_habitats = set(table[0]).difference(
