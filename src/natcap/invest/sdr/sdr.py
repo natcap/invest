@@ -78,6 +78,7 @@ ARGS_SPEC = {
             "type": "vector",
             "geometries": spec_utils.POLYGONS,
             "projected": True,
+            "fields": {},
             "about": gettext(
                 "Map of the boundaries of the watershed(s) over which to "
                 "aggregate results. Each watershed should contribute to a "
