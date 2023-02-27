@@ -854,6 +854,37 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
             ("The missing values found in the LULC raster but not the"
              " table are: [321]") in str(context.exception))
 
+    def test_invalid_soil_group(self):
+        """SWY test exception when user provides invalid soil group."""
+        import pygeoprocessing
+        from natcap.invest.seasonal_water_yield import seasonal_water_yield
+
+        # use predefined directory so test can clean up files during teardown
+        args = SeasonalWaterYieldRegressionTests.generate_base_args(
+            self.workspace_dir)
+        # make args explicit that this is a base run of SWY
+        args['user_defined_climate_zones'] = False
+        args['user_defined_local_recharge'] = False
+        args['monthly_alpha'] = False
+        args['results_suffix'] = ''
+
+        soil_array = pygeoprocessing.raster_to_numpy_array(
+            args['soil_group_path'])
+        raster = gdal.OpenEx(args['soil_group_path'], gdal.GA_Update)
+        band = raster.GetRasterBand(1)
+        soil_array = band.ReadAsArray()
+        soil_array[50, 50] = 6  # invalid value
+        soil_array[51, 51] = 7  # invalid value
+        soil_array[52, 52] = band.GetNoDataValue()  # valid, excluded
+        band.WriteArray(soil_array)
+        band = None
+        raster = None
+
+        with self.assertRaises(ValueError) as cm:
+            seasonal_water_yield.execute(args)
+        self.assertIn("Invalid group(s) 6, 7 were found in soil group raster",
+                      str(cm.exception))
+
     def test_user_recharge(self):
         """SWY user recharge regression test on sample data.
 

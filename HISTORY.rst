@@ -58,6 +58,10 @@ Unreleased Changes
     * Clarifying where the visual quality calculations' disk-based sorting
       cache should be located, which addresses an interesting crash experienced
       by some users on Windows. https://github.com/natcap/invest/issues/1189
+* Seasonal Water Yield
+    * If a soil group raster contains any pixels that are not in the set of
+      allowed soil groups (anything other than 1, 2, 3 or 4), a human readable
+      exception will now be raised. https://github.com/natcap/invest/issues/1193
 
 3.12.1 (2022-12-16)
 -------------------
