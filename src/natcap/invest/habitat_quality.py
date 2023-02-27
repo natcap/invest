@@ -2,14 +2,12 @@
 """InVEST Habitat Quality model."""
 import collections
 import logging
-import math
 import os
 
 import numpy
+from osgeo import gdal
 import pygeoprocessing
 import taskgraph
-from osgeo import gdal
-from osgeo import osr
 
 from .model_metadata import MODEL_METADATA
 from . import spec_utils
@@ -1134,4 +1132,3 @@ def validate(args, limit_to=None):
                 invalid_keys.add('threats_table_path')
 
     return validation_warnings
-
