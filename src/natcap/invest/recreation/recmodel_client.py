@@ -1,42 +1,41 @@
 """InVEST Recreation Client."""
 import json
-import os
-import zipfile
-import time
 import logging
 import math
+import os
 import pickle
-import urllib.request
-import tempfile
 import shutil
+import tempfile
+import time
+import urllib.request
+import zipfile
 
-import rtree
-import Pyro4
-from osgeo import ogr
-from osgeo import gdal
-from osgeo import osr
-import shapely
-import shapely.geometry
-import shapely.wkt
-import shapely.prepared
-import pygeoprocessing
 import numpy
 import numpy.linalg
+import pygeoprocessing
+import Pyro4
+import rtree
+import shapely
+import shapely.geometry
+import shapely.prepared
 import shapely.speedups
+import shapely.wkt
 import taskgraph
+from osgeo import gdal
+from osgeo import ogr
+from osgeo import osr
 
 if shapely.speedups.available:
     shapely.speedups.enable()
 
 # prefer to do intrapackage imports to avoid case where global package is
 # installed and we import the global version of it rather than the local
-from .. import utils
+from .. import gettext
 from .. import spec_utils
-from ..spec_utils import u
+from .. import utils
 from .. import validation
 from ..model_metadata import MODEL_METADATA
-from .. import gettext
-
+from ..spec_utils import u
 
 LOGGER = logging.getLogger(__name__)
 
@@ -1499,8 +1498,8 @@ def _validate_same_projection(base_vector_path, table_path):
     # This will load the table as a list of paths which we can iterate through
     # without bothering the rest of the table structure
     data_paths = utils.read_csv_to_dataframe(
-        table_path, to_lower=True, squeeze=True, expand_path_cols=['path']
-    )['path'].tolist()
+        table_path, to_lower=True, expand_path_cols=['path']
+    ).squeeze('columns')['path'].tolist()
 
     base_vector = gdal.OpenEx(base_vector_path, gdal.OF_VECTOR)
     base_layer = base_vector.GetLayer()
