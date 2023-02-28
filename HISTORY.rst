@@ -50,6 +50,9 @@ Unreleased Changes
     * Any points over nodata (and therefore excluded from the viewshed
       analysis) will now correctly have their FID reported in the logging.
       https://github.com/natcap/invest/issues/1188
+* SDR
+    * The ``ws_id`` field is no longer a required field in the watershed vector.
+      https://github.com/natcap/invest/issues/1201
 * Seasonal Water Yield
     * If a soil group raster contains any pixels that are not in the set of
       allowed soil groups (anything other than 1, 2, 3 or 4), a human readable
