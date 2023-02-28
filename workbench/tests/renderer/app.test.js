@@ -5,7 +5,6 @@ import { spawn, exec } from 'child_process';
 import Stream from 'stream';
 
 import fetch from 'node-fetch';
-import GettextJS from 'gettext.js';
 import React from 'react';
 import { ipcRenderer } from 'electron';
 import {
@@ -34,6 +33,7 @@ import {
 } from '../../src/main/setupInvestHandlers';
 import writeInvestParameters from '../../src/main/writeInvestParameters';
 import { removeIpcMainListeners } from '../../src/main/main';
+
 
 // It's quite a pain to dynamically mock a const from a module,
 // here we do it by importing as another object, then
@@ -874,76 +874,30 @@ describe('InVEST subprocess testing', () => {
 });
 
 describe('Translation', () => {
-  const i18n = new GettextJS();
-  const testLanguage = 'es';
-  const messageCatalog = {
-    '': {
-      language: testLanguage,
-      'plural-forms': 'nplurals=2; plural=(n!=1);',
-    },
-    Open: 'σρєи',
-    Language: 'ℓαиgυαgє',
-  };
-
   beforeAll(async () => {
     getInvestModelNames.mockResolvedValue({});
-    getSupportedLanguages.mockResolvedValue({ en: 'english', es: 'spanish' });
+    getSupportedLanguages.mockResolvedValue({ en: 'english', ll: 'foo' });
 
-    i18n.loadJSON(messageCatalog, 'messages');
-
-    // mock out the relevant IPC channels
-    ipcRenderer.invoke.mockImplementation((channel, arg) => {
-      if (channel === ipcMainChannels.SET_LANGUAGE) {
-        i18n.setLocale(arg);
-      }
-      return Promise.resolve();
-    });
-
-    ipcRenderer.sendSync.mockImplementation((channel, arg) => {
-      if (channel === ipcMainChannels.GETTEXT) {
-        return i18n.gettext(arg);
-      }
-      return undefined;
-    });
-
-    // this is the same setup that's done in src/renderer/index.js (out of test scope)
-    ipcRenderer.invoke(ipcMainChannels.SET_LANGUAGE, 'en');
-    global.window._ = ipcRenderer.sendSync.bind(null, ipcMainChannels.GETTEXT);
     delete global.window.location;
     Object.defineProperty(global.window, 'location', {
       configurable: true,
       value: { reload: jest.fn() },
-    })
+    });
   });
 
   test('Text rerenders in new language when language setting changes', async () => {
-    const {
-      findByText,
-      getByText,
-      findByLabelText,
-    } = render(<App />);
+    const { findByLabelText } = render(<App />);
 
     userEvent.click(await findByLabelText('settings'));
-    let languageInput = await findByLabelText('Language', { exact: false });
+    const languageInput = await findByLabelText('Language', { exact: false });
     expect(languageInput).toHaveValue('en');
 
-    userEvent.selectOptions(languageInput, testLanguage);
-
-    // text within the settings modal component should be translated
-    languageInput = await findByLabelText(messageCatalog.Language, { exact: false });
-    expect(languageInput).toHaveValue(testLanguage);
-    expect(global.window.location.reload).toHaveBeenCalled();
-
-    // text should also be translated in other components
-    // such as the Open button (visible in background)
-    await findByText(messageCatalog.Open);
-
-    // text without a translation in the message catalog should display in the default English
-    expect(getByText('Logging threshold')).toBeDefined();
-
-    // resetting language should re-render components in English
-    userEvent.click(getByText('Reset to Defaults'));
-    expect(await findByText('Language')).toBeDefined();
-    expect(await findByText('Open')).toBeDefined();
+    userEvent.selectOptions(languageInput, 'll');
+    await waitFor(() => {
+      expect(global.window.location.reload).toHaveBeenCalled();
+    });
+    // because we can't reload the window in the test environment,
+    // components won't actually rerender in the new language
+    expect(languageInput).toHaveValue('ll');
   });
 });

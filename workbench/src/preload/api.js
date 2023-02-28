@@ -22,8 +22,6 @@ export default {
   PORT: process.env.PORT,
   // Workbench logfile location, so Report window can open to it
   LOGFILE_PATH: logger.transports.file.getFile().path,
-  // The gettext callable; a partially applied function
-  _: ipcRenderer.sendSync.bind(null, ipcMainChannels.GETTEXT),
   getLogger: getLogger,
   path: {
     resolve: path.resolve,

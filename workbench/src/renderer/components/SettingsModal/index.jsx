@@ -14,6 +14,7 @@ import {
   MdWarningAmber,
 } from 'react-icons/md';
 import { BsChevronExpand } from 'react-icons/bs';
+import { withTranslation } from 'react-i18next';
 
 import { getDefaultSettings } from './SettingsStorage';
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
@@ -24,7 +25,7 @@ const { ipcRenderer } = window.Workbench.electron;
 const logLevelOptions = ['DEBUG', 'INFO', 'WARNING', 'ERROR'];
 
 /** Render a dialog with a form for configuring global invest settings */
-export default class SettingsModal extends React.Component {
+class SettingsModal extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
@@ -83,7 +84,7 @@ export default class SettingsModal extends React.Component {
 
   render() {
     const { show, nWorkersOptions, languageOptions } = this.state;
-    const { investSettings, clearJobsStorage } = this.props;
+    const { investSettings, clearJobsStorage, t } = this.props;
     return (
       <React.Fragment>
         <Button
@@ -102,7 +103,7 @@ export default class SettingsModal extends React.Component {
           onHide={this.handleClose}
         >
           <Modal.Header>
-            <Modal.Title>{_('InVEST Settings')}</Modal.Title>
+            <Modal.Title>{t('InVEST Settings')}</Modal.Title>
             <Button
               variant="secondary-outline"
               onClick={this.handleClose}
@@ -118,10 +119,10 @@ export default class SettingsModal extends React.Component {
                 <Form.Group as={Row}>
                   <Form.Label column sm="8" htmlFor="language-select">
                     <MdTranslate className="language-icon" />
-                    {_('Language')}
+                    {t('Language')}
                     <Form.Text className="text-nowrap" muted>
                       <MdWarningAmber className="align-text-bottom ml-3" />
-                      Changing this setting will refresh the app and close all tabs
+                      {t('Changing this setting will refresh the app and close all tabs')}
                     </Form.Text>
                   </Form.Label>
                   <Col sm="4">
@@ -143,7 +144,7 @@ export default class SettingsModal extends React.Component {
             }
             <Form.Group as={Row}>
               <Form.Label column sm="6" htmlFor="logging-select">
-                {_('Logging threshold')}
+                {t('Logging threshold')}
               </Form.Label>
               <Col sm="6">
                 <Form.Control
@@ -154,14 +155,14 @@ export default class SettingsModal extends React.Component {
                   onChange={this.handleChange}
                 >
                   {logLevelOptions.map(
-                    (opt) => <option value={opt} key={opt}>{_(opt)}</option>
+                    (opt) => <option value={opt} key={opt}>{t(opt)}</option>
                   )}
                 </Form.Control>
               </Col>
             </Form.Group>
             <Form.Group as={Row}>
               <Form.Label column sm="6" htmlFor="taskgraph-logging-select">
-                {_('Taskgraph logging threshold')}
+                {t('Taskgraph logging threshold')}
               </Form.Label>
               <Col sm="6">
                 <Form.Control
@@ -172,7 +173,7 @@ export default class SettingsModal extends React.Component {
                   onChange={this.handleChange}
                 >
                   {logLevelOptions.map(
-                    (opt) => <option value={opt} key={opt}>{_(opt)}</option>
+                    (opt) => <option value={opt} key={opt}>{t(opt)}</option>
                   )}
                 </Form.Control>
               </Col>
@@ -183,7 +184,7 @@ export default class SettingsModal extends React.Component {
                   <Form.Group as={Row}>
                     <Col sm="6">
                       <Form.Label htmlFor="nworkers-select">
-                        {_('Taskgraph n_workers parameter')}
+                        {t('Taskgraph n_workers parameter')}
                       </Form.Label>
                     </Col>
                     <Col sm="6">
@@ -208,18 +209,18 @@ export default class SettingsModal extends React.Component {
                         className="pt-0"
                       >
                         <BsChevronExpand className="mx-1" />
-                        <span className="small"><u>more info</u></span>
+                        <span className="small"><u>{t('more info')}</u></span>
                       </Accordion.Toggle>
                       <Accordion.Collapse eventKey="0" className="pr-1">
                         <ul>
-                          <li>{_('synchronous task execution is most reliable')}</li>
+                          <li>{t('synchronous task execution is most reliable')}</li>
                           <li>
-                            {_(`threaded task management: tasks execute only in the
-                            main process, using multiple threads.`)}
+                            {t('threaded task management: tasks execute only ' +
+                               'in the main process, using multiple threads.')}
                           </li>
                           <li>
-                            {_(`n CPUs: depending on the InVEST model, tasks may execute
-                            in parallel using up to this many processes.`)}
+                            {t('n CPUs: depending on the InVEST model, tasks ' +
+                               'may execute in parallel using up to this many processes.')}
                           </li>
                         </ul>
                       </Accordion.Collapse>
@@ -236,7 +237,7 @@ export default class SettingsModal extends React.Component {
                   type="button"
                   className="w-100"
                 >
-                  {_('Reset to Defaults')}
+                  {t('Reset to Defaults')}
                 </Button>
               </Col>
             </Row>
@@ -246,7 +247,7 @@ export default class SettingsModal extends React.Component {
               onClick={this.switchToDownloadModal}
               className="w-50"
             >
-              {_('Download Sample Data')}
+              {t('Download Sample Data')}
             </Button>
             <hr />
             <Button
@@ -254,9 +255,9 @@ export default class SettingsModal extends React.Component {
               onClick={clearJobsStorage}
               className="mr-2 w-50"
             >
-              {_('Clear Recent Jobs')}
+              {t('Clear Recent Jobs')}
             </Button>
-            <span>{_('no invest workspaces will be deleted')}</span>
+            <span>{t('no invest workspaces will be deleted')}</span>
           </Modal.Body>
         </Modal>
       </React.Fragment>
@@ -277,3 +278,5 @@ SettingsModal.propTypes = {
   showDownloadModal: PropTypes.func.isRequired,
   nCPU: PropTypes.number.isRequired,
 };
+
+export default withTranslation()(SettingsModal);
