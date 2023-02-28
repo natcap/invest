@@ -279,12 +279,10 @@ jobs:
         os: [macos-latest, windows-latest]
         include:
           - os: macos-latest
-            binary-make-command: mac_dmg
             puppeteer-log: ~/Library/Logs/invest-workbench/
             workspace-path: InVEST-failed-mac-workspace.tar
             binary-extension: dmg
           - os: windows-latest
-            binary-make-command: windows_installer
             puppeteer-log: ~/AppData/Roaming/invest-workbench/logs/
             workspace-path: ${{ github.workspace }}
             binary-extension: exe
@@ -315,7 +313,7 @@ jobs:
         run: make install
 
       - name: Build binaries
-        run: make CONDA=micromamba ${{ matrix.binary-make-command }}
+        run: make CONDA=micromamba binaries
 
       - name: Run invest-autotest with binaries
         if : |
