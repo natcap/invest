@@ -2,15 +2,16 @@
 DATA_DIR := data
 GIT_SAMPLE_DATA_REPO        := https://bitbucket.org/natcap/invest-sample-data.git
 GIT_SAMPLE_DATA_REPO_PATH   := $(DATA_DIR)/invest-sample-data
-GIT_SAMPLE_DATA_REPO_REV    := 6505a0b76de9b9b59924b896441a95a94fef6b67
+GIT_SAMPLE_DATA_REPO_REV    := 8d9c739506b3554639f4a53b8c52b23d2986b833
 
 GIT_TEST_DATA_REPO          := https://bitbucket.org/natcap/invest-test-data.git
 GIT_TEST_DATA_REPO_PATH     := $(DATA_DIR)/invest-test-data
-GIT_TEST_DATA_REPO_REV      := f5e651c9ba0a012dc033b9c1d12d51e42f6f87b0
+GIT_TEST_DATA_REPO_REV      := 29d8da596ff197d3cc6e355e7cd4313945b89b71
 
 GIT_UG_REPO                 := https://github.com/natcap/invest.users-guide
 GIT_UG_REPO_PATH            := doc/users-guide
-GIT_UG_REPO_REV             := 7c49102031db630a40cd89c507b9585cde0de8a5
+GIT_UG_REPO_REV             := 20bce284cb58ff4508a634cd2becde6ad175f7e1
+
 
 ENV = "./env"
 ifeq ($(OS),Windows_NT)
@@ -132,6 +133,8 @@ MAC_APPLICATION_BUNDLE_NAME := InVEST.app
 MAC_APPLICATION_BUNDLE_DIR := $(BUILD_DIR)/mac_app_$(VERSION)
 MAC_APPLICATION_BUNDLE := $(MAC_APPLICATION_BUNDLE_DIR)/$(MAC_APPLICATION_BUNDLE_NAME)
 
+INVEST_AUTOTESTER := $(PYTHON) scripts/invest-autotest.py --cwd $(GIT_SAMPLE_DATA_REPO_PATH) --binary $(INVEST_BINARIES_DIR)/invest
+
 
 .PHONY: fetch install binaries apidocs userguide windows_installer mac_dmg sampledata sampledata_single test test_ui clean help check python_packages jenkins purge mac_zipfile deploy codesign_mac codesign_windows $(GIT_SAMPLE_DATA_REPO_PATH) $(GIT_TEST_DATA_REPO_PATH) $(GIT_UG_REPO_REV)
 
@@ -183,6 +186,9 @@ validate_sampledata: $(GIT_SAMPLE_DATA_REPO_PATH)
 
 validate_userguide_filenames: $(GIT_UG_REPO_PATH)
 	$(UG_FILE_VALIDATOR)
+
+invest_autotest: $(GIT_SAMPLE_DATA_REPO_PATH) $(INVEST_BINARIES_DIR)
+	$(INVEST_AUTOTESTER)
 
 clean:
 	-$(RMDIR) $(BUILD_DIR)
@@ -312,7 +318,6 @@ ZIPDIRS = Annual_Water_Yield \
 		  CropProduction \
 		  DelineateIt \
 		  forest_carbon_edge_effect \
-		  globio \
 		  GridSeascape \
 		  HabitatQuality \
 		  HabitatRiskAssess \
@@ -326,6 +331,7 @@ ZIPDIRS = Annual_Water_Yield \
 		  Seasonal_Water_Yield \
 		  UrbanCoolingModel \
 		  UrbanFloodMitigation \
+		  UrbanNatureAccess \
 		  UrbanStormwater \
 		  WaveEnergy \
 		  WindEnergy

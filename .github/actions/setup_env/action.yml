@@ -29,7 +29,7 @@ runs:
     # after the environment is updated, 'python' will point to the
     # conda-managed python and this python won't be used again
     - name: Set up python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ inputs.python-version }}
 

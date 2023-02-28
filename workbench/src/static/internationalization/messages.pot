@@ -7,7 +7,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
-"Report-Msgid-Bugs-To: esoth@stanford.edu\n"
+"Report-Msgid-Bugs-To: natcap-software@lists.stanford.edu\n"
 "POT-Creation-Date: 2021-10-28 13:00-0700\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
@@ -31,9 +31,6 @@ msgstr ""
 msgid "Download"
 msgstr ""
 
-msgid "Export all input data to a compressed archive"
-msgstr ""
-
 msgid "Frequently Asked Questions"
 msgstr ""
 
@@ -43,19 +40,7 @@ msgstr ""
 msgid "Open"
 msgstr ""
 
-msgid "Save datastack"
-msgstr ""
-
-msgid "Save model setup to a JSON file"
-msgstr ""
-
-msgid "Save model setup to a Python script"
-msgstr ""
-
-msgid "Save to JSON"
-msgstr ""
-
-msgid "Save to Python script"
+msgid "Save as..."
 msgstr ""
 
 msgid "User's Guide"
@@ -79,10 +64,22 @@ msgstr ""
 msgid "Clear Recent Jobs"
 msgstr ""
 
+msgid "Create a post on our forum "
+msgstr ""
+
+msgid "Datastack options"
+msgstr ""
+
 msgid "Download Sample Data"
 msgstr ""
 
 msgid "Error: see log for details"
+msgstr ""
+
+msgid "Find My Logs"
+msgstr ""
+
+msgid "Find the Workbench log files "
 msgstr ""
 
 msgid "InVEST Settings"
@@ -130,6 +127,9 @@ msgstr ""
 msgid "Setup"
 msgstr ""
 
+msgid "Something went wrong"
+msgstr ""
+
 msgid "Taskgraph logging threshold"
 msgstr ""
 
@@ -148,5 +148,32 @@ msgstr ""
 msgid "synchronous task execution is most reliable"
 msgstr ""
 
+msgid "threaded task management: tasks execute only in the main process, using multiple threads."
+msgstr ""
+
+msgid "n CPUs: depending on the InVEST model, tasks may execute in parallel using up to this many processes."
+msgstr ""
+
+msgid "Please help us fix this by reporting the problem. You may follow these steps:"
+msgstr ""
+
+msgid "using the button below. There may be multiple files with a ".log" extension."
+msgstr ""
+
+msgid "and upload all the log files, along with a brief description of what happened before you saw this message."
+msgstr ""
+
 msgid "text"
+msgstr ""
+
+msgid "Save your parameters in a JSON file. This includes the paths to your input data, but not the data itself. Open this file in InVEST to restore your parameters."
+msgstr ""
+
+msgid "Save your parameters and input data in a compressed archive. This archive contains the same JSON file produced by the "Parameters only" option, plus the data. You can open this file in InVEST to restore your parameters. This option is useful to copy all the necessary data to a different location."
+msgstr ""
+
+msgid "Save your parameters in a python script. This includes the paths to your input data, but not the data itself. Running the python script will programmatically run the model with your parameters. Use this as a starting point for batch scripts."
+msgstr ""
+
+msgid "Set up a model from a sample datastack file (.json) or from an InVEST model's logfile (.txt): "
 msgstr ""

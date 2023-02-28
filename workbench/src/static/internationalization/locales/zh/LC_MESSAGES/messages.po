@@ -5,149 +5,150 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: PROJECT VERSION\n"
-"Report-Msgid-Bugs-To: esoth@stanford.edu\n"
-"POT-Creation-Date: 2021-10-28 13:00-0700\n"
-"PO-Revision-Date: 2021-10-28 13:00-0700\n"
-"Last-Translator: Automatically generated\n"
-"Language-Team: none\n"
-"MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=UTF-8\n"
-"Content-Transfer-Encoding: 8bit\n"
+"Project-Id-Version: InVEST 3.12\n"
+"Report-Msgid-Bugs-To: jdouglass@stanford.edu\n"
+"POT-Creation-Date: 2022-10-21 13:17-0700\n"
+"PO-Revision-Date: 2022-12-27 10:27+0800\n"
+"Last-Translator: \n"
+"Language-Team: zh <LL@li.org>\n"
 "Language: zh\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"X-Generator: Poedit 3.2\n"
 
 msgid "Cancel"
-msgstr ""
+msgstr "取消"
 
 msgid "Download Complete"
-msgstr ""
+msgstr "下载完整版"
 
 msgid "Download Failed"
-msgstr ""
+msgstr "下载失败"
 
 msgid "Download InVEST sample data"
-msgstr ""
+msgstr "下载InVEST样例数据"
 
 msgid "Download"
-msgstr ""
+msgstr "下载"
 
 msgid "Export all input data to a compressed archive"
-msgstr ""
+msgstr "将所有输入数据导出到压缩档案中"
 
 msgid "Frequently Asked Questions"
-msgstr ""
+msgstr "常见问题"
 
 msgid "InVEST"
-msgstr ""
+msgstr "InVEST"
 
 msgid "Open"
-msgstr ""
+msgstr "打开"
 
 msgid "Save datastack"
-msgstr ""
+msgstr "保存数据包"
 
 msgid "Save model setup to a JSON file"
-msgstr ""
+msgstr "将模型设置保存到一个JSON文件中"
 
 msgid "Save model setup to a Python script"
-msgstr ""
+msgstr "将模型设置保存到Python脚本中"
 
 msgid "Save to JSON"
-msgstr ""
+msgstr "保存到JSON"
 
 msgid "Save to Python script"
-msgstr ""
+msgstr "保存到Python脚本"
 
 msgid "User's Guide"
-msgstr ""
+msgstr "用户指南"
 
 msgid "User's guide entry"
-msgstr ""
+msgstr "用户指南条目"
 
 msgid "Bounding box does not intersect at least one other:"
-msgstr ""
+msgstr "边界框至少不与另一个相交:"
 
 msgid "Browse to a datastack (.json) or InVEST logfile (.txt)"
-msgstr ""
+msgstr "浏览到一个数据包（.json）或InVEST日志文件（.txt）。"
 
 msgid "Browse to a datastack (.json, .tgz) or InVEST logfile (.txt)"
-msgstr ""
+msgstr "浏览到数据包（.json, .tgz）或InVEST日志文件（.txt）。"
 
 msgid "Cancel Run"
-msgstr ""
+msgstr "取消运行"
 
 msgid "Clear Recent Jobs"
-msgstr ""
+msgstr "清除最近的工作"
 
 msgid "Download Sample Data"
-msgstr ""
+msgstr "下载样例数据"
 
 msgid "Error: see log for details"
-msgstr ""
+msgstr "错误：详见日志"
 
 msgid "InVEST Settings"
-msgstr ""
+msgstr "InVEST设置"
 
 msgid "Language"
-msgstr ""
+msgstr "语言"
 
 msgid "Load parameters from file"
-msgstr ""
+msgstr "从文件中加载参数"
 
 msgid "Log"
-msgstr ""
+msgstr "日志"
 
 msgid "Logging threshold"
-msgstr ""
+msgstr "日志阈值"
 
 msgid "Model Complete"
-msgstr ""
+msgstr "完整模型"
 
 msgid "No args to see here"
-msgstr ""
+msgstr "在args dict中缺少关键信息"
 
 msgid "Only drop one file at a time."
-msgstr ""
+msgstr "一次只能丢一个文件。"
 
 msgid "Open Workspace"
-msgstr ""
+msgstr "打开工作空间"
 
 msgid "Recent runs:"
-msgstr ""
+msgstr "最近的运行："
 
 msgid "Reset to Defaults"
-msgstr ""
+msgstr "重置为默认值"
 
 msgid "Run Canceled"
-msgstr ""
+msgstr "取消运行"
 
 msgid "Run"
-msgstr ""
+msgstr "运行"
 
 msgid "Running"
-msgstr ""
+msgstr "运行中"
 
 msgid "Setup"
-msgstr ""
+msgstr "设置"
 
 msgid "Taskgraph logging threshold"
-msgstr ""
+msgstr "任务图记录阈值"
 
 msgid "Taskgraph n_workers parameter"
-msgstr ""
+msgstr "任务图n_workers参数"
 
 msgid "no invest workspaces will be deleted"
-msgstr ""
+msgstr "没有invest的工作空间将被删除"
 
 msgid "percent: a number from 0 - 100"
-msgstr ""
+msgstr "百分比：一个从0-100的数字"
 
 msgid "ratio: a decimal from 0 - 1"
-msgstr ""
+msgstr "比率：一个从0-1的小数"
 
 msgid "synchronous task execution is most reliable"
-msgstr ""
+msgstr "同步任务的执行是最可靠的"
 
 msgid "text"
-msgstr ""
+msgstr "文本"

@@ -438,7 +438,6 @@ Section "InVEST Tools" Section_InVEST_Tools
         !insertmacro StartMenuLink "${SMPATH}\Habitat Quality" "habitat_quality"
         !insertmacro StartMenuLink "${SMPATH}\Carbon Storage and Sequestration" "carbon"
         !insertmacro StartMenuLink "${SMPATH}\Forest Carbon Edge Effect" "forest_carbon_edge_effect"
-        !insertmacro StartMenuLink "${SMPATH}\GLOBIO" "globio"
         !insertmacro StartMenuLink "${SMPATH}\Crop Pollination" "pollination"
         !insertmacro StartMenuLink "${SMPATH}\Wave Energy" "wave_energy"
         !insertmacro StartMenuLink "${SMPATH}\Wind Energy" "wind_energy"
@@ -567,7 +566,6 @@ SectionGroup /e "InVEST Datasets" SEC_DATA
     !insertmacro downloadData "Crop Production (optional)" "CropProduction.zip" 111898
     !insertmacro downloadData "DelineateIt (optional)" "DelineateIt.zip" 536
     !insertmacro downloadData "Forest Carbon Edge Effect (required for forest carbon edge model)" "forest_carbon_edge_effect.zip" 8060
-    !insertmacro downloadData "GLOBIO (optional)" "globio.zip" 186020
     !insertmacro downloadData "Habitat Quality (optional)" "HabitatQuality.zip" 1880
     !insertmacro downloadData "Habitat Risk Assessment (optional)" "HabitatRiskAssess.zip" 7791
     !insertmacro downloadData "Nutrient Delivery Ratio (optional)" "NDR.zip" 10973

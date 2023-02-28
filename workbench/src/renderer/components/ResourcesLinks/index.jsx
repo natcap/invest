@@ -21,7 +21,6 @@ const FORUM_TAGS = {
   crop_production_regression: 'crop-production',
   delineateit: 'delineateit',
   forest_carbon_edge_effect: 'carbon-edge-effects',
-  globio: 'globio',
   habitat_quality: 'habitat-quality',
   habitat_risk_assessment: 'hra',
   ndr: 'ndr',
