@@ -35,7 +35,7 @@ ifeq ($(OS),Windows_NT)
 	SHELL := /usr/bin/bash
 	CONDA := conda.bat
 	BASHLIKE_SHELL_COMMAND := '$(SHELL)' -c
-	.DEFAULT_GOAL := windows_installer
+	.DEFAULT_GOAL := binaries
 	RM_DATA_DIR := $(RMDIR) $(DATA_DIR)
 	/ := '\'
 	OSNAME = 'windows'
@@ -54,19 +54,10 @@ else
 	# linux, mac distinguish between python2 and python3
 	PYTHON = python3
 	RM_DATA_DIR := yes | $(RMDIR) $(DATA_DIR)
-
-	ifeq ($(shell sh -c 'uname -s 2>/dev/null || echo not'),Darwin)  # mac OSX
-		.DEFAULT_GOAL := mac_dmg
-		OSNAME = 'mac'
-	else
-		.DEFAULT_GOAL := binaries
-	endif
+	.DEFAULT_GOAL := binaries
 endif
 
 REQUIRED_PROGRAMS := make zip pandoc $(PYTHON) git git-lfs conda yarn
-ifeq ($(OS),Windows_NT)
-	REQUIRED_PROGRAMS += makensis
-endif
 
 ZIP := zip
 PIP = $(PYTHON) -m pip
@@ -116,7 +107,6 @@ UG_FILE_VALIDATOR := $(PYTHON) scripts/userguide-filevalidator.py $(GIT_UG_REPO_
 
 # Target names.
 INVEST_BINARIES_DIR := $(DIST_DIR)/invest
-# INVEST_BINARIES_DIR_ZIP := $(OSNAME)_invest_binaries.zip
 
 APIDOCS_BUILD_DIR := $(BUILD_DIR)/sphinx/apidocs
 APIDOCS_TARGET_DIR := $(DIST_DIR)/apidocs
@@ -126,16 +116,10 @@ USERGUIDE_BUILD_DIR := $(BUILD_DIR)/sphinx/userguide
 USERGUIDE_TARGET_DIR := $(DIST_DIR)/userguide
 USERGUIDE_ZIP_FILE := $(DIST_DIR)/InVEST_$(VERSION)_userguide.zip
 
-MAC_DISK_IMAGE_FILE := $(DIST_DIR)/InVEST_$(VERSION).dmg
-MAC_BINARIES_ZIP_FILE := $(DIST_DIR)/InVEST-$(VERSION)-mac.zip
-MAC_APPLICATION_BUNDLE_NAME := InVEST.app
-MAC_APPLICATION_BUNDLE_DIR := $(BUILD_DIR)/mac_app_$(VERSION)
-MAC_APPLICATION_BUNDLE := $(MAC_APPLICATION_BUNDLE_DIR)/$(MAC_APPLICATION_BUNDLE_NAME)
-
 INVEST_AUTOTESTER := $(PYTHON) scripts/invest-autotest.py --cwd $(GIT_SAMPLE_DATA_REPO_PATH) --binary $(INVEST_BINARIES_DIR)/invest
 
 
-.PHONY: fetch install binaries apidocs userguide windows_installer mac_dmg sampledata sampledata_single test clean help check python_packages jenkins purge mac_zipfile deploy codesign_mac codesign_windows $(GIT_SAMPLE_DATA_REPO_PATH) $(GIT_TEST_DATA_REPO_PATH) $(GIT_UG_REPO_REV)
+.PHONY: fetch install binaries apidocs userguide sampledata sampledata_single test clean help check python_packages jenkins purge mac_zipfile deploy codesign_mac codesign_windows $(GIT_SAMPLE_DATA_REPO_PATH) $(GIT_TEST_DATA_REPO_PATH) $(GIT_UG_REPO_REV)
 
 # Very useful for debugging variables!
 # $ make print-FORKNAME, for example, would print the value of the variable $(FORKNAME)
@@ -158,8 +142,6 @@ help:
 	@echo "  apidocs           to build HTML API documentation"
 	@echo "  userguide         to build HTML version of the users guide"
 	@echo "  python_packages   to build natcap.invest wheel and source distributions"
-	@echo "  windows_installer to build an NSIS installer for distribution"
-	@echo "  mac_dmg           to build a disk image for distribution"
 	@echo "  codesign_mac      to sign the mac disk image using the codesign utility"
 	@echo "  codesign_windows  to sign the windows installer using the SignTool utility"
 	@echo "  sampledata        to build sample data zipfiles"
@@ -343,30 +325,6 @@ sampledata_single: $(SAMPLEDATA_SINGLE_ARCHIVE)
 $(SAMPLEDATA_SINGLE_ARCHIVE): $(GIT_SAMPLE_DATA_REPO_PATH) dist
 	$(BASHLIKE_SHELL_COMMAND) "cd $(GIT_SAMPLE_DATA_REPO_PATH) && $(ZIP) -r ../../$(SAMPLEDATA_SINGLE_ARCHIVE) ./* -x .svn -x .git"
 
-
-# Installers for each platform.
-# Windows (NSIS) installer is written to dist/InVEST_<version>_x86_Setup.exe
-# Mac (DMG) disk image is written to dist/InVEST <version>.dmg
-WINDOWS_INSTALLER_FILE := $(DIST_DIR)/InVEST_$(INSTALLER_NAME_FORKUSER)$(VERSION)_$(PYTHON_ARCH)_Setup.exe
-windows_installer: $(WINDOWS_INSTALLER_FILE)
-$(WINDOWS_INSTALLER_FILE): $(INVEST_BINARIES_DIR) $(USERGUIDE_ZIP_FILE) build/vcredist_x86.exe | $(GIT_SAMPLE_DATA_REPO_PATH)
-	-$(RM) $(WINDOWS_INSTALLER_FILE)
-	makensis /DVERSION=$(VERSION) /DBINDIR=$(INVEST_BINARIES_DIR) /DARCHITECTURE=$(PYTHON_ARCH) /DFORKNAME=$(INSTALLER_NAME_FORKUSER) /DDATA_LOCATION=$(DATA_BASE_URL) installer\windows\invest_installer.nsi
-
-mac_dmg: $(MAC_DISK_IMAGE_FILE)
-$(MAC_DISK_IMAGE_FILE): $(DIST_DIR) $(MAC_APPLICATION_BUNDLE) $(USERGUIDE_TARGET_DIR)
-	# everything in the source directory $(MAC_APPLICATION_BUNDLE_DIR) will be copied into the DMG.
-	# so that directory should only contain the app bundle.
-	installer/darwin/create_dmg.sh "InVEST $(VERSION)" $(MAC_APPLICATION_BUNDLE_DIR) $(MAC_DISK_IMAGE_FILE)
-
-mac_app: $(MAC_APPLICATION_BUNDLE)
-$(MAC_APPLICATION_BUNDLE): $(BUILD_DIR) $(INVEST_BINARIES_DIR) $(USERGUIDE_TARGET_DIR)
-	./installer/darwin/build_app_bundle.sh $(VERSION) $(INVEST_BINARIES_DIR) $(USERGUIDE_TARGET_DIR) $(MAC_APPLICATION_BUNDLE)
-
-mac_zipfile: $(MAC_BINARIES_ZIP_FILE)
-$(MAC_BINARIES_ZIP_FILE): $(DIST_DIR) $(MAC_APPLICATION_BUNDLE) $(USERGUIDE_TARGET_DIR)
-	./installer/darwin/build_zip.sh $(VERSION) $(MAC_APPLICATION_BUNDLE) $(USERGUIDE_TARGET_DIR)
-
 build/vcredist_x86.exe: | build
 	powershell.exe -Command "Start-BitsTransfer -Source https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe -Destination build\vcredist_x86.exe"
 
@@ -389,12 +347,12 @@ codesign_mac:
 	# this is essential to avoid the UI password prompt
 	security set-key-partition-list -S apple-tool:,apple: -s -k $(KEYCHAIN_PASS) $(KEYCHAIN_NAME)
 	# sign the dmg using certificate that's looked up by unique identifier 'Stanford'
-	codesign --timestamp --verbose --sign Stanford $(BIN_TO_SIGN) $(WORKBENCH_BIN_TO_SIGN)
+	codesign --timestamp --verbose --sign Stanford $(WORKBENCH_BIN_TO_SIGN)
 
 codesign_windows:
 	$(GSUTIL) cp gs://stanford_cert/$(CERT_FILE) $(BUILD_DIR)/$(CERT_FILE)
-	"$(SIGNTOOL)" sign -fd SHA256 -f $(BUILD_DIR)/$(CERT_FILE) -p $(CERT_PASS) $(BIN_TO_SIGN) $(WORKBENCH_BIN_TO_SIGN)
-	"$(SIGNTOOL)" timestamp -tr http://timestamp.sectigo.com -td SHA256 $(BIN_TO_SIGN) $(WORKBENCH_BIN_TO_SIGN)
+	"$(SIGNTOOL)" sign -fd SHA256 -f $(BUILD_DIR)/$(CERT_FILE) -p $(CERT_PASS) $(WORKBENCH_BIN_TO_SIGN)
+	"$(SIGNTOOL)" timestamp -tr http://timestamp.sectigo.com -td SHA256 $(WORKBENCH_BIN_TO_SIGN)
 	$(RM) $(BUILD_DIR)/$(CERT_FILE)
 	@echo "Installer was signed with signtool"
 
