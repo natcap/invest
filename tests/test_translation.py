@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 from babel.messages import Catalog, mofile
 import natcap.invest
-from natcap.invest import carbon, cli, validation, set_locale, ui_server
+from natcap.invest import validation
 
 TEST_LANG = 'll'
 
@@ -34,6 +34,7 @@ for key, value in TEST_MESSAGES.items():
 
 def reset_locale():
     """Reset affected parts of the global context."""
+    from natcap.invest import carbon, cli, ui_server, set_locale
     set_locale('en')
 
     # "unimport" the modules being translated
@@ -115,6 +116,7 @@ class TranslationTests(unittest.TestCase):
 
     def test_server_get_invest_models(self):
         """Translation: test that /models endpoint is translated."""
+        from natcap.invest import ui_server
         test_client = ui_server.app.test_client()
         response = test_client.get(
             'api/models', query_string={'language': TEST_LANG})
@@ -124,6 +126,7 @@ class TranslationTests(unittest.TestCase):
 
     def test_server_get_invest_getspec(self):
         """Translation: test that /getspec endpoint is translated."""
+        from natcap.invest import ui_server
         test_client = ui_server.app.test_client()
         response = test_client.post(
             'api/getspec', json='carbon', query_string={'language': TEST_LANG})
@@ -134,6 +137,8 @@ class TranslationTests(unittest.TestCase):
 
     def test_server_get_invest_validate(self):
         """Translation: test that /validate endpoint is translated."""
+        from natcap.invest import ui_server
+        from natcap.invest import carbon
         test_client = ui_server.app.test_client()
         payload = {
             'model_module': carbon.ARGS_SPEC['pyname'],
@@ -148,6 +153,7 @@ class TranslationTests(unittest.TestCase):
 
     def test_translate_formatted_string(self):
         """Translation: test that f-string can be translated."""
+        from natcap.invest import carbon, validation, set_locale
         set_locale(TEST_LANG)
         importlib.reload(validation)
         importlib.reload(carbon)

@@ -22,7 +22,7 @@ from .. import spec_utils
 from .. import utils
 from .. import validation
 from ..model_metadata import MODEL_METADATA
-from ..spec_utils import u
+from ..unit_registry import u
 from . import sdr_core
 
 LOGGER = logging.getLogger(__name__)

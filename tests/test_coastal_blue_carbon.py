@@ -12,7 +12,6 @@ import unittest
 import numpy
 import pygeoprocessing
 from natcap.invest import utils
-from natcap.invest.coastal_blue_carbon import coastal_blue_carbon
 from osgeo import gdal
 from osgeo import osr
 
@@ -238,6 +237,7 @@ class TestCBC2(unittest.TestCase):
 
     def test_extract_snapshots(self):
         """CBC: Extract snapshots from a snapshot CSV."""
+        from natcap.invest.coastal_blue_carbon import coastal_blue_carbon
         csv_path = os.path.join(self.workspace_dir, 'snapshots.csv')
 
         transition_years = (2000, 2010, 2020)
@@ -273,6 +273,7 @@ class TestCBC2(unittest.TestCase):
         # The full biophysical table will have much, much more information.  To
         # keep the test simple, I'm only tracking the columns I know I'll need
         # in this function.
+        from natcap.invest.coastal_blue_carbon import coastal_blue_carbon
         biophysical_table = {
             1: {'lulc-class': 'a',
                 'soil-yearly-accumulation': 2,
@@ -330,6 +331,7 @@ class TestCBC2(unittest.TestCase):
         # The full biophysical table will have much, much more information.  To
         # keep the test simple, I'm only tracking the columns I know I'll need
         # in this function.
+        from natcap.invest.coastal_blue_carbon import coastal_blue_carbon
         biophysical_table = {
             1: {'lulc-class': 'a',
                 'soil-yearly-accumulation': 2,
@@ -401,6 +403,7 @@ class TestCBC2(unittest.TestCase):
 
     def test_emissions(self):
         """CBC: Check emissions calculations."""
+        from natcap.invest.coastal_blue_carbon import coastal_blue_carbon
         volume_disturbed_carbon = numpy.array(
             [[5.5, coastal_blue_carbon.NODATA_FLOAT32_MIN]], dtype=numpy.float32)
         year_last_disturbed = numpy.array(
@@ -421,6 +424,7 @@ class TestCBC2(unittest.TestCase):
 
     def test_add_rasters(self):
         """CBC: Check that we can sum rasters."""
+        from natcap.invest.coastal_blue_carbon import coastal_blue_carbon
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(32731)  # WGS84 / UTM zone 31 S
         wkt = srs.ExportToWkt()
@@ -548,6 +552,7 @@ class TestCBC2(unittest.TestCase):
 
     def test_duplicate_lulc_classes(self):
         """CBC: Raise an execption if duplicate lulc-classes."""
+        from natcap.invest.coastal_blue_carbon import coastal_blue_carbon
         args = TestCBC2._create_model_args(self.workspace_dir)
         args['workspace_dir'] = os.path.join(self.workspace_dir, 'workspace')
         with open(args['biophysical_table_path'], 'r') as table:
@@ -566,6 +571,7 @@ class TestCBC2(unittest.TestCase):
 
     def test_model_no_analysis_year_no_price_table(self):
         """CBC: Test the model's execution."""
+        from natcap.invest.coastal_blue_carbon import coastal_blue_carbon
         args = TestCBC2._create_model_args(self.workspace_dir)
         args['workspace_dir'] = os.path.join(self.workspace_dir, 'workspace')
         del args['analysis_year']  # final year is 2020.
@@ -639,6 +645,7 @@ class TestCBC2(unittest.TestCase):
         This test came up while looking into an issue reported on the forums:
         https://community.naturalcapitalproject.org/t/coastal-blue-carbon-negative-carbon-stocks/780/12
         """
+        from natcap.invest.coastal_blue_carbon import coastal_blue_carbon
         args = TestCBC2._create_model_args(self.workspace_dir)
         args['workspace_dir'] = os.path.join(self.workspace_dir, 'workspace')
 
@@ -691,6 +698,7 @@ class TestCBC2(unittest.TestCase):
 
     def test_model(self):
         """CBC: Test the model's execution."""
+        from natcap.invest.coastal_blue_carbon import coastal_blue_carbon
         args = TestCBC2._create_model_args(self.workspace_dir)
         args['workspace_dir'] = os.path.join(self.workspace_dir, 'workspace')
 
@@ -813,6 +821,7 @@ class TestCBC2(unittest.TestCase):
         When the model executes without transitions, we still evaluate carbon
         sequestration (accumulation only) for the whole baseline period.
         """
+        from natcap.invest.coastal_blue_carbon import coastal_blue_carbon
         args = TestCBC2._create_model_args(self.workspace_dir)
         args['workspace_dir'] = os.path.join(self.workspace_dir, 'workspace')
 
@@ -864,6 +873,7 @@ class TestCBC2(unittest.TestCase):
 
     def test_validation(self):
         """CBC: Test custom validation."""
+        from natcap.invest.coastal_blue_carbon import coastal_blue_carbon
         args = TestCBC2._create_model_args(self.workspace_dir)
         args['workspace_dir'] = self.workspace_dir
 
@@ -905,6 +915,7 @@ class TestCBC2(unittest.TestCase):
 
     def test_track_first_disturbance(self):
         """CBC: Track disturbances over time."""
+        from natcap.invest.coastal_blue_carbon import coastal_blue_carbon
         float32_nodata = coastal_blue_carbon.NODATA_FLOAT32_MIN
 
         srs = osr.SpatialReference()
@@ -962,6 +973,7 @@ class TestCBC2(unittest.TestCase):
 
     def test_track_later_disturbance(self):
         """CBC: Track disturbances over time."""
+        from natcap.invest.coastal_blue_carbon import coastal_blue_carbon
         float32_nodata = coastal_blue_carbon.NODATA_FLOAT32_MIN
         uint16_nodata = coastal_blue_carbon.NODATA_UINT16_MAX
 

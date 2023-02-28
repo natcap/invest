@@ -10,7 +10,7 @@ const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
 const isMac = process.platform === 'darwin';
 
-export default function menuTemplate(parentWindow, isDevMode) {
+export default function menuTemplate(parentWindow, isDevMode, i18n) {
   // Much of this template comes straight from the docs
   // https://www.electronjs.org/docs/api/menu
   const template = [
@@ -31,14 +31,14 @@ export default function menuTemplate(parentWindow, isDevMode) {
     }] : []),
     // { role: 'fileMenu' }
     {
-      label: 'File',
+      label: i18n.t('File'),
       submenu: [
         isMac ? { role: 'close' } : { role: 'quit' }
       ]
     },
     // { role: 'editMenu' }
     {
-      label: 'Edit',
+      label: i18n.t('Edit'),
       submenu: [
         { role: 'undo' },
         { role: 'redo' },
@@ -52,7 +52,7 @@ export default function menuTemplate(parentWindow, isDevMode) {
           { role: 'selectAll' },
           { type: 'separator' },
           {
-            label: 'Speech',
+            label: i18n.t('Speech'),
             submenu: [
               { role: 'startspeaking' },
               { role: 'stopspeaking' }
@@ -67,7 +67,7 @@ export default function menuTemplate(parentWindow, isDevMode) {
     },
     // { role: 'viewMenu' }
     {
-      label: 'View',
+      label: i18n.t('View'),
       submenu: [
         { role: 'reload' },
         { role: 'forcereload' },
@@ -81,7 +81,7 @@ export default function menuTemplate(parentWindow, isDevMode) {
     },
     // { role: 'windowMenu' }
     {
-      label: 'Window',
+      label: i18n.t('Window'),
       submenu: [
         { role: 'minimize' },
         { role: 'zoom' },
@@ -96,14 +96,14 @@ export default function menuTemplate(parentWindow, isDevMode) {
       ]
     },
     {
-      label: 'About',
+      label: i18n.t('About'),
       submenu: [
         {
-          label: 'About InVEST',
+          label: i18n.t('About InVEST'),
           click: () => openAboutWindow(parentWindow, isDevMode),
         },
         {
-          label: 'Report a problem',
+          label: i18n.t('Report a problem'),
           click: () => openReportWindow(parentWindow, isDevMode),
         },
       ],

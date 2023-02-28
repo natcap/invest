@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import fetch from 'node-fetch';
 
 import api from '../src/preload/api';
+import '../src/renderer/i18n/i18n';
 
 // debug logging is a bit noisy, not so useful during tests.
 if (!process.env.ELECTRON_LOG_LEVEL) {
