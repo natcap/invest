@@ -218,39 +218,6 @@ jobs:
       - name: Validate user guide links
         run: make validate_userguide_filenames
 
-  run-ui-tests:
-    name: Run UI Tests
-    runs-on: windows-latest
-    needs: check-syntax-errors
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: [3.8, 3.9, "3.10"]
-
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0 # Fetch complete history for accurate versioning
-
-      - name: Restore git-LFS test data cache
-        uses: actions/cache@v3
-        with:
-          path: data/invest-test-data
-          key: git-lfs-testdata-${{ hashfiles('Makefile') }}
-
-      - uses: ./.github/actions/setup_env
-        with:
-          python-version: ${{ matrix.python-version }}
-          requirements-files: requirements.txt requirements-dev.txt
-          requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
-
-      - name: Make install
-        run: make install
-
-      - name: Run UI tests
-        timeout-minutes: 10  # tests usually take < 2 minutes, so 10 is generous.
-        run: make test_ui
-
   run-workbench-tests:
     name: Run Workbench Tests
     runs-on: ${{ matrix.os }}

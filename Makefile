@@ -135,7 +135,7 @@ MAC_APPLICATION_BUNDLE := $(MAC_APPLICATION_BUNDLE_DIR)/$(MAC_APPLICATION_BUNDLE
 INVEST_AUTOTESTER := $(PYTHON) scripts/invest-autotest.py --cwd $(GIT_SAMPLE_DATA_REPO_PATH) --binary $(INVEST_BINARIES_DIR)/invest
 
 
-.PHONY: fetch install binaries apidocs userguide windows_installer mac_dmg sampledata sampledata_single test test_ui clean help check python_packages jenkins purge mac_zipfile deploy codesign_mac codesign_windows $(GIT_SAMPLE_DATA_REPO_PATH) $(GIT_TEST_DATA_REPO_PATH) $(GIT_UG_REPO_REV)
+.PHONY: fetch install binaries apidocs userguide windows_installer mac_dmg sampledata sampledata_single test clean help check python_packages jenkins purge mac_zipfile deploy codesign_mac codesign_windows $(GIT_SAMPLE_DATA_REPO_PATH) $(GIT_TEST_DATA_REPO_PATH) $(GIT_UG_REPO_REV)
 
 # Very useful for debugging variables!
 # $ make print-FORKNAME, for example, would print the value of the variable $(FORKNAME)
@@ -165,7 +165,6 @@ help:
 	@echo "  sampledata        to build sample data zipfiles"
 	@echo "  sampledata_single to build a single self-contained data zipfile.  Used for advanced NSIS install."
 	@echo "  test              to run pytest on the tests directory"
-	@echo "  test_ui           to run pytest on the ui_tests directory"
 	@echo "  clean             to remove temporary directories and files (but not dist/)"
 	@echo "  purge             to remove temporary directories, cloned repositories and the built environment."
 	@echo "  help              to print this help and exit"
@@ -175,9 +174,6 @@ $(BUILD_DIR) $(DATA_DIR) $(DIST_DIR) $(DIST_DATA_DIR):
 
 test: $(GIT_TEST_DATA_REPO_PATH)
 	$(TESTRUNNER) tests
-
-test_ui: $(GIT_TEST_DATA_REPO_PATH)
-	$(TESTRUNNER) ui_tests
 
 validate_sampledata: $(GIT_SAMPLE_DATA_REPO_PATH)
 	$(TEST_DATAVALIDATOR)
@@ -237,7 +233,7 @@ fetch: $(GIT_UG_REPO_PATH) $(GIT_SAMPLE_DATA_REPO_PATH) $(GIT_TEST_DATA_REPO_PAT
 # Python conda environment management
 env:
 	@echo "NOTE: requires 'requests' be installed in base Python"
-	$(PYTHON) ./scripts/convert-requirements-to-conda-yml.py requirements.txt requirements-dev.txt requirements-docs.txt requirements-gui.txt > requirements-all.yml
+	$(PYTHON) ./scripts/convert-requirements-to-conda-yml.py requirements.txt requirements-dev.txt requirements-docs.txt > requirements-all.yml
 	$(CONDA) create -p $(ENV) -y -c conda-forge python=3.8 nomkl
 	$(CONDA) env update -p $(ENV) --file requirements-all.yml
 	@echo "----------------------------"
