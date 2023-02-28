@@ -58,6 +58,9 @@ Unreleased Changes
     * Clarifying where the visual quality calculations' disk-based sorting
       cache should be located, which addresses an interesting crash experienced
       by some users on Windows. https://github.com/natcap/invest/issues/1189
+* SDR
+    * The ``ws_id`` field is no longer a required field in the watershed vector.
+      https://github.com/natcap/invest/issues/1201
 * Seasonal Water Yield
     * If a soil group raster contains any pixels that are not in the set of
       allowed soil groups (anything other than 1, 2, 3 or 4), a human readable

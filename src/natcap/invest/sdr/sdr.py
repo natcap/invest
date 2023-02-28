@@ -27,8 +27,6 @@ from . import sdr_core
 
 LOGGER = logging.getLogger(__name__)
 
-INVALID_ID_MSG = gettext('{number} features have a non-integer ws_id field')
-
 ARGS_SPEC = {
     "model_name": MODEL_METADATA["sdr"].model_title,
     "pyname": MODEL_METADATA["sdr"].pyname,
@@ -78,13 +76,9 @@ ARGS_SPEC = {
         },
         "watersheds_path": {
             "type": "vector",
-            "fields": {
-                "ws_id": {
-                    "type": "integer",
-                    "about": gettext("Unique identifier for the watershed.")}
-            },
             "geometries": spec_utils.POLYGONS,
             "projected": True,
+            "fields": {},
             "about": gettext(
                 "Map of the boundaries of the watershed(s) over which to "
                 "aggregate results. Each watershed should contribute to a "
@@ -1434,28 +1428,5 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
-    validation_warnings = validation.validate(
+    return validation.validate(
         args, ARGS_SPEC['args'], ARGS_SPEC['args_with_spatial_overlap'])
-
-    invalid_keys = validation.get_invalid_keys(validation_warnings)
-    sufficient_keys = validation.get_sufficient_keys(args)
-
-    if ('watersheds_path' not in invalid_keys and
-            'watersheds_path' in sufficient_keys):
-        # The watersheds vector must have an integer column called WS_ID.
-        vector = gdal.OpenEx(args['watersheds_path'], gdal.OF_VECTOR)
-        layer = vector.GetLayer()
-        n_invalid_features = 0
-        for feature in layer:
-            try:
-                int(feature.GetFieldAsString('ws_id'))
-            except ValueError:
-                n_invalid_features += 1
-
-        if n_invalid_features:
-            validation_warnings.append((
-                ['watersheds_path'],
-                INVALID_ID_MSG.format(number=n_invalid_features)))
-            invalid_keys.add('watersheds_path')
-
-    return validation_warnings
