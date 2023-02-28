@@ -981,8 +981,8 @@ def _calculate_visual_quality(source_raster_path, working_dir, target_path):
     raster_info = pygeoprocessing.get_raster_info(source_raster_path)
     raster_nodata = raster_info['nodata'][0]
 
-    temp_dir = tempfile.mkdtemp(dir=working_dir,
-                                prefix='visual_quality')
+    temp_dir = os.path.normpath(
+        tempfile.mkdtemp(dir=working_dir, prefix='visual_quality'))
 
     # phase 1: calculate percentiles from the visible_structures raster
     LOGGER.info('Determining percentiles for %s',
@@ -1006,8 +1006,11 @@ def _calculate_visual_quality(source_raster_path, working_dir, target_path):
         gdal.GDT_Float64, _VALUATION_NODATA,
         raster_driver_creation_tuple=FLOAT_GTIFF_CREATION_OPTIONS)
 
+    # The directory passed to raster_band_percentile() is expected to not exist
+    # or be completely empty.
+    percentiles_working_dir = os.path.join(temp_dir, 'percentiles_working_dir')
     percentile_values = pygeoprocessing.raster_band_percentile(
-        (masked_raster_path, 1), temp_dir, [0., 25., 50., 75.])
+        (masked_raster_path, 1), percentiles_working_dir, [0., 25., 50., 75.])
 
     shutil.rmtree(temp_dir, ignore_errors=True)
 
