@@ -6,6 +6,7 @@ import Form from 'react-bootstrap/Form';
 import ArgInput from '../ArgInput';
 import { boolStringToBoolean } from '../../../utils';
 import { ipcMainChannels } from '../../../../main/ipcMainChannels';
+import { withTranslation } from 'react-i18next';
 
 const { ipcRenderer } = window.Workbench.electron;
 
@@ -17,7 +18,7 @@ function dragOverHandler(event) {
 }
 
 /** Renders a form with a list of input components. */
-export default class ArgsForm extends React.Component {
+class ArgsForm extends React.Component {
   constructor(props) {
     super(props);
     this.handleFocus = this.handleFocus.bind(this);
@@ -41,12 +42,13 @@ export default class ArgsForm extends React.Component {
     const formElement = this.formRef.current;
     formElement.classList.remove('dragging');
 
+    const { loadParametersFromFile, t } = this.props;
     const fileList = event.dataTransfer.files;
     if (fileList.length !== 1) {
-      alert(_('Only drop one file at a time.')); // eslint-disable-line no-alert
+      alert(t('Only drop one file at a time.')); // eslint-disable-line no-alert
       return;
     }
-    this.props.loadParametersFromFile(fileList[0].path);
+    loadParametersFromFile(fileList[0].path);
   }
 
   /** Handle drag enter events for the Form elements. */
@@ -84,15 +86,16 @@ export default class ArgsForm extends React.Component {
     const { name } = event.currentTarget; // the arg's key and type
     // TODO: could add more filters based on argType (e.g. only show .csv)
     const fileList = event.dataTransfer.files;
+    const { triggerScrollEvent, updateArgValues, t } = this.props;
     if (fileList.length !== 1) {
-      alert(_('Only drop one file at a time.')); // eslint-disable-line no-alert
+      alert(t('Only drop one file at a time.')); // eslint-disable-line no-alert
     } else if (fileList.length === 1) {
-      this.props.updateArgValues(name, fileList[0].path);
+      updateArgValues(name, fileList[0].path);
     } else {
       throw new Error('Error handling input file drop');
     }
     event.currentTarget.focus();
-    this.props.triggerScrollEvent();
+    triggerScrollEvent();
   }
 
   handleFocus(event) {
@@ -222,3 +225,5 @@ ArgsForm.propTypes = {
 ArgsForm.defaultProps = {
   scrollEventCount: 0,
 };
+
+export default withTranslation()(ArgsForm);

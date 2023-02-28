@@ -41,6 +41,8 @@ Unreleased Changes
       ``sphinx-rtd-theme`` and ``sphinx-reredirects`` will be pulled from
       conda-forge instead of PyPI.
       (`#1151 <https://github.com/natcap/invest/issues/1151>`_)
+    * The ``invest`` command-line-interface no longer opens a graphical
+      interface to InVEST. (`#755 <https://github.com/natcap/invest/issues/755>`_)
 * Workbench
     * Added tooltips to the model tabs so that they can be identified even when
       several tabs are open (`#1071 <https://github.com/natcap/invest/issues/1088>`_)
@@ -76,6 +78,8 @@ Unreleased Changes
     * Fixed a possible path traversal vulnerability when working with datastack
       archives.  This patches CVE-2007-4559, reported to us by Trellix.
       https://github.com/natcap/invest/issues/1113
+    * Added Spanish and Chinese translations of user-facing text and an interface
+      to switch languages in the workbench UI.
     * Updating descriptions for LULC about text and biophysical table for
       clarity in model specs. https://github.com/natcap/invest/issues/1077
 * Workbench
@@ -89,6 +93,9 @@ Unreleased Changes
     * Fixed a bug where uncaught exceptions in the React tree would result in
       a blank browser window.
       (`#1119 <https://github.com/natcap/invest/issues/1119>`_)
+* GLOBIO
+    * Deprecated the GLOBIO model
+      (`#1131 <https://github.com/natcap/invest/issues/1131>`_)
 * Habitat Quality
     * All spatial inputs including the access vector and threat rasters are
       now reprojected to the ``lulc_cur_path`` raster. This fixes a bug where

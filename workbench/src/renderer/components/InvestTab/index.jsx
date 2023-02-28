@@ -10,6 +10,7 @@ import Col from 'react-bootstrap/Col';
 import {
   MdKeyboardArrowRight,
 } from 'react-icons/md';
+import { withTranslation } from 'react-i18next';
 
 import ModelStatusAlert from './ModelStatusAlert';
 import SetupTab from '../SetupTab';
@@ -52,7 +53,7 @@ function handleOpenWorkspace(logfile) {
  * Manage launching of an invest model in a child process.
  * And manage saves of executed jobs to a persistent store.
  */
-export default class InvestTab extends React.Component {
+class InvestTab extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
@@ -203,7 +204,7 @@ export default class InvestTab extends React.Component {
       logfile,
     } = this.props.job;
 
-    const { tabID, investSettings } = this.props;
+    const { tabID, investSettings, t } = this.props;
 
     // Don't render the model setup & log until data has been fetched.
     if (!modelSpec) {
@@ -228,11 +229,11 @@ export default class InvestTab extends React.Component {
               onSelect={this.switchTabs}
             >
               <Nav.Link eventKey="setup">
-                {_('Setup')}
+                {t('Setup')}
                 <MdKeyboardArrowRight />
               </Nav.Link>
               <Nav.Link eventKey="log" disabled={logDisabled}>
-                {_('Log')}
+                {t('Log')}
                 <MdKeyboardArrowRight />
               </Nav.Link>
             </Nav>
@@ -320,3 +321,5 @@ InvestTab.propTypes = {
   saveJob: PropTypes.func.isRequired,
   updateJobProperties: PropTypes.func.isRequired,
 };
+
+export default withTranslation()(InvestTab);
