@@ -195,17 +195,17 @@ class ValidateArgsSpecs(unittest.TestCase):
                     # - a fields property that maps each field header to a nested
                     #   type dictionary describing the data in that field
                     # - a geometries property: the set of valid geometry types
-                    self.assertTrue('fields' in arg)
-                    self.assertTrue(isinstance(arg['fields'], dict))
+                    self.assertIn('fields', arg.keys())
+                    self.assertIsInstance(arg['fields'], dict)
                     for field in arg['fields']:
-                        self.assertTrue(isinstance(field, str))
+                        self.assertIsInstance(field, str)
                         self.validate(
                             arg['fields'][field],
                             f'{name}.fields.{field}',
                             parent_type=t)
 
-                    self.assertTrue('geometries' in arg)
-                    self.assertTrue(isinstance(arg['geometries'], set))
+                    self.assertIn('geometries', arg)
+                    self.assertIsInstance(arg['geometries'], set)
 
                     attrs.remove('fields')
                     attrs.remove('geometries')
@@ -213,7 +213,7 @@ class ValidateArgsSpecs(unittest.TestCase):
                     # may optionally have a 'projected' attribute that says
                     # whether the vector must be linearly projected
                     if 'projected' in arg:
-                        self.assertTrue(isinstance(arg['projected'], bool))
+                        self.assertIsInstance(arg['projected'], bool)
                         attrs.remove('projected')
                     # if 'projected' is True, may also have a 'projection_units'
                     # attribute saying the expected linear projection unit
@@ -221,8 +221,8 @@ class ValidateArgsSpecs(unittest.TestCase):
                         # doesn't make sense to have projection units unless
                         # projected is True
                         self.assertTrue(arg['projected'])
-                        self.assertTrue(
-                            isinstance(arg['projection_units'], pint.Unit))
+                        self.assertIsInstance(arg['projection_units'],
+                                              pint.Unit)
                         attrs.remove('projection_units')
 
                 elif t == 'csv':
