@@ -320,6 +320,40 @@ class HRAUnitTests(unittest.TestCase):
         self.assertIn("Criterion could not be opened as a spatial file",
                       str(cm.exception))
 
+    def test_criteria_table_missing_section_headers(self):
+        """HRA: verify exception when a required section is not found."""
+        from natcap.invest import hra
+
+        criteria_table_path = os.path.join(self.workspace_dir, 'criteria.csv')
+        with open(criteria_table_path, 'w') as criteria_table:
+            criteria_table.write(
+                textwrap.dedent(  # NOTE: also checking whitespace around
+                    """\
+                      HABITAT-NAME,eelgrass,,,hardbottom ,,,CRITERIA TYPE
+                    HABITAT-FOOOOO-ATTRIBUTES,RATING  ,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
+                    recruitment rate,2,2,2,2,2,2,C
+                    connectivity rate,foo/eelgrass_connectivity.shp,2,2,2,2,2,C
+                    ,,,,,,,
+                    HABITAT STRESSOR OVERLAP PROPERTIES,,,,,,,
+                    oil,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
+                    frequency of disturbance ,2,2,3,2,2,3,C
+                    management effectiveness,2,2,1,2,2,1,E
+                    ,,,,,,,
+                    fishing,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
+                    frequency of disturbance,2,2,3,2,2,3,C
+                    management effectiveness,2,2,1,2,2,1,E
+                    """
+                ))
+        target_composite_csv_path = os.path.join(self.workspace_dir,
+                                                 'composite.csv')
+        with self.assertRaises(AssertionError) as cm:
+            habitats, stressors = hra._parse_criteria_table(
+                criteria_table_path, target_composite_csv_path)
+        self.assertIn('The criteria table is missing these section headers',
+                      str(cm.exception))
+        self.assertIn('HABITAT NAME', str(cm.exception))
+        self.assertIn('HABITAT RESILIENCE ATTRIBUTES', str(cm.exception))
+
     def test_maximum_reclassified_score(self):
         """HRA: check maximum reclassed score given a stack of scores."""
         from natcap.invest import hra
