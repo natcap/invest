@@ -43,6 +43,8 @@ Unreleased Changes
       (`#1151 <https://github.com/natcap/invest/issues/1151>`_)
     * The ``invest`` command-line-interface no longer opens a graphical
       interface to InVEST. (`#755 <https://github.com/natcap/invest/issues/755>`_)
+    * Replace the ``ARGS_SPEC`` with ``MODEL_SPEC`` which describes all model
+      outputs as well as inputs in a structured format (`#596 <https://github.com/natcap/invest/issues/596>`_)
 * Habitat Quality
     * The model now uses an euclidean distance implementation for decaying
       threat rasters both linearly and exponentially. Since InVEST 3.3.0 a
