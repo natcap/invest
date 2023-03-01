@@ -134,16 +134,10 @@ describe('extractZipInplace', () => {
     zipfile.outputStream.pipe(
       fs.createWriteStream(zipPath)
     ).on('close', () => {
-      // being extra careful with recursive rm
-      if (level1Dir.startsWith(path.join(root, 'level1'))) {
-        rimraf(level1Dir, (error) => {
-          if (error) {
-            throw error;
-          }
-          doneZipping = true;
-          done();
-        });
-      }
+      fs.unlinkSync(file1Path);
+      fs.unlinkSync(file2Path);
+      doneZipping = true;
+      done();
     });
     zipfile.end();
   });
