@@ -149,7 +149,6 @@ describe('extractZipInplace', () => {
   });
 
   afterEach(() => {
-    fs.unlinkSync(zipPath);
     fs.rmSync(root, { recursive: true, force: true });
   });
 
@@ -161,6 +160,7 @@ describe('extractZipInplace', () => {
     expect(fs.existsSync(file2Path)).toBe(false);
 
     expect(await extractZipInplace(zipPath)).toBe(true);
+    fs.unlinkSync(zipPath);
 
     // And the expected state after extraction
     expect(fs.existsSync(file1Path)).toBe(true);
