@@ -5,6 +5,7 @@ import { MdOpenInNew } from 'react-icons/md';
 
 import UG_ROOT from '../../userguideURL';
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
+import { useTranslation } from 'react-i18next';
 
 const { ipcRenderer } = window.Workbench.electron;
 
@@ -21,7 +22,6 @@ const FORUM_TAGS = {
   crop_production_regression: 'crop-production',
   delineateit: 'delineateit',
   forest_carbon_edge_effect: 'carbon-edge-effects',
-  globio: 'globio',
   habitat_quality: 'habitat-quality',
   habitat_risk_assessment: 'hra',
   ndr: 'ndr',
@@ -66,6 +66,8 @@ export default function ResourcesTab(props) {
 
   const userGuideURL = `${UG_ROOT}/${docs}#data-needs`;
 
+  const { t, i18n } = useTranslation();
+
   return (
     <React.Fragment>
       <a
@@ -75,7 +77,7 @@ export default function ResourcesTab(props) {
         onClick={handleClick}
       >
         <MdOpenInNew className="mr-1" />
-        {_("User's Guide")}
+        {t("User's Guide")}
       </a>
       <a
         href={forumURL}
@@ -84,7 +86,7 @@ export default function ResourcesTab(props) {
         onClick={handleClick}
       >
         <MdOpenInNew className="mr-1" />
-        {_("Frequently Asked Questions")}
+        {t("Frequently Asked Questions")}
       </a>
     </React.Fragment>
   );

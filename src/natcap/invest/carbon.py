@@ -14,7 +14,7 @@ import taskgraph
 from . import validation
 from . import utils
 from . import spec_utils
-from .spec_utils import u
+from .unit_registry import u
 from .model_metadata import MODEL_METADATA
 from . import gettext
 
@@ -112,13 +112,7 @@ MODEL_SPEC = {
         "carbon_pools_path": {
             "type": "csv",
             "columns": {
-                "lucode": {
-                    "type": "integer",
-                    "about": gettext(
-                        "LULC code. Every value in the "
-                        "LULC maps must have a corresponding entry in "
-                        "this column.")
-                },
+                "lucode": spec_utils.LULC_TABLE_COLUMN,
                 "c_above": {
                     "type": "number",
                     "units": u.metric_ton/u.hectare,

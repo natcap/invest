@@ -20,7 +20,7 @@ env:
   # build: dependency of make install
   # nomkl: make sure numpy w/out mkl
   # setuptools_scm: needed for versioning to work
-  CONDA_DEFAULT_DEPENDENCIES: build nomkl setuptools_scm
+  CONDA_DEFAULT_DEPENDENCIES: python-build nomkl setuptools_scm
   LATEST_SUPPORTED_PYTHON_VERSION: "3.10"
 
 jobs:
@@ -31,7 +31,7 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Set up python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: ${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
 
@@ -66,7 +66,7 @@ jobs:
       # Test data is way, way faster by contrast (on the order of a few
       # seconds to archive).
       - name: Restore git-LFS test data cache
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: data/invest-test-data
           key: git-lfs-testdata-${{ hashfiles('Makefile') }}
@@ -91,10 +91,11 @@ jobs:
           path: ./conda-env-artifact
 
       - name: Compare conda environments
-        continue-on-error: true
         run: |
-          conda list --export > conda-env.txt
-          diff ./conda-env.txt ./conda-env-artifact/conda-env.txt
+          micromamba list > conda-env.txt
+          # make sure that the exit code is always 0
+          # otherwise, an error appears in the action annotations
+          diff ./conda-env.txt ./conda-env-artifact/conda-env.txt || true
 
       - name: Build and install wheel
         run: |
@@ -108,13 +109,13 @@ jobs:
         run: make test
 
       - name: Upload wheel artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: Wheel for ${{ matrix.os }} ${{ matrix.python-version }}
           path: dist
 
       - name: Upload conda env artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         continue-on-error: true
         with:
           name: Conda Env for ${{ matrix.os }} ${{ matrix.python-version }}
@@ -170,7 +171,7 @@ jobs:
           # natcap.invest from source and that it imports.
           python -c "from natcap.invest import *"
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: Source distribution
           path: dist
@@ -198,7 +199,7 @@ jobs:
     runs-on: windows-latest
     needs: check-syntax-errors
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0 # Fetch complete history for accurate versioning
 
@@ -227,12 +228,12 @@ jobs:
         python-version: [3.8, 3.9, "3.10"]
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0 # Fetch complete history for accurate versioning
 
       - name: Restore git-LFS test data cache
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: data/invest-test-data
           key: git-lfs-testdata-${{ hashfiles('Makefile') }}
@@ -262,7 +263,7 @@ jobs:
 
     steps:
       - name: Check out repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0 # Fetch complete history for accurate versioning
 
@@ -277,13 +278,13 @@ jobs:
         run: make install
 
       - name: Set up node
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v3
         with:
           node-version: 14.x
 
       - name: Restore node_modules cache
         id: nodemodules-cache
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: workbench/node_modules
           key: ${{ runner.os }}-${{ hashFiles('workbench/yarn.lock') }}
@@ -321,7 +322,7 @@ jobs:
             workspace-path: ${{ github.workspace }}
             binary-extension: exe
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0 # Fetch complete history for accurate versioning
 
@@ -343,7 +344,7 @@ jobs:
       - name: Restore cached NSIS plugins (Windows)
         id: restore-nsis-cache
         if: matrix.os == 'windows-latest'
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: | # update this list of paths if windows-ci-binary-install.ps1 changes
             C:\Program Files (x86)\NSIS\Plugins\x86-ansi\nsProcess.dll
@@ -376,16 +377,22 @@ jobs:
         run: make install
 
       - name: Build binaries
-        run: make ${{ matrix.binary-make-command }}
+        run: make CONDA=micromamba ${{ matrix.binary-make-command }}
+
+      - name: Run invest-autotest with binaries
+        if : |
+          github.event_name == 'push' &&
+          (contains(github.ref, 'release') || github.ref == 'refs/heads/main')
+        run: make invest_autotest
 
       - name: Install Node.js
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v3
         with:
           node-version: 14.x
 
       - name: Restore node_modules cache
         id: nodemodules-cache
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: workbench/node_modules
           key: ${{ runner.os }}-${{ hashFiles('workbench/yarn.lock') }}
@@ -449,27 +456,27 @@ jobs:
 
       - name: Upload binary artifact
         if: always()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: InVEST-${{ runner.os }}-binary
           path: dist/*.${{ matrix.binary-extension }}
 
       - name: Upload workbench binary artifact
         if: always()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: Workbench-${{ runner.os }}-binary
           path: workbench/dist/*.${{ matrix.binary-extension }}
 
       - name: Upload user's guide artifact (Windows)
         if: matrix.os == 'windows-latest'
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: InVEST-user-guide
           path: dist/InVEST_*_userguide.zip
 
       - name: Upload workbench logging from puppeteer
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         if: always()
         with:
           name: ${{ runner.os }}_puppeteer_log.zip'
@@ -481,7 +488,7 @@ jobs:
 
       - name: Upload workspace on failure
         if: ${{ failure() }}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: InVEST-failed-${{ runner.os }}-workspace
           path: ${{ matrix.workspace-path}}
@@ -491,11 +498,11 @@ jobs:
     needs: check-syntax-errors
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0 # Fetch complete history for accurate versioning
 
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v4
         with:
           python-version: ${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
 
@@ -506,7 +513,7 @@ jobs:
       - run: make sampledata sampledata_single
 
       - name: Upload sample data artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: InVEST-sample-data
           path: dist/*.zip

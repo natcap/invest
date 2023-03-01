@@ -3,16 +3,20 @@ import PropTypes from 'prop-types';
 
 import Alert from 'react-bootstrap/Alert';
 import Button from 'react-bootstrap/Button';
+import { useTranslation } from 'react-i18next';
 
 /* Render different Alert contents depending on an InVEST run status */
 export default function ModelStatusAlert(props) {
+  const { status } = props;
+  const { t, i18n } = useTranslation();
+
   const WorkspaceButton = (
     <Button
       variant="outline-dark"
       onClick={props.handleOpenWorkspace}
       disabled={props.status === 'running'}
     >
-      {_("Open Workspace")}
+      {t('Open Workspace')}
     </Button>
   );
 
@@ -21,42 +25,46 @@ export default function ModelStatusAlert(props) {
       variant="outline-dark"
       onClick={props.terminateInvestProcess}
     >
-      {_("Cancel Run")}
+      {t('Cancel Run')}
     </Button>
   );
 
-  if (props.status === 'running') {
+  if (status === 'running') {
     return (
       <Alert variant="secondary">
         {CancelButton}
       </Alert>
     );
   }
-  if (props.status === 'error') {
-    return (
-      <Alert
-        className="text-break"
-        variant="danger"
-      >
-        {props.finalTraceback}
-        {WorkspaceButton}
-      </Alert>
-    );
+
+  let alertVariant;
+  let alertMessage;
+  if (status === 'success') {
+    alertVariant = 'success';
+    alertMessage = t('Model Complete');
+  } else if (status === 'error') {
+    alertVariant = 'danger';
+    alertMessage = t('Error: see log for details');
+  } else if (status === 'canceled') {
+    alertVariant = 'danger';
+    alertMessage = t('Run Canceled');
   }
-  if (props.status === 'success') {
-    return (
-      <Alert variant="success">
-        {_("Model Complete")}
-        {WorkspaceButton}
-      </Alert>
-    );
-  }
-  return null;
+
+  return (
+    <Alert
+      className="text-break"
+      variant={alertVariant}
+    >
+      {alertMessage}
+      {WorkspaceButton}
+    </Alert>
+  );
 }
 
 ModelStatusAlert.propTypes = {
-  status: PropTypes.oneOf(['running', 'error', 'success']).isRequired,
-  finalTraceback: PropTypes.string,
+  status: PropTypes.oneOf(
+    ['running', 'error', 'success', 'canceled']
+  ).isRequired,
   terminateInvestProcess: PropTypes.func.isRequired,
   handleOpenWorkspace: PropTypes.func.isRequired,
 };

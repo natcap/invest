@@ -178,23 +178,6 @@ const UI_SPEC = {
       biomass_to_carbon_conversion_factor: isSufficient.bind(null, 'compute_forest_edge_effects'),
     },
   },
-  globio: {
-    order: [
-      ['workspace_dir', 'results_suffix'],
-      ['predefined_globio', 'globio_lulc_path'],
-      ['lulc_to_globio_table_path', 'lulc_path', 'pasture_path', 'potential_vegetation_path', 'primary_threshold', 'pasture_threshold'],
-      ['aoi_path', 'infrastructure_dir', 'intensification_fraction', 'msa_parameters_path'],
-    ],
-    enabledFunctions: {
-      globio_lulc_path: isSufficient.bind(null, 'predefined_globio'),
-      lulc_to_globio_table_path: isNotSufficient.bind(null, 'predefined_globio'),
-      lulc_path: isNotSufficient.bind(null, 'predefined_globio'),
-      pasture_path: isNotSufficient.bind(null, 'predefined_globio'),
-      potential_vegetation_path: isNotSufficient.bind(null, 'predefined_globio'),
-      primary_threshold: isNotSufficient.bind(null, 'predefined_globio'),
-      pasture_threshold: isNotSufficient.bind(null, 'predefined_globio'),
-    },
-  },
   habitat_quality: {
     order: [
       ['workspace_dir', 'results_suffix'],

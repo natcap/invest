@@ -18,7 +18,7 @@ jobs:
     name: PR main into release/**
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0
       - run: git fetch origin +refs/tags/*:refs/tags/*

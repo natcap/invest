@@ -11,15 +11,14 @@ import taskgraph
 from osgeo import gdal
 from osgeo import ogr
 
-from ..model_metadata import MODEL_METADATA
+from .. import gettext
 from .. import spec_utils
 from .. import utils
 from .. import validation
+from ..model_metadata import MODEL_METADATA
 from ..sdr import sdr
-from ..spec_utils import u
-from .. import gettext
+from ..unit_registry import u
 from . import ndr_core
-
 
 LOGGER = logging.getLogger(__name__)
 
@@ -45,8 +44,8 @@ MODEL_SPEC = {
         "lulc_path": {
             **spec_utils.LULC,
             "projected": True,
-            "about": gettext(
-                f"{spec_utils.LULC['about']} All values in this raster must "
+            "about": spec_utils.LULC['about'] + " " + gettext(
+                "All values in this raster must "
                 "have corresponding entries in the Biophysical table.")
         },
         "runoff_proxy_path": {
@@ -75,12 +74,7 @@ MODEL_SPEC = {
         "biophysical_table_path": {
             "type": "csv",
             "columns": {
-                "lucode": {
-                    "type": "integer",
-                    "about": gettext(
-                        "LULC code for this class corresponding to values in "
-                        "the LULC raster.")
-                },
+                "lucode": spec_utils.LULC_TABLE_COLUMN,
                 "load_[NUTRIENT]": {  # nitrogen or phosphorus nutrient loads
                     "type": "number",
                     "units": u.kilogram/u.hectare/u.year,

@@ -298,6 +298,7 @@ exceed 100% of window.*/
 .card-footer .status {
 	overflow: hidden;
 	font-style: italic;
+	text-transform: capitalize;
 }
 
 .card-footer .status-error {
@@ -531,24 +532,23 @@ input[type=text]::placeholder {
 	height: var(--content-height);
 }
 
-#log-text {
+#log-display {
 	font-family: monospace;
 	font-size:1rem;
 	color: #000;
-	margin-top: 1rem;
-	margin-bottom: 1rem;
+	padding-right: 0;
 }
 
-#log-text .invest-log-primary {
+#log-display .invest-log-primary {
 	color: #000;
 	font-weight: bold;
 }
 
-#log-text .invest-log-primary-warning {
+#log-display .invest-log-primary-warning {
 	color: #f13232;
 }
 
-#log-text .invest-log-error {
+#log-display .invest-log-error {
 	color: #f13232;
 	font-weight: bold;
 }
@@ -569,4 +569,21 @@ input[type=text]::placeholder {
 	And it is okay because we set the minimum electron window width
 	at 800px when we create it.*/
 	max-width: 600px;
+}
+
+/* Save As modal */
+.save-as-modal svg {
+	margin-bottom: 0.2rem;
+}
+
+.error-boundary {
+	max-width:600px;
+	margin: 0 auto;
+	margin-top: 5rem;
+	border-color: black;
+	border-style: dotted;
+}
+
+.error-boundary .btn {
+	margin: 1rem;
 }

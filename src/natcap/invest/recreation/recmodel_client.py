@@ -1,42 +1,41 @@
 """InVEST Recreation Client."""
 import json
-import os
-import zipfile
-import time
 import logging
 import math
+import os
 import pickle
-import urllib.request
-import tempfile
 import shutil
+import tempfile
+import time
+import urllib.request
+import zipfile
 
-import rtree
-import Pyro4
-from osgeo import ogr
-from osgeo import gdal
-from osgeo import osr
-import shapely
-import shapely.geometry
-import shapely.wkt
-import shapely.prepared
-import pygeoprocessing
 import numpy
 import numpy.linalg
+import pygeoprocessing
+import Pyro4
+import rtree
+import shapely
+import shapely.geometry
+import shapely.prepared
 import shapely.speedups
+import shapely.wkt
 import taskgraph
+from osgeo import gdal
+from osgeo import ogr
+from osgeo import osr
 
 if shapely.speedups.available:
     shapely.speedups.enable()
 
 # prefer to do intrapackage imports to avoid case where global package is
 # installed and we import the global version of it rather than the local
-from .. import utils
+from .. import gettext
 from .. import spec_utils
-from ..spec_utils import u
+from .. import utils
 from .. import validation
 from ..model_metadata import MODEL_METADATA
-from .. import gettext
-
+from ..unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
 
@@ -855,15 +854,13 @@ def _schedule_predictor_data_processing(
     }
 
     predictor_table = utils.build_lookup_from_csv(
-        predictor_table_path, 'id')
+        predictor_table_path, 'id', expand_path_cols=['path'])
     predictor_task_list = []
     predictor_json_list = []  # tracks predictor files to add to shp
 
     for predictor_id in predictor_table:
         LOGGER.info(f"Building predictor {predictor_id}")
 
-        predictor_path = _sanitize_path(
-            predictor_table_path, predictor_table[predictor_id]['path'])
         predictor_type = predictor_table[predictor_id]['type'].strip()
         if predictor_type.startswith('raster'):
             # type must be one of raster_sum or raster_mean
@@ -873,8 +870,8 @@ def _schedule_predictor_data_processing(
             predictor_json_list.append(predictor_target_path)
             predictor_task_list.append(task_graph.add_task(
                 func=_raster_sum_mean,
-                args=(predictor_path, raster_op_mode, response_vector_path,
-                      predictor_target_path),
+                args=(predictor_table[predictor_id]['path'], raster_op_mode,
+                      response_vector_path, predictor_target_path),
                 target_path_list=[predictor_target_path],
                 task_name=f'predictor {predictor_id}'))
         # polygon types are a special case because the polygon_area
@@ -886,7 +883,8 @@ def _schedule_predictor_data_processing(
             predictor_task_list.append(task_graph.add_task(
                 func=_polygon_area,
                 args=(predictor_type, response_polygons_pickle_path,
-                      predictor_path, predictor_target_path),
+                      predictor_table[predictor_id]['path'],
+                      predictor_target_path),
                 target_path_list=[predictor_target_path],
                 dependent_task_list=[prepare_response_polygons_task],
                 task_name=f'predictor {predictor_id}'))
@@ -896,7 +894,8 @@ def _schedule_predictor_data_processing(
             predictor_json_list.append(predictor_target_path)
             predictor_task_list.append(task_graph.add_task(
                 func=predictor_functions[predictor_type],
-                args=(response_polygons_pickle_path, predictor_path,
+                args=(response_polygons_pickle_path,
+                      predictor_table[predictor_id]['path'],
                       predictor_target_path),
                 target_path_list=[predictor_target_path],
                 dependent_task_list=[prepare_response_polygons_task],
@@ -1617,7 +1616,8 @@ def _validate_same_projection(base_vector_path, table_path):
     # This will load the table as a list of paths which we can iterate through
     # without bothering the rest of the table structure
     data_paths = utils.read_csv_to_dataframe(
-        table_path, to_lower=True, squeeze=True)['path'].tolist()
+        table_path, to_lower=True, expand_path_cols=['path']
+    ).squeeze('columns')['path'].tolist()
 
     base_vector = gdal.OpenEx(base_vector_path, gdal.OF_VECTOR)
     base_layer = base_vector.GetLayer()
@@ -1626,8 +1626,7 @@ def _validate_same_projection(base_vector_path, table_path):
     base_vector = None
 
     invalid_projections = False
-    for raw_path in data_paths:
-        path = _sanitize_path(table_path, raw_path)
+    for path in data_paths:
 
         def error_handler(err_level, err_no, err_msg):
             """Empty error handler to avoid stderr output."""
@@ -1706,14 +1705,6 @@ def delay_op(last_time, time_delay, func):
         func()
         return time.time()
     return last_time
-
-
-def _sanitize_path(base_path, raw_path):
-    """Return ``path`` if absolute, or make absolute local to ``base_path``."""
-    if os.path.isabs(raw_path):
-        return raw_path
-    else:  # assume relative path w.r.t. the response table
-        return os.path.join(os.path.dirname(base_path), raw_path)
 
 
 @validation.invest_validator

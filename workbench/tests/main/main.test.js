@@ -174,9 +174,8 @@ describe('createWindow', () => {
       ipcMainChannels.SHOW_OPEN_DIALOG,
       ipcMainChannels.SHOW_SAVE_DIALOG,
       ipcMainChannels.IS_FIRST_RUN,
-      ipcMainChannels.SET_LANGUAGE,
+      ipcMainChannels.CHANGE_LANGUAGE,
       ipcMainChannels.GET_N_CPUS,
-      ipcMainChannels.IS_DEV_MODE,
       ipcMainChannels.INVEST_VERSION,
       ipcMainChannels.CHECK_STORAGE_TOKEN,
     ];
@@ -185,7 +184,6 @@ describe('createWindow', () => {
       ipcMainChannels.INVEST_RUN,
       ipcMainChannels.INVEST_KILL,
       ipcMainChannels.INVEST_READ_LOG,
-      ipcMainChannels.GETTEXT,
       ipcMainChannels.SHOW_ITEM_IN_FOLDER,
       ipcMainChannels.OPEN_EXTERNAL_URL,
     ];

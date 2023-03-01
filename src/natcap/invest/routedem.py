@@ -1,20 +1,19 @@
 """RouteDEM for exposing the natcap.invest's routing package to UI."""
-import os
 import logging
+import os
 
-from osgeo import gdal
+import numpy
 import pygeoprocessing
 import pygeoprocessing.routing
 import taskgraph
-import numpy
+from osgeo import gdal
 
-from . import utils
+from . import gettext
 from . import spec_utils
-from .spec_utils import u
+from . import utils
 from . import validation
 from .model_metadata import MODEL_METADATA
-from . import gettext
-
+from .unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
 
@@ -78,9 +77,9 @@ MODEL_SPEC = {
         "threshold_flow_accumulation": {
             **spec_utils.THRESHOLD_FLOW_ACCUMULATION,
             "required": "calculate_stream_threshold",
-            "about": gettext(
-                f"{spec_utils.THRESHOLD_FLOW_ACCUMULATION['about']} "
-                "Required if Calculate Streams is selected.")
+            "about": (
+                spec_utils.THRESHOLD_FLOW_ACCUMULATION['about'] + " " +
+                gettext("Required if Calculate Streams is selected."))
         },
         "calculate_downslope_distance": {
             "type": "boolean",

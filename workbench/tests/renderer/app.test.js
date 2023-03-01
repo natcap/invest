@@ -5,12 +5,12 @@ import { spawn, exec } from 'child_process';
 import Stream from 'stream';
 
 import fetch from 'node-fetch';
-import GettextJS from 'gettext.js';
 import React from 'react';
 import { ipcRenderer } from 'electron';
 import {
   render, waitFor, within
 } from '@testing-library/react';
+import { act } from 'react-dom/test-utils';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 
@@ -19,7 +19,8 @@ import {
   getInvestModelNames,
   getSpec,
   fetchValidation,
-  fetchDatastackFromFile
+  fetchDatastackFromFile,
+  getSupportedLanguages
 } from '../../src/renderer/server_requests';
 import InvestJob from '../../src/renderer/InvestJob';
 import {
@@ -32,6 +33,7 @@ import {
 } from '../../src/main/setupInvestHandlers';
 import writeInvestParameters from '../../src/main/writeInvestParameters';
 import { removeIpcMainListeners } from '../../src/main/main';
+
 
 // It's quite a pain to dynamically mock a const from a module,
 // here we do it by importing as another object, then
@@ -110,6 +112,11 @@ describe('Various ways to open and close InVEST models', () => {
     const setupTab = await findByText('Setup');
     expect(setupTab.classList.contains('active')).toBeTruthy();
     expect(getSpec).toHaveBeenCalledTimes(1);
+    const navTab = await findByRole('tab', { name: MOCK_MODEL_TITLE });
+    act(() => {
+      userEvent.hover(navTab);
+    });
+    await findByRole('tooltip', { name: MOCK_MODEL_TITLE });
   });
 
   test('Clicking a recent job renders SetupTab', async () => {
@@ -308,7 +315,6 @@ describe('Display recently executed InVEST jobs on Home tab', () => {
         results_suffix: 'suffix',
       },
       status: 'error',
-      finalTraceback: 'ValueError ...',
     });
     const recentJobs = await InvestJob.saveJob(job2);
     const initialJobs = [job1, job2];
@@ -326,8 +332,8 @@ describe('Display recently executed InVEST jobs on Home tab', () => {
           expect(getByText('Model Complete'))
             .toBeInTheDocument();
         }
-        if (job.status === 'error' && job.finalTraceback) {
-          expect(getByText(job.finalTraceback))
+        if (job.status === 'error') {
+          expect(getByText(job.status))
             .toBeInTheDocument();
         }
         if (job.argsValues.results_suffix) {
@@ -340,6 +346,30 @@ describe('Display recently executed InVEST jobs on Home tab', () => {
           .toBeInTheDocument();
       });
     });
+  });
+
+  test('Recent Jobs: a job with incomplete data is skipped', async () => {
+    const job1 = new InvestJob({
+      modelRunName: 'carbon',
+      modelHumanName: 'invest A',
+      argsValues: {
+        workspace_dir: 'dir',
+      },
+      status: 'success',
+    });
+    const job2 = new InvestJob({
+      // argsValues is missing
+      modelRunName: 'sdr',
+      modelHumanName: 'invest B',
+      status: 'success',
+    });
+    await InvestJob.saveJob(job1);
+    await InvestJob.saveJob(job2);
+
+    const { findByText, queryByText } = render(<App />);
+
+    expect(await findByText(job1.modelHumanName)).toBeInTheDocument();
+    expect(queryByText(job2.modelHumanName)).toBeNull();
   });
 
   test('Recent Jobs: placeholder if there are no recent jobs', async () => {
@@ -383,14 +413,18 @@ describe('InVEST global settings: dialog interactions', () => {
   const tgLoggingLabelText = 'Taskgraph logging threshold';
   const languageLabelText = 'Language';
 
+  beforeAll(() => {
+    delete global.window.location;
+    Object.defineProperty(global.window, 'location', {
+      configurable: true,
+      value: { reload: jest.fn() },
+    });
+  });
+
   beforeEach(async () => {
     getInvestModelNames.mockResolvedValue({});
-    ipcRenderer.invoke.mockImplementation((channel) => {
-      if (channel === ipcMainChannels.IS_DEV_MODE) {
-        return Promise.resolve(true); // mock dev mode so that language dropdown is rendered
-      }
-      return Promise.resolve();
-    });
+    getSupportedLanguages.mockResolvedValue({ en: 'english', es: 'spanish' });
+    ipcRenderer.invoke.mockImplementation(() => Promise.resolve());
   });
 
   test('Invest settings save on change', async () => {
@@ -655,15 +689,9 @@ describe('InVEST subprocess testing', () => {
     const execute = await findByRole('button', { name: /Run/ });
     userEvent.click(execute);
 
-    // To test that we can parse the finalTraceback even after extra data
-    const someStdErr = 'something went wrong';
-    const finalTraceback = 'ValueError';
-    const pyInstallerErr = "[12345] Failed to execute script 'cli' due to unhandled exception!";
-    const allStdErr = `${someStdErr}\n${finalTraceback}\n${pyInstallerErr}\n`;
-
     mockInvestProc.stdout.push(stdOutText);
     mockInvestProc.stdout.push(stdOutLogfileSignal);
-    mockInvestProc.stderr.push(allStdErr);
+    mockInvestProc.stderr.push('some error');
     const logTab = await findByText('Log');
     await waitFor(() => {
       expect(logTab.classList.contains('active')).toBeTruthy();
@@ -674,11 +702,9 @@ describe('InVEST subprocess testing', () => {
 
     mockInvestProc.emit('exit', 1); // 1 - exit w/ error
 
-    // Only finalTraceback text should be rendered in a red alert
     const alert = await findByRole('alert');
     await waitFor(() => {
-      expect(alert).toHaveTextContent(new RegExp(`^${finalTraceback}`));
-      expect(alert).not.toHaveTextContent(someStdErr);
+      expect(alert).toHaveTextContent('Error: see log for details');
       expect(alert).toHaveClass('alert-danger');
     });
     expect(await findByRole('button', { name: 'Open Workspace' }))
@@ -848,72 +874,30 @@ describe('InVEST subprocess testing', () => {
 });
 
 describe('Translation', () => {
-  const i18n = new GettextJS();
-  const testLanguage = 'es';
-  const messageCatalog = {
-    '': {
-      language: testLanguage,
-      'plural-forms': 'nplurals=2; plural=(n!=1);',
-    },
-    Open: 'σρєи',
-    Language: 'ℓαиgυαgє',
-  };
-
   beforeAll(async () => {
     getInvestModelNames.mockResolvedValue({});
+    getSupportedLanguages.mockResolvedValue({ en: 'english', ll: 'foo' });
 
-    i18n.loadJSON(messageCatalog, 'messages');
-
-    // mock out the relevant IPC channels
-    ipcRenderer.invoke.mockImplementation((channel, arg) => {
-      if (channel === ipcMainChannels.SET_LANGUAGE) {
-        i18n.setLocale(arg);
-      }
-      if (channel === ipcMainChannels.IS_DEV_MODE) {
-        return Promise.resolve(true); // mock dev mode so that language dropdown is rendered
-      }
-      return Promise.resolve();
+    delete global.window.location;
+    Object.defineProperty(global.window, 'location', {
+      configurable: true,
+      value: { reload: jest.fn() },
     });
-
-    ipcRenderer.sendSync.mockImplementation((channel, arg) => {
-      if (channel === ipcMainChannels.GETTEXT) {
-        return i18n.gettext(arg);
-      }
-      return undefined;
-    });
-
-    // this is the same setup that's done in src/renderer/index.js (out of test scope)
-    ipcRenderer.invoke(ipcMainChannels.SET_LANGUAGE, 'en');
-    global.window._ = ipcRenderer.sendSync.bind(null, ipcMainChannels.GETTEXT);
   });
 
   test('Text rerenders in new language when language setting changes', async () => {
-    const {
-      findByText,
-      getByText,
-      findByLabelText,
-    } = render(<App />);
+    const { findByLabelText } = render(<App />);
 
     userEvent.click(await findByLabelText('settings'));
-    let languageInput = await findByLabelText('Language', { exact: false });
+    const languageInput = await findByLabelText('Language', { exact: false });
     expect(languageInput).toHaveValue('en');
 
-    userEvent.selectOptions(languageInput, testLanguage);
-
-    // text within the settings modal component should be translated
-    languageInput = await findByLabelText(messageCatalog.Language, { exact: false });
-    expect(languageInput).toHaveValue(testLanguage);
-
-    // text should also be translated in other components
-    // such as the Open button (visible in background)
-    await findByText(messageCatalog.Open);
-
-    // text without a translation in the message catalog should display in the default English
-    expect(getByText('Logging threshold')).toBeDefined();
-
-    // resetting language should re-render components in English
-    userEvent.click(getByText('Reset to Defaults'));
-    expect(await findByText('Language')).toBeDefined();
-    expect(await findByText('Open')).toBeDefined();
+    userEvent.selectOptions(languageInput, 'll');
+    await waitFor(() => {
+      expect(global.window.location.reload).toHaveBeenCalled();
+    });
+    // because we can't reload the window in the test environment,
+    // components won't actually rerender in the new language
+    expect(languageInput).toHaveValue('ll');
   });
 });

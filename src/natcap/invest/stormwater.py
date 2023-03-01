@@ -4,17 +4,18 @@ import math
 import os
 
 import numpy
-from osgeo import gdal, ogr, osr
 import pygeoprocessing
 import taskgraph
+from osgeo import gdal
+from osgeo import ogr
+from osgeo import osr
 
+from . import gettext
 from . import spec_utils
-from .spec_utils import u
 from . import utils
 from . import validation
 from .model_metadata import MODEL_METADATA
-from . import gettext
-
+from .unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
 
@@ -22,6 +23,7 @@ LOGGER = logging.getLogger(__name__)
 FLOAT_NODATA = -1
 UINT8_NODATA = 255
 UINT16_NODATA = 65535
+NONINTEGER_SOILS_RASTER_MESSAGE = 'Soil group raster data type must be integer'
 
 MODEL_SPEC = {
     "model_name": MODEL_METADATA["stormwater"].model_title,
@@ -45,10 +47,7 @@ MODEL_SPEC = {
         "biophysical_table": {
             "type": "csv",
             "columns": {
-                "lucode": {
-                    "type": "integer",
-                    "about": gettext("LULC code corresponding to the LULC raster")
-                },
+                "lucode": spec_utils.LULC_TABLE_COLUMN,
                 "emc_[POLLUTANT]": {
                     "type": "number",
                     "units": u.milligram/u.liter,
@@ -60,15 +59,20 @@ MODEL_SPEC = {
                 **{
                     f"rc_{soil_group}": {
                         "type": "ratio",
-                        "about": gettext("Stormwater runoff coefficient for soil "
-                                  f"group {soil_group.upper()}")
+                        "about": (
+                            gettext(
+                                "Stormwater runoff coefficient for soil group")
+                            + f" {soil_group.upper()}"),
                     } for soil_group in ["a", "b", "c", "d"]
                 },
                 **{
                     f"pe_{soil_group}": {
                         "type": "ratio",
-                        "about": gettext("Stormwater percolation coefficient for "
-                                  f"soil group {soil_group.upper()}"),
+                        "about": (
+                            gettext(
+                                "Stormwater percolation coefficient "
+                                "for soil group") +
+                            f" {soil_group.upper()}"),
                         "required": False
                     } for soil_group in ["a", "b", "c", "d"]
                 },
@@ -1276,5 +1280,14 @@ def validate(args, limit_to=None):
             the error message in the second part of the tuple. This should
             be an empty list if validation succeeds.
     """
-    return validation.validate(args, MODEL_SPEC['args'],
+    validation_warnings = validation.validate(args, MODEL_SPEC['args'],
                                MODEL_SPEC['args_with_spatial_overlap'])
+    invalid_keys = validation.get_invalid_keys(validation_warnings)
+    if 'soil_group_path' not in invalid_keys:
+        # check that soil group raster has integer type
+        soil_group_dtype = pygeoprocessing.get_raster_info(
+            args['soil_group_path'])['numpy_type']
+        if not numpy.issubdtype(soil_group_dtype, numpy.integer):
+            validation_warnings.append(
+                (['soil_group_path'], NONINTEGER_SOILS_RASTER_MESSAGE))
+    return validation_warnings

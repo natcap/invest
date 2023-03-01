@@ -1,21 +1,21 @@
 """InVEST Annual Water Yield model."""
 import logging
-import os
 import math
+import os
 import pickle
 
 import numpy
-from osgeo import gdal
-from osgeo import ogr
 import pygeoprocessing
 import taskgraph
+from osgeo import gdal
+from osgeo import ogr
 
-from . import utils
+from . import gettext
 from . import spec_utils
-from .spec_utils import u
+from . import utils
 from . import validation
 from .model_metadata import MODEL_METADATA
-from . import gettext
+from .unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
 
@@ -117,9 +117,9 @@ MODEL_SPEC = {
         "lulc_path": {
             **spec_utils.LULC,
             "projected": True,
-            "about": gettext(
-                f"{spec_utils.LULC['about']} All values in this raster "
-                "must have corresponding entries in the Biophysical Table.")
+            "about": spec_utils.LULC['about'] + " " + gettext(
+                "All values in this raster must have corresponding entries "
+                "in the Biophysical Table.")
         },
         "depth_to_root_rest_layer_path": {
             "type": "raster",
@@ -187,11 +187,7 @@ MODEL_SPEC = {
         "biophysical_table_path": {
             "type": "csv",
             "columns": {
-                "lucode": {
-                    "type": "integer",
-                    "about": gettext(
-                        "LULC code corresponding to values in the LULC map.")
-                },
+                "lucode": spec_utils.LULC_TABLE_COLUMN,
                 "lulc_veg": {
                     "type": "integer",
                     "about": gettext(

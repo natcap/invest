@@ -9,7 +9,7 @@ from osgeo import osr
 import pygeoprocessing
 import taskgraph
 
-from .spec_utils import u
+from .unit_registry import u
 from . import spec_utils
 from . import utils
 from . import validation

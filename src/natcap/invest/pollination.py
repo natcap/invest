@@ -15,7 +15,7 @@ import taskgraph
 
 from . import utils
 from . import spec_utils
-from .spec_utils import u
+from .unit_registry import u
 from . import validation
 from .model_metadata import MODEL_METADATA
 from . import gettext
@@ -89,12 +89,7 @@ MODEL_SPEC = {
         "landcover_biophysical_table_path": {
             "type": "csv",
             "columns": {
-                "lucode": {
-                    "type": "integer",
-                    "about": gettext(
-                        "LULC code representing this class in the LULC raster."
-                    )
-                },
+                "lucode": spec_utils.LULC_TABLE_COLUMN,
                 "nesting_[SUBSTRATE]_availability_index": {
                     "type": "ratio",
                     "about": gettext(

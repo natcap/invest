@@ -13,9 +13,7 @@ import { MdFolderOpen } from 'react-icons/md';
 import Expire from '../Expire';
 import Portal from '../Portal';
 import ArgsForm from './ArgsForm';
-import {
-  RunButton, SaveParametersButtons
-} from './SetupButtons';
+import SaveAsModal from '../SaveAsModal';
 import {
   archiveDatastack,
   fetchDatastackFromFile,
@@ -25,6 +23,7 @@ import {
 } from '../../server_requests';
 import { argsDictFromObject } from '../../utils';
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
+import { withTranslation } from 'react-i18next';
 
 const { ipcRenderer } = window.Workbench.electron;
 
@@ -76,7 +75,7 @@ function initializeArgValues(argsSpec, uiSpec, argsDict) {
 }
 
 /** Renders an arguments form, execute button, and save buttons. */
-export default class SetupTab extends React.Component {
+class SetupTab extends React.Component {
   constructor(props) {
     super(props);
     this._isMounted = false;
@@ -235,7 +234,7 @@ export default class SetupTab extends React.Component {
     this.setSaveAlert(response);
   }
 
-  async saveJsonFile(datastackPath) {
+  async saveJsonFile(datastackPath, relativePaths) {
     const {
       pyModuleName,
     } = this.props;
@@ -245,7 +244,7 @@ export default class SetupTab extends React.Component {
     const payload = {
       filepath: datastackPath,
       moduleName: pyModuleName,
-      relativePaths: false,
+      relativePaths: relativePaths,
       args: JSON.stringify(args),
     };
     const response = await writeParametersToFile(payload);
@@ -290,14 +289,14 @@ export default class SetupTab extends React.Component {
 
   async loadParametersFromFile(filepath) {
     const datastack = await fetchDatastackFromFile(filepath);
-
-    if (datastack.module_name === this.props.pyModuleName) {
+    const { pyModuleName, switchTabs, t } = this.props;
+    if (datastack.module_name === pyModuleName) {
       this.batchUpdateArgs(datastack.args);
-      this.props.switchTabs('setup');
+      switchTabs('setup');
       this.triggerScrollEvent();
     } else {
       alert( // eslint-disable-line no-alert
-        _(`Datastack/Logfile for ${datastack.model_human_name} does not match this model.`)
+        t(`Datastack/Logfile for ${datastack.model_human_name} does not match this model.`)
       );
     }
   }
@@ -461,6 +460,7 @@ export default class SetupTab extends React.Component {
       saveAlerts,
       scrollEventCount,
     } = this.state;
+    const { t } = this.props;
     if (argsValues) {
       const {
         argsSpec,
@@ -469,6 +469,7 @@ export default class SetupTab extends React.Component {
         sidebarFooterElementId,
         executeClicked,
         uiSpec,
+        modelName,
       } = this.props;
 
       const SaveAlerts = [];
@@ -495,7 +496,7 @@ export default class SetupTab extends React.Component {
         executeClicked
           ? (
             <span>
-              {_('Running')}
+              {t('Running')}
               <Spinner
                 animation="border"
                 size="sm"
@@ -504,7 +505,7 @@ export default class SetupTab extends React.Component {
               />
             </span>
           )
-          : <span>{_('Run')}</span>
+          : <span>{t('Run')}</span>
       );
       return (
         <Container fluid>
@@ -530,7 +531,7 @@ export default class SetupTab extends React.Component {
               delay={{ show: 250, hide: 400 }}
               overlay={(
                 <Tooltip>
-                  {_('Browse to a datastack (.json, .tgz) or InVEST logfile (.txt)')}
+                  {t('Browse to a datastack (.json, .tgz) or InVEST logfile (.txt)')}
                 </Tooltip>
               )}
             >
@@ -539,10 +540,11 @@ export default class SetupTab extends React.Component {
                 variant="link"
               >
                 <MdFolderOpen className="mr-1" />
-                {_('Load parameters from file')}
+                {t('Load parameters from file')}
               </Button>
             </OverlayTrigger>
-            <SaveParametersButtons
+            <SaveAsModal
+              modelName={modelName}
               savePythonScript={this.savePythonScript}
               saveJsonFile={this.saveJsonFile}
               saveDatastack={this.saveDatastack}
@@ -552,20 +554,25 @@ export default class SetupTab extends React.Component {
             </React.Fragment>
           </Portal>
           <Portal elId={sidebarFooterElementId}>
-            <RunButton
+            <Button
+              block
+              variant="primary"
+              size="lg"
+              onClick={this.wrapInvestExecute}
               disabled={!argsValid || executeClicked}
-              wrapInvestExecute={this.wrapInvestExecute}
-              buttonText={buttonText}
-            />
+            >
+              {buttonText}
+            </Button>
           </Portal>
         </Container>
       );
     }
     // The SetupTab remains disabled in this route, so no need
     // to render anything here.
-    return (<div>{_('No args to see here')}</div>);
+    return (<div>{t('No args to see here')}</div>);
   }
 }
+export default withTranslation()(SetupTab);
 
 SetupTab.propTypes = {
   pyModuleName: PropTypes.string.isRequired,

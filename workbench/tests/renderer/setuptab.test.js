@@ -243,7 +243,7 @@ describe('Arguments form interactions', () => {
   });
 
   test('Type fast & confirm validation waits for pause in typing', async () => {
-    const spy = jest.spyOn(SetupTab.prototype, 'investValidate');
+    const spy = jest.spyOn(SetupTab.WrappedComponent.prototype, 'investValidate');
     const spec = baseArgsSpec('directory');
     spec.args.arg.required = true;
     const { findByLabelText } = renderSetupFromSpec(spec, UI_SPEC);
@@ -259,7 +259,7 @@ describe('Arguments form interactions', () => {
   });
 
   test('Type slow & confirm validation waits for pause in typing', async () => {
-    const spy = jest.spyOn(SetupTab.prototype, 'investValidate');
+    const spy = jest.spyOn(SetupTab.WrappedComponent.prototype, 'investValidate');
     const spec = baseArgsSpec('directory');
     spec.args.arg.required = true;
     const { findByLabelText } = renderSetupFromSpec(spec, UI_SPEC);

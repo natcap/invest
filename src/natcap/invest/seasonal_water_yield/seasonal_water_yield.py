@@ -18,7 +18,7 @@ from .. import spec_utils
 from .. import utils
 from .. import validation
 from ..model_metadata import MODEL_METADATA
-from ..spec_utils import u
+from ..unit_registry import u
 from . import seasonal_water_yield_core
 
 gdal.SetCacheMax(2**26)
@@ -94,8 +94,8 @@ MODEL_SPEC = {
         "lulc_raster_path": {
             **spec_utils.LULC,
             "projected": True,
-            "about": gettext(
-                f"{spec_utils.LULC['about']} All values in this raster MUST "
+            "about": spec_utils.LULC['about'] + " " + gettext(
+                "All values in this raster MUST "
                 "have corresponding entries in the Biophysical Table.")
         },
         "soil_group_path": {
@@ -110,9 +110,7 @@ MODEL_SPEC = {
         "biophysical_table_path": {
             "type": "csv",
             "columns": {
-                "lucode": {
-                    "type": "integer",
-                    "about": gettext("LULC code matching those in the LULC raster.")},
+                "lucode": spec_utils.LULC_TABLE_COLUMN,
                 "cn_[SOIL_GROUP]": {
                     "type": "number",
                     "units": u.none,
@@ -1212,6 +1210,7 @@ def _calculate_curve_number_raster(
 
     # Use set of table lucodes in cn_op
     lucodes_set = set(lucodes)
+    valid_soil_groups = set([soil_nodata, *map_soil_type_to_header.keys()])
 
     def cn_op(lulc_array, soil_group_array):
         """Map lulc code and soil to a curve number."""
@@ -1232,7 +1231,17 @@ def _calculate_curve_number_raster(
                 f" raster but not the table are: {missing_lulc_values}.")
             raise ValueError(error_message)
 
-        for soil_group_id in numpy.unique(soil_group_array):
+        unique_soil_groups = numpy.unique(soil_group_array)
+        invalid_soil_groups = set(unique_soil_groups) - valid_soil_groups
+        if invalid_soil_groups:
+            invalid_soil_groups = [str(group) for group in invalid_soil_groups]
+            raise ValueError(
+                "The soil group raster must only have groups 1, 2, 3 or 4. "
+                f"Invalid group(s) {', '.join(invalid_soil_groups)} were "
+                f"found in soil group raster {soil_group_path} "
+                f"(nodata value: {soil_nodata})")
+
+        for soil_group_id in unique_soil_groups:
             if soil_group_id == soil_nodata:
                 continue
             current_soil_mask = (soil_group_array == soil_group_id)

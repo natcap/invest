@@ -22,7 +22,7 @@ from . import spec_utils
 from . import utils
 from . import validation
 from .model_metadata import MODEL_METADATA
-from .spec_utils import u
+from .unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
 TARGET_NODATA = -1
@@ -56,10 +56,7 @@ MODEL_SPEC = {
             "name": gettext("biophysical table"),
             "type": "csv",
             "columns": {
-                "lucode": {
-                    "type": "integer",
-                    "about": gettext(
-                        "LULC code corresponding to those in the LULC map.")},
+                "lucode": spec_utils.LULC_TABLE_COLUMN,
                 "kc": {
                     "type": "number",
                     "units": u.none,

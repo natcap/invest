@@ -188,3 +188,19 @@ export function writeParametersToFile(payload) {
       .catch((error) => logger.error(error.stack))
   );
 }
+
+
+/**
+ * Get the mapping of supported language codes to display names.
+ *
+ * @returns {Promise} resolves object
+ */
+export async function getSupportedLanguages() {
+  return (
+    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/languages`, {
+      method: 'get',
+    })
+      .then((response) => response.json())
+      .catch((error) => logger.error(error.stack))
+  );
+}

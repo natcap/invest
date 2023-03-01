@@ -104,7 +104,7 @@ from osgeo import gdal
 
 from .. import utils
 from .. import spec_utils
-from ..spec_utils import u
+from ..unit_registry import u
 from .. import validation
 from ..model_metadata import MODEL_METADATA
 from .. import gettext
@@ -2238,17 +2238,15 @@ def _extract_snapshots_from_table(csv_path):
         paths.  These raster paths will be absolute paths.
 
     """
-    table = utils.read_csv_to_dataframe(csv_path, index_col=False)
-    table.columns = table.columns.str.lower()
+    table = utils.read_csv_to_dataframe(
+        csv_path, to_lower=True, index_col=False,
+        expand_path_cols=['raster_path'])
 
     output_dict = {}
     table.set_index("snapshot_year", drop=False, inplace=True)
-    for index, row in table.iterrows():
-        raster_path = row['raster_path']
-        if not os.path.isabs(raster_path):
-            raster_path = os.path.join(os.path.dirname(csv_path), raster_path)
-        output_dict[int(index)] = os.path.abspath(raster_path)
 
+    for index, row in table.iterrows():
+        output_dict[int(index)] = row['raster_path']
     return output_dict
 
 

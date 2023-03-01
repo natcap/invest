@@ -22,12 +22,10 @@ from .. import spec_utils
 from .. import utils
 from .. import validation
 from ..model_metadata import MODEL_METADATA
-from ..spec_utils import u
+from ..unit_registry import u
 from . import sdr_core
 
 LOGGER = logging.getLogger(__name__)
-
-INVALID_ID_MSG = gettext('{number} features have a non-integer ws_id field')
 
 MODEL_SPEC = {
     "model_name": MODEL_METADATA["sdr"].model_title,
@@ -72,19 +70,15 @@ MODEL_SPEC = {
         "lulc_path": {
             **spec_utils.LULC,
             "projected": True,
-            "about": gettext(
-                f"{spec_utils.LULC['about']} All values in this raster must "
+            "about": spec_utils.LULC['about'] + " " + gettext(
+                "All values in this raster must "
                 "have corresponding entries in the Biophysical Table.")
         },
         "watersheds_path": {
             "type": "vector",
-            "fields": {
-                "ws_id": {
-                    "type": "integer",
-                    "about": gettext("Unique identifier for the watershed.")}
-            },
             "geometries": spec_utils.POLYGONS,
             "projected": True,
+            "fields": {},
             "about": gettext(
                 "Map of the boundaries of the watershed(s) over which to "
                 "aggregate results. Each watershed should contribute to a "
@@ -94,9 +88,7 @@ MODEL_SPEC = {
         "biophysical_table_path": {
             "type": "csv",
             "columns": {
-                "lucode": {
-                    "type": "integer",
-                    "about": gettext("LULC code from the LULC raster.")},
+                "lucode": spec_utils.LULC_TABLE_COLUMN,
                 "usle_c": {
                     "type": "ratio",
                     "about": gettext("Cover-management factor for the USLE")},
@@ -1699,28 +1691,5 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
-    validation_warnings = validation.validate(
+    return validation.validate(
         args, MODEL_SPEC['args'], MODEL_SPEC['args_with_spatial_overlap'])
-
-    invalid_keys = validation.get_invalid_keys(validation_warnings)
-    sufficient_keys = validation.get_sufficient_keys(args)
-
-    if ('watersheds_path' not in invalid_keys and
-            'watersheds_path' in sufficient_keys):
-        # The watersheds vector must have an integer column called WS_ID.
-        vector = gdal.OpenEx(args['watersheds_path'], gdal.OF_VECTOR)
-        layer = vector.GetLayer()
-        n_invalid_features = 0
-        for feature in layer:
-            try:
-                int(feature.GetFieldAsString('ws_id'))
-            except ValueError:
-                n_invalid_features += 1
-
-        if n_invalid_features:
-            validation_warnings.append((
-                ['watersheds_path'],
-                INVALID_ID_MSG.format(number=n_invalid_features)))
-            invalid_keys.add('watersheds_path')
-
-    return validation_warnings

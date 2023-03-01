@@ -68,12 +68,6 @@ MODEL_METADATA = {
         gui='forest_carbon.ForestCarbonEdgeEffect',
         userguide='carbon_edge.html',
         aliases=('fc',)),
-    'globio': _MODELMETA(
-        model_title=gettext('GLOBIO'),
-        pyname='natcap.invest.globio',
-        gui='globio.GLOBIO',
-        userguide='globio.html',
-        aliases=()),
     'habitat_quality': _MODELMETA(
         model_title=gettext('Habitat Quality'),
         pyname='natcap.invest.habitat_quality',
