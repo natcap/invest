@@ -21,7 +21,7 @@ import {
 } from '../../src/main/createPythonFlaskProcess';
 import findInvestBinaries from '../../src/main/findInvestBinaries';
 
-jest.setTimeout(120000); // This test is slow in CI
+jest.setTimeout(1200000); // This test is slow in CI
 
 let flaskSubprocess;
 beforeAll(async () => {
@@ -34,7 +34,7 @@ beforeAll(async () => {
   // So, allowing many retries, especially because the error
   // that is thrown if all retries fail is swallowed by jest
   // and tests try to run anyway.
-  await getFlaskIsReady({ retries: 201 });
+  await getFlaskIsReady({ retries: 401 });
   console.log((Date.now() - then) / 1000);
 });
 
