@@ -108,7 +108,7 @@ beforeAll(() => {
     if (`${data}`.match('main window loaded')) {
       try {
         BROWSER = await puppeteer.connect({
-          browserURL: `http://localhost:${PORT}`,
+          browserURL: `http://127.0.0.1:${PORT}`,
           defaultViewport: null,
         });
       } catch (e) {

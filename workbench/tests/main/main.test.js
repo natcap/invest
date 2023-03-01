@@ -207,7 +207,7 @@ describe('createWindow', () => {
 });
 
 describe('investUsageLogger', () => {
-  const expectedURL = `http://localhost:${process.env.PORT}/api/log_model_start`;
+  const expectedURL = `http://127.0.0.1:${process.env.PORT}/api/log_model_start`;
   beforeEach(() => {
     // the expected response
     const response = {
