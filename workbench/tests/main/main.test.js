@@ -149,6 +149,7 @@ describe('extractZipInplace', () => {
   });
 
   afterEach(() => {
+    fs.unlinkSync(zipPath);
     fs.rmSync(root, { recursive: true, force: true });
   });
 
