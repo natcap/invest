@@ -25,6 +25,7 @@ jest.setTimeout(120000); // This test is slow in CI
 
 let flaskSubprocess;
 beforeAll(async () => {
+  const then = Date.now();
   const isDevMode = true; // otherwise need to mock process.resourcesPath
   const investExe = findInvestBinaries(isDevMode);
   flaskSubprocess = createPythonFlaskProcess(investExe);
@@ -34,6 +35,7 @@ beforeAll(async () => {
   // that is thrown if all retries fail is swallowed by jest
   // and tests try to run anyway.
   await getFlaskIsReady({ retries: 201 });
+  console.log((Date.now() - then) / 1000);
 });
 
 afterAll(async () => {
