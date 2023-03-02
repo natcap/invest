@@ -143,8 +143,13 @@ describe('extractZipInplace', () => {
   });
 
   afterEach(() => {
-    fs.unlinkSync(file1Path);
+    // forced, recursive rm not reliable on Windows
+    // so remove specific items one at a time, bottom up.
+    fs.unlinkSync(zipPath);
     fs.unlinkSync(file2Path);
+    fs.unlinkSync(file1Path);
+    fs.rmdirSync(level2Dir);
+    fs.rmdirSync(level1Dir);
     fs.rmSync(root, {
       recursive: true,
       force: true,
@@ -160,7 +165,6 @@ describe('extractZipInplace', () => {
     expect(fs.existsSync(file2Path)).toBe(false);
 
     expect(await extractZipInplace(zipPath)).toBe(true);
-    fs.unlinkSync(zipPath);
 
     // And the expected state after extraction
     expect(fs.existsSync(file1Path)).toBe(true);
