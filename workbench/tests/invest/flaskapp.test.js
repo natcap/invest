@@ -5,7 +5,6 @@ import path from 'path';
 import readline from 'readline';
 import url from 'url';
 
-import rimraf from 'rimraf';
 import React from 'react';
 import { render } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -22,21 +21,15 @@ import {
 } from '../../src/main/createPythonFlaskProcess';
 import findInvestBinaries from '../../src/main/findInvestBinaries';
 
-jest.setTimeout(1200000); // This test is slow in CI
+// This test starts a python subprocess, which can be slow
+jest.setTimeout(1200000);
 
 let flaskSubprocess;
 beforeAll(async () => {
-  const then = Date.now();
   const isDevMode = true; // otherwise need to mock process.resourcesPath
   const investExe = findInvestBinaries(isDevMode);
   flaskSubprocess = createPythonFlaskProcess(investExe);
-  // In the CI the flask app takes more than 10x as long to startup.
-  // Especially so on macos.
-  // So, allowing many retries, especially because the error
-  // that is thrown if all retries fail is swallowed by jest
-  // and tests try to run anyway.
-  await getFlaskIsReady({ retries: 401 });
-  console.log((Date.now() - then) / 1000);
+  await getFlaskIsReady();
 });
 
 afterAll(async () => {

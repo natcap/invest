@@ -58,23 +58,21 @@ export async function getFlaskIsReady({ i = 0, retries = 41 } = {}) {
   try {
     await fetch(`${HOSTNAME}:${process.env.PORT}/api/ready`, {
       method: 'get',
-    })
+    });
   } catch (error) {
     if (error.code === 'ECONNREFUSED') {
       while (i < retries) {
         i++;
         // Try every X ms, usually takes a couple seconds to startup.
         await new Promise((resolve) => setTimeout(resolve, 300));
-        console.log(`retry # ${i}`);
         logger.debug(`retry # ${i}`);
-        return await getFlaskIsReady({ i: i, retries: retries });
+        return getFlaskIsReady({ i: i, retries: retries });
       }
       logger.error(`Not able to connect to server after ${retries} tries.`);
     }
     logger.error(error);
     throw error;
   }
-    
 }
 
 /**
