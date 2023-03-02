@@ -4,7 +4,6 @@ import PropTypes from 'prop-types';
 import Form from 'react-bootstrap/Form';
 
 import ArgInput from '../ArgInput';
-import { boolStringToBoolean } from '../../../utils';
 import { ipcMainChannels } from '../../../../main/ipcMainChannels';
 import { withTranslation } from 'react-i18next';
 
@@ -22,8 +21,6 @@ class ArgsForm extends React.Component {
   constructor(props) {
     super(props);
     this.handleFocus = this.handleFocus.bind(this);
-    this.handleChange = this.handleChange.bind(this);
-    this.handleBoolChange = this.handleBoolChange.bind(this);
     this.selectFile = this.selectFile.bind(this);
     this.inputDropHandler = this.inputDropHandler.bind(this);
     this.onArchiveDragDrop = this.onArchiveDragDrop.bind(this);
@@ -103,19 +100,6 @@ class ArgsForm extends React.Component {
     this.props.updateArgTouched(name);
   }
 
-  handleChange(event) {
-    /** Pass input value up to SetupTab for storage & validation. */
-    const { name, value } = event.currentTarget;
-    this.props.updateArgValues(name, value);
-  }
-
-  handleBoolChange(event) {
-    /** Handle changes from boolean inputs that submit strings */
-    const { name, value } = event.currentTarget;
-    const boolVal = boolStringToBoolean(value);
-    this.props.updateArgValues(name, boolVal);
-  }
-
   async selectFile(event) {
     /** Handle clicks on browse-button inputs */
     const { name, value } = event.currentTarget; // the arg's key and type
@@ -155,8 +139,7 @@ class ArgsForm extends React.Component {
             userguide={userguide}
             dropdownOptions={argsDropdownOptions[argkey]}
             enabled={argsEnabled[argkey]}
-            handleBoolChange={this.handleBoolChange}
-            handleChange={this.handleChange}
+            updateArgValues={this.props.updateArgValues}
             handleFocus={this.handleFocus}
             inputDropHandler={this.inputDropHandler}
             isValid={argsValidation[argkey].valid}

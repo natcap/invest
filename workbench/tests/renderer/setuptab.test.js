@@ -124,11 +124,12 @@ describe('Arguments form input types', () => {
     expect(input).toHaveAttribute('type', 'text');
   });
 
-  test('render an unchecked radio button for a boolean', async () => {
+  test('render an unchecked toggle switch for a boolean', async () => {
     const spec = baseArgsSpec('boolean');
     const { findByLabelText } = renderSetupFromSpec(spec, UI_SPEC);
     const input = await findByLabelText(`${spec.args.arg.name}`);
-    expect(input).toHaveAttribute('type', 'radio');
+    // for some reason, the type is still checkbox when it renders as a switch
+    expect(input).toHaveAttribute('type', 'checkbox');
     expect(input).not.toBeChecked();
   });
 
