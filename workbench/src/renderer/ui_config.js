@@ -362,7 +362,7 @@ const UI_SPEC = {
       //   && state.argsValues.decay_function.value === 'power')),
       population_group_radii_table: ((state) => (
         isSufficient('search_radius_mode', state)
-        && state.argsValues.search_radius_mode.value === 'radius per pop group')),
+        && state.argsValues.search_radius_mode.value === 'radius per population group')),
     },
   },
   wave_energy: {
