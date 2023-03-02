@@ -22,7 +22,7 @@ import {
 import findInvestBinaries from '../../src/main/findInvestBinaries';
 
 // This test starts a python subprocess, which can be slow
-jest.setTimeout(1200000);
+jest.setTimeout(120000);
 
 let flaskSubprocess;
 beforeAll(async () => {
