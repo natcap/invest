@@ -65,10 +65,6 @@ To list the available models::
 
     $ invest list
 
-To launch a model's user-interface::
-
-    $ invest run carbon
-
 To run a model directly from the command-line::
 
     $ invest -vvv run <modelname> -d <datastack json file> -w <output_workspace>
