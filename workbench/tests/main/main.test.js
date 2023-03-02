@@ -143,10 +143,12 @@ describe('extractZipInplace', () => {
   });
 
   afterEach(() => {
+    fs.unlinkSync(file1Path);
+    fs.unlinkSync(file2Path);
     fs.rmSync(root, {
       recursive: true,
       force: true,
-      maxRetries: 10,
+      maxRetries: 20,
     });
   });
 
