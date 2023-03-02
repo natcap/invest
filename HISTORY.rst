@@ -57,6 +57,7 @@ Unreleased Changes
 * Workbench
     * Added tooltips to the model tabs so that they can be identified even when
       several tabs are open (`#1071 <https://github.com/natcap/invest/issues/1088>`_)
+    * Represent boolean inputs with a toggle switch rather than radio buttons.
 * HRA
     * Fixed an issue where a cryptic exception was being thrown if the criteria
       table's sections were not spelled exactly as expected.  There is now a
