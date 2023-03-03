@@ -54,12 +54,16 @@ function initializeArgValues(argsSpec, uiSpec, argsDict) {
     if (argsSpec[argkey].type === 'boolean') {
       value = argsDict[argkey] || false;
     } else if (argsSpec[argkey].type === 'option_string') {
-      const optionsArray = Array.isArray(argsSpec[argkey].options)
-        ? argsSpec[argkey].options
-        : Object.keys(argsSpec[argkey].options);
-      value = argsDict[argkey]
-        || optionsArray[0]; // default to first
-      argsDropdownOptions[argkey] = optionsArray;
+      if  (argsDict[argkey]) {
+        value = argsDict[argkey];
+      } else { // default to first
+        if (Array.isArray(argsSpec[argkey].options)) {
+          value = argsSpec[argkey].options[0];
+        } else {
+          value = Object.keys(argsSpec[argkey].options)[0];
+        }
+      }
+      argsDropdownOptions[argkey] = argsSpec[argkey].options;
     } else {
       value = argsDict[argkey] || '';
     }

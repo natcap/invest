@@ -256,9 +256,15 @@ export default function ArgInput(props) {
         onFocus={handleChange}
         disabled={!enabled}
       >
-        {dropdownOptions.map(
-          (opt) => <option value={opt} key={opt}>{opt}</option>
-        )}
+        {
+          Array.isArray(dropdownOptions) ?
+          dropdownOptions.map(
+            (opt) => <option value={opt} key={opt}>{opt}</option>
+          ) :
+          Object.entries(dropdownOptions).map(
+            ([opt, info]) => <option value={opt} key={opt}>{info.display_name}</option>
+          )
+        }
       </Form.Control>
     );
   } else {
@@ -331,7 +337,7 @@ ArgInput.propTypes = {
   handleBoolChange: PropTypes.func.isRequired,
   selectFile: PropTypes.func.isRequired,
   enabled: PropTypes.bool.isRequired,
-  dropdownOptions: PropTypes.arrayOf(PropTypes.string),
+  dropdownOptions: PropTypes.oneOfType([PropTypes.arrayOf(PropTypes.string), PropTypes.object]),
   inputDropHandler: PropTypes.func.isRequired,
   scrollEventCount: PropTypes.number,
 };
