@@ -44,6 +44,9 @@ Unreleased Changes
     * The ``invest`` command-line-interface no longer opens a graphical
       interface to InVEST. (`#755 <https://github.com/natcap/invest/issues/755>`_)
     * The classic InVEST user-interface has been removed in favor of the Workbench.
+    * Replace the ``ARGS_SPEC`` with ``MODEL_SPEC`` which describes all model
+      outputs as well as inputs in a structured format 
+      (`#596 <https://github.com/natcap/invest/issues/596>`_)
 * Workbench
     * Added tooltips to the model tabs so that they can be identified even when
       several tabs are open (`#1071 <https://github.com/natcap/invest/issues/1088>`_)

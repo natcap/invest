@@ -31,8 +31,43 @@ CROPS = {
     "wheat": {"description": gettext("wheat")}
 }
 
+NUTRIENTS = [
+    ("protein", "protein", u.gram/u.hectogram),
+    ("lipid", "total lipid", u.gram/u.hectogram),
+    ("energy", "energy", u.kilojoule/u.hectogram),
+    ("ca", "calcium", u.milligram/u.hectogram),
+    ("fe", "iron", u.milligram/u.hectogram),
+    ("mg", "magnesium", u.milligram/u.hectogram),
+    ("ph", "phosphorus", u.milligram/u.hectogram),
+    ("k", "potassium", u.milligram/u.hectogram),
+    ("na", "sodium", u.milligram/u.hectogram),
+    ("zn", "zinc", u.milligram/u.hectogram),
+    ("cu", "copper", u.milligram/u.hectogram),
+    ("fl", "fluoride", u.microgram/u.hectogram),
+    ("mn", "manganese", u.milligram/u.hectogram),
+    ("se", "selenium", u.microgram/u.hectogram),
+    ("vita", "vitamin A", u.IU/u.hectogram),
+    ("betac", "beta carotene", u.microgram/u.hectogram),
+    ("alphac", "alpha carotene", u.microgram/u.hectogram),
+    ("vite", "vitamin E", u.milligram/u.hectogram),
+    ("crypto", "cryptoxanthin", u.microgram/u.hectogram),
+    ("lycopene", "lycopene", u.microgram/u.hectogram),
+    ("lutein", "lutein and zeaxanthin", u.microgram/u.hectogram),
+    ("betaT", "beta tocopherol", u.milligram/u.hectogram),
+    ("gammaT", "gamma tocopherol", u.milligram/u.hectogram),
+    ("deltaT", "delta tocopherol", u.milligram/u.hectogram),
+    ("vitc", "vitamin C", u.milligram/u.hectogram),
+    ("thiamin", "thiamin", u.milligram/u.hectogram),
+    ("riboflavin", "riboflavin", u.milligram/u.hectogram),
+    ("niacin", "niacin", u.milligram/u.hectogram),
+    ("pantothenic", "pantothenic acid", u.milligram/u.hectogram),
+    ("vitb6", "vitamin B6", u.milligram/u.hectogram),
+    ("folate", "folate", u.microgram/u.hectogram),
+    ("vitb12", "vitamin B12", u.microgram/u.hectogram),
+    ("vitk", "vitamin K", u.microgram/u.hectogram)
+]
 
-ARGS_SPEC = {
+MODEL_SPEC = {
     "model_name": MODEL_METADATA["crop_production_regression"].model_title,
     "pyname": MODEL_METADATA["crop_production_regression"].pyname,
     "userguide": MODEL_METADATA["crop_production_regression"].userguide,
@@ -113,48 +148,167 @@ ARGS_SPEC = {
                     "type": "csv",
                     "columns": {
                         nutrient: {
+                            "about": about,
                             "type": "number",
                             "units": units
-                        } for nutrient, units in {
-                            "protein":     u.gram/u.hectogram,
-                            "lipid":       u.gram/u.hectogram,       # total lipid
-                            "energy":      u.kilojoule/u.hectogram,
-                            "ca":          u.milligram/u.hectogram,  # calcium
-                            "fe":          u.milligram/u.hectogram,  # iron
-                            "mg":          u.milligram/u.hectogram,  # magnesium
-                            "ph":          u.milligram/u.hectogram,  # phosphorus
-                            "k":           u.milligram/u.hectogram,  # potassium
-                            "na":          u.milligram/u.hectogram,  # sodium
-                            "zn":          u.milligram/u.hectogram,  # zinc
-                            "cu":          u.milligram/u.hectogram,  # copper
-                            "fl":          u.microgram/u.hectogram,  # fluoride
-                            "mn":          u.milligram/u.hectogram,  # manganese
-                            "se":          u.microgram/u.hectogram,  # selenium
-                            "vita":        u.IU/u.hectogram,         # vitamin A
-                            "betac":       u.microgram/u.hectogram,  # beta carotene
-                            "alphac":      u.microgram/u.hectogram,  # alpha carotene
-                            "vite":        u.milligram/u.hectogram,  # vitamin e
-                            "crypto":      u.microgram/u.hectogram,  # cryptoxanthin
-                            "lycopene":    u.microgram/u.hectogram,  # lycopene
-                            "lutein":      u.microgram/u.hectogram,  # lutein + zeaxanthin
-                            "betaT":       u.milligram/u.hectogram,  # beta tocopherol
-                            "gammaT":      u.milligram/u.hectogram,  # gamma tocopherol
-                            "deltaT":      u.milligram/u.hectogram,  # delta tocopherol
-                            "vitc":        u.milligram/u.hectogram,  # vitamin C
-                            "thiamin":     u.milligram/u.hectogram,
-                            "riboflavin":  u.milligram/u.hectogram,
-                            "niacin":      u.milligram/u.hectogram,
-                            "pantothenic": u.milligram/u.hectogram,  # pantothenic acid
-                            "vitb6":       u.milligram/u.hectogram,  # vitamin B6
-                            "folate":      u.microgram/u.hectogram,
-                            "vitb12":      u.microgram/u.hectogram,  # vitamin B12
-                            "vitk":        u.microgram/u.hectogram,  # vitamin K
-                        }.items()
+                        } for nutrient, about, units in NUTRIENTS
+                    }
+                },
+                "extended_climate_bin_maps": {
+                    "type": "directory",
+                    "about": gettext("Maps of climate bins for each crop."),
+                    "contents": {
+                        "extendedclimatebins[CROP]": {
+                            "type": "raster",
+                            "bands": {1: {"type": "integer"}},
+                        }
+                    }
+                },
+                "observed_yield": {
+                    "type": "directory",
+                    "about": gettext("Maps of actual observed yield for each crop."),
+                    "contents": {
+                        "[CROP]_observed_yield.tif": {
+                            "type": "raster",
+                            "bands": {1: {
+                                "type": "number",
+                                "units": u.metric_ton/u.hectare
+                            }}
+                        }
                     }
                 }
             },
             "about": gettext("The Crop Production datasets provided with the model."),
             "name": gettext("model data")
+        }
+    },
+    "outputs": {
+        "aggregate_results.csv": {
+            "created_if": "aggregate_polygon_path",
+            "about": "Table of results aggregated by ",
+            "columns": {
+                "FID": {
+                    "type": "integer",
+                    "about": "FID of the AOI polygon"
+                },
+                "[CROP]_modeled": {
+                    "type": "number",
+                    "units": u.metric_ton,
+                    "about": "Modeled production of the given crop within the polygon"
+                },
+                "[CROP]_observed": {
+                    "type": "number",
+                    "units": u.metric_ton,
+                    "about": "Observed production of the given crop within the polygon"
+                },
+                **{
+                    f"{nutrient}_{x}": {
+                        "about": f"{x} {name} production within the polygon",
+                        "type": "number",
+                        "units": units
+                    } for nutrient, name, units in NUTRIENTS
+                      for x in ["modeled", "observed"]
+                }
+            }
+        },
+        "result_table.csv": {
+            "about": "Table of results aggregated by crop",
+            "columns": {
+                "crop": {
+                    "type": "freestyle_string",
+                    "about": "Name of the crop"
+                },
+                "area (ha)": {
+                    "type": "number",
+                    "units": u.hectare,
+                    "about": "Area covered by the crop"
+                },
+                "production_modeled": {
+                    "type": "number",
+                    "units": u.metric_ton,
+                    "about": "Modeled crop production"
+                },
+                "production_observed": {
+                    "type": "number",
+                    "units": u.metric_ton,
+                    "about": "Observed crop production"
+                },
+                **{
+                    f"{nutrient}_{x}": {
+                        "about": f"{x} {name} production from the crop",
+                        "type": "number",
+                        "units": units
+                    } for nutrient, name, units in NUTRIENTS
+                      for x in ["modeled", "observed"]
+                }
+            }
+        },
+        "[CROP]_observed_production.tif": {
+            "about": "Observed yield for the given crop",
+            "bands": {1: {"type": "number", "units": u.metric_ton/u.hectare}}
+        },
+        "[CROP]_regression_production.tif": {
+            "about": "Modeled yield for the given crop",
+            "bands": {1: {"type": "number", "units": u.metric_ton/u.hectare}}
+        },
+        "intermediate": {
+            "type": "directory",
+            "contents": {
+                "aggregate_vector.shp": {
+                    "about": "Copy of input AOI vector",
+                    "geometries": spec_utils.POLYGONS,
+                    "fields": {}
+                },
+                "clipped_[CROP]_climate_bin_map.tif": {
+                    "about": (
+                        "Climate bin map for the given crop, clipped to the "
+                        "LULC extent"),
+                    "bands": {1: {"type": "integer"}}
+                },
+                "[CROP]_[PARAMETER]_coarse_regression_parameter.tif": {
+                    "about": (
+                        "Regression parameter for the given crop at the "
+                        "coarse resolution of the climate bin map"),
+                    "bands": {1: {"type": "number", "units": u.none}}
+                },
+                "[CROP]_[PARAMETER]_interpolated_regression_parameter.tif": {
+                    "about": (
+                        "Regression parameter for the given crop, "
+                        "interpolated to the resolution of the landcover map"),
+                    "bands": {1: {"type": "number", "units": u.none}}
+                },
+                "[CROP]_clipped_observed_yield.tif": {
+                    "about": (
+                        "Observed yield for the given crop, clipped to the "
+                        "extend of the landcover map"),
+                    "bands": {1: {
+                        "type": "number", "units": u.metric_ton/u.hectare
+                    }}
+                },
+                "[CROP]_interpolated_observed_yield.tif": {
+                    "about": (
+                        "Observed yield for the given crop, interpolated to "
+                        "the resolution of the landcover map"),
+                    "bands": {1: {
+                        "type": "number", "units": u.metric_ton/u.hectare
+                    }}
+                },
+                "[CROP]_[NUTRIENT]_yield.tif": {
+                    "about": "Nutrient-dependent crop yield",
+                    "bands": {1: {
+                        "type": "number", "units": u.metric_ton/u.hectare
+                    }}
+                },
+                "[CROP]_zeroed_observed_yield.tif": {
+                    "about": (
+                        "Observed yield for the given crop, with nodata "
+                        "converted to 0"),
+                    "bands": {1: {
+                        "type": "number", "units": u.metric_ton/u.hectare
+                    }}
+                },
+                "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
+            }
         }
     }
 }
@@ -695,7 +849,7 @@ def _x_yield_op(
     result = numpy.empty(b_x.shape, dtype=numpy.float32)
     result[:] = _NODATA_YIELD
     valid_mask = (
-        ~utils.array_equals_nodata(y_max,  _NODATA_YIELD) &
+        ~utils.array_equals_nodata(y_max, _NODATA_YIELD) &
         ~utils.array_equals_nodata(b_x, _NODATA_YIELD) &
         ~utils.array_equals_nodata(c_x, _NODATA_YIELD) &
         (lulc_array == crop_lucode))
@@ -953,10 +1107,10 @@ def aggregate_regression_results_to_polygons(
                     '%s_observed' % crop_name]:
                 total_nutrient_table[
                     nutrient_id]['observed'][fid_index] += (
-                        nutrient_factor *
+                        nutrient_factor * # percent crop used * 1000 [100g per Mg]
                         total_yield_lookup[
                             '%s_observed' % crop_name][fid_index]['sum'] *
-                        nutrient_table[crop_name][nutrient_id])
+                        nutrient_table[crop_name][nutrient_id])  # nutrient unit per 100g crop
 
     # report everything to a table
     aggregate_table_path = os.path.join(
@@ -1009,4 +1163,4 @@ def validate(args, limit_to=None):
 
     """
     return validation.validate(
-        args, ARGS_SPEC['args'], ARGS_SPEC['args_with_spatial_overlap'])
+        args, MODEL_SPEC['args'], MODEL_SPEC['args_with_spatial_overlap'])

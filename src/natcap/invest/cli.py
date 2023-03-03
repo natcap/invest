@@ -123,7 +123,7 @@ def export_to_python(target_filepath, model, args_dict=None):
     if args_dict is None:
         model_module = importlib.import_module(
             name=model_metadata.MODEL_METADATA[model].pyname)
-        spec = model_module.ARGS_SPEC
+        spec = model_module.MODEL_SPEC
         cast_args = {key: '' for key in spec['args'].keys()}
     else:
         cast_args = dict((str(key), value) for (key, value)
@@ -414,7 +414,7 @@ def main(user_args=None):
         target_model = model_metadata.MODEL_METADATA[args.model].pyname
         model_module = importlib.reload(
             importlib.import_module(name=target_model))
-        spec = model_module.ARGS_SPEC
+        spec = model_module.MODEL_SPEC
 
         if args.json:
             message = json.dumps(spec)
