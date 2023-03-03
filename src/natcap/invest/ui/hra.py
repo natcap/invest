@@ -86,7 +86,7 @@ class HabitatRiskAssessment(model.InVESTModel):
         self.n_overlapping_stressors = inputs.Text(
             args_key='n_overlapping_stressors',
             helptext=(
-                hra.ARGS_SPEC['args']['n_overlapping_stressors']['about']),
+                hra.MODEL_SPEC['args']['n_overlapping_stressors']['about']),
             label='Number of Overlapping Stressors',
             validator=self.validator)
         self.add_input(self.n_overlapping_stressors)
