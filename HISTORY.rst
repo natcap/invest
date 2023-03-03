@@ -50,6 +50,8 @@ Unreleased Changes
 * Workbench
     * Added tooltips to the model tabs so that they can be identified even when
       several tabs are open (`#1071 <https://github.com/natcap/invest/issues/1088>`_)
+    * Options' display names will now be shown in dropdown menus
+      (`#1217 <https://github.com/natcap/invest/issues/1217>`_)
 * Habitat Quality
     * The model now uses an euclidean distance implementation for decaying
       threat rasters both linearly and exponentially. Since InVEST 3.3.0 a
