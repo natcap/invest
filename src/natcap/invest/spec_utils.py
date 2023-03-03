@@ -347,21 +347,25 @@ def format_options_string_from_dict(options):
 
     Args:
         options (dict): the dictionary of options to document, where keys are
-            options and values are descriptions of the options
+            options and values are dictionaries describing the options.
+            They may have either or both 'display_name' and 'description' keys,
+            for example:
+            {'option1': {'display_name': 'Option 1', 'description': 'the first option'}}
 
     Returns:
         list of RST-formatted strings, where each is a line in a bullet list
     """
     lines = []
+    for key, info in options.items():
+        display_name = info['display_name'] if 'display_name' in info else key
+        if 'description' in info:
+            lines.append(f'- {display_name}: {info["description"]}')
+        else:
+            lines.append(f'- {display_name}')
+    # sort the options alphabetically
     # casefold() is a more aggressive version of lower() that may work better
     # for some languages to remove all case distinctions
-    sorted_options = sorted(
-        list(options.keys()),
-        key=lambda option: option.casefold()
-    )
-    for option in sorted_options:
-        lines.append(f'- {option}: {options[option]}')
-    return lines
+    return sorted(lines, key=lambda line: line.casefold())
 
 
 def format_options_string_from_list(options):
