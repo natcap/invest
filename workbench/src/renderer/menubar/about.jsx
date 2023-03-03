@@ -6,6 +6,7 @@ import i18n from '../i18n/i18n';
 import { handleClickExternalURL } from './handlers';
 import { getSettingsValue } from '../components/SettingsModal/SettingsStorage';
 import { ipcMainChannels } from '../../main/ipcMainChannels';
+import investLogo from '../static/invest-logo.png';
 
 const { ipcRenderer } = window.Workbench.electron;
 
@@ -23,42 +24,47 @@ ReactDom.render(
       <React.Fragment>
         <div id="header">
           <img
-            src="/src/renderer/static/invest-logo.png"
+            src={investLogo}
             width="191"
             height="167"
+            alt="InVEST logo"
           />
-          <div id='invest-version'>
-          <p>{t('version:')}</p>
-          <span id='version-string'></span>
-        </div>
-          <p id='invest-copyright'>
+          <div id="invest-version">
+            <p>{t('version:')}</p>
+            <span id="version-string" />
+          </div>
+          <p id="invest-copyright">
             {t('Copyright 2022, The Natural Capital Project')}
           </p>
         </div>
-        <br/>
+        <br />
         <div id="links">
-          <p>{t('Documentation: ')}
+          <p>
+            {t('Documentation: ')}
             <a
               href="http://releases.naturalcapitalproject.org/invest-userguide/latest/"
             >
               http://releases.naturalcapitalproject.org/invest-userguide/latest/
             </a>
           </p>
-          <p>{t('Homepage: ')}
+          <p>
+            {t('Homepage: ')}
             <a
               href="https://naturalcapitalproject.stanford.edu/"
             >
               https://naturalcapitalproject.stanford.edu/
             </a>
-            </p>
-          <p>{t('Project page: ')}
+          </p>
+          <p>
+            {t('Project page: ')}
             <a
               href="https://github.com/natcap/invest"
             >
               https://github.com/natcap/invest
             </a>
-            </p>
-          <p>{t('License: ')}
+          </p>
+          <p>
+            {t('License: ')}
             <a
               href="https://github.com/natcap/invest/blob/master/LICENSE.txt"
             >
@@ -75,7 +81,7 @@ ReactDom.render(
                 <td>GPL</td>
                 <td>
                   <a
-                    href='http://pyinstaller.org'
+                    href="http://pyinstaller.org"
                   >
                     http://pyinstaller.org
                   </a>
@@ -86,7 +92,7 @@ ReactDom.render(
                 <td>{t('MIT and others')}</td>
                 <td>
                   <a
-                    href='http://gdal.org'
+                    href="http://gdal.org"
                   >
                     http://gdal.org
                   </a>
@@ -97,7 +103,7 @@ ReactDom.render(
                 <td>BSD</td>
                 <td>
                   <a
-                    href='http://numpy.org'
+                    href="http://numpy.org"
                   >
                     http://numpy.org
                   </a>
@@ -108,7 +114,7 @@ ReactDom.render(
                 <td>BSD</td>
                 <td>
                   <a
-                    href='https://github.com/natcap/pygeoprocessing'
+                    href="https://github.com/natcap/pygeoprocessing"
                   >
                     https://github.com/natcap/pygeoprocessing
                   </a>
@@ -119,7 +125,7 @@ ReactDom.render(
                 <td>MIT</td>
                 <td>
                   <a
-                    href='https://github.com/Toblerity/rtree'
+                    href="https://github.com/Toblerity/rtree"
                   >
                     https://github.com/Toblerity/rtree
                   </a>
@@ -130,7 +136,7 @@ ReactDom.render(
                 <td>BSD</td>
                 <td>
                   <a
-                    href='http://www.scipy.org/'
+                    href="http://www.scipy.org/"
                   >
                     http://www.scipy.org/
                   </a>
@@ -141,7 +147,7 @@ ReactDom.render(
                 <td>BSD</td>
                 <td>
                   <a
-                    href='http://github.com/Toblerity/Shapely'
+                    href="http://github.com/Toblerity/Shapely"
                   >
                     http://github.com/Toblerity/Shapely
                   </a>
