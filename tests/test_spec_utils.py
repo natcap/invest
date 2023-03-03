@@ -83,27 +83,18 @@ class TestSpecUtils(unittest.TestCase):
             "about": "Description",
             "type": "option_string",
             "options": {
-                "option_a": {
-                    "display_name": "A"
-                },
-                "Option_b": {
-                    "description": "do something"
-                },
-                "option_c": {
-                    "display_name": "c",
-                    "description": "do something else"
-                }
+                "option_a": "do something",
+                "Option_b": "do something else"
             }
         }
         # expect that option case is ignored
-        # otherwise, c would sort before A
+        # otherwise, Option_b would sort before option_a
         out = spec_utils.describe_arg_from_spec(spec['name'], spec)
         expected_rst = ([
             '**Bar** (`option <input_types.html#option>`__, *required*): Description',
             '\tOptions:',
-            '\t- A',
-            '\t- c: do something else',
-            '\t- Option_b: do something'
+            '\t- option_a: do something',
+            '\t- Option_b: do something else'
         ])
         self.assertEqual(repr(out), repr(expected_rst))
 
