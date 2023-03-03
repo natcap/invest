@@ -3,7 +3,7 @@ import fetch from 'node-fetch';
 import { getLogger } from './logger';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
-const HOSTNAME = 'http://localhost';
+const HOSTNAME = 'http://127.0.0.1';
 
 export default function writeParametersToFile(payload) {
   return (

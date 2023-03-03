@@ -21,7 +21,7 @@ PREFIX = 'api'
 app = Flask(__name__)
 CORS(app, resources={
     f'/{PREFIX}/*': {
-        'origins': 'http://localhost:*'
+        'origins': ['http://localhost:*', 'http://127.0.0.1:*']
     }
 })
 

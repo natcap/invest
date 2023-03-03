@@ -21,19 +21,15 @@ import {
 } from '../../src/main/createPythonFlaskProcess';
 import findInvestBinaries from '../../src/main/findInvestBinaries';
 
-jest.setTimeout(120000); // This test is slow in CI
+// This test starts a python subprocess, which can be slow
+jest.setTimeout(120000);
 
 let flaskSubprocess;
 beforeAll(async () => {
   const isDevMode = true; // otherwise need to mock process.resourcesPath
   const investExe = findInvestBinaries(isDevMode);
   flaskSubprocess = createPythonFlaskProcess(investExe);
-  // In the CI the flask app takes more than 10x as long to startup.
-  // Especially so on macos.
-  // So, allowing many retries, especially because the error
-  // that is thrown if all retries fail is swallowed by jest
-  // and tests try to run anyway.
-  await getFlaskIsReady({ retries: 201 });
+  await getFlaskIsReady();
 });
 
 afterAll(async () => {
@@ -42,12 +38,12 @@ afterAll(async () => {
 
 describe('requests to flask endpoints', () => {
   let WORKSPACE;
-  beforeEach(() => {
+  beforeAll(() => {
     WORKSPACE = fs.mkdtempSync(path.join(os.tmpdir(), 'data-'));
   });
 
-  afterEach(() => {
-    fs.rmdirSync(WORKSPACE, { recursive: true });
+  afterAll(() => {
+    fs.rmSync(WORKSPACE, { recursive: true, force: true });
   });
 
   test('invest list items have expected properties', async () => {
@@ -83,7 +79,8 @@ describe('requests to flask endpoints', () => {
   test('write parameters to file and parse them from file', async () => {
     const spec = await server_requests.getSpec('carbon');
     const argsDict = argsDictFromObject(spec.args);
-    const filepath = path.join(WORKSPACE, 'foo.json');
+    const workspace = fs.mkdtempSync(WORKSPACE);
+    const filepath = path.join(workspace, 'foo.json');
     const payload = {
       filepath: filepath,
       moduleName: spec.pyname,
@@ -122,7 +119,8 @@ describe('requests to flask endpoints', () => {
     const modelName = 'carbon'; // as appearing in `invest list`
     const spec = await server_requests.getSpec(modelName);
     const argsDict = argsDictFromObject(spec.args);
-    const filepath = path.join(WORKSPACE, 'foo.py');
+    const workspace = fs.mkdtempSync(WORKSPACE);
+    const filepath = path.join(workspace, 'foo.py');
     const payload = {
       filepath: filepath,
       modelname: modelName,
