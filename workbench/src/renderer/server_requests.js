@@ -1,7 +1,7 @@
 import { getSettingsValue } from './components/SettingsModal/SettingsStorage';
 
 const logger = window.Workbench.getLogger('server_requests.js');
-const HOSTNAME = 'http://localhost';
+const HOSTNAME = 'http://127.0.0.1';
 const { PORT } = window.Workbench;
 const PREFIX = 'api';
 
