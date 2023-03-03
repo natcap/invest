@@ -134,22 +134,27 @@ describe('extractZipInplace', () => {
     zipfile.outputStream.pipe(
       fs.createWriteStream(zipPath)
     ).on('close', () => {
-      // being extra careful with recursive rm
-      if (level1Dir.startsWith(path.join(root, 'level1'))) {
-        rimraf(level1Dir, (error) => {
-          if (error) {
-            throw error;
-          }
-          doneZipping = true;
-          done();
-        });
-      }
+      fs.unlinkSync(file1Path);
+      fs.unlinkSync(file2Path);
+      doneZipping = true;
+      done();
     });
     zipfile.end();
   });
 
   afterEach(() => {
-    fs.rmSync(root, { recursive: true, force: true });
+    // forced, recursive rm not reliable on Windows
+    // so remove specific items one at a time, bottom up.
+    fs.unlinkSync(zipPath);
+    fs.unlinkSync(file2Path);
+    fs.unlinkSync(file1Path);
+    fs.rmdirSync(level2Dir);
+    fs.rmdirSync(level1Dir);
+    fs.rmSync(root, {
+      recursive: true,
+      force: true,
+      maxRetries: 20,
+    });
   });
 
   test('should extract recursively', async () => {
@@ -205,7 +210,7 @@ describe('createWindow', () => {
 });
 
 describe('investUsageLogger', () => {
-  const expectedURL = `http://localhost:${process.env.PORT}/api/log_model_start`;
+  const expectedURL = `http://127.0.0.1:${process.env.PORT}/api/log_model_start`;
   beforeEach(() => {
     // the expected response
     const response = {
