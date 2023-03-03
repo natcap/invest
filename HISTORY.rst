@@ -43,8 +43,13 @@ Unreleased Changes
       (`#1151 <https://github.com/natcap/invest/issues/1151>`_)
     * The ``invest`` command-line-interface no longer opens a graphical
       interface to InVEST. (`#755 <https://github.com/natcap/invest/issues/755>`_)
+    * The classic InVEST user-interface has been removed in favor of the Workbench.
     * Replace the ``ARGS_SPEC`` with ``MODEL_SPEC`` which describes all model
-      outputs as well as inputs in a structured format (`#596 <https://github.com/natcap/invest/issues/596>`_)
+      outputs as well as inputs in a structured format 
+      (`#596 <https://github.com/natcap/invest/issues/596>`_)
+* Workbench
+    * Added tooltips to the model tabs so that they can be identified even when
+      several tabs are open (`#1071 <https://github.com/natcap/invest/issues/1088>`_)
 * Habitat Quality
     * The model now uses an euclidean distance implementation for decaying
       threat rasters both linearly and exponentially. Since InVEST 3.3.0 a
@@ -56,9 +61,6 @@ Unreleased Changes
       degradation and quality outputs that were difficult to interpret.
     * There should be a noticeable runtime improvement from calculating
       euclidean distances vs convolutions.
-* Workbench
-    * Added tooltips to the model tabs so that they can be identified even when
-      several tabs are open (`#1071 <https://github.com/natcap/invest/issues/1088>`_)
 * HRA
     * Fixed an issue where a cryptic exception was being thrown if the criteria
       table's sections were not spelled exactly as expected.  There is now a

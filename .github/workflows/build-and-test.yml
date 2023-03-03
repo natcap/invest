@@ -75,7 +75,7 @@ jobs:
         uses: ./.github/actions/setup_env
         with:
           python-version: ${{ matrix.python-version }}
-          requirements-files: requirements.txt requirements-dev.txt requirements-gui.txt
+          requirements-files: requirements.txt requirements-dev.txt
           requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
 
       - name: Download previous conda environment.yml
@@ -218,39 +218,6 @@ jobs:
       - name: Validate user guide links
         run: make validate_userguide_filenames
 
-  run-ui-tests:
-    name: Run UI Tests
-    runs-on: windows-latest
-    needs: check-syntax-errors
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: [3.8, 3.9, "3.10"]
-
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0 # Fetch complete history for accurate versioning
-
-      - name: Restore git-LFS test data cache
-        uses: actions/cache@v3
-        with:
-          path: data/invest-test-data
-          key: git-lfs-testdata-${{ hashfiles('Makefile') }}
-
-      - uses: ./.github/actions/setup_env
-        with:
-          python-version: ${{ matrix.python-version }}
-          requirements-files: requirements.txt requirements-dev.txt requirements-gui.txt
-          requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
-
-      - name: Make install
-        run: make install
-
-      - name: Run UI tests
-        timeout-minutes: 10  # tests usually take < 2 minutes, so 10 is generous.
-        run: make test_ui
-
   run-workbench-tests:
     name: Run Workbench Tests
     runs-on: ${{ matrix.os }}
@@ -271,7 +238,7 @@ jobs:
         uses: ./.github/actions/setup_env
         with:
           python-version: ${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
-          requirements-files: requirements.txt requirements-dev.txt requirements-gui.txt
+          requirements-files: requirements.txt requirements-dev.txt
           requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
 
       - name: Make install
@@ -312,12 +279,10 @@ jobs:
         os: [macos-latest, windows-latest]
         include:
           - os: macos-latest
-            binary-make-command: mac_dmg
             puppeteer-log: ~/Library/Logs/invest-workbench/
             workspace-path: InVEST-failed-mac-workspace.tar
             binary-extension: dmg
           - os: windows-latest
-            binary-make-command: windows_installer
             puppeteer-log: ~/AppData/Roaming/invest-workbench/logs/
             workspace-path: ${{ github.workspace }}
             binary-extension: exe
@@ -326,58 +291,18 @@ jobs:
         with:
           fetch-depth: 0 # Fetch complete history for accurate versioning
 
-      - name: Install build dependencies (macOS)
-        if: matrix.os == 'macos-latest'
-        run: brew install create-dmg
-
-        # Not caching chocolatey packages because the cache may not be reliable
-        # https://github.com/chocolatey/choco/issues/2134
-        # and this step only takes about 30 seconds.
-      - name: Install build dependencies (Windows)
-        if: matrix.os == 'windows-latest'
-        shell: powershell
-        run: |
-          choco install zip unzip
-          $env:PATH += ";C:\ProgramData\chocolatey\bin"
-          refreshenv  # Choco-provided command to reload environment variables
-
-      - name: Restore cached NSIS plugins (Windows)
-        id: restore-nsis-cache
-        if: matrix.os == 'windows-latest'
-        uses: actions/cache@v3
-        with:
-          path: | # update this list of paths if windows-ci-binary-install.ps1 changes
-            C:\Program Files (x86)\NSIS\Plugins\x86-ansi\nsProcess.dll
-            C:\Program Files (x86)\NSIS\Include\nsProcess.nsh
-            C:\Program Files (x86)\NSIS\Plugins\x86-ansi\INetC.dll
-            C:\Program Files (x86)\NSIS\Plugins\x86-ansi\nsisunz.dll
-            C:\Program Files (x86)\NSIS\Plugins\x86-ansi\StdUtils.dll
-            C:\Program Files (x86)\NSIS\Plugins\x86-ansi\UAC.dll
-            C:\Program Files (x86)\NSIS\Include\NsisMultiUser.nsh
-            C:\Program Files (x86)\NSIS\Include\NsisMultiUserLang.nsh
-            C:\Program Files (x86)\NSIS\Include\StdUtils.nsh
-            C:\Program Files (x86)\NSIS\Include\UAC.nsh
-            C:\Program Files (x86)\NSIS\Include\Utils.nsh
-            C:\Program Files (x86)\NSIS\Include\un.Utils.nsh
-          key: NSIS-plugins--${{ hashFiles('ci/windows-ci-binary-install.ps1') }}
-
-      - name: Download NSIS plugins (Windows)  # only if they couldn't be restored from the cache
-        if: matrix.os == 'windows-latest' && steps.restore-nsis-cache.outputs.cache-hit != 'true'
-        shell: powershell
-        run: ./ci/windows-ci-binary-install.ps1
-
       - name: Set up conda environment
         uses: ./.github/actions/setup_env
         with:
           python-version: ${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
-          requirements-files: requirements.txt requirements-dev.txt requirements-docs.txt requirements-gui.txt
+          requirements-files: requirements.txt requirements-dev.txt requirements-docs.txt
           requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }} pandoc
 
       - name: Make install
         run: make install
 
       - name: Build binaries
-        run: make CONDA=micromamba ${{ matrix.binary-make-command }}
+        run: make CONDA=micromamba binaries
 
       - name: Run invest-autotest with binaries
         if : |
@@ -434,9 +359,8 @@ jobs:
           CERT_FILE: 2025-01-16-Expiry-AppStore-App.p12
           CERT_PASS: ${{ secrets.MACOS_CODESIGN_CERT_PASS }}
         run: |
-          INSTALLER_BINARY=$(find "$(pwd)/dist" -type f -name 'InVEST_*.dmg' | head -n 1)
           WORKBENCH_BINARY=$(find "$(pwd)/workbench/dist" -type f -name 'invest_*.dmg' | head -n 1)
-          make BIN_TO_SIGN="$INSTALLER_BINARY" WORKBENCH_BIN_TO_SIGN="$WORKBENCH_BINARY" codesign_mac
+          make WORKBENCH_BIN_TO_SIGN="$WORKBENCH_BINARY" codesign_mac
 
       - name: Sign binaries (Windows)
         if: github.event_name != 'pull_request' && matrix.os == 'windows-latest' # secrets not available in PR
@@ -446,20 +370,12 @@ jobs:
         run: |
           # figure out the path to signtool.exe (it keeps changing with SDK updates)
           SIGNTOOL_PATH=$(find 'C:\\Program Files (x86)\\Windows Kits\\10' -type f -name 'signtool.exe*' | head -n 1)
-          INSTALLER_BINARY=$(find "$(pwd)/dist" -type f -name 'InVEST_*.exe' | head -n 1)
           WORKBENCH_BINARY=$(find "$(pwd)/workbench/dist" -type f -name 'invest_*.exe' | head -n 1)
-          make BIN_TO_SIGN="$INSTALLER_BINARY" WORKBENCH_BIN_TO_SIGN="$WORKBENCH_BINARY" SIGNTOOL="$SIGNTOOL_PATH" codesign_windows
+          make WORKBENCH_BIN_TO_SIGN="$WORKBENCH_BINARY" SIGNTOOL="$SIGNTOOL_PATH" codesign_windows
 
       - name: Deploy artifacts to GCS
         if: github.event_name != 'pull_request'
         run: make deploy
-
-      - name: Upload binary artifact
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: InVEST-${{ runner.os }}-binary
-          path: dist/*.${{ matrix.binary-extension }}
 
       - name: Upload workbench binary artifact
         if: always()

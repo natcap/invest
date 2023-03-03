@@ -42,12 +42,12 @@ const config = {
   artifactName: ARTIFACT_NAME,
   mac: {
     category: 'public.app-category.business',
-    icon: 'resources/invest-in-shadow-white.png',
+    icon: 'resources/InVEST-2.ico',
     target: 'dmg',
   },
   win: {
     target: 'nsis',
-    icon: 'resources/invest-in-shadow-white.png',
+    icon: 'resources/InVEST-2.ico',
   },
   nsis: {
     oneClick: false,
