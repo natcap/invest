@@ -356,13 +356,13 @@ const UI_SPEC = {
     enabledFunctions: {
       search_radius: ((state) => (
         isSufficient('search_radius_mode', state)
-        && state.argsValues.search_radius_mode.value === 'radius_uniform')),
+        && state.argsValues.search_radius_mode.value === 'uniform radius')),
       // decay_function_power_beta: ((state) => (
       //   isSufficient('decay_function', state)
       //   && state.argsValues.decay_function.value === 'power')),
       population_group_radii_table: ((state) => (
         isSufficient('search_radius_mode', state)
-        && state.argsValues.search_radius_mode.value === 'radius_per_pop_group')),
+        && state.argsValues.search_radius_mode.value === 'radius per population group')),
     },
   },
   wave_energy: {
