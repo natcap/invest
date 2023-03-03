@@ -83,7 +83,6 @@ class SettingsModal extends React.Component {
     for (let i = 1; i <= nCPU; i += 1) {
       nWorkersOptions.push([i, `${i} ${t('CPUs')}`]);
     }
-    // console.log(t('DEBUG'))
     const logLevelOptions = {  // map value to display name
       'DEBUG': t('DEBUG'),
       'INFO': t('INFO'),
