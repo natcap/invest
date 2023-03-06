@@ -269,7 +269,7 @@ class CarbonTests(unittest.TestCase):
 
 
 class CarbonValidationTests(unittest.TestCase):
-    """Tests for the Carbon Model ARGS_SPEC and validation."""
+    """Tests for the Carbon Model MODEL_SPEC and validation."""
 
     def setUp(self):
         """Create a temporary workspace."""

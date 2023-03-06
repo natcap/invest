@@ -108,7 +108,7 @@ beforeAll(() => {
     if (`${data}`.match('main window loaded')) {
       try {
         BROWSER = await puppeteer.connect({
-          browserURL: `http://localhost:${PORT}`,
+          browserURL: `http://127.0.0.1:${PORT}`,
           defaultViewport: null,
         });
       } catch (e) {
@@ -159,9 +159,9 @@ test('Run a real invest model', async () => {
   const doc = await getDocument(page);
   await page.screenshot({ path: `${SCREENSHOT_PREFIX}1-page-load.png` });
 
-  const extraTime = 5000; // long timeouts finding the first elements
+  const downloadModal = await page.waitForSelector('.modal-dialog');
   const downloadModalCancel = await findByRole(
-    doc, 'button', { name: 'Cancel' }, { timeout: extraTime }
+    downloadModal, 'button', { name: 'Cancel' }
   );
   await downloadModalCancel.click();
   // We need to get the modelButton from w/in this list-group because there
@@ -219,7 +219,7 @@ test('Run a real invest model', async () => {
   // Cancel button does not appear until after invest has confirmed
   // it is running. So extra timeout on the query:
   const cancelButton = await findByRole(sidebar,
-    'button', { name: 'Cancel Run' }, { timeout: 5000 });
+    'button', { name: 'Cancel Run' }, { timeout: 15000 });
   await cancelButton.click();
   expect(await findByText(sidebar, 'Run Canceled'));
   expect(await findByText(sidebar, 'Open Workspace'));

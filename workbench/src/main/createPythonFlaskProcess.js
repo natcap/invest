@@ -5,7 +5,7 @@ import fetch from 'node-fetch';
 import { getLogger } from './logger';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
-const HOSTNAME = 'http://localhost';
+const HOSTNAME = 'http://127.0.0.1';
 
 /**
  * Spawn a child process running the Python Flask app.
@@ -54,27 +54,25 @@ export function createPythonFlaskProcess(investExe) {
  * @param {number} retries - number of recursive calls this function is allowed.
  * @returns { Promise } resolves text indicating success.
  */
-export function getFlaskIsReady({ i = 0, retries = 41 } = {}) {
-  return (
-    fetch(`${HOSTNAME}:${process.env.PORT}/api/ready`, {
+export async function getFlaskIsReady({ i = 0, retries = 41 } = {}) {
+  try {
+    await fetch(`${HOSTNAME}:${process.env.PORT}/api/ready`, {
       method: 'get',
-    })
-      .then((response) => response.text())
-      .catch(async (error) => {
-        if (error.code === 'ECONNREFUSED') {
-          while (i < retries) {
-            i++;
-            // Try every X ms, usually takes a couple seconds to startup.
-            await new Promise((resolve) => setTimeout(resolve, 300));
-            logger.debug(`retry # ${i}`);
-            return await getFlaskIsReady({ i: i, retries: retries });
-          }
-          logger.error(`Not able to connect to server after ${retries} tries.`);
-        }
-        logger.error(error);
-        throw error;
-      })
-  );
+    });
+  } catch (error) {
+    if (error.code === 'ECONNREFUSED') {
+      while (i < retries) {
+        i++;
+        // Try every X ms, usually takes a couple seconds to startup.
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        logger.debug(`retry # ${i}`);
+        return getFlaskIsReady({ i: i, retries: retries });
+      }
+      logger.error(`Not able to connect to server after ${retries} tries.`);
+    }
+    logger.error(error);
+    throw error;
+  }
 }
 
 /**
