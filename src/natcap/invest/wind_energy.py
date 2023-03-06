@@ -33,7 +33,69 @@ from . import gettext
 LOGGER = logging.getLogger(__name__)
 speedups.enable()
 
-ARGS_SPEC = {
+INPUT_WIND_DATA_FIELDS = {
+    "long": {
+        "type": "number",
+        "units": u.degree,
+        "about": gettext("Longitude of the data point.")
+    },
+    "lati": {
+        "type": "number",
+        "units": u.degree,
+        "about": gettext("Latitude of the data point.")
+    },
+    "lam": {
+        "type": "number",
+        "units": u.none,
+        "about": gettext(
+            "Weibull scale factor at the reference hub height at "
+            "this point.")
+    },
+    "k": {
+        "type": "number",
+        "units": u.none,
+        "about": gettext("Weibull shape factor at this point.")
+    },
+    "ref": {
+        "type": "number",
+        "units": u.meter,
+        "about": gettext(
+            "The reference hub height at this point, at which "
+            "wind speed data was collected and LAM was estimated.")
+    }
+}
+
+OUTPUT_WIND_DATA_FIELDS = {
+    **INPUT_WIND_DATA_FIELDS,
+    "lam": {
+        "type": "number",
+        "units": u.none,
+        "about": gettext(
+            "Weibull scale factor calculated for the "
+            "proposed hub height at this point.")
+    },
+    "ref_lam": {
+        "type": "number",
+        "units": u.degree,
+        "about": gettext(
+            "Weibull scale factor at the reference hub height at "
+            "this point.")
+    },
+    "Dens_W/m2": {
+        "type": "number",
+        "units": u.watt/u.meter**2,
+        "about": gettext("Power density at this point.")
+    },
+    "Harv_MWhr": {
+        "type": "number",
+        "units": u.megawatt_hour/u.year,
+        "about": gettext(
+            "Predicted energy harvested from a wind "
+            "farm centered on this point.")
+    }
+}
+
+MODEL_SPEC = {
     "model_name": MODEL_METADATA["wind_energy"].model_title,
     "pyname": MODEL_METADATA["wind_energy"].pyname,
     "userguide": MODEL_METADATA["wind_energy"].userguide,
@@ -48,37 +110,7 @@ ARGS_SPEC = {
         "n_workers": spec_utils.N_WORKERS,
         "wind_data_path": {
             "type": "csv",
-            "columns": {
-                "long": {
-                    "type": "number",
-                    "units": u.degree,
-                    "about": gettext("Longitude of the data point.")
-                },
-                "lati": {
-                    "type": "number",
-                    "units": u.degree,
-                    "about": gettext("Latitude of the data point.")
-                },
-                "lam": {
-                    "type": "number",
-                    "units": u.none,
-                    "about": gettext(
-                        "Weibull scale factor at the reference hub height at "
-                        "this point.")
-                },
-                "k": {
-                    "type": "number",
-                    "units": u.none,
-                    "about": gettext("Weibull shape factor at this point.")
-                },
-                "ref": {
-                    "type": "number",
-                    "units": u.meter,
-                    "about": gettext(
-                        "The reference hub height at this point, at which "
-                        "wind speed data was collected and LAM was estimated.")
-                }
-            },
+            "columns": INPUT_WIND_DATA_FIELDS,
             "about": gettext("Table of Weibull parameters for each wind data point."),
             "name": gettext("wind data points")
         },
@@ -392,6 +424,109 @@ ARGS_SPEC = {
                 "Required if Run Valuation is selected and Use Price Table "
                 "is not selected."),
             "name": gettext("rate of price change")
+        }
+    },
+    "outputs": {
+        "output": {
+            "type": "directory",
+            "contents": {
+                "carbon_emissions_tons.tif": {
+                    "about": gettext(
+                        "Map of offset carbon emissions for a farm centered "
+                        "on each pixel"),
+                    "bands": {1: {
+                        "type": "number",
+                        "units": u.metric_ton/u.year
+                    }}
+                },
+                "density_W_per_m2.tif": {
+                    "about": gettext("Map of power density."),
+                    "bands": {1: {
+                        "type": "number",
+                        "units": u.watt/u.meter**2
+                    }}
+                },
+                "harvested_energy_MWhr_per_yr.tif": {
+                    "about": gettext(
+                        "Map of energy harvested from a farm centered on each pixel."),
+                    "bands": {1: {
+                        "type": "number",
+                        "units": u.megawatt_hour/u.year
+                    }}
+                },
+                "levelized_cost_price_per_kWh.tif": {
+                    "about": gettext(
+                        "Map of the energy price that would be required to "
+                        "set the present value of a farm centered on each "
+                        "pixel equal to zero."),
+                    "bands": {1: {
+                        "type": "number",
+                        "units": u.currency/u.kilowatt_hour
+                    }}
+                },
+                "npv.tif": {
+                    "about": gettext(
+                        "Map of the net present value of a farm centered on each pixel."),
+                    "bands": {1: {"type": "number", "units": u.currency}}
+                },
+                "wind_energy_points.shp": {
+                    "about": gettext("Map of summarized data at each point."),
+                    "geometries": spec_utils.POINT,
+                    "fields": OUTPUT_WIND_DATA_FIELDS
+                }
+            }
+        },
+        "intermediate": {
+            "type": "directory",
+            "contents": {
+                "aoi_raster.tif": {
+                    "about": "Empty raster covering the extent of the AOI",
+                    "bands": {1: {"type": "integer"}}
+                },
+                "bathymetry_projected.tif": {
+                    "about": "Clipped and reprojected bathymetry map",
+                    "bands": {1: {"type": "number", "units": u.meter}}
+                },
+                "depth_mask.tif": {
+                    "about": (
+                        "Bathymetry map masked to show only the pixels that "
+                        "fall within the allowed depth range"),
+                    "bands": {1: {"type": "number", "units": u.meter}}
+                },
+                "distance_mask.tif": {
+                    "about": (
+                        "Distance to shore, masked to show only the pixels "
+                        "that fall within the allowed distance range"),
+                    "bands": {1: {"type": "number", "units": u.meter}}
+                },
+                "distance_trans.tif": {
+                    "about": "Distance to shore from each pixel",
+                    "bands": {1: {"type": "number", "units": u.meter}}
+                },
+                "projected_clipped_land_poly.shp": {
+                    "about": "Clipped and reprojected land polygon vector",
+                    "fields": {},
+                    "geometries": {"POLYGON", "MULTIPOLYGON"}
+                },
+                "projection_params.pickle": {
+                    "about": "Pickled bathymetry reprojection parameters"
+                },
+                "temp_density.tif": {
+                    "about": "Interpolated wind power density",
+                    "bands": {1: {"type": "number", "units": u.watt/u.meter**2}}
+                },
+                "temp_harvested.tif": {
+                    "about": "Interpolated harvested wind energy",
+                    "bands": {1: {"type": "number", "units": u.megawatt_hour/u.year}}
+                },
+                "wind_data.pickle": {"about": "Pickled wind data dictionary"},
+                "wind_energy_points_from_data.shp": {
+                    "about": "Wind data",
+                    "geometries": spec_utils.POINT,
+                    "fields": OUTPUT_WIND_DATA_FIELDS
+                },
+                "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
+            }
         }
     }
 }
@@ -2641,5 +2776,5 @@ def validate(args, limit_to=None):
         message applies to and tuple[1] is the str validation warning.
 
     """
-    return validation.validate(args, ARGS_SPEC['args'],
-                               ARGS_SPEC['args_with_spatial_overlap'])
+    return validation.validate(args, MODEL_SPEC['args'],
+                               MODEL_SPEC['args_with_spatial_overlap'])

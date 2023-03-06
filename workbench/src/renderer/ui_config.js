@@ -19,7 +19,7 @@ where
    Args within each nested array are visually grouped together.
 - `hidden` (optional) a 1D array of args that should not be displayed in a GUI.
    Use this for model-specific args, no need to include 'n_workers'.
-   All args in ARGS_SPEC (except n_workers) must be contained in `order`+`hidden`.
+   All args in MODEL_SPEC (except n_workers) must be contained in `order`+`hidden`.
    `hidden` is only used in tests, to catch args that should be in `order`,
    but are missing.
 - `modelName` as passed to `invest getspec <modelName>`
@@ -28,7 +28,7 @@ where
 - `f` is a function that accepts `SetupTab.state` as its one argument
     - in the `enabledFunctions` section, `f` returns a boolean where true = enabled, false = disabled
     - in the `dropdownFunctions` section, `f` returns a list of dropdown options.
-      Note: Most dropdown inputs will have a static list of options defined in the ARGS_SPEC.
+      Note: Most dropdown inputs will have a static list of options defined in the MODEL_SPEC.
       This is only for dynamically populating a dropdown.
 
 When the SetupTab component renders, it calls `f(this.state)` to get

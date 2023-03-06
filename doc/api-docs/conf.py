@@ -138,30 +138,6 @@ texinfo_documents = [
 
 # -- Prepare for sphinx build ---------------------------------------------
 
-# As suggested here https://stackoverflow.com/questions/27325165/metaclass-error-when-extending-scipy-stats-rv-continuous-mocked-for-read-the-doc
-# Classes involved in multiple inheritance from a mocked class: 
-#   * Container(QtWidgets.QGroupBox, InVESTModelInput) 
-#   * Executor(QtCore.QObject, threading.Thread)
-# We have to explicitly define the mocked classes so that `type(mocked class)` 
-# is `type` and not `unittest.mock.MagicMock` to avoid metaclass conflict error
-
-# Because Container inherits from QtWidgets.QGroupBox and InVESTModelInput
-# which both are mocked, we have to give them separate classes
-# Otherwise we get an MRO error
-class MockQObject:
-  pass
-class MockQGroupBox:
-  pass
-mock_qtpy = MagicMock()
-mock_qtpy.QtCore.QObject = MockQObject
-mock_qtpy.QtWidgets.QGroupBox = MockQGroupBox
-sys.modules.update([
-  ('qtpy', mock_qtpy),
-  ('qtpy.QtCore', MagicMock()),
-  ('qtpy.QtGui', MagicMock()),
-  ('qtpy.QtWidgets', MagicMock())
-])
-
 # Use sphinx apidoc tool to generate documentation for invest. Generated rst 
 # files go into the api/ directory. Note that some apidoc options may not work 
 # the same because we aren't using their values in the custom templates
@@ -228,9 +204,9 @@ invest_model_modules = {}
 for _, name, _ in pkgutil.walk_packages(path=[INVEST_LIB_DIR],
                                         prefix='natcap.'):
     module = importlib.import_module(name)
-    # any module with an ARGS_SPEC is an invest model
-    if hasattr(module, 'ARGS_SPEC'):
-        model_title = module.ARGS_SPEC['model_name']
+    # any module with a MODEL_SPEC is an invest model
+    if hasattr(module, 'MODEL_SPEC'):
+        model_title = module.MODEL_SPEC['model_name']
         invest_model_modules[model_title] = name
 
 # Write sphinx autodoc function for each entrypoint

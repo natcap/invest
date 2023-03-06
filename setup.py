@@ -14,10 +14,6 @@ _REQUIREMENTS = [req.split(';')[0].split('#')[0].strip() for req in
                  open('requirements.txt').readlines()
                  if (not req.startswith(('#', 'hg+', 'git+'))
                      and len(req.strip()) > 0)]
-_GUI_REQUIREMENTS = [req.split(';')[0].split('#')[0].strip() for req in
-                     open('requirements-gui.txt').readlines()
-                     if not (req.startswith(('#', 'hg+'))
-                             and len(req.strip()) > 0)]
 
 # Since OSX Mavericks, the stdlib has been renamed.  So if we're on OSX, we
 # need to be sure to define which standard c++ library to use.  I don't have
@@ -50,9 +46,6 @@ class build_py(_build_py):
 
 setup(
     install_requires=_REQUIREMENTS,
-    extras_require={
-        'ui': _GUI_REQUIREMENTS,
-    },
     ext_modules=[
         Extension(
             name=f'natcap.invest.{package}.{module}',

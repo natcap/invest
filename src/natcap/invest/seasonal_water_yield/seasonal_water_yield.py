@@ -31,7 +31,7 @@ MONTH_ID_TO_LABEL = [
     'jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct',
     'nov', 'dec']
 
-ARGS_SPEC = {
+MODEL_SPEC = {
     "model_name": MODEL_METADATA["seasonal_water_yield"].model_title,
     "pyname": MODEL_METADATA["seasonal_water_yield"].pyname,
     "userguide": MODEL_METADATA["seasonal_water_yield"].userguide,
@@ -275,6 +275,146 @@ ARGS_SPEC = {
                 "Required if Use Monthly Alpha Table is selected."),
             "name": gettext("monthly alpha table")
         }
+    },
+    "outputs": {
+        "B.tif": {
+            "about": gettext(
+                "Map of baseflow values, the contribution of a pixel to slow "
+                "release flow (which is not evapotranspired before it reaches "
+                "the stream)."),
+            "bands": {1: {
+                "type": "number",
+                "units": u.millimeter
+            }}
+        },
+        "B_sum.tif": {
+            "about": gettext(
+                "Map of B_sum values, the flow through a pixel, contributed "
+                "by all upslope pixels, that is not evapotranspirated before "
+                "it reaches the stream."),
+            "bands": {1: {
+                "type": "number",
+                "units": u.millimeter
+            }}
+        },
+        "CN.tif": {
+            "about": gettext("Map of curve number values."),
+            "bands": {1: {
+                "type": "number",
+                "units": u.none
+            }}
+        },
+        "L_avail.tif": {
+            "about": gettext("Map of available local recharge"),
+            "bands": {1: {
+                "type": "number",
+                "units": u.millimeter
+            }}
+        },
+        "L.tif": {
+            "about": gettext("Map of local recharge values"),
+            "bands": {1: {
+                "type": "number",
+                "units": u.millimeter
+            }}
+        },
+        "L_sum_avail.tif": {
+            "about": gettext(
+                "Map of total available water, contributed by all upslope "
+                "pixels, that is available for evapotranspiration by this pixel."),
+            "bands": {1: {
+                "type": "number",
+                "units": u.millimeter
+            }}
+        },
+        "L_sum.tif": {
+            "about": gettext(
+                "Map of cumulative upstream recharge: the flow through a "
+                "pixel, contributed by all upslope pixels, that is available "
+                "for evapotranspiration to downslope pixels."),
+            "bands": {1: {
+                "type": "number",
+                "units": u.millimeter
+            }}
+        },
+        "QF.tif": {
+            "about": gettext("Map of quickflow"),
+            "bands": {1: {
+                "type": "number",
+                "units": u.millimeter/u.year
+            }}
+        },
+        "P.tif": {
+            "about": gettext("The total precipitation across all months on this pixel."),
+            "bands": {1: {
+                "type": "number",
+                "units": u.millimeter/u.year
+            }}
+        },
+        "Vri.tif": {
+            "about": gettext(
+                "Map of the values of recharge (contribution, positive or "
+                "negative), to the total recharge."),
+            "bands": {1: {
+                "type": "number",
+                "units": u.millimeter
+            }}
+        },
+        "aggregated_results_swy.shp": {
+            "about": gettext("Table of biophysical values for each watershed"),
+            "geometries": spec_utils.POLYGONS,
+            "fields": {
+                "qb": {
+                    "about": gettext(
+                        "Mean local recharge value within the watershed"),
+                    "type": "number",
+                    "units": u.millimeter
+                },
+                "vri_sum": {
+                    "about": gettext(
+                        "Total recharge contribution, (positive or negative) "
+                        "within the watershed."),
+                    "type": "number",
+                    "units": u.millimeter
+                }
+            }
+        },
+        "intermediate_outputs": {
+            "type": "directory",
+            "contents": {
+                "aet.tif": {
+                    "about": gettext("Map of actual evapotranspiration"),
+                    "bands": {1: {
+                        "type": "number",
+                        "units": u.millimeter
+                    }}
+                },
+                "flow_dir_mfd.tif": {
+                    "about": gettext(
+                        "Map of multiple flow direction. Values are encoded in "
+                        "a binary format and should not be used directly."),
+                    "bands": {1: {"type": "integer"}}
+                },
+                "qf_[MONTH].tif": {
+                    "about": gettext(
+                        "Maps of monthly quickflow (1 = January… 12 = December)"),
+                    "bands": {1: {
+                        "type": "number",
+                        "units": u.millimeter
+                    }}
+                },
+                "stream.tif": {
+                    "about": gettext(
+                        "Stream network map generated from the input DEM and "
+                        "Threshold Flow Accumulation. Values of 1 represent "
+                        "streams, values of 0 are non-stream pixels."),
+                    "bands": {1: {
+                        "type": "integer"
+                    }}
+                }
+            }
+        },
+        "cache_dir": spec_utils.TASKGRAPH_DIR
     }
 }
 
@@ -1260,5 +1400,5 @@ def validate(args, limit_to=None):
             the error message in the second part of the tuple. This should
             be an empty list if validation succeeds.
     """
-    return validation.validate(args, ARGS_SPEC['args'],
-                               ARGS_SPEC['args_with_spatial_overlap'])
+    return validation.validate(args, MODEL_SPEC['args'],
+                               MODEL_SPEC['args_with_spatial_overlap'])

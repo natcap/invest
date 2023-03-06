@@ -7,7 +7,7 @@ import pkg from '../../package.json';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 const WORKBENCH_VERSION = pkg.version;
-const HOSTNAME = 'http://localhost';
+const HOSTNAME = 'http://127.0.0.1';
 const PREFIX = 'api';
 
 export default function investUsageLogger() {

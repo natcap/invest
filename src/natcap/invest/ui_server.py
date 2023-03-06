@@ -21,7 +21,7 @@ PREFIX = 'api'
 app = Flask(__name__)
 CORS(app, resources={
     f'/{PREFIX}/*': {
-        'origins': 'http://localhost:*'
+        'origins': ['http://localhost:*', 'http://127.0.0.1:*']
     }
 })
 
@@ -56,7 +56,7 @@ def get_invest_models():
 
 @app.route(f'/{PREFIX}/getspec', methods=['POST'])
 def get_invest_getspec():
-    """Gets the ARGS_SPEC dict from an InVEST model.
+    """Gets the MODEL_SPEC dict from an InVEST model.
 
     Body (JSON string): "carbon"
     Accepts a `language` query parameter which should be an ISO 639-1 language
@@ -72,7 +72,7 @@ def get_invest_getspec():
     importlib.reload(natcap.invest.spec_utils)
     model_module = importlib.reload(
         importlib.import_module(name=target_module))
-    return spec_utils.serialize_args_spec(model_module.ARGS_SPEC)
+    return spec_utils.serialize_args_spec(model_module.MODEL_SPEC)
 
 
 @app.route(f'/{PREFIX}/validate', methods=['POST'])

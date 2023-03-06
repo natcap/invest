@@ -67,7 +67,7 @@ class EndpointFunctionTests(unittest.TestCase):
         self.assertEqual(
             set(spec),
             {'model_name', 'pyname', 'userguide',
-             'args_with_spatial_overlap', 'args'})
+             'args_with_spatial_overlap', 'args', 'outputs'})
 
     def test_get_invest_validate(self):
         """UI server: get_invest_validate endpoint."""
@@ -77,7 +77,7 @@ class EndpointFunctionTests(unittest.TestCase):
             'workspace_dir': 'foo'
         }
         payload = {
-            'model_module': carbon.ARGS_SPEC['pyname'],
+            'model_module': carbon.MODEL_SPEC['pyname'],
             'args': json.dumps(args)
         }
         response = test_client.post(f'{ROUTE_PREFIX}/validate', json=payload)

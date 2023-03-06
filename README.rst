@@ -28,7 +28,7 @@ General Information
 * Website: https://naturalcapitalproject.stanford.edu/software/invest
 * Source code: https://github.com/natcap/invest
 * Issue tracker: https://github.com/natcap/invest/issues
-* Users' guide: http://data.naturalcapitalproject.org/nightly-build/invest-users-guide/html/
+* Users' guide: https://storage.googleapis.com/releases.naturalcapitalproject.org/invest-userguide/latest/index.html
 * API documentation: http://invest.readthedocs.io/en/latest/
 
 
@@ -43,16 +43,6 @@ http://invest.readthedocs.io/en/latest/installing.html or locally at ``doc/api-d
     The ``make`` commands for InVEST require a BASH shell environment. Windows
     users can use Git Bash within the Git for Windows suite. More infomration
     can be found at https://gitforwindows.org
-
-NSIS-specific requirements
-++++++++++++++++++++++++++
-The InVEST NSIS installer requires the following:
-
-* NSIS
-* Installed Plugins:
-    * Nsisunz: http://nsis.sourceforge.net/Nsisunz_plug-in
-    * InetC: http://nsis.sourceforge.net/Inetc_plug-in
-    * NsProcess: http://nsis.sourceforge.net/NsProcess_plugin
 
 Managing python dependencies
 ++++++++++++++++++++++++++++
@@ -69,7 +59,7 @@ Or on Windows, use the following instead from a CMD prompt::
 
 This makefile target is included for convenience ... you may of course choose to
 manage your own virtual environment.  ``requirements.txt``,
-``requirements-dev.txt`` and ``requirements-gui.txt`` list the python
+``requirements-dev.txt`` and ``requirements-docs.txt`` list the python
 dependencies needed.
 
 Using a different environment name
@@ -135,24 +125,10 @@ and relevant shared libraries.
 Binaries cannot be cross-compiled for other operating systems.
 
 
-InVEST Windows Installer
+InVEST Workbench
 ++++++++++++++++++++++++
 
-The InVEST installer for Windows can be built with::
-
-    > make windows_installer
-
-This will create the installer at ``dist/InVEST_*_Setup.exe``.
-
-
-InVEST Mac Disk Image
-+++++++++++++++++++++
-
-The InVEST disk image for Mac can be built with::
-
-    $ make mac_installer
-
-This will create the installed at ``dist/InVEST_*.dmg``.
+See developer instructions at ``workbench/readme.md``.
 
 
 
@@ -222,14 +198,6 @@ To run tests on the suite of Ecosytem Service models in InVEST::
     $ make test
 
 
-User interface tests
-++++++++++++++++++++
-
-To run tests for user interface functionality::
-
-    $ make test_ui
-
-
 Changing how GNU make runs tests
 ++++++++++++++++++++++++++++++++
 
@@ -241,17 +209,15 @@ command line.  For example, to run the tests with ``nose``::
     $ make TESTRUNNER=nose test
 
 
-Running tests on installed binaries
+Running tests on binaries
 +++++++++++++++++++++++++++++++++++
 
-The InVEST binaries for Windows include a python script to automatically
+This repository includes a python script to automatically
 execute and check the exit status of all InVEST models, running on the
-installed InVEST sample data.  This script requires Python version 2.7 to be on
-the PATH.  Once InVEST and all sample data have been installed on the target
-computer::
+installed InVEST sample data. Once all sample data have been fetched
+and binaries built on the target computer::
 
-    > cd C:\InVEST_<version>_x86\invest-3-x86
-    > .\invest-autotest.bat
+    $ make invest_autotest
 
 
 Copyright and license information

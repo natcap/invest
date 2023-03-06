@@ -1,4 +1,4 @@
-ARGS_SPEC = {
+MODEL_SPEC = {
     'args': {
         'vector': {'type': 'vector'},
     }
