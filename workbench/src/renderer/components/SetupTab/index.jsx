@@ -589,7 +589,7 @@ SetupTab.propTypes = {
     enabledFunctions: PropTypes.objectOf(PropTypes.func),
     dropdownFunctions: PropTypes.objectOf(PropTypes.func),
   }).isRequired,
-  argsInitValues: PropTypes.objectOf(PropTypes.string),
+  argsInitValues: PropTypes.objectOf(PropTypes.oneOfType([PropTypes.string, PropTypes.bool])),
   investExecute: PropTypes.func.isRequired,
   nWorkers: PropTypes.string.isRequired,
   sidebarSetupElementId: PropTypes.string.isRequired,
