@@ -513,6 +513,11 @@ def execute(args):
             'target_projection_wkt': lulc_raster_info['projection_wkt'],
             'target_path': file_registry['reprojected_admin_boundaries'],
             'driver_name': 'GPKG',
+            # Making the layer name be what we want the final output to be
+            # called.  Preemptively removing dashes - Arc doesn't like it.
+            'target_layer_name': os.path.splitext(
+                os.path.basename(
+                    file_registry['admin_boundaries']))[0].replace('-', '_'),
             'id_fieldname': ID_FIELDNAME,
         },
         task_name='Reproject admin units',
@@ -1240,7 +1245,8 @@ def _geometries_overlap(vector_path):
 
 
 def _reproject_and_identify(base_vector_path, target_projection_wkt,
-                            target_path, driver_name, id_fieldname):
+                            target_path, driver_name, id_fieldname,
+                            target_layer_name):
     """Reproject a vector and add an ID field.
 
     Args:
@@ -1253,12 +1259,14 @@ def _reproject_and_identify(base_vector_path, target_projection_wkt,
             name and an integer type will be created in the target vector.
             Each feature in the target vector will be assigned a unique integer
             ID.
+        target_layer_name (string): The layer name of the target vector.
 
     Returns:
         ``None``
     """
     pygeoprocessing.reproject_vector(
         base_vector_path, target_projection_wkt, target_path,
+        target_layer_name=target_layer_name,
         driver_name=driver_name)
 
     vector = gdal.OpenEx(target_path, gdal.GA_Update)

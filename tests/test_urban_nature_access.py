@@ -446,11 +446,11 @@ class UNATests(unittest.TestCase):
 
         # Check that we're getting the appropriate summary values in the
         # admin units vector.
+        layer_name = f"admin_boundaries_{args['results_suffix']}"
         admin_vector_path = os.path.join(
-            args['workspace_dir'], 'output',
-            f"admin_boundaries_{args['results_suffix']}.gpkg")
+            args['workspace_dir'], 'output', f"{layer_name}.gpkg")
         admin_vector = gdal.OpenEx(admin_vector_path)
-        admin_layer = admin_vector.GetLayer()
+        admin_layer = admin_vector.GetLayer(layer_name)
         self.assertEqual(admin_layer.GetFeatureCount(), 1)
 
         # expected field values from eyeballing the results; random seed = 1
