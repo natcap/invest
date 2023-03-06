@@ -230,6 +230,7 @@ export default function ArgInput(props) {
         type="switch"
         id={argkey}
         name={argkey}
+        checked={value}
         onChange={() => updateArgValues(argkey, !value)}
         disabled={!enabled}
         bsCustomPrefix="form-switch"

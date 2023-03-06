@@ -53,7 +53,7 @@ const UI_SPEC = { order: [Object.keys(BASE_ARGS_SPEC.args)] };
  * @param {object} uiSpec - an invest UI spec for the same model
  * @returns {object} - containing the test utility functions returned by render
  */
-function renderSetupFromSpec(baseSpec, uiSpec) {
+function renderSetupFromSpec(baseSpec, uiSpec, initValues = undefined) {
   // some ARGS_SPEC boilerplate that is not under test,
   // but is required by PropType-checking
   const spec = { ...baseSpec };
@@ -67,7 +67,7 @@ function renderSetupFromSpec(baseSpec, uiSpec) {
       modelName={spec.modelName}
       argsSpec={spec.args}
       uiSpec={uiSpec}
-      argsInitValues={undefined}
+      argsInitValues={initValues}
       investExecute={() => {}}
       nWorkers="-1"
       sidebarSetupElementId="foo"
@@ -131,6 +131,14 @@ describe('Arguments form input types', () => {
     // for some reason, the type is still checkbox when it renders as a switch
     expect(input).toHaveAttribute('type', 'checkbox');
     expect(input).not.toBeChecked();
+  });
+
+  test('render a toggle with a value', async () => {
+    const spec = baseArgsSpec('boolean');
+    const { findByLabelText } = renderSetupFromSpec(spec, UI_SPEC, { arg: 'true' });
+    const input = await findByLabelText(`${spec.args.arg.name}`);
+    // for some reason, the type is still checkbox when it renders as a switch
+    expect(input).toBeChecked();
   });
 
   test('render a select input for an option_string dict', async () => {
