@@ -904,12 +904,12 @@ def validate(args, spec, spatial_overlap_opts=None):
     invalid_keys = set()
     sufficient_keys = set(args.keys()).difference(insufficient_keys)
     for key in sufficient_keys.difference(excluded_keys):
-        # Extra args that don't exist in the ARGS_SPEC are okay
+        # Extra args that don't exist in the MODEL_SPEC are okay
         # we don't need to try to validate them
         try:
             parameter_spec = spec[key]
         except KeyError:
-            LOGGER.debug(f'Provided key {key} does not exist in ARGS_SPEC')
+            LOGGER.debug(f'Provided key {key} does not exist in MODEL_SPEC')
             continue
 
         type_validation_func = _VALIDATION_FUNCS[parameter_spec['type']]
@@ -1013,24 +1013,24 @@ def invest_validator(validate_func):
         # import one another. This causes a problem in test_validation.py,
         # which gets imported into itself here and fails.
         # Since this decorator might not be needed in the future,
-        # just ignore failed imports; assume they have no ARGS_SPEC.
+        # just ignore failed imports; assume they have no MODEL_SPEC.
         try:
             model_module = importlib.import_module(validate_func.__module__)
         except Exception:
-            LOGGER.warning('Unable to import module %s: assuming no ARGS_SPEC.',
+            LOGGER.warning('Unable to import module %s: assuming no MODEL_SPEC.',
                            validate_func.__module__)
             model_module = None
 
-        # If the module has an ARGS_SPEC defined, validate against that.
-        if hasattr(model_module, 'ARGS_SPEC'):
+        # If the module has an MODEL_SPEC defined, validate against that.
+        if hasattr(model_module, 'MODEL_SPEC'):
             LOGGER.debug('Using ARG_SPEC for validation')
-            args_spec = getattr(model_module, 'ARGS_SPEC')['args']
+            args_spec = getattr(model_module, 'MODEL_SPEC')['args']
 
             if limit_to is None:
-                LOGGER.info('Starting whole-model validation with ARGS_SPEC')
+                LOGGER.info('Starting whole-model validation with MODEL_SPEC')
                 warnings_ = validate_func(args)
             else:
-                LOGGER.info('Starting single-input validation with ARGS_SPEC')
+                LOGGER.info('Starting single-input validation with MODEL_SPEC')
                 args_key_spec = args_spec[limit_to]
 
                 args_value = args[limit_to]
@@ -1061,7 +1061,7 @@ def invest_validator(validate_func):
                 else:
                     warnings_ = [([limit_to], error_msg)]
         else:  # args_spec is not defined for this function.
-            LOGGER.warning('ARGS_SPEC not defined for this model')
+            LOGGER.warning('MODEL_SPEC not defined for this model')
             warnings_ = validate_func(args, limit_to)
 
         LOGGER.debug('Validation warnings: %s',

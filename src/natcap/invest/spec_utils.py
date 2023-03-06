@@ -5,13 +5,7 @@ import os
 import pint
 
 from . import gettext
-
-# the same unit registry instance should be shared across everything
-# load from custom unit defintions file
-# don't raise warnings when redefining units
-u = pint.UnitRegistry(on_redefinition='ignore')
-u.load_definitions(os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), 'unit_definitions.txt'))
+from .unit_registry import u
 
 # Specs for common arg types ##################################################
 WORKSPACE = {
@@ -133,6 +127,55 @@ LULC_TABLE_COLUMN = {
         "integer.")
 }
 
+# Specs for common outputs ####################################################
+TASKGRAPH_DIR = {
+    "type": "directory",
+    "about": (
+        "Cache that stores data between model runs. This directory contains no "
+        "human-readable data and you may ignore it."),
+    "contents": {
+        "taskgraph.db": {}
+    }
+}
+FILLED_DEM = {
+    "about": gettext("Map of elevation after any pits are filled"),
+    "bands": {1: {
+        "type": "number",
+        "units": u.meter
+    }}
+}
+FLOW_ACCUMULATION = {
+    "about": gettext("Map of flow accumulation"),
+    "bands": {1: {
+        "type": "number",
+        "units": u.none
+    }}
+}
+FLOW_DIRECTION = {
+    "about": gettext(
+        "MFD flow direction. Note: the pixel values should not "
+        "be interpreted directly. Each 32-bit number consists "
+        "of 8 4-bit numbers. Each 4-bit number represents the "
+        "proportion of flow into one of the eight neighboring "
+        "pixels."),
+    "bands": {1: {"type": "integer"}}
+}
+FLOW_DIRECTION_D8 = {
+    "about": gettext(
+        "D8 flow direction."),
+    "bands": {1: {"type": "integer"}}
+}
+SLOPE = {
+    "about": gettext(
+        "Percent slope, calculated from the pit-filled "
+        "DEM. 100 is equivalent to a 45 degree slope."),
+    "bands": {1: {"type": "percent"}}
+}
+STREAM = {
+    "about": "Stream network, created using flow direction and flow accumulation derived from the DEM and Threshold Flow Accumulation. Values of 1 represent streams, values of 0 are non-stream pixels.",
+    "bands": {1: {"type": "integer"}}
+}
+
 # geometry types ##############################################################
 # the full list of ogr geometry types is in an enum in
 # https://github.com/OSGeo/gdal/blob/master/gdal/ogr/ogr_core.h
@@ -206,10 +249,10 @@ def format_unit(unit):
 
 
 def serialize_args_spec(spec):
-    """Serialize an ARGS_SPEC dict to a JSON string.
+    """Serialize an MODEL_SPEC dict to a JSON string.
 
     Args:
-        spec (dict): An invest model's ARGS_SPEC.
+        spec (dict): An invest model's MODEL_SPEC.
 
     Raises:
         TypeError if any object type within the spec is not handled by
@@ -503,11 +546,11 @@ def describe_arg_from_name(module_name, *arg_keys):
         <arg_keys[0]>-<arg_keys[1]>...-<arg_keys[n]>
         where underscores in arg keys are replaced with hyphens.
     """
-    # import the specified module (that should have an ARGS_SPEC attribute)
+    # import the specified module (that should have an MODEL_SPEC attribute)
     module = importlib.import_module(module_name)
     # start with the spec for all args
     # narrow down to the nested spec indicated by the sequence of arg keys
-    spec = module.ARGS_SPEC['args']
+    spec = module.MODEL_SPEC['args']
     for i, key in enumerate(arg_keys):
         # convert raster band numbers to ints
         if arg_keys[i - 1] == 'bands':
@@ -518,7 +561,7 @@ def describe_arg_from_name(module_name, *arg_keys):
             keys_so_far = '.'.join(arg_keys[:i + 1])
             raise ValueError(
                 f"Could not find the key '{keys_so_far}' in the "
-                f"{module_name} model's ARGS_SPEC")
+                f"{module_name} model's MODEL_SPEC")
 
     # format spec into an RST formatted description string
     if 'name' in spec:

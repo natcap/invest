@@ -340,7 +340,7 @@ describe('Sidebar Buttons', () => {
       filePaths: ['']
     };
     ipcRenderer.invoke.mockResolvedValue(mockDialogData);
-    const spy = jest.spyOn(SetupTab.prototype, 'loadParametersFromFile');
+    const spy = jest.spyOn(SetupTab.WrappedComponent.prototype, 'loadParametersFromFile');
 
     const { findByText } = renderInvestTab();
 
@@ -361,7 +361,7 @@ describe('Sidebar Buttons', () => {
       filePaths: ['']
     };
     ipcRenderer.invoke.mockResolvedValue(mockDialogData);
-    const spy = jest.spyOn(SetupTab.prototype, method);
+    const spy = jest.spyOn(SetupTab.WrappedComponent.prototype, method);
 
     const { findByText, findByLabelText, findByRole } = renderInvestTab();
     const saveAsButton = await findByText('Save as...');

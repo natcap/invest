@@ -135,7 +135,7 @@ class ScenarioProximityTests(unittest.TestCase):
 
 
 class ScenarioGenValidationTests(unittest.TestCase):
-    """Tests for the Scenario Generator ARGS_SPEC and validation."""
+    """Tests for the Scenario Generator MODEL_SPEC and validation."""
 
     def setUp(self):
         """Initiate list of required keys."""

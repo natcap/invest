@@ -850,7 +850,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
 
 class WindEnergyValidationTests(unittest.TestCase):
-    """Tests for the Wind Energy Model ARGS_SPEC and validation."""
+    """Tests for the Wind Energy Model MODEL_SPEC and validation."""
 
     def setUp(self):
         """Setup a list of required keys."""

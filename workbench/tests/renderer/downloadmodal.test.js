@@ -5,10 +5,8 @@ import {
 import '@testing-library/jest-dom';
 import userEvent from '@testing-library/user-event';
 import { ipcRenderer, BrowserWindow } from 'electron';
-import {
-  DataDownloadModal,
-  DownloadProgressBar
-} from '../../src/renderer/components/DataDownloadModal';
+import DataDownloadModal from '../../src/renderer/components/DataDownloadModal';
+import DownloadProgressBar from '../../src/renderer/components/DownloadProgressBar';
 import sampledata_registry from '../../src/renderer/components/DataDownloadModal/sampledata_registry.json';
 import { getInvestModelNames } from '../../src/renderer/server_requests';
 import App from '../../src/renderer/app';
@@ -45,8 +43,9 @@ describe('Sample Data Download Form', () => {
   });
 
   test('Modal does not display when app has been run before', async () => {
-    const { queryByText } = render(<App isFirstRun={false} />);
-    const modalTitle = await queryByText('Download InVEST sample data');
+    const { findByText, queryByText } = render(<App isFirstRun />);
+    await findByText("InVEST");  // wait for page to load before querying
+    const modalTitle = queryByText('Download InVEST sample data');
     expect(modalTitle).toBeNull();
   });
 

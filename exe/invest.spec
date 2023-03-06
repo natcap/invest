@@ -25,14 +25,13 @@ kwargs = {
     'hiddenimports': [
         'natcap',
         'natcap.invest',
-        'natcap.invest.ui.launcher',
         'yaml',
         'rtree',  # mac builds aren't picking up rtree by default.
         'pkg_resources.py2_warn',
         'cmath',
         'charset_normalizer',
     ],
-    'datas': [('qt.conf', '.'), proj_datas],
+    'datas': [proj_datas],
     'cipher': block_cipher,
 }
 

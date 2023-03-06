@@ -18,11 +18,11 @@ from . import spec_utils
 from . import utils
 from . import validation
 from .model_metadata import MODEL_METADATA
-from .spec_utils import u
+from .unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
 
-ARGS_SPEC = {
+MODEL_SPEC = {
     "model_name": MODEL_METADATA["urban_flood_risk_mitigation"].model_title,
     "pyname": MODEL_METADATA["urban_flood_risk_mitigation"].pyname,
     "userguide": MODEL_METADATA["urban_flood_risk_mitigation"].userguide,
@@ -107,6 +107,107 @@ ARGS_SPEC = {
                 "must have corresponding entries in this table. Required if "
                 "the Built Infrastructure vector is provided."),
             "name": gettext("damage loss table")
+        }
+    },
+    "outputs": {
+        "Runoff_retention.tif": {
+            "about": "Map of runoff retention index.",
+            "bands": {1: {
+                "type": "number",
+                "units": u.none
+            }}
+        },
+        "Runoff_retention_m3.tif": {
+            "about": "Map of runoff retention volume.",
+            "bands": {1: {
+                "type": "number",
+                "units": u.meter**3
+            }}
+        },
+        "Q_mm.tif": {
+            "about": "Map of runoff.",
+            "bands": {1: {
+                "type": "number",
+                "units": u.millimeter
+            }}
+        },
+        "flood_risk_service.shp": {
+            "about": "Aggregated results for each area of interest.",
+            "geometries": spec_utils.POLYGONS,
+            "fields": {
+                "rnf_rt_idx": {
+                    "about": "Average runoff retention index.",
+                    "type": "number",
+                    "units": u.none
+                },
+                "rnf_rt_m3": {
+                    "about": "Average runoff retention volume.",
+                    "type": "number",
+                    "units": u.meter**3
+                },
+                "flood_vol": {
+                    "about": "Total flood volume",
+                    "type": "number",
+                    "units": u.meter**3
+                },
+                "aff_bld": {
+                    "about": "Total potential damage to built infrastructure.",
+                    "created_if": "built_infrastructure_vector_path",
+                    "type": "number",
+                    "units": u.currency
+                },
+                "serv_blt": {
+                    "about": "Total service value of built infrastructure.",
+                    "created_if": "built_infrastructure_vector_path",
+                    "type": "number",
+                    "units": u.currency*u.meter**3
+                }
+            }
+        },
+        "intermediate_files": {
+            "type": "directory",
+            "contents": {
+                "Q_m3.tif": {
+                    "about": "Map of runoff volume.",
+                    "bands": {1: {"type": "number", "units": u.meter**3}}
+                },
+                "reprojected_aoi.gpkg": {
+                    "about": (
+                        "Copy of AOI vector reprojected to the same spatial "
+                        "reference as the LULC."),
+                    "geometries": spec_utils.POLYGONS,
+                    "fields": {}
+                },
+                "structures_reprojected.gpkg": {
+                    "about": (
+                        "Copy of built infrastructure vector reprojected to "
+                        "the same spatial reference as the LULC."),
+                    "geometries": spec_utils.POLYGONS,
+                    "fields": {}
+                }
+            }
+        },
+        "temp_working_dir_not_for_humans": {
+            "type": "directory",
+            "contents": {
+                "aligned_lulc.tif": {
+                    "about": "Aligned and clipped copy of the LULC.",
+                    "bands": {1: {"type": "integer"}}
+                },
+                "aligned_soils_hydrological_group.tif": {
+                    "about": "Aligned and clipped copy of the soils map.",
+                    "bands": {1: {"type": "integer"}}
+                },
+                "cn_raster.tif": {
+                    "about": "Map of curve number.",
+                    "bands": {1: {"type": "number", "units": u.none}}
+                },
+                "s_max.tif": {
+                    "about": "Map of potential retention.",
+                    "bands": {1: {"type": "number", "units": u.millimeter}}
+                },
+                "taskgraph_data.db": {}
+            }
         }
     }
 }
@@ -837,5 +938,5 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
-    return validation.validate(args, ARGS_SPEC['args'],
-                               ARGS_SPEC['args_with_spatial_overlap'])
+    return validation.validate(args, MODEL_SPEC['args'],
+                               MODEL_SPEC['args_with_spatial_overlap'])

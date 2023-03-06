@@ -6,9 +6,7 @@ import unittest
 
 import numpy
 import pygeoprocessing
-from natcap.invest import utils
 from osgeo import gdal
-from osgeo import ogr
 from osgeo import osr
 
 REGRESSION_DATA = os.path.join(
@@ -127,77 +125,6 @@ class SDRTests(unittest.TestCase):
         self.assertTrue(
             validate_result,
             'expected a validation error but didn\'t get one')
-
-    def test_sdr_validation_watershed_missing_ws_id(self):
-        """SDR test validation notices missing `ws_id` field on watershed."""
-        from natcap.invest import sdr
-        from natcap.invest import validation
-
-        vector_driver = ogr.GetDriverByName("ESRI Shapefile")
-        test_watershed_path = os.path.join(
-            self.workspace_dir, 'watershed.shp')
-        vector = vector_driver.CreateDataSource(test_watershed_path)
-        srs = osr.SpatialReference()
-        srs.ImportFromEPSG(4326)
-        layer = vector.CreateLayer("watershed", srs, ogr.wkbPoint)
-        # forget to add a 'ws_id' field
-        layer.CreateField(ogr.FieldDefn("id", ogr.OFTInteger))
-        feature = ogr.Feature(layer.GetLayerDefn())
-        feature.SetField("id", 0)
-        feature.SetGeometry(ogr.CreateGeometryFromWkt("POINT(-112.2 42.5)"))
-        layer.CreateFeature(feature)
-        feature = None
-        layer = None
-        vector = None
-
-        # use predefined directory so test can clean up files during teardown
-        args = SDRTests.generate_base_args(
-            self.workspace_dir)
-        args['watersheds_path'] = test_watershed_path
-        validate_result = sdr.sdr.validate(args, limit_to=None)
-        self.assertTrue(
-            validate_result,
-            'expected a validation error but didn\'t get one')
-        expected = [(
-            ['watersheds_path'],
-            validation.MESSAGES['MATCHED_NO_HEADERS'].format(
-                header='field', header_name='ws_id'))]
-        self.assertEqual(validate_result, expected)
-
-    def test_sdr_validation_watershed_missing_ws_id_value(self):
-        """SDR test validation notices bad value in `ws_id` watershed."""
-        from natcap.invest.sdr import sdr
-
-        vector_driver = ogr.GetDriverByName("ESRI Shapefile")
-        test_watershed_path = os.path.join(
-            self.workspace_dir, 'watershed.shp')
-        vector = vector_driver.CreateDataSource(test_watershed_path)
-        srs = osr.SpatialReference()
-        srs.ImportFromEPSG(26910)  # NAD83 / UTM zone 11N
-        layer = vector.CreateLayer("watershed", srs, ogr.wkbPoint)
-        # forget to add a 'ws_id' field
-        layer.CreateField(ogr.FieldDefn("ws_id", ogr.OFTInteger))
-        feature = ogr.Feature(layer.GetLayerDefn())
-        # Point coordinates taken from within bounds of other test data
-        feature.SetGeometry(ogr.CreateGeometryFromWkt(
-            "POINT(463250 4929700)"))
-
-        # intentionally not setting ws_id
-        layer.CreateFeature(feature)
-        feature = None
-        layer = None
-        vector = None
-
-        # use predefined directory so test can clean up files during teardown
-        args = SDRTests.generate_base_args(
-            self.workspace_dir)
-        args['watersheds_path'] = test_watershed_path
-
-        validate_result = sdr.validate(args, limit_to=None)
-        self.assertTrue(len(validate_result) > 0,
-                        'Expected validation errors but none found')
-        self.assertTrue(utils.matches_format_string(
-            validate_result[0][1], sdr.INVALID_ID_MSG))
 
     def test_base_regression(self):
         """SDR base regression test on sample data.

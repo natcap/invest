@@ -1,7 +1,7 @@
 #!python
 
-import os
 import argparse
+import os
 
 
 def main(userguide_dir):
@@ -19,7 +19,7 @@ def main(userguide_dir):
     from natcap.invest.model_metadata import MODEL_METADATA
 
     missing_files = []
-    userguide_dir_source = os.path.join(userguide_dir, 'source')
+    userguide_dir_source = os.path.join(userguide_dir, 'source', 'en')
 
     for data in MODEL_METADATA.values():
         # html referenced won't exist unless we actually built the UG,

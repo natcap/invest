@@ -10,14 +10,15 @@ import Button from 'react-bootstrap/Button';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import Spinner from 'react-bootstrap/Spinner';
+import Tooltip from 'react-bootstrap/Tooltip';
+import OverlayTrigger from 'react-bootstrap/OverlayTrigger';
 import { MdClose, MdHome } from 'react-icons/md';
 
 import HomeTab from './components/HomeTab';
 import InvestTab from './components/InvestTab';
 import SettingsModal from './components/SettingsModal';
-import {
-  DataDownloadModal, DownloadProgressBar
-} from './components/DataDownloadModal';
+import DataDownloadModal from './components/DataDownloadModal';
+import DownloadProgressBar from './components/DownloadProgressBar';
 import {
   saveSettingsStore, getAllSettings,
 } from './components/SettingsModal/SettingsStorage';
@@ -25,6 +26,7 @@ import { getInvestModelNames } from './server_requests';
 import InvestJob from './InvestJob';
 import { dragOverHandlerNone } from './utils';
 import { ipcMainChannels } from '../main/ipcMainChannels';
+import i18n from 'i18next';
 
 const { ipcRenderer } = window.Workbench.electron;
 const logger = window.Workbench.getLogger('app.jsx');
@@ -68,7 +70,10 @@ export default class App extends React.Component {
       investSettings: investSettings,
       showDownloadModal: this.props.isFirstRun,
     });
-
+    await i18n.changeLanguage(investSettings.language);
+    await ipcRenderer.invoke(
+      ipcMainChannels.CHANGE_LANGUAGE, investSettings.language
+    );
     ipcRenderer.on('download-status', (downloadedNofN) => {
       this.setState({
         downloadedNofN: downloadedNofN,
@@ -90,13 +95,21 @@ export default class App extends React.Component {
     );
   }
 
-  saveSettings(settings) {
-    saveSettingsStore(settings);
-    ipcRenderer.invoke(
-      ipcMainChannels.SET_LANGUAGE, settings.language
-    ).then(() => {
-      this.setState({ investSettings: settings });
-    });
+  async saveSettings(settings) {
+    const { investSettings } = this.state;
+    await saveSettingsStore(settings);
+    this.setState({ investSettings: settings });
+    // if language has changed, refresh the app
+    if (settings.language !== investSettings.language) {
+      // change language in the renderer process
+      await i18n.changeLanguage(settings.language);
+      // change language in the main process
+      await ipcRenderer.invoke(
+        ipcMainChannels.CHANGE_LANGUAGE, settings.language
+      );
+      // rerender for changes to take effect
+      window.location.reload();
+    }
   }
 
   /** Store a sampledata filepath in localforage.
@@ -235,27 +248,37 @@ export default class App extends React.Component {
           statusSymbol = '';
       }
       investNavItems.push(
-        <Nav.Item
-          key={id}
-          className={id === activeTab ? 'active' : ''}
+        <OverlayTrigger
+          key={`${id}-tooltip`}
+          placement="bottom"
+          overlay={(
+            <Tooltip>
+              {job.modelHumanName}
+            </Tooltip>
+          )}
         >
-          <Nav.Link eventKey={id}>
-            {statusSymbol}
-            {` ${job.modelHumanName}`}
-          </Nav.Link>
-          <Button
-            aria-label={`close ${job.modelHumanName} tab`}
-            className="close-tab"
-            variant="outline-dark"
-            onClick={(event) => {
-              event.stopPropagation();
-              this.closeInvestModel(id);
-            }}
-            onDragOver={dragOverHandlerNone}
+          <Nav.Item
+            key={id}
+            className={id === activeTab ? 'active' : ''}
           >
-            <MdClose />
-          </Button>
-        </Nav.Item>
+            <Nav.Link eventKey={id}>
+              {statusSymbol}
+              {` ${job.modelHumanName}`}
+            </Nav.Link>
+            <Button
+              aria-label={`close ${job.modelHumanName} tab`}
+              className="close-tab"
+              variant="outline-dark"
+              onClick={(event) => {
+                event.stopPropagation();
+                this.closeInvestModel(id);
+              }}
+              onDragOver={dragOverHandlerNone}
+            >
+              <MdClose />
+            </Button>
+          </Nav.Item>
+        </OverlayTrigger>
       );
       investTabPanes.push(
         <TabPane
@@ -295,7 +318,7 @@ export default class App extends React.Component {
                     eventKey="home"
                   >
                     <MdHome />
-                    {_("InVEST")}
+                    InVEST
                   </Nav.Link>
                 </Navbar.Brand>
               </Col>

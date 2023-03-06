@@ -1,7 +1,7 @@
 import unittest
 
 from natcap.invest import spec_utils
-from natcap.invest.spec_utils import u
+from natcap.invest.unit_registry import u
 
 
 class TestSpecUtils(unittest.TestCase):
@@ -242,6 +242,6 @@ class TestSpecUtils(unittest.TestCase):
         expected_rst = (
             '.. _carbon-pools-path-columns-lucode:\n\n' +
             '**lucode** (`integer <input_types.html#integer>`__, *required*): ' +
-            carbon.ARGS_SPEC['args']['carbon_pools_path']['columns']['lucode']['about']
+            carbon.MODEL_SPEC['args']['carbon_pools_path']['columns']['lucode']['about']
         )
         self.assertEqual(repr(out), repr(expected_rst))
