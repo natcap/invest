@@ -301,6 +301,9 @@ jobs:
       - name: Make install
         run: make install
 
+      - name: Build userguide
+        run: make userguide
+
       - name: Build binaries
         run: make CONDA=micromamba binaries
 
