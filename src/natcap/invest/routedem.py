@@ -119,7 +119,7 @@ _ROUTING_FUNCS = {
     'D8': {
         'flow_accumulation': pygeoprocessing.routing.flow_accumulation_d8,
         'flow_direction': pygeoprocessing.routing.flow_dir_d8,
-        'threshold_flow': None,  # Defined in source code as _threshold_flow
+        'threshold_flow': pygeoprocessing.routing.extract_streams_d8,
         'distance_to_channel': pygeoprocessing.routing.distance_to_channel_d8,
     },
     'MFD': {
@@ -129,36 +129,6 @@ _ROUTING_FUNCS = {
         'distance_to_channel': pygeoprocessing.routing.distance_to_channel_mfd,
     }
 }
-
-
-def _threshold_flow(flow_accum_pixels, threshold, in_nodata, out_nodata):
-    """Raster_calculator local_op to threshold D8 stream flow.
-
-    Args:
-        flow_accum_pixels (numpy.ndarray): Array representing the number of
-            pixels upslope of a given pixel.
-        threshold (int or float): The threshold above which we have a stream.
-        in_nodata (int or float): The nodata value of the flow accumulation
-            raster.
-        out_nodata (int): The nodata value of the target stream mask raster.
-
-    Returns:
-        A numpy.ndarray (dtype is numpy.uint8) with pixel values of 1 where
-        flow accumulation > threshold, 0 where flow accumulation < threshold
-        and out_nodata where flow accumulation is equal to in_nodata.
-
-    """
-    out_matrix = numpy.empty(flow_accum_pixels.shape, dtype=numpy.uint8)
-    out_matrix[:] = out_nodata
-    stream_mask = (flow_accum_pixels > threshold)
-
-    valid_mask = slice(None)
-    if in_nodata is not None:
-        valid_mask = ~utils.array_equals_nodata(flow_accum_pixels, in_nodata)
-
-    out_matrix[valid_mask & stream_mask] = 1
-    out_matrix[valid_mask & ~stream_mask] = 0
-    return out_matrix
 
 
 def execute(args):
@@ -292,8 +262,7 @@ def execute(args):
             flow_accum_task = graph.add_task(
                 routing_funcs['flow_accumulation'],
                 args=((flow_dir_path, 1),
-                      flow_accumulation_path
-                ),
+                      flow_accumulation_path),
                 target_path_list=[flow_accumulation_path],
                 task_name='flow_accumulation_%s' % algorithm,
                 dependent_task_list=[flow_direction_task])
@@ -302,24 +271,20 @@ def execute(args):
                     bool(args['calculate_stream_threshold'])):
                 stream_mask_path = os.path.join(
                         args['workspace_dir'],
-                    _STREAM_MASK_FILE_PATTERN % file_suffix)
+                        _STREAM_MASK_FILE_PATTERN % file_suffix)
                 if algorithm == 'D8':
-                    flow_accum_task.join()
-                    flow_accum_info = pygeoprocessing.get_raster_info(
-                        flow_accumulation_path)
                     stream_threshold_task = graph.add_task(
-                        pygeoprocessing.raster_calculator,
-                        args=(((flow_accumulation_path, 1),
-                               (float(args['threshold_flow_accumulation']), 'raw'),
-                               (flow_accum_info['nodata'][0], 'raw'),
-                               (255, 'raw')),
-                              _threshold_flow,
-                              stream_mask_path,
-                              gdal.GDT_Byte,
-                              255),
+                        pygeoprocessing.routing.extract_streams_d8,
+                        kwargs={
+                            'flow_accum_raster_path_band':
+                                (flow_accumulation_path, 1),
+                            'flow_threshold': float(
+                                args['threshold_flow_accumulation']),
+                            'target_stream_raster_path': stream_mask_path,
+                        },
                         target_path_list=[stream_mask_path],
-                        task_name='stream_thresholding_D8',
-                        dependent_task_list=[flow_accum_task])
+                        dependent_task_list=[flow_accum_task],
+                        task_name='stream_thresholding_d8')
                 else:  # MFD
                     stream_threshold_task = graph.add_task(
                         routing_funcs['threshold_flow'],
@@ -344,6 +309,7 @@ def execute(args):
                         target_path_list=[distance_path],
                         task_name='downslope_distance_%s' % algorithm,
                         dependent_task_list=[stream_threshold_task])
+    graph.close()
     graph.join()
 
 

@@ -290,23 +290,17 @@ def execute(args):
         snap_distance = int(args['snap_distance'])
         flow_threshold = int(args['flow_threshold'])
 
-        out_nodata = 255
-        flow_accumulation_task.join()  # wait so we can read the nodata value
-        flow_accumulation_nodata = pygeoprocessing.get_raster_info(
-            file_registry['flow_accumulation'])['nodata']
         streams_task = graph.add_task(
-            pygeoprocessing.raster_calculator,
-            args=([(file_registry['flow_accumulation'], 1),
-                   (flow_accumulation_nodata, 'raw'),
-                   (out_nodata, 'raw'),
-                   (flow_threshold, 'raw')],
-                  _threshold_streams,
-                  file_registry['streams'],
-                  gdal.GDT_Byte,
-                  out_nodata),
+            pygeoprocessing.routing.extract_streams_d8,
+            kwargs={
+                'flow_accum_raster_path_band':
+                    (file_registry['flow_accumulation'], 1),
+                'flow_threshold': flow_threshold,
+                'target_stream_raster_path': file_registry['streams'],
+            },
             target_path_list=[file_registry['streams']],
             dependent_task_list=[flow_accumulation_task],
-            task_name='threshold_streams')
+            task_name='extract streams')
 
         snapped_outflow_points_task = graph.add_task(
             snap_points_to_nearest_stream,

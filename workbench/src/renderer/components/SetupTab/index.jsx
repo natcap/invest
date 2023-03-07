@@ -300,7 +300,10 @@ class SetupTab extends React.Component {
       this.triggerScrollEvent();
     } else {
       alert( // eslint-disable-line no-alert
-        t(`Datastack/Logfile for ${datastack.model_human_name} does not match this model.`)
+        t(
+          'Datastack/Logfile for {{modelName}} does not match this model.',
+          { modelName: datastack.model_human_name }
+        )
       );
     }
   }
@@ -593,7 +596,7 @@ SetupTab.propTypes = {
     enabledFunctions: PropTypes.objectOf(PropTypes.func),
     dropdownFunctions: PropTypes.objectOf(PropTypes.func),
   }).isRequired,
-  argsInitValues: PropTypes.objectOf(PropTypes.string),
+  argsInitValues: PropTypes.objectOf(PropTypes.oneOfType([PropTypes.string, PropTypes.bool])),
   investExecute: PropTypes.func.isRequired,
   nWorkers: PropTypes.string.isRequired,
   sidebarSetupElementId: PropTypes.string.isRequired,
