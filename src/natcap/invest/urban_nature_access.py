@@ -61,19 +61,29 @@ ARGS_SPEC = {
             'about': (
                 "A map of LULC codes. "
                 "All values in this raster must have corresponding entries "
-                "in the LULC attribute table."),
+                "in the LULC attribute table. For this model in particular, "
+                "the urban nature types are of importance.  Non-nature types "
+                "are not required to be uniquely identified. All outputs "
+                "be produced at the resolution of this raster."
+            ),
         },
         'lulc_attribute_table': {
             'name': 'LULC attribute table',
             'type': 'csv',
+            'about': (
+                "A table identifying which LULC codes represent urban nature. "
+                "All LULC classes in the Land Use Land Cover raster MUST have "
+                "corresponding values in this table.  Each row is a land use "
+                "land cover class."
+            ),
             'columns': {
                 'lucode': spec_utils.LULC_TABLE_COLUMN,
                 'urban_nature': {
                     'type': 'number',
                     'units': u.none,
                     'about': (
-                        "1 if this LULC code represents urban nature, 0 "
-                        "if not."
+                        "Binary code indicating whether the LULC type is "
+                        "(1) or is not (0) an urban nature type."
                     ),
                 },
                 'search_radius_m': {
@@ -83,16 +93,15 @@ ARGS_SPEC = {
                         f'search_radius_mode == "{RADIUS_OPT_URBAN_NATURE}"',
                     'expression': 'value >= 0',
                     'about': (
-                        'The distance in meters to use as the search radius '
-                        'for this type of urban nature. Values must be >= 0. '
-                        'Required when running the model with search radii '
-                        'defined per urban nature class.'
+                        'The distance within which a LULC type is relevant '
+                        'to the population group of interest. This is the '
+                        'search distance that the model will apply for '
+                        'this LULC type. Values must be >= 0 and defined '
+                        'in meters. Required when running the model with '
+                        'search radii defined per urban nature class.'
                     ),
                 }
             },
-            'about': (
-                "A table identifying which LULC codes represent urban nature."
-            ),
         },
         'population_raster_path': {
             'type': 'raster',
@@ -103,8 +112,7 @@ ARGS_SPEC = {
             'projected': True,
             'projection_units': u.meter,
             'about': (
-                "A raster representing the number of people who live in each "
-                "pixel."
+                "A raster representing the number of inhabitants per pixel."
             ),
         },
         'admin_boundaries_vector_path': {
@@ -118,18 +126,19 @@ ARGS_SPEC = {
                         f"(search_radius_mode == '{RADIUS_OPT_POP_GROUP}') "
                         "or aggregate_by_pop_group"),
                     "about": gettext(
-                        "The proportion of the population within this region "
-                        "belonging to the identified population group "
-                        "(POP_GROUP). At least one column with the prefix "
-                        "'pop_' is required when aggregating output by "
-                        "population groups."
+                        "The proportion of the population within each "
+                        "administrative unit belonging to the identified "
+                        "population group (POP_GROUP). At least one column "
+                        "with the prefix 'pop_' is required when aggregating "
+                        "output by population groups."
                     ),
                 }
             },
             'about': gettext(
-                "Non-overlapping regions (typically administrative "
-                "boundaries) within which population supply and demand are "
-                "summarized."
+                "A vector representing administrative units. Polygons "
+                "representing administrative units should not overlap. "
+                "Overlapping administrative geometries may cause unexpected "
+                "results and for this reason should not overlap."
             ),
         },
         'urban_nature_demand': {
@@ -240,7 +249,7 @@ ARGS_SPEC = {
             'about': gettext(
                 'The search radius to use when running the model under a '
                 'uniform search radius. Required when running the model '
-                'with a uniform search radius.'),
+                'with a uniform search radius. Units are in meters.'),
         },
         'population_group_radii_table': {
             'name': 'population group radii table',
@@ -251,10 +260,8 @@ ARGS_SPEC = {
                     "type": "ratio",
                     "required": False,
                     "about": gettext(
-                        "The proportion of the population within this region "
-                        "belonging to the identified population group. "
-                        "Values in this column must match those population "
-                        "group field names in the administrative boundaries "
+                        "The name of the population group. Names must match "
+                        "the names defined in the administrative boundaries "
                         "vector."
                     ),
                 },
@@ -265,7 +272,7 @@ ARGS_SPEC = {
                         f'search_radius_mode == "{RADIUS_OPT_POP_GROUP}"',
                     'expression': 'value >= 0',
                     'about': gettext(
-                        "The distance in meters to use as the search radius "
+                        "The search radius in meters to use "
                         "for this population group.  Values must be >= 0."
                     ),
                 },
