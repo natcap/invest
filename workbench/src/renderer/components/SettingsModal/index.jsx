@@ -22,15 +22,12 @@ import { getSupportedLanguages } from '../../server_requests';
 
 const { ipcRenderer } = window.Workbench.electron;
 
-const logLevelOptions = ['DEBUG', 'INFO', 'WARNING', 'ERROR'];
-
 /** Render a dialog with a form for configuring global invest settings */
 class SettingsModal extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
       show: false,
-      nWorkersOptions: null,
       languageOptions: null,
     };
     this.handleShow = this.handleShow.bind(this);
@@ -41,15 +38,8 @@ class SettingsModal extends React.Component {
   }
 
   async componentDidMount() {
-    const nWorkersOptions = [];
-    nWorkersOptions.push([-1, 'Synchronous (-1)']);
-    nWorkersOptions.push([0, 'Threaded task management (0)']);
-    for (let i = 1; i <= this.props.nCPU; i += 1) {
-      nWorkersOptions.push([i, `${i} CPUs`]);
-    }
     const languageOptions = await getSupportedLanguages();
     this.setState({
-      nWorkersOptions: nWorkersOptions,
       languageOptions: languageOptions,
     });
   }
@@ -83,8 +73,22 @@ class SettingsModal extends React.Component {
   }
 
   render() {
-    const { show, nWorkersOptions, languageOptions } = this.state;
-    const { investSettings, clearJobsStorage, t } = this.props;
+    const { show, languageOptions } = this.state;
+    const { investSettings, clearJobsStorage, nCPU, t } = this.props;
+
+    const nWorkersOptions = [
+      [-1, `${t('Synchronous')} (-1)`],
+      [0, `${t('Threaded task management')} (0)`]
+    ];
+    for (let i = 1; i <= nCPU; i += 1) {
+      nWorkersOptions.push([i, `${i} ${t('CPUs')}`]);
+    }
+    const logLevelOptions = {  // map value to display name
+      'DEBUG': t('DEBUG'),
+      'INFO': t('INFO'),
+      'WARNING': t('WARNING'),
+      'ERROR': t('ERROR')
+    };
     return (
       <React.Fragment>
         <Button
@@ -154,8 +158,8 @@ class SettingsModal extends React.Component {
                   value={investSettings.loggingLevel}
                   onChange={this.handleChange}
                 >
-                  {logLevelOptions.map(
-                    (opt) => <option value={opt} key={opt}>{t(opt)}</option>
+                  {Object.entries(logLevelOptions).map(
+                    ([opt, displayName]) => <option value={opt} key={opt}>{displayName}</option>
                   )}
                 </Form.Control>
               </Col>
@@ -172,8 +176,8 @@ class SettingsModal extends React.Component {
                   value={investSettings.taskgraphLoggingLevel}
                   onChange={this.handleChange}
                 >
-                  {logLevelOptions.map(
-                    (opt) => <option value={opt} key={opt}>{t(opt)}</option>
+                  {Object.entries(logLevelOptions).map(
+                    ([opt, displayName]) => <option value={opt} key={opt}>{displayName}</option>
                   )}
                 </Form.Control>
               </Col>

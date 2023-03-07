@@ -296,7 +296,10 @@ class SetupTab extends React.Component {
       this.triggerScrollEvent();
     } else {
       alert( // eslint-disable-line no-alert
-        t(`Datastack/Logfile for ${datastack.model_human_name} does not match this model.`)
+        t(
+          'Datastack/Logfile for {{modelName}} does not match this model.',
+          { modelName: datastack.model_human_name }
+        )
       );
     }
   }
