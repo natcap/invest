@@ -135,8 +135,7 @@ export default function ArgInput(props) {
     argSpec,
     userguide,
     enabled,
-    handleBoolChange,
-    handleChange,
+    updateArgValues,
     handleFocus,
     inputDropHandler,
     isValid,
@@ -159,6 +158,12 @@ export default function ArgInput(props) {
       inputRef.current.scrollLeft = inputRef.current.scrollWidth;
     }
   }, [scrollEventCount, value]);
+
+  function handleChange(event) {
+    /** Pass input value up to SetupTab for storage & validation. */
+    const { name, value } = event.currentTarget;
+    updateArgValues(name, value);
+  }
 
   // Messages with this pattern include validation feedback about
   // multiple inputs, but the whole message is repeated for each input.
@@ -220,30 +225,16 @@ export default function ArgInput(props) {
   let form;
   if (argSpec.type === 'boolean') {
     form = (
-      <React.Fragment>
-        <Form.Check
-          id={argkey}
-          inline
-          type="radio"
-          label="Yes"
-          value="true"
-          checked={!!value} // double bang casts undefined to false
-          onChange={handleBoolChange}
-          name={argkey}
-          disabled={!enabled}
-        />
-        <Form.Check
-          id={argkey}
-          inline
-          type="radio"
-          label="No"
-          value="false"
-          checked={!value} // undefined becomes true, that's okay
-          onChange={handleBoolChange}
-          name={argkey}
-          disabled={!enabled}
-        />
-      </React.Fragment>
+      <Form.Check
+        inline
+        type="switch"
+        id={argkey}
+        name={argkey}
+        checked={value}
+        onChange={() => updateArgValues(argkey, !value)}
+        disabled={!enabled}
+        bsCustomPrefix="form-switch"
+      />
     );
   } else if (argSpec.type === 'option_string') {
     form = (
@@ -326,9 +317,8 @@ ArgInput.propTypes = {
   touched: PropTypes.bool,
   isValid: PropTypes.bool,
   validationMessage: PropTypes.string,
+  updateArgValues: PropTypes.func.isRequired,
   handleFocus: PropTypes.func.isRequired,
-  handleChange: PropTypes.func.isRequired,
-  handleBoolChange: PropTypes.func.isRequired,
   selectFile: PropTypes.func.isRequired,
   enabled: PropTypes.bool.isRequired,
   dropdownOptions: PropTypes.arrayOf(PropTypes.string),
