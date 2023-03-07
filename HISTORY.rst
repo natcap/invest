@@ -53,6 +53,7 @@ Unreleased Changes
 * DelineateIt
     * DelineateIt now uses ``pygeoprocessing.routing.extract_streams_d8`` for D8
       stream thresholding. https://github.com/natcap/invest/issues/1143
+    * Represent boolean inputs with a toggle switch rather than radio buttons.
 * Habitat Quality
     * The model now uses an euclidean distance implementation for decaying
       threat rasters both linearly and exponentially. Since InVEST 3.3.0 a
