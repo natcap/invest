@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 import Form from 'react-bootstrap/Form';
 import Button from 'react-bootstrap/Button';
@@ -11,7 +12,6 @@ import { MdFolderOpen, MdInfo, MdOpenInNew } from 'react-icons/md';
 
 import baseUserguideURL from '../../../userguideURL';
 import { ipcMainChannels } from '../../../../main/ipcMainChannels';
-import { useTranslation } from 'react-i18next';
 import i18n from '../../../i18n/i18n';
 
 const { ipcRenderer } = window.Workbench.electron;
@@ -352,12 +352,11 @@ ArgInput.defaultProps = {
 function handleClickUsersGuideLink(event) {
   event.preventDefault();
   ipcRenderer.send(
-    ipcMainChannels.OPEN_EXTERNAL_URL, event.currentTarget.href
+    ipcMainChannels.OPEN_LOCAL_HTML, event.currentTarget.href
   );
 }
 
 function AboutModal(props) {
-
   const [aboutShow, setAboutShow] = useState(false);
   const handleAboutClose = () => setAboutShow(false);
   const handleAboutOpen = () => setAboutShow(true);
@@ -367,7 +366,8 @@ function AboutModal(props) {
 
   // create link to users guide entry for this arg
   // anchor name is the arg name, with underscores replaced with hyphens
-  const userguideURL = `${baseUserguideURL}/${userguide}#${argkey.replace(/_/g, '-')}`;
+  const userguideURL = `
+    ${window.Workbench.USERGUIDE_PATH}/${i18n.language}/${userguide}#${argkey.replace(/_/g, '-')}`;
   return (
     <React.Fragment>
       <Button

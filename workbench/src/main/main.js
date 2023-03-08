@@ -27,6 +27,7 @@ import {
 } from './setupInvestHandlers';
 import setupGetNCPUs from './setupGetNCPUs';
 import setupOpenExternalUrl from './setupOpenExternalUrl';
+import setupOpenLocalHtml from './setupOpenLocalHtml';
 import setupChangeLanguage from './setupChangeLanguage';
 import { ipcMainChannels } from './ipcMainChannels';
 import menuTemplate from './menubar';
@@ -84,6 +85,7 @@ export const createWindow = async () => {
   setupChangeLanguage();
   await getFlaskIsReady();
 
+  const devModeArg = ELECTRON_DEV_MODE ? '--devMode' : '';
   // Create the browser window.
   mainWindow = new BrowserWindow({
     minWidth: 800,
@@ -91,6 +93,7 @@ export const createWindow = async () => {
     webPreferences: {
       preload: path.join(__dirname, '../preload/preload.js'),
       defaultEncoding: 'UTF-8',
+      additionalArguments: [devModeArg],
     },
   });
   Menu.setApplicationMenu(
@@ -142,6 +145,7 @@ export const createWindow = async () => {
   setupContextMenu(mainWindow);
   setupGetNCPUs();
   setupOpenExternalUrl();
+  setupOpenLocalHtml(mainWindow);
   return Promise.resolve(); // lets tests await createWindow(), then assert
 };
 

@@ -6,6 +6,8 @@ import { ipcRenderer } from 'electron';
 import { ipcMainChannels } from '../main/ipcMainChannels';
 import { getLogger } from '../main/logger';
 
+const isDevMode = process.argv.includes('--devMode');
+
 const logger = getLogger();
 
 // Most IPC initiates in renderer and main does the listening,
@@ -17,9 +19,15 @@ const ipcRendererChannels = [
   /download-status/,
 ];
 
+// In DevMode, local UG is served at the root path
+const userguidePath = isDevMode
+  ? ''
+  : `file:///${process.resourcesPath}/documentation`;
+
 export default {
   // Port where the flask app is running
   PORT: process.env.PORT,
+  USERGUIDE_PATH: userguidePath,
   // Workbench logfile location, so Report window can open to it
   LOGFILE_PATH: logger.transports.file.getFile().path,
   getLogger: getLogger,

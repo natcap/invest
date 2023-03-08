@@ -8,6 +8,7 @@ export const ipcMainChannels = {
   INVEST_VERSION: 'invest-version',
   IS_FIRST_RUN: 'is-first-run',
   OPEN_EXTERNAL_URL: 'open-external-url',
+  OPEN_LOCAL_HTML: 'open-local-html',
   SHOW_ITEM_IN_FOLDER: 'show-item-in-folder',
   SHOW_OPEN_DIALOG: 'show-open-dialog',
   SHOW_SAVE_DIALOG: 'show-save-dialog',
