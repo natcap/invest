@@ -2,10 +2,9 @@ import React from 'react';
 
 import PropTypes from 'prop-types';
 import { MdOpenInNew } from 'react-icons/md';
-
-import UG_ROOT from '../../userguideURL';
-import { ipcMainChannels } from '../../../main/ipcMainChannels';
 import { useTranslation } from 'react-i18next';
+
+import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
 const { ipcRenderer } = window.Workbench.electron;
 

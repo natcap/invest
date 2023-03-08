@@ -10,7 +10,6 @@ import InputGroup from 'react-bootstrap/InputGroup';
 import Modal from 'react-bootstrap/Modal';
 import { MdFolderOpen, MdInfo, MdOpenInNew } from 'react-icons/md';
 
-import baseUserguideURL from '../../../userguideURL';
 import { ipcMainChannels } from '../../../../main/ipcMainChannels';
 import i18n from '../../../i18n/i18n';
 
