@@ -16,6 +16,7 @@ workflows of an InVEST user.
 ## To package this app for distribution
 1. from invest/:
   - `make binaries`
+  - `make userguide`
 2. from invest/workbench/:
   - `yarn run install`
   - `yarn run build`

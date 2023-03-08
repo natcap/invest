@@ -145,7 +145,7 @@ export const createWindow = async () => {
   setupContextMenu(mainWindow);
   setupGetNCPUs();
   setupOpenExternalUrl();
-  setupOpenLocalHtml(mainWindow);
+  setupOpenLocalHtml(mainWindow, ELECTRON_DEV_MODE);
   return Promise.resolve(); // lets tests await createWindow(), then assert
 };
 
