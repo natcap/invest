@@ -11,6 +11,7 @@ import { spawn, spawnSync } from 'child_process';
 import rimraf from 'rimraf';
 import puppeteer from 'puppeteer-core';
 import { getDocument, queries, waitFor } from 'pptr-testing-library';
+import '@testing-library/jest-dom';
 
 import pkg from '../../package.json';
 import { APP_HAS_RUN_TOKEN } from '../../src/main/setupCheckFirstRun';
@@ -89,7 +90,6 @@ function makeAOI() {
 // errors are not thrown from an async beforeAll
 // https://github.com/facebook/jest/issues/8688
 beforeAll(() => {
-  try { fs.unlinkSync(APP_HAS_RUN_TOKEN_PATH); } catch {}
   // start the invest app and forward stderr to console
   ELECTRON_PROCESS = spawn(
     `"${BINARY_PATH}"`,
@@ -139,6 +139,10 @@ afterAll(async () => {
   rimraf(TMP_DIR, (error) => { if (error) { throw error; } });
   ELECTRON_PROCESS.removeAllListeners();
   ELECTRON_PROCESS.kill();
+});
+
+beforeEach(() => {
+  try { fs.unlinkSync(APP_HAS_RUN_TOKEN_PATH); } catch {}
 });
 
 test('Run a real invest model', async () => {
@@ -226,10 +230,56 @@ test('Run a real invest model', async () => {
   await page.screenshot({ path: `${SCREENSHOT_PREFIX}6-run-canceled.png` });
 }, 240000); // >2x the sum of all the max timeouts within this test
 
-// Test for duplicate application launch.
-// We have the binary path, so now let's launch a new subprocess with the same binary
-// The test is that the subprocess exits within a certain reasonable timeout.
-// Also verify that window 1 has focus.
+test.only('Check local userguide links', async () => {
+  const { findByText, findAllByRole, findByRole, getByText } = queries;
+  // On GHA MacOS, we seem to have to wait a long time for the browser
+  // to be ready. Maybe related to https://github.com/natcap/invest-workbench/issues/158
+  await waitFor(() => {
+    expect(BROWSER && BROWSER.isConnected()).toBeTruthy();
+  }, { timeout: 60000 });
+  // find the mainWindow's index.html, not the splashScreen's splash.html
+  const target = await BROWSER.waitForTarget(
+    (target) => target.url().endsWith('index.html')
+  );
+  const page = await target.page();
+  page.on('error', (err) => {
+    console.log(err);
+  });
+  const doc = await getDocument(page);
+  const downloadModal = await page.waitForSelector('.modal-dialog');
+  const downloadModalCancel = await findByRole(
+    downloadModal, 'button', { name: 'Cancel' }
+  );
+  await downloadModalCancel.click();
+
+  const investList = await page.waitForSelector('.invest-list-group');
+  const modelButtons = await findAllByRole(investList, 'button');
+
+  for (let i = 0; i < modelButtons.length; i++) {
+    const btn = modelButtons[i];
+    await btn.click();
+    const link = await findByText(doc, "User's Guide");
+    const hrefHandle = await link.getProperty('href');
+    const hrefValue = await hrefHandle.jsonValue();
+    link.click();
+    const ugTarget = await BROWSER.waitForTarget(
+      (target) => target.url() === hrefValue
+    );
+    const ugPage = await ugTarget.page();
+    const ugDoc = await getDocument(ugPage);
+    expect(getByText(ugDoc, 'Table of Contents')).toBeInTheDocument();
+    ugPage.close();
+    const tab = await page.waitForSelector('.nav-item');
+    const closeTabBtn = await findByRole(tab, 'button');
+    closeTabBtn.click();
+    await page.waitForTimeout(1000);
+  }
+});
+
+/* Test for duplicate application launch.
+We have the binary path, so now let's launch a new subprocess with the same binary
+The test is that the subprocess exits within a certain reasonable timeout.
+Also verify that window 1 has focus. */
 test('App re-launch will exit and focus on first instance', async () => {
   if (process.platform === 'win32') {
     await waitFor(() => {
