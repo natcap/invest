@@ -929,7 +929,7 @@ def execute(args):
             urban_nature_supply_by_group_paths[
                 pop_group] = urban_nature_supply_to_group_path
             urban_nature_supply_by_group_task = graph.add_task(
-                pygeoprocessing.convolve_2d,
+                _convolve_and_set_lower_bound,
                 kwargs={
                     'signal_path_band': (
                         file_registry['urban_nature_population_ratio'], 1),
