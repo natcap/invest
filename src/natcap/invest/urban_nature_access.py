@@ -1305,8 +1305,10 @@ def _weighted_sum(raster_path_list, weight_raster_list, target_path):
     """
     assert len(raster_path_list) == len(weight_raster_list)
 
-    nodata_list = [pygeoprocessing.get_raster_info(path)['nodata'][0]
-                   for path in raster_path_list]
+    raster_nodata_list = [pygeoprocessing.get_raster_info(path)['nodata'][0]
+                          for path in raster_path_list]
+    weight_nodata_list = [pygeoprocessing.get_raster_info(path)['nodata'][0]
+                          for path in weight_raster_list]
 
     def _weight_and_sum(*args):
         pixel_arrays = args[:int(len(args)/2)]
@@ -1314,9 +1316,11 @@ def _weighted_sum(raster_path_list, weight_raster_list, target_path):
 
         target_array = numpy.zeros(pixel_arrays[0].shape, dtype=numpy.float32)
         touched_pixels = numpy.zeros(target_array.shape, dtype=bool)
-        for source_array, weight_array, nodata in zip(
-                pixel_arrays, weight_arrays, nodata_list):
-            valid_pixels = ~utils.array_equals_nodata(source_array, nodata)
+        for source_array, weight_array, source_nodata, weight_nodata in zip(
+                pixel_arrays, weight_arrays, raster_nodata_list, weight_nodata_list):
+            valid_pixels = (
+                ~utils.array_equals_nodata(source_array, source_nodata) &
+                ~utils.array_equals_nodata(weight_array, weight_nodata))
             touched_pixels |= valid_pixels
             target_array[valid_pixels] += (
                 source_array[valid_pixels] * weight_array[valid_pixels])
