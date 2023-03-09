@@ -198,7 +198,8 @@ ARGS_SPEC = {
             'about': (
                 'Pixels within the search radius of an urban nature pixel '
                 'have a distance-weighted contribution to an urban nature '
-                'pixel according to the selected decay function.'),
+                'pixel according to the selected distance-weighting '
+                'function.'),
         },
         'search_radius_mode': {
             'name': 'search radius mode',
@@ -684,7 +685,7 @@ def execute(args):
 
         decayed_population_path = os.path.join(
             intermediate_dir,
-            f'decayed_population_within_{search_radius_m}{suffix}.tif')
+            f'distance_weighted_population_within_{search_radius_m}{suffix}.tif')
         decayed_population_task = graph.add_task(
             _convolve_and_set_lower_bound,
             kwargs={
@@ -752,7 +753,7 @@ def execute(args):
         for search_radius_m in search_radii:
             decayed_population_paths[search_radius_m] = os.path.join(
                 intermediate_dir,
-                f'decayed_population_within_{search_radius_m}{suffix}.tif')
+                f'distance_weighted_population_within_{search_radius_m}{suffix}.tif')
             decayed_population_tasks[search_radius_m] = graph.add_task(
                 _convolve_and_set_lower_bound,
                 kwargs={
@@ -858,7 +859,7 @@ def execute(args):
             search_radius_m = search_radii_by_pop_group[pop_group]
             decayed_population_in_group_path = os.path.join(
                 intermediate_dir,
-                f'decayed_population_in_{pop_group}{suffix}.tif')
+                f'distance_weighted_population_in_{pop_group}{suffix}.tif')
             decayed_population_in_group_paths.append(
                 decayed_population_in_group_path)
             decayed_population_in_group_tasks.append(graph.add_task(
@@ -880,7 +881,7 @@ def execute(args):
 
         sum_of_decayed_population_path = os.path.join(
             intermediate_dir,
-            f'decayed_population_all_groups{suffix}.tif')
+            f'distance_weighted_population_all_groups{suffix}.tif')
         sum_of_decayed_population_task = graph.add_task(
             ndr._sum_rasters,
             kwargs={
