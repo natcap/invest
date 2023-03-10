@@ -146,7 +146,7 @@ beforeEach(() => {
 });
 
 test('Run a real invest model', async () => {
-  const { findByText, findByLabelText, findByRole } = queries;
+  const { findByText, findByRole } = queries;
   // On GHA MacOS, we seem to have to wait a long time for the browser
   // to be ready. Maybe related to https://github.com/natcap/invest-workbench/issues/158
   await waitFor(() => {
@@ -230,8 +230,8 @@ test('Run a real invest model', async () => {
   await page.screenshot({ path: `${SCREENSHOT_PREFIX}6-run-canceled.png` });
 }, 240000); // >2x the sum of all the max timeouts within this test
 
-test.only('Check local userguide links', async () => {
-  const { findByText, findAllByRole, findByRole, getByText } = queries;
+test('Check local userguide links', async () => {
+  const { findByText, findAllByRole, findByRole, } = queries;
   // On GHA MacOS, we seem to have to wait a long time for the browser
   // to be ready. Maybe related to https://github.com/natcap/invest-workbench/issues/158
   await waitFor(() => {
@@ -259,20 +259,26 @@ test.only('Check local userguide links', async () => {
     const btn = modelButtons[i];
     await btn.click();
     const link = await findByText(doc, "User's Guide");
+    await page.waitForTimeout(300); // link.click() not working w/o this pause
     const hrefHandle = await link.getProperty('href');
     const hrefValue = await hrefHandle.jsonValue();
-    link.click();
+    await link.click();
     const ugTarget = await BROWSER.waitForTarget(
       (target) => target.url() === hrefValue
     );
     const ugPage = await ugTarget.page();
     const ugDoc = await getDocument(ugPage);
-    expect(getByText(ugDoc, 'Table of Contents')).toBeInTheDocument();
-    ugPage.close();
+    try {
+      await findByText(ugDoc, 'Table of Contents');
+    } catch {
+      throw new Error(`${hrefValue} not found`);
+    }
+
+    await ugPage.close();
     const tab = await page.waitForSelector('.nav-item');
     const closeTabBtn = await findByRole(tab, 'button');
-    closeTabBtn.click();
-    await page.waitForTimeout(1000);
+    await closeTabBtn.click();
+    await page.waitForTimeout(300);
   }
 });
 

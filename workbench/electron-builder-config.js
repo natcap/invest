@@ -28,10 +28,10 @@ const config = {
       from: '../dist/invest',
       to: 'invest',
     },
-    // {
-    //   from: '../dist/userguide',
-    //   to: 'documentation',
-    // },
+    {
+      from: '../dist/userguide',
+      to: 'documentation',
+    },
     {
       from: 'resources/storage_token.txt',
       to: 'storage_token.txt',
