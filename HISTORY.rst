@@ -96,7 +96,11 @@ Unreleased Changes
       allowed soil groups (anything other than 1, 2, 3 or 4), a human readable
       exception will now be raised. https://github.com/natcap/invest/issues/1193
 * Urban Nature Access
-    * Added this new model.
+    * Added the Urban Nature Access model to InVEST. The model for urban
+      nature access provides a measure of both the supply of urban nature
+      and the demand for nature by the urban population, ultimately
+      calculating the balance between supply and demand. See the corresponding
+      User's Guide chapter for documentation.
 * Visitation: Recreation and Tourism
     * Fixed a ``FutureWarning`` when reading in CSVs. This fix does not
       otherwise affect model behavior. https://github.com/natcap/invest/issues/1202
