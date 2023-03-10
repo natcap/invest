@@ -841,6 +841,53 @@ class UNATests(unittest.TestCase):
                 urban_nature_access._square_off_pixels(raster_path))
             self.assertEqual(computed_pixel_size, expected_pixel_size)
 
+    def test_weighted_sum(self):
+        """UNA: Assert weighted sum is correct."""
+        from natcap.invest import urban_nature_access
+
+        weights_paths = []
+        source_paths = []
+
+        for index in (1, 2):
+            nodata = -index
+            source_array = numpy.full((30, 30), index, dtype=numpy.float32)
+            source_array[5][5] = nodata
+            weight_array = numpy.full((30, 30), index/4, dtype=numpy.float32)
+            weight_array[10][10] = nodata
+            source_path = os.path.join(self.workspace_dir,
+                                       f'source_{index}.tif')
+            source_paths.append(source_path)
+            weight_path = os.path.join(self.workspace_dir,
+                                       f'weights_{index}.tif')
+            weights_paths.append(weight_path)
+            for array, path in ((source_array, source_path),
+                                (weight_array, weight_path)):
+                pygeoprocessing.numpy_array_to_raster(
+                    base_array=array,
+                    target_nodata=nodata,
+                    pixel_size=_DEFAULT_PIXEL_SIZE,
+                    origin=_DEFAULT_ORIGIN,
+                    projection_wkt=_DEFAULT_SRS.ExportToWkt(),
+                    target_path=path)
+
+        target_path = os.path.join(self.workspace_dir, 'weighted_sum.tif')
+        urban_nature_access._weighted_sum(source_paths, weights_paths,
+                                          target_path)
+
+        weighted_sum_array = pygeoprocessing.raster_to_numpy_array(target_path)
+        weighted_sum_nodata = pygeoprocessing.get_raster_info(
+            target_path)['nodata'][0]
+
+        # check that we have the expected number of nodata pixels
+        nodata_pixels = numpy.isclose(weighted_sum_array, weighted_sum_nodata)
+        self.assertEqual(
+            numpy.count_nonzero(nodata_pixels), 2)
+
+        # Check that the sum is what we expect, given the expected nodata
+        # pixels
+        numpy.testing.assert_allclose(
+            numpy.sum(weighted_sum_array[~nodata_pixels]), 1122.5)
+
     def test_validate(self):
         """UNA: Basic test for validation."""
         from natcap.invest import urban_nature_access

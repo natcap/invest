@@ -61,19 +61,29 @@ ARGS_SPEC = {
             'about': (
                 "A map of LULC codes. "
                 "All values in this raster must have corresponding entries "
-                "in the LULC attribute table."),
+                "in the LULC attribute table. For this model in particular, "
+                "the urban nature types are of importance.  Non-nature types "
+                "are not required to be uniquely identified. All outputs "
+                "will be produced at the resolution of this raster."
+            ),
         },
         'lulc_attribute_table': {
             'name': 'LULC attribute table',
             'type': 'csv',
+            'about': (
+                "A table identifying which LULC codes represent urban nature. "
+                "All LULC classes in the Land Use Land Cover raster MUST have "
+                "corresponding values in this table.  Each row is a land use "
+                "land cover class."
+            ),
             'columns': {
                 'lucode': spec_utils.LULC_TABLE_COLUMN,
                 'urban_nature': {
                     'type': 'number',
                     'units': u.none,
                     'about': (
-                        "1 if this LULC code represents urban nature, 0 "
-                        "if not."
+                        "Binary code indicating whether the LULC type is "
+                        "(1) or is not (0) an urban nature type."
                     ),
                 },
                 'search_radius_m': {
@@ -83,16 +93,15 @@ ARGS_SPEC = {
                         f'search_radius_mode == "{RADIUS_OPT_URBAN_NATURE}"',
                     'expression': 'value >= 0',
                     'about': (
-                        'The distance in meters to use as the search radius '
-                        'for this type of urban nature. Values must be >= 0. '
-                        'Required when running the model with search radii '
-                        'defined per urban nature class.'
+                        'The distance within which a LULC type is relevant '
+                        'to the population group of interest. This is the '
+                        'search distance that the model will apply for '
+                        'this LULC type. Values must be >= 0 and defined '
+                        'in meters. Required when running the model with '
+                        'search radii defined per urban nature class.'
                     ),
                 }
             },
-            'about': (
-                "A table identifying which LULC codes represent urban nature."
-            ),
         },
         'population_raster_path': {
             'type': 'raster',
@@ -103,8 +112,7 @@ ARGS_SPEC = {
             'projected': True,
             'projection_units': u.meter,
             'about': (
-                "A raster representing the number of people who live in each "
-                "pixel."
+                "A raster representing the number of inhabitants per pixel."
             ),
         },
         'admin_boundaries_vector_path': {
@@ -118,18 +126,19 @@ ARGS_SPEC = {
                         f"(search_radius_mode == '{RADIUS_OPT_POP_GROUP}') "
                         "or aggregate_by_pop_group"),
                     "about": gettext(
-                        "The proportion of the population within this region "
-                        "belonging to the identified population group "
-                        "(POP_GROUP). At least one column with the prefix "
-                        "'pop_' is required when aggregating output by "
-                        "population groups."
+                        "The proportion of the population within each "
+                        "administrative unit belonging to the identified "
+                        "population group (POP_GROUP). At least one column "
+                        "with the prefix 'pop_' is required when aggregating "
+                        "output by population groups."
                     ),
                 }
             },
             'about': gettext(
-                "Non-overlapping regions (typically administrative "
-                "boundaries) within which population supply and demand are "
-                "summarized."
+                "A vector representing administrative units. Polygons "
+                "representing administrative units should not overlap. "
+                "Overlapping administrative geometries may cause unexpected "
+                "results and for this reason should not overlap."
             ),
         },
         'urban_nature_demand': {
@@ -189,7 +198,8 @@ ARGS_SPEC = {
             'about': (
                 'Pixels within the search radius of an urban nature pixel '
                 'have a distance-weighted contribution to an urban nature '
-                'pixel according to the selected decay function.'),
+                'pixel according to the selected distance-weighting '
+                'function.'),
         },
         'search_radius_mode': {
             'name': 'search radius mode',
@@ -240,7 +250,7 @@ ARGS_SPEC = {
             'about': gettext(
                 'The search radius to use when running the model under a '
                 'uniform search radius. Required when running the model '
-                'with a uniform search radius.'),
+                'with a uniform search radius. Units are in meters.'),
         },
         'population_group_radii_table': {
             'name': 'population group radii table',
@@ -251,10 +261,8 @@ ARGS_SPEC = {
                     "type": "ratio",
                     "required": False,
                     "about": gettext(
-                        "The proportion of the population within this region "
-                        "belonging to the identified population group. "
-                        "Values in this column must match those population "
-                        "group field names in the administrative boundaries "
+                        "The name of the population group. Names must match "
+                        "the names defined in the administrative boundaries "
                         "vector."
                     ),
                 },
@@ -265,7 +273,7 @@ ARGS_SPEC = {
                         f'search_radius_mode == "{RADIUS_OPT_POP_GROUP}"',
                     'expression': 'value >= 0',
                     'about': gettext(
-                        "The distance in meters to use as the search radius "
+                        "The search radius in meters to use "
                         "for this population group.  Values must be >= 0."
                     ),
                 },
@@ -677,7 +685,7 @@ def execute(args):
 
         decayed_population_path = os.path.join(
             intermediate_dir,
-            f'decayed_population_within_{search_radius_m}{suffix}.tif')
+            f'distance_weighted_population_within_{search_radius_m}{suffix}.tif')
         decayed_population_task = graph.add_task(
             _convolve_and_set_lower_bound,
             kwargs={
@@ -745,7 +753,7 @@ def execute(args):
         for search_radius_m in search_radii:
             decayed_population_paths[search_radius_m] = os.path.join(
                 intermediate_dir,
-                f'decayed_population_within_{search_radius_m}{suffix}.tif')
+                f'distance_weighted_population_within_{search_radius_m}{suffix}.tif')
             decayed_population_tasks[search_radius_m] = graph.add_task(
                 _convolve_and_set_lower_bound,
                 kwargs={
@@ -851,7 +859,7 @@ def execute(args):
             search_radius_m = search_radii_by_pop_group[pop_group]
             decayed_population_in_group_path = os.path.join(
                 intermediate_dir,
-                f'decayed_population_in_{pop_group}{suffix}.tif')
+                f'distance_weighted_population_in_{pop_group}{suffix}.tif')
             decayed_population_in_group_paths.append(
                 decayed_population_in_group_path)
             decayed_population_in_group_tasks.append(graph.add_task(
@@ -873,7 +881,7 @@ def execute(args):
 
         sum_of_decayed_population_path = os.path.join(
             intermediate_dir,
-            f'decayed_population_all_groups{suffix}.tif')
+            f'distance_weighted_population_all_groups{suffix}.tif')
         sum_of_decayed_population_task = graph.add_task(
             ndr._sum_rasters,
             kwargs={
@@ -922,7 +930,7 @@ def execute(args):
             urban_nature_supply_by_group_paths[
                 pop_group] = urban_nature_supply_to_group_path
             urban_nature_supply_by_group_task = graph.add_task(
-                pygeoprocessing.convolve_2d,
+                _convolve_and_set_lower_bound,
                 kwargs={
                     'signal_path_band': (
                         file_registry['urban_nature_population_ratio'], 1),
@@ -1298,8 +1306,10 @@ def _weighted_sum(raster_path_list, weight_raster_list, target_path):
     """
     assert len(raster_path_list) == len(weight_raster_list)
 
-    nodata_list = [pygeoprocessing.get_raster_info(path)['nodata'][0]
-                   for path in raster_path_list]
+    raster_nodata_list = [pygeoprocessing.get_raster_info(path)['nodata'][0]
+                          for path in raster_path_list]
+    weight_nodata_list = [pygeoprocessing.get_raster_info(path)['nodata'][0]
+                          for path in weight_raster_list]
 
     def _weight_and_sum(*args):
         pixel_arrays = args[:int(len(args)/2)]
@@ -1307,9 +1317,11 @@ def _weighted_sum(raster_path_list, weight_raster_list, target_path):
 
         target_array = numpy.zeros(pixel_arrays[0].shape, dtype=numpy.float32)
         touched_pixels = numpy.zeros(target_array.shape, dtype=bool)
-        for source_array, weight_array, nodata in zip(
-                pixel_arrays, weight_arrays, nodata_list):
-            valid_pixels = ~utils.array_equals_nodata(source_array, nodata)
+        for source_array, weight_array, source_nodata, weight_nodata in zip(
+                pixel_arrays, weight_arrays, raster_nodata_list, weight_nodata_list):
+            valid_pixels = (
+                ~utils.array_equals_nodata(source_array, source_nodata) &
+                ~utils.array_equals_nodata(weight_array, weight_nodata))
             touched_pixels |= valid_pixels
             target_array[valid_pixels] += (
                 source_array[valid_pixels] * weight_array[valid_pixels])
