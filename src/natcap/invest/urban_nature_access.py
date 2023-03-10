@@ -64,7 +64,7 @@ ARGS_SPEC = {
                 "in the LULC attribute table. For this model in particular, "
                 "the urban nature types are of importance.  Non-nature types "
                 "are not required to be uniquely identified. All outputs "
-                "be produced at the resolution of this raster."
+                "will be produced at the resolution of this raster."
             ),
         },
         'lulc_attribute_table': {
