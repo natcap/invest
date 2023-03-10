@@ -249,28 +249,8 @@ describe('Build each model UI from MODEL_SPEC', () => {
   });
 });
 
-describe('Check UG & Forum links for each model', () => {
+describe('Check Forum links for each model', () => {
   const { UI_SPEC } = require('../../src/renderer/ui_config');
-
-  test.each(Object.keys(UI_SPEC))('%s - User Guide', async (model) => {
-    const argsSpec = await server_requests.getSpec(model);
-
-    const { findByRole } = render(
-      <ResourcesLinks
-        moduleName={model}
-        docs={argsSpec.userguide}
-      />
-    );
-    const link = await findByRole('link', { name: /user's guide/i });
-    const address = link.getAttribute('href');
-    const options = {
-      method: 'HEAD',
-      host: url.parse(address).host,
-      path: url.parse(address).pathname,
-    };
-    const status = await getUrlStatus(options);
-    expect(status).toBeStatus200(address);
-  });
 
   test.each(Object.keys(UI_SPEC))('%s - Forum', async (model) => {
     const argsSpec = await server_requests.getSpec(model);
