@@ -18,7 +18,10 @@ from . import coastal_blue_carbon
 
 LOGGER = logging.getLogger(__name__)
 
-ARGS_SPEC = {
+BIOPHYSICAL_COLUMNS_SPEC = coastal_blue_carbon.MODEL_SPEC[
+    'args']['biophysical_table_path']['columns']
+
+MODEL_SPEC = {
     "model_name": MODEL_METADATA["coastal_blue_carbon_preprocessor"].model_title,
     "pyname": MODEL_METADATA["coastal_blue_carbon_preprocessor"].pyname,
     "userguide": MODEL_METADATA["coastal_blue_carbon_preprocessor"].userguide,
@@ -69,8 +72,66 @@ ARGS_SPEC = {
             "about": gettext(
                 "A table mapping snapshot years to corresponding LULC maps "
                 "for each year."),
-            "name": gettext("LULC snapshots table"),
+            "name": gettext("LULC snapshots table")
+        }
+    },
+    "outputs": {
+        "transitions.csv": {
+            "about": (
+                "LULC transition matrix. The first column represents the "
+                "source LULC class, and the first row represents the "
+                "destination LULC classes. Cells are populated with "
+                "transition states, or left empty if no such transition occurs."),
+            "columns": {
+                "lulc-class": {
+                    "type": "integer",
+                    "about": gettext(
+                        "LULC codes matching the codes in the biophysical "
+                        "table.")},
+                "[LULC]": {
+                    "type": "option_string",
+                    "options": {
+                        "accum": {
+                            "description": gettext("a state of carbon accumulation")
+                        },
+                        "disturb": {
+                            "description": gettext(
+                                "Carbon disturbance occurred. Replace this "
+                                "with one of ‘low-impact-disturb’, "
+                                "‘med-impact-disturb’, or ‘high-impact-disturb’ "
+                                "to indicate the degree of disturbance.")},
+                        "NCC": {
+                            "description": gettext("no change in carbon")
+                        }
+                    }
+                }
+            }
         },
+        "carbon_pool_transient_template.csv": {
+            "about": (
+                "Table mapping each LULC type to impact and accumulation "
+                "information. This is a template that you will fill out to "
+                "create the biophysical table input to the main model."),
+            "columns": {
+                **BIOPHYSICAL_COLUMNS_SPEC,
+                # remove "expression" property which doesn't go in output spec
+                "biomass-half-life": dict(
+                    set(BIOPHYSICAL_COLUMNS_SPEC["biomass-half-life"].items()) -
+                    {("expression", "value > 0")}
+                ),
+                "soil-half-life": dict(
+                    set(BIOPHYSICAL_COLUMNS_SPEC["soil-half-life"].items()) -
+                    {("expression", "value > 0")}
+                )
+            }
+        },
+        "aligned_lulc_[YEAR].tif": {
+            "about": (
+                "Copy of LULC map for the given year, aligned and resampled "
+                "to match all the other LULC maps."),
+            "bands": {1: {"type": "integer"}}
+        },
+        "task_cache": spec_utils.TASKGRAPH_DIR
     }
 }
 
@@ -318,7 +379,7 @@ def _create_biophysical_table(landcover_table, target_biophysical_table_path):
         ``None``
     """
     target_column_names = [
-        colname.lower() for colname in coastal_blue_carbon.ARGS_SPEC['args'][
+        colname.lower() for colname in coastal_blue_carbon.MODEL_SPEC['args'][
             'biophysical_table_path']['columns']]
 
     with open(target_biophysical_table_path, 'w') as bio_table:
@@ -350,4 +411,4 @@ def validate(args, limit_to=None):
         A list of tuples where tuple[0] is an iterable of keys that the error
         message applies to and tuple[1] is the string validation warning.
     """
-    return validation.validate(args, ARGS_SPEC['args'])
+    return validation.validate(args, MODEL_SPEC['args'])

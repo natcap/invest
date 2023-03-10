@@ -43,9 +43,61 @@ Unreleased Changes
       (`#1151 <https://github.com/natcap/invest/issues/1151>`_)
     * The ``invest`` command-line-interface no longer opens a graphical
       interface to InVEST. (`#755 <https://github.com/natcap/invest/issues/755>`_)
+    * The classic InVEST user-interface has been removed in favor of the Workbench.
+    * Replace the ``ARGS_SPEC`` with ``MODEL_SPEC`` which describes all model
+      outputs as well as inputs in a structured format
+      (`#596 <https://github.com/natcap/invest/issues/596>`_)
 * Workbench
     * Added tooltips to the model tabs so that they can be identified even when
       several tabs are open (`#1071 <https://github.com/natcap/invest/issues/1088>`_)
+    * Options' display names will now be shown in dropdown menus
+      (`#1217 <https://github.com/natcap/invest/issues/1217>`_)
+    * Represent boolean inputs with a toggle switch rather than radio buttons.
+* DelineateIt
+    * DelineateIt now uses ``pygeoprocessing.routing.extract_streams_d8`` for D8
+      stream thresholding. https://github.com/natcap/invest/issues/1143
+* Habitat Quality
+    * The model now uses an euclidean distance implementation for decaying
+      threat rasters both linearly and exponentially. Since InVEST 3.3.0 a
+      convolution implementation has been used, which reflected how
+      the density of a threat or surrounding threat pixels could have an
+      even greater, cumulative impact and degradation over space. However, this
+      was never properly documented in the User's Guide and is not the approach
+      taken in the publication. The convolution implementation also produced
+      degradation and quality outputs that were difficult to interpret.
+    * There should be a noticeable runtime improvement from calculating
+      euclidean distances vs convolutions.
+* HRA
+    * Fixed an issue where a cryptic exception was being thrown if the criteria
+      table's sections were not spelled exactly as expected.  There is now a
+      much more readable error if a section is obviously missing.  Leading and
+      trailing whitespace is also now removed from all string fields in the
+      criteria table, which should also help reduce the chance of errors.
+      https://github.com/natcap/invest/issues/1191
+* GLOBIO
+    * Deprecated the GLOBIO model
+      (`#1131 <https://github.com/natcap/invest/issues/1131>`_)
+* RouteDEM
+    * RouteDEM now uses ``pygeoprocessing.routing.extract_streams_d8`` for D8
+      stream thresholding. https://github.com/natcap/invest/issues/1143
+* Scenic Quality
+    * Any points over nodata (and therefore excluded from the viewshed
+      analysis) will now correctly have their FID reported in the logging.
+      https://github.com/natcap/invest/issues/1188
+    * Clarifying where the visual quality calculations' disk-based sorting
+      cache should be located, which addresses an interesting crash experienced
+      by some users on Windows. https://github.com/natcap/invest/issues/1189
+* SDR
+    * The ``ws_id`` field is no longer a required field in the watershed vector.
+      https://github.com/natcap/invest/issues/1201
+* Seasonal Water Yield
+    * If a soil group raster contains any pixels that are not in the set of
+      allowed soil groups (anything other than 1, 2, 3 or 4), a human readable
+      exception will now be raised. https://github.com/natcap/invest/issues/1193
+* Visitation: Recreation and Tourism
+    * Fixed a ``FutureWarning`` when reading in CSVs. This fix does not
+      otherwise affect model behavior. https://github.com/natcap/invest/issues/1202
+
 
 3.12.1 (2022-12-16)
 -------------------
@@ -68,9 +120,6 @@ Unreleased Changes
     * Fixed a bug where uncaught exceptions in the React tree would result in
       a blank browser window.
       (`#1119 <https://github.com/natcap/invest/issues/1119>`_)
-* GLOBIO
-    * Deprecated the GLOBIO model
-      (`#1131 <https://github.com/natcap/invest/issues/1131>`_)
 * Habitat Quality
     * All spatial inputs including the access vector and threat rasters are
       now reprojected to the ``lulc_cur_path`` raster. This fixes a bug where

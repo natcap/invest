@@ -28,7 +28,7 @@ MISSING_CONVERT_OPTION_MSG = gettext(
     'One or more of "convert_nearest_to_edge" or "convert_farthest_from_edge" '
     'must be selected')
 
-ARGS_SPEC = {
+MODEL_SPEC = {
     "model_name": MODEL_METADATA["scenario_generator_proximity"].model_title,
     "pyname": MODEL_METADATA["scenario_generator_proximity"].pyname,
     "userguide": MODEL_METADATA["scenario_generator_proximity"].userguide,
@@ -107,6 +107,77 @@ ARGS_SPEC = {
                 "nearest pixels to the 'focal' land cover areas "
                 "and working outwards."),
             "name": gettext("convert nearest to edge")
+        }
+    },
+    "outputs": {
+        "nearest_to_edge.tif": {
+            "about": gettext("Map of the nearest-to-edge conversion scenario."),
+            "bands": {1: {"type": "integer"}}
+        },
+        "farthest_from_edge.tif": {
+            "about": gettext("Map of the farthest-from-edge conversion scenario."),
+            "bands": {1: {"type": "integer"}}
+        },
+        "nearest_to_edge.csv": {
+            "about": gettext(
+                "Table of land cover classes and the amount of each that was converted for the nearest-to-edge conversion scenario."),
+            "columns": {
+                "lucode": {
+                    "type": "integer",
+                    "about": "LULC code of the land cover class"
+                },
+                "area converted (Ha)": {
+                    "type": "number",
+                    "units": u.hectare,
+                    "about": "Total area converted from this land cover class"
+                },
+                "pixels converted": {
+                    "type": "integer",
+                    "about": "Number of pixels converted from this land cover class"
+                }
+            }
+        },
+        "farthest_from_edge.csv": {
+            "about": gettext(
+                "Table of land cover classes and the amount of each that was converted for the nearest-to-edge conversion scenario."),
+            "columns": {
+                "lucode": {
+                    "type": "integer",
+                    "about": "LULC code of the land cover class"
+                },
+                "area converted (Ha)": {
+                    "type": "number",
+                    "units": u.hectare,
+                    "about": "Total area converted from this land cover class"
+                },
+                "pixels converted": {
+                    "type": "integer",
+                    "about": "Number of pixels converted from this land cover class"
+                }
+            }
+        },
+        "intermediate": {
+            "type": "directory",
+            "contents": {
+                "aoi_masked_lulc.tif": {
+                    "about": gettext(
+                        "Copy of the LULC raster masked to the AOI extent."),
+                    "bands": {1: {"type": "integer"}}
+                },
+                "farthest_from_edge_distance.tif": {
+                    "about": gettext(
+                        "Map of the distance from each pixel to the farthest "
+                        "edge of the focal landcover."),
+                    "bands": {1: {"type": "number", "units": u.pixel}}
+                },
+                "nearest_to_edge_distance.tif": {
+                    "about": gettext(
+                        "Map of the distance from each pixel to the nearest "
+                        "edge of the focal landcover."),
+                    "bands": {1: {"type": "number", "units": u.pixel}}
+                },
+                "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
+            }
         }
     }
 }
@@ -820,7 +891,7 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
-    validation_warnings = validation.validate(args, ARGS_SPEC['args'])
+    validation_warnings = validation.validate(args, MODEL_SPEC['args'])
     invalid_keys = validation.get_invalid_keys(validation_warnings)
 
     if ('convert_nearest_to_edge' not in invalid_keys and

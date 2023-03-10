@@ -28,7 +28,7 @@ LOGGER = logging.getLogger(__name__)
 TARGET_NODATA = -1
 _LOGGING_PERIOD = 5
 
-ARGS_SPEC = {
+MODEL_SPEC = {
     "model_name": MODEL_METADATA["urban_cooling_model"].model_title,
     "pyname": MODEL_METADATA["urban_cooling_model"].pyname,
     "userguide": MODEL_METADATA["urban_cooling_model"].userguide,
@@ -241,6 +241,109 @@ ARGS_SPEC = {
                 "The relative weight to apply to ETI when calculating the "
                 "cooling capacity index. If not provided, defaults to 0.2.")
         },
+    },
+    "outputs": {
+        "hm.tif": {
+            "about": "Map of heat mitigation index.",
+            "bands": {1: {"type": "ratio"}}
+        },
+        "uhi_results.shp": {
+            "about": (
+                "A copy of the input Area of Interest vector with "
+                "additional fields."),
+            "geometries": spec_utils.POLYGONS,
+            "fields": {
+                "avg_cc": {
+                    "about": "Average CC value",
+                    "type": "number",
+                    "units": u.none
+                },
+                "avg_tmp_v": {
+                    "about": "Average temperature value",
+                    "type": "number",
+                    "units": u.degree_Celsius
+                },
+                "avg_tmp_an": {
+                    "about": "Average temperature anomaly",
+                    "type": "number",
+                    "units": u.degree_Celsius
+                },
+                "avd_eng_cn": {
+                    "about": "Avoided energy consumption (kWh or $ if optional energy cost input column was provided in the Energy Consumption Table).",
+                    "type": "number",
+                    "units": u.none
+                },
+                "avg_wbgt_v": {
+                    "about": "Average wet bulb globe temperature.",
+                    "type": "number",
+                    "units": u.degree_Celsius
+                },
+                "avg_ltls_v": {
+                    "about": "Average light work productivity loss",
+                    "type": "percent"
+                },
+                "avg_hvls_v": {
+                    "about": "Average heavy work productivity loss",
+                    "type": "percent"
+                }
+            }
+        },
+        "buildings_with_stats.shp": {
+            "about": "A copy of the input vector “Building Footprints” with additional fields.",
+            "geometries": spec_utils.POLYGONS,
+            "fields": {
+                "energy_sav": {
+                    "about": "Energy savings value (kWh or currency if optional energy cost input column was provided in the Energy Consumption Table). Savings are relative to a theoretical scenario where the city contains NO natural areas nor green spaces; where CC = 0 for all LULC classes.",
+                    "type": "number",
+                    "units": u.none
+                },
+                "mean_t_air": {
+                    "about": "Average temperature value in building.",
+                    "type": "number",
+                    "units": u.degree_Celsius
+                }
+            }
+        },
+        "intermediate": {
+            "type": "directory",
+            "contents": {
+                "cc.tif": {
+                    "about": "Map of cooling capacity",
+                    "bands": {1: {"type": "ratio"}}
+                },
+                "T_air.tif": {
+                    "about": "Map of air temperature with air mixing.",
+                    "bands": {1: {"type": "number", "units": u.degree_Celsius}}
+                },
+                "T_air_nomix.tif": {
+                    "about": "Map of air temperature without air mixing.",
+                    "bands": {1: {"type": "number", "units": u.degree_Celsius}}
+                },
+                "eti.tif": {
+                    "about": "Map of the evapotranspiration index.",
+                    "bands": {1: {"type": "ratio"}}
+                },
+                "wbgt.tif": {
+                    "about": "Map of wet bulb globe temperature.",
+                    "bands": {1: {"type": "number", "units": u.degree_Celsius}}
+                },
+                "reprojected_aoi.shp": {
+                    "about": (
+                        "The Area of Interest vector reprojected to the "
+                        "spatial reference of the LULC."),
+                    "geometries": spec_utils.POLYGONS,
+                    "fields": {}
+                },
+                "reprojected_buildings.shp": {
+                    "about": (
+                        "The buildings vector reprojected to the spatial "
+                        "reference of the LULC."),
+                    "geometries": spec_utils.POLYGONS,
+                    "fields": {}
+                },
+                "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
+            }
+        }
     }
 }
 
@@ -971,7 +1074,7 @@ def calculate_energy_savings(
 
     # Find the index of the 'type' column in a case-insensitive way.
     # We can assume that the field exists because we're checking for it in
-    # validation as defined in ARGS_SPEC.
+    # validation as defined in MODEL_SPEC.
     fieldnames = [field.GetName().lower()
                   for field in target_building_layer.schema]
     type_field_index = fieldnames.index('type')
@@ -1423,7 +1526,7 @@ def validate(args, limit_to=None):
 
     """
     validation_warnings = validation.validate(
-        args, ARGS_SPEC['args'], ARGS_SPEC['args_with_spatial_overlap'])
+        args, MODEL_SPEC['args'], MODEL_SPEC['args_with_spatial_overlap'])
 
     invalid_keys = validation.get_invalid_keys(validation_warnings)
     if ('biophysical_table_path' not in invalid_keys and
@@ -1435,7 +1538,7 @@ def validate(args, limit_to=None):
             # If args['cc_method'] isn't one of these two allowed values
             # ('intensity' or 'factors'), it'll be caught by
             # validation.validate due to the allowed values stated in
-            # ARGS_SPEC.
+            # MODEL_SPEC.
             extra_biophysical_keys = ['building_intensity']
 
         error_msg = validation.check_csv(

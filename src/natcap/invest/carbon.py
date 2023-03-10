@@ -20,7 +20,28 @@ from . import gettext
 
 LOGGER = logging.getLogger(__name__)
 
-ARGS_SPEC = {
+CARBON_OUTPUTS = {
+    f"c_{scenario}_{pool}.tif": {
+        "about": (
+            f"Raster of {pool_name} carbon values in the {scenario_name} "
+            "scenario, mapped from the Carbon Pools table to the LULC."),
+        "bands": {1: {
+            "type": "number",
+            "units": u.metric_ton/u.pixel
+        }}
+    } for pool, pool_name in [
+        ('above', 'aboveground'),
+        ('below', 'belowground'),
+        ('soil', 'soil'),
+        ('dead', 'dead matter')
+    ] for scenario, scenario_name in [
+        ('cur', 'current'),
+        ('fut', 'future'),
+        ('redd', 'REDD')
+    ]
+}
+
+MODEL_SPEC = {
     "model_name": MODEL_METADATA["carbon"].model_title,
     "pyname": MODEL_METADATA["carbon"].pyname,
     "userguide": MODEL_METADATA["carbon"].userguide,
@@ -169,6 +190,73 @@ ARGS_SPEC = {
                 "The relative annual increase of the price of carbon. "
                 "Required if Run Valuation model is selected."),
             "name": gettext("annual price change")
+        }
+    },
+    "outputs": {
+        "report.html": {
+            "about": "This file presents a summary of all data computed by the model. It also includes descriptions of all other output files produced by the model, so it is a good place to begin exploring and understanding model results. Because this is an HTML file, it can be opened with any web browser."
+        },
+        "tot_c_cur.tif": {
+            "about": "Raster showing the amount of carbon stored in each pixel for the current scenario. It is a sum of all of the carbon pools provided by the biophysical table.",
+            "bands": {1: {
+                "type": "number",
+                "units": u.metric_ton/u.pixel
+            }}
+        },
+        "tot_c_fut.tif": {
+            "about": "Raster showing the amount of carbon stored in each pixel for the future scenario. It is a sum of all of the carbon pools provided by the biophysical table.",
+            "bands": {1: {
+                "type": "number",
+                "units": u.metric_ton/u.pixel
+            }},
+            "created_if": "lulc_fut_path"
+        },
+        "tot_c_redd.tif": {
+            "about": "Raster showing the amount of carbon stored in each pixel for the REDD scenario. It is a sum of all of the carbon pools provided by the biophysical table.",
+            "bands": {1: {
+                "type": "number",
+                "units": u.metric_ton/u.pixel
+            }},
+            "created_if": "lulc_redd_path"
+        },
+        "delta_cur_fut.tif": {
+            "about": "Raster showing the difference in carbon stored between the future landscape and the current landscape. In this map some values may be negative and some positive. Positive values indicate sequestered carbon, negative values indicate carbon that was lost.",
+            "bands": {1: {
+                "type": "number",
+                "units": u.metric_ton/u.pixel
+            }},
+            "created_if": "lulc_fut_path"
+        },
+        "delta_cur_redd.tif": {
+            "about": "Raster showing the difference in carbon stored between the REDD landscape and the current landscape. In this map some values may be negative and some positive. Positive values indicate sequestered carbon, negative values indicate carbon that was lost.",
+            "bands": {1: {
+                "type": "number",
+                "units": u.metric_ton/u.pixel
+            }},
+            "created_if": "lulc_redd_path"
+        },
+        "npv_fut.tif": {
+            "about": "Rasters showing the economic value of carbon sequestered between the current and the future landscape dates.",
+            "bands": {1: {
+                "type": "number",
+                "units": u.currency/u.pixel
+            }},
+            "created_if": "lulc_fut_path"
+        },
+        "npv_redd.tif": {
+            "about": "Rasters showing the economic value of carbon sequestered between the current and the REDD landscape dates.",
+            "bands": {1: {
+                "type": "number",
+                "units": u.currency/u.pixel
+            }},
+            "created_if": "lulc_redd_path"
+        },
+        "intermediate": {
+            "type": "directory",
+            "contents": {
+                **CARBON_OUTPUTS,
+                "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
+            }
         }
     }
 }
@@ -653,4 +741,4 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
     """
     return validation.validate(
-        args, ARGS_SPEC['args'], ARGS_SPEC['args_with_spatial_overlap'])
+        args, MODEL_SPEC['args'], MODEL_SPEC['args_with_spatial_overlap'])

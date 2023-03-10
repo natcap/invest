@@ -90,12 +90,6 @@ Dependencies for ``natcap.invest`` are listed in ``requirements.txt``:
     :literal:
     :start-line: 14
 
-Additional dependencies for the UI are listed in ``requirements-gui.txt``:
-
-.. include:: ../../requirements-gui.txt
-    :literal:
-    :start-line: 9
-
 Please use ``conda`` and ``pip`` to install the correct versions of these dependencies automatically as described above.
 
 .. _BinaryDependencies:

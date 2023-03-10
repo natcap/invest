@@ -1,7 +1,7 @@
 import { getSettingsValue } from './components/SettingsModal/SettingsStorage';
 
 const logger = window.Workbench.getLogger('server_requests.js');
-const HOSTNAME = 'http://localhost';
+const HOSTNAME = 'http://127.0.0.1';
 const { PORT } = window.Workbench;
 const PREFIX = 'api';
 
@@ -28,7 +28,7 @@ export async function getInvestModelNames() {
 }
 
 /**
- * Get the ARGS_SPEC dict from an invest model as a JSON.
+ * Get the MODEL_SPEC dict from an invest model as a JSON.
  *
  * @param {string} payload - model name as given by `invest list`
  * @returns {Promise} resolves object
