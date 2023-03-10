@@ -16,7 +16,7 @@ import '@testing-library/jest-dom';
 import pkg from '../../package.json';
 import { APP_HAS_RUN_TOKEN } from '../../src/main/setupCheckFirstRun';
 
-jest.setTimeout(240000); // This test takes ~20 seconds, but sometimes longer
+jest.setTimeout(240000);
 const PORT = 9009;
 let ELECTRON_PROCESS;
 let BROWSER;
@@ -87,9 +87,17 @@ function makeAOI() {
   fs.writeFileSync(TMP_AOI_PATH, JSON.stringify(geojson));
 }
 
+beforeAll(() => {
+  makeAOI();
+});
+afterAll(() => {
+  rimraf(TMP_DIR, (error) => { if (error) { throw error; } });
+});
+
 // errors are not thrown from an async beforeAll
 // https://github.com/facebook/jest/issues/8688
-beforeAll(() => {
+beforeEach(() => {
+  try { fs.unlinkSync(APP_HAS_RUN_TOKEN_PATH); } catch {}
   // start the invest app and forward stderr to console
   ELECTRON_PROCESS = spawn(
     `"${BINARY_PATH}"`,
@@ -119,30 +127,21 @@ beforeAll(() => {
   };
   ELECTRON_PROCESS.stdout.on('data', stdOutCallback);
 
-  // set up test data
-  makeAOI();
-
   // clear old screenshots
   glob.glob(`${SCREENSHOT_PREFIX}*.png`, (err, files) => {
     files.forEach((file) => fs.unlinkSync(file));
   });
 });
 
-afterAll(async () => {
+afterEach(async () => {
   try {
     await BROWSER.close();
   } catch (error) {
     console.log(BINARY_PATH);
     console.error(error);
   }
-
-  rimraf(TMP_DIR, (error) => { if (error) { throw error; } });
   ELECTRON_PROCESS.removeAllListeners();
   ELECTRON_PROCESS.kill();
-});
-
-beforeEach(() => {
-  try { fs.unlinkSync(APP_HAS_RUN_TOKEN_PATH); } catch {}
 });
 
 test('Run a real invest model', async () => {
@@ -228,6 +227,10 @@ test('Run a real invest model', async () => {
   expect(await findByText(sidebar, 'Run Canceled'));
   expect(await findByText(sidebar, 'Open Workspace'));
   await page.screenshot({ path: `${SCREENSHOT_PREFIX}6-run-canceled.png` });
+
+  // we're sharing the browser instance across tests
+  // so just reload the page as "cleanup".
+  // await page.reload();
 }, 240000); // >2x the sum of all the max timeouts within this test
 
 test('Check local userguide links', async () => {
@@ -278,8 +281,9 @@ test('Check local userguide links', async () => {
     const tab = await page.waitForSelector('.nav-item');
     const closeTabBtn = await findByRole(tab, 'button');
     await closeTabBtn.click();
-    await page.waitForTimeout(300);
+    await page.waitForTimeout(100); // allow for Home Tab to be visible again
   }
+  // await page.reload();
 });
 
 /* Test for duplicate application launch.
@@ -289,8 +293,8 @@ Also verify that window 1 has focus. */
 test('App re-launch will exit and focus on first instance', async () => {
   if (process.platform === 'win32') {
     await waitFor(() => {
-      expect(BROWSER.isConnected()).toBeTruthy();
-    });
+      expect(BROWSER && BROWSER.isConnected()).toBeTruthy();
+    }, { timeout: 60000 });
 
     // Open another instance of the Workbench application.
     // This should return quickly.  The test timeout is there in case the new i
