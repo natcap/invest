@@ -314,7 +314,8 @@ describe('Arguments form interactions', () => {
   });
 
   test('Open info dialog, expect text & link', async () => {
-    const spy = jest.spyOn(ipcRenderer, 'send');
+    const spy = jest.spyOn(ipcRenderer, 'send')
+      .mockImplementation(() => Promise.resolve());
     const spec = baseArgsSpec('directory');
     const { findByText, findByRole } = renderSetupFromSpec(spec, UI_SPEC);
     userEvent.click(await findByRole('button', { name: /info about/ }));

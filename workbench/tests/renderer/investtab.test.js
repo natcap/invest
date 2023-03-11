@@ -397,7 +397,8 @@ describe('Sidebar Buttons', () => {
     // It seemed impossible to spy on an instance of BrowserWindow
     // and its call to .loadUrl(), given our setup in __mocks__/electron.js,
     // so this will have to suffice:
-    const spy = jest.spyOn(ipcRenderer, 'send');
+    const spy = jest.spyOn(ipcRenderer, 'send')
+      .mockImplementation(() => Promise.resolve());
 
     const { findByRole } = renderInvestTab();
     const link = await findByRole('link', { name: /user's guide/i });
