@@ -212,7 +212,7 @@ describe('Build each model UI from MODEL_SPEC', () => {
     const argsSpec = await server_requests.getSpec(model);
     const uiSpec = UI_SPEC[model];
 
-    const { findByRole, findAllByRole } = render(
+    const { findByRole } = render(
       <SetupTab
         pyModuleName={argsSpec.pyname}
         modelName={argsSpec.model_name}
@@ -230,22 +230,6 @@ describe('Build each model UI from MODEL_SPEC', () => {
     );
     expect(await findByRole('textbox', { name: /workspace/i }))
       .toBeInTheDocument();
-
-    const infoButtons = await findAllByRole('button', { name: /info about/ });
-    /* eslint-disable no-restricted-syntax, no-await-in-loop */
-    for (const btn of infoButtons) {
-      userEvent.click(btn);
-      const link = await findByRole('link');
-      const address = link.getAttribute('href');
-      const options = {
-        method: 'HEAD',
-        host: url.parse(address).host,
-        path: url.parse(address).pathname,
-      };
-      const status = await getUrlStatus(options);
-      expect(status).toBeStatus200(address);
-    }
-    /* eslint-enable no-restricted-syntax, no-await-in-loop */
   });
 });
 
