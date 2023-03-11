@@ -286,29 +286,25 @@ test('Check local userguide links', async () => {
   // await page.reload();
 });
 
+const testWin = process.platform === 'win32' ? test : test.skip;
 /* Test for duplicate application launch.
 We have the binary path, so now let's launch a new subprocess with the same binary
 The test is that the subprocess exits within a certain reasonable timeout.
-Also verify that window 1 has focus. */
-test('App re-launch will exit and focus on first instance', async () => {
-  if (process.platform === 'win32') {
-    await waitFor(() => {
-      expect(BROWSER && BROWSER.isConnected()).toBeTruthy();
-    }, { timeout: 60000 });
+Single instance lock caused the app to crash on macOS, and also
+is less important because mac generally won't open multiple instances */
+testWin('App re-launch will exit and focus on first instance', async () => {
+  await waitFor(() => {
+    expect(BROWSER && BROWSER.isConnected()).toBeTruthy();
+  }, { timeout: 60000 });
 
-    // Open another instance of the Workbench application.
-    // This should return quickly.  The test timeout is there in case the new i
-    // process hangs for some reason.
-    const otherElectronProcess = spawnSync(
-      `"${BINARY_PATH}"`, [`--remote-debugging-port=${PORT}`],
-      { shell: true }
-    );
+  // Open another instance of the Workbench application.
+  // This should return quickly.  The test timeout is there in case the new i
+  // process hangs for some reason.
+  const otherElectronProcess = spawnSync(
+    `"${BINARY_PATH}"`, [`--remote-debugging-port=${PORT}`],
+    { shell: true }
+  );
 
-    // When another instance is already open, we expect an exit code of 1.
-    expect(otherElectronProcess.status).toBe(1);
-  } else {
-    // Single instance lock caused the app to crash on macOS, and also
-    // is less important because mac generally won't open multiple instances
-    console.log("Skipping this test because we're not on Windows");
-  }
+  // When another instance is already open, we expect an exit code of 1.
+  expect(otherElectronProcess.status).toBe(1);
 });
