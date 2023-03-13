@@ -35,7 +35,7 @@ const config = {
   ],
   extraFiles: [{
     from: '../LICENSE.txt',
-    to: 'LICENSE.txt',
+    to: 'LICENSE.InVEST.txt',
   }],
   appId: APP_ID,
   productName: PRODUCT_NAME,
