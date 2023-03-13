@@ -19,9 +19,16 @@ const APP_ID = `NaturalCapitalProject.Invest.Workbench.${investVersion}`;
 const PRODUCT_NAME = `InVEST ${investVersion} Workbench`;
 const ARTIFACT_NAME = `invest_${investVersion}_workbench_${OS}_${ARCH}.${EXT}`;
 
+// this version appears as a footer in the NSIS installer & uninstaller.
+// It includes package.json version by default, but that is meaningless for us.
+// We can override that, but also must maintain semver compliance, so
+// always trim to this format.
+const installerVersion = investVersion.match(/[0-9]+\.[0-9]+\.[0-9]+/)[0];
+
 const config = {
   extraMetadata: {
     main: 'build/main/main.js',
+    version: installerVersion,
   },
   extraResources: [
     {
@@ -54,6 +61,7 @@ const config = {
     createDesktopShortcut: false,
     installerHeader: 'resources/InVEST-header-wcvi-rocks.bmp',
     oneClick: false,
+    uninstallDisplayName: PRODUCT_NAME,
   },
   files: [
     'build/**/*',
