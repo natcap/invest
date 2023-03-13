@@ -45,11 +45,17 @@ Unreleased Changes
       interface to InVEST. (`#755 <https://github.com/natcap/invest/issues/755>`_)
     * The classic InVEST user-interface has been removed in favor of the Workbench.
     * Replace the ``ARGS_SPEC`` with ``MODEL_SPEC`` which describes all model
-      outputs as well as inputs in a structured format 
+      outputs as well as inputs in a structured format
       (`#596 <https://github.com/natcap/invest/issues/596>`_)
 * Workbench
     * Added tooltips to the model tabs so that they can be identified even when
       several tabs are open (`#1071 <https://github.com/natcap/invest/issues/1088>`_)
+    * Options' display names will now be shown in dropdown menus
+      (`#1217 <https://github.com/natcap/invest/issues/1217>`_)
+    * Represent boolean inputs with a toggle switch rather than radio buttons.
+* DelineateIt
+    * DelineateIt now uses ``pygeoprocessing.routing.extract_streams_d8`` for D8
+      stream thresholding. https://github.com/natcap/invest/issues/1143
 * Habitat Quality
     * The model now uses an euclidean distance implementation for decaying
       threat rasters both linearly and exponentially. Since InVEST 3.3.0 a
@@ -68,6 +74,12 @@ Unreleased Changes
       trailing whitespace is also now removed from all string fields in the
       criteria table, which should also help reduce the chance of errors.
       https://github.com/natcap/invest/issues/1191
+* GLOBIO
+    * Deprecated the GLOBIO model
+      (`#1131 <https://github.com/natcap/invest/issues/1131>`_)
+* RouteDEM
+    * RouteDEM now uses ``pygeoprocessing.routing.extract_streams_d8`` for D8
+      stream thresholding. https://github.com/natcap/invest/issues/1143
 * Scenic Quality
     * Any points over nodata (and therefore excluded from the viewshed
       analysis) will now correctly have their FID reported in the logging.
@@ -108,9 +120,6 @@ Unreleased Changes
     * Fixed a bug where uncaught exceptions in the React tree would result in
       a blank browser window.
       (`#1119 <https://github.com/natcap/invest/issues/1119>`_)
-* GLOBIO
-    * Deprecated the GLOBIO model
-      (`#1131 <https://github.com/natcap/invest/issues/1131>`_)
 * Habitat Quality
     * All spatial inputs including the access vector and threat rasters are
       now reprojected to the ``lulc_cur_path`` raster. This fixes a bug where

@@ -219,7 +219,7 @@ def format_unit(unit):
 
     # Optionally use a pre-set format for a particular unit
     custom_formats = {
-        u.pixel: 'number of pixels',
+        u.pixel: gettext('number of pixels'),
         u.year_AD: '',  # don't need to mention units for a year input
         u.other: '',    # for inputs that can have any or multiple units
         # For soil erodibility (t*h*ha/(ha*MJ*mm)), by convention the ha's
@@ -228,7 +228,7 @@ def format_unit(unit):
         # this isn't a perfect solution
         # see https://github.com/hgrecco/pint/issues/1364
         u.t * u.hr / (u.MJ * u.mm): 't · h · ha / (ha · MJ · mm)',
-        u.none: 'unitless'
+        u.none: gettext('unitless')
     }
     if unit in custom_formats:
         return custom_formats[unit]
@@ -237,7 +237,7 @@ def format_unit(unit):
     # `formatter` expects an iterable of (unit, exponent) pairs, which lives in
     # the pint.Unit's `_units` attribute.
     unit_items = [(u.get_symbol(key), val) for key, val in unit._units.items()]
-    return pint.formatting.formatter(
+    formatted_unit = pint.formatting.formatter(
         unit_items,
         as_ratio=True,
         single_denominator=True,
@@ -246,6 +246,10 @@ def format_unit(unit):
         power_fmt="{}{}",
         parentheses_fmt="({})",
         exp_call=pint.formatting._pretty_fmt_exponent)
+
+    if 'currency' in formatted_unit:
+        formatted_unit = formatted_unit.replace('currency', gettext('currency units'))
+    return formatted_unit
 
 
 def serialize_args_spec(spec):
@@ -278,12 +282,12 @@ def serialize_args_spec(spec):
 
 # accepted geometries for a vector will be displayed in this order
 GEOMETRY_ORDER = [
-    gettext('POINT'),
-    gettext('MULTIPOINT'),
-    gettext('LINESTRING'),
-    gettext('MULTILINESTRING'),
-    gettext('POLYGON'),
-    gettext('MULTIPOLYGON')]
+    'POINT',
+    'MULTIPOINT',
+    'LINESTRING',
+    'MULTILINESTRING',
+    'POLYGON',
+    'MULTIPOLYGON']
 
 INPUT_TYPES_HTML_FILE = 'input_types.html'
 
@@ -320,7 +324,7 @@ def format_geometries_string(geometries):
     sorted_geoms = sorted(
         geometries,
         key=lambda g: GEOMETRY_ORDER.index(g))
-    return '/'.join(geom.lower() for geom in sorted_geoms)
+    return '/'.join(gettext(geom).lower() for geom in sorted_geoms)
 
 
 def format_permissions_string(permissions):
@@ -347,21 +351,25 @@ def format_options_string_from_dict(options):
 
     Args:
         options (dict): the dictionary of options to document, where keys are
-            options and values are descriptions of the options
+            options and values are dictionaries describing the options.
+            They may have either or both 'display_name' and 'description' keys,
+            for example:
+            {'option1': {'display_name': 'Option 1', 'description': 'the first option'}}
 
     Returns:
         list of RST-formatted strings, where each is a line in a bullet list
     """
     lines = []
+    for key, info in options.items():
+        display_name = info['display_name'] if 'display_name' in info else key
+        if 'description' in info:
+            lines.append(f'- {display_name}: {info["description"]}')
+        else:
+            lines.append(f'- {display_name}')
+    # sort the options alphabetically
     # casefold() is a more aggressive version of lower() that may work better
     # for some languages to remove all case distinctions
-    sorted_options = sorted(
-        list(options.keys()),
-        key=lambda option: option.casefold()
-    )
-    for option in sorted_options:
-        lines.append(f'- {option}: {options[option]}')
-    return lines
+    return sorted(lines, key=lambda line: line.casefold())
 
 
 def format_options_string_from_list(options):
@@ -492,7 +500,9 @@ def describe_arg_from_spec(name, spec):
     if units:
         units_string = format_unit(units)
         if units_string:
-            in_parentheses.append(f'units: **{units_string}**')
+            # pybabel can't find the message if it's in the f-string
+            translated_units = gettext("units")
+            in_parentheses.append(f'{translated_units}: **{units_string}**')
 
     if spec['type'] == 'vector':
         in_parentheses.append(format_geometries_string(spec["geometries"]))

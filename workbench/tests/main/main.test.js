@@ -109,7 +109,11 @@ describe('findInvestBinaries', () => {
   });
 });
 
-describe('extractZipInplace', () => {
+// For now, skipping on Windows as we've been unable to resolve a race condition
+// Fully addressing https://github.com/natcap/invest/issues/1239
+// probably means re-writing this test from scratch.
+const maybe = process.platform !== 'win32' ? describe : describe.skip;
+maybe('extractZipInplace', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'data-'));
   const zipPath = path.join(root, 'output.zip');
   let level1Dir;

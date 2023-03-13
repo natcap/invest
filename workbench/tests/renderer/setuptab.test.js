@@ -54,7 +54,7 @@ const UI_SPEC = { order: [Object.keys(BASE_MODEL_SPEC.args)] };
  * @param {object} uiSpec - an invest UI spec for the same model
  * @returns {object} - containing the test utility functions returned by render
  */
-function renderSetupFromSpec(baseSpec, uiSpec) {
+function renderSetupFromSpec(baseSpec, uiSpec, initValues = undefined) {
   // some MODEL_SPEC boilerplate that is not under test,
   // but is required by PropType-checking
   const spec = { ...baseSpec };
@@ -68,7 +68,7 @@ function renderSetupFromSpec(baseSpec, uiSpec) {
       modelName={spec.modelName}
       argsSpec={spec.args}
       uiSpec={uiSpec}
-      argsInitValues={undefined}
+      argsInitValues={initValues}
       investExecute={() => {}}
       nWorkers="-1"
       sidebarSetupElementId="foo"
@@ -125,22 +125,32 @@ describe('Arguments form input types', () => {
     expect(input).toHaveAttribute('type', 'text');
   });
 
-  test('render an unchecked radio button for a boolean', async () => {
+  test('render an unchecked toggle switch for a boolean', async () => {
     const spec = baseArgsSpec('boolean');
     const { findByLabelText } = renderSetupFromSpec(spec, UI_SPEC);
     const input = await findByLabelText(`${spec.args.arg.name}`);
-    expect(input).toHaveAttribute('type', 'radio');
+    // for some reason, the type is still checkbox when it renders as a switch
+    expect(input).toHaveAttribute('type', 'checkbox');
     expect(input).not.toBeChecked();
+  });
+
+  test('render a toggle with a value', async () => {
+    const spec = baseArgsSpec('boolean');
+    const { findByLabelText } = renderSetupFromSpec(spec, UI_SPEC, { arg: true });
+    const input = await findByLabelText(`${spec.args.arg.name}`);
+    // for some reason, the type is still checkbox when it renders as a switch
+    expect(input).toBeChecked();
   });
 
   test('render a select input for an option_string dict', async () => {
     const spec = baseArgsSpec('option_string');
     spec.args.arg.options = {
-      a: 'about a',
-      b: 'about b',
+      a: {'display_name': 'Option A'},
+      b: {'display_name': 'Option B'}
     };
     const { findByLabelText } = renderSetupFromSpec(spec, UI_SPEC);
     const input = await findByLabelText(`${spec.args.arg.name}`);
+    expect(input).toHaveDisplayValue('Option A')
     expect(input).toHaveValue('a');
     expect(input).not.toHaveValue('b');
   });

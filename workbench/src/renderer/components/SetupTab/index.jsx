@@ -54,12 +54,16 @@ function initializeArgValues(argsSpec, uiSpec, argsDict) {
     if (argsSpec[argkey].type === 'boolean') {
       value = argsDict[argkey] || false;
     } else if (argsSpec[argkey].type === 'option_string') {
-      const optionsArray = Array.isArray(argsSpec[argkey].options)
-        ? argsSpec[argkey].options
-        : Object.keys(argsSpec[argkey].options);
-      value = argsDict[argkey]
-        || optionsArray[0]; // default to first
-      argsDropdownOptions[argkey] = optionsArray;
+      if  (argsDict[argkey]) {
+        value = argsDict[argkey];
+      } else { // default to first
+        if (Array.isArray(argsSpec[argkey].options)) {
+          value = argsSpec[argkey].options[0];
+        } else {
+          value = Object.keys(argsSpec[argkey].options)[0];
+        }
+      }
+      argsDropdownOptions[argkey] = argsSpec[argkey].options;
     } else {
       value = argsDict[argkey] || '';
     }
@@ -296,7 +300,10 @@ class SetupTab extends React.Component {
       this.triggerScrollEvent();
     } else {
       alert( // eslint-disable-line no-alert
-        t(`Datastack/Logfile for ${datastack.model_human_name} does not match this model.`)
+        t(
+          'Datastack/Logfile for {{modelName}} does not match this model.',
+          { modelName: datastack.model_human_name }
+        )
       );
     }
   }
@@ -589,7 +596,7 @@ SetupTab.propTypes = {
     enabledFunctions: PropTypes.objectOf(PropTypes.func),
     dropdownFunctions: PropTypes.objectOf(PropTypes.func),
   }).isRequired,
-  argsInitValues: PropTypes.objectOf(PropTypes.string),
+  argsInitValues: PropTypes.objectOf(PropTypes.oneOfType([PropTypes.string, PropTypes.bool])),
   investExecute: PropTypes.func.isRequired,
   nWorkers: PropTypes.string.isRequired,
   sidebarSetupElementId: PropTypes.string.isRequired,
