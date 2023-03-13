@@ -50,9 +50,10 @@ const config = {
     icon: 'resources/InVEST-2-256x256.ico',
   },
   nsis: {
-    oneClick: false,
     allowToChangeInstallationDirectory: true,
+    createDesktopShortcut: false,
     installerHeader: 'resources/InVEST-header-wcvi-rocks.bmp',
+    oneClick: false,
   },
   files: [
     'build/**/*',
