@@ -227,10 +227,6 @@ test('Run a real invest model', async () => {
   expect(await findByText(sidebar, 'Run Canceled'));
   expect(await findByText(sidebar, 'Open Workspace'));
   await page.screenshot({ path: `${SCREENSHOT_PREFIX}6-run-canceled.png` });
-
-  // we're sharing the browser instance across tests
-  // so just reload the page as "cleanup".
-  // await page.reload();
 }, 240000); // >2x the sum of all the max timeouts within this test
 
 test('Check local userguide links', async () => {
@@ -283,7 +279,6 @@ test('Check local userguide links', async () => {
     await closeTabBtn.click();
     await page.waitForTimeout(100); // allow for Home Tab to be visible again
   }
-  // await page.reload();
 });
 
 const testWin = process.platform === 'win32' ? test : test.skip;
