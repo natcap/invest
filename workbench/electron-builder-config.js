@@ -51,6 +51,7 @@ const config = {
   },
   nsis: {
     oneClick: false,
+    allowToChangeInstallationDirectory: true,
   },
   files: [
     'build/**/*',
