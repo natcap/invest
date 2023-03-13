@@ -52,6 +52,7 @@ const config = {
   nsis: {
     oneClick: false,
     allowToChangeInstallationDirectory: true,
+    installerHeader: 'resources/InVEST-header-wcvi-rocks.bmp',
   },
   files: [
     'build/**/*',
