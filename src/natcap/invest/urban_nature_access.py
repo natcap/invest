@@ -529,7 +529,7 @@ MODEL_SPEC = {
                         "Each pixel represents the proportion of the total "
                         "population that belongs to the population group "
                         "POP_GROUP."),
-                    "bands": {1: {"type": "ratio", "units": u.none}},
+                    "bands": {1: {"type": "number", "units": u.none}},
                     "created_if":
                         f"search_radius_mode == '{RADIUS_OPT_POP_GROUP}'",
                 },
