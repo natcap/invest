@@ -40,7 +40,7 @@ RADIUS_OPT_URBAN_NATURE = 'radius per urban nature class'
 RADIUS_OPT_POP_GROUP = 'radius per population group'
 POP_FIELD_REGEX = '^pop_'
 ID_FIELDNAME = 'adm_unit_id'
-ARGS_SPEC = {
+MODEL_SPEC = {
     'model_name': MODEL_METADATA['urban_nature_access'].model_title,
     'pyname': MODEL_METADATA['urban_nature_access'].pyname,
     'userguide': MODEL_METADATA['urban_nature_access'].userguide,
@@ -297,6 +297,287 @@ ARGS_SPEC = {
         #         'kernel.  Required when using the Power search kernel.'
         #     ),
         # }
+    },
+    'outputs': {
+        'output': {
+            "type": "directory",
+            "contents": {
+                "urban_nature_supply.tif": {
+                    "about": "The calculated supply of urban nature.",
+                    "bands": {1: {
+                        "type": "number",
+                        "units": u.m**2,
+                    }}},
+                "urban_nature_demand.tif": {
+                    "about": (
+                        "The required area of urban nature needed by the "
+                        "population residing in each pixel in order to "
+                        "fully satisfy their urban nature needs. "
+                        "Higher values indicate a greater demand for "
+                        "accessible urban nature from the surrounding area."),
+                    "bands": {1: {
+                        "type": "number",
+                        "units": u.m**2,
+                    }}},
+                "urban_nature_balance_totalpop.tif": {
+                    "about": (
+                        "The urban nature balance for the total population "
+                        "in a pixel. Positive values indicate an oversupply "
+                        "of urban nature relative to the stated urban nature "
+                        "demand. Negative values indicate an undersupply of "
+                        "urban nature relative to the stated urban nature "
+                        "demand. This output is of particular relevance to "
+                        "understand the total amount of nature deficit for "
+                        "the population in a particular pixel."),
+                    "bands": {1: {
+                        "type": "number",
+                        "units": u.m**2,
+                    }}},
+                "admin_boundaries.gpkg": {
+                    "about": (
+                        "A copy of the user's administrative boundaries "
+                        "vector with a single layer."),
+                    "geometries": spec_utils.POLYGONS,
+                    "fields": {
+                        "SUP_DEMadm_cap": {
+                            "type": "number",
+                            "units": u.m**2/u.person,
+                            "about": (
+                                "The averge urban nature supply/demand "
+                                "balance available per person within this "
+                                "administrative unit.")
+                        },
+                        "Pund_adm": {
+                            "type": "number",
+                            "units": u.people,
+                            "about": (
+                                "The total population within the "
+                                "administrative unit that is undersupplied "
+                                "with urban nature.")
+                        },
+                        "Povr_adm": {
+                            "type": "number",
+                            "units": u.people,
+                            "about": (
+                                "The total population within the "
+                                "administrative unit that is oversupplied "
+                                "with urban nature.")
+                        },
+                        "SUP_DEMadm_cap_[POP_GROUP]": {
+                            "type": "number",
+                            "units": u.m**2/u.person,
+                            "about": (
+                                "The mean urban nature supply/demand "
+                                "balance available per person in population "
+                                "group POP_GROUP within this administrative "
+                                "unit."),
+                            "created_if": (
+                                f"(search_radius_mode == '{RADIUS_OPT_POP_GROUP}') "
+                                "or aggregate_by_pop_group"),
+                        },
+                        "Pund_adm_[POP_GROUP]": {
+                            "type": "number",
+                            "units": u.people,
+                            "about": (
+                                "The total population belonging to the "
+                                "population group POP_GROUP within this "
+                                "administrative unit that are undersupplied "
+                                "with urban nature."),
+                            "created_if": (
+                                f"(search_radius_mode == '{RADIUS_OPT_POP_GROUP}') "
+                                "or aggregate_by_pop_group"),
+                        },
+                        "Povr_adm_[POP_GROUP]": {
+                            "type": "number",
+                            "units": u.people,
+                            "about": (
+                                "The total population belonging to the "
+                                "population group POP_GROUP within this "
+                                "administrative unit that is oversupplied "
+                                "with urban nature."),
+                            "created_if": (
+                                f"(search_radius_mode == '{RADIUS_OPT_POP_GROUP}') "
+                                "or aggregate_by_pop_group"),
+                        },
+                    },
+                },
+                "urban_nature_balance_[POP_GROUP].tif": {
+                    "about": gettext(
+                        "Positive pixel values indicate an oversupply of "
+                        "urban nature for the population group POP_GROUP "
+                        "relative to the stated urban nature demand. "
+                        "Negative values indicate an undersupply of urban "
+                        "nature for the population group POP_GROUP relative "
+                        "to the stated urban nature demand."),
+                    "bands": {1: {"type": "number", "units": u.m**2/u.person}},
+                    "created_if":
+                        f"search_radius_mode == '{RADIUS_OPT_POP_GROUP}'",
+                }
+            },
+        },
+        'intermediate': {
+            'type': 'directory',
+            'contents': {
+                '_taskgraph_working_dir': spec_utils.TASKGRAPH_DIR,
+                "aligned_lulc.tif": {
+                    "about": gettext(
+                        "A copy of the user's land use land cover raster. "
+                        "If the user-supplied LULC has non-square pixels, "
+                        "they will be resampled to square pixels in this "
+                        "raster."),
+                    "bands": {1: {"type": "integer"}},
+                },
+                "aligned_population.tif": {
+                    "about": gettext(
+                        "The user's population raster, aligned to the same "
+                        "resolution and dimensions as the aligned LULC."),
+                    "bands": {1: {'type': 'number', 'units': u.count}},
+                },
+                "undersupplied_population.tif": {
+                    "about": gettext(
+                        "The population experiencing an urban nature deficit."
+                    ),
+                    "bands": {1: {'type': 'number', 'units': u.count}},
+                },
+                "oversupplied_population.tif": {
+                    "about": gettext(
+                        "The population experiencing an urban nature surplus."
+                    ),
+                    "bands": {1: {'type': 'number', 'units': u.count}},
+                },
+
+
+
+                # when RADIUS_OPT_UNIFORM
+                "distance_weighted_population_within_[SEARCH_RADIUS].tif": {
+                    "about": gettext(
+                        "A sum of the population within the given search "
+                        "radius SEARCH_RADIUS, weighted by the user's decay "
+                        "function."),
+                    "bands": {1: {'type': 'number', 'units': u.count}},
+                    "created_if": (
+                        f"search_radius_mode == '{RADIUS_OPT_UNIFORM}' or "
+                        f"search_radius_mode == '{RADIUS_OPT_URBAN_NATURE}'"),
+                },
+                "urban_nature_area.tif": {
+                    "about": gettext(
+                        "The area of urban nature (in square meters) "
+                        "represented in each pixel."),
+                    "bands": {1: {"type": "number", "units": u.m**2}},
+                    "created_if":
+                        (f"search_radius_mode == '{RADIUS_OPT_UNIFORM}' or "
+                         f"search_radius_mode == '{RADIUS_OPT_POP_GROUP}'"),
+                },
+                "urban_nature_population_ratio.tif": {
+                    "about": gettext(
+                        "The calculated urban nature/population ratio."),
+                    "bands": {1: {"type": "number", "units": u.m**2/u.person}},
+                    "created_if":
+                        f"search_radius_mode == '{RADIUS_OPT_UNIFORM}'",
+                },
+
+                # When RADIUS_OPT_URBAN_NATURE
+                "urban_nature_area_[LUCODE].tif": {
+                    "about": gettext(
+                        "Pixel values represent the ares of urban nature "
+                        "(in square meters) represented in each pixel for "
+                        "the urban nature class represented by the land use "
+                        "land cover code LUCODE."),
+                    "bands": {1: {"type": "number", "units": u.m**2}},
+                    "created_if":
+                        f"search_radius_mode == '{RADIUS_OPT_URBAN_NATURE}'",
+                },
+                "urban_nature_supply_lucode_[LUCODE].tif": {
+                    "about": gettext(
+                        "The urban nature supplied to populations due to the "
+                        "land use land cover code LUCODE"),
+                    "bands": {1: {"type": "number", "units": u.m**2/u.person}},
+                    "created_if":
+                        f"search_radius_mode == '{RADIUS_OPT_UNIFORM}'",
+                },
+                "urban_nature_population_ratio_lucode_[LUCODE].tif": {
+                    "about": gettext(
+                        "The calculated urban nature/population ratio for "
+                        "the urban nature class represented by the land use "
+                        "land cover code LUCODE."),
+                    "bands": {1: {"type": "number", "units": u.m**2/u.person}},
+                    "created_if":
+                        f"search_radius_mode == '{RADIUS_OPT_URBAN_NATURE}'",
+                },
+                "urban_nature_supply_lucode_[LUCODE].tif": {
+                    "about": gettext(
+                        "The urban nature supplied to populations due to "
+                        "the land use land cover class LUCODE."),
+                    "bands": {1: {"type": "number", "units": u.m**2/u.person}},
+                    "created_if":
+                        f"search_radius_mode == '{RADIUS_OPT_URBAN_NATURE}'",
+                },
+
+
+                # When RADIUS_OPT_POP_GROUP
+                "population_in_[POP_GROUP].tif": {
+                    "about": gettext(
+                        "Each pixel represents the population of a pixel "
+                        "belonging to the population in the population group "
+                        "POP_GROUP."),
+                    "bands": {1: {"type": "number", "units": u.count}},
+                    "created_if":
+                        f"search_radius_mode == '{RADIUS_OPT_POP_GROUP}'",
+                },
+                "proportion_of_population_in_[POP_GROUP].tif": {
+                    "about": gettext(
+                        "Each pixel represents the proportion of the total "
+                        "population that belongs to the population group "
+                        "POP_GROUP."),
+                    "bands": {1: {"type": "ratio", "units": u.none}},
+                    "created_if":
+                        f"search_radius_mode == '{RADIUS_OPT_POP_GROUP}'",
+                },
+                "distance_weighted_population_in_[POP_GROUP].tif": {
+                    "about": gettext(
+                        "Each pixel represents the total number of people "
+                        "within the search radius for the population group "
+                        "POP_GROUP, weighted by the user's selection of "
+                        "decay function."),
+                    "bands": {1: {"type": "number", "units": u.people}},
+                    "created_if":
+                        f"search_radius_mode == '{RADIUS_OPT_POP_GROUP}'",
+                },
+                "distance_weighted_population_all_groups.tif": {
+                    "about": gettext(
+                        "The total population, weighted by the appropriate "
+                        "decay function."),
+                    "bands": {1: {"type": "number", "units": u.people}},
+                    "created_if":
+                        f"search_radius_mode == '{RADIUS_OPT_POP_GROUP}'",
+                },
+                "urban_nature_supply_to_[POP_GROUP].tif": {
+                    "about": gettext(
+                        "The urban nature supply to population group "
+                        "POP_GROUP."),
+                    "bands": {1: {"type": "number", "units": u.m**2/u.person}},
+                    "created_if":
+                        f"search_radius_mode == '{RADIUS_OPT_POP_GROUP}'",
+                },
+                "undersupplied_population_[POP_GROUP].tif": {
+                    "about": gettext(
+                        "The population in population group POP_GROUP that "
+                        "are experiencing an urban nature deficit."),
+                    "bands": {1: {"type": "number", "units": u.people}},
+                    "created_if":
+                        f"search_radius_mode == '{RADIUS_OPT_POP_GROUP}'",
+                },
+                "oversupplied_population_[POP_GROUP].tif": {
+                    "about": gettext(
+                        "The population in population group POP_GROUP that "
+                        "are experiencing an urban nature surplus."),
+                    "bands": {1: {"type": "number", "units": u.people}},
+                    "created_if":
+                        f"search_radius_mode == '{RADIUS_OPT_POP_GROUP}'",
+                },
+            },
+
+        }
     }
 }
 
