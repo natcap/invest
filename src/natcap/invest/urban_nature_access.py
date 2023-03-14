@@ -708,7 +708,7 @@ def execute(args):
     # Since we have these keys defined in two places, I want to be super sure
     # that the labels match.
     assert sorted(kernel_creation_functions.keys()) == (
-        sorted(ARGS_SPEC['args']['decay_function']['options']))
+        sorted(MODEL_SPEC['args']['decay_function']['options']))
 
     decay_function = args['decay_function']
     LOGGER.info(f'Using decay function {decay_function}')
@@ -935,7 +935,7 @@ def execute(args):
                 index=False, name=None))
     else:
         valid_options = ', '.join(
-            ARGS_SPEC['args']['search_radius_mode']['options'].keys())
+            MODEL_SPEC['args']['search_radius_mode']['options'].keys())
         raise ValueError(
             "Invalid search radius mode provided: "
             f"{args['search_radius_mode']}; must be one of {valid_options}")
@@ -1783,9 +1783,9 @@ def _reclassify_urban_nature_area(
         target_datatype=gdal.GDT_Float32,
         target_nodata=FLOAT32_NODATA,
         error_details={
-            'raster_name': ARGS_SPEC['args']['lulc_raster_path']['name'],
+            'raster_name': MODEL_SPEC['args']['lulc_raster_path']['name'],
             'column_name': 'urban_nature',
-            'table_name': ARGS_SPEC['args']['lulc_attribute_table']['name'],
+            'table_name': MODEL_SPEC['args']['lulc_attribute_table']['name'],
         }
     )
 
@@ -2625,4 +2625,4 @@ def _mask_raster(source_raster_path, mask_raster_path, target_raster_path):
 
 def validate(args, limit_to=None):
     return validation.validate(
-        args, ARGS_SPEC['args'], ARGS_SPEC['args_with_spatial_overlap'])
+        args, MODEL_SPEC['args'], MODEL_SPEC['args_with_spatial_overlap'])
