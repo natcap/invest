@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 
 import React from 'react';
-import { ipcMain, ipcRenderer, shell } from 'electron';
+import { ipcRenderer, shell } from 'electron';
 import { render, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import userEvent from '@testing-library/user-event';
