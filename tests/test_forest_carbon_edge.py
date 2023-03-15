@@ -349,7 +349,7 @@ class ForestCarbonEdgeTests(unittest.TestCase):
 
 
 class ForestCarbonEdgeValidationTests(unittest.TestCase):
-    """Tests for the Forest Carbon Model ARGS_SPEC and validation."""
+    """Tests for the Forest Carbon Model MODEL_SPEC and validation."""
 
     def setUp(self):
         """Create a temporary workspace."""

@@ -4,6 +4,7 @@ import PropTypes from 'prop-types';
 import Button from 'react-bootstrap/Button';
 import OverlayTrigger from 'react-bootstrap/OverlayTrigger';
 import Tooltip from 'react-bootstrap/Tooltip';
+import { withTranslation } from 'react-i18next';
 
 import InvestJob from '../../InvestJob';
 import { fetchDatastackFromFile } from '../../server_requests';
@@ -15,7 +16,7 @@ const { ipcRenderer } = window.Workbench.electron;
  * Render a button that loads args from a datastack, parameterset, or logfile.
  * Opens a native OS filesystem dialog to browse to a file.
  */
-export default class OpenButton extends React.Component {
+class OpenButton extends React.Component {
   constructor(props) {
     super(props);
     this.browseFile = this.browseFile.bind(this);
@@ -35,7 +36,8 @@ export default class OpenButton extends React.Component {
   }
 
   render() {
-    const tipText = _('Browse to a datastack (.json) or InVEST logfile (.txt)');
+    const { t } = this.props;
+    const tipText = t('Browse to a datastack (.json) or InVEST logfile (.txt)');
     return (
       <OverlayTrigger
         placement="left"
@@ -47,7 +49,7 @@ export default class OpenButton extends React.Component {
           onClick={this.browseFile}
           variant="outline-dark"
         >
-          {_("Open")}
+          {t("Open")}
         </Button>
       </OverlayTrigger>
     );
@@ -57,3 +59,5 @@ export default class OpenButton extends React.Component {
 OpenButton.propTypes = {
   openInvestModel: PropTypes.func.isRequired,
 };
+
+export default withTranslation()(OpenButton);

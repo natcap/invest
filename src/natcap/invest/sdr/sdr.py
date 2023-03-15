@@ -27,9 +27,7 @@ from . import sdr_core
 
 LOGGER = logging.getLogger(__name__)
 
-INVALID_ID_MSG = gettext('{number} features have a non-integer ws_id field')
-
-ARGS_SPEC = {
+MODEL_SPEC = {
     "model_name": MODEL_METADATA["sdr"].model_title,
     "pyname": MODEL_METADATA["sdr"].pyname,
     "userguide": MODEL_METADATA["sdr"].userguide,
@@ -78,13 +76,9 @@ ARGS_SPEC = {
         },
         "watersheds_path": {
             "type": "vector",
-            "fields": {
-                "ws_id": {
-                    "type": "integer",
-                    "about": gettext("Unique identifier for the watershed.")}
-            },
             "geometries": spec_utils.POLYGONS,
             "projected": True,
+            "fields": {},
             "about": gettext(
                 "Map of the boundaries of the watershed(s) over which to "
                 "aggregate results. Each watershed should contribute to a "
@@ -137,13 +131,276 @@ ARGS_SPEC = {
         },
         "drainage_path": {
             "type": "raster",
-            "bands": {1: {"type": "number", "units": u.none}},
+            "bands": {1: {"type": "integer"}},
             "required": False,
             "about": gettext(
                 "Map of locations of artificial drainages that drain to the "
                 "watershed. Pixels with 1 are drainages and are treated like "
                 "streams. Pixels with 0 are not drainages."),
             "name": gettext("drainages")
+        }
+    },
+    "outputs": {
+        "avoided_erosion.tif": {
+            "about": "The contribution of vegetation to keeping soil from eroding from each pixel. (Eq. (82))",
+            "bands": {1: {
+                "type": "number",
+                "units": u.metric_ton/u.pixel
+            }}
+        },
+        "avoided_export.tif": {
+            "about": "The contribution of vegetation to keeping erosion from entering a stream. This combines local/on-pixel sediment retention with trapping of erosion from upslope of the pixel. (Eq. (83))",
+            "bands": {1: {
+                "type": "number",
+                "units": u.metric_ton/u.pixel
+            }}
+        },
+        "rkls.tif": {
+            "bands": {1: {
+                "type": "number",
+                "units": u.metric_ton/u.pixel
+            }},
+            "about": "Total potential soil loss per pixel in the original land cover from the RKLS equation. Equivalent to the soil loss for bare soil. (Eq. (68), without applying the C or P factors)."
+        },
+        "sed_deposition.tif": {
+            "about": "The total amount of sediment deposited on the pixel from upslope sources as a result of trapping. (Eq. (80))",
+            "bands": {1: {
+                "type": "number",
+                "units": u.metric_ton/u.pixel
+            }}
+        },
+        "sed_export.tif": {
+            "about": "The total amount of sediment exported from each pixel that reaches the stream. (Eq. (76))",
+            "bands": {1: {
+                "type": "number",
+                "units": u.metric_ton/u.pixel
+            }}
+        },
+        "stream.tif": spec_utils.STREAM,
+        "stream_and_drainage.tif": {
+            "created_if": "drainage_path",
+            "about": "This raster is the union of that layer with the calculated stream layer(Eq. (85)). Values of 1 represent streams, values of 0 are non-stream pixels.",
+            "bands": {1: {"type": "integer"}}
+        },
+        "usle.tif": {
+            "about": "Total potential soil loss per pixel in the original land cover calculated from the USLE equation. (Eq. (68))",
+            "bands": {1: {
+                "type": "number",
+                "units": u.metric_ton/u.pixel
+            }}
+        },
+        "watershed_results_sdr.shp": {
+            "about": "Table containing biophysical values for each watershed",
+            "geometries": spec_utils.POLYGONS,
+            "fields": {
+                "sed_export": {
+                    "type": "number",
+                    "units": u.metric_ton,
+                    "about": "Total amount of sediment exported to the stream per watershed. (Eq. (77) with sum calculated over the watershed area)"
+                },
+                "usle_tot": {
+                    "type": "number",
+                    "units": u.metric_ton,
+                    "about": "Total amount of potential soil loss in each watershed calculated by the USLE equation. (Sum of USLE from (68) over the watershed area)"
+                },
+                "avoid_exp": {
+                    "type": "number",
+                    "units": u.metric_ton,
+                    "about": "The sum of avoided export in the watershed."
+                },
+                "avoid_eros": {
+                    "type": "number",
+                    "units": u.metric_ton,
+                    "about": "The sum of avoided local erosion in the watershed"
+                },
+                "sed_dep": {
+                    "type": "number",
+                    "units": u.metric_ton,
+                    "about": "Total amount of sediment deposited on the landscape in each watershed, which does not enter the stream."
+                }
+            }
+        },
+        "intermediate_outputs": {
+            "type": "directory",
+            "contents": {
+                "cp.tif": {
+                    "about": gettext(
+                        "CP factor derived by mapping usle_c and usle_p from "
+                        "the biophysical table to the LULC raster."),
+                    "bands": {1: {"type": "ratio"}}
+                },
+                "d_dn.tif": {
+                    "about": gettext(
+                        "Downslope factor of the index of connectivity (Eq. (74))"),
+                    "bands": {1: {"type": "number", "units": u.none}}
+                },
+                "d_up.tif": {
+                    "about": gettext(
+                        "Upslope factor of the index of connectivity (Eq. (73))"),
+                    "bands": {1: {"type": "number", "units": u.none}}
+                },
+                "e_prime.tif": {
+                    "about": gettext(
+                        "Sediment downslope deposition, the amount of sediment "
+                        "from a given pixel that does not reach a stream (Eq. (78))"),
+                    "bands": {1: {
+                        "type": "number",
+                        "units": u.metric_ton/(u.hectare*u.year)
+                    }}
+                },
+                "f.tif": {
+                    "about": gettext(
+                        "Map of sediment flux for sediment that does not "
+                        "reach the stream (Eq. (81))"),
+                    "bands": {1: {
+                        "type": "number",
+                        "units": u.metric_ton/(u.hectare*u.year)
+                    }}
+                },
+                "flow_accumulation.tif": spec_utils.FLOW_ACCUMULATION,
+                "flow_direction.tif": spec_utils.FLOW_DIRECTION,
+                "ic.tif": {
+                    "about": gettext("Index of connectivity (Eq. (70))"),
+                    "bands": {1: {
+                        "type": "number",
+                        "units": u.none
+                    }}
+                },
+                "ls.tif": {
+                    "about": gettext("LS factor for USLE (Eq. (69))"),
+                    "bands": {1: {
+                        "type": "number",
+                        "units": u.none
+                    }}
+                },
+                "pit_filled_dem.tif": spec_utils.FILLED_DEM,
+                "s_accumulation.tif": {
+                    "about": gettext(
+                        "Flow accumulation weighted by the thresholded slope. "
+                        "Used in calculating s_bar."),
+                    "bands": {1: {
+                        "type": "number",
+                        "units": u.none
+                    }}
+                },
+                "s_bar.tif": {
+                    "about": gettext(
+                        "Mean thresholded slope gradient of the upslope "
+                        "contributing area (in eq. (73))"),
+                    "bands": {1: {
+                        "type": "number",
+                        "units": u.none
+                    }}
+                },
+                "sdr_factor.tif": {
+                    "about": gettext("Sediment delivery ratio (Eq. (75))"),
+                    "bands": {1: {"type": "ratio"}}
+                },
+                "slope.tif": spec_utils.SLOPE,
+                "slope_threshold.tif": {
+                    "about": gettext(
+                        "Percent slope, thresholded to be no less than 0.005 "
+                        "and no greater than 1 (eq. (71)). 1 is equivalent to "
+                        "a 45 degree slope."),
+                    "bands": {1: {"type": "ratio"}}
+                },
+                "w_accumulation.tif": {
+                    "about": gettext(
+                        "Flow accumulation weighted by the thresholded "
+                        "cover-management factor. Used in calculating w_bar."),
+                    "bands": {1: {
+                        "type": "number",
+                        "units": u.none
+                    }}
+                },
+                "w_bar.tif": {
+                    "about": gettext(
+                        "Mean thresholded cover-management factor for upslope "
+                        "contributing area (in eq. (73))"),
+                    "bands": {1: {"type": "ratio"}}
+                },
+                "w.tif": {
+                    "about": gettext(
+                        "Cover-management factor derived by mapping usle_c "
+                        "from the biophysical table to the LULC raster."),
+                    "bands": {1: {"type": "ratio"}}
+                },
+                "w_threshold.tif": {
+                    "about": gettext(
+                        "Cover-management factor thresholded to be no less "
+                        "than 0.001 (eq. (72))"),
+                    "bands": {1: {"type": "ratio"}}
+                },
+                "weighted_avg_aspect.tif": {
+                    "about": gettext(
+                        "Average aspect weighted by flow direction (in eq. (69))"),
+                    "bands": {1: {"type": "number", "units": u.none}}
+                },
+                "what_drains_to_stream.tif": {
+                    "about": gettext(
+                        "Map of which pixels drain to a stream. A value of "
+                        "1 means that at least some of the runoff from that "
+                        "pixel drains to a stream in stream.tif. A value of 0 "
+                        "means that it does not drain at all to any stream "
+                        "in stream.tif."),
+                    "bands": {1: {"type": "integer"}}
+                },
+                "ws_inverse.tif": {
+                    "about": gettext(
+                        "Inverse of the thresholded cover-management factor "
+                        "times the thresholded slope (in eq. (74))"),
+                    "bands": {1: {"type": "ratio"}}
+                },
+                "churn_dir_not_for_humans": {
+                    "type": "directory",
+                    "contents": {
+                        "aligned_dem.tif": {
+                            "about": gettext(
+                                "Copy of the input DEM, clipped to the extent "
+                                "of the other raster inputs."),
+                            "bands": {1: {
+                                "type": "number",
+                                "units": u.meter
+                            }}
+                        },
+                        "aligned_drainage.tif": {
+                            "about": gettext(
+                                "Copy of the input drainage map, clipped to "
+                                "the extent of the other raster inputs and "
+                                "aligned to the DEM."),
+                            "bands": {1: {"type": "integer"}},
+                        },
+                        "aligned_erodibility.tif": {
+                            "about": gettext(
+                                "Copy of the input erodibility map, clipped to "
+                                "the extent of the other raster inputs and "
+                                "aligned to the DEM."),
+                            "bands": {1: {
+                                "type": "number",
+                                "units": u.metric_ton*u.hectare*u.hour/(u.hectare*u.megajoule*u.millimeter)
+                            }}
+                        },
+                        "aligned_erosivity.tif": {
+                            "about": gettext(
+                                "Copy of the input erosivity map, clipped to "
+                                "the extent of the other raster inputs and "
+                                "aligned to the DEM."),
+                            "bands": {1: {
+                                "type": "number",
+                                "units": u.megajoule*u.millimeter/(u.hectare*u.hour*u.year)
+                            }}
+                        },
+                        "aligned_lulc.tif": {
+                            "about": gettext(
+                                "Copy of the input drainage map, clipped to "
+                                "the extent of the other raster inputs and "
+                                "aligned to the DEM."),
+                            "bands": {1: {"type": "integer"}},
+                        },
+                        "taskgraph.db": {}
+                    }
+                }
+            }
         }
     }
 }
@@ -1434,28 +1691,5 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
-    validation_warnings = validation.validate(
-        args, ARGS_SPEC['args'], ARGS_SPEC['args_with_spatial_overlap'])
-
-    invalid_keys = validation.get_invalid_keys(validation_warnings)
-    sufficient_keys = validation.get_sufficient_keys(args)
-
-    if ('watersheds_path' not in invalid_keys and
-            'watersheds_path' in sufficient_keys):
-        # The watersheds vector must have an integer column called WS_ID.
-        vector = gdal.OpenEx(args['watersheds_path'], gdal.OF_VECTOR)
-        layer = vector.GetLayer()
-        n_invalid_features = 0
-        for feature in layer:
-            try:
-                int(feature.GetFieldAsString('ws_id'))
-            except ValueError:
-                n_invalid_features += 1
-
-        if n_invalid_features:
-            validation_warnings.append((
-                ['watersheds_path'],
-                INVALID_ID_MSG.format(number=n_invalid_features)))
-            invalid_keys.add('watersheds_path')
-
-    return validation_warnings
+    return validation.validate(
+        args, MODEL_SPEC['args'], MODEL_SPEC['args_with_spatial_overlap'])
