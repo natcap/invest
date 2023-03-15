@@ -513,7 +513,6 @@ MODEL_SPEC = {
                         f"search_radius_mode == '{RADIUS_OPT_URBAN_NATURE}'",
                 },
 
-
                 # When RADIUS_OPT_POP_GROUP
                 "population_in_[POP_GROUP].tif": {
                     "about": gettext(
