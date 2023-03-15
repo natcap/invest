@@ -301,6 +301,20 @@ jobs:
       - name: Make install
         run: make install
 
+        # Not caching chocolatey packages because the cache may not be reliable
+        # https://github.com/chocolatey/choco/issues/2134
+        # and this step only takes about 30 seconds.
+      - name: Install build dependencies (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: powershell
+        run: |
+          choco install zip unzip
+          $env:PATH += ";C:\ProgramData\chocolatey\bin"
+          refreshenv  # Choco-provided command to reload environment variables
+
+      - name: Build userguide
+        run: make userguide
+
       - name: Build binaries
         run: make CONDA=micromamba binaries
 

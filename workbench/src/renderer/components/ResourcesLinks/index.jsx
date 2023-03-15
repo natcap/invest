@@ -2,10 +2,9 @@ import React from 'react';
 
 import PropTypes from 'prop-types';
 import { MdOpenInNew } from 'react-icons/md';
-
-import UG_ROOT from '../../userguideURL';
-import { ipcMainChannels } from '../../../main/ipcMainChannels';
 import { useTranslation } from 'react-i18next';
+
+import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
 const { ipcRenderer } = window.Workbench.electron;
 
@@ -43,10 +42,20 @@ const FORUM_TAGS = {
 /**
  * Open the target href in the default web browser.
  */
-function handleClick(event) {
+function handleForumClick(event) {
   event.preventDefault();
   ipcRenderer.send(
     ipcMainChannels.OPEN_EXTERNAL_URL, event.currentTarget.href
+  );
+}
+
+/**
+ * Open the target href in an electron window.
+ */
+function handleUGClick(event) {
+  event.preventDefault();
+  ipcRenderer.send(
+    ipcMainChannels.OPEN_LOCAL_HTML, event.currentTarget.href
   );
 }
 
@@ -65,9 +74,8 @@ export default function ResourcesTab(props) {
     forumURL = `${FORUM_ROOT}/tag/${tagName}`;
   }
 
-  const userGuideURL = `${UG_ROOT}/${docs}#data-needs`;
-
   const { t, i18n } = useTranslation();
+  const userGuideURL = `${window.Workbench.USERGUIDE_PATH}/${i18n.language}/${docs}`;
 
   return (
     <React.Fragment>
@@ -75,7 +83,7 @@ export default function ResourcesTab(props) {
         href={userGuideURL}
         title={userGuideURL}
         aria-label="go to user's guide in web browser"
-        onClick={handleClick}
+        onClick={handleUGClick}
       >
         <MdOpenInNew className="mr-1" />
         {t("User's Guide")}
@@ -84,7 +92,7 @@ export default function ResourcesTab(props) {
         href={forumURL}
         title={forumURL}
         aria-label="go to frequently asked questions in web browser"
-        onClick={handleClick}
+        onClick={handleForumClick}
       >
         <MdOpenInNew className="mr-1" />
         {t("Frequently Asked Questions")}

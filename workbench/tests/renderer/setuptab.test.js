@@ -1,4 +1,4 @@
-import { ipcRenderer, shell } from 'electron';
+import { ipcRenderer } from 'electron';
 import React from 'react';
 import {
   createEvent, fireEvent, render, waitFor, within
@@ -12,6 +12,7 @@ import {
 } from '../../src/renderer/server_requests';
 import setupOpenExternalUrl from '../../src/main/setupOpenExternalUrl';
 import { removeIpcMainListeners } from '../../src/main/main';
+import { ipcMainChannels } from '../../src/main/ipcMainChannels';
 
 jest.mock('../../src/renderer/server_requests');
 
@@ -323,6 +324,8 @@ describe('Arguments form interactions', () => {
   });
 
   test('Open info dialog, expect text & link', async () => {
+    const spy = jest.spyOn(ipcRenderer, 'send')
+      .mockImplementation(() => Promise.resolve());
     const spec = baseArgsSpec('directory');
     const { findByText, findByRole } = renderSetupFromSpec(spec, UI_SPEC);
     userEvent.click(await findByRole('button', { name: /info about/ }));
@@ -330,7 +333,8 @@ describe('Arguments form interactions', () => {
     const link = await findByRole('link', { name: /user guide/ });
     userEvent.click(link);
     await waitFor(() => {
-      expect(shell.openExternal).toHaveBeenCalledTimes(1);
+      const calledChannels = spy.mock.calls.map(call => call[0]);
+      expect(calledChannels).toContain(ipcMainChannels.OPEN_LOCAL_HTML);
     });
   });
 });

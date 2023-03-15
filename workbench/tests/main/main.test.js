@@ -195,6 +195,7 @@ describe('createWindow', () => {
       ipcMainChannels.INVEST_READ_LOG,
       ipcMainChannels.SHOW_ITEM_IN_FOLDER,
       ipcMainChannels.OPEN_EXTERNAL_URL,
+      ipcMainChannels.OPEN_LOCAL_HTML,
     ];
     // Even with mocking, the 'on' method is a real event handler,
     // so we can get it's registered events from the EventEmitter.

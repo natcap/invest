@@ -36,6 +36,10 @@ const config = {
       to: 'invest',
     },
     {
+      from: '../dist/userguide',
+      to: 'documentation',
+    },
+    {
       from: 'resources/storage_token.txt',
       to: 'storage_token.txt',
     },

@@ -54,6 +54,8 @@ Unreleased Changes
     * Options' display names will now be shown in dropdown menus
       (`#1217 <https://github.com/natcap/invest/issues/1217>`_)
     * Represent boolean inputs with a toggle switch rather than radio buttons.
+    * Includes local versions of the User Guide in English, Spanish, & Chinese.
+      https://github.com/natcap/invest/issues/851
 * DelineateIt
     * DelineateIt now uses ``pygeoprocessing.routing.extract_streams_d8`` for D8
       stream thresholding. https://github.com/natcap/invest/issues/1143
