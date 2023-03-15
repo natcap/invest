@@ -445,9 +445,6 @@ MODEL_SPEC = {
                     ),
                     "bands": {1: {'type': 'number', 'units': u.count}},
                 },
-
-
-
                 # when RADIUS_OPT_UNIFORM
                 "distance_weighted_population_within_[SEARCH_RADIUS].tif": {
                     "about": gettext(
@@ -512,7 +509,6 @@ MODEL_SPEC = {
                     "created_if":
                         f"search_radius_mode == '{RADIUS_OPT_URBAN_NATURE}'",
                 },
-
 
                 # When RADIUS_OPT_POP_GROUP
                 "population_in_[POP_GROUP].tif": {
