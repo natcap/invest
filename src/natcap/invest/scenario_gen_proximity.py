@@ -1,28 +1,26 @@
 """Scenario Generation: Proximity Based."""
-import math
-import shutil
-import os
-import logging
-import tempfile
-import struct
-import heapq
-import time
 import collections
+import heapq
+import logging
+import math
+import os
+import shutil
+import struct
+import tempfile
+import time
 
 import numpy
-from osgeo import osr
-from osgeo import gdal
-import scipy
 import pygeoprocessing
+import scipy
 import taskgraph
+from osgeo import gdal
 
-from . import utils
+from . import gettext
 from . import spec_utils
-from .unit_registry import u
+from . import utils
 from . import validation
 from .model_metadata import MODEL_METADATA
-from . import gettext
-
+from .unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
 
@@ -446,7 +444,8 @@ def _convert_landscape(
     }
     # a sigma of 1.0 gives nice visual results to smooth pixel level artifacts
     # since a pixel is the 1.0 unit
-    _make_gaussian_kernel_path(1.0, tmp_file_registry['gaussian_kernel'])
+    utils.gaussian_decay_kernel_raster(
+        1.0, tmp_file_registry['gaussian_kernel'])
 
     # create the output raster first as a copy of the base landcover so it can
     # be looped on for each step
@@ -871,62 +870,6 @@ def _convert_by_score(
     _flush_cache_to_band(
         data_array, row_array, col_array, next_index, dirty_blocks, out_band,
         stats_cache)
-
-
-def _make_gaussian_kernel_path(sigma, kernel_path):
-    """Create a 2D Gaussian kernel.
-
-    Args:
-        sigma (float): the sigma as in the classic Gaussian function
-        kernel_path (string): path to raster on disk to write the gaussian
-            kernel.
-
-    Returns:
-        None.
-
-    """
-    # going 3.0 times out from the sigma gives you over 99% of area under
-    # the guassian curve
-    max_distance = sigma * 3.0
-    kernel_size = int(numpy.round(max_distance * 2 + 1))
-
-    driver = gdal.GetDriverByName('GTiff')
-    kernel_dataset = driver.Create(
-        kernel_path.encode('utf-8'), kernel_size, kernel_size, 1,
-        gdal.GDT_Float32, options=[
-            'BIGTIFF=IF_SAFER', 'TILED=YES', 'BLOCKXSIZE=256',
-            'BLOCKYSIZE=256'])
-
-    # Make some kind of geotransform, it doesn't matter what but
-    # will make GIS libraries behave better if it's all defined
-    kernel_dataset.SetGeoTransform([0, 1, 0, 0, 0, -1])
-    srs = osr.SpatialReference()
-    srs.SetWellKnownGeogCS('WGS84')
-    kernel_dataset.SetProjection(srs.ExportToWkt())
-
-    kernel_band = kernel_dataset.GetRasterBand(1)
-    kernel_band.SetNoDataValue(-9999)
-
-    col_index = numpy.array(range(kernel_size))
-    running_sum = 0.0
-    for row_index in range(kernel_size):
-        distance_kernel_row = numpy.sqrt(
-            (row_index - max_distance) ** 2 +
-            (col_index - max_distance) ** 2).reshape(1, kernel_size)
-        kernel = numpy.where(
-            distance_kernel_row > max_distance, 0.0,
-            (1 / (2.0 * numpy.pi * sigma ** 2) *
-             numpy.exp(-distance_kernel_row**2 / (2 * sigma ** 2))))
-        running_sum += numpy.sum(kernel)
-        kernel_band.WriteArray(kernel, xoff=0, yoff=row_index)
-
-    kernel_dataset.FlushCache()
-    for kernel_data, kernel_block in pygeoprocessing.iterblocks(
-            (kernel_path, 1)):
-        # divide by sum to normalize
-        kernel_block /= running_sum
-        kernel_band.WriteArray(
-            kernel_block, xoff=kernel_data['xoff'], yoff=kernel_data['yoff'])
 
 
 @validation.invest_validator

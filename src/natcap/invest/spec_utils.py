@@ -516,7 +516,8 @@ def describe_arg_from_spec(name, spec):
 
     # Nested args may not have an about section
     if 'about' in spec:
-        about_string = f': {spec["about"]}'
+        sanitized_about_string = spec["about"].replace("_", "\\_")
+        about_string = f': {sanitized_about_string}'
     else:
         about_string = ''
 

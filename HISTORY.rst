@@ -14,7 +14,6 @@
   - Habitat Quality
   - HRA
   - NDR
-  - Visitation: Recreation and Tourism
   - RouteDEM
   - Scenario Generator
   - Scenic Quality
@@ -22,9 +21,11 @@
   - Seasonal Water Yield
   - Urban Cooling
   - Urban Flood Risk
+  - Urban Nature Access
   - Urban Stormwater Retention
   - Wave Energy
   - Wind Energy
+  - Visitation: Recreation and Tourism
 
   Workbench fixes/enhancements:
   - Workbench
@@ -94,6 +95,12 @@ Unreleased Changes
     * If a soil group raster contains any pixels that are not in the set of
       allowed soil groups (anything other than 1, 2, 3 or 4), a human readable
       exception will now be raised. https://github.com/natcap/invest/issues/1193
+* Urban Nature Access
+    * Added the Urban Nature Access model to InVEST. The model for urban
+      nature access provides a measure of both the supply of urban nature
+      and the demand for nature by the urban population, ultimately
+      calculating the balance between supply and demand. See the corresponding
+      User's Guide chapter for documentation.
 * Visitation: Recreation and Tourism
     * Fixed a ``FutureWarning`` when reading in CSVs. This fix does not
       otherwise affect model behavior. https://github.com/natcap/invest/issues/1202

@@ -2,7 +2,7 @@
 DATA_DIR := data
 GIT_SAMPLE_DATA_REPO        := https://bitbucket.org/natcap/invest-sample-data.git
 GIT_SAMPLE_DATA_REPO_PATH   := $(DATA_DIR)/invest-sample-data
-GIT_SAMPLE_DATA_REPO_REV    := 5a39a92a1b32adcdbe71ddbb754bab4ab8f00b69
+GIT_SAMPLE_DATA_REPO_REV    := 5992790e63a5b906aa126cd5d72f019a985925e3
 
 GIT_TEST_DATA_REPO          := https://bitbucket.org/natcap/invest-test-data.git
 GIT_TEST_DATA_REPO_PATH     := $(DATA_DIR)/invest-test-data
@@ -10,7 +10,7 @@ GIT_TEST_DATA_REPO_REV      := 29d8da596ff197d3cc6e355e7cd4313945b89b71
 
 GIT_UG_REPO                 := https://github.com/natcap/invest.users-guide
 GIT_UG_REPO_PATH            := doc/users-guide
-GIT_UG_REPO_REV             := 019a80680601b8720c54a6a5f78751d50251d1f5
+GIT_UG_REPO_REV             := 49fcb5b30b0f0336e932e6e32e662284a3e711af
 
 ENV = "./env"
 ifeq ($(OS),Windows_NT)
@@ -308,6 +308,7 @@ ZIPDIRS = Annual_Water_Yield \
 		  Seasonal_Water_Yield \
 		  UrbanCoolingModel \
 		  UrbanFloodMitigation \
+		  UrbanNatureAccess \
 		  UrbanStormwater \
 		  WaveEnergy \
 		  WindEnergy

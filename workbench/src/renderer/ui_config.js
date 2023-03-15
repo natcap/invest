@@ -335,6 +335,36 @@ const UI_SPEC = {
       ['built_infrastructure_vector_path', 'infrastructure_damage_loss_table_path'],
     ],
   },
+  urban_nature_access: {
+    order: [
+      ['workspace_dir', 'results_suffix'],
+      ['lulc_raster_path', 'lulc_attribute_table'],
+      [
+        'population_raster_path',
+        'admin_boundaries_vector_path',
+        'population_group_radii_table',
+        'urban_nature_demand',
+        'aggregate_by_pop_group',
+      ],
+      [
+        'search_radius_mode',
+        'decay_function',
+        //'decay_function_power_beta',
+        'search_radius',
+      ],
+    ],
+    enabledFunctions: {
+      search_radius: ((state) => (
+        isSufficient('search_radius_mode', state)
+        && state.argsValues.search_radius_mode.value === 'uniform radius')),
+      // decay_function_power_beta: ((state) => (
+      //   isSufficient('decay_function', state)
+      //   && state.argsValues.decay_function.value === 'power')),
+      population_group_radii_table: ((state) => (
+        isSufficient('search_radius_mode', state)
+        && state.argsValues.search_radius_mode.value === 'radius per population group')),
+    },
+  },
   wave_energy: {
     order: [
       ['workspace_dir', 'results_suffix'],

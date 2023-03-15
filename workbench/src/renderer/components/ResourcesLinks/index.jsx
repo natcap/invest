@@ -35,6 +35,7 @@ const FORUM_TAGS = {
   stormwater: 'urban-stormwater',
   urban_cooling_model: 'urban-cooling',
   urban_flood_risk_mitigation: 'urban-flood',
+  urban_nature_access: 'urban-nature-access',
   wave_energy: 'wave-energy',
   wind_energy: 'wind-energy',
 };
