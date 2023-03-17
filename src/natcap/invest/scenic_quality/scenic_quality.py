@@ -543,6 +543,10 @@ def _determine_valid_viewpoints(dem_path, structures_path):
 
             # Coordinates in map units to pass to viewshed algorithm
             geometry = point.GetGeometryRef()
+            if geometry.GetGeometryType() not in {
+                    ogr.wkbPoint, ogr.wkbMultiPoint}:
+                raise AssertionError("")
+
             viewpoint = (geometry.GetX(), geometry.GetY())
 
             if (not bbox_minx <= viewpoint[0] <= bbox_maxx or
