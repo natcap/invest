@@ -13,9 +13,6 @@ quantify and forecast this return. InVEST enables decision-makers to quantify
 the importance of natural capital, to assess the tradeoffs associated with
 alternative choices, and to integrate conservation and human development.
 
-Older versions of InVEST ran as script tools in the ArcGIS ArcToolBox environment,
-but have almost all been ported over to a purely open-source python environment.
-
 InVEST is licensed under a permissive, modified BSD license.
 
 For more information, see:
@@ -33,16 +30,10 @@ Installing InVEST
 Python Dependencies
 -------------------
 
-Dependencies for ``natcap.invest`` are listed in ``requirements.txt``.
-Additionally, a python binding for Qt is needed to use the InVEST GUI, but is
-not required for development against ``natcap.invest``.  InVEST uses the
-interface library ``qtpy`` to support ``PyQt5`` and ``PySide2``.  In our 
-experience, ``PyQt5`` and ``PySide2`` have been easiest to work with.  One of
-these bindings for Qt must be installed in order to use the GUI.
+Runtime dependencies for ``natcap.invest`` are listed in ``requirements.txt``.
 
-
-Installing from Source
-----------------------
+Installing via pip
+------------------
 
 If you have a compiler installed and configured for your system, and
 dependencies installed, the easiest way to install InVEST as a python package
@@ -61,14 +52,14 @@ source tree:
 
 .. code-block:: console
 
-    $ pip install git+https://github.com/natcap/invest@master#egg=natcap.invest
+    $ pip install "git+https://github.com/natcap/invest@main#egg=natcap.invest"
 
 Development
 ===========
 
-Dependencies for developing InVEST are listed in ``requirements.txt`` and in
-``requirements-dev.txt``.  If you're running a GUI, you'll need a Qt binding
-(see above) and the packages installed in ``requirements-gui.txt``.
+Dependencies for InVEST are listed in ``requirements.txt`` (runtime
+requirements), ``requirements-dev.txt`` (development requirements), and
+``requirements-docs.txt`` (for building documentation).
 
 Support
 =======
