@@ -6,11 +6,11 @@ GIT_SAMPLE_DATA_REPO_REV    := 5992790e63a5b906aa126cd5d72f019a985925e3
 
 GIT_TEST_DATA_REPO          := https://bitbucket.org/natcap/invest-test-data.git
 GIT_TEST_DATA_REPO_PATH     := $(DATA_DIR)/invest-test-data
-GIT_TEST_DATA_REPO_REV      := 29d8da596ff197d3cc6e355e7cd4313945b89b71
+GIT_TEST_DATA_REPO_REV      := a89253d83d5f70a8ea2d8a951b2d47d603505f14
 
 GIT_UG_REPO                 := https://github.com/natcap/invest.users-guide
 GIT_UG_REPO_PATH            := doc/users-guide
-GIT_UG_REPO_REV             := 49fcb5b30b0f0336e932e6e32e662284a3e711af
+GIT_UG_REPO_REV             := f44ca0cdb8bcdbc98cd10a92caeddd8ac399e6d5
 
 ENV = "./env"
 ifeq ($(OS),Windows_NT)
