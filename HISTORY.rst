@@ -35,6 +35,14 @@
 
 .. :changelog:
 
+Unreleased Changes
+------------------
+
+* HRA
+    * Fixed a bug in HRA where the model would error when all exposure and
+      consequence criteria were skipped for a single habitat. The model now
+      correctly handles this case. https://github.com/natcap/invest/issues/1250
+
 3.13.0 (2023-03-17)
 -------------------
 * General
