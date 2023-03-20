@@ -19,7 +19,6 @@ from natcap.invest import set_locale
 from natcap.invest import ui_server
 from natcap.invest import utils
 
-
 DEFAULT_EXIT_CODE = 1
 LOGGER = logging.getLogger(__name__)
 
@@ -459,6 +458,11 @@ def main(user_args=None):
                        'Starting model with parameters: \n%s',
                        datastack.format_args_dict(parsed_datastack.args,
                                                   parsed_datastack.model_name))
+
+            # Logging extra information here for debug purposes in service of
+            # https://github.com/natcap/invest/issues/1167
+            logging.getLogger('gdal').setLevel(logging.DEBUG)
+            LOGGER.info(f"#1167 FS Encoding: {sys.getfilesystemencoding()}")
 
             # We're deliberately not validating here because the user
             # can just call ``invest validate <datastack>`` to validate.
