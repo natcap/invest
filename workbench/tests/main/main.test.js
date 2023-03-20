@@ -109,7 +109,11 @@ describe('findInvestBinaries', () => {
   });
 });
 
-describe('extractZipInplace', () => {
+// For now, skipping on Windows as we've been unable to resolve a race condition
+// Fully addressing https://github.com/natcap/invest/issues/1239
+// probably means re-writing this test from scratch.
+const maybe = process.platform !== 'win32' ? describe : describe.skip;
+maybe('extractZipInplace', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'data-'));
   const zipPath = path.join(root, 'output.zip');
   let level1Dir;
@@ -179,9 +183,8 @@ describe('createWindow', () => {
       ipcMainChannels.SHOW_OPEN_DIALOG,
       ipcMainChannels.SHOW_SAVE_DIALOG,
       ipcMainChannels.IS_FIRST_RUN,
-      ipcMainChannels.SET_LANGUAGE,
+      ipcMainChannels.CHANGE_LANGUAGE,
       ipcMainChannels.GET_N_CPUS,
-      ipcMainChannels.IS_DEV_MODE,
       ipcMainChannels.INVEST_VERSION,
       ipcMainChannels.CHECK_STORAGE_TOKEN,
     ];
@@ -190,9 +193,9 @@ describe('createWindow', () => {
       ipcMainChannels.INVEST_RUN,
       ipcMainChannels.INVEST_KILL,
       ipcMainChannels.INVEST_READ_LOG,
-      ipcMainChannels.GETTEXT,
       ipcMainChannels.SHOW_ITEM_IN_FOLDER,
       ipcMainChannels.OPEN_EXTERNAL_URL,
+      ipcMainChannels.OPEN_LOCAL_HTML,
     ];
     // Even with mocking, the 'on' method is a real event handler,
     // so we can get it's registered events from the EventEmitter.

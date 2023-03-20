@@ -19,53 +19,54 @@ Machine-readable message catalog file. This is compiled from the corresponding P
 
 No changes are immediately needed when we add, remove, or edit strings that are translated. We only need to update the translations files when we are going to send them to the translator. Ideally this would happen for each language before each release, but that may not be possible, and that's okay. This process can happen at any time, whenever a translator is available to us. Any string for which a translation is unavailable will automatically fall back to the English version.
 
-When we are ready to get a new batch of translations, here is the process.
+When we are ready to get a new batch of translations, here is the process. These instructions assume you have defined the two-letter locale code in an environment variable `$LL`.
+
 
 1. Run the following from the root invest directory, replacing `<LANG>` with the language code:
 ```
 pybabel extract \
    --no-wrap \
    --project InVEST \
-   --version 3.10 \
    --msgid-bugs-address esoth@stanford.edu \
    --copyright-holder "Natural Capital Project" \
    --output src/natcap/invest/internationalization/messages.pot \
    src/
 
-pybabel update \  # update message catalog from template
-   --locale <LANG> \
+# update message catalog from template
+pybabel update \
+   --locale $LL \
    --input-file src/natcap/invest/internationalization/messages.pot \
-   --output-file src/natcap/invest/internationalization/locales/<LANG>/LC_MESSAGES/messages.po
+   --output-file src/natcap/invest/internationalization/locales/$LL/LC_MESSAGES/messages.po
 ```
 
 2. Check that the changes look correct, then commit:
 ```
 git diff
-git add src/natcap/invest/internationalization/messages.pot src/natcap/invest/internationalization/locales/<LANG>/LC_MESSAGES/messages.po
-git commit -m "extract message catalog template and update <LANG> catalog from it"
+git add src/natcap/invest/internationalization/messages.pot src/natcap/invest/internationalization/locales/$LL/LC_MESSAGES/messages.po
+git commit -m "extract message catalog template and update $LL catalog from it"
 ```
 This looks through the source code for strings wrapped in the `gettext(...)` function and writes them to the message catalog template. Then it updates the message catalog for the specificed language. New strings that don't yet have a translation will have an empty `msgstr` value. Previously translated messages that are no longer needed will be commented out but remain in the file. This will save translator time if they're needed again in the future.
 
-3. Send `src/natcap/invest/internationalization/locales/<LANG>/LC_MESSAGES/messages.po` to the translator and wait to get it back. The translator will fill in the `msgstr` values for any new or edited messages.
+3. Send `src/natcap/invest/internationalization/locales/$LL/LC_MESSAGES/messages.po` to the translator and wait to get it back. The translator will fill in the `msgstr` values for any new or edited messages.
 
-4. Replace `src/natcap/invest/internationalization/locales/<LANG>/LC_MESSAGES/messages.po` with the updated version received from the translator and commit.
+4. Replace `src/natcap/invest/internationalization/locales/$LL/LC_MESSAGES/messages.po` with the updated version received from the translator and commit.
 ```
-git add internationalization/locales/<LANG>/LC_MESSAGES/messages.po
-git commit -m "update <LANG> message catalog with new translations"
+git add internationalization/locales/$LL/LC_MESSAGES/messages.po
+git commit -m "update $LL message catalog with new translations"
 ```
 
 ## Process to add support for a new language
 
 ```
-mkdir -p src/natcap/invest/internationalization/locales/<LANG>/LC_MESSAGES/  # create the expected directory structure
-pybabel init --input-file src/natcap/invest/internationalization/messages.pot --output-file src/natcap/invest/internationalization/locales/<LANG>/LC_MESSAGES/messages.po --locale <LANG> # initialize the message catalog from the template
+mkdir -p src/natcap/invest/internationalization/locales/$LL/LC_MESSAGES/  # create the expected directory structure
+pybabel init --input-file src/natcap/invest/internationalization/messages.pot --output-file src/natcap/invest/internationalization/locales/$LL/LC_MESSAGES/messages.po --locale $LL # initialize the message catalog from the template
 ```
 Then follow the "Process to update translations" instructions above, starting from step 2.
 
 ## Which messages are translated?
 
 * Model titles
-* `ARGS_SPEC` `name` and `about` text
+* `MODEL_SPEC` `name` and `about` text
 * Validation messages
 * Strings that appear in the UI, such as button labels and tooltip text
 

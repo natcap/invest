@@ -1,4 +1,4 @@
-import { ipcRenderer, shell } from 'electron';
+import { ipcRenderer } from 'electron';
 import React from 'react';
 import {
   createEvent, fireEvent, render, waitFor, within
@@ -12,13 +12,14 @@ import {
 } from '../../src/renderer/server_requests';
 import setupOpenExternalUrl from '../../src/main/setupOpenExternalUrl';
 import { removeIpcMainListeners } from '../../src/main/main';
+import { ipcMainChannels } from '../../src/main/ipcMainChannels';
 
 jest.mock('../../src/renderer/server_requests');
 
 const MODULE = 'carbon';
 
 const VALIDATION_MESSAGE = 'invalid because';
-const BASE_ARGS_SPEC = {
+const BASE_MODEL_SPEC = {
   args: {
     arg: {
       name: 'foo',
@@ -37,14 +38,14 @@ const BASE_ARGS_SPEC = {
  */
 function baseArgsSpec(type) {
   // make a deep copy so we don't edit the original
-  const spec = JSON.parse(JSON.stringify(BASE_ARGS_SPEC));
+  const spec = JSON.parse(JSON.stringify(BASE_MODEL_SPEC));
   spec.args.arg.type = type;
   if (type === 'number') {
     spec.args.arg.units = 'foo unit';
   }
   return spec;
 }
-const UI_SPEC = { order: [Object.keys(BASE_ARGS_SPEC.args)] };
+const UI_SPEC = { order: [Object.keys(BASE_MODEL_SPEC.args)] };
 
 /**
  * Render a SetupTab component given the necessary specs.
@@ -53,8 +54,8 @@ const UI_SPEC = { order: [Object.keys(BASE_ARGS_SPEC.args)] };
  * @param {object} uiSpec - an invest UI spec for the same model
  * @returns {object} - containing the test utility functions returned by render
  */
-function renderSetupFromSpec(baseSpec, uiSpec) {
-  // some ARGS_SPEC boilerplate that is not under test,
+function renderSetupFromSpec(baseSpec, uiSpec, initValues = undefined) {
+  // some MODEL_SPEC boilerplate that is not under test,
   // but is required by PropType-checking
   const spec = { ...baseSpec };
   if (!spec.modelName) { spec.modelName = 'Eco Model'; }
@@ -67,7 +68,7 @@ function renderSetupFromSpec(baseSpec, uiSpec) {
       modelName={spec.modelName}
       argsSpec={spec.args}
       uiSpec={uiSpec}
-      argsInitValues={undefined}
+      argsInitValues={initValues}
       investExecute={() => {}}
       nWorkers="-1"
       sidebarSetupElementId="foo"
@@ -82,7 +83,7 @@ function renderSetupFromSpec(baseSpec, uiSpec) {
 describe('Arguments form input types', () => {
   beforeEach(() => {
     fetchValidation.mockResolvedValue(
-      [[Object.keys(BASE_ARGS_SPEC.args), VALIDATION_MESSAGE]]
+      [[Object.keys(BASE_MODEL_SPEC.args), VALIDATION_MESSAGE]]
     );
   });
 
@@ -124,22 +125,32 @@ describe('Arguments form input types', () => {
     expect(input).toHaveAttribute('type', 'text');
   });
 
-  test('render an unchecked radio button for a boolean', async () => {
+  test('render an unchecked toggle switch for a boolean', async () => {
     const spec = baseArgsSpec('boolean');
     const { findByLabelText } = renderSetupFromSpec(spec, UI_SPEC);
     const input = await findByLabelText(`${spec.args.arg.name}`);
-    expect(input).toHaveAttribute('type', 'radio');
+    // for some reason, the type is still checkbox when it renders as a switch
+    expect(input).toHaveAttribute('type', 'checkbox');
     expect(input).not.toBeChecked();
+  });
+
+  test('render a toggle with a value', async () => {
+    const spec = baseArgsSpec('boolean');
+    const { findByLabelText } = renderSetupFromSpec(spec, UI_SPEC, { arg: true });
+    const input = await findByLabelText(`${spec.args.arg.name}`);
+    // for some reason, the type is still checkbox when it renders as a switch
+    expect(input).toBeChecked();
   });
 
   test('render a select input for an option_string dict', async () => {
     const spec = baseArgsSpec('option_string');
     spec.args.arg.options = {
-      a: 'about a',
-      b: 'about b',
+      a: {'display_name': 'Option A'},
+      b: {'display_name': 'Option B'}
     };
     const { findByLabelText } = renderSetupFromSpec(spec, UI_SPEC);
     const input = await findByLabelText(`${spec.args.arg.name}`);
+    expect(input).toHaveDisplayValue('Option A')
     expect(input).toHaveValue('a');
     expect(input).not.toHaveValue('b');
   });
@@ -157,7 +168,7 @@ describe('Arguments form input types', () => {
 describe('Arguments form interactions', () => {
   beforeEach(() => {
     fetchValidation.mockResolvedValue(
-      [[Object.keys(BASE_ARGS_SPEC.args), VALIDATION_MESSAGE]]
+      [[Object.keys(BASE_MODEL_SPEC.args), VALIDATION_MESSAGE]]
     );
     setupOpenExternalUrl();
   });
@@ -243,7 +254,7 @@ describe('Arguments form interactions', () => {
   });
 
   test('Type fast & confirm validation waits for pause in typing', async () => {
-    const spy = jest.spyOn(SetupTab.prototype, 'investValidate');
+    const spy = jest.spyOn(SetupTab.WrappedComponent.prototype, 'investValidate');
     const spec = baseArgsSpec('directory');
     spec.args.arg.required = true;
     const { findByLabelText } = renderSetupFromSpec(spec, UI_SPEC);
@@ -259,7 +270,7 @@ describe('Arguments form interactions', () => {
   });
 
   test('Type slow & confirm validation waits for pause in typing', async () => {
-    const spy = jest.spyOn(SetupTab.prototype, 'investValidate');
+    const spy = jest.spyOn(SetupTab.WrappedComponent.prototype, 'investValidate');
     const spec = baseArgsSpec('directory');
     spec.args.arg.required = true;
     const { findByLabelText } = renderSetupFromSpec(spec, UI_SPEC);
@@ -313,6 +324,8 @@ describe('Arguments form interactions', () => {
   });
 
   test('Open info dialog, expect text & link', async () => {
+    const spy = jest.spyOn(ipcRenderer, 'send')
+      .mockImplementation(() => Promise.resolve());
     const spec = baseArgsSpec('directory');
     const { findByText, findByRole } = renderSetupFromSpec(spec, UI_SPEC);
     userEvent.click(await findByRole('button', { name: /info about/ }));
@@ -320,7 +333,8 @@ describe('Arguments form interactions', () => {
     const link = await findByRole('link', { name: /user guide/ });
     userEvent.click(link);
     await waitFor(() => {
-      expect(shell.openExternal).toHaveBeenCalledTimes(1);
+      const calledChannels = spy.mock.calls.map(call => call[0]);
+      expect(calledChannels).toContain(ipcMainChannels.OPEN_LOCAL_HTML);
     });
   });
 });

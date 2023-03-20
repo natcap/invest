@@ -502,15 +502,11 @@ input[type=text]::placeholder {
 	color: #a5a5a5;
 }
 
-/* Default sized Radio buttons are too small */
-.form-check-inline .form-check-input {
-	transform:scale(2.0);
+/* Default sized toggle switch too small */
+.form-switch {
+	transform:scale(1.5);
 	margin-left: 1rem;
-}
-
-.form-check-label {
-	padding-left: 0.5rem;
-	padding-right: 1rem;
+	margin-top: 0.6rem;
 }
 
 .invalid-feedback {

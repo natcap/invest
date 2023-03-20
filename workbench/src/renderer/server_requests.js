@@ -28,7 +28,7 @@ export async function getInvestModelNames() {
 }
 
 /**
- * Get the ARGS_SPEC dict from an invest model as a JSON.
+ * Get the MODEL_SPEC dict from an invest model as a JSON.
  *
  * @param {string} payload - model name as given by `invest list`
  * @returns {Promise} resolves object
@@ -185,6 +185,22 @@ export function writeParametersToFile(payload) {
         logger.debug(text);
         return text;
       })
+      .catch((error) => logger.error(error.stack))
+  );
+}
+
+
+/**
+ * Get the mapping of supported language codes to display names.
+ *
+ * @returns {Promise} resolves object
+ */
+export async function getSupportedLanguages() {
+  return (
+    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/languages`, {
+      method: 'get',
+    })
+      .then((response) => response.json())
       .catch((error) => logger.error(error.stack))
   );
 }

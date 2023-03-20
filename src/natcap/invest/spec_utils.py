@@ -5,13 +5,7 @@ import os
 import pint
 
 from . import gettext
-
-# the same unit registry instance should be shared across everything
-# load from custom unit defintions file
-# don't raise warnings when redefining units
-u = pint.UnitRegistry(on_redefinition='ignore')
-u.load_definitions(os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), 'unit_definitions.txt'))
+from .unit_registry import u
 
 # Specs for common arg types ##################################################
 WORKSPACE = {
@@ -133,6 +127,55 @@ LULC_TABLE_COLUMN = {
         "integer.")
 }
 
+# Specs for common outputs ####################################################
+TASKGRAPH_DIR = {
+    "type": "directory",
+    "about": (
+        "Cache that stores data between model runs. This directory contains no "
+        "human-readable data and you may ignore it."),
+    "contents": {
+        "taskgraph.db": {}
+    }
+}
+FILLED_DEM = {
+    "about": gettext("Map of elevation after any pits are filled"),
+    "bands": {1: {
+        "type": "number",
+        "units": u.meter
+    }}
+}
+FLOW_ACCUMULATION = {
+    "about": gettext("Map of flow accumulation"),
+    "bands": {1: {
+        "type": "number",
+        "units": u.none
+    }}
+}
+FLOW_DIRECTION = {
+    "about": gettext(
+        "MFD flow direction. Note: the pixel values should not "
+        "be interpreted directly. Each 32-bit number consists "
+        "of 8 4-bit numbers. Each 4-bit number represents the "
+        "proportion of flow into one of the eight neighboring "
+        "pixels."),
+    "bands": {1: {"type": "integer"}}
+}
+FLOW_DIRECTION_D8 = {
+    "about": gettext(
+        "D8 flow direction."),
+    "bands": {1: {"type": "integer"}}
+}
+SLOPE = {
+    "about": gettext(
+        "Percent slope, calculated from the pit-filled "
+        "DEM. 100 is equivalent to a 45 degree slope."),
+    "bands": {1: {"type": "percent"}}
+}
+STREAM = {
+    "about": "Stream network, created using flow direction and flow accumulation derived from the DEM and Threshold Flow Accumulation. Values of 1 represent streams, values of 0 are non-stream pixels.",
+    "bands": {1: {"type": "integer"}}
+}
+
 # geometry types ##############################################################
 # the full list of ogr geometry types is in an enum in
 # https://github.com/OSGeo/gdal/blob/master/gdal/ogr/ogr_core.h
@@ -176,7 +219,7 @@ def format_unit(unit):
 
     # Optionally use a pre-set format for a particular unit
     custom_formats = {
-        u.pixel: 'number of pixels',
+        u.pixel: gettext('number of pixels'),
         u.year_AD: '',  # don't need to mention units for a year input
         u.other: '',    # for inputs that can have any or multiple units
         # For soil erodibility (t*h*ha/(ha*MJ*mm)), by convention the ha's
@@ -185,7 +228,7 @@ def format_unit(unit):
         # this isn't a perfect solution
         # see https://github.com/hgrecco/pint/issues/1364
         u.t * u.hr / (u.MJ * u.mm): 't · h · ha / (ha · MJ · mm)',
-        u.none: 'unitless'
+        u.none: gettext('unitless')
     }
     if unit in custom_formats:
         return custom_formats[unit]
@@ -194,7 +237,7 @@ def format_unit(unit):
     # `formatter` expects an iterable of (unit, exponent) pairs, which lives in
     # the pint.Unit's `_units` attribute.
     unit_items = [(u.get_symbol(key), val) for key, val in unit._units.items()]
-    return pint.formatting.formatter(
+    formatted_unit = pint.formatting.formatter(
         unit_items,
         as_ratio=True,
         single_denominator=True,
@@ -204,12 +247,16 @@ def format_unit(unit):
         parentheses_fmt="({})",
         exp_call=pint.formatting._pretty_fmt_exponent)
 
+    if 'currency' in formatted_unit:
+        formatted_unit = formatted_unit.replace('currency', gettext('currency units'))
+    return formatted_unit
+
 
 def serialize_args_spec(spec):
-    """Serialize an ARGS_SPEC dict to a JSON string.
+    """Serialize an MODEL_SPEC dict to a JSON string.
 
     Args:
-        spec (dict): An invest model's ARGS_SPEC.
+        spec (dict): An invest model's MODEL_SPEC.
 
     Raises:
         TypeError if any object type within the spec is not handled by
@@ -235,12 +282,12 @@ def serialize_args_spec(spec):
 
 # accepted geometries for a vector will be displayed in this order
 GEOMETRY_ORDER = [
-    gettext('POINT'),
-    gettext('MULTIPOINT'),
-    gettext('LINESTRING'),
-    gettext('MULTILINESTRING'),
-    gettext('POLYGON'),
-    gettext('MULTIPOLYGON')]
+    'POINT',
+    'MULTIPOINT',
+    'LINESTRING',
+    'MULTILINESTRING',
+    'POLYGON',
+    'MULTIPOLYGON']
 
 INPUT_TYPES_HTML_FILE = 'input_types.html'
 
@@ -277,7 +324,7 @@ def format_geometries_string(geometries):
     sorted_geoms = sorted(
         geometries,
         key=lambda g: GEOMETRY_ORDER.index(g))
-    return '/'.join(geom.lower() for geom in sorted_geoms)
+    return '/'.join(gettext(geom).lower() for geom in sorted_geoms)
 
 
 def format_permissions_string(permissions):
@@ -304,21 +351,25 @@ def format_options_string_from_dict(options):
 
     Args:
         options (dict): the dictionary of options to document, where keys are
-            options and values are descriptions of the options
+            options and values are dictionaries describing the options.
+            They may have either or both 'display_name' and 'description' keys,
+            for example:
+            {'option1': {'display_name': 'Option 1', 'description': 'the first option'}}
 
     Returns:
         list of RST-formatted strings, where each is a line in a bullet list
     """
     lines = []
+    for key, info in options.items():
+        display_name = info['display_name'] if 'display_name' in info else key
+        if 'description' in info:
+            lines.append(f'- {display_name}: {info["description"]}')
+        else:
+            lines.append(f'- {display_name}')
+    # sort the options alphabetically
     # casefold() is a more aggressive version of lower() that may work better
     # for some languages to remove all case distinctions
-    sorted_options = sorted(
-        list(options.keys()),
-        key=lambda option: option.casefold()
-    )
-    for option in sorted_options:
-        lines.append(f'- {option}: {options[option]}')
-    return lines
+    return sorted(lines, key=lambda line: line.casefold())
 
 
 def format_options_string_from_list(options):
@@ -449,7 +500,9 @@ def describe_arg_from_spec(name, spec):
     if units:
         units_string = format_unit(units)
         if units_string:
-            in_parentheses.append(f'units: **{units_string}**')
+            # pybabel can't find the message if it's in the f-string
+            translated_units = gettext("units")
+            in_parentheses.append(f'{translated_units}: **{units_string}**')
 
     if spec['type'] == 'vector':
         in_parentheses.append(format_geometries_string(spec["geometries"]))
@@ -463,7 +516,8 @@ def describe_arg_from_spec(name, spec):
 
     # Nested args may not have an about section
     if 'about' in spec:
-        about_string = f': {spec["about"]}'
+        sanitized_about_string = spec["about"].replace("_", "\\_")
+        about_string = f': {sanitized_about_string}'
     else:
         about_string = ''
 
@@ -503,11 +557,11 @@ def describe_arg_from_name(module_name, *arg_keys):
         <arg_keys[0]>-<arg_keys[1]>...-<arg_keys[n]>
         where underscores in arg keys are replaced with hyphens.
     """
-    # import the specified module (that should have an ARGS_SPEC attribute)
+    # import the specified module (that should have an MODEL_SPEC attribute)
     module = importlib.import_module(module_name)
     # start with the spec for all args
     # narrow down to the nested spec indicated by the sequence of arg keys
-    spec = module.ARGS_SPEC['args']
+    spec = module.MODEL_SPEC['args']
     for i, key in enumerate(arg_keys):
         # convert raster band numbers to ints
         if arg_keys[i - 1] == 'bands':
@@ -518,7 +572,7 @@ def describe_arg_from_name(module_name, *arg_keys):
             keys_so_far = '.'.join(arg_keys[:i + 1])
             raise ValueError(
                 f"Could not find the key '{keys_so_far}' in the "
-                f"{module_name} model's ARGS_SPEC")
+                f"{module_name} model's MODEL_SPEC")
 
     # format spec into an RST formatted description string
     if 'name' in spec:
