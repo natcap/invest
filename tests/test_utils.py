@@ -14,6 +14,7 @@ import unittest
 import warnings
 
 import numpy
+import numpy.testing
 import pygeoprocessing
 from osgeo import gdal
 from osgeo import ogr
@@ -210,6 +211,61 @@ class ExponentialDecayUtilsTests(unittest.TestCase):
         numpy.testing.assert_allclose(model_array, reg_array, atol=1e-6)
 
 
+class GaussianDecayUtilsTests(unittest.TestCase):
+    """Tests for natcap.invest.utils.gaussian_decay_kernel_raster."""
+
+    def setUp(self):
+        """Setup workspace."""
+        self.workspace_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        """Delete workspace."""
+        shutil.rmtree(self.workspace_dir)
+
+    def test_gaussian_kernel_raster(self):
+        """Utils: test gaussian_decay_kernel_raster."""
+        from natcap.invest import utils
+
+        sigma = 10
+        # The kernel should have a radius of 3 standard deviations.
+        # We then double that for the diameter and add 1 to ensure there's a
+        # single pixel at the center.
+        kernel_dimension = sigma * 3 * 2 + 1
+
+        def gkern():
+            """
+            Creates a gaussian kernel with side length ``kernel_dimension``
+            and a sigma of ``sigma``.
+
+            This function adapted from the following stackoverflow answer:
+            https://stackoverflow.com/a/43346070/299084
+            """
+            ax = numpy.linspace(
+                -(kernel_dimension - 1) / 2.,
+                (kernel_dimension - 1) / 2.,
+                kernel_dimension)
+            gauss = numpy.exp(-0.5 * numpy.square(ax) / numpy.square(sigma))
+            kernel = numpy.outer(gauss, gauss)
+
+            dist_from_center = numpy.hypot(
+                *numpy.mgrid[
+                    -kernel_dimension/2:kernel_dimension/2,
+                    -kernel_dimension/2:kernel_dimension/2])
+            # The sigma*3 is the maximum radius from the center
+            # Anything greater than that distance should be set to 0 by the
+            # gaussian kernel creation function.
+            kernel[dist_from_center > (sigma * 3)] = 0.0
+            return kernel / numpy.sum(kernel)
+
+        expected_matrix = gkern()
+
+        kernel_filepath = os.path.join(self.workspace_dir, 'kernel.tif')
+        utils.gaussian_decay_kernel_raster(sigma, kernel_filepath)
+
+        disk_kernel = pygeoprocessing.raster_to_numpy_array(kernel_filepath)
+        numpy.testing.assert_allclose(expected_matrix, disk_kernel, atol=1e-4)
+
+
 class SandboxTempdirTests(unittest.TestCase):
     """Test Sandbox Tempdir."""
 
@@ -351,7 +407,7 @@ class ThreadFilterTests(unittest.TestCase):
             args=(),
             exc_info=None,
             func='test_thread_filter_same_thread')
-        filterer = ThreadFilter(threading.currentThread().name)
+        filterer = ThreadFilter(threading.current_thread().name)
 
         # The record comes from the same thread.
         self.assertEqual(filterer.filter(record), False)

@@ -1,0 +1,3270 @@
+# Chinese translations for InVEST.
+# Copyright (C) 2022 Natural Capital Project
+# This file is distributed under the same license as the InVEST project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2022.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: InVEST 3.12\n"
+"Report-Msgid-Bugs-To: jdouglass@stanford.edu\n"
+"POT-Creation-Date: 2023-03-03 12:40-0800\n"
+"PO-Revision-Date: 2023-03-16 14:02-0700\n"
+"Last-Translator: \n"
+"Language-Team: zh <LL@li.org>\n"
+"Language: zh\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"Generated-By: Babel 2.10.3\n"
+"X-Generator: Poedit 3.2.2\n"
+
+#: src/natcap/invest/annual_water_yield.py:43
+#: src/natcap/invest/forest_carbon_edge_effect.py:113
+#: src/natcap/invest/sdr/sdr.py:73
+msgid "All values in this raster must have corresponding entries in the Biophysical Table."
+msgstr "该栅格中的所有数值必须在生物物理表中有相应的条目。"
+
+#: src/natcap/invest/annual_water_yield.py:54
+msgid "Map of root restricting layer depth, the soil depth at which root penetration is strongly inhibited because of physical or chemical characteristics."
+msgstr "根系限制层深度图，由于物理或化学特性，根系渗透受到强烈抑制的土壤深度。"
+
+#: src/natcap/invest/annual_water_yield.py:58
+msgid "root restricting layer depth"
+msgstr "根系限制层的深度"
+
+#: src/natcap/invest/annual_water_yield.py:68
+msgid "Map of plant available water content, the fraction of water that can be stored in the soil profile that is available to plants."
+msgstr "植物可用水分含量图，即可储存在土壤剖面中的、可供植物使用的那部分水。"
+
+#: src/natcap/invest/annual_water_yield.py:72
+msgid "plant available water content"
+msgstr "植物可用水分含量"
+
+#: src/natcap/invest/annual_water_yield.py:84
+msgid "Unique identifier for each watershed."
+msgstr "每个流域的唯一标识符。"
+
+#: src/natcap/invest/annual_water_yield.py:88
+msgid "Map of watershed boundaries, such that each watershed drains to a point of interest where hydropower production will be analyzed."
+msgstr "流域边界图，以便每个流域排水到一个兴趣点，在那里水电生产将被分析。"
+
+#: src/natcap/invest/annual_water_yield.py:92 src/natcap/invest/ndr/ndr.py:72
+msgid "watersheds"
+msgstr "流域"
+
+#: src/natcap/invest/annual_water_yield.py:100
+msgid "Unique identifier for each subwatershed."
+msgstr "每个流域的唯一标识符。"
+
+#: src/natcap/invest/annual_water_yield.py:105
+msgid "Map of subwatershed boundaries within each watershed in the Watersheds map."
+msgstr "流域地图中每个流域内的小流域边界图。"
+
+#: src/natcap/invest/annual_water_yield.py:108
+msgid "sub-watersheds"
+msgstr "流域"
+
+#: src/natcap/invest/annual_water_yield.py:116
+msgid "Code indicating whether the the LULC class is vegetated for the purpose of AET. Enter 1 for all vegetated classes except wetlands, and 0 for all other classes, including wetlands, urban areas, water bodies, etc."
+msgstr "表示LULC等级是否为植被的代码，用于AET的目的。除湿地外，所有植被等级均为1，所有其他等级均为0，包括湿地、城市区域、水体等。"
+
+#: src/natcap/invest/annual_water_yield.py:126
+msgid "Maximum root depth for plants in this LULC class. Only used for classes with a 'lulc_veg' value of 1."
+msgstr "该LULC的植物最大根系深度。只用于'lulc_veg'值为1的类。"
+
+#: src/natcap/invest/annual_water_yield.py:133
+#: src/natcap/invest/urban_cooling_model.py:63
+msgid "Crop coefficient for this LULC class."
+msgstr "LULC的作物系数。"
+
+#: src/natcap/invest/annual_water_yield.py:135
+msgid "Table of biophysical parameters for each LULC class. All values in the LULC raster must have corresponding entries in this table."
+msgstr "LULC生物物理参数表。LULC栅格中的所有值都必须在该表中有相应的条目。"
+
+#: src/natcap/invest/annual_water_yield.py:139
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:205
+#: src/natcap/invest/forest_carbon_edge_effect.py:109
+#: src/natcap/invest/ndr/ndr.py:118 src/natcap/invest/pollination.py:116
+#: src/natcap/invest/sdr/sdr.py:103
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:138
+#: src/natcap/invest/urban_cooling_model.py:56
+#: src/natcap/invest/urban_flood_risk_mitigation.py:76
+msgid "biophysical table"
+msgstr "生物物理表"
+
+#: src/natcap/invest/annual_water_yield.py:145
+msgid "The seasonality factor, representing hydrogeological characterisitics and the seasonal distribution of precipitation. Values typically range from 1 - 30."
+msgstr "季节性因子，代表水文地质特征和降水的季节分布。值的范围通常为1 - 30。"
+
+#: src/natcap/invest/annual_water_yield.py:149
+msgid "z parameter"
+msgstr "z参数"
+
+#: src/natcap/invest/annual_water_yield.py:155
+msgid "LULC code corresponding to the LULC raster"
+msgstr "与LULC栅格中的值相对应的LULC代码"
+
+#: src/natcap/invest/annual_water_yield.py:159
+msgid "Average consumptive water use in this LULC class."
+msgstr "LULC的平均耗水量。"
+
+#: src/natcap/invest/annual_water_yield.py:166
+msgid "A table of water demand for each LULC class. Each LULC code in the LULC raster must have a corresponding row in this table."
+msgstr "每个LULC的水需求表。LULC栅格中的每个LULC代码必须在该表中有相应的条目。"
+
+#: src/natcap/invest/annual_water_yield.py:170
+msgid "water demand table"
+msgstr "水需求表"
+
+#: src/natcap/invest/annual_water_yield.py:177
+msgid "Unique identifier for the hydropower station. This must match the 'ws_id' value for the corresponding watershed in the Watersheds vector. Each watershed in the Watersheds vector must have its 'ws_id' entered in this column."
+msgstr "水电站的唯一标识符。这必须匹配流域向量中相应流域的'ws_id'值。流域向量中的每个流域必须在这一列中输入它的“ws_id”。"
+
+#: src/natcap/invest/annual_water_yield.py:186
+msgid "Turbine efficiency, the proportion of potential energy captured and converted to electricity by the turbine."
+msgstr "涡轮机效率，即涡轮机捕获并转化为电能的比例。"
+
+#: src/natcap/invest/annual_water_yield.py:193
+msgid "The proportion of inflow water volume that is used to generate energy."
+msgstr "用于发电的流入水量占总水量的比例。"
+
+#: src/natcap/invest/annual_water_yield.py:200
+msgid "The head, measured as the average annual effective height of water behind each dam at the turbine intake."
+msgstr "水头，是指在水轮机进水口处每个大坝后的平均年有效水位。"
+
+#: src/natcap/invest/annual_water_yield.py:208
+msgid "The price of power produced by the station. Must be in the same currency used in the 'cost' column."
+msgstr "发电站发电的价格。必须在“成本”栏中使用相同的货币。"
+
+#: src/natcap/invest/annual_water_yield.py:215
+msgid "Annual maintenance and operations cost of running the hydropower station. Must be in the same currency used in the 'kw_price' column."
+msgstr "水电站运行年度维护运行费用。必须与“kw_price”列中使用的货币相同。"
+
+#: src/natcap/invest/annual_water_yield.py:223
+msgid "Number of years over which to value the hydropower station. This is either the station's expected lifespan or the duration of the land use scenario of interest."
+msgstr "为水电站估价的年数。这要么是空间站的预期寿命，要么是有关土地使用情况的持续时间。"
+
+#: src/natcap/invest/annual_water_yield.py:231
+msgid "The annual discount rate, applied for each year in the time span."
+msgstr "年度贴现率，适用于时间跨度内的每一年。"
+
+#: src/natcap/invest/annual_water_yield.py:237
+msgid "A table mapping each watershed to the associated valuation parameters for its hydropower station."
+msgstr "将每个流域映射到其水电站的相关估值参数的表格。"
+
+#: src/natcap/invest/annual_water_yield.py:240
+msgid "hydropower valuation table"
+msgstr "水电估价表"
+
+#: src/natcap/invest/carbon.py:38
+msgid "A map of LULC for the current scenario. All values in this raster must have corresponding entries in the Carbon Pools table."
+msgstr "当前场景的LULC。该栅格中的所有值都必须在碳库表中有相应的条目。"
+
+#: src/natcap/invest/carbon.py:42
+msgid "current LULC"
+msgstr "现状LULC"
+
+#: src/natcap/invest/carbon.py:47
+msgid "Run sequestration analysis. This requires inputs of LULC maps for both current and future scenarios. Required if REDD scenario analysis or run valuation model is selected."
+msgstr "运行固碳分析。这需要输入当前和未来情景下的LULC地图。如果选择REDD情景分析或运行估值模型，则需要。"
+
+#: src/natcap/invest/carbon.py:52
+msgid "calculate sequestration"
+msgstr "计算封存"
+
+#: src/natcap/invest/carbon.py:59
+msgid "A map of LULC for the future scenario. If run valuation model is selected, this should be the reference, or baseline, future scenario against which to compare the REDD policy scenario. All values in this raster must have corresponding entries in the Carbon Pools table. Required if Calculate Sequestration is selected."
+msgstr "未来情景下的LULC地图。如果选择运行评估模型，这应该是参考或基线的未来情景，用来比较REDD政策情景。该栅格中的所有数值必须在碳库表中有相应的条目。如果选择计算固存量，则需要。"
+
+#: src/natcap/invest/carbon.py:67
+msgid "future LULC"
+msgstr "未来的LULC"
+
+#: src/natcap/invest/carbon.py:72
+msgid "Run REDD scenario analysis. This requires three LULC maps: one for the current scenario, one for the future baseline scenario, and one for the future REDD policy scenario."
+msgstr "运行REDD情景分析。这需要三张LULC地图：一张用于当前情景，一张用于未来基线情景，一张用于未来REDD政策情景。"
+
+#: src/natcap/invest/carbon.py:77
+msgid "REDD scenario analysis"
+msgstr "REDD情景分析"
+
+#: src/natcap/invest/carbon.py:84
+msgid "A map of LULC for the REDD policy scenario. All values in this raster must have corresponding entries in the Carbon Pools table. Required if REDD Scenario Analysis is selected."
+msgstr "REDD政策情景下的LULC地图。该栅格中的所有值必须在碳库表中有相应的条目。如果选择REDD情景分析，则需要。"
+
+#: src/natcap/invest/carbon.py:89
+msgid "REDD LULC"
+msgstr "REDD LULC"
+
+#: src/natcap/invest/carbon.py:98
+msgid "Carbon density of aboveground biomass."
+msgstr "地上生物量的碳密度。"
+
+#: src/natcap/invest/carbon.py:102
+msgid "Carbon density of belowground biomass."
+msgstr "地下生物量的碳密度。"
+
+#: src/natcap/invest/carbon.py:106
+msgid "Carbon density of soil."
+msgstr "土壤的碳密度。"
+
+#: src/natcap/invest/carbon.py:110
+msgid "Carbon density of dead matter."
+msgstr "枯木的碳密度。"
+
+#: src/natcap/invest/carbon.py:112
+msgid "A table that maps each LULC code to carbon pool data for that LULC type."
+msgstr "将每个LULC代码映射到该LULC类型的碳库数据的表格。"
+
+#: src/natcap/invest/carbon.py:115
+msgid "carbon pools"
+msgstr "碳库"
+
+#: src/natcap/invest/carbon.py:122
+msgid "The calendar year of the current scenario depicted in the current LULC map. Required if Run Valuation model is selected."
+msgstr "当前LULC地图中描述的当前情景年。如果选择运行评估模型，则需要。"
+
+#: src/natcap/invest/carbon.py:125
+msgid "current LULC year"
+msgstr "现状LULC"
+
+#: src/natcap/invest/carbon.py:132
+msgid "The calendar year of the future scenario depicted in the future LULC map. Required if Run Valuation model is selected."
+msgstr "未来LULC地图中描述的未来情景年。如果选择运行评估模式，则需要。"
+
+#: src/natcap/invest/carbon.py:140
+msgid "Calculate net present value for the future scenario, and the REDD scenario if provided, and report it in the final HTML document."
+msgstr "计算未来方案的净现值，如果提供REDD方案，则计算REDD方案，并在最后的HTML文件中报告。"
+
+#: src/natcap/invest/carbon.py:144
+msgid "run valuation model"
+msgstr "运行估价模型"
+
+#: src/natcap/invest/carbon.py:150
+msgid "The present value of carbon. Required if Run Valuation model is selected."
+msgstr "碳的价格。如果选择运行评估模型，则需要。"
+
+#: src/natcap/invest/carbon.py:153
+msgid "price of carbon"
+msgstr "碳的价格"
+
+#: src/natcap/invest/carbon.py:158
+msgid "The annual market discount rate in the price of carbon, which reflects society's preference for immediate benefits over future benefits. Required if Run Valuation model is selected."
+msgstr "碳价格中的年度市场贴现率，反映了社会对眼前利益比未来利益的偏好。如果选择运行评估模式则需要。"
+
+#: src/natcap/invest/carbon.py:163
+msgid "annual market discount rate"
+msgstr "年度市场贴现率"
+
+#: src/natcap/invest/carbon.py:168
+msgid "The relative annual increase of the price of carbon. Required if Run Valuation model is selected."
+msgstr "碳价格的相对年度增长。如果选择运行评估模型，则需要。"
+
+#: src/natcap/invest/carbon.py:171
+msgid "annual price change"
+msgstr "年度价格变化"
+
+#: src/natcap/invest/cli.py:55
+msgid "Available models:"
+msgstr "可用的模型："
+
+#: src/natcap/invest/coastal_vulnerability.py:33
+msgid "Must be a polyline vector"
+msgstr "必须是一个多线矢量"
+
+#: src/natcap/invest/coastal_vulnerability.py:34
+msgid "Must be a point or multipoint geometry."
+msgstr "必须是一个点或多点的几何体。"
+
+#: src/natcap/invest/coastal_vulnerability.py:60
+msgid "Map of the region over which to run the model."
+msgstr "运行模型的区域地图。"
+
+#: src/natcap/invest/coastal_vulnerability.py:66
+msgid "Interval at which to space shore points along the coastline."
+msgstr "沿着海岸线的海岸点的间隔。"
+
+#: src/natcap/invest/coastal_vulnerability.py:68
+msgid "model resolution"
+msgstr "模型分辨率"
+
+#: src/natcap/invest/coastal_vulnerability.py:74
+msgid "Map of all landmasses in and around the region of interest. It is not recommended to clip this landmass to the AOI polygon because some functions in the model require searching for landmasses around shore points up to the distance defined in Maximum Fetch Distance, which likely extends beyond the AOI polygon."
+msgstr "兴趣区域内及其周围的所有地块的地图。不建议将该地块夹在 AOI 多边形中，因为模型中的一些功能需要搜索海岸点周围的地块，直到最大取样距离中定义的距离，这很可能超出了 AOI 多边形。"
+
+#: src/natcap/invest/coastal_vulnerability.py:81
+msgid "landmasses"
+msgstr "陆地"
+
+#: src/natcap/invest/coastal_vulnerability.py:88
+#, python-format
+msgid "Proportion of the highest 10% of wind speeds in the record of interest that blow in the direction of each sector."
+msgstr "在感兴趣的记录中，吹向各方向的最高10% of风速的比例。"
+
+#: src/natcap/invest/coastal_vulnerability.py:95
+#, python-format
+msgid "Average of the highest 10% of wind speeds that blow in the direction of each sector."
+msgstr "吹向各方向的最高10% of风速的平均值。"
+
+#: src/natcap/invest/coastal_vulnerability.py:100
+#, python-format
+msgid "Proportion of the highest 10% of wave power values on record that are in each sector."
+msgstr "每个区段的最高10% of波能的记录比例。"
+
+#: src/natcap/invest/coastal_vulnerability.py:106
+#, python-format
+msgid "Average of the highest 10% of wave power values on record in the direction of each sector."
+msgstr "每个方向上记录的最高10% of波能的平均值。"
+
+#: src/natcap/invest/coastal_vulnerability.py:111
+#, python-format
+msgid "Average of the highest 10% of wind speeds that are centered on each main sector direction X."
+msgstr "以每个主要扇形方向X为中心的最高10% of风速的平均值。"
+
+#: src/natcap/invest/coastal_vulnerability.py:116
+msgid "Map of gridded wind and wave data that represent storm conditions. This global dataset is provided with the InVEST sample data. There are 80 required columns; each of the 5 types is repeated for each sixteenth sector of the 360° compass: [0,22,45,67,90,112,135,157,180,202,225,247,270,292,315,337]. For example: REI_PCT0, V10PCT_90."
+msgstr "代表风暴条件的风浪栅格数据图。这个全球数据集是与InVEST样本数据一起提供的。有80个所需的列；5种类型中的每一种都在360°罗盘的每十六个扇形区域内重复。[0,22,45,67,90,112,135,157,180,202,225,247,270,292,315,337].比如说REI_PCT0，V10PCT_90。"
+
+#: src/natcap/invest/coastal_vulnerability.py:124
+msgid "WaveWatchIII"
+msgstr "波浪观察III"
+
+#: src/natcap/invest/coastal_vulnerability.py:130
+msgid "Maximum distance in meters to extend rays from shore points. Points with rays equal to this distance accumulate ocean- driven wave exposure along those rays and local-wind-driven wave exposure along the shorter rays."
+msgstr "从海岸点延伸出的射线的最大距离（米）。射线等于这个距离的点，沿着这些射线积累海洋驱动的波浪暴露，沿着较短的射线积累局部风驱动的波浪暴露。"
+
+#: src/natcap/invest/coastal_vulnerability.py:135
+msgid "maximum fetch distance"
+msgstr "最大取水距离"
+
+#: src/natcap/invest/coastal_vulnerability.py:143
+msgid "Map of bathymetry (ocean depth). Bathymetry values should be negative, and any positive values will be ignored. This should cover the area extending beyond the AOI to the maximum fetch distance."
+msgstr "水深测量（海洋深度）地图。水深值应该是负值，任何正值都将被忽略。这应涵盖AOI之外延伸到最大风速距离的区域。"
+
+#: src/natcap/invest/coastal_vulnerability.py:149
+msgid "Bathymetry"
+msgstr "测深学"
+
+#: src/natcap/invest/coastal_vulnerability.py:155
+msgid "Map of the edges of the continental shelf or other locally relevant bathymetry contour."
+msgstr "大陆边缘的地图或其他与当地相关的水深等值线。"
+
+#: src/natcap/invest/coastal_vulnerability.py:158
+msgid "continental shelf contour"
+msgstr "大陆架等高线"
+
+#: src/natcap/invest/coastal_vulnerability.py:166
+msgid "Map of elevation above sea level on land. This should cover the area extending beyond the AOI by at least the elevation averaging radius. Elevation may be measured in any unit."
+msgstr "陆地上的海平面以上地图。该图应涵盖AOI以外的区域，至少是高程平均半径的范围。高程可以用任何单位来测量。"
+
+#: src/natcap/invest/coastal_vulnerability.py:175
+msgid "A radius around each shore point within which to average the elevation values in the DEM raster."
+msgstr "每个海岸点的半径，在此范围内对DEM栅格中的高程值进行平均。"
+
+#: src/natcap/invest/coastal_vulnerability.py:178
+msgid "elevation averaging radius"
+msgstr "高程平均半径"
+
+#: src/natcap/invest/coastal_vulnerability.py:185
+msgid "Unique name for the habitat. No spaces allowed."
+msgstr "生境的独特名称。不允许有空格。"
+
+#: src/natcap/invest/coastal_vulnerability.py:191
+msgid "Map of area(s) where the habitat is present. If raster, presence of the habitat can be represented by any value and absence of the habitat can be represented by 0 and nodata values."
+msgstr "生境存在的区域地图。如果是栅格图，生境的存在可以用任何数值表示，生境的缺失可以用0和nodata值表示。"
+
+#: src/natcap/invest/coastal_vulnerability.py:199
+msgid "very high protection"
+msgstr "极高的保护"
+
+#: src/natcap/invest/coastal_vulnerability.py:200
+msgid "high protection"
+msgstr "高度保护"
+
+#: src/natcap/invest/coastal_vulnerability.py:201
+msgid "moderate protection"
+msgstr "中度保护"
+
+#: src/natcap/invest/coastal_vulnerability.py:202
+msgid "low protection"
+msgstr "低保护"
+
+#: src/natcap/invest/coastal_vulnerability.py:203
+msgid "very low protection"
+msgstr "极低保护"
+
+#: src/natcap/invest/coastal_vulnerability.py:205
+msgid "Relative amount of coastline protection this habitat provides."
+msgstr "该生境提供的海岸线保护的相对数量。"
+
+#: src/natcap/invest/coastal_vulnerability.py:213
+msgid "The distance beyond which this habitat will provide no protection to the coastline."
+msgstr "超过这个距离，这个生境就不能对海岸线提供保护。"
+
+#: src/natcap/invest/coastal_vulnerability.py:218
+msgid "Table that specifies spatial habitat data and parameters."
+msgstr "指定空间生境数据和参数的表格。"
+
+#: src/natcap/invest/coastal_vulnerability.py:220
+msgid "habitats table"
+msgstr "生境表"
+
+#: src/natcap/invest/coastal_vulnerability.py:228
+msgid "very low exposure"
+msgstr "极低暴露"
+
+#: src/natcap/invest/coastal_vulnerability.py:229
+msgid "low exposure"
+msgstr "低暴露"
+
+#: src/natcap/invest/coastal_vulnerability.py:230
+msgid "moderate exposure"
+msgstr "中度暴露"
+
+#: src/natcap/invest/coastal_vulnerability.py:231
+msgid "high exposure"
+msgstr "高暴露"
+
+#: src/natcap/invest/coastal_vulnerability.py:232
+msgid "very high exposure"
+msgstr "极高暴露"
+
+#: src/natcap/invest/coastal_vulnerability.py:234
+msgid "Relative exposure of the segment of coastline."
+msgstr "该段海岸线的相对暴露。"
+
+#: src/natcap/invest/coastal_vulnerability.py:239
+msgid "Map of relative exposure of each segment of coastline."
+msgstr "每段海岸线的相对曝露地图。"
+
+#: src/natcap/invest/coastal_vulnerability.py:240
+msgid "geomorphology"
+msgstr "地貌学"
+
+#: src/natcap/invest/coastal_vulnerability.py:245
+msgid "1: very low exposure"
+msgstr "1：极低暴露"
+
+#: src/natcap/invest/coastal_vulnerability.py:246
+msgid "2: low exposure"
+msgstr "2：低暴露"
+
+#: src/natcap/invest/coastal_vulnerability.py:247
+msgid "3: moderate exposure"
+msgstr "3：中度暴露"
+
+#: src/natcap/invest/coastal_vulnerability.py:248
+msgid "4: high exposure"
+msgstr "4：高暴露"
+
+#: src/natcap/invest/coastal_vulnerability.py:249
+msgid "5: very high exposure"
+msgstr "5：极高暴露"
+
+#: src/natcap/invest/coastal_vulnerability.py:252
+msgid "Exposure rank to assign to any shore points that are not near to any segment in the geomorphology vector. Required if a Geomorphology vector is provided."
+msgstr "对任何不靠近地貌向量中任何区段的海岸点进行曝光等级分配。如果提供了地貌向量则需要。"
+
+#: src/natcap/invest/coastal_vulnerability.py:256
+msgid "geomorphology fill value"
+msgstr "地貌填充值"
+
+#: src/natcap/invest/coastal_vulnerability.py:264
+msgid "Map of total human population on each pixel."
+msgstr "每个栅格上的总人口地图。"
+
+#: src/natcap/invest/coastal_vulnerability.py:265
+msgid "human population"
+msgstr "人口"
+
+#: src/natcap/invest/coastal_vulnerability.py:272
+msgid "The radius around each shore point within which to compute the average population density. Required if a Human Population map is provided."
+msgstr "计算平均人口密度的每个海岸点周围的半径。如果提供人类人口地图，则需要。"
+
+#: src/natcap/invest/coastal_vulnerability.py:276
+msgid "population search radius"
+msgstr "人口搜索半径"
+
+#: src/natcap/invest/coastal_vulnerability.py:282
+msgid "Sea level rise rate or amount. This field name must be chosen as the Sea Level Rise Field."
+msgstr "海平面上升率或数量。这个字段名必须选择为海平面上升字段。"
+
+#: src/natcap/invest/coastal_vulnerability.py:291
+msgid "Map of sea level rise rates or amounts. May be any sea level rise metric of interest, such as rate, or net rise/fall."
+msgstr "海平面上升率或数量的地图。可以是任何感兴趣的海平面上升指标，如速率，或净上升/下降。"
+
+#: src/natcap/invest/coastal_vulnerability.py:294
+msgid "sea level rise"
+msgstr "海平面上升"
+
+#: src/natcap/invest/coastal_vulnerability.py:300
+msgid "Name of the field in the sea level rise vector which contains the sea level rise metric of interest. Required if a Sea Level Rise vector is provided."
+msgstr "海平面上升矢量中包含感兴趣的海平面上升指标的字段名称。如果提供了海平面上升矢量，则需要。"
+
+#: src/natcap/invest/coastal_vulnerability.py:304
+msgid "sea level rise field"
+msgstr "海平面上升边界"
+
+#: src/natcap/invest/crop_production_percentile.py:96
+msgid "A table that maps each LULC code from the LULC map to one of the 175 canonical crop names representing the crop grown in that LULC class."
+msgstr "一个表格，将LULC地图中的每个LULC代码与代表该LULC等级中种植的175个典型的作物名称之一进行映射。"
+
+#: src/natcap/invest/crop_production_percentile.py:100
+msgid "LULC to Crop Table"
+msgstr "LULC与作物对应表"
+
+#: src/natcap/invest/crop_production_percentile.py:112
+msgid "Table mapping each climate bin to yield percentiles for each crop."
+msgstr "每个气候仓与每种作物的产量百分比的映射表。"
+
+#: src/natcap/invest/crop_production_percentile.py:142
+msgid "Maps of climate bins for each crop."
+msgstr "每种作物的气候区间图。"
+
+#: src/natcap/invest/crop_production_percentile.py:152
+msgid "Maps of actual observed yield for each crop."
+msgstr "每种作物的实际观察产量图。"
+
+#: src/natcap/invest/crop_production_percentile.py:207
+msgid "Path to the InVEST Crop Production Data directory."
+msgstr "InVEST作物生产数据目录的路径。"
+
+#: src/natcap/invest/crop_production_percentile.py:208
+msgid "model data directory"
+msgstr "模型数据目录"
+
+#: src/natcap/invest/crop_production_regression.py:23
+msgid "barley"
+msgstr "大麦"
+
+#: src/natcap/invest/crop_production_regression.py:24
+msgid "maize"
+msgstr "玉米"
+
+#: src/natcap/invest/crop_production_regression.py:25
+msgid "oil palm"
+msgstr "棕榈油"
+
+#: src/natcap/invest/crop_production_regression.py:26
+msgid "potato"
+msgstr "马铃薯"
+
+#: src/natcap/invest/crop_production_regression.py:27
+msgid "rice"
+msgstr "大米"
+
+#: src/natcap/invest/crop_production_regression.py:28
+msgid "soybean"
+msgstr "大豆"
+
+#: src/natcap/invest/crop_production_regression.py:29
+msgid "sugar beet"
+msgstr "甜菜"
+
+#: src/natcap/invest/crop_production_regression.py:30
+msgid "sugarcane"
+msgstr "甘蔗"
+
+#: src/natcap/invest/crop_production_regression.py:31
+msgid "wheat"
+msgstr "小麦"
+
+#: src/natcap/invest/crop_production_regression.py:61
+msgid "A table that maps each LULC code from the LULC map to one of the 10 canonical crop names representing the crop grown in that LULC class."
+msgstr "一个表将每个LULC代码从LULC映射到代表在该LULC类中生长的作物的10个规范作物名称中的一个。"
+
+#: src/natcap/invest/crop_production_regression.py:65
+msgid "LULC to crop table"
+msgstr "LULC与作物对应表"
+
+#: src/natcap/invest/crop_production_regression.py:73
+msgid "One of the supported crop types."
+msgstr "受支持的作物类型之一。"
+
+#: src/natcap/invest/crop_production_regression.py:81
+msgid "A table that maps crops to fertilizer application rates."
+msgstr "将作物与化肥施用量相对应的表格。"
+
+#: src/natcap/invest/crop_production_regression.py:83
+msgid "fertilization rate table"
+msgstr "施肥率表"
+
+#: src/natcap/invest/crop_production_regression.py:156
+msgid "The Crop Production datasets provided with the model."
+msgstr "模型提供的作物生产数据集。"
+
+#: src/natcap/invest/crop_production_regression.py:157
+msgid "model data"
+msgstr "模型数据"
+
+#: src/natcap/invest/forest_carbon_edge_effect.py:50
+msgid "Number of closest regression models that are used when calculating the total biomass. Each local model is linearly weighted by distance such that the pixel's biomass is a function of each of these points with the closest point having the largest effect. Must be an integer greater than 0. Required if Compute Forest Edge Effects is selected."
+msgstr "计算总生物量时使用的最接近的回归模型的数目。每个局部模型都按距离线性加权，这样像素的生物量是这些点的函数，最近的点具有最大的影响。必须为大于0的整数。如果选中“计算森林边缘效果”，则需要。"
+
+#: src/natcap/invest/forest_carbon_edge_effect.py:58
+msgid "number of points to average"
+msgstr "平均分数"
+
+#: src/natcap/invest/forest_carbon_edge_effect.py:71
+msgid "Enter 1 if the LULC class is tropical forest, 0 if it is not tropical forest."
+msgstr "如果LULC类是热带森林，则输入1，如果不是热带森林，则输入0。"
+
+#: src/natcap/invest/forest_carbon_edge_effect.py:77
+msgid "Carbon density value for the aboveground carbon pool."
+msgstr "地上碳库的碳密度值。"
+
+#: src/natcap/invest/forest_carbon_edge_effect.py:85
+msgid "Carbon density value for the belowground carbon pool. Required if calculating all pools."
+msgstr "地下碳库的碳密度值。如果计算所有碳库，则必须。"
+
+#: src/natcap/invest/forest_carbon_edge_effect.py:93
+msgid "Carbon density value for the soil carbon pool. Required if calculating all pools."
+msgstr "土壤碳库的碳密度值。如果计算所有碳库，则必须。"
+
+#: src/natcap/invest/forest_carbon_edge_effect.py:101
+msgid "Carbon density value for the dead matter carbon pool. Required if calculating all pools."
+msgstr "枯木碳库的碳密度值。如果计算所有碳库，则必须。"
+
+#: src/natcap/invest/forest_carbon_edge_effect.py:106
+msgid "A table mapping each LULC code from the LULC map to biophysical data for that LULC class."
+msgstr "将每个LULC代码从LULC映射到该LULC类的生物物理数据的表。"
+
+#: src/natcap/invest/forest_carbon_edge_effect.py:122
+msgid "all"
+msgstr "全部"
+
+#: src/natcap/invest/forest_carbon_edge_effect.py:123
+msgid "Use all pools (aboveground, belowground, soil, and dead matter) in the carbon pool calculation."
+msgstr "在碳库计算中使用所有的碳库(地上、地下、土壤和枯木)。"
+
+#: src/natcap/invest/forest_carbon_edge_effect.py:127
+msgid "aboveground only"
+msgstr "只在地面上"
+
+#: src/natcap/invest/forest_carbon_edge_effect.py:128
+msgid "Only use the aboveground pool in the carbon pool calculation."
+msgstr "碳库计算只使用地上碳库。"
+
+#: src/natcap/invest/forest_carbon_edge_effect.py:132
+msgid "Which carbon pools to consider."
+msgstr "要考虑哪个碳库。"
+
+#: src/natcap/invest/forest_carbon_edge_effect.py:133
+msgid "carbon pools to calculate"
+msgstr "要计算的碳库"
+
+#: src/natcap/invest/forest_carbon_edge_effect.py:137
+msgid "Account for forest edge effects on aboveground carbon."
+msgstr "考虑森林边缘对地上碳的影响。"
+
+#: src/natcap/invest/forest_carbon_edge_effect.py:138
+msgid "compute forest edge effects"
+msgstr "计算森林边缘效应"
+
+#: src/natcap/invest/forest_carbon_edge_effect.py:146
+msgid "asymptotic"
+msgstr "渐近的"
+
+#: src/natcap/invest/forest_carbon_edge_effect.py:147
+msgid "logarithmic"
+msgstr "对数的"
+
+#: src/natcap/invest/forest_carbon_edge_effect.py:148
+msgid "linear"
+msgstr "线性的"
+
+#: src/natcap/invest/forest_carbon_edge_effect.py:150
+msgid "Optimal regression model for the area."
+msgstr "该地区的最佳回归模型。"
+
+#: src/natcap/invest/forest_carbon_edge_effect.py:155
+msgid "θ₁ parameter for the regression equation."
+msgstr "θ₁为回归方程的参数。"
+
+#: src/natcap/invest/forest_carbon_edge_effect.py:159
+msgid "θ₂ parameter for the regression equation."
+msgstr "回归方程的θ₂参数。"
+
+#: src/natcap/invest/forest_carbon_edge_effect.py:163
+msgid "θ₃ parameter for the regression equation. Used only for the asymptotic model."
+msgstr "回归方程的θ₃参数。仅用于渐近模型。"
+
+#: src/natcap/invest/forest_carbon_edge_effect.py:169
+msgid "Map storing the optimal regression model for each tropical subregion and the corresponding theta parameters for that regression equation. Default data is provided. Required if Compute Forest Edge Effects is selected."
+msgstr "储存每个热带次区域的最佳回归模型和该回归方程的相应theta参数的地图。提供默认数据。如果选择 \"计算森林边缘效应 \"则需要。"
+
+#: src/natcap/invest/forest_carbon_edge_effect.py:174
+msgid "global regression models"
+msgstr "全球回归模型"
+
+#: src/natcap/invest/forest_carbon_edge_effect.py:179
+msgid "Proportion of forest edge biomass that is elemental carbon. Required if Compute Forest Edge Effects is selected."
+msgstr "森林边缘生物量中元素碳的比例。如果选择 \"计算森林边缘效应 \"则需要。"
+
+#: src/natcap/invest/forest_carbon_edge_effect.py:182
+msgid "forest edge biomass to carbon conversion factor"
+msgstr "林缘生物量与碳的转换系数"
+
+#: src/natcap/invest/habitat_quality.py:22
+msgid "Threats {threats} does not match any column in the sensitivity table. Sensitivity columns: {column_names}"
+msgstr "威胁{threats}与敏感度表中的任何列不匹配。敏感度列。{column_names}"
+
+#: src/natcap/invest/habitat_quality.py:25
+msgid "The column '{column_name}' was not found in the Threat Data table for the corresponding input LULC scenario."
+msgstr "在相应的输入LULC情景的威胁数据表中没有找到\"{column_name}\"列。"
+
+#: src/natcap/invest/habitat_quality.py:28
+msgid "A threat raster for threats: {threat_list} was not found or it could not be opened by GDAL."
+msgstr "威胁的栅格。{threat_list}没有找到，或者它不能被GDAL打开。"
+
+#: src/natcap/invest/habitat_quality.py:31
+msgid "Threat paths must be unique. Duplicates: "
+msgstr "威胁路径必须是唯一的。重复的: "
+
+#: src/natcap/invest/habitat_quality.py:50
+msgid "Map of LULC at present. All values in this raster must have corresponding entries in the Sensitivity table."
+msgstr "目前LULC的地图。该栅格中的所有数值都必须在敏感度表中有相应的条目。"
+
+#: src/natcap/invest/habitat_quality.py:53
+msgid "current land cover"
+msgstr "现状土地覆盖"
+
+#: src/natcap/invest/habitat_quality.py:59
+msgid "Map of LULC in a future scenario. All values in this raster must have corresponding entries in the Sensitivity Table. Must use the same classification scheme and codes as in the Current LULC map."
+msgstr "未来情景下的LULC地图。该栅格中的所有数值必须在敏感度表中有相应的条目。必须使用与当前LULC地图中相同的分类方案和代码。"
+
+#: src/natcap/invest/habitat_quality.py:64
+msgid "future land cover"
+msgstr "未来土地覆盖"
+
+#: src/natcap/invest/habitat_quality.py:70
+msgid "Map of LULC in a baseline scenario, when intensive landscape management was relatively rare. All values in this raster must have corresponding entries in the Sensitivity table. Must use the same classification scheme and codes as in the Current LULC map."
+msgstr "基线情景下的LULC地图，当时密集的景观管理相对罕见。该栅格中的所有数值必须在敏感度表中有相应的条目。必须使用与当前LULC地图中相同的分类方案和代码。"
+
+#: src/natcap/invest/habitat_quality.py:76
+msgid "baseline land cover"
+msgstr "基线土地覆盖"
+
+#: src/natcap/invest/habitat_quality.py:83
+msgid "Name of the threat. Each threat name must have a corresponding column in the Sensitivity table."
+msgstr "威胁的名称。每个威胁名称必须在敏感度表中有一个相应的列。"
+
+#: src/natcap/invest/habitat_quality.py:89
+msgid "The maximum distance over which each threat affects habitat quality. The impact of each degradation source will decline to zero at this maximum distance. This value must be greater than or equal to the pixel size of your LULC raster(s)."
+msgstr "每个威胁影响生境质量的最大距离。每个退化源的影响在这个最大距离上会下降到零。这个值必须大于或等于你的LULC栅格的像素大小。"
+
+#: src/natcap/invest/habitat_quality.py:98
+msgid "The impact of each threat on habitat quality, relative to other threats."
+msgstr "相对于其他威胁，每种威胁对栖息地质量的影响。"
+
+#: src/natcap/invest/habitat_quality.py:106
+msgid "Effects of the threat decay linearly with distance from the threat."
+msgstr "威胁的影响随着距离威胁的距离线性衰减。"
+
+#: src/natcap/invest/habitat_quality.py:110
+msgid "Effects of the threat decay exponentially with distance from the threat."
+msgstr "威胁的影响随着距离威胁的距离呈指数级衰减。"
+
+#: src/natcap/invest/habitat_quality.py:114
+msgid "The type of decay over space for each threat."
+msgstr "每种威胁在空间上的衰减类型。"
+
+#: src/natcap/invest/habitat_quality.py:119
+msgid "Map of the threat's distribution in the current scenario. Each pixel value is the relative intensity of the threat at that location. "
+msgstr "当前场景下的威胁分布图。每个像素值都是该位置威胁的相对强度。 "
+
+#: src/natcap/invest/habitat_quality.py:128
+msgid "Map of the threat's distribution in the future scenario. Each pixel value is the relative intensity of the threat at that location. Required if Future LULC is provided."
+msgstr "威胁在未来场景中的分布图。每个像素值都是该位置威胁的相对强度。如果提供未来LULC，则必须。"
+
+#: src/natcap/invest/habitat_quality.py:138
+msgid "Map of the threat's distribution in the baseline scenario. Each pixel value is the relative intensity of the threat at that location. Required if Baseline LULC is provided."
+msgstr "基线场景中威胁分布的地图。每个像素值都是该位置威胁的相对强度。如果提供了基线LULC，则需要。"
+
+#: src/natcap/invest/habitat_quality.py:145
+msgid "Table mapping each threat of interest to its properties and distribution maps. Paths are relative to the threats table path."
+msgstr "表将每个感兴趣威胁的属性和映射。路径相对于威胁表路径。"
+
+#: src/natcap/invest/habitat_quality.py:149
+msgid "threats table"
+msgstr "威胁表格"
+
+#: src/natcap/invest/habitat_quality.py:157
+msgid "The region's relative accessibility to threats, where 0 represents completely inaccessible and 1 represents completely accessible."
+msgstr "该区域对威胁的相对可达性，其中0表示完全不可达，1表示完全可达。"
+
+#: src/natcap/invest/habitat_quality.py:165
+msgid "Map of the relative protection that legal, institutional, social, and physical barriers provide against threats. Any cells not covered by a polygon will be set to 1."
+msgstr "法律、制度、社会和物理障碍对威胁的相对保护。任何未被多边形覆盖的单元格将被设置为1。"
+
+#: src/natcap/invest/habitat_quality.py:169
+msgid "accessibility to threats"
+msgstr "威胁的可达性"
+
+#: src/natcap/invest/habitat_quality.py:177
+msgid "Suitability of this LULC class as habitat, where 0 is not suitable and 1 is completely suitable."
+msgstr "该LULC类生境的适宜性，0为不适宜，1为完全适宜。"
+
+#: src/natcap/invest/habitat_quality.py:183
+msgid "The relative sensitivity of each LULC class to each type of threat, where 1 represents high sensitivity and 0 represents that it is unaffected. There must be one threat column for each threat name in the 'threats' column of the Threats Table."
+msgstr "每个LULC类对每种威胁类型的相对敏感性，其中1表示高敏感性，0表示不受影响。在“威胁表”的“威胁”列中，每个威胁必须有一个对应列。"
+
+#: src/natcap/invest/habitat_quality.py:191
+msgid "Table mapping each LULC class to data about the species' habitat preference and threat sensitivity in areas with that LULC."
+msgstr "将每个LULC类映射到具有该LULC区域的物种栖息地偏好和威胁敏感性的数据。"
+
+#: src/natcap/invest/habitat_quality.py:195
+msgid "sensitivity table"
+msgstr "敏感性表格"
+
+#: src/natcap/invest/habitat_quality.py:201
+msgid "Half-saturation constant used in the degradation equation."
+msgstr "退化公式中使用的半饱和常数。"
+
+#: src/natcap/invest/habitat_quality.py:203
+msgid "half-saturation constant"
+msgstr "半包和常数"
+
+#: src/natcap/invest/hra.py:66
+msgid "habitat stressor table"
+msgstr "生境压力源表"
+
+#: src/natcap/invest/hra.py:67
+msgid "A table describing each habitat and stressor."
+msgstr "描述每个生境和压力源的表格。"
+
+#: src/natcap/invest/hra.py:72
+msgid "A unique name for each habitat or stressor. These names must match the habitat and stressor names in the Criteria Scores Table."
+msgstr "每个生境或压力源的唯一名称。这些名称必须符合标准评分表中的生境和压力源名称。"
+
+#: src/natcap/invest/hra.py:81
+msgid "Pixel values are 1, indicating presence of the habitat/stressor, or 0 indicating absence. Any values besides 0 or 1 will be treated as 0."
+msgstr "栅格值为1，表示生境/压力源存在，或0表示不存在。除0或1以外的任何值都将被视为0。"
+
+#: src/natcap/invest/hra.py:88
+msgid "Map of where the habitat or stressor exists. For rasters, a pixel value of 1 indicates presence of the habitat or stressor. 0 (or any other value) indicates absence of the habitat or stressor. For vectors, a polygon indicates an area where the habitat or stressor is present."
+msgstr "生境或压力源的分布图。对于栅格，值为1表示生境或压力源的存在。0(或任何其他值)表示没有生境或压力源。对于矢量，多边形表示生境或压力源存在的区域。"
+
+#: src/natcap/invest/hra.py:99
+msgid "habitat"
+msgstr "生境"
+
+#: src/natcap/invest/hra.py:100
+msgid "stressor"
+msgstr "压力源"
+
+#: src/natcap/invest/hra.py:102
+msgid "Whether this row is for a habitat or a stressor."
+msgstr "不管这是用作生境还是用作压力源。"
+
+#: src/natcap/invest/hra.py:108
+msgid "The desired buffer distance used to expand a given stressor’s influence or footprint. This should be left blank for habitats, but must be filled in for stressors. Enter 0 if no buffering is desired for a given stressor. The model will round down this buffer distance to the nearest cell unit. e.g., a buffer distance of 600m will buffer a stressor’s footprint by two grid cells if the resolution of analysis is 250m."
+msgstr "用于扩大给定压力源的影响或影响范围的所需缓冲距离。这里应该为生境留下空白，但必须为压力源填写。如果给定的压力源不需要缓冲，则输入0。模型将把这个缓冲距离舍入到最近的栅格单元。例如，如果分析分辨率为250m, 600m的缓冲距离将用两个栅格单元缓冲压力源的足迹。"
+
+#: src/natcap/invest/hra.py:123
+msgid "criteria scores table"
+msgstr "标准评分表"
+
+#: src/natcap/invest/hra.py:124
+msgid "A table of criteria scores for all habitats and stressors."
+msgstr "所有生境和压力源的标准评分表。"
+
+#: src/natcap/invest/hra.py:130
+msgid "resolution of analysis"
+msgstr "分析的决议"
+
+#: src/natcap/invest/hra.py:131
+msgid "The resolution at which to run the analysis. The model outputs will have this resolution."
+msgstr "运行分析的分辨率。模型将输出这个分辨率。"
+
+#: src/natcap/invest/hra.py:139
+msgid "maximum criteria score"
+msgstr "最高标准得分"
+
+#: src/natcap/invest/hra.py:140
+msgid "The highest possible criteria score in the scoring system."
+msgstr "打分系统中可能的最高标准得分。"
+
+#: src/natcap/invest/hra.py:147
+msgid "risk equation"
+msgstr "风险方程"
+
+#: src/natcap/invest/hra.py:148
+msgid "The equation to use to calculate risk from exposure and consequence."
+msgstr "用来计算暴露和后果的风险的方程式。"
+
+#: src/natcap/invest/hra.py:153
+msgid "Multiplicative"
+msgstr "乘法"
+
+#: src/natcap/invest/hra.py:154
+msgid "Euclidean"
+msgstr "欧几里德"
+
+#: src/natcap/invest/hra.py:158
+msgid "decay equation"
+msgstr "衰变方程"
+
+#: src/natcap/invest/hra.py:159
+msgid "The equation to model effects of stressors in buffer areas."
+msgstr "缓冲区内压力源效应的模型方程。"
+
+#: src/natcap/invest/hra.py:164
+msgid "None"
+msgstr "无"
+
+#: src/natcap/invest/hra.py:165
+msgid "No decay. Stressor has full effect in the buffer area."
+msgstr "没有衰变。压迫物在缓冲区内有充分的效果。"
+
+#: src/natcap/invest/hra.py:169
+msgid "Linear"
+msgstr "线性"
+
+#: src/natcap/invest/hra.py:170
+msgid "Stressor effects in the buffer area decay linearly with distance from the stressor."
+msgstr "缓冲区内的压力源效应随着与压力源的距离线性衰减。"
+
+#: src/natcap/invest/hra.py:174
+msgid "Exponential"
+msgstr "指数型"
+
+#: src/natcap/invest/hra.py:175
+msgid "Stressor effects in the buffer area decay exponentially with distance from the stressor."
+msgstr "缓冲区内的压迫物效应随着与压迫物的距离呈指数级衰减。"
+
+#: src/natcap/invest/hra.py:188
+msgid "Uniquely identifies each feature. Required if the vector contains more than one feature."
+msgstr "独特地识别每个特征。如果向量包含一个以上的特征，则需要。"
+
+#: src/natcap/invest/hra.py:193
+msgid "A GDAL-supported vector file containing features representing one or more planning regions or subregions."
+msgstr "一个GDAL支持的矢量文件，包含代表一个或多个规划区域或次区域的特征。"
+
+#: src/natcap/invest/hra.py:198
+msgid "Number of Overlapping Stressors"
+msgstr "重叠的压力源的数量"
+
+#: src/natcap/invest/hra.py:201
+msgid "The number of overlapping stressors to consider as 'maximum' when reclassifying risk scores into high/medium/low.  Affects the breaks between risk classifications."
+msgstr "在将风险分数重新分类为高/中/低时，将重叠的压力源的数量视为 \"最大\"。  影响到风险分类之间的断裂。"
+
+#: src/natcap/invest/hra.py:210
+msgid "Generate GeoJSONs"
+msgstr "生成GeoJSONs"
+
+#: src/natcap/invest/hra.py:211
+msgid "Generate GeoJSON outputs for web visualization."
+msgstr "生成用于网络可视化的GeoJSON输出。"
+
+#: src/natcap/invest/model_metadata.py:18
+msgid "Annual Water Yield"
+msgstr "年产水量"
+
+#: src/natcap/invest/model_metadata.py:24
+msgid "Carbon Storage and Sequestration"
+msgstr "碳储存和封存"
+
+#: src/natcap/invest/model_metadata.py:30
+msgid "Coastal Blue Carbon"
+msgstr "沿海蓝碳"
+
+#: src/natcap/invest/model_metadata.py:36
+msgid "Coastal Blue Carbon Preprocessor"
+msgstr "沿海蓝碳预处理器"
+
+#: src/natcap/invest/model_metadata.py:42
+msgid "Coastal Vulnerability"
+msgstr "沿海地区的易损性"
+
+#: src/natcap/invest/model_metadata.py:48
+msgid "Crop Production: Percentile"
+msgstr "农作物生产: 百分位数"
+
+#: src/natcap/invest/model_metadata.py:54
+msgid "Crop Production: Regression"
+msgstr "农作物生产: 回归"
+
+#: src/natcap/invest/model_metadata.py:60
+msgid "DelineateIt"
+msgstr "描述"
+
+#: src/natcap/invest/model_metadata.py:66
+msgid "Forest Carbon Edge Effect"
+msgstr "森林碳边缘效应"
+
+#: src/natcap/invest/model_metadata.py:72
+msgid "Habitat Quality"
+msgstr "生境质量"
+
+#: src/natcap/invest/model_metadata.py:78
+msgid "Habitat Risk Assessment"
+msgstr "生境风险评估"
+
+#: src/natcap/invest/model_metadata.py:84
+msgid "Nutrient Delivery Ratio"
+msgstr "养分输送比"
+
+#: src/natcap/invest/model_metadata.py:90
+msgid "Crop Pollination"
+msgstr "作物授粉"
+
+#: src/natcap/invest/model_metadata.py:96
+msgid "Visitation: Recreation and Tourism"
+msgstr "旅游:娱乐和旅游"
+
+#: src/natcap/invest/model_metadata.py:102
+msgid "RouteDEM"
+msgstr "DEM路径"
+
+#: src/natcap/invest/model_metadata.py:108
+msgid "Scenario Generator: Proximity Based"
+msgstr "场景生成器:基于接近性"
+
+#: src/natcap/invest/model_metadata.py:114
+msgid "Scenic Quality"
+msgstr "风景质量"
+
+#: src/natcap/invest/model_metadata.py:120
+msgid "Sediment Delivery Ratio"
+msgstr "泥沙输移比"
+
+#: src/natcap/invest/model_metadata.py:126
+msgid "Seasonal Water Yield"
+msgstr "季节性产水量"
+
+#: src/natcap/invest/model_metadata.py:132
+msgid "Urban Stormwater Retention"
+msgstr "城市雨水滞留"
+
+#: src/natcap/invest/model_metadata.py:138
+msgid "Wave Energy Production"
+msgstr "波浪能生产"
+
+#: src/natcap/invest/model_metadata.py:144
+msgid "Wind Energy Production"
+msgstr "风能生产"
+
+#: src/natcap/invest/model_metadata.py:150
+msgid "Urban Flood Risk Mitigation"
+msgstr "缓解城市洪水风险"
+
+#: src/natcap/invest/model_metadata.py:156
+msgid "Urban Cooling"
+msgstr "城市降温"
+
+#: src/natcap/invest/pollination.py:37
+msgid "Map of LULC codes. All values in this raster must have corresponding entries in the Biophysical Table."
+msgstr "LULC代码的地图。该栅格中的所有数值必须在生物物理表中有相应的条目。"
+
+#: src/natcap/invest/pollination.py:46
+msgid "Unique name or identifier for each pollinator species or guild of interest."
+msgstr "每个传粉者物种的唯一名称或标识符。"
+
+#: src/natcap/invest/pollination.py:52
+msgid "Utilization of the substrate by this species, where 1 indicates the nesting substrate is fully utilized and 0 indicates it is not utilized at all. Replace [SUBSTRATE] with substrate names matching those in the Biophysical Table, so that there is a column for each substrate."
+msgstr "该物种对基质的利用情况，其中1表示筑巢基质被充分利用，0表示完全没有利用。用生物物理表中匹配的底物名称替换[SUBSTRATE]，这样每个底物都有一个列。"
+
+#: src/natcap/invest/pollination.py:62
+msgid "Pollinator activity for this species/guild in each season. 1 indicates maximum activity for the species/guild, and 0 indicates no activity. Replace [SEASON] with season names matching those in the biophysical table, so that there is a column for each season."
+msgstr "本物种/公会在每个季节的传粉者活动。1表示该物种/公会的最大活动，0表示没有活动。用生物物理表中匹配的季节名替换[SEASON]，这样每个季节都有一个列。"
+
+#: src/natcap/invest/pollination.py:73
+msgid "Average distance that this species or guild travels to forage on flowers."
+msgstr "这个物种或公会在花上觅食的平均距离。"
+
+#: src/natcap/invest/pollination.py:79
+msgid "The proportion of total pollinator abundance that consists of this species/guild."
+msgstr "由该物种/协会组成的传粉者总数的比例。"
+
+#: src/natcap/invest/pollination.py:84
+msgid "A table mapping each pollinator species or guild of interest to its pollination-related parameters."
+msgstr "一个表，将每一个传粉者物种或感兴趣的协会的传粉相关参数。"
+
+#: src/natcap/invest/pollination.py:87
+msgid "Guild Table"
+msgstr "公会表"
+
+#: src/natcap/invest/pollination.py:95
+msgid "Index of availability of the given substrate in this LULC class. Replace [SUBSTRATE] with substrate names matching those in the Guild Table, so that there is a column for each substrate."
+msgstr "该LULC类中给定基质的可用性索引。用与公会表中的基质名称相匹配的基质名称替换[SUBSTRATE]，这样，每个基质都有一列。"
+
+#: src/natcap/invest/pollination.py:102
+msgid "Abundance of flowers during the given season in this LULC class. This is the proportion of land area covered by flowers, multiplied by the proportion of the season for which there is that coverage. Replace [SEASON] with season names matching those in the Guild Table, so that there is a column for each season."
+msgstr "该LULC等级在特定季节的花卉丰度。这是花卉覆盖的土地面积的比例，乘以有该覆盖的季节的比例。用与公会表中的季节名称相匹配的季节名称替换[SEASON]，以便每个季节都有一列。"
+
+#: src/natcap/invest/pollination.py:111
+msgid "A table mapping each LULC class to nesting availability and floral abundance data for each substrate and season in that LULC class. All values in the LULC raster must have corresponding entries in this table."
+msgstr "一个将每个LULC等级与该LULC等级中每个基质和季节的筑巢可用性和花卉丰度数据进行映射的表格。LULC栅格中的所有数值必须在此表中有相应的条目。"
+
+#: src/natcap/invest/pollination.py:123
+msgid "Name of the crop grown on each polygon, e.g. 'blueberries', 'almonds', etc."
+msgstr "每个多边形上种植的作物名称，如 \"蓝莓\"、\"杏仁 \"等。"
+
+#: src/natcap/invest/pollination.py:128
+msgid "The half saturation coefficient for the crop grown in this area. This is the wild pollinator abundance (i.e. the proportion of all pollinators that are wild) needed to reach half of the total potential pollinator-dependent yield."
+msgstr "该地区种植的作物的半饱和系数。这是达到依赖授粉者的潜在总产量的一半所需的野生授粉者丰度（即所有授粉者中野生的比例）。"
+
+#: src/natcap/invest/pollination.py:136
+msgid "The season in which the crop is pollinated. Season names must match those in the Guild Table and Biophysical Table."
+msgstr "作物授粉的季节。季节名称必须与公会表和生物物理表中的名称一致。"
+
+#: src/natcap/invest/pollination.py:142
+msgid "The floral resources available at this farm for the given season. Replace [SEASON] with season names matching those in the Guild Table and Biophysical Table, so that there is one field for each season."
+msgstr "这个农场在给定季节可获得的花草资源。用与行会表和生物物理表相匹配的季节名称替换[SEASON]，这样每个季节就有一个字段。"
+
+#: src/natcap/invest/pollination.py:150
+msgid "The nesting suitability for the given substrate at this farm. given substrate. Replace [SUBSTRATE] with substrate names matching those in the Guild Table and Biophysical Table, so that there is one field for each substrate."
+msgstr "该农场对给定基质的嵌套适用性。 给定基质。用与公会表和生物物理表中的基质名称相匹配的基质名称替换[SUBSTRATE]，这样每个基质就有一个字段。"
+
+#: src/natcap/invest/pollination.py:158
+msgid "The proportion of crop dependent on pollinators."
+msgstr "依靠传粉者的作物比例。"
+
+#: src/natcap/invest/pollination.py:163
+msgid "The proportion of pollination required on the farm that is provided by managed pollinators."
+msgstr "农场中由管理传粉者提供的传粉比例。"
+
+#: src/natcap/invest/pollination.py:169
+msgid "Map of farm sites to be analyzed, with pollination data specific to each farm."
+msgstr "要分析的农场地点的地图，每个农场的授粉数据。"
+
+#: src/natcap/invest/pollination.py:172
+msgid "farms map"
+msgstr "农场地图"
+
+#: src/natcap/invest/routedem.py:20
+msgid "Must be between 1 and {maximum}"
+msgstr "必须在1和{maximum}之间"
+
+#: src/natcap/invest/routedem.py:36
+msgid "Index of the raster band to use, for multi-band rasters."
+msgstr "要使用的栅格波段的索引，用于多波段栅格。"
+
+#: src/natcap/invest/routedem.py:38
+msgid "band index"
+msgstr "波段索引"
+
+#: src/natcap/invest/routedem.py:45
+msgid "All water on a pixel flows into the most downhill of its 8 surrounding pixels"
+msgstr "一个栅格上的所有水都流入周围8个栅格中最下坡的一个"
+
+#: src/natcap/invest/routedem.py:50
+msgid "Flow off a pixel is modeled fractionally so that water is split among multiple downslope pixels"
+msgstr "一个栅格的流量是分段建模的，因此水在多个下斜坡栅格之间被分割"
+
+#: src/natcap/invest/routedem.py:54
+msgid "The routing algorithm to use."
+msgstr "要使用的路由算法。"
+
+#: src/natcap/invest/routedem.py:55
+msgid "routing algorithm"
+msgstr "路由算法"
+
+#: src/natcap/invest/routedem.py:60
+msgid "Calculate flow direction from the provided DEM."
+msgstr "根据所提供的DEM计算流向。"
+
+#: src/natcap/invest/routedem.py:61
+msgid "calculate flow direction"
+msgstr "计算流向"
+
+#: src/natcap/invest/routedem.py:66
+msgid "Calculate flow accumulation from the flow direction output."
+msgstr "从流量方向输出计算流量累积。"
+
+#: src/natcap/invest/routedem.py:68
+msgid "calculate flow accumulation"
+msgstr "计算流量累积"
+
+#: src/natcap/invest/routedem.py:73
+msgid "Calculate streams from the flow accumulation output. "
+msgstr "从流量累积输出中计算流量。 "
+
+#: src/natcap/invest/routedem.py:75
+msgid "calculate streams"
+msgstr "计算流"
+
+#: src/natcap/invest/routedem.py:82
+msgid "Required if Calculate Streams is selected."
+msgstr "如果选中“计算流”，则需要。"
+
+#: src/natcap/invest/routedem.py:87
+msgid "Calculate flow distance from each pixel to a stream as defined in the Calculate Streams output."
+msgstr "计算从每个栅格到在计算流输出中定义的流的距离。"
+
+#: src/natcap/invest/routedem.py:90
+msgid "calculate distance to stream"
+msgstr "计算到溪流的距离"
+
+#: src/natcap/invest/routedem.py:95
+msgid "Calculate percent slope from the provided DEM."
+msgstr "根据所提供的DEM计算坡度百分比。"
+
+#: src/natcap/invest/routedem.py:96
+msgid "calculate slope"
+msgstr "计算坡度"
+
+#: src/natcap/invest/scenario_gen_proximity.py:29
+msgid "One or more of \"convert_nearest_to_edge\" or \"convert_farthest_from_edge\" must be selected"
+msgstr "必须选择“convert_nearest_to_edge”或“convert_farthest_from_edge”中的一个或多个"
+
+#: src/natcap/invest/scenario_gen_proximity.py:44
+msgid "Base map from which to generate scenarios."
+msgstr "生成场景的基本映射。"
+
+#: src/natcap/invest/scenario_gen_proximity.py:45
+msgid "base LULC map"
+msgstr "基准LULC图"
+
+#: src/natcap/invest/scenario_gen_proximity.py:49
+msgid "The LULC code to which habitat will be converted."
+msgstr "栖息地要转换为的LULC代码。"
+
+#: src/natcap/invest/scenario_gen_proximity.py:50
+msgid "replacement landcover code"
+msgstr "替换的土地覆盖代码"
+
+#: src/natcap/invest/scenario_gen_proximity.py:56
+msgid "Maximum area to be converted to agriculture."
+msgstr "最大面积转为农业。"
+
+#: src/natcap/invest/scenario_gen_proximity.py:57
+msgid "maximum area to convert"
+msgstr "可转换的最大面积"
+
+#: src/natcap/invest/scenario_gen_proximity.py:62
+msgid "A space-separated list of LULC codes that are used to determine the proximity when referring to 'towards' or 'away' from the base landcover codes"
+msgstr "一个以空格分隔的LULC代码列表，用于在提到“朝向”或“远离”基本地表覆盖代码时确定邻近性"
+
+#: src/natcap/invest/scenario_gen_proximity.py:66
+msgid "focal landcover codes"
+msgstr "焦点土地覆盖代码"
+
+#: src/natcap/invest/scenario_gen_proximity.py:71
+msgid "A space-separated list of LULC codes that can be converted to be converted to agriculture."
+msgstr "一个用空格分隔的LULC代码列表，可以转换为农业代码。"
+
+#: src/natcap/invest/scenario_gen_proximity.py:74
+msgid "convertible landcover codes"
+msgstr "可转换的土地覆盖代码"
+
+#: src/natcap/invest/scenario_gen_proximity.py:80
+msgid "The number of steps that the simulation should take to fragment the habitat of interest in the fragmentation scenario. This parameter is used to divide the conversion simulation into equal subareas of the requested max area. During each sub-step the distance transform is recalculated from the base landcover codes.  This can affect the final result if the base types are also convertible types."
+msgstr "在碎片场景中，模拟将感兴趣的栖息地碎片化所应采取的步骤数。此参数用于将转换模拟划分为所请求的最大区域的相等子区域。在每一个子步骤中，从基本的土地覆盖编码重新计算距离变换。如果基类型也是可转换类型，这可能会影响最终结果。"
+
+#: src/natcap/invest/scenario_gen_proximity.py:88
+msgid "number of conversion steps"
+msgstr "转换步骤数量"
+
+#: src/natcap/invest/scenario_gen_proximity.py:93
+msgid "Area over which to run the conversion. Provide this input if change is only desired in a subregion of the Base LULC map."
+msgstr "运行转换的区域。如果只希望在Base LULC映射的子区域中进行更改，则提供此输入。"
+
+#: src/natcap/invest/scenario_gen_proximity.py:99
+msgid "Convert the 'convertible' landcover codes starting at the furthest pixel from the 'focal' land cover areas and working inwards."
+msgstr "从距离“焦点”土地覆盖区域最远的像素开始，向内转换“可转换”土地覆盖代码。"
+
+#: src/natcap/invest/scenario_gen_proximity.py:103
+msgid "convert farthest from edge"
+msgstr "从最远的边开始转换"
+
+#: src/natcap/invest/scenario_gen_proximity.py:107
+msgid "Convert the 'convertible' landcover codes starting at the nearest pixels to the 'focal' land cover areas and working outwards."
+msgstr "将“可转换”土地覆盖代码从最近的像素开始转换为“焦点”土地覆盖区域并向外工作。"
+
+#: src/natcap/invest/scenario_gen_proximity.py:111
+msgid "convert nearest to edge"
+msgstr "最接近边的转换"
+
+#: src/natcap/invest/spec_utils.py:12
+msgid "workspace"
+msgstr "工作空间"
+
+#: src/natcap/invest/spec_utils.py:13
+msgid "The folder where all the model's output files will be written. If this folder does not exist, it will be created. If data already exists in the folder, it will be overwritten."
+msgstr "将写入所有模型输出文件的文件夹。如果这个文件夹不存在，将创建它。如果数据已经存在于文件夹中，它将被覆盖。"
+
+#: src/natcap/invest/spec_utils.py:24
+msgid "file suffix"
+msgstr "文件后缀"
+
+#: src/natcap/invest/spec_utils.py:25
+msgid "Suffix that will be appended to all output file names. Useful to differentiate between model runs."
+msgstr "后缀，它将附加到所有输出文件名。区分模型运行很有用。"
+
+#: src/natcap/invest/spec_utils.py:34
+msgid "taskgraph n_workers parameter"
+msgstr "任务图n_workers参数"
+
+#: src/natcap/invest/spec_utils.py:35
+msgid "The n_workers parameter to provide to taskgraph. -1 will cause all jobs to run synchronously. 0 will run all jobs in the same process, but scheduling will take place asynchronously. Any other positive integer will cause that many processes to be spawned to execute tasks."
+msgstr "提供给任务图的n_workers参数。-1将使所有作业同步运行。0将运行同一进程中的所有作业，但调度将异步进行。任何其他正整数都将导致生成同样多的进程来执行任务。"
+
+#: src/natcap/invest/spec_utils.py:60
+msgid "area of interest"
+msgstr "感兴趣的区域"
+
+#: src/natcap/invest/spec_utils.py:61
+msgid "A map of areas over which to aggregate and summarize the final results."
+msgstr "汇总和总结最终结果的区域地图。"
+
+#: src/natcap/invest/spec_utils.py:68
+msgid "Map of land use/land cover codes. Each land use/land cover type must be assigned a unique integer code."
+msgstr "土地利用/土地覆盖代码栅格地图。 每种土地利用/土地覆盖类型必须用一个唯一的整数代码来表示。"
+
+#: src/natcap/invest/spec_utils.py:71
+msgid "land use/land cover"
+msgstr "土地使用/土地覆盖"
+
+#: src/natcap/invest/spec_utils.py:81
+msgid "Map of elevation above sea level."
+msgstr "海平面以上的高程地图。"
+
+#: src/natcap/invest/spec_utils.py:82
+msgid "digital elevation model"
+msgstr "数字高程模型"
+
+#: src/natcap/invest/spec_utils.py:92
+msgid "Map of average annual precipitation."
+msgstr "年平均降水量地图。"
+
+#: src/natcap/invest/spec_utils.py:93
+msgid "precipitation"
+msgstr "降水"
+
+#: src/natcap/invest/spec_utils.py:96
+msgid "evapotranspiration"
+msgstr "蒸发量"
+
+#: src/natcap/invest/spec_utils.py:104
+msgid "Map of evapotranspiration values."
+msgstr "蒸发量值地图。"
+
+#: src/natcap/invest/spec_utils.py:109
+msgid "Map of soil hydrologic groups. Pixels may have values 1, 2, 3, or 4, corresponding to soil hydrologic groups A, B, C, or D, respectively."
+msgstr "土壤水文组的地图。栅格的值可以是1、2、3或4，分别对应于土壤水文组A、B、C或D。"
+
+#: src/natcap/invest/spec_utils.py:112
+msgid "soil hydrologic group"
+msgstr "土壤水文组"
+
+#: src/natcap/invest/spec_utils.py:118
+msgid "The number of upslope pixels that must flow into a pixel before it is classified as a stream."
+msgstr "在被归类为流之前，必须流入一个栅格的上坡栅格的数量。"
+
+#: src/natcap/invest/spec_utils.py:121
+msgid "threshold flow accumulation"
+msgstr "阈值流量累积"
+
+#: src/natcap/invest/spec_utils.py:125
+#: src/natcap/invest/urban_flood_risk_mitigation.py:63
+#, fuzzy
+msgid "LULC codes from the LULC raster. Each code must be a unique integer."
+msgstr "来自 LULC 栅格的 LULC 代码。 每个代码必须是唯一的整数。"
+
+#: src/natcap/invest/spec_utils.py:173
+msgid "number of pixels"
+msgstr "像元数量"
+
+#: src/natcap/invest/spec_utils.py:174
+#, fuzzy
+msgid "currency units"
+msgstr "货币单位"
+
+#: src/natcap/invest/spec_utils.py:183
+#, fuzzy
+msgid "unitless"
+msgstr "无单位的"
+
+#: src/natcap/invest/spec_utils.py:254
+msgid "required"
+msgstr "必填"
+
+#: src/natcap/invest/spec_utils.py:256
+msgid "optional"
+msgstr "可选的"
+
+#: src/natcap/invest/spec_utils.py:259
+msgid "conditionally required"
+msgstr "有条件地要求"
+
+#: src/natcap/invest/spec_utils.py:289
+msgid "read"
+msgstr "阅读"
+
+#: src/natcap/invest/spec_utils.py:291
+msgid "write"
+msgstr "写入"
+
+#: src/natcap/invest/spec_utils.py:293
+msgid "execute"
+msgstr "执行"
+
+#: src/natcap/invest/spec_utils.py:366
+msgid "true/false"
+msgstr "真/假"
+
+#: src/natcap/invest/spec_utils.py:367
+msgid "CSV"
+msgstr "CSV"
+
+#: src/natcap/invest/spec_utils.py:368
+msgid "directory"
+msgstr "模型数据目录"
+
+#: src/natcap/invest/spec_utils.py:369
+msgid "file"
+msgstr "文件后缀"
+
+#: src/natcap/invest/spec_utils.py:370
+msgid "text"
+msgstr "文本"
+
+#: src/natcap/invest/spec_utils.py:371
+msgid "integer"
+msgstr "整数"
+
+#: src/natcap/invest/spec_utils.py:372
+msgid "number"
+msgstr "数量"
+
+#: src/natcap/invest/spec_utils.py:373
+msgid "option"
+msgstr "选项"
+
+#: src/natcap/invest/spec_utils.py:374
+msgid "percent"
+msgstr "百分比"
+
+#: src/natcap/invest/spec_utils.py:375
+msgid "raster"
+msgstr "栅格"
+
+#: src/natcap/invest/spec_utils.py:376
+msgid "ratio"
+msgstr "比例"
+
+#: src/natcap/invest/spec_utils.py:377
+msgid "vector"
+msgstr "向量"
+
+#: src/natcap/invest/spec_utils.py:448
+#, fuzzy
+msgid "units"
+msgstr "单位"
+
+#: src/natcap/invest/spec_utils.py:476 src/natcap/invest/spec_utils.py:480
+msgid "Options:"
+msgstr "选项:"
+
+#: src/natcap/invest/spec_utils.py:484
+msgid " Please see the sample data table for details on the format."
+msgstr " 关于格式的细节，请参见样本数据表。"
+
+#: src/natcap/invest/stormwater.py:54
+msgid "Event mean concentration of the pollutant in stormwater. You may include any number of these columns for different pollutants, or none at all."
+msgstr "雨水中污染物的事件平均浓度。你可以为不同的污染物包括任何数量的这些列，或者根本不包括。"
+
+#: src/natcap/invest/stormwater.py:63
+msgid "Stormwater runoff coefficient for soil group"
+msgstr "土壤组的雨水径流系数"
+
+#: src/natcap/invest/stormwater.py:72
+msgid "Stormwater percolation coefficient for soil group"
+msgstr "土壤组的雨水渗漏系数"
+
+#: src/natcap/invest/stormwater.py:82
+msgid "Enter 1 if the LULC class is a connected impervious surface, 0 if not. This column is only used if the 'adjust retention ratios' option is selected. If 'adjust retention ratios' is selected and this column exists, the adjustment algorithm takes into account the LULC as well as road centerlines. If this column does not exist, only the road centerlines are used."
+msgstr "如果LULC等级是连接的不透水表面，则输入1，如果不是则输入0。这一栏只有在选择了 \"调整保留率 \"选项时才会使用。如果选择了 \"调整保留率\"，并且这一栏存在，调整算法会考虑LULC和道路中心线。如果这一栏不存在，则只使用道路中心线。"
+
+#: src/natcap/invest/stormwater.py:93
+msgid "Table mapping each LULC code found in the LULC raster to biophysical data about that LULC class. If you provide the percolation coefficient column (PE_[X]) for any soil group, you must provide it for all four soil groups."
+msgstr "将LULC栅格中的每个LULC代码与该LULC类别的生物物理数据进行映射的表格。如果你为任何土壤组提供渗滤系数列（PE_[X]），你必须为所有四个土壤组提供。"
+
+#: src/natcap/invest/stormwater.py:98
+msgid "Biophysical table"
+msgstr "生物物理表"
+
+#: src/natcap/invest/stormwater.py:102
+msgid "If true, adjust retention ratios. The adjustment algorithm accounts for drainage effects of nearby impervious surfaces which are directly connected to artifical urban drainage channels (typically roads, parking lots, etc.) Connected impervious surfaces are indicated by the is_connected columnin the biophysical table and/or the road centerlines vector."
+msgstr "如果为真，则调整保留率。调整算法考虑了附近不透水表面的排水影响，这些不透水表面直接与城市人工排水道相连（通常是道路、停车场等）。"
+
+#: src/natcap/invest/stormwater.py:109
+msgid "Adjust retention ratios"
+msgstr "调整保留率"
+
+#: src/natcap/invest/stormwater.py:115
+msgid "Radius around each pixel to adjust retention ratios. Measured in raster coordinate system units. For the adjustment algorithm, a pixel is 'near' a connected impervious surface if its centerpoint is within this radius of connected-impervious LULC and/or a road centerline."
+msgstr "每个像素周围的半径，用于调整保留率。以栅格坐标系统单位测量。对于调整算法，如果一个像素的中心点在这个半径内的相连不透水的LULC和/或道路中心线内，则该像素 \"靠近 \"相连不透水的表面。"
+
+#: src/natcap/invest/stormwater.py:121
+msgid "Retention radius"
+msgstr "保留半径"
+
+#: src/natcap/invest/stormwater.py:128
+msgid "Map of road centerlines"
+msgstr "道路中心线地图"
+
+#: src/natcap/invest/stormwater.py:129
+msgid "Road centerlines"
+msgstr "道路中心线"
+
+#: src/natcap/invest/stormwater.py:134
+msgid "Areas over which to aggregate results (typically watersheds or sewersheds). The aggregated data are: average retention ratio and total retention volume; average percolation ratio and total percolation volume if percolation data was provided; total retention value if replacement cost was provided; and total avoided pollutant load for each pollutant provided."
+msgstr "汇总结果的区域（通常是流域或污水流域）。汇总的数据是：平均保留率和总保留量；如果提供了渗滤数据，则提供平均渗滤率和总渗滤量；如果提供了重置成本，则提供总保留价值；以及所提供的每种污染物的总避免污染负荷。"
+
+#: src/natcap/invest/stormwater.py:147
+msgid "Replacement cost of stormwater retention devices"
+msgstr "雨水保留装置的更换费用"
+
+#: src/natcap/invest/stormwater.py:148
+msgid "Replacement cost"
+msgstr "替换费用"
+
+#: src/natcap/invest/urban_cooling_model.py:48
+msgid "Map of LULC for the area of interest. All values in this raster must have corresponding entries in the Biophysical Table."
+msgstr "所关注区域的LULC地图。该栅格中的所有数值必须在生物物理表中有相应的条目。"
+
+#: src/natcap/invest/urban_cooling_model.py:66
+msgid "Enter 1 to indicate that the LULC is considered a green area. Enter 0 to indicate that the LULC is not considered a green area."
+msgstr "输入1表示该LULC被认为是绿色区域。输入 0 表示该 LULC 不被视为绿色区域。"
+
+#: src/natcap/invest/urban_cooling_model.py:73
+msgid "The proportion of area in this LULC class that is covered by tree canopy at least 2 meters high. Required if the 'factors' option is selected for the Cooling Capacity Calculation Method."
+msgstr "该LULC等级中被至少2米高的树冠覆盖的面积比例。如果冷却能力计算方法选择 \"因素 \"选项，则需要。"
+
+#: src/natcap/invest/urban_cooling_model.py:81
+msgid "The proportion of solar radiation that is directly reflected by this LULC class. Required if the 'factors' option is selected for the Cooling Capacity Calculation Method."
+msgstr "该LULC等级直接反射的太阳辐射的比例。如果冷却能力计算方法选择 \"因素 \"选项，则需要。"
+
+#: src/natcap/invest/urban_cooling_model.py:89
+msgid "The ratio of building floor area to footprint area, with all values in this column normalized between 0 and 1. Required if the 'intensity' option is selected for the Cooling Capacity Calculation Method."
+msgstr "建筑物面积与占地面积的比率，这一栏中的所有数值都在0和1之间归一化。 如果冷却能力计算方法选择了 \"强度 \"选项，则需要。"
+
+#: src/natcap/invest/urban_cooling_model.py:96
+msgid "A table mapping each LULC code to biophysical data for that LULC class. All values in the LULC raster must have corresponding entries in this table."
+msgstr "将每个LULC代码映射到该LULC等级的生物物理数据的表格。LULC栅格中的所有数值必须在此表中有相应的条目。"
+
+#: src/natcap/invest/urban_cooling_model.py:105
+msgid "maximum cooling distance"
+msgstr "最大冷却距离"
+
+#: src/natcap/invest/urban_cooling_model.py:106
+msgid "Distance over which green areas larger than 2 hectares have a cooling effect."
+msgstr "大于2公顷的绿地具有冷却效果的距离。"
+
+#: src/natcap/invest/urban_cooling_model.py:114
+msgid "air blending distance"
+msgstr "空气混合距离"
+
+#: src/natcap/invest/urban_cooling_model.py:115
+msgid "Radius over which to average air temperatures to account for air mixing."
+msgstr "平均空气温度的半径，以考虑到空气混合。"
+
+#: src/natcap/invest/urban_cooling_model.py:120
+msgid "reference air temperature"
+msgstr "参考空气温度"
+
+#: src/natcap/invest/urban_cooling_model.py:123
+msgid "Air temperature in a rural reference area where the urban heat island effect is not observed."
+msgstr "在没有观察到城市热岛效应的农村参考地区的空气温度。"
+
+#: src/natcap/invest/urban_cooling_model.py:128
+msgid "UHI effect"
+msgstr "城市热岛效应"
+
+#: src/natcap/invest/urban_cooling_model.py:131
+msgid "The magnitude of the urban heat island effect, i.e., the difference between the rural reference temperature and the maximum temperature observed in the city."
+msgstr "城市热岛效应的大小，即农村参考温度与城市中观察到的最高温度之间的差异。"
+
+#: src/natcap/invest/urban_cooling_model.py:137
+msgid "run energy savings valuation"
+msgstr "运行能源节约评估"
+
+#: src/natcap/invest/urban_cooling_model.py:139
+msgid "Run the energy savings valuation model."
+msgstr "运行节能评估模型。"
+
+#: src/natcap/invest/urban_cooling_model.py:142
+msgid "run work productivity valuation"
+msgstr "运行工作效率评估"
+
+#: src/natcap/invest/urban_cooling_model.py:144
+msgid "Run the work productivity valuation model."
+msgstr "运行工作生产力评估模型。"
+
+#: src/natcap/invest/urban_cooling_model.py:147
+msgid "average relative humidity"
+msgstr "平均相对湿度"
+
+#: src/natcap/invest/urban_cooling_model.py:150
+msgid "The average relative humidity over the time period of interest. Required if Run Work Productivity Valuation is selected."
+msgstr "所关注的时间段内的平均相对湿度。如果选择了运行工作生产力评估，则需要。"
+
+#: src/natcap/invest/urban_cooling_model.py:156
+msgid "buildings"
+msgstr "建筑"
+
+#: src/natcap/invest/urban_cooling_model.py:161
+msgid "Code indicating the building type. These codes must match those in the Energy Consumption Table."
+msgstr "表示建筑类型的代码。这些代码必须与能源消耗表中的代码一致。"
+
+#: src/natcap/invest/urban_cooling_model.py:166
+msgid "A map of built infrastructure footprints. Required if Run Energy Savings Valuation is selected."
+msgstr "已建基础设施足迹的地图。如果选择运行能源节约评估，则需要。"
+
+#: src/natcap/invest/urban_cooling_model.py:171
+msgid "energy consumption table"
+msgstr "能源消耗表"
+
+#: src/natcap/invest/urban_cooling_model.py:176
+msgid "Building type codes matching those in the Buildings vector."
+msgstr "建筑物类型代码与建筑物向量中的代码相匹配。"
+
+#: src/natcap/invest/urban_cooling_model.py:183
+msgid "Energy consumption by footprint area for this building type."
+msgstr "该建筑类型按占地面积计算的能源消耗。"
+
+#: src/natcap/invest/urban_cooling_model.py:191
+msgid "The cost of electricity for this building type. If this column is provided, the energy savings outputs will be in the this currency unit rather than kWh."
+msgstr "该建筑类型的电力成本。如果提供了这一栏，节能输出将以货币为单位而非千瓦时为单位。"
+
+#: src/natcap/invest/urban_cooling_model.py:199
+msgid "A table of energy consumption data for each building type. Required if Run Energy Savings Valuation is selected."
+msgstr "每种建筑类型的能源消耗数据表格。如果选择运行能源节约评估，则需要。"
+
+#: src/natcap/invest/urban_cooling_model.py:204
+msgid "cooling capacity calculation method"
+msgstr "制冷量计算方法"
+
+#: src/natcap/invest/urban_cooling_model.py:208
+msgid "factors"
+msgstr "因素"
+
+#: src/natcap/invest/urban_cooling_model.py:209
+msgid "Use the weighted shade, albedo, and ETI factors as a temperature predictor (for daytime temperatures)."
+msgstr "使用加权阴影、反照率和ETI因子作为温度预测器（针对白天的温度）。"
+
+#: src/natcap/invest/urban_cooling_model.py:213
+msgid "intensity"
+msgstr "强度"
+
+#: src/natcap/invest/urban_cooling_model.py:214
+msgid "Use building intensity as a temperature predictor (for nighttime temperatures)."
+msgstr "使用建筑强度作为温度预测器（针对夜间温度）。"
+
+#: src/natcap/invest/urban_cooling_model.py:218
+msgid "The air temperature predictor method to use."
+msgstr "要使用的空气温度预测方法。"
+
+#: src/natcap/invest/urban_cooling_model.py:221
+msgid "shade weight"
+msgstr "阴影权重"
+
+#: src/natcap/invest/urban_cooling_model.py:224
+msgid "The relative weight to apply to shade when calculating the cooling capacity index. If not provided, defaults to 0.6."
+msgstr "计算冷却能力指数时适用于阴凉处的相对权重。如果没有提供，默认为0.6。"
+
+#: src/natcap/invest/urban_cooling_model.py:229
+msgid "albedo weight"
+msgstr "反照率权重"
+
+#: src/natcap/invest/urban_cooling_model.py:232
+msgid "The relative weight to apply to albedo when calculating the cooling capacity index. If not provided, defaults to 0.2."
+msgstr "计算冷却能力指数时应用于反照率的相对权重。如果没有提供，默认为0.2。"
+
+#: src/natcap/invest/urban_cooling_model.py:237
+msgid "evapotranspiration weight"
+msgstr "蒸发权重"
+
+#: src/natcap/invest/urban_cooling_model.py:240
+msgid "The relative weight to apply to ETI when calculating the cooling capacity index. If not provided, defaults to 0.2."
+msgstr "计算冷却能力指数时，应用于ETI的相对权重。如果没有提供，默认为0.2。"
+
+#: src/natcap/invest/urban_flood_risk_mitigation.py:44
+msgid "Depth of rainfall for the design storm of interest."
+msgstr "所关注的设计暴雨的降雨深度。"
+
+#: src/natcap/invest/urban_flood_risk_mitigation.py:45
+msgid "rainfall depth"
+msgstr "降雨深度"
+
+#: src/natcap/invest/urban_flood_risk_mitigation.py:50
+msgid "Map of LULC. All values in this raster must have corresponding entries in the Biophysical Table."
+msgstr "LULC的地图。该栅格中的所有数值必须在生物物理表中有相应的条目。"
+
+#: src/natcap/invest/urban_flood_risk_mitigation.py:67
+msgid "The curve number value for this LULC type in the soil group code"
+msgstr "该LULC类型在土壤组代码中的曲线数字值"
+
+#: src/natcap/invest/urban_flood_risk_mitigation.py:72
+msgid "Table of curve number data for each LULC class. All LULC codes in the LULC raster must have corresponding entries in this table for each soil group."
+msgstr "每个LULC等级的曲线编号数据表。LULC栅格中的所有LULC代码必须在此表中有每个土壤组的对应条目。"
+
+#: src/natcap/invest/urban_flood_risk_mitigation.py:83
+msgid "Code indicating the building type. These codes must match those in the Damage Loss Table."
+msgstr "表示建筑物类型的代码。这些代码必须与损坏损失表中的代码一致。"
+
+#: src/natcap/invest/urban_flood_risk_mitigation.py:89
+msgid "Map of building footprints."
+msgstr "建筑物地图。"
+
+#: src/natcap/invest/urban_flood_risk_mitigation.py:90
+msgid "built infrastructure"
+msgstr "建成的基础设施"
+
+#: src/natcap/invest/urban_flood_risk_mitigation.py:97
+msgid "Building type code."
+msgstr "建筑类型代码。"
+
+#: src/natcap/invest/urban_flood_risk_mitigation.py:101
+msgid "Potential damage loss for this building type."
+msgstr "这种建筑类型的潜在破坏损失。"
+
+#: src/natcap/invest/urban_flood_risk_mitigation.py:104
+msgid "Table of potential damage loss data for each building type. All values in the Built Infrastructure vector 'type' field must have corresponding entries in this table. Required if the Built Infrastructure vector is provided."
+msgstr "每个建筑类型的潜在破坏损失数据表。基础设施建设矢量 \"类型 \"字段中的所有数值必须在此表中有相应的条目。如果提供建筑基础设施向量，则需要。"
+
+#: src/natcap/invest/urban_flood_risk_mitigation.py:109
+msgid "damage loss table"
+msgstr "危害损失表"
+
+#: src/natcap/invest/validation.py:30
+msgid "Key is missing from the args dict"
+msgstr "在args dict中缺少关键信息"
+
+#: src/natcap/invest/validation.py:31
+msgid "Input is required but has no value"
+msgstr "输入是必需的，但没有价值"
+
+#: src/natcap/invest/validation.py:32
+msgid "Expected the {header} \"{header_name}\" but did not find it"
+msgstr "期待{header}\"{header_name}\"，但没有找到"
+
+#: src/natcap/invest/validation.py:34
+msgid "Expected the {header} \"{header_name}\" only once but found it {number} times"
+msgstr "预计{header}\"{header_name}\"只有一次，但发现它有{number}次"
+
+#: src/natcap/invest/validation.py:36
+msgid "Value \"{value}\" could not be interpreted as a number"
+msgstr "值\"{value}\"不能被解释为一个数字"
+
+#: src/natcap/invest/validation.py:37
+msgid "Layer must be projected in this unit: \"{unit_a}\" but found this unit: \"{unit_b}\""
+msgstr "层必须投射在这个单位。\"{unit_a}\"但发现这个单位是\"{unit_b}\""
+
+#: src/natcap/invest/validation.py:39
+msgid "An unexpected error occurred in validation"
+msgstr "在验证过程中发生了一个意外的错误"
+
+#: src/natcap/invest/validation.py:40
+msgid "Directory not found"
+msgstr "未找到目录"
+
+#: src/natcap/invest/validation.py:41
+msgid "Path must be a directory"
+msgstr "路径必须是一个目录"
+
+#: src/natcap/invest/validation.py:42
+msgid "File not found"
+msgstr "未找到文件"
+
+#: src/natcap/invest/validation.py:43
+msgid "Dataset must have a valid projection."
+msgstr "数据集必须有一个有效的投影。"
+
+#: src/natcap/invest/validation.py:44
+msgid "Dataset must be projected in linear units."
+msgstr "数据集必须以线性单位投影。"
+
+#: src/natcap/invest/validation.py:45
+msgid "File could not be opened as a GDAL raster"
+msgstr "文件无法以GDAL栅格形式打开"
+
+#: src/natcap/invest/validation.py:46
+msgid "File found to be an overview \".ovr\" file."
+msgstr "发现文件是一个概览\".ovr \"文件。"
+
+#: src/natcap/invest/validation.py:47
+msgid "File could not be opened as a GDAL vector"
+msgstr "文件无法作为GDAL向量打开"
+
+#: src/natcap/invest/validation.py:48
+msgid "File could not be opened as a CSV or Excel file."
+msgstr "文件无法作为CSV或Excel文件打开。"
+
+#: src/natcap/invest/validation.py:49
+msgid "File could not be opened as a CSV. File must be encoded as a UTF-8 CSV."
+msgstr "文件不能以CSV形式打开。文件必须被编码为UTF-8 CSV。"
+
+#: src/natcap/invest/validation.py:51
+msgid "Value did not match expected pattern {regexp}"
+msgstr "值不符合预期模式 {regexp}"
+
+#: src/natcap/invest/validation.py:52
+msgid "Value must be one of: {option_list}"
+msgstr "值必须是以下之一。{option_list}"
+
+#: src/natcap/invest/validation.py:53
+msgid "Value does not meet condition {condition}"
+msgstr "值不符合条件 {condition}"
+
+#: src/natcap/invest/validation.py:54
+msgid "Value {value} is not in the range {range}"
+msgstr "值{value}不在范围内{range}。"
+
+#: src/natcap/invest/validation.py:55
+msgid "Value \"{value}\" does not represent an integer"
+msgstr "值\"{value}\"不代表一个整数"
+
+#: src/natcap/invest/validation.py:56
+msgid "Value must be either True or False, not {value}"
+msgstr "值必须是真或假，而不是{value}。"
+
+#: src/natcap/invest/validation.py:57
+msgid "Spatial file {filepath} has no projection"
+msgstr "空间文件{filepath}没有投影"
+
+#: src/natcap/invest/validation.py:58
+msgid "Bounding boxes do not intersect: {bboxes}"
+msgstr "边界不相交：{bboxes} 。"
+
+#: src/natcap/invest/validation.py:59
+msgid "You must have {permission} access to this file"
+msgstr "你必须有{permission}的权限来访问这个文件"
+
+#: src/natcap/invest/wave_energy.py:45
+msgid "Point vector for the west coast of North America and Hawaii."
+msgstr "北美洲西海岸和夏威夷的点矢量。"
+
+#: src/natcap/invest/wave_energy.py:52
+msgid "Extract vector for the west coast of North America and Hawaii."
+msgstr "为北美西海岸和夏威夷提取矢量。"
+
+#: src/natcap/invest/wave_energy.py:57
+msgid "WaveWatchIII data for the west coast of North America and Hawaii."
+msgstr "北美西海岸和夏威夷的WaveWatchIII数据。"
+
+#: src/natcap/invest/wave_energy.py:64
+msgid "Point vector for the East Coast of North America and Puerto Rico."
+msgstr "北美东海岸和波多黎各的点矢量。"
+
+#: src/natcap/invest/wave_energy.py:71
+msgid "Extract vector for the East Coast of North America and Puerto Rico."
+msgstr "北美东海岸和波多黎各的提取矢量。"
+
+#: src/natcap/invest/wave_energy.py:76
+msgid "WaveWatchIII data for the East Coast of North America and Puerto Rico."
+msgstr "北美东海岸和波多黎各的WaveWatchIII数据。"
+
+#: src/natcap/invest/wave_energy.py:83
+msgid "Point vector for the North Sea 4 meter resolution."
+msgstr "北海的点向量，4米分辨率。"
+
+#: src/natcap/invest/wave_energy.py:89
+msgid "Extract vector for the North Sea 4 meter resolution."
+msgstr "北海4米分辨率的提取矢量。"
+
+#: src/natcap/invest/wave_energy.py:93
+msgid "WaveWatchIII data for the North Sea 4 meter resolution."
+msgstr "北海4米分辨率的WaveWatchIII数据。"
+
+#: src/natcap/invest/wave_energy.py:100
+msgid "Point vector for the North Sea 10 meter resolution."
+msgstr "北海10米分辨率的点矢量。"
+
+#: src/natcap/invest/wave_energy.py:106
+msgid "Extract vector for the North Sea 10 meter resolution."
+msgstr "北海10米分辨率的提取矢量。"
+
+#: src/natcap/invest/wave_energy.py:110
+msgid "WaveWatchIII data for the North Sea 10 meter resolution."
+msgstr "北海10米分辨率的WaveWatchIII数据。"
+
+#: src/natcap/invest/wave_energy.py:117
+msgid "Point vector for Australia."
+msgstr "澳大利亚的点矢量。"
+
+#: src/natcap/invest/wave_energy.py:122
+msgid "Extract vector for Australia."
+msgstr "为澳大利亚提取矢量。"
+
+#: src/natcap/invest/wave_energy.py:125
+msgid "WaveWatchIII data for Australia."
+msgstr "澳大利亚的WaveWatchIII数据。"
+
+#: src/natcap/invest/wave_energy.py:130
+msgid "Global point vector."
+msgstr "全局点矢量。"
+
+#: src/natcap/invest/wave_energy.py:135
+msgid "Global extract vector."
+msgstr "全球提取矢量。"
+
+#: src/natcap/invest/wave_energy.py:138
+msgid "Global WaveWatchIII data."
+msgstr "全球WaveWatchIII数据。"
+
+#: src/natcap/invest/wave_energy.py:140
+msgid "Pre-packaged wave energy data directory. This is provided with the sample data."
+msgstr "预先打包的波浪能数据目录。这是与样本数据一起提供的。"
+
+#: src/natcap/invest/wave_energy.py:143
+msgid "wave base data"
+msgstr "波段基础数据"
+
+#: src/natcap/invest/wave_energy.py:148
+msgid "West Coast of North America and Hawaii"
+msgstr "北美洲西海岸和夏威夷"
+
+#: src/natcap/invest/wave_energy.py:150
+msgid "East Coast of North America and Puerto Rico"
+msgstr "北美洲东海岸和波多黎各"
+
+#: src/natcap/invest/wave_energy.py:153
+msgid "North Sea 4 meter resolution"
+msgstr "北海4米分辨率"
+
+#: src/natcap/invest/wave_energy.py:155
+msgid "North Sea 10 meter resolution"
+msgstr "北海10米分辨率"
+
+#: src/natcap/invest/wave_energy.py:156
+msgid "Australia"
+msgstr "澳大利亚"
+
+#: src/natcap/invest/wave_energy.py:157
+msgid "Global"
+msgstr "全球"
+
+#: src/natcap/invest/wave_energy.py:159
+msgid "The analysis area over which to run the model."
+msgstr "运行模型的研究区域。"
+
+#: src/natcap/invest/wave_energy.py:161
+msgid "analysis area"
+msgstr "研究区"
+
+#: src/natcap/invest/wave_energy.py:171
+msgid "A matrix of the wave machine performance, or ability to capture wave energy, in different sea state conditions. The first column contains wave height values (in meters, increasing from top to bottom), and the first row contains wave period values (in seconds, increasing from left to right). Values within the matrix are the machine performance in kilowatts at that sea state condition, described by the wave height (row) and wave period (column). The model linearly interpolates sea state data from the base wave dataset onto this matrix to determine performance."
+msgstr "波浪机在不同海况条件下的性能，或捕捉波浪能量的能力的矩阵。第一列包含波高值（米，从上到下增加），第一行包含波周期值（秒，从左到右增加）。矩阵内的数值是在该海况下的机器性能，单位是千瓦，由波高（行）和波期（列）描述。该模型将基本波浪数据集的海况数据线性内插到该矩阵上，以确定性能。"
+
+#: src/natcap/invest/wave_energy.py:182
+msgid "machine performance table"
+msgstr "机器性能表"
+
+#: src/natcap/invest/wave_energy.py:188
+msgid "Maximum capacity for device."
+msgstr "设备的最大容量。"
+
+#: src/natcap/invest/wave_energy.py:193
+msgid "Upper limit of wave height for device operation. The device shuts down when waves are higher than this."
+msgstr "设备运行的波浪高度的上限。当波浪高于这个高度时，设备就会关闭。"
+
+#: src/natcap/invest/wave_energy.py:200
+msgid "Upper limit of wave period for device operation. The device shuts down when the wave period is longer than this."
+msgstr "设备运行的波形周期的上限。当波浪周期长于此值时，设备就会关闭。"
+
+#: src/natcap/invest/wave_energy.py:208
+msgid "Table of parameters for the wave energy machine in use."
+msgstr "使用中的波浪能机的参数表。"
+
+#: src/natcap/invest/wave_energy.py:209
+msgid "machine parameter table"
+msgstr "机器参数表"
+
+#: src/natcap/invest/wave_energy.py:212 src/natcap/invest/wind_energy.py:100
+msgid "bathymetry"
+msgstr "测深学"
+
+#: src/natcap/invest/wave_energy.py:215 src/natcap/invest/wind_energy.py:99
+msgid "Map of ocean depth. Values should be negative."
+msgstr "海洋深度的地图。数值应该是负的。"
+
+#: src/natcap/invest/scenic_quality/scenic_quality.py:122
+#: src/natcap/invest/wave_energy.py:220
+msgid "Run the valuation model."
+msgstr "运行估值模型。"
+
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:348
+#: src/natcap/invest/scenic_quality/scenic_quality.py:119
+#: src/natcap/invest/wave_energy.py:221 src/natcap/invest/wind_energy.py:282
+msgid "run valuation"
+msgstr "运行估值模型"
+
+#: src/natcap/invest/wave_energy.py:228 src/natcap/invest/wind_energy.py:302
+msgid "Unique identifier for each point."
+msgstr "每个点的唯一标识符。"
+
+#: src/natcap/invest/wave_energy.py:232 src/natcap/invest/wind_energy.py:306
+msgid "This is a land connection point"
+msgstr "这是一个陆地连接点"
+
+#: src/natcap/invest/wave_energy.py:234 src/natcap/invest/wind_energy.py:308
+msgid "This is a grid connection point"
+msgstr "这是一个电网连接点"
+
+#: src/natcap/invest/wave_energy.py:237 src/natcap/invest/wind_energy.py:311
+msgid "The type of connection at this point."
+msgstr "这时的连接类型。"
+
+#: src/natcap/invest/wave_energy.py:242 src/natcap/invest/wind_energy.py:316
+msgid "Latitude of the connection point."
+msgstr "连接点的纬度。"
+
+#: src/natcap/invest/wave_energy.py:247 src/natcap/invest/wind_energy.py:321
+msgid "Longitude of the connection point."
+msgstr "连接点的经度。"
+
+#: src/natcap/invest/wave_energy.py:251
+msgid "Name for the connection point location."
+msgstr "连接点位置的名称。"
+
+#: src/natcap/invest/wave_energy.py:255
+msgid "A table of data for each connection point. Required if Run Valuation is selected."
+msgstr "每个连接点的数据表格。如果选择运行估值，则需要。"
+
+#: src/natcap/invest/wave_energy.py:258
+msgid "grid connection points table"
+msgstr "电网连接点表"
+
+#: src/natcap/invest/wave_energy.py:266
+msgid "Maximum capacity of the device."
+msgstr "设备的最大容量。"
+
+#: src/natcap/invest/wave_energy.py:271
+msgid "Capital cost per device installed."
+msgstr "每套设备的资本成本。"
+
+#: src/natcap/invest/wave_energy.py:276
+msgid "Cost of mooring lines."
+msgstr "停泊线的费用。"
+
+#: src/natcap/invest/wave_energy.py:281
+msgid "Cost of underwater cable."
+msgstr "水下电缆的成本。"
+
+#: src/natcap/invest/wave_energy.py:286
+msgid "Cost of overland transmission lines."
+msgstr "陆上输电线路的成本。"
+
+#: src/natcap/invest/wave_energy.py:291
+msgid "Operating and maintenance cost."
+msgstr "运营和维护成本。"
+
+#: src/natcap/invest/wave_energy.py:296
+msgid "Price of electricity."
+msgstr "电价。"
+
+#: src/natcap/invest/wave_energy.py:300
+msgid "Discount rate."
+msgstr "折扣率。"
+
+#: src/natcap/invest/wave_energy.py:305
+msgid "Number of slack lines required per machine."
+msgstr "每台机器需要的松弛线的数量。"
+
+#: src/natcap/invest/wave_energy.py:310
+msgid "Table of economic parameters for the wave energy machine. Required if Run Valuation is selected."
+msgstr "波浪能机器的经济参数表。如果选择运行评估，则需要。"
+
+#: src/natcap/invest/wave_energy.py:313
+msgid "machine economic table"
+msgstr "机器经济表"
+
+#: src/natcap/invest/wave_energy.py:320
+msgid "Number of wave machines to model. Required if Run Valuation is selected."
+msgstr "要建模的波浪机数量。如果选择运行估价，则需要。"
+
+#: src/natcap/invest/wave_energy.py:323
+msgid "number of machines"
+msgstr "机器数量"
+
+#: src/natcap/invest/wind_energy.py:55
+msgid "Longitude of the data point."
+msgstr "数据点的经度。"
+
+#: src/natcap/invest/wind_energy.py:60
+msgid "Latitude of the data point."
+msgstr "数据点的纬度。"
+
+#: src/natcap/invest/wind_energy.py:65
+msgid "Weibull scale factor at the reference hub height at this point."
+msgstr "在这一点上，参考枢纽高度的Weibull比例因子。"
+
+#: src/natcap/invest/wind_energy.py:72
+msgid "Weibull shape factor at this point."
+msgstr "在这一点上，Weibull形状因子。"
+
+#: src/natcap/invest/wind_energy.py:77
+msgid "The reference hub height at this point, at which wind speed data was collected and LAM was estimated."
+msgstr "在这一点上的参考枢纽高度，在这一点上收集风速数据并估计LAM。"
+
+#: src/natcap/invest/wind_energy.py:82
+msgid "Table of Weibull parameters for each wind data point."
+msgstr "每个风数据点的Weibull参数表。"
+
+#: src/natcap/invest/wind_energy.py:83
+msgid "wind data points"
+msgstr "风数据点"
+
+#: src/natcap/invest/wind_energy.py:90
+msgid "Map of the area(s) of interest over which to run the model and aggregate valuation results. Required if Run Valuation is selected and the Grid Connection Points table is provided."
+msgstr "运行模型和汇总估价结果的相关区域地图。如果选择了运行评估并提供了网格连接点表格，则需要。"
+
+#: src/natcap/invest/wind_energy.py:107
+msgid "Map of the coastlines of landmasses in the area of interest. Required if the Minimum Distance and Maximum Distance inputs are provided."
+msgstr "感兴趣的地区的陆地的海岸线地图。如果提供最小距离和最大距离的输入，则需要。"
+
+#: src/natcap/invest/wind_energy.py:111
+msgid "land polygon"
+msgstr "陆地多边形"
+
+#: src/natcap/invest/wind_energy.py:119
+msgid "Standard atmosphere air density."
+msgstr "标准大气的空气密度。"
+
+#: src/natcap/invest/wind_energy.py:123
+msgid "Exponent to use in the power curve function."
+msgstr "功率曲线函数中使用的指数。"
+
+#: src/natcap/invest/wind_energy.py:126
+msgid "Cost to decommission a turbine as a proportion of the total upfront costs (cables, foundations, installation?)"
+msgstr "涡轮机退役的成本占前期总成本的比例（电缆、地基、安装？）"
+
+#: src/natcap/invest/wind_energy.py:133
+msgid "The operations and maintenance costs as a proportion of capex_arr"
+msgstr "运营和维护成本占资本支出的比例_arr"
+
+#: src/natcap/invest/wind_energy.py:138
+msgid "The miscellaneous costs as a proportion of capex_arr"
+msgstr "杂项费用占资本支出的比例_arr"
+
+#: src/natcap/invest/wind_energy.py:143
+msgid "The installation costs as a proportion of capex_arr"
+msgstr "安装费用占资本支出的比例_arr"
+
+#: src/natcap/invest/wind_energy.py:149
+msgid "The length of infield cable."
+msgstr "内场电缆的长度。"
+
+#: src/natcap/invest/wind_energy.py:153
+msgid "The cost of infield cable."
+msgstr "内场电缆的费用。"
+
+#: src/natcap/invest/wind_energy.py:157
+msgid "Cost of AC cable that scales with capacity."
+msgstr "随容量变化而变化的交流电缆的成本。"
+
+#: src/natcap/invest/wind_energy.py:161
+msgid "Cost of DC cable that scales with capacity."
+msgstr "随容量变化而变化的直流电缆的成本。"
+
+#: src/natcap/invest/wind_energy.py:165
+msgid "Cost of AC cable that scales with length."
+msgstr "随长度变化而变化的交流电缆的成本。"
+
+#: src/natcap/invest/wind_energy.py:169
+msgid "Cost of DC cable that scales with length."
+msgstr "与长度成比例的直流电缆的成本。"
+
+#: src/natcap/invest/wind_energy.py:173
+msgid "The threshold above which a wind farm’s distance from the grid requires a switch from AC to DC power to overcome line losses which reduce the amount of energy delivered"
+msgstr "风电场与电网的距离超过这个阈值时，需要从交流电转换为直流电，以克服线路损耗，从而减少输送的能量"
+
+#: src/natcap/invest/wind_energy.py:181
+msgid "The expected lifetime of the facility"
+msgstr "设施的预期寿命"
+
+#: src/natcap/invest/wind_energy.py:185
+msgid "Factor that translates carbon-free wind power to a corresponding amount of avoided CO2 emissions"
+msgstr "将无碳的风力发电转化为相应的避免的二氧化碳排放量的因素"
+
+#: src/natcap/invest/wind_energy.py:191
+msgid "The reduction in air density per meter above sea level"
+msgstr "海平面以上每米的空气密度减少量"
+
+#: src/natcap/invest/wind_energy.py:196
+msgid "The fraction of energy lost due to downtime, power conversion inefficiency, and electrical grid losses"
+msgstr "由于停机、电力转换效率低下和电网损失而损失的能源部分"
+
+#: src/natcap/invest/wind_energy.py:200
+msgid "A table of wind energy infrastructure parameters."
+msgstr "风能基础设施参数表。"
+
+#: src/natcap/invest/wind_energy.py:202
+msgid "global wind energy parameters"
+msgstr "全球风能参数"
+
+#: src/natcap/invest/wind_energy.py:210
+msgid "Height of the turbine hub above sea level."
+msgstr "涡轮机轮毂高于海平面的高度。"
+
+#: src/natcap/invest/wind_energy.py:214
+msgid "Wind speed at which the turbine begins producing power."
+msgstr "涡轮机开始生产电力时的风速。"
+
+#: src/natcap/invest/wind_energy.py:220
+msgid "Minimum wind speed at which the turbine reaches its rated power output."
+msgstr "涡轮机达到额定输出功率的最低风速。"
+
+#: src/natcap/invest/wind_energy.py:226
+msgid "Wind speed above which the turbine stops generating power for safety reasons."
+msgstr "风速，超过这个风速，涡轮机就会出于安全原因停止发电。"
+
+#: src/natcap/invest/wind_energy.py:232
+msgid "The turbine's rated power output."
+msgstr "涡轮机的额定输出功率。"
+
+#: src/natcap/invest/wind_energy.py:236
+msgid "The cost of one turbine."
+msgstr "一个涡轮机的成本。"
+
+#: src/natcap/invest/wind_energy.py:238
+msgid "A table of parameters specific to the type of turbine."
+msgstr "涡轮机类型特有的参数表。"
+
+#: src/natcap/invest/wind_energy.py:239
+msgid "turbine parameters"
+msgstr "涡轮机参数"
+
+#: src/natcap/invest/wind_energy.py:245
+msgid "The number of wind turbines per wind farm."
+msgstr "每个风电场的风力涡轮机数量。"
+
+#: src/natcap/invest/wind_energy.py:246
+msgid "number of turbines"
+msgstr "涡轮机的数量"
+
+#: src/natcap/invest/wind_energy.py:251
+msgid "Minimum depth for offshore wind farm installation."
+msgstr "海上风电场安装的最小深度。"
+
+#: src/natcap/invest/wind_energy.py:252
+msgid "minimum depth"
+msgstr "最小深度"
+
+#: src/natcap/invest/wind_energy.py:257
+msgid "Maximum depth for offshore wind farm installation."
+msgstr "海上风电场安装的最大深度。"
+
+#: src/natcap/invest/wind_energy.py:258
+msgid "maximum depth"
+msgstr "最大深度"
+
+#: src/natcap/invest/wind_energy.py:264
+msgid "Minimum distance from shore for offshore wind farm installation. Required if Run Valuation is selected."
+msgstr "海上风电场安装的最小离岸距离。如果选择运行评估，则需要。"
+
+#: src/natcap/invest/wind_energy.py:267
+msgid "minimum distance"
+msgstr "最小距离"
+
+#: src/natcap/invest/wind_energy.py:273
+msgid "Maximum distance from shore for offshore wind farm installation. Required if Run Valuation is selected."
+msgstr "海上风电场安装的最大离岸距离。如果选择运行评估，则需要。"
+
+#: src/natcap/invest/wind_energy.py:276
+msgid "maximum distance"
+msgstr "最大距离"
+
+#: src/natcap/invest/wind_energy.py:281
+msgid "Run the valuation component of the model."
+msgstr "运行估值模型。"
+
+#: src/natcap/invest/wind_energy.py:288
+msgid "The cost of the foundation for one turbine."
+msgstr "一个涡轮机的基础费用。"
+
+#: src/natcap/invest/wind_energy.py:289
+msgid "foundation cost"
+msgstr "基础费用"
+
+#: src/natcap/invest/wind_energy.py:294
+msgid "Annual discount rate to apply to valuation."
+msgstr "适用于估价的年度贴现率。"
+
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:402
+#: src/natcap/invest/wind_energy.py:295
+msgid "discount rate"
+msgstr "折现率"
+
+#: src/natcap/invest/wind_energy.py:325
+msgid "Table of grid and land connection points to which cables will connect. Required if Run Valuation is selected and Average Shore-to-Grid Distance is not provided."
+msgstr "电缆将连接的电网和陆地连接点的表格。如果选择了运行评估，并且没有提供海岸到网格的平均距离，则需要。"
+
+#: src/natcap/invest/wind_energy.py:329
+msgid "grid connection points"
+msgstr "电网连接点表"
+
+#: src/natcap/invest/wind_energy.py:336
+msgid "Average distance to the onshore grid from coastal cable landing points. Required if Run Valuation is selected and the Grid Connection Points table is not provided."
+msgstr "从沿海电缆登陆点到陆上电网的平均距离。如果选择运行评估，且未提供电网连接点表，则需要。"
+
+#: src/natcap/invest/wind_energy.py:340
+msgid "average shore-to-grid distance"
+msgstr "岸边到电网的平均距离"
+
+#: src/natcap/invest/wind_energy.py:345
+msgid "Use a Wind Energy Price Table instead of calculating annual prices from the initial Energy Price and Rate of Price Change inputs."
+msgstr "使用风能价格表，而不是从最初的能源价格和价格变化率输入来计算年度价格。"
+
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:357
+#: src/natcap/invest/wind_energy.py:349
+msgid "use price table"
+msgstr "使用价格表"
+
+#: src/natcap/invest/wind_energy.py:357
+msgid "Consecutive years for each year in the lifespan of the wind farm. These may be the actual years: 2010, 2011, 2012..., or the number of the years after the starting date: 1, 2, 3,..."
+msgstr "风电场寿命期中每一年的连续年份。这些可以是实际年份：2010年、2011年、2012年......，也可以是起始日期之后的年份：1、2、3......。"
+
+#: src/natcap/invest/wind_energy.py:366
+msgid "Price of energy for each year."
+msgstr "每一年的能源价格。"
+
+#: src/natcap/invest/wind_energy.py:370
+msgid "Table of yearly prices for wind energy. There must be a row for each year in the lifespan given in the 'time_period' column in the Global Wind Energy Parameters table. Required if Run Valuation and Use Price Table are selected."
+msgstr "风力发电的年度价格表。在全球风能参数表的'时间_周期'栏中给出的寿命期内，每年必须有一行。如果选择了运行估值和使用价格表，则需要。"
+
+#: src/natcap/invest/wind_energy.py:375
+msgid "wind energy price table"
+msgstr "风能价格表"
+
+#: src/natcap/invest/wind_energy.py:381
+msgid "The initial price of wind energy, at the first year in the wind energy farm lifespan. Required if Run Valuation is selected and Use Price Table is not selected."
+msgstr "风力发电场寿命中第一年的风能初始价格。如果选择了运行评估和不选择使用价格表，则需要。"
+
+#: src/natcap/invest/wind_energy.py:385
+msgid "price of energy"
+msgstr "能源价格"
+
+#: src/natcap/invest/wind_energy.py:390
+msgid "The annual rate of change in the price of wind energy. Required if Run Valuation is selected and Use Price Table is not selected."
+msgstr "风能价格的年变化率。如果选择了运行估价和不选择使用价格表，则需要。"
+
+#: src/natcap/invest/wind_energy.py:394
+msgid "rate of price change"
+msgstr "价格变化率"
+
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:115
+msgid "Analysis year {analysis_year} must be >= the latest snapshot year ({latest_year})"
+msgstr "分析年份{analysis_year}必须>=最新快照年份（{latest_year}）"
+
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:118
+msgid "Raster for snapshot {snapshot_year} could not be validated."
+msgstr "快照{snapshot_year}的栅格不能被验证。"
+
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:174
+msgid "The snapshot year that this row's LULC raster represents. Each year in this table must be unique."
+msgstr "这一行的LULC栅格所代表的快照年份。此表中的每一年必须是唯一的。"
+
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:181
+msgid "Map of LULC in the given snapshot year. All values in this raster must have corresponding entries in the Biophysical Table and Landcover Transitions Table."
+msgstr "在给定的快照年份，LULC的地图。该栅格中的所有数值必须在生物物理表和土地覆被转换表中有相应的条目。"
+
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:188
+msgid "A table mapping snapshot years to corresponding LULC maps."
+msgstr "一个将快照年份与相应的LULC地图相联系的表格。"
+
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:190
+msgid "landcover snapshots table"
+msgstr "土地覆盖快照表"
+
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:196
+msgid "analysis year"
+msgstr "分析年"
+
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:197
+msgid "A year that may be used to extend the analysis beyond the last snapshot year. If used, the model assumes that carbon will continue to accumulate or emit after the last snapshot year until the analysis year. This value must be greater than the final snapshot year."
+msgstr "一个可用于将分析延伸到最后一个快照年之后的年份。如果使用，模型假定碳在最后一个快照年之后将继续积累或排放，直到分析年。该值必须大于最后快照年。"
+
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:210
+msgid "The LULC code that represents this LULC class in the LULC snapshot rasters."
+msgstr "在LULC快照栅格中代表该LULC类别的LULC代码。"
+
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:215
+msgid "Name of the LULC class. This label must be unique among the all the LULC classes."
+msgstr "LULC类别的名称。这个标签在所有LULC等级中必须是唯一的。"
+
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:221
+msgid "The initial carbon stocks in the biomass pool for this LULC class."
+msgstr "该LULC等级的生物质库的初始碳储量。"
+
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:227
+msgid "The initial carbon stocks in the soil pool for this LULC class."
+msgstr "该LULC等级的土壤池中的初始碳储量。"
+
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:233
+msgid "The initial carbon stocks in the litter pool for this LULC class."
+msgstr "该LULC等级的垃圾池中的初始碳储量。"
+
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:240
+msgid "The half-life of carbon in the biomass pool."
+msgstr "碳在生物质库中的半衰期。"
+
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:243
+msgid "Proportion of carbon stock in the biomass pool that is disturbed when a cell transitions away from this  LULC class in a low-impact disturbance."
+msgstr "当一个单元在低影响的干扰下从该LULC等级过渡到其他等级时，生物量池中碳储量的比例受到干扰。"
+
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:249
+msgid "Proportion of carbon stock in the biomass pool that is disturbed when a cell transitions away from this LULC class in a medium-impact disturbance."
+msgstr "在中等影响的干扰下，当一个单元从该LULC等级过渡到其他等级时，生物量池中碳储量的比例受到干扰。"
+
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:255
+msgid "Proportion of carbon stock in the biomass pool that is disturbed when a cell transitions away from this LULC class in a high-impact disturbance."
+msgstr "当一个单元在高影响扰动下从该LULC等级过渡到其他等级时，生物量池中碳储量的比例受到干扰。"
+
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:262
+msgid "Annual rate of CO2E accumulation in the biomass pool."
+msgstr "生物量库中CO2E的年积累率。"
+
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:268
+msgid "The half-life of carbon in the soil pool."
+msgstr "土壤池中的碳的半衰期。"
+
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:271
+msgid "Proportion of carbon stock in the soil pool that is disturbed when a cell transitions away from this LULC class in a low-impact disturbance."
+msgstr "当一个单元在低影响的干扰中脱离该LULC等级时，土壤池中碳储量的比例受到干扰。"
+
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:277
+msgid "Proportion of carbon stock in the soil pool that is disturbed when a cell transitions away from this LULC class in a medium-impact disturbance."
+msgstr "在中等影响的干扰下，当一个单元从该LULC等级过渡到其他等级时，土壤池中的碳储量比例受到干扰。"
+
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:283
+msgid "Proportion of carbon stock in the soil pool that is disturbed when a cell transitions away from this LULC class in a high-impact disturbance."
+msgstr "当一个单元在高影响的干扰中从该LULC等级过渡到其他等级时，土壤池中的碳储量比例受到干扰。"
+
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:290
+msgid "Annual rate of CO2E accumulation in the soil pool."
+msgstr "土壤池中CO2E的年积累率。"
+
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:295
+msgid "Annual rate of CO2E accumulation in the litter pool."
+msgstr "废弃物池中CO2E的年积累率。"
+
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:298
+msgid "Table of biophysical properties for each LULC class."
+msgstr "每个LULC类别的生物物理特性表。"
+
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:301
+msgid "landcover transitions table"
+msgstr "土地覆盖转换表"
+
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:306
+msgid "LULC codes matching the codes in the biophysical table."
+msgstr "LULC代码与生物物理表中的代码相匹配。"
+
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:313
+msgid "a state of carbon accumulation"
+msgstr "积碳状态"
+
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:316
+msgid "high carbon disturbance rate"
+msgstr "高碳扰动率"
+
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:319
+msgid "medium carbon disturbance rate"
+msgstr "中等碳扰动率"
+
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:322
+msgid "low carbon disturbance rate"
+msgstr "低碳扰动率"
+
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:325
+msgid "no change in carbon"
+msgstr "碳无变化"
+
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:328
+msgid "A transition matrix describing the type of carbon action that occurs when each LULC type transitions to each other type. Values in the first column, 'lulc-class', represents the original LULC class that is transitioned away from. Values in the first row represents the LULC class that is transitioned to. Each cell in the matrix is filled with an option indicating the effect on carbon when transitioning from that cell's row's LULC class to that cell's column's LULC class. The classes in this table must exactly match the classes in the Biophysical Table 'lulc-class' column. A cell may be left empty if the transition never occurs."
+msgstr "一个过渡矩阵，描述每个LULC类型过渡到其他类型时发生的碳行动的类型。第一列中的数值，\"LULC-class\"，代表被过渡到的原始LULC类别。第一行中的数值代表被过渡到的LULC类别。矩阵中的每个单元格都填有一个选项，表示从该单元格的行的LULC等级过渡到该单元格的列的LULC等级时对碳的影响。该表中的等级必须与生物物理表 \"LULC-Class \"列中的等级完全一致。如果转换从未发生，则单元格可以留空。"
+
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:343
+msgid "A transition matrix mapping the type of carbon action undergone when one LULC type transitions to another."
+msgstr "当一种LULC类型过渡到另一种LULC类型时，一个过渡矩阵映射出所经历的碳行动的类型。"
+
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:351
+msgid "Enable net present valuation analysis based on carbon prices from either a yearly price table, or an initial price and yearly interest rate."
+msgstr "启用基于年度价格表的碳价格，或初始价格和年度利率的净现值分析。"
+
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:360
+msgid "Use a yearly price table, rather than an initial price and interest rate, to indicate carbon value over time."
+msgstr "使用年度价格表，而不是初始价格和利率，以表明随着时间推移的碳价值。"
+
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:365
+msgid "price"
+msgstr "价格"
+
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:369
+msgid "The price of CO2E at the baseline year. Required if Do Valuation is selected and Use Price Table is not selected."
+msgstr "基线年的CO2E价格。如果选择 \"做估值 \"且不选择 \"使用价格表\"，则需要。"
+
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:374
+msgid "interest rate"
+msgstr "利率"
+
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:377
+msgid "Annual increase in the price of CO2E. Required if Do Valuation is selected and Use Price Table is not selected."
+msgstr "CO2E价格的年度增长。如果选择 \"做估值 \"且不选择 \"使用价格表\"，则需要。"
+
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:382
+msgid "price table"
+msgstr "价格表"
+
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:389
+msgid "Each year from the snapshot year to analysis year."
+msgstr "从快照年到分析年的每一年。"
+
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:394
+msgid "Price of CO2E in that year."
+msgstr "当年的CO2E价格。"
+
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:396
+msgid "Table of annual CO2E prices for each year from the baseline year to the final snapshot or analysis year. Required if Do Valuation is selected and Use Price Table is selected."
+msgstr "从基线年到最终快照或分析年每年的CO2E价格表。如果选择 \"做估值 \"并选择 \"使用价格表\"，则需要。"
+
+#: src/natcap/invest/coastal_blue_carbon/coastal_blue_carbon.py:405
+msgid "Annual discount rate on the price of carbon. This is compounded each year after the baseline year. Required if Run Valuation is selected."
+msgstr "碳价格的年度折扣率。在基线年之后每年复利。如果选择运行评估，则需要。"
+
+#: src/natcap/invest/coastal_blue_carbon/preprocessor.py:30
+msgid "LULC lookup table"
+msgstr "LULC查询表"
+
+#: src/natcap/invest/coastal_blue_carbon/preprocessor.py:32
+msgid "A table mapping LULC codes from the snapshot rasters to the corresponding LULC class names, and whether or not the class is a coastal blue carbon habitat."
+msgstr "将快照栅格中的LULC代码映射到相应的LULC等级名称，以及该等级是否为沿海蓝碳生境的表格。"
+
+#: src/natcap/invest/coastal_blue_carbon/preprocessor.py:39
+msgid "LULC code. Every value in the snapshot LULC maps must have a corresponding entry in this column."
+msgstr "LULC代码。在快照LULC地图中的每一个值都必须在这一栏中有一个相应的条目。"
+
+#: src/natcap/invest/coastal_blue_carbon/preprocessor.py:45
+msgid "Name of the LULC class."
+msgstr "LULC等级的名称。"
+
+#: src/natcap/invest/coastal_blue_carbon/preprocessor.py:48
+msgid "Enter TRUE if this LULC class is a coastal blue carbon habitat, FALSE if not."
+msgstr "如果该LULC类别是沿海蓝碳生境，则输入TRUE，如果不是，则输入FALSE。"
+
+#: src/natcap/invest/coastal_blue_carbon/preprocessor.py:59
+msgid "Year to snapshot."
+msgstr "年到快照。"
+
+#: src/natcap/invest/coastal_blue_carbon/preprocessor.py:63
+msgid "Map of LULC in the snapshot year. All values in this raster must have corresponding entries in the LULC Lookup table."
+msgstr "快照年份的LULC地图。该栅格中的所有数值必须在LULC查询表中有相应的条目。"
+
+#: src/natcap/invest/coastal_blue_carbon/preprocessor.py:69
+msgid "A table mapping snapshot years to corresponding LULC maps for each year."
+msgstr "一个表格，将快照年份与每年相应的LULC地图进行映射。"
+
+#: src/natcap/invest/coastal_blue_carbon/preprocessor.py:72
+msgid "LULC snapshots table"
+msgstr "土地覆盖快照表"
+
+#: src/natcap/invest/delineateit/delineateit.py:46
+msgid "Detect pour points (watershed outlets) based on the DEM, and use these instead of a user-provided outlet features vector."
+msgstr "根据DEM检测倾倒点（流域出口），并使用这些倾倒点而不是用户提供的出口特征矢量。"
+
+#: src/natcap/invest/delineateit/delineateit.py:50
+msgid "detect pour points"
+msgstr "检测倾倒点"
+
+#: src/natcap/invest/delineateit/delineateit.py:57
+msgid "A map of watershed outlets from which to delineate the watersheds. Required if Detect Pour Points is not checked."
+msgstr "流域出口的地图，据此划定流域。如果没有勾选检测倾倒点，则需要。"
+
+#: src/natcap/invest/delineateit/delineateit.py:60
+msgid "watershed outlets"
+msgstr "流域出口"
+
+#: src/natcap/invest/delineateit/delineateit.py:65
+msgid "Whether to snap point geometries to the nearest stream pixel.  If ``True``, ``args['flow_threshold']`` and ``args['snap_distance']`` must also be defined. If a point is equally near to more than one stream pixel, it will be snapped to the stream pixel with the highest flow accumulation value. This has no effect if Detect Pour Points is selected."
+msgstr "是否将点的几何图形抓取到最近的河流栅格。  如果是 \"True\"，还必须定义 \"args['flow_threshold']\"和 \"args['snap_distance''\"。如果一个点同样靠近一个以上的河流栅格，它将被捕捉到具有最高流量累积值的河流栅格。如果选择了Detect Pour Points，这就没有影响。"
+
+#: src/natcap/invest/delineateit/delineateit.py:73
+msgid "snap points to the nearest stream"
+msgstr "捕捉点指向最近的河流"
+
+#: src/natcap/invest/delineateit/delineateit.py:78
+msgid "about Required if Snap Points is selected."
+msgstr "如果选择了Snap Points，则需要。"
+
+#: src/natcap/invest/delineateit/delineateit.py:87
+msgid "Maximum distance to relocate watershed outlet points in order to snap them to a stream. Required if Snap Points is selected."
+msgstr "重新定位流域出口点的最大距离，以便将其锁定在一个流上。如果选择卡住点，则需要。"
+
+#: src/natcap/invest/delineateit/delineateit.py:91
+msgid "snap distance"
+msgstr "捕捉距离"
+
+#: src/natcap/invest/delineateit/delineateit.py:96
+msgid "Skip delineation for any invalid geometries found in the Outlet Features. Otherwise, an invalid geometry will cause the model to crash."
+msgstr "跳过在出口特征中发现的任何无效几何图形的划线。否则，一个无效的几何图形将导致模型崩溃。"
+
+#: src/natcap/invest/delineateit/delineateit.py:100
+msgid "skip invalid geometries"
+msgstr "跳过无效的几何图形"
+
+#: src/natcap/invest/ndr/ndr.py:25
+msgid "Either calc_n or calc_p must be True"
+msgstr "计算_n或计算_p必须为真"
+
+#: src/natcap/invest/ndr/ndr.py:47
+msgid "All values in this raster must have corresponding entries in the Biophysical table."
+msgstr "该光栅中的所有数值必须在生物物理表中有相应的条目。"
+
+#: src/natcap/invest/ndr/ndr.py:57
+msgid "Map of runoff potential, the capacity to transport nutrients downslope. This can be a quickflow index or annual precipitation. Any units are allowed since the values will be normalized by their average."
+msgstr "径流潜力图，即向下坡输送营养物质的能力。这可以是一个快速流指数或年降水量。任何单位都是允许的，因为这些值将以其平均值为标准。"
+
+#: src/natcap/invest/ndr/ndr.py:62
+msgid "nutrient runoff proxy"
+msgstr "营养物质径流代理"
+
+#: src/natcap/invest/ndr/ndr.py:69
+msgid "Map of the boundaries of the watershed(s) over which to aggregate the model results."
+msgstr "汇总模型结果的流域边界图。"
+
+#: src/natcap/invest/ndr/ndr.py:81
+msgid "The nutrient loading for this land use class."
+msgstr "该土地使用类别的营养负荷。"
+
+#: src/natcap/invest/ndr/ndr.py:85
+msgid "Maximum nutrient retention efficiency. This is the maximum proportion of the nutrient that is retained on this LULC class."
+msgstr "最大养分保留效率。这是保留在该LULC等级上的最大养分比例。"
+
+#: src/natcap/invest/ndr/ndr.py:92
+msgid "The distance after which it is assumed that this LULC type retains the nutrient at its maximum capacity. If nutrients travel a shorter distance that this, the retention efficiency will be less than the maximum value eff_x, following an exponential decay."
+msgstr "假设该LULC类型以其最大能力保留营养物的距离。如果营养物质的移动距离比这短，保留效率将小于最大值eff_x，呈指数衰减。"
+
+#: src/natcap/invest/ndr/ndr.py:102
+msgid "The proportion of the total amount of nitrogen that are dissolved into the subsurface. By default, this value should be set to 0, indicating that all nutrients are delivered via surface flow. There is no equivalent of this for phosphorus."
+msgstr "溶解到地表下的氮总量的比例。默认情况下，这个值应该设置为0，表示所有的营养物质都通过地表流输送。对于磷，没有相应的数值。"
+
+#: src/natcap/invest/ndr/ndr.py:109
+msgid "A table mapping each LULC class to its biophysical properties related to nutrient load and retention. Replace '[NUTRIENT]' in the column names with 'n' or 'p' for nitrogen or phosphorus respectively. Nitrogen data must be provided if Calculate Nitrogen is selected. Phosphorus data must be provided if Calculate Phosphorus is selected. All LULC codes in the LULC raster must have corresponding entries in this table."
+msgstr "将每个LULC等级与其与养分负荷和保留有关的生物物理特性相匹配的表格。将列名中的\"[NUTRIENT]\"分别用 \"n \"或 \"p \"代替氮或磷。如果选择计算氮，必须提供氮的数据。如果选择计算磷，则必须提供磷的数据。LULC栅格中的所有LULC代码必须在此表中有相应的条目。"
+
+#: src/natcap/invest/ndr/ndr.py:122
+msgid "Calculate phosphorus retention and export."
+msgstr "计算磷的保留和输出。"
+
+#: src/natcap/invest/ndr/ndr.py:123
+msgid "calculate phosphorus"
+msgstr "计算磷"
+
+#: src/natcap/invest/ndr/ndr.py:127
+msgid "Calculate nitrogen retention and export."
+msgstr "计算氮的保留和输出。"
+
+#: src/natcap/invest/ndr/ndr.py:128
+msgid "calculate nitrogen"
+msgstr "计算氮"
+
+#: src/natcap/invest/ndr/ndr.py:136
+msgid "Calibration parameter that determines the shape of the relationship between hydrologic connectivity (the degree of connection from patches of land to the stream) and the nutrient delivery ratio (percentage of nutrient that actually reaches the stream)."
+msgstr "校准参数，决定了水文连通性（土地斑块与河流的连接程度）和营养物质输送率（实际到达河流的营养物质百分比）之间关系的形状。"
+
+#: src/natcap/invest/ndr/ndr.py:142 src/natcap/invest/sdr/sdr.py:110
+msgid "Borselli k parameter"
+msgstr "Borselli k参数"
+
+#: src/natcap/invest/ndr/ndr.py:148
+msgid "subsurface critical length (nitrogen)"
+msgstr "地下临界长度(氮气)"
+
+#: src/natcap/invest/ndr/ndr.py:149
+msgid "The distance traveled (subsurface and downslope) after which it is assumed that soil retains nitrogen at its maximum capacity. Required if Calculate Nitrogen is selected."
+msgstr "假设土壤以最大容量保留氮的距离（地表下和下坡）。如果选择 \"计算氮\"，则需要。"
+
+#: src/natcap/invest/ndr/ndr.py:157
+msgid "subsurface maximum retention efficiency (nitrogen)"
+msgstr "地下最大保留效率（氮）。"
+
+#: src/natcap/invest/ndr/ndr.py:158
+msgid "The maximum nitrogen retention efficiency that can be reached through subsurface flow. This characterizes the retention due to biochemical degradation in soils. Required if Calculate Nitrogen is selected."
+msgstr "通过地下流动可达到的最大氮保留效率。这表征了由于土壤中的生物化学降解而产生的滞留。如果选择计算氮，则需要。"
+
+#: src/natcap/invest/recreation/recmodel_client.py:51
+msgid "A unique identifier for the predictor (10 characters or less)."
+msgstr "预测器的唯一标识符（10个字符或更少）。"
+
+#: src/natcap/invest/recreation/recmodel_client.py:56
+msgid "A spatial file to use as a predictor."
+msgstr "作为预测器使用的空间文件。"
+
+#: src/natcap/invest/recreation/recmodel_client.py:63
+msgid "The type of predictor file provided in the 'path' column."
+msgstr "路径栏中提供的预测器文件的类型。"
+
+#: src/natcap/invest/recreation/recmodel_client.py:66
+msgid "Predictor is a raster. Metric is the mean of values within the AOI grid cell or polygon."
+msgstr "预测器是一个栅格。度量是AOI网格单元或多边形内数值的平均值。"
+
+#: src/natcap/invest/recreation/recmodel_client.py:70
+msgid "Predictor is a raster. Metric is the sum of values within the AOI grid cell or polygon."
+msgstr "预测器是一个栅格。度量是AOI网格单元或多边形内的数值之和。"
+
+#: src/natcap/invest/recreation/recmodel_client.py:74
+msgid "Predictor is a point vector. Metric is the number of points within each AOI grid cell or polygon."
+msgstr "预测器是一个点矢量。度量是每个AOI网格单元或多边形内的点的数量。"
+
+#: src/natcap/invest/recreation/recmodel_client.py:78
+msgid "Predictor is a point vector. Metric is the Euclidean distance between the center of each AOI grid cell and the nearest point in this layer."
+msgstr "预测器是一个点矢量。度量是每个AOI网格单元的中心与本层最近的点之间的欧几里得距离。"
+
+#: src/natcap/invest/recreation/recmodel_client.py:83
+msgid "Predictor is a line vector. Metric is the total length of the lines that fall within each AOI grid cell."
+msgstr "预测器是一个线矢量。度量是属于每个AOI网格单元的线的总长度。"
+
+#: src/natcap/invest/recreation/recmodel_client.py:87
+msgid "Predictor is a polygon vector. Metric is the area of overlap between the polygon and each AOI grid cell."
+msgstr "预测器是一个多边形矢量。度量是多边形与每个AOI网格单元之间的重叠面积。"
+
+#: src/natcap/invest/recreation/recmodel_client.py:91
+msgid "Predictor is a polygon vector. Metric is the percentage (0-100) of overlapping area between the polygon and each AOI grid cell."
+msgstr "预测器是一个多边形矢量。衡量标准是多边形与每个AOI网格单元之间的重叠面积百分比（0-100）。"
+
+#: src/natcap/invest/recreation/recmodel_client.py:110
+msgid "Map of area(s) over which to run the model."
+msgstr "运行模型的区域地图。"
+
+#: src/natcap/invest/recreation/recmodel_client.py:115
+msgid "FQDN to a recreation server.  If not provided, a default is assumed."
+msgstr "FQDN到一个娱乐服务器。  如果没有提供，则假定为默认。"
+
+#: src/natcap/invest/recreation/recmodel_client.py:118
+msgid "hostname"
+msgstr "主机名"
+
+#: src/natcap/invest/recreation/recmodel_client.py:125
+msgid "the port on ``hostname`` to use for contacting the recreation server."
+msgstr "``hostname'的端口，用于联系娱乐服务器。"
+
+#: src/natcap/invest/recreation/recmodel_client.py:128
+msgid "port"
+msgstr "端口"
+
+#: src/natcap/invest/recreation/recmodel_client.py:134
+msgid "Year at which to start photo user-day calculations. Calculations start on the first day of the year. Year must be in the range 2005 - 2017, and must be less than or equal to the End Year."
+msgstr "开始计算照片用户日的年份。计算从该年的第一天开始。年份必须在2005-2017范围内，并且必须小于或等于结束年份。"
+
+#: src/natcap/invest/recreation/recmodel_client.py:139
+msgid "start year"
+msgstr "起始年份"
+
+#: src/natcap/invest/recreation/recmodel_client.py:145
+msgid "Year at which to end photo user-day calculations. Calculations continue through the last day of the year. Year must be in the range 2005 - 2017, and must be greater than or equal to the Start Year."
+msgstr "结束照片用户日计算的年份。计算会持续到该年的最后一天。年份必须在2005-2017范围内，并且必须大于或等于起始年份。"
+
+#: src/natcap/invest/recreation/recmodel_client.py:150
+msgid "end year"
+msgstr "结束年份"
+
+#: src/natcap/invest/recreation/recmodel_client.py:155
+msgid "Divide the AOI polygons into equal-sized grid cells, and compute results for those cells instead of the original polygons."
+msgstr "将AOI的多边形划分为同等大小的网格单元，并对这些单元而非原始多边形进行计算。"
+
+#: src/natcap/invest/recreation/recmodel_client.py:159
+msgid "grid the AOI"
+msgstr "网格AOI"
+
+#: src/natcap/invest/recreation/recmodel_client.py:164
+msgid "square"
+msgstr "方形"
+
+#: src/natcap/invest/recreation/recmodel_client.py:165
+msgid "hexagon"
+msgstr "六边形"
+
+#: src/natcap/invest/recreation/recmodel_client.py:168
+msgid "The shape of grid cells to make within the AOI polygons. Required if Grid AOI is selected."
+msgstr "在AOI多边形范围内制作的网格单元的形状。如果选择了网格AOI，则需要。"
+
+#: src/natcap/invest/recreation/recmodel_client.py:171
+msgid "grid type"
+msgstr "网格类型"
+
+#: src/natcap/invest/recreation/recmodel_client.py:178
+msgid "Size of grid cells to make, measured in the projection units of the AOI. If the Grid Type is 'square', this is the length of each side of the square. If the Grid Type is 'hexagon', this is the hexagon's maximal diameter."
+msgstr "要制作的网格单元的尺寸，以AOI的投影单位衡量。如果网格类型是 \"正方形\"，这就是正方形的每条边的长度。如果网格类型是 \"六边形\"，这是该六边形的最大直径。"
+
+#: src/natcap/invest/recreation/recmodel_client.py:183
+msgid "cell size"
+msgstr "单元大小"
+
+#: src/natcap/invest/recreation/recmodel_client.py:188
+msgid "Run the regression model using the predictor table and scenario table, if provided."
+msgstr "使用预测表和情景表（如果提供）运行回归模型。"
+
+#: src/natcap/invest/recreation/recmodel_client.py:191
+msgid "compute regression"
+msgstr "计算回归"
+
+#: src/natcap/invest/recreation/recmodel_client.py:197
+msgid "A table that maps predictor IDs to spatial files and their predictor metric types. The file paths can be absolute or relative to the table."
+msgstr "一个将预测器ID映射到空间文件及其预测器度量类型的表格。文件路径可以是绝对的，也可以是相对于该表的。"
+
+#: src/natcap/invest/recreation/recmodel_client.py:201
+msgid "predictor table"
+msgstr "预测表"
+
+#: src/natcap/invest/recreation/recmodel_client.py:207
+msgid "A table of future or alternative scenario predictors. Maps IDs to files and their types. The file paths can be absolute or relative to the table."
+msgstr "一个未来或替代方案的预测表。将ID映射到文件和它们的类型。文件路径可以是绝对的，也可以是相对于该表的。"
+
+#: src/natcap/invest/recreation/recmodel_client.py:211
+msgid "scenario predictor table"
+msgstr "情景预测表"
+
+#: src/natcap/invest/scenic_quality/scenic_quality.py:67
+msgid "features impacting scenic quality"
+msgstr "影响风景质量的特征"
+
+#: src/natcap/invest/scenic_quality/scenic_quality.py:75
+msgid "Maximum length of the line of sight originating from a viewpoint. The value can either be positive (preferred) or negative (kept for backwards compatibility), but is converted to a positive number. If this field is not provided, the model will include all pixels in the DEM in the visibility analysis. RADIUS preferred, but may also be called RADIUS2 for backwards compatibility."
+msgstr "源自一个观点的视线的最大长度。该值可以是正数（首选）或负数（为向后兼容而保留），但要转换为正数。如果不提供这个字段，模型将在可见度分析中包括DEM中的所有像素。首选RADIUS，但也可以称为RADIUS2，以便向后兼容。"
+
+#: src/natcap/invest/scenic_quality/scenic_quality.py:88
+msgid "Viewshed importance coefficient. If this field is provided, the values are used to weight each feature's viewshed impacts. If not provided, all viewsheds are equally weighted with a weight of 1."
+msgstr "景观重要性系数。如果提供了这个字段，其值将用于加权每个特征的视域影响。如果没有提供，则所有视域的权重相同，权重为1。"
+
+#: src/natcap/invest/scenic_quality/scenic_quality.py:97
+msgid "Viewpoint height, the elevation above the ground of each feature. If this field is not provided, defaults to 0."
+msgstr "视点高度，每个特征在地面上的高度。如果没有提供这个字段，默认为0。"
+
+#: src/natcap/invest/scenic_quality/scenic_quality.py:102
+msgid "Map of locations of objects that negatively affect scenic quality. This must have the same projection as the DEM."
+msgstr "对景区质量有负面影响的物体的位置图。这必须具有与DEM相同的投影。"
+
+#: src/natcap/invest/scenic_quality/scenic_quality.py:112
+msgid "refractivity coefficient"
+msgstr "折射系数"
+
+#: src/natcap/invest/scenic_quality/scenic_quality.py:114
+msgid "The refractivity coefficient corrects for the curvature of the earth and refraction of visible light in air."
+msgstr "折射率系数修正了地球的曲率和可见光在空气中的折射。"
+
+#: src/natcap/invest/scenic_quality/scenic_quality.py:125
+msgid "Valuation function"
+msgstr "估值功能"
+
+#: src/natcap/invest/scenic_quality/scenic_quality.py:129
+msgid "linear: a + bx"
+msgstr "线性：a + bx"
+
+#: src/natcap/invest/scenic_quality/scenic_quality.py:130
+msgid "logarithmic: a + b log(x+1)"
+msgstr "对数：a + b log(x+1)"
+
+#: src/natcap/invest/scenic_quality/scenic_quality.py:132
+msgid "exponential: a * e^(-bx)"
+msgstr "指数：a * e^(-bx)"
+
+#: src/natcap/invest/scenic_quality/scenic_quality.py:134
+msgid "Valuation function used to calculate the visual impact of each feature, given distance from the feature 'x' and parameters 'a' and 'b'."
+msgstr "用于计算每个特征的视觉影响的评价函数，给定与特征'x'的距离和参数'a'和'b'。"
+
+#: src/natcap/invest/scenic_quality/scenic_quality.py:140
+msgid "coefficient a"
+msgstr "系数a"
+
+#: src/natcap/invest/scenic_quality/scenic_quality.py:144
+msgid "First coefficient ('a') used by the valuation function"
+msgstr "估值函数使用的第一个系数（'a'）"
+
+#: src/natcap/invest/scenic_quality/scenic_quality.py:147
+msgid "coefficient b"
+msgstr "系数b"
+
+#: src/natcap/invest/scenic_quality/scenic_quality.py:151
+msgid "Second coefficient ('b') used by the valuation function"
+msgstr "估值函数使用的第二个系数（'b'）"
+
+#: src/natcap/invest/scenic_quality/scenic_quality.py:154
+msgid "maximum valuation radius"
+msgstr "最大估价半径"
+
+#: src/natcap/invest/scenic_quality/scenic_quality.py:159
+msgid "Valuation will only be computed for cells that fall within this radius of a feature impacting scenic quality."
+msgstr "只有在影响风景质量的特征的这个半径范围内的单元才会被计算出估值。"
+
+#: src/natcap/invest/sdr/sdr.py:53
+msgid "Map of rainfall erosivity, reflecting the intensity and duration of rainfall in the area of interest."
+msgstr "降雨侵蚀性地图，反映了有关地区的降雨强度和时间。"
+
+#: src/natcap/invest/sdr/sdr.py:56
+msgid "erosivity"
+msgstr "侵蚀性"
+
+#: src/natcap/invest/sdr/sdr.py:64
+msgid "Map of soil erodibility, the susceptibility of soil particles to detachment and transport by rainfall and runoff."
+msgstr "土壤侵蚀性地图，土壤颗粒容易被降雨和径流剥离和运输。"
+
+#: src/natcap/invest/sdr/sdr.py:68
+msgid "soil erodibility"
+msgstr "土壤侵蚀性"
+
+#: src/natcap/invest/sdr/sdr.py:82
+msgid "Map of the boundaries of the watershed(s) over which to aggregate results. Each watershed should contribute to a point of interest where water quality will be analyzed."
+msgstr "汇总结果的流域边界图。每一个流域都应该为一个兴趣点做出贡献，在那里将对水质进行分析。"
+
+#: src/natcap/invest/sdr/sdr.py:86
+msgid "Watersheds"
+msgstr "流域"
+
+#: src/natcap/invest/sdr/sdr.py:94
+msgid "Cover-management factor for the USLE"
+msgstr "USLE的覆盖管理系数"
+
+#: src/natcap/invest/sdr/sdr.py:97
+msgid "Support practice factor for the USLE"
+msgstr "支持USLE的实践因素"
+
+#: src/natcap/invest/sdr/sdr.py:99
+msgid "A table mapping each LULC code to biophysical properties of that LULC class. All values in the LULC raster must have corresponding entries in this table."
+msgstr "一个将每个LULC代码与该LULC类别的生物物理属性相匹配的表格。LULC栅格中的所有数值必须在此表中有相应的条目。"
+
+#: src/natcap/invest/sdr/sdr.py:109
+msgid "Borselli k parameter."
+msgstr "Borselli k参数。"
+
+#: src/natcap/invest/sdr/sdr.py:114
+msgid "The maximum SDR value that a pixel can have."
+msgstr "一个栅格可以拥有的最大SDR值。"
+
+#: src/natcap/invest/sdr/sdr.py:115
+msgid "maximum SDR value"
+msgstr "最大SDR值"
+
+#: src/natcap/invest/sdr/sdr.py:120
+msgid "Borselli IC0 parameter."
+msgstr "Borselli IC0参数。"
+
+#: src/natcap/invest/sdr/sdr.py:121
+msgid "Borselli IC0 parameter"
+msgstr "Borselli IC0参数"
+
+#: src/natcap/invest/sdr/sdr.py:127
+msgid "The maximum allowed value of the slope length parameter (L) in the LS factor."
+msgstr "LS因子中斜率长度参数（L）的最大允许值。"
+
+#: src/natcap/invest/sdr/sdr.py:130
+msgid "maximum l value"
+msgstr "最大l值"
+
+#: src/natcap/invest/sdr/sdr.py:136
+msgid "Map of locations of artificial drainages that drain to the watershed. Pixels with 1 are drainages and are treated like streams. Pixels with 0 are not drainages."
+msgstr "流入流域的人工排水沟位置图。带1的像素是排水沟，与溪流一样处理。带0的像素不是排水沟。"
+
+#: src/natcap/invest/sdr/sdr.py:140
+msgid "drainages"
+msgstr "排水渠"
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:55
+msgid "Twelve files, one for each month. File names must end with the month number (1-12). For example, the filenames 'et0_1.tif' 'evapotranspiration1.tif' are both valid for the month of January."
+msgstr "12个文件，每个月一个。文件名必须以月份编号（1-12）结尾。例如，文件名'et0_1.tif''evapotranspiration1.tif'都对1月份有效。"
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:64
+msgid "Directory containing maps of reference evapotranspiration for each month. Only .tif files should be in this folder (no .tfw, .xml, etc files)."
+msgstr "包含每个月的参考蒸发量地图的目录。在这个文件夹中只有.tif文件（没有.tfw、.xml等文件）。"
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:68
+msgid "ET0 directory"
+msgstr "模型数据目录"
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:76
+msgid "Twelve files, one for each month. File names must end with the month number (1-12). For example, the filenames 'precip_1.tif' and 'precip1.tif' are both valid names for the month of January."
+msgstr "12个文件，每个月一个。文件名必须以月号（1-12）结尾。例如，文件名'precip_1.tif'和'precip1.tif'都是一月的有效名称。"
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:84
+msgid "Directory containing maps of monthly precipitation for each month. Only .tif files should be in this folder (no .tfw, .xml, etc files)."
+msgstr "包含每个月的月度降水量地图的目录。在这个文件夹中只能有.tif文件（没有.tfw、.xml等文件）。"
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:88
+msgid "precipitation directory"
+msgstr "降水目录"
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:97
+msgid "All values in this raster MUST have corresponding entries in the Biophysical Table."
+msgstr "该栅格中的所有数值必须在生物物理表中有相应的条目。"
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:117
+msgid "Curve number values for each combination of soil group and LULC class. Replace [SOIL_GROUP] with each soil group code A, B, C, D so that there is one column for each soil group. Curve number values must be greater than 0."
+msgstr "土壤组和LULC等级的每个组合的曲线数值。用每个土壤组的代码A、B、C、D替换[SOIL_GROUP]，这样每个土壤组就有一列。曲线编号值必须大于0。"
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:127
+msgid "Crop/vegetation coefficient (Kc) values for this LULC class in each month. Replace [MONTH] with the numbers 1 to 12 so that there is one column for each month."
+msgstr "该LULC等级在每个月的作物/植被系数（Kc）值。用数字1至12代替[MONTH]，这样每个月就有一列。"
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:134
+msgid "A table mapping each LULC code to biophysical properties of the corresponding LULC class. All values in the LULC raster must have corresponding entries in this table."
+msgstr "将每个LULC代码与相应的LULC类别的生物物理属性进行映射的表格。LULC栅格中的所有数值必须在此表中有相应的条目。"
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:146
+msgid "Values are the numbers 1-12 corresponding to each month, January (1) through December (12)."
+msgstr "数值为1-12的数字，对应每个月，1月（1）到12月（12）。"
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:153
+msgid "The number of rain events in that month."
+msgstr "该月的雨水事件的数量。"
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:159
+msgid "A table containing the number of rain events for each month. Required if neither User-Defined Local Recharge nor User-Defined Climate Zones is selected."
+msgstr "一个包含每个月雨量事件数量的表格。如果既没有选择用户定义的本地补给，也没有选择用户定义的气候区，则需要。"
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:163
+msgid "rain events table"
+msgstr "降雨事件表"
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:168
+msgid "The proportion of upslope annual available local recharge that is available in each month. Required if Use Monthly Alpha Table is not selected."
+msgstr "每个月的上坡年可用本地补给量的比例。如果不选择使用月度阿尔法表，则需要。"
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:172
+msgid "alpha_m parameter"
+msgstr "alpha_m 参数"
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:176
+msgid "The proportion of the upgradient subsidy that is available for downgradient evapotranspiration."
+msgstr "可用于下流蒸发的上流补给的比例。"
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:179
+msgid "beta_i parameter"
+msgstr "beta_i 参数"
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:183
+msgid "The proportion of pixel local recharge that is available to downgradient pixels."
+msgstr "下游栅格可获得的栅格本地补给比例。"
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:186
+msgid "gamma parameter"
+msgstr "gamma参数"
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:190
+msgid "Use user-defined local recharge data instead of calculating local recharge from the other provided data."
+msgstr "使用用户定义的本地补给数据，而不是根据其他提供的数据计算本地补给。"
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:193
+msgid "user-defined recharge layer (advanced)"
+msgstr "用户定义的补给层（高级）"
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:203
+msgid "Map of local recharge data. Required if User-Defined Local Recharge is selected."
+msgstr "本地补给数据的地图。如果选择用户定义的本地补给，则需要。"
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:206
+msgid "local recharge"
+msgstr "本地补给"
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:210
+msgid "Use user-defined climate zone data in lieu of a global rain events table."
+msgstr "使用用户定义的气候区数据来代替全球雨水事件表。"
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:213
+msgid "climate zones (advanced)"
+msgstr "气候区（高级）"
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:220
+msgid "Climate zone ID numbers, corresponding to the values in the Climate Zones map."
+msgstr "气候区ID号，与气候区地图中的数值相对应。"
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:226
+msgid "The number of rain events that occur in each month in this climate zone. Replace [MONTH] with the month abbreviations: jan, feb, mar, apr, may, jun, jul, aug, sep, oct, nov, dec, so that there is a column for each month."
+msgstr "该气候区每月发生的雨量事件的数量。将[MONTH]改为月份缩写：Jan, feb, mar, apr, may, jun, jul, aug, sep, oct, nov, dec，这样，每个月都有一列。"
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:234
+msgid "Table of monthly precipitation events for each climate zone. Required if User-Defined Climate Zones is selected."
+msgstr "每个气候区的月降水事件表。如果选择了“自定义气候区”，则需要。"
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:237
+msgid "climate zone table"
+msgstr "气候区表"
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:244
+msgid "Map of climate zones. All values in this raster must have corresponding entries in the Climate Zone Table."
+msgstr "气候区地图。该栅格中的所有值必须在气候区表中有相应的条目。"
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:247
+msgid "climate zone map"
+msgstr "气候区地图"
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:251
+msgid "Use montly alpha values instead of a single value for the whole year."
+msgstr "使用每月alpha值，而不是全年的单一值。"
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:254
+msgid "use monthly alpha table (advanced)"
+msgstr "使用月alpha表(高级)"
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:262
+msgid "Values are the numbers 1-12 corresponding to each month."
+msgstr "值是与每个月对应的数字1-12。"
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:269
+msgid "The alpha value for that month."
+msgstr "该月的alpha值。"
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:273
+msgid "Table of alpha values for each month. Required if Use Monthly Alpha Table is selected."
+msgstr "每个月的alpha值表。如果选中“使用月Alpha表”，则需要。"
+
+#: src/natcap/invest/seasonal_water_yield/seasonal_water_yield.py:276
+msgid "monthly alpha table"
+msgstr "月alpha表"
+
+#~ msgid "LULC code corresponding to values in the LULC map."
+#~ msgstr "与LULC栅格中的值相对应的LULC代码。"
+
+#~ msgid "LULC code. Every value in the LULC maps must have a corresponding entry in this column."
+#~ msgstr "LULC代码。LULC地图中的每一个值都必须在这一栏中有一个相应的条目。"
+
+#~ msgid "Code for this LULC class from the LULC map. Every value in the LULC raster must have a corresponding entry in this column."
+#~ msgstr "从LULC中对应是代码。LULC栅格中的每个值在这一列中都必须有相应的条目。"
+
+#~ msgid "Use the predefined GLOBIO LULC map instead of providing the LULC map."
+#~ msgstr "使用预定义的GLOBIO LULC地图，而不是提供LULC地图。"
+
+#~ msgid "use predefined LULC"
+#~ msgstr "使用预定义的LULC"
+
+#~ msgid "Each LULC code must have a corresponding entry in the biophysical table. Required if Use Predefined GLOBIO LULC is not selected."
+#~ msgstr "每个LULC代码必须在生物物理表中有一个相应的条目。如果不选择使用预定义GLOBIO LULC，则需要。"
+
+#~ msgid "LULC code from the LULC map input."
+#~ msgstr "来自LULC地图输入的LULC代码。"
+
+#~ msgid "Corresponding GLOBIO LULC code."
+#~ msgstr "相应的GLOBIO LULC代码。"
+
+#~ msgid "A table mapping each LULC code in the LULC raster input to the corresponding GLOBIO LULC code for the class. Required if Use Predefined GLOBIO LULC is not selected."
+#~ msgstr "将LULC栅格输入中的每个LULC代码映射到该类的相应GLOBIO LULC代码的表格。如果没有选择使用预定义的GLOBIO LULC，则需要。"
+
+#~ msgid "LULC to GLOBIO LULC Table"
+#~ msgstr "LULC与GLOBIO LULC对应表"
+
+#~ msgid "Maps of the location of infrastructure. For rasters, any valid value greater than zero indicates the presence of infrastrucutre. For vectors, any geometries indicate the presence of infrastructure."
+#~ msgstr "基础设施位置的地图。对于栅格，任何大于零的有效值都表示有基础设施存在。对于矢量，任何几何图形都表示有基础设施存在。"
+
+#~ msgid "Directory containing raster and/or vector map(s) any forms of infrastructure to consider in the MSA calculation."
+#~ msgstr "包含栅格和/或矢量地图的目录，在MSA计算中考虑的任何形式的基础设施。"
+
+#~ msgid "infrastructure directory"
+#~ msgstr "基础设施目录"
+
+#~ msgid "Map of the proportion of each pixel that is pasture. Required if Use Predefined GLOBIO LULC is not selected."
+#~ msgstr "每个栅格的牧草比例图。如果不选择使用预定义的GLOBIO LULC，则需要。"
+
+#~ msgid "pasture"
+#~ msgstr "草场"
+
+#~ msgid "potential vegetation"
+#~ msgstr "潜在的植被"
+
+#~ msgid "Map of potential vegetation classes from Ramankutty and Foley (1999). Required if Use Predefined GLOBIO LULC is not selected."
+#~ msgstr "来自Ramankutty和Foley（1999）的潜在植被等级图。如果不选择使用预定义的GLOBIO LULC，则需要。"
+
+#~ msgid "Areas in the Pasture map with a pasture proportion greater than or equal to this threshold are considered grassland or livestock grazing areas. Required if Use Predefined GLOBIO LULC is not selected."
+#~ msgstr "牧场地图中牧场比例大于或等于该阈值的区域被视为草原或牲畜放牧区。如果不选择使用预定义的GLOBIO LULC，则需要。"
+
+#~ msgid "pasture threshold"
+#~ msgstr "牧场阈值"
+
+#~ msgid "Proportion of total agriculture that is intensive. "
+#~ msgstr "密集型农业总量的比例。 "
+
+#~ msgid "proportion of intensified agriculture"
+#~ msgstr "强化农业的比例"
+
+#~ msgid "Forest ragmentation quality index threshold below which an area is classified as secondary forest. Areas with FFQI greater than or equal to this threshold are classified as primary forest. Required if Use Predefined GLOBIO LULC is not selected."
+#~ msgstr "森林破损质量指数阈值，低于此阈值的区域被归类为次生林。FFQI大于或等于该阈值的区域被划为原始森林。如果不选择使用预定义的GLOBIO LULC，则需要。"
+
+#~ msgid "primary threshold"
+#~ msgstr "主要阈值"
+
+#~ msgid "This MSA value represents infrastructure impacts on primary vegetation. The value in the 'value' column is a distance range in meters."
+#~ msgstr "该MSA值表示基础设施对初级植被的影响。“value”列中的值是以米为单位的距离范围。"
+
+#~ msgid "This MSA value represents infrastructure impacts on non-primary vegetation. The value in the 'value' column is a distance range in meters."
+#~ msgstr "该MSA值表示基础设施对非原生植被的影响。“value”列中的值是以米为单位的距离范围。"
+
+#~ msgid "This MSA value represents fragmentation impacts. The value in the 'value' column is an FFQI range."
+#~ msgstr "这个MSA值表示碎片影响。“value”列中的值是一个FFQI范围。"
+
+#~ msgid "This MSA value represents land-use impacts. The value in the 'value' column is one of the GLOBIO-recognized LULC codes."
+#~ msgstr "这个MSA值表示土地使用的影响。“value”列中的值是GLOBIO识别的LULC代码之一。"
+
+#~ msgid "The type of MSA value in this row."
+#~ msgstr "该行中MSA值的类型。"
+
+#~ msgid "Indicates a number or range of a bin. This may be a single number e.g. 1000, a range (two numbers separated by a hyphen e.g. 1000-2000), or an upper or lower bound (a number preceded by > or < e.g. <5"
+#~ msgstr "表示一个数字或一个bin的范围。这可以是一个单一的数字，如1000，一个范围（用连字符分隔的两个数字，如1000-2000），或一个上界或下界（前面有>或<的数字，如：<5"
+
+#~ msgid "MSA value for the MSA type specified in the 'msa_type' column, when the impact value is within the range given in the 'value' column."
+#~ msgstr "在'msa_type'列中指定的MSA类型的MSA值，当影响值在'value'列中给出的范围内。"
+
+#~ msgid "Table that sets the MSA values for each impact driver and each range of impact values."
+#~ msgstr "为每个冲击器和每个冲击值范围设定MSA值的表格。"
+
+#~ msgid "MSA Parameter Table"
+#~ msgstr "MSA参数表"
+
+#~ msgid "Predefined GLOBIO LULC map using the standard GLOBIO classification scheme and codes. Required if Use Predefined GLOBIO LULC is selected."
+#~ msgstr "使用标准GLOBIO分类方案和代码的预定义GLOBIO LULC地图。如果选择使用预定义的GLOBIO LULC，则需要。"
+
+#~ msgid "GLOBIO Classified Land Use"
+#~ msgstr "GLOBIO分类的土地使用"
+
+#~ msgid "LULC codes corresponding to those in the LULC rasters."
+#~ msgstr "与LULC栅格相对应的LULC代码。"
+
+#~ msgid "GLOBIO"
+#~ msgstr "GLOBIO"
+
+#~ msgid "LULC code representing this class in the LULC raster."
+#~ msgstr "在LULC栅格中表示这个类的LULC代码。"
+
+#~ msgid "Map of land use/land cover codes."
+#~ msgstr "土地使用/土地覆盖代码地图。"
+
+#~ msgid "LULC code corresponding to those in the LULC map."
+#~ msgstr "与LULC栅格中的值相对应的LULC代码。"
+
+#~ msgid "LULC codes matching those in the LULC map."
+#~ msgstr "与LULC栅格相对应的LULC代码。"
+
+#~ msgid "LULC code for this class corresponding to values in the LULC raster."
+#~ msgstr "该类的LULC代码，对应于LULC栅格中的数值。"
+
+#~ msgid "{number} features have a non-integer ws_id field"
+#~ msgstr "{number} 特征有一个非整数的ws_id字段"
+
+#~ msgid "Unique identifier for the watershed."
+#~ msgstr "流域的唯一标识符。"
+
+#~ msgid "LULC code from the LULC raster."
+#~ msgstr "来自LULC栅格的LULC代码。"
+
+#~ msgid "LULC code matching those in the LULC raster."
+#~ msgstr "LULC代码与LULC栅格中的代码相匹配。"
+
+#~ msgid "POINT"
+#~ msgstr "点"
+
+#~ msgid "MULTIPOINT"
+#~ msgstr "多点"
+
+#~ msgid "LINESTRING"
+#~ msgstr "线串"
+
+#~ msgid "MULTILINESTRING"
+#~ msgstr "多字符串"
+
+#~ msgid "POLYGON"
+#~ msgstr "多边形"
+
+#~ msgid "MULTIPOLYGON"
+#~ msgstr "多边形集"

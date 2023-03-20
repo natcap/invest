@@ -11,11 +11,12 @@ import { spawn, spawnSync } from 'child_process';
 import rimraf from 'rimraf';
 import puppeteer from 'puppeteer-core';
 import { getDocument, queries, waitFor } from 'pptr-testing-library';
+import '@testing-library/jest-dom';
 
 import pkg from '../../package.json';
 import { APP_HAS_RUN_TOKEN } from '../../src/main/setupCheckFirstRun';
 
-jest.setTimeout(240000); // This test takes ~20 seconds, but sometimes longer
+jest.setTimeout(240000);
 const PORT = 9009;
 let ELECTRON_PROCESS;
 let BROWSER;
@@ -86,9 +87,16 @@ function makeAOI() {
   fs.writeFileSync(TMP_AOI_PATH, JSON.stringify(geojson));
 }
 
+beforeAll(() => {
+  makeAOI();
+});
+afterAll(() => {
+  rimraf(TMP_DIR, (error) => { if (error) { throw error; } });
+});
+
 // errors are not thrown from an async beforeAll
 // https://github.com/facebook/jest/issues/8688
-beforeAll(() => {
+beforeEach(() => {
   try { fs.unlinkSync(APP_HAS_RUN_TOKEN_PATH); } catch {}
   // start the invest app and forward stderr to console
   ELECTRON_PROCESS = spawn(
@@ -108,7 +116,7 @@ beforeAll(() => {
     if (`${data}`.match('main window loaded')) {
       try {
         BROWSER = await puppeteer.connect({
-          browserURL: `http://localhost:${PORT}`,
+          browserURL: `http://127.0.0.1:${PORT}`,
           defaultViewport: null,
         });
       } catch (e) {
@@ -119,30 +127,25 @@ beforeAll(() => {
   };
   ELECTRON_PROCESS.stdout.on('data', stdOutCallback);
 
-  // set up test data
-  makeAOI();
-
   // clear old screenshots
   glob.glob(`${SCREENSHOT_PREFIX}*.png`, (err, files) => {
     files.forEach((file) => fs.unlinkSync(file));
   });
 });
 
-afterAll(async () => {
+afterEach(async () => {
   try {
     await BROWSER.close();
   } catch (error) {
     console.log(BINARY_PATH);
     console.error(error);
   }
-
-  rimraf(TMP_DIR, (error) => { if (error) { throw error; } });
   ELECTRON_PROCESS.removeAllListeners();
   ELECTRON_PROCESS.kill();
 });
 
 test('Run a real invest model', async () => {
-  const { findByText, findByLabelText, findByRole } = queries;
+  const { findByText, findByRole } = queries;
   // On GHA MacOS, we seem to have to wait a long time for the browser
   // to be ready. Maybe related to https://github.com/natcap/invest-workbench/issues/158
   await waitFor(() => {
@@ -159,9 +162,9 @@ test('Run a real invest model', async () => {
   const doc = await getDocument(page);
   await page.screenshot({ path: `${SCREENSHOT_PREFIX}1-page-load.png` });
 
-  const extraTime = 5000; // long timeouts finding the first elements
+  const downloadModal = await page.waitForSelector('.modal-dialog');
   const downloadModalCancel = await findByRole(
-    doc, 'button', { name: 'Cancel' }, { timeout: extraTime }
+    downloadModal, 'button', { name: 'Cancel' }
   );
   await downloadModalCancel.click();
   // We need to get the modelButton from w/in this list-group because there
@@ -219,36 +222,84 @@ test('Run a real invest model', async () => {
   // Cancel button does not appear until after invest has confirmed
   // it is running. So extra timeout on the query:
   const cancelButton = await findByRole(sidebar,
-    'button', { name: 'Cancel Run' }, { timeout: 5000 });
+    'button', { name: 'Cancel Run' }, { timeout: 15000 });
   await cancelButton.click();
   expect(await findByText(sidebar, 'Run Canceled'));
   expect(await findByText(sidebar, 'Open Workspace'));
   await page.screenshot({ path: `${SCREENSHOT_PREFIX}6-run-canceled.png` });
 }, 240000); // >2x the sum of all the max timeouts within this test
 
-// Test for duplicate application launch.
-// We have the binary path, so now let's launch a new subprocess with the same binary
-// The test is that the subprocess exits within a certain reasonable timeout.
-// Also verify that window 1 has focus.
-test('App re-launch will exit and focus on first instance', async () => {
-  if (process.platform === 'win32') {
-    await waitFor(() => {
-      expect(BROWSER.isConnected()).toBeTruthy();
-    });
+test('Check local userguide links', async () => {
+  const { findByText, findAllByRole, findByRole, } = queries;
+  // On GHA MacOS, we seem to have to wait a long time for the browser
+  // to be ready. Maybe related to https://github.com/natcap/invest-workbench/issues/158
+  await waitFor(() => {
+    expect(BROWSER && BROWSER.isConnected()).toBeTruthy();
+  }, { timeout: 60000 });
+  // find the mainWindow's index.html, not the splashScreen's splash.html
+  const target = await BROWSER.waitForTarget(
+    (target) => target.url().endsWith('index.html')
+  );
+  const page = await target.page();
+  page.on('error', (err) => {
+    console.log(err);
+  });
+  const doc = await getDocument(page);
+  const downloadModal = await page.waitForSelector('.modal-dialog');
+  const downloadModalCancel = await findByRole(
+    downloadModal, 'button', { name: 'Cancel' }
+  );
+  await downloadModalCancel.click();
 
-    // Open another instance of the Workbench application.
-    // This should return quickly.  The test timeout is there in case the new i
-    // process hangs for some reason.
-    const otherElectronProcess = spawnSync(
-      `"${BINARY_PATH}"`, [`--remote-debugging-port=${PORT}`],
-      { shell: true }
+  const investList = await page.waitForSelector('.invest-list-group');
+  const modelButtons = await findAllByRole(investList, 'button');
+
+  for (let i = 0; i < modelButtons.length; i++) {
+    const btn = modelButtons[i];
+    await btn.click();
+    const link = await findByText(doc, "User's Guide");
+    await page.waitForTimeout(300); // link.click() not working w/o this pause
+    const hrefHandle = await link.getProperty('href');
+    const hrefValue = await hrefHandle.jsonValue();
+    await link.click();
+    const ugTarget = await BROWSER.waitForTarget(
+      (target) => target.url() === hrefValue
     );
+    const ugPage = await ugTarget.page();
+    const ugDoc = await getDocument(ugPage);
+    try {
+      await findByText(ugDoc, 'Table of Contents');
+    } catch {
+      throw new Error(`${hrefValue} not found`);
+    }
 
-    // When another instance is already open, we expect an exit code of 1.
-    expect(otherElectronProcess.status).toBe(1);
-  } else {
-    // Single instance lock caused the app to crash on macOS, and also
-    // is less important because mac generally won't open multiple instances
-    console.log("Skipping this test because we're not on Windows");
+    await ugPage.close();
+    const tab = await page.waitForSelector('.nav-item');
+    const closeTabBtn = await findByRole(tab, 'button');
+    await closeTabBtn.click();
+    await page.waitForTimeout(100); // allow for Home Tab to be visible again
   }
+});
+
+const testWin = process.platform === 'win32' ? test : test.skip;
+/* Test for duplicate application launch.
+We have the binary path, so now let's launch a new subprocess with the same binary
+The test is that the subprocess exits within a certain reasonable timeout.
+Single instance lock caused the app to crash on macOS, and also
+is less important because mac generally won't open multiple instances */
+testWin('App re-launch will exit and focus on first instance', async () => {
+  await waitFor(() => {
+    expect(BROWSER && BROWSER.isConnected()).toBeTruthy();
+  }, { timeout: 60000 });
+
+  // Open another instance of the Workbench application.
+  // This should return quickly.  The test timeout is there in case the new i
+  // process hangs for some reason.
+  const otherElectronProcess = spawnSync(
+    `"${BINARY_PATH}"`, [`--remote-debugging-port=${PORT}`],
+    { shell: true }
+  );
+
+  // When another instance is already open, we expect an exit code of 1.
+  expect(otherElectronProcess.status).toBe(1);
 });

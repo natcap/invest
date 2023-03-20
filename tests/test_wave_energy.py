@@ -613,7 +613,7 @@ class WaveEnergyRegressionTests(unittest.TestCase):
 
 
 class WaveEnergyValidateTests(unittest.TestCase):
-    """Wave Energy Validate: tests for ARGS_SPEC and validate."""
+    """Wave Energy Validate: tests for MODEL_SPEC and validate."""
 
     def setUp(self):
         """Set up list of required keys."""

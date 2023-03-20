@@ -19,7 +19,9 @@ import {
 import InvestJob from '../../src/renderer/InvestJob';
 import setupDialogs from '../../src/main/setupDialogs';
 import setupOpenExternalUrl from '../../src/main/setupOpenExternalUrl';
+import setupOpenLocalHtml from '../../src/main/setupOpenLocalHtml';
 import { removeIpcMainListeners } from '../../src/main/main';
+import { ipcMainChannels } from '../../src/main/ipcMainChannels';
 
 // It's quite a pain to dynamically mock a const from a module,
 // here we do it by importing as another object, then
@@ -145,6 +147,7 @@ describe('Sidebar Buttons', () => {
     fetchValidation.mockResolvedValue([]);
     uiConfig.UI_SPEC = mockUISpec(spec);
     setupOpenExternalUrl();
+    setupOpenLocalHtml();
   });
 
   afterEach(() => {
@@ -340,7 +343,7 @@ describe('Sidebar Buttons', () => {
       filePaths: ['']
     };
     ipcRenderer.invoke.mockResolvedValue(mockDialogData);
-    const spy = jest.spyOn(SetupTab.prototype, 'loadParametersFromFile');
+    const spy = jest.spyOn(SetupTab.WrappedComponent.prototype, 'loadParametersFromFile');
 
     const { findByText } = renderInvestTab();
 
@@ -361,7 +364,7 @@ describe('Sidebar Buttons', () => {
       filePaths: ['']
     };
     ipcRenderer.invoke.mockResolvedValue(mockDialogData);
-    const spy = jest.spyOn(SetupTab.prototype, method);
+    const spy = jest.spyOn(SetupTab.WrappedComponent.prototype, method);
 
     const { findByText, findByLabelText, findByRole } = renderInvestTab();
     const saveAsButton = await findByText('Save as...');
@@ -390,12 +393,19 @@ describe('Sidebar Buttons', () => {
     });
   });
 
-  test('User Guide link opens externally', async () => {
+  test('User Guide link sends IPC to main', async () => {
+    // It seemed impossible to spy on an instance of BrowserWindow
+    // and its call to .loadUrl(), given our setup in __mocks__/electron.js,
+    // so this will have to suffice:
+    const spy = jest.spyOn(ipcRenderer, 'send')
+      .mockImplementation(() => Promise.resolve());
+
     const { findByRole } = renderInvestTab();
     const link = await findByRole('link', { name: /user's guide/i });
     userEvent.click(link);
     await waitFor(() => {
-      expect(shell.openExternal).toHaveBeenCalledTimes(1);
+      const calledChannels = spy.mock.calls.map(call => call[0]);
+      expect(calledChannels).toContain(ipcMainChannels.OPEN_LOCAL_HTML);
     });
   });
 

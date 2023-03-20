@@ -330,7 +330,8 @@ def make_suffix_string(args, suffix_key):
     return file_suffix
 
 
-def exponential_decay_kernel_raster(expected_distance, kernel_filepath):
+def exponential_decay_kernel_raster(expected_distance, kernel_filepath,
+        normalize=True):
     """Create a raster-based exponential decay kernel.
 
     The raster created will be a tiled GeoTiff, with 256x256 memory blocks.
@@ -342,6 +343,8 @@ def exponential_decay_kernel_raster(expected_distance, kernel_filepath):
         kernel_filepath (string): The path to the file on disk where this
             kernel should be stored.  If this file exists, it will be
             overwritten.
+        normalize=True (bool): Whether to divide the kernel values by the sum
+            of all values in the kernel.
 
     Returns:
         None
@@ -411,18 +414,107 @@ def exponential_decay_kernel_raster(expected_distance, kernel_filepath):
     # object in interblocks()
     kernel_band.FlushCache()
     kernel_dataset.FlushCache()
+    kernel_band = None
+    kernel_dataset = None
 
-    for block_data in pygeoprocessing.iterblocks(
-            (kernel_filepath, 1), offset_only=True):
-        kernel_block = kernel_band.ReadAsArray(**block_data)
-        kernel_block /= integration
-        kernel_band.WriteArray(kernel_block, xoff=block_data['xoff'],
-                               yoff=block_data['yoff'])
+    if normalize:
+        kernel_dataset = gdal.OpenEx(kernel_filepath, gdal.GA_Update)
+        kernel_band = kernel_dataset.GetRasterBand(1)
+        for block_data in pygeoprocessing.iterblocks(
+                (kernel_filepath, 1), offset_only=True):
+            kernel_block = kernel_band.ReadAsArray(**block_data)
+            kernel_block /= integration
+            kernel_band.WriteArray(kernel_block, xoff=block_data['xoff'],
+                                   yoff=block_data['yoff'])
 
-    kernel_band.FlushCache()
+        kernel_band.FlushCache()
+        kernel_dataset.FlushCache()
+        kernel_band = None
+        kernel_dataset = None
+
+
+def gaussian_decay_kernel_raster(
+        sigma, kernel_filepath, n_std_dev=3.0, normalize=True):
+    """Create a raster-based gaussian decay kernel.
+
+    The raster will be a tiled GeoTIFF, with 256x256 memory blocks.
+
+    While the ``sigma`` parameter represents the width of a standard deviation
+    in pixels, the ``n_std_dev`` parameter defines how many standard deviations
+    should be included in the resulting kernel.  The resulting kernel raster
+    will be square in shape, with a width of ``(sigma * n_std_dev * 2) + 1``
+    pixels.
+
+    Args:
+        sigma (int or float): The distance (in pixels) of the standard
+            deviation from the center of the raster.
+        kernel_filepath (string): The path to the file on disk where this
+            kernel should be stored. If a file exists at this path, it will be
+            overwritten.
+        n_std_dev=3.0 (int or float): The number of times sigma should be
+            multiplied in order to get the pixel radius of the resulting
+            kernel.  The default of 3 standard deviations will cover 99.7% of
+            the area under the gaussian curve.
+        normalize=True (bool): Whether to divide the kernel values by the sum
+            of all values in the kernel.
+
+    Returns:
+        ``None``
+    """
+    # going 3.0 times out from the sigma gives you over 99% of area under
+    # the gaussian curve
+    max_distance = sigma * n_std_dev
+    kernel_size = int(numpy.round(max_distance * 2 + 1))
+
+    driver = gdal.GetDriverByName('GTiff')
+    kernel_dataset = driver.Create(
+        kernel_filepath.encode('utf-8'), kernel_size, kernel_size, 1,
+        gdal.GDT_Float32, options=[
+            'BIGTIFF=IF_SAFER', 'TILED=YES', 'BLOCKXSIZE=256',
+            'BLOCKYSIZE=256'])
+
+    # Make some kind of geotransform, it doesn't matter what but
+    # will make GIS libraries behave better if it's all defined
+    kernel_dataset.SetGeoTransform([0, 1, 0, 0, 0, -1])
+    srs = osr.SpatialReference()
+    srs.SetWellKnownGeogCS('WGS84')
+    kernel_dataset.SetProjection(srs.ExportToWkt())
+
+    kernel_band = kernel_dataset.GetRasterBand(1)
+    kernel_nodata = -9999
+    kernel_band.SetNoDataValue(kernel_nodata)
+
+    col_index = numpy.array(range(kernel_size))
+    running_sum = 0.0
+    for row_index in range(kernel_size):
+        distance_kernel_row = numpy.sqrt(
+            (row_index - max_distance) ** 2 +
+            (col_index - max_distance) ** 2).reshape(1, kernel_size)
+        kernel = numpy.where(
+            distance_kernel_row > max_distance, 0.0,
+            (1 / (2.0 * numpy.pi * sigma ** 2) *
+             numpy.exp(-distance_kernel_row**2 / (2 * sigma ** 2))))
+        running_sum += numpy.sum(kernel)
+        kernel_band.WriteArray(kernel, xoff=0, yoff=row_index)
+
     kernel_dataset.FlushCache()
     kernel_band = None
     kernel_dataset = None
+
+    if normalize:
+        kernel_dataset = gdal.OpenEx(kernel_filepath, gdal.GA_Update)
+        kernel_band = kernel_dataset.GetRasterBand(1)
+        for kernel_data, kernel_block in pygeoprocessing.iterblocks(
+                (kernel_filepath, 1)):
+            # divide by sum to normalize
+            kernel_block /= running_sum
+            kernel_band.WriteArray(
+                kernel_block, xoff=kernel_data['xoff'],
+                yoff=kernel_data['yoff'])
+
+        kernel_dataset.FlushCache()
+        kernel_band = None
+        kernel_dataset = None
 
 
 def build_file_registry(base_file_path_list, file_suffix):

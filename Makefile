@@ -2,15 +2,15 @@
 DATA_DIR := data
 GIT_SAMPLE_DATA_REPO        := https://bitbucket.org/natcap/invest-sample-data.git
 GIT_SAMPLE_DATA_REPO_PATH   := $(DATA_DIR)/invest-sample-data
-GIT_SAMPLE_DATA_REPO_REV    := 6505a0b76de9b9b59924b896441a95a94fef6b67
+GIT_SAMPLE_DATA_REPO_REV    := 5992790e63a5b906aa126cd5d72f019a985925e3
 
 GIT_TEST_DATA_REPO          := https://bitbucket.org/natcap/invest-test-data.git
 GIT_TEST_DATA_REPO_PATH     := $(DATA_DIR)/invest-test-data
-GIT_TEST_DATA_REPO_REV      := f5e651c9ba0a012dc033b9c1d12d51e42f6f87b0
+GIT_TEST_DATA_REPO_REV      := a89253d83d5f70a8ea2d8a951b2d47d603505f14
 
 GIT_UG_REPO                 := https://github.com/natcap/invest.users-guide
 GIT_UG_REPO_PATH            := doc/users-guide
-GIT_UG_REPO_REV             := 90b0e96e717894a0fe9e9ef701e1585e5cb8649f
+GIT_UG_REPO_REV             := f44ca0cdb8bcdbc98cd10a92caeddd8ac399e6d5
 
 ENV = "./env"
 ifeq ($(OS),Windows_NT)
@@ -35,7 +35,7 @@ ifeq ($(OS),Windows_NT)
 	SHELL := /usr/bin/bash
 	CONDA := conda.bat
 	BASHLIKE_SHELL_COMMAND := '$(SHELL)' -c
-	.DEFAULT_GOAL := windows_installer
+	.DEFAULT_GOAL := binaries
 	RM_DATA_DIR := $(RMDIR) $(DATA_DIR)
 	/ := '\'
 	OSNAME = 'windows'
@@ -54,19 +54,10 @@ else
 	# linux, mac distinguish between python2 and python3
 	PYTHON = python3
 	RM_DATA_DIR := yes | $(RMDIR) $(DATA_DIR)
-
-	ifeq ($(shell sh -c 'uname -s 2>/dev/null || echo not'),Darwin)  # mac OSX
-		.DEFAULT_GOAL := mac_dmg
-		OSNAME = 'mac'
-	else
-		.DEFAULT_GOAL := binaries
-	endif
+	.DEFAULT_GOAL := binaries
 endif
 
 REQUIRED_PROGRAMS := make zip pandoc $(PYTHON) git git-lfs conda yarn
-ifeq ($(OS),Windows_NT)
-	REQUIRED_PROGRAMS += makensis
-endif
 
 ZIP := zip
 PIP = $(PYTHON) -m pip
@@ -116,7 +107,6 @@ UG_FILE_VALIDATOR := $(PYTHON) scripts/userguide-filevalidator.py $(GIT_UG_REPO_
 
 # Target names.
 INVEST_BINARIES_DIR := $(DIST_DIR)/invest
-# INVEST_BINARIES_DIR_ZIP := $(OSNAME)_invest_binaries.zip
 
 APIDOCS_BUILD_DIR := $(BUILD_DIR)/sphinx/apidocs
 APIDOCS_TARGET_DIR := $(DIST_DIR)/apidocs
@@ -126,14 +116,10 @@ USERGUIDE_BUILD_DIR := $(BUILD_DIR)/sphinx/userguide
 USERGUIDE_TARGET_DIR := $(DIST_DIR)/userguide
 USERGUIDE_ZIP_FILE := $(DIST_DIR)/InVEST_$(VERSION)_userguide.zip
 
-MAC_DISK_IMAGE_FILE := $(DIST_DIR)/InVEST_$(VERSION).dmg
-MAC_BINARIES_ZIP_FILE := $(DIST_DIR)/InVEST-$(VERSION)-mac.zip
-MAC_APPLICATION_BUNDLE_NAME := InVEST.app
-MAC_APPLICATION_BUNDLE_DIR := $(BUILD_DIR)/mac_app_$(VERSION)
-MAC_APPLICATION_BUNDLE := $(MAC_APPLICATION_BUNDLE_DIR)/$(MAC_APPLICATION_BUNDLE_NAME)
+INVEST_AUTOTESTER := $(PYTHON) scripts/invest-autotest.py --cwd $(GIT_SAMPLE_DATA_REPO_PATH) --binary $(INVEST_BINARIES_DIR)/invest
 
 
-.PHONY: fetch install binaries apidocs userguide windows_installer mac_dmg sampledata sampledata_single test test_ui clean help check python_packages jenkins purge mac_zipfile deploy codesign_mac codesign_windows $(GIT_SAMPLE_DATA_REPO_PATH) $(GIT_TEST_DATA_REPO_PATH) $(GIT_UG_REPO_REV)
+.PHONY: fetch install binaries apidocs userguide sampledata sampledata_single test clean help check python_packages jenkins purge mac_zipfile deploy codesign_mac codesign_windows $(GIT_SAMPLE_DATA_REPO_PATH) $(GIT_TEST_DATA_REPO_PATH) $(GIT_UG_REPO_REV)
 
 # Very useful for debugging variables!
 # $ make print-FORKNAME, for example, would print the value of the variable $(FORKNAME)
@@ -156,14 +142,11 @@ help:
 	@echo "  apidocs           to build HTML API documentation"
 	@echo "  userguide         to build HTML version of the users guide"
 	@echo "  python_packages   to build natcap.invest wheel and source distributions"
-	@echo "  windows_installer to build an NSIS installer for distribution"
-	@echo "  mac_dmg           to build a disk image for distribution"
 	@echo "  codesign_mac      to sign the mac disk image using the codesign utility"
 	@echo "  codesign_windows  to sign the windows installer using the SignTool utility"
 	@echo "  sampledata        to build sample data zipfiles"
 	@echo "  sampledata_single to build a single self-contained data zipfile.  Used for advanced NSIS install."
 	@echo "  test              to run pytest on the tests directory"
-	@echo "  test_ui           to run pytest on the ui_tests directory"
 	@echo "  clean             to remove temporary directories and files (but not dist/)"
 	@echo "  purge             to remove temporary directories, cloned repositories and the built environment."
 	@echo "  help              to print this help and exit"
@@ -174,15 +157,15 @@ $(BUILD_DIR) $(DATA_DIR) $(DIST_DIR) $(DIST_DATA_DIR):
 test: $(GIT_TEST_DATA_REPO_PATH)
 	$(TESTRUNNER) tests
 
-test_ui: $(GIT_TEST_DATA_REPO_PATH)
-	$(TESTRUNNER) ui_tests
-
 validate_sampledata: $(GIT_SAMPLE_DATA_REPO_PATH)
 	$(TEST_DATAVALIDATOR)
 	$(DATAVALIDATOR)
 
 validate_userguide_filenames: $(GIT_UG_REPO_PATH)
 	$(UG_FILE_VALIDATOR)
+
+invest_autotest: $(GIT_SAMPLE_DATA_REPO_PATH) $(INVEST_BINARIES_DIR)
+	$(INVEST_AUTOTESTER)
 
 clean:
 	-$(RMDIR) $(BUILD_DIR)
@@ -232,7 +215,7 @@ fetch: $(GIT_UG_REPO_PATH) $(GIT_SAMPLE_DATA_REPO_PATH) $(GIT_TEST_DATA_REPO_PAT
 # Python conda environment management
 env:
 	@echo "NOTE: requires 'requests' be installed in base Python"
-	$(PYTHON) ./scripts/convert-requirements-to-conda-yml.py requirements.txt requirements-dev.txt requirements-docs.txt requirements-gui.txt > requirements-all.yml
+	$(PYTHON) ./scripts/convert-requirements-to-conda-yml.py requirements.txt requirements-dev.txt requirements-docs.txt > requirements-all.yml
 	$(CONDA) create -p $(ENV) -y -c conda-forge python=3.8 nomkl
 	$(CONDA) env update -p $(ENV) --file requirements-all.yml
 	@echo "----------------------------"
@@ -267,7 +250,7 @@ $(INVEST_BINARIES_DIR): | $(DIST_DIR) $(BUILD_DIR)
 	-$(RMDIR) $(BUILD_DIR)/pyi-build
 	-$(RMDIR) $(INVEST_BINARIES_DIR)
 	$(PYTHON) -m PyInstaller --workpath $(BUILD_DIR)/pyi-build --clean --distpath $(DIST_DIR) exe/invest.spec
-	$(CONDA) list --export > $(INVEST_BINARIES_DIR)/package_versions.txt
+	$(CONDA) list > $(INVEST_BINARIES_DIR)/package_versions.txt
 	$(INVEST_BINARIES_DIR)/invest list
 
 # Documentation.
@@ -294,7 +277,7 @@ endif
 # Userguide HTML docs are copied to dist/userguide
 userguide: $(USERGUIDE_TARGET_DIR) $(USERGUIDE_ZIP_FILE)
 $(USERGUIDE_TARGET_DIR): $(GIT_UG_REPO_PATH) $(GIT_SAMPLE_DATA_REPO_PATH) | $(DIST_DIR)
-	ln -s $(WORKING_DIR)/$(GIT_SAMPLE_DATA_REPO_PATH) $(WORKING_DIR)/$(GIT_UG_REPO_PATH)
+	-ln -s $(WORKING_DIR)/$(GIT_SAMPLE_DATA_REPO_PATH) $(WORKING_DIR)/$(GIT_UG_REPO_PATH)
 	$(MAKE) -C $(GIT_UG_REPO_PATH) SPHINXBUILD="$(PYTHON) -m sphinx" BUILDDIR=../../$(USERGUIDE_BUILD_DIR) html
 	$(COPYDIR) $(USERGUIDE_BUILD_DIR)/html $(USERGUIDE_TARGET_DIR)
 
@@ -312,7 +295,6 @@ ZIPDIRS = Annual_Water_Yield \
 		  CropProduction \
 		  DelineateIt \
 		  forest_carbon_edge_effect \
-		  globio \
 		  GridSeascape \
 		  HabitatQuality \
 		  HabitatRiskAssess \
@@ -326,6 +308,7 @@ ZIPDIRS = Annual_Water_Yield \
 		  Seasonal_Water_Yield \
 		  UrbanCoolingModel \
 		  UrbanFloodMitigation \
+		  UrbanNatureAccess \
 		  UrbanStormwater \
 		  WaveEnergy \
 		  WindEnergy
@@ -342,30 +325,6 @@ sampledata_single: $(SAMPLEDATA_SINGLE_ARCHIVE)
 
 $(SAMPLEDATA_SINGLE_ARCHIVE): $(GIT_SAMPLE_DATA_REPO_PATH) dist
 	$(BASHLIKE_SHELL_COMMAND) "cd $(GIT_SAMPLE_DATA_REPO_PATH) && $(ZIP) -r ../../$(SAMPLEDATA_SINGLE_ARCHIVE) ./* -x .svn -x .git"
-
-
-# Installers for each platform.
-# Windows (NSIS) installer is written to dist/InVEST_<version>_x86_Setup.exe
-# Mac (DMG) disk image is written to dist/InVEST <version>.dmg
-WINDOWS_INSTALLER_FILE := $(DIST_DIR)/InVEST_$(INSTALLER_NAME_FORKUSER)$(VERSION)_$(PYTHON_ARCH)_Setup.exe
-windows_installer: $(WINDOWS_INSTALLER_FILE)
-$(WINDOWS_INSTALLER_FILE): $(INVEST_BINARIES_DIR) $(USERGUIDE_ZIP_FILE) build/vcredist_x86.exe | $(GIT_SAMPLE_DATA_REPO_PATH)
-	-$(RM) $(WINDOWS_INSTALLER_FILE)
-	makensis /DVERSION=$(VERSION) /DBINDIR=$(INVEST_BINARIES_DIR) /DARCHITECTURE=$(PYTHON_ARCH) /DFORKNAME=$(INSTALLER_NAME_FORKUSER) /DDATA_LOCATION=$(DATA_BASE_URL) installer\windows\invest_installer.nsi
-
-mac_dmg: $(MAC_DISK_IMAGE_FILE)
-$(MAC_DISK_IMAGE_FILE): $(DIST_DIR) $(MAC_APPLICATION_BUNDLE) $(USERGUIDE_TARGET_DIR)
-	# everything in the source directory $(MAC_APPLICATION_BUNDLE_DIR) will be copied into the DMG.
-	# so that directory should only contain the app bundle.
-	installer/darwin/create_dmg.sh "InVEST $(VERSION)" $(MAC_APPLICATION_BUNDLE_DIR) $(MAC_DISK_IMAGE_FILE)
-
-mac_app: $(MAC_APPLICATION_BUNDLE)
-$(MAC_APPLICATION_BUNDLE): $(BUILD_DIR) $(INVEST_BINARIES_DIR) $(USERGUIDE_TARGET_DIR)
-	./installer/darwin/build_app_bundle.sh $(VERSION) $(INVEST_BINARIES_DIR) $(USERGUIDE_TARGET_DIR) $(MAC_APPLICATION_BUNDLE)
-
-mac_zipfile: $(MAC_BINARIES_ZIP_FILE)
-$(MAC_BINARIES_ZIP_FILE): $(DIST_DIR) $(MAC_APPLICATION_BUNDLE) $(USERGUIDE_TARGET_DIR)
-	./installer/darwin/build_zip.sh $(VERSION) $(MAC_APPLICATION_BUNDLE) $(USERGUIDE_TARGET_DIR)
 
 build/vcredist_x86.exe: | build
 	powershell.exe -Command "Start-BitsTransfer -Source https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe -Destination build\vcredist_x86.exe"
@@ -389,12 +348,12 @@ codesign_mac:
 	# this is essential to avoid the UI password prompt
 	security set-key-partition-list -S apple-tool:,apple: -s -k $(KEYCHAIN_PASS) $(KEYCHAIN_NAME)
 	# sign the dmg using certificate that's looked up by unique identifier 'Stanford'
-	codesign --timestamp --verbose --sign Stanford $(BIN_TO_SIGN) $(WORKBENCH_BIN_TO_SIGN)
+	codesign --timestamp --verbose --sign Stanford $(WORKBENCH_BIN_TO_SIGN)
 
 codesign_windows:
 	$(GSUTIL) cp gs://stanford_cert/$(CERT_FILE) $(BUILD_DIR)/$(CERT_FILE)
-	"$(SIGNTOOL)" sign -fd SHA256 -f $(BUILD_DIR)/$(CERT_FILE) -p $(CERT_PASS) $(BIN_TO_SIGN) $(WORKBENCH_BIN_TO_SIGN)
-	"$(SIGNTOOL)" timestamp -tr http://timestamp.sectigo.com -td SHA256 $(BIN_TO_SIGN) $(WORKBENCH_BIN_TO_SIGN)
+	"$(SIGNTOOL)" sign -fd SHA256 -f $(BUILD_DIR)/$(CERT_FILE) -p $(CERT_PASS) $(WORKBENCH_BIN_TO_SIGN)
+	"$(SIGNTOOL)" timestamp -tr http://timestamp.sectigo.com -td SHA256 $(WORKBENCH_BIN_TO_SIGN)
 	$(RM) $(BUILD_DIR)/$(CERT_FILE)
 	@echo "Installer was signed with signtool"
 

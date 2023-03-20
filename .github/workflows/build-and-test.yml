@@ -31,7 +31,7 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Set up python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: ${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
 
@@ -66,7 +66,7 @@ jobs:
       # Test data is way, way faster by contrast (on the order of a few
       # seconds to archive).
       - name: Restore git-LFS test data cache
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: data/invest-test-data
           key: git-lfs-testdata-${{ hashfiles('Makefile') }}
@@ -75,7 +75,7 @@ jobs:
         uses: ./.github/actions/setup_env
         with:
           python-version: ${{ matrix.python-version }}
-          requirements-files: requirements.txt requirements-dev.txt requirements-gui.txt
+          requirements-files: requirements.txt requirements-dev.txt
           requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
 
       - name: Download previous conda environment.yml
@@ -91,10 +91,11 @@ jobs:
           path: ./conda-env-artifact
 
       - name: Compare conda environments
-        continue-on-error: true
         run: |
-          conda list --export > conda-env.txt
-          diff ./conda-env.txt ./conda-env-artifact/conda-env.txt
+          micromamba list > conda-env.txt
+          # make sure that the exit code is always 0
+          # otherwise, an error appears in the action annotations
+          diff ./conda-env.txt ./conda-env-artifact/conda-env.txt || true
 
       - name: Build and install wheel
         run: |
@@ -108,13 +109,13 @@ jobs:
         run: make test
 
       - name: Upload wheel artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: Wheel for ${{ matrix.os }} ${{ matrix.python-version }}
           path: dist
 
       - name: Upload conda env artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         continue-on-error: true
         with:
           name: Conda Env for ${{ matrix.os }} ${{ matrix.python-version }}
@@ -170,7 +171,7 @@ jobs:
           # natcap.invest from source and that it imports.
           python -c "from natcap.invest import *"
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: Source distribution
           path: dist
@@ -198,7 +199,7 @@ jobs:
     runs-on: windows-latest
     needs: check-syntax-errors
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0 # Fetch complete history for accurate versioning
 
@@ -217,39 +218,6 @@ jobs:
       - name: Validate user guide links
         run: make validate_userguide_filenames
 
-  run-ui-tests:
-    name: Run UI Tests
-    runs-on: windows-latest
-    needs: check-syntax-errors
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: [3.8, 3.9, "3.10"]
-
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 0 # Fetch complete history for accurate versioning
-
-      - name: Restore git-LFS test data cache
-        uses: actions/cache@v2
-        with:
-          path: data/invest-test-data
-          key: git-lfs-testdata-${{ hashfiles('Makefile') }}
-
-      - uses: ./.github/actions/setup_env
-        with:
-          python-version: ${{ matrix.python-version }}
-          requirements-files: requirements.txt requirements-dev.txt requirements-gui.txt
-          requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
-
-      - name: Make install
-        run: make install
-
-      - name: Run UI tests
-        timeout-minutes: 10  # tests usually take < 2 minutes, so 10 is generous.
-        run: make test_ui
-
   run-workbench-tests:
     name: Run Workbench Tests
     runs-on: ${{ matrix.os }}
@@ -262,7 +230,7 @@ jobs:
 
     steps:
       - name: Check out repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0 # Fetch complete history for accurate versioning
 
@@ -270,20 +238,20 @@ jobs:
         uses: ./.github/actions/setup_env
         with:
           python-version: ${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
-          requirements-files: requirements.txt requirements-dev.txt requirements-gui.txt
+          requirements-files: requirements.txt requirements-dev.txt
           requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
 
       - name: Make install
         run: make install
 
       - name: Set up node
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v3
         with:
-          node-version: 14.x
+          node-version: lts/*
 
       - name: Restore node_modules cache
         id: nodemodules-cache
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: workbench/node_modules
           key: ${{ runner.os }}-${{ hashFiles('workbench/yarn.lock') }}
@@ -311,23 +279,27 @@ jobs:
         os: [macos-latest, windows-latest]
         include:
           - os: macos-latest
-            binary-make-command: mac_dmg
             puppeteer-log: ~/Library/Logs/invest-workbench/
             workspace-path: InVEST-failed-mac-workspace.tar
             binary-extension: dmg
           - os: windows-latest
-            binary-make-command: windows_installer
             puppeteer-log: ~/AppData/Roaming/invest-workbench/logs/
             workspace-path: ${{ github.workspace }}
             binary-extension: exe
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0 # Fetch complete history for accurate versioning
 
-      - name: Install build dependencies (macOS)
-        if: matrix.os == 'macos-latest'
-        run: brew install create-dmg
+      - name: Set up conda environment
+        uses: ./.github/actions/setup_env
+        with:
+          python-version: ${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
+          requirements-files: requirements.txt requirements-dev.txt requirements-docs.txt
+          requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }} pandoc
+
+      - name: Make install
+        run: make install
 
         # Not caching chocolatey packages because the cache may not be reliable
         # https://github.com/chocolatey/choco/issues/2134
@@ -340,52 +312,26 @@ jobs:
           $env:PATH += ";C:\ProgramData\chocolatey\bin"
           refreshenv  # Choco-provided command to reload environment variables
 
-      - name: Restore cached NSIS plugins (Windows)
-        id: restore-nsis-cache
-        if: matrix.os == 'windows-latest'
-        uses: actions/cache@v2
-        with:
-          path: | # update this list of paths if windows-ci-binary-install.ps1 changes
-            C:\Program Files (x86)\NSIS\Plugins\x86-ansi\nsProcess.dll
-            C:\Program Files (x86)\NSIS\Include\nsProcess.nsh
-            C:\Program Files (x86)\NSIS\Plugins\x86-ansi\INetC.dll
-            C:\Program Files (x86)\NSIS\Plugins\x86-ansi\nsisunz.dll
-            C:\Program Files (x86)\NSIS\Plugins\x86-ansi\StdUtils.dll
-            C:\Program Files (x86)\NSIS\Plugins\x86-ansi\UAC.dll
-            C:\Program Files (x86)\NSIS\Include\NsisMultiUser.nsh
-            C:\Program Files (x86)\NSIS\Include\NsisMultiUserLang.nsh
-            C:\Program Files (x86)\NSIS\Include\StdUtils.nsh
-            C:\Program Files (x86)\NSIS\Include\UAC.nsh
-            C:\Program Files (x86)\NSIS\Include\Utils.nsh
-            C:\Program Files (x86)\NSIS\Include\un.Utils.nsh
-          key: NSIS-plugins--${{ hashFiles('ci/windows-ci-binary-install.ps1') }}
-
-      - name: Download NSIS plugins (Windows)  # only if they couldn't be restored from the cache
-        if: matrix.os == 'windows-latest' && steps.restore-nsis-cache.outputs.cache-hit != 'true'
-        shell: powershell
-        run: ./ci/windows-ci-binary-install.ps1
-
-      - name: Set up conda environment
-        uses: ./.github/actions/setup_env
-        with:
-          python-version: ${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
-          requirements-files: requirements.txt requirements-dev.txt requirements-docs.txt requirements-gui.txt
-          requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }} pandoc
-
-      - name: Make install
-        run: make install
+      - name: Build userguide
+        run: make userguide
 
       - name: Build binaries
-        run: make ${{ matrix.binary-make-command }}
+        run: make CONDA=micromamba binaries
+
+      - name: Run invest-autotest with binaries
+        if : |
+          github.event_name == 'push' &&
+          (contains(github.ref, 'release') || github.ref == 'refs/heads/main')
+        run: make invest_autotest
 
       - name: Install Node.js
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v3
         with:
-          node-version: 14.x
+          node-version: lts/*
 
       - name: Restore node_modules cache
         id: nodemodules-cache
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: workbench/node_modules
           key: ${{ runner.os }}-${{ hashFiles('workbench/yarn.lock') }}
@@ -427,9 +373,8 @@ jobs:
           CERT_FILE: 2025-01-16-Expiry-AppStore-App.p12
           CERT_PASS: ${{ secrets.MACOS_CODESIGN_CERT_PASS }}
         run: |
-          INSTALLER_BINARY=$(find "$(pwd)/dist" -type f -name 'InVEST_*.dmg' | head -n 1)
           WORKBENCH_BINARY=$(find "$(pwd)/workbench/dist" -type f -name 'invest_*.dmg' | head -n 1)
-          make BIN_TO_SIGN="$INSTALLER_BINARY" WORKBENCH_BIN_TO_SIGN="$WORKBENCH_BINARY" codesign_mac
+          make WORKBENCH_BIN_TO_SIGN="$WORKBENCH_BINARY" codesign_mac
 
       - name: Sign binaries (Windows)
         if: github.event_name != 'pull_request' && matrix.os == 'windows-latest' # secrets not available in PR
@@ -439,37 +384,29 @@ jobs:
         run: |
           # figure out the path to signtool.exe (it keeps changing with SDK updates)
           SIGNTOOL_PATH=$(find 'C:\\Program Files (x86)\\Windows Kits\\10' -type f -name 'signtool.exe*' | head -n 1)
-          INSTALLER_BINARY=$(find "$(pwd)/dist" -type f -name 'InVEST_*.exe' | head -n 1)
           WORKBENCH_BINARY=$(find "$(pwd)/workbench/dist" -type f -name 'invest_*.exe' | head -n 1)
-          make BIN_TO_SIGN="$INSTALLER_BINARY" WORKBENCH_BIN_TO_SIGN="$WORKBENCH_BINARY" SIGNTOOL="$SIGNTOOL_PATH" codesign_windows
+          make WORKBENCH_BIN_TO_SIGN="$WORKBENCH_BINARY" SIGNTOOL="$SIGNTOOL_PATH" codesign_windows
 
       - name: Deploy artifacts to GCS
         if: github.event_name != 'pull_request'
         run: make deploy
 
-      - name: Upload binary artifact
-        if: always()
-        uses: actions/upload-artifact@v2
-        with:
-          name: InVEST-${{ runner.os }}-binary
-          path: dist/*.${{ matrix.binary-extension }}
-
       - name: Upload workbench binary artifact
         if: always()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: Workbench-${{ runner.os }}-binary
           path: workbench/dist/*.${{ matrix.binary-extension }}
 
       - name: Upload user's guide artifact (Windows)
         if: matrix.os == 'windows-latest'
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: InVEST-user-guide
           path: dist/InVEST_*_userguide.zip
 
       - name: Upload workbench logging from puppeteer
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         if: always()
         with:
           name: ${{ runner.os }}_puppeteer_log.zip'
@@ -481,7 +418,7 @@ jobs:
 
       - name: Upload workspace on failure
         if: ${{ failure() }}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: InVEST-failed-${{ runner.os }}-workspace
           path: ${{ matrix.workspace-path}}
@@ -491,11 +428,11 @@ jobs:
     needs: check-syntax-errors
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0 # Fetch complete history for accurate versioning
 
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v4
         with:
           python-version: ${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
 
@@ -506,7 +443,7 @@ jobs:
       - run: make sampledata sampledata_single
 
       - name: Upload sample data artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: InVEST-sample-data
           path: dist/*.zip
