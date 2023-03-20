@@ -35,6 +35,14 @@
 
 .. :changelog:
 
+Unreleased Changes
+------------------
+
+* Scenic Quality
+    * The Scenic Quality model will now raise an error when it encounters a
+      geometry that is not a simple Point.  This is in line with the user's
+      guide chapter.  https://github.com/natcap/invest/issues/1245
+
 3.13.0 (2023-03-17)
 -------------------
 * General
