@@ -12,6 +12,7 @@ import sys
 import textwrap
 import warnings
 
+import chardet
 import natcap.invest
 from natcap.invest import datastack
 from natcap.invest import model_metadata
@@ -463,6 +464,12 @@ def main(user_args=None):
             # https://github.com/natcap/invest/issues/1167
             logging.getLogger('gdal').setLevel(logging.DEBUG)
             LOGGER.info(f"#1167 FS Encoding: {sys.getfilesystemencoding()}")
+
+            # chardet can tell us what it thinks the encoding is, but only from
+            # a string of bytes, which is super easy to get from a file.
+            with open(args.datastack, 'rb') as datastack_json:
+                detected_langs = chardet.detect(datastack_json.read())
+            LOGGER.info(f"#1167 What chardet thinks: f{detected_langs}")
 
             # We're deliberately not validating here because the user
             # can just call ``invest validate <datastack>`` to validate.
