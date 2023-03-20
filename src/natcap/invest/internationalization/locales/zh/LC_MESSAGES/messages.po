@@ -8,15 +8,16 @@ msgstr ""
 "Project-Id-Version: InVEST 3.12\n"
 "Report-Msgid-Bugs-To: jdouglass@stanford.edu\n"
 "POT-Creation-Date: 2023-03-03 12:40-0800\n"
-"PO-Revision-Date: 2022-12-21 10:12+0800\n"
+"PO-Revision-Date: 2023-03-16 14:02-0700\n"
 "Last-Translator: \n"
-"Language: zh\n"
 "Language-Team: zh <LL@li.org>\n"
-"Plural-Forms: nplurals=1; plural=0;\n"
+"Language: zh\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
 "Generated-By: Babel 2.10.3\n"
+"X-Generator: Poedit 3.2.2\n"
 
 #: src/natcap/invest/annual_water_yield.py:43
 #: src/natcap/invest/forest_carbon_edge_effect.py:113
@@ -1311,7 +1312,7 @@ msgstr "汇总和总结最终结果的区域地图。"
 
 #: src/natcap/invest/spec_utils.py:68
 msgid "Map of land use/land cover codes. Each land use/land cover type must be assigned a unique integer code."
-msgstr "foo"
+msgstr "土地利用/土地覆盖代码栅格地图。 每种土地利用/土地覆盖类型必须用一个唯一的整数代码来表示。"
 
 #: src/natcap/invest/spec_utils.py:71
 msgid "land use/land cover"
@@ -1359,21 +1360,23 @@ msgstr "阈值流量累积"
 
 #: src/natcap/invest/spec_utils.py:125
 #: src/natcap/invest/urban_flood_risk_mitigation.py:63
+#, fuzzy
 msgid "LULC codes from the LULC raster. Each code must be a unique integer."
-msgstr "foo"
+msgstr "来自 LULC 栅格的 LULC 代码。 每个代码必须是唯一的整数。"
 
 #: src/natcap/invest/spec_utils.py:173
-#, fuzzy
 msgid "number of pixels"
-msgstr "涡轮机的数量"
+msgstr "像元数量"
 
 #: src/natcap/invest/spec_utils.py:174
+#, fuzzy
 msgid "currency units"
-msgstr "foo"
+msgstr "货币单位"
 
 #: src/natcap/invest/spec_utils.py:183
+#, fuzzy
 msgid "unitless"
-msgstr "foo"
+msgstr "无单位的"
 
 #: src/natcap/invest/spec_utils.py:254
 msgid "required"
@@ -1448,8 +1451,9 @@ msgid "vector"
 msgstr "向量"
 
 #: src/natcap/invest/spec_utils.py:448
+#, fuzzy
 msgid "units"
-msgstr "foo"
+msgstr "单位"
 
 #: src/natcap/invest/spec_utils.py:476 src/natcap/invest/spec_utils.py:480
 msgid "Options:"
@@ -3264,4 +3268,3 @@ msgstr "月alpha表"
 
 #~ msgid "MULTIPOLYGON"
 #~ msgstr "多边形集"
-
