@@ -42,6 +42,11 @@ Unreleased Changes
     * Fixed a bug in HRA where the model would error when all exposure and
       consequence criteria were skipped for a single habitat. The model now
       correctly handles this case. https://github.com/natcap/invest/issues/1250
+* Scenic Quality
+    * The Scenic Quality model will now raise an error when it encounters a
+      geometry that is not a simple Point.  This is in line with the user's
+      guide chapter.  https://github.com/natcap/invest/issues/1245
+
 
 3.13.0 (2023-03-17)
 -------------------

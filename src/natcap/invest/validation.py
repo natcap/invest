@@ -1,25 +1,26 @@
 """Common validation utilities for InVEST models."""
 import ast
-import inspect
-import logging
-import pprint
-import os
-import re
-import threading
 import functools
 import importlib
+import inspect
+import logging
+import os
+import pprint
 import queue
+import re
+import threading
 import warnings
 
+import numpy
 import pandas
 import pint
 import pygeoprocessing
-from osgeo import gdal, osr
-import numpy
+from osgeo import gdal
+from osgeo import osr
 
-from . import utils
-from . import spec_utils
 from . import gettext
+from . import spec_utils
+from . import utils
 
 #: A flag to pass to the validation context manager indicating that all keys
 #: should be checked.
@@ -1023,7 +1024,7 @@ def invest_validator(validate_func):
 
         # If the module has an MODEL_SPEC defined, validate against that.
         if hasattr(model_module, 'MODEL_SPEC'):
-            LOGGER.debug('Using ARG_SPEC for validation')
+            LOGGER.debug('Using MODEL_SPEC for validation')
             args_spec = getattr(model_module, 'MODEL_SPEC')['args']
 
             if limit_to is None:
