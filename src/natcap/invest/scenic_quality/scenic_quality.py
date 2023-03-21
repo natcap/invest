@@ -13,6 +13,7 @@ import shapely.geometry
 import taskgraph
 from natcap.invest.scenic_quality.viewshed import viewshed
 from osgeo import gdal
+from osgeo import ogr
 from osgeo import osr
 
 from .. import gettext
@@ -543,6 +544,11 @@ def _determine_valid_viewpoints(dem_path, structures_path):
 
             # Coordinates in map units to pass to viewshed algorithm
             geometry = point.GetGeometryRef()
+            if geometry.GetGeometryType() != ogr.wkbPoint:
+                raise AssertionError(
+                    f"Feature {point.GetFID()} is not a Point geometry. "
+                    "Features must be a Point.")
+
             viewpoint = (geometry.GetX(), geometry.GetY())
 
             if (not bbox_minx <= viewpoint[0] <= bbox_maxx or
@@ -1075,7 +1081,7 @@ def _calculate_visual_quality(source_raster_path, working_dir, target_path):
         nodata = utils.array_equals_nodata(valuation_matrix, raster_nodata)
         valid_indexes = (~nodata & nonzero)
         visual_quality = numpy.empty(valuation_matrix.shape,
-                                     dtype=numpy.int8)
+                                     dtype=numpy.uint8)
         visual_quality[:] = _BYTE_NODATA
         visual_quality[~nonzero & ~nodata] = 0
         visual_quality[valid_indexes] = numpy.digitize(
