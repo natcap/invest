@@ -161,7 +161,7 @@ def prepare_workspace(
     # Use GDAL's logging handler.
     # Enabling debug logging will produce a TON of GDAL logging, but this is
     # good for the debugging we need to do.
-    gdal.ConfigurePythonLogging('osgeo.gdal', enable_debug=True)
+    #gdal.ConfigurePythonLogging('osgeo.gdal', enable_debug=True)
 
     with log_to_file(logfile, exclude_threads=exclude_threads,
                      logging_level=logging_level):
