@@ -69,10 +69,18 @@ def _log_gdal_errors(*args, **kwargs):
     Returns:
         ``None``
     """
-    if len(args) + len(kwargs) != 3:
-        LOGGER.error(
-            '_log_gdal_errors was called with an incorrect number of '
-            f'arguments.  args: {args}, kwargs: {kwargs}')
+    LOGGER.info(f"#1167: args {args}")
+    LOGGER.info(f"#1167: kwargs {kwargs}")
+    try:
+        if len(args) + len(kwargs) != 3:
+            LOGGER.error(
+                '_log_gdal_errors was called with an incorrect number of '
+                f'arguments.  args: {args}, kwargs: {kwargs}')
+    except Exception as e:
+        LOGGER.exception(f"#1167 {str(e)}")
+
+    if not isinstance(args, (list, tuple)):
+        args = (args,)
 
     try:
         gdal_args = {}
