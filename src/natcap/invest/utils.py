@@ -28,7 +28,7 @@ LOG_FMT = (
 # GDAL has 5 error levels, python's logging has 6.  We skip logging.INFO.
 # A dict clarifies the mapping between levels.
 GDAL_ERROR_LEVELS = {
-    gdal.CE_None: logging.NOTSET,
+    gdal.CE_None: logging.INFO,
     gdal.CE_Debug: logging.DEBUG,
     gdal.CE_Warning: logging.WARNING,
     gdal.CE_Failure: logging.ERROR,
@@ -122,10 +122,13 @@ def capture_gdal_logging():
         ``None``
     """
     gdal.PushErrorHandler(_log_gdal_errors)
+    orig_cpl_debug_state = gdal.GetConfigOption("CPL_DEBUG")
+    gdal.SetConfigOption("CPL_DEBUG", "ON")
     try:
         yield
     finally:
         gdal.PopErrorHandler()
+        gdal.SetConfigOption("CPL_DEBUG", orig_cpl_debug_state)
 
 
 def _format_time(seconds):
@@ -163,8 +166,8 @@ def prepare_workspace(
     # good for the debugging we need to do.
     #gdal.ConfigurePythonLogging('osgeo.gdal', enable_debug=True)
 
-    with log_to_file(logfile, exclude_threads=exclude_threads,
-                     logging_level=logging_level):
+    with capture_gdal_logging(), log_to_file(logfile, exclude_threads=exclude_threads,
+                                             logging_level=logging_level):
         with sandbox_tempdir(dir=workspace):
             logging.captureWarnings(True)
             # If invest is launched as a subprocess (e.g. the Workbench)
