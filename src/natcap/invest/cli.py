@@ -463,6 +463,7 @@ def main(user_args=None):
             # Logging extra information here for debug purposes in service of
             # https://github.com/natcap/invest/issues/1167
             logging.getLogger('gdal').setLevel(logging.DEBUG)
+            logging.getLogger('osgeo').setLevel(logging.DEBUG)
             LOGGER.info(f"#1167 FS Encoding: {sys.getfilesystemencoding()}")
 
             # chardet can tell us what it thinks the encoding is, but only from
