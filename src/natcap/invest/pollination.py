@@ -1,25 +1,25 @@
 """Pollinator service model for InVEST."""
-import itertools
 import collections
-import re
-import os
-import logging
 import hashlib
 import inspect
+import itertools
+import logging
+import os
+import re
+import shutil
 
+import numpy
+import pygeoprocessing
+import taskgraph
 from osgeo import gdal
 from osgeo import ogr
-import pygeoprocessing
-import numpy
-import taskgraph
 
-from . import utils
+from . import gettext
 from . import spec_utils
-from .unit_registry import u
+from . import utils
 from . import validation
 from .model_metadata import MODEL_METADATA
-from . import gettext
-
+from .unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
 
@@ -505,6 +505,10 @@ def execute(args):
         args['workspace_dir'], 'intermediate_outputs')
     work_token_dir = os.path.join(
         intermediate_output_dir, '_taskgraph_working_dir')
+
+    # Force pollination to re-run each time
+    shutil.rmtree(work_token_dir, ignore_errors=True)
+
     output_dir = os.path.join(args['workspace_dir'])
     utils.make_directories(
         [output_dir, intermediate_output_dir])
