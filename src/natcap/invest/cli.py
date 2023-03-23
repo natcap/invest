@@ -469,7 +469,20 @@ def main(user_args=None):
             # a string of bytes, which is super easy to get from a file.
             with open(args.datastack, 'rb') as datastack_json:
                 detected_langs = chardet.detect(datastack_json.read())
-            LOGGER.info(f"#1167 What chardet thinks: f{detected_langs}")
+            LOGGER.info(f"#1167 What chardet thinks about the datastack: f{detected_langs}")
+
+            for key, arg in parsed_datastack.args.items():
+                try:
+                    if model_module.MODEL_SPEC['args'][key]['type'] in (
+                            'csv', 'raster', 'vector'):
+                        with open(arg_file, 'rb') as opened_file:
+                            detected_langs = chardet.detect(opened_file.read())
+
+                        LOGGER.info(f"#1167 what chardet thinks about {arg_file}: "
+                                    f"{detected_langs}")
+                except KeyError:
+                    LOGGER.info(f"Skipping chardet inspection for key {key}. "
+                                "Key not described in MODEL_SPEC.")
 
             # We're deliberately not validating here because the user
             # can just call ``invest validate <datastack>`` to validate.

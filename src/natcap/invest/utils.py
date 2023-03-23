@@ -10,6 +10,7 @@ import tempfile
 import time
 from datetime import datetime
 
+import chardet
 import numpy
 import pandas
 import pygeoprocessing
@@ -69,6 +70,11 @@ def _log_gdal_errors(*args, **kwargs):
     Returns:
         ``None``
     """
+    if not isinstance(args, (list, tuple)):
+        LOGGER.info(f"#1167: args is not a tuple: {type(args)}")
+        if isinstance(args, (bytes, bytearray, str)):
+            LOGGER.info(f"#1167: chardet thinks args is {chardet.detect(args)}")
+
     LOGGER.info(f"#1167: args {args}")
     LOGGER.info(f"#1167: kwargs {kwargs}")
     try:
