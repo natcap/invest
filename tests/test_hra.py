@@ -77,6 +77,44 @@ class HRAUnitTests(unittest.TestCase):
         numpy.testing.assert_allclose(
             exposure_array, expected_exposure_array)
 
+    def test_calc_criteria_skip_all_criteria(self):
+        """HRA: handle user skipping all criteria."""
+        from natcap.invest import hra
+
+        habitat_mask = numpy.array([
+            [0, 1, 1]], dtype=numpy.uint8)
+        habitat_mask_path = os.path.join(self.workspace_dir,
+                                         'habitat_mask.tif')
+        pygeoprocessing.numpy_array_to_raster(
+            habitat_mask, 255, (30, -30), ORIGIN, SRS_WKT, habitat_mask_path)
+
+        decayed_distance_array = numpy.array([
+            [0, 1, 1]], dtype=numpy.float32)
+        decayed_distance_raster_path = os.path.join(self.workspace_dir,
+                                                    'decayed_dist.tif')
+        pygeoprocessing.numpy_array_to_raster(
+            decayed_distance_array, -1, (30, -30), ORIGIN, SRS_WKT,
+            decayed_distance_raster_path)
+
+        attributes_list = [
+            {'rating': 0, 'dq': 3, 'weight': 3},
+            {'rating': 0, 'dq': 2, 'weight': 1},
+            {'rating': 0, 'dq': 3, 'weight': 3},
+            {'rating': 0, 'dq': 3, 'weight': 3},
+        ]
+        target_exposure_path = os.path.join(self.workspace_dir, 'exposure.tif')
+        hra._calc_criteria(attributes_list, habitat_mask_path,
+                           target_exposure_path, decayed_distance_raster_path)
+
+        exposure_array = pygeoprocessing.raster_to_numpy_array(
+            target_exposure_path)
+        nodata = hra._TARGET_NODATA_FLOAT32
+        # These expected values were calculated by hand.
+        expected_exposure_array = numpy.array([
+            [nodata, 0, 0]], dtype=numpy.float32)
+        numpy.testing.assert_allclose(
+            exposure_array, expected_exposure_array)
+
     def test_decayed_distance_linear(self):
         """HRA: linear decay over a distance."""
         from natcap.invest import hra

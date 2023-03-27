@@ -2275,8 +2275,20 @@ def _calc_criteria(attributes_list, habitat_mask_raster_path,
         if decayed_edt_raster_path:
             numerator[valid_mask] *= decayed_edt_band.ReadAsArray(
                 **block_info)[valid_mask]
-        criterion_score[valid_mask] = (
-            numerator[valid_mask] / denominator[valid_mask])
+
+        # It is possible for the user to skip all pairwise calculations by
+        # setting the rating to 0 for every habitat/stressor combination.
+        # Doing so will leave the denominator at 0, resulting in a numpy
+        # divide-by-zero warning and +/- inf pixel values.
+        # JD is making the call to instead write out a raster filled with 0
+        # everywhere it is valid.
+        if numpy.sum(denominator[valid_mask]) == 0:
+            criterion_score[valid_mask] = 0
+        else:
+            # This is the normal calculation when the user has defined at least
+            # one rating for a habitat/stressor pair.
+            criterion_score[valid_mask] = (
+                numerator[valid_mask] / denominator[valid_mask])
 
         target_criterion_band.WriteArray(criterion_score,
                                          xoff=block_info['xoff'],

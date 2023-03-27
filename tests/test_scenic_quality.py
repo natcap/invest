@@ -13,6 +13,7 @@ import pygeoprocessing
 from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
+from shapely.geometry import LineString
 from shapely.geometry import Point
 from shapely.geometry import Polygon
 
@@ -106,6 +107,29 @@ class ScenicQualityTests(unittest.TestCase):
             geometries, viewpoints_path, WKT, 'GeoJSON',
             fields=fields, attribute_list=attributes,
             ogr_geom_type=ogr.wkbPoint)
+
+    def test_exception_when_invalid_geometry_type(self):
+        """SQ: model raises exception when structures are not points."""
+        from natcap.invest.scenic_quality import scenic_quality
+
+        geometries = [
+            Point(7.0, -3.0),
+            LineString([(7.0, -3.0),( 8.0, -3.0)]),
+        ]
+
+        viewpoints_path = os.path.join(
+            self.workspace_dir, 'viewpoints.geojson')
+        pygeoprocessing.shapely_geometry_to_vector(
+            geometries, viewpoints_path, WKT, 'GeoJSON',
+            ogr_geom_type=ogr.wkbUnknown)
+
+        dem_path = os.path.join(self.workspace_dir, 'dem.tif')
+        ScenicQualityTests.create_dem(dem_path)
+
+        with self.assertRaises(AssertionError) as cm:
+            scenic_quality._determine_valid_viewpoints(
+                dem_path, viewpoints_path)
+        self.assertIn('Feature 1 is not a Point geometry', str(cm.exception))
 
     def test_exception_when_no_structures_aoi_overlap(self):
         """SQ: model raises exception when AOI does not overlap structures."""
