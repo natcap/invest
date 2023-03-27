@@ -476,10 +476,10 @@ def main(user_args=None):
                 try:
                     if model_module.MODEL_SPEC['args'][key]['type'] in (
                             'csv', 'raster', 'vector'):
-                        with open(arg_file, 'rb') as opened_file:
+                        with open(arg, 'rb') as opened_file:
                             detected_langs = chardet.detect(opened_file.read())
 
-                        LOGGER.info(f"#1167 what chardet thinks about {arg_file}: "
+                        LOGGER.info(f"#1167 what chardet thinks about {arg}: "
                                     f"{detected_langs}")
                 except KeyError:
                     LOGGER.info(f"Skipping chardet inspection for key {key}. "
