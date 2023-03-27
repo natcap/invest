@@ -1,25 +1,16 @@
 #!/usr/bin/env bash
-#
 # Initiate a release on the current commit.
-#
-set -e  # Exit the script immediately if any subshell has a nonzero exit code.
-
 # - Create autorelease branch
 # - Update HISTORY.rst
 # - Commit the changes to HISTORY.rst
 # - Tag the commit
 # - Push the tag
 # - Build workflows run on push, wait for them to finish
-# - Download the build artifacts
-# - Create a github release for the tag
-#   - Attach release notes
-#   - Attach the build artifacts
-# - Create a pull request from the autorelease branch into main
-# - Create a pypi release
-#   - Attach the build artifacts
+
+set -e  # Exit the script immediately if any subshell has a nonzero exit code.
 
 VERSION=$1
-GITHUB_REPO="emlys/invest-mirror"
+GITHUB_REPO="natcap/invest"
 SCRIPT_PATH=$(dirname "$0")
 
 # Validate inputs and environment

@@ -1,8 +1,16 @@
-set -ex  # Exit the script immediately if any subshell has a nonzero exit code.
+# Finish the release.
+# - Download the build artifacts
+# - Create a github release for the tag
+#   - Attach release notes
+#   - Attach the build artifacts
+# - Create a pull request from the autorelease branch into main
+# - Create a pypi release
+#   - Attach the build artifacts
+set -e  # Exit the script immediately if any subshell has a nonzero exit code.
 
 VERSION=$1
 GH_RUN_ID=$2
-GITHUB_REPO="emlys/invest-mirror"
+GITHUB_REPO="natcap/invest"
 PYPI_REPO="testpypi"
 SCRIPT_PATH=$(dirname "$0")
 
