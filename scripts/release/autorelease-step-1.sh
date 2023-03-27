@@ -63,11 +63,11 @@ git checkout -b "$AUTORELEASE_BRANCH"
 # X.X.X (XXXX-XX-XX)
 # ------------------
 
-HEADER="$VERSION $(date '+%Y-%m-%d')"
-HEADER_LENGTH=${#HISTORY_HEADER}
-UNDERLINE=$(for i in $(seq 1 $HEADER_LENGTH); do echo -n "="; done)
+HEADER="$VERSION ($(date '+%Y-%m-%d'))"
+HEADER_LENGTH=${#HEADER}
+UNDERLINE=$(for i in $(seq 1 $HEADER_LENGTH); do echo -n "-"; done)
 perl -0777 -i -pe \
-    's/Unreleased Changes\n------------------/..\n  Unreleased Changes\n  ------------------\n\n${HEADER}\n${UNDERLINE}\n/g' \
+    "s/Unreleased Changes\n------------------/..\n  Unreleased Changes\n  ------------------\n\n${HEADER}\n${UNDERLINE}/g" \
     HISTORY.rst
 
 git add HISTORY.rst
