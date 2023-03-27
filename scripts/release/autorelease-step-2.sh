@@ -14,26 +14,11 @@ GITHUB_REPO="natcap/invest"
 PYPI_REPO="testpypi"
 SCRIPT_PATH=$(dirname "$0")
 
-# from the list of recent github actions runs,
-# extract the run ID corresponding to the release tag
-RUN_ID=$(gh --repo $GITHUB_REPO run list --branch $VERSION --json databaseId --jq ".[].databaseId")
-
-if (( ${#RUN_ID} = 0 ))
-then
-    echo "No matching run found"
-    exit 4
-fi
-if (( ${#RUN_ID} > 10 ))
-then
-    echo "Multiple run IDs found: ${RUN_ID}"
-    exit 4
-fi
-
 # Using -p here to not fail the command if the directory already exists.
 mkdir -p dist build
 
-echo "Found github actions run: https://github.com/$GITHUB_REPO/actions/runs/$RUN_ID"
-echo "Downloading artifacts..."
+echo "Downloading artifacts from github actions run: "
+echo "https://github.com/$GITHUB_REPO/actions/runs/$RUN_ID"
 gh --repo $GITHUB_REPO run download $RUN_ID \
     --dir dist \
     --name InVEST-Windows-binary.zip \
