@@ -84,8 +84,11 @@ export function setupInvestRunHandlers(investExe) {
         detached: true, // counter-intuitive, but w/ true: invest terminates when this shell terminates
       });
     } else { // windows
+      const envVars = JSON.parse(JSON.stringify(process.env));
+      envVars.PYTHONUTF8 = '1'; // #1167 - force UTF-8 on Windows
       investRun = spawn(investExe, cmdArgs, {
         shell: true,
+        env: envVars,
       });
     }
 
