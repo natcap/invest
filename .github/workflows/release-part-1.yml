@@ -1,0 +1,145 @@
+name: Bugfix Release (Part 1 of 2)
+
+on: workflow_dispatch
+
+#!/usr/bin/env bash
+# Initiate a release on the current commit.
+# - Create autorelease branch
+# - Update HISTORY.rst
+# - Commit the changes to HISTORY.rst
+# - Tag the commit
+# - Push the tag
+# - Build workflows run on push, wait for them to finish
+
+defaults:
+  runs-on: ubuntu-latest
+
+env:
+  VERSION: $1
+  GITHUB_REPO: "natcap/invest"
+  AUTORELEASE_BRANCH: autorelease/$VERSION
+  PR_MESSAGE_FILE: pr_message.md
+
+jobs:
+
+  finalize-and-tag:
+    steps:
+
+      - name: install dependencies
+        run: conda install gh
+
+      # Members of the natcap software team can push to the autorelease branch on
+      # natcap/invest; this branch is a special case for our release process.
+      - name: create autorelease branch
+        run: git checkout -b "$AUTORELEASE_BRANCH"
+
+      # Replace
+      #
+      # Unreleased Changes
+      # ------------------
+      #
+      # with
+      #
+      # ..
+      #   Unreleased Changes
+      #   ------------------
+      #
+      # X.X.X (XXXX-XX-XX)
+      # ------------------
+      - name: update HISTORY.rst
+        run: |
+          HEADER="$VERSION ($(date '+%Y-%m-%d'))"
+          HEADER_LENGTH=${#HEADER}
+          UNDERLINE=$(for i in $(seq 1 $HEADER_LENGTH); do echo -n "-"; done)
+          perl -0777 -i -pe \
+              "s/Unreleased Changes\n------------------/..\n  Unreleased Changes\n  ------------------\n\n${HEADER}\n${UNDERLINE}/g" \
+              HISTORY.rst
+          git add HISTORY.rst
+          git commit -m "Committing the $VERSION release."
+
+      - name: tag and push
+        run: |
+          git tag "$VERSION"
+          git push https://github.com/${GITHUB_REPO}.git $VERSION $AUTORELEASE_BRANCH
+
+      - name: create PR message
+        run: |
+          echo "
+            Release $VERSION and merge into main
+
+            # Release $VERSION
+
+            This PR includes changes needed to perform the $VERSION release.
+            When the PR was created, the bugfix release tag $VERSION should have
+            been created, These binaries
+            will be automatically uploaded to the release object at
+            https://github.com/$GITHUB_REPO/releases/tag/$VERSION.
+
+            ## If something doesn't look right
+            1. Decline this PR. This will trigger a Github Action that will clean up.
+            2. Make needed changes
+            3. Once things look right, re-trigger the release workflow.
+
+            ## If everything looks OK
+            1. Approve and merge this PR. This will trigger a Github Action
+               that will complete the release.
+            2. Take a look at the Release Checklist
+               (https://github.com/natcap/invest/wiki/Release-Checklist) and take care of
+               anything else that needs to be taken care of.
+          " > $PR_MESSAGE_FILE
+
+      - name: create a PR from the autorelease branch into main
+        run: |
+          gh pr create \
+            --base "$GITHUB_REPO:main" \
+            --head "$GITHUB_REPO:autorelease/$VERSION" \
+            --title "$VERSION release" \
+            --body-file $PR_MESSAGE_FILE \
+            --reviewer "@me" \
+            --assign "@me" \
+            --labels "auto"
+
+
+      - name: delete tag and autorelease branch
+        if:
+        run: git push --delete origin $VERSION $AUTORELEASE_BRANCH
+
+
+
+
+echo "Release has been created using testpypi. To release officially:"
+echo "twine upload -r pypi dist/natcap.invest.*"
+
+
+
+
+
+if git rev-parse "$VERSION" > /dev/null 2>&1  # fail if tag already exists
+then
+    echo "The tag $VERSION already exists in this repo."
+    echo "Are you sure you're creating the right version?"
+    exit 3
+fi
+
+echo "Waiting for Github Actions run to start..."
+sleep 5
+# from the list of recent github actions runs,
+# extract the run ID corresponding to the release tag
+RUN_ID=$(gh --repo $GITHUB_REPO run list --branch $VERSION --json databaseId --jq ".[].databaseId")
+
+if (( ${#RUN_ID} = 0 ))
+then
+    echo "No matching run found"
+    exit 4
+fi
+if (( ${#RUN_ID} > 10 ))
+then
+    echo "Multiple run IDs found: ${RUN_ID}"
+    exit 4
+fi
+
+echo "Wait for Github Actions run to finish:"
+echo "https://github.com/$GITHUB_REPO/actions/runs/$RUN_ID"
+echo ""
+echo "When it's completed successfully, run the second release script:"
+echo "./autorelease-step-2.sh $VERSION $RUN_ID"
