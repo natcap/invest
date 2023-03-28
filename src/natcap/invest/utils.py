@@ -35,6 +35,7 @@ GDAL_ERROR_LEVELS = {
     gdal.CE_Failure: logging.ERROR,
     gdal.CE_Fatal: logging.CRITICAL,
 }
+GDAL_ARG_MISSING = "MISSING"
 
 # In GDAL 3.0 spatial references no longer ignore Geographic CRS Axis Order
 # and conform to Lat first, Lon Second. Transforms expect (lat, lon) order
@@ -77,43 +78,45 @@ def _log_gdal_errors(*args, **kwargs):
                 LOGGER.info(f"#1167: chardet thinks args is {chardet.detect(args)}")
     except Exception as e:
         LOGGER.info(f"#1167: args: {args}")
+        LOGGER.info(f"#1167: exception: {str(e)}")
 
     LOGGER.info(f"#1167: args {args}")
     LOGGER.info(f"#1167: kwargs {kwargs}")
     try:
-        if len(args) + len(kwargs) != 3:
-            LOGGER.error(
-                '_log_gdal_errors was called with an incorrect number of '
-                f'arguments.  args: {args}, kwargs: {kwargs}')
+        # We had a case on the forums where GDAL was calling the error handler
+        # with no args or kwargs at all - it isn't even clear why the error
+        # handler was called in the first place..  Handling it here at the
+        # DEBUG level to avoid exceptions being logged to the logfile.
+        if len(args) + len(kwargs) == 0:
+            LOGGER.debug("_log_gdal_errors was called with no arguments. "
+                        "Skipping.")
+            return
     except Exception as e:
         LOGGER.exception(f"#1167 {str(e)}")
 
-    if not isinstance(args, (list, tuple)):
-        args = (args,)
+    # If we have gotten to this point, we know that the logger was called with
+    # some number of arguments that might be a combination of args and kwargs.
+    # If any are missing, use GDAL_ARG_MISSING as a placeholder.
+    gdal_args = {}
+    for index, key in enumerate(('err_level', 'err_no', 'err_msg')):
+        try:
+            parameter = args[index]
+        except IndexError:
+            try:
+                parameter = kwargs[key]
+            except KeyError:
+                parameter = GDAL_ARG_MISSING
+        gdal_args[key] = parameter
 
     try:
-        gdal_args = {}
-        for index, key in enumerate(('err_level', 'err_no', 'err_msg')):
-            try:
-                parameter = args[index]
-            except IndexError:
-                parameter = kwargs[key]
-            gdal_args[key] = parameter
-    except KeyError as missing_key:
-        LOGGER.exception(
-            f'_log_gdal_errors called without the argument {missing_key}. '
-            f'Called with args: {args}, kwargs: {kwargs}')
-
-        # Returning from the function because we don't have enough
-        # information to call the ``osgeo_logger`` in the way we intended.
-        return
-
-    err_level = gdal_args['err_level']
+        err_level = GDAL_ERROR_LEVELS[gdal_args['err_level']]
+    except KeyError:
+        # If GDAL didn't report an error level, assume debug.
+        err_level = logging.DEBUG
     err_no = gdal_args['err_no']
     err_msg = gdal_args['err_msg'].replace('\n', '')
     _OSGEO_LOGGER.log(
-        level=GDAL_ERROR_LEVELS[err_level],
-        msg=f'[errno {err_no}] {err_msg}')
+        level=err_level, msg=f'[errno {err_no}] {err_msg}')
 
 
 @contextlib.contextmanager
