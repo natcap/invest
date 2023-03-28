@@ -69,16 +69,35 @@ jobs:
 
             # Release $VERSION
 
-            This PR includes changes needed to perform the $VERSION release.
-            When the PR was created, the bugfix release tag $VERSION should have
-            been created, These binaries
-            will be automatically uploaded to the release object at
-            https://github.com/$GITHUB_REPO/releases/tag/$VERSION.
+            This PR includes automated changes made for the $VERSION release.
 
-            ## If something doesn't look right
-            1. Decline this PR. This will trigger a Github Action that will clean up.
-            2. Make needed changes
-            3. Once things look right, re-trigger the release workflow.
+            In addition to the actions workflow triggered by this PR,
+            workflows will also be triggered for the $AUTORELEASE_BRANCH branch
+            and the $VERSION tag.
+
+            The $VERSION tag workflow is most important because it produces the
+            artifacts that will be used in the next steps of the release process.
+            If it fails for any reason, decline this PR and start over.
+            Declining this PR will trigger a Github Action that will roll back any
+            release steps that have completed so far.
+
+            ## Intermittent failures
+            If the $VERSION tag workflow fails due to an intermittent problem,
+            decline this PR and start over. Declining this PR will trigger a
+            Github Action that will roll back any release steps that have completed
+            so far.
+
+            If $VERSION tag workflow succeeds, but this PR workflow and/or the
+            $AUTORELEASE_BRANCH branch workflow fail due to an intermittent problem,
+            continue with the release. Approve and merge this PR with a comment
+            explaining what happened.
+
+            ## Bugs
+            If the workflows reveal a bug in the tagged version, decline this PR.
+            Declining this PR will trigger a Github Action that will roll back any
+            release steps that have completed so far. Submit a fix in a separate PR
+            into `main`. Once the fix has been merged, restart the release process
+            from the beginning.
 
             ## If everything looks OK
             1. Approve and merge this PR. This will trigger a Github Action
