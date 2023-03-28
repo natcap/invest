@@ -31,7 +31,7 @@ then
     exit 2
 fi
 
-if git rev-parse "$VERSION" >/dev/null 2>&1  # fail if tag already exists
+if git rev-parse "$VERSION" > /dev/null 2>&1  # fail if tag already exists
 then
     echo "The tag $VERSION already exists in this repo."
     echo "Are you sure you're creating the right version?"
