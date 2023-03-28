@@ -59,3 +59,6 @@ rm $PR_MESSAGE_FILE
 # Create a release on PyPI
 # This is the only step that can't be rolled back
 twine upload -r $PYPI_REPO dist/natcap.invest.*
+
+echo "Release has been created using testpypi. To release officially:"
+echo "twine upload -r pypi dist/natcap.invest.*"
