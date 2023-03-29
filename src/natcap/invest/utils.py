@@ -121,13 +121,10 @@ def capture_gdal_logging():
         ``None``
     """
     gdal.PushErrorHandler(_log_gdal_errors)
-    orig_cpl_debug_state = gdal.GetConfigOption("CPL_DEBUG")
-    gdal.SetConfigOption("CPL_DEBUG", "ON")
     try:
         yield
     finally:
         gdal.PopErrorHandler()
-        gdal.SetConfigOption("CPL_DEBUG", orig_cpl_debug_state)
 
 
 def _format_time(seconds):
