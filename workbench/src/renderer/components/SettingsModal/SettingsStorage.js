@@ -12,6 +12,8 @@ const investSettingsStore = localforage.createInstance({
  *     {String} nWorkers - TaskGraph number of workers
  *     {String} taskgraphLoggingLevel - InVEST taskgraph logging level
  *     {String} loggingLevel - InVEST model logging level
+ *     {String} gdalLoggingLevel - GDAL log level - 'DEBUG' means CPL_DEBUG=ON.
+ *       'NORMAL' expected otherwise.
  *     {String} sampleDataDir - default location for sample datastack downloads
  */
 export function getDefaultSettings() {
@@ -19,6 +21,7 @@ export function getDefaultSettings() {
     nWorkers: '-1',
     taskgraphLoggingLevel: 'INFO',
     loggingLevel: 'INFO',
+    gdalLoggingLevel: 'NORMAL',
     sampleDataDir: '',
     language: 'en'
   };

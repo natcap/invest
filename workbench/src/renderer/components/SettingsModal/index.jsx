@@ -165,6 +165,23 @@ class SettingsModal extends React.Component {
               </Col>
             </Form.Group>
             <Form.Group as={Row}>
+              <Form.Label column sm="6" htmlFor="gdal-logging-select">
+                {t('GDAL logging level')}
+              </Form.Label>
+              <Col sm="6">
+                <Form.Control
+                  id="gdal-logging-select"
+                  as="select"
+                  name="gdalLoggingLevel"
+                  value={investSettings.gdalLoggingLevel}
+                  onChange={this.handleChange}
+                >
+                  <option value="NORMAL" key="NORMAL">NORMAL</option>
+                  <option value="DEBUG" key="DEBUG">DEBUG</option>
+                </Form.Control>
+              </Col>
+            </Form.Group>
+            <Form.Group as={Row}>
               <Form.Label column sm="6" htmlFor="taskgraph-logging-select">
                 {t('Taskgraph logging threshold')}
               </Form.Label>
@@ -276,6 +293,7 @@ SettingsModal.propTypes = {
     nWorkers: PropTypes.string,
     taskgraphLoggingLevel: PropTypes.string,
     loggingLevel: PropTypes.string,
+    gdalLoggingLevel: PropTypes.string,
     sampleDataDir: PropTypes.string,
     language: PropTypes.string,
   }).isRequired,

@@ -45,7 +45,15 @@ export function setupInvestRunHandlers(investExe) {
   });
 
   ipcMain.on(ipcMainChannels.INVEST_RUN, async (
-    event, modelRunName, pyModuleName, args, loggingLevel, taskgraphLoggingLevel, language, tabID
+    event,
+    modelRunName,
+    pyModuleName,
+    args,
+    loggingLevel,
+    gdalLoggingLevel,
+    taskgraphLoggingLevel,
+    language,
+    tabID
   ) => {
     let investRun;
     let investStarted = false;
@@ -77,15 +85,19 @@ export function setupInvestRunHandlers(investExe) {
       '--headless',
       `-d "${datastackPath}"`,
     ];
+    // Make a copy of process.env before modifying it.
+    const envVars = JSON.parse(JSON.stringify(process.env));
+    if (gdalLoggingLevel === 'DEBUG') {
+      envVars.CPL_DEBUG = 'ON';
+    }
     logger.debug(`set to run ${cmdArgs}`);
     if (process.platform !== 'win32') {
       investRun = spawn(investExe, cmdArgs, {
         shell: true, // without shell, IOError when datastack.py loads json
         detached: true, // counter-intuitive, but w/ true: invest terminates when this shell terminates
+        env: envVars,
       });
     } else { // windows
-      // Make a copy of process.env before modifying it.
-      const envVars = JSON.parse(JSON.stringify(process.env));
       envVars.PYTHONUTF8 = '1'; // #1167 - force UTF-8 on Windows
       investRun = spawn(investExe, cmdArgs, {
         shell: true,
