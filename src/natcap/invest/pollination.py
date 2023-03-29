@@ -505,10 +505,6 @@ def execute(args):
         args['workspace_dir'], 'intermediate_outputs')
     work_token_dir = os.path.join(
         intermediate_output_dir, '_taskgraph_working_dir')
-
-    # Force pollination to re-run each time
-    shutil.rmtree(work_token_dir, ignore_errors=True)
-
     output_dir = os.path.join(args['workspace_dir'])
     utils.make_directories(
         [output_dir, intermediate_output_dir])

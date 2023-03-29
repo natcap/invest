@@ -7,20 +7,17 @@ import importlib
 import json
 import logging
 import multiprocessing
-import os
 import pprint
 import sys
 import textwrap
 import warnings
 
-import chardet
 import natcap.invest
 from natcap.invest import datastack
 from natcap.invest import model_metadata
 from natcap.invest import set_locale
 from natcap.invest import ui_server
 from natcap.invest import utils
-from osgeo import gdal
 
 DEFAULT_EXIT_CODE = 1
 LOGGER = logging.getLogger(__name__)
@@ -461,51 +458,6 @@ def main(user_args=None):
                        'Starting model with parameters: \n%s',
                        datastack.format_args_dict(parsed_datastack.args,
                                                   parsed_datastack.model_name))
-
-            # Logging extra information here for debug purposes in service of
-            # https://github.com/natcap/invest/issues/1167
-            logging.getLogger('gdal').setLevel(logging.DEBUG)
-            logging.getLogger('osgeo').setLevel(logging.DEBUG)
-            LOGGER.info(f"#1167 gdal version: {gdal.__version__}")
-            LOGGER.info(f"#1167 FS Encoding: {sys.getfilesystemencoding()}")
-            LOGGER.info(f"#1167 FS Enc Errors: {sys.getfilesystemencodeerrors()}")
-            LOGGER.info(f"#1167 Default Encoding: {sys.getdefaultencoding()}")
-
-            # logging extra language information
-            for envvar in ['LANG', 'PYTHONIOENCODING',
-                           "PYTHONLEGACYWINDOWSSTDIO",
-                           "PYTHONCOERCECLOCALE",
-                           "PYTHONUTF8", "PYTHONWARNDEFAULTENCODING"]:
-                try:
-                    LOGGER.info(f"#1167 {envvar}={os.environ[envvar]}")
-                except KeyError:
-                    LOGGER.info(f"#1167 {envvar} not set")
-
-            # chardet can tell us what it thinks the encoding is, but only from
-            # a string of bytes, which is super easy to get from a file.
-            with open(args.datastack, 'rb') as datastack_json:
-                detected_langs = chardet.detect_all(datastack_json.read())
-            LOGGER.info(f"#1167 What chardet thinks about the datastack: f{detected_langs}")
-
-            for key, arg in parsed_datastack.args.items():
-                try:
-                    input_type = model_module.MODEL_SPEC['args'][key]['type']
-                    if input_type in (
-                            'csv', 'raster', 'vector'):
-                        with open(arg, 'rb') as opened_file:
-                            detected_langs = chardet.detect_all(opened_file.read())
-                        LOGGER.info(f"#1167 what chardet thinks about the file {arg}: "
-                                    f"{detected_langs}")
-
-                    try:
-                        if input_type in ('csv', 'raster', 'vector', 'directory'):
-                            LOGGER.info("#1167 what chardet thinks about the "
-                                        f"path {arg}: {chardet.detect_all(arg)}")
-                    except Exception as e:
-                        LOGGER.info(f"#1167 arg is not bytes: {arg}")
-                except KeyError:
-                    LOGGER.info(f"Skipping chardet inspection for key {key}. "
-                                "Key not described in MODEL_SPEC.")
 
             # We're deliberately not validating here because the user
             # can just call ``invest validate <datastack>`` to validate.

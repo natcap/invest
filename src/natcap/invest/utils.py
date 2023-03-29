@@ -10,7 +10,6 @@ import tempfile
 import time
 from datetime import datetime
 
-import chardet
 import numpy
 import pandas
 import pygeoprocessing
@@ -26,8 +25,8 @@ LOG_FMT = (
     "%(module)s.%(funcName)s(%(lineno)d) "
     "%(levelname)s %(message)s")
 
-# GDAL has 5 error levels, python's logging has 6.  We skip logging.INFO.
-# A dict clarifies the mapping between levels.
+# GDAL has 5 error levels, python's logging has 6.
+# This error level mapping matches GDAL's as of GDAL 3.5.0.
 GDAL_ERROR_LEVELS = {
     gdal.CE_None: logging.INFO,
     gdal.CE_Debug: logging.DEBUG,
@@ -35,7 +34,6 @@ GDAL_ERROR_LEVELS = {
     gdal.CE_Failure: logging.ERROR,
     gdal.CE_Fatal: logging.CRITICAL,
 }
-GDAL_ARG_MISSING = "MISSING"
 
 # In GDAL 3.0 spatial references no longer ignore Geographic CRS Axis Order
 # and conform to Lat first, Lon Second. Transforms expect (lat, lon) order
@@ -72,31 +70,20 @@ def _log_gdal_errors(*args, **kwargs):
         ``None``
     """
     try:
-        if not isinstance(args, (list, tuple)):
-            LOGGER.info(f"#1167: args is not a tuple: {type(args)}")
-            if isinstance(args, (bytes, bytearray, str)):
-                LOGGER.info(f"#1167: chardet thinks args is {chardet.detect(args)}")
-    except Exception as e:
-        LOGGER.info(f"#1167: args: {args}")
-        LOGGER.info(f"#1167: exception: {str(e)}")
-
-    LOGGER.info(f"#1167: args {args}")
-    LOGGER.info(f"#1167: kwargs {kwargs}")
-    try:
         # We had a case on the forums where GDAL was calling the error handler
         # with no args or kwargs at all - it isn't even clear why the error
         # handler was called in the first place..  Handling it here at the
         # DEBUG level to avoid exceptions being logged to the logfile.
         if len(args) + len(kwargs) == 0:
-            LOGGER.debug("_log_gdal_errors was called with no arguments. "
-                        "Skipping.")
+            LOGGER.debug("_log_gdal_errors was called with no args/kwargs. "
+                         "Skipping.")
             return
     except Exception as e:
-        LOGGER.exception(f"#1167 {str(e)}")
+        LOGGER.exception(str(e))
 
     # If we have gotten to this point, we know that the logger was called with
     # some number of arguments that might be a combination of args and kwargs.
-    # If any are missing, use GDAL_ARG_MISSING as a placeholder.
+    # If any are missing, use a placeholder.
     gdal_args = {}
     for index, key in enumerate(('err_level', 'err_no', 'err_msg')):
         try:
@@ -105,7 +92,7 @@ def _log_gdal_errors(*args, **kwargs):
             try:
                 parameter = kwargs[key]
             except KeyError:
-                parameter = GDAL_ARG_MISSING
+                parameter = "MISSING"
         gdal_args[key] = parameter
 
     try:
@@ -173,12 +160,8 @@ def prepare_workspace(
             modelname=modelname,
             timestamp=datetime.now().strftime("%Y-%m-%d--%H_%M_%S")))
 
-    # Use GDAL's logging handler.
-    # Enabling debug logging will produce a TON of GDAL logging, but this is
-    # good for the debugging we need to do.
-    #gdal.ConfigurePythonLogging('osgeo.gdal', enable_debug=True)
-
-    with capture_gdal_logging(), log_to_file(logfile, exclude_threads=exclude_threads,
+    with capture_gdal_logging(), log_to_file(logfile,
+                                             exclude_threads=exclude_threads,
                                              logging_level=logging_level):
         with sandbox_tempdir(dir=workspace):
             logging.captureWarnings(True)
