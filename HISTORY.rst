@@ -37,7 +37,20 @@
 
 Unreleased Changes
 ------------------
-
+* General
+    * Log messages originating from GDAL will now be logged at their ``CPL``
+      error levels to match the logging levels as they are laid out in the GDAL
+      source code. In practice, this only changes messages with the
+      ``gdal.CE_None`` level, which will now be logged with the
+      ``logging.INFO`` level (formerly ``logging.NOTSET``).
+* Workbench
+    * The InVEST application is now started in UTF-8 mode.  This resolves a
+      cryptic ``UnicodeDecodeError`` experienced by some users whose locale
+      encoding and filesystem encoding are not already set to UTF-8.
+      (https://github.com/natcap/invest/issues/1167)
+    * Added a new option to the Settings dialog that allows the user to enable
+      GDAL's debug logging. Setting this to "DEBUG" is the equivalent of
+      setting the environment variable ``CPL_DEBUG=ON``.
 * HRA
     * Fixed a bug in HRA where the model would error when all exposure and
       consequence criteria were skipped for a single habitat. The model now
