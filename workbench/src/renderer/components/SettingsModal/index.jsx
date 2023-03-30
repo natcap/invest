@@ -176,8 +176,8 @@ class SettingsModal extends React.Component {
                   value={investSettings.gdalLoggingLevel}
                   onChange={this.handleChange}
                 >
-                  <option value="NORMAL" key="NORMAL">NORMAL</option>
-                  <option value="DEBUG" key="DEBUG">DEBUG</option>
+                  <option value="NORMAL" key="NORMAL">{t('NORMAL')}</option>
+                  <option value="DEBUG" key="DEBUG">{t('DEBUG')}</option>
                 </Form.Control>
               </Col>
             </Form.Group>
