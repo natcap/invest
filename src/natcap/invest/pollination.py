@@ -1,25 +1,25 @@
 """Pollinator service model for InVEST."""
+import itertools
 import collections
+import re
+import os
+import logging
 import hashlib
 import inspect
-import itertools
-import logging
-import os
-import re
-import shutil
 
-import numpy
-import pygeoprocessing
-import taskgraph
 from osgeo import gdal
 from osgeo import ogr
+import pygeoprocessing
+import numpy
+import taskgraph
 
-from . import gettext
-from . import spec_utils
 from . import utils
+from . import spec_utils
+from .unit_registry import u
 from . import validation
 from .model_metadata import MODEL_METADATA
-from .unit_registry import u
+from . import gettext
+
 
 LOGGER = logging.getLogger(__name__)
 
