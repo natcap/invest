@@ -94,14 +94,12 @@ export function setupInvestRunHandlers(investExe) {
     const opts = {
       shell: true,
       env: envVars,
-    }
-    if (process.platform === 'win32') {
-      opts.env.PYTHONUTF8 = '1'; // #1167 - force UTF-8 on Windows
-    } else { // windows
+    };
+    opts.env.PYTHONUTF8 = '1'; // #1167 - force UTF-8 mode
+    if (process.platform !== 'win32') {
       opts.detached = true;
     }
     investRun = spawn(investExe, cmdArgs, opts);
-    }
 
     // There's no general way to know that a spawned process started,
     // so this logic to listen once on stdout seems like the way.
