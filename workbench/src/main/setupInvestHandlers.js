@@ -91,18 +91,16 @@ export function setupInvestRunHandlers(investExe) {
       envVars.CPL_DEBUG = 'ON';
     }
     logger.debug(`set to run ${cmdArgs}`);
-    if (process.platform !== 'win32') {
-      investRun = spawn(investExe, cmdArgs, {
-        shell: true, // without shell, IOError when datastack.py loads json
-        detached: true, // counter-intuitive, but w/ true: invest terminates when this shell terminates
-        env: envVars,
-      });
+    const opts = {
+      shell: true,
+      env: envVars,
+    }
+    if (process.platform === 'win32') {
+      opts.env.PYTHONUTF8 = '1'; // #1167 - force UTF-8 on Windows
     } else { // windows
-      envVars.PYTHONUTF8 = '1'; // #1167 - force UTF-8 on Windows
-      investRun = spawn(investExe, cmdArgs, {
-        shell: true,
-        env: envVars,
-      });
+      opts.detached = true;
+    }
+    investRun = spawn(investExe, cmdArgs, opts);
     }
 
     // There's no general way to know that a spawned process started,
