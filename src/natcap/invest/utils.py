@@ -18,7 +18,7 @@ from osgeo import osr
 from shapely.wkt import loads
 
 LOGGER = logging.getLogger(__name__)
-_OSGEO_LOGGER = logging.getLogger('osgeo')
+_OSGEO_LOGGER = logging.getLogger('osgeo.gdal')
 LOG_FMT = (
     "%(asctime)s "
     "(%(name)s) "

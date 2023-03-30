@@ -514,34 +514,13 @@ class GDALWarningsLoggingTests(unittest.TestCase):
 
         self.assertEqual(len(messages), 1)
 
-    def test_log_gdal_errors_bad_n_args(self):
-        """utils: test error capture when number of args != 3."""
-        from natcap.invest import utils
-
-        log_queue = queue.Queue()
-        log_queue_handler = logging.handlers.QueueHandler(log_queue)
-        utils.LOGGER.addHandler(log_queue_handler)
-
-        try:
-            # 1 parameter, expected 3
-            utils._log_gdal_errors('foo')
-        finally:
-            utils.LOGGER.removeHandler(log_queue_handler)
-
-        record = log_queue.get_nowait()
-        self.assertEqual(record.name, 'natcap.invest.utils')
-        self.assertEqual(record.levelno, logging.ERROR)
-        self.assertIn(
-            '_log_gdal_errors was called with an incorrect number',
-            record.msg)
-
     def test_log_gdal_errors_missing_param(self):
         """utils: test error when specific parameters missing."""
         from natcap.invest import utils
 
         log_queue = queue.Queue()
         log_queue_handler = logging.handlers.QueueHandler(log_queue)
-        utils.LOGGER.addHandler(log_queue_handler)
+        utils._OSGEO_LOGGER.addHandler(log_queue_handler)
 
         try:
             # Missing third parameter, "err_msg"
@@ -549,14 +528,62 @@ class GDALWarningsLoggingTests(unittest.TestCase):
                 gdal.CE_Failure, 123,
                 bad_param='bad param')  # param obviously bad
         finally:
-            utils.LOGGER.removeHandler(log_queue_handler)
+            utils._OSGEO_LOGGER.removeHandler(log_queue_handler)
 
         record = log_queue.get_nowait()
-        self.assertEqual(record.name, 'natcap.invest.utils')
+        self.assertEqual(record.name, 'osgeo.gdal')
         self.assertEqual(record.levelno, logging.ERROR)
-        self.assertIn(
-            "_log_gdal_errors called without the argument 'err_msg'",
-            record.msg)
+        self.assertIn("MISSING", record.msg)
+
+    def test_log_gdal_errors_missing_err_level(self):
+        """utils: test error when the error level is missing."""
+        from natcap.invest import utils
+
+        log_queue = queue.Queue()
+        log_queue_handler = logging.handlers.QueueHandler(log_queue)
+        utils._OSGEO_LOGGER.addHandler(log_queue_handler)
+
+        try:
+            utils._log_gdal_errors(
+                # deliberately omitting err_level for test
+                err_code=123,
+                err_msg='bad param')
+        finally:
+            utils._OSGEO_LOGGER.removeHandler(log_queue_handler)
+
+        record = log_queue.get_nowait()
+        self.assertEqual(record.name, 'osgeo.gdal')
+        self.assertEqual(record.levelno, logging.DEBUG)
+        self.assertIn("MISSING", record.msg)
+
+    def test_log_gdal_errors_no_args(self):
+        """utils: test no gdal logs when handler called with no args."""
+        from natcap.invest import utils
+
+        gdal_log_queue = queue.Queue()
+        gdal_log_queue_handler = logging.handlers.QueueHandler(gdal_log_queue)
+        utils._OSGEO_LOGGER.addHandler(gdal_log_queue_handler)
+
+        utils_log_queue = queue.Queue()
+        utils_log_queue_handler = logging.handlers.QueueHandler(
+            utils_log_queue)
+        utils.LOGGER.addHandler(utils_log_queue_handler)
+
+        try:
+            utils._log_gdal_errors()
+        finally:
+            utils._OSGEO_LOGGER.removeHandler(gdal_log_queue_handler)
+            utils.LOGGER.removeHandler(utils_log_queue_handler)
+
+        # We expect there to be no gdal logs.
+        with self.assertRaises(queue.Empty):
+            gdal_log_queue.get_nowait()
+
+        record = utils_log_queue.get_nowait()
+        self.assertEqual(record.name, 'natcap.invest.utils')
+        self.assertEqual(record.levelno, logging.DEBUG)
+        self.assertIn("_log_gdal_errors was called with no args/kwargs.",
+                      record.msg)
 
 
 class PrepareWorkspaceTests(unittest.TestCase):
