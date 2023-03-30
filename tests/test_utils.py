@@ -528,7 +528,7 @@ class GDALWarningsLoggingTests(unittest.TestCase):
         finally:
             utils.LOGGER.removeHandler(log_queue_handler)
 
-        record = log_queue.get()
+        record = log_queue.get_nowait()
         self.assertEqual(record.name, 'natcap.invest.utils')
         self.assertEqual(record.levelno, logging.ERROR)
         self.assertIn(
@@ -551,7 +551,7 @@ class GDALWarningsLoggingTests(unittest.TestCase):
         finally:
             utils.LOGGER.removeHandler(log_queue_handler)
 
-        record = log_queue.get()
+        record = log_queue.get_nowait()
         self.assertEqual(record.name, 'natcap.invest.utils')
         self.assertEqual(record.levelno, logging.ERROR)
         self.assertIn(
