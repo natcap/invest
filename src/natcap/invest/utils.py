@@ -79,7 +79,11 @@ def _log_gdal_errors(*args, **kwargs):
                          "Skipping.")
             return
     except Exception as e:
+        # We might get here if something goes wrong in len().  This happened on
+        # the forums before we started using UTF-8 mode.
+        # https://github.com/natcap/invest/issues/1167
         LOGGER.exception(str(e))
+        return
 
     # If we have gotten to this point, we know that the logger was called with
     # some number of arguments that might be a combination of args and kwargs.
