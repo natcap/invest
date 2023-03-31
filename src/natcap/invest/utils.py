@@ -1,9 +1,11 @@
 """InVEST specific code utils."""
+import base64
 import codecs
 import contextlib
 import logging
 import math
 import os
+import pickle
 import re
 import shutil
 import tempfile
@@ -82,10 +84,18 @@ def _log_gdal_errors(*args, **kwargs):
         # We might get here if something goes wrong in len().  This happened on
         # the forums before we started using UTF-8 mode.
         # https://github.com/natcap/invest/issues/1167
+        def _b64pickle(obj):
+            # Sometimes you just need to see the original object.
+            # Pickle allows us to serialize any python object into a bytestring
+            # base64 renders that bytestring into ASCII-printable chars.
+            # to decode, run:
+            #    obj = pickle.load(base64.b64decode(printed_string))
+            return base64.b64encode(pickle.dumps(obj))
+
         LOGGER.exception(
             f"{str(e)}\n"
-            f"  args:   {repr(args)}\n"
-            f"  kwargs: {repr(kwargs)}"
+            f"  args   (b64 pickle): {repr(args)}\n"
+            f"  kwargs (b64 pickle): {repr(kwargs)}"
         )
         return
 
@@ -342,7 +352,7 @@ def make_suffix_string(args, suffix_key):
 
 
 def exponential_decay_kernel_raster(expected_distance, kernel_filepath,
-        normalize=True):
+                                    normalize=True):
     """Create a raster-based exponential decay kernel.
 
     The raster created will be a tiled GeoTiff, with 256x256 memory blocks.
