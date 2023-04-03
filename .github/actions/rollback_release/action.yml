@@ -7,14 +7,17 @@ runs:
   using: "composite"
   steps:
     - name: Install dependencies
+      shell: bash
       run: conda install gh --channel conda-forge
 
     - name: Configure git
-        run: |
-          git config user.name "GitHub Actions"
-          git config user.email "<>"
+      shell: bash
+      run: |
+        git config user.name "GitHub Actions"
+        git config user.email "<>"
 
     - name: Delete the tag (if it exists)
+      shell: bash
       run: |
         if [ `git rev-parse --verify ${{ inputs.VERSION }} 2>/dev/null` ] ;
         then
@@ -22,6 +25,7 @@ runs:
         fi
 
     - name: Delete the autorelease branch (if it exists)
+      shell: bash
       run: |
         if [ `git rev-parse --verify autorelease/${{ inputs.VERSION }} 2>/dev/null` ] ;
         then
@@ -29,6 +33,7 @@ runs:
         fi
 
     - name: Delete the Github release (if it exists)
+      shell: bash
       run: |
         if [ `gh release list | awk -F '\t' -v col=3 '{print $col}' | grep -x -F ${{ inputs.VERSION }}` ] ;
         then
