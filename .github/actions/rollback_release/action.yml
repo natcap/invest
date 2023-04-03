@@ -1,0 +1,31 @@
+name: "Roll back a release"
+inputs:
+  VERSION:
+    description: "Version to roll back"
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Install dependencies
+      run: conda install gh
+
+    - name: Delete the tag (if it exists)
+      run: |
+        if [ `git rev-parse --verify ${{ inputs.VERSION }} 2>/dev/null` ] ;
+        then
+           git push origin --delete ${{ inputs.VERSION }};
+        fi
+
+    - name: Delete the autorelease branch (if it exists)
+      run: |
+        if [ `git rev-parse --verify autorelease/${{ inputs.VERSION }} 2>/dev/null` ] ;
+        then
+           git push origin --delete autorelease/${{ inputs.VERSION }} ;
+        fi
+
+    - name: Delete the Github release (if it exists)
+      run: |
+        if [ `gh release list | awk -F '\t' -v col=3 '{print $col}' | grep -x -F ${{ inputs.VERSION }}` ] ;
+        then
+          gh release delete ${{ inputs.VERSION }} --yes ;
+        fi

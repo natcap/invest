@@ -1,0 +1,125 @@
+name: Release (Part 1 of 2)
+
+on: workflow_dispatch
+
+#!/usr/bin/env bash
+# Initiate a release on the current commit.
+# - Create autorelease branch
+# - Update HISTORY.rst
+# - Commit the changes to HISTORY.rst
+# - Tag the commit
+# - Push the tag
+# - Build workflows run on push, wait for them to finish
+
+defaults:
+  runs-on: ubuntu-latest
+
+env:
+  VERSION: $1
+  GITHUB_REPO: "natcap/invest"
+  AUTORELEASE_BRANCH: autorelease/$VERSION
+  PR_MESSAGE_FILE: pr_message.md
+
+jobs:
+
+  finalize-and-tag:
+    steps:
+
+      - name: install dependencies
+        run: conda install gh
+
+      # Members of the natcap software team can push to the autorelease branch on
+      # natcap/invest; this branch is a special case for our release process.
+      - name: create autorelease branch
+        run: git checkout -b "$AUTORELEASE_BRANCH"
+
+      # Replace
+      #
+      # Unreleased Changes
+      # ------------------
+      #
+      # with
+      #
+      # ..
+      #   Unreleased Changes
+      #   ------------------
+      #
+      # X.X.X (XXXX-XX-XX)
+      # ------------------
+      - name: update HISTORY.rst
+        run: |
+          HEADER="$VERSION ($(date '+%Y-%m-%d'))"
+          HEADER_LENGTH=${#HEADER}
+          UNDERLINE=$(for i in $(seq 1 $HEADER_LENGTH); do echo -n "-"; done)
+          perl -0777 -i -pe \
+              "s/Unreleased Changes\n------------------/..\n  Unreleased Changes\n  ------------------\n\n${HEADER}\n${UNDERLINE}/g" \
+              HISTORY.rst
+          git add HISTORY.rst
+          git commit -m "Committing the $VERSION release."
+
+      - name: tag and push
+        run: |
+          git tag "$VERSION"
+          git push https://github.com/${GITHUB_REPO}.git $VERSION $AUTORELEASE_BRANCH
+
+      - name: create PR message
+        run: |
+          echo "
+            Release $VERSION and merge into main
+
+            # Release $VERSION
+
+            This PR includes automated changes made for the $VERSION release.
+
+            In addition to the actions workflow triggered by this PR,
+            workflows will also be triggered for the $AUTORELEASE_BRANCH branch
+            and the $VERSION tag.
+
+            The $VERSION tag workflow is most important because it produces the
+            artifacts that will be used in the next steps of the release process.
+            If it fails for any reason, decline this PR and start over.
+            Declining this PR will trigger a Github Action that will roll back any
+            release steps that have completed so far.
+
+            ## Intermittent failures
+            If the $VERSION tag workflow fails due to an intermittent problem,
+            decline this PR and start over. Declining this PR will trigger a
+            Github Action that will roll back any release steps that have completed
+            so far.
+
+            If $VERSION tag workflow succeeds, but this PR workflow and/or the
+            $AUTORELEASE_BRANCH branch workflow fail due to an intermittent problem,
+            continue with the release. Approve and merge this PR with a comment
+            explaining what happened.
+
+            ## Bugs
+            If the workflows reveal a bug in the tagged version, decline this PR.
+            Declining this PR will trigger a Github Action that will roll back any
+            release steps that have completed so far. Submit a fix in a separate PR
+            into `main`. Once the fix has been merged, restart the release process
+            from the beginning.
+
+            ## If everything looks OK
+            1. Approve and merge this PR. This will trigger a Github Action
+               that will complete the release.
+            2. Take a look at the Release Checklist
+               (https://github.com/natcap/invest/wiki/Release-Checklist) and take care of
+               anything else that needs to be taken care of.
+          " > $PR_MESSAGE_FILE
+
+      - name: create a PR from the autorelease branch into main
+        run: |
+          gh pr create \
+            --base "$GITHUB_REPO:main" \
+            --head "$GITHUB_REPO:autorelease/$VERSION" \
+            --title "$VERSION release" \
+            --body-file $PR_MESSAGE_FILE \
+            --reviewer "@me" \
+            --assign "@me" \
+            --labels "auto"
+
+      - name: Roll back on failure
+        if: failure()
+        uses: ./.github/actions/rollback_release
+        with:
+          VERSION: ${{ env.VERSION }}
