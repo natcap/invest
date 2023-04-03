@@ -1,30 +1,23 @@
 name: Release (Part 1 of 2)
 
-on: workflow_dispatch
-
-#!/usr/bin/env bash
-# Initiate a release on the current commit.
-# - Create autorelease branch
-# - Update HISTORY.rst
-# - Commit the changes to HISTORY.rst
-# - Tag the commit
-# - Push the tag
-# - Build workflows run on push, wait for them to finish
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        required: true
+        type: string
 
 defaults:
   runs-on: ubuntu-latest
 
 env:
-  VERSION: $1
-  GITHUB_REPO: "natcap/invest"
-  AUTORELEASE_BRANCH: autorelease/$VERSION
+  VERSION: ${{ inputs.version }}
+  AUTORELEASE_BRANCH: autorelease/${{ inputs.version }}
   PR_MESSAGE_FILE: pr_message.md
 
 jobs:
-
   finalize-and-tag:
     steps:
-
       - name: install dependencies
         run: conda install gh
 
@@ -59,8 +52,8 @@ jobs:
 
       - name: tag and push
         run: |
-          git tag "$VERSION"
-          git push https://github.com/${GITHUB_REPO}.git $VERSION $AUTORELEASE_BRANCH
+          git tag $VERSION
+          git push $VERSION $AUTORELEASE_BRANCH
 
       - name: create PR message
         run: |
@@ -110,8 +103,8 @@ jobs:
       - name: create a PR from the autorelease branch into main
         run: |
           gh pr create \
-            --base "$GITHUB_REPO:main" \
-            --head "$GITHUB_REPO:autorelease/$VERSION" \
+            --base main \
+            --head $AUTORELEASE_BRANCH \
             --title "$VERSION release" \
             --body-file $PR_MESSAGE_FILE \
             --reviewer "@me" \

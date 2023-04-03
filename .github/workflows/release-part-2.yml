@@ -1,3 +1,5 @@
+name: Release (Part 2 of 2)
+
 on:
   # this workflow will run any time any PR into main is closed
   pull_request:
@@ -13,7 +15,6 @@ env:
   BRANCH: ${{ github.head_ref }}
 
 jobs:
-
   roll_back_release:
     # run this job if a PR from an autorelease branch into main was closed without merging
     if: startsWith(github.head_ref, 'autorelease') && github.event.pull_request.merged == false
@@ -88,6 +89,3 @@ jobs:
         uses: ./.github/actions/rollback_release
         with:
           VERSION: ${{ env.VERSION }}
-
-
-
