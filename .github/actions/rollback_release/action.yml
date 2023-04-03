@@ -19,23 +19,32 @@ runs:
     - name: Delete the tag (if it exists)
       shell: bash
       run: |
-        if [ `git rev-parse --verify ${{ inputs.VERSION }} 2>/dev/null` ] ;
+        if [ `git rev-parse --verify ${{ inputs.VERSION }} 2>/dev/null` ]
         then
-           git push origin --delete ${{ inputs.VERSION }};
+          echo "Deleting ${{ inputs.VERSION }} tag"
+          git push origin --delete ${{ inputs.VERSION }}
+        else
+          echo "${{ inputs.VERSION }} tag not found"
         fi
 
     - name: Delete the autorelease branch (if it exists)
       shell: bash
       run: |
-        if [ `git rev-parse --verify autorelease/${{ inputs.VERSION }} 2>/dev/null` ] ;
+        if [ `git rev-parse --verify autorelease/${{ inputs.VERSION }} 2>/dev/null` ]
         then
-           git push origin --delete autorelease/${{ inputs.VERSION }} ;
+          echo "Deleting autorelease/${{ inputs.VERSION }} branch"
+          git push origin --delete autorelease/${{ inputs.VERSION }}
+        else
+          echo "autorelease/${{ inputs.VERSION }} branch not found"
         fi
 
     - name: Delete the Github release (if it exists)
       shell: bash
       run: |
-        if [ `gh release list | awk -F '\t' -v col=3 '{print $col}' | grep -x -F ${{ inputs.VERSION }}` ] ;
+        if [ `gh release list | awk -F '\t' -v col=3 '{print $col}' | grep -x -F ${{ inputs.VERSION }}` ]
         then
-          gh release delete ${{ inputs.VERSION }} --yes ;
+          echo "Deleting ${{ inputs.VERSION }} GitHub release"
+          gh release delete ${{ inputs.VERSION }} --yes
+        else
+          echo "${{ inputs.VERSION }} GitHub release not found"
         fi
