@@ -67,7 +67,7 @@ jobs:
       - name: create PR message
         run: |
           echo "
-            Release $VERSION and merge into main
+            Release $VERSION and merge into \`main\`
 
             # Release $VERSION
 
@@ -98,7 +98,7 @@ jobs:
             If the workflows reveal a bug in the tagged version, decline this PR.
             Declining this PR will trigger a Github Action that will roll back any
             release steps that have completed so far. Submit a fix in a separate PR
-            into `main`. Once the fix has been merged, restart the release process
+            into \`main\`. Once the fix has been merged, restart the release process
             from the beginning.
 
             ## If everything looks OK
