@@ -25,6 +25,7 @@ jobs:
         run: |
           git config user.name "GitHub Actions"
           git config user.email "<>"
+          git remote -v
 
       # Members of the natcap software team can push to the autorelease branch on
       # natcap/invest; this branch is a special case for our release process.
@@ -58,7 +59,7 @@ jobs:
       - name: tag and push
         run: |
           git tag $VERSION
-          git push $VERSION $AUTORELEASE_BRANCH
+          git push origin $VERSION $AUTORELEASE_BRANCH
 
       - name: create PR message
         run: |
