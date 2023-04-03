@@ -9,6 +9,11 @@ runs:
     - name: Install dependencies
       run: conda install gh --channel conda-forge
 
+    - name: Configure git
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "<>"
+
     - name: Delete the tag (if it exists)
       run: |
         if [ `git rev-parse --verify ${{ inputs.VERSION }} 2>/dev/null` ] ;

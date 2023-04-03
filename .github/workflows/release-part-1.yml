@@ -21,6 +21,11 @@ jobs:
       - name: install dependencies
         run: conda install gh --channel conda-forge
 
+      - name: Configure git
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "<>"
+
       # Members of the natcap software team can push to the autorelease branch on
       # natcap/invest; this branch is a special case for our release process.
       - name: create autorelease branch
