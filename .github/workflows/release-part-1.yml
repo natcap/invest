@@ -7,9 +7,6 @@ on:
         required: true
         type: string
 
-defaults:
-  runs-on: ubuntu-latest
-
 env:
   VERSION: ${{ inputs.version }}
   AUTORELEASE_BRANCH: autorelease/${{ inputs.version }}
@@ -17,6 +14,7 @@ env:
 
 jobs:
   finalize-and-tag:
+    runs-on: ubuntu-latest
     steps:
       - name: install dependencies
         run: conda install gh
