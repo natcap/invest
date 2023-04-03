@@ -3,6 +3,8 @@ inputs:
   VERSION:
     description: "Version to roll back"
     required: true
+env:
+  GITHUB_TOKEN: ${{ github.token }}
 runs:
   using: "composite"
   steps:
