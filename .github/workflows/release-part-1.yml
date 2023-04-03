@@ -21,7 +21,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: install dependencies
+      - name: Install dependencies
         run: conda install gh --channel conda-forge
 
       - name: Configure git
@@ -32,7 +32,7 @@ jobs:
 
       # Members of the natcap software team can push to the autorelease branch on
       # natcap/invest; this branch is a special case for our release process.
-      - name: create autorelease branch
+      - name: Create autorelease branch
         run: git checkout -b "$AUTORELEASE_BRANCH"
 
       # Replace
@@ -48,7 +48,7 @@ jobs:
       #
       # X.X.X (XXXX-XX-XX)
       # ------------------
-      - name: update HISTORY.rst
+      - name: Update HISTORY.rst
         run: |
           HEADER="$VERSION ($(date '+%Y-%m-%d'))"
           HEADER_LENGTH=${#HEADER}
@@ -59,12 +59,12 @@ jobs:
           git add HISTORY.rst
           git commit -m "Committing the $VERSION release."
 
-      - name: tag and push
+      - name: Tag and push
         run: |
           git tag $VERSION
           git push origin $VERSION $AUTORELEASE_BRANCH
 
-      - name: create PR message
+      - name: Create PR message
         run: |
           echo "
             Release $VERSION and merge into \`main\`
@@ -109,7 +109,7 @@ jobs:
                anything else that needs to be taken care of.
           " > $PR_MESSAGE_FILE
 
-      - name: create a PR from the autorelease branch into main
+      - name: Create a PR from the autorelease branch into main
         run: |
           gh pr create \
             --base main \
@@ -125,3 +125,4 @@ jobs:
         uses: ./.github/actions/rollback_release
         with:
           VERSION: ${{ env.VERSION }}
+          GITHUB_TOKEN: ${{ github.token }}

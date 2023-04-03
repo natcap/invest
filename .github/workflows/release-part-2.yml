@@ -23,6 +23,7 @@ jobs:
         uses: ./.github/actions/rollback_release
         with:
           VERSION: ${{ env.VERSION }}
+          GITHUB_TOKEN: ${{ github.token }}
 
   publish_release:
     # run this job if a PR was merged from an autorelease branch into main
@@ -91,3 +92,4 @@ jobs:
         uses: ./.github/actions/rollback_release
         with:
           VERSION: ${{ env.VERSION }}
+          GITHUB_TOKEN: ${{ github.token }}
