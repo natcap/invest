@@ -16,6 +16,8 @@ jobs:
   finalize-and-tag:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v3
+
       - name: install dependencies
         run: conda install gh
 
