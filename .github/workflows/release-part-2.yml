@@ -32,7 +32,7 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Install dependencies
-        run: conda install gh twine
+        run: conda install --channel conda-forge gh twine
 
       - name: Extract version from autorelease branch name
         run: echo "VERSION=${BRANCH:12}" >> $GITHUB_ENV

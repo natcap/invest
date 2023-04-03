@@ -7,7 +7,7 @@ runs:
   using: "composite"
   steps:
     - name: Install dependencies
-      run: conda install gh
+      run: conda install gh --channel conda-forge
 
     - name: Delete the tag (if it exists)
       run: |
