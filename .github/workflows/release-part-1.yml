@@ -15,6 +15,7 @@ env:
 
 permissions:
   contents: write  # allow this workflow to push changes to the repo
+  pull-requests: write
 
 jobs:
   finalize-and-tag:
