@@ -12,6 +12,9 @@ env:
   AUTORELEASE_BRANCH: autorelease/${{ inputs.version }}
   PR_MESSAGE_FILE: pr_message.md
 
+permissions:
+  contents: write  # allow this workflow to push changes to the repo
+
 jobs:
   finalize-and-tag:
     runs-on: ubuntu-latest
