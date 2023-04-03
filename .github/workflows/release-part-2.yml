@@ -1,25 +1,52 @@
-name: Bugfix Release (Part 2 of 2)
+on:
+  # this workflow will run any time any PR into main is closed
+  pull_request:
+    types:
+      - closed
+    branches:
+      - main
 
-on: tag checks succeed
+defaults:
+  runs-on: ubuntu-latest
 
 env:
-  VERSION: $1
-  GH_RUN_ID: $2
-  GITHUB_REPO: "natcap/invest"
-  PYPI_REPO: "testpypi"
-  RELEASE_MESSAGE_FILE: release_message.rst
+  BRANCH: ${{ github.head_ref }}
 
 jobs:
-  publish:
+
+  roll_back_release:
+    # run this job if a PR from an autorelease branch into main was closed without merging
+    if: startsWith(github.head_ref, 'autorelease') && github.event.pull_request.merged == false
+    steps:
+      - name: Roll back on failure
+        uses: ./.github/actions/rollback_release
+        with:
+          VERSION: ${{ env.VERSION }}
+
+  publish_release:
+    # run this job if a PR was merged from an autorelease branch into main
+    if: startsWith(github.head_ref, 'autorelease') && github.event.pull_request.merged == true
     steps:
 
-      - name: install dependencies
+      - name: Install dependencies
         run: conda install gh twine
 
-      - name: download artifacts
+      - name: Extract version from autorelease branch name
+        run: echo "VERSION=${BRANCH:12}" >> $GITHUB_ENV
+
+      - name: Find actions run for the $VERSION tag
+        run: |
+          RUN_ID=$(
+            gh run list \
+              --branch ${{ env.VERSION }} \
+              --json databaseId \
+              --jq ".[].databaseId")
+          echo $RUN_ID
+
+      - name: Download release artifacts
         run: |
           mkdir artifacts
-          gh --repo $GITHUB_REPO run download $GH_RUN_ID \
+          gh run download $RUN_ID \
             --dir artifacts \
             --name InVEST-Windows-binary.zip \
             --name InVEST-macOS-binary.zip \
@@ -30,34 +57,37 @@ jobs:
             --name "Source distribution.zip" \
             --name "Wheel for *.zip"
 
-      - name: create release message
+      - name: Create release message
         run: |
           # Format the HISTORY of this release for the release.
           # This file represents both the title and the body of the
           # release.  A blank line separates the title from the body.
 
-          echo "$VERSION" >> "$RELEASE_MESSAGE_FILE"
-          echo "" >> "$RELEASE_MESSAGE_FILE"
+          echo "$VERSION" >> $RELEASE_MESSAGE_FILE
+          echo "" >> $RELEASE_MESSAGE_FILE
           echo "This bugfix release includes the following fixes and features:" >> "$RELEASE_MESSAGE_FILE"
-          echo "" >> "$RELEASE_MESSAGE_FILE"  # extra line to clarify we're starting a bulleted list.
+          echo "" >> $RELEASE_MESSAGE_FILE  # extra line to clarify we're starting a bulleted list.
 
           # Copy the history notes for this version into the release message
           # The tail +3 cuts off the version string and underline of the title.
           sed -n "/$VERSION/,/^$/p" HISTORY.rst | tail -n +3 >> $RELEASE_MESSAGE_FILE
 
-      - name: create github release
+      - name: Create Github release
         run: |
           gh release create $VERSION \
-            --repo $GITHUB_REPO \
             --notes-file $RELEASE_MESSAGE_FILE \
             --verify-tag \
-            dist/*
+            artifacts/*
 
-      - name: create a PyPI release
+      - name: Create a PyPI release
         # this is the only step that can't be rolled back
-        run: twine upload -r $PYPI_REPO dist/natcap.invest.*
+        run: twine upload -r testpypi artifacts/natcap.invest.*
 
-      - name: roll back on failure
+      - name: Roll back on failure
         if: failure()
+        uses: ./.github/actions/rollback_release
+        with:
+          VERSION: ${{ env.VERSION }}
+
 
 

@@ -1,4 +1,4 @@
-name: Bugfix Release (Part 1 of 2)
+name: Release (Part 1 of 2)
 
 on: workflow_dispatch
 
@@ -118,47 +118,8 @@ jobs:
             --assign "@me" \
             --labels "auto"
 
-
-      - name: delete tag and autorelease branch
-        if:
-        run: git push --delete origin $VERSION $AUTORELEASE_BRANCH
-
-
-
-
-echo "Release has been created using testpypi. To release officially:"
-echo "twine upload -r pypi dist/natcap.invest.*"
-
-
-
-
-
-if git rev-parse "$VERSION" > /dev/null 2>&1  # fail if tag already exists
-then
-    echo "The tag $VERSION already exists in this repo."
-    echo "Are you sure you're creating the right version?"
-    exit 3
-fi
-
-echo "Waiting for Github Actions run to start..."
-sleep 5
-# from the list of recent github actions runs,
-# extract the run ID corresponding to the release tag
-RUN_ID=$(gh --repo $GITHUB_REPO run list --branch $VERSION --json databaseId --jq ".[].databaseId")
-
-if (( ${#RUN_ID} = 0 ))
-then
-    echo "No matching run found"
-    exit 4
-fi
-if (( ${#RUN_ID} > 10 ))
-then
-    echo "Multiple run IDs found: ${RUN_ID}"
-    exit 4
-fi
-
-echo "Wait for Github Actions run to finish:"
-echo "https://github.com/$GITHUB_REPO/actions/runs/$RUN_ID"
-echo ""
-echo "When it's completed successfully, run the second release script:"
-echo "./autorelease-step-2.sh $VERSION $RUN_ID"
+      - name: Roll back on failure
+        if: failure()
+        uses: ./.github/actions/rollback_release
+        with:
+          VERSION: ${{ env.VERSION }}
