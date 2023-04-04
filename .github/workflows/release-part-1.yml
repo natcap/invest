@@ -10,21 +10,15 @@ on:
 env:
   VERSION: ${{ inputs.version }}
   AUTORELEASE_BRANCH: autorelease/${{ inputs.version }}
-  GITHUB_TOKEN: ${{ github.token }}
-
-permissions:
-  contents: write  # allow this workflow to push changes to the repo
-  pull-requests: write
-  checks: write
+  # use a personal access token here which has permissions to trigger further actions
+  # this is necessary for the pr checks
+  GITHUB_TOKEN: ${{ secrets.AUTORELEASE_BOT_PAT }}
 
 jobs:
   finalize-and-tag:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-
-      - name: Install dependencies
-        run: conda install gh --channel conda-forge
 
       - name: Configure git
         run: |
@@ -121,4 +115,4 @@ jobs:
         uses: ./.github/actions/rollback_release
         with:
           VERSION: ${{ env.VERSION }}
-          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ env.GITHUB_TOKEN }}

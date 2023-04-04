@@ -9,10 +9,6 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Install dependencies
-      shell: bash
-      run: conda install gh --channel conda-forge
-
     - name: Configure git
       shell: bash
       run: |
