@@ -113,6 +113,8 @@ jobs:
 
       - name: Create a PR from the autorelease branch into main
         run: |
+          git status
+          git diff
           gh pr create \
             --base main \
             --head $AUTORELEASE_BRANCH \
