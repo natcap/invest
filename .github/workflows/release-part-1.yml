@@ -119,8 +119,7 @@ jobs:
             --title "$VERSION release" \
             --body-file $PR_MESSAGE_FILE \
             --reviewer $GITHUB_ACTOR \
-            --assignee $GITHUB_ACTOR \
-            --label auto
+            --assignee $GITHUB_ACTOR
 
       - name: Roll back on failure
         if: failure()
