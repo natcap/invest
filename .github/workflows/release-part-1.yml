@@ -70,7 +70,7 @@ jobs:
         run: |
           gh --repo emlys/invest-mirror pr create \
             --base main \
-            --head task/1160 \
+            --head $AUTORELEASE_BRANCH \
             --title "$VERSION release" \
             --reviewer $GITHUB_ACTOR \
             --assignee $GITHUB_ACTOR \
