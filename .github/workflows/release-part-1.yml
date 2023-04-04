@@ -65,10 +65,16 @@ jobs:
           git tag $VERSION
           git push origin $VERSION $AUTORELEASE_BRANCH
 
-      - name: Create PR message
+      - name: Create a PR from the autorelease branch into main
         run: |
-          echo "
-            PR_MESSAGE=Release $VERSION and merge into \`main\`
+          gh --repo emlys/invest-mirror pr create \
+            --base main \
+            --head task/1160 \
+            --title "$VERSION release" \
+            --reviewer $GITHUB_ACTOR \
+            --assignee $GITHUB_ACTOR \
+            --body "
+            Release $VERSION and merge into \`main\`
 
             # Release $VERSION
 
@@ -107,18 +113,7 @@ jobs:
                that will complete the release.
             2. Take a look at the Release Checklist
                (https://github.com/natcap/invest/wiki/Release-Checklist) and take care of
-               anything else that needs to be taken care of.
-          " >> $GITHUB_ENV
-
-      - name: Create a PR from the autorelease branch into main
-        run: |
-          gh pr create \
-            --base main \
-            --head $AUTORELEASE_BRANCH \
-            --title "$VERSION release" \
-            --body $PR_MESSAGE \
-            --reviewer $GITHUB_ACTOR \
-            --assignee $GITHUB_ACTOR
+               anything else that needs to be taken care of."
 
       - name: Roll back on failure
         if: failure()
