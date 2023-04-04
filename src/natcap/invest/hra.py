@@ -1834,10 +1834,10 @@ def _mask_binary_presence_absence_rasters(
 
 def _open_table_as_dataframe(table_path, **kwargs):
     extension = os.path.splitext(table_path)[1].lower()
-    # Technically, pandas.read_excel can handle xls, xlsx, xlsm, xlsb, odf, ods
-    # and odt file extensions, but I have not tested anything other than XLS
-    # and XLSX, so leaving this as-is from the prior HRA implementation.
-    if extension in {'.xls', '.xlsx'}:
+    # Technically, pandas.read_excel can handle xlsx, xlsm, xlsb, odf, ods
+    # and odt file extensions, but I have not tested anything other than
+    # XLSX, so leaving this as-is from the prior HRA implementation.
+    if extension == '.xlsx':
         excel_df = pandas.read_excel(table_path, **kwargs)
         excel_df.columns = excel_df.columns.str.lower()
         excel_df['path'] = excel_df['path'].apply(
@@ -1906,7 +1906,7 @@ def _parse_criteria_table(criteria_table_path, target_composite_csv_path):
     included in this table.
 
     Args:
-        criteria_table_path (string): The path to a CSV, XLS or XLSX file on
+        criteria_table_path (string): The path to a CSV or XLSX file on
             disk.
         target_composite_csv_path (string): The path to where a new CSV should
             be written containing similar information but in a more easily
@@ -1921,7 +1921,7 @@ def _parse_criteria_table(criteria_table_path, target_composite_csv_path):
     # This function requires that the table is read as a numpy array, so it's
     # easiest to read the table directly.
     extension = os.path.splitext(criteria_table_path)[1].lower()
-    if extension in {'.xls', '.xlsx'}:
+    if extension == '.xlsx':
         df = pandas.read_excel(criteria_table_path, header=None)
     else:
         df = pandas.read_csv(criteria_table_path, header=None, sep=None,
@@ -2476,7 +2476,7 @@ def _override_datastack_archive_criteria_table_path(
     """
     args_key = 'criteria_table_path'
     extension = os.path.splitext(criteria_table_path)[1].lower()
-    if extension in {'.xls', '.xlsx'}:
+    if extension == '.xlsx':
         df = pandas.read_excel(criteria_table_path, header=None)
     else:
         df = pandas.read_csv(criteria_table_path, header=None, sep=None,
