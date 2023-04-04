@@ -118,8 +118,8 @@ jobs:
             --head $AUTORELEASE_BRANCH \
             --title "$VERSION release" \
             --body-file $PR_MESSAGE_FILE \
-            --reviewer @me \
-            --assignee @me \
+            --reviewer ${{ env.GITHUB_ACTOR }} \
+            --assignee ${{ env.GITHUB_ACTOR }} \
             --label auto
 
       - name: Roll back on failure
