@@ -10,7 +10,6 @@ on:
 env:
   VERSION: ${{ inputs.version }}
   AUTORELEASE_BRANCH: autorelease/${{ inputs.version }}
-  PR_MESSAGE_FILE: pr_message.md
   GITHUB_TOKEN: ${{ github.token }}
 
 permissions:
@@ -69,7 +68,7 @@ jobs:
       - name: Create PR message
         run: |
           echo "
-            Release $VERSION and merge into \`main\`
+            PR_MESSAGE=Release $VERSION and merge into \`main\`
 
             # Release $VERSION
 
@@ -109,17 +108,15 @@ jobs:
             2. Take a look at the Release Checklist
                (https://github.com/natcap/invest/wiki/Release-Checklist) and take care of
                anything else that needs to be taken care of.
-          " > $PR_MESSAGE_FILE
+          " >> $GITHUB_ENV
 
       - name: Create a PR from the autorelease branch into main
         run: |
-          git status
-          git diff
           gh pr create \
             --base main \
             --head $AUTORELEASE_BRANCH \
             --title "$VERSION release" \
-            --body-file $PR_MESSAGE_FILE \
+            --body $PR_MESSAGE \
             --reviewer $GITHUB_ACTOR \
             --assignee $GITHUB_ACTOR
 
