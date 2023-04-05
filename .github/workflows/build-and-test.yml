@@ -299,9 +299,7 @@ jobs:
           requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }} pandoc
 
       - name: Make install
-        run: |
-          conda uninstall build
-          make install
+        run: make install
 
         # Not caching chocolatey packages because the cache may not be reliable
         # https://github.com/chocolatey/choco/issues/2134
