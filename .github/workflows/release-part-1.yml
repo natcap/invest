@@ -68,7 +68,7 @@ jobs:
 
       - name: Create a PR from the autorelease branch into main
         run: |
-          gh --repo emlys/invest-mirror pr create \
+          gh pr create \
             --base main \
             --head $AUTORELEASE_BRANCH \
             --title "$VERSION release" \
@@ -108,7 +108,7 @@ jobs:
 
             **If $VERSION tag workflow succeeds, but this PR workflow fails
             due to an intermittent problem**, continue with the release.
-            Approve and merge this PR with a comment explaining what happened.
+            Approve and merge this PR with a comment explaining what happened."
 
       - name: Roll back on failure
         if: failure()
