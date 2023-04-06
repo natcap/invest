@@ -64,7 +64,7 @@ jobs:
       - name: Tag and push
         run: |
           git tag $VERSION
-          git push origin $VERSION $AUTORELEASE_BRANCH
+          git push origin $VERSION
 
       - name: Create a PR from the autorelease branch into main
         run: |
