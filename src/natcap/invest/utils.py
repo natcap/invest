@@ -80,10 +80,11 @@ def _log_gdal_errors(*args, **kwargs):
             LOGGER.debug("_log_gdal_errors was called with no args/kwargs. "
                          "Skipping.")
             return
-    except Exception as e:
+    except UnicodeError as e:
         # We might get here if something goes wrong in len().  This happened on
         # the forums before we started using UTF-8 mode.
         # https://github.com/natcap/invest/issues/1167
+
         def _b64pickle(obj):
             # Sometimes you just need to see the original object.
             # Pickle allows us to serialize any python object into a bytestring
@@ -94,9 +95,20 @@ def _log_gdal_errors(*args, **kwargs):
 
         LOGGER.exception(
             f"{str(e)}\n"
-            f"  args   (b64 pickle): {repr(args)}\n"
-            f"  kwargs (b64 pickle): {repr(kwargs)}"
+            f"  args   (b64 pickle): {repr(_b64pickle(args))}\n"
+            f"  kwargs (b64 pickle): {repr(_b64pickle(kwargs))}\n"
+            f"  exc data:\n"
+            f"    raw exc:      (b64 pickle): {repr(_b64pickle(e))}\n"
+            f"    exc.encoding: (b64 pickle): {repr(_b64pickle(e.encoding))}\n"
+            f"    exc.reason:   (b64 pickle): {repr(_b64pickle(e.reason))}\n"
+            f"    exc.object:   (b64 pickle): {repr(_b64pickle(e.object))}\n"
+            f"    exc.start:    (b64 pickle): {repr(_b64pickle(e.start))}\n"
+            f"    exc.end:      (b64 pickle): {repr(_b64pickle(e.end))}"
         )
+        return
+    except Exception as e:
+        # Generic exception handler if a different case was not met.
+        LOGGER.exception(str(e))
         return
 
     # If we have gotten to this point, we know that the logger was called with
