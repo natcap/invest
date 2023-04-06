@@ -110,9 +110,9 @@ jobs:
             due to an intermittent problem**, continue with the release.
             Approve and merge this PR with a comment explaining what happened."
 
-      - name: Roll back on failure
-        if: failure()
-        uses: ./.github/actions/rollback_release
-        with:
-          VERSION: ${{ env.VERSION }}
-          GITHUB_TOKEN: ${{ env.GITHUB_TOKEN }}
+      # - name: Roll back on failure
+      #   if: failure()
+      #   uses: ./.github/actions/rollback_release
+      #   with:
+      #     VERSION: ${{ env.VERSION }}
+      #     GITHUB_TOKEN: ${{ env.GITHUB_TOKEN }}
