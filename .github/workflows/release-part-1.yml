@@ -14,11 +14,7 @@ env:
   # this is necessary for the pr checks
   GITHUB_TOKEN: ${{ secrets.AUTORELEASE_BOT_PAT }}
 
-permissions:
-  contents: write
-  pull-requests: write
-  actions: write
-  checks: write
+permissions: write-all
 
 jobs:
   finalize-and-tag:
