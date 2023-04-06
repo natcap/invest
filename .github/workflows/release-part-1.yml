@@ -63,6 +63,7 @@ jobs:
 
       - name: Tag and push
         run: |
+          git push origin $AUTORELEASE_BRANCH
           git tag $VERSION
           git push origin $VERSION
 
@@ -86,13 +87,13 @@ jobs:
             any release steps that have completed so far.
 
             ## Review this PR
-            - [] Make sure that the automated changes look correct
-            - [] Wait for BOTH the PR checks AND the [$VERSION tag checks]()
-                 to complete. The $VERSION tag workflow is most important
-                 because it produces the artifacts that will be used in the
-                 next steps of the release process. If it fails for any reason,
+            - [ ] Make sure that the automated changes look correct
+            - [ ] Wait for BOTH the PR checks AND the [$VERSION tag checks]() \
+                 to complete. The $VERSION tag workflow is most important \
+                 because it produces the artifacts that will be used in the \
+                 next steps of the release process. If it fails for any reason, \
                  decline this PR and start over.
-            - [] Download and try out the artifacts from the [tag build]
+            - [ ] Download and try out the artifacts from the [tag build]
 
             **If everything looks good**, approve and merge this PR. This will
             trigger a Github Action that will publish the release. Then go
@@ -110,9 +111,9 @@ jobs:
             due to an intermittent problem**, continue with the release.
             Approve and merge this PR with a comment explaining what happened."
 
-      # - name: Roll back on failure
-      #   if: failure()
-      #   uses: ./.github/actions/rollback_release
-      #   with:
-      #     VERSION: ${{ env.VERSION }}
-      #     GITHUB_TOKEN: ${{ env.GITHUB_TOKEN }}
+      - name: Roll back on failure
+        if: failure()
+        uses: ./.github/actions/rollback_release
+        with:
+          VERSION: ${{ env.VERSION }}
+          GITHUB_TOKEN: ${{ env.GITHUB_TOKEN }}
