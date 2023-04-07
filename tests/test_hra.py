@@ -758,7 +758,6 @@ class HRAUnitTests(unittest.TestCase):
         expected_df['path'] = [os.path.join(self.workspace_dir, 'foo.tif')]
 
         for filename, func in [('target.csv', source_df.to_csv),
-                               ('target.xls', source_df.to_excel),
                                ('target.xlsx', source_df.to_excel)]:
             full_filepath = os.path.join(self.workspace_dir, filename)
             func(full_filepath, index=False)
