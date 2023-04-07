@@ -10,6 +10,7 @@ on:
 
 env:
   BRANCH: ${{ github.head_ref }}
+  GITHUB_TOKEN: ${{ secrets.AUTORELEASE_BOT_PAT }}
 
 jobs:
   roll_back_release:
