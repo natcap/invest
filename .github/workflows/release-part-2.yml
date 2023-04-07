@@ -9,7 +9,6 @@ on:
       - main
 
 env:
-  BRANCH: ${{ github.head_ref }}
   GITHUB_TOKEN: ${{ secrets.AUTORELEASE_BOT_PAT }}
 
 jobs:
@@ -37,7 +36,7 @@ jobs:
         run: conda install --channel conda-forge twine
 
       - name: Extract version from autorelease branch name
-        run: echo "VERSION=${BRANCH:12}" >> $GITHUB_ENV
+        run: echo "VERSION=$(echo ${{ github.head_ref }} | cut -c 13-)" >> $GITHUB_ENV
 
       - name: Find actions run for the $VERSION tag
         run: |
@@ -70,26 +69,17 @@ jobs:
             gh --repo emlys/invest-mirror run download $RUN_ID --dir artifacts --name "$artifact"
           done
 
-      - name: Create release message
-        run: |
-          # Format the HISTORY of this release for the release.
-          # This file represents both the title and the body of the
-          # release.  A blank line separates the title from the body.
-
-          echo "$VERSION" >> $RELEASE_MESSAGE_FILE
-          echo "" >> $RELEASE_MESSAGE_FILE
-          echo "This bugfix release includes the following fixes and features:" >> "$RELEASE_MESSAGE_FILE"
-          echo "" >> $RELEASE_MESSAGE_FILE  # extra line to clarify we're starting a bulleted list.
-
-          # Copy the history notes for this version into the release message
-          # The tail +3 cuts off the version string and underline of the title.
-          sed -n "/$VERSION/,/^$/p" HISTORY.rst | tail -n +3 >> $RELEASE_MESSAGE_FILE
-
       - name: Create Github release
         run: |
+          # Copy the history notes for this version into the release message
+          # The tail +3 cuts off the version string and underline of the title.
           gh release create $VERSION \
-            --notes-file $RELEASE_MESSAGE_FILE \
             --verify-tag \
+            --title $VERSION \
+            --notes "
+            This release includes the following fixes and features:
+
+            $(sed -n "/$VERSION/,/^$/p" HISTORY.rst | tail -n +3)" \
             artifacts/*
 
       - name: Create a PyPI release
