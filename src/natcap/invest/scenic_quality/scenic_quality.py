@@ -513,22 +513,27 @@ def _determine_valid_viewpoints(dem_path, structures_path):
                     structures_layer.GetFeatureCount())
 
         radius_fieldname = None
-        fieldnames = set(
-            column.GetName() for column in structures_layer.schema)
+        fieldnames = {}
+        for column in structures_layer.schema:
+            actual_fieldname = column.GetName()
+            cleaned_fieldname = actual_fieldname.upper().strip()
+            fieldnames[cleaned_fieldname] = actual_fieldname
         possible_radius_fieldnames = set(
-            ['RADIUS', 'RADIUS2']).intersection(fieldnames)
+            ['RADIUS', 'RADIUS2']).intersection(set(fieldnames.keys()))
         if possible_radius_fieldnames:
-            radius_fieldname = possible_radius_fieldnames.pop()
+            radius_fieldname = fieldnames[possible_radius_fieldnames.pop()]
 
-        height_present = False
-        height_fieldname = 'HEIGHT'
-        if height_fieldname in fieldnames:
+        try:
+            height_fieldname = fieldnames['HEIGHT']
             height_present = True
+        except KeyError:
+            height_present = False
 
-        weight_present = False
-        weight_fieldname = 'WEIGHT'
-        if weight_fieldname in fieldnames:
+        try:
+            weight_fieldname = fieldnames['WEIGHT']
             weight_present = True
+        except KeyError:
+            weight_present = False
 
         last_log_time = time.time()
         n_features_touched = -1
@@ -560,11 +565,11 @@ def _determine_valid_viewpoints(dem_path, structures_path):
 
             max_radius = None
             if radius_fieldname:
-                max_radius = math.fabs(point.GetField(radius_fieldname))
+                max_radius = math.fabs(float(point.GetField(radius_fieldname)))
 
             height = 0.0
             if height_present:
-                height = math.fabs(point.GetField(height_fieldname))
+                height = math.fabs(float(point.GetField(height_fieldname)))
 
             weight = 1.0
             if weight_present:

@@ -1,9 +1,6 @@
 """Module for Regression Testing the InVEST Scenic Quality module."""
-import contextlib
 import glob
-import logging
 import os
-import queue
 import shutil
 import tempfile
 import unittest
@@ -409,14 +406,14 @@ class ScenicQualityTests(unittest.TestCase):
                                        'viewpoints.geojson')
         ScenicQualityTests.create_viewpoints(
             viewpoints_path,
-            fields={'RADIUS': ogr.OFTReal,
-                    'HEIGHT': ogr.OFTReal,
+            fields={' RADIUS ': ogr.OFTReal,  # spaces in fieldname
+                    'HeighT': ogr.OFTReal,  # mixed case
                     'WEIGHT': ogr.OFTReal},
             attributes=[
-                {'RADIUS': 6.0, 'HEIGHT': 1.0, 'WEIGHT': 1.0},
-                {'RADIUS': 6.0, 'HEIGHT': 1.0, 'WEIGHT': 1.0},
-                {'RADIUS': 6.0, 'HEIGHT': 1.0, 'WEIGHT': 2.5},
-                {'RADIUS': 6.0, 'HEIGHT': 1.0, 'WEIGHT': 2.5}])
+                {' RADIUS ': 6.0, 'HeighT': 1.0, 'WEIGHT': 1.0},
+                {' RADIUS ': 6.0, 'HeighT': 1.0, 'WEIGHT': 1.0},
+                {' RADIUS ': 6.0, 'HeighT': 1.0, 'WEIGHT': 2.5},
+                {' RADIUS ': 6.0, 'HeighT': 1.0, 'WEIGHT': 2.5}])
 
         aoi_path = os.path.join(self.workspace_dir, 'aoi.geojson')
         ScenicQualityTests.create_aoi(aoi_path)
