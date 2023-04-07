@@ -51,16 +51,24 @@ jobs:
       - name: Download release artifacts
         run: |
           mkdir artifacts
-          gh run download $RUN_ID \
-            --dir artifacts \
-            --name InVEST-Windows-binary.zip \
-            --name InVEST-macOS-binary.zip \
-            --name Workbench-Windows-binary.zip \
-            --name Workbench-macOS-binary.zip \
-            --name InVEST-sample-data.zip \
-            --name InVEST-user-guide.zip \
-            --name "Source distribution.zip" \
-            --name "Wheel for *.zip"
+          # this will download a folder containing each artifact
+          gh --repo emlys/invest-mirror run download $RUN_ID --dir artifacts --pattern "Wheel for *"
+          # move the artifacts out of the folders
+          mv artifacts/*/* artifacts
+          rm -rf artifacts/Wheel*
+          # verify that all 6 wheels are there
+          if [ `find artifacts/* | wc -l` -ne 6 ]; then exit 1; fi
+
+          # download each artifact separately so that the command will fail if
+          # any artifact is not found
+          for artifact in Workbench-Windows-binary \
+                          Workbench-macOS-binary \
+                          InVEST-sample-data \
+                          InVEST-user-guide \
+                          "Source distribution"
+          do
+            gh --repo emlys/invest-mirror run download $RUN_ID --dir artifacts --name "$artifact"
+          done
 
       - name: Create release message
         run: |
