@@ -33,7 +33,7 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Install dependencies
-        run: conda install --channel conda-forge twine
+        run: pip install twine
 
       - name: Extract version from autorelease branch name
         run: echo "VERSION=$(echo ${{ github.head_ref }} | cut -c 13-)" >> $GITHUB_ENV
@@ -44,8 +44,7 @@ jobs:
             gh run list \
               --branch ${{ env.VERSION }} \
               --json databaseId \
-              --jq ".[].databaseId")
-          echo $RUN_ID
+              --jq .[].databaseId)
 
       - name: Download release artifacts
         run: |
@@ -58,8 +57,7 @@ jobs:
           # verify that all 6 wheels are there
           if [ `find artifacts/* | wc -l` -ne 6 ]; then exit 1; fi
 
-          # download each artifact separately so that the command will fail if
-          # any artifact is not found
+          # download each artifact separately so that the command will fail if any is missing
           for artifact in Workbench-Windows-binary \
                           Workbench-macOS-binary \
                           InVEST-sample-data \
@@ -71,6 +69,10 @@ jobs:
 
       - name: Create Github release
         run: |
+          head -n 100 HISTORY.rst
+          sed -n "/$VERSION/,/^$/p" HISTORY.rst
+          sed -n "/$VERSION/,/^$/p" HISTORY.rst | tail -n +3
+
           # Copy the history notes for this version into the release message
           # The tail +3 cuts off the version string and underline of the title.
           gh release create $VERSION \
@@ -84,7 +86,12 @@ jobs:
 
       - name: Create a PyPI release
         # this is the only step that can't be rolled back
-        run: twine upload -r testpypi artifacts/natcap.invest.*
+        run: |
+          twine upload \
+            --repository testpypi \
+            --username emlys
+            --password ${{ secrets.PYPI_PASSWORD }}
+            artifacts/natcap.invest.*
 
       - name: Roll back on failure
         if: failure()
