@@ -67,7 +67,7 @@ jobs:
           git tag $VERSION
           git push origin $VERSION
 
-      - name: Find actions run for the $VERSION tag
+      - name: Find actions run for the version tag
         run: |
           # wait a few seconds to make sure the actions run exists before querying it
           sleep 5
@@ -86,15 +86,13 @@ jobs:
             --reviewer $GITHUB_ACTOR \
             --assignee $GITHUB_ACTOR \
             --body "
-            Release $VERSION and merge into \`main\`
-
-            # $VERSION Release
+            # Release $VERSION and merge into \`main\`
 
             This PR contains automated changes made for the $VERSION release.
 
-            Approving this PR will trigger an action that publishes the \
-            release. Declining this PR will trigger an action that rolls back \
-            any release steps that have completed so far.
+            Merging this PR will trigger an action that publishes the \
+            release. Closing this PR without merging will trigger an action that \
+            rolls back any release steps that have completed so far.
 
             ## Review this PR
             - [ ] Make sure that the automated changes look correct
@@ -102,7 +100,7 @@ jobs:
                   to complete. The $VERSION tag workflow is most important \
                   because it produces the artifacts that will be used in the \
                   next steps of the release process.
-            - [ ] Download and try out the artifacts from the [tag build]($TAG_RUN_URL)
+            - [ ] Download and try out the [tag build artifacts]($TAG_RUN_URL)
 
             **If everything looks good**, approve and merge this PR. This will \
             trigger a Github Action that will publish the release. Then go \
