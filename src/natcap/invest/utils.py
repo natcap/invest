@@ -47,6 +47,15 @@ GDAL_ERROR_LEVELS = {
 DEFAULT_OSR_AXIS_MAPPING_STRATEGY = osr.OAMS_TRADITIONAL_GIS_ORDER
 
 
+def _b64pickle(obj):
+    # Sometimes you just need to see the original object.
+    # Pickle allows us to serialize any python object into a bytestring
+    # base64 renders that bytestring into ASCII-printable chars.
+    # to decode, run:
+    #    obj = pickle.load(base64.b64decode(printed_string))
+    return base64.b64encode(pickle.dumps(obj))
+
+
 def _log_gdal_errors(*args, **kwargs):
     """Log error messages to osgeo.
 
@@ -80,19 +89,19 @@ def _log_gdal_errors(*args, **kwargs):
             LOGGER.debug("_log_gdal_errors was called with no args/kwargs. "
                          "Skipping.")
             return
-    except UnicodeError as e:
+    except SystemError as e:
         # We might get here if something goes wrong in len().  This happened on
         # the forums before we started using UTF-8 mode.
         # https://github.com/natcap/invest/issues/1167
-
-        def _b64pickle(obj):
-            # Sometimes you just need to see the original object.
-            # Pickle allows us to serialize any python object into a bytestring
-            # base64 renders that bytestring into ASCII-printable chars.
-            # to decode, run:
-            #    obj = pickle.load(base64.b64decode(printed_string))
-            return base64.b64encode(pickle.dumps(obj))
-
+        LOGGER.exception(
+            f"{str(e)}\n"
+            f"  args   (b64 pickle): {repr(_b64pickle(args))}\n"
+            f"  kwargs (b64 pickle): {repr(_b64pickle(kwargs))}\n"
+            f"  SystemError (b64 pickle): {repr(_b64pickle(e))}\n"
+            f"  SystemError args (b64 pickle): {repr(_b64pickle(e.args))}"
+        )
+        return
+    except (UnicodeError, UnicodeDecodeError, UnicodeEncodeError) as e:
         LOGGER.exception(
             f"{str(e)}\n"
             f"  args   (b64 pickle): {repr(_b64pickle(args))}\n"
