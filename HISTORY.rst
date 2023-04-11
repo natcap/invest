@@ -48,6 +48,9 @@ Unreleased Changes
     * The Scenic Quality model will now raise an error when it encounters a
       geometry that is not a simple Point.  This is in line with the user's
       guide chapter.  https://github.com/natcap/invest/issues/1245
+    * The Scenic Quality model now supports both uppercase and lowercase
+      fieldnames. Leading and trailing spaces are now also stripped for the
+      user's convenience. https://github.com/natcap/invest/issues/1276
 
 3.13.0 (2023-03-17)
 -------------------
