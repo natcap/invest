@@ -453,16 +453,6 @@ def main(user_args=None):
         LOGGER.info('Imported target %s from %s',
                     model_module.__name__, model_module)
 
-        # issue 1167 debugging
-        for packagename in ('osgeo', 'natcap', 'pygeoprocessing'):
-            logging.getLogger(packagename).setLevel(logging.DEBUG)
-            try:
-                version = __import__(packagename).__version__
-            except:
-                version = 'unknown'
-            LOGGER.debug(f"{packagename}=={version}")
-
-
         with utils.prepare_workspace(parsed_datastack.args['workspace_dir'],
                                      name=parsed_datastack.model_name,
                                      logging_level=log_level):
@@ -470,6 +460,18 @@ def main(user_args=None):
                        'Starting model with parameters: \n%s',
                        datastack.format_args_dict(parsed_datastack.args,
                                                   parsed_datastack.model_name))
+
+            # issue 1167 debugging
+            for packagename in ('osgeo', 'natcap', 'pygeoprocessing'):
+                logging.getLogger(packagename).setLevel(logging.DEBUG)
+                try:
+                    version = __import__(packagename).__version__
+                except:
+                    version = 'unknown'
+                LOGGER.debug(f"{packagename}=={version}")
+
+            LOGGER.debug('Using GDAL Exceptions')
+            gdal.UseExceptions()
 
             # logging extra encoding information
             LOGGER.debug(f"Python: {sys.version_info}")
