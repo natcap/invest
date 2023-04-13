@@ -454,8 +454,14 @@ def main(user_args=None):
                     model_module.__name__, model_module)
 
         # issue 1167 debugging
-        for logger in ('osgeo', 'natcap', 'pygeoprocessing'):
-            logging.getLogger(logger).setLevel(logging.DEBUG)
+        for packagename in ('osgeo', 'natcap', 'pygeoprocessing'):
+            logging.getLogger(packagename).setLevel(logging.DEBUG)
+            try:
+                version = __import__(packagename).__version__
+            except:
+                version = 'unknown'
+            LOGGER.debug(f"{packagename}=={version}")
+
 
         with utils.prepare_workspace(parsed_datastack.args['workspace_dir'],
                                      name=parsed_datastack.model_name,
@@ -466,8 +472,10 @@ def main(user_args=None):
                                                   parsed_datastack.model_name))
 
             # logging extra encoding information
+            LOGGER.debug(f"Python: {sys.version_info}")
             if sys.version_info > (3, 11, 0):
                 LOGGER.debug(f"Locale encoding: {locale.getencoding()}")
+            LOGGER.debug(f"Locale: {locale.getlocale()}")
             LOGGER.debug(f"Filesystem encoding: {sys.getfilesystemencoding()}")
             LOGGER.debug("Filesystem encode errors: "
                          f"{sys.getfilesystemencodeerrors()}")

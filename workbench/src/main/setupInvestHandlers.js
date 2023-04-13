@@ -95,6 +95,7 @@ export function setupInvestRunHandlers(investExe) {
       shell: true,
       env: envVars,
     };
+    opts.env.CPL_DEBUG = 'ON';  // #1167 - force for now
     opts.env.PYTHONUTF8 = '1'; // #1167 - force UTF-8 mode
     if (process.platform !== 'win32') {
       opts.detached = true;
