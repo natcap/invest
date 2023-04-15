@@ -163,6 +163,7 @@ class InvestTab extends React.Component {
       this.state.modelSpec.pyname,
       args,
       investSettings.loggingLevel,
+      investSettings.gdalLoggingLevel,
       investSettings.taskgraphLoggingLevel,
       investSettings.language,
       tabID

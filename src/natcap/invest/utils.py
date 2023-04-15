@@ -1,9 +1,11 @@
 """InVEST specific code utils."""
+import base64
 import codecs
 import contextlib
 import logging
 import math
 import os
+import pickle
 import re
 import shutil
 import tempfile
@@ -18,17 +20,17 @@ from osgeo import osr
 from shapely.wkt import loads
 
 LOGGER = logging.getLogger(__name__)
-_OSGEO_LOGGER = logging.getLogger('osgeo')
+_OSGEO_LOGGER = logging.getLogger('osgeo.gdal')
 LOG_FMT = (
     "%(asctime)s "
     "(%(name)s) "
     "%(module)s.%(funcName)s(%(lineno)d) "
     "%(levelname)s %(message)s")
 
-# GDAL has 5 error levels, python's logging has 6.  We skip logging.INFO.
-# A dict clarifies the mapping between levels.
+# GDAL has 5 error levels, python's logging has 6.
+# This error level mapping matches GDAL's as of GDAL 3.5.0.
 GDAL_ERROR_LEVELS = {
-    gdal.CE_None: logging.NOTSET,
+    gdal.CE_None: logging.INFO,
     gdal.CE_Debug: logging.DEBUG,
     gdal.CE_Warning: logging.WARNING,
     gdal.CE_Failure: logging.ERROR,
@@ -43,6 +45,15 @@ GDAL_ERROR_LEVELS = {
 # axis order, which will use Lon,Lat order for Geographic CRS, but otherwise
 # leaves Projected CRS alone
 DEFAULT_OSR_AXIS_MAPPING_STRATEGY = osr.OAMS_TRADITIONAL_GIS_ORDER
+
+
+def _b64pickle(obj):
+    # Sometimes you just need to see the original object.
+    # Pickle allows us to serialize any python object into a bytestring
+    # base64 renders that bytestring into ASCII-printable chars.
+    # to decode, run:
+    #    obj = pickle.load(base64.b64decode(printed_string))
+    return base64.b64encode(pickle.dumps(obj))
 
 
 def _log_gdal_errors(*args, **kwargs):
@@ -69,34 +80,69 @@ def _log_gdal_errors(*args, **kwargs):
     Returns:
         ``None``
     """
-    if len(args) + len(kwargs) != 3:
-        LOGGER.error(
-            '_log_gdal_errors was called with an incorrect number of '
-            f'arguments.  args: {args}, kwargs: {kwargs}')
-
     try:
-        gdal_args = {}
-        for index, key in enumerate(('err_level', 'err_no', 'err_msg')):
-            try:
-                parameter = args[index]
-            except IndexError:
-                parameter = kwargs[key]
-            gdal_args[key] = parameter
-    except KeyError as missing_key:
+        # We had a case on the forums where GDAL was calling the error handler
+        # with no args or kwargs at all - it isn't even clear why the error
+        # handler was called in the first place..  Handling it here at the
+        # DEBUG level to avoid exceptions being logged to the logfile.
+        if len(args) + len(kwargs) == 0:
+            LOGGER.debug("_log_gdal_errors was called with no args/kwargs. "
+                         "Skipping.")
+            return
+    except SystemError as e:
+        # We might get here if something goes wrong in len().  This happened on
+        # the forums before we started using UTF-8 mode.
+        # https://github.com/natcap/invest/issues/1167
         LOGGER.exception(
-            f'_log_gdal_errors called without the argument {missing_key}. '
-            f'Called with args: {args}, kwargs: {kwargs}')
-
-        # Returning from the function because we don't have enough
-        # information to call the ``osgeo_logger`` in the way we intended.
+            f"{str(e)}\n"
+            f"  args   (b64 pickle): {repr(_b64pickle(args))}\n"
+            f"  kwargs (b64 pickle): {repr(_b64pickle(kwargs))}\n"
+            f"  SystemError (b64 pickle): {repr(_b64pickle(e))}\n"
+            f"  SystemError args (b64 pickle): {repr(_b64pickle(e.args))}"
+        )
+        return
+    except (UnicodeError, UnicodeDecodeError, UnicodeEncodeError) as e:
+        LOGGER.exception(
+            f"{str(e)}\n"
+            f"  args   (b64 pickle): {repr(_b64pickle(args))}\n"
+            f"  kwargs (b64 pickle): {repr(_b64pickle(kwargs))}\n"
+            f"  exc data:\n"
+            f"    raw exc:      (b64 pickle): {repr(_b64pickle(e))}\n"
+            f"    exc.encoding: (b64 pickle): {repr(_b64pickle(e.encoding))}\n"
+            f"    exc.reason:   (b64 pickle): {repr(_b64pickle(e.reason))}\n"
+            f"    exc.object:   (b64 pickle): {repr(_b64pickle(e.object))}\n"
+            f"    exc.start:    (b64 pickle): {repr(_b64pickle(e.start))}\n"
+            f"    exc.end:      (b64 pickle): {repr(_b64pickle(e.end))}"
+        )
+        return
+    except Exception as e:
+        # Generic exception handler if a different case was not met.
+        LOGGER.exception(str(e))
         return
 
-    err_level = gdal_args['err_level']
+    # If we have gotten to this point, we know that the logger was called with
+    # some number of arguments that might be a combination of args and kwargs.
+    # If any are missing, use a placeholder.
+    gdal_args = {}
+    for index, key in enumerate(('err_level', 'err_no', 'err_msg')):
+        try:
+            parameter = args[index]
+        except IndexError:
+            try:
+                parameter = kwargs[key]
+            except KeyError:
+                parameter = "MISSING"
+        gdal_args[key] = parameter
+
+    try:
+        err_level = GDAL_ERROR_LEVELS[gdal_args['err_level']]
+    except KeyError:
+        # If GDAL didn't report an error level, assume debug.
+        err_level = logging.DEBUG
     err_no = gdal_args['err_no']
     err_msg = gdal_args['err_msg'].replace('\n', '')
     _OSGEO_LOGGER.log(
-        level=GDAL_ERROR_LEVELS[err_level],
-        msg=f'[errno {err_no}] {err_msg}')
+        level=err_level, msg=f'[errno {err_no}] {err_msg}')
 
 
 @contextlib.contextmanager
@@ -327,7 +373,7 @@ def make_suffix_string(args, suffix_key):
 
 
 def exponential_decay_kernel_raster(expected_distance, kernel_filepath,
-        normalize=True):
+                                    normalize=True):
     """Create a raster-based exponential decay kernel.
 
     The raster created will be a tiled GeoTiff, with 256x256 memory blocks.

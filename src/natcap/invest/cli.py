@@ -5,8 +5,10 @@ import codecs
 import datetime
 import importlib
 import json
+import locale
 import logging
 import multiprocessing
+import os
 import pprint
 import sys
 import textwrap
@@ -18,7 +20,7 @@ from natcap.invest import model_metadata
 from natcap.invest import set_locale
 from natcap.invest import ui_server
 from natcap.invest import utils
-
+from osgeo import gdal
 
 DEFAULT_EXIT_CODE = 1
 LOGGER = logging.getLogger(__name__)
@@ -459,6 +461,36 @@ def main(user_args=None):
                        'Starting model with parameters: \n%s',
                        datastack.format_args_dict(parsed_datastack.args,
                                                   parsed_datastack.model_name))
+
+            # issue 1167 debugging
+            for packagename in ('osgeo', 'natcap', 'pygeoprocessing'):
+                logging.getLogger(packagename).setLevel(logging.DEBUG)
+                try:
+                    version = __import__(packagename).__version__
+                except:
+                    version = 'unknown'
+                LOGGER.debug(f"{packagename}=={version}")
+
+            LOGGER.debug('Using GDAL Exceptions')
+            gdal.UseExceptions()
+
+            # logging extra encoding information
+            LOGGER.debug(f"Python: {sys.version_info}")
+            if sys.version_info > (3, 11, 0):
+                LOGGER.debug(f"Locale encoding: {locale.getencoding()}")
+            LOGGER.debug(f"Locale: {locale.getlocale()}")
+            LOGGER.debug(f"Filesystem encoding: {sys.getfilesystemencoding()}")
+            LOGGER.debug("Filesystem encode errors: "
+                         f"{sys.getfilesystemencodeerrors()}")
+            LOGGER.debug(f"UTF8 Mode: {sys.flags.utf8_mode}")
+            for envvar in ['LANG', 'PYTHONIOENCODING',
+                           "PYTHONLEGACYWINDOWSSTDIO",
+                           "PYTHONCOERCECLOCALE",
+                           "PYTHONUTF8", "PYTHONWARNDEFAULTENCODING"]:
+                try:
+                    LOGGER.debug(f"{envvar}={os.environ[envvar]}")
+                except KeyError:
+                    LOGGER.debug(f"{envvar} not set")
 
             # We're deliberately not validating here because the user
             # can just call ``invest validate <datastack>`` to validate.

@@ -45,7 +45,15 @@ export function setupInvestRunHandlers(investExe) {
   });
 
   ipcMain.on(ipcMainChannels.INVEST_RUN, async (
-    event, modelRunName, pyModuleName, args, loggingLevel, taskgraphLoggingLevel, language, tabID
+    event,
+    modelRunName,
+    pyModuleName,
+    args,
+    loggingLevel,
+    gdalLoggingLevel,
+    taskgraphLoggingLevel,
+    language,
+    tabID
   ) => {
     let investRun;
     let investStarted = false;
@@ -77,17 +85,22 @@ export function setupInvestRunHandlers(investExe) {
       '--headless',
       `-d "${datastackPath}"`,
     ];
-    logger.debug(`set to run ${cmdArgs}`);
-    if (process.platform !== 'win32') {
-      investRun = spawn(investExe, cmdArgs, {
-        shell: true, // without shell, IOError when datastack.py loads json
-        detached: true, // counter-intuitive, but w/ true: invest terminates when this shell terminates
-      });
-    } else { // windows
-      investRun = spawn(investExe, cmdArgs, {
-        shell: true,
-      });
+    // Make a copy of process.env before modifying it.
+    const envVars = JSON.parse(JSON.stringify(process.env));
+    if (gdalLoggingLevel === 'DEBUG') {
+      envVars.CPL_DEBUG = 'ON';
     }
+    logger.debug(`set to run ${cmdArgs}`);
+    const opts = {
+      shell: true,
+      env: envVars,
+    };
+    opts.env.CPL_DEBUG = 'ON';  // #1167 - force for now
+    opts.env.PYTHONUTF8 = '1'; // #1167 - force UTF-8 mode
+    if (process.platform !== 'win32') {
+      opts.detached = true;
+    }
+    investRun = spawn(investExe, cmdArgs, opts);
 
     // There's no general way to know that a spawned process started,
     // so this logic to listen once on stdout seems like the way.
