@@ -69,19 +69,16 @@ jobs:
 
       - name: Create Github release
         run: |
-          head -n 100 HISTORY.rst
-          sed -n "/$VERSION/,/^$/p" HISTORY.rst
-          sed -n "/$VERSION/,/^$/p" HISTORY.rst | tail -n +3
-
           # Copy the history notes for this version into the release message
-          # The tail +3 cuts off the version string and underline of the title.
+          # The sed | tail | sed | head command extracts everything in the
+          # first section of the RST file (between ---- section dividers)
           gh release create $VERSION \
             --verify-tag \
             --title $VERSION \
             --notes "
             This release includes the following fixes and features:
 
-            $(sed -n "/$VERSION/,/^$/p" HISTORY.rst | tail -n +3)" \
+            $(sed -n '/^---*/,$ p' HISTORY.rst | tail -n +2 | sed '/^---*/q' | head -n -2)" \
             artifacts/*
 
       - name: Create a PyPI release
