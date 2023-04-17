@@ -3,26 +3,25 @@
 An implementation of the model described in 'Degradation in carbon stocks
 near tropical forest edges', by Chaplin-Kramer et. al (2015).
 """
-import os
 import logging
+import os
+import pickle
 import time
 import uuid
 
-import pickle
 import numpy
-from osgeo import gdal
-from osgeo import ogr
 import pygeoprocessing
 import scipy.spatial
 import taskgraph
+from osgeo import gdal
+from osgeo import ogr
 
-from . import utils
+from . import gettext
 from . import spec_utils
-from .spec_utils import u
+from . import utils
 from . import validation
 from .model_metadata import MODEL_METADATA
-from . import gettext
-
+from .unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
 
@@ -32,7 +31,7 @@ DISTANCE_UPPER_BOUND = 500e3
 # helpful to have a global nodata defined for the whole model
 NODATA_VALUE = -1
 
-ARGS_SPEC = {
+MODEL_SPEC = {
     "model_name": MODEL_METADATA["forest_carbon_edge_effect"].model_title,
     "pyname": MODEL_METADATA["forest_carbon_edge_effect"].pyname,
     "userguide": MODEL_METADATA["forest_carbon_edge_effect"].userguide,
@@ -66,12 +65,7 @@ ARGS_SPEC = {
         "biophysical_table_path": {
             "type": "csv",
             "columns": {
-                "lucode": {
-                    "type": "integer",
-                    "about": gettext(
-                        "Code for this LULC class from the LULC map. Every "
-                        "value in the LULC raster must have a corresponding "
-                        "entry in this column.")},
+                "lucode": spec_utils.LULC_TABLE_COLUMN,
                 "is_tropical_forest": {
                     "type": "boolean",
                     "about": gettext(
@@ -116,8 +110,8 @@ ARGS_SPEC = {
         },
         "lulc_raster_path": {
             **spec_utils.LULC,
-            "about": gettext(
-                f"{spec_utils.LULC['about']} All values in this raster must "
+            "about": spec_utils.LULC['about'] + " " + gettext(
+                "All values in this raster must "
                 "have corresponding entries in the Biophysical Table."),
             "projected": True
         },
@@ -186,6 +180,78 @@ ARGS_SPEC = {
                 "Proportion of forest edge biomass that is elemental carbon. "
                 "Required if Compute Forest Edge Effects is selected."),
             "name": gettext("forest edge biomass to carbon conversion factor")
+        }
+    },
+    "outputs": {
+        "carbon_map.tif": {
+            "about": (
+                "A map of carbon stock per pixel, with the amount in forest derived from the regression based on "
+                "distance to forest edge, and the amount in non-forest classes according to the biophysical table. "
+                "Note that because the map displays carbon per pixel, coarser resolution maps should have higher "
+                "values for carbon, because the pixel areas are larger."),
+            "bands": {1: {
+                "type": "number",
+                "units": u.metric_ton/u.pixel
+            }}
+        },
+        "aggregated_carbon_stocks.shp": {
+            "about": "AOI map with aggregated carbon statistics.",
+            "geometries": spec_utils.POLYGONS,
+            "fields": {
+                "c_sum": {
+                    "type": "number",
+                    "units": u.metric_ton,
+                    "about": "Total carbon in the area."
+                },
+                "c_ha_mean":{
+                    "type": "number",
+                    "units": u.metric_ton/u.hectare,
+                    "about": "Mean carbon density in the area."
+                }
+            }
+        },
+        "intermediate_outputs": {
+            "type": "directory",
+            "contents": {
+                "c_above_carbon_stocks.tif": {
+                    "about": "Carbon stored in the aboveground biomass carbon pool.",
+                    "bands": {1: {"type": "number", "units": u.metric_ton}}
+                },
+                "c_below_carbon_stocks.tif": {
+                    "about": "Carbon stored in the belowground biomass carbon pool.",
+                    "bands": {1: {"type": "number", "units": u.metric_ton}}
+                },
+                "c_dead_carbon_stocks.tif": {
+                    "about": "Carbon stored in the dead matter biomass carbon pool.",
+                    "bands": {1: {"type": "number", "units": u.metric_ton}}
+                },
+                "c_soil_carbon_stocks.tif": {
+                    "about": "Carbon stored in the soil biomass carbon pool.",
+                    "bands": {1: {"type": "number", "units": u.metric_ton}}
+                },
+                "local_carbon_shape.shp": {
+                    "about": (
+                        "The regression parameters reprojected to match your "
+                        "study area."),
+                    "geometries": spec_utils.POLYGONS,
+                    "fields": {}
+                },
+                "edge_distance.tif": {
+                    "about": (
+                        "The distance of each forest pixel to the nearest "
+                        "forest edge"),
+                    "bands": {1: {"type": "number", "units": u.pixel}}
+                },
+                "tropical_forest_edge_carbon_stocks.tif": {
+                    "about": (
+                        "A map of carbon in the forest only, according to the "
+                        "regression method."),
+                    "bands": {1: {
+                        "type": "number", "units": u.metric_ton/u.hectare
+                    }}
+                },
+                "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
+            }
         }
     }
 }
@@ -971,7 +1037,7 @@ def validate(args, limit_to=None):
 
     """
     validation_warnings = validation.validate(
-        args, ARGS_SPEC['args'], ARGS_SPEC['args_with_spatial_overlap'])
+        args, MODEL_SPEC['args'], MODEL_SPEC['args_with_spatial_overlap'])
 
     invalid_keys = set([])
     for affected_keys, error_msg in validation_warnings:

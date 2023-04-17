@@ -1,25 +1,102 @@
 """InVEST Annual Water Yield model."""
 import logging
-import os
 import math
+import os
 import pickle
 
 import numpy
-from osgeo import gdal
-from osgeo import ogr
 import pygeoprocessing
 import taskgraph
+from osgeo import gdal
+from osgeo import ogr
 
-from . import utils
+from . import gettext
 from . import spec_utils
-from .spec_utils import u
+from . import utils
 from . import validation
 from .model_metadata import MODEL_METADATA
-from . import gettext
+from .unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
 
-ARGS_SPEC = {
+BASE_OUTPUT_FIELDS = {
+    "precip_mn": {
+        "type": "number",
+        "units": u.mm,
+        "about": "Mean precipitation per pixel in the subwatershed.",
+    },
+    "PET_mn": {
+        "type": "number",
+        "units": u.mm,
+        "about": "Mean potential evapotranspiration per pixel in the subwatershed.",
+    },
+    "AET_mn": {
+        "type": "number",
+        "units": u.mm,
+        "about": "Mean actual evapotranspiration per pixel in the subwatershed.",
+    },
+    "wyield_mn": {
+        "type": "number",
+        "units": u.mm,
+        "about": "Mean water yield per pixel in the subwatershed.",
+    },
+    "wyield_vol": {
+        "type": "number",
+        "units": u.m**3,
+        "about": "Total volume of water yield in the subwatershed.",
+    }
+}
+SCARCITY_OUTPUT_FIELDS = {
+    "consum_vol": {
+        "type": "number",
+        "units": u.m**3,
+        "about": "Total water consumption for each watershed.",
+        "created_if": "demand_table_path"
+    },
+    "consum_mn": {
+        "type": "number",
+        "units": u.meter**3/u.hectare,
+        "about": "Mean water consumptive volume per pixel per watershed.",
+        "created_if": "demand_table_path"
+    },
+    "rsupply_vl": {
+        "type": "number",
+        "units": u.m**3,
+        "about": "Total realized water supply (water yield – consumption) volume for each watershed.",
+        "created_if": "demand_table_path"
+    },
+    "rsupply_mn": {
+        "type": "number",
+        "units": u.m**3/u.hectare,
+        "about": "Mean realized water supply (water yield – consumption) volume per pixel per watershed.",
+        "created_if": "demand_table_path"
+    }
+}
+VALUATION_OUTPUT_FIELDS = {
+    "hp_energy": {
+        "type": "number",
+        "units": u.kilowatt_hour,
+        "created_if": "valuation_table_path",
+        "about": "The amount of ecosystem service in energy production terms. This is the amount of energy produced annually by the hydropower station that can be attributed to each watershed based on the watershed’s water yield contribution.",
+    },
+    "hp_val": {
+        "type": "number",
+        "units": u.currency,
+        "created_if": "valuation_table_path",
+        "about": "The amount of ecosystem service in economic terms. This shows the value of the landscape per watershed according to its ability to yield water for hydropower production over the specified timespan, and with respect to the discount rate.",
+    }
+}
+SUBWATERSHED_OUTPUT_FIELDS = {
+    **BASE_OUTPUT_FIELDS,
+    **SCARCITY_OUTPUT_FIELDS
+}
+WATERSHED_OUTPUT_FIELDS = {
+    **BASE_OUTPUT_FIELDS,
+    **SCARCITY_OUTPUT_FIELDS,
+    **VALUATION_OUTPUT_FIELDS
+}
+
+MODEL_SPEC = {
     "model_name": MODEL_METADATA["annual_water_yield"].model_title,
     "pyname": MODEL_METADATA["annual_water_yield"].pyname,
     "userguide": MODEL_METADATA["annual_water_yield"].userguide,
@@ -40,9 +117,9 @@ ARGS_SPEC = {
         "lulc_path": {
             **spec_utils.LULC,
             "projected": True,
-            "about": gettext(
-                f"{spec_utils.LULC['about']} All values in this raster "
-                "must have corresponding entries in the Biophysical Table.")
+            "about": spec_utils.LULC['about'] + " " + gettext(
+                "All values in this raster must have corresponding entries "
+                "in the Biophysical Table.")
         },
         "depth_to_root_rest_layer_path": {
             "type": "raster",
@@ -110,11 +187,7 @@ ARGS_SPEC = {
         "biophysical_table_path": {
             "type": "csv",
             "columns": {
-                "lucode": {
-                    "type": "integer",
-                    "about": gettext(
-                        "LULC code corresponding to values in the LULC map.")
-                },
+                "lucode": spec_utils.LULC_TABLE_COLUMN,
                 "lulc_veg": {
                     "type": "integer",
                     "about": gettext(
@@ -242,6 +315,111 @@ ARGS_SPEC = {
                 "A table mapping each watershed to the associated valuation "
                 "parameters for its hydropower station."),
             "name": gettext("hydropower valuation table")
+        }
+    },
+    "outputs": {
+        "output": {
+            "type": "directory",
+            "contents": {
+                "watershed_results_wyield.shp": {
+                    "fields": {**WATERSHED_OUTPUT_FIELDS},
+                    "geometries": spec_utils.POLYGON,
+                    "about": "Shapefile containing biophysical output values per watershed."
+                },
+                "watershed_results_wyield.csv": {
+                    "columns": {**WATERSHED_OUTPUT_FIELDS},
+                    "about": "Table containing biophysical output values per watershed."
+                },
+                "subwatershed_results_wyield.shp": {
+                    "fields": {**SUBWATERSHED_OUTPUT_FIELDS},
+                    "geometries": spec_utils.POLYGON,
+                    "about": "Shapefile containing biophysical output values per subwatershed."
+                },
+                "subwatershed_results_wyield.csv": {
+                    "columns": {**SUBWATERSHED_OUTPUT_FIELDS},
+                    "about": "Table containing biophysical output values per subwatershed."
+                },
+                "per_pixel": {
+                    "type": "directory",
+                    "about": "Outputs in the per_pixel folder can be useful for intermediate calculations but should NOT be interpreted at the pixel level, as model assumptions are based on processes understood at the subwatershed scale.",
+                    "contents": {
+                        "fractp.tif": {
+                            "about": (
+                                "The fraction of precipitation that actually "
+                                "evapotranspires at the pixel level."),
+                            "bands": {1: {"type": "ratio"}}
+                        },
+                        "aet.tif": {
+                            "about": "Estimated actual evapotranspiration per pixel.",
+                            "bands": {
+                                1: {"type": "number", "units": u.millimeter}
+                            }
+                        },
+                        "wyield.tif": {
+                            "about": "Estimated water yield per pixel.",
+                            "bands": {
+                                1: {"type": "number", "units": u.millimeter}
+                            }
+                        }
+                    }
+                },
+                "intermediate": {
+                    "type": "directory",
+                    "contents": {
+                        "clipped_lulc.tif": {
+                            "about": "Aligned and clipped copy of LULC input.",
+                            "bands": {1: {"type": "integer"}}
+                        },
+                        "depth_to_root_rest_layer.tif": {
+                            "about": (
+                                "Aligned and clipped copy of root restricting "
+                                "layer depth input."),
+                            "bands": {
+                                1: {"type": "number", "units": u.millimeter}
+                            }
+                        },
+                        "eto.tif": {
+                            "about": "Aligned and clipped copy of ET0 input.",
+                            "bands": {
+                                1: {"type": "number", "units": u.millimeter}
+                            }
+                        },
+                        "kc_raster.tif": {
+                            "about": "Map of KC values.",
+                            "bands": {
+                                1: {"type": "number", "units": u.none}
+                            }
+                        },
+                        "pawc.tif": {
+                            "about": "Aligned and clipped copy of PAWC input.",
+                            "bands": {1: {"type": "ratio"}},
+                        },
+                        "pet.tif": {
+                            "about": "Map of potential evapotranspiration.",
+                            "bands": {
+                                1: {"type": "number", "units": u.millimeter}
+                            }
+                        },
+                        "precip.tif": {
+                            "about": "Aligned and clipped copy of precipitation input.",
+                            "bands": {
+                                1: {"type": "number", "units": u.millimeter}
+                            }
+                        },
+                        "root_depth.tif": {
+                            "about": "Map of root depth.",
+                            "bands": {
+                                1: {"type": "number", "units": u.millimeter}
+                            }
+                        },
+                        "veg.tif": {
+                            "about": "Map of vegetated state.",
+                            "bands": {1: {"type": "integer"}},
+                        },
+                        "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
+                    }
+                }
+            }
         }
     }
 }
@@ -1203,4 +1381,4 @@ def validate(args, limit_to=None):
 
     """
     return validation.validate(
-        args, ARGS_SPEC['args'], ARGS_SPEC['args_with_spatial_overlap'])
+        args, MODEL_SPEC['args'], MODEL_SPEC['args_with_spatial_overlap'])

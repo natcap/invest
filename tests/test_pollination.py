@@ -463,7 +463,7 @@ class PollinationTests(unittest.TestCase):
 
 
 class PollinationValidationTests(unittest.TestCase):
-    """Tests for the Pollination Model ARGS_SPEC and validation."""
+    """Tests for the Pollination Model MODEL_SPEC and validation."""
 
     def setUp(self):
         """Create list of always required arguments."""

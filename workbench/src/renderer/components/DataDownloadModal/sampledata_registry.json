@@ -26,9 +26,6 @@
     "filename": "forest_carbon_edge_effect.zip",
     "note": "(required to run model)"
   },
-  "GLOBIO": {
-    "filename": "globio.zip"
-  },
   "Habitat Quality": {
     "filename": "HabitatQuality.zip"
   },
@@ -61,6 +58,9 @@
   },
   "Urban Flood Risk Mitigation": {
     "filename": "UrbanFloodMitigation.zip"
+  },
+  "Urban Nature Access": {
+    "filename": "UrbanNatureAccess.zip"
   },
   "Visitation: Recreation and Tourism": {
     "filename": "recreation.zip"

@@ -59,6 +59,41 @@ ParameterSet = collections.namedtuple('ParameterSet',
                                       'args model_name invest_version')
 
 
+def _tarfile_safe_extract(archive_path, dest_dir_path):
+    """Extract a tarfile in a safe way.
+
+    This function avoids the CVE-2007-4559 exploit that's been a vulnerability
+    in the python stdlib for at least 15 years now and should really be patched
+    upstream.
+
+    Args:
+        archive_path (string): The path to a tarfile, such as a datastack
+            archive created by InVEST.
+        dest_dir_path (string): The path to the destination directory, where
+            the contents should be unzipped.
+
+    Returns:
+        ``None``
+    """
+    # The guts of this function are taken from Trellix's PR to InVEST.  See
+    # https://github.com/natcap/invest/pull/1099 for details.
+    with tarfile.open(archive_path) as tar:
+        def is_within_directory(directory, target):
+            abs_directory = os.path.abspath(directory)
+            abs_target = os.path.abspath(target)
+            prefix = os.path.commonprefix([abs_directory, abs_target])
+            return prefix == abs_directory
+
+        def safe_extract(tar, path=".", members=None, *, numeric_owner=False):
+            for member in tar.getmembers():
+                member_path = os.path.join(path, member.name)
+                if not is_within_directory(path, member_path):
+                    raise Exception("Attempted Path Traversal in Tar File")
+            tar.extractall(path, members, numeric_owner=numeric_owner)
+
+        safe_extract(tar, dest_dir_path)
+
+
 def _copy_spatial_files(spatial_filepath, target_dir):
     """Copy spatial files to a new directory.
 
@@ -212,7 +247,7 @@ def build_datastack_archive(args, model_name, datastack_path):
     # For tracking existing files so we don't copy files in twice
     files_found = {}
     LOGGER.debug(f'Keys: {sorted(args.keys())}')
-    args_spec = module.ARGS_SPEC['args']
+    args_spec = module.MODEL_SPEC['args']
 
     spatial_types = {'raster', 'vector'}
     file_based_types = spatial_types.union({'csv', 'file', 'directory'})
@@ -220,7 +255,7 @@ def build_datastack_archive(args, model_name, datastack_path):
     for key in args:
         # Allow the model to override specific arguments in datastack archive
         # prep.  This is useful for tables (like HRA) that are too complicated
-        # to describe in the ARGS_SPEC format, but use a common specification
+        # to describe in the MODEL_SPEC format, but use a common specification
         # for the other args keys.
         override_funcname = f'_override_datastack_archive_{key}'
         if hasattr(module, override_funcname):
@@ -249,7 +284,7 @@ def build_datastack_archive(args, model_name, datastack_path):
         # Possible that a user might pass an args key that doesn't belong to
         # this model.  Skip if so.
         if key not in args_spec:
-            LOGGER.info(f'Skipping arg {key}; not in model ARGS_SPEC')
+            LOGGER.info(f'Skipping arg {key}; not in model MODEL_SPEC')
 
         input_type = args_spec[key]['type']
         if input_type in file_based_types:
@@ -275,7 +310,7 @@ def build_datastack_archive(args, model_name, datastack_path):
         if input_type == 'csv':
             # check the CSV for columns that may be spatial.
             # But also, the columns specification might not be listed, so don't
-            # require that 'columns' exists in the ARGS_SPEC.
+            # require that 'columns' exists in the MODEL_SPEC.
             spatial_columns = []
             if 'columns' in args_spec[key]:
                 for col_name, col_definition in (
@@ -402,7 +437,7 @@ def build_datastack_archive(args, model_name, datastack_path):
             # Note that no models currently use this to the best of my
             # knowledge, so better to raise a NotImplementedError
             raise NotImplementedError(
-                'The "other" ARGS_SPEC input type is not supported')
+                'The "other" MODEL_SPEC input type is not supported')
         else:
             LOGGER.debug(
                 f"Type {input_type} is not filesystem-based; "
@@ -451,8 +486,7 @@ def extract_datastack_archive(datastack_path, dest_dir_path):
     LOGGER.info('Extracting archive %s to %s', datastack_path, dest_dir_path)
     dest_dir_path = os.path.abspath(dest_dir_path)
     # extract the archive to the workspace
-    with tarfile.open(datastack_path) as tar:
-        tar.extractall(dest_dir_path)
+    _tarfile_safe_extract(datastack_path, dest_dir_path)
 
     # get the arguments dictionary
     arguments_dict = json.load(open(

@@ -26,17 +26,29 @@ import {
   setupInvestRunHandlers,
   setupInvestLogReaderHandler
 } from './setupInvestHandlers';
-import setupSetLanguage from './setLanguage';
 import setupGetNCPUs from './setupGetNCPUs';
 import setupOpenExternalUrl from './setupOpenExternalUrl';
+import setupOpenLocalHtml from './setupOpenLocalHtml';
+import setupChangeLanguage from './setupChangeLanguage';
 import { ipcMainChannels } from './ipcMainChannels';
 import menuTemplate from './menubar';
 import ELECTRON_DEV_MODE from './isDevMode';
 import BASE_URL from './baseUrl';
 import { getLogger } from './logger';
 import pkg from '../../package.json';
+import i18n from './i18n/i18n';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
+
+process.on('uncaughtException', (err) => {
+  logger.error(err);
+  process.exit(1);
+});
+process.on('unhandledRejection', (err, promise) => {
+  logger.error(`unhandled rejection at: ${promise}`);
+  logger.error(err);
+  process.exit(1);
+});
 
 if (!process.env.PORT) {
   process.env.PORT = '56789';
@@ -71,8 +83,10 @@ export const createWindow = async () => {
   setupDialogs();
   setupCheckFirstRun();
   setupCheckStorageToken();
+  setupChangeLanguage();
   await getFlaskIsReady();
 
+  const devModeArg = ELECTRON_DEV_MODE ? '--devMode' : '';
   // Create the browser window.
   mainWindow = new BrowserWindow({
     minWidth: 800,
@@ -80,12 +94,22 @@ export const createWindow = async () => {
     webPreferences: {
       preload: path.join(__dirname, '../preload/preload.js'),
       defaultEncoding: 'UTF-8',
+      additionalArguments: [devModeArg],
     },
   });
-  const menubar = Menu.buildFromTemplate(
-    menuTemplate(mainWindow, ELECTRON_DEV_MODE)
+  Menu.setApplicationMenu(
+    Menu.buildFromTemplate(
+      menuTemplate(mainWindow, ELECTRON_DEV_MODE, i18n)
+    )
   );
-  Menu.setApplicationMenu(menubar);
+  // when language changes, rebuild the menu bar in new language
+  i18n.on('languageChanged', (lng) => {
+    Menu.setApplicationMenu(
+      Menu.buildFromTemplate(
+        menuTemplate(mainWindow, ELECTRON_DEV_MODE, i18n)
+      )
+    );
+  });
   mainWindow.loadURL(path.join(BASE_URL, 'index.html'));
 
   mainWindow.once('ready-to-show', () => {
@@ -122,8 +146,8 @@ export const createWindow = async () => {
   setupInvestLogReaderHandler();
   setupContextMenu(mainWindow);
   setupGetNCPUs();
-  setupSetLanguage();
   setupOpenExternalUrl();
+  setupOpenLocalHtml(mainWindow, ELECTRON_DEV_MODE);
   return Promise.resolve(); // lets tests await createWindow(), then assert
 };
 

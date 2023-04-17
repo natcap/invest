@@ -1,27 +1,27 @@
 """InVEST Scenic Quality Model."""
-import os
-import math
 import logging
-import tempfile
+import math
+import os
 import shutil
+import tempfile
 import time
 
 import numpy
-from osgeo import gdal
-from osgeo import osr
-import taskgraph
 import pygeoprocessing
 import rtree
 import shapely.geometry
-
+import taskgraph
 from natcap.invest.scenic_quality.viewshed import viewshed
-from .. import utils
+from osgeo import gdal
+from osgeo import ogr
+from osgeo import osr
+
+from .. import gettext
 from .. import spec_utils
-from ..spec_utils import u
+from .. import utils
 from .. import validation
 from ..model_metadata import MODEL_METADATA
-from .. import gettext
-
+from ..unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
 _VALUATION_NODATA = -99999  # largish negative nodata value.
@@ -44,12 +44,10 @@ _INTERMEDIATE_BASE_FILES = {
     'structures_clipped': 'structures_clipped.shp',
     'structures_reprojected': 'structures_reprojected.shp',
     'visibility_pattern': 'visibility_{id}.tif',
-    'auxiliary_pattern': 'auxiliary_{id}.tif',  # Retained for debugging.
     'value_pattern': 'value_{id}.tif',
 }
 
-
-ARGS_SPEC = {
+MODEL_SPEC = {
     "model_name": MODEL_METADATA["scenic_quality"].model_title,
     "pyname": MODEL_METADATA["scenic_quality"].pyname,
     "userguide": MODEL_METADATA["scenic_quality"].userguide,
@@ -161,6 +159,60 @@ ARGS_SPEC = {
                 "Valuation will only be computed for cells that fall within "
                 "this radius of a feature impacting scenic quality."),
         },
+    },
+    "outputs": {
+        "output": {
+            "type": "directory",
+            "contents": {
+                "vshed_qual.tif": {
+                    "about": gettext(
+                        "Map of visual quality classified into quartiles."),
+                    "bands": {1: {"type": "integer"}}
+                },
+                "vshed.tif": {
+                    "about": gettext("This raster layer contains the weighted sum of all visibility rasters. If no weight column is provided in the structures point vector, this raster will represent a count of the number of structure points that are visible from each pixel."),
+                    "bands": {1: {"type": "number", "units": u.none}}
+                },
+                "vshed_value.tif": {
+                    "about": gettext("This raster layer contains the weighted sum of the valuation rasters created for each point."),
+                    "bands": {1: {"type": "number", "units": u.none}}
+                }
+            }
+        },
+        "intermediate": {
+            "type": "directory",
+            "contents": {
+                "aoi_reprojected.shp": {
+                    "about": gettext("This vector is the AOI, reprojected to the DEM’s spatial reference and projection."),
+                    "geometries": spec_utils.POLYGONS,
+                    "fields": {}
+                },
+                "dem_clipped.tif": {
+                    "about": gettext("This raster layer is a version of the DEM that has been clipped and masked to the AOI and tiled. This is the DEM file that is used for the viewshed analysis."),
+                    "bands": {1: {"type": "number", "units": u.meter}}
+                },
+                "structures_clipped.shp": {
+                    "about": gettext(
+                        "Copy of the structures vector, clipped to the AOI extent."),
+                    "geometries": spec_utils.POINT,
+                    "fields": {}
+                },
+                "structures_reprojected.shp": {
+                    "about": gettext("Copy of the structures vector, reprojected to the DEM’s spatial reference and projection."),
+                    "geometries": spec_utils.POINT,
+                    "fields": {}
+                },
+                "value_[FEATURE_ID].tif": {
+                    "about": gettext("The calculated value of the viewshed amenity/disamenity given the distances of pixels from the structure's viewpoint, the weight of the viewpoint, the valuation function, and the a and b coefficients. The viewshed’s value is only evaluated for visible pixels."),
+                    "bands": {1: {"type": "number", "units": u.none}}
+                },
+                "visibility_[FEATURE_ID].tif": {
+                    "about": gettext("Map of visibility for a given structure's viewpoint. This raster has pixel values of 0 (not visible), 1 (visible), or nodata (where the DEM is nodata)."),
+                    "bands": {1: {"type": "integer"}}
+                },
+                "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
+            }
+        }
     }
 }
 
@@ -219,7 +271,7 @@ def execute(args):
             'b': float(args['b_coef']),
         }
         if (args['valuation_function'] not in
-                ARGS_SPEC['args']['valuation_function']['options']):
+                MODEL_SPEC['args']['valuation_function']['options']):
             raise ValueError('Valuation function type %s not recognized' %
                              args['valuation_function'])
         max_valuation_radius = float(args['max_valuation_radius'])
@@ -461,22 +513,27 @@ def _determine_valid_viewpoints(dem_path, structures_path):
                     structures_layer.GetFeatureCount())
 
         radius_fieldname = None
-        fieldnames = set(
-            column.GetName() for column in structures_layer.schema)
+        fieldnames = {}
+        for column in structures_layer.schema:
+            actual_fieldname = column.GetName()
+            cleaned_fieldname = actual_fieldname.upper().strip()
+            fieldnames[cleaned_fieldname] = actual_fieldname
         possible_radius_fieldnames = set(
-            ['RADIUS', 'RADIUS2']).intersection(fieldnames)
+            ['RADIUS', 'RADIUS2']).intersection(set(fieldnames.keys()))
         if possible_radius_fieldnames:
-            radius_fieldname = possible_radius_fieldnames.pop()
+            radius_fieldname = fieldnames[possible_radius_fieldnames.pop()]
 
-        height_present = False
-        height_fieldname = 'HEIGHT'
-        if height_fieldname in fieldnames:
+        try:
+            height_fieldname = fieldnames['HEIGHT']
             height_present = True
+        except KeyError:
+            height_present = False
 
-        weight_present = False
-        weight_fieldname = 'WEIGHT'
-        if weight_fieldname in fieldnames:
+        try:
+            weight_fieldname = fieldnames['WEIGHT']
             weight_present = True
+        except KeyError:
+            weight_present = False
 
         last_log_time = time.time()
         n_features_touched = -1
@@ -492,6 +549,11 @@ def _determine_valid_viewpoints(dem_path, structures_path):
 
             # Coordinates in map units to pass to viewshed algorithm
             geometry = point.GetGeometryRef()
+            if geometry.GetGeometryType() != ogr.wkbPoint:
+                raise AssertionError(
+                    f"Feature {point.GetFID()} is not a Point geometry. "
+                    "Features must be a Point.")
+
             viewpoint = (geometry.GetX(), geometry.GetY())
 
             if (not bbox_minx <= viewpoint[0] <= bbox_maxx or
@@ -503,11 +565,11 @@ def _determine_valid_viewpoints(dem_path, structures_path):
 
             max_radius = None
             if radius_fieldname:
-                max_radius = math.fabs(point.GetField(radius_fieldname))
+                max_radius = math.fabs(float(point.GetField(radius_fieldname)))
 
             height = 0.0
             if height_present:
-                height = math.fabs(point.GetField(height_fieldname))
+                height = math.fabs(float(point.GetField(height_fieldname)))
 
             weight = 1.0
             if weight_present:
@@ -549,6 +611,7 @@ def _determine_valid_viewpoints(dem_path, structures_path):
         dem_block = dem_band.ReadAsArray(**block_data)
         for item in intersecting_points:
             viewpoint = (item.bounds[0], item.bounds[2])
+            feature_id = item.id
             metadata = item.object
             ix_viewpoint = int(
                 (viewpoint[0] - dem_gt[0]) // dem_gt[1]) - block_data['xoff']
@@ -559,7 +622,7 @@ def _determine_valid_viewpoints(dem_path, structures_path):
                     dem_nodata).any():
                 LOGGER.info(
                     'Feature %s in layer %s is over nodata; skipping.',
-                    point.GetFID(), layer_name)
+                    feature_id, layer_name)
                 continue
 
             if viewpoint in valid_structures:
@@ -981,8 +1044,8 @@ def _calculate_visual_quality(source_raster_path, working_dir, target_path):
     raster_info = pygeoprocessing.get_raster_info(source_raster_path)
     raster_nodata = raster_info['nodata'][0]
 
-    temp_dir = tempfile.mkdtemp(dir=working_dir,
-                                prefix='visual_quality')
+    temp_dir = os.path.normpath(
+        tempfile.mkdtemp(dir=working_dir, prefix='visual_quality'))
 
     # phase 1: calculate percentiles from the visible_structures raster
     LOGGER.info('Determining percentiles for %s',
@@ -1006,8 +1069,11 @@ def _calculate_visual_quality(source_raster_path, working_dir, target_path):
         gdal.GDT_Float64, _VALUATION_NODATA,
         raster_driver_creation_tuple=FLOAT_GTIFF_CREATION_OPTIONS)
 
+    # The directory passed to raster_band_percentile() is expected to not exist
+    # or be completely empty.
+    percentiles_working_dir = os.path.join(temp_dir, 'percentiles_working_dir')
     percentile_values = pygeoprocessing.raster_band_percentile(
-        (masked_raster_path, 1), temp_dir, [0., 25., 50., 75.])
+        (masked_raster_path, 1), percentiles_working_dir, [0., 25., 50., 75.])
 
     shutil.rmtree(temp_dir, ignore_errors=True)
 
@@ -1020,7 +1086,7 @@ def _calculate_visual_quality(source_raster_path, working_dir, target_path):
         nodata = utils.array_equals_nodata(valuation_matrix, raster_nodata)
         valid_indexes = (~nodata & nonzero)
         visual_quality = numpy.empty(valuation_matrix.shape,
-                                     dtype=numpy.int8)
+                                     dtype=numpy.uint8)
         visual_quality[:] = _BYTE_NODATA
         visual_quality[~nonzero & ~nodata] = 0
         visual_quality[valid_indexes] = numpy.digitize(
@@ -1053,4 +1119,4 @@ def validate(args, limit_to=None):
 
     """
     return validation.validate(
-        args, ARGS_SPEC['args'], ARGS_SPEC['args_with_spatial_overlap'])
+        args, MODEL_SPEC['args'], MODEL_SPEC['args_with_spatial_overlap'])

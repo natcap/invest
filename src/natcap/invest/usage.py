@@ -70,7 +70,7 @@ def _calculate_args_bounding_box(args, args_spec):
 
     Args:
         args (dict): a string key and any value pair dictionary.
-        args_spec (dict): the model ARGS_SPEC describing args
+        args_spec (dict): the model MODEL_SPEC describing args
 
     Returns:
         bb_intersection, bb_union tuple that's either the lat/lng bounding
@@ -216,7 +216,7 @@ def _log_model(pyname, model_args, invest_interface, session_id=None):
         md5.update(json.dumps(data).encode('utf-8'))
         return md5.hexdigest()
 
-    args_spec = importlib.import_module(pyname).ARGS_SPEC
+    args_spec = importlib.import_module(pyname).MODEL_SPEC
 
     try:
         bounding_box_intersection, bounding_box_union = (

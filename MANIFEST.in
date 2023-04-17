@@ -5,3 +5,4 @@ prune ci
 prune exe
 prune installer
 prune workbench
+include src/natcap/invest/internationalization/locales/*/LC_MESSAGES/messages.mo

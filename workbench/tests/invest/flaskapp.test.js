@@ -21,19 +21,15 @@ import {
 } from '../../src/main/createPythonFlaskProcess';
 import findInvestBinaries from '../../src/main/findInvestBinaries';
 
-jest.setTimeout(120000); // This test is slow in CI
+// This test starts a python subprocess, which can be slow
+jest.setTimeout(120000);
 
 let flaskSubprocess;
 beforeAll(async () => {
   const isDevMode = true; // otherwise need to mock process.resourcesPath
   const investExe = findInvestBinaries(isDevMode);
   flaskSubprocess = createPythonFlaskProcess(investExe);
-  // In the CI the flask app takes more than 10x as long to startup.
-  // Especially so on macos.
-  // So, allowing many retries, especially because the error
-  // that is thrown if all retries fail is swallowed by jest
-  // and tests try to run anyway.
-  await getFlaskIsReady({ retries: 201 });
+  await getFlaskIsReady();
 });
 
 afterAll(async () => {
@@ -42,12 +38,12 @@ afterAll(async () => {
 
 describe('requests to flask endpoints', () => {
   let WORKSPACE;
-  beforeEach(() => {
+  beforeAll(() => {
     WORKSPACE = fs.mkdtempSync(path.join(os.tmpdir(), 'data-'));
   });
 
-  afterEach(() => {
-    fs.rmdirSync(WORKSPACE, { recursive: true });
+  afterAll(() => {
+    fs.rmSync(WORKSPACE, { recursive: true, force: true });
   });
 
   test('invest list items have expected properties', async () => {
@@ -83,7 +79,8 @@ describe('requests to flask endpoints', () => {
   test('write parameters to file and parse them from file', async () => {
     const spec = await server_requests.getSpec('carbon');
     const argsDict = argsDictFromObject(spec.args);
-    const filepath = path.join(WORKSPACE, 'foo.json');
+    const workspace = fs.mkdtempSync(WORKSPACE);
+    const filepath = path.join(workspace, 'foo.json');
     const payload = {
       filepath: filepath,
       moduleName: spec.pyname,
@@ -122,7 +119,8 @@ describe('requests to flask endpoints', () => {
     const modelName = 'carbon'; // as appearing in `invest list`
     const spec = await server_requests.getSpec(modelName);
     const argsDict = argsDictFromObject(spec.args);
-    const filepath = path.join(WORKSPACE, 'foo.py');
+    const workspace = fs.mkdtempSync(WORKSPACE);
+    const filepath = path.join(workspace, 'foo.py');
     const payload = {
       filepath: filepath,
       modelname: modelName,
@@ -158,10 +156,10 @@ describe('validate the UI spec', () => {
       expect(spec.model_name).toBeDefined();
       expect(Object.keys(UI_SPEC)).toContain(modelName);
       expect(Object.keys(UI_SPEC[modelName])).toContain('order');
-      // expect each ARGS_SPEC arg to exist in 'order' or 'hidden' property
+      // expect each MODEL_SPEC arg to exist in 'order' or 'hidden' property
       const orderArray = UI_SPEC[modelName].order.flat();
       // 'hidden' is an optional property. It need not include 'n_workers',
-      // but we should insert 'n_workers' here as it is present in ARGS_SPEC.
+      // but we should insert 'n_workers' here as it is present in MODEL_SPEC.
       const hiddenArray = UI_SPEC[modelName].hidden || [];
       const allArgs = orderArray.concat(hiddenArray.concat('n_workers'));
       const argsSet = new Set(allArgs);
@@ -207,14 +205,14 @@ expect.extend({
   },
 });
 
-describe('Build each model UI from ARGS_SPEC', () => {
+describe('Build each model UI from MODEL_SPEC', () => {
   const { UI_SPEC } = require('../../src/renderer/ui_config');
 
   test.each(Object.keys(UI_SPEC))('%s', async (model) => {
     const argsSpec = await server_requests.getSpec(model);
     const uiSpec = UI_SPEC[model];
 
-    const { findByRole, findAllByRole } = render(
+    const { findByRole } = render(
       <SetupTab
         pyModuleName={argsSpec.pyname}
         modelName={argsSpec.model_name}
@@ -232,47 +230,11 @@ describe('Build each model UI from ARGS_SPEC', () => {
     );
     expect(await findByRole('textbox', { name: /workspace/i }))
       .toBeInTheDocument();
-
-    const infoButtons = await findAllByRole('button', { name: /info about/ });
-    /* eslint-disable no-restricted-syntax, no-await-in-loop */
-    for (const btn of infoButtons) {
-      userEvent.click(btn);
-      const link = await findByRole('link');
-      const address = link.getAttribute('href');
-      const options = {
-        method: 'HEAD',
-        host: url.parse(address).host,
-        path: url.parse(address).pathname,
-      };
-      const status = await getUrlStatus(options);
-      expect(status).toBeStatus200(address);
-    }
-    /* eslint-enable no-restricted-syntax, no-await-in-loop */
   });
 });
 
-describe('Check UG & Forum links for each model', () => {
+describe('Check Forum links for each model', () => {
   const { UI_SPEC } = require('../../src/renderer/ui_config');
-
-  test.each(Object.keys(UI_SPEC))('%s - User Guide', async (model) => {
-    const argsSpec = await server_requests.getSpec(model);
-
-    const { findByRole } = render(
-      <ResourcesLinks
-        moduleName={model}
-        docs={argsSpec.userguide}
-      />
-    );
-    const link = await findByRole('link', { name: /user's guide/i });
-    const address = link.getAttribute('href');
-    const options = {
-      method: 'HEAD',
-      host: url.parse(address).host,
-      path: url.parse(address).pathname,
-    };
-    const status = await getUrlStatus(options);
-    expect(status).toBeStatus200(address);
-  });
 
   test.each(Object.keys(UI_SPEC))('%s - Forum', async (model) => {
     const argsSpec = await server_requests.getSpec(model);

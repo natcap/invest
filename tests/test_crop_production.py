@@ -400,7 +400,7 @@ class CropProductionTests(unittest.TestCase):
 
 
 class CropValidationTests(unittest.TestCase):
-    """Tests for the Crop Productions' ARGS_SPEC and validation."""
+    """Tests for the Crop Productions' MODEL_SPEC and validation."""
 
     def setUp(self):
         """Create a temporary workspace."""

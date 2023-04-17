@@ -14,7 +14,6 @@
   - Habitat Quality
   - HRA
   - NDR
-  - Visitation: Recreation and Tourism
   - RouteDEM
   - Scenario Generator
   - Scenic Quality
@@ -22,9 +21,11 @@
   - Seasonal Water Yield
   - Urban Cooling
   - Urban Flood Risk
+  - Urban Nature Access
   - Urban Stormwater Retention
   - Wave Energy
   - Wind Energy
+  - Visitation: Recreation and Tourism
 
   Workbench fixes/enhancements:
   - Workbench
@@ -36,10 +37,142 @@
 
 Unreleased Changes
 ------------------
+
+* HRA
+    * Fixed a bug in HRA where the model would error when all exposure and
+      consequence criteria were skipped for a single habitat. The model now
+      correctly handles this case. https://github.com/natcap/invest/issues/1250
+    * Tables in the .xls format are no longer supported. This format was
+      deprecated by ``pandas``. (`#1271 <https://github.com/natcap/invest/issues/1271>`_)
+* Scenic Quality
+    * The Scenic Quality model will now raise an error when it encounters a
+      geometry that is not a simple Point.  This is in line with the user's
+      guide chapter.  https://github.com/natcap/invest/issues/1245
+    * The Scenic Quality model now supports both uppercase and lowercase
+      fieldnames. Leading and trailing spaces are now also stripped for the
+      user's convenience. https://github.com/natcap/invest/issues/1276
+
+3.13.0 (2023-03-17)
+-------------------
+* General
+    * During builds of the InVEST documentation, the packages
+      ``sphinx-rtd-theme`` and ``sphinx-reredirects`` will be pulled from
+      conda-forge instead of PyPI.
+      (`#1151 <https://github.com/natcap/invest/issues/1151>`_)
+    * The ``invest`` command-line-interface no longer opens a graphical
+      interface to InVEST. (`#755 <https://github.com/natcap/invest/issues/755>`_)
+    * The classic InVEST user-interface has been removed in favor of the Workbench.
+    * Replace the ``ARGS_SPEC`` with ``MODEL_SPEC`` which describes all model
+      outputs as well as inputs in a structured format
+      (`#596 <https://github.com/natcap/invest/issues/596>`_)
+* Workbench
+    * Added tooltips to the model tabs so that they can be identified even when
+      several tabs are open (`#1071 <https://github.com/natcap/invest/issues/1088>`_)
+    * Options' display names will now be shown in dropdown menus
+      (`#1217 <https://github.com/natcap/invest/issues/1217>`_)
+    * Represent boolean inputs with a toggle switch rather than radio buttons.
+    * Includes local versions of the User Guide in English, Spanish, & Chinese.
+      https://github.com/natcap/invest/issues/851
+* DelineateIt
+    * DelineateIt now uses ``pygeoprocessing.routing.extract_streams_d8`` for D8
+      stream thresholding. https://github.com/natcap/invest/issues/1143
+* Habitat Quality
+    * The model now uses an euclidean distance implementation for decaying
+      threat rasters both linearly and exponentially. Since InVEST 3.3.0 a
+      convolution implementation has been used, which reflected how
+      the density of a threat or surrounding threat pixels could have an
+      even greater, cumulative impact and degradation over space. However, this
+      was never properly documented in the User's Guide and is not the approach
+      taken in the publication. The convolution implementation also produced
+      degradation and quality outputs that were difficult to interpret.
+    * There should be a noticeable runtime improvement from calculating
+      euclidean distances vs convolutions.
+* HRA
+    * Fixed an issue where a cryptic exception was being thrown if the criteria
+      table's sections were not spelled exactly as expected.  There is now a
+      much more readable error if a section is obviously missing.  Leading and
+      trailing whitespace is also now removed from all string fields in the
+      criteria table, which should also help reduce the chance of errors.
+      https://github.com/natcap/invest/issues/1191
+* GLOBIO
+    * Deprecated the GLOBIO model
+      (`#1131 <https://github.com/natcap/invest/issues/1131>`_)
+* RouteDEM
+    * RouteDEM now uses ``pygeoprocessing.routing.extract_streams_d8`` for D8
+      stream thresholding. https://github.com/natcap/invest/issues/1143
+* Scenic Quality
+    * Any points over nodata (and therefore excluded from the viewshed
+      analysis) will now correctly have their FID reported in the logging.
+      https://github.com/natcap/invest/issues/1188
+    * Clarifying where the visual quality calculations' disk-based sorting
+      cache should be located, which addresses an interesting crash experienced
+      by some users on Windows. https://github.com/natcap/invest/issues/1189
+* SDR
+    * The ``ws_id`` field is no longer a required field in the watershed vector.
+      https://github.com/natcap/invest/issues/1201
+* Seasonal Water Yield
+    * If a soil group raster contains any pixels that are not in the set of
+      allowed soil groups (anything other than 1, 2, 3 or 4), a human readable
+      exception will now be raised. https://github.com/natcap/invest/issues/1193
+* Urban Nature Access
+    * Added the Urban Nature Access model to InVEST. The model for urban
+      nature access provides a measure of both the supply of urban nature
+      and the demand for nature by the urban population, ultimately
+      calculating the balance between supply and demand. See the corresponding
+      User's Guide chapter for documentation.
+* Visitation: Recreation and Tourism
+    * Fixed a ``FutureWarning`` when reading in CSVs. This fix does not
+      otherwise affect model behavior. https://github.com/natcap/invest/issues/1202
+
+
+3.12.1 (2022-12-16)
+-------------------
+* General
+    * Fixed a possible path traversal vulnerability when working with datastack
+      archives.  This patches CVE-2007-4559, reported to us by Trellix.
+      https://github.com/natcap/invest/issues/1113
+    * Added Spanish and Chinese translations of user-facing text and an interface
+      to switch languages in the workbench UI.
+    * Updating descriptions for LULC about text and biophysical table for
+      clarity in model specs. https://github.com/natcap/invest/issues/1077
+* Workbench
+    * Fixed a bug where the Workbench would become unresponsive during an
+      InVEST model run if the model emitted a very high volume of log messages.
+    * Fixed a bug where the Workbench could crash if there was too much
+      standard error emitted from an invest model.
+    * Added a new "Save as" dialog window to handle different save options, and
+      allow the option to use relative paths in a JSON datastack
+      (`#1088 <https://github.com/natcap/invest/issues/1088>`_)
+    * Fixed a bug where uncaught exceptions in the React tree would result in
+      a blank browser window.
+      (`#1119 <https://github.com/natcap/invest/issues/1119>`_)
+* Habitat Quality
+    * All spatial inputs including the access vector and threat rasters are
+      now reprojected to the ``lulc_cur_path`` raster. This fixes a bug where
+      rasters with a different SRS would appear to not intersect the
+      ``lulc_cur_path`` even if they did. (https://github.com/natcap/invest/issues/1093)
+    * Paths in the threats table may now be either absolute or relative to the
+      threats table.
+* HRA
+    * Fixed a regression relative to InVEST 3.9.0 outputs where spatial
+      criteria vectors were being rasterized with the ``ALL_TOUCHED=TRUE``
+      flag, leading to a perceived buffering of spatial criteria in certain
+      cases.  In InVEST 3.9.0, these were rasterized with ``ALL_TOUCHED=FALSE``.
+      https://github.com/natcap/invest/issues/1120
+    * Fixed an issue with the results table, ``SUMMARY_STATISTICS.csv`` where
+      the percentages of high, medium and low risk classifications were not
+      correctly reported.
+    * Added a column to the ``SUMMARY_STATISTICS.csv`` output table to also
+      report the percentage of pixels within each subregion that have no risk
+      classification (a risk classification of 0).
+* Urban Stormwater Retention
+    * Added validation to check that the input soil groups raster has an
+      integer data type
 * Urban Cooling
     * Updated the text for the ``building_intensity`` column in the biophysical
       table to clarify that the values of this column should be normalized
       relative to one another to be between 0 and 1.
+
 
 
 3.12.0 (2022-08-31)

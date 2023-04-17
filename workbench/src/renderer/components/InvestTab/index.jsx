@@ -10,6 +10,7 @@ import Col from 'react-bootstrap/Col';
 import {
   MdKeyboardArrowRight,
 } from 'react-icons/md';
+import { withTranslation } from 'react-i18next';
 
 import ModelStatusAlert from './ModelStatusAlert';
 import SetupTab from '../SetupTab';
@@ -22,7 +23,8 @@ import { ipcMainChannels } from '../../../main/ipcMainChannels';
 const { ipcRenderer } = window.Workbench.electron;
 const logger = window.Workbench.getLogger('InvestTab');
 
-/** Get an invest model's ARGS_SPEC when a model button is clicked.
+/** Get an invest model's MODEL_SPEC when a model button is clicked.
+
  *
  * @param {string} modelName - as in a model name appearing in `invest list`
  * @returns {object} destructures to:
@@ -52,13 +54,13 @@ function handleOpenWorkspace(logfile) {
  * Manage launching of an invest model in a child process.
  * And manage saves of executed jobs to a persistent store.
  */
-export default class InvestTab extends React.Component {
+class InvestTab extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
       activeTab: 'setup',
-      modelSpec: null, // ARGS_SPEC dict with all keys except ARGS_SPEC.args
-      argsSpec: null, // ARGS_SPEC.args, the immutable args stuff
+      modelSpec: null, // MODEL_SPEC dict with all keys except MODEL_SPEC.args
+      argsSpec: null, // MODEL_SPEC.args, the immutable args stuff
       uiSpec: null,
       userTerminated: false,
       executeClicked: false,
@@ -105,7 +107,7 @@ export default class InvestTab extends React.Component {
 
   /** Receive data about the exit status of the invest process.
    *
-   * @param {object} data - of shape { code: number, stdErr: string }
+   * @param {object} data - of shape { code: number }
    */
   investExitCallback(data) {
     const {
@@ -113,26 +115,12 @@ export default class InvestTab extends React.Component {
       updateJobProperties,
       saveJob,
     } = this.props;
-    let finalTraceback = '';
+    let status = (data.code === 0) ? 'success' : 'error';
     if (this.state.userTerminated) {
-      finalTraceback = 'Run Canceled';
-    } else if (data.stdErr) {
-      // Get the last meaningful line of stderr for display in an Alert.
-      // The PyInstaller exe will always emit a final 'Failed ...' message
-      // after an uncaught exception.
-      const stdErrLines = data.stdErr.split(/\r\n|\r|\n/);
-      while (
-        !finalTraceback || finalTraceback.includes(
-          "Failed to execute script 'cli' due to unhandled exception!"
-        )
-      ) {
-        finalTraceback = stdErrLines.pop();
-      }
+      status = 'canceled';
     }
-    const status = (data.code === 0) ? 'success' : 'error';
     updateJobProperties(tabID, {
       status: status,
-      finalTraceback: finalTraceback,
     });
     saveJob(tabID);
     this.setState({
@@ -215,10 +203,9 @@ export default class InvestTab extends React.Component {
       modelRunName,
       argsValues,
       logfile,
-      finalTraceback,
     } = this.props.job;
 
-    const { tabID, investSettings } = this.props;
+    const { tabID, investSettings, t } = this.props;
 
     // Don't render the model setup & log until data has been fetched.
     if (!modelSpec) {
@@ -243,11 +230,11 @@ export default class InvestTab extends React.Component {
               onSelect={this.switchTabs}
             >
               <Nav.Link eventKey="setup">
-                {_('Setup')}
+                {t('Setup')}
                 <MdKeyboardArrowRight />
               </Nav.Link>
               <Nav.Link eventKey="log" disabled={logDisabled}>
-                {_('Log')}
+                {t('Log')}
                 <MdKeyboardArrowRight />
               </Nav.Link>
             </Nav>
@@ -270,7 +257,6 @@ export default class InvestTab extends React.Component {
                   ? (
                     <ModelStatusAlert
                       status={status}
-                      finalTraceback={finalTraceback}
                       handleOpenWorkspace={() => handleOpenWorkspace(logfile)}
                       terminateInvestProcess={this.terminateInvestProcess}
                     />
@@ -325,7 +311,6 @@ InvestTab.propTypes = {
     argsValues: PropTypes.object,
     logfile: PropTypes.string,
     status: PropTypes.string,
-    finalTraceback: PropTypes.string,
   }).isRequired,
   tabID: PropTypes.string.isRequired,
   investSettings: PropTypes.shape({
@@ -337,3 +322,5 @@ InvestTab.propTypes = {
   saveJob: PropTypes.func.isRequired,
   updateJobProperties: PropTypes.func.isRequired,
 };
+
+export default withTranslation()(InvestTab);

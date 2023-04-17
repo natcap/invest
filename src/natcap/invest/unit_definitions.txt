@@ -41,3 +41,7 @@ year_AD = []
 
 # redefine degree to use ° symbol
 degree = π / 180 * radian = ° = deg = arcdeg = arcdegree = angular_degree
+
+# for inputs that use a population count
+person = [count]
+people = [count]

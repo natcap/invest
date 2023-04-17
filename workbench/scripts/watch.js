@@ -5,6 +5,7 @@ const sharedConfig = {
   build: {
     watch: {},
   },
+  publicDir: '../dist/userguide',
 };
 
 async function watch() {

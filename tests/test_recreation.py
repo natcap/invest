@@ -266,60 +266,6 @@ class TestRecServer(unittest.TestCase):
             aoi_path,
             os.path.join(out_workspace_dir, 'test_aoi_for_subset.shp'))
 
-    @_timeout(30.0)
-    def test_empty_server(self):
-        """Recreation test a client call to simple server."""
-        from natcap.invest.recreation import recmodel_server
-        from natcap.invest.recreation import recmodel_client
-
-        empty_point_data_path = os.path.join(
-            self.workspace_dir, 'empty_table.csv')
-        open(empty_point_data_path, 'w').close()  # touch the file
-
-        # attempt to get an open port; could result in race condition but
-        # will be okay for a test. if this test ever fails because of port
-        # in use, that's probably why
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.bind(('', 0))
-        port = sock.getsockname()[1]
-        sock.close()
-        sock = None
-
-        server_args = {
-            'hostname': 'localhost',
-            'port': port,
-            'raw_csv_point_data_path': empty_point_data_path,
-            'cache_workspace': self.workspace_dir,
-            'min_year': 2004,
-            'max_year': 2015,
-        }
-
-        server_thread = threading.Thread(
-            target=recmodel_server.execute, args=(server_args,))
-        server_thread.daemon = True
-        server_thread.start()
-
-        client_args = {
-            'aoi_path': os.path.join(
-                SAMPLE_DATA, 'test_aoi_for_subset.shp'),
-            'cell_size': 7000.0,
-            'hostname': 'localhost',
-            'port': port,
-            'compute_regression': False,
-            'start_year': '2005',
-            'end_year': '2014',
-            'grid_aoi': False,
-            'results_suffix': '',
-            'workspace_dir': self.workspace_dir,
-        }
-        recmodel_client.execute(client_args)
-
-        # testing for file existence seems reasonable since mostly we are
-        # testing that a local server starts and a client connects to it
-        _test_same_files(
-            os.path.join(REGRESSION_DATA, 'file_list_empty_local_server.txt'),
-            self.workspace_dir)
-
     def test_local_aggregate_points(self):
         """Recreation test single threaded local AOI aggregate calculation."""
         from natcap.invest.recreation import recmodel_server
@@ -1190,7 +1136,7 @@ class RecreationRegressionTests(unittest.TestCase):
 
 
 class RecreationValidationTests(unittest.TestCase):
-    """Tests for the Recreation Model ARGS_SPEC and validation."""
+    """Tests for the Recreation Model MODEL_SPEC and validation."""
 
     def setUp(self):
         """Create a temporary workspace."""

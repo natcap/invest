@@ -7,6 +7,7 @@ import Modal from 'react-bootstrap/Modal';
 import Alert from 'react-bootstrap/Alert';
 import ProgressBar from 'react-bootstrap/ProgressBar';
 import Table from 'react-bootstrap/Table';
+import { withTranslation } from 'react-i18next';
 
 import Expire from '../Expire';
 import sampledataRegistry from './sampledata_registry.json';
@@ -19,7 +20,7 @@ const BASE_URL = 'https://storage.googleapis.com/releases.naturalcapitalproject.
 const DEFAULT_FILESIZE = 0;
 
 /** Render a dialog with a form for configuring global invest settings */
-export class DataDownloadModal extends React.Component {
+class DataDownloadModal extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
@@ -162,6 +163,7 @@ export class DataDownloadModal extends React.Component {
       selectedLinksArray,
       dataRegistry,
     } = this.state;
+    const { t } = this.props;
     // Don't render until registry is loaded, since it loads async
     if (!dataRegistry) { return <div />; }
 
@@ -205,7 +207,7 @@ export class DataDownloadModal extends React.Component {
       >
         <Form>
           <Modal.Header>
-            <Modal.Title>{_("Download InVEST sample data")}</Modal.Title>
+            <Modal.Title>{t("Download InVEST sample data")}</Modal.Title>
           </Modal.Header>
           <Modal.Body>
             <Table
@@ -237,14 +239,14 @@ export class DataDownloadModal extends React.Component {
               variant="secondary"
               onClick={this.props.closeModal}
             >
-              {_("Cancel")}
+              {t("Cancel")}
             </Button>
             <Button
               variant="primary"
               onClick={this.handleSubmit}
               disabled={!downloadEnabled}
             >
-              {_("Download")}
+              {t("Download")}
             </Button>
           </Modal.Footer>
         </Form>
@@ -259,51 +261,4 @@ DataDownloadModal.propTypes = {
   storeDownloadDir: PropTypes.func.isRequired,
 };
 
-export function DownloadProgressBar(props) {
-  const [nComplete, nTotal] = props.downloadedNofN;
-  if (nComplete === 'failed') {
-    return (
-      <Expire
-        className="d-inline"
-        delay={props.expireAfter}
-      >
-        <Alert
-          className="d-inline"
-          variant="danger"
-        >
-          {_("Download Failed")}
-        </Alert>
-      </Expire>
-    );
-  }
-  if (nComplete === nTotal) {
-    return (
-      <Expire
-        className="d-inline"
-        delay={props.expireAfter}
-      >
-        <Alert
-          className="d-inline"
-          variant="success"
-        >
-          {_("Download Complete")}
-        </Alert>
-      </Expire>
-    );
-  }
-  return (
-    <ProgressBar
-      animated
-      max={1}
-      now={(nComplete + 1) / nTotal}
-      label={_(`Downloading ${nComplete + 1} of ${nTotal}`)}
-    />
-  );
-}
-
-DownloadProgressBar.propTypes = {
-  downloadedNofN: PropTypes.arrayOf(
-    PropTypes.oneOfType([PropTypes.number, PropTypes.string])
-  ).isRequired,
-  expireAfter: PropTypes.number.isRequired,
-};
+export default withTranslation()(DataDownloadModal)
