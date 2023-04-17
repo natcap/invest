@@ -14,16 +14,19 @@ export default function setupCheckFilePermissions() {
   ipcMain.handle(
     ipcMainChannels.CHECK_FILE_PERMISSIONS, (event, folder) => {
       const filepath = path.join(folder, 'foo.txt');
+      let writeable;
       try {
         // The only reliable way to determine if a folder is writeable
         // is to write to it. https://github.com/nodejs/node/issues/2949
         fs.writeFileSync(filepath, '');
-        fs.rm(filepath, (err) => logger.debug(err));
-        return true;
+        writeable = true;
       } catch (err) {
+        writeable = false;
         logger.debug(err);
-        return false;
+      } finally {
+        fs.rm(filepath, (err) => logger.debug(err));
       }
+      return writeable;
     }
   );
 }

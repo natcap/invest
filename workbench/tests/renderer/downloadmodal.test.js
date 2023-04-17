@@ -167,6 +167,7 @@ describe('DownloadProgressBar', () => {
 
 describe('Integration tests with main process', () => {
   beforeEach(async () => {
+    // setupCheckFilePermissions();
     setupDownloadHandlers(new BrowserWindow());
     getInvestModelNames.mockResolvedValue({});
   });
@@ -184,6 +185,9 @@ describe('Integration tests with main process', () => {
     ipcRenderer.invoke.mockImplementation((channel, options) => {
       if (channel === ipcMainChannels.SHOW_OPEN_DIALOG) {
         return Promise.resolve(dialogData);
+      }
+      if (channel === ipcMainChannels.CHECK_FILE_PERMISSIONS) {
+        return Promise.resolve(true);
       }
       return Promise.resolve(undefined);
     });
@@ -203,8 +207,8 @@ describe('Integration tests with main process', () => {
     });
     const progressBar = await findByRole('progressbar');
     expect(progressBar).toHaveTextContent(`Downloading 1 of ${nURLs}`);
-    // We don't have mocks that take us all the way through to a complete
-    // download, when the progress bar would become a 'Download Complete' alert
+    // The electron window's downloadURL function is mocked, so we don't
+    // expect the progress bar to update further in this test.
   });
 
   test('Cancel: does not store a sampleDataDir value', async () => {
@@ -218,5 +222,30 @@ describe('Integration tests with main process', () => {
       const value = await getSettingsValue('sampleDataDir');
       expect(value).toBe(existingValue);
     });
+  });
+
+  test('Alert when download location is not writeable', async () => {
+    const dialogData = {
+      filePaths: ['foo/directory'],
+    };
+
+    ipcRenderer.invoke.mockImplementation((channel, options) => {
+      if (channel === ipcMainChannels.SHOW_OPEN_DIALOG) {
+        return Promise.resolve(dialogData);
+      }
+      if (channel === ipcMainChannels.CHECK_FILE_PERMISSIONS) {
+        return Promise.resolve(false);
+      }
+      return Promise.resolve(undefined);
+    });
+
+    const {
+      findByRole,
+    } = render(<App isFirstRun />);
+
+    const downloadButton = await findByRole('button', { name: 'Download' });
+    userEvent.click(downloadButton);
+    const alert = await findByRole('alert');
+    expect(alert).toHaveTextContent('Please choose a different folder');
   });
 });
