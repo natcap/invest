@@ -74,6 +74,7 @@ jobs:
           echo "TAG_RUN_URL=$( \
             gh run list \
               --branch $VERSION \
+              --limit 1 \
               --json url \
               --jq .[].url)" >> $GITHUB_ENV
 

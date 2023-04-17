@@ -14,7 +14,7 @@ env:
 jobs:
   roll_back_release:
     # run this job if a PR from an autorelease branch into main was closed without merging
-    if: startsWith(github.head_ref, 'autorelease') && github.event.pull_request.merged == false
+    if: startsWith(github.head_ref, 'autorelease') && github.event.pull_request.merged != true
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -23,7 +23,7 @@ jobs:
         uses: ./.github/actions/rollback_release
         with:
           VERSION: ${{ env.VERSION }}
-          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ env.GITHUB_TOKEN }}
 
   publish_release:
     # run this job if a PR was merged from an autorelease branch into main
@@ -69,19 +69,16 @@ jobs:
 
       - name: Create Github release
         run: |
-          head -n 100 HISTORY.rst
-          sed -n "/$VERSION/,/^$/p" HISTORY.rst
-          sed -n "/$VERSION/,/^$/p" HISTORY.rst | tail -n +3
-
           # Copy the history notes for this version into the release message
-          # The tail +3 cuts off the version string and underline of the title.
+          # The sed | tail | sed | head command extracts everything in the
+          # first section of the RST file (between ---- section dividers)
           gh release create $VERSION \
             --verify-tag \
             --title $VERSION \
             --notes "
             This release includes the following fixes and features:
 
-            $(sed -n "/$VERSION/,/^$/p" HISTORY.rst | tail -n +3)" \
+            $(sed -n '/^---*/,$ p' HISTORY.rst | tail -n +2 | sed '/^---*/q' | head -n -2)" \
             artifacts/*
 
       - name: Create a PyPI release
@@ -98,4 +95,4 @@ jobs:
         uses: ./.github/actions/rollback_release
         with:
           VERSION: ${{ env.VERSION }}
-          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ env.GITHUB_TOKEN }}
