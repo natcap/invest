@@ -3,8 +3,7 @@ name: Release (Part 2 of 2)
 on:
   # this workflow will run any time any PR into main is closed
   pull_request:
-    types:
-      - closed
+    types: [closed]
     branches:
       - main
 
