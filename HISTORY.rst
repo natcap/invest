@@ -35,9 +35,10 @@
 
 .. :changelog:
 
-..
-  Unreleased Changes
-  ------------------
+
+Unreleased Changes
+------------------
+* foo
 
 3.13.0a7 (2023-04-14)
 ---------------------
