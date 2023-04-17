@@ -98,4 +98,4 @@ jobs:
         uses: ./.github/actions/rollback_release
         with:
           VERSION: ${{ env.VERSION }}
-          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ env.GITHUB_TOKEN }}
