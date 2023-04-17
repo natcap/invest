@@ -14,7 +14,7 @@ env:
 jobs:
   roll_back_release:
     # run this job if a PR from an autorelease branch into main was closed without merging
-    if: startsWith(github.head_ref, 'autorelease') && github.event.pull_request.merged == false
+    if: startsWith(github.head_ref, 'autorelease') && github.event.pull_request.merged != true
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -23,7 +23,7 @@ jobs:
         uses: ./.github/actions/rollback_release
         with:
           VERSION: ${{ env.VERSION }}
-          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ env.GITHUB_TOKEN }}
 
   publish_release:
     # run this job if a PR was merged from an autorelease branch into main
