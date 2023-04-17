@@ -17,7 +17,9 @@ import { ipcMainChannels } from '../../../main/ipcMainChannels';
 const { ipcRenderer } = window.Workbench.electron;
 const logger = window.Workbench.getLogger('DataDownloadModal');
 
-const BASE_URL = 'https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.10.2/data';
+// A URL for sampledata to use in devMode, when the token containing the URL
+// associated with a production build of the Workbench does not exist.
+const BASE_URL = 'https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.13.0/data';
 const DEFAULT_FILESIZE = 0;
 
 /** Render a dialog with a form for configuring global invest settings */
