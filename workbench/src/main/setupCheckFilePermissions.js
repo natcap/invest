@@ -15,6 +15,8 @@ export default function setupCheckFilePermissions() {
     ipcMainChannels.CHECK_FILE_PERMISSIONS, (event, folder) => {
       const filepath = path.join(folder, 'foo.txt');
       try {
+        // The only reliable way to determine if a folder is writeable
+        // is to write to it. https://github.com/nodejs/node/issues/2949
         fs.writeFileSync(filepath, '');
         fs.rm(filepath, (err) => logger.debug(err));
         return true;
