@@ -76,6 +76,8 @@ export default function setupDownloadHandlers(mainWindow) {
         );
       } else {
         logger.info(`download failed: ${state}`);
+        const idx = downloadQueue.findIndex((item) => item === itemURL);
+        downloadQueue.splice(idx, 1);
         mainWindow.webContents.send(
           'download-status',
           ['failed', 'failed'] // ProgressBar expects array length 2

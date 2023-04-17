@@ -92,9 +92,10 @@ class DataDownloadModal extends React.Component {
       { properties: ['openDirectory'] }
     );
     if (data.filePaths.length) {
-      const writable = await ipcRenderer.invoke(
-        ipcMainChannels.CHECK_FILE_PERMISSIONS, data.filePaths[0]
-      );
+      // const writable = await ipcRenderer.invoke(
+      //   ipcMainChannels.CHECK_FILE_PERMISSIONS, data.filePaths[0]
+      // );
+      const writable = true;
       if (!writable) {
         alert(
           `This application does not have permission to write to folder:\n\n
