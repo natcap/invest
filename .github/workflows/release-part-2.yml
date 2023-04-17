@@ -18,6 +18,9 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Extract version from autorelease branch name
+        run: echo "VERSION=$(echo ${{ github.head_ref }} | cut -c 13-)" >> $GITHUB_ENV
+
       - name: Roll back on failure
         uses: ./.github/actions/rollback_release
         with:
