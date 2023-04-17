@@ -19,23 +19,23 @@ runs:
     - name: Delete the tag (if it exists)
       shell: bash
       run: |
-        if [ `git rev-parse --verify ${{ inputs.VERSION }} 2>/dev/null` ]
+        if git ls-remote --exit-code origin refs/tags/${{ inputs.VERSION }}
         then
           echo "Deleting ${{ inputs.VERSION }} tag"
           git push origin --delete ${{ inputs.VERSION }}
         else
-          echo "${{ inputs.VERSION }} tag not found"
+          echo "${{ inputs.VERSION }} tag not found in origin"
         fi
 
     - name: Delete the autorelease branch (if it exists)
       shell: bash
       run: |
-        if [ `git rev-parse --verify autorelease/${{ inputs.VERSION }} 2>/dev/null` ]
+        if git ls-remote --exit-code origin autorelease/${{ inputs.VERSION }}
         then
           echo "Deleting autorelease/${{ inputs.VERSION }} branch"
           git push origin --delete autorelease/${{ inputs.VERSION }}
         else
-          echo "autorelease/${{ inputs.VERSION }} branch not found"
+          echo "autorelease/${{ inputs.VERSION }} branch not found in origin"
         fi
 
     - name: Delete the Github release (if it exists)
