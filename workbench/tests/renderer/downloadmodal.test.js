@@ -167,7 +167,6 @@ describe('DownloadProgressBar', () => {
 
 describe('Integration tests with main process', () => {
   beforeEach(async () => {
-    // setupCheckFilePermissions();
     setupDownloadHandlers(new BrowserWindow());
     getInvestModelNames.mockResolvedValue({});
   });
