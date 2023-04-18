@@ -96,7 +96,7 @@ jobs:
           gh release create $VERSION \
             --verify-tag \
             --title $VERSION \
-            --notes-file notes.md \
+            --notes-file notes.rst \
             artifacts/*
 
       - name: Create a PyPI release
