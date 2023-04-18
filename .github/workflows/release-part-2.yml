@@ -100,7 +100,7 @@ jobs:
             --notes "
             This release includes the following fixes and features:
 
-            $(sed -n "/$VERSION/,/^$/p" HISTORY.rst | tail -n +3" \
+            $(sed -n "/$VERSION/,/^$/p" HISTORY.rst | tail -n +3)" \
             artifacts/*
 
       - name: Create a PyPI release
