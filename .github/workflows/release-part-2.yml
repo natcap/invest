@@ -100,13 +100,13 @@ jobs:
         # this is the only step that can't be rolled back
         run: |
           ls artifacts/
-          ls artifacts/natcap.invest.*
+          ls artifacts/natcap.invest*
 
           twine upload \
             --repository testpypi \
             --username emlys \
             --password ${{ secrets.PYPI_PASSWORD }} \
-            artifacts/natcap.invest.*
+            artifacts/natcap.invest*
 
       # - name: Roll back on failure
       #   if: failure()
