@@ -57,7 +57,7 @@ jobs:
         run: |
           mkdir artifacts
           # this will download a folder containing each artifact
-          gh --repo emlys/invest-mirror run download $RUN_ID --dir artifacts --pattern "Wheel for *"
+          gh run download $RUN_ID --dir artifacts --pattern "Wheel for *"
           # move the artifacts out of the folders
           mv artifacts/*/* artifacts
           rm -rf artifacts/Wheel*
@@ -74,6 +74,9 @@ jobs:
             gh --repo emlys/invest-mirror run download $RUN_ID --dir artifacts --name "$artifact"
           done
 
+          ls artifacts/
+          ls artifacts/natcap.invest.*
+
       - name: Create Github release
         run: |
           # Copy the history notes for this version into the release message
@@ -82,10 +85,6 @@ jobs:
           gh release create $VERSION \
             --verify-tag \
             --title $VERSION \
-            --notes "
-            This release includes the following fixes and features:
-
-            $(sed -n '/^---*/,$ p' HISTORY.rst | tail -n +2 | sed '/^---*/q' | head -n -2)" \
             artifacts/*
 
       - name: Create a PyPI release
@@ -97,9 +96,9 @@ jobs:
             --password ${{ secrets.PYPI_PASSWORD }} \
             artifacts/natcap.invest.*
 
-      - name: Roll back on failure
-        if: failure()
-        uses: ./.github/actions/rollback_release
-        with:
-          VERSION: ${{ env.VERSION }}
-          GITHUB_TOKEN: ${{ env.GITHUB_TOKEN }}
+      # - name: Roll back on failure
+      #   if: failure()
+      #   uses: ./.github/actions/rollback_release
+      #   with:
+      #     VERSION: ${{ env.VERSION }}
+      #     GITHUB_TOKEN: ${{ env.GITHUB_TOKEN }}
