@@ -86,14 +86,21 @@ jobs:
             gh --repo emlys/invest-mirror run download $RUN_ID --dir artifacts --name "$artifact"
           done
 
+          sed -n "/$VERSION/,/^$/p" HISTORY.rst | tail -n +3
+          sed -n '/^---*/,$ p' HISTORY.rst | tail -n +2 | sed '/^---*/q' | head -n -2
+
+          echo "VERSION=$(echo ${{ github.head_ref }} | cut -c 13-)" >> $GITHUB_ENV
+
       - name: Create Github release
         run: |
           # Copy the history notes for this version into the release message
-          # The sed | tail | sed | head command extracts everything in the
-          # first section of the RST file (between ---- section dividers)
           gh release create $VERSION \
             --verify-tag \
             --title $VERSION \
+            --notes "
+            This release includes the following fixes and features:
+
+            $(sed -n "/$VERSION/,/^$/p" HISTORY.rst | tail -n +3" \
             artifacts/*
 
       - name: Create a PyPI release
