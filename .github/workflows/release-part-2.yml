@@ -18,6 +18,8 @@ on:
         type: string
 
 env:
+  VERSION: ${{ inputs.version }}
+  RUN_ID: ${{ inputs.run_id }}
   GITHUB_TOKEN: ${{ secrets.AUTORELEASE_BOT_PAT }}
 
 permissions:
