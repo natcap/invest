@@ -20,7 +20,7 @@ permissions:
   actions: write
 
 jobs:
-  finalize-and-tag:
+  start-release:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
