@@ -93,8 +93,8 @@ jobs:
         run: |
           twine upload \
             --repository testpypi \
-            --username emlys
-            --password ${{ secrets.PYPI_PASSWORD }}
+            --username emlys \
+            --password ${{ secrets.PYPI_PASSWORD }} \
             artifacts/natcap.invest.*
 
       - name: Roll back on failure
