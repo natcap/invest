@@ -5,18 +5,21 @@ import Form from 'react-bootstrap/Form';
 import Button from 'react-bootstrap/Button';
 import Modal from 'react-bootstrap/Modal';
 import Alert from 'react-bootstrap/Alert';
-import ProgressBar from 'react-bootstrap/ProgressBar';
 import Table from 'react-bootstrap/Table';
+import {
+  MdErrorOutline,
+} from 'react-icons/md';
 import { withTranslation } from 'react-i18next';
 
-import Expire from '../Expire';
 import sampledataRegistry from './sampledata_registry.json';
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
 const { ipcRenderer } = window.Workbench.electron;
 const logger = window.Workbench.getLogger('DataDownloadModal');
 
-const BASE_URL = 'https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.10.2/data';
+// A URL for sampledata to use in devMode, when the token containing the URL
+// associated with a production build of the Workbench does not exist.
+const BASE_URL = 'https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.13.0/data';
 const DEFAULT_FILESIZE = 0;
 
 /** Render a dialog with a form for configuring global invest settings */
@@ -30,11 +33,13 @@ class DataDownloadModal extends React.Component {
       modelCheckBoxState: {},
       dataRegistry: null,
       baseURL: BASE_URL,
+      alertPath: '',
     };
 
     this.handleSubmit = this.handleSubmit.bind(this);
     this.handleCheckAll = this.handleCheckAll.bind(this);
     this.handleCheckList = this.handleCheckList.bind(this);
+    this.closeDialog = this.closeDialog.bind(this);
     this.controller = new AbortController();
     this.signal = this.controller.signal;
   }
@@ -92,14 +97,22 @@ class DataDownloadModal extends React.Component {
       { properties: ['openDirectory'] }
     );
     if (data.filePaths.length) {
-      ipcRenderer.send(
-        ipcMainChannels.DOWNLOAD_URL,
-        this.state.selectedLinksArray,
-        data.filePaths[0]
+      const writable = await ipcRenderer.invoke(
+        ipcMainChannels.CHECK_FILE_PERMISSIONS, data.filePaths[0]
       );
-      this.props.storeDownloadDir(data.filePaths[0]);
+      if (!writable) {
+        this.setState({ alertPath: data.filePaths[0] });
+      } else {
+        this.setState({ alertPath: '' });
+        ipcRenderer.send(
+          ipcMainChannels.DOWNLOAD_URL,
+          this.state.selectedLinksArray,
+          data.filePaths[0]
+        );
+        this.props.storeDownloadDir(data.filePaths[0]);
+        this.closeDialog();
+      }
     }
-    this.props.closeModal();
   }
 
   handleCheckAll(event) {
@@ -147,6 +160,11 @@ class DataDownloadModal extends React.Component {
     });
   }
 
+  closeDialog() {
+    this.setState({ alertPath: '' })
+    this.props.closeModal()
+  }
+
   render() {
     const {
       modelCheckBoxState,
@@ -192,12 +210,29 @@ class DataDownloadModal extends React.Component {
     return (
       <Modal className="download-data-modal"
         show={this.props.show}
-        onHide={this.props.closeModal}
+        onHide={this.closeDialog}
         size="lg"
       >
         <Form>
           <Modal.Header>
-            <Modal.Title>{t("Download InVEST sample data")}</Modal.Title>
+            {
+              (this.state.alertPath)
+                ? (
+                  <Alert
+                    className="mb-0"
+                    variant="danger"
+                  >
+                    <MdErrorOutline
+                      size="2em"
+                      className="pr-1"
+                    />
+                    {t('Please choose a different folder. '
+                      + 'This application does not have permission to write to folder:')}
+                    <p className="mb-0"><em>{this.state.alertPath}</em></p>
+                  </Alert>
+                )
+                : <Modal.Title>{t("Download InVEST sample data")}</Modal.Title>
+            }
           </Modal.Header>
           <Modal.Body>
             <Table
@@ -227,7 +262,7 @@ class DataDownloadModal extends React.Component {
           <Modal.Footer>
             <Button
               variant="secondary"
-              onClick={this.props.closeModal}
+              onClick={this.closeDialog}
             >
               {t("Cancel")}
             </Button>

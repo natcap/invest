@@ -37,7 +37,10 @@
 
 Unreleased Changes
 ------------------
-
+* Workbench
+    * Fixed a bug where sampledata downloads failed silently (and progress bar 
+      became innacurate) if the Workbench did not have write permission to 
+      the download location. https://github.com/natcap/invest/issues/1070
 * HRA
     * Fixed a bug in HRA where the model would error when all exposure and
       consequence criteria were skipped for a single habitat. The model now
