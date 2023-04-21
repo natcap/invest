@@ -97,6 +97,8 @@ export function setupInvestRunHandlers(investExe) {
     };
     opts.env.CPL_DEBUG = 'ON';  // #1167 - force for now
     opts.env.PYTHONUTF8 = '1'; // #1167 - force UTF-8 mode
+    opts.env.PYTHONWARNDEFAULTENCODING = "1";  // #1167 - warn when default encoding used
+    opts.env.PYTHONTRACEMALLOC = "5";
     if (process.platform !== 'win32') {
       opts.detached = true;
     }

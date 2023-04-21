@@ -489,7 +489,7 @@ def main(user_args=None):
                            "PYTHONUTF8", "PYTHONWARNDEFAULTENCODING",
                            "PROJ_LIB", "PROJ_DATA", "GDAL_DATA"]:
                 try:
-                    LOGGER.debug(f"{envvar}={os.environ[envvar]}")
+                    LOGGER.debug(f"{envvar}={repr(os.environ[envvar])}")
                 except KeyError:
                     LOGGER.debug(f"{envvar} not set")
 

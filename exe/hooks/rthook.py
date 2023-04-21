@@ -1,7 +1,7 @@
-import sys
-import os
 import multiprocessing
+import os
 import platform
+import sys
 
 multiprocessing.freeze_support()
 
