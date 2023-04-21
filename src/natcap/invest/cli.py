@@ -486,11 +486,17 @@ def main(user_args=None):
             for envvar in ['LANG', 'PYTHONIOENCODING',
                            "PYTHONLEGACYWINDOWSSTDIO",
                            "PYTHONCOERCECLOCALE",
-                           "PYTHONUTF8", "PYTHONWARNDEFAULTENCODING"]:
+                           "PYTHONUTF8", "PYTHONWARNDEFAULTENCODING",
+                           "PROJ_LIB", "PROJ_DATA", "GDAL_DATA"]:
                 try:
                     LOGGER.debug(f"{envvar}={os.environ[envvar]}")
                 except KeyError:
                     LOGGER.debug(f"{envvar} not set")
+
+            try:
+                LOGGER.debug(f"MEIPASS: {repr(sys._MEIPASS)}")
+            except:
+                LOGGER.debug("MEIPASS: nope")
 
             # We're deliberately not validating here because the user
             # can just call ``invest validate <datastack>`` to validate.
