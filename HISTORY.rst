@@ -37,6 +37,10 @@
 
 Unreleased Changes
 ------------------
+* General
+    * Fixed a bug in the CLI where ``invest getspec --json`` failed on
+      non-json-serializable objects such as ``pint.Unit``.
+      https://github.com/natcap/invest/issues/1280
 * Workbench
     * Fixed a bug where sampledata downloads failed silently (and progress bar 
       became innacurate) if the Workbench did not have write permission to 

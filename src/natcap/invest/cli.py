@@ -16,6 +16,7 @@ import natcap.invest
 from natcap.invest import datastack
 from natcap.invest import model_metadata
 from natcap.invest import set_locale
+from natcap.invest import spec_utils
 from natcap.invest import ui_server
 from natcap.invest import utils
 
@@ -417,7 +418,7 @@ def main(user_args=None):
         spec = model_module.MODEL_SPEC
 
         if args.json:
-            message = json.dumps(spec)
+            message = spec_utils.serialize_args_spec(spec)
         else:
             message = pprint.pformat(spec)
         sys.stdout.write(message)
