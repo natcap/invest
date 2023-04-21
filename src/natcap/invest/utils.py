@@ -9,11 +9,13 @@ import pickle
 import re
 import shutil
 import tempfile
+import textwrap
 import time
 from datetime import datetime
 
 import numpy
 import pandas
+import psutil
 import pygeoprocessing
 from osgeo import gdal
 from osgeo import osr
@@ -100,6 +102,14 @@ def _log_gdal_errors(*args, **kwargs):
             f"  SystemError (b64 pickle): {repr(_b64pickle(e))}\n"
             f"  SystemError args (b64 pickle): {repr(_b64pickle(e.args))}"
         )
+        proc = psutil.Process()  # current process
+        opened_files_list = textwrap.indent(
+            "\n".join([str(file) for file in proc.open_files()]), '  ')
+        LOGGER.error(f"Open files:\n{opened_files_list}")
+        for config_opt in ('__last_error_message', '__last_error_code'):
+            value = gdal.GetThreadLocalConfigOption(config_opt)
+            LOGGER.error(f'gdal {config_opt}: {value}')
+        LOGGER.error(f'GDAL last error: {gdal.GetLastErrorMsg()}')
         return
     except (UnicodeError, UnicodeDecodeError, UnicodeEncodeError) as e:
         LOGGER.exception(
