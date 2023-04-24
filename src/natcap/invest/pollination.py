@@ -1,25 +1,24 @@
 """Pollinator service model for InVEST."""
-import itertools
 import collections
-import re
-import os
-import logging
 import hashlib
 import inspect
+import itertools
+import logging
+import os
+import re
 
+import numpy
+import pygeoprocessing
+import taskgraph
 from osgeo import gdal
 from osgeo import ogr
-import pygeoprocessing
-import numpy
-import taskgraph
 
-from . import utils
+from . import gettext
 from . import spec_utils
-from .unit_registry import u
+from . import utils
 from . import validation
 from .model_metadata import MODEL_METADATA
-from . import gettext
-
+from .unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
 
@@ -1191,7 +1190,7 @@ def _parse_scenario_variables(args):
             raise ValueError(
                 "Expected a header in guild table that matched the pattern "
                 f"'{header}' but was unable to find one. Here are all the "
-                f"headers from {guild_table_path}: {guild_headers}")
+                f"headers from {guild_table_path}: {', '.join(guild_headers)}")
 
     landcover_biophysical_table = utils.build_lookup_from_csv(
         landcover_biophysical_table_path, 'lucode', to_lower=True)
@@ -1204,7 +1203,7 @@ def _parse_scenario_variables(args):
                 "Expected a header in biophysical table that matched the "
                 f"pattern '{header}' but was unable to find one. Here are all "
                 f"the headers from {landcover_biophysical_table_path}: "
-                f"{biophysical_table_headers}")
+                f"{', '.join(biophysical_table_headers)}")
 
     # this dict to dict will map seasons to guild/biophysical headers
     # ex season_to_header['spring']['guilds']
@@ -1240,7 +1239,7 @@ def _parse_scenario_variables(args):
             matches = re.findall(header, " ".join(farm_headers))
             if not matches:
                 raise ValueError(
-                    f"Missing an expected headers '{header}' from "
+                    f"Missing expected header(s) '{header}' from "
                     f"{farm_vector_path}.\n"
                     f"Got these headers instead: {farm_headers}")
 
@@ -1269,15 +1268,16 @@ def _parse_scenario_variables(args):
         if len(lookup_table) != 3 and farm_vector is not None:
             raise ValueError(
                 "Expected a biophysical, guild, and farm entry for "
-                f"'{table_type}' but instead found only {lookup_table}. "
-                f"Ensure there are corresponding entries of '{table_type}' in "
-                "both the guilds, biophysical table, and farm fields.")
+                f"'{table_type}' but instead found only "
+                f"{list(lookup_table.keys())}. Ensure there are "
+                f"corresponding entries of '{table_type}' in both the "
+                "guilds, biophysical table, and farm fields.")
         elif len(lookup_table) != 2 and farm_vector is None:
             raise ValueError(
-                f"Expected a biophysical, and guild entry for '{table_type}' "
-                f"but instead found only {lookup_table}. Ensure there are "
-                f"corresponding entries of '{table_type}' in both the guilds "
-                "and biophysical table.")
+                f"Expected a biophysical and guild entry for '{table_type}' "
+                f"but instead found only {list(lookup_table.keys())}. "
+                "Ensure there are corresponding entries of '{table_type}' in "
+                "both the guilds and biophysical table.")
 
     if farm_vector_path is not None:
         farm_season_set = set()
@@ -1288,8 +1288,8 @@ def _parse_scenario_variables(args):
             raise ValueError(
                 "Found seasons in farm polygon that were not specified in the "
                 "biophysical table: "
-                f"{farm_season_set.difference(season_to_header)}. Expected "
-                f"only these: {season_to_header}")
+                f"{', '.join(farm_season_set.difference(season_to_header))}. "
+                f"Expected only these: {', '.join(season_to_header.keys())}")
 
     result = {}
     # * season_list (list of string)
