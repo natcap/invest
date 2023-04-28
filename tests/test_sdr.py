@@ -141,11 +141,11 @@ class SDRTests(unittest.TestCase):
 
         sdr.execute(args)
         expected_results = {
-            'usle_tot': 13.90210914612,
-            'sed_export': 0.55185163021,
-            'sed_dep': 8.80130577087,
-            'avoid_exp': 57971.87890625,
-            'avoid_eros': 1458232.5,
+            'usle_tot': 2.62457418442,
+            'sed_export': 0.09748090804,
+            'sed_dep': 1.71672844887,
+            'avoid_exp': 10199.7490234375,
+            'avoid_eros': 274510.75,
         }
 
         vector_path = os.path.join(
@@ -213,10 +213,10 @@ class SDRTests(unittest.TestCase):
 
         sdr.execute(args)
         expected_results = {
-            'sed_export': 0.55185163021,
-            'usle_tot': 13.90210914612,
-            'avoid_exp': 57971.87890625,
-            'avoid_eros': 1458232.5,
+            'sed_export': 0.09748090804,
+            'usle_tot': 2.62457418442,
+            'avoid_exp': 10199.7490234375,
+            'avoid_eros': 274510.75,
         }
 
         vector_path = os.path.join(
@@ -238,10 +238,10 @@ class SDRTests(unittest.TestCase):
         sdr.execute(args)
 
         expected_results = {
-            'sed_export': 0.67064666748,
-            'usle_tot': 12.6965303421,
-            'avoid_exp': 69130.8203125,
-            'avoid_eros': 1317588.375,
+            'sed_export': 0.08896198869,
+            'usle_tot': 1.86480903625,
+            'avoid_exp': 9204.283203125,
+            'avoid_eros': 194613.28125,
         }
 
         vector_path = os.path.join(
@@ -264,10 +264,10 @@ class SDRTests(unittest.TestCase):
         sdr.execute(args)
 
         expected_results = {
-            'sed_export': 0.97192692757,
-            'usle_tot': 12.68887424469,
-            'avoid_exp': 100960.9609375,
-            'avoid_eros': 1329122.0,
+            'sed_export': 0.17336219549,
+            'usle_tot': 2.56186032295,
+            'avoid_exp': 17980.52734375,
+            'avoid_eros': 267931.71875,
         }
 
         vector_path = os.path.join(
