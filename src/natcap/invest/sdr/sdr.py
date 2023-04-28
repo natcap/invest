@@ -1066,7 +1066,13 @@ def _calculate_ls_factor(
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         result[:] = _TARGET_NODATA
 
-        contributing_area = (flow_accumulation[valid_mask]-1) * cell_area
+        # Although Desmet & Govers (1996) discusses "upstream contributing
+        # area", this is not strictly defined. We decided to use the square
+        # root of the upstream contributing area here as an estimate, which
+        # matches the SAGA LS Factor option "square root of catchment area".
+        # See the InVEST ADR-0001 for more information.
+        contributing_area = numpy.sqrt(
+            (flow_accumulation[valid_mask]-1) * cell_area)
         slope_in_radians = numpy.arctan(percent_slope[valid_mask] / 100.0)
 
         aspect_length = (numpy.fabs(numpy.sin(slope_in_radians)) +
