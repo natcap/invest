@@ -41,9 +41,15 @@ Unreleased Changes
     * Fixed a bug in the CLI where ``invest getspec --json`` failed on
       non-json-serializable objects such as ``pint.Unit``.
       https://github.com/natcap/invest/issues/1280
+    * A new directory at `./doc/decision-records` has been created for
+      "Architecture/Any Decision Records", which will serve as a record of
+      nontrivial decisions that were made to InVEST and why.  This is
+      intended for reference by our science and software teams, and also by
+      the community at large when inquiring about a nontrivial change.
+      https://github.com/natcap/invest/issues/1079
 * Workbench
-    * Fixed a bug where sampledata downloads failed silently (and progress bar 
-      became innacurate) if the Workbench did not have write permission to 
+    * Fixed a bug where sampledata downloads failed silently (and progress bar
+      became innacurate) if the Workbench did not have write permission to
       the download location. https://github.com/natcap/invest/issues/1070
 * HRA
     * Fixed a bug in HRA where the model would error when all exposure and
