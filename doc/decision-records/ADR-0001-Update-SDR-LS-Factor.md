@@ -5,13 +5,6 @@ Science Lead: Rafa
 
 ## Context
 
-* SDR released in 3.1.0 (2014-11-19), used d-infinity
-* LS factor has remained unchanged since its release
-* Anecdotally, we have received many questions about the validity of LS
-* Even on the sample data, InVEST's LS factor output does not compare to the QGIS LS factor
-* We dismissed those issues, saying that the user needed to calibrate their model run
-* X value was 'improved' to be a weighted mean of proportional flow in InVEST 3.8.1
-
 Since we released the updated InVEST SDR model in InVEST 3.1.0, we have seen a
 common refrain of users and NatCap science staff noticing that the LS factor
 output of SDR did not produce realistic results and that the LS factor produced
@@ -37,7 +30,7 @@ for their LS factor equations:
 1. The contributing area $A_{i,j-in}$ is not strictly defined in Desmet &
    Govers (1996), it is only referred to as "the contributing area at the inlet
    of a grid cell with coordinates (i, j) (m^2)".
-   InVEST assumes that "contributing area" is $area_{pixel} \cdot {n_upstream_pixels}$.
+   InVEST assumes that "contributing area" is $area_{pixel} \cdot n\_upstream\_pixels}$.
    SAGA refers to this as "specific catchment area" and allows the user to choose their
    specific catchment area equation,  where the available options are
    "contour length simply as cell size", "contour length dependent on aspect", "square
@@ -64,7 +57,8 @@ to the presence of plateaus.
 Once we finally understood these discrepancies, James implemented several of the
 contributing area functions available in SAGA to see what might be most comparable
 to the real world.  Source code and a docker container for these experiments are
-available at https://github.com/phargogh/invest-ls-factor-vs-saga/blob/main/src/natcap/invest/sdr/sdr.py#L901.
+available at https://github.com/phargogh/invest-ls-factor-vs-saga/blob/main/src/natcap/invest/sdr/sdr.py#L901.  Some additional discussion and notes can be viewed in the related
+github issue: https://github.com/natcap/invest/issues/915.
 
 ## Decision
 
