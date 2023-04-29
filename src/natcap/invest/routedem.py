@@ -2,11 +2,9 @@
 import logging
 import os
 
-import numpy
 import pygeoprocessing
 import pygeoprocessing.routing
 import taskgraph
-from osgeo import gdal
 
 from . import gettext
 from . import spec_utils
@@ -94,15 +92,37 @@ MODEL_SPEC = {
             "required": False,
             "about": gettext("Calculate percent slope from the provided DEM."),
             "name": gettext("calculate slope")
-        }
+        },
+        "calculate_stream_order": {
+            "type": "boolean",
+            "required": False,
+            "about": gettext("Calculate the Strahler Stream order."),
+            "name": gettext("calculate strahler stream orders"),
+        },
+        "calculate_subwatersheds": {
+            "type": "boolean",
+            "required": False,
+            "about": gettext("Determine subwatersheds from the stream order."),
+            "name": gettext("calculate subwatersheds"),
+        },
     },
     "outputs": {
+        "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR,
         "filled.tif": spec_utils.FILLED_DEM,
         "flow_accumulation.tif": spec_utils.FLOW_ACCUMULATION,
         "flow_direction.tif": spec_utils.FLOW_DIRECTION,
         "slope.tif": spec_utils.SLOPE,
         "stream_mask.tif": spec_utils.STREAM,
-        "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
+        "strahler_stream_order.gpkg": {
+            "about": "",
+            "geometries": spec_utils.LINESTRING,
+            "fields": {},
+        },
+        "subwatersheds.gpkg": {
+            "about": "",
+            "geometries": spec_utils.POLYGON,
+            "fields": {},
+        },
     }
 }
 
@@ -171,8 +191,12 @@ def execute(args):
             args['calculate_flow_accumulation'],
             args['calculate_flow_direction'], and
             args['calculate_stream_threshold'] are all True.
-        args['calculate_slope'] (bool):  If True, model will calculate a
+        args['calculate_slope'] (bool): If True, model will calculate a
             slope raster from the DEM.
+        args['calculate_stream_order']: If True, model will create a vector of
+            the Strahler stream order.
+        args['calculate_subwatersheds']: If True, the model will create a
+            vector of subwatersheds.
         args['n_workers'] (int): The ``n_workers`` parameter to pass to
             the task graph.  The default is ``-1`` if not provided.
 
