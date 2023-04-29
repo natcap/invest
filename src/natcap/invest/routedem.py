@@ -296,28 +296,20 @@ def execute(args):
                         args['workspace_dir'],
                         _STREAM_MASK_FILE_PATTERN % file_suffix)
                 stream_threshold = float(args['threshold_flow_accumulation'])
-                if algorithm == 'D8':
-                    stream_threshold_task = graph.add_task(
-                        pygeoprocessing.routing.extract_streams_d8,
-                        kwargs={
-                            'flow_accum_raster_path_band':
-                                (flow_accumulation_path, 1),
-                            'flow_threshold': stream_threshold,
-                            'target_stream_raster_path': stream_mask_path,
-                        },
-                        target_path_list=[stream_mask_path],
-                        dependent_task_list=[flow_accum_task],
-                        task_name='stream_thresholding_d8')
-                else:  # MFD
-                    stream_threshold_task = graph.add_task(
-                        routing_funcs['threshold_flow'],
-                        args=((flow_accumulation_path, 1),
-                              (flow_dir_path, 1),
-                              stream_threshold,
-                              stream_mask_path),
-                        target_path_list=[stream_mask_path],
-                        task_name=['stream_extraction_MFD'],
-                        dependent_task_list=[flow_accum_task])
+                stream_extraction_kwargs = {
+                    'flow_accum_raster_path_band': (flow_accumulation_path, 1),
+                    'flow_threshold': stream_threshold,
+                    'target_stream_raster_path': stream_mask_path,
+                }
+                if algorithm == 'MFD':
+                    stream_extraction_kwargs['flow_dir_mfd_path_band'] = (
+                        flow_dir_path, 1)
+                stream_threshold_task = graph.add_task(
+                    routing_funcs['threshold_flow'],
+                    kwargs=stream_extraction_kwargs,
+                    target_path_list=[stream_mask_path],
+                    dependent_task_list=[flow_accum_task],
+                    task_name=f'stream_thresholding_{algorithm}')
 
                 if bool(args.get('calculate_downslope_distance', False)):
                     distance_path = os.path.join(
