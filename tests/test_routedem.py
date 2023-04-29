@@ -184,6 +184,7 @@ class RouteDEMTests(unittest.TestCase):
             'calculate_downslope_distance': True,
             'calculate_slope': True,
             'calculate_stream_order': True,
+            'calculate_subwatersheds': True,
             'threshold_flow_accumulation': 4,
         }
 
@@ -196,11 +197,13 @@ class RouteDEMTests(unittest.TestCase):
                 'flow_accumulation_foo.tif',
                 'flow_direction_foo.tif',
                 'slope_foo.tif',
-                'stream_mask_foo.tif'):
+                'stream_mask_foo.tif',
+                'strahler_stream_order_foo.gpkg',
+                'subwatersheds_foo.gpkg'):
             self.assertTrue(
                 os.path.exists(
                     os.path.join(args['workspace_dir'], expected_file)),
-                'Raster not found: %s' % expected_file)
+                'File not found: %s' % expected_file)
 
         expected_stream_mask = numpy.array([
             [0, 0, 0, 0, 1, 1, 0, 0, 0],
@@ -264,9 +267,6 @@ class RouteDEMTests(unittest.TestCase):
                 'downslope_distance_foo.tif')).ReadAsArray(),
             rtol=0, atol=1e-6)
 
-        self.assertTrue(os.path.exists(os.path.join(
-            args['workspace_dir'], 'strahler_stream_order_foo.gpkg')))
-
     def test_routedem_mfd(self):
         """RouteDEM: test mfd routing."""
         from natcap.invest import routedem
@@ -282,6 +282,7 @@ class RouteDEMTests(unittest.TestCase):
             'calculate_downslope_distance': True,
             'calculate_slope': False,
             'calculate_stream_order': True,  # make sure file not created
+            'calculate_subwatersheds': True,  # make sure file not created
             'threshold_flow_accumulation': 4,
         }
 
@@ -325,6 +326,8 @@ class RouteDEMTests(unittest.TestCase):
 
         self.assertFalse(os.path.exists(os.path.join(
             args['workspace_dir'], 'strahler_stream_order_foo.gpkg')))
+        self.assertFalse(os.path.exists(os.path.join(
+            args['workspace_dir'], 'subwatersheds_foo.gpkg')))
 
     def test_validation_required_args(self):
         """RouteDEM: test required args in validation."""

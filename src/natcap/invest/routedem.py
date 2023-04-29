@@ -135,6 +135,7 @@ _FLOW_ACCUMULATION_FILE_PATTERN = 'flow_accumulation%s.tif'
 _STREAM_MASK_FILE_PATTERN = 'stream_mask%s.tif'
 _DOWNSLOPE_DISTANCE_FILE_PATTERN = 'downslope_distance%s.tif'
 _STRAHLER_STREAM_ORDER_PATTERN = 'strahler_stream_order%s.gpkg'
+_SUBWATERSHEDS_PATTERN = 'subwatersheds%s.gpkg'
 
 _ROUTING_FUNCS = {
     'D8': {
@@ -358,8 +359,26 @@ def execute(args):
                             flow_accum_task,
                         ])
 
-                    #if bool(args.get('calculate_subwatersheds', False)):
-                        #subwatersheds_path =
+                    if bool(args.get('calculate_subwatersheds', False)):
+                        subwatersheds_path = os.path.join(
+                            args['workspace_dir'],
+                            _SUBWATERSHEDS_PATTERN % file_suffix)
+                        graph.add_task(
+                            pygeoprocessing.routing.calculate_subwatershed_boundary,
+                            kwargs={
+                                'd8_flow_dir_raster_path_band':
+                                    (flow_dir_path, 1),
+                                'strahler_stream_vector_path':
+                                    stream_order_path,
+                                'target_watershed_boundary_vector_path':
+                                    subwatersheds_path,
+                                'outlet_at_confluence': False,  # The default
+                            },
+                            target_path_list=[subwatersheds_path],
+                            task_name=(
+                                'Calculate subwatersheds from stream order'),
+                            dependent_task_list=[flow_direction_task,
+                                                 stream_order_task])
 
     graph.close()
     graph.join()
