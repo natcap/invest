@@ -97,13 +97,13 @@ MODEL_SPEC = {
             "type": "boolean",
             "required": False,
             "about": gettext("Calculate the Strahler Stream order."),
-            "name": gettext("calculate strahler stream orders"),
+            "name": gettext("calculate strahler stream orders (D8 only)"),
         },
         "calculate_subwatersheds": {
             "type": "boolean",
             "required": False,
             "about": gettext("Determine subwatersheds from the stream order."),
-            "name": gettext("calculate subwatersheds"),
+            "name": gettext("calculate subwatersheds (D8 only)"),
         },
     },
     "outputs": {

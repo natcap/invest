@@ -239,13 +239,24 @@ const UI_SPEC = {
       ['algorithm'],
       ['calculate_flow_direction'],
       ['calculate_flow_accumulation'],
-      ['calculate_stream_threshold', 'threshold_flow_accumulation', 'calculate_downslope_distance'],
+      ['calculate_stream_threshold',
+        'threshold_flow_accumulation',
+        'calculate_downslope_distance',
+        'calculate_stream_order',
+        'calculate_subwatersheds',
+      ],
     ],
     enabledFunctions: {
       calculate_flow_accumulation: isSufficient.bind(null, 'calculate_flow_direction'),
       calculate_stream_threshold: isSufficient.bind(null, 'calculate_flow_accumulation'),
       threshold_flow_accumulation: isSufficient.bind(null, 'calculate_stream_threshold'),
       calculate_downslope_distance: isSufficient.bind(null, 'calculate_stream_threshold'),
+      calculate_stream_order: ((state) => (
+        isSufficient('calculate_stream_threshold', state)
+        && state.argsValues.algorithm.value === 'D8')),
+      calculate_subwatersheds: ((state) => (
+        isSufficient('calculate_stream_order', state)
+        && state.argsValues.algorithm.value === 'D8')),
     },
   },
   scenario_generator_proximity: {
