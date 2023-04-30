@@ -116,7 +116,104 @@ MODEL_SPEC = {
         "strahler_stream_order.gpkg": {
             "about": "",
             "geometries": spec_utils.LINESTRING,
-            "fields": {},
+            "fields": {
+                "order": {
+                    "about": "The Strahler stream order.",
+                    "type": "number",
+                    "units": u.none,
+                },
+                "river_id": {
+                    "about": (
+                        "A unique identifier used by all stream segments that "
+                        "connect to the same outlet."),
+                    "type": "number",
+                    "units": u.none,
+                },
+                "drop_distance": {
+                    "about": (
+                        "The drop distance in DEM elevation units from the "
+                        "upstream to downstream component of this stream "
+                        "segment."),
+                    "type": "number",
+                    "units": u.elevation,  # TODO: will this work?
+                },
+                "outlet": {
+                    "about": (
+                        "1 if this segment is an outlet, 0 if it is not."),
+                    "type": "number",
+                    "units": u.none,
+                },
+                "river_id": {
+                    "about": (
+                        "A unique identifier among all stream segments which "
+                        "are hydrologically connected."),
+                    "type": "number",
+                    "units": u.none,
+                },
+                "us_fa": {
+                    "about": (
+                        "The flow accumulation value at the upstream end of "
+                        "the stream segment."),
+                    "type": "number",
+                    "units": u.pixels,  # TODO: does this work?
+                },
+                "ds_fa": {
+                    "about": (
+                        "The flow accumulation value at the downstream end of "
+                        "the stream segment."),
+                    "type": "number",
+                    "units": u.pixels,  # TODO: does this work?
+                },
+                "thresh_fa": {
+                    "about": (
+                        "The final threshold flow accumulation value used to "
+                        "determine the river segments."),
+                    "type": "number",
+                    "units": u.pixels,  # TODO: does this work?
+                },
+                "upstream_d8_dir": {
+                    "about": (
+                        "The direction of flow immediately upstream."),
+                    "type": "number",
+                    "units": u.none,
+                },
+                "ds_x": {
+                    "about": "The raster X coordinate for the outlet.",
+                    "type": "number",
+                    "units": u.none,
+                },
+                "ds_y": {
+                    "about": "The raster Y coordinate for the outlet.",
+                    "type": "number",
+                    "units": u.none,
+                },
+                "ds_x_1": {
+                    "about": (
+                        "The raster X coordinate that is 1 pixel upstream "
+                        "from the outlet."),
+                    "type": "number",
+                    "units": u.none,
+                },
+                "ds_y_1": {
+                    "about": (
+                        "The raster Y coordinate that is 1 pixel upstream "
+                        "from the outlet."),
+                    "type": "number",
+                    "units": u.none,
+                },
+                "us_x": {
+                    "about": (
+                        "The raster X coordinate for the upstream inlet."),
+                    "type": "number",
+                    "units": u.none,
+                },
+                "us_y": {
+                    "about": (
+                        "The raster Y coordinate for the upstream inlet."),
+                    "type": "number",
+                    "units": u.none,
+                },
+            },
         },
         "subwatersheds.gpkg": {
             "about": "",
