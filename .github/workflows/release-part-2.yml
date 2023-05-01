@@ -47,11 +47,11 @@ jobs:
 
       - name: Find actions run for the $VERSION tag
         run: |
-          RUN_ID=$(
+          echo "RUN_ID=$(
             gh run list \
               --branch ${{ env.VERSION }} \
               --json databaseId \
-              --jq .[].databaseId)
+              --jq .[].databaseId)" >> $GITHUB_ENV
 
       - name: Download release artifacts
         run: |
