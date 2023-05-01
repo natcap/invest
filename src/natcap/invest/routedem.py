@@ -135,7 +135,7 @@ MODEL_SPEC = {
                         "upstream to downstream component of this stream "
                         "segment."),
                     "type": "number",
-                    "units": u.elevation,  # TODO: will this work?
+                    "units": u.none,
                 },
                 "outlet": {
                     "about": (
@@ -148,7 +148,7 @@ MODEL_SPEC = {
                         "The flow accumulation value at the upstream end of "
                         "the stream segment."),
                     "type": "number",
-                    "units": u.pixels,  # TODO: does this work?
+                    "units": u.count,
                 },
                 "ds_fa": {
                     "about": (
