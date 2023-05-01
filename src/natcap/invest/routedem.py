@@ -143,13 +143,6 @@ MODEL_SPEC = {
                     "type": "number",
                     "units": u.none,
                 },
-                "river_id": {
-                    "about": (
-                        "A unique identifier among all stream segments which "
-                        "are hydrologically connected."),
-                    "type": "number",
-                    "units": u.none,
-                },
                 "us_fa": {
                     "about": (
                         "The flow accumulation value at the upstream end of "
@@ -216,9 +209,48 @@ MODEL_SPEC = {
             },
         },
         "subwatersheds.gpkg": {
-            "about": "",
+            "about": (
+                "A GeoPackage with polygon features representing "
+                "subwatersheds.  A new subwatershed is created for each "
+                "tributary of a stream and is influenced greatly by "
+                "your choice of Threshold Flow Accumulation value."),
             "geometries": spec_utils.POLYGON,
-            "fields": {},
+            "fields": {
+                "stream_id": {
+                    "about": (
+                        "A unique stream id, matching the one in the Strahler "
+                        "stream order vector."),
+                    "type": "number",
+                    "units": u.none,
+                },
+                "terminated_early": {
+                    "about": (
+                        "Indicates whether generation of this subwatershed "
+                        "terminated early (1) or completed as expected (0). "
+                        "If you encounter a (1), please let us know via the "
+                        "forums, community.naturalcapitalproject.org."),
+                    "type": "number",
+                    "units": u.none,
+                },
+                "outlet_x": {
+                    "about": (
+                        "The X coordinate in pixels from the origin of the "
+                        "outlet of the watershed. This can be useful when "
+                        "determining other properties of the watershed when "
+                        "indexing with the underlying raster data."),
+                    "type": "number",
+                    "units": u.none,
+                },
+                "outlet_y": {
+                    "about": (
+                        "The X coordinate in pixels from the origin of the "
+                        "outlet of the watershed. This can be useful when "
+                        "determining other properties of the watershed when "
+                        "indexing with the underlying raster data."),
+                    "type": "number",
+                    "units": u.none,
+                },
+            },
         },
     }
 }
