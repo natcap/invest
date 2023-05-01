@@ -1,25 +1,13 @@
 name: Release (Part 2 of 2)
 
-# on:
-#   # this workflow will run any time any PR into main is closed
-#   pull_request:
-#     types: [closed]
-#     branches:
-#       - main
-
 on:
-  workflow_dispatch:
-    inputs:
-      version:
-        required: true
-        type: string
-      run_id:
-        required: true
-        type: string
+  # this workflow will run any time any PR into main is closed
+  pull_request:
+    types: [closed]
+    branches:
+      - main
 
 env:
-  VERSION: ${{ inputs.version }}
-  RUN_ID: ${{ inputs.run_id }}
   GITHUB_TOKEN: ${{ secrets.AUTORELEASE_BOT_PAT }}
 
 permissions:
@@ -28,25 +16,25 @@ permissions:
   actions: write
 
 jobs:
-  # roll_back_release:
-  #   # run this job if a PR from an autorelease branch into main was closed without merging
-  #   if: startsWith(github.head_ref, 'autorelease') && github.event.pull_request.merged != true
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v3
+  roll_back_release:
+    # run this job if a PR from an autorelease branch into main was closed without merging
+    if: startsWith(github.head_ref, 'autorelease') && github.event.pull_request.merged != true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
 
-  #     - name: Extract version from autorelease branch name
-  #       run: echo "VERSION=$(echo ${{ github.head_ref }} | cut -c 13-)" >> $GITHUB_ENV
+      - name: Extract version from autorelease branch name
+        run: echo "VERSION=$(echo ${{ github.head_ref }} | cut -c 13-)" >> $GITHUB_ENV
 
-  #     - name: Roll back on failure
-  #       uses: ./.github/actions/rollback_release
-  #       with:
-  #         VERSION: ${{ env.VERSION }}
-  #         GITHUB_TOKEN: ${{ env.GITHUB_TOKEN }}
+      - name: Roll back on failure
+        uses: ./.github/actions/rollback_release
+        with:
+          VERSION: ${{ env.VERSION }}
+          GITHUB_TOKEN: ${{ env.GITHUB_TOKEN }}
 
   publish_release:
     # run this job if a PR was merged from an autorelease branch into main
-    # if: startsWith(github.head_ref, 'autorelease') && github.event.pull_request.merged == true
+    if: startsWith(github.head_ref, 'autorelease') && github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -54,16 +42,16 @@ jobs:
       - name: Install dependencies
         run: pip install twine
 
-      # - name: Extract version from autorelease branch name
-      #   run: echo "VERSION=$(echo ${{ github.head_ref }} | cut -c 13-)" >> $GITHUB_ENV
+      - name: Extract version from autorelease branch name
+        run: echo "VERSION=$(echo ${{ github.head_ref }} | cut -c 13-)" >> $GITHUB_ENV
 
-      # - name: Find actions run for the $VERSION tag
-      #   run: |
-      #     RUN_ID=$(
-      #       gh run list \
-      #         --branch ${{ env.VERSION }} \
-      #         --json databaseId \
-      #         --jq .[].databaseId)
+      - name: Find actions run for the $VERSION tag
+        run: |
+          RUN_ID=$(
+            gh run list \
+              --branch ${{ env.VERSION }} \
+              --json databaseId \
+              --jq .[].databaseId)
 
       - name: Download release artifacts
         run: |
@@ -102,18 +90,15 @@ jobs:
       - name: Create a PyPI release
         # this is the only step that can't be rolled back
         run: |
-          ls artifacts/
-          ls artifacts/natcap.invest*
-
           twine upload \
             --repository testpypi \
             --username emlys \
             --password ${{ secrets.PYPI_PASSWORD }} \
             artifacts/natcap.invest*
 
-      # - name: Roll back on failure
-      #   if: failure()
-      #   uses: ./.github/actions/rollback_release
-      #   with:
-      #     VERSION: ${{ env.VERSION }}
-      #     GITHUB_TOKEN: ${{ env.GITHUB_TOKEN }}
+      - name: Roll back on failure
+        if: failure()
+        uses: ./.github/actions/rollback_release
+        with:
+          VERSION: ${{ env.VERSION }}
+          GITHUB_TOKEN: ${{ env.GITHUB_TOKEN }}
