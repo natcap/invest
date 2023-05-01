@@ -114,7 +114,9 @@ MODEL_SPEC = {
         "slope.tif": spec_utils.SLOPE,
         "stream_mask.tif": spec_utils.STREAM,
         "strahler_stream_order.gpkg": {
-            "about": "",
+            "about": (
+                "A vector of line segments indicating the Strahler stream "
+                "order and other properties of each stream segment."),
             "geometries": spec_utils.LINESTRING,
             "fields": {
                 "order": {
