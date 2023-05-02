@@ -62,6 +62,10 @@ Unreleased Changes
     * The Scenic Quality model now supports both uppercase and lowercase
       fieldnames. Leading and trailing spaces are now also stripped for the
       user's convenience. https://github.com/natcap/invest/issues/1276
+* SDR
+    * Fixed an issue with sediment deposition progress logging that was
+      causing the "percent complete" indicator to not progress linearly.
+      https://github.com/natcap/invest/issues/1262
 * Urban Nature Access
     * The model will now handle a case where an input raster might not have a
       nodata value defined.  When this happens, a nodata value is inferred
