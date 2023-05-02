@@ -62,6 +62,14 @@ Unreleased Changes
     * The Scenic Quality model now supports both uppercase and lowercase
       fieldnames. Leading and trailing spaces are now also stripped for the
       user's convenience. https://github.com/natcap/invest/issues/1276
+* Urban Nature Access
+    * The model will now handle a case where an input raster might not have a
+      nodata value defined.  When this happens, a nodata value is inferred
+      based on the datatype of the source raster and a ``WARNING`` is logged to
+      notify the user.  It is possible, though unlikely, that the assumed value
+      may collide with values in the source raster.  If this happens, the
+      workaround is to define the correct nodata value in the source raster.
+      https://github.com/natcap/invest/issues/1293
 
 3.13.0 (2023-03-17)
 -------------------
