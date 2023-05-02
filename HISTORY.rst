@@ -51,6 +51,10 @@ Unreleased Changes
       correctly handles this case. https://github.com/natcap/invest/issues/1250
     * Tables in the .xls format are no longer supported. This format was
       deprecated by ``pandas``. (`#1271 <https://github.com/natcap/invest/issues/1271>`_)
+* Pollination
+    * Several exceptions have been tidied up so that only fieldnames are
+      printed instead of the python data structures representing the whole
+      table.  https://github.com/natcap/invest/issues/1283
 * RouteDEM
     * RouteDEM now allows the user to calculate Strahler Stream Orders, which
       will be written to a new vector in the user's workspace. This stream
