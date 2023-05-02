@@ -123,13 +123,13 @@ jobs:
 
       - name: Authenticate GCP
         if: github.event_name != 'pull_request'
-        uses: google-github-actions/auth@v0
+        uses: google-github-actions/auth@v1
         with:
           credentials_json: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
 
       - name: Set up GCP
         if: github.event_name != 'pull_request'
-        uses: google-github-actions/setup-gcloud@v0
+        uses: google-github-actions/setup-gcloud@v1
 
       - name: Deploy artifacts to GCS
         if: github.event_name != 'pull_request'
@@ -182,13 +182,13 @@ jobs:
         # different extensions)
       - name: Authenticate GCP
         if: github.event_name != 'pull_request' && matrix.os == 'macos-latest' && matrix.python-version == env.LATEST_SUPPORTED_PYTHON_VERSION
-        uses: google-github-actions/auth@v0
+        uses: google-github-actions/auth@v1
         with:
           credentials_json: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
 
       - name: Set up GCP
         if: github.event_name != 'pull_request' && matrix.os == 'macos-latest' && matrix.python-version == env.LATEST_SUPPORTED_PYTHON_VERSION
-        uses: google-github-actions/setup-gcloud@v0
+        uses: google-github-actions/setup-gcloud@v1
 
       - name: Deploy artifacts to GCS
         if: github.event_name != 'pull_request' && matrix.os == 'macos-latest' && matrix.python-version == env.LATEST_SUPPORTED_PYTHON_VERSION
@@ -359,13 +359,13 @@ jobs:
 
       - name: Authenticate GCP
         if: github.event_name != 'pull_request'
-        uses: google-github-actions/auth@v0
+        uses: google-github-actions/auth@v1
         with:
           credentials_json: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
 
       - name: Set up GCP
         if: github.event_name != 'pull_request'
-        uses: google-github-actions/setup-gcloud@v0
+        uses: google-github-actions/setup-gcloud@v1
 
       - name: Sign binaries (macOS)
         if: github.event_name != 'pull_request' && matrix.os == 'macos-latest' # secrets not available in PR
@@ -450,13 +450,13 @@ jobs:
 
       - name: Authenticate GCP
         if: github.event_name != 'pull_request'
-        uses: google-github-actions/auth@v0
+        uses: google-github-actions/auth@v1
         with:
           credentials_json: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
 
       - name: Set up GCP
         if: github.event_name != 'pull_request'
-        uses: google-github-actions/setup-gcloud@v0
+        uses: google-github-actions/setup-gcloud@v1
 
       - name: Deploy artifacts to GCS
         if: github.event_name != 'pull_request'
