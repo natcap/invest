@@ -2606,17 +2606,32 @@ def _mask_raster(source_raster_path, mask_raster_path, target_raster_path):
     """
     source_raster_info = pygeoprocessing.get_raster_info(source_raster_path)
     source_raster_nodata = source_raster_info['nodata'][0]
+    source_raster_dtype = source_raster_info['datatype']
+
+    if source_raster_nodata is None:
+        source_numpy_dtype = source_raster_info['numpy_type']
+        try:
+            target_nodata = numpy.finfo(source_numpy_dtype).min
+        except ValueError:
+            # ValueError: When the numpy dtype is an int, finfo raises this.
+            target_nodata = numpy.iinfo(source_numpy_dtype).max
+        target_nodata = float(target_nodata)
+        LOGGER.warning(
+            'No nodata value defined, assuming a value of '
+            f'{target_nodata} on {source_raster_path}')
+    else:
+        target_nodata = source_raster_nodata
 
     def _mask(array, valid_mask):
         array = array.copy()
-        array[valid_mask == 0] = source_raster_nodata
+        array[valid_mask == 0] = target_nodata
         return array
 
     pygeoprocessing.raster_calculator(
         [(source_raster_path, 1), (mask_raster_path, 1)], _mask,
         target_raster_path,
-        datatype_target=source_raster_info['datatype'],
-        nodata_target=source_raster_nodata)
+        datatype_target=source_raster_dtype,
+        nodata_target=target_nodata)
 
 
 def validate(args, limit_to=None):

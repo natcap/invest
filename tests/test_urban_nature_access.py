@@ -894,3 +894,51 @@ class UNATests(unittest.TestCase):
         args = _build_model_args(self.workspace_dir)
         args['search_radius_mode'] = urban_nature_access.RADIUS_OPT_URBAN_NATURE
         self.assertEqual(urban_nature_access.validate(args), [])
+
+    def test_mask(self):
+        """UNA: Unit test for _mask_raster."""
+        from natcap.invest import urban_nature_access
+
+        source_raster_path = os.path.join(self.workspace_dir, 'source.tif')
+        mask_raster_path = os.path.join(self.workspace_dir, 'mask.tif')
+        target_raster_path = os.path.join(self.workspace_dir, 'target.tif')
+
+        mask_array = numpy.array([
+            [0, 1, 1, 1, 0],
+            [0, 1, 1, 1, 0],
+            [0, 1, 1, 1, 0]], dtype=numpy.uint8)
+        pygeoprocessing.numpy_array_to_raster(
+            mask_array, 0, _DEFAULT_PIXEL_SIZE, _DEFAULT_ORIGIN,
+            _DEFAULT_SRS.ExportToWkt(), mask_raster_path)
+
+        # Check a few different dtype / nodata combinations.
+        for dtype, nodatas, default_nodata in (
+                (numpy.uint8, (None, 255), numpy.iinfo(numpy.uint8).max),
+                (numpy.float32, (None, 1e9), numpy.finfo(numpy.float32).min)):
+            for nodata in nodatas:
+                if nodata is None:
+                    nd = 5
+                else:
+                    nd = nodata
+                source_array = numpy.array([
+                    [1, 2, 3, 4, 5],
+                    [1, 2, 3, 4, 5],
+                    [1, 2, 3, 4, nd]], dtype=dtype)
+
+                pygeoprocessing.numpy_array_to_raster(
+                    source_array, nodata, _DEFAULT_PIXEL_SIZE, _DEFAULT_ORIGIN,
+                    _DEFAULT_SRS.ExportToWkt(), source_raster_path)
+
+                urban_nature_access._mask_raster(
+                    source_raster_path, mask_raster_path, target_raster_path)
+
+                output_array = pygeoprocessing.raster_to_numpy_array(
+                    target_raster_path)
+                expected_array = source_array.copy()
+
+                if nodata is not None:
+                    expected_array[mask_array == 0] = nodata
+                else:
+                    expected_array[mask_array == 0] = default_nodata
+
+                numpy.testing.assert_allclose(output_array, expected_array)
