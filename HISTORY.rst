@@ -42,8 +42,8 @@ Unreleased Changes
       non-json-serializable objects such as ``pint.Unit``.
       https://github.com/natcap/invest/issues/1280
 * Workbench
-    * Fixed a bug where sampledata downloads failed silently (and progress bar 
-      became innacurate) if the Workbench did not have write permission to 
+    * Fixed a bug where sampledata downloads failed silently (and progress bar
+      became innacurate) if the Workbench did not have write permission to
       the download location. https://github.com/natcap/invest/issues/1070
 * HRA
     * Fixed a bug in HRA where the model would error when all exposure and
@@ -51,6 +51,16 @@ Unreleased Changes
       correctly handles this case. https://github.com/natcap/invest/issues/1250
     * Tables in the .xls format are no longer supported. This format was
       deprecated by ``pandas``. (`#1271 <https://github.com/natcap/invest/issues/1271>`_)
+* RouteDEM
+    * RouteDEM now allows the user to calculate Strahler Stream Orders, which
+      will be written to a new vector in the user's workspace. This stream
+      order vector is dependent on the user's Threshold Flow Accumulation value
+      and is only available for the D8 routing model.
+      https://github.com/natcap/invest/issues/884
+    * RouteDEM now allows the user to create a vector of subwatersheds, which
+      are written to a new vector in the user's workspace.  This vector is
+      dependent on the calculation of Strahler Stream Orders and is only
+      available for the D8 routing model. https://github.com/natcap/invest/issues/349
 * Scenic Quality
     * The Scenic Quality model will now raise an error when it encounters a
       geometry that is not a simple Point.  This is in line with the user's
