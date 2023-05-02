@@ -35,28 +35,33 @@
 
 .. :changelog:
 
-
-..
-  Unreleased Changes
-  ------------------
-
-3.13.0a9 (2023-04-18)
----------------------
-* foo
-
-3.13.0a7 (2023-04-14)
----------------------
-
+Unreleased Changes
+------------------
+* General
+    * Fixed a bug in the CLI where ``invest getspec --json`` failed on
+      non-json-serializable objects such as ``pint.Unit``.
+      https://github.com/natcap/invest/issues/1280
+* Workbench
+    * Fixed a bug where sampledata downloads failed silently (and progress bar
+      became innacurate) if the Workbench did not have write permission to
+      the download location. https://github.com/natcap/invest/issues/1070
 * HRA
     * Fixed a bug in HRA where the model would error when all exposure and
       consequence criteria were skipped for a single habitat. The model now
       correctly handles this case. https://github.com/natcap/invest/issues/1250
     * Tables in the .xls format are no longer supported. This format was
       deprecated by ``pandas``. (`#1271 <https://github.com/natcap/invest/issues/1271>`_)
+* Pollination
+    * Several exceptions have been tidied up so that only fieldnames are
+      printed instead of the python data structures representing the whole
+      table.  https://github.com/natcap/invest/issues/1283
 * Scenic Quality
     * The Scenic Quality model will now raise an error when it encounters a
       geometry that is not a simple Point.  This is in line with the user's
       guide chapter.  https://github.com/natcap/invest/issues/1245
+    * The Scenic Quality model now supports both uppercase and lowercase
+      fieldnames. Leading and trailing spaces are now also stripped for the
+      user's convenience. https://github.com/natcap/invest/issues/1276
 
 3.13.0 (2023-03-17)
 -------------------
