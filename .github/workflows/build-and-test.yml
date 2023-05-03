@@ -130,6 +130,8 @@ jobs:
       - name: Set up GCP
         if: github.event_name != 'pull_request'
         uses: google-github-actions/setup-gcloud@v1
+        with:
+          version: "= 417.0.1"
 
       - name: Deploy artifacts to GCS
         if: github.event_name != 'pull_request'
@@ -189,6 +191,8 @@ jobs:
       - name: Set up GCP
         if: github.event_name != 'pull_request' && matrix.os == 'macos-latest' && matrix.python-version == env.LATEST_SUPPORTED_PYTHON_VERSION
         uses: google-github-actions/setup-gcloud@v1
+        with:
+          version: "= 417.0.1"
 
       - name: Deploy artifacts to GCS
         if: github.event_name != 'pull_request' && matrix.os == 'macos-latest' && matrix.python-version == env.LATEST_SUPPORTED_PYTHON_VERSION
@@ -366,6 +370,8 @@ jobs:
       - name: Set up GCP
         if: github.event_name != 'pull_request'
         uses: google-github-actions/setup-gcloud@v1
+        with:
+          version: "= 417.0.1"
 
       - name: Sign binaries (macOS)
         if: github.event_name != 'pull_request' && matrix.os == 'macos-latest' # secrets not available in PR
@@ -457,6 +463,8 @@ jobs:
       - name: Set up GCP
         if: github.event_name != 'pull_request'
         uses: google-github-actions/setup-gcloud@v1
+        with:
+          version: "= 417.0.1"
 
       - name: Deploy artifacts to GCS
         if: github.event_name != 'pull_request'
