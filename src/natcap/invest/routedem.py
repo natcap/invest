@@ -150,21 +150,21 @@ MODEL_SPEC = {
                         "The flow accumulation value at the upstream end of "
                         "the stream segment."),
                     "type": "number",
-                    "units": u.count,
+                    "units": u.pixels,
                 },
                 "ds_fa": {
                     "about": (
                         "The flow accumulation value at the downstream end of "
                         "the stream segment."),
                     "type": "number",
-                    "units": u.pixels,  # TODO: does this work?
+                    "units": u.pixels,
                 },
                 "thresh_fa": {
                     "about": (
                         "The final threshold flow accumulation value used to "
                         "determine the river segments."),
                     "type": "number",
-                    "units": u.pixels,  # TODO: does this work?
+                    "units": u.pixels,
                 },
                 "upstream_d8_dir": {
                     "about": (
