@@ -62,6 +62,10 @@ Unreleased Changes
     * The Scenic Quality model now supports both uppercase and lowercase
       fieldnames. Leading and trailing spaces are now also stripped for the
       user's convenience. https://github.com/natcap/invest/issues/1276
+* SDR
+    * Fixed an issue with sediment deposition progress logging that was
+      causing the "percent complete" indicator to not progress linearly.
+      https://github.com/natcap/invest/issues/1262
 
 3.13.0 (2023-03-17)
 -------------------
