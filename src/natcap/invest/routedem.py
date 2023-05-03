@@ -173,40 +173,44 @@ MODEL_SPEC = {
                     "units": u.none,
                 },
                 "ds_x": {
-                    "about": "The raster X coordinate for the outlet.",
+                    "about": (
+                        "The DEM X coordinate for the outlet in pixels from "
+                        "the origin."),
                     "type": "number",
-                    "units": u.none,
+                    "units": u.pixels,
                 },
                 "ds_y": {
-                    "about": "The raster Y coordinate for the outlet.",
+                    "about": (
+                        "The DEM Y coordinate for the outlet in pixels from "
+                        "the origin."),
                     "type": "number",
-                    "units": u.none,
+                    "units": u.pixels,
                 },
                 "ds_x_1": {
                     "about": (
-                        "The raster X coordinate that is 1 pixel upstream "
+                        "The DEM X coordinate that is 1 pixel upstream "
                         "from the outlet."),
                     "type": "number",
-                    "units": u.none,
+                    "units": u.pixels,
                 },
                 "ds_y_1": {
                     "about": (
-                        "The raster Y coordinate that is 1 pixel upstream "
+                        "The DEM Y coordinate that is 1 pixel upstream "
                         "from the outlet."),
                     "type": "number",
-                    "units": u.none,
+                    "units": u.pixels,
                 },
                 "us_x": {
                     "about": (
-                        "The raster X coordinate for the upstream inlet."),
+                        "The DEM X coordinate for the upstream inlet."),
                     "type": "number",
-                    "units": u.none,
+                    "units": u.pixels,
                 },
                 "us_y": {
                     "about": (
-                        "The raster Y coordinate for the upstream inlet."),
+                        "The DEM Y coordinate for the upstream inlet."),
                     "type": "number",
-                    "units": u.none,
+                    "units": u.pixels,
                 },
             },
         },
