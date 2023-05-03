@@ -80,7 +80,6 @@ jobs:
           echo "This release includes the following fixes and features:" > notes.rst
           echo "" >> notes.rst
           sed -n "/$VERSION/,/^$/p" HISTORY.rst | tail -n +3 >> notes.rst
-          cat notes.rst
           gh release create $VERSION \
             --verify-tag \
             --title $VERSION \
@@ -91,8 +90,7 @@ jobs:
         # this is the only step that can't be rolled back
         run: |
           twine upload \
-            --repository testpypi \
-            --username emlys \
+            --username ${{ secrets.PYPI_USERNAME }} \
             --password ${{ secrets.PYPI_PASSWORD }} \
             artifacts/natcap.invest*
 
