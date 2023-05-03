@@ -1,4 +1,5 @@
 """Module for Regression Testing the InVEST Carbon model."""
+import collections
 import os
 import shutil
 import tempfile
@@ -266,6 +267,35 @@ class RouteDEMTests(unittest.TestCase):
                 args['workspace_dir'],
                 'downslope_distance_foo.tif')).ReadAsArray(),
             rtol=0, atol=1e-6)
+
+        try:
+            vector = gdal.OpenEx(os.path.join(
+                args['workspace_dir'], 'strahler_stream_order_foo.gpkg'))
+            layer = vector.GetLayer()
+            self.assertEqual(27, layer.GetFeatureCount())
+            features_per_order = collections.defaultdict(int)
+            for feature in layer:
+                order = feature.GetField('order')
+                features_per_order[order] += 1
+            self.assertEqual(dict(features_per_order), {1: 18, 2: 9})
+        finally:
+            layer = None
+            vector = None
+
+        try:
+            vector = gdal.OpenEx(os.path.join(
+                args['workspace_dir'], 'subwatersheds_foo.gpkg'))
+            layer = vector.GetLayer()
+            self.assertEqual(26, layer.GetFeatureCount())
+            features_by_area = collections.defaultdict(int)
+            for feature in layer:
+                geometry = feature.GetGeometryRef()
+                area = geometry.GetArea()
+                features_by_area[area] += 1
+            self.assertEqual(dict(features_by_area), {16: 17, 4: 8, 24: 1})
+        finally:
+            layer = None
+            vector = None
 
     def test_routedem_mfd(self):
         """RouteDEM: test mfd routing."""
