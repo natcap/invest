@@ -1,8 +1,9 @@
 """Module for Regression Testing the InVEST Carbon model."""
-import unittest
-import tempfile
-import shutil
+import collections
 import os
+import shutil
+import tempfile
+import unittest
 
 import numpy
 from osgeo import gdal
@@ -163,8 +164,8 @@ class RouteDEMTests(unittest.TestCase):
              50.249374, 50.24938, 50.249382, 55.17727, 63.18101],
             dtype=numpy.float32).reshape((15,))
         numpy.testing.assert_allclose(
-            expected_unique_values, 
-            numpy.unique(slope_array), 
+            expected_unique_values,
+            numpy.unique(slope_array),
             rtol=0, atol=1e-6)
         numpy.testing.assert_allclose(
             numpy.sum(slope_array), 4088.7358, rtol=0, atol=1e-4)
@@ -183,6 +184,8 @@ class RouteDEMTests(unittest.TestCase):
             'calculate_stream_threshold': True,
             'calculate_downslope_distance': True,
             'calculate_slope': True,
+            'calculate_stream_order': True,
+            'calculate_subwatersheds': True,
             'threshold_flow_accumulation': 4,
         }
 
@@ -195,11 +198,13 @@ class RouteDEMTests(unittest.TestCase):
                 'flow_accumulation_foo.tif',
                 'flow_direction_foo.tif',
                 'slope_foo.tif',
-                'stream_mask_foo.tif'):
+                'stream_mask_foo.tif',
+                'strahler_stream_order_foo.gpkg',
+                'subwatersheds_foo.gpkg'):
             self.assertTrue(
                 os.path.exists(
                     os.path.join(args['workspace_dir'], expected_file)),
-                'Raster not found: %s' % expected_file)
+                'File not found: %s' % expected_file)
 
         expected_stream_mask = numpy.array([
             [0, 0, 0, 0, 1, 1, 0, 0, 0],
@@ -230,7 +235,7 @@ class RouteDEMTests(unittest.TestCase):
         numpy.testing.assert_allclose(
             expected_flow_accum,
             gdal.OpenEx(os.path.join(
-                args['workspace_dir'], 
+                args['workspace_dir'],
                 'flow_accumulation_foo.tif')).ReadAsArray(),
             rtol=0, atol=1e-6)
 
@@ -244,7 +249,7 @@ class RouteDEMTests(unittest.TestCase):
         numpy.testing.assert_allclose(
             expected_flow_direction,
             gdal.OpenEx(os.path.join(
-                args['workspace_dir'], 
+                args['workspace_dir'],
                 'flow_direction_foo.tif')).ReadAsArray(),
             rtol=0, atol=1e-6)
 
@@ -259,9 +264,38 @@ class RouteDEMTests(unittest.TestCase):
         numpy.testing.assert_allclose(
             expected_downslope_distance,
             gdal.OpenEx(os.path.join(
-                args['workspace_dir'], 
+                args['workspace_dir'],
                 'downslope_distance_foo.tif')).ReadAsArray(),
             rtol=0, atol=1e-6)
+
+        try:
+            vector = gdal.OpenEx(os.path.join(
+                args['workspace_dir'], 'strahler_stream_order_foo.gpkg'))
+            layer = vector.GetLayer()
+            self.assertEqual(27, layer.GetFeatureCount())
+            features_per_order = collections.defaultdict(int)
+            for feature in layer:
+                order = feature.GetField('order')
+                features_per_order[order] += 1
+            self.assertEqual(dict(features_per_order), {1: 18, 2: 9})
+        finally:
+            layer = None
+            vector = None
+
+        try:
+            vector = gdal.OpenEx(os.path.join(
+                args['workspace_dir'], 'subwatersheds_foo.gpkg'))
+            layer = vector.GetLayer()
+            self.assertEqual(26, layer.GetFeatureCount())
+            features_by_area = collections.defaultdict(int)
+            for feature in layer:
+                geometry = feature.GetGeometryRef()
+                area = geometry.GetArea()
+                features_by_area[area] += 1
+            self.assertEqual(dict(features_by_area), {16: 17, 4: 8, 24: 1})
+        finally:
+            layer = None
+            vector = None
 
     def test_routedem_mfd(self):
         """RouteDEM: test mfd routing."""
@@ -277,6 +311,8 @@ class RouteDEMTests(unittest.TestCase):
             'calculate_stream_threshold': True,
             'calculate_downslope_distance': True,
             'calculate_slope': False,
+            'calculate_stream_order': True,  # make sure file not created
+            'calculate_subwatersheds': True,  # make sure file not created
             'threshold_flow_accumulation': 4,
         }
 
@@ -317,6 +353,11 @@ class RouteDEMTests(unittest.TestCase):
             raster_sum = numpy.sum(raster.ReadAsArray(), dtype=numpy.float64)
             numpy.testing.assert_allclose(
                 raster_sum, expected_sum, rtol=0, atol=1e-6)
+
+        self.assertFalse(os.path.exists(os.path.join(
+            args['workspace_dir'], 'strahler_stream_order_foo.gpkg')))
+        self.assertFalse(os.path.exists(os.path.join(
+            args['workspace_dir'], 'subwatersheds_foo.gpkg')))
 
     def test_validation_required_args(self):
         """RouteDEM: test required args in validation."""

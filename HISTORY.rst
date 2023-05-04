@@ -55,6 +55,16 @@ Unreleased Changes
     * Several exceptions have been tidied up so that only fieldnames are
       printed instead of the python data structures representing the whole
       table.  https://github.com/natcap/invest/issues/1283
+* RouteDEM
+    * RouteDEM now allows the user to calculate Strahler Stream Orders, which
+      will be written to a new vector in the user's workspace. This stream
+      order vector is dependent on the user's Threshold Flow Accumulation value
+      and is only available for the D8 routing model.
+      https://github.com/natcap/invest/issues/884
+    * RouteDEM now allows the user to create a vector of subwatersheds, which
+      are written to a new vector in the user's workspace.  This vector is
+      dependent on the calculation of Strahler Stream Orders and is only
+      available for the D8 routing model. https://github.com/natcap/invest/issues/349
 * Scenic Quality
     * The Scenic Quality model will now raise an error when it encounters a
       geometry that is not a simple Point.  This is in line with the user's
