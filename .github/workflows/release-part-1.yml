@@ -63,9 +63,8 @@ jobs:
 
       - name: Tag and push
         run: |
-          git push origin $AUTORELEASE_BRANCH
           git tag $VERSION
-          git push origin $VERSION
+          git push --atomic origin $AUTORELEASE_BRANCH $VERSION
 
       - name: Find actions run for the version tag
         run: |

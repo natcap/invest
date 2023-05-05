@@ -47,7 +47,7 @@ jobs:
 
       - name: Find actions run for the $VERSION tag
         run: |
-          echo "RUN_ID=$(
+          echo "RUN_ID=$( \
             gh run list \
               --branch ${{ env.VERSION }} \
               --json databaseId \
