@@ -72,7 +72,7 @@ jobs:
                           InVEST-user-guide \
                           "Source distribution"
           do
-            gh --repo emlys/invest-mirror run download $RUN_ID --dir artifacts --name "$artifact"
+            gh run download $RUN_ID --dir artifacts --name "$artifact"
           done
 
       - name: Create Github release
@@ -91,8 +91,8 @@ jobs:
         # this is the only step that can't be rolled back
         run: |
           twine upload \
-            --username ${{ secrets.PYPI_USERNAME }} \
-            --password ${{ secrets.PYPI_PASSWORD }} \
+            --username="__token__" \
+            --password=${{ secrets.PYPI_NATCAP_INVEST_TOKEN }} \
             artifacts/natcap.invest*
 
       - name: Roll back on failure
