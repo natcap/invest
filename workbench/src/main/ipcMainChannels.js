@@ -1,4 +1,5 @@
 export const ipcMainChannels = {
+  CHECK_FILE_PERMISSIONS: 'check-file-permissions',
   CHECK_STORAGE_TOKEN: 'check-storage-token',
   DOWNLOAD_URL: 'download-url',
   GET_N_CPUS: 'get-n-cpus',
