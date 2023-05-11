@@ -1,0 +1,118 @@
+name: Release (Part 1 of 2)
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        required: true
+        type: string
+
+env:
+  VERSION: ${{ inputs.version }}
+  AUTORELEASE_BRANCH: autorelease/${{ inputs.version }}
+  # use a personal access token here which has permissions to trigger further actions
+  # this is necessary for the pr checks
+  GITHUB_TOKEN: ${{ secrets.AUTORELEASE_BOT_PAT }}
+
+jobs:
+  start-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.AUTORELEASE_BOT_PAT }}
+
+      - name: Configure git
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "<>"
+
+      # Members of the natcap software team can push to the autorelease branch on
+      # natcap/invest; this branch is a special case for our release process.
+      - name: Create autorelease branch
+        run: git checkout -b "$AUTORELEASE_BRANCH"
+
+      # Replace
+      #
+      # Unreleased Changes
+      # ------------------
+      #
+      # with
+      #
+      # ..
+      #   Unreleased Changes
+      #   ------------------
+      #
+      # X.X.X (XXXX-XX-XX)
+      # ------------------
+      - name: Update HISTORY.rst
+        run: |
+          HEADER="$VERSION ($(date '+%Y-%m-%d'))"
+          HEADER_LENGTH=${#HEADER}
+          UNDERLINE=$(for i in $(seq 1 $HEADER_LENGTH); do echo -n "-"; done)
+          perl -0777 -i -pe \
+              "s/Unreleased Changes\n------------------/..\n  Unreleased Changes\n  ------------------\n\n${HEADER}\n${UNDERLINE}/g" \
+              HISTORY.rst
+          git add HISTORY.rst
+          git commit -m "Committing the $VERSION release."
+
+      - name: Tag and push
+        run: |
+          git tag $VERSION
+          git push --atomic origin $AUTORELEASE_BRANCH $VERSION
+
+      - name: Find actions run for the version tag
+        run: |
+          # wait a few seconds to make sure the actions run exists before querying it
+          sleep 5
+          echo "TAG_RUN_URL=$( \
+            gh run list \
+              --branch $VERSION \
+              --limit 1 \
+              --json url \
+              --jq .[].url)" >> $GITHUB_ENV
+
+      - name: Create a PR from the autorelease branch into main
+        run: |
+          gh pr create \
+            --base main \
+            --head $AUTORELEASE_BRANCH \
+            --title "$VERSION release" \
+            --reviewer $GITHUB_ACTOR \
+            --assignee $GITHUB_ACTOR \
+            --body "
+            # Release $VERSION and merge into \`main\`
+
+            This PR contains automated changes made for the $VERSION release.
+
+            Merging this PR will trigger an action that publishes the \
+            release. Closing this PR without merging will trigger an action that \
+            rolls back any release steps that have completed so far.
+
+            ## Review this PR
+            - [ ] Make sure that the automated changes look correct
+            - [ ] Wait for BOTH the PR checks below AND the [$VERSION tag checks]($TAG_RUN_URL) \
+                  to complete. The $VERSION tag workflow is most important \
+                  because it produces the artifacts that will be used in the \
+                  next steps of the release process.
+            - [ ] Download and try out the [tag build artifacts]($TAG_RUN_URL)
+
+            **If everything looks good**, approve and merge this PR. This will \
+            trigger a Github Action that will publish the release. Then go \
+            back to the [Release Checklist](https://github.com/natcap/invest/wiki/Release-Checklist) \
+            and complete any remaining tasks.
+
+            **If there is a bug**, decline this PR. Submit a fix in a separate \
+            PR into \`main\`. Once the fix has been merged, restart the release \
+            process from the beginning.
+
+            **If either workflow fails due to an intermittent problem**, \
+            rerun it through the GitHub UI. Proceed to approve and merge this \
+            PR once it succeeds."
+
+      - name: Roll back on failure
+        if: failure()
+        uses: ./.github/actions/rollback_release
+        with:
+          VERSION: ${{ env.VERSION }}
+          GITHUB_TOKEN: ${{ env.GITHUB_TOKEN }}
