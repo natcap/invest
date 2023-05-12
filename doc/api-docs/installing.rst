@@ -45,10 +45,10 @@ To install ``natcap.invest`` via ``pip``::
 
     pip install natcap.invest
 
-Note that ``natcap.invest`` depends on GDAL, which must already be compiled and
-available on your system.  GDAL can be installed from your system package manager,
-from ``conda``/``mamba``, or from
-`Christoph Gohlke's python builds for Windows <https://github.com/cgohlke/geospatial.whl/>`_.
+Note that ``pip install natcap.invest`` will fail with a compilation error if
+GDAL is not already installed. ``natcap.invest`` depends on the underlying
+GDAL binaries, which cannot be installed via ``pip``. For details on installing
+GDAL on your system, see https://gdal.org/download.html.
 
 Installing from source
 ----------------------
@@ -65,6 +65,9 @@ latest changes in the source tree.  This approach requires both a C/C++ compiler
 and ``git`` to be available on your system::
 
     pip install "git+https://github.com/natcap/invest.git@main#egg=natcap.invest"
+
+Note that GDAL must be installed on your system before installing in this way.
+For details on installing GDAL, see https://gdal.org/download.html.
 
 Dependencies
 ------------
