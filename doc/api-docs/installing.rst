@@ -50,6 +50,36 @@ GDAL is not already installed. ``natcap.invest`` depends on the underlying
 GDAL binaries, which cannot be installed via ``pip``. For details on installing
 GDAL on your system, see https://gdal.org/download.html.
 
+Errors Compiling GDAL
++++++++++++++++++++++
+
+If you see one of these errors, you need to install GDAL:
+
+* ``FileNotFoundError: [Errno 2] No such file or directory: 'gdal-config'``
+* ``gdal_config_error: [Errno 2] No such file or directory: 'gdal-config'``
+
+It is also possible to have a compatible version of GDAL installed, but for
+``pip`` to try to compile the GDAL bindings anyways.  This happens when a newer
+version of the GDAL python bindings are available on the Python Package Index
+than are installed on your system.  The error message you see will look
+something like this::
+
+        bool CPL_DLL GDALDatasetAddFieldDomain(GDALDatasetH hDS,
+                     ^
+        fatal error: too many errors emitted, stopping now [-ferror-limit=]
+        1 warning and 20 errors generated.
+        error: command '/usr/bin/clang' failed with exit code 1
+        [end of output]
+
+    note: This error originates from a subprocess, and is likely not a problem with pip.
+    ERROR: Failed building wheel for GDAL
+    Running setup.py clean for GDAL
+
+To work around this error when you have a compatible version of GDAL already installed,
+instruct ``pip`` to only upgrade packages if needed::
+
+    pip install natcap.invest --upgrade-strategy=only-if-needed
+
 Installing from source
 ----------------------
 
