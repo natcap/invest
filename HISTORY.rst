@@ -41,6 +41,9 @@ Unreleased Changes
     * Fixed a bug in the CLI where ``invest getspec --json`` failed on
       non-json-serializable objects such as ``pint.Unit``.
       https://github.com/natcap/invest/issues/1280
+    * Updated the package installation instructions in the API docs for clarity
+      and also to highlight the ease of installation through ``conda-forge``.
+      https://github.com/natcap/invest/issues/1256
 * Workbench
     * Fixed a bug where sampledata downloads failed silently (and progress bar
       became innacurate) if the Workbench did not have write permission to
