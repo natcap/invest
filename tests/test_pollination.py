@@ -1,14 +1,14 @@
 """Module for Regression Testing the InVEST Pollination model."""
-import numpy
-import unittest
-import tempfile
-import shutil
 import os
+import shutil
+import tempfile
+import unittest
 
+import numpy
 import pygeoprocessing
+import shapely.geometry
 from osgeo import ogr
 from osgeo import osr
-import shapely.geometry
 
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'pollination')
@@ -126,8 +126,9 @@ class PollinationTests(unittest.TestCase):
                 REGRESSION_DATA, 'input', 'missing_headers_farm.shp'),
         }
         # should error when not finding an expected farm header
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ValueError) as cm:
             pollination.execute(args)
+        self.assertIn('Missing expected header', str(cm.exception))
 
     def test_pollination_too_many_farm_seasons(self):
         """Pollination: regression testing too many seasons in farm."""
@@ -147,8 +148,11 @@ class PollinationTests(unittest.TestCase):
                 REGRESSION_DATA, 'input', 'too_many_seasons_farm.shp'),
         }
         # should error when not finding an expected farm header
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ValueError) as cm:
             pollination.execute(args)
+        self.assertIn(
+            ('Found seasons in farm polygon that were not specified in the '
+             'biophysical table'), str(cm.exception))
 
     def test_pollination_missing_guild_header(self):
         """Pollination: regression testing missing guild headers."""
@@ -166,8 +170,10 @@ class PollinationTests(unittest.TestCase):
                 'landcover_biophysical_table_simple.csv'),
         }
         # should error when not finding an expected farm header
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ValueError) as cm:
             pollination.execute(args)
+        self.assertIn('Expected a biophysical and guild entry for',
+                      str(cm.exception))
 
     def test_pollination_no_farm_regression(self):
         """Pollination: regression testing sample data with no farms."""
@@ -244,8 +250,11 @@ class PollinationTests(unittest.TestCase):
             'farm_vector_path': os.path.join(
                 REGRESSION_DATA, 'input', 'farms.shp'),
         }
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ValueError) as cm:
             pollination.execute(args)
+        self.assertIn(
+            'Expected a header in guild table that matched the pattern',
+            str(cm.exception))
 
     def test_pollination_bad_biophysical_headers(self):
         """Pollination: testing that model detects bad biophysical headers."""
@@ -270,13 +279,16 @@ class PollinationTests(unittest.TestCase):
             'farm_vector_path': os.path.join(
                 REGRESSION_DATA, 'input', 'farms.shp'),
         }
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ValueError) as cm:
             pollination.execute(args)
+        self.assertIn(
+            'Expected a header in biophysical table that matched the pattern',
+            str(cm.exception))
 
     def test_pollination_missing_lulc_values(self):
         """Pollination: testing that model detects missing lulc values."""
-        from natcap.invest import pollination
         import pandas
+        from natcap.invest import pollination
 
         temp_path = tempfile.mkdtemp(dir=self.workspace_dir)
 
@@ -306,9 +318,9 @@ class PollinationTests(unittest.TestCase):
         with self.assertRaises(ValueError) as cm:
             pollination.execute(args)
 
-        self.assertTrue(
+        self.assertIn(
             "The missing values found in the LULC raster but not the table"
-            " are: [1]" in str(cm.exception))
+            " are: [1]", str(cm.exception))
 
     def test_pollination_bad_cross_table_headers(self):
         """Pollination: ensure detection of missing headers in one table."""
@@ -342,8 +354,11 @@ class PollinationTests(unittest.TestCase):
             'farm_vector_path': os.path.join(
                 REGRESSION_DATA, 'input', 'farms.shp'),
         }
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ValueError) as cm:
             pollination.execute(args)
+        self.assertIn(
+            "Expected a biophysical, guild, and farm entry for 'fall'",
+            str(cm.exception))
 
     def test_pollination_bad_farm_type(self):
         """Pollination: ensure detection of bad farm geometry type."""
@@ -380,8 +395,9 @@ class PollinationTests(unittest.TestCase):
                 REGRESSION_DATA, 'input', 'landcover_biophysical_table.csv'),
             'farm_vector_path': farm_shape_path,
         }
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ValueError) as cm:
             pollination.execute(args)
+        self.assertIn("Farm layer not a polygon type", str(cm.exception))
 
     def test_pollination_unequal_raster_pixel_size(self):
         """Pollination: regression testing sample data."""

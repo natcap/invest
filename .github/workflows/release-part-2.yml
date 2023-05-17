@@ -1,0 +1,98 @@
+name: Release (Part 2 of 2)
+
+on:
+  # this workflow will run any time any PR into main is closed
+  pull_request:
+    types: [closed]
+    branches:
+      - main
+
+env:
+  GITHUB_TOKEN: ${{ secrets.AUTORELEASE_BOT_PAT }}
+
+jobs:
+  roll_back_release:
+    # run this job if a PR from an autorelease branch into main was closed without merging
+    if: startsWith(github.head_ref, 'autorelease') && github.event.pull_request.merged != true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Extract version from autorelease branch name
+        run: echo "VERSION=$(echo ${{ github.head_ref }} | cut -c 13-)" >> $GITHUB_ENV
+
+      - name: Roll back on failure
+        uses: ./.github/actions/rollback_release
+        with:
+          VERSION: ${{ env.VERSION }}
+          GITHUB_TOKEN: ${{ env.GITHUB_TOKEN }}
+
+  publish_release:
+    # run this job if a PR was merged from an autorelease branch into main
+    if: startsWith(github.head_ref, 'autorelease') && github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: pip install twine
+
+      - name: Extract version from autorelease branch name
+        run: echo "VERSION=$(echo ${{ github.head_ref }} | cut -c 13-)" >> $GITHUB_ENV
+
+      - name: Find actions run for the $VERSION tag
+        run: |
+          echo "RUN_ID=$( \
+            gh run list \
+              --branch $VERSION \
+              --limit 1 \
+              --json databaseId \
+              --jq .[].databaseId)" >> $GITHUB_ENV
+
+      - name: Download release artifacts
+        run: |
+          mkdir artifacts
+          # this will download a folder containing each artifact
+          gh run download $RUN_ID --dir artifacts --pattern "Wheel for *"
+          # move the artifacts out of the folders
+          mv artifacts/*/* artifacts
+          rm -rf artifacts/Wheel*
+          # verify that all 6 wheels are there
+          if [ `find artifacts/* | wc -l` -ne 6 ]; then exit 1; fi
+
+          # download each artifact separately so that the command will fail if any is missing
+          for artifact in Workbench-Windows-binary \
+                          Workbench-macOS-binary \
+                          InVEST-sample-data \
+                          InVEST-user-guide \
+                          "Source distribution"
+          do
+            gh run download $RUN_ID --dir artifacts --name "$artifact"
+          done
+
+      - name: Create Github release
+        run: |
+          # Copy the history notes for this version into the release message
+          echo "This release includes the following fixes and features:" > notes.rst
+          echo "" >> notes.rst
+          sed -n "/$VERSION/,/^$/p" HISTORY.rst | tail -n +3 >> notes.rst
+          gh release create $VERSION \
+            --verify-tag \
+            --title $VERSION \
+            --notes-file notes.rst \
+            artifacts/*
+
+      - name: Create a PyPI release
+        # this is the only step that can't be rolled back
+        run: |
+          twine upload \
+            --username="__token__" \
+            --password=${{ secrets.PYPI_NATCAP_INVEST_TOKEN }} \
+            artifacts/natcap.invest*
+
+      - name: Roll back on failure
+        if: failure()
+        uses: ./.github/actions/rollback_release
+        with:
+          VERSION: ${{ env.VERSION }}
+          GITHUB_TOKEN: ${{ env.GITHUB_TOKEN }}

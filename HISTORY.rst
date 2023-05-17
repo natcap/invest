@@ -47,6 +47,9 @@ Unreleased Changes
       intended for reference by our science and software teams, and also by
       the community at large when inquiring about a nontrivial change.
       https://github.com/natcap/invest/issues/1079
+    * Updated the package installation instructions in the API docs for clarity
+      and also to highlight the ease of installation through ``conda-forge``.
+      https://github.com/natcap/invest/issues/1256
 * Workbench
     * Fixed a bug where sampledata downloads failed silently (and progress bar
       became innacurate) if the Workbench did not have write permission to
@@ -57,6 +60,20 @@ Unreleased Changes
       correctly handles this case. https://github.com/natcap/invest/issues/1250
     * Tables in the .xls format are no longer supported. This format was
       deprecated by ``pandas``. (`#1271 <https://github.com/natcap/invest/issues/1271>`_)
+* Pollination
+    * Several exceptions have been tidied up so that only fieldnames are
+      printed instead of the python data structures representing the whole
+      table.  https://github.com/natcap/invest/issues/1283
+* RouteDEM
+    * RouteDEM now allows the user to calculate Strahler Stream Orders, which
+      will be written to a new vector in the user's workspace. This stream
+      order vector is dependent on the user's Threshold Flow Accumulation value
+      and is only available for the D8 routing model.
+      https://github.com/natcap/invest/issues/884
+    * RouteDEM now allows the user to create a vector of subwatersheds, which
+      are written to a new vector in the user's workspace.  This vector is
+      dependent on the calculation of Strahler Stream Orders and is only
+      available for the D8 routing model. https://github.com/natcap/invest/issues/349
 * Scenic Quality
     * The Scenic Quality model will now raise an error when it encounters a
       geometry that is not a simple Point.  This is in line with the user's
@@ -64,6 +81,10 @@ Unreleased Changes
     * The Scenic Quality model now supports both uppercase and lowercase
       fieldnames. Leading and trailing spaces are now also stripped for the
       user's convenience. https://github.com/natcap/invest/issues/1276
+* SDR
+    * Fixed an issue with sediment deposition progress logging that was
+      causing the "percent complete" indicator to not progress linearly.
+      https://github.com/natcap/invest/issues/1262
 
 3.13.0 (2023-03-17)
 -------------------
