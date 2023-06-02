@@ -875,23 +875,22 @@ def _calculate_annual_qfi(qfm_path_list, target_qf_path):
         None.
 
     """
+    qf_nodata = -1
+
     def qfi_sum_op(*qf_values):
         """Sum the monthly qfis."""
-        # only calculate the sum where data is available for all 12 months
-        valid_mask = numpy.full(qf_values[0].shape, True)
-        for i in range(len(qf_values)):
-            valid_mask &= ~utils.array_equals_nodata(qf_values[i], TARGET_NODATA)
-
-        qf_sum = numpy.full(qf_values[0].shape, TARGET_NODATA, dtype=numpy.float32)
-        qf_sum[valid_mask] = 0
+        qf_sum = numpy.zeros(qf_values[0].shape)
+        valid_mask = ~utils.array_equals_nodata(qf_values[0], qf_nodata)
+        valid_qf_sum = qf_sum[valid_mask]
         for index in range(len(qf_values)):
-            qf_sum[valid_mask] += qf_values[index][valid_mask]
-
+            valid_qf_sum += qf_values[index][valid_mask]
+        qf_sum[:] = qf_nodata
+        qf_sum[valid_mask] = valid_qf_sum
         return qf_sum
 
     pygeoprocessing.raster_calculator(
         [(path, 1) for path in qfm_path_list],
-        qfi_sum_op, target_qf_path, gdal.GDT_Float32, TARGET_NODATA)
+        qfi_sum_op, target_qf_path, gdal.GDT_Float32, qf_nodata)
 
 
 def _calculate_monthly_quick_flow(precip_path, n_events_path, stream_path,
