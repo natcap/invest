@@ -6,6 +6,7 @@ import Card from 'react-bootstrap/Card';
 import Container from 'react-bootstrap/Container';
 import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
+import { useTranslation } from 'react-i18next';
 
 import OpenButton from '../OpenButton';
 import InvestJob from '../../InvestJob';
@@ -109,86 +110,81 @@ HomeTab.propTypes = {
 /**
  * Renders a button for each recent invest job.
  */
-class RecentInvestJobs extends React.Component {
-  constructor(props) {
-    super(props);
-    this.handleClick = this.handleClick.bind(this);
+function RecentInvestJobs(props) {
+  const { recentJobs, openInvestModel } = props;
+  const handleClick = (jobMetadata) => {
+    openInvestModel(new InvestJob(jobMetadata));
   }
+  const { t, i18n } = useTranslation();
 
-  handleClick(jobMetadata) {
-    this.props.openInvestModel(new InvestJob(jobMetadata));
-  }
-
-  render() {
-    // Buttons to load each recently saved state
-    const recentButtons = [];
-    const { recentJobs } = this.props;
-    recentJobs.forEach((job) => {
-      recentButtons.push(
-        <Card
-          className="text-left recent-job-card"
-          as="button"
-          key={job.hash}
-          onClick={() => this.handleClick(job)}
-        >
-          <Card.Body>
-            <Card.Header>
-              <span className="header-title">{job.modelHumanName}</span>
-            </Card.Header>
-            <Card.Title>
-              <span className="text-heading">{'Workspace: '}</span>
-              <span className="text-mono">{job.argsValues.workspace_dir}</span>
-            </Card.Title>
-            <Card.Title>
-              <span className="text-heading">{'Suffix: '}</span>
-              <span className="text-mono">{job.argsValues.results_suffix}</span>
-            </Card.Title>
-            <Card.Footer className="text-muted">
-              <span className="timestamp">{job.humanTime}</span>
-              <span className="status">
-                {(job.status === 'success'
-                  ? <span className="status-success">{_('Model Complete')}</span>
-                  : <span className="status-error">{job.status}</span>
-                )}
-              </span>
-            </Card.Footer>
-          </Card.Body>
-        </Card>
-      );
-    });
-
-    return (
-      <>
-        <Container>
-          <Row>
-            <Col className="recent-header-col">
-              {recentButtons.length
-                ? (
-                  <h4>
-                    {_('Recent runs:')}
-                  </h4>
-                )
-                : (
-                  <div className="default-text">
-                    {_(`Set up a model from a sample datastack file (.json)
-                        or from an InVEST model's logfile (.txt): `)}
-                  </div>
-                )}
-            </Col>
-            <Col className="open-button-col">
-              <OpenButton
-                className="mr-2"
-                openInvestModel={this.props.openInvestModel}
-              />
-            </Col>
-          </Row>
-        </Container>
-        <React.Fragment>
-          {recentButtons}
-        </React.Fragment>
-      </>
+  // Buttons to load each recently saved state
+  const recentButtons = [];
+  recentJobs.forEach((job) => {
+    if (!job.argsValues) { return; }
+    recentButtons.push(
+      <Card
+        className="text-left recent-job-card"
+        as="button"
+        key={job.hash}
+        onClick={() => handleClick(job)}
+      >
+        <Card.Body>
+          <Card.Header>
+            <span className="header-title">{job.modelHumanName}</span>
+          </Card.Header>
+          <Card.Title>
+            <span className="text-heading">{'Workspace: '}</span>
+            <span className="text-mono">{job.argsValues.workspace_dir}</span>
+          </Card.Title>
+          <Card.Title>
+            <span className="text-heading">{'Suffix: '}</span>
+            <span className="text-mono">{job.argsValues.results_suffix}</span>
+          </Card.Title>
+          <Card.Footer className="text-muted">
+            <span className="timestamp">{job.humanTime}</span>
+            <span className="status">
+              {(job.status === 'success'
+                ? <span className="status-success">{t('Model Complete')}</span>
+                : <span className="status-error">{job.status}</span>
+              )}
+            </span>
+          </Card.Footer>
+        </Card.Body>
+      </Card>
     );
-  }
+  });
+
+  return (
+    <>
+      <Container>
+        <Row>
+          <Col className="recent-header-col">
+            {recentButtons.length
+              ? (
+                <h4>
+                  {t('Recent runs:')}
+                </h4>
+              )
+              : (
+                <div className="default-text">
+                  {t("Set up a model from a sample datastack file (.json) " +
+                     "or from an InVEST model's logfile (.txt): ")}
+                </div>
+              )}
+          </Col>
+          <Col className="open-button-col">
+            <OpenButton
+              className="mr-2"
+              openInvestModel={openInvestModel}
+            />
+          </Col>
+        </Row>
+      </Container>
+      <React.Fragment>
+        {recentButtons}
+      </React.Fragment>
+    </>
+  );
 }
 
 RecentInvestJobs.propTypes = {

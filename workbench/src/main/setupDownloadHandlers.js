@@ -45,6 +45,7 @@ export default function setupDownloadHandlers(mainWindow) {
     const itemURL = item.getURL();
     item.on('updated', (event, state) => {
       if (state === 'interrupted') {
+        item.cancel(); // we're never attempting to resume, so cancel.
         logger.info('download interrupted');
       } else if (state === 'progressing') {
         if (item.isPaused()) {
@@ -75,6 +76,8 @@ export default function setupDownloadHandlers(mainWindow) {
         );
       } else {
         logger.info(`download failed: ${state}`);
+        const idx = downloadQueue.findIndex((item) => item === itemURL);
+        downloadQueue.splice(idx, 1);
         mainWindow.webContents.send(
           'download-status',
           ['failed', 'failed'] // ProgressBar expects array length 2

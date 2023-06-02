@@ -15,7 +15,7 @@ export default defineConfig({
   build: {
     mode: process.env.MODE,
     sourcemap: 'inline',
-    minify: process.env.MODE !== 'development',
+    minify: false,
     outDir: path.join(PROJECT_ROOT, 'build'),
     target: 'chrome98',
     rollupOptions: {

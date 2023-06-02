@@ -1,29 +1,28 @@
 """Pollinator service model for InVEST."""
-import itertools
 import collections
-import re
-import os
-import logging
 import hashlib
 import inspect
+import itertools
+import logging
+import os
+import re
 
+import numpy
+import pygeoprocessing
+import taskgraph
 from osgeo import gdal
 from osgeo import ogr
-import pygeoprocessing
-import numpy
-import taskgraph
 
-from . import utils
+from . import gettext
 from . import spec_utils
-from .spec_utils import u
+from . import utils
 from . import validation
 from .model_metadata import MODEL_METADATA
-from . import gettext
-
+from .unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
 
-ARGS_SPEC = {
+MODEL_SPEC = {
     "model_name": MODEL_METADATA["pollination"].model_title,
     "pyname": MODEL_METADATA["pollination"].pyname,
     "userguide": MODEL_METADATA["pollination"].userguide,
@@ -89,12 +88,7 @@ ARGS_SPEC = {
         "landcover_biophysical_table_path": {
             "type": "csv",
             "columns": {
-                "lucode": {
-                    "type": "integer",
-                    "about": gettext(
-                        "LULC code representing this class in the LULC raster."
-                    )
-                },
+                "lucode": spec_utils.LULC_TABLE_COLUMN,
                 "nesting_[SUBSTRATE]_availability_index": {
                     "type": "ratio",
                     "about": gettext(
@@ -175,6 +169,149 @@ ARGS_SPEC = {
                 "Map of farm sites to be analyzed, with pollination data "
                 "specific to each farm."),
             "name": gettext("farms map")
+        }
+    },
+    "outputs": {
+        "farm_results.shp": {
+            "created_if": "farm_vector_path",
+            "about": gettext(
+                "A copy of the input farm polygon vector file with additional fields"),
+            "geometries": spec_utils.POLYGONS,
+            "fields": {
+                "p_abund": {
+                    "about": (
+                        "Average pollinator abundance on the farm for the "
+                        "active season"),
+                    "type": "ratio"
+                },
+                "y_tot": {
+                    "about": (
+                        "Total yield index, including wild and managed "
+                        "pollinators and pollinator independent yield."),
+                    "type": "ratio"
+                },
+                "pdep_y_w": {
+                    "about": (
+                        "Proportion of potential pollination-dependent yield "
+                        "attributable to wild pollinators."),
+                    "type": "ratio"
+                },
+                "y_wild": {
+                    "about": (
+                        "Proportion of the total yield attributable to wild "
+                        "pollinators."),
+                    "type": "ratio"
+                }
+            }
+        },
+        "farm_pollinators.tif": {
+            "created_if": "farm_vector_path",
+            "about": gettext(
+                "Total pollinator abundance across all species per season, "
+                "clipped to the geometry of the farm vector’s polygons."),
+            "bands": {1: {"type": "ratio"}}
+        },
+        "pollinator_abundance_[SPECIES]_[SEASON].tif": {
+            "about": gettext("Abundance of pollinator SPECIES in season SEASON."),
+            "bands": {1: {"type": "ratio"}}
+        },
+        "pollinator_supply_[SPECIES].tif": {
+            "about": gettext(
+                "Index of pollinator SPECIES that could be on a pixel given "
+                "its arbitrary abundance factor from the table, multiplied by "
+                "the habitat suitability for that species at that pixel, "
+                "multiplied by the available floral resources that a "
+                "pollinator could fly to from that pixel."),
+            "bands": {1: {"type": "ratio"}}
+        },
+        "total_pollinator_abundance_[SEASON].tif": {
+            "created_if": "farm_vector_path",
+            "about": gettext(
+                "Total pollinator abundance across all species per season."),
+            "bands": {1: {"type": "ratio"}}
+        },
+        "total_pollinator_yield.tif": {
+            "created_if": "farm_vector_path",
+            "about": gettext(
+                "Total pollinator yield index for pixels that overlap farms, "
+                "including wild and managed pollinators."),
+            "bands": {1: {"type": "ratio"}}
+        },
+        "wild_pollinator_yield.tif": {
+            "created_if": "farm_vector_path",
+            "about": gettext(
+                "Pollinator yield index for pixels that overlap farms, for "
+                "wild pollinators only."),
+            "bands": {1: {"type": "ratio"}}
+        },
+        "intermediate_outputs": {
+            "type": "directory",
+            "contents": {
+                "blank_raster.tif": {
+                    "about": (
+                        "Blank raster used for rasterizing all the farm parameters/fields later"),
+                    "bands": {1: {"type": "integer"}}
+                },
+                "convolve_ps_[SPECIES].tif": {
+                    "about": "Convolved pollinator supply",
+                    "bands": {1: {"type": "ratio"}}
+                },
+                "farm_nesting_substrate_index_[SUBSTRATE].tif": {
+                    "about": "Rasterized substrate availability",
+                    "bands": {1: {"type": "ratio"}}
+                },
+                "farm_pollinator_[SEASON].tif": {
+                    "about": "On-farm pollinator abundance",
+                    "bands": {1: {"type": "ratio"}}
+                },
+                "farm_relative_floral_abundance_index_[SEASON].tif": {
+                    "about": "On-farm relative floral abundance",
+                    "bands": {1: {"type": "ratio"}}
+                },
+                "floral_resources_[SPECIES].tif": {
+                    "about": "Floral resources available to the species",
+                    "bands": {1: {"type": "ratio"}}
+                },
+                "foraged_flowers_index_[SPECIES]_[SEASON].tif": {
+                    "about": (
+                        "Foraged flowers index for the given species and season"),
+                    "bands": {1: {"type": "ratio"}}
+                },
+                "habitat_nesting_index_[SPECIES].tif": {
+                    "about": "Habitat nesting index for the given species",
+                    "bands": {1: {"type": "ratio"}}
+                },
+                "half_saturation_[SEASON].tif": {
+                    "about": "Half saturation constant for the given season",
+                    "bands": {1: {"type": "ratio"}}
+                },
+                "kernel_[ALPHA].tif": {
+                    "about": "Exponential decay kernel for the given radius",
+                    "bands": {1: {"type": "ratio"}}
+                },
+                "local_foraging_effectiveness_[SPECIES].tif": {
+                    "about": "Foraging effectiveness for the given species",
+                    "bands": {1: {"type": "ratio"}}
+                },
+                "managed_pollinators.tif": {
+                    "about": "Managed pollinators rasterized from the farm vector",
+                    "bands": {1: {"type": "ratio"}}
+                },
+                "nesting_substrate_index_[SUBSTRATE].tif": {
+                    "about": "Nesting substrate index for the given substrate",
+                    "bands": {1: {"type": "ratio"}}
+                },
+                "relative_floral_abundance_index_[SEASON].tif": {
+                    "about": "Floral abundance index in the given season",
+                    "bands": {1: {"type": "ratio"}}
+                },
+                "reprojected_farm_vector.shp": {
+                    "about": "Farm vector reprojected to the LULC projection",
+                    "fields": {},
+                    "geometries": spec_utils.POLYGONS
+                },
+                "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
+            }
         }
     }
 }
@@ -1053,7 +1190,7 @@ def _parse_scenario_variables(args):
             raise ValueError(
                 "Expected a header in guild table that matched the pattern "
                 f"'{header}' but was unable to find one. Here are all the "
-                f"headers from {guild_table_path}: {guild_headers}")
+                f"headers from {guild_table_path}: {', '.join(guild_headers)}")
 
     landcover_biophysical_table = utils.build_lookup_from_csv(
         landcover_biophysical_table_path, 'lucode', to_lower=True)
@@ -1066,7 +1203,7 @@ def _parse_scenario_variables(args):
                 "Expected a header in biophysical table that matched the "
                 f"pattern '{header}' but was unable to find one. Here are all "
                 f"the headers from {landcover_biophysical_table_path}: "
-                f"{biophysical_table_headers}")
+                f"{', '.join(biophysical_table_headers)}")
 
     # this dict to dict will map seasons to guild/biophysical headers
     # ex season_to_header['spring']['guilds']
@@ -1102,7 +1239,7 @@ def _parse_scenario_variables(args):
             matches = re.findall(header, " ".join(farm_headers))
             if not matches:
                 raise ValueError(
-                    f"Missing an expected headers '{header}' from "
+                    f"Missing expected header(s) '{header}' from "
                     f"{farm_vector_path}.\n"
                     f"Got these headers instead: {farm_headers}")
 
@@ -1131,15 +1268,16 @@ def _parse_scenario_variables(args):
         if len(lookup_table) != 3 and farm_vector is not None:
             raise ValueError(
                 "Expected a biophysical, guild, and farm entry for "
-                f"'{table_type}' but instead found only {lookup_table}. "
-                f"Ensure there are corresponding entries of '{table_type}' in "
-                "both the guilds, biophysical table, and farm fields.")
+                f"'{table_type}' but instead found only "
+                f"{list(lookup_table.keys())}. Ensure there are "
+                f"corresponding entries of '{table_type}' in both the "
+                "guilds, biophysical table, and farm fields.")
         elif len(lookup_table) != 2 and farm_vector is None:
             raise ValueError(
-                f"Expected a biophysical, and guild entry for '{table_type}' "
-                f"but instead found only {lookup_table}. Ensure there are "
-                f"corresponding entries of '{table_type}' in both the guilds "
-                "and biophysical table.")
+                f"Expected a biophysical and guild entry for '{table_type}' "
+                f"but instead found only {list(lookup_table.keys())}. "
+                "Ensure there are corresponding entries of '{table_type}' in "
+                "both the guilds and biophysical table.")
 
     if farm_vector_path is not None:
         farm_season_set = set()
@@ -1150,8 +1288,8 @@ def _parse_scenario_variables(args):
             raise ValueError(
                 "Found seasons in farm polygon that were not specified in the "
                 "biophysical table: "
-                f"{farm_season_set.difference(season_to_header)}. Expected "
-                f"only these: {season_to_header}")
+                f"{', '.join(farm_season_set.difference(season_to_header))}. "
+                f"Expected only these: {', '.join(season_to_header.keys())}")
 
     result = {}
     # * season_list (list of string)
@@ -1534,4 +1672,4 @@ def validate(args, limit_to=None):
     # Deliberately not validating the interrelationship of the columns between
     # the biophysical table and the guilds table as the model itself already
     # does extensive checking for this.
-    return validation.validate(args, ARGS_SPEC['args'])
+    return validation.validate(args, MODEL_SPEC['args'])

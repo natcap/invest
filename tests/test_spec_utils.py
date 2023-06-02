@@ -1,7 +1,7 @@
 import unittest
 
 from natcap.invest import spec_utils
-from natcap.invest.spec_utils import u
+from natcap.invest.unit_registry import u
 
 
 class TestSpecUtils(unittest.TestCase):
@@ -83,18 +83,27 @@ class TestSpecUtils(unittest.TestCase):
             "about": "Description",
             "type": "option_string",
             "options": {
-                "option_a": "do something",
-                "Option_b": "do something else"
+                "option_a": {
+                    "display_name": "A"
+                },
+                "Option_b": {
+                    "description": "do something"
+                },
+                "option_c": {
+                    "display_name": "c",
+                    "description": "do something else"
+                }
             }
         }
         # expect that option case is ignored
-        # otherwise, Option_b would sort before option_a
+        # otherwise, c would sort before A
         out = spec_utils.describe_arg_from_spec(spec['name'], spec)
         expected_rst = ([
             '**Bar** (`option <input_types.html#option>`__, *required*): Description',
             '\tOptions:',
-            '\t- option_a: do something',
-            '\t- Option_b: do something else'
+            '\t- A',
+            '\t- c: do something else',
+            '\t- Option_b: do something'
         ])
         self.assertEqual(repr(out), repr(expected_rst))
 
@@ -242,6 +251,6 @@ class TestSpecUtils(unittest.TestCase):
         expected_rst = (
             '.. _carbon-pools-path-columns-lucode:\n\n' +
             '**lucode** (`integer <input_types.html#integer>`__, *required*): ' +
-            carbon.ARGS_SPEC['args']['carbon_pools_path']['columns']['lucode']['about']
+            carbon.MODEL_SPEC['args']['carbon_pools_path']['columns']['lucode']['about']
         )
         self.assertEqual(repr(out), repr(expected_rst))

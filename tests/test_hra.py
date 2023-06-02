@@ -77,6 +77,44 @@ class HRAUnitTests(unittest.TestCase):
         numpy.testing.assert_allclose(
             exposure_array, expected_exposure_array)
 
+    def test_calc_criteria_skip_all_criteria(self):
+        """HRA: handle user skipping all criteria."""
+        from natcap.invest import hra
+
+        habitat_mask = numpy.array([
+            [0, 1, 1]], dtype=numpy.uint8)
+        habitat_mask_path = os.path.join(self.workspace_dir,
+                                         'habitat_mask.tif')
+        pygeoprocessing.numpy_array_to_raster(
+            habitat_mask, 255, (30, -30), ORIGIN, SRS_WKT, habitat_mask_path)
+
+        decayed_distance_array = numpy.array([
+            [0, 1, 1]], dtype=numpy.float32)
+        decayed_distance_raster_path = os.path.join(self.workspace_dir,
+                                                    'decayed_dist.tif')
+        pygeoprocessing.numpy_array_to_raster(
+            decayed_distance_array, -1, (30, -30), ORIGIN, SRS_WKT,
+            decayed_distance_raster_path)
+
+        attributes_list = [
+            {'rating': 0, 'dq': 3, 'weight': 3},
+            {'rating': 0, 'dq': 2, 'weight': 1},
+            {'rating': 0, 'dq': 3, 'weight': 3},
+            {'rating': 0, 'dq': 3, 'weight': 3},
+        ]
+        target_exposure_path = os.path.join(self.workspace_dir, 'exposure.tif')
+        hra._calc_criteria(attributes_list, habitat_mask_path,
+                           target_exposure_path, decayed_distance_raster_path)
+
+        exposure_array = pygeoprocessing.raster_to_numpy_array(
+            target_exposure_path)
+        nodata = hra._TARGET_NODATA_FLOAT32
+        # These expected values were calculated by hand.
+        expected_exposure_array = numpy.array([
+            [nodata, 0, 0]], dtype=numpy.float32)
+        numpy.testing.assert_allclose(
+            exposure_array, expected_exposure_array)
+
     def test_decayed_distance_linear(self):
         """HRA: linear decay over a distance."""
         from natcap.invest import hra
@@ -175,21 +213,20 @@ class HRAUnitTests(unittest.TestCase):
 
         habitats, stressors = hra._parse_info_table(info_table_path)
 
-        workspace = self.workspace_dir.replace('\\', '/')
         expected_habitats = {
             'corals': {
-                'path': f'{workspace}/habitat/corals.shp',
+                'path': os.path.abspath(f'{self.workspace_dir}/habitat/corals.shp'),
             }
         }
         self.assertEqual(habitats, expected_habitats)
 
         expected_stressors = {
             'oil': {
-                'path': f'{workspace}/stressors/oil.shp',
+                'path': os.path.abspath(f'{self.workspace_dir}/stressors/oil.shp'),
                 'buffer': 1000,
             },
             'transportation': {
-                'path': f'{workspace}/stressors/transport.shp',
+                'path': os.path.abspath(f'{self.workspace_dir}/stressors/transport.shp'),
                 'buffer': 100,
             }
         }
@@ -226,15 +263,17 @@ class HRAUnitTests(unittest.TestCase):
         """HRA: check parsing of the criteria table."""
         from natcap.invest import hra
 
+        eelgrass_relpath = 'foo/eelgrass_connectivity.shp'
+
         criteria_table_path = os.path.join(self.workspace_dir, 'criteria.csv')
         with open(criteria_table_path, 'w') as criteria_table:
             criteria_table.write(
                 textwrap.dedent(
-                    """\
+                    f"""\
                     HABITAT NAME,eelgrass,,,hardbottom,,,CRITERIA TYPE
                     HABITAT RESILIENCE ATTRIBUTES,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
                     recruitment rate,2,2,2,2,2,2,C
-                    connectivity rate,foo\\eelgrass_connectivity.shp,2,2,2,2,2,C
+                    connectivity rate,{eelgrass_relpath},2,2,2,2,2,C
                     ,,,,,,,
                     HABITAT STRESSOR OVERLAP PROPERTIES,,,,,,,
                     oil,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
@@ -264,17 +303,15 @@ class HRAUnitTests(unittest.TestCase):
         self.assertEqual(habitats, {'eelgrass', 'hardbottom'})
         self.assertEqual(stressors, {'oil', 'fishing'})
 
-        # We expect the backslash to have been converted to a forward slash.
-        eelgrass_path = (
-            f'{self.workspace_dir}/foo/eelgrass_connectivity.shp'.replace(
-                '\\', '/'))
+        eelgrass_abspath = os.path.abspath(
+            os.path.join(self.workspace_dir, eelgrass_relpath))
         expected_composite_dataframe = pandas.read_csv(
             io.StringIO(textwrap.dedent(
                 f"""\
                 habitat,stressor,criterion,rating,dq,weight,e/c
                 eelgrass,RESILIENCE,recruitment rate,2,2,2,C
                 hardbottom,RESILIENCE,recruitment rate,2,2,2,C
-                eelgrass,RESILIENCE,connectivity rate,{eelgrass_path},2,2,C
+                eelgrass,RESILIENCE,connectivity rate,{eelgrass_abspath},2,2,C
                 hardbottom,RESILIENCE,connectivity rate,2,2,2,C
                 eelgrass,oil,frequency of disturbance,2,2,3,C
                 hardbottom,oil,frequency of disturbance,2,2,3,C
@@ -301,7 +338,7 @@ class HRAUnitTests(unittest.TestCase):
                     HABITAT NAME,eelgrass,,,hardbottom,,,CRITERIA TYPE
                     HABITAT RESILIENCE ATTRIBUTES,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
                     recruitment rate,2,2,2,2,2,2,C
-                    connectivity rate,foo\\eelgrass_connectivity.shp,2,2,2,2,2,C
+                    connectivity rate,foo/eelgrass_connectivity.shp,2,2,2,2,2,C
                     ,,,,,,,
                     HABITAT STRESSOR OVERLAP PROPERTIES,,,,,,,
                     oil,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
@@ -320,6 +357,40 @@ class HRAUnitTests(unittest.TestCase):
                 criteria_table_path, target_composite_csv_path)
         self.assertIn("Criterion could not be opened as a spatial file",
                       str(cm.exception))
+
+    def test_criteria_table_missing_section_headers(self):
+        """HRA: verify exception when a required section is not found."""
+        from natcap.invest import hra
+
+        criteria_table_path = os.path.join(self.workspace_dir, 'criteria.csv')
+        with open(criteria_table_path, 'w') as criteria_table:
+            criteria_table.write(
+                textwrap.dedent(  # NOTE: also checking whitespace around
+                    """\
+                      HABITAT-NAME,eelgrass,,,hardbottom ,,,CRITERIA TYPE
+                    HABITAT-FOOOOO-ATTRIBUTES,RATING  ,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
+                    recruitment rate,2,2,2,2,2,2,C
+                    connectivity rate,foo/eelgrass_connectivity.shp,2,2,2,2,2,C
+                    ,,,,,,,
+                    HABITAT STRESSOR OVERLAP PROPERTIES,,,,,,,
+                    oil,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
+                    frequency of disturbance ,2,2,3,2,2,3,C
+                    management effectiveness,2,2,1,2,2,1,E
+                    ,,,,,,,
+                    fishing,RATING,DQ,WEIGHT,RATING,DQ,WEIGHT,E/C
+                    frequency of disturbance,2,2,3,2,2,3,C
+                    management effectiveness,2,2,1,2,2,1,E
+                    """
+                ))
+        target_composite_csv_path = os.path.join(self.workspace_dir,
+                                                 'composite.csv')
+        with self.assertRaises(AssertionError) as cm:
+            habitats, stressors = hra._parse_criteria_table(
+                criteria_table_path, target_composite_csv_path)
+        self.assertIn('The criteria table is missing these section headers',
+                      str(cm.exception))
+        self.assertIn('HABITAT NAME', str(cm.exception))
+        self.assertIn('HABITAT RESILIENCE ATTRIBUTES', str(cm.exception))
 
     def test_maximum_reclassified_score(self):
         """HRA: check maximum reclassed score given a stack of scores."""
@@ -443,77 +514,6 @@ class HRAUnitTests(unittest.TestCase):
             (source_array != nodata).astype(numpy.uint8)
         )
 
-    def test_rasterize_aoi_regions(self):
-        """HRA: test rasterization of AOI regions."""
-        from natcap.invest import hra
-
-        habitat_mask_path = os.path.join(
-            self.workspace_dir, 'habitat_mask.tif')
-        nodata = 255
-        habitat_mask_array = numpy.array([
-            [0, 1, 1],
-            [0, 1, 255],
-            [255, 1, 1]], dtype=numpy.uint8)
-        pygeoprocessing.numpy_array_to_raster(
-            habitat_mask_array, nodata, (30, -30), ORIGIN, SRS_WKT,
-            habitat_mask_path)
-
-        bounding_box = pygeoprocessing.get_raster_info(
-            habitat_mask_path)['bounding_box']
-
-        # 3 overlapping AOI regions
-        aoi_geometries = [shapely.geometry.box(*bounding_box)] * 3
-        source_vector_path = os.path.join(self.workspace_dir, 'aoi.shp')
-
-        target_raster_dir = os.path.join(self.workspace_dir, 'rasters')
-        target_json = os.path.join(self.workspace_dir, 'aoi_rasters.json')
-
-        # First test: with no subregion names provided, there's only 1
-        # subregion raster produced.
-        pygeoprocessing.shapely_geometry_to_vector(
-            aoi_geometries, source_vector_path, SRS_WKT, 'ESRI Shapefile')
-        hra._rasterize_aoi_regions(
-            source_vector_path, habitat_mask_path, target_raster_dir,
-            target_json)
-        self.assertEqual(
-            os.listdir(target_raster_dir),
-            ['subregion_set_0.tif'])
-
-        self.assertEqual(
-            json.load(open(target_json)),
-            {'subregion_rasters': [
-                os.path.join(target_raster_dir, 'subregion_set_0.tif')],
-             'subregion_names': {'0': 'Total Region'}})
-
-        # Second test: when subregion names are provided, subregions should be
-        # treated as distinct, nonoverlapping regions.
-        pygeoprocessing.shapely_geometry_to_vector(
-            aoi_geometries, source_vector_path, SRS_WKT,
-            vector_format='ESRI Shapefile',
-            fields={'NamE': ogr.OFTString},
-            attribute_list=[
-                {'NamE': 'subregion_1'},
-                {'NamE': 'subregion_2'},
-                {'NamE': 'subregion_3'},
-            ])
-        hra._rasterize_aoi_regions(
-            source_vector_path, habitat_mask_path, target_raster_dir,
-            target_json)
-        self.assertEqual(
-            os.listdir(target_raster_dir),
-            [f'subregion_set_{n}.tif' for n in (0, 1, 2)])
-        self.assertEqual(
-            json.load(open(target_json)),
-            {'subregion_rasters': [
-                os.path.join(target_raster_dir, f'subregion_set_{n}.tif')
-                for n in (0, 1, 2)],
-             'subregion_names': {
-                 '0': 'subregion_1',
-                 '1': 'subregion_2',
-                 '2': 'subregion_3',
-             }}
-        )
-
     def test_create_raster_from_bounding_box(self):
         """HRA: test creation of a raster from a bbox."""
         from natcap.invest import hra
@@ -608,7 +608,8 @@ class HRAUnitTests(unittest.TestCase):
                 self.workspace_dir, 'aligned_criterion_vector.tif'),
         }
 
-        hra._align(raster_path_map, vector_path_map, (30, -30), SRS_WKT)
+        hra._align(raster_path_map, vector_path_map, (30, -30), SRS_WKT,
+                  all_touched_vectors=set([habitat_vector_path]))
 
         # Calculated by hand given the above spatial inputs and
         # (30, -30) pixels.  All rasters should share the same extents and
@@ -654,15 +655,16 @@ class HRAUnitTests(unittest.TestCase):
 
         # The aligned criterion raster should have been rasterized from the
         # rating column.
+        # This is an ALL_TOUCHED=FALSE rasterization.
         ndta = hra._TARGET_NODATA_FLOAT32
         expected_criterion_array = numpy.array([
-            [0.12, 0.12, 0.12, 0.12, 0.12, 0.12, ndta, ndta, ndta, ndta],
-            [0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, ndta, ndta, ndta],
-            [0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, ndta, ndta, ndta],
-            [0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, ndta, ndta, ndta],
-            [0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, ndta, ndta, ndta],
-            [0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, ndta, ndta, ndta],
+            [ndta, ndta, 0.12, 0.12, 0.12, ndta, ndta, ndta, ndta, ndta],
             [ndta, 0.12, 0.12, 0.12, 0.12, 0.12, ndta, ndta, ndta, ndta],
+            [0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, ndta, ndta, ndta],
+            [0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, ndta, ndta, ndta],
+            [0.12, 0.12, 0.12, 0.12, 0.12, 0.12, ndta, ndta, ndta, ndta],
+            [ndta, 0.12, 0.12, 0.12, 0.12, 0.12, ndta, ndta, ndta, ndta],
+            [ndta, ndta, 0.12, 0.12, ndta, ndta, ndta, ndta, ndta, ndta],
             [ndta, ndta, ndta, ndta, ndta, ndta, ndta, ndta, ndta, ndta],
             [ndta, ndta, ndta, ndta, ndta, ndta, ndta, ndta, ndta, ndta]],
             dtype=numpy.float32)
@@ -748,14 +750,14 @@ class HRAUnitTests(unittest.TestCase):
         # No matter the supported file format, make sure we have consistent
         # table headings.
         source_df = pandas.read_csv(io.StringIO(textwrap.dedent("""\
-                FOO,bar,BaZ
-                1, 2, 3""")))
+                FOO,bar,BaZ,path
+                1, 2, 3,foo.tif""")))
 
         expected_df = source_df.copy()  # defaults to a deepcopy.
         expected_df.columns = expected_df.columns.str.lower()
+        expected_df['path'] = [os.path.join(self.workspace_dir, 'foo.tif')]
 
         for filename, func in [('target.csv', source_df.to_csv),
-                               ('target.xls', source_df.to_excel),
                                ('target.xlsx', source_df.to_excel)]:
             full_filepath = os.path.join(self.workspace_dir, filename)
             func(full_filepath, index=False)
@@ -922,18 +924,15 @@ class HRAUnitTests(unittest.TestCase):
             data_dir, 'criteria_table_path_data')
         self.maxDiff = None
 
-        def _rewrite(path):
-            return path.replace('\\', '/')
-
         self.assertEqual(
             known_files, {
-                _rewrite(eelgrass_path): _rewrite(os.path.join(
+                eelgrass_path: os.path.join(
                     output_criteria_data_dir, 'eelgrass_connectivity',
-                    'eelgrass_connectivity.shp')),
-                _rewrite(mgmt_path_1): _rewrite(os.path.join(
-                    output_criteria_data_dir, 'mgmt1', 'mgmt1.tif')),
-                _rewrite(mgmt_path_2): _rewrite(os.path.join(
-                    output_criteria_data_dir, 'mgmt2', 'mgmt2.tif')),
+                    'eelgrass_connectivity.shp'),
+                mgmt_path_1: os.path.join(
+                    output_criteria_data_dir, 'mgmt1', 'mgmt1.tif'),
+                mgmt_path_2: os.path.join(
+                    output_criteria_data_dir, 'mgmt2', 'mgmt2.tif')
             }
         )
         for copied_filepath in known_files.values():
@@ -979,6 +978,176 @@ class HRAUnitTests(unittest.TestCase):
                                             target_path)
         self.assertIn('Invalid decay type bad decay type provided',
                       str(cm.exception))
+
+    def test_summary_stats(self):
+        """HRA: test summary stats table."""
+        from natcap.invest import hra
+        e_array = numpy.array([[0, 1, 2, 3]], dtype=numpy.float32)
+        c_array = numpy.array([[0.5, 1.5, 2.5, 3.5]], dtype=numpy.float32)
+        risk_array = numpy.array([[0, 1.1, 2.2, 3.3]], dtype=numpy.float32)
+        pairwise_classes_array = numpy.array([[0, 1, 2, 3]], dtype=numpy.int8)
+
+        pairwise_raster_dicts = [{
+            'habitat': 'life',
+            'stressor': 'industry',
+            'e_path': os.path.join(self.workspace_dir, 'e.tif'),
+            'c_path': os.path.join(self.workspace_dir, 'c.tif'),
+            'risk_path': os.path.join(self.workspace_dir, 'risk.tif'),
+            'classification_path': os.path.join(self.workspace_dir,
+                                                'classes.tif'),
+        }]
+        nodata = -1
+        for array, key in [
+                (e_array, 'e_path'),
+                (c_array, 'c_path'),
+                (risk_array, 'risk_path'),
+                (pairwise_classes_array, 'classification_path')]:
+            pygeoprocessing.numpy_array_to_raster(
+                array, nodata, (10, -10), ORIGIN, SRS_WKT,
+                pairwise_raster_dicts[0][key])
+
+        # For the sake of testing this function more rigorously, creating a new
+        # classification path for the per-habitat summary classification
+        # raster.
+        #
+        # NOTE that if we were running this in the real world with only 1
+        # pairwise risk raster, the cumulative risk would match the pairwise
+        # risk.  I'm providing a different cumulative risk raster here for the
+        # sole purpose of checking table construction, not to provide
+        # real-world model results.
+        per_habitat_classifications = {
+            pairwise_raster_dicts[0]['habitat']: os.path.join(
+                self.workspace_dir, 'cumulative_classes.tif')
+        }
+        cumulative_classes_array = numpy.array(
+            [[2, 3, 2, 3]], dtype=numpy.uint8)
+        pygeoprocessing.numpy_array_to_raster(
+            cumulative_classes_array, nodata, (10, -10), ORIGIN, SRS_WKT,
+            list(per_habitat_classifications.values())[0])
+
+        target_summary_csv_path = os.path.join(
+            self.workspace_dir, 'summary.csv')
+        aoi_vector_path = os.path.join(self.workspace_dir, 'aoi.shp')
+        subregion_bounding_box = pygeoprocessing.get_raster_info(
+            list(per_habitat_classifications.values())[0])['bounding_box']
+        subregion_geom = shapely.geometry.box(*subregion_bounding_box)
+
+        def percent_with_risk_class(array, risk_class):
+            """Calculate the percent of risk class pixels matching a class.
+
+            Args:
+                array (numpy.array): A risk classification array.
+                risk_class (int): The integer risk class of interest
+
+            Returns:
+                The percentage (0-100) of pixels in ``array`` that match the
+                risk class ``risk_class``.
+            """
+            return (array[array == risk_class].size / array.size) * 100
+
+        # This is a standard record in the summary table, used in both subtests
+        # below.
+        std_record = {
+            'HABITAT': pairwise_raster_dicts[0]['habitat'],
+            'STRESSOR': pairwise_raster_dicts[0]['stressor'],
+            'E_MIN': numpy.min(e_array),
+            'E_MAX': numpy.max(e_array),
+            'E_MEAN': numpy.sum(e_array) / 4,
+            'C_MIN': numpy.min(c_array),
+            'C_MAX': numpy.max(c_array),
+            'C_MEAN': numpy.sum(c_array) / 4,
+            'R_MIN': numpy.min(risk_array),
+            'R_MAX': numpy.max(risk_array),
+            'R_MEAN': numpy.sum(risk_array) / 4,
+            'R_%HIGH': percent_with_risk_class(pairwise_classes_array, 3),
+            'R_%MEDIUM': percent_with_risk_class(pairwise_classes_array, 2),
+            'R_%LOW': percent_with_risk_class(pairwise_classes_array, 1),
+            'R_%NONE': percent_with_risk_class(pairwise_classes_array, 0),
+        }
+
+        with self.subTest("multiple subregion names"):
+            # 3 subregions, 2 of which have the same name.
+            # In cases of overlap, the function double-counts.
+            pygeoprocessing.shapely_geometry_to_vector(
+                [subregion_geom] * 3, aoi_vector_path, SRS_WKT,
+                'ESRI Shapefile', fields={'name': ogr.OFTString},
+                attribute_list=[
+                    {'name': 'first region'},
+                    {'name': 'first region'},
+                    {'name': 'second region'}
+                ])
+            hra._create_summary_statistics_file(
+                aoi_vector_path, pairwise_raster_dicts,
+                per_habitat_classifications, target_summary_csv_path)
+            expected_records = [
+                {**std_record,
+                 **{'SUBREGION': 'first region',
+                    'STRESSOR': '(FROM ALL STRESSORS)'},
+                    'R_%HIGH': percent_with_risk_class(
+                        cumulative_classes_array, 3),
+                    'R_%MEDIUM': percent_with_risk_class(
+                        cumulative_classes_array, 2),
+                    'R_%LOW': percent_with_risk_class(
+                        cumulative_classes_array, 1),
+                    'R_%NONE': percent_with_risk_class(
+                        cumulative_classes_array, 0),
+                },
+                {**std_record,
+                 **{'SUBREGION': 'second region',
+                    'STRESSOR': '(FROM ALL STRESSORS)'},
+                    'R_%HIGH': percent_with_risk_class(
+                        cumulative_classes_array, 3),
+                    'R_%MEDIUM': percent_with_risk_class(
+                        cumulative_classes_array, 2),
+                    'R_%LOW': percent_with_risk_class(
+                        cumulative_classes_array, 1),
+                    'R_%NONE': percent_with_risk_class(
+                        cumulative_classes_array, 0),
+                },
+                {**std_record,
+                 **{'SUBREGION': 'first region'},
+                },
+                {**std_record,
+                 **{'SUBREGION': 'second region'}
+                },
+            ]
+            created_dataframe = pandas.read_csv(target_summary_csv_path)
+            expected_dataframe = pandas.DataFrame.from_records(
+                expected_records).reindex(columns=created_dataframe.columns)
+            pandas.testing.assert_frame_equal(
+                expected_dataframe, created_dataframe,
+                check_dtype=False  # ignore float32/float64 type difference.
+            )
+
+        with self.subTest("no subregion names"):
+            # When no subregion names provided, all subregions are assumed to
+            # be in the same region: "Total Region".
+            pygeoprocessing.shapely_geometry_to_vector(
+                [subregion_geom] * 3, aoi_vector_path, SRS_WKT,
+                'ESRI Shapefile')
+            hra._create_summary_statistics_file(
+                aoi_vector_path, pairwise_raster_dicts,
+                per_habitat_classifications, target_summary_csv_path)
+            expected_records = [
+                {**std_record,
+                 **{'SUBREGION': 'Total Region',
+                    'STRESSOR': '(FROM ALL STRESSORS)'},
+                    'R_%HIGH': 50.0,
+                    'R_%MEDIUM': 50.0,
+                    'R_%LOW': 0,
+                    'R_%NONE': 0,
+                },
+                {**std_record,
+                 **{'SUBREGION': 'Total Region'},
+                },
+            ]
+            created_dataframe = pandas.read_csv(target_summary_csv_path)
+            expected_dataframe = pandas.DataFrame.from_records(
+                expected_records).reindex(columns=created_dataframe.columns)
+            pandas.testing.assert_frame_equal(
+                expected_dataframe, created_dataframe,
+                check_dtype=False  # ignore float32/float64 type difference.
+            )
 
 
 class HRAModelTests(unittest.TestCase):

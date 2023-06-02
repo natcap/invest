@@ -1,4 +1,4 @@
-ARGS_SPEC = {
+MODEL_SPEC = {
     'args': {
         'foo': {'type': 'file'},
         'bar': {'type': 'file'},

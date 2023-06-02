@@ -1,0 +1,50 @@
+name: "Roll back a release"
+inputs:
+  VERSION:
+    description: "Version to roll back"
+    required: true
+  GITHUB_TOKEN:
+    description: "GitHub token"
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Configure git
+      shell: bash
+      run: |
+        git config user.name "GitHub Actions"
+        git config user.email "<>"
+        echo "GITHUB_TOKEN=${{ inputs.GITHUB_TOKEN }}" >> $GITHUB_ENV
+
+    - name: Delete the tag (if it exists)
+      shell: bash
+      run: |
+        if git ls-remote --exit-code origin refs/tags/${{ inputs.VERSION }}
+        then
+          echo "Deleting ${{ inputs.VERSION }} tag"
+          git push origin --delete ${{ inputs.VERSION }}
+        else
+          echo "${{ inputs.VERSION }} tag not found in origin"
+        fi
+
+    - name: Delete the autorelease branch (if it exists)
+      shell: bash
+      run: |
+        if git ls-remote --exit-code origin autorelease/${{ inputs.VERSION }}
+        then
+          echo "Deleting autorelease/${{ inputs.VERSION }} branch"
+          git push origin --delete autorelease/${{ inputs.VERSION }}
+        else
+          echo "autorelease/${{ inputs.VERSION }} branch not found in origin"
+        fi
+
+    - name: Delete the Github release (if it exists)
+      shell: bash
+      run: |
+        if [ `gh release list | awk -F '\t' -v col=3 '{print $col}' | grep -x -F ${{ inputs.VERSION }}` ]
+        then
+          echo "Deleting ${{ inputs.VERSION }} GitHub release"
+          gh release delete ${{ inputs.VERSION }} --yes
+        else
+          echo "${{ inputs.VERSION }} GitHub release not found"
+        fi

@@ -19,7 +19,9 @@ import {
 import InvestJob from '../../src/renderer/InvestJob';
 import setupDialogs from '../../src/main/setupDialogs';
 import setupOpenExternalUrl from '../../src/main/setupOpenExternalUrl';
+import setupOpenLocalHtml from '../../src/main/setupOpenLocalHtml';
 import { removeIpcMainListeners } from '../../src/main/main';
+import { ipcMainChannels } from '../../src/main/ipcMainChannels';
 
 // It's quite a pain to dynamically mock a const from a module,
 // here we do it by importing as another object, then
@@ -145,6 +147,7 @@ describe('Sidebar Buttons', () => {
     fetchValidation.mockResolvedValue([]);
     uiConfig.UI_SPEC = mockUISpec(spec);
     setupOpenExternalUrl();
+    setupOpenLocalHtml();
   });
 
   afterEach(() => {
@@ -157,8 +160,12 @@ describe('Sidebar Buttons', () => {
     const mockDialogData = { filePath: 'foo.json' };
     ipcRenderer.invoke.mockResolvedValueOnce(mockDialogData);
 
-    const { findByText, findByRole } = renderInvestTab();
-    const saveButton = await findByText('Save to JSON');
+    const { findByText, findByLabelText, findByRole } = renderInvestTab();
+    const saveAsButton = await findByText('Save as...');
+    userEvent.click(saveAsButton);
+    const jsonOption = await findByLabelText((content, element) => content.startsWith('Parameters only'));
+    userEvent.click(jsonOption);
+    const saveButton = await findByRole('button', { name: 'Save' });
     userEvent.click(saveButton);
 
     expect(await findByRole('alert')).toHaveTextContent(response);
@@ -186,9 +193,12 @@ describe('Sidebar Buttons', () => {
     const mockDialogData = { filePath: 'foo.py' };
     ipcRenderer.invoke.mockResolvedValue(mockDialogData);
 
-    const { findByText, findByRole } = renderInvestTab();
-
-    const saveButton = await findByText('Save to Python script');
+    const { findByText, findByLabelText, findByRole } = renderInvestTab();
+    const saveAsButton = await findByText('Save as...');
+    userEvent.click(saveAsButton);
+    const pythonOption = await findByLabelText((content, element) => content.startsWith('Python script'));
+    userEvent.click(pythonOption);
+    const saveButton = await findByRole('button', { name: 'Save' });
     userEvent.click(saveButton);
 
     expect(await findByRole('alert')).toHaveTextContent(response);
@@ -217,15 +227,18 @@ describe('Sidebar Buttons', () => {
     const response = 'saved';
     archiveDatastack.mockImplementation(() => new Promise(
       (resolve) => {
-        setTimeout(() => resolve(response), 100);
+        setTimeout(() => resolve(response), 1000);
       }
     ));
     const mockDialogData = { filePath: 'data.tgz' };
     ipcRenderer.invoke.mockResolvedValue(mockDialogData);
 
-    const { findByText, findByRole, getByRole } = renderInvestTab();
-
-    const saveButton = await findByText('Save datastack');
+    const { findByText, findByLabelText, findByRole, getByRole} = renderInvestTab();
+    const saveAsButton = await findByText('Save as...');
+    userEvent.click(saveAsButton);
+    const datastackOption = await findByLabelText((content, element) => content.startsWith('Parameters and data'));
+    userEvent.click(datastackOption);
+    const saveButton = await findByRole('button', { name: 'Save' });
     userEvent.click(saveButton);
 
     expect(await findByRole('alert')).toHaveTextContent('archiving...');
@@ -264,12 +277,20 @@ describe('Sidebar Buttons', () => {
     const mockDialogData = { filePath: 'foo' };
     ipcRenderer.invoke.mockResolvedValue(mockDialogData);
 
-    const { findByText, getAllByRole, queryByRole } = renderInvestTab();
+    const { findByText, findByLabelText, findByRole, getAllByRole, queryByRole } = renderInvestTab();
+    const saveAsButton = await findByText('Save as...');
+    userEvent.click(saveAsButton);
+    const pythonOption = await findByLabelText((content, element) => content.startsWith('Python script'));
+    const datastackOption = await findByLabelText((content, element) => content.startsWith('Parameters and data'));
+    const saveButton = await findByRole('button', { name: 'Save' });
 
-    const saveDatastackButton = await findByText('Save datastack');
-    const savePythonButton = await findByText('Save to Python script');
-    userEvent.click(saveDatastackButton);
-    userEvent.click(savePythonButton);
+    userEvent.click(datastackOption);
+    userEvent.click(saveButton);
+
+    userEvent.click(saveAsButton);
+    userEvent.click(pythonOption)
+    userEvent.click(saveButton);
+
     await waitFor(() => {
       expect(getAllByRole('alert')).toHaveLength(2);
     });
@@ -316,22 +337,17 @@ describe('Sidebar Buttons', () => {
     expect(input2).toHaveValue(mockDatastack.args.port);
   });
 
-  test.each([
-    ['Load parameters from file', 'loadParametersFromFile'],
-    ['Save to Python script', 'savePythonScript'],
-    ['Save to JSON', 'saveJsonFile'],
-    ['Save datastack', 'saveDatastack']
-  ])('%s: does nothing when canceled', async (label, method) => {
+  test('Load parameters from file does nothing when canceled', async () => {
     // callback data if the OS dialog was canceled
     const mockDialogData = {
       filePaths: ['']
     };
     ipcRenderer.invoke.mockResolvedValue(mockDialogData);
-    const spy = jest.spyOn(SetupTab.prototype, method);
+    const spy = jest.spyOn(SetupTab.WrappedComponent.prototype, 'loadParametersFromFile');
 
     const { findByText } = renderInvestTab();
 
-    const loadButton = await findByText(label);
+    const loadButton = await findByText('Load parameters from file');
     userEvent.click(loadButton);
 
     // Calls that would have triggered if a file was selected
@@ -339,17 +355,36 @@ describe('Sidebar Buttons', () => {
   });
 
   test.each([
-    ['Load parameters from file'],
-    ['Save to Python script'],
-    ['Save to JSON'],
-    ['Save datastack'],
-  ])('%s: has hover text', async (label) => {
+    ['Parameters only', 'saveJsonFile'],
+    ['Parameters and data', 'saveDatastack'],
+    ['Python script', 'savePythonScript']
+  ])('%s: does nothing when canceled', async (label, method) => {
+    // callback data if the OS dialog was canceled
+    const mockDialogData = {
+      filePaths: ['']
+    };
+    ipcRenderer.invoke.mockResolvedValue(mockDialogData);
+    const spy = jest.spyOn(SetupTab.WrappedComponent.prototype, method);
+
+    const { findByText, findByLabelText, findByRole } = renderInvestTab();
+    const saveAsButton = await findByText('Save as...');
+    userEvent.click(saveAsButton);
+    const option = await findByLabelText((content, element) => content.startsWith(label));
+    userEvent.click(option);
+    const saveButton = await findByRole('button', { name: 'Save' });
+    userEvent.click(saveButton);
+
+    // Calls that would have triggered if a file was selected
+    expect(spy).toHaveBeenCalledTimes(0);
+  });
+
+  test('Load parameters button has hover text', async () => {
     const {
       findByText,
       findByRole,
       queryByRole,
     } = renderInvestTab();
-    const loadButton = await findByText(label);
+    const loadButton = await findByText('Load parameters from file');
     userEvent.hover(loadButton);
     expect(await findByRole('tooltip')).toBeInTheDocument();
     userEvent.unhover(loadButton);
@@ -358,12 +393,19 @@ describe('Sidebar Buttons', () => {
     });
   });
 
-  test('User Guide link opens externally', async () => {
+  test('User Guide link sends IPC to main', async () => {
+    // It seemed impossible to spy on an instance of BrowserWindow
+    // and its call to .loadUrl(), given our setup in __mocks__/electron.js,
+    // so this will have to suffice:
+    const spy = jest.spyOn(ipcRenderer, 'send')
+      .mockImplementation(() => Promise.resolve());
+
     const { findByRole } = renderInvestTab();
     const link = await findByRole('link', { name: /user's guide/i });
     userEvent.click(link);
     await waitFor(() => {
-      expect(shell.openExternal).toHaveBeenCalledTimes(1);
+      const calledChannels = spy.mock.calls.map(call => call[0]);
+      expect(calledChannels).toContain(ipcMainChannels.OPEN_LOCAL_HTML);
     });
   });
 

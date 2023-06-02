@@ -326,7 +326,8 @@ def make_suffix_string(args, suffix_key):
     return file_suffix
 
 
-def exponential_decay_kernel_raster(expected_distance, kernel_filepath):
+def exponential_decay_kernel_raster(expected_distance, kernel_filepath,
+        normalize=True):
     """Create a raster-based exponential decay kernel.
 
     The raster created will be a tiled GeoTiff, with 256x256 memory blocks.
@@ -338,6 +339,8 @@ def exponential_decay_kernel_raster(expected_distance, kernel_filepath):
         kernel_filepath (string): The path to the file on disk where this
             kernel should be stored.  If this file exists, it will be
             overwritten.
+        normalize=True (bool): Whether to divide the kernel values by the sum
+            of all values in the kernel.
 
     Returns:
         None
@@ -407,18 +410,107 @@ def exponential_decay_kernel_raster(expected_distance, kernel_filepath):
     # object in interblocks()
     kernel_band.FlushCache()
     kernel_dataset.FlushCache()
+    kernel_band = None
+    kernel_dataset = None
 
-    for block_data in pygeoprocessing.iterblocks(
-            (kernel_filepath, 1), offset_only=True):
-        kernel_block = kernel_band.ReadAsArray(**block_data)
-        kernel_block /= integration
-        kernel_band.WriteArray(kernel_block, xoff=block_data['xoff'],
-                               yoff=block_data['yoff'])
+    if normalize:
+        kernel_dataset = gdal.OpenEx(kernel_filepath, gdal.GA_Update)
+        kernel_band = kernel_dataset.GetRasterBand(1)
+        for block_data in pygeoprocessing.iterblocks(
+                (kernel_filepath, 1), offset_only=True):
+            kernel_block = kernel_band.ReadAsArray(**block_data)
+            kernel_block /= integration
+            kernel_band.WriteArray(kernel_block, xoff=block_data['xoff'],
+                                   yoff=block_data['yoff'])
 
-    kernel_band.FlushCache()
+        kernel_band.FlushCache()
+        kernel_dataset.FlushCache()
+        kernel_band = None
+        kernel_dataset = None
+
+
+def gaussian_decay_kernel_raster(
+        sigma, kernel_filepath, n_std_dev=3.0, normalize=True):
+    """Create a raster-based gaussian decay kernel.
+
+    The raster will be a tiled GeoTIFF, with 256x256 memory blocks.
+
+    While the ``sigma`` parameter represents the width of a standard deviation
+    in pixels, the ``n_std_dev`` parameter defines how many standard deviations
+    should be included in the resulting kernel.  The resulting kernel raster
+    will be square in shape, with a width of ``(sigma * n_std_dev * 2) + 1``
+    pixels.
+
+    Args:
+        sigma (int or float): The distance (in pixels) of the standard
+            deviation from the center of the raster.
+        kernel_filepath (string): The path to the file on disk where this
+            kernel should be stored. If a file exists at this path, it will be
+            overwritten.
+        n_std_dev=3.0 (int or float): The number of times sigma should be
+            multiplied in order to get the pixel radius of the resulting
+            kernel.  The default of 3 standard deviations will cover 99.7% of
+            the area under the gaussian curve.
+        normalize=True (bool): Whether to divide the kernel values by the sum
+            of all values in the kernel.
+
+    Returns:
+        ``None``
+    """
+    # going 3.0 times out from the sigma gives you over 99% of area under
+    # the gaussian curve
+    max_distance = sigma * n_std_dev
+    kernel_size = int(numpy.round(max_distance * 2 + 1))
+
+    driver = gdal.GetDriverByName('GTiff')
+    kernel_dataset = driver.Create(
+        kernel_filepath.encode('utf-8'), kernel_size, kernel_size, 1,
+        gdal.GDT_Float32, options=[
+            'BIGTIFF=IF_SAFER', 'TILED=YES', 'BLOCKXSIZE=256',
+            'BLOCKYSIZE=256'])
+
+    # Make some kind of geotransform, it doesn't matter what but
+    # will make GIS libraries behave better if it's all defined
+    kernel_dataset.SetGeoTransform([0, 1, 0, 0, 0, -1])
+    srs = osr.SpatialReference()
+    srs.SetWellKnownGeogCS('WGS84')
+    kernel_dataset.SetProjection(srs.ExportToWkt())
+
+    kernel_band = kernel_dataset.GetRasterBand(1)
+    kernel_nodata = -9999
+    kernel_band.SetNoDataValue(kernel_nodata)
+
+    col_index = numpy.array(range(kernel_size))
+    running_sum = 0.0
+    for row_index in range(kernel_size):
+        distance_kernel_row = numpy.sqrt(
+            (row_index - max_distance) ** 2 +
+            (col_index - max_distance) ** 2).reshape(1, kernel_size)
+        kernel = numpy.where(
+            distance_kernel_row > max_distance, 0.0,
+            (1 / (2.0 * numpy.pi * sigma ** 2) *
+             numpy.exp(-distance_kernel_row**2 / (2 * sigma ** 2))))
+        running_sum += numpy.sum(kernel)
+        kernel_band.WriteArray(kernel, xoff=0, yoff=row_index)
+
     kernel_dataset.FlushCache()
     kernel_band = None
     kernel_dataset = None
+
+    if normalize:
+        kernel_dataset = gdal.OpenEx(kernel_filepath, gdal.GA_Update)
+        kernel_band = kernel_dataset.GetRasterBand(1)
+        for kernel_data, kernel_block in pygeoprocessing.iterblocks(
+                (kernel_filepath, 1)):
+            # divide by sum to normalize
+            kernel_block /= running_sum
+            kernel_band.WriteArray(
+                kernel_block, xoff=kernel_data['xoff'],
+                yoff=kernel_data['yoff'])
+
+        kernel_dataset.FlushCache()
+        kernel_band = None
+        kernel_dataset = None
 
 
 def build_file_registry(base_file_path_list, file_suffix):
@@ -489,7 +581,8 @@ def build_file_registry(base_file_path_list, file_suffix):
 
 
 def build_lookup_from_csv(
-        table_path, key_field, column_list=None, to_lower=True):
+        table_path, key_field, column_list=None, to_lower=True,
+        expand_path_cols=[]):
     """Read a CSV table into a dictionary indexed by ``key_field``.
 
     Creates a dictionary from a CSV whose keys are unique entries in the CSV
@@ -510,6 +603,10 @@ def build_lookup_from_csv(
         to_lower (bool): if True, converts all unicode in the CSV,
             including headers and values to lowercase, otherwise uses raw
             string values. default=True.
+        expand_path_cols (list[string])): if provided, a list of the names of
+            columns that contain paths to expand. Any relative paths in these
+            columns will be expanded to absolute paths. It is assumed that
+            relative paths are relative to the CSV's path.
 
     Returns:
         lookup_dict (dict): a dictionary of the form
@@ -534,7 +631,7 @@ def build_lookup_from_csv(
 
     table = read_csv_to_dataframe(
         table_path, to_lower=to_lower, sep=None, index_col=False,
-        engine='python')
+        engine='python', expand_path_cols=expand_path_cols)
 
     # if 'to_lower`, case handling is done before trying to access the data.
     # the columns are stripped of leading/trailing whitespace in
@@ -590,9 +687,26 @@ def build_lookup_from_csv(
     return lookup_dict
 
 
+def expand_path(path, base_path):
+    """Check if a path is relative, and if so, expand it using the base path.
+
+    Args:
+        path (string): path to check and expand if necessary
+        base_path (string): path to expand the first path relative to
+
+    Returns:
+        path as an absolute path
+    """
+    if not path:
+        return None
+    if os.path.isabs(path):
+        return os.path.abspath(path)  # normalize path separators
+    return os.path.abspath(os.path.join(os.path.dirname(base_path), path))
+
+
 def read_csv_to_dataframe(
         path, to_lower=False, sep=None, encoding=None, engine='python',
-        **kwargs):
+        expand_path_cols=[], **kwargs):
     """Return a dataframe representation of the CSV.
 
     Wrapper around ``pandas.read_csv`` that standardizes the column names by
@@ -615,6 +729,11 @@ def read_csv_to_dataframe(
             set to 'utf-8-sig'; otherwise the BOM causes an error.
         engine (string): kwarg for pandas.read_csv: 'c', 'python', or None.
             Defaults to 'python' (see note about encoding).
+        expand_path_cols (list[string])): if provided, a list of the names of
+            columns that contain paths to expand. Any relative paths in these
+            columns will be expanded to absolute paths. It is assumed that
+            relative paths are relative to the CSV's path.
+
         **kwargs: any kwargs that are valid for ``pandas.read_csv``
 
     Returns:
@@ -626,8 +745,8 @@ def read_csv_to_dataframe(
     if not encoding and has_utf8_bom(path):
         encoding = 'utf-8-sig'
     try:
-        dataframe = pandas.read_csv(path, engine=engine, encoding=encoding,
-                                    sep=sep, **kwargs)
+        dataframe = pandas.read_csv(
+            path, engine=engine, encoding=encoding, sep=sep, **kwargs)
     except UnicodeDecodeError as error:
         LOGGER.error(
             f'{path} must be encoded as utf-8 or ASCII')
@@ -642,6 +761,15 @@ def read_csv_to_dataframe(
     # Remove values with leading ('^ +') and trailing (' +$') whitespace.
     # Regular expressions using 'replace' only substitute on strings.
     dataframe = dataframe.replace(r"^ +| +$", r"", regex=True)
+
+    if expand_path_cols:
+        for col in expand_path_cols:
+            # allow for the case where a column is optional
+            if col in dataframe:
+                dataframe[col] = dataframe[col].apply(
+                    # if the whole column is empty, cells will be parsed as NaN
+                    # catch that before trying to expand them as paths
+                    lambda p: '' if pandas.isna(p) else expand_path(p, path))
 
     return dataframe
 

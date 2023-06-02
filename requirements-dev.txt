@@ -22,4 +22,4 @@ setuptools_scm>=6.4.0
 requests
 coverage
 xlwt
-build
+build  # pip-only

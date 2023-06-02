@@ -19,7 +19,7 @@ where
    Args within each nested array are visually grouped together.
 - `hidden` (optional) a 1D array of args that should not be displayed in a GUI.
    Use this for model-specific args, no need to include 'n_workers'.
-   All args in ARGS_SPEC (except n_workers) must be contained in `order`+`hidden`.
+   All args in MODEL_SPEC (except n_workers) must be contained in `order`+`hidden`.
    `hidden` is only used in tests, to catch args that should be in `order`,
    but are missing.
 - `modelName` as passed to `invest getspec <modelName>`
@@ -28,7 +28,7 @@ where
 - `f` is a function that accepts `SetupTab.state` as its one argument
     - in the `enabledFunctions` section, `f` returns a boolean where true = enabled, false = disabled
     - in the `dropdownFunctions` section, `f` returns a list of dropdown options.
-      Note: Most dropdown inputs will have a static list of options defined in the ARGS_SPEC.
+      Note: Most dropdown inputs will have a static list of options defined in the MODEL_SPEC.
       This is only for dynamically populating a dropdown.
 
 When the SetupTab component renders, it calls `f(this.state)` to get
@@ -178,23 +178,6 @@ const UI_SPEC = {
       biomass_to_carbon_conversion_factor: isSufficient.bind(null, 'compute_forest_edge_effects'),
     },
   },
-  globio: {
-    order: [
-      ['workspace_dir', 'results_suffix'],
-      ['predefined_globio', 'globio_lulc_path'],
-      ['lulc_to_globio_table_path', 'lulc_path', 'pasture_path', 'potential_vegetation_path', 'primary_threshold', 'pasture_threshold'],
-      ['aoi_path', 'infrastructure_dir', 'intensification_fraction', 'msa_parameters_path'],
-    ],
-    enabledFunctions: {
-      globio_lulc_path: isSufficient.bind(null, 'predefined_globio'),
-      lulc_to_globio_table_path: isNotSufficient.bind(null, 'predefined_globio'),
-      lulc_path: isNotSufficient.bind(null, 'predefined_globio'),
-      pasture_path: isNotSufficient.bind(null, 'predefined_globio'),
-      potential_vegetation_path: isNotSufficient.bind(null, 'predefined_globio'),
-      primary_threshold: isNotSufficient.bind(null, 'predefined_globio'),
-      pasture_threshold: isNotSufficient.bind(null, 'predefined_globio'),
-    },
-  },
   habitat_quality: {
     order: [
       ['workspace_dir', 'results_suffix'],
@@ -256,13 +239,24 @@ const UI_SPEC = {
       ['algorithm'],
       ['calculate_flow_direction'],
       ['calculate_flow_accumulation'],
-      ['calculate_stream_threshold', 'threshold_flow_accumulation', 'calculate_downslope_distance'],
+      ['calculate_stream_threshold',
+        'threshold_flow_accumulation',
+        'calculate_downslope_distance',
+        'calculate_stream_order',
+        'calculate_subwatersheds',
+      ],
     ],
     enabledFunctions: {
       calculate_flow_accumulation: isSufficient.bind(null, 'calculate_flow_direction'),
       calculate_stream_threshold: isSufficient.bind(null, 'calculate_flow_accumulation'),
       threshold_flow_accumulation: isSufficient.bind(null, 'calculate_stream_threshold'),
       calculate_downslope_distance: isSufficient.bind(null, 'calculate_stream_threshold'),
+      calculate_stream_order: ((state) => (
+        isSufficient('calculate_stream_threshold', state)
+        && state.argsValues.algorithm.value === 'D8')),
+      calculate_subwatersheds: ((state) => (
+        isSufficient('calculate_stream_order', state)
+        && state.argsValues.algorithm.value === 'D8')),
     },
   },
   scenario_generator_proximity: {
@@ -351,6 +345,36 @@ const UI_SPEC = {
       ['lulc_path', 'curve_number_table_path', 'soils_hydrological_group_raster_path'],
       ['built_infrastructure_vector_path', 'infrastructure_damage_loss_table_path'],
     ],
+  },
+  urban_nature_access: {
+    order: [
+      ['workspace_dir', 'results_suffix'],
+      ['lulc_raster_path', 'lulc_attribute_table'],
+      [
+        'population_raster_path',
+        'admin_boundaries_vector_path',
+        'population_group_radii_table',
+        'urban_nature_demand',
+        'aggregate_by_pop_group',
+      ],
+      [
+        'search_radius_mode',
+        'decay_function',
+        //'decay_function_power_beta',
+        'search_radius',
+      ],
+    ],
+    enabledFunctions: {
+      search_radius: ((state) => (
+        isSufficient('search_radius_mode', state)
+        && state.argsValues.search_radius_mode.value === 'uniform radius')),
+      // decay_function_power_beta: ((state) => (
+      //   isSufficient('decay_function', state)
+      //   && state.argsValues.decay_function.value === 'power')),
+      population_group_radii_table: ((state) => (
+        isSufficient('search_radius_mode', state)
+        && state.argsValues.search_radius_mode.value === 'radius per population group')),
+    },
   },
   wave_energy: {
     order: [

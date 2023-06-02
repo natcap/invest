@@ -5,21 +5,25 @@ import Form from 'react-bootstrap/Form';
 import Button from 'react-bootstrap/Button';
 import Modal from 'react-bootstrap/Modal';
 import Alert from 'react-bootstrap/Alert';
-import ProgressBar from 'react-bootstrap/ProgressBar';
 import Table from 'react-bootstrap/Table';
+import {
+  MdErrorOutline,
+} from 'react-icons/md';
+import { withTranslation } from 'react-i18next';
 
-import Expire from '../Expire';
 import sampledataRegistry from './sampledata_registry.json';
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
 const { ipcRenderer } = window.Workbench.electron;
 const logger = window.Workbench.getLogger('DataDownloadModal');
 
-const BASE_URL = 'https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.10.2/data';
+// A URL for sampledata to use in devMode, when the token containing the URL
+// associated with a production build of the Workbench does not exist.
+const BASE_URL = 'https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.13.0/data';
 const DEFAULT_FILESIZE = 0;
 
 /** Render a dialog with a form for configuring global invest settings */
-export class DataDownloadModal extends React.Component {
+class DataDownloadModal extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
@@ -29,11 +33,13 @@ export class DataDownloadModal extends React.Component {
       modelCheckBoxState: {},
       dataRegistry: null,
       baseURL: BASE_URL,
+      alertPath: '',
     };
 
     this.handleSubmit = this.handleSubmit.bind(this);
     this.handleCheckAll = this.handleCheckAll.bind(this);
     this.handleCheckList = this.handleCheckList.bind(this);
+    this.closeDialog = this.closeDialog.bind(this);
     this.controller = new AbortController();
     this.signal = this.controller.signal;
   }
@@ -91,14 +97,22 @@ export class DataDownloadModal extends React.Component {
       { properties: ['openDirectory'] }
     );
     if (data.filePaths.length) {
-      ipcRenderer.send(
-        ipcMainChannels.DOWNLOAD_URL,
-        this.state.selectedLinksArray,
-        data.filePaths[0]
+      const writable = await ipcRenderer.invoke(
+        ipcMainChannels.CHECK_FILE_PERMISSIONS, data.filePaths[0]
       );
-      this.props.storeDownloadDir(data.filePaths[0]);
+      if (!writable) {
+        this.setState({ alertPath: data.filePaths[0] });
+      } else {
+        this.setState({ alertPath: '' });
+        ipcRenderer.send(
+          ipcMainChannels.DOWNLOAD_URL,
+          this.state.selectedLinksArray,
+          data.filePaths[0]
+        );
+        this.props.storeDownloadDir(data.filePaths[0]);
+        this.closeDialog();
+      }
     }
-    this.props.closeModal();
   }
 
   handleCheckAll(event) {
@@ -146,12 +160,18 @@ export class DataDownloadModal extends React.Component {
     });
   }
 
+  closeDialog() {
+    this.setState({ alertPath: '' })
+    this.props.closeModal()
+  }
+
   render() {
     const {
       modelCheckBoxState,
       selectedLinksArray,
       dataRegistry,
     } = this.state;
+    const { t } = this.props;
     // Don't render until registry is loaded, since it loads async
     if (!dataRegistry) { return <div />; }
 
@@ -190,12 +210,29 @@ export class DataDownloadModal extends React.Component {
     return (
       <Modal className="download-data-modal"
         show={this.props.show}
-        onHide={this.props.closeModal}
+        onHide={this.closeDialog}
         size="lg"
       >
         <Form>
           <Modal.Header>
-            <Modal.Title>{_("Download InVEST sample data")}</Modal.Title>
+            {
+              (this.state.alertPath)
+                ? (
+                  <Alert
+                    className="mb-0"
+                    variant="danger"
+                  >
+                    <MdErrorOutline
+                      size="2em"
+                      className="pr-1"
+                    />
+                    {t('Please choose a different folder. '
+                      + 'This application does not have permission to write to folder:')}
+                    <p className="mb-0"><em>{this.state.alertPath}</em></p>
+                  </Alert>
+                )
+                : <Modal.Title>{t("Download InVEST sample data")}</Modal.Title>
+            }
           </Modal.Header>
           <Modal.Body>
             <Table
@@ -225,16 +262,16 @@ export class DataDownloadModal extends React.Component {
           <Modal.Footer>
             <Button
               variant="secondary"
-              onClick={this.props.closeModal}
+              onClick={this.closeDialog}
             >
-              {_("Cancel")}
+              {t("Cancel")}
             </Button>
             <Button
               variant="primary"
               onClick={this.handleSubmit}
               disabled={!downloadEnabled}
             >
-              {_("Download")}
+              {t("Download")}
             </Button>
           </Modal.Footer>
         </Form>
@@ -249,51 +286,4 @@ DataDownloadModal.propTypes = {
   storeDownloadDir: PropTypes.func.isRequired,
 };
 
-export function DownloadProgressBar(props) {
-  const [nComplete, nTotal] = props.downloadedNofN;
-  if (nComplete === 'failed') {
-    return (
-      <Expire
-        className="d-inline"
-        delay={props.expireAfter}
-      >
-        <Alert
-          className="d-inline"
-          variant="danger"
-        >
-          {_("Download Failed")}
-        </Alert>
-      </Expire>
-    );
-  }
-  if (nComplete === nTotal) {
-    return (
-      <Expire
-        className="d-inline"
-        delay={props.expireAfter}
-      >
-        <Alert
-          className="d-inline"
-          variant="success"
-        >
-          {_("Download Complete")}
-        </Alert>
-      </Expire>
-    );
-  }
-  return (
-    <ProgressBar
-      animated
-      max={1}
-      now={(nComplete + 1) / nTotal}
-      label={_(`Downloading ${nComplete + 1} of ${nTotal}`)}
-    />
-  );
-}
-
-DownloadProgressBar.propTypes = {
-  downloadedNofN: PropTypes.arrayOf(
-    PropTypes.oneOfType([PropTypes.number, PropTypes.string])
-  ).isRequired,
-  expireAfter: PropTypes.number.isRequired,
-};
+export default withTranslation()(DataDownloadModal)

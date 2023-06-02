@@ -5,10 +5,8 @@ import {
 import '@testing-library/jest-dom';
 import userEvent from '@testing-library/user-event';
 import { ipcRenderer, BrowserWindow } from 'electron';
-import {
-  DataDownloadModal,
-  DownloadProgressBar
-} from '../../src/renderer/components/DataDownloadModal';
+import DataDownloadModal from '../../src/renderer/components/DataDownloadModal';
+import DownloadProgressBar from '../../src/renderer/components/DownloadProgressBar';
 import sampledata_registry from '../../src/renderer/components/DataDownloadModal/sampledata_registry.json';
 import { getInvestModelNames } from '../../src/renderer/server_requests';
 import App from '../../src/renderer/app';
@@ -45,8 +43,9 @@ describe('Sample Data Download Form', () => {
   });
 
   test('Modal does not display when app has been run before', async () => {
-    const { queryByText } = render(<App isFirstRun={false} />);
-    const modalTitle = await queryByText('Download InVEST sample data');
+    const { findByText, queryByText } = render(<App isFirstRun />);
+    await findByText("InVEST");  // wait for page to load before querying
+    const modalTitle = queryByText('Download InVEST sample data');
     expect(modalTitle).toBeNull();
   });
 
@@ -186,6 +185,9 @@ describe('Integration tests with main process', () => {
       if (channel === ipcMainChannels.SHOW_OPEN_DIALOG) {
         return Promise.resolve(dialogData);
       }
+      if (channel === ipcMainChannels.CHECK_FILE_PERMISSIONS) {
+        return Promise.resolve(true);
+      }
       return Promise.resolve(undefined);
     });
 
@@ -204,8 +206,8 @@ describe('Integration tests with main process', () => {
     });
     const progressBar = await findByRole('progressbar');
     expect(progressBar).toHaveTextContent(`Downloading 1 of ${nURLs}`);
-    // We don't have mocks that take us all the way through to a complete
-    // download, when the progress bar would become a 'Download Complete' alert
+    // The electron window's downloadURL function is mocked, so we don't
+    // expect the progress bar to update further in this test.
   });
 
   test('Cancel: does not store a sampleDataDir value', async () => {
@@ -219,5 +221,30 @@ describe('Integration tests with main process', () => {
       const value = await getSettingsValue('sampleDataDir');
       expect(value).toBe(existingValue);
     });
+  });
+
+  test('Alert when download location is not writeable', async () => {
+    const dialogData = {
+      filePaths: ['foo/directory'],
+    };
+
+    ipcRenderer.invoke.mockImplementation((channel, options) => {
+      if (channel === ipcMainChannels.SHOW_OPEN_DIALOG) {
+        return Promise.resolve(dialogData);
+      }
+      if (channel === ipcMainChannels.CHECK_FILE_PERMISSIONS) {
+        return Promise.resolve(false);
+      }
+      return Promise.resolve(undefined);
+    });
+
+    const {
+      findByRole,
+    } = render(<App isFirstRun />);
+
+    const downloadButton = await findByRole('button', { name: 'Download' });
+    userEvent.click(downloadButton);
+    const alert = await findByRole('alert');
+    expect(alert).toHaveTextContent('Please choose a different folder');
   });
 });

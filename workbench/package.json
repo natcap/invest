@@ -1,11 +1,11 @@
 {
   "name": "invest-workbench",
-  "version": "0.1.0-beta",
+  "version": "0.1.0",
   "description": "Models that map and value the goods and services from nature that sustain and fulfill human life",
   "main": "build/main/main.js",
   "homepage": "./",
   "scripts": {
-    "start": "yarn build-main && yarn build-preload && yarn build-static && concurrently --kill-others \"yarn serve\" \"electron .\"",
+    "start": "yarn build-main && yarn build-preload && concurrently --kill-others \"yarn serve\" \"electron .\"",
     "serve": "cross-env MODE=development node scripts/watch.js",
     "lint": "eslint --cache --color --ext .jsx,.js src",
     "test": "cross-env PORT=56788 jest --runInBand --testPathIgnorePatterns /tests/binary_tests/ /tests/sampledata_linkcheck/",
@@ -15,11 +15,10 @@
     "test-electron-app": "jest --runInBand --testMatch **/tests/binary_tests/*.test.js",
     "test-sampledata-registry": "jest --runInBand --testMatch **/tests/sampledata_linkcheck/*.test.js",
     "postinstall": "electron-builder install-app-deps",
-    "build-main": "babel --delete-dir-on-start src/main -d build/main --verbose --config-file ./babel.config.js --ignore **/__mocks__/* -s both",
+    "build-main": "babel --delete-dir-on-start src/main -d build/main --verbose --config-file ./babel.config.js --ignore **/__mocks__/* -s both --copy-files --no-copy-ignored",
     "build-preload": "babel --delete-dir-on-start src/preload -d build/preload --verbose --config-file ./babel.config.js --ignore **/__mocks__/* -s both",
-    "build-static": "cp -r src/static build/static",
     "build-renderer": "vite --config vite.config.js build",
-    "build": "yarn build-renderer && yarn build-main && yarn build-preload && yarn build-static",
+    "build": "yarn build-renderer && yarn build-main && yarn build-preload",
     "token": "cd .. && make jprint-DATA_BASE_URL > workbench/resources/storage_token.txt",
     "dist": "yarn run token && cross-env DEBUG=electron-builder electron-builder build --config electron-builder-config.js"
   },
@@ -40,15 +39,16 @@
   "dependencies": {
     "@babel/runtime": "^7.13.10",
     "electron-log": "^4.3.5",
-    "gettext-parser": "^4.2.0",
-    "gettext.js": "^1.0.1",
+    "i18next": "^22.4.9",
     "localforage": "^1.9.0",
     "node-fetch": "^2.6.7",
     "prop-types": "^15.7.2",
+    "react-i18next": "^12.1.4",
     "yauzl": "^2.10.0"
   },
   "devDependencies": {
     "@babel/cli": "^7.13.10",
+    "@babel/eslint-parser": "^7.19.1",
     "@babel/plugin-transform-runtime": "^7.13.10",
     "@babel/preset-env": "^7.13.10",
     "@babel/preset-react": "^7.12.13",
@@ -65,15 +65,17 @@
     "electron": "^18.2.4",
     "electron-builder": "^23.0.3",
     "electron-devtools-installer": "^3.2.0",
-    "eslint": "^7.21.0",
-    "eslint-config-airbnb": "^18.2.1",
+    "eslint": "^8.35.0",
+    "eslint-config-airbnb": "^19.0.4",
     "eslint-plugin-import": "^2.22.1",
-    "eslint-plugin-jest": "^24.2.1",
-    "eslint-plugin-jsdoc": "^31.6.1",
+    "eslint-plugin-jest": "^27.2.1",
+    "eslint-plugin-jsdoc": "^40.0.1",
     "eslint-plugin-jsx-a11y": "^6.4.1",
     "eslint-plugin-react": "^7.22.0",
     "eslint-plugin-react-hooks": "^4.2.0",
     "fs-extra": "^9.1.0",
+    "i18next-conv": "^13.1.0",
+    "i18next-parser": "^7.6.0",
     "jest": "^27.4.7",
     "pptr-testing-library": "^0.6.4",
     "puppeteer-core": "^9.1.1",
@@ -85,17 +87,5 @@
     "rimraf": "^3.0.2",
     "vite": "^2.8.3",
     "yazl": "^2.5.1"
-  },
-  "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
   }
 }

@@ -2,24 +2,22 @@
 import logging
 import os
 
-import numpy
 import pygeoprocessing
 import pygeoprocessing.routing
 import taskgraph
-from osgeo import gdal
 
 from . import gettext
 from . import spec_utils
 from . import utils
 from . import validation
 from .model_metadata import MODEL_METADATA
-from .spec_utils import u
+from .unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
 
 INVALID_BAND_INDEX_MSG = gettext('Must be between 1 and {maximum}')
 
-ARGS_SPEC = {
+MODEL_SPEC = {
     "model_name": MODEL_METADATA["routedem"].model_title,
     "pyname": MODEL_METADATA["routedem"].pyname,
     "userguide": MODEL_METADATA["routedem"].userguide,
@@ -94,7 +92,172 @@ ARGS_SPEC = {
             "required": False,
             "about": gettext("Calculate percent slope from the provided DEM."),
             "name": gettext("calculate slope")
-        }
+        },
+        "calculate_stream_order": {
+            "type": "boolean",
+            "required": False,
+            "about": gettext("Calculate the Strahler Stream order."),
+            "name": gettext("calculate strahler stream orders (D8 only)"),
+        },
+        "calculate_subwatersheds": {
+            "type": "boolean",
+            "required": False,
+            "about": gettext("Determine subwatersheds from the stream order."),
+            "name": gettext("calculate subwatersheds (D8 only)"),
+        },
+    },
+    "outputs": {
+        "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR,
+        "filled.tif": spec_utils.FILLED_DEM,
+        "flow_accumulation.tif": spec_utils.FLOW_ACCUMULATION,
+        "flow_direction.tif": spec_utils.FLOW_DIRECTION,
+        "slope.tif": spec_utils.SLOPE,
+        "stream_mask.tif": spec_utils.STREAM,
+        "strahler_stream_order.gpkg": {
+            "about": (
+                "A vector of line segments indicating the Strahler stream "
+                "order and other properties of each stream segment."),
+            "geometries": spec_utils.LINESTRING,
+            "fields": {
+                "order": {
+                    "about": "The Strahler stream order.",
+                    "type": "number",
+                    "units": u.none,
+                },
+                "river_id": {
+                    "about": (
+                        "A unique identifier used by all stream segments that "
+                        "connect to the same outlet."),
+                    "type": "number",
+                    "units": u.none,
+                },
+                "drop_distance": {
+                    "about": (
+                        "The drop distance in DEM elevation units from the "
+                        "upstream to downstream component of this stream "
+                        "segment."),
+                    "type": "number",
+                    "units": u.none,
+                },
+                "outlet": {
+                    "about": (
+                        "1 if this segment is an outlet, 0 if it is not."),
+                    "type": "number",
+                    "units": u.none,
+                },
+                "us_fa": {
+                    "about": (
+                        "The flow accumulation value at the upstream end of "
+                        "the stream segment."),
+                    "type": "number",
+                    "units": u.pixels,
+                },
+                "ds_fa": {
+                    "about": (
+                        "The flow accumulation value at the downstream end of "
+                        "the stream segment."),
+                    "type": "number",
+                    "units": u.pixels,
+                },
+                "thresh_fa": {
+                    "about": (
+                        "The final threshold flow accumulation value used to "
+                        "determine the river segments."),
+                    "type": "number",
+                    "units": u.pixels,
+                },
+                "upstream_d8_dir": {
+                    "about": (
+                        "The direction of flow immediately upstream."),
+                    "type": "number",
+                    "units": u.none,
+                },
+                "ds_x": {
+                    "about": (
+                        "The DEM X coordinate for the outlet in pixels from "
+                        "the origin."),
+                    "type": "number",
+                    "units": u.pixels,
+                },
+                "ds_y": {
+                    "about": (
+                        "The DEM Y coordinate for the outlet in pixels from "
+                        "the origin."),
+                    "type": "number",
+                    "units": u.pixels,
+                },
+                "ds_x_1": {
+                    "about": (
+                        "The DEM X coordinate that is 1 pixel upstream "
+                        "from the outlet."),
+                    "type": "number",
+                    "units": u.pixels,
+                },
+                "ds_y_1": {
+                    "about": (
+                        "The DEM Y coordinate that is 1 pixel upstream "
+                        "from the outlet."),
+                    "type": "number",
+                    "units": u.pixels,
+                },
+                "us_x": {
+                    "about": (
+                        "The DEM X coordinate for the upstream inlet."),
+                    "type": "number",
+                    "units": u.pixels,
+                },
+                "us_y": {
+                    "about": (
+                        "The DEM Y coordinate for the upstream inlet."),
+                    "type": "number",
+                    "units": u.pixels,
+                },
+            },
+        },
+        "subwatersheds.gpkg": {
+            "about": (
+                "A GeoPackage with polygon features representing "
+                "subwatersheds.  A new subwatershed is created for each "
+                "tributary of a stream and is influenced greatly by "
+                "your choice of Threshold Flow Accumulation value."),
+            "geometries": spec_utils.POLYGON,
+            "fields": {
+                "stream_id": {
+                    "about": (
+                        "A unique stream id, matching the one in the Strahler "
+                        "stream order vector."),
+                    "type": "number",
+                    "units": u.none,
+                },
+                "terminated_early": {
+                    "about": (
+                        "Indicates whether generation of this subwatershed "
+                        "terminated early (1) or completed as expected (0). "
+                        "If you encounter a (1), please let us know via the "
+                        "forums, community.naturalcapitalproject.org."),
+                    "type": "number",
+                    "units": u.none,
+                },
+                "outlet_x": {
+                    "about": (
+                        "The X coordinate in pixels from the origin of the "
+                        "outlet of the watershed. This can be useful when "
+                        "determining other properties of the watershed when "
+                        "indexing with the underlying raster data."),
+                    "type": "number",
+                    "units": u.none,
+                },
+                "outlet_y": {
+                    "about": (
+                        "The X coordinate in pixels from the origin of the "
+                        "outlet of the watershed. This can be useful when "
+                        "determining other properties of the watershed when "
+                        "indexing with the underlying raster data."),
+                    "type": "number",
+                    "units": u.none,
+                },
+            },
+        },
     }
 }
 
@@ -106,12 +269,14 @@ _TARGET_FLOW_DIRECTION_FILE_PATTERN = 'flow_direction%s.tif'
 _FLOW_ACCUMULATION_FILE_PATTERN = 'flow_accumulation%s.tif'
 _STREAM_MASK_FILE_PATTERN = 'stream_mask%s.tif'
 _DOWNSLOPE_DISTANCE_FILE_PATTERN = 'downslope_distance%s.tif'
+_STRAHLER_STREAM_ORDER_PATTERN = 'strahler_stream_order%s.gpkg'
+_SUBWATERSHEDS_PATTERN = 'subwatersheds%s.gpkg'
 
 _ROUTING_FUNCS = {
     'D8': {
         'flow_accumulation': pygeoprocessing.routing.flow_accumulation_d8,
         'flow_direction': pygeoprocessing.routing.flow_dir_d8,
-        'threshold_flow': None,  # Defined in source code as _threshold_flow
+        'threshold_flow': pygeoprocessing.routing.extract_streams_d8,
         'distance_to_channel': pygeoprocessing.routing.distance_to_channel_d8,
     },
     'MFD': {
@@ -121,36 +286,6 @@ _ROUTING_FUNCS = {
         'distance_to_channel': pygeoprocessing.routing.distance_to_channel_mfd,
     }
 }
-
-
-def _threshold_flow(flow_accum_pixels, threshold, in_nodata, out_nodata):
-    """Raster_calculator local_op to threshold D8 stream flow.
-
-    Args:
-        flow_accum_pixels (numpy.ndarray): Array representing the number of
-            pixels upslope of a given pixel.
-        threshold (int or float): The threshold above which we have a stream.
-        in_nodata (int or float): The nodata value of the flow accumulation
-            raster.
-        out_nodata (int): The nodata value of the target stream mask raster.
-
-    Returns:
-        A numpy.ndarray (dtype is numpy.uint8) with pixel values of 1 where
-        flow accumulation > threshold, 0 where flow accumulation < threshold
-        and out_nodata where flow accumulation is equal to in_nodata.
-
-    """
-    out_matrix = numpy.empty(flow_accum_pixels.shape, dtype=numpy.uint8)
-    out_matrix[:] = out_nodata
-    stream_mask = (flow_accum_pixels > threshold)
-
-    valid_mask = slice(None)
-    if in_nodata is not None:
-        valid_mask = ~utils.array_equals_nodata(flow_accum_pixels, in_nodata)
-
-    out_matrix[valid_mask & stream_mask] = 1
-    out_matrix[valid_mask & ~stream_mask] = 0
-    return out_matrix
 
 
 def execute(args):
@@ -193,8 +328,12 @@ def execute(args):
             args['calculate_flow_accumulation'],
             args['calculate_flow_direction'], and
             args['calculate_stream_threshold'] are all True.
-        args['calculate_slope'] (bool):  If True, model will calculate a
+        args['calculate_slope'] (bool): If True, model will calculate a
             slope raster from the DEM.
+        args['calculate_stream_order']: If True, model will create a vector of
+            the Strahler stream order.
+        args['calculate_subwatersheds']: If True, the model will create a
+            vector of subwatersheds.
         args['n_workers'] (int): The ``n_workers`` parameter to pass to
             the task graph.  The default is ``-1`` if not provided.
 
@@ -239,7 +378,7 @@ def execute(args):
     # Calculate slope.  This is intentionally on the original DEM, not
     # on the pitfilled DEM.  If the user really wants the slop of the filled
     # DEM, they can pass it back through RouteDEM.
-    if 'calculate_slope' in args and bool(args['calculate_slope']):
+    if bool(args.get('calculate_slope', False)):
         target_slope_path = os.path.join(
             args['workspace_dir'], _TARGET_SLOPE_FILE_PATTERN % file_suffix)
         graph.add_task(
@@ -260,8 +399,7 @@ def execute(args):
         task_name='fill_pits',
         target_path_list=[dem_filled_pits_path])
 
-    if ('calculate_flow_direction' in args and
-            bool(args['calculate_flow_direction'])):
+    if bool(args.get('calculate_flow_direction', False)):
         LOGGER.info("calculating flow direction")
         flow_dir_path = os.path.join(
             args['workspace_dir'],
@@ -275,8 +413,7 @@ def execute(args):
             dependent_task_list=[filled_pits_task],
             task_name='flow_dir_%s' % algorithm)
 
-        if ('calculate_flow_accumulation' in args and
-                bool(args['calculate_flow_accumulation'])):
+        if bool(args.get('calculate_flow_accumulation', False)):
             LOGGER.info("calculating flow accumulation")
             flow_accumulation_path = os.path.join(
                 args['workspace_dir'],
@@ -284,47 +421,32 @@ def execute(args):
             flow_accum_task = graph.add_task(
                 routing_funcs['flow_accumulation'],
                 args=((flow_dir_path, 1),
-                      flow_accumulation_path
-                ),
+                      flow_accumulation_path),
                 target_path_list=[flow_accumulation_path],
                 task_name='flow_accumulation_%s' % algorithm,
                 dependent_task_list=[flow_direction_task])
 
-            if ('calculate_stream_threshold' in args and
-                    bool(args['calculate_stream_threshold'])):
+            if bool(args.get('calculate_stream_threshold', False)):
                 stream_mask_path = os.path.join(
                         args['workspace_dir'],
-                    _STREAM_MASK_FILE_PATTERN % file_suffix)
-                if algorithm == 'D8':
-                    flow_accum_task.join()
-                    flow_accum_info = pygeoprocessing.get_raster_info(
-                        flow_accumulation_path)
-                    stream_threshold_task = graph.add_task(
-                        pygeoprocessing.raster_calculator,
-                        args=(((flow_accumulation_path, 1),
-                               (float(args['threshold_flow_accumulation']), 'raw'),
-                               (flow_accum_info['nodata'][0], 'raw'),
-                               (255, 'raw')),
-                              _threshold_flow,
-                              stream_mask_path,
-                              gdal.GDT_Byte,
-                              255),
-                        target_path_list=[stream_mask_path],
-                        task_name='stream_thresholding_D8',
-                        dependent_task_list=[flow_accum_task])
-                else:  # MFD
-                    stream_threshold_task = graph.add_task(
-                        routing_funcs['threshold_flow'],
-                        args=((flow_accumulation_path, 1),
-                              (flow_dir_path, 1),
-                              float(args['threshold_flow_accumulation']),
-                              stream_mask_path),
-                        target_path_list=[stream_mask_path],
-                        task_name=['stream_extraction_MFD'],
-                        dependent_task_list=[flow_accum_task])
+                        _STREAM_MASK_FILE_PATTERN % file_suffix)
+                stream_threshold = float(args['threshold_flow_accumulation'])
+                stream_extraction_kwargs = {
+                    'flow_accum_raster_path_band': (flow_accumulation_path, 1),
+                    'flow_threshold': stream_threshold,
+                    'target_stream_raster_path': stream_mask_path,
+                }
+                if algorithm == 'MFD':
+                    stream_extraction_kwargs['flow_dir_mfd_path_band'] = (
+                        flow_dir_path, 1)
+                stream_threshold_task = graph.add_task(
+                    routing_funcs['threshold_flow'],
+                    kwargs=stream_extraction_kwargs,
+                    target_path_list=[stream_mask_path],
+                    dependent_task_list=[flow_accum_task],
+                    task_name=f'stream_thresholding_{algorithm}')
 
-                if ('calculate_downslope_distance' in args and
-                        bool(args['calculate_downslope_distance'])):
+                if bool(args.get('calculate_downslope_distance', False)):
                     distance_path = os.path.join(
                         args['workspace_dir'],
                         _DOWNSLOPE_DISTANCE_FILE_PATTERN % file_suffix)
@@ -336,6 +458,56 @@ def execute(args):
                         target_path_list=[distance_path],
                         task_name='downslope_distance_%s' % algorithm,
                         dependent_task_list=[stream_threshold_task])
+
+                # We are only doing stream order for D8 flow direction.
+                if (bool(args.get('calculate_stream_order', False)
+                         and algorithm == 'D8')):
+                    stream_order_path = os.path.join(
+                        args['workspace_dir'],
+                        _STRAHLER_STREAM_ORDER_PATTERN % file_suffix)
+                    stream_order_task = graph.add_task(
+                        pygeoprocessing.routing.extract_strahler_streams_d8,
+                        kwargs={
+                            "flow_dir_d8_raster_path_band":
+                                (flow_dir_path, 1),
+                            "flow_accum_raster_path_band":
+                                (flow_accumulation_path, 1),
+                            "dem_raster_path_band":
+                                (dem_filled_pits_path, 1),
+                            "target_stream_vector_path": stream_order_path,
+                            "min_flow_accum_threshold": stream_threshold,
+                            "river_order": 5,  # the default
+                        },
+                        target_path_list=[stream_order_path],
+                        task_name='Calculate D8 stream order',
+                        dependent_task_list=[
+                            filled_pits_task,
+                            flow_direction_task,
+                            flow_accum_task,
+                        ])
+
+                    if bool(args.get('calculate_subwatersheds', False)):
+                        subwatersheds_path = os.path.join(
+                            args['workspace_dir'],
+                            _SUBWATERSHEDS_PATTERN % file_suffix)
+                        graph.add_task(
+                            pygeoprocessing.routing.calculate_subwatershed_boundary,
+                            kwargs={
+                                'd8_flow_dir_raster_path_band':
+                                    (flow_dir_path, 1),
+                                'strahler_stream_vector_path':
+                                    stream_order_path,
+                                'target_watershed_boundary_vector_path':
+                                    subwatersheds_path,
+                                'outlet_at_confluence': False,  # The default
+                            },
+                            target_path_list=[subwatersheds_path],
+                            task_name=(
+                                'Calculate subwatersheds from stream order'),
+                            dependent_task_list=[flow_direction_task,
+                                                 stream_order_task])
+
+    graph.close()
     graph.join()
 
 
@@ -357,7 +529,7 @@ def validate(args, limit_to=None):
             the error message in the second part of the tuple. This should
             be an empty list if validation succeeds.
     """
-    validation_warnings = validation.validate(args, ARGS_SPEC['args'])
+    validation_warnings = validation.validate(args, MODEL_SPEC['args'])
 
     invalid_keys = validation.get_invalid_keys(validation_warnings)
     sufficient_keys = validation.get_sufficient_keys(args)

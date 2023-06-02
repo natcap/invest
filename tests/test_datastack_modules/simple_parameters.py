@@ -1,4 +1,4 @@
-ARGS_SPEC = {
+MODEL_SPEC = {
     'args': {
         'a': {'type': 'integer'},
         'b': {'type': 'freestyle_string'},

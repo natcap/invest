@@ -1,5 +1,6 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 import Form from 'react-bootstrap/Form';
 import Button from 'react-bootstrap/Button';
@@ -9,8 +10,8 @@ import InputGroup from 'react-bootstrap/InputGroup';
 import Modal from 'react-bootstrap/Modal';
 import { MdFolderOpen, MdInfo, MdOpenInNew } from 'react-icons/md';
 
-import baseUserguideURL from '../../../userguideURL';
 import { ipcMainChannels } from '../../../../main/ipcMainChannels';
+import i18n from '../../../i18n/i18n';
 
 const { ipcRenderer } = window.Workbench.electron;
 
@@ -29,7 +30,7 @@ const { ipcRenderer } = window.Workbench.electron;
  * @returns {string} - the filtered and formatted part of the message
  */
 function filterSpatialOverlapFeedback(message, filepath) {
-  const newPrefix = _('Bounding box does not intersect at least one other:');
+  const newPrefix = i18n.t('Bounding box does not intersect at least one other:');
   const bbox = message.split(`${filepath}:`).pop().split('|')[0];
   const bboxFormatted = bbox.split(' ').map(
     (str) => str.padEnd(22, ' ')
@@ -50,7 +51,7 @@ function FormLabel(props) {
       <span>
         {
           (typeof required === 'boolean' && !required)
-            ? <em> (optional)</em>
+            ? <em> ({i18n.t('optional')})</em>
             : <React.Fragment />
         }
         {/* display units at the end of the arg name, if applicable */}
@@ -79,7 +80,7 @@ function Feedback(props) {
       type="invalid"
       id={`${argkey}-feedback`}
     >
-      {`${argtype} : ${(message)}`}
+      {`${i18n.t(argtype)} : ${(message)}`}
     </Form.Control.Feedback>
   );
 }
@@ -133,8 +134,7 @@ export default function ArgInput(props) {
     argSpec,
     userguide,
     enabled,
-    handleBoolChange,
-    handleChange,
+    updateArgValues,
     handleFocus,
     inputDropHandler,
     isValid,
@@ -146,6 +146,8 @@ export default function ArgInput(props) {
   } = props;
   let { validationMessage } = props;
 
+  const { t, i18n } = useTranslation();
+
   // Occasionaly we want to force a scroll to the end of input fields
   // so that the most important part of a filepath is visible.
   // scrollEventCount changes on drop events and on use of the browse button.
@@ -155,6 +157,12 @@ export default function ArgInput(props) {
       inputRef.current.scrollLeft = inputRef.current.scrollWidth;
     }
   }, [scrollEventCount, value]);
+
+  function handleChange(event) {
+    /** Pass input value up to SetupTab for storage & validation. */
+    const { name, value } = event.currentTarget;
+    updateArgValues(name, value);
+  }
 
   // Messages with this pattern include validation feedback about
   // multiple inputs, but the whole message is repeated for each input.
@@ -201,45 +209,31 @@ export default function ArgInput(props) {
   let placeholderText;
   switch (argSpec.type) {
     case 'freestyle_string':
-      placeholderText = _('text');
+      placeholderText = t('text');
       break;
     case 'percent':
-      placeholderText = _('percent: a number from 0 - 100');
+      placeholderText = t('percent: a number from 0 - 100');
       break;
     case 'ratio':
-      placeholderText = _('ratio: a decimal from 0 - 1');
+      placeholderText = t('ratio: a decimal from 0 - 1');
       break;
     default:
-      placeholderText = _(argSpec.type);
+      placeholderText = t(argSpec.type);
   }
 
   let form;
   if (argSpec.type === 'boolean') {
     form = (
-      <React.Fragment>
-        <Form.Check
-          id={argkey}
-          inline
-          type="radio"
-          label="Yes"
-          value="true"
-          checked={!!value} // double bang casts undefined to false
-          onChange={handleBoolChange}
-          name={argkey}
-          disabled={!enabled}
-        />
-        <Form.Check
-          id={argkey}
-          inline
-          type="radio"
-          label="No"
-          value="false"
-          checked={!value} // undefined becomes true, that's okay
-          onChange={handleBoolChange}
-          name={argkey}
-          disabled={!enabled}
-        />
-      </React.Fragment>
+      <Form.Check
+        inline
+        type="switch"
+        id={argkey}
+        name={argkey}
+        checked={value}
+        onChange={() => updateArgValues(argkey, !value)}
+        disabled={!enabled}
+        bsCustomPrefix="form-switch"
+      />
     );
   } else if (argSpec.type === 'option_string') {
     form = (
@@ -252,9 +246,15 @@ export default function ArgInput(props) {
         onFocus={handleChange}
         disabled={!enabled}
       >
-        {dropdownOptions.map(
-          (opt) => <option value={opt} key={opt}>{opt}</option>
-        )}
+        {
+          Array.isArray(dropdownOptions) ?
+          dropdownOptions.map(
+            (opt) => <option value={opt} key={opt}>{opt}</option>
+          ) :
+          Object.entries(dropdownOptions).map(
+            ([opt, info]) => <option value={opt} key={opt}>{info.display_name}</option>
+          )
+        }
       </Form.Control>
     );
   } else {
@@ -322,12 +322,11 @@ ArgInput.propTypes = {
   touched: PropTypes.bool,
   isValid: PropTypes.bool,
   validationMessage: PropTypes.string,
+  updateArgValues: PropTypes.func.isRequired,
   handleFocus: PropTypes.func.isRequired,
-  handleChange: PropTypes.func.isRequired,
-  handleBoolChange: PropTypes.func.isRequired,
   selectFile: PropTypes.func.isRequired,
   enabled: PropTypes.bool.isRequired,
-  dropdownOptions: PropTypes.arrayOf(PropTypes.string),
+  dropdownOptions: PropTypes.oneOfType([PropTypes.arrayOf(PropTypes.string), PropTypes.object]),
   inputDropHandler: PropTypes.func.isRequired,
   scrollEventCount: PropTypes.number,
 };
@@ -348,65 +347,52 @@ ArgInput.defaultProps = {
 function handleClickUsersGuideLink(event) {
   event.preventDefault();
   ipcRenderer.send(
-    ipcMainChannels.OPEN_EXTERNAL_URL, event.currentTarget.href
+    ipcMainChannels.OPEN_LOCAL_HTML, event.currentTarget.href
   );
 }
 
-class AboutModal extends React.PureComponent {
-  constructor(props) {
-    super(props);
-    this.state = {
-      aboutShow: false,
-    };
-    this.handleAboutOpen = this.handleAboutOpen.bind(this);
-    this.handleAboutClose = this.handleAboutClose.bind(this);
-  }
+function AboutModal(props) {
+  const [aboutShow, setAboutShow] = useState(false);
+  const handleAboutClose = () => setAboutShow(false);
+  const handleAboutOpen = () => setAboutShow(true);
 
-  handleAboutClose() {
-    this.setState({ aboutShow: false });
-  }
+  const { userguide, arg, argkey } = props;
+  const { t, i18n } = useTranslation();
 
-  handleAboutOpen() {
-    this.setState({ aboutShow: true });
-  }
-
-  render() {
-    const { userguide, arg, argkey } = this.props;
-    const { aboutShow } = this.state;
-    // create link to users guide entry for this arg
-    // anchor name is the arg name, with underscores replaced with hyphens
-    const userguideURL = `${baseUserguideURL}/${userguide}#${argkey.replace(/_/g, '-')}`;
-    return (
-      <React.Fragment>
-        <Button
-          aria-label={`info about ${arg.name}`}
-          className="mr-2"
-          onClick={this.handleAboutOpen}
-          variant="outline-info"
-        >
-          <MdInfo />
-        </Button>
-        <Modal show={aboutShow} onHide={this.handleAboutClose}>
-          <Modal.Header>
-            <Modal.Title>{arg.name}</Modal.Title>
-          </Modal.Header>
-          <Modal.Body>
-            {arg.about}
-            <br />
-            <a
-              href={userguideURL}
-              title={userguideURL}
-              aria-label="open user guide section for this input in web browser"
-              onClick={handleClickUsersGuideLink}
-            >
-              {_("User's guide entry")}
-              <MdOpenInNew className="mr-1" />
-            </a>
-          </Modal.Body>
-        </Modal>
-      </React.Fragment>
-    );
-  }
+  // create link to users guide entry for this arg
+  // anchor name is the arg name, with underscores replaced with hyphens
+  const userguideURL = `
+    ${window.Workbench.USERGUIDE_PATH}/${i18n.language}/${userguide}#${argkey.replace(/_/g, '-')}`;
+  return (
+    <React.Fragment>
+      <Button
+        aria-label={`info about ${arg.name}`}
+        className="mr-2"
+        onClick={handleAboutOpen}
+        variant="outline-info"
+      >
+        <MdInfo />
+      </Button>
+      <Modal show={aboutShow} onHide={handleAboutClose}>
+        <Modal.Header>
+          <Modal.Title>{arg.name}</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {arg.about}
+          <br />
+          <a
+            href={userguideURL}
+            title={userguideURL}
+            aria-label="open user guide section for this input in web browser"
+            onClick={handleClickUsersGuideLink}
+          >
+            {t("User's guide entry")}
+            <MdOpenInNew className="mr-1" />
+          </a>
+        </Modal.Body>
+      </Modal>
+    </React.Fragment>
+  );
 }
 
 AboutModal.propTypes = {
