@@ -20,13 +20,9 @@ import InvestTab from './components/InvestTab';
 import SettingsModal from './components/SettingsModal';
 import DataDownloadModal from './components/DataDownloadModal';
 import DownloadProgressBar from './components/DownloadProgressBar';
-import {
-  saveSettingsStore, getAllSettings,
-} from './components/SettingsModal/SettingsStorage';
 import { getInvestModelNames } from './server_requests';
 import InvestJob from './InvestJob';
 import { dragOverHandlerNone } from './utils';
-// import { ipcMainChannels } from '../main/ipcMainChannels';
 
 const { ipcRenderer } = window.Workbench.electron;
 const logger = window.Workbench.getLogger('app.jsx');
