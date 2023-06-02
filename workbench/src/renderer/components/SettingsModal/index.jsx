@@ -16,7 +16,6 @@ import {
 import { BsChevronExpand } from 'react-icons/bs';
 import { withTranslation } from 'react-i18next';
 
-import { getDefaultSettings } from './SettingsStorage';
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
 import { getSupportedLanguages } from '../../server_requests';
 
@@ -29,11 +28,15 @@ class SettingsModal extends React.Component {
     this.state = {
       show: false,
       languageOptions: null,
+      language: null,
+      loggingLevel: null,
+      taskgraphLoggingLevel: null,
+      nWorkers: null
     };
     this.handleShow = this.handleShow.bind(this);
     this.handleClose = this.handleClose.bind(this);
     this.handleChange = this.handleChange.bind(this);
-    this.handleReset = this.handleReset.bind(this);
+    this.setSettings = this.setSettings.bind(this);
     this.switchToDownloadModal = this.switchToDownloadModal.bind(this);
   }
 
@@ -42,6 +45,7 @@ class SettingsModal extends React.Component {
     this.setState({
       languageOptions: languageOptions,
     });
+    this.setSettings();
   }
 
   handleClose() {
@@ -54,17 +58,27 @@ class SettingsModal extends React.Component {
     this.setState({ show: true });
   }
 
-  handleReset(event) {
-    event.preventDefault();
-    const resetSettings = getDefaultSettings();
-    this.props.saveSettings(resetSettings);
+  handleChange(event) {
+    const { name, value } = event.currentTarget;
+    this.setState({ [name]: value });
+    ipcRenderer.send(ipcMainChannels.SET_SETTING, name, value);
   }
 
-  handleChange(event) {
-    const newSettings = { ...this.props.investSettings };
-    const { name, value } = event.currentTarget;
-    newSettings[name] = value;
-    this.props.saveSettings(newSettings);
+  async setSettings() {
+    const language = await ipcRenderer
+      .invoke(ipcMainChannels.GET_SETTING, 'language');
+    const loggingLevel = await ipcRenderer
+      .invoke(ipcMainChannels.GET_SETTING, 'loggingLevel');
+    const taskgraphLoggingLevel = await ipcRenderer
+      .invoke(ipcMainChannels.GET_SETTING, 'taskgraphLoggingLevel');
+    const nWorkers = await ipcRenderer
+      .invoke(ipcMainChannels.GET_SETTING, 'nWorkers');
+    this.setState({
+      language: language,
+      loggingLevel: loggingLevel,
+      taskgraphLoggingLevel: taskgraphLoggingLevel,
+      nWorkers: nWorkers
+    });
   }
 
   switchToDownloadModal() {
@@ -73,8 +87,15 @@ class SettingsModal extends React.Component {
   }
 
   render() {
-    const { show, languageOptions } = this.state;
-    const { investSettings, clearJobsStorage, nCPU, t } = this.props;
+    const {
+      show,
+      languageOptions,
+      language,
+      loggingLevel,
+      taskgraphLoggingLevel,
+      nWorkers,
+    } = this.state;
+    const { clearJobsStorage, nCPU, t } = this.props;
 
     const nWorkersOptions = [
       [-1, `${t('Synchronous')} (-1)`],
@@ -83,7 +104,7 @@ class SettingsModal extends React.Component {
     for (let i = 1; i <= nCPU; i += 1) {
       nWorkersOptions.push([i, `${i} ${t('CPUs')}`]);
     }
-    const logLevelOptions = {  // map value to display name
+    const logLevelOptions = { // map value to display name
       'DEBUG': t('DEBUG'),
       'INFO': t('INFO'),
       'WARNING': t('WARNING'),
@@ -134,7 +155,7 @@ class SettingsModal extends React.Component {
                       id="language-select"
                       as="select"
                       name="language"
-                      value={investSettings.language}
+                      value={language}
                       onChange={this.handleChange}
                     >
                       {Object.entries(languageOptions).map((entry) => {
@@ -155,7 +176,7 @@ class SettingsModal extends React.Component {
                   id="logging-select"
                   as="select"
                   name="loggingLevel"
-                  value={investSettings.loggingLevel}
+                  value={loggingLevel}
                   onChange={this.handleChange}
                 >
                   {Object.entries(logLevelOptions).map(
@@ -173,7 +194,7 @@ class SettingsModal extends React.Component {
                   id="taskgraph-logging-select"
                   as="select"
                   name="taskgraphLoggingLevel"
-                  value={investSettings.taskgraphLoggingLevel}
+                  value={taskgraphLoggingLevel}
                   onChange={this.handleChange}
                 >
                   {Object.entries(logLevelOptions).map(
@@ -197,7 +218,7 @@ class SettingsModal extends React.Component {
                         as="select"
                         name="nWorkers"
                         type="text"
-                        value={investSettings.nWorkers}
+                        value={nWorkers}
                         onChange={this.handleChange}
                       >
                         {nWorkersOptions.map(
@@ -233,18 +254,6 @@ class SettingsModal extends React.Component {
                 )
                 : <div />
             }
-            <Row className="justify-content-end">
-              <Col sm="5">
-                <Button
-                  variant="secondary"
-                  onClick={this.handleReset}
-                  type="button"
-                  className="w-100"
-                >
-                  {t('Reset to Defaults')}
-                </Button>
-              </Col>
-            </Row>
             <hr />
             <Button
               variant="primary"
@@ -270,15 +279,7 @@ class SettingsModal extends React.Component {
 }
 
 SettingsModal.propTypes = {
-  saveSettings: PropTypes.func.isRequired,
   clearJobsStorage: PropTypes.func.isRequired,
-  investSettings: PropTypes.shape({
-    nWorkers: PropTypes.string,
-    taskgraphLoggingLevel: PropTypes.string,
-    loggingLevel: PropTypes.string,
-    sampleDataDir: PropTypes.string,
-    language: PropTypes.string,
-  }).isRequired,
   showDownloadModal: PropTypes.func.isRequired,
   nCPU: PropTypes.number.isRequired,
 };

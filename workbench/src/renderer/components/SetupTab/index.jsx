@@ -1,5 +1,6 @@
 import React from 'react';
 import PropTypes from 'prop-types';
+import { withTranslation } from 'react-i18next';
 
 import Alert from 'react-bootstrap/Alert';
 import Container from 'react-bootstrap/Container';
@@ -23,7 +24,6 @@ import {
 } from '../../server_requests';
 import { argsDictFromObject } from '../../utils';
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
-import { withTranslation } from 'react-i18next';
 
 const { ipcRenderer } = window.Workbench.electron;
 
@@ -210,10 +210,13 @@ class SetupTab extends React.Component {
    * @param  {object} argsValues - of the shape returned by `initializeArgValues`.
    * @returns {object} copy of original argsValues with an n_workers property.
    */
-  insertNWorkers(argsValues) {
+  async insertNWorkers(argsValues) {
+    const nWorkers = await ipcRenderer.invoke(
+      ipcMainChannels.GET_SETTING, 'nWorkers'
+    );
     return {
       ...argsValues,
-      n_workers: { value: this.props.nWorkers },
+      n_workers: { value: nWorkers },
     };
   }
 
@@ -598,7 +601,6 @@ SetupTab.propTypes = {
   }).isRequired,
   argsInitValues: PropTypes.objectOf(PropTypes.oneOfType([PropTypes.string, PropTypes.bool])),
   investExecute: PropTypes.func.isRequired,
-  nWorkers: PropTypes.string.isRequired,
   sidebarSetupElementId: PropTypes.string.isRequired,
   sidebarFooterElementId: PropTypes.string.isRequired,
   executeClicked: PropTypes.bool.isRequired,

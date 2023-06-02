@@ -1,5 +1,6 @@
 import React from 'react';
 import PropTypes from 'prop-types';
+import i18n from 'i18next';
 
 import TabPane from 'react-bootstrap/TabPane';
 import TabContent from 'react-bootstrap/TabContent';
@@ -25,8 +26,7 @@ import {
 import { getInvestModelNames } from './server_requests';
 import InvestJob from './InvestJob';
 import { dragOverHandlerNone } from './utils';
-import { ipcMainChannels } from '../main/ipcMainChannels';
-import i18n from 'i18next';
+// import { ipcMainChannels } from '../main/ipcMainChannels';
 
 const { ipcRenderer } = window.Workbench.electron;
 const logger = window.Workbench.getLogger('app.jsx');
@@ -44,18 +44,15 @@ export default class App extends React.Component {
       openJobs: {},
       investList: null,
       recentJobs: [],
-      investSettings: null,
       showDownloadModal: false,
       downloadedNofN: null,
     };
-    this.saveSettings = this.saveSettings.bind(this);
     this.switchTabs = this.switchTabs.bind(this);
     this.openInvestModel = this.openInvestModel.bind(this);
     this.closeInvestModel = this.closeInvestModel.bind(this);
     this.updateJobProperties = this.updateJobProperties.bind(this);
     this.saveJob = this.saveJob.bind(this);
     this.clearRecentJobs = this.clearRecentJobs.bind(this);
-    this.storeDownloadDir = this.storeDownloadDir.bind(this);
     this.showDownloadModal = this.showDownloadModal.bind(this);
   }
 
@@ -63,17 +60,13 @@ export default class App extends React.Component {
   async componentDidMount() {
     const investList = await getInvestModelNames();
     const recentJobs = await InvestJob.getJobStore();
-    const investSettings = await getAllSettings();
     this.setState({
       investList: investList,
       recentJobs: recentJobs,
-      investSettings: investSettings,
       showDownloadModal: this.props.isFirstRun,
     });
-    await i18n.changeLanguage(investSettings.language);
-    await ipcRenderer.invoke(
-      ipcMainChannels.CHANGE_LANGUAGE, investSettings.language
-    );
+    const language = await ipcRenderer.invoke('getSettingsValue', 'language');
+    await i18n.changeLanguage(language);
     ipcRenderer.on('download-status', (downloadedNofN) => {
       this.setState({
         downloadedNofN: downloadedNofN,
@@ -93,33 +86,6 @@ export default class App extends React.Component {
     this.setState(
       { activeTab: key }
     );
-  }
-
-  async saveSettings(settings) {
-    const { investSettings } = this.state;
-    await saveSettingsStore(settings);
-    this.setState({ investSettings: settings });
-    // if language has changed, refresh the app
-    if (settings.language !== investSettings.language) {
-      // change language in the renderer process
-      await i18n.changeLanguage(settings.language);
-      // change language in the main process
-      await ipcRenderer.invoke(
-        ipcMainChannels.CHANGE_LANGUAGE, settings.language
-      );
-      // rerender for changes to take effect
-      window.location.reload();
-    }
-  }
-
-  /** Store a sampledata filepath in localforage.
-   *
-   * @param {string} dir - the path to the user-selected dir
-   */
-  storeDownloadDir(dir) {
-    const { investSettings } = this.state;
-    investSettings.sampleDataDir = dir;
-    this.saveSettings(investSettings);
   }
 
   showDownloadModal(shouldShow) {
@@ -212,7 +178,6 @@ export default class App extends React.Component {
   render() {
     const {
       investList,
-      investSettings,
       recentJobs,
       openJobs,
       openTabIDs,
@@ -289,7 +254,6 @@ export default class App extends React.Component {
           <InvestTab
             job={job}
             tabID={id}
-            investSettings={investSettings}
             saveJob={this.saveJob}
             updateJobProperties={this.updateJobProperties}
           />
@@ -344,21 +308,12 @@ export default class App extends React.Component {
                     )
                     : <div />
                 }
-                {
-                  // don't render until after we fetched the data
-                  (investSettings)
-                    ? (
-                      <SettingsModal
-                        className="mx-3"
-                        saveSettings={this.saveSettings}
-                        investSettings={investSettings}
-                        clearJobsStorage={this.clearRecentJobs}
-                        showDownloadModal={() => this.showDownloadModal(true)}
-                        nCPU={this.props.nCPU}
-                      />
-                    )
-                    : <div />
-                }
+                <SettingsModal
+                  className="mx-3"
+                  clearJobsStorage={this.clearRecentJobs}
+                  showDownloadModal={() => this.showDownloadModal(true)}
+                  nCPU={this.props.nCPU}
+                />
               </Col>
             </Row>
           </Navbar>
