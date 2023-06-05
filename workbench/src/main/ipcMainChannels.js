@@ -12,7 +12,6 @@ export const ipcMainChannels = {
   IS_FIRST_RUN: 'is-first-run',
   OPEN_EXTERNAL_URL: 'open-external-url',
   OPEN_LOCAL_HTML: 'open-local-html',
-  RESET_SETTINGS: 'reset-settings',
   SET_SETTING: 'set-setting',
   SHOW_ITEM_IN_FOLDER: 'show-item-in-folder',
   SHOW_OPEN_DIALOG: 'show-open-dialog',

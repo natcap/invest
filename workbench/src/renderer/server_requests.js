@@ -1,4 +1,6 @@
-import { getSettingsValue } from './components/SettingsModal/SettingsStorage';
+import { ipcRenderer } from 'electron';
+
+import { ipcMainChannels } from '../main/ipcMainChannels';
 
 const logger = window.Workbench.getLogger('server_requests.js');
 const HOSTNAME = 'http://127.0.0.1';
@@ -17,7 +19,7 @@ const PREFIX = 'api';
  * @returns {Promise} resolves object
  */
 export async function getInvestModelNames() {
-  const language = await getSettingsValue('language');
+  const language = await ipcRenderer.invoke(ipcMainChannels.GET_SETTING, 'language');
   return (
     window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/models?language=${language}`, {
       method: 'get',
@@ -34,7 +36,7 @@ export async function getInvestModelNames() {
  * @returns {Promise} resolves object
  */
 export async function getSpec(payload) {
-  const language = await getSettingsValue('language');
+  const language = await ipcRenderer.invoke(ipcMainChannels.GET_SETTING, 'language');
   return (
     window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/getspec?language=${language}`, {
       method: 'post',
@@ -56,7 +58,7 @@ export async function getSpec(payload) {
  * @returns {Promise} resolves array
  */
 export async function fetchValidation(payload) {
-  const language = await getSettingsValue('language');
+  const language = await ipcRenderer.invoke(ipcMainChannels.GET_SETTING, 'language');
   return (
     window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/validate?language=${language}`, {
       method: 'post',

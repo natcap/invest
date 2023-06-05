@@ -23,9 +23,10 @@ import {
   getSupportedLanguages
 } from '../../src/renderer/server_requests';
 import InvestJob from '../../src/renderer/InvestJob';
-import {
-  getSettingsValue, saveSettingsStore
-} from '../../src/renderer/components/SettingsModal/SettingsStorage';
+// import {
+//   getSettingsValue, saveSettingsStore
+// } from '../../src/renderer/components/SettingsModal/SettingsStorage';
+import { settingsStore, setupSettingsHandlers } from '../../src/main/settingsStore';
 import { ipcMainChannels } from '../../src/main/ipcMainChannels';
 import {
   setupInvestRunHandlers,
@@ -414,11 +415,17 @@ describe('InVEST global settings: dialog interactions', () => {
   const languageLabelText = 'Language';
 
   beforeAll(() => {
-    delete global.window.location;
-    Object.defineProperty(global.window, 'location', {
-      configurable: true,
-      value: { reload: jest.fn() },
-    });
+  //   // Because changing the language triggers a location.reload
+  //   delete global.window.location;
+  //   Object.defineProperty(global.window, 'location', {
+  //     configurable: true,
+  //     value: { reload: jest.fn() },
+  //   });
+    setupSettingsHandlers();
+  });
+
+  afterAll(() => {
+    removeIpcMainListeners();
   });
 
   beforeEach(async () => {
@@ -464,10 +471,11 @@ describe('InVEST global settings: dialog interactions', () => {
       expect(tgLoggingInput).toHaveValue(tgLoggingLevel);
       expect(languageInput).toHaveValue(languageValue);
     });
-    expect(await getSettingsValue('nWorkers')).toBe(nWorkersValue);
-    expect(await getSettingsValue('loggingLevel')).toBe(loggingLevel);
-    expect(await getSettingsValue('taskgraphLoggingLevel')).toBe(tgLoggingLevel);
-    expect(await getSettingsValue('language')).toBe(languageValue);
+
+    expect(settingsStore.get('nWorkers')).toBe(nWorkersValue);
+    expect(settingsStore.get('loggingLevel')).toBe(loggingLevel);
+    expect(settingsStore.get('taskgraphLoggingLevel')).toBe(tgLoggingLevel);
+    expect(settingsStore.get('language')).toBe(languageValue);
   });
 
   test('Load invest settings from storage and test Reset', async () => {

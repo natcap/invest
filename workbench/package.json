@@ -62,6 +62,7 @@
     "babel-eslint": "^10.1.0",
     "bootstrap": "4.3.1",
     "concurrently": "^7.0.0",
+    "conf": "^11.0.1",
     "cross-env": "^7.0.3",
     "electron": "^18.2.4",
     "electron-builder": "^23.0.3",
