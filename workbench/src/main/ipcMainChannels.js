@@ -3,6 +3,7 @@ export const ipcMainChannels = {
   CHECK_STORAGE_TOKEN: 'check-storage-token',
   DOWNLOAD_URL: 'download-url',
   GET_N_CPUS: 'get-n-cpus',
+  GET_ELECTRON_LOG_PATH: 'get-electron-log-path',
   INVEST_KILL: 'invest-kill',
   INVEST_READ_LOG: 'invest-read-log',
   INVEST_RUN: 'invest-run',

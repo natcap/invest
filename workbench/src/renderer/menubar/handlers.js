@@ -1,7 +1,6 @@
 import { ipcMainChannels } from '../../main/ipcMainChannels';
 
 const { ipcRenderer } = window.Workbench.electron;
-const { LOGFILE_PATH } = window.Workbench;
 
 export function handleClickExternalURL(event) {
   event.preventDefault();
@@ -10,9 +9,12 @@ export function handleClickExternalURL(event) {
   );
 }
 
-export function handleClickFindLogfiles() {
+export async function handleClickFindLogfiles() {
+  const logfilePath = await ipcRenderer.invoke(
+    ipcMainChannels.GET_ELECTRON_LOG_PATH
+  );
   ipcRenderer.send(
     ipcMainChannels.SHOW_ITEM_IN_FOLDER,
-    LOGFILE_PATH
+    logfilePath
   );
 }

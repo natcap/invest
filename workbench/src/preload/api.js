@@ -1,14 +1,11 @@
-import path from 'path';
-
 // eslint-disable-next-line import/no-extraneous-dependencies
-import { ipcRenderer } from 'electron';
+const { ipcRenderer } = require('electron');
+// using `import` for electron messes with vite and yields a bad bundle.
+// `import`` is okay for local modules though
 
 import { ipcMainChannels } from '../main/ipcMainChannels';
-import { getLogger } from '../main/logger';
 
 const isDevMode = process.argv.includes('--devMode');
-
-const logger = getLogger();
 
 // Most IPC initiates in renderer and main does the listening,
 // but these channels are exceptions: renderer listens for them
@@ -25,14 +22,13 @@ const userguidePath = isDevMode
   : `file:///${process.resourcesPath}/documentation`;
 
 export default {
-  // Port where the flask app is running
-  PORT: process.env.PORT,
+  PORT: process.env.PORT, // where the flask app is running
   USERGUIDE_PATH: userguidePath,
-  // Workbench logfile location, so Report window can open to it
-  LOGFILE_PATH: logger.transports.file.getFile().path,
-  getLogger: getLogger,
-  path: {
-    resolve: path.resolve,
+  logger: {
+    debug: (message) => ipcRenderer.send(ipcMainChannels.LOGGER, 'debug', message),
+    info: (message) => ipcRenderer.send(ipcMainChannels.LOGGER, 'info', message),
+    warning: (message) => ipcRenderer.send(ipcMainChannels.LOGGER, 'warning', message),
+    error: (message) => ipcRenderer.send(ipcMainChannels.LOGGER, 'error', message),
   },
   electron: {
     ipcRenderer: {

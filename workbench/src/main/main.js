@@ -30,6 +30,7 @@ import setupGetNCPUs from './setupGetNCPUs';
 import setupOpenExternalUrl from './setupOpenExternalUrl';
 import setupOpenLocalHtml from './setupOpenLocalHtml';
 import setupChangeLanguage from './setupChangeLanguage';
+import setupRendererLogger from './setupRendererLogger';
 import { ipcMainChannels } from './ipcMainChannels';
 import menuTemplate from './menubar';
 import ELECTRON_DEV_MODE from './isDevMode';
@@ -84,6 +85,7 @@ export const createWindow = async () => {
   setupCheckFirstRun();
   setupCheckStorageToken();
   setupChangeLanguage();
+  setupRendererLogger();
   await getFlaskIsReady();
 
   const devModeArg = ELECTRON_DEV_MODE ? '--devMode' : '';

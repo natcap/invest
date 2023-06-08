@@ -11,8 +11,6 @@ import { useTranslation } from 'react-i18next';
 import OpenButton from '../OpenButton';
 import InvestJob from '../../InvestJob';
 
-const logger = window.Workbench.getLogger('HomeTab');
-
 /**
  * Renders a table of buttons for each invest model and
  * a list of cards for each cached invest job.

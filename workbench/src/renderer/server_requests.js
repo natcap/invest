@@ -1,8 +1,8 @@
 import { getSettingsValue } from './components/SettingsModal/SettingsStorage';
 
-const logger = window.Workbench.getLogger('server_requests.js');
+// const logger = window.Workbench.getLogger('server_requests.js');
 const HOSTNAME = 'http://127.0.0.1';
-const { PORT } = window.Workbench;
+const { logger, PORT } = window.Workbench;
 const PREFIX = 'api';
 
 // The Flask server sends UTF-8 encoded responses by default
