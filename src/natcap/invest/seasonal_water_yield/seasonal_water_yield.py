@@ -21,8 +21,6 @@ from ..model_metadata import MODEL_METADATA
 from ..unit_registry import u
 from . import seasonal_water_yield_core
 
-gdal.SetCacheMax(2**26)
-
 LOGGER = logging.getLogger(__name__)
 
 TARGET_NODATA = -1
