@@ -582,7 +582,7 @@ def build_file_registry(base_file_path_list, file_suffix):
 
 def build_lookup_from_csv(
         table_path, key_field, column_list=None, to_lower=True,
-        expand_path_cols=[]):
+        expand_path_cols=[], **kwargs):
     """Read a CSV table into a dictionary indexed by ``key_field``.
 
     Creates a dictionary from a CSV whose keys are unique entries in the CSV
@@ -607,6 +607,7 @@ def build_lookup_from_csv(
             columns that contain paths to expand. Any relative paths in these
             columns will be expanded to absolute paths. It is assumed that
             relative paths are relative to the CSV's path.
+        **kwargs: additional kwargs will be passed to ``pandas.read_csv``
 
     Returns:
         lookup_dict (dict): a dictionary of the form
@@ -631,7 +632,7 @@ def build_lookup_from_csv(
 
     table = read_csv_to_dataframe(
         table_path, to_lower=to_lower, sep=None, index_col=False,
-        engine='python', expand_path_cols=expand_path_cols)
+        engine='python', expand_path_cols=expand_path_cols, **kwargs)
 
     # if 'to_lower`, case handling is done before trying to access the data.
     # the columns are stripped of leading/trailing whitespace in
