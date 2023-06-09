@@ -83,6 +83,9 @@ Unreleased Changes
     * Fixed a bug where monthy quickflow nodata pixels were not being passed
       on to the total quickflow raster, which could result in negative values
       on the edges (`#1105 <https://github.com/natcap/invest/issues/1105>`_)
+    * Removed the GDAL cache size limit on this model, which means that, by
+      default, the model will use up to 5% of installed memory.
+      https://github.com/natcap/invest/issues/1320
 
 3.13.0 (2023-03-17)
 -------------------
