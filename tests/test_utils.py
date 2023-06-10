@@ -856,6 +856,27 @@ class BuildLookupFromCSVTests(unittest.TestCase):
         self.assertEqual(lookup_dict[4]['header3'], 'bar')
         self.assertEqual(lookup_dict[1]['header1'], 1)
 
+    def test_csv_utf8_encoding(self):
+        """utils: test that CSV read correctly with UTF-8 encoding."""
+        from natcap.invest import utils
+
+        csv_file = os.path.join(self.workspace_dir, 'csv.csv')
+        # writing with utf-8-sig will prepend the BOM
+        with open(csv_file, 'w', encoding='utf-8') as file_obj:
+            file_obj.write(textwrap.dedent(
+                """
+                header1,HEADER2,header3
+                1,2,bar
+                4,5,FOO
+                """
+            ).strip())
+        lookup_dict = utils.build_lookup_from_csv(
+            csv_file, 'header1')
+        # assert the BOM prefix was correctly parsed and skipped
+        self.assertEqual(lookup_dict[4]['header2'], 5)
+        self.assertEqual(lookup_dict[4]['header3'], 'foo')
+        self.assertEqual(lookup_dict[1]['header1'], 1)
+
     def test_csv_utf8_bom_encoding(self):
         """utils: test that CSV read correctly with UTF-8 BOM encoding."""
         from natcap.invest import utils
@@ -891,7 +912,7 @@ class BuildLookupFromCSVTests(unittest.TestCase):
                 """
                 header 1,HEADER 2,header 3
                 1,2,bar1
-                4,5,FOO
+                4,5,FÖÖ
                 """
             ).strip())
 
@@ -899,7 +920,8 @@ class BuildLookupFromCSVTests(unittest.TestCase):
             csv_file, 'header 1')
 
         self.assertEqual(lookup_dict[4]['header 2'], 5)
-        self.assertEqual(lookup_dict[4]['header 3'], 'foo')
+        # non-Unicode characters should be replaced with the replacement character
+        self.assertEqual(lookup_dict[4]['header 3'], 'f��')
         self.assertEqual(lookup_dict[1]['header 1'], 1)
 
     def test_expand_path(self):
