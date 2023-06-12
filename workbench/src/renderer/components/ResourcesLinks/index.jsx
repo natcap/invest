@@ -54,6 +54,7 @@ function handleForumClick(event) {
  */
 function handleUGClick(event) {
   event.preventDefault();
+  console.log(event.currentTarget.href)
   ipcRenderer.send(
     ipcMainChannels.OPEN_LOCAL_HTML, event.currentTarget.href
   );

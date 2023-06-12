@@ -5,8 +5,6 @@ const { ipcRenderer } = require('electron');
 
 import { ipcMainChannels } from '../main/ipcMainChannels';
 
-const isDevMode = process.argv.includes('--devMode');
-
 // Most IPC initiates in renderer and main does the listening,
 // but these channels are exceptions: renderer listens for them
 const ipcRendererChannels = [
@@ -16,13 +14,18 @@ const ipcRendererChannels = [
   /download-status/,
 ];
 
+const PORT = process.argv.filter((arg) => arg.startsWith('--port'))[0].split('=')[1];
+const userPaths = ipcRenderer.sendSync(ipcMainChannels.GET_ELECTRON_PATHS);
+
 // In DevMode, local UG is served at the root path
+const isDevMode = process.argv.includes('--devMode');
 const userguidePath = isDevMode
   ? ''
-  : `file:///${process.resourcesPath}/documentation`;
+  : `file:///${userPaths.resourcesPath}/documentation`;
 
 export default {
-  PORT: process.env.PORT, // where the flask app is running
+  PORT: PORT, // where the flask app is running
+  ELECTRON_LOG_PATH: `${userPaths.userData}/logs/main.log`,
   USERGUIDE_PATH: userguidePath,
   logger: {
     debug: (message) => ipcRenderer.send(ipcMainChannels.LOGGER, 'debug', message),

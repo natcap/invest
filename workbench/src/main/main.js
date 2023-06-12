@@ -30,6 +30,7 @@ import setupGetNCPUs from './setupGetNCPUs';
 import setupOpenExternalUrl from './setupOpenExternalUrl';
 import setupOpenLocalHtml from './setupOpenLocalHtml';
 import setupChangeLanguage from './setupChangeLanguage';
+import setupGetElectronPaths from './setupGetElectronPaths';
 import setupRendererLogger from './setupRendererLogger';
 import { ipcMainChannels } from './ipcMainChannels';
 import menuTemplate from './menubar';
@@ -85,6 +86,7 @@ export const createWindow = async () => {
   setupCheckFirstRun();
   setupCheckStorageToken();
   setupChangeLanguage();
+  setupGetElectronPaths();
   setupRendererLogger();
   await getFlaskIsReady();
 
@@ -96,7 +98,7 @@ export const createWindow = async () => {
     webPreferences: {
       preload: path.join(__dirname, '../preload/preload.js'),
       defaultEncoding: 'UTF-8',
-      additionalArguments: [devModeArg],
+      additionalArguments: [devModeArg, `--port=${process.env.PORT}`],
     },
   });
   Menu.setApplicationMenu(

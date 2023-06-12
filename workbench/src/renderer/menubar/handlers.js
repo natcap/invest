@@ -10,11 +10,8 @@ export function handleClickExternalURL(event) {
 }
 
 export async function handleClickFindLogfiles() {
-  const logfilePath = await ipcRenderer.invoke(
-    ipcMainChannels.GET_ELECTRON_LOG_PATH
-  );
   ipcRenderer.send(
     ipcMainChannels.SHOW_ITEM_IN_FOLDER,
-    logfilePath
+    window.Workbench.ELECTRON_LOG_PATH,
   );
 }

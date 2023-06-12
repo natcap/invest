@@ -1,6 +1,5 @@
 import { getSettingsValue } from './components/SettingsModal/SettingsStorage';
 
-// const logger = window.Workbench.getLogger('server_requests.js');
 const HOSTNAME = 'http://127.0.0.1';
 const { logger, PORT } = window.Workbench;
 const PREFIX = 'api';
@@ -23,7 +22,7 @@ export async function getInvestModelNames() {
       method: 'get',
     })
       .then((response) => response.json())
-      .catch((error) => logger.error(error.stack))
+      .catch((error) => { console.log(error.stack); logger.error(`${error.stack}`) })
   );
 }
 

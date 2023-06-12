@@ -11,11 +11,8 @@ export default defineConfig({
     minify: false,
     outDir: path.join(PROJECT_ROOT, 'build/preload'),
     target: 'chrome98',
-    lib: {
-      entry: 'preload.js',
-      name: 'preload.js',
-    },
     rollupOptions: {
+      input: ['preload.js'],
       output: {
         entryFileNames: 'preload.js',
       },

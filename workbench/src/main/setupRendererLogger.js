@@ -6,7 +6,7 @@ import { getLogger } from './logger';
 const logger = getLogger('renderer');
 
 export default function setupRendererLogger() {
-  ipcMain.on(ipcMainChannels.LOGGER, (level, message) => {
+  ipcMain.on(ipcMainChannels.LOGGER, (event, level, message) => {
     switch (level) {
       case 'debug':
         logger.debug(message);
@@ -24,8 +24,4 @@ export default function setupRendererLogger() {
         logger.info(message);
     }
   });
-
-  ipcMain.handle(ipcMainChannels.GET_ELECTRON_LOG_PATH, () => (
-    logger.transports.file.getFile().path
-  ));
 }

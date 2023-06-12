@@ -23,10 +23,9 @@ workflows of an InVEST user.
   - `yarn run dist`  - Configure the packaging in `electron-builder-config.js`.
 
 ## Dependency management in package.json
-`dependencies` should only include node modules used by the 
-main and preload processes. 
+`dependencies` should only include node modules used by the main process.  
 
-Renderer process dependencies (`react`, `boostrap`, etc) belong in `devDependencies`. 
+Renderer & preload process dependencies (`react`, `boostrap`, etc) belong in `devDependencies`. 
 They are required in production, but we want electron-builder to ignore them
 because they are already packaged via the vite bundle.
 electron-builder will package everything under `dependencies` and nothing under `devDependencies`.  
