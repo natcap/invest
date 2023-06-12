@@ -14,18 +14,25 @@ const ipcRendererChannels = [
   /download-status/,
 ];
 
-const PORT = process.argv.filter((arg) => arg.startsWith('--port'))[0].split('=')[1];
+const portArg = process.argv.filter((arg) => arg.startsWith('--port'))[0];
+const PORT = portArg ? portArg.split('=')[1] : '';
 const userPaths = ipcRenderer.sendSync(ipcMainChannels.GET_ELECTRON_PATHS);
-
-// In DevMode, local UG is served at the root path
 const isDevMode = process.argv.includes('--devMode');
-const userguidePath = isDevMode
-  ? ''
-  : `file:///${userPaths.resourcesPath}/documentation`;
+
+// As well as being loaded by the electron preload script,
+// this module is loaded by the jest setup script in order to
+// mock browser APIs that are normally setup during electron preload.
+// In the jest case, we do not have userPaths data.
+const userguidePath = (!isDevMode && userPaths)
+  ? `file:///${userPaths.resourcesPath}/documentation`
+  : ''; // In DevMode, local UG is served at the root path
+const electronLogPath = (userPaths)
+  ? `${userPaths.userData}/logs/main.log`
+  : '';
 
 export default {
   PORT: PORT, // where the flask app is running
-  ELECTRON_LOG_PATH: `${userPaths.userData}/logs/main.log`,
+  ELECTRON_LOG_PATH: electronLogPath,
   USERGUIDE_PATH: userguidePath,
   logger: {
     debug: (message) => ipcRenderer.send(ipcMainChannels.LOGGER, 'debug', message),

@@ -1,7 +1,6 @@
 import crypto from 'crypto';
 import fetch from 'node-fetch';
 
-import api from '../src/preload/api';
 import '../src/renderer/i18n/i18n';
 
 // debug logging is a bit noisy, not so useful during tests.
@@ -12,7 +11,12 @@ if (!process.env.ELECTRON_LOG_LEVEL) {
 // Test for a jsdom env (as opposed to node), which means renderer tests.
 if (global.window) {
   // mock the work of preload.js here:
+  const api = require('../src/preload/api').default;
   global.window.Workbench = api;
+
+  // normally electron main passes port to preload.
+  // As workaround for renderer tests, we set env.PORT when jest is invoked.
+  global.window.Workbench.PORT = process.env.PORT;
 
   // mock out the global gettext function - avoid setting up translation
   global.window._ = (x) => x;

@@ -183,7 +183,6 @@ describe('createWindow', () => {
       ipcMainChannels.CHANGE_LANGUAGE,
       ipcMainChannels.CHECK_STORAGE_TOKEN,
       ipcMainChannels.CHECK_FILE_PERMISSIONS,
-      ipcMainChannels.GET_ELECTRON_LOG_PATH,
       ipcMainChannels.GET_N_CPUS,
       ipcMainChannels.INVEST_VERSION,
       ipcMainChannels.IS_FIRST_RUN,
@@ -192,6 +191,7 @@ describe('createWindow', () => {
     ];
     const expectedOnChannels = [
       ipcMainChannels.DOWNLOAD_URL,
+      ipcMainChannels.GET_ELECTRON_PATHS,
       ipcMainChannels.INVEST_RUN,
       ipcMainChannels.INVEST_KILL,
       ipcMainChannels.INVEST_READ_LOG,
