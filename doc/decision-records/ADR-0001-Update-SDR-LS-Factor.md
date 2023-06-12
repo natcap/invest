@@ -30,7 +30,7 @@ for their LS factor equations:
 1. The contributing area $A_{i,j-in}$ is not strictly defined in Desmet &
    Govers (1996), it is only referred to as "the contributing area at the inlet
    of a grid cell with coordinates (i, j) (m^2)".
-   InVEST assumes that "contributing area" is $area_{pixel} \cdot n\_upstream\_pixels}$.
+   InVEST assumes that "contributing area" is $area_{pixel} \cdot n\_upstream\_pixels$.
    SAGA refers to this as "specific catchment area" and allows the user to choose their
    specific catchment area equation,  where the available options are
    "contour length simply as cell size", "contour length dependent on aspect", "square
@@ -68,7 +68,7 @@ the LS Factor calculation:
 1. We will revert to using the on-pixel aspect, $|\sin \theta|+|\cos \theta|$.
    This is in line with the published literature.
 2. We will convert the "contributing area" portion of the LS Factor to be
-   $\sqrt{n\_pixels\_upstream \cdot pixel\_area}$. Rafa's opinion on this
+   $\sqrt{n\_upstream\_pixels \cdot pixel\_area}$. Rafa's opinion on this
    is that the LS factor equations were designed for a 1-dimensional situation,
    so our specific catchment area number should reflect this.
 
