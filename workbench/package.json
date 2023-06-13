@@ -23,6 +23,7 @@
     "dist": "yarn run token && cross-env DEBUG=electron-builder electron-builder build --config electron-builder-config.js"
   },
   "jest": {
+    "reporters": [["default", {"summaryThreshold": 2}]],
     "verbose": true,
     "collectCoverage": true,
     "setupFiles": [
@@ -76,7 +77,8 @@
     "fs-extra": "^9.1.0",
     "i18next-conv": "^13.1.0",
     "i18next-parser": "^7.6.0",
-    "jest": "^27.4.7",
+    "jest": "^29.5.0",
+    "jest-environment-jsdom": "^29.5.0",
     "pptr-testing-library": "^0.7.0",
     "puppeteer-core": "^20.6.0",
     "react": "^17.0.1",
