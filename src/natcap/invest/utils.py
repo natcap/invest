@@ -701,7 +701,7 @@ def expand_path(path, base_path):
 
 def read_csv_to_dataframe(
         path, to_lower=False, expand_path_cols=[], sep=None, engine='python',
-        encoding='utf-8-sig', encoding_errors='replace', **kwargs):
+        encoding='utf-8-sig', **kwargs):
     """Return a dataframe representation of the CSV.
 
     Wrapper around ``pandas.read_csv`` that standardizes the column names by
@@ -725,8 +725,6 @@ def read_csv_to_dataframe(
             supports the sep=None option.
         encoding (str): kwarg of ``pandas.read_csv``. Using the 'utf-8-sig'
             encoding handles UTF-8 with or without BOM.
-        encoding_errors (str): kwarg of ``pandas.read_csv``. The 'replace'
-            option replaces unknown characters with a placeholder.
         **kwargs: additional kwargs will be passed to ``pandas.read_csv``
 
     Returns:
@@ -735,8 +733,7 @@ def read_csv_to_dataframe(
     """
     try:
         dataframe = pandas.read_csv(
-            path, sep=sep, engine=engine, encoding=encoding,
-            encoding_errors=encoding_errors, **kwargs)
+            path, sep=sep, engine=engine, encoding=encoding, **kwargs)
     except UnicodeDecodeError as error:
         LOGGER.error(
             f'{path} must be encoded as UTF-8 or ASCII')

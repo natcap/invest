@@ -912,7 +912,7 @@ class BuildLookupFromCSVTests(unittest.TestCase):
                 """
                 header 1,HEADER 2,header 3
                 1,2,bar1
-                4,5,FÖÖ
+                4,5,FOO
                 """
             ).strip())
 
@@ -921,8 +921,24 @@ class BuildLookupFromCSVTests(unittest.TestCase):
 
         self.assertEqual(lookup_dict[4]['header 2'], 5)
         # non-Unicode characters should be replaced with the replacement character
-        self.assertEqual(lookup_dict[4]['header 3'], 'f��')
+        self.assertEqual(lookup_dict[4]['header 3'], 'foo')
         self.assertEqual(lookup_dict[1]['header 1'], 1)
+
+    def test_csv_error_non_utf8_character(self):
+        """utils: test that error is raised on non-UTF8 character."""
+        from natcap.invest import utils
+
+        csv_file = os.path.join(self.workspace_dir, 'csv.csv')
+        with codecs.open(csv_file, 'w', encoding='iso-8859-1') as file_obj:
+            file_obj.write(textwrap.dedent(
+                """
+                header 1,HEADER 2,header 3
+                1,2,bar1
+                4,5,FÖÖ
+                """
+            ).strip())
+        with self.assertRaises(UnicodeDecodeError) as cm:
+            utils.build_lookup_from_csv(csv_file, 'header 1')
 
     def test_expand_path(self):
         """utils: test path expansion function."""
