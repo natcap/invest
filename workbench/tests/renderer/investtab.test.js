@@ -157,7 +157,7 @@ describe('Sidebar Buttons', () => {
   test('Save to JSON: requests endpoint with correct payload', async () => {
     const response = 'saved';
     writeParametersToFile.mockResolvedValue(response);
-    const mockDialogData = { filePath: 'foo.json' };
+    const mockDialogData = { canceled: false, filePath: 'foo.json' };
     ipcRenderer.invoke.mockResolvedValueOnce(mockDialogData);
 
     const { findByText, findByLabelText, findByRole } = renderInvestTab();
@@ -190,7 +190,7 @@ describe('Sidebar Buttons', () => {
   test('Save to Python script: requests endpoint with correct payload', async () => {
     const response = 'saved';
     saveToPython.mockResolvedValue(response);
-    const mockDialogData = { filePath: 'foo.py' };
+    const mockDialogData = { canceled: false, filePath: 'foo.py' };
     ipcRenderer.invoke.mockResolvedValue(mockDialogData);
 
     const { findByText, findByLabelText, findByRole } = renderInvestTab();
@@ -230,7 +230,7 @@ describe('Sidebar Buttons', () => {
         setTimeout(() => resolve(response), 1000);
       }
     ));
-    const mockDialogData = { filePath: 'data.tgz' };
+    const mockDialogData = { canceled: false, filePath: 'data.tgz' };
     ipcRenderer.invoke.mockResolvedValue(mockDialogData);
 
     const { findByText, findByLabelText, findByRole, getByRole} = renderInvestTab();
@@ -274,7 +274,7 @@ describe('Sidebar Buttons', () => {
       }
     ));
     saveToPython.mockResolvedValue(response);
-    const mockDialogData = { filePath: 'foo' };
+    const mockDialogData = { canceled: false, filePath: 'foo' };
     ipcRenderer.invoke.mockResolvedValue(mockDialogData);
 
     const { findByText, findByLabelText, findByRole, getAllByRole, queryByRole } = renderInvestTab();
@@ -309,6 +309,7 @@ describe('Sidebar Buttons', () => {
     };
     fetchDatastackFromFile.mockResolvedValue(mockDatastack);
     const mockDialogData = {
+      canceled: false,
       filePaths: ['foo.json']
     };
     ipcRenderer.invoke.mockResolvedValue(mockDialogData);
@@ -340,7 +341,8 @@ describe('Sidebar Buttons', () => {
   test('Load parameters from file does nothing when canceled', async () => {
     // callback data if the OS dialog was canceled
     const mockDialogData = {
-      filePaths: ['']
+      canceled: true,
+      filePaths: []
     };
     ipcRenderer.invoke.mockResolvedValue(mockDialogData);
     const spy = jest.spyOn(SetupTab.WrappedComponent.prototype, 'loadParametersFromFile');
@@ -361,7 +363,8 @@ describe('Sidebar Buttons', () => {
   ])('%s: does nothing when canceled', async (label, method) => {
     // callback data if the OS dialog was canceled
     const mockDialogData = {
-      filePaths: ['']
+      canceled: true,
+      filePaths: []
     };
     ipcRenderer.invoke.mockResolvedValue(mockDialogData);
     const spy = jest.spyOn(SetupTab.WrappedComponent.prototype, method);
