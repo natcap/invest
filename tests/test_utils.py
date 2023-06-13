@@ -861,7 +861,6 @@ class BuildLookupFromCSVTests(unittest.TestCase):
         from natcap.invest import utils
 
         csv_file = os.path.join(self.workspace_dir, 'csv.csv')
-        # writing with utf-8-sig will prepend the BOM
         with open(csv_file, 'w', encoding='utf-8') as file_obj:
             file_obj.write(textwrap.dedent(
                 """
@@ -872,7 +871,6 @@ class BuildLookupFromCSVTests(unittest.TestCase):
             ).strip())
         lookup_dict = utils.build_lookup_from_csv(
             csv_file, 'header1')
-        # assert the BOM prefix was correctly parsed and skipped
         self.assertEqual(lookup_dict[4]['header2'], 5)
         self.assertEqual(lookup_dict[4]['header3'], 'foo')
         self.assertEqual(lookup_dict[1]['header1'], 1)
@@ -920,7 +918,6 @@ class BuildLookupFromCSVTests(unittest.TestCase):
             csv_file, 'header 1')
 
         self.assertEqual(lookup_dict[4]['header 2'], 5)
-        # non-Unicode characters should be replaced with the replacement character
         self.assertEqual(lookup_dict[4]['header 3'], 'foo')
         self.assertEqual(lookup_dict[1]['header 1'], 1)
 
@@ -937,7 +934,7 @@ class BuildLookupFromCSVTests(unittest.TestCase):
                 4,5,FÖÖ
                 """
             ).strip())
-        with self.assertRaises(UnicodeDecodeError) as cm:
+        with self.assertRaises(UnicodeDecodeError):
             utils.build_lookup_from_csv(csv_file, 'header 1')
 
     def test_expand_path(self):
