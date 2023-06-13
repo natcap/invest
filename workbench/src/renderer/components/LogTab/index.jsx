@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import ReactDom from 'react-dom';
 import PropTypes from 'prop-types';
 
 import Row from 'react-bootstrap/Row';
@@ -85,9 +86,12 @@ export default class LogTab extends React.Component {
   }
 
   updateState() {
-    this.setState((state) => ({
-      logdata: state.logdata.concat(this.cache)
-    }));
+    // const data = this.cache // works
+    ReactDom.flushSync(() => { // also works
+      this.setState((state) => ({
+        logdata: state.logdata.concat(this.cache)
+      }));
+    });
     this.cache = [];
   }
 
@@ -107,6 +111,7 @@ export default class LogTab extends React.Component {
   }
 
   render() {
+    console.log('render')
     return (
       <Container fluid>
         <Row>
