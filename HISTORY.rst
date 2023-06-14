@@ -86,6 +86,8 @@ Unreleased Changes
     * Removed the GDAL cache size limit on this model, which means that, by
       default, the model will use up to 5% of installed memory.
       https://github.com/natcap/invest/issues/1320
+    * Fixed a bug where nodata pixels in quick flow were being set to 0
+      (`#1317 <https://github.com/natcap/invest/issues/1317>`_)
 
 3.13.0 (2023-03-17)
 -------------------

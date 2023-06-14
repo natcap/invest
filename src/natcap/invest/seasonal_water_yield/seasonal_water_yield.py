@@ -1133,12 +1133,6 @@ def _calculate_monthly_quick_flow(
             valid_stream_precip_mask &= ~utils.array_equals_nodata(
                 p_im, p_nodata)
         qf_im[valid_stream_precip_mask] = p_im[valid_stream_precip_mask]
-
-        # this handles some user cases where they don't have data defined on
-        # their landcover raster. It otherwise crashes later with some NaNs.
-        # more intermediate outputs with nodata values guaranteed to be defined
-        qf_im[utils.array_equals_nodata(qf_im, qf_nodata) &
-              ~utils.array_equals_nodata(stream_array, stream_nodata)] = 0.0
         return qf_im
 
     pygeoprocessing.raster_calculator(
