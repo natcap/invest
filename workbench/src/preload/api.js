@@ -1,10 +1,13 @@
 import path from 'path';
+import Store from 'electron-store';
 
 // eslint-disable-next-line import/no-extraneous-dependencies
 import { ipcRenderer } from 'electron';
 
 import { ipcMainChannels } from '../main/ipcMainChannels';
 import { getLogger } from '../main/logger';
+
+const store = new Store();
 
 const isDevMode = process.argv.includes('--devMode');
 
@@ -30,6 +33,8 @@ export default {
   USERGUIDE_PATH: userguidePath,
   // Workbench logfile location, so Report window can open to it
   LOGFILE_PATH: logger.transports.file.getFile().path,
+  // default to en if no language setting exists
+  LANGUAGE: store.get('language', 'en'),
   getLogger: getLogger,
   path: {
     resolve: path.resolve,

@@ -20,7 +20,6 @@ export function getDefaultSettings() {
     taskgraphLoggingLevel: 'INFO',
     loggingLevel: 'INFO',
     sampleDataDir: '',
-    language: 'en'
   };
   return defaultSettings;
 }
