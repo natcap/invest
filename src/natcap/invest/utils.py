@@ -674,7 +674,8 @@ def read_csv_to_dataframe(
     # Set 'index_col' as the index of the dataframe
     if index_col:
         try:
-            dataframe = dataframe.set_index(index_col, drop=False)
+            dataframe = dataframe.set_index(
+                index_col, drop=False, verify_integrity=True)
         except KeyError:
             # If 'index_col' is not a column then KeyError is raised for using
             # it as the index column
