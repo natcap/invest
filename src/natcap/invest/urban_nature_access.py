@@ -903,7 +903,7 @@ def execute(args):
             )
 
     attr_table = utils.read_csv_to_dataframe(
-        args['lulc_attribute_table'], to_lower=True)
+        args['lulc_attribute_table'], cols_to_lower=True)
     kernel_paths = {}  # search_radius, kernel path
     kernel_tasks = {}  # search_radius, kernel task
 

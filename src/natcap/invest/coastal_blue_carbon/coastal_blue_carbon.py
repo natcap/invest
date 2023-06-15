@@ -1985,7 +1985,7 @@ def _read_transition_matrix(transition_csv_path, biophysical_dict):
         landcover transition, and the second contains accumulation rates for
         the pool for the landcover transition.
     """
-    table = utils.read_csv_to_dataframe(transition_csv_path, index_col=False)
+    table = utils.read_csv_to_dataframe(transition_csv_path)
 
     lulc_class_to_lucode = {}
     max_lucode = 0
@@ -2239,8 +2239,7 @@ def _extract_snapshots_from_table(csv_path):
 
     """
     table = utils.read_csv_to_dataframe(
-        csv_path, to_lower=True, index_col=False,
-        expand_path_cols=['raster_path'])
+        csv_path, cols_to_lower=True, expand_path_cols=['raster_path'])
 
     output_dict = {}
     table.set_index("snapshot_year", drop=False, inplace=True)

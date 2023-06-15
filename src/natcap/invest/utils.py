@@ -713,7 +713,7 @@ def read_csv_to_dataframe(
         # the columns are stripped of leading/trailing whitespace in
         # ``read_csv_to_dataframe``, and also lowercased if ``to_lower`` so we only
         # need to convert the rest of the table.
-        if index_col:
+        if index_col and isinstance(index_col, str):
             index_col = index_col.lower()
         # lowercase column names
         if usecols:
