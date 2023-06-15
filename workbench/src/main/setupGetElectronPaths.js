@@ -8,6 +8,5 @@ export default function setupGetElectronPaths() {
       resourcesPath: process.resourcesPath,
       userDataPath: app.getPath('userData')
     };
-    // return data;
   });
 }
