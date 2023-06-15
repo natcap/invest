@@ -64,7 +64,6 @@ export default class App extends React.Component {
     const investList = await getInvestModelNames();
     const recentJobs = await InvestJob.getJobStore();
     const investSettings = await getAllSettings();
-    investSettings.language = window.Workbench.LANGUAGE;
     this.setState({
       investList: investList,
       recentJobs: recentJobs,

@@ -4,7 +4,6 @@ import path from 'path';
 import {
   app,
   BrowserWindow,
-  screen,
   nativeTheme,
   Menu,
   ipcMain
@@ -74,8 +73,7 @@ export const createWindow = async () => {
   // read language setting from storage and switch to that language
   // default to en if no language setting exists
   const store = new Store();
-  const languageCode = store.get('language', 'en');
-  i18n.changeLanguage(languageCode);
+  i18n.changeLanguage(store.get('language', 'en'));
 
   splashScreen = new BrowserWindow({
     width: 574, // dims set to match the image in splash.html

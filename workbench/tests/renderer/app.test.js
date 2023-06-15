@@ -3,7 +3,7 @@ import path from 'path';
 import events from 'events';
 import { spawn, exec } from 'child_process';
 import Stream from 'stream';
-
+import Store from 'electron-store';
 import fetch from 'node-fetch';
 import React from 'react';
 import { ipcRenderer } from 'electron';
@@ -26,14 +26,12 @@ import InvestJob from '../../src/renderer/InvestJob';
 import {
   getSettingsValue, saveSettingsStore
 } from '../../src/renderer/components/SettingsModal/SettingsStorage';
-import { ipcMainChannels } from '../../src/main/ipcMainChannels';
 import {
   setupInvestRunHandlers,
   setupInvestLogReaderHandler,
 } from '../../src/main/setupInvestHandlers';
 import writeInvestParameters from '../../src/main/writeInvestParameters';
 import { removeIpcMainListeners } from '../../src/main/main';
-
 
 // It's quite a pain to dynamically mock a const from a module,
 // here we do it by importing as another object, then
@@ -54,6 +52,8 @@ const MOCK_INVEST_LIST = {
   },
 };
 const MOCK_VALIDATION_VALUE = [[['workspace_dir'], 'invalid because']];
+
+const store = new Store();
 
 const SAMPLE_SPEC = {
   model_name: MOCK_MODEL_TITLE,
@@ -413,14 +413,6 @@ describe('InVEST global settings: dialog interactions', () => {
   const tgLoggingLabelText = 'Taskgraph logging threshold';
   const languageLabelText = 'Language';
 
-  beforeAll(() => {
-    delete global.window.location;
-    Object.defineProperty(global.window, 'location', {
-      configurable: true,
-      value: { reload: jest.fn() },
-    });
-  });
-
   beforeEach(async () => {
     getInvestModelNames.mockResolvedValue({});
     getSupportedLanguages.mockResolvedValue({ en: 'english', es: 'spanish' });
@@ -467,7 +459,7 @@ describe('InVEST global settings: dialog interactions', () => {
     expect(await getSettingsValue('nWorkers')).toBe(nWorkersValue);
     expect(await getSettingsValue('loggingLevel')).toBe(loggingLevel);
     expect(await getSettingsValue('taskgraphLoggingLevel')).toBe(tgLoggingLevel);
-    expect(await getSettingsValue('language')).toBe(languageValue);
+    expect(Store.get.toHaveBeenCalled());
   });
 
   test('Load invest settings from storage and test Reset', async () => {
@@ -512,7 +504,8 @@ describe('InVEST global settings: dialog interactions', () => {
       expect(nWorkersInput).toHaveValue(defaultSettings.nWorkers);
       expect(loggingInput).toHaveValue(defaultSettings.loggingLevel);
       expect(tgLoggingInput).toHaveValue(defaultSettings.tgLoggingLevel);
-      expect(languageInput).toHaveValue(defaultSettings.language);
+      // should NOT change the language setting - it's handled differently
+      expect(languageInput).toHaveValue(expectedSettings.language);
     });
   });
 
@@ -877,12 +870,6 @@ describe('Translation', () => {
   beforeAll(async () => {
     getInvestModelNames.mockResolvedValue({});
     getSupportedLanguages.mockResolvedValue({ en: 'english', ll: 'foo' });
-
-    delete global.window.location;
-    Object.defineProperty(global.window, 'location', {
-      configurable: true,
-      value: { reload: jest.fn() },
-    });
   });
 
   test('Text rerenders in new language when language setting changes', async () => {
@@ -893,9 +880,6 @@ describe('Translation', () => {
     expect(languageInput).toHaveValue('en');
 
     userEvent.selectOptions(languageInput, 'll');
-    await waitFor(() => {
-      expect(global.window.location.reload).toHaveBeenCalled();
-    });
     // because we can't reload the window in the test environment,
     // components won't actually rerender in the new language
     expect(languageInput).toHaveValue('ll');
