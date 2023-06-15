@@ -44,15 +44,22 @@ so mock setup can be done in a `beforeEach`, or in a `test` block itself.
 
 the global config:
 ```
-"restoreMocks": true,
+"restoreMocks": false,
 ```
-Restore unmocked implementations. But this only works with `jest.spyOn`
-and all the syntactic sugar for it (`mockReturnValue`, `mockImplementation`, etc).
-So, all mocks are unmocked before each test, except manual mocks such as in
-in `__mocks__/electron.js` where `spyOn` is not used and properties are 
-manually assigned `jest.fn()`. We only use manual mocks for modules that
-should absolutely be mocked in all test cases. Electron is a good example because
-its API is never available outside an electron runtime, which jest does not provide.
+Restore unmocked implementations. Ideally, this would be `true`. And previously it was.
+But as of jest28 or 29 it behaves differently. Now it restores manual mocks in `__mocks__`,
+such as the electron API. That is unhelpful, as we always want that API mocked and there
+is no way to revert to the original manual mock between tests. Basically, we have this problem:
+https://github.com/jestjs/jest/issues/10419. Though for us it seems triggered by `restoreMocks`
+instead of `reset`. Setting to `false` allows `__mocks__` to work as expected, but now it
+no longer restores things like,
+```javascript
+const spy = jest.spyOn(ipcRenderer, 'send')
+  .mockImplementation(() => Promise.resolve());
+...
+spy.mockReset(); // now required, and resets to orignal mock defined in __mocks__
+```
+
 ```
 "clearMocks": true,
 ```

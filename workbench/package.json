@@ -8,7 +8,7 @@
     "start": "yarn build-main && yarn build:preload && concurrently --kill-others \"yarn serve\" \"electron .\"",
     "serve": "cross-env MODE=development node scripts/watch.js",
     "lint": "eslint --cache --color --ext .jsx,.js src",
-    "test": "yarn run test-main && yarn run test-renderer && yarn run test-flask",
+    "test": "cross-env PORT=56788 jest --runInBand --testPathIgnorePatterns /tests/binary_tests/ /tests/sampledata_linkcheck/",
     "test-main": "jest --runInBand --testMatch **/tests/main/*.test.js",
     "test-renderer": "cross-env PORT=56788 jest --runInBand --testMatch **/tests/renderer/*.test.js",
     "test-flask": "cross-env PORT=56788 jest --runInBand --testMatch **/tests/invest/*.test.js",
@@ -31,7 +31,7 @@
     ],
     "testEnvironment": "jsdom",
     "clearMocks": true,
-    "restoreMocks": true,
+    "restoreMocks": false,
     "resetModules": true
   },
   "keywords": [],

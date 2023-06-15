@@ -410,6 +410,7 @@ describe('Sidebar Buttons', () => {
       const calledChannels = spy.mock.calls.map(call => call[0]);
       expect(calledChannels).toContain(ipcMainChannels.OPEN_LOCAL_HTML);
     });
+    spy.mockReset();
   });
 
   test('Forum link opens externally', async () => {
