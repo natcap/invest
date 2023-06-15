@@ -21,10 +21,6 @@ if (global.window) {
   // mock out the global gettext function - avoid setting up translation
   global.window._ = (x) => x;
 
-  // jsdom does not implement these window APIs:
-  global.window.crypto = {
-    getRandomValues: () => [crypto.randomBytes(4).toString('hex')],
-  };
   global.window.fetch = fetch;
 }
 
