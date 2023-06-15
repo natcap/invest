@@ -18,17 +18,17 @@ const ipcRendererChannels = [
 const portArg = process.argv.filter((arg) => arg.startsWith('--port'))[0];
 const PORT = portArg ? portArg.split('=')[1] : '';
 const userPaths = ipcRenderer.sendSync(ipcMainChannels.GET_ELECTRON_PATHS);
-const isDevMode = process.argv.includes('--devMode');
+const isDevMode = process.argv.includes('--devmode');
 
 // As well as being loaded by the electron preload script,
 // this module is loaded by the jest setup script in order to
 // mock APIs that are normally setup during electron preload.
 // In the jest case, we do not have userPaths data.
 const userguidePath = (!isDevMode && userPaths)
-  ? `file:///${userPaths.resourcesPath}/documentation`
+  ? `file:///${userPaths.resourcesPath}/documentation` // as a URL
   : ''; // In DevMode, local UG is served at the root path
 const electronLogPath = (userPaths)
-  ? `${userPaths.userData}/logs/main.log`
+  ? userPaths.logfilePath
   : '';
 
 export default {

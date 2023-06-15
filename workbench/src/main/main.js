@@ -90,7 +90,7 @@ export const createWindow = async () => {
   setupRendererLogger();
   await getFlaskIsReady();
 
-  const devModeArg = ELECTRON_DEV_MODE ? '--devMode' : '';
+  const devModeArg = ELECTRON_DEV_MODE ? '--devmode' : '';
   // Create the browser window.
   mainWindow = new BrowserWindow({
     minWidth: 800,
