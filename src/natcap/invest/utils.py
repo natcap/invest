@@ -580,58 +580,6 @@ def build_file_registry(base_file_path_list, file_suffix):
     return f_reg
 
 
-def build_lookup_from_csv(
-        table_path, key_field, column_list=None, to_lower=True, **kwargs):
-    """Read a CSV table into a dictionary indexed by ``key_field``.
-
-    Creates a dictionary from a CSV whose keys are unique entries in the CSV
-    table under the column named by ``key_field`` and values are dictionaries
-    indexed by the other columns in ``table_path`` including ``key_field``
-    whose values are the values on that row of the CSV table.
-
-    If an entire row is NA/NaN (including ``key_field``) then it is dropped
-    from the table and a warning is given of the dropped rows.
-
-    Args:
-        table_path (string): path to a CSV file containing at
-            least the header key_field
-        key_field: (string): a column in the CSV file at `table_path` that
-            can uniquely identify each row in the table and sets the row index.
-        column_list (list): a list of column names to subset from the CSV
-            file, default=None
-        to_lower (bool): if True, converts all unicode in the CSV,
-            including headers and values to lowercase, otherwise uses raw
-            string values. default=True.
-        **kwargs: additional kwargs will be passed to ``utils.read_csv_from_dataframe``
-
-    Returns:
-        lookup_dict (dict): a dictionary of the form
-        {key_field_0: {csv_header_0: value0, csv_header_1: value1...},
-        key_field_1: {csv_header_0: valuea, csv_header_1: valueb...}}
-
-        if ``to_lower`` all strings including key_fields and values are
-        converted to lowercase unicode.
-
-    Raise:
-        ValueError
-            If ValueError occurs during conversion to dictionary.
-        KeyError
-            If ``key_field`` is not present during ``set_index`` call.
-    """
-
-    table = read_csv_to_dataframe(table_path, cols_to_lower=to_lower,
-        vals_to_lower=to_lower, index_col=key_field, **kwargs)
-
-    try:
-        lookup_dict = table.to_dict(orient='index')
-    except ValueError:
-        # If 'key_field' is not unique then a value error is raised.
-        LOGGER.error(f"The 'key_field' : '{key_field}' column values are not"
-                     f" unique: {table.index.tolist()}")
-        raise
-    return lookup_dict
-
-
 def expand_path(path, base_path):
     """Check if a path is relative, and if so, expand it using the base path.
 
@@ -650,8 +598,8 @@ def expand_path(path, base_path):
 
 
 def read_csv_to_dataframe(
-        path, index_col=None, usecols=None, cols_to_lower=False,
-        vals_to_lower=False, expand_path_cols=[], sep=None, engine='python',
+        path, index_col=None, usecols=None, cols_to_lower=True,
+        vals_to_lower=True, expand_path_cols=[], sep=None, engine='python',
         encoding='utf-8-sig', **kwargs):
     """Return a dataframe representation of the CSV.
 
@@ -734,17 +682,6 @@ def read_csv_to_dataframe(
                          f"in the table {path}")
             raise
 
-    # drop any empty rows
-    dataframe = dataframe.dropna(how="all")
-
-    # fill the rest of empty or NaN values with empty string
-    dataframe = dataframe.fillna(value="")
-
-    # strip whitespace from table values
-    # Remove values with leading ('^ +') and trailing (' +$') whitespace.
-    # Regular expressions using 'replace' only substitute on strings.
-    dataframe = dataframe.replace(r"^ +| +$", r"", regex=True)
-
     # convert table values to lowercase
     if vals_to_lower:
         dataframe = dataframe.applymap(
@@ -759,6 +696,17 @@ def read_csv_to_dataframe(
                     # if the whole column is empty, cells will be parsed as NaN
                     # catch that before trying to expand them as paths
                     lambda p: '' if pandas.isna(p) else expand_path(p, path))
+
+    # drop any empty rows
+    dataframe = dataframe.dropna(how="all")
+
+    # fill the rest of empty or NaN values with empty string
+    dataframe = dataframe.fillna(value="")
+
+    # strip whitespace from table values
+    # Remove values with leading ('^ +') and trailing (' +$') whitespace.
+    # Regular expressions using 'replace' only substitute on strings.
+    dataframe = dataframe.replace(r"^ +| +$", r"", regex=True)
 
     return dataframe
 

@@ -306,8 +306,8 @@ def execute(args):
         task_name='align raster stack')
 
     # Load CN table
-    cn_table = utils.build_lookup_from_csv(
-        args['curve_number_table_path'], 'lucode')
+    cn_table = utils.read_csv_to_dataframe(
+        args['curve_number_table_path'], 'lucode').to_dict(orient='index')
 
     # make cn_table into a 2d array where first dim is lucode, second is
     # 0..3 to correspond to CN_A..CN_D
@@ -648,8 +648,8 @@ def _calculate_damage_to_infrastructure_in_aoi(
     infrastructure_vector = gdal.OpenEx(structures_vector_path, gdal.OF_VECTOR)
     infrastructure_layer = infrastructure_vector.GetLayer()
 
-    damage_type_map = utils.build_lookup_from_csv(
-        structures_damage_table, 'type', to_lower=True)
+    damage_type_map = utils.read_csv_to_dataframe(
+        structures_damage_table, 'type').to_dict(orient='index')
 
     infrastructure_layer_defn = infrastructure_layer.GetLayerDefn()
     type_index = -1

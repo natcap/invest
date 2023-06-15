@@ -336,7 +336,7 @@ def build_datastack_archive(args, model_name, datastack_path):
                     data_dir, f'{key}_csv_data')
 
                 dataframe = utils.read_csv_to_dataframe(
-                    source_path, cols_to_lower=True)
+                    source_path, vals_to_lower=False)
                 csv_source_dir = os.path.abspath(os.path.dirname(source_path))
                 for spatial_column_name in spatial_columns:
                     # Iterate through the spatial columns, identify the set of

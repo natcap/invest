@@ -902,8 +902,7 @@ def execute(args):
                     aoi_reprojection_task, lulc_mask_task]
             )
 
-    attr_table = utils.read_csv_to_dataframe(
-        args['lulc_attribute_table'], cols_to_lower=True)
+    attr_table = utils.read_csv_to_dataframe(args['lulc_attribute_table'])
     kernel_paths = {}  # search_radius, kernel path
     kernel_tasks = {}  # search_radius, kernel task
 
@@ -1749,8 +1748,8 @@ def _reclassify_urban_nature_area(
     Returns:
         ``None``
     """
-    attribute_table_dict = utils.build_lookup_from_csv(
-        lulc_attribute_table, key_field='lucode')
+    attribute_table_dict = utils.read_csv_to_dataframe(
+        lulc_attribute_table, 'lucode').to_dict(orient='index')
 
     squared_pixel_area = abs(
         numpy.multiply(*_square_off_pixels(lulc_raster_path)))

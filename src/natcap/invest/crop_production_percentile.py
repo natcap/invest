@@ -458,8 +458,8 @@ def execute(args):
         None.
 
     """
-    crop_to_landcover_table = utils.build_lookup_from_csv(
-        args['landcover_to_crop_table_path'], 'crop_name', to_lower=True)
+    crop_to_landcover_table = utils.read_csv_to_dataframe(
+        args['landcover_to_crop_table_path'], 'crop_name').to_dict(orient='index')
     bad_crop_name_list = []
     for crop_name in crop_to_landcover_table:
         crop_climate_bin_raster_path = os.path.join(
@@ -540,8 +540,8 @@ def execute(args):
         climate_percentile_yield_table_path = os.path.join(
             args['model_data_path'],
             _CLIMATE_PERCENTILE_TABLE_PATTERN % crop_name)
-        crop_climate_percentile_table = utils.build_lookup_from_csv(
-            climate_percentile_yield_table_path, 'climate_bin', to_lower=True)
+        crop_climate_percentile_table = utils.read_csv_to_dataframe(
+            climate_percentile_yield_table_path, 'climate_bin').to_dict(orient='index')
         yield_percentile_headers = [
             x for x in list(crop_climate_percentile_table.values())[0]
             if x != 'climate_bin']
@@ -698,9 +698,10 @@ def execute(args):
 
     # both 'crop_nutrient.csv' and 'crop' are known data/header values for
     # this model data.
-    nutrient_table = utils.build_lookup_from_csv(
+    nutrient_table = utils.read_csv_to_dataframe(
         os.path.join(args['model_data_path'], 'crop_nutrient.csv'),
-        'crop', to_lower=False)
+        'crop', cols_to_lower=False, vals_to_lower=False
+        ).to_dict(orient='index')
     result_table_path = os.path.join(
         output_dir, 'result_table%s.csv' % file_suffix)
 

@@ -971,8 +971,9 @@ class RecreationRegressionTests(unittest.TestCase):
         predictor_table_path = os.path.join(SAMPLE_DATA, 'predictors.csv')
 
         # make outputs to be overwritten
-        predictor_dict = utils.build_lookup_from_csv(
-            predictor_table_path, 'id')
+        predictor_dict = utils.read_csv_to_dataframe(
+            predictor_table_path, 'id',
+            cols_to_lower=True, vals_to_lower=True).to_dict(orient='index')
         predictor_list = predictor_dict.keys()
         tmp_working_dir = tempfile.mkdtemp(dir=self.workspace_dir)
         empty_json_list = [

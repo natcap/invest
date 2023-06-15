@@ -743,7 +743,8 @@ def execute(args):
     # arrays. Also store the amount of energy the machine produces
     # in a certain wave period/height state as a 2D array
     machine_perf_dict = {}
-    machine_perf_data = utils.read_csv_to_dataframe(args['machine_perf_path'])
+    machine_perf_data = utils.read_csv_to_dataframe(
+        args['machine_perf_path'], cols_to_lower=False, vals_to_lower=False)
     # Get the wave period fields, starting from the second column of the table
     machine_perf_dict['periods'] = machine_perf_data.columns.values[1:]
     # Build up the height field by taking the first column of the table
@@ -777,7 +778,7 @@ def execute(args):
     if 'land_gridPts_path' in args:
         # Create a grid_land_data dataframe for later use in valuation
         grid_land_data = utils.read_csv_to_dataframe(
-            args['land_gridPts_path'], cols_to_lower=True)
+            args['land_gridPts_path'], vals_to_lower=False)
         required_col_names = ['id', 'type', 'lat', 'long', 'location']
         grid_land_data, missing_grid_land_fields = _get_validated_dataframe(
             args['land_gridPts_path'], required_col_names)
@@ -1425,7 +1426,7 @@ def _get_validated_dataframe(csv_path, field_list):
         missing_fields (list): missing fields as string format in dataframe.
 
     """
-    dataframe = utils.read_csv_to_dataframe(csv_path, cols_to_lower=True)
+    dataframe = utils.read_csv_to_dataframe(csv_path, vals_to_lower=False)
     missing_fields = []
     for field in field_list:
         if field not in dataframe.columns:
@@ -1670,7 +1671,7 @@ def _machine_csv_to_dict(machine_csv_path):
     machine_dict = {}
     # make columns and indexes lowercased and strip whitespace
     machine_data = utils.read_csv_to_dataframe(
-        machine_csv_path, cols_to_lower=True, index_col=0)
+        machine_csv_path, 'name', vals_to_lower=False)
     machine_data.index = machine_data.index.str.strip()
     machine_data.index = machine_data.index.str.lower()
 
