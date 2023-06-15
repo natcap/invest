@@ -738,7 +738,7 @@ class BuildLookupFromCSVTests(unittest.TestCase):
             table_file.write(csv_text)
 
         result = utils.build_lookup_from_csv(
-            table_path, 'lucode', to_lower=True, column_list=['val1', 'val2'])
+            table_path, 'lucode', to_lower=True, usecols=['lucode', 'val1', 'val2'])
 
         expected_result = {
             1: {'val1': 0.5, 'val2': 2, 'lucode': 1},
@@ -1030,7 +1030,7 @@ class ReadCSVToDataframeTests(unittest.TestCase):
                 b
                 """
             ).strip())
-        df = utils.read_csv_to_dataframe(csv_file, to_lower=True)
+        df = utils.read_csv_to_dataframe(csv_file, cols_to_lower=True)
         # header should be lowercase
         self.assertEqual(df.columns[0], 'header')
         # case of table values shouldn't change
