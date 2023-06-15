@@ -598,8 +598,8 @@ def expand_path(path, base_path):
 
 
 def read_csv_to_dataframe(
-        path, index_col=None, usecols=None, cols_to_lower=True,
-        vals_to_lower=True, expand_path_cols=[], sep=None, engine='python',
+        path, index_col=False, usecols=None, cols_to_lower=True,
+        vals_to_lower=True, expand_path_cols=None, sep=None, engine='python',
         encoding='utf-8-sig', **kwargs):
     """Return a dataframe representation of the CSV.
 

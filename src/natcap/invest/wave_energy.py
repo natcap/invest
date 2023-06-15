@@ -743,8 +743,7 @@ def execute(args):
     # arrays. Also store the amount of energy the machine produces
     # in a certain wave period/height state as a 2D array
     machine_perf_dict = {}
-    machine_perf_data = utils.read_csv_to_dataframe(
-        args['machine_perf_path'], cols_to_lower=False, vals_to_lower=False)
+    machine_perf_data = utils.read_csv_to_dataframe(args['machine_perf_path'])
     # Get the wave period fields, starting from the second column of the table
     machine_perf_dict['periods'] = machine_perf_data.columns.values[1:]
     # Build up the height field by taking the first column of the table
