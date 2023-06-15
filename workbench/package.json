@@ -10,7 +10,7 @@
     "lint": "eslint --cache --color --ext .jsx,.js src",
     "test": "cross-env PORT=56788 jest --runInBand --testPathIgnorePatterns /tests/binary_tests/ /tests/sampledata_linkcheck/",
     "test-main": "jest --runInBand --testMatch **/tests/main/*.test.js",
-    "test-renderer": "cross-env PORT=56788 jest --runInBand --testMatch **/tests/renderer/*.test.js",
+    "test-renderer": "jest --runInBand --testMatch **/tests/renderer/*.test.js",
     "test-flask": "cross-env PORT=56788 jest --runInBand --testMatch **/tests/invest/*.test.js",
     "test-electron-app": "jest --runInBand --testMatch **/tests/binary_tests/*.test.js",
     "test-sampledata-registry": "jest --runInBand --testMatch **/tests/sampledata_linkcheck/*.test.js",
