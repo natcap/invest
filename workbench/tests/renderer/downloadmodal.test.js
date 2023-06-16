@@ -135,19 +135,18 @@ describe('DownloadProgressBar', () => {
   });
 
   test('Displays message on complete, then disappears', async () => {
+    const alertText = 'Download Complete';
     const nComplete = 5;
     const nTotal = 5;
-    const { getByText } = render(
+    const { getByText, queryByText } = render(
       <DownloadProgressBar
         downloadedNofN={[nComplete, nTotal]}
-        expireAfter={1000}
+        expireAfter={500} // less than default timeout for queryBy
       />
     );
-    const alert = getByText('Download Complete');
+    const alert = getByText(alertText);
     expect(alert).toBeInTheDocument();
-    await waitFor(() => {
-      expect(alert).not.toBeInTheDocument();
-    });
+    await waitForElementToBeRemoved(() => queryByText(alertText));
   });
 
   test('Displays message on fail, then disappears', async () => {
@@ -157,15 +156,12 @@ describe('DownloadProgressBar', () => {
     const { getByText, queryByText } = render(
       <DownloadProgressBar
         downloadedNofN={[nComplete, nTotal]}
-        expireAfter={1000}
+        expireAfter={500} // less than default timeout for queryBy
       />
     );
     const alert = getByText(alertText);
     expect(alert).toBeInTheDocument();
     await waitForElementToBeRemoved(() => queryByText(alertText));
-    // await waitFor(() => {
-    //   expect(alert).not.toBeInTheDocument();
-    // });
   });
 });
 
