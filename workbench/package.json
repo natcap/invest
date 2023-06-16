@@ -24,12 +24,8 @@
   },
   "jest": {
     "reporters": [
-      [
-        "default",
-        {
-          "summaryThreshold": 2
-        }
-      ]
+      ["github-actions", { "silent": false }],
+      ["default", {"summaryThreshold": 2}]
     ],
     "verbose": true,
     "collectCoverage": true,

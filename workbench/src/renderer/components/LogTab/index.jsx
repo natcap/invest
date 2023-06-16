@@ -111,7 +111,6 @@ export default class LogTab extends React.Component {
   }
 
   render() {
-    console.log('render')
     return (
       <Container fluid>
         <Row>
