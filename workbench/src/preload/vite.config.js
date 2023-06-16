@@ -10,7 +10,7 @@ export default defineConfig({
     sourcemap: 'inline',
     minify: false,
     outDir: path.join(PROJECT_ROOT, 'build/preload'),
-    target: 'chrome98',
+    target: 'chrome114',
     rollupOptions: {
       input: ['preload.js'],
       output: {

@@ -9,7 +9,7 @@ export function handleClickExternalURL(event) {
   );
 }
 
-export async function handleClickFindLogfiles() {
+export function handleClickFindLogfiles() {
   ipcRenderer.send(
     ipcMainChannels.SHOW_ITEM_IN_FOLDER,
     window.Workbench.ELECTRON_LOG_PATH,

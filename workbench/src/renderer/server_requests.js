@@ -22,7 +22,7 @@ export async function getInvestModelNames() {
       method: 'get',
     })
       .then((response) => response.json())
-      .catch((error) => { console.log(error.stack); logger.error(`${error.stack}`) })
+      .catch((error) => { logger.error(`${error.stack}`) })
   );
 }
 

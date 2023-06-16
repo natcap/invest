@@ -44,6 +44,8 @@ Unreleased Changes
     * Updated the package installation instructions in the API docs for clarity
       and also to highlight the ease of installation through ``conda-forge``.
       https://github.com/natcap/invest/issues/1256
+    * ``utils.build_lookup_from_csv`` now accepts kwargs for ``pandas.read_csv``
+      (`#1319 <https://github.com/natcap/invest/issues/1319>`_)
 * Workbench
     * Fixed a bug where sampledata downloads failed silently (and progress bar
       became innacurate) if the Workbench did not have write permission to
@@ -79,6 +81,13 @@ Unreleased Changes
     * Fixed an issue with sediment deposition progress logging that was
       causing the "percent complete" indicator to not progress linearly.
       https://github.com/natcap/invest/issues/1262
+* Seasonal Water Yield
+    * Fixed a bug where monthy quickflow nodata pixels were not being passed
+      on to the total quickflow raster, which could result in negative values
+      on the edges (`#1105 <https://github.com/natcap/invest/issues/1105>`_)
+    * Removed the GDAL cache size limit on this model, which means that, by
+      default, the model will use up to 5% of installed memory.
+      https://github.com/natcap/invest/issues/1320
 
 3.13.0 (2023-03-17)
 -------------------

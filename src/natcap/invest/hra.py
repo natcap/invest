@@ -1845,8 +1845,7 @@ def _open_table_as_dataframe(table_path, **kwargs):
         return excel_df
     else:
         return utils.read_csv_to_dataframe(
-            table_path, sep=None, to_lower=True, engine='python',
-            expand_path_cols=['path'], **kwargs)
+            table_path, to_lower=True, expand_path_cols=['path'], **kwargs)
 
 
 def _parse_info_table(info_table_path):
