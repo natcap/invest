@@ -112,8 +112,9 @@ export default function menuTemplate(parentWindow, isDevMode, i18n) {
   return template;
 }
 
-function openAboutWindow(parentWindow, isDevMode) {
-  const child = new BrowserWindow({
+function createWindow(parentWindow, isDevMode) {
+  const devModeArg = isDevMode ? '--devMode' : '';
+  const win = new BrowserWindow({
     parent: parentWindow,
     width: 700,
     height: 800,
@@ -121,14 +122,21 @@ function openAboutWindow(parentWindow, isDevMode) {
     webPreferences: {
       minimumFontSize: 12,
       preload: path.join(__dirname, '../preload/preload.js'),
+      defaultEncoding: 'UTF-8',
+      additionalArguments: [devModeArg, `--port=${process.env.PORT}`],
     },
   });
-  setupContextMenu(child);
-  child.setMenu(null);
-  child.loadURL(path.join(BASE_URL, 'about.html'));
+  setupContextMenu(win);
+  win.setMenu(null);
   if (isDevMode) {
-    child.webContents.openDevTools();
+    win.webContents.openDevTools();
   }
+  return win;
+}
+
+function openAboutWindow(parentWindow, isDevMode) {
+  const child = createWindow(parentWindow, isDevMode);
+  child.loadURL(path.join(BASE_URL, 'about.html'));
 }
 
 function openReportWindow(parentWindow, isDevMode) {
@@ -139,21 +147,7 @@ function openReportWindow(parentWindow, isDevMode) {
   logger.debug(JSON.stringify(process.arch, null, 2));
   logger.debug(JSON.stringify(process.platform, null, 2));
   logger.debug(JSON.stringify(process.env, null, 2));
-  const child = new BrowserWindow({
-    parent: parentWindow,
-    width: 700,
-    height: 800,
-    frame: true,
-    webPreferences: {
-      minimumFontSize: 12,
-      preload: path.join(__dirname, '..', 'preload/preload.js'),
-      defaultEncoding: 'UTF-8',
-    },
-  });
-  setupContextMenu(child);
-  child.setMenu(null);
+
+  const child = createWindow(parentWindow, isDevMode);
   child.loadURL(path.join(BASE_URL, 'report_a_problem.html'));
-  if (isDevMode) {
-    child.webContents.openDevTools();
-  }
 }

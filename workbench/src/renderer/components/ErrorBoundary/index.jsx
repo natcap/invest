@@ -6,7 +6,7 @@ import { withTranslation } from 'react-i18next';
 
 import { handleClickFindLogfiles } from '../../menubar/handlers';
 
-const logger = window.Workbench.getLogger('ErrorBoundary');
+const { logger } = window.Workbench;
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
