@@ -23,7 +23,14 @@
     "dist": "yarn run token && cross-env DEBUG=electron-builder electron-builder build --config electron-builder-config.js"
   },
   "jest": {
-    "reporters": [["default", {"summaryThreshold": 2}]],
+    "reporters": [
+      [
+        "default",
+        {
+          "summaryThreshold": 2
+        }
+      ]
+    ],
     "verbose": true,
     "collectCoverage": true,
     "setupFiles": [
