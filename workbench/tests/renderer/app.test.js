@@ -154,6 +154,7 @@ describe('Various ways to open and close InVEST models', () => {
 
   test('Open File: Dialog callback renders SetupTab', async () => {
     const mockDialogData = {
+      canceled: false,
       filePaths: ['foo.json'],
     };
     const mockDatastack = {
@@ -187,6 +188,7 @@ describe('Various ways to open and close InVEST models', () => {
   test('Open File: Dialog callback is canceled', async () => {
     // Resembles callback data if the dialog was canceled
     const mockDialogData = {
+      canceled: true,
       filePaths: [],
     };
     ipcRenderer.invoke.mockResolvedValue(mockDialogData);

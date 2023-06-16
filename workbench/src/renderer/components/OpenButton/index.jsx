@@ -24,7 +24,7 @@ class OpenButton extends React.Component {
 
   async browseFile() {
     const data = await ipcRenderer.invoke(ipcMainChannels.SHOW_OPEN_DIALOG);
-    if (data.filePaths.length) {
+    if (!data.canceled) {
       const datastack = await fetchDatastackFromFile(data.filePaths[0]);
       const job = new InvestJob({
         modelRunName: datastack.model_run_name,

@@ -44,6 +44,8 @@ Unreleased Changes
     * Updated the package installation instructions in the API docs for clarity
       and also to highlight the ease of installation through ``conda-forge``.
       https://github.com/natcap/invest/issues/1256
+    * ``utils.build_lookup_from_csv`` now accepts kwargs for ``pandas.read_csv``
+      (`#1319 <https://github.com/natcap/invest/issues/1319>`_)
 * Workbench
     * Fixed a bug where sampledata downloads failed silently (and progress bar
       became innacurate) if the Workbench did not have write permission to

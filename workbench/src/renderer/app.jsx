@@ -29,7 +29,6 @@ import { ipcMainChannels } from '../main/ipcMainChannels';
 import i18n from 'i18next';
 
 const { ipcRenderer } = window.Workbench.electron;
-const logger = window.Workbench.getLogger('app.jsx');
 
 /** This component manages any application state that should persist
  * and be independent from properties of a single invest job.

@@ -581,8 +581,7 @@ def build_file_registry(base_file_path_list, file_suffix):
 
 
 def build_lookup_from_csv(
-        table_path, key_field, column_list=None, to_lower=True,
-        expand_path_cols=[]):
+        table_path, key_field, column_list=None, to_lower=True, **kwargs):
     """Read a CSV table into a dictionary indexed by ``key_field``.
 
     Creates a dictionary from a CSV whose keys are unique entries in the CSV
@@ -603,10 +602,7 @@ def build_lookup_from_csv(
         to_lower (bool): if True, converts all unicode in the CSV,
             including headers and values to lowercase, otherwise uses raw
             string values. default=True.
-        expand_path_cols (list[string])): if provided, a list of the names of
-            columns that contain paths to expand. Any relative paths in these
-            columns will be expanded to absolute paths. It is assumed that
-            relative paths are relative to the CSV's path.
+        **kwargs: additional kwargs will be passed to ``utils.read_csv_from_dataframe``
 
     Returns:
         lookup_dict (dict): a dictionary of the form
@@ -630,8 +626,7 @@ def build_lookup_from_csv(
         col_list.append(key_field)
 
     table = read_csv_to_dataframe(
-        table_path, to_lower=to_lower, sep=None, index_col=False,
-        engine='python', expand_path_cols=expand_path_cols)
+        table_path, to_lower=to_lower, index_col=False, **kwargs)
 
     # if 'to_lower`, case handling is done before trying to access the data.
     # the columns are stripped of leading/trailing whitespace in
@@ -705,8 +700,8 @@ def expand_path(path, base_path):
 
 
 def read_csv_to_dataframe(
-        path, to_lower=False, sep=None, encoding=None, engine='python',
-        expand_path_cols=[], **kwargs):
+        path, to_lower=False, expand_path_cols=[], sep=None, engine='python',
+        encoding='utf-8-sig', **kwargs):
     """Return a dataframe representation of the CSV.
 
     Wrapper around ``pandas.read_csv`` that standardizes the column names by
@@ -715,41 +710,33 @@ def read_csv_to_dataframe(
     column names that don't exactly match the specification. Strips
     leading/trailing whitespace from data entries as well.
 
+    Also sets custom defaults for some kwargs passed to ``pandas.read_csv``.
+
     Args:
-        path (string): path to a CSV file
+        path (str): path to a CSV file
         to_lower (bool): if True, convert all column names to lowercase
-        sep: separator to pass to pandas.read_csv. Defaults to None, which
-            lets the Python engine infer the separator (if engine='python').
-        encoding (string): name of encoding codec to pass to `pandas.read_csv`.
-            Defaults to None. Setting engine='python' when encoding=None allows
-            a lot of non-UTF8 encodings to be read without raising an error.
-            Any special characters in other encodings may get replaced with the
-            replacement character.
-            If encoding=None, and the file begins with a BOM, the encoding gets
-            set to 'utf-8-sig'; otherwise the BOM causes an error.
-        engine (string): kwarg for pandas.read_csv: 'c', 'python', or None.
-            Defaults to 'python' (see note about encoding).
         expand_path_cols (list[string])): if provided, a list of the names of
             columns that contain paths to expand. Any relative paths in these
             columns will be expanded to absolute paths. It is assumed that
             relative paths are relative to the CSV's path.
-
-        **kwargs: any kwargs that are valid for ``pandas.read_csv``
+        sep: kwarg of ``pandas.read_csv``. Defaults to None, which
+            lets the Python engine infer the separator
+        engine (str): kwarg of ``pandas.read_csv``. The 'python' engine
+            supports the sep=None option.
+        encoding (str): kwarg of ``pandas.read_csv``. Using the 'utf-8-sig'
+            encoding handles UTF-8 with or without BOM.
+        **kwargs: additional kwargs will be passed to ``pandas.read_csv``
 
     Returns:
         pandas.DataFrame with the contents of the given CSV
 
     """
-    # Check if the file encoding is UTF-8 BOM first
-    # allow encoding kwarg to override this if it's provided
-    if not encoding and has_utf8_bom(path):
-        encoding = 'utf-8-sig'
     try:
         dataframe = pandas.read_csv(
-            path, engine=engine, encoding=encoding, sep=sep, **kwargs)
+            path, sep=sep, engine=engine, encoding=encoding, **kwargs)
     except UnicodeDecodeError as error:
         LOGGER.error(
-            f'{path} must be encoded as utf-8 or ASCII')
+            f'{path} must be encoded as UTF-8 or ASCII')
         raise error
 
     # this won't work on integer types, which happens if you set header=None

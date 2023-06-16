@@ -31,6 +31,8 @@ import setupGetNCPUs from './setupGetNCPUs';
 import setupOpenExternalUrl from './setupOpenExternalUrl';
 import setupOpenLocalHtml from './setupOpenLocalHtml';
 import setupChangeLanguage from './setupChangeLanguage';
+import setupGetElectronPaths from './setupGetElectronPaths';
+import setupRendererLogger from './setupRendererLogger';
 import { ipcMainChannels } from './ipcMainChannels';
 import menuTemplate from './menubar';
 import ELECTRON_DEV_MODE from './isDevMode';
@@ -90,9 +92,11 @@ export const createWindow = async () => {
   setupCheckFirstRun();
   setupCheckStorageToken();
   setupChangeLanguage();
+  setupGetElectronPaths();
+  setupRendererLogger();
   await getFlaskIsReady();
 
-  const devModeArg = ELECTRON_DEV_MODE ? '--devMode' : '';
+  const devModeArg = ELECTRON_DEV_MODE ? '--devmode' : '';
   // Create the browser window.
   mainWindow = new BrowserWindow({
     minWidth: 800,
@@ -100,7 +104,7 @@ export const createWindow = async () => {
     webPreferences: {
       preload: path.join(__dirname, '../preload/preload.js'),
       defaultEncoding: 'UTF-8',
-      additionalArguments: [devModeArg],
+      additionalArguments: [devModeArg, `--port=${process.env.PORT}`],
     },
   });
   Menu.setApplicationMenu(

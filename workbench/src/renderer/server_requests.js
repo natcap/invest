@@ -1,6 +1,7 @@
-const logger = window.Workbench.getLogger('server_requests.js');
+import { getSettingsValue } from './components/SettingsModal/SettingsStorage';
+
 const HOSTNAME = 'http://127.0.0.1';
-const { PORT } = window.Workbench;
+const { logger, PORT } = window.Workbench;
 const PREFIX = 'api';
 
 // The Flask server sends UTF-8 encoded responses by default
@@ -15,12 +16,13 @@ const PREFIX = 'api';
  * @returns {Promise} resolves object
  */
 export async function getInvestModelNames() {
+  const language = await getSettingsValue('language');
   return (
-    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/models?language=${window.Workbench.LANGUAGE}`, {
+    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/models?language=${language}`, {
       method: 'get',
     })
       .then((response) => response.json())
-      .catch((error) => logger.error(error.stack))
+      .catch((error) => { logger.error(`${error.stack}`) })
   );
 }
 
@@ -31,8 +33,9 @@ export async function getInvestModelNames() {
  * @returns {Promise} resolves object
  */
 export async function getSpec(payload) {
+  const language = await getSettingsValue('language');
   return (
-    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/getspec?language=${window.Workbench.LANGUAGE}`, {
+    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/getspec?language=${language}`, {
       method: 'post',
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },
@@ -52,8 +55,9 @@ export async function getSpec(payload) {
  * @returns {Promise} resolves array
  */
 export async function fetchValidation(payload) {
+  const language = await getSettingsValue('language');
   return (
-    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/validate?language=${window.Workbench.LANGUAGE}`, {
+    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/validate?language=${language}`, {
       method: 'post',
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },
@@ -97,7 +101,7 @@ export function getVectorColumnNames(payload) {
   return (
     window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/colnames`, {
       method: 'post',
-      body: JSON.stringify({ vector_path: payload }),
+      body: JSON.stringify({vector_path: payload}),
       headers: { 'Content-Type': 'application/json' },
     })
       .then((response) => response.json())
@@ -183,6 +187,7 @@ export function writeParametersToFile(payload) {
       .catch((error) => logger.error(error.stack))
   );
 }
+
 
 /**
  * Get the mapping of supported language codes to display names.
