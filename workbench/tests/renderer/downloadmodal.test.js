@@ -73,24 +73,24 @@ describe('Sample Data Download Form', () => {
 
     // Toggle all off using Select All
     const selectAllCheckbox = getByLabelText('Select All');
-    userEvent.click(selectAllCheckbox);
+    await userEvent.click(selectAllCheckbox);
     allCheckBoxes.forEach((box) => {
       expect(box).not.toBeChecked();
     });
     expect(downloadButton).toBeDisabled();
 
     // Toggle all on using Select All
-    userEvent.click(selectAllCheckbox);
+    await userEvent.click(selectAllCheckbox);
     allCheckBoxes.forEach((box) => {
       expect(box).toBeChecked();
     });
 
     // Toggle one off & on
     const modelCheckbox = getByLabelText(new RegExp(modelName));
-    userEvent.click(modelCheckbox);
+    await userEvent.click(modelCheckbox);
     expect(modelCheckbox).not.toBeChecked();
     expect(selectAllCheckbox).not.toBeChecked();
-    userEvent.click(modelCheckbox);
+    await userEvent.click(modelCheckbox);
     expect(modelCheckbox).toBeChecked();
   });
 
@@ -198,7 +198,7 @@ describe('Integration tests with main process', () => {
 
     const allCheckBoxes = await findAllByRole('checkbox');
     const downloadButton = await findByRole('button', { name: 'Download' });
-    userEvent.click(downloadButton);
+    await userEvent.click(downloadButton);
     const nURLs = allCheckBoxes.length - 1; // all except Select All
     await waitFor(async () => {
       expect(await getSettingsValue('sampleDataDir'))
@@ -215,7 +215,7 @@ describe('Integration tests with main process', () => {
 
     const existingValue = await getSettingsValue('sampleDataDir');
     const cancelButton = await findByRole('button', { name: 'Cancel' });
-    userEvent.click(cancelButton);
+    await userEvent.click(cancelButton);
 
     await waitFor(async () => {
       const value = await getSettingsValue('sampleDataDir');
@@ -243,7 +243,7 @@ describe('Integration tests with main process', () => {
     } = render(<App isFirstRun />);
 
     const downloadButton = await findByRole('button', { name: 'Download' });
-    userEvent.click(downloadButton);
+    await userEvent.click(downloadButton);
     const alert = await findByRole('alert');
     expect(alert).toHaveTextContent('Please choose a different folder');
   });
