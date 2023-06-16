@@ -77,6 +77,7 @@ MODEL_SPEC = {
         },
         "threats_table_path": {
             "type": "csv",
+            "index_col": "threat",
             "columns": {
                 "threat": {
                     "type": "freestyle_string",
@@ -170,6 +171,7 @@ MODEL_SPEC = {
         },
         "sensitivity_table_path": {
             "type": "csv",
+            "index_col": "lulc",
             "columns": {
                 "lulc": spec_utils.LULC_TABLE_COLUMN,
                 "habitat": {

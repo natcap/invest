@@ -46,6 +46,7 @@ MODEL_SPEC = {
         "precipitation_path": spec_utils.PRECIP,
         "biophysical_table": {
             "type": "csv",
+            "index_col": "lucode",
             "columns": {
                 "lucode": spec_utils.LULC_TABLE_COLUMN,
                 "emc_[POLLUTANT]": {

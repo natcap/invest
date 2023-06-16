@@ -86,6 +86,7 @@ MODEL_SPEC = {
         },
         "landcover_to_crop_table_path": {
             "type": "csv",
+            "index_col": "lucode",
             "columns": {
                 "lucode": {"type": "integer"},
                 "crop_name": {
@@ -101,6 +102,7 @@ MODEL_SPEC = {
         },
         "fertilization_rate_table_path": {
             "type": "csv",
+            "index_col": "crop_name",
             "columns": {
                 "crop_name": {
                     "type": "option_string",
@@ -129,29 +131,35 @@ MODEL_SPEC = {
                     "contents": {
                         "[CROP]_regression_yield_table.csv": {
                             "type": "csv",
+                            "index_col": "climate_bin",
                             "columns": {
-                                'climate_bin': {"type": "integer"},
-                                'yield_ceiling': {
+                                "climate_bin": {"type": "integer"},
+                                "yield_ceiling": {
                                     "type": "number",
                                     "units": u.metric_ton/u.hectare
                                 },
-                                'b_nut':  {"type": "number", "units": u.none},
-                                'b_k2o':  {"type": "number", "units": u.none},
-                                'c_n':    {"type": "number", "units": u.none},
-                                'c_p2o5': {"type": "number", "units": u.none},
-                                'c_k2o':  {"type": "number", "units": u.none}
+                                "b_nut":  {"type": "number", "units": u.none},
+                                "b_k2o":  {"type": "number", "units": u.none},
+                                "c_n":    {"type": "number", "units": u.none},
+                                "c_p2o5": {"type": "number", "units": u.none},
+                                "c_k2o":  {"type": "number", "units": u.none}
                             }
                         }
                     }
                 },
                 "crop_nutrient.csv": {
                     "type": "csv",
+                    "index_col": "crop",
                     "columns": {
-                        nutrient: {
+                        "crop": {
+                            "type": "option_string",
+                            "options": CROPS
+                        },
+                        **{nutrient: {
                             "about": about,
                             "type": "number",
                             "units": units
-                        } for nutrient, about, units in NUTRIENTS
+                        } for nutrient, about, units in NUTRIENTS}
                     }
                 },
                 "extended_climate_bin_maps": {
@@ -186,6 +194,7 @@ MODEL_SPEC = {
         "aggregate_results.csv": {
             "created_if": "aggregate_polygon_path",
             "about": "Table of results aggregated by ",
+            "index_col": "FID",
             "columns": {
                 "FID": {
                     "type": "integer",
@@ -213,6 +222,7 @@ MODEL_SPEC = {
         },
         "result_table.csv": {
             "about": "Table of results aggregated by crop",
+            "index_col": "crop",
             "columns": {
                 "crop": {
                     "type": "freestyle_string",

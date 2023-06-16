@@ -130,6 +130,7 @@ MODEL_SPEC = {
                     "units": u.metric_ton/u.hectare,
                     "about": gettext("Carbon density of dead matter.")}
             },
+            "index_col": "lucode",
             "about": gettext(
                 "A table that maps each LULC code to carbon pool data for "
                 "that LULC type."),

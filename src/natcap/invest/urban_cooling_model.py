@@ -55,6 +55,7 @@ MODEL_SPEC = {
         "biophysical_table_path": {
             "name": gettext("biophysical table"),
             "type": "csv",
+            "index_col": "lucode",
             "columns": {
                 "lucode": spec_utils.LULC_TABLE_COLUMN,
                 "kc": {
@@ -170,6 +171,7 @@ MODEL_SPEC = {
         "energy_consumption_table_path": {
             "name": gettext("energy consumption table"),
             "type": "csv",
+            "index_col": "type",
             "columns": {
                 "type": {
                     "type": "integer",

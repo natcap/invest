@@ -39,6 +39,7 @@ MODEL_SPEC = {
         },
         "guild_table_path": {
             "type": "csv",
+            "index_col": "species",
             "columns": {
                 "species": {
                     "type": "freestyle_string",
@@ -87,6 +88,7 @@ MODEL_SPEC = {
         },
         "landcover_biophysical_table_path": {
             "type": "csv",
+            "index_col": "lucode",
             "columns": {
                 "lucode": spec_utils.LULC_TABLE_COLUMN,
                 "nesting_[SUBSTRATE]_availability_index": {

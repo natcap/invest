@@ -76,6 +76,7 @@ MODEL_SPEC = {
                 "corresponding values in this table.  Each row is a land use "
                 "land cover class."
             ),
+            'index_col': 'lucode',
             'columns': {
                 'lucode': spec_utils.LULC_TABLE_COLUMN,
                 'urban_nature': {
@@ -256,6 +257,7 @@ MODEL_SPEC = {
             'name': 'population group radii table',
             'type': 'csv',
             'required': f'search_radius_mode == "{RADIUS_OPT_POP_GROUP}"',
+            'index_col': 'pop_group',
             'columns': {
                 "pop_group": {
                     "type": "ratio",

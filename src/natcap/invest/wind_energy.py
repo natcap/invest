@@ -328,6 +328,7 @@ MODEL_SPEC = {
         },
         "grid_points_path": {
             "type": "csv",
+            "index_col": "id",
             "columns": {
                 "id": {
                     "type": "integer",
@@ -382,6 +383,7 @@ MODEL_SPEC = {
         },
         "wind_schedule": {
             "type": "csv",
+            "index_col": "year",
             "columns": {
                 "year": {
                     "type": "number",

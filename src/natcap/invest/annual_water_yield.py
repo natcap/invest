@@ -87,10 +87,19 @@ VALUATION_OUTPUT_FIELDS = {
     }
 }
 SUBWATERSHED_OUTPUT_FIELDS = {
+    "subws_id": {
+        "type": "integer",
+        "about": gettext("Unique identifier for each subwatershed.")
+    },
     **BASE_OUTPUT_FIELDS,
-    **SCARCITY_OUTPUT_FIELDS
+    **SCARCITY_OUTPUT_FIELDS,
+
 }
 WATERSHED_OUTPUT_FIELDS = {
+    "ws_id": {
+        "type": "integer",
+        "about": gettext("Unique identifier for each watershed.")
+    },
     **BASE_OUTPUT_FIELDS,
     **SCARCITY_OUTPUT_FIELDS,
     **VALUATION_OUTPUT_FIELDS
@@ -209,6 +218,7 @@ MODEL_SPEC = {
                     "units": u.none,
                     "about": gettext("Crop coefficient for this LULC class.")}
             },
+            "index_col": "lucode",
             "about": gettext(
                 "Table of biophysical parameters for each LULC class. All "
                 "values in the LULC raster must have corresponding entries "
@@ -239,6 +249,7 @@ MODEL_SPEC = {
                     "units": u.meter**3/u.year/u.pixel
                 }
             },
+            "index_col": "lucode",
             "required": False,
             "about": gettext(
                 "A table of water demand for each LULC class. Each LULC code "
@@ -310,6 +321,7 @@ MODEL_SPEC = {
                         "the time span.")
                 }
             },
+            "index_col": "ws_id",
             "required": False,
             "about": gettext(
                 "A table mapping each watershed to the associated valuation "
@@ -328,6 +340,7 @@ MODEL_SPEC = {
                 },
                 "watershed_results_wyield.csv": {
                     "columns": {**WATERSHED_OUTPUT_FIELDS},
+                    "index_col": "ws_id",
                     "about": "Table containing biophysical output values per watershed."
                 },
                 "subwatershed_results_wyield.shp": {
@@ -337,6 +350,7 @@ MODEL_SPEC = {
                 },
                 "subwatershed_results_wyield.csv": {
                     "columns": {**SUBWATERSHED_OUTPUT_FIELDS},
+                    "index_col": "subws_id",
                     "about": "Table containing biophysical output values per subwatershed."
                 },
                 "per_pixel": {

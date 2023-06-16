@@ -107,6 +107,7 @@ MODEL_SPEC = {
         },
         "biophysical_table_path": {
             "type": "csv",
+            "index_col": "lucode",
             "columns": {
                 "lucode": spec_utils.LULC_TABLE_COLUMN,
                 "cn_[SOIL_GROUP]": {
@@ -137,6 +138,7 @@ MODEL_SPEC = {
         },
         "rain_events_table_path": {
             "type": "csv",
+            "index_col": "month",
             "columns": {
                 "month": {
                     "type": "number",
@@ -212,6 +214,7 @@ MODEL_SPEC = {
         },
         "climate_zone_table_path": {
             "type": "csv",
+            "index_col": "cz_id",
             "columns": {
                 "cz_id": {
                     "type": "integer",
@@ -253,6 +256,7 @@ MODEL_SPEC = {
         },
         "monthly_alpha_path": {
             "type": "csv",
+            "index_col": "month",
             "columns": {
                 "month": {
                     "type": "number",

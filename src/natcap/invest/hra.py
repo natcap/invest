@@ -66,6 +66,7 @@ MODEL_SPEC = {
             "name": gettext("habitat stressor table"),
             "about": gettext("A table describing each habitat and stressor."),
             "type": "csv",
+            "index_col": "name",
             "columns": {
                 "name": {
                     "type": "freestyle_string",

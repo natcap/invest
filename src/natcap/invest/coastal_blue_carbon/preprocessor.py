@@ -36,6 +36,7 @@ MODEL_SPEC = {
                 "A table mapping LULC codes from the snapshot rasters to the "
                 "corresponding LULC class names, and whether or not the "
                 "class is a coastal blue carbon habitat."),
+            "index_col": "code",
             "columns": {
                 "code": {
                     "type": "integer",
@@ -55,6 +56,7 @@ MODEL_SPEC = {
         },
         "landcover_snapshot_csv": {
             "type": "csv",
+            "index_col": "snapshot_year",
             "columns": {
                 "snapshot_year": {
                     "type": "number",
@@ -82,6 +84,7 @@ MODEL_SPEC = {
                 "source LULC class, and the first row represents the "
                 "destination LULC classes. Cells are populated with "
                 "transition states, or left empty if no such transition occurs."),
+            "index_col": "lulc-class",
             "columns": {
                 "lulc-class": {
                     "type": "integer",
@@ -112,6 +115,7 @@ MODEL_SPEC = {
                 "Table mapping each LULC type to impact and accumulation "
                 "information. This is a template that you will fill out to "
                 "create the biophysical table input to the main model."),
+            "index_col": "code",
             "columns": {
                 **BIOPHYSICAL_COLUMNS_SPEC,
                 # remove "expression" property which doesn't go in output spec

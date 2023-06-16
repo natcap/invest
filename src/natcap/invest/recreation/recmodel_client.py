@@ -192,6 +192,7 @@ MODEL_SPEC = {
         },
         "predictor_table_path": {
             "type": "csv",
+            "index_col": "id",
             "columns": predictor_table_columns,
             "required": "compute_regression",
             "about": gettext(
@@ -202,6 +203,7 @@ MODEL_SPEC = {
         },
         "scenario_predictor_table_path": {
             "type": "csv",
+            "index_col": "id",
             "columns": predictor_table_columns,
             "required": False,
             "about": gettext(
@@ -233,7 +235,12 @@ MODEL_SPEC = {
         },
         "monthly_table.csv": {
             "about": gettext("Table of monthly photo-user-days."),
+            "index_col": "poly_id",
             "columns": {
+                "poly_id": {
+                    "type": "integer",
+                    "about": gettext("Polygon ID")
+                },
                 "[YEAR]-[MONTH]": {
                     "about": gettext(
                         "Total photo-user-days counted in each cell in the "

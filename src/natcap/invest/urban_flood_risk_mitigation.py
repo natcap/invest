@@ -57,6 +57,7 @@ MODEL_SPEC = {
         },
         "curve_number_table_path": {
             "type": "csv",
+            "index_col": "lucode",
             "columns": {
                 "lucode": {
                     "type": "integer",
@@ -91,6 +92,7 @@ MODEL_SPEC = {
         },
         "infrastructure_damage_loss_table_path": {
             "type": "csv",
+            "index_col": "type",
             "columns": {
                 "type": {
                     "type": "integer",

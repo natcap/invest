@@ -167,6 +167,7 @@ MODEL_SPEC = {
         "n_workers": spec_utils.N_WORKERS,
         "landcover_snapshot_csv": {
             "type": "csv",
+            "index_col": "snapshot_year",
             "columns": {
                 "snapshot_year": {
                     "type": "number",
@@ -204,6 +205,7 @@ MODEL_SPEC = {
         "biophysical_table_path": {
             "name": gettext("biophysical table"),
             "type": "csv",
+            "index_col": "code",
             "columns": {
                 "code": {
                     "type": "integer",
@@ -300,6 +302,7 @@ MODEL_SPEC = {
         "landcover_transitions_table": {
             "name": gettext("landcover transitions table"),
             "type": "csv",
+            "index_col": "lulc-class",
             "columns": {
                 "lulc-class": {
                     "type": "integer",
@@ -382,6 +385,7 @@ MODEL_SPEC = {
             "name": gettext("price table"),
             "type": "csv",
             "required": "use_price_table",
+            "index_col": "year",
             "columns": {
                 "year": {
                     "type": "number",

@@ -326,6 +326,7 @@ MODEL_SPEC = {
         },
         "land_gridPts_path": {
             "type": "csv",
+            "index_col": "id",
             "columns": LAND_GRID_POINT_FIELDS,
             "required": "valuation_container",
             "about": gettext(
@@ -423,6 +424,7 @@ MODEL_SPEC = {
                         "Table of value ranges for each captured wave energy "
                         "quantile group as well as the number of pixels for "
                         "each group."),
+                    "index_col": "Percentile Group",
                     "columns": {
                         **PERCENTILE_TABLE_FIELDS,
                         "Value Range (megawatt hours per year, MWh/yr)": {
@@ -459,6 +461,7 @@ MODEL_SPEC = {
                         "Table of value ranges for each net present value "
                         "quantile group as well as the number of pixels for "
                         "each group."),
+                    "index_col": "Percentile Group",
                     "columns": {
                         **PERCENTILE_TABLE_FIELDS,
                         "Value Range (thousands of currency units, currency)": {
@@ -497,6 +500,7 @@ MODEL_SPEC = {
                     "about": gettext(
                         "Table of value ranges for each wave power quantile "
                         "group as well as the number of pixels for each group."),
+                    "index_col": "Percentile Group",
                     "columns": {
                         **PERCENTILE_TABLE_FIELDS,
                         "Value Range (wave power per unit width of wave crest length, kW/m)": {

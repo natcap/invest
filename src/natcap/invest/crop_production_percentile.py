@@ -22,6 +22,51 @@ from .crop_production_regression import NUTRIENTS
 
 LOGGER = logging.getLogger(__name__)
 
+CROP_OPTIONS = {
+    # TODO: use human-readable translatable crop names (#614)
+    crop: {"description": crop} for crop in [
+        "abaca", "agave", "alfalfa", "almond", "aniseetc",
+        "apple", "apricot", "areca", "artichoke", "asparagus",
+        "avocado", "bambara", "banana", "barley", "bean",
+        "beetfor", "berrynes", "blueberry", "brazil",
+        "canaryseed", "carob", "carrot", "carrotfor", "cashew",
+        "broadbean", "buckwheat", "cabbage", "cabbagefor",
+        "cashewapple", "cassava", "castor", "cauliflower",
+        "cerealnes", "cherry", "chestnut", "chickpea",
+        "chicory", "chilleetc", "cinnamon", "citrusnes",
+        "clove", "clover", "cocoa", "coconut", "coffee",
+        "cotton", "cowpea", "cranberry", "cucumberetc",
+        "currant", "date", "eggplant", "fibrenes", "fig",
+        "flax", "fonio", "fornes", "fruitnes", "garlic",
+        "ginger", "gooseberry", "grape", "grapefruitetc",
+        "grassnes", "greenbean", "greenbroadbean", "greencorn",
+        "greenonion", "greenpea", "groundnut", "hazelnut",
+        "hemp", "hempseed", "hop", "jute", "jutelikefiber",
+        "kapokfiber", "kapokseed", "karite", "kiwi", "kolanut",
+        "legumenes", "lemonlime", "lentil", "lettuce",
+        "linseed", "lupin", "maize", "maizefor", "mango",
+        "mate", "melonetc", "melonseed", "millet",
+        "mixedgrain", "mixedgrass", "mushroom", "mustard",
+        "nutmeg", "nutnes", "oats", "oilpalm", "oilseedfor",
+        "oilseednes", "okra", "olive", "onion", "orange",
+        "papaya", "pea", "peachetc", "pear", "pepper",
+        "peppermint", "persimmon", "pigeonpea", "pimento",
+        "pineapple", "pistachio", "plantain", "plum", "poppy",
+        "potato", "pulsenes", "pumpkinetc", "pyrethrum",
+        "quince", "quinoa", "ramie", "rapeseed", "rasberry",
+        "rice", "rootnes", "rubber", "rye", "ryefor",
+        "safflower", "sesame", "sisal", "sorghum",
+        "sorghumfor", "sourcherry, soybean", "spicenes",
+        "spinach", "stonefruitnes", "strawberry", "stringbean",
+        "sugarbeet", "sugarcane", "sugarnes", "sunflower",
+        "swedefor", "sweetpotato", "tangetc", "taro", "tea",
+        "tobacco", "tomato", "triticale", "tropicalnes",
+        "tung", "turnipfor", "vanilla", "vegetablenes",
+        "vegfor", "vetch", "walnut", "watermelon", "wheat",
+        "yam", "yautia"
+    ]
+}
+
 MODEL_SPEC = {
     "model_name": MODEL_METADATA["crop_production_percentile"].model_title,
     "pyname": MODEL_METADATA["crop_production_percentile"].pyname,
@@ -44,54 +89,12 @@ MODEL_SPEC = {
         },
         "landcover_to_crop_table_path": {
             "type": "csv",
+            "index_col": "lucode",
             "columns": {
                 "lucode": {"type": "integer"},
                 "crop_name": {
                     "type": "option_string",
-                    "options": {
-                        # TODO: use human-readable translatable crop names (#614)
-                        crop: {"description": crop} for crop in [
-                            "abaca", "agave", "alfalfa", "almond", "aniseetc",
-                            "apple", "apricot", "areca", "artichoke", "asparagus",
-                            "avocado", "bambara", "banana", "barley", "bean",
-                            "beetfor", "berrynes", "blueberry", "brazil",
-                            "canaryseed", "carob", "carrot", "carrotfor", "cashew",
-                            "broadbean", "buckwheat", "cabbage", "cabbagefor",
-                            "cashewapple", "cassava", "castor", "cauliflower",
-                            "cerealnes", "cherry", "chestnut", "chickpea",
-                            "chicory", "chilleetc", "cinnamon", "citrusnes",
-                            "clove", "clover", "cocoa", "coconut", "coffee",
-                            "cotton", "cowpea", "cranberry", "cucumberetc",
-                            "currant", "date", "eggplant", "fibrenes", "fig",
-                            "flax", "fonio", "fornes", "fruitnes", "garlic",
-                            "ginger", "gooseberry", "grape", "grapefruitetc",
-                            "grassnes", "greenbean", "greenbroadbean", "greencorn",
-                            "greenonion", "greenpea", "groundnut", "hazelnut",
-                            "hemp", "hempseed", "hop", "jute", "jutelikefiber",
-                            "kapokfiber", "kapokseed", "karite", "kiwi", "kolanut",
-                            "legumenes", "lemonlime", "lentil", "lettuce",
-                            "linseed", "lupin", "maize", "maizefor", "mango",
-                            "mate", "melonetc", "melonseed", "millet",
-                            "mixedgrain", "mixedgrass", "mushroom", "mustard",
-                            "nutmeg", "nutnes", "oats", "oilpalm", "oilseedfor",
-                            "oilseednes", "okra", "olive", "onion", "orange",
-                            "papaya", "pea", "peachetc", "pear", "pepper",
-                            "peppermint", "persimmon", "pigeonpea", "pimento",
-                            "pineapple", "pistachio", "plantain", "plum", "poppy",
-                            "potato", "pulsenes", "pumpkinetc", "pyrethrum",
-                            "quince", "quinoa", "ramie", "rapeseed", "rasberry",
-                            "rice", "rootnes", "rubber", "rye", "ryefor",
-                            "safflower", "sesame", "sisal", "sorghum",
-                            "sorghumfor", "sourcherry, soybean", "spicenes",
-                            "spinach", "stonefruitnes", "strawberry", "stringbean",
-                            "sugarbeet", "sugarcane", "sugarnes", "sunflower",
-                            "swedefor", "sweetpotato", "tangetc", "taro", "tea",
-                            "tobacco", "tomato", "triticale", "tropicalnes",
-                            "tung", "turnipfor", "vanilla", "vegetablenes",
-                            "vegfor", "vetch", "walnut", "watermelon", "wheat",
-                            "yam", "yautia"
-                        ]
-                    }
+                    "options": CROP_OPTIONS
                 }
             },
             "about": gettext(
@@ -116,6 +119,7 @@ MODEL_SPEC = {
                     "contents": {
                         "[CROP]_percentile_yield_table.csv": {
                             "type": "csv",
+                            "index_col": "climate_bin",
                             "columns": {
                                 "climate_bin": {"type": "integer"},
                                 "yield_25th": {
@@ -163,8 +167,13 @@ MODEL_SPEC = {
                 },
                 "crop_nutrient.csv": {
                     "type": "csv",
+                    "index_col": "crop",
                     "columns": {
-                        nutrient: {
+                        "crop": {
+                            "type": "option_string",
+                            "options": CROP_OPTIONS
+                        },
+                        **{nutrient: {
                             "type": "number",
                             "units": units
                         } for nutrient, units in {
@@ -201,7 +210,7 @@ MODEL_SPEC = {
                             "folate":      u.microgram/u.hectogram,
                             "vitb12":      u.microgram/u.hectogram,  # vitamin B12
                             "vitk":        u.microgram/u.hectogram,  # vitamin K
-                        }.items()
+                        }.items()}
                     }
                 }
             },
@@ -213,6 +222,7 @@ MODEL_SPEC = {
         "aggregate_results.csv": {
             "created_if": "aggregate_polygon_path",
             "about": "Model results aggregated to AOI polygons",
+            "index_col": "FID",
             "columns": {
                 "FID": {
                     "type": "integer",
@@ -251,6 +261,7 @@ MODEL_SPEC = {
         },
         "result_table.csv": {
             "about": "Model results aggregated by crop",
+            "index_col": "crop",
             "columns": {
                 "crop": {
                     "type": "freestyle_string",
