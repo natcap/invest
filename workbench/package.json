@@ -23,7 +23,14 @@
     "dist": "yarn run token && cross-env DEBUG=electron-builder electron-builder build --config electron-builder-config.js"
   },
   "jest": {
-    "reporters": [["default", {"summaryThreshold": 2}]],
+    "reporters": [
+      [
+        "default",
+        {
+          "summaryThreshold": 2
+        }
+      ]
+    ],
     "verbose": true,
     "collectCoverage": true,
     "setupFiles": [
@@ -48,17 +55,17 @@
     "yauzl": "^2.10.0"
   },
   "devDependencies": {
-    "@babel/cli": "^7.13.10",
-    "@babel/eslint-parser": "^7.19.1",
-    "@babel/plugin-transform-runtime": "^7.13.10",
-    "@babel/preset-env": "^7.13.10",
-    "@babel/preset-react": "^7.12.13",
-    "@babel/register": "^7.13.8",
-    "@testing-library/dom": "^8.1.0",
+    "@babel/cli": "^7.22.5",
+    "@babel/eslint-parser": "^7.22.5",
+    "@babel/plugin-transform-runtime": "^7.22.5",
+    "@babel/preset-env": "^7.22.5",
+    "@babel/preset-react": "^7.22.5",
+    "@babel/register": "^7.22.5",
+    "@testing-library/dom": "^9.3.1",
     "@testing-library/jest-dom": "^5.14.1",
-    "@testing-library/react": "^12.0.0",
-    "@testing-library/user-event": "^13.5.0",
-    "@vitejs/plugin-react": "^1.2.0",
+    "@testing-library/react": "^14.0.0",
+    "@testing-library/user-event": "^14.4.3",
+    "@vitejs/plugin-react": "^4.0.0",
     "babel-eslint": "^10.1.0",
     "bootstrap": "4.3.1",
     "concurrently": "^8.2.0",
@@ -81,11 +88,11 @@
     "jest-environment-jsdom": "^29.5.0",
     "pptr-testing-library": "^0.7.0",
     "puppeteer-core": "^20.6.0",
-    "react": "^17.0.1",
+    "react": "^18.2.0",
     "react-bootstrap": "^1.5.2",
-    "react-devtools": "^4.10.1",
-    "react-dom": "^17.0.1",
-    "react-icons": "^4.3.1",
+    "react-devtools": "^4.27.8",
+    "react-dom": "^18.2.0",
+    "react-icons": "^4.9.0",
     "rimraf": "^3.0.2",
     "vite": "^4.3.9",
     "yazl": "^2.5.1"
