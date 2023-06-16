@@ -1,6 +1,8 @@
 import React from 'react';
 import {
-  render, waitFor
+  render,
+  waitFor,
+  waitForElementToBeRemoved,
 } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import userEvent from '@testing-library/user-event';
@@ -149,19 +151,21 @@ describe('DownloadProgressBar', () => {
   });
 
   test('Displays message on fail, then disappears', async () => {
+    const alertText = 'Download Failed';
     const nComplete = 'failed';
     const nTotal = 'failed';
-    const { getByText } = render(
+    const { getByText, queryByText } = render(
       <DownloadProgressBar
         downloadedNofN={[nComplete, nTotal]}
         expireAfter={1000}
       />
     );
-    const alert = getByText('Download Failed');
+    const alert = getByText(alertText);
     expect(alert).toBeInTheDocument();
-    await waitFor(() => {
-      expect(alert).not.toBeInTheDocument();
-    });
+    await waitForElementToBeRemoved(() => queryByText(alertText));
+    // await waitFor(() => {
+    //   expect(alert).not.toBeInTheDocument();
+    // });
   });
 });
 
