@@ -161,8 +161,8 @@ class DataDownloadModal extends React.Component {
   }
 
   closeDialog() {
-    this.setState({ alertPath: '' })
-    this.props.closeModal()
+    this.setState({ alertPath: '' });
+    this.props.closeModal();
   }
 
   render() {
