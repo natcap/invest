@@ -618,12 +618,12 @@ class ReadCSVToDataframeTests(unittest.TestCase):
 
         with open(csv_file, 'w') as file_obj:
             file_obj.write(textwrap.dedent(
-                """
+                """\
                 HEADER,
                 A,
                 b
                 """
-            ).strip())
+            ))
         df = utils.read_csv_to_dataframe(csv_file)
         # header and table values should be lowercased
         self.assertEqual(df.columns[0], 'header')
@@ -802,12 +802,12 @@ class ReadCSVToDataframeTests(unittest.TestCase):
         csv_file = os.path.join(self.workspace_dir, 'csv.csv')
         with open(csv_file, 'w') as file_obj:
             file_obj.write(textwrap.dedent(
-                """
+                """\
                 header1,HEADER2,header3
                 1,2,bar
                 4,5,FOO
                 """
-            ).strip())
+            ))
 
         lookup_dict = utils.read_csv_to_dataframe(
             csv_file, 'header1').to_dict(orient='index')
@@ -822,12 +822,12 @@ class ReadCSVToDataframeTests(unittest.TestCase):
         csv_file = os.path.join(self.workspace_dir, 'csv.csv')
         with open(csv_file, 'w') as file_obj:
             file_obj.write(textwrap.dedent(
-                """
+                """\
                 header1,HEADER2,header3,missing_column,
                 1,2,3,
                 4,FOO,bar,
                 """
-            ).strip())
+            ))
 
         lookup_dict = utils.read_csv_to_dataframe(
             csv_file, 'header1',
@@ -844,12 +844,12 @@ class ReadCSVToDataframeTests(unittest.TestCase):
         csv_file = os.path.join(self.workspace_dir, 'csv.csv')
         with open(csv_file, 'w') as file_obj:
             file_obj.write(textwrap.dedent(
-                """
+                """\
                 header1;HEADER2;header3;
                 1;2;3;
                 4;FOO;bar;
                 """
-            ).strip())
+            ))
 
         lookup_dict = utils.read_csv_to_dataframe(
             csv_file, 'header1',
@@ -866,12 +866,12 @@ class ReadCSVToDataframeTests(unittest.TestCase):
         csv_file = os.path.join(self.workspace_dir, 'csv.csv')
         with open(csv_file, 'w', encoding='utf-8') as file_obj:
             file_obj.write(textwrap.dedent(
-                """
+                """\
                 header1,HEADER2,header3
                 1,2,bar
                 4,5,FOO
                 """
-            ).strip())
+            ))
         lookup_dict = utils.read_csv_to_dataframe(
             csv_file, 'header1').to_dict(orient='index')
         self.assertEqual(lookup_dict[4]['header2'], 5)
@@ -886,12 +886,12 @@ class ReadCSVToDataframeTests(unittest.TestCase):
         # writing with utf-8-sig will prepend the BOM
         with open(csv_file, 'w', encoding='utf-8-sig') as file_obj:
             file_obj.write(textwrap.dedent(
-                """
+                """\
                 header1,HEADER2,header3
                 1,2,bar
                 4,5,FOO
                 """
-            ).strip())
+            ))
         # confirm that the file has the BOM prefix
         with open(csv_file, 'rb') as file_obj:
             self.assertTrue(file_obj.read().startswith(codecs.BOM_UTF8))
@@ -910,12 +910,12 @@ class ReadCSVToDataframeTests(unittest.TestCase):
         csv_file = os.path.join(self.workspace_dir, 'csv.csv')
         with codecs.open(csv_file, 'w', encoding='iso-8859-1') as file_obj:
             file_obj.write(textwrap.dedent(
-                """
+                """\
                 header 1,HEADER 2,header 3
                 1,2,bar1
                 4,5,FOO
                 """
-            ).strip())
+            ))
 
         lookup_dict = utils.read_csv_to_dataframe(
             csv_file, 'header 1').to_dict(orient='index')
@@ -931,12 +931,12 @@ class ReadCSVToDataframeTests(unittest.TestCase):
         csv_file = os.path.join(self.workspace_dir, 'csv.csv')
         with codecs.open(csv_file, 'w', encoding='iso-8859-1') as file_obj:
             file_obj.write(textwrap.dedent(
-                """
+                """\
                 header 1,HEADER 2,header 3
                 1,2,bar1
                 4,5,FÖÖ
                 """
-            ).strip())
+            ))
         with self.assertRaises(UnicodeDecodeError):
             utils.read_csv_to_dataframe(csv_file, 'header 1')
 
@@ -965,12 +965,12 @@ class ReadCSVToDataframeTests(unittest.TestCase):
 
         with open(csv_file, 'w') as file_obj:
             file_obj.write(textwrap.dedent(
-                """
+                """\
                 HEADER,
                 A,
                 b
                 """
-            ).strip())
+            ))
         df = utils.read_csv_to_dataframe(
             csv_file, cols_to_lower=True, vals_to_lower=False)
         # header should be lowercase
@@ -987,12 +987,12 @@ class ReadCSVToDataframeTests(unittest.TestCase):
 
         with open(csv_file, 'w') as file_obj:
             file_obj.write(textwrap.dedent(
-                """
+                """\
                 HEADER,
                 A,
                 b
                 """
-            ).strip())
+            ))
         df = utils.read_csv_to_dataframe(
             csv_file, cols_to_lower=False, vals_to_lower=True)
         # header should still be uppercase
@@ -1009,12 +1009,12 @@ class ReadCSVToDataframeTests(unittest.TestCase):
         # writing with utf-8-sig will prepend the BOM
         with open(csv_file, 'w', encoding='utf-8-sig') as file_obj:
             file_obj.write(textwrap.dedent(
-                """
+                """\
                 header1,header2,header3
                 1,2,bar
                 4,5,FOO
                 """
-            ).strip())
+            ))
         # confirm that the file has the BOM prefix
         with open(csv_file, 'rb') as file_obj:
             self.assertTrue(file_obj.read().startswith(codecs.BOM_UTF8))
@@ -1033,12 +1033,12 @@ class ReadCSVToDataframeTests(unittest.TestCase):
         # encode with ISO Cyrillic, include a non-ASCII character
         with open(csv_file, 'w', encoding='iso8859_5') as file_obj:
             file_obj.write(textwrap.dedent(
-                """
+                """\
                 header,
                 fЮЮ,
                 bar
                 """
-            ).strip())
+            ))
         df = utils.read_csv_to_dataframe(csv_file, encoding='iso8859_5')
         # with the encoding specified, special characters should work
         # and be lowercased
@@ -1053,12 +1053,12 @@ class ReadCSVToDataframeTests(unittest.TestCase):
 
         with open(csv_file, 'w') as file_obj:
             file_obj.write(textwrap.dedent(
-                """
+                """\
                 h1;h2;h3
                 a;b;c
                 d;e;f
                 """
-            ).strip())
+            ))
         # using sep=None with the default engine='python',
         # it should infer what the separator is
         df = utils.read_csv_to_dataframe(csv_file, sep=None)
@@ -1079,12 +1079,12 @@ class ReadCSVToDataframeTests(unittest.TestCase):
 
         with open(csv_file, 'w') as file_obj:
             file_obj.write(textwrap.dedent(
-                """
+                """\
                 1,2,3
                 a,b,c
                 d,e,f
                 """
-            ).strip())
+            ))
         df = utils.read_csv_to_dataframe(csv_file)
         # expect headers to be strings
         self.assertEqual(df.columns[0], '1')
@@ -1120,14 +1120,14 @@ class ReadCSVToDataframeTests(unittest.TestCase):
         csv_file = os.path.join(self.workspace_dir, 'csv.csv')
         with open(csv_file, 'w') as file_obj:
             file_obj.write(textwrap.dedent(
-                f"""
+                f"""\
                 bar,path
                 1,foo.txt
                 2,foo/bar.txt
                 3,foo\\bar.txt
                 4,{self.workspace_dir}/foo.txt
                 """
-            ).strip())
+            ))
         df = utils.read_csv_to_dataframe(
             csv_file, expand_path_cols=['path'], vals_to_lower=False)
         self.assertEqual(
