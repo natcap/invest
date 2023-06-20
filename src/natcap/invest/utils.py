@@ -646,7 +646,7 @@ def read_csv_to_dataframe(
             path, index_col=False, sep=sep, engine=engine, encoding=encoding, **kwargs)
     except UnicodeDecodeError as error:
         LOGGER.error(
-            f'{path} must be encoded as UTF-8 or ASCII')
+            f'The file {path} must be encoded as UTF-8 or ASCII')
         raise error
 
     # strip whitespace from column names
