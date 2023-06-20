@@ -88,6 +88,10 @@ Unreleased Changes
     * Removed the GDAL cache size limit on this model, which means that, by
       default, the model will use up to 5% of installed memory.
       https://github.com/natcap/invest/issues/1320
+    * Monthly quick flow nodata values will now be preserved instead of being
+      set to 0. The old behavior was not well documented and caused some
+      confusion when nodata pixels did not line up. It's safer not to fill in
+      unknown data. (`#1317 <https://github.com/natcap/invest/issues/1317>`_)
 
 3.13.0 (2023-03-17)
 -------------------
