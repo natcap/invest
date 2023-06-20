@@ -598,8 +598,8 @@ def expand_path(path, base_path):
 
 
 def read_csv_to_dataframe(
-        path, index_col=False, usecols=None, cols_to_lower=True,
-        vals_to_lower=True, expand_path_cols=None, sep=None, engine='python',
+        path, index_col=False, usecols=None, convert_cols_to_lower=True,
+        convert_vals_to_lower=True, expand_path_cols=None, sep=None, engine='python',
         encoding='utf-8-sig', **kwargs):
     """Return a dataframe representation of the CSV.
 
@@ -614,14 +614,14 @@ def read_csv_to_dataframe(
     Args:
         path (str): path to a CSV file
         index_col (str): name of column to use as the dataframe index. If
-            ``cols_to_lower``, this column name and the dataframe column names
+            ``convert_cols_to_lower``, this column name and the dataframe column names
             will be lowercased before they are compared. If ``usecols``
             is defined, this must be included in ``usecols``.
         usecols (list(str)): list of column names to subset from the dataframe.
-            If ``cols_to_lower``, these names and the dataframe column names
+            If ``convert_cols_to_lower``, these names and the dataframe column names
             will be lowercased before they are compared.
-        cols_to_lower (bool): if True, convert all column names to lowercase
-        vals_to_lower (bool): if True, convert all table values to lowercase
+        convert_cols_to_lower (bool): if True, convert all column names to lowercase
+        convert_vals_to_lower (bool): if True, convert all table values to lowercase
         expand_path_cols (list[string])): if provided, a list of the names of
             columns that contain paths to expand. Any relative paths in these
             columns will be expanded to absolute paths. It is assumed that
@@ -655,7 +655,7 @@ def read_csv_to_dataframe(
     dataframe.columns = dataframe.columns.str.strip()
 
     # convert column names to lowercase
-    if cols_to_lower:
+    if convert_cols_to_lower:
         dataframe.columns = dataframe.columns.str.lower()
         # if 'to_lower`, case handling is done before trying to access the data.
         # the columns are stripped of leading/trailing whitespace in
@@ -684,7 +684,7 @@ def read_csv_to_dataframe(
             raise
 
     # convert table values to lowercase
-    if vals_to_lower:
+    if convert_vals_to_lower:
         dataframe = dataframe.applymap(
             lambda x: x.lower() if isinstance(x, str) else x)
 

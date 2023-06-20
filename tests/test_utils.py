@@ -831,7 +831,7 @@ class ReadCSVToDataframeTests(unittest.TestCase):
 
         lookup_dict = utils.read_csv_to_dataframe(
             csv_file, 'header1',
-            cols_to_lower=False, vals_to_lower=False).to_dict(orient='index')
+            convert_cols_to_lower=False, convert_vals_to_lower=False).to_dict(orient='index')
 
         self.assertEqual(lookup_dict[4]['HEADER2'], 'FOO')
         self.assertEqual(lookup_dict[4]['header3'], 'bar')
@@ -853,7 +853,7 @@ class ReadCSVToDataframeTests(unittest.TestCase):
 
         lookup_dict = utils.read_csv_to_dataframe(
             csv_file, 'header1',
-            cols_to_lower=False, vals_to_lower=False).to_dict(orient='index')
+            convert_cols_to_lower=False, convert_vals_to_lower=False).to_dict(orient='index')
 
         self.assertEqual(lookup_dict[4]['HEADER2'], 'FOO')
         self.assertEqual(lookup_dict[4]['header3'], 'bar')
@@ -957,7 +957,7 @@ class ReadCSVToDataframeTests(unittest.TestCase):
             f'{self.workspace_dir}{os.sep}foo.txt',
             utils.expand_path(f'{self.workspace_dir}{os.sep}foo.txt', base_path))
 
-    def test_cols_to_lower(self):
+    def test_convert_cols_to_lower(self):
         """utils: test that to_lower=True makes headers lowercase"""
         from natcap.invest import utils
 
@@ -972,14 +972,14 @@ class ReadCSVToDataframeTests(unittest.TestCase):
                 """
             ))
         df = utils.read_csv_to_dataframe(
-            csv_file, cols_to_lower=True, vals_to_lower=False)
+            csv_file, convert_cols_to_lower=True, convert_vals_to_lower=False)
         # header should be lowercase
         self.assertEqual(df.columns[0], 'header')
         # case of table values shouldn't change
         self.assertEqual(df['header'][0], 'A')
         self.assertEqual(df['header'][1], 'b')
 
-    def test_vals_to_lower(self):
+    def test_convert_vals_to_lower(self):
         """utils: test that to_lower=True makes headers lowercase"""
         from natcap.invest import utils
 
@@ -994,7 +994,7 @@ class ReadCSVToDataframeTests(unittest.TestCase):
                 """
             ))
         df = utils.read_csv_to_dataframe(
-            csv_file, cols_to_lower=False, vals_to_lower=True)
+            csv_file, convert_cols_to_lower=False, convert_vals_to_lower=True)
         # header should still be uppercase
         self.assertEqual(df.columns[0], 'HEADER')
         # case of table values should change
@@ -1100,7 +1100,7 @@ class ReadCSVToDataframeTests(unittest.TestCase):
             file_obj.write(" Col1, Col2 ,Col3 \n")
             file_obj.write(" val1, val2 ,val3 \n")
             file_obj.write(" , 2 1 ,  ")
-        df = utils.read_csv_to_dataframe(csv_file, cols_to_lower=False)
+        df = utils.read_csv_to_dataframe(csv_file, convert_cols_to_lower=False)
         # header should have no leading / trailing whitespace
         self.assertEqual(df.columns[0], 'Col1')
         self.assertEqual(df.columns[1], 'Col2')
@@ -1129,7 +1129,7 @@ class ReadCSVToDataframeTests(unittest.TestCase):
                 """
             ))
         df = utils.read_csv_to_dataframe(
-            csv_file, expand_path_cols=['path'], vals_to_lower=False)
+            csv_file, expand_path_cols=['path'], convert_vals_to_lower=False)
         self.assertEqual(
             f'{self.workspace_dir}{os.sep}foo.txt',
             df['path'][0])
