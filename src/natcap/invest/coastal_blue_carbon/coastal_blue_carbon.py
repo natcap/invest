@@ -1987,7 +1987,7 @@ def _read_transition_matrix(transition_csv_path, biophysical_dict):
         the pool for the landcover transition.
     """
     table = utils.read_csv_to_dataframe(
-        transition_csv_path, cols_to_lower=False, vals_to_lower=False)
+        transition_csv_path, convert_cols_to_lower=False, convert_vals_to_lower=False)
 
     lulc_class_to_lucode = {}
     max_lucode = 0
@@ -2031,6 +2031,10 @@ def _read_transition_matrix(transition_csv_path, biophysical_dict):
 
         # Strip any whitespace to eliminate leading/trailing whitespace
         row = row.str.strip()
+
+        # skip rows starting with a blank cell, these are part of the legend
+        if not row['lulc-class']:
+            continue
 
         try:
             from_colname = str(row['lulc-class']).lower()
@@ -2241,7 +2245,7 @@ def _extract_snapshots_from_table(csv_path):
 
     """
     table = utils.read_csv_to_dataframe(
-        csv_path, vals_to_lower=False, expand_path_cols=['raster_path'])
+        csv_path, convert_vals_to_lower=False, expand_path_cols=['raster_path'])
 
     output_dict = {}
     table.set_index("snapshot_year", drop=False, inplace=True)
