@@ -151,10 +151,10 @@ class TestPreprocessor(unittest.TestCase):
                        pprint.pformat(non_suffixed_files)))
 
         expected_landcover_codes = set(range(0, 24))
-        found_landcover_codes = set(utils.read_csv_to_dataframe(
+        found_landcover_codes = set(utils.build_lookup_from_csv(
             os.path.join(outputs_dir,
                          'carbon_biophysical_table_template_150225.csv'),
-            'code').to_dict(orient='index').keys())
+            'code').keys())
         self.assertEqual(expected_landcover_codes, found_landcover_codes)
 
     def test_transition_table(self):
@@ -188,8 +188,8 @@ class TestPreprocessor(unittest.TestCase):
             lulc_csv.write('0,mangrove,True\n')
             lulc_csv.write('1,parking lot,False\n')
 
-        landcover_table = utils.read_csv_to_dataframe(
-            landcover_table_path, 'code').to_dict(orient='index')
+        landcover_table = utils.build_lookup_from_csv(
+            landcover_table_path, 'code')
         target_table_path = os.path.join(self.workspace_dir,
                                          'transition_table.csv')
 
@@ -203,8 +203,8 @@ class TestPreprocessor(unittest.TestCase):
                       str(context.exception))
 
         # Re-load the landcover table
-        landcover_table = utils.read_csv_to_dataframe(
-            landcover_table_path, 'code').to_dict(orient='index')
+        landcover_table = utils.build_lookup_from_csv(
+            landcover_table_path, 'code')
         preprocessor._create_transition_table(
             landcover_table, [filename_a, filename_b], target_table_path)
 
@@ -358,6 +358,7 @@ class TestCBC2(unittest.TestCase):
             transition_csv.write('b,,NCC,accum\n')
             transition_csv.write('c,accum,,NCC\n')
             transition_csv.write(',,,\n')
+            transition_csv.write(',legend,,')  # simulate legend
 
         disturbance_matrices, accumulation_matrices = (
              coastal_blue_carbon._read_transition_matrix(

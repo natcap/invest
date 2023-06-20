@@ -700,7 +700,7 @@ def execute(args):
     # this model data.
     nutrient_table = utils.read_csv_to_dataframe(
         os.path.join(args['model_data_path'], 'crop_nutrient.csv'),
-        'crop', cols_to_lower=False, vals_to_lower=False
+        'crop', convert_cols_to_lower=False, convert_vals_to_lower=False
         ).to_dict(orient='index')
     result_table_path = os.path.join(
         output_dir, 'result_table%s.csv' % file_suffix)

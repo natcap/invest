@@ -1134,7 +1134,7 @@ def execute(args):
 
         # Read the grid points csv, and convert it to land and grid dictionary
         grid_land_df = utils.read_csv_to_dataframe(
-            args['grid_points_path'], vals_to_lower=False)
+            args['grid_points_path'], convert_vals_to_lower=False)
 
         # Make separate dataframes based on 'TYPE'
         grid_df = grid_land_df.loc[(
@@ -1974,7 +1974,7 @@ def _read_csv_wind_data(wind_data_path, hub_height):
 
     """
     wind_point_df = utils.read_csv_to_dataframe(
-        wind_data_path, cols_to_lower=False, vals_to_lower=False)
+        wind_data_path, convert_cols_to_lower=False, convert_vals_to_lower=False)
 
     # Calculate scale value at new hub height given reference values.
     # See equation 3 in users guide
