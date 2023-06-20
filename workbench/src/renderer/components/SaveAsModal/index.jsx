@@ -30,13 +30,18 @@ class SaveAsModal extends React.Component {
   }
 
   async browseSaveFile(event) {
-    const { modelName, saveJsonFile, saveDatastack, savePythonScript } = this.props;
+    const {
+      modelName,
+      saveJsonFile,
+      saveDatastack,
+      savePythonScript
+    } = this.props;
     const { datastackType, relativePaths } = this.state;
     const defaultTargetPaths = {
       json: `invest_${modelName}_args.json`,
       tgz: `invest_${modelName}_datastack.tgz`,
       py: `execute_invest_${modelName}.py`,
-    }
+    };
 
     const data = await ipcRenderer.invoke(
       ipcMainChannels.SHOW_SAVE_DIALOG,

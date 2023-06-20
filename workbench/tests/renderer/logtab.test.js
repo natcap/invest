@@ -80,7 +80,7 @@ ValueError: Values in the LULC raster were found that are not represented under 
     fs.rmSync(workspace, { recursive: true, force: true });
   });
 
-  test.only('Text in logfile is rendered', async () => {
+  test('Text in logfile is rendered', async () => {
     const { findByText } = renderLogTab(logfilePath);
 
     const log = await findByText(new RegExp(uniqueText));
