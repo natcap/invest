@@ -379,7 +379,7 @@ class DatastackArchiveTests(unittest.TestCase):
 
         spatial_csv_dict = utils.read_csv_to_dataframe(
             archive_params['spatial_table'], 'ID',
-            cols_to_lower=True, vals_to_lower=True).to_dict(orient='index')
+            convert_cols_to_lower=True, convert_vals_to_lower=True).to_dict(orient='index')
         spatial_csv_dir = os.path.dirname(archive_params['spatial_table'])
         numpy.testing.assert_allclose(
             pygeoprocessing.raster_to_numpy_array(
