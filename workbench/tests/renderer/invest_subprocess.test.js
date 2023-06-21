@@ -6,7 +6,7 @@ import Stream from 'stream';
 
 import React from 'react';
 import {
-  render, waitFor, within
+  render, waitFor, within, act
 } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
@@ -143,18 +143,20 @@ describe('InVEST subprocess testing', () => {
     const carbon = await findByRole(
       'button', { name: MOCK_MODEL_TITLE }
     );
-    userEvent.click(carbon);
+    await userEvent.click(carbon);
     const workspaceInput = await findByLabelText(
       `${spec.args.workspace_dir.name}`
     );
-    userEvent.type(workspaceInput, fakeWorkspace);
+    await userEvent.type(workspaceInput, fakeWorkspace);
     const execute = await findByRole('button', { name: /Run/ });
-    userEvent.click(execute);
+    await userEvent.click(execute);
     await waitFor(() => expect(execute).toBeDisabled());
 
-    // logfile signal on stdout listener is how app knows the process started
-    mockInvestProc.stdout.push(stdOutText);
-    mockInvestProc.stdout.push(stdOutLogfileSignal);
+    act(() => {
+      // logfile signal on stdout listener is how app knows the process started
+      mockInvestProc.stdout.push(stdOutText);
+      mockInvestProc.stdout.push(stdOutLogfileSignal);
+    });
     const logTab = await findByText('Log');
     await waitFor(() => {
       expect(logTab.classList.contains('active')).toBeTruthy();
@@ -164,16 +166,18 @@ describe('InVEST subprocess testing', () => {
     expect(queryByText('Model Complete')).toBeNull();
     expect(queryByText('Open Workspace')).toBeNull();
 
-    mockInvestProc.emit('exit', 0); // 0 - exit w/o error
-    expect(await findByText('Model Complete')).toBeInTheDocument();
+    act(() => {
+      mockInvestProc.emit('exit', 0); // 0 - exit w/o error
+    });
+    expect(await findByRole('alert')).toHaveTextContent('Model Complete');
     expect(await findByText('Open Workspace')).toBeEnabled();
-    expect(execute).toBeEnabled();
+    expect(await findByText(/\u2705/)).toBeInTheDocument();
+    await waitFor(() => expect(execute).toBeEnabled());
 
     // A recent job card should be rendered
-    await getByRole('button', { name: 'InVEST' }).click();
-    const homeTab = await getByRole('tabpanel', { name: 'home tab' });
-    const cardText = await within(homeTab)
-      .findByText(fakeWorkspace);
+    await userEvent.click(getByRole('button', { name: 'InVEST' }));
+    const homeTab = getByRole('tabpanel', { name: 'home tab' });
+    const cardText = await within(homeTab).findByText(fakeWorkspace);
     expect(cardText).toBeInTheDocument();
   });
 
@@ -189,18 +193,20 @@ describe('InVEST subprocess testing', () => {
     const carbon = await findByRole(
       'button', { name: MOCK_MODEL_TITLE }
     );
-    userEvent.click(carbon);
+    await userEvent.click(carbon);
     const workspaceInput = await findByLabelText(
       `${spec.args.workspace_dir.name}`
     );
-    userEvent.type(workspaceInput, fakeWorkspace);
+    await userEvent.type(workspaceInput, fakeWorkspace);
 
     const execute = await findByRole('button', { name: /Run/ });
-    userEvent.click(execute);
+    await userEvent.click(execute);
 
-    mockInvestProc.stdout.push(stdOutText);
-    mockInvestProc.stdout.push(stdOutLogfileSignal);
-    mockInvestProc.stderr.push('some error');
+    act(() => {
+      mockInvestProc.stdout.push(stdOutText);
+      mockInvestProc.stdout.push(stdOutLogfileSignal);
+      mockInvestProc.stderr.push('some error');
+    });
     const logTab = await findByText('Log');
     await waitFor(() => {
       expect(logTab.classList.contains('active')).toBeTruthy();
@@ -209,7 +215,9 @@ describe('InVEST subprocess testing', () => {
     expect(await findByText(stdOutText, { exact: false }))
       .toBeInTheDocument();
 
-    mockInvestProc.emit('exit', 1); // 1 - exit w/ error
+    act(() => {
+      mockInvestProc.emit('exit', 1); // 1 - exit w/ error
+    });
 
     const alert = await findByRole('alert');
     await waitFor(() => {
@@ -220,7 +228,7 @@ describe('InVEST subprocess testing', () => {
       .toBeEnabled();
 
     // A recent job card should be rendered
-    await getByRole('button', { name: 'InVEST' }).click();
+    await userEvent.click(getByRole('button', { name: 'InVEST' }));
     const homeTab = await getByRole('tabpanel', { name: 'home tab' });
     const cardText = await within(homeTab)
       .findByText(fakeWorkspace);
@@ -240,20 +248,24 @@ describe('InVEST subprocess testing', () => {
     const carbon = await findByRole(
       'button', { name: MOCK_MODEL_TITLE }
     );
-    userEvent.click(carbon);
+    await userEvent.click(carbon);
     const workspaceInput = await findByLabelText(
       `${spec.args.workspace_dir.name}`
     );
-    userEvent.type(workspaceInput, fakeWorkspace);
+    await userEvent.type(workspaceInput, fakeWorkspace);
 
     const execute = await findByRole('button', { name: /Run/ });
-    userEvent.click(execute);
+    await userEvent.click(execute);
 
-    // stdout listener is how the app knows the process started
-    // Canel button only appears after this signal.
-    mockInvestProc.stdout.push(stdOutText);
+    act(() => {
+      // stdout listener is how the app knows the process started
+      // Canel button only appears after this signal.
+      mockInvestProc.stdout.push(stdOutText);
+    });
     expect(queryByText('Cancel Run')).toBeNull();
-    mockInvestProc.stdout.push(stdOutLogfileSignal);
+    act(() => {
+      mockInvestProc.stdout.push(stdOutLogfileSignal);
+    });
     const logTab = await findByText('Log');
     await waitFor(() => {
       expect(logTab.classList.contains('active')).toBeTruthy();
@@ -262,14 +274,14 @@ describe('InVEST subprocess testing', () => {
       .toBeInTheDocument();
 
     const cancelButton = await findByText('Cancel Run');
-    userEvent.click(cancelButton);
+    await userEvent.click(cancelButton);
     expect(await findByText('Open Workspace'))
       .toBeEnabled();
     expect(await findByRole('alert'))
       .toHaveTextContent('Run Canceled');
 
     // A recent job card should be rendered
-    await getByRole('button', { name: 'InVEST' }).click();
+    await userEvent.click(getByRole('button', { name: 'InVEST' }));
     const homeTab = await getByRole('tabpanel', { name: 'home tab' });
     const cardText = await within(homeTab)
       .findByText(fakeWorkspace);
@@ -287,18 +299,20 @@ describe('InVEST subprocess testing', () => {
     const carbon = await findByRole(
       'button', { name: MOCK_MODEL_TITLE }
     );
-    userEvent.click(carbon);
+    await userEvent.click(carbon);
     const workspaceInput = await findByLabelText(
       `${spec.args.workspace_dir.name}`
     );
-    userEvent.type(workspaceInput, fakeWorkspace);
+    await userEvent.type(workspaceInput, fakeWorkspace);
 
     const execute = await findByRole('button', { name: /Run/ });
-    userEvent.click(execute);
+    await userEvent.click(execute);
 
-    // stdout listener is how the app knows the process started
-    mockInvestProc.stdout.push(stdOutText);
-    mockInvestProc.stdout.push(stdOutLogfileSignal);
+    act(() => {
+      // stdout listener is how the app knows the process started
+      mockInvestProc.stdout.push(stdOutText);
+      mockInvestProc.stdout.push(stdOutLogfileSignal);
+    });
     let logTab = await findByText('Log');
     await waitFor(() => {
       expect(logTab.classList.contains('active')).toBeTruthy();
@@ -307,7 +321,7 @@ describe('InVEST subprocess testing', () => {
       .toBeInTheDocument();
 
     const cancelButton = await findByText('Cancel Run');
-    userEvent.click(cancelButton);
+    await userEvent.click(cancelButton);
     expect(await findByText('Open Workspace'))
       .toBeEnabled();
 
@@ -316,20 +330,24 @@ describe('InVEST subprocess testing', () => {
     // Now click away from Log, re-run, and expect the switch
     // back to the new log
     const setupTab = await findByText('Setup');
-    userEvent.click(setupTab);
-    userEvent.click(execute);
+    await userEvent.click(setupTab);
+    await userEvent.click(execute);
     const newStdOutText = 'this is new stdout text';
-    anotherInvestProc.stdout.push(newStdOutText);
-    anotherInvestProc.stdout.push(stdOutLogfileSignal);
+    act(() => {
+      anotherInvestProc.stdout.push(newStdOutText);
+      anotherInvestProc.stdout.push(stdOutLogfileSignal);
+    });
     logTab = await findByText('Log');
     await waitFor(() => {
       expect(logTab.classList.contains('active')).toBeTruthy();
     });
     expect(await findByText(newStdOutText, { exact: false }))
       .toBeInTheDocument();
-    anotherInvestProc.emit('exit', 0);
-    // Give it time to run the listener before unmounting.
-    await new Promise((resolve) => setTimeout(resolve, 300));
+    act(() => {
+      anotherInvestProc.emit('exit', 0);
+    });
+    expect(await findByText('Open Workspace'))
+      .toBeEnabled();
   });
 
   test('Load Recent run & re-run it - expect new log display', async () => {
@@ -355,8 +373,8 @@ describe('InVEST subprocess testing', () => {
     const recentJobCard = await findByText(
       argsValues.workspace_dir
     );
-    userEvent.click(recentJobCard);
-    userEvent.click(await findByText('Log'));
+    await userEvent.click(recentJobCard);
+    await userEvent.click(await findByText('Log'));
     // We don't need to have a real logfile in order to test that LogTab
     // is trying to read from a file instead of from stdout
     expect(await findByText(/Logfile is missing/)).toBeInTheDocument();
@@ -364,11 +382,13 @@ describe('InVEST subprocess testing', () => {
     // Now re-run from the same InvestTab component and expect
     // LogTab is displaying the new invest process stdout
     const setupTab = await findByText('Setup');
-    userEvent.click(setupTab);
+    await userEvent.click(setupTab);
     const execute = await findByRole('button', { name: /Run/ });
-    userEvent.click(execute);
-    mockInvestProc.stdout.push(stdOutText);
-    mockInvestProc.stdout.push(stdOutLogfileSignal);
+    await userEvent.click(execute);
+    act(() => {
+      mockInvestProc.stdout.push(stdOutText);
+      mockInvestProc.stdout.push(stdOutLogfileSignal);
+    });
     const logTab = await findByText('Log');
     await waitFor(() => {
       expect(logTab.classList.contains('active')).toBeTruthy();
@@ -376,8 +396,10 @@ describe('InVEST subprocess testing', () => {
     expect(await findByText(stdOutText, { exact: false }))
       .toBeInTheDocument();
     expect(queryByText('Logfile is missing')).toBeNull();
-    mockInvestProc.emit('exit', 0);
-    // Give it time to run the listener before unmounting.
-    await new Promise((resolve) => setTimeout(resolve, 300));
+    act(() => {
+      mockInvestProc.emit('exit', 0);
+    });
+    expect(await findByText('Open Workspace'))
+      .toBeEnabled();
   });
 });
