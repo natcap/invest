@@ -1,5 +1,5 @@
 import React from 'react';
-import ReactDom from 'react-dom';
+import { createRoot } from 'react-dom/client';
 
 import App from './app';
 import './i18n/i18n';
@@ -11,12 +11,12 @@ const { ipcRenderer } = window.Workbench.electron;
 const isFirstRun = await ipcRenderer.invoke(ipcMainChannels.IS_FIRST_RUN);
 const nCPU = await ipcRenderer.invoke(ipcMainChannels.GET_N_CPUS);
 
-ReactDom.render(
+const root = createRoot(document.getElementById('App'));
+root.render(
   <ErrorBoundary>
     <App
       isFirstRun={isFirstRun}
       nCPU={nCPU}
     />
-  </ErrorBoundary>,
-  document.getElementById('App')
+  </ErrorBoundary>
 );
