@@ -177,15 +177,6 @@ export function main() {
   }
 
   app.on('ready', async () => {
-    if (ELECTRON_DEV_MODE) {
-      const {
-        default: installExtension,
-        REACT_DEVELOPER_TOOLS,
-      } = require('electron-devtools-installer');
-      await installExtension(REACT_DEVELOPER_TOOLS, {
-        loadExtensionOptions: { allowFileAccess: true },
-      });
-    }
     createWindow();
   });
   app.on('activate', () => {

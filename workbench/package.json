@@ -24,8 +24,18 @@
   },
   "jest": {
     "reporters": [
-      ["github-actions", { "silent": false }],
-      ["default", {"summaryThreshold": 2}]
+      [
+        "github-actions",
+        {
+          "silent": false
+        }
+      ],
+      [
+        "default",
+        {
+          "summaryThreshold": 2
+        }
+      ]
     ],
     "verbose": true,
     "collectCoverage": true,
@@ -67,7 +77,6 @@
     "cross-env": "^7.0.3",
     "electron": "^25.1.0",
     "electron-builder": "^23.0.3",
-    "electron-devtools-installer": "^3.2.0",
     "eslint": "^8.35.0",
     "eslint-config-airbnb": "^19.0.4",
     "eslint-plugin-import": "^2.22.1",
@@ -84,7 +93,6 @@
     "puppeteer-core": "^20.6.0",
     "react": "^18.2.0",
     "react-bootstrap": "^1.5.2",
-    "react-devtools": "^4.27.8",
     "react-dom": "^18.2.0",
     "react-icons": "^4.9.0",
     "rimraf": "^3.0.2",
