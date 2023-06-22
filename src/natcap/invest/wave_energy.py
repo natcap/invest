@@ -777,7 +777,7 @@ def execute(args):
     if 'land_gridPts_path' in args:
         # Create a grid_land_data dataframe for later use in valuation
         grid_land_data = utils.read_csv_to_dataframe(
-            args['land_gridPts_path'], to_lower=True)
+            args['land_gridPts_path'], convert_vals_to_lower=False)
         required_col_names = ['id', 'type', 'lat', 'long', 'location']
         grid_land_data, missing_grid_land_fields = _get_validated_dataframe(
             args['land_gridPts_path'], required_col_names)
@@ -1425,7 +1425,7 @@ def _get_validated_dataframe(csv_path, field_list):
         missing_fields (list): missing fields as string format in dataframe.
 
     """
-    dataframe = utils.read_csv_to_dataframe(csv_path, to_lower=True)
+    dataframe = utils.read_csv_to_dataframe(csv_path, convert_vals_to_lower=False)
     missing_fields = []
     for field in field_list:
         if field not in dataframe.columns:
@@ -1670,7 +1670,7 @@ def _machine_csv_to_dict(machine_csv_path):
     machine_dict = {}
     # make columns and indexes lowercased and strip whitespace
     machine_data = utils.read_csv_to_dataframe(
-        machine_csv_path, to_lower=True, index_col=0)
+        machine_csv_path, 'name', convert_vals_to_lower=False)
     machine_data.index = machine_data.index.str.strip()
     machine_data.index = machine_data.index.str.lower()
 
