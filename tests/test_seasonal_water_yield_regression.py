@@ -1127,6 +1127,42 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
             pygeoprocessing.raster_to_numpy_array(output_path),
             expected_quickflow_array, atol=1e-5)
 
+    def test_calculate_annual_qfi_different_nodata_areas(self):
+        """Test with qf rasters with different areas of nodata."""
+        from natcap.invest.seasonal_water_yield import seasonal_water_yield
+        qf_array_1 = numpy.array([
+            [10, 10],
+            [10, -1]], dtype=numpy.float32)
+        qf_array_2 = numpy.array([
+            [10, 10],
+            [-1, 10]], dtype=numpy.float32)
+        qf_array_3 = numpy.array([
+            [-1, 10],
+            [10, 10]], dtype=numpy.float32)
+
+        qf_1_path = os.path.join(self.workspace_dir, 'qf_1.tif')
+        qf_2_path = os.path.join(self.workspace_dir, 'qf_2.tif')
+        qf_3_path = os.path.join(self.workspace_dir, 'qf_3.tif')
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(26910)  # UTM Zone 10N
+        project_wkt = srs.ExportToWkt()
+        output_path = os.path.join(self.workspace_dir, 'qf_sum.tif')
+
+        # write all the test arrays to raster files
+        for array, path in [(qf_array_1, qf_1_path),
+                            (qf_array_2, qf_2_path),
+                            (qf_array_3, qf_3_path)]:
+            pygeoprocessing.numpy_array_to_raster(
+                array, -1, (1, -1), (1180000, 690000), project_wkt, path)
+        seasonal_water_yield._calculate_annual_qfi(
+            [qf_1_path, qf_2_path, qf_3_path], output_path)
+        numpy.testing.assert_allclose(
+            pygeoprocessing.raster_to_numpy_array(output_path),
+            numpy.array([
+                [-1, 30],
+                [-1, -1]], dtype=numpy.float32))
+
     def test_local_recharge_undefined_nodata(self):
         """Test `calculate_local_recharge` with undefined nodata values"""
         from natcap.invest.seasonal_water_yield import \

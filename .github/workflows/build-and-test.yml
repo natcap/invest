@@ -310,6 +310,7 @@ jobs:
         run: |
           choco install zip unzip
           $env:PATH += ";C:\ProgramData\chocolatey\bin"
+          Import-Module $env:ChocolateyInstall\helpers\chocolateyProfile.psm1
           refreshenv  # Choco-provided command to reload environment variables
 
       - name: Build userguide

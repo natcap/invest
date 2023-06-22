@@ -21,8 +21,6 @@ from ..model_metadata import MODEL_METADATA
 from ..unit_registry import u
 from . import seasonal_water_yield_core
 
-gdal.SetCacheMax(2**26)
-
 LOGGER = logging.getLogger(__name__)
 
 TARGET_NODATA = -1
@@ -1017,13 +1015,16 @@ def _calculate_annual_qfi(qfm_path_list, target_qf_path):
 
     def qfi_sum_op(*qf_values):
         """Sum the monthly qfis."""
-        qf_sum = numpy.zeros(qf_values[0].shape)
-        valid_mask = ~utils.array_equals_nodata(qf_values[0], qf_nodata)
-        valid_qf_sum = qf_sum[valid_mask]
-        for index in range(len(qf_values)):
-            valid_qf_sum += qf_values[index][valid_mask]
-        qf_sum[:] = qf_nodata
-        qf_sum[valid_mask] = valid_qf_sum
+
+        # only calculate the sum where data is available for all 12 months
+        valid_mask = numpy.full(qf_values[0].shape, True)
+        for qf_array in qf_values:
+            valid_mask &= ~utils.array_equals_nodata(qf_array, qf_nodata)
+
+        qf_sum = numpy.full(qf_values[0].shape, qf_nodata, dtype=numpy.float32)
+        qf_sum[valid_mask] = 0
+        for qf_array in qf_values:
+            qf_sum[valid_mask] += qf_array[valid_mask]
         return qf_sum
 
     pygeoprocessing.raster_calculator(
@@ -1173,11 +1174,6 @@ def _calculate_monthly_quick_flow(precip_path, n_events_path, stream_path,
         # case 3d: set any negative values to 0
         qf_im[qf_im < 0] = 0
 
-        # this handles some user cases where they don't have data defined on
-        # their landcover raster. It otherwise crashes later with some NaNs.
-        # more intermediate outputs with nodata values guaranteed to be defined
-        qf_im[utils.array_equals_nodata(qf_im, TARGET_NODATA) &
-              ~utils.array_equals_nodata(stream, stream_nodata)] = 0
         return qf_im
 
     pygeoprocessing.raster_calculator(
