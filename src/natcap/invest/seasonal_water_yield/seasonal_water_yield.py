@@ -1093,85 +1093,85 @@ def _calculate_monthly_quick_flow(precip_path, n_events_path, stream_path,
         #       s_i^2 / a_im * exp(0.8 * s_i / a_im) * E1(s_i / a_im)
         #    )
         #
-        # When evaluating case 3, there are a couple of edge cases related
-        # to the last term of the quickflow equation:
+        # When evaluating the QF equation, there are a few edge cases:
         #
-        #       s_i^2 / a_im * exp(0.8 * s_i / a_im) * E1(s_i / a_im)
+        # 3a. Where s_i = 0, you get NaN and a warning from numpy because
+        #     E1(0 / a_im) = infinity. In this case, per conversation with
+        #     Rafa, the final term of the equation should evaluate to 0, and
+        #     the equation can be simplified to QF_im = P_im
+        #     (which makes sense because if s_i = 0, no water is retained).
         #
-        # 3a. Where s_i = 0, this term should equal 0 (per conversation with
-        #     Rafa). But, evaluating in numpy you get NaN and a warning
-        #     because E1(0 / a_im) = infinity.
-        #
-        #     Solution: Preemptively set the result to 0 where s_i = 0 in
+        #     Solution: Preemptively set QF_im equal to P_im where s_i = 0 in
         #     order to avoid calculations with infinity.
         #
-        # 3b. When the ratio s_i / a_im becomes large, this term approaches 0.
+        # 3b. When the ratio s_i / a_im becomes large, QF approaches 0.
         #     [NOTE: I don't know how to prove this mathematically, but it
         #     holds true when I tested with reasonable values of s_i and a_im].
         #     The exp() term becomes very large, while the E1() term becomes
-        #     very small. When (s_i / a_im) > 880 ish, exp(0.8 * s_i / a_im)
-        #     will overflow and round up to infinity. Meanwhile, E1(s_i / a_im)
-        #     will become so small that it rounds down to 0.
+        #     very small.
         #
-        #     Solution: Catch the overflow warning, and set the term to 0
-        #     anywhere that overflow happens.
+        #     Per conversation with Rafa and Lisa, large s_i / a_im ratios
+        #     shouldn't happen often with real world data. But if they did, it
+        #     would be a situation where there is very little precipitation
+        #     spread out over relatively many rain events and the soil is very
+        #     absorbent, so logically, QF should be effectively zero.
         #
-        # 3c. Otherwise, evaluate the term as usual.
+        #     To avoid overflow, we set a threshold of 100 for the s_i / a_im
+        #     ratio. Where s_i / a_im > 100, we set QF to 0. 100 was chosen
+        #     because it's a nice whole number that gets us close to the
+        #     float32 max without surpassing it (exp(0.8*100) = 5e34). When
+        #     s_i / a_im = 100, the actual result of the QF equation is on the
+        #     order of 1e-6, so it should be rounded down to 0 anyway.
+        #
+        # 3c. Otherwise, evaluate the QF equation as usual.
+        #
+        # 3d. With certain inputs [for example: n_m = 10, CN = 50, p_im = 30],
+        #     it's possible that the QF equation evaluates to a very small
+        #     negative value. Per conversation with Lisa and Rafa, this is an
+        #     edge case that the equation was not designed for. Negative QF
+        #     doesn't make sense, so we set any negative QF values to 0.
 
         # qf_im is the quickflow at pixel i on month m
         qf_im = numpy.full(p_im.shape, TARGET_NODATA, dtype=numpy.float32)
 
-        # case 1: there is no precipitation where both p_im and n_m are
-        # defined and equal to zero.
-        case_1_mask = ~precip_mask
-        qf_im[case_1_mask] = 0
+        # case 1: where there is no precipitation
+        qf_im[~precip_mask] = 0
 
-        # case 2: there is precipitation where both p_im and n_m are
-        # defined and greater than zero, and we're on a stream.
-        case_2_mask = precip_mask & stream_mask
-        qf_im[case_2_mask] = p_im[case_2_mask]
+        # case 2: where there is precipitation and we're on a stream
+        qf_im[precip_mask & stream_mask] = p_im[precip_mask & stream_mask]
 
-        # case 3
-        # only where all four inputs are defined
+        # case 3: where there is precipitation and we're not on a stream
         case_3_mask = valid_mask & precip_mask & ~stream_mask
 
-        term_result = numpy.full(
-            qf_im[case_3_mask].shape, TARGET_NODATA, dtype=numpy.float32)
-
+        # for consistent indexing, make a_im the same shape as the other
+        # arrays even though we only use it in case 3
+        a_im = numpy.full(p_im.shape, numpy.nan, dtype=numpy.float32)
         # a_im is the mean rain depth on a rainy day at pixel i on month m
-        # the 25.4 converts inches to mm since Si is in inches
-        a_im = p_im[case_3_mask] / (n_m[case_3_mask] * 25.4)
+        # the 25.4 converts inches to mm since s_i is in inches
+        a_im[case_3_mask] = p_im[case_3_mask] / (n_m[case_3_mask] * 25.4)
 
-        # don't raise a warning on overflow
-        with numpy.errstate(over='ignore'):
-            exp_result = numpy.exp((0.8 * s_i[case_3_mask]) / a_im)
+        # case 3a: when s_i = 0, qf = p
+        case_3a_mask = case_3_mask & (s_i == 0)
+        qf_im[case_3a_mask] = p_im[case_3a_mask]
 
-        # edge case 3a: set the whole term to 0 when s_i = 0
-        subcase_a_mask = s_i[case_3_mask] == 0
-        term_result[subcase_a_mask] = 0
+        # case 3b: set quickflow to 0 when the s_i/a_im ratio is too large
+        case_3b_mask = case_3_mask & (s_i / a_im > 100)
+        qf_im[case_3b_mask] = 0
 
-        # edge case 3b: set the whole term to 0 when exp() overflows
-        subcase_b_mask = numpy.isinf(exp_result)
-        term_result[subcase_b_mask] = 0
-
-        # case 3c: evaluate the term as usual
-        # s_i^2 / a_im * exp(0.8 * s_i / a_im) * E1(s_i / a_im)
-        subcase_c_mask = ~(subcase_a_mask | subcase_b_mask)
-        term_result[subcase_c_mask] = (
-            s_i[case_3_mask][subcase_c_mask] ** 2 / a_im[subcase_c_mask] *
-            exp_result[subcase_c_mask] *
-            scipy.special.exp1(
-                s_i[case_3_mask][subcase_c_mask] / a_im[subcase_c_mask]
+        # case 3c: evaluate the equation as usual
+        case_3c_mask = case_3_mask & ~(case_3a_mask | case_3b_mask)
+        qf_im[case_3c_mask] = (
+            25.4 * n_m[case_3c_mask] * (
+                ((a_im[case_3c_mask] - s_i[case_3c_mask]) *
+                 numpy.exp(-0.2 * s_i[case_3c_mask] / a_im[case_3c_mask])) +
+                (s_i[case_3c_mask] ** 2 / a_im[case_3c_mask] *
+                 numpy.exp(0.8 * s_i[case_3c_mask] / a_im[case_3c_mask]) *
+                 scipy.special.exp1(s_i[case_3c_mask] / a_im[case_3c_mask]))
             )
         )
 
-        qf_im[case_3_mask] = (
-            25.4 * n_m[case_3_mask] * (
-                (a_im - s_i[case_3_mask]) *
-                numpy.exp(-0.2 * s_i[case_3_mask] / a_im) +
-                term_result
-            )
-        )
+        # case 3d: set any negative values to 0
+        qf_im[qf_im < 0] = 0
 
         # this handles some user cases where they don't have data defined on
         # their landcover raster. It otherwise crashes later with some NaNs.

@@ -1020,6 +1020,113 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         numpy.testing.assert_allclose(
             quickflow_array, expected_quickflow_array, atol=1e-5)
 
+    def test_monthly_quickflow_si_zero(self):
+        """Test `_calculate_monthly_quick_flow` when s_i is zero"""
+        from natcap.invest.seasonal_water_yield import seasonal_water_yield
+
+        # QF should be equal to P when s_i is 0
+        precip_array = numpy.array([[10.5]], dtype=numpy.float32)
+        si_array = numpy.array([[0]], dtype=numpy.float32)
+        n_events_array = numpy.array([[10]], dtype=numpy.float32)
+        stream_mask = numpy.array([[0]], dtype=numpy.float32)
+        expected_quickflow_array = numpy.array([[10.5]])
+
+        precip_path = os.path.join(self.workspace_dir, 'precip.tif')
+        si_path = os.path.join(self.workspace_dir, 'si.tif')
+        n_events_path = os.path.join(self.workspace_dir, 'n_events.tif')
+        stream_path = os.path.join(self.workspace_dir, 'stream.tif')
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(26910)  # UTM Zone 10N
+        project_wkt = srs.ExportToWkt()
+        output_path = os.path.join(self.workspace_dir, 'quickflow.tif')
+
+        # write all the test arrays to raster files
+        for array, path in [(precip_array, precip_path),
+                            (n_events_array, n_events_path),
+                            (si_array, si_path),
+                            (stream_mask, stream_path)]:
+            # define a nodata value for intermediate outputs
+            pygeoprocessing.numpy_array_to_raster(
+                array, -1, (1, -1), (1180000, 690000), project_wkt, path)
+        seasonal_water_yield._calculate_monthly_quick_flow(
+            precip_path, n_events_path, stream_path, si_path, output_path)
+        numpy.testing.assert_allclose(
+            pygeoprocessing.raster_to_numpy_array(output_path),
+            expected_quickflow_array, atol=1e-5)
+
+    def test_monthly_quickflow_large_si_aim_ratio(self):
+        """Test `_calculate_monthly_quick_flow` with undefined nodata values"""
+        from natcap.invest.seasonal_water_yield import seasonal_water_yield
+
+        # with these values, the QF equation would overflow float32 if
+        # we didn't catch it early
+        precip_array = numpy.array([[6]], dtype=numpy.float32)
+        si_array = numpy.array([[23.33]], dtype=numpy.float32)
+        n_events_array = numpy.array([[10]], dtype=numpy.float32)
+        stream_mask = numpy.array([[0]], dtype=numpy.float32)
+        expected_quickflow_array = numpy.array([[0]])
+
+        precip_path = os.path.join(self.workspace_dir, 'precip.tif')
+        si_path = os.path.join(self.workspace_dir, 'si.tif')
+        n_events_path = os.path.join(self.workspace_dir, 'n_events.tif')
+        stream_path = os.path.join(self.workspace_dir, 'stream.tif')
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(26910)  # UTM Zone 10N
+        project_wkt = srs.ExportToWkt()
+        output_path = os.path.join(self.workspace_dir, 'quickflow.tif')
+
+        # write all the test arrays to raster files
+        for array, path in [(precip_array, precip_path),
+                            (n_events_array, n_events_path),
+                            (si_array, si_path),
+                            (stream_mask, stream_path)]:
+            # define a nodata value for intermediate outputs
+            pygeoprocessing.numpy_array_to_raster(
+                array, -1, (1, -1), (1180000, 690000), project_wkt, path)
+        seasonal_water_yield._calculate_monthly_quick_flow(
+            precip_path, n_events_path, stream_path, si_path, output_path)
+        numpy.testing.assert_allclose(
+            pygeoprocessing.raster_to_numpy_array(output_path),
+            expected_quickflow_array, atol=1e-5)
+
+    def test_monthly_quickflow_negative_values_set_to_zero(self):
+        """Test `_calculate_monthly_quick_flow` with negative QF result"""
+        from natcap.invest.seasonal_water_yield import seasonal_water_yield
+
+        # with these values, the QF equation evaluates to a small negative
+        # number. assert that it is set to zero
+        precip_array = numpy.array([[30]], dtype=numpy.float32)
+        si_array = numpy.array([[10]], dtype=numpy.float32)
+        n_events_array = numpy.array([[10]], dtype=numpy.float32)
+        stream_mask = numpy.array([[0]], dtype=numpy.float32)
+        expected_quickflow_array = numpy.array([[0]])
+
+        precip_path = os.path.join(self.workspace_dir, 'precip.tif')
+        si_path = os.path.join(self.workspace_dir, 'si.tif')
+        n_events_path = os.path.join(self.workspace_dir, 'n_events.tif')
+        stream_path = os.path.join(self.workspace_dir, 'stream.tif')
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(26910)  # UTM Zone 10N
+        project_wkt = srs.ExportToWkt()
+        output_path = os.path.join(self.workspace_dir, 'quickflow.tif')
+
+        # write all the test arrays to raster files
+        for array, path in [(precip_array, precip_path),
+                            (n_events_array, n_events_path),
+                            (si_array, si_path),
+                            (stream_mask, stream_path)]:
+            # define a nodata value for intermediate outputs
+            pygeoprocessing.numpy_array_to_raster(
+                array, -1, (1, -1), (1180000, 690000), project_wkt, path)
+        seasonal_water_yield._calculate_monthly_quick_flow(
+            precip_path, n_events_path, stream_path, si_path, output_path)
+        numpy.testing.assert_allclose(
+            pygeoprocessing.raster_to_numpy_array(output_path),
+            expected_quickflow_array, atol=1e-5)
+
     def test_local_recharge_undefined_nodata(self):
         """Test `calculate_local_recharge` with undefined nodata values"""
         from natcap.invest.seasonal_water_yield import \
