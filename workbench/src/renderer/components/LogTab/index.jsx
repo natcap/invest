@@ -86,8 +86,11 @@ export default class LogTab extends React.Component {
   }
 
   updateState() {
-    // const data = this.cache // works
-    ReactDom.flushSync(() => { // also works
+    // flushSync will override react18 batched updates
+    // and force state updates to happen now. We're managing
+    // the rate of updates ourselves in this component via
+    // debouncedLogUpdate.
+    ReactDom.flushSync(() => {
       this.setState((state) => ({
         logdata: state.logdata.concat(this.cache)
       }));
