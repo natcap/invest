@@ -986,7 +986,7 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
 
         # results calculated by wolfram alpha
         expected_quickflow_array = numpy.array([
-            [4.20212e-35, 4.20212e-35],
+            [0, 0],
             [0.61928378,  0.61928378]])
 
         precip_path = os.path.join(self.workspace_dir, 'precip.tif')
@@ -1176,8 +1176,8 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
             [100, 100],
             [200, 200]], dtype=numpy.float32)
         quickflow_array = numpy.array([
-            [-4.8e-36, -4.822e-36],
-            [ 6.1e-01,  6.1e-01]], dtype=numpy.float32)
+            [0, 0],
+            [0.61, 0.61]], dtype=numpy.float32)
         flow_dir_array = numpy.array([
             [15, 25],
             [50, 50]], dtype=numpy.float32)
