@@ -213,8 +213,8 @@ def execute(args):
         target_path_list=aligned_snapshot_paths,
         task_name='Align input landcover rasters')
 
-    landcover_table = utils.build_lookup_from_csv(
-        args['lulc_lookup_table_path'], 'code')
+    landcover_table = utils.read_csv_to_dataframe(
+        args['lulc_lookup_table_path'], 'code').to_dict(orient='index')
 
     target_transition_table = os.path.join(
         output_dir, TRANSITION_TABLE.format(suffix=suffix))

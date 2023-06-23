@@ -494,11 +494,11 @@ def execute(args):
 
     LOGGER.info(
         "Checking if the landcover raster is missing lucodes")
-    crop_to_landcover_table = utils.build_lookup_from_csv(
-        args['landcover_to_crop_table_path'], 'crop_name', to_lower=True)
+    crop_to_landcover_table = utils.read_csv_to_dataframe(
+        args['landcover_to_crop_table_path'], 'crop_name').to_dict(orient='index')
 
-    crop_to_fertlization_rate_table = utils.build_lookup_from_csv(
-        args['fertilization_rate_table_path'], 'crop_name', to_lower=True)
+    crop_to_fertlization_rate_table = utils.read_csv_to_dataframe(
+        args['fertilization_rate_table_path'], 'crop_name').to_dict(orient='index')
 
     crop_lucodes = [
         x[_EXPECTED_LUCODE_TABLE_HEADER]
@@ -581,8 +581,8 @@ def execute(args):
         crop_regression_table_path = os.path.join(
             args['model_data_path'], _REGRESSION_TABLE_PATTERN % crop_name)
 
-        crop_regression_table = utils.build_lookup_from_csv(
-            crop_regression_table_path, 'climate_bin', to_lower=True)
+        crop_regression_table = utils.read_csv_to_dataframe(
+            crop_regression_table_path, 'climate_bin').to_dict(orient='index')
         for bin_id in crop_regression_table:
             for header in _EXPECTED_REGRESSION_TABLE_HEADERS:
                 if crop_regression_table[bin_id][header.lower()] == '':
@@ -806,9 +806,10 @@ def execute(args):
 
     # both 'crop_nutrient.csv' and 'crop' are known data/header values for
     # this model data.
-    nutrient_table = utils.build_lookup_from_csv(
+    nutrient_table = utils.read_csv_to_dataframe(
         os.path.join(args['model_data_path'], 'crop_nutrient.csv'),
-        'crop', to_lower=False)
+        'crop', convert_cols_to_lower=False, convert_vals_to_lower=False
+        ).to_dict(orient='index')
 
     LOGGER.info("Generating report table")
     result_table_path = os.path.join(

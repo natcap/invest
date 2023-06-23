@@ -588,8 +588,8 @@ def execute(args):
 
     # We're assuming that the LULC initial variables and the carbon pool
     # transient table are combined into a single lookup table.
-    biophysical_parameters = utils.build_lookup_from_csv(
-        args['biophysical_table_path'], 'code')
+    biophysical_parameters = utils.read_csv_to_dataframe(
+        args['biophysical_table_path'], 'code').to_dict(orient='index')
 
     # LULC Classnames are critical to the transition mapping, so they must be
     # unique.  This check is here in ``execute`` because it's possible that
@@ -968,8 +968,9 @@ def execute(args):
         if args.get('use_price_table', False):
             prices = {
                 year: values['price'] for (year, values) in
-                utils.build_lookup_from_csv(
-                    args['price_table_path'], 'year').items()}
+                utils.read_csv_to_dataframe(
+                    args['price_table_path'], 'year'
+                ).to_dict(orient='index').items()}
         else:
             inflation_rate = float(args['inflation_rate']) * 0.01
             annual_price = float(args['price'])
@@ -1989,7 +1990,8 @@ def _read_transition_matrix(transition_csv_path, biophysical_dict):
         landcover transition, and the second contains accumulation rates for
         the pool for the landcover transition.
     """
-    table = utils.read_csv_to_dataframe(transition_csv_path, index_col=False)
+    table = utils.read_csv_to_dataframe(
+        transition_csv_path, convert_cols_to_lower=False, convert_vals_to_lower=False)
 
     lulc_class_to_lucode = {}
     max_lucode = 0
@@ -2033,6 +2035,10 @@ def _read_transition_matrix(transition_csv_path, biophysical_dict):
 
         # Strip any whitespace to eliminate leading/trailing whitespace
         row = row.str.strip()
+
+        # skip rows starting with a blank cell, these are part of the legend
+        if not row['lulc-class']:
+            continue
 
         try:
             from_colname = str(row['lulc-class']).lower()
@@ -2243,8 +2249,7 @@ def _extract_snapshots_from_table(csv_path):
 
     """
     table = utils.read_csv_to_dataframe(
-        csv_path, to_lower=True, index_col=False,
-        expand_path_cols=['raster_path'])
+        csv_path, convert_vals_to_lower=False, expand_path_cols=['raster_path'])
 
     output_dict = {}
     table.set_index("snapshot_year", drop=False, inplace=True)

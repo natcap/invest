@@ -499,8 +499,8 @@ def execute(args):
 
     """
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
-    biophysical_table = utils.build_lookup_from_csv(
-        args['biophysical_table_path'], 'lucode')
+    biophysical_table = utils.read_csv_to_dataframe(
+        args['biophysical_table_path'], 'lucode').to_dict(orient='index')
 
     # Test to see if c or p values are outside of 0..1
     for table_key in ['usle_c', 'usle_p']:
