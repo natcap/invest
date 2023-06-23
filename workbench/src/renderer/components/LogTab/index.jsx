@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import ReactDom from 'react-dom';
 import PropTypes from 'prop-types';
 
 import Row from 'react-bootstrap/Row';
@@ -45,11 +46,14 @@ LogDisplay.propTypes = {
 export default class LogTab extends React.Component {
   constructor(props) {
     super(props);
+    this.validationTimer = null;
+    this.cache = [];
     this.state = {
       logdata: [],
     };
 
-    this.updateLog = this.updateLog.bind(this);
+    this.updateState = this.updateState.bind(this);
+    this.debouncedLogUpdate = this.debouncedLogUpdate.bind(this);
   }
 
   componentDidMount() {
@@ -57,7 +61,7 @@ export default class LogTab extends React.Component {
     // This channel is replied to by the invest process stdout listener
     // And by the logfile reader.
     ipcRenderer.on(`invest-stdout-${tabID}`, (data) => {
-      this.updateLog(data);
+      this.debouncedLogUpdate(data);
     });
     if (!executeClicked && logfile) {
       ipcRenderer.send(
@@ -78,12 +82,32 @@ export default class LogTab extends React.Component {
 
   componentWillUnmount() {
     ipcRenderer.removeAllListeners(`invest-stdout-${this.props.tabID}`);
+    clearTimeout(this.validationTimer);
   }
 
-  updateLog(data) {
-    this.setState((state) => ({
-      logdata: state.logdata.concat([data])
-    }));
+  updateState() {
+    // const data = this.cache // works
+    ReactDom.flushSync(() => { // also works
+      this.setState((state) => ({
+        logdata: state.logdata.concat(this.cache)
+      }));
+    });
+    this.cache = [];
+  }
+
+  /*
+   * Cache incoming logger messages in real-time, then move them to react state
+   * in batches, at some longer interval. This limits the number of renders in
+   * the event of very high volume logging, while still allowing the browser to
+   * appear that it is updating in real-time.
+   */
+  debouncedLogUpdate(data) {
+    if (this.validationTimer) {
+      clearTimeout(this.validationTimer);
+    }
+    this.cache.push(data);
+    // updates every 10ms will appear to be real-time
+    this.validationTimer = setTimeout(this.updateState, 10);
   }
 
   render() {
