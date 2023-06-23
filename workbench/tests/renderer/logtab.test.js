@@ -23,7 +23,7 @@ function renderLogTab(logfilePath) {
       executeClicked={false}
       tabID={tabID}
       logfile={logfilePath}
-    />, { legacyRoot: false }
+    />
   );
   return utils;
 }
