@@ -10,8 +10,6 @@ import { spawn, spawnSync } from 'child_process';
 
 import rimraf from 'rimraf';
 import puppeteer from 'puppeteer-core';
-import { getDocument, queries, waitFor } from 'pptr-testing-library';
-import '@testing-library/jest-dom';
 
 import pkg from '../../package.json';
 import { APP_HAS_RUN_TOKEN } from '../../src/main/setupCheckFirstRun';
@@ -145,12 +143,14 @@ afterEach(async () => {
 });
 
 test('Run a real invest model', async () => {
-  const { findByText, findByRole } = queries;
   // On GHA MacOS, we seem to have to wait a long time for the browser
   // to be ready. Maybe related to https://github.com/natcap/invest-workbench/issues/158
-  await waitFor(() => {
-    expect(BROWSER && BROWSER.isConnected()).toBeTruthy();
-  }, { timeout: 60000 });
+  let i = 0;
+  while (!BROWSER || !BROWSER.isConnected()) {
+    i++;
+    await new Promise(r => setTimeout(r, 1000));
+  }
+  console.log(`waited ${i} seconds for pptr to connect`);
   // find the mainWindow's index.html, not the splashScreen's splash.html
   const target = await BROWSER.waitForTarget(
     (target) => target.url().endsWith('index.html')
@@ -159,83 +159,68 @@ test('Run a real invest model', async () => {
   page.on('error', (err) => {
     console.log(err);
   });
-  const doc = await getDocument(page);
   await page.screenshot({ path: `${SCREENSHOT_PREFIX}1-page-load.png` });
 
   const downloadModal = await page.waitForSelector('.modal-dialog');
-  const downloadModalCancel = await findByRole(
-    downloadModal, 'button', { name: 'Cancel' }
-  );
+  const downloadModalCancel = await downloadModal.waitForSelector(
+    'aria/[name="Cancel"][role="button"]');
   await downloadModalCancel.click();
   // We need to get the modelButton from w/in this list-group because there
   // are buttons with the same name in the Recent Jobs container.
-  const investModels = await page.$('.invest-list-group');
+  const investModels = await page.waitForSelector('.invest-list-group');
   await page.screenshot({ path: `${SCREENSHOT_PREFIX}2-models-list.png` });
 
   // Setting up Recreation model because it has very few data requirements
-  const modelButton = await findByRole(
-    investModels, 'button', { name: /Visitation/ }
-  );
+  const modelButton = await investModels.waitForSelector(
+    'aria/[name="Visitation: Recreation and Tourism"][role="button"]');
   await modelButton.click();
   await page.screenshot({ path: `${SCREENSHOT_PREFIX}3-model-tab.png` });
 
   const argsForm = await page.waitForSelector('.args-form');
   const typeDelay = 10;
-  const workspace = await findByRole(
-    argsForm, 'textbox', { name: /Workspace/i }
-  );
+  const workspace = await argsForm.waitForSelector(
+    'aria/[name="Workspace"][role="textbox"]');
   await workspace.type(TMP_DIR, { delay: typeDelay });
-  const aoi = await findByRole(
-    argsForm, 'textbox', { name: /area of interest/i }
-  );
+  const aoi = await argsForm.waitForSelector(
+    'aria/[name="Area Of Interest"][role="textbox"]');
   await aoi.type(TMP_AOI_PATH, { delay: typeDelay });
-  const startYear = await findByRole(
-    argsForm, 'textbox', { name: /start year/i }
-  );
+  const startYear = await argsForm.waitForSelector(
+    'aria/[name="Start Year"][role="textbox"]');
   await startYear.type('2008', { delay: typeDelay });
-  const endYear = await findByRole(
-    argsForm, 'textbox', {name: /end year/i }
-  );
+  const endYear = await argsForm.waitForSelector(
+    'aria/[name="End Year"][role="textbox"]');
   await endYear.type('2012', { delay: typeDelay });
   await page.screenshot({ path: `${SCREENSHOT_PREFIX}4-complete-setup-form.png` });
 
+  const sidebar = await page.waitForSelector('.invest-sidebar-col');
+
   // Button is disabled until validation completes
-  const sidebar = await page.$('.invest-sidebar-col');
-  const runButton = await findByRole(sidebar, 'button', { name: 'Run' });
-  await waitFor(async () => {
-    const isEnabled = await page.evaluate(
-      (btn) => !btn.disabled,
-      runButton
-    );
-    expect(isEnabled).toBe(true);
-  }, { timeout: 10000 }); // waiting for validation
+  const runButton = await sidebar.waitForSelector(
+    '.btn-primary:not([disabled])');
   await runButton.click();
 
-  const logTab = await findByText(doc, 'Log');
-  await waitFor(async () => {
-    const prop = await logTab.getProperty('className');
-    const vals = await prop.jsonValue();
-    expect(vals.includes('active')).toBeTruthy();
-  });
+  await page.waitForSelector('#invest-tab-tab-log.active');
   await page.screenshot({ path: `${SCREENSHOT_PREFIX}5-active-log-tab.png` });
 
   // Cancel button does not appear until after invest has confirmed
   // it is running. So extra timeout on the query:
-  const cancelButton = await findByRole(sidebar,
-    'button', { name: 'Cancel Run' }, { timeout: 15000 });
+  const cancelButton = await sidebar.waitForSelector(
+    'aria/[name="Cancel Run"][role="button"]', { timeout: 15000 });
   await cancelButton.click();
-  expect(await findByText(sidebar, 'Run Canceled'));
-  expect(await findByText(sidebar, 'Open Workspace'));
+  await sidebar.waitForSelector('text/Run Canceled');
+  await page.waitForSelector('aria/[name="Open Workspace"][role="button"]');
   await page.screenshot({ path: `${SCREENSHOT_PREFIX}6-run-canceled.png` });
 }, 240000); // >2x the sum of all the max timeouts within this test
 
 test('Check local userguide links', async () => {
-  const { findByText, findAllByRole, findByRole, } = queries;
   // On GHA MacOS, we seem to have to wait a long time for the browser
   // to be ready. Maybe related to https://github.com/natcap/invest-workbench/issues/158
-  await waitFor(() => {
-    expect(BROWSER && BROWSER.isConnected()).toBeTruthy();
-  }, { timeout: 60000 });
+  let i = 0;
+  while (!BROWSER || !BROWSER.isConnected()) {
+    i++;
+    await new Promise(r => setTimeout(r, 1000));
+  }
+  console.log(`waited ${i} seconds for pptr to connect`);
   // find the mainWindow's index.html, not the splashScreen's splash.html
   const target = await BROWSER.waitForTarget(
     (target) => target.url().endsWith('index.html')
@@ -244,20 +229,17 @@ test('Check local userguide links', async () => {
   page.on('error', (err) => {
     console.log(err);
   });
-  const doc = await getDocument(page);
   const downloadModal = await page.waitForSelector('.modal-dialog');
-  const downloadModalCancel = await findByRole(
-    downloadModal, 'button', { name: 'Cancel' }
-  );
+  const downloadModalCancel = await downloadModal.waitForSelector(
+    'aria/[name="Cancel"][role="button"]');
   await downloadModalCancel.click();
 
   const investList = await page.waitForSelector('.invest-list-group');
-  const modelButtons = await findAllByRole(investList, 'button');
+  const modelButtons = await investList.$$('aria/[role="button"]');
 
-  for (let i = 0; i < modelButtons.length; i++) {
-    const btn = modelButtons[i];
+  for (const btn of modelButtons) {
     await btn.click();
-    const link = await findByText(doc, "User's Guide");
+    const link = await page.waitForSelector('text/User\'s Guide');
     await page.waitForTimeout(300); // link.click() not working w/o this pause
     const hrefHandle = await link.getProperty('href');
     const hrefValue = await hrefHandle.jsonValue();
@@ -266,16 +248,15 @@ test('Check local userguide links', async () => {
       (target) => target.url() === hrefValue
     );
     const ugPage = await ugTarget.page();
-    const ugDoc = await getDocument(ugPage);
     try {
-      await findByText(ugDoc, 'Table of Contents');
+      await ugPage.waitForSelector('text/Table of Contents');
     } catch {
       throw new Error(`${hrefValue} not found`);
     }
 
     await ugPage.close();
     const tab = await page.waitForSelector('.nav-item');
-    const closeTabBtn = await findByRole(tab, 'button');
+    const closeTabBtn = await tab.waitForSelector('aria/[role="button"]');
     await closeTabBtn.click();
     await page.waitForTimeout(100); // allow for Home Tab to be visible again
   }
@@ -288,9 +269,12 @@ The test is that the subprocess exits within a certain reasonable timeout.
 Single instance lock caused the app to crash on macOS, and also
 is less important because mac generally won't open multiple instances */
 testWin('App re-launch will exit and focus on first instance', async () => {
-  await waitFor(() => {
-    expect(BROWSER && BROWSER.isConnected()).toBeTruthy();
-  }, { timeout: 60000 });
+  let i = 0;
+  while (!BROWSER || !BROWSER.isConnected()) {
+    i++;
+    await new Promise(r => setTimeout(r, 1000));
+  }
+  console.log(`waited ${i} seconds for pptr to connect`);
 
   // Open another instance of the Workbench application.
   // This should return quickly.  The test timeout is there in case the new i
