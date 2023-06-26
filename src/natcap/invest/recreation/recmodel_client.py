@@ -1101,6 +1101,7 @@ def _polygon_area(
             polygons[polygon_index]
             for polygon_index in potential_intersecting_poly_ids
             if prepped_polygons[polygon_index].intersects(geometry)]
+        # TODO: union first, then intersect & sum
         polygon_area_coverage = sum([
             (geometry.intersection(polygon)).area
             for polygon in intersecting_polygons])

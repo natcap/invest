@@ -14,12 +14,14 @@ import json
 import queue
 import multiprocessing
 
-import Pyro4
 import numpy
-import pandas
 from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
+import pandas
+import pygeoprocessing
+import Pyro4
+import shapely
 import taskgraph
 import warnings
 
@@ -779,6 +781,62 @@ class RecreationRegressionTests(unittest.TestCase):
             predictor_results = json.load(file)
         # Assert that target file was written and it is an empty dictionary
         assert(len(predictor_results) == 0)
+
+    def test_overlapping_features_in_polygon_predictor(self):
+        """Recreation test overlapping predictor features not double-counted.
+
+        If a polygon predictor contains features that overlap, the overlapping
+        area should only be counted once when calculating `polygon_area_coverage`
+        or `polygon_percent_coverage`.
+        """
+        from natcap.invest.recreation import recmodel_client
+
+        response_vector_path = os.path.join(self.workspace_dir, 'aoi.geojson')
+        response_polygons_pickle_path = os.path.join(
+            self.workspace_dir, 'response.pickle')
+        predictor_vector_path = os.path.join(
+            self.workspace_dir, 'predictor.geojson')
+        predictor_target_path = os.path.join(
+            self.workspace_dir, 'predictor.json')
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(32610)  # a UTM system
+
+        # A unit square
+        response_geom = shapely.geometry.Polygon(
+            ((0., 0.), (0., 1.), (1., 1.), (1., 0.), (0., 0.)))
+        pygeoprocessing.shapely_geometry_to_vector(
+            [response_geom],
+            response_vector_path,
+            srs.ExportToWkt(),
+            'GEOJSON')
+
+        # Two overlapping polygons, including a unit square
+        predictor_geom_list = [
+            shapely.geometry.Polygon(
+                ((0., 0.), (0., 1.), (1., 1.), (1., 0.), (0., 0.))),
+            shapely.geometry.Polygon(
+                ((0., 0.), (0., 0.5), (0.5, 0.5), (0.5, 0.), (0., 0.)))]
+        pygeoprocessing.shapely_geometry_to_vector(
+            predictor_geom_list,
+            predictor_vector_path,
+            srs.ExportToWkt(),
+            'GEOJSON')
+
+        recmodel_client._prepare_response_polygons_lookup(
+            response_vector_path, response_polygons_pickle_path)
+        recmodel_client._polygon_area(
+            'polygon_area_coverage',
+            response_polygons_pickle_path,
+            predictor_vector_path,
+            predictor_target_path)
+
+        with open(predictor_target_path, 'r') as file:
+            data = json.load(file)
+            print(data)
+        actual_value = list(data.values())[0]
+        expected_value = 1
+        self.assertEqual(actual_value, expected_value)
 
     def test_least_squares_regression(self):
         """Recreation regression test for the least-squares linear model."""
