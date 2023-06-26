@@ -580,108 +580,6 @@ def build_file_registry(base_file_path_list, file_suffix):
     return f_reg
 
 
-def build_lookup_from_csv(
-        table_path, key_field, column_list=None, to_lower=True, **kwargs):
-    """Read a CSV table into a dictionary indexed by ``key_field``.
-
-    Creates a dictionary from a CSV whose keys are unique entries in the CSV
-    table under the column named by ``key_field`` and values are dictionaries
-    indexed by the other columns in ``table_path`` including ``key_field``
-    whose values are the values on that row of the CSV table.
-
-    If an entire row is NA/NaN (including ``key_field``) then it is dropped
-    from the table and a warning is given of the dropped rows.
-
-    Args:
-        table_path (string): path to a CSV file containing at
-            least the header key_field
-        key_field: (string): a column in the CSV file at `table_path` that
-            can uniquely identify each row in the table and sets the row index.
-        column_list (list): a list of column names to subset from the CSV
-            file, default=None
-        to_lower (bool): if True, converts all unicode in the CSV,
-            including headers and values to lowercase, otherwise uses raw
-            string values. default=True.
-        **kwargs: additional kwargs will be passed to ``utils.read_csv_from_dataframe``
-
-    Returns:
-        lookup_dict (dict): a dictionary of the form
-        {key_field_0: {csv_header_0: value0, csv_header_1: value1...},
-        key_field_1: {csv_header_0: valuea, csv_header_1: valueb...}}
-
-        if ``to_lower`` all strings including key_fields and values are
-        converted to lowercase unicode.
-
-    Raise:
-        ValueError
-            If ValueError occurs during conversion to dictionary.
-        KeyError
-            If ``key_field`` is not present during ``set_index`` call.
-    """
-    # Reassign to avoid mutation
-    col_list = column_list
-    # if a list of columns are provided to use and return, make sure
-    # 'key_field' is one of them.
-    if col_list and key_field not in col_list:
-        col_list.append(key_field)
-
-    table = read_csv_to_dataframe(
-        table_path, to_lower=to_lower, index_col=False, **kwargs)
-
-    # if 'to_lower`, case handling is done before trying to access the data.
-    # the columns are stripped of leading/trailing whitespace in
-    # ``read_csv_to_dataframe``, and also lowercased if ``to_lower`` so we only
-    # need to convert the rest of the table.
-    if to_lower:
-        key_field = key_field.lower()
-        # lowercase column names
-        if col_list:
-            col_list = [col.lower() for col in col_list]
-        # lowercase values
-        table = table.applymap(
-            lambda x: x.lower() if isinstance(x, str) else x)
-
-    # Set 'key_field' as the index of the dataframe
-    try:
-        table.set_index(key_field, drop=False, inplace=True)
-    except KeyError:
-        # If 'key_field' is not a column then KeyError is raised for using
-        # it as the index column
-        LOGGER.error(f"'key_field' : '{key_field}' could not be found as a"
-                     f" column in the table. Table path: {table_path}.")
-        raise
-
-    # Subset dataframe by columns if desired
-    if col_list:
-        table = table.loc[:, col_list]
-
-    # look for NaN values and warn if any are found.
-    table_na = table.isna()
-    if table_na.values.any():
-        LOGGER.warning(
-            f"Empty or NaN values were found in the table: {table_path}.")
-    # look to see if an entire row is NA values
-    table_na_rows = table_na.all(axis=1)
-    na_rows = table_na_rows.index[table_na_rows].tolist()
-    # if a completely empty row, drop it
-    if na_rows:
-        LOGGER.warning(
-            "Encountered an entirely blank row on line(s)"
-            f" {[x+2 for x in na_rows]}. Dropping rows from table.")
-        table.dropna(how="all", inplace=True)
-    # fill the rest of empty or NaN values with empty string
-    table.fillna(value="", inplace=True)
-    try:
-        lookup_dict = table.to_dict(orient='index')
-    except ValueError:
-        # If 'key_field' is not unique then a value error is raised.
-        LOGGER.error(f"The 'key_field' : '{key_field}' column values are not"
-                     f" unique: {table.index.tolist()}")
-        raise
-
-    return lookup_dict
-
-
 def expand_path(path, base_path):
     """Check if a path is relative, and if so, expand it using the base path.
 
@@ -700,7 +598,8 @@ def expand_path(path, base_path):
 
 
 def read_csv_to_dataframe(
-        path, to_lower=False, expand_path_cols=[], sep=None, engine='python',
+        path, index_col=False, usecols=None, convert_cols_to_lower=True,
+        convert_vals_to_lower=True, expand_path_cols=None, sep=None, engine='python',
         encoding='utf-8-sig', **kwargs):
     """Return a dataframe representation of the CSV.
 
@@ -714,7 +613,15 @@ def read_csv_to_dataframe(
 
     Args:
         path (str): path to a CSV file
-        to_lower (bool): if True, convert all column names to lowercase
+        index_col (str): name of column to use as the dataframe index. If
+            ``convert_cols_to_lower``, this column name and the dataframe column names
+            will be lowercased before they are compared. If ``usecols``
+            is defined, this must be included in ``usecols``.
+        usecols (list(str)): list of column names to subset from the dataframe.
+            If ``convert_cols_to_lower``, these names and the dataframe column names
+            will be lowercased before they are compared.
+        convert_cols_to_lower (bool): if True, convert all column names to lowercase
+        convert_vals_to_lower (bool): if True, convert all table values to lowercase
         expand_path_cols (list[string])): if provided, a list of the names of
             columns that contain paths to expand. Any relative paths in these
             columns will be expanded to absolute paths. It is assumed that
@@ -732,23 +639,56 @@ def read_csv_to_dataframe(
 
     """
     try:
+        # set index_col=False to force pandas not to index by any column
+        # this is useful in case of trailing separators
+        # we'll explicitly set the index column later on
         dataframe = pandas.read_csv(
-            path, sep=sep, engine=engine, encoding=encoding, **kwargs)
+            path, index_col=False, sep=sep, engine=engine, encoding=encoding, **kwargs)
     except UnicodeDecodeError as error:
         LOGGER.error(
-            f'{path} must be encoded as UTF-8 or ASCII')
+            f'The file {path} must be encoded as UTF-8 or ASCII')
         raise error
 
+    # strip whitespace from column names
     # this won't work on integer types, which happens if you set header=None
     # however, there's little reason to use this function if there's no header
     dataframe.columns = dataframe.columns.str.strip()
-    if to_lower:
+
+    # convert column names to lowercase
+    if convert_cols_to_lower:
         dataframe.columns = dataframe.columns.str.lower()
+        # if 'to_lower`, case handling is done before trying to access the data.
+        # the columns are stripped of leading/trailing whitespace in
+        # ``read_csv_to_dataframe``, and also lowercased if ``to_lower`` so we only
+        # need to convert the rest of the table.
+        if index_col and isinstance(index_col, str):
+            index_col = index_col.lower()
+        # lowercase column names
+        if usecols:
+            usecols = [col.lower() for col in usecols]
 
-    # Remove values with leading ('^ +') and trailing (' +$') whitespace.
-    # Regular expressions using 'replace' only substitute on strings.
-    dataframe = dataframe.replace(r"^ +| +$", r"", regex=True)
+    # Subset dataframe by columns if desired
+    if usecols:
+        dataframe = dataframe[usecols]
 
+    # Set 'index_col' as the index of the dataframe
+    if index_col:
+        try:
+            dataframe = dataframe.set_index(
+                index_col, drop=False, verify_integrity=True)
+        except KeyError:
+            # If 'index_col' is not a column then KeyError is raised for using
+            # it as the index column
+            LOGGER.error(f"The column '{index_col}' could not be found "
+                         f"in the table {path}")
+            raise
+
+    # convert table values to lowercase
+    if convert_vals_to_lower:
+        dataframe = dataframe.applymap(
+            lambda x: x.lower() if isinstance(x, str) else x)
+
+    # expand paths
     if expand_path_cols:
         for col in expand_path_cols:
             # allow for the case where a column is optional
@@ -757,6 +697,17 @@ def read_csv_to_dataframe(
                     # if the whole column is empty, cells will be parsed as NaN
                     # catch that before trying to expand them as paths
                     lambda p: '' if pandas.isna(p) else expand_path(p, path))
+
+    # drop any empty rows
+    dataframe = dataframe.dropna(how="all")
+
+    # fill the rest of empty or NaN values with empty string
+    dataframe = dataframe.fillna(value="")
+
+    # strip whitespace from table values
+    # Remove values with leading ('^ +') and trailing (' +$') whitespace.
+    # Regular expressions using 'replace' only substitute on strings.
+    dataframe = dataframe.replace(r"^ +| +$", r"", regex=True)
 
     return dataframe
 
