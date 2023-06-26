@@ -459,7 +459,7 @@ class TestRecServer(unittest.TestCase):
             self.assertTrue(len(ws) == 0)
 
     @_timeout(30.0)
-    def test_regression_local_server(self):
+    def test_execute_local_server(self):
         """Recreation base regression test on sample data on local server.
 
         Executes Recreation model all the way through scenario prediction.
@@ -821,7 +821,7 @@ class RecreationRegressionTests(unittest.TestCase):
             numpy.testing.assert_allclose(results[key], expected_results[key])
 
     @unittest.skip("skipping to avoid remote server call (issue #3753)")
-    def test_base_regression(self):
+    def test_base_execute(self):
         """Recreation base regression test on fast sample data.
 
         Executes Recreation model with default data and default arguments.
@@ -851,7 +851,7 @@ class RecreationRegressionTests(unittest.TestCase):
             os.path.join(args['workspace_dir'], 'scenario_results.shp'),
             os.path.join(REGRESSION_DATA, 'scenario_results_40000.csv'))
 
-    def test_square_grid_regression(self):
+    def test_square_grid(self):
         """Recreation square grid regression test."""
         from natcap.invest.recreation import recmodel_client
 
@@ -868,7 +868,7 @@ class RecreationRegressionTests(unittest.TestCase):
         utils._assert_vectors_equal(
             out_grid_vector_path, expected_grid_vector_path)
 
-    def test_hex_grid_regression(self):
+    def test_hex_grid(self):
         """Recreation hex grid regression test."""
         from natcap.invest.recreation import recmodel_client
 
@@ -886,8 +886,8 @@ class RecreationRegressionTests(unittest.TestCase):
             out_grid_vector_path, expected_grid_vector_path)
 
     @unittest.skip("skipping to avoid remote server call (issue #3753)")
-    def test_no_grid_regression(self):
-        """Recreation base regression on ungridded AOI."""
+    def test_no_grid_execute(self):
+        """Recreation execute on ungridded AOI."""
         from natcap.invest.recreation import recmodel_client
 
         args = {
