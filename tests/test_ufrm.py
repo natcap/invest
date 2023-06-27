@@ -216,7 +216,8 @@ class UFRMTests(unittest.TestCase):
         try:
             urban_flood_risk_mitigation.execute(args)
         except ValueError:
-            self.fail('unexpected ValueError')
+            self.fail('unexpected ValueError when testing curve number row with all zeros')
+
 
     def test_ufrm_string_damage_to_infrastructure(self):
         """UFRM: handle str(int) structure indices.
