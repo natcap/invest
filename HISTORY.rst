@@ -96,6 +96,10 @@ Unreleased Changes
       set to 0. The old behavior was not well documented and caused some
       confusion when nodata pixels did not line up. It's safer not to fill in
       unknown data. (`#1317 <https://github.com/natcap/invest/issues/1317>`_)
+* Urban Flood Risk
+    * Fixed a bug where the model incorrectly raised an error if the
+      biophysical table contained a row of all 0s.
+      (`#1123 <https://github.com/natcap/invest/issues/1123>`_)
 
 3.13.0 (2023-03-17)
 -------------------
