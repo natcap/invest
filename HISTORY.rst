@@ -96,6 +96,10 @@ Unreleased Changes
       set to 0. The old behavior was not well documented and caused some
       confusion when nodata pixels did not line up. It's safer not to fill in
       unknown data. (`#1317 <https://github.com/natcap/invest/issues/1317>`_)
+* Urban Flood Risk
+    * Fixed a bug where the model incorrectly raised an error if the
+      biophysical table contained a row of all 0s.
+      (`#1123 <https://github.com/natcap/invest/issues/1123>`_)
 * Visitation: Recreation and Tourism
     * Fixed a bug where overlapping predictor polygons would be double-counted
       in ``polygon_area_coverage`` and ``polygon_percent_coverage`` calculations.

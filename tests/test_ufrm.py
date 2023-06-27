@@ -198,6 +198,27 @@ class UFRMTests(unittest.TestCase):
             f'{[16, 17, 18, 21]}')
         self.assertEqual(expected_message, actual_message)
 
+    def test_ufrm_explicit_zeros_in_table(self):
+        """UFRM: assert no exception on row of all zeros."""
+        import pandas
+        from natcap.invest import urban_flood_risk_mitigation
+        args = self._make_args()
+
+        good_cn_table_path = os.path.join(
+            self.workspace_dir, 'good_cn_table.csv')
+        cn_table = pandas.read_csv(args['curve_number_table_path'])
+
+        # a user may define a row with all 0s
+        cn_table.iloc[0] = [0] * cn_table.shape[1]
+        cn_table.to_csv(good_cn_table_path, index=False)
+        args['curve_number_table_path'] = good_cn_table_path
+
+        try:
+            urban_flood_risk_mitigation.execute(args)
+        except ValueError:
+            self.fail('unexpected ValueError when testing curve number row with all zeros')
+
+
     def test_ufrm_string_damage_to_infrastructure(self):
         """UFRM: handle str(int) structure indices.
 
