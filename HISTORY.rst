@@ -100,6 +100,10 @@ Unreleased Changes
     * Fixed a bug where the model incorrectly raised an error if the
       biophysical table contained a row of all 0s.
       (`#1123 <https://github.com/natcap/invest/issues/1123>`_)
+* Visitation: Recreation and Tourism
+    * Fixed a bug where overlapping predictor polygons would be double-counted
+      in ``polygon_area_coverage`` and ``polygon_percent_coverage`` calculations.
+      (`#1310 <https://github.com/natcap/invest/issues/1310>`_)
 
 3.13.0 (2023-03-17)
 -------------------
