@@ -104,6 +104,10 @@ Unreleased Changes
       where s_i / a_im > 100. This is done to avoid overflow errors when
       calculating edge cases where the result would round down to 0 anyway.
       (`#1318 <https://github.com/natcap/invest/issues/1318>`_)
+* Urban Flood Risk
+    * Fixed a bug where the model incorrectly raised an error if the
+      biophysical table contained a row of all 0s.
+      (`#1123 <https://github.com/natcap/invest/issues/1123>`_)
 * Visitation: Recreation and Tourism
     * Fixed a bug where overlapping predictor polygons would be double-counted
       in ``polygon_area_coverage`` and ``polygon_percent_coverage`` calculations.

@@ -14,10 +14,10 @@ test('Open File: displays a tooltip on hover', async () => {
   );
 
   const openButton = await findByRole('button', { name: 'Open' });
-  userEvent.hover(openButton);
+  await userEvent.hover(openButton);
   const hoverText = 'Browse to a datastack (.json) or InVEST logfile (.txt)';
   expect(await findByText(hoverText)).toBeInTheDocument();
-  userEvent.unhover(openButton);
+  await userEvent.unhover(openButton);
   await waitFor(() => {
     expect(queryByText(hoverText)).toBeNull();
   });

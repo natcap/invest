@@ -1,10 +1,3 @@
-import fs from 'fs';
-import path from 'path';
-import events from 'events';
-import { spawn, exec } from 'child_process';
-import Stream from 'stream';
-
-import fetch from 'node-fetch';
 import React from 'react';
 import { ipcRenderer } from 'electron';
 import {
@@ -24,16 +17,12 @@ import {
 } from '../../src/renderer/server_requests';
 import InvestJob from '../../src/renderer/InvestJob';
 import {
-  getSettingsValue, saveSettingsStore
+  getSettingsValue,
+  saveSettingsStore,
+  clearSettingsStore,
 } from '../../src/renderer/components/SettingsModal/SettingsStorage';
-import { ipcMainChannels } from '../../src/main/ipcMainChannels';
-import {
-  setupInvestRunHandlers,
-  setupInvestLogReaderHandler,
-} from '../../src/main/setupInvestHandlers';
-import writeInvestParameters from '../../src/main/writeInvestParameters';
-import { removeIpcMainListeners } from '../../src/main/main';
 
+import { mockUISpec } from './utils';
 
 // It's quite a pain to dynamically mock a const from a module,
 // here we do it by importing as another object, then
@@ -41,10 +30,7 @@ import { removeIpcMainListeners } from '../../src/main/main';
 // https://stackoverflow.com/questions/42977961/how-to-mock-an-exported-const-in-jest
 import * as uiConfig from '../../src/renderer/ui_config';
 
-jest.mock('node-fetch');
-jest.mock('child_process');
 jest.mock('../../src/renderer/server_requests');
-jest.mock('../../src/main/writeInvestParameters');
 
 const MOCK_MODEL_TITLE = 'Carbon';
 const MOCK_MODEL_RUN_NAME = 'carbon';
@@ -73,12 +59,6 @@ const SAMPLE_SPEC = {
   },
 };
 
-function mockUISpec(spec, modelName) {
-  return {
-    [modelName]: { order: [Object.keys(spec.args)] },
-  };
-}
-
 // Because we mock UI_SPEC without using jest's API
 // we also need to reset it without jest's API.
 const { UI_SPEC } = uiConfig;
@@ -106,16 +86,14 @@ describe('Various ways to open and close InVEST models', () => {
     const carbon = await findByRole(
       'button', { name: MOCK_MODEL_TITLE }
     );
-    userEvent.click(carbon);
+    await userEvent.click(carbon);
     const executeButton = await findByRole('button', { name: /Run/ });
     expect(executeButton).toBeDisabled();
     const setupTab = await findByText('Setup');
     expect(setupTab.classList.contains('active')).toBeTruthy();
     expect(getSpec).toHaveBeenCalledTimes(1);
     const navTab = await findByRole('tab', { name: MOCK_MODEL_TITLE });
-    act(() => {
-      userEvent.hover(navTab);
-    });
+    await userEvent.hover(navTab);
     await findByRole('tooltip', { name: MOCK_MODEL_TITLE });
   });
 
@@ -139,7 +117,7 @@ describe('Various ways to open and close InVEST models', () => {
     const recentJobCard = await findByText(
       argsValues.workspace_dir
     );
-    userEvent.click(recentJobCard);
+    await userEvent.click(recentJobCard);
     const executeButton = await findByRole('button', { name: /Run/ });
     expect(executeButton).toBeDisabled();
     const setupTab = await findByText('Setup');
@@ -174,7 +152,7 @@ describe('Various ways to open and close InVEST models', () => {
 
     const openButton = await findByRole('button', { name: 'Open' });
     expect(openButton).not.toBeDisabled();
-    userEvent.click(openButton);
+    await userEvent.click(openButton);
     const executeButton = await findByRole('button', { name: /Run/ });
     expect(executeButton).toBeDisabled();
     const setupTab = await findByText('Setup');
@@ -198,7 +176,7 @@ describe('Various ways to open and close InVEST models', () => {
     );
 
     const openButton = await findByRole('button', { name: 'Open' });
-    userEvent.click(openButton);
+    await userEvent.click(openButton);
     const homeTab = await findByRole('tabpanel', { name: 'home tab' });
     // expect we're on the same tab we started on instead of switching to Setup
     expect(homeTab.classList.contains('active')).toBeTruthy();
@@ -220,7 +198,7 @@ describe('Various ways to open and close InVEST models', () => {
     const homeTab = await findByRole('tabpanel', { name: 'home tab' });
 
     // Open a model tab and expect that it's active
-    userEvent.click(carbon);
+    await userEvent.click(carbon);
     let modelTabs = await findAllByRole('tab', { name: MOCK_MODEL_TITLE });
     expect(modelTabs).toHaveLength(1); // one carbon tab open
     const tab1 = modelTabs[0];
@@ -229,8 +207,8 @@ describe('Various ways to open and close InVEST models', () => {
     expect(homeTab.classList.contains('active')).toBeFalsy();
 
     // Open a second model tab and expect that it's active
-    userEvent.click(homeTab);
-    userEvent.click(carbon);
+    await userEvent.click(homeTab);
+    await userEvent.click(carbon);
     modelTabs = await findAllByRole('tab', { name: MOCK_MODEL_TITLE });
     expect(modelTabs).toHaveLength(2); // 2 carbon tabs open
     const tab2 = modelTabs[1];
@@ -242,8 +220,8 @@ describe('Various ways to open and close InVEST models', () => {
     expect(tab2EventKey).not.toEqual(tab1EventKey);
 
     // Open a third model tab and expect that it's active
-    userEvent.click(homeTab);
-    userEvent.click(carbon);
+    await userEvent.click(homeTab);
+    await userEvent.click(carbon);
     modelTabs = await findAllByRole('tab', { name: MOCK_MODEL_TITLE });
     expect(modelTabs).toHaveLength(3); // 3 carbon tabs open
     const tab3 = modelTabs[2];
@@ -259,7 +237,7 @@ describe('Various ways to open and close InVEST models', () => {
     // Click the close button on the middle tab
     const tab2CloseButton = await within(tab2.closest('.nav-item'))
       .getByRole('button', { name: new RegExp(`close ${MOCK_MODEL_TITLE}`) });
-    userEvent.click(tab2CloseButton);
+    await userEvent.click(tab2CloseButton);
     // Now there should only be 2 model tabs open
     modelTabs = await findAllByRole('tab', { name: MOCK_MODEL_TITLE });
     expect(modelTabs).toHaveLength(2);
@@ -270,7 +248,7 @@ describe('Various ways to open and close InVEST models', () => {
     // Click the close button on the right tab
     const tab3CloseButton = await within(tab3.closest('.nav-item'))
       .getByRole('button', { name: new RegExp(`close ${MOCK_MODEL_TITLE}`) });
-    userEvent.click(tab3CloseButton);
+    await userEvent.click(tab3CloseButton);
     // Now there should only be 1 model tab open
     modelTabs = await findAllByRole('tab', { name: MOCK_MODEL_TITLE });
     expect(modelTabs).toHaveLength(1);
@@ -281,7 +259,7 @@ describe('Various ways to open and close InVEST models', () => {
     // Click the close button on the last tab
     const tab1CloseButton = await within(tab1.closest('.nav-item'))
       .getByRole('button', { name: new RegExp(`close ${MOCK_MODEL_TITLE}`) });
-    userEvent.click(tab1CloseButton);
+    await userEvent.click(tab1CloseButton);
     // Now there should be no model tabs open.
     modelTabs = await queryAllByRole('tab', { name: MOCK_MODEL_TITLE });
     expect(modelTabs).toHaveLength(0);
@@ -402,8 +380,8 @@ describe('Display recently executed InVEST jobs on Home tab', () => {
           .toBeTruthy();
       });
     });
-    userEvent.click(getByRole('button', { name: 'settings' }));
-    userEvent.click(getByText('Clear Recent Jobs'));
+    await userEvent.click(getByRole('button', { name: 'settings' }));
+    await userEvent.click(getByText('Clear Recent Jobs'));
     const node = await findByText(/Set up a model from a sample datastack file/);
     expect(node).toBeInTheDocument();
   });
@@ -415,7 +393,9 @@ describe('InVEST global settings: dialog interactions', () => {
   const tgLoggingLabelText = 'Taskgraph logging threshold';
   const languageLabelText = 'Language';
 
+  const { location } = global.window;
   beforeAll(() => {
+    // window.location.reload is not implemented in jsdom
     delete global.window.location;
     Object.defineProperty(global.window, 'location', {
       configurable: true,
@@ -423,10 +403,21 @@ describe('InVEST global settings: dialog interactions', () => {
     });
   });
 
+  afterAll(() => {
+    Object.defineProperty(global.window, 'location', {
+      configurable: true,
+      value: location,
+    });
+  });
+
   beforeEach(async () => {
     getInvestModelNames.mockResolvedValue({});
     getSupportedLanguages.mockResolvedValue({ en: 'english', es: 'spanish' });
     ipcRenderer.invoke.mockImplementation(() => Promise.resolve());
+  });
+
+  afterEach(async () => {
+    await clearSettingsStore();
   });
 
   test('Invest settings save on change', async () => {
@@ -442,24 +433,24 @@ describe('InVEST global settings: dialog interactions', () => {
       <App />
     );
 
-    userEvent.click(await findByRole('button', { name: 'settings' }));
+    await userEvent.click(await findByRole('button', { name: 'settings' }));
     const nWorkersInput = getByLabelText(nWorkersLabelText, { exact: false });
     const loggingInput = getByLabelText(loggingLabelText);
     const tgLoggingInput = getByLabelText(tgLoggingLabelText);
     const languageInput = getByLabelText(languageLabelText, { exact: false });
 
-    userEvent.selectOptions(nWorkersInput, [getByText(nWorkersLabel)]);
+    await userEvent.selectOptions(nWorkersInput, [getByText(nWorkersLabel)]);
     await waitFor(() => { expect(nWorkersInput).toHaveValue(nWorkersValue); });
-    userEvent.selectOptions(loggingInput, [loggingLevel]);
+    await userEvent.selectOptions(loggingInput, [loggingLevel]);
     await waitFor(() => { expect(loggingInput).toHaveValue(loggingLevel); });
-    userEvent.selectOptions(tgLoggingInput, [tgLoggingLevel]);
+    await userEvent.selectOptions(tgLoggingInput, [tgLoggingLevel]);
     await waitFor(() => { expect(tgLoggingInput).toHaveValue(tgLoggingLevel); });
-    userEvent.selectOptions(languageInput, [languageValue]);
+    await userEvent.selectOptions(languageInput, [languageValue]);
     await waitFor(() => { expect(languageInput).toHaveValue(languageValue); });
-    userEvent.click(getByRole('button', { name: 'close settings' }));
+    await userEvent.click(getByRole('button', { name: 'close settings' }));
 
     // Check values were saved in app and in store
-    userEvent.click(await findByRole('button', { name: 'settings' }));
+    await userEvent.click(await findByRole('button', { name: 'settings' }));
     await waitFor(() => {
       expect(nWorkersInput).toHaveValue(nWorkersValue);
       expect(loggingInput).toHaveValue(loggingLevel);
@@ -483,18 +474,16 @@ describe('InVEST global settings: dialog interactions', () => {
       nWorkers: '0',
       loggingLevel: 'ERROR',
       taskgraphLoggingLevel: 'INFO',
-      language: 'es',
+      language: 'en',
     };
 
     await saveSettingsStore(expectedSettings);
 
     const {
       getByText, getByLabelText, findByRole,
-    } = render(
-      <App />
-    );
+    } = render(<App />);
 
-    userEvent.click(await findByRole('button', { name: 'settings' }));
+    await userEvent.click(await findByRole('button', { name: 'settings' }));
     const nWorkersInput = getByLabelText(nWorkersLabelText, { exact: false });
     const loggingInput = getByLabelText(loggingLabelText);
     const tgLoggingInput = getByLabelText(tgLoggingLabelText);
@@ -509,7 +498,7 @@ describe('InVEST global settings: dialog interactions', () => {
     });
 
     // Test Reset sets values to default
-    userEvent.click(getByText('Reset to Defaults'));
+    await userEvent.click(getByText('Reset to Defaults'));
     await waitFor(() => {
       expect(nWorkersInput).toHaveValue(defaultSettings.nWorkers);
       expect(loggingInput).toHaveValue(defaultSettings.loggingLevel);
@@ -526,8 +515,8 @@ describe('InVEST global settings: dialog interactions', () => {
     );
 
     const settingsBtn = await findByRole('button', { name: 'settings' });
-    userEvent.click(settingsBtn);
-    userEvent.click(
+    await userEvent.click(settingsBtn);
+    await userEvent.click(
       await findByRole('button', { name: 'Download Sample Data' })
     );
 
@@ -537,345 +526,8 @@ describe('InVEST global settings: dialog interactions', () => {
   });
 });
 
-describe('InVEST subprocess testing', () => {
-  const spec = {
-    args: {
-      workspace_dir: {
-        name: 'Workspace',
-        type: 'directory',
-      },
-      results_suffix: {
-        name: 'Suffix',
-        type: 'freestyle_string',
-      },
-    },
-    model_name: 'EcoModel',
-    pyname: 'natcap.invest.dot',
-    userguide: 'foo.html',
-  };
-  const modelName = 'carbon';
-  // nothing is written to the fake workspace in these tests,
-  // and we mock validation, so this dir need not exist.
-  const fakeWorkspace = 'foo_dir';
-  const logfilePath = path.join(fakeWorkspace, 'invest-log.txt');
-  // invest always emits this message, and the workbench always listens for it:
-  const stdOutLogfileSignal = `Writing log messages to [${logfilePath}]`;
-  const stdOutText = 'hello from invest';
-  const investExe = 'foo';
-
-  // We need to mock child_process.spawn to return a mock invest process,
-  // And we also need an interface to that mocked process in each test
-  // so we can push to stdout, stderr, etc, just like invest would.
-  function getMockedInvestProcess() {
-    const mockInvestProc = new events.EventEmitter();
-    mockInvestProc.pid = -9999999; // not a plausible pid
-    mockInvestProc.stdout = new Stream.Readable({
-      read: () => {},
-    });
-    mockInvestProc.stderr = new Stream.Readable({
-      read: () => {},
-    });
-    if (process.platform !== 'win32') {
-      jest.spyOn(process, 'kill')
-        .mockImplementation(() => {
-          mockInvestProc.emit('exit', null);
-        });
-    } else {
-      exec.mockImplementation(() => {
-        mockInvestProc.emit('exit', null);
-      });
-    }
-    spawn.mockImplementation(() => mockInvestProc);
-    return mockInvestProc;
-  }
-
-  beforeAll(() => {
-    setupInvestRunHandlers(investExe);
-    setupInvestLogReaderHandler();
-    // mock request/response for invest usage-logging
-    const response = {
-      ok: true,
-      text: async () => 'foo',
-    };
-    fetch.mockResolvedValue(response);
-  });
-
-  afterAll(() => {
-    removeIpcMainListeners();
-  });
-
-  beforeEach(() => {
-    getSpec.mockResolvedValue(spec);
-    fetchValidation.mockResolvedValue([]);
-    getInvestModelNames.mockResolvedValue(
-      { Carbon: { model_name: modelName } }
-    );
-    uiConfig.UI_SPEC = mockUISpec(spec, modelName);
-    // mock the request to write the datastack file. Actually write it
-    // because the app will clean it up when invest exits.
-    writeInvestParameters.mockImplementation((payload) => {
-      fs.writeFileSync(payload.filepath, 'foo');
-      return Promise.resolve({ text: () => 'foo' });
-    });
-  });
-
-  afterEach(async () => {
-    await InvestJob.clearStore();
-  });
-
-  test('exit without error - expect log display', async () => {
-    const mockInvestProc = getMockedInvestProcess();
-    const {
-      findByText,
-      findByLabelText,
-      findByRole,
-      getByRole,
-      queryByText,
-    } = render(<App />);
-
-    const carbon = await findByRole(
-      'button', { name: MOCK_MODEL_TITLE }
-    );
-    userEvent.click(carbon);
-    const workspaceInput = await findByLabelText(
-      `${spec.args.workspace_dir.name}`
-    );
-    userEvent.type(workspaceInput, fakeWorkspace);
-    const execute = await findByRole('button', { name: /Run/ });
-    userEvent.click(execute);
-    await waitFor(() => expect(execute).toBeDisabled());
-
-    // logfile signal on stdout listener is how app knows the process started
-    mockInvestProc.stdout.push(stdOutText);
-    mockInvestProc.stdout.push(stdOutLogfileSignal);
-    const logTab = await findByText('Log');
-    await waitFor(() => {
-      expect(logTab.classList.contains('active')).toBeTruthy();
-    });
-    expect(await findByText(stdOutText, { exact: false }))
-      .toBeInTheDocument();
-    expect(queryByText('Model Complete')).toBeNull();
-    expect(queryByText('Open Workspace')).toBeNull();
-
-    mockInvestProc.emit('exit', 0); // 0 - exit w/o error
-    expect(await findByText('Model Complete')).toBeInTheDocument();
-    expect(await findByText('Open Workspace')).toBeEnabled();
-    expect(execute).toBeEnabled();
-
-    // A recent job card should be rendered
-    await getByRole('button', { name: 'InVEST' }).click();
-    const homeTab = await getByRole('tabpanel', { name: 'home tab' });
-    const cardText = await within(homeTab)
-      .findByText(fakeWorkspace);
-    expect(cardText).toBeInTheDocument();
-  });
-
-  test('exit with error - expect log & alert display', async () => {
-    const mockInvestProc = getMockedInvestProcess();
-    const {
-      findByText,
-      findByLabelText,
-      findByRole,
-      getByRole,
-    } = render(<App />);
-
-    const carbon = await findByRole(
-      'button', { name: MOCK_MODEL_TITLE }
-    );
-    userEvent.click(carbon);
-    const workspaceInput = await findByLabelText(
-      `${spec.args.workspace_dir.name}`
-    );
-    userEvent.type(workspaceInput, fakeWorkspace);
-
-    const execute = await findByRole('button', { name: /Run/ });
-    userEvent.click(execute);
-
-    mockInvestProc.stdout.push(stdOutText);
-    mockInvestProc.stdout.push(stdOutLogfileSignal);
-    mockInvestProc.stderr.push('some error');
-    const logTab = await findByText('Log');
-    await waitFor(() => {
-      expect(logTab.classList.contains('active')).toBeTruthy();
-    });
-
-    expect(await findByText(stdOutText, { exact: false }))
-      .toBeInTheDocument();
-
-    mockInvestProc.emit('exit', 1); // 1 - exit w/ error
-
-    const alert = await findByRole('alert');
-    await waitFor(() => {
-      expect(alert).toHaveTextContent('Error: see log for details');
-      expect(alert).toHaveClass('alert-danger');
-    });
-    expect(await findByRole('button', { name: 'Open Workspace' }))
-      .toBeEnabled();
-
-    // A recent job card should be rendered
-    await getByRole('button', { name: 'InVEST' }).click();
-    const homeTab = await getByRole('tabpanel', { name: 'home tab' });
-    const cardText = await within(homeTab)
-      .findByText(fakeWorkspace);
-    expect(cardText).toBeInTheDocument();
-  });
-
-  test('user terminates process - expect log & alert display', async () => {
-    const mockInvestProc = getMockedInvestProcess();
-    const {
-      findByText,
-      findByLabelText,
-      findByRole,
-      getByRole,
-      queryByText,
-    } = render(<App />);
-
-    const carbon = await findByRole(
-      'button', { name: MOCK_MODEL_TITLE }
-    );
-    userEvent.click(carbon);
-    const workspaceInput = await findByLabelText(
-      `${spec.args.workspace_dir.name}`
-    );
-    userEvent.type(workspaceInput, fakeWorkspace);
-
-    const execute = await findByRole('button', { name: /Run/ });
-    userEvent.click(execute);
-
-    // stdout listener is how the app knows the process started
-    // Canel button only appears after this signal.
-    mockInvestProc.stdout.push(stdOutText);
-    expect(queryByText('Cancel Run')).toBeNull();
-    mockInvestProc.stdout.push(stdOutLogfileSignal);
-    const logTab = await findByText('Log');
-    await waitFor(() => {
-      expect(logTab.classList.contains('active')).toBeTruthy();
-    });
-    expect(await findByText(stdOutText, { exact: false }))
-      .toBeInTheDocument();
-
-    const cancelButton = await findByText('Cancel Run');
-    userEvent.click(cancelButton);
-    expect(await findByText('Open Workspace'))
-      .toBeEnabled();
-    expect(await findByRole('alert'))
-      .toHaveTextContent('Run Canceled');
-
-    // A recent job card should be rendered
-    await getByRole('button', { name: 'InVEST' }).click();
-    const homeTab = await getByRole('tabpanel', { name: 'home tab' });
-    const cardText = await within(homeTab)
-      .findByText(fakeWorkspace);
-    expect(cardText).toBeInTheDocument();
-  });
-
-  test('Run & re-run a job - expect new log display', async () => {
-    const mockInvestProc = getMockedInvestProcess();
-    const {
-      findByText,
-      findByLabelText,
-      findByRole,
-    } = render(<App />);
-
-    const carbon = await findByRole(
-      'button', { name: MOCK_MODEL_TITLE }
-    );
-    userEvent.click(carbon);
-    const workspaceInput = await findByLabelText(
-      `${spec.args.workspace_dir.name}`
-    );
-    userEvent.type(workspaceInput, fakeWorkspace);
-
-    const execute = await findByRole('button', { name: /Run/ });
-    userEvent.click(execute);
-
-    // stdout listener is how the app knows the process started
-    mockInvestProc.stdout.push(stdOutText);
-    mockInvestProc.stdout.push(stdOutLogfileSignal);
-    let logTab = await findByText('Log');
-    await waitFor(() => {
-      expect(logTab.classList.contains('active')).toBeTruthy();
-    });
-    expect(await findByText(stdOutText, { exact: false }))
-      .toBeInTheDocument();
-
-    const cancelButton = await findByText('Cancel Run');
-    userEvent.click(cancelButton);
-    expect(await findByText('Open Workspace'))
-      .toBeEnabled();
-
-    // Now the second invest process:
-    const anotherInvestProc = getMockedInvestProcess();
-    // Now click away from Log, re-run, and expect the switch
-    // back to the new log
-    const setupTab = await findByText('Setup');
-    userEvent.click(setupTab);
-    userEvent.click(execute);
-    const newStdOutText = 'this is new stdout text';
-    anotherInvestProc.stdout.push(newStdOutText);
-    anotherInvestProc.stdout.push(stdOutLogfileSignal);
-    logTab = await findByText('Log');
-    await waitFor(() => {
-      expect(logTab.classList.contains('active')).toBeTruthy();
-    });
-    expect(await findByText(newStdOutText, { exact: false }))
-      .toBeInTheDocument();
-    anotherInvestProc.emit('exit', 0);
-    // Give it time to run the listener before unmounting.
-    await new Promise((resolve) => setTimeout(resolve, 300));
-  });
-
-  test('Load Recent run & re-run it - expect new log display', async () => {
-    const mockInvestProc = getMockedInvestProcess();
-    const argsValues = {
-      workspace_dir: fakeWorkspace,
-    };
-    const mockJob = new InvestJob({
-      modelRunName: 'carbon',
-      modelHumanName: 'Carbon Sequestration',
-      argsValues: argsValues,
-      status: 'success',
-      logfile: logfilePath,
-    });
-    await InvestJob.saveJob(mockJob);
-
-    const {
-      findByText,
-      findByRole,
-      queryByText,
-    } = render(<App />);
-
-    const recentJobCard = await findByText(
-      argsValues.workspace_dir
-    );
-    userEvent.click(recentJobCard);
-    userEvent.click(await findByText('Log'));
-    // We don't need to have a real logfile in order to test that LogTab
-    // is trying to read from a file instead of from stdout
-    expect(await findByText(/Logfile is missing/)).toBeInTheDocument();
-
-    // Now re-run from the same InvestTab component and expect
-    // LogTab is displaying the new invest process stdout
-    const setupTab = await findByText('Setup');
-    userEvent.click(setupTab);
-    const execute = await findByRole('button', { name: /Run/ });
-    userEvent.click(execute);
-    mockInvestProc.stdout.push(stdOutText);
-    mockInvestProc.stdout.push(stdOutLogfileSignal);
-    const logTab = await findByText('Log');
-    await waitFor(() => {
-      expect(logTab.classList.contains('active')).toBeTruthy();
-    });
-    expect(await findByText(stdOutText, { exact: false }))
-      .toBeInTheDocument();
-    expect(queryByText('Logfile is missing')).toBeNull();
-    mockInvestProc.emit('exit', 0);
-    // Give it time to run the listener before unmounting.
-    await new Promise((resolve) => setTimeout(resolve, 300));
-  });
-});
-
 describe('Translation', () => {
+  const { location } = global.window;
   beforeAll(async () => {
     getInvestModelNames.mockResolvedValue({});
     getSupportedLanguages.mockResolvedValue({ en: 'english', ll: 'foo' });
@@ -887,14 +539,21 @@ describe('Translation', () => {
     });
   });
 
+  afterAll(() => {
+    Object.defineProperty(global.window, 'location', {
+      configurable: true,
+      value: location,
+    });
+  });
+
   test('Text rerenders in new language when language setting changes', async () => {
     const { findByLabelText } = render(<App />);
 
-    userEvent.click(await findByLabelText('settings'));
+    await userEvent.click(await findByLabelText('settings'));
     const languageInput = await findByLabelText('Language', { exact: false });
     expect(languageInput).toHaveValue('en');
 
-    userEvent.selectOptions(languageInput, 'll');
+    await userEvent.selectOptions(languageInput, 'll');
     await waitFor(() => {
       expect(global.window.location.reload).toHaveBeenCalled();
     });
