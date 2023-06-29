@@ -446,6 +446,7 @@ MODEL_SPEC = {
                     ),
                     "bands": {1: {'type': 'number', 'units': u.count}},
                 },
+
                 # when RADIUS_OPT_UNIFORM
                 "distance_weighted_population_within_[SEARCH_RADIUS].tif": {
                     "about": gettext(
@@ -466,6 +467,14 @@ MODEL_SPEC = {
                         (f"search_radius_mode == '{RADIUS_OPT_UNIFORM}' or "
                          f"search_radius_mode == '{RADIUS_OPT_POP_GROUP}'"),
                 },
+                "accessible_urban_nature.tif": {
+                    "about": gettext(
+                        "The area of greenspace available within the defined "
+                        "radius, weighted by the selected decay function."),
+                    "bands": {1: {"type": "number", "units": u.m**2}},
+                    "created_if":
+                        f"search_radius_mode == '{RADIUS_OPT_URBAN_NATURE}'",
+                },
                 "urban_nature_population_ratio.tif": {
                     "about": gettext(
                         "The calculated urban nature/population ratio."),
@@ -485,27 +494,28 @@ MODEL_SPEC = {
                     "created_if":
                         f"search_radius_mode == '{RADIUS_OPT_URBAN_NATURE}'",
                 },
+                "accessible_urban_nature_lucode_[LUCODE].tif": {
+                    "about": gettext(
+                        "The area of greenspace available within the radius "
+                        "associated with urban nature class LUCODE, weighted "
+                        "by the selected decay function."),
+                    "bands": {1: {"type": "number", "units": u.m**2}},
+                    "created_if":
+                        f"search_radius_mode == '{RADIUS_OPT_URBAN_NATURE}'",
+                },
                 "urban_nature_supply_percapita_lucode_[LUCODE].tif": {
                     "about": gettext(
                         "The urban nature supplied to populations due to the "
                         "land use land cover code LUCODE"),
                     "bands": {1: {"type": "number", "units": u.m**2/u.person}},
                     "created_if":
-                        f"search_radius_mode == '{RADIUS_OPT_UNIFORM}'",
+                        f"search_radius_mode == '{RADIUS_OPT_URBAN_NATURE}'",
                 },
                 "urban_nature_population_ratio_lucode_[LUCODE].tif": {
                     "about": gettext(
                         "The calculated urban nature/population ratio for "
                         "the urban nature class represented by the land use "
                         "land cover code LUCODE."),
-                    "bands": {1: {"type": "number", "units": u.m**2/u.person}},
-                    "created_if":
-                        f"search_radius_mode == '{RADIUS_OPT_URBAN_NATURE}'",
-                },
-                "urban_nature_supply_percapita_lucode_[LUCODE].tif": {
-                    "about": gettext(
-                        "The urban nature supplied to populations due to "
-                        "the land use land cover class LUCODE."),
                     "bands": {1: {"type": "number", "units": u.m**2/u.person}},
                     "created_if":
                         f"search_radius_mode == '{RADIUS_OPT_URBAN_NATURE}'",
@@ -518,6 +528,15 @@ MODEL_SPEC = {
                         "belonging to the population in the population group "
                         "POP_GROUP."),
                     "bands": {1: {"type": "number", "units": u.count}},
+                    "created_if":
+                        f"search_radius_mode == '{RADIUS_OPT_POP_GROUP}'",
+                },
+                "accessible_urban_nature_to_[POP_GROUP].tif": {
+                    "about": gettext(
+                        "The area of greenspace available within the radius "
+                        "associated with group POP_GROUP, weighted by the "
+                        "selected decay function."),
+                    "bands": {1: {"type": "number", "units": u.m**2}},
                     "created_if":
                         f"search_radius_mode == '{RADIUS_OPT_POP_GROUP}'",
                 },
