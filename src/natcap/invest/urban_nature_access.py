@@ -990,6 +990,21 @@ def execute(args):
             dependent_task_list=[lulc_mask_task]
         )
 
+        accessible_urban_nature_path = os.path.join(
+            intermediate_dir, f'accessible_urban_nature{suffix}.tif')
+        _ = graph.add_task(
+            _convolve_and_set_lower_bound,
+            kwargs={
+                "signal_path_band": (urban_nature_pixels_path, 1),
+                "kernel_path_band": (kernel_paths[search_radius_m], 1),
+                "target_path": accessible_urban_nature_path,
+                "working_dir": intermediate_dir,
+            },
+            task_name='Accessible urban nature',
+            target_path_list=[accessible_urban_nature_path],
+            dependent_task_list=[urban_nature_reclassification_task]
+        )
+
         urban_nature_population_ratio_path = os.path.join(
             intermediate_dir,
             f'urban_nature_population_ratio{suffix}.tif')
