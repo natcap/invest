@@ -725,7 +725,6 @@ class UNATests(unittest.TestCase):
             output_dir, 'accessible_urban_nature_to_pop_female.tif'),
             6221004.412597656, 1171.7352294921875, 11898.0712890625)
 
-
     def test_modes_same_radii_same_results(self):
         """UNA: all modes have same results when consistent radii.
 
