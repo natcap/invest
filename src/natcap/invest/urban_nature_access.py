@@ -414,6 +414,38 @@ MODEL_SPEC = {
                     "created_if":
                         f"search_radius_mode == '{RADIUS_OPT_POP_GROUP}'",
                 }
+
+                # when RADIUS_OPT_UNIFORM
+                "accessible_urban_nature.tif": {
+                    "about": gettext(
+                        "The area of greenspace available within the defined "
+                        "radius, weighted by the selected decay function."),
+                    "bands": {1: {"type": "number", "units": u.m**2}},
+                    "created_if":
+                        f"search_radius_mode == '{RADIUS_OPT_URBAN_NATURE}'",
+                },
+
+                # When RADIUS_OPT_URBAN_NATURE
+                "accessible_urban_nature_lucode_[LUCODE].tif": {
+                    "about": gettext(
+                        "The area of greenspace available within the radius "
+                        "associated with urban nature class LUCODE, weighted "
+                        "by the selected decay function."),
+                    "bands": {1: {"type": "number", "units": u.m**2}},
+                    "created_if":
+                        f"search_radius_mode == '{RADIUS_OPT_URBAN_NATURE}'",
+                },
+
+                # When RADIUS_OPT_POP_GROUP
+                "accessible_urban_nature_to_[POP_GROUP].tif": {
+                    "about": gettext(
+                        "The area of greenspace available within the radius "
+                        "associated with group POP_GROUP, weighted by the "
+                        "selected decay function."),
+                    "bands": {1: {"type": "number", "units": u.m**2}},
+                    "created_if":
+                        f"search_radius_mode == '{RADIUS_OPT_POP_GROUP}'",
+                },
             },
         },
         'intermediate': {
@@ -467,14 +499,6 @@ MODEL_SPEC = {
                         (f"search_radius_mode == '{RADIUS_OPT_UNIFORM}' or "
                          f"search_radius_mode == '{RADIUS_OPT_POP_GROUP}'"),
                 },
-                "accessible_urban_nature.tif": {
-                    "about": gettext(
-                        "The area of greenspace available within the defined "
-                        "radius, weighted by the selected decay function."),
-                    "bands": {1: {"type": "number", "units": u.m**2}},
-                    "created_if":
-                        f"search_radius_mode == '{RADIUS_OPT_URBAN_NATURE}'",
-                },
                 "urban_nature_population_ratio.tif": {
                     "about": gettext(
                         "The calculated urban nature/population ratio."),
@@ -490,15 +514,6 @@ MODEL_SPEC = {
                         "(in square meters) represented in each pixel for "
                         "the urban nature class represented by the land use "
                         "land cover code LUCODE."),
-                    "bands": {1: {"type": "number", "units": u.m**2}},
-                    "created_if":
-                        f"search_radius_mode == '{RADIUS_OPT_URBAN_NATURE}'",
-                },
-                "accessible_urban_nature_lucode_[LUCODE].tif": {
-                    "about": gettext(
-                        "The area of greenspace available within the radius "
-                        "associated with urban nature class LUCODE, weighted "
-                        "by the selected decay function."),
                     "bands": {1: {"type": "number", "units": u.m**2}},
                     "created_if":
                         f"search_radius_mode == '{RADIUS_OPT_URBAN_NATURE}'",
@@ -528,15 +543,6 @@ MODEL_SPEC = {
                         "belonging to the population in the population group "
                         "POP_GROUP."),
                     "bands": {1: {"type": "number", "units": u.count}},
-                    "created_if":
-                        f"search_radius_mode == '{RADIUS_OPT_POP_GROUP}'",
-                },
-                "accessible_urban_nature_to_[POP_GROUP].tif": {
-                    "about": gettext(
-                        "The area of greenspace available within the radius "
-                        "associated with group POP_GROUP, weighted by the "
-                        "selected decay function."),
-                    "bands": {1: {"type": "number", "units": u.m**2}},
                     "created_if":
                         f"search_radius_mode == '{RADIUS_OPT_POP_GROUP}'",
                 },
@@ -1010,7 +1016,7 @@ def execute(args):
         )
 
         accessible_urban_nature_path = os.path.join(
-            intermediate_dir, f'accessible_urban_nature{suffix}.tif')
+            output_dir, f'accessible_urban_nature{suffix}.tif')
         _ = graph.add_task(
             _convolve_and_set_lower_bound,
             kwargs={
@@ -1099,7 +1105,7 @@ def execute(args):
             )
 
             accessible_urban_nature_path = os.path.join(
-                intermediate_dir,
+                output_dir,
                 f'accessible_urban_nature_lucode_{lucode}{suffix}.tif')
             _ = graph.add_task(
                 _convolve_and_set_lower_bound,
@@ -1188,7 +1194,7 @@ def execute(args):
             search_radius_m = search_radii_by_pop_group[pop_group]
 
             accessible_urban_nature_path = os.path.join(
-                intermediate_dir,
+                output_dir,
                 f'accessible_urban_nature_to_{pop_group}{suffix}.tif')
             _ = graph.add_task(
                 _convolve_and_set_lower_bound,
