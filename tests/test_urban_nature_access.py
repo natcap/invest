@@ -569,7 +569,6 @@ class UNATests(unittest.TestCase):
         _assert_urban_nature(os.path.join(
             output_dir, 'accessible_urban_nature_lucode_9_suffix.tif'),
             7744116.974121094, 1567.57958984375, 12863.4619140625)
-        assert print(os.listdir(output_dir)) == 0
 
     def test_split_population(self):
         """UNA: test split population optional module.
@@ -704,6 +703,28 @@ class UNATests(unittest.TestCase):
         for fieldname, expected_value in expected_field_values.items():
             self.assertAlmostEqual(
                 expected_value, summary_feature.GetField(fieldname))
+
+        def _assert_urban_nature(path, sum_value, min_value, max_value):
+            accessible_urban_nature_array = (
+                pygeoprocessing.raster_to_numpy_array(path))
+            valid_mask = ~utils.array_equals_nodata(
+                accessible_urban_nature_array,
+                urban_nature_access.FLOAT32_NODATA)
+            valid_pixels = accessible_urban_nature_array[valid_mask]
+            print(f"{numpy.sum(valid_pixels)}, {numpy.min(valid_pixels)}, "
+                  f"{numpy.max(valid_pixels)}")
+            self.assertAlmostEqual(numpy.sum(valid_pixels), sum_value)
+            self.assertAlmostEqual(numpy.min(valid_pixels), min_value)
+            self.assertAlmostEqual(numpy.max(valid_pixels), max_value)
+
+        output_dir = os.path.join(args['workspace_dir'], 'output')
+        _assert_urban_nature(os.path.join(
+            output_dir, 'accessible_urban_nature_to_pop_male.tif'),
+            6221004.412597656, 1171.7352294921875, 11898.0712890625)
+        _assert_urban_nature(os.path.join(
+            output_dir, 'accessible_urban_nature_to_pop_female.tif'),
+            6221004.412597656, 1171.7352294921875, 11898.0712890625)
+
 
     def test_modes_same_radii_same_results(self):
         """UNA: all modes have same results when consistent radii.
