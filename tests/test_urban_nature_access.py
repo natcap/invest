@@ -480,6 +480,16 @@ class UNATests(unittest.TestCase):
         admin_vector = None
         admin_layer = None
 
+        accessible_urban_nature_array = pygeoprocessing.raster_to_numpy_array(
+            os.path.join(args['workspace_dir'], 'output',
+                         'accessible_urban_nature_suffix.tif'))
+        valid_mask = ~utils.array_equals_nodata(
+            accessible_urban_nature_array, urban_nature_access.FLOAT32_NODATA)
+        valid_pixels = accessible_urban_nature_array[valid_mask]
+        self.assertAlmostEqual(numpy.sum(valid_pixels), 6221004.41259766)
+        self.assertAlmostEqual(numpy.min(valid_pixels), 1171.7352294921875)
+        self.assertAlmostEqual(numpy.max(valid_pixels), 11898.0712890625)
+
     def test_split_urban_nature(self):
         from natcap.invest import urban_nature_access
 
