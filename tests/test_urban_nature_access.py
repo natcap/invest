@@ -542,6 +542,35 @@ class UNATests(unittest.TestCase):
         admin_vector = None
         admin_layer = None
 
+        def _assert_urban_nature(path, sum_value, min_value, max_value):
+            accessible_urban_nature_array = (
+                pygeoprocessing.raster_to_numpy_array(path))
+            valid_mask = ~utils.array_equals_nodata(
+                accessible_urban_nature_array,
+                urban_nature_access.FLOAT32_NODATA)
+            valid_pixels = accessible_urban_nature_array[valid_mask]
+            self.assertAlmostEqual(numpy.sum(valid_pixels), sum_value)
+            self.assertAlmostEqual(numpy.min(valid_pixels), min_value)
+            self.assertAlmostEqual(numpy.max(valid_pixels), max_value)
+
+        output_dir = os.path.join(args['workspace_dir'], 'output')
+        _assert_urban_nature(os.path.join(
+            output_dir, 'accessible_urban_nature_lucode_1_suffix.tif'),
+            72000.0, 0.0, 900.0)
+        _assert_urban_nature(os.path.join(
+            output_dir, 'accessible_urban_nature_lucode_3_suffix.tif'),
+            1034934.9864730835, 0.0, 4431.1650390625)
+        _assert_urban_nature(os.path.join(
+            output_dir, 'accessible_urban_nature_lucode_5_suffix.tif'),
+            2837622.9519348145, 0.0, 8136.6884765625)
+        _assert_urban_nature(os.path.join(
+            output_dir, 'accessible_urban_nature_lucode_7_suffix.tif'),
+            8112734.805541992, 2019.2935791015625, 17729.431640625)
+        _assert_urban_nature(os.path.join(
+            output_dir, 'accessible_urban_nature_lucode_9_suffix.tif'),
+            7744116.974121094, 1567.57958984375, 12863.4619140625)
+        assert print(os.listdir(output_dir)) == 0
+
     def test_split_population(self):
         """UNA: test split population optional module.
 
