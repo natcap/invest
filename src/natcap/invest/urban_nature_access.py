@@ -413,7 +413,7 @@ MODEL_SPEC = {
                     "bands": {1: {"type": "number", "units": u.m**2/u.person}},
                     "created_if":
                         f"search_radius_mode == '{RADIUS_OPT_POP_GROUP}'",
-                }
+                },
 
                 # when RADIUS_OPT_UNIFORM
                 "accessible_urban_nature.tif": {
