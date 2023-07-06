@@ -75,6 +75,7 @@ MODEL_SPEC = {
                 "c_above": {
                     "type": "number",
                     "units": u.metric_ton/u.hectare,
+                    "na_allowed": True,
                     "about": gettext(
                         "Carbon density value for the aboveground carbon "
                         "pool.")
@@ -420,7 +421,8 @@ def execute(args):
     LOGGER.info('Calculating direct mapped carbon stocks')
     carbon_maps = []
     biophysical_table = utils.read_csv_to_dataframe(
-        args['biophysical_table_path'], 'lucode').to_dict(orient='index')
+        args['biophysical_table_path'],
+        MODEL_SPEC['args']['biophysical_table_path']).to_dict(orient='index')
     biophysical_keys = [
         x.lower() for x in list(biophysical_table.values())[0].keys()]
     pool_list = [('c_above', True)]
@@ -632,7 +634,8 @@ def _calculate_lulc_carbon_map(
     """
     # classify forest pixels from lulc
     biophysical_table = utils.read_csv_to_dataframe(
-        biophysical_table_path, 'lucode').to_dict(orient='index')
+        biophysical_table_path, MODEL_SPEC['args']['biophysical_table_path']
+    ).to_dict(orient='index')
 
     lucode_to_per_cell_carbon = {}
     cell_size = pygeoprocessing.get_raster_info(
@@ -698,7 +701,8 @@ def _map_distance_from_tropical_forest_edge(
     """
     # Build a list of forest lucodes
     biophysical_table = utils.read_csv_to_dataframe(
-        biophysical_table_path, 'lucode').to_dict(orient='index')
+        biophysical_table_path, MODEL_SPEC['args']['biophysical_table_path']
+    ).to_dict(orient='index')
     forest_codes = [
         lucode for (lucode, ludata) in biophysical_table.items()
         if int(ludata['is_tropical_forest']) == 1]

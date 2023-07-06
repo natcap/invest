@@ -305,12 +305,14 @@ MODEL_SPEC = {
             "index_col": "lulc-class",
             "columns": {
                 "lulc-class": {
-                    "type": "integer",
+                    "type": "freestyle_string",
+                    "na_allowed": True,
                     "about": gettext(
                         "LULC codes matching the codes in the biophysical "
                         "table.")},
                 "[LULC CODE]": {
                     "type": "option_string",
+                    "na_allowed": True,
                     "options": {
                         "accum": {
                             "description": gettext("a state of carbon accumulation")
@@ -589,7 +591,8 @@ def execute(args):
     # We're assuming that the LULC initial variables and the carbon pool
     # transient table are combined into a single lookup table.
     biophysical_parameters = utils.read_csv_to_dataframe(
-        args['biophysical_table_path'], 'code').to_dict(orient='index')
+        args['biophysical_table_path'], MODEL_SPEC['args']['biophysical_table_path']
+    ).to_dict(orient='index')
 
     # LULC Classnames are critical to the transition mapping, so they must be
     # unique.  This check is here in ``execute`` because it's possible that
@@ -969,7 +972,8 @@ def execute(args):
             prices = {
                 year: values['price'] for (year, values) in
                 utils.read_csv_to_dataframe(
-                    args['price_table_path'], 'year'
+                    args['price_table_path'],
+                    MODEL_SPEC['args']['price_table_path']
                 ).to_dict(orient='index').items()}
         else:
             inflation_rate = float(args['inflation_rate']) * 0.01
@@ -1991,7 +1995,7 @@ def _read_transition_matrix(transition_csv_path, biophysical_dict):
         the pool for the landcover transition.
     """
     table = utils.read_csv_to_dataframe(
-        transition_csv_path, convert_cols_to_lower=False, convert_vals_to_lower=False)
+        transition_csv_path, MODEL_SPEC['args']['landcover_transitions_table'], set_index=False)
 
     lulc_class_to_lucode = {}
     max_lucode = 0
@@ -2249,7 +2253,7 @@ def _extract_snapshots_from_table(csv_path):
 
     """
     table = utils.read_csv_to_dataframe(
-        csv_path, convert_vals_to_lower=False, expand_path_cols=['raster_path'])
+        csv_path, MODEL_SPEC['args']['landcover_snapshot_csv'], set_index=False)
 
     output_dict = {}
     table.set_index("snapshot_year", drop=False, inplace=True)

@@ -89,7 +89,7 @@ MODEL_SPEC = {
         },
         "landcover_to_crop_table_path": {
             "type": "csv",
-            "index_col": "lucode",
+            "index_col": "crop_name",
             "columns": {
                 "lucode": {"type": "integer"},
                 "crop_name": {
@@ -172,6 +172,9 @@ MODEL_SPEC = {
                         "crop": {
                             "type": "option_string",
                             "options": CROP_OPTIONS
+                        },
+                        "percentrefuse": {
+                            "type": "percent"
                         },
                         **{nutrient: {
                             "type": "number",
@@ -417,11 +420,11 @@ _AGGREGATE_TABLE_FILE_PATTERN = os.path.join(
     '.', 'aggregate_results%s.csv')
 
 _EXPECTED_NUTRIENT_TABLE_HEADERS = [
-    'Protein', 'Lipid', 'Energy', 'Ca', 'Fe', 'Mg', 'Ph', 'K', 'Na', 'Zn',
-    'Cu', 'Fl', 'Mn', 'Se', 'VitA', 'betaC', 'alphaC', 'VitE', 'Crypto',
-    'Lycopene', 'Lutein', 'betaT', 'gammaT', 'deltaT', 'VitC', 'Thiamin',
-    'Riboflavin', 'Niacin', 'Pantothenic', 'VitB6', 'Folate', 'VitB12',
-    'VitK']
+    'protein', 'lipid', 'energy', 'ca', 'fe', 'mg', 'ph', 'k', 'na', 'zn',
+    'cu', 'fl', 'mn', 'se', 'vita', 'betac', 'alphac', 'vite', 'crypto',
+    'lycopene', 'lutein', 'betat', 'gammat', 'deltat', 'vitc', 'thiamin',
+    'riboflavin', 'niacin', 'pantothenic', 'vitb6', 'folate', 'vitb12',
+    'vitk']
 _EXPECTED_LUCODE_TABLE_HEADER = 'lucode'
 _NODATA_YIELD = -1
 
@@ -470,7 +473,8 @@ def execute(args):
 
     """
     crop_to_landcover_table = utils.read_csv_to_dataframe(
-        args['landcover_to_crop_table_path'], 'crop_name').to_dict(orient='index')
+        args['landcover_to_crop_table_path'],
+        MODEL_SPEC['args']['landcover_to_crop_table_path']).to_dict(orient='index')
     bad_crop_name_list = []
     for crop_name in crop_to_landcover_table:
         crop_climate_bin_raster_path = os.path.join(
@@ -552,7 +556,11 @@ def execute(args):
             args['model_data_path'],
             _CLIMATE_PERCENTILE_TABLE_PATTERN % crop_name)
         crop_climate_percentile_table = utils.read_csv_to_dataframe(
-            climate_percentile_yield_table_path, 'climate_bin').to_dict(orient='index')
+            climate_percentile_yield_table_path,
+            MODEL_SPEC['args']['model_data_path']['contents'][
+                'climate_percentile_yield_tables']['contents'][
+                '[CROP]_percentile_yield_table.csv']
+            ).to_dict(orient='index')
         yield_percentile_headers = [
             x for x in list(crop_climate_percentile_table.values())[0]
             if x != 'climate_bin']
@@ -711,8 +719,8 @@ def execute(args):
     # this model data.
     nutrient_table = utils.read_csv_to_dataframe(
         os.path.join(args['model_data_path'], 'crop_nutrient.csv'),
-        'crop', convert_cols_to_lower=False, convert_vals_to_lower=False
-        ).to_dict(orient='index')
+        MODEL_SPEC['args']['model_data_path']['contents']['crop_nutrient.csv']
+    ).to_dict(orient='index')
     result_table_path = os.path.join(
         output_dir, 'result_table%s.csv' % file_suffix)
 
@@ -953,7 +961,7 @@ def tabulate_results(
 
             # convert 100g to Mg and fraction left over from refuse
             nutrient_factor = 1e4 * (
-                1 - nutrient_table[crop_name]['Percentrefuse'] / 100)
+                1 - nutrient_table[crop_name]['percentrefuse'] / 100)
             for nutrient_id in _EXPECTED_NUTRIENT_TABLE_HEADERS:
                 for yield_percentile_id in sorted(yield_percentile_headers):
                     total_nutrient = (
@@ -1026,7 +1034,7 @@ def aggregate_to_polygons(
     for crop_name in crop_to_landcover_table:
         # convert 100g to Mg and fraction left over from refuse
         nutrient_factor = 1e4 * (
-            1 - nutrient_table[crop_name]['Percentrefuse'] / 100)
+            1 - nutrient_table[crop_name]['percentrefuse'] / 100)
         # loop over percentiles
         for yield_percentile_id in yield_percentile_headers:
             percentile_crop_production_raster_path = os.path.join(

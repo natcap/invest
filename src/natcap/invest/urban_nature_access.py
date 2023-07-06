@@ -92,6 +92,7 @@ MODEL_SPEC = {
                     'units': u.meter,
                     'required':
                         f'search_radius_mode == "{RADIUS_OPT_URBAN_NATURE}"',
+                    'na_allowed': True,
                     'expression': 'value >= 0',
                     'about': (
                         'The distance within which a LULC type is relevant '
@@ -260,7 +261,7 @@ MODEL_SPEC = {
             'index_col': 'pop_group',
             'columns': {
                 "pop_group": {
-                    "type": "ratio",
+                    "type": "freestyle_string",
                     "required": False,
                     "about": gettext(
                         "The name of the population group. Names must match "
@@ -904,7 +905,8 @@ def execute(args):
                     aoi_reprojection_task, lulc_mask_task]
             )
 
-    attr_table = utils.read_csv_to_dataframe(args['lulc_attribute_table'])
+    attr_table = utils.read_csv_to_dataframe(
+        args['lulc_attribute_table'], MODEL_SPEC['args']['lulc_attribute_table'], set_index=False)
     kernel_paths = {}  # search_radius, kernel path
     kernel_tasks = {}  # search_radius, kernel task
 
@@ -924,7 +926,8 @@ def execute(args):
                 index=False, name=None))
     elif args['search_radius_mode'] == RADIUS_OPT_POP_GROUP:
         pop_group_table = utils.read_csv_to_dataframe(
-            args['population_group_radii_table'])
+            args['population_group_radii_table'],
+            MODEL_SPEC['args']['population_group_radii_table'], set_index=False)
         search_radii = set(pop_group_table['search_radius_m'].unique())
         # Build a dict of {pop_group: search_radius_m}
         search_radii_by_pop_group = dict(
@@ -1189,7 +1192,8 @@ def execute(args):
 
         # Create a dict of {pop_group: search_radius_m}
         group_radii_table = utils.read_csv_to_dataframe(
-            args['population_group_radii_table'])
+            args['population_group_radii_table'],
+            MODEL_SPEC['args']['population_group_radii_table'], set_index=False)
         search_radii = dict(
             group_radii_table[['pop_group', 'search_radius_m']].itertuples(
                 index=False, name=None))
@@ -1751,7 +1755,8 @@ def _reclassify_urban_nature_area(
         ``None``
     """
     attribute_table_dict = utils.read_csv_to_dataframe(
-        lulc_attribute_table, 'lucode').to_dict(orient='index')
+        lulc_attribute_table, MODEL_SPEC['args']['lulc_attribute_table'], set_index=False
+    ).to_dict(orient='index')
 
     squared_pixel_area = abs(
         numpy.multiply(*_square_off_pixels(lulc_raster_path)))

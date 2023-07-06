@@ -324,7 +324,7 @@ _INDEX_NODATA = -1
 _NESTING_SUBSTRATE_PATTERN = 'nesting_([^_]+)_availability_index'
 _FLORAL_RESOURCES_AVAILABLE_PATTERN = 'floral_resources_([^_]+)_index'
 _EXPECTED_BIOPHYSICAL_HEADERS = [
-    'lucode', _NESTING_SUBSTRATE_PATTERN, _FLORAL_RESOURCES_AVAILABLE_PATTERN]
+    _NESTING_SUBSTRATE_PATTERN, _FLORAL_RESOURCES_AVAILABLE_PATTERN]
 
 # These are patterns expected in the guilds table
 _NESTING_SUITABILITY_PATTERN = 'nesting_suitability_([^_]+)_index'
@@ -334,7 +334,7 @@ _FORAGING_ACTIVITY_RE_PATTERN = _FORAGING_ACTIVITY_PATTERN % '([^_]+)'
 _RELATIVE_SPECIES_ABUNDANCE_FIELD = 'relative_abundance'
 _ALPHA_HEADER = 'alpha'
 _EXPECTED_GUILD_HEADERS = [
-    'species', _NESTING_SUITABILITY_PATTERN, _FORAGING_ACTIVITY_RE_PATTERN,
+    _NESTING_SUITABILITY_PATTERN, _FORAGING_ACTIVITY_RE_PATTERN,
     _ALPHA_HEADER, _RELATIVE_SPECIES_ABUNDANCE_FIELD]
 
 _NESTING_SUBSTRATE_INDEX_FILEPATTERN = 'nesting_substrate_index_%s%s.tif'
@@ -1182,7 +1182,8 @@ def _parse_scenario_variables(args):
         farm_vector_path = None
 
     guild_table = utils.read_csv_to_dataframe(
-        guild_table_path, 'species').to_dict(orient='index')
+        guild_table_path, MODEL_SPEC['args']['guild_table_path']
+    ).to_dict(orient='index')
 
     LOGGER.info('Checking to make sure guild table has all expected headers')
     guild_headers = list(guild_table.values())[0].keys()
@@ -1195,7 +1196,9 @@ def _parse_scenario_variables(args):
                 f"headers from {guild_table_path}: {', '.join(guild_headers)}")
 
     landcover_biophysical_table = utils.read_csv_to_dataframe(
-        landcover_biophysical_table_path, 'lucode').to_dict(orient='index')
+        landcover_biophysical_table_path,
+        MODEL_SPEC['args']['landcover_biophysical_table_path']
+    ).to_dict(orient='index')
     biophysical_table_headers = (
         list(landcover_biophysical_table.values())[0].keys())
     for header in _EXPECTED_BIOPHYSICAL_HEADERS:

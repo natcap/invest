@@ -532,7 +532,8 @@ def execute(args):
             'valuation table.')
         # Open/read in valuation parameters from CSV file
         valuation_params = utils.read_csv_to_dataframe(
-            args['valuation_table_path'], 'ws_id').to_dict(orient='index')
+            args['valuation_table_path'], MODEL_SPEC['args']['valuation_table_path']
+        ).to_dict(orient='index')
         watershed_vector = gdal.OpenEx(
             args['watersheds_path'], gdal.OF_VECTOR)
         watershed_layer = watershed_vector.GetLayer()
@@ -651,14 +652,16 @@ def execute(args):
 
     # Open/read in the csv file into a dictionary and add to arguments
     bio_dict = utils.read_csv_to_dataframe(
-        args['biophysical_table_path'], 'lucode').to_dict(orient='index')
+        args['biophysical_table_path'], MODEL_SPEC['args']['biophysical_table_path']
+    ).to_dict(orient='index')
     bio_lucodes = set(bio_dict.keys())
     bio_lucodes.add(nodata_dict['lulc'])
     LOGGER.debug(f'bio_lucodes: {bio_lucodes}')
 
     if 'demand_table_path' in args and args['demand_table_path'] != '':
         demand_dict = utils.read_csv_to_dataframe(
-            args['demand_table_path'], 'lucode').to_dict(orient='index')
+            args['demand_table_path'], MODEL_SPEC['args']['demand_table_path']
+        ).to_dict(orient='index')
         demand_reclassify_dict = dict(
             [(lucode, demand_dict[lucode]['demand'])
              for lucode in demand_dict])

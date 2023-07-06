@@ -494,6 +494,7 @@ class UNATests(unittest.TestCase):
         new_search_radius_values[7] = 30 * 9  # make one a duplicate distance.
         attribute_table['search_radius_m'] = attribute_table['lucode'].map(
             new_search_radius_values)
+        print(attribute_table)
         attribute_table.to_csv(args['lulc_attribute_table'], index=False)
 
         urban_nature_access.execute(args)

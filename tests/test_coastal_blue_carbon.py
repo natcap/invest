@@ -10,6 +10,7 @@ import textwrap
 import unittest
 
 import numpy
+import pandas
 import pygeoprocessing
 from natcap.invest import utils
 from osgeo import gdal
@@ -151,10 +152,12 @@ class TestPreprocessor(unittest.TestCase):
                        pprint.pformat(non_suffixed_files)))
 
         expected_landcover_codes = set(range(0, 24))
-        found_landcover_codes = set(utils.read_csv_to_dataframe(
-            os.path.join(outputs_dir,
-                         'carbon_biophysical_table_template_150225.csv'),
-            'code').to_dict(orient='index').keys())
+        print('\n\n')
+        print(pandas.read_csv(
+            os.path.join(outputs_dir, 'carbon_biophysical_table_template_150225.csv')))
+        found_landcover_codes = set(pandas.read_csv(
+            os.path.join(outputs_dir, 'carbon_biophysical_table_template_150225.csv')
+        )['code'].values)
         self.assertEqual(expected_landcover_codes, found_landcover_codes)
 
     def test_transition_table(self):
@@ -189,7 +192,9 @@ class TestPreprocessor(unittest.TestCase):
             lulc_csv.write('1,parking lot,False\n')
 
         landcover_table = utils.read_csv_to_dataframe(
-            landcover_table_path, 'code').to_dict(orient='index')
+            landcover_table_path,
+            preprocessor.MODEL_SPEC['args']['lulc_lookup_table_path']
+        ).to_dict(orient='index')
         target_table_path = os.path.join(self.workspace_dir,
                                          'transition_table.csv')
 
@@ -204,7 +209,9 @@ class TestPreprocessor(unittest.TestCase):
 
         # Re-load the landcover table
         landcover_table = utils.read_csv_to_dataframe(
-            landcover_table_path, 'code').to_dict(orient='index')
+            landcover_table_path,
+            preprocessor.MODEL_SPEC['args']['lulc_lookup_table_path']
+        ).to_dict(orient='index')
         preprocessor._create_transition_table(
             landcover_table, [filename_a, filename_b], target_table_path)
 

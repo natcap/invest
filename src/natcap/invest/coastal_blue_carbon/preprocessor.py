@@ -214,7 +214,9 @@ def execute(args):
         task_name='Align input landcover rasters')
 
     landcover_table = utils.read_csv_to_dataframe(
-        args['lulc_lookup_table_path'], 'code').to_dict(orient='index')
+        args['lulc_lookup_table_path'],
+        MODEL_SPEC['args']['lulc_lookup_table_path'], set_index=False
+    ).set_index('code', drop=False).to_dict(orient='index')
 
     target_transition_table = os.path.join(
         output_dir, TRANSITION_TABLE.format(suffix=suffix))
@@ -382,12 +384,15 @@ def _create_biophysical_table(landcover_table, target_biophysical_table_path):
     Returns:
         ``None``
     """
+    print(landcover_table)
     target_column_names = [
         colname.lower() for colname in coastal_blue_carbon.MODEL_SPEC['args'][
             'biophysical_table_path']['columns']]
 
+    print(target_column_names)
     with open(target_biophysical_table_path, 'w') as bio_table:
         bio_table.write(f"{','.join(target_column_names)}\n")
+        print(f"{','.join(target_column_names)}\n")
         for lulc_code in sorted(landcover_table.keys()):
             # 2 columns are defined below, and we need 1 less comma to only
             # have commas between fields.
@@ -398,6 +403,7 @@ def _create_biophysical_table(landcover_table, target_biophysical_table_path):
                     row.append(str(landcover_table[lulc_code][colname]))
                 except KeyError:
                     row.append('')
+            print(f"{','.join(row)}\n")
             bio_table.write(f"{','.join(row)}\n")
 
 

@@ -124,6 +124,7 @@ MODEL_SPEC = {
                 },
                 "fut_path": {
                     "required": "lulc_fut_path",
+                    "na_allowed": True,
                     "type": "raster",
                     "bands": {1: {"type": "ratio"}},
                     "about": gettext(
@@ -134,6 +135,7 @@ MODEL_SPEC = {
                 },
                 "base_path": {
                     "required": "lulc_bas_path",
+                    "na_allowed": True,
                     "type": "raster",
                     "bands": {1: {"type": "ratio"}},
                     "about": gettext(
@@ -174,6 +176,10 @@ MODEL_SPEC = {
             "index_col": "lulc",
             "columns": {
                 "lulc": spec_utils.LULC_TABLE_COLUMN,
+                "name": {
+                    "type": "freestyle_string",
+                    "required": False
+                },
                 "habitat": {
                     "type": "ratio",
                     "about": gettext(
@@ -383,11 +389,12 @@ def execute(args):
     # Get CSVs as dictionaries and ensure the key is a string for threats.
     threat_dict = {
         str(key): value for key, value in utils.read_csv_to_dataframe(
-            args['threats_table_path'], 'THREAT',
-            expand_path_cols=['cur_path', 'fut_path', 'base_path']
-            ).to_dict(orient='index').items()}
+            args['threats_table_path'],
+            MODEL_SPEC['args']['threats_table_path']
+        ).to_dict(orient='index').items()}
     sensitivity_dict = utils.read_csv_to_dataframe(
-        args['sensitivity_table_path'], 'LULC').to_dict(orient='index')
+        args['sensitivity_table_path'],
+        MODEL_SPEC['args']['sensitivity_table_path']).to_dict(orient='index')
 
     half_saturation_constant = float(args['half_saturation_constant'])
 
@@ -1156,15 +1163,16 @@ def validate(args, limit_to=None):
     if ("threats_table_path" not in invalid_keys and
             "sensitivity_table_path" not in invalid_keys and
             "threat_raster_folder" not in invalid_keys):
-
         # Get CSVs as dictionaries and ensure the key is a string for threats.
         threat_dict = {
             str(key): value for key, value in utils.read_csv_to_dataframe(
-                args['threats_table_path'], 'THREAT',
-                expand_path_cols=['cur_path', 'fut_path', 'base_path']
-                ).to_dict(orient='index').items()}
+                args['threats_table_path'],
+                MODEL_SPEC['args']['threats_table_path']
+            ).to_dict(orient='index').items()}
         sensitivity_dict = utils.read_csv_to_dataframe(
-            args['sensitivity_table_path'], 'LULC').to_dict(orient='index')
+            args['sensitivity_table_path'],
+            MODEL_SPEC['args']['sensitivity_table_path']
+        ).to_dict(orient='index')
 
         # check that the threat names in the threats table match with the
         # threats columns in the sensitivity table.

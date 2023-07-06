@@ -368,7 +368,8 @@ def execute(args):
          (_TMP_BASE_FILES, output_dir)], file_suffix)
 
     carbon_pool_table = utils.read_csv_to_dataframe(
-        args['carbon_pools_path'], 'lucode').to_dict(orient='index')
+        args['carbon_pools_path'], MODEL_SPEC['args']['carbon_pools_path']
+    ).to_dict(orient='index')
 
     work_token_dir = os.path.join(
         intermediate_output_dir, '_taskgraph_working_dir')

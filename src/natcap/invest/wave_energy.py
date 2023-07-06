@@ -747,7 +747,7 @@ def execute(args):
     # arrays. Also store the amount of energy the machine produces
     # in a certain wave period/height state as a 2D array
     machine_perf_dict = {}
-    machine_perf_data = utils.read_csv_to_dataframe(args['machine_perf_path'])
+    machine_perf_data = pandas.read_csv(args['machine_perf_path'])
     # Get the wave period fields, starting from the second column of the table
     machine_perf_dict['periods'] = machine_perf_data.columns.values[1:]
     # Build up the height field by taking the first column of the table
@@ -781,7 +781,7 @@ def execute(args):
     if 'land_gridPts_path' in args:
         # Create a grid_land_data dataframe for later use in valuation
         grid_land_data = utils.read_csv_to_dataframe(
-            args['land_gridPts_path'], convert_vals_to_lower=False)
+            args['land_gridPts_path'], MODEL_SPEC['args']['land_gridPts_path'], set_index=False)
         required_col_names = ['id', 'type', 'lat', 'long', 'location']
         grid_land_data, missing_grid_land_fields = _get_validated_dataframe(
             args['land_gridPts_path'], required_col_names)
@@ -1084,10 +1084,8 @@ def execute(args):
     grid_vector_path = os.path.join(
         output_dir, 'GridPts_prj%s.shp' % file_suffix)
 
-    grid_data = grid_land_data.loc[
-        grid_land_data['type'].str.upper() == 'GRID']
-    land_data = grid_land_data.loc[
-        grid_land_data['type'].str.upper() == 'LAND']
+    grid_data = grid_land_data.loc[grid_land_data['type'] == 'grid']
+    land_data = grid_land_data.loc[grid_land_data['type'] == 'land']
 
     grid_dict = grid_data.to_dict('index')
     land_dict = land_data.to_dict('index')
@@ -1429,7 +1427,8 @@ def _get_validated_dataframe(csv_path, field_list):
         missing_fields (list): missing fields as string format in dataframe.
 
     """
-    dataframe = utils.read_csv_to_dataframe(csv_path, convert_vals_to_lower=False)
+    dataframe = utils.read_csv_to_dataframe(csv_path,
+        MODEL_SPEC['args']['land_gridPts_path'], set_index=False)
     missing_fields = []
     for field in field_list:
         if field not in dataframe.columns:
@@ -1497,6 +1496,7 @@ def _dict_to_point_vector(base_dict_data, target_vector_path, layer_name,
     for point_dict in base_dict_data.values():
         latitude = float(point_dict['lat'])
         longitude = float(point_dict['long'])
+        point_dict['id'] = int(point_dict['id'])
         # When projecting to WGS84, extents -180 to 180 are used for longitude.
         # In case input longitude is from -360 to 0 convert
         if longitude < -180:
@@ -1509,7 +1509,7 @@ def _dict_to_point_vector(base_dict_data, target_vector_path, layer_name,
         target_layer.CreateFeature(output_feature)
 
         for field_name in point_dict:
-            output_feature.SetField(field_name, point_dict[field_name])
+            output_feature.SetField(field_name.upper(), point_dict[field_name])
         output_feature.SetGeometryDirectly(geom)
         target_layer.SetFeature(output_feature)
         output_feature = None
@@ -1674,7 +1674,13 @@ def _machine_csv_to_dict(machine_csv_path):
     machine_dict = {}
     # make columns and indexes lowercased and strip whitespace
     machine_data = utils.read_csv_to_dataframe(
-        machine_csv_path, 'name', convert_vals_to_lower=False)
+        machine_csv_path,
+        {
+            'index_col': 'name',
+            'columns': {
+                'name': {'type': 'freestyle_string'},
+                'value': {'type': 'number'}
+        }})
     machine_data.index = machine_data.index.str.strip()
     machine_data.index = machine_data.index.str.lower()
 

@@ -861,8 +861,8 @@ def _schedule_predictor_data_processing(
     }
 
     predictor_table = utils.read_csv_to_dataframe(
-        predictor_table_path, 'id', expand_path_cols=['path']
-        ).to_dict(orient='index')
+        predictor_table_path, MODEL_SPEC['args']['predictor_table_path']
+    ).to_dict(orient='index')
     predictor_task_list = []
     predictor_json_list = []  # tracks predictor files to add to shp
 
@@ -1555,7 +1555,8 @@ def _validate_same_id_lengths(table_path):
 
     """
     predictor_table = utils.read_csv_to_dataframe(
-        table_path, 'id').to_dict(orient='index')
+        table_path, MODEL_SPEC['args']['predictor_table_path']
+    ).to_dict(orient='index')
     too_long = set()
     for p_id in predictor_table:
         if len(p_id) > 10:
@@ -1589,10 +1590,13 @@ def _validate_same_ids_and_types(
 
     """
     predictor_table = utils.read_csv_to_dataframe(
-        predictor_table_path, 'id').to_dict(orient='index')
+        predictor_table_path, MODEL_SPEC['args']['predictor_table_path']
+    ).to_dict(orient='index')
 
     scenario_predictor_table = utils.read_csv_to_dataframe(
-        scenario_predictor_table_path, 'id').to_dict(orient='index')
+        scenario_predictor_table_path,
+        MODEL_SPEC['args']['scenario_predictor_table_path']
+    ).to_dict(orient='index')
 
     predictor_table_pairs = set([
         (p_id, predictor_table[p_id]['type'].strip()) for p_id in predictor_table])
@@ -1625,7 +1629,7 @@ def _validate_same_projection(base_vector_path, table_path):
     # This will load the table as a list of paths which we can iterate through
     # without bothering the rest of the table structure
     data_paths = utils.read_csv_to_dataframe(
-        table_path, convert_vals_to_lower=False, expand_path_cols=['path']
+        table_path, MODEL_SPEC['args']['predictor_table_path']
     ).squeeze('columns')['path'].tolist()
 
     base_vector = gdal.OpenEx(base_vector_path, gdal.OF_VECTOR)
@@ -1682,7 +1686,8 @@ def _validate_predictor_types(table_path):
         ValueError if any value in the ``type`` column does not match a valid
         type, ignoring leading/trailing whitespace.
     """
-    df = utils.read_csv_to_dataframe(table_path, convert_vals_to_lower=False)
+    df = utils.read_csv_to_dataframe(
+        table_path, MODEL_SPEC['args']['predictor_table_path'])
     # ignore leading/trailing whitespace because it will be removed
     # when the type values are used
     type_list = set([type.strip() for type in df['type']])

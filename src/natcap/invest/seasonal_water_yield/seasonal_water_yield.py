@@ -567,11 +567,13 @@ def _execute(args):
             not args['user_defined_climate_zones']):
         rain_events_lookup = (
             utils.read_csv_to_dataframe(
-                args['rain_events_table_path'], 'month'
-                ).to_dict(orient='index'))
+                args['rain_events_table_path'],
+                MODEL_SPEC['args']['rain_events_table_path']
+            ).to_dict(orient='index'))
 
     biophysical_table = utils.read_csv_to_dataframe(
-        args['biophysical_table_path'], 'lucode').to_dict(orient='index')
+        args['biophysical_table_path'],
+        MODEL_SPEC['args']['biophysical_table_path']).to_dict(orient='index')
 
     bad_value_list = []
     for lucode, value in biophysical_table.items():
@@ -598,7 +600,8 @@ def _execute(args):
         alpha_month_map = dict(
             (key, val['alpha']) for key, val in
             utils.read_csv_to_dataframe(
-                args['monthly_alpha_path'], 'month'
+                args['monthly_alpha_path'],
+                MODEL_SPEC['args']['monthly_alpha_path']
             ).to_dict(orient='index').items())
     else:
         # make all 12 entries equal to args['alpha_m']
@@ -768,7 +771,8 @@ def _execute(args):
             if args['user_defined_climate_zones']:
                 cz_rain_events_lookup = (
                     utils.read_csv_to_dataframe(
-                        args['climate_zone_table_path'], 'cz_id'
+                        args['climate_zone_table_path'],
+                        MODEL_SPEC['args']['climate_zone_table_path']
                     ).to_dict(orient='index'))
                 month_label = MONTH_ID_TO_LABEL[month_id]
                 climate_zone_rain_events_month = dict([

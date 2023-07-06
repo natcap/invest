@@ -63,7 +63,7 @@ class AnnualWaterYieldTests(unittest.TestCase):
 
         with self.assertRaises(ValueError) as cm:
             annual_water_yield.execute(args)
-        self.assertTrue('veg value must be either 1 or 0' in str(cm.exception))
+        self.assertIn('Empty or NA values are not allowed', str(cm.exception))
 
         table_df = pandas.read_csv(args['biophysical_table_path'])
         table_df['LULC_veg'] = ['-1']*len(table_df.index)
@@ -72,7 +72,7 @@ class AnnualWaterYieldTests(unittest.TestCase):
 
         with self.assertRaises(ValueError) as cm:
             annual_water_yield.execute(args)
-        self.assertTrue('veg value must be either 1 or 0' in str(cm.exception))
+        self.assertIn('value must be either 1 or 0, not -1', str(cm.exception))
     
     def test_missing_lulc_value(self):
         """Hydro: catching missing LULC value in Biophysical table."""

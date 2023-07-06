@@ -159,9 +159,9 @@ class ForestCarbonEdgeTests(unittest.TestCase):
 
         with self.assertRaises(ValueError) as cm:
             forest_carbon_edge_effect.execute(args)
-        expected_message = 'Could not interpret carbon pool value'
         actual_message = str(cm.exception)
-        self.assertTrue(expected_message in actual_message, actual_message)
+        self.assertTrue(
+            'Empty or NA values are not allowed' in actual_message, actual_message)
     
     def test_missing_lulc_value(self):
         """Forest Carbon Edge: test with missing LULC value."""
