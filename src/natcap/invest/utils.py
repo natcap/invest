@@ -597,35 +597,29 @@ def expand_path(path, base_path):
     return os.path.abspath(os.path.join(os.path.dirname(base_path), path))
 
 
-def read_csv_to_dataframe(
-        path, index_col=False, usecols=None, convert_cols_to_lower=True,
-        convert_vals_to_lower=True, expand_path_cols=None, sep=None, engine='python',
-        encoding='utf-8-sig', **kwargs):
+def read_csv_to_dataframe(path, spec, sep=None, engine='python',
+                          encoding='utf-8-sig', na_allowed=False, set_index=True, **kwargs):
     """Return a dataframe representation of the CSV.
 
-    Wrapper around ``pandas.read_csv`` that standardizes the column names by
-    stripping leading/trailing whitespace and optionally making all lowercase.
+    Wrapper around ``pandas.read_csv`` t
     This helps avoid common errors caused by user-supplied CSV files with
-    column names that don't exactly match the specification. Strips
-    leading/trailing whitespace from data entries as well.
+    column names that don't exactly match the specification.
+
+    Whitespace is stripped from column names and optionally they are lowercased.
+
+    raster, vector, csv, file, directory: cast to str, strip whitespace, and
+        expanded as paths relative to the input path
+    freestyle_string, option_string: cast to str, strip whitespace and convert
+        to lowercase
+    number, ratio, percent: cast to float
+    integer: cast to int
+    boolean: cast to bool
 
     Also sets custom defaults for some kwargs passed to ``pandas.read_csv``.
 
     Args:
         path (str): path to a CSV file
-        index_col (str): name of column to use as the dataframe index. If
-            ``convert_cols_to_lower``, this column name and the dataframe column names
-            will be lowercased before they are compared. If ``usecols``
-            is defined, this must be included in ``usecols``.
-        usecols (list(str)): list of column names to subset from the dataframe.
-            If ``convert_cols_to_lower``, these names and the dataframe column names
-            will be lowercased before they are compared.
-        convert_cols_to_lower (bool): if True, convert all column names to lowercase
-        convert_vals_to_lower (bool): if True, convert all table values to lowercase
-        expand_path_cols (list[string])): if provided, a list of the names of
-            columns that contain paths to expand. Any relative paths in these
-            columns will be expanded to absolute paths. It is assumed that
-            relative paths are relative to the CSV's path.
+        spec (dict): dictionary specifying the structure of the CSV table
         sep: kwarg of ``pandas.read_csv``. Defaults to None, which
             lets the Python engine infer the separator
         engine (str): kwarg of ``pandas.read_csv``. The 'python' engine
@@ -638,44 +632,84 @@ def read_csv_to_dataframe(
         pandas.DataFrame with the contents of the given CSV
 
     """
+    # build up a list of regex patterns to match columns against columns from
+    # the table that match a pattern in this list (after stripping whitespace
+    # and lowercasing) will be included in the dataframe
+    patterns = []
+    for column in spec['columns']:
+        column = column.lower()
+        match = re.match(r'(.*)\[(.+)\](.*)', column)
+        if match:
+            # for column name patterns, convert it to a regex pattern
+            groups = match.groups()
+            patterns.append(f'{groups[0]}(.+){groups[2]}')
+        else:
+            # for regular column names, use the exact name as the pattern
+            patterns.append(column.replace('(', '\(').replace(')', '\)'))
+
     try:
         # set index_col=False to force pandas not to index by any column
         # this is useful in case of trailing separators
         # we'll explicitly set the index column later on
-        dataframe = pandas.read_csv(
-            path, index_col=False, sep=sep, engine=engine, encoding=encoding, **kwargs)
+        df = pandas.read_csv(
+            path, index_col=False, sep=sep, engine=engine, encoding=encoding,
+            usecols=lambda col: any(
+                re.fullmatch(pattern, col.strip().lower()) for pattern in patterns
+            ), **kwargs)
     except UnicodeDecodeError as error:
         LOGGER.error(
             f'The file {path} must be encoded as UTF-8 or ASCII')
         raise error
 
-    # strip whitespace from column names
+    # strip whitespace from column names and convert to lowercase
     # this won't work on integer types, which happens if you set header=None
     # however, there's little reason to use this function if there's no header
-    dataframe.columns = dataframe.columns.str.strip()
+    df.columns = df.columns.str.strip().str.lower()
 
-    # convert column names to lowercase
-    if convert_cols_to_lower:
-        dataframe.columns = dataframe.columns.str.lower()
-        # if 'to_lower`, case handling is done before trying to access the data.
-        # the columns are stripped of leading/trailing whitespace in
-        # ``read_csv_to_dataframe``, and also lowercased if ``to_lower`` so we only
-        # need to convert the rest of the table.
-        if index_col and isinstance(index_col, str):
-            index_col = index_col.lower()
-        # lowercase column names
-        if usecols:
-            usecols = [col.lower() for col in usecols]
+    # drop any empty rows
+    df = df.dropna(how="all")
 
-    # Subset dataframe by columns if desired
-    if usecols:
-        dataframe = dataframe[usecols]
+    # strip whitespace from table values
+    # Remove values with leading ('^ +') and trailing (' +$') whitespace.
+    # Regular expressions using 'replace' only substitute on strings.
+    df = df.replace(r"^ +| +$", r"", regex=True)
 
-    # Set 'index_col' as the index of the dataframe
-    if index_col:
+    available_cols = set(df.columns)
+
+    for col_spec, pattern in zip(spec['columns'].values(), patterns):
+        matching_cols = [c for c in available_cols if re.match(pattern, c)]
+        available_cols -= set(matching_cols)
+        for col in matching_cols:
+            try:
+                if col_spec['type'] in ['csv', 'directory', 'file', 'raster', 'vector', {"vector", "raster"}]:
+                    df[col] = df[col].fillna('')
+                    df[col] = df[col].astype(pandas.StringDtype())
+                    df[col] = df[col].apply(lambda p: expand_path(p, path) if p else '')
+                elif col_spec['type'] in {'freestyle_string', 'option_string'}:
+                    df[col] = df[col].fillna('')
+                    df[col] = df[col].apply(lambda s: str(s).lower())
+                    df[col] = df[col].astype(pandas.StringDtype())
+                elif col_spec['type'] in {'number', 'percent', 'ratio'}:
+                    df[col] = df[col].astype(float)
+                elif col_spec['type'] == 'integer':
+                    df[col] = df[col].astype(pandas.Int64Dtype())
+                elif col_spec['type'] == 'boolean':
+                    df[col] = df[col].astype('boolean')
+            except ValueError as err:
+                raise ValueError(
+                    f'Value(s) in the "{col}" column of the table {path} '
+                    f'could not be interpreted as {col_spec["type"]}s. '
+                    f'Original error: {err}')
+            if not col_spec.get('na_allowed', False) and df[col].isna().any():
+                raise ValueError(
+                    f'Empty or NA values are not allowed in the "{col}" '
+                    f'column of the table {path}.')
+
+     # set the index column, if specified
+    if set_index:
+        index_col = spec['index_col'].lower()
         try:
-            dataframe = dataframe.set_index(
-                index_col, drop=False, verify_integrity=True)
+            df = df.set_index(index_col, verify_integrity=True)
         except KeyError:
             # If 'index_col' is not a column then KeyError is raised for using
             # it as the index column
@@ -683,33 +717,7 @@ def read_csv_to_dataframe(
                          f"in the table {path}")
             raise
 
-    # convert table values to lowercase
-    if convert_vals_to_lower:
-        dataframe = dataframe.applymap(
-            lambda x: x.lower() if isinstance(x, str) else x)
-
-    # expand paths
-    if expand_path_cols:
-        for col in expand_path_cols:
-            # allow for the case where a column is optional
-            if col in dataframe:
-                dataframe[col] = dataframe[col].apply(
-                    # if the whole column is empty, cells will be parsed as NaN
-                    # catch that before trying to expand them as paths
-                    lambda p: '' if pandas.isna(p) else expand_path(p, path))
-
-    # drop any empty rows
-    dataframe = dataframe.dropna(how="all")
-
-    # fill the rest of empty or NaN values with empty string
-    dataframe = dataframe.fillna(value="")
-
-    # strip whitespace from table values
-    # Remove values with leading ('^ +') and trailing (' +$') whitespace.
-    # Regular expressions using 'replace' only substitute on strings.
-    dataframe = dataframe.replace(r"^ +| +$", r"", regex=True)
-
-    return dataframe
+    return df
 
 
 def make_directories(directory_list):

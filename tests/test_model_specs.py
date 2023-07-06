@@ -253,6 +253,11 @@ class ValidateModelSpecs(unittest.TestCase):
             types = arg['type'] if isinstance(
                 arg['type'], set) else [arg['type']]
             attrs = set(arg.keys())
+
+            if 'na_allowed' in arg and parent_type == 'csv':
+                self.assertIsInstance(arg['na_allowed'], bool)
+                attrs.discard('na_allowed')
+
             for t in types:
                 self.assertIn(t, valid_nested_types[parent_type])
 
