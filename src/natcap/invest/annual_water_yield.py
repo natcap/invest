@@ -523,24 +523,23 @@ def execute(args):
     if invalid_parameters:
         raise ValueError(f'Invalid parameters passed: {invalid_parameters}')
 
-    # valuation_params is passed to create_vector_output()
-    # which computes valuation if valuation_params is not None.
-    valuation_params = None
+    # valuation_df is passed to create_vector_output()
+    # which computes valuation if valuation_df is not None.
+    valuation_df = None
     if 'valuation_table_path' in args and args['valuation_table_path'] != '':
         LOGGER.info(
             'Checking that watersheds have entries for every `ws_id` in the '
             'valuation table.')
         # Open/read in valuation parameters from CSV file
-        valuation_params = utils.read_csv_to_dataframe(
-            args['valuation_table_path'], MODEL_SPEC['args']['valuation_table_path']
-        ).to_dict(orient='index')
+        valuation_df = utils.read_csv_to_dataframe(
+            args['valuation_table_path'], MODEL_SPEC['args']['valuation_table_path'])
         watershed_vector = gdal.OpenEx(
             args['watersheds_path'], gdal.OF_VECTOR)
         watershed_layer = watershed_vector.GetLayer()
         missing_ws_ids = []
         for watershed_feature in watershed_layer:
             watershed_ws_id = watershed_feature.GetField('ws_id')
-            if watershed_ws_id not in valuation_params:
+            if watershed_ws_id not in valuation_df.index:
                 missing_ws_ids.append(watershed_ws_id)
         watershed_feature = None
         watershed_layer = None
@@ -651,50 +650,43 @@ def execute(args):
         'lulc': pygeoprocessing.get_raster_info(clipped_lulc_path)['nodata'][0]}
 
     # Open/read in the csv file into a dictionary and add to arguments
-    bio_dict = utils.read_csv_to_dataframe(
-        args['biophysical_table_path'], MODEL_SPEC['args']['biophysical_table_path']
-    ).to_dict(orient='index')
-    bio_lucodes = set(bio_dict.keys())
+    bio_df = utils.read_csv_to_dataframe(args['biophysical_table_path'],
+                                         MODEL_SPEC['args']['biophysical_table_path'])
+    bio_lucodes = set(bio_df.index.values)
     bio_lucodes.add(nodata_dict['lulc'])
     LOGGER.debug(f'bio_lucodes: {bio_lucodes}')
 
     if 'demand_table_path' in args and args['demand_table_path'] != '':
-        demand_dict = utils.read_csv_to_dataframe(
-            args['demand_table_path'], MODEL_SPEC['args']['demand_table_path']
-        ).to_dict(orient='index')
+        demand_df = utils.read_csv_to_dataframe(
+            args['demand_table_path'], MODEL_SPEC['args']['demand_table_path'])
         demand_reclassify_dict = dict(
-            [(lucode, demand_dict[lucode]['demand'])
-             for lucode in demand_dict])
-        demand_lucodes = set(demand_dict.keys())
+            [(lucode, row['demand']) for lucode, row in demand_df.iterrows()])
+        demand_lucodes = set(demand_df.index.values)
         demand_lucodes.add(nodata_dict['lulc'])
         LOGGER.debug(f'demand_lucodes: {demand_lucodes}', )
     else:
         demand_lucodes = None
 
-    # Break the bio_dict into three separate dictionaries based on
+    # Break the bio_df into three separate dictionaries based on
     # Kc, root_depth, and LULC_veg fields to use for reclassifying
     Kc_dict = {}
     root_dict = {}
     vegetated_dict = {}
 
-    for lulc_code in bio_dict:
-        Kc_dict[lulc_code] = bio_dict[lulc_code]['kc']
+    for lulc_code, row in bio_df.iterrows():
+        Kc_dict[lulc_code] = row['kc']
 
         # Catch invalid LULC_veg values with an informative error.
-        lulc_veg_value = bio_dict[lulc_code]['lulc_veg']
-        try:
-            vegetated_dict[lulc_code] = int(lulc_veg_value)
-            if vegetated_dict[lulc_code] not in set([0, 1]):
-                raise ValueError()
-        except ValueError:
+        if row['lulc_veg'] not in set([0, 1]):
             # If the user provided an invalid LULC_veg value, raise an
             # informative error.
             raise ValueError(
-                f'LULC_veg value must be either 1 or 0, not {lulc_veg_value}')
+                f'LULC_veg value must be either 1 or 0, not {row["lulc_veg"]}')
+        vegetated_dict[lulc_code] = row['lulc_veg']
 
         # If LULC_veg value is 1 get root depth value
         if vegetated_dict[lulc_code] == 1:
-            root_dict[lulc_code] = bio_dict[lulc_code]['root_depth']
+            root_dict[lulc_code] = row['root_depth']
         # If LULC_veg value is 0 then we do not care about root
         # depth value so will just substitute in a 1. This
         # value will not end up being used.
@@ -860,7 +852,7 @@ def execute(args):
         write_output_vector_attributes_task = graph.add_task(
             func=write_output_vector_attributes,
             args=(target_ws_path, ws_id_name, zonal_stats_pickle_list,
-                  valuation_params),
+                  valuation_df),
             target_path_list=[target_ws_path],
             dependent_task_list=[
                 *zonal_stats_task_list, copy_watersheds_vector_task],
@@ -896,7 +888,7 @@ def copy_vector(base_vector_path, target_vector_path):
 
 
 def write_output_vector_attributes(target_vector_path, ws_id_name,
-                                   stats_path_list, valuation_params):
+                                   stats_path_list, valuation_df):
     """Add data attributes to the vector outputs of this model.
 
     Join results of zonal stats to copies of the watershed shapefiles.
@@ -910,7 +902,7 @@ def write_output_vector_attributes(target_vector_path, ws_id_name,
             represent watersheds or subwatersheds.
         stats_path_list (list): List of file paths to pickles storing the zonal
             stats results.
-        valuation_params (dict): The dictionary built from
+        valuation_df (pandas.DataFrame): dataframe built from
             args['valuation_table_path']. Or None if valuation table was not
             provided.
 
@@ -946,10 +938,10 @@ def write_output_vector_attributes(target_vector_path, ws_id_name,
                 _add_zonal_stats_dict_to_shape(
                     target_vector_path, ws_stats_dict, key_name, 'mean')
 
-    if valuation_params:
+    if valuation_df is not None:
         # only do valuation for watersheds, not subwatersheds
         if ws_id_name == 'ws_id':
-            compute_watershed_valuation(target_vector_path, valuation_params)
+            compute_watershed_valuation(target_vector_path, valuation_df)
 
 
 def convert_vector_to_csv(base_vector_path, target_csv_path):
@@ -1158,14 +1150,14 @@ def pet_op(eto_pix, Kc_pix, eto_nodata, output_nodata):
     return result
 
 
-def compute_watershed_valuation(watershed_results_vector_path, val_dict):
+def compute_watershed_valuation(watershed_results_vector_path, val_df):
     """Compute net present value and energy for the watersheds.
 
     Args:
         watershed_results_vector_path (string):
             Path to an OGR shapefile for the watershed results.
             Where the results will be added.
-        val_dict (dict): a python dictionary that has all the valuation
+        val_df (pandas.DataFrame): a dataframe that has all the valuation
             parameters for each watershed.
 
     Returns:
@@ -1200,26 +1192,23 @@ def compute_watershed_valuation(watershed_results_vector_path, val_dict):
         # there won't be a rsupply_vl value if the polygon feature only
         # covers nodata raster values, so check before doing math.
         if rsupply_vl is not None:
-            # Get the valuation parameters for watershed 'ws_id'
-            val_row = val_dict[ws_id]
-
             # Compute hydropower energy production (KWH)
             # This is from the equation given in the Users' Guide
             energy = (
-                val_row['efficiency'] * val_row['fraction'] *
-                val_row['height'] * rsupply_vl * 0.00272)
+                val_df['efficiency'][ws_id] * val_df['fraction'][ws_id] *
+                val_df['height'][ws_id] * rsupply_vl * 0.00272)
 
             dsum = 0
             # Divide by 100 because it is input at a percent and we need
             # decimal value
-            disc = val_row['discount'] / 100
+            disc = val_df['discount'][ws_id] / 100
             # To calculate the summation of the discount rate term over the life
             # span of the dam we can use a geometric series
             ratio = 1 / (1 + disc)
             if ratio != 1:
-                dsum = (1 - math.pow(ratio, val_row['time_span'])) / (1 - ratio)
+                dsum = (1 - math.pow(ratio, val_df['time_span'][ws_id])) / (1 - ratio)
 
-            npv = ((val_row['kw_price'] * energy) - val_row['cost']) * dsum
+            npv = ((val_df['kw_price'][ws_id] * energy) - val_df['cost'][ws_id]) * dsum
 
             # Get the volume field index and add value
             ws_feat.SetField(energy_field, energy)

@@ -213,16 +213,15 @@ def execute(args):
         target_path_list=aligned_snapshot_paths,
         task_name='Align input landcover rasters')
 
-    landcover_table = utils.read_csv_to_dataframe(
+    landcover_df = utils.read_csv_to_dataframe(
         args['lulc_lookup_table_path'],
-        MODEL_SPEC['args']['lulc_lookup_table_path'], set_index=False
-    ).set_index('code', drop=False).to_dict(orient='index')
+        MODEL_SPEC['args']['lulc_lookup_table_path'])
 
     target_transition_table = os.path.join(
         output_dir, TRANSITION_TABLE.format(suffix=suffix))
     _ = task_graph.add_task(
         func=_create_transition_table,
-        args=(landcover_table,
+        args=(landcover_df,
               aligned_snapshot_paths,
               target_transition_table),
         target_path_list=[target_transition_table],
@@ -233,7 +232,7 @@ def execute(args):
         output_dir, BIOPHYSICAL_TABLE.format(suffix=suffix))
     _ = task_graph.add_task(
         func=_create_biophysical_table,
-        args=(landcover_table, target_biophysical_table_path),
+        args=(landcover_df, target_biophysical_table_path),
         target_path_list=[target_biophysical_table_path],
         task_name='Write biophysical table template')
 
@@ -241,20 +240,20 @@ def execute(args):
     task_graph.join()
 
 
-def _create_transition_table(landcover_table, lulc_snapshot_list,
+def _create_transition_table(landcover_df, lulc_snapshot_list,
                              target_table_path):
     """Create the transition table from a series of landcover snapshots.
 
     Args:
-        landcover_table (dict): A dict mapping integer landcover codes to dict
-            values indicating the landcover class name in the ``lulc-class``
-            field and ``True`` or ``False`` under the
-            ``is_coastal_blue_carbon_habitat`` key.
+        landcover_df (pandas.DataFrame: A table mapping integer landcover
+            codes to values indicating the landcover class name in the
+            ``lulc-class`` column and ``True`` or ``False`` under the
+            ``is_coastal_blue_carbon_habitat`` column.
         lulc_snapshot_list (list): A list of string paths to GDAL rasters on
             disk.  All rasters must have the same spatial reference, pixel size
             and dimensions and must also all be integer rasters, where all
             non-nodata pixel values must be represented in the
-            ``landcover_table`` dict.
+            ``landcover_df`` dataframe.
         target_table_path (string): A string path to where the target
             transition table should be written.
 
@@ -323,13 +322,13 @@ def _create_transition_table(landcover_table, lulc_snapshot_list,
     sparse_transition_table = {}
     for from_lucode, to_lucode in transition_pairs:
         try:
-            from_is_cbc = landcover_table[
-                from_lucode]['is_coastal_blue_carbon_habitat']
-            to_is_cbc = landcover_table[
-                to_lucode]['is_coastal_blue_carbon_habitat']
+            from_is_cbc = landcover_df[
+                'is_coastal_blue_carbon_habitat'][from_lucode]
+            to_is_cbc = landcover_df[
+            'is_coastal_blue_carbon_habitat'][to_lucode]
         except KeyError:
             for variable in (from_lucode, to_lucode):
-                if variable not in landcover_table:
+                if variable not in landcover_df.index:
                     raise ValueError(
                         'The landcover table is missing a row with the '
                         f'landuse code {variable}.')
@@ -337,14 +336,14 @@ def _create_transition_table(landcover_table, lulc_snapshot_list,
         sparse_transition_table[(from_lucode, to_lucode)] = (
             transition_types[(from_is_cbc, to_is_cbc)])
 
-    code_list = sorted([code for code in landcover_table.keys()])
+    code_list = sorted(landcover_df.index)
     lulc_class_list_sorted = [
-        landcover_table[code]['lulc-class'] for code in code_list]
+        landcover_df['lulc-class'][code] for code in code_list]
     with open(target_table_path, 'w') as csv_file:
         fieldnames = ['lulc-class'] + lulc_class_list_sorted
         csv_file.write(f"{','.join(fieldnames)}\n")
         for row_code in code_list:
-            class_name = landcover_table[row_code]['lulc-class']
+            class_name = landcover_df['lulc-class'][row_code]
             row = [class_name]
             for col_code in code_list:
                 try:
@@ -367,7 +366,7 @@ def _create_transition_table(landcover_table, lulc_snapshot_list,
         csv_file.write("\n,NCC (no-carbon-change)")
 
 
-def _create_biophysical_table(landcover_table, target_biophysical_table_path):
+def _create_biophysical_table(landcover_df, target_biophysical_table_path):
     """Write the biophysical table template to disk.
 
     The biophysical table templates contains all of the fields required by the
@@ -376,34 +375,33 @@ def _create_biophysical_table(landcover_table, target_biophysical_table_path):
     table.
 
     Args:
-        landcover_table (dict): A dict mapping int landcover codes to a dict
-            with string keys that map to numeric or string column values.
+        landcover_df (pandas.DataFrame): A table mapping int landcover codes
+            to biophysical data
         target_biophysical_table_path (string): The path to where the
             biophysical table template will be stored on disk.
 
     Returns:
         ``None``
     """
-    print(landcover_table)
     target_column_names = [
         colname.lower() for colname in coastal_blue_carbon.MODEL_SPEC['args'][
             'biophysical_table_path']['columns']]
 
-    print(target_column_names)
     with open(target_biophysical_table_path, 'w') as bio_table:
         bio_table.write(f"{','.join(target_column_names)}\n")
-        print(f"{','.join(target_column_names)}\n")
-        for lulc_code in sorted(landcover_table.keys()):
+        for lulc_code, row in landcover_df.sort_index().iterrows():
             # 2 columns are defined below, and we need 1 less comma to only
             # have commas between fields.
             row = []
             for colname in target_column_names:
-                try:
-                    # Use the user's defined value if it exists
-                    row.append(str(landcover_table[lulc_code][colname]))
-                except KeyError:
-                    row.append('')
-            print(f"{','.join(row)}\n")
+                if colname == 'code':
+                    row.append(str(lulc_code))
+                else:
+                    try:
+                        # Use the user's defined value if it exists
+                        row.append(str(landcover_df[colname][lulc_code]))
+                    except KeyError:
+                        row.append('')
             bio_table.write(f"{','.join(row)}\n")
 
 

@@ -590,16 +590,14 @@ def execute(args):
 
     # We're assuming that the LULC initial variables and the carbon pool
     # transient table are combined into a single lookup table.
-    biophysical_parameters = utils.read_csv_to_dataframe(
-        args['biophysical_table_path'], MODEL_SPEC['args']['biophysical_table_path']
-    ).to_dict(orient='index')
+    biophysical_df = utils.read_csv_to_dataframe(
+        args['biophysical_table_path'],
+        MODEL_SPEC['args']['biophysical_table_path'])
 
     # LULC Classnames are critical to the transition mapping, so they must be
     # unique.  This check is here in ``execute`` because it's possible that
     # someone might have a LOT of classes in their biophysical table.
-    unique_lulc_classnames = set(
-        params['lulc-class'] for params in biophysical_parameters.values())
-    if len(unique_lulc_classnames) != len(biophysical_parameters):
+    if not biophysical_df['lulc-class'].is_unique:
         raise ValueError(
             "All values in `lulc-class` column must be unique, but "
             "duplicates were found.")
@@ -637,7 +635,7 @@ def execute(args):
         task_name='Align input landcover rasters.')
 
     (disturbance_matrices, accumulation_matrices) = _read_transition_matrix(
-        args['landcover_transitions_table'], biophysical_parameters)
+        args['landcover_transitions_table'], biophysical_df)
 
     # Baseline stocks are simply reclassified.
     # Baseline accumulation are simply reclassified
@@ -671,8 +669,7 @@ def execute(args):
             func=pygeoprocessing.reclassify_raster,
             args=(
                 (aligned_lulc_paths[baseline_lulc_year], 1),
-                {lucode: values[f'{pool}-initial'] for (lucode, values)
-                    in biophysical_parameters.items()},
+                biophysical_df[f'{pool}-initial'].to_dict(),
                 stock_rasters[baseline_lulc_year][pool],
                 gdal.GDT_Float32,
                 NODATA_FLOAT32_MIN),
@@ -689,9 +686,7 @@ def execute(args):
             func=pygeoprocessing.reclassify_raster,
             args=(
                 (aligned_lulc_paths[baseline_lulc_year], 1),
-                {lucode: values[f'{pool}-yearly-accumulation']
-                    for (lucode, values)
-                    in biophysical_parameters.items()},
+                biophysical_df[f'{pool}-yearly-accumulation'].to_dict(),
                 yearly_accum_rasters[baseline_lulc_year][pool],
                 gdal.GDT_Float32,
                 NODATA_FLOAT32_MIN),
@@ -812,9 +807,7 @@ def execute(args):
                 func=pygeoprocessing.reclassify_raster,
                 args=(
                     (aligned_lulc_paths[prior_transition_year], 1),
-                    {lucode: values[f'{pool}-half-life']
-                        for (lucode, values)
-                        in biophysical_parameters.items()},
+                    biophysical_df[f'{pool}-half-life'].to_dict(),
                     halflife_rasters[current_transition_year][pool],
                     gdal.GDT_Float32,
                     NODATA_FLOAT32_MIN),
@@ -875,9 +868,7 @@ def execute(args):
         yearly_accum_tasks[current_transition_year][POOL_LITTER] = task_graph.add_task(
             func=pygeoprocessing.reclassify_raster,
             args=((aligned_lulc_paths[current_transition_year], 1),
-                  {lucode: values[f'{POOL_LITTER}-yearly-accumulation']
-                   for (lucode, values) in
-                   biophysical_parameters.items()},
+                  biophysical_df[f'{POOL_LITTER}-yearly-accumulation'].to_dict(),
                   yearly_accum_rasters[current_transition_year][POOL_LITTER],
                   gdal.GDT_Float32,
                   NODATA_FLOAT32_MIN),
@@ -969,12 +960,10 @@ def execute(args):
     prices = None
     if args.get('do_economic_analysis', False):  # Do if truthy
         if args.get('use_price_table', False):
-            prices = {
-                year: values['price'] for (year, values) in
-                utils.read_csv_to_dataframe(
-                    args['price_table_path'],
-                    MODEL_SPEC['args']['price_table_path']
-                ).to_dict(orient='index').items()}
+            prices = utils.read_csv_to_dataframe(
+                args['price_table_path'],
+                MODEL_SPEC['args']['price_table_path']
+            )['price'].to_dict()
         else:
             inflation_rate = float(args['inflation_rate']) * 0.01
             annual_price = float(args['price'])
@@ -1965,7 +1954,7 @@ def _sum_n_rasters(
     target_raster = None
 
 
-def _read_transition_matrix(transition_csv_path, biophysical_dict):
+def _read_transition_matrix(transition_csv_path, biophysical_df):
     """Read a transition CSV table in to a series of sparse matrices.
 
     Args:
@@ -1983,7 +1972,7 @@ def _read_transition_matrix(transition_csv_path, biophysical_dict):
                 * ``'high-impact-disturb'`` indicating a
                     high-impact disturbance
                 * ``''`` (blank), which is equivalent to no carbon change.o
-        biophysical_dict (dict): A ``dict`` mapping of integer landcover codes
+        biophysical_df (pandas.DataFrame): A table mapping integer landcover codes
             to biophysical values for disturbance and accumulation values for
             soil and biomass carbon pools.
 
@@ -1998,11 +1987,9 @@ def _read_transition_matrix(transition_csv_path, biophysical_dict):
         transition_csv_path, MODEL_SPEC['args']['landcover_transitions_table'], set_index=False)
 
     lulc_class_to_lucode = {}
-    max_lucode = 0
-    for (lucode, values) in biophysical_dict.items():
-        lulc_class_to_lucode[
-            str(values['lulc-class']).strip().lower()] = lucode
-        max_lucode = max(max_lucode, lucode)
+    max_lucode = biophysical_df.index.max()
+    for lucode, row in biophysical_df.iterrows():
+        lulc_class_to_lucode[row['lulc-class']] = lucode
 
     # Load up a sparse matrix with the transitions to save on memory usage.
     # The number of possible rows/cols is the value of the maximum possible
@@ -2078,19 +2065,17 @@ def _read_transition_matrix(transition_csv_path, biophysical_dict):
             # disturbance values.
             if field_value.endswith('disturb'):
                 soil_disturbance_matrix[from_lucode, to_lucode] = (
-                    biophysical_dict[from_lucode][f'soil-{field_value}'])
+                    biophysical_df[f'soil-{field_value}'][from_lucode])
                 biomass_disturbance_matrix[from_lucode, to_lucode] = (
-                    biophysical_dict[from_lucode][f'biomass-{field_value}'])
+                    biophysical_df[f'biomass-{field_value}'][from_lucode])
 
             # When we're transitioning to a landcover that accumulates, use the
             # target landcover's accumulation value.
             elif field_value == 'accum':
                 soil_accumulation_matrix[from_lucode, to_lucode] = (
-                    biophysical_dict[to_lucode][
-                        'soil-yearly-accumulation'])
+                    biophysical_df['soil-yearly-accumulation'][to_lucode])
                 biomass_accumulation_matrix[from_lucode, to_lucode] = (
-                    biophysical_dict[to_lucode][
-                        'biomass-yearly-accumulation'])
+                    biophysical_df['biomass-yearly-accumulation'][to_lucode])
 
     disturbance_matrices = {
         'soil': soil_disturbance_matrix,

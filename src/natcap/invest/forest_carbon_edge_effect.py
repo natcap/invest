@@ -420,17 +420,15 @@ def execute(args):
     # Map non-forest landcover codes to carbon biomasses
     LOGGER.info('Calculating direct mapped carbon stocks')
     carbon_maps = []
-    biophysical_table = utils.read_csv_to_dataframe(
+    biophysical_df = utils.read_csv_to_dataframe(
         args['biophysical_table_path'],
-        MODEL_SPEC['args']['biophysical_table_path']).to_dict(orient='index')
-    biophysical_keys = [
-        x.lower() for x in list(biophysical_table.values())[0].keys()]
+        MODEL_SPEC['args']['biophysical_table_path'])
     pool_list = [('c_above', True)]
     if args['pools_to_calculate'] == 'all':
         pool_list.extend([
             ('c_below', False), ('c_soil', False), ('c_dead', False)])
     for carbon_pool_type, ignore_tropical_type in pool_list:
-        if carbon_pool_type in biophysical_keys:
+        if carbon_pool_type in biophysical_df.columns:
             carbon_maps.append(
                 output_file_registry[carbon_pool_type+'_map'])
             task_graph.add_task(
@@ -633,9 +631,8 @@ def _calculate_lulc_carbon_map(
 
     """
     # classify forest pixels from lulc
-    biophysical_table = utils.read_csv_to_dataframe(
-        biophysical_table_path, MODEL_SPEC['args']['biophysical_table_path']
-    ).to_dict(orient='index')
+    biophysical_df = utils.read_csv_to_dataframe(
+        biophysical_table_path, MODEL_SPEC['args']['biophysical_table_path'])
 
     lucode_to_per_cell_carbon = {}
     cell_size = pygeoprocessing.get_raster_info(
@@ -643,24 +640,22 @@ def _calculate_lulc_carbon_map(
     cell_area_ha = abs(cell_size[0]) * abs(cell_size[1]) / 10000
 
     # Build a lookup table
-    for lucode in biophysical_table:
+    for lucode, row in biophysical_df.iterrows():
         if compute_forest_edge_effects:
-            is_tropical_forest = (
-                int(biophysical_table[int(lucode)]['is_tropical_forest']))
+            is_tropical_forest = row['is_tropical_forest']
         else:
-            is_tropical_forest = 0
-        if ignore_tropical_type and is_tropical_forest == 1:
+            is_tropical_forest = False
+        if ignore_tropical_type and is_tropical_forest:
             # if tropical forest above ground, lookup table is nodata
-            lucode_to_per_cell_carbon[int(lucode)] = NODATA_VALUE
+            lucode_to_per_cell_carbon[lucode] = NODATA_VALUE
         else:
             try:
-                lucode_to_per_cell_carbon[int(lucode)] = float(
-                    biophysical_table[lucode][carbon_pool_type]) * cell_area_ha
+                lucode_to_per_cell_carbon[lucode] = row[carbon_pool_type] * cell_area_ha
             except ValueError:
                 raise ValueError(
                     "Could not interpret carbon pool value as a number. "
                     f"lucode: {lucode}, pool_type: {carbon_pool_type}, "
-                    f"value: {biophysical_table[lucode][carbon_pool_type]}")
+                    f"value: {row[carbon_pool_type]}")
 
     # map aboveground carbon from table to lulc that is not forest
     reclass_error_details = {
@@ -700,12 +695,9 @@ def _map_distance_from_tropical_forest_edge(
 
     """
     # Build a list of forest lucodes
-    biophysical_table = utils.read_csv_to_dataframe(
-        biophysical_table_path, MODEL_SPEC['args']['biophysical_table_path']
-    ).to_dict(orient='index')
-    forest_codes = [
-        lucode for (lucode, ludata) in biophysical_table.items()
-        if int(ludata['is_tropical_forest']) == 1]
+    biophysical_df = utils.read_csv_to_dataframe(
+        biophysical_table_path, MODEL_SPEC['args']['biophysical_table_path'])
+    forest_codes = biophysical_df[biophysical_df['is_tropical_forest']].index.values
 
     # Make a raster where 1 is non-forest landcover types and 0 is forest
     lulc_nodata = pygeoprocessing.get_raster_info(

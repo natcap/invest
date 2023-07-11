@@ -152,9 +152,6 @@ class TestPreprocessor(unittest.TestCase):
                        pprint.pformat(non_suffixed_files)))
 
         expected_landcover_codes = set(range(0, 24))
-        print('\n\n')
-        print(pandas.read_csv(
-            os.path.join(outputs_dir, 'carbon_biophysical_table_template_150225.csv')))
         found_landcover_codes = set(pandas.read_csv(
             os.path.join(outputs_dir, 'carbon_biophysical_table_template_150225.csv')
         )['code'].values)
@@ -191,29 +188,27 @@ class TestPreprocessor(unittest.TestCase):
             lulc_csv.write('0,mangrove,True\n')
             lulc_csv.write('1,parking lot,False\n')
 
-        landcover_table = utils.read_csv_to_dataframe(
+        landcover_df = utils.read_csv_to_dataframe(
             landcover_table_path,
-            preprocessor.MODEL_SPEC['args']['lulc_lookup_table_path']
-        ).to_dict(orient='index')
+            preprocessor.MODEL_SPEC['args']['lulc_lookup_table_path'])
         target_table_path = os.path.join(self.workspace_dir,
                                          'transition_table.csv')
 
         # Remove landcover code 1 from the table; expect error.
-        del landcover_table[1]
+        landcover_df = landcover_df.drop(1)
         with self.assertRaises(ValueError) as context:
             preprocessor._create_transition_table(
-                landcover_table, [filename_a, filename_b], target_table_path)
+                landcover_df, [filename_a, filename_b], target_table_path)
 
         self.assertIn('missing a row with the landuse code 1',
                       str(context.exception))
 
         # Re-load the landcover table
-        landcover_table = utils.read_csv_to_dataframe(
+        landcover_df = utils.read_csv_to_dataframe(
             landcover_table_path,
-            preprocessor.MODEL_SPEC['args']['lulc_lookup_table_path']
-        ).to_dict(orient='index')
+            preprocessor.MODEL_SPEC['args']['lulc_lookup_table_path'])
         preprocessor._create_transition_table(
-            landcover_table, [filename_a, filename_b], target_table_path)
+            landcover_df, [filename_a, filename_b], target_table_path)
 
         with open(target_table_path) as transition_table:
             self.assertEqual(
@@ -281,7 +276,7 @@ class TestCBC2(unittest.TestCase):
         # keep the test simple, I'm only tracking the columns I know I'll need
         # in this function.
         from natcap.invest.coastal_blue_carbon import coastal_blue_carbon
-        biophysical_table = {
+        biophysical_table = pandas.DataFrame({
             1: {'lulc-class': 'a',
                 'soil-yearly-accumulation': 2,
                 'biomass-yearly-accumulation': 3,
@@ -297,7 +292,7 @@ class TestCBC2(unittest.TestCase):
                 'biomass-yearly-accumulation': 11,
                 'soil-high-impact-disturb': 12,
                 'biomass-high-impact-disturb': 13}
-        }
+        }).T
 
         transition_csv_path = os.path.join(self.workspace_dir,
                                            'transitions.csv')
@@ -339,7 +334,7 @@ class TestCBC2(unittest.TestCase):
         # keep the test simple, I'm only tracking the columns I know I'll need
         # in this function.
         from natcap.invest.coastal_blue_carbon import coastal_blue_carbon
-        biophysical_table = {
+        biophysical_table = pandas.DataFrame({
             1: {'lulc-class': 'a',
                 'soil-yearly-accumulation': 2,
                 'biomass-yearly-accumulation': 3,
@@ -355,7 +350,7 @@ class TestCBC2(unittest.TestCase):
                 'biomass-yearly-accumulation': 11,
                 'soil-high-impact-disturb': 12,
                 'biomass-high-impact-disturb': 13}
-        }
+        }).T
 
         transition_csv_path = os.path.join(self.workspace_dir,
                                            'transitions.csv')
@@ -373,14 +368,14 @@ class TestCBC2(unittest.TestCase):
 
         expected_biomass_disturbance = numpy.zeros((4, 4), dtype=numpy.float32)
         expected_biomass_disturbance[1, 3] = (
-            biophysical_table[1]['biomass-high-impact-disturb'])
+            biophysical_table['biomass-high-impact-disturb'][1])
         numpy.testing.assert_allclose(
             expected_biomass_disturbance,
             disturbance_matrices['biomass'].toarray())
 
         expected_soil_disturbance = numpy.zeros((4, 4), dtype=numpy.float32)
         expected_soil_disturbance[1, 3] = (
-            biophysical_table[1]['soil-high-impact-disturb'])
+            biophysical_table['soil-high-impact-disturb'][1])
         numpy.testing.assert_allclose(
             expected_soil_disturbance,
             disturbance_matrices['soil'].toarray())
@@ -388,22 +383,22 @@ class TestCBC2(unittest.TestCase):
         expected_biomass_accumulation = numpy.zeros(
             (4, 4), dtype=numpy.float32)
         expected_biomass_accumulation[3, 1] = (
-            biophysical_table[1]['biomass-yearly-accumulation'])
+            biophysical_table['biomass-yearly-accumulation'][1])
         expected_biomass_accumulation[1, 2] = (
-            biophysical_table[2]['biomass-yearly-accumulation'])
+            biophysical_table['biomass-yearly-accumulation'][2])
         expected_biomass_accumulation[2, 3] = (
-            biophysical_table[3]['biomass-yearly-accumulation'])
+            biophysical_table['biomass-yearly-accumulation'][3])
         numpy.testing.assert_allclose(
             expected_biomass_accumulation,
             accumulation_matrices['biomass'].toarray())
 
         expected_soil_accumulation = numpy.zeros((4, 4), dtype=numpy.float32)
         expected_soil_accumulation[3, 1] = (
-            biophysical_table[1]['soil-yearly-accumulation'])
+            biophysical_table['soil-yearly-accumulation'][1])
         expected_soil_accumulation[1, 2] = (
-            biophysical_table[2]['soil-yearly-accumulation'])
+            biophysical_table['soil-yearly-accumulation'][2])
         expected_soil_accumulation[2, 3] = (
-            biophysical_table[3]['soil-yearly-accumulation'])
+            biophysical_table['soil-yearly-accumulation'][3])
         numpy.testing.assert_allclose(
             expected_soil_accumulation,
             accumulation_matrices['soil'].toarray())

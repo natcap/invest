@@ -367,9 +367,8 @@ def execute(args):
          (_INTERMEDIATE_BASE_FILES, intermediate_output_dir),
          (_TMP_BASE_FILES, output_dir)], file_suffix)
 
-    carbon_pool_table = utils.read_csv_to_dataframe(
-        args['carbon_pools_path'], MODEL_SPEC['args']['carbon_pools_path']
-    ).to_dict(orient='index')
+    carbon_pool_df = utils.read_csv_to_dataframe(
+        args['carbon_pools_path'], MODEL_SPEC['args']['carbon_pools_path'])
 
     work_token_dir = os.path.join(
         intermediate_output_dir, '_taskgraph_working_dir')
@@ -415,9 +414,7 @@ def execute(args):
         carbon_map_task_lookup[scenario_type] = []
         storage_path_list = []
         for pool_type in ['c_above', 'c_below', 'c_soil', 'c_dead']:
-            carbon_pool_by_type = dict([
-                (lucode, float(carbon_pool_table[lucode][pool_type]))
-                for lucode in carbon_pool_table])
+            carbon_pool_by_type = carbon_pool_df[pool_type].to_dict()
 
             lulc_key = 'lulc_%s_path' % scenario_type
             storage_key = '%s_%s' % (pool_type, scenario_type)

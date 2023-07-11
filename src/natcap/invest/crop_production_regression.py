@@ -497,20 +497,16 @@ def execute(args):
 
     LOGGER.info(
         "Checking if the landcover raster is missing lucodes")
-    crop_to_landcover_table = utils.read_csv_to_dataframe(
+    crop_to_landcover_df = utils.read_csv_to_dataframe(
         args['landcover_to_crop_table_path'],
-        MODEL_SPEC['args']['landcover_to_crop_table_path']).to_dict(orient='index')
+        MODEL_SPEC['args']['landcover_to_crop_table_path'])
 
-    print(crop_to_landcover_table)
-
-    crop_to_fertlization_rate_table = utils.read_csv_to_dataframe(
+    crop_to_fertilization_rate_df = utils.read_csv_to_dataframe(
         args['fertilization_rate_table_path'],
-        MODEL_SPEC['args']['fertilization_rate_table_path']
-    ).to_dict(orient='index')
+        MODEL_SPEC['args']['fertilization_rate_table_path'])
+    print(crop_to_fertilization_rate_df)
 
-    crop_lucodes = [
-        x[_EXPECTED_LUCODE_TABLE_HEADER]
-        for x in crop_to_landcover_table.values()]
+    crop_lucodes = list(crop_to_landcover_df[_EXPECTED_LUCODE_TABLE_HEADER])
 
     unique_lucodes = numpy.array([])
     for _, lu_band_data in pygeoprocessing.iterblocks(
@@ -527,9 +523,7 @@ def execute(args):
             "aren't in the landcover raster: %s", missing_lucodes)
 
     LOGGER.info("Checking that crops correspond to known types.")
-    for crop_name in crop_to_landcover_table:
-        crop_lucode = crop_to_landcover_table[crop_name][
-            _EXPECTED_LUCODE_TABLE_HEADER]
+    for crop_name in crop_to_landcover_df.index:
         crop_climate_bin_raster_path = os.path.join(
             args['model_data_path'],
             _EXTENDED_CLIMATE_BIN_FILE_PATTERN % crop_name)
@@ -561,9 +555,8 @@ def execute(args):
     crop_lucode = None
     observed_yield_nodata = None
 
-    for crop_name in crop_to_landcover_table:
-        crop_lucode = crop_to_landcover_table[crop_name][
-            _EXPECTED_LUCODE_TABLE_HEADER]
+    for crop_name, row in crop_to_landcover_df.iterrows():
+        crop_lucode = row[_EXPECTED_LUCODE_TABLE_HEADER]
         LOGGER.info("Processing crop %s", crop_name)
         crop_climate_bin_raster_path = os.path.join(
             args['model_data_path'],
@@ -586,22 +579,19 @@ def execute(args):
             task_name='crop_climate_bin')
         dependent_task_list.append(crop_climate_bin_task)
 
-        crop_regression_table_path = os.path.join(
-            args['model_data_path'], _REGRESSION_TABLE_PATTERN % crop_name)
-
-        crop_regression_table = utils.read_csv_to_dataframe(
-            crop_regression_table_path,
+        crop_regression_df = utils.read_csv_to_dataframe(
+            os.path.join(args['model_data_path'],
+                         _REGRESSION_TABLE_PATTERN % crop_name),
             MODEL_SPEC['args']['model_data_path']['contents'][
                 'climate_regression_yield_tables']['contents'][
-                '[CROP]_regression_yield_table.csv']).to_dict(orient='index')
-        for bin_id in crop_regression_table:
+                '[CROP]_regression_yield_table.csv'])
+        for _, row in crop_regression_df.iterrows():
             for header in _EXPECTED_REGRESSION_TABLE_HEADERS:
-                if numpy.isnan(crop_regression_table[bin_id][header]):
-                    crop_regression_table[bin_id][header] = 0
+                if numpy.isnan(row[header]):
+                    row[header] = 0
 
         yield_regression_headers = [
-            x for x in list(crop_regression_table.values())[0]
-            if x != 'climate_bin']
+            x for x in crop_regression_df.columns if x != 'climate_bin']
 
         reclassify_error_details = {
             'raster_name': f'{crop_name} Climate Bin',
@@ -618,10 +608,7 @@ def execute(args):
                     output_dir,
                     _INTERPOLATED_YIELD_REGRESSION_FILE_PATTERN % (
                         crop_name, yield_regression_id, file_suffix)))
-            bin_to_regression_value = dict([
-                (bin_id,
-                 crop_regression_table[bin_id][yield_regression_id])
-                for bin_id in crop_regression_table])
+            bin_to_regression_value = crop_regression_df[yield_regression_id].to_dict()
             # reclassify nodata to a valid value of 0
             # we're assuming that the crop doesn't exist where there is no data
             # this is more likely than assuming the crop does exist, esp.
@@ -674,8 +661,8 @@ def execute(args):
                    (regression_parameter_raster_path_lookup['b_nut'], 1),
                    (regression_parameter_raster_path_lookup['c_n'], 1),
                    (args['landcover_raster_path'], 1),
-                   (crop_to_fertlization_rate_table[crop_name]
-                    ['nitrogen_rate'], 'raw'),
+                   (crop_to_fertilization_rate_df['nitrogen_rate'][crop_name],
+                    'raw'),
                    (crop_lucode, 'raw'), (pixel_area_ha, 'raw')],
                   _x_yield_op,
                   nitrogen_yield_raster_path, gdal.GDT_Float32, _NODATA_YIELD),
@@ -693,8 +680,8 @@ def execute(args):
                    (regression_parameter_raster_path_lookup['b_nut'], 1),
                    (regression_parameter_raster_path_lookup['c_p2o5'], 1),
                    (args['landcover_raster_path'], 1),
-                   (crop_to_fertlization_rate_table[crop_name]
-                    ['phosphorus_rate'], 'raw'),
+                   (crop_to_fertilization_rate_df['phosphorus_rate'][crop_name],
+                    'raw'),
                    (crop_lucode, 'raw'), (pixel_area_ha, 'raw')],
                   _x_yield_op,
                   phosphorus_yield_raster_path, gdal.GDT_Float32, _NODATA_YIELD),
@@ -712,8 +699,8 @@ def execute(args):
                    (regression_parameter_raster_path_lookup['b_k2o'], 1),
                    (regression_parameter_raster_path_lookup['c_k2o'], 1),
                    (args['landcover_raster_path'], 1),
-                   (crop_to_fertlization_rate_table[crop_name]
-                    ['potassium_rate'], 'raw'),
+                   (crop_to_fertilization_rate_df['potassium_rate'][crop_name],
+                    'raw'),
                    (crop_lucode, 'raw'), (pixel_area_ha, 'raw')],
                   _x_yield_op,
                   potassium_yield_raster_path, gdal.GDT_Float32, _NODATA_YIELD),
@@ -817,18 +804,19 @@ def execute(args):
 
     # both 'crop_nutrient.csv' and 'crop' are known data/header values for
     # this model data.
-    nutrient_table = utils.read_csv_to_dataframe(
+    nutrient_df = utils.read_csv_to_dataframe(
         os.path.join(args['model_data_path'], 'crop_nutrient.csv'),
-        MODEL_SPEC['args']['model_data_path']['contents']['crop_nutrient.csv']
-    ).to_dict(orient='index')
+        MODEL_SPEC['args']['model_data_path']['contents']['crop_nutrient.csv'])
+    print(nutrient_df)
 
     LOGGER.info("Generating report table")
+    crop_names = list(crop_to_landcover_df.index)
     result_table_path = os.path.join(
         output_dir, 'result_table%s.csv' % file_suffix)
     _ = task_graph.add_task(
         func=tabulate_regression_results,
-        args=(nutrient_table,
-              crop_to_landcover_table, pixel_area_ha,
+        args=(nutrient_df,
+              crop_names, pixel_area_ha,
               args['landcover_raster_path'], landcover_nodata,
               output_dir, file_suffix, result_table_path),
         target_path_list=[result_table_path],
@@ -848,7 +836,7 @@ def execute(args):
             args=(args['aggregate_polygon_path'],
                   target_aggregate_vector_path,
                   landcover_raster_info['projection_wkt'],
-                  crop_to_landcover_table, nutrient_table,
+                  crop_names, nutrient_df,
                   output_dir, file_suffix,
                   aggregate_results_table_path),
             target_path_list=[target_aggregate_vector_path,
@@ -950,17 +938,16 @@ def _mask_observed_yield_op(
 
 
 def tabulate_regression_results(
-        nutrient_table,
-        crop_to_landcover_table, pixel_area_ha, landcover_raster_path,
+        nutrient_df,
+        crop_names, pixel_area_ha, landcover_raster_path,
         landcover_nodata, output_dir, file_suffix, target_table_path):
     """Write table with total yield and nutrient results by crop.
 
     This function includes all the operations that write to results_table.csv.
 
     Args:
-        nutrient_table (dict): a lookup of nutrient values by crop in the
-            form of nutrient_table[<crop>][<nutrient>].
-        crop_to_landcover_table (dict): landcover codes keyed by crop names
+        nutrient_df (pandas.DataFrame): a table of nutrient values by crop
+        crop_names (list): list of crop names
         pixel_area_ha (float): area of lulc raster cells (hectares)
         landcover_raster_path (string): path to landcover raster
         landcover_nodata (float): landcover raster nodata value
@@ -981,7 +968,7 @@ def tabulate_regression_results(
         result_table.write(
             'crop,area (ha),' + 'production_observed,production_modeled,' +
             ','.join(nutrient_headers) + '\n')
-        for crop_name in sorted(crop_to_landcover_table):
+        for crop_name in sorted(crop_names):
             result_table.write(crop_name)
             production_lookup = {}
             production_pixel_count = 0
@@ -1027,18 +1014,18 @@ def tabulate_regression_results(
 
             # convert 100g to Mg and fraction left over from refuse
             nutrient_factor = 1e4 * (
-                1 - nutrient_table[crop_name]['percentrefuse'] / 100)
+                1 - nutrient_df['percentrefuse'][crop_name] / 100)
             for nutrient_id in _EXPECTED_NUTRIENT_TABLE_HEADERS:
                 total_nutrient = (
                     nutrient_factor *
                     production_lookup['modeled'] *
-                    nutrient_table[crop_name][nutrient_id])
+                    nutrient_df[nutrient_id][crop_name])
                 result_table.write(",%f" % (total_nutrient))
                 result_table.write(
                     ",%f" % (
                         nutrient_factor *
                         production_lookup['observed'] *
-                        nutrient_table[crop_name][nutrient_id]))
+                        nutrient_df[nutrient_id][crop_name]))
             result_table.write('\n')
 
         total_area = 0
@@ -1056,8 +1043,8 @@ def tabulate_regression_results(
 
 def aggregate_regression_results_to_polygons(
         base_aggregate_vector_path, target_aggregate_vector_path,
-        landcover_raster_projection, crop_to_landcover_table,
-        nutrient_table, output_dir, file_suffix,
+        landcover_raster_projection, crop_names,
+        nutrient_df, output_dir, file_suffix,
         target_aggregate_table_path):
     """Write table with aggregate results of yield and nutrient values.
 
@@ -1070,9 +1057,8 @@ def aggregate_regression_results_to_polygons(
         target_aggregate_vector_path (string):
             path to re-projected copy of polygon vector
         landcover_raster_projection (string): a WKT projection string
-        crop_to_landcover_table (dict): landcover codes keyed by crop names
-        nutrient_table (dict): a lookup of nutrient values by crop in the
-            form of nutrient_table[<crop>][<nutrient>].
+        crop_names (list): list of crop names
+        nutrient_df (pandas.DataFrame): a table of nutrient values by crop
         output_dir (string): the file path to the output workspace.
         file_suffix (string): string to append to any output filenames.
         target_aggregate_table_path (string): path to 'aggregate_results.csv'
@@ -1093,10 +1079,10 @@ def aggregate_regression_results_to_polygons(
     total_nutrient_table = collections.defaultdict(
         lambda: collections.defaultdict(lambda: collections.defaultdict(
             float)))
-    for crop_name in crop_to_landcover_table:
+    for crop_name in crop_names:
         # convert 100g to Mg and fraction left over from refuse
         nutrient_factor = 1e4 * (
-            1 - nutrient_table[crop_name]['percentrefuse'] / 100)
+            1 - nutrient_df['percentrefuse'][crop_name] / 100)
         LOGGER.info(
             "Calculating zonal stats for %s", crop_name)
         crop_production_raster_path = os.path.join(
@@ -1114,7 +1100,7 @@ def aggregate_regression_results_to_polygons(
                         nutrient_factor *
                         total_yield_lookup['%s_modeled' % crop_name][
                             fid_index]['sum'] *
-                        nutrient_table[crop_name][nutrient_id])
+                        nutrient_df[nutrient_id][crop_name])
 
         # process observed
         observed_yield_path = os.path.join(
@@ -1132,7 +1118,7 @@ def aggregate_regression_results_to_polygons(
                         nutrient_factor * # percent crop used * 1000 [100g per Mg]
                         total_yield_lookup[
                             '%s_observed' % crop_name][fid_index]['sum'] *
-                        nutrient_table[crop_name][nutrient_id])  # nutrient unit per 100g crop
+                        nutrient_df[nutrient_id][crop_name])  # nutrient unit per 100g crop
 
     # report everything to a table
     aggregate_table_path = os.path.join(
