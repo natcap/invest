@@ -1139,13 +1139,9 @@ def execute(args):
         grid_land_df = utils.read_csv_to_dataframe(
             args['grid_points_path'], MODEL_SPEC['args']['grid_points_path'])
 
-        # Make separate dataframes based on 'TYPE'
-        grid_df = grid_land_df[grid_land_df['type'] == 'grid']
-        land_df = grid_land_df[grid_land_df['type'] == 'land']
-
         # Convert the dataframes to dictionaries, using 'ID' (the index) as key
-        grid_dict = grid_df.to_dict('index')
-        land_dict = land_df.to_dict('index')
+        grid_dict = grid_land_df[grid_land_df['type'] == 'grid'].to_dict('index')
+        land_dict = grid_land_df[grid_land_df['type'] == 'land'].to_dict('index')
 
         grid_vector_path = os.path.join(
             inter_dir, 'val_grid_points%s.shp' % suffix)

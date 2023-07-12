@@ -1849,9 +1849,8 @@ def _open_table_as_dataframe(table_path, **kwargs):
         excel_df = excel_df.set_index('name')
         return excel_df
     else:
-        df = utils.read_csv_to_dataframe(
+        return utils.read_csv_to_dataframe(
             table_path, MODEL_SPEC['args']['info_table_path'], **kwargs)
-        return df
 
 
 def _parse_info_table(info_table_path):

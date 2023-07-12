@@ -504,7 +504,6 @@ def execute(args):
     crop_to_fertilization_rate_df = utils.read_csv_to_dataframe(
         args['fertilization_rate_table_path'],
         MODEL_SPEC['args']['fertilization_rate_table_path'])
-    print(crop_to_fertilization_rate_df)
 
     crop_lucodes = list(crop_to_landcover_df[_EXPECTED_LUCODE_TABLE_HEADER])
 
@@ -807,7 +806,6 @@ def execute(args):
     nutrient_df = utils.read_csv_to_dataframe(
         os.path.join(args['model_data_path'], 'crop_nutrient.csv'),
         MODEL_SPEC['args']['model_data_path']['contents']['crop_nutrient.csv'])
-    print(nutrient_df)
 
     LOGGER.info("Generating report table")
     crop_names = list(crop_to_landcover_df.index)
