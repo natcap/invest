@@ -97,6 +97,7 @@ import time
 import shutil
 
 import numpy
+import pandas
 import pygeoprocessing
 import scipy.sparse
 import taskgraph
@@ -170,8 +171,7 @@ MODEL_SPEC = {
             "index_col": "snapshot_year",
             "columns": {
                 "snapshot_year": {
-                    "type": "number",
-                    "units": u.year_AD,
+                    "type": "integer",
                     "about": gettext(
                         "The snapshot year that this row's LULC raster "
                         "represents. Each year in this table must be unique.")
@@ -570,7 +570,10 @@ def execute(args):
     task_graph, n_workers, intermediate_dir, output_dir, suffix = (
         _set_up_workspace(args))
 
-    snapshots = _extract_snapshots_from_table(args['landcover_snapshot_csv'])
+    snapshots = utils.read_csv_to_dataframe(
+        args['landcover_snapshot_csv'],
+        MODEL_SPEC['args']['landcover_snapshot_csv']
+    )['raster_path'].to_dict()
 
     # Phase 1: alignment and preparation of inputs
     baseline_lulc_year = min(snapshots.keys())
@@ -1984,7 +1987,8 @@ def _read_transition_matrix(transition_csv_path, biophysical_df):
         the pool for the landcover transition.
     """
     table = utils.read_csv_to_dataframe(
-        transition_csv_path, MODEL_SPEC['args']['landcover_transitions_table'], set_index=False)
+        transition_csv_path, MODEL_SPEC['args']['landcover_transitions_table']
+    ).reset_index()
 
     lulc_class_to_lucode = {}
     max_lucode = biophysical_df.index.max()
@@ -2024,24 +2028,19 @@ def _read_transition_matrix(transition_csv_path, biophysical_df):
                         "blank line encountered.")
             break
 
-        # Strip any whitespace to eliminate leading/trailing whitespace
-        row = row.str.strip()
-
         # skip rows starting with a blank cell, these are part of the legend
         if not row['lulc-class']:
             continue
 
         try:
-            from_colname = str(row['lulc-class']).lower()
-            from_lucode = lulc_class_to_lucode[from_colname]
+            from_lucode = lulc_class_to_lucode[row['lulc-class']]
         except KeyError:
             raise ValueError("The transition table's 'lulc-class' column has "
-                             f"a value, '{from_colname}', that was expected "
+                             f"a value, '{row['lulc-class']}', that was expected "
                              "in the biophysical table but could not be "
                              "found.")
 
-        for colname, field_value in row.items():
-            to_colname = str(colname).strip().lower()
+        for to_colname, field_value in row.items():
 
             # Skip the top row, only contains headers.
             if to_colname == 'lulc-class':
@@ -2057,8 +2056,7 @@ def _read_transition_matrix(transition_csv_path, biophysical_df):
 
             # Only set values where the transition HAS a value.
             # Takes advantage of the sparse characteristic of the model.
-            if (isinstance(field_value, float) and
-                    numpy.isnan(field_value)):
+            if pandas.isna(field_value):
                 continue
 
             # When transition is a disturbance, we use the source landcover's
@@ -2217,37 +2215,6 @@ def _reclassify_disturbance_magnitude(
         target_raster_path, gdal.GDT_Float32, NODATA_FLOAT32_MIN)
 
 
-def _extract_snapshots_from_table(csv_path):
-    """Extract the year/raster snapshot mapping from a CSV.
-
-    No validation is performed on the years or raster paths.
-
-    Args:
-        csv_path (string): The path to a CSV on disk containing snapshot
-            years and a corresponding transition raster path.  Snapshot years
-            may be in any order in the CSV, but must be integers and no two
-            years may be the same.  Snapshot raster paths must refer to a
-            raster file located on disk representing the landcover at that
-            transition.  If the path is absolute, the path will be used as
-            given.  If the path is relative, the path will be interpreted as
-            relative to the parent directory of this CSV file.
-
-    Returns:
-        A ``dict`` mapping int snapshot years to their corresponding raster
-        paths.  These raster paths will be absolute paths.
-
-    """
-    table = utils.read_csv_to_dataframe(
-        csv_path, MODEL_SPEC['args']['landcover_snapshot_csv'], set_index=False)
-
-    output_dict = {}
-    table.set_index("snapshot_year", drop=False, inplace=True)
-
-    for index, row in table.iterrows():
-        output_dict[int(index)] = row['raster_path']
-    return output_dict
-
-
 @validation.invest_validator
 def validate(args, limit_to=None):
     """Validate an input dictionary for Coastal Blue Carbon.
@@ -2270,8 +2237,10 @@ def validate(args, limit_to=None):
 
     if ("landcover_snapshot_csv" not in invalid_keys and
             "landcover_snapshot_csv" in sufficient_keys):
-        snapshots = _extract_snapshots_from_table(
-            args['landcover_snapshot_csv'])
+        snapshots = utils.read_csv_to_dataframe(
+            args['landcover_snapshot_csv'],
+            MODEL_SPEC['args']['landcover_snapshot_csv']
+        )['raster_path'].to_dict()
 
         for snapshot_year, snapshot_raster_path in snapshots.items():
             raster_error_message = validation.check_raster(

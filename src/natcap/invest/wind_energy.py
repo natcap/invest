@@ -757,10 +757,10 @@ def execute(args):
         time = int(val_parameters_dict['time_period'])
         if args['price_table']:
             wind_price_df = utils.read_csv_to_dataframe(
-                args['wind_schedule'], MODEL_SPEC['args']['wind_schedule'],
-                set_index=False)
+                args['wind_schedule'], MODEL_SPEC['args']['wind_schedule']
+            ).sort_index()  # sort by year
 
-            year_count = len(wind_price_df['year'])
+            year_count = len(wind_price_df)
             if year_count != time + 1:
                 raise ValueError(
                     "The 'time' argument in the Global Wind Energy Parameters "
@@ -769,7 +769,6 @@ def execute(args):
 
             # Save the price values into a list where the indices of the list
             # indicate the time steps for the lifespan of the wind farm
-            wind_price_df.sort_values('year', inplace=True)
             price_list = wind_price_df['price'].tolist()
         else:
             change_rate = float(args["rate_change"])
@@ -1138,16 +1137,14 @@ def execute(args):
 
         # Read the grid points csv, and convert it to land and grid dictionary
         grid_land_df = utils.read_csv_to_dataframe(
-            args['grid_points_path'], MODEL_SPEC['args']['grid_points_path'], set_index=False)
+            args['grid_points_path'], MODEL_SPEC['args']['grid_points_path'])
 
         # Make separate dataframes based on 'TYPE'
-        grid_df = grid_land_df.loc[(grid_land_df['type'] == 'grid')]
-        land_df = grid_land_df.loc[(grid_land_df['type'] == 'land')]
+        grid_df = grid_land_df[grid_land_df['type'] == 'grid']
+        land_df = grid_land_df[grid_land_df['type'] == 'land']
 
         # Convert the dataframes to dictionaries, using 'ID' (the index) as key
-        grid_df.set_index('id', inplace=True)
         grid_dict = grid_df.to_dict('index')
-        land_df.set_index('id', inplace=True)
         land_dict = land_df.to_dict('index')
 
         grid_vector_path = os.path.join(
@@ -1976,7 +1973,7 @@ def _read_csv_wind_data(wind_data_path, hub_height):
 
     """
     wind_point_df = utils.read_csv_to_dataframe(
-        wind_data_path, MODEL_SPEC['args']['wind_data_path'], set_index=False)
+        wind_data_path, MODEL_SPEC['args']['wind_data_path'])
     wind_point_df.columns = wind_point_df.columns.str.upper()
 
     # Calculate scale value at new hub height given reference values.

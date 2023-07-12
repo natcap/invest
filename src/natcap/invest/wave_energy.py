@@ -326,7 +326,6 @@ MODEL_SPEC = {
         },
         "land_gridPts_path": {
             "type": "csv",
-            "index_col": "id",
             "columns": LAND_GRID_POINT_FIELDS,
             "required": "valuation_container",
             "about": gettext(
@@ -781,10 +780,13 @@ def execute(args):
     if 'land_gridPts_path' in args:
         # Create a grid_land_data dataframe for later use in valuation
         grid_land_data = utils.read_csv_to_dataframe(
-            args['land_gridPts_path'], MODEL_SPEC['args']['land_gridPts_path'], set_index=False)
-        required_col_names = ['id', 'type', 'lat', 'long', 'location']
-        grid_land_data, missing_grid_land_fields = _get_validated_dataframe(
-            args['land_gridPts_path'], required_col_names)
+            args['land_gridPts_path'],
+            MODEL_SPEC['args']['land_gridPts_path'])
+        missing_grid_land_fields = []
+        for field in ['id', 'type', 'lat', 'long', 'location']:
+            if field not in grid_land_data.columns:
+                missing_grid_land_fields.append(field)
+
         if missing_grid_land_fields:
             raise ValueError(
                 'The following column fields are missing from the Grid '
@@ -1413,27 +1415,6 @@ def _add_target_fields_to_wave_vector(
 
     target_wave_layer = None
     target_wave_vector = None
-
-
-def _get_validated_dataframe(csv_path, field_list):
-    """Return a dataframe with upper cased fields, and a list of missing fields.
-
-    Args:
-        csv_path (str): path to the csv to be converted to a dataframe.
-        field_list (list): a list of fields in string format.
-
-    Returns:
-        dataframe (pandas.DataFrame): from csv with upper-cased fields.
-        missing_fields (list): missing fields as string format in dataframe.
-
-    """
-    dataframe = utils.read_csv_to_dataframe(csv_path,
-        MODEL_SPEC['args']['land_gridPts_path'], set_index=False)
-    missing_fields = []
-    for field in field_list:
-        if field not in dataframe.columns:
-            missing_fields.append(field)
-    return dataframe, missing_fields
 
 
 def _dict_to_point_vector(base_dict_data, target_vector_path, layer_name,

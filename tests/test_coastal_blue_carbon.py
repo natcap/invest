@@ -237,39 +237,6 @@ class TestCBC2(unittest.TestCase):
         """Remove workspace after each test function."""
         shutil.rmtree(self.workspace_dir)
 
-    def test_extract_snapshots(self):
-        """CBC: Extract snapshots from a snapshot CSV."""
-        from natcap.invest.coastal_blue_carbon import coastal_blue_carbon
-        csv_path = os.path.join(self.workspace_dir, 'snapshots.csv')
-
-        transition_years = (2000, 2010, 2020)
-        transition_rasters = []
-        with open(csv_path, 'w') as transitions_csv:
-            # Check that we can interpret varying case.
-            transitions_csv.write('snapshot_YEAR,raster_PATH\n')
-            for transition_year in transition_years:
-                # Write absolute paths.
-                transition_file_path = os.path.join(
-                    self.workspace_dir, f'{transition_year}.tif)')
-                transition_rasters.append(transition_file_path)
-                transitions_csv.write(
-                    f'{transition_year},{transition_file_path}\n')
-
-            # Make one path relative to the workspace, where the transitions
-            # CSV also lives.
-            # The expected raster path is absolute.
-            transitions_csv.write('2030,some_path.tif\n')
-            transition_years += (2030,)
-            transition_rasters.append(os.path.join(self.workspace_dir,
-                                                   'some_path.tif'))
-
-        extracted_transitions = (
-            coastal_blue_carbon._extract_snapshots_from_table(csv_path))
-
-        self.assertEqual(
-            extracted_transitions,
-            dict(zip(transition_years, transition_rasters)))
-
     def test_read_invalid_transition_matrix(self):
         """CBC: Test exceptions in invalid transition structure."""
         # The full biophysical table will have much, much more information.  To
@@ -651,8 +618,10 @@ class TestCBC2(unittest.TestCase):
         args = TestCBC2._create_model_args(self.workspace_dir)
         args['workspace_dir'] = os.path.join(self.workspace_dir, 'workspace')
 
-        prior_snapshots = coastal_blue_carbon._extract_snapshots_from_table(
-            args['landcover_snapshot_csv'])
+        prior_snapshots = utils.read_csv_to_dataframe(
+            args['landcover_snapshot_csv'],
+            coastal_blue_carbon.MODEL_SPEC['args']['landcover_snapshot_csv']
+        )['raster_path'].to_dict()
         baseline_year = min(prior_snapshots.keys())
         baseline_raster = prior_snapshots[baseline_year]
         with open(args['landcover_snapshot_csv'], 'w') as snapshot_csv:
@@ -827,8 +796,10 @@ class TestCBC2(unittest.TestCase):
         args = TestCBC2._create_model_args(self.workspace_dir)
         args['workspace_dir'] = os.path.join(self.workspace_dir, 'workspace')
 
-        prior_snapshots = coastal_blue_carbon._extract_snapshots_from_table(
-            args['landcover_snapshot_csv'])
+        prior_snapshots = utils.read_csv_to_dataframe(
+            args['landcover_snapshot_csv'],
+            coastal_blue_carbon.MODEL_SPEC['args']['landcover_snapshot_csv']
+        )['raster_path'].to_dict()
         baseline_year = min(prior_snapshots.keys())
         baseline_raster = prior_snapshots[baseline_year]
         with open(args['landcover_snapshot_csv'], 'w') as snapshot_csv:
@@ -891,8 +862,10 @@ class TestCBC2(unittest.TestCase):
             raster.write('not a raster')
 
         # Write over the landcover snapshot CSV
-        prior_snapshots = coastal_blue_carbon._extract_snapshots_from_table(
-            args['landcover_snapshot_csv'])
+        prior_snapshots = utils.read_csv_to_dataframe(
+            args['landcover_snapshot_csv'],
+            coastal_blue_carbon.MODEL_SPEC['args']['landcover_snapshot_csv']
+        )['raster_path'].to_dict()
         baseline_year = min(prior_snapshots)
         with open(args['landcover_snapshot_csv'], 'w') as snapshot_table:
             snapshot_table.write('snapshot_year,raster_path\n')

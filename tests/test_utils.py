@@ -627,8 +627,7 @@ class ReadCSVToDataframeTests(unittest.TestCase):
             ))
         df = utils.read_csv_to_dataframe(
             csv_file,
-            {'columns': {'header': {'type': 'freestyle_string'}}},
-            set_index=False)
+            {'columns': {'header': {'type': 'freestyle_string'}}})
         # header and table values should be lowercased
         self.assertEqual(df.columns[0], 'header')
         self.assertEqual(df['header'][0], 'a')
@@ -756,7 +755,7 @@ class ReadCSVToDataframeTests(unittest.TestCase):
                     'val1': {'type': 'number'},
                     'val2': {'type': 'number'}
             }
-        }, set_index=False)
+        })
         self.assertEqual(list(df.columns), ['lucode', 'val1', 'val2'])
 
     def test_column_pattern_matching(self):
@@ -776,7 +775,7 @@ class ReadCSVToDataframeTests(unittest.TestCase):
                     'lucode': {'type': 'integer'},
                     '[HABITAT]_value': {'type': 'number'}
             }
-        }, set_index=False)
+        })
         self.assertEqual(
             list(df.columns), ['lucode', 'grassland_value', 'forest_value'])
 
@@ -799,7 +798,7 @@ class ReadCSVToDataframeTests(unittest.TestCase):
                     'lucode': {'type': 'integer'},
                     'val1': {'type': 'number'},
                     'val2': {'type': 'number'}
-            }}, set_index=False)
+            }})
         self.assertEqual(result['val2'][0], 2)
         self.assertEqual(result['lucode'][1], 2)
 
@@ -856,7 +855,7 @@ class ReadCSVToDataframeTests(unittest.TestCase):
                 'header2': {'type': 'freestyle_string'},
                 'header3': {'type': 'freestyle_string'}
             }
-        }, set_index=False)
+        })
         self.assertEqual(df['header2'][1], 'foo')
         self.assertEqual(df['header3'][1], 'bar')
         self.assertEqual(df['header1'][0], 1)
@@ -878,7 +877,7 @@ class ReadCSVToDataframeTests(unittest.TestCase):
         df = utils.read_csv_to_dataframe(
             csv_file, {'columns': {
                 'header': {'type': 'freestyle_string'}
-            }}, set_index=False)
+            }})
         self.assertEqual(df['header'][0], 'a')
 
     def test_convert_vals_to_lower(self):
@@ -898,7 +897,7 @@ class ReadCSVToDataframeTests(unittest.TestCase):
         df = utils.read_csv_to_dataframe(
             csv_file, {'columns': {
                 'header': {'type': 'freestyle_string'}
-            }}, set_index=False)
+            }})
         self.assertEqual(df.columns[0], 'header')
 
     def test_integer_type_columns(self):
@@ -917,7 +916,7 @@ class ReadCSVToDataframeTests(unittest.TestCase):
         df = utils.read_csv_to_dataframe(
             csv_file, {'columns': {
                 'id': {'type': 'integer'},
-                'header': {'type': 'integer', 'na_allowed': True}}}, set_index=False)
+                'header': {'type': 'integer', 'na_allowed': True}}})
         self.assertIsInstance(df['header'][0], numpy.int64)
         self.assertIsInstance(df['header'][1], numpy.int64)
         # empty values are returned as pandas.NA
@@ -940,7 +939,7 @@ class ReadCSVToDataframeTests(unittest.TestCase):
                 'h1': {'type': 'number'},
                 'h2': {'type': 'ratio'},
                 'h3': {'type': 'percent', 'na_allowed': True},
-            }}, set_index=False)
+            }})
         self.assertEqual(df['h1'].dtype, float)
         self.assertEqual(df['h2'].dtype, float)
         self.assertEqual(df['h3'].dtype, float)
@@ -964,7 +963,7 @@ class ReadCSVToDataframeTests(unittest.TestCase):
                 'h1': {'type': 'freestyle_string'},
                 'h2': {'type': 'option_string'},
                 'h3': {'type': 'freestyle_string'},
-            }}, set_index=False)
+            }})
         self.assertEqual(df['h1'][0], '1')
         self.assertEqual(df['h2'][1], 'b')
         # empty values are returned as empty strings
@@ -986,7 +985,7 @@ class ReadCSVToDataframeTests(unittest.TestCase):
         df = utils.read_csv_to_dataframe(
             csv_file, {'columns': {
                 'index': {'type': 'freestyle_string'},
-                'h1': {'type': 'bool', 'na_allowed': True}}}, set_index=False)
+                'h1': {'type': 'bool', 'na_allowed': True}}})
         self.assertEqual(df['h1'][0], True)
         self.assertEqual(df['h1'][1], False)
         # empty values are returned as pandas.NA
@@ -1011,7 +1010,7 @@ class ReadCSVToDataframeTests(unittest.TestCase):
             csv_file, {'columns': {
                 'bar': {'type': 'integer'},
                 'path': {'type': 'file'}
-            }}, set_index=False)
+            }})
         self.assertEqual(
             f'{self.workspace_dir}{os.sep}foo.txt',
             df['path'][0])
@@ -1074,7 +1073,7 @@ class ReadCSVToDataframeTests(unittest.TestCase):
                     'header1': {'type': 'integer'},
                     'header2': {'type': 'integer'},
                     'header3': {'type': 'freestyle_string'}
-            }}, set_index=False)
+            }})
         # assert the BOM prefix was correctly parsed and skipped
         self.assertEqual(df.columns[0], 'header1')
         self.assertEqual(df['header2'][1], 5)
@@ -1097,7 +1096,7 @@ class ReadCSVToDataframeTests(unittest.TestCase):
                 'header 1': {'type': 'integer'},
                 'header 2': {'type': 'integer'},
                 'header 3': {'type': 'freestyle_string'}
-        }}, set_index=False)
+        }})
         self.assertEqual(df['header 2'][1], 5)
         self.assertEqual(df['header 3'][1], 'foo')
         self.assertEqual(df['header 1'][0], 1)
@@ -1144,7 +1143,7 @@ class ReadCSVToDataframeTests(unittest.TestCase):
         df = utils.read_csv_to_dataframe(
             csv_file, {
                 'columns': {'header': {'type': 'freestyle_string'}
-            }}, set_index=False, encoding='iso8859_5')
+            }}, encoding='iso8859_5')
         # with the encoding specified, special characters should work
         # and be lowercased
         self.assertEqual(df['header'][0], 'fюю')
@@ -1172,7 +1171,7 @@ class ReadCSVToDataframeTests(unittest.TestCase):
                     'h1': {'type': 'freestyle_string'},
                     'h2': {'type': 'freestyle_string'},
                     'h3': {'type': 'freestyle_string'}
-            }}, set_index=False, converters={'h2': lambda val: f'foo_{val}'})
+            }}, converters={'h2': lambda val: f'foo_{val}'})
 
         self.assertEqual(df.columns[0], 'h1')
         self.assertEqual(df['h2'][1], 'foo_e')
@@ -1202,7 +1201,7 @@ class ReadCSVToDataframeTests(unittest.TestCase):
                 '1': {'type': 'freestyle_string'},
                 '2': {'type': 'freestyle_string'},
                 '3': {'type': 'freestyle_string'}
-            }}, set_index=False)
+            }})
         # expect headers to be strings
         self.assertEqual(df.columns[0], '1')
         self.assertEqual(df['1'][0], 'a')
@@ -1223,7 +1222,7 @@ class ReadCSVToDataframeTests(unittest.TestCase):
                     'col1': {'type': 'freestyle_string'},
                     'col2': {'type': 'freestyle_string'},
                     'col3': {'type': 'freestyle_string'}
-            }}, set_index=False)
+            }})
         # header should have no leading / trailing whitespace
         self.assertEqual(list(df.columns), ['col1', 'col2', 'col3'])
 

@@ -598,7 +598,7 @@ def expand_path(path, base_path):
 
 
 def read_csv_to_dataframe(path, spec, sep=None, engine='python',
-                          encoding='utf-8-sig', na_allowed=False, set_index=True, **kwargs):
+                          encoding='utf-8-sig', na_allowed=False, **kwargs):
     """Return a dataframe representation of the CSV.
 
     Wrapper around ``pandas.read_csv`` t
@@ -706,7 +706,7 @@ def read_csv_to_dataframe(path, spec, sep=None, engine='python',
                     f'column of the table {path}.')
 
      # set the index column, if specified
-    if set_index:
+    if 'index_col' in spec and spec['index_col'] is not None:
         index_col = spec['index_col'].lower()
         try:
             df = df.set_index(index_col, verify_integrity=True)

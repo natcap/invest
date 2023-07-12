@@ -59,8 +59,7 @@ MODEL_SPEC = {
             "index_col": "snapshot_year",
             "columns": {
                 "snapshot_year": {
-                    "type": "number",
-                    "units": u.year_AD,
+                    "type": "integer",
                     "about": gettext("Year to snapshot.")},
                 "raster_path": {
                     "type": "raster",
@@ -181,9 +180,10 @@ def execute(args):
     task_graph = taskgraph.TaskGraph(
         taskgraph_cache_dir, n_workers, reporting_interval=5.0)
 
-    snapshots_dict = (
-        coastal_blue_carbon._extract_snapshots_from_table(
-            args['landcover_snapshot_csv']))
+    snapshots_dict = utils.read_csv_to_dataframe(
+        args['landcover_snapshot_csv'],
+        MODEL_SPEC['args']['landcover_snapshot_csv']
+    )['raster_path'].to_dict()
 
     # Align the raster stack for analyzing the various transitions.
     min_pixel_size = float('inf')
