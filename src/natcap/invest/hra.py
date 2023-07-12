@@ -106,7 +106,6 @@ MODEL_SPEC = {
                 "stressor buffer (meters)": {
                     "type": "number",
                     "units": u.meter,
-                    "na_allowed": True,
                     "about": gettext(
                         "The desired buffer distance used to expand a given "
                         "stressor’s influence or footprint. This should be "
@@ -1843,7 +1842,7 @@ def _open_table_as_dataframe(table_path, **kwargs):
         excel_df = pandas.read_excel(table_path, **kwargs)
         excel_df.columns = excel_df.columns.str.lower()
         excel_df['path'] = excel_df['path'].apply(
-            lambda p: utils.expand_path(p, table_path))
+            lambda p: utils.expand_path(p, table_path)).astype('string')
         excel_df['name'] = excel_df['name'].astype('string')
         excel_df['type'] = excel_df['type'].astype('string')
         excel_df['stressor buffer (meters)'] = excel_df['stressor buffer (meters)'].astype(float)

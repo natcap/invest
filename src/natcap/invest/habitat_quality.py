@@ -124,7 +124,6 @@ MODEL_SPEC = {
                 },
                 "fut_path": {
                     "required": "lulc_fut_path",
-                    "na_allowed": True,
                     "type": "raster",
                     "bands": {1: {"type": "ratio"}},
                     "about": gettext(
@@ -135,7 +134,6 @@ MODEL_SPEC = {
                 },
                 "base_path": {
                     "required": "lulc_bas_path",
-                    "na_allowed": True,
                     "type": "raster",
                     "bands": {1: {"type": "ratio"}},
                     "about": gettext(
@@ -388,7 +386,8 @@ def execute(args):
     LOGGER.info("Checking Threat and Sensitivity tables for compliance")
     # Get CSVs as dictionaries and ensure the key is a string for threats.
     threat_df = utils.read_csv_to_dataframe(
-        args['threats_table_path'], MODEL_SPEC['args']['threats_table_path'])
+        args['threats_table_path'], MODEL_SPEC['args']['threats_table_path']
+    ).fillna('')
     sensitivity_df = utils.read_csv_to_dataframe(
         args['sensitivity_table_path'],
         MODEL_SPEC['args']['sensitivity_table_path'])
@@ -426,10 +425,9 @@ def execute(args):
             for threat, row in threat_df.iterrows():
                 LOGGER.debug(f"Validating path for threat: {threat}")
                 threat_table_path_col = _THREAT_SCENARIO_MAP[lulc_key]
-                threat_path = row[threat_table_path_col]
 
                 threat_validate_result = _validate_threat_path(
-                    threat_path, lulc_key)
+                    row[threat_table_path_col], lulc_key)
                 if threat_validate_result == 'error':
                     raise ValueError(
                         'There was an Error locating a threat raster from '
@@ -1154,7 +1152,7 @@ def validate(args, limit_to=None):
         # Get CSVs as dictionaries and ensure the key is a string for threats.
         threat_df = utils.read_csv_to_dataframe(
                 args['threats_table_path'],
-                MODEL_SPEC['args']['threats_table_path'])
+                MODEL_SPEC['args']['threats_table_path']).fillna('')
         sensitivity_df = utils.read_csv_to_dataframe(
             args['sensitivity_table_path'],
             MODEL_SPEC['args']['sensitivity_table_path'])

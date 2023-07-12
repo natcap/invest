@@ -306,13 +306,11 @@ MODEL_SPEC = {
             "columns": {
                 "lulc-class": {
                     "type": "freestyle_string",
-                    "na_allowed": True,
                     "about": gettext(
                         "LULC codes matching the codes in the biophysical "
                         "table.")},
                 "[LULC CODE]": {
                     "type": "option_string",
-                    "na_allowed": True,
                     "options": {
                         "accum": {
                             "description": gettext("a state of carbon accumulation")
@@ -2029,7 +2027,7 @@ def _read_transition_matrix(transition_csv_path, biophysical_df):
             break
 
         # skip rows starting with a blank cell, these are part of the legend
-        if not row['lulc-class']:
+        if pandas.isna(row['lulc-class']):
             continue
 
         try:

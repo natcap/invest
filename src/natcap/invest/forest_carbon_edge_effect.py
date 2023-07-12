@@ -10,6 +10,7 @@ import time
 import uuid
 
 import numpy
+import pandas
 import pygeoprocessing
 import scipy.spatial
 import taskgraph
@@ -75,7 +76,6 @@ MODEL_SPEC = {
                 "c_above": {
                     "type": "number",
                     "units": u.metric_ton/u.hectare,
-                    "na_allowed": True,
                     "about": gettext(
                         "Carbon density value for the aboveground carbon "
                         "pool.")
@@ -649,13 +649,13 @@ def _calculate_lulc_carbon_map(
             # if tropical forest above ground, lookup table is nodata
             lucode_to_per_cell_carbon[lucode] = NODATA_VALUE
         else:
-            try:
-                lucode_to_per_cell_carbon[lucode] = row[carbon_pool_type] * cell_area_ha
-            except ValueError:
+            if pandas.isna(row[carbon_pool_type]):
                 raise ValueError(
                     "Could not interpret carbon pool value as a number. "
                     f"lucode: {lucode}, pool_type: {carbon_pool_type}, "
                     f"value: {row[carbon_pool_type]}")
+            lucode_to_per_cell_carbon[lucode] = row[carbon_pool_type] * cell_area_ha
+
 
     # map aboveground carbon from table to lulc that is not forest
     reclass_error_details = {

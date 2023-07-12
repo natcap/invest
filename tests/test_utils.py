@@ -966,8 +966,8 @@ class ReadCSVToDataframeTests(unittest.TestCase):
             }})
         self.assertEqual(df['h1'][0], '1')
         self.assertEqual(df['h2'][1], 'b')
-        # empty values are returned as empty strings
-        self.assertEqual(df['h3'][1], '')
+        # empty values are returned as NA
+        self.assertTrue(pd.isna(df['h3'][1]))
 
     def test_boolean_type_columns(self):
         """utils: boolean column values are returned as booleans."""
@@ -1024,7 +1024,7 @@ class ReadCSVToDataframeTests(unittest.TestCase):
             f'{self.workspace_dir}{os.sep}foo.txt',
             df['path'][3])
         # empty values are returned as empty strings
-        self.assertEqual('', df['path'][4])
+        self.assertTrue(pd.isna(df['path'][4]))
 
     def test_csv_utf8_encoding(self):
         """utils: test that CSV read correctly with UTF-8 encoding."""

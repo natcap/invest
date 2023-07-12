@@ -757,13 +757,12 @@ class HRAUnitTests(unittest.TestCase):
         })
 
         expected_df = source_df.copy().set_index('name')  # defaults to a deepcopy.
-        expected_df['path'] = [os.path.join(self.workspace_dir, 'foo.tif')]
+        expected_df['path']['1'] = os.path.join(self.workspace_dir, 'foo.tif')
 
         for filename, func in [('target.csv', source_df.to_csv),
                                ('target.xlsx', source_df.to_excel)]:
             full_filepath = os.path.join(self.workspace_dir, filename)
             func(full_filepath, index=False)
-
             opened_df = hra._open_table_as_dataframe(full_filepath)
             pandas.testing.assert_frame_equal(expected_df, opened_df, check_index_type=False)
 

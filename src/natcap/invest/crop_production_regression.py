@@ -138,11 +138,11 @@ MODEL_SPEC = {
                                     "type": "number",
                                     "units": u.metric_ton/u.hectare
                                 },
-                                "b_nut":  {"type": "number", "units": u.none, "na_allowed": True},
-                                "b_k2o":  {"type": "number", "units": u.none, "na_allowed": True},
-                                "c_n":    {"type": "number", "units": u.none, "na_allowed": True},
-                                "c_p2o5": {"type": "number", "units": u.none, "na_allowed": True},
-                                "c_k2o":  {"type": "number", "units": u.none, "na_allowed": True}
+                                "b_nut":  {"type": "number", "units": u.none},
+                                "b_k2o":  {"type": "number", "units": u.none},
+                                "c_n":    {"type": "number", "units": u.none},
+                                "c_p2o5": {"type": "number", "units": u.none},
+                                "c_k2o":  {"type": "number", "units": u.none}
                             }
                         }
                     }

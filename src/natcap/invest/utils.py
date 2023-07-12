@@ -598,7 +598,7 @@ def expand_path(path, base_path):
 
 
 def read_csv_to_dataframe(path, spec, sep=None, engine='python',
-                          encoding='utf-8-sig', na_allowed=False, **kwargs):
+                          encoding='utf-8-sig', **kwargs):
     """Return a dataframe representation of the CSV.
 
     Wrapper around ``pandas.read_csv`` t
@@ -669,11 +669,6 @@ def read_csv_to_dataframe(path, spec, sep=None, engine='python',
     # drop any empty rows
     df = df.dropna(how="all")
 
-    # strip whitespace from table values
-    # Remove values with leading ('^ +') and trailing (' +$') whitespace.
-    # Regular expressions using 'replace' only substitute on strings.
-    df = df.replace(r"^ +| +$", r"", regex=True)
-
     available_cols = set(df.columns)
 
     for col_spec, pattern in zip(spec['columns'].values(), patterns):
@@ -681,13 +676,13 @@ def read_csv_to_dataframe(path, spec, sep=None, engine='python',
         available_cols -= set(matching_cols)
         for col in matching_cols:
             try:
-                if col_spec['type'] in ['csv', 'directory', 'file', 'raster', 'vector', {"vector", "raster"}]:
-                    df[col] = df[col].fillna('')
+                if col_spec['type'] in ['csv', 'directory', 'file', 'raster', 'vector', {'vector', 'raster'}]:
+                    df[col] = df[col].apply(
+                        lambda p: p if pandas.isna(p) else expand_path(str(p).strip(), path))
                     df[col] = df[col].astype(pandas.StringDtype())
-                    df[col] = df[col].apply(lambda p: expand_path(p, path) if p else '')
                 elif col_spec['type'] in {'freestyle_string', 'option_string'}:
-                    df[col] = df[col].fillna('')
-                    df[col] = df[col].apply(lambda s: str(s).lower())
+                    df[col] = df[col].apply(
+                        lambda s: s if pandas.isna(s) else str(s).strip().lower())
                     df[col] = df[col].astype(pandas.StringDtype())
                 elif col_spec['type'] in {'number', 'percent', 'ratio'}:
                     df[col] = df[col].astype(float)
@@ -700,10 +695,6 @@ def read_csv_to_dataframe(path, spec, sep=None, engine='python',
                     f'Value(s) in the "{col}" column of the table {path} '
                     f'could not be interpreted as {col_spec["type"]}s. '
                     f'Original error: {err}')
-            if not col_spec.get('na_allowed', False) and df[col].isna().any():
-                raise ValueError(
-                    f'Empty or NA values are not allowed in the "{col}" '
-                    f'column of the table {path}.')
 
      # set the index column, if specified
     if 'index_col' in spec and spec['index_col'] is not None:

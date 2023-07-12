@@ -92,7 +92,6 @@ MODEL_SPEC = {
                     'units': u.meter,
                     'required':
                         f'search_radius_mode == "{RADIUS_OPT_URBAN_NATURE}"',
-                    'na_allowed': True,
                     'expression': 'value >= 0',
                     'about': (
                         'The distance within which a LULC type is relevant '
