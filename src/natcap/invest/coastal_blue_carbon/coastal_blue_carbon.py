@@ -307,7 +307,7 @@ MODEL_SPEC = {
                 "lulc-class": {
                     "type": "freestyle_string",
                     "about": gettext(
-                        "LULC codes matching the codes in the biophysical "
+                        "LULC class names matching those in the biophysical "
                         "table.")},
                 "[LULC CODE]": {
                     "type": "option_string",
