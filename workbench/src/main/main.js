@@ -30,12 +30,9 @@ import setupGetNCPUs from './setupGetNCPUs';
 import setupOpenExternalUrl from './setupOpenExternalUrl';
 import setupOpenLocalHtml from './setupOpenLocalHtml';
 import setupChangeLanguage from './setupChangeLanguage';
-<<<<<<< HEAD
 import { setupSettingsHandlers } from './settingsStore';
-=======
 import setupGetElectronPaths from './setupGetElectronPaths';
 import setupRendererLogger from './setupRendererLogger';
->>>>>>> upstream/main
 import { ipcMainChannels } from './ipcMainChannels';
 import menuTemplate from './menubar';
 import ELECTRON_DEV_MODE from './isDevMode';
