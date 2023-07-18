@@ -346,7 +346,8 @@ def exponential_decay_kernel_raster(expected_distance, kernel_filepath,
         None
     """
     max_distance = expected_distance * 5
-    kernel_size = int(numpy.round(max_distance * 2 + 1))
+    kernel_
+    size = int(numpy.round(max_distance * 2 + 1))
 
     driver = gdal.GetDriverByName('GTiff')
     kernel_dataset = driver.Create(
@@ -607,6 +608,7 @@ def read_csv_to_dataframe(path, spec, **kwargs):
     Column names are lowercased and whitespace is stripped off. Empty rows are
     dropped. Values in each column are processed and cast to an appropriate
     dtype according to the type in the spec:
+
     - Values in raster, vector, csv, file, and directory columns are cast to
       str, whitespace stripped, and expanded as paths relative to the input path
     - Values in freestyle_string and option_string columns are cast to str,
@@ -620,6 +622,7 @@ def read_csv_to_dataframe(path, spec, **kwargs):
 
     Also sets custom defaults for some kwargs passed to ``pandas.read_csv``,
     which you can override with kwargs:
+
     - sep=None: lets the Python engine infer the separator
     - engine='python': The 'python' engine supports the sep=None option.
     - encoding='utf-8-sig': 'utf-8-sig' handles UTF-8 with or without BOM.
@@ -631,7 +634,6 @@ def read_csv_to_dataframe(path, spec, **kwargs):
 
     Returns:
         pandas.DataFrame with the contents of the given CSV
-
     """
     # build up a list of regex patterns to match columns against columns from
     # the table that match a pattern in this list (after stripping whitespace
