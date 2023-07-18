@@ -1,9 +1,8 @@
-import { ipcRenderer } from 'electron';
-
 import { ipcMainChannels } from '../main/ipcMainChannels';
 
 const HOSTNAME = 'http://127.0.0.1';
 const { logger, PORT } = window.Workbench;
+const { ipcRenderer } = window.Workbench.electron;
 const PREFIX = 'api';
 
 // The Flask server sends UTF-8 encoded responses by default

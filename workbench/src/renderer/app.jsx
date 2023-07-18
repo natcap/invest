@@ -24,6 +24,8 @@ import { getInvestModelNames } from './server_requests';
 import InvestJob from './InvestJob';
 import { dragOverHandlerNone } from './utils';
 
+import { ipcMainChannels } from '../main/ipcMainChannels';
+
 const { ipcRenderer } = window.Workbench.electron;
 
 /** This component manages any application state that should persist
@@ -60,7 +62,7 @@ export default class App extends React.Component {
       recentJobs: recentJobs,
       showDownloadModal: this.props.isFirstRun,
     });
-    const language = await ipcRenderer.invoke('getSettingsValue', 'language');
+    const language = await ipcRenderer.invoke(ipcMainChannels.GET_SETTING, 'language');
     await i18n.changeLanguage(language);
     ipcRenderer.on('download-status', (downloadedNofN) => {
       this.setState({
