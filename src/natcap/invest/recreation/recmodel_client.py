@@ -1197,7 +1197,7 @@ def _point_nearest_distance(
                 f"{(100*index)/len(response_polygons_lookup):.2f}% complete"))
 
         point_distance_lookup[str(feature_id)] = min([
-            geometry.distance(point) for point in points])
+            geometry.centroid.distance(point) for point in points])
     LOGGER.info(f"{os.path.basename(point_vector_path)} point distance: "
                 "100.00% complete")
     with open(predictor_target_path, 'w') as jsonfile:
