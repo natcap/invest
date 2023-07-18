@@ -754,8 +754,7 @@ def execute(args):
         # If Price Table provided use that for price of energy, validate inputs
         time = int(val_parameters_dict['time_period'])
         if args['price_table']:
-            wind_price_df = utils.read_csv_to_dataframe(
-                args['wind_schedule'], to_lower=True)
+            wind_price_df = utils.read_csv_to_dataframe(args['wind_schedule'])
 
             year_count = len(wind_price_df['year'])
             if year_count != time + 1:
@@ -1135,7 +1134,7 @@ def execute(args):
 
         # Read the grid points csv, and convert it to land and grid dictionary
         grid_land_df = utils.read_csv_to_dataframe(
-            args['grid_points_path'], to_lower=True)
+            args['grid_points_path'], convert_vals_to_lower=False)
 
         # Make separate dataframes based on 'TYPE'
         grid_df = grid_land_df.loc[(
@@ -1856,8 +1855,7 @@ def _read_csv_wind_parameters(csv_path, parameter_list):
     # this doesn't benefit from `utils.read_csv_to_dataframe` because there
     # is no header to strip whitespace
     # use sep=None, engine='python' to infer what the separator is
-    wind_param_df = pandas.read_csv(
-        csv_path, header=None, index_col=0, sep=None, engine='python')
+    wind_param_df = pandas.read_csv(csv_path, header=None, index_col=0)
     # only get the required parameters and leave out the rest
     wind_param_df = wind_param_df[wind_param_df.index.isin(parameter_list)]
     wind_dict = wind_param_df.to_dict()[1]
@@ -1975,7 +1973,8 @@ def _read_csv_wind_data(wind_data_path, hub_height):
             to dictionaries that hold wind data at that location.
 
     """
-    wind_point_df = utils.read_csv_to_dataframe(wind_data_path, to_lower=False)
+    wind_point_df = utils.read_csv_to_dataframe(
+        wind_data_path, convert_cols_to_lower=False, convert_vals_to_lower=False)
 
     # Calculate scale value at new hub height given reference values.
     # See equation 3 in users guide

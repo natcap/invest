@@ -21,7 +21,7 @@ import { UI_SPEC } from '../../ui_config';
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
 const { ipcRenderer } = window.Workbench.electron;
-const logger = window.Workbench.getLogger('InvestTab');
+const { logger } = window.Workbench;
 
 /** Get an invest model's MODEL_SPEC when a model button is clicked.
 

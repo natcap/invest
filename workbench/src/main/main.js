@@ -30,7 +30,12 @@ import setupGetNCPUs from './setupGetNCPUs';
 import setupOpenExternalUrl from './setupOpenExternalUrl';
 import setupOpenLocalHtml from './setupOpenLocalHtml';
 import setupChangeLanguage from './setupChangeLanguage';
+<<<<<<< HEAD
 import { setupSettingsHandlers } from './settingsStore';
+=======
+import setupGetElectronPaths from './setupGetElectronPaths';
+import setupRendererLogger from './setupRendererLogger';
+>>>>>>> upstream/main
 import { ipcMainChannels } from './ipcMainChannels';
 import menuTemplate from './menubar';
 import ELECTRON_DEV_MODE from './isDevMode';
@@ -82,13 +87,19 @@ export const createWindow = async () => {
   const investExe = findInvestBinaries(ELECTRON_DEV_MODE);
   flaskSubprocess = createPythonFlaskProcess(investExe);
   setupDialogs();
+  setupCheckFilePermissions();
   setupCheckFirstRun();
   setupCheckStorageToken();
   setupChangeLanguage();
   setupSettingsHandlers();
+  setupGetElectronPaths();
+  setupGetNCPUs();
+  setupInvestLogReaderHandler();
+  setupOpenExternalUrl();
+  setupRendererLogger();
   await getFlaskIsReady();
 
-  const devModeArg = ELECTRON_DEV_MODE ? '--devMode' : '';
+  const devModeArg = ELECTRON_DEV_MODE ? '--devmode' : '';
   // Create the browser window.
   mainWindow = new BrowserWindow({
     minWidth: 800,
@@ -96,7 +107,7 @@ export const createWindow = async () => {
     webPreferences: {
       preload: path.join(__dirname, '../preload/preload.js'),
       defaultEncoding: 'UTF-8',
-      additionalArguments: [devModeArg],
+      additionalArguments: [devModeArg, `--port=${process.env.PORT}`],
     },
   });
   Menu.setApplicationMenu(
@@ -120,16 +131,7 @@ export const createWindow = async () => {
     mainWindow.show();
   });
 
-  // Open the DevTools.
-  // The timing of this is fussy due a chromium bug. It seems to only
-  // come up if there is an unrelated uncaught exception during page load.
-  // https://bugs.chromium.org/p/chromium/issues/detail?id=1085215
-  // https://github.com/electron/electron/issues/23662
-  mainWindow.webContents.on('did-frame-finish-load', async () => {
-    if (ELECTRON_DEV_MODE) {
-      mainWindow.webContents.openDevTools();
-    }
-    // We use this stdout as a signal in a puppeteer test
+  mainWindow.webContents.on('did-finish-load', () => {
     process.stdout.write('main window loaded');
   });
 
@@ -142,14 +144,21 @@ export const createWindow = async () => {
     mainWindow = null;
   });
 
-  setupCheckFilePermissions();
+  // register listeners that need a reference to the mainWindow or
+  // have callbacks that won't work until the invest server is ready.
+  setupContextMenu(mainWindow);
   setupDownloadHandlers(mainWindow);
   setupInvestRunHandlers(investExe);
-  setupInvestLogReaderHandler();
-  setupContextMenu(mainWindow);
-  setupGetNCPUs();
-  setupOpenExternalUrl();
   setupOpenLocalHtml(mainWindow, ELECTRON_DEV_MODE);
+  if (ELECTRON_DEV_MODE) {
+    // The timing of this is fussy due a chromium bug. It seems to only
+    // come up if there is an unrelated uncaught exception during page load.
+    // https://bugs.chromium.org/p/chromium/issues/detail?id=1085215
+    // https://github.com/electron/electron/issues/23662
+    // Calling this in a 'did-finish-load' listener would make a lot of sense,
+    // but most of the time it doesn't work.
+    mainWindow.webContents.openDevTools();
+  }
   return Promise.resolve(); // lets tests await createWindow(), then assert
 };
 
@@ -175,15 +184,6 @@ export function main() {
   }
 
   app.on('ready', async () => {
-    if (ELECTRON_DEV_MODE) {
-      const {
-        default: installExtension,
-        REACT_DEVELOPER_TOOLS,
-      } = require('electron-devtools-installer');
-      await installExtension(REACT_DEVELOPER_TOOLS, {
-        loadExtensionOptions: { allowFileAccess: true },
-      });
-    }
     createWindow();
   });
   app.on('activate', () => {

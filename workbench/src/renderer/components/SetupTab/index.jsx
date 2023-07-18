@@ -313,7 +313,7 @@ class SetupTab extends React.Component {
 
   async browseForDatastack() {
     const data = await ipcRenderer.invoke(ipcMainChannels.SHOW_OPEN_DIALOG);
-    if (data.filePaths.length) {
+    if (!data.canceled) {
       this.loadParametersFromFile(data.filePaths[0]);
     }
   }

@@ -1179,8 +1179,8 @@ def _parse_scenario_variables(args):
     else:
         farm_vector_path = None
 
-    guild_table = utils.build_lookup_from_csv(
-        guild_table_path, 'species', to_lower=True)
+    guild_table = utils.read_csv_to_dataframe(
+        guild_table_path, 'species').to_dict(orient='index')
 
     LOGGER.info('Checking to make sure guild table has all expected headers')
     guild_headers = list(guild_table.values())[0].keys()
@@ -1192,8 +1192,8 @@ def _parse_scenario_variables(args):
                 f"'{header}' but was unable to find one. Here are all the "
                 f"headers from {guild_table_path}: {', '.join(guild_headers)}")
 
-    landcover_biophysical_table = utils.build_lookup_from_csv(
-        landcover_biophysical_table_path, 'lucode', to_lower=True)
+    landcover_biophysical_table = utils.read_csv_to_dataframe(
+        landcover_biophysical_table_path, 'lucode').to_dict(orient='index')
     biophysical_table_headers = (
         list(landcover_biophysical_table.values())[0].keys())
     for header in _EXPECTED_BIOPHYSICAL_HEADERS:

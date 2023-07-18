@@ -2,9 +2,8 @@ import { ipcRenderer } from 'electron';
 
 import { ipcMainChannels } from '../main/ipcMainChannels';
 
-const logger = window.Workbench.getLogger('server_requests.js');
 const HOSTNAME = 'http://127.0.0.1';
-const { PORT } = window.Workbench;
+const { logger, PORT } = window.Workbench;
 const PREFIX = 'api';
 
 // The Flask server sends UTF-8 encoded responses by default
@@ -25,7 +24,7 @@ export async function getInvestModelNames() {
       method: 'get',
     })
       .then((response) => response.json())
-      .catch((error) => logger.error(error.stack))
+      .catch((error) => { logger.error(`${error.stack}`) })
   );
 }
 

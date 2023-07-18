@@ -15,7 +15,7 @@ import sampledataRegistry from './sampledata_registry.json';
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
 const { ipcRenderer } = window.Workbench.electron;
-const logger = window.Workbench.getLogger('DataDownloadModal');
+const { logger } = window.Workbench;
 
 // A URL for sampledata to use in devMode, when the token containing the URL
 // associated with a production build of the Workbench does not exist.
@@ -161,8 +161,8 @@ class DataDownloadModal extends React.Component {
   }
 
   closeDialog() {
-    this.setState({ alertPath: '' })
-    this.props.closeModal()
+    this.setState({ alertPath: '' });
+    this.props.closeModal();
   }
 
   render() {
