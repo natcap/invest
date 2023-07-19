@@ -737,8 +737,8 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
 
         with self.assertRaises(ValueError) as context:
             seasonal_water_yield.execute(args)
-        self.assertIn(
-            'could not be interpreted as numbers', str(context.exception))
+        self.assertTrue(
+            'expecting all floating point numbers' in str(context.exception))
 
     def test_monthly_alpha_regression(self):
         """SWY monthly alpha values regression test on sample data.
