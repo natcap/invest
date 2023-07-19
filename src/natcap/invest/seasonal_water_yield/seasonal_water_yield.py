@@ -1175,7 +1175,7 @@ def _calculate_monthly_quick_flow(precip_path, n_events_path, stream_path,
         )
 
         # case 3d: set any negative values to 0
-        qf_im[qf_im < 0] = 0
+        qf_im[valid_mask & (qf_im < 0)] = 0
 
         return qf_im
 

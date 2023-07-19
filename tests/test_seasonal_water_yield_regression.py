@@ -1056,7 +1056,7 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
             expected_quickflow_array, atol=1e-5)
 
     def test_monthly_quickflow_large_si_aim_ratio(self):
-        """Test `_calculate_monthly_quick_flow` with undefined nodata values"""
+        """Test `_calculate_monthly_quick_flow` with large s_i/a_im ratio"""
         from natcap.invest.seasonal_water_yield import seasonal_water_yield
 
         # with these values, the QF equation would overflow float32 if
