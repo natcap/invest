@@ -346,8 +346,7 @@ def exponential_decay_kernel_raster(expected_distance, kernel_filepath,
         None
     """
     max_distance = expected_distance * 5
-    kernel_
-    size = int(numpy.round(max_distance * 2 + 1))
+    kernel_size = int(numpy.round(max_distance * 2 + 1))
 
     driver = gdal.GetDriverByName('GTiff')
     kernel_dataset = driver.Create(
