@@ -1,5 +1,5 @@
 import Store from 'electron-store';
-import { ipcMain } from 'electron';
+import { app, ipcMain } from 'electron';
 import { getLogger } from './logger';
 import { ipcMainChannels } from './ipcMainChannels';
 
@@ -18,6 +18,8 @@ export default function setupChangeLanguage() {
     (e, languageCode) => {
       logger.debug('changing language to', languageCode);
       store.set('language', languageCode);
+      app.relaunch();
+      app.exit();
     }
   );
 }
