@@ -1,6 +1,8 @@
 import React from 'react';
 import {
-  render, waitFor
+  render,
+  waitFor,
+  waitForElementToBeRemoved,
 } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import userEvent from '@testing-library/user-event';
@@ -44,7 +46,7 @@ describe('Sample Data Download Form', () => {
 
   test('Modal does not display when app has been run before', async () => {
     const { findByText, queryByText } = render(<App isFirstRun />);
-    await findByText("InVEST");  // wait for page to load before querying
+    await findByText('InVEST'); // wait for page to load before querying
     const modalTitle = queryByText('Download InVEST sample data');
     expect(modalTitle).toBeNull();
   });
@@ -73,24 +75,24 @@ describe('Sample Data Download Form', () => {
 
     // Toggle all off using Select All
     const selectAllCheckbox = getByLabelText('Select All');
-    userEvent.click(selectAllCheckbox);
+    await userEvent.click(selectAllCheckbox);
     allCheckBoxes.forEach((box) => {
       expect(box).not.toBeChecked();
     });
     expect(downloadButton).toBeDisabled();
 
     // Toggle all on using Select All
-    userEvent.click(selectAllCheckbox);
+    await userEvent.click(selectAllCheckbox);
     allCheckBoxes.forEach((box) => {
       expect(box).toBeChecked();
     });
 
     // Toggle one off & on
     const modelCheckbox = getByLabelText(new RegExp(modelName));
-    userEvent.click(modelCheckbox);
+    await userEvent.click(modelCheckbox);
     expect(modelCheckbox).not.toBeChecked();
     expect(selectAllCheckbox).not.toBeChecked();
-    userEvent.click(modelCheckbox);
+    await userEvent.click(modelCheckbox);
     expect(modelCheckbox).toBeChecked();
   });
 
@@ -133,35 +135,33 @@ describe('DownloadProgressBar', () => {
   });
 
   test('Displays message on complete, then disappears', async () => {
+    const alertText = 'Download Complete';
     const nComplete = 5;
     const nTotal = 5;
-    const { getByText } = render(
+    const { getByText, queryByText } = render(
       <DownloadProgressBar
         downloadedNofN={[nComplete, nTotal]}
-        expireAfter={1000}
+        expireAfter={500} // less than default timeout for queryBy
       />
     );
-    const alert = getByText('Download Complete');
+    const alert = getByText(alertText);
     expect(alert).toBeInTheDocument();
-    await waitFor(() => {
-      expect(alert).not.toBeInTheDocument();
-    });
+    await waitForElementToBeRemoved(() => queryByText(alertText));
   });
 
   test('Displays message on fail, then disappears', async () => {
+    const alertText = 'Download Failed';
     const nComplete = 'failed';
     const nTotal = 'failed';
-    const { getByText } = render(
+    const { getByText, queryByText } = render(
       <DownloadProgressBar
         downloadedNofN={[nComplete, nTotal]}
-        expireAfter={1000}
+        expireAfter={500} // less than default timeout for queryBy
       />
     );
-    const alert = getByText('Download Failed');
+    const alert = getByText(alertText);
     expect(alert).toBeInTheDocument();
-    await waitFor(() => {
-      expect(alert).not.toBeInTheDocument();
-    });
+    await waitForElementToBeRemoved(() => queryByText(alertText));
   });
 });
 
@@ -198,7 +198,7 @@ describe('Integration tests with main process', () => {
 
     const allCheckBoxes = await findAllByRole('checkbox');
     const downloadButton = await findByRole('button', { name: 'Download' });
-    userEvent.click(downloadButton);
+    await userEvent.click(downloadButton);
     const nURLs = allCheckBoxes.length - 1; // all except Select All
     await waitFor(async () => {
       expect(await getSettingsValue('sampleDataDir'))
@@ -215,7 +215,7 @@ describe('Integration tests with main process', () => {
 
     const existingValue = await getSettingsValue('sampleDataDir');
     const cancelButton = await findByRole('button', { name: 'Cancel' });
-    userEvent.click(cancelButton);
+    await userEvent.click(cancelButton);
 
     await waitFor(async () => {
       const value = await getSettingsValue('sampleDataDir');
@@ -243,7 +243,7 @@ describe('Integration tests with main process', () => {
     } = render(<App isFirstRun />);
 
     const downloadButton = await findByRole('button', { name: 'Download' });
-    userEvent.click(downloadButton);
+    await userEvent.click(downloadButton);
     const alert = await findByRole('alert');
     expect(alert).toHaveTextContent('Please choose a different folder');
   });

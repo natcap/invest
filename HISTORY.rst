@@ -44,12 +44,16 @@ Unreleased Changes
     * Updated the package installation instructions in the API docs for clarity
       and also to highlight the ease of installation through ``conda-forge``.
       https://github.com/natcap/invest/issues/1256
-    * ``utils.build_lookup_from_csv`` now accepts kwargs for ``pandas.read_csv``
-      (`#1319 <https://github.com/natcap/invest/issues/1319>`_)
+    * ``utils.build_lookup_from_csv`` has been deprecated and its functionality
+      has been merged into ``utils.read_csv_to_dataframe``
+      (`#1319 <https://github.com/natcap/invest/issues/1319>`_),
+      (`#1327 <https://github.com/natcap/invest/issues/1327>`_)
 * Workbench
     * Fixed a bug where sampledata downloads failed silently (and progress bar
       became innacurate) if the Workbench did not have write permission to
       the download location. https://github.com/natcap/invest/issues/1070
+* Forest Carbon
+    * The biophysical table is now case-insensitive.
 * HRA
     * Fixed a bug in HRA where the model would error when all exposure and
       consequence criteria were skipped for a single habitat. The model now
@@ -88,6 +92,18 @@ Unreleased Changes
     * Removed the GDAL cache size limit on this model, which means that, by
       default, the model will use up to 5% of installed memory.
       https://github.com/natcap/invest/issues/1320
+    * Monthly quick flow nodata values will now be preserved instead of being
+      set to 0. The old behavior was not well documented and caused some
+      confusion when nodata pixels did not line up. It's safer not to fill in
+      unknown data. (`#1317 <https://github.com/natcap/invest/issues/1317>`_)
+* Urban Flood Risk
+    * Fixed a bug where the model incorrectly raised an error if the
+      biophysical table contained a row of all 0s.
+      (`#1123 <https://github.com/natcap/invest/issues/1123>`_)
+* Visitation: Recreation and Tourism
+    * Fixed a bug where overlapping predictor polygons would be double-counted
+      in ``polygon_area_coverage`` and ``polygon_percent_coverage`` calculations.
+      (`#1310 <https://github.com/natcap/invest/issues/1310>`_)
 
 3.13.0 (2023-03-17)
 -------------------

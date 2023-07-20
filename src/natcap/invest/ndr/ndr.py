@@ -619,8 +619,8 @@ def execute(args):
         if args['calc_' + nutrient_id]:
             nutrients_to_process.append(nutrient_id)
 
-    lucode_to_parameters = utils.build_lookup_from_csv(
-        args['biophysical_table_path'], 'lucode')
+    lucode_to_parameters = utils.read_csv_to_dataframe(
+        args['biophysical_table_path'], 'lucode').to_dict(orient='index')
 
     _validate_inputs(nutrients_to_process, lucode_to_parameters)
 

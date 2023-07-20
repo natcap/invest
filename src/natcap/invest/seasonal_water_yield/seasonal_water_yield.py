@@ -562,11 +562,12 @@ def _execute(args):
     if (not args['user_defined_local_recharge'] and
             not args['user_defined_climate_zones']):
         rain_events_lookup = (
-            utils.build_lookup_from_csv(
-                args['rain_events_table_path'], 'month'))
+            utils.read_csv_to_dataframe(
+                args['rain_events_table_path'], 'month'
+                ).to_dict(orient='index'))
 
-    biophysical_table = utils.build_lookup_from_csv(
-        args['biophysical_table_path'], 'lucode')
+    biophysical_table = utils.read_csv_to_dataframe(
+        args['biophysical_table_path'], 'lucode').to_dict(orient='index')
 
     bad_value_list = []
     for lucode, value in biophysical_table.items():
@@ -592,8 +593,9 @@ def _execute(args):
         # parse out the alpha lookup table of the form (month_id: alpha_val)
         alpha_month_map = dict(
             (key, val['alpha']) for key, val in
-            utils.build_lookup_from_csv(
-                args['monthly_alpha_path'], 'month').items())
+            utils.read_csv_to_dataframe(
+                args['monthly_alpha_path'], 'month'
+            ).to_dict(orient='index').items())
     else:
         # make all 12 entries equal to args['alpha_m']
         alpha_m = float(fractions.Fraction(args['alpha_m']))
@@ -761,8 +763,9 @@ def _execute(args):
         for month_id in range(N_MONTHS):
             if args['user_defined_climate_zones']:
                 cz_rain_events_lookup = (
-                    utils.build_lookup_from_csv(
-                        args['climate_zone_table_path'], 'cz_id'))
+                    utils.read_csv_to_dataframe(
+                        args['climate_zone_table_path'], 'cz_id'
+                    ).to_dict(orient='index'))
                 month_label = MONTH_ID_TO_LABEL[month_id]
                 climate_zone_rain_events_month = dict([
                     (cz_id, cz_rain_events_lookup[cz_id][month_label]) for
@@ -1133,12 +1136,6 @@ def _calculate_monthly_quick_flow(
             valid_stream_precip_mask &= ~utils.array_equals_nodata(
                 p_im, p_nodata)
         qf_im[valid_stream_precip_mask] = p_im[valid_stream_precip_mask]
-
-        # this handles some user cases where they don't have data defined on
-        # their landcover raster. It otherwise crashes later with some NaNs.
-        # more intermediate outputs with nodata values guaranteed to be defined
-        qf_im[utils.array_equals_nodata(qf_im, qf_nodata) &
-              ~utils.array_equals_nodata(stream_array, stream_nodata)] = 0.0
         return qf_im
 
     pygeoprocessing.raster_calculator(

@@ -306,8 +306,8 @@ def execute(args):
         task_name='align raster stack')
 
     # Load CN table
-    cn_table = utils.build_lookup_from_csv(
-        args['curve_number_table_path'], 'lucode')
+    cn_table = utils.read_csv_to_dataframe(
+        args['curve_number_table_path'], 'lucode').to_dict(orient='index')
 
     # make cn_table into a 2d array where first dim is lucode, second is
     # 0..3 to correspond to CN_A..CN_D
@@ -648,8 +648,8 @@ def _calculate_damage_to_infrastructure_in_aoi(
     infrastructure_vector = gdal.OpenEx(structures_vector_path, gdal.OF_VECTOR)
     infrastructure_layer = infrastructure_vector.GetLayer()
 
-    damage_type_map = utils.build_lookup_from_csv(
-        structures_damage_table, 'type', to_lower=True)
+    damage_type_map = utils.read_csv_to_dataframe(
+        structures_damage_table, 'type').to_dict(orient='index')
 
     infrastructure_layer_defn = infrastructure_layer.GetLayerDefn()
     type_index = -1
@@ -871,14 +871,14 @@ def _lu_to_cn_op(
     # this is an array where each column represents a valid landcover
     # pixel and the rows are the curve number index for the landcover
     # type under that pixel (0..3 are CN_A..CN_D and 4 is "unknown")
-    valid_lucodes = lucode_array[valid_mask].astype(int)
+    valid_lucode_array = lucode_array[valid_mask].astype(int)
 
     try:
-        cn_matrix = lucode_to_cn_table[valid_lucodes]
+        cn_matrix = lucode_to_cn_table[valid_lucode_array]
     except IndexError:
         # Find the code that raised the IndexError, and possibly
         # any others that also would have.
-        lucodes = numpy.unique(valid_lucodes)
+        lucodes = numpy.unique(valid_lucode_array)
         missing_codes = lucodes[lucodes >= lucode_to_cn_table.shape[0]]
         raise ValueError(
             f'The biophysical table is missing a row for lucode(s) '
@@ -886,10 +886,11 @@ def _lu_to_cn_op(
 
     # Even without an IndexError, still must guard against
     # lucodes that can index into the sparse matrix but were
-    # missing from the biophysical table. They have rows of all 0.
-    if not cn_matrix.sum(1).all():
-        empty_rows = numpy.where(lucode_to_cn_table.sum(1) == 0)
-        missing_codes = numpy.intersect1d(valid_lucodes, empty_rows)
+    # missing from the biophysical table. Do this by intersecting
+    # rows with no stored values with the lulc array
+    empty_rows = cn_matrix.getnnz(1) == 0
+    if empty_rows.any():
+        missing_codes = numpy.intersect1d(valid_lucode_array, empty_rows)
         raise ValueError(
             f'The biophysical table is missing a row for lucode(s) '
             f'{missing_codes.tolist()}')
