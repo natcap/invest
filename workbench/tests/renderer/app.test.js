@@ -3,7 +3,6 @@ import path from 'path';
 import events from 'events';
 import { spawn, exec } from 'child_process';
 import Stream from 'stream';
-import Store from 'electron-store';
 import fetch from 'node-fetch';
 import React from 'react';
 import { ipcRenderer } from 'electron';
@@ -46,8 +45,6 @@ const MOCK_INVEST_LIST = {
   },
 };
 const MOCK_VALIDATION_VALUE = [[['workspace_dir'], 'invalid because']];
-
-const store = new Store();
 
 const SAMPLE_SPEC = {
   model_name: MOCK_MODEL_TITLE,
@@ -434,8 +431,7 @@ describe('InVEST global settings: dialog interactions', () => {
     const loggingLevel = 'DEBUG';
     const tgLoggingLevel = 'DEBUG';
     const languageValue = 'es';
-
-    const spy = jest.spyOn(ipcRenderer, 'invoke')
+    const spyInvoke = jest.spyOn(ipcRenderer, 'invoke');
 
     const {
       getByText, getByRole, getByLabelText, findByRole,
@@ -470,8 +466,7 @@ describe('InVEST global settings: dialog interactions', () => {
     expect(await getSettingsValue('nWorkers')).toBe(nWorkersValue);
     expect(await getSettingsValue('loggingLevel')).toBe(loggingLevel);
     expect(await getSettingsValue('taskgraphLoggingLevel')).toBe(tgLoggingLevel);
-
-    expect(spy).toHaveBeenCalledWith(ipcMainChannels.CHANGE_LANGUAGE, languageValue);
+    expect(spyInvoke).toHaveBeenCalledWith(ipcMainChannels.CHANGE_LANGUAGE, languageValue);
   });
 
   test('Load invest settings from storage and test Reset', async () => {
@@ -535,36 +530,5 @@ describe('InVEST global settings: dialog interactions', () => {
     expect(await findByText('Download InVEST sample data'))
       .toBeInTheDocument();
     expect(queryByText('Settings')).toBeNull();
-  });
-});
-
-describe('Translation', () => {
-  const { location } = global.window;
-  beforeAll(async () => {
-    getInvestModelNames.mockResolvedValue({});
-    getSupportedLanguages.mockResolvedValue({ en: 'english', ll: 'foo' });
-  });
-
-  afterAll(() => {
-    Object.defineProperty(global.window, 'location', {
-      configurable: true,
-      value: location,
-    });
-  });
-
-  test('Text rerenders in new language when language setting changes', async () => {
-    const { findByLabelText } = render(<App />);
-
-    await userEvent.click(await findByLabelText('settings'));
-    const languageInput = await findByLabelText('Language', { exact: false });
-    expect(languageInput).toHaveValue('en');
-
-    await userEvent.selectOptions(languageInput, 'll');
-    await waitFor(() => {
-      expect(global.window.location.reload).toHaveBeenCalled();
-    });
-    // because we can't reload the window in the test environment,
-    // components won't actually rerender in the new language
-    expect(languageInput).toHaveValue('ll');
   });
 });
