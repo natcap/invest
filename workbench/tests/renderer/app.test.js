@@ -28,6 +28,7 @@ import {
   saveSettingsStore,
   clearSettingsStore,
 } from '../../src/renderer/components/SettingsModal/SettingsStorage';
+import { ipcMainChannels } from '../../src/main/ipcMainChannels';
 import { mockUISpec } from './utils';
 // It's quite a pain to dynamically mock a const from a module,
 // here we do it by importing as another object, then
@@ -434,6 +435,8 @@ describe('InVEST global settings: dialog interactions', () => {
     const tgLoggingLevel = 'DEBUG';
     const languageValue = 'es';
 
+    const spy = jest.spyOn(ipcRenderer, 'invoke')
+
     const {
       getByText, getByRole, getByLabelText, findByRole,
     } = render(
@@ -467,7 +470,8 @@ describe('InVEST global settings: dialog interactions', () => {
     expect(await getSettingsValue('nWorkers')).toBe(nWorkersValue);
     expect(await getSettingsValue('loggingLevel')).toBe(loggingLevel);
     expect(await getSettingsValue('taskgraphLoggingLevel')).toBe(tgLoggingLevel);
-    expect(Store.get.toHaveBeenCalled());
+
+    expect(spy).toHaveBeenCalledWith(ipcMainChannels.CHANGE_LANGUAGE, languageValue);
   });
 
   test('Load invest settings from storage and test Reset', async () => {

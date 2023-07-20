@@ -192,6 +192,7 @@ describe('createWindow', () => {
     const expectedOnChannels = [
       ipcMainChannels.DOWNLOAD_URL,
       ipcMainChannels.GET_ELECTRON_PATHS,
+      ipcMainChannels.GET_LANGUAGE,
       ipcMainChannels.INVEST_RUN,
       ipcMainChannels.INVEST_KILL,
       ipcMainChannels.INVEST_READ_LOG,
