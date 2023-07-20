@@ -100,6 +100,10 @@ Unreleased Changes
     * Fixed a bug where the model incorrectly raised an error if the
       biophysical table contained a row of all 0s.
       (`#1123 <https://github.com/natcap/invest/issues/1123>`_)
+* Urban Nature Access
+    * Fixed an issue where, under certain circumstances, the model would raise
+      a cryptic ``TypeError`` when creating the summary vector.
+      https://github.com/natcap/invest/issues/1350
 * Visitation: Recreation and Tourism
     * Fixed a bug where overlapping predictor polygons would be double-counted
       in ``polygon_area_coverage`` and ``polygon_percent_coverage`` calculations.

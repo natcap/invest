@@ -2014,7 +2014,10 @@ def _write_supply_demand_vector(source_aoi_vector_path, feature_attrs,
     for feature in target_layer:
         feature_id = feature.GetFID()
         for attr_name, attr_value in feature_attrs[feature_id].items():
-            feature.SetField(attr_name, attr_value)
+            # It is possible that attr_value may be a numpy.float32 object,
+            # which will raise a cryptic error.  Numpy.float64 will not raise
+            # this error.  Casting to float avoids the issue.
+            feature.SetField(attr_name, float(attr_value))
 
         target_layer.SetFeature(feature)
     target_layer.CommitTransaction()
