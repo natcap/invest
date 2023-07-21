@@ -15,7 +15,7 @@ const PREFIX = 'api';
  */
 export async function getInvestModelNames() {
   return (
-    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/models?language=en`, {
+    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/models?language=${window.Workbench.LANGUAGE}`, {
       method: 'get',
     })
       .then((response) => response.json())
@@ -31,7 +31,7 @@ export async function getInvestModelNames() {
  */
 export async function getSpec(payload) {
   return (
-    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/getspec?language=en`, {
+    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/getspec?language=${window.Workbench.LANGUAGE}`, {
       method: 'post',
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },
@@ -52,7 +52,7 @@ export async function getSpec(payload) {
  */
 export async function fetchValidation(payload) {
   return (
-    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/validate?language=en`, {
+    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/validate?language=${window.Workbench.LANGUAGE}`, {
       method: 'post',
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },
