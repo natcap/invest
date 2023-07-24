@@ -888,6 +888,11 @@ class UNATests(unittest.TestCase):
         numpy.testing.assert_allclose(
             numpy.sum(weighted_sum_array[~nodata_pixels]), 1122.5)
 
+    def test_write_vector(self):
+        """UNA: test writing of various float types to the output vector."""
+        # TODO
+        pass
+
     def test_validate(self):
         """UNA: Basic test for validation."""
         from natcap.invest import urban_nature_access
