@@ -75,7 +75,7 @@ export default function ResourcesTab(props) {
   }
 
   const { t, i18n } = useTranslation();
-  const userGuideURL = `${window.Workbench.USERGUIDE_PATH}/${window.Workbench.language}/${docs}`;
+  const userGuideURL = `${window.Workbench.USERGUIDE_PATH}/${window.Workbench.LANGUAGE}/${docs}`;
 
   return (
     <React.Fragment>
