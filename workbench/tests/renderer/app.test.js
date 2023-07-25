@@ -19,7 +19,7 @@ import InvestJob from '../../src/renderer/InvestJob';
 // import {
 //   getSettingsValue, saveSettingsStore
 // } from '../../src/renderer/components/SettingsModal/SettingsStorage';
-import { settingsStore, setupSettingsHandlers } from '../../src/main/settingsStore';
+import { setupSettingsHandlers } from '../../src/main/settingsStore';
 import { ipcMainChannels } from '../../src/main/ipcMainChannels';
 import {
   setupInvestRunHandlers,

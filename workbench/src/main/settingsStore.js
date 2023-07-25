@@ -4,66 +4,55 @@ import Ajv from 'ajv';
 
 import { ipcMainChannels } from './ipcMainChannels';
 
-const defaults = {
+export const defaults = {
   nWorkers: '-1',
   taskgraphLoggingLevel: 'INFO',
   loggingLevel: 'INFO',
   language: 'en',
-  foo: 'bar'
 };
 
-const schema = {
+export const schema = {
   type: 'object',
   properties: {
     nWorkers: {
       type: 'string',
-      default: '-1'
     },
     taskgraphLoggingLevel: {
       enum: ['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG'],
-      default: 'INFO'
     },
     loggingLevel: {
       enum: ['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG'],
-      default: 'INFO'
     },
     language: {
       enum: ['en', 'es', 'zh'],
-      default: 'en'
     },
-    foo: {
-      type: 'string',
-      default: 'bar'
-    }
   },
-  required: ['nWorkers', 'taskgraphLoggingLevel', 'loggingLevel', 'language', 'foo']
+  required: ['nWorkers', 'taskgraphLoggingLevel', 'loggingLevel', 'language']
 };
 
-// if the schema includes new properties compared to the file,
-// we can update the file with default value for the missing prop.
-const ajv = new Ajv();
-const validate = ajv.compile(schema);
-
-const store = new Store({ defaults: defaults });
-console.log(store.store)
-
-// if the schema for a property has changed making it invalid, reset that property to default
-
-// if the schema contains fewer properties than present in file, you're probably
-// running an older version of the workbench, should be valid if additionalProperties are okay
-
-const valid = validate(store.store);
-console.log(valid)
-if (!valid) {
-  console.log(validate.errors)
-  validate.errors.forEach((e) => {
-    store.set(e.keyword, schema.properties[e.keyword].default);
-  });
-  // store.reset(invalidKeys);
-  // store = new Store({ defaults: defaults });
+/**
+ * Open a store and validate against a schema.
+ *
+ * Required properties missing from the store are initialized with defaults.
+ * Invalid properties are reset to defaults.
+ *
+ * @param  {object} data key-values with which to initialize a store.
+ * @returns {Store} an instance of an electron-store Store
+ */
+export function initStore(data = defaults) {
+  const ajv = new Ajv();
+  const validate = ajv.compile(schema);
+  const store = new Store({ defaults: data });
+  const valid = validate(store.store);
+  if (!valid) {
+    validate.errors.forEach((e) => {
+      store.set(e.keyword, defaults[e.keyword]);
+    });
+  }
+  return store;
 }
 
-export const settingsStore = store;
+export const settingsStore = initStore();
 
 export function setupSettingsHandlers() {
   ipcMain.handle(ipcMainChannels.GET_SETTING, (event, key) => settingsStore.get(key));
