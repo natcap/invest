@@ -1,5 +1,5 @@
 const HOSTNAME = 'http://127.0.0.1';
-const { logger, PORT } = window.Workbench;
+const { logger, PORT, LANGUAGE } = window.Workbench;
 const PREFIX = 'api';
 
 // The Flask server sends UTF-8 encoded responses by default
@@ -15,7 +15,7 @@ const PREFIX = 'api';
  */
 export async function getInvestModelNames() {
   return (
-    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/models?language=${window.Workbench.LANGUAGE}`, {
+    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/models?language=${LANGUAGE}`, {
       method: 'get',
     })
       .then((response) => response.json())
@@ -31,7 +31,7 @@ export async function getInvestModelNames() {
  */
 export async function getSpec(payload) {
   return (
-    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/getspec?language=${window.Workbench.LANGUAGE}`, {
+    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/getspec?language=${LANGUAGE}`, {
       method: 'post',
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },
@@ -52,7 +52,7 @@ export async function getSpec(payload) {
  */
 export async function fetchValidation(payload) {
   return (
-    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/validate?language=${window.Workbench.LANGUAGE}`, {
+    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/validate?language=${LANGUAGE}`, {
       method: 'post',
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },
