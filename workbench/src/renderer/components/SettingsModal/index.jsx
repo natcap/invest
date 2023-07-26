@@ -273,7 +273,7 @@ class SettingsModal extends React.Component {
             <span>{t('no invest workspaces will be deleted')}</span>
           </Modal.Body>
         </Modal>
-        <Modal show={showConfirmLanguageChange} centered>
+        <Modal show={showConfirmLanguageChange} className="confirm-modal" >
           <Modal.Header>
             <Modal.Title>Warning</Modal.Title>
           </Modal.Header>
