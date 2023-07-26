@@ -52,6 +52,8 @@ Unreleased Changes
     * Fixed a bug where sampledata downloads failed silently (and progress bar
       became innacurate) if the Workbench did not have write permission to
       the download location. https://github.com/natcap/invest/issues/1070
+    * Changing the language setting will now cause the app to relaunch
+      (`#1168 <https://github.com/natcap/invest/issues/1168>`_),
 * Forest Carbon
     * The biophysical table is now case-insensitive.
 * HRA
