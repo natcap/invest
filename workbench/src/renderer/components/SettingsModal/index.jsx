@@ -30,6 +30,7 @@ class SettingsModal extends React.Component {
       show: false,
       languageOptions: null,
       language: window.Workbench.LANGUAGE,
+      showConfirmLanguageChange: false,
     };
     this.handleShow = this.handleShow.bind(this);
     this.handleClose = this.handleClose.bind(this);
@@ -85,7 +86,7 @@ class SettingsModal extends React.Component {
   }
 
   render() {
-    const { show, languageOptions, language } = this.state;
+    const { show, languageOptions, language, showConfirmLanguageChange } = this.state;
     const { investSettings, clearJobsStorage, nCPU, t } = this.props;
 
     const nWorkersOptions = [
@@ -136,10 +137,6 @@ class SettingsModal extends React.Component {
                   <Form.Label column sm="8" htmlFor="language-select">
                     <MdTranslate className="language-icon" />
                     {t('Language')}
-                    <Form.Text className="text-nowrap" muted>
-                      <MdWarningAmber className="align-text-bottom ml-3" />
-                      {t('You must quit and restart the app for this setting to take effect')}
-                    </Form.Text>
                   </Form.Label>
                   <Col sm="4">
                     <Form.Control
@@ -147,7 +144,7 @@ class SettingsModal extends React.Component {
                       as="select"
                       name="language"
                       value={language}
-                      onChange={this.handleChangeLanguage}
+                      onChange={() => this.setState({ showConfirmLanguageChange: true })}
                     >
                       {Object.entries(languageOptions).map((entry) => {
                         const [value, displayName] = entry;
@@ -275,6 +272,28 @@ class SettingsModal extends React.Component {
             </Button>
             <span>{t('no invest workspaces will be deleted')}</span>
           </Modal.Body>
+        </Modal>
+        <Modal show={showConfirmLanguageChange} centered>
+          <Modal.Header>
+            <Modal.Title>Warning</Modal.Title>
+          </Modal.Header>
+
+          <Modal.Body>
+            <p>
+              Changing this setting will close your tabs and relaunch the app.
+            </p>
+          </Modal.Body>
+
+          <Modal.Footer>
+            <Button
+              variant="secondary"
+              onClick={() => this.setState({ showConfirmLanguageChange: false })}
+            > Cancel </Button>
+            <Button
+              variant="primary"
+              onClick={this.handleChangeLanguage}
+            > Confirm </Button>
+          </Modal.Footer>
         </Modal>
       </React.Fragment>
     );
