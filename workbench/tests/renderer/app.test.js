@@ -434,7 +434,7 @@ describe('InVEST global settings: dialog interactions', () => {
     const spyInvoke = jest.spyOn(ipcRenderer, 'invoke');
 
     const {
-      getByText, getByRole, getByLabelText, findByRole,
+      getByText, getByRole, getByLabelText, findByRole, findByText,
     } = render(
       <App />
     );
@@ -443,7 +443,6 @@ describe('InVEST global settings: dialog interactions', () => {
     const nWorkersInput = getByLabelText(nWorkersLabelText, { exact: false });
     const loggingInput = getByLabelText(loggingLabelText);
     const tgLoggingInput = getByLabelText(tgLoggingLabelText);
-    const languageInput = getByLabelText(languageLabelText, { exact: false });
 
     await userEvent.selectOptions(nWorkersInput, [getByText(nWorkersLabel)]);
     await waitFor(() => { expect(nWorkersInput).toHaveValue(nWorkersValue); });
@@ -451,21 +450,23 @@ describe('InVEST global settings: dialog interactions', () => {
     await waitFor(() => { expect(loggingInput).toHaveValue(loggingLevel); });
     await userEvent.selectOptions(tgLoggingInput, [tgLoggingLevel]);
     await waitFor(() => { expect(tgLoggingInput).toHaveValue(tgLoggingLevel); });
-    await userEvent.selectOptions(languageInput, [languageValue]);
-    await waitFor(() => { expect(languageInput).toHaveValue(languageValue); });
     await userEvent.click(getByRole('button', { name: 'close settings' }));
 
     // Check values were saved in app and in store
     await userEvent.click(await findByRole('button', { name: 'settings' }));
+    const languageInput = getByLabelText(languageLabelText, { exact: false });
     await waitFor(() => {
       expect(nWorkersInput).toHaveValue(nWorkersValue);
       expect(loggingInput).toHaveValue(loggingLevel);
       expect(tgLoggingInput).toHaveValue(tgLoggingLevel);
-      expect(languageInput).toHaveValue(languageValue);
+      expect(languageInput).toHaveValue('en');
     });
     expect(await getSettingsValue('nWorkers')).toBe(nWorkersValue);
     expect(await getSettingsValue('loggingLevel')).toBe(loggingLevel);
     expect(await getSettingsValue('taskgraphLoggingLevel')).toBe(tgLoggingLevel);
+
+    await userEvent.selectOptions(languageInput, [languageValue]);
+    await userEvent.click(await findByText('Confirm'));
     expect(spyInvoke).toHaveBeenCalledWith(ipcMainChannels.CHANGE_LANGUAGE, languageValue);
   });
 

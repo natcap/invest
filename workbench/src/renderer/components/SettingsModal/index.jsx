@@ -70,13 +70,12 @@ class SettingsModal extends React.Component {
     this.props.saveSettings(newSettings);
   }
 
-  handleChangeLanguage(event) {
-    this.setState({ language: event.currentTarget.value });
+  handleChangeLanguage() {
     // if language has changed, refresh the app
-    if (event.currentTarget.value !== window.Workbench.language) {
+    if (this.state.language !== window.Workbench.language) {
       // tell the main process to update the language setting in storage
       // and then relaunch the app
-      ipcRenderer.invoke(ipcMainChannels.CHANGE_LANGUAGE, event.currentTarget.value);
+      ipcRenderer.invoke(ipcMainChannels.CHANGE_LANGUAGE, this.state.language);
     }
   }
 
@@ -143,8 +142,12 @@ class SettingsModal extends React.Component {
                       id="language-select"
                       as="select"
                       name="language"
-                      value={language}
-                      onChange={() => this.setState({ showConfirmLanguageChange: true })}
+                      value={window.Workbench.LANGUAGE}
+                      onChange={
+                        (event) => this.setState({
+                          showConfirmLanguageChange: true,
+                          language: event.target.value
+                        })}
                     >
                       {Object.entries(languageOptions).map((entry) => {
                         const [value, displayName] = entry;
@@ -277,13 +280,11 @@ class SettingsModal extends React.Component {
           <Modal.Header>
             <Modal.Title>Warning</Modal.Title>
           </Modal.Header>
-
           <Modal.Body>
             <p>
               Changing this setting will close your tabs and relaunch the app.
             </p>
           </Modal.Body>
-
           <Modal.Footer>
             <Button
               variant="secondary"
