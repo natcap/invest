@@ -313,7 +313,7 @@ InvestTab.propTypes = {
     status: PropTypes.string,
   }).isRequired,
   tabID: PropTypes.string.isRequired,
-investSettings: PropTypes.shape({
+  investSettings: PropTypes.shape({
     nWorkers: PropTypes.string,
     taskgraphLoggingLevel: PropTypes.string,
     loggingLevel: PropTypes.string,
