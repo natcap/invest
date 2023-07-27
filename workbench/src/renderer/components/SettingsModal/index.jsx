@@ -276,26 +276,30 @@ class SettingsModal extends React.Component {
             <span>{t('no invest workspaces will be deleted')}</span>
           </Modal.Body>
         </Modal>
-        <Modal show={showConfirmLanguageChange} className="confirm-modal" >
-          <Modal.Header>
-            <Modal.Title>Warning</Modal.Title>
-          </Modal.Header>
-          <Modal.Body>
-            <p>
-              {t('Changing this setting will close your tabs and relaunch the app.')}
-            </p>
-          </Modal.Body>
-          <Modal.Footer>
-            <Button
-              variant="secondary"
-              onClick={() => this.setState({ showConfirmLanguageChange: false })}
-            > Cancel </Button>
-            <Button
-              variant="primary"
-              onClick={this.handleChangeLanguage}
-            > Confirm </Button>
-          </Modal.Footer>
-        </Modal>
+        {
+          (languageOptions) ? (
+            <Modal show={showConfirmLanguageChange} className="confirm-modal" >
+              <Modal.Header>
+                <Modal.Title>Warning</Modal.Title>
+              </Modal.Header>
+              <Modal.Body>
+                <p>
+                  {t('Changing this setting will close your tabs and relaunch the app.')}
+                </p>
+              </Modal.Body>
+              <Modal.Footer>
+                <Button
+                  variant="secondary"
+                  onClick={() => this.setState({ showConfirmLanguageChange: false })}
+                >{t('Cancel')}</Button>
+                <Button
+                  variant="primary"
+                  onClick={this.handleChangeLanguage}
+                >{t('Change to ') + languageOptions[language]}</Button>
+              </Modal.Footer>
+            </Modal>
+          ) : <React.Fragment />
+        }
       </React.Fragment>
     );
   }
