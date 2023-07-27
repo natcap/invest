@@ -282,7 +282,7 @@ class SettingsModal extends React.Component {
           </Modal.Header>
           <Modal.Body>
             <p>
-              Changing this setting will close your tabs and relaunch the app.
+              {t('Changing this setting will close your tabs and relaunch the app.')}
             </p>
           </Modal.Body>
           <Modal.Footer>

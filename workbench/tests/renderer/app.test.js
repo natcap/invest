@@ -398,23 +398,6 @@ describe('InVEST global settings: dialog interactions', () => {
   const tgLoggingLabelText = 'Taskgraph logging threshold';
   const languageLabelText = 'Language';
 
-  const { location } = global.window;
-  beforeAll(() => {
-    // window.location.reload is not implemented in jsdom
-    delete global.window.location;
-    Object.defineProperty(global.window, 'location', {
-      configurable: true,
-      value: { reload: jest.fn() },
-    });
-  });
-
-  afterAll(() => {
-    Object.defineProperty(global.window, 'location', {
-      configurable: true,
-      value: location,
-    });
-  });
-
   beforeEach(async () => {
     getInvestModelNames.mockResolvedValue({});
     getSupportedLanguages.mockResolvedValue({ en: 'english', es: 'spanish' });
