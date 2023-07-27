@@ -449,7 +449,7 @@ describe('InVEST global settings: dialog interactions', () => {
     expect(await getSettingsValue('taskgraphLoggingLevel')).toBe(tgLoggingLevel);
 
     await userEvent.selectOptions(languageInput, [languageValue]);
-    await userEvent.click(await findByText('Confirm'));
+    await userEvent.click(await findByText('Change to spanish'));
     expect(spyInvoke).toHaveBeenCalledWith(ipcMainChannels.CHANGE_LANGUAGE, languageValue);
   });
 
