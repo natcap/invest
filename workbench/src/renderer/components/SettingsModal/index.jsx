@@ -280,7 +280,7 @@ class SettingsModal extends React.Component {
           (languageOptions) ? (
             <Modal show={showConfirmLanguageChange} className="confirm-modal" >
               <Modal.Header>
-                <Modal.Title>Warning</Modal.Title>
+                <Modal.Title as="h5" >{t('Warning')}</Modal.Title>
               </Modal.Header>
               <Modal.Body>
                 <p>
