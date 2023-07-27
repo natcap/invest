@@ -72,7 +72,7 @@ class SettingsModal extends React.Component {
 
   handleChangeLanguage() {
     // if language has changed, refresh the app
-    if (this.state.language !== window.Workbench.language) {
+    if (this.state.language !== window.Workbench.LANGUAGE) {
       // tell the main process to update the language setting in storage
       // and then relaunch the app
       ipcRenderer.invoke(ipcMainChannels.CHANGE_LANGUAGE, this.state.language);
