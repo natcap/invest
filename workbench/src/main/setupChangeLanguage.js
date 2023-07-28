@@ -19,7 +19,7 @@ export default function setupChangeLanguage() {
       logger.debug('changing language to', languageCode);
       store.set('language', languageCode);
       app.relaunch();
-      app.exit();
+      app.quit();
     }
   );
 }
