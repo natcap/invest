@@ -24,254 +24,254 @@ env:
   LATEST_SUPPORTED_PYTHON_VERSION: "3.10"
 
 jobs:
-  # check-syntax-errors:
-  #   name: Check for syntax errors
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v3
+  check-syntax-errors:
+    name: Check for syntax errors
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
 
-  #     - name: Set up python
-  #       uses: actions/setup-python@v4
-  #       with:
-  #         python-version: ${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
+      - name: Set up python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
 
-  #     # this is fast enough that it's not worth caching
-  #     - name: Set up environment
-  #       run: pip install flake8
+      # this is fast enough that it's not worth caching
+      - name: Set up environment
+        run: pip install flake8
 
-  #     - name: Lint with flake8
-  #       run: |
-  #         # stop the build if there are Python syntax errors or undefined names
-  #         python -m flake8 src --count --select=E9,F63,F7,F82 --show-source --statistics
-  #         # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-  #         python -m flake8 src --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+      - name: Lint with flake8
+        run: |
+          # stop the build if there are Python syntax errors or undefined names
+          python -m flake8 src --count --select=E9,F63,F7,F82 --show-source --statistics
+          # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+          python -m flake8 src --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
-  # run-model-tests:
-  #   name: Run model tests
-  #   runs-on: ${{ matrix.os }}
-  #   needs: check-syntax-errors
-  #   strategy:
-  #     fail-fast: false
-  #     matrix:
-  #       python-version: [3.8, 3.9, "3.10"]
-  #       os: [windows-latest, macos-latest]
-  #   steps:
-  #     - uses: actions/checkout@v3
-  #       with:
-  #         fetch-depth: 0 # Fetch complete history for accurate versioning
+  run-model-tests:
+    name: Run model tests
+    runs-on: ${{ matrix.os }}
+    needs: check-syntax-errors
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [3.8, 3.9, "3.10"]
+        os: [windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # Fetch complete history for accurate versioning
 
 
-  #     # NOTE: It takes twice as long to save the sample data cache
-  #     # as it does to do a fresh clone (almost 5 minutes vs. 2.5 minutes)
-  #     # Test data is way, way faster by contrast (on the order of a few
-  #     # seconds to archive).
-  #     - name: Restore git-LFS test data cache
-  #       uses: actions/cache@v3
-  #       with:
-  #         path: data/invest-test-data
-  #         key: git-lfs-testdata-${{ hashfiles('Makefile') }}
+      # NOTE: It takes twice as long to save the sample data cache
+      # as it does to do a fresh clone (almost 5 minutes vs. 2.5 minutes)
+      # Test data is way, way faster by contrast (on the order of a few
+      # seconds to archive).
+      - name: Restore git-LFS test data cache
+        uses: actions/cache@v3
+        with:
+          path: data/invest-test-data
+          key: git-lfs-testdata-${{ hashfiles('Makefile') }}
 
-  #     - name: Set up python environment
-  #       uses: ./.github/actions/setup_env
-  #       with:
-  #         python-version: ${{ matrix.python-version }}
-  #         requirements-files: requirements.txt requirements-dev.txt
-  #         requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
+      - name: Set up python environment
+        uses: ./.github/actions/setup_env
+        with:
+          python-version: ${{ matrix.python-version }}
+          requirements-files: requirements.txt requirements-dev.txt
+          requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
 
-  #     - name: Download previous conda environment.yml
-  #       continue-on-error: true
-  #       # Using 'dawidd6' since 'download-artifact' GH action doesn't
-  #       # support downloading artifacts from prior workflow runs
-  #       uses: dawidd6/action-download-artifact@v2
-  #       with:
-  #         workflow: build-and-test.yml
-  #         # Get frozen conda env artifact from last successful workflow
-  #         workflow_conclusion: success
-  #         name: Conda Env for ${{ matrix.os }} ${{ matrix.python-version }}
-  #         path: ./conda-env-artifact
+      - name: Download previous conda environment.yml
+        continue-on-error: true
+        # Using 'dawidd6' since 'download-artifact' GH action doesn't
+        # support downloading artifacts from prior workflow runs
+        uses: dawidd6/action-download-artifact@v2
+        with:
+          workflow: build-and-test.yml
+          # Get frozen conda env artifact from last successful workflow
+          workflow_conclusion: success
+          name: Conda Env for ${{ matrix.os }} ${{ matrix.python-version }}
+          path: ./conda-env-artifact
 
-  #     - name: Compare conda environments
-  #       run: |
-  #         micromamba list > conda-env.txt
-  #         # make sure that the exit code is always 0
-  #         # otherwise, an error appears in the action annotations
-  #         diff ./conda-env.txt ./conda-env-artifact/conda-env.txt || true
+      - name: Compare conda environments
+        run: |
+          micromamba list > conda-env.txt
+          # make sure that the exit code is always 0
+          # otherwise, an error appears in the action annotations
+          diff ./conda-env.txt ./conda-env-artifact/conda-env.txt || true
 
-  #     - name: Build and install wheel
-  #       run: |
-  #         # uninstall InVEST if it was already in the restored cache
-  #         python -m pip uninstall -y natcap.invest
-  #         python -m build --wheel
-  #         ls -la dist
-  #         pip install $(find dist -name "natcap.invest*.whl")
+      - name: Build and install wheel
+        run: |
+          # uninstall InVEST if it was already in the restored cache
+          python -m pip uninstall -y natcap.invest
+          python -m build --wheel
+          ls -la dist
+          pip install $(find dist -name "natcap.invest*.whl")
 
-  #     - name: Run model tests
-  #       run: make test
+      - name: Run model tests
+        run: make test
 
-  #     - name: Upload wheel artifact
-  #       uses: actions/upload-artifact@v3
-  #       with:
-  #         name: Wheel for ${{ matrix.os }} ${{ matrix.python-version }}
-  #         path: dist
+      - name: Upload wheel artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: Wheel for ${{ matrix.os }} ${{ matrix.python-version }}
+          path: dist
 
-  #     - name: Upload conda env artifact
-  #       uses: actions/upload-artifact@v3
-  #       continue-on-error: true
-  #       with:
-  #         name: Conda Env for ${{ matrix.os }} ${{ matrix.python-version }}
-  #         path: conda-env.txt
+      - name: Upload conda env artifact
+        uses: actions/upload-artifact@v3
+        continue-on-error: true
+        with:
+          name: Conda Env for ${{ matrix.os }} ${{ matrix.python-version }}
+          path: conda-env.txt
 
-  #     - name: Authenticate GCP
-  #       if: github.event_name != 'pull_request'
-  #       uses: google-github-actions/auth@v0
-  #       with:
-  #         credentials_json: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
+      - name: Authenticate GCP
+        if: github.event_name != 'pull_request'
+        uses: google-github-actions/auth@v0
+        with:
+          credentials_json: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
 
-  #     - name: Set up GCP
-  #       if: github.event_name != 'pull_request'
-  #       uses: google-github-actions/setup-gcloud@v0
+      - name: Set up GCP
+        if: github.event_name != 'pull_request'
+        uses: google-github-actions/setup-gcloud@v0
 
-  #     - name: Deploy artifacts to GCS
-  #       if: github.event_name != 'pull_request'
-  #       run: make deploy
+      - name: Deploy artifacts to GCS
+        if: github.event_name != 'pull_request'
+        run: make deploy
 
-  # test-source-distribution:
-  #   name: Check sdist
-  #   runs-on: ${{ matrix.os }}
-  #   needs: check-syntax-errors
-  #   strategy:
-  #     matrix:
-  #       python-version: [3.8, 3.9, "3.10"]
-  #       os: [windows-latest, macos-latest]
-  #   steps:
-  #     - uses: actions/checkout@v3
+  test-source-distribution:
+    name: Check sdist
+    runs-on: ${{ matrix.os }}
+    needs: check-syntax-errors
+    strategy:
+      matrix:
+        python-version: [3.8, 3.9, "3.10"]
+        os: [windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v3
 
-  #     - uses: ./.github/actions/setup_env
-  #       with:
-  #         python-version: ${{ matrix.python-version }}
-  #         requirements-files: requirements.txt
-  #         requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
+      - uses: ./.github/actions/setup_env
+        with:
+          python-version: ${{ matrix.python-version }}
+          requirements-files: requirements.txt
+          requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
 
-  #     - name: Build source distribution
-  #       run: |
-  #         # Because we're using PEP518 build requirements, the user's
-  #         # computer is guaranteed to have cython available at build
-  #         # time.  Thus, it is no longer necessary to distribute the
-  #         # .cpp files in addition to the .pyx files.
-  #         python -m build --sdist
+      - name: Build source distribution
+        run: |
+          # Because we're using PEP518 build requirements, the user's
+          # computer is guaranteed to have cython available at build
+          # time.  Thus, it is no longer necessary to distribute the
+          # .cpp files in addition to the .pyx files.
+          python -m build --sdist
 
-  #     - name: Install from source distribution
-  #       run : |
-  #         # Install natcap.invest from the sdist in dist/
-  #         pip install $(find dist -name "natcap.invest*")
+      - name: Install from source distribution
+        run : |
+          # Install natcap.invest from the sdist in dist/
+          pip install $(find dist -name "natcap.invest*")
 
-  #         # Model tests should cover model functionality, we just want
-  #         # to be sure that we can import `natcap.invest` here.
-  #         # The point here is to make sure that we can build
-  #         # natcap.invest from source and that it imports.
-  #         python -c "from natcap.invest import *"
+          # Model tests should cover model functionality, we just want
+          # to be sure that we can import `natcap.invest` here.
+          # The point here is to make sure that we can build
+          # natcap.invest from source and that it imports.
+          python -c "from natcap.invest import *"
 
-  #     - uses: actions/upload-artifact@v3
-  #       with:
-  #         name: Source distribution
-  #         path: dist
+      - uses: actions/upload-artifact@v3
+        with:
+          name: Source distribution
+          path: dist
 
-  #       # Secrets not available in PR so don't use GCP.
-  #       # Only upload sdist in one of the matrix cases so we don't
-  #       # overwrite artifacts or have duplicates (mac/windows sdists have
-  #       # different extensions)
-  #     - name: Authenticate GCP
-  #       if: github.event_name != 'pull_request' && matrix.os == 'macos-latest' && matrix.python-version == env.LATEST_SUPPORTED_PYTHON_VERSION
-  #       uses: google-github-actions/auth@v0
-  #       with:
-  #         credentials_json: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
+        # Secrets not available in PR so don't use GCP.
+        # Only upload sdist in one of the matrix cases so we don't
+        # overwrite artifacts or have duplicates (mac/windows sdists have
+        # different extensions)
+      - name: Authenticate GCP
+        if: github.event_name != 'pull_request' && matrix.os == 'macos-latest' && matrix.python-version == env.LATEST_SUPPORTED_PYTHON_VERSION
+        uses: google-github-actions/auth@v0
+        with:
+          credentials_json: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
 
-  #     - name: Set up GCP
-  #       if: github.event_name != 'pull_request' && matrix.os == 'macos-latest' && matrix.python-version == env.LATEST_SUPPORTED_PYTHON_VERSION
-  #       uses: google-github-actions/setup-gcloud@v0
+      - name: Set up GCP
+        if: github.event_name != 'pull_request' && matrix.os == 'macos-latest' && matrix.python-version == env.LATEST_SUPPORTED_PYTHON_VERSION
+        uses: google-github-actions/setup-gcloud@v0
 
-  #     - name: Deploy artifacts to GCS
-  #       if: github.event_name != 'pull_request' && matrix.os == 'macos-latest' && matrix.python-version == env.LATEST_SUPPORTED_PYTHON_VERSION
-  #       run: make deploy
+      - name: Deploy artifacts to GCS
+        if: github.event_name != 'pull_request' && matrix.os == 'macos-latest' && matrix.python-version == env.LATEST_SUPPORTED_PYTHON_VERSION
+        run: make deploy
 
-  # validate-resources:
-  #   name: Validate Sampledata & User Guide
-  #   runs-on: windows-latest
-  #   needs: check-syntax-errors
-  #   steps:
-  #     - uses: actions/checkout@v3
-  #       with:
-  #         fetch-depth: 0 # Fetch complete history for accurate versioning
+  validate-resources:
+    name: Validate Sampledata & User Guide
+    runs-on: windows-latest
+    needs: check-syntax-errors
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # Fetch complete history for accurate versioning
 
-  #     - uses: ./.github/actions/setup_env
-  #       with:
-  #         python-version: ${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
-  #         requirements-files: requirements.txt
-  #         requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }} pytest
+      - uses: ./.github/actions/setup_env
+        with:
+          python-version: ${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
+          requirements-files: requirements.txt
+          requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }} pytest
 
-  #     - name: Make install
-  #       run: make install
+      - name: Make install
+        run: make install
 
-  #     - name: Validate sample data
-  #       run: make validate_sampledata
+      - name: Validate sample data
+        run: make validate_sampledata
 
-  #     - name: Validate user guide links
-  #       run: make validate_userguide_filenames
+      - name: Validate user guide links
+        run: make validate_userguide_filenames
 
-  # run-workbench-tests:
-  #   name: Run Workbench Tests
-  #   runs-on: ${{ matrix.os }}
-  #   needs: check-syntax-errors
-  #   strategy:
-  #     fail-fast: false
-  #     max-parallel: 4
-  #     matrix:
-  #       os: [windows-latest, macos-latest]
+  run-workbench-tests:
+    name: Run Workbench Tests
+    runs-on: ${{ matrix.os }}
+    needs: check-syntax-errors
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        os: [windows-latest, macos-latest]
 
-  #   steps:
-  #     - name: Check out repo
-  #       uses: actions/checkout@v3
-  #       with:
-  #         fetch-depth: 0 # Fetch complete history for accurate versioning
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # Fetch complete history for accurate versioning
 
-  #     - name: Set up python environment
-  #       uses: ./.github/actions/setup_env
-  #       with:
-  #         python-version: ${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
-  #         requirements-files: requirements.txt requirements-dev.txt
-  #         requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
+      - name: Set up python environment
+        uses: ./.github/actions/setup_env
+        with:
+          python-version: ${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
+          requirements-files: requirements.txt requirements-dev.txt
+          requirements: ${{ env.CONDA_DEFAULT_DEPENDENCIES }}
 
-  #     - name: Make install
-  #       run: make install
+      - name: Make install
+        run: make install
 
-  #     - name: Set up node
-  #       uses: actions/setup-node@v3
-  #       with:
-  #         node-version: lts/*
+      - name: Set up node
+        uses: actions/setup-node@v3
+        with:
+          node-version: lts/*
 
-  #     - name: Restore node_modules cache
-  #       id: nodemodules-cache
-  #       uses: actions/cache@v3
-  #       with:
-  #         path: workbench/node_modules
-  #         key: ${{ runner.os }}-${{ hashFiles('workbench/yarn.lock') }}
+      - name: Restore node_modules cache
+        id: nodemodules-cache
+        uses: actions/cache@v3
+        with:
+          path: workbench/node_modules
+          key: ${{ runner.os }}-${{ hashFiles('workbench/yarn.lock') }}
 
-  #     - name: Install workbench dependencies
-  #       if: steps.nodemodules-cache.outputs.cache-hit != 'true'
-  #       working-directory: workbench
-  #       run: |
-  #         yarn config set network-timeout 600000 -g
-  #         yarn install
+      - name: Install workbench dependencies
+        if: steps.nodemodules-cache.outputs.cache-hit != 'true'
+        working-directory: workbench
+        run: |
+          yarn config set network-timeout 600000 -g
+          yarn install
 
-  #     - name: Run workbench tests
-  #       working-directory: workbench
-  #       env:
-  #         CI: true
-  #       run: yarn test
+      - name: Run workbench tests
+        working-directory: workbench
+        env:
+          CI: true
+        run: yarn test
 
   build-binaries:
     name: Build binaries
-    # needs: check-syntax-errors
+    needs: check-syntax-errors
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -443,41 +443,41 @@ jobs:
           name: InVEST-failed-${{ runner.os }}-workspace
           path: ${{ matrix.workspace-path}}
 
-  # build-sampledata:
-  #   name: Build sampledata archives
-  #   needs: check-syntax-errors
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v3
-  #       with:
-  #         fetch-depth: 0 # Fetch complete history for accurate versioning
+  build-sampledata:
+    name: Build sampledata archives
+    needs: check-syntax-errors
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # Fetch complete history for accurate versioning
 
-  #     - uses: actions/setup-python@v4
-  #       with:
-  #         python-version: ${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
+      - uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
 
-  #     - name: Install dependencies
-  #       # dependencies of setup.py, needed to get the version string
-  #       run: pip install babel cython numpy setuptools setuptools_scm wheel
+      - name: Install dependencies
+        # dependencies of setup.py, needed to get the version string
+        run: pip install babel cython numpy setuptools setuptools_scm wheel
 
-  #     - run: make sampledata sampledata_single
+      - run: make sampledata sampledata_single
 
-  #     - name: Upload sample data artifact
-  #       uses: actions/upload-artifact@v3
-  #       with:
-  #         name: InVEST-sample-data
-  #         path: dist/*.zip
+      - name: Upload sample data artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: InVEST-sample-data
+          path: dist/*.zip
 
-  #     - name: Authenticate GCP
-  #       if: github.event_name != 'pull_request'
-  #       uses: google-github-actions/auth@v0
-  #       with:
-  #         credentials_json: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
+      - name: Authenticate GCP
+        if: github.event_name != 'pull_request'
+        uses: google-github-actions/auth@v0
+        with:
+          credentials_json: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
 
-  #     - name: Set up GCP
-  #       if: github.event_name != 'pull_request'
-  #       uses: google-github-actions/setup-gcloud@v0
+      - name: Set up GCP
+        if: github.event_name != 'pull_request'
+        uses: google-github-actions/setup-gcloud@v0
 
-  #     - name: Deploy artifacts to GCS
-  #       if: github.event_name != 'pull_request'
-  #       run: make deploy
+      - name: Deploy artifacts to GCS
+        if: github.event_name != 'pull_request'
+        run: make deploy
