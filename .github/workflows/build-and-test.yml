@@ -282,14 +282,11 @@ jobs:
             puppeteer-log: ~/Library/Logs/invest-workbench/
             workspace-path: InVEST-failed-mac-workspace.tar
             binary-extension: dmg
-            certificate-path: 2025-01-16-Expiry-AppStore-App.p12
-            certificate-password: ${{ secrets.MACOS_CODESIGN_CERT_PASS }}
           - os: windows-latest
             puppeteer-log: ~/AppData/Roaming/invest-workbench/logs/
             workspace-path: ${{ github.workspace }}
             binary-extension: exe
-            certificate-path: Stanford-natcap-code-signing-cert-expires-2024-01-26.p12
-            certificate-password: ${{ secrets.WINDOWS_CODESIGN_CERT_PASS }}
+
     steps:
       - uses: actions/checkout@v3
         with:
@@ -358,16 +355,29 @@ jobs:
         if: github.event_name != 'pull_request'
         uses: google-github-actions/setup-gcloud@v0
 
-      - name: Build Workbench
+      - name: Build Workbench (macOS)
         working-directory: workbench
         env:
           GH_TOKEN: env.GITHUB_TOKEN
           DEBUG: electron-builder
-          CSC_LINK: ${{ matrix.certificate-path }}
-          CSC_KEY_PASSWORD: ${{ matrix.certificate-password }}
+          CSC_LINK: 2025-01-16-Expiry-AppStore-App.p12
+          CSC_KEY_PASSWORD: ${{ secrets.MACOS_CODESIGN_CERT_PASS }}
         run: |
           # download the certificate file from google cloud
-          gsutil cp gs://stanford_cert/${{ matrix.certificate-path }} ${{ matrix.certificate-path }}
+          gsutil cp gs://stanford_cert/2025-01-16-Expiry-AppStore-App.p12 2025-01-16-Expiry-AppStore-App.p12
+          yarn run build
+          yarn run dist
+
+      - name: Build Workbench (Windows)
+        working-directory: workbench
+        env:
+          GH_TOKEN: env.GITHUB_TOKEN
+          DEBUG: electron-builder
+          CSC_LINK: Stanford-natcap-code-signing-cert-expires-2024-01-26.p12
+          CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CODESIGN_CERT_PASS }}
+        run: |
+          # download the certificate file from google cloud
+          gsutil cp gs://stanford_cert/Stanford-natcap-code-signing-cert-expires-2024-01-26.p12 Stanford-natcap-code-signing-cert-expires-2024-01-26.p12
           yarn run build
           yarn run dist
 
