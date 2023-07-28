@@ -12,6 +12,7 @@ from osgeo import gdal
 from cpython.mem cimport PyMem_Malloc, PyMem_Free
 from cython.operator cimport dereference as deref
 from cython.operator cimport preincrement as inc
+from libc.time cimport time as ctime
 from libcpp.pair cimport pair
 from libcpp.set cimport set as cset
 from libcpp.list cimport list as clist
@@ -453,6 +454,8 @@ def calculate_sediment_deposition(
     cdef float flow_sum, neighbor_flow_sum
     cdef float downslope_sdr_weighted_sum, sdr_i, sdr_j
     cdef float p_j, p_val
+    cdef unsigned long n_pixels_processed = 0
+    cdef time_t last_log_time = ctime(NULL)
 
     for offset_dict in pygeoprocessing.iterblocks(
             (mfd_flow_direction_path, 1), offset_only=True, largest_block=0):
@@ -461,8 +464,10 @@ def calculate_sediment_deposition(
         xoff = offset_dict['xoff']
         yoff = offset_dict['yoff']
 
-        LOGGER.info('Sediment deposition %.2f%% complete', 100 * (
-            (xoff * yoff) / float(n_cols*n_rows)))
+        if ctime(NULL) - last_log_time > 5.0:
+            last_log_time = ctime(NULL)
+            LOGGER.info('Sediment deposition %.2f%% complete', 100 * (
+                n_pixels_processed / float(n_cols * n_rows)))
 
         for row_index in range(win_ysize):
             seed_row = yoff + row_index
@@ -666,6 +671,7 @@ def calculate_sediment_deposition(
 
                     sediment_deposition_raster.set(global_col, global_row, t_i)
                     f_raster.set(global_col, global_row, f_i)
+        n_pixels_processed += (win_xsize * win_ysize)
 
     LOGGER.info('Sediment deposition 100% complete')
     sediment_deposition_raster.close()

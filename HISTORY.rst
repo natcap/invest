@@ -55,16 +55,39 @@ Unreleased Changes
     * Fixed a bug in the CLI where ``invest getspec --json`` failed on
       non-json-serializable objects such as ``pint.Unit``.
       https://github.com/natcap/invest/issues/1280
+    * Updated the package installation instructions in the API docs for clarity
+      and also to highlight the ease of installation through ``conda-forge``.
+      https://github.com/natcap/invest/issues/1256
+    * ``utils.build_lookup_from_csv`` has been deprecated and its functionality
+      has been merged into ``utils.read_csv_to_dataframe``
+      (`#1319 <https://github.com/natcap/invest/issues/1319>`_),
+      (`#1327 <https://github.com/natcap/invest/issues/1327>`_)
 * Workbench
     * Fixed a bug where sampledata downloads failed silently (and progress bar
       became innacurate) if the Workbench did not have write permission to
       the download location. https://github.com/natcap/invest/issues/1070
+* Forest Carbon
+    * The biophysical table is now case-insensitive.
 * HRA
     * Fixed a bug in HRA where the model would error when all exposure and
       consequence criteria were skipped for a single habitat. The model now
       correctly handles this case. https://github.com/natcap/invest/issues/1250
     * Tables in the .xls format are no longer supported. This format was
       deprecated by ``pandas``. (`#1271 <https://github.com/natcap/invest/issues/1271>`_)
+* Pollination
+    * Several exceptions have been tidied up so that only fieldnames are
+      printed instead of the python data structures representing the whole
+      table.  https://github.com/natcap/invest/issues/1283
+* RouteDEM
+    * RouteDEM now allows the user to calculate Strahler Stream Orders, which
+      will be written to a new vector in the user's workspace. This stream
+      order vector is dependent on the user's Threshold Flow Accumulation value
+      and is only available for the D8 routing model.
+      https://github.com/natcap/invest/issues/884
+    * RouteDEM now allows the user to create a vector of subwatersheds, which
+      are written to a new vector in the user's workspace.  This vector is
+      dependent on the calculation of Strahler Stream Orders and is only
+      available for the D8 routing model. https://github.com/natcap/invest/issues/349
 * Scenic Quality
     * The Scenic Quality model will now raise an error when it encounters a
       geometry that is not a simple Point.  This is in line with the user's
@@ -72,6 +95,29 @@ Unreleased Changes
     * The Scenic Quality model now supports both uppercase and lowercase
       fieldnames. Leading and trailing spaces are now also stripped for the
       user's convenience. https://github.com/natcap/invest/issues/1276
+* SDR
+    * Fixed an issue with sediment deposition progress logging that was
+      causing the "percent complete" indicator to not progress linearly.
+      https://github.com/natcap/invest/issues/1262
+* Seasonal Water Yield
+    * Fixed a bug where monthy quickflow nodata pixels were not being passed
+      on to the total quickflow raster, which could result in negative values
+      on the edges (`#1105 <https://github.com/natcap/invest/issues/1105>`_)
+    * Removed the GDAL cache size limit on this model, which means that, by
+      default, the model will use up to 5% of installed memory.
+      https://github.com/natcap/invest/issues/1320
+    * Monthly quick flow nodata values will now be preserved instead of being
+      set to 0. The old behavior was not well documented and caused some
+      confusion when nodata pixels did not line up. It's safer not to fill in
+      unknown data. (`#1317 <https://github.com/natcap/invest/issues/1317>`_)
+* Urban Flood Risk
+    * Fixed a bug where the model incorrectly raised an error if the
+      biophysical table contained a row of all 0s.
+      (`#1123 <https://github.com/natcap/invest/issues/1123>`_)
+* Visitation: Recreation and Tourism
+    * Fixed a bug where overlapping predictor polygons would be double-counted
+      in ``polygon_area_coverage`` and ``polygon_percent_coverage`` calculations.
+      (`#1310 <https://github.com/natcap/invest/issues/1310>`_)
 
 3.13.0 (2023-03-17)
 -------------------

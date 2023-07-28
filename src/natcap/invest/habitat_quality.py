@@ -380,11 +380,12 @@ def execute(args):
     LOGGER.info("Checking Threat and Sensitivity tables for compliance")
     # Get CSVs as dictionaries and ensure the key is a string for threats.
     threat_dict = {
-        str(key): value for key, value in utils.build_lookup_from_csv(
-            args['threats_table_path'], 'THREAT', to_lower=True,
-            expand_path_cols=['cur_path', 'fut_path', 'base_path']).items()}
-    sensitivity_dict = utils.build_lookup_from_csv(
-        args['sensitivity_table_path'], 'LULC', to_lower=True)
+        str(key): value for key, value in utils.read_csv_to_dataframe(
+            args['threats_table_path'], 'THREAT',
+            expand_path_cols=['cur_path', 'fut_path', 'base_path']
+            ).to_dict(orient='index').items()}
+    sensitivity_dict = utils.read_csv_to_dataframe(
+        args['sensitivity_table_path'], 'LULC').to_dict(orient='index')
 
     half_saturation_constant = float(args['half_saturation_constant'])
 
@@ -1156,11 +1157,12 @@ def validate(args, limit_to=None):
 
         # Get CSVs as dictionaries and ensure the key is a string for threats.
         threat_dict = {
-            str(key): value for key, value in utils.build_lookup_from_csv(
-                args['threats_table_path'], 'THREAT', to_lower=True,
-                expand_path_cols=['cur_path', 'fut_path', 'base_path']).items()}
-        sensitivity_dict = utils.build_lookup_from_csv(
-            args['sensitivity_table_path'], 'LULC', to_lower=True)
+            str(key): value for key, value in utils.read_csv_to_dataframe(
+                args['threats_table_path'], 'THREAT',
+                expand_path_cols=['cur_path', 'fut_path', 'base_path']
+                ).to_dict(orient='index').items()}
+        sensitivity_dict = utils.read_csv_to_dataframe(
+            args['sensitivity_table_path'], 'LULC').to_dict(orient='index')
 
         # check that the threat names in the threats table match with the
         # threats columns in the sensitivity table.

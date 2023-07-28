@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import ReactDom from 'react-dom';
 import PropTypes from 'prop-types';
 
 import Row from 'react-bootstrap/Row';
@@ -8,7 +9,6 @@ import Container from 'react-bootstrap/Container';
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
 const { ipcRenderer } = window.Workbench.electron;
-const logger = window.Workbench.getLogger('LogTab');
 
 function LogDisplay(props) {
   const ref = useRef();
@@ -86,9 +86,15 @@ export default class LogTab extends React.Component {
   }
 
   updateState() {
-    this.setState((state) => ({
-      logdata: state.logdata.concat(this.cache)
-    }));
+    // flushSync will override react18 batched updates
+    // and force state updates to happen now. We're managing
+    // the rate of updates ourselves in this component via
+    // debouncedLogUpdate.
+    ReactDom.flushSync(() => {
+      this.setState((state) => ({
+        logdata: state.logdata.concat(this.cache)
+      }));
+    });
     this.cache = [];
   }
 

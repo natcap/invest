@@ -487,6 +487,9 @@ def execute(args):
         args['drainage_path'] (string): (optional) path to drainage raster that
             is used to add additional drainage areas to the internally
             calculated stream layer
+        args['l_max'] (number): the maximum allowed value of the slope length
+            parameter (L) in the LS factor. If the calculated value of L
+            exceeds 'l_max' it will be clamped to this value.
         args['n_workers'] (int): if present, indicates how many worker
             processes should be used in parallel processing. -1 indicates
             single process mode, 0 is single process but non-blocking mode,
@@ -497,8 +500,8 @@ def execute(args):
 
     """
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
-    biophysical_table = utils.build_lookup_from_csv(
-        args['biophysical_table_path'], 'lucode')
+    biophysical_table = utils.read_csv_to_dataframe(
+        args['biophysical_table_path'], 'lucode').to_dict(orient='index')
 
     # Test to see if c or p values are outside of 0..1
     for table_key in ['usle_c', 'usle_p']:

@@ -482,8 +482,8 @@ def execute(args):
         task_name='align input rasters')
 
     # Build a lookup dictionary mapping each LULC code to its row
-    biophysical_dict = utils.build_lookup_from_csv(
-        args['biophysical_table'], 'lucode')
+    biophysical_dict = utils.read_csv_to_dataframe(
+        args['biophysical_table'], 'lucode').to_dict(orient='index')
     # sort the LULC codes upfront because we use the sorted list in multiple
     # places. it's more efficient to do this once.
     sorted_lucodes = sorted(biophysical_dict)

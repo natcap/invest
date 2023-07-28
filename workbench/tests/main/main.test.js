@@ -180,20 +180,22 @@ describe('createWindow', () => {
   test('should register various ipcMain listeners', async () => {
     await createWindow();
     const expectedHandleChannels = [
-      ipcMainChannels.SHOW_OPEN_DIALOG,
-      ipcMainChannels.SHOW_SAVE_DIALOG,
-      ipcMainChannels.IS_FIRST_RUN,
       ipcMainChannels.CHANGE_LANGUAGE,
-      ipcMainChannels.GET_N_CPUS,
-      ipcMainChannels.INVEST_VERSION,
       ipcMainChannels.CHECK_STORAGE_TOKEN,
       ipcMainChannels.CHECK_FILE_PERMISSIONS,
+      ipcMainChannels.GET_N_CPUS,
+      ipcMainChannels.INVEST_VERSION,
+      ipcMainChannels.IS_FIRST_RUN,
+      ipcMainChannels.SHOW_OPEN_DIALOG,
+      ipcMainChannels.SHOW_SAVE_DIALOG,
     ];
     const expectedOnChannels = [
       ipcMainChannels.DOWNLOAD_URL,
+      ipcMainChannels.GET_ELECTRON_PATHS,
       ipcMainChannels.INVEST_RUN,
       ipcMainChannels.INVEST_KILL,
       ipcMainChannels.INVEST_READ_LOG,
+      ipcMainChannels.LOGGER,
       ipcMainChannels.SHOW_ITEM_IN_FOLDER,
       ipcMainChannels.OPEN_EXTERNAL_URL,
       ipcMainChannels.OPEN_LOCAL_HTML,
