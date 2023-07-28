@@ -356,6 +356,7 @@ jobs:
         uses: google-github-actions/setup-gcloud@v0
 
       - name: Build Workbench (macOS)
+        if: github.event_name != 'pull_request' && matrix.os == 'macos-latest' # secrets not available in PR
         working-directory: workbench
         env:
           GH_TOKEN: env.GITHUB_TOKEN
@@ -369,6 +370,7 @@ jobs:
           yarn run dist
 
       - name: Build Workbench (Windows)
+        if: github.event_name != 'pull_request' && matrix.os == 'windows-latest' # secrets not available in PR
         working-directory: workbench
         env:
           GH_TOKEN: env.GITHUB_TOKEN
