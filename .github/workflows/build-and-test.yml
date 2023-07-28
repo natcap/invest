@@ -349,7 +349,6 @@ jobs:
         env:
           GH_TOKEN: env.GITHUB_TOKEN
           DEBUG: electron-builder
-          CSC_IDENTITY_AUTO_DISCOVERY: false  # disable electron-builder code signing
         run: |
           yarn run build
           yarn run dist
