@@ -271,6 +271,7 @@ jobs:
 
   build-binaries:
     name: Build binaries
+    needs: check-syntax-errors
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -285,7 +286,6 @@ jobs:
             puppeteer-log: ~/AppData/Roaming/invest-workbench/logs/
             workspace-path: ${{ github.workspace }}
             binary-extension: exe
-
     steps:
       - uses: actions/checkout@v3
         with:
