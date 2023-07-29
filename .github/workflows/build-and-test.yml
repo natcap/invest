@@ -271,7 +271,6 @@ jobs:
 
   build-binaries:
     name: Build binaries
-    needs: check-syntax-errors
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -355,31 +354,41 @@ jobs:
         if: github.event_name != 'pull_request'
         uses: google-github-actions/setup-gcloud@v0
 
-      - name: Build Workbench (macOS)
-        if: github.event_name != 'pull_request' && matrix.os == 'macos-latest' # secrets not available in PR
+      - name: Build Workbench (PRs)
+        if: github.event_name == 'pull_request'
         working-directory: workbench
         env:
           GH_TOKEN: env.GITHUB_TOKEN
           DEBUG: electron-builder
-          CSC_LINK: 2025-01-16-Expiry-AppStore-App.p12
-          CSC_KEY_PASSWORD: ${{ secrets.MACOS_CODESIGN_CERT_PASS }}
+          CSC_IDENTITY_AUTO_DISCOVERY: false  # disable electron-builder code signing
         run: |
-          # download the certificate file from google cloud
-          gsutil cp gs://stanford_cert/2025-01-16-Expiry-AppStore-App.p12 2025-01-16-Expiry-AppStore-App.p12
           yarn run build
           yarn run dist
 
-      - name: Build Workbench (Windows)
+      - name: Disable code signing (PRs)
+        if: github.event_name == 'pull_request'
+        run: echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> $GITHUB_ENV
+
+      - name: Enable code signing (macOS)
+        if: github.event_name != 'pull_request' && matrix.os == 'macos-latest' # secrets not available in PR
+        run: |
+          gsutil cp gs://stanford_cert/2025-01-16-Expiry-AppStore-App.p12 2025-01-16-Expiry-AppStore-App.p12
+          echo "CSC_LINK=2025-01-16-Expiry-AppStore-App.p12" >> $GITHUB_ENV
+          echo "CSC_KEY_PASSWORD=${{ secrets.MACOS_CODESIGN_CERT_PASS }}" >> $GITHUB_ENV
+
+      - name: Enable code signing (Windows)
         if: github.event_name != 'pull_request' && matrix.os == 'windows-latest' # secrets not available in PR
+        run: |
+          gsutil cp gs://stanford_cert/Stanford-natcap-code-signing-cert-expires-2024-01-26.p12 Stanford-natcap-code-signing-cert-expires-2024-01-26.p12
+          echo "CSC_LINK=Stanford-natcap-code-signing-cert-expires-2024-01-26.p12" >> $GITHUB_ENV
+          echo "CSC_KEY_PASSWORD=${{ secrets.WINDOWS_CODESIGN_CERT_PASS }}" >> $GITHUB_ENV
+
+      - name: Build Workbench
         working-directory: workbench
         env:
           GH_TOKEN: env.GITHUB_TOKEN
           DEBUG: electron-builder
-          CSC_LINK: Stanford-natcap-code-signing-cert-expires-2024-01-26.p12
-          CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CODESIGN_CERT_PASS }}
         run: |
-          # download the certificate file from google cloud
-          gsutil cp gs://stanford_cert/Stanford-natcap-code-signing-cert-expires-2024-01-26.p12 Stanford-natcap-code-signing-cert-expires-2024-01-26.p12
           yarn run build
           yarn run dist
 
