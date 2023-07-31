@@ -3,7 +3,6 @@ import { ipcRenderer } from 'electron';
 import {
   render, waitFor, within
 } from '@testing-library/react';
-import { act } from 'react-dom/test-utils';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 
@@ -16,20 +15,13 @@ import {
   getSupportedLanguages
 } from '../../src/renderer/server_requests';
 import InvestJob from '../../src/renderer/InvestJob';
-// import {
-//   getSettingsValue, saveSettingsStore
-// } from '../../src/renderer/components/SettingsModal/SettingsStorage';
 import { setupSettingsHandlers } from '../../src/main/settingsStore';
 import { ipcMainChannels } from '../../src/main/ipcMainChannels';
-import {
-  setupInvestRunHandlers,
-  setupInvestLogReaderHandler,
-} from '../../src/main/setupInvestHandlers';
-import writeInvestParameters from '../../src/main/writeInvestParameters';
 import { removeIpcMainListeners } from '../../src/main/main';
-
+import {
+  getSettingsValue,
+} from '../../src/renderer/components/SettingsModal/SettingsStorage';
 import { mockUISpec } from './utils';
-
 // It's quite a pain to dynamically mock a const from a module,
 // here we do it by importing as another object, then
 // we can overwrite the object we want to mock later
@@ -399,33 +391,12 @@ describe('InVEST global settings: dialog interactions', () => {
   const tgLoggingLabelText = 'Taskgraph logging threshold';
   const languageLabelText = 'Language';
 
-  const { location } = global.window;
   beforeAll(() => {
-  //   // Because changing the language triggers a location.reload
-  //   delete global.window.location;
-  //   Object.defineProperty(global.window, 'location', {
-  //     configurable: true,
-  //     value: { reload: jest.fn() },
-  //   });
     setupSettingsHandlers();
   });
 
-  // afterAll(() => {
-  //   removeIpcMainListeners();
-  //   // window.location.reload is not implemented in jsdom
-  //   delete global.window.location;
-  //   Object.defineProperty(global.window, 'location', {
-  //     configurable: true,
-  //     value: { reload: jest.fn() },
-  //   });
-  // });
-
   afterAll(() => {
     removeIpcMainListeners();
-    Object.defineProperty(global.window, 'location', {
-      configurable: true,
-      value: location,
-    });
   });
 
   beforeEach(async () => {
@@ -434,19 +405,16 @@ describe('InVEST global settings: dialog interactions', () => {
     ipcRenderer.invoke.mockImplementation(() => Promise.resolve());
   });
 
-  // afterEach(async () => {
-  //   await clearSettingsStore();
-  // });
-
   test('Invest settings save on change', async () => {
     const nWorkersLabel = 'Threaded task management (0)';
     const nWorkersValue = '0';
     const loggingLevel = 'DEBUG';
     const tgLoggingLevel = 'DEBUG';
     const languageValue = 'es';
+    const spyInvoke = jest.spyOn(ipcRenderer, 'invoke');
 
     const {
-      getByText, getByRole, getByLabelText, findByRole,
+      getByText, getByRole, getByLabelText, findByRole, findByText,
     } = render(
       <App />
     );
@@ -455,7 +423,6 @@ describe('InVEST global settings: dialog interactions', () => {
     const nWorkersInput = getByLabelText(nWorkersLabelText, { exact: false });
     const loggingInput = getByLabelText(loggingLabelText);
     const tgLoggingInput = getByLabelText(tgLoggingLabelText);
-    const languageInput = getByLabelText(languageLabelText, { exact: false });
 
     await userEvent.selectOptions(nWorkersInput, [getByText(nWorkersLabel)]);
     await waitFor(() => { expect(nWorkersInput).toHaveValue(nWorkersValue); });
@@ -463,23 +430,25 @@ describe('InVEST global settings: dialog interactions', () => {
     await waitFor(() => { expect(loggingInput).toHaveValue(loggingLevel); });
     await userEvent.selectOptions(tgLoggingInput, [tgLoggingLevel]);
     await waitFor(() => { expect(tgLoggingInput).toHaveValue(tgLoggingLevel); });
-    await userEvent.selectOptions(languageInput, [languageValue]);
-    await waitFor(() => { expect(languageInput).toHaveValue(languageValue); });
     await userEvent.click(getByRole('button', { name: 'close settings' }));
 
     // Check values were saved in app
     await userEvent.click(await findByRole('button', { name: 'settings' }));
+    const languageInput = getByLabelText(languageLabelText, { exact: false });
     await waitFor(() => {
       expect(nWorkersInput).toHaveValue(nWorkersValue);
       expect(loggingInput).toHaveValue(loggingLevel);
       expect(tgLoggingInput).toHaveValue(tgLoggingLevel);
-      expect(languageInput).toHaveValue(languageValue);
+      expect(languageInput).toHaveValue('en');
     });
 
-    // expect(settingsStore.get('nWorkers')).toBe(nWorkersValue);
-    // expect(settingsStore.get('loggingLevel')).toBe(loggingLevel);
-    // expect(settingsStore.get('taskgraphLoggingLevel')).toBe(tgLoggingLevel);
-    // expect(settingsStore.get('language')).toBe(languageValue);
+    expect(await getSettingsValue('nWorkers')).toBe(nWorkersValue);
+    expect(await getSettingsValue('loggingLevel')).toBe(loggingLevel);
+    expect(await getSettingsValue('taskgraphLoggingLevel')).toBe(tgLoggingLevel);
+
+    await userEvent.selectOptions(languageInput, [languageValue]);
+    await userEvent.click(await findByText('Change to spanish'));
+    expect(spyInvoke).toHaveBeenCalledWith(ipcMainChannels.CHANGE_LANGUAGE, languageValue);
   });
 
   // test('Load invest settings from storage and test Reset', async () => {
@@ -516,13 +485,14 @@ describe('InVEST global settings: dialog interactions', () => {
   //     expect(languageInput).toHaveValue(expectedSettings.language);
   //   });
 
-  //   // Test Reset sets values to default
+    // Test Reset sets values to default
   //   await userEvent.click(getByText('Reset to Defaults'));
   //   await waitFor(() => {
   //     expect(nWorkersInput).toHaveValue(defaultSettings.nWorkers);
   //     expect(loggingInput).toHaveValue(defaultSettings.loggingLevel);
   //     expect(tgLoggingInput).toHaveValue(defaultSettings.tgLoggingLevel);
-  //     expect(languageInput).toHaveValue(defaultSettings.language);
+  //     // should NOT change the language setting - it's handled differently
+  //     expect(languageInput).toHaveValue(expectedSettings.language);
   //   });
   // });
 
@@ -542,42 +512,5 @@ describe('InVEST global settings: dialog interactions', () => {
     expect(await findByText('Download InVEST sample data'))
       .toBeInTheDocument();
     expect(queryByText('Settings')).toBeNull();
-  });
-});
-
-describe('Translation', () => {
-  const { location } = global.window;
-  beforeAll(async () => {
-    getInvestModelNames.mockResolvedValue({});
-    getSupportedLanguages.mockResolvedValue({ en: 'english', ll: 'foo' });
-
-    delete global.window.location;
-    Object.defineProperty(global.window, 'location', {
-      configurable: true,
-      value: { reload: jest.fn() },
-    });
-  });
-
-  afterAll(() => {
-    Object.defineProperty(global.window, 'location', {
-      configurable: true,
-      value: location,
-    });
-  });
-
-  test('Text rerenders in new language when language setting changes', async () => {
-    const { findByLabelText } = render(<App />);
-
-    await userEvent.click(await findByLabelText('settings'));
-    const languageInput = await findByLabelText('Language', { exact: false });
-    expect(languageInput).toHaveValue('en');
-
-    await userEvent.selectOptions(languageInput, 'll');
-    // await waitFor(() => {
-    //   expect(global.window.location.reload).toHaveBeenCalled();
-    // });
-    // // because we can't reload the window in the test environment,
-    // // components won't actually rerender in the new language
-    // expect(languageInput).toHaveValue('ll');
   });
 });

@@ -1,4 +1,4 @@
-class Store {
+export default class Store {
   constructor(options) {
     this.defaults = options.defaults || {};
     this.store = this.defaults;
@@ -20,5 +20,3 @@ class Store {
     this.store = this.defaults;
   }
 }
-
-export default Store;

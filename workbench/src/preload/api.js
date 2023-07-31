@@ -35,6 +35,7 @@ export default {
   PORT: PORT, // where the flask app is running
   ELECTRON_LOG_PATH: electronLogPath,
   USERGUIDE_PATH: userguidePath,
+  LANGUAGE: ipcRenderer.sendSync(ipcMainChannels.GET_LANGUAGE),
   logger: {
     debug: (message) => ipcRenderer.send(ipcMainChannels.LOGGER, 'debug', message),
     info: (message) => ipcRenderer.send(ipcMainChannels.LOGGER, 'info', message),

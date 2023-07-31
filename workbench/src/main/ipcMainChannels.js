@@ -6,6 +6,7 @@ export const ipcMainChannels = {
   GET_ELECTRON_PATHS: 'get-electron-paths',
   GET_N_CPUS: 'get-n-cpus',
   GET_SETTING: 'get-setting',
+  GET_LANGUAGE: 'get-language',
   INVEST_KILL: 'invest-kill',
   INVEST_READ_LOG: 'invest-read-log',
   INVEST_RUN: 'invest-run',
