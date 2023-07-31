@@ -365,30 +365,29 @@ jobs:
           yarn run build
           yarn run dist
 
-      - name: Disable code signing (PRs)
-        if: github.event_name == 'pull_request'
-        run: echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> $GITHUB_ENV
-
-      - name: Enable code signing (macOS)
+      - name: Build Workbench (macOS)
         if: github.event_name != 'pull_request' && matrix.os == 'macos-latest' # secrets not available in PR
-        run: |
-          gsutil cp gs://stanford_cert/2025-01-16-Expiry-AppStore-App.p12 2025-01-16-Expiry-AppStore-App.p12
-          echo "CSC_LINK=2025-01-16-Expiry-AppStore-App.p12" >> $GITHUB_ENV
-          echo "CSC_KEY_PASSWORD=${{ secrets.MACOS_CODESIGN_CERT_PASS }}" >> $GITHUB_ENV
-
-      - name: Enable code signing (Windows)
-        if: github.event_name != 'pull_request' && matrix.os == 'windows-latest' # secrets not available in PR
-        run: |
-          gsutil cp gs://stanford_cert/Stanford-natcap-code-signing-cert-expires-2024-01-26.p12 Stanford-natcap-code-signing-cert-expires-2024-01-26.p12
-          echo "CSC_LINK=Stanford-natcap-code-signing-cert-expires-2024-01-26.p12" >> $GITHUB_ENV
-          echo "CSC_KEY_PASSWORD=${{ secrets.WINDOWS_CODESIGN_CERT_PASS }}" >> $GITHUB_ENV
-
-      - name: Build Workbench
         working-directory: workbench
         env:
           GH_TOKEN: env.GITHUB_TOKEN
           DEBUG: electron-builder
+          CSC_LINK: 2025-01-16-Expiry-AppStore-App.p12
+          CSC_KEY_PASSWORD: ${{ secrets.MACOS_CODESIGN_CERT_PASS }}
         run: |
+          gsutil cp gs://stanford_cert/$CSC_LINK $CSC_LINK
+          yarn run build
+          yarn run dist
+
+      - name: Build Workbench (Windows)
+        if: github.event_name != 'pull_request' && matrix.os == 'windows-latest' # secrets not available in PR
+        working-directory: workbench
+        env:
+          GH_TOKEN: env.GITHUB_TOKEN
+          DEBUG: electron-builder
+          CSC_LINK: Stanford-natcap-code-signing-cert-expires-2024-01-26.p12
+          CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CODESIGN_CERT_PASS }}
+        run: |
+          gsutil cp gs://stanford_cert/$CSC_LINK $CSC_LINK
           yarn run build
           yarn run dist
 
