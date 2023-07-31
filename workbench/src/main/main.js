@@ -4,11 +4,12 @@ import path from 'path';
 import {
   app,
   BrowserWindow,
-  screen,
   nativeTheme,
   Menu,
   ipcMain
 } from 'electron';
+
+import Store from 'electron-store';
 
 import {
   createPythonFlaskProcess,
@@ -71,6 +72,11 @@ export const createWindow = async () => {
   logger.info(`Running invest-workbench version ${pkg.version}`);
   nativeTheme.themeSource = 'light'; // override OS/browser setting
 
+  // read language setting from storage and switch to that language
+  // default to en if no language setting exists
+  const store = new Store();
+  i18n.changeLanguage(store.get('language', 'en'));
+
   splashScreen = new BrowserWindow({
     width: 574, // dims set to match the image in splash.html
     height: 500,
@@ -110,14 +116,6 @@ export const createWindow = async () => {
       menuTemplate(mainWindow, ELECTRON_DEV_MODE, i18n)
     )
   );
-  // when language changes, rebuild the menu bar in new language
-  i18n.on('languageChanged', (lng) => {
-    Menu.setApplicationMenu(
-      Menu.buildFromTemplate(
-        menuTemplate(mainWindow, ELECTRON_DEV_MODE, i18n)
-      )
-    );
-  });
   mainWindow.loadURL(path.join(BASE_URL, 'index.html'));
 
   mainWindow.once('ready-to-show', () => {

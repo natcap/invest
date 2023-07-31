@@ -69,10 +69,7 @@ export default class App extends React.Component {
       investSettings: investSettings,
       showDownloadModal: this.props.isFirstRun,
     });
-    await i18n.changeLanguage(investSettings.language);
-    await ipcRenderer.invoke(
-      ipcMainChannels.CHANGE_LANGUAGE, investSettings.language
-    );
+    await i18n.changeLanguage(window.Workbench.LANGUAGE);
     ipcRenderer.on('download-status', (downloadedNofN) => {
       this.setState({
         downloadedNofN: downloadedNofN,
@@ -95,20 +92,8 @@ export default class App extends React.Component {
   }
 
   async saveSettings(settings) {
-    const { investSettings } = this.state;
     await saveSettingsStore(settings);
     this.setState({ investSettings: settings });
-    // if language has changed, refresh the app
-    if (settings.language !== investSettings.language) {
-      // change language in the renderer process
-      await i18n.changeLanguage(settings.language);
-      // change language in the main process
-      await ipcRenderer.invoke(
-        ipcMainChannels.CHANGE_LANGUAGE, settings.language
-      );
-      // rerender for changes to take effect
-      window.location.reload();
-    }
   }
 
   /** Store a sampledata filepath in localforage.

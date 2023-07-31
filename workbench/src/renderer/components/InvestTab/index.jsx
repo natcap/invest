@@ -164,7 +164,7 @@ class InvestTab extends React.Component {
       args,
       investSettings.loggingLevel,
       investSettings.taskgraphLoggingLevel,
-      investSettings.language,
+      window.Workbench.LANGUAGE,
       tabID
     );
     this.switchTabs('log');
@@ -317,7 +317,6 @@ InvestTab.propTypes = {
     nWorkers: PropTypes.string,
     taskgraphLoggingLevel: PropTypes.string,
     loggingLevel: PropTypes.string,
-    language: PropTypes.string,
   }).isRequired,
   saveJob: PropTypes.func.isRequired,
   updateJobProperties: PropTypes.func.isRequired,
