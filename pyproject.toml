@@ -74,3 +74,6 @@ no_lines_before = 'LOCALFOLDER'
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.pytest.ini_options]
+filterwarnings = ["error", "ignore::DeprecationWarning"]
