@@ -2631,10 +2631,12 @@ def _clip_vector_by_vector(
         shutil.rmtree(temp_dir, ignore_errors=True)
 
     if empty_clip:
+        # The "clip_vector_path" is always the AOI.
         raise ValueError(
             f"Clipping {base_vector_path} by {clip_vector_path} returned 0"
-            " features. If an AOI was provided this could mean the AOI and"
-            " Wind Data do not intersect spatially.")
+            " features. This means the AOI and {base_vector_path} do not"
+            " intersect spatially. Please check that the AOI has spatial"
+            " overlap with all input data.")
 
     LOGGER.info('Finished _clip_vector_by_vector')
 
