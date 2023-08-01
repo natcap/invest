@@ -535,27 +535,6 @@ def execute(args):
     Returns:
         None.
     """
-    # This upgrades warnings to exceptions across this model.
-    # I found this useful to catch all kinds of weird inputs to the model
-    # during debugging and think it makes sense to have in production of this
-    # model too.
-    try:
-        warnings.filterwarnings('error')
-        _execute(args)
-    finally:
-        warnings.resetwarnings()
-
-
-def _execute(args):
-    """Execute the seasonal water yield model.
-
-    Args:
-        See the parameters for
-        `natcap.invest.seasonal_water_yield.seasonal_wateryield.execute`.
-
-    Returns:
-        None
-    """
     LOGGER.info('prepare and test inputs for common errors')
 
     # fail early on a missing required rain events table
