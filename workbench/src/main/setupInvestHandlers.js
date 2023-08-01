@@ -55,6 +55,7 @@ export function setupInvestRunHandlers(investExe) {
     const loggingLevel = settingsStore.get('loggingLevel');
     const taskgraphLoggingLevel = settingsStore.get('taskgraphLoggingLevel');
     const language = settingsStore.get('language');
+    const nWorkers = settingsStore.get('nWorkers');
 
     // Write a temporary datastack json for passing to invest CLI
     try {
@@ -68,7 +69,10 @@ export function setupInvestRunHandlers(investExe) {
       filepath: datastackPath,
       moduleName: pyModuleName,
       relativePaths: false,
-      args: JSON.stringify(args),
+      args: JSON.stringify({
+        ...args,
+        n_workers: nWorkers,
+      }),
     };
     await writeInvestParameters(payload);
 

@@ -105,7 +105,6 @@ class SetupTab extends React.Component {
     this.updateArgTouched = this.updateArgTouched.bind(this);
     this.updateArgValues = this.updateArgValues.bind(this);
     this.batchUpdateArgs = this.batchUpdateArgs.bind(this);
-    this.insertNWorkers = this.insertNWorkers.bind(this);
     this.callUISpecFunctions = this.callUISpecFunctions.bind(this);
     this.browseForDatastack = this.browseForDatastack.bind(this);
     this.loadParametersFromFile = this.loadParametersFromFile.bind(this);
@@ -204,22 +203,6 @@ class SetupTab extends React.Component {
     }
   }
 
-  /**
-   * n_workers is a special invest arg stored in global settings
-   *
-   * @param  {object} argsValues - of the shape returned by `initializeArgValues`.
-   * @returns {object} copy of original argsValues with an n_workers property.
-   */
-  async insertNWorkers(argsValues) {
-    const nWorkers = await ipcRenderer.invoke(
-      ipcMainChannels.GET_SETTING, 'nWorkers'
-    );
-    return {
-      ...argsValues,
-      n_workers: { value: nWorkers },
-    };
-  }
-
   /** Save the current invest arguments to a python script via datastack.py API.
    *
    * @param {string} filepath - desired path to the python script
@@ -229,9 +212,7 @@ class SetupTab extends React.Component {
     const {
       modelName,
     } = this.props;
-    const args = argsDictFromObject(
-      this.insertNWorkers(this.state.argsValues)
-    );
+    const args = argsDictFromObject(this.state.argsValues);
     const payload = {
       filepath: filepath,
       modelname: modelName,
@@ -245,9 +226,7 @@ class SetupTab extends React.Component {
     const {
       pyModuleName,
     } = this.props;
-    const args = argsDictFromObject(
-      this.insertNWorkers(this.state.argsValues)
-    );
+    const args = argsDictFromObject(this.state.argsValues);
     const payload = {
       filepath: datastackPath,
       moduleName: pyModuleName,
@@ -318,9 +297,9 @@ class SetupTab extends React.Component {
     }
   }
 
-  wrapInvestExecute() {
+  async wrapInvestExecute() {
     this.props.investExecute(
-      argsDictFromObject(this.insertNWorkers(this.state.argsValues))
+      argsDictFromObject(this.state.argsValues)
     );
   }
 
