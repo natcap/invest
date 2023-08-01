@@ -15,12 +15,12 @@ import {
   getSupportedLanguages
 } from '../../src/renderer/server_requests';
 import InvestJob from '../../src/renderer/InvestJob';
-import { setupSettingsHandlers } from '../../src/main/settingsStore';
+import {
+  settingsStore,
+  setupSettingsHandlers
+} from '../../src/main/settingsStore';
 import { ipcMainChannels } from '../../src/main/ipcMainChannels';
 import { removeIpcMainListeners } from '../../src/main/main';
-import {
-  getSettingsValue,
-} from '../../src/renderer/components/SettingsModal/SettingsStorage';
 import { mockUISpec } from './utils';
 // It's quite a pain to dynamically mock a const from a module,
 // here we do it by importing as another object, then
@@ -402,7 +402,7 @@ describe('InVEST global settings: dialog interactions', () => {
   beforeEach(async () => {
     getInvestModelNames.mockResolvedValue({});
     getSupportedLanguages.mockResolvedValue({ en: 'english', es: 'spanish' });
-    ipcRenderer.invoke.mockImplementation(() => Promise.resolve());
+    // ipcRenderer.invoke.mockImplementation(() => Promise.resolve());
   });
 
   test('Invest settings save on change', async () => {
@@ -430,25 +430,18 @@ describe('InVEST global settings: dialog interactions', () => {
     await waitFor(() => { expect(loggingInput).toHaveValue(loggingLevel); });
     await userEvent.selectOptions(tgLoggingInput, [tgLoggingLevel]);
     await waitFor(() => { expect(tgLoggingInput).toHaveValue(tgLoggingLevel); });
-    await userEvent.click(getByRole('button', { name: 'close settings' }));
 
-    // Check values were saved in app
-    await userEvent.click(await findByRole('button', { name: 'settings' }));
+    // Check values were saved
+    expect(settingsStore.get('nWorkers')).toBe(nWorkersValue);
+    expect(settingsStore.get('loggingLevel')).toBe(loggingLevel);
+    expect(settingsStore.get('taskgraphLoggingLevel')).toBe(tgLoggingLevel);
+
+    // language is handled differently; changing it triggers electron to restart
     const languageInput = getByLabelText(languageLabelText, { exact: false });
-    await waitFor(() => {
-      expect(nWorkersInput).toHaveValue(nWorkersValue);
-      expect(loggingInput).toHaveValue(loggingLevel);
-      expect(tgLoggingInput).toHaveValue(tgLoggingLevel);
-      expect(languageInput).toHaveValue('en');
-    });
-
-    expect(await getSettingsValue('nWorkers')).toBe(nWorkersValue);
-    expect(await getSettingsValue('loggingLevel')).toBe(loggingLevel);
-    expect(await getSettingsValue('taskgraphLoggingLevel')).toBe(tgLoggingLevel);
-
     await userEvent.selectOptions(languageInput, [languageValue]);
     await userEvent.click(await findByText('Change to spanish'));
-    expect(spyInvoke).toHaveBeenCalledWith(ipcMainChannels.CHANGE_LANGUAGE, languageValue);
+    expect(spyInvoke)
+      .toHaveBeenCalledWith(ipcMainChannels.CHANGE_LANGUAGE, languageValue);
   });
 
   // test('Load invest settings from storage and test Reset', async () => {

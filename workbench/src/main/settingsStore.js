@@ -1,8 +1,11 @@
-import { ipcMain } from 'electron';
+import { app, ipcMain } from 'electron';
 import Store from 'electron-store';
 import Ajv from 'ajv';
 
 import { ipcMainChannels } from './ipcMainChannels';
+import { getLogger } from './logger';
+
+const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
 export const defaults = {
   nWorkers: '-1',
@@ -55,8 +58,31 @@ export function initStore(data = defaults) {
 export const settingsStore = initStore();
 
 export function setupSettingsHandlers() {
-  ipcMain.handle(ipcMainChannels.GET_SETTING, (event, key) => settingsStore.get(key));
-  ipcMain.on(ipcMainChannels.SET_SETTING, (event, key, value) => {
-    settingsStore.set(key, value);
+  ipcMain.handle(
+    ipcMainChannels.GET_SETTING,
+    (event, key) => settingsStore.get(key)
+  );
+
+  ipcMain.on(
+    ipcMainChannels.SET_SETTING,
+    (event, key, value) => settingsStore.set(key, value)
+  );
+
+  // language is stored in the same store, but has special
+  // needs for getting & setting because we need to get
+  // the value synchronously during preload, and trigger
+  // an app restart on change.
+  ipcMain.on(ipcMainChannels.GET_LANGUAGE, (event) => {
+    event.returnValue = settingsStore.get('language');
   });
+
+  ipcMain.handle(
+    ipcMainChannels.CHANGE_LANGUAGE,
+    (e, languageCode) => {
+      logger.debug('changing language to', languageCode);
+      settingsStore.set('language', languageCode);
+      app.relaunch();
+      app.quit();
+    }
+  );
 }

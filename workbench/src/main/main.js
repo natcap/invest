@@ -9,8 +9,6 @@ import {
   ipcMain
 } from 'electron';
 
-import Store from 'electron-store';
-
 import {
   createPythonFlaskProcess,
   getFlaskIsReady,
@@ -30,8 +28,7 @@ import {
 import setupGetNCPUs from './setupGetNCPUs';
 import setupOpenExternalUrl from './setupOpenExternalUrl';
 import setupOpenLocalHtml from './setupOpenLocalHtml';
-import setupChangeLanguage from './setupChangeLanguage';
-import { setupSettingsHandlers } from './settingsStore';
+import { settingsStore, setupSettingsHandlers } from './settingsStore';
 import setupGetElectronPaths from './setupGetElectronPaths';
 import setupRendererLogger from './setupRendererLogger';
 import { ipcMainChannels } from './ipcMainChannels';
@@ -73,10 +70,7 @@ export const createWindow = async () => {
   logger.info(`Running invest-workbench version ${pkg.version}`);
   nativeTheme.themeSource = 'light'; // override OS/browser setting
 
-  // read language setting from storage and switch to that language
-  // default to en if no language setting exists
-  const store = new Store();
-  i18n.changeLanguage(store.get('language', 'en'));
+  i18n.changeLanguage(settingsStore.get('language'));
 
   splashScreen = new BrowserWindow({
     width: 574, // dims set to match the image in splash.html
@@ -93,7 +87,6 @@ export const createWindow = async () => {
   setupCheckFilePermissions();
   setupCheckFirstRun();
   setupCheckStorageToken();
-  setupChangeLanguage();
   setupSettingsHandlers();
   setupGetElectronPaths();
   setupGetNCPUs();
