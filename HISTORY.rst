@@ -55,7 +55,10 @@ Unreleased Changes
     * The workbench app is now distributed with a valid code signature
       (`#727 <https://github.com/natcap/invest/issues/727>`_)
     * Changing the language setting will now cause the app to relaunch
-      (`#1168 <https://github.com/natcap/invest/issues/1168>`_),
+      (`#1168 <https://github.com/natcap/invest/issues/1168>`_)
+    * Closing the main window will now close any user's guide windows that are
+      open. Fixed a bug where the app could not be reopened after closing.
+      (`#1258 <https://github.com/natcap/invest/issues/1258>`_)
 * Forest Carbon
     * The biophysical table is now case-insensitive.
 * HRA
