@@ -260,7 +260,6 @@ export default class App extends React.Component {
         <DataDownloadModal
           show={showDownloadModal}
           closeModal={() => this.showDownloadModal(false)}
-          storeDownloadDir={this.storeDownloadDir}
         />
         <TabContainer activeKey={activeTab}>
           <Navbar
