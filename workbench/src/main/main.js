@@ -62,7 +62,6 @@ if (!process.env.PORT) {
 let mainWindow;
 let splashScreen;
 let flaskSubprocess;
-let forceQuit = false;
 
 export function destroyWindow() {
   mainWindow = null;
@@ -134,15 +133,6 @@ export const createWindow = async () => {
     logger.error(details);
   });
 
-  mainWindow.on('close', (event) => {
-    // 'close' is triggered by the red traffic light button on mac
-    // override this behavior and just minimize,
-    // unless we're actually quitting the app
-    if (process.platform === 'darwin' & !forceQuit) {
-      event.preventDefault();
-    }
-  });
-
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
@@ -194,20 +184,17 @@ export function main() {
       createWindow();
     }
   });
-  app.on('window-all-closed', async (event) => {
+  app.on('window-all-closed', async () => {
     // On OS X it is common for applications and their menu bar
     // to stay active until the user quits explicitly with Cmd + Q
-    event.preventDefault();
     if (process.platform !== 'darwin') {
       app.quit();
     }
   });
-
   let shuttingDown = false;
   app.on('before-quit', async (event) => {
     // prevent quitting until after we're done with cleanup,
     // then programatically quit
-    forceQuit = true;
     if (shuttingDown) { return; }
     event.preventDefault();
     shuttingDown = true;
