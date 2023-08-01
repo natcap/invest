@@ -402,7 +402,6 @@ describe('InVEST global settings: dialog interactions', () => {
   beforeEach(async () => {
     getInvestModelNames.mockResolvedValue({});
     getSupportedLanguages.mockResolvedValue({ en: 'english', es: 'spanish' });
-    // ipcRenderer.invoke.mockImplementation(() => Promise.resolve());
   });
 
   test('Invest settings save on change', async () => {
@@ -414,7 +413,7 @@ describe('InVEST global settings: dialog interactions', () => {
     const spyInvoke = jest.spyOn(ipcRenderer, 'invoke');
 
     const {
-      getByText, getByRole, getByLabelText, findByRole, findByText,
+      getByText, getByLabelText, findByRole, findByText,
     } = render(
       <App />
     );
@@ -443,51 +442,6 @@ describe('InVEST global settings: dialog interactions', () => {
     expect(spyInvoke)
       .toHaveBeenCalledWith(ipcMainChannels.CHANGE_LANGUAGE, languageValue);
   });
-
-  // test('Load invest settings from storage and test Reset', async () => {
-  //   const defaultSettings = {
-  //     nWorkers: '-1',
-  //     loggingLevel: 'INFO',
-  //     taskgraphLoggingLevel: 'ERROR',
-  //     language: 'en',
-  //   };
-  //   const expectedSettings = {
-  //     nWorkers: '0',
-  //     loggingLevel: 'ERROR',
-  //     taskgraphLoggingLevel: 'INFO',
-  //     language: 'en',
-  //   };
-
-  //   await saveSettingsStore(expectedSettings);
-
-  //   const {
-  //     getByText, getByLabelText, findByRole,
-  //   } = render(<App />);
-
-  //   await userEvent.click(await findByRole('button', { name: 'settings' }));
-  //   const nWorkersInput = getByLabelText(nWorkersLabelText, { exact: false });
-  //   const loggingInput = getByLabelText(loggingLabelText);
-  //   const tgLoggingInput = getByLabelText(tgLoggingLabelText);
-  //   const languageInput = getByLabelText(languageLabelText, { exact: false });
-
-  //   // Test that the invest settings were loaded in from store.
-  //   await waitFor(() => {
-  //     expect(nWorkersInput).toHaveValue(expectedSettings.nWorkers);
-  //     expect(loggingInput).toHaveValue(expectedSettings.loggingLevel);
-  //     expect(tgLoggingInput).toHaveValue(expectedSettings.tgLoggingLevel);
-  //     expect(languageInput).toHaveValue(expectedSettings.language);
-  //   });
-
-    // Test Reset sets values to default
-  //   await userEvent.click(getByText('Reset to Defaults'));
-  //   await waitFor(() => {
-  //     expect(nWorkersInput).toHaveValue(defaultSettings.nWorkers);
-  //     expect(loggingInput).toHaveValue(defaultSettings.loggingLevel);
-  //     expect(tgLoggingInput).toHaveValue(defaultSettings.tgLoggingLevel);
-  //     // should NOT change the language setting - it's handled differently
-  //     expect(languageInput).toHaveValue(expectedSettings.language);
-  //   });
-  // });
 
   test('Access sampledata download Modal from settings', async () => {
     const {

@@ -297,7 +297,7 @@ class SetupTab extends React.Component {
     }
   }
 
-  async wrapInvestExecute() {
+  wrapInvestExecute() {
     this.props.investExecute(
       argsDictFromObject(this.state.argsValues)
     );
