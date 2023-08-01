@@ -116,6 +116,10 @@ Unreleased Changes
     * Fixed a bug where overlapping predictor polygons would be double-counted
       in ``polygon_area_coverage`` and ``polygon_percent_coverage`` calculations.
       (`#1310 <https://github.com/natcap/invest/issues/1310>`_)
+* Wind Energy
+    * Updated a misleading error message that is raised when the AOI does
+      not spatially overlap another input.
+      (`#1054 <https://github.com/natcap/invest/issues/1054>`_)
 
 3.13.0 (2023-03-17)
 -------------------
