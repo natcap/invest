@@ -140,6 +140,7 @@ export const createWindow = async () => {
     // unless we're actually quitting the app
     if (process.platform === 'darwin' & !forceQuit) {
       event.preventDefault();
+      mainWindow.minimize()
     }
   });
 
