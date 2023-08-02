@@ -167,6 +167,7 @@ test('Run a real invest model', async () => {
   const downloadModal = await page.waitForSelector('.modal-dialog');
   const downloadModalCancel = await downloadModal.waitForSelector(
     'aria/[name="Cancel"][role="button"]');
+  await page.waitForTimeout(300); // waiting for click handler to be ready
   await downloadModalCancel.click();
   // We need to get the modelButton from w/in this list-group because there
   // are buttons with the same name in the Recent Jobs container.
@@ -235,11 +236,13 @@ test('Check local userguide links', async () => {
   const downloadModal = await page.waitForSelector('.modal-dialog');
   const downloadModalCancel = await downloadModal.waitForSelector(
     'aria/[name="Cancel"][role="button"]');
+  await page.waitForTimeout(500); // waiting for click handler to be ready
   await downloadModalCancel.click();
 
   const investList = await page.waitForSelector('.invest-list-group');
   const modelButtons = await investList.$$('aria/[role="button"]');
 
+  await page.waitForTimeout(300); // first btn click does not register w/o this pause
   for (const btn of modelButtons) {
     await btn.click();
     const link = await page.waitForSelector('text/User\'s Guide');
