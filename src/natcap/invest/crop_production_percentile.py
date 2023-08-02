@@ -89,9 +89,9 @@ nutrient_units = {
     "crypto":      u.microgram/u.hectogram,  # cryptoxanthin
     "lycopene":    u.microgram/u.hectogram,  # lycopene
     "lutein":      u.microgram/u.hectogram,  # lutein + zeaxanthin
-    "betaT":       u.milligram/u.hectogram,  # beta tocopherol
-    "gammaT":      u.milligram/u.hectogram,  # gamma tocopherol
-    "deltaT":      u.milligram/u.hectogram,  # delta tocopherol
+    "betat":       u.milligram/u.hectogram,  # beta tocopherol
+    "gammat":      u.milligram/u.hectogram,  # gamma tocopherol
+    "deltat":      u.milligram/u.hectogram,  # delta tocopherol
     "vitc":        u.milligram/u.hectogram,  # vitamin C
     "thiamin":     u.milligram/u.hectogram,
     "riboflavin":  u.milligram/u.hectogram,
