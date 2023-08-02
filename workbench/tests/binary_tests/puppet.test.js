@@ -133,13 +133,16 @@ beforeEach(() => {
 
 afterEach(async () => {
   try {
+    const pages = await BROWSER.pages();
+    await Promise.all(pages.map(page => page.close()));
     await BROWSER.close();
   } catch (error) {
     console.log(BINARY_PATH);
     console.error(error);
+  } finally {
+    ELECTRON_PROCESS.removeAllListeners();
+    ELECTRON_PROCESS.kill();
   }
-  ELECTRON_PROCESS.removeAllListeners();
-  ELECTRON_PROCESS.kill();
 });
 
 test('Run a real invest model', async () => {
