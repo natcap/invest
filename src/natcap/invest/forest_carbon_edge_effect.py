@@ -865,8 +865,9 @@ def _calculate_tropical_forest_edge_carbon_map(
     #   kd_tree.data.shape: (d, 2)
     #   theta_model_parameters.shape: (d, 3)
     #   method_model_parameter.shape: (d,)
-    kd_tree, theta_model_parameters, method_model_parameter = pickle.load(
-        open(spatial_index_pickle_path, 'rb'))
+    with open(spatial_index_pickle_path, 'rb') as spatial_index_pickle_file:
+        kd_tree, theta_model_parameters, method_model_parameter = pickle.load(
+            spatial_index_pickle_file)
 
     # create output raster and open band for writing
     # fill nodata, in case we skip entire memory blocks that are non-forest

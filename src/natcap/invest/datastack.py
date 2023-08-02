@@ -489,8 +489,9 @@ def extract_datastack_archive(datastack_path, dest_dir_path):
     _tarfile_safe_extract(datastack_path, dest_dir_path)
 
     # get the arguments dictionary
-    arguments_dict = json.load(open(
-        os.path.join(dest_dir_path, DATASTACK_PARAMETER_FILENAME)))['args']
+    with open(os.path.join(
+            dest_dir_path, DATASTACK_PARAMETER_FILENAME)) as datastack_file:
+        arguments_dict = json.load(datastack_file)['args']
 
     def _rewrite_paths(args_param):
         """Converts paths in `args_param` to paths in `dest_dir_path."""

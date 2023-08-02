@@ -132,11 +132,11 @@ class DatastackArchiveTests(unittest.TestCase):
         self.assertEqual(len(os.listdir(out_directory)), 3)
 
         # We expect the workspace to be excluded from the resulting args dict.
-        self.assertEqual(
-            json.load(open(
-                os.path.join(out_directory,
-                             datastack.DATASTACK_PARAMETER_FILENAME)))['args'],
-            {'a': 1, 'b': 'hello there', 'c': 'plain bytestring', 'd': ''})
+        with open(os.path.join(
+                out_directory, datastack.DATASTACK_PARAMETER_FILENAME)) as file:
+            self.assertEqual(
+                json.load(file)['args'],
+                {'a': 1, 'b': 'hello there', 'c': 'plain bytestring', 'd': ''})
 
     def test_collect_rasters(self):
         """Datastack: test collect GDAL rasters."""
@@ -158,10 +158,10 @@ class DatastackArchiveTests(unittest.TestCase):
             out_directory = os.path.join(self.workspace, 'extracted_archive')
             datastack._tarfile_safe_extract(archive_path, out_directory)
 
-            archived_params = json.load(
-                open(os.path.join(
+            with open(os.path.join(
                     out_directory,
-                    datastack.DATASTACK_PARAMETER_FILENAME)))['args']
+                    datastack.DATASTACK_PARAMETER_FILENAME)) as datastack_file:
+                archived_params = json.load(datastack_file)['args']
 
             self.assertEqual(len(archived_params), 1)
             model_array = pygeoprocessing.raster_to_numpy_array(
@@ -200,10 +200,10 @@ class DatastackArchiveTests(unittest.TestCase):
             out_directory = os.path.join(dest_dir, 'extracted_archive')
             datastack._tarfile_safe_extract(archive_path, out_directory)
 
-            archived_params = json.load(
-                open(os.path.join(
+            with open(os.path.join(
                     out_directory,
-                    datastack.DATASTACK_PARAMETER_FILENAME)))['args']
+                    datastack.DATASTACK_PARAMETER_FILENAME)) as datastack_file:
+                archived_params = json.load(datastack_file)['args']
             _assert_vectors_equal(
                 params['vector'],
                 os.path.join(out_directory, archived_params['vector']))
@@ -242,9 +242,10 @@ class DatastackArchiveTests(unittest.TestCase):
         out_directory = os.path.join(self.workspace, 'extracted_archive')
         datastack._tarfile_safe_extract(archive_path, out_directory)
 
-        archived_params = json.load(
-            open(os.path.join(out_directory,
-                              datastack.DATASTACK_PARAMETER_FILENAME)))['args']
+        with open(os.path.join(
+                out_directory,
+                datastack.DATASTACK_PARAMETER_FILENAME)) as datastack_file:
+            archived_params = json.load(datastack_file)['args']
         self.assertTrue(filecmp.cmp(
             params['some_file'],
             os.path.join(out_directory, archived_params['some_file']),
@@ -279,9 +280,10 @@ class DatastackArchiveTests(unittest.TestCase):
         out_directory = os.path.join(self.workspace, 'extracted_archive')
         datastack._tarfile_safe_extract(archive_path, out_directory)
 
-        archived_params = json.load(
-            open(os.path.join(out_directory,
-                              datastack.DATASTACK_PARAMETER_FILENAME)))['args']
+        with open(os.path.join(
+                out_directory,
+                datastack.DATASTACK_PARAMETER_FILENAME)) as datastack_file:
+            archived_params = json.load(datastack_file)['args']
 
         # Assert that the archived 'foo' and 'bar' params point to the same
         # file.
@@ -473,7 +475,8 @@ class ParameterSetTest(unittest.TestCase):
         # make the sample data so filepaths are interpreted correctly
         for file_base in ('foo', 'bar', 'file1', 'file2'):
             test_filepath = os.path.join(self.workspace, file_base + '.txt')
-            open(test_filepath, 'w').write('hello!')
+            with open(test_filepath, 'w') as file:
+                file.write('hello!')
         os.makedirs(params['data_dir'])
 
         # Write the parameter set
@@ -481,7 +484,8 @@ class ParameterSetTest(unittest.TestCase):
             params, modelname, paramset_filename, relative=True)
 
         # Check that the written parameter set file contains relative paths
-        raw_args = json.load(open(paramset_filename))['args']
+        with open(paramset_filename) as param_file:
+            raw_args = json.load(param_file)['args']
         self.assertEqual(raw_args['foo'], 'foo.txt')
         self.assertEqual(raw_args['bar'], 'foo.txt')
         self.assertEqual(raw_args['file_list'], ['file1.txt', 'file2.txt'])
@@ -517,7 +521,8 @@ class ParameterSetTest(unittest.TestCase):
 
         # make the sample data so filepaths are interpreted correctly
         for base_name in ('foo', 'bar', 'doh'):
-            open(params[base_name], 'w').write('hello!')
+            with open(params[base_name], 'w') as file:
+                file.write('hello!')
         os.makedirs(params['data_dir'])
 
         # Write the parameter set
@@ -525,7 +530,8 @@ class ParameterSetTest(unittest.TestCase):
             params, modelname, paramset_filename, relative=True)
 
         # Check that the written parameter set file contains relative paths
-        raw_args = json.load(open(paramset_filename))['args']
+        with open(paramset_filename) as param_file:
+            raw_args = json.load(param_file)['args']
         self.assertEqual(raw_args['foo'], 'foo.txt')
         # Expecting linux style path separators for Windows
         self.assertEqual(raw_args['bar'], 'inter_dir/bar.txt')

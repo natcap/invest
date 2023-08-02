@@ -653,7 +653,8 @@ def _retrieve_photo_user_days(
                 aoizip.write(filename, os.path.basename(filename))
 
     # convert shapefile to binary string for serialization
-    zip_file_binary = open(compressed_aoi_path, 'rb').read()
+    with open(compressed_aoi_path, 'rb') as aoifile:
+        zip_file_binary = aoifile.read()
 
     # transfer zipped file to server
     start_time = time.time()
@@ -667,8 +668,8 @@ def _retrieve_photo_user_days(
                 f'workspace_id: {workspace_id}')
 
     # unpack result
-    open(compressed_pud_path, 'wb').write(
-        result_zip_file_binary)
+    with open(compressed_pud_path, 'wb') as pud_file:
+        pud_file.write(result_zip_file_binary)
     temporary_output_dir = tempfile.mkdtemp(dir=output_dir)
     zipfile.ZipFile(compressed_pud_path, 'r').extractall(
         temporary_output_dir)

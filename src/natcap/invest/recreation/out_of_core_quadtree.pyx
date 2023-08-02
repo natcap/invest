@@ -82,7 +82,8 @@ class OutOfCoreQuadTree(object):
         """Flush any cached data to disk."""
         self.node_data_manager.flush()
         if self.pickle_filename is not None:
-            pickle.dump(self, open(self.pickle_filename, 'wb'))
+            with open(self.pickle_filename, 'wb') as pickle_file:
+                pickle.dump(self, pickle_file)
 
     def build_node_shapes(self, ogr_polygon_layer):
         """Add features to an ogr.Layer to visualize quadtree segmentation.

@@ -236,7 +236,8 @@ class TestRecServer(unittest.TestCase):
                 myzip.write(filename, os.path.basename(filename))
 
         # convert shapefile to binary string for serialization
-        zip_file_binary = open(aoi_archive_path, 'rb').read()
+        with open(aoi_archive_path, 'rb') as file:
+            zip_file_binary = file.read()
         date_range = (('2005-01-01'), ('2014-12-31'))
         out_vector_filename = 'test_aoi_for_subset_pud.shp'
 
@@ -286,7 +287,8 @@ class TestRecServer(unittest.TestCase):
                 myzip.write(filename, os.path.basename(filename))
 
         # convert shapefile to binary string for serialization
-        zip_file_binary = open(aoi_archive_path, 'rb').read()
+        with open(aoi_archive_path, 'rb') as file:
+            zip_file_binary = file.read()
 
         # transfer zipped file to server
         date_range = (('2005-01-01'), ('2014-12-31'))
@@ -297,7 +299,8 @@ class TestRecServer(unittest.TestCase):
 
         # unpack result
         result_zip_path = os.path.join(self.workspace_dir, 'pud_result.zip')
-        open(result_zip_path, 'wb').write(zip_result)
+        with open(result_zip_path, 'wb') as file:
+            file.write(zip_result)
         zipfile.ZipFile(result_zip_path, 'r').extractall(self.workspace_dir)
 
         result_vector_path = os.path.join(
@@ -312,7 +315,8 @@ class TestRecServer(unittest.TestCase):
         out_workspace_dir = os.path.join(self.workspace_dir, 'workspace_zip')
         os.makedirs(out_workspace_dir)
         workspace_zip_path = os.path.join(out_workspace_dir, 'workspace.zip')
-        open(workspace_zip_path, 'wb').write(workspace_zip_binary)
+        with open(workspace_zip_path, 'wb') as file:
+            file.write(workspace_zip_binary)
         zipfile.ZipFile(workspace_zip_path, 'r').extractall(out_workspace_dir)
         utils._assert_vectors_equal(
             aoi_path,
@@ -664,11 +668,13 @@ class TestLocalRecServer(unittest.TestCase):
         self.recreation_server._calc_aggregated_points_in_aoi(
             aoi_path, self.workspace_dir, date_range, out_vector_filename)
 
-        output_lines = open(os.path.join(
-            self.workspace_dir, 'monthly_table.csv'), 'r').readlines()
-        expected_lines = open(os.path.join(
-            REGRESSION_DATA, 'expected_monthly_table_for_subset.csv'),
-                              'r').readlines()
+        with open(os.path.join(
+                self.workspace_dir, 'monthly_table.csv'), 'r') as file:
+            output_lines = file.readlines()
+        with open(os.path.join(
+                REGRESSION_DATA, 'expected_monthly_table_for_subset.csv'),
+                'r') as file:
+            expected_lines = file.readlines()
 
         if output_lines != expected_lines:
             raise ValueError(

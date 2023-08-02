@@ -84,5 +84,7 @@ class UsageLoggingTests(unittest.TestCase):
             bb_union, [-87.237771, -85.526132, -87.23321, -85.526491])
 
         # Verify that no errors were raised in calculating the bounding boxes.
-        self.assertTrue('ERROR' not in open(output_logfile).read(),
-                        'Exception logged when there should not have been.')
+        with open(output_logfile) as logfile:
+            self.assertTrue(
+                'ERROR' not in logfile.read(),
+                'Exception logged when there should not have been.')
