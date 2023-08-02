@@ -67,6 +67,42 @@ CROP_OPTIONS = {
     ]
 }
 
+nutrient_units = {
+    "protein":     u.gram/u.hectogram,
+    "lipid":       u.gram/u.hectogram,       # total lipid
+    "energy":      u.kilojoule/u.hectogram,
+    "ca":          u.milligram/u.hectogram,  # calcium
+    "fe":          u.milligram/u.hectogram,  # iron
+    "mg":          u.milligram/u.hectogram,  # magnesium
+    "ph":          u.milligram/u.hectogram,  # phosphorus
+    "k":           u.milligram/u.hectogram,  # potassium
+    "na":          u.milligram/u.hectogram,  # sodium
+    "zn":          u.milligram/u.hectogram,  # zinc
+    "cu":          u.milligram/u.hectogram,  # copper
+    "fl":          u.microgram/u.hectogram,  # fluoride
+    "mn":          u.milligram/u.hectogram,  # manganese
+    "se":          u.microgram/u.hectogram,  # selenium
+    "vita":        u.IU/u.hectogram,         # vitamin A
+    "betac":       u.microgram/u.hectogram,  # beta carotene
+    "alphac":      u.microgram/u.hectogram,  # alpha carotene
+    "vite":        u.milligram/u.hectogram,  # vitamin e
+    "crypto":      u.microgram/u.hectogram,  # cryptoxanthin
+    "lycopene":    u.microgram/u.hectogram,  # lycopene
+    "lutein":      u.microgram/u.hectogram,  # lutein + zeaxanthin
+    "betaT":       u.milligram/u.hectogram,  # beta tocopherol
+    "gammaT":      u.milligram/u.hectogram,  # gamma tocopherol
+    "deltaT":      u.milligram/u.hectogram,  # delta tocopherol
+    "vitc":        u.milligram/u.hectogram,  # vitamin C
+    "thiamin":     u.milligram/u.hectogram,
+    "riboflavin":  u.milligram/u.hectogram,
+    "niacin":      u.milligram/u.hectogram,
+    "pantothenic": u.milligram/u.hectogram,  # pantothenic acid
+    "vitb6":       u.milligram/u.hectogram,  # vitamin B6
+    "folate":      u.microgram/u.hectogram,
+    "vitb12":      u.microgram/u.hectogram,  # vitamin B12
+    "vitk":        u.microgram/u.hectogram,  # vitamin K
+}
+
 MODEL_SPEC = {
     "model_name": MODEL_METADATA["crop_production_percentile"].model_title,
     "pyname": MODEL_METADATA["crop_production_percentile"].pyname,
@@ -179,41 +215,7 @@ MODEL_SPEC = {
                         **{nutrient: {
                             "type": "number",
                             "units": units
-                        } for nutrient, units in {
-                            "protein":     u.gram/u.hectogram,
-                            "lipid":       u.gram/u.hectogram,       # total lipid
-                            "energy":      u.kilojoule/u.hectogram,
-                            "ca":          u.milligram/u.hectogram,  # calcium
-                            "fe":          u.milligram/u.hectogram,  # iron
-                            "mg":          u.milligram/u.hectogram,  # magnesium
-                            "ph":          u.milligram/u.hectogram,  # phosphorus
-                            "k":           u.milligram/u.hectogram,  # potassium
-                            "na":          u.milligram/u.hectogram,  # sodium
-                            "zn":          u.milligram/u.hectogram,  # zinc
-                            "cu":          u.milligram/u.hectogram,  # copper
-                            "fl":          u.microgram/u.hectogram,  # fluoride
-                            "mn":          u.milligram/u.hectogram,  # manganese
-                            "se":          u.microgram/u.hectogram,  # selenium
-                            "vita":        u.IU/u.hectogram,         # vitamin A
-                            "betac":       u.microgram/u.hectogram,  # beta carotene
-                            "alphac":      u.microgram/u.hectogram,  # alpha carotene
-                            "vite":        u.milligram/u.hectogram,  # vitamin e
-                            "crypto":      u.microgram/u.hectogram,  # cryptoxanthin
-                            "lycopene":    u.microgram/u.hectogram,  # lycopene
-                            "lutein":      u.microgram/u.hectogram,  # lutein + zeaxanthin
-                            "betaT":       u.milligram/u.hectogram,  # beta tocopherol
-                            "gammaT":      u.milligram/u.hectogram,  # gamma tocopherol
-                            "deltaT":      u.milligram/u.hectogram,  # delta tocopherol
-                            "vitc":        u.milligram/u.hectogram,  # vitamin C
-                            "thiamin":     u.milligram/u.hectogram,
-                            "riboflavin":  u.milligram/u.hectogram,
-                            "niacin":      u.milligram/u.hectogram,
-                            "pantothenic": u.milligram/u.hectogram,  # pantothenic acid
-                            "vitb6":       u.milligram/u.hectogram,  # vitamin B6
-                            "folate":      u.microgram/u.hectogram,
-                            "vitb12":      u.microgram/u.hectogram,  # vitamin B12
-                            "vitk":        u.microgram/u.hectogram,  # vitamin K
-                        }.items()}
+                        } for nutrient, units in nutrient_units.items()}
                     }
                 }
             },
@@ -419,12 +421,7 @@ _AGGREGATE_VECTOR_FILE_PATTERN = os.path.join(
 _AGGREGATE_TABLE_FILE_PATTERN = os.path.join(
     '.', 'aggregate_results%s.csv')
 
-_EXPECTED_NUTRIENT_TABLE_HEADERS = [
-    'protein', 'lipid', 'energy', 'ca', 'fe', 'mg', 'ph', 'k', 'na', 'zn',
-    'cu', 'fl', 'mn', 'se', 'vita', 'betac', 'alphac', 'vite', 'crypto',
-    'lycopene', 'lutein', 'betat', 'gammat', 'deltat', 'vitc', 'thiamin',
-    'riboflavin', 'niacin', 'pantothenic', 'vitb6', 'folate', 'vitb12',
-    'vitk']
+_EXPECTED_NUTRIENT_TABLE_HEADERS = list(nutrient_units.keys())
 _EXPECTED_LUCODE_TABLE_HEADER = 'lucode'
 _NODATA_YIELD = -1
 
