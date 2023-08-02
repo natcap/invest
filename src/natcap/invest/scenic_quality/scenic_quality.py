@@ -549,10 +549,10 @@ def _determine_valid_viewpoints(dem_path, structures_path):
 
             # Coordinates in map units to pass to viewshed algorithm
             geometry = point.GetGeometryRef()
-            if geometry.GetGeometryType() != ogr.wkbPoint:
+            if geometry.GetGeometryName() != 'POINT':
                 raise AssertionError(
-                    f"Feature {point.GetFID()} is not a Point geometry. "
-                    "Features must be a Point.")
+                    f"Feature {point.GetFID()} must be a POINT geometry, "
+                    f"not {geometry.GetGeometryName()}")
 
             viewpoint = (geometry.GetX(), geometry.GetY())
 

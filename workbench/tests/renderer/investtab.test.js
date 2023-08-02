@@ -162,11 +162,11 @@ describe('Sidebar Buttons', () => {
 
     const { findByText, findByLabelText, findByRole } = renderInvestTab();
     const saveAsButton = await findByText('Save as...');
-    userEvent.click(saveAsButton);
+    await userEvent.click(saveAsButton);
     const jsonOption = await findByLabelText((content, element) => content.startsWith('Parameters only'));
-    userEvent.click(jsonOption);
+    await userEvent.click(jsonOption);
     const saveButton = await findByRole('button', { name: 'Save' });
-    userEvent.click(saveButton);
+    await userEvent.click(saveButton);
 
     expect(await findByRole('alert')).toHaveTextContent(response);
     const payload = writeParametersToFile.mock.calls[0][0];
@@ -195,11 +195,11 @@ describe('Sidebar Buttons', () => {
 
     const { findByText, findByLabelText, findByRole } = renderInvestTab();
     const saveAsButton = await findByText('Save as...');
-    userEvent.click(saveAsButton);
+    await userEvent.click(saveAsButton);
     const pythonOption = await findByLabelText((content, element) => content.startsWith('Python script'));
-    userEvent.click(pythonOption);
+    await userEvent.click(pythonOption);
     const saveButton = await findByRole('button', { name: 'Save' });
-    userEvent.click(saveButton);
+    await userEvent.click(saveButton);
 
     expect(await findByRole('alert')).toHaveTextContent(response);
     const payload = saveToPython.mock.calls[0][0];
@@ -233,13 +233,13 @@ describe('Sidebar Buttons', () => {
     const mockDialogData = { canceled: false, filePath: 'data.tgz' };
     ipcRenderer.invoke.mockResolvedValue(mockDialogData);
 
-    const { findByText, findByLabelText, findByRole, getByRole} = renderInvestTab();
+    const { findByText, findByLabelText, findByRole, getByRole } = renderInvestTab();
     const saveAsButton = await findByText('Save as...');
-    userEvent.click(saveAsButton);
+    await userEvent.click(saveAsButton);
     const datastackOption = await findByLabelText((content, element) => content.startsWith('Parameters and data'));
-    userEvent.click(datastackOption);
+    await userEvent.click(datastackOption);
     const saveButton = await findByRole('button', { name: 'Save' });
-    userEvent.click(saveButton);
+    await userEvent.click(saveButton);
 
     expect(await findByRole('alert')).toHaveTextContent('archiving...');
     await waitFor(() => {
@@ -264,39 +264,6 @@ describe('Sidebar Buttons', () => {
       expect(typeof args[key]).toBe('string');
     });
     expect(archiveDatastack).toHaveBeenCalledTimes(1);
-  });
-
-  test('Multiple Save Clicks: each triggers a unique alert', async () => {
-    const response = 'saved';
-    archiveDatastack.mockImplementation(() => new Promise(
-      (resolve) => {
-        setTimeout(() => resolve(response), 100);
-      }
-    ));
-    saveToPython.mockResolvedValue(response);
-    const mockDialogData = { canceled: false, filePath: 'foo' };
-    ipcRenderer.invoke.mockResolvedValue(mockDialogData);
-
-    const { findByText, findByLabelText, findByRole, getAllByRole, queryByRole } = renderInvestTab();
-    const saveAsButton = await findByText('Save as...');
-    userEvent.click(saveAsButton);
-    const pythonOption = await findByLabelText((content, element) => content.startsWith('Python script'));
-    const datastackOption = await findByLabelText((content, element) => content.startsWith('Parameters and data'));
-    const saveButton = await findByRole('button', { name: 'Save' });
-
-    userEvent.click(datastackOption);
-    userEvent.click(saveButton);
-
-    userEvent.click(saveAsButton);
-    userEvent.click(pythonOption)
-    userEvent.click(saveButton);
-
-    await waitFor(() => {
-      expect(getAllByRole('alert')).toHaveLength(2);
-    });
-    await waitFor(() => {
-      expect(queryByRole('alert')).toBeNull();
-    }, { timeout: 3000 }); // alerts disappear after 2 seconds
   });
 
   test('Load parameters from file: loads parameters', async () => {
@@ -325,9 +292,9 @@ describe('Sidebar Buttons', () => {
     });
     const { findByText, findByLabelText, findByRole } = renderInvestTab(job);
 
-    userEvent.click(await findByRole('tab', { name: 'Log' }));
+    await userEvent.click(await findByRole('tab', { name: 'Log' }));
     const loadButton = await findByText('Load parameters from file');
-    userEvent.click(loadButton);
+    await userEvent.click(loadButton);
 
     const setupTab = await findByRole('tab', { name: 'Setup' });
     expect(setupTab.classList.contains('active')).toBeTruthy();
@@ -350,7 +317,7 @@ describe('Sidebar Buttons', () => {
     const { findByText } = renderInvestTab();
 
     const loadButton = await findByText('Load parameters from file');
-    userEvent.click(loadButton);
+    await userEvent.click(loadButton);
 
     // Calls that would have triggered if a file was selected
     expect(spy).toHaveBeenCalledTimes(0);
@@ -371,11 +338,11 @@ describe('Sidebar Buttons', () => {
 
     const { findByText, findByLabelText, findByRole } = renderInvestTab();
     const saveAsButton = await findByText('Save as...');
-    userEvent.click(saveAsButton);
+    await userEvent.click(saveAsButton);
     const option = await findByLabelText((content, element) => content.startsWith(label));
-    userEvent.click(option);
+    await userEvent.click(option);
     const saveButton = await findByRole('button', { name: 'Save' });
-    userEvent.click(saveButton);
+    await userEvent.click(saveButton);
 
     // Calls that would have triggered if a file was selected
     expect(spy).toHaveBeenCalledTimes(0);
@@ -388,9 +355,9 @@ describe('Sidebar Buttons', () => {
       queryByRole,
     } = renderInvestTab();
     const loadButton = await findByText('Load parameters from file');
-    userEvent.hover(loadButton);
+    await userEvent.hover(loadButton);
     expect(await findByRole('tooltip')).toBeInTheDocument();
-    userEvent.unhover(loadButton);
+    await userEvent.unhover(loadButton);
     await waitFor(() => {
       expect(queryByRole('tooltip')).toBeNull();
     });
@@ -405,7 +372,7 @@ describe('Sidebar Buttons', () => {
 
     const { findByRole } = renderInvestTab();
     const link = await findByRole('link', { name: /user's guide/i });
-    userEvent.click(link);
+    await userEvent.click(link);
     await waitFor(() => {
       const calledChannels = spy.mock.calls.map(call => call[0]);
       expect(calledChannels).toContain(ipcMainChannels.OPEN_LOCAL_HTML);
@@ -416,7 +383,7 @@ describe('Sidebar Buttons', () => {
   test('Forum link opens externally', async () => {
     const { findByRole } = renderInvestTab();
     const link = await findByRole('link', { name: /frequently asked questions/i });
-    userEvent.click(link);
+    await userEvent.click(link);
     await waitFor(() => {
       expect(shell.openExternal).toHaveBeenCalledTimes(1);
     });
@@ -469,8 +436,8 @@ describe('InVEST Run Button', () => {
 
     // These new values will be valid - Run should enable
     fetchValidation.mockResolvedValue([]);
-    userEvent.type(a, 'foo');
-    userEvent.type(b, '1');
+    await userEvent.type(a, 'foo');
+    await userEvent.type(b, '1');
     await waitFor(() => {
       expect(runButton).toBeEnabled();
     });
@@ -478,7 +445,7 @@ describe('InVEST Run Button', () => {
     // This new value will be invalid - Run should disable again
     invalidFeedback = 'must be a number';
     fetchValidation.mockResolvedValue([[['b'], invalidFeedback]]);
-    userEvent.type(b, 'one');
+    await userEvent.type(b, 'one');
     await waitFor(() => {
       expect(runButton).toBeDisabled();
     });

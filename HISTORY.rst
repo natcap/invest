@@ -52,6 +52,10 @@ Unreleased Changes
     * Fixed a bug where sampledata downloads failed silently (and progress bar
       became innacurate) if the Workbench did not have write permission to
       the download location. https://github.com/natcap/invest/issues/1070
+    * The workbench app is now distributed with a valid code signature
+      (`#727 <https://github.com/natcap/invest/issues/727>`_)
+    * Changing the language setting will now cause the app to relaunch
+      (`#1168 <https://github.com/natcap/invest/issues/1168>`_),
 * Forest Carbon
     * The biophysical table is now case-insensitive.
 * HRA
@@ -96,6 +100,22 @@ Unreleased Changes
       set to 0. The old behavior was not well documented and caused some
       confusion when nodata pixels did not line up. It's safer not to fill in
       unknown data. (`#1317 <https://github.com/natcap/invest/issues/1317>`_)
+    * Negative monthly quickflow values will now be set to 0. This is because
+      very small negative values occasionally result from valid data, but they
+      should be interpreted as 0.
+      (`#1318 <https://github.com/natcap/invest/issues/1318>`_)
+    * In the monthly quickflow calculation, QF_im will be set to 0 on any pixel
+      where s_i / a_im > 100. This is done to avoid overflow errors when
+      calculating edge cases where the result would round down to 0 anyway.
+      (`#1318 <https://github.com/natcap/invest/issues/1318>`_)
+* Urban Flood Risk
+    * Fixed a bug where the model incorrectly raised an error if the
+      biophysical table contained a row of all 0s.
+      (`#1123 <https://github.com/natcap/invest/issues/1123>`_)
+* Visitation: Recreation and Tourism
+    * Fixed a bug where overlapping predictor polygons would be double-counted
+      in ``polygon_area_coverage`` and ``polygon_percent_coverage`` calculations.
+      (`#1310 <https://github.com/natcap/invest/issues/1310>`_)
 
 3.13.0 (2023-03-17)
 -------------------

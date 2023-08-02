@@ -4,11 +4,12 @@ import path from 'path';
 import {
   app,
   BrowserWindow,
-  screen,
   nativeTheme,
   Menu,
   ipcMain
 } from 'electron';
+
+import Store from 'electron-store';
 
 import {
   createPythonFlaskProcess,
@@ -71,6 +72,11 @@ export const createWindow = async () => {
   logger.info(`Running invest-workbench version ${pkg.version}`);
   nativeTheme.themeSource = 'light'; // override OS/browser setting
 
+  // read language setting from storage and switch to that language
+  // default to en if no language setting exists
+  const store = new Store();
+  i18n.changeLanguage(store.get('language', 'en'));
+
   splashScreen = new BrowserWindow({
     width: 574, // dims set to match the image in splash.html
     height: 500,
@@ -83,10 +89,14 @@ export const createWindow = async () => {
   const investExe = findInvestBinaries(ELECTRON_DEV_MODE);
   flaskSubprocess = createPythonFlaskProcess(investExe);
   setupDialogs();
+  setupCheckFilePermissions();
   setupCheckFirstRun();
   setupCheckStorageToken();
   setupChangeLanguage();
   setupGetElectronPaths();
+  setupGetNCPUs();
+  setupInvestLogReaderHandler();
+  setupOpenExternalUrl();
   setupRendererLogger();
   await getFlaskIsReady();
 
@@ -106,14 +116,6 @@ export const createWindow = async () => {
       menuTemplate(mainWindow, ELECTRON_DEV_MODE, i18n)
     )
   );
-  // when language changes, rebuild the menu bar in new language
-  i18n.on('languageChanged', (lng) => {
-    Menu.setApplicationMenu(
-      Menu.buildFromTemplate(
-        menuTemplate(mainWindow, ELECTRON_DEV_MODE, i18n)
-      )
-    );
-  });
   mainWindow.loadURL(path.join(BASE_URL, 'index.html'));
 
   mainWindow.once('ready-to-show', () => {
@@ -122,16 +124,7 @@ export const createWindow = async () => {
     mainWindow.show();
   });
 
-  // Open the DevTools.
-  // The timing of this is fussy due a chromium bug. It seems to only
-  // come up if there is an unrelated uncaught exception during page load.
-  // https://bugs.chromium.org/p/chromium/issues/detail?id=1085215
-  // https://github.com/electron/electron/issues/23662
-  mainWindow.webContents.on('did-frame-finish-load', async () => {
-    if (ELECTRON_DEV_MODE) {
-      mainWindow.webContents.openDevTools();
-    }
-    // We use this stdout as a signal in a puppeteer test
+  mainWindow.webContents.on('did-finish-load', () => {
     process.stdout.write('main window loaded');
   });
 
@@ -144,14 +137,21 @@ export const createWindow = async () => {
     mainWindow = null;
   });
 
-  setupCheckFilePermissions();
+  // register listeners that need a reference to the mainWindow or
+  // have callbacks that won't work until the invest server is ready.
+  setupContextMenu(mainWindow);
   setupDownloadHandlers(mainWindow);
   setupInvestRunHandlers(investExe);
-  setupInvestLogReaderHandler();
-  setupContextMenu(mainWindow);
-  setupGetNCPUs();
-  setupOpenExternalUrl();
   setupOpenLocalHtml(mainWindow, ELECTRON_DEV_MODE);
+  if (ELECTRON_DEV_MODE) {
+    // The timing of this is fussy due a chromium bug. It seems to only
+    // come up if there is an unrelated uncaught exception during page load.
+    // https://bugs.chromium.org/p/chromium/issues/detail?id=1085215
+    // https://github.com/electron/electron/issues/23662
+    // Calling this in a 'did-finish-load' listener would make a lot of sense,
+    // but most of the time it doesn't work.
+    mainWindow.webContents.openDevTools();
+  }
   return Promise.resolve(); // lets tests await createWindow(), then assert
 };
 
@@ -177,15 +177,6 @@ export function main() {
   }
 
   app.on('ready', async () => {
-    if (ELECTRON_DEV_MODE) {
-      const {
-        default: installExtension,
-        REACT_DEVELOPER_TOOLS,
-      } = require('electron-devtools-installer');
-      await installExtension(REACT_DEVELOPER_TOOLS, {
-        loadExtensionOptions: { allowFileAccess: true },
-      });
-    }
     createWindow();
   });
   app.on('activate', () => {

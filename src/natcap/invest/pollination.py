@@ -720,6 +720,7 @@ def execute(args):
     pollinator_abundance_task_map = {}
     floral_resources_index_path_map = {}
     floral_resources_index_task_map = {}
+    alpha_kernel_map = {}
     for species in scenario_variables['species_list']:
         # calculate foraging_effectiveness[species]
         # FE(x, s) = sum_j [RA(l(x), j) * fa(s, j)]
@@ -764,11 +765,17 @@ def execute(args):
             intermediate_output_dir, _KERNEL_FILE_PATTERN % (
                 alpha, file_suffix))
 
-        alpha_kernel_raster_task = task_graph.add_task(
-            task_name=f'decay_kernel_raster_{alpha}',
-            func=utils.exponential_decay_kernel_raster,
-            args=(alpha, kernel_path),
-            target_path_list=[kernel_path])
+        # to avoid creating duplicate kernel rasters check to see if an
+        # adequate kernel task has already been submitted
+        try:
+            alpha_kernel_raster_task = alpha_kernel_map[kernel_path]
+        except:
+            alpha_kernel_raster_task = task_graph.add_task(
+                task_name=f'decay_kernel_raster_{alpha}',
+                func=utils.exponential_decay_kernel_raster,
+                args=(alpha, kernel_path),
+                target_path_list=[kernel_path])
+            alpha_kernel_map[kernel_path] = alpha_kernel_raster_task
 
         # convolve FE with alpha_s
         floral_resources_index_path = os.path.join(

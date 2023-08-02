@@ -192,7 +192,7 @@ describe('Arguments form interactions', () => {
     const filepath = 'grilled_cheese.csv';
     let mockDialogData = { filePaths: [filepath] };
     ipcRenderer.invoke.mockResolvedValue(mockDialogData);
-    userEvent.click(await findByRole('button', { name: /browse for/ }));
+    await userEvent.click(await findByRole('button', { name: /browse for/ }));
     await waitFor(() => {
       expect(input).toHaveValue(filepath);
     });
@@ -200,7 +200,7 @@ describe('Arguments form interactions', () => {
     // Browse again, but cancel it and expect the previous value
     mockDialogData = { filePaths: [] }; // empty array is a mocked 'Cancel'
     ipcRenderer.invoke.mockResolvedValue(mockDialogData);
-    userEvent.click(await findByRole('button', { name: /browse for/ }));
+    await userEvent.click(await findByRole('button', { name: /browse for/ }));
     await waitFor(() => {
       expect(input).toHaveValue(filepath);
     });
@@ -218,7 +218,7 @@ describe('Arguments form interactions', () => {
     const btn = await findByRole('button', { name: /browse for/ });
     // Click on a target element nested within the button to make
     // sure the handler still works correctly.
-    userEvent.click(btn.querySelector('svg'));
+    await userEvent.click(btn.querySelector('svg'));
     expect(await findByLabelText(`${spec.args.arg.name}`))
       .toHaveValue(filepath);
   });
@@ -237,7 +237,7 @@ describe('Arguments form interactions', () => {
     expect(input).toHaveClass('is-invalid');
     expect(queryByText(RegExp(VALIDATION_MESSAGE))).toBeNull();
 
-    userEvent.type(input, 'foo');
+    await userEvent.type(input, 'foo');
     await waitFor(() => {
       expect(input).toHaveValue('foo');
       expect(input).toHaveClass('is-invalid');
@@ -246,7 +246,7 @@ describe('Arguments form interactions', () => {
       .toBeInTheDocument();
 
     fetchValidation.mockResolvedValue([]); // now make input valid
-    userEvent.type(input, 'mydir');
+    await userEvent.type(input, 'mydir');
     await waitFor(() => {
       expect(input).toHaveClass('is-valid');
       expect(queryByText(RegExp(VALIDATION_MESSAGE))).toBeNull();
@@ -263,7 +263,7 @@ describe('Arguments form interactions', () => {
     spy.mockClear(); // it was already called once on render
 
     // Fast typing, expect only 1 validation call
-    userEvent.type(input, 'foo', { delay: 0 });
+    await userEvent.type(input, 'foo', { delay: 0 });
     await waitFor(() => {
       expect(spy).toHaveBeenCalledTimes(1);
     }, 500); // debouncedValidate waits for 200ms
@@ -328,10 +328,10 @@ describe('Arguments form interactions', () => {
       .mockImplementation(() => Promise.resolve());
     const spec = baseArgsSpec('directory');
     const { findByText, findByRole } = renderSetupFromSpec(spec, UI_SPEC);
-    userEvent.click(await findByRole('button', { name: /info about/ }));
+    await userEvent.click(await findByRole('button', { name: /info about/ }));
     expect(await findByText(spec.args.arg.about)).toBeInTheDocument();
     const link = await findByRole('link', { name: /user guide/ });
-    userEvent.click(link);
+    await userEvent.click(link);
     await waitFor(() => {
       const calledChannels = spy.mock.calls.map(call => call[0]);
       expect(calledChannels).toContain(ipcMainChannels.OPEN_LOCAL_HTML);
@@ -399,7 +399,7 @@ describe('UI spec functionality', () => {
     });
 
     // Check how the state changes as we click the checkboxes
-    userEvent.click(arg1);
+    await userEvent.click(arg1);
     await waitFor(() => {
       expect(arg2).toBeEnabled();
       expect(arg3).toBeDisabled();
@@ -407,7 +407,7 @@ describe('UI spec functionality', () => {
       expect(arg4).toHaveClass('is-invalid');
     });
 
-    userEvent.click(arg2);
+    await userEvent.click(arg2);
     await waitFor(() => {
       expect(arg2).toBeEnabled();
       expect(arg3).toBeEnabled();
@@ -456,7 +456,7 @@ describe('UI spec functionality', () => {
     expect(option).toBeNull();
 
     // check that the dropdown option appears when the text field gets a value
-    userEvent.type(arg1, 'a vector');
+    await userEvent.type(arg1, 'a vector');
     option = await findByText('Field1'); // will raise an error if not found
   });
 
@@ -587,8 +587,8 @@ describe('Misc form validation stuff', () => {
     const { findByLabelText } = renderSetupFromSpec(spec, uiSpec);
     const vectorInput = await findByLabelText(spec.args.vector.name);
     const rasterInput = await findByLabelText(RegExp(`^${spec.args.raster.name}`));
-    userEvent.type(vectorInput, vectorValue);
-    userEvent.type(rasterInput, rasterValue);
+    await userEvent.type(vectorInput, vectorValue);
+    await userEvent.type(rasterInput, rasterValue);
 
     // Feedback on each input should only include the bounding box
     // of that single input.
