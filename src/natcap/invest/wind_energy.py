@@ -2634,7 +2634,7 @@ def _clip_vector_by_vector(
         # The "clip_vector_path" is always the AOI.
         raise ValueError(
             f"Clipping {base_vector_path} by {clip_vector_path} returned 0"
-            " features. This means the AOI and {base_vector_path} do not"
+            f" features. This means the AOI and {base_vector_path} do not"
             " intersect spatially. Please check that the AOI has spatial"
             " overlap with all input data.")
 
