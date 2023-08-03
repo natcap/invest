@@ -195,12 +195,11 @@ export function main() {
       createWindow();
     }
   });
-  app.on('window-all-closed', async (event) => {
+  app.on('window-all-closed', (event) => {
     // On OS X it is common for applications and their menu bar
     // to stay active until the user quits explicitly with Cmd + Q
-    event.preventDefault();
-    if (process.platform !== 'darwin') {
-      app.quit();
+    if (process.platform === 'darwin') {
+      event.preventDefault();
     }
   });
 
