@@ -1,15 +1,8 @@
-import fs from 'fs';
-import path from 'path';
-import events from 'events';
-import { spawn, exec } from 'child_process';
-import Stream from 'stream';
-import fetch from 'node-fetch';
 import React from 'react';
 import { ipcRenderer } from 'electron';
 import {
   render, waitFor, within
 } from '@testing-library/react';
-import { act } from 'react-dom/test-utils';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 
@@ -23,11 +16,11 @@ import {
 } from '../../src/renderer/server_requests';
 import InvestJob from '../../src/renderer/InvestJob';
 import {
-  getSettingsValue,
-  saveSettingsStore,
-  clearSettingsStore,
-} from '../../src/renderer/components/SettingsModal/SettingsStorage';
+  settingsStore,
+  setupSettingsHandlers
+} from '../../src/main/settingsStore';
 import { ipcMainChannels } from '../../src/main/ipcMainChannels';
+import { removeIpcMainListeners } from '../../src/main/main';
 import { mockUISpec } from './utils';
 // It's quite a pain to dynamically mock a const from a module,
 // here we do it by importing as another object, then
@@ -398,26 +391,29 @@ describe('InVEST global settings: dialog interactions', () => {
   const tgLoggingLabelText = 'Taskgraph logging threshold';
   const languageLabelText = 'Language';
 
+  beforeAll(() => {
+    setupSettingsHandlers();
+  });
+
+  afterAll(() => {
+    removeIpcMainListeners();
+  });
+
   beforeEach(async () => {
     getInvestModelNames.mockResolvedValue({});
     getSupportedLanguages.mockResolvedValue({ en: 'english', es: 'spanish' });
-    ipcRenderer.invoke.mockImplementation(() => Promise.resolve());
-  });
-
-  afterEach(async () => {
-    await clearSettingsStore();
   });
 
   test('Invest settings save on change', async () => {
     const nWorkersLabel = 'Threaded task management (0)';
-    const nWorkersValue = '0';
+    const nWorkersValue = 0;
     const loggingLevel = 'DEBUG';
     const tgLoggingLevel = 'DEBUG';
     const languageValue = 'es';
     const spyInvoke = jest.spyOn(ipcRenderer, 'invoke');
 
     const {
-      getByText, getByRole, getByLabelText, findByRole, findByText,
+      getByText, getByLabelText, findByRole, findByText,
     } = render(
       <App />
     );
@@ -428,74 +424,23 @@ describe('InVEST global settings: dialog interactions', () => {
     const tgLoggingInput = getByLabelText(tgLoggingLabelText);
 
     await userEvent.selectOptions(nWorkersInput, [getByText(nWorkersLabel)]);
-    await waitFor(() => { expect(nWorkersInput).toHaveValue(nWorkersValue); });
+    await waitFor(() => { expect(nWorkersInput).toHaveValue(nWorkersValue.toString()); });
     await userEvent.selectOptions(loggingInput, [loggingLevel]);
     await waitFor(() => { expect(loggingInput).toHaveValue(loggingLevel); });
     await userEvent.selectOptions(tgLoggingInput, [tgLoggingLevel]);
     await waitFor(() => { expect(tgLoggingInput).toHaveValue(tgLoggingLevel); });
-    await userEvent.click(getByRole('button', { name: 'close settings' }));
 
-    // Check values were saved in app and in store
-    await userEvent.click(await findByRole('button', { name: 'settings' }));
+    // Check values were saved
+    expect(settingsStore.get('nWorkers')).toBe(nWorkersValue);
+    expect(settingsStore.get('loggingLevel')).toBe(loggingLevel);
+    expect(settingsStore.get('taskgraphLoggingLevel')).toBe(tgLoggingLevel);
+
+    // language is handled differently; changing it triggers electron to restart
     const languageInput = getByLabelText(languageLabelText, { exact: false });
-    await waitFor(() => {
-      expect(nWorkersInput).toHaveValue(nWorkersValue);
-      expect(loggingInput).toHaveValue(loggingLevel);
-      expect(tgLoggingInput).toHaveValue(tgLoggingLevel);
-      expect(languageInput).toHaveValue('en');
-    });
-    expect(await getSettingsValue('nWorkers')).toBe(nWorkersValue);
-    expect(await getSettingsValue('loggingLevel')).toBe(loggingLevel);
-    expect(await getSettingsValue('taskgraphLoggingLevel')).toBe(tgLoggingLevel);
-
     await userEvent.selectOptions(languageInput, [languageValue]);
     await userEvent.click(await findByText('Change to spanish'));
-    expect(spyInvoke).toHaveBeenCalledWith(ipcMainChannels.CHANGE_LANGUAGE, languageValue);
-  });
-
-  test('Load invest settings from storage and test Reset', async () => {
-    const defaultSettings = {
-      nWorkers: '-1',
-      loggingLevel: 'INFO',
-      taskgraphLoggingLevel: 'ERROR',
-      language: 'en',
-    };
-    const expectedSettings = {
-      nWorkers: '0',
-      loggingLevel: 'ERROR',
-      taskgraphLoggingLevel: 'INFO',
-      language: 'en',
-    };
-
-    await saveSettingsStore(expectedSettings);
-
-    const {
-      getByText, getByLabelText, findByRole,
-    } = render(<App />);
-
-    await userEvent.click(await findByRole('button', { name: 'settings' }));
-    const nWorkersInput = getByLabelText(nWorkersLabelText, { exact: false });
-    const loggingInput = getByLabelText(loggingLabelText);
-    const tgLoggingInput = getByLabelText(tgLoggingLabelText);
-    const languageInput = getByLabelText(languageLabelText, { exact: false });
-
-    // Test that the invest settings were loaded in from store.
-    await waitFor(() => {
-      expect(nWorkersInput).toHaveValue(expectedSettings.nWorkers);
-      expect(loggingInput).toHaveValue(expectedSettings.loggingLevel);
-      expect(tgLoggingInput).toHaveValue(expectedSettings.tgLoggingLevel);
-      expect(languageInput).toHaveValue(expectedSettings.language);
-    });
-
-    // Test Reset sets values to default
-    await userEvent.click(getByText('Reset to Defaults'));
-    await waitFor(() => {
-      expect(nWorkersInput).toHaveValue(defaultSettings.nWorkers);
-      expect(loggingInput).toHaveValue(defaultSettings.loggingLevel);
-      expect(tgLoggingInput).toHaveValue(defaultSettings.tgLoggingLevel);
-      // should NOT change the language setting - it's handled differently
-      expect(languageInput).toHaveValue(expectedSettings.language);
-    });
+    expect(spyInvoke)
+      .toHaveBeenCalledWith(ipcMainChannels.CHANGE_LANGUAGE, languageValue);
   });
 
   test('Access sampledata download Modal from settings', async () => {

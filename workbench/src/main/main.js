@@ -9,8 +9,6 @@ import {
   ipcMain
 } from 'electron';
 
-import Store from 'electron-store';
-
 import {
   createPythonFlaskProcess,
   getFlaskIsReady,
@@ -30,7 +28,7 @@ import {
 import setupGetNCPUs from './setupGetNCPUs';
 import setupOpenExternalUrl from './setupOpenExternalUrl';
 import setupOpenLocalHtml from './setupOpenLocalHtml';
-import setupChangeLanguage from './setupChangeLanguage';
+import { settingsStore, setupSettingsHandlers } from './settingsStore';
 import setupGetElectronPaths from './setupGetElectronPaths';
 import setupRendererLogger from './setupRendererLogger';
 import { ipcMainChannels } from './ipcMainChannels';
@@ -38,8 +36,8 @@ import menuTemplate from './menubar';
 import ELECTRON_DEV_MODE from './isDevMode';
 import BASE_URL from './baseUrl';
 import { getLogger } from './logger';
-import pkg from '../../package.json';
 import i18n from './i18n/i18n';
+import pkg from '../../package.json';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
@@ -72,10 +70,7 @@ export const createWindow = async () => {
   logger.info(`Running invest-workbench version ${pkg.version}`);
   nativeTheme.themeSource = 'light'; // override OS/browser setting
 
-  // read language setting from storage and switch to that language
-  // default to en if no language setting exists
-  const store = new Store();
-  i18n.changeLanguage(store.get('language', 'en'));
+  i18n.changeLanguage(settingsStore.get('language'));
 
   splashScreen = new BrowserWindow({
     width: 574, // dims set to match the image in splash.html
@@ -92,7 +87,7 @@ export const createWindow = async () => {
   setupCheckFilePermissions();
   setupCheckFirstRun();
   setupCheckStorageToken();
-  setupChangeLanguage();
+  setupSettingsHandlers();
   setupGetElectronPaths();
   setupGetNCPUs();
   setupInvestLogReaderHandler();
