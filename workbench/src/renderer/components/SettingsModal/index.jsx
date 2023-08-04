@@ -160,7 +160,6 @@ class SettingsModal extends React.Component {
                       id="language-select"
                       as="select"
                       name="language"
-                      onChange={this.handleChange}
                       value={window.Workbench.LANGUAGE}
                       onChange={
                         (event) => this.setState({
