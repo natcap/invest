@@ -8,7 +8,7 @@ import { getLogger } from './logger';
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
 export const defaults = {
-  nWorkers: '-1',
+  nWorkers: -1,
   taskgraphLoggingLevel: 'INFO',
   loggingLevel: 'INFO',
   language: 'en',
@@ -18,7 +18,7 @@ export const schema = {
   type: 'object',
   properties: {
     nWorkers: {
-      type: 'string',
+      type: 'number',
     },
     taskgraphLoggingLevel: {
       enum: ['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG'],
@@ -43,13 +43,26 @@ export const schema = {
  * @returns {Store} an instance of an electron-store Store
  */
 export function initStore(data = defaults) {
-  const ajv = new Ajv();
+  const ajv = new Ajv({ allErrors: true });
   const validate = ajv.compile(schema);
   const store = new Store({ defaults: data });
   const valid = validate(store.store);
   if (!valid) {
     validate.errors.forEach((e) => {
-      store.set(e.keyword, defaults[e.keyword]);
+      logger.debug(e);
+      let property;
+      if (e.instancePath) {
+        property = e.instancePath.split('/').pop();
+      } else if (e.keyword === 'required') {
+        property = e.params.missingProperty;
+      } else {
+        // something is invalid that we're not prepared to fix
+        // so just reset the whole store to defaults.
+        logger.debug(e);
+        store.reset();
+      }
+      logger.debug(`resetting value for setting ${property}`);
+      store.set(property, defaults[property]);
     });
   }
   return store;

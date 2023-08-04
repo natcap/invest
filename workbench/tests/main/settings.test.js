@@ -1,9 +1,7 @@
 import {
   defaults,
-  schema,
   settingsStore,
   initStore,
-  setupSettingsHandlers
 } from '../../src/main/settingsStore';
 
 afterEach(() => {
@@ -16,8 +14,8 @@ test('an empty store initializes to defaults', () => {
 });
 
 test('invalid items are reset, valid items are unchanged', () => {
-  const data = defaults;
-  data.nWorkers = '5'; // valid, but not default
+  const data = { ...defaults };
+  data.nWorkers = 5; // valid, but not default
   data.taskgraphLoggingLevel = 'ERROR'; // valid, but not default
   data.loggingLevel = 'FOO'; // wrong value
   data.language = 1; // wrong type
@@ -34,10 +32,21 @@ test('invalid items are reset, valid items are unchanged', () => {
 });
 
 test('properties not present in schema are untouched during validation', () => {
-  const data = defaults;
+  const data = { ...defaults };
   data.foo = 'bar';
 
   const store = initStore(data);
 
   expect(store.get('foo')).toEqual(data.foo);
+});
+
+test('missing properties are added with default value', () => {
+  const data = { ...defaults };
+  delete data.loggingLevel;
+  delete data.language;
+
+  const store = initStore(data);
+
+  expect(store.get('loggingLevel')).toEqual(defaults.loggingLevel);
+  expect(store.get('language')).toEqual(defaults.language);
 });
