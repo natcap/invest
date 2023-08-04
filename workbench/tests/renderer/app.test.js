@@ -406,7 +406,7 @@ describe('InVEST global settings: dialog interactions', () => {
 
   test('Invest settings save on change', async () => {
     const nWorkersLabel = 'Threaded task management (0)';
-    const nWorkersValue = '0';
+    const nWorkersValue = 0;
     const loggingLevel = 'DEBUG';
     const tgLoggingLevel = 'DEBUG';
     const languageValue = 'es';
@@ -424,7 +424,7 @@ describe('InVEST global settings: dialog interactions', () => {
     const tgLoggingInput = getByLabelText(tgLoggingLabelText);
 
     await userEvent.selectOptions(nWorkersInput, [getByText(nWorkersLabel)]);
-    await waitFor(() => { expect(nWorkersInput).toHaveValue(nWorkersValue); });
+    await waitFor(() => { expect(nWorkersInput).toHaveValue(nWorkersValue.toString()); });
     await userEvent.selectOptions(loggingInput, [loggingLevel]);
     await waitFor(() => { expect(loggingInput).toHaveValue(loggingLevel); });
     await userEvent.selectOptions(tgLoggingInput, [tgLoggingLevel]);
