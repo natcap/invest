@@ -37,6 +37,7 @@ class SettingsModal extends React.Component {
     this.handleShow = this.handleShow.bind(this);
     this.handleClose = this.handleClose.bind(this);
     this.handleChange = this.handleChange.bind(this);
+    this.handleChangeNumber = this.handleChangeNumber.bind(this);
     this.loadSettings = this.loadSettings.bind(this);
     this.handleChangeLanguage = this.handleChangeLanguage.bind(this);
     this.switchToDownloadModal = this.switchToDownloadModal.bind(this);
@@ -64,6 +65,13 @@ class SettingsModal extends React.Component {
     const { name, value } = event.currentTarget;
     this.setState({ [name]: value });
     ipcRenderer.send(ipcMainChannels.SET_SETTING, name, value);
+  }
+
+  handleChangeNumber(event) {
+    const { name, value } = event.currentTarget;
+    const numeral = Number(value);
+    this.setState({ [name]: numeral });
+    ipcRenderer.send(ipcMainChannels.SET_SETTING, name, numeral);
   }
 
   async loadSettings() {
@@ -228,7 +236,7 @@ class SettingsModal extends React.Component {
                         name="nWorkers"
                         type="text"
                         value={nWorkers}
-                        onChange={this.handleChange}
+                        onChange={this.handleChangeNumber}
                       >
                         {nWorkersOptions.map(
                           (opt) => <option value={opt[0]} key={opt[0]}>{opt[1]}</option>
