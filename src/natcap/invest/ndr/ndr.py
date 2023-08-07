@@ -1149,11 +1149,12 @@ def _normalize_raster(base_raster_path_band, target_normalized_raster_path):
     value_mean = value_sum
     if value_count > 0.0:
         value_mean /= value_count
+    target_nodata = float(numpy.finfo(numpy.float32).min)
 
     def _normalize_raster_op(array):
         """Divide values by mean."""
         result = numpy.empty(array.shape, dtype=numpy.float32)
-        result[:] = numpy.float32(base_nodata)
+        result[:] = target_nodata
 
         valid_mask = slice(None)
         if base_nodata is not None:
@@ -1163,11 +1164,6 @@ def _normalize_raster(base_raster_path_band, target_normalized_raster_path):
             result[valid_mask] /= value_mean
         return result
 
-    # It's possible for base_nodata to extend outside what can be represented
-    # in a float32, yet GDAL expects a python float.  Casting to numpy.float32
-    # and back to a python float allows for the nodata value to reflect the
-    # actual nodata pixel values.
-    target_nodata = float(numpy.float32(base_nodata))
     pygeoprocessing.raster_calculator(
         [base_raster_path_band], _normalize_raster_op,
         target_normalized_raster_path, gdal.GDT_Float32,
