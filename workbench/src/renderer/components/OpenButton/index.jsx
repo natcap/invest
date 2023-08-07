@@ -11,6 +11,7 @@ import { fetchDatastackFromFile } from '../../server_requests';
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
 const { ipcRenderer } = window.Workbench.electron;
+const { logger } = window.Workbench;
 
 /**
  * Render a button that loads args from a datastack, parameterset, or logfile.
@@ -25,7 +26,13 @@ class OpenButton extends React.Component {
   async browseFile() {
     const data = await ipcRenderer.invoke(ipcMainChannels.SHOW_OPEN_DIALOG);
     if (!data.canceled) {
-      const datastack = await fetchDatastackFromFile(data.filePaths[0]);
+      let datastack;
+      try {
+        datastack = await fetchDatastackFromFile(data.filePaths[0]);
+      } catch (error) {
+        logger.error(error);
+        return;
+      }
       const job = new InvestJob({
         modelRunName: datastack.model_run_name,
         modelHumanName: datastack.model_human_name,

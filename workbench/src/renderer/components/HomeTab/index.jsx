@@ -112,7 +112,7 @@ function RecentInvestJobs(props) {
   const { recentJobs, openInvestModel } = props;
   const handleClick = (jobMetadata) => {
     openInvestModel(new InvestJob(jobMetadata));
-  }
+  };
   const { t, i18n } = useTranslation();
 
   // Buttons to load each recently saved state
