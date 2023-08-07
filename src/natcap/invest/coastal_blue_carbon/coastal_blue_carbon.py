@@ -117,6 +117,9 @@ INVALID_ANALYSIS_YEAR_MSG = gettext(
     "({latest_year})")
 INVALID_SNAPSHOT_RASTER_MSG = gettext(
     "Raster for snapshot {snapshot_year} could not be validated.")
+INVALID_TRANSITION_VALUES_MSG = gettext(
+    "The transition table expects values of {model_transitions} but found "
+    "values of {transition_values}.")
 
 POOL_SOIL = 'soil'
 POOL_BIOMASS = 'biomass'
@@ -2298,5 +2301,29 @@ def validate(args, limit_to=None):
                     INVALID_ANALYSIS_YEAR_MSG.format(
                         analysis_year=args['analysis_year'],
                         latest_year=max(snapshots.keys()))))
+
+    # check for invalid options in the translation table
+    if ("landcover_transitions_table" not in invalid_keys and
+            "landcover_transitions_table" in sufficient_keys):
+        transition_options = list(
+            MODEL_SPEC['args']['landcover_transitions_table']['columns']['[LULC CODE]']['options'].keys())
+        # NaNs are replaced with an empty string in the utils call, so add
+        # to possible transition values
+        transition_options.append('')
+        transitions_df = utils.read_csv_to_dataframe(
+            args['landcover_transitions_table'], index_col='lulc-class',
+            convert_cols_to_lower=False, convert_vals_to_lower=False)
+        # the util call keeps index as a column, but we want to exclude it
+        transitions_df.drop('lulc-class', axis=1, inplace=True)
+        if ((~transitions_df.isin(transition_options)).any(axis=None)):
+            transition_numpy_mask = (~transitions_df.isin(transition_options)).values
+            transition_numpy_values = transitions_df.to_numpy()
+            bad_transition_values = list(
+                numpy.unique(transition_numpy_values[transition_numpy_mask]))
+            validation_warnings.append((
+                ['landcover_transitions_table'],
+                INVALID_TRANSITION_VALUES_MSG.format(
+                    model_transitions=(transition_options),
+                    transition_values=bad_transition_values)))
 
     return validation_warnings
