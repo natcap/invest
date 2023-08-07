@@ -139,8 +139,7 @@ afterEach(async () => {
   } catch (error) {
     console.log(BINARY_PATH);
     console.error(error);
-  } finally {
-    ELECTRON_PROCESS.removeAllListeners();
+    // Normally BROWSER.close() will kill this process
     ELECTRON_PROCESS.kill();
   }
 });
