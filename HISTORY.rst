@@ -55,7 +55,11 @@ Unreleased Changes
     * The workbench app is now distributed with a valid code signature
       (`#727 <https://github.com/natcap/invest/issues/727>`_)
     * Changing the language setting will now cause the app to relaunch
-      (`#1168 <https://github.com/natcap/invest/issues/1168>`_),
+      (`#1168 <https://github.com/natcap/invest/issues/1168>`_)
+* Coastal Blue Carbon
+    * Added valuation for the transition table, raising a validation error if
+      unexpected values are encoutnered.
+      (`#729 <https://github.com/natcap/invest/issues/729>`_)
 * Forest Carbon
     * The biophysical table is now case-insensitive.
 * HRA
