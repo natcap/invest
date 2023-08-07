@@ -44,7 +44,8 @@ class CLIHeadlessTests(unittest.TestCase):
             os.path.dirname(__file__), '..', 'data', 'invest-test-data',
             'coastal_blue_carbon', 'cbc_galveston_bay.invs.json')
 
-        datastack_dict = json.load(open(parameter_set_path))
+        with open(parameter_set_path) as datastack_file:
+            datastack_dict = json.load(datastack_file)
         datastack_dict['args']['workspace_dir'] = self.workspace_dir
         new_parameter_set_path = os.path.join(
             self.workspace_dir, 'paramset.invs.json')
@@ -58,8 +59,7 @@ class CLIHeadlessTests(unittest.TestCase):
             cli.main([
                 'run',
                 'coastal_blue_carbon',  # uses an exact modelname
-                '--datastack', new_parameter_set_path,
-                '--headless',  # unused, but recognized for backwards compat
+                '--datastack', new_parameter_set_path
             ])
         patched_model.assert_called_once()
 
