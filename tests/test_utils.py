@@ -575,13 +575,15 @@ class PrepareWorkspaceTests(unittest.TestCase):
         from natcap.invest import utils
 
         workspace = os.path.join(self.workspace, 'foo')
-        try:
+        with warnings.catch_warnings():
+            # restore the warnings filter to default, overriding any
+            # global pytest filter. this preserves the warnings so that
+            # they may be redirected to the log.
+            warnings.simplefilter('default')
             with utils.prepare_workspace(workspace,
                                          'some_model'):
                 warnings.warn('deprecated', UserWarning)
                 gdal.Open('file should not exist')
-        except Warning as warning_raised:
-            self.fail('Warning was not captured: %s' % warning_raised)
 
         self.assertTrue(os.path.exists(workspace))
         logfile_glob = glob.glob(os.path.join(workspace, '*.txt'))
