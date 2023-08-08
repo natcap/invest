@@ -26,6 +26,7 @@ import { argsDictFromObject } from '../../utils';
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
 const { ipcRenderer } = window.Workbench.electron;
+const { logger } = window.Workbench;
 
 /** Initialize values of InVEST args based on the model's UI Spec.
  *
@@ -274,8 +275,20 @@ class SetupTab extends React.Component {
   }
 
   async loadParametersFromFile(filepath) {
-    const datastack = await fetchDatastackFromFile(filepath);
     const { pyModuleName, switchTabs, t } = this.props;
+    let datastack;
+    try {
+      datastack = await fetchDatastackFromFile(filepath);
+    } catch (error) {
+      logger.error(error);
+      alert( // eslint-disable-line no-alert
+        t(
+          'No InVEST model data can be parsed from the file:\n {{filepath}}',
+          { filepath: filepath }
+        )
+      );
+      return;
+    }
     if (datastack.module_name === pyModuleName) {
       this.batchUpdateArgs(datastack.args);
       switchTabs('setup');

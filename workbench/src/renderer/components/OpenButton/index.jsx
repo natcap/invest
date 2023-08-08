@@ -24,6 +24,7 @@ class OpenButton extends React.Component {
   }
 
   async browseFile() {
+    const { t } = this.props;
     const data = await ipcRenderer.invoke(ipcMainChannels.SHOW_OPEN_DIALOG);
     if (!data.canceled) {
       let datastack;
@@ -31,6 +32,9 @@ class OpenButton extends React.Component {
         datastack = await fetchDatastackFromFile(data.filePaths[0]);
       } catch (error) {
         logger.error(error);
+        alert(
+          `No InVEST model data can be parsed from the file:\n${data.filePaths[0]}`
+        );
         return;
       }
       const job = new InvestJob({
