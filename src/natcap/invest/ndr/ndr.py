@@ -315,6 +315,10 @@ MODEL_SPEC = {
                     "about": "NDR values for phosphorus",
                     "bands": {1: {"type": "ratio"}}
                 },
+                "masked_runoff_proxy.tif": {
+                    "about": "Runoff proxy input masked to exclude pixels outside the watershed",
+                    "bands": {1: {"type": "number", "units": u.none}}
+                },
                 "runoff_proxy_index.tif": {
                     "about": "Normalized values for the Runoff Proxy input to the model",
                     "bands": {1: {"type": "ratio"}}
@@ -441,6 +445,7 @@ _INTERMEDIATE_BASE_FILES = {
     'modified_load_p_path': 'modified_load_p.tif',
     'ndr_n_path': 'ndr_n.tif',
     'ndr_p_path': 'ndr_p.tif',
+    'masked_runoff_proxy_path': 'masked_runoff_proxy.tif',
     'runoff_proxy_index_path': 'runoff_proxy_index.tif',
     's_accumulation_path': 's_accumulation.tif',
     's_bar_path': 's_bar.tif',
@@ -653,6 +658,33 @@ def execute(args):
         target_path_list=aligned_raster_list,
         task_name='align rasters')
 
+    def assign_nodata(raster_path, band):
+        raster = gdal.Open(raster_path, gdal.GA_Update)
+        raster.GetRasterBand(band).SetNoDataValue(_TARGET_NODATA)
+        raster = None
+
+    mask_runoff_dependent_task = align_raster_task
+    if pygeoprocessing.get_raster_info(
+            f_reg['aligned_runoff_proxy_path'])['nodata'][0] is None:
+        mask_runoff_dependent_task = task_graph.add_task(
+            func=assign_nodata,
+            kwargs=dict(
+                raster_path=f_reg['aligned_runoff_proxy_path'],
+                band=1),
+            dependent_task_list=[align_raster_task],
+            target_path_list=[f_reg['aligned_runoff_proxy_path']],
+            task_name='assign nodata value to runoff proxy raster')
+
+    mask_runoff_proxy_task = task_graph.add_task(
+        func=pygeoprocessing.mask_raster,
+        kwargs={
+            'base_raster_path_band': (f_reg['aligned_runoff_proxy_path'], 1),
+            'mask_vector_path': args['watersheds_path'],
+            'target_mask_raster_path': f_reg['masked_runoff_proxy_path']},
+        dependent_task_list=[mask_runoff_dependent_task],
+        target_path_list=[f_reg['masked_runoff_proxy_path']],
+        task_name='mask runoff proxy raster')
+
     fill_pits_task = task_graph.add_task(
         func=pygeoprocessing.routing.fill_pits,
         args=(
@@ -707,7 +739,7 @@ def execute(args):
 
     runoff_proxy_index_task = task_graph.add_task(
         func=_normalize_raster,
-        args=((f_reg['aligned_runoff_proxy_path'], 1),
+        args=((f_reg['masked_runoff_proxy_path'], 1),
               f_reg['runoff_proxy_index_path']),
         target_path_list=[f_reg['runoff_proxy_index_path']],
         dependent_task_list=[align_raster_task],
