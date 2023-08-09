@@ -200,7 +200,6 @@ export function main() {
   app.on('before-quit', async (event) => {
     // prevent quitting until after we're done with cleanup,
     // then programatically quit
-    console.log('before-quit');
     forceQuit = true;
     if (shuttingDown) { return; }
     event.preventDefault();
