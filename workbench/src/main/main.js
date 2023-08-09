@@ -195,18 +195,12 @@ export function main() {
       createWindow();
     }
   });
-  app.on('window-all-closed', (event) => {
-    // On OS X it is common for applications and their menu bar
-    // to stay active until the user quits explicitly with Cmd + Q
-    if (process.platform === 'darwin') {
-      event.preventDefault();
-    }
-  });
 
   let shuttingDown = false;
   app.on('before-quit', async (event) => {
     // prevent quitting until after we're done with cleanup,
     // then programatically quit
+    console.log('before-quit');
     forceQuit = true;
     if (shuttingDown) { return; }
     event.preventDefault();
