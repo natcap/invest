@@ -651,23 +651,15 @@ def execute(args):
             base_raster_list, aligned_raster_list,
             ['near']*len(base_raster_list), dem_info['pixel_size'],
             'intersection'),
-        kwargs={
-            'base_vector_path_list': [args['watersheds_path']],
-            'vector_mask_options': {
-                'mask_vector_path': args['watersheds_path']}},
+        kwargs={'base_vector_path_list': [args['watersheds_path']]},
         target_path_list=aligned_raster_list,
         task_name='align rasters')
-
-    def assign_nodata(raster_path, band):
-        raster = gdal.Open(raster_path, gdal.GA_Update)
-        raster.GetRasterBand(band).SetNoDataValue(_TARGET_NODATA)
-        raster = None
 
     mask_runoff_dependent_task = align_raster_task
     if pygeoprocessing.get_raster_info(
             f_reg['aligned_runoff_proxy_path'])['nodata'][0] is None:
         mask_runoff_dependent_task = task_graph.add_task(
-            func=assign_nodata,
+            func=_assign_nodata,
             kwargs=dict(
                 raster_path=f_reg['aligned_runoff_proxy_path'],
                 band=1),
@@ -1026,6 +1018,11 @@ def execute(args):
     LOGGER.info(r' ||   \\,-.|||_   //   \\_  ')
     LOGGER.info(r' (_")  (_/(__)_) (__)  (__) ')
 
+
+def _assign_nodata(raster_path, band):
+    raster = gdal.Open(raster_path, gdal.GA_Update)
+    raster.GetRasterBand(band).SetNoDataValue(_TARGET_NODATA)
+    raster = None
 
 def _slope_proportion_and_threshold(slope_path, target_threshold_slope_path):
     """Rescale slope to proportion and threshold to between 0.005 and 1.0.
