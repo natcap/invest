@@ -268,7 +268,7 @@ describe('Various ways to open and close InVEST models', () => {
 
 describe('Display recently executed InVEST jobs on Home tab', () => {
   beforeEach(() => {
-    getInvestModelNames.mockResolvedValue({});
+    getInvestModelNames.mockResolvedValue(MOCK_INVEST_LIST);
   });
 
   afterEach(async () => {
@@ -277,7 +277,7 @@ describe('Display recently executed InVEST jobs on Home tab', () => {
 
   test('Recent Jobs: each has a button', async () => {
     const job1 = new InvestJob({
-      modelRunName: 'carbon',
+      modelRunName: MOCK_MODEL_RUN_NAME,
       modelHumanName: 'Carbon Sequestration',
       argsValues: {
         workspace_dir: 'work1',
@@ -286,7 +286,7 @@ describe('Display recently executed InVEST jobs on Home tab', () => {
     });
     await InvestJob.saveJob(job1);
     const job2 = new InvestJob({
-      modelRunName: 'sdr',
+      modelRunName: MOCK_MODEL_RUN_NAME,
       modelHumanName: 'Sediment Ratio Delivery',
       argsValues: {
         workspace_dir: 'work2',
@@ -328,7 +328,7 @@ describe('Display recently executed InVEST jobs on Home tab', () => {
 
   test('Recent Jobs: a job with incomplete data is skipped', async () => {
     const job1 = new InvestJob({
-      modelRunName: 'carbon',
+      modelRunName: MOCK_MODEL_RUN_NAME,
       modelHumanName: 'invest A',
       argsValues: {
         workspace_dir: 'dir',
@@ -337,7 +337,7 @@ describe('Display recently executed InVEST jobs on Home tab', () => {
     });
     const job2 = new InvestJob({
       // argsValues is missing
-      modelRunName: 'sdr',
+      modelRunName: MOCK_MODEL_RUN_NAME,
       modelHumanName: 'invest B',
       status: 'success',
     });
@@ -348,6 +348,23 @@ describe('Display recently executed InVEST jobs on Home tab', () => {
 
     expect(await findByText(job1.modelHumanName)).toBeInTheDocument();
     expect(queryByText(job2.modelHumanName)).toBeNull();
+  });
+
+  test('Recent Jobs: a job from a deprecated model is not displayed', async () => {
+    const job1 = new InvestJob({
+      modelRunName: 'does not exist',
+      modelHumanName: 'invest A',
+      argsValues: {
+        workspace_dir: 'dir',
+      },
+      status: 'success',
+    });
+    await InvestJob.saveJob(job1);
+    const { findByText, queryByText } = render(<App />);
+
+    expect(queryByText(job1.modelHumanName)).toBeNull();
+    expect(await findByText(/Set up a model from a sample datastack file/))
+      .toBeInTheDocument();
   });
 
   test('Recent Jobs: placeholder if there are no recent jobs', async () => {
@@ -361,7 +378,7 @@ describe('Display recently executed InVEST jobs on Home tab', () => {
 
   test('Recent Jobs: cleared by button', async () => {
     const job1 = new InvestJob({
-      modelRunName: 'carbon',
+      modelRunName: MOCK_MODEL_RUN_NAME,
       modelHumanName: 'Carbon Sequestration',
       argsValues: {
         workspace_dir: 'work1',

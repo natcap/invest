@@ -54,10 +54,14 @@ export default class App extends React.Component {
   /** Initialize the list of invest models, recent invest jobs, etc. */
   async componentDidMount() {
     const investList = await getInvestModelNames();
-    const recentJobs = await InvestJob.getJobStore();
+    let recentJobs = await InvestJob.getJobStore();
     this.setState({
       investList: investList,
-      recentJobs: recentJobs,
+      recentJobs: recentJobs.filter((job) => (
+        Object.values(investList)
+          .map((m) => m.model_name)
+          .includes(job.modelRunName)
+      )),
       showDownloadModal: this.props.isFirstRun,
     });
     await i18n.changeLanguage(window.Workbench.LANGUAGE);
