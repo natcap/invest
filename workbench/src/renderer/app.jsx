@@ -220,7 +220,17 @@ export default class App extends React.Component {
             key={id}
             className={id === activeTab ? 'active' : ''}
           >
-            <Nav.Link eventKey={id}>
+            <Nav.Link
+              eventKey={id}
+              onAuxClick={(event) => {
+                event.stopPropagation();
+                event.preventDefault();
+                if (event.button === 1) {
+                  // middle mouse button clicked, close tab
+                  this.closeInvestModel(id);
+                }
+              }}
+            >
               {statusSymbol}
               {` ${job.modelHumanName}`}
             </Nav.Link>
