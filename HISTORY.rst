@@ -59,6 +59,9 @@ Unreleased Changes
     * Closing the main window will now close any user's guide windows that are
       open. Fixed a bug where the app could not be reopened after closing.
       (`#1258 <https://github.com/natcap/invest/issues/1258>`_)
+    * Middle clicking an InVEST model tab was opening a blank window. Now
+      middle clicking will close that tab as expected.
+      (`#1261 <https://github.com/natcap/invest/issues/1261>`_)
 * Forest Carbon
     * The biophysical table is now case-insensitive.
 * HRA
