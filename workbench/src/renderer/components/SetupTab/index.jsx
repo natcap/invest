@@ -55,7 +55,7 @@ function initializeArgValues(argsSpec, uiSpec, argsDict) {
     if (argsSpec[argkey].type === 'boolean') {
       value = argsDict[argkey] || false;
     } else if (argsSpec[argkey].type === 'option_string') {
-      if  (argsDict[argkey]) {
+      if (argsDict[argkey]) {
         value = argsDict[argkey];
       } else { // default to first
         if (Array.isArray(argsSpec[argkey].options)) {
