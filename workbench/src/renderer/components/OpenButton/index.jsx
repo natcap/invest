@@ -33,8 +33,10 @@ class OpenButton extends React.Component {
       } catch (error) {
         logger.error(error);
         alert(
-          'No InVEST model data can be parsed from the file:\n {{filepath}}',
-          { filepath: data.filePaths[0] }
+          t(
+            'No InVEST model data can be parsed from the file:\n {{filepath}}',
+            { filepath: data.filePaths[0] }
+          )
         );
         return;
       }
