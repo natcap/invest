@@ -1,4 +1,4 @@
-import { spawn, exec } from 'child_process';
+import { spawn, execSync } from 'child_process';
 
 import fetch from 'node-fetch';
 
@@ -88,26 +88,12 @@ export async function shutdownPythonProcess(subprocess) {
       subprocess.kill();
     } else {
       const { pid } = subprocess;
-      exec(`taskkill /pid ${pid} /t /f`);
+      execSync(`taskkill /pid ${pid} /t /f`);
     }
   } catch (error) {
     // if the process was already killed by some other means
     logger.debug(error);
+  } finally {
+    Promise.resolve();
   }
-
-  // If we return too quickly, it seems the electron app is allowed
-  // to quit before the subprocess is killed, and the subprocess remains
-  // open. Here we poll a flask endpoint and resolve only when it
-  // gives ECONNREFUSED.
-  return fetch(`${HOSTNAME}:${process.env.PORT}/ready`, {
-    method: 'get',
-  })
-    .then(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      return shutdownPythonProcess(subprocess);
-    })
-    .catch(() => {
-      logger.debug('flask server is closed');
-      return Promise.resolve();
-    });
 }

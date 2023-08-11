@@ -62,6 +62,9 @@ Unreleased Changes
     * Fixed a bug where invalid metadata for a recent run would result
       in an uncaught exception.
       (`#1286 <https://github.com/natcap/invest/issues/1286>`_)
+    * Middle clicking an InVEST model tab was opening a blank window. Now
+      middle clicking will close that tab as expected.
+      (`#1261 <https://github.com/natcap/invest/issues/1261>`_)
 * Forest Carbon
     * The biophysical table is now case-insensitive.
 * HRA
