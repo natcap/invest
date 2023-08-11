@@ -64,6 +64,10 @@ Unreleased Changes
       correctly handles this case. https://github.com/natcap/invest/issues/1250
     * Tables in the .xls format are no longer supported. This format was
       deprecated by ``pandas``. (`#1271 <https://github.com/natcap/invest/issues/1271>`_)
+* NDR
+    * Fixed a bug where the runoff proxy index and subsequent results were
+      calculated incorrectly if the runoff proxy raster had no nodata value
+      (`#1005 <https://github.com/natcap/invest/issues/1005>`_)
 * Pollination
     * Several exceptions have been tidied up so that only fieldnames are
       printed instead of the python data structures representing the whole
