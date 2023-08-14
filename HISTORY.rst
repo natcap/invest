@@ -118,6 +118,9 @@ Unreleased Changes
     * Fixed a bug where the model incorrectly raised an error if the
       biophysical table contained a row of all 0s.
       (`#1123 <https://github.com/natcap/invest/issues/1123>`_)
+    * Biophysical table Workbench validation now warns if there is a missing
+      curve number value.
+      (`#1346 <https://github.com/natcap/invest/issues/1346>`_)
 * Visitation: Recreation and Tourism
     * Fixed a bug where overlapping predictor polygons would be double-counted
       in ``polygon_area_coverage`` and ``polygon_percent_coverage`` calculations.
