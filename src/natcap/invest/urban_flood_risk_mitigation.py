@@ -939,5 +939,25 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
-    return validation.validate(args, MODEL_SPEC['args'],
-                               MODEL_SPEC['args_with_spatial_overlap'])
+    validation_warnings = validation.validate(
+        args, MODEL_SPEC['args'], MODEL_SPEC['args_with_spatial_overlap'])
+
+    sufficient_keys = validation.get_sufficient_keys(args)
+    invalid_keys = validation.get_invalid_keys(validation_warnings)
+
+    if ("curve_number_table_path" not in invalid_keys and
+            "curve_number_table_path" in sufficient_keys):
+        # Load CN table
+        cn_df = utils.read_csv_to_dataframe(
+            args['curve_number_table_path'], 'lucode')
+        cn_cols = ['cn_a', 'cn_b', 'cn_c', 'cn_d']
+        # utils func converts empty entries into an empty string
+        empty_values = cn_df[cn_cols]==""
+        if empty_values.any(axis=None):
+            empty_lucodes = empty_values[empty_values.any(axis=1)].index
+            lucode_list = list(empty_lucodes.values)
+            validation_warnings.append((
+                ['curve_number_table_path'],
+                f'Missing curve numbers for lucode(s) {lucode_list}'))
+
+    return validation_warnings
