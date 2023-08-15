@@ -423,6 +423,7 @@ MODEL_SPEC = {
                         "Table of value ranges for each captured wave energy "
                         "quantile group as well as the number of pixels for "
                         "each group."),
+                    "index_col": "Percentile Group",
                     "columns": {
                         **PERCENTILE_TABLE_FIELDS,
                         "Value Range (megawatt hours per year, MWh/yr)": {
@@ -459,6 +460,7 @@ MODEL_SPEC = {
                         "Table of value ranges for each net present value "
                         "quantile group as well as the number of pixels for "
                         "each group."),
+                    "index_col": "Percentile Group",
                     "columns": {
                         **PERCENTILE_TABLE_FIELDS,
                         "Value Range (thousands of currency units, currency)": {
@@ -497,6 +499,7 @@ MODEL_SPEC = {
                     "about": gettext(
                         "Table of value ranges for each wave power quantile "
                         "group as well as the number of pixels for each group."),
+                    "index_col": "Percentile Group",
                     "columns": {
                         **PERCENTILE_TABLE_FIELDS,
                         "Value Range (wave power per unit width of wave crest length, kW/m)": {
@@ -743,7 +746,7 @@ def execute(args):
     # arrays. Also store the amount of energy the machine produces
     # in a certain wave period/height state as a 2D array
     machine_perf_dict = {}
-    machine_perf_data = utils.read_csv_to_dataframe(args['machine_perf_path'])
+    machine_perf_data = pandas.read_csv(args['machine_perf_path'])
     # Get the wave period fields, starting from the second column of the table
     machine_perf_dict['periods'] = machine_perf_data.columns.values[1:]
     # Build up the height field by taking the first column of the table
@@ -775,12 +778,15 @@ def execute(args):
 
     # Check if required column fields are entered in the land grid csv file
     if 'land_gridPts_path' in args:
-        # Create a grid_land_data dataframe for later use in valuation
-        grid_land_data = utils.read_csv_to_dataframe(
-            args['land_gridPts_path'], convert_vals_to_lower=False)
-        required_col_names = ['id', 'type', 'lat', 'long', 'location']
-        grid_land_data, missing_grid_land_fields = _get_validated_dataframe(
-            args['land_gridPts_path'], required_col_names)
+        # Create a grid_land_df dataframe for later use in valuation
+        grid_land_df = utils.read_csv_to_dataframe(
+            args['land_gridPts_path'],
+            MODEL_SPEC['args']['land_gridPts_path'])
+        missing_grid_land_fields = []
+        for field in ['id', 'type', 'lat', 'long', 'location']:
+            if field not in grid_land_df.columns:
+                missing_grid_land_fields.append(field)
+
         if missing_grid_land_fields:
             raise ValueError(
                 'The following column fields are missing from the Grid '
@@ -1080,20 +1086,12 @@ def execute(args):
     grid_vector_path = os.path.join(
         output_dir, 'GridPts_prj%s.shp' % file_suffix)
 
-    grid_data = grid_land_data.loc[
-        grid_land_data['type'].str.upper() == 'GRID']
-    land_data = grid_land_data.loc[
-        grid_land_data['type'].str.upper() == 'LAND']
-
-    grid_dict = grid_data.to_dict('index')
-    land_dict = land_data.to_dict('index')
-
     # Make a point shapefile for grid points
     LOGGER.info('Creating Grid Points Vector.')
     create_grid_points_vector_task = task_graph.add_task(
         func=_dict_to_point_vector,
-        args=(grid_dict, grid_vector_path, 'grid_points', analysis_area_sr_wkt,
-              aoi_sr_wkt),
+        args=(grid_land_df[grid_land_df['type'] == 'grid'].to_dict('index'),
+              grid_vector_path, 'grid_points', analysis_area_sr_wkt, aoi_sr_wkt),
         target_path_list=[grid_vector_path],
         task_name='create_grid_points_vector')
 
@@ -1101,8 +1099,8 @@ def execute(args):
     LOGGER.info('Creating Landing Points Vector.')
     create_land_points_vector_task = task_graph.add_task(
         func=_dict_to_point_vector,
-        args=(land_dict, land_vector_path, 'land_points', analysis_area_sr_wkt,
-              aoi_sr_wkt),
+        args=(grid_land_df[grid_land_df['type'] == 'land'].to_dict('index'),
+              land_vector_path, 'land_points', analysis_area_sr_wkt, aoi_sr_wkt),
         target_path_list=[land_vector_path],
         task_name='create_land_points_vector')
 
@@ -1413,26 +1411,6 @@ def _add_target_fields_to_wave_vector(
     target_wave_vector = None
 
 
-def _get_validated_dataframe(csv_path, field_list):
-    """Return a dataframe with upper cased fields, and a list of missing fields.
-
-    Args:
-        csv_path (str): path to the csv to be converted to a dataframe.
-        field_list (list): a list of fields in string format.
-
-    Returns:
-        dataframe (pandas.DataFrame): from csv with upper-cased fields.
-        missing_fields (list): missing fields as string format in dataframe.
-
-    """
-    dataframe = utils.read_csv_to_dataframe(csv_path, convert_vals_to_lower=False)
-    missing_fields = []
-    for field in field_list:
-        if field not in dataframe.columns:
-            missing_fields.append(field)
-    return dataframe, missing_fields
-
-
 def _dict_to_point_vector(base_dict_data, target_vector_path, layer_name,
                           base_sr_wkt, target_sr_wkt):
     """Given a dictionary of data create a point shapefile that represents it.
@@ -1493,6 +1471,7 @@ def _dict_to_point_vector(base_dict_data, target_vector_path, layer_name,
     for point_dict in base_dict_data.values():
         latitude = float(point_dict['lat'])
         longitude = float(point_dict['long'])
+        point_dict['id'] = int(point_dict['id'])
         # When projecting to WGS84, extents -180 to 180 are used for longitude.
         # In case input longitude is from -360 to 0 convert
         if longitude < -180:
@@ -1505,7 +1484,7 @@ def _dict_to_point_vector(base_dict_data, target_vector_path, layer_name,
         target_layer.CreateFeature(output_feature)
 
         for field_name in point_dict:
-            output_feature.SetField(field_name, point_dict[field_name])
+            output_feature.SetField(field_name.upper(), point_dict[field_name])
         output_feature.SetGeometryDirectly(geom)
         target_layer.SetFeature(output_feature)
         output_feature = None
@@ -1670,9 +1649,13 @@ def _machine_csv_to_dict(machine_csv_path):
     machine_dict = {}
     # make columns and indexes lowercased and strip whitespace
     machine_data = utils.read_csv_to_dataframe(
-        machine_csv_path, 'name', convert_vals_to_lower=False)
-    machine_data.index = machine_data.index.str.strip()
-    machine_data.index = machine_data.index.str.lower()
+        machine_csv_path,
+        {
+            'index_col': 'name',
+            'columns': {
+                'name': {'type': 'freestyle_string'},
+                'value': {'type': 'number'}
+        }})
 
     # drop NaN indexed rows in dataframe
     machine_data = machine_data[machine_data.index.notnull()]
