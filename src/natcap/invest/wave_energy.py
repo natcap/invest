@@ -711,10 +711,6 @@ def execute(args):
 
     """
     LOGGER.info('Starting the Wave Energy Model.')
-    invalid_parameters = validate(args)
-    if invalid_parameters:
-        raise ValueError("Invalid parameters passed: %s" % invalid_parameters)
-
     # Create the Output and Intermediate directories if they do not exist.
     workspace = args['workspace_dir']
     output_dir = os.path.join(workspace, 'output')

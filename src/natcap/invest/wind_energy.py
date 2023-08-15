@@ -641,10 +641,6 @@ def execute(args):
 
     """
     LOGGER.info('Starting the Wind Energy Model')
-    invalid_parameters = validate(args)
-    if invalid_parameters:
-        raise ValueError("Invalid parameters passed: %s" % invalid_parameters)
-
     workspace = args['workspace_dir']
     inter_dir = os.path.join(workspace, 'intermediate')
     out_dir = os.path.join(workspace, 'output')
