@@ -751,14 +751,6 @@ def execute(args):
         time = int(val_parameters_dict['time_period'])
         if args['price_table']:
             wind_price_df = utils.read_csv_to_dataframe(args['wind_schedule'])
-
-            year_count = len(wind_price_df['year'])
-            if year_count != time + 1:
-                raise ValueError(
-                    "The 'time' argument in the Global Wind Energy Parameters "
-                    "file must equal the number of years provided in the price"
-                    " table.")
-
             # Save the price values into a list where the indices of the list
             # indicate the time steps for the lifespan of the wind farm
             wind_price_df.sort_values('year', inplace=True)
@@ -2771,5 +2763,20 @@ def validate(args, limit_to=None):
         message applies to and tuple[1] is the str validation warning.
 
     """
-    return validation.validate(args, MODEL_SPEC['args'],
+    validation_warnings = validation.validate(args, MODEL_SPEC['args'],
                                MODEL_SPEC['args_with_spatial_overlap'])
+
+    invalid_keys = validation.get_invalid_keys(validation_warnings)
+    if ('wind_schedule' not in invalid_keys and
+            'global_wind_parameters_path' not in invalid_keys):
+        year_count = len(
+            utils.read_csv_to_dataframe(args['wind_schedule'])['year'])
+        time = int(_read_csv_wind_parameters(
+            args['global_wind_parameters_path'], valuation_global_params
+        )['time_period'])
+        if year_count != time + 1:
+            validation_warnings.append((
+                ['wind_schedule']
+                "The 'time' argument in the Global Wind Energy Parameters "
+                "file must equal the number of years provided in the price"
+                " table.")

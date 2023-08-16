@@ -508,13 +508,9 @@ def execute(args):
 
     if args['risk_eq'].lower() == 'multiplicative':
         max_pairwise_risk = max_rating * max_rating
-    elif args['risk_eq'].lower() == 'euclidean':
+    else:  # euclidean
         max_pairwise_risk = math.sqrt(
             ((max_rating - 1) ** 2) + ((max_rating - 1) ** 2))
-    else:
-        raise ValueError(
-            "args['risk_eq'] must be either 'Multiplicative' or 'Euclidean' "
-            f"not {args['risk_eq']}")
     LOGGER.info(
         f"The maximum pairwise risk score for {args['risk_eq'].lower()} "
         f"risk is {max_pairwise_risk}")

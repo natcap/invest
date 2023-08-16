@@ -920,7 +920,7 @@ def execute(args):
         lucode_to_search_radii = list(
             urban_nature_attrs[['lucode', 'search_radius_m']].itertuples(
                 index=False, name=None))
-    elif args['search_radius_mode'] == RADIUS_OPT_POP_GROUP:
+    else:
         pop_group_table = utils.read_csv_to_dataframe(
             args['population_group_radii_table'])
         search_radii = set(pop_group_table['search_radius_m'].unique())
@@ -928,12 +928,6 @@ def execute(args):
         search_radii_by_pop_group = dict(
             pop_group_table[['pop_group', 'search_radius_m']].itertuples(
                 index=False, name=None))
-    else:
-        valid_options = ', '.join(
-            MODEL_SPEC['args']['search_radius_mode']['options'].keys())
-        raise ValueError(
-            "Invalid search radius mode provided: "
-            f"{args['search_radius_mode']}; must be one of {valid_options}")
 
     for search_radius_m in search_radii:
         search_radius_in_pixels = abs(

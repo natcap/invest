@@ -537,58 +537,6 @@ def execute(args):
         None
 
     """
-    def _validate_inputs(nutrients_to_process, lucode_to_parameters):
-        """Validate common errors in inputs.
-
-        Args:
-            nutrients_to_process (list): list of 'n' and/or 'p'
-            lucode_to_parameters (dictionary): biophysical input table mapping
-                lucode to dictionary of table parameters.  Used to validate
-                the correct columns are input
-
-        Returns:
-            None
-
-        Raises:
-            ValueError whenever a missing field in the parameter table is
-            detected along with a message describing every missing field.
-
-        """
-        # Make sure all the nutrient inputs are good
-        if len(nutrients_to_process) == 0:
-            raise ValueError("Neither phosphorus nor nitrogen was selected"
-                             " to be processed.  Choose at least one.")
-
-        # Build up a list that'll let us iterate through all the input tables
-        # and check for the required rows, and report errors if something
-        # is missing.
-        row_header_table_list = []
-
-        lu_parameter_row = list(lucode_to_parameters.values())[0]
-        row_header_table_list.append(
-            (lu_parameter_row, ['load_', 'eff_', 'crit_len_'],
-             args['biophysical_table_path']))
-
-        missing_headers = []
-        for row, header_prefixes, table_type in row_header_table_list:
-            for nutrient_id in nutrients_to_process:
-                for header_prefix in header_prefixes:
-                    header = header_prefix + nutrient_id
-                    if header not in row:
-                        missing_headers.append(
-                            "Missing header %s from %s" % (
-                                header, table_type))
-
-        # proportion_subsurface_n is a special case in which phosphorus does
-        # not have an equivalent.
-        if ('n' in nutrients_to_process and
-                'proportion_subsurface_n' not in lu_parameter_row):
-            missing_headers.append(
-                "Missing header proportion_subsurface_n from " +
-                args['biophysical_table_path'])
-
-        if len(missing_headers) > 0:
-            raise ValueError('\n'.join(missing_headers))
 
     # Load all the tables for preprocessing
     output_dir = os.path.join(args['workspace_dir'])
@@ -621,8 +569,6 @@ def execute(args):
 
     lucode_to_parameters = utils.read_csv_to_dataframe(
         args['biophysical_table_path'], 'lucode').to_dict(orient='index')
-
-    _validate_inputs(nutrients_to_process, lucode_to_parameters)
 
     # these are used for aggregation in the last step
     field_pickle_map = {}
@@ -1091,6 +1037,8 @@ def validate(args, limit_to=None):
         nutrient_required_fields = []
         nutrients_selected = set()
         for nutrient_letter in ('n', 'p'):
+            if nutrient_letter == 'n':
+                nutrient_required_fields += ['proportion_subsurface_n']
             do_nutrient_key = f'calc_{nutrient_letter}'
             if do_nutrient_key in args and args[do_nutrient_key]:
                 nutrients_selected.add(do_nutrient_key)

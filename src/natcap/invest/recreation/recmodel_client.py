@@ -129,7 +129,7 @@ MODEL_SPEC = {
         },
         "start_year": {
             "type": "number",
-            "expression": "value >= 2005",
+            "expression": "2005 <= value <= 2017",
             "units": u.year_AD,
             "about": gettext(
                 "Year at which to start photo user-day calculations. "
@@ -140,7 +140,7 @@ MODEL_SPEC = {
         },
         "end_year": {
             "type": "number",
-            "expression": "value <= 2017",
+            "expression": "2005 <= value <= 2017",
             "units": u.year_AD,
             "about": gettext(
                 "Year at which to end photo user-day calculations. "
@@ -430,29 +430,6 @@ def execute(args):
         None
 
     """
-    if ('predictor_table_path' in args and
-            args['predictor_table_path'] != ''):
-        _validate_same_id_lengths(args['predictor_table_path'])
-        _validate_same_projection(
-            args['aoi_path'], args['predictor_table_path'])
-        _validate_predictor_types(args['predictor_table_path'])
-
-    if ('predictor_table_path' in args and
-            'scenario_predictor_table_path' in args and
-            args['predictor_table_path'] != '' and
-            args['scenario_predictor_table_path'] != ''):
-        _validate_same_ids_and_types(
-            args['predictor_table_path'],
-            args['scenario_predictor_table_path'])
-        _validate_same_projection(
-            args['aoi_path'], args['scenario_predictor_table_path'])
-        _validate_predictor_types(args['scenario_predictor_table_path'])
-
-    if int(args['end_year']) < int(args['start_year']):
-        raise ValueError(
-            "Start year must be less than or equal to end year.\n"
-            f"start_year: {args['start_year']}\nend_year: {args['end_year']}")
-
     # in case the user defines a hostname
     if 'hostname' in args:
         server_url = f"PYRO:natcap.invest.recreation@{args['hostname']}:{args['port']}"
@@ -627,19 +604,6 @@ def _retrieve_photo_user_days(
     with open(server_version_pickle, 'wb') as f:
         pickle.dump(server_version, f)
 
-    # validate available year range
-    min_year, max_year = recmodel_server.get_valid_year_range()
-    LOGGER.info(
-        f"Server supports year queries between {min_year} and {max_year}")
-    if not min_year <= int(start_year) <= max_year:
-        raise ValueError(
-            f"Start year must be between {min_year} and {max_year}.\n"
-            f" User input: ({start_year})")
-    if not min_year <= int(end_year) <= max_year:
-        raise ValueError(
-            f"End year must be between {min_year} and {max_year}.\n"
-            f" User input: ({end_year})")
-
     # append jan 1 to start and dec 31 to end
     date_range = (str(start_year)+'-01-01',
                   str(end_year)+'-12-31')
@@ -776,8 +740,6 @@ def _grid_vector(vector_path, grid_type, cell_size, out_grid_vector_path):
             return square
         n_rows = int((extent[3] - extent[2]) / cell_size)
         n_cols = int((extent[1] - extent[0]) / cell_size)
-    else:
-        raise ValueError(f'Unknown polygon type: {grid_type}')
 
     for row_index in range(n_rows):
         for col_index in range(n_cols):
@@ -1534,68 +1496,25 @@ def _calculate_scenario(
     scenario_coefficient_vector = None
 
 
-def _validate_same_id_lengths(table_path):
-    """Ensure a predictor table has ids of length less than 10.
-
-    Parameter:
-        table_path (string):  path to a csv table that has at least
-            the field 'id'
-
-    Raises:
-        ValueError if any of the fields in 'id' and 'type' don't match between
-        tables.
-
-    """
-    predictor_table = utils.read_csv_to_dataframe(
-        table_path, 'id').to_dict(orient='index')
-    too_long = set()
-    for p_id in predictor_table:
-        if len(p_id) > 10:
-            too_long.add(p_id)
-    if len(too_long) > 0:
-        raise ValueError(
-            "The following IDs are more than 10 characters long: "
-            f"{str(too_long)}")
-
-
-def _validate_same_ids_and_types(
-        predictor_table_path, scenario_predictor_table_path):
-    """Ensure both tables have same ids and types.
-
-    Assert that both the elements of the 'id' and 'type' fields of each table
-    contain the same elements and that their values are the same.  This
-    ensures that a user won't get an accidentally incorrect simulation result.
+def delay_op(last_time, time_delay, func):
+    """Execute ``func`` if last_time + time_delay >= current time.
 
     Args:
-        predictor_table_path (string): path to a csv table that has at least
-            the fields 'id' and 'type'
-        scenario_predictor_table_path (string):  path to a csv table that has
-            at least the fields 'id' and 'type'
+        last_time (float): last time in seconds that ``func`` was triggered
+        time_delay (float): time to wait in seconds since last_time before
+            triggering ``func``
+        func (function): parameterless function to invoke if
+         current_time >= last_time + time_delay
 
     Returns:
-        None
-
-    Raises:
-        ValueError if any of the fields in 'id' and 'type' don't match between
-        tables.
+        If ``func`` was triggered, return the time which it was triggered in
+        seconds, otherwise return ``last_time``.
 
     """
-    predictor_table = utils.read_csv_to_dataframe(
-        predictor_table_path, 'id').to_dict(orient='index')
-
-    scenario_predictor_table = utils.read_csv_to_dataframe(
-        scenario_predictor_table_path, 'id').to_dict(orient='index')
-
-    predictor_table_pairs = set([
-        (p_id, predictor_table[p_id]['type'].strip()) for p_id in predictor_table])
-    scenario_predictor_table_pairs = set([
-        (p_id, scenario_predictor_table[p_id]['type'].strip()) for p_id in
-        scenario_predictor_table])
-    if predictor_table_pairs != scenario_predictor_table_pairs:
-        raise ValueError('table pairs unequal.\n\t'
-                         f'predictor: {predictor_table_pairs}\n\t'
-                         f'scenario:{scenario_predictor_table_pairs}')
-    LOGGER.info('tables validate correctly')
+    if time.time() - last_time > time_delay:
+        func()
+        return time.time()
+    return last_time
 
 
 def _validate_same_projection(base_vector_path, table_path):
@@ -1683,29 +1602,8 @@ def _validate_predictor_types(table_path):
                        'polygon_area_coverage', 'polygon_percent_coverage'})
     difference = type_list.difference(valid_types)
     if difference:
-        raise ValueError('The table contains invalid type value(s): '
-                         f'{difference}. The allowed types are: {valid_types}')
-
-
-def delay_op(last_time, time_delay, func):
-    """Execute ``func`` if last_time + time_delay >= current time.
-
-    Args:
-        last_time (float): last time in seconds that ``func`` was triggered
-        time_delay (float): time to wait in seconds since last_time before
-            triggering ``func``
-        func (function): parameterless function to invoke if
-         current_time >= last_time + time_delay
-
-    Returns:
-        If ``func`` was triggered, return the time which it was triggered in
-        seconds, otherwise return ``last_time``.
-
-    """
-    if time.time() - last_time > time_delay:
-        func()
-        return time.time()
-    return last_time
+        return('The table contains invalid type value(s): '
+               f'{difference}. The allowed types are: {valid_types}')
 
 
 @validation.invest_validator
@@ -1727,4 +1625,48 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
-    return validation.validate(args, MODEL_SPEC['args'])
+    validation_warnings = validation.validate(args, MODEL_SPEC['args'])
+
+    invalid_keys = validation.get_invalid_keys(validation_warnings)
+
+    if 'predictor_table_path' not in invalid_keys:
+
+        # Ensure a predictor table has ids of length less than 10.
+        predictor_table = utils.read_csv_to_dataframe(
+            args['predictor_table_path'], 'id').to_dict(orient='index')
+        too_long = [p_id for p_id in predictor_table if len(p_id) > 10]
+        if len(too_long) > 0:
+            validation_warnings.append((
+                ['predictor_table_path'],
+                f"The following IDs are more than 10 characters long: "
+                f"{too_long}"))
+
+        _validate_same_projection(
+            args['aoi_path'], args['predictor_table_path'])
+        _validate_predictor_types(args['predictor_table_path'])
+
+        if 'scenario_predictor_table_path' not in invalid_keys:
+            scenario_predictor_table = utils.read_csv_to_dataframe(
+                args['scenario_predictor_table_path'], 'id').to_dict(orient='index')
+            predictor_table_pairs = set([
+                (p_id, predictor_table[p_id]['type'].strip()) for p_id in predictor_table])
+            scenario_predictor_table_pairs = set([
+                (p_id, scenario_predictor_table[p_id]['type'].strip()) for p_id in
+                scenario_predictor_table])
+            if predictor_table_pairs != scenario_predictor_table_pairs:
+                validation_warnings.append((
+                    ['predictor_table_path', 'scenario_predictor_table_path'],
+                    'table pairs unequal.' +
+                    f'predictor: {predictor_table_pairs}' +
+                    f'scenario: {scenario_predictor_table_pairs}'))
+
+            _validate_same_projection(
+                args['aoi_path'], args['scenario_predictor_table_path'])
+            _validate_predictor_types(args['scenario_predictor_table_path'])
+
+    if int(args['end_year']) < int(args['start_year']):
+        raise ValueError(
+            "Start year must be less than or equal to end year.\n"
+            f"start_year: {args['start_year']}\nend_year: {args['end_year']}")
+
+

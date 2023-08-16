@@ -270,10 +270,6 @@ def execute(args):
             'a': float(args['a_coef']),
             'b': float(args['b_coef']),
         }
-        if (args['valuation_function'] not in
-                MODEL_SPEC['args']['valuation_function']['options']):
-            raise ValueError('Valuation function type %s not recognized' %
-                             args['valuation_function'])
         max_valuation_radius = float(args['max_valuation_radius'])
 
     # Create output and intermediate directory

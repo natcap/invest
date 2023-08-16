@@ -346,16 +346,8 @@ def execute(args):
 
     if ('calculate_flow_direction' in args and
             bool(args['calculate_flow_direction'])):
-        # All routing functions depend on this one task.
-        # Check the algorithm early so we can fail quickly, but only if we're
-        # doing some sort of hydological routing
         algorithm = args['algorithm'].upper()
-        try:
-            routing_funcs = _ROUTING_FUNCS[algorithm]
-        except KeyError:
-            raise RuntimeError(
-                'Invalid algorithm specified (%s). Must be one of %s' % (
-                    args['algorithm'], ', '.join(sorted(_ROUTING_FUNCS.keys()))))
+        routing_funcs = _ROUTING_FUNCS[algorithm]
 
     if 'dem_band_index' in args and args['dem_band_index'] not in (None, ''):
         band_index = int(args['dem_band_index'])

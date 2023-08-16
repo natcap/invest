@@ -349,24 +349,18 @@ def execute(args):
     # just check that the AOI exists since it wouldn't crash until the end of
     # the whole model run if it didn't.
     if 'aoi_vector_path' in args and args['aoi_vector_path'] != '':
-        aoi_vector = gdal.OpenEx(args['aoi_vector_path'], gdal.OF_VECTOR)
-        if not aoi_vector:
+        lulc_raster_bb = pygeoprocessing.get_raster_info(
+            args['lulc_raster_path'])['bounding_box']
+        aoi_vector_bb = pygeoprocessing.get_vector_info(
+            args['aoi_vector_path'])['bounding_box']
+        try:
+            merged_bb = pygeoprocessing.merge_bounding_box_list(
+                [lulc_raster_bb, aoi_vector_bb], 'intersection')
+            LOGGER.debug(f"merged bounding boxes: {merged_bb}")
+        except ValueError:
             raise ValueError(
-                f"Unable to open aoi at: {args['aoi_vector_path']}")
-        else:
-            aoi_vector = None
-            lulc_raster_bb = pygeoprocessing.get_raster_info(
-                args['lulc_raster_path'])['bounding_box']
-            aoi_vector_bb = pygeoprocessing.get_vector_info(
-                args['aoi_vector_path'])['bounding_box']
-            try:
-                merged_bb = pygeoprocessing.merge_bounding_box_list(
-                    [lulc_raster_bb, aoi_vector_bb], 'intersection')
-                LOGGER.debug(f"merged bounding boxes: {merged_bb}")
-            except ValueError:
-                raise ValueError(
-                    f"The landcover raster {args['lulc_raster_path']} and AOI "
-                    f"{args['aoi_vector_path']} do not touch each other.")
+                f"The landcover raster {args['lulc_raster_path']} and AOI "
+                f"{args['aoi_vector_path']} do not touch each other.")
 
     output_dir = args['workspace_dir']
     intermediate_dir = os.path.join(
