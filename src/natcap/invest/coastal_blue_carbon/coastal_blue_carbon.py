@@ -2265,18 +2265,16 @@ def validate(args, limit_to=None):
     # check for invalid options in the translation table
     if ("landcover_transitions_table" not in invalid_keys and
             "landcover_transitions_table" in sufficient_keys):
+        transitions_spec = MODEL_SPEC['args']['landcover_transitions_table']
         transition_options = list(
-            MODEL_SPEC['args']['landcover_transitions_table']['columns']['[LULC CODE]']['options'].keys())
-        # NaNs are replaced with an empty string in the utils call, so add
-        # to possible transition values
-        transition_options.append('')
+            transitions_spec['columns']['[LULC CODE]']['options'].keys())
+        # lowercase options since utils call will lowercase table values
+        transition_options = [x.lower() for x in transition_options]
         transitions_df = utils.read_csv_to_dataframe(
-            args['landcover_transitions_table'], index_col='lulc-class',
-            convert_cols_to_lower=False, convert_vals_to_lower=False)
-        # the util call keeps index as a column, but we want to exclude it
-        transitions_df.drop('lulc-class', axis=1, inplace=True)
-        if ((~transitions_df.isin(transition_options)).any(axis=None)):
-            transition_numpy_mask = (~transitions_df.isin(transition_options)).values
+            args['landcover_transitions_table'], transitions_spec)
+        transitions_mask = ~transitions_df.isin(transition_options) & ~transitions_df.isna()
+        if transitions_mask.any(axis=None):
+            transition_numpy_mask = transitions_mask.values
             transition_numpy_values = transitions_df.to_numpy()
             bad_transition_values = list(
                 numpy.unique(transition_numpy_values[transition_numpy_mask]))
