@@ -1,5 +1,6 @@
 import React from 'react';
 import PropTypes from 'prop-types';
+import i18n from 'i18next';
 
 import TabPane from 'react-bootstrap/TabPane';
 import TabContent from 'react-bootstrap/TabContent';
@@ -19,14 +20,9 @@ import InvestTab from './components/InvestTab';
 import SettingsModal from './components/SettingsModal';
 import DataDownloadModal from './components/DataDownloadModal';
 import DownloadProgressBar from './components/DownloadProgressBar';
-import {
-  saveSettingsStore, getAllSettings,
-} from './components/SettingsModal/SettingsStorage';
 import { getInvestModelNames } from './server_requests';
 import InvestJob from './InvestJob';
 import { dragOverHandlerNone } from './utils';
-import { ipcMainChannels } from '../main/ipcMainChannels';
-import i18n from 'i18next';
 
 const { ipcRenderer } = window.Workbench.electron;
 
@@ -43,18 +39,15 @@ export default class App extends React.Component {
       openJobs: {},
       investList: null,
       recentJobs: [],
-      investSettings: null,
       showDownloadModal: false,
       downloadedNofN: null,
     };
-    this.saveSettings = this.saveSettings.bind(this);
     this.switchTabs = this.switchTabs.bind(this);
     this.openInvestModel = this.openInvestModel.bind(this);
     this.closeInvestModel = this.closeInvestModel.bind(this);
     this.updateJobProperties = this.updateJobProperties.bind(this);
     this.saveJob = this.saveJob.bind(this);
     this.clearRecentJobs = this.clearRecentJobs.bind(this);
-    this.storeDownloadDir = this.storeDownloadDir.bind(this);
     this.showDownloadModal = this.showDownloadModal.bind(this);
   }
 
@@ -62,11 +55,9 @@ export default class App extends React.Component {
   async componentDidMount() {
     const investList = await getInvestModelNames();
     const recentJobs = await InvestJob.getJobStore();
-    const investSettings = await getAllSettings();
     this.setState({
       investList: investList,
       recentJobs: recentJobs,
-      investSettings: investSettings,
       showDownloadModal: this.props.isFirstRun,
     });
     await i18n.changeLanguage(window.Workbench.LANGUAGE);
@@ -89,21 +80,6 @@ export default class App extends React.Component {
     this.setState(
       { activeTab: key }
     );
-  }
-
-  async saveSettings(settings) {
-    await saveSettingsStore(settings);
-    this.setState({ investSettings: settings });
-  }
-
-  /** Store a sampledata filepath in localforage.
-   *
-   * @param {string} dir - the path to the user-selected dir
-   */
-  storeDownloadDir(dir) {
-    const { investSettings } = this.state;
-    investSettings.sampleDataDir = dir;
-    this.saveSettings(investSettings);
   }
 
   showDownloadModal(shouldShow) {
@@ -196,7 +172,6 @@ export default class App extends React.Component {
   render() {
     const {
       investList,
-      investSettings,
       recentJobs,
       openJobs,
       openTabIDs,
@@ -245,7 +220,17 @@ export default class App extends React.Component {
             key={id}
             className={id === activeTab ? 'active' : ''}
           >
-            <Nav.Link eventKey={id}>
+            <Nav.Link
+              eventKey={id}
+              onAuxClick={(event) => {
+                event.stopPropagation();
+                event.preventDefault();
+                if (event.button === 1) {
+                  // middle mouse button clicked, close tab
+                  this.closeInvestModel(id);
+                }
+              }}
+            >
               {statusSymbol}
               {` ${job.modelHumanName}`}
             </Nav.Link>
@@ -273,7 +258,6 @@ export default class App extends React.Component {
           <InvestTab
             job={job}
             tabID={id}
-            investSettings={investSettings}
             saveJob={this.saveJob}
             updateJobProperties={this.updateJobProperties}
           />
@@ -286,7 +270,6 @@ export default class App extends React.Component {
         <DataDownloadModal
           show={showDownloadModal}
           closeModal={() => this.showDownloadModal(false)}
-          storeDownloadDir={this.storeDownloadDir}
         />
         <TabContainer activeKey={activeTab}>
           <Navbar
@@ -328,21 +311,12 @@ export default class App extends React.Component {
                     )
                     : <div />
                 }
-                {
-                  // don't render until after we fetched the data
-                  (investSettings)
-                    ? (
-                      <SettingsModal
-                        className="mx-3"
-                        saveSettings={this.saveSettings}
-                        investSettings={investSettings}
-                        clearJobsStorage={this.clearRecentJobs}
-                        showDownloadModal={() => this.showDownloadModal(true)}
-                        nCPU={this.props.nCPU}
-                      />
-                    )
-                    : <div />
-                }
+                <SettingsModal
+                  className="mx-3"
+                  clearJobsStorage={this.clearRecentJobs}
+                  showDownloadModal={() => this.showDownloadModal(true)}
+                  nCPU={this.props.nCPU}
+                />
               </Col>
             </Row>
           </Navbar>

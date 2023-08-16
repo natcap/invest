@@ -121,6 +121,7 @@ MODEL_SPEC = {
         "nearest_to_edge.csv": {
             "about": gettext(
                 "Table of land cover classes and the amount of each that was converted for the nearest-to-edge conversion scenario."),
+            "index_col": "lucode",
             "columns": {
                 "lucode": {
                     "type": "integer",
@@ -140,6 +141,7 @@ MODEL_SPEC = {
         "farthest_from_edge.csv": {
             "about": gettext(
                 "Table of land cover classes and the amount of each that was converted for the nearest-to-edge conversion scenario."),
+            "index_col": "lucode",
             "columns": {
                 "lucode": {
                     "type": "integer",

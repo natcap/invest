@@ -48,6 +48,10 @@ Unreleased Changes
       has been merged into ``utils.read_csv_to_dataframe``
       (`#1319 <https://github.com/natcap/invest/issues/1319>`_),
       (`#1327 <https://github.com/natcap/invest/issues/1327>`_)
+* Coastal Blue Carbon
+    * Added valuation for the transition table, raising a validation error if
+      unexpected values are encoutnered.
+      (`#729 <https://github.com/natcap/invest/issues/729>`_)
 * Workbench
     * Fixed a bug where sampledata downloads failed silently (and progress bar
       became innacurate) if the Workbench did not have write permission to
@@ -56,10 +60,12 @@ Unreleased Changes
       (`#727 <https://github.com/natcap/invest/issues/727>`_)
     * Changing the language setting will now cause the app to relaunch
       (`#1168 <https://github.com/natcap/invest/issues/1168>`_)
-* Coastal Blue Carbon
-    * Added valuation for the transition table, raising a validation error if
-      unexpected values are encoutnered.
-      (`#729 <https://github.com/natcap/invest/issues/729>`_)
+    * Closing the main window will now close any user's guide windows that are
+      open. Fixed a bug where the app could not be reopened after closing.
+      (`#1258 <https://github.com/natcap/invest/issues/1258>`_)
+    * Middle clicking an InVEST model tab was opening a blank window. Now
+      middle clicking will close that tab as expected.
+      (`#1261 <https://github.com/natcap/invest/issues/1261>`_)
 * Forest Carbon
     * The biophysical table is now case-insensitive.
 * HRA
