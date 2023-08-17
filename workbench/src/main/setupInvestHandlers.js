@@ -11,6 +11,7 @@ import ELECTRON_DEV_MODE from './isDevMode';
 import investUsageLogger from './investUsageLogger';
 import markupMessage from './investLogMarkup';
 import writeInvestParameters from './writeInvestParameters';
+import { settingsStore } from './settingsStore';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
@@ -45,12 +46,16 @@ export function setupInvestRunHandlers(investExe) {
   });
 
   ipcMain.on(ipcMainChannels.INVEST_RUN, async (
-    event, modelRunName, pyModuleName, args, loggingLevel, taskgraphLoggingLevel, language, tabID
+    event, modelRunName, pyModuleName, args, tabID
   ) => {
     let investRun;
     let investStarted = false;
     let investStdErr = '';
     const usageLogger = investUsageLogger();
+    const loggingLevel = settingsStore.get('loggingLevel');
+    const taskgraphLoggingLevel = settingsStore.get('taskgraphLoggingLevel');
+    const language = settingsStore.get('language');
+    const nWorkers = settingsStore.get('nWorkers');
 
     // Write a temporary datastack json for passing to invest CLI
     try {
@@ -64,7 +69,10 @@ export function setupInvestRunHandlers(investExe) {
       filepath: datastackPath,
       moduleName: pyModuleName,
       relativePaths: false,
-      args: JSON.stringify(args),
+      args: JSON.stringify({
+        ...args,
+        n_workers: nWorkers,
+      }),
     };
     await writeInvestParameters(payload);
 

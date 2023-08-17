@@ -126,7 +126,8 @@ class ScenicQualityTests(unittest.TestCase):
         with self.assertRaises(AssertionError) as cm:
             scenic_quality._determine_valid_viewpoints(
                 dem_path, viewpoints_path)
-        self.assertIn('Feature 1 is not a Point geometry', str(cm.exception))
+        self.assertIn('Feature 1 must be a POINT geometry, not LINESTRING',
+                      str(cm.exception))
 
     def test_exception_when_no_structures_aoi_overlap(self):
         """SQ: model raises exception when AOI does not overlap structures."""
