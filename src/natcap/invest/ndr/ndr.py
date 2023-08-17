@@ -445,6 +445,7 @@ _INTERMEDIATE_BASE_FILES = {
     'modified_load_p_path': 'modified_load_p.tif',
     'ndr_n_path': 'ndr_n.tif',
     'ndr_p_path': 'ndr_p.tif',
+    'aligned_runoff_proxy_nodata_path': 'aligned_runoff_proxy_nodata.tif',
     'masked_runoff_proxy_path': 'masked_runoff_proxy.tif',
     'runoff_proxy_index_path': 'runoff_proxy_index.tif',
     's_accumulation_path': 's_accumulation.tif',
@@ -656,21 +657,23 @@ def execute(args):
         task_name='align rasters')
 
     mask_runoff_dependent_task = align_raster_task
+    mask_base_raster_path = f_reg['aligned_runoff_proxy_path']
     if pygeoprocessing.get_raster_info(
             f_reg['aligned_runoff_proxy_path'])['nodata'][0] is None:
+        mask_base_raster_path = f_reg['aligned_runoff_proxy_nodata_path']
         mask_runoff_dependent_task = task_graph.add_task(
             func=_assign_nodata,
-            kwargs=dict(
-                raster_path=f_reg['aligned_runoff_proxy_path'],
-                band=1),
+            kwargs={
+                'raster_path': f_reg['aligned_runoff_proxy_path'],
+                'target_path': f_reg['aligned_runoff_proxy_nodata_path']},
             dependent_task_list=[align_raster_task],
-            target_path_list=[f_reg['aligned_runoff_proxy_path']],
+            target_path_list=[f_reg['aligned_runoff_proxy_nodata_path']],
             task_name='assign nodata value to runoff proxy raster')
 
     mask_runoff_proxy_task = task_graph.add_task(
         func=pygeoprocessing.mask_raster,
         kwargs={
-            'base_raster_path_band': (f_reg['aligned_runoff_proxy_path'], 1),
+            'base_raster_path_band': (mask_base_raster_path, 1),
             'mask_vector_path': args['watersheds_path'],
             'target_mask_raster_path': f_reg['masked_runoff_proxy_path']},
         dependent_task_list=[mask_runoff_dependent_task],
@@ -1019,10 +1022,21 @@ def execute(args):
     LOGGER.info(r' (_")  (_/(__)_) (__)  (__) ')
 
 
-def _assign_nodata(raster_path, band):
-    raster = gdal.Open(raster_path, gdal.GA_Update)
-    raster.GetRasterBand(band).SetNoDataValue(_TARGET_NODATA)
-    raster = None
+def _assign_nodata(raster_path, target_path):
+    """Create a copy of a raster with default nodata value assigned to band 1.
+
+    Args:
+        raster_path (str): path of the raster to copy
+        target_path (str): path to write out the copy
+
+    Returns:
+        None
+    """
+    source = gdal.OpenEx(raster_path, gdal.OF_RASTER)
+    driver = gdal.GetDriverByName('GTIFF')
+    target = driver.CreateCopy(target_path, source)
+    target.GetRasterBand(1).SetNoDataValue(_TARGET_NODATA)
+    source, target = None, None
 
 def _slope_proportion_and_threshold(slope_path, target_threshold_slope_path):
     """Rescale slope to proportion and threshold to between 0.005 and 1.0.
