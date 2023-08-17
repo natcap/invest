@@ -102,12 +102,11 @@ class NDRTests(unittest.TestCase):
             normalized_array, expected_array, rtol=0, atol=1e-6)
 
     def test_missing_headers(self):
-        """NDR biphysical headers missing should return validation message."""
+        """NDR biophysical headers missing should return validation message."""
         from natcap.invest.ndr import ndr
 
         # use predefined directory so test can clean up files during teardown
         args = NDRTests.generate_base_args(self.workspace_dir)
-        # make args explicit that this is a base run of SWY
         args['biophysical_table_path'] = os.path.join(
             REGRESSION_DATA, 'input', 'biophysical_table_missing_headers.csv')
         validation_messages = ndr.validate(args)

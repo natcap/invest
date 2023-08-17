@@ -1036,7 +1036,7 @@ def validate(args, limit_to=None):
     LOGGER.debug('Starting logging for biophysical table')
     if 'biophysical_table_path' not in invalid_keys:
         # Check required fields given the state of ``calc_n`` and ``calc_p``
-        nutrient_required_fields = []
+        nutrient_required_fields = ['lucode']
         nutrients_selected = set()
         for nutrient_letter in ('n', 'p'):
             if nutrient_letter == 'n':
@@ -1049,20 +1049,16 @@ def validate(args, limit_to=None):
                     f'eff_{nutrient_letter}',
                     f'crit_len_{nutrient_letter}'
                 ]
-
         if not nutrients_selected:
             validation_warnings.append(
                 (['calc_n', 'calc_p'], MISSING_NUTRIENT_MSG))
 
-        LOGGER.debug('Required nutrient-specific keys in CSV: %s',
-                     nutrient_required_fields)
         # Check that these nutrient-specific keys are in the table
         # validate has already checked all the other keys
         error_msg = validation.check_csv(
             args['biophysical_table_path'],
-            header_patterns=nutrient_required_fields)
+            columns={key: '' for key in nutrient_required_fields})
         if error_msg:
-            LOGGER.debug('Error: %s', error_msg)
             validation_warnings.append(
                 (['biophysical_table_path'], error_msg))
 
