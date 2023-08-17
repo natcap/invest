@@ -57,6 +57,7 @@ MODEL_SPEC = {
         },
         "curve_number_table_path": {
             "type": "csv",
+            "index_col": "lucode",
             "columns": {
                 "lucode": {
                     "type": "integer",
@@ -91,6 +92,7 @@ MODEL_SPEC = {
         },
         "infrastructure_damage_loss_table_path": {
             "type": "csv",
+            "index_col": "type",
             "columns": {
                 "type": {
                     "type": "integer",
@@ -302,20 +304,20 @@ def execute(args):
         task_name='align raster stack')
 
     # Load CN table
-    cn_table = utils.read_csv_to_dataframe(
-        args['curve_number_table_path'], 'lucode').to_dict(orient='index')
+    cn_df = utils.read_csv_to_dataframe(
+        args['curve_number_table_path'],
+        MODEL_SPEC['args']['curve_number_table_path'])
 
     # make cn_table into a 2d array where first dim is lucode, second is
     # 0..3 to correspond to CN_A..CN_D
     data = []
     row_ind = []
     col_ind = []
-    for lucode in cn_table:
-        data.extend([
-            cn_table[lucode][f'cn_{soil_id}']
-            for soil_id in ['a', 'b', 'c', 'd']])
-        row_ind.extend([int(lucode)] * 4)
+    for lucode, row in cn_df.iterrows():
+        data.extend([row[f'cn_{soil_id}'] for soil_id in ['a', 'b', 'c', 'd']])
+        row_ind.extend([lucode] * 4)
     col_ind = [0, 1, 2, 3] * (len(row_ind) // 4)
+
     lucode_to_cn_table = scipy.sparse.csr_matrix((data, (row_ind, col_ind)))
 
     cn_nodata = -1
@@ -645,7 +647,9 @@ def _calculate_damage_to_infrastructure_in_aoi(
     infrastructure_layer = infrastructure_vector.GetLayer()
 
     damage_type_map = utils.read_csv_to_dataframe(
-        structures_damage_table, 'type').to_dict(orient='index')
+        structures_damage_table,
+        MODEL_SPEC['args']['infrastructure_damage_loss_table_path']
+    )['damage'].to_dict()
 
     infrastructure_layer_defn = infrastructure_layer.GetLayerDefn()
     type_index = -1
@@ -699,8 +703,8 @@ def _calculate_damage_to_infrastructure_in_aoi(
                 intersection_geometry = aoi_geometry_shapely.intersection(
                     infrastructure_geometry)
                 damage_type = int(infrastructure_feature.GetField(type_index))
-                damage = damage_type_map[damage_type]['damage']
-                total_damage += intersection_geometry.area * damage
+                total_damage += (
+                    intersection_geometry.area * damage_type_map[damage_type])
 
         aoi_damage[aoi_feature.GetFID()] = total_damage
 

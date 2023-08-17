@@ -59,6 +59,9 @@ Unreleased Changes
     * Closing the main window will now close any user's guide windows that are
       open. Fixed a bug where the app could not be reopened after closing.
       (`#1258 <https://github.com/natcap/invest/issues/1258>`_)
+    * Fixed a bug where invalid metadata for a recent run would result
+      in an uncaught exception.
+      (`#1286 <https://github.com/natcap/invest/issues/1286>`_)
     * Middle clicking an InVEST model tab was opening a blank window. Now
       middle clicking will close that tab as expected.
       (`#1261 <https://github.com/natcap/invest/issues/1261>`_)
