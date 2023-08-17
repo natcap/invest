@@ -1530,9 +1530,8 @@ def _validate_same_id_lengths(table_path):
         if len(p_id) > 10:
             too_long.add(p_id)
     if len(too_long) > 0:
-        raise ValueError(
-            "The following IDs are more than 10 characters long: "
-            f"{str(too_long)}")
+        return (
+            f'The following IDs are more than 10 characters long: {too_long}')
 
 
 def _validate_same_ids_and_types(
@@ -1569,10 +1568,8 @@ def _validate_same_ids_and_types(
         (p_id, scenario_predictor_table[p_id]['type'].strip()) for p_id in
         scenario_predictor_table])
     if predictor_table_pairs != scenario_predictor_table_pairs:
-        raise ValueError('table pairs unequal.\n\t'
-                         f'predictor: {predictor_table_pairs}\n\t'
-                         f'scenario:{scenario_predictor_table_pairs}')
-    LOGGER.info('tables validate correctly')
+        return (f'table pairs unequal. predictor: {predictor_table_pairs} '
+                f'scenario: {scenario_predictor_table_pairs}')
 
 
 def _validate_same_projection(base_vector_path, table_path):
@@ -1632,9 +1629,8 @@ def _validate_same_projection(base_vector_path, table_path):
                 f"current:{ref.ExportToPrettyWkt()}")
             invalid_projections = True
     if invalid_projections:
-        raise ValueError(
-            "One or more of the projections in the table did not match the "
-            "projection of the base vector")
+        return ("One or more of the projections in the table did not match "
+                "the projection of the base vector")
 
 
 def _validate_predictor_types(table_path):
