@@ -931,7 +931,8 @@ def execute(args):
             )
 
     attr_table = utils.read_csv_to_dataframe(
-        args['lulc_attribute_table'], MODEL_SPEC['args']['lulc_attribute_table'])
+        args['lulc_attribute_table'],
+        MODEL_SPEC['args']['lulc_attribute_table'])
     kernel_paths = {}  # search_radius, kernel path
     kernel_tasks = {}  # search_radius, kernel task
 
@@ -1262,12 +1263,6 @@ def execute(args):
                 sum_of_decayed_population_task,
             ])
 
-        # Create a dict of {pop_group: search_radius_m}
-        group_radii_table = utils.read_csv_to_dataframe(
-            args['population_group_radii_table'])
-        search_radii = dict(
-            group_radii_table[['pop_group', 'search_radius_m']].itertuples(
-                index=False, name=None))
         urban_nature_supply_percapita_by_group_paths = {}
         urban_nature_supply_percapita_by_group_tasks = []
         urban_nature_balance_totalpop_by_group_paths = {}
@@ -1276,7 +1271,7 @@ def execute(args):
         supply_population_tasks = {'over': {}, 'under': {}}
         for pop_group, proportional_pop_path in (
                 proportional_population_paths.items()):
-            search_radius_m = search_radii[pop_group]
+            search_radius_m = search_radii_by_pop_group[pop_group]
             urban_nature_supply_percapita_to_group_path = os.path.join(
                 intermediate_dir,
                 f'urban_nature_supply_percapita_to_{pop_group}{suffix}.tif')
