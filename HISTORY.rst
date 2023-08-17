@@ -66,6 +66,19 @@ Unreleased Changes
     * Fixed a bug where sampledata downloads failed silently (and progress bar
       became innacurate) if the Workbench did not have write permission to
       the download location. https://github.com/natcap/invest/issues/1070
+    * The workbench app is now distributed with a valid code signature
+      (`#727 <https://github.com/natcap/invest/issues/727>`_)
+    * Changing the language setting will now cause the app to relaunch
+      (`#1168 <https://github.com/natcap/invest/issues/1168>`_)
+    * Closing the main window will now close any user's guide windows that are
+      open. Fixed a bug where the app could not be reopened after closing.
+      (`#1258 <https://github.com/natcap/invest/issues/1258>`_)
+    * Fixed a bug where invalid metadata for a recent run would result
+      in an uncaught exception.
+      (`#1286 <https://github.com/natcap/invest/issues/1286>`_)
+    * Middle clicking an InVEST model tab was opening a blank window. Now
+      middle clicking will close that tab as expected.
+      (`#1261 <https://github.com/natcap/invest/issues/1261>`_)
 * Forest Carbon
     * The biophysical table is now case-insensitive.
 * HRA
@@ -110,6 +123,14 @@ Unreleased Changes
       set to 0. The old behavior was not well documented and caused some
       confusion when nodata pixels did not line up. It's safer not to fill in
       unknown data. (`#1317 <https://github.com/natcap/invest/issues/1317>`_)
+    * Negative monthly quickflow values will now be set to 0. This is because
+      very small negative values occasionally result from valid data, but they
+      should be interpreted as 0.
+      (`#1318 <https://github.com/natcap/invest/issues/1318>`_)
+    * In the monthly quickflow calculation, QF_im will be set to 0 on any pixel
+      where s_i / a_im > 100. This is done to avoid overflow errors when
+      calculating edge cases where the result would round down to 0 anyway.
+      (`#1318 <https://github.com/natcap/invest/issues/1318>`_)
 * Urban Flood Risk
     * Fixed a bug where the model incorrectly raised an error if the
       biophysical table contained a row of all 0s.
@@ -118,6 +139,10 @@ Unreleased Changes
     * Fixed a bug where overlapping predictor polygons would be double-counted
       in ``polygon_area_coverage`` and ``polygon_percent_coverage`` calculations.
       (`#1310 <https://github.com/natcap/invest/issues/1310>`_)
+* Wind Energy
+    * Updated a misleading error message that is raised when the AOI does
+      not spatially overlap another input.
+      (`#1054 <https://github.com/natcap/invest/issues/1054>`_)
 
 3.13.0 (2023-03-17)
 -------------------

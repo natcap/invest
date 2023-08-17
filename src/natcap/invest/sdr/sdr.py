@@ -87,6 +87,7 @@ MODEL_SPEC = {
         },
         "biophysical_table_path": {
             "type": "csv",
+            "index_col": "lucode",
             "columns": {
                 "lucode": spec_utils.LULC_TABLE_COLUMN,
                 "usle_c": {
@@ -500,30 +501,18 @@ def execute(args):
 
     """
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
-    biophysical_table = utils.read_csv_to_dataframe(
-        args['biophysical_table_path'], 'lucode').to_dict(orient='index')
+    biophysical_df = utils.read_csv_to_dataframe(
+        args['biophysical_table_path'], MODEL_SPEC['args']['biophysical_table_path'])
 
     # Test to see if c or p values are outside of 0..1
-    for table_key in ['usle_c', 'usle_p']:
-        for (lulc_code, table) in biophysical_table.items():
-            try:
-                float(lulc_code)
-            except ValueError:
-                raise ValueError(
-                    f'Value "{lulc_code}" from the "lucode" column of the '
-                    f'biophysical table is not a number. Please check the '
-                    f'formatting of {args["biophysical_table_path"]}')
-            try:
-                float_value = float(table[table_key])
-                if float_value < 0 or float_value > 1:
-                    raise ValueError(
-                        f'{float_value} is not within range 0..1')
-            except ValueError:
+    for key in ['usle_c', 'usle_p']:
+        for lulc_code, row in biophysical_df.iterrows():
+            if row[key] < 0 or row[key] > 1:
                 raise ValueError(
                     f'A value in the biophysical table is not a number '
                     f'within range 0..1. The offending value is in '
-                    f'column "{table_key}", lucode row "{lulc_code}", '
-                    f'and has value "{table[table_key]}"')
+                    f'column "{key}", lucode row "{lulc_code}", '
+                    f'and has value "{row[key]}"')
 
     intermediate_output_dir = os.path.join(
         args['workspace_dir'], INTERMEDIATE_DIR_NAME)
@@ -664,19 +653,21 @@ def execute(args):
         drainage_raster_path_task = (
             f_reg['stream_path'], stream_task)
 
+    lulc_to_c = biophysical_df['usle_c'].to_dict()
     threshold_w_task = task_graph.add_task(
         func=_calculate_w,
         args=(
-            biophysical_table, f_reg['aligned_lulc_path'], f_reg['w_path'],
+            lulc_to_c, f_reg['aligned_lulc_path'], f_reg['w_path'],
             f_reg['thresholded_w_path']),
         target_path_list=[f_reg['w_path'], f_reg['thresholded_w_path']],
         dependent_task_list=[align_task],
         task_name='calculate W')
 
+    lulc_to_cp = (biophysical_df['usle_c'] * biophysical_df['usle_p']).to_dict()
     cp_task = task_graph.add_task(
         func=_calculate_cp,
         args=(
-            biophysical_table, f_reg['aligned_lulc_path'],
+            lulc_to_cp, f_reg['aligned_lulc_path'],
             f_reg['cp_factor_path']),
         target_path_list=[f_reg['cp_factor_path']],
         dependent_task_list=[align_task],
@@ -1264,15 +1255,14 @@ def _add_drainage(stream_path, drainage_path, out_stream_and_drainage_path):
 
 
 def _calculate_w(
-        biophysical_table, lulc_path, w_factor_path,
+        lulc_to_c, lulc_path, w_factor_path,
         out_thresholded_w_factor_path):
     """W factor: map C values from LULC and lower threshold to 0.001.
 
     W is a factor in calculating d_up accumulation for SDR.
 
     Args:
-        biophysical_table (dict): map of LULC codes to dictionaries that
-            contain at least a 'usle_c' field
+        lulc_to_c (dict): mapping of LULC codes to C values
         lulc_path (string): path to LULC raster
         w_factor_path (string): path to outputed raw W factor
         out_thresholded_w_factor_path (string): W factor from `w_factor_path`
@@ -1282,9 +1272,6 @@ def _calculate_w(
         None
 
     """
-    lulc_to_c = dict(
-        [(lulc_code, float(table['usle_c'])) for
-         (lulc_code, table) in biophysical_table.items()])
     if pygeoprocessing.get_raster_info(lulc_path)['nodata'][0] is None:
         # will get a case where the raster might be masked but nothing to
         # replace so 0 is used by default. Ensure this exists in lookup.
@@ -1313,13 +1300,11 @@ def _calculate_w(
         gdal.GDT_Float32, _TARGET_NODATA)
 
 
-def _calculate_cp(biophysical_table, lulc_path, cp_factor_path):
+def _calculate_cp(lulc_to_cp, lulc_path, cp_factor_path):
     """Map LULC to C*P value.
 
     Args:
-        biophysical_table (dict): map of lulc codes to dictionaries that
-            contain at least the entry 'usle_c" and 'usle_p' corresponding to
-            those USLE components.
+        lulc_to_cp (dict): mapping of lulc codes to CP values
         lulc_path (string): path to LULC raster
         cp_factor_path (string): path to output raster of LULC mapped to C*P
             values
@@ -1328,9 +1313,6 @@ def _calculate_cp(biophysical_table, lulc_path, cp_factor_path):
         None
 
     """
-    lulc_to_cp = dict(
-        [(lulc_code, float(table['usle_c']) * float(table['usle_p'])) for
-         (lulc_code, table) in biophysical_table.items()])
     if pygeoprocessing.get_raster_info(lulc_path)['nodata'][0] is None:
         # will get a case where the raster might be masked but nothing to
         # replace so 0 is used by default. Ensure this exists in lookup.

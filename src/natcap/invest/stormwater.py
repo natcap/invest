@@ -46,6 +46,7 @@ MODEL_SPEC = {
         "precipitation_path": spec_utils.PRECIP,
         "biophysical_table": {
             "type": "csv",
+            "index_col": "lucode",
             "columns": {
                 "lucode": spec_utils.LULC_TABLE_COLUMN,
                 "emc_[POLLUTANT]": {
@@ -482,11 +483,12 @@ def execute(args):
         task_name='align input rasters')
 
     # Build a lookup dictionary mapping each LULC code to its row
-    biophysical_dict = utils.read_csv_to_dataframe(
-        args['biophysical_table'], 'lucode').to_dict(orient='index')
-    # sort the LULC codes upfront because we use the sorted list in multiple
+    # sort by the LULC codes upfront because we use the sorted list in multiple
     # places. it's more efficient to do this once.
-    sorted_lucodes = sorted(biophysical_dict)
+    biophysical_df = utils.read_csv_to_dataframe(
+        args['biophysical_table'], MODEL_SPEC['args']['biophysical_table']
+    ).sort_index()
+    sorted_lucodes = biophysical_df.index.to_list()
 
     # convert the nested dictionary in to a 2D array where rows are LULC codes
     # in sorted order and columns correspond to soil groups in order
@@ -498,10 +500,8 @@ def execute(args):
     # up with their indices in the array. this is more efficient than
     # decrementing the whole soil group array by 1.
     retention_ratio_array = numpy.array([
-        [1 - biophysical_dict[lucode][f'rc_{soil_group}']
-            for soil_group in ['a', 'b', 'c', 'd']
-         ] for lucode in sorted_lucodes
-    ], dtype=numpy.float32)
+        1 - biophysical_df[f'rc_{soil_group}'].to_numpy()
+        for soil_group in ['a', 'b', 'c', 'd']], dtype=numpy.float32).T
 
     # Calculate stormwater retention ratio and volume from
     # LULC, soil groups, biophysical data, and precipitation
@@ -522,10 +522,6 @@ def execute(args):
     if args['adjust_retention_ratios']:
         # in raster coord system units
         radius = float(args['retention_radius'])
-        # boolean mapping for each LULC code whether it's connected
-        is_connected_map = {
-            lucode: 1 if biophysical_dict[lucode]['is_connected'] else 0
-            for lucode in biophysical_dict}
 
         reproject_roads_task = task_graph.add_task(
             func=pygeoprocessing.reproject_vector,
@@ -591,7 +587,7 @@ def execute(args):
             func=pygeoprocessing.reclassify_raster,
             args=(
                 (files['lulc_aligned_path'], 1),
-                is_connected_map,
+                biophysical_df['is_connected'].astype(int).to_dict(),
                 files['connected_lulc_path'],
                 gdal.GDT_Byte,
                 UINT8_NODATA),
@@ -706,14 +702,12 @@ def execute(args):
 
     # (Optional) Calculate stormwater percolation ratio and volume from
     # LULC, soil groups, biophysical table, and precipitation
-    if 'pe_a' in next(iter(biophysical_dict.values())):
+    if 'pe_a' in biophysical_df.columns:
         LOGGER.info('percolation data detected in biophysical table. '
                     'Will calculate percolation ratio and volume rasters.')
         percolation_ratio_array = numpy.array([
-            [biophysical_dict[lucode][f'pe_{soil_group}']
-                for soil_group in ['a', 'b', 'c', 'd']
-             ] for lucode in sorted_lucodes
-        ], dtype=numpy.float32)
+            biophysical_df[f'pe_{soil_group}'].to_numpy()
+            for soil_group in ['a', 'b', 'c', 'd']], dtype=numpy.float32).T
         percolation_ratio_task = task_graph.add_task(
             func=lookup_ratios,
             args=(
@@ -749,8 +743,8 @@ def execute(args):
 
     # get all EMC columns from an arbitrary row in the dictionary
     # strip the first four characters off 'EMC_pollutant' to get pollutant name
-    pollutants = [key[4:] for key in next(iter(biophysical_dict.values()))
-                  if key.startswith('emc_')]
+    pollutants = [
+        col[4:] for col in biophysical_df.columns if col.startswith('emc_')]
     LOGGER.debug(f'Pollutants found in biophysical table: {pollutants}')
 
     # Calculate avoided pollutant load for each pollutant from retention volume
@@ -766,9 +760,7 @@ def execute(args):
             output_dir, f'actual_pollutant_load_{pollutant}{suffix}.tif')
         actual_load_paths.append(actual_pollutant_load_path)
         # make an array mapping each LULC code to the pollutant EMC value
-        emc_array = numpy.array(
-            [biophysical_dict[lucode][f'emc_{pollutant}']
-                for lucode in sorted_lucodes], dtype=numpy.float32)
+        emc_array = biophysical_df[f'emc_{pollutant}'].to_numpy(dtype=numpy.float32)
 
         # calculate avoided load from retention volume
         avoided_load_task = task_graph.add_task(

@@ -58,8 +58,8 @@ export default class InvestJob {
       const lastKey = sortedJobHashes.pop();
       investJobStore.removeItem(lastKey);
     }
-    await investJobStore.setItem(HASH_ARRAY_KEY, sortedJobHashes);
     await investJobStore.setItem(job.hash, job);
+    await investJobStore.setItem(HASH_ARRAY_KEY, sortedJobHashes);
     return InvestJob.getJobStore();
   }
 
