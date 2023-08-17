@@ -1476,10 +1476,3 @@ class HRAModelTests(unittest.TestCase):
                       str(cm.exception))
         self.assertIn("Missing from criteria table: transportation",
                       str(cm.exception))
-
-        args['risk_eq'] = 'some other risk eq'
-        with self.assertRaises(ValueError) as cm:
-            hra.execute(args)
-
-        self.assertIn("must be either 'Multiplicative' or 'Euclidean'",
-                      str(cm.exception))

@@ -1521,9 +1521,8 @@ def _validate_same_id_lengths(table_path):
         table_path (string):  path to a csv table that has at least
             the field 'id'
 
-    Raises:
-        ValueError if any of the fields in 'id' and 'type' don't match between
-        tables.
+    Return:
+        string message if IDs are too long
 
     """
     predictor_df = utils.read_csv_to_dataframe(
@@ -1552,12 +1551,8 @@ def _validate_same_ids_and_types(
             at least the fields 'id' and 'type'
 
     Returns:
-        None
-
-    Raises:
-        ValueError if any of the fields in 'id' and 'type' don't match between
-        tables.
-
+        string message if any of the fields in 'id' and 'type' don't match
+        between tables.
     """
     predictor_df = utils.read_csv_to_dataframe(
         predictor_table_path, MODEL_SPEC['args']['predictor_table_path'])
@@ -1571,8 +1566,8 @@ def _validate_same_ids_and_types(
     scenario_predictor_pairs = set([
         (p_id, row['type']) for p_id, row in scenario_predictor_df.iterrows()])
     if predictor_pairs != scenario_predictor_pairs:
-        return (f'table pairs unequal. predictor: {predictor_table_pairs} '
-                f'scenario: {scenario_predictor_table_pairs}')
+        return (f'table pairs unequal. predictor: {predictor_pairs} '
+                f'scenario: {scenario_predictor_pairs}')
 
 
 def _validate_same_projection(base_vector_path, table_path):
@@ -1584,12 +1579,8 @@ def _validate_same_projection(base_vector_path, table_path):
             the field 'path'
 
     Returns:
-        None
-
-    Raises:
-        ValueError if the projections in each of the GIS types in the table
+        string message if the projections in each of the GIS types in the table
             are not identical to the projection in base_vector_path
-
     """
     # This will load the table as a list of paths which we can iterate through
     # without bothering the rest of the table structure
@@ -1620,16 +1611,12 @@ def _validate_same_projection(base_vector_path, table_path):
         else:
             vector = gdal.OpenEx(path, gdal.OF_VECTOR)
             if vector is None:
-                raise ValueError(f"{path} did not load")
+                return f"{path} did not load"
             layer = vector.GetLayer()
             ref = osr.SpatialReference(layer.GetSpatialRef().ExportToWkt())
             layer = None
             vector = None
         if not base_ref.IsSame(ref):
-            LOGGER.warning(
-                f"{path} might have a different projection than the base AOI\n"
-                f"base:{base_ref.ExportToPrettyWkt()}\n"
-                f"current:{ref.ExportToPrettyWkt()}")
             invalid_projections = True
     if invalid_projections:
         return ("One or more of the projections in the table did not match "
@@ -1644,11 +1631,8 @@ def _validate_predictor_types(table_path):
             the field 'type'
 
     Returns:
-        None
-
-    Raises:
-        ValueError if any value in the ``type`` column does not match a valid
-        type, ignoring leading/trailing whitespace.
+        string message if any value in the ``type`` column does not match a
+        valid type, ignoring leading/trailing whitespace.
     """
     df = utils.read_csv_to_dataframe(
         table_path, MODEL_SPEC['args']['predictor_table_path'])
@@ -1707,8 +1691,9 @@ def validate(args, limit_to=None):
     sufficient_valid_keys = (validation.get_sufficient_keys(args) -
                              validation.get_invalid_keys(validation_messages))
 
+    validation_tuples = []
     if 'predictor_table_path' in sufficient_valid_keys:
-        validation_tuples = [
+        validation_tuples += [
             (_validate_same_id_lengths, ['predictor_table_path']),
             (_validate_same_projection, ['aoi_path', 'predictor_table_path']),
             (_validate_predictor_types, ['predictor_table_path'])]
@@ -1727,8 +1712,8 @@ def validate(args, limit_to=None):
 
     if 'start_year' in sufficient_valid_keys and 'end_year' in sufficient_valid_keys:
         if int(args['end_year']) < int(args['start_year']):
-            validation_messages.append(
+            validation_messages.append((
                 ['start_year', 'end_year'],
-                "Start year must be less than or equal to end year.")
+                "Start year must be less than or equal to end year."))
 
     return validation_messages

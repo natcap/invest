@@ -697,9 +697,8 @@ class RecreationRegressionTests(unittest.TestCase):
         table_path = os.path.join(
             SAMPLE_DATA, 'predictors_data_missing.csv')
 
-        with self.assertRaises(ValueError):
-            recmodel_client._validate_same_projection(
-                response_vector_path, table_path)
+        self.assertIsNotNone(recmodel_client._validate_same_projection(
+                response_vector_path, table_path))
 
     def test_data_different_projection(self):
         """Recreation raise exception if data in different projection."""
@@ -709,9 +708,8 @@ class RecreationRegressionTests(unittest.TestCase):
         table_path = os.path.join(
             SAMPLE_DATA, 'predictors_wrong_projection.csv')
 
-        with self.assertRaises(ValueError):
-            recmodel_client._validate_same_projection(
-                response_vector_path, table_path)
+        self.assertIsNotNone(recmodel_client._validate_same_projection(
+                response_vector_path, table_path))
 
     def test_different_tables(self):
         """Recreation exception if scenario ids different than predictor."""
@@ -721,10 +719,9 @@ class RecreationRegressionTests(unittest.TestCase):
             SAMPLE_DATA, 'predictors_data_missing.csv')
         scenario_table_path = os.path.join(
             SAMPLE_DATA, 'predictors_wrong_projection.csv')
-
-        with self.assertRaises(ValueError):
+        self.assertIsNotNone(
             recmodel_client._validate_same_ids_and_types(
-                base_table_path, scenario_table_path)
+                base_table_path, scenario_table_path))
 
     def test_delay_op(self):
         """Recreation coverage of delay op function."""
@@ -833,7 +830,6 @@ class RecreationRegressionTests(unittest.TestCase):
 
         with open(predictor_target_path, 'r') as file:
             data = json.load(file)
-            print(data)
         actual_value = list(data.values())[0]
         expected_value = 1
         self.assertEqual(actual_value, expected_value)
@@ -984,9 +980,8 @@ class RecreationRegressionTests(unittest.TestCase):
             'results_suffix': '',
             'workspace_dir': self.workspace_dir,
         }
-
-        with self.assertRaises(ValueError):
-            recmodel_client.execute(args)
+        msgs = recmodel_client.validate(args)
+        self.assertIn('more than 10 characters long', msgs[0][1])
 
     def test_existing_output_shapefiles(self):
         """Recreation grid test when output files need to be overwritten."""
@@ -1125,9 +1120,9 @@ class RecreationRegressionTests(unittest.TestCase):
                 SAMPLE_DATA, 'predictors_scenario.csv'),
             'workspace_dir': self.workspace_dir,
         }
-
-        with self.assertRaises(ValueError):
-            recmodel_client.execute(args)
+        msgs = recmodel_client.validate(args)
+        self.assertEqual(
+            'Start year must be less than or equal to end year.', msgs[0][1])
 
     def test_bad_grid_type(self):
         """Recreation ensure that bad grid type raises ValueError."""
@@ -1341,11 +1336,8 @@ class RecreationValidationTests(unittest.TestCase):
             'predictor_table_path': bad_table_path,
             'workspace_dir': self.workspace_dir,
         }
-
-        with self.assertRaises(ValueError) as cm:
-            recmodel_client.execute(args)
-        self.assertTrue('The table contains invalid type value(s)' in
-                        str(cm.exception))
+        msgs = recmodel_client.validate(args)
+        self.assertIn('The table contains invalid type value(s)', msgs[0][1])
 
 
 def _assert_regression_results_eq(

@@ -2758,22 +2758,26 @@ def validate(args, limit_to=None):
     Returns:
         A list of tuples where tuple[0] is an iterable of keys that the error
         message applies to and tuple[1] is the str validation warning.
-
     """
     validation_warnings = validation.validate(args, MODEL_SPEC['args'],
                                MODEL_SPEC['args_with_spatial_overlap'])
 
     invalid_keys = validation.get_invalid_keys(validation_warnings)
-    if ('wind_schedule' not in invalid_keys and
-            'global_wind_parameters_path' not in invalid_keys):
+    sufficient_keys = validation.get_sufficient_keys(args)
+    valid_sufficient_keys = sufficient_keys - invalid_keys
+
+    if ('wind_schedule' in valid_sufficient_keys and
+            'global_wind_parameters_path' in valid_sufficient_keys):
         year_count = len(
-            utils.read_csv_to_dataframe(args['wind_schedule'])['year'])
+            utils.read_csv_to_dataframe(
+                args['wind_schedule'], MODEL_SPEC['args']['wind_schedule']))
         time = int(_read_csv_wind_parameters(
-            args['global_wind_parameters_path'], valuation_global_params
+            args['global_wind_parameters_path'], ['time_period']
         )['time_period'])
         if year_count != time + 1:
             validation_warnings.append((
-                ['wind_schedule']
+                ['wind_schedule'],
                 "The 'time' argument in the Global Wind Energy Parameters "
-                "file must equal the number of years provided in the price"
-                " table.")
+                "file must equal the number of years provided in the price "
+                "table."))
+    return validation_warnings

@@ -59,23 +59,6 @@ class RouteDEMTests(unittest.TestCase):
         dem_raster.SetGeoTransform(dem_geotransform)
         dem_raster = None
 
-    def test_routedem_invalid_algorithm(self):
-        """RouteDEM: fail when the algorithm isn't recognized."""
-        from natcap.invest import routedem
-        args = {
-            'workspace_dir': self.workspace_dir,
-            'algorithm': 'invalid',
-            'dem_path': os.path.join(self.workspace_dir, 'dem.tif'),
-            'results_suffix': 'foo',
-            'calculate_flow_direction': True,
-        }
-
-        RouteDEMTests._make_dem(args['dem_path'])
-        with self.assertRaises(RuntimeError) as cm:
-            routedem.execute(args)
-
-        self.assertTrue('Invalid algorithm specified' in str(cm.exception))
-
     def test_routedem_no_options_default_band(self):
         """RouteDEM: default to band 1 when not specified."""
         from natcap.invest import routedem

@@ -102,7 +102,7 @@ class NDRTests(unittest.TestCase):
             normalized_array, expected_array, rtol=0, atol=1e-6)
 
     def test_missing_headers(self):
-        """NDR biphysical headers missing should raise a ValueError."""
+        """NDR biphysical headers missing should return validation message."""
         from natcap.invest.ndr import ndr
 
         # use predefined directory so test can clean up files during teardown
@@ -110,8 +110,8 @@ class NDRTests(unittest.TestCase):
         # make args explicit that this is a base run of SWY
         args['biophysical_table_path'] = os.path.join(
             REGRESSION_DATA, 'input', 'biophysical_table_missing_headers.csv')
-        with self.assertRaises(ValueError):
-            ndr.execute(args)
+        validation_messages = ndr.validate(args)
+        self.assertEqual(len(validation_messages), 1)
 
     def test_crit_len_0(self):
         """NDR test case where crit len is 0 in biophysical table."""
@@ -182,7 +182,7 @@ class NDRTests(unittest.TestCase):
             in actual_message)
 
     def test_no_nutrient_selected(self):
-        """NDR no nutrient selected should raise a ValueError."""
+        """NDR no nutrient selected should return a validation message."""
         from natcap.invest.ndr import ndr
 
         # use predefined directory so test can clean up files during teardown
@@ -190,8 +190,8 @@ class NDRTests(unittest.TestCase):
         # make args explicit that this is a base run of SWY
         args['calc_n'] = False
         args['calc_p'] = False
-        with self.assertRaises(ValueError):
-            ndr.execute(args)
+        validation_messages = ndr.validate(args)
+        self.assertEqual(len(validation_messages), 1)
 
     def test_base_regression(self):
         """NDR base regression test on sample data.

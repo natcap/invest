@@ -791,7 +791,7 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
                     weight * visibility[valid_pixels]))
             return valuation
 
-    elif valuation_method == 'exponential':
+    else:  # exponential
 
         def _valuation(distance, visibility):
             valid_pixels = (visibility == 1)

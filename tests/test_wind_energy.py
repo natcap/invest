@@ -723,7 +723,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
             os.path.join(REGRESSION_DATA, 'priceval', vector_path))
 
     def test_field_error_missing_bio_param(self):
-        """WindEnergy: test that ValueError raised when missing bio param."""
+        """WindEnergy: test that validation catches missing bio param."""
         from natcap.invest import wind_energy
 
         # for testing raised exceptions, running on a set of data that was
@@ -749,7 +749,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         }
 
         # creating a stand in turbine parameter csv file that is missing
-        # the 'cut_out_wspd' entry. This should raise the exception
+        # the 'cut_out_wspd' entry.
         tmp, file_path = tempfile.mkstemp(
             suffix='.csv', dir=args['workspace_dir'])
         os.close(tmp)
@@ -760,10 +760,11 @@ class WindEnergyRegressionTests(unittest.TestCase):
         _create_vertical_csv(data, file_path)
         args['turbine_parameters_path'] = file_path
 
-        self.assertRaises(ValueError, wind_energy.execute, args)
+        validation_messages = wind_energy.validate(args)
+        self.assertEqual(len(validation_messages), 1)
 
     def test_time_period_exception(self):
-        """WindEnergy: raise ValueError if 'time' and 'wind_sched' differ."""
+        """WindEnergy: validation message if 'time' and 'wind_sched' differ."""
         from natcap.invest import wind_energy
 
         # for testing raised exceptions, running on a set of data that was
@@ -815,8 +816,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
         }
         _create_vertical_csv(data, file_path)
         args['global_wind_parameters_path'] = file_path
-
-        self.assertRaises(ValueError, wind_energy.execute, args)
+        validation_messages = wind_energy.validate(args)
+        self.assertEqual(len(validation_messages), 1)
 
     def test_clip_vector_value_error(self):
         """WindEnergy: Test AOI doesn't intersect Wind Data points."""
