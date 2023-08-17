@@ -124,6 +124,7 @@ Unreleased Changes
 * Urban Nature Access
     * Urban nature supply outputs have been renamed to add ``percapita`` to the
       filename.
+
         * In uniform search radius mode, ``urban_nature_supply.tif`` has been
           renamed to ``urban_nature_supply_percapita.tif``.
         * When defining search radii by urban nature class,
@@ -132,10 +133,12 @@ Unreleased Changes
         * When defining search radii by population groups,
           ``urban_nature_supply_to_[POP_GROUP].tif`` has been renamed to
           ``urban_nature_supply_percapita_to_[POP_GROUP].tif``.
+
     * A new output for "Accessible Urban Nature" is created, indicating the
       area of accessible greenspace available to people within the search
       radius, weighted by the selected decay function.  The outputs vary
       slightly depending on the selected execution mode.
+
         * In uniform search radius mode, a single new output is created,
           ``accessible_urban_nature.tif``.
         * When defining search radii by urban nature class, one new
@@ -144,6 +147,7 @@ Unreleased Changes
         * When defining search radii for population groups, one new output
           raster is created for each population group.  These files are named
           ``accessible_urban_nature_to_[POP_GROUP].tif``.
+
 * Visitation: Recreation and Tourism
     * Fixed a bug where overlapping predictor polygons would be double-counted
       in ``polygon_area_coverage`` and ``polygon_percent_coverage`` calculations.
