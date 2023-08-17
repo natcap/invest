@@ -846,7 +846,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
             wind_energy.execute(args)
 
         self.assertTrue(
-            "returned 0 features. If an AOI was" in str(cm.exception))
+            "returned 0 features. This means the AOI " in str(cm.exception))
 
 
 class WindEnergyValidationTests(unittest.TestCase):
