@@ -22,6 +22,87 @@ from .crop_production_regression import NUTRIENTS
 
 LOGGER = logging.getLogger(__name__)
 
+CROP_OPTIONS = {
+    # TODO: use human-readable translatable crop names (#614)
+    crop: {"description": crop} for crop in [
+        "abaca", "agave", "alfalfa", "almond", "aniseetc",
+        "apple", "apricot", "areca", "artichoke", "asparagus",
+        "avocado", "bambara", "banana", "barley", "bean",
+        "beetfor", "berrynes", "blueberry", "brazil",
+        "canaryseed", "carob", "carrot", "carrotfor", "cashew",
+        "broadbean", "buckwheat", "cabbage", "cabbagefor",
+        "cashewapple", "cassava", "castor", "cauliflower",
+        "cerealnes", "cherry", "chestnut", "chickpea",
+        "chicory", "chilleetc", "cinnamon", "citrusnes",
+        "clove", "clover", "cocoa", "coconut", "coffee",
+        "cotton", "cowpea", "cranberry", "cucumberetc",
+        "currant", "date", "eggplant", "fibrenes", "fig",
+        "flax", "fonio", "fornes", "fruitnes", "garlic",
+        "ginger", "gooseberry", "grape", "grapefruitetc",
+        "grassnes", "greenbean", "greenbroadbean", "greencorn",
+        "greenonion", "greenpea", "groundnut", "hazelnut",
+        "hemp", "hempseed", "hop", "jute", "jutelikefiber",
+        "kapokfiber", "kapokseed", "karite", "kiwi", "kolanut",
+        "legumenes", "lemonlime", "lentil", "lettuce",
+        "linseed", "lupin", "maize", "maizefor", "mango",
+        "mate", "melonetc", "melonseed", "millet",
+        "mixedgrain", "mixedgrass", "mushroom", "mustard",
+        "nutmeg", "nutnes", "oats", "oilpalm", "oilseedfor",
+        "oilseednes", "okra", "olive", "onion", "orange",
+        "papaya", "pea", "peachetc", "pear", "pepper",
+        "peppermint", "persimmon", "pigeonpea", "pimento",
+        "pineapple", "pistachio", "plantain", "plum", "poppy",
+        "potato", "pulsenes", "pumpkinetc", "pyrethrum",
+        "quince", "quinoa", "ramie", "rapeseed", "rasberry",
+        "rice", "rootnes", "rubber", "rye", "ryefor",
+        "safflower", "sesame", "sisal", "sorghum",
+        "sorghumfor", "sourcherry, soybean", "spicenes",
+        "spinach", "stonefruitnes", "strawberry", "stringbean",
+        "sugarbeet", "sugarcane", "sugarnes", "sunflower",
+        "swedefor", "sweetpotato", "tangetc", "taro", "tea",
+        "tobacco", "tomato", "triticale", "tropicalnes",
+        "tung", "turnipfor", "vanilla", "vegetablenes",
+        "vegfor", "vetch", "walnut", "watermelon", "wheat",
+        "yam", "yautia"
+    ]
+}
+
+nutrient_units = {
+    "protein":     u.gram/u.hectogram,
+    "lipid":       u.gram/u.hectogram,       # total lipid
+    "energy":      u.kilojoule/u.hectogram,
+    "ca":          u.milligram/u.hectogram,  # calcium
+    "fe":          u.milligram/u.hectogram,  # iron
+    "mg":          u.milligram/u.hectogram,  # magnesium
+    "ph":          u.milligram/u.hectogram,  # phosphorus
+    "k":           u.milligram/u.hectogram,  # potassium
+    "na":          u.milligram/u.hectogram,  # sodium
+    "zn":          u.milligram/u.hectogram,  # zinc
+    "cu":          u.milligram/u.hectogram,  # copper
+    "fl":          u.microgram/u.hectogram,  # fluoride
+    "mn":          u.milligram/u.hectogram,  # manganese
+    "se":          u.microgram/u.hectogram,  # selenium
+    "vita":        u.IU/u.hectogram,         # vitamin A
+    "betac":       u.microgram/u.hectogram,  # beta carotene
+    "alphac":      u.microgram/u.hectogram,  # alpha carotene
+    "vite":        u.milligram/u.hectogram,  # vitamin e
+    "crypto":      u.microgram/u.hectogram,  # cryptoxanthin
+    "lycopene":    u.microgram/u.hectogram,  # lycopene
+    "lutein":      u.microgram/u.hectogram,  # lutein + zeaxanthin
+    "betat":       u.milligram/u.hectogram,  # beta tocopherol
+    "gammat":      u.milligram/u.hectogram,  # gamma tocopherol
+    "deltat":      u.milligram/u.hectogram,  # delta tocopherol
+    "vitc":        u.milligram/u.hectogram,  # vitamin C
+    "thiamin":     u.milligram/u.hectogram,
+    "riboflavin":  u.milligram/u.hectogram,
+    "niacin":      u.milligram/u.hectogram,
+    "pantothenic": u.milligram/u.hectogram,  # pantothenic acid
+    "vitb6":       u.milligram/u.hectogram,  # vitamin B6
+    "folate":      u.microgram/u.hectogram,
+    "vitb12":      u.microgram/u.hectogram,  # vitamin B12
+    "vitk":        u.microgram/u.hectogram,  # vitamin K
+}
+
 MODEL_SPEC = {
     "model_name": MODEL_METADATA["crop_production_percentile"].model_title,
     "pyname": MODEL_METADATA["crop_production_percentile"].pyname,
@@ -44,54 +125,12 @@ MODEL_SPEC = {
         },
         "landcover_to_crop_table_path": {
             "type": "csv",
+            "index_col": "crop_name",
             "columns": {
                 "lucode": {"type": "integer"},
                 "crop_name": {
                     "type": "option_string",
-                    "options": {
-                        # TODO: use human-readable translatable crop names (#614)
-                        crop: {"description": crop} for crop in [
-                            "abaca", "agave", "alfalfa", "almond", "aniseetc",
-                            "apple", "apricot", "areca", "artichoke", "asparagus",
-                            "avocado", "bambara", "banana", "barley", "bean",
-                            "beetfor", "berrynes", "blueberry", "brazil",
-                            "canaryseed", "carob", "carrot", "carrotfor", "cashew",
-                            "broadbean", "buckwheat", "cabbage", "cabbagefor",
-                            "cashewapple", "cassava", "castor", "cauliflower",
-                            "cerealnes", "cherry", "chestnut", "chickpea",
-                            "chicory", "chilleetc", "cinnamon", "citrusnes",
-                            "clove", "clover", "cocoa", "coconut", "coffee",
-                            "cotton", "cowpea", "cranberry", "cucumberetc",
-                            "currant", "date", "eggplant", "fibrenes", "fig",
-                            "flax", "fonio", "fornes", "fruitnes", "garlic",
-                            "ginger", "gooseberry", "grape", "grapefruitetc",
-                            "grassnes", "greenbean", "greenbroadbean", "greencorn",
-                            "greenonion", "greenpea", "groundnut", "hazelnut",
-                            "hemp", "hempseed", "hop", "jute", "jutelikefiber",
-                            "kapokfiber", "kapokseed", "karite", "kiwi", "kolanut",
-                            "legumenes", "lemonlime", "lentil", "lettuce",
-                            "linseed", "lupin", "maize", "maizefor", "mango",
-                            "mate", "melonetc", "melonseed", "millet",
-                            "mixedgrain", "mixedgrass", "mushroom", "mustard",
-                            "nutmeg", "nutnes", "oats", "oilpalm", "oilseedfor",
-                            "oilseednes", "okra", "olive", "onion", "orange",
-                            "papaya", "pea", "peachetc", "pear", "pepper",
-                            "peppermint", "persimmon", "pigeonpea", "pimento",
-                            "pineapple", "pistachio", "plantain", "plum", "poppy",
-                            "potato", "pulsenes", "pumpkinetc", "pyrethrum",
-                            "quince", "quinoa", "ramie", "rapeseed", "rasberry",
-                            "rice", "rootnes", "rubber", "rye", "ryefor",
-                            "safflower", "sesame", "sisal", "sorghum",
-                            "sorghumfor", "sourcherry, soybean", "spicenes",
-                            "spinach", "stonefruitnes", "strawberry", "stringbean",
-                            "sugarbeet", "sugarcane", "sugarnes", "sunflower",
-                            "swedefor", "sweetpotato", "tangetc", "taro", "tea",
-                            "tobacco", "tomato", "triticale", "tropicalnes",
-                            "tung", "turnipfor", "vanilla", "vegetablenes",
-                            "vegfor", "vetch", "walnut", "watermelon", "wheat",
-                            "yam", "yautia"
-                        ]
-                    }
+                    "options": CROP_OPTIONS
                 }
             },
             "about": gettext(
@@ -116,6 +155,7 @@ MODEL_SPEC = {
                     "contents": {
                         "[CROP]_percentile_yield_table.csv": {
                             "type": "csv",
+                            "index_col": "climate_bin",
                             "columns": {
                                 "climate_bin": {"type": "integer"},
                                 "yield_25th": {
@@ -163,45 +203,19 @@ MODEL_SPEC = {
                 },
                 "crop_nutrient.csv": {
                     "type": "csv",
+                    "index_col": "crop",
                     "columns": {
-                        nutrient: {
+                        "crop": {
+                            "type": "option_string",
+                            "options": CROP_OPTIONS
+                        },
+                        "percentrefuse": {
+                            "type": "percent"
+                        },
+                        **{nutrient: {
                             "type": "number",
                             "units": units
-                        } for nutrient, units in {
-                            "protein":     u.gram/u.hectogram,
-                            "lipid":       u.gram/u.hectogram,       # total lipid
-                            "energy":      u.kilojoule/u.hectogram,
-                            "ca":          u.milligram/u.hectogram,  # calcium
-                            "fe":          u.milligram/u.hectogram,  # iron
-                            "mg":          u.milligram/u.hectogram,  # magnesium
-                            "ph":          u.milligram/u.hectogram,  # phosphorus
-                            "k":           u.milligram/u.hectogram,  # potassium
-                            "na":          u.milligram/u.hectogram,  # sodium
-                            "zn":          u.milligram/u.hectogram,  # zinc
-                            "cu":          u.milligram/u.hectogram,  # copper
-                            "fl":          u.microgram/u.hectogram,  # fluoride
-                            "mn":          u.milligram/u.hectogram,  # manganese
-                            "se":          u.microgram/u.hectogram,  # selenium
-                            "vita":        u.IU/u.hectogram,         # vitamin A
-                            "betac":       u.microgram/u.hectogram,  # beta carotene
-                            "alphac":      u.microgram/u.hectogram,  # alpha carotene
-                            "vite":        u.milligram/u.hectogram,  # vitamin e
-                            "crypto":      u.microgram/u.hectogram,  # cryptoxanthin
-                            "lycopene":    u.microgram/u.hectogram,  # lycopene
-                            "lutein":      u.microgram/u.hectogram,  # lutein + zeaxanthin
-                            "betaT":       u.milligram/u.hectogram,  # beta tocopherol
-                            "gammaT":      u.milligram/u.hectogram,  # gamma tocopherol
-                            "deltaT":      u.milligram/u.hectogram,  # delta tocopherol
-                            "vitc":        u.milligram/u.hectogram,  # vitamin C
-                            "thiamin":     u.milligram/u.hectogram,
-                            "riboflavin":  u.milligram/u.hectogram,
-                            "niacin":      u.milligram/u.hectogram,
-                            "pantothenic": u.milligram/u.hectogram,  # pantothenic acid
-                            "vitb6":       u.milligram/u.hectogram,  # vitamin B6
-                            "folate":      u.microgram/u.hectogram,
-                            "vitb12":      u.microgram/u.hectogram,  # vitamin B12
-                            "vitk":        u.microgram/u.hectogram,  # vitamin K
-                        }.items()
+                        } for nutrient, units in nutrient_units.items()}
                     }
                 }
             },
@@ -213,6 +227,7 @@ MODEL_SPEC = {
         "aggregate_results.csv": {
             "created_if": "aggregate_polygon_path",
             "about": "Model results aggregated to AOI polygons",
+            "index_col": "FID",
             "columns": {
                 "FID": {
                     "type": "integer",
@@ -251,6 +266,7 @@ MODEL_SPEC = {
         },
         "result_table.csv": {
             "about": "Model results aggregated by crop",
+            "index_col": "crop",
             "columns": {
                 "crop": {
                     "type": "freestyle_string",
@@ -405,12 +421,7 @@ _AGGREGATE_VECTOR_FILE_PATTERN = os.path.join(
 _AGGREGATE_TABLE_FILE_PATTERN = os.path.join(
     '.', 'aggregate_results%s.csv')
 
-_EXPECTED_NUTRIENT_TABLE_HEADERS = [
-    'Protein', 'Lipid', 'Energy', 'Ca', 'Fe', 'Mg', 'Ph', 'K', 'Na', 'Zn',
-    'Cu', 'Fl', 'Mn', 'Se', 'VitA', 'betaC', 'alphaC', 'VitE', 'Crypto',
-    'Lycopene', 'Lutein', 'betaT', 'gammaT', 'deltaT', 'VitC', 'Thiamin',
-    'Riboflavin', 'Niacin', 'Pantothenic', 'VitB6', 'Folate', 'VitB12',
-    'VitK']
+_EXPECTED_NUTRIENT_TABLE_HEADERS = list(nutrient_units.keys())
 _EXPECTED_LUCODE_TABLE_HEADER = 'lucode'
 _NODATA_YIELD = -1
 
@@ -458,10 +469,11 @@ def execute(args):
         None.
 
     """
-    crop_to_landcover_table = utils.build_lookup_from_csv(
-        args['landcover_to_crop_table_path'], 'crop_name', to_lower=True)
+    crop_to_landcover_df = utils.read_csv_to_dataframe(
+        args['landcover_to_crop_table_path'],
+        MODEL_SPEC['args']['landcover_to_crop_table_path'])
     bad_crop_name_list = []
-    for crop_name in crop_to_landcover_table:
+    for crop_name in crop_to_landcover_df.index:
         crop_climate_bin_raster_path = os.path.join(
             args['model_data_path'],
             _EXTENDED_CLIMATE_BIN_FILE_PATTERN % crop_name)
@@ -512,9 +524,8 @@ def execute(args):
 
     crop_lucode = None
     observed_yield_nodata = None
-    for crop_name in crop_to_landcover_table:
-        crop_lucode = crop_to_landcover_table[crop_name][
-            _EXPECTED_LUCODE_TABLE_HEADER]
+    for crop_name, row in crop_to_landcover_df.iterrows():
+        crop_lucode = row[_EXPECTED_LUCODE_TABLE_HEADER]
         LOGGER.info("Processing crop %s", crop_name)
         crop_climate_bin_raster_path = os.path.join(
             args['model_data_path'],
@@ -540,11 +551,13 @@ def execute(args):
         climate_percentile_yield_table_path = os.path.join(
             args['model_data_path'],
             _CLIMATE_PERCENTILE_TABLE_PATTERN % crop_name)
-        crop_climate_percentile_table = utils.build_lookup_from_csv(
-            climate_percentile_yield_table_path, 'climate_bin', to_lower=True)
+        crop_climate_percentile_df = utils.read_csv_to_dataframe(
+            climate_percentile_yield_table_path,
+            MODEL_SPEC['args']['model_data_path']['contents'][
+                'climate_percentile_yield_tables']['contents'][
+                '[CROP]_percentile_yield_table.csv'])
         yield_percentile_headers = [
-            x for x in list(crop_climate_percentile_table.values())[0]
-            if x != 'climate_bin']
+            x for x in crop_climate_percentile_df.columns if x != 'climate_bin']
 
         reclassify_error_details = {
             'raster_name': f'{crop_name} Climate Bin',
@@ -556,10 +569,8 @@ def execute(args):
                 output_dir,
                 _INTERPOLATED_YIELD_PERCENTILE_FILE_PATTERN % (
                     crop_name, yield_percentile_id, file_suffix))
-            bin_to_percentile_yield = dict([
-                (bin_id,
-                 crop_climate_percentile_table[bin_id][yield_percentile_id])
-                for bin_id in crop_climate_percentile_table])
+            bin_to_percentile_yield = (
+                crop_climate_percentile_df[yield_percentile_id].to_dict())
             # reclassify nodata to a valid value of 0
             # we're assuming that the crop doesn't exist where there is no data
             # this is more likely than assuming the crop does exist, esp.
@@ -698,16 +709,17 @@ def execute(args):
 
     # both 'crop_nutrient.csv' and 'crop' are known data/header values for
     # this model data.
-    nutrient_table = utils.build_lookup_from_csv(
+    nutrient_df = utils.read_csv_to_dataframe(
         os.path.join(args['model_data_path'], 'crop_nutrient.csv'),
-        'crop', to_lower=False)
+        MODEL_SPEC['args']['model_data_path']['contents']['crop_nutrient.csv'])
     result_table_path = os.path.join(
         output_dir, 'result_table%s.csv' % file_suffix)
 
+    crop_names = crop_to_landcover_df.index.to_list()
     tabulate_results_task = task_graph.add_task(
         func=tabulate_results,
-        args=(nutrient_table, yield_percentile_headers,
-              crop_to_landcover_table, pixel_area_ha,
+        args=(nutrient_df, yield_percentile_headers,
+              crop_names, pixel_area_ha,
               args['landcover_raster_path'], landcover_nodata,
               output_dir, file_suffix, result_table_path),
         target_path_list=[result_table_path],
@@ -726,7 +738,7 @@ def execute(args):
             args=(args['aggregate_polygon_path'],
                   target_aggregate_vector_path,
                   landcover_raster_info['projection_wkt'],
-                  crop_to_landcover_table, nutrient_table,
+                  crop_names, nutrient_df,
                   yield_percentile_headers, output_dir, file_suffix,
                   aggregate_results_table_path),
             target_path_list=[target_aggregate_vector_path,
@@ -850,19 +862,18 @@ def _mask_observed_yield_op(
 
 
 def tabulate_results(
-        nutrient_table, yield_percentile_headers,
-        crop_to_landcover_table, pixel_area_ha, landcover_raster_path,
+        nutrient_df, yield_percentile_headers,
+        crop_names, pixel_area_ha, landcover_raster_path,
         landcover_nodata, output_dir, file_suffix, target_table_path):
     """Write table with total yield and nutrient results by crop.
 
     This function includes all the operations that write to results_table.csv.
 
     Args:
-        nutrient_table (dict): a lookup of nutrient values by crop in the
-            form of nutrient_table[<crop>][<nutrient>].
+        nutrient_df (pandas.DataFrame): a table of nutrient values by crop
         yield_percentile_headers (list): list of strings indicating percentiles
             at which yield was calculated.
-        crop_to_landcover_table (dict): landcover codes keyed by crop names
+        crop_names (list): list of crop names
         pixel_area_ha (float): area of lulc raster cells (hectares)
         landcover_raster_path (string): path to landcover raster
         landcover_nodata (float): landcover raster nodata value
@@ -893,7 +904,7 @@ def tabulate_results(
             'crop,area (ha),' + 'production_observed,' +
             ','.join(production_percentile_headers) + ',' + ','.join(
                 nutrient_headers) + '\n')
-        for crop_name in sorted(crop_to_landcover_table):
+        for crop_name in sorted(crop_names):
             result_table.write(crop_name)
             production_lookup = {}
             production_pixel_count = 0
@@ -941,19 +952,19 @@ def tabulate_results(
 
             # convert 100g to Mg and fraction left over from refuse
             nutrient_factor = 1e4 * (
-                1 - nutrient_table[crop_name]['Percentrefuse'] / 100)
+                1 - nutrient_df['percentrefuse'][crop_name] / 100)
             for nutrient_id in _EXPECTED_NUTRIENT_TABLE_HEADERS:
                 for yield_percentile_id in sorted(yield_percentile_headers):
                     total_nutrient = (
                         nutrient_factor *
                         production_lookup[yield_percentile_id] *
-                        nutrient_table[crop_name][nutrient_id])
+                        nutrient_df[nutrient_id][crop_name])
                     result_table.write(",%f" % (total_nutrient))
                 result_table.write(
                     ",%f" % (
                         nutrient_factor *
                         production_lookup['observed'] *
-                        nutrient_table[crop_name][nutrient_id]))
+                        nutrient_df[nutrient_id][crop_name]))
             result_table.write('\n')
 
         total_area = 0
@@ -971,8 +982,8 @@ def tabulate_results(
 
 def aggregate_to_polygons(
         base_aggregate_vector_path, target_aggregate_vector_path,
-        landcover_raster_projection, crop_to_landcover_table,
-        nutrient_table, yield_percentile_headers, output_dir, file_suffix,
+        landcover_raster_projection, crop_names,
+        nutrient_df, yield_percentile_headers, output_dir, file_suffix,
         target_aggregate_table_path):
     """Write table with aggregate results of yield and nutrient values.
 
@@ -985,9 +996,8 @@ def aggregate_to_polygons(
         target_aggregate_vector_path (string):
             path to re-projected copy of polygon vector
         landcover_raster_projection (string): a WKT projection string
-        crop_to_landcover_table (dict): landcover codes keyed by crop names
-        nutrient_table (dict): a lookup of nutrient values by crop in the
-            form of nutrient_table[<crop>][<nutrient>].
+        crop_names (list): list of crop names
+        nutrient_df (pandas.DataFrame): a table of nutrient values by crop
         yield_percentile_headers (list): list of strings indicating percentiles
             at which yield was calculated.
         output_dir (string): the file path to the output workspace.
@@ -1011,10 +1021,10 @@ def aggregate_to_polygons(
     total_nutrient_table = collections.defaultdict(
         lambda: collections.defaultdict(lambda: collections.defaultdict(
             float)))
-    for crop_name in crop_to_landcover_table:
+    for crop_name in crop_names:
         # convert 100g to Mg and fraction left over from refuse
         nutrient_factor = 1e4 * (
-            1 - nutrient_table[crop_name]['Percentrefuse'] / 100)
+            1 - nutrient_df['percentrefuse'][crop_name] / 100)
         # loop over percentiles
         for yield_percentile_id in yield_percentile_headers:
             percentile_crop_production_raster_path = os.path.join(
@@ -1039,24 +1049,24 @@ def aggregate_to_polygons(
                             total_yield_lookup['%s_%s' % (
                                 crop_name, yield_percentile_id)][
                                     id_index]['sum'] *
-                            nutrient_table[crop_name][nutrient_id])
+                            nutrient_df[nutrient_id][crop_name])
 
         # process observed
         observed_yield_path = os.path.join(
             output_dir, _OBSERVED_PRODUCTION_FILE_PATTERN % (
                 crop_name, file_suffix))
-        total_yield_lookup['%s_observed' % crop_name] = (
+        total_yield_lookup[f'{crop_name}_observed'] = (
             pygeoprocessing.zonal_statistics(
                 (observed_yield_path, 1),
                 target_aggregate_vector_path))
         for nutrient_id in _EXPECTED_NUTRIENT_TABLE_HEADERS:
-            for id_index in total_yield_lookup['%s_observed' % crop_name]:
+            for id_index in total_yield_lookup[f'{crop_name}_observed']:
                 total_nutrient_table[
                     nutrient_id]['observed'][id_index] += (
                         nutrient_factor *
                         total_yield_lookup[
-                            '%s_observed' % crop_name][id_index]['sum'] *
-                        nutrient_table[crop_name][nutrient_id])
+                            f'{crop_name}_observed'][id_index]['sum'] *
+                        nutrient_df[nutrient_id][crop_name])
 
     # report everything to a table
     with open(target_aggregate_table_path, 'w') as aggregate_table:

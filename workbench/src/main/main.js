@@ -4,7 +4,6 @@ import path from 'path';
 import {
   app,
   BrowserWindow,
-  screen,
   nativeTheme,
   Menu,
   ipcMain
@@ -29,14 +28,16 @@ import {
 import setupGetNCPUs from './setupGetNCPUs';
 import setupOpenExternalUrl from './setupOpenExternalUrl';
 import setupOpenLocalHtml from './setupOpenLocalHtml';
-import setupChangeLanguage from './setupChangeLanguage';
+import { settingsStore, setupSettingsHandlers } from './settingsStore';
+import setupGetElectronPaths from './setupGetElectronPaths';
+import setupRendererLogger from './setupRendererLogger';
 import { ipcMainChannels } from './ipcMainChannels';
 import menuTemplate from './menubar';
 import ELECTRON_DEV_MODE from './isDevMode';
 import BASE_URL from './baseUrl';
 import { getLogger } from './logger';
-import pkg from '../../package.json';
 import i18n from './i18n/i18n';
+import pkg from '../../package.json';
 
 const logger = getLogger(__filename.split('/').slice(-1)[0]);
 
@@ -59,6 +60,7 @@ if (!process.env.PORT) {
 let mainWindow;
 let splashScreen;
 let flaskSubprocess;
+let forceQuit = false;
 
 export function destroyWindow() {
   mainWindow = null;
@@ -68,6 +70,8 @@ export function destroyWindow() {
 export const createWindow = async () => {
   logger.info(`Running invest-workbench version ${pkg.version}`);
   nativeTheme.themeSource = 'light'; // override OS/browser setting
+
+  i18n.changeLanguage(settingsStore.get('language'));
 
   splashScreen = new BrowserWindow({
     width: 574, // dims set to match the image in splash.html
@@ -81,12 +85,18 @@ export const createWindow = async () => {
   const investExe = findInvestBinaries(ELECTRON_DEV_MODE);
   flaskSubprocess = createPythonFlaskProcess(investExe);
   setupDialogs();
+  setupCheckFilePermissions();
   setupCheckFirstRun();
   setupCheckStorageToken();
-  setupChangeLanguage();
+  setupSettingsHandlers();
+  setupGetElectronPaths();
+  setupGetNCPUs();
+  setupInvestLogReaderHandler();
+  setupOpenExternalUrl();
+  setupRendererLogger();
   await getFlaskIsReady();
 
-  const devModeArg = ELECTRON_DEV_MODE ? '--devMode' : '';
+  const devModeArg = ELECTRON_DEV_MODE ? '--devmode' : '';
   // Create the browser window.
   mainWindow = new BrowserWindow({
     minWidth: 800,
@@ -94,7 +104,7 @@ export const createWindow = async () => {
     webPreferences: {
       preload: path.join(__dirname, '../preload/preload.js'),
       defaultEncoding: 'UTF-8',
-      additionalArguments: [devModeArg],
+      additionalArguments: [devModeArg, `--port=${process.env.PORT}`],
     },
   });
   Menu.setApplicationMenu(
@@ -102,14 +112,6 @@ export const createWindow = async () => {
       menuTemplate(mainWindow, ELECTRON_DEV_MODE, i18n)
     )
   );
-  // when language changes, rebuild the menu bar in new language
-  i18n.on('languageChanged', (lng) => {
-    Menu.setApplicationMenu(
-      Menu.buildFromTemplate(
-        menuTemplate(mainWindow, ELECTRON_DEV_MODE, i18n)
-      )
-    );
-  });
   mainWindow.loadURL(path.join(BASE_URL, 'index.html'));
 
   mainWindow.once('ready-to-show', () => {
@@ -118,16 +120,7 @@ export const createWindow = async () => {
     mainWindow.show();
   });
 
-  // Open the DevTools.
-  // The timing of this is fussy due a chromium bug. It seems to only
-  // come up if there is an unrelated uncaught exception during page load.
-  // https://bugs.chromium.org/p/chromium/issues/detail?id=1085215
-  // https://github.com/electron/electron/issues/23662
-  mainWindow.webContents.on('did-frame-finish-load', async () => {
-    if (ELECTRON_DEV_MODE) {
-      mainWindow.webContents.openDevTools();
-    }
-    // We use this stdout as a signal in a puppeteer test
+  mainWindow.webContents.on('did-finish-load', () => {
     process.stdout.write('main window loaded');
   });
 
@@ -136,18 +129,35 @@ export const createWindow = async () => {
     logger.error(details);
   });
 
+  mainWindow.on('close', (event) => {
+    // 'close' is triggered by the red traffic light button on mac
+    // override this behavior and just minimize,
+    // unless we're actually quitting the app
+    if (process.platform === 'darwin' & !forceQuit) {
+      event.preventDefault();
+      mainWindow.minimize()
+    }
+  });
+
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
 
-  setupCheckFilePermissions();
+  // register listeners that need a reference to the mainWindow or
+  // have callbacks that won't work until the invest server is ready.
+  setupContextMenu(mainWindow);
   setupDownloadHandlers(mainWindow);
   setupInvestRunHandlers(investExe);
-  setupInvestLogReaderHandler();
-  setupContextMenu(mainWindow);
-  setupGetNCPUs();
-  setupOpenExternalUrl();
   setupOpenLocalHtml(mainWindow, ELECTRON_DEV_MODE);
+  if (ELECTRON_DEV_MODE) {
+    // The timing of this is fussy due a chromium bug. It seems to only
+    // come up if there is an unrelated uncaught exception during page load.
+    // https://bugs.chromium.org/p/chromium/issues/detail?id=1085215
+    // https://github.com/electron/electron/issues/23662
+    // Calling this in a 'did-finish-load' listener would make a lot of sense,
+    // but most of the time it doesn't work.
+    mainWindow.webContents.openDevTools();
+  }
   return Promise.resolve(); // lets tests await createWindow(), then assert
 };
 
@@ -173,15 +183,6 @@ export function main() {
   }
 
   app.on('ready', async () => {
-    if (ELECTRON_DEV_MODE) {
-      const {
-        default: installExtension,
-        REACT_DEVELOPER_TOOLS,
-      } = require('electron-devtools-installer');
-      await installExtension(REACT_DEVELOPER_TOOLS, {
-        loadExtensionOptions: { allowFileAccess: true },
-      });
-    }
     createWindow();
   });
   app.on('activate', () => {
@@ -189,17 +190,12 @@ export function main() {
       createWindow();
     }
   });
-  app.on('window-all-closed', async () => {
-    // On OS X it is common for applications and their menu bar
-    // to stay active until the user quits explicitly with Cmd + Q
-    if (process.platform !== 'darwin') {
-      app.quit();
-    }
-  });
+
   let shuttingDown = false;
   app.on('before-quit', async (event) => {
     // prevent quitting until after we're done with cleanup,
     // then programatically quit
+    forceQuit = true;
     if (shuttingDown) { return; }
     event.preventDefault();
     shuttingDown = true;

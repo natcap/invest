@@ -77,6 +77,7 @@ MODEL_SPEC = {
         },
         "threats_table_path": {
             "type": "csv",
+            "index_col": "threat",
             "columns": {
                 "threat": {
                     "type": "freestyle_string",
@@ -170,8 +171,13 @@ MODEL_SPEC = {
         },
         "sensitivity_table_path": {
             "type": "csv",
+            "index_col": "lulc",
             "columns": {
                 "lulc": spec_utils.LULC_TABLE_COLUMN,
+                "name": {
+                    "type": "freestyle_string",
+                    "required": False
+                },
                 "habitat": {
                     "type": "ratio",
                     "about": gettext(
@@ -379,19 +385,17 @@ def execute(args):
 
     LOGGER.info("Checking Threat and Sensitivity tables for compliance")
     # Get CSVs as dictionaries and ensure the key is a string for threats.
-    threat_dict = {
-        str(key): value for key, value in utils.build_lookup_from_csv(
-            args['threats_table_path'], 'THREAT', to_lower=True,
-            expand_path_cols=['cur_path', 'fut_path', 'base_path']).items()}
-    sensitivity_dict = utils.build_lookup_from_csv(
-        args['sensitivity_table_path'], 'LULC', to_lower=True)
+    threat_df = utils.read_csv_to_dataframe(
+        args['threats_table_path'], MODEL_SPEC['args']['threats_table_path']
+    ).fillna('')
+    sensitivity_df = utils.read_csv_to_dataframe(
+        args['sensitivity_table_path'],
+        MODEL_SPEC['args']['sensitivity_table_path'])
 
     half_saturation_constant = float(args['half_saturation_constant'])
 
     # Dictionary for reclassing habitat values
-    sensitivity_reclassify_habitat_dict = {
-        int(key): float(val['habitat']) for key, val in
-        sensitivity_dict.items()}
+    sensitivity_reclassify_habitat_dict = sensitivity_df['habitat'].to_dict()
 
     # declare dictionaries to store the land cover and the threat rasters
     # pertaining to the different threats
@@ -418,13 +422,12 @@ def execute(args):
 
             # for each threat given in the CSV file try opening the associated
             # raster which should be found relative to the Threat CSV
-            for threat in threat_dict:
+            for threat, row in threat_df.iterrows():
                 LOGGER.debug(f"Validating path for threat: {threat}")
                 threat_table_path_col = _THREAT_SCENARIO_MAP[lulc_key]
-                threat_path = threat_dict[threat][threat_table_path_col]
 
                 threat_validate_result = _validate_threat_path(
-                    threat_path, lulc_key)
+                    row[threat_table_path_col], lulc_key)
                 if threat_validate_result == 'error':
                     raise ValueError(
                         'There was an Error locating a threat raster from '
@@ -515,7 +518,7 @@ def execute(args):
             intermediate_output_dir,
             (f'{os.path.splitext(os.path.basename(lulc_path))[0]}'
              f'_aligned{file_suffix}.tif'))
-        for threat in threat_dict:
+        for threat in threat_df.index.values:
             threat_path = threat_path_dict['threat' + lulc_key][threat]
             if threat_path in lulc_and_threat_raster_list:
                 aligned_threat_path = os.path.join(
@@ -577,10 +580,7 @@ def execute(args):
         access_task_list.append(rasterize_access_task)
 
     # calculate the weight sum which is the sum of all the threats' weights
-    weight_sum = 0.0
-    for threat_data in threat_dict.values():
-        # Sum weight of threats
-        weight_sum = weight_sum + threat_data['weight']
+    weight_sum = threat_df['weight'].sum()
 
     # for each land cover raster provided compute habitat quality
     for lulc_key, lulc_path in lulc_path_dict.items():
@@ -617,9 +617,9 @@ def execute(args):
         exit_landcover = False
 
         # adjust each threat/threat raster for distance, weight, and access
-        for threat, threat_data in threat_dict.items():
+        for threat, row in threat_df.iterrows():
             LOGGER.debug(
-                f'Calculating threat: {threat}.\nThreat data: {threat_data}')
+                f'Calculating threat: {threat}.\nThreat data: {row}')
 
             # get the threat raster for the specific threat
             threat_raster_path = threat_path_dict['threat' + lulc_key][threat]
@@ -633,7 +633,7 @@ def execute(args):
                 exit_landcover = True
                 break
             # Check to make sure max_dist is greater than 0
-            if threat_data['max_dist'] <= 0.0:
+            if row['max_dist'] <= 0:
                 raise ValueError(
                     f"The max distance for threat: '{threat}' is less than"
                     " or equal to 0. MAX_DIST should be a positive value.")
@@ -649,17 +649,15 @@ def execute(args):
                 dependent_task_list=[align_task],
                 task_name=f'distance edt {lulc_key} {threat}')
 
-            decay_type = threat_data['decay']
-
             filtered_threat_raster_path = os.path.join(
                 intermediate_output_dir,
-                f'filtered_{decay_type}_{threat}{lulc_key}{file_suffix}.tif')
+                f'filtered_{row["decay"]}_{threat}{lulc_key}{file_suffix}.tif')
 
             dist_decay_task = task_graph.add_task(
                 func=_decay_distance,
                 args=(
-                    distance_raster_path, threat_data['max_dist'],
-                    decay_type, filtered_threat_raster_path),
+                    distance_raster_path, row['max_dist'],
+                    row['decay'], filtered_threat_raster_path),
                 target_path_list=[filtered_threat_raster_path],
                 dependent_task_list=[dist_edt_task],
                 task_name=f'distance decay {lulc_key} {threat}')
@@ -671,9 +669,7 @@ def execute(args):
                 f'sens_{threat}{lulc_key}{file_suffix}.tif')
 
             # Dictionary for reclassing threat sensitivity values
-            sensitivity_reclassify_threat_dict = {
-                int(key): float(val[threat]) for key, val in
-                sensitivity_dict.items()}
+            sensitivity_reclassify_threat_dict = sensitivity_df[threat].to_dict()
 
             reclass_error_details = {
                 'raster_name': 'LULC', 'column_name': 'lucode',
@@ -685,11 +681,11 @@ def execute(args):
                       reclass_error_details),
                 target_path_list=[sens_raster_path],
                 dependent_task_list=[align_task],
-                task_name=f'sens_raster_{decay_type}{lulc_key}_{threat}')
+                task_name=f'sens_raster_{row["decay"]}{lulc_key}_{threat}')
             sensitivity_task_list.append(sens_threat_task)
 
             # get the normalized weight for each threat
-            weight_avg = threat_data['weight'] / weight_sum
+            weight_avg = row['weight'] / weight_sum
 
             # add the threat raster adjusted by distance and the raster
             # representing sensitivity to the list to be past to
@@ -723,7 +719,7 @@ def execute(args):
             dependent_task_list=[
                 *threat_decay_task_list, *sensitivity_task_list,
                 *access_task_list],
-            task_name=f'tot_degradation_{decay_type}{lulc_key}_{threat}')
+            task_name=f'tot_degradation_{row["decay"]}{lulc_key}_{threat}')
 
         # Compute habitat quality
         # ksq: a term used below to compute habitat quality
@@ -1153,19 +1149,18 @@ def validate(args, limit_to=None):
     if ("threats_table_path" not in invalid_keys and
             "sensitivity_table_path" not in invalid_keys and
             "threat_raster_folder" not in invalid_keys):
-
         # Get CSVs as dictionaries and ensure the key is a string for threats.
-        threat_dict = {
-            str(key): value for key, value in utils.build_lookup_from_csv(
-                args['threats_table_path'], 'THREAT', to_lower=True,
-                expand_path_cols=['cur_path', 'fut_path', 'base_path']).items()}
-        sensitivity_dict = utils.build_lookup_from_csv(
-            args['sensitivity_table_path'], 'LULC', to_lower=True)
+        threat_df = utils.read_csv_to_dataframe(
+                args['threats_table_path'],
+                MODEL_SPEC['args']['threats_table_path']).fillna('')
+        sensitivity_df = utils.read_csv_to_dataframe(
+            args['sensitivity_table_path'],
+            MODEL_SPEC['args']['sensitivity_table_path'])
 
         # check that the threat names in the threats table match with the
         # threats columns in the sensitivity table.
-        sens_header_set = set(list(sensitivity_dict.values())[0])
-        threat_set = {threat for threat in threat_dict}
+        sens_header_set = set(sensitivity_df.columns)
+        threat_set = set(threat_df.index.values)
         missing_sens_header_set = threat_set.difference(sens_header_set)
 
         if missing_sens_header_set:
@@ -1189,14 +1184,14 @@ def validate(args, limit_to=None):
                 # for each threat given in the CSV file try opening the
                 # associated raster which should be found in
                 # threat_raster_folder
-                for threat in threat_dict:
+                for threat, row in threat_df.iterrows():
                     threat_table_path_col = _THREAT_SCENARIO_MAP[lulc_key]
-                    if threat_table_path_col not in threat_dict[threat]:
+                    if threat_table_path_col not in row:
                         bad_threat_columns.append(threat_table_path_col)
                         break
 
                     # Threat path from threat CSV is relative to CSV
-                    threat_path = threat_dict[threat][threat_table_path_col]
+                    threat_path = row[threat_table_path_col]
 
                     threat_validate_result = _validate_threat_path(
                         threat_path, lulc_key)

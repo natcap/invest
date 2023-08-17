@@ -303,8 +303,7 @@ class SDRTests(unittest.TestCase):
         with self.assertRaises(ValueError) as context:
             sdr.execute(args)
         self.assertIn(
-            f'A value in the biophysical table is not a number '
-            f'within range 0..1.', str(context.exception))
+            f'could not be interpreted as ratios', str(context.exception))
 
     def test_lucode_not_a_number(self):
         """SDR test expected exception for invalid data in lucode column."""
@@ -325,8 +324,7 @@ class SDRTests(unittest.TestCase):
         with self.assertRaises(ValueError) as context:
             sdr.execute(args)
         self.assertIn(
-            f'Value "{invalid_value}" from the "lucode" column of the '
-            f'biophysical table is not a number.', str(context.exception))
+            'could not be interpreted as integers', str(context.exception))
 
     def test_missing_lulc_value(self):
         """SDR test for ValueError when LULC value not found in table."""

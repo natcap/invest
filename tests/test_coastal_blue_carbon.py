@@ -10,6 +10,7 @@ import textwrap
 import unittest
 
 import numpy
+import pandas
 import pygeoprocessing
 from natcap.invest import utils
 from osgeo import gdal
@@ -151,10 +152,9 @@ class TestPreprocessor(unittest.TestCase):
                        pprint.pformat(non_suffixed_files)))
 
         expected_landcover_codes = set(range(0, 24))
-        found_landcover_codes = set(utils.build_lookup_from_csv(
-            os.path.join(outputs_dir,
-                         'carbon_biophysical_table_template_150225.csv'),
-            'code').keys())
+        found_landcover_codes = set(pandas.read_csv(
+            os.path.join(outputs_dir, 'carbon_biophysical_table_template_150225.csv')
+        )['code'].values)
         self.assertEqual(expected_landcover_codes, found_landcover_codes)
 
     def test_transition_table(self):
@@ -188,25 +188,27 @@ class TestPreprocessor(unittest.TestCase):
             lulc_csv.write('0,mangrove,True\n')
             lulc_csv.write('1,parking lot,False\n')
 
-        landcover_table = utils.build_lookup_from_csv(
-            landcover_table_path, 'code')
+        landcover_df = utils.read_csv_to_dataframe(
+            landcover_table_path,
+            preprocessor.MODEL_SPEC['args']['lulc_lookup_table_path'])
         target_table_path = os.path.join(self.workspace_dir,
                                          'transition_table.csv')
 
         # Remove landcover code 1 from the table; expect error.
-        del landcover_table[1]
+        landcover_df = landcover_df.drop(1)
         with self.assertRaises(ValueError) as context:
             preprocessor._create_transition_table(
-                landcover_table, [filename_a, filename_b], target_table_path)
+                landcover_df, [filename_a, filename_b], target_table_path)
 
         self.assertIn('missing a row with the landuse code 1',
                       str(context.exception))
 
         # Re-load the landcover table
-        landcover_table = utils.build_lookup_from_csv(
-            landcover_table_path, 'code')
+        landcover_df = utils.read_csv_to_dataframe(
+            landcover_table_path,
+            preprocessor.MODEL_SPEC['args']['lulc_lookup_table_path'])
         preprocessor._create_transition_table(
-            landcover_table, [filename_a, filename_b], target_table_path)
+            landcover_df, [filename_a, filename_b], target_table_path)
 
         with open(target_table_path) as transition_table:
             self.assertEqual(
@@ -235,46 +237,13 @@ class TestCBC2(unittest.TestCase):
         """Remove workspace after each test function."""
         shutil.rmtree(self.workspace_dir)
 
-    def test_extract_snapshots(self):
-        """CBC: Extract snapshots from a snapshot CSV."""
-        from natcap.invest.coastal_blue_carbon import coastal_blue_carbon
-        csv_path = os.path.join(self.workspace_dir, 'snapshots.csv')
-
-        transition_years = (2000, 2010, 2020)
-        transition_rasters = []
-        with open(csv_path, 'w') as transitions_csv:
-            # Check that we can interpret varying case.
-            transitions_csv.write('snapshot_YEAR,raster_PATH\n')
-            for transition_year in transition_years:
-                # Write absolute paths.
-                transition_file_path = os.path.join(
-                    self.workspace_dir, f'{transition_year}.tif)')
-                transition_rasters.append(transition_file_path)
-                transitions_csv.write(
-                    f'{transition_year},{transition_file_path}\n')
-
-            # Make one path relative to the workspace, where the transitions
-            # CSV also lives.
-            # The expected raster path is absolute.
-            transitions_csv.write('2030,some_path.tif\n')
-            transition_years += (2030,)
-            transition_rasters.append(os.path.join(self.workspace_dir,
-                                                   'some_path.tif'))
-
-        extracted_transitions = (
-            coastal_blue_carbon._extract_snapshots_from_table(csv_path))
-
-        self.assertEqual(
-            extracted_transitions,
-            dict(zip(transition_years, transition_rasters)))
-
     def test_read_invalid_transition_matrix(self):
         """CBC: Test exceptions in invalid transition structure."""
         # The full biophysical table will have much, much more information.  To
         # keep the test simple, I'm only tracking the columns I know I'll need
         # in this function.
         from natcap.invest.coastal_blue_carbon import coastal_blue_carbon
-        biophysical_table = {
+        biophysical_table = pandas.DataFrame({
             1: {'lulc-class': 'a',
                 'soil-yearly-accumulation': 2,
                 'biomass-yearly-accumulation': 3,
@@ -290,7 +259,7 @@ class TestCBC2(unittest.TestCase):
                 'biomass-yearly-accumulation': 11,
                 'soil-high-impact-disturb': 12,
                 'biomass-high-impact-disturb': 13}
-        }
+        }).T
 
         transition_csv_path = os.path.join(self.workspace_dir,
                                            'transitions.csv')
@@ -332,7 +301,7 @@ class TestCBC2(unittest.TestCase):
         # keep the test simple, I'm only tracking the columns I know I'll need
         # in this function.
         from natcap.invest.coastal_blue_carbon import coastal_blue_carbon
-        biophysical_table = {
+        biophysical_table = pandas.DataFrame({
             1: {'lulc-class': 'a',
                 'soil-yearly-accumulation': 2,
                 'biomass-yearly-accumulation': 3,
@@ -348,7 +317,7 @@ class TestCBC2(unittest.TestCase):
                 'biomass-yearly-accumulation': 11,
                 'soil-high-impact-disturb': 12,
                 'biomass-high-impact-disturb': 13}
-        }
+        }).T
 
         transition_csv_path = os.path.join(self.workspace_dir,
                                            'transitions.csv')
@@ -366,14 +335,14 @@ class TestCBC2(unittest.TestCase):
 
         expected_biomass_disturbance = numpy.zeros((4, 4), dtype=numpy.float32)
         expected_biomass_disturbance[1, 3] = (
-            biophysical_table[1]['biomass-high-impact-disturb'])
+            biophysical_table['biomass-high-impact-disturb'][1])
         numpy.testing.assert_allclose(
             expected_biomass_disturbance,
             disturbance_matrices['biomass'].toarray())
 
         expected_soil_disturbance = numpy.zeros((4, 4), dtype=numpy.float32)
         expected_soil_disturbance[1, 3] = (
-            biophysical_table[1]['soil-high-impact-disturb'])
+            biophysical_table['soil-high-impact-disturb'][1])
         numpy.testing.assert_allclose(
             expected_soil_disturbance,
             disturbance_matrices['soil'].toarray())
@@ -381,22 +350,22 @@ class TestCBC2(unittest.TestCase):
         expected_biomass_accumulation = numpy.zeros(
             (4, 4), dtype=numpy.float32)
         expected_biomass_accumulation[3, 1] = (
-            biophysical_table[1]['biomass-yearly-accumulation'])
+            biophysical_table['biomass-yearly-accumulation'][1])
         expected_biomass_accumulation[1, 2] = (
-            biophysical_table[2]['biomass-yearly-accumulation'])
+            biophysical_table['biomass-yearly-accumulation'][2])
         expected_biomass_accumulation[2, 3] = (
-            biophysical_table[3]['biomass-yearly-accumulation'])
+            biophysical_table['biomass-yearly-accumulation'][3])
         numpy.testing.assert_allclose(
             expected_biomass_accumulation,
             accumulation_matrices['biomass'].toarray())
 
         expected_soil_accumulation = numpy.zeros((4, 4), dtype=numpy.float32)
         expected_soil_accumulation[3, 1] = (
-            biophysical_table[1]['soil-yearly-accumulation'])
+            biophysical_table['soil-yearly-accumulation'][1])
         expected_soil_accumulation[1, 2] = (
-            biophysical_table[2]['soil-yearly-accumulation'])
+            biophysical_table['soil-yearly-accumulation'][2])
         expected_soil_accumulation[2, 3] = (
-            biophysical_table[3]['soil-yearly-accumulation'])
+            biophysical_table['soil-yearly-accumulation'][3])
         numpy.testing.assert_allclose(
             expected_soil_accumulation,
             accumulation_matrices['soil'].toarray())
@@ -649,8 +618,10 @@ class TestCBC2(unittest.TestCase):
         args = TestCBC2._create_model_args(self.workspace_dir)
         args['workspace_dir'] = os.path.join(self.workspace_dir, 'workspace')
 
-        prior_snapshots = coastal_blue_carbon._extract_snapshots_from_table(
-            args['landcover_snapshot_csv'])
+        prior_snapshots = utils.read_csv_to_dataframe(
+            args['landcover_snapshot_csv'],
+            coastal_blue_carbon.MODEL_SPEC['args']['landcover_snapshot_csv']
+        )['raster_path'].to_dict()
         baseline_year = min(prior_snapshots.keys())
         baseline_raster = prior_snapshots[baseline_year]
         with open(args['landcover_snapshot_csv'], 'w') as snapshot_csv:
@@ -825,8 +796,10 @@ class TestCBC2(unittest.TestCase):
         args = TestCBC2._create_model_args(self.workspace_dir)
         args['workspace_dir'] = os.path.join(self.workspace_dir, 'workspace')
 
-        prior_snapshots = coastal_blue_carbon._extract_snapshots_from_table(
-            args['landcover_snapshot_csv'])
+        prior_snapshots = utils.read_csv_to_dataframe(
+            args['landcover_snapshot_csv'],
+            coastal_blue_carbon.MODEL_SPEC['args']['landcover_snapshot_csv']
+        )['raster_path'].to_dict()
         baseline_year = min(prior_snapshots.keys())
         baseline_raster = prior_snapshots[baseline_year]
         with open(args['landcover_snapshot_csv'], 'w') as snapshot_csv:
@@ -889,8 +862,10 @@ class TestCBC2(unittest.TestCase):
             raster.write('not a raster')
 
         # Write over the landcover snapshot CSV
-        prior_snapshots = coastal_blue_carbon._extract_snapshots_from_table(
-            args['landcover_snapshot_csv'])
+        prior_snapshots = utils.read_csv_to_dataframe(
+            args['landcover_snapshot_csv'],
+            coastal_blue_carbon.MODEL_SPEC['args']['landcover_snapshot_csv']
+        )['raster_path'].to_dict()
         baseline_year = min(prior_snapshots)
         with open(args['landcover_snapshot_csv'], 'w') as snapshot_table:
             snapshot_table.write('snapshot_year,raster_path\n')

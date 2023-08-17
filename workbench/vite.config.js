@@ -17,7 +17,7 @@ export default defineConfig({
     sourcemap: 'inline',
     minify: false,
     outDir: path.join(PROJECT_ROOT, 'build'),
-    target: 'chrome98',
+    target: 'chrome114',
     rollupOptions: {
       input: [
         path.resolve(PROJECT_ROOT, 'index.html'),

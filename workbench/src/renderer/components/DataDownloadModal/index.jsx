@@ -15,7 +15,7 @@ import sampledataRegistry from './sampledata_registry.json';
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
 const { ipcRenderer } = window.Workbench.electron;
-const logger = window.Workbench.getLogger('DataDownloadModal');
+const { logger } = window.Workbench;
 
 // A URL for sampledata to use in devMode, when the token containing the URL
 // associated with a production build of the Workbench does not exist.
@@ -109,7 +109,6 @@ class DataDownloadModal extends React.Component {
           this.state.selectedLinksArray,
           data.filePaths[0]
         );
-        this.props.storeDownloadDir(data.filePaths[0]);
         this.closeDialog();
       }
     }
@@ -161,8 +160,8 @@ class DataDownloadModal extends React.Component {
   }
 
   closeDialog() {
-    this.setState({ alertPath: '' })
-    this.props.closeModal()
+    this.setState({ alertPath: '' });
+    this.props.closeModal();
   }
 
   render() {
@@ -283,7 +282,6 @@ class DataDownloadModal extends React.Component {
 DataDownloadModal.propTypes = {
   show: PropTypes.bool.isRequired,
   closeModal: PropTypes.func.isRequired,
-  storeDownloadDir: PropTypes.func.isRequired,
 };
 
-export default withTranslation()(DataDownloadModal)
+export default withTranslation()(DataDownloadModal);

@@ -310,6 +310,7 @@ jobs:
         run: |
           choco install zip unzip
           $env:PATH += ";C:\ProgramData\chocolatey\bin"
+          Import-Module $env:ChocolateyInstall\helpers\chocolateyProfile.psm1
           refreshenv  # Choco-provided command to reload environment variables
 
       - name: Build userguide
@@ -343,20 +344,6 @@ jobs:
           yarn config set network-timeout 600000 -g
           yarn install
 
-      - name: Build Workbench
-        working-directory: workbench
-        env:
-          GH_TOKEN: env.GITHUB_TOKEN
-          DEBUG: electron-builder
-          CSC_IDENTITY_AUTO_DISCOVERY: false  # disable electron-builder code signing
-        run: |
-          yarn run build
-          yarn run dist
-
-      - name: Test electron app with puppeteer
-        working-directory: workbench
-        run: npx cross-env CI=true yarn run test-electron-app
-
       - name: Authenticate GCP
         if: github.event_name != 'pull_request'
         uses: google-github-actions/auth@v0
@@ -366,6 +353,47 @@ jobs:
       - name: Set up GCP
         if: github.event_name != 'pull_request'
         uses: google-github-actions/setup-gcloud@v0
+
+      - name: Build Workbench (PRs)
+        if: github.event_name == 'pull_request'
+        working-directory: workbench
+        env:
+          GH_TOKEN: env.GITHUB_TOKEN
+          DEBUG: electron-builder
+          CSC_IDENTITY_AUTO_DISCOVERY: false  # disable electron-builder code signing
+        run: |
+          yarn run build
+          yarn run dist
+
+      - name: Build Workbench (macOS)
+        if: github.event_name != 'pull_request' && matrix.os == 'macos-latest' # secrets not available in PR
+        working-directory: workbench
+        env:
+          GH_TOKEN: env.GITHUB_TOKEN
+          DEBUG: electron-builder
+          CSC_LINK: 2025-01-16-Expiry-AppStore-App.p12
+          CSC_KEY_PASSWORD: ${{ secrets.MACOS_CODESIGN_CERT_PASS }}
+        run: |
+          gsutil cp gs://stanford_cert/$CSC_LINK $CSC_LINK
+          yarn run build
+          yarn run dist
+
+      - name: Build Workbench (Windows)
+        if: github.event_name != 'pull_request' && matrix.os == 'windows-latest' # secrets not available in PR
+        working-directory: workbench
+        env:
+          GH_TOKEN: env.GITHUB_TOKEN
+          DEBUG: electron-builder
+          CSC_LINK: Stanford-natcap-code-signing-cert-expires-2024-01-26.p12
+          CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CODESIGN_CERT_PASS }}
+        run: |
+          gsutil cp gs://stanford_cert/$CSC_LINK $CSC_LINK
+          yarn run build
+          yarn run dist
+
+      - name: Test electron app with puppeteer
+        working-directory: workbench
+        run: npx cross-env CI=true yarn run test-electron-app
 
       - name: Sign binaries (macOS)
         if: github.event_name != 'pull_request' && matrix.os == 'macos-latest' # secrets not available in PR

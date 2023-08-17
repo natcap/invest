@@ -580,113 +580,6 @@ def build_file_registry(base_file_path_list, file_suffix):
     return f_reg
 
 
-def build_lookup_from_csv(
-        table_path, key_field, column_list=None, to_lower=True,
-        expand_path_cols=[]):
-    """Read a CSV table into a dictionary indexed by ``key_field``.
-
-    Creates a dictionary from a CSV whose keys are unique entries in the CSV
-    table under the column named by ``key_field`` and values are dictionaries
-    indexed by the other columns in ``table_path`` including ``key_field``
-    whose values are the values on that row of the CSV table.
-
-    If an entire row is NA/NaN (including ``key_field``) then it is dropped
-    from the table and a warning is given of the dropped rows.
-
-    Args:
-        table_path (string): path to a CSV file containing at
-            least the header key_field
-        key_field: (string): a column in the CSV file at `table_path` that
-            can uniquely identify each row in the table and sets the row index.
-        column_list (list): a list of column names to subset from the CSV
-            file, default=None
-        to_lower (bool): if True, converts all unicode in the CSV,
-            including headers and values to lowercase, otherwise uses raw
-            string values. default=True.
-        expand_path_cols (list[string])): if provided, a list of the names of
-            columns that contain paths to expand. Any relative paths in these
-            columns will be expanded to absolute paths. It is assumed that
-            relative paths are relative to the CSV's path.
-
-    Returns:
-        lookup_dict (dict): a dictionary of the form
-        {key_field_0: {csv_header_0: value0, csv_header_1: value1...},
-        key_field_1: {csv_header_0: valuea, csv_header_1: valueb...}}
-
-        if ``to_lower`` all strings including key_fields and values are
-        converted to lowercase unicode.
-
-    Raise:
-        ValueError
-            If ValueError occurs during conversion to dictionary.
-        KeyError
-            If ``key_field`` is not present during ``set_index`` call.
-    """
-    # Reassign to avoid mutation
-    col_list = column_list
-    # if a list of columns are provided to use and return, make sure
-    # 'key_field' is one of them.
-    if col_list and key_field not in col_list:
-        col_list.append(key_field)
-
-    table = read_csv_to_dataframe(
-        table_path, to_lower=to_lower, sep=None, index_col=False,
-        engine='python', expand_path_cols=expand_path_cols)
-
-    # if 'to_lower`, case handling is done before trying to access the data.
-    # the columns are stripped of leading/trailing whitespace in
-    # ``read_csv_to_dataframe``, and also lowercased if ``to_lower`` so we only
-    # need to convert the rest of the table.
-    if to_lower:
-        key_field = key_field.lower()
-        # lowercase column names
-        if col_list:
-            col_list = [col.lower() for col in col_list]
-        # lowercase values
-        table = table.applymap(
-            lambda x: x.lower() if isinstance(x, str) else x)
-
-    # Set 'key_field' as the index of the dataframe
-    try:
-        table.set_index(key_field, drop=False, inplace=True)
-    except KeyError:
-        # If 'key_field' is not a column then KeyError is raised for using
-        # it as the index column
-        LOGGER.error(f"'key_field' : '{key_field}' could not be found as a"
-                     f" column in the table. Table path: {table_path}.")
-        raise
-
-    # Subset dataframe by columns if desired
-    if col_list:
-        table = table.loc[:, col_list]
-
-    # look for NaN values and warn if any are found.
-    table_na = table.isna()
-    if table_na.values.any():
-        LOGGER.warning(
-            f"Empty or NaN values were found in the table: {table_path}.")
-    # look to see if an entire row is NA values
-    table_na_rows = table_na.all(axis=1)
-    na_rows = table_na_rows.index[table_na_rows].tolist()
-    # if a completely empty row, drop it
-    if na_rows:
-        LOGGER.warning(
-            "Encountered an entirely blank row on line(s)"
-            f" {[x+2 for x in na_rows]}. Dropping rows from table.")
-        table.dropna(how="all", inplace=True)
-    # fill the rest of empty or NaN values with empty string
-    table.fillna(value="", inplace=True)
-    try:
-        lookup_dict = table.to_dict(orient='index')
-    except ValueError:
-        # If 'key_field' is not unique then a value error is raised.
-        LOGGER.error(f"The 'key_field' : '{key_field}' column values are not"
-                     f" unique: {table.index.tolist()}")
-        raise
-
-    return lookup_dict
-
-
 def expand_path(path, base_path):
     """Check if a path is relative, and if so, expand it using the base path.
 
@@ -704,74 +597,127 @@ def expand_path(path, base_path):
     return os.path.abspath(os.path.join(os.path.dirname(base_path), path))
 
 
-def read_csv_to_dataframe(
-        path, to_lower=False, sep=None, encoding=None, engine='python',
-        expand_path_cols=[], **kwargs):
+def read_csv_to_dataframe(path, spec, **kwargs):
     """Return a dataframe representation of the CSV.
 
-    Wrapper around ``pandas.read_csv`` that standardizes the column names by
-    stripping leading/trailing whitespace and optionally making all lowercase.
-    This helps avoid common errors caused by user-supplied CSV files with
-    column names that don't exactly match the specification. Strips
-    leading/trailing whitespace from data entries as well.
+    Wrapper around ``pandas.read_csv`` that performs some common data cleaning
+    based on information in the arg spec.
+
+    Columns are filtered to just those that match a pattern in the spec.
+    Column names are lowercased and whitespace is stripped off. Empty rows are
+    dropped. Values in each column are processed and cast to an appropriate
+    dtype according to the type in the spec:
+
+    - Values in raster, vector, csv, file, and directory columns are cast to
+      str, whitespace stripped, and expanded as paths relative to the input path
+    - Values in freestyle_string and option_string columns are cast to str,
+      whitespace stripped, and converted to lowercase
+    - Values in number, ratio, and percent columns are cast to float
+    - Values in integer columns are cast to int
+    - Values in boolean columns are cast to bool
+
+    Empty or NA cells are returned as ``numpy.nan`` (for floats) or
+    ``pandas.NA`` (for all other types).
+
+    Also sets custom defaults for some kwargs passed to ``pandas.read_csv``,
+    which you can override with kwargs:
+
+    - sep=None: lets the Python engine infer the separator
+    - engine='python': The 'python' engine supports the sep=None option.
+    - encoding='utf-8-sig': 'utf-8-sig' handles UTF-8 with or without BOM.
 
     Args:
-        path (string): path to a CSV file
-        to_lower (bool): if True, convert all column names to lowercase
-        sep: separator to pass to pandas.read_csv. Defaults to None, which
-            lets the Python engine infer the separator (if engine='python').
-        encoding (string): name of encoding codec to pass to `pandas.read_csv`.
-            Defaults to None. Setting engine='python' when encoding=None allows
-            a lot of non-UTF8 encodings to be read without raising an error.
-            Any special characters in other encodings may get replaced with the
-            replacement character.
-            If encoding=None, and the file begins with a BOM, the encoding gets
-            set to 'utf-8-sig'; otherwise the BOM causes an error.
-        engine (string): kwarg for pandas.read_csv: 'c', 'python', or None.
-            Defaults to 'python' (see note about encoding).
-        expand_path_cols (list[string])): if provided, a list of the names of
-            columns that contain paths to expand. Any relative paths in these
-            columns will be expanded to absolute paths. It is assumed that
-            relative paths are relative to the CSV's path.
-
-        **kwargs: any kwargs that are valid for ``pandas.read_csv``
+        path (str): path to a CSV file
+        spec (dict): dictionary specifying the structure of the CSV table
+        **kwargs: additional kwargs will be passed to ``pandas.read_csv``
 
     Returns:
         pandas.DataFrame with the contents of the given CSV
-
     """
-    # Check if the file encoding is UTF-8 BOM first
-    # allow encoding kwarg to override this if it's provided
-    if not encoding and has_utf8_bom(path):
-        encoding = 'utf-8-sig'
+    # build up a list of regex patterns to match columns against columns from
+    # the table that match a pattern in this list (after stripping whitespace
+    # and lowercasing) will be included in the dataframe
+    patterns = []
+    for column in spec['columns']:
+        column = column.lower()
+        match = re.match(r'(.*)\[(.+)\](.*)', column)
+        if match:
+            # for column name patterns, convert it to a regex pattern
+            groups = match.groups()
+            patterns.append(f'{groups[0]}(.+){groups[2]}')
+        else:
+            # for regular column names, use the exact name as the pattern
+            patterns.append(column.replace('(', '\(').replace(')', '\)'))
+
     try:
-        dataframe = pandas.read_csv(
-            path, engine=engine, encoding=encoding, sep=sep, **kwargs)
+        # set index_col=False to force pandas not to index by any column
+        # this is useful in case of trailing separators
+        # we'll explicitly set the index column later on
+        df = pandas.read_csv(
+            path,
+            index_col=False,
+            usecols=lambda col: any(
+                re.fullmatch(pattern, col.strip().lower()) for pattern in patterns
+            ),
+            **{
+                'sep': None,
+                'engine': 'python',
+                'encoding': 'utf-8-sig',
+                **kwargs
+            })
     except UnicodeDecodeError as error:
         LOGGER.error(
-            f'{path} must be encoded as utf-8 or ASCII')
+            f'The file {path} must be encoded as UTF-8 or ASCII')
         raise error
 
+    # strip whitespace from column names and convert to lowercase
     # this won't work on integer types, which happens if you set header=None
     # however, there's little reason to use this function if there's no header
-    dataframe.columns = dataframe.columns.str.strip()
-    if to_lower:
-        dataframe.columns = dataframe.columns.str.lower()
+    df.columns = df.columns.str.strip().str.lower()
 
-    # Remove values with leading ('^ +') and trailing (' +$') whitespace.
-    # Regular expressions using 'replace' only substitute on strings.
-    dataframe = dataframe.replace(r"^ +| +$", r"", regex=True)
+    # drop any empty rows
+    df = df.dropna(how="all")
 
-    if expand_path_cols:
-        for col in expand_path_cols:
-            # allow for the case where a column is optional
-            if col in dataframe:
-                dataframe[col] = dataframe[col].apply(
-                    # if the whole column is empty, cells will be parsed as NaN
-                    # catch that before trying to expand them as paths
-                    lambda p: '' if pandas.isna(p) else expand_path(p, path))
+    available_cols = set(df.columns)
 
-    return dataframe
+    for col_spec, pattern in zip(spec['columns'].values(), patterns):
+        matching_cols = [c for c in available_cols if re.match(pattern, c)]
+        available_cols -= set(matching_cols)
+        for col in matching_cols:
+            try:
+                if col_spec['type'] in ['csv', 'directory', 'file', 'raster', 'vector', {'vector', 'raster'}]:
+                    df[col] = df[col].apply(
+                        lambda p: p if pandas.isna(p) else expand_path(str(p).strip(), path))
+                    df[col] = df[col].astype(pandas.StringDtype())
+                elif col_spec['type'] in {'freestyle_string', 'option_string'}:
+                    df[col] = df[col].apply(
+                        lambda s: s if pandas.isna(s) else str(s).strip().lower())
+                    df[col] = df[col].astype(pandas.StringDtype())
+                elif col_spec['type'] in {'number', 'percent', 'ratio'}:
+                    df[col] = df[col].astype(float)
+                elif col_spec['type'] == 'integer':
+                    df[col] = df[col].astype(pandas.Int64Dtype())
+                elif col_spec['type'] == 'boolean':
+                    df[col] = df[col].astype('boolean')
+            except ValueError as err:
+                raise ValueError(
+                    f'Value(s) in the "{col}" column of the table {path} '
+                    f'could not be interpreted as {col_spec["type"]}s. '
+                    f'Original error: {err}')
+
+     # set the index column, if specified
+    if 'index_col' in spec and spec['index_col'] is not None:
+        index_col = spec['index_col'].lower()
+        try:
+            df = df.set_index(index_col, verify_integrity=True)
+        except KeyError:
+            # If 'index_col' is not a column then KeyError is raised for using
+            # it as the index column
+            LOGGER.error(f"The column '{index_col}' could not be found "
+                         f"in the table {path}")
+            raise
+
+    return df
 
 
 def make_directories(directory_list):

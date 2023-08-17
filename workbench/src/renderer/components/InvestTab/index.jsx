@@ -21,7 +21,7 @@ import { UI_SPEC } from '../../ui_config';
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
 const { ipcRenderer } = window.Workbench.electron;
-const logger = window.Workbench.getLogger('InvestTab');
+const { logger } = window.Workbench;
 
 /** Get an invest model's MODEL_SPEC when a model button is clicked.
 
@@ -147,7 +147,6 @@ class InvestTab extends React.Component {
     const {
       job,
       tabID,
-      investSettings,
       updateJobProperties,
     } = this.props;
     const args = { ...argsValues };
@@ -162,9 +161,6 @@ class InvestTab extends React.Component {
       job.modelRunName,
       this.state.modelSpec.pyname,
       args,
-      investSettings.loggingLevel,
-      investSettings.taskgraphLoggingLevel,
-      investSettings.language,
       tabID
     );
     this.switchTabs('log');
@@ -205,7 +201,7 @@ class InvestTab extends React.Component {
       logfile,
     } = this.props.job;
 
-    const { tabID, investSettings, t } = this.props;
+    const { tabID, t } = this.props;
 
     // Don't render the model setup & log until data has been fetched.
     if (!modelSpec) {
@@ -279,7 +275,6 @@ class InvestTab extends React.Component {
                   uiSpec={uiSpec}
                   argsInitValues={argsValues}
                   investExecute={this.investExecute}
-                  nWorkers={investSettings.nWorkers}
                   sidebarSetupElementId={sidebarSetupElementId}
                   sidebarFooterElementId={sidebarFooterElementId}
                   executeClicked={executeClicked}
@@ -313,12 +308,6 @@ InvestTab.propTypes = {
     status: PropTypes.string,
   }).isRequired,
   tabID: PropTypes.string.isRequired,
-  investSettings: PropTypes.shape({
-    nWorkers: PropTypes.string,
-    taskgraphLoggingLevel: PropTypes.string,
-    loggingLevel: PropTypes.string,
-    language: PropTypes.string,
-  }).isRequired,
   saveJob: PropTypes.func.isRequired,
   updateJobProperties: PropTypes.func.isRequired,
 };

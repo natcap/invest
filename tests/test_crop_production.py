@@ -63,14 +63,11 @@ class CropProductionTests(unittest.TestCase):
         pandas.testing.assert_frame_equal(
             expected_agg_result_table, agg_result_table, check_dtype=False)
 
-        result_table_path = os.path.join(
-            args['workspace_dir'], 'result_table.csv')
-        expected_result_table_path = os.path.join(
-            TEST_DATA_PATH, 'expected_result_table.csv')
         expected_result_table = pandas.read_csv(
-            expected_result_table_path)
+            os.path.join(TEST_DATA_PATH, 'expected_result_table.csv')
+        )
         result_table = pandas.read_csv(
-            result_table_path)
+            os.path.join(args['workspace_dir'], 'result_table.csv'))
         pandas.testing.assert_frame_equal(
             expected_result_table, result_table, check_dtype=False)
 
@@ -314,14 +311,10 @@ class CropProductionTests(unittest.TestCase):
 
         crop_production_regression.execute(args)
 
-        agg_result_table_path = os.path.join(
-            args['workspace_dir'], 'aggregate_results.csv')
-        expected_agg_result_table_path = os.path.join(
-            TEST_DATA_PATH, 'expected_regression_aggregate_results.csv')
         expected_agg_result_table = pandas.read_csv(
-            expected_agg_result_table_path)
+            os.path.join(TEST_DATA_PATH, 'expected_regression_aggregate_results.csv'))
         agg_result_table = pandas.read_csv(
-            agg_result_table_path)
+            os.path.join(args['workspace_dir'], 'aggregate_results.csv'))
         pandas.testing.assert_frame_equal(
             expected_agg_result_table, agg_result_table, check_dtype=False)
 
@@ -387,14 +380,10 @@ class CropProductionTests(unittest.TestCase):
 
         crop_production_regression.execute(args)
 
-        result_table_path = os.path.join(
-            args['workspace_dir'], 'result_table.csv')
-        expected_result_table_path = os.path.join(
-            TEST_DATA_PATH, 'expected_regression_result_table_no_nodata.csv')
-        expected_result_table = pandas.read_csv(
-            expected_result_table_path)
+        expected_result_table = pandas.read_csv(os.path.join(
+            TEST_DATA_PATH, 'expected_regression_result_table_no_nodata.csv'))
         result_table = pandas.read_csv(
-            result_table_path)
+            os.path.join(args['workspace_dir'], 'result_table.csv'))
         pandas.testing.assert_frame_equal(
             expected_result_table, result_table, check_dtype=False)
 

@@ -66,6 +66,7 @@ MODEL_SPEC = {
             "name": gettext("habitat stressor table"),
             "about": gettext("A table describing each habitat and stressor."),
             "type": "csv",
+            "index_col": "name",
             "columns": {
                 "name": {
                     "type": "freestyle_string",
@@ -1841,12 +1842,15 @@ def _open_table_as_dataframe(table_path, **kwargs):
         excel_df = pandas.read_excel(table_path, **kwargs)
         excel_df.columns = excel_df.columns.str.lower()
         excel_df['path'] = excel_df['path'].apply(
-            lambda p: utils.expand_path(p, table_path))
+            lambda p: utils.expand_path(p, table_path)).astype('string')
+        excel_df['name'] = excel_df['name'].astype('string')
+        excel_df['type'] = excel_df['type'].astype('string')
+        excel_df['stressor buffer (meters)'] = excel_df['stressor buffer (meters)'].astype(float)
+        excel_df = excel_df.set_index('name')
         return excel_df
     else:
         return utils.read_csv_to_dataframe(
-            table_path, sep=None, to_lower=True, engine='python',
-            expand_path_cols=['path'], **kwargs)
+            table_path, MODEL_SPEC['args']['info_table_path'], **kwargs)
 
 
 def _parse_info_table(info_table_path):
@@ -1871,8 +1875,12 @@ def _parse_info_table(info_table_path):
     """
     info_table_path = os.path.abspath(info_table_path)
 
-    table = _open_table_as_dataframe(info_table_path)
-    table = table.set_index('name')
+    try:
+        table = _open_table_as_dataframe(info_table_path)
+    except ValueError as err:
+        if 'Index has duplicate keys' in str(err):
+            raise ValueError("Habitat and stressor names may not overlap.")
+
     table = table.rename(columns={'stressor buffer (meters)': 'buffer'})
 
     # Drop the buffer column from the habitats list; we don't need it.
@@ -1882,15 +1890,6 @@ def _parse_info_table(info_table_path):
     # Keep the buffer column in the stressors dataframe.
     stressors = table.loc[table['type'] == 'stressor'].drop(
         columns=['type']).to_dict(orient='index')
-
-    # habitats and stressors must be nonoverlapping sets.
-    repeated_habitats_stressors = set(
-        habitats.keys()).intersection(stressors.keys())
-    if repeated_habitats_stressors:
-        raise ValueError(
-            "Habitat and stressor names may not overlap. These names are "
-            "both habitats and stressors: "
-            f"{', '.join(repeated_habitats_stressors)}")
 
     return (habitats, stressors)
 

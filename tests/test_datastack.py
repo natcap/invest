@@ -377,8 +377,15 @@ class DatastackArchiveTests(unittest.TestCase):
             self.assertTrue(
                 filecmp.cmp(archive_params[key], params[key], shallow=False))
 
-        spatial_csv_dict = utils.build_lookup_from_csv(
-            archive_params['spatial_table'], 'ID', to_lower=True)
+        spatial_csv_dict = utils.read_csv_to_dataframe(
+            archive_params['spatial_table'],
+            {
+                'index_col': 'id',
+                'columns': {
+                    'id': {'type': 'integer'},
+                    'path': {'type': 'file'}
+                }
+            }).to_dict(orient='index')
         spatial_csv_dir = os.path.dirname(archive_params['spatial_table'])
         numpy.testing.assert_allclose(
             pygeoprocessing.raster_to_numpy_array(

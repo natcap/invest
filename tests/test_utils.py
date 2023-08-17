@@ -15,6 +15,7 @@ import warnings
 
 import numpy
 import numpy.testing
+import pandas as pd
 import pygeoprocessing
 from osgeo import gdal
 from osgeo import ogr
@@ -254,7 +255,7 @@ class GaussianDecayUtilsTests(unittest.TestCase):
             # The sigma*3 is the maximum radius from the center
             # Anything greater than that distance should be set to 0 by the
             # gaussian kernel creation function.
-            kernel[dist_from_center > (sigma * 3)] = 0.0
+            kernel[dist_from_center > (sigma * 3)] = 0
             return kernel / numpy.sum(kernel)
 
         expected_matrix = gkern()
@@ -599,357 +600,6 @@ class PrepareWorkspaceTests(unittest.TestCase):
             self.assertTrue('Elapsed time:' in logfile_text)
 
 
-class BuildLookupFromCSVTests(unittest.TestCase):
-    """Tests for natcap.invest.utils.build_lookup_from_csv."""
-
-    def setUp(self):
-        """Make temporary directory for workspace."""
-        self.workspace_dir = tempfile.mkdtemp()
-
-    def tearDown(self):
-        """Delete workspace."""
-        shutil.rmtree(self.workspace_dir)
-
-    def test_build_lookup_from_csv(self):
-        """utils: test build_lookup_from_csv."""
-        from natcap.invest import utils
-        table_str = 'a,b,foo,bar,_\n0.0,x,-1,bar,apple\n'
-        table_path = os.path.join(self.workspace_dir, 'table.csv')
-        with open(table_path, 'w') as table_file:
-            table_file.write(table_str)
-        result = utils.build_lookup_from_csv(
-            table_path, 'a', to_lower=True)
-        expected_dict = {
-            0.0: {
-                'a': 0.0,
-                'b': 'x',
-                'foo': -1.0,
-                'bar': 'bar',
-                '_': 'apple'
-            },
-        }
-        self.assertDictEqual(result, expected_dict)
-
-    def test_unique_key_not_first_column(self):
-        """utils: test success when key field is not first column."""
-        from natcap.invest import utils
-        csv_text = ("desc,lucode,val1,val2\n"
-                    "corn,1,0.5,2\n"
-                    "bread,2,1,4\n"
-                    "beans,3,0.5,4\n"
-                    "butter,4,9,1")
-        table_path = os.path.join(self.workspace_dir, 'table.csv')
-        with open(table_path, 'w') as table_file:
-            table_file.write(csv_text)
-
-        result = utils.build_lookup_from_csv(
-            table_path, 'lucode', to_lower=True)
-        expected_result = {
-            1: {'desc': 'corn', 'val1': 0.5, 'val2': 2, 'lucode': 1},
-            2: {'desc': 'bread', 'val1': 1, 'val2': 4, 'lucode': 2},
-            3: {'desc': 'beans', 'val1': 0.5, 'val2': 4, 'lucode': 3},
-            4: {'desc': 'butter', 'val1': 9, 'val2': 1, 'lucode': 4}}
-
-        self.assertDictEqual(result, expected_result)
-
-    def test_non_unique_keys(self):
-        """utils: test error is raised if keys are not unique."""
-        from natcap.invest import utils
-        csv_text = ("lucode,desc,val1,val2\n"
-                    "1,corn,0.5,2\n"
-                    "2,bread,1,4\n"
-                    "2,beans,0.5,4\n"
-                    "4,butter,9,1")
-        table_path = os.path.join(self.workspace_dir, 'table.csv')
-        with open(table_path, 'w') as table_file:
-            table_file.write(csv_text)
-
-        with self.assertRaises(ValueError):
-            utils.build_lookup_from_csv(table_path, 'lucode', to_lower=True)
-
-    def test_missing_key_field(self):
-        """utils: test error is raised when missing key field."""
-        from natcap.invest import utils
-        csv_text = ("luode,desc,val1,val2\n"
-                    "1,corn,0.5,2\n"
-                    "2,bread,1,4\n"
-                    "3,beans,0.5,4\n"
-                    "4,butter,9,1")
-        table_path = os.path.join(self.workspace_dir, 'table.csv')
-        with open(table_path, 'w') as table_file:
-            table_file.write(csv_text)
-
-        with self.assertRaises(KeyError):
-            utils.build_lookup_from_csv(table_path, 'lucode', to_lower=True)
-
-    def test_nan_holes(self):
-        """utils: test empty strings returned when missing data is present."""
-        from natcap.invest import utils
-        csv_text = ("lucode,desc,val1,val2\n"
-                    "1,corn,0.5,2\n"
-                    "2,,1,4\n"
-                    "3,beans,0.5,4\n"
-                    "4,butter,,1")
-        table_path = os.path.join(self.workspace_dir, 'table.csv')
-        with open(table_path, 'w') as table_file:
-            table_file.write(csv_text)
-
-        result = utils.build_lookup_from_csv(
-            table_path, 'lucode', to_lower=True)
-        expected_result = {
-            1: {'desc': 'corn', 'val1': 0.5, 'val2': 2, 'lucode': 1},
-            2: {'desc': '', 'val1': 1, 'val2': 4, 'lucode': 2},
-            3: {'desc': 'beans', 'val1': 0.5, 'val2': 4, 'lucode': 3},
-            4: {'desc': 'butter', 'val1': '', 'val2': 1, 'lucode': 4}}
-
-        self.assertDictEqual(result, expected_result)
-
-    def test_nan_row(self):
-        """utils: test NaN row is dropped."""
-        from natcap.invest import utils
-        csv_text = ("lucode,desc,val1,val2\n"
-                    "1,corn,0.5,2\n"
-                    ",,,\n"
-                    "3,beans,0.5,4\n"
-                    "4,butter,9,1")
-        table_path = os.path.join(self.workspace_dir, 'table.csv')
-        with open(table_path, 'w') as table_file:
-            table_file.write(csv_text)
-
-        result = utils.build_lookup_from_csv(
-            table_path, 'lucode', to_lower=True)
-        expected_result = {
-            1.0: {'desc': 'corn', 'val1': 0.5, 'val2': 2, 'lucode': 1.0},
-            3.0: {'desc': 'beans', 'val1': 0.5, 'val2': 4, 'lucode': 3.0},
-            4.0: {'desc': 'butter', 'val1': 9, 'val2': 1, 'lucode': 4.0}}
-
-        self.assertDictEqual(result, expected_result)
-
-    def test_column_subset(self):
-        """utils: test column subset is properly returned."""
-        from natcap.invest import utils
-        csv_text = ("lucode,desc,val1,val2\n"
-                    "1,corn,0.5,2\n"
-                    "2,bread,1,4\n"
-                    "3,beans,0.5,4\n"
-                    "4,butter,9,1")
-        table_path = os.path.join(self.workspace_dir, 'table.csv')
-        with open(table_path, 'w') as table_file:
-            table_file.write(csv_text)
-
-        result = utils.build_lookup_from_csv(
-            table_path, 'lucode', to_lower=True, column_list=['val1', 'val2'])
-
-        expected_result = {
-            1: {'val1': 0.5, 'val2': 2, 'lucode': 1},
-            2: {'val1': 1, 'val2': 4, 'lucode': 2},
-            3: {'val1': 0.5, 'val2': 4, 'lucode': 3},
-            4: {'val1': 9, 'val2': 1, 'lucode': 4}}
-
-        self.assertDictEqual(result, expected_result)
-
-    def test_trailing_comma(self):
-        """utils: test a trailing comma on first line is handled properly."""
-        from natcap.invest import utils
-        csv_text = ("lucode,desc,val1,val2\n"
-                    "1,corn,0.5,2,\n"
-                    "2,bread,1,4\n"
-                    "3,beans,0.5,4\n"
-                    "4,butter,9,1")
-        table_path = os.path.join(self.workspace_dir, 'table.csv')
-        with open(table_path, 'w') as table_file:
-            table_file.write(csv_text)
-
-        result = utils.build_lookup_from_csv(
-            table_path, 'lucode', to_lower=True)
-
-        expected_result = {
-            1: {'desc': 'corn', 'val1': 0.5, 'val2': 2, 'lucode': 1},
-            2: {'desc': 'bread', 'val1': 1, 'val2': 4, 'lucode': 2},
-            3: {'desc': 'beans', 'val1': 0.5, 'val2': 4, 'lucode': 3},
-            4: {'desc': 'butter', 'val1': 9, 'val2': 1, 'lucode': 4}}
-
-        self.assertDictEqual(result, expected_result)
-
-    def test_trailing_comma_second_line(self):
-        """utils: test a trailing comma on second line is handled properly."""
-        from natcap.invest import utils
-        csv_text = ("lucode,desc,val1,val2\n"
-                    "1,corn,0.5,2\n"
-                    "2,bread,1,4,\n"
-                    "3,beans,0.5,4\n"
-                    "4,butter,9,1")
-        table_path = os.path.join(self.workspace_dir, 'table.csv')
-        with open(table_path, 'w') as table_file:
-            table_file.write(csv_text)
-
-        result = utils.build_lookup_from_csv(
-            table_path, 'lucode', to_lower=True)
-
-        expected_result = {
-            1: {'desc': 'corn', 'val1': 0.5, 'val2': 2, 'lucode': 1},
-            2: {'desc': 'bread', 'val1': 1, 'val2': 4, 'lucode': 2},
-            3: {'desc': 'beans', 'val1': 0.5, 'val2': 4, 'lucode': 3},
-            4: {'desc': 'butter', 'val1': 9, 'val2': 1, 'lucode': 4}}
-
-        self.assertDictEqual(result, expected_result)
-
-    def test_results_lowercase_non_numeric(self):
-        """utils: text handling of converting to lowercase."""
-        from natcap.invest import utils
-
-        csv_file = os.path.join(self.workspace_dir, 'csv.csv')
-        with open(csv_file, 'w') as file_obj:
-            file_obj.write(textwrap.dedent(
-                """
-                header1,HEADER2,header3
-                1,2,bar
-                4,5,FOO
-                """
-            ).strip())
-
-        lookup_dict = utils.build_lookup_from_csv(
-            csv_file, 'header1', to_lower=True)
-
-        self.assertEqual(lookup_dict[4]['header3'], 'foo')
-        self.assertEqual(lookup_dict[1]['header2'], 2)
-
-    def test_results_uppercase_numeric_cast(self):
-        """utils: test handling of uppercase, num. casting, blank values."""
-        from natcap.invest import utils
-
-        csv_file = os.path.join(self.workspace_dir, 'csv.csv')
-        with open(csv_file, 'w') as file_obj:
-            file_obj.write(textwrap.dedent(
-                """
-                header1,HEADER2,header3,missing_column,
-                1,2,3,
-                4,FOO,bar,
-                """
-            ).strip())
-
-        lookup_dict = utils.build_lookup_from_csv(
-            csv_file, 'header1', to_lower=False)
-
-        self.assertEqual(lookup_dict[4]['HEADER2'], 'FOO')
-        self.assertEqual(lookup_dict[4]['header3'], 'bar')
-        self.assertEqual(lookup_dict[1]['header1'], 1)
-
-    def test_csv_dialect_detection_semicolon_delimited(self):
-        """utils: test that we can parse semicolon-delimited CSVs."""
-        from natcap.invest import utils
-
-        csv_file = os.path.join(self.workspace_dir, 'csv.csv')
-        with open(csv_file, 'w') as file_obj:
-            file_obj.write(textwrap.dedent(
-                """
-                header1;HEADER2;header3;
-                1;2;3;
-                4;FOO;bar;
-                """
-            ).strip())
-
-        lookup_dict = utils.build_lookup_from_csv(
-            csv_file, 'header1', to_lower=False)
-
-        self.assertEqual(lookup_dict[4]['HEADER2'], 'FOO')
-        self.assertEqual(lookup_dict[4]['header3'], 'bar')
-        self.assertEqual(lookup_dict[1]['header1'], 1)
-
-    def test_csv_utf8_bom_encoding(self):
-        """utils: test that CSV read correctly with UTF-8 BOM encoding."""
-        from natcap.invest import utils
-
-        csv_file = os.path.join(self.workspace_dir, 'csv.csv')
-        # writing with utf-8-sig will prepend the BOM
-        with open(csv_file, 'w', encoding='utf-8-sig') as file_obj:
-            file_obj.write(textwrap.dedent(
-                """
-                header1,HEADER2,header3
-                1,2,bar
-                4,5,FOO
-                """
-            ).strip())
-        # confirm that the file has the BOM prefix
-        with open(csv_file, 'rb') as file_obj:
-            self.assertTrue(file_obj.read().startswith(codecs.BOM_UTF8))
-
-        lookup_dict = utils.build_lookup_from_csv(
-            csv_file, 'header1')
-        # assert the BOM prefix was correctly parsed and skipped
-        self.assertEqual(lookup_dict[4]['header2'], 5)
-        self.assertEqual(lookup_dict[4]['header3'], 'foo')
-        self.assertEqual(lookup_dict[1]['header1'], 1)
-
-    def test_csv_latin_1_encoding(self):
-        """utils: test that CSV read correctly with Latin-1 encoding."""
-        from natcap.invest import utils
-
-        csv_file = os.path.join(self.workspace_dir, 'csv.csv')
-        with codecs.open(csv_file, 'w', encoding='iso-8859-1') as file_obj:
-            file_obj.write(textwrap.dedent(
-                """
-                header 1,HEADER 2,header 3
-                1,2,bar1
-                4,5,FOO
-                """
-            ).strip())
-
-        lookup_dict = utils.build_lookup_from_csv(
-            csv_file, 'header 1')
-
-        self.assertEqual(lookup_dict[4]['header 2'], 5)
-        self.assertEqual(lookup_dict[4]['header 3'], 'foo')
-        self.assertEqual(lookup_dict[1]['header 1'], 1)
-
-    def test_expand_path(self):
-        """utils: test path expansion function."""
-        from natcap.invest import utils
-        base_path = os.path.join(self.workspace_dir, 'csv.csv')
-        self.assertEqual(
-            f'{self.workspace_dir}{os.sep}foo.txt',
-            utils.expand_path('foo.txt', base_path))
-        self.assertEqual(
-            f'{self.workspace_dir}{os.sep}foo{os.sep}bar.txt',
-            utils.expand_path('foo/bar.txt', base_path))
-        self.assertEqual(
-            f'{self.workspace_dir}{os.sep}foo\\bar.txt',
-            utils.expand_path('foo\\bar.txt', base_path))
-        self.assertEqual(
-            f'{self.workspace_dir}{os.sep}foo.txt',
-            utils.expand_path(f'{self.workspace_dir}{os.sep}foo.txt', base_path))
-
-    def test_expand_path_columns(self):
-        """utils: test path expansion feature of read_csv_to_dataframe."""
-        from natcap.invest import utils
-
-        csv_file = os.path.join(self.workspace_dir, 'csv.csv')
-        with open(csv_file, 'w') as file_obj:
-            file_obj.write(textwrap.dedent(
-                f"""
-                bar,path
-                1,foo.txt
-                2,foo/bar.txt
-                3,foo\\bar.txt
-                4,{self.workspace_dir}/foo.txt
-                """
-            ).strip())
-        df = utils.read_csv_to_dataframe(csv_file, expand_path_cols=['path'])
-        self.assertEqual(
-            f'{self.workspace_dir}{os.sep}foo.txt',
-            df['path'][0])
-        self.assertEqual(
-            f'{self.workspace_dir}{os.sep}foo{os.sep}bar.txt',
-            df['path'][1])
-        self.assertEqual(
-            f'{self.workspace_dir}{os.sep}foo\\bar.txt',
-            df['path'][2])
-        self.assertEqual(
-            f'{self.workspace_dir}{os.sep}foo.txt',
-            df['path'][3])
-
-
-
 class ReadCSVToDataframeTests(unittest.TestCase):
     """Tests for natcap.invest.utils.read_csv_to_dataframe."""
 
@@ -969,61 +619,511 @@ class ReadCSVToDataframeTests(unittest.TestCase):
 
         with open(csv_file, 'w') as file_obj:
             file_obj.write(textwrap.dedent(
-                """
-                HEADER,
-                A,
+                """\
+                header,
+                a,
                 b
                 """
-            ).strip())
-        df = utils.read_csv_to_dataframe(csv_file)
-        # case of header and table values shouldn't change
-        self.assertEqual(df.columns[0], 'HEADER')
-        self.assertEqual(df['HEADER'][0], 'A')
-        self.assertEqual(df['HEADER'][1], 'b')
+            ))
+        df = utils.read_csv_to_dataframe(
+            csv_file,
+            {'columns': {'header': {'type': 'freestyle_string'}}})
+        # header and table values should be lowercased
+        self.assertEqual(df.columns[0], 'header')
+        self.assertEqual(df['header'][0], 'a')
+        self.assertEqual(df['header'][1], 'b')
 
-    def test_to_lower(self):
-        """utils: test that to_lower=True makes headers lowercase"""
+    def test_unique_key_not_first_column(self):
+        """utils: test success when key field is not first column."""
+        from natcap.invest import utils
+        csv_text = ("desc,lucode,val1,val2\n"
+                    "corn,1,0.5,2\n"
+                    "bread,2,1,4\n"
+                    "beans,3,0.5,4\n"
+                    "butter,4,9,1")
+        table_path = os.path.join(self.workspace_dir, 'table.csv')
+        with open(table_path, 'w') as table_file:
+            table_file.write(csv_text)
+
+        df = utils.read_csv_to_dataframe(
+            table_path,
+            {
+                'index_col': 'lucode',
+                'columns': {
+                    'desc': {'type': 'freestyle_string'},
+                    'lucode': {'type': 'integer'},
+                    'val1': {'type': 'number'},
+                    'val2': {'type': 'number'}
+            }})
+        self.assertEqual(df.index.name, 'lucode')
+        self.assertEqual(list(df.index.values), [1, 2, 3, 4])
+        self.assertEqual(df['desc'][2], 'bread')
+
+    def test_non_unique_keys(self):
+        """utils: test error is raised if keys are not unique."""
+        from natcap.invest import utils
+        csv_text = ("lucode,desc,val1,val2\n"
+                    "1,corn,0.5,2\n"
+                    "2,bread,1,4\n"
+                    "2,beans,0.5,4\n"
+                    "4,butter,9,1")
+        table_path = os.path.join(self.workspace_dir, 'table.csv')
+        with open(table_path, 'w') as table_file:
+            table_file.write(csv_text)
+
+        with self.assertRaises(ValueError):
+            utils.read_csv_to_dataframe(
+                table_path,
+                {
+                    'index_col': 'lucode',
+                    'columns': {
+                        'desc': {'type': 'freestyle_string'},
+                        'lucode': {'type': 'integer'},
+                        'val1': {'type': 'number'},
+                        'val2': {'type': 'number'}
+                }})
+
+    def test_missing_key_field(self):
+        """utils: test error is raised when missing key field."""
+        from natcap.invest import utils
+        csv_text = ("luode,desc,val1,val2\n"
+                    "1,corn,0.5,2\n"
+                    "2,bread,1,4\n"
+                    "3,beans,0.5,4\n"
+                    "4,butter,9,1")
+        table_path = os.path.join(self.workspace_dir, 'table.csv')
+        with open(table_path, 'w') as table_file:
+            table_file.write(csv_text)
+
+        with self.assertRaises(KeyError):
+            utils.read_csv_to_dataframe(
+                table_path,
+                {
+                    'index_col': 'lucode',
+                    'columns': {
+                        'desc': {'type': 'freestyle_string'},
+                        'lucode': {'type': 'integer'},
+                        'val1': {'type': 'number'},
+                        'val2': {'type': 'number'}
+                }})
+
+    def test_nan_row(self):
+        """utils: test NaN row is dropped."""
+        from natcap.invest import utils
+        csv_text = ("lucode,desc,val1,val2\n"
+                    "1,corn,0.5,2\n"
+                    ",,,\n"
+                    "3,beans,0.5,4\n"
+                    "4,butter,9,1")
+        table_path = os.path.join(self.workspace_dir, 'table.csv')
+        with open(table_path, 'w') as table_file:
+            table_file.write(csv_text)
+
+        result = utils.read_csv_to_dataframe(
+            table_path,
+            {
+                'index_col': 'lucode',
+                'columns': {
+                    'desc': {'type': 'freestyle_string'},
+                    'lucode': {'type': 'integer'},
+                    'val1': {'type': 'number'},
+                    'val2': {'type': 'number'}
+            }}).to_dict(orient='index')
+        expected_result = {
+            1: {'desc': 'corn', 'val1': 0.5, 'val2': 2},
+            3: {'desc': 'beans', 'val1': 0.5, 'val2': 4},
+            4: {'desc': 'butter', 'val1': 9, 'val2': 1}}
+
+        self.assertDictEqual(result, expected_result)
+
+    def test_column_subset(self):
+        """utils: test column subset is properly returned."""
+        from natcap.invest import utils
+        table_path = os.path.join(self.workspace_dir, 'table.csv')
+        with open(table_path, 'w') as table_file:
+            table_file.write(
+                "lucode,desc,val1,val2\n"
+                "1,corn,0.5,2\n"
+                "2,bread,1,4\n"
+                "3,beans,0.5,4\n"
+                "4,butter,9,1")
+        df = utils.read_csv_to_dataframe(
+            table_path,
+            {
+                'columns': {
+                    'lucode': {'type': 'integer'},
+                    'val1': {'type': 'number'},
+                    'val2': {'type': 'number'}
+            }
+        })
+        self.assertEqual(list(df.columns), ['lucode', 'val1', 'val2'])
+
+    def test_column_pattern_matching(self):
+        """utils: test column subset is properly returned."""
+        from natcap.invest import utils
+        table_path = os.path.join(self.workspace_dir, 'table.csv')
+        with open(table_path, 'w') as table_file:
+            table_file.write(
+                "lucode,grassland_value,forest_value,wetland_valueee\n"
+                "1,0.5,2\n"
+                "2,1,4\n"
+                "3,0.5,4\n"
+                "4,9,1")
+        df = utils.read_csv_to_dataframe(
+            table_path, {
+                'columns': {
+                    'lucode': {'type': 'integer'},
+                    '[HABITAT]_value': {'type': 'number'}
+            }
+        })
+        self.assertEqual(
+            list(df.columns), ['lucode', 'grassland_value', 'forest_value'])
+
+    def test_trailing_comma(self):
+        """utils: test a trailing comma on first line is handled properly."""
+        from natcap.invest import utils
+        table_path = os.path.join(self.workspace_dir, 'table.csv')
+        with open(table_path, 'w') as table_file:
+            table_file.write(
+                "lucode,desc,val1,val2\n"
+                "1,corn,0.5,2,\n"
+                "2,bread,1,4\n"
+                "3,beans,0.5,4\n"
+                "4,butter,9,1")
+        result = utils.read_csv_to_dataframe(
+            table_path,
+            {
+                'columns': {
+                    'desc': {'type': 'freestyle_string'},
+                    'lucode': {'type': 'integer'},
+                    'val1': {'type': 'number'},
+                    'val2': {'type': 'number'}
+            }})
+        self.assertEqual(result['val2'][0], 2)
+        self.assertEqual(result['lucode'][1], 2)
+
+
+    def test_trailing_comma_second_line(self):
+        """utils: test a trailing comma on second line is handled properly."""
+        from natcap.invest import utils
+        csv_text = ("lucode,desc,val1,val2\n"
+                    "1,corn,0.5,2\n"
+                    "2,bread,1,4,\n"
+                    "3,beans,0.5,4\n"
+                    "4,butter,9,1")
+        table_path = os.path.join(self.workspace_dir, 'table.csv')
+        with open(table_path, 'w') as table_file:
+            table_file.write(csv_text)
+
+        result = utils.read_csv_to_dataframe(
+            table_path,
+            {
+                'index_col': 'lucode',
+                'columns': {
+                    'desc': {'type': 'freestyle_string'},
+                    'lucode': {'type': 'integer'},
+                    'val1': {'type': 'number'},
+                    'val2': {'type': 'number'}
+            }}).to_dict(orient='index')
+
+        expected_result = {
+            1: {'desc': 'corn', 'val1': 0.5, 'val2': 2},
+            2: {'desc': 'bread', 'val1': 1, 'val2': 4},
+            3: {'desc': 'beans', 'val1': 0.5, 'val2': 4},
+            4: {'desc': 'butter', 'val1': 9, 'val2': 1}}
+
+        self.assertDictEqual(result, expected_result)
+
+    def test_csv_dialect_detection_semicolon_delimited(self):
+        """utils: test that we can parse semicolon-delimited CSVs."""
+        from natcap.invest import utils
+
+        csv_file = os.path.join(self.workspace_dir, 'csv.csv')
+        with open(csv_file, 'w') as file_obj:
+            file_obj.write(textwrap.dedent(
+                """\
+                header1;HEADER2;header3;
+                1;2;3;
+                4;FOO;bar;
+                """
+            ))
+
+        df = utils.read_csv_to_dataframe(
+            csv_file,
+            {'columns': {
+                'header1': {'type': 'integer'},
+                'header2': {'type': 'freestyle_string'},
+                'header3': {'type': 'freestyle_string'}
+            }
+        })
+        self.assertEqual(df['header2'][1], 'foo')
+        self.assertEqual(df['header3'][1], 'bar')
+        self.assertEqual(df['header1'][0], 1)
+
+    def test_convert_cols_to_lower(self):
+        """utils: test that column names are converted to lowercase"""
         from natcap.invest import utils
 
         csv_file = os.path.join(self.workspace_dir, 'csv.csv')
 
         with open(csv_file, 'w') as file_obj:
             file_obj.write(textwrap.dedent(
-                """
-                HEADER,
+                """\
+                header,
                 A,
                 b
                 """
-            ).strip())
-        df = utils.read_csv_to_dataframe(csv_file, to_lower=True)
-        # header should be lowercase
-        self.assertEqual(df.columns[0], 'header')
-        # case of table values shouldn't change
-        self.assertEqual(df['header'][0], 'A')
-        self.assertEqual(df['header'][1], 'b')
+            ))
+        df = utils.read_csv_to_dataframe(
+            csv_file, {'columns': {
+                'header': {'type': 'freestyle_string'}
+            }})
+        self.assertEqual(df['header'][0], 'a')
 
-    def test_utf8_bom_encoding(self):
-        """utils: test that CSV read correctly with UTF-8 BOM encoding."""
+    def test_convert_vals_to_lower(self):
+        """utils: test that values are converted to lowercase"""
         from natcap.invest import utils
 
         csv_file = os.path.join(self.workspace_dir, 'csv.csv')
-        # writing with utf-8-sig will prepend the BOM
-        with open(csv_file, 'w', encoding='utf-8-sig') as file_obj:
+
+        with open(csv_file, 'w') as file_obj:
             file_obj.write(textwrap.dedent(
+                """\
+                HEADER,
+                a,
+                b
                 """
+            ))
+        df = utils.read_csv_to_dataframe(
+            csv_file, {'columns': {
+                'header': {'type': 'freestyle_string'}
+            }})
+        self.assertEqual(df.columns[0], 'header')
+
+    def test_integer_type_columns(self):
+        """utils: integer column values are returned as integers."""
+        from natcap.invest import utils
+        csv_file = os.path.join(self.workspace_dir, 'csv.csv')
+        with open(csv_file, 'w') as file_obj:
+            file_obj.write(textwrap.dedent(
+                """\
+                id,header,
+                1,5.0,
+                2,-1,
+                3,
+                """
+            ))
+        df = utils.read_csv_to_dataframe(
+            csv_file, {'columns': {
+                'id': {'type': 'integer'},
+                'header': {'type': 'integer', 'na_allowed': True}}})
+        self.assertIsInstance(df['header'][0], numpy.int64)
+        self.assertIsInstance(df['header'][1], numpy.int64)
+        # empty values are returned as pandas.NA
+        self.assertTrue(pd.isna(df['header'][2]))
+
+    def test_float_type_columns(self):
+        """utils: float column values are returned as floats."""
+        from natcap.invest import utils
+        csv_file = os.path.join(self.workspace_dir, 'csv.csv')
+        with open(csv_file, 'w') as file_obj:
+            file_obj.write(textwrap.dedent(
+                """\
+                h1,h2,h3
+                5,0.5,.4
+                -1,-.3,
+                """
+            ))
+        df = utils.read_csv_to_dataframe(
+            csv_file, {'columns': {
+                'h1': {'type': 'number'},
+                'h2': {'type': 'ratio'},
+                'h3': {'type': 'percent', 'na_allowed': True},
+            }})
+        self.assertEqual(df['h1'].dtype, float)
+        self.assertEqual(df['h2'].dtype, float)
+        self.assertEqual(df['h3'].dtype, float)
+        # empty values are returned as numpy.nan
+        self.assertTrue(numpy.isnan(df['h3'][1]))
+
+    def test_string_type_columns(self):
+        """utils: string column values are returned as strings."""
+        from natcap.invest import utils
+        csv_file = os.path.join(self.workspace_dir, 'csv.csv')
+        with open(csv_file, 'w') as file_obj:
+            file_obj.write(textwrap.dedent(
+                """\
+                h1,h2,h3
+                1,a,foo
+                2,b,
+                """
+            ))
+        df = utils.read_csv_to_dataframe(
+            csv_file, {'columns': {
+                'h1': {'type': 'freestyle_string'},
+                'h2': {'type': 'option_string'},
+                'h3': {'type': 'freestyle_string'},
+            }})
+        self.assertEqual(df['h1'][0], '1')
+        self.assertEqual(df['h2'][1], 'b')
+        # empty values are returned as NA
+        self.assertTrue(pd.isna(df['h3'][1]))
+
+    def test_boolean_type_columns(self):
+        """utils: boolean column values are returned as booleans."""
+        from natcap.invest import utils
+        csv_file = os.path.join(self.workspace_dir, 'csv.csv')
+        with open(csv_file, 'w') as file_obj:
+            file_obj.write(textwrap.dedent(
+                """\
+                index,h1
+                a,1
+                b,0
+                c,
+                """
+            ))
+        df = utils.read_csv_to_dataframe(
+            csv_file, {'columns': {
+                'index': {'type': 'freestyle_string'},
+                'h1': {'type': 'bool', 'na_allowed': True}}})
+        self.assertEqual(df['h1'][0], True)
+        self.assertEqual(df['h1'][1], False)
+        # empty values are returned as pandas.NA
+        self.assertTrue(pd.isna(df['h1'][2]))
+
+    def test_expand_path_columns(self):
+        """utils: test values in path columns are expanded."""
+        from natcap.invest import utils
+        csv_file = os.path.join(self.workspace_dir, 'csv.csv')
+        with open(csv_file, 'w') as file_obj:
+            file_obj.write(textwrap.dedent(
+                f"""\
+                bar,path
+                1,foo.txt
+                2,foo/bar.txt
+                3,foo\\bar.txt
+                4,{self.workspace_dir}/foo.txt
+                5,
+                """
+            ))
+        df = utils.read_csv_to_dataframe(
+            csv_file, {'columns': {
+                'bar': {'type': 'integer'},
+                'path': {'type': 'file'}
+            }})
+        self.assertEqual(
+            f'{self.workspace_dir}{os.sep}foo.txt',
+            df['path'][0])
+        self.assertEqual(
+            f'{self.workspace_dir}{os.sep}foo{os.sep}bar.txt',
+            df['path'][1])
+        self.assertEqual(
+            f'{self.workspace_dir}{os.sep}foo\\bar.txt',
+            df['path'][2])
+        self.assertEqual(
+            f'{self.workspace_dir}{os.sep}foo.txt',
+            df['path'][3])
+        # empty values are returned as empty strings
+        self.assertTrue(pd.isna(df['path'][4]))
+
+    def test_csv_utf8_encoding(self):
+        """utils: test that CSV read correctly with UTF-8 encoding."""
+        from natcap.invest import utils
+
+        csv_file = os.path.join(self.workspace_dir, 'csv.csv')
+        with open(csv_file, 'w', encoding='utf-8') as file_obj:
+            file_obj.write(textwrap.dedent(
+                """\
                 header1,HEADER2,header3
                 1,2,bar
                 4,5,FOO
                 """
-            ).strip())
+            ))
+        lookup_dict = utils.read_csv_to_dataframe(
+            csv_file,
+            {
+                'index_col': 'header1',
+                'columns': {
+                    'header1': {'type': 'integer'},
+                    'header2': {'type': 'integer'},
+                    'header3': {'type': 'freestyle_string'}
+            }}).to_dict(orient='index')
+        self.assertEqual(lookup_dict[4]['header2'], 5)
+        self.assertEqual(lookup_dict[4]['header3'], 'foo')
+
+    def test_utf8_bom_encoding(self):
+        """utils: test that CSV read correctly with UTF-8 BOM encoding."""
+        from natcap.invest import utils
+        csv_file = os.path.join(self.workspace_dir, 'csv.csv')
+        # writing with utf-8-sig will prepend the BOM
+        with open(csv_file, 'w', encoding='utf-8-sig') as file_obj:
+            file_obj.write(textwrap.dedent(
+                """\
+                header1,header2,header3
+                1,2,bar
+                4,5,FOO
+                """
+            ))
         # confirm that the file has the BOM prefix
         with open(csv_file, 'rb') as file_obj:
             self.assertTrue(file_obj.read().startswith(codecs.BOM_UTF8))
-
-        df = utils.read_csv_to_dataframe(csv_file)
+        df = utils.read_csv_to_dataframe(csv_file,
+            {
+                'columns': {
+                    'header1': {'type': 'integer'},
+                    'header2': {'type': 'integer'},
+                    'header3': {'type': 'freestyle_string'}
+            }})
         # assert the BOM prefix was correctly parsed and skipped
         self.assertEqual(df.columns[0], 'header1')
-        self.assertEqual(df['HEADER2'][1], 5)
+        self.assertEqual(df['header2'][1], 5)
+
+    def test_csv_latin_1_encoding(self):
+        """utils: can read Latin-1 encoded CSV if it uses only ASCII chars."""
+        from natcap.invest import utils
+        csv_file = os.path.join(self.workspace_dir, 'csv.csv')
+        with codecs.open(csv_file, 'w', encoding='iso-8859-1') as file_obj:
+            file_obj.write(textwrap.dedent(
+                """\
+                header 1,HEADER 2,header 3
+                1,2,bar1
+                4,5,FOO
+                """
+            ))
+        df = utils.read_csv_to_dataframe(
+            csv_file,
+            {'columns': {
+                'header 1': {'type': 'integer'},
+                'header 2': {'type': 'integer'},
+                'header 3': {'type': 'freestyle_string'}
+        }})
+        self.assertEqual(df['header 2'][1], 5)
+        self.assertEqual(df['header 3'][1], 'foo')
+        self.assertEqual(df['header 1'][0], 1)
+
+    def test_csv_error_non_utf8_character(self):
+        """utils: test that error is raised on non-UTF8 character."""
+        from natcap.invest import utils
+
+        csv_file = os.path.join(self.workspace_dir, 'csv.csv')
+        with codecs.open(csv_file, 'w', encoding='iso-8859-1') as file_obj:
+            file_obj.write(textwrap.dedent(
+                """\
+                header 1,HEADER 2,header 3
+                1,2,bar1
+                4,5,FÖÖ
+                """
+            ))
+        with self.assertRaises(UnicodeDecodeError):
+            utils.read_csv_to_dataframe(
+                csv_file,
+                {
+                    'index_col': 'header1',
+                    'columns': {
+                        'header1': {'type': 'integer'},
+                        'header2': {'type': 'integer'},
+                        'header3': {'type': 'freestyle_string'}
+                    }})
 
     def test_override_default_encoding(self):
         """utils: test that you can override the default encoding kwarg"""
@@ -1034,15 +1134,19 @@ class ReadCSVToDataframeTests(unittest.TestCase):
         # encode with ISO Cyrillic, include a non-ASCII character
         with open(csv_file, 'w', encoding='iso8859_5') as file_obj:
             file_obj.write(textwrap.dedent(
-                """
+                """\
                 header,
                 fЮЮ,
                 bar
                 """
-            ).strip())
-        df = utils.read_csv_to_dataframe(csv_file, encoding='iso8859_5')
+            ))
+        df = utils.read_csv_to_dataframe(
+            csv_file, {
+                'columns': {'header': {'type': 'freestyle_string'}
+            }}, encoding='iso8859_5')
         # with the encoding specified, special characters should work
-        self.assertEqual(df['header'][0], 'fЮЮ')
+        # and be lowercased
+        self.assertEqual(df['header'][0], 'fюю')
         self.assertEqual(df['header'][1], 'bar')
 
     def test_other_kwarg(self):
@@ -1053,18 +1157,24 @@ class ReadCSVToDataframeTests(unittest.TestCase):
 
         with open(csv_file, 'w') as file_obj:
             file_obj.write(textwrap.dedent(
-                """
+                """\
                 h1;h2;h3
                 a;b;c
                 d;e;f
                 """
-            ).strip())
+            ))
         # using sep=None with the default engine='python',
         # it should infer what the separator is
-        df = utils.read_csv_to_dataframe(csv_file, sep=None)
+        df = utils.read_csv_to_dataframe(
+            csv_file, {
+                'columns': {
+                    'h1': {'type': 'freestyle_string'},
+                    'h2': {'type': 'freestyle_string'},
+                    'h3': {'type': 'freestyle_string'}
+            }}, converters={'h2': lambda val: f'foo_{val}'})
 
         self.assertEqual(df.columns[0], 'h1')
-        self.assertEqual(df['h2'][1], 'e')
+        self.assertEqual(df['h2'][1], 'foo_e')
 
     def test_csv_with_integer_headers(self):
         """
@@ -1079,13 +1189,19 @@ class ReadCSVToDataframeTests(unittest.TestCase):
 
         with open(csv_file, 'w') as file_obj:
             file_obj.write(textwrap.dedent(
-                """
+                """\
                 1,2,3
                 a,b,c
                 d,e,f
                 """
-            ).strip())
-        df = utils.read_csv_to_dataframe(csv_file)
+            ))
+        df = utils.read_csv_to_dataframe(
+            csv_file,
+            {'columns': {
+                '1': {'type': 'freestyle_string'},
+                '2': {'type': 'freestyle_string'},
+                '3': {'type': 'freestyle_string'}
+            }})
         # expect headers to be strings
         self.assertEqual(df.columns[0], '1')
         self.assertEqual(df['1'][0], 'a')
@@ -1100,18 +1216,23 @@ class ReadCSVToDataframeTests(unittest.TestCase):
             file_obj.write(" Col1, Col2 ,Col3 \n")
             file_obj.write(" val1, val2 ,val3 \n")
             file_obj.write(" , 2 1 ,  ")
-        df = utils.read_csv_to_dataframe(csv_file)
+        df = utils.read_csv_to_dataframe(
+            csv_file, {
+                'columns': {
+                    'col1': {'type': 'freestyle_string'},
+                    'col2': {'type': 'freestyle_string'},
+                    'col3': {'type': 'freestyle_string'}
+            }})
         # header should have no leading / trailing whitespace
-        self.assertEqual(df.columns[0], 'Col1')
-        self.assertEqual(df.columns[1], 'Col2')
-        self.assertEqual(df.columns[2], 'Col3')
+        self.assertEqual(list(df.columns), ['col1', 'col2', 'col3'])
+
         # values should have no leading / trailing whitespace
-        self.assertEqual(df['Col1'][0], 'val1')
-        self.assertEqual(df['Col2'][0], 'val2')
-        self.assertEqual(df['Col3'][0], 'val3')
-        self.assertEqual(df['Col1'][1], '')
-        self.assertEqual(df['Col2'][1], '2 1')
-        self.assertEqual(df['Col3'][1], '')
+        self.assertEqual(df['col1'][0], 'val1')
+        self.assertEqual(df['col2'][0], 'val2')
+        self.assertEqual(df['col3'][0], 'val3')
+        self.assertEqual(df['col1'][1], '')
+        self.assertEqual(df['col2'][1], '2 1')
+        self.assertEqual(df['col3'][1], '')
 
 
 class CreateCoordinateTransformationTests(unittest.TestCase):
@@ -1441,7 +1562,7 @@ class AssertVectorsEqualTests(unittest.TestCase):
         attrs = [{'id': 1, 'foo': 2.3456}, {'id': 2, 'foo': 5.6789}]
         attrs_copy = [
             {'id': 1, 'foo': 2.3456}, {'id': 2, 'foo': 5.6789},
-            {'id': 3, 'foo': 5.0}]
+            {'id': 3, 'foo': 5}]
 
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(3157)

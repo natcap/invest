@@ -39,6 +39,7 @@ MODEL_SPEC = {
         },
         "guild_table_path": {
             "type": "csv",
+            "index_col": "species",
             "columns": {
                 "species": {
                     "type": "freestyle_string",
@@ -87,6 +88,7 @@ MODEL_SPEC = {
         },
         "landcover_biophysical_table_path": {
             "type": "csv",
+            "index_col": "lucode",
             "columns": {
                 "lucode": spec_utils.LULC_TABLE_COLUMN,
                 "nesting_[SUBSTRATE]_availability_index": {
@@ -322,7 +324,7 @@ _INDEX_NODATA = -1
 _NESTING_SUBSTRATE_PATTERN = 'nesting_([^_]+)_availability_index'
 _FLORAL_RESOURCES_AVAILABLE_PATTERN = 'floral_resources_([^_]+)_index'
 _EXPECTED_BIOPHYSICAL_HEADERS = [
-    'lucode', _NESTING_SUBSTRATE_PATTERN, _FLORAL_RESOURCES_AVAILABLE_PATTERN]
+    _NESTING_SUBSTRATE_PATTERN, _FLORAL_RESOURCES_AVAILABLE_PATTERN]
 
 # These are patterns expected in the guilds table
 _NESTING_SUITABILITY_PATTERN = 'nesting_suitability_([^_]+)_index'
@@ -332,7 +334,7 @@ _FORAGING_ACTIVITY_RE_PATTERN = _FORAGING_ACTIVITY_PATTERN % '([^_]+)'
 _RELATIVE_SPECIES_ABUNDANCE_FIELD = 'relative_abundance'
 _ALPHA_HEADER = 'alpha'
 _EXPECTED_GUILD_HEADERS = [
-    'species', _NESTING_SUITABILITY_PATTERN, _FORAGING_ACTIVITY_RE_PATTERN,
+    _NESTING_SUITABILITY_PATTERN, _FORAGING_ACTIVITY_RE_PATTERN,
     _ALPHA_HEADER, _RELATIVE_SPECIES_ABUNDANCE_FIELD]
 
 _NESTING_SUBSTRATE_INDEX_FILEPATTERN = 'nesting_substrate_index_%s%s.tif'
@@ -718,6 +720,7 @@ def execute(args):
     pollinator_abundance_task_map = {}
     floral_resources_index_path_map = {}
     floral_resources_index_task_map = {}
+    alpha_kernel_map = {}
     for species in scenario_variables['species_list']:
         # calculate foraging_effectiveness[species]
         # FE(x, s) = sum_j [RA(l(x), j) * fa(s, j)]
@@ -762,11 +765,17 @@ def execute(args):
             intermediate_output_dir, _KERNEL_FILE_PATTERN % (
                 alpha, file_suffix))
 
-        alpha_kernel_raster_task = task_graph.add_task(
-            task_name=f'decay_kernel_raster_{alpha}',
-            func=utils.exponential_decay_kernel_raster,
-            args=(alpha, kernel_path),
-            target_path_list=[kernel_path])
+        # to avoid creating duplicate kernel rasters check to see if an
+        # adequate kernel task has already been submitted
+        try:
+            alpha_kernel_raster_task = alpha_kernel_map[kernel_path]
+        except:
+            alpha_kernel_raster_task = task_graph.add_task(
+                task_name=f'decay_kernel_raster_{alpha}',
+                func=utils.exponential_decay_kernel_raster,
+                args=(alpha, kernel_path),
+                target_path_list=[kernel_path])
+            alpha_kernel_map[kernel_path] = alpha_kernel_raster_task
 
         # convolve FE with alpha_s
         floral_resources_index_path = os.path.join(
@@ -1179,23 +1188,22 @@ def _parse_scenario_variables(args):
     else:
         farm_vector_path = None
 
-    guild_table = utils.build_lookup_from_csv(
-        guild_table_path, 'species', to_lower=True)
+    guild_df = utils.read_csv_to_dataframe(
+        guild_table_path, MODEL_SPEC['args']['guild_table_path'])
 
     LOGGER.info('Checking to make sure guild table has all expected headers')
-    guild_headers = list(guild_table.values())[0].keys()
     for header in _EXPECTED_GUILD_HEADERS:
-        matches = re.findall(header, " ".join(guild_headers))
+        matches = re.findall(header, " ".join(guild_df.columns))
         if len(matches) == 0:
             raise ValueError(
                 "Expected a header in guild table that matched the pattern "
                 f"'{header}' but was unable to find one. Here are all the "
-                f"headers from {guild_table_path}: {', '.join(guild_headers)}")
+                f"headers from {guild_table_path}: {', '.join(guild_df.columns)}")
 
-    landcover_biophysical_table = utils.build_lookup_from_csv(
-        landcover_biophysical_table_path, 'lucode', to_lower=True)
-    biophysical_table_headers = (
-        list(landcover_biophysical_table.values())[0].keys())
+    landcover_biophysical_df = utils.read_csv_to_dataframe(
+        landcover_biophysical_table_path,
+        MODEL_SPEC['args']['landcover_biophysical_table_path'])
+    biophysical_table_headers = landcover_biophysical_df.columns
     for header in _EXPECTED_BIOPHYSICAL_HEADERS:
         matches = re.findall(header, " ".join(biophysical_table_headers))
         if len(matches) == 0:
@@ -1211,7 +1219,7 @@ def _parse_scenario_variables(args):
     # this dict to dict will map substrate types to guild/biophysical headers
     # ex substrate_to_header['cavity']['biophysical']
     substrate_to_header = collections.defaultdict(dict)
-    for header in guild_headers:
+    for header in guild_df.columns:
         match = re.match(_FORAGING_ACTIVITY_RE_PATTERN, header)
         if match:
             season = match.group(1)
@@ -1297,55 +1305,48 @@ def _parse_scenario_variables(args):
     # * substrate_list (list of string)
     result['substrate_list'] = sorted(substrate_to_header)
     # * species_list (list of string)
-    result['species_list'] = sorted(guild_table)
+    result['species_list'] = sorted(guild_df.index)
 
     result['alpha_value'] = dict()
     for species in result['species_list']:
-        result['alpha_value'][species] = float(
-            guild_table[species][_ALPHA_HEADER])
+        result['alpha_value'][species] = guild_df[_ALPHA_HEADER][species]
 
     # * species_abundance[species] (string->float)
-    total_relative_abundance = numpy.sum([
-        guild_table[species][_RELATIVE_SPECIES_ABUNDANCE_FIELD]
-        for species in result['species_list']])
+    total_relative_abundance = guild_df[_RELATIVE_SPECIES_ABUNDANCE_FIELD].sum()
     result['species_abundance'] = {}
     for species in result['species_list']:
         result['species_abundance'][species] = (
-            guild_table[species][_RELATIVE_SPECIES_ABUNDANCE_FIELD] /
-            float(total_relative_abundance))
+            guild_df[_RELATIVE_SPECIES_ABUNDANCE_FIELD][species] /
+            total_relative_abundance)
 
     # map the relative foraging activity of a species during a certain season
     # (species, season)
     result['species_foraging_activity'] = dict()
     for species in result['species_list']:
         total_activity = numpy.sum([
-            guild_table[species][_FORAGING_ACTIVITY_PATTERN % season]
+            guild_df[_FORAGING_ACTIVITY_PATTERN % season][species]
             for season in result['season_list']])
         for season in result['season_list']:
             result['species_foraging_activity'][(species, season)] = (
-                guild_table[species][_FORAGING_ACTIVITY_PATTERN % season] /
-                float(total_activity))
+                guild_df[_FORAGING_ACTIVITY_PATTERN % season][species] /
+                total_activity)
 
     # * landcover_substrate_index[substrate][landcover] (float)
     result['landcover_substrate_index'] = collections.defaultdict(dict)
-    for raw_landcover_id in landcover_biophysical_table:
-        landcover_id = int(raw_landcover_id)
+    for landcover_id, row in landcover_biophysical_df.iterrows():
         for substrate in result['substrate_list']:
             substrate_biophysical_header = (
                 substrate_to_header[substrate]['biophysical'])
             result['landcover_substrate_index'][substrate][landcover_id] = (
-                landcover_biophysical_table[landcover_id][
-                    substrate_biophysical_header])
+                row[substrate_biophysical_header])
 
     # * landcover_floral_resources[season][landcover] (float)
     result['landcover_floral_resources'] = collections.defaultdict(dict)
-    for raw_landcover_id in landcover_biophysical_table:
-        landcover_id = int(raw_landcover_id)
+    for landcover_id, row in landcover_biophysical_df.iterrows():
         for season in result['season_list']:
             floral_rources_header = season_to_header[season]['biophysical']
             result['landcover_floral_resources'][season][landcover_id] = (
-                landcover_biophysical_table[landcover_id][
-                    floral_rources_header])
+                row[floral_rources_header])
 
     # * species_substrate_index[(species, substrate)] (tuple->float)
     result['species_substrate_index'] = collections.defaultdict(dict)
@@ -1353,7 +1354,7 @@ def _parse_scenario_variables(args):
         for substrate in result['substrate_list']:
             substrate_guild_header = substrate_to_header[substrate]['guild']
             result['species_substrate_index'][species][substrate] = (
-                guild_table[species][substrate_guild_header])
+                guild_df[substrate_guild_header][species])
 
     # * foraging_activity_index[(species, season)] (tuple->float)
     result['foraging_activity_index'] = {}
@@ -1362,7 +1363,7 @@ def _parse_scenario_variables(args):
             key = (species, season)
             foraging_biophyiscal_header = season_to_header[season]['guild']
             result['foraging_activity_index'][key] = (
-                guild_table[species][foraging_biophyiscal_header])
+                guild_df[foraging_biophyiscal_header][species])
 
     return result
 

@@ -1,7 +1,5 @@
 import localforage from 'localforage';
 
-const logger = window.Workbench.getLogger('InvestJob.js');
-
 const HASH_ARRAY_KEY = 'jobHashes';
 const MAX_CACHED_JOBS = 30;
 const investJobStore = localforage.createInstance({
@@ -60,8 +58,8 @@ export default class InvestJob {
       const lastKey = sortedJobHashes.pop();
       investJobStore.removeItem(lastKey);
     }
-    await investJobStore.setItem(HASH_ARRAY_KEY, sortedJobHashes);
     await investJobStore.setItem(job.hash, job);
+    await investJobStore.setItem(HASH_ARRAY_KEY, sortedJobHashes);
     return InvestJob.getJobStore();
   }
 

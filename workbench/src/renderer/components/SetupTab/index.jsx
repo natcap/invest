@@ -1,5 +1,6 @@
 import React from 'react';
 import PropTypes from 'prop-types';
+import { withTranslation } from 'react-i18next';
 
 import Alert from 'react-bootstrap/Alert';
 import Container from 'react-bootstrap/Container';
@@ -23,9 +24,9 @@ import {
 } from '../../server_requests';
 import { argsDictFromObject } from '../../utils';
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
-import { withTranslation } from 'react-i18next';
 
 const { ipcRenderer } = window.Workbench.electron;
+const { logger } = window.Workbench;
 
 /** Initialize values of InVEST args based on the model's UI Spec.
  *
@@ -54,7 +55,7 @@ function initializeArgValues(argsSpec, uiSpec, argsDict) {
     if (argsSpec[argkey].type === 'boolean') {
       value = argsDict[argkey] || false;
     } else if (argsSpec[argkey].type === 'option_string') {
-      if  (argsDict[argkey]) {
+      if (argsDict[argkey]) {
         value = argsDict[argkey];
       } else { // default to first
         if (Array.isArray(argsSpec[argkey].options)) {
@@ -105,7 +106,6 @@ class SetupTab extends React.Component {
     this.updateArgTouched = this.updateArgTouched.bind(this);
     this.updateArgValues = this.updateArgValues.bind(this);
     this.batchUpdateArgs = this.batchUpdateArgs.bind(this);
-    this.insertNWorkers = this.insertNWorkers.bind(this);
     this.callUISpecFunctions = this.callUISpecFunctions.bind(this);
     this.browseForDatastack = this.browseForDatastack.bind(this);
     this.loadParametersFromFile = this.loadParametersFromFile.bind(this);
@@ -204,19 +204,6 @@ class SetupTab extends React.Component {
     }
   }
 
-  /**
-   * n_workers is a special invest arg stored in global settings
-   *
-   * @param  {object} argsValues - of the shape returned by `initializeArgValues`.
-   * @returns {object} copy of original argsValues with an n_workers property.
-   */
-  insertNWorkers(argsValues) {
-    return {
-      ...argsValues,
-      n_workers: { value: this.props.nWorkers },
-    };
-  }
-
   /** Save the current invest arguments to a python script via datastack.py API.
    *
    * @param {string} filepath - desired path to the python script
@@ -226,9 +213,7 @@ class SetupTab extends React.Component {
     const {
       modelName,
     } = this.props;
-    const args = argsDictFromObject(
-      this.insertNWorkers(this.state.argsValues)
-    );
+    const args = argsDictFromObject(this.state.argsValues);
     const payload = {
       filepath: filepath,
       modelname: modelName,
@@ -242,9 +227,7 @@ class SetupTab extends React.Component {
     const {
       pyModuleName,
     } = this.props;
-    const args = argsDictFromObject(
-      this.insertNWorkers(this.state.argsValues)
-    );
+    const args = argsDictFromObject(this.state.argsValues);
     const payload = {
       filepath: datastackPath,
       moduleName: pyModuleName,
@@ -292,8 +275,20 @@ class SetupTab extends React.Component {
   }
 
   async loadParametersFromFile(filepath) {
-    const datastack = await fetchDatastackFromFile(filepath);
     const { pyModuleName, switchTabs, t } = this.props;
+    let datastack;
+    try {
+      datastack = await fetchDatastackFromFile(filepath);
+    } catch (error) {
+      logger.error(error);
+      alert( // eslint-disable-line no-alert
+        t(
+          'No InVEST model data can be parsed from the file:\n {{filepath}}',
+          { filepath: filepath }
+        )
+      );
+      return;
+    }
     if (datastack.module_name === pyModuleName) {
       this.batchUpdateArgs(datastack.args);
       switchTabs('setup');
@@ -310,14 +305,14 @@ class SetupTab extends React.Component {
 
   async browseForDatastack() {
     const data = await ipcRenderer.invoke(ipcMainChannels.SHOW_OPEN_DIALOG);
-    if (data.filePaths.length) {
+    if (!data.canceled) {
       this.loadParametersFromFile(data.filePaths[0]);
     }
   }
 
   wrapInvestExecute() {
     this.props.investExecute(
-      argsDictFromObject(this.insertNWorkers(this.state.argsValues))
+      argsDictFromObject(this.state.argsValues)
     );
   }
 
@@ -598,7 +593,6 @@ SetupTab.propTypes = {
   }).isRequired,
   argsInitValues: PropTypes.objectOf(PropTypes.oneOfType([PropTypes.string, PropTypes.bool])),
   investExecute: PropTypes.func.isRequired,
-  nWorkers: PropTypes.string.isRequired,
   sidebarSetupElementId: PropTypes.string.isRequired,
   sidebarFooterElementId: PropTypes.string.isRequired,
   executeClicked: PropTypes.bool.isRequired,
