@@ -2768,9 +2768,7 @@ def validate(args, limit_to=None):
 
     if ('wind_schedule' in valid_sufficient_keys and
             'global_wind_parameters_path' in valid_sufficient_keys):
-        year_count = len(
-            utils.read_csv_to_dataframe(
-                args['wind_schedule'], MODEL_SPEC['args']['wind_schedule']))
+        year_count = pandas.read_csv(args['wind_schedule']).shape[0]
         time = int(_read_csv_wind_parameters(
             args['global_wind_parameters_path'], ['time_period']
         )['time_period'])
