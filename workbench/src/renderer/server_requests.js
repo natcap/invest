@@ -82,7 +82,6 @@ export function fetchDatastackFromFile(payload) {
       headers: { 'Content-Type': 'application/json' },
     })
       .then((response) => response.json())
-      .catch((error) => logger.error(error.stack))
   );
 }
 

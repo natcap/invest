@@ -163,6 +163,21 @@ describe('Arguments form input types', () => {
     expect(input).toHaveValue('a');
     expect(input).not.toHaveValue('b');
   });
+
+  test('initial arg values can contain extra args', async () => {
+    const spec = baseArgsSpec('number');
+    const displayedValue = '1';
+    const missingValue = '0';
+    const initArgs = {
+      [Object.keys(spec.args)[0]]: displayedValue,
+      paramZ: missingValue, // paramZ is not in the ARGS_SPEC or UI_SPEC
+    };
+
+    const { findByLabelText, queryByText } = renderSetupFromSpec(spec, UI_SPEC, initArgs);
+    const input = await findByLabelText(`${spec.args.arg.name} (${spec.args.arg.units})`);
+    await waitFor(() => expect(input).toHaveValue(displayedValue));
+    expect(queryByText(missingValue)).toBeNull();
+  });
 });
 
 describe('Arguments form interactions', () => {

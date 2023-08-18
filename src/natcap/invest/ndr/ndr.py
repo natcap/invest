@@ -73,6 +73,7 @@ MODEL_SPEC = {
         },
         "biophysical_table_path": {
             "type": "csv",
+            "index_col": "lucode",
             "columns": {
                 "lucode": spec_utils.LULC_TABLE_COLUMN,
                 "load_[NUTRIENT]": {  # nitrogen or phosphorus nutrient loads
@@ -552,14 +553,14 @@ def execute(args):
         None
 
     """
-    def _validate_inputs(nutrients_to_process, lucode_to_parameters):
+    def _validate_inputs(nutrients_to_process, biophysical_df):
         """Validate common errors in inputs.
 
         Args:
             nutrients_to_process (list): list of 'n' and/or 'p'
-            lucode_to_parameters (dictionary): biophysical input table mapping
-                lucode to dictionary of table parameters.  Used to validate
-                the correct columns are input
+            biophysical_df (pandas.DataFrame): dataframe representation of
+                the input biophysical table. Used to validate the correct
+                columns are input
 
         Returns:
             None
@@ -579,7 +580,7 @@ def execute(args):
         # is missing.
         row_header_table_list = []
 
-        lu_parameter_row = list(lucode_to_parameters.values())[0]
+        lu_parameter_row = biophysical_df.columns.to_list()
         row_header_table_list.append(
             (lu_parameter_row, ['load_', 'eff_', 'crit_len_'],
              args['biophysical_table_path']))
@@ -634,10 +635,11 @@ def execute(args):
         if args['calc_' + nutrient_id]:
             nutrients_to_process.append(nutrient_id)
 
-    lucode_to_parameters = utils.read_csv_to_dataframe(
-        args['biophysical_table_path'], 'lucode').to_dict(orient='index')
+    biophysical_df = utils.read_csv_to_dataframe(
+        args['biophysical_table_path'],
+        MODEL_SPEC['args']['biophysical_table_path'])
 
-    _validate_inputs(nutrients_to_process, lucode_to_parameters)
+    _validate_inputs(nutrients_to_process, biophysical_df)
 
     # these are used for aggregation in the last step
     field_pickle_map = {}
@@ -845,14 +847,16 @@ def execute(args):
         # Perrine says that 'n' is the only case where we could consider a
         # prop subsurface component.  So there's a special case for that.
         if nutrient == 'n':
-            subsurface_proportion_type = 'proportion_subsurface_n'
+            subsurface_proportion_map = (
+                biophysical_df['proportion_subsurface_n'].to_dict())
         else:
-            subsurface_proportion_type = None
+            subsurface_proportion_map = None
         load_task = task_graph.add_task(
             func=_calculate_load,
             args=(
-                f_reg['masked_lulc_path'], lucode_to_parameters,
-                f'load_{nutrient}', load_path),
+                f_reg['masked_lulc_path'],
+                biophysical_df[f'load_{nutrient}'],
+                load_path),
             dependent_task_list=[align_raster_task],
             target_path_list=[load_path],
             task_name=f'{nutrient} load')
@@ -869,8 +873,7 @@ def execute(args):
         surface_load_task = task_graph.add_task(
             func=_map_surface_load,
             args=(modified_load_path, f_reg['masked_lulc_path'],
-                  lucode_to_parameters, subsurface_proportion_type,
-                  surface_load_path),
+                  subsurface_proportion_map, surface_load_path),
             target_path_list=[surface_load_path],
             dependent_task_list=[modified_load_task, align_raster_task],
             task_name=f'map surface load {nutrient}')
@@ -880,7 +883,7 @@ def execute(args):
             func=_map_lulc_to_val_mask_stream,
             args=(
                 f_reg['masked_lulc_path'], f_reg['stream_path'],
-                lucode_to_parameters, f'eff_{nutrient}', eff_path),
+                biophysical_df[f'eff_{nutrient}'].to_dict(), eff_path),
             target_path_list=[eff_path],
             dependent_task_list=[align_raster_task, stream_extraction_task],
             task_name=f'ret eff {nutrient}')
@@ -890,7 +893,8 @@ def execute(args):
             func=_map_lulc_to_val_mask_stream,
             args=(
                 f_reg['masked_lulc_path'], f_reg['stream_path'],
-                lucode_to_parameters, f'crit_len_{nutrient}', crit_len_path),
+                biophysical_df[f'crit_len_{nutrient}'].to_dict(),
+                crit_len_path),
             target_path_list=[crit_len_path],
             dependent_task_list=[align_raster_task, stream_extraction_task],
             task_name=f'ret eff {nutrient}')
@@ -934,9 +938,8 @@ def execute(args):
 
         # only calculate subsurface things for nitrogen
         if nutrient == 'n':
-            proportion_subsurface_map = {
-                lucode: params['proportion_subsurface_n']
-                for lucode, params in lucode_to_parameters.items()}
+            proportion_subsurface_map = (
+                biophysical_df['proportion_subsurface_n'].to_dict())
             subsurface_load_task = task_graph.add_task(
                 func=_map_subsurface_load,
                 args=(modified_load_path, f_reg['masked_lulc_path'],
@@ -1229,18 +1232,13 @@ def _normalize_raster(base_raster_path_band, target_normalized_raster_path):
         target_nodata)
 
 
-def _calculate_load(
-        lulc_raster_path, lucode_to_parameters, load_type,
-        target_load_raster):
+def _calculate_load(lulc_raster_path, lucode_to_load, target_load_raster):
     """Calculate load raster by mapping landcover and multiplying by area.
 
     Args:
         lulc_raster_path (string): path to integer landcover raster.
-        lucode_to_parameters (dict): a mapping of landcover IDs to a
-            dictionary indexed by the value of `load_{load_type}` that
-            represents a per-area nutrient load.
-        load_type (string): represent nutrient to map, either 'load_n' or
-            'load_p'.
+        lucode_to_load (dict): a mapping of landcover IDs to per-area
+            nutrient load.
         target_load_raster (string): path to target raster that will have
             total load per pixel.
 
@@ -1260,8 +1258,7 @@ def _calculate_load(
             if lucode != nodata_landuse:
                 try:
                     result[lucode_array == lucode] = (
-                        lucode_to_parameters[lucode][load_type] *
-                        cell_area_ha)
+                        lucode_to_load[lucode] * cell_area_ha)
                 except KeyError:
                     raise KeyError(
                         'lucode: %d is present in the landuse raster but '
@@ -1345,18 +1342,17 @@ def _sum_rasters(raster_path_list, target_nodata, target_result_path):
 
 
 def _map_surface_load(
-        modified_load_path, lulc_raster_path, lucode_to_parameters,
-        subsurface_proportion_type, target_surface_load_path):
+        modified_load_path, lulc_raster_path, lucode_to_subsurface_proportion,
+        target_surface_load_path):
     """Calculate surface load from landcover raster.
 
     Args:
         modified_load_path (string): path to modified load raster with units
             of kg/pixel.
         lulc_raster_path (string): path to landcover raster.
-        lucode_to_parameters (dict): maps landcover codes to a dictionary that
-            can be indexed by `subsurface_proportion_type`.
-        subsurface_proportion_type (string): if None no subsurface transfer
-            is mapped.  Otherwise indexed from lucode_to_parameters.
+        lucode_to_subsurface_proportion (dict): maps landcover codes to
+            subsurface proportion values. Or if None, no subsurface transfer
+            is mapped.
         target_surface_load_path (string): path to target raster.
 
     Returns:
@@ -1366,16 +1362,15 @@ def _map_surface_load(
     lulc_raster_info = pygeoprocessing.get_raster_info(lulc_raster_path)
     nodata_landuse = lulc_raster_info['nodata'][0]
 
-    keys = sorted(numpy.array(list(lucode_to_parameters)))
-    if subsurface_proportion_type is not None:
+    if lucode_to_subsurface_proportion is not None:
+        keys = sorted(lucode_to_subsurface_proportion.keys())
         subsurface_values = numpy.array(
-            [lucode_to_parameters[x][subsurface_proportion_type]
-             for x in keys])
+            [lucode_to_subsurface_proportion[x] for x in keys])
 
     def _map_surface_load_op(lucode_array, modified_load_array):
         """Convert unit load to total load & handle nodata."""
         # If we don't have subsurface, just return 0.0.
-        if subsurface_proportion_type is None:
+        if lucode_to_subsurface_proportion is None:
             return numpy.where(
                 ~utils.array_equals_nodata(lucode_array, nodata_landuse),
                 modified_load_array, _TARGET_NODATA)
@@ -1437,17 +1432,13 @@ def _map_subsurface_load(
 
 
 def _map_lulc_to_val_mask_stream(
-        lulc_raster_path, stream_path, lucode_to_parameters, map_id,
-        target_eff_path):
+        lulc_raster_path, stream_path, lucodes_to_vals, target_eff_path):
     """Make retention efficiency raster from landcover.
 
     Args:
         lulc_raster_path (string): path to landcover raster.
         stream_path (string) path to stream layer 0, no stream 1 stream.
-        lucode_to_parameters (dict) mapping of landcover code to a dictionary
-            that contains the key in `map_id`
-        map_id (string): the id in the lookup table with values to map
-            landcover to efficiency.
+        lucodes_to_val (dict) mapping of landcover codes to values
         target_eff_path (string): target raster that contains the mapping of
             landcover codes to retention efficiency values except where there
             is a stream in which case the retention efficiency is 0.
@@ -1456,9 +1447,8 @@ def _map_lulc_to_val_mask_stream(
         None.
 
     """
-    keys = sorted(numpy.array(list(lucode_to_parameters)))
-    values = numpy.array(
-        [lucode_to_parameters[x][map_id] for x in keys])
+    lucodes = sorted(lucodes_to_vals.keys())
+    values = numpy.array([lucodes_to_vals[x] for x in lucodes])
 
     nodata_landuse = pygeoprocessing.get_raster_info(
         lulc_raster_path)['nodata'][0]
@@ -1472,7 +1462,7 @@ def _map_lulc_to_val_mask_stream(
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         result[:] = _TARGET_NODATA
         index = numpy.digitize(
-            lucode_array[valid_mask].ravel(), keys, right=True)
+            lucode_array[valid_mask].ravel(), lucodes, right=True)
         result[valid_mask] = (
             values[index] * (1 - stream_array[valid_mask]))
         return result
