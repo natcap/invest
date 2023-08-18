@@ -656,27 +656,20 @@ def execute(args):
         target_path_list=aligned_raster_list,
         task_name='align rasters')
 
-    mask_runoff_dependent_task = align_raster_task
-    mask_base_raster_path = f_reg['aligned_runoff_proxy_path']
-    if pygeoprocessing.get_raster_info(
-            f_reg['aligned_runoff_proxy_path'])['nodata'][0] is None:
-        mask_base_raster_path = f_reg['aligned_runoff_proxy_nodata_path']
-        mask_runoff_dependent_task = task_graph.add_task(
-            func=_assign_nodata,
-            kwargs={
-                'raster_path': f_reg['aligned_runoff_proxy_path'],
-                'target_path': f_reg['aligned_runoff_proxy_nodata_path']},
-            dependent_task_list=[align_raster_task],
-            target_path_list=[f_reg['aligned_runoff_proxy_nodata_path']],
-            task_name='assign nodata value to runoff proxy raster')
-
+    # Use the cutline feature of gdal.Warp to mask pixels outside the watershed
+    # it's possible that a runoff proxy input might have an undefined nodata
+    # value. since we're introducing nodata pixels, set a nodata value if one
+    # is not already defined.
+    rp_nodata = pygeoprocessing.get_raster_info(
+        f_reg['aligned_runoff_proxy_path'])['nodata'][0]
     mask_runoff_proxy_task = task_graph.add_task(
-        func=pygeoprocessing.mask_raster,
+        func=gdal.Warp,
         kwargs={
-            'base_raster_path_band': (mask_base_raster_path, 1),
-            'mask_vector_path': args['watersheds_path'],
-            'target_mask_raster_path': f_reg['masked_runoff_proxy_path']},
-        dependent_task_list=[mask_runoff_dependent_task],
+            'destNameOrDestDS': f_reg['masked_runoff_proxy_path'],
+            'srcDSOrSrcDSTab': f_reg['aligned_runoff_proxy_path'],
+            'dstNodata': _TARGET_NODATA if rp_nodata is None else rp_nodata,
+            'cutlineDSName': args['watersheds_path']},
+        dependent_task_list=[align_raster_task],
         target_path_list=[f_reg['masked_runoff_proxy_path']],
         task_name='mask runoff proxy raster')
 
