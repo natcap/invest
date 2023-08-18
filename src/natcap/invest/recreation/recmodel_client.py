@@ -1695,15 +1695,21 @@ def validate(args, limit_to=None):
     if 'predictor_table_path' in sufficient_valid_keys:
         validation_tuples += [
             (_validate_same_id_lengths, ['predictor_table_path']),
-            (_validate_same_projection, ['aoi_path', 'predictor_table_path']),
             (_validate_predictor_types, ['predictor_table_path'])]
+        if 'aoi_path' in sufficient_valid_keys:
+            validation_tuples.append(
+                (_validate_same_projection, ['aoi_path', 'predictor_table_path']))
         if 'scenario_predictor_table_path' in sufficient_valid_keys:
-            validation_tuples += [
-                (_validate_same_ids_and_types,
-                    ['predictor_table_path', 'scenario_predictor_table_path']),
-                (_validate_same_projection,
-                    ['aoi_path', 'scenario_predictor_table_path']),
-                (_validate_predictor_types, ['scenario_predictor_table_path'])]
+            validation_tuples.append((
+                _validate_same_ids_and_types,
+                ['predictor_table_path', 'scenario_predictor_table_path']))
+    if 'scenario_predictor_table_path' in sufficient_valid_keys:
+        validation_tuples.append((
+            _validate_predictor_types, ['scenario_predictor_table_path']))
+        if 'aoi_path' in sufficient_valid_keys:
+            validation_tuples.append((_validate_same_projection,
+                ['aoi_path', 'scenario_predictor_table_path']))
+
 
     for validate_func, key_list in validation_tuples:
         msg = validate_func(*[args[key] for key in key_list])
