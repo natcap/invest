@@ -144,15 +144,14 @@ class NDRTests(unittest.TestCase):
         feature = result_layer.GetFeature(1)
         if not feature:
             raise AssertionError("No features were output.")
-
         for field, value in [
                 ('p_surface_load', 41.921),
-                ('p_surface_export', 5.06),
+                ('p_surface_export', 5.59887886),
                 ('n_surface_load', 2978.520),
                 ('n_subsurface_load', 28.614),
-                ('n_surface_export', 311.967),
+                ('n_surface_export', 289.0498),
                 ('n_subsurface_load', 28.614094),
-                ('n_total_export', 331.05)]:
+                ('n_total_export', 304.66061401)]:
             if not numpy.isclose(feature.GetField(field), value, atol=1e-2):
                 error_results[field] = (
                     'field', feature.GetField(field), value)
@@ -194,42 +193,6 @@ class NDRTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             ndr.execute(args)
 
-
-    def test_runoff_proxy_undefined_nodata(self):
-        """NDR: values should be correct with undefined runoff proxy nodata."""
-        from natcap.invest.ndr import ndr
-        args = NDRTests.generate_base_args(self.workspace_dir)
-        target_path = os.path.join(self.workspace_dir, 'runoff_proxy_input.tif')
-        source = gdal.OpenEx(args['runoff_proxy_path'], gdal.OF_RASTER)
-        driver = gdal.GetDriverByName('GTIFF')
-        target = driver.CreateCopy(target_path, source)
-        target.GetRasterBand(1).DeleteNoDataValue()
-        source, target = None, None
-        args['runoff_proxy_path'] = target_path
-        ndr.execute(args)
-
-        # regression test for https://github.com/natcap/invest/issues/1005
-        # assert that the intermediate masked runoff proxy raster was assigned
-        # a nodata value (since the test data has no nodata value),
-        # and that the runoff proxy index is calculated correctly
-        nodata = pygeoprocessing.get_raster_info(os.path.join(
-            self.workspace_dir, 'intermediate_outputs', 'masked_runoff_proxy.tif')
-        )['nodata'][0]
-        self.assertEqual(nodata, -1)
-        masked_runoff_proxy_array = pygeoprocessing.raster_to_numpy_array(
-            os.path.join(self.workspace_dir,
-                         'intermediate_outputs', 'masked_runoff_proxy.tif'))
-        mask = ~numpy.isclose(masked_runoff_proxy_array, nodata)
-        expected_mean = 1885.08
-        self.assertTrue(
-            numpy.isclose(masked_runoff_proxy_array[mask].mean(), expected_mean))
-        runoff_proxy_index_array = pygeoprocessing.raster_to_numpy_array(
-            os.path.join(self.workspace_dir, 'intermediate_outputs',
-                         'runoff_proxy_index.tif'))
-        numpy.testing.assert_array_almost_equal(
-           runoff_proxy_index_array[mask],
-           masked_runoff_proxy_array[mask] / expected_mean)
-
     def test_base_regression(self):
         """NDR base regression test on sample data.
 
@@ -241,7 +204,6 @@ class NDRTests(unittest.TestCase):
 
         # use predefined directory so test can clean up files during teardown
         args = NDRTests.generate_base_args(self.workspace_dir)
-
         # make an empty output shapefile on top of where the new output
         # shapefile should reside to ensure the model overwrites it
         with open(
@@ -263,12 +225,12 @@ class NDRTests(unittest.TestCase):
         # results
         for field, expected_value in [
                 ('p_surface_load', 41.921860),
-                ('p_surface_export', 6.259909),
+                ('p_surface_export', 5.899117),
                 ('n_surface_load', 2978.519775),
-                ('n_surface_export', 311.967743),
+                ('n_surface_export', 289.0498),
                 ('n_subsurface_load', 28.614094),
-                ('n_subsurface_export', 19.082558),
-                ('n_total_export', 331.050293)]:
+                ('n_subsurface_export', 15.61077),
+                ('n_total_export', 304.660614)]:
             val = result_feature.GetField(field)
             if not numpy.isclose(val, expected_value):
                 mismatch_list.append(
@@ -285,6 +247,53 @@ class NDRTests(unittest.TestCase):
                 os.path.join(
                     args['workspace_dir'], 'intermediate_outputs',
                     'what_drains_to_stream.tif')))
+
+    def test_regression_undefined_nodata(self):
+        """NDR test when DEM, LULC and runoff proxy have undefined nodata."""
+        from natcap.invest.ndr import ndr
+
+        # use predefined directory so test can clean up files during teardown
+        args = NDRTests.generate_base_args(self.workspace_dir)
+
+        # unset nodata values for DEM, LULC, and runoff proxy
+        # regression test for https://github.com/natcap/invest/issues/1005
+        for key in ['runoff_proxy_path', 'dem_path', 'lulc_path']:
+            target_path = os.path.join(self.workspace_dir, f'{key}_no_nodata.tif')
+            source = gdal.OpenEx(args[key], gdal.OF_RASTER)
+            driver = gdal.GetDriverByName('GTIFF')
+            target = driver.CreateCopy(target_path, source)
+            target.GetRasterBand(1).DeleteNoDataValue()
+            source, target = None, None
+            args[key] = target_path
+
+        # make args explicit that this is a base run of SWY
+        ndr.execute(args)
+
+        result_vector = ogr.Open(os.path.join(
+            args['workspace_dir'], 'watershed_results_ndr.gpkg'))
+        result_layer = result_vector.GetLayer()
+        result_feature = result_layer.GetFeature(1)
+        result_layer = None
+        result_vector = None
+        mismatch_list = []
+        # these values were generated by manual inspection of regression
+        # results
+        for field, expected_value in [
+                ('p_surface_load', 41.921860),
+                ('p_surface_export', 5.899117),
+                ('n_surface_load', 2978.519775),
+                ('n_surface_export', 289.0498),
+                ('n_subsurface_load', 28.614094),
+                ('n_subsurface_export', 15.61077),
+                ('n_total_export', 304.660614)]:
+            val = result_feature.GetField(field)
+            if not numpy.isclose(val, expected_value):
+                mismatch_list.append(
+                    (field, 'expected: %f' % expected_value,
+                     'actual: %f' % val))
+        result_feature = None
+        if mismatch_list:
+            raise RuntimeError("results not expected: %s" % mismatch_list)
 
     def test_validation(self):
         """NDR test argument validation."""
