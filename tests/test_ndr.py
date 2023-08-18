@@ -194,25 +194,18 @@ class NDRTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             ndr.execute(args)
 
-    def test_base_regression(self):
-        """NDR base regression test on sample data.
 
-        Execute NDR with sample data and checks that the output files are
-        generated and that the aggregate shapefile fields are the same as the
-        regression case.
-        """
+    def test_runoff_proxy_undefined_nodata(self):
+        """NDR: values should be correct with undefined runoff proxy nodata."""
         from natcap.invest.ndr import ndr
-
-        # use predefined directory so test can clean up files during teardown
         args = NDRTests.generate_base_args(self.workspace_dir)
-        # make an empty output shapefile on top of where the new output
-        # shapefile should reside to ensure the model overwrites it
-        with open(
-                os.path.join(self.workspace_dir, 'watershed_results_ndr.gpkg'),
-                'wb') as f:
-            f.write(b'')
-
-        # make args explicit that this is a base run of SWY
+        target_path = os.path.join(self.workspace_dir, 'runoff_proxy_input.tif')
+        source = gdal.OpenEx(args['runoff_proxy_path'], gdal.OF_RASTER)
+        driver = gdal.GetDriverByName('GTIFF')
+        target = driver.CreateCopy(target_path, source)
+        target.GetRasterBand(1).DeleteNoDataValue()
+        source, target = None, None
+        args['runoff_proxy_path'] = target_path
         ndr.execute(args)
 
         # regression test for https://github.com/natcap/invest/issues/1005
@@ -236,6 +229,28 @@ class NDRTests(unittest.TestCase):
         numpy.testing.assert_array_almost_equal(
            runoff_proxy_index_array[mask],
            masked_runoff_proxy_array[mask] / expected_mean)
+
+    def test_base_regression(self):
+        """NDR base regression test on sample data.
+
+        Execute NDR with sample data and checks that the output files are
+        generated and that the aggregate shapefile fields are the same as the
+        regression case.
+        """
+        from natcap.invest.ndr import ndr
+
+        # use predefined directory so test can clean up files during teardown
+        args = NDRTests.generate_base_args(self.workspace_dir)
+
+        # make an empty output shapefile on top of where the new output
+        # shapefile should reside to ensure the model overwrites it
+        with open(
+                os.path.join(self.workspace_dir, 'watershed_results_ndr.gpkg'),
+                'wb') as f:
+            f.write(b'')
+
+        # make args explicit that this is a base run of SWY
+        ndr.execute(args)
 
         result_vector = ogr.Open(os.path.join(
             args['workspace_dir'], 'watershed_results_ndr.gpkg'))
