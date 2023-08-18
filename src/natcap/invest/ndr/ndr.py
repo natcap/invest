@@ -445,7 +445,6 @@ _INTERMEDIATE_BASE_FILES = {
     'modified_load_p_path': 'modified_load_p.tif',
     'ndr_n_path': 'ndr_n.tif',
     'ndr_p_path': 'ndr_p.tif',
-    'aligned_runoff_proxy_nodata_path': 'aligned_runoff_proxy_nodata.tif',
     'masked_runoff_proxy_path': 'masked_runoff_proxy.tif',
     'runoff_proxy_index_path': 'runoff_proxy_index.tif',
     's_accumulation_path': 's_accumulation.tif',
@@ -1014,22 +1013,6 @@ def execute(args):
     LOGGER.info(r' ||   \\,-.|||_   //   \\_  ')
     LOGGER.info(r' (_")  (_/(__)_) (__)  (__) ')
 
-
-def _assign_nodata(raster_path, target_path):
-    """Create a copy of a raster with default nodata value assigned to band 1.
-
-    Args:
-        raster_path (str): path of the raster to copy
-        target_path (str): path to write out the copy
-
-    Returns:
-        None
-    """
-    source = gdal.OpenEx(raster_path, gdal.OF_RASTER)
-    driver = gdal.GetDriverByName('GTIFF')
-    target = driver.CreateCopy(target_path, source)
-    target.GetRasterBand(1).SetNoDataValue(_TARGET_NODATA)
-    source, target = None, None
 
 def _slope_proportion_and_threshold(slope_path, target_threshold_slope_path):
     """Rescale slope to proportion and threshold to between 0.005 and 1.0.
