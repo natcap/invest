@@ -666,9 +666,9 @@ def execute(args):
         task_name='align rasters')
 
     # Use the cutline feature of gdal.Warp to mask pixels outside the watershed
-    # it's possible that a runoff proxy input might have an undefined nodata
-    # value. since we're introducing nodata pixels, set a nodata value if one
-    # is not already defined.
+    # it's possible that the DEM, LULC, or runoff proxy inputs might have an
+    # undefined nodata value. since we're introducing nodata pixels, set a nodata
+    # value if one is not already defined.
     rp_nodata = pygeoprocessing.get_raster_info(
         f_reg['aligned_runoff_proxy_path'])['nodata'][0]
     mask_runoff_proxy_task = task_graph.add_task(

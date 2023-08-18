@@ -256,6 +256,7 @@ class NDRTests(unittest.TestCase):
         args = NDRTests.generate_base_args(self.workspace_dir)
 
         # unset nodata values for DEM, LULC, and runoff proxy
+        # this is ok because the test data is 100% valid
         # regression test for https://github.com/natcap/invest/issues/1005
         for key in ['runoff_proxy_path', 'dem_path', 'lulc_path']:
             target_path = os.path.join(self.workspace_dir, f'{key}_no_nodata.tif')

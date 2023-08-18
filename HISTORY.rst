@@ -65,8 +65,8 @@ Unreleased Changes
     * Tables in the .xls format are no longer supported. This format was
       deprecated by ``pandas``. (`#1271 <https://github.com/natcap/invest/issues/1271>`_)
 * NDR
-    * Fixed a bug where the runoff proxy index and subsequent results were
-      calculated incorrectly if the runoff proxy raster had no nodata value
+    * Fixed a bug where results were calculated incorrectly if the runoff proxy
+      raster (or the DEM or LULC) had no nodata value
       (`#1005 <https://github.com/natcap/invest/issues/1005>`_)
 * Pollination
     * Several exceptions have been tidied up so that only fieldnames are
