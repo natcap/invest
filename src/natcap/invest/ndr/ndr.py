@@ -684,12 +684,15 @@ def execute(args):
 
     dem_nodata = pygeoprocessing.get_raster_info(
         f_reg['aligned_dem_path'])['nodata'][0]
+    dem_target_nodata = int(
+        numpy.finfo(numpy.float32).min if dem_nodata is None else dem_nodata)
     mask_dem_task = task_graph.add_task(
         func=gdal.Warp,
         kwargs={
             'destNameOrDestDS': f_reg['masked_dem_path'],
             'srcDSOrSrcDSTab': f_reg['aligned_dem_path'],
-            'dstNodata': _TARGET_NODATA if dem_nodata is None else dem_nodata,
+            'outputType': gdal.GDT_Float32,
+            'dstNodata': dem_target_nodata,
             'cutlineDSName': args['watersheds_path']},
         dependent_task_list=[align_raster_task],
         target_path_list=[f_reg['masked_dem_path']],
@@ -697,12 +700,15 @@ def execute(args):
 
     lulc_nodata = pygeoprocessing.get_raster_info(
         f_reg['aligned_lulc_path'])['nodata'][0]
+    lulc_target_nodata = (
+        numpy.iinfo(numpy.int32).min if lulc_nodata is None else lulc_nodata)
     mask_lulc_task = task_graph.add_task(
         func=gdal.Warp,
         kwargs={
             'destNameOrDestDS': f_reg['masked_lulc_path'],
             'srcDSOrSrcDSTab': f_reg['aligned_lulc_path'],
-            'dstNodata': _TARGET_NODATA if lulc_nodata is None else lulc_nodata,
+            'outputType': gdal.GDT_Int32,
+            'dstNodata': lulc_target_nodata,
             'cutlineDSName': args['watersheds_path']},
         dependent_task_list=[align_raster_task],
         target_path_list=[f_reg['masked_lulc_path']],
