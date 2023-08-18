@@ -57,7 +57,12 @@ export default class App extends React.Component {
     const recentJobs = await InvestJob.getJobStore();
     this.setState({
       investList: investList,
-      recentJobs: recentJobs,
+      // filter out models that do not exist in current version of invest
+      recentJobs: recentJobs.filter((job) => (
+        Object.values(investList)
+          .map((m) => m.model_name)
+          .includes(job.modelRunName)
+      )),
       showDownloadModal: this.props.isFirstRun,
     });
     await i18n.changeLanguage(window.Workbench.LANGUAGE);
@@ -220,7 +225,17 @@ export default class App extends React.Component {
             key={id}
             className={id === activeTab ? 'active' : ''}
           >
-            <Nav.Link eventKey={id}>
+            <Nav.Link
+              eventKey={id}
+              onAuxClick={(event) => {
+                event.stopPropagation();
+                event.preventDefault();
+                if (event.button === 1) {
+                  // middle mouse button clicked, close tab
+                  this.closeInvestModel(id);
+                }
+              }}
+            >
               {statusSymbol}
               {` ${job.modelHumanName}`}
             </Nav.Link>
