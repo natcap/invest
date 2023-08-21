@@ -48,6 +48,8 @@ Unreleased Changes
       has been merged into ``utils.read_csv_to_dataframe``
       (`#1319 <https://github.com/natcap/invest/issues/1319>`_),
       (`#1327 <https://github.com/natcap/invest/issues/1327>`_)
+    * Improved the validation message that is returned when not all spatial
+      inputs overlap (`#502 <https://github.com/natcap/invest/issues/502>`_)
 * Workbench
     * Fixed a bug where sampledata downloads failed silently (and progress bar
       became innacurate) if the Workbench did not have write permission to
