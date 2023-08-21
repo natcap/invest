@@ -71,7 +71,7 @@ the LS Factor calculation:
 1. We will revert to using the on-pixel aspect, $|\sin \theta|+|\cos \theta|$.
    This is in line with the published literature.
 2. We will convert the "contributing area" portion of the LS Factor to be
-   $\sqrt{ n\\_upstream\\_pixels \cdot area_{pixel} }$. Rafa's opinion on this
+   $\sqrt{ n\\_upstream\\_pixels \cdot area\_{pixel} }$. Rafa's opinion on this
    is that the LS factor equations were designed for a 1-dimensional situation,
    so our specific catchment area number should reflect this.
 
