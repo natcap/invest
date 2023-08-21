@@ -30,7 +30,8 @@ const { ipcRenderer } = window.Workbench.electron;
  * @returns {string} - the filtered and formatted part of the message
  */
 function filterSpatialOverlapFeedback(message, filepath) {
-  const newPrefix = i18n.t('Bounding box does not intersect at least one other:');
+  const newPrefix = i18n.t(
+    'Not all of the spatial layers overlap each other. Bounding box:');
   const bbox = message.split(`${filepath}:`).pop().split('|')[0];
   const bboxFormatted = bbox.split(' ').map(
     (str) => str.padEnd(22, ' ')
