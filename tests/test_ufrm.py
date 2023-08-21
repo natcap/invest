@@ -360,3 +360,17 @@ class UFRMTests(unittest.TestCase):
             [(['curve_number_table_path'],
               validation.MESSAGES['MATCHED_NO_HEADERS'].format(
                   header='column', header_name='cn_a'))])
+
+        # test missing CN_X values raise warnings
+        args = self._make_args()
+        cn_table = pandas.read_csv(args['curve_number_table_path'])
+        cn_table.at[0, 'CN_A'] = numpy.nan
+        new_cn_path = os.path.join(
+            self.workspace_dir, 'cn_missing_value_table.csv')
+        cn_table.to_csv(new_cn_path, index=False)
+        args['curve_number_table_path'] = new_cn_path
+        result = urban_flood_risk_mitigation.validate(args)
+        self.assertEqual(
+            result,
+            [(['curve_number_table_path'],
+              'Missing curve numbers for lucode(s) [0]')])
