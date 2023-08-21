@@ -107,7 +107,6 @@ class NDRTests(unittest.TestCase):
 
         # use predefined directory so test can clean up files during teardown
         args = NDRTests.generate_base_args(self.workspace_dir)
-        # make args explicit that this is a base run of SWY
         args['biophysical_table_path'] = os.path.join(
             REGRESSION_DATA, 'input', 'biophysical_table_missing_headers.csv')
         with self.assertRaises(ValueError):
@@ -171,7 +170,6 @@ class NDRTests(unittest.TestCase):
 
         # use predefined directory so test can clean up files during teardown
         args = NDRTests.generate_base_args(self.workspace_dir)
-        # make args explicit that this is a base run of SWY
         args['biophysical_table_path'] = os.path.join(
             REGRESSION_DATA, 'input', 'biophysical_table_missing_lucode.csv')
         with self.assertRaises(KeyError) as cm:
@@ -187,7 +185,6 @@ class NDRTests(unittest.TestCase):
 
         # use predefined directory so test can clean up files during teardown
         args = NDRTests.generate_base_args(self.workspace_dir)
-        # make args explicit that this is a base run of SWY
         args['calc_n'] = False
         args['calc_p'] = False
         with self.assertRaises(ValueError):
@@ -210,8 +207,6 @@ class NDRTests(unittest.TestCase):
                 os.path.join(self.workspace_dir, 'watershed_results_ndr.gpkg'),
                 'wb') as f:
             f.write(b'')
-
-        # make args explicit that this is a base run of SWY
         ndr.execute(args)
 
         result_vector = ogr.Open(os.path.join(
@@ -267,7 +262,6 @@ class NDRTests(unittest.TestCase):
             source, target = None, None
             args[key] = target_path
 
-        # make args explicit that this is a base run of SWY
         ndr.execute(args)
 
         result_vector = ogr.Open(os.path.join(
