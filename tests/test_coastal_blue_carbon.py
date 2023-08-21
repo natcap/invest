@@ -877,8 +877,18 @@ class TestCBC2(unittest.TestCase):
         # analysis year must be >= the last transition year.
         args['analysis_year'] = baseline_year
 
+        # Write invalid entries to landcover transition table
+        with open(args['landcover_transitions_table'], 'w') as transition_table:
+            transition_table.write('lulc-class,Developed,Forest,Water\n')
+            transition_table.write('Developed,NCC,,invalid\n')
+            transition_table.write('Forest,accum,disturb,low-impact-disturb\n')
+            transition_table.write('Water,disturb,med-impact-disturb,high-impact-disturb\n')
+        transition_options = [
+                'accum', 'high-impact-disturb', 'med-impact-disturb',
+                'low-impact-disturb', 'ncc']
+
         validation_warnings = coastal_blue_carbon.validate(args)
-        self.assertEqual(len(validation_warnings), 2)
+        self.assertEqual(len(validation_warnings), 3)
         self.assertIn(
             coastal_blue_carbon.INVALID_SNAPSHOT_RASTER_MSG.format(
                 snapshot_year=baseline_year + 10),
@@ -887,6 +897,11 @@ class TestCBC2(unittest.TestCase):
             coastal_blue_carbon.INVALID_ANALYSIS_YEAR_MSG.format(
                 analysis_year=2000, latest_year=2010),
             validation_warnings[1][1])
+        self.assertIn(
+            coastal_blue_carbon.INVALID_TRANSITION_VALUES_MSG.format(
+                model_transitions=transition_options,
+                transition_values=['disturb', 'invalid']),
+            validation_warnings[2][1])
 
     def test_track_first_disturbance(self):
         """CBC: Track disturbances over time."""
