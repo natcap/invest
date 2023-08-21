@@ -67,6 +67,10 @@ Unreleased Changes
     * Middle clicking an InVEST model tab was opening a blank window. Now
       middle clicking will close that tab as expected.
       (`#1261 <https://github.com/natcap/invest/issues/1261>`_)
+* Coastal Blue Carbon
+    * Added validation for the transition table, raising a validation error if
+      unexpected values are encountered.
+      (`#729 <https://github.com/natcap/invest/issues/729>`_)
 * Forest Carbon
     * The biophysical table is now case-insensitive.
 * HRA

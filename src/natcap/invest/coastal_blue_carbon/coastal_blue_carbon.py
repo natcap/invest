@@ -118,6 +118,9 @@ INVALID_ANALYSIS_YEAR_MSG = gettext(
     "({latest_year})")
 INVALID_SNAPSHOT_RASTER_MSG = gettext(
     "Raster for snapshot {snapshot_year} could not be validated.")
+INVALID_TRANSITION_VALUES_MSG = gettext(
+    "The transition table expects values of {model_transitions} but found "
+    "values of {transition_values}.")
 
 POOL_SOIL = 'soil'
 POOL_BIOMASS = 'biomass'
@@ -2258,5 +2261,27 @@ def validate(args, limit_to=None):
                     INVALID_ANALYSIS_YEAR_MSG.format(
                         analysis_year=args['analysis_year'],
                         latest_year=max(snapshots.keys()))))
+
+    # check for invalid options in the translation table
+    if ("landcover_transitions_table" not in invalid_keys and
+            "landcover_transitions_table" in sufficient_keys):
+        transitions_spec = MODEL_SPEC['args']['landcover_transitions_table']
+        transition_options = list(
+            transitions_spec['columns']['[LULC CODE]']['options'].keys())
+        # lowercase options since utils call will lowercase table values
+        transition_options = [x.lower() for x in transition_options]
+        transitions_df = utils.read_csv_to_dataframe(
+            args['landcover_transitions_table'], transitions_spec)
+        transitions_mask = ~transitions_df.isin(transition_options) & ~transitions_df.isna()
+        if transitions_mask.any(axis=None):
+            transition_numpy_mask = transitions_mask.values
+            transition_numpy_values = transitions_df.to_numpy()
+            bad_transition_values = list(
+                numpy.unique(transition_numpy_values[transition_numpy_mask]))
+            validation_warnings.append((
+                ['landcover_transitions_table'],
+                INVALID_TRANSITION_VALUES_MSG.format(
+                    model_transitions=(transition_options),
+                    transition_values=bad_transition_values)))
 
     return validation_warnings
