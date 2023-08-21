@@ -49,8 +49,8 @@ Unreleased Changes
       (`#1319 <https://github.com/natcap/invest/issues/1319>`_),
       (`#1327 <https://github.com/natcap/invest/issues/1327>`_)
 * Coastal Blue Carbon
-    * Added valuation for the transition table, raising a validation error if
-      unexpected values are encoutnered.
+    * Added validation for the transition table, raising a validation error if
+      unexpected values are encountered.
       (`#729 <https://github.com/natcap/invest/issues/729>`_)
 * Workbench
     * Fixed a bug where sampledata downloads failed silently (and progress bar
