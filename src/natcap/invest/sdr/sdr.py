@@ -1010,13 +1010,52 @@ def _calculate_what_drains_to_stream(
 
 def _calculate_ls_factor(
         flow_accumulation_path, slope_path, l_max,
-        target_ls_prime_factor_path):
+        target_ls_factor_path):
     """Calculate LS factor.
 
-    Calculates a modified LS factor as Equation 3 from "Extension and
+    Calculates the LS factor using Equation 3 from "Extension and
     validation of a geographic information system-based method for calculating
     the Revised Universal Soil Loss Equation length-slope factor for erosion
     risk assessments in large watersheds".
+
+    The equation for this is::
+
+                 (upstream_area + pixel_area)^(m+1) - upstream_area^(m+1)
+        LS = S * --------------------------------------------------------
+                       (pixel_area^(m+2)) * aspect_dir * 22.13^(m)
+
+    Where
+
+        * ``S`` is the slope factor defined in equation 4 from the same paper,
+          calculated by the following where ``b`` is the slope in radians:
+
+          * ``S = 10.8 * sin(b) + 0.03`` where slope < 9%
+          * ``S = 16.8 * sin(b) - 0.50`` where slope >= 9%
+
+        * ``upstream_area`` is interpreted as the square root of the
+          catchment area, to match SAGA-GIS's method for calculating LS
+          Factor.
+        * ``pixel_area`` is the area of the pixel in square meters.
+        * ``m`` is the slope-length exponent of the RUSLE LS-factor,
+          which, as discussed in Oliveira et al. 2013 is a function of the
+          on-pixel slope theta:
+
+          * ``m = 0.2`` when ``theta <= 1%``
+          * ``m = 0.3`` when ``1% < theta <= 3.5%``
+          * ``m = 0.4`` when ``3.5% < theta <= 5%``
+          * ``m = 0.5`` when ``5% < theta <= 9%``
+          * ``m = (beta / (1+beta)`` when ``theta > 9%``, where
+            ``beta = (sin(theta) / 0.0896) / (3*sin(theta)^0.8 + 0.56)``
+
+        * ``aspect_dir`` is calculated by ``sin(abs(alpha)) + cos(abs(alpha))``
+          for the given pixel.
+
+    Oliveira et al can be found at:
+
+        Oliveira, A.H., Silva, M.A. da, Silva, M.L.N., Curi, N., Neto, G.K.,
+        Freitas, D.A.F. de, 2013. Development of Topographic Factor Modeling
+        for Application in Soil Erosion Models, in: Intechopen (Ed.), Soil
+        Processes and Current Trends in Quality Assessment. p. 28.
 
     Args:
         flow_accumulation_path (string): path to raster, pixel values are the
@@ -1024,7 +1063,7 @@ def _calculate_ls_factor(
         slope_path (string): path to slope raster as a percent
         l_max (float): if the calculated value of L exceeds this value
             it is clamped to this value.
-        target_ls_prime_factor_path (string): path to output ls_prime_factor
+        target_ls_factor_path (string): path to output ls_prime_factor
             raster
 
     Returns:
@@ -1040,7 +1079,7 @@ def _calculate_ls_factor(
     cell_area = cell_size ** 2
 
     def ls_factor_function(percent_slope, flow_accumulation, l_max):
-        """Calculate the LS' factor.
+        """Calculate the LS factor.
 
         Args:
             percent_slope (numpy.ndarray): slope in percent
@@ -1113,7 +1152,7 @@ def _calculate_ls_factor(
     pygeoprocessing.raster_calculator(
         [(path, 1) for path in [slope_path, flow_accumulation_path]] + [
             (l_max, 'raw')],
-        ls_factor_function, target_ls_prime_factor_path, gdal.GDT_Float32,
+        ls_factor_function, target_ls_factor_path, gdal.GDT_Float32,
         _TARGET_NODATA)
 
 
