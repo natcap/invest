@@ -1104,6 +1104,9 @@ def _calculate_ls_factor(
         # root of the upstream contributing area here as an estimate, which
         # matches the SAGA LS Factor option "square root of catchment area".
         # See the InVEST ADR-0001 for more information.
+        # We subtract 1 from the flow accumulation because FA includes itself
+        # in its count of pixels upstream and our LS factor equation wants only
+        # those pixels that are strictly upstream.
         contributing_area = numpy.sqrt(
             (flow_accumulation[valid_mask]-1) * cell_area)
         slope_in_radians = numpy.arctan(percent_slope[valid_mask] / 100.0)
