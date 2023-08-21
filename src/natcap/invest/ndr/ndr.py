@@ -686,7 +686,7 @@ def execute(args):
 
     dem_nodata = pygeoprocessing.get_raster_info(
         f_reg['aligned_dem_path'])['nodata'][0]
-    dem_target_nodata = int(
+    dem_target_nodata = float(  # GDAL expects a python float, not numpy.float32
         numpy.finfo(numpy.float32).min if dem_nodata is None else dem_nodata)
     mask_dem_task = task_graph.add_task(
         func=gdal.Warp,
