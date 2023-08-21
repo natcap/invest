@@ -168,7 +168,7 @@ export default function ArgInput(props) {
   // Messages with this pattern include validation feedback about
   // multiple inputs, but the whole message is repeated for each input.
   // It's more readable if filtered on the individual input.
-  const pattern = 'Bounding boxes do not intersect';
+  const pattern = 'Not all of the spatial layers overlap each other';
   if (validationMessage.startsWith(pattern)) {
     validationMessage = filterSpatialOverlapFeedback(
       validationMessage, value
