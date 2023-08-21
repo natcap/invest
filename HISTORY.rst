@@ -42,7 +42,8 @@
       that significantly affect most outputs of SDR and will bring the LS
       factor output more in line with the outputs of SAGA-GIS's LS Factor.
       A discussion of differences between these two implementations can be
-      viewed at https://github.com/natcap/invest/tree/main/doc/decision-records/ADR-0001-FILLMEIN.md.  The two specific changes implemented are:
+      viewed at https://github.com/natcap/invest/tree/main/doc/decision-records/ADR-0001-FILLMEIN.md.  
+      The two specific changes implemented are:
         * The LS Factor's on-pixel aspect length is now calculated as
           ``abs(sin(slope)) + abs(cos(slope))``.
         * The LS Factor's upstream contributing area is now calculated as
