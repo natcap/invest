@@ -1,6 +1,7 @@
 # ADR-0001: Update the InVEST SDR LS Factor
 
 Author: James
+
 Science Lead: Rafa
 
 ## Context
@@ -30,7 +31,7 @@ for their LS factor equations:
 1. The contributing area $A_{i,j-in}$ is not strictly defined in Desmet &
    Govers (1996), it is only referred to as "the contributing area at the inlet
    of a grid cell with coordinates (i, j) (m^2)".
-   InVEST assumes that "contributing area" is $area_{pixel} \cdot n\_upstream\_pixels$.
+   InVEST assumes that "contributing area" is $area_{pixel} \cdot n\\_upstream\\_pixels$.
    SAGA refers to this as "specific catchment area" and allows the user to choose their
    specific catchment area equation,  where the available options are
    "contour length simply as cell size", "contour length dependent on aspect", "square
@@ -57,8 +58,10 @@ to the presence of plateaus.
 Once we finally understood these discrepancies, James implemented several of the
 contributing area functions available in SAGA to see what might be most comparable
 to the real world.  Source code and a docker container for these experiments are
-available at https://github.com/phargogh/invest-ls-factor-vs-saga/blob/main/src/natcap/invest/sdr/sdr.py#L901.  Some additional discussion and notes can be viewed in the related
-github issue: https://github.com/natcap/invest/issues/915.
+available at
+https://github.com/phargogh/invest-ls-factor-vs-saga/blob/main/src/natcap/invest/sdr/sdr.py#L901.
+Some additional discussion and notes can be viewed in the related github issue:
+https://github.com/natcap/invest/issues/915.
 
 ## Decision
 
@@ -68,7 +71,7 @@ the LS Factor calculation:
 1. We will revert to using the on-pixel aspect, $|\sin \theta|+|\cos \theta|$.
    This is in line with the published literature.
 2. We will convert the "contributing area" portion of the LS Factor to be
-   $\sqrt{n\_upstream\_pixels \cdot pixel\_area}$. Rafa's opinion on this
+   $\sqrt{ n\\_upstream\\_pixels \cdot area_{pixel} }$. Rafa's opinion on this
    is that the LS factor equations were designed for a 1-dimensional situation,
    so our specific catchment area number should reflect this.
 
@@ -85,5 +88,7 @@ released.
 ## References
 
 Zevenbergen & Thorne (1987): https://searchworks.stanford.edu/articles/edb__89861226
+
 Desmet & Govers (1996): https://searchworks.stanford.edu/articles/edsgac__edsgac.A18832564
+
 Oliveira et al (2013): http://dx.doi.org/10.5772/54439
