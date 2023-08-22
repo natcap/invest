@@ -24,7 +24,7 @@ ReactDom.render(
           <img
             src={investLogo}
             width="191"
-            height="167"
+            height="159"
             alt="InVEST logo"
           />
           <div id="invest-version">
@@ -32,7 +32,7 @@ ReactDom.render(
             <span id="version-string" />
           </div>
           <p id="invest-copyright">
-            {t('Copyright 2022, The Natural Capital Project')}
+            {t('Copyright 2023, The Natural Capital Project')}
           </p>
         </div>
         <br />
@@ -66,7 +66,15 @@ ReactDom.render(
             <a
               href="https://github.com/natcap/invest/blob/master/LICENSE.txt"
             >
-              BSD 3-clause
+              Apache 2.0
+            </a>
+          </p>
+          <p>
+            {t('InVEST Trademark and Logo Use Policy: ')}
+            <a
+              href="https://naturalcapitalproject.stanford.edu/invest-trademark-and-logo-use-policy"
+            >
+              Trademark and Logo Policy
             </a>
           </p>
         </div>

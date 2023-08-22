@@ -79,7 +79,7 @@ export const createWindow = async () => {
 
   splashScreen = new BrowserWindow({
     width: 574, // dims set to match the image in splash.html
-    height: 500,
+    height: 479,
     transparent: true,
     frame: false,
     alwaysOnTop: false,
