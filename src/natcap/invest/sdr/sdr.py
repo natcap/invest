@@ -1047,7 +1047,7 @@ def _calculate_ls_factor(
           * ``m = (beta / (1+beta)`` when ``theta > 9%``, where
             ``beta = (sin(theta) / 0.0896) / (3*sin(theta)^0.8 + 0.56)``
 
-        * ``aspect_dir`` is calculated by ``sin(abs(alpha)) + cos(abs(alpha))``
+        * ``aspect_dir`` is calculated by ``|sin(alpha)| + |cos(alpha)|``
           for the given pixel.
 
     Oliveira et al can be found at:

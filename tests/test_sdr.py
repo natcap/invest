@@ -391,3 +391,43 @@ class SDRTests(unittest.TestCase):
         what_drains = pygeoprocessing.raster_to_numpy_array(
             target_what_drains_path)
         numpy.testing.assert_allclose(what_drains, expected_drainage)
+
+    def test_ls_factor(self):
+        """SDR test for our LS Factor function."""
+        from natcap.invest.sdr import sdr
+
+        nodata = -1
+
+        # These varying percent slope values should cover all of the slope
+        # factor and slope table cases.
+        pct_slope_array = numpy.array(
+            [[1.5, 4, 8, 10, 15, nodata]], dtype=numpy.float32)
+        flow_accum_array = numpy.array(
+            [[100, 100, 100, 100, 10000000, nodata]], dtype=numpy.float32)
+        l_max = 25  # affects the last item in the array only
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(26910)  # NAD83 / UTM zone 11N
+        srs_wkt = srs.ExportToWkt()
+        origin = (463250, 4929700)
+        pixel_size = (30, -30)
+
+        pct_slope_path = os.path.join(self.workspace_dir, 'pct_slope.tif')
+        pygeoprocessing.numpy_array_to_raster(
+            pct_slope_array, nodata, pixel_size, origin, srs_wkt,
+            pct_slope_path)
+
+        flow_accum_path = os.path.join(self.workspace_dir, 'flow_accum.tif')
+        pygeoprocessing.numpy_array_to_raster(
+            flow_accum_array, nodata, pixel_size, origin, srs_wkt,
+            flow_accum_path)
+
+        target_ls_factor_path = os.path.join(self.workspace_dir, 'ls.tif')
+        sdr._calculate_ls_factor(flow_accum_path, pct_slope_path, l_max,
+                                 target_ls_factor_path)
+
+        ls = pygeoprocessing.raster_to_numpy_array(target_ls_factor_path)
+        expected_ls = numpy.array(
+            [[0.253996, 0.657229, 1.345856, 1.776729, 49.802994, -1]],
+            dtype=numpy.float32)
+        numpy.testing.assert_allclose(ls, expected_ls, rtol=1e-6)
