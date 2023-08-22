@@ -141,11 +141,11 @@ class SDRTests(unittest.TestCase):
 
         sdr.execute(args)
         expected_results = {
-            'usle_tot': 13.90210914612,
-            'sed_export': 0.55185163021,
-            'sed_dep': 8.80130577087,
-            'avoid_exp': 57971.87890625,
-            'avoid_eros': 1458232.5,
+            'usle_tot': 2.62457418442,
+            'sed_export': 0.09748090804,
+            'sed_dep': 1.71672844887,
+            'avoid_exp': 10199.7490234375,
+            'avoid_eros': 274510.75,
         }
 
         vector_path = os.path.join(
@@ -213,10 +213,10 @@ class SDRTests(unittest.TestCase):
 
         sdr.execute(args)
         expected_results = {
-            'sed_export': 0.55185163021,
-            'usle_tot': 13.90210914612,
-            'avoid_exp': 57971.87890625,
-            'avoid_eros': 1458232.5,
+            'sed_export': 0.09748090804,
+            'usle_tot': 2.62457418442,
+            'avoid_exp': 10199.7490234375,
+            'avoid_eros': 274510.75,
         }
 
         vector_path = os.path.join(
@@ -238,10 +238,10 @@ class SDRTests(unittest.TestCase):
         sdr.execute(args)
 
         expected_results = {
-            'sed_export': 0.67064666748,
-            'usle_tot': 12.6965303421,
-            'avoid_exp': 69130.8203125,
-            'avoid_eros': 1317588.375,
+            'sed_export': 0.08896198869,
+            'usle_tot': 1.86480903625,
+            'avoid_exp': 9204.283203125,
+            'avoid_eros': 194613.28125,
         }
 
         vector_path = os.path.join(
@@ -264,10 +264,10 @@ class SDRTests(unittest.TestCase):
         sdr.execute(args)
 
         expected_results = {
-            'sed_export': 0.97192692757,
-            'usle_tot': 12.68887424469,
-            'avoid_exp': 100960.9609375,
-            'avoid_eros': 1329122.0,
+            'sed_export': 0.17336219549,
+            'usle_tot': 2.56186032295,
+            'avoid_exp': 17980.52734375,
+            'avoid_eros': 267931.71875,
         }
 
         vector_path = os.path.join(
@@ -391,3 +391,43 @@ class SDRTests(unittest.TestCase):
         what_drains = pygeoprocessing.raster_to_numpy_array(
             target_what_drains_path)
         numpy.testing.assert_allclose(what_drains, expected_drainage)
+
+    def test_ls_factor(self):
+        """SDR test for our LS Factor function."""
+        from natcap.invest.sdr import sdr
+
+        nodata = -1
+
+        # These varying percent slope values should cover all of the slope
+        # factor and slope table cases.
+        pct_slope_array = numpy.array(
+            [[1.5, 4, 8, 10, 15, nodata]], dtype=numpy.float32)
+        flow_accum_array = numpy.array(
+            [[100, 100, 100, 100, 10000000, nodata]], dtype=numpy.float32)
+        l_max = 25  # affects the last item in the array only
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(26910)  # NAD83 / UTM zone 11N
+        srs_wkt = srs.ExportToWkt()
+        origin = (463250, 4929700)
+        pixel_size = (30, -30)
+
+        pct_slope_path = os.path.join(self.workspace_dir, 'pct_slope.tif')
+        pygeoprocessing.numpy_array_to_raster(
+            pct_slope_array, nodata, pixel_size, origin, srs_wkt,
+            pct_slope_path)
+
+        flow_accum_path = os.path.join(self.workspace_dir, 'flow_accum.tif')
+        pygeoprocessing.numpy_array_to_raster(
+            flow_accum_array, nodata, pixel_size, origin, srs_wkt,
+            flow_accum_path)
+
+        target_ls_factor_path = os.path.join(self.workspace_dir, 'ls.tif')
+        sdr._calculate_ls_factor(flow_accum_path, pct_slope_path, l_max,
+                                 target_ls_factor_path)
+
+        ls = pygeoprocessing.raster_to_numpy_array(target_ls_factor_path)
+        expected_ls = numpy.array(
+            [[0.253996, 0.657229, 1.345856, 1.776729, 49.802994, -1]],
+            dtype=numpy.float32)
+        numpy.testing.assert_allclose(ls, expected_ls, rtol=1e-6)
