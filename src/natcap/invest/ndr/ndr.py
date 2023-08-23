@@ -390,6 +390,18 @@ MODEL_SPEC = {
                         "and reprojected to the DEM projection"),
                     "bands": {1: {"type": "number", "units": u.none}}
                 },
+                "masked_dem.tif": {
+                    "about": "DEM input masked to exclude pixels outside the watershed",
+                    "bands": {1: {"type": "number", "units": u.meter}}
+                },
+                "masked_lulc.tif": {
+                    "about": "LULC input masked to exclude pixels outside the watershed",
+                    "bands": {1: {"type": "integer"}}
+                },
+                "masked_runoff_proxy.tif": {
+                    "about": "Runoff proxy input masked to exclude pixels outside the watershed",
+                    "bands": {1: {"type": "number", "units": u.none}}
+                },
                 "filled_dem.tif": spec_utils.FILLED_DEM,
                 "slope.tif": spec_utils.SLOPE,
                 "subsurface_export_n.pickle": {
@@ -461,9 +473,12 @@ _INTERMEDIATE_BASE_FILES = {
     'drainage_mask': 'what_drains_to_stream.tif',
     'filled_dem_path': 'filled_dem.tif',
     'aligned_dem_path': 'aligned_dem.tif',
+    'masked_dem_path': 'masked_dem.tif',
     'slope_path': 'slope.tif',
     'aligned_lulc_path': 'aligned_lulc.tif',
+    'masked_lulc_path': 'masked_lulc.tif',
     'aligned_runoff_proxy_path': 'aligned_runoff_proxy.tif',
+    'masked_runoff_proxy_path': 'masked_runoff_proxy.tif',
     'surface_load_n_pickle_path': 'surface_load_n.pickle',
     'surface_load_p_pickle_path': 'surface_load_p.pickle',
     'subsurface_load_n_pickle_path': 'subsurface_load_n.pickle',
@@ -639,17 +654,63 @@ def execute(args):
             base_raster_list, aligned_raster_list,
             ['near']*len(base_raster_list), dem_info['pixel_size'],
             'intersection'),
-        kwargs={
-            'base_vector_path_list': [args['watersheds_path']],
-            'vector_mask_options': {
-                'mask_vector_path': args['watersheds_path']}},
+        kwargs={'base_vector_path_list': [args['watersheds_path']]},
         target_path_list=aligned_raster_list,
         task_name='align rasters')
+
+    # Use the cutline feature of gdal.Warp to mask pixels outside the watershed
+    # it's possible that the DEM, LULC, or runoff proxy inputs might have an
+    # undefined nodata value. since we're introducing nodata pixels, set a nodata
+    # value if one is not already defined.
+    rp_nodata = pygeoprocessing.get_raster_info(
+        f_reg['aligned_runoff_proxy_path'])['nodata'][0]
+    mask_runoff_proxy_task = task_graph.add_task(
+        func=gdal.Warp,
+        kwargs={
+            'destNameOrDestDS': f_reg['masked_runoff_proxy_path'],
+            'srcDSOrSrcDSTab': f_reg['aligned_runoff_proxy_path'],
+            'dstNodata': _TARGET_NODATA if rp_nodata is None else rp_nodata,
+            'cutlineDSName': args['watersheds_path']},
+        dependent_task_list=[align_raster_task],
+        target_path_list=[f_reg['masked_runoff_proxy_path']],
+        task_name='mask runoff proxy raster')
+
+    dem_nodata = pygeoprocessing.get_raster_info(
+        f_reg['aligned_dem_path'])['nodata'][0]
+    dem_target_nodata = float(  # GDAL expects a python float, not numpy.float32
+        numpy.finfo(numpy.float32).min if dem_nodata is None else dem_nodata)
+    mask_dem_task = task_graph.add_task(
+        func=gdal.Warp,
+        kwargs={
+            'destNameOrDestDS': f_reg['masked_dem_path'],
+            'srcDSOrSrcDSTab': f_reg['aligned_dem_path'],
+            'outputType': gdal.GDT_Float32,
+            'dstNodata': dem_target_nodata,
+            'cutlineDSName': args['watersheds_path']},
+        dependent_task_list=[align_raster_task],
+        target_path_list=[f_reg['masked_dem_path']],
+        task_name='mask dem raster')
+
+    lulc_nodata = pygeoprocessing.get_raster_info(
+        f_reg['aligned_lulc_path'])['nodata'][0]
+    lulc_target_nodata = (
+        numpy.iinfo(numpy.int32).min if lulc_nodata is None else lulc_nodata)
+    mask_lulc_task = task_graph.add_task(
+        func=gdal.Warp,
+        kwargs={
+            'destNameOrDestDS': f_reg['masked_lulc_path'],
+            'srcDSOrSrcDSTab': f_reg['aligned_lulc_path'],
+            'outputType': gdal.GDT_Int32,
+            'dstNodata': lulc_target_nodata,
+            'cutlineDSName': args['watersheds_path']},
+        dependent_task_list=[align_raster_task],
+        target_path_list=[f_reg['masked_lulc_path']],
+        task_name='mask lulc raster')
 
     fill_pits_task = task_graph.add_task(
         func=pygeoprocessing.routing.fill_pits,
         args=(
-            (f_reg['aligned_dem_path'], 1), f_reg['filled_dem_path']),
+            (f_reg['masked_dem_path'], 1), f_reg['filled_dem_path']),
         kwargs={'working_dir': intermediate_output_dir},
         dependent_task_list=[align_raster_task],
         target_path_list=[f_reg['filled_dem_path']],
@@ -700,7 +761,7 @@ def execute(args):
 
     runoff_proxy_index_task = task_graph.add_task(
         func=_normalize_raster,
-        args=((f_reg['aligned_runoff_proxy_path'], 1),
+        args=((f_reg['masked_runoff_proxy_path'], 1),
               f_reg['runoff_proxy_index_path']),
         target_path_list=[f_reg['runoff_proxy_index_path']],
         dependent_task_list=[align_raster_task],
@@ -790,7 +851,7 @@ def execute(args):
         load_task = task_graph.add_task(
             func=_calculate_load,
             args=(
-                f_reg['aligned_lulc_path'],
+                f_reg['masked_lulc_path'],
                 biophysical_df[f'load_{nutrient}'],
                 load_path),
             dependent_task_list=[align_raster_task],
@@ -808,7 +869,7 @@ def execute(args):
         surface_load_path = f_reg[f'surface_load_{nutrient}_path']
         surface_load_task = task_graph.add_task(
             func=_map_surface_load,
-            args=(modified_load_path, f_reg['aligned_lulc_path'],
+            args=(modified_load_path, f_reg['masked_lulc_path'],
                   subsurface_proportion_map, surface_load_path),
             target_path_list=[surface_load_path],
             dependent_task_list=[modified_load_task, align_raster_task],
@@ -818,7 +879,7 @@ def execute(args):
         eff_task = task_graph.add_task(
             func=_map_lulc_to_val_mask_stream,
             args=(
-                f_reg['aligned_lulc_path'], f_reg['stream_path'],
+                f_reg['masked_lulc_path'], f_reg['stream_path'],
                 biophysical_df[f'eff_{nutrient}'].to_dict(), eff_path),
             target_path_list=[eff_path],
             dependent_task_list=[align_raster_task, stream_extraction_task],
@@ -828,7 +889,7 @@ def execute(args):
         crit_len_task = task_graph.add_task(
             func=_map_lulc_to_val_mask_stream,
             args=(
-                f_reg['aligned_lulc_path'], f_reg['stream_path'],
+                f_reg['masked_lulc_path'], f_reg['stream_path'],
                 biophysical_df[f'crit_len_{nutrient}'].to_dict(),
                 crit_len_path),
             target_path_list=[crit_len_path],
@@ -878,7 +939,7 @@ def execute(args):
                 biophysical_df['proportion_subsurface_n'].to_dict())
             subsurface_load_task = task_graph.add_task(
                 func=_map_subsurface_load,
-                args=(modified_load_path, f_reg['aligned_lulc_path'],
+                args=(modified_load_path, f_reg['masked_lulc_path'],
                       proportion_subsurface_map, f_reg['sub_load_n_path']),
                 target_path_list=[f_reg['sub_load_n_path']],
                 dependent_task_list=[modified_load_task, align_raster_task],

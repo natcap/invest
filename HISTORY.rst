@@ -35,12 +35,34 @@
 
 .. :changelog:
 
+3.14.0 (YYYY-MM-DD)
+-------------------
+* SDR
+    * We implemented two major functional changes to the InVEST LS Factor
+      that significantly affect most outputs of SDR and will bring the LS
+      factor output more in line with the outputs of SAGA-GIS's LS Factor.
+      A discussion of differences between these two implementations can be
+      viewed at https://github.com/natcap/invest/tree/main/doc/decision-records/ADR-0001-Update-SDR-LS-Factor.md.
+      The two specific changes implemented are:
+
+        * The LS Factor's on-pixel aspect length is now calculated as
+          ``abs(sin(slope)) + abs(cos(slope))``.
+        * The LS Factor's upstream contributing area is now calculated as
+          an estimate for the specific catchment area, calculated by
+          ``sqrt(n_pixels_upstream * pixel_area)``.
+
 Unreleased Changes
 ------------------
 * General
     * Fixed a bug in the CLI where ``invest getspec --json`` failed on
       non-json-serializable objects such as ``pint.Unit``.
       https://github.com/natcap/invest/issues/1280
+    * A new directory at `./doc/decision-records` has been created for
+      "Architecture/Any Decision Records", which will serve as a record of
+      nontrivial decisions that were made to InVEST and why.  This is
+      intended for reference by our science and software teams, and also by
+      the community at large when inquiring about a nontrivial change.
+      https://github.com/natcap/invest/issues/1079
     * Updated the package installation instructions in the API docs for clarity
       and also to highlight the ease of installation through ``conda-forge``.
       https://github.com/natcap/invest/issues/1256
@@ -48,6 +70,8 @@ Unreleased Changes
       has been merged into ``utils.read_csv_to_dataframe``
       (`#1319 <https://github.com/natcap/invest/issues/1319>`_),
       (`#1327 <https://github.com/natcap/invest/issues/1327>`_)
+    * Improved the validation message that is returned when not all spatial
+      inputs overlap (`#502 <https://github.com/natcap/invest/issues/502>`_)
     * Standardized the name and location of the taskgraph cache directory for
       all models. It is now called ``taskgraph_cache`` and located in the top
       level of the workspace directory.
@@ -73,6 +97,10 @@ Unreleased Changes
     * Middle clicking an InVEST model tab was opening a blank window. Now
       middle clicking will close that tab as expected.
       (`#1261 <https://github.com/natcap/invest/issues/1261>`_)
+* Coastal Blue Carbon
+    * Added validation for the transition table, raising a validation error if
+      unexpected values are encountered.
+      (`#729 <https://github.com/natcap/invest/issues/729>`_)
 * Forest Carbon
     * The biophysical table is now case-insensitive.
 * HRA
@@ -84,6 +112,9 @@ Unreleased Changes
 * NDR
     * The contents of the output ``cache_dir`` have been consolidated into
       ``intermediate_outputs``.
+    * Fixed a bug where results were calculated incorrectly if the runoff proxy
+      raster (or the DEM or LULC) had no nodata value
+      (`#1005 <https://github.com/natcap/invest/issues/1005>`_)
 * Pollination
     * Several exceptions have been tidied up so that only fieldnames are
       printed instead of the python data structures representing the whole
@@ -138,6 +169,9 @@ Unreleased Changes
       (`#1123 <https://github.com/natcap/invest/issues/1123>`_)
     * The contents of the output ``temp_working_dir_not_for_humans`` have been
       consolidated into ``intermediate_files``.
+    * Biophysical table Workbench validation now warns if there is a missing
+      curve number value.
+      (`#1346 <https://github.com/natcap/invest/issues/1346>`_)
 * Urban Nature Access
     * Urban nature supply outputs have been renamed to add ``percapita`` to the
       filename.
@@ -164,7 +198,6 @@ Unreleased Changes
         * When defining search radii for population groups, one new output
           raster is created for each population group.  These files are named
           ``accessible_urban_nature_to_[POP_GROUP].tif``.
-
 * Visitation: Recreation and Tourism
     * Fixed a bug where overlapping predictor polygons would be double-counted
       in ``polygon_area_coverage`` and ``polygon_percent_coverage`` calculations.
