@@ -352,53 +352,48 @@ MODEL_SPEC = {
                         "times the thresholded slope (in eq. (74))"),
                     "bands": {1: {"type": "ratio"}}
                 },
-                "churn_dir_not_for_humans": {
-                    "type": "directory",
-                    "contents": {
-                        "aligned_dem.tif": {
-                            "about": gettext(
-                                "Copy of the input DEM, clipped to the extent "
-                                "of the other raster inputs."),
-                            "bands": {1: {
-                                "type": "number",
-                                "units": u.meter
-                            }}
-                        },
-                        "aligned_drainage.tif": {
-                            "about": gettext(
-                                "Copy of the input drainage map, clipped to "
-                                "the extent of the other raster inputs and "
-                                "aligned to the DEM."),
-                            "bands": {1: {"type": "integer"}},
-                        },
-                        "aligned_erodibility.tif": {
-                            "about": gettext(
-                                "Copy of the input erodibility map, clipped to "
-                                "the extent of the other raster inputs and "
-                                "aligned to the DEM."),
-                            "bands": {1: {
-                                "type": "number",
-                                "units": u.metric_ton*u.hectare*u.hour/(u.hectare*u.megajoule*u.millimeter)
-                            }}
-                        },
-                        "aligned_erosivity.tif": {
-                            "about": gettext(
-                                "Copy of the input erosivity map, clipped to "
-                                "the extent of the other raster inputs and "
-                                "aligned to the DEM."),
-                            "bands": {1: {
-                                "type": "number",
-                                "units": u.megajoule*u.millimeter/(u.hectare*u.hour*u.year)
-                            }}
-                        },
-                        "aligned_lulc.tif": {
-                            "about": gettext(
-                                "Copy of the input drainage map, clipped to "
-                                "the extent of the other raster inputs and "
-                                "aligned to the DEM."),
-                            "bands": {1: {"type": "integer"}},
-                        }
-                    }
+                "aligned_dem.tif": {
+                    "about": gettext(
+                        "Copy of the input DEM, clipped to the extent "
+                        "of the other raster inputs."),
+                    "bands": {1: {
+                        "type": "number",
+                        "units": u.meter
+                    }}
+                },
+                "aligned_drainage.tif": {
+                    "about": gettext(
+                        "Copy of the input drainage map, clipped to "
+                        "the extent of the other raster inputs and "
+                        "aligned to the DEM."),
+                    "bands": {1: {"type": "integer"}},
+                },
+                "aligned_erodibility.tif": {
+                    "about": gettext(
+                        "Copy of the input erodibility map, clipped to "
+                        "the extent of the other raster inputs and "
+                        "aligned to the DEM."),
+                    "bands": {1: {
+                        "type": "number",
+                        "units": u.metric_ton*u.hectare*u.hour/(u.hectare*u.megajoule*u.millimeter)
+                    }}
+                },
+                "aligned_erosivity.tif": {
+                    "about": gettext(
+                        "Copy of the input erosivity map, clipped to "
+                        "the extent of the other raster inputs and "
+                        "aligned to the DEM."),
+                    "bands": {1: {
+                        "type": "number",
+                        "units": u.megajoule*u.millimeter/(u.hectare*u.hour*u.year)
+                    }}
+                },
+                "aligned_lulc.tif": {
+                    "about": gettext(
+                        "Copy of the input drainage map, clipped to "
+                        "the extent of the other raster inputs and "
+                        "aligned to the DEM."),
+                    "bands": {1: {"type": "integer"}},
                 }
             }
         },
@@ -516,8 +511,7 @@ def execute(args):
     intermediate_output_dir = os.path.join(
         args['workspace_dir'], INTERMEDIATE_DIR_NAME)
     output_dir = os.path.join(args['workspace_dir'])
-    taskgraph_dir = os.path.join(output_dir, 'taskgraph_cache')
-    utils.make_directories([output_dir, intermediate_output_dir, taskgraph_dir])
+    utils.make_directories([output_dir, intermediate_output_dir])
 
     f_reg = utils.build_file_registry(
         [(_OUTPUT_BASE_FILES, output_dir),
@@ -531,7 +525,8 @@ def execute(args):
         # TypeError when n_workers is None.
         n_workers = -1  # Synchronous mode.
     task_graph = taskgraph.TaskGraph(
-        taskgraph_dir, n_workers, reporting_interval=5.0)
+        os.path.join(output_dir, 'taskgraph_cache'),
+        n_workers, reporting_interval=5.0)
 
     base_list = []
     aligned_list = []

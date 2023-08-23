@@ -590,9 +590,8 @@ def _execute(args):
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
     intermediate_output_dir = os.path.join(
         args['workspace_dir'], 'intermediate_outputs')
-    taskgraph_dir = os.path.join(args['workspace_dir'], 'taskgraph_cache')
     output_dir = args['workspace_dir']
-    utils.make_directories([intermediate_output_dir, taskgraph_dir, output_dir])
+    utils.make_directories([intermediate_output_dir, output_dir])
 
     try:
         n_workers = int(args['n_workers'])
@@ -602,7 +601,8 @@ def _execute(args):
         # TypeError when n_workers is None.
         n_workers = -1  # Synchronous mode.
     task_graph = taskgraph.TaskGraph(
-        taskgraph_dir, n_workers, reporting_interval=5)
+        os.path.join(args['workspace_dir'], 'taskgraph_cache'),
+        n_workers, reporting_interval=5)
 
     LOGGER.info('Building file registry')
     file_registry = utils.build_file_registry(
