@@ -48,6 +48,10 @@ Unreleased Changes
       has been merged into ``utils.read_csv_to_dataframe``
       (`#1319 <https://github.com/natcap/invest/issues/1319>`_),
       (`#1327 <https://github.com/natcap/invest/issues/1327>`_)
+    * Standardized the name and location of the taskgraph cache directory for
+      all models. It is now called ``taskgraph_cache`` and located in the top
+      level of the workspace directory.
+      (`#1230 <https://github.com/natcap/invest/issues/1230>`_)
 * Coastal Blue Carbon
     * Added validation for the transition table, raising a validation error if
       unexpected values are encountered.
@@ -77,6 +81,9 @@ Unreleased Changes
       correctly handles this case. https://github.com/natcap/invest/issues/1250
     * Tables in the .xls format are no longer supported. This format was
       deprecated by ``pandas``. (`#1271 <https://github.com/natcap/invest/issues/1271>`_)
+* NDR
+    * The contents of the output ``cache_dir`` have been consolidated into
+      ``intermediate_outputs``.
 * Pollination
     * Several exceptions have been tidied up so that only fieldnames are
       printed instead of the python data structures representing the whole
@@ -102,6 +109,8 @@ Unreleased Changes
     * Fixed an issue with sediment deposition progress logging that was
       causing the "percent complete" indicator to not progress linearly.
       https://github.com/natcap/invest/issues/1262
+    * The contents of the output ``churn_dir_not_for_humans`` have been
+      consolidated into ``intermediate_outputs``.
 * Seasonal Water Yield
     * Fixed a bug where monthy quickflow nodata pixels were not being passed
       on to the total quickflow raster, which could result in negative values
@@ -121,10 +130,14 @@ Unreleased Changes
       where s_i / a_im > 100. This is done to avoid overflow errors when
       calculating edge cases where the result would round down to 0 anyway.
       (`#1318 <https://github.com/natcap/invest/issues/1318>`_)
+    * The contents of the output ``cache_dir`` have been consolidated into
+      ``intermediate_outputs``.
 * Urban Flood Risk
     * Fixed a bug where the model incorrectly raised an error if the
       biophysical table contained a row of all 0s.
       (`#1123 <https://github.com/natcap/invest/issues/1123>`_)
+    * The contents of the output ``temp_working_dir_not_for_humans`` have been
+      consolidated into ``intermediate_files``.
 * Urban Nature Access
     * Urban nature supply outputs have been renamed to add ``percapita`` to the
       filename.
