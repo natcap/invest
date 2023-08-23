@@ -57,6 +57,12 @@ Unreleased Changes
     * Fixed a bug in the CLI where ``invest getspec --json`` failed on
       non-json-serializable objects such as ``pint.Unit``.
       https://github.com/natcap/invest/issues/1280
+    * A new directory at `./doc/decision-records` has been created for
+      "Architecture/Any Decision Records", which will serve as a record of
+      nontrivial decisions that were made to InVEST and why.  This is
+      intended for reference by our science and software teams, and also by
+      the community at large when inquiring about a nontrivial change.
+      https://github.com/natcap/invest/issues/1079
     * Updated the package installation instructions in the API docs for clarity
       and also to highlight the ease of installation through ``conda-forge``.
       https://github.com/natcap/invest/issues/1256
