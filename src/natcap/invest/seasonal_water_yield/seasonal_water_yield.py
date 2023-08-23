@@ -416,7 +416,7 @@ MODEL_SPEC = {
                 }
             }
         },
-        "cache_dir": spec_utils.TASKGRAPH_DIR
+        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
     }
 }
 
@@ -593,7 +593,7 @@ def _execute(args):
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
     intermediate_output_dir = os.path.join(
         args['workspace_dir'], 'intermediate_outputs')
-    cache_dir = os.path.join(args['workspace_dir'], 'cache_dir')
+    cache_dir = os.path.join(args['workspace_dir'], 'taskgraph_cache')
     output_dir = args['workspace_dir']
     utils.make_directories([intermediate_output_dir, cache_dir, output_dir])
 

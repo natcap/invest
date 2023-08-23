@@ -134,7 +134,7 @@ MODEL_SPEC = {
                 "to match all the other LULC maps."),
             "bands": {1: {"type": "integer"}}
         },
-        "task_cache": spec_utils.TASKGRAPH_DIR
+        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
     }
 }
 
@@ -167,7 +167,7 @@ def execute(args):
     """
     suffix = utils.make_suffix_string(args, 'results_suffix')
     output_dir = os.path.join(args['workspace_dir'], 'outputs_preprocessor')
-    taskgraph_cache_dir = os.path.join(args['workspace_dir'], 'task_cache')
+    taskgraph_cache_dir = os.path.join(args['workspace_dir'], 'taskgraph_cache')
     utils.make_directories([output_dir, taskgraph_cache_dir])
 
     try:

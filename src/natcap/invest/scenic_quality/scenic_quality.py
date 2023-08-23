@@ -209,10 +209,10 @@ MODEL_SPEC = {
                 "visibility_[FEATURE_ID].tif": {
                     "about": gettext("Map of visibility for a given structure's viewpoint. This raster has pixel values of 0 (not visible), 1 (visible), or nodata (where the DEM is nodata)."),
                     "bands": {1: {"type": "integer"}}
-                },
-                "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
+                }
             }
-        }
+        },
+        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
     }
 }
 
@@ -290,7 +290,7 @@ def execute(args):
          (_INTERMEDIATE_BASE_FILES, intermediate_dir)],
         file_suffix)
 
-    work_token_dir = os.path.join(intermediate_dir, '_taskgraph_working_dir')
+    work_token_dir = os.path.join(args['workspace_dir'], 'taskgraph_cache')
     try:
         n_workers = int(args['n_workers'])
     except (KeyError, ValueError, TypeError):

@@ -429,12 +429,12 @@ MODEL_SPEC = {
                         "veg.tif": {
                             "about": "Map of vegetated state.",
                             "bands": {1: {"type": "integer"}},
-                        },
-                        "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
+                        }
                     }
                 }
             }
-        }
+        },
+        "taskgraph_dir": spec_utils.TASKGRAPH_DIR
     }
 }
 
@@ -601,7 +601,6 @@ def execute(args):
     seasonality_constant = float(args['seasonality_constant'])
 
     # Initialize a TaskGraph
-    work_token_dir = os.path.join(intermediate_dir, '_taskgraph_working_dir')
     try:
         n_workers = int(args['n_workers'])
     except (KeyError, ValueError, TypeError):
@@ -609,7 +608,8 @@ def execute(args):
         # ValueError when n_workers is an empty string.
         # TypeError when n_workers is None.
         n_workers = -1  # single process mode.
-    graph = taskgraph.TaskGraph(work_token_dir, n_workers)
+    graph = taskgraph.TaskGraph(
+        os.path.join(args['workspace_dir'], 'taskgraph_cache'), n_workers)
 
     base_raster_path_list = [
         args['eto_path'],

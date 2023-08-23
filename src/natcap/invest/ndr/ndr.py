@@ -415,12 +415,12 @@ MODEL_SPEC = {
                         },
                         "total_export_n.pickle": {
                             "about": "Pickled zonal statistics of total nitrogen export"
-                        },
-                        "taskgraph.db": {}
+                        }
                     }
                 }
             }
-        }
+        },
+        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
     }
 }
 
@@ -595,7 +595,7 @@ def execute(args):
     output_dir = os.path.join(args['workspace_dir'])
     intermediate_output_dir = os.path.join(
         args['workspace_dir'], INTERMEDIATE_DIR_NAME)
-    cache_dir = os.path.join(intermediate_output_dir, 'cache_dir')
+    cache_dir = os.path.join(args['workspace_dir'], 'taskgraph_cache')
     utils.make_directories([output_dir, intermediate_output_dir, cache_dir])
 
     try:

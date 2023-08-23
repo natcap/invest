@@ -137,7 +137,7 @@ MODEL_SPEC = {
             "geometries": spec_utils.POINT,
             "fields": {}
         },
-        "_work_tokens": spec_utils.TASKGRAPH_DIR
+        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
     }
 }
 

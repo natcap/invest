@@ -397,12 +397,12 @@ MODEL_SPEC = {
                                 "the extent of the other raster inputs and "
                                 "aligned to the DEM."),
                             "bands": {1: {"type": "integer"}},
-                        },
-                        "taskgraph.db": {}
+                        }
                     }
                 }
             }
-        }
+        },
+        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
     }
 }
 
@@ -518,8 +518,7 @@ def execute(args):
     intermediate_output_dir = os.path.join(
         args['workspace_dir'], INTERMEDIATE_DIR_NAME)
     output_dir = os.path.join(args['workspace_dir'])
-    churn_dir = os.path.join(
-        intermediate_output_dir, 'churn_dir_not_for_humans')
+    churn_dir = os.path.join(output_dir, 'taskgraph_cache')
     utils.make_directories([output_dir, intermediate_output_dir, churn_dir])
 
     f_reg = utils.build_file_registry(

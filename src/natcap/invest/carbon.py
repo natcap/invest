@@ -255,10 +255,10 @@ MODEL_SPEC = {
         "intermediate": {
             "type": "directory",
             "contents": {
-                **CARBON_OUTPUTS,
-                "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
+                **CARBON_OUTPUTS
             }
-        }
+        },
+        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
     }
 }
 
@@ -370,8 +370,6 @@ def execute(args):
     carbon_pool_df = utils.read_csv_to_dataframe(
         args['carbon_pools_path'], MODEL_SPEC['args']['carbon_pools_path'])
 
-    work_token_dir = os.path.join(
-        intermediate_output_dir, '_taskgraph_working_dir')
     try:
         n_workers = int(args['n_workers'])
     except (KeyError, ValueError, TypeError):
@@ -379,7 +377,8 @@ def execute(args):
         # ValueError when n_workers is an empty string.
         # TypeError when n_workers is None.
         n_workers = -1  # Synchronous mode.
-    graph = taskgraph.TaskGraph(work_token_dir, n_workers)
+    graph = taskgraph.TaskGraph(
+        os.path.join(args['workspace_dir'], 'taskgraph_cache'), n_workers)
 
     cell_size_set = set()
     raster_size_set = set()

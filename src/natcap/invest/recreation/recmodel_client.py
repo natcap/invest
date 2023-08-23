@@ -331,10 +331,10 @@ MODEL_SPEC = {
                 },
                 "server_version.pickle": {
                     "about": gettext("Server version info")
-                },
-                "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
+                }
             }
-        }
+        },
+        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
     }
 }
 
@@ -479,7 +479,7 @@ def execute(args):
          (_INTERMEDIATE_BASE_FILES, intermediate_dir)], file_suffix)
 
     # Initialize a TaskGraph
-    taskgraph_db_dir = os.path.join(intermediate_dir, '_taskgraph_working_dir')
+    taskgraph_db_dir = os.path.join(output_dir, 'taskgraph_cache')
     try:
         n_workers = int(args['n_workers'])
     except (KeyError, ValueError, TypeError):
