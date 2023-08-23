@@ -479,7 +479,6 @@ def execute(args):
          (_INTERMEDIATE_BASE_FILES, intermediate_dir)], file_suffix)
 
     # Initialize a TaskGraph
-    taskgraph_db_dir = os.path.join(output_dir, 'taskgraph_cache')
     try:
         n_workers = int(args['n_workers'])
     except (KeyError, ValueError, TypeError):
@@ -487,7 +486,8 @@ def execute(args):
         # ValueError when n_workers is an empty string.
         # TypeError when n_workers is None.
         n_workers = -1  # single process mode.
-    task_graph = taskgraph.TaskGraph(taskgraph_db_dir, n_workers)
+    task_graph = taskgraph.TaskGraph(
+        os.path.join(output_dir, 'taskgraph_cache'), n_workers)
 
     if args['grid_aoi']:
         prep_aoi_task = task_graph.add_task(

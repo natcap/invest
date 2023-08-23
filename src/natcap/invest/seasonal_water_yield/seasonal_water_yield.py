@@ -441,9 +441,6 @@ _INTERMEDIATE_BASE_FILES = {
     'flow_dir_mfd_path': 'flow_dir_mfd.tif',
     'qfm_path_list': ['qf_%d.tif' % (x+1) for x in range(N_MONTHS)],
     'stream_path': 'stream.tif',
-}
-
-_TMP_BASE_FILES = {
     'outflow_direction_path': 'outflow_direction.tif',
     'outflow_weights_path': 'outflow_weights.tif',
     'kc_path': 'kc.tif',
@@ -593,9 +590,9 @@ def _execute(args):
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
     intermediate_output_dir = os.path.join(
         args['workspace_dir'], 'intermediate_outputs')
-    cache_dir = os.path.join(args['workspace_dir'], 'taskgraph_cache')
+    taskgraph_dir = os.path.join(args['workspace_dir'], 'taskgraph_cache')
     output_dir = args['workspace_dir']
-    utils.make_directories([intermediate_output_dir, cache_dir, output_dir])
+    utils.make_directories([intermediate_output_dir, taskgraph_dir, output_dir])
 
     try:
         n_workers = int(args['n_workers'])
@@ -605,13 +602,12 @@ def _execute(args):
         # TypeError when n_workers is None.
         n_workers = -1  # Synchronous mode.
     task_graph = taskgraph.TaskGraph(
-        cache_dir, n_workers, reporting_interval=5)
+        taskgraph_dir, n_workers, reporting_interval=5)
 
     LOGGER.info('Building file registry')
     file_registry = utils.build_file_registry(
         [(_OUTPUT_BASE_FILES, output_dir),
-         (_INTERMEDIATE_BASE_FILES, intermediate_output_dir),
-         (_TMP_BASE_FILES, cache_dir)], file_suffix)
+         (_INTERMEDIATE_BASE_FILES, intermediate_output_dir)], file_suffix)
 
     LOGGER.info('Checking that the AOI is not the output aggregate vector')
     if (os.path.normpath(args['aoi_path']) ==
@@ -689,7 +685,7 @@ def _execute(args):
         args=(
             (file_registry['dem_aligned_path'], 1),
             file_registry['dem_pit_filled_path']),
-        kwargs={'working_dir': cache_dir},
+        kwargs={'working_dir': intermediate_output_dir},
         target_path_list=[file_registry['dem_pit_filled_path']],
         dependent_task_list=[align_task],
         task_name='fill dem pits')
@@ -699,7 +695,7 @@ def _execute(args):
         args=(
             (file_registry['dem_pit_filled_path'], 1),
             file_registry['flow_dir_mfd_path']),
-        kwargs={'working_dir': cache_dir},
+        kwargs={'working_dir': intermediate_output_dir},
         target_path_list=[file_registry['flow_dir_mfd_path']],
         dependent_task_list=[fill_pit_task],
         task_name='flow dir mfd')

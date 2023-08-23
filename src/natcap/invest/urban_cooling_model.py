@@ -342,10 +342,10 @@ MODEL_SPEC = {
                         "reference of the LULC."),
                     "geometries": spec_utils.POLYGONS,
                     "fields": {}
-                },
-                "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
+                }
             }
-        }
+        },
+        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
     }
 }
 
@@ -456,7 +456,7 @@ def execute(args):
         n_workers = -1  # Synchronous mode.
 
     task_graph = taskgraph.TaskGraph(
-        os.path.join(intermediate_dir, '_taskgraph_working_dir'), n_workers)
+        os.path.join(args['workspace_dir'], 'taskgraph_cache'), n_workers)
 
     # align all the input rasters.
     aligned_lulc_raster_path = os.path.join(

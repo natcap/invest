@@ -167,8 +167,7 @@ def execute(args):
     """
     suffix = utils.make_suffix_string(args, 'results_suffix')
     output_dir = os.path.join(args['workspace_dir'], 'outputs_preprocessor')
-    taskgraph_cache_dir = os.path.join(args['workspace_dir'], 'taskgraph_cache')
-    utils.make_directories([output_dir, taskgraph_cache_dir])
+    utils.make_directories([output_dir])
 
     try:
         n_workers = int(args['n_workers'])
@@ -178,7 +177,8 @@ def execute(args):
         # TypeError when n_workers is None.
         n_workers = -1  # Synchronous mode.
     task_graph = taskgraph.TaskGraph(
-        taskgraph_cache_dir, n_workers, reporting_interval=5.0)
+        os.path.join(args['workspace_dir'], 'taskgraph_cache'),
+        n_workers, reporting_interval=5.0)
 
     snapshots_dict = utils.read_csv_to_dataframe(
         args['landcover_snapshot_csv'],
