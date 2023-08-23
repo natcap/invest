@@ -64,10 +64,8 @@ Unreleased Changes
       has been merged into ``utils.read_csv_to_dataframe``
       (`#1319 <https://github.com/natcap/invest/issues/1319>`_),
       (`#1327 <https://github.com/natcap/invest/issues/1327>`_)
-* Coastal Blue Carbon
-    * Added validation for the transition table, raising a validation error if
-      unexpected values are encountered.
-      (`#729 <https://github.com/natcap/invest/issues/729>`_)
+    * Improved the validation message that is returned when not all spatial
+      inputs overlap (`#502 <https://github.com/natcap/invest/issues/502>`_)
 * Workbench
     * Fixed a bug where sampledata downloads failed silently (and progress bar
       became innacurate) if the Workbench did not have write permission to
@@ -85,6 +83,10 @@ Unreleased Changes
     * Middle clicking an InVEST model tab was opening a blank window. Now
       middle clicking will close that tab as expected.
       (`#1261 <https://github.com/natcap/invest/issues/1261>`_)
+* Coastal Blue Carbon
+    * Added validation for the transition table, raising a validation error if
+      unexpected values are encountered.
+      (`#729 <https://github.com/natcap/invest/issues/729>`_)
 * Forest Carbon
     * The biophysical table is now case-insensitive.
 * HRA
