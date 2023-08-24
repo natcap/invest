@@ -182,6 +182,15 @@ Unreleased Changes
         * When defining search radii for population groups, one new output
           raster is created for each population group.  These files are named
           ``accessible_urban_nature_to_[POP_GROUP].tif``.
+
+    * Urban nature classes can now be defined to occupy a proportion of a
+      pixel, such as a park that is semi-developed. This proportion is
+      provided through user input as a proportion (0-1) in the
+      ``urban_nature`` column of the LULC Attribute Table.  A value of ``0``
+      indicates that there is no urban nature in this class, ``0.333``
+      indicates that a third of the area of this LULC class is urban nature,
+      and ``1`` would indicate that the entire LULC class's area is urban
+      nature.  https://github.com/natcap/invest/issues/1180
 * Visitation: Recreation and Tourism
     * Fixed a bug where overlapping predictor polygons would be double-counted
       in ``polygon_area_coverage`` and ``polygon_percent_coverage`` calculations.
