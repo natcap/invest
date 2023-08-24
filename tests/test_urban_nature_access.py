@@ -85,7 +85,8 @@ def _build_model_args(workspace):
             6,0,100
             7,1,100
             8,0,100
-            9,1,100"""))
+            9,1,100
+            """))
 
     admin_geom = [
         shapely.geometry.box(
@@ -959,6 +960,18 @@ class UNATests(unittest.TestCase):
     def test_urban_nature_proportion(self):
         """UNA: Run the model with urban nature proportion."""
         from natcap.invest import urban_nature_access
+
+        args = _build_model_args(self.workspace_dir)
+        args['search_radius_mode'] = urban_nature_access.RADIUS_OPT_UNIFORM
+        args['search_radius'] = 1000
+        with open(args['lulc_attribute_table'], 'a') as attr_table:
+            attr_table.write("10,0.5,100\n")
+
+        # make sure our inputs validate
+        validation_results = urban_nature_access.validate(args)
+        self.assertEqual(validation_results, [])
+
+        urban_nature_access.execute(args)
 
     def test_validate(self):
         """UNA: Basic test for validation."""
