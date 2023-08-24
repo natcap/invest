@@ -1934,7 +1934,7 @@ class HabitatQualityTests(unittest.TestCase):
         self.assertTrue(
             validate_result,
             "expected failed validations instead didn't get any.")
-        self.assertIn("Bounding boxes do not intersect", validate_result[0][1])
+        self.assertIn("bounding boxes must intersect", validate_result[0][1])
 
     def test_habitat_quality_argspec_missing_projection(self):
         """Habitat Quality: raise error on missing projection."""

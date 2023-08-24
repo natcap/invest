@@ -16,7 +16,6 @@ import {
 import { BsChevronExpand } from 'react-icons/bs';
 import { withTranslation } from 'react-i18next';
 
-import { getDefaultSettings } from './SettingsStorage';
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
 import { getSupportedLanguages } from '../../server_requests';
 
@@ -29,14 +28,18 @@ class SettingsModal extends React.Component {
     this.state = {
       show: false,
       languageOptions: null,
+      loggingLevel: null,
+      taskgraphLoggingLevel: null,
+      nWorkers: null,
       language: window.Workbench.LANGUAGE,
       showConfirmLanguageChange: false,
     };
     this.handleShow = this.handleShow.bind(this);
     this.handleClose = this.handleClose.bind(this);
     this.handleChange = this.handleChange.bind(this);
+    this.handleChangeNumber = this.handleChangeNumber.bind(this);
+    this.loadSettings = this.loadSettings.bind(this);
     this.handleChangeLanguage = this.handleChangeLanguage.bind(this);
-    this.handleReset = this.handleReset.bind(this);
     this.switchToDownloadModal = this.switchToDownloadModal.bind(this);
   }
 
@@ -45,6 +48,7 @@ class SettingsModal extends React.Component {
     this.setState({
       languageOptions: languageOptions,
     });
+    this.loadSettings();
   }
 
   handleClose() {
@@ -57,17 +61,31 @@ class SettingsModal extends React.Component {
     this.setState({ show: true });
   }
 
-  handleReset(event) {
-    event.preventDefault();
-    const resetSettings = getDefaultSettings();
-    this.props.saveSettings(resetSettings);
+  handleChange(event) {
+    const { name, value } = event.currentTarget;
+    this.setState({ [name]: value });
+    ipcRenderer.send(ipcMainChannels.SET_SETTING, name, value);
   }
 
-  handleChange(event) {
-    const newSettings = { ...this.props.investSettings };
+  handleChangeNumber(event) {
     const { name, value } = event.currentTarget;
-    newSettings[name] = value;
-    this.props.saveSettings(newSettings);
+    const numeral = Number(value);
+    this.setState({ [name]: numeral });
+    ipcRenderer.send(ipcMainChannels.SET_SETTING, name, numeral);
+  }
+
+  async loadSettings() {
+    const loggingLevel = await ipcRenderer
+      .invoke(ipcMainChannels.GET_SETTING, 'loggingLevel');
+    const taskgraphLoggingLevel = await ipcRenderer
+      .invoke(ipcMainChannels.GET_SETTING, 'taskgraphLoggingLevel');
+    const nWorkers = await ipcRenderer
+      .invoke(ipcMainChannels.GET_SETTING, 'nWorkers');
+    this.setState({
+      loggingLevel: loggingLevel,
+      taskgraphLoggingLevel: taskgraphLoggingLevel,
+      nWorkers: nWorkers
+    });
   }
 
   handleChangeLanguage() {
@@ -85,8 +103,16 @@ class SettingsModal extends React.Component {
   }
 
   render() {
-    const { show, languageOptions, language, showConfirmLanguageChange } = this.state;
-    const { investSettings, clearJobsStorage, nCPU, t } = this.props;
+    const {
+      show,
+      languageOptions,
+      language,
+      loggingLevel,
+      taskgraphLoggingLevel,
+      nWorkers,
+      showConfirmLanguageChange,
+    } = this.state;
+    const { clearJobsStorage, nCPU, t } = this.props;
 
     const nWorkersOptions = [
       [-1, `${t('Synchronous')} (-1)`],
@@ -167,7 +193,7 @@ class SettingsModal extends React.Component {
                   id="logging-select"
                   as="select"
                   name="loggingLevel"
-                  value={investSettings.loggingLevel}
+                  value={loggingLevel}
                   onChange={this.handleChange}
                 >
                   {Object.entries(logLevelOptions).map(
@@ -185,7 +211,7 @@ class SettingsModal extends React.Component {
                   id="taskgraph-logging-select"
                   as="select"
                   name="taskgraphLoggingLevel"
-                  value={investSettings.taskgraphLoggingLevel}
+                  value={taskgraphLoggingLevel}
                   onChange={this.handleChange}
                 >
                   {Object.entries(logLevelOptions).map(
@@ -209,8 +235,8 @@ class SettingsModal extends React.Component {
                         as="select"
                         name="nWorkers"
                         type="text"
-                        value={investSettings.nWorkers}
-                        onChange={this.handleChange}
+                        value={nWorkers}
+                        onChange={this.handleChangeNumber}
                       >
                         {nWorkersOptions.map(
                           (opt) => <option value={opt[0]} key={opt[0]}>{opt[1]}</option>
@@ -245,18 +271,6 @@ class SettingsModal extends React.Component {
                 )
                 : <div />
             }
-            <Row className="justify-content-end">
-              <Col sm="5">
-                <Button
-                  variant="secondary"
-                  onClick={this.handleReset}
-                  type="button"
-                  className="w-100"
-                >
-                  {t('Reset to Defaults')}
-                </Button>
-              </Col>
-            </Row>
             <hr />
             <Button
               variant="primary"
@@ -306,14 +320,7 @@ class SettingsModal extends React.Component {
 }
 
 SettingsModal.propTypes = {
-  saveSettings: PropTypes.func.isRequired,
   clearJobsStorage: PropTypes.func.isRequired,
-  investSettings: PropTypes.shape({
-    nWorkers: PropTypes.string,
-    taskgraphLoggingLevel: PropTypes.string,
-    loggingLevel: PropTypes.string,
-    sampleDataDir: PropTypes.string,
-  }).isRequired,
   showDownloadModal: PropTypes.func.isRequired,
   nCPU: PropTypes.number.isRequired,
 };

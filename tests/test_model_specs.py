@@ -173,7 +173,11 @@ class ValidateModelSpecs(unittest.TestCase):
                         spec['columns'][column],
                         f'{key}.columns.{column}',
                         parent_type=t)
+                if 'index_col' in spec:
+                    self.assertIn(spec['index_col'], spec['columns'])
+
                 attrs.discard('columns')
+                attrs.discard('index_col')
 
             elif t == 'directory':
                 # directory type should have a contents property that maps each
@@ -249,6 +253,7 @@ class ValidateModelSpecs(unittest.TestCase):
             types = arg['type'] if isinstance(
                 arg['type'], set) else [arg['type']]
             attrs = set(arg.keys())
+
             for t in types:
                 self.assertIn(t, valid_nested_types[parent_type])
 
@@ -395,8 +400,12 @@ class ValidateModelSpecs(unittest.TestCase):
                                 f'{name}.{direction}.{header}',
                                 parent_type=t)
 
-                        attrs.discard('rows')
-                        attrs.discard('columns')
+                    if 'index_col' in arg:
+                        self.assertIn(arg['index_col'], arg['columns'])
+                        attrs.discard('index_col')
+
+                    attrs.discard('rows')
+                    attrs.discard('columns')
 
                     # csv type may optionally have an 'excel_ok' attribute
                     if 'excel_ok' in arg:

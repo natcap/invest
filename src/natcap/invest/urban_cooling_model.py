@@ -55,6 +55,7 @@ MODEL_SPEC = {
         "biophysical_table_path": {
             "name": gettext("biophysical table"),
             "type": "csv",
+            "index_col": "lucode",
             "columns": {
                 "lucode": spec_utils.LULC_TABLE_COLUMN,
                 "kc": {
@@ -170,6 +171,7 @@ MODEL_SPEC = {
         "energy_consumption_table_path": {
             "name": gettext("energy consumption table"),
             "type": "csv",
+            "index_col": "type",
             "columns": {
                 "type": {
                     "type": "integer",
@@ -410,8 +412,8 @@ def execute(args):
     intermediate_dir = os.path.join(
         args['workspace_dir'], 'intermediate')
     utils.make_directories([args['workspace_dir'], intermediate_dir])
-    biophysical_lucode_map = utils.read_csv_to_dataframe(
-        args['biophysical_table_path'], 'lucode').to_dict(orient='index')
+    biophysical_df = utils.read_csv_to_dataframe(
+        args['biophysical_table_path'], MODEL_SPEC['args']['biophysical_table_path'])
 
     # cast to float and calculate relative weights
     # Use default weights for shade, albedo, eti if the user didn't provide
@@ -496,16 +498,13 @@ def execute(args):
         'raster_name': 'LULC', 'column_name': 'lucode',
         'table_name': 'Biophysical'}
     for prop in reclassification_props:
-        prop_map = dict(
-            (lucode, x[prop])
-            for lucode, x in biophysical_lucode_map.items())
-
         prop_raster_path = os.path.join(
             intermediate_dir, f'{prop}{file_suffix}.tif')
         prop_task = task_graph.add_task(
             func=utils.reclassify_raster,
             args=(
-                (aligned_lulc_raster_path, 1), prop_map, prop_raster_path,
+                (aligned_lulc_raster_path, 1),
+                biophysical_df[prop].to_dict(), prop_raster_path,
                 gdal.GDT_Float32, TARGET_NODATA, reclass_error_details),
             target_path_list=[prop_raster_path],
             dependent_task_list=[align_task],
@@ -1079,8 +1078,9 @@ def calculate_energy_savings(
                   for field in target_building_layer.schema]
     type_field_index = fieldnames.index('type')
 
-    energy_consumption_table = utils.read_csv_to_dataframe(
-        energy_consumption_table_path, 'type').to_dict(orient='index')
+    energy_consumption_df = utils.read_csv_to_dataframe(
+        energy_consumption_table_path,
+        MODEL_SPEC['args']['energy_consumption_table_path'])
 
     target_building_layer.StartTransaction()
     last_time = time.time()
@@ -1104,7 +1104,7 @@ def calculate_energy_savings(
         # Building type should be an integer and has to match the building
         # types in the energy consumption table.
         target_type = target_feature.GetField(int(type_field_index))
-        if target_type not in energy_consumption_table:
+        if target_type not in energy_consumption_df.index:
             target_building_layer.CommitTransaction()
             target_building_layer = None
             target_building_vector = None
@@ -1114,16 +1114,14 @@ def calculate_energy_savings(
                 "that has no corresponding entry in the energy consumption "
                 f"table at {energy_consumption_table_path}")
 
-        consumption_increase = float(
-            energy_consumption_table[target_type]['consumption'])
+        consumption_increase = energy_consumption_df['consumption'][target_type]
 
         # Load building cost if we can, but don't adjust the value if the cost
         # column is not there.
         # NOTE: if the user has an empty column value but the 'cost' column
         # exists, this will raise an error.
         try:
-            building_cost = float(
-                energy_consumption_table[target_type]['cost'])
+            building_cost = energy_consumption_df['cost'][target_type]
         except KeyError:
             # KeyError when cost column not present.
             building_cost = 1

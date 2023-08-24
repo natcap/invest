@@ -163,6 +163,21 @@ describe('Arguments form input types', () => {
     expect(input).toHaveValue('a');
     expect(input).not.toHaveValue('b');
   });
+
+  test('initial arg values can contain extra args', async () => {
+    const spec = baseArgsSpec('number');
+    const displayedValue = '1';
+    const missingValue = '0';
+    const initArgs = {
+      [Object.keys(spec.args)[0]]: displayedValue,
+      paramZ: missingValue, // paramZ is not in the ARGS_SPEC or UI_SPEC
+    };
+
+    const { findByLabelText, queryByText } = renderSetupFromSpec(spec, UI_SPEC, initArgs);
+    const input = await findByLabelText(`${spec.args.arg.name} (${spec.args.arg.units})`);
+    await waitFor(() => expect(input).toHaveValue(displayedValue));
+    expect(queryByText(missingValue)).toBeNull();
+  });
 });
 
 describe('Arguments form interactions', () => {
@@ -577,8 +592,8 @@ describe('Misc form validation stuff', () => {
     const rasterValue = './raster.tif';
     const expectedVal2 = '-79.0198012081401';
     const rasterBox = `[${expectedVal2}, 26.481559513537064, -78.37173806200593, 27.268061760228512]`;
-    const message = `Bounding boxes do not intersect: ${vectorValue}: ${vectorBox} | ${rasterValue}: ${rasterBox}`;
-    const newPrefix = 'Bounding box does not intersect at least one other:';
+    const message = `Not all of the spatial layers overlap each other. All bounding boxes must intersect: ${vectorValue}: ${vectorBox} | ${rasterValue}: ${rasterBox}`;
+    const newPrefix = 'Not all of the spatial layers overlap each other. Bounding box:';
     const vectorMessage = new RegExp(`${newPrefix}\\s*\\[${expectedVal1}`);
     const rasterMessage = new RegExp(`${newPrefix}\\s*\\[${expectedVal2}`);
 

@@ -749,21 +749,22 @@ class HRAUnitTests(unittest.TestCase):
 
         # No matter the supported file format, make sure we have consistent
         # table headings.
-        source_df = pandas.read_csv(io.StringIO(textwrap.dedent("""\
-                FOO,bar,BaZ,path
-                1, 2, 3,foo.tif""")))
+        source_df = pandas.DataFrame({
+            'name': pandas.Series(['1'], dtype='string'),
+            'type': pandas.Series(['2'], dtype='string'),
+            'stressor buffer (meters)': pandas.Series([3], dtype=float),
+            'path': pandas.Series(['foo.tif'], dtype='string')
+        })
 
-        expected_df = source_df.copy()  # defaults to a deepcopy.
-        expected_df.columns = expected_df.columns.str.lower()
-        expected_df['path'] = [os.path.join(self.workspace_dir, 'foo.tif')]
+        expected_df = source_df.copy().set_index('name')  # defaults to a deepcopy.
+        expected_df['path']['1'] = os.path.join(self.workspace_dir, 'foo.tif')
 
         for filename, func in [('target.csv', source_df.to_csv),
                                ('target.xlsx', source_df.to_excel)]:
             full_filepath = os.path.join(self.workspace_dir, filename)
             func(full_filepath, index=False)
-
             opened_df = hra._open_table_as_dataframe(full_filepath)
-            pandas.testing.assert_frame_equal(expected_df, opened_df)
+            pandas.testing.assert_frame_equal(expected_df, opened_df, check_index_type=False)
 
     def test_pairwise_risk(self):
         """HRA: check pairwise risk calculations."""
