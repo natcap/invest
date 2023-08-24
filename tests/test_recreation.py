@@ -177,7 +177,7 @@ class TestRecServerLoop(unittest.TestCase):
         self.server_process = multiprocessing.Process(
             target=recmodel_server.execute, args=(server_args,), daemon=False)
         self.server_process.start()
-        time.sleep(5)
+        time.sleep(5)  # need a few seconds for the server to be ready
 
     def tearDown(self):
         """Delete workspace."""
