@@ -100,7 +100,11 @@ Unreleased Changes
       consequence criteria were skipped for a single habitat. The model now
       correctly handles this case. https://github.com/natcap/invest/issues/1250
     * Tables in the .xls format are no longer supported. This format was
-      deprecated by ``pandas``. (`#1271 <https://github.com/natcap/invest/issues/1271>`_)
+      deprecated by ``pandas``.
+      (`#1271 <https://github.com/natcap/invest/issues/1271>`_)
+    * Fixed a bug where vector inputs could be rasterized onto a grid that is
+      not exactly aligned with other raster inputs.
+      (`#1312 <https://github.com/natcap/invest/issues/1312>`_)
 * NDR
     * Fixed a bug where results were calculated incorrectly if the runoff proxy
       raster (or the DEM or LULC) had no nodata value
