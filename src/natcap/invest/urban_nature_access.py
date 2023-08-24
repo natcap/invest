@@ -1,5 +1,4 @@
 import collections
-import functools
 import logging
 import math
 import os
@@ -80,11 +79,13 @@ MODEL_SPEC = {
             'columns': {
                 'lucode': spec_utils.LULC_TABLE_COLUMN,
                 'urban_nature': {
-                    'type': 'number',
-                    'units': u.none,
+                    'type': 'ratio',
                     'about': (
-                        "Binary code indicating whether the LULC type is "
-                        "(1) or is not (0) an urban nature type."
+                        "The proportion (0-1) indicating how much of the land "
+                        "in this LULC type is urban nature. "
+                        "0 indicates no area this LULC type is urban nature, "
+                        "1 indicates that this LULC type is entirely urban "
+                        "nature."
                     ),
                 },
                 'search_radius_m': {
@@ -648,9 +649,10 @@ def execute(args):
             CSV with the following columns:
 
             * ``lucode``: (required) the integer landcover code represented.
-            * ``urban_nature``: (required) ``0`` or ``1`` indicating whether
-              this landcover code is (``1``) or is not (``0``) an urban nature
-              pixel.
+            * ``urban_nature``: (required) a proportion (0-1) representing
+              how much of this landcover type is urban nature.  ``0``
+              indicates none of this type's area is urban nature, ``1``
+              indicates all of this type's area is urban nature.
             * ``search_radius_m``: (conditionally required) the search radius
               for this urban nature LULC class in meters. Required for all
               urban nature LULC codes if ``args['search_radius_mode'] ==
@@ -939,7 +941,7 @@ def execute(args):
     if args['search_radius_mode'] == RADIUS_OPT_UNIFORM:
         search_radii = set([float(args['search_radius'])])
     elif args['search_radius_mode'] == RADIUS_OPT_URBAN_NATURE:
-        urban_nature_attrs = attr_table[attr_table['urban_nature'] == 1]
+        urban_nature_attrs = attr_table[attr_table['urban_nature'] > 0]
         try:
             search_radii = set(urban_nature_attrs['search_radius_m'].unique())
         except KeyError as missing_key:
@@ -1802,13 +1804,16 @@ def _reclassify_urban_nature_area(
     """Reclassify LULC pixels into the urban nature area they represent.
 
     After execution, urban nature pixels will have values representing the
-    pixel's area, while pixels that are not urban nature will have a pixel
-    value of 0.  Nodata values will propagate to the output raster.
+    pixel's area of urban nature (pixel area * proportion of urban nature),
+    while pixels that are not urban nature will have a pixel value of 0.
+    Nodata values will propagate to the output raster.
 
     Args:
         lulc_raster_path (string): The path to a land-use/land-cover raster.
         lulc_attribute_table (string): The path to a CSV table representing
             LULC attributes.  Must have "lucode" and "urban_nature" columns.
+            The "urban_nature" column represents a proportion 0-1 of how much
+            of the pixel's area represents urban nature.
         target_raster_path (string): Where the reclassified urban nature raster
             should be written.
         only_these_urban_nature_codes=None (iterable or None): If ``None``, all
@@ -1830,13 +1835,15 @@ def _reclassify_urban_nature_area(
         valid_urban_nature_codes = set(only_these_urban_nature_codes)
     else:
         valid_urban_nature_codes = set(
-            lulc_attribute_df[lulc_attribute_df['urban_nature'] == 1].index)
+            lulc_attribute_df[lulc_attribute_df['urban_nature'] > 0].index)
 
     urban_nature_area_map = {}
-    for lucode in lulc_attribute_df.index:
+    for row in lulc_attribute_df[['urban_nature']].itertuples():
+        lucode = row.Index
+        urban_nature_proportion = row.urban_nature
         urban_nature_area = 0
         if lucode in valid_urban_nature_codes:
-            urban_nature_area = squared_pixel_area
+            urban_nature_area = squared_pixel_area * urban_nature_proportion
         urban_nature_area_map[lucode] = urban_nature_area
 
     lulc_raster_info = pygeoprocessing.get_raster_info(lulc_raster_path)
