@@ -80,7 +80,6 @@ MODEL_SPEC = {
                 'lucode': spec_utils.LULC_TABLE_COLUMN,
                 'urban_nature': {
                     'type': 'ratio',
-                    'units': u.none,
                     'about': (
                         "The proportion (0-1) indicating how much of the land "
                         "in this LULC type is urban nature. "
