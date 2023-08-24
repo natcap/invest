@@ -973,9 +973,54 @@ class UNATests(unittest.TestCase):
 
         urban_nature_access.execute(args)
 
+    def test_reclassify_urban_nature(self):
+        """UNA: Test for urban nature area reclassification."""
+        from natcap.invest import urban_nature_access
+        args = _build_model_args(self.workspace_dir)
+
+        # Rewrite the lulc attribute table to use proportions of urban nature.
+        with open(args['lulc_attribute_table'], 'w') as attr_table:
+            attr_table.write(textwrap.dedent(
+                """\
+                lucode,urban_nature,search_radius_m
+                0,0,100
+                1,0.1,100
+                2,0,100
+                3,0.3,100
+                4,0,100
+                5,0.5,100
+                6,0,100
+                7,0.7,100
+                8,0,100
+                9,0.9,100
+                """))
+
+        urban_nature_area_path = os.path.join(
+            self.workspace_dir, 'urban_nature_area.tif')
+        urban_nature_access._reclassify_urban_nature_area(
+            args['lulc_raster_path'], args['lulc_attribute_table'],
+            urban_nature_area_path)
+
+        # The source lulc is randomized, so need to programmatically build up
+        # the expected array.
+        source_lulc_array = pygeoprocessing.raster_to_numpy_array(
+            args['lulc_raster_path'])
+        pixel_area = abs(_DEFAULT_PIXEL_SIZE[0] * _DEFAULT_PIXEL_SIZE[1])
+        expected_array = numpy.zeros(source_lulc_array.shape,
+                                     dtype=numpy.float32)
+        for i in range(1, 10, 2):
+            factor = float(f"0.{i}")
+            expected_array[source_lulc_array == i] = factor * pixel_area
+
+        reclassified_array = pygeoprocessing.raster_to_numpy_array(
+            urban_nature_area_path)
+        numpy.testing.assert_array_almost_equal(
+            reclassified_array, expected_array)
+
     def test_validate(self):
         """UNA: Basic test for validation."""
         from natcap.invest import urban_nature_access
         args = _build_model_args(self.workspace_dir)
-        args['search_radius_mode'] = urban_nature_access.RADIUS_OPT_URBAN_NATURE
+        args['search_radius_mode'] = (
+            urban_nature_access.RADIUS_OPT_URBAN_NATURE)
         self.assertEqual(urban_nature_access.validate(args), [])
