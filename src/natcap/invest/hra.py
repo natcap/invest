@@ -1585,7 +1585,7 @@ def _align(raster_path_map, vector_path_map, target_pixel_size,
             layer = None
             vector = None
 
-            _create_raster_from_bounding_box(
+            pygeoprocessing.create_raster_from_bounding_box(
                 target_raster_path=target_raster_path,
                 target_bounding_box=target_bounding_box,
                 target_pixel_size=target_pixel_size,
