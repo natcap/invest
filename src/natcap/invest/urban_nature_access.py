@@ -1,5 +1,4 @@
 import collections
-import functools
 import logging
 import math
 import os
@@ -80,11 +79,14 @@ MODEL_SPEC = {
             'columns': {
                 'lucode': spec_utils.LULC_TABLE_COLUMN,
                 'urban_nature': {
-                    'type': 'number',
+                    'type': 'ratio',
                     'units': u.none,
                     'about': (
-                        "Binary code indicating whether the LULC type is "
-                        "(1) or is not (0) an urban nature type."
+                        "The proportion (0-1) indicating how much of the land "
+                        "in this LULC type is urban nature. "
+                        "0 indicates no area this LULC type is urban nature, "
+                        "1 indicates that this LULC type is entirely urban "
+                        "nature."
                     ),
                 },
                 'search_radius_m': {
@@ -648,9 +650,10 @@ def execute(args):
             CSV with the following columns:
 
             * ``lucode``: (required) the integer landcover code represented.
-            * ``urban_nature``: (required) ``0`` or ``1`` indicating whether
-              this landcover code is (``1``) or is not (``0``) an urban nature
-              pixel.
+            * ``urban_nature``: (required) a proportion (0-1) representing
+              how much of this landcover type is urban nature.  ``0``
+              indicates none of this type's area is urban nature, ``1``
+              indicates all of this type's area is urban nature.
             * ``search_radius_m``: (conditionally required) the search radius
               for this urban nature LULC class in meters. Required for all
               urban nature LULC codes if ``args['search_radius_mode'] ==

@@ -956,6 +956,10 @@ class UNATests(unittest.TestCase):
         numpy.testing.assert_allclose(
             numpy.sum(weighted_sum_array[~nodata_pixels]), 1122.5)
 
+    def test_urban_nature_proportion(self):
+        """UNA: Run the model with urban nature proportion."""
+        from natcap.invest import urban_nature_access
+
     def test_validate(self):
         """UNA: Basic test for validation."""
         from natcap.invest import urban_nature_access
