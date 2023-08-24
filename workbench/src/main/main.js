@@ -60,6 +60,7 @@ if (!process.env.PORT) {
 let mainWindow;
 let splashScreen;
 let flaskSubprocess;
+let forceQuit = false;
 
 export function destroyWindow() {
   mainWindow = null;
@@ -137,7 +138,7 @@ export const createWindow = async () => {
       mainWindow.minimize()
     }
   });
-  
+
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
@@ -194,6 +195,7 @@ export function main() {
   app.on('before-quit', async (event) => {
     // prevent quitting until after we're done with cleanup,
     // then programatically quit
+    forceQuit = true;
     if (shuttingDown) { return; }
     event.preventDefault();
     shuttingDown = true;
