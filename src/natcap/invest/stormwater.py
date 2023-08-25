@@ -364,10 +364,10 @@ MODEL_SPEC = {
                         "calculated by convolving the search kernel with the "
                         "retention ratio raster."),
                     "bands": {1: {"type": "ratio"}}
-                },
-                "cache_dir": spec_utils.TASKGRAPH_DIR
+                }
             }
-        }
+        },
+        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
     }
 }
 
@@ -439,14 +439,14 @@ def execute(args):
     suffix = utils.make_suffix_string(args, 'results_suffix')
     output_dir = args['workspace_dir']
     intermediate_dir = os.path.join(output_dir, 'intermediate')
-    cache_dir = os.path.join(intermediate_dir, 'cache_dir')
-    utils.make_directories(
-        [args['workspace_dir'], intermediate_dir, cache_dir])
+    utils.make_directories([args['workspace_dir'], intermediate_dir])
     files = utils.build_file_registry(
         [(INTERMEDIATE_OUTPUTS, intermediate_dir),
          (FINAL_OUTPUTS, output_dir)], suffix)
 
-    task_graph = taskgraph.TaskGraph(cache_dir, int(args.get('n_workers', -1)))
+    task_graph = taskgraph.TaskGraph(
+        os.path.join(args['workspace_dir'], 'taskgraph_cache'),
+        int(args.get('n_workers', -1)))
 
     # get the necessary base raster info
     source_lulc_raster_info = pygeoprocessing.get_raster_info(

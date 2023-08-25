@@ -374,65 +374,60 @@ MODEL_SPEC = {
                         "type": "integer"
                     }}
                 },
-                "cache_dir": {
-                    "type": "directory",
-                    "contents": {
-                        "aligned_dem.tif": {
-                            "about": "Copy of the DEM clipped to the extent of the other inputs",
-                            "bands": {1: {"type": "number", "units": u.meter}}
-                        },
-                        "aligned_lulc.tif": {
-                            "about": (
-                                "Copy of the LULC clipped to the extent of the other inputs "
-                                "and reprojected to the DEM projection"),
-                            "bands": {1: {"type": "integer"}}
-                        },
-                        "aligned_runoff_proxy.tif": {
-                            "about": (
-                                "Copy of the runoff proxy clipped to the extent of the other inputs "
-                                "and reprojected to the DEM projection"),
-                            "bands": {1: {"type": "number", "units": u.none}}
-                        },
-                        "masked_dem.tif": {
-                            "about": "DEM input masked to exclude pixels outside the watershed",
-                            "bands": {1: {"type": "number", "units": u.meter}}
-                        },
-                        "masked_lulc.tif": {
-                            "about": "LULC input masked to exclude pixels outside the watershed",
-                            "bands": {1: {"type": "integer"}}
-                        },
-                        "masked_runoff_proxy.tif": {
-                            "about": "Runoff proxy input masked to exclude pixels outside the watershed",
-                            "bands": {1: {"type": "number", "units": u.none}}
-                        },
-                        "filled_dem.tif": spec_utils.FILLED_DEM,
-                        "slope.tif": spec_utils.SLOPE,
-                        "subsurface_export_n.pickle": {
-                            "about": "Pickled zonal statistics of nitrogen subsurface export"
-                        },
-                        "subsurface_load_n.pickle": {
-                            "about": "Pickled zonal statistics of nitrogen subsurface load"
-                        },
-                        "surface_export_n.pickle": {
-                            "about": "Pickled zonal statistics of nitrogen surface export"
-                        },
-                        "surface_export_p.pickle": {
-                            "about": "Pickled zonal statistics of phosphorus surface export"
-                        },
-                        "surface_load_n.pickle": {
-                            "about": "Pickled zonal statistics of nitrogen surface load"
-                        },
-                        "surface_load_p.pickle": {
-                            "about": "Pickled zonal statistics of phosphorus surface load"
-                        },
-                        "total_export_n.pickle": {
-                            "about": "Pickled zonal statistics of total nitrogen export"
-                        },
-                        "taskgraph.db": {}
-                    }
+                "aligned_dem.tif": {
+                    "about": "Copy of the DEM clipped to the extent of the other inputs",
+                    "bands": {1: {"type": "number", "units": u.meter}}
+                },
+                "aligned_lulc.tif": {
+                    "about": (
+                        "Copy of the LULC clipped to the extent of the other inputs "
+                        "and reprojected to the DEM projection"),
+                    "bands": {1: {"type": "integer"}}
+                },
+                "aligned_runoff_proxy.tif": {
+                    "about": (
+                        "Copy of the runoff proxy clipped to the extent of the other inputs "
+                        "and reprojected to the DEM projection"),
+                    "bands": {1: {"type": "number", "units": u.none}}
+                },
+                "masked_dem.tif": {
+                    "about": "DEM input masked to exclude pixels outside the watershed",
+                    "bands": {1: {"type": "number", "units": u.meter}}
+                },
+                "masked_lulc.tif": {
+                    "about": "LULC input masked to exclude pixels outside the watershed",
+                    "bands": {1: {"type": "integer"}}
+                },
+                "masked_runoff_proxy.tif": {
+                    "about": "Runoff proxy input masked to exclude pixels outside the watershed",
+                    "bands": {1: {"type": "number", "units": u.none}}
+                },
+                "filled_dem.tif": spec_utils.FILLED_DEM,
+                "slope.tif": spec_utils.SLOPE,
+                "subsurface_export_n.pickle": {
+                    "about": "Pickled zonal statistics of nitrogen subsurface export"
+                },
+                "subsurface_load_n.pickle": {
+                    "about": "Pickled zonal statistics of nitrogen subsurface load"
+                },
+                "surface_export_n.pickle": {
+                    "about": "Pickled zonal statistics of nitrogen surface export"
+                },
+                "surface_export_p.pickle": {
+                    "about": "Pickled zonal statistics of phosphorus surface export"
+                },
+                "surface_load_n.pickle": {
+                    "about": "Pickled zonal statistics of nitrogen surface load"
+                },
+                "surface_load_p.pickle": {
+                    "about": "Pickled zonal statistics of phosphorus surface load"
+                },
+                "total_export_n.pickle": {
+                    "about": "Pickled zonal statistics of total nitrogen export"
                 }
             }
-        }
+        },
+        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
     }
 }
 
@@ -476,9 +471,6 @@ _INTERMEDIATE_BASE_FILES = {
     'thresholded_slope_path': 'thresholded_slope.tif',
     'dist_to_channel_path': 'dist_to_channel.tif',
     'drainage_mask': 'what_drains_to_stream.tif',
-}
-
-_CACHE_BASE_FILES = {
     'filled_dem_path': 'filled_dem.tif',
     'aligned_dem_path': 'aligned_dem.tif',
     'masked_dem_path': 'masked_dem.tif',
@@ -610,8 +602,7 @@ def execute(args):
     output_dir = os.path.join(args['workspace_dir'])
     intermediate_output_dir = os.path.join(
         args['workspace_dir'], INTERMEDIATE_DIR_NAME)
-    cache_dir = os.path.join(intermediate_output_dir, 'cache_dir')
-    utils.make_directories([output_dir, intermediate_output_dir, cache_dir])
+    utils.make_directories([output_dir, intermediate_output_dir])
 
     try:
         n_workers = int(args['n_workers'])
@@ -621,13 +612,13 @@ def execute(args):
         # TypeError when n_workers is None.
         n_workers = -1  # Synchronous mode.
     task_graph = taskgraph.TaskGraph(
-        cache_dir, n_workers, reporting_interval=5.0)
+        os.path.join(args['workspace_dir'], 'taskgraph_cache'),
+        n_workers, reporting_interval=5.0)
 
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
     f_reg = utils.build_file_registry(
         [(_OUTPUT_BASE_FILES, output_dir),
-         (_INTERMEDIATE_BASE_FILES, intermediate_output_dir),
-         (_CACHE_BASE_FILES, cache_dir)], file_suffix)
+         (_INTERMEDIATE_BASE_FILES, intermediate_output_dir)], file_suffix)
 
     # Build up a list of nutrients to process based on what's checked on
     nutrients_to_process = []
@@ -720,7 +711,7 @@ def execute(args):
         func=pygeoprocessing.routing.fill_pits,
         args=(
             (f_reg['masked_dem_path'], 1), f_reg['filled_dem_path']),
-        kwargs={'working_dir': cache_dir},
+        kwargs={'working_dir': intermediate_output_dir},
         dependent_task_list=[align_raster_task],
         target_path_list=[f_reg['filled_dem_path']],
         task_name='fill pits')
@@ -729,7 +720,7 @@ def execute(args):
         func=pygeoprocessing.routing.flow_dir_mfd,
         args=(
             (f_reg['filled_dem_path'], 1), f_reg['flow_direction_path']),
-        kwargs={'working_dir': cache_dir},
+        kwargs={'working_dir': intermediate_output_dir},
         dependent_task_list=[fill_pits_task],
         target_path_list=[f_reg['flow_direction_path']],
         task_name='flow dir')

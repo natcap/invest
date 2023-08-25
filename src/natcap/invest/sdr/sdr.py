@@ -352,57 +352,52 @@ MODEL_SPEC = {
                         "times the thresholded slope (in eq. (74))"),
                     "bands": {1: {"type": "ratio"}}
                 },
-                "churn_dir_not_for_humans": {
-                    "type": "directory",
-                    "contents": {
-                        "aligned_dem.tif": {
-                            "about": gettext(
-                                "Copy of the input DEM, clipped to the extent "
-                                "of the other raster inputs."),
-                            "bands": {1: {
-                                "type": "number",
-                                "units": u.meter
-                            }}
-                        },
-                        "aligned_drainage.tif": {
-                            "about": gettext(
-                                "Copy of the input drainage map, clipped to "
-                                "the extent of the other raster inputs and "
-                                "aligned to the DEM."),
-                            "bands": {1: {"type": "integer"}},
-                        },
-                        "aligned_erodibility.tif": {
-                            "about": gettext(
-                                "Copy of the input erodibility map, clipped to "
-                                "the extent of the other raster inputs and "
-                                "aligned to the DEM."),
-                            "bands": {1: {
-                                "type": "number",
-                                "units": u.metric_ton*u.hectare*u.hour/(u.hectare*u.megajoule*u.millimeter)
-                            }}
-                        },
-                        "aligned_erosivity.tif": {
-                            "about": gettext(
-                                "Copy of the input erosivity map, clipped to "
-                                "the extent of the other raster inputs and "
-                                "aligned to the DEM."),
-                            "bands": {1: {
-                                "type": "number",
-                                "units": u.megajoule*u.millimeter/(u.hectare*u.hour*u.year)
-                            }}
-                        },
-                        "aligned_lulc.tif": {
-                            "about": gettext(
-                                "Copy of the input drainage map, clipped to "
-                                "the extent of the other raster inputs and "
-                                "aligned to the DEM."),
-                            "bands": {1: {"type": "integer"}},
-                        },
-                        "taskgraph.db": {}
-                    }
+                "aligned_dem.tif": {
+                    "about": gettext(
+                        "Copy of the input DEM, clipped to the extent "
+                        "of the other raster inputs."),
+                    "bands": {1: {
+                        "type": "number",
+                        "units": u.meter
+                    }}
+                },
+                "aligned_drainage.tif": {
+                    "about": gettext(
+                        "Copy of the input drainage map, clipped to "
+                        "the extent of the other raster inputs and "
+                        "aligned to the DEM."),
+                    "bands": {1: {"type": "integer"}},
+                },
+                "aligned_erodibility.tif": {
+                    "about": gettext(
+                        "Copy of the input erodibility map, clipped to "
+                        "the extent of the other raster inputs and "
+                        "aligned to the DEM."),
+                    "bands": {1: {
+                        "type": "number",
+                        "units": u.metric_ton*u.hectare*u.hour/(u.hectare*u.megajoule*u.millimeter)
+                    }}
+                },
+                "aligned_erosivity.tif": {
+                    "about": gettext(
+                        "Copy of the input erosivity map, clipped to "
+                        "the extent of the other raster inputs and "
+                        "aligned to the DEM."),
+                    "bands": {1: {
+                        "type": "number",
+                        "units": u.megajoule*u.millimeter/(u.hectare*u.hour*u.year)
+                    }}
+                },
+                "aligned_lulc.tif": {
+                    "about": gettext(
+                        "Copy of the input drainage map, clipped to "
+                        "the extent of the other raster inputs and "
+                        "aligned to the DEM."),
+                    "bands": {1: {"type": "integer"}},
                 }
             }
-        }
+        },
+        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
     }
 }
 
@@ -421,6 +416,11 @@ _OUTPUT_BASE_FILES = {
 INTERMEDIATE_DIR_NAME = 'intermediate_outputs'
 
 _INTERMEDIATE_BASE_FILES = {
+    'aligned_dem_path': 'aligned_dem.tif',
+    'aligned_drainage_path': 'aligned_drainage.tif',
+    'aligned_erodibility_path': 'aligned_erodibility.tif',
+    'aligned_erosivity_path': 'aligned_erosivity.tif',
+    'aligned_lulc_path': 'aligned_lulc.tif',
     'cp_factor_path': 'cp.tif',
     'd_dn_path': 'd_dn.tif',
     'd_up_path': 'd_up.tif',
@@ -444,13 +444,6 @@ _INTERMEDIATE_BASE_FILES = {
     'drainage_mask': 'what_drains_to_stream.tif',
 }
 
-_TMP_BASE_FILES = {
-    'aligned_dem_path': 'aligned_dem.tif',
-    'aligned_drainage_path': 'aligned_drainage.tif',
-    'aligned_erodibility_path': 'aligned_erodibility.tif',
-    'aligned_erosivity_path': 'aligned_erosivity.tif',
-    'aligned_lulc_path': 'aligned_lulc.tif',
-}
 
 # Target nodata is for general rasters that are positive, and _IC_NODATA are
 # for rasters that are any range
@@ -517,14 +510,11 @@ def execute(args):
     intermediate_output_dir = os.path.join(
         args['workspace_dir'], INTERMEDIATE_DIR_NAME)
     output_dir = os.path.join(args['workspace_dir'])
-    churn_dir = os.path.join(
-        intermediate_output_dir, 'churn_dir_not_for_humans')
-    utils.make_directories([output_dir, intermediate_output_dir, churn_dir])
+    utils.make_directories([output_dir, intermediate_output_dir])
 
     f_reg = utils.build_file_registry(
         [(_OUTPUT_BASE_FILES, output_dir),
-         (_INTERMEDIATE_BASE_FILES, intermediate_output_dir),
-         (_TMP_BASE_FILES, churn_dir)], file_suffix)
+         (_INTERMEDIATE_BASE_FILES, intermediate_output_dir)], file_suffix)
 
     try:
         n_workers = int(args['n_workers'])
@@ -534,7 +524,8 @@ def execute(args):
         # TypeError when n_workers is None.
         n_workers = -1  # Synchronous mode.
     task_graph = taskgraph.TaskGraph(
-        churn_dir, n_workers, reporting_interval=5.0)
+        os.path.join(output_dir, 'taskgraph_cache'),
+        n_workers, reporting_interval=5.0)
 
     base_list = []
     aligned_list = []

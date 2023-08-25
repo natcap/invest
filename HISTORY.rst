@@ -72,6 +72,10 @@ Unreleased Changes
       (`#1327 <https://github.com/natcap/invest/issues/1327>`_)
     * Improved the validation message that is returned when not all spatial
       inputs overlap (`#502 <https://github.com/natcap/invest/issues/502>`_)
+    * Standardized the name and location of the taskgraph cache directory for
+      all models. It is now called ``taskgraph_cache`` and located in the top
+      level of the workspace directory.
+      (`#1230 <https://github.com/natcap/invest/issues/1230>`_)
 * Workbench
     * Fixed a bug where sampledata downloads failed silently (and progress bar
       became innacurate) if the Workbench did not have write permission to
@@ -106,6 +110,8 @@ Unreleased Changes
       not exactly aligned with other raster inputs.
       (`#1312 <https://github.com/natcap/invest/issues/1312>`_)
 * NDR
+    * The contents of the output ``cache_dir`` have been consolidated into
+      ``intermediate_outputs``.
     * Fixed a bug where results were calculated incorrectly if the runoff proxy
       raster (or the DEM or LULC) had no nodata value
       (`#1005 <https://github.com/natcap/invest/issues/1005>`_)
@@ -134,6 +140,8 @@ Unreleased Changes
     * Fixed an issue with sediment deposition progress logging that was
       causing the "percent complete" indicator to not progress linearly.
       https://github.com/natcap/invest/issues/1262
+    * The contents of the output ``churn_dir_not_for_humans`` have been
+      consolidated into ``intermediate_outputs``.
 * Seasonal Water Yield
     * Fixed a bug where monthy quickflow nodata pixels were not being passed
       on to the total quickflow raster, which could result in negative values
@@ -153,10 +161,14 @@ Unreleased Changes
       where s_i / a_im > 100. This is done to avoid overflow errors when
       calculating edge cases where the result would round down to 0 anyway.
       (`#1318 <https://github.com/natcap/invest/issues/1318>`_)
+    * The contents of the output ``cache_dir`` have been consolidated into
+      ``intermediate_outputs``.
 * Urban Flood Risk
     * Fixed a bug where the model incorrectly raised an error if the
       biophysical table contained a row of all 0s.
       (`#1123 <https://github.com/natcap/invest/issues/1123>`_)
+    * The contents of the output ``temp_working_dir_not_for_humans`` have been
+      consolidated into ``intermediate_files``.
     * Biophysical table Workbench validation now warns if there is a missing
       curve number value.
       (`#1346 <https://github.com/natcap/invest/issues/1346>`_)

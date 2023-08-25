@@ -438,7 +438,7 @@ MODEL_SPEC = {
                 }
             }
         },
-        ".taskgraph": spec_utils.TASKGRAPH_DIR
+        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
     }
 }
 
@@ -497,7 +497,6 @@ def execute(args):
     intermediate_dir = os.path.join(args['workspace_dir'],
                                     'intermediate_outputs')
     output_dir = os.path.join(args['workspace_dir'], 'outputs')
-    taskgraph_working_dir = os.path.join(args['workspace_dir'], '.taskgraph')
     utils.make_directories([intermediate_dir, output_dir])
     suffix = utils.make_suffix_string(args, 'results_suffix')
 
@@ -527,7 +526,8 @@ def execute(args):
         # ValueError when n_workers is an empty string.
         # TypeError when n_workers is None.
         n_workers = -1  # single process mode.
-    graph = taskgraph.TaskGraph(taskgraph_working_dir, n_workers)
+    graph = taskgraph.TaskGraph(
+        os.path.join(args['workspace_dir'], 'taskgraph_cache'), n_workers)
 
     # parse the info table and get info dicts for habitats, stressors.
     habitats_info, stressors_info = _parse_info_table(args['info_table_path'])

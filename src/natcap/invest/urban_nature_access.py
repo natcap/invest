@@ -454,7 +454,6 @@ MODEL_SPEC = {
         'intermediate': {
             'type': 'directory',
             'contents': {
-                '_taskgraph_working_dir': spec_utils.TASKGRAPH_DIR,
                 "aligned_lulc.tif": {
                     "about": gettext(
                         "A copy of the user's land use land cover raster. "
@@ -599,10 +598,10 @@ MODEL_SPEC = {
                     "bands": {1: {"type": "number", "units": u.people}},
                     "created_if":
                         f"search_radius_mode == '{RADIUS_OPT_POP_GROUP}'",
-                },
-            },
-
-        }
+                }
+            }
+        },
+        'taskgraph_cache': spec_utils.TASKGRAPH_DIR,
     }
 }
 
@@ -707,7 +706,6 @@ def execute(args):
          (_INTERMEDIATE_BASE_FILES, intermediate_dir)],
         suffix)
 
-    work_token_dir = os.path.join(intermediate_dir, '_taskgraph_working_dir')
     try:
         n_workers = int(args['n_workers'])
     except (KeyError, ValueError, TypeError):
@@ -715,7 +713,8 @@ def execute(args):
         # ValueError when n_workers is an empty string.
         # TypeError when n_workers is None.
         n_workers = -1  # Synchronous execution
-    graph = taskgraph.TaskGraph(work_token_dir, n_workers)
+    graph = taskgraph.TaskGraph(
+        os.path.join(args['workspace_dir'], 'taskgraph_cache'), n_workers)
 
     kernel_creation_functions = {
         KERNEL_LABEL_DICHOTOMY: _kernel_dichotomy,
