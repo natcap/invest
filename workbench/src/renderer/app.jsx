@@ -13,6 +13,7 @@ import Spinner from 'react-bootstrap/Spinner';
 import Tooltip from 'react-bootstrap/Tooltip';
 import OverlayTrigger from 'react-bootstrap/OverlayTrigger';
 import { MdClose, MdHome } from 'react-icons/md';
+import { AiOutlineTrademarkCircle } from 'react-icons/ai';
 
 import HomeTab from './components/HomeTab';
 import InvestTab from './components/InvestTab';
@@ -305,6 +306,7 @@ export default class App extends React.Component {
                     InVEST
                   </Nav.Link>
                 </Navbar.Brand>
+                <AiOutlineTrademarkCircle className="rtm" />
               </Col>
               <Col className="navbar-middle">
                 <Nav
