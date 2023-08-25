@@ -81,11 +81,11 @@ MODEL_SPEC = {
                 'urban_nature': {
                     'type': 'ratio',
                     'about': (
-                        "The proportion (0-1) indicating how much of the land "
-                        "in this LULC type is urban nature. "
-                        "0 indicates no area this LULC type is urban nature, "
-                        "1 indicates that this LULC type is entirely urban "
-                        "nature."
+                        "The proportion (0-1) indicating the naturalness of "
+                        "the land types. 0 indicates the naturalness level of "
+                        "this LULC type is lowest (0% nature), while 1 "
+                        "indicates that of this LULC type is the highest "
+                        "(100% nature)"
                     ),
                 },
                 'search_radius_m': {
