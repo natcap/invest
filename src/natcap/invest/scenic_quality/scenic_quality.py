@@ -20,7 +20,6 @@ from .. import gettext
 from .. import spec_utils
 from .. import utils
 from .. import validation
-from ..model_metadata import MODEL_METADATA
 from ..unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
@@ -48,9 +47,11 @@ _INTERMEDIATE_BASE_FILES = {
 }
 
 MODEL_SPEC = {
-    "model_name": MODEL_METADATA["scenic_quality"].model_title,
-    "pyname": MODEL_METADATA["scenic_quality"].pyname,
-    "userguide": MODEL_METADATA["scenic_quality"].userguide,
+    "model_id": "scenic_quality",
+    "model_name": gettext("Scenic Quality"),
+    "pyname": "natcap.invest.scenic_quality.scenic_quality",
+    "userguide": "scenic_quality.html",
+    "aliases": ("sq",),
     "args_with_spatial_overlap": {
         "spatial_keys": ["aoi_path", "structure_path", "dem_path"],
         "different_projections_ok": True,

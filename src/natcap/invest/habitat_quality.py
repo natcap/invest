@@ -9,7 +9,6 @@ from osgeo import gdal
 import pygeoprocessing
 import taskgraph
 
-from .model_metadata import MODEL_METADATA
 from . import spec_utils
 from . import utils
 from . import validation
@@ -31,9 +30,11 @@ MISSING_THREAT_RASTER_MSG = gettext(
 DUPLICATE_PATHS_MSG = gettext("Threat paths must be unique. Duplicates: ")
 
 MODEL_SPEC = {
-    "model_name": MODEL_METADATA["habitat_quality"].model_title,
-    "pyname": MODEL_METADATA["habitat_quality"].pyname,
-    "userguide": MODEL_METADATA["habitat_quality"].userguide,
+    "model_id": "habitat_quality",
+    "model_name": gettext("Habitat Quality"),
+    "pyname": "natcap.invest.habitat_quality",
+    "userguide": "habitat_quality.html",
+    "aliases": ("hq",),
     "args_with_spatial_overlap": {
         "spatial_keys": [
             "lulc_cur_path", "lulc_fut_path", "lulc_bas_path",

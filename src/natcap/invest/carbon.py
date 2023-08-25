@@ -15,7 +15,6 @@ from . import validation
 from . import utils
 from . import spec_utils
 from .unit_registry import u
-from .model_metadata import MODEL_METADATA
 from . import gettext
 
 LOGGER = logging.getLogger(__name__)
@@ -42,9 +41,11 @@ CARBON_OUTPUTS = {
 }
 
 MODEL_SPEC = {
-    "model_name": MODEL_METADATA["carbon"].model_title,
-    "pyname": MODEL_METADATA["carbon"].pyname,
-    "userguide": MODEL_METADATA["carbon"].userguide,
+    "model_id": "carbon",
+    "model_name": gettext("Carbon Storage and Sequestration"),
+    "pyname": "natcap.invest.carbon",
+    "userguide": "carbonstorage.html",
+    "aliases": (),
     "args_with_spatial_overlap": {
         "spatial_keys": ["lulc_cur_path", "lulc_fut_path", "lulc_redd_path"],
     },

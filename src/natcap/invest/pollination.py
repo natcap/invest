@@ -17,15 +17,16 @@ from . import gettext
 from . import spec_utils
 from . import utils
 from . import validation
-from .model_metadata import MODEL_METADATA
 from .unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
 
 MODEL_SPEC = {
-    "model_name": MODEL_METADATA["pollination"].model_title,
-    "pyname": MODEL_METADATA["pollination"].pyname,
-    "userguide": MODEL_METADATA["pollination"].userguide,
+    "model_id": "pollination",
+    "model_name": gettext("Crop Pollination"),
+    "pyname": "natcap.invest.pollination",
+    "userguide": "croppollination.html",
+    "aliases": (),
     "args": {
         "workspace_dir": spec_utils.WORKSPACE,
         "results_suffix": spec_utils.SUFFIX,

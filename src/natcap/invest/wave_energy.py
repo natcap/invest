@@ -21,7 +21,6 @@ from . import utils
 from . import spec_utils
 from .unit_registry import u
 from . import validation
-from .model_metadata import MODEL_METADATA
 from . import gettext
 
 
@@ -132,9 +131,11 @@ CAPTURED_WEM_FIELDS = {
 }
 
 MODEL_SPEC = {
-    "model_name": MODEL_METADATA["wave_energy"].model_title,
-    "pyname": MODEL_METADATA["wave_energy"].pyname,
-    "userguide": MODEL_METADATA["wave_energy"].userguide,
+    "model_id": "wave_energy",
+    "model_name": gettext("Wave Energy Production"),
+    "pyname": "natcap.invest.wave_energy",
+    "userguide": "wave_energy.html",
+    "aliases": (),
     "args": {
         "workspace_dir": spec_utils.WORKSPACE,
         "results_suffix": spec_utils.SUFFIX,

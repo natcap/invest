@@ -21,7 +21,6 @@ from . import gettext
 from . import spec_utils
 from . import utils
 from . import validation
-from .model_metadata import MODEL_METADATA
 from .unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
@@ -29,9 +28,11 @@ TARGET_NODATA = -1
 _LOGGING_PERIOD = 5
 
 MODEL_SPEC = {
-    "model_name": MODEL_METADATA["urban_cooling_model"].model_title,
-    "pyname": MODEL_METADATA["urban_cooling_model"].pyname,
-    "userguide": MODEL_METADATA["urban_cooling_model"].userguide,
+    "model_id": "urban_cooling_model",
+    "model_name": gettext("Urban Cooling"),
+    "pyname": "natcap.invest.urban_cooling_model",
+    "userguide": "urban_cooling_model.html",
+    "aliases": ("ucm",),
     "args_with_spatial_overlap": {
         "spatial_keys": ["lulc_raster_path", "ref_eto_raster_path",
                          "aoi_vector_path", "building_vector_path"],

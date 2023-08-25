@@ -18,16 +18,17 @@ from .. import gettext
 from .. import spec_utils
 from .. import utils
 from .. import validation
-from ..model_metadata import MODEL_METADATA
 from ..unit_registry import u
 from . import delineateit_core
 
 LOGGER = logging.getLogger(__name__)
 
 MODEL_SPEC = {
-    "model_name": MODEL_METADATA["delineateit"].model_title,
-    "pyname": MODEL_METADATA["delineateit"].pyname,
-    "userguide": MODEL_METADATA["delineateit"].userguide,
+    "model_id": "delineateit",
+    "model_name": gettext("DelineateIt"),
+    "pyname": "natcap.invest.delineateit.delineateit",
+    "userguide": "delineateit.html",
+    "aliases": (),
     "args_with_spatial_overlap": {
         "spatial_keys": ["dem_path", "outlet_vector_path"],
         "different_projections_ok": True,

@@ -12,7 +12,6 @@ from .. import gettext
 from .. import spec_utils
 from .. import utils
 from .. import validation
-from ..model_metadata import MODEL_METADATA
 from ..unit_registry import u
 from . import coastal_blue_carbon
 
@@ -22,9 +21,11 @@ BIOPHYSICAL_COLUMNS_SPEC = coastal_blue_carbon.MODEL_SPEC[
     'args']['biophysical_table_path']['columns']
 
 MODEL_SPEC = {
-    "model_name": MODEL_METADATA["coastal_blue_carbon_preprocessor"].model_title,
-    "pyname": MODEL_METADATA["coastal_blue_carbon_preprocessor"].pyname,
-    "userguide": MODEL_METADATA["coastal_blue_carbon_preprocessor"].userguide,
+    "model_id": "coastal_blue_carbon_preprocessor",
+    "model_name": gettext("Coastal Blue Carbon Preprocessor"),
+    "pyname": "natcap.invest.coastal_blue_carbon.preprocessor",
+    "userguide": "coastal_blue_carbon.html",
+    "aliases": ("cbc_pre",),
     "args": {
         "workspace_dir": spec_utils.WORKSPACE,
         "results_suffix": spec_utils.SUFFIX,

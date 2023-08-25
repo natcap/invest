@@ -21,16 +21,17 @@ from .. import gettext
 from .. import spec_utils
 from .. import utils
 from .. import validation
-from ..model_metadata import MODEL_METADATA
 from ..unit_registry import u
 from . import sdr_core
 
 LOGGER = logging.getLogger(__name__)
 
 MODEL_SPEC = {
-    "model_name": MODEL_METADATA["sdr"].model_title,
-    "pyname": MODEL_METADATA["sdr"].pyname,
-    "userguide": MODEL_METADATA["sdr"].userguide,
+    "model_id": "sdr",
+    "model_name": gettext("Sediment Delivery Ratio"),
+    "pyname": "natcap.invest.sdr.sdr",
+    "userguide": "sdr.html",
+    "aliases": (),
     "args_with_spatial_overlap": {
         "spatial_keys": ["dem_path", "erosivity_path", "erodibility_path",
                          "lulc_path", "drainage_path", "watersheds_path", ],

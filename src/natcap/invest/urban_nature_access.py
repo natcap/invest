@@ -22,7 +22,6 @@ from . import gettext
 from . import spec_utils
 from . import utils
 from . import validation
-from .model_metadata import MODEL_METADATA
 from .ndr import ndr
 from .spec_utils import u
 
@@ -41,9 +40,11 @@ RADIUS_OPT_POP_GROUP = 'radius per population group'
 POP_FIELD_REGEX = '^pop_'
 ID_FIELDNAME = 'adm_unit_id'
 MODEL_SPEC = {
-    'model_name': MODEL_METADATA['urban_nature_access'].model_title,
-    'pyname': MODEL_METADATA['urban_nature_access'].pyname,
-    'userguide': MODEL_METADATA['urban_nature_access'].userguide,
+    'model_id': 'urban_nature_access',
+    'model_name': gettext('Urban Nature Access'),
+    'pyname': 'natcap.invest.urban_nature_access',
+    'userguide': 'urban_nature_access.html',
+    'aliases': ('una',),
     'args_with_spatial_overlap': {
         'spatial_keys': [
             'lulc_raster_path', 'population_raster_path',

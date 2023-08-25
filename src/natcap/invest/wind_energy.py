@@ -26,7 +26,6 @@ from . import utils
 from . import spec_utils
 from .unit_registry import u
 from . import validation
-from .model_metadata import MODEL_METADATA
 from . import gettext
 
 
@@ -96,12 +95,14 @@ OUTPUT_WIND_DATA_FIELDS = {
 }
 
 MODEL_SPEC = {
-    "model_name": MODEL_METADATA["wind_energy"].model_title,
-    "pyname": MODEL_METADATA["wind_energy"].pyname,
-    "userguide": MODEL_METADATA["wind_energy"].userguide,
+    "model_id": "wind_energy",
+    "model_name": gettext("Wind Energy Production"),
+    "pyname": "natcap.invest.wind_energy",
+    "userguide": "wind_energy.html",
+    "aliases": (),
     "args_with_spatial_overlap": {
-        "spatial_keys": ['aoi_vector_path', 'bathymetry_path',
-                         'land_polygon_vector_path'],
+        "spatial_keys": ["aoi_vector_path", "bathymetry_path",
+                         "land_polygon_vector_path"],
         "different_projections_ok": True,
     },
     "args": {

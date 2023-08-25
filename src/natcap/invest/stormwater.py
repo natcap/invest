@@ -13,8 +13,7 @@ from osgeo import osr
 from . import gettext
 from . import spec_utils
 from . import utils
-from . import validation
-from .model_metadata import MODEL_METADATA
+from . import validatio
 from .unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
@@ -26,9 +25,11 @@ UINT16_NODATA = 65535
 NONINTEGER_SOILS_RASTER_MESSAGE = 'Soil group raster data type must be integer'
 
 MODEL_SPEC = {
-    "model_name": MODEL_METADATA["stormwater"].model_title,
-    "pyname": MODEL_METADATA["stormwater"].pyname,
-    "userguide": MODEL_METADATA["stormwater"].userguide,
+    "model_id": "stormwater",
+    "model_name": gettext("Urban Stormwater Retention"),
+    "pyname": "natcap.invest.stormwater",
+    "userguide": "stormwater.html",
+    "aliases": (),
     "args_with_spatial_overlap": {
         "spatial_keys": ["lulc_path", "soil_group_path", "precipitation_path",
                          "road_centerlines_path", "aggregate_areas_path"],

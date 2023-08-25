@@ -13,7 +13,6 @@ from .unit_registry import u
 from . import spec_utils
 from . import utils
 from . import validation
-from .model_metadata import MODEL_METADATA
 from . import gettext
 
 
@@ -68,9 +67,11 @@ NUTRIENTS = [
 ]
 
 MODEL_SPEC = {
-    "model_name": MODEL_METADATA["crop_production_regression"].model_title,
-    "pyname": MODEL_METADATA["crop_production_regression"].pyname,
-    "userguide": MODEL_METADATA["crop_production_regression"].userguide,
+    "model_id": "crop_production_regression",
+    "model_name": gettext("Crop Production: Regression"),
+    "pyname": "natcap.invest.crop_production_regression",
+    "userguide": "crop_production.html",
+    "aliases": ("cpr",),
     "args_with_spatial_overlap": {
         "spatial_keys": ["landcover_raster_path", "aggregate_polygon_path"],
         "different_projections_ok": True,

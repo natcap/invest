@@ -10,7 +10,6 @@ from . import gettext
 from . import spec_utils
 from . import utils
 from . import validation
-from .model_metadata import MODEL_METADATA
 from .unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
@@ -18,9 +17,11 @@ LOGGER = logging.getLogger(__name__)
 INVALID_BAND_INDEX_MSG = gettext('Must be between 1 and {maximum}')
 
 MODEL_SPEC = {
-    "model_name": MODEL_METADATA["routedem"].model_title,
-    "pyname": MODEL_METADATA["routedem"].pyname,
-    "userguide": MODEL_METADATA["routedem"].userguide,
+    "model_id": "routedem",
+    "model_name": gettext("RouteDEM"),
+    "pyname": "natcap.invest.routedem",
+    "userguide": "routedem.html",
+    "aliases": (),
     "args": {
         "workspace_dir": spec_utils.WORKSPACE,
         "results_suffix": spec_utils.SUFFIX,

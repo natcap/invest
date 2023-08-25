@@ -17,7 +17,6 @@ from .. import gettext
 from .. import spec_utils
 from .. import utils
 from .. import validation
-from ..model_metadata import MODEL_METADATA
 from ..unit_registry import u
 from . import seasonal_water_yield_core
 
@@ -30,9 +29,11 @@ MONTH_ID_TO_LABEL = [
     'nov', 'dec']
 
 MODEL_SPEC = {
-    "model_name": MODEL_METADATA["seasonal_water_yield"].model_title,
-    "pyname": MODEL_METADATA["seasonal_water_yield"].pyname,
-    "userguide": MODEL_METADATA["seasonal_water_yield"].userguide,
+    "model_id": "seasonal_water_yield",
+    "model_name": gettext("Seasonal Water Yield"),
+    "pyname": "natcap.invest.seasonal_water_yield.seasonal_water_yield",
+    "userguide": "seasonal_water_yield.html",
+    "aliases": ("swy",),
     "args_with_spatial_overlap": {
         "spatial_keys": ["dem_raster_path", "lulc_raster_path",
                          "soil_group_path", "aoi_path", "l_path",

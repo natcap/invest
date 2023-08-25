@@ -15,7 +15,6 @@ from .. import gettext
 from .. import spec_utils
 from .. import utils
 from .. import validation
-from ..model_metadata import MODEL_METADATA
 from ..sdr import sdr
 from ..unit_registry import u
 from . import ndr_core
@@ -25,9 +24,11 @@ LOGGER = logging.getLogger(__name__)
 MISSING_NUTRIENT_MSG = gettext('Either calc_n or calc_p must be True')
 
 MODEL_SPEC = {
-    "model_name": MODEL_METADATA["ndr"].model_title,
-    "pyname": MODEL_METADATA["ndr"].pyname,
-    "userguide": MODEL_METADATA["ndr"].userguide,
+    "model_id": "ndr",
+    "model_name": gettext("Nutrient Delivery Ratio"),
+    "pyname": "natcap.invest.ndr.ndr",
+    "userguide": "ndr.html",
+    "aliases": (),
     "args_with_spatial_overlap": {
         "spatial_keys": ["dem_path", "lulc_path", "runoff_proxy_path",
                          "watersheds_path"],

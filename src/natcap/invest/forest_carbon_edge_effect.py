@@ -21,7 +21,6 @@ from . import gettext
 from . import spec_utils
 from . import utils
 from . import validation
-from .model_metadata import MODEL_METADATA
 from .unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
@@ -33,9 +32,11 @@ DISTANCE_UPPER_BOUND = 500e3
 NODATA_VALUE = -1
 
 MODEL_SPEC = {
-    "model_name": MODEL_METADATA["forest_carbon_edge_effect"].model_title,
-    "pyname": MODEL_METADATA["forest_carbon_edge_effect"].pyname,
-    "userguide": MODEL_METADATA["forest_carbon_edge_effect"].userguide,
+    "model_id": "forest_carbon_edge_effect",
+    "model_name": gettext("Forest Carbon Edge Effect"),
+    "pyname": "natcap.invest.forest_carbon_edge_effect",
+    "userguide": "carbon_edge.html",
+    "aliases": ("fc",),
     "args_with_spatial_overlap": {
         "spatial_keys": ["aoi_vector_path", "lulc_raster_path"],
     },

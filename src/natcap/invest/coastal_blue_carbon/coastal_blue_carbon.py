@@ -107,7 +107,6 @@ from .. import utils
 from .. import spec_utils
 from ..unit_registry import u
 from .. import validation
-from ..model_metadata import MODEL_METADATA
 from .. import gettext
 
 
@@ -162,9 +161,11 @@ TASKGRAPH_CACHE_DIR_NAME = 'task_cache'
 OUTPUT_DIR_NAME = 'output'
 
 MODEL_SPEC = {
-    "model_name": MODEL_METADATA["coastal_blue_carbon"].model_title,
-    "pyname": MODEL_METADATA["coastal_blue_carbon"].pyname,
-    "userguide": MODEL_METADATA["coastal_blue_carbon"].userguide,
+    "model_id": "coastal_blue_carbon",
+    "model_name": gettext("Coastal Blue Carbon"),
+    "pyname": "natcap.invest.coastal_blue_carbon.coastal_blue_carbon",
+    "userguide": "coastal_blue_carbon.html",
+    "aliases": ("cbc",),
     "args": {
         "workspace_dir": spec_utils.WORKSPACE,
         "results_suffix": spec_utils.SUFFIX,

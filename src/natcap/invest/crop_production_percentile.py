@@ -15,7 +15,6 @@ from . import utils
 from . import spec_utils
 from .unit_registry import u
 from . import validation
-from .model_metadata import MODEL_METADATA
 from . import gettext
 from .crop_production_regression import NUTRIENTS
 
@@ -104,9 +103,11 @@ nutrient_units = {
 }
 
 MODEL_SPEC = {
-    "model_name": MODEL_METADATA["crop_production_percentile"].model_title,
-    "pyname": MODEL_METADATA["crop_production_percentile"].pyname,
-    "userguide": MODEL_METADATA["crop_production_percentile"].userguide,
+    "model_id": "crop_production_percentile",
+    "model_name": gettext("Crop Production: Percentile"),
+    "pyname": "natcap.invest.crop_production_percentile",
+    "userguide": "crop_production.html",
+    "aliases": ("cpp",),
     "args_with_spatial_overlap": {
         "spatial_keys": [
             "landcover_raster_path",
