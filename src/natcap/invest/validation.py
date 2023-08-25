@@ -56,7 +56,8 @@ MESSAGES = {
     'NOT_AN_INTEGER': gettext('Value "{value}" does not represent an integer'),
     'NOT_BOOLEAN': gettext("Value must be either True or False, not {value}"),
     'NO_PROJECTION': gettext('Spatial file {filepath} has no projection'),
-    'BBOX_NOT_INTERSECT': gettext("Bounding boxes do not intersect: {bboxes}"),
+    'BBOX_NOT_INTERSECT': gettext('Not all of the spatial layers overlap each '
+        'other. All bounding boxes must intersect: {bboxes}'),
     'NEED_PERMISSION': gettext('You must have {permission} access to this file'),
 }
 

@@ -85,7 +85,8 @@ def _build_model_args(workspace):
             6,0,100
             7,1,100
             8,0,100
-            9,1,100"""))
+            9,1,100
+            """))
 
     admin_geom = [
         shapely.geometry.box(
@@ -342,7 +343,7 @@ class UNATests(unittest.TestCase):
         from natcap.invest import urban_nature_access
 
         nodata = urban_nature_access.FLOAT32_NODATA
-        urban_nature_supply = numpy.array([
+        urban_nature_supply_percapita = numpy.array([
             [nodata, 100.5],
             [75, 100]], dtype=numpy.float32)
         urban_nature_demand = 50
@@ -353,7 +354,7 @@ class UNATests(unittest.TestCase):
 
         urban_nature_budget = (
             urban_nature_access._urban_nature_balance_percapita_op(
-                urban_nature_supply, urban_nature_demand))
+                urban_nature_supply_percapita, urban_nature_demand))
         expected_urban_nature_budget = numpy.array([
             [nodata, 50.5],
             [25, 50]], dtype=numpy.float32)
@@ -480,6 +481,16 @@ class UNATests(unittest.TestCase):
         admin_vector = None
         admin_layer = None
 
+        accessible_urban_nature_array = pygeoprocessing.raster_to_numpy_array(
+            os.path.join(args['workspace_dir'], 'output',
+                         'accessible_urban_nature_suffix.tif'))
+        valid_mask = ~utils.array_equals_nodata(
+            accessible_urban_nature_array, urban_nature_access.FLOAT32_NODATA)
+        valid_pixels = accessible_urban_nature_array[valid_mask]
+        self.assertAlmostEqual(numpy.sum(valid_pixels), 6221004.41259766)
+        self.assertAlmostEqual(numpy.min(valid_pixels), 1171.7352294921875)
+        self.assertAlmostEqual(numpy.max(valid_pixels), 11898.0712890625)
+
     def test_split_urban_nature(self):
         from natcap.invest import urban_nature_access
 
@@ -531,6 +542,23 @@ class UNATests(unittest.TestCase):
 
         admin_vector = None
         admin_layer = None
+
+        output_dir = os.path.join(args['workspace_dir'], 'output')
+        self._assert_urban_nature(os.path.join(
+            output_dir, 'accessible_urban_nature_lucode_1_suffix.tif'),
+            72000.0, 0.0, 900.0)
+        self._assert_urban_nature(os.path.join(
+            output_dir, 'accessible_urban_nature_lucode_3_suffix.tif'),
+            1034934.9864730835, 0.0, 4431.1650390625)
+        self._assert_urban_nature(os.path.join(
+            output_dir, 'accessible_urban_nature_lucode_5_suffix.tif'),
+            2837622.9519348145, 0.0, 8136.6884765625)
+        self._assert_urban_nature(os.path.join(
+            output_dir, 'accessible_urban_nature_lucode_7_suffix.tif'),
+            8112734.805541992, 2019.2935791015625, 17729.431640625)
+        self._assert_urban_nature(os.path.join(
+            output_dir, 'accessible_urban_nature_lucode_9_suffix.tif'),
+            7744116.974121094, 1567.57958984375, 12863.4619140625)
 
     def test_split_population(self):
         """UNA: test split population optional module.
@@ -602,6 +630,36 @@ class UNATests(unittest.TestCase):
                 rtol=1e-6
             )
 
+    def _assert_urban_nature(self, path, sum_value, min_value, max_value):
+        """Compare a raster's sum, min and max to given values.
+
+        The raster is assumed to be an accessible urban nature raster.
+
+        Args:
+            path (str): The path to an urban nature raster.
+            sum_value (float): The expected sum of the raster.
+            min_value (float): The expected min of the raster.
+            max_value (float): The expected max of the raster.
+
+        Returns:
+            ``None``
+
+        Raises:
+            AssertionError: When the raster's sum, min or max values are not
+            numerically close to the expected values.
+        """
+        from natcap.invest import urban_nature_access
+
+        accessible_urban_nature_array = (
+            pygeoprocessing.raster_to_numpy_array(path))
+        valid_mask = ~utils.array_equals_nodata(
+            accessible_urban_nature_array,
+            urban_nature_access.FLOAT32_NODATA)
+        valid_pixels = accessible_urban_nature_array[valid_mask]
+        self.assertAlmostEqual(numpy.sum(valid_pixels), sum_value)
+        self.assertAlmostEqual(numpy.min(valid_pixels), min_value)
+        self.assertAlmostEqual(numpy.max(valid_pixels), max_value)
+
     def test_radii_by_pop_group(self):
         """UNA: Test defining radii by population group."""
         from natcap.invest import urban_nature_access
@@ -666,11 +724,19 @@ class UNATests(unittest.TestCase):
             self.assertAlmostEqual(
                 expected_value, summary_feature.GetField(fieldname))
 
+        output_dir = os.path.join(args['workspace_dir'], 'output')
+        self._assert_urban_nature(os.path.join(
+            output_dir, 'accessible_urban_nature_to_pop_male.tif'),
+            6221004.412597656, 1171.7352294921875, 11898.0712890625)
+        self._assert_urban_nature(os.path.join(
+            output_dir, 'accessible_urban_nature_to_pop_female.tif'),
+            6221004.412597656, 1171.7352294921875, 11898.0712890625)
+
     def test_modes_same_radii_same_results(self):
         """UNA: all modes have same results when consistent radii.
 
         Although the different modes have different ways of defining their
-        search radii, the urban_nature_supply raster should be numerically
+        search radii, the urban_nature_supply_percapita raster should be numerically
         equivalent if they all use the same search radii.
 
         This is a good gut-check of basic model behavior across modes.
@@ -772,16 +838,19 @@ class UNATests(unittest.TestCase):
 
         uniform_radius_supply = pygeoprocessing.raster_to_numpy_array(
             os.path.join(uniform_args['workspace_dir'], 'output',
-                         'urban_nature_supply_uniform.tif'))
-        split_urban_nature_supply = pygeoprocessing.raster_to_numpy_array(
-            os.path.join(split_urban_nature_args['workspace_dir'], 'output',
-                         'urban_nature_supply_urban_nature.tif'))
+                         'urban_nature_supply_percapita_uniform.tif'))
+        split_urban_nature_supply_percapita = (
+            pygeoprocessing.raster_to_numpy_array(
+                os.path.join(
+                    split_urban_nature_args['workspace_dir'], 'output',
+                    'urban_nature_supply_percapita_urban_nature.tif')))
         split_pop_groups_supply = pygeoprocessing.raster_to_numpy_array(
             os.path.join(pop_group_args['workspace_dir'], 'output',
-                         'urban_nature_supply_popgroup.tif'))
+                         'urban_nature_supply_percapita_popgroup.tif'))
 
         numpy.testing.assert_allclose(
-            uniform_radius_supply, split_urban_nature_supply, rtol=1e-6)
+            uniform_radius_supply, split_urban_nature_supply_percapita,
+            rtol=1e-6)
         numpy.testing.assert_allclose(
             uniform_radius_supply, split_pop_groups_supply, rtol=1e-6)
 
@@ -888,9 +957,76 @@ class UNATests(unittest.TestCase):
         numpy.testing.assert_allclose(
             numpy.sum(weighted_sum_array[~nodata_pixels]), 1122.5)
 
+    def test_urban_nature_proportion(self):
+        """UNA: Run the model with urban nature proportion."""
+        from natcap.invest import urban_nature_access
+
+        args = _build_model_args(self.workspace_dir)
+        args['search_radius_mode'] = urban_nature_access.RADIUS_OPT_UNIFORM
+        args['search_radius'] = 1000
+        with open(args['lulc_attribute_table'], 'a') as attr_table:
+            attr_table.write("10,0.5,100\n")
+
+        # make sure our inputs validate
+        validation_results = urban_nature_access.validate(args)
+        self.assertEqual(validation_results, [])
+
+        urban_nature_access.execute(args)
+
+    def test_reclassify_urban_nature(self):
+        """UNA: Test for urban nature area reclassification."""
+        from natcap.invest import urban_nature_access
+        args = _build_model_args(self.workspace_dir)
+
+        # Rewrite the lulc attribute table to use proportions of urban nature.
+        with open(args['lulc_attribute_table'], 'w') as attr_table:
+            attr_table.write(textwrap.dedent(
+                """\
+                lucode,urban_nature,search_radius_m
+                0,0,100
+                1,0.1,100
+                2,0,100
+                3,0.3,100
+                4,0,100
+                5,0.5,100
+                6,0,100
+                7,0.7,100
+                8,0,100
+                9,0.9,100
+                """))
+
+        urban_nature_area_path = os.path.join(
+            self.workspace_dir, 'urban_nature_area.tif')
+
+        for limit_to_lucodes in (None, set([1, 3])):
+            urban_nature_access._reclassify_urban_nature_area(
+                args['lulc_raster_path'], args['lulc_attribute_table'],
+                urban_nature_area_path,
+                only_these_urban_nature_codes=limit_to_lucodes)
+
+            # The source lulc is randomized, so need to programmatically build
+            # up the expected array.
+            source_lulc_array = pygeoprocessing.raster_to_numpy_array(
+                args['lulc_raster_path'])
+            pixel_area = abs(_DEFAULT_PIXEL_SIZE[0] * _DEFAULT_PIXEL_SIZE[1])
+            expected_array = numpy.zeros(source_lulc_array.shape,
+                                         dtype=numpy.float32)
+            for i in range(1, 10, 2):
+                if limit_to_lucodes is not None:
+                    if i not in limit_to_lucodes:
+                        continue
+                factor = float(f"0.{i}")
+                expected_array[source_lulc_array == i] = factor * pixel_area
+
+            reclassified_array = pygeoprocessing.raster_to_numpy_array(
+                urban_nature_area_path)
+            numpy.testing.assert_array_almost_equal(
+                reclassified_array, expected_array)
+
     def test_validate(self):
         """UNA: Basic test for validation."""
         from natcap.invest import urban_nature_access
         args = _build_model_args(self.workspace_dir)
-        args['search_radius_mode'] = urban_nature_access.RADIUS_OPT_URBAN_NATURE
+        args['search_radius_mode'] = (
+            urban_nature_access.RADIUS_OPT_URBAN_NATURE)
         self.assertEqual(urban_nature_access.validate(args), [])

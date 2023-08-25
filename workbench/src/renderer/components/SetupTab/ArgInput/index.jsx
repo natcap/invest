@@ -30,7 +30,8 @@ const { ipcRenderer } = window.Workbench.electron;
  * @returns {string} - the filtered and formatted part of the message
  */
 function filterSpatialOverlapFeedback(message, filepath) {
-  const newPrefix = i18n.t('Bounding box does not intersect at least one other:');
+  const newPrefix = i18n.t(
+    'Not all of the spatial layers overlap each other. Bounding box:');
   const bbox = message.split(`${filepath}:`).pop().split('|')[0];
   const bboxFormatted = bbox.split(' ').map(
     (str) => str.padEnd(22, ' ')
@@ -167,7 +168,7 @@ export default function ArgInput(props) {
   // Messages with this pattern include validation feedback about
   // multiple inputs, but the whole message is repeated for each input.
   // It's more readable if filtered on the individual input.
-  const pattern = 'Bounding boxes do not intersect';
+  const pattern = 'Not all of the spatial layers overlap each other';
   if (validationMessage.startsWith(pattern)) {
     validationMessage = filterSpatialOverlapFeedback(
       validationMessage, value
@@ -362,7 +363,7 @@ function AboutModal(props) {
   // create link to users guide entry for this arg
   // anchor name is the arg name, with underscores replaced with hyphens
   const userguideURL = `
-    ${window.Workbench.USERGUIDE_PATH}/${i18n.language}/${userguide}#${argkey.replace(/_/g, '-')}`;
+    ${window.Workbench.USERGUIDE_PATH}/${window.Workbench.LANGUAGE}/${userguide}#${argkey.replace(/_/g, '-')}`;
   return (
     <React.Fragment>
       <Button

@@ -66,6 +66,7 @@ MODEL_SPEC = {
             "name": gettext("habitat stressor table"),
             "about": gettext("A table describing each habitat and stressor."),
             "type": "csv",
+            "index_col": "name",
             "columns": {
                 "name": {
                     "type": "freestyle_string",
@@ -1584,7 +1585,7 @@ def _align(raster_path_map, vector_path_map, target_pixel_size,
             layer = None
             vector = None
 
-            _create_raster_from_bounding_box(
+            pygeoprocessing.create_raster_from_bounding_box(
                 target_raster_path=target_raster_path,
                 target_bounding_box=target_bounding_box,
                 target_pixel_size=target_pixel_size,
@@ -1597,74 +1598,6 @@ def _align(raster_path_map, vector_path_map, target_pixel_size,
             pygeoprocessing.rasterize(
                 source_vector_path, target_raster_path,
                 burn_values=burn_values, option_list=rasterize_option_list)
-
-
-def _create_raster_from_bounding_box(
-        target_raster_path, target_bounding_box, target_pixel_size,
-        target_pixel_type, target_srs_wkt, target_nodata=None,
-        fill_value=None):
-    """Create a raster from a given bounding box.
-
-    Args:
-        target_raster_path (string): The path to where the new raster should be
-            created on disk.
-        target_bounding_box (tuple): a 4-element iterable of (minx, miny,
-            maxx, maxy) in projected units matching the SRS of
-            ``target_srs_wkt``.
-        target_pixel_size (tuple): A 2-element tuple of the (x, y) pixel size
-            of the target raster.  Elements are in units of the target SRS.
-        target_pixel_type (int): The GDAL GDT_* type of the target raster.
-        target_srs_wkt (string): The SRS of the target raster, in Well-Known
-            Text format.
-        target_nodata (float): If provided, the nodata value of the target
-            raster.
-        fill_value=None (number): If provided, the value that the target raster
-            should be filled with.
-
-    Returns:
-        ``None``
-    """
-    bbox_minx, bbox_miny, bbox_maxx, bbox_maxy = target_bounding_box
-
-    driver = gdal.GetDriverByName('GTiff')
-    n_bands = 1
-    n_cols = int(numpy.ceil(
-        abs((bbox_maxx - bbox_minx) / target_pixel_size[0])))
-    n_rows = int(numpy.ceil(
-        abs((bbox_maxy - bbox_miny) / target_pixel_size[1])))
-
-    raster = driver.Create(
-        target_raster_path, n_cols, n_rows, n_bands, target_pixel_type,
-        options=['TILED=YES', 'BIGTIFF=YES', 'COMPRESS=DEFLATE',
-                 'BLOCKXSIZE=256', 'BLOCKYSIZE=256'])
-    raster.SetProjection(target_srs_wkt)
-
-    # Set the transform based on the upper left corner and given pixel
-    # dimensions.  Bounding box is in format [minx, miny, maxx, maxy]
-    if target_pixel_size[0] < 0:
-        x_source = bbox_maxx
-    else:
-        x_source = bbox_minx
-    if target_pixel_size[1] < 0:
-        y_source = bbox_maxy
-    else:
-        y_source = bbox_miny
-    raster_transform = [
-        x_source, target_pixel_size[0], 0.0,
-        y_source, 0.0, target_pixel_size[1]]
-    raster.SetGeoTransform(raster_transform)
-
-    # Fill the band if requested.
-    band = raster.GetRasterBand(1)
-    if fill_value is not None:
-        band.Fill(fill_value)
-
-    # Set the nodata value.
-    if target_nodata is not None:
-        band.SetNoDataValue(float(target_nodata))
-
-    band = None
-    raster = None
 
 
 def _simplify(source_vector_path, tolerance, target_vector_path,
@@ -1841,12 +1774,15 @@ def _open_table_as_dataframe(table_path, **kwargs):
         excel_df = pandas.read_excel(table_path, **kwargs)
         excel_df.columns = excel_df.columns.str.lower()
         excel_df['path'] = excel_df['path'].apply(
-            lambda p: utils.expand_path(p, table_path))
+            lambda p: utils.expand_path(p, table_path)).astype('string')
+        excel_df['name'] = excel_df['name'].astype('string')
+        excel_df['type'] = excel_df['type'].astype('string')
+        excel_df['stressor buffer (meters)'] = excel_df['stressor buffer (meters)'].astype(float)
+        excel_df = excel_df.set_index('name')
         return excel_df
     else:
         return utils.read_csv_to_dataframe(
-            table_path, convert_vals_to_lower=False,
-            expand_path_cols=['path'], **kwargs)
+            table_path, MODEL_SPEC['args']['info_table_path'], **kwargs)
 
 
 def _parse_info_table(info_table_path):
@@ -1871,8 +1807,12 @@ def _parse_info_table(info_table_path):
     """
     info_table_path = os.path.abspath(info_table_path)
 
-    table = _open_table_as_dataframe(info_table_path)
-    table = table.set_index('name')
+    try:
+        table = _open_table_as_dataframe(info_table_path)
+    except ValueError as err:
+        if 'Index has duplicate keys' in str(err):
+            raise ValueError("Habitat and stressor names may not overlap.")
+
     table = table.rename(columns={'stressor buffer (meters)': 'buffer'})
 
     # Drop the buffer column from the habitats list; we don't need it.
@@ -1882,15 +1822,6 @@ def _parse_info_table(info_table_path):
     # Keep the buffer column in the stressors dataframe.
     stressors = table.loc[table['type'] == 'stressor'].drop(
         columns=['type']).to_dict(orient='index')
-
-    # habitats and stressors must be nonoverlapping sets.
-    repeated_habitats_stressors = set(
-        habitats.keys()).intersection(stressors.keys())
-    if repeated_habitats_stressors:
-        raise ValueError(
-            "Habitat and stressor names may not overlap. These names are "
-            "both habitats and stressors: "
-            f"{', '.join(repeated_habitats_stressors)}")
 
     return (habitats, stressors)
 

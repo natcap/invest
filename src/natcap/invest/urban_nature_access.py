@@ -1,5 +1,4 @@
 import collections
-import functools
 import logging
 import math
 import os
@@ -76,14 +75,17 @@ MODEL_SPEC = {
                 "corresponding values in this table.  Each row is a land use "
                 "land cover class."
             ),
+            'index_col': 'lucode',
             'columns': {
                 'lucode': spec_utils.LULC_TABLE_COLUMN,
                 'urban_nature': {
-                    'type': 'number',
-                    'units': u.none,
+                    'type': 'ratio',
                     'about': (
-                        "Binary code indicating whether the LULC type is "
-                        "(1) or is not (0) an urban nature type."
+                        "The proportion (0-1) indicating the naturalness of "
+                        "the land types. 0 indicates the naturalness level of "
+                        "this LULC type is lowest (0% nature), while 1 "
+                        "indicates that of this LULC type is the highest "
+                        "(100% nature)"
                     ),
                 },
                 'search_radius_m': {
@@ -256,9 +258,10 @@ MODEL_SPEC = {
             'name': 'population group radii table',
             'type': 'csv',
             'required': f'search_radius_mode == "{RADIUS_OPT_POP_GROUP}"',
+            'index_col': 'pop_group',
             'columns': {
                 "pop_group": {
-                    "type": "ratio",
+                    "type": "freestyle_string",
                     "required": False,
                     "about": gettext(
                         "The name of the population group. Names must match "
@@ -302,8 +305,9 @@ MODEL_SPEC = {
         'output': {
             "type": "directory",
             "contents": {
-                "urban_nature_supply.tif": {
-                    "about": "The calculated supply of urban nature.",
+                "urban_nature_supply_percapita.tif": {
+                    "about": (
+                        "The calculated supply per capita of urban nature."),
                     "bands": {1: {
                         "type": "number",
                         "units": u.m**2,
@@ -412,7 +416,39 @@ MODEL_SPEC = {
                     "bands": {1: {"type": "number", "units": u.m**2/u.person}},
                     "created_if":
                         f"search_radius_mode == '{RADIUS_OPT_POP_GROUP}'",
-                }
+                },
+
+                # when RADIUS_OPT_UNIFORM
+                "accessible_urban_nature.tif": {
+                    "about": gettext(
+                        "The area of greenspace available within the defined "
+                        "radius, weighted by the selected decay function."),
+                    "bands": {1: {"type": "number", "units": u.m**2}},
+                    "created_if":
+                        f"search_radius_mode == '{RADIUS_OPT_URBAN_NATURE}'",
+                },
+
+                # When RADIUS_OPT_URBAN_NATURE
+                "accessible_urban_nature_lucode_[LUCODE].tif": {
+                    "about": gettext(
+                        "The area of greenspace available within the radius "
+                        "associated with urban nature class LUCODE, weighted "
+                        "by the selected decay function."),
+                    "bands": {1: {"type": "number", "units": u.m**2}},
+                    "created_if":
+                        f"search_radius_mode == '{RADIUS_OPT_URBAN_NATURE}'",
+                },
+
+                # When RADIUS_OPT_POP_GROUP
+                "accessible_urban_nature_to_[POP_GROUP].tif": {
+                    "about": gettext(
+                        "The area of greenspace available within the radius "
+                        "associated with group POP_GROUP, weighted by the "
+                        "selected decay function."),
+                    "bands": {1: {"type": "number", "units": u.m**2}},
+                    "created_if":
+                        f"search_radius_mode == '{RADIUS_OPT_POP_GROUP}'",
+                },
             },
         },
         'intermediate': {
@@ -445,6 +481,7 @@ MODEL_SPEC = {
                     ),
                     "bands": {1: {'type': 'number', 'units': u.count}},
                 },
+
                 # when RADIUS_OPT_UNIFORM
                 "distance_weighted_population_within_[SEARCH_RADIUS].tif": {
                     "about": gettext(
@@ -484,27 +521,19 @@ MODEL_SPEC = {
                     "created_if":
                         f"search_radius_mode == '{RADIUS_OPT_URBAN_NATURE}'",
                 },
-                "urban_nature_supply_lucode_[LUCODE].tif": {
+                "urban_nature_supply_percapita_lucode_[LUCODE].tif": {
                     "about": gettext(
                         "The urban nature supplied to populations due to the "
                         "land use land cover code LUCODE"),
                     "bands": {1: {"type": "number", "units": u.m**2/u.person}},
                     "created_if":
-                        f"search_radius_mode == '{RADIUS_OPT_UNIFORM}'",
+                        f"search_radius_mode == '{RADIUS_OPT_URBAN_NATURE}'",
                 },
                 "urban_nature_population_ratio_lucode_[LUCODE].tif": {
                     "about": gettext(
                         "The calculated urban nature/population ratio for "
                         "the urban nature class represented by the land use "
                         "land cover code LUCODE."),
-                    "bands": {1: {"type": "number", "units": u.m**2/u.person}},
-                    "created_if":
-                        f"search_radius_mode == '{RADIUS_OPT_URBAN_NATURE}'",
-                },
-                "urban_nature_supply_lucode_[LUCODE].tif": {
-                    "about": gettext(
-                        "The urban nature supplied to populations due to "
-                        "the land use land cover class LUCODE."),
                     "bands": {1: {"type": "number", "units": u.m**2/u.person}},
                     "created_if":
                         f"search_radius_mode == '{RADIUS_OPT_URBAN_NATURE}'",
@@ -547,10 +576,10 @@ MODEL_SPEC = {
                     "created_if":
                         f"search_radius_mode == '{RADIUS_OPT_POP_GROUP}'",
                 },
-                "urban_nature_supply_to_[POP_GROUP].tif": {
+                "urban_nature_supply_percapita_to_[POP_GROUP].tif": {
                     "about": gettext(
-                        "The urban nature supply to population group "
-                        "POP_GROUP."),
+                        "The urban nature supply per capita to population "
+                        "group POP_GROUP."),
                     "bands": {1: {"type": "number", "units": u.m**2/u.person}},
                     "created_if":
                         f"search_radius_mode == '{RADIUS_OPT_POP_GROUP}'",
@@ -579,7 +608,7 @@ MODEL_SPEC = {
 
 
 _OUTPUT_BASE_FILES = {
-    'urban_nature_supply': 'urban_nature_supply.tif',
+    'urban_nature_supply_percapita': 'urban_nature_supply_percapita.tif',
     'admin_boundaries': 'admin_boundaries.gpkg',
     'urban_nature_balance_percapita': 'urban_nature_balance_percapita.tif',
     'urban_nature_balance_totalpop': 'urban_nature_balance_totalpop.tif',
@@ -620,9 +649,10 @@ def execute(args):
             CSV with the following columns:
 
             * ``lucode``: (required) the integer landcover code represented.
-            * ``urban_nature``: (required) ``0`` or ``1`` indicating whether
-              this landcover code is (``1``) or is not (``0``) an urban nature
-              pixel.
+            * ``urban_nature``: (required) a proportion (0-1) representing
+              how much of this landcover type is urban nature.  ``0``
+              indicates none of this type's area is urban nature, ``1``
+              indicates all of this type's area is urban nature.
             * ``search_radius_m``: (conditionally required) the search radius
               for this urban nature LULC class in meters. Required for all
               urban nature LULC codes if ``args['search_radius_mode'] ==
@@ -902,14 +932,16 @@ def execute(args):
                     aoi_reprojection_task, lulc_mask_task]
             )
 
-    attr_table = utils.read_csv_to_dataframe(args['lulc_attribute_table'])
+    attr_table = utils.read_csv_to_dataframe(
+        args['lulc_attribute_table'],
+        MODEL_SPEC['args']['lulc_attribute_table'])
     kernel_paths = {}  # search_radius, kernel path
     kernel_tasks = {}  # search_radius, kernel task
 
     if args['search_radius_mode'] == RADIUS_OPT_UNIFORM:
         search_radii = set([float(args['search_radius'])])
     elif args['search_radius_mode'] == RADIUS_OPT_URBAN_NATURE:
-        urban_nature_attrs = attr_table[attr_table['urban_nature'] == 1]
+        urban_nature_attrs = attr_table[attr_table['urban_nature'] > 0]
         try:
             search_radii = set(urban_nature_attrs['search_radius_m'].unique())
         except KeyError as missing_key:
@@ -918,16 +950,14 @@ def execute(args):
                 f"attribute table {args['lulc_attribute_table']}")
         # Build an iterable of plain tuples: (lucode, search_radius_m)
         lucode_to_search_radii = list(
-            urban_nature_attrs[['lucode', 'search_radius_m']].itertuples(
-                index=False, name=None))
+            urban_nature_attrs[['search_radius_m']].itertuples(name=None))
     elif args['search_radius_mode'] == RADIUS_OPT_POP_GROUP:
         pop_group_table = utils.read_csv_to_dataframe(
-            args['population_group_radii_table'])
+            args['population_group_radii_table'],
+            MODEL_SPEC['args']['population_group_radii_table'])
         search_radii = set(pop_group_table['search_radius_m'].unique())
         # Build a dict of {pop_group: search_radius_m}
-        search_radii_by_pop_group = dict(
-            pop_group_table[['pop_group', 'search_radius_m']].itertuples(
-                index=False, name=None))
+        search_radii_by_pop_group = pop_group_table['search_radius_m'].to_dict()
     else:
         valid_options = ', '.join(
             MODEL_SPEC['args']['search_radius_mode']['options'].keys())
@@ -989,6 +1019,21 @@ def execute(args):
             dependent_task_list=[lulc_mask_task]
         )
 
+        accessible_urban_nature_path = os.path.join(
+            output_dir, f'accessible_urban_nature{suffix}.tif')
+        _ = graph.add_task(
+            _convolve_and_set_lower_bound,
+            kwargs={
+                "signal_path_band": (urban_nature_pixels_path, 1),
+                "kernel_path_band": (kernel_paths[search_radius_m], 1),
+                "target_path": accessible_urban_nature_path,
+                "working_dir": intermediate_dir,
+            },
+            task_name='Accessible urban nature',
+            target_path_list=[accessible_urban_nature_path],
+            dependent_task_list=[urban_nature_reclassification_task]
+        )
+
         urban_nature_population_ratio_path = os.path.join(
             intermediate_dir,
             f'urban_nature_population_ratio{suffix}.tif')
@@ -1005,17 +1050,17 @@ def execute(args):
                 urban_nature_reclassification_task, decayed_population_task,
             ])
 
-        urban_nature_supply_task = graph.add_task(
+        urban_nature_supply_percapita_task = graph.add_task(
             _convolve_and_set_lower_bound,
             kwargs={
                 'signal_path_band': (
                     urban_nature_population_ratio_path, 1),
                 'kernel_path_band': (kernel_path, 1),
-                'target_path': file_registry['urban_nature_supply'],
+                'target_path': file_registry['urban_nature_supply_percapita'],
                 'working_dir': intermediate_dir,
             },
             task_name='2SFCA - urban nature supply',
-            target_path_list=[file_registry['urban_nature_supply']],
+            target_path_list=[file_registry['urban_nature_supply_percapita']],
             dependent_task_list=[
                 kernel_tasks[search_radius_m],
                 urban_nature_population_ratio_task])
@@ -1044,8 +1089,8 @@ def execute(args):
                 dependent_task_list=[
                     kernel_tasks[search_radius_m], population_mask_task])
 
-        partial_urban_nature_supply_paths = []
-        partial_urban_nature_supply_tasks = []
+        partial_urban_nature_supply_percapita_paths = []
+        partial_urban_nature_supply_percapita_tasks = []
         for lucode, search_radius_m in lucode_to_search_radii:
             urban_nature_pixels_path = os.path.join(
                 intermediate_dir,
@@ -1061,6 +1106,22 @@ def execute(args):
                 target_path_list=[urban_nature_pixels_path],
                 task_name=f'Identify urban nature areas with lucode {lucode}',
                 dependent_task_list=[lulc_mask_task]
+            )
+
+            accessible_urban_nature_path = os.path.join(
+                output_dir,
+                f'accessible_urban_nature_lucode_{lucode}{suffix}.tif')
+            _ = graph.add_task(
+                _convolve_and_set_lower_bound,
+                kwargs={
+                    "signal_path_band": (urban_nature_pixels_path, 1),
+                    "kernel_path_band": (kernel_paths[search_radius_m], 1),
+                    "target_path": accessible_urban_nature_path,
+                    "working_dir": intermediate_dir,
+                },
+                task_name='Accessible urban nature',
+                target_path_list=[accessible_urban_nature_path],
+                dependent_task_list=[urban_nature_reclassification_task]
             )
 
             urban_nature_population_ratio_path = os.path.join(
@@ -1080,35 +1141,37 @@ def execute(args):
                     decayed_population_tasks[search_radius_m],
                 ])
 
-            urban_nature_supply_path = os.path.join(
+            urban_nature_supply_percapita_path = os.path.join(
                 intermediate_dir,
-                f'urban_nature_supply_lucode_{lucode}{suffix}.tif')
-            partial_urban_nature_supply_paths.append(urban_nature_supply_path)
-            partial_urban_nature_supply_tasks.append(graph.add_task(
+                f'urban_nature_supply_percapita_lucode_{lucode}{suffix}.tif')
+            partial_urban_nature_supply_percapita_paths.append(
+                urban_nature_supply_percapita_path)
+            partial_urban_nature_supply_percapita_tasks.append(graph.add_task(
                 pygeoprocessing.convolve_2d,
                 kwargs={
                     'signal_path_band': (
                         urban_nature_population_ratio_path, 1),
                     'kernel_path_band': (kernel_paths[search_radius_m], 1),
-                    'target_path': urban_nature_supply_path,
+                    'target_path': urban_nature_supply_percapita_path,
                     'working_dir': intermediate_dir,
                 },
                 task_name=f'2SFCA - urban_nature supply for lucode {lucode}',
-                target_path_list=[urban_nature_supply_path],
+                target_path_list=[urban_nature_supply_percapita_path],
                 dependent_task_list=[
                     kernel_tasks[search_radius_m],
                     urban_nature_population_ratio_task]))
 
-        urban_nature_supply_task = graph.add_task(
+        urban_nature_supply_percapita_task = graph.add_task(
             ndr._sum_rasters,
             kwargs={
-                'raster_path_list': partial_urban_nature_supply_paths,
+                'raster_path_list': partial_urban_nature_supply_percapita_paths,
                 'target_nodata': FLOAT32_NODATA,
-                'target_result_path': file_registry['urban_nature_supply'],
+                'target_result_path':
+                    file_registry['urban_nature_supply_percapita'],
             },
             task_name='2SFCA - urban nature supply total',
-            target_path_list=[file_registry['urban_nature_supply']],
-            dependent_task_list=partial_urban_nature_supply_tasks
+            target_path_list=[file_registry['urban_nature_supply_percapita']],
+            dependent_task_list=partial_urban_nature_supply_percapita_tasks
         )
 
     # Search radius mode 3: search radii are defined per population group.
@@ -1133,6 +1196,23 @@ def execute(args):
         decayed_population_in_group_tasks = []
         for pop_group in split_population_fields:
             search_radius_m = search_radii_by_pop_group[pop_group]
+
+            accessible_urban_nature_path = os.path.join(
+                output_dir,
+                f'accessible_urban_nature_to_{pop_group}{suffix}.tif')
+            _ = graph.add_task(
+                _convolve_and_set_lower_bound,
+                kwargs={
+                    "signal_path_band": (urban_nature_pixels_path, 1),
+                    "kernel_path_band": (kernel_paths[search_radius_m], 1),
+                    "target_path": accessible_urban_nature_path,
+                    "working_dir": intermediate_dir,
+                },
+                task_name='Accessible urban nature',
+                target_path_list=[accessible_urban_nature_path],
+                dependent_task_list=[urban_nature_reclassification_task]
+            )
+
             decayed_population_in_group_path = os.path.join(
                 intermediate_dir,
                 f'distance_weighted_population_in_{pop_group}{suffix}.tif')
@@ -1185,42 +1265,36 @@ def execute(args):
                 sum_of_decayed_population_task,
             ])
 
-        # Create a dict of {pop_group: search_radius_m}
-        group_radii_table = utils.read_csv_to_dataframe(
-            args['population_group_radii_table'])
-        search_radii = dict(
-            group_radii_table[['pop_group', 'search_radius_m']].itertuples(
-                index=False, name=None))
-        urban_nature_supply_by_group_paths = {}
-        urban_nature_supply_by_group_tasks = []
+        urban_nature_supply_percapita_by_group_paths = {}
+        urban_nature_supply_percapita_by_group_tasks = []
         urban_nature_balance_totalpop_by_group_paths = {}
         urban_nature_balance_totalpop_by_group_tasks = []
         supply_population_paths = {'over': {}, 'under': {}}
         supply_population_tasks = {'over': {}, 'under': {}}
         for pop_group, proportional_pop_path in (
                 proportional_population_paths.items()):
-            search_radius_m = search_radii[pop_group]
-            urban_nature_supply_to_group_path = os.path.join(
+            search_radius_m = search_radii_by_pop_group[pop_group]
+            urban_nature_supply_percapita_to_group_path = os.path.join(
                 intermediate_dir,
-                f'urban_nature_supply_to_{pop_group}{suffix}.tif')
-            urban_nature_supply_by_group_paths[
-                pop_group] = urban_nature_supply_to_group_path
-            urban_nature_supply_by_group_task = graph.add_task(
+                f'urban_nature_supply_percapita_to_{pop_group}{suffix}.tif')
+            urban_nature_supply_percapita_by_group_paths[
+                pop_group] = urban_nature_supply_percapita_to_group_path
+            urban_nature_supply_percapita_by_group_task = graph.add_task(
                 _convolve_and_set_lower_bound,
                 kwargs={
                     'signal_path_band': (
                         file_registry['urban_nature_population_ratio'], 1),
                     'kernel_path_band': (kernel_paths[search_radius_m], 1),
-                    'target_path': urban_nature_supply_to_group_path,
+                    'target_path': urban_nature_supply_percapita_to_group_path,
                     'working_dir': intermediate_dir,
                 },
                 task_name=f'2SFCA - urban nature supply for {pop_group}',
-                target_path_list=[urban_nature_supply_to_group_path],
+                target_path_list=[urban_nature_supply_percapita_to_group_path],
                 dependent_task_list=[
                     kernel_tasks[search_radius_m],
                     urban_nature_population_ratio_task])
-            urban_nature_supply_by_group_tasks.append(
-                urban_nature_supply_by_group_task)
+            urban_nature_supply_percapita_by_group_tasks.append(
+                urban_nature_supply_percapita_by_group_task)
 
             # Calculate SUP_DEMi_cap for each population group.
             per_cap_urban_nature_balance_pop_group_path = os.path.join(
@@ -1230,7 +1304,7 @@ def execute(args):
                 pygeoprocessing.raster_calculator,
                 kwargs={
                     'base_raster_path_band_const_list': [
-                        (urban_nature_supply_to_group_path, 1),
+                        (urban_nature_supply_percapita_to_group_path, 1),
                         (float(args['urban_nature_demand']), 'raw')
                     ],
                     'local_op': _urban_nature_balance_percapita_op,
@@ -1244,7 +1318,7 @@ def execute(args):
                 target_path_list=[
                     per_cap_urban_nature_balance_pop_group_path],
                 dependent_task_list=[
-                    urban_nature_supply_by_group_task,
+                    urban_nature_supply_percapita_by_group_task,
                 ])
 
             urban_nature_balance_totalpop_by_group_path = os.path.join(
@@ -1303,21 +1377,21 @@ def execute(args):
                         proportional_population_tasks[pop_group],
                     ])
 
-        urban_nature_supply_task = graph.add_task(
+        urban_nature_supply_percapita_task = graph.add_task(
             _weighted_sum,
             kwargs={
                 'raster_path_list':
-                    [urban_nature_supply_by_group_paths[group] for group in
+                    [urban_nature_supply_percapita_by_group_paths[group] for group in
                      sorted(split_population_fields)],
                 'weight_raster_list':
                     [pop_group_proportion_paths[group] for group in
                      sorted(split_population_fields)],
-                'target_path': file_registry['urban_nature_supply'],
+                'target_path': file_registry['urban_nature_supply_percapita'],
             },
             task_name='2SFCA - urban nature supply total',
-            target_path_list=[file_registry['urban_nature_supply']],
+            target_path_list=[file_registry['urban_nature_supply_percapita']],
             dependent_task_list=[
-                *urban_nature_supply_by_group_tasks,
+                *urban_nature_supply_percapita_by_group_tasks,
                 *pop_group_proportion_tasks.values(),
             ])
 
@@ -1325,7 +1399,7 @@ def execute(args):
             pygeoprocessing.raster_calculator,
             kwargs={
                 'base_raster_path_band_const_list': [
-                    (file_registry['urban_nature_supply'], 1),
+                    (file_registry['urban_nature_supply_percapita'], 1),
                     (float(args['urban_nature_demand']), 'raw')
                 ],
                 'local_op': _urban_nature_balance_percapita_op,
@@ -1337,7 +1411,7 @@ def execute(args):
             task_name='Calculate per-capita urban nature balance',
             target_path_list=[file_registry['urban_nature_balance_percapita']],
             dependent_task_list=[
-                urban_nature_supply_task,
+                urban_nature_supply_percapita_task,
             ])
 
         urban_nature_balance_totalpop_task = graph.add_task(
@@ -1388,7 +1462,7 @@ def execute(args):
             pygeoprocessing.raster_calculator,
             kwargs={
                 'base_raster_path_band_const_list': [
-                    (file_registry['urban_nature_supply'], 1),
+                    (file_registry['urban_nature_supply_percapita'], 1),
                     (float(args['urban_nature_demand']), 'raw')
                 ],
                 'local_op': _urban_nature_balance_percapita_op,
@@ -1400,7 +1474,7 @@ def execute(args):
             task_name='Calculate per-capita urban nature balance',
             target_path_list=[file_registry['urban_nature_balance_percapita']],
             dependent_task_list=[
-                urban_nature_supply_task,
+                urban_nature_supply_percapita_task,
             ])
 
         # This is "SUP_DEMi" from the user's guide
@@ -1730,13 +1804,16 @@ def _reclassify_urban_nature_area(
     """Reclassify LULC pixels into the urban nature area they represent.
 
     After execution, urban nature pixels will have values representing the
-    pixel's area, while pixels that are not urban nature will have a pixel
-    value of 0.  Nodata values will propagate to the output raster.
+    pixel's area of urban nature (pixel area * proportion of urban nature),
+    while pixels that are not urban nature will have a pixel value of 0.
+    Nodata values will propagate to the output raster.
 
     Args:
         lulc_raster_path (string): The path to a land-use/land-cover raster.
         lulc_attribute_table (string): The path to a CSV table representing
             LULC attributes.  Must have "lucode" and "urban_nature" columns.
+            The "urban_nature" column represents a proportion 0-1 of how much
+            of the pixel's area represents urban nature.
         target_raster_path (string): Where the reclassified urban nature raster
             should be written.
         only_these_urban_nature_codes=None (iterable or None): If ``None``, all
@@ -1748,8 +1825,8 @@ def _reclassify_urban_nature_area(
     Returns:
         ``None``
     """
-    attribute_table_dict = utils.read_csv_to_dataframe(
-        lulc_attribute_table, 'lucode').to_dict(orient='index')
+    lulc_attribute_df = utils.read_csv_to_dataframe(
+        lulc_attribute_table, MODEL_SPEC['args']['lulc_attribute_table'])
 
     squared_pixel_area = abs(
         numpy.multiply(*_square_off_pixels(lulc_raster_path)))
@@ -1758,14 +1835,15 @@ def _reclassify_urban_nature_area(
         valid_urban_nature_codes = set(only_these_urban_nature_codes)
     else:
         valid_urban_nature_codes = set(
-            lucode for lucode, attributes in attribute_table_dict.items()
-            if (attributes['urban_nature']) == 1)
+            lulc_attribute_df[lulc_attribute_df['urban_nature'] > 0].index)
 
     urban_nature_area_map = {}
-    for lucode, attributes in attribute_table_dict.items():
+    for row in lulc_attribute_df[['urban_nature']].itertuples():
+        lucode = row.Index
+        urban_nature_proportion = row.urban_nature
         urban_nature_area = 0
         if lucode in valid_urban_nature_codes:
-            urban_nature_area = squared_pixel_area
+            urban_nature_area = squared_pixel_area * urban_nature_proportion
         urban_nature_area_map[lucode] = urban_nature_area
 
     lulc_raster_info = pygeoprocessing.get_raster_info(lulc_raster_path)

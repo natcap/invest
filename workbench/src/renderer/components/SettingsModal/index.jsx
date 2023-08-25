@@ -16,7 +16,6 @@ import {
 import { BsChevronExpand } from 'react-icons/bs';
 import { withTranslation } from 'react-i18next';
 
-import { getDefaultSettings } from './SettingsStorage';
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
 import { getSupportedLanguages } from '../../server_requests';
 
@@ -29,11 +28,18 @@ class SettingsModal extends React.Component {
     this.state = {
       show: false,
       languageOptions: null,
+      loggingLevel: null,
+      taskgraphLoggingLevel: null,
+      nWorkers: null,
+      language: window.Workbench.LANGUAGE,
+      showConfirmLanguageChange: false,
     };
     this.handleShow = this.handleShow.bind(this);
     this.handleClose = this.handleClose.bind(this);
     this.handleChange = this.handleChange.bind(this);
-    this.handleReset = this.handleReset.bind(this);
+    this.handleChangeNumber = this.handleChangeNumber.bind(this);
+    this.loadSettings = this.loadSettings.bind(this);
+    this.handleChangeLanguage = this.handleChangeLanguage.bind(this);
     this.switchToDownloadModal = this.switchToDownloadModal.bind(this);
   }
 
@@ -42,6 +48,7 @@ class SettingsModal extends React.Component {
     this.setState({
       languageOptions: languageOptions,
     });
+    this.loadSettings();
   }
 
   handleClose() {
@@ -54,17 +61,40 @@ class SettingsModal extends React.Component {
     this.setState({ show: true });
   }
 
-  handleReset(event) {
-    event.preventDefault();
-    const resetSettings = getDefaultSettings();
-    this.props.saveSettings(resetSettings);
+  handleChange(event) {
+    const { name, value } = event.currentTarget;
+    this.setState({ [name]: value });
+    ipcRenderer.send(ipcMainChannels.SET_SETTING, name, value);
   }
 
-  handleChange(event) {
-    const newSettings = { ...this.props.investSettings };
+  handleChangeNumber(event) {
     const { name, value } = event.currentTarget;
-    newSettings[name] = value;
-    this.props.saveSettings(newSettings);
+    const numeral = Number(value);
+    this.setState({ [name]: numeral });
+    ipcRenderer.send(ipcMainChannels.SET_SETTING, name, numeral);
+  }
+
+  async loadSettings() {
+    const loggingLevel = await ipcRenderer
+      .invoke(ipcMainChannels.GET_SETTING, 'loggingLevel');
+    const taskgraphLoggingLevel = await ipcRenderer
+      .invoke(ipcMainChannels.GET_SETTING, 'taskgraphLoggingLevel');
+    const nWorkers = await ipcRenderer
+      .invoke(ipcMainChannels.GET_SETTING, 'nWorkers');
+    this.setState({
+      loggingLevel: loggingLevel,
+      taskgraphLoggingLevel: taskgraphLoggingLevel,
+      nWorkers: nWorkers
+    });
+  }
+
+  handleChangeLanguage() {
+    // if language has changed, refresh the app
+    if (this.state.language !== window.Workbench.LANGUAGE) {
+      // tell the main process to update the language setting in storage
+      // and then relaunch the app
+      ipcRenderer.invoke(ipcMainChannels.CHANGE_LANGUAGE, this.state.language);
+    }
   }
 
   switchToDownloadModal() {
@@ -73,21 +103,29 @@ class SettingsModal extends React.Component {
   }
 
   render() {
-    const { show, languageOptions } = this.state;
-    const { investSettings, clearJobsStorage, nCPU, t } = this.props;
+    const {
+      show,
+      languageOptions,
+      language,
+      loggingLevel,
+      taskgraphLoggingLevel,
+      nWorkers,
+      showConfirmLanguageChange,
+    } = this.state;
+    const { clearJobsStorage, nCPU, t } = this.props;
 
     const nWorkersOptions = [
       [-1, `${t('Synchronous')} (-1)`],
-      [0, `${t('Threaded task management')} (0)`]
+      [0, `${t('Threaded task management')} (0)`],
     ];
     for (let i = 1; i <= nCPU; i += 1) {
       nWorkersOptions.push([i, `${i} ${t('CPUs')}`]);
     }
-    const logLevelOptions = {  // map value to display name
-      'DEBUG': t('DEBUG'),
-      'INFO': t('INFO'),
-      'WARNING': t('WARNING'),
-      'ERROR': t('ERROR')
+    const logLevelOptions = { // map value to display name
+      DEBUG: t('DEBUG'),
+      INFO: t('INFO'),
+      WARNING: t('WARNING'),
+      ERROR: t('ERROR'),
     };
     return (
       <React.Fragment>
@@ -124,18 +162,18 @@ class SettingsModal extends React.Component {
                   <Form.Label column sm="8" htmlFor="language-select">
                     <MdTranslate className="language-icon" />
                     {t('Language')}
-                    <Form.Text className="text-nowrap" muted>
-                      <MdWarningAmber className="align-text-bottom ml-3" />
-                      {t('Changing this setting will refresh the app and close all tabs')}
-                    </Form.Text>
                   </Form.Label>
                   <Col sm="4">
                     <Form.Control
                       id="language-select"
                       as="select"
                       name="language"
-                      value={investSettings.language}
-                      onChange={this.handleChange}
+                      value={window.Workbench.LANGUAGE}
+                      onChange={
+                        (event) => this.setState({
+                          showConfirmLanguageChange: true,
+                          language: event.target.value
+                        })}
                     >
                       {Object.entries(languageOptions).map((entry) => {
                         const [value, displayName] = entry;
@@ -155,7 +193,7 @@ class SettingsModal extends React.Component {
                   id="logging-select"
                   as="select"
                   name="loggingLevel"
-                  value={investSettings.loggingLevel}
+                  value={loggingLevel}
                   onChange={this.handleChange}
                 >
                   {Object.entries(logLevelOptions).map(
@@ -173,7 +211,7 @@ class SettingsModal extends React.Component {
                   id="taskgraph-logging-select"
                   as="select"
                   name="taskgraphLoggingLevel"
-                  value={investSettings.taskgraphLoggingLevel}
+                  value={taskgraphLoggingLevel}
                   onChange={this.handleChange}
                 >
                   {Object.entries(logLevelOptions).map(
@@ -197,8 +235,8 @@ class SettingsModal extends React.Component {
                         as="select"
                         name="nWorkers"
                         type="text"
-                        value={investSettings.nWorkers}
-                        onChange={this.handleChange}
+                        value={nWorkers}
+                        onChange={this.handleChangeNumber}
                       >
                         {nWorkersOptions.map(
                           (opt) => <option value={opt[0]} key={opt[0]}>{opt[1]}</option>
@@ -233,18 +271,6 @@ class SettingsModal extends React.Component {
                 )
                 : <div />
             }
-            <Row className="justify-content-end">
-              <Col sm="5">
-                <Button
-                  variant="secondary"
-                  onClick={this.handleReset}
-                  type="button"
-                  className="w-100"
-                >
-                  {t('Reset to Defaults')}
-                </Button>
-              </Col>
-            </Row>
             <hr />
             <Button
               variant="primary"
@@ -264,21 +290,37 @@ class SettingsModal extends React.Component {
             <span>{t('no invest workspaces will be deleted')}</span>
           </Modal.Body>
         </Modal>
+        {
+          (languageOptions) ? (
+            <Modal show={showConfirmLanguageChange} className="confirm-modal" >
+              <Modal.Header>
+                <Modal.Title as="h5" >{t('Warning')}</Modal.Title>
+              </Modal.Header>
+              <Modal.Body>
+                <p>
+                  {t('Changing this setting will close your tabs and relaunch the app.')}
+                </p>
+              </Modal.Body>
+              <Modal.Footer>
+                <Button
+                  variant="secondary"
+                  onClick={() => this.setState({ showConfirmLanguageChange: false })}
+                >{t('Cancel')}</Button>
+                <Button
+                  variant="primary"
+                  onClick={this.handleChangeLanguage}
+                >{t('Change to ') + languageOptions[language]}</Button>
+              </Modal.Footer>
+            </Modal>
+          ) : <React.Fragment />
+        }
       </React.Fragment>
     );
   }
 }
 
 SettingsModal.propTypes = {
-  saveSettings: PropTypes.func.isRequired,
   clearJobsStorage: PropTypes.func.isRequired,
-  investSettings: PropTypes.shape({
-    nWorkers: PropTypes.string,
-    taskgraphLoggingLevel: PropTypes.string,
-    loggingLevel: PropTypes.string,
-    sampleDataDir: PropTypes.string,
-    language: PropTypes.string,
-  }).isRequired,
   showDownloadModal: PropTypes.func.isRequired,
   nCPU: PropTypes.number.isRequired,
 };

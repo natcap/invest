@@ -35,12 +35,34 @@
 
 .. :changelog:
 
+3.14.0 (YYYY-MM-DD)
+-------------------
+* SDR
+    * We implemented two major functional changes to the InVEST LS Factor
+      that significantly affect most outputs of SDR and will bring the LS
+      factor output more in line with the outputs of SAGA-GIS's LS Factor.
+      A discussion of differences between these two implementations can be
+      viewed at https://github.com/natcap/invest/tree/main/doc/decision-records/ADR-0001-Update-SDR-LS-Factor.md.
+      The two specific changes implemented are:
+
+        * The LS Factor's on-pixel aspect length is now calculated as
+          ``abs(sin(slope)) + abs(cos(slope))``.
+        * The LS Factor's upstream contributing area is now calculated as
+          an estimate for the specific catchment area, calculated by
+          ``sqrt(n_pixels_upstream * pixel_area)``.
+
 Unreleased Changes
 ------------------
 * General
     * Fixed a bug in the CLI where ``invest getspec --json`` failed on
       non-json-serializable objects such as ``pint.Unit``.
       https://github.com/natcap/invest/issues/1280
+    * A new directory at `./doc/decision-records` has been created for
+      "Architecture/Any Decision Records", which will serve as a record of
+      nontrivial decisions that were made to InVEST and why.  This is
+      intended for reference by our science and software teams, and also by
+      the community at large when inquiring about a nontrivial change.
+      https://github.com/natcap/invest/issues/1079
     * Updated the package installation instructions in the API docs for clarity
       and also to highlight the ease of installation through ``conda-forge``.
       https://github.com/natcap/invest/issues/1256
@@ -48,10 +70,29 @@ Unreleased Changes
       has been merged into ``utils.read_csv_to_dataframe``
       (`#1319 <https://github.com/natcap/invest/issues/1319>`_),
       (`#1327 <https://github.com/natcap/invest/issues/1327>`_)
+    * Improved the validation message that is returned when not all spatial
+      inputs overlap (`#502 <https://github.com/natcap/invest/issues/502>`_)
 * Workbench
     * Fixed a bug where sampledata downloads failed silently (and progress bar
       became innacurate) if the Workbench did not have write permission to
       the download location. https://github.com/natcap/invest/issues/1070
+    * The workbench app is now distributed with a valid code signature
+      (`#727 <https://github.com/natcap/invest/issues/727>`_)
+    * Changing the language setting will now cause the app to relaunch
+      (`#1168 <https://github.com/natcap/invest/issues/1168>`_)
+    * Closing the main window will now close any user's guide windows that are
+      open. Fixed a bug where the app could not be reopened after closing.
+      (`#1258 <https://github.com/natcap/invest/issues/1258>`_)
+    * Fixed a bug where invalid metadata for a recent run would result
+      in an uncaught exception.
+      (`#1286 <https://github.com/natcap/invest/issues/1286>`_)
+    * Middle clicking an InVEST model tab was opening a blank window. Now
+      middle clicking will close that tab as expected.
+      (`#1261 <https://github.com/natcap/invest/issues/1261>`_)
+* Coastal Blue Carbon
+    * Added validation for the transition table, raising a validation error if
+      unexpected values are encountered.
+      (`#729 <https://github.com/natcap/invest/issues/729>`_)
 * Forest Carbon
     * The biophysical table is now case-insensitive.
 * HRA
@@ -59,7 +100,15 @@ Unreleased Changes
       consequence criteria were skipped for a single habitat. The model now
       correctly handles this case. https://github.com/natcap/invest/issues/1250
     * Tables in the .xls format are no longer supported. This format was
-      deprecated by ``pandas``. (`#1271 <https://github.com/natcap/invest/issues/1271>`_)
+      deprecated by ``pandas``.
+      (`#1271 <https://github.com/natcap/invest/issues/1271>`_)
+    * Fixed a bug where vector inputs could be rasterized onto a grid that is
+      not exactly aligned with other raster inputs.
+      (`#1312 <https://github.com/natcap/invest/issues/1312>`_)
+* NDR
+    * Fixed a bug where results were calculated incorrectly if the runoff proxy
+      raster (or the DEM or LULC) had no nodata value
+      (`#1005 <https://github.com/natcap/invest/issues/1005>`_)
 * Pollination
     * Several exceptions have been tidied up so that only fieldnames are
       printed instead of the python data structures representing the whole
@@ -96,14 +145,64 @@ Unreleased Changes
       set to 0. The old behavior was not well documented and caused some
       confusion when nodata pixels did not line up. It's safer not to fill in
       unknown data. (`#1317 <https://github.com/natcap/invest/issues/1317>`_)
+    * Negative monthly quickflow values will now be set to 0. This is because
+      very small negative values occasionally result from valid data, but they
+      should be interpreted as 0.
+      (`#1318 <https://github.com/natcap/invest/issues/1318>`_)
+    * In the monthly quickflow calculation, QF_im will be set to 0 on any pixel
+      where s_i / a_im > 100. This is done to avoid overflow errors when
+      calculating edge cases where the result would round down to 0 anyway.
+      (`#1318 <https://github.com/natcap/invest/issues/1318>`_)
 * Urban Flood Risk
     * Fixed a bug where the model incorrectly raised an error if the
       biophysical table contained a row of all 0s.
       (`#1123 <https://github.com/natcap/invest/issues/1123>`_)
+    * Biophysical table Workbench validation now warns if there is a missing
+      curve number value.
+      (`#1346 <https://github.com/natcap/invest/issues/1346>`_)
+* Urban Nature Access
+    * Urban nature supply outputs have been renamed to add ``percapita`` to the
+      filename.
+
+        * In uniform search radius mode, ``urban_nature_supply.tif`` has been
+          renamed to ``urban_nature_supply_percapita.tif``.
+        * When defining search radii by urban nature class,
+          ``urban_nature_supply_lucode_[LUCODE].tif`` has been renamed to
+          ``urban_nature_supply_percapita_lucode_[LUCODE].tif``.
+        * When defining search radii by population groups,
+          ``urban_nature_supply_to_[POP_GROUP].tif`` has been renamed to
+          ``urban_nature_supply_percapita_to_[POP_GROUP].tif``.
+
+    * A new output for "Accessible Urban Nature" is created, indicating the
+      area of accessible greenspace available to people within the search
+      radius, weighted by the selected decay function.  The outputs vary
+      slightly depending on the selected execution mode.
+
+        * In uniform search radius mode, a single new output is created,
+          ``accessible_urban_nature.tif``.
+        * When defining search radii by urban nature class, one new
+          output raster is created for each class of urban nature.  These files
+          are named ``accessible_urban_nature_lucode_[LUCODE].tif``.
+        * When defining search radii for population groups, one new output
+          raster is created for each population group.  These files are named
+          ``accessible_urban_nature_to_[POP_GROUP].tif``.
+
+    * Urban nature classes can now be defined to occupy a proportion of a
+      pixel, such as a park that is semi-developed. This proportion is
+      provided through user input as a proportion (0-1) in the
+      ``urban_nature`` column of the LULC Attribute Table.  A value of ``0``
+      indicates that there is no urban nature in this class, ``0.333``
+      indicates that a third of the area of this LULC class is urban nature,
+      and ``1`` would indicate that the entire LULC class's area is urban
+      nature.  https://github.com/natcap/invest/issues/1180
 * Visitation: Recreation and Tourism
     * Fixed a bug where overlapping predictor polygons would be double-counted
       in ``polygon_area_coverage`` and ``polygon_percent_coverage`` calculations.
       (`#1310 <https://github.com/natcap/invest/issues/1310>`_)
+* Wind Energy
+    * Updated a misleading error message that is raised when the AOI does
+      not spatially overlap another input.
+      (`#1054 <https://github.com/natcap/invest/issues/1054>`_)
 
 3.13.0 (2023-03-17)
 -------------------

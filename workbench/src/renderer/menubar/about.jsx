@@ -4,7 +4,6 @@ import { Translation } from 'react-i18next';
 
 import i18n from '../i18n/i18n';
 import { handleClickExternalURL } from './handlers';
-import { getSettingsValue } from '../components/SettingsModal/SettingsStorage';
 import { ipcMainChannels } from '../../main/ipcMainChannels';
 import investLogo from '../static/invest-logo.png';
 
@@ -15,8 +14,7 @@ async function getInvestVersion() {
   return investVersion;
 }
 
-const language = await getSettingsValue('language');
-await i18n.changeLanguage(language);
+await i18n.changeLanguage(window.Workbench.LANGUAGE);
 const investVersion = await getInvestVersion();
 ReactDom.render(
   <Translation>

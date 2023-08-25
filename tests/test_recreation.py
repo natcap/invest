@@ -1030,8 +1030,9 @@ class RecreationRegressionTests(unittest.TestCase):
 
         # make outputs to be overwritten
         predictor_dict = utils.read_csv_to_dataframe(
-            predictor_table_path, 'id',
-            convert_cols_to_lower=True, convert_vals_to_lower=True).to_dict(orient='index')
+            predictor_table_path,
+            recmodel_client.MODEL_SPEC['args']['predictor_table_path']
+        ).to_dict(orient='index')
         predictor_list = predictor_dict.keys()
         tmp_working_dir = tempfile.mkdtemp(dir=self.workspace_dir)
         empty_json_list = [

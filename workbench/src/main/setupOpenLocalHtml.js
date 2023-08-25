@@ -11,6 +11,7 @@ export default function setupOpenLocalHtml(parentWindow, isDevMode) {
     ipcMainChannels.OPEN_LOCAL_HTML, (event, url) => {
       const [width, height] = parentWindow.getSize();
       const child = new BrowserWindow({
+        parent: parentWindow,
         width: width > 1000 ? 1000 : width, // UG content is never wider
         height: height,
         frame: true,

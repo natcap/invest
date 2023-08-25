@@ -179,7 +179,7 @@ describe('Sidebar Buttons', () => {
     const args = JSON.parse(payload.args);
     const argKeys = Object.keys(args);
     expect(argKeys).toEqual(
-      expect.arrayContaining(Object.keys(spec.args).concat('n_workers'))
+      expect.arrayContaining(Object.keys(spec.args))
     );
     argKeys.forEach((key) => {
       expect(typeof args[key]).toBe('string');
@@ -191,7 +191,7 @@ describe('Sidebar Buttons', () => {
     const response = 'saved';
     saveToPython.mockResolvedValue(response);
     const mockDialogData = { canceled: false, filePath: 'foo.py' };
-    ipcRenderer.invoke.mockResolvedValue(mockDialogData);
+    ipcRenderer.invoke.mockResolvedValueOnce(mockDialogData);
 
     const { findByText, findByLabelText, findByRole } = renderInvestTab();
     const saveAsButton = await findByText('Save as...');
@@ -215,7 +215,7 @@ describe('Sidebar Buttons', () => {
     const args = JSON.parse(payload.args);
     const argKeys = Object.keys(args);
     expect(argKeys).toEqual(
-      expect.arrayContaining(Object.keys(spec.args).concat('n_workers'))
+      expect.arrayContaining(Object.keys(spec.args))
     );
     argKeys.forEach((key) => {
       expect(typeof args[key]).toBe('string');
