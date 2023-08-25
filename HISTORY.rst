@@ -209,8 +209,13 @@ Unreleased Changes
       nature.  https://github.com/natcap/invest/issues/1180
 * Visitation: Recreation and Tourism
     * Fixed a bug where overlapping predictor polygons would be double-counted
-      in ``polygon_area_coverage`` and ``polygon_percent_coverage`` calculations.
-      (`#1310 <https://github.com/natcap/invest/issues/1310>`_)
+      in ``polygon_area_coverage`` and ``polygon_percent_coverage``
+      calculations. (`#1310 <https://github.com/natcap/invest/issues/1310>`_)
+    * Changed the calculation of ``point_nearest_distance`` metric to match
+      the description in the User's Guide. Values are now the distance to the
+      centroid of the AOI polygon instead of the distance to the nearest
+      edge of the AOI polygon.
+      (`#1347 <https://github.com/natcap/invest/issues/1347>`_)
 * Wind Energy
     * Updated a misleading error message that is raised when the AOI does
       not spatially overlap another input.

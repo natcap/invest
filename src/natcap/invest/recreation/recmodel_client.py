@@ -77,7 +77,7 @@ predictor_table_columns = {
             "point_nearest_distance": {
                 "description": gettext(
                     "Predictor is a point vector. Metric is the Euclidean "
-                    "distance between the center of each AOI grid cell and "
+                    "distance between the centroid of each AOI grid cell and "
                     "the nearest point in this layer.")},
             "line_intersect_length": {
                 "description": gettext(
@@ -417,7 +417,7 @@ def execute(args):
                     * 'point_count': count of the points contained in the
                       response polygon
                     * 'point_nearest_distance': distance to the nearest point
-                      from the response polygon
+                      from the centroid of the response polygon
                     * 'line_intersect_length': length of lines that intersect
                       with the response polygon in projected units of AOI
                     * 'polygon_area': area of the polygon contained within
@@ -1170,7 +1170,7 @@ def _line_intersect_length(
 def _point_nearest_distance(
         response_polygons_pickle_path, point_vector_path,
         predictor_target_path):
-    """Calculate distance to nearest point for all polygons.
+    """Calculate distance to nearest point for the centroid of all polygons.
 
     Args:
         response_polygons_pickle_path (str): path to a pickled dictionary which
@@ -1200,7 +1200,7 @@ def _point_nearest_distance(
                 f"{(100*index)/len(response_polygons_lookup):.2f}% complete"))
 
         point_distance_lookup[str(feature_id)] = min([
-            geometry.distance(point) for point in points])
+            geometry.centroid.distance(point) for point in points])
     LOGGER.info(f"{os.path.basename(point_vector_path)} point distance: "
                 "100.00% complete")
     with open(predictor_target_path, 'w') as jsonfile:
