@@ -76,10 +76,6 @@ Unreleased Changes
       all models. It is now called ``taskgraph_cache`` and located in the top
       level of the workspace directory.
       (`#1230 <https://github.com/natcap/invest/issues/1230>`_)
-* Coastal Blue Carbon
-    * Added validation for the transition table, raising a validation error if
-      unexpected values are encountered.
-      (`#729 <https://github.com/natcap/invest/issues/729>`_)
 * Workbench
     * Fixed a bug where sampledata downloads failed silently (and progress bar
       became innacurate) if the Workbench did not have write permission to
