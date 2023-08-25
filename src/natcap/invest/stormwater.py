@@ -13,7 +13,7 @@ from osgeo import osr
 from . import gettext
 from . import spec_utils
 from . import utils
-from . import validatio
+from . import validation
 from .unit_registry import u
 
 LOGGER = logging.getLogger(__name__)

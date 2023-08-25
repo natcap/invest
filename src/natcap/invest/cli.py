@@ -8,6 +8,7 @@ import importlib
 import json
 import logging
 import multiprocessing
+import pkgutil
 import pprint
 import sys
 import textwrap
@@ -32,18 +33,21 @@ def is_invest_model(module):
         hasattr(module, "MODEL_SPEC") and isinstance(module.MODEL_SPEC, dict))
 
 
+# pyname: importable name e.g. natcap.invest.carbon, natcap.invest.sdr.sdr
+# model id: identifier e.g. coastal_blue_carbon
+# model name: title e.g. Coastal Blue Carbon
+
 # Build up an index mapping aliases to model_name.
-MODEL_SPECS = {}
 
 pyname_to_module = {}
-for _, name, ispkg in pkgutil.iter_modules(natcap.invest.__path__):
-
-    discovered_models[name] = model
-
+for _, name, ispkg in pkgutil.iter_modules(natcap.invest.__path__, 'natcap.invest.'):
+    print(name, ispkg)
     module = importlib.import_module(name)
+    print(module)
     if ispkg:
         for _, sub_name, _ in pkgutil.iter_modules(module.__path__):
-            submodule = importlib.import_module(sub_name)
+            submodule = importlib.import_module(f'{name}.{sub_name}')
+            print(submodule)
             if is_invest_model(submodule):
                 pyname_to_module[f'{name}.{sub_name}'] = submodule
     else:
@@ -51,17 +55,14 @@ for _, name, ispkg in pkgutil.iter_modules(natcap.invest.__path__):
             pyname_to_module[name] = module
 
 
-
 model_id_to_pyname = {}
-_MODEL_ALIASES = {}
-for pyname, model in models.items():
+model_id_to_spec = {}
+model_alias_to_id = {}
+for pyname, model in pyname_to_module.items():
     model_id_to_pyname[model.MODEL_SPEC['model_id']] = pyname
+    model_id_to_spec[model.MODEL_SPEC['model_id']] = model.MODEL_SPEC
     for alias in model.MODEL_SPEC['aliases']:
-        _MODEL_ALIASES[alias] = model_id
-
-    MODEL_SPECS[model.MODEL_SPEC['model_id']] = model.MODEL_SPEC
-
-models = {key: models[key] for key in sorted(models)}
+        model_alias_to_id[alias] = model.MODEL_SPEC['model_id']
 
 
 def build_model_list_table(locale_code):
@@ -81,14 +82,14 @@ def build_model_list_table(locale_code):
         localedir=LOCALE_DIR,
         # fall back to a NullTranslation, which returns the English messages
         fallback=True)
-    max_model_id_length = max(len(_id) for _id in MODEL_SPECS.keys())
+    max_model_id_length = max(len(_id) for _id in model_id_to_spec.keys())
 
     # Adding 3 to max alias name length for the parentheses plus some padding.
     max_alias_name_length = max(len(', '.join(spec['aliases']))
-                                for spec in MODEL_SPECS.values()) + 3
+                                for spec in model_id_to_spec.values()) + 3
     template_string = '    {model_id} {aliases} {model_name}'
     strings = [translation.gettext('Available models:')]
-    for model_id, model_spec in MODEL_SPECS.items():
+    for model_id, model_spec in model_id_to_spec.items():
 
         alias_string = ', '.join(model_spec['aliases'])
         if alias_string:
@@ -113,7 +114,7 @@ def build_model_list_json():
 
     """
     json_object = {}
-    for model_id, model_spec in MODEL_SPECS.items():
+    for model_id, model_spec in model_id_to_spec.items():
         json_object[model_spec['model_name']] = {
             'model_name': model_id,
             'aliases': spec['aliases']
@@ -152,7 +153,7 @@ def export_to_python(target_filepath, model_id, args_dict=None):
     """)
 
     if args_dict is None:
-        cast_args = {key: '' for key in MODEL_SPECS[model_id]['args'].keys()}
+        cast_args = {key: '' for key in model_id_to_spec[model_id]['args'].keys()}
     else:
         cast_args = dict((str(key), value) for (key, value)
                          in args_dict.items())
@@ -169,7 +170,7 @@ def export_to_python(target_filepath, model_id, args_dict=None):
         py_file.write(script_template.format(
             invest_version=natcap.invest.__version__,
             today=datetime.datetime.now().strftime('%c'),
-            model_title=MODEL_SPECS[model_id]['model_name'],
+            model_title=model_id_to_spec[model_id]['model_name'],
             pyname=f'natcap.invest.{model_id_to_pyname[model_id]}',
             model_args=args))
 
@@ -204,8 +205,7 @@ class SelectModelAction(argparse.Action):
 
         Overridden from argparse.Action.__call__.
         """
-        known_models = sorted(list(MODEL_SPECS.keys()))
-        known_aliases =
+        known_models = sorted(list(model_id_to_spec.keys()))
 
         matching_models = [model for model in known_models if
                            model.startswith(values)]
@@ -214,11 +214,11 @@ class SelectModelAction(argparse.Action):
                          model == values]
 
         if len(matching_models) == 1:  # match an identifying substring
-            modelname = matching_models[0]
-        elif len(exact_matches) == 1:  # match an exact modelname
-            modelname = exact_matches[0]
-        elif values in _MODEL_ALIASES:  # match an alias
-            modelname = _MODEL_ALIASES[values]
+            model_id = matching_models[0]
+        elif len(exact_matches) == 1:  # match an exact model id
+            model_id = exact_matches[0]
+        elif values in model_alias_to_id:  # match an alias
+            model_id = model_alias_to_id[values]
         elif len(matching_models) == 0:
             parser.exit(status=1, message=(
                 "Error: '%s' not a known model" % values))
@@ -230,7 +230,7 @@ class SelectModelAction(argparse.Action):
                     "    {matching_models}").format(
                         model=values,
                         matching_models=' '.join(matching_models)))
-        setattr(namespace, self.dest, modelname)
+        setattr(namespace, self.dest, model_id)
 
 
 def main(user_args=None):
@@ -438,7 +438,7 @@ def main(user_args=None):
         parser.exit(0)
 
     if args.subcommand == 'getspec':
-        target_model = MODEL_SPECS[args.model].pyname
+        target_model = model_id_to_spec[args.model].pyname
         model_module = importlib.reload(
             importlib.import_module(name=target_model))
         spec = model_module.MODEL_SPEC
@@ -474,7 +474,7 @@ def main(user_args=None):
         else:
             parsed_datastack.args['workspace_dir'] = args.workspace
 
-        target_model = MODEL_SPECS[args.model].pyname
+        target_model = model_id_to_spec[args.model].pyname
         model_module = importlib.import_module(name=target_model)
         LOGGER.info('Imported target %s from %s',
                     model_module.__name__, model_module)
