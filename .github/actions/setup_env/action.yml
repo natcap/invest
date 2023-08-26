@@ -65,6 +65,7 @@ runs:
         environment-file: environment.yml
         environment-name: env
         channels: conda-forge
+        init-shell: bash
         cache-environment: true
         cache-environment-key: ${{ runner.os }}${{ runner.arch }}-${{ env.WEEK }}-${{ hashFiles('environment.yml') }}
 
