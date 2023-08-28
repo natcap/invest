@@ -317,7 +317,7 @@ jobs:
         run: make userguide
 
       - name: Build binaries
-        run: make CONDA=micromamba binaries
+        run: make CONDA="$MAMBA_EXE" binaries
 
       - name: Run invest-autotest with binaries
         if : |
