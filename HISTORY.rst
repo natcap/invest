@@ -76,6 +76,7 @@ Unreleased Changes
       all models. It is now called ``taskgraph_cache`` and located in the top
       level of the workspace directory.
       (`#1230 <https://github.com/natcap/invest/issues/1230>`_)
+    * InVEST is now distributed under the Apache 2.0 License.
 * Workbench
     * Fixed a bug where sampledata downloads failed silently (and progress bar
       became innacurate) if the Workbench did not have write permission to
@@ -93,6 +94,8 @@ Unreleased Changes
     * Middle clicking an InVEST model tab was opening a blank window. Now
       middle clicking will close that tab as expected.
       (`#1261 <https://github.com/natcap/invest/issues/1261>`_)
+    * Updated InVEST logo to use new version with registered trademark symbol.
+      (`https://naturalcapitalproject.stanford.edu/invest-trademark-and-logo-use-policy`_)
 * Coastal Blue Carbon
     * Added validation for the transition table, raising a validation error if
       unexpected values are encountered.
