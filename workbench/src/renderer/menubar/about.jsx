@@ -37,46 +37,60 @@ ReactDom.render(
         </div>
         <br />
         <div id="links">
-          <p>
-            {t('Documentation: ')}
-            <a
-              href="http://releases.naturalcapitalproject.org/invest-userguide/latest/"
-            >
-              http://releases.naturalcapitalproject.org/invest-userguide/latest/
-            </a>
-          </p>
-          <p>
-            {t('Homepage: ')}
-            <a
-              href="https://naturalcapitalproject.stanford.edu/"
-            >
-              https://naturalcapitalproject.stanford.edu/
-            </a>
-          </p>
-          <p>
-            {t('Project page: ')}
-            <a
-              href="https://github.com/natcap/invest"
-            >
-              https://github.com/natcap/invest
-            </a>
-          </p>
-          <p>
-            {t('License: ')}
-            <a
-              href="https://github.com/natcap/invest/blob/master/LICENSE.txt"
-            >
-              Apache 2.0
-            </a>
-          </p>
-          <p>
-            {t('InVEST Trademark and Logo Use Policy: ')}
-            <a
-              href="https://naturalcapitalproject.stanford.edu/invest-trademark-and-logo-use-policy"
-            >
-              Trademark and Logo Policy
-            </a>
-          </p>
+          <table>
+            <tbody>
+              <tr>
+                <td>{t('Documentation')}</td>
+                <td>
+                  <a
+                    href="http://releases.naturalcapitalproject.org/invest-userguide/latest/"
+                  >
+                    http://releases.naturalcapitalproject.org/invest-userguide/latest/
+                  </a>
+                </td>
+              </tr>
+              <tr>
+                <td>{t('Homepage')}</td>
+                <td>
+                  <a
+                    href="https://naturalcapitalproject.stanford.edu/"
+                  >
+                    https://naturalcapitalproject.stanford.edu/
+                  </a>
+                </td>
+              </tr>
+              <tr>
+                <td>{t('Project page')}</td>
+                <td>
+                  <a
+                    href="https://github.com/natcap/invest"
+                  >
+                    https://github.com/natcap/invest
+                  </a>
+                </td>
+              </tr>
+              <tr>
+                <td>{t('License')}</td>
+                <td>
+                  <a
+                    href="https://github.com/natcap/invest/blob/master/LICENSE.txt"
+                  >
+                    Apache 2.0
+                  </a>
+                </td>
+              </tr>
+              <tr>
+                <td>{t('InVEST Trademark and Logo Use Policy')}</td>
+                <td>
+                  <a
+                    href="https://naturalcapitalproject.stanford.edu/invest-trademark-and-logo-use-policy"
+                  >
+                    Trademark and Logo Policy
+                  </a>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
         <div id="licenses">
           <h4>{t('Open-Source Licenses:')}</h4>
