@@ -107,6 +107,7 @@ MODEL_SPEC = {
         },
         "biophysical_table_path": {
             "type": "csv",
+            "index_col": "lucode",
             "columns": {
                 "lucode": spec_utils.LULC_TABLE_COLUMN,
                 "cn_[SOIL_GROUP]": {
@@ -137,6 +138,7 @@ MODEL_SPEC = {
         },
         "rain_events_table_path": {
             "type": "csv",
+            "index_col": "month",
             "columns": {
                 "month": {
                     "type": "number",
@@ -212,6 +214,7 @@ MODEL_SPEC = {
         },
         "climate_zone_table_path": {
             "type": "csv",
+            "index_col": "cz_id",
             "columns": {
                 "cz_id": {
                     "type": "integer",
@@ -253,6 +256,7 @@ MODEL_SPEC = {
         },
         "monthly_alpha_path": {
             "type": "csv",
+            "index_col": "month",
             "columns": {
                 "month": {
                     "type": "number",
@@ -409,10 +413,62 @@ MODEL_SPEC = {
                     "bands": {1: {
                         "type": "integer"
                     }}
+                },
+                'Si.tif': {
+                    "about": gettext("Map of the S_i factor derived from CN"),
+                    "bands": {1: {"type": "number", "units": u.inch}}
+                },
+                'lulc_aligned.tif': {
+                    "about": gettext("Copy of LULC input, aligned and clipped "
+                                     "to match the other spatial inputs"),
+                    "bands": {1: {"type": "integer"}}
+                },
+                'dem_aligned.tif': {
+                    "about": gettext("Copy of DEM input, aligned and clipped "
+                                     "to match the other spatial inputs"),
+                    "bands": {1: {"type": "number", "units": u.meter}}
+                },
+                'pit_filled_dem.tif': {
+                    "about": gettext("Pit filled DEM"),
+                    "bands": {1: {"type": "number", "units": u.meter}}
+                },
+                'soil_group_aligned.tif': {
+                    "about": gettext("Copy of soil groups input, aligned and "
+                                     "clipped to match the other spatial inputs"),
+                    "bands": {1: {"type": "integer"}}
+                },
+                'flow_accum.tif': spec_utils.FLOW_ACCUMULATION,
+                'prcp_a[MONTH].tif': {
+                    "bands": {1: {"type": "number", "units": u.millimeter/u.year}},
+                    "about": gettext("Monthly precipitation rasters, aligned and "
+                                     "clipped to match the other spatial inputs")
+                },
+                'n_events[MONTH].tif': {
+                    "about": gettext("Map of monthly rain events"),
+                    "bands": {1: {"type": "integer"}}
+                },
+                'et0_a[MONTH].tif': {
+                    "bands": {1: {"type": "number", "units": u.millimeter}},
+                    "about": gettext("Monthly ET0 rasters, aligned and "
+                                     "clipped to match the other spatial inputs")
+                },
+                'kc_[MONTH].tif': {
+                    "about": gettext("Map of monthly KC values"),
+                    "bands": {1: {"type": "number", "units": u.none}}
+                },
+                'l_aligned.tif': {
+                    "about": gettext("Copy of user-defined local recharge input, "
+                                     "aligned and clipped to match the other spatial inputs"),
+                    "bands": {1: {"type": "number", "units": u.millimeter}}
+                },
+                'cz_aligned.tif': {
+                    "about": gettext("Copy of user-defined climate zones raster, "
+                                     "aligned and clipped to match the other spatial inputs"),
+                    "bands": {1: {"type": "integer"}}
                 }
             }
         },
-        "cache_dir": spec_utils.TASKGRAPH_DIR
+        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
     }
 }
 
@@ -437,18 +493,10 @@ _INTERMEDIATE_BASE_FILES = {
     'flow_dir_mfd_path': 'flow_dir_mfd.tif',
     'qfm_path_list': ['qf_%d.tif' % (x+1) for x in range(N_MONTHS)],
     'stream_path': 'stream.tif',
-}
-
-_TMP_BASE_FILES = {
-    'outflow_direction_path': 'outflow_direction.tif',
-    'outflow_weights_path': 'outflow_weights.tif',
-    'kc_path': 'kc.tif',
     'si_path': 'Si.tif',
     'lulc_aligned_path': 'lulc_aligned.tif',
     'dem_aligned_path': 'dem_aligned.tif',
     'dem_pit_filled_path': 'pit_filled_dem.tif',
-    'loss_path': 'loss.tif',
-    'zero_absorption_source_path': 'zero_absorption.tif',
     'soil_group_aligned_path': 'soil_group_aligned.tif',
     'flow_accum_path': 'flow_accum.tif',
     'precip_path_aligned_list': ['prcp_a%d.tif' % x for x in range(N_MONTHS)],
@@ -457,7 +505,6 @@ _TMP_BASE_FILES = {
     'kc_path_list': ['kc_%d.tif' % x for x in range(N_MONTHS)],
     'l_aligned_path': 'l_aligned.tif',
     'cz_aligned_raster_path': 'cz_aligned.tif',
-    'l_sum_pre_clamp': 'l_sum_pre_clamp.tif'
 }
 
 
@@ -561,41 +608,20 @@ def _execute(args):
     # fail early on a missing required rain events table
     if (not args['user_defined_local_recharge'] and
             not args['user_defined_climate_zones']):
-        rain_events_lookup = (
-            utils.read_csv_to_dataframe(
-                args['rain_events_table_path'], 'month'
-                ).to_dict(orient='index'))
+        rain_events_df = utils.read_csv_to_dataframe(
+            args['rain_events_table_path'],
+            MODEL_SPEC['args']['rain_events_table_path'])
 
-    biophysical_table = utils.read_csv_to_dataframe(
-        args['biophysical_table_path'], 'lucode').to_dict(orient='index')
-
-    bad_value_list = []
-    for lucode, value in biophysical_table.items():
-        for biophysical_id in ['cn_a', 'cn_b', 'cn_c', 'cn_d'] + [
-                'kc_%d' % (month_index+1) for month_index in range(N_MONTHS)]:
-            try:
-                _ = float(value[biophysical_id])
-            except ValueError:
-                bad_value_list.append(
-                    (biophysical_id, lucode, value[biophysical_id]))
-
-    if bad_value_list:
-        raise ValueError(
-            'biophysical_table at %s seems to have the following incorrect '
-            'values (expecting all floating point numbers): %s' % (
-                args['biophysical_table_path'], ','.join(
-                    ['%s(lucode %d): "%s"' % (
-                        lucode, biophysical_id, bad_value)
-                     for lucode, biophysical_id, bad_value in
-                        bad_value_list])))
+    biophysical_df = utils.read_csv_to_dataframe(
+        args['biophysical_table_path'],
+        MODEL_SPEC['args']['biophysical_table_path'])
 
     if args['monthly_alpha']:
         # parse out the alpha lookup table of the form (month_id: alpha_val)
-        alpha_month_map = dict(
-            (key, val['alpha']) for key, val in
-            utils.read_csv_to_dataframe(
-                args['monthly_alpha_path'], 'month'
-            ).to_dict(orient='index').items())
+        alpha_month_map = utils.read_csv_to_dataframe(
+            args['monthly_alpha_path'],
+            MODEL_SPEC['args']['monthly_alpha_path']
+        )['alpha'].to_dict()
     else:
         # make all 12 entries equal to args['alpha_m']
         alpha_m = float(fractions.Fraction(args['alpha_m']))
@@ -610,9 +636,8 @@ def _execute(args):
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
     intermediate_output_dir = os.path.join(
         args['workspace_dir'], 'intermediate_outputs')
-    cache_dir = os.path.join(args['workspace_dir'], 'cache_dir')
     output_dir = args['workspace_dir']
-    utils.make_directories([intermediate_output_dir, cache_dir, output_dir])
+    utils.make_directories([intermediate_output_dir, output_dir])
 
     try:
         n_workers = int(args['n_workers'])
@@ -622,13 +647,13 @@ def _execute(args):
         # TypeError when n_workers is None.
         n_workers = -1  # Synchronous mode.
     task_graph = taskgraph.TaskGraph(
-        cache_dir, n_workers, reporting_interval=5)
+        os.path.join(args['workspace_dir'], 'taskgraph_cache'),
+        n_workers, reporting_interval=5)
 
     LOGGER.info('Building file registry')
     file_registry = utils.build_file_registry(
         [(_OUTPUT_BASE_FILES, output_dir),
-         (_INTERMEDIATE_BASE_FILES, intermediate_output_dir),
-         (_TMP_BASE_FILES, cache_dir)], file_suffix)
+         (_INTERMEDIATE_BASE_FILES, intermediate_output_dir)], file_suffix)
 
     LOGGER.info('Checking that the AOI is not the output aggregate vector')
     if (os.path.normpath(args['aoi_path']) ==
@@ -706,7 +731,7 @@ def _execute(args):
         args=(
             (file_registry['dem_aligned_path'], 1),
             file_registry['dem_pit_filled_path']),
-        kwargs={'working_dir': cache_dir},
+        kwargs={'working_dir': intermediate_output_dir},
         target_path_list=[file_registry['dem_pit_filled_path']],
         dependent_task_list=[align_task],
         task_name='fill dem pits')
@@ -716,7 +741,7 @@ def _execute(args):
         args=(
             (file_registry['dem_pit_filled_path'], 1),
             file_registry['flow_dir_mfd_path']),
-        kwargs={'working_dir': cache_dir},
+        kwargs={'working_dir': intermediate_output_dir},
         target_path_list=[file_registry['flow_dir_mfd_path']],
         dependent_task_list=[fill_pit_task],
         task_name='flow dir mfd')
@@ -762,14 +787,11 @@ def _execute(args):
             'table_name': 'Climate Zone'}
         for month_id in range(N_MONTHS):
             if args['user_defined_climate_zones']:
-                cz_rain_events_lookup = (
-                    utils.read_csv_to_dataframe(
-                        args['climate_zone_table_path'], 'cz_id'
-                    ).to_dict(orient='index'))
-                month_label = MONTH_ID_TO_LABEL[month_id]
-                climate_zone_rain_events_month = dict([
-                    (cz_id, cz_rain_events_lookup[cz_id][month_label]) for
-                    cz_id in cz_rain_events_lookup])
+                cz_rain_events_df = utils.read_csv_to_dataframe(
+                    args['climate_zone_table_path'],
+                    MODEL_SPEC['args']['climate_zone_table_path'])
+                climate_zone_rain_events_month = (
+                    cz_rain_events_df[MONTH_ID_TO_LABEL[month_id]].to_dict())
                 n_events_task = task_graph.add_task(
                     func=utils.reclassify_raster,
                     args=(
@@ -784,15 +806,14 @@ def _execute(args):
                     task_name='n_events for month %d' % month_id)
                 reclassify_n_events_task_list.append(n_events_task)
             else:
-                # rain_events_lookup defined near entry point of execute
-                n_events = rain_events_lookup[month_id+1]['events']
                 n_events_task = task_graph.add_task(
                     func=pygeoprocessing.new_raster_from_base,
                     args=(
                         file_registry['dem_aligned_path'],
                         file_registry['n_events_path_list'][month_id],
                         gdal.GDT_Float32, [TARGET_NODATA]),
-                    kwargs={'fill_value_list': (n_events,)},
+                    kwargs={'fill_value_list': (
+                        rain_events_df['events'][month_id+1],)},
                     target_path_list=[
                         file_registry['n_events_path_list'][month_id]],
                     dependent_task_list=[align_task],
@@ -805,7 +826,8 @@ def _execute(args):
             args=(
                 file_registry['lulc_aligned_path'],
                 file_registry['soil_group_aligned_path'],
-                biophysical_table, file_registry['cn_path']),
+                biophysical_df,
+                file_registry['cn_path']),
             target_path_list=[file_registry['cn_path']],
             dependent_task_list=[align_task],
             task_name='calculate curve number')
@@ -852,9 +874,7 @@ def _execute(args):
             'raster_name': 'LULC', 'column_name': 'lucode',
             'table_name': 'Biophysical'}
         for month_index in range(N_MONTHS):
-            kc_lookup = dict([
-                (lucode, biophysical_table[lucode]['kc_%d' % (month_index+1)])
-                for lucode in biophysical_table])
+            kc_lookup = biophysical_df['kc_%d' % (month_index+1)].to_dict()
             kc_task = task_graph.add_task(
                 func=utils.reclassify_raster,
                 args=(
@@ -1186,16 +1206,16 @@ def _calculate_monthly_quick_flow(precip_path, n_events_path, stream_path,
 
 
 def _calculate_curve_number_raster(
-        lulc_raster_path, soil_group_path, biophysical_table, cn_path):
+        lulc_raster_path, soil_group_path, biophysical_df, cn_path):
     """Calculate the CN raster from the landcover and soil group rasters.
 
     Args:
         lulc_raster_path (string): path to landcover raster
         soil_group_path (string): path to raster indicating soil group where
             pixel values are in [1,2,3,4]
-        biophysical_table (dict): maps landcover IDs to dictionaries that
-            contain at least the keys 'cn_a', 'cn_b', 'cn_c', 'cn_d', that
-            map to the curve numbers for that landcover and soil type.
+        biophysical_df (pandas.DataFrame): table mapping landcover IDs to the
+            columns 'cn_a', 'cn_b', 'cn_c', 'cn_d', that contain
+            the curve number values for that landcover and soil type.
         cn_path (string): path to output curve number raster to be output
             which will be the dimensions of the intersection of
             `lulc_raster_path` and `soil_group_path` the cell size of
@@ -1217,7 +1237,7 @@ def _calculate_curve_number_raster(
     lulc_nodata = pygeoprocessing.get_raster_info(
         lulc_raster_path)['nodata'][0]
 
-    lucodes = list(biophysical_table)
+    lucodes = biophysical_df.index.to_list()
     if lulc_nodata is not None:
         lucodes.append(lulc_nodata)
 
@@ -1230,7 +1250,7 @@ def _calculate_curve_number_raster(
         for lucode in sorted(lucodes):
             if lucode != lulc_nodata:
                 lulc_to_soil[soil_id]['cn_values'].append(
-                    biophysical_table[lucode][soil_column])
+                    biophysical_df[soil_column][lucode])
                 lulc_to_soil[soil_id]['lulc_values'].append(lucode)
             else:
                 # handle the lulc nodata with cn nodata

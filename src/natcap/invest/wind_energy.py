@@ -328,6 +328,7 @@ MODEL_SPEC = {
         },
         "grid_points_path": {
             "type": "csv",
+            "index_col": "id",
             "columns": {
                 "id": {
                     "type": "integer",
@@ -382,6 +383,7 @@ MODEL_SPEC = {
         },
         "wind_schedule": {
             "type": "csv",
+            "index_col": "year",
             "columns": {
                 "year": {
                     "type": "number",
@@ -524,10 +526,10 @@ MODEL_SPEC = {
                     "about": "Wind data",
                     "geometries": spec_utils.POINT,
                     "fields": OUTPUT_WIND_DATA_FIELDS
-                },
-                "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
+                }
             }
-        }
+        },
+        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
     }
 }
 
@@ -654,7 +656,6 @@ def execute(args):
     suffix = utils.make_suffix_string(args, 'results_suffix')
 
     # Initialize a TaskGraph
-    taskgraph_working_dir = os.path.join(inter_dir, '_taskgraph_working_dir')
     try:
         n_workers = int(args['n_workers'])
     except (KeyError, ValueError, TypeError):
@@ -662,7 +663,8 @@ def execute(args):
         # ValueError when n_workers is an empty string.
         # TypeError when n_workers is None.
         n_workers = -1  # single process mode.
-    task_graph = taskgraph.TaskGraph(taskgraph_working_dir, n_workers)
+    task_graph = taskgraph.TaskGraph(
+        os.path.join(args['workspace_dir'], 'taskgraph_cache'), n_workers)
 
     # Resample the bathymetry raster if it does not have square pixel size
     try:
@@ -754,9 +756,11 @@ def execute(args):
         # If Price Table provided use that for price of energy, validate inputs
         time = int(val_parameters_dict['time_period'])
         if args['price_table']:
-            wind_price_df = utils.read_csv_to_dataframe(args['wind_schedule'])
+            wind_price_df = utils.read_csv_to_dataframe(
+                args['wind_schedule'], MODEL_SPEC['args']['wind_schedule']
+            ).sort_index()  # sort by year
 
-            year_count = len(wind_price_df['year'])
+            year_count = len(wind_price_df)
             if year_count != time + 1:
                 raise ValueError(
                     "The 'time' argument in the Global Wind Energy Parameters "
@@ -765,7 +769,6 @@ def execute(args):
 
             # Save the price values into a list where the indices of the list
             # indicate the time steps for the lifespan of the wind farm
-            wind_price_df.sort_values('year', inplace=True)
             price_list = wind_price_df['price'].tolist()
         else:
             change_rate = float(args["rate_change"])
@@ -1134,19 +1137,11 @@ def execute(args):
 
         # Read the grid points csv, and convert it to land and grid dictionary
         grid_land_df = utils.read_csv_to_dataframe(
-            args['grid_points_path'], convert_vals_to_lower=False)
-
-        # Make separate dataframes based on 'TYPE'
-        grid_df = grid_land_df.loc[(
-            grid_land_df['type'].str.upper() == 'GRID')]
-        land_df = grid_land_df.loc[(
-            grid_land_df['type'].str.upper() == 'LAND')]
+            args['grid_points_path'], MODEL_SPEC['args']['grid_points_path'])
 
         # Convert the dataframes to dictionaries, using 'ID' (the index) as key
-        grid_df.set_index('id', inplace=True)
-        grid_dict = grid_df.to_dict('index')
-        land_df.set_index('id', inplace=True)
-        land_dict = land_df.to_dict('index')
+        grid_dict = grid_land_df[grid_land_df['type'] == 'grid'].to_dict('index')
+        land_dict = grid_land_df[grid_land_df['type'] == 'land'].to_dict('index')
 
         grid_vector_path = os.path.join(
             inter_dir, 'val_grid_points%s.shp' % suffix)
@@ -1974,7 +1969,8 @@ def _read_csv_wind_data(wind_data_path, hub_height):
 
     """
     wind_point_df = utils.read_csv_to_dataframe(
-        wind_data_path, convert_cols_to_lower=False, convert_vals_to_lower=False)
+        wind_data_path, MODEL_SPEC['args']['wind_data_path'])
+    wind_point_df.columns = wind_point_df.columns.str.upper()
 
     # Calculate scale value at new hub height given reference values.
     # See equation 3 in users guide
@@ -2631,10 +2627,12 @@ def _clip_vector_by_vector(
         shutil.rmtree(temp_dir, ignore_errors=True)
 
     if empty_clip:
+        # The "clip_vector_path" is always the AOI.
         raise ValueError(
             f"Clipping {base_vector_path} by {clip_vector_path} returned 0"
-            " features. If an AOI was provided this could mean the AOI and"
-            " Wind Data do not intersect spatially.")
+            f" features. This means the AOI and {base_vector_path} do not"
+            " intersect spatially. Please check that the AOI has spatial"
+            " overlap with all input data.")
 
     LOGGER.info('Finished _clip_vector_by_vector')
 

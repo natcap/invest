@@ -109,7 +109,6 @@ class DataDownloadModal extends React.Component {
           this.state.selectedLinksArray,
           data.filePaths[0]
         );
-        this.props.storeDownloadDir(data.filePaths[0]);
         this.closeDialog();
       }
     }
@@ -283,7 +282,6 @@ class DataDownloadModal extends React.Component {
 DataDownloadModal.propTypes = {
   show: PropTypes.bool.isRequired,
   closeModal: PropTypes.func.isRequired,
-  storeDownloadDir: PropTypes.func.isRequired,
 };
 
-export default withTranslation()(DataDownloadModal)
+export default withTranslation()(DataDownloadModal);

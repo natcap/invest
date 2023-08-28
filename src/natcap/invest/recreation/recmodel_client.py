@@ -77,7 +77,7 @@ predictor_table_columns = {
             "point_nearest_distance": {
                 "description": gettext(
                     "Predictor is a point vector. Metric is the Euclidean "
-                    "distance between the center of each AOI grid cell and "
+                    "distance between the centroid of each AOI grid cell and "
                     "the nearest point in this layer.")},
             "line_intersect_length": {
                 "description": gettext(
@@ -192,6 +192,7 @@ MODEL_SPEC = {
         },
         "predictor_table_path": {
             "type": "csv",
+            "index_col": "id",
             "columns": predictor_table_columns,
             "required": "compute_regression",
             "about": gettext(
@@ -202,6 +203,7 @@ MODEL_SPEC = {
         },
         "scenario_predictor_table_path": {
             "type": "csv",
+            "index_col": "id",
             "columns": predictor_table_columns,
             "required": False,
             "about": gettext(
@@ -233,7 +235,12 @@ MODEL_SPEC = {
         },
         "monthly_table.csv": {
             "about": gettext("Table of monthly photo-user-days."),
+            "index_col": "poly_id",
             "columns": {
+                "poly_id": {
+                    "type": "integer",
+                    "about": gettext("Polygon ID")
+                },
                 "[YEAR]-[MONTH]": {
                     "about": gettext(
                         "Total photo-user-days counted in each cell in the "
@@ -324,10 +331,10 @@ MODEL_SPEC = {
                 },
                 "server_version.pickle": {
                     "about": gettext("Server version info")
-                },
-                "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
+                }
             }
-        }
+        },
+        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
     }
 }
 
@@ -410,7 +417,7 @@ def execute(args):
                     * 'point_count': count of the points contained in the
                       response polygon
                     * 'point_nearest_distance': distance to the nearest point
-                      from the response polygon
+                      from the centroid of the response polygon
                     * 'line_intersect_length': length of lines that intersect
                       with the response polygon in projected units of AOI
                     * 'polygon_area': area of the polygon contained within
@@ -472,7 +479,6 @@ def execute(args):
          (_INTERMEDIATE_BASE_FILES, intermediate_dir)], file_suffix)
 
     # Initialize a TaskGraph
-    taskgraph_db_dir = os.path.join(intermediate_dir, '_taskgraph_working_dir')
     try:
         n_workers = int(args['n_workers'])
     except (KeyError, ValueError, TypeError):
@@ -480,7 +486,8 @@ def execute(args):
         # ValueError when n_workers is an empty string.
         # TypeError when n_workers is None.
         n_workers = -1  # single process mode.
-    task_graph = taskgraph.TaskGraph(taskgraph_db_dir, n_workers)
+    task_graph = taskgraph.TaskGraph(
+        os.path.join(output_dir, 'taskgraph_cache'), n_workers)
 
     if args['grid_aoi']:
         prep_aoi_task = task_graph.add_task(
@@ -853,16 +860,14 @@ def _schedule_predictor_data_processing(
         'line_intersect_length': _line_intersect_length,
     }
 
-    predictor_table = utils.read_csv_to_dataframe(
-        predictor_table_path, 'id', expand_path_cols=['path']
-        ).to_dict(orient='index')
+    predictor_df = utils.read_csv_to_dataframe(
+        predictor_table_path, MODEL_SPEC['args']['predictor_table_path'])
     predictor_task_list = []
     predictor_json_list = []  # tracks predictor files to add to shp
 
-    for predictor_id in predictor_table:
+    for predictor_id, row in predictor_df.iterrows():
         LOGGER.info(f"Building predictor {predictor_id}")
-
-        predictor_type = predictor_table[predictor_id]['type'].strip()
+        predictor_type = row['type']
         if predictor_type.startswith('raster'):
             # type must be one of raster_sum or raster_mean
             raster_op_mode = predictor_type.split('_')[1]
@@ -871,7 +876,7 @@ def _schedule_predictor_data_processing(
             predictor_json_list.append(predictor_target_path)
             predictor_task_list.append(task_graph.add_task(
                 func=_raster_sum_mean,
-                args=(predictor_table[predictor_id]['path'], raster_op_mode,
+                args=(row['path'], raster_op_mode,
                       response_vector_path, predictor_target_path),
                 target_path_list=[predictor_target_path],
                 task_name=f'predictor {predictor_id}'))
@@ -884,8 +889,7 @@ def _schedule_predictor_data_processing(
             predictor_task_list.append(task_graph.add_task(
                 func=_polygon_area,
                 args=(predictor_type, response_polygons_pickle_path,
-                      predictor_table[predictor_id]['path'],
-                      predictor_target_path),
+                      row['path'], predictor_target_path),
                 target_path_list=[predictor_target_path],
                 dependent_task_list=[prepare_response_polygons_task],
                 task_name=f'predictor {predictor_id}'))
@@ -896,8 +900,7 @@ def _schedule_predictor_data_processing(
             predictor_task_list.append(task_graph.add_task(
                 func=predictor_functions[predictor_type],
                 args=(response_polygons_pickle_path,
-                      predictor_table[predictor_id]['path'],
-                      predictor_target_path),
+                      row['path'], predictor_target_path),
                 target_path_list=[predictor_target_path],
                 dependent_task_list=[prepare_response_polygons_task],
                 task_name=f'predictor {predictor_id}'))
@@ -1167,7 +1170,7 @@ def _line_intersect_length(
 def _point_nearest_distance(
         response_polygons_pickle_path, point_vector_path,
         predictor_target_path):
-    """Calculate distance to nearest point for all polygons.
+    """Calculate distance to nearest point for the centroid of all polygons.
 
     Args:
         response_polygons_pickle_path (str): path to a pickled dictionary which
@@ -1197,7 +1200,7 @@ def _point_nearest_distance(
                 f"{(100*index)/len(response_polygons_lookup):.2f}% complete"))
 
         point_distance_lookup[str(feature_id)] = min([
-            geometry.distance(point) for point in points])
+            geometry.centroid.distance(point) for point in points])
     LOGGER.info(f"{os.path.basename(point_vector_path)} point distance: "
                 "100.00% complete")
     with open(predictor_target_path, 'w') as jsonfile:
@@ -1546,10 +1549,10 @@ def _validate_same_id_lengths(table_path):
         tables.
 
     """
-    predictor_table = utils.read_csv_to_dataframe(
-        table_path, 'id').to_dict(orient='index')
+    predictor_df = utils.read_csv_to_dataframe(
+        table_path, MODEL_SPEC['args']['predictor_table_path'])
     too_long = set()
-    for p_id in predictor_table:
+    for p_id in predictor_df.index:
         if len(p_id) > 10:
             too_long.add(p_id)
     if len(too_long) > 0:
@@ -1580,21 +1583,21 @@ def _validate_same_ids_and_types(
         tables.
 
     """
-    predictor_table = utils.read_csv_to_dataframe(
-        predictor_table_path, 'id').to_dict(orient='index')
+    predictor_df = utils.read_csv_to_dataframe(
+        predictor_table_path, MODEL_SPEC['args']['predictor_table_path'])
 
-    scenario_predictor_table = utils.read_csv_to_dataframe(
-        scenario_predictor_table_path, 'id').to_dict(orient='index')
+    scenario_predictor_df = utils.read_csv_to_dataframe(
+        scenario_predictor_table_path,
+        MODEL_SPEC['args']['scenario_predictor_table_path'])
 
-    predictor_table_pairs = set([
-        (p_id, predictor_table[p_id]['type'].strip()) for p_id in predictor_table])
-    scenario_predictor_table_pairs = set([
-        (p_id, scenario_predictor_table[p_id]['type'].strip()) for p_id in
-        scenario_predictor_table])
-    if predictor_table_pairs != scenario_predictor_table_pairs:
+    predictor_pairs = set([
+        (p_id, row['type']) for p_id, row in predictor_df.iterrows()])
+    scenario_predictor_pairs = set([
+        (p_id, row['type']) for p_id, row in scenario_predictor_df.iterrows()])
+    if predictor_pairs != scenario_predictor_pairs:
         raise ValueError('table pairs unequal.\n\t'
-                         f'predictor: {predictor_table_pairs}\n\t'
-                         f'scenario:{scenario_predictor_table_pairs}')
+                         f'predictor: {predictor_pairs}\n\t'
+                         f'scenario:{scenario_predictor_pairs}')
     LOGGER.info('tables validate correctly')
 
 
@@ -1617,8 +1620,8 @@ def _validate_same_projection(base_vector_path, table_path):
     # This will load the table as a list of paths which we can iterate through
     # without bothering the rest of the table structure
     data_paths = utils.read_csv_to_dataframe(
-        table_path, convert_vals_to_lower=False, expand_path_cols=['path']
-    ).squeeze('columns')['path'].tolist()
+        table_path, MODEL_SPEC['args']['predictor_table_path']
+    )['path'].tolist()
 
     base_vector = gdal.OpenEx(base_vector_path, gdal.OF_VECTOR)
     base_layer = base_vector.GetLayer()
@@ -1674,14 +1677,14 @@ def _validate_predictor_types(table_path):
         ValueError if any value in the ``type`` column does not match a valid
         type, ignoring leading/trailing whitespace.
     """
-    df = utils.read_csv_to_dataframe(table_path, convert_vals_to_lower=False)
+    df = utils.read_csv_to_dataframe(
+        table_path, MODEL_SPEC['args']['predictor_table_path'])
     # ignore leading/trailing whitespace because it will be removed
     # when the type values are used
-    type_list = set([type.strip() for type in df['type']])
     valid_types = set({'raster_mean', 'raster_sum', 'point_count',
                        'point_nearest_distance', 'line_intersect_length',
                        'polygon_area_coverage', 'polygon_percent_coverage'})
-    difference = type_list.difference(valid_types)
+    difference = set(df['type']).difference(valid_types)
     if difference:
         raise ValueError('The table contains invalid type value(s): '
                          f'{difference}. The allowed types are: {valid_types}')
