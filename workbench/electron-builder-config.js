@@ -35,6 +35,10 @@ const config = {
       from: '../LICENSE.txt',
       to: 'LICENSE.InVEST.txt',
     },
+    {
+      from: '../NOTICE.txt',
+      to: 'NOTICE.InVEST.txt',
+    },
   ]
   extraResources: [
     {
