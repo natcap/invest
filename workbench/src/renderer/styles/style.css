@@ -34,7 +34,7 @@ body {
 }
 
 .navbar-brand {
-	padding-bottom: 0;
+  padding-bottom: 0;
   margin-right: 0;
 }
 
@@ -59,15 +59,15 @@ body {
 }
 
 .navbar-brand .nav-link {
-	color: var(--invest-green);
-	font-weight: 600;
-	font-size: 2.0rem;
-	letter-spacing: 1px;
-	padding-bottom: 0;
-	padding-left: 0.7rem;
+  color: var(--invest-green);
+  font-weight: 600;
+  font-size: 2.0rem;
+  letter-spacing: 1px;
+  padding-bottom: 0;
+  padding-left: 0.7rem;
   padding-right: 0;
-	display: flex;
-	align-items: center;
+  display: flex;
+  align-items: center;
 }
 
 /*tricky to align icon with text*/
@@ -77,8 +77,8 @@ body {
 
 /*registered trademark icon styling*/
 .rtm {
-	color: var(--invest-green);
-	font-size: 0.5rem;
+  color: var(--invest-green);
+  font-size: 0.5rem;
   margin-bottom: 0.3rem;
 }
 
