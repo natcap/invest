@@ -12,7 +12,7 @@ our 3-Clause BSD License and make sure it still met our needs. There was also
 concern about whether InVEST was being fairly attributed in derivative works 
 and whether the InVEST License should play a role in helping define attribution.
 While reviewing various licenses the intention was to always stick with a
-permissive open source license and not move to a copyleft or more restrive 
+permissive open source license and not move to a copyleft or more restrictive 
 license. Doug did a thorough audit of licenses, specifically looking at how 
 permissive open source licenses and software projects handle attribution.
 Doug collaborated with James, Lisa, and others throughout this process.
