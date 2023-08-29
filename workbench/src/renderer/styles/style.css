@@ -1,5 +1,5 @@
 :root {
-	font-size: 16px;
+  font-size: 16px;
 }
 
 
@@ -12,25 +12,25 @@
   to appear with height: 100%, even when parent has a fixed height;
 */
 body {
-	--invest-green: #148F68;
-	--header-height: 64px;
-	--content-height: calc(100vh - var(--header-height));
-	min-height: 100vh;
-	background-color: rgba(0,0,0,0);
-	margin: 0;
-	overflow-y: hidden;
+  --invest-green: #148F68;
+  --header-height: 64px;
+  --content-height: calc(100vh - var(--header-height));
+  min-height: 100vh;
+  background-color: rgba(0,0,0,0);
+  margin: 0;
+  overflow-y: hidden;
 }
 
 /*Top Navigation*/
 
 .navbar {
-	border-bottom: 3px solid var(--invest-green);
-	padding: 0;
-	height: var(--header-height)
+  border-bottom: 3px solid var(--invest-green);
+  padding: 0;
+  height: var(--header-height)
 }
 
 .navbar .row {
-	align-items: end;
+  align-items: end;
 }
 
 .navbar-brand {
@@ -39,23 +39,23 @@ body {
 }
 
 .navbar-brand:hover {
-	text-decoration-line: underline;
-	text-decoration-thickness: 3px;
+  text-decoration-line: underline;
+  text-decoration-thickness: 3px;
 }
 
 .navbar-middle {
-	flex-shrink: 1;
-	min-width: 0;
-	padding-left: 0;
-	padding-right: 0;
+  flex-shrink: 1;
+  min-width: 0;
+  padding-left: 0;
+  padding-right: 0;
 }
 
 .navbar-right {
-	max-width: fit-content;
-	margin-left: 0.5rem;
-	margin-right: -15px;
-	padding-left: 0;
-	padding-right: 0;
+  max-width: fit-content;
+  margin-left: 0.5rem;
+  margin-right: -15px;
+  padding-left: 0;
+  padding-right: 0;
 }
 
 .navbar-brand .nav-link {
@@ -72,7 +72,7 @@ body {
 
 /*tricky to align icon with text*/
 .navbar-brand .nav-link svg {
-	margin-bottom: -0.2rem;
+  margin-bottom: -0.2rem;
 }
 
 /*registered trademark icon styling*/
@@ -83,35 +83,35 @@ body {
 }
 
 .navbar-nav.nav-tabs {
-	border-bottom: 0;
-	overflow-x: hidden;
-	overflow-y: hidden;
+  border-bottom: 0;
+  overflow-x: hidden;
+  overflow-y: hidden;
 }
 
 .navbar-nav .nav-item {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	max-width: fit-content;
-	white-space: nowrap;
-	flex: 1; /*size by available space, not by content*/
-	min-width: 0; /*and allow it to shrink to fit container*/
-	background-color: transparent;
-	border: 2px solid #999999;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: fit-content;
+  white-space: nowrap;
+  flex: 1; /*size by available space, not by content*/
+  min-width: 0; /*and allow it to shrink to fit container*/
+  background-color: transparent;
+  border: 2px solid #999999;
   border-bottom: 0;
   border-radius: 5px 5px 0 0;
 }
 
 .navbar-nav .nav-item.active {
-	border: 3px solid var(--invest-green);
-	border-bottom: 0;
-	background-color: ghostwhite;
+  border: 3px solid var(--invest-green);
+  border-bottom: 0;
+  background-color: ghostwhite;
 }
 
 .navbar-light .navbar-nav .nav-link {
-	overflow: hidden;
-	text-overflow: ellipsis;
-	min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
   background-color: transparent;
   color: #999999;
   border: 0;
@@ -120,294 +120,294 @@ body {
 }
 
 .close-tab.btn {
-	background-color: transparent;
-	border-color: transparent;
-	color: #6c757d;
-	margin-left: 0.1rem;
-	padding-left: 0.1rem;
-	padding-right: 0.1rem;
-	padding-top: 0.1rem;
-	padding-bottom: 0.1rem;
-	height: fit-content;
+  background-color: transparent;
+  border-color: transparent;
+  color: #6c757d;
+  margin-left: 0.1rem;
+  padding-left: 0.1rem;
+  padding-right: 0.1rem;
+  padding-top: 0.1rem;
+  padding-bottom: 0.1rem;
+  height: fit-content;
 }
 .close-tab:hover, .close-tab:focus, .close-tab:active {
-	border-color: #6c757d;
-	background-color: #6c757d;
-	color: white;
+  border-color: #6c757d;
+  background-color: #6c757d;
+  color: white;
 }
 
 .progress {
-	display: inline-flex;
-	height: 2rem;
-	font-size: 1rem;
-	background-color: #aeb1b3;
+  display: inline-flex;
+  height: 2rem;
+  font-size: 1rem;
+  background-color: #aeb1b3;
 }
 
 .progress-bar {
-	padding-left: 0.5rem;
-	padding-right: 0.5rem;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
 }
 
 .navbar .alert {
-	padding: 0.4rem;
+  padding: 0.4rem;
 }
 
 .navbar .row .text-right {
-	white-space: nowrap;
+  white-space: nowrap;
 }
 
 .settings-icon-btn, .settings-icon-btn:hover {
-	background-color: transparent;
-	border-color: transparent;
+  background-color: transparent;
+  border-color: transparent;
 }
 
 .settings-icon {
-	color: black;
-	font-size: 2rem;
-	vertical-align: text-bottom;
+  color: black;
+  font-size: 2rem;
+  vertical-align: text-bottom;
 }
 
 .language-icon {
-	color: black;
-	font-size: 1rem;
-	vertical-align: text-bottom;
-	margin-right: 0.2rem;
+  color: black;
+  font-size: 1rem;
+  vertical-align: text-bottom;
+  margin-right: 0.2rem;
 }
 
 /* add padding to accomodate the width of a scroll bar
 otherwise the bar will make overall width of content
 exceed 100% of window.*/
 #home-tab-content {
-	padding-right:  16px;
+  padding-right:  16px;
 }
 
 /* Home Tab */
 
 .invest-list-container {
-	height: var(--content-height);
-	overflow-y: auto;
+  height: var(--content-height);
+  overflow-y: auto;
 }
 
 .invest-list-group {
-	/*do not constrain height here because it can cause more
-	columns to be created. Constrain it in parent instead.*/
-	display: block;
-	column-count: 2;
-	white-space: nowrap;
+  /*do not constrain height here because it can cause more
+  columns to be created. Constrain it in parent instead.*/
+  display: block;
+  column-count: 2;
+  white-space: nowrap;
 }
 
 .invest-list-group .list-group-item {
-	border-top: none;
-	border-right: none;
-	border-left: none;
-	border-bottom: 1px solid rgba(0,0,0,.125);
-	margin-bottom: 0;
-	overflow: hidden;
-	text-overflow: ellipsis;
+  border-top: none;
+  border-right: none;
+  border-left: none;
+  border-bottom: 1px solid rgba(0,0,0,.125);
+  margin-bottom: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .invest-list-group .list-group-item:last-child {
-	border-radius: 0;
+  border-radius: 0;
 }
 
 .invest-button {
-	color: var(--invest-green);
-	font-weight: 600;
+  color: var(--invest-green);
+  font-weight: 600;
 }
 
 .invest-button:hover {
-	color: white;
-	background-color: var(--invest-green);
-	opacity: 75%;
-	font-weight: 600;
+  color: white;
+  background-color: var(--invest-green);
+  opacity: 75%;
+  font-weight: 600;
 }
 
 .open-button-col {
-	max-width: fit-content;
-	padding-right: 0;
+  max-width: fit-content;
+  padding-right: 0;
 }
 
 .recent-header-col {
-	padding-left: 0;
+  padding-left: 0;
 }
 
 .recent-header-col .default-text {
-	padding-left: 0;
-	text-align: right;
+  padding-left: 0;
+  text-align: right;
 }
 
 .recent-job-card-col {
-	height: var(--content-height);
-	overflow-y: auto;
-	padding-right: 0.5rem;
+  height: var(--content-height);
+  overflow-y: auto;
+  padding-right: 0.5rem;
 }
 
 .recent-job-card-col .container {
-	padding-top: 0.25rem;
-	padding-bottom: 0.25rem;
-	padding-right: 0.5rem;
+  padding-top: 0.25rem;
+  padding-bottom: 0.25rem;
+  padding-right: 0.5rem;
 }
 
 .recent-job-card-col .container .row {
-	align-items: center;
+  align-items: center;
 }
 
 .recent-job-card {
-	width: inherit; 
-	margin-bottom: 1rem;
-	padding: 0;
-	height: fit-content;
-	filter: drop-shadow(2px 2px 2px grey);
+  width: inherit; 
+  margin-bottom: 1rem;
+  padding: 0;
+  height: fit-content;
+  filter: drop-shadow(2px 2px 2px grey);
 }
 
 .card-body {
-	padding: 0;
-	width: inherit;
+  padding: 0;
+  width: inherit;
 }
 
 .card-header {
-	background-color: var(--invest-green);
-	filter: opacity(0.75);
-	margin-bottom: 1rem;
-	margin-left: -0.1rem;
-	margin-right: -0.05rem;
+  background-color: var(--invest-green);
+  filter: opacity(0.75);
+  margin-bottom: 1rem;
+  margin-left: -0.1rem;
+  margin-right: -0.05rem;
 }
 
 .card-header .header-title {
-	color: white;
-	font-size: 1.35rem;
-	font-weight: 600;
-	letter-spacing: 0.5px;
+  color: white;
+  font-size: 1.35rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
 }
 
 .card-title {
-	padding-left: 1.25rem;
+  padding-left: 1.25rem;
 }
 
 .card-title .text-heading {
-	color: gray;
+  color: gray;
 }
 
 .card-title .text-mono {
-	font-family: monospace;
-	font-size: 1.2rem;
+  font-family: monospace;
+  font-size: 1.2rem;
 }
 
 .card-footer {
-	display: flex;
-	justify-content: space-between;
-	white-space: nowrap;
-	padding-right: 1rem;
+  display: flex;
+  justify-content: space-between;
+  white-space: nowrap;
+  padding-right: 1rem;
 }
 
 .card-footer span {
-	text-overflow: ellipsis;
+  text-overflow: ellipsis;
 }
 
 .card-footer .status {
-	overflow: hidden;
-	font-style: italic;
-	text-transform: capitalize;
+  overflow: hidden;
+  font-style: italic;
+  text-transform: capitalize;
 }
 
 .card-footer .status-error {
-	color: red;
+  color: red;
 }
 
 .card-footer .status-success {
-	color: var(--invest-green);
+  color: var(--invest-green);
 }
 
 .card-footer .timestamp {
-	padding-right:  2rem;
+  padding-right:  2rem;
 }
 
 /* InVEST Model Tab */
 
 .invest-main-col {
-	 /* main col can grow & shrink, sidebar cannot. */
-	flex:  1 1 0;
-	padding-left: 0;
-	padding-right: 0;
+   /* main col can grow & shrink, sidebar cannot. */
+  flex:  1 1 0;
+  padding-left: 0;
+  padding-right: 0;
 }
 
 .invest-main-col .tab-content {
-	background-color: ghostwhite;
+  background-color: ghostwhite;
 }
 
 .invest-sidebar-col {
-	/* sidebar cannot grow or shrink, main col can.
-	 * sidebar width tries to be 25%.
-	 */
-	flex: 0 0 25%;
-	display: flex;
-	flex-direction: column;
-	padding-right: 0;
-	padding-bottom: 1rem;
+  /* sidebar cannot grow or shrink, main col can.
+   * sidebar width tries to be 25%.
+   */
+  flex: 0 0 25%;
+  display: flex;
+  flex-direction: column;
+  padding-right: 0;
+  padding-bottom: 1rem;
 }
 
 .invest-sidebar-col .nav-link {
-	color: #000;
-	border-right: 5px solid transparent;
-	border-radius: 0;
-	font-size: 1.3rem;
-	font-weight: 550;
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	padding-right: 0;
+  color: #000;
+  border-right: 5px solid transparent;
+  border-radius: 0;
+  font-size: 1.3rem;
+  font-weight: 550;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-right: 0;
 }
 
 .invest-sidebar-col .nav-link svg {
-	font-size: 2rem;
+  font-size: 2rem;
 }
 
 .invest-sidebar-col .nav-link:hover, .invest-sidebar-col .nav-link:focus {
-	background-color: rgb(240, 240, 240);
-	border-right: 5px solid rgb(240, 240, 240);
-	border-radius: 0;
+  background-color: rgb(240, 240, 240);
+  border-right: 5px solid rgb(240, 240, 240);
+  border-radius: 0;
 }
 
 .invest-sidebar-col .nav-link.disabled {
-	color: #888888;
+  color: #888888;
 }
 
 .invest-sidebar-col .nav-link.active {
-	color: #000;
-	background-color: ghostwhite;
-	border-right: 5px solid var(--invest-green);
-	border-radius: 0;
+  color: #000;
+  background-color: ghostwhite;
+  border-right: 5px solid var(--invest-green);
+  border-radius: 0;
 }
 
 .sidebar-row {
-	display: flex;
-	flex-direction: column;
-	font-size: 1rem;
-	padding-left: 1rem;
-	padding-right: 1rem;
+  display: flex;
+  flex-direction: column;
+  font-size: 1rem;
+  padding-left: 1rem;
+  padding-right: 1rem;
 }
 
 .sidebar-buttons {
-	display: flex;
-	flex-direction: column;
-	flex-wrap: nowrap;
-	align-items: flex-start;
+  display: flex;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: flex-start;
 }
 
 .sidebar-buttons .btn {
-	white-space: nowrap;
-	background: none;
-	border: none;
-	color: black;
-	padding-left: 0;
+  white-space: nowrap;
+  background: none;
+  border: none;
+  color: black;
+  padding-left: 0;
 }
 
 .sidebar-buttons .alert {
-	margin-top: 1rem;
+  margin-top: 1rem;
 }
 
 .sidebar-links a {
-	padding-top: 0.5rem;
+  padding-top: 0.5rem;
 }
 
 .sidebar-footer {
@@ -416,42 +416,42 @@ exceed 100% of window.*/
 
 /* Model Status Alert */
 .invest-sidebar-col .sidebar-footer .alert {
-	display: flex;
-	flex-direction: column;
-	justify-content: center;
-	order: -1;
-	font-family: monospace;
-	font-weight: bold;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  order: -1;
+  font-family: monospace;
+  font-weight: bold;
 }
 
 .invest-sidebar-col .alert .btn {
-	flex: 1;
-	margin-top: 1rem;
-	font-size: 1.1rem;
-	font-family: revert;
-	letter-spacing: 0.03rem;
+  flex: 1;
+  margin-top: 1rem;
+  font-size: 1.1rem;
+  font-family: revert;
+  letter-spacing: 0.03rem;
 }
 
 /* The Run button */
 .sidebar-footer .btn-primary {
-	font-size: 1.5rem;
-	font-weight: 600;
-	letter-spacing: 0.1rem;
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: 0.1rem;
 }
 
 .sidebar-footer .btn-primary .spinner-border {
-	margin-left: 1rem;
-	margin-bottom: 0.25rem;
+  margin-left: 1rem;
+  margin-bottom: 0.25rem;
 }
 
 /* InVEST Setup Tab */
 .args-form {
-	height: var(--content-height);
-	width: 100%;
-	overflow-y: auto;
-	overflow-x: hidden;
-	padding-left: 2rem;
-	padding-right: 1rem;
+  height: var(--content-height);
+  width: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-left: 2rem;
+  padding-right: 1rem;
 }
 
 /* InVEST Argument Forms */
@@ -460,46 +460,46 @@ exceed 100% of window.*/
 }
 
 .arg-group {
-	margin-top: 1.0rem;
-	margin-bottom: 1.5rem;
-	padding-bottom: 0.5rem;
-	border-bottom: 1px dotted;
+  margin-top: 1.0rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px dotted;
 }
 
 .arg-group:last-of-type {
-	border-bottom: none;
+  border-bottom: none;
 }
 
 .arg-hide {
-	display: none;
+  display: none;
 }
 
 .arg-disable .form-label {
-	color: #a5a5a5;
+  color: #a5a5a5;
 }
 
 .args-form .form-control:disabled {
-	color: #888888;
+  color: #888888;
 }
 
 .args-form .form-group {
-	align-items: center;
+  align-items: center;
 }
 
 #argname {
-	text-transform: capitalize;
-	font-weight: 600;
+  text-transform: capitalize;
+  font-weight: 600;
 }
 
 .args-form .form-control {
-	font-family: monospace;
-	font-size:1.3rem;
+  font-family: monospace;
+  font-size:1.3rem;
 }
 
 .args-form .form-control[type=text] {
-	/*always hold space for a validation mark so the rightmost
-	text is never hidden by the mark when it appears.*/
-	padding-right: 2em;
+  /*always hold space for a validation mark so the rightmost
+  text is never hidden by the mark when it appears.*/
+  padding-right: 2em;
 }
 
 input.input-dragging {
@@ -507,93 +507,93 @@ input.input-dragging {
 }
 
 input[type=text]::placeholder {
-	font-style: italic;
-	color: #a5a5a5;
+  font-style: italic;
+  color: #a5a5a5;
 }
 
 /* Default sized toggle switch too small */
 .form-switch {
-	transform:scale(1.5);
-	margin-left: 1rem;
-	margin-top: 0.6rem;
+  transform:scale(1.5);
+  margin-left: 1rem;
+  margin-top: 0.6rem;
 }
 
 .invalid-feedback {
-	font-size: 0.9rem;
-	font-family: monospace;
-	white-space: pre-wrap;
-	padding-left: 3rem;
-	text-indent: -3rem;
+  font-size: 0.9rem;
+  font-family: monospace;
+  white-space: pre-wrap;
+  padding-left: 3rem;
+  text-indent: -3rem;
 }
 
 .args-form svg {
-	font-size: 1.5rem;
+  font-size: 1.5rem;
 }
 
 /* InVEST Log Tab */
 #log-display {
-	overflow: auto;
-	white-space: pre-wrap;
-	height: var(--content-height);
+  overflow: auto;
+  white-space: pre-wrap;
+  height: var(--content-height);
 }
 
 #log-display {
-	font-family: monospace;
-	font-size:1rem;
-	color: #000;
-	padding-right: 0;
+  font-family: monospace;
+  font-size:1rem;
+  color: #000;
+  padding-right: 0;
 }
 
 #log-display .invest-log-primary {
-	color: #000;
-	font-weight: bold;
+  color: #000;
+  font-weight: bold;
 }
 
 #log-display .invest-log-primary-warning {
-	color: #f13232;
+  color: #f13232;
 }
 
 #log-display .invest-log-error {
-	color: #f13232;
-	font-weight: bold;
+  color: #f13232;
+  font-weight: bold;
 }
 
 /* Download Data Modal */
 .download-data-modal .modal-dialog {
-	overflow-y: initial;
+  overflow-y: initial;
 }
 
 .download-data-modal .modal-body {
-	height: 80vh;
-	overflow-y: auto;
+  height: 80vh;
+  overflow-y: auto;
 }
 
 /* Settings Modal */
 .settings-modal .modal-dialog {
-	/*Hardcoding prevents dynamic resizing, which is convenient.
-	And it is okay because we set the minimum electron window width
-	at 800px when we create it.*/
-	max-width: 600px;
+  /*Hardcoding prevents dynamic resizing, which is convenient.
+  And it is okay because we set the minimum electron window width
+  at 800px when we create it.*/
+  max-width: 600px;
 }
 
 /* Save As modal */
 .save-as-modal svg {
-	margin-bottom: 0.2rem;
+  margin-bottom: 0.2rem;
 }
 
 .confirm-modal .modal-content {
-	background-color: papayawhip;
-	margin-top: 100px;
+  background-color: papayawhip;
+  margin-top: 100px;
 }
 
 .error-boundary {
-	max-width:600px;
-	margin: 0 auto;
-	margin-top: 5rem;
-	border-color: black;
-	border-style: dotted;
+  max-width:600px;
+  margin: 0 auto;
+  margin-top: 5rem;
+  border-color: black;
+  border-style: dotted;
 }
 
 .error-boundary .btn {
-	margin: 1rem;
+  margin: 1rem;
 }
