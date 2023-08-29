@@ -73,7 +73,7 @@ ReactDom.render(
                 <td>{t('License')}</td>
                 <td>
                   <a
-                    href="https://github.com/natcap/invest/blob/master/LICENSE.txt"
+                    href="https://github.com/natcap/invest/blob/main/LICENSE.txt"
                   >
                     Apache 2.0
                   </a>
