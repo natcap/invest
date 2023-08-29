@@ -30,6 +30,12 @@ const config = {
     main: 'build/main/main.js',
     version: installerVersion,
   },
+  extraFiles: [
+    {
+      from: '../LICENSE.txt',
+      to: 'LICENSE.InVEST.txt',
+    },
+  ]
   extraResources: [
     {
       from: '../dist/invest',
@@ -42,10 +48,6 @@ const config = {
     {
       from: 'resources/storage_token.txt',
       to: 'storage_token.txt',
-    },
-    {
-      from: '../LICENSE.txt',
-      to: 'LICENSE.InVEST.txt',
     },
   ],
   appId: APP_ID,
