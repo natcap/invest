@@ -45,7 +45,7 @@ NatCap Stanford University employee, we did not feel it necessary.
 
 ## Status
 
-- PR Draft
+Complete
 
 ## Consequences
 
