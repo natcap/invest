@@ -121,6 +121,7 @@ MODEL_SPEC = {
         "nearest_to_edge.csv": {
             "about": gettext(
                 "Table of land cover classes and the amount of each that was converted for the nearest-to-edge conversion scenario."),
+            "index_col": "lucode",
             "columns": {
                 "lucode": {
                     "type": "integer",
@@ -140,6 +141,7 @@ MODEL_SPEC = {
         "farthest_from_edge.csv": {
             "about": gettext(
                 "Table of land cover classes and the amount of each that was converted for the nearest-to-edge conversion scenario."),
+            "index_col": "lucode",
             "columns": {
                 "lucode": {
                     "type": "integer",
@@ -175,10 +177,10 @@ MODEL_SPEC = {
                         "Map of the distance from each pixel to the nearest "
                         "edge of the focal landcover."),
                     "bands": {1: {"type": "number", "units": u.pixel}}
-                },
-                "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
+                }
             }
-        }
+        },
+        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
     }
 }
 
@@ -251,8 +253,6 @@ def execute(args):
     utils.make_directories(
         [output_dir, intermediate_output_dir, tmp_dir])
 
-    work_token_dir = os.path.join(
-        intermediate_output_dir, '_taskgraph_working_dir')
     try:
         n_workers = int(args['n_workers'])
     except (KeyError, ValueError, TypeError):
@@ -260,7 +260,8 @@ def execute(args):
         # ValueError when n_workers is an empty string.
         # TypeError when n_workers is None.
         n_workers = -1  # Single process mode.
-    task_graph = taskgraph.TaskGraph(work_token_dir, n_workers)
+    task_graph = taskgraph.TaskGraph(
+        os.path.join(args['workspace_dir'], 'taskgraph_cache'), n_workers)
 
     area_to_convert = float(args['area_to_convert'])
     replacement_lucode = int(args['replacement_lucode'])

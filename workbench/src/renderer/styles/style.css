@@ -572,6 +572,11 @@ input[type=text]::placeholder {
 	margin-bottom: 0.2rem;
 }
 
+.confirm-modal .modal-content {
+	background-color: papayawhip;
+	margin-top: 100px;
+}
+
 .error-boundary {
 	max-width:600px;
 	margin: 0 auto;

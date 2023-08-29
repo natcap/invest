@@ -43,11 +43,11 @@ const config = {
       from: 'resources/storage_token.txt',
       to: 'storage_token.txt',
     },
+    {
+      from: '../LICENSE.txt',
+      to: 'LICENSE.InVEST.txt',
+    },
   ],
-  extraFiles: [{
-    from: '../LICENSE.txt',
-    to: 'LICENSE.InVEST.txt',
-  }],
   appId: APP_ID,
   productName: PRODUCT_NAME,
   artifactName: ARTIFACT_NAME,

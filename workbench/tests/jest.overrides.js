@@ -12,6 +12,7 @@ if (!process.env.ELECTRON_LOG_LEVEL) {
 if (global.window) {
   // mock the work of preload.js here:
   const api = require('../src/preload/api').default;
+  api.LANGUAGE = 'en';
   global.window.Workbench = api;
 
   // normally electron main passes port to preload.

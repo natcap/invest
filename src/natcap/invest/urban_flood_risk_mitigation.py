@@ -57,6 +57,7 @@ MODEL_SPEC = {
         },
         "curve_number_table_path": {
             "type": "csv",
+            "index_col": "lucode",
             "columns": {
                 "lucode": {
                     "type": "integer",
@@ -91,6 +92,7 @@ MODEL_SPEC = {
         },
         "infrastructure_damage_loss_table_path": {
             "type": "csv",
+            "index_col": "type",
             "columns": {
                 "type": {
                     "type": "integer",
@@ -184,12 +186,7 @@ MODEL_SPEC = {
                         "the same spatial reference as the LULC."),
                     "geometries": spec_utils.POLYGONS,
                     "fields": {}
-                }
-            }
-        },
-        "temp_working_dir_not_for_humans": {
-            "type": "directory",
-            "contents": {
+                },
                 "aligned_lulc.tif": {
                     "about": "Aligned and clipped copy of the LULC.",
                     "bands": {1: {"type": "integer"}}
@@ -205,10 +202,10 @@ MODEL_SPEC = {
                 "s_max.tif": {
                     "about": "Map of potential retention.",
                     "bands": {1: {"type": "number", "units": u.millimeter}}
-                },
-                "taskgraph_data.db": {}
+                }
             }
-        }
+        },
+        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
     }
 }
 
@@ -259,12 +256,10 @@ def execute(args):
 
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
 
-    temporary_working_dir = os.path.join(
-        args['workspace_dir'], 'temp_working_dir_not_for_humans')
     intermediate_dir = os.path.join(
         args['workspace_dir'], 'intermediate_files')
     utils.make_directories([
-        args['workspace_dir'], intermediate_dir, temporary_working_dir])
+        args['workspace_dir'], intermediate_dir])
 
     try:
         n_workers = int(args['n_workers'])
@@ -273,13 +268,14 @@ def execute(args):
         # ValueError when n_workers is an empty string.
         # TypeError when n_workers is None.
         n_workers = -1  # Synchronous mode.
-    task_graph = taskgraph.TaskGraph(temporary_working_dir, n_workers)
+    task_graph = taskgraph.TaskGraph(
+        os.path.join(args['workspace_dir'], 'taskgraph_cache'), n_workers)
 
     # Align LULC with soils
     aligned_lulc_path = os.path.join(
-        temporary_working_dir, f'aligned_lulc{file_suffix}.tif')
+        intermediate_dir, f'aligned_lulc{file_suffix}.tif')
     aligned_soils_path = os.path.join(
-        temporary_working_dir,
+        intermediate_dir,
         f'aligned_soils_hydrological_group{file_suffix}.tif')
 
     lulc_raster_info = pygeoprocessing.get_raster_info(
@@ -306,20 +302,20 @@ def execute(args):
         task_name='align raster stack')
 
     # Load CN table
-    cn_table = utils.read_csv_to_dataframe(
-        args['curve_number_table_path'], 'lucode').to_dict(orient='index')
+    cn_df = utils.read_csv_to_dataframe(
+        args['curve_number_table_path'],
+        MODEL_SPEC['args']['curve_number_table_path'])
 
     # make cn_table into a 2d array where first dim is lucode, second is
     # 0..3 to correspond to CN_A..CN_D
     data = []
     row_ind = []
     col_ind = []
-    for lucode in cn_table:
-        data.extend([
-            cn_table[lucode][f'cn_{soil_id}']
-            for soil_id in ['a', 'b', 'c', 'd']])
-        row_ind.extend([int(lucode)] * 4)
+    for lucode, row in cn_df.iterrows():
+        data.extend([row[f'cn_{soil_id}'] for soil_id in ['a', 'b', 'c', 'd']])
+        row_ind.extend([lucode] * 4)
     col_ind = [0, 1, 2, 3] * (len(row_ind) // 4)
+
     lucode_to_cn_table = scipy.sparse.csr_matrix((data, (row_ind, col_ind)))
 
     cn_nodata = -1
@@ -327,7 +323,7 @@ def execute(args):
     soil_type_nodata = soil_raster_info['nodata'][0]
 
     cn_raster_path = os.path.join(
-        temporary_working_dir, f'cn_raster{file_suffix}.tif')
+        intermediate_dir, f'cn_raster{file_suffix}.tif')
     align_raster_stack_task.join()
 
     cn_raster_task = task_graph.add_task(
@@ -344,7 +340,7 @@ def execute(args):
     # Generate S_max
     s_max_nodata = -9999
     s_max_raster_path = os.path.join(
-        temporary_working_dir, f's_max{file_suffix}.tif')
+        intermediate_dir, f's_max{file_suffix}.tif')
     s_max_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=(
@@ -649,7 +645,9 @@ def _calculate_damage_to_infrastructure_in_aoi(
     infrastructure_layer = infrastructure_vector.GetLayer()
 
     damage_type_map = utils.read_csv_to_dataframe(
-        structures_damage_table, 'type').to_dict(orient='index')
+        structures_damage_table,
+        MODEL_SPEC['args']['infrastructure_damage_loss_table_path']
+    )['damage'].to_dict()
 
     infrastructure_layer_defn = infrastructure_layer.GetLayerDefn()
     type_index = -1
@@ -703,8 +701,8 @@ def _calculate_damage_to_infrastructure_in_aoi(
                 intersection_geometry = aoi_geometry_shapely.intersection(
                     infrastructure_geometry)
                 damage_type = int(infrastructure_feature.GetField(type_index))
-                damage = damage_type_map[damage_type]['damage']
-                total_damage += intersection_geometry.area * damage
+                total_damage += (
+                    intersection_geometry.area * damage_type_map[damage_type])
 
         aoi_damage[aoi_feature.GetFID()] = total_damage
 
@@ -939,5 +937,25 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
-    return validation.validate(args, MODEL_SPEC['args'],
-                               MODEL_SPEC['args_with_spatial_overlap'])
+    validation_warnings = validation.validate(
+        args, MODEL_SPEC['args'], MODEL_SPEC['args_with_spatial_overlap'])
+
+    sufficient_keys = validation.get_sufficient_keys(args)
+    invalid_keys = validation.get_invalid_keys(validation_warnings)
+
+    if ("curve_number_table_path" not in invalid_keys and
+            "curve_number_table_path" in sufficient_keys):
+        # Load CN table. Resulting DF has index and CN_X columns only.
+        cn_df = utils.read_csv_to_dataframe(
+            args['curve_number_table_path'],
+            MODEL_SPEC['args']['curve_number_table_path'])
+        # Check for NaN values.
+        nan_mask = cn_df.isna()
+        if nan_mask.any(axis=None):
+            nan_lucodes = nan_mask[nan_mask.any(axis=1)].index
+            lucode_list = list(nan_lucodes.values)
+            validation_warnings.append((
+                ['curve_number_table_path'],
+                f'Missing curve numbers for lucode(s) {lucode_list}'))
+
+    return validation_warnings

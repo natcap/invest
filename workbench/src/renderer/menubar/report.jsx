@@ -7,12 +7,10 @@ import {
   handleClickExternalURL,
   handleClickFindLogfiles
 } from './handlers';
-import { getSettingsValue } from '../components/SettingsModal/SettingsStorage';
 import investLogo from '../static/invest-logo.png';
 import natcapLogo from '../static/NatCapLogo.jpg';
 
-const language = await getSettingsValue('language');
-await i18n.changeLanguage(language);
+await i18n.changeLanguage(window.Workbench.LANGUAGE);
 ReactDom.render(
   <Translation>
     {(t, { i18n }) => (

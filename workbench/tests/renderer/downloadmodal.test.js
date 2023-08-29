@@ -12,10 +12,6 @@ import DownloadProgressBar from '../../src/renderer/components/DownloadProgressB
 import sampledata_registry from '../../src/renderer/components/DataDownloadModal/sampledata_registry.json';
 import { getInvestModelNames } from '../../src/renderer/server_requests';
 import App from '../../src/renderer/app';
-import {
-  clearSettingsStore,
-  getSettingsValue,
-} from '../../src/renderer/components/SettingsModal/SettingsStorage';
 import setupDownloadHandlers from '../../src/main/setupDownloadHandlers';
 import { removeIpcMainListeners } from '../../src/main/main';
 import { ipcMainChannels } from '../../src/main/ipcMainChannels';
@@ -173,7 +169,6 @@ describe('Integration tests with main process', () => {
 
   afterEach(async () => {
     removeIpcMainListeners();
-    await clearSettingsStore();
   });
 
   test('Download: starts, updates progress, & stores location', async () => {
@@ -200,27 +195,10 @@ describe('Integration tests with main process', () => {
     const downloadButton = await findByRole('button', { name: 'Download' });
     await userEvent.click(downloadButton);
     const nURLs = allCheckBoxes.length - 1; // all except Select All
-    await waitFor(async () => {
-      expect(await getSettingsValue('sampleDataDir'))
-        .toBe(dialogData.filePaths[0]);
-    });
     const progressBar = await findByRole('progressbar');
     expect(progressBar).toHaveTextContent(`Downloading 1 of ${nURLs}`);
     // The electron window's downloadURL function is mocked, so we don't
     // expect the progress bar to update further in this test.
-  });
-
-  test('Cancel: does not store a sampleDataDir value', async () => {
-    const { findByRole } = render(<App isFirstRun />);
-
-    const existingValue = await getSettingsValue('sampleDataDir');
-    const cancelButton = await findByRole('button', { name: 'Cancel' });
-    await userEvent.click(cancelButton);
-
-    await waitFor(async () => {
-      const value = await getSettingsValue('sampleDataDir');
-      expect(value).toBe(existingValue);
-    });
   });
 
   test('Alert when download location is not writeable', async () => {
