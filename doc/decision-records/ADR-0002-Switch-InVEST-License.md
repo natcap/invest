@@ -27,7 +27,7 @@ source license:
 1. Explicitly states the terms in clear language, including attribution and
    trademark guidelines, which helps remove ambiguity and room for
    interpretation.
-2. Includes a clause requiring derivate works to clearly note any major changes
+2. Includes a clause requiring derivative works to clearly note any major changes
    to the original source. This felt like a nice addition given the scientific 
    nature of our software and quality that our software is known for.
 3. Is a widely established and adopted license that is useable "as is".
