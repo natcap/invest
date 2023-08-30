@@ -45,7 +45,7 @@ NatCap Stanford University employee, we did not feel it necessary.
 
 ## Status
 
-Complete
+Complete. Released in InVEST 3.14.0.
 
 ## Consequences
 
