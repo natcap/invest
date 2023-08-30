@@ -41,13 +41,10 @@ def is_invest_model(module):
 
 pyname_to_module = {}
 for _, name, ispkg in pkgutil.iter_modules(natcap.invest.__path__, 'natcap.invest.'):
-    print(name, ispkg)
     module = importlib.import_module(name)
-    print(module)
     if ispkg:
         for _, sub_name, _ in pkgutil.iter_modules(module.__path__):
             submodule = importlib.import_module(f'{name}.{sub_name}')
-            print(submodule)
             if is_invest_model(submodule):
                 pyname_to_module[f'{name}.{sub_name}'] = submodule
     else:
@@ -102,7 +99,7 @@ def build_model_list_table(locale_code):
     return '\n'.join(strings) + '\n'
 
 
-def build_model_list_json():
+def build_model_list_json(locale_code):
     """Build a json object of relevant information for the CLI.
 
     The json object returned uses the human-readable model names for keys
@@ -113,11 +110,19 @@ def build_model_list_json():
         A string representation of the JSON object.
 
     """
+    from natcap.invest import LOCALE_DIR
+    translation = gettext.translation(
+        'messages',
+        languages=[locale_code],
+        localedir=LOCALE_DIR,
+        # fall back to a NullTranslation, which returns the English messages
+        fallback=True)
+
     json_object = {}
     for model_id, model_spec in model_id_to_spec.items():
-        json_object[model_spec['model_name']] = {
+        json_object[translation.gettext(model_spec['model_name'])] = {
             'model_name': model_id,
-            'aliases': spec['aliases']
+            'aliases': model_spec['aliases']
         }
 
     return json.dumps(json_object)
@@ -160,7 +165,6 @@ def export_to_python(target_filepath, model_id, args_dict=None):
 
     with codecs.open(target_filepath, 'w', encoding='utf-8') as py_file:
         args = pprint.pformat(cast_args, indent=4)  # 4 spaces
-
         # Tweak formatting from pprint:
         # * Bump parameter inline with starting { to next line
         # * add trailing comma to last item item pair
@@ -171,7 +175,7 @@ def export_to_python(target_filepath, model_id, args_dict=None):
             invest_version=natcap.invest.__version__,
             today=datetime.datetime.now().strftime('%c'),
             model_title=model_id_to_spec[model_id]['model_name'],
-            pyname=f'natcap.invest.{model_id_to_pyname[model_id]}',
+            pyname=model_id_to_pyname[model_id],
             model_args=args))
 
 
@@ -438,7 +442,7 @@ def main(user_args=None):
         parser.exit(0)
 
     if args.subcommand == 'getspec':
-        target_model = model_id_to_spec[args.model].pyname
+        target_model = model_id_to_pyname[args.model]
         model_module = importlib.reload(
             importlib.import_module(name=target_model))
         spec = model_module.MODEL_SPEC
@@ -474,7 +478,7 @@ def main(user_args=None):
         else:
             parsed_datastack.args['workspace_dir'] = args.workspace
 
-        target_model = model_id_to_spec[args.model].pyname
+        target_model = model_id_to_pyname[args.model]
         model_module = importlib.import_module(name=target_model)
         LOGGER.info('Imported target %s from %s',
                     model_module.__name__, model_module)
