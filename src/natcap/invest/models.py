@@ -30,7 +30,6 @@ for _, name, ispkg in pkgutil.iter_modules(natcap.invest.__path__, 'natcap.inves
         if is_invest_model(module):
             pyname_to_module[name] = module
 
-
 model_id_to_pyname = {}
 model_id_to_spec = {}
 model_alias_to_id = {}
