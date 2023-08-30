@@ -39,7 +39,7 @@ const config = {
       from: '../NOTICE.txt',
       to: 'NOTICE.InVEST.txt',
     },
-  ]
+  ],
   extraResources: [
     {
       from: '../dist/invest',
