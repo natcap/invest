@@ -11,7 +11,7 @@ import natcap.invest
 from natcap.invest import cli
 from natcap.invest import datastack
 from natcap.invest import set_locale
-from natcap.invest.model_metadata import MODEL_METADATA
+from natcap.invest.models import model_id_to_pyname, model_id_to_spec
 from natcap.invest import spec_utils
 from natcap.invest import usage
 
@@ -25,9 +25,8 @@ CORS(app, resources={
     }
 })
 
-PYNAME_TO_MODEL_NAME_MAP = {
-    metadata.pyname: model_name
-    for model_name, metadata in MODEL_METADATA.items()
+PYNAME_TO_MODEL_ID_MAP = {
+    pyname: model_id for model_id, pyname in model_id_to_pyname.items()
 }
 
 
@@ -49,9 +48,8 @@ def get_invest_models():
         A JSON string
     """
     LOGGER.debug('get model list')
-    set_locale(request.args.get('language', 'en'))
-    importlib.reload(natcap.invest.model_metadata)
-    return cli.build_model_list_json()
+    locale_code = request.args.get('language', 'en')
+    return cli.build_model_list_json(locale_code)
 
 
 @app.route(f'/{PREFIX}/getspec', methods=['POST'])
@@ -68,7 +66,7 @@ def get_invest_getspec():
     """
     set_locale(request.args.get('language', 'en'))
     target_model = request.get_json()
-    target_module = MODEL_METADATA[target_model].pyname
+    target_module = model_id_to_pyname[target_model]
     importlib.reload(natcap.invest.spec_utils)
     model_module = importlib.reload(
         importlib.import_module(name=target_module))
@@ -152,13 +150,13 @@ def post_datastack_file():
     filepath = request.get_json()
     stack_type, stack_info = datastack.get_datastack_info(
         filepath)
-    model_name = PYNAME_TO_MODEL_NAME_MAP[stack_info.model_name]
+    model_id = PYNAME_TO_MODEL_ID_MAP[stack_info.model_name]
     result_dict = {
         'type': stack_type,
         'args': stack_info.args,
         'module_name': stack_info.model_name,
-        'model_run_name': model_name,
-        'model_human_name': MODEL_METADATA[model_name].model_title,
+        'model_run_name': model_id,
+        'model_human_name': model_id_to_spec[model_id]['model_name'],
         'invest_version': stack_info.invest_version
     }
     return json.dumps(result_dict)
@@ -194,7 +192,7 @@ def save_to_python():
 
     Body (JSON string):
         filepath: string
-        modelname: string (a key in natcap.invest.MODEL_METADATA)
+        modelname: string (matching a model_id from a MODEL_SPEC)
         args_dict: JSON string of InVEST model args keys and values
 
     Returns:
