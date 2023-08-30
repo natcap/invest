@@ -957,6 +957,42 @@ class UNATests(unittest.TestCase):
         numpy.testing.assert_allclose(
             numpy.sum(weighted_sum_array[~nodata_pixels]), 1122.5)
 
+    def test_write_vector(self):
+        """UNA: test writing of various numeric types to the output vector."""
+        from natcap.invest import urban_nature_access
+        args = _build_model_args(self.workspace_dir)
+
+        feature_attrs = {
+            0: {
+                'my-field-1': float(1.2345),
+                'my-field-2': numpy.float32(2.34567),
+                'my-field-3': numpy.float64(3.45678),
+                'my-field-4': int(4),
+                'my-field-5': numpy.int16(5),
+                'my-field-6': numpy.int32(6),
+            },
+        }
+        target_vector_path = os.path.join(self.workspace_dir, 'target.gpkg')
+        urban_nature_access._write_supply_demand_vector(
+            args['admin_boundaries_vector_path'], feature_attrs,
+            target_vector_path)
+
+        self.assertTrue(os.path.exists(target_vector_path))
+        try:
+            vector = gdal.OpenEx(target_vector_path)
+            self.assertEqual(vector.GetLayerCount(), 1)
+            layer = vector.GetLayer()
+            self.assertEqual(len(layer.schema), len(feature_attrs[0]))
+            self.assertEqual(layer.GetFeatureCount(), 1)
+            feature = layer.GetFeature(0)
+            for field_name, expected_field_value in feature_attrs[0].items():
+                self.assertEqual(
+                    feature.GetField(field_name), expected_field_value)
+        finally:
+            feature = None
+            layer = None
+            vector = None
+
     def test_urban_nature_proportion(self):
         """UNA: Run the model with urban nature proportion."""
         from natcap.invest import urban_nature_access

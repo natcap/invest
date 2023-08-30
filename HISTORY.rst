@@ -206,6 +206,9 @@ Unreleased Changes
       indicates that a third of the area of this LULC class is urban nature,
       and ``1`` would indicate that the entire LULC class's area is urban
       nature.  https://github.com/natcap/invest/issues/1180
+    * Fixed an issue where, under certain circumstances, the model would raise
+      a cryptic ``TypeError`` when creating the summary vector.
+      https://github.com/natcap/invest/issues/1350
 * Visitation: Recreation and Tourism
     * Fixed a bug where overlapping predictor polygons would be double-counted
       in ``polygon_area_coverage`` and ``polygon_percent_coverage``
