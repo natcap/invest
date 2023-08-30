@@ -35,22 +35,6 @@
 
 .. :changelog:
 
-3.14.0 (YYYY-MM-DD)
--------------------
-* SDR
-    * We implemented two major functional changes to the InVEST LS Factor
-      that significantly affect most outputs of SDR and will bring the LS
-      factor output more in line with the outputs of SAGA-GIS's LS Factor.
-      A discussion of differences between these two implementations can be
-      viewed at https://github.com/natcap/invest/tree/main/doc/decision-records/ADR-0001-Update-SDR-LS-Factor.md.
-      The two specific changes implemented are:
-
-        * The LS Factor's on-pixel aspect length is now calculated as
-          ``abs(sin(slope)) + abs(cos(slope))``.
-        * The LS Factor's upstream contributing area is now calculated as
-          an estimate for the specific catchment area, calculated by
-          ``sqrt(n_pixels_upstream * pixel_area)``.
-
 Unreleased Changes
 ------------------
 * General
@@ -76,6 +60,7 @@ Unreleased Changes
       all models. It is now called ``taskgraph_cache`` and located in the top
       level of the workspace directory.
       (`#1230 <https://github.com/natcap/invest/issues/1230>`_)
+    * InVEST is now distributed under the Apache 2.0 License.
 * Workbench
     * Fixed a bug where sampledata downloads failed silently (and progress bar
       became innacurate) if the Workbench did not have write permission to
@@ -93,6 +78,8 @@ Unreleased Changes
     * Middle clicking an InVEST model tab was opening a blank window. Now
       middle clicking will close that tab as expected.
       (`#1261 <https://github.com/natcap/invest/issues/1261>`_)
+    * Updated InVEST logo to use new version with registered trademark symbol.
+      (`https://naturalcapitalproject.stanford.edu/invest-trademark-and-logo-use-policy`_)
 * Coastal Blue Carbon
     * Added validation for the transition table, raising a validation error if
       unexpected values are encountered.
@@ -142,6 +129,18 @@ Unreleased Changes
       https://github.com/natcap/invest/issues/1262
     * The contents of the output ``churn_dir_not_for_humans`` have been
       consolidated into ``intermediate_outputs``.
+    * We implemented two major functional changes to the InVEST LS Factor
+      that significantly affect most outputs of SDR and will bring the LS
+      factor output more in line with the outputs of SAGA-GIS's LS Factor.
+      A discussion of differences between these two implementations can be
+      viewed at https://github.com/natcap/invest/tree/main/doc/decision-records/ADR-0001-Update-SDR-LS-Factor.md.
+      The two specific changes implemented are:
+
+        * The LS Factor's on-pixel aspect length is now calculated as
+          ``abs(sin(slope)) + abs(cos(slope))``.
+        * The LS Factor's upstream contributing area is now calculated as
+          an estimate for the specific catchment area, calculated by
+          ``sqrt(n_pixels_upstream * pixel_area)``.
 * Seasonal Water Yield
     * Fixed a bug where monthy quickflow nodata pixels were not being passed
       on to the total quickflow raster, which could result in negative values
