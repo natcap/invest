@@ -80,7 +80,7 @@ Unreleased Changes
       (`#1261 <https://github.com/natcap/invest/issues/1261>`_)
     * Updated InVEST logo to use new version with registered trademark symbol.
       (`InVEST TM and Logo Use Policy 
-       <https://naturalcapitalproject.stanford.edu/invest-trademark-and-logo-use-policy>`_)
+      <https://naturalcapitalproject.stanford.edu/invest-trademark-and-logo-use-policy>`_)
     * InVEST is licensed using a permissive open source license. But we have
       decided to add back the license and agreement step to the installer to
       be upfront and explicit about how InVEST is licensed.
