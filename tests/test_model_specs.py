@@ -3,7 +3,7 @@ import re
 import unittest
 
 import pint
-from natcap.invest.model_metadata import MODEL_METADATA
+from natcap.invest.models import model_id_to_pyname
 
 valid_nested_types = {
     None: {  # if no parent type (arg is top-level), then all types are valid
@@ -51,12 +51,11 @@ class ValidateModelSpecs(unittest.TestCase):
         required_keys = {'model_id', 'model_name', 'pyname', 'userguide',
                          'aliases', 'args', 'outputs'}
         optional_spatial_key = 'args_with_spatial_overlap'
-        for model_name, metadata in MODEL_METADATA.items():
-            # metadata is a collections.namedtuple, fields accessible by name
-            model = importlib.import_module(metadata.pyname)
+        for model_id, pyname in model_id_to_pyname.items():
+            model = importlib.import_module(pyname)
 
             # Validate top-level keys are correct
-            with self.subTest(metadata.pyname):
+            with self.subTest(pyname):
                 self.assertTrue(
                     required_keys.issubset(model.MODEL_SPEC),
                     ("Required key(s) missing from MODEL_SPEC: "
@@ -73,10 +72,10 @@ class ValidateModelSpecs(unittest.TestCase):
             for key, arg in model.MODEL_SPEC['args'].items():
                 # the top level should have 'name' and 'about' attrs
                 # but they aren't required at nested levels
-                self.validate_args(arg, f'{model_name}.args.{key}')
+                self.validate_args(arg, f'{model_id}.args.{key}')
 
             for key, spec in model.MODEL_SPEC['outputs'].items():
-                self.validate_output(spec, f'{model_name}.outputs.{key}')
+                self.validate_output(spec, f'{model_id}.outputs.{key}')
 
     def validate_output(self, spec, key, parent_type=None):
         """
@@ -498,14 +497,14 @@ class ValidateModelSpecs(unittest.TestCase):
         """MODEL_SPEC: test each arg spec can serialize to JSON."""
         from natcap.invest import spec_utils
 
-        for model_name, metadata in MODEL_METADATA.items():
-            model = importlib.import_module(metadata.pyname)
+        for pyname in model_id_to_pyname.values():
+            model = importlib.import_module(pyname)
             try:
                 _ = spec_utils.serialize_args_spec(model.MODEL_SPEC)
             except TypeError as error:
                 self.fail(
                     f'Failed to avoid TypeError when serializing '
-                    f'{metadata.pyname}.MODEL_SPEC: \n'
+                    f'{pyname}.MODEL_SPEC: \n'
                     f'{error}')
 
 
