@@ -79,7 +79,7 @@ Unreleased Changes
       middle clicking will close that tab as expected.
       (`#1261 <https://github.com/natcap/invest/issues/1261>`_)
     * Updated InVEST logo to use new version with registered trademark symbol.
-      (`https://naturalcapitalproject.stanford.edu/invest-trademark-and-logo-use-policy`_)
+      (https://naturalcapitalproject.stanford.edu/invest-trademark-and-logo-use-policy)
 * Coastal Blue Carbon
     * Added validation for the transition table, raising a validation error if
       unexpected values are encountered.
