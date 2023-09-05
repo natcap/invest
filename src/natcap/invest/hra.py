@@ -117,15 +117,13 @@ MODEL_SPEC = {
                         "footprint by two grid cells if the resolution of "
                         "analysis is 250m.")
                 }
-            },
-            "excel_ok": True
+            }
         },
         "criteria_table_path": {
             "name": gettext("criteria scores table"),
             "about": gettext(
                 "A table of criteria scores for all habitats and stressors."),
-            "type": "csv",
-            "excel_ok": True,
+            "type": "csv"
         },
         "resolution": {
             "name": gettext("resolution of analysis"),
@@ -1765,26 +1763,6 @@ def _mask_binary_presence_absence_rasters(
         _TARGET_GDAL_TYPE_BYTE, _TARGET_NODATA_BYTE)
 
 
-def _open_table_as_dataframe(table_path, **kwargs):
-    extension = os.path.splitext(table_path)[1].lower()
-    # Technically, pandas.read_excel can handle xlsx, xlsm, xlsb, odf, ods
-    # and odt file extensions, but I have not tested anything other than
-    # XLSX, so leaving this as-is from the prior HRA implementation.
-    if extension == '.xlsx':
-        excel_df = pandas.read_excel(table_path, **kwargs)
-        excel_df.columns = excel_df.columns.str.lower()
-        excel_df['path'] = excel_df['path'].apply(
-            lambda p: utils.expand_path(p, table_path)).astype('string')
-        excel_df['name'] = excel_df['name'].astype('string')
-        excel_df['type'] = excel_df['type'].astype('string')
-        excel_df['stressor buffer (meters)'] = excel_df['stressor buffer (meters)'].astype(float)
-        excel_df = excel_df.set_index('name')
-        return excel_df
-    else:
-        return utils.read_csv_to_dataframe(
-            table_path, MODEL_SPEC['args']['info_table_path'], **kwargs)
-
-
 def _parse_info_table(info_table_path):
     """Parse the HRA habitat/stressor info table.
 
@@ -1808,7 +1786,8 @@ def _parse_info_table(info_table_path):
     info_table_path = os.path.abspath(info_table_path)
 
     try:
-        table = _open_table_as_dataframe(info_table_path)
+        table = utils.read_csv_to_dataframe(
+            info_table_path, MODEL_SPEC['args']['info_table_path'])
     except ValueError as err:
         if 'Index has duplicate keys' in str(err):
             raise ValueError("Habitat and stressor names may not overlap.")
@@ -1837,8 +1816,7 @@ def _parse_criteria_table(criteria_table_path, target_composite_csv_path):
     included in this table.
 
     Args:
-        criteria_table_path (string): The path to a CSV or XLSX file on
-            disk.
+        criteria_table_path (string): The path to a CSV file on disk.
         target_composite_csv_path (string): The path to where a new CSV should
             be written containing similar information but in a more easily
             parseable (for a program) format.
@@ -1851,13 +1829,8 @@ def _parse_criteria_table(criteria_table_path, target_composite_csv_path):
     """
     # This function requires that the table is read as a numpy array, so it's
     # easiest to read the table directly.
-    extension = os.path.splitext(criteria_table_path)[1].lower()
-    if extension == '.xlsx':
-        df = pandas.read_excel(criteria_table_path, header=None)
-    else:
-        df = pandas.read_csv(criteria_table_path, header=None, sep=None,
-                             engine='python')
-    table = df.to_numpy()
+    table = pandas.read_csv(criteria_table_path, header=None, sep=None,
+                            engine='python').to_numpy()
 
     # clean up any leading or trailing whitespace.
     for row_num in range(table.shape[0]):
@@ -2406,13 +2379,8 @@ def _override_datastack_archive_criteria_table_path(
         the data dir.
     """
     args_key = 'criteria_table_path'
-    extension = os.path.splitext(criteria_table_path)[1].lower()
-    if extension == '.xlsx':
-        df = pandas.read_excel(criteria_table_path, header=None)
-    else:
-        df = pandas.read_csv(criteria_table_path, header=None, sep=None,
-                             engine='python')
-    criteria_table_array = df.to_numpy()
+    criteria_table_array = pandas.read_csv(
+        criteria_table_path, header=None, sep=None, engine='python').to_numpy()
     contained_data_dir = os.path.join(data_dir, f'{args_key}_data')
 
     known_rating_cols = set()

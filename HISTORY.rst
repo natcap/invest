@@ -96,6 +96,8 @@ Unreleased Changes
     * Fixed a bug where vector inputs could be rasterized onto a grid that is
       not exactly aligned with other raster inputs.
       (`#1312 <https://github.com/natcap/invest/issues/1312>`_)
+    * Dropped support for Excel (.xlsx) files
+      (`#1391 <https://github.com/natcap/invest/issues/1391>`_)
 * NDR
     * The contents of the output ``cache_dir`` have been consolidated into
       ``intermediate_outputs``.
