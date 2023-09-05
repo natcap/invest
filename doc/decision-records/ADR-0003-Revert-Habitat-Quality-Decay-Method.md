@@ -22,7 +22,7 @@ at the very high end of the 0-1 range and this didn't happen prior to the
 convolution implementation. The degradation outputs were all very low too. I
 believe the reason these values were not reflecting a 0-1 index response for
 degradation was because the convolution approach ends up calculating the
-impact of each threat ($i_rxy$ in degradation equation) to be a very small
+impact of each threat ($i_{rxy}$ in degradation equation) to be a very small
 number even if the distance is very small (meaning the pixel is close to the
 threat).
 
