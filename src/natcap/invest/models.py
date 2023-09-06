@@ -19,16 +19,18 @@ def is_invest_model(module):
 # Build up an index mapping aliases to model_name.
 
 pyname_to_module = {}
-for _, name, ispkg in pkgutil.iter_modules(natcap.invest.__path__, 'natcap.invest.'):
-    module = importlib.import_module(name)
+for _, name, ispkg in pkgutil.iter_modules(natcap.invest.__path__):
+    if name in {'__main__', 'cli', 'ui_server'}:
+        continue  # avoid a circular import
+    module = importlib.import_module(f'natcap.invest.{name}')
     if ispkg:
         for _, sub_name, _ in pkgutil.iter_modules(module.__path__):
-            submodule = importlib.import_module(f'{name}.{sub_name}')
+            submodule = importlib.import_module(f'natcap.invest.{name}.{sub_name}')
             if is_invest_model(submodule):
-                pyname_to_module[f'{name}.{sub_name}'] = submodule
+                pyname_to_module[f'natcap.invest.{name}.{sub_name}'] = submodule
     else:
         if is_invest_model(module):
-            pyname_to_module[name] = module
+            pyname_to_module[f'natcap.invest.{name}'] = module
 
 model_id_to_pyname = {}
 model_id_to_spec = {}
