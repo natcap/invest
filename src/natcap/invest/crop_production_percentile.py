@@ -362,10 +362,10 @@ MODEL_SPEC = {
                     "bands": {1: {
                         "type": "number", "units": u.metric_ton/u.hectare
                     }}
-                },
-                "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
+                }
             }
-        }
+        },
+        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
     }
 }
 
@@ -510,8 +510,6 @@ def execute(args):
         edge_samples=11)
 
     # Initialize a TaskGraph
-    work_token_dir = os.path.join(
-        output_dir, _INTERMEDIATE_OUTPUT_DIR, '_taskgraph_working_dir')
     try:
         n_workers = int(args['n_workers'])
     except (KeyError, ValueError, TypeError):
@@ -519,7 +517,8 @@ def execute(args):
         # ValueError when n_workers is an empty string.
         # TypeError when n_workers is None.
         n_workers = -1  # Single process mode.
-    task_graph = taskgraph.TaskGraph(work_token_dir, n_workers)
+    task_graph = taskgraph.TaskGraph(
+        os.path.join(output_dir, 'taskgraph_cache'), n_workers)
     dependent_task_list = []
 
     crop_lucode = None

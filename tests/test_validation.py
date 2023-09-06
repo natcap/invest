@@ -731,24 +731,6 @@ class CSVValidation(unittest.TestCase):
             header='column', header_name='field_a')
         self.assertEqual(error_msg, expected_msg)
 
-    def test_excel_missing_fieldnames(self):
-        """Validation: test that we can check missing fieldnames in excel."""
-        from natcap.invest import validation
-
-        df = pandas.DataFrame([
-            {'foo': 1, 'bar': 2, 'baz': 3},
-            {'foo': 2, 'bar': 3, 'baz': 4},
-            {'foo': 3, 'bar': 4, 'baz': 5}])
-
-        target_file = os.path.join(self.workspace_dir, 'test.xlsx')
-        df.to_excel(target_file)
-
-        error_msg = validation.check_csv(
-            target_file, columns={'field_a': {}}, excel_ok=True)
-        expected_msg = validation.MESSAGES['MATCHED_NO_HEADERS'].format(
-            header='column', header_name='field_a')
-        self.assertEqual(error_msg, expected_msg)
-
     def test_wrong_filetype(self):
         """Validation: verify CSV type does not open pickles."""
         from natcap.invest import validation
@@ -761,12 +743,7 @@ class CSVValidation(unittest.TestCase):
         target_file = os.path.join(self.workspace_dir, 'test.pckl')
         df.to_pickle(target_file)
 
-        error_msg = validation.check_csv(
-            target_file, columns={'field_a': {}}, excel_ok=True)
-        self.assertEqual(error_msg, validation.MESSAGES['NOT_CSV_OR_EXCEL'])
-
-        error_msg = validation.check_csv(
-            target_file, columns={'field_a': {}}, excel_ok=False)
+        error_msg = validation.check_csv(target_file, columns={'field_a': {}})
         self.assertEqual(error_msg, validation.MESSAGES['NOT_CSV'])
 
     def test_slow_to_open(self):

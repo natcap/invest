@@ -46,7 +46,6 @@ MESSAGES = {
     'NOT_GDAL_RASTER': gettext('File could not be opened as a GDAL raster'),
     'OVR_FILE': gettext('File found to be an overview ".ovr" file.'),
     'NOT_GDAL_VECTOR': gettext('File could not be opened as a GDAL vector'),
-    'NOT_CSV_OR_EXCEL': gettext('File could not be opened as a CSV or Excel file.'),
     'NOT_CSV': gettext('File could not be opened as a CSV. File must be encoded as '
                  'a UTF-8 CSV.'),
     'REGEXP_MISMATCH': gettext("Value did not match expected pattern {regexp}"),
@@ -543,7 +542,7 @@ def check_boolean(value, **kwargs):
         return MESSAGES['NOT_BOOLEAN'].format(value=value)
 
 
-def check_csv(filepath, rows=None, columns=None, excel_ok=False, **kwargs):
+def check_csv(filepath, rows=None, columns=None, **kwargs):
     """Validate a table.
 
     Args:
@@ -556,8 +555,6 @@ def check_csv(filepath, rows=None, columns=None, excel_ok=False, **kwargs):
             exist in the first row of the table. See the docstring of
             ``check_headers`` for details on validation rules. No more than one
             of `rows` and `columns` should be defined.
-        excel_ok=False (boolean): Whether it's OK for the file to be an Excel
-            table. This is not a common case.
 
     Returns:
         A string error message if an error was found. ``None`` otherwise.
@@ -579,13 +576,7 @@ def check_csv(filepath, rows=None, columns=None, excel_ok=False, **kwargs):
             filepath, sep=None, engine='python', encoding=encoding,
             header=None)
     except Exception:
-        if excel_ok:
-            try:
-                dataframe = pandas.read_excel(filepath)
-            except ValueError:
-                return MESSAGES['NOT_CSV_OR_EXCEL']
-        else:
-            return MESSAGES['NOT_CSV']
+        return MESSAGES['NOT_CSV']
 
     # assume that at most one of `rows` and `columns` is defined
     if columns:

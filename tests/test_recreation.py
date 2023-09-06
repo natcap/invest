@@ -870,7 +870,7 @@ class RecreationRegressionTests(unittest.TestCase):
             REGRESSION_DATA, 'square_grid_vector_path.shp')
 
         utils._assert_vectors_equal(
-            out_grid_vector_path, expected_grid_vector_path)
+            expected_grid_vector_path, out_grid_vector_path)
 
     def test_hex_grid(self):
         """Recreation hex grid regression test."""
@@ -887,7 +887,7 @@ class RecreationRegressionTests(unittest.TestCase):
             REGRESSION_DATA, 'hex_grid_vector_path.shp')
 
         utils._assert_vectors_equal(
-            out_grid_vector_path, expected_grid_vector_path)
+            expected_grid_vector_path, out_grid_vector_path)
 
     @unittest.skip("skipping to avoid remote server call (issue #3753)")
     def test_no_grid_execute(self):
@@ -953,7 +953,7 @@ class RecreationRegressionTests(unittest.TestCase):
             REGRESSION_DATA, 'hex_grid_vector_path.shp')
 
         utils._assert_vectors_equal(
-            out_grid_vector_path, expected_grid_vector_path)
+            expected_grid_vector_path, out_grid_vector_path)
 
     def test_existing_regression_coef(self):
         """Recreation test regression coefficients handle existing output."""
@@ -1004,7 +1004,7 @@ class RecreationRegressionTests(unittest.TestCase):
             REGRESSION_DATA, 'test_regression_coefficients.shp')
 
         utils._assert_vectors_equal(
-            out_coefficient_vector_path, expected_coeff_vector_path, 1e-6)
+            expected_coeff_vector_path, out_coefficient_vector_path, 1e-6)
 
     def test_predictor_table_absolute_paths(self):
         """Recreation test validation from full path."""

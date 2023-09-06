@@ -117,15 +117,13 @@ MODEL_SPEC = {
                         "footprint by two grid cells if the resolution of "
                         "analysis is 250m.")
                 }
-            },
-            "excel_ok": True
+            }
         },
         "criteria_table_path": {
             "name": gettext("criteria scores table"),
             "about": gettext(
                 "A table of criteria scores for all habitats and stressors."),
-            "type": "csv",
-            "excel_ok": True,
+            "type": "csv"
         },
         "resolution": {
             "name": gettext("resolution of analysis"),
@@ -438,7 +436,7 @@ MODEL_SPEC = {
                 }
             }
         },
-        ".taskgraph": spec_utils.TASKGRAPH_DIR
+        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
     }
 }
 
@@ -497,7 +495,6 @@ def execute(args):
     intermediate_dir = os.path.join(args['workspace_dir'],
                                     'intermediate_outputs')
     output_dir = os.path.join(args['workspace_dir'], 'outputs')
-    taskgraph_working_dir = os.path.join(args['workspace_dir'], '.taskgraph')
     utils.make_directories([intermediate_dir, output_dir])
     suffix = utils.make_suffix_string(args, 'results_suffix')
 
@@ -527,7 +524,8 @@ def execute(args):
         # ValueError when n_workers is an empty string.
         # TypeError when n_workers is None.
         n_workers = -1  # single process mode.
-    graph = taskgraph.TaskGraph(taskgraph_working_dir, n_workers)
+    graph = taskgraph.TaskGraph(
+        os.path.join(args['workspace_dir'], 'taskgraph_cache'), n_workers)
 
     # parse the info table and get info dicts for habitats, stressors.
     habitats_info, stressors_info = _parse_info_table(args['info_table_path'])
@@ -1585,7 +1583,7 @@ def _align(raster_path_map, vector_path_map, target_pixel_size,
             layer = None
             vector = None
 
-            _create_raster_from_bounding_box(
+            pygeoprocessing.create_raster_from_bounding_box(
                 target_raster_path=target_raster_path,
                 target_bounding_box=target_bounding_box,
                 target_pixel_size=target_pixel_size,
@@ -1598,74 +1596,6 @@ def _align(raster_path_map, vector_path_map, target_pixel_size,
             pygeoprocessing.rasterize(
                 source_vector_path, target_raster_path,
                 burn_values=burn_values, option_list=rasterize_option_list)
-
-
-def _create_raster_from_bounding_box(
-        target_raster_path, target_bounding_box, target_pixel_size,
-        target_pixel_type, target_srs_wkt, target_nodata=None,
-        fill_value=None):
-    """Create a raster from a given bounding box.
-
-    Args:
-        target_raster_path (string): The path to where the new raster should be
-            created on disk.
-        target_bounding_box (tuple): a 4-element iterable of (minx, miny,
-            maxx, maxy) in projected units matching the SRS of
-            ``target_srs_wkt``.
-        target_pixel_size (tuple): A 2-element tuple of the (x, y) pixel size
-            of the target raster.  Elements are in units of the target SRS.
-        target_pixel_type (int): The GDAL GDT_* type of the target raster.
-        target_srs_wkt (string): The SRS of the target raster, in Well-Known
-            Text format.
-        target_nodata (float): If provided, the nodata value of the target
-            raster.
-        fill_value=None (number): If provided, the value that the target raster
-            should be filled with.
-
-    Returns:
-        ``None``
-    """
-    bbox_minx, bbox_miny, bbox_maxx, bbox_maxy = target_bounding_box
-
-    driver = gdal.GetDriverByName('GTiff')
-    n_bands = 1
-    n_cols = int(numpy.ceil(
-        abs((bbox_maxx - bbox_minx) / target_pixel_size[0])))
-    n_rows = int(numpy.ceil(
-        abs((bbox_maxy - bbox_miny) / target_pixel_size[1])))
-
-    raster = driver.Create(
-        target_raster_path, n_cols, n_rows, n_bands, target_pixel_type,
-        options=['TILED=YES', 'BIGTIFF=YES', 'COMPRESS=DEFLATE',
-                 'BLOCKXSIZE=256', 'BLOCKYSIZE=256'])
-    raster.SetProjection(target_srs_wkt)
-
-    # Set the transform based on the upper left corner and given pixel
-    # dimensions.  Bounding box is in format [minx, miny, maxx, maxy]
-    if target_pixel_size[0] < 0:
-        x_source = bbox_maxx
-    else:
-        x_source = bbox_minx
-    if target_pixel_size[1] < 0:
-        y_source = bbox_maxy
-    else:
-        y_source = bbox_miny
-    raster_transform = [
-        x_source, target_pixel_size[0], 0.0,
-        y_source, 0.0, target_pixel_size[1]]
-    raster.SetGeoTransform(raster_transform)
-
-    # Fill the band if requested.
-    band = raster.GetRasterBand(1)
-    if fill_value is not None:
-        band.Fill(fill_value)
-
-    # Set the nodata value.
-    if target_nodata is not None:
-        band.SetNoDataValue(float(target_nodata))
-
-    band = None
-    raster = None
 
 
 def _simplify(source_vector_path, tolerance, target_vector_path,
@@ -1833,26 +1763,6 @@ def _mask_binary_presence_absence_rasters(
         _TARGET_GDAL_TYPE_BYTE, _TARGET_NODATA_BYTE)
 
 
-def _open_table_as_dataframe(table_path, **kwargs):
-    extension = os.path.splitext(table_path)[1].lower()
-    # Technically, pandas.read_excel can handle xlsx, xlsm, xlsb, odf, ods
-    # and odt file extensions, but I have not tested anything other than
-    # XLSX, so leaving this as-is from the prior HRA implementation.
-    if extension == '.xlsx':
-        excel_df = pandas.read_excel(table_path, **kwargs)
-        excel_df.columns = excel_df.columns.str.lower()
-        excel_df['path'] = excel_df['path'].apply(
-            lambda p: utils.expand_path(p, table_path)).astype('string')
-        excel_df['name'] = excel_df['name'].astype('string')
-        excel_df['type'] = excel_df['type'].astype('string')
-        excel_df['stressor buffer (meters)'] = excel_df['stressor buffer (meters)'].astype(float)
-        excel_df = excel_df.set_index('name')
-        return excel_df
-    else:
-        return utils.read_csv_to_dataframe(
-            table_path, MODEL_SPEC['args']['info_table_path'], **kwargs)
-
-
 def _parse_info_table(info_table_path):
     """Parse the HRA habitat/stressor info table.
 
@@ -1876,7 +1786,8 @@ def _parse_info_table(info_table_path):
     info_table_path = os.path.abspath(info_table_path)
 
     try:
-        table = _open_table_as_dataframe(info_table_path)
+        table = utils.read_csv_to_dataframe(
+            info_table_path, MODEL_SPEC['args']['info_table_path'])
     except ValueError as err:
         if 'Index has duplicate keys' in str(err):
             raise ValueError("Habitat and stressor names may not overlap.")
@@ -1905,8 +1816,7 @@ def _parse_criteria_table(criteria_table_path, target_composite_csv_path):
     included in this table.
 
     Args:
-        criteria_table_path (string): The path to a CSV or XLSX file on
-            disk.
+        criteria_table_path (string): The path to a CSV file on disk.
         target_composite_csv_path (string): The path to where a new CSV should
             be written containing similar information but in a more easily
             parseable (for a program) format.
@@ -1919,13 +1829,8 @@ def _parse_criteria_table(criteria_table_path, target_composite_csv_path):
     """
     # This function requires that the table is read as a numpy array, so it's
     # easiest to read the table directly.
-    extension = os.path.splitext(criteria_table_path)[1].lower()
-    if extension == '.xlsx':
-        df = pandas.read_excel(criteria_table_path, header=None)
-    else:
-        df = pandas.read_csv(criteria_table_path, header=None, sep=None,
-                             engine='python')
-    table = df.to_numpy()
+    table = pandas.read_csv(criteria_table_path, header=None, sep=None,
+                            engine='python').to_numpy()
 
     # clean up any leading or trailing whitespace.
     for row_num in range(table.shape[0]):
@@ -2474,13 +2379,8 @@ def _override_datastack_archive_criteria_table_path(
         the data dir.
     """
     args_key = 'criteria_table_path'
-    extension = os.path.splitext(criteria_table_path)[1].lower()
-    if extension == '.xlsx':
-        df = pandas.read_excel(criteria_table_path, header=None)
-    else:
-        df = pandas.read_csv(criteria_table_path, header=None, sep=None,
-                             engine='python')
-    criteria_table_array = df.to_numpy()
+    criteria_table_array = pandas.read_csv(
+        criteria_table_path, header=None, sep=None, engine='python').to_numpy()
     contained_data_dir = os.path.join(data_dir, f'{args_key}_data')
 
     known_rating_cols = set()

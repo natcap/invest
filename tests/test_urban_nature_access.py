@@ -85,7 +85,8 @@ def _build_model_args(workspace):
             6,0,100
             7,1,100
             8,0,100
-            9,1,100"""))
+            9,1,100
+            """))
 
     admin_geom = [
         shapely.geometry.box(
@@ -956,9 +957,112 @@ class UNATests(unittest.TestCase):
         numpy.testing.assert_allclose(
             numpy.sum(weighted_sum_array[~nodata_pixels]), 1122.5)
 
+    def test_write_vector(self):
+        """UNA: test writing of various numeric types to the output vector."""
+        from natcap.invest import urban_nature_access
+        args = _build_model_args(self.workspace_dir)
+
+        feature_attrs = {
+            0: {
+                'my-field-1': float(1.2345),
+                'my-field-2': numpy.float32(2.34567),
+                'my-field-3': numpy.float64(3.45678),
+                'my-field-4': int(4),
+                'my-field-5': numpy.int16(5),
+                'my-field-6': numpy.int32(6),
+            },
+        }
+        target_vector_path = os.path.join(self.workspace_dir, 'target.gpkg')
+        urban_nature_access._write_supply_demand_vector(
+            args['admin_boundaries_vector_path'], feature_attrs,
+            target_vector_path)
+
+        self.assertTrue(os.path.exists(target_vector_path))
+        try:
+            vector = gdal.OpenEx(target_vector_path)
+            self.assertEqual(vector.GetLayerCount(), 1)
+            layer = vector.GetLayer()
+            self.assertEqual(len(layer.schema), len(feature_attrs[0]))
+            self.assertEqual(layer.GetFeatureCount(), 1)
+            feature = layer.GetFeature(0)
+            for field_name, expected_field_value in feature_attrs[0].items():
+                self.assertEqual(
+                    feature.GetField(field_name), expected_field_value)
+        finally:
+            feature = None
+            layer = None
+            vector = None
+
+    def test_urban_nature_proportion(self):
+        """UNA: Run the model with urban nature proportion."""
+        from natcap.invest import urban_nature_access
+
+        args = _build_model_args(self.workspace_dir)
+        args['search_radius_mode'] = urban_nature_access.RADIUS_OPT_UNIFORM
+        args['search_radius'] = 1000
+        with open(args['lulc_attribute_table'], 'a') as attr_table:
+            attr_table.write("10,0.5,100\n")
+
+        # make sure our inputs validate
+        validation_results = urban_nature_access.validate(args)
+        self.assertEqual(validation_results, [])
+
+        urban_nature_access.execute(args)
+
+    def test_reclassify_urban_nature(self):
+        """UNA: Test for urban nature area reclassification."""
+        from natcap.invest import urban_nature_access
+        args = _build_model_args(self.workspace_dir)
+
+        # Rewrite the lulc attribute table to use proportions of urban nature.
+        with open(args['lulc_attribute_table'], 'w') as attr_table:
+            attr_table.write(textwrap.dedent(
+                """\
+                lucode,urban_nature,search_radius_m
+                0,0,100
+                1,0.1,100
+                2,0,100
+                3,0.3,100
+                4,0,100
+                5,0.5,100
+                6,0,100
+                7,0.7,100
+                8,0,100
+                9,0.9,100
+                """))
+
+        urban_nature_area_path = os.path.join(
+            self.workspace_dir, 'urban_nature_area.tif')
+
+        for limit_to_lucodes in (None, set([1, 3])):
+            urban_nature_access._reclassify_urban_nature_area(
+                args['lulc_raster_path'], args['lulc_attribute_table'],
+                urban_nature_area_path,
+                only_these_urban_nature_codes=limit_to_lucodes)
+
+            # The source lulc is randomized, so need to programmatically build
+            # up the expected array.
+            source_lulc_array = pygeoprocessing.raster_to_numpy_array(
+                args['lulc_raster_path'])
+            pixel_area = abs(_DEFAULT_PIXEL_SIZE[0] * _DEFAULT_PIXEL_SIZE[1])
+            expected_array = numpy.zeros(source_lulc_array.shape,
+                                         dtype=numpy.float32)
+            for i in range(1, 10, 2):
+                if limit_to_lucodes is not None:
+                    if i not in limit_to_lucodes:
+                        continue
+                factor = float(f"0.{i}")
+                expected_array[source_lulc_array == i] = factor * pixel_area
+
+            reclassified_array = pygeoprocessing.raster_to_numpy_array(
+                urban_nature_area_path)
+            numpy.testing.assert_array_almost_equal(
+                reclassified_array, expected_array)
+
     def test_validate(self):
         """UNA: Basic test for validation."""
         from natcap.invest import urban_nature_access
         args = _build_model_args(self.workspace_dir)
-        args['search_radius_mode'] = urban_nature_access.RADIUS_OPT_URBAN_NATURE
+        args['search_radius_mode'] = (
+            urban_nature_access.RADIUS_OPT_URBAN_NATURE)
         self.assertEqual(urban_nature_access.validate(args), [])

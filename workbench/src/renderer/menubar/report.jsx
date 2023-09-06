@@ -55,13 +55,13 @@ ReactDom.render(
           <img
             src={investLogo}
             width="143"
-            height="125"
+            height="119"
             alt="invest logo"
           />
           <img
             src={natcapLogo}
             width="143"
-            height="125"
+            height="119"
             alt="Natural Capital Project logo"
           />
         </div>

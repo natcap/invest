@@ -309,10 +309,10 @@ MODEL_SPEC = {
                             "bands": {1: {"type": "integer"}}
                         }
                     }
-                },
-                "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
+                }
             }
-        }
+        },
+        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
     }
 }
 # All out rasters besides rarity should be gte to 0. Set nodata accordingly.
@@ -377,11 +377,9 @@ def execute(args):
         args['workspace_dir'], 'intermediate')
     utils.make_directories([intermediate_output_dir, output_dir])
 
-    taskgraph_working_dir = os.path.join(
-        intermediate_output_dir, '_taskgraph_working_dir')
-
     n_workers = int(args.get('n_workers', -1))
-    task_graph = taskgraph.TaskGraph(taskgraph_working_dir, n_workers)
+    task_graph = taskgraph.TaskGraph(
+        os.path.join(args['workspace_dir'], 'taskgraph_cache'), n_workers)
 
     LOGGER.info("Checking Threat and Sensitivity tables for compliance")
     # Get CSVs as dictionaries and ensure the key is a string for threats.
