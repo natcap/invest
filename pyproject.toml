@@ -76,4 +76,5 @@ no_lines_before = 'LOCALFOLDER'
 where = ["src"]
 
 [tool.pytest.ini_options]
-filterwarnings = ["error", "ignore::DeprecationWarning"]
+# raise warnings to errors, except for deprecation warnings
+filterwarnings = ["error", "default::DeprecationWarning"]
