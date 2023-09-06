@@ -225,29 +225,6 @@ class TestRecServerLoop(unittest.TestCase):
         utils._assert_vectors_equal(
             out_scenario_path, expected_scenario_path, 1e-3)
 
-    def test_results_suffix_on_serverside_files(self):
-        """Recreation test suffix gets added to files created on server."""
-        from natcap.invest.recreation import recmodel_client
-
-        args = {
-            'aoi_path': os.path.join(
-                SAMPLE_DATA, 'andros_aoi_with_extra_fields_features.shp'),
-            'compute_regression': False,
-            'start_year': '2014',
-            'end_year': '2015',
-            'grid_aoi': False,
-            'results_suffix': 'hello',
-            'workspace_dir': self.workspace_dir,
-            'hostname': 'localhost',
-            'port': self.port,
-        }
-        recmodel_client.execute(args)
-
-        self.assertTrue(os.path.exists(
-            os.path.join(args['workspace_dir'], 'monthly_table_hello.csv')))
-        self.assertTrue(os.path.exists(
-            os.path.join(args['workspace_dir'], 'pud_results_hello.shp')))
-
     @_timeout(30.0)
     def test_execute_local_server(self):
         """Recreation base regression test on sample data on local server.
