@@ -209,10 +209,10 @@ MODEL_SPEC = {
                 "visibility_[FEATURE_ID].tif": {
                     "about": gettext("Map of visibility for a given structure's viewpoint. This raster has pixel values of 0 (not visible), 1 (visible), or nodata (where the DEM is nodata)."),
                     "bands": {1: {"type": "integer"}}
-                },
-                "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
+                }
             }
-        }
+        },
+        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
     }
 }
 
@@ -270,6 +270,10 @@ def execute(args):
             'a': float(args['a_coef']),
             'b': float(args['b_coef']),
         }
+        if (args['valuation_function'] not in
+                MODEL_SPEC['args']['valuation_function']['options']):
+            raise ValueError('Valuation function type %s not recognized' %
+                             args['valuation_function'])
         max_valuation_radius = float(args['max_valuation_radius'])
 
     # Create output and intermediate directory
@@ -286,7 +290,6 @@ def execute(args):
          (_INTERMEDIATE_BASE_FILES, intermediate_dir)],
         file_suffix)
 
-    work_token_dir = os.path.join(intermediate_dir, '_taskgraph_working_dir')
     try:
         n_workers = int(args['n_workers'])
     except (KeyError, ValueError, TypeError):
@@ -294,7 +297,8 @@ def execute(args):
         # ValueError when n_workers is an empty string.
         # TypeError when n_workers is None.
         n_workers = -1  # Synchronous execution
-    graph = taskgraph.TaskGraph(work_token_dir, n_workers)
+    graph = taskgraph.TaskGraph(
+        os.path.join(args['workspace_dir'], 'taskgraph_cache'), n_workers)
 
     reprojected_aoi_task = graph.add_task(
         pygeoprocessing.reproject_vector,
@@ -791,7 +795,7 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
                     weight * visibility[valid_pixels]))
             return valuation
 
-    else:  # exponential
+    elif valuation_method == 'exponential':
 
         def _valuation(distance, visibility):
             valid_pixels = (visibility == 1)

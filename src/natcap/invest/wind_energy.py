@@ -756,6 +756,13 @@ def execute(args):
                 args['wind_schedule'], MODEL_SPEC['args']['wind_schedule']
             ).sort_index()  # sort by year
 
+            year_count = len(wind_price_df)
+            if year_count != time + 1:
+                raise ValueError(
+                    "The 'time' argument in the Global Wind Energy Parameters "
+                    "file must equal the number of years provided in the price"
+                    " table.")
+
             # Save the price values into a list where the indices of the list
             # indicate the time steps for the lifespan of the wind farm
             price_list = wind_price_df['price'].tolist()

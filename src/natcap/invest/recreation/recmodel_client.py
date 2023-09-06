@@ -437,6 +437,10 @@ def execute(args):
         None
 
     """
+    if int(args['end_year']) < int(args['start_year']):
+        raise ValueError(
+            "Start year must be less than or equal to end year.\n"
+            f"start_year: {args['start_year']}\nend_year: {args['end_year']}")
     # in case the user defines a hostname
     if 'hostname' in args:
         server_url = f"PYRO:natcap.invest.recreation@{args['hostname']}:{args['port']}"
@@ -1619,8 +1623,9 @@ def _validate_same_projection(base_vector_path, table_path):
         if not base_ref.IsSame(ref):
             invalid_projections = True
     if invalid_projections:
-        return ("One or more of the projections in the table did not match "
-                "the projection of the base vector")
+        return (
+            f"One or more of the projections in the table ({path}) did not "
+            f"match the projection of the base vector ({base_vector_path})")
 
 
 def _validate_predictor_types(table_path):

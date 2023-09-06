@@ -690,7 +690,7 @@ class RecreationRegressionTests(unittest.TestCase):
         shutil.rmtree(self.workspace_dir)
 
     def test_data_missing_in_predictors(self):
-        """Recreation raise exception if predictor data missing."""
+        """Recreation can validate if predictor data missing."""
         from natcap.invest.recreation import recmodel_client
 
         response_vector_path = os.path.join(SAMPLE_DATA, 'andros_aoi.shp')
@@ -701,7 +701,7 @@ class RecreationRegressionTests(unittest.TestCase):
                 response_vector_path, table_path))
 
     def test_data_different_projection(self):
-        """Recreation raise exception if data in different projection."""
+        """Recreation can validate if data in different projection."""
         from natcap.invest.recreation import recmodel_client
 
         response_vector_path = os.path.join(SAMPLE_DATA, 'andros_aoi.shp')
@@ -712,7 +712,7 @@ class RecreationRegressionTests(unittest.TestCase):
                 response_vector_path, table_path))
 
     def test_different_tables(self):
-        """Recreation exception if scenario ids different than predictor."""
+        """Recreation can validate if scenario ids different than predictor."""
         from natcap.invest.recreation import recmodel_client
 
         base_table_path = os.path.join(
@@ -964,7 +964,7 @@ class RecreationRegressionTests(unittest.TestCase):
             expected_result_table, result_table, check_dtype=False)
 
     def test_predictor_id_too_long(self):
-        """Recreation test ID too long raises ValueError."""
+        """Recreation can validate predictor ID length."""
         from natcap.invest.recreation import recmodel_client
 
         args = {
@@ -1123,6 +1123,8 @@ class RecreationRegressionTests(unittest.TestCase):
         msgs = recmodel_client.validate(args)
         self.assertEqual(
             'Start year must be less than or equal to end year.', msgs[0][1])
+        with self.assertRaises(ValueError):
+            recmodel_client.execute(args)
 
     def test_bad_grid_type(self):
         """Recreation ensure that bad grid type raises ValueError."""
