@@ -177,7 +177,11 @@ class TestRecServerLoop(unittest.TestCase):
         self.server_process = multiprocessing.Process(
             target=recmodel_server.execute, args=(server_args,), daemon=False)
         self.server_process.start()
-        time.sleep(5)  # need a few seconds for the server to be ready
+        # need a few seconds for the server to be ready
+        # Dave suggested that if this turns out to be flaky, we could instead
+        # listen for the stdout from the server process indicating it's done
+        # initializing, or poll the server and retry multiple times.
+        time.sleep(5)
 
     def tearDown(self):
         """Delete workspace."""
