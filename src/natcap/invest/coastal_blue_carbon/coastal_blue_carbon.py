@@ -118,6 +118,9 @@ INVALID_ANALYSIS_YEAR_MSG = gettext(
     "({latest_year})")
 INVALID_SNAPSHOT_RASTER_MSG = gettext(
     "Raster for snapshot {snapshot_year} could not be validated.")
+INVALID_TRANSITION_VALUES_MSG = gettext(
+    "The transition table expects values of {model_transitions} but found "
+    "values of {transition_values}.")
 
 POOL_SOIL = 'soil'
 POOL_BIOMASS = 'biomass'
@@ -155,7 +158,6 @@ NET_PRESENT_VALUE_RASTER_PATTERN = 'net-present-value-at-{year}{suffix}.tif'
 CARBON_STOCK_AT_YEAR_RASTER_PATTERN = 'carbon-stock-at-{year}{suffix}.tif'
 
 INTERMEDIATE_DIR_NAME = 'intermediate'
-TASKGRAPH_CACHE_DIR_NAME = 'task_cache'
 OUTPUT_DIR_NAME = 'output'
 
 MODEL_SPEC = {
@@ -521,7 +523,7 @@ MODEL_SPEC = {
                 }
             }
         },
-        "task_cache": spec_utils.TASKGRAPH_DIR
+        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
     }
 }
 
@@ -1066,10 +1068,9 @@ def _set_up_workspace(args):
         # TypeError when n_workers is None.
         n_workers = -1  # Synchronous mode.
 
-    taskgraph_cache_dir = os.path.join(
-        args['workspace_dir'], TASKGRAPH_CACHE_DIR_NAME)
     task_graph = taskgraph.TaskGraph(
-        taskgraph_cache_dir, n_workers, reporting_interval=5.0)
+        os.path.join(args['workspace_dir'], 'taskgraph_cache'),
+        n_workers, reporting_interval=5.0)
 
     suffix = utils.make_suffix_string(args, 'results_suffix')
     intermediate_dir = os.path.join(
@@ -1077,7 +1078,7 @@ def _set_up_workspace(args):
     output_dir = os.path.join(
         args['workspace_dir'], OUTPUT_DIR_NAME)
 
-    utils.make_directories([output_dir, intermediate_dir, taskgraph_cache_dir])
+    utils.make_directories([output_dir, intermediate_dir])
 
     return task_graph, n_workers, intermediate_dir, output_dir, suffix
 
@@ -2258,5 +2259,27 @@ def validate(args, limit_to=None):
                     INVALID_ANALYSIS_YEAR_MSG.format(
                         analysis_year=args['analysis_year'],
                         latest_year=max(snapshots.keys()))))
+
+    # check for invalid options in the translation table
+    if ("landcover_transitions_table" not in invalid_keys and
+            "landcover_transitions_table" in sufficient_keys):
+        transitions_spec = MODEL_SPEC['args']['landcover_transitions_table']
+        transition_options = list(
+            transitions_spec['columns']['[LULC CODE]']['options'].keys())
+        # lowercase options since utils call will lowercase table values
+        transition_options = [x.lower() for x in transition_options]
+        transitions_df = utils.read_csv_to_dataframe(
+            args['landcover_transitions_table'], transitions_spec)
+        transitions_mask = ~transitions_df.isin(transition_options) & ~transitions_df.isna()
+        if transitions_mask.any(axis=None):
+            transition_numpy_mask = transitions_mask.values
+            transition_numpy_values = transitions_df.to_numpy()
+            bad_transition_values = list(
+                numpy.unique(transition_numpy_values[transition_numpy_mask]))
+            validation_warnings.append((
+                ['landcover_transitions_table'],
+                INVALID_TRANSITION_VALUES_MSG.format(
+                    model_transitions=(transition_options),
+                    transition_values=bad_transition_values)))
 
     return validation_warnings

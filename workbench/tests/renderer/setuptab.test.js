@@ -592,8 +592,8 @@ describe('Misc form validation stuff', () => {
     const rasterValue = './raster.tif';
     const expectedVal2 = '-79.0198012081401';
     const rasterBox = `[${expectedVal2}, 26.481559513537064, -78.37173806200593, 27.268061760228512]`;
-    const message = `Bounding boxes do not intersect: ${vectorValue}: ${vectorBox} | ${rasterValue}: ${rasterBox}`;
-    const newPrefix = 'Bounding box does not intersect at least one other:';
+    const message = `Not all of the spatial layers overlap each other. All bounding boxes must intersect: ${vectorValue}: ${vectorBox} | ${rasterValue}: ${rasterBox}`;
+    const newPrefix = 'Not all of the spatial layers overlap each other. Bounding box:';
     const vectorMessage = new RegExp(`${newPrefix}\\s*\\[${expectedVal1}`);
     const rasterMessage = new RegExp(`${newPrefix}\\s*\\[${expectedVal2}`);
 

@@ -46,6 +46,25 @@ jobs:
           # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
           python -m flake8 src --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
+  check-history-rst-syntax:
+    name: Check HISTORY RST syntax
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-python@v4
+        name: Set up python
+        with:
+          python-version: ${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
+
+      - name: Set up environment
+        run: pip install doc8
+
+      - name: Lint with doc8
+        run: |
+            # Skip line-too-long errors (D001)
+            python -m doc8 --ignore D001 HISTORY.rst
+
   run-model-tests:
     name: Run model tests
     runs-on: ${{ matrix.os }}
@@ -317,7 +336,7 @@ jobs:
         run: make userguide
 
       - name: Build binaries
-        run: make CONDA=micromamba binaries
+        run: make CONDA="$MAMBA_EXE" binaries
 
       - name: Run invest-autotest with binaries
         if : |

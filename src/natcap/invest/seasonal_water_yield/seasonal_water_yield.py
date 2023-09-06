@@ -413,10 +413,62 @@ MODEL_SPEC = {
                     "bands": {1: {
                         "type": "integer"
                     }}
+                },
+                'Si.tif': {
+                    "about": gettext("Map of the S_i factor derived from CN"),
+                    "bands": {1: {"type": "number", "units": u.inch}}
+                },
+                'lulc_aligned.tif': {
+                    "about": gettext("Copy of LULC input, aligned and clipped "
+                                     "to match the other spatial inputs"),
+                    "bands": {1: {"type": "integer"}}
+                },
+                'dem_aligned.tif': {
+                    "about": gettext("Copy of DEM input, aligned and clipped "
+                                     "to match the other spatial inputs"),
+                    "bands": {1: {"type": "number", "units": u.meter}}
+                },
+                'pit_filled_dem.tif': {
+                    "about": gettext("Pit filled DEM"),
+                    "bands": {1: {"type": "number", "units": u.meter}}
+                },
+                'soil_group_aligned.tif': {
+                    "about": gettext("Copy of soil groups input, aligned and "
+                                     "clipped to match the other spatial inputs"),
+                    "bands": {1: {"type": "integer"}}
+                },
+                'flow_accum.tif': spec_utils.FLOW_ACCUMULATION,
+                'prcp_a[MONTH].tif': {
+                    "bands": {1: {"type": "number", "units": u.millimeter/u.year}},
+                    "about": gettext("Monthly precipitation rasters, aligned and "
+                                     "clipped to match the other spatial inputs")
+                },
+                'n_events[MONTH].tif': {
+                    "about": gettext("Map of monthly rain events"),
+                    "bands": {1: {"type": "integer"}}
+                },
+                'et0_a[MONTH].tif': {
+                    "bands": {1: {"type": "number", "units": u.millimeter}},
+                    "about": gettext("Monthly ET0 rasters, aligned and "
+                                     "clipped to match the other spatial inputs")
+                },
+                'kc_[MONTH].tif': {
+                    "about": gettext("Map of monthly KC values"),
+                    "bands": {1: {"type": "number", "units": u.none}}
+                },
+                'l_aligned.tif': {
+                    "about": gettext("Copy of user-defined local recharge input, "
+                                     "aligned and clipped to match the other spatial inputs"),
+                    "bands": {1: {"type": "number", "units": u.millimeter}}
+                },
+                'cz_aligned.tif': {
+                    "about": gettext("Copy of user-defined climate zones raster, "
+                                     "aligned and clipped to match the other spatial inputs"),
+                    "bands": {1: {"type": "integer"}}
                 }
             }
         },
-        "cache_dir": spec_utils.TASKGRAPH_DIR
+        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
     }
 }
 
@@ -441,18 +493,10 @@ _INTERMEDIATE_BASE_FILES = {
     'flow_dir_mfd_path': 'flow_dir_mfd.tif',
     'qfm_path_list': ['qf_%d.tif' % (x+1) for x in range(N_MONTHS)],
     'stream_path': 'stream.tif',
-}
-
-_TMP_BASE_FILES = {
-    'outflow_direction_path': 'outflow_direction.tif',
-    'outflow_weights_path': 'outflow_weights.tif',
-    'kc_path': 'kc.tif',
     'si_path': 'Si.tif',
     'lulc_aligned_path': 'lulc_aligned.tif',
     'dem_aligned_path': 'dem_aligned.tif',
     'dem_pit_filled_path': 'pit_filled_dem.tif',
-    'loss_path': 'loss.tif',
-    'zero_absorption_source_path': 'zero_absorption.tif',
     'soil_group_aligned_path': 'soil_group_aligned.tif',
     'flow_accum_path': 'flow_accum.tif',
     'precip_path_aligned_list': ['prcp_a%d.tif' % x for x in range(N_MONTHS)],
@@ -461,7 +505,6 @@ _TMP_BASE_FILES = {
     'kc_path_list': ['kc_%d.tif' % x for x in range(N_MONTHS)],
     'l_aligned_path': 'l_aligned.tif',
     'cz_aligned_raster_path': 'cz_aligned.tif',
-    'l_sum_pre_clamp': 'l_sum_pre_clamp.tif'
 }
 
 
@@ -593,9 +636,8 @@ def _execute(args):
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
     intermediate_output_dir = os.path.join(
         args['workspace_dir'], 'intermediate_outputs')
-    cache_dir = os.path.join(args['workspace_dir'], 'cache_dir')
     output_dir = args['workspace_dir']
-    utils.make_directories([intermediate_output_dir, cache_dir, output_dir])
+    utils.make_directories([intermediate_output_dir, output_dir])
 
     try:
         n_workers = int(args['n_workers'])
@@ -605,13 +647,13 @@ def _execute(args):
         # TypeError when n_workers is None.
         n_workers = -1  # Synchronous mode.
     task_graph = taskgraph.TaskGraph(
-        cache_dir, n_workers, reporting_interval=5)
+        os.path.join(args['workspace_dir'], 'taskgraph_cache'),
+        n_workers, reporting_interval=5)
 
     LOGGER.info('Building file registry')
     file_registry = utils.build_file_registry(
         [(_OUTPUT_BASE_FILES, output_dir),
-         (_INTERMEDIATE_BASE_FILES, intermediate_output_dir),
-         (_TMP_BASE_FILES, cache_dir)], file_suffix)
+         (_INTERMEDIATE_BASE_FILES, intermediate_output_dir)], file_suffix)
 
     LOGGER.info('Checking that the AOI is not the output aggregate vector')
     if (os.path.normpath(args['aoi_path']) ==
@@ -689,7 +731,7 @@ def _execute(args):
         args=(
             (file_registry['dem_aligned_path'], 1),
             file_registry['dem_pit_filled_path']),
-        kwargs={'working_dir': cache_dir},
+        kwargs={'working_dir': intermediate_output_dir},
         target_path_list=[file_registry['dem_pit_filled_path']],
         dependent_task_list=[align_task],
         task_name='fill dem pits')
@@ -699,7 +741,7 @@ def _execute(args):
         args=(
             (file_registry['dem_pit_filled_path'], 1),
             file_registry['flow_dir_mfd_path']),
-        kwargs={'working_dir': cache_dir},
+        kwargs={'working_dir': intermediate_output_dir},
         target_path_list=[file_registry['flow_dir_mfd_path']],
         dependent_task_list=[fill_pit_task],
         task_name='flow dir mfd')

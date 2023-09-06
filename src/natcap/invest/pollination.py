@@ -311,10 +311,10 @@ MODEL_SPEC = {
                     "about": "Farm vector reprojected to the LULC projection",
                     "fields": {},
                     "geometries": spec_utils.POLYGONS
-                },
-                "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
+                }
             }
-        }
+        },
+        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
     }
 }
 
@@ -504,8 +504,6 @@ def execute(args):
     # create initial working directories and determine file suffixes
     intermediate_output_dir = os.path.join(
         args['workspace_dir'], 'intermediate_outputs')
-    work_token_dir = os.path.join(
-        intermediate_output_dir, '_taskgraph_working_dir')
     output_dir = os.path.join(args['workspace_dir'])
     utils.make_directories(
         [output_dir, intermediate_output_dir])
@@ -534,7 +532,8 @@ def execute(args):
         # ValueError when n_workers is an empty string.
         # TypeError when n_workers is None.
         n_workers = -1  # Synchronous mode.
-    task_graph = taskgraph.TaskGraph(work_token_dir, n_workers)
+    task_graph = taskgraph.TaskGraph(
+        os.path.join(args['workspace_dir'], 'taskgraph_cache'), n_workers)
 
     if farm_vector_path is not None:
         # ensure farm vector is in the same projection as the landcover map

@@ -526,10 +526,10 @@ MODEL_SPEC = {
                     "about": "Wind data",
                     "geometries": spec_utils.POINT,
                     "fields": OUTPUT_WIND_DATA_FIELDS
-                },
-                "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
+                }
             }
-        }
+        },
+        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
     }
 }
 
@@ -652,7 +652,6 @@ def execute(args):
     suffix = utils.make_suffix_string(args, 'results_suffix')
 
     # Initialize a TaskGraph
-    taskgraph_working_dir = os.path.join(inter_dir, '_taskgraph_working_dir')
     try:
         n_workers = int(args['n_workers'])
     except (KeyError, ValueError, TypeError):
@@ -660,7 +659,8 @@ def execute(args):
         # ValueError when n_workers is an empty string.
         # TypeError when n_workers is None.
         n_workers = -1  # single process mode.
-    task_graph = taskgraph.TaskGraph(taskgraph_working_dir, n_workers)
+    task_graph = taskgraph.TaskGraph(
+        os.path.join(args['workspace_dir'], 'taskgraph_cache'), n_workers)
 
     # Resample the bathymetry raster if it does not have square pixel size
     try:
@@ -2623,10 +2623,12 @@ def _clip_vector_by_vector(
         shutil.rmtree(temp_dir, ignore_errors=True)
 
     if empty_clip:
+        # The "clip_vector_path" is always the AOI.
         raise ValueError(
             f"Clipping {base_vector_path} by {clip_vector_path} returned 0"
-            " features. If an AOI was provided this could mean the AOI and"
-            " Wind Data do not intersect spatially.")
+            f" features. This means the AOI and {base_vector_path} do not"
+            " intersect spatially. Please check that the AOI has spatial"
+            " overlap with all input data.")
 
     LOGGER.info('Finished _clip_vector_by_vector')
 
