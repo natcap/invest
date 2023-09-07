@@ -65,6 +65,79 @@ jobs:
             # Skip line-too-long errors (D001)
             python -m doc8 --ignore D001 HISTORY.rst
 
+  report-translation-status:
+    name: Report status of translations
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-python@v4
+        name: Set up python
+        with:
+          python-version: ${{ env.LATEST_SUPPORTED_PYTHON_VERSION }}
+
+      - name: Set up environment
+        run: pip install babel
+
+      - name: Update message catalogs
+        run: |
+          # update message catalog template
+          pybabel extract \
+            --no-wrap \
+            --project InVEST \
+            --msgid-bugs-address esoth@stanford.edu \
+            --copyright-holder "Natural Capital Project" \
+            --output src/natcap/invest/internationalization/messages.pot \
+            src/
+
+          # update each language's message catalog from template
+          for dirname in src/natcap/invest/internationalization/locales/*; do
+            echo $(basename $dirname);
+            pybabel update \
+              --locale $(basename $dirname) \
+              --input-file src/natcap/invest/internationalization/messages.pot \
+              --output-file $dirname/LC_MESSAGES/messages.po
+          done
+
+      - name: Count missing translations
+        shell: python
+        run: |
+          import json
+          import os
+          from babel.messages.pofile import read_po
+
+          print('natcap.invest:\n')
+          locales_dir = 'src/natcap/invest/internationalization/locales'
+          for locale in os.listdir(locales_dir):
+
+            with open(f'{locales_dir}/{locale}/LC_MESSAGES/messages.po') as f:
+              catalog = read_po(f)
+
+            n_missing = len([message for message in catalog if message.string == ''])
+            percent_missing = n_missing / len(catalog) * 100
+            n_obsolete = len(catalog.obsolete)
+            n_total_messages = len(catalog) + n_obsolete
+            print(f'{locale}:')
+            print(f'{len(catalog) + len(catalog.obsolete)} total messages ({len(catalog)} current and {len(catalog.obsolete)} obsolete)')
+            print(f'{n_missing}/{len(catalog)} ({percent_missing:.0f}%) of current messages need translation\n')
+
+          print('\nWorkbench:\n')
+          main_dir = 'workbench/src/main/i18n'
+          renderer_dir = 'workbench/src/renderer/i18n'
+
+          locales = [file[:-5] for file in os.listdir(main_dir) if file.endswith('.json')]
+          for locale in locales:
+            with open(f'{main_dir}/{locale}.json') as f:
+              catalog = json.load(f)
+            with open(f'{renderer_dir}/{locale}.json') as f:
+              catalog.update(json.load(f))
+
+            n_missing = len([message for message in catalog.values() if message == ''])
+            percent_missing = n_missing / len(catalog) * 100
+            print(f'{locale}: {n_missing}/{len(catalog)} ({percent_missing:.0f}%) of messages need translation')
+
+          print("\nFor user's guide translation stats, see the user's guide checks")
+
   run-model-tests:
     name: Run model tests
     runs-on: ${{ matrix.os }}
