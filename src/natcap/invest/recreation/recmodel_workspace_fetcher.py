@@ -50,7 +50,7 @@ def execute(args):
         args['workspace_id'])
 
     # unpack result
-    open(os.path.join(
-        output_dir, '%s.zip' % args['workspace_id']), 'wb').write(
-            workspace_aoi_binary)
+    with open(os.path.join(
+            output_dir, '%s.zip' % args['workspace_id']), 'wb') as file:
+        file.write(workspace_aoi_binary)
     LOGGER.info("fetched aoi")

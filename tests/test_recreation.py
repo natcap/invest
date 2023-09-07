@@ -13,6 +13,7 @@ import logging
 import json
 import queue
 import multiprocessing
+import time
 
 import numpy
 from osgeo import gdal
@@ -140,8 +141,209 @@ class TestBufferedNumpyDiskMap(unittest.TestCase):
             file_manager.read(1234)
 
 
+class TestRecServerLoop(unittest.TestCase):
+    """Tests that use the rec server execute loop running in another process."""
+
+    def setUp(self):
+        """Setup workspace."""
+        from natcap.invest.recreation import recmodel_server
+
+        self.workspace_dir = tempfile.mkdtemp()
+        self.resampled_data_path = os.path.join(
+            self.workspace_dir, 'resampled_data.csv')
+        _resample_csv(
+            os.path.join(SAMPLE_DATA, 'sample_data.csv'),
+            self.resampled_data_path, resample_factor=10)
+
+        # attempt to get an open port; could result in race condition but
+        # will be okay for a test. if this test ever fails because of port
+        # in use, that's probably why
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.bind(('', 0))
+        self.port = sock.getsockname()[1]
+        sock.close()
+        sock = None
+
+        server_args = {
+            'hostname': 'localhost',
+            'port': self.port,
+            'raw_csv_point_data_path': self.resampled_data_path,
+            'cache_workspace': self.workspace_dir,
+            'min_year': 2008,
+            'max_year': 2015,
+            'max_points_per_node': 200,
+        }
+
+        self.server_process = multiprocessing.Process(
+            target=recmodel_server.execute, args=(server_args,), daemon=False)
+        self.server_process.start()
+        # need a few seconds for the server to be ready
+        # Dave suggested that if this turns out to be flaky, we could instead
+        # listen for the stdout from the server process indicating it's done
+        # initializing, or poll the server and retry multiple times.
+        time.sleep(5)
+
+    def tearDown(self):
+        """Delete workspace."""
+        self.server_process.terminate()
+        shutil.rmtree(self.workspace_dir, ignore_errors=True)
+
+    def test_all_metrics_local_server(self):
+        """Recreation test with all but trivial predictor metrics.
+
+        Executes Recreation model all the way through scenario prediction.
+        With this 'extra_fields_features' AOI, we also cover two edge cases:
+        1) the AOI has a pre-existing field that the model wishes to create.
+        2) the AOI has features only covering nodata raster predictor values.
+        """
+        from natcap.invest.recreation import recmodel_client
+        args = {
+            'aoi_path': os.path.join(
+                SAMPLE_DATA, 'andros_aoi_with_extra_fields_features.shp'),
+            'compute_regression': True,
+            'start_year': '2008',
+            'end_year': '2014',
+            'grid_aoi': False,
+            'predictor_table_path': os.path.join(
+                SAMPLE_DATA, 'predictors_all.csv'),
+            'scenario_predictor_table_path': os.path.join(
+                SAMPLE_DATA, 'predictors_all.csv'),
+            'results_suffix': '',
+            'workspace_dir': self.workspace_dir,
+            'hostname': 'localhost',
+            'port': self.port,
+        }
+        recmodel_client.execute(args)
+
+        out_grid_vector_path = os.path.join(
+            args['workspace_dir'], 'predictor_data.shp')
+        expected_grid_vector_path = os.path.join(
+            REGRESSION_DATA, 'predictor_data_all_metrics.shp')
+        utils._assert_vectors_equal(
+            out_grid_vector_path, expected_grid_vector_path, 1e-3)
+
+        out_scenario_path = os.path.join(
+            args['workspace_dir'], 'scenario_results.shp')
+        expected_scenario_path = os.path.join(
+            REGRESSION_DATA, 'scenario_results_all_metrics.shp')
+        utils._assert_vectors_equal(
+            out_scenario_path, expected_scenario_path, 1e-3)
+
+    @_timeout(30.0)
+    def test_execute_local_server(self):
+        """Recreation base regression test on sample data on local server.
+
+        Executes Recreation model all the way through scenario prediction.
+        With this florida AOI, raster and vector predictors do not
+        intersect the AOI. This makes for a fast test and incidentally
+        covers an edge case.
+        """
+        from natcap.invest.recreation import recmodel_client
+
+        args = {
+            'aoi_path': os.path.join(
+                SAMPLE_DATA, 'local_recreation_aoi_florida_utm18n.shp'),
+            'cell_size': 40000.0,
+            'compute_regression': True,
+            'start_year': '2008',
+            'end_year': '2014',
+            'hostname': 'localhost',
+            'port': self.port,
+            'grid_aoi': True,
+            'grid_type': 'hexagon',
+            'predictor_table_path': os.path.join(
+                SAMPLE_DATA, 'predictors.csv'),
+            'results_suffix': '',
+            'scenario_predictor_table_path': os.path.join(
+                SAMPLE_DATA, 'predictors_scenario.csv'),
+            'workspace_dir': self.workspace_dir,
+        }
+
+        recmodel_client.execute(args)
+
+        _assert_regression_results_eq(
+            args['workspace_dir'],
+            os.path.join(REGRESSION_DATA, 'file_list_base_florida_aoi.txt'),
+            os.path.join(args['workspace_dir'], 'scenario_results.shp'),
+            os.path.join(REGRESSION_DATA, 'local_server_scenario_results.csv'))
+
+    @_timeout(30.0)
+    def test_workspace_fetcher(self):
+        """Recreation test workspace fetcher on a local Pyro4 empty server."""
+        from natcap.invest.recreation import recmodel_workspace_fetcher
+
+        path = "PYRO:natcap.invest.recreation@localhost:%s" % self.port
+        LOGGER.info("Local server path %s", path)
+        recreation_server = Pyro4.Proxy(path)
+        aoi_path = os.path.join(
+            SAMPLE_DATA, 'test_aoi_for_subset.shp')
+        basename = os.path.splitext(aoi_path)[0]
+        aoi_archive_path = os.path.join(
+            self.workspace_dir, 'aoi_zipped.zip')
+        with zipfile.ZipFile(aoi_archive_path, 'w') as myzip:
+            for filename in glob.glob(basename + '.*'):
+                myzip.write(filename, os.path.basename(filename))
+
+        # convert shapefile to binary string for serialization
+        with open(aoi_archive_path, 'rb') as file:
+            zip_file_binary = file.read()
+        date_range = (('2005-01-01'), ('2014-12-31'))
+        out_vector_filename = 'test_aoi_for_subset_pud.shp'
+
+        _, workspace_id = (
+            recreation_server.calc_photo_user_days_in_aoi(
+                zip_file_binary, date_range, out_vector_filename))
+        fetcher_args = {
+            'workspace_dir': self.workspace_dir,
+            'hostname': 'localhost',
+            'port': self.port,
+            'workspace_id': workspace_id,
+        }
+        try:
+            recmodel_workspace_fetcher.execute(fetcher_args)
+        except:
+            LOGGER.error(
+                "Server process failed (%s) is_alive=%s",
+                str(server_thread), server_thread.is_alive())
+            raise
+
+        out_workspace_dir = os.path.join(
+            self.workspace_dir, 'workspace_zip')
+        os.makedirs(out_workspace_dir)
+        workspace_zip_path = os.path.join(
+            self.workspace_dir, workspace_id + '.zip')
+        zipfile.ZipFile(workspace_zip_path, 'r').extractall(
+            out_workspace_dir)
+        utils._assert_vectors_equal(
+            aoi_path,
+            os.path.join(out_workspace_dir, 'test_aoi_for_subset.shp'))
+
+    def test_results_suffix_on_serverside_files(self):
+        """Recreation test suffix gets added to files created on server."""
+        from natcap.invest.recreation import recmodel_client
+
+        args = {
+            'aoi_path': os.path.join(
+                SAMPLE_DATA, 'andros_aoi_with_extra_fields_features.shp'),
+            'compute_regression': False,
+            'start_year': '2014',
+            'end_year': '2015',
+            'grid_aoi': False,
+            'results_suffix': 'hello',
+            'workspace_dir': self.workspace_dir,
+            'hostname': 'localhost',
+            'port': self.port,
+        }
+        recmodel_client.execute(args)
+
+        self.assertTrue(os.path.exists(
+            os.path.join(args['workspace_dir'], 'monthly_table_hello.csv')))
+        self.assertTrue(os.path.exists(
+            os.path.join(args['workspace_dir'], 'pud_results_hello.shp')))
+
+
 class TestRecServer(unittest.TestCase):
-    """Tests that set up local rec server on a port and call through."""
+    """Tests for recmodel_server functions and the RecModel object."""
 
     def setUp(self):
         """Setup workspace."""
@@ -186,88 +388,6 @@ class TestRecServer(unittest.TestCase):
                 self.resampled_data_path,
                 2014, 2005, os.path.join(self.workspace_dir, 'server_cache'))
 
-    @_timeout(30.0)
-    def test_workspace_fetcher(self):
-        """Recreation test workspace fetcher on a local Pyro4 empty server."""
-        from natcap.invest.recreation import recmodel_server
-        from natcap.invest.recreation import recmodel_workspace_fetcher
-
-        # Attempt a few connections, we've had this test be flaky on the
-        # entire suite run which we suspect is because of a race condition
-        server_launched = False
-        for _ in range(3):
-            try:
-                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                sock.bind(('', 0))
-                port = sock.getsockname()[1]
-                sock.close()
-                sock = None
-
-                server_args = {
-                    'hostname': 'localhost',
-                    'port': port,
-                    'raw_csv_point_data_path': self.resampled_data_path,
-                    'cache_workspace': self.workspace_dir,
-                    'min_year': 2010,
-                    'max_year': 2015,
-                }
-
-                server_thread = threading.Thread(
-                    target=recmodel_server.execute, args=(server_args,))
-                server_thread.daemon = True
-                server_thread.start()
-                server_launched = True
-                break
-            except:
-                LOGGER.warn("Can't start server process on port %d", port)
-        if not server_launched:
-            self.fail("Server didn't start")
-
-        path = "PYRO:natcap.invest.recreation@localhost:%s" % port
-        LOGGER.info("Local server path %s", path)
-        recreation_server = Pyro4.Proxy(path)
-        aoi_path = os.path.join(
-            SAMPLE_DATA, 'test_aoi_for_subset.shp')
-        basename = os.path.splitext(aoi_path)[0]
-        aoi_archive_path = os.path.join(
-            self.workspace_dir, 'aoi_zipped.zip')
-        with zipfile.ZipFile(aoi_archive_path, 'w') as myzip:
-            for filename in glob.glob(basename + '.*'):
-                myzip.write(filename, os.path.basename(filename))
-
-        # convert shapefile to binary string for serialization
-        zip_file_binary = open(aoi_archive_path, 'rb').read()
-        date_range = (('2005-01-01'), ('2014-12-31'))
-        out_vector_filename = 'test_aoi_for_subset_pud.shp'
-
-        _, workspace_id = (
-            recreation_server.calc_photo_user_days_in_aoi(
-                zip_file_binary, date_range, out_vector_filename))
-        fetcher_args = {
-            'workspace_dir': self.workspace_dir,
-            'hostname': 'localhost',
-            'port': port,
-            'workspace_id': workspace_id,
-        }
-        try:
-            recmodel_workspace_fetcher.execute(fetcher_args)
-        except:
-            LOGGER.error(
-                "Server process failed (%s) is_alive=%s",
-                str(server_thread), server_thread.is_alive())
-            raise
-
-        out_workspace_dir = os.path.join(
-            self.workspace_dir, 'workspace_zip')
-        os.makedirs(out_workspace_dir)
-        workspace_zip_path = os.path.join(
-            self.workspace_dir, workspace_id + '.zip')
-        zipfile.ZipFile(workspace_zip_path, 'r').extractall(
-            out_workspace_dir)
-        utils._assert_vectors_equal(
-            aoi_path,
-            os.path.join(out_workspace_dir, 'test_aoi_for_subset.shp'))
-
     def test_local_aggregate_points(self):
         """Recreation test single threaded local AOI aggregate calculation."""
         from natcap.invest.recreation import recmodel_server
@@ -286,7 +406,8 @@ class TestRecServer(unittest.TestCase):
                 myzip.write(filename, os.path.basename(filename))
 
         # convert shapefile to binary string for serialization
-        zip_file_binary = open(aoi_archive_path, 'rb').read()
+        with open(aoi_archive_path, 'rb') as file:
+            zip_file_binary = file.read()
 
         # transfer zipped file to server
         date_range = (('2005-01-01'), ('2014-12-31'))
@@ -297,7 +418,8 @@ class TestRecServer(unittest.TestCase):
 
         # unpack result
         result_zip_path = os.path.join(self.workspace_dir, 'pud_result.zip')
-        open(result_zip_path, 'wb').write(zip_result)
+        with open(result_zip_path, 'wb') as file:
+            file.write(zip_result)
         zipfile.ZipFile(result_zip_path, 'r').extractall(self.workspace_dir)
 
         result_vector_path = os.path.join(
@@ -312,7 +434,8 @@ class TestRecServer(unittest.TestCase):
         out_workspace_dir = os.path.join(self.workspace_dir, 'workspace_zip')
         os.makedirs(out_workspace_dir)
         workspace_zip_path = os.path.join(out_workspace_dir, 'workspace.zip')
-        open(workspace_zip_path, 'wb').write(workspace_zip_binary)
+        with open(workspace_zip_path, 'wb') as file:
+            file.write(workspace_zip_binary)
         zipfile.ZipFile(workspace_zip_path, 'r').extractall(out_workspace_dir)
         utils._assert_vectors_equal(
             aoi_path,
@@ -460,184 +583,6 @@ class TestRecServer(unittest.TestCase):
             # assert that no warning was raised
             self.assertTrue(len(ws) == 0)
 
-    @_timeout(30.0)
-    def test_execute_local_server(self):
-        """Recreation base regression test on sample data on local server.
-
-        Executes Recreation model all the way through scenario prediction.
-        With this florida AOI, raster and vector predictors do not
-        intersect the AOI. This makes for a fast test and incidentally
-        covers an edge case.
-        """
-        from natcap.invest.recreation import recmodel_client
-        from natcap.invest.recreation import recmodel_server
-
-        # attempt to get an open port; could result in race condition but
-        # will be okay for a test. if this test ever fails because of port
-        # in use, that's probably why
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.bind(('', 0))
-        port = sock.getsockname()[1]
-        sock.close()
-        sock = None
-
-        server_args = {
-            'hostname': 'localhost',
-            'port': port,
-            'raw_csv_point_data_path': self.resampled_data_path,
-            'cache_workspace': self.workspace_dir,
-            'min_year': 2004,
-            'max_year': 2015,
-            'max_points_per_node': 200,
-        }
-
-        server_thread = threading.Thread(
-            target=recmodel_server.execute, args=(server_args,))
-        server_thread.daemon = True
-        server_thread.start()
-
-        args = {
-            'aoi_path': os.path.join(
-                SAMPLE_DATA, 'local_recreation_aoi_florida_utm18n.shp'),
-            'cell_size': 40000.0,
-            'compute_regression': True,
-            'start_year': '2005',
-            'end_year': '2014',
-            'hostname': 'localhost',
-            'port': port,
-            'grid_aoi': True,
-            'grid_type': 'hexagon',
-            'predictor_table_path': os.path.join(
-                SAMPLE_DATA, 'predictors.csv'),
-            'results_suffix': '',
-            'scenario_predictor_table_path': os.path.join(
-                SAMPLE_DATA, 'predictors_scenario.csv'),
-            'workspace_dir': self.workspace_dir,
-        }
-
-        recmodel_client.execute(args)
-
-        _assert_regression_results_eq(
-            args['workspace_dir'],
-            os.path.join(REGRESSION_DATA, 'file_list_base_florida_aoi.txt'),
-            os.path.join(args['workspace_dir'], 'scenario_results.shp'),
-            os.path.join(REGRESSION_DATA, 'local_server_scenario_results.csv'))
-
-    def test_all_metrics_local_server(self):
-        """Recreation test with all but trivial predictor metrics.
-
-        Executes Recreation model all the way through scenario prediction.
-        With this 'extra_fields_features' AOI, we also cover two edge cases:
-        1) the AOI has a pre-existing field that the model wishes to create.
-        2) the AOI has features only covering nodata raster predictor values.
-        """
-        from natcap.invest.recreation import recmodel_client
-        from natcap.invest.recreation import recmodel_server
-
-        # attempt to get an open port; could result in race condition but
-        # will be okay for a test. if this test ever fails because of port
-        # in use, that's probably why
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.bind(('', 0))
-        port = sock.getsockname()[1]
-        sock.close()
-        sock = None
-
-        server_args = {
-            'hostname': 'localhost',
-            'port': port,
-            'raw_csv_point_data_path': self.resampled_data_path,
-            'cache_workspace': self.workspace_dir,
-            'min_year': 2008,
-            'max_year': 2015,
-            'max_points_per_node': 200,
-        }
-
-        server_thread = threading.Thread(
-            target=recmodel_server.execute, args=(server_args,))
-        server_thread.daemon = True
-        server_thread.start()
-
-        args = {
-            'aoi_path': os.path.join(
-                SAMPLE_DATA, 'andros_aoi_with_extra_fields_features.shp'),
-            'compute_regression': True,
-            'start_year': '2008',
-            'end_year': '2014',
-            'grid_aoi': False,
-            'predictor_table_path': os.path.join(
-                SAMPLE_DATA, 'predictors_all.csv'),
-            'scenario_predictor_table_path': os.path.join(
-                SAMPLE_DATA, 'predictors_all.csv'),
-            'results_suffix': '',
-            'workspace_dir': self.workspace_dir,
-            'hostname': server_args['hostname'],
-            'port': server_args['port'],
-        }
-        recmodel_client.execute(args)
-
-        out_grid_vector_path = os.path.join(
-            args['workspace_dir'], 'predictor_data.shp')
-        expected_grid_vector_path = os.path.join(
-            REGRESSION_DATA, 'predictor_data_all_metrics.shp')
-        utils._assert_vectors_equal(
-            expected_grid_vector_path, out_grid_vector_path, 1e-3)
-
-        out_scenario_path = os.path.join(
-            args['workspace_dir'], 'scenario_results.shp')
-        expected_scenario_path = os.path.join(
-            REGRESSION_DATA, 'scenario_results_all_metrics.shp')
-        utils._assert_vectors_equal(
-            expected_scenario_path, out_scenario_path, 1e-3)
-
-    def test_results_suffix_on_serverside_files(self):
-        """Recreation test suffix gets added to files created on server."""
-        from natcap.invest.recreation import recmodel_client
-        from natcap.invest.recreation import recmodel_server
-
-        # attempt to get an open port; could result in race condition but
-        # will be okay for a test. if this test ever fails because of port
-        # in use, that's probably why
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.bind(('', 0))
-        port = sock.getsockname()[1]
-        sock.close()
-        sock = None
-
-        server_args = {
-            'hostname': 'localhost',
-            'port': port,
-            'raw_csv_point_data_path': self.resampled_data_path,
-            'cache_workspace': self.workspace_dir,
-            'min_year': 2014,
-            'max_year': 2015,
-            'max_points_per_node': 200,
-        }
-
-        server_thread = threading.Thread(
-            target=recmodel_server.execute, args=(server_args,))
-        server_thread.daemon = True
-        server_thread.start()
-
-        args = {
-            'aoi_path': os.path.join(
-                SAMPLE_DATA, 'andros_aoi_with_extra_fields_features.shp'),
-            'compute_regression': False,
-            'start_year': '2014',
-            'end_year': '2015',
-            'grid_aoi': False,
-            'results_suffix': 'hello',
-            'workspace_dir': self.workspace_dir,
-            'hostname': server_args['hostname'],
-            'port': server_args['port'],
-        }
-        recmodel_client.execute(args)
-
-        self.assertTrue(os.path.exists(
-            os.path.join(args['workspace_dir'], 'monthly_table_hello.csv')))
-        self.assertTrue(os.path.exists(
-            os.path.join(args['workspace_dir'], 'pud_results_hello.shp')))
-
 
 class TestLocalRecServer(unittest.TestCase):
     """Tests using a local rec server."""
@@ -664,11 +609,13 @@ class TestLocalRecServer(unittest.TestCase):
         self.recreation_server._calc_aggregated_points_in_aoi(
             aoi_path, self.workspace_dir, date_range, out_vector_filename)
 
-        output_lines = open(os.path.join(
-            self.workspace_dir, 'monthly_table.csv'), 'r').readlines()
-        expected_lines = open(os.path.join(
-            REGRESSION_DATA, 'expected_monthly_table_for_subset.csv'),
-                              'r').readlines()
+        with open(os.path.join(
+                self.workspace_dir, 'monthly_table.csv'), 'r') as file:
+            output_lines = file.readlines()
+        with open(os.path.join(
+                REGRESSION_DATA, 'expected_monthly_table_for_subset.csv'),
+                'r') as file:
+            expected_lines = file.readlines()
 
         if output_lines != expected_lines:
             raise ValueError(
@@ -833,7 +780,6 @@ class RecreationRegressionTests(unittest.TestCase):
 
         with open(predictor_target_path, 'r') as file:
             data = json.load(file)
-            print(data)
         actual_value = list(data.values())[0]
         expected_value = 1
         self.assertEqual(actual_value, expected_value)

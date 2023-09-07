@@ -176,7 +176,8 @@ class RecModel(object):
         workspace_path = os.path.join(self.cache_workspace, workspace_id)
         out_zip_file_path = os.path.join(
             workspace_path, str('server_in')+'.zip')
-        return open(out_zip_file_path, 'rb').read()
+        with open(out_zip_file_path, 'rb') as out_zipfile:
+            return out_zipfile.read()
 
     @_try_except_wrapper("exception in calc_photo_user_days_in_aoi")
     def calc_photo_user_days_in_aoi(
@@ -239,7 +240,8 @@ class RecModel(object):
         LOGGER.info(
             'calc user days complete sending binary back on %s',
             workspace_path)
-        return open(aoi_pud_archive_path, 'rb').read(), workspace_id
+        with open(aoi_pud_archive_path, 'rb') as aoi_pud_archive:
+            return aoi_pud_archive.read(), workspace_id
 
     def _calc_aggregated_points_in_aoi(
             self, aoi_path, workspace_path, date_range, out_vector_filename):
@@ -268,7 +270,8 @@ class RecModel(object):
         pud_poly_feature_queue = multiprocessing.Queue(4)
         n_polytest_processes = multiprocessing.cpu_count()
 
-        global_qt = pickle.load(open(self.qt_pickle_filename, 'rb'))
+        with open(self.qt_pickle_filename, 'rb') as qt_pickle:
+            global_qt = pickle.load(qt_pickle)
         aoi_layer = aoi_vector.GetLayer()
         aoi_extent = aoi_layer.GetExtent()
         aoi_ref = aoi_layer.GetSpatialRef()
@@ -422,39 +425,39 @@ class RecModel(object):
         n_poly_tested = 0
 
         monthly_table_path = os.path.join(workspace_path, 'monthly_table.csv')
-        monthly_table = open(monthly_table_path, 'w')
         date_range_year = [
             date.tolist().timetuple().tm_year for date in date_range]
         table_headers = [
             '%s-%s' % (year, month) for year in range(
                 int(date_range_year[0]), int(date_range_year[1])+1)
             for month in range(1, 13)]
-        monthly_table.write('poly_id,' + ','.join(table_headers) + '\n')
+        with open(monthly_table_path, 'w') as monthly_table:
+            monthly_table.write('poly_id,' + ','.join(table_headers) + '\n')
 
-        while True:
-            result_tuple = pud_poly_feature_queue.get()
-            n_poly_tested += 1
-            if result_tuple == 'STOP':
-                n_processes_alive -= 1
-                if n_processes_alive == 0:
-                    break
-                continue
-            last_time = recmodel_client.delay_op(
-                last_time, LOGGER_TIME_DELAY, lambda: LOGGER.info(
-                    '%.2f%% of polygons tested', 100 * float(n_poly_tested) /
-                    pud_aoi_layer.GetFeatureCount()))
-            poly_id, pud_list, pud_monthly_set = result_tuple
-            poly_feat = pud_aoi_layer.GetFeature(poly_id)
-            for pud_index, pud_id in enumerate(pud_id_suffix_list):
-                poly_feat.SetField('PUD_%s' % pud_id, pud_list[pud_index])
-            pud_aoi_layer.SetFeature(poly_feat)
+            while True:
+                result_tuple = pud_poly_feature_queue.get()
+                n_poly_tested += 1
+                if result_tuple == 'STOP':
+                    n_processes_alive -= 1
+                    if n_processes_alive == 0:
+                        break
+                    continue
+                last_time = recmodel_client.delay_op(
+                    last_time, LOGGER_TIME_DELAY, lambda: LOGGER.info(
+                        '%.2f%% of polygons tested', 100 * float(n_poly_tested) /
+                        pud_aoi_layer.GetFeatureCount()))
+                poly_id, pud_list, pud_monthly_set = result_tuple
+                poly_feat = pud_aoi_layer.GetFeature(poly_id)
+                for pud_index, pud_id in enumerate(pud_id_suffix_list):
+                    poly_feat.SetField('PUD_%s' % pud_id, pud_list[pud_index])
+                pud_aoi_layer.SetFeature(poly_feat)
 
-            line = '%s,' % poly_id
-            line += (
-                ",".join(['%s' % len(pud_monthly_set[header])
-                          for header in table_headers]))
-            line += '\n'  # final newline
-            monthly_table.write(line)
+                line = '%s,' % poly_id
+                line += (
+                    ",".join(['%s' % len(pud_monthly_set[header])
+                              for header in table_headers]))
+                line += '\n'  # final newline
+                monthly_table.write(line)
 
         LOGGER.info('done with polygon test, syncing to disk')
         pud_aoi_layer = None
@@ -714,7 +717,8 @@ def _calc_poly_pud(
     """
     start_time = time.time()
     LOGGER.info('in a _calc_poly_process, loading %s', local_qt_pickle_path)
-    local_qt = pickle.load(open(local_qt_pickle_path, 'rb'))
+    with open(local_qt_pickle_path, 'rb') as qt_pickle:
+        local_qt = pickle.load(qt_pickle)
     LOGGER.info('local qt load took %.2fs', time.time() - start_time)
 
     aoi_vector = gdal.OpenEx(aoi_path, gdal.OF_VECTOR)

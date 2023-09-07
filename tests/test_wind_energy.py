@@ -202,7 +202,8 @@ class WindEnergyUnitTests(unittest.TestCase):
         }
         wind_data_pickle_path = os.path.join(
             self.workspace_dir, 'wind_data.pickle')
-        pickle.dump(wind_data, open(wind_data_pickle_path, 'wb'))
+        with open(wind_data_pickle_path, 'wb') as file:
+            pickle.dump(wind_data, file)
 
         layer_name = "datatopoint"
         out_path = os.path.join(self.workspace_dir, 'datatopoint.shp')
@@ -253,7 +254,8 @@ class WindEnergyUnitTests(unittest.TestCase):
         }
         wind_data_pickle_path = os.path.join(
             self.workspace_dir, 'wind_data.pickle')
-        pickle.dump(wind_data, open(wind_data_pickle_path, 'wb'))
+        with open(wind_data_pickle_path, 'wb') as file:
+            pickle.dump(wind_data, file)
 
         layer_name = "datatopoint"
         out_path = os.path.join(self.workspace_dir, 'datatopoint.shp')
