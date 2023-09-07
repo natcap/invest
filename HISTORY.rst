@@ -83,7 +83,11 @@ Unreleased Changes
       middle clicking will close that tab as expected.
       (`#1261 <https://github.com/natcap/invest/issues/1261>`_)
     * Updated InVEST logo to use new version with registered trademark symbol.
-      (https://naturalcapitalproject.stanford.edu/invest-trademark-and-logo-use-policy)
+      (`InVEST TM and Logo Use Policy
+      <https://naturalcapitalproject.stanford.edu/invest-trademark-and-logo-use-policy>`_)
+    * InVEST is licensed using a permissive open source license. But we have
+      decided to add back the license and agreement step to the installer to
+      be upfront and explicit about how InVEST is licensed.
 * Coastal Blue Carbon
     * Added validation for the transition table, raising a validation error if
       unexpected values are encountered.

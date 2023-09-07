@@ -72,6 +72,7 @@ const config = {
     installerHeader: 'resources/InVEST-header-wcvi-rocks.bmp',
     oneClick: false,
     uninstallDisplayName: PRODUCT_NAME,
+    license: 'build/license_en.txt',
   },
   files: [
     'build/**/*',
