@@ -54,6 +54,10 @@ Unreleased Changes
       has been merged into ``utils.read_csv_to_dataframe``
       (`#1319 <https://github.com/natcap/invest/issues/1319>`_),
       (`#1327 <https://github.com/natcap/invest/issues/1327>`_)
+    * Standardized on keeping the ``execute`` and ``validate`` functions
+      orthogonal. Now no models call ``validate`` from ``execute``. This
+      affected AWY, CV, UFRM, Wave Energy, and Wind Energy.
+      (`#1373 <https://github.com/natcap/invest/issues/1373>`_)
     * Improved the validation message that is returned when not all spatial
       inputs overlap (`#502 <https://github.com/natcap/invest/issues/502>`_)
     * Standardized the name and location of the taskgraph cache directory for

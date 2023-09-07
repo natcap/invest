@@ -545,59 +545,6 @@ def execute(args):
         None
 
     """
-    def _validate_inputs(nutrients_to_process, biophysical_df):
-        """Validate common errors in inputs.
-
-        Args:
-            nutrients_to_process (list): list of 'n' and/or 'p'
-            biophysical_df (pandas.DataFrame): dataframe representation of
-                the input biophysical table. Used to validate the correct
-                columns are input
-
-        Returns:
-            None
-
-        Raises:
-            ValueError whenever a missing field in the parameter table is
-            detected along with a message describing every missing field.
-
-        """
-        # Make sure all the nutrient inputs are good
-        if len(nutrients_to_process) == 0:
-            raise ValueError("Neither phosphorus nor nitrogen was selected"
-                             " to be processed.  Choose at least one.")
-
-        # Build up a list that'll let us iterate through all the input tables
-        # and check for the required rows, and report errors if something
-        # is missing.
-        row_header_table_list = []
-
-        lu_parameter_row = biophysical_df.columns.to_list()
-        row_header_table_list.append(
-            (lu_parameter_row, ['load_', 'eff_', 'crit_len_'],
-             args['biophysical_table_path']))
-
-        missing_headers = []
-        for row, header_prefixes, table_type in row_header_table_list:
-            for nutrient_id in nutrients_to_process:
-                for header_prefix in header_prefixes:
-                    header = header_prefix + nutrient_id
-                    if header not in row:
-                        missing_headers.append(
-                            "Missing header %s from %s" % (
-                                header, table_type))
-
-        # proportion_subsurface_n is a special case in which phosphorus does
-        # not have an equivalent.
-        if ('n' in nutrients_to_process and
-                'proportion_subsurface_n' not in lu_parameter_row):
-            missing_headers.append(
-                "Missing header proportion_subsurface_n from " +
-                args['biophysical_table_path'])
-
-        if len(missing_headers) > 0:
-            raise ValueError('\n'.join(missing_headers))
-
     # Load all the tables for preprocessing
     output_dir = os.path.join(args['workspace_dir'])
     intermediate_output_dir = os.path.join(
@@ -629,8 +576,6 @@ def execute(args):
     biophysical_df = utils.read_csv_to_dataframe(
         args['biophysical_table_path'],
         MODEL_SPEC['args']['biophysical_table_path'])
-
-    _validate_inputs(nutrients_to_process, biophysical_df)
 
     # these are used for aggregation in the last step
     field_pickle_map = {}
@@ -1143,9 +1088,11 @@ def validate(args, limit_to=None):
     LOGGER.debug('Starting logging for biophysical table')
     if 'biophysical_table_path' not in invalid_keys:
         # Check required fields given the state of ``calc_n`` and ``calc_p``
-        nutrient_required_fields = []
+        nutrient_required_fields = ['lucode']
         nutrients_selected = set()
         for nutrient_letter in ('n', 'p'):
+            if nutrient_letter == 'n':
+                nutrient_required_fields += ['proportion_subsurface_n']
             do_nutrient_key = f'calc_{nutrient_letter}'
             if do_nutrient_key in args and args[do_nutrient_key]:
                 nutrients_selected.add(do_nutrient_key)
@@ -1154,20 +1101,16 @@ def validate(args, limit_to=None):
                     f'eff_{nutrient_letter}',
                     f'crit_len_{nutrient_letter}'
                 ]
-
         if not nutrients_selected:
             validation_warnings.append(
                 (['calc_n', 'calc_p'], MISSING_NUTRIENT_MSG))
 
-        LOGGER.debug('Required nutrient-specific keys in CSV: %s',
-                     nutrient_required_fields)
         # Check that these nutrient-specific keys are in the table
         # validate has already checked all the other keys
         error_msg = validation.check_csv(
             args['biophysical_table_path'],
-            header_patterns=nutrient_required_fields)
+            columns={key: '' for key in nutrient_required_fields})
         if error_msg:
-            LOGGER.debug('Error: %s', error_msg)
             validation_warnings.append(
                 (['biophysical_table_path'], error_msg))
 

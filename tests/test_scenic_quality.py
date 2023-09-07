@@ -225,38 +225,6 @@ class ScenicQualityTests(unittest.TestCase):
                                       quality_matrix,
                                       rtol=0, atol=1e-6)
 
-    def test_invalid_valuation_function(self):
-        """SQ: model raises exception with invalid valuation function."""
-        from natcap.invest.scenic_quality import scenic_quality
-
-        dem_path = os.path.join(self.workspace_dir, 'dem.tif')
-        ScenicQualityTests.create_dem(dem_path)
-
-        viewpoints_path = os.path.join(self.workspace_dir,
-                                       'viewpoints.geojson')
-        ScenicQualityTests.create_viewpoints(viewpoints_path)
-
-        aoi_path = os.path.join(self.workspace_dir, 'aoi.geojson')
-        ScenicQualityTests.create_aoi(aoi_path)
-
-        args = {
-            'workspace_dir': os.path.join(self.workspace_dir, 'workspace'),
-            'results_suffix': 'foo',
-            'aoi_path': aoi_path,
-            'structure_path': viewpoints_path,
-            'dem_path': dem_path,
-            'refraction': 0.13,
-            'do_valuation': True,
-            'valuation_function': 'INVALID FUNCTION',
-            'a_coef': 1,
-            'b_coef': 0,
-            'max_valuation_radius': 10.0,
-            'n_workers': -1,
-        }
-
-        with self.assertRaises(ValueError):
-            scenic_quality.execute(args)
-
     def test_error_invalid_viewpoints(self):
         """SQ: error when no valid viewpoints.
 

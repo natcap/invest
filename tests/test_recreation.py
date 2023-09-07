@@ -637,41 +637,38 @@ class RecreationRegressionTests(unittest.TestCase):
         shutil.rmtree(self.workspace_dir)
 
     def test_data_missing_in_predictors(self):
-        """Recreation raise exception if predictor data missing."""
+        """Recreation can validate if predictor data missing."""
         from natcap.invest.recreation import recmodel_client
 
         response_vector_path = os.path.join(SAMPLE_DATA, 'andros_aoi.shp')
         table_path = os.path.join(
             SAMPLE_DATA, 'predictors_data_missing.csv')
 
-        with self.assertRaises(ValueError):
-            recmodel_client._validate_same_projection(
-                response_vector_path, table_path)
+        self.assertIsNotNone(recmodel_client._validate_same_projection(
+                response_vector_path, table_path))
 
     def test_data_different_projection(self):
-        """Recreation raise exception if data in different projection."""
+        """Recreation can validate if data in different projection."""
         from natcap.invest.recreation import recmodel_client
 
         response_vector_path = os.path.join(SAMPLE_DATA, 'andros_aoi.shp')
         table_path = os.path.join(
             SAMPLE_DATA, 'predictors_wrong_projection.csv')
 
-        with self.assertRaises(ValueError):
-            recmodel_client._validate_same_projection(
-                response_vector_path, table_path)
+        self.assertIsNotNone(recmodel_client._validate_same_projection(
+                response_vector_path, table_path))
 
     def test_different_tables(self):
-        """Recreation exception if scenario ids different than predictor."""
+        """Recreation can validate if scenario ids different than predictor."""
         from natcap.invest.recreation import recmodel_client
 
         base_table_path = os.path.join(
             SAMPLE_DATA, 'predictors_data_missing.csv')
         scenario_table_path = os.path.join(
             SAMPLE_DATA, 'predictors_wrong_projection.csv')
-
-        with self.assertRaises(ValueError):
+        self.assertIsNotNone(
             recmodel_client._validate_same_ids_and_types(
-                base_table_path, scenario_table_path)
+                base_table_path, scenario_table_path))
 
     def test_delay_op(self):
         """Recreation coverage of delay op function."""
@@ -914,7 +911,7 @@ class RecreationRegressionTests(unittest.TestCase):
             expected_result_table, result_table, check_dtype=False)
 
     def test_predictor_id_too_long(self):
-        """Recreation test ID too long raises ValueError."""
+        """Recreation can validate predictor ID length."""
         from natcap.invest.recreation import recmodel_client
 
         args = {
@@ -930,9 +927,8 @@ class RecreationRegressionTests(unittest.TestCase):
             'results_suffix': '',
             'workspace_dir': self.workspace_dir,
         }
-
-        with self.assertRaises(ValueError):
-            recmodel_client.execute(args)
+        msgs = recmodel_client.validate(args)
+        self.assertIn('more than 10 characters long', msgs[0][1])
 
     def test_existing_output_shapefiles(self):
         """Recreation grid test when output files need to be overwritten."""
@@ -1071,7 +1067,9 @@ class RecreationRegressionTests(unittest.TestCase):
                 SAMPLE_DATA, 'predictors_scenario.csv'),
             'workspace_dir': self.workspace_dir,
         }
-
+        msgs = recmodel_client.validate(args)
+        self.assertEqual(
+            'Start year must be less than or equal to end year.', msgs[0][1])
         with self.assertRaises(ValueError):
             recmodel_client.execute(args)
 
@@ -1287,11 +1285,8 @@ class RecreationValidationTests(unittest.TestCase):
             'predictor_table_path': bad_table_path,
             'workspace_dir': self.workspace_dir,
         }
-
-        with self.assertRaises(ValueError) as cm:
-            recmodel_client.execute(args)
-        self.assertTrue('The table contains invalid type value(s)' in
-                        str(cm.exception))
+        msgs = recmodel_client.validate(args)
+        self.assertIn('The table contains invalid type value(s)', msgs[0][1])
 
 
 def _assert_regression_results_eq(

@@ -643,10 +643,6 @@ def execute(args):
 
     """
     LOGGER.info('Starting the Wind Energy Model')
-    invalid_parameters = validate(args)
-    if invalid_parameters:
-        raise ValueError("Invalid parameters passed: %s" % invalid_parameters)
-
     workspace = args['workspace_dir']
     inter_dir = os.path.join(workspace, 'intermediate')
     out_dir = os.path.join(workspace, 'output')
@@ -2771,7 +2767,24 @@ def validate(args, limit_to=None):
     Returns:
         A list of tuples where tuple[0] is an iterable of keys that the error
         message applies to and tuple[1] is the str validation warning.
-
     """
-    return validation.validate(args, MODEL_SPEC['args'],
+    validation_warnings = validation.validate(args, MODEL_SPEC['args'],
                                MODEL_SPEC['args_with_spatial_overlap'])
+
+    invalid_keys = validation.get_invalid_keys(validation_warnings)
+    sufficient_keys = validation.get_sufficient_keys(args)
+    valid_sufficient_keys = sufficient_keys - invalid_keys
+
+    if ('wind_schedule' in valid_sufficient_keys and
+            'global_wind_parameters_path' in valid_sufficient_keys):
+        year_count = pandas.read_csv(args['wind_schedule']).shape[0]
+        time = int(_read_csv_wind_parameters(
+            args['global_wind_parameters_path'], ['time_period']
+        )['time_period'])
+        if year_count != time + 1:
+            validation_warnings.append((
+                ['wind_schedule'],
+                "The 'time' argument in the Global Wind Energy Parameters "
+                "file must equal the number of years provided in the price "
+                "table."))
+    return validation_warnings

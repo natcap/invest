@@ -250,10 +250,6 @@ def execute(args):
         None.
 
     """
-    invalid_parameters = validate(args)
-    if invalid_parameters:
-        raise ValueError(f"Invalid parameters passed: {invalid_parameters}")
-
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
 
     intermediate_dir = os.path.join(

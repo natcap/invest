@@ -518,11 +518,6 @@ def execute(args):
         None
 
     """
-    LOGGER.info('Validating arguments')
-    invalid_parameters = validate(args)
-    if invalid_parameters:
-        raise ValueError(f'Invalid parameters passed: {invalid_parameters}')
-
     # valuation_df is passed to create_vector_output()
     # which computes valuation if valuation_df is not None.
     valuation_df = None
