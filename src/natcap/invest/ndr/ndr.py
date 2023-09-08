@@ -29,6 +29,16 @@ MODEL_SPEC = {
     "pyname": "natcap.invest.ndr.ndr",
     "userguide": "ndr.html",
     "aliases": (),
+    "ui_spec": {
+        "order": [
+            ['workspace_dir', 'results_suffix'],
+            ['dem_path', 'lulc_path', 'runoff_proxy_path', 'watersheds_path', 'biophysical_table_path'],
+            ['calc_p'],
+            ['calc_n', 'subsurface_critical_length_n', 'subsurface_eff_n'],
+            ['threshold_flow_accumulation', 'k_param'],
+        ],
+        "hidden": ["n_workers"]
+    },
     "args_with_spatial_overlap": {
         "spatial_keys": ["dem_path", "lulc_path", "runoff_proxy_path",
                          "watersheds_path"],
@@ -147,6 +157,7 @@ MODEL_SPEC = {
             "type": "number",
             "units": u.meter,
             "required": "calc_n",
+            "allowed": "calc_n",
             "name": gettext("subsurface critical length (nitrogen)"),
             "about": gettext(
                 "The distance traveled (subsurface and downslope) after which "
@@ -156,6 +167,7 @@ MODEL_SPEC = {
         "subsurface_eff_n": {
             "type": "ratio",
             "required": "calc_n",
+            "allowed": "calc_n",
             "name": gettext("subsurface maximum retention efficiency (nitrogen)"),
             "about": gettext(
                 "The maximum nitrogen retention efficiency that can be "

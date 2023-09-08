@@ -45,6 +45,15 @@ MODEL_SPEC = {
     'pyname': 'natcap.invest.urban_nature_access',
     'userguide': 'urban_nature_access.html',
     'aliases': ('una',),
+    'ui_spec': {
+        'order': [
+            ['workspace_dir', 'results_suffix'],
+            ['lulc_raster_path', 'lulc_attribute_table'],
+            ['population_raster_path', 'admin_boundaries_vector_path', 'population_group_radii_table', 'urban_nature_demand', 'aggregate_by_pop_group'],
+            ['search_radius_mode', 'decay_function', 'search_radius']
+        ],
+        "hidden": ["n_workers"]
+    },
     'args_with_spatial_overlap': {
         'spatial_keys': [
             'lulc_raster_path', 'population_raster_path',
@@ -249,6 +258,7 @@ MODEL_SPEC = {
             'units': u.m,
             'expression': 'value > 0',
             'required': f'search_radius_mode == "{RADIUS_OPT_UNIFORM}"',
+            'allowed': f'search_radius_mode and search_radius_mode == "{RADIUS_OPT_UNIFORM}"',
             'about': gettext(
                 'The search radius to use when running the model under a '
                 'uniform search radius. Required when running the model '
@@ -258,6 +268,7 @@ MODEL_SPEC = {
             'name': 'population group radii table',
             'type': 'csv',
             'required': f'search_radius_mode == "{RADIUS_OPT_POP_GROUP}"',
+            'allowed': f'search_radius_mode and search_radius_mode == "{RADIUS_OPT_POP_GROUP}"',
             'index_col': 'pop_group',
             'columns': {
                 "pop_group": {

@@ -37,6 +37,15 @@ MODEL_SPEC = {
     "pyname": "natcap.invest.forest_carbon_edge_effect",
     "userguide": "carbon_edge.html",
     "aliases": ("fc",),
+    "ui_spec": {
+        "order": [
+            ['workspace_dir', 'results_suffix'],
+            ['lulc_raster_path', 'biophysical_table_path', 'pools_to_calculate'],
+            ['compute_forest_edge_effects', 'tropical_forest_edge_carbon_model_vector_path', 'n_nearest_model_points', 'biomass_to_carbon_conversion_factor'],
+            ['aoi_vector_path']
+        ],
+        "hidden": ["n_workers"]
+    },
     "args_with_spatial_overlap": {
         "spatial_keys": ["aoi_vector_path", "lulc_raster_path"],
     },
@@ -49,6 +58,7 @@ MODEL_SPEC = {
             "type": "number",
             "units": u.none,
             "required": "compute_forest_edge_effects",
+            "allowed": "compute_forest_edge_effects",
             "about": gettext(
                 "Number of closest regression models that are used when "
                 "calculating the total biomass. Each local model is linearly "
@@ -169,6 +179,7 @@ MODEL_SPEC = {
             },
             "geometries": spec_utils.POLYGONS,
             "required": "compute_forest_edge_effects",
+            "allowed": "compute_forest_edge_effects",
             "about": gettext(
                 "Map storing the optimal regression model for each tropical "
                 "subregion and the corresponding theta parameters for that "
@@ -179,6 +190,7 @@ MODEL_SPEC = {
         "biomass_to_carbon_conversion_factor": {
             "type": "ratio",
             "required": "compute_forest_edge_effects",
+            "allowed": "compute_forest_edge_effects",
             "about": gettext(
                 "Proportion of forest edge biomass that is elemental carbon. "
                 "Required if Compute Forest Edge Effects is selected."),

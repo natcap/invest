@@ -32,6 +32,16 @@ MODEL_SPEC = {
     "pyname": "natcap.invest.sdr.sdr",
     "userguide": "sdr.html",
     "aliases": (),
+    "ui_spec": {
+        "order": [
+            ['workspace_dir', 'results_suffix'],
+            ['dem_path', 'erosivity_path', 'erodibility_path'],
+            ['lulc_path', 'biophysical_table_path'],
+            ['watersheds_path', 'drainage_path'],
+            ['threshold_flow_accumulation', 'k_param', 'sdr_max', 'ic_0_param', 'l_max']
+        ],
+        "hidden": ["n_workers"]
+    },
     "args_with_spatial_overlap": {
         "spatial_keys": ["dem_path", "erosivity_path", "erodibility_path",
                          "lulc_path", "drainage_path", "watersheds_path", ],

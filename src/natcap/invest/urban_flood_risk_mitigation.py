@@ -27,6 +27,15 @@ MODEL_SPEC = {
     "pyname": "natcap.invest.urban_flood_risk_mitigation",
     "userguide": "urban_flood_mitigation.html",
     "aliases": ("ufrm",),
+    "ui_spec": {
+        "order": [
+            ['workspace_dir', 'results_suffix'],
+            ['aoi_watersheds_path', 'rainfall_depth'],
+            ['lulc_path', 'curve_number_table_path', 'soils_hydrological_group_raster_path'],
+            ['built_infrastructure_vector_path', 'infrastructure_damage_loss_table_path']
+        ],
+        "hidden": ["n_workers"]
+    },
     "args_with_spatial_overlap": {
         "spatial_keys": ["aoi_watersheds_path", "lulc_path",
                          "built_infrastructure_vector_path",

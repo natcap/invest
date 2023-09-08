@@ -59,6 +59,18 @@ MODEL_SPEC = {
     "pyname": "natcap.invest.hra",
     "userguide": "habitat_risk_assessment.html",
     "aliases": ("hra",),
+    "ui_spec": {
+        "order": [
+            ['workspace_dir', 'results_suffix'],
+            ['info_table_path', 'criteria_table_path'],
+            ['resolution', 'max_rating'],
+            ['risk_eq', 'decay_eq'],
+            ['aoi_vector_path'],
+            ['n_overlapping_stressors'],
+            ['visualize_outputs']
+        ],
+        "hidden": ["n_workers"]
+    },
     "args": {
         "workspace_dir": spec_utils.WORKSPACE,
         "results_suffix": spec_utils.SUFFIX,

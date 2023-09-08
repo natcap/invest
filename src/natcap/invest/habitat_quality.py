@@ -35,6 +35,14 @@ MODEL_SPEC = {
     "pyname": "natcap.invest.habitat_quality",
     "userguide": "habitat_quality.html",
     "aliases": ("hq",),
+    "ui_spec": {
+        "order": [
+            ['workspace_dir', 'results_suffix'],
+            ['lulc_cur_path', 'lulc_fut_path', 'lulc_bas_path'],
+            ['threats_table_path', 'access_vector_path', 'sensitivity_table_path', 'half_saturation_constant'],
+        ],
+        "hidden": ["n_workers"]
+    },
     "args_with_spatial_overlap": {
         "spatial_keys": [
             "lulc_cur_path", "lulc_fut_path", "lulc_bas_path",

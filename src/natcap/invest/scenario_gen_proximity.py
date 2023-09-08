@@ -33,6 +33,15 @@ MODEL_SPEC = {
     "pyname": "natcap.invest.scenario_gen_proximity",
     "userguide": "scenario_gen_proximity.html",
     "aliases": ("sgp",),
+    "ui_spec": {
+        "order": [
+            ['workspace_dir', 'results_suffix'],
+            ['base_lulc_path', 'aoi_path'],
+            ['area_to_convert', 'focal_landcover_codes', 'convertible_landcover_codes', 'replacement_lucode'],
+            ['convert_farthest_from_edge', 'convert_nearest_to_edge', 'n_fragmentation_steps']
+        ],
+        "hidden": ["n_workers"]
+    },
     "args": {
         "workspace_dir": spec_utils.WORKSPACE,
         "results_suffix": spec_utils.SUFFIX,

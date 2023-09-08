@@ -46,6 +46,16 @@ MODEL_SPEC = {
     "pyname": "natcap.invest.carbon",
     "userguide": "carbonstorage.html",
     "aliases": (),
+    "ui_spec": {
+        "order": [
+            ['workspace_dir', 'results_suffix'],
+            ['lulc_cur_path', 'carbon_pools_path'],
+            ['calc_sequestration', 'lulc_fut_path'],
+            ['do_redd', 'lulc_redd_path'],
+            ['do_valuation', 'lulc_cur_year', 'lulc_fut_year', 'price_per_metric_ton_of_c', 'discount_rate', 'rate_change'],
+        ],
+        "hidden": ["n_workers"]
+    },
     "args_with_spatial_overlap": {
         "spatial_keys": ["lulc_cur_path", "lulc_fut_path", "lulc_redd_path"],
     },
@@ -78,6 +88,7 @@ MODEL_SPEC = {
             "projected": True,
             "projection_units": u.meter,
             "required": "calc_sequestration",
+            "allowed": "calc_sequestration",
             "about": gettext(
                 "A map of LULC for the future scenario. "
                 "If run valuation model is "
@@ -91,6 +102,7 @@ MODEL_SPEC = {
         "do_redd": {
             "type": "boolean",
             "required": False,
+            "allowed": "calc_sequestration",
             "about": gettext(
                 "Run REDD scenario analysis. This requires three "
                 "LULC maps: one for the current scenario, one "
@@ -103,6 +115,7 @@ MODEL_SPEC = {
             "projected": True,
             "projection_units": u.meter,
             "required": "do_redd",
+            "allowed": "do_redd",
             "about": gettext(
                 "A map of LULC for the REDD policy scenario. "
                 "All values in this raster must have corresponding entries in "
@@ -142,6 +155,7 @@ MODEL_SPEC = {
             "type": "number",
             "units": u.year_AD,
             "required": "do_valuation",
+            "allowed": "do_valuation",
             "about": gettext(
                 "The calendar year of the current scenario depicted in the "
                 "current LULC map. Required if Run Valuation model is selected."),
@@ -152,6 +166,7 @@ MODEL_SPEC = {
             "type": "number",
             "units": u.year_AD,
             "required": "do_valuation",
+            "allowed": "do_valuation",
             "about": gettext(
                 "The calendar year of the future scenario depicted in the "
                 "future LULC map. Required if Run Valuation model is selected."),
@@ -160,6 +175,7 @@ MODEL_SPEC = {
         "do_valuation": {
             "type": "boolean",
             "required": False,
+            "allowed": "calc_sequestration",
             "about": gettext(
                 "Calculate net present value for the future scenario, and the "
                 "REDD scenario if provided, and report it in the final HTML "
@@ -170,6 +186,7 @@ MODEL_SPEC = {
             "type": "number",
             "units": u.currency/u.metric_ton,
             "required": "do_valuation",
+            "allowed": "do_valuation",
             "about": gettext(
                 "The present value of carbon. "
                 "Required if Run Valuation model is selected."),
@@ -178,6 +195,7 @@ MODEL_SPEC = {
         "discount_rate": {
             "type": "ratio",
             "required": "do_valuation",
+            "allowed": "do_valuation",
             "about": gettext(
                 "The annual market discount rate in the price of carbon, "
                 "which reflects society's preference for immediate benefits "
@@ -188,6 +206,7 @@ MODEL_SPEC = {
         "rate_change": {
             "type": "ratio",
             "required": "do_valuation",
+            "allowed": "do_valuation",
             "about": gettext(
                 "The relative annual increase of the price of carbon. "
                 "Required if Run Valuation model is selected."),

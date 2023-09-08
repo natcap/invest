@@ -49,7 +49,7 @@ class ValidateModelSpecs(unittest.TestCase):
         """MODEL_SPEC: test each spec meets the expected pattern."""
 
         required_keys = {'model_id', 'model_name', 'pyname', 'userguide',
-                         'aliases', 'args', 'outputs'}
+                         'aliases', 'args', 'ui_spec', 'outputs'}
         optional_spatial_key = 'args_with_spatial_overlap'
         for model_id, pyname in model_id_to_pyname.items():
             model = importlib.import_module(pyname)
@@ -66,6 +66,25 @@ class ValidateModelSpecs(unittest.TestCase):
                     self.assertTrue(
                         set(model.MODEL_SPEC[optional_spatial_key]).issubset(
                             {'spatial_keys', 'different_projections_ok'}))
+
+                self.assertIsInstance(model.MODEL_SPEC['ui_spec'], dict)
+                self.assertEqual(set(model.MODEL_SPEC['ui_spec'].keys()),
+                                 {'order', 'hidden'})
+                self.assertIsInstance(model.MODEL_SPEC['ui_spec']['order'], list)
+                self.assertIsInstance(model.MODEL_SPEC['ui_spec']['hidden'], list)
+
+                found_keys = set()
+                for group in model.MODEL_SPEC['ui_spec']['order']:
+                    self.assertIsInstance(group, list)
+                    for key in group:
+                        self.assertIsInstance(key, str)
+                        self.assertNotIn(key, found_keys)
+                        found_keys.add(key)
+                for key in model.MODEL_SPEC['ui_spec']['hidden']:
+                    self.assertIsInstance(key, str)
+                    self.assertNotIn(key, found_keys)
+                    found_keys.add(key)
+                self.assertEqual(found_keys, set(model.MODEL_SPEC['args'].keys()))
 
             # validate that each arg meets the expected pattern
             # save up errors to report at the end
@@ -458,6 +477,9 @@ class ValidateModelSpecs(unittest.TestCase):
                 self.assertTrue(isinstance(arg['required'], bool) or
                                 isinstance(arg['required'], str))
                 attrs.remove('required')
+            if 'allowed' in attrs:
+                self.assertIsInstance(arg['allowed'], str)
+                attrs.remove('allowed')
             if 'type' in attrs:
                 self.assertTrue(isinstance(arg['type'], str) or
                                 isinstance(arg['type'], set))

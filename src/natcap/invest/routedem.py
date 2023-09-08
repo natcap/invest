@@ -22,6 +22,18 @@ MODEL_SPEC = {
     "pyname": "natcap.invest.routedem",
     "userguide": "routedem.html",
     "aliases": (),
+    "ui_spec": {
+        "order": [
+            ['workspace_dir', 'results_suffix'],
+            ['dem_path', 'dem_band_index'],
+            ['calculate_slope'],
+            ['algorithm'],
+            ['calculate_flow_direction'],
+            ['calculate_flow_accumulation'],
+            ['calculate_stream_threshold', 'threshold_flow_accumulation', 'calculate_downslope_distance', 'calculate_stream_order', 'calculate_subwatersheds']
+        ],
+        "hidden": ["n_workers"]
+    },
     "args": {
         "workspace_dir": spec_utils.WORKSPACE,
         "results_suffix": spec_utils.SUFFIX,
@@ -62,6 +74,7 @@ MODEL_SPEC = {
         "calculate_flow_accumulation": {
             "type": "boolean",
             "required": False,
+            "allowed": "calculate_flow_direction",
             "about": gettext(
                 "Calculate flow accumulation from the flow direction output."),
             "name": gettext("calculate flow accumulation")
@@ -69,6 +82,7 @@ MODEL_SPEC = {
         "calculate_stream_threshold": {
             "type": "boolean",
             "required": False,
+            "allowed": "calculate_flow_accumulation",
             "about": gettext(
                 "Calculate streams from the flow accumulation output. "),
             "name": gettext("calculate streams")
@@ -76,6 +90,7 @@ MODEL_SPEC = {
         "threshold_flow_accumulation": {
             **spec_utils.THRESHOLD_FLOW_ACCUMULATION,
             "required": "calculate_stream_threshold",
+            "allowed": "calculate_stream_threshold",
             "about": (
                 spec_utils.THRESHOLD_FLOW_ACCUMULATION['about'] + " " +
                 gettext("Required if Calculate Streams is selected."))
@@ -83,6 +98,7 @@ MODEL_SPEC = {
         "calculate_downslope_distance": {
             "type": "boolean",
             "required": False,
+            "allowed": "calculate_stream_threshold",
             "about": gettext(
                 "Calculate flow distance from each pixel to a stream as "
                 "defined in the Calculate Streams output."),
@@ -97,12 +113,14 @@ MODEL_SPEC = {
         "calculate_stream_order": {
             "type": "boolean",
             "required": False,
+            "allowed": "calculate_stream_threshold and algorithm == 'D8'",
             "about": gettext("Calculate the Strahler Stream order."),
             "name": gettext("calculate strahler stream orders (D8 only)"),
         },
         "calculate_subwatersheds": {
             "type": "boolean",
             "required": False,
+            "allowed": "calculate_stream_order and algorithm == 'D8'",
             "about": gettext("Determine subwatersheds from the stream order."),
             "name": gettext("calculate subwatersheds (D8 only)"),
         },

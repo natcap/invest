@@ -26,6 +26,13 @@ MODEL_SPEC = {
     "pyname": "natcap.invest.coastal_blue_carbon.preprocessor",
     "userguide": "coastal_blue_carbon.html",
     "aliases": ("cbc_pre",),
+    "ui_spec": {
+        "order": [
+            ['workspace_dir', 'results_suffix'],
+            ['lulc_lookup_table_path', 'landcover_snapshot_csv']
+        ],
+        "hidden": ["n_workers"]
+    },
     "args": {
         "workspace_dir": spec_utils.WORKSPACE,
         "results_suffix": spec_utils.SUFFIX,

@@ -72,6 +72,13 @@ MODEL_SPEC = {
     "pyname": "natcap.invest.crop_production_regression",
     "userguide": "crop_production.html",
     "aliases": ("cpr",),
+    "ui_spec": {
+        "order": [
+            ['workspace_dir', 'results_suffix'],
+            ['model_data_path', 'landcover_raster_path', 'landcover_to_crop_table_path', 'fertilization_rate_table_path', 'aggregate_polygon_path'],
+        ],
+        "hidden": ["n_workers"]
+    },
     "args_with_spatial_overlap": {
         "spatial_keys": ["landcover_raster_path", "aggregate_polygon_path"],
         "different_projections_ok": True,
