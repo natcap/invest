@@ -41,7 +41,10 @@ MODEL_SPEC = {
             ['convert_farthest_from_edge', 'convert_nearest_to_edge', 'n_fragmentation_steps']
         ],
         "hidden": ["n_workers"],
-        "forum_tag": 'scenario-generator'
+        "forum_tag": 'scenario-generator',
+        "sampledata": {
+            "filename": "scenario_proximity.zip"
+        }
     },
     "args": {
         "workspace_dir": spec_utils.WORKSPACE,

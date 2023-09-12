@@ -38,7 +38,10 @@ MODEL_SPEC = {
             ['threshold_flow_accumulation', 'k_param'],
         ],
         "hidden": ["n_workers"],
-        "forum_tag": 'ndr'
+        "forum_tag": 'ndr',
+        "sampledata":{
+            "filename": "NDR.zip"
+        }
     },
     "args_with_spatial_overlap": {
         "spatial_keys": ["dem_path", "lulc_path", "runoff_proxy_path",

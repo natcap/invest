@@ -34,7 +34,10 @@ MODEL_SPEC = {
             ['guild_table_path', 'farm_vector_path']
         ],
         "hidden": ["n_workers"],
-        "forum_tag": 'pollination'
+        "forum_tag": 'pollination',
+        "sampledata": {
+            "filename": "pollination.zip"
+        }
     },
     "args": {
         "workspace_dir": spec_utils.WORKSPACE,

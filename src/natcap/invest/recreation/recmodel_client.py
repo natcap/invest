@@ -110,7 +110,10 @@ MODEL_SPEC = {
             ['grid_aoi', 'grid_type', 'cell_size'],
         ],
         "hidden": ['n_workers', 'hostname', 'port'],
-        "forum_tag": 'recreation'
+        "forum_tag": 'recreation',
+        "sampledata": {
+            "filename": "recreation.zip"
+        }
     },
     "args": {
         "workspace_dir": spec_utils.WORKSPACE,

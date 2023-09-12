@@ -70,7 +70,10 @@ MODEL_SPEC = {
             ['visualize_outputs']
         ],
         "hidden": ["n_workers"],
-        "forum_tag": 'hra'
+        "forum_tag": 'hra',
+        "sampledata": {
+            "filename": "HabitatRiskAssess.zip"
+        }
     },
     "args": {
         "workspace_dir": spec_utils.WORKSPACE,

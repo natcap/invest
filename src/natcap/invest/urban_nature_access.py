@@ -53,7 +53,10 @@ MODEL_SPEC = {
             ['search_radius_mode', 'decay_function', 'search_radius']
         ],
         "hidden": ["n_workers"],
-        "forum_tag": 'urban-nature-access'
+        "forum_tag": 'urban-nature-access',
+        "sampledata": {
+            "filename": "UrbanNatureAccess.zip"
+        }
     },
     'args_with_spatial_overlap': {
         'spatial_keys': [

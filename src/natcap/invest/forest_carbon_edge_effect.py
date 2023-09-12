@@ -45,7 +45,11 @@ MODEL_SPEC = {
             ['aoi_vector_path']
         ],
         "hidden": ["n_workers"],
-        "forum_tag": 'carbon-edge-effects'
+        "forum_tag": 'carbon-edge-effects',
+        "sampledata": {
+            "filename": "forest_carbon_edge_effect.zip",
+            "note": "(required to run model)"
+        }
     },
     "args_with_spatial_overlap": {
         "spatial_keys": ["aoi_vector_path", "lulc_raster_path"],

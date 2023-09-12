@@ -173,7 +173,10 @@ MODEL_SPEC = {
             ['do_economic_analysis', 'use_price_table', 'price', 'inflation_rate', 'price_table_path', 'discount_rate'],
         ],
         "hidden": ["n_workers"],
-        "forum_tag": 'blue-carbon'
+        "forum_tag": 'blue-carbon',
+        "sampledata": {
+            "filename": "CoastalBlueCarbon.zip"
+        }
     },
     "args": {
         "workspace_dir": spec_utils.WORKSPACE,

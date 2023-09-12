@@ -119,7 +119,10 @@ MODEL_SPEC = {
             ['demand_table_path', 'valuation_table_path']
         ],
         "hidden": ["n_workers"],
-        "forum_tag": "annual-water-yield"
+        "forum_tag": "annual-water-yield",
+        "sampledata": {
+            "filename": "Annual_Water_Yield.zip"
+        }
     },
     "args_with_spatial_overlap": {
         "spatial_keys": ["lulc_path",

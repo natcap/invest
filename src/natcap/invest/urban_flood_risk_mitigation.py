@@ -35,7 +35,10 @@ MODEL_SPEC = {
             ['built_infrastructure_vector_path', 'infrastructure_damage_loss_table_path']
         ],
         "hidden": ["n_workers"],
-        "forum_tag": 'urban-flood'
+        "forum_tag": 'urban-flood',
+        "sampledata": {
+            "filename": "UrbanFloodMitigation.zip"
+        }
     },
     "args_with_spatial_overlap": {
         "spatial_keys": ["aoi_watersheds_path", "lulc_path",

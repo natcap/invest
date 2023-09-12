@@ -43,7 +43,10 @@ MODEL_SPEC = {
             ['cc_weight_shade', 'cc_weight_albedo', 'cc_weight_eti'],
         ],
         "hidden": ["n_workers"],
-        "forum_tag": 'urban-cooling'
+        "forum_tag": 'urban-cooling',
+        "sampledata": {
+            "filename": "UrbanCoolingModel.zip"
+        }
     },
     "args_with_spatial_overlap": {
         "spatial_keys": ["lulc_raster_path", "ref_eto_raster_path",

@@ -42,7 +42,10 @@ MODEL_SPEC = {
             ['threats_table_path', 'access_vector_path', 'sensitivity_table_path', 'half_saturation_constant'],
         ],
         "hidden": ["n_workers"],
-        "forum_tag": 'habitat-quality'
+        "forum_tag": 'habitat-quality',
+        "sampledata": {
+            "filename": "HabitatQuality.zip"
+        }
     },
     "args_with_spatial_overlap": {
         "spatial_keys": [

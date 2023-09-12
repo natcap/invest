@@ -55,7 +55,10 @@ MODEL_SPEC = {
             ['do_valuation', 'lulc_cur_year', 'lulc_fut_year', 'price_per_metric_ton_of_c', 'discount_rate', 'rate_change'],
         ],
         "hidden": ["n_workers"],
-        "forum_tag": 'carbon'
+        "forum_tag": 'carbon',
+        "sampledata": {
+            "filename": "Carbon.zip"
+        }
     },
     "args_with_spatial_overlap": {
         "spatial_keys": ["lulc_cur_path", "lulc_fut_path", "lulc_redd_path"],
