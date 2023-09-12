@@ -14,6 +14,7 @@ from natcap.invest import set_locale
 from natcap.invest.models import model_id_to_pyname, model_id_to_spec
 from natcap.invest import spec_utils
 from natcap.invest import usage
+from natcap.invest import validation
 
 LOGGER = logging.getLogger(__name__)
 
@@ -104,6 +105,33 @@ def get_invest_validate():
         json.loads(payload['args']), limit_to=limit_to)
     LOGGER.debug(results)
     return json.dumps(results)
+
+
+@app.route(f'/{PREFIX}/args_enabled', methods=['POST'])
+def get_args_enabled():
+    """Gets the return value of an InVEST model's validate function.
+
+    Body (JSON string):
+        model_module: string (e.g. natcap.invest.carbon)
+        args: JSON string of InVEST model args keys and values
+
+    Accepts a `language` query parameter which should be an ISO 639-1 language
+    code. Validation messages will be translated to the requested language if
+    translations are available, or fall back to English otherwise.
+
+    Returns:
+        A JSON string.
+    """
+    payload = request.get_json()
+    LOGGER.debug(payload)
+
+    model_spec = importlib.import_module(
+        name=payload['model_module']).MODEL_SPEC
+    results = validation.args_enabled(json.loads(payload['args']), model_spec)
+    LOGGER.debug(results)
+    print(results)
+    return json.dumps(results)
+
 
 
 @app.route(f'/{PREFIX}/colnames', methods=['POST'])

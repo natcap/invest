@@ -41,6 +41,24 @@ export async function getSpec(payload) {
   );
 }
 
+export async function fetchArgsEnabled(payload) {
+  return (
+    window.fetch(`${HOSTNAME}:${PORT}/${PREFIX}/args_enabled`, {
+      method: 'post',
+      body: JSON.stringify(payload),
+      headers: { 'Content-Type': 'application/json' },
+    })
+      .then((response) => response.json())
+      .catch((error) => {
+        logger.error(error.stack);
+        // In practice this function is debounced, so there's a case (tests)
+        // where it is not called until after the flask app was killed.
+        // So instead of letting it return undefined, return the expected type.
+        return [];
+      })
+  );
+}
+
 /**
  * Send invest arguments to a model's validate function.
  *
