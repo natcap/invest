@@ -33,7 +33,8 @@ MODEL_SPEC = {
             ['landcover_raster_path', 'landcover_biophysical_table_path'],
             ['guild_table_path', 'farm_vector_path']
         ],
-        "hidden": ["n_workers"]
+        "hidden": ["n_workers"],
+        "forum_tag": 'pollination'
     },
     "args": {
         "workspace_dir": spec_utils.WORKSPACE,

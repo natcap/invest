@@ -17,7 +17,6 @@ import SetupTab from '../SetupTab';
 import LogTab from '../LogTab';
 import ResourcesLinks from '../ResourcesLinks';
 import { getSpec } from '../../server_requests';
-import { UI_SPEC } from '../../ui_config';
 import { ipcMainChannels } from '../../../main/ipcMainChannels';
 
 const { ipcRenderer } = window.Workbench.electron;
@@ -33,12 +32,8 @@ const { logger } = window.Workbench;
 async function investGetSpec(modelName) {
   const spec = await getSpec(modelName);
   if (spec) {
-    const { args, ...modelSpec } = spec;
-    const uiSpec = UI_SPEC[modelName];
-    if (uiSpec) {
-      return { modelSpec: modelSpec, argsSpec: args, uiSpec: uiSpec };
-    }
-    logger.error(`no UI spec found for ${modelName}`);
+    const { args, ui_spec, ...modelSpec } = spec;
+    return { modelSpec: modelSpec, argsSpec: args, uiSpec: ui_spec };
   } else {
     logger.error(`no args spec found for ${modelName}`);
   }
@@ -242,6 +237,7 @@ class InvestTab extends React.Component {
               <ResourcesLinks
                 moduleName={modelRunName}
                 docs={modelSpec.userguide}
+                forumTagName={uiSpec.forum_tag}
               />
             </div>
             <div

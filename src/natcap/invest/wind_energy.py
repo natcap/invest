@@ -107,7 +107,8 @@ MODEL_SPEC = {
             ['turbine_parameters_path', 'number_of_turbines', 'min_depth', 'max_depth', 'min_distance', 'max_distance'],
             ['valuation_container', 'foundation_cost', 'discount_rate', 'grid_points_path', 'avg_grid_distance', 'price_table', 'wind_schedule', 'wind_price', 'rate_change'],
         ],
-        "hidden": ["n_workers"]
+        "hidden": ["n_workers"],
+        "forum_tag": 'wind-energy'
     },
     "args_with_spatial_overlap": {
         "spatial_keys": ["aoi_vector_path", "bathymetry_path",

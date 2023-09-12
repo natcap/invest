@@ -109,7 +109,8 @@ MODEL_SPEC = {
             ['compute_regression', 'predictor_table_path', 'scenario_predictor_table_path'],
             ['grid_aoi', 'grid_type', 'cell_size'],
         ],
-        "hidden": ['n_workers', 'hostname', 'port']
+        "hidden": ['n_workers', 'hostname', 'port'],
+        "forum_tag": 'recreation'
     },
     "args": {
         "workspace_dir": spec_utils.WORKSPACE,

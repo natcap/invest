@@ -35,7 +35,8 @@ MODEL_SPEC = {
             ['dem_path', 'detect_pour_points', 'outlet_vector_path', 'skip_invalid_geometry'],
             ['snap_points', 'flow_threshold', 'snap_distance'],
         ],
-        "hidden": ["n_workers"]
+        "hidden": ["n_workers"],
+        "forum_tag": 'delineateit'
     },
     "args_with_spatial_overlap": {
         "spatial_keys": ["dem_path", "outlet_vector_path"],

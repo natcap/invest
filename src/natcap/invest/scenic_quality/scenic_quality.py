@@ -58,7 +58,8 @@ MODEL_SPEC = {
             ['aoi_path', 'structure_path', 'dem_path', 'refraction'],
             ['do_valuation', 'valuation_function', 'a_coef', 'b_coef', 'max_valuation_radius'],
         ],
-        "hidden": ["n_workers"]
+        "hidden": ["n_workers"],
+        "forum_tag": 'scenic-quality'
     },
     "args_with_spatial_overlap": {
         "spatial_keys": ["aoi_path", "structure_path", "dem_path"],

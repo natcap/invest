@@ -37,7 +37,8 @@ MODEL_SPEC = {
             ['calc_n', 'subsurface_critical_length_n', 'subsurface_eff_n'],
             ['threshold_flow_accumulation', 'k_param'],
         ],
-        "hidden": ["n_workers"]
+        "hidden": ["n_workers"],
+        "forum_tag": 'ndr'
     },
     "args_with_spatial_overlap": {
         "spatial_keys": ["dem_path", "lulc_path", "runoff_proxy_path",

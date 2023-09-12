@@ -44,7 +44,8 @@ MODEL_SPEC = {
             ['monthly_alpha', 'alpha_m', 'monthly_alpha_path'],
             ['user_defined_climate_zones', 'rain_events_table_path', 'climate_zone_table_path', 'climate_zone_raster_path'],
         ],
-        "hidden": ["n_workers"]
+        "hidden": ["n_workers"],
+        "forum_tag": 'seasonal-water-yield'
     },
     "args_with_spatial_overlap": {
         "spatial_keys": ["dem_raster_path", "lulc_raster_path",

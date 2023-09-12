@@ -172,7 +172,8 @@ MODEL_SPEC = {
             ['landcover_snapshot_csv', 'biophysical_table_path', 'landcover_transitions_table', 'analysis_year'],
             ['do_economic_analysis', 'use_price_table', 'price', 'inflation_rate', 'price_table_path', 'discount_rate'],
         ],
-        "hidden": ["n_workers"]
+        "hidden": ["n_workers"],
+        "forum_tag": 'blue-carbon'
     },
     "args": {
         "workspace_dir": spec_utils.WORKSPACE,

@@ -69,7 +69,8 @@ MODEL_SPEC = {
             ['n_overlapping_stressors'],
             ['visualize_outputs']
         ],
-        "hidden": ["n_workers"]
+        "hidden": ["n_workers"],
+        "forum_tag": 'hra'
     },
     "args": {
         "workspace_dir": spec_utils.WORKSPACE,

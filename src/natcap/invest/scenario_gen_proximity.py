@@ -40,7 +40,8 @@ MODEL_SPEC = {
             ['area_to_convert', 'focal_landcover_codes', 'convertible_landcover_codes', 'replacement_lucode'],
             ['convert_farthest_from_edge', 'convert_nearest_to_edge', 'n_fragmentation_steps']
         ],
-        "hidden": ["n_workers"]
+        "hidden": ["n_workers"],
+        "forum_tag": 'scenario-generator'
     },
     "args": {
         "workspace_dir": spec_utils.WORKSPACE,

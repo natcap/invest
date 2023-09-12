@@ -31,7 +31,8 @@ MODEL_SPEC = {
             ['workspace_dir', 'results_suffix'],
             ['lulc_lookup_table_path', 'landcover_snapshot_csv']
         ],
-        "hidden": ["n_workers"]
+        "hidden": ["n_workers"],
+        "forum_tag": 'blue-carbon'
     },
     "args": {
         "workspace_dir": spec_utils.WORKSPACE,

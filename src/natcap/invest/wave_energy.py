@@ -143,7 +143,8 @@ MODEL_SPEC = {
             ['machine_perf_path', 'machine_param_path'],
             ['valuation_container', 'land_gridPts_path', 'machine_econ_path', 'number_of_machines'],
         ],
-        "hidden": ["n_workers"]
+        "hidden": ["n_workers"],
+        "forum_tag": 'wave-energy'
     },
     "args": {
         "workspace_dir": spec_utils.WORKSPACE,

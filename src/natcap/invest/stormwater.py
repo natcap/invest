@@ -37,7 +37,8 @@ MODEL_SPEC = {
             ['adjust_retention_ratios', 'retention_radius', 'road_centerlines_path'],
             ['aggregate_areas_path', 'replacement_cost'],
         ],
-        "hidden": ["n_workers"]
+        "hidden": ["n_workers"],
+        "forum_tag": 'urban-stormwater'
     },
     "args_with_spatial_overlap": {
         "spatial_keys": ["lulc_path", "soil_group_path", "precipitation_path",

@@ -118,7 +118,8 @@ MODEL_SPEC = {
             ['watersheds_path', 'sub_watersheds_path'],
             ['demand_table_path', 'valuation_table_path']
         ],
-        "hidden": ["n_workers"]
+        "hidden": ["n_workers"],
+        "forum_tag": "annual-water-yield"
     },
     "args_with_spatial_overlap": {
         "spatial_keys": ["lulc_path",
