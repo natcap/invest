@@ -1,5 +1,8 @@
 import importlib
+import importlib.util
+import os
 import pkgutil
+import sys
 
 import natcap.invest
 
@@ -31,6 +34,25 @@ for _, name, ispkg in pkgutil.iter_modules(natcap.invest.__path__):
     else:
         if is_invest_model(module):
             pyname_to_module[f'natcap.invest.{name}'] = module
+
+plugin_dir = os.environ.get('NATCAP_INVEST_PLUGIN_DIR')
+if plugin_dir:
+    for _, name, ispkg in pkgutil.iter_modules([plugin_dir]):
+
+        spec = importlib.util.spec_from_file_location(
+            name, os.path.join(plugin_dir, f'{name}.py'))
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[name] = module
+        spec.loader.exec_module(module)
+
+        if ispkg:
+            for _, sub_name, _ in pkgutil.iter_modules(module.__path__):
+                submodule = importlib.import_module(f'natcap.invest.{name}.{sub_name}')
+                if is_invest_model(submodule):
+                    pyname_to_module[f'natcap.invest.{name}.{sub_name}'] = submodule
+        else:
+            if is_invest_model(module):
+                pyname_to_module[f'natcap.invest.{name}'] = module
 
 model_id_to_pyname = {}
 model_id_to_spec = {}
