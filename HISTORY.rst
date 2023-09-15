@@ -35,9 +35,13 @@
 
 .. :changelog:
 
-..
-  Unreleased Changes
-  ------------------
+Unreleased Changes
+------------------
+* General
+    * In advance of the numpy 2.0 release, function calls to ``numpy.product``
+      have been replaced with ``numpy.prod``.
+      https://github.com/natcap/invest/issues/1410
+
 
 3.14.0 (2023-09-08)
 -------------------
