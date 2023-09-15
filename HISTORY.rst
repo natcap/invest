@@ -35,9 +35,13 @@
 
 .. :changelog:
 
-..
-  Unreleased Changes
-  ------------------
+
+Unreleased Changes
+------------------
+* NDR
+    * Fixing an issue where minor geometric issues in the watersheds input
+      (such as a ring self-intersection) would raise an error in the model.
+      https://github.com/natcap/invest/issues/1412
 
 3.14.0 (2023-09-08)
 -------------------
