@@ -682,11 +682,9 @@ def execute(args):
         args=(
             f_reg['rkls_path'],
             f_reg['cp_factor_path'],
-            drainage_raster_path_task[0],
             f_reg['usle_path']),
         target_path_list=[f_reg['usle_path']],
-        dependent_task_list=[
-            rkls_task, cp_task, drainage_raster_path_task[1]],
+        dependent_task_list=[rkls_task, cp_task],
         task_name='calculate USLE')
 
     bar_task_map = {}
@@ -1360,22 +1358,20 @@ def _calculate_cp(lulc_to_cp, lulc_path, cp_factor_path):
 
 
 def _calculate_usle(
-        rkls_path, cp_factor_path, drainage_raster_path, out_usle_path):
+        rkls_path, cp_factor_path, out_usle_path):
     """Calculate USLE, multiply RKLS by CP."""
-    def usle_op(rkls, cp_factor, drainage):
+    def usle_op(rkls, cp_factor):
         """Calculate USLE."""
         result = numpy.empty(rkls.shape, dtype=numpy.float32)
         result[:] = _TARGET_NODATA
         valid_mask = (
             ~utils.array_equals_nodata(rkls, _TARGET_NODATA) &
-            ~utils.array_equals_nodata(cp_factor, _TARGET_NODATA) &
-            (drainage == 0))
+            ~utils.array_equals_nodata(cp_factor, _TARGET_NODATA))
         result[valid_mask] = rkls[valid_mask] * cp_factor[valid_mask]
         return result
 
     pygeoprocessing.raster_calculator(
-        [(path, 1) for path in [
-            rkls_path, cp_factor_path, drainage_raster_path]], usle_op,
+        [(rkls_path, 1), (cp_factor_path, 1)], usle_op,
         out_usle_path, gdal.GDT_Float32, _TARGET_NODATA)
 
 
