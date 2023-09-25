@@ -180,9 +180,9 @@ def execute(args):
         os.path.join(args['workspace_dir'], 'taskgraph_cache'),
         n_workers, reporting_interval=5.0)
 
-    snapshots_dict = utils.read_csv_to_dataframe(
+    snapshots_dict = validation.get_validated_dataframe(
         args['landcover_snapshot_csv'],
-        MODEL_SPEC['args']['landcover_snapshot_csv']
+        **MODEL_SPEC['args']['landcover_snapshot_csv']
     )['raster_path'].to_dict()
 
     # Align the raster stack for analyzing the various transitions.
@@ -213,9 +213,9 @@ def execute(args):
         target_path_list=aligned_snapshot_paths,
         task_name='Align input landcover rasters')
 
-    landcover_df = utils.read_csv_to_dataframe(
+    landcover_df = validation.get_validated_dataframe(
         args['lulc_lookup_table_path'],
-        MODEL_SPEC['args']['lulc_lookup_table_path'])
+        **MODEL_SPEC['args']['lulc_lookup_table_path'])
 
     target_transition_table = os.path.join(
         output_dir, TRANSITION_TABLE.format(suffix=suffix))

@@ -32,8 +32,10 @@ MESSAGES = {
     'MISSING_VALUE': gettext('Input is required but has no value'),
     'MATCHED_NO_HEADERS': gettext('Expected the {header} "{header_name}" but did '
                             'not find it'),
+    'PATTERN_MATCHED_NONE': gettext('Expected to find at least one {header} matching '
+                                    'the pattern "{header_name}" but found none'),
     'DUPLICATE_HEADER': gettext('Expected the {header} "{header_name}" only once '
-                          'but found it {number} times'),
+                                'but found it {number} times'),
     'NOT_A_NUMBER': gettext('Value "{value}" could not be interpreted as a number'),
     'WRONG_PROJECTION_UNIT': gettext('Layer must be projected in this unit: '
                                '"{unit_a}" but found this unit: "{unit_b}"'),
@@ -46,8 +48,6 @@ MESSAGES = {
     'NOT_GDAL_RASTER': gettext('File could not be opened as a GDAL raster'),
     'OVR_FILE': gettext('File found to be an overview ".ovr" file.'),
     'NOT_GDAL_VECTOR': gettext('File could not be opened as a GDAL vector'),
-    'NOT_CSV': gettext('File could not be opened as a CSV. File must be encoded as '
-                 'a UTF-8 CSV.'),
     'REGEXP_MISMATCH': gettext("Value did not match expected pattern {regexp}"),
     'INVALID_OPTION': gettext("Value must be one of: {option_list}"),
     'INVALID_VALUE': gettext('Value does not meet condition {condition}'),
@@ -542,19 +542,106 @@ def check_boolean(value, **kwargs):
         return MESSAGES['NOT_BOOLEAN'].format(value=value)
 
 
-def check_csv(filepath, rows=None, columns=None, **kwargs):
+def get_validated_dataframe(csv_path, columns=None, rows=None, index_col=None,
+        read_csv_kwargs={}, **kwargs):
+    """Read a CSV into a dataframe that is guaranteed to match the spec."""
+
+    if not (columns or rows):
+        raise ValueError('One of columns or rows must be provided')
+
+    # build up a list of regex patterns to match columns against columns from
+    # the table that match a pattern in this list (after stripping whitespace
+    # and lowercasing) will be included in the dataframe
+    axis = 'column' if columns else 'row'
+
+    if rows:
+        read_csv_kwargs = read_csv_kwargs.copy()
+        read_csv_kwargs['header'] = None
+
+    df = utils.read_csv_to_dataframe(csv_path, **read_csv_kwargs)
+
+    if rows:
+        # swap rows and column
+        df = df.set_index(df.columns[0]).rename_axis(None, axis=0).T.reset_index(drop=True)
+
+    spec = columns if columns else rows
+
+    patterns = []
+    for column in spec:
+        column = column.lower()
+        match = re.match(r'(.*)\[(.+)\](.*)', column)
+        if match:
+            # for column name patterns, convert it to a regex pattern
+            groups = match.groups()
+            patterns.append(f'{groups[0]}(.+){groups[2]}')
+        else:
+            # for regular column names, use the exact name as the pattern
+            patterns.append(column.replace('(', '\(').replace(')', '\)'))
+
+    # select only the columns that match a pattern
+    df = df[[col for col in df.columns if any(
+        re.fullmatch(pattern, col) for pattern in patterns)]]
+
+    available_cols = set(df.columns)
+
+    for (col_name, col_spec), pattern in zip(spec.items(), patterns):
+        matching_cols = [c for c in available_cols if re.fullmatch(pattern, c)]
+        if col_spec.get('required', True) is True and '[' not in col_name and not matching_cols:
+            raise ValueError(MESSAGES['MATCHED_NO_HEADERS'].format(
+                header=axis,
+                header_name=col_name))
+        available_cols -= set(matching_cols)
+        for col in matching_cols:
+            try:
+                if col_spec['type'] in ['csv', 'directory', 'file', 'raster', 'vector', {'vector', 'raster'}]:
+                    df[col] = df[col].apply(
+                        lambda p: p if pandas.isna(p) else utils.expand_path(str(p).strip(), csv_path))
+                    df[col] = df[col].astype(pandas.StringDtype())
+                elif col_spec['type'] in {'freestyle_string', 'option_string'}:
+                    df[col] = df[col].apply(
+                        lambda s: s if pandas.isna(s) else str(s).strip().lower())
+                    df[col] = df[col].astype(pandas.StringDtype())
+                elif col_spec['type'] in {'number', 'percent', 'ratio'}:
+                    df[col] = df[col].astype(float)
+                elif col_spec['type'] == 'integer':
+                    df[col] = df[col].astype(pandas.Int64Dtype())
+                elif col_spec['type'] == 'boolean':
+                    df[col] = df[col].astype('boolean')
+            except ValueError as err:
+                raise ValueError(
+                    f'Value(s) in the "{col}" column of the table {csv_path} '
+                    f'could not be interpreted as {col_spec["type"]}s. '
+                    f'Original error: {err}')
+
+    if any(df.columns.duplicated()):
+        duplicated_columns = df.columns[df.columns.duplicated]
+        return MESSAGES['DUPLICATE_HEADER'].format(
+            header=header_type,
+            header_name=expected,
+            number=count)
+
+     # set the index column, if specified
+    if index_col is not None:
+        index_col = index_col.lower()
+        try:
+            df = df.set_index(index_col, verify_integrity=True)
+        except KeyError:
+            # If 'index_col' is not a column then KeyError is raised for using
+            # it as the index column
+            LOGGER.error(f"The column '{index_col}' could not be found "
+                         f"in the table {csv_path}")
+            raise
+
+    return df
+
+
+
+
+def check_csv(filepath, **kwargs):
     """Validate a table.
 
     Args:
         filepath (string): The string filepath to the table.
-        rows (dict): A dictionary spec of row names that are expected to exist
-            in the first column of the table. See the docstring of
-            ``check_headers`` for details on validation rules. No more than one
-            of `rows` and `columns` should be defined.
-        columns (dict): A dictionary spec of column names that are expected to
-            exist in the first row of the table. See the docstring of
-            ``check_headers`` for details on validation rules. No more than one
-            of `rows` and `columns` should be defined.
 
     Returns:
         A string error message if an error was found. ``None`` otherwise.
@@ -563,28 +650,11 @@ def check_csv(filepath, rows=None, columns=None, **kwargs):
     file_warning = check_file(filepath, permissions='r')
     if file_warning:
         return file_warning
-
-    try:
-        # Check if the file encoding is UTF-8 BOM first
-        encoding = None
-        if utils.has_utf8_bom(filepath):
-            encoding = 'utf-8-sig'
-        # engine=python handles unknown characters by replacing them with a
-        # replacement character, instead of raising an error
-        # use sep=None, engine='python' to infer what the separator is
-        dataframe = pandas.read_csv(
-            filepath, sep=None, engine='python', encoding=encoding,
-            header=None)
-    except Exception:
-        return MESSAGES['NOT_CSV']
-
-    # assume that at most one of `rows` and `columns` is defined
-    if columns:
-        headers = [str(name).strip() for name in dataframe.iloc[0]]
-        return check_headers(get_headers_to_validate(columns), headers, 'column')
-    elif rows:
-        headers = [str(name).strip() for name in dataframe.iloc[:, 0]]
-        return check_headers(get_headers_to_validate(rows), headers, 'row')
+    if 'columns' in kwargs or 'rows' in kwargs:
+        try:
+            get_validated_dataframe(filepath, **kwargs)
+        except Exception as e:
+            return str(e)
 
 
 def check_headers(expected_headers, actual_headers, header_type='header'):

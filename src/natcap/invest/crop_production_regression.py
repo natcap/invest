@@ -495,13 +495,13 @@ def execute(args):
 
     LOGGER.info(
         "Checking if the landcover raster is missing lucodes")
-    crop_to_landcover_df = utils.read_csv_to_dataframe(
+    crop_to_landcover_df = validation.get_validated_dataframe(
         args['landcover_to_crop_table_path'],
-        MODEL_SPEC['args']['landcover_to_crop_table_path'])
+        **MODEL_SPEC['args']['landcover_to_crop_table_path'])
 
-    crop_to_fertilization_rate_df = utils.read_csv_to_dataframe(
+    crop_to_fertilization_rate_df = validation.get_validated_dataframe(
         args['fertilization_rate_table_path'],
-        MODEL_SPEC['args']['fertilization_rate_table_path'])
+        **MODEL_SPEC['args']['fertilization_rate_table_path'])
 
     crop_lucodes = list(crop_to_landcover_df[_EXPECTED_LUCODE_TABLE_HEADER])
 
@@ -576,10 +576,10 @@ def execute(args):
             task_name='crop_climate_bin')
         dependent_task_list.append(crop_climate_bin_task)
 
-        crop_regression_df = utils.read_csv_to_dataframe(
+        crop_regression_df = validation.get_validated_dataframe(
             os.path.join(args['model_data_path'],
                          _REGRESSION_TABLE_PATTERN % crop_name),
-            MODEL_SPEC['args']['model_data_path']['contents'][
+            **MODEL_SPEC['args']['model_data_path']['contents'][
                 'climate_regression_yield_tables']['contents'][
                 '[CROP]_regression_yield_table.csv'])
         for _, row in crop_regression_df.iterrows():
@@ -801,9 +801,9 @@ def execute(args):
 
     # both 'crop_nutrient.csv' and 'crop' are known data/header values for
     # this model data.
-    nutrient_df = utils.read_csv_to_dataframe(
+    nutrient_df = validation.get_validated_dataframe(
         os.path.join(args['model_data_path'], 'crop_nutrient.csv'),
-        MODEL_SPEC['args']['model_data_path']['contents']['crop_nutrient.csv'])
+        **MODEL_SPEC['args']['model_data_path']['contents']['crop_nutrient.csv'])
 
     LOGGER.info("Generating report table")
     crop_names = list(crop_to_landcover_df.index)

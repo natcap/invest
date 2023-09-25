@@ -468,9 +468,9 @@ def execute(args):
         None.
 
     """
-    crop_to_landcover_df = utils.read_csv_to_dataframe(
+    crop_to_landcover_df = validation.get_validated_dataframe(
         args['landcover_to_crop_table_path'],
-        MODEL_SPEC['args']['landcover_to_crop_table_path'])
+        **MODEL_SPEC['args']['landcover_to_crop_table_path'])
     bad_crop_name_list = []
     for crop_name in crop_to_landcover_df.index:
         crop_climate_bin_raster_path = os.path.join(
@@ -549,9 +549,9 @@ def execute(args):
         climate_percentile_yield_table_path = os.path.join(
             args['model_data_path'],
             _CLIMATE_PERCENTILE_TABLE_PATTERN % crop_name)
-        crop_climate_percentile_df = utils.read_csv_to_dataframe(
+        crop_climate_percentile_df = validation.get_validated_dataframe(
             climate_percentile_yield_table_path,
-            MODEL_SPEC['args']['model_data_path']['contents'][
+            **MODEL_SPEC['args']['model_data_path']['contents'][
                 'climate_percentile_yield_tables']['contents'][
                 '[CROP]_percentile_yield_table.csv'])
         yield_percentile_headers = [
@@ -707,9 +707,9 @@ def execute(args):
 
     # both 'crop_nutrient.csv' and 'crop' are known data/header values for
     # this model data.
-    nutrient_df = utils.read_csv_to_dataframe(
+    nutrient_df = validation.get_validated_dataframe(
         os.path.join(args['model_data_path'], 'crop_nutrient.csv'),
-        MODEL_SPEC['args']['model_data_path']['contents']['crop_nutrient.csv'])
+        **MODEL_SPEC['args']['model_data_path']['contents']['crop_nutrient.csv'])
     result_table_path = os.path.join(
         output_dir, 'result_table%s.csv' % file_suffix)
 

@@ -931,9 +931,9 @@ def execute(args):
                     aoi_reprojection_task, lulc_mask_task]
             )
 
-    attr_table = utils.read_csv_to_dataframe(
+    attr_table = validation.get_validated_dataframe(
         args['lulc_attribute_table'],
-        MODEL_SPEC['args']['lulc_attribute_table'])
+        **MODEL_SPEC['args']['lulc_attribute_table'])
     kernel_paths = {}  # search_radius, kernel path
     kernel_tasks = {}  # search_radius, kernel task
 
@@ -951,9 +951,9 @@ def execute(args):
         lucode_to_search_radii = list(
             urban_nature_attrs[['search_radius_m']].itertuples(name=None))
     elif args['search_radius_mode'] == RADIUS_OPT_POP_GROUP:
-        pop_group_table = utils.read_csv_to_dataframe(
+        pop_group_table = validation.get_validated_dataframe(
             args['population_group_radii_table'],
-            MODEL_SPEC['args']['population_group_radii_table'])
+            **MODEL_SPEC['args']['population_group_radii_table'])
         search_radii = set(pop_group_table['search_radius_m'].unique())
         # Build a dict of {pop_group: search_radius_m}
         search_radii_by_pop_group = pop_group_table['search_radius_m'].to_dict()
@@ -1824,8 +1824,8 @@ def _reclassify_urban_nature_area(
     Returns:
         ``None``
     """
-    lulc_attribute_df = utils.read_csv_to_dataframe(
-        lulc_attribute_table, MODEL_SPEC['args']['lulc_attribute_table'])
+    lulc_attribute_df = validation.get_validated_dataframe(
+        lulc_attribute_table, **MODEL_SPEC['args']['lulc_attribute_table'])
 
     squared_pixel_area = abs(
         numpy.multiply(*_square_off_pixels(lulc_raster_path)))

@@ -622,9 +622,9 @@ class ReadCSVToDataframeTests(unittest.TestCase):
         with open(csv_file, 'w') as file_obj:
             file_obj.write(textwrap.dedent(
                 """\
-                header,
-                a,
-                b
+                header, ,
+                a, ,
+                b,c
                 """
             ))
         df = utils.read_csv_to_dataframe(
@@ -1235,6 +1235,53 @@ class ReadCSVToDataframeTests(unittest.TestCase):
         self.assertEqual(df['col1'][1], '')
         self.assertEqual(df['col2'][1], '2 1')
         self.assertEqual(df['col3'][1], '')
+
+    def test_rows(self):
+        """utils: read csv with row headers instead of columns"""
+        from natcap.invest import utils
+
+        csv_file = os.path.join(self.workspace_dir, 'csv.csv')
+
+        with open(csv_file, 'w') as file_obj:
+            file_obj.write("row1, a ,b\n")
+            file_obj.write("row2,1,3\n")
+        df = utils.read_csv_to_dataframe(
+            csv_file, {
+                'rows': {
+                    'row1': {'type': 'freestyle_string'},
+                    'row2': {'type': 'number'},
+            }})
+        print(df)
+        # header should have no leading / trailing whitespace
+        self.assertEqual(list(df.columns), ['row1', 'row2'])
+
+        self.assertEqual(df['row1'][0], 'a')
+        self.assertEqual(df['row1'][1], 'b')
+        self.assertEqual(df['row2'][0], 1)
+        self.assertEqual(df['row2'][1], 3)
+        self.assertEqual(df['row2'].dtype, float)
+
+    def test_no_rows_or_columns(self):
+        """utils: read csv with no row or column specs provided"""
+        from natcap.invest import utils
+        csv_text = ("lucode,desc,val1,val2\n"
+                    "1,corn,0.5,2\n"
+                    "2,bread,1,4,\n"
+                    "3,beans,0.5,4\n"
+                    "4,butter,9,1")
+        table_path = os.path.join(self.workspace_dir, 'table.csv')
+        with open(table_path, 'w') as table_file:
+            table_file.write(csv_text)
+
+        df = utils.read_csv_to_dataframe(
+            table_path, {})
+
+        print(df)
+        self.assertEqual(list(df.columns), ['lucode', 'desc', 'val1', 'val2'])
+        self.assertEqual(df['lucode'][0], 1)
+        self.assertEqual(df['desc'][1], 'bread')
+        self.assertEqual(df['val1'][2], 0.5)
+        self.assertEqual(df['val2'][3], 1)
 
 
 class CreateCoordinateTransformationTests(unittest.TestCase):

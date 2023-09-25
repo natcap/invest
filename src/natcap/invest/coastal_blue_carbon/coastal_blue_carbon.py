@@ -570,9 +570,9 @@ def execute(args):
     task_graph, n_workers, intermediate_dir, output_dir, suffix = (
         _set_up_workspace(args))
 
-    snapshots = utils.read_csv_to_dataframe(
+    snapshots = validation.get_validated_dataframe(
         args['landcover_snapshot_csv'],
-        MODEL_SPEC['args']['landcover_snapshot_csv']
+        **MODEL_SPEC['args']['landcover_snapshot_csv']
     )['raster_path'].to_dict()
 
     # Phase 1: alignment and preparation of inputs
@@ -593,9 +593,9 @@ def execute(args):
 
     # We're assuming that the LULC initial variables and the carbon pool
     # transient table are combined into a single lookup table.
-    biophysical_df = utils.read_csv_to_dataframe(
+    biophysical_df = validation.get_validated_dataframe(
         args['biophysical_table_path'],
-        MODEL_SPEC['args']['biophysical_table_path'])
+        **MODEL_SPEC['args']['biophysical_table_path'])
 
     # LULC Classnames are critical to the transition mapping, so they must be
     # unique.  This check is here in ``execute`` because it's possible that
@@ -963,9 +963,9 @@ def execute(args):
     prices = None
     if args.get('do_economic_analysis', False):  # Do if truthy
         if args.get('use_price_table', False):
-            prices = utils.read_csv_to_dataframe(
+            prices = validation.get_validated_dataframe(
                 args['price_table_path'],
-                MODEL_SPEC['args']['price_table_path']
+                **MODEL_SPEC['args']['price_table_path']
             )['price'].to_dict()
         else:
             inflation_rate = float(args['inflation_rate']) * 0.01
@@ -1985,8 +1985,8 @@ def _read_transition_matrix(transition_csv_path, biophysical_df):
         landcover transition, and the second contains accumulation rates for
         the pool for the landcover transition.
     """
-    table = utils.read_csv_to_dataframe(
-        transition_csv_path, MODEL_SPEC['args']['landcover_transitions_table']
+    table = validation.get_validated_dataframe(
+        transition_csv_path, **MODEL_SPEC['args']['landcover_transitions_table']
     ).reset_index()
 
     lulc_class_to_lucode = {}
@@ -2236,9 +2236,9 @@ def validate(args, limit_to=None):
 
     if ("landcover_snapshot_csv" not in invalid_keys and
             "landcover_snapshot_csv" in sufficient_keys):
-        snapshots = utils.read_csv_to_dataframe(
+        snapshots = validation.get_validated_dataframe(
             args['landcover_snapshot_csv'],
-            MODEL_SPEC['args']['landcover_snapshot_csv']
+            **MODEL_SPEC['args']['landcover_snapshot_csv']
         )['raster_path'].to_dict()
 
         for snapshot_year, snapshot_raster_path in snapshots.items():
@@ -2268,8 +2268,8 @@ def validate(args, limit_to=None):
             transitions_spec['columns']['[LULC CODE]']['options'].keys())
         # lowercase options since utils call will lowercase table values
         transition_options = [x.lower() for x in transition_options]
-        transitions_df = utils.read_csv_to_dataframe(
-            args['landcover_transitions_table'], transitions_spec)
+        transitions_df = validation.get_validated_dataframe(
+            args['landcover_transitions_table'], **transitions_spec)
         transitions_mask = ~transitions_df.isin(transition_options) & ~transitions_df.isna()
         if transitions_mask.any(axis=None):
             transition_numpy_mask = transitions_mask.values

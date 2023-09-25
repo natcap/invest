@@ -485,8 +485,8 @@ def execute(args):
     # Build a lookup dictionary mapping each LULC code to its row
     # sort by the LULC codes upfront because we use the sorted list in multiple
     # places. it's more efficient to do this once.
-    biophysical_df = utils.read_csv_to_dataframe(
-        args['biophysical_table'], MODEL_SPEC['args']['biophysical_table']
+    biophysical_df = validation.get_validated_dataframe(
+        args['biophysical_table'], **MODEL_SPEC['args']['biophysical_table']
     ).sort_index()
     sorted_lucodes = biophysical_df.index.to_list()
 

@@ -298,9 +298,9 @@ def execute(args):
         task_name='align raster stack')
 
     # Load CN table
-    cn_df = utils.read_csv_to_dataframe(
+    cn_df = validation.get_validated_dataframe(
         args['curve_number_table_path'],
-        MODEL_SPEC['args']['curve_number_table_path'])
+        **MODEL_SPEC['args']['curve_number_table_path'])
 
     # make cn_table into a 2d array where first dim is lucode, second is
     # 0..3 to correspond to CN_A..CN_D
@@ -640,9 +640,9 @@ def _calculate_damage_to_infrastructure_in_aoi(
     infrastructure_vector = gdal.OpenEx(structures_vector_path, gdal.OF_VECTOR)
     infrastructure_layer = infrastructure_vector.GetLayer()
 
-    damage_type_map = utils.read_csv_to_dataframe(
+    damage_type_map = validation.get_validated_dataframe(
         structures_damage_table,
-        MODEL_SPEC['args']['infrastructure_damage_loss_table_path']
+        **MODEL_SPEC['args']['infrastructure_damage_loss_table_path']
     )['damage'].to_dict()
 
     infrastructure_layer_defn = infrastructure_layer.GetLayerDefn()
@@ -942,9 +942,9 @@ def validate(args, limit_to=None):
     if ("curve_number_table_path" not in invalid_keys and
             "curve_number_table_path" in sufficient_keys):
         # Load CN table. Resulting DF has index and CN_X columns only.
-        cn_df = utils.read_csv_to_dataframe(
+        cn_df = validation.get_validated_dataframe(
             args['curve_number_table_path'],
-            MODEL_SPEC['args']['curve_number_table_path'])
+            **MODEL_SPEC['args']['curve_number_table_path'])
         # Check for NaN values.
         nan_mask = cn_df.isna()
         if nan_mask.any(axis=None):

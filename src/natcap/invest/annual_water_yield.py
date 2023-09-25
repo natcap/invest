@@ -526,8 +526,9 @@ def execute(args):
             'Checking that watersheds have entries for every `ws_id` in the '
             'valuation table.')
         # Open/read in valuation parameters from CSV file
-        valuation_df = utils.read_csv_to_dataframe(
-            args['valuation_table_path'], MODEL_SPEC['args']['valuation_table_path'])
+        valuation_df = validation.get_validated_dataframe(
+            args['valuation_table_path'],
+            **MODEL_SPEC['args']['valuation_table_path'])
         watershed_vector = gdal.OpenEx(
             args['watersheds_path'], gdal.OF_VECTOR)
         watershed_layer = watershed_vector.GetLayer()
@@ -645,15 +646,15 @@ def execute(args):
         'lulc': pygeoprocessing.get_raster_info(clipped_lulc_path)['nodata'][0]}
 
     # Open/read in the csv file into a dictionary and add to arguments
-    bio_df = utils.read_csv_to_dataframe(args['biophysical_table_path'],
-                                         MODEL_SPEC['args']['biophysical_table_path'])
+    bio_df = validation.get_validated_dataframe(args['biophysical_table_path'],
+                                         **MODEL_SPEC['args']['biophysical_table_path'])
     bio_lucodes = set(bio_df.index.values)
     bio_lucodes.add(nodata_dict['lulc'])
     LOGGER.debug(f'bio_lucodes: {bio_lucodes}')
 
     if 'demand_table_path' in args and args['demand_table_path'] != '':
-        demand_df = utils.read_csv_to_dataframe(
-            args['demand_table_path'], MODEL_SPEC['args']['demand_table_path'])
+        demand_df = validation.get_validated_dataframe(
+            args['demand_table_path'], **MODEL_SPEC['args']['demand_table_path'])
         demand_reclassify_dict = dict(
             [(lucode, row['demand']) for lucode, row in demand_df.iterrows()])
         demand_lucodes = set(demand_df.index.values)

@@ -367,8 +367,8 @@ def execute(args):
          (_INTERMEDIATE_BASE_FILES, intermediate_output_dir),
          (_TMP_BASE_FILES, output_dir)], file_suffix)
 
-    carbon_pool_df = utils.read_csv_to_dataframe(
-        args['carbon_pools_path'], MODEL_SPEC['args']['carbon_pools_path'])
+    carbon_pool_df = validation.get_validated_dataframe(
+        args['carbon_pools_path'], **MODEL_SPEC['args']['carbon_pools_path'])
 
     try:
         n_workers = int(args['n_workers'])

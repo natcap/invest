@@ -707,18 +707,21 @@ def execute(args):
     ]
 
     # Read the biophysical turbine parameters into a dictionary
-    bio_turbine_dict = _read_csv_wind_parameters(
-        args['turbine_parameters_path'], biophysical_params)
-
+    turbine_dict = validation.get_validated_dataframe(
+        args['turbine_parameters_path'],
+        **MODEL_SPEC['args']['turbine_parameters_path']
+    ).iloc[0].to_dict()
     # Read the biophysical global parameters into a dictionary
-    bio_global_params_dict = _read_csv_wind_parameters(
-        args['global_wind_parameters_path'], biophysical_params)
+    global_params_dict = validation.get_validated_dataframe(
+        args['global_wind_parameters_path'],
+        **MODEL_SPEC['args']['global_wind_parameters_path']
+    ).iloc[0].to_dict()
 
     # Combine the turbine and global parameters into one dictionary
-    bio_parameters_dict = bio_global_params_dict.copy()
-    bio_parameters_dict.update(bio_turbine_dict)
+    parameters_dict = global_params_dict.copy()
+    parameters_dict.update(turbine_dict)
 
-    LOGGER.debug('Biophysical Turbine Parameters: %s', bio_parameters_dict)
+    LOGGER.debug('Biophysical Turbine Parameters: %s', parameters_dict)
 
     if ('valuation_container' not in args or
             args['valuation_container'] is False):
@@ -727,33 +730,11 @@ def execute(args):
         LOGGER.info(
             'Valuation Selected. Checking required parameters from CSV files.')
 
-        # Create a list of the valuation parameters we are looking for from the
-        # input files
-        valuation_turbine_params = ['turbine_cost', 'turbine_rated_pwr']
-        # Read the biophysical turbine parameters into a dictionary
-        val_turbine_dict = _read_csv_wind_parameters(
-            args['turbine_parameters_path'], valuation_turbine_params)
-
-        valuation_global_params = [
-            'carbon_coefficient', 'time_period', 'infield_cable_cost',
-            'infield_cable_length', 'installation_cost',
-            'miscellaneous_capex_cost', 'operation_maintenance_cost',
-            'decommission_cost', 'ac_dc_distance_break', 'mw_coef_ac',
-            'mw_coef_dc', 'cable_coef_ac', 'cable_coef_dc'
-        ]
-        # Read the biophysical global parameters into a dictionary
-        val_global_param_dict = _read_csv_wind_parameters(
-            args['global_wind_parameters_path'], valuation_global_params)
-
-        # Combine the turbine and global parameters into one dictionary
-        val_parameters_dict = val_global_param_dict.copy()
-        val_parameters_dict.update(val_turbine_dict)
-
         # If Price Table provided use that for price of energy, validate inputs
-        time = int(val_parameters_dict['time_period'])
+        time = parameters_dict['time_period']
         if args['price_table']:
-            wind_price_df = utils.read_csv_to_dataframe(
-                args['wind_schedule'], MODEL_SPEC['args']['wind_schedule']
+            wind_price_df = validation.get_validated_dataframe(
+                args['wind_schedule'], **MODEL_SPEC['args']['wind_schedule']
             ).sort_index()  # sort by year
 
             year_count = len(wind_price_df)
@@ -773,11 +754,11 @@ def execute(args):
             # are the time steps for the lifespan of the farm and values
             # are adjusted based on the rate of change
             price_list = []
-            for time_step in range(time + 1):
+            for time_step in range(int(time) + 1):
                 price_list.append(wind_price * (1 + change_rate)**(time_step))
 
     # Hub Height to use for setting Weibull parameters
-    hub_height = int(bio_parameters_dict['hub_height'])
+    hub_height = parameters_dict['hub_height']
 
     LOGGER.debug('hub_height : %s', hub_height)
 
@@ -791,7 +772,7 @@ def execute(args):
         inter_dir, 'wind_data%s.pickle' % suffix)
     compute_density_harvested_task = task_graph.add_task(
         func=_compute_density_harvested_fields,
-        args=(wind_data, bio_parameters_dict, number_of_turbines,
+        args=(wind_data, parameters_dict, number_of_turbines,
               wind_data_pickle_path),
         target_path_list=[wind_data_pickle_path],
         task_name='compute_density_harvested_fields')
@@ -1132,8 +1113,8 @@ def execute(args):
         LOGGER.info('Grid Points Provided. Reading in the grid points')
 
         # Read the grid points csv, and convert it to land and grid dictionary
-        grid_land_df = utils.read_csv_to_dataframe(
-            args['grid_points_path'], MODEL_SPEC['args']['grid_points_path'])
+        grid_land_df = validation.get_validated_dataframe(
+            args['grid_points_path'], **MODEL_SPEC['args']['grid_points_path'])
 
         # Convert the dataframes to dictionaries, using 'ID' (the index) as key
         grid_dict = grid_land_df[grid_land_df['type'] == 'grid'].to_dict('index')
@@ -1306,7 +1287,7 @@ def execute(args):
     task_graph.add_task(
         func=_calculate_npv_levelized_rasters,
         args=(harvested_masked_path, final_dist_raster_path, npv_raster_path,
-              levelized_raster_path, val_parameters_dict, args, price_list),
+              levelized_raster_path, parameters_dict, args, price_list),
         target_path_list=[npv_raster_path, levelized_raster_path],
         task_name='calculate_npv_levelized_rasters',
         dependent_task_list=[final_dist_task])
@@ -1316,7 +1297,7 @@ def execute(args):
 
     # The amount of CO2 not released into the atmosphere, with the constant
     # conversion factor provided in the users guide by Rob Griffin
-    carbon_coef = float(val_parameters_dict['carbon_coefficient'])
+    carbon_coef = parameters_dict['carbon_coefficient']
 
     task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
@@ -1335,7 +1316,7 @@ def execute(args):
 def _calculate_npv_levelized_rasters(
         base_harvested_raster_path, base_dist_raster_path,
         target_npv_raster_path, target_levelized_raster_path,
-        val_parameters_dict, args, price_list):
+        parameters_dict, args, price_list):
     """Calculate NPV and levelized rasters from harvested and dist rasters.
 
     Args:
@@ -1352,7 +1333,7 @@ def _calculate_npv_levelized_rasters(
             store the unit price of energy that would be required to set the
             present value of the farm centered at each pixel equal to zero.
 
-        val_parameters_dict (dict): a dictionary of the turbine and biophysical
+        parameters_dict (dict): a dictionary of the turbine and biophysical
             global parameters.
 
         args (dict): a dictionary that contains information on
@@ -1383,35 +1364,35 @@ def _calculate_npv_levelized_rasters(
         target_levelized_raster_path, gdal.OF_RASTER | gdal.GA_Update)
     levelized_band = levelized_raster.GetRasterBand(1)
 
-    # Get constants from val_parameters_dict to make it more readable
+    # Get constants from parameters_dict to make it more readable
     # The length of infield cable in km
-    infield_length = float(val_parameters_dict['infield_cable_length'])
+    infield_length = parameters_dict['infield_cable_length']
     # The cost of infield cable in currency units per km
-    infield_cost = float(val_parameters_dict['infield_cable_cost'])
+    infield_cost = parameters_dict['infield_cable_cost']
     # The cost of the foundation in currency units
-    foundation_cost = float(args['foundation_cost'])
+    foundation_cost = args['foundation_cost']
     # The cost of each turbine unit in currency units
-    unit_cost = float(val_parameters_dict['turbine_cost'])
+    unit_cost = parameters_dict['turbine_cost']
     # The installation cost as a decimal
-    install_cost = float(val_parameters_dict['installation_cost'])
+    install_cost = parameters_dict['installation_cost']
     # The miscellaneous costs as a decimal factor of capex_arr
-    misc_capex_cost = float(val_parameters_dict['miscellaneous_capex_cost'])
+    misc_capex_cost = parameters_dict['miscellaneous_capex_cost']
     # The operations and maintenance costs as a decimal factor of capex_arr
-    op_maint_cost = float(val_parameters_dict['operation_maintenance_cost'])
+    op_maint_cost = parameters_dict['operation_maintenance_cost']
     # The discount rate as a decimal
-    discount_rate = float(args['discount_rate'])
+    discount_rate = args['discount_rate']
     # The cost to decommission the farm as a decimal factor of capex_arr
-    decom = float(val_parameters_dict['decommission_cost'])
+    decom = parameters_dict['decommission_cost']
     # The mega watt value for the turbines in MW
-    mega_watt = float(val_parameters_dict['turbine_rated_pwr'])
+    mega_watt = parameters_dict['turbine_rated_pwr']
     # The distance at which AC switches over to DC power
-    circuit_break = float(val_parameters_dict['ac_dc_distance_break'])
+    circuit_break = parameters_dict['ac_dc_distance_break']
     # The coefficients for the AC/DC megawatt and cable cost from the CAP
     # function
-    mw_coef_ac = float(val_parameters_dict['mw_coef_ac'])
-    mw_coef_dc = float(val_parameters_dict['mw_coef_dc'])
-    cable_coef_ac = float(val_parameters_dict['cable_coef_ac'])
-    cable_coef_dc = float(val_parameters_dict['cable_coef_dc'])
+    mw_coef_ac = parameters_dict['mw_coef_ac']
+    mw_coef_dc = parameters_dict['mw_coef_dc']
+    cable_coef_ac = parameters_dict['cable_coef_ac']
+    cable_coef_dc = parameters_dict['cable_coef_dc']
 
     # The total mega watt capacity of the wind farm where mega watt is the
     # turbines rated power
@@ -1437,7 +1418,7 @@ def _calculate_npv_levelized_rasters(
 
     # Discount constant raised to the total time, a constant found in the NPV
     # calculation (1+i)^T
-    disc_time = disc_const**int(val_parameters_dict['time_period'])
+    disc_time = disc_const**parameters_dict['time_period']
     LOGGER.debug('disc_time : %s', disc_time)
 
     for (harvest_block_info, harvest_block_data), (_, dist_block_data) in zip(
@@ -1502,7 +1483,7 @@ def _calculate_npv_levelized_rasters(
         # the wind farm. Starting at year 1, because year 0 yields no revenue
         for year in range(1, len(price_list)):
             # currency units per kilowatt-hour of that year
-            currency_per_kwh = float(price_list[year])
+            currency_per_kwh = price_list[year]
 
             # The revenue for the wind farm. The energy_val_arr is in kWh/yr
             rev_arr = energy_val_arr * currency_per_kwh
@@ -1824,36 +1805,6 @@ def _calculate_land_to_grid_distance(
     LOGGER.info('Finished _calculate_land_to_grid_distance.')
 
 
-def _read_csv_wind_parameters(csv_path, parameter_list):
-    """Construct a dictionary from a csv file given a list of keys.
-
-    The list of keys corresponds to the parameters names in 'csv_path' which
-    are represented in the first column of the file.
-
-    Args:
-        csv_path (str): a path to a CSV file where every row is a parameter
-            with the parameter name in the first column followed by the value
-            in the second column
-        parameter_list (list) : a List of strs that represent the parameter
-            names to be found in 'csv_path'. These strs will be the keys in
-            the returned dictionary
-
-    Returns: a Dictionary where the 'parameter_list' strs are the
-            keys that have values pulled from 'csv_path'
-
-    """
-    # use the parameters in the first column as indices for the dataframe
-    # this doesn't benefit from `utils.read_csv_to_dataframe` because there
-    # is no header to strip whitespace
-    # use sep=None, engine='python' to infer what the separator is
-    wind_param_df = pandas.read_csv(csv_path, header=None, index_col=0)
-    # only get the required parameters and leave out the rest
-    wind_param_df = wind_param_df[wind_param_df.index.isin(parameter_list)]
-    wind_dict = wind_param_df.to_dict()[1]
-
-    return wind_dict
-
-
 def _mask_by_distance(base_raster_path, min_dist, max_dist, out_nodata,
                       target_raster_path):
     """Create a raster whose pixel values are bound by min and max distances.
@@ -1964,8 +1915,8 @@ def _read_csv_wind_data(wind_data_path, hub_height):
             to dictionaries that hold wind data at that location.
 
     """
-    wind_point_df = utils.read_csv_to_dataframe(
-        wind_data_path, MODEL_SPEC['args']['wind_data_path'])
+    wind_point_df = validation.get_validated_dataframe(
+        wind_data_path, **MODEL_SPEC['args']['wind_data_path'])
     wind_point_df.columns = wind_point_df.columns.str.upper()
 
     # Calculate scale value at new hub height given reference values.
@@ -1980,7 +1931,7 @@ def _read_csv_wind_data(wind_data_path, hub_height):
 
 
 def _compute_density_harvested_fields(
-        wind_dict, bio_parameters_dict, number_of_turbines,
+        wind_dict, parameters_dict, number_of_turbines,
         target_pickle_path):
     """Compute the density and harvested energy based on scale and shape keys.
 
@@ -1989,7 +1940,7 @@ def _compute_density_harvested_fields(
             keys ``LAM``, ``LATI``, ``K``, ``LONG``, ``REF_LAM``, and ``REF``,
             and numbers indicating their corresponding values.
 
-        bio_parameters_dict (dict): a dictionary where the 'parameter_list'
+        parameters_dict (dict): a dictionary where the 'parameter_list'
             strings are the keys that have values pulled from bio-parameters
             CSV.
 
@@ -2009,20 +1960,20 @@ def _compute_density_harvested_fields(
     # The rated power is expressed in units of MW but the harvested energy
     # equation calls for it in terms of Wh. Thus we multiply by a million to
     # get to Wh.
-    rated_power = float(bio_parameters_dict['turbine_rated_pwr']) * 1000000
+    rated_power = parameters_dict['turbine_rated_pwr'] * 1000000
 
     # Get the rest of the inputs needed to compute harvested wind energy
     # from the dictionary so that it is in a more readable format
-    exp_pwr_curve = int(bio_parameters_dict['exponent_power_curve'])
-    air_density_standard = float(bio_parameters_dict['air_density'])
-    v_rate = float(bio_parameters_dict['rated_wspd'])
-    v_out = float(bio_parameters_dict['cut_out_wspd'])
-    v_in = float(bio_parameters_dict['cut_in_wspd'])
-    air_density_coef = float(bio_parameters_dict['air_density_coefficient'])
-    losses = float(bio_parameters_dict['loss_parameter'])
+    exp_pwr_curve = parameters_dict['exponent_power_curve']
+    air_density_standard = parameters_dict['air_density']
+    v_rate = parameters_dict['rated_wspd']
+    v_out = parameters_dict['cut_out_wspd']
+    v_in = parameters_dict['cut_in_wspd']
+    air_density_coef = parameters_dict['air_density_coefficient']
+    losses = parameters_dict['loss_parameter']
 
     # Hub Height to use for setting Weibull parameters
-    hub_height = int(bio_parameters_dict['hub_height'])
+    hub_height = parameters_dict['hub_height']
 
     # Compute the mean air density, given by CKs formulas
     mean_air_density = air_density_standard - air_density_coef * hub_height
@@ -2202,8 +2153,8 @@ def _dictionary_to_point_vector(
     # For each inner dictionary (for each point) create a point and set its
     # fields
     for point_dict in base_dict_data.values():
-        latitude = float(point_dict['lati'])
-        longitude = float(point_dict['long'])
+        latitude = point_dict['lati']
+        longitude = point_dict['long']
 
         geom = ogr.Geometry(ogr.wkbPoint)
         geom.AddPoint_2D(longitude, latitude)
@@ -2469,8 +2420,8 @@ def _wind_data_to_point_vector(wind_data_pickle_path,
     # For each inner dictionary (for each point) create a point
     for point_dict in wind_data.values():
         geom = ogr.Geometry(ogr.wkbPoint)
-        latitude = float(point_dict['LATI'])
-        longitude = float(point_dict['LONG'])
+        latitude = point_dict['LATI']
+        longitude = point_dict['LONG']
         # When projecting to WGS84, extents -180 to 180 are used for
         # longitude. In case input longitude is from -360 to 0 convert
         if longitude < -180:
@@ -2770,7 +2721,6 @@ def validate(args, limit_to=None):
     """
     validation_warnings = validation.validate(args, MODEL_SPEC['args'],
                                MODEL_SPEC['args_with_spatial_overlap'])
-
     invalid_keys = validation.get_invalid_keys(validation_warnings)
     sufficient_keys = validation.get_sufficient_keys(args)
     valid_sufficient_keys = sufficient_keys - invalid_keys
@@ -2778,9 +2728,15 @@ def validate(args, limit_to=None):
     if ('wind_schedule' in valid_sufficient_keys and
             'global_wind_parameters_path' in valid_sufficient_keys):
         year_count = pandas.read_csv(args['wind_schedule']).shape[0]
-        time = int(_read_csv_wind_parameters(
-            args['global_wind_parameters_path'], ['time_period']
-        )['time_period'])
+        time = validation.get_validated_dataframe(
+            args['global_wind_parameters_path'],
+            index_col='0',
+            columns={
+                '0': {'type': 'freestyle_string'},
+                '1': {'type': 'number'}
+            },
+            read_csv_kwargs={'header': None}
+        )['1']['time_period']
         if year_count != time + 1:
             validation_warnings.append((
                 ['wind_schedule'],

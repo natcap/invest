@@ -494,8 +494,9 @@ def execute(args):
 
     """
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
-    biophysical_df = utils.read_csv_to_dataframe(
-        args['biophysical_table_path'], MODEL_SPEC['args']['biophysical_table_path'])
+    biophysical_df = validation.get_validated_dataframe(
+        args['biophysical_table_path'],
+        **MODEL_SPEC['args']['biophysical_table_path'])
 
     # Test to see if c or p values are outside of 0..1
     for key in ['usle_c', 'usle_p']:

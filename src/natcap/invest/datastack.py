@@ -35,6 +35,7 @@ import warnings
 from osgeo import gdal
 
 from . import utils
+from . import validation
 
 try:
     from . import __version__
@@ -335,8 +336,8 @@ def build_datastack_archive(args, model_name, datastack_path):
                 contained_files_dir = os.path.join(
                     data_dir, f'{key}_csv_data')
 
-                dataframe = utils.read_csv_to_dataframe(
-                    source_path, args_spec[key])
+                dataframe = validation.get_validated_dataframe(
+                    source_path, **args_spec[key])
                 csv_source_dir = os.path.abspath(os.path.dirname(source_path))
                 for spatial_column_name in spatial_columns:
                     # Iterate through the spatial columns, identify the set of

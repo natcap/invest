@@ -769,14 +769,22 @@ def execute(args):
     LOGGER.debug('Machine Performance Rows : %s', machine_perf_dict['periods'])
     LOGGER.debug('Machine Performance Cols : %s', machine_perf_dict['heights'])
 
-    machine_param_dict = _machine_csv_to_dict(args['machine_param_path'])
+    machine_param_dict = validation.get_validated_dataframe(
+        args['machine_param_path'],
+        index_col='name',
+        columns={
+            'name': {'type': 'freestyle_string'},
+            'value': {'type': 'number'}
+        },
+    )['value'].to_dict()
+    print(machine_param_dict)
 
     # Check if required column fields are entered in the land grid csv file
     if 'land_gridPts_path' in args:
         # Create a grid_land_df dataframe for later use in valuation
-        grid_land_df = utils.read_csv_to_dataframe(
+        grid_land_df = validation.get_validated_dataframe(
             args['land_gridPts_path'],
-            MODEL_SPEC['args']['land_gridPts_path'])
+            **MODEL_SPEC['args']['land_gridPts_path'])
         missing_grid_land_fields = []
         for field in ['id', 'type', 'lat', 'long', 'location']:
             if field not in grid_land_df.columns:
@@ -788,7 +796,14 @@ def execute(args):
                 'Connection Points File: %s' % missing_grid_land_fields)
 
     if 'valuation_container' in args and args['valuation_container']:
-        machine_econ_dict = _machine_csv_to_dict(args['machine_econ_path'])
+        machine_econ_dict = validation.get_validated_dataframe(
+            args['machine_econ_path'],
+            index_col='name',
+            columns={
+                'name': {'type': 'freestyle_string'},
+                'value': {'type': 'number'}
+            }
+        )['value'].to_dict()
 
     # Build up a dictionary of possible analysis areas where the key
     # is the analysis area selected and the value is a dictionary
@@ -1624,42 +1639,6 @@ def _binary_wave_data_to_dict(wave_file_path):
     wave_dict['heights'] = numpy.array(wave_heights, dtype='f')
     LOGGER.info('Finished extrapolating wave data to dictionary.')
     return wave_dict
-
-
-def _machine_csv_to_dict(machine_csv_path):
-    """Create a dictionary from the table in machine csv file.
-
-    The dictionary's keys are the 'NAME' from the machine table and its values
-    are from the corresponding 'VALUE' field. No need to check for missing
-    columns since the file is validated by validate() function.
-
-    Args:
-        machine_csv_path (str): path to the input machine CSV file.
-
-    Returns:
-        machine_dict (dict): a dictionary of keys from the first column of the
-            CSV file and corresponding values from the `VALUE` column.
-
-    """
-    machine_dict = {}
-    # make columns and indexes lowercased and strip whitespace
-    machine_data = utils.read_csv_to_dataframe(
-        machine_csv_path,
-        {
-            'index_col': 'name',
-            'columns': {
-                'name': {'type': 'freestyle_string'},
-                'value': {'type': 'number'}
-        }})
-
-    # drop NaN indexed rows in dataframe
-    machine_data = machine_data[machine_data.index.notnull()]
-    LOGGER.debug('machine_data dataframe from %s: %s' %
-                 (machine_csv_path, machine_data))
-    machine_dict = machine_data.to_dict('index')
-    for key in machine_dict.keys():
-        machine_dict[key] = machine_dict[key]['value']
-    return machine_dict
 
 
 def _get_vector_spatial_ref(base_vector_path):

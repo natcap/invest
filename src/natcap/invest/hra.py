@@ -1786,8 +1786,8 @@ def _parse_info_table(info_table_path):
     info_table_path = os.path.abspath(info_table_path)
 
     try:
-        table = utils.read_csv_to_dataframe(
-            info_table_path, MODEL_SPEC['args']['info_table_path'])
+        table = validation.get_validated_dataframe(
+            info_table_path, **MODEL_SPEC['args']['info_table_path'])
     except ValueError as err:
         if 'Index has duplicate keys' in str(err):
             raise ValueError("Habitat and stressor names may not overlap.")
