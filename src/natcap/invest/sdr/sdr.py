@@ -682,11 +682,9 @@ def execute(args):
         args=(
             f_reg['rkls_path'],
             f_reg['cp_factor_path'],
-            drainage_raster_path_task[0],
             f_reg['usle_path']),
         target_path_list=[f_reg['usle_path']],
-        dependent_task_list=[
-            rkls_task, cp_task, drainage_raster_path_task[1]],
+        dependent_task_list=[rkls_task, cp_task],
         task_name='calculate USLE')
 
     bar_task_map = {}
@@ -774,7 +772,8 @@ def execute(args):
     e_prime_task = task_graph.add_task(
         func=_calculate_e_prime,
         args=(
-            f_reg['usle_path'], f_reg['sdr_path'], f_reg['e_prime_path']),
+            f_reg['usle_path'], f_reg['sdr_path'],
+            drainage_raster_path_task[0], f_reg['e_prime_path']),
         target_path_list=[f_reg['e_prime_path']],
         dependent_task_list=[usle_task, sdr_task],
         task_name='calculate export prime')
@@ -1216,9 +1215,6 @@ def _calculate_rkls(
             erosivity[valid_mask] *    # MJ * mm / (ha * hr * yr)
             erodibility[valid_mask] *  # t * ha * hr / (MJ * ha * mm)
             cell_area_ha)              # ha / pixel
-
-        # rkls is 1 on the stream
-        rkls[nodata_mask & (stream == 1)] = 1
         return rkls
 
     # aligning with index 3 that's the stream and the most likely to be
@@ -1362,22 +1358,20 @@ def _calculate_cp(lulc_to_cp, lulc_path, cp_factor_path):
 
 
 def _calculate_usle(
-        rkls_path, cp_factor_path, drainage_raster_path, out_usle_path):
-    """Calculate USLE, multiply RKLS by CP and set to 1 on drains."""
-    def usle_op(rkls, cp_factor, drainage):
+        rkls_path, cp_factor_path, out_usle_path):
+    """Calculate USLE, multiply RKLS by CP."""
+    def usle_op(rkls, cp_factor):
         """Calculate USLE."""
         result = numpy.empty(rkls.shape, dtype=numpy.float32)
         result[:] = _TARGET_NODATA
         valid_mask = (
             ~utils.array_equals_nodata(rkls, _TARGET_NODATA) &
             ~utils.array_equals_nodata(cp_factor, _TARGET_NODATA))
-        result[valid_mask] = rkls[valid_mask] * cp_factor[valid_mask] * (
-            1 - drainage[valid_mask])
+        result[valid_mask] = rkls[valid_mask] * cp_factor[valid_mask]
         return result
 
     pygeoprocessing.raster_calculator(
-        [(path, 1) for path in [
-            rkls_path, cp_factor_path, drainage_raster_path]], usle_op,
+        [(rkls_path, 1), (cp_factor_path, 1)], usle_op,
         out_usle_path, gdal.GDT_Float32, _TARGET_NODATA)
 
 
@@ -1596,9 +1590,9 @@ def _calculate_sed_export(usle_path, sdr_path, target_sed_export_path):
         target_sed_export_path, gdal.GDT_Float32, _TARGET_NODATA)
 
 
-def _calculate_e_prime(usle_path, sdr_path, target_e_prime):
+def _calculate_e_prime(usle_path, sdr_path, stream_path, target_e_prime):
     """Calculate USLE * (1-SDR)."""
-    def e_prime_op(usle, sdr):
+    def e_prime_op(usle, sdr, streams):
         """Wash that does not reach stream."""
         valid_mask = (
             ~utils.array_equals_nodata(usle, _TARGET_NODATA) &
@@ -1606,11 +1600,16 @@ def _calculate_e_prime(usle_path, sdr_path, target_e_prime):
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         result[:] = _TARGET_NODATA
         result[valid_mask] = usle[valid_mask] * (1-sdr[valid_mask])
+        # set to 0 on streams, to prevent nodata propagating up/down slope
+        # in calculate_sediment_deposition. This makes sense intuitively:
+        # E'_i represents the sediment export from pixel i that does not
+        # reach a stream, which is 0 if pixel i is already in a stream.
+        result[streams == 1] = 0
         return result
 
     pygeoprocessing.raster_calculator(
-        [(usle_path, 1), (sdr_path, 1)], e_prime_op, target_e_prime,
-        gdal.GDT_Float32, _TARGET_NODATA)
+        [(usle_path, 1), (sdr_path, 1), (stream_path, 1)], e_prime_op,
+        target_e_prime, gdal.GDT_Float32, _TARGET_NODATA)
 
 
 def _generate_report(

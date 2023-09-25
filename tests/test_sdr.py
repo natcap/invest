@@ -144,8 +144,8 @@ class SDRTests(unittest.TestCase):
             'usle_tot': 2.62457418442,
             'sed_export': 0.09748090804,
             'sed_dep': 1.71672844887,
-            'avoid_exp': 10199.7490234375,
-            'avoid_eros': 274510.75,
+            'avoid_exp': 10199.46875,
+            'avoid_eros': 274444.75,
         }
 
         vector_path = os.path.join(
@@ -215,8 +215,8 @@ class SDRTests(unittest.TestCase):
         expected_results = {
             'sed_export': 0.09748090804,
             'usle_tot': 2.62457418442,
-            'avoid_exp': 10199.7490234375,
-            'avoid_eros': 274510.75,
+            'avoid_exp': 10199.46875,
+            'avoid_eros': 274444.75,
         }
 
         vector_path = os.path.join(
@@ -240,8 +240,8 @@ class SDRTests(unittest.TestCase):
         expected_results = {
             'sed_export': 0.08896198869,
             'usle_tot': 1.86480903625,
-            'avoid_exp': 9204.283203125,
-            'avoid_eros': 194613.28125,
+            'avoid_exp': 9203.955078125,
+            'avoid_eros': 194212.28125,
         }
 
         vector_path = os.path.join(
@@ -266,8 +266,8 @@ class SDRTests(unittest.TestCase):
         expected_results = {
             'sed_export': 0.17336219549,
             'usle_tot': 2.56186032295,
-            'avoid_exp': 17980.52734375,
-            'avoid_eros': 267931.71875,
+            'avoid_exp': 17980.05859375,
+            'avoid_eros': 267663.71875,
         }
 
         vector_path = os.path.join(
