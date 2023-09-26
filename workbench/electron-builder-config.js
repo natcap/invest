@@ -47,6 +47,10 @@ const config = {
       from: '../LICENSE.txt',
       to: 'LICENSE.InVEST.txt',
     },
+    {
+      from: '../NOTICE.txt',
+      to: 'NOTICE.InVEST.txt',
+    },
   ],
   appId: APP_ID,
   productName: PRODUCT_NAME,
@@ -66,6 +70,7 @@ const config = {
     installerHeader: 'resources/InVEST-header-wcvi-rocks.bmp',
     oneClick: false,
     uninstallDisplayName: PRODUCT_NAME,
+    license: 'build/license_en.txt',
   },
   files: [
     'build/**/*',

@@ -157,7 +157,6 @@ NET_PRESENT_VALUE_RASTER_PATTERN = 'net-present-value-at-{year}{suffix}.tif'
 CARBON_STOCK_AT_YEAR_RASTER_PATTERN = 'carbon-stock-at-{year}{suffix}.tif'
 
 INTERMEDIATE_DIR_NAME = 'intermediate'
-TASKGRAPH_CACHE_DIR_NAME = 'task_cache'
 OUTPUT_DIR_NAME = 'output'
 
 MODEL_SPEC = {
@@ -542,7 +541,7 @@ MODEL_SPEC = {
                 }
             }
         },
-        "task_cache": spec_utils.TASKGRAPH_DIR
+        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
     }
 }
 
@@ -1087,10 +1086,9 @@ def _set_up_workspace(args):
         # TypeError when n_workers is None.
         n_workers = -1  # Synchronous mode.
 
-    taskgraph_cache_dir = os.path.join(
-        args['workspace_dir'], TASKGRAPH_CACHE_DIR_NAME)
     task_graph = taskgraph.TaskGraph(
-        taskgraph_cache_dir, n_workers, reporting_interval=5.0)
+        os.path.join(args['workspace_dir'], 'taskgraph_cache'),
+        n_workers, reporting_interval=5.0)
 
     suffix = utils.make_suffix_string(args, 'results_suffix')
     intermediate_dir = os.path.join(
@@ -1098,7 +1096,7 @@ def _set_up_workspace(args):
     output_dir = os.path.join(
         args['workspace_dir'], OUTPUT_DIR_NAME)
 
-    utils.make_directories([output_dir, intermediate_dir, taskgraph_cache_dir])
+    utils.make_directories([output_dir, intermediate_dir])
 
     return task_graph, n_workers, intermediate_dir, output_dir, suffix
 

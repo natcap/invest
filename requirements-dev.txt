@@ -10,7 +10,7 @@
 # scripts/convert-requirements-to-conda-yml.py as though it can only be found
 # on pip.
 
-Cython
+Cython<3.0.0
 virtualenv>=12.0.1
 pytest
 pytest-subtests

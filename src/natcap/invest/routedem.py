@@ -130,7 +130,7 @@ MODEL_SPEC = {
         },
     },
     "outputs": {
-        "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR,
+        "taskgraph_cache": spec_utils.TASKGRAPH_DIR,
         "filled.tif": spec_utils.FILLED_DEM,
         "flow_accumulation.tif": spec_utils.FLOW_ACCUMULATION,
         "flow_direction.tif": spec_utils.FLOW_DIRECTION,
@@ -364,21 +364,12 @@ def execute(args):
         ``None``
     """
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
-    task_cache_dir = os.path.join(args['workspace_dir'], '_taskgraph_working_dir')
-    utils.make_directories([args['workspace_dir'], task_cache_dir])
+    utils.make_directories([args['workspace_dir']])
 
     if ('calculate_flow_direction' in args and
             bool(args['calculate_flow_direction'])):
-        # All routing functions depend on this one task.
-        # Check the algorithm early so we can fail quickly, but only if we're
-        # doing some sort of hydological routing
         algorithm = args['algorithm'].upper()
-        try:
-            routing_funcs = _ROUTING_FUNCS[algorithm]
-        except KeyError:
-            raise RuntimeError(
-                'Invalid algorithm specified (%s). Must be one of %s' % (
-                    args['algorithm'], ', '.join(sorted(_ROUTING_FUNCS.keys()))))
+        routing_funcs = _ROUTING_FUNCS[algorithm]
 
     if 'dem_band_index' in args and args['dem_band_index'] not in (None, ''):
         band_index = int(args['dem_band_index'])
@@ -396,7 +387,8 @@ def execute(args):
         # TypeError when n_workers is None.
         n_workers = -1  # Synchronous mode.
 
-    graph = taskgraph.TaskGraph(task_cache_dir, n_workers=n_workers)
+    graph = taskgraph.TaskGraph(
+        os.path.join(args['workspace_dir'], 'taskgraph_cache'), n_workers=n_workers)
 
     # Calculate slope.  This is intentionally on the original DEM, not
     # on the pitfilled DEM.  If the user really wants the slop of the filled

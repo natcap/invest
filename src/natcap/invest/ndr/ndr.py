@@ -391,65 +391,60 @@ MODEL_SPEC = {
                         "type": "integer"
                     }}
                 },
-                "cache_dir": {
-                    "type": "directory",
-                    "contents": {
-                        "aligned_dem.tif": {
-                            "about": "Copy of the DEM clipped to the extent of the other inputs",
-                            "bands": {1: {"type": "number", "units": u.meter}}
-                        },
-                        "aligned_lulc.tif": {
-                            "about": (
-                                "Copy of the LULC clipped to the extent of the other inputs "
-                                "and reprojected to the DEM projection"),
-                            "bands": {1: {"type": "integer"}}
-                        },
-                        "aligned_runoff_proxy.tif": {
-                            "about": (
-                                "Copy of the runoff proxy clipped to the extent of the other inputs "
-                                "and reprojected to the DEM projection"),
-                            "bands": {1: {"type": "number", "units": u.none}}
-                        },
-                        "masked_dem.tif": {
-                            "about": "DEM input masked to exclude pixels outside the watershed",
-                            "bands": {1: {"type": "number", "units": u.meter}}
-                        },
-                        "masked_lulc.tif": {
-                            "about": "LULC input masked to exclude pixels outside the watershed",
-                            "bands": {1: {"type": "integer"}}
-                        },
-                        "masked_runoff_proxy.tif": {
-                            "about": "Runoff proxy input masked to exclude pixels outside the watershed",
-                            "bands": {1: {"type": "number", "units": u.none}}
-                        },
-                        "filled_dem.tif": spec_utils.FILLED_DEM,
-                        "slope.tif": spec_utils.SLOPE,
-                        "subsurface_export_n.pickle": {
-                            "about": "Pickled zonal statistics of nitrogen subsurface export"
-                        },
-                        "subsurface_load_n.pickle": {
-                            "about": "Pickled zonal statistics of nitrogen subsurface load"
-                        },
-                        "surface_export_n.pickle": {
-                            "about": "Pickled zonal statistics of nitrogen surface export"
-                        },
-                        "surface_export_p.pickle": {
-                            "about": "Pickled zonal statistics of phosphorus surface export"
-                        },
-                        "surface_load_n.pickle": {
-                            "about": "Pickled zonal statistics of nitrogen surface load"
-                        },
-                        "surface_load_p.pickle": {
-                            "about": "Pickled zonal statistics of phosphorus surface load"
-                        },
-                        "total_export_n.pickle": {
-                            "about": "Pickled zonal statistics of total nitrogen export"
-                        },
-                        "taskgraph.db": {}
-                    }
+                "aligned_dem.tif": {
+                    "about": "Copy of the DEM clipped to the extent of the other inputs",
+                    "bands": {1: {"type": "number", "units": u.meter}}
+                },
+                "aligned_lulc.tif": {
+                    "about": (
+                        "Copy of the LULC clipped to the extent of the other inputs "
+                        "and reprojected to the DEM projection"),
+                    "bands": {1: {"type": "integer"}}
+                },
+                "aligned_runoff_proxy.tif": {
+                    "about": (
+                        "Copy of the runoff proxy clipped to the extent of the other inputs "
+                        "and reprojected to the DEM projection"),
+                    "bands": {1: {"type": "number", "units": u.none}}
+                },
+                "masked_dem.tif": {
+                    "about": "DEM input masked to exclude pixels outside the watershed",
+                    "bands": {1: {"type": "number", "units": u.meter}}
+                },
+                "masked_lulc.tif": {
+                    "about": "LULC input masked to exclude pixels outside the watershed",
+                    "bands": {1: {"type": "integer"}}
+                },
+                "masked_runoff_proxy.tif": {
+                    "about": "Runoff proxy input masked to exclude pixels outside the watershed",
+                    "bands": {1: {"type": "number", "units": u.none}}
+                },
+                "filled_dem.tif": spec_utils.FILLED_DEM,
+                "slope.tif": spec_utils.SLOPE,
+                "subsurface_export_n.pickle": {
+                    "about": "Pickled zonal statistics of nitrogen subsurface export"
+                },
+                "subsurface_load_n.pickle": {
+                    "about": "Pickled zonal statistics of nitrogen subsurface load"
+                },
+                "surface_export_n.pickle": {
+                    "about": "Pickled zonal statistics of nitrogen surface export"
+                },
+                "surface_export_p.pickle": {
+                    "about": "Pickled zonal statistics of phosphorus surface export"
+                },
+                "surface_load_n.pickle": {
+                    "about": "Pickled zonal statistics of nitrogen surface load"
+                },
+                "surface_load_p.pickle": {
+                    "about": "Pickled zonal statistics of phosphorus surface load"
+                },
+                "total_export_n.pickle": {
+                    "about": "Pickled zonal statistics of total nitrogen export"
                 }
             }
-        }
+        },
+        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
     }
 }
 
@@ -493,9 +488,6 @@ _INTERMEDIATE_BASE_FILES = {
     'thresholded_slope_path': 'thresholded_slope.tif',
     'dist_to_channel_path': 'dist_to_channel.tif',
     'drainage_mask': 'what_drains_to_stream.tif',
-}
-
-_CACHE_BASE_FILES = {
     'filled_dem_path': 'filled_dem.tif',
     'aligned_dem_path': 'aligned_dem.tif',
     'masked_dem_path': 'masked_dem.tif',
@@ -570,65 +562,11 @@ def execute(args):
         None
 
     """
-    def _validate_inputs(nutrients_to_process, biophysical_df):
-        """Validate common errors in inputs.
-
-        Args:
-            nutrients_to_process (list): list of 'n' and/or 'p'
-            biophysical_df (pandas.DataFrame): dataframe representation of
-                the input biophysical table. Used to validate the correct
-                columns are input
-
-        Returns:
-            None
-
-        Raises:
-            ValueError whenever a missing field in the parameter table is
-            detected along with a message describing every missing field.
-
-        """
-        # Make sure all the nutrient inputs are good
-        if len(nutrients_to_process) == 0:
-            raise ValueError("Neither phosphorus nor nitrogen was selected"
-                             " to be processed.  Choose at least one.")
-
-        # Build up a list that'll let us iterate through all the input tables
-        # and check for the required rows, and report errors if something
-        # is missing.
-        row_header_table_list = []
-
-        lu_parameter_row = biophysical_df.columns.to_list()
-        row_header_table_list.append(
-            (lu_parameter_row, ['load_', 'eff_', 'crit_len_'],
-             args['biophysical_table_path']))
-
-        missing_headers = []
-        for row, header_prefixes, table_type in row_header_table_list:
-            for nutrient_id in nutrients_to_process:
-                for header_prefix in header_prefixes:
-                    header = header_prefix + nutrient_id
-                    if header not in row:
-                        missing_headers.append(
-                            "Missing header %s from %s" % (
-                                header, table_type))
-
-        # proportion_subsurface_n is a special case in which phosphorus does
-        # not have an equivalent.
-        if ('n' in nutrients_to_process and
-                'proportion_subsurface_n' not in lu_parameter_row):
-            missing_headers.append(
-                "Missing header proportion_subsurface_n from " +
-                args['biophysical_table_path'])
-
-        if len(missing_headers) > 0:
-            raise ValueError('\n'.join(missing_headers))
-
     # Load all the tables for preprocessing
     output_dir = os.path.join(args['workspace_dir'])
     intermediate_output_dir = os.path.join(
         args['workspace_dir'], INTERMEDIATE_DIR_NAME)
-    cache_dir = os.path.join(intermediate_output_dir, 'cache_dir')
-    utils.make_directories([output_dir, intermediate_output_dir, cache_dir])
+    utils.make_directories([output_dir, intermediate_output_dir])
 
     try:
         n_workers = int(args['n_workers'])
@@ -638,13 +576,13 @@ def execute(args):
         # TypeError when n_workers is None.
         n_workers = -1  # Synchronous mode.
     task_graph = taskgraph.TaskGraph(
-        cache_dir, n_workers, reporting_interval=5.0)
+        os.path.join(args['workspace_dir'], 'taskgraph_cache'),
+        n_workers, reporting_interval=5.0)
 
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
     f_reg = utils.build_file_registry(
         [(_OUTPUT_BASE_FILES, output_dir),
-         (_INTERMEDIATE_BASE_FILES, intermediate_output_dir),
-         (_CACHE_BASE_FILES, cache_dir)], file_suffix)
+         (_INTERMEDIATE_BASE_FILES, intermediate_output_dir)], file_suffix)
 
     # Build up a list of nutrients to process based on what's checked on
     nutrients_to_process = []
@@ -655,8 +593,6 @@ def execute(args):
     biophysical_df = utils.read_csv_to_dataframe(
         args['biophysical_table_path'],
         MODEL_SPEC['args']['biophysical_table_path'])
-
-    _validate_inputs(nutrients_to_process, biophysical_df)
 
     # these are used for aggregation in the last step
     field_pickle_map = {}
@@ -737,7 +673,7 @@ def execute(args):
         func=pygeoprocessing.routing.fill_pits,
         args=(
             (f_reg['masked_dem_path'], 1), f_reg['filled_dem_path']),
-        kwargs={'working_dir': cache_dir},
+        kwargs={'working_dir': intermediate_output_dir},
         dependent_task_list=[align_raster_task],
         target_path_list=[f_reg['filled_dem_path']],
         task_name='fill pits')
@@ -746,7 +682,7 @@ def execute(args):
         func=pygeoprocessing.routing.flow_dir_mfd,
         args=(
             (f_reg['filled_dem_path'], 1), f_reg['flow_direction_path']),
-        kwargs={'working_dir': cache_dir},
+        kwargs={'working_dir': intermediate_output_dir},
         dependent_task_list=[fill_pits_task],
         target_path_list=[f_reg['flow_direction_path']],
         task_name='flow dir')
@@ -1169,9 +1105,11 @@ def validate(args, limit_to=None):
     LOGGER.debug('Starting logging for biophysical table')
     if 'biophysical_table_path' not in invalid_keys:
         # Check required fields given the state of ``calc_n`` and ``calc_p``
-        nutrient_required_fields = []
+        nutrient_required_fields = ['lucode']
         nutrients_selected = set()
         for nutrient_letter in ('n', 'p'):
+            if nutrient_letter == 'n':
+                nutrient_required_fields += ['proportion_subsurface_n']
             do_nutrient_key = f'calc_{nutrient_letter}'
             if do_nutrient_key in args and args[do_nutrient_key]:
                 nutrients_selected.add(do_nutrient_key)
@@ -1180,20 +1118,16 @@ def validate(args, limit_to=None):
                     f'eff_{nutrient_letter}',
                     f'crit_len_{nutrient_letter}'
                 ]
-
         if not nutrients_selected:
             validation_warnings.append(
                 (['calc_n', 'calc_p'], MISSING_NUTRIENT_MSG))
 
-        LOGGER.debug('Required nutrient-specific keys in CSV: %s',
-                     nutrient_required_fields)
         # Check that these nutrient-specific keys are in the table
         # validate has already checked all the other keys
         error_msg = validation.check_csv(
             args['biophysical_table_path'],
-            header_patterns=nutrient_required_fields)
+            columns={key: '' for key in nutrient_required_fields})
         if error_msg:
-            LOGGER.debug('Error: %s', error_msg)
             validation_warnings.append(
                 (['biophysical_table_path'], error_msg))
 
@@ -1230,11 +1164,12 @@ def _normalize_raster(base_raster_path_band, target_normalized_raster_path):
     value_mean = value_sum
     if value_count > 0.0:
         value_mean /= value_count
+    target_nodata = float(numpy.finfo(numpy.float32).min)
 
     def _normalize_raster_op(array):
         """Divide values by mean."""
         result = numpy.empty(array.shape, dtype=numpy.float32)
-        result[:] = numpy.float32(base_nodata)
+        result[:] = target_nodata
 
         valid_mask = slice(None)
         if base_nodata is not None:
@@ -1244,11 +1179,6 @@ def _normalize_raster(base_raster_path_band, target_normalized_raster_path):
             result[valid_mask] /= value_mean
         return result
 
-    # It's possible for base_nodata to extend outside what can be represented
-    # in a float32, yet GDAL expects a python float.  Casting to numpy.float32
-    # and back to a python float allows for the nodata value to reflect the
-    # actual nodata pixel values.
-    target_nodata = float(numpy.float32(base_nodata))
     pygeoprocessing.raster_calculator(
         [base_raster_path_band], _normalize_raster_op,
         target_normalized_raster_path, gdal.GDT_Float32,

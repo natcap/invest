@@ -1,20 +1,19 @@
 """InVEST Crop Production Percentile Model."""
 import collections
-import os
 import logging
+import os
 
 import numpy
-from osgeo import gdal
-from osgeo import osr
 import pygeoprocessing
 import taskgraph
+from osgeo import gdal
+from osgeo import osr
 
-from .unit_registry import u
+from . import gettext
 from . import spec_utils
 from . import utils
 from . import validation
-from . import gettext
-
+from .unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
 
@@ -328,10 +327,10 @@ MODEL_SPEC = {
                     "bands": {1: {
                         "type": "number", "units": u.metric_ton/u.hectare
                     }}
-                },
-                "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
+                }
             }
-        }
+        },
+        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
     }
 }
 
@@ -492,8 +491,6 @@ def execute(args):
         output_dir, os.path.join(output_dir, _INTERMEDIATE_OUTPUT_DIR)])
 
     # Initialize a TaskGraph
-    work_token_dir = os.path.join(
-        output_dir, _INTERMEDIATE_OUTPUT_DIR, '_taskgraph_working_dir')
     try:
         n_workers = int(args['n_workers'])
     except (KeyError, ValueError, TypeError):
@@ -501,7 +498,8 @@ def execute(args):
         # ValueError when n_workers is an empty string.
         # TypeError when n_workers is None.
         n_workers = -1  # Single process mode.
-    task_graph = taskgraph.TaskGraph(work_token_dir, n_workers)
+    task_graph = taskgraph.TaskGraph(
+        os.path.join(output_dir, 'taskgraph_cache'), n_workers)
     dependent_task_list = []
 
     LOGGER.info(
@@ -543,7 +541,7 @@ def execute(args):
 
     landcover_raster_info = pygeoprocessing.get_raster_info(
         args['landcover_raster_path'])
-    pixel_area_ha = numpy.product([
+    pixel_area_ha = numpy.prod([
         abs(x) for x in landcover_raster_info['pixel_size']]) / 10000
     landcover_nodata = landcover_raster_info['nodata'][0]
     if landcover_nodata is None:

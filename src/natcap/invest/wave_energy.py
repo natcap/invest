@@ -620,10 +620,10 @@ MODEL_SPEC = {
                 "LandPts.txt": {
                     "created_if": "valuation_container",
                     "about": "This text file logs records of the landing point coordinates."
-                },
-                "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
+                }
             }
-        }
+        },
+        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
     }
 }
 
@@ -734,10 +734,6 @@ def execute(args):
 
     """
     LOGGER.info('Starting the Wave Energy Model.')
-    invalid_parameters = validate(args)
-    if invalid_parameters:
-        raise ValueError("Invalid parameters passed: %s" % invalid_parameters)
-
     # Create the Output and Intermediate directories if they do not exist.
     workspace = args['workspace_dir']
     output_dir = os.path.join(workspace, 'output')
@@ -745,8 +741,6 @@ def execute(args):
     utils.make_directories([intermediate_dir, output_dir])
 
     # Initialize a TaskGraph
-    taskgraph_working_dir = os.path.join(
-        intermediate_dir, '_taskgraph_working_dir')
     try:
         n_workers = int(args['n_workers'])
     except (KeyError, ValueError, TypeError):
@@ -754,7 +748,8 @@ def execute(args):
         # ValueError when n_workers is an empty string.
         # TypeError when n_workers is None.
         n_workers = -1  # single process mode.
-    task_graph = taskgraph.TaskGraph(taskgraph_working_dir, n_workers)
+    task_graph = taskgraph.TaskGraph(
+        os.path.join(args['workspace_dir'], 'taskgraph_cache'), n_workers)
 
     # Append a _ to the suffix if it's not empty and doesn't already have one
     file_suffix = utils.make_suffix_string(args, 'results_suffix')

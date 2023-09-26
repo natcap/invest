@@ -154,7 +154,7 @@ MODEL_SPEC = {
             "geometries": spec_utils.POINT,
             "fields": {}
         },
-        "_work_tokens": spec_utils.TASKGRAPH_DIR
+        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
     }
 }
 
@@ -238,8 +238,6 @@ def execute(args):
     file_registry = utils.build_file_registry(
         [(_OUTPUT_FILES, output_directory)], file_suffix)
 
-    work_token_dir = os.path.join(output_directory, '_work_tokens')
-
     # Manually setting n_workers to be -1 so that everything happens in the
     # same thread.
     try:
@@ -249,7 +247,8 @@ def execute(args):
         # ValueError when n_workers is an empty string.
         # TypeError when n_workers is None.
         n_workers = -1
-    graph = taskgraph.TaskGraph(work_token_dir, n_workers=n_workers)
+    graph = taskgraph.TaskGraph(
+        os.path.join(output_directory, '_work_tokens'), n_workers=n_workers)
 
     fill_pits_task = graph.add_task(
         pygeoprocessing.routing.fill_pits,

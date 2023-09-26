@@ -426,11 +426,6 @@ class ValidateModelSpecs(unittest.TestCase):
                     attrs.discard('rows')
                     attrs.discard('columns')
 
-                    # csv type may optionally have an 'excel_ok' attribute
-                    if 'excel_ok' in arg:
-                        self.assertIsInstance(arg['excel_ok'], bool)
-                        attrs.discard('excel_ok')
-
                 elif t == 'directory':
                     # directory type should have a contents property that maps each
                     # expected path name/pattern within the directory to a nested

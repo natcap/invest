@@ -76,7 +76,7 @@ predictor_table_columns = {
             "point_nearest_distance": {
                 "description": gettext(
                     "Predictor is a point vector. Metric is the Euclidean "
-                    "distance between the center of each AOI grid cell and "
+                    "distance between the centroid of each AOI grid cell and "
                     "the nearest point in this layer.")},
             "line_intersect_length": {
                 "description": gettext(
@@ -143,7 +143,7 @@ MODEL_SPEC = {
         },
         "start_year": {
             "type": "number",
-            "expression": "value >= 2005",
+            "expression": "2005 <= value <= 2017",
             "units": u.year_AD,
             "about": gettext(
                 "Year at which to start photo user-day calculations. "
@@ -154,7 +154,7 @@ MODEL_SPEC = {
         },
         "end_year": {
             "type": "number",
-            "expression": "value <= 2017",
+            "expression": "2005 <= value <= 2017",
             "units": u.year_AD,
             "about": gettext(
                 "Year at which to end photo user-day calculations. "
@@ -349,10 +349,10 @@ MODEL_SPEC = {
                 },
                 "server_version.pickle": {
                     "about": gettext("Server version info")
-                },
-                "_taskgraph_working_dir": spec_utils.TASKGRAPH_DIR
+                }
             }
-        }
+        },
+        "taskgraph_cache": spec_utils.TASKGRAPH_DIR
     }
 }
 
@@ -435,7 +435,7 @@ def execute(args):
                     * 'point_count': count of the points contained in the
                       response polygon
                     * 'point_nearest_distance': distance to the nearest point
-                      from the response polygon
+                      from the centroid of the response polygon
                     * 'line_intersect_length': length of lines that intersect
                       with the response polygon in projected units of AOI
                     * 'polygon_area': area of the polygon contained within
@@ -455,29 +455,10 @@ def execute(args):
         None
 
     """
-    if ('predictor_table_path' in args and
-            args['predictor_table_path'] != ''):
-        _validate_same_id_lengths(args['predictor_table_path'])
-        _validate_same_projection(
-            args['aoi_path'], args['predictor_table_path'])
-        _validate_predictor_types(args['predictor_table_path'])
-
-    if ('predictor_table_path' in args and
-            'scenario_predictor_table_path' in args and
-            args['predictor_table_path'] != '' and
-            args['scenario_predictor_table_path'] != ''):
-        _validate_same_ids_and_types(
-            args['predictor_table_path'],
-            args['scenario_predictor_table_path'])
-        _validate_same_projection(
-            args['aoi_path'], args['scenario_predictor_table_path'])
-        _validate_predictor_types(args['scenario_predictor_table_path'])
-
     if int(args['end_year']) < int(args['start_year']):
         raise ValueError(
             "Start year must be less than or equal to end year.\n"
             f"start_year: {args['start_year']}\nend_year: {args['end_year']}")
-
     # in case the user defines a hostname
     if 'hostname' in args:
         server_url = f"PYRO:natcap.invest.recreation@{args['hostname']}:{args['port']}"
@@ -497,7 +478,6 @@ def execute(args):
          (_INTERMEDIATE_BASE_FILES, intermediate_dir)], file_suffix)
 
     # Initialize a TaskGraph
-    taskgraph_db_dir = os.path.join(intermediate_dir, '_taskgraph_working_dir')
     try:
         n_workers = int(args['n_workers'])
     except (KeyError, ValueError, TypeError):
@@ -505,7 +485,8 @@ def execute(args):
         # ValueError when n_workers is an empty string.
         # TypeError when n_workers is None.
         n_workers = -1  # single process mode.
-    task_graph = taskgraph.TaskGraph(taskgraph_db_dir, n_workers)
+    task_graph = taskgraph.TaskGraph(
+        os.path.join(output_dir, 'taskgraph_cache'), n_workers)
 
     if args['grid_aoi']:
         prep_aoi_task = task_graph.add_task(
@@ -678,7 +659,8 @@ def _retrieve_photo_user_days(
                 aoizip.write(filename, os.path.basename(filename))
 
     # convert shapefile to binary string for serialization
-    zip_file_binary = open(compressed_aoi_path, 'rb').read()
+    with open(compressed_aoi_path, 'rb') as aoifile:
+        zip_file_binary = aoifile.read()
 
     # transfer zipped file to server
     start_time = time.time()
@@ -692,8 +674,8 @@ def _retrieve_photo_user_days(
                 f'workspace_id: {workspace_id}')
 
     # unpack result
-    open(compressed_pud_path, 'wb').write(
-        result_zip_file_binary)
+    with open(compressed_pud_path, 'wb') as pud_file:
+        pud_file.write(result_zip_file_binary)
     temporary_output_dir = tempfile.mkdtemp(dir=output_dir)
     zipfile.ZipFile(compressed_pud_path, 'r').extractall(
         temporary_output_dir)
@@ -1188,7 +1170,7 @@ def _line_intersect_length(
 def _point_nearest_distance(
         response_polygons_pickle_path, point_vector_path,
         predictor_target_path):
-    """Calculate distance to nearest point for all polygons.
+    """Calculate distance to nearest point for the centroid of all polygons.
 
     Args:
         response_polygons_pickle_path (str): path to a pickled dictionary which
@@ -1218,7 +1200,7 @@ def _point_nearest_distance(
                 f"{(100*index)/len(response_polygons_lookup):.2f}% complete"))
 
         point_distance_lookup[str(feature_id)] = min([
-            geometry.distance(point) for point in points])
+            geometry.centroid.distance(point) for point in points])
     LOGGER.info(f"{os.path.basename(point_vector_path)} point distance: "
                 "100.00% complete")
     with open(predictor_target_path, 'w') as jsonfile:
@@ -1562,9 +1544,8 @@ def _validate_same_id_lengths(table_path):
         table_path (string):  path to a csv table that has at least
             the field 'id'
 
-    Raises:
-        ValueError if any of the fields in 'id' and 'type' don't match between
-        tables.
+    Return:
+        string message if IDs are too long
 
     """
     predictor_df = utils.read_csv_to_dataframe(
@@ -1574,9 +1555,8 @@ def _validate_same_id_lengths(table_path):
         if len(p_id) > 10:
             too_long.add(p_id)
     if len(too_long) > 0:
-        raise ValueError(
-            "The following IDs are more than 10 characters long: "
-            f"{str(too_long)}")
+        return (
+            f'The following IDs are more than 10 characters long: {too_long}')
 
 
 def _validate_same_ids_and_types(
@@ -1594,12 +1574,8 @@ def _validate_same_ids_and_types(
             at least the fields 'id' and 'type'
 
     Returns:
-        None
-
-    Raises:
-        ValueError if any of the fields in 'id' and 'type' don't match between
-        tables.
-
+        string message if any of the fields in 'id' and 'type' don't match
+        between tables.
     """
     predictor_df = utils.read_csv_to_dataframe(
         predictor_table_path, MODEL_SPEC['args']['predictor_table_path'])
@@ -1613,10 +1589,8 @@ def _validate_same_ids_and_types(
     scenario_predictor_pairs = set([
         (p_id, row['type']) for p_id, row in scenario_predictor_df.iterrows()])
     if predictor_pairs != scenario_predictor_pairs:
-        raise ValueError('table pairs unequal.\n\t'
-                         f'predictor: {predictor_pairs}\n\t'
-                         f'scenario:{scenario_predictor_pairs}')
-    LOGGER.info('tables validate correctly')
+        return (f'table pairs unequal. predictor: {predictor_pairs} '
+                f'scenario: {scenario_predictor_pairs}')
 
 
 def _validate_same_projection(base_vector_path, table_path):
@@ -1628,12 +1602,8 @@ def _validate_same_projection(base_vector_path, table_path):
             the field 'path'
 
     Returns:
-        None
-
-    Raises:
-        ValueError if the projections in each of the GIS types in the table
+        string message if the projections in each of the GIS types in the table
             are not identical to the projection in base_vector_path
-
     """
     # This will load the table as a list of paths which we can iterate through
     # without bothering the rest of the table structure
@@ -1664,21 +1634,17 @@ def _validate_same_projection(base_vector_path, table_path):
         else:
             vector = gdal.OpenEx(path, gdal.OF_VECTOR)
             if vector is None:
-                raise ValueError(f"{path} did not load")
+                return f"{path} did not load"
             layer = vector.GetLayer()
             ref = osr.SpatialReference(layer.GetSpatialRef().ExportToWkt())
             layer = None
             vector = None
         if not base_ref.IsSame(ref):
-            LOGGER.warning(
-                f"{path} might have a different projection than the base AOI\n"
-                f"base:{base_ref.ExportToPrettyWkt()}\n"
-                f"current:{ref.ExportToPrettyWkt()}")
             invalid_projections = True
     if invalid_projections:
-        raise ValueError(
-            "One or more of the projections in the table did not match the "
-            "projection of the base vector")
+        return (
+            f"One or more of the projections in the table ({path}) did not "
+            f"match the projection of the base vector ({base_vector_path})")
 
 
 def _validate_predictor_types(table_path):
@@ -1689,11 +1655,8 @@ def _validate_predictor_types(table_path):
             the field 'type'
 
     Returns:
-        None
-
-    Raises:
-        ValueError if any value in the ``type`` column does not match a valid
-        type, ignoring leading/trailing whitespace.
+        string message if any value in the ``type`` column does not match a
+        valid type, ignoring leading/trailing whitespace.
     """
     df = utils.read_csv_to_dataframe(
         table_path, MODEL_SPEC['args']['predictor_table_path'])
@@ -1704,8 +1667,8 @@ def _validate_predictor_types(table_path):
                        'polygon_area_coverage', 'polygon_percent_coverage'})
     difference = set(df['type']).difference(valid_types)
     if difference:
-        raise ValueError('The table contains invalid type value(s): '
-                         f'{difference}. The allowed types are: {valid_types}')
+        return (f'The table contains invalid type value(s): {difference}. '
+                f'The allowed types are: {valid_types}')
 
 
 def delay_op(last_time, time_delay, func):
@@ -1748,4 +1711,39 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
-    return validation.validate(args, MODEL_SPEC['args'])
+    validation_messages = validation.validate(args, MODEL_SPEC['args'])
+    sufficient_valid_keys = (validation.get_sufficient_keys(args) -
+                             validation.get_invalid_keys(validation_messages))
+
+    validation_tuples = []
+    if 'predictor_table_path' in sufficient_valid_keys:
+        validation_tuples += [
+            (_validate_same_id_lengths, ['predictor_table_path']),
+            (_validate_predictor_types, ['predictor_table_path'])]
+        if 'aoi_path' in sufficient_valid_keys:
+            validation_tuples.append(
+                (_validate_same_projection, ['aoi_path', 'predictor_table_path']))
+        if 'scenario_predictor_table_path' in sufficient_valid_keys:
+            validation_tuples.append((
+                _validate_same_ids_and_types,
+                ['predictor_table_path', 'scenario_predictor_table_path']))
+    if 'scenario_predictor_table_path' in sufficient_valid_keys:
+        validation_tuples.append((
+            _validate_predictor_types, ['scenario_predictor_table_path']))
+        if 'aoi_path' in sufficient_valid_keys:
+            validation_tuples.append((_validate_same_projection,
+                ['aoi_path', 'scenario_predictor_table_path']))
+
+
+    for validate_func, key_list in validation_tuples:
+        msg = validate_func(*[args[key] for key in key_list])
+        if msg:
+            validation_messages.append((key_list, msg))
+
+    if 'start_year' in sufficient_valid_keys and 'end_year' in sufficient_valid_keys:
+        if int(args['end_year']) < int(args['start_year']):
+            validation_messages.append((
+                ['start_year', 'end_year'],
+                "Start year must be less than or equal to end year."))
+
+    return validation_messages

@@ -35,24 +35,18 @@
 
 .. :changelog:
 
-3.14.0 (YYYY-MM-DD)
--------------------
-* SDR
-    * We implemented two major functional changes to the InVEST LS Factor
-      that significantly affect most outputs of SDR and will bring the LS
-      factor output more in line with the outputs of SAGA-GIS's LS Factor.
-      A discussion of differences between these two implementations can be
-      viewed at https://github.com/natcap/invest/tree/main/doc/decision-records/ADR-0001-Update-SDR-LS-Factor.md.
-      The two specific changes implemented are:
-
-        * The LS Factor's on-pixel aspect length is now calculated as
-          ``abs(sin(slope)) + abs(cos(slope))``.
-        * The LS Factor's upstream contributing area is now calculated as
-          an estimate for the specific catchment area, calculated by
-          ``sqrt(n_pixels_upstream * pixel_area)``.
-
 Unreleased Changes
 ------------------
+* General
+    * In advance of the numpy 2.0 release, function calls to ``numpy.product``
+      have been replaced with ``numpy.prod``.
+      https://github.com/natcap/invest/issues/1410
+* SDR
+    * RKLS, USLE, avoided erosion, and avoided export rasters will now have
+      nodata in streams (`#1415 <https://github.com/natcap/invest/issues/1415>`_)
+
+3.14.0 (2023-09-08)
+-------------------
 * General
     * Fixed a bug in the CLI where ``invest getspec --json`` failed on
       non-json-serializable objects such as ``pint.Unit``.
@@ -70,8 +64,17 @@ Unreleased Changes
       has been merged into ``utils.read_csv_to_dataframe``
       (`#1319 <https://github.com/natcap/invest/issues/1319>`_),
       (`#1327 <https://github.com/natcap/invest/issues/1327>`_)
+    * Standardized on keeping the ``execute`` and ``validate`` functions
+      orthogonal. Now no models call ``validate`` from ``execute``. This
+      affected AWY, CV, UFRM, Wave Energy, and Wind Energy.
+      (`#1373 <https://github.com/natcap/invest/issues/1373>`_)
     * Improved the validation message that is returned when not all spatial
       inputs overlap (`#502 <https://github.com/natcap/invest/issues/502>`_)
+    * Standardized the name and location of the taskgraph cache directory for
+      all models. It is now called ``taskgraph_cache`` and located in the top
+      level of the workspace directory.
+      (`#1230 <https://github.com/natcap/invest/issues/1230>`_)
+    * InVEST is now distributed under the Apache 2.0 License.
 * Workbench
     * Fixed a bug where sampledata downloads failed silently (and progress bar
       became innacurate) if the Workbench did not have write permission to
@@ -89,6 +92,12 @@ Unreleased Changes
     * Middle clicking an InVEST model tab was opening a blank window. Now
       middle clicking will close that tab as expected.
       (`#1261 <https://github.com/natcap/invest/issues/1261>`_)
+    * Updated InVEST logo to use new version with registered trademark symbol.
+      (`InVEST TM and Logo Use Policy
+      <https://naturalcapitalproject.stanford.edu/invest-trademark-and-logo-use-policy>`_)
+    * InVEST is licensed using a permissive open source license. But we have
+      decided to add back the license and agreement step to the installer to
+      be upfront and explicit about how InVEST is licensed.
 * Coastal Blue Carbon
     * Added validation for the transition table, raising a validation error if
       unexpected values are encountered.
@@ -100,8 +109,16 @@ Unreleased Changes
       consequence criteria were skipped for a single habitat. The model now
       correctly handles this case. https://github.com/natcap/invest/issues/1250
     * Tables in the .xls format are no longer supported. This format was
-      deprecated by ``pandas``. (`#1271 <https://github.com/natcap/invest/issues/1271>`_)
+      deprecated by ``pandas``.
+      (`#1271 <https://github.com/natcap/invest/issues/1271>`_)
+    * Fixed a bug where vector inputs could be rasterized onto a grid that is
+      not exactly aligned with other raster inputs.
+      (`#1312 <https://github.com/natcap/invest/issues/1312>`_)
+    * Dropped support for Excel (.xlsx) files
+      (`#1391 <https://github.com/natcap/invest/issues/1391>`_)
 * NDR
+    * The contents of the output ``cache_dir`` have been consolidated into
+      ``intermediate_outputs``.
     * Fixed a bug where results were calculated incorrectly if the runoff proxy
       raster (or the DEM or LULC) had no nodata value
       (`#1005 <https://github.com/natcap/invest/issues/1005>`_)
@@ -130,6 +147,20 @@ Unreleased Changes
     * Fixed an issue with sediment deposition progress logging that was
       causing the "percent complete" indicator to not progress linearly.
       https://github.com/natcap/invest/issues/1262
+    * The contents of the output ``churn_dir_not_for_humans`` have been
+      consolidated into ``intermediate_outputs``.
+    * We implemented two major functional changes to the InVEST LS Factor
+      that significantly affect most outputs of SDR and will bring the LS
+      factor output more in line with the outputs of SAGA-GIS's LS Factor.
+      A discussion of differences between these two implementations can be
+      viewed at https://github.com/natcap/invest/tree/main/doc/decision-records/ADR-0001-Update-SDR-LS-Factor.md.
+      The two specific changes implemented are:
+
+        * The LS Factor's on-pixel aspect length is now calculated as
+          ``abs(sin(slope)) + abs(cos(slope))``.
+        * The LS Factor's upstream contributing area is now calculated as
+          an estimate for the specific catchment area, calculated by
+          ``sqrt(n_pixels_upstream * pixel_area)``.
 * Seasonal Water Yield
     * Fixed a bug where monthy quickflow nodata pixels were not being passed
       on to the total quickflow raster, which could result in negative values
@@ -149,10 +180,14 @@ Unreleased Changes
       where s_i / a_im > 100. This is done to avoid overflow errors when
       calculating edge cases where the result would round down to 0 anyway.
       (`#1318 <https://github.com/natcap/invest/issues/1318>`_)
+    * The contents of the output ``cache_dir`` have been consolidated into
+      ``intermediate_outputs``.
 * Urban Flood Risk
     * Fixed a bug where the model incorrectly raised an error if the
       biophysical table contained a row of all 0s.
       (`#1123 <https://github.com/natcap/invest/issues/1123>`_)
+    * The contents of the output ``temp_working_dir_not_for_humans`` have been
+      consolidated into ``intermediate_files``.
     * Biophysical table Workbench validation now warns if there is a missing
       curve number value.
       (`#1346 <https://github.com/natcap/invest/issues/1346>`_)
@@ -182,10 +217,27 @@ Unreleased Changes
         * When defining search radii for population groups, one new output
           raster is created for each population group.  These files are named
           ``accessible_urban_nature_to_[POP_GROUP].tif``.
+
+    * Urban nature classes can now be defined to occupy a proportion of a
+      pixel, such as a park that is semi-developed. This proportion is
+      provided through user input as a proportion (0-1) in the
+      ``urban_nature`` column of the LULC Attribute Table.  A value of ``0``
+      indicates that there is no urban nature in this class, ``0.333``
+      indicates that a third of the area of this LULC class is urban nature,
+      and ``1`` would indicate that the entire LULC class's area is urban
+      nature.  https://github.com/natcap/invest/issues/1180
+    * Fixed an issue where, under certain circumstances, the model would raise
+      a cryptic ``TypeError`` when creating the summary vector.
+      https://github.com/natcap/invest/issues/1350
 * Visitation: Recreation and Tourism
     * Fixed a bug where overlapping predictor polygons would be double-counted
-      in ``polygon_area_coverage`` and ``polygon_percent_coverage`` calculations.
-      (`#1310 <https://github.com/natcap/invest/issues/1310>`_)
+      in ``polygon_area_coverage`` and ``polygon_percent_coverage``
+      calculations. (`#1310 <https://github.com/natcap/invest/issues/1310>`_)
+    * Changed the calculation of ``point_nearest_distance`` metric to match
+      the description in the User's Guide. Values are now the distance to the
+      centroid of the AOI polygon instead of the distance to the nearest
+      edge of the AOI polygon.
+      (`#1347 <https://github.com/natcap/invest/issues/1347>`_)
 * Wind Energy
     * Updated a misleading error message that is raised when the AOI does
       not spatially overlap another input.

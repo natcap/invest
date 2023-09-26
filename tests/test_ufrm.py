@@ -297,13 +297,6 @@ class UFRMTests(unittest.TestCase):
         self.assertEqual(len(aoi_damage_dict), 1)
         numpy.testing.assert_allclose(aoi_damage_dict[0], 5645.787282992962)
 
-    def test_ufrm_invalid_validation(self):
-        """UFRM: assert validation error on bad args."""
-        from natcap.invest import urban_flood_risk_mitigation
-
-        with self.assertRaises(ValueError):
-            urban_flood_risk_mitigation.execute({})
-
     def test_validate(self):
         """UFRM: test validate function."""
         from natcap.invest import urban_flood_risk_mitigation
