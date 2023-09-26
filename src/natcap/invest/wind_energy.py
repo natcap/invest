@@ -7,7 +7,6 @@ import shutil
 import tempfile
 
 import numpy
-import pandas
 from scipy import integrate
 
 import shapely.wkb
@@ -764,7 +763,16 @@ def execute(args):
 
     # Read the wind energy data into a dictionary
     LOGGER.info('Reading in Wind Data into a dictionary')
-    wind_data = _read_csv_wind_data(args['wind_data_path'], hub_height)
+    wind_point_df = validation.get_validated_dataframe(
+        args['wind_data_path'], **MODEL_SPEC['args']['wind_data_path'])
+    wind_point_df.columns = wind_point_df.columns.str.upper()
+    # Calculate scale value at new hub height given reference values.
+    # See equation 3 in users guide
+    wind_point_df.rename(columns={'LAM': 'REF_LAM'}, inplace=True)
+    wind_point_df['LAM'] = wind_point_df.apply(
+        lambda row: row.REF_LAM * (hub_height / row.REF)**_ALPHA, axis=1)
+    wind_point_df.drop(['REF'], axis=1)  # REF is not needed after calculation
+    wind_data = wind_point_df.to_dict('index')  # so keys will be 0, 1, 2, ...
 
     # Compute Wind Density and Harvested Wind Energy, adding the values to the
     # points to the dictionary, and pickle the dictionary
@@ -1901,35 +1909,6 @@ def _create_distance_raster(base_raster_path, base_vector_path,
     LOGGER.info("Finished _create_distance_raster")
 
 
-def _read_csv_wind_data(wind_data_path, hub_height):
-    """Unpack the csv wind data into a dictionary.
-
-    Args:
-        wind_data_path (str): a path for the csv wind data file with header
-            of: "LONG","LATI","LAM","K","REF"
-        hub_height (int): the hub height to use for calculating Weibull
-            parameters and wind energy values
-
-    Returns:
-        A dictionary where the keys are lat/long tuples which point
-            to dictionaries that hold wind data at that location.
-
-    """
-    wind_point_df = validation.get_validated_dataframe(
-        wind_data_path, **MODEL_SPEC['args']['wind_data_path'])
-    wind_point_df.columns = wind_point_df.columns.str.upper()
-
-    # Calculate scale value at new hub height given reference values.
-    # See equation 3 in users guide
-    wind_point_df.rename(columns={'LAM': 'REF_LAM'}, inplace=True)
-    wind_point_df['LAM'] = wind_point_df.apply(
-        lambda row: row.REF_LAM * (hub_height / row.REF)**_ALPHA, axis=1)
-    wind_point_df.drop(['REF'], axis=1)  # REF is not needed after calculation
-    wind_dict = wind_point_df.to_dict('index')  # so keys will be 0, 1, 2, ...
-
-    return wind_dict
-
-
 def _compute_density_harvested_fields(
         wind_dict, parameters_dict, number_of_turbines,
         target_pickle_path):
@@ -2727,7 +2706,8 @@ def validate(args, limit_to=None):
 
     if ('wind_schedule' in valid_sufficient_keys and
             'global_wind_parameters_path' in valid_sufficient_keys):
-        year_count = pandas.read_csv(args['wind_schedule']).shape[0]
+        year_count = utils.read_csv_to_dataframe(
+            args['wind_schedule']).shape[0]
         time = validation.get_validated_dataframe(
             args['global_wind_parameters_path'],
             index_col='0',

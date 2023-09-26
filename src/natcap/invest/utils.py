@@ -648,10 +648,10 @@ def read_csv_to_dataframe(path, **kwargs):
                 **kwargs
             })
     except UnicodeDecodeError as error:
-        LOGGER.error(
+        raise ValueError(
             f'The file {path} must be encoded as UTF-8 or ASCII')
-        raise error
 
+    # drop columns whose header is NA
     df = df[[col for col in df.columns if not pandas.isna(col)]]
 
     # strip whitespace from column names and convert to lowercase
@@ -660,7 +660,7 @@ def read_csv_to_dataframe(path, **kwargs):
     df.columns = df.columns.astype(str).str.strip().str.lower()
 
     # drop any empty rows
-    df = df.dropna(how="all")
+    df = df.dropna(how="all").reset_index(drop=True)
 
     return df
 
