@@ -297,7 +297,6 @@ class NDRTests(unittest.TestCase):
 
         # use predefined directory so test can clean up files during teardown
         args = NDRTests.generate_base_args(self.workspace_dir)
-        print(args)
         # should not raise an exception
         validation_errors = ndr.validate(args)
         self.assertEqual(len(validation_errors), 0)
