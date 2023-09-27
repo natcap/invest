@@ -44,6 +44,9 @@ Unreleased Changes
 * SDR
     * RKLS, USLE, avoided erosion, and avoided export rasters will now have
       nodata in streams (`#1415 <https://github.com/natcap/invest/issues/1415>`_)
+* Wind Energy
+    * Fixed a bug where model would error when the grid points path was empty
+      (`#1417 <https://github.com/natcap/invest/issues/1417>`_)
 
 3.14.0 (2023-09-08)
 -------------------
