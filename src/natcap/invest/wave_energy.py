@@ -773,11 +773,10 @@ def execute(args):
         args['machine_param_path'],
         index_col='name',
         columns={
-            'name': {'type': 'freestyle_string'},
+            'name': {'type': 'option_string'},
             'value': {'type': 'number'}
         },
     )['value'].to_dict()
-    print(machine_param_dict)
 
     # Check if required column fields are entered in the land grid csv file
     if 'land_gridPts_path' in args:
@@ -800,7 +799,7 @@ def execute(args):
             args['machine_econ_path'],
             index_col='name',
             columns={
-                'name': {'type': 'freestyle_string'},
+                'name': {'type': 'option_string'},
                 'value': {'type': 'number'}
             }
         )['value'].to_dict()
