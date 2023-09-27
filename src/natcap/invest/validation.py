@@ -582,6 +582,9 @@ def get_validated_dataframe(csv_path, columns=None, rows=None, index_col=None,
     df = df[[col for col in df.columns if any(
         re.fullmatch(pattern, col) for pattern in patterns)]]
 
+    # drop any empty rows
+    df = df.dropna(how="all").reset_index(drop=True)
+
     available_cols = set(df.columns)
 
     for (col_name, col_spec), pattern in zip(spec.items(), patterns):

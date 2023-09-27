@@ -659,9 +659,6 @@ def read_csv_to_dataframe(path, **kwargs):
     # however, there's little reason to use this function if there's no header
     df.columns = df.columns.astype(str).str.strip().str.lower()
 
-    # drop any empty rows
-    df = df.dropna(how="all").reset_index(drop=True)
-
     return df
 
 

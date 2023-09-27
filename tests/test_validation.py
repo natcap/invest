@@ -1268,6 +1268,34 @@ class TestGetValidatedDataframe(unittest.TestCase):
         self.assertEqual(df['col2'][1], '2 1')
         self.assertEqual(df['col3'][1], '')
 
+    def test_nan_row(self):
+        """validation: test NaN row is dropped."""
+        from natcap.invest import validation
+        csv_text = ("lucode,desc,val1,val2\n"
+                    "1,corn,0.5,2\n"
+                    ",,,\n"
+                    "3,beans,0.5,4\n"
+                    "4,butter,9,1")
+        table_path = os.path.join(self.workspace_dir, 'table.csv')
+        with open(table_path, 'w') as table_file:
+            table_file.write(csv_text)
+
+        result = validation.get_validated_dataframe(
+            table_path,
+            index_col='lucode',
+            columns={
+                'desc': {'type': 'freestyle_string'},
+                'lucode': {'type': 'integer'},
+                'val1': {'type': 'number'},
+                'val2': {'type': 'number'}
+            }).to_dict(orient='index')
+        expected_result = {
+            1: {'desc': 'corn', 'val1': 0.5, 'val2': 2},
+            3: {'desc': 'beans', 'val1': 0.5, 'val2': 4},
+            4: {'desc': 'butter', 'val1': 9, 'val2': 1}}
+
+        self.assertDictEqual(result, expected_result)
+
     def test_rows(self):
         """validation: read csv with row headers instead of columns"""
         from natcap.invest import validation

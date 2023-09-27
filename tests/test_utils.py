@@ -724,26 +724,6 @@ class ReadCSVToDataframeTests(unittest.TestCase):
         self.assertEqual(df['header'][0], 'fЮЮ')
         self.assertEqual(df['header'][1], 'bar')
 
-    def test_nan_row(self):
-        """utils: test NaN row is dropped."""
-        from natcap.invest import utils
-        csv_text = ("lucode,desc,val1,val2\n"
-                    "1,corn,0.5,2\n"
-                    ",,,\n"
-                    "3,beans,0.5,4\n"
-                    "4,butter,9,1")
-        table_path = os.path.join(self.workspace_dir, 'table.csv')
-        with open(table_path, 'w') as table_file:
-            table_file.write(csv_text)
-
-        result = utils.read_csv_to_dataframe(table_path,).to_dict(orient='index')
-        expected_result = {
-            0: {'lucode': 1, 'desc': 'corn', 'val1': 0.5, 'val2': 2},
-            1: {'lucode': 3, 'desc': 'beans', 'val1': 0.5, 'val2': 4},
-            2: {'lucode': 4, 'desc': 'butter', 'val1': 9, 'val2': 1}}
-
-        self.assertDictEqual(result, expected_result)
-
     def test_csv_dialect_detection_semicolon_delimited(self):
         """utils: test that we can parse semicolon-delimited CSVs."""
         from natcap.invest import utils
