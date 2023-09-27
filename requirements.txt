@@ -15,7 +15,7 @@ Pyro4==4.77  # pip-only
 pandas>=1.2.1
 numpy>=1.11.0,!=1.16.0
 Rtree>=0.8.2,!=0.9.1
-shapely>=1.8.5
+shapely>=2.0.0
 scipy>=1.9.0
 pygeoprocessing==2.4.0  # pip-only
 taskgraph[niced_processes]>=0.11.0  # pip-only
