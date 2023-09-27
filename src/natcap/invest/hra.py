@@ -551,8 +551,7 @@ def execute(args):
                 f"  Missing from criteria table: {missing_from_criteria_table}"
             )
 
-    criteria_df = utils.read_csv_to_dataframe(
-        composite_criteria_table_path, index_col=False)
+    criteria_df = utils.read_csv_to_dataframe(composite_criteria_table_path)
     # Because criteria may be spatial, we need to prepare those spatial inputs
     # as well.
     spatial_criteria_attrs = {}
