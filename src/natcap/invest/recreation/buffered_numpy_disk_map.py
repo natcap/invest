@@ -146,6 +146,8 @@ class BufferedNumpyDiskMap(object):
             "SELECT (array_path) FROM array_table where array_id=? LIMIT 1",
             [array_id])
         array_path = db_cursor.fetchone()
+        db_connection.close()
+
         if array_path is not None:
             array_data = numpy.load(array_path[0])
         else:
