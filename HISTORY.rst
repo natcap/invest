@@ -41,6 +41,7 @@ Unreleased Changes
     * In advance of the numpy 2.0 release, function calls to ``numpy.product``
       have been replaced with ``numpy.prod``.
       https://github.com/natcap/invest/issues/1410
+    * Add support for python 3.11 (`#1103 <https://github.com/natcap/invest/issues/1103>`_)
 * SDR
     * RKLS, USLE, avoided erosion, and avoided export rasters will now have
       nodata in streams (`#1415 <https://github.com/natcap/invest/issues/1415>`_)
