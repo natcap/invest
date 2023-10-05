@@ -1127,7 +1127,7 @@ def execute(args):
         LOGGER.info('Valuation Not Selected. Model completed')
         return
 
-    if 'grid_points_path' in args:
+    if 'grid_points_path' in args and args['grid_points_path']:
         # Handle Grid Points
         LOGGER.info('Grid Points Provided. Reading in the grid points')
 

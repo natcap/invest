@@ -319,7 +319,8 @@ ArgInput.propTypes = {
     units: PropTypes.string, // for numbers only
   }).isRequired,
   userguide: PropTypes.string.isRequired,
-  value: PropTypes.oneOfType([PropTypes.string, PropTypes.bool]),
+  value: PropTypes.oneOfType(
+    [PropTypes.string, PropTypes.bool, PropTypes.number]),
   touched: PropTypes.bool,
   isValid: PropTypes.bool,
   validationMessage: PropTypes.string,
