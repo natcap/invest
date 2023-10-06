@@ -603,7 +603,6 @@ def execute(args):
         kwargs={'base_vector_path_list': [args['watersheds_path']]},
         target_path_list=aligned_raster_list,
         task_name='align rasters')
-    align_raster_task.join()
 
     mask_task = task_graph.add_task(
         func=_create_mask_raster,
@@ -1001,6 +1000,23 @@ def execute(args):
 
 def _create_mask_raster(source_raster_path, source_vector_path,
                         target_raster_path):
+    """Create a mask raster from a vector.
+
+    Masking like this is more tolerant of geometry errors than using gdalwarp's
+    cutline functionality, which fails on even simple geometry errors.
+
+    Args:
+        source_raster_path (str): The path to a source raster from which the
+            raster size, geotransform and spatial reference will be copied.
+        source_vector_path (str): The path to a vector on disk to be
+            rasterized onto a new raster matching the attributes of the raster
+            at ``source_raster_path``.
+        target_raster_path (str): The path to where the output raster should be
+            written.
+
+    Returns:
+        ``None``
+    """
     pygeoprocessing.new_raster_from_base(
         source_raster_path, target_raster_path, gdal.GDT_Byte, [255], [0])
     pygeoprocessing.rasterize(source_vector_path, target_raster_path, [1],
