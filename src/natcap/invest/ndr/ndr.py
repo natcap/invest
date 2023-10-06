@@ -602,6 +602,7 @@ def execute(args):
         kwargs={'base_vector_path_list': [args['watersheds_path']]},
         target_path_list=aligned_raster_list,
         task_name='align rasters')
+    align_raster_task.join()
 
     # Use the cutline feature of gdal.Warp to mask pixels outside the watershed
     # it's possible that the DEM, LULC, or runoff proxy inputs might have an
