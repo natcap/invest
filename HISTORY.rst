@@ -35,13 +35,20 @@
 
 .. :changelog:
 
-
 Unreleased Changes
 ------------------
+* General
+    * In advance of the numpy 2.0 release, function calls to ``numpy.product``
+      have been replaced with ``numpy.prod``.
+      https://github.com/natcap/invest/issues/1410
 * NDR
     * Fixing an issue where minor geometric issues in the watersheds input
       (such as a ring self-intersection) would raise an error in the model.
       https://github.com/natcap/invest/issues/1412
+* SDR
+    * RKLS, USLE, avoided erosion, and avoided export rasters will now have
+      nodata in streams (`#1415 <https://github.com/natcap/invest/issues/1415>`_)
+
 
 3.14.0 (2023-09-08)
 -------------------

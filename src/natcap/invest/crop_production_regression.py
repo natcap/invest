@@ -1,21 +1,20 @@
 """InVEST Crop Production Percentile Model."""
 import collections
-import os
 import logging
+import os
 
 import numpy
-from osgeo import gdal
-from osgeo import osr
 import pygeoprocessing
 import taskgraph
+from osgeo import gdal
+from osgeo import osr
 
-from .unit_registry import u
+from . import gettext
 from . import spec_utils
 from . import utils
 from . import validation
 from .model_metadata import MODEL_METADATA
-from . import gettext
-
+from .unit_registry import u
 
 LOGGER = logging.getLogger(__name__)
 
@@ -533,7 +532,7 @@ def execute(args):
 
     landcover_raster_info = pygeoprocessing.get_raster_info(
         args['landcover_raster_path'])
-    pixel_area_ha = numpy.product([
+    pixel_area_ha = numpy.prod([
         abs(x) for x in landcover_raster_info['pixel_size']]) / 10000
     landcover_nodata = landcover_raster_info['nodata'][0]
     if landcover_nodata is None:

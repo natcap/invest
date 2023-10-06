@@ -603,6 +603,7 @@ def execute(args):
         kwargs={'base_vector_path_list': [args['watersheds_path']]},
         target_path_list=aligned_raster_list,
         task_name='align rasters')
+    align_raster_task.join()
 
     mask_task = task_graph.add_task(
         func=_create_mask_raster,
