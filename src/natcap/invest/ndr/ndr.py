@@ -604,6 +604,9 @@ def execute(args):
         target_path_list=aligned_raster_list,
         task_name='align rasters')
 
+    # Since we mask multiple rasters using the same vector, we can just do the
+    # rasterization once.  Calling pygeoprocessing.mask_raster() multiple times
+    # unfortunately causes the rasterization to happen once per call.
     mask_task = task_graph.add_task(
         func=_create_mask_raster,
         kwargs={
@@ -1025,6 +1028,24 @@ def _create_mask_raster(source_raster_path, source_vector_path,
 
 def _mask_raster(source_raster_path, mask_raster_path,
                  target_masked_raster_path, default_nodata, target_dtype):
+    """Using a raster of 1s and 0s, determine which pixels remain in output.
+
+    Args:
+        source_raster_path (str): The path to a source raster that contains
+            pixel values, some of which will propagate through to the target
+            raster.
+        mask_raster_path (str): The path to a raster of 1s and 0s indicating
+            whether a pixel should (1) or should not (0) be copied to the
+            target raster.
+        target_masked_raster_path (str): The path to where the target raster
+            should be written.
+        default_nodata (int, float, None): The nodata value that should be used
+            if ``source_raster_path`` does not have a defined nodata value.
+        target_dtype (int): The ``gdal.GDT_*`` datatype of the target raster.
+
+    Returns:
+        ``None``
+    """
     source_raster_info = pygeoprocessing.get_raster_info(source_raster_path)
     source_nodata = source_raster_info['nodata'][0]
     nodata = source_nodata
