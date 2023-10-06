@@ -45,6 +45,9 @@ Unreleased Changes
     * Fixing an issue where minor geometric issues in the watersheds input
       (such as a ring self-intersection) would raise an error in the model.
       https://github.com/natcap/invest/issues/1412
+    * Fixed a task dependency issue where NDR would crash because of a race
+      condition when run with ``n_workers > 0``.
+      https://github.com/natcap/invest/issues/1426
 * SDR
     * RKLS, USLE, avoided erosion, and avoided export rasters will now have
       nodata in streams (`#1415 <https://github.com/natcap/invest/issues/1415>`_)
