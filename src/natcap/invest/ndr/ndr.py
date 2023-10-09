@@ -1052,10 +1052,9 @@ def _mask_raster(source_raster_path, mask_raster_path,
     if nodata is None:
         nodata = default_nodata
 
-    numpy_dtype = pygeoprocessing.choose_dtype(source_raster_path)
-
     def _mask_op(mask, raster):
-        result = numpy.full(mask.shape, nodata, dtype=numpy_dtype)
+        result = numpy.full(mask.shape, nodata,
+                            dtype=source_raster_info['numpy_type'])
         valid_pixels = (
             ~pygeoprocessing.array_equals_nodata(raster, nodata) &
             (mask == 1))
