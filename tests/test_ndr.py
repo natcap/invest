@@ -7,7 +7,10 @@ import unittest
 
 import numpy
 import pygeoprocessing
-from osgeo import gdal, ogr
+import shapely.geometry
+from osgeo import gdal
+from osgeo import ogr
+from osgeo import osr
 
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'ndr')
@@ -360,3 +363,48 @@ class NDRTests(unittest.TestCase):
             'subsurface_eff_n',
         ]
         self.assertEqual(set(invalid_args), set(expected_missing_args))
+
+    def test_masking_invalid_geometry(self):
+        """NDR test masking of invalid geometries.
+
+        For more context, see https://github.com/natcap/invest/issues/1412.
+        """
+        from natcap.invest.ndr import ndr
+
+        default_origin = (444720, 3751320)
+        default_pixel_size = (30, -30)
+        default_epsg = 3116
+        default_srs = osr.SpatialReference()
+        default_srs.ImportFromEPSG(default_epsg)
+
+        # bowtie geometry is invalid; verify we can still create a mask.
+        coordinates = []
+        for pixel_x_offset, pixel_y_offset in [
+                (0, 0), (0, 1), (1, 0), (1, 1), (0, 0)]:
+            coordinates.append((
+                default_origin[0] + default_pixel_size[0] * pixel_x_offset,
+                default_origin[1] + default_pixel_size[1] * pixel_y_offset
+            ))
+
+        source_vector_path = os.path.join(self.workspace_dir, 'vector.geojson')
+        pygeoprocessing.shapely_geometry_to_vector(
+            [shapely.geometry.Polygon(coordinates)], source_vector_path,
+            default_srs.ExportToWkt(), 'GeoJSON')
+
+        source_raster_path = os.path.join(self.workspace_dir, 'raster.tif')
+        vector_info = pygeoprocessing.get_vector_info(source_vector_path)
+        bbox_geom = shapely.geometry.box(*vector_info['bounding_box'])
+        bbox_geom.buffer(50)  # expand around the vector
+        pygeoprocessing.create_raster_from_bounding_box(
+            bbox_geom.bounds, source_raster_path,
+            default_pixel_size, gdal.GDT_Byte, default_srs.ExportToWkt(),
+            target_nodata=255)
+
+        target_raster_path = os.path.join(self.workspace_dir, 'target.tif')
+        ndr._create_mask_raster(source_raster_path, source_vector_path,
+                                target_raster_path)
+
+        expected_array = numpy.array([[1]])
+        numpy.testing.assert_array_equal(
+            expected_array,
+            pygeoprocessing.raster_to_numpy_array(target_raster_path))

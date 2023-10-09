@@ -442,6 +442,7 @@ _OUTPUT_BASE_FILES = {
 INTERMEDIATE_DIR_NAME = 'intermediate_outputs'
 
 _INTERMEDIATE_BASE_FILES = {
+    'mask_path': 'watersheds_mask.tif',
     'ic_factor_path': 'ic_factor.tif',
     'load_n_path': 'load_n.tif',
     'load_p_path': 'load_p.tif',
@@ -603,61 +604,66 @@ def execute(args):
         target_path_list=aligned_raster_list,
         task_name='align rasters')
 
-    # Use the cutline feature of gdal.Warp to mask pixels outside the watershed
-    # it's possible that the DEM, LULC, or runoff proxy inputs might have an
-    # undefined nodata value. since we're introducing nodata pixels, set a nodata
-    # value if one is not already defined.
-    rp_nodata = pygeoprocessing.get_raster_info(
-        f_reg['aligned_runoff_proxy_path'])['nodata'][0]
+    # Since we mask multiple rasters using the same vector, we can just do the
+    # rasterization once.  Calling pygeoprocessing.mask_raster() multiple times
+    # unfortunately causes the rasterization to happen once per call.
+    mask_task = task_graph.add_task(
+        func=_create_mask_raster,
+        kwargs={
+            'source_raster_path': f_reg['aligned_dem_path'],
+            'source_vector_path': args['watersheds_path'],
+            'target_raster_path': f_reg['mask_path']
+        },
+        target_path_list=[f_reg['mask_path']],
+        dependent_task_list=[align_raster_task],
+        task_name='create watersheds mask'
+    )
     mask_runoff_proxy_task = task_graph.add_task(
-        func=gdal.Warp,
+        func=_mask_raster,
         kwargs={
-            'destNameOrDestDS': f_reg['masked_runoff_proxy_path'],
-            'srcDSOrSrcDSTab': f_reg['aligned_runoff_proxy_path'],
-            'dstNodata': _TARGET_NODATA if rp_nodata is None else rp_nodata,
-            'cutlineDSName': args['watersheds_path']},
-        dependent_task_list=[align_raster_task],
+            'source_raster_path': f_reg['aligned_runoff_proxy_path'],
+            'mask_raster_path': f_reg['mask_path'],
+            'target_masked_raster_path': f_reg['masked_runoff_proxy_path'],
+            'target_dtype': gdal.GDT_Float32,
+            'default_nodata': _TARGET_NODATA,
+        },
+        dependent_task_list=[mask_task, align_raster_task],
         target_path_list=[f_reg['masked_runoff_proxy_path']],
-        task_name='mask runoff proxy raster')
-
-    dem_nodata = pygeoprocessing.get_raster_info(
-        f_reg['aligned_dem_path'])['nodata'][0]
-    dem_target_nodata = float(  # GDAL expects a python float, not numpy.float32
-        numpy.finfo(numpy.float32).min if dem_nodata is None else dem_nodata)
+        task_name='mask runoff proxy raster',
+    )
     mask_dem_task = task_graph.add_task(
-        func=gdal.Warp,
+        func=_mask_raster,
         kwargs={
-            'destNameOrDestDS': f_reg['masked_dem_path'],
-            'srcDSOrSrcDSTab': f_reg['aligned_dem_path'],
-            'outputType': gdal.GDT_Float32,
-            'dstNodata': dem_target_nodata,
-            'cutlineDSName': args['watersheds_path']},
-        dependent_task_list=[align_raster_task],
+            'source_raster_path': f_reg['aligned_dem_path'],
+            'mask_raster_path': f_reg['mask_path'],
+            'target_masked_raster_path': f_reg['masked_dem_path'],
+            'target_dtype': gdal.GDT_Float32,
+            'default_nodata': float(numpy.finfo(numpy.float32).min),
+        },
+        dependent_task_list=[mask_task, align_raster_task],
         target_path_list=[f_reg['masked_dem_path']],
-        task_name='mask dem raster')
-
-    lulc_nodata = pygeoprocessing.get_raster_info(
-        f_reg['aligned_lulc_path'])['nodata'][0]
-    lulc_target_nodata = (
-        numpy.iinfo(numpy.int32).min if lulc_nodata is None else lulc_nodata)
+        task_name='mask dem raster',
+    )
     mask_lulc_task = task_graph.add_task(
-        func=gdal.Warp,
+        func=_mask_raster,
         kwargs={
-            'destNameOrDestDS': f_reg['masked_lulc_path'],
-            'srcDSOrSrcDSTab': f_reg['aligned_lulc_path'],
-            'outputType': gdal.GDT_Int32,
-            'dstNodata': lulc_target_nodata,
-            'cutlineDSName': args['watersheds_path']},
-        dependent_task_list=[align_raster_task],
+            'source_raster_path': f_reg['aligned_lulc_path'],
+            'mask_raster_path': f_reg['mask_path'],
+            'target_masked_raster_path': f_reg['masked_lulc_path'],
+            'target_dtype': gdal.GDT_Int32,
+            'default_nodata': numpy.iinfo(numpy.int32).min,
+        },
+        dependent_task_list=[mask_task, align_raster_task],
         target_path_list=[f_reg['masked_lulc_path']],
-        task_name='mask lulc raster')
+        task_name='mask lulc raster',
+    )
 
     fill_pits_task = task_graph.add_task(
         func=pygeoprocessing.routing.fill_pits,
         args=(
             (f_reg['masked_dem_path'], 1), f_reg['filled_dem_path']),
         kwargs={'working_dir': intermediate_output_dir},
-        dependent_task_list=[align_raster_task],
+        dependent_task_list=[align_raster_task, mask_dem_task],
         target_path_list=[f_reg['filled_dem_path']],
         task_name='fill pits')
 
@@ -709,7 +715,7 @@ def execute(args):
         args=((f_reg['masked_runoff_proxy_path'], 1),
               f_reg['runoff_proxy_index_path']),
         target_path_list=[f_reg['runoff_proxy_index_path']],
-        dependent_task_list=[align_raster_task],
+        dependent_task_list=[align_raster_task, mask_runoff_proxy_task],
         task_name='runoff proxy mean')
 
     s_task = task_graph.add_task(
@@ -799,7 +805,7 @@ def execute(args):
                 f_reg['masked_lulc_path'],
                 biophysical_df[f'load_{nutrient}'],
                 load_path),
-            dependent_task_list=[align_raster_task],
+            dependent_task_list=[align_raster_task, mask_lulc_task],
             target_path_list=[load_path],
             task_name=f'{nutrient} load')
 
@@ -993,6 +999,71 @@ def execute(args):
     LOGGER.info(r' |_| \_|  |____/ u|_| \_\   ')
     LOGGER.info(r' ||   \\,-.|||_   //   \\_  ')
     LOGGER.info(r' (_")  (_/(__)_) (__)  (__) ')
+
+
+def _create_mask_raster(source_raster_path, source_vector_path,
+                        target_raster_path):
+    """Create a mask raster from a vector.
+
+    Masking like this is more tolerant of geometry errors than using gdalwarp's
+    cutline functionality, which fails on even simple geometry errors.
+
+    Args:
+        source_raster_path (str): The path to a source raster from which the
+            raster size, geotransform and spatial reference will be copied.
+        source_vector_path (str): The path to a vector on disk to be
+            rasterized onto a new raster matching the attributes of the raster
+            at ``source_raster_path``.
+        target_raster_path (str): The path to where the output raster should be
+            written.
+
+    Returns:
+        ``None``
+    """
+    pygeoprocessing.new_raster_from_base(
+        source_raster_path, target_raster_path, gdal.GDT_Byte, [255], [0])
+    pygeoprocessing.rasterize(source_vector_path, target_raster_path, [1],
+                              option_list=['ALL_TOUCHED=FALSE'])
+
+
+def _mask_raster(source_raster_path, mask_raster_path,
+                 target_masked_raster_path, default_nodata, target_dtype):
+    """Using a raster of 1s and 0s, determine which pixels remain in output.
+
+    Args:
+        source_raster_path (str): The path to a source raster that contains
+            pixel values, some of which will propagate through to the target
+            raster.
+        mask_raster_path (str): The path to a raster of 1s and 0s indicating
+            whether a pixel should (1) or should not (0) be copied to the
+            target raster.
+        target_masked_raster_path (str): The path to where the target raster
+            should be written.
+        default_nodata (int, float, None): The nodata value that should be used
+            if ``source_raster_path`` does not have a defined nodata value.
+        target_dtype (int): The ``gdal.GDT_*`` datatype of the target raster.
+
+    Returns:
+        ``None``
+    """
+    source_raster_info = pygeoprocessing.get_raster_info(source_raster_path)
+    source_nodata = source_raster_info['nodata'][0]
+    nodata = source_nodata
+    if nodata is None:
+        nodata = default_nodata
+
+    def _mask_op(mask, raster):
+        result = numpy.full(mask.shape, nodata,
+                            dtype=source_raster_info['numpy_type'])
+        valid_pixels = (
+            ~utils.array_equals_nodata(raster, nodata) &
+            (mask == 1))
+        result[valid_pixels] = raster[valid_pixels]
+        return result
+
+    pygeoprocessing.raster_calculator(
+        [(mask_raster_path, 1), (source_raster_path, 1)], _mask_op,
+        target_masked_raster_path, target_dtype, nodata)
 
 
 def _slope_proportion_and_threshold(slope_path, target_threshold_slope_path):
