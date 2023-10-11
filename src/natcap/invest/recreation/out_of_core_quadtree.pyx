@@ -304,6 +304,7 @@ class OutOfCoreQuadTree(object):
                             shapely_prepared_polygon.contains(shapely_point)):
                         result_deque.append(point)
                 return result_deque
+        # DF: here's where we dive into the tree:
         elif shapely_polygon.intersects(bounding_polygon):
             # combine results of children
             result_deque = collections.deque()
