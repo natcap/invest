@@ -278,7 +278,7 @@ class SetupTab extends React.Component {
     const { pyModuleName, switchTabs, t } = this.props;
     let datastack;
     try {
-      if (filepath.endsWith('tgz')) {
+      if (filepath.endsWith('gz')) {
         const extractLocation = await ipcRenderer.invoke(
           ipcMainChannels.SHOW_OPEN_DIALOG,
           {
