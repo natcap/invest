@@ -192,12 +192,16 @@ def get_datastack_info(filepath, extract_path=None):
     if tarfile.is_tarfile(filepath):
         if not extract_path:
             raise ValueError('extract_path must be provided if using archive')
+        extract_dir = os.path.join(
+            extract_path,
+            os.path.splitext(os.path.basename(filepath))[0])
+        if not os.path.exists(extract_dir):
+            os.mkdir(extract_dir)
         # If it's a tarfile, we need to extract the parameters file to be able
         # to inspect the parameters and model details.
-        with tarfile.open(filepath) as archive:
-            archive.extractall(extract_path)
-            return 'archive', extract_parameter_set(
-                os.path.join(extract_path, DATASTACK_PARAMETER_FILENAME))
+        extract_datastack_archive(filepath, extract_dir)
+        return 'archive', extract_parameter_set(
+            os.path.join(extract_dir, DATASTACK_PARAMETER_FILENAME))
 
     try:
         return 'json', extract_parameter_set(filepath)
