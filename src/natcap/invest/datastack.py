@@ -170,12 +170,14 @@ def format_args_dict(args_dict, model_name):
     return args_string
 
 
-def get_datastack_info(filepath):
+def get_datastack_info(filepath, extract_path=None):
     """Get information about a datastack.
 
     Args:
         filepath (string): The path to a file on disk that can be extracted as
             a datastack, parameter set, or logfile.
+        extract_path (str): Path to a directory to extract the datastack, if
+            provided as an archive.
 
     Returns:
         A 2-tuple.  The first item of the tuple is one of:
@@ -188,23 +190,14 @@ def get_datastack_info(filepath):
         parsed args, modelname and invest version that the file was built with.
     """
     if tarfile.is_tarfile(filepath):
+        if not extract_path:
+            raise ValueError('extract_path must be provided if using archive')
         # If it's a tarfile, we need to extract the parameters file to be able
         # to inspect the parameters and model details.
         with tarfile.open(filepath) as archive:
-            try:
-                temp_directory = tempfile.mkdtemp()
-                archive.extract('./' + DATASTACK_PARAMETER_FILENAME,
-                                temp_directory)
-                return 'archive', extract_parameter_set(
-                    os.path.join(temp_directory, DATASTACK_PARAMETER_FILENAME))
-            finally:
-                try:
-                    shutil.rmtree(temp_directory)
-                except OSError:
-                    # If something happens and we can't remove temp_directory,
-                    # just log the exception and continue with program
-                    # execution.
-                    LOGGER.exception('Could not remove %s', temp_directory)
+            archive.extractall(extract_path)
+            return 'archive', extract_parameter_set(
+                os.path.join(extract_path, DATASTACK_PARAMETER_FILENAME))
 
     try:
         return 'json', extract_parameter_set(filepath)

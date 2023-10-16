@@ -278,7 +278,24 @@ class SetupTab extends React.Component {
     const { pyModuleName, switchTabs, t } = this.props;
     let datastack;
     try {
-      datastack = await fetchDatastackFromFile(filepath);
+      if (filepath.endsWith('tgz')) {
+        const extractLocation = await ipcRenderer.invoke(
+          ipcMainChannels.SHOW_OPEN_DIALOG,
+          {
+            defaultPath: '~/Downloads',
+            properties: ['openDirectory'],
+          }
+        );
+        if (extractLocation.filePaths) {
+          datastack = await fetchDatastackFromFile({
+            filepath: filepath,
+            extractPath: extractLocation.filePaths[0]});
+        } else {
+          return;
+        }
+      } else {
+          datastack = await fetchDatastackFromFile({ filepath: filepath });
+      }
     } catch (error) {
       logger.error(error);
       alert( // eslint-disable-line no-alert
