@@ -42,6 +42,8 @@ Unreleased Changes
       have been replaced with ``numpy.prod``.
       https://github.com/natcap/invest/issues/1410
     * Add support for python 3.11 (`#1103 <https://github.com/natcap/invest/issues/1103>`_)
+    * Datastack archives will now be correctly extracted
+      (`#1308 <https://github.com/natcap/invest/issues/1308>`_)
 * SDR
     * RKLS, USLE, avoided erosion, and avoided export rasters will now have
       nodata in streams (`#1415 <https://github.com/natcap/invest/issues/1415>`_)
