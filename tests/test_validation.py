@@ -458,7 +458,7 @@ class VectorValidation(unittest.TestCase):
         from natcap.invest import validation
 
         filepath = os.path.join(self.workspace_dir, 'file.txt')
-        error_msg = validation.check_vector(filepath)
+        error_msg = validation.check_vector(filepath, geometries={'POINT'})
         self.assertEqual(error_msg, validation.MESSAGES['FILE_NOT_FOUND'])
 
     def test_invalid_vector(self):
@@ -469,7 +469,7 @@ class VectorValidation(unittest.TestCase):
         with open(filepath, 'w') as bad_vector:
             bad_vector.write('not a vector')
 
-        error_msg = validation.check_vector(filepath)
+        error_msg = validation.check_vector(filepath, geometries={'POINT'})
         self.assertEqual(error_msg, validation.MESSAGES['NOT_GDAL_VECTOR'])
 
     def test_missing_fieldnames(self):
@@ -481,7 +481,7 @@ class VectorValidation(unittest.TestCase):
         vector = driver.Create(filepath, 0, 0, 0, gdal.GDT_Unknown)
         wgs84_srs = osr.SpatialReference()
         wgs84_srs.ImportFromEPSG(4326)
-        layer = vector.CreateLayer('sample_layer', wgs84_srs, ogr.wkbUnknown)
+        layer = vector.CreateLayer('sample_layer', wgs84_srs, ogr.wkbPoint)
 
         for field_name, field_type in (('COL_A', ogr.OFTInteger),
                                        ('col_b', ogr.OFTString)):
@@ -497,7 +497,8 @@ class VectorValidation(unittest.TestCase):
         vector = None
 
         error_msg = validation.check_vector(
-            filepath, fields={'col_a': {}, 'col_b': {}, 'col_c': {}})
+            filepath, geometries={'POINT'},
+            fields={'col_a': {}, 'col_b': {}, 'col_c': {}})
         expected = validation.MESSAGES['MATCHED_NO_HEADERS'].format(
             header='field', header_name='col_c')
         self.assertEqual(error_msg, expected)
@@ -511,19 +512,39 @@ class VectorValidation(unittest.TestCase):
         vector = driver.Create(filepath, 0, 0, 0, gdal.GDT_Unknown)
         meters_srs = osr.SpatialReference()
         meters_srs.ImportFromEPSG(32731)
-        layer = vector.CreateLayer('sample_layer', meters_srs, ogr.wkbUnknown)
+        layer = vector.CreateLayer('sample_layer', meters_srs, ogr.wkbPoint)
 
         layer = None
         vector = None
 
         error_msg = validation.check_vector(
-            filepath, projected=True, projection_units=spec_utils.u.foot)
+            filepath, geometries={'POINT'}, projected=True,
+            projection_units=spec_utils.u.foot)
         expected_msg = validation.MESSAGES['WRONG_PROJECTION_UNIT'].format(
             unit_a='foot', unit_b='metre')
         self.assertEqual(error_msg, expected_msg)
 
         self.assertEqual(None, validation.check_vector(
-            filepath, projected=True, projection_units=spec_utils.u.meter))
+            filepath, geometries={'POINT'}, projected=True,
+            projection_units=spec_utils.u.meter))
+
+    def test_wrong_geom_type(self):
+        """Validation: checks that the vector's geometry type is correct."""
+        from natcap.invest import spec_utils, validation
+        driver = gdal.GetDriverByName('GPKG')
+        filepath = os.path.join(self.workspace_dir, 'vector.gpkg')
+        vector = driver.Create(filepath, 0, 0, 0, gdal.GDT_Unknown)
+        meters_srs = osr.SpatialReference()
+        meters_srs.ImportFromEPSG(32731)
+        layer = vector.CreateLayer('sample_layer', meters_srs, ogr.wkbPoint)
+        layer = None
+        vector = None
+        self.assertEqual(
+            validation.check_vector(filepath, geometries={'POLYGON', 'POINT'}),
+            None)
+        self.assertEqual(
+            validation.check_vector(filepath, geometries={'MULTIPOINT'}),
+            validation.MESSAGES['WRONG_GEOM_TYPE'].format(allowed={'MULTIPOINT'}))
 
 
 class FreestyleStringValidation(unittest.TestCase):
@@ -1172,7 +1193,8 @@ class TestValidationFromSpec(unittest.TestCase):
                 'name': 'vector 1',
                 'about': 'vector 1',
                 'required': True,
-                'fields': {}
+                'fields': {},
+                'geometries': {'POINT'}
             }
         }
 
@@ -1287,6 +1309,7 @@ class TestValidationFromSpec(unittest.TestCase):
                 'name': 'vector 1',
                 'about': 'vector 1',
                 'required': False,
+                'geometries': {'POINT'}
             }
         }
 

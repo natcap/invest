@@ -17,6 +17,7 @@ import pint
 import pygeoprocessing
 from osgeo import gdal
 from osgeo import osr
+from osgeo import ogr
 
 from . import gettext
 from . import spec_utils
@@ -58,6 +59,7 @@ MESSAGES = {
     'BBOX_NOT_INTERSECT': gettext('Not all of the spatial layers overlap each '
         'other. All bounding boxes must intersect: {bboxes}'),
     'NEED_PERMISSION': gettext('You must have {permission} access to this file'),
+    'WRONG_GEOM_TYPE': gettext('Geometry type must be one of {allowed}')
 }
 
 
@@ -335,8 +337,8 @@ def load_fields_from_vector(filepath, layer_id=0):
     return fieldnames
 
 
-def check_vector(filepath, fields=None, projected=False, projection_units=None,
-                 **kwargs):
+def check_vector(filepath, geometries, fields=None, projected=False,
+                 projection_units=None, **kwargs):
     """Validate a GDAL vector on disk.
 
     Note:
@@ -366,11 +368,30 @@ def check_vector(filepath, fields=None, projected=False, projection_units=None,
     gdal_dataset = gdal.OpenEx(filepath, gdal.OF_VECTOR)
     gdal.PopErrorHandler()
 
+    geom_map = {
+        'POINT': [ogr.wkbPoint, ogr.wkbPointM, ogr.wkbPointZM, ogr.wkbPoint25D],
+        'LINESTRING': [ogr.wkbLineString, ogr.wkbLineStringM,
+                       ogr.wkbLineStringZM, ogr.wkbLineString25D],
+        'POLYGON': [ogr.wkbPolygon, ogr.wkbPolygonM,
+                    ogr.wkbPolygonZM, ogr.wkbPolygon25D],
+        'MULTIPOINT': [ogr.wkbMultiPoint, ogr.wkbMultiPointM,
+                       ogr.wkbMultiPointZM, ogr.wkbMultiPoint25D],
+        'MULTILINESTRING': [ogr.wkbMultiLineString, ogr.wkbMultiLineStringM,
+                            ogr.wkbMultiLineStringZM, ogr.wkbMultiLineString25D],
+        'MULTIPOLYGON': [ogr.wkbMultiPolygon, ogr.wkbMultiPolygonM,
+                         ogr.wkbMultiPolygonZM, ogr.wkbMultiPolygon25D]
+    }
+
+    allowed_geom_types = []
+    for geom in geometries:
+        allowed_geom_types += geom_map[geom]
+
     if gdal_dataset is None:
         return MESSAGES['NOT_GDAL_VECTOR']
 
     layer = gdal_dataset.GetLayer()
-    srs = layer.GetSpatialRef()
+    if layer.GetGeomType() not in allowed_geom_types:
+        return MESSAGES['WRONG_GEOM_TYPE'].format(allowed=geometries)
 
     if fields:
         field_patterns = get_headers_to_validate(fields)
@@ -380,6 +401,7 @@ def check_vector(filepath, fields=None, projected=False, projection_units=None,
         if required_field_warning:
             return required_field_warning
 
+    srs = layer.GetSpatialRef()
     projection_warning = _check_projection(srs, projected, projection_units)
     return projection_warning
 
