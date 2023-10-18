@@ -177,7 +177,8 @@ def get_datastack_info(filepath, extract_path=None):
         filepath (string): The path to a file on disk that can be extracted as
             a datastack, parameter set, or logfile.
         extract_path (str): Path to a directory to extract the datastack, if
-            provided as an archive.
+            provided as an archive. Will be overwritten if it already exists,
+            or created if it does not already exist.
 
     Returns:
         A 2-tuple.  The first item of the tuple is one of:
@@ -192,16 +193,16 @@ def get_datastack_info(filepath, extract_path=None):
     if tarfile.is_tarfile(filepath):
         if not extract_path:
             raise ValueError('extract_path must be provided if using archive')
-        extract_dir = os.path.join(
-            extract_path,
-            os.path.splitext(os.path.basename(filepath))[0])
-        if not os.path.exists(extract_dir):
-            os.mkdir(extract_dir)
+        if os.path.isfile(extract_path):
+            os.remove(extract_path)
+        elif os.path.isdir(extract_path):
+            shutil.rmtree(extract_path)
+        os.mkdir(extract_path)
         # If it's a tarfile, we need to extract the parameters file to be able
         # to inspect the parameters and model details.
-        extract_datastack_archive(filepath, extract_dir)
+        extract_datastack_archive(filepath, extract_path)
         return 'archive', extract_parameter_set(
-            os.path.join(extract_dir, DATASTACK_PARAMETER_FILENAME))
+            os.path.join(extract_path, DATASTACK_PARAMETER_FILENAME))
 
     try:
         return 'json', extract_parameter_set(filepath)
