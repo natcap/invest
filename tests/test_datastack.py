@@ -611,7 +611,7 @@ class ParameterSetTest(unittest.TestCase):
             params, 'test_datastack_modules.simple_parameters', archive_path)
 
         stack_type, stack_info = datastack.get_datastack_info(
-            archive_path, extract_path=self.workspace)
+            archive_path, extract_path=os.path.join(self.workspace, 'archive'))
 
         self.assertEqual(stack_type, 'archive')
         self.assertEqual(stack_info, datastack.ParameterSet(
