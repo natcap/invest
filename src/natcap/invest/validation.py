@@ -389,6 +389,11 @@ def check_vector(filepath, geometries, fields=None, projected=False,
     if gdal_dataset is None:
         return MESSAGES['NOT_GDAL_VECTOR']
 
+    # NOTE: this only checks the layer geometry type, not the types of the actual
+    # geometries (layer.GetGeometryTypes()). This is probably equivalent in most
+    # cases, and it's more efficient than checking every geometry, but we might
+    # need to change this in the future if it becomes a problem. Currently not
+    # supporting ogr.wkbUnknown which allows mixed types.
     layer = gdal_dataset.GetLayer()
     if layer.GetGeomType() not in allowed_geom_types:
         return MESSAGES['WRONG_GEOM_TYPE'].format(allowed=geometries)
