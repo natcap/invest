@@ -42,6 +42,9 @@ Unreleased Changes
       have been replaced with ``numpy.prod``.
       https://github.com/natcap/invest/issues/1410
     * Add support for python 3.11 (`#1103 <https://github.com/natcap/invest/issues/1103>`_)
+    * Adding a docker container that is built on each commit where a change to
+      model code, requirements, or the docker configuration has been made.
+      https://github.com/natcap/invest/issues/1115
 * NDR
     * Fixing an issue where minor geometric issues in the watersheds input
       (such as a ring self-intersection) would raise an error in the model.
