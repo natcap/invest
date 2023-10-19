@@ -7,6 +7,7 @@ on:
             - 'docker/*'
             - '.github/workflows/build-docker.yml'
             - 'src/**/*'
+            - 'requirements*.txt'
 
 concurrency:
     # make sure only one run of this workflow for a given PR or a given branch
