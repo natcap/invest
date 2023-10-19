@@ -5,14 +5,22 @@ FROM debian:12.2 as build
 ARG INVEST_VERSION="main"
 ARG INVEST_REPO="natcap/invest"
 RUN apt update && apt install -y python3 python3-dev python3-pip python3-build build-essential git python3.11-venv
-RUN git clone https://github.com/${INVEST_REPO}.git && \
+RUN cd / && \
+        git clone https://github.com/${INVEST_REPO}.git && \
         cd $(basename ${INVEST_REPO}) && \
         git checkout ${INVEST_VERSION} && \
+        python3 -m build
+
+RUN cd / && \
+        git clone https://github.com/natcap/pygeoprocessing.git && \
+        cd pygeoprocessing && \
+        git checkout main && \
         python3 -m build
 
 # Create the container for distribution that has runtime dependencies.
 FROM mambaorg/micromamba:1.5.0-bookworm-slim
 COPY --from=build /invest/dist/*.whl /tmp/
+COPY --from=build /pygeoprocessing/dist/*.whl /tmp/
 
 # The environment.yml file will be built during github actions.
 COPY --chown=$MAMBA_USER:$MAMBA_USER environment.yml /tmp/environment.yml
