@@ -45,9 +45,9 @@ jobs:
                   username: ${{ github.actor }}
                   password: ${{ secrets.GITHUB_TOKEN }}
 
-            - name: Determine version
+            - name: Create environment file
               run: |
-                  echo "DATESTAMP_VERSION=$(date +%F)" >> $GITHUB_ENV
+                  python scripts/convert-requirements-to-conda-yml.py requirements.txt > docker/environment.yml
 
             - name: Build docker
               run: |
