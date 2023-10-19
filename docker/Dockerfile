@@ -2,7 +2,7 @@
 
 # Build the InVEST wheel in a separate container stage
 FROM debian:12.2 as build
-RUN apt update && apt install python3 python3-dev python3-pip python3-build build-essential
+RUN apt update && apt install -y python3 python3-dev python3-pip python3-build build-essential
 RUN python3 -m build && pwd
 
 # Create the container for distribution that has runtime dependencies.
