@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
-ARG INVEST_VERSION=main
-ARG INVEST_REPO=natcap/invest
+ARG INVEST_VERSION="main"
+ARG INVEST_REPO="natcap/invest"
 
 # Build the InVEST wheel in a separate container stage
 FROM debian:12.2 as build
