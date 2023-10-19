@@ -50,7 +50,7 @@ jobs:
             - name: Build docker
               run: |
                   # Replace / (invalid character) with .
-                  SANITIZED_REF="${{ github.ref_name }//\//.}"
+                  SANITIZED_REF="$(echo ${{github.ref_name}} | sed 's|/|.|g')"
                   cd docker && docker build \
                         -t ghcr.io/${{ github.repository_owner }}/${{ env.CONTAINER_NAME }}:latest \
                         -t ghcr.io/${{ github.repository_owner }}/${{ env.CONTAINER_NAME }}:${{ github.sha}} \
