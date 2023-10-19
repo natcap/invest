@@ -25,3 +25,4 @@ pint
 Babel
 Flask
 flask_cors
+requests
