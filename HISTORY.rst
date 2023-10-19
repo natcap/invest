@@ -52,6 +52,9 @@ Unreleased Changes
     * Fixed a task dependency issue where NDR would crash because of a race
       condition when run with ``n_workers > 0``.
       https://github.com/natcap/invest/issues/1426
+    * Fixed an issue in NDR's effective retention where, on rasters with more
+      than 2^31 pixels, the model would crash with an error relating to a
+      negative (overflowed) index. https://github.com/natcap/invest/issues/1431
 * SDR
     * RKLS, USLE, avoided erosion, and avoided export rasters will now have
       nodata in streams (`#1415 <https://github.com/natcap/invest/issues/1415>`_)
