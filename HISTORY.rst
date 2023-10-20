@@ -42,6 +42,8 @@ Unreleased Changes
       have been replaced with ``numpy.prod``.
       https://github.com/natcap/invest/issues/1410
     * Add support for python 3.11 (`#1103 <https://github.com/natcap/invest/issues/1103>`_)
+    * Datastack archives will now be correctly extracted
+      (`#1308 <https://github.com/natcap/invest/issues/1308>`_)
 * NDR
     * Fixing an issue where minor geometric issues in the watersheds input
       (such as a ring self-intersection) would raise an error in the model.
