@@ -54,6 +54,10 @@ Unreleased Changes
 * SDR
     * RKLS, USLE, avoided erosion, and avoided export rasters will now have
       nodata in streams (`#1415 <https://github.com/natcap/invest/issues/1415>`_)
+* Urban Cooling
+    * Fixed a bug where model would error out if any feature in the buildings
+      vector was missing a geometry; now they will be skipped
+      (`#1401 <https://github.com/natcap/invest/issues/1401>`_)
 * Wind Energy
     * Fixed a bug where model would error when the grid points path was empty
       (`#1417 <https://github.com/natcap/invest/issues/1417>`_)
