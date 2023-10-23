@@ -101,7 +101,8 @@ describe('requests to flask endpoints', () => {
     });
 
     // Second test the datastack is read and parsed
-    const data2 = await server_requests.fetchDatastackFromFile(filepath);
+    const data2 = await server_requests.fetchDatastackFromFile(
+      { filepath: filepath });
     const expectedKeys2 = [
       'type',
       'args',
