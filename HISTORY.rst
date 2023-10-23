@@ -50,6 +50,12 @@ Unreleased Changes
       condition when run with ``n_workers > 0``.
       https://github.com/natcap/invest/issues/1426
 * SDR
+    * Fixed an issue with SDR's sediment deposition where large regions would
+      become nodata in cases where the DEM has valid data but other inputs
+      (LULC, erosivity, erodibility) did not have valid pixels.  Now, all
+      raster inputs are mutually masked so that only those pixel stacks
+      continue through to the model where all pixels in the stack are
+      non-nodata. (`#911 https://github.com/natcap/invest/issues/911`_)
     * RKLS, USLE, avoided erosion, and avoided export rasters will now have
       nodata in streams (`#1415 <https://github.com/natcap/invest/issues/1415>`_)
 * Wind Energy
