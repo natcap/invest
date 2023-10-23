@@ -585,17 +585,22 @@ def execute(args):
 
     base_list = []
     aligned_list = []
-    for file_key in ['dem', 'lulc', 'erosivity', 'erodibility']:
-        base_list.append(args[file_key + "_path"])
-        aligned_list.append(f_reg["aligned_" + file_key + "_path"])
-    # all continuous rasters can use bilinaer, but lulc should be mode
+    masked_list = []
+    input_raster_key_list = ['dem', 'lulc', 'erosivity', 'erodibility']
+    for file_key in input_raster_key_list:
+        base_list.append(args[f"{file_key}_path"])
+        aligned_list.append(f_reg[f"aligned_{file_key}_path"])
+        masked_list.append(f_reg[f"masked_{file_key}_path"])
+    # all continuous rasters can use bilinear, but lulc should be mode
     interpolation_list = ['bilinear', 'mode', 'bilinear', 'bilinear']
 
     drainage_present = False
     if 'drainage_path' in args and args['drainage_path'] != '':
         drainage_present = True
+        input_raster_key_list.append('drainage')
         base_list.append(args['drainage_path'])
         aligned_list.append(f_reg['aligned_drainage_path'])
+        masked_list.append(f_reg['masked_drainage_path'])
         interpolation_list.append('near')
 
     dem_raster_info = pygeoprocessing.get_raster_info(args['dem_path'])
@@ -622,11 +627,7 @@ def execute(args):
         func=pygeoprocessing.raster_map,
         kwargs={
             'op': lambda *x: 1,  # any valid pixel gets a value of 1
-            'rasters': [f_reg['aligned_dem_path'],
-                        f_reg['aligned_drainage_path'],
-                        f_reg['aligned_erodibility_path'],
-                        f_reg['aligned_erosivity_path'],
-                        f_reg['aligned_lulc_path']],
+            'rasters': aligned_list,
             'target_path': f_reg['mask_path'],
             'target_nodata': 0,
         },
@@ -635,20 +636,18 @@ def execute(args):
         task_name='create mask')
 
     mask_tasks = {}  # use a dict so we can put these in a loop
-    for f_reg_key in ('dem_path', 'drainage_path', 'erodibility_path',
-                      'erosivity_path', 'lulc_path'):
-        aligned_key = f'aligned_{f_reg_key}'
-        masked_key = f'masked_{f_reg_key}'
-        mask_tasks[masked_key.replace('_path', '')] = task_graph.add_task(
+    for key, aligned_path, masked_path in zip(input_raster_key_list,
+                                            aligned_list, masked_list):
+        mask_tasks[f"masked_{key}"] = task_graph.add_task(
             func=pygeoprocessing.raster_map,
             kwargs={
                 'op': lambda array, mask: array,
-                'rasters': [f_reg[aligned_key], f_reg['mask_path']],
-                'target_path': f_reg[masked_key],
+                'rasters': [aligned_path, f_reg['mask_path']],
+                'target_path': masked_path,
             },
-            target_path_list=[f_reg[masked_key]],
+            target_path_list=[masked_path],
             dependent_task_list=[mutual_mask_task, align_task],
-            task_name=f'mask {f_reg_key}')
+            task_name=f'mask {key}')
 
     pit_fill_task = task_graph.add_task(
         func=pygeoprocessing.routing.fill_pits,
