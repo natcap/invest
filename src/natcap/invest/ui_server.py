@@ -149,9 +149,9 @@ def post_datastack_file():
     Returns:
         A JSON string.
     """
-    filepath = request.get_json()
+    payload = request.get_json()
     stack_type, stack_info = datastack.get_datastack_info(
-        filepath)
+        payload['filepath'], payload.get('extractPath', None))
     model_name = PYNAME_TO_MODEL_NAME_MAP[stack_info.model_name]
     result_dict = {
         'type': stack_type,
