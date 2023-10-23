@@ -348,6 +348,9 @@ def check_vector(filepath, geometries, fields=None, projected=False,
     Args:
         filepath (string): The path to the vector on disk.  The file must exist
             and be readable.
+        geometries (set): Set of geometry type(s) that are allowed. Options are
+            'POINT', 'LINESTRING', 'POLYGON', 'MULTIPOINT', 'MULTILINESTRING',
+            and 'MULTIPOLYGON'.
         fields=None (dict): A dictionary spec of field names that the vector is
             expected to have. See the docstring of ``check_headers`` for
             details on validation rules.
