@@ -69,4 +69,5 @@ jobs:
                   docker run --rm ghcr.io/${{ github.repository_owner }}/${{ env.CONTAINER_NAME }}:latest python -m natcap.invest --version
 
             - name: Push docker
+              if: github.event_name != 'pull_request'
               run: docker image push --all-tags ghcr.io/${{ github.repository_owner }}/${{ env.CONTAINER_NAME }}
