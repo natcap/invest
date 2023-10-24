@@ -63,16 +63,23 @@ def build_environment_from_requirements(cli_args):
 
                     pip_requirements.add(line)
 
-                    # If git needs to be installed for pip to clone to a
+                    # If an scm needs to be installed for pip to clone to a
                     # revision, add it to the conda package list.
+                    #
                     # Bazaar (bzr, which pip supports) is not listed;
                     # deprecated as of 2016 and not available on conda-forge.
-                    for prefix, conda_pkg in [("git+", "git"),
-                                              ("hg+", "mercurial"),
-                                              ("svn+", "subversion")]:
+                    for prefix, scm_conda_pkg in [("git+", "git"),
+                                                  ("hg+", "mercurial"),
+                                                  ("svn+", "subversion")]:
                         if line.startswith(prefix):
-                            conda_requirements.add(conda_pkg)
-                            break  # only 1 of these can be true.
+                            conda_requirements.add(scm_conda_pkg)
+                            # Always make the compiler available
+                            # cxx-compiler works on all OSes.
+                            # NOTE: do not use this as a dependency in a
+                            # conda-forge package recipe!
+                            # https://anaconda.org/conda-forge/cxx-compiler
+                            conda_requirements.add('cxx-compiler')
+                            break  # The line can only match 1 prefix
                 else:
                     conda_requirements.add(line)
 
