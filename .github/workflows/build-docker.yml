@@ -10,6 +10,7 @@ on:
             - 'requirements*.txt'
             - 'pyproject.toml'
             - 'setup.py'
+            - 'scripts/convert-requirements-to-conda-yml.py'
 
 concurrency:
     # make sure only one run of this workflow for a given PR or a given branch
