@@ -45,6 +45,8 @@ Unreleased Changes
     * Adding a docker container that is built on each commit where a change to
       model code, requirements, or the docker configuration has been made.
       https://github.com/natcap/invest/issues/1115
+    * Vector geometry types will now be validated for all models
+      (`#1374 <https://github.com/natcap/invest/issues/1374>`_)
     * Datastack archives will now be correctly extracted
       (`#1308 <https://github.com/natcap/invest/issues/1308>`_)
 * NDR
@@ -63,11 +65,14 @@ Unreleased Changes
     * Fixed an issue in SDR's sediment deposition where, on rasters with more
       than 2^31 pixels, the model would crash with an error relating to a
       negative (overflowed) index. https://github.com/natcap/invest/issues/1431
-* Seasonal Water Yield
     * Fixed an issue in Seasonal Water Yield's baseflow routing and local
       recharge functions where, on rasters with more than 2^31 pixels, the
       model would crash with an error relating to a negative (overflowed)
       index. https://github.com/natcap/invest/issues/1431
+* Urban Cooling
+    * Fixed a bug where model would error out if any feature in the buildings
+      vector was missing a geometry; now they will be skipped
+      (`#1401 <https://github.com/natcap/invest/issues/1401>`_)
 * Wind Energy
     * Fixed a bug where model would error when the grid points path was empty
       (`#1417 <https://github.com/natcap/invest/issues/1417>`_)

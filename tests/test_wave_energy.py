@@ -678,34 +678,3 @@ class WaveEnergyValidateTests(unittest.TestCase):
         expected_error = (
             ['dem_path', 'wave_base_data_path'], validation.MESSAGES['MISSING_VALUE'])
         self.assertTrue(expected_error in validation_error_list)
-
-    def test_validate_bad_aoi_incorrect_proj_units(self):
-        """WaveEnergy: test validating AOI vector with incorrect units."""
-        from natcap.invest import wave_energy, validation
-
-        args = {}
-        # Validation will recognize the units "foot" and say it's incorrect
-        args['aoi_path'] = os.path.join(SAMPLE_DATA,
-                                        'bad_AOI_us_survey_foot.shp')
-        validation_error_list = wave_energy.validate(args)
-        expected_error = (
-            ['aoi_path'],
-            validation.MESSAGES['WRONG_PROJECTION_UNIT'].format(
-                unit_a='meter', unit_b='us_survey_foot'))
-        self.assertTrue(expected_error in validation_error_list)
-
-    def test_validate_bad_aoi_unrecognized_proj_units(self):
-        """WaveEnergy: test validating AOI vector with unrecognized units"""
-        from natcap.invest import wave_energy, validation
-
-        args = {}
-        # The unit "not_a_unit" is not recognized by pint
-        args['aoi_path'] = os.path.join(
-            SAMPLE_DATA, 'bad_AOI_fake_unit.shp')
-
-        validation_error_list = wave_energy.validate(args)
-        expected_error = (
-            ['aoi_path'],
-            validation.MESSAGES['WRONG_PROJECTION_UNIT'].format(
-                unit_a='meter', unit_b='not_a_unit'))
-        self.assertTrue(expected_error in validation_error_list)
