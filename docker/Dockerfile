@@ -11,16 +11,9 @@ RUN cd / && \
         git checkout ${INVEST_VERSION} && \
         python3 -m build
 
-RUN cd / && \
-        git clone https://github.com/natcap/pygeoprocessing.git && \
-        cd pygeoprocessing && \
-        git checkout main && \
-        python3 -m build
-
 # Create the container for distribution that has runtime dependencies.
 FROM mambaorg/micromamba:1.5.0-bookworm-slim
 COPY --from=build /invest/dist/*.whl /tmp/
-COPY --from=build /pygeoprocessing/dist/*.whl /tmp/
 
 # The environment.yml file will be built during github actions.
 COPY --chown=$MAMBA_USER:$MAMBA_USER environment.yml /tmp/environment.yml
