@@ -65,7 +65,6 @@ Unreleased Changes
     * Fixed an issue in SDR's sediment deposition where, on rasters with more
       than 2^31 pixels, the model would crash with an error relating to a
       negative (overflowed) index. https://github.com/natcap/invest/issues/1431
-* Seasonal Water Yield
     * Fixed an issue in Seasonal Water Yield's baseflow routing and local
       recharge functions where, on rasters with more than 2^31 pixels, the
       model would crash with an error relating to a negative (overflowed)
