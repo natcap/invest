@@ -2,6 +2,7 @@
 """convert-requirements-to-conda-yml.py"""
 
 import argparse
+import platform
 import sys
 
 YML_TEMPLATE = """channels:
@@ -68,18 +69,26 @@ def build_environment_from_requirements(cli_args):
                     #
                     # Bazaar (bzr, which pip supports) is not listed;
                     # deprecated as of 2016 and not available on conda-forge.
+                    install_compiler = False
                     for prefix, scm_conda_pkg in [("git+", "git"),
                                                   ("hg+", "mercurial"),
                                                   ("svn+", "subversion")]:
                         if line.startswith(prefix):
                             conda_requirements.add(scm_conda_pkg)
-                            # Always make the compiler available
-                            # cxx-compiler works on all OSes.
-                            # NOTE: do not use this as a dependency in a
-                            # conda-forge package recipe!
-                            # https://anaconda.org/conda-forge/cxx-compiler
-                            conda_requirements.add('cxx-compiler')
+                            install_compiler = True
                             break  # The line can only match 1 prefix
+
+                    # It's less common (like for pygeoprocessing) to have linux
+                    # wheels.  Install a compiler if we're on linux, to be
+                    # safe.
+                    if platform.system() == 'Linux' or install_compiler:
+                        # Always make the compiler available
+                        # cxx-compiler works on all OSes.
+                        # NOTE: do not use this as a dependency in a
+                        # conda-forge package recipe!
+                        # https://anaconda.org/conda-forge/cxx-compiler
+                        conda_requirements.add('cxx-compiler')
+
                 else:
                     conda_requirements.add(line)
 
