@@ -42,6 +42,8 @@ Unreleased Changes
       have been replaced with ``numpy.prod``.
       https://github.com/natcap/invest/issues/1410
     * Add support for python 3.11 (`#1103 <https://github.com/natcap/invest/issues/1103>`_)
+    * Vector geometry types will now be validated for all models
+      (`#1374 <https://github.com/natcap/invest/issues/1374>`_)
     * Datastack archives will now be correctly extracted
       (`#1308 <https://github.com/natcap/invest/issues/1308>`_)
 * NDR
