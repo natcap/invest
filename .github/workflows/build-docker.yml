@@ -8,6 +8,8 @@ on:
             - '.github/workflows/build-docker.yml'
             - 'src/**/*'
             - 'requirements*.txt'
+            - 'pyproject.toml'
+            - 'setup.py'
 
 concurrency:
     # make sure only one run of this workflow for a given PR or a given branch
@@ -50,7 +52,7 @@ jobs:
 
             - name: Build docker
               run: |
-                  # Replace / (invalid character) with .
+                  # Replace / (invalid tag character) with .
                   SANITIZED_REF="$(echo ${{github.ref_name}} | sed 's|/|.|g')"
                   cd docker && docker build \
                         --build-arg="INVEST_REPO=${{ github.repository }}" \
