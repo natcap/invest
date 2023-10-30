@@ -1662,8 +1662,8 @@ def _weighted_sum(raster_path_list, weight_raster_list, target_path):
         for source_array, weight_array, source_nodata, weight_nodata in zip(
                 pixel_arrays, weight_arrays, raster_nodata_list, weight_nodata_list):
             valid_pixels = (
-                ~utils.array_equals_nodata(source_array, source_nodata) &
-                ~utils.array_equals_nodata(weight_array, weight_nodata))
+                ~pygeoprocessing.array_equals_nodata(source_array, source_nodata) &
+                ~pygeoprocessing.array_equals_nodata(weight_array, weight_nodata))
             touched_pixels |= valid_pixels
             target_array[valid_pixels] += (
                 source_array[valid_pixels] * weight_array[valid_pixels])
@@ -1719,9 +1719,9 @@ def _reclassify_and_multiply(
         supply_block = supply_band.ReadAsArray(**block_info)
 
         valid_mask = (
-            ~utils.array_equals_nodata(
+            ~pygeoprocessing.array_equals_nodata(
                 pop_group_proportion_block, pop_group_nodata) &
-            ~utils.array_equals_nodata(supply_block, supply_nodata))
+            ~pygeoprocessing.array_equals_nodata(supply_block, supply_nodata))
         target_block = numpy.full(supply_block.shape, FLOAT32_NODATA,
                                   dtype=numpy.float32)
         target_block[valid_mask] = (
@@ -2234,7 +2234,7 @@ def _convolve_and_set_lower_bound(
     target_nodata = target_band.GetNoDataValue()
     for block_data, block in pygeoprocessing.iterblocks(
             (target_path, 1)):
-        valid_pixels = ~utils.array_equals_nodata(block, target_nodata)
+        valid_pixels = ~pygeoprocessing.array_equals_nodata(block, target_nodata)
         block[(block < 0) & valid_pixels] = 0
         target_band.WriteArray(
             block, xoff=block_data['xoff'], yoff=block_data['yoff'])
@@ -2601,7 +2601,7 @@ def _create_valid_pixels_nodata_mask(raster_list, target_mask_path):
     def _create_mask(*raster_arrays):
         valid_pixels_mask = numpy.ones(raster_arrays[0].shape, dtype=bool)
         for nodata, array in zip(nodatas, raster_arrays):
-            valid_pixels_mask &= ~utils.array_equals_nodata(array, nodata)
+            valid_pixels_mask &= ~pygeoprocessing.array_equals_nodata(array, nodata)
 
         return valid_pixels_mask
 

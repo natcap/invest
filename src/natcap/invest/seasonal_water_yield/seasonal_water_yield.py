@@ -982,7 +982,7 @@ def _calculate_vri(l_path, target_vri_path):
 
     for _, block in pygeoprocessing.iterblocks((l_path, 1)):
         valid_mask = (
-            ~utils.array_equals_nodata(block, l_nodata) &
+            ~pygeoprocessing.array_equals_nodata(block, l_nodata) &
             (~numpy.isinf(block)))
         qb_sum += numpy.sum(block[valid_mask])
         qb_valid_count += numpy.count_nonzero(valid_mask)
@@ -993,7 +993,7 @@ def _calculate_vri(l_path, target_vri_path):
         result = numpy.empty_like(li_array)
         result[:] = li_nodata
         if qb_sum > 0:
-            valid_mask = ~utils.array_equals_nodata(li_array, li_nodata)
+            valid_mask = ~pygeoprocessing.array_equals_nodata(li_array, li_nodata)
             try:
                 result[valid_mask] = li_array[valid_mask] / qb_sum
             except RuntimeWarning:
@@ -1044,8 +1044,8 @@ def _calculate_monthly_quick_flow(precip_path, n_events_path, stream_path,
         Returns:
             quick flow (numpy.array)
         """
-        valid_p_mask = ~utils.array_equals_nodata(p_im, p_nodata)
-        valid_n_mask = ~utils.array_equals_nodata(n_m, n_nodata)
+        valid_p_mask = ~pygeoprocessing.array_equals_nodata(p_im, p_nodata)
+        valid_n_mask = ~pygeoprocessing.array_equals_nodata(n_m, n_nodata)
         # precip mask: both p_im and n_m are defined and greater than 0
         precip_mask = valid_p_mask & valid_n_mask & (p_im > 0) & (n_m > 0)
         stream_mask = stream == 1
@@ -1054,8 +1054,8 @@ def _calculate_monthly_quick_flow(precip_path, n_events_path, stream_path,
         valid_mask = (
           valid_p_mask &
           valid_n_mask &
-          ~utils.array_equals_nodata(stream, stream_nodata) &
-          ~utils.array_equals_nodata(s_i, si_nodata))
+          ~pygeoprocessing.array_equals_nodata(stream, stream_nodata) &
+          ~pygeoprocessing.array_equals_nodata(s_i, si_nodata))
 
         # QF is defined in terms of three cases:
         #
@@ -1274,7 +1274,7 @@ def _calculate_si_raster(cn_path, stream_path, si_path):
     def si_op(ci_factor, stream_mask):
         """Calculate si factor."""
         valid_mask = (
-            ~utils.array_equals_nodata(ci_factor, cn_nodata) &
+            ~pygeoprocessing.array_equals_nodata(ci_factor, cn_nodata) &
             (ci_factor > 0))
         si_array = numpy.empty(ci_factor.shape)
         si_array[:] = TARGET_NODATA

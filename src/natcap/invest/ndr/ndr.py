@@ -1085,7 +1085,7 @@ def _mask_raster(source_raster_path, mask_raster_path,
         result = numpy.full(mask.shape, nodata,
                             dtype=source_raster_info['numpy_type'])
         valid_pixels = (
-            ~utils.array_equals_nodata(raster, nodata) &
+            ~pygeoprocessing.array_equals_nodata(raster, nodata) &
             (mask == 1))
         result[valid_pixels] = raster[valid_pixels]
         return result
@@ -1416,8 +1416,8 @@ def calculate_ic(d_up_path, d_dn_path, target_ic_path):
     def _ic_op(d_up, d_dn):
         """Calculate IC0."""
         valid_mask = (
-            ~utils.array_equals_nodata(d_up, d_up_nodata) &
-            ~utils.array_equals_nodata(d_dn, d_dn_nodata) & (d_up != 0) &
+            ~pygeoprocessing.array_equals_nodata(d_up, d_up_nodata) &
+            ~pygeoprocessing.array_equals_nodata(d_dn, d_dn_nodata) & (d_up != 0) &
             (d_dn != 0))
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         result[:] = ic_nodata

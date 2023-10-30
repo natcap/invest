@@ -1719,7 +1719,7 @@ def _create_percentile_rasters(base_raster_path, target_raster_path,
 
     def _mask_below_start_value(array):
         valid_mask = (
-            ~utils.array_equals_nodata(array, base_nodata) &
+            ~pygeoprocessing.array_equals_nodata(array, base_nodata) &
             (array >= float(start_value)))
         result = numpy.empty_like(array)
         result[:] = base_nodata

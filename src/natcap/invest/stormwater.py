@@ -890,9 +890,9 @@ def volume_op(ratio_array, precip_array, precip_nodata, pixel_area):
     """
     volume_array = numpy.full(ratio_array.shape, FLOAT_NODATA,
                               dtype=numpy.float32)
-    valid_mask = ~utils.array_equals_nodata(ratio_array, FLOAT_NODATA)
+    valid_mask = ~pygeoprocessing.array_equals_nodata(ratio_array, FLOAT_NODATA)
     if precip_nodata is not None:
-        valid_mask &= ~utils.array_equals_nodata(precip_array, precip_nodata)
+        valid_mask &= ~pygeoprocessing.array_equals_nodata(precip_array, precip_nodata)
 
     # precipitation (mm/yr) * pixel area (m^2) *
     # 0.001 (m/mm) * ratio = volume (m^3/yr)
@@ -943,9 +943,9 @@ def pollutant_load_op(lulc_array, lulc_nodata, volume_array, sorted_lucodes,
     """
     load_array = numpy.full(
         lulc_array.shape, FLOAT_NODATA, dtype=numpy.float32)
-    valid_mask = ~utils.array_equals_nodata(volume_array, FLOAT_NODATA)
+    valid_mask = ~pygeoprocessing.array_equals_nodata(volume_array, FLOAT_NODATA)
     if lulc_nodata is not None:
-        valid_mask &= ~utils.array_equals_nodata(lulc_array, lulc_nodata)
+        valid_mask &= ~pygeoprocessing.array_equals_nodata(lulc_array, lulc_nodata)
 
     # bin each value in the LULC array such that
     # lulc_array[i,j] == sorted_lucodes[lulc_index[i,j]]. thus,
@@ -975,7 +975,7 @@ def retention_value_op(retention_volume_array, replacement_cost):
     """
     value_array = numpy.full(retention_volume_array.shape, FLOAT_NODATA,
                              dtype=numpy.float32)
-    valid_mask = ~utils.array_equals_nodata(
+    valid_mask = ~pygeoprocessing.array_equals_nodata(
         retention_volume_array, FLOAT_NODATA)
 
     # retention (m^3/yr) * replacement cost ($/m^3) = retention value ($/yr)

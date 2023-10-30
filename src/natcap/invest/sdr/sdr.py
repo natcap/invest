@@ -922,10 +922,10 @@ def _calculate_what_drains_to_stream(
         """
         drains_to_stream = numpy.full(
             flow_dir_mfd.shape, _BYTE_NODATA, dtype=numpy.uint8)
-        valid_flow_dir = ~utils.array_equals_nodata(
+        valid_flow_dir = ~pygeoprocessing.array_equals_nodata(
             flow_dir_mfd, flow_dir_mfd_nodata)
         valid_dist_to_channel = (
-            ~utils.array_equals_nodata(
+            ~pygeoprocessing.array_equals_nodata(
                 dist_to_channel, dist_to_channel_nodata) &
             valid_flow_dir)
 
@@ -1026,8 +1026,8 @@ def _calculate_ls_factor(
         # avg aspect intermediate output should always have a defined
         # nodata value from pygeoprocessing
         valid_mask = (
-            ~utils.array_equals_nodata(percent_slope, slope_nodata) &
-            ~utils.array_equals_nodata(
+            ~pygeoprocessing.array_equals_nodata(percent_slope, slope_nodata) &
+            ~pygeoprocessing.array_equals_nodata(
                 flow_accumulation, flow_accumulation_nodata))
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         result[:] = _TARGET_NODATA
@@ -1141,13 +1141,13 @@ def _calculate_rkls(
         """
         rkls = numpy.empty(ls_factor.shape, dtype=numpy.float32)
         nodata_mask = (
-            ~utils.array_equals_nodata(ls_factor, _TARGET_NODATA) &
-            ~utils.array_equals_nodata(stream, stream_nodata))
+            ~pygeoprocessing.array_equals_nodata(ls_factor, _TARGET_NODATA) &
+            ~pygeoprocessing.array_equals_nodata(stream, stream_nodata))
         if erosivity_nodata is not None:
-            nodata_mask &= ~utils.array_equals_nodata(
+            nodata_mask &= ~pygeoprocessing.array_equals_nodata(
                 erosivity, erosivity_nodata)
         if erodibility_nodata is not None:
-            nodata_mask &= ~utils.array_equals_nodata(
+            nodata_mask &= ~pygeoprocessing.array_equals_nodata(
                 erodibility, erodibility_nodata)
 
         valid_mask = nodata_mask & (stream == 0)
@@ -1364,8 +1364,8 @@ def _calculate_ic(d_up_path, d_dn_path, out_ic_factor_path):
     def ic_op(d_up, d_dn):
         """Calculate IC factor."""
         valid_mask = (
-            ~utils.array_equals_nodata(d_up, _TARGET_NODATA) &
-            ~utils.array_equals_nodata(d_dn, d_dn_nodata) & (d_dn != 0) &
+            ~pygeoprocessing.array_equals_nodata(d_up, _TARGET_NODATA) &
+            ~pygeoprocessing.array_equals_nodata(d_dn, d_dn_nodata) & (d_dn != 0) &
             (d_up != 0))
         ic_array = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         ic_array[:] = _IC_NODATA
@@ -1384,7 +1384,7 @@ def _calculate_sdr(
     def sdr_op(ic_factor, stream):
         """Calculate SDR factor."""
         valid_mask = (
-            ~utils.array_equals_nodata(ic_factor, _IC_NODATA) & (stream != 1))
+            ~pygeoprocessing.array_equals_nodata(ic_factor, _IC_NODATA) & (stream != 1))
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         result[:] = _TARGET_NODATA
         result[valid_mask] = (
@@ -1414,8 +1414,8 @@ def _calculate_e_prime(usle_path, sdr_path, stream_path, target_e_prime):
     def e_prime_op(usle, sdr, streams):
         """Wash that does not reach stream."""
         valid_mask = (
-            ~utils.array_equals_nodata(usle, _TARGET_NODATA) &
-            ~utils.array_equals_nodata(sdr, _TARGET_NODATA))
+            ~pygeoprocessing.array_equals_nodata(usle, _TARGET_NODATA) &
+            ~pygeoprocessing.array_equals_nodata(sdr, _TARGET_NODATA))
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         result[:] = _TARGET_NODATA
         result[valid_mask] = usle[valid_mask] * (1-sdr[valid_mask])

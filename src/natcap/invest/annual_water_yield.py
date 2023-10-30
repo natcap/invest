@@ -1026,19 +1026,19 @@ def fractp_op(
     # and retain their original nodata values.
     # out_nodata is defined above and should never be None.
     valid_mask = (
-        ~utils.array_equals_nodata(Kc, nodata_dict['out_nodata']) &
-        ~utils.array_equals_nodata(root, nodata_dict['out_nodata']) &
-        ~utils.array_equals_nodata(veg, nodata_dict['out_nodata']) &
-        ~utils.array_equals_nodata(precip, 0))
+        ~pygeoprocessing.array_equals_nodata(Kc, nodata_dict['out_nodata']) &
+        ~pygeoprocessing.array_equals_nodata(root, nodata_dict['out_nodata']) &
+        ~pygeoprocessing.array_equals_nodata(veg, nodata_dict['out_nodata']) &
+        ~pygeoprocessing.array_equals_nodata(precip, 0))
     if nodata_dict['eto'] is not None:
-        valid_mask &= ~utils.array_equals_nodata(eto, nodata_dict['eto'])
+        valid_mask &= ~pygeoprocessing.array_equals_nodata(eto, nodata_dict['eto'])
     if nodata_dict['precip'] is not None:
-        valid_mask &= ~utils.array_equals_nodata(precip, nodata_dict['precip'])
+        valid_mask &= ~pygeoprocessing.array_equals_nodata(precip, nodata_dict['precip'])
     if nodata_dict['depth_root'] is not None:
-        valid_mask &= ~utils.array_equals_nodata(
+        valid_mask &= ~pygeoprocessing.array_equals_nodata(
             soil, nodata_dict['depth_root'])
     if nodata_dict['pawc'] is not None:
-        valid_mask &= ~utils.array_equals_nodata(pawc, nodata_dict['pawc'])
+        valid_mask &= ~pygeoprocessing.array_equals_nodata(pawc, nodata_dict['pawc'])
 
     # Compute Budyko Dryness index
     # Use the original AET equation if the land cover type is vegetation

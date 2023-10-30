@@ -858,9 +858,9 @@ def _x_yield_op(
     result = numpy.empty(b_x.shape, dtype=numpy.float32)
     result[:] = _NODATA_YIELD
     valid_mask = (
-        ~utils.array_equals_nodata(y_max, _NODATA_YIELD) &
-        ~utils.array_equals_nodata(b_x, _NODATA_YIELD) &
-        ~utils.array_equals_nodata(c_x, _NODATA_YIELD) &
+        ~pygeoprocessing.array_equals_nodata(y_max, _NODATA_YIELD) &
+        ~pygeoprocessing.array_equals_nodata(b_x, _NODATA_YIELD) &
+        ~pygeoprocessing.array_equals_nodata(c_x, _NODATA_YIELD) &
         (lulc_array == crop_lucode))
     result[valid_mask] = pixel_area_ha * y_max[valid_mask] * (
         1 - b_x[valid_mask] * numpy.exp(
@@ -890,7 +890,7 @@ def _zero_observed_yield_op(observed_yield_array, observed_yield_nodata):
     result[:] = 0
     valid_mask = slice(None)
     if observed_yield_nodata is not None:
-        valid_mask = ~utils.array_equals_nodata(
+        valid_mask = ~pygeoprocessing.array_equals_nodata(
             observed_yield_array, observed_yield_nodata)
     result[valid_mask] = observed_yield_array[valid_mask]
     return result
@@ -916,7 +916,7 @@ def _mask_observed_yield_op(
     result = numpy.empty(lulc_array.shape, dtype=numpy.float32)
     if landcover_nodata is not None:
         result[:] = observed_yield_nodata
-        valid_mask = ~utils.array_equals_nodata(lulc_array, landcover_nodata)
+        valid_mask = ~pygeoprocessing.array_equals_nodata(lulc_array, landcover_nodata)
         result[valid_mask] = 0
     else:
         result[:] = 0
@@ -978,7 +978,7 @@ def tabulate_regression_results(
                 # if nodata value undefined, assume all pixels are valid
                 valid_mask = numpy.full(yield_block.shape, True)
                 if observed_yield_nodata is not None:
-                    valid_mask = ~utils.array_equals_nodata(
+                    valid_mask = ~pygeoprocessing.array_equals_nodata(
                         yield_block, observed_yield_nodata)
                 production_pixel_count += numpy.count_nonzero(
                     valid_mask & (yield_block > 0.0))
@@ -996,7 +996,7 @@ def tabulate_regression_results(
                     (crop_production_raster_path, 1)):
                 yield_sum += numpy.sum(
                     # _NODATA_YIELD will always have a value (defined above)
-                    yield_block[~utils.array_equals_nodata(
+                    yield_block[~pygeoprocessing.array_equals_nodata(
                         yield_block, _NODATA_YIELD)])
             production_lookup['modeled'] = yield_sum
             result_table.write(",%f" % yield_sum)
@@ -1022,7 +1022,7 @@ def tabulate_regression_results(
                 (landcover_raster_path, 1)):
             if landcover_nodata is not None:
                 total_area += numpy.count_nonzero(
-                    ~utils.array_equals_nodata(band_values, landcover_nodata))
+                    ~pygeoprocessing.array_equals_nodata(band_values, landcover_nodata))
             else:
                 total_area += band_values.size
         result_table.write(

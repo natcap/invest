@@ -476,7 +476,7 @@ class UNATests(unittest.TestCase):
         accessible_urban_nature_array = pygeoprocessing.raster_to_numpy_array(
             os.path.join(args['workspace_dir'], 'output',
                          'accessible_urban_nature_suffix.tif'))
-        valid_mask = ~utils.array_equals_nodata(
+        valid_mask = ~pygeoprocessing.array_equals_nodata(
             accessible_urban_nature_array, urban_nature_access.FLOAT32_NODATA)
         valid_pixels = accessible_urban_nature_array[valid_mask]
         self.assertAlmostEqual(numpy.sum(valid_pixels), 6221004.41259766)
@@ -595,7 +595,7 @@ class UNATests(unittest.TestCase):
         def _read_and_sum_raster(path):
             array = pygeoprocessing.raster_to_numpy_array(path)
             nodata = pygeoprocessing.get_raster_info(path)['nodata'][0]
-            return numpy.sum(array[~utils.array_equals_nodata(array, nodata)])
+            return numpy.sum(array[~pygeoprocessing.array_equals_nodata(array, nodata)])
 
         intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
         for (supply_type, supply_field), fieldname in itertools.product(
@@ -644,7 +644,7 @@ class UNATests(unittest.TestCase):
 
         accessible_urban_nature_array = (
             pygeoprocessing.raster_to_numpy_array(path))
-        valid_mask = ~utils.array_equals_nodata(
+        valid_mask = ~pygeoprocessing.array_equals_nodata(
             accessible_urban_nature_array,
             urban_nature_access.FLOAT32_NODATA)
         valid_pixels = accessible_urban_nature_array[valid_mask]
@@ -810,7 +810,7 @@ class UNATests(unittest.TestCase):
                 os.path.join(args['workspace_dir'], 'output',
                              f'urban_nature_demand_{suffix}.tif'))
             nodata = urban_nature_access.FLOAT32_NODATA
-            valid_pixels = ~utils.array_equals_nodata(population, nodata)
+            valid_pixels = ~pygeoprocessing.array_equals_nodata(population, nodata)
             numpy.testing.assert_allclose(
                 (population[valid_pixels].sum() *
                     float(args['urban_nature_demand'])),

@@ -950,7 +950,7 @@ def _raster_values_in_bounds(raster_path_band, lower_bound, upper_bound):
     values_valid = True
 
     for _, raster_block in pygeoprocessing.iterblocks(raster_path_band):
-        nodata_mask = ~utils.array_equals_nodata(raster_block, raster_nodata)
+        nodata_mask = ~pygeoprocessing.array_equals_nodata(raster_block, raster_nodata)
         if ((raster_block[nodata_mask] < lower_bound) |
                 (raster_block[nodata_mask] > upper_bound)).any():
             values_valid = False
