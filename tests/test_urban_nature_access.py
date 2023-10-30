@@ -361,14 +361,6 @@ class UNATests(unittest.TestCase):
         numpy.testing.assert_allclose(
             urban_nature_budget, expected_urban_nature_budget)
 
-        supply_demand = urban_nature_access._urban_nature_balance_totalpop_op(
-            urban_nature_budget, population)
-        expected_supply_demand = numpy.array([
-            [nodata, 100 * 50.5],
-            [25 * 40.75, nodata]], dtype=numpy.float32)
-        numpy.testing.assert_allclose(
-            supply_demand, expected_supply_demand)
-
     def test_reclassify_and_multpliy(self):
         """UNA: test reclassification/multiplication function."""
         from natcap.invest import urban_nature_access
@@ -713,8 +705,8 @@ class UNATests(unittest.TestCase):
             'Povr_adm': 0,
             'Povr_adm_female': 607.13671875,
             'Povr_adm_male': 477.0360107421875,
-            'SUP_DEMadm_cap': -17.90779987933412,
-            'SUP_DEMadm_cap_female': -17.907799675104435,
+            'SUP_DEMadm_cap': -17.907799109781322,
+            'SUP_DEMadm_cap_female': -17.90779830090304,
             'SUP_DEMadm_cap_male': -17.907800139262825,
         }
         self.assertEqual(
@@ -928,11 +920,14 @@ class UNATests(unittest.TestCase):
                                           target_path)
 
         weighted_sum_array = pygeoprocessing.raster_to_numpy_array(target_path)
+        print(list(weighted_sum_array))
         weighted_sum_nodata = pygeoprocessing.get_raster_info(
             target_path)['nodata'][0]
+        print(weighted_sum_nodata)
 
         # check that we have the expected number of nodata pixels
         nodata_pixels = numpy.isclose(weighted_sum_array, weighted_sum_nodata)
+        print(list(nodata_pixels))
         self.assertEqual(
             numpy.count_nonzero(nodata_pixels), 2)
 

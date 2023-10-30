@@ -625,16 +625,15 @@ def execute(args):
         # Using the averaged retention ratio raster and boolean
         # "within radius" rasters, adjust the retention ratios
         adjust_retention_ratio_task = task_graph.add_task(
-            func=pygeoprocessing.raster_calculator,
-            args=([
-                (files['retention_ratio_path'], 1),
-                (files['ratio_average_path'], 1),
-                (files['near_connected_lulc_path'], 1),
-                (files['near_road_path'], 1)],
-                adjust_op,
-                files['adjusted_retention_ratio_path'],
-                gdal.GDT_Float32,
-                FLOAT_NODATA),
+            func=pygeoprocessing.raster_map,
+            kwargs=dict(
+                op=adjust_op,
+                rasters=[
+                    files['retention_ratio_path'],
+                    files['ratio_average_path'],
+                    files['near_connected_lulc_path'],
+                    files['near_road_path']],
+                target_path=files['adjusted_retention_ratio_path']),
             target_path_list=[files['adjusted_retention_ratio_path']],
             task_name='adjust stormwater retention ratio',
             dependent_task_list=[retention_ratio_task, average_ratios_task,
@@ -665,13 +664,11 @@ def execute(args):
 
     # Calculate stormwater runoff ratios and volume
     runoff_ratio_task = task_graph.add_task(
-        func=pygeoprocessing.raster_calculator,
-        args=(
-            [(final_retention_ratio_path, 1)],
-            retention_to_runoff_op,
-            files['runoff_ratio_path'],
-            gdal.GDT_Float32,
-            FLOAT_NODATA),
+        func=pygeoprocessing.raster_map,
+        kwargs=dict(
+            op=retention_to_runoff_op,
+            rasters=[final_retention_ratio_path],
+            target_path=files['runoff_ratio_path']),
         target_path_list=[files['runoff_ratio_path']],
         dependent_task_list=[final_retention_ratio_task],
         task_name='calculate stormwater runoff ratio'
@@ -862,37 +859,19 @@ def lookup_ratios(lulc_path, soil_group_path, ratio_lookup, sorted_lucodes,
     Returns:
         None
     """
-    lulc_nodata = pygeoprocessing.get_raster_info(lulc_path)['nodata'][0]
-    soil_group_nodata = pygeoprocessing.get_raster_info(
-        soil_group_path)['nodata'][0]
     # insert a column on the left side of the array so that the soil
     # group codes 1-4 line up with their indexes. this is faster than
     # decrementing every value in a large raster.
     ratio_lookup = numpy.insert(ratio_lookup, 0,
                                 numpy.zeros(ratio_lookup.shape[0]), axis=1)
-
-    def ratio_op(lulc_array, soil_group_array):
-        output_ratio_array = numpy.full(lulc_array.shape, FLOAT_NODATA,
-                                        dtype=numpy.float32)
-        valid_mask = numpy.full(lulc_array.shape, True)
-        if lulc_nodata is not None:
-            valid_mask &= ~utils.array_equals_nodata(lulc_array, lulc_nodata)
-        if soil_group_nodata is not None:
-            valid_mask &= ~utils.array_equals_nodata(
-                soil_group_array, soil_group_nodata)
-        # the index of each lucode in the sorted lucodes array
-        lulc_index = numpy.digitize(lulc_array[valid_mask], sorted_lucodes,
-                                    right=True)
-        output_ratio_array[valid_mask] = (
-            ratio_lookup[lulc_index, soil_group_array[valid_mask]])
-        return output_ratio_array
-
-    pygeoprocessing.raster_calculator(
-        [(lulc_path, 1), (soil_group_path, 1)],
-        ratio_op,
-        output_path,
-        gdal.GDT_Float32,
-        FLOAT_NODATA)
+    pygeoprocessing.raster_map(
+        op=lambda lulc_array, soil_group_array: ratio_lookup[
+            # the index of each lucode in the sorted lucodes array
+            numpy.digitize(lulc_array, sorted_lucodes, right=True),
+            soil_group_array],
+        rasters=[lulc_path, soil_group_path],
+        target_path=output_path,
+        target_dtype=numpy.float32)
 
 
 def volume_op(ratio_array, precip_array, precip_nodata, pixel_area):
@@ -934,11 +913,7 @@ def retention_to_runoff_op(retention_array):
     Returns:
         numpy.ndarray of stormwater runoff ratios
     """
-    runoff_array = numpy.full(retention_array.shape, FLOAT_NODATA,
-                              dtype=numpy.float32)
-    valid_mask = ~utils.array_equals_nodata(retention_array, FLOAT_NODATA)
-    runoff_array[valid_mask] = 1 - retention_array[valid_mask]
-    return runoff_array
+    return 1 - retention_array
 
 
 def pollutant_load_op(lulc_array, lulc_nodata, volume_array, sorted_lucodes,
@@ -1013,8 +988,8 @@ def adjust_op(ratio_array, avg_ratio_array, near_connected_lulc_array,
               near_road_array):
     """Apply the retention ratio adjustment algorithm to an array of ratios.
 
-    This is meant to be used with raster_calculator. Assumes that the nodata
-    value for all four input arrays is the global FLOAT_NODATA.
+    This is meant to be used with raster_map. Assumes that nodata is already
+    filtered out.
 
     Args:
         ratio_array (numpy.ndarray): 2D array of stormwater retention ratios
@@ -1028,36 +1003,14 @@ def adjust_op(ratio_array, avg_ratio_array, near_connected_lulc_array,
         2D numpy array of adjusted retention ratios. Has the same shape as
         ``retention_ratio_array``.
     """
-    adjusted_ratio_array = numpy.full(ratio_array.shape, FLOAT_NODATA,
-                                      dtype=numpy.float32)
-    adjustment_factor_array = numpy.full(ratio_array.shape, FLOAT_NODATA,
-                                         dtype=numpy.float32)
-    valid_mask = (
-        ~utils.array_equals_nodata(ratio_array, FLOAT_NODATA) &
-        ~utils.array_equals_nodata(avg_ratio_array, FLOAT_NODATA) &
-        (near_connected_lulc_array != UINT8_NODATA) &
-        (near_road_array != UINT8_NODATA))
-
     # adjustment factor:
     # - 0 if any of the nearby pixels are impervious/connected;
     # - average of nearby pixels, otherwise
-    is_not_connected = ~(
-        near_connected_lulc_array[valid_mask] |
-        near_road_array[valid_mask]).astype(bool)
-    adjustment_factor_array[valid_mask] = (avg_ratio_array[valid_mask] *
-                                           is_not_connected)
-
-    adjustment_factor_array[valid_mask] = (
-        avg_ratio_array[valid_mask] * ~(
-            near_connected_lulc_array[valid_mask] |
-            near_road_array[valid_mask]
-        ).astype(bool))
-
     # equation 2-4: Radj_ij = R_ij + (1 - R_ij) * C_ij
-    adjusted_ratio_array[valid_mask] = (
-        ratio_array[valid_mask] +
-        (1 - ratio_array[valid_mask]) * adjustment_factor_array[valid_mask])
-    return adjusted_ratio_array
+    return ratio_array + (1 - ratio_array) * (
+        avg_ratio_array * ~(
+            near_connected_lulc_array | near_road_array
+        ).astype(bool))
 
 
 def aggregate_results(base_aggregate_areas_path, target_vector_path, srs_wkt,
@@ -1140,23 +1093,15 @@ def is_near(input_path, radius, distance_path, out_path):
         None
     """
     # Calculate the distance from each pixel to the nearest '1' pixel
-    pygeoprocessing.distance_transform_edt(
-        (input_path, 1),
-        distance_path)
-
-    def lte_threshold_op(array, threshold):
-        """Binary array of elements less than or equal to the threshold."""
-        # no need to mask nodata because distance_transform_edt doesn't
-        # output any nodata pixels
-        return array <= threshold
+    pygeoprocessing.distance_transform_edt((input_path, 1), distance_path)
 
     # Threshold that to a binary array so '1' means it's within the radius
-    pygeoprocessing.raster_calculator(
-        [(distance_path, 1), (radius, 'raw')],
-        lte_threshold_op,
-        out_path,
-        gdal.GDT_Byte,
-        UINT8_NODATA)
+    pygeoprocessing.raster_map(
+        op=lambda dist: dist <= radius,
+        rasters=[distance_path],
+        target_path=out_path,
+        target_dtype=numpy.uint8,
+        target_nodata=UINT8_NODATA)
 
 
 def make_search_kernel(raster_path, radius):

@@ -716,12 +716,15 @@ def execute(args):
                 crop_name, file_suffix))
 
         calc_min_NKP_task = task_graph.add_task(
-            func=pygeoprocessing.raster_calculator,
-            args=([(nitrogen_yield_raster_path, 1),
-                   (phosphorus_yield_raster_path, 1),
-                   (potassium_yield_raster_path, 1)],
-                  _min_op, crop_production_raster_path,
-                  gdal.GDT_Float32, _NODATA_YIELD),
+            func=pygeoprocessing.raster_map,
+            kwargs=dict(
+                op=_min_op,
+                rasters=[nitrogen_yield_raster_path,
+                         phosphorus_yield_raster_path,
+                         potassium_yield_raster_path],
+                target_path=crop_production_raster_path,
+                target_dtype=numpy.float32,
+                target_nodata=_NODATA_YIELD),
             target_path_list=[crop_production_raster_path],
             dependent_task_list=dependent_task_list,
             task_name='calc_min_of_NKP')
@@ -868,17 +871,7 @@ def _x_yield_op(
 
 def _min_op(y_n, y_p, y_k):
     """Calculate the min of the three inputs and multiply by Ymax."""
-    result = numpy.empty(y_n.shape, dtype=numpy.float32)
-    result[:] = _NODATA_YIELD
-    valid_mask = (
-        ~utils.array_equals_nodata(y_n, _NODATA_YIELD) &
-        ~utils.array_equals_nodata(y_k, _NODATA_YIELD) &
-        ~utils.array_equals_nodata(y_p, _NODATA_YIELD))
-    result[valid_mask] = (
-        numpy.min(
-            [y_n[valid_mask], y_k[valid_mask], y_p[valid_mask]],
-            axis=0))
-    return result
+    return numpy.min([y_n, y_k, y_p], axis=0)
 
 
 def _zero_observed_yield_op(observed_yield_array, observed_yield_nodata):

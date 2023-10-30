@@ -47,7 +47,7 @@ class CropProductionTests(unittest.TestCase):
             'aggregate_polygon_path': os.path.join(
                 SAMPLE_DATA_PATH, 'aggregate_shape.shp'),
             'model_data_path': MODEL_DATA_PATH,
-            'n_workers': '-1'
+            'n_workers': 1
         }
 
         crop_production_percentile.execute(args)
@@ -222,7 +222,7 @@ class CropProductionTests(unittest.TestCase):
             'nitrogen_fertilization_rate': 29.6,
             'phosphorus_fertilization_rate': 8.4,
             'potassium_fertilization_rate': 14.2,
-            'n_workers': '-1'
+            'n_workers': 1
         }
 
         with open(args['landcover_to_crop_table_path'],
@@ -307,6 +307,7 @@ class CropProductionTests(unittest.TestCase):
             'nitrogen_fertilization_rate': 29.6,
             'phosphorus_fertilization_rate': 8.4,
             'potassium_fertilization_rate': 14.2,
+            'n_workers': 1
         }
 
         crop_production_regression.execute(args)

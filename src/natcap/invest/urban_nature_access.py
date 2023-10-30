@@ -22,7 +22,6 @@ from . import spec_utils
 from . import utils
 from . import validation
 from .model_metadata import MODEL_METADATA
-from .ndr import ndr
 from .spec_utils import u
 
 LOGGER = logging.getLogger(__name__)
@@ -1037,10 +1036,11 @@ def execute(args):
             intermediate_dir,
             f'urban_nature_population_ratio{suffix}.tif')
         urban_nature_population_ratio_task = graph.add_task(
-            _calculate_urban_nature_population_ratio,
-            args=(urban_nature_pixels_path,
-                  decayed_population_path,
-                  urban_nature_population_ratio_path),
+            func=pygeoprocessing.raster_map,
+            kwargs=dict(
+                op=_urban_nature_population_ratio,
+                rasters=[urban_nature_pixels_path, decayed_population_path],
+                target_path=urban_nature_population_ratio_path),
             task_name=(
                 '2SFCA: Calculate R_j urban nature/population ratio - '
                 f'{search_radius_m}'),
@@ -1127,10 +1127,11 @@ def execute(args):
                 intermediate_dir,
                 f'urban_nature_population_ratio_lucode_{lucode}{suffix}.tif')
             urban_nature_population_ratio_task = graph.add_task(
-                _calculate_urban_nature_population_ratio,
-                args=(urban_nature_pixels_path,
-                      decayed_population_paths[search_radius_m],
-                      urban_nature_population_ratio_path),
+                func=pygeoprocessing.raster_map,
+                kwargs=dict(
+                    op=_urban_nature_population_ratio,
+                    rasters=[urban_nature_pixels_path, decayed_population_paths[search_radius_m]],
+                    target_path=urban_nature_population_ratio_path),
                 task_name=(
                     '2SFCA: Calculate R_j urban nature/population ratio - '
                     f'{search_radius_m}'),
@@ -1161,13 +1162,11 @@ def execute(args):
                     urban_nature_population_ratio_task]))
 
         urban_nature_supply_percapita_task = graph.add_task(
-            ndr._sum_rasters,
-            kwargs={
-                'raster_path_list': partial_urban_nature_supply_percapita_paths,
-                'target_nodata': FLOAT32_NODATA,
-                'target_result_path':
-                    file_registry['urban_nature_supply_percapita'],
-            },
+            func=pygeoprocessing.raster_map,
+            kwargs=dict(
+                op=_sum_op,
+                rasters=partial_urban_nature_supply_percapita_paths,
+                target_path=file_registry['urban_nature_supply_percapita']),
             task_name='2SFCA - urban nature supply total',
             target_path_list=[file_registry['urban_nature_supply_percapita']],
             dependent_task_list=partial_urban_nature_supply_percapita_tasks
@@ -1238,22 +1237,22 @@ def execute(args):
             intermediate_dir,
             f'distance_weighted_population_all_groups{suffix}.tif')
         sum_of_decayed_population_task = graph.add_task(
-            ndr._sum_rasters,
-            kwargs={
-                'raster_path_list': decayed_population_in_group_paths,
-                'target_nodata': FLOAT32_NODATA,
-                'target_result_path': sum_of_decayed_population_path,
-            },
+            func=pygeoprocessing.raster_map,
+            kwargs=dict(
+                op=_sum_op,
+                rasters=decayed_population_in_group_paths,
+                target_path=sum_of_decayed_population_path),
             task_name='2SFCA - urban nature supply total',
             target_path_list=[sum_of_decayed_population_path],
             dependent_task_list=decayed_population_in_group_tasks
         )
 
         urban_nature_population_ratio_task = graph.add_task(
-            _calculate_urban_nature_population_ratio,
-            args=(urban_nature_pixels_path,
-                  sum_of_decayed_population_path,
-                  file_registry['urban_nature_population_ratio']),
+            func=pygeoprocessing.raster_map,
+            kwargs=dict(
+                op=_urban_nature_population_ratio,
+                rasters=[urban_nature_pixels_path, sum_of_decayed_population_path],
+                target_path=file_registry['urban_nature_population_ratio']),
             task_name=(
                 '2SFCA: Calculate R_j urban nature/population ratio - '
                 f'{search_radius_m}'),
@@ -1326,18 +1325,14 @@ def execute(args):
             urban_nature_balance_totalpop_by_group_paths[
                 pop_group] = urban_nature_balance_totalpop_by_group_path
             urban_nature_balance_totalpop_by_group_tasks.append(graph.add_task(
-                pygeoprocessing.raster_calculator,
-                kwargs={
-                    'base_raster_path_band_const_list': [
-                        (per_cap_urban_nature_balance_pop_group_path, 1),
-                        (proportional_pop_path, 1)
+                pygeoprocessing.raster_map,
+                kwargs=dict(
+                    op=_urban_nature_balance_totalpop_op,
+                    rasters=[
+                        per_cap_urban_nature_balance_pop_group_path,
+                        proportional_pop_path
                     ],
-                    'local_op': _urban_nature_balance_totalpop_op,
-                    'target_raster_path': (
-                        urban_nature_balance_totalpop_by_group_path),
-                    'datatype_target': gdal.GDT_Float32,
-                    'nodata_target': FLOAT32_NODATA
-                },
+                    target_path=urban_nature_balance_totalpop_by_group_path),
                 task_name='Calculate per-capita urban nature supply-demand',
                 target_path_list=[
                     urban_nature_balance_totalpop_by_group_path],
@@ -1414,14 +1409,11 @@ def execute(args):
             ])
 
         urban_nature_balance_totalpop_task = graph.add_task(
-            ndr._sum_rasters,
-            kwargs={
-                'raster_path_list':
-                    list(urban_nature_balance_totalpop_by_group_paths.values()),
-                'target_nodata': FLOAT32_NODATA,
-                'target_result_path':
-                    file_registry['urban_nature_balance_totalpop'],
-            },
+            func=pygeoprocessing.raster_map,
+            kwargs=dict(
+                op=_sum_op,
+                rasters=list(urban_nature_balance_totalpop_by_group_paths.values()),
+                target_path=file_registry['urban_nature_balance_totalpop']),
             task_name='2SFCA - urban nature - total population',
             target_path_list=[
                 file_registry['urban_nature_balance_totalpop']],
@@ -1478,18 +1470,15 @@ def execute(args):
 
         # This is "SUP_DEMi" from the user's guide
         urban_nature_balance_totalpop_task = graph.add_task(
-            pygeoprocessing.raster_calculator,
-            kwargs={
-                'base_raster_path_band_const_list': [
-                    (file_registry['urban_nature_balance_percapita'], 1),
-                    (file_registry['masked_population'], 1)
+            pygeoprocessing.raster_map,
+            kwargs=dict(
+                op=_urban_nature_balance_totalpop_op,
+                rasters=[
+                    file_registry['urban_nature_balance_percapita'],
+                    file_registry['masked_population']
                 ],
-                'local_op': _urban_nature_balance_totalpop_op,
-                'target_raster_path': (
-                    file_registry['urban_nature_balance_totalpop']),
-                'datatype_target': gdal.GDT_Float32,
-                'nodata_target': FLOAT32_NODATA
-            },
+                target_path=file_registry['urban_nature_balance_totalpop']
+            ),
             task_name='Calculate urban nature balance for the total population',
             target_path_list=[
                 file_registry['urban_nature_balance_totalpop']],
@@ -1565,6 +1554,10 @@ def execute(args):
     graph.close()
     graph.join()
     LOGGER.info('Finished Urban Nature Access Model')
+
+
+# Sum a list of arrays element-wise
+def _sum_op(*array_list): return numpy.sum(array_list, axis=0)
 
 
 def _geometries_overlap(vector_path):
@@ -2145,112 +2138,69 @@ def _urban_nature_balance_totalpop_op(urban_nature_balance, population):
         A ``numpy.array`` of the area (in square meters) of urban nature
         supplied to each individual in each pixel.
     """
-    supply_demand = numpy.full(
-        urban_nature_balance.shape, FLOAT32_NODATA, dtype=numpy.float32)
-    valid_pixels = (
-        ~numpy.isclose(urban_nature_balance, FLOAT32_NODATA) &
-        ~numpy.isclose(population, FLOAT32_NODATA))
-    supply_demand[valid_pixels] = (
-        urban_nature_balance[valid_pixels] * population[valid_pixels])
-    return supply_demand
+    return urban_nature_balance * population
 
 
-def _calculate_urban_nature_population_ratio(
-        urban_nature_area_raster_path, convolved_population_raster_path,
-        target_ratio_raster_path):
+def _urban_nature_population_ratio(urban_nature_area, convolved_population):
     """Calculate the urban nature-population ratio R_j.
 
     Args:
-        urban_nature_area_raster_path (string): The path to a raster representing
-            the area of the pixel that represents urban nature.  Pixel values
-            will be ``0`` if there is no urban nature.
-        convolved_population_raster_path (string): The path to a raster
-            representing population counts that have been convolved over some
-            search kernel and perhaps weighted.
-        target_ratio_raster_path (string): The path to where the target
-            urban nature-population raster should be written.
+        urban_nature_area (numpy.array): A numpy array representing the area
+            of urban nature in the pixel.  Pixel values will be ``0`` if
+            there is no urban nature.  Pixel values may also match
+            ``urban_nature_nodata``.
+        convolved_population (numpy.array): A numpy array where each pixel
+            represents the total number of people within a search radius of
+            each pixel, perhaps weighted by a search kernel.
 
     Returns:
-        ``None``.
+        A numpy array with the ratio ``R_j`` representing the
+        urban nature-population ratio with the following constraints:
+
+            * ``convolved_population`` pixels that are numerically close to
+              ``0`` are snapped to ``0`` to avoid unrealistically small
+              denominators in the final ratio.
+            * Any non-urban nature pixels will have a value of ``0`` in the
+              output matrix.
     """
-    urban_nature_nodata = pygeoprocessing.get_raster_info(
-        urban_nature_area_raster_path)['nodata'][0]
-    population_nodata = pygeoprocessing.get_raster_info(
-        convolved_population_raster_path)['nodata'][0]
+    # ASSUMPTION: population nodata value is not close to 0.
+    #  Shouldn't be if we're coming from convolution.
+    out_array = numpy.full(
+        urban_nature_area.shape, FLOAT32_NODATA, dtype=numpy.float32)
 
-    def _urban_nature_population_ratio(urban_nature_area, convolved_population):
-        """Calculate the urban nature-population ratio R_j.
+    # Small negative values should already have been filtered out in
+    # another function after the convolution.
+    # This avoids divide-by-zero errors when taking the ratio.
+    valid_pixels = (convolved_population > 0)
 
-        Args:
-            urban_nature_area (numpy.array): A numpy array representing the area
-                of urban nature in the pixel.  Pixel values will be ``0`` if
-                there is no urban nature.  Pixel values may also match
-                ``urban_nature_nodata``.
-            convolved_population (numpy.array): A numpy array where each pixel
-                represents the total number of people within a search radius of
-                each pixel, perhaps weighted by a search kernel.
+    # R_j is a ratio only calculated for the urban nature pixels.
+    urban_nature_pixels = ~numpy.isclose(urban_nature_area, 0)
+    valid_pixels &= urban_nature_pixels
 
-        Returns:
-            A numpy array with the ratio ``R_j`` representing the
-            urban nature-population ratio with the following constraints:
+    # The user's guide specifies that if the population in the search
+    # radius is numerically 0, the urban nature/population ratio should be
+    # set to the urban nature area.
+    # A consequence of this is that as the population approaches 0 from the
+    # positive side, the ratio will approach infinity.
+    # After checking with the science team, we decided that where the
+    # population is less than or equal to 1, the calculated
+    # urban nature/population ratio would be set to the available urban
+    # nature on that pixel.
+    population_close_to_zero = (convolved_population <= 1.0)
+    out_array[population_close_to_zero] = (
+        urban_nature_area[population_close_to_zero])
+    out_array[~urban_nature_pixels] = 0
 
-                * ``convolved_population`` pixels that are numerically close to
-                  ``0`` are snapped to ``0`` to avoid unrealistically small
-                  denominators in the final ratio.
-                * Any non-urban nature pixels will have a value of ``0`` in the
-                  output matrix.
-        """
-        # ASSUMPTION: population nodata value is not close to 0.
-        #  Shouldn't be if we're coming from convolution.
-        out_array = numpy.full(
-            urban_nature_area.shape, FLOAT32_NODATA, dtype=numpy.float32)
+    valid_pixels_with_population = (
+        valid_pixels & (~population_close_to_zero))
+    out_array[valid_pixels_with_population] = (
+        urban_nature_area[valid_pixels_with_population] /
+        convolved_population[valid_pixels_with_population])
 
-        # Small negative values should already have been filtered out in
-        # another function after the convolution.
-        # This avoids divide-by-zero errors when taking the ratio.
-        valid_pixels = (convolved_population > 0)
+    # eliminate pixel values < 0
+    out_array[valid_pixels & (out_array < 0)] = 0
 
-        # R_j is a ratio only calculated for the urban nature pixels.
-        urban_nature_pixels = ~numpy.isclose(urban_nature_area, 0)
-        valid_pixels &= urban_nature_pixels
-        if population_nodata is not None:
-            valid_pixels &= ~utils.array_equals_nodata(
-                convolved_population, population_nodata)
-
-        if urban_nature_nodata is not None:
-            valid_pixels &= ~utils.array_equals_nodata(
-                urban_nature_area, urban_nature_nodata)
-
-        # The user's guide specifies that if the population in the search
-        # radius is numerically 0, the urban nature/population ratio should be
-        # set to the urban nature area.
-        # A consequence of this is that as the population approaches 0 from the
-        # positive side, the ratio will approach infinity.
-        # After checking with the science team, we decided that where the
-        # population is less than or equal to 1, the calculated
-        # urban nature/population ratio would be set to the available urban
-        # nature on that pixel.
-        population_close_to_zero = (convolved_population <= 1.0)
-        out_array[population_close_to_zero] = (
-            urban_nature_area[population_close_to_zero])
-        out_array[~urban_nature_pixels] = 0
-
-        valid_pixels_with_population = (
-            valid_pixels & (~population_close_to_zero))
-        out_array[valid_pixels_with_population] = (
-            urban_nature_area[valid_pixels_with_population] /
-            convolved_population[valid_pixels_with_population])
-
-        # eliminate pixel values < 0
-        out_array[valid_pixels & (out_array < 0)] = 0
-
-        return out_array
-
-    pygeoprocessing.raster_calculator(
-        [(urban_nature_area_raster_path, 1),
-         (convolved_population_raster_path, 1)],
-        _urban_nature_population_ratio, target_ratio_raster_path,
-        gdal.GDT_Float32, FLOAT32_NODATA)
+    return out_array
 
 
 def _convolve_and_set_lower_bound(
@@ -2368,7 +2318,6 @@ def _resample_population_raster(
     population_raster_info = pygeoprocessing.get_raster_info(
         source_population_raster_path)
     pixel_area = numpy.multiply(*population_raster_info['pixel_size'])
-    population_nodata = population_raster_info['nodata'][0]
 
     population_srs = osr.SpatialReference()
     population_srs.ImportFromWkt(population_raster_info['projection_wkt'])
@@ -2386,18 +2335,15 @@ def _resample_population_raster(
 
         Returns:
             """
-        out_array = numpy.full(
-            population.shape, FLOAT32_NODATA, dtype=numpy.float32)
-        valid_mask = ~utils.array_equals_nodata(population, population_nodata)
-        out_array[valid_mask] = population[valid_mask] / population_pixel_area
-        return out_array
+        return population / population_pixel_area
 
     # Step 1: convert the population raster to population density per sq. km
     density_raster_path = os.path.join(tmp_working_dir, 'pop_density.tif')
-    pygeoprocessing.raster_calculator(
-        [(source_population_raster_path, 1)],
-        _convert_population_to_density,
-        density_raster_path, gdal.GDT_Float32, FLOAT32_NODATA)
+    pygeoprocessing.raster_map(
+        rasters=[source_population_raster_path],
+        op=_convert_population_to_density,
+        target_path=density_raster_path,
+        target_dtype=numpy.float32)
 
     # Step 2: align to the LULC
     warped_density_path = os.path.join(tmp_working_dir, 'warped_density.tif')
@@ -2432,18 +2378,12 @@ def _resample_population_raster(
         # between multiple pixels.  So it's preserving an unrealistic degree of
         # precision, but that's probably OK because pixels are imprecise
         # measures anyways.
-        out_array = numpy.full(
-            density.shape, FLOAT32_NODATA, dtype=numpy.float32)
+        return density * target_pixel_area
 
-        # We already know that the nodata value is FLOAT32_NODATA
-        valid_mask = ~numpy.isclose(density, FLOAT32_NODATA)
-        out_array[valid_mask] = density[valid_mask] * target_pixel_area
-        return out_array
-
-    pygeoprocessing.raster_calculator(
-        [(warped_density_path, 1)],
-        _convert_density_to_population,
-        target_population_raster_path, gdal.GDT_Float32, FLOAT32_NODATA)
+    pygeoprocessing.raster_map(
+        op=_convert_density_to_population,
+        rasters=[warped_density_path],
+        target_path=target_population_raster_path)
 
     shutil.rmtree(tmp_working_dir, ignore_errors=True)
 

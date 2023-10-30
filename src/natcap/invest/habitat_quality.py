@@ -298,17 +298,6 @@ MODEL_SPEC = {
                 "filtered_[THREAT]_aligned.tif": {
                     "about": "Filtered threat raster",
                     "bands": {1: {"type": "ratio"}},
-                },
-                "kernels": {
-                    "type": "directory",
-                    "contents": {
-                        "kernel_[HABITAT]_[SCENARIO].tif": {
-                            "about": (
-                                "Convolution kernel for the given habitat and "
-                                "scenario"),
-                            "bands": {1: {"type": "integer"}}
-                        }
-                    }
                 }
             }
         },
@@ -781,30 +770,12 @@ def _calculate_habitat_quality(deg_hab_raster_list, quality_out_path, ksq):
     Returns:
         None
     """
-    def quality_op(degradation, habitat):
-        """Computes habitat quality given degradation and habitat values."""
-        out_array = numpy.empty_like(degradation)
-        out_array[:] = _OUT_NODATA
-        # Both these rasters are Float32, so the actual pixel values written
-        # might be *slightly* off of _OUT_NODATA but should still be
-        # interpreted as nodata.
-        # _OUT_NODATA (defined above) should never be None, so this is okay
-        valid_pixels = ~(
-            utils.array_equals_nodata(degradation, _OUT_NODATA) |
-            utils.array_equals_nodata(habitat, _OUT_NODATA))
-
-        out_array[valid_pixels] = (
-            habitat[valid_pixels] *
-            (1.0 - (degradation[valid_pixels]**_SCALING_PARAM) /
-                (degradation[valid_pixels]**_SCALING_PARAM + ksq)))
-        return out_array
-
-    deg_hab_raster_band_list = [
-        (path, 1) for path in deg_hab_raster_list]
-
-    pygeoprocessing.raster_calculator(
-        deg_hab_raster_band_list, quality_op, quality_out_path,
-        gdal.GDT_Float32, _OUT_NODATA)
+    pygeoprocessing.raster_map(
+        op=lambda degradation, habitat: (
+            habitat * (1 - (degradation**_SCALING_PARAM) /
+            (degradation**_SCALING_PARAM + ksq))),
+        rasters=deg_hab_raster_list,
+        target_path=quality_out_path)
 
 
 def _calculate_total_degradation(
@@ -822,7 +793,7 @@ def _calculate_total_degradation(
     Returns:
         None
     """
-    def total_degradation(*raster):
+    def total_degradation(*arrays):
         """Computes the total degradation value.
 
         Args:
@@ -842,27 +813,20 @@ def _calculate_total_degradation(
         # we can not be certain how many threats the user will enter,
         # so we handle each filtered threat and sensitivity raster
         # in pairs
-        sum_degradation = numpy.zeros(raster[0].shape)
-        for index in range(len(raster) // 2):
+        sum_degradation = numpy.zeros(arrays[0].shape)
+        for index in range(len(arrays) // 2):
             step = index * 2
             sum_degradation += (
-                raster[step] * raster[step + 1] * weight_list[index])
+                arrays[step] * arrays[step + 1] * weight_list[index])
 
-        nodata_mask = numpy.empty(raster[0].shape, dtype=numpy.int8)
-        nodata_mask[:] = 0
-        for array in raster:
-            nodata_mask = nodata_mask | utils.array_equals_nodata(
-                array, _OUT_NODATA)
+        # the last element in arrays is access
+        return sum_degradation * arrays[-1]
 
-        # the last element in raster is access
-        return numpy.where(
-            nodata_mask, _OUT_NODATA, sum_degradation * raster[-1])
-
-    deg_raster_band_list = [(path, 1) for path in deg_raster_list]
-
-    pygeoprocessing.raster_calculator(
-        deg_raster_band_list, total_degradation, deg_sum_raster_path,
-        gdal.GDT_Float32, _OUT_NODATA)
+    pygeoprocessing.raster_map(
+        op=total_degradation,
+        rasters=deg_raster_list,
+        target_path=deg_sum_raster_path,
+        target_dtype=numpy.float32)
 
 
 def _compute_rarity_operation(
@@ -904,27 +868,12 @@ def _compute_rarity_operation(
     lulc_area = float(abs(lulc_pixel_size[0]) * abs(lulc_pixel_size[1]))
     lulc_nodata = lulc_raster_info['nodata'][0]
 
-    def trim_op(base, cover_x):
-        """Trim cover_x to the mask of base.
-
-        Args:
-            base (numpy.ndarray): base raster from 'lulc_base'
-            cover_x (numpy.ndarray): either future or current land
-                cover raster from 'lulc_path_band' above
-
-        Returns:
-            _OUT_NODATA where either array has nodata, otherwise cover_x.
-        """
-        result_array = numpy.full(cover_x.shape, _OUT_NODATA)
-        valid_mask = (
-            ~utils.array_equals_nodata(base, base_nodata) &
-            ~utils.array_equals_nodata(cover_x, lulc_nodata))
-        result_array[valid_mask] = cover_x[valid_mask]
-        return result_array
-
-    pygeoprocessing.raster_calculator(
-        [base_lulc_path_band, lulc_path_band], trim_op, new_cover_path[0],
-        gdal.GDT_Float32, _OUT_NODATA)
+    # Trim cover_x to the mask of base.
+    pygeoprocessing.raster_map(
+        op=lambda base, cover_x: cover_x,
+        rasters=[base_lulc_path_band[0], lulc_path_band[0]],
+        target_path=new_cover_path[0],
+        target_dtype=numpy.float32)
 
     LOGGER.info('Starting rarity computation on'
                 f' {os.path.basename(lulc_path_band[0])} land cover.')
@@ -1032,7 +981,7 @@ def _decay_distance(dist_raster_path, max_dist, decay_type, target_path):
         dist_raster_path)['pixel_size']
 
     # convert max distance (given in KM) to meters
-    max_dist_m = max_dist * 1000.0
+    max_dist_m = max_dist * 1000
 
     # convert max distance from meters to the number of pixels that
     # represents on the raster
@@ -1041,31 +990,21 @@ def _decay_distance(dist_raster_path, max_dist, decay_type, target_path):
 
     def linear_op(dist):
         """Linear decay operation."""
-        valid_mask = ~utils.array_equals_nodata(dist, _OUT_NODATA)
-        result = numpy.empty(dist.shape, dtype=numpy.float32)
-        result[:] = _OUT_NODATA
-
-        result[valid_mask] = numpy.where(
-            dist[valid_mask] > max_dist_pixel, 0.0,
-            (max_dist_pixel - dist[valid_mask]) / max_dist_pixel)
-        return result
+        return numpy.where(
+            dist > max_dist_pixel, 0,
+            (max_dist_pixel - dist) / max_dist_pixel)
 
     def exp_op(dist):
         """Exponential decay operation."""
-        valid_mask = ~utils.array_equals_nodata(dist, _OUT_NODATA)
-        result = numpy.empty(dist.shape, dtype=numpy.float32)
-        result[:] = _OUT_NODATA
-
         # Some background on where the 2.99 constant comes from:
         # With the constant of 2.99, the impact of the threat is reduced by
         # 95% (to 5%) at the specified max threat distance. So I suspect it's
         # based on the traditional 95% cutoff that is used in statistics. We
         # could tweak this cutoff (e.g., 99% decay at max distance), if we
         # wanted. - Lisa Mandle
-        result[valid_mask] = numpy.where(
-            dist[valid_mask] > max_dist_pixel, 0.0,
-            numpy.exp((-dist[valid_mask] * 2.99) / max_dist_pixel))
-        return result
+        return numpy.where(
+            dist > max_dist_pixel, 0,
+            numpy.exp((-dist * 2.99) / max_dist_pixel))
 
     if decay_type == 'linear':
         decay_op = linear_op
@@ -1077,9 +1016,11 @@ def _decay_distance(dist_raster_path, max_dist, decay_type, target_path):
             f" either 'linear' or 'exponential'. Input was '{decay_type}' for"
             f" output raster path : '{target_path}'")
 
-    pygeoprocessing.raster_calculator(
-        [(dist_raster_path, 1)], decay_op, target_path, gdal.GDT_Float32,
-        _OUT_NODATA)
+    pygeoprocessing.raster_map(
+        op=decay_op,
+        rasters=[dist_raster_path],
+        target_path=target_path,
+        target_dtype=numpy.float32)
 
 
 def _validate_threat_path(threat_path, lulc_key):

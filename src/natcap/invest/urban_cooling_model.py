@@ -604,10 +604,11 @@ def execute(args):
         LOGGER.info('Calculating Cooling Coefficient using '
                     'building intensity')
         cc_task = task_graph.add_task(
-            func=pygeoprocessing.raster_calculator,
-            args=([(task_path_prop_map['building_intensity'][1], 1)],
-                  calc_cc_op_intensity, cc_raster_path,
-                  gdal.GDT_Float32, TARGET_NODATA),
+            func=pygeoprocessing.raster_map,
+            kwargs=dict(
+                op=calc_cc_op_intensity,
+                rasters=[task_path_prop_map['building_intensity'][1]],
+                target_path=cc_raster_path),
             target_path_list=[cc_raster_path],
             dependent_task_list=[
                 task_path_prop_map['building_intensity'][0]],
@@ -1232,11 +1233,7 @@ def calc_cc_op_intensity(intensity_array):
         A numpy array of ``1 - intensity_array``.
 
     """
-    result = numpy.empty(intensity_array.shape, dtype=numpy.float32)
-    result[:] = TARGET_NODATA
-    valid_mask = ~utils.array_equals_nodata(intensity_array, TARGET_NODATA)
-    result[valid_mask] = 1 - intensity_array[valid_mask]
-    return result
+    return 1 - intensity_array
 
 
 def calc_eti_op(
@@ -1271,27 +1268,12 @@ def calculate_wbgt(
 
     """
     LOGGER.info('Calculating WBGT')
-    t_air_nodata = pygeoprocessing.get_raster_info(
-        t_air_raster_path)['nodata'][0]
-
-    def wbgt_op(avg_rel_humidity, t_air_array):
-        wbgt = numpy.empty(t_air_array.shape, dtype=numpy.float32)
-
-        valid_mask = slice(None)
-        if t_air_nodata is not None:
-            valid_mask = ~utils.array_equals_nodata(t_air_array, t_air_nodata)
-        wbgt[:] = TARGET_NODATA
-        t_air_valid = t_air_array[valid_mask]
-        e_i = (
+    pygeoprocessing.raster_map(
+        op=lambda t_air: 0.567 * t_air + 0.393 * (
             (avg_rel_humidity / 100) * 6.105 * numpy.exp(
-                17.27 * (t_air_valid / (237.7 + t_air_valid))))
-        wbgt[valid_mask] = 0.567 * t_air_valid + 0.393 * e_i + 3.94
-        return wbgt
-
-    pygeoprocessing.raster_calculator(
-        [(avg_rel_humidity, 'raw'), (t_air_raster_path, 1)],
-        wbgt_op, target_vapor_pressure_path, gdal.GDT_Float32,
-        TARGET_NODATA)
+                17.27 * (t_air / (237.7 + t_air)))) + 3.94,
+        rasters=[t_air_raster_path],
+        target_path=target_vapor_pressure_path)
 
 
 def flat_disk_kernel(max_distance, kernel_filepath):
@@ -1420,33 +1402,24 @@ def map_work_loss(
     """
     LOGGER.info(
         f'Calculating work loss using thresholds: {work_temp_threshold_array}')
-    byte_target_nodata = 255
 
     def classify_to_percent_op(temperature_array):
         result = numpy.empty(temperature_array.shape)
-        result[:] = byte_target_nodata
-        valid_mask = ~utils.array_equals_nodata(
-            temperature_array, TARGET_NODATA)
+        result[temperature_array < work_temp_threshold_array[0]] = 0
         result[
-            valid_mask &
-            (temperature_array < work_temp_threshold_array[0])] = 0
-        result[
-            valid_mask &
             (temperature_array >= work_temp_threshold_array[0]) &
             (temperature_array < work_temp_threshold_array[1])] = 25
         result[
-            valid_mask &
             (temperature_array >= work_temp_threshold_array[1]) &
             (temperature_array < work_temp_threshold_array[2])] = 50
-        result[
-            valid_mask &
-            (temperature_array >= work_temp_threshold_array[2])] = 75
+        result[temperature_array >= work_temp_threshold_array[2]] = 75
         return result
 
-    pygeoprocessing.raster_calculator(
-        [(temperature_raster_path, 1)], classify_to_percent_op,
-        work_loss_raster_path, gdal.GDT_Byte,
-        nodata_target=byte_target_nodata)
+    pygeoprocessing.raster_map(
+        op=classify_to_percent_op,
+        rasters=[temperature_raster_path],
+        target_path=work_loss_raster_path,
+        target_dtype=numpy.uint8)
 
 
 def _invoke_timed_callback(

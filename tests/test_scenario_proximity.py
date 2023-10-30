@@ -38,7 +38,7 @@ class ScenarioProximityTests(unittest.TestCase):
             'focal_landcover_codes': '1 2 3 4 5',
             'n_fragmentation_steps': '1',
             'replacement_lucode': '12',
-            'n_workers': '-1',
+            'n_workers': 2,
         }
         return args
 

@@ -296,9 +296,6 @@ _TMP_BASE_FILES = {
 
 # -1.0 since carbon stocks are 0 or greater
 _CARBON_NODATA = -1.0
-# use min float32 which is unlikely value to see in a NPV raster
-_VALUE_NODATA = float(numpy.finfo(numpy.float32).min)
-
 
 def execute(args):
     """Carbon.
@@ -435,8 +432,12 @@ def execute(args):
             "Calculate carbon storage for '%s'", output_key)
 
         sum_rasters_task = graph.add_task(
-            _sum_rasters,
-            args=(storage_path_list, file_registry[output_key]),
+            func=pygeoprocessing.raster_map,
+            kwargs=dict(
+                op=sum_op,
+                rasters=storage_path_list,
+                target_path=file_registry[output_key],
+                target_nodata=_CARBON_NODATA),
             target_path_list=[file_registry[output_key]],
             dependent_task_list=carbon_map_task_lookup[scenario_type],
             task_name='sum_rasters_for_total_c_%s' % output_key)
@@ -455,8 +456,13 @@ def execute(args):
             file_registry['tot_c_' + scenario_type]]
 
         diff_rasters_task = graph.add_task(
-            _diff_rasters,
-            args=(storage_path_list, file_registry[output_key]),
+            func=pygeoprocessing.raster_map,
+            kwargs=dict(
+                op=diff_op,
+                rasters=storage_path_list,
+                target_path=file_registry[output_key],
+                target_dtype=numpy.float32,
+                target_nodata=_CARBON_NODATA),
             target_path_list=[file_registry[output_key]],
             dependent_task_list=[
                 sum_rasters_task_lookup['cur'],
@@ -512,6 +518,9 @@ def execute(args):
                 "Can't remove temporary file: %s\nOriginal Exception:\n%s",
                 file_registry[tmp_filename_key], os_error)
 
+def sum_op(*xs): return numpy.sum(xs, axis=0)
+
+def diff_op(base, future): return future - base
 
 def _accumulate_totals(raster_path):
     """Sum all non-nodata pixels in `raster_path` and return result."""
@@ -553,43 +562,6 @@ def _generate_carbon_map(
     utils.reclassify_raster(
         (lulc_path, 1), carbon_stock_by_type, out_carbon_stock_path,
         gdal.GDT_Float32, _CARBON_NODATA, reclass_error_details)
-
-
-def _sum_rasters(storage_path_list, output_sum_path):
-    """Sum all the rasters in `storage_path_list` to `output_sum_path`."""
-    def _sum_op(*storage_arrays):
-        """Sum all the arrays or nodata a pixel stack if one exists."""
-        valid_mask = reduce(
-            lambda x, y: x & y, [
-                ~utils.array_equals_nodata(_, _CARBON_NODATA)
-                for _ in storage_arrays])
-        result = numpy.empty(storage_arrays[0].shape)
-        result[:] = _CARBON_NODATA
-        result[valid_mask] = numpy.sum([
-            _[valid_mask] for _ in storage_arrays], axis=0)
-        return result
-
-    pygeoprocessing.raster_calculator(
-        [(x, 1) for x in storage_path_list], _sum_op, output_sum_path,
-        gdal.GDT_Float32, _CARBON_NODATA)
-
-
-def _diff_rasters(storage_path_list, output_diff_path):
-    """Subtract rasters in `storage_path_list` to `output_sum_path`."""
-    def _diff_op(base_array, future_array):
-        """Subtract future_array from base_array and ignore nodata."""
-        result = numpy.empty(base_array.shape, dtype=numpy.float32)
-        result[:] = _CARBON_NODATA
-        valid_mask = (
-            ~utils.array_equals_nodata(base_array, _CARBON_NODATA) &
-            ~utils.array_equals_nodata(future_array, _CARBON_NODATA))
-        result[valid_mask] = (
-            future_array[valid_mask] - base_array[valid_mask])
-        return result
-
-    pygeoprocessing.raster_calculator(
-        [(x, 1) for x in storage_path_list], _diff_op, output_diff_path,
-        gdal.GDT_Float32, _CARBON_NODATA)
 
 
 def _calculate_valuation_constant(
@@ -639,17 +611,10 @@ def _calculate_npv(delta_carbon_path, valuation_constant, npv_out_path):
     Returns:
         None.
     """
-    def _npv_value_op(carbon_array):
-        """Calculate the NPV given carbon storage or loss values."""
-        result = numpy.empty(carbon_array.shape, dtype=numpy.float32)
-        result[:] = _VALUE_NODATA
-        valid_mask = ~utils.array_equals_nodata(carbon_array,  _CARBON_NODATA)
-        result[valid_mask] = carbon_array[valid_mask] * valuation_constant
-        return result
-
-    pygeoprocessing.raster_calculator(
-        [(delta_carbon_path, 1)], _npv_value_op, npv_out_path,
-        gdal.GDT_Float32, _VALUE_NODATA)
+    pygeoprocessing.raster_map(
+        op=lambda carbon: carbon * valuation_constant,
+        rasters=[delta_carbon_path],
+        target_path=npv_out_path)
 
 
 def _generate_report(raster_file_set, model_args, file_registry):

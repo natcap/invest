@@ -1082,21 +1082,15 @@ def _calculate_visual_quality(source_raster_path, working_dir, target_path):
     LOGGER.info('Mapping percentile breaks %s', percentile_bins)
 
     def _map_percentiles(valuation_matrix):
-        nonzero = (valuation_matrix != 0)
-        nodata = utils.array_equals_nodata(valuation_matrix, raster_nodata)
-        valid_indexes = (~nodata & nonzero)
-        visual_quality = numpy.empty(valuation_matrix.shape,
-                                     dtype=numpy.uint8)
-        visual_quality[:] = _BYTE_NODATA
-        visual_quality[~nonzero & ~nodata] = 0
-        visual_quality[valid_indexes] = numpy.digitize(
-            valuation_matrix[valid_indexes], percentile_bins)
-        return visual_quality
+        return numpy.where(
+            valuation_matrix == 0, 0, numpy.digitize(
+                valuation_matrix, percentile_bins))
 
-    pygeoprocessing.raster_calculator(
-        [(source_raster_path, 1)], _map_percentiles, target_path,
-        gdal.GDT_Byte, _BYTE_NODATA,
-        raster_driver_creation_tuple=BYTE_GTIFF_CREATION_OPTIONS)
+    pygeoprocessing.raster_map(
+        op=_map_percentiles,
+        rasters=[source_raster_path],
+        target_path=target_path,
+        target_dtype=numpy.uint8)
 
 
 @validation.invest_validator

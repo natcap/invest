@@ -208,7 +208,7 @@ class UCMTests(unittest.TestCase):
             'avg_tmp_an': 1.608697970397692,
             'avd_eng_cn': 7239979.192322,
             'avg_wbgt_v': 31.91108630952381,
-            'avg_ltls_v': 28.744239631336406,
+            'avg_ltls_v': 28.73463901689708,  # changed due to using float64 vs float32
             'avg_hvls_v': 75.000000000000000,
         }
         try:

@@ -1514,28 +1514,18 @@ def _calculate_npv(
                 prices_by_year[year] / (
                     (1 + discount_rate) ** years_since_baseline))
 
-        def _npv(*sequestration_matrices):
-            npv = numpy.empty(sequestration_matrices[0].shape,
-                              dtype=numpy.float32)
-            npv[:] = NODATA_FLOAT32_MIN
+        def _npv_op(*sequestration_arrays):
+            return numpy.sum(sequestration_arrays, axis=0) * valuation_factor
 
-            matrix_sum = numpy.zeros(npv.shape, dtype=numpy.float32)
-            valid_pixels = numpy.ones(npv.shape, dtype=bool)
-            for matrix in sequestration_matrices:
-                valid_pixels &= ~utils.array_equals_nodata(matrix, NODATA_FLOAT32_MIN)
-                matrix_sum[valid_pixels] += matrix[valid_pixels]
-
-            npv[valid_pixels] = (
-                matrix_sum[valid_pixels] * valuation_factor)
-            return npv
-
-        raster_path_band_tuples = [
-            (path, 1) for (year, path) in net_sequestration_rasters.items() if
+        raster_paths = [
+            path for (_, path) in net_sequestration_rasters.items() if
             year <= target_raster_year]
 
-        pygeoprocessing.raster_calculator(
-            raster_path_band_tuples, _npv, target_raster_path,
-            gdal.GDT_Float32, NODATA_FLOAT32_MIN)
+        pygeoprocessing.raster_map(
+            op=_npv_op,
+            rasters=raster_paths,
+            target_path=target_raster_path,
+            target_dtype=numpy.float32)
 
 
 def _calculate_stocks_after_baseline_period(
@@ -1562,32 +1552,14 @@ def _calculate_stocks_after_baseline_period(
         ``None``.
 
     """
-    # Both of these values are assumed to be defined from earlier in the
-    # model's execution.
-    baseline_nodata = pygeoprocessing.get_raster_info(
-        baseline_stock_raster_path)['nodata'][0]
-    accum_nodata = pygeoprocessing.get_raster_info(
-        yearly_accumulation_raster_path)['nodata'][0]
-
     def _calculate_accumulation_over_years(baseline_matrix, accum_matrix):
-        target_matrix = numpy.empty(baseline_matrix.shape, dtype=numpy.float32)
-        target_matrix[:] = NODATA_FLOAT32_MIN
+        return baseline_matrix + (accum_matrix * n_years)
 
-        valid_pixels = (
-            ~utils.array_equals_nodata(baseline_matrix, baseline_nodata) &
-            ~utils.array_equals_nodata(accum_matrix, accum_nodata))
-
-        target_matrix[valid_pixels] = (
-            baseline_matrix[valid_pixels] + (
-                accum_matrix[valid_pixels] * n_years))
-
-        return target_matrix
-
-    pygeoprocessing.raster_calculator(
-        [(baseline_stock_raster_path, 1),
-         (yearly_accumulation_raster_path, 1)],
-        _calculate_accumulation_over_years, target_raster_path,
-        gdal.GDT_Float32, NODATA_FLOAT32_MIN)
+    pygeoprocessing.raster_map(
+        op=_calculate_accumulation_over_years,
+        rasters=[baseline_stock_raster_path, yearly_accumulation_raster_path],
+        target_path=target_raster_path,
+        target_dtype=numpy.float32)
 
 
 def _calculate_accumulation_over_time(
@@ -2179,39 +2151,19 @@ def _reclassify_disturbance_magnitude(
         ``None``
 
     """
-    from_nodata = pygeoprocessing.get_raster_info(
-        landuse_transition_from_raster)['nodata'][0]
-    to_nodata = pygeoprocessing.get_raster_info(
-        landuse_transition_to_raster)['nodata'][0]
-
     def _reclassify_disturbance(
             landuse_transition_from_matrix, landuse_transition_to_matrix):
         """Pygeoprocessing op to reclassify disturbances."""
-        output_matrix = numpy.empty(landuse_transition_from_matrix.shape,
-                                    dtype=numpy.float32)
-        output_matrix[:] = NODATA_FLOAT32_MIN
 
-        valid_pixels = numpy.ones(landuse_transition_from_matrix.shape,
-                                  dtype=bool)
-        if from_nodata is not None:
-            valid_pixels &= ~utils.array_equals_nodata(
-                landuse_transition_from_matrix, from_nodata)
+        return disturbance_magnitude_matrix[
+            landuse_transition_from_matrix,
+            landuse_transition_to_matrix].toarray().flatten()
 
-        if to_nodata is not None:
-            valid_pixels &= ~utils.array_equals_nodata(
-                landuse_transition_to_matrix, to_nodata)
-
-        disturbance_magnitude = disturbance_magnitude_matrix[
-            landuse_transition_from_matrix[valid_pixels],
-            landuse_transition_to_matrix[valid_pixels]].toarray().flatten()
-
-        output_matrix[valid_pixels] = disturbance_magnitude
-        return output_matrix
-
-    pygeoprocessing.raster_calculator(
-        [(landuse_transition_from_raster, 1),
-            (landuse_transition_to_raster, 1)], _reclassify_disturbance,
-        target_raster_path, gdal.GDT_Float32, NODATA_FLOAT32_MIN)
+    pygeoprocessing.raster_map(
+        op=_reclassify_disturbance,
+        rasters=[landuse_transition_from_raster, landuse_transition_to_raster],
+        target_path=target_raster_path,
+        target_dtype=numpy.float32)
 
 
 @validation.invest_validator

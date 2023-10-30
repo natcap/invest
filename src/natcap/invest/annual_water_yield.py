@@ -733,12 +733,13 @@ def execute(args):
 
     LOGGER.info('Calculate PET from Ref Evap times Kc')
     calculate_pet_task = graph.add_task(
-        func=pygeoprocessing.raster_calculator,
-        args=([(eto_path, 1), (tmp_Kc_raster_path, 1),
-               (nodata_dict['eto'], 'raw'),
-               (nodata_dict['out_nodata'], 'raw')],
-              pet_op, tmp_pet_path, gdal.GDT_Float32,
-              nodata_dict['out_nodata']),
+        func=pygeoprocessing.raster_map,
+        kwargs=dict(
+            op=pet_op,
+            rasters=[eto_path, tmp_Kc_raster_path],
+            target_path=tmp_pet_path,
+            target_dtype=numpy.float32,
+            target_nodata=nodata_dict['out_nodata']),
         target_path_list=[tmp_pet_path],
         dependent_task_list=[create_Kc_raster_task],
         task_name='calculate_pet')
@@ -764,12 +765,13 @@ def execute(args):
 
     LOGGER.info('Performing wyield operation')
     calculate_wyield_task = graph.add_task(
-        func=pygeoprocessing.raster_calculator,
-        args=([(fractp_path, 1), (precip_path, 1),
-               (nodata_dict['precip'], 'raw'),
-               (nodata_dict['out_nodata'], 'raw')],
-              wyield_op, wyield_path, gdal.GDT_Float32,
-              nodata_dict['out_nodata']),
+        func=pygeoprocessing.raster_map,
+        kwargs=dict(
+            op=wyield_op,
+            rasters=[fractp_path, precip_path],
+            target_path=wyield_path,
+            target_nodata=nodata_dict['out_nodata'],
+            target_dtype=numpy.float32),
         target_path_list=[wyield_path],
         dependent_task_list=[calculate_fractp_task, align_raster_stack_task],
         task_name='calculate_wyield')
@@ -777,11 +779,13 @@ def execute(args):
 
     LOGGER.debug('Performing aet operation')
     calculate_aet_task = graph.add_task(
-        func=pygeoprocessing.raster_calculator,
-        args=([(fractp_path, 1), (precip_path, 1),
-               (nodata_dict['precip'], 'raw'),
-               (nodata_dict['out_nodata'], 'raw')],
-              aet_op, aet_path, gdal.GDT_Float32, nodata_dict['out_nodata']),
+        func=pygeoprocessing.raster_map,
+        kwargs=dict(
+            op=aet_op,
+            rasters=[fractp_path, precip_path],
+            target_path=aet_path,
+            target_nodata=nodata_dict['out_nodata'],
+            target_dtype=numpy.float32),
         target_path_list=[aet_path],
         dependent_task_list=[
             calculate_fractp_task, create_veg_raster_task,
@@ -864,6 +868,15 @@ def execute(args):
             task_name=f'create_{ws_id_name}_table_output')
 
     graph.join()
+
+
+def pet_op(eto, kc): return eto * kc
+
+
+def aet_op(fractp, precip): return fractp * precip
+
+
+def wyield_op(fractp, precip): return (1 - fractp) * precip
 
 
 def copy_vector(base_vector_path, target_vector_path):
@@ -977,55 +990,6 @@ def zonal_stats_tofile(base_vector_path, raster_path, target_stats_pickle):
         picklefile.write(pickle.dumps(ws_stats_dict))
 
 
-def aet_op(fractp, precip, precip_nodata, output_nodata):
-    """Compute actual evapotranspiration values.
-
-    Args:
-        fractp (numpy.ndarray float): fractp raster values.
-        precip (numpy.ndarray): precipitation raster values (mm).
-        precip_nodata (float): nodata value from the precip raster.
-        output_nodata (float): nodata value assigned to output of
-            raster_calculator.
-
-    Returns:
-        numpy.ndarray of actual evapotranspiration values (mm).
-
-    """
-    result = numpy.empty_like(fractp)
-    result[:] = output_nodata
-    # checking if fractp >= 0 because it's a value that's between 0 and 1
-    # and the nodata value is a large negative number.
-    valid_mask = fractp >= 0
-    if precip_nodata is not None:
-        valid_mask &= ~utils.array_equals_nodata(precip, precip_nodata)
-    result[valid_mask] = fractp[valid_mask] * precip[valid_mask]
-    return result
-
-
-def wyield_op(fractp, precip, precip_nodata, output_nodata):
-    """Calculate water yield.
-
-    Args:
-        fractp (numpy.ndarray float): fractp raster values.
-        precip (numpy.ndarray): precipitation raster values (mm).
-        precip_nodata (float): nodata value from the precip raster.
-        output_nodata (float): nodata value assigned to output of
-            raster_calculator.
-
-    Returns:
-        numpy.ndarray of water yield value (mm).
-
-    """
-    result = numpy.empty_like(fractp)
-    result[:] = output_nodata
-    # output_nodata is defined above, should never be None
-    valid_mask = ~utils.array_equals_nodata(fractp, output_nodata)
-    if precip_nodata is not None:
-        valid_mask &= ~utils.array_equals_nodata(precip, precip_nodata)
-    result[valid_mask] = (1 - fractp[valid_mask]) * precip[valid_mask]
-    return result
-
-
 def fractp_op(
         Kc, eto, precip, root, soil, pawc, veg,
         nodata_dict, seasonality_constant):
@@ -1119,30 +1083,6 @@ def fractp_op(
     fractp[:] = nodata_dict['out_nodata']
     fractp[valid_mask] = result
     return fractp
-
-
-def pet_op(eto_pix, Kc_pix, eto_nodata, output_nodata):
-    """Calculate the plant potential evapotranspiration.
-
-    Args:
-        eto_pix (numpy.ndarray): a numpy array of ETo
-        Kc_pix (numpy.ndarray): a numpy array of  Kc coefficient
-        precip_nodata (float): nodata value from the precip raster
-        output_nodata (float): nodata value assigned to output of
-            raster_calculator
-
-    Returns:
-        numpy.ndarray of potential evapotranspiration (mm)
-
-    """
-    result = numpy.empty(eto_pix.shape, dtype=numpy.float32)
-    result[:] = output_nodata
-
-    valid_mask = ~utils.array_equals_nodata(Kc_pix, output_nodata)
-    if eto_nodata is not None:
-        valid_mask &= ~utils.array_equals_nodata(eto_pix, eto_nodata)
-    result[valid_mask] = eto_pix[valid_mask] * Kc_pix[valid_mask]
-    return result
 
 
 def compute_watershed_valuation(watershed_results_vector_path, val_df):

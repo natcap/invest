@@ -629,50 +629,6 @@ class StormwaterTests(unittest.TestCase):
             replacement_cost)
         numpy.testing.assert_allclose(actual, expected)
 
-    def test_adjust_op(self):
-        """Stormwater: test adjust_op function."""
-        from natcap.invest import stormwater
-
-        ratio_array = numpy.array([
-            [0,   0.0001, stormwater.FLOAT_NODATA],
-            [0.5, 0.9,    1]], dtype=numpy.float32)
-        # these are obviously not averages from the above array but
-        # it doesn't matter for this test
-        avg_ratio_array = numpy.array([
-            [0.5, 0.5, 0.5],
-            [0.5, stormwater.FLOAT_NODATA, 0.5]], dtype=numpy.float32)
-        near_connected_lulc_array = numpy.array([
-            [0, 0, 1],
-            [stormwater.UINT8_NODATA, 0, 1]], dtype=numpy.uint8)
-        near_road_centerline_array = numpy.array([
-            [1, 1, 1],
-            [0, 0, 0]], dtype=numpy.uint8)
-
-        out = stormwater.adjust_op(
-            ratio_array,
-            avg_ratio_array,
-            near_connected_lulc_array,
-            near_road_centerline_array)
-        for y in range(ratio_array.shape[0]):
-            for x in range(ratio_array.shape[1]):
-                if (ratio_array[y, x] == stormwater.FLOAT_NODATA or
-                    avg_ratio_array[y, x] == stormwater.FLOAT_NODATA or
-                    near_connected_lulc_array[y, x] == stormwater.UINT8_NODATA or
-                        near_road_centerline_array[y, x] == stormwater.UINT8_NODATA):
-                    numpy.testing.assert_allclose(
-                        out[y, x], stormwater.FLOAT_NODATA)
-                else:
-                    # equation 2-4: Radj_ij = R_ij + (1 - R_ij) * C_ij
-                    adjust_factor = (
-                        0 if (
-                            near_connected_lulc_array[y, x] or
-                            near_road_centerline_array[y, x]
-                        ) else avg_ratio_array[y, x])
-                    adjusted = (ratio_array[y, x] +
-                                (1 - ratio_array[y, x]) * adjust_factor)
-                    numpy.testing.assert_allclose(out[y, x], adjusted,
-                                                  rtol=1e-6)
-
     def test_is_near(self):
         """Stormwater: test is_near function."""
         from natcap.invest import stormwater

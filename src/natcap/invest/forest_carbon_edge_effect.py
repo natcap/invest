@@ -696,26 +696,12 @@ def _map_distance_from_tropical_forest_edge(
     lulc_nodata = pygeoprocessing.get_raster_info(
         base_lulc_raster_path)['nodata']
 
-    forest_mask_nodata = 255
-
-    def mask_non_forest_op(lulc_array):
-        """Convert forest lulc codes to 0.
-        Args:
-            lulc_array (numpy.ndarray): array representing a LULC raster where
-                each forest LULC code is in `forest_codes`.
-        Returns:
-            numpy.ndarray with the same shape as lulc_array. All pixels are
-                0 (forest), 1 (non-forest), or 255 (nodata).
-        """
-        non_forest_mask = ~numpy.isin(lulc_array, forest_codes)
-        nodata_mask = lulc_array == lulc_nodata
-        # where LULC has nodata, set value to nodata value (255)
-        # where LULC has data, set to 0 if LULC is a forest type, 1 if it's not
-        return numpy.where(nodata_mask, forest_mask_nodata, non_forest_mask)
-
-    pygeoprocessing.raster_calculator(
-        [(base_lulc_raster_path, 1)], mask_non_forest_op,
-        target_non_forest_mask_path, gdal.GDT_Byte, forest_mask_nodata)
+    pygeoprocessing.raster_map(
+        op=lambda lulc_array: ~numpy.isin(lulc_array, forest_codes),
+        rasters=[base_lulc_raster_path],
+        target_path=target_non_forest_mask_path,
+        target_dtype=numpy.uint8,
+        target_nodata=255)
 
     # Do the distance transform on non-forest pixels
     # This is the distance from each pixel to the nearest pixel with value 1.

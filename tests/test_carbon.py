@@ -114,7 +114,7 @@ class CarbonTests(unittest.TestCase):
             'lulc_cur_year': 2016,
             'lulc_fut_year': 2030,
             'discount_rate': -7.1,
-            'n_workers': -1,
+            'n_workers': 1,
         }
 
         # Create LULC rasters and pools csv in workspace and add them to args.

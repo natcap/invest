@@ -841,8 +841,11 @@ def execute(args):
             quick_flow_task_list.append(monthly_quick_flow_task)
 
         qf_task = task_graph.add_task(
-            func=_calculate_annual_qfi,
-            args=(file_registry['qfm_path_list'], file_registry['qf_path']),
+            func=pygeoprocessing.raster_map,
+            kwargs=dict(
+                op=qfi_sum_op,
+                rasters=file_registry['qfm_path_list'],
+                target_path=file_registry['qf_path']),
             target_path_list=[file_registry['qf_path']],
             dependent_task_list=quick_flow_task_list,
             task_name='calculate QFi')
@@ -997,41 +1000,14 @@ def _calculate_vri(l_path, target_vri_path):
                 LOGGER.exception(qb_sum)
                 raise
         return result
+
     pygeoprocessing.raster_calculator(
         [(l_path, 1)], vri_op, target_vri_path, gdal.GDT_Float32,
         li_nodata)
 
 
-def _calculate_annual_qfi(qfm_path_list, target_qf_path):
-    """Calculate annual quickflow.
-
-    Args:
-        qfm_path_list (list): list of monthly quickflow raster paths.
-        target_qf_path (str): path to target annual quickflow raster.
-
-    Returns:
-        None.
-
-    """
-    qf_nodata = -1
-
-    def qfi_sum_op(*qf_values):
-        """Sum the monthly qfis."""
-
-        # only calculate the sum where data is available for all 12 months
-        valid_mask = numpy.full(qf_values[0].shape, True)
-        for qf_array in qf_values:
-            valid_mask &= ~utils.array_equals_nodata(qf_array, qf_nodata)
-
-        qf_sum = numpy.full(qf_values[0].shape, qf_nodata, dtype=numpy.float32)
-        qf_sum[valid_mask] = 0
-        for qf_array in qf_values:
-            qf_sum[valid_mask] += qf_array[valid_mask]
-        return qf_sum
-
-    pygeoprocessing.raster_calculator(
-        [(path, 1) for path in qfm_path_list],
-        qfi_sum_op, target_qf_path, gdal.GDT_Float32, qf_nodata)
+"""Sum the monthly qfis."""
+def qfi_sum_op(*qf_values): return numpy.sum(qf_values)
 
 
 def _calculate_monthly_quick_flow(precip_path, n_events_path, stream_path,
@@ -1203,23 +1179,14 @@ def _calculate_curve_number_raster(
     Returns:
         None
     """
-    soil_nodata = pygeoprocessing.get_raster_info(
-        soil_group_path)['nodata'][0]
     map_soil_type_to_header = {
         1: 'cn_a',
         2: 'cn_b',
         3: 'cn_c',
         4: 'cn_d',
     }
-    # curve numbers are always positive so -1 a good nodata choice
     lulc_to_soil = {}
-    lulc_nodata = pygeoprocessing.get_raster_info(
-        lulc_raster_path)['nodata'][0]
-
     lucodes = biophysical_df.index.to_list()
-    if lulc_nodata is not None:
-        lucodes.append(lulc_nodata)
-
     for soil_id, soil_column in map_soil_type_to_header.items():
         lulc_to_soil[soil_id] = {
             'lulc_values': [],
@@ -1227,14 +1194,9 @@ def _calculate_curve_number_raster(
         }
 
         for lucode in sorted(lucodes):
-            if lucode != lulc_nodata:
-                lulc_to_soil[soil_id]['cn_values'].append(
-                    biophysical_df[soil_column][lucode])
-                lulc_to_soil[soil_id]['lulc_values'].append(lucode)
-            else:
-                # handle the lulc nodata with cn nodata
-                lulc_to_soil[soil_id]['lulc_values'].append(lulc_nodata)
-                lulc_to_soil[soil_id]['cn_values'].append(TARGET_NODATA)
+            lulc_to_soil[soil_id]['cn_values'].append(
+                biophysical_df[soil_column][lucode])
+            lulc_to_soil[soil_id]['lulc_values'].append(lucode)
 
         # Making the landcover array a float32 in case the user provides a
         # float landcover map like Kate did.
@@ -1247,7 +1209,7 @@ def _calculate_curve_number_raster(
 
     # Use set of table lucodes in cn_op
     lucodes_set = set(lucodes)
-    valid_soil_groups = set([soil_nodata, *map_soil_type_to_header.keys()])
+    valid_soil_groups = set(map_soil_type_to_header.keys())
 
     def cn_op(lulc_array, soil_group_array):
         """Map lulc code and soil to a curve number."""
@@ -1276,11 +1238,10 @@ def _calculate_curve_number_raster(
                 "The soil group raster must only have groups 1, 2, 3 or 4. "
                 f"Invalid group(s) {', '.join(invalid_soil_groups)} were "
                 f"found in soil group raster {soil_group_path} "
-                f"(nodata value: {soil_nodata})")
+                "(nodata value: "
+                f"{pygeoprocessing.get_raster_info(soil_group_path)['nodata'][0]})")
 
         for soil_group_id in unique_soil_groups:
-            if soil_group_id == soil_nodata:
-                continue
             current_soil_mask = (soil_group_array == soil_group_id)
             index = numpy.digitize(
                 lulc_array.ravel(),
@@ -1291,9 +1252,10 @@ def _calculate_curve_number_raster(
             cn_result[current_soil_mask] = cn_values[current_soil_mask]
         return cn_result
 
-    pygeoprocessing.raster_calculator(
-        [(lulc_raster_path, 1), (soil_group_path, 1)], cn_op, cn_path,
-        gdal.GDT_Float32, TARGET_NODATA)
+    pygeoprocessing.raster_map(
+        op=cn_op,
+        rasters=[lulc_raster_path, soil_group_path],
+        target_path=cn_path)
 
 
 def _calculate_si_raster(cn_path, stream_path, si_path):
@@ -1401,20 +1363,15 @@ def _aggregate_recharge(
 
 def _calculate_l_avail(l_path, gamma, target_l_avail_path):
     """l avail = l * gamma."""
-    li_nodata = pygeoprocessing.get_raster_info(l_path)['nodata'][0]
 
     def l_avail_op(l_array):
         """Calculate equation [8] L_avail = min(gamma*L, L)."""
-        result = numpy.empty(l_array.shape)
-        result[:] = li_nodata
-        valid_mask = ~utils.array_equals_nodata(l_array, li_nodata)
-        result[valid_mask] = numpy.min(numpy.stack(
-            (gamma*l_array[valid_mask], l_array[valid_mask])), axis=0)
-        return result
+        return numpy.min(numpy.stack((gamma*l_array, l_array)), axis=0)
 
-    pygeoprocessing.raster_calculator(
-        [(l_path, 1)], l_avail_op, target_l_avail_path, gdal.GDT_Float32,
-        li_nodata)
+    pygeoprocessing.raster_map(
+        op=l_avail_op,
+        rasters=[l_path],
+        target_path=target_l_avail_path)
 
 
 @validation.invest_validator

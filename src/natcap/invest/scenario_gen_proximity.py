@@ -453,9 +453,10 @@ def _convert_landscape(
     lulc_raster_info = pygeoprocessing.get_raster_info(base_lulc_path)
     lulc_nodata = lulc_raster_info['nodata'][0]
     mask_nodata = 2
-    pygeoprocessing.raster_calculator(
-        [(base_lulc_path, 1)], lambda x: x, output_landscape_raster_path,
-        gdal.GDT_Int32, lulc_nodata)
+    pygeoprocessing.raster_map(
+        op=lambda x: x,
+        rasters=[base_lulc_path],
+        target_path=output_landscape_raster_path)
 
     # convert everything furthest from edge for each of n_steps
     pixel_area_ha = (
@@ -493,13 +494,14 @@ def _convert_landscape(
                         lulc_array.shape)
                 if invert_mask:
                     base_mask = ~base_mask
-                return numpy.where(
-                    utils.array_equals_nodata(lulc_array, lulc_nodata),
-                    mask_nodata, base_mask)
-            pygeoprocessing.raster_calculator(
-                [(output_landscape_raster_path, 1)], _mask_base_op,
-                tmp_file_registry[mask_id], gdal.GDT_Byte,
-                mask_nodata)
+                return base_mask
+
+            pygeoprocessing.raster_map(
+                op=_mask_base_op,
+                rasters=[output_landscape_raster_path],
+                target_path=tmp_file_registry[mask_id],
+                target_dtype=numpy.uint8,
+                target_nodata=mask_nodata)
 
             # create distance transform for the current mask
             pygeoprocessing.distance_transform_edt(
