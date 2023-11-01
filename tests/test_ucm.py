@@ -27,7 +27,7 @@ class UCMTests(unittest.TestCase):
         """UCM: regression: CC Factors."""
         import natcap.invest.urban_cooling_model
         args = {
-            'workspace_dir': '/Users/emily/Documents/testucmfail',#os.path.join(self.workspace_dir, 'workspace'),
+            'workspace_dir': os.path.join(self.workspace_dir, 'workspace'),
             'results_suffix': 'test_suffix',
             't_ref': 35.0,
             't_obs_raster_path': os.path.join(
@@ -208,7 +208,7 @@ class UCMTests(unittest.TestCase):
             'avg_tmp_an': 1.608697970397692,
             'avd_eng_cn': 7239992.744486,
             'avg_wbgt_v': 31.91108630952381,
-            'avg_ltls_v': 28.73463901689708,  # changed due to using float64 vs float32
+            'avg_ltls_v': 28.73463901689708,
             'avg_hvls_v': 75.000000000000000,
         }
         try:

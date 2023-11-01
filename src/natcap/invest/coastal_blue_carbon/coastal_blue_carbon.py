@@ -1514,16 +1514,11 @@ def _calculate_npv(
                 prices_by_year[year] / (
                     (1 + discount_rate) ** years_since_baseline))
 
-        def _npv_op(*sequestration_arrays):
-            return numpy.sum(sequestration_arrays, axis=0) * valuation_factor
-
-        raster_paths = [
-            path for (_, path) in net_sequestration_rasters.items() if
-            year <= target_raster_year]
-
         pygeoprocessing.raster_map(
-            op=_npv_op,
-            rasters=raster_paths,
+            op=lambda *seq_arrays: numpy.sum(seq, axis=0) * valuation_factor,
+            rasters=[
+                path for year, path in net_sequestration_rasters.items() if
+                year <= target_raster_year],
             target_path=target_raster_path,
             target_dtype=numpy.float32)
 
@@ -1552,11 +1547,8 @@ def _calculate_stocks_after_baseline_period(
         ``None``.
 
     """
-    def _calculate_accumulation_over_years(baseline_matrix, accum_matrix):
-        return baseline_matrix + (accum_matrix * n_years)
-
     pygeoprocessing.raster_map(
-        op=_calculate_accumulation_over_years,
+        op=lambda baseline, accum: baseline + (accum * n_years),
         rasters=[baseline_stock_raster_path, yearly_accumulation_raster_path],
         target_path=target_raster_path,
         target_dtype=numpy.float32)
@@ -2151,16 +2143,9 @@ def _reclassify_disturbance_magnitude(
         ``None``
 
     """
-    def _reclassify_disturbance(
-            landuse_transition_from_matrix, landuse_transition_to_matrix):
-        """Pygeoprocessing op to reclassify disturbances."""
-
-        return disturbance_magnitude_matrix[
-            landuse_transition_from_matrix,
-            landuse_transition_to_matrix].toarray().flatten()
-
     pygeoprocessing.raster_map(
-        op=_reclassify_disturbance,
+        op=lambda _from, _to: (
+            disturbance_magnitude_matrix[_from, _to].toarray().flatten()),
         rasters=[landuse_transition_from_raster, landuse_transition_to_raster],
         target_path=target_raster_path,
         target_dtype=numpy.float32)

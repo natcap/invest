@@ -733,7 +733,7 @@ def execute(args):
     s_bar_task = task_graph.add_task(
         func=pygeoprocessing.raster_map,
         kwargs=dict(
-            op=_bar_op,
+            op=numpy.divide,  # s_bar = s_accum / flow_accum
             rasters=[f_reg['s_accumulation_path'], f_reg['flow_accumulation_path']],
             target_path=f_reg['s_bar_path'],
             target_dtype=numpy.float32,
@@ -890,7 +890,7 @@ def execute(args):
         surface_export_task = task_graph.add_task(
             func=pygeoprocessing.raster_map,
             kwargs=dict(
-                op=_calculate_export_op,
+                op=numpy.multiply,  # export = load * ndr
                 rasters=[surface_load_path, ndr_path],
                 target_path=surface_export_path,
                 target_dtype=numpy.float32,
@@ -930,7 +930,7 @@ def execute(args):
             subsurface_export_task = task_graph.add_task(
                 func=pygeoprocessing.raster_map,
                 kwargs=dict(
-                    op=_calculate_export_op,
+                    op=numpy.multiply,  # export = load * ndr
                     rasters=[f_reg['sub_load_n_path'], f_reg['sub_ndr_n_path']],
                     target_path=f_reg['n_subsurface_export_path'],
                     target_dtype=numpy.float32,
@@ -1030,6 +1030,23 @@ def execute(args):
     LOGGER.info(r' (_")  (_/(__)_) (__)  (__) ')
 
 
+# raster_map equation: Multiply a series of arrays element-wise
+def _mult_op(*array_list): return numpy.prod(numpy.stack(array_list), axis=0)
+
+# raster_map equation: Sum a list of arrays element-wise
+def _sum_op(*array_list): return numpy.sum(array_list, axis=0)
+
+# raster_map equation: calculate inverse of S factor
+def _inverse_op(base_val): return numpy.where(base_val == 0, 0, 1 / base_val)
+
+# raster_map equation: rescale and threshold slope between 0.005 and 1
+def _slope_proportion_and_threshold_op(slope):
+    slope_fraction = slope / 100
+    slope_fraction[slope_fraction < 0.005] = 0.005
+    slope_fraction[slope_fraction > 1] = 1
+    return slope_fraction
+
+
 def _create_mask_raster(source_raster_path, source_vector_path,
                         target_raster_path):
     """Create a mask raster from a vector.
@@ -1093,14 +1110,6 @@ def _mask_raster(source_raster_path, mask_raster_path,
     pygeoprocessing.raster_calculator(
         [(mask_raster_path, 1), (source_raster_path, 1)], _mask_op,
         target_masked_raster_path, target_dtype, nodata)
-
-
-def _slope_proportion_and_threshold_op(slope):
-    """Rescale and threshold slope between 0.005 and 1.0."""
-    slope_fraction = slope / 100
-    slope_fraction[slope_fraction < 0.005] = 0.005
-    slope_fraction[slope_fraction > 1] = 1
-    return slope_fraction
 
 
 def _add_fields_to_shapefile(field_pickle_map, target_vector_path):
@@ -1217,14 +1226,8 @@ def _normalize_raster(base_raster_path_band, target_normalized_raster_path):
     if value_count > 0:
         value_mean /= value_count
 
-    def _normalize_raster_op(array):
-        """Divide values by mean."""
-        if value_mean == 0:
-            return array
-        return array / value_mean
-
     pygeoprocessing.raster_map(
-        op=_normalize_raster_op,
+        op=lambda array: array if value_mean == 0 else array / value_mean,
         rasters=[base_raster_path_band[0]],
         target_path=target_normalized_raster_path,
         target_dtype=numpy.float32)
@@ -1266,14 +1269,6 @@ def _calculate_load(lulc_raster_path, lucode_to_load, target_load_raster):
         target_path=target_load_raster,
         target_dtype=numpy.float32,
         target_nodata=_TARGET_NODATA)
-
-
-#Multiply a series of arrays element-wise
-def _mult_op(*array_list): return numpy.prod(numpy.stack(array_list), axis=0)
-
-
-# Sum a list of arrays element-wise
-def _sum_op(*array_list): return numpy.sum(array_list, axis=0)
 
 
 def _map_surface_load(
@@ -1334,14 +1329,10 @@ def _map_subsurface_load(
     keys = sorted(numpy.array(list(proportion_subsurface_map)))
     subsurface_permeance_values = numpy.array(
         [proportion_subsurface_map[x] for x in keys])
-
-    def _map_subsurface_load_op(lucode_array, modified_load_array):
-        """Convert unit load to total load & handle nodata."""
-        index = numpy.digitize(lucode_array.ravel(), keys, right=True)
-        return modified_load_array * subsurface_permeance_values[index]
-
     pygeoprocessing.raster_map(
-        op=_map_subsurface_load_op,
+        op=lambda lulc, modified_load: (
+            modified_load * subsurface_permeance_values[
+                numpy.digitize(lulc.ravel(), keys, right=True)]),
         rasters=[lulc_raster_path, modified_load_path],
         target_path=target_sub_load_path,
         target_dtype=numpy.float32,
@@ -1366,45 +1357,27 @@ def _map_lulc_to_val_mask_stream(
     """
     lucodes = sorted(lucodes_to_vals.keys())
     values = numpy.array([lucodes_to_vals[x] for x in lucodes])
-
-    def _map_eff_op(lucode_array, stream_array):
-        """Map efficiency from LULC and handle nodata/streams."""
-        index = numpy.digitize(lucode_array.ravel(), lucodes, right=True)
-        return values[index] * (1 - stream_array)
-
     pygeoprocessing.raster_map(
-        op=_map_eff_op,
+        op=lambda lulc, stream: (
+            values[numpy.digitize(lulc.ravel(), lucodes, right=True)] *
+            (1 - stream)),
         rasters=[lulc_raster_path, stream_path],
         target_path=target_eff_path,
         target_dtype=numpy.float32,
         target_nodata=_TARGET_NODATA)
 
 
-def _bar_op(s_accumulation, flow_accumulation):
-    """Calculate bar operation of s_accum / flow_accum."""
-    return s_accumulation / flow_accumulation
-
-
 def d_up_calculation(s_bar_path, flow_accum_path, target_d_up_path):
     """Calculate d_up = s_bar * sqrt(upslope area)."""
     cell_area_m2 = abs(numpy.prod(pygeoprocessing.get_raster_info(
         s_bar_path)['pixel_size']))
-
-    def _d_up_op(s_bar, flow_accumulation):
-        """Calculate d_up index."""
-        return s_bar * numpy.sqrt(flow_accumulation * cell_area_m2)
-
     pygeoprocessing.raster_map(
-        op=_d_up_op,
+        op=lambda s_bar, flow_accum: (
+            s_bar * numpy.sqrt(flow_accum * cell_area_m2)),
         rasters=[s_bar_path, flow_accum_path],
         target_path=target_d_up_path,
         target_dtype=numpy.float32,
         target_nodata=_TARGET_NODATA)
-
-
-def _inverse_op(base_val):
-    """Calculate inverse of S factor."""
-    return numpy.where(base_val == 0, 0, 1 / base_val)
 
 
 def calculate_ic(d_up_path, d_dn_path, target_ic_path):
@@ -1439,14 +1412,9 @@ def _calculate_ndr(
     ic_factor_raster = None
     ic_0_param = (ic_min + ic_max) / 2
 
-    def _calculate_ndr_op(effective_retention_array, ic_array):
-        """Calculate NDR."""
-        return (
-            (1 - effective_retention_array) /
-            (1 + numpy.exp((ic_0_param - ic_array) / k_param)))
-
     pygeoprocessing.raster_map(
-        op=_calculate_ndr_op,
+        op=lambda eff, ic: ((1 - eff) /
+                            (1 + numpy.exp((ic_0_param - ic) / k_param))),
         rasters=[effective_retention_path, ic_factor_path],
         target_path=target_ndr_path,
         target_dtype=numpy.float32,
@@ -1456,23 +1424,14 @@ def _calculate_ndr(
 def _calculate_sub_ndr(
         eff_sub, crit_len_sub, dist_to_channel_path, target_sub_ndr_path):
     """Calculate subsurface: subndr = eff_sub(1-e^(-5*l/crit_len)."""
-
-    def _sub_ndr_op(dist_to_channel_array):
-        """Calculate subsurface NDR."""
-        return 1 - eff_sub * (
-            1 - numpy.exp(-5 * dist_to_channel_array / crit_len_sub))
-
     pygeoprocessing.raster_map(
-        op=_sub_ndr_op,
+        op=lambda dist_to_channel: (
+            1 - eff_sub *
+            (1 - numpy.exp(-5 * dist_to_channel / crit_len_sub))),
         rasters=[dist_to_channel_path],
         target_path=target_sub_ndr_path,
         target_dtype=numpy.float32,
         target_nodata=_TARGET_NODATA)
-
-
-def _calculate_export_op(load_array, ndr_array):
-    """Multiply load by NDR."""
-    return load_array * ndr_array
 
 
 def _aggregate_and_pickle_total(

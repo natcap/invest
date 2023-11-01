@@ -583,7 +583,7 @@ def execute(args):
     threshold_slope_task = task_graph.add_task(
         func=pygeoprocessing.raster_map,
         kwargs=dict(
-            op=threshold_slope,
+            op=threshold_slope_op,
             rasters=[f_reg['slope_path']],
             target_path=f_reg['thresholded_slope_path']),
         target_path_list=[f_reg['thresholded_slope_path']],
@@ -769,9 +769,11 @@ def execute(args):
         task_name='calculate sdr')
 
     sed_export_task = task_graph.add_task(
-        func=_calculate_sed_export,
-        args=(
-            f_reg['usle_path'], f_reg['sdr_path'], f_reg['sed_export_path']),
+        func=pygeoprocessing.raster_map,
+        kwargs=dict(
+            op=numpy.multiply,  # export = USLE * SDR
+            rasters=[f_reg['usle_path'], f_reg['sdr_path']],
+            target_path=f_reg['sed_export_path']),
         target_path_list=[f_reg['sed_export_path']],
         dependent_task_list=[usle_task, sdr_task],
         task_name='calculate sed export')
@@ -798,7 +800,7 @@ def execute(args):
     avoided_erosion_task = task_graph.add_task(
         func=pygeoprocessing.raster_map,
         kwargs=dict(
-            op=_avoided_erosion_op,
+            op=numpy.subtract,  # avoided erosion = rkls - usle
             rasters=[f_reg['rkls_path'], f_reg['usle_path']],
             target_path=f_reg['avoided_erosion_path']),
         dependent_task_list=[rkls_task, usle_task],
@@ -844,7 +846,7 @@ def execute(args):
 
 
 def _avoided_export_op(avoided_erosion, sdr, sed_deposition):
-    """Calculate total retention.
+    """raster_map equation: calculate total retention.
 
     Args:
         avoided_erosion (numpy.array): Avoided erosion values.
@@ -859,19 +861,25 @@ def _avoided_export_op(avoided_erosion, sdr, sed_deposition):
     # known as a modified USLE)
     return avoided_erosion * sdr + sed_deposition
 
-
-def _avoided_erosion_op(rkls, usle):
-    """Calculate avoided erosion.
+def add_drainage_op(stream, drainage):
+    """raster_map equation: add drainage mask to stream layer.
 
     Args:
-        rkls (numpy.array): Computed RKLS values.
-        usle (numpy.array): Computed USLE values.
+        stream (numpy.array): binary array where 1 indicates
+            a stream, and 0 is a valid landscape pixel but not a stream.
+        drainage (numpy.array): binary array where 1 indicates any water
+            reaching that pixel drains to a stream.
 
     Returns:
-        A ``numpy.array`` of the same size and shape of the input numpy
-        arrays containing computed avoided erosion values.
+        numpy.array combination of stream and drainage
     """
-    return rkls - usle
+    return numpy.where(drainage == 1, 1, stream)
+
+# raster_map equation: calculate USLE
+def usle_op(rkls, cp_factor): return rkls * cp_factor
+
+# raster_map equation: calculate the inverse ws factor
+def inverse_ws_op(w_factor, s_factor): return 1 / (w_factor * s_factor)
 
 
 def _calculate_what_drains_to_stream(
@@ -1003,15 +1011,11 @@ def _calculate_ls_factor(
         None
 
     """
-    slope_nodata = pygeoprocessing.get_raster_info(slope_path)['nodata'][0]
-
-    flow_accumulation_info = pygeoprocessing.get_raster_info(
-        flow_accumulation_path)
-    flow_accumulation_nodata = flow_accumulation_info['nodata'][0]
-    cell_size = abs(flow_accumulation_info['pixel_size'][0])
+    cell_size = abs(pygeoprocessing.get_raster_info(
+        flow_accumulation_path)['pixel_size'][0])
     cell_area = cell_size ** 2
 
-    def ls_factor_function(percent_slope, flow_accumulation, l_max):
+    def ls_factor_function(percent_slope, flow_accumulation):
         """Calculate the LS factor.
 
         Args:
@@ -1023,15 +1027,6 @@ def _calculate_ls_factor(
             ls_factor
 
         """
-        # avg aspect intermediate output should always have a defined
-        # nodata value from pygeoprocessing
-        valid_mask = (
-            ~pygeoprocessing.array_equals_nodata(percent_slope, slope_nodata) &
-            ~pygeoprocessing.array_equals_nodata(
-                flow_accumulation, flow_accumulation_nodata))
-        result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
-        result[:] = _TARGET_NODATA
-
         # Although Desmet & Govers (1996) discusses "upstream contributing
         # area", this is not strictly defined. We decided to use the square
         # root of the upstream contributing area here as an estimate, which
@@ -1040,9 +1035,8 @@ def _calculate_ls_factor(
         # We subtract 1 from the flow accumulation because FA includes itself
         # in its count of pixels upstream and our LS factor equation wants only
         # those pixels that are strictly upstream.
-        contributing_area = numpy.sqrt(
-            (flow_accumulation[valid_mask]-1) * cell_area)
-        slope_in_radians = numpy.arctan(percent_slope[valid_mask] / 100.0)
+        contributing_area = numpy.sqrt((flow_accumulation - 1) * cell_area)
+        slope_in_radians = numpy.arctan(percent_slope / 100)
 
         aspect_length = (numpy.fabs(numpy.sin(slope_in_radians)) +
                          numpy.fabs(numpy.cos(slope_in_radians)))
@@ -1050,7 +1044,7 @@ def _calculate_ls_factor(
         # From Equation 4 in "Extension and validation of a geographic
         # information system ..."
         slope_factor = numpy.where(
-            percent_slope[valid_mask] < 9.0,
+            percent_slope < 9,
             10.8 * numpy.sin(slope_in_radians) + 0.03,
             16.8 * numpy.sin(slope_in_radians) - 0.5)
 
@@ -1064,10 +1058,9 @@ def _calculate_ls_factor(
         slope_table = numpy.array([1., 3.5, 5., 9.])
         m_table = numpy.array([0.2, 0.3, 0.4, 0.5])
         # mask where slopes are larger than lookup table
-        big_slope_mask = percent_slope[valid_mask] > slope_table[-1]
+        big_slope_mask = percent_slope > slope_table[-1]
         m_indexes = numpy.digitize(
-            percent_slope[valid_mask][~big_slope_mask], slope_table,
-            right=True)
+            percent_slope[~big_slope_mask], slope_table, right=True)
         m_exp = numpy.empty(big_slope_mask.shape, dtype=numpy.float32)
         m_exp[big_slope_mask] = (
             beta[big_slope_mask] / (1 + beta[big_slope_mask]))
@@ -1082,14 +1075,12 @@ def _calculate_ls_factor(
         # threshold L factor to l_max
         l_factor[l_factor > l_max] = l_max
 
-        result[valid_mask] = l_factor * slope_factor
-        return result
+        return l_factor * slope_factor
 
-    pygeoprocessing.raster_calculator(
-        [(path, 1) for path in [slope_path, flow_accumulation_path]] + [
-            (l_max, 'raw')],
-        ls_factor_function, target_ls_factor_path, gdal.GDT_Float32,
-        _TARGET_NODATA)
+    pygeoprocessing.raster_map(
+        op=ls_factor_function,
+        rasters=[slope_path, flow_accumulation_path],
+        target_path=target_ls_factor_path)
 
 
 def _calculate_rkls(
@@ -1168,8 +1159,8 @@ def _calculate_rkls(
         rkls_function, rkls_path, gdal.GDT_Float32, _TARGET_NODATA)
 
 
-def threshold_slope(slope):
-    """Convert slope to m/m and clamp at 0.005 and 1.0.
+def threshold_slope_op(slope):
+    """raster_map equation: convert slope to m/m and clamp at 0.005 and 1.0.
 
     As desribed in Cavalli et al., 2013.
     """
@@ -1177,21 +1168,6 @@ def threshold_slope(slope):
     slope_m[slope_m < 0.005] = 0.005
     slope_m[slope_m > 1] = 1
     return slope_m
-
-
-def add_drainage_op(stream, drainage):
-    """Add drainage mask to stream layer.
-
-    Args:
-        stream (numpy.array): binary array where 1 indicates
-            a stream, and 0 is a valid landscape pixel but not a stream.
-        drainage (numpy.array): binary array where 1 indicates any water
-            reaching that pixel drains to a stream.
-
-    Returns:
-        numpy.array combination of stream and drainage
-    """
-    return numpy.where(drainage == 1, 1, stream)
 
 
 def _calculate_w(
@@ -1227,12 +1203,8 @@ def _calculate_w(
         (lulc_path, 1), lulc_to_c, w_factor_path, gdal.GDT_Float32,
         _TARGET_NODATA, reclass_error_details)
 
-    def threshold_w(w_val):
-        """Threshold w to 0.001."""
-        return numpy.where(w_val < 0.001, 0.001, w_val)
-
     pygeoprocessing.raster_map(
-        op=threshold_w,
+        op=lambda w_val: numpy.where(w_val < 0.001, 0.001, w_val),
         rasters=[w_factor_path],
         target_path=out_thresholded_w_factor_path)
 
@@ -1265,11 +1237,6 @@ def _calculate_cp(lulc_to_cp, lulc_path, cp_factor_path):
         _TARGET_NODATA, reclass_error_details)
 
 
-def usle_op(rkls, cp_factor):
-    """Calculate USLE."""
-    return rkls * cp_factor
-
-
 def _calculate_bar_factor(
         flow_direction_path, factor_path, flow_accumulation_path,
         accumulation_path, out_bar_path):
@@ -1292,9 +1259,6 @@ def _calculate_bar_factor(
         None.
 
     """
-    flow_accumulation_nodata = pygeoprocessing.get_raster_info(
-        flow_accumulation_path)['nodata'][0]
-
     LOGGER.debug("doing flow accumulation mfd on %s", factor_path)
     # manually setting compression to DEFLATE because we got some LZW
     # errors when testing with large data.
@@ -1305,12 +1269,8 @@ def _calculate_bar_factor(
             'TILED=YES', 'BIGTIFF=YES', 'COMPRESS=DEFLATE',
             'PREDICTOR=3']))
 
-    def bar_op(base_accumulation, flow_accumulation):
-        """Aggregate accumulation from base divided by the flow accum."""
-        return base_accumulation / flow_accumulation
-
     pygeoprocessing.raster_map(
-        op=bar_op,
+        op=lambda base_accum, flow_accum: base_accum / flow_accum,
         rasters=[accumulation_path, flow_accumulation_path],
         target_path=out_bar_path)
 
@@ -1320,17 +1280,9 @@ def _calculate_d_up(
     """Calculate w_bar * s_bar * sqrt(flow accumulation * cell area)."""
     cell_area = abs(
         pygeoprocessing.get_raster_info(w_bar_path)['pixel_size'][0])**2
-
-    def d_up_op(w_bar, s_bar, flow_accumulation):
-        """Calculate the d_up index.
-
-        w_bar * s_bar * sqrt(upslope area)
-
-        """
-        return w_bar * s_bar * numpy.sqrt(flow_accumulation * cell_area)
-
     pygeoprocessing.raster_map(
-        op=d_up_op,
+        op=lambda w_bar, s_bar, flow_accum: (
+            w_bar * s_bar * numpy.sqrt(flow_accum * cell_area)),
         rasters=[w_bar_path, s_bar_path, flow_accumulation_path],
         target_path=out_d_up_path)
 
@@ -1340,20 +1292,11 @@ def _calculate_d_up_bare(
     """Calculate s_bar * sqrt(flow accumulation * cell area)."""
     cell_area = abs(
         pygeoprocessing.get_raster_info(s_bar_path)['pixel_size'][0])**2
-
-    def d_up_op(s_bar, flow_accumulation):
-        """Calculate the bare d_up index: s_bar * sqrt(upslope area)."""
-        return numpy.sqrt(flow_accumulation * cell_area) * s_bar
-
     pygeoprocessing.raster_map(
-        op=d_up_op,
+        op=lambda s_bar, flow_accum: (
+            numpy.sqrt(flow_accum * cell_area) * s_bar),
         rasters=[s_bar_path, flow_accumulation_path],
         target_path=out_d_up_bare_path)
-
-
-def inverse_ws_op(w_factor, s_factor):
-    """Calculate the inverse ws factor."""
-    return 1 / (w_factor * s_factor)
 
 
 def _calculate_ic(d_up_path, d_dn_path, out_ic_factor_path):
@@ -1395,18 +1338,6 @@ def _calculate_sdr(
     pygeoprocessing.raster_calculator(
         [(ic_path, 1), (stream_path, 1)], sdr_op, out_sdr_path,
         gdal.GDT_Float32, _TARGET_NODATA)
-
-
-def _calculate_sed_export(usle_path, sdr_path, target_sed_export_path):
-    """Calculate USLE * SDR."""
-    def sed_export_op(usle, sdr):
-        """Sediment export."""
-        return usle * sdr
-
-    pygeoprocessing.raster_map(
-        op=sed_export_op,
-        rasters=[usle_path, sdr_path],
-        target_path=target_sed_export_path)
 
 
 def _calculate_e_prime(usle_path, sdr_path, stream_path, target_e_prime):

@@ -1067,6 +1067,25 @@ def execute(args):
     task_graph.join()
 
 
+def pollinator_supply_op(
+        foraged_flowers_array, floral_resources_array,
+        convolve_ps_array):
+    """raster_map equation: calculate (RA*fa)/FR * convolve(PS)."""
+    return numpy.where(
+        floral_resources_array == 0, 0,
+        foraged_flowers_array / floral_resources_array * convolve_ps_array)
+
+def on_farm_pollinator_abundance_op(h, pat):
+    """raster_map equation: return (pat * (1 - h)) / (h * (1 - 2*pat)+pat))"""
+    return (pat * (1 - h)) / (h * (1 - 2 * pat) + pat)
+
+# raster_map equation: return min(mp_array+FP_array, 1)
+def pyt_op(mp_array, FP_array): return numpy.minimum(mp_array + FP_array, 1)
+
+# raster_map equation: return max(0,PYT_array-mp_array)
+def pyw_op(mp_array, PYT_array): return numpy.maximum(PYT_array - mp_array, 0)
+
+
 def _rasterize_vector_onto_base(
         base_raster_path, base_vector_path, attribute_id,
         target_raster_path, filter_string=None):
@@ -1366,6 +1385,19 @@ def _parse_scenario_variables(args):
     return result
 
 
+def _sum_arrays(*array_list):
+    """Calculate sum of array_list and account for nodata."""
+    valid_mask = numpy.zeros(array_list[0].shape, dtype=bool)
+    result = numpy.empty_like(array_list[0])
+    result[:] = 0
+    for array in array_list:
+        local_valid_mask = ~pygeoprocessing.array_equals_nodata(array, _INDEX_NODATA)
+        result[local_valid_mask] += array[local_valid_mask]
+        valid_mask |= local_valid_mask
+    result[~valid_mask] = _INDEX_NODATA
+    return result
+
+
 def _calculate_habitat_nesting_index(
         substrate_path_map, species_substrate_index_map,
         target_habitat_nesting_index_path):
@@ -1394,33 +1426,11 @@ def _calculate_habitat_nesting_index(
 
 
 def _multiply_by_scalar(raster_path, scalar, target_path):
-
+    """Multiply a raster by a scalar and write out result."""
     pygeoprocessing.raster_map(
         op=lambda array: array * scalar,
         rasters=[raster_path],
         target_path=target_path)
-
-
-def _sum_arrays(*array_list):
-    """Calculate sum of array_list and account for nodata."""
-    valid_mask = numpy.zeros(array_list[0].shape, dtype=bool)
-    result = numpy.empty_like(array_list[0])
-    result[:] = 0
-    for array in array_list:
-        local_valid_mask = ~pygeoprocessing.array_equals_nodata(array, _INDEX_NODATA)
-        result[local_valid_mask] += array[local_valid_mask]
-        valid_mask |= local_valid_mask
-    result[~valid_mask] = _INDEX_NODATA
-    return result
-
-
-def pollinator_supply_op(
-        foraged_flowers_array, floral_resources_array,
-        convolve_ps_array):
-    """Calculating (RA*fa)/FR * convolve(PS)."""
-    return numpy.where(
-        floral_resources_array == 0, 0,
-        foraged_flowers_array / floral_resources_array * convolve_ps_array)
 
 
 def _calculate_pollinator_supply_index(
@@ -1439,23 +1449,6 @@ def _calculate_pollinator_supply_index(
         op=lambda f_r, h_n: species_abundance * f_r * h_n,
         rasters=[habitat_nesting_suitability_path, floral_resources_path],
         target_path=target_path)
-
-
-def on_farm_pollinator_abundance_op(h_array, pat_array):
-    """Return (pad * (1 - h)) / (h * (1 - 2*pat)+pat)) tolerate nodata."""
-    return (
-        (pat_array * (1 - h_array)) /
-        (h_array * (1 - 2 * pat_array) + pat_array))
-
-
-def pyt_op(mp_array, FP_array):
-    """Return min(mp_array+FP_array, 1)."""
-    return numpy.minimum(mp_array + FP_array, 1)
-
-
-def pyw_op(mp_array, PYT_array):
-    """Return max(0,PYT_array-mp_array)."""
-    return numpy.maximum(PYT_array - mp_array, 0)
 
 
 @validation.invest_validator

@@ -735,7 +735,7 @@ def execute(args):
     calculate_pet_task = graph.add_task(
         func=pygeoprocessing.raster_map,
         kwargs=dict(
-            op=pet_op,
+            op=numpy.multiply,  # PET = ET0 * KC
             rasters=[eto_path, tmp_Kc_raster_path],
             target_path=tmp_pet_path,
             target_dtype=numpy.float32,
@@ -781,7 +781,7 @@ def execute(args):
     calculate_aet_task = graph.add_task(
         func=pygeoprocessing.raster_map,
         kwargs=dict(
-            op=aet_op,
+            op=numpy.multiply,  # AET = fractp * precip
             rasters=[fractp_path, precip_path],
             target_path=aet_path,
             target_nodata=nodata_dict['out_nodata'],
@@ -870,12 +870,7 @@ def execute(args):
     graph.join()
 
 
-def pet_op(eto, kc): return eto * kc
-
-
-def aet_op(fractp, precip): return fractp * precip
-
-
+# wyield equation to pass to raster_map
 def wyield_op(fractp, precip): return (1 - fractp) * precip
 
 

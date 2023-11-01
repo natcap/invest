@@ -819,14 +819,11 @@ class UNATests(unittest.TestCase):
                                           target_path)
 
         weighted_sum_array = pygeoprocessing.raster_to_numpy_array(target_path)
-        print(list(weighted_sum_array))
         weighted_sum_nodata = pygeoprocessing.get_raster_info(
             target_path)['nodata'][0]
-        print(weighted_sum_nodata)
 
         # check that we have the expected number of nodata pixels
         nodata_pixels = numpy.isclose(weighted_sum_array, weighted_sum_nodata)
-        print(list(nodata_pixels))
         self.assertEqual(
             numpy.count_nonzero(nodata_pixels), 2)
 

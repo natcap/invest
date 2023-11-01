@@ -451,15 +451,13 @@ def execute(args):
             continue
         output_key = 'delta_cur_' + scenario_type
         LOGGER.info("Calculate sequestration scenario '%s'", output_key)
-        storage_path_list = [
-            file_registry['tot_c_cur'],
-            file_registry['tot_c_' + scenario_type]]
 
         diff_rasters_task = graph.add_task(
             func=pygeoprocessing.raster_map,
             kwargs=dict(
-                op=diff_op,
-                rasters=storage_path_list,
+                op=numpy.subtract,  # delta = scenario C - current C
+                rasters=[file_registry['tot_c_' + scenario_type],
+                         file_registry['tot_c_cur']],
                 target_path=file_registry[output_key],
                 target_dtype=numpy.float32,
                 target_nodata=_CARBON_NODATA),
@@ -518,9 +516,10 @@ def execute(args):
                 "Can't remove temporary file: %s\nOriginal Exception:\n%s",
                 file_registry[tmp_filename_key], os_error)
 
+
+# element-wise sum function to pass to raster_map
 def sum_op(*xs): return numpy.sum(xs, axis=0)
 
-def diff_op(base, future): return future - base
 
 def _accumulate_totals(raster_path):
     """Sum all non-nodata pixels in `raster_path` and return result."""

@@ -1081,13 +1081,9 @@ def _calculate_visual_quality(source_raster_path, working_dir, target_path):
     percentile_bins = numpy.array(percentile_values)
     LOGGER.info('Mapping percentile breaks %s', percentile_bins)
 
-    def _map_percentiles(valuation_matrix):
-        return numpy.where(
-            valuation_matrix == 0, 0, numpy.digitize(
-                valuation_matrix, percentile_bins))
-
     pygeoprocessing.raster_map(
-        op=_map_percentiles,
+        op=lambda val_array: numpy.where(
+            val_array == 0, 0, numpy.digitize(val_array, percentile_bins)),
         rasters=[source_raster_path],
         target_path=target_path,
         target_dtype=numpy.uint8)

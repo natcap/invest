@@ -508,6 +508,7 @@ class TestCBC2(unittest.TestCase):
             'price_table_path': os.path.join(target_dir,
                                              'price_table.csv'),
             'discount_rate': 4,
+            'n_workers': 1
         }
 
         with open(args['price_table_path'], 'w') as price_table:

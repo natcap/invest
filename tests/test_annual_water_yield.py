@@ -43,7 +43,7 @@ class AnnualWaterYieldTests(unittest.TestCase):
             'biophysical_table_path': os.path.join(
                 SAMPLE_DATA, 'biophysical_table.csv'),
             'seasonality_constant': 5,
-            'n_workers': 1,
+            'n_workers': -1,
         }
         return args
 

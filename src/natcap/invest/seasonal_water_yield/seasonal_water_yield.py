@@ -965,6 +965,18 @@ def execute(args):
     LOGGER.info('      //_| //_|')
 
 
+# raster_map equation: sum the monthly qfis
+def qfi_sum_op(*qf_values): return numpy.sum(qf_values)
+
+
+def _calculate_l_avail(l_path, gamma, target_l_avail_path):
+    """l avail = l * gamma."""
+    pygeoprocessing.raster_map(
+        op=lambda l: numpy.min(numpy.stack((gamma * l, l)), axis=0),
+        rasters=[l_path],
+        target_path=target_l_avail_path)
+
+
 def _calculate_vri(l_path, target_vri_path):
     """Calculate VRI as li_array / qb_sum.
 
@@ -1004,10 +1016,6 @@ def _calculate_vri(l_path, target_vri_path):
     pygeoprocessing.raster_calculator(
         [(l_path, 1)], vri_op, target_vri_path, gdal.GDT_Float32,
         li_nodata)
-
-
-"""Sum the monthly qfis."""
-def qfi_sum_op(*qf_values): return numpy.sum(qf_values)
 
 
 def _calculate_monthly_quick_flow(precip_path, n_events_path, stream_path,
@@ -1359,19 +1367,6 @@ def _aggregate_recharge(
     aggregate_layer = None
     gdal.Dataset.__swig_destroy__(aggregate_vector)
     aggregate_vector = None
-
-
-def _calculate_l_avail(l_path, gamma, target_l_avail_path):
-    """l avail = l * gamma."""
-
-    def l_avail_op(l_array):
-        """Calculate equation [8] L_avail = min(gamma*L, L)."""
-        return numpy.min(numpy.stack((gamma*l_array, l_array)), axis=0)
-
-    pygeoprocessing.raster_map(
-        op=l_avail_op,
-        rasters=[l_path],
-        target_path=target_l_avail_path)
 
 
 @validation.invest_validator

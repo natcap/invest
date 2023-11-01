@@ -73,7 +73,6 @@ class PollinationTests(unittest.TestCase):
                 'landcover_biophysical_table_simple.csv'),
             'farm_vector_path': os.path.join(
                 REGRESSION_DATA, 'input', 'blueberry_ridge_farm.shp'),
-            'n_workers': 2
         }
         # make empty result files to get coverage for removing if necessary
         result_files = ['farm_results.shp', 'total_pollinator_yield.tif',

@@ -869,9 +869,8 @@ def _x_yield_op(
     return result
 
 
-def _min_op(y_n, y_p, y_k):
-    """Calculate the min of the three inputs and multiply by Ymax."""
-    return numpy.min([y_n, y_k, y_p], axis=0)
+"""equation for raster_map: calculate min of inputs and multiply by Ymax."""
+def _min_op(y_n, y_p, y_k): return numpy.min([y_n, y_k, y_p], axis=0)
 
 
 def _zero_observed_yield_op(observed_yield_array, observed_yield_nodata):

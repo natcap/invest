@@ -615,7 +615,6 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         args = SeasonalWaterYieldRegressionTests.generate_base_args(
             self.workspace_dir)
 
-        args['workspace_dir'] = '/Users/emily/Documents/swypass'
         # Ensure the model can pass when a nodata value is not defined.
         size = 100
         lulc_array = numpy.zeros((size, size), dtype=numpy.int8)
