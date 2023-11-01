@@ -27,7 +27,7 @@ class UCMTests(unittest.TestCase):
         """UCM: regression: CC Factors."""
         import natcap.invest.urban_cooling_model
         args = {
-            'workspace_dir': os.path.join(self.workspace_dir, 'workspace'),
+            'workspace_dir': '/Users/emily/Documents/testucmfail',#os.path.join(self.workspace_dir, 'workspace'),
             'results_suffix': 'test_suffix',
             't_ref': 35.0,
             't_obs_raster_path': os.path.join(
@@ -69,7 +69,7 @@ class UCMTests(unittest.TestCase):
             'avg_cc': 0.222150472947109,
             'avg_tmp_v': 37.325275675470998,
             'avg_tmp_an': 2.325275675470998,
-            'avd_eng_cn': 3520203.713694,
+            'avd_eng_cn': 3520217.313878,
             'avg_wbgt_v': 32.60417266705069,
             'avg_ltls_v': 75.000000000000000,
             'avg_hvls_v': 75.000000000000000,
@@ -90,7 +90,7 @@ class UCMTests(unittest.TestCase):
 
         # Assert that the decimal value of the energy savings value is what we
         # expect.
-        expected_energy_sav = 3564024.929250
+        expected_energy_sav = 3564038.678764
 
         energy_sav = 0.0
         n_nonetype = 0
@@ -206,7 +206,7 @@ class UCMTests(unittest.TestCase):
             'avg_cc': 0.428302583240327,
             'avg_tmp_v': 36.60869797039769,
             'avg_tmp_an': 1.608697970397692,
-            'avd_eng_cn': 7239979.192322,
+            'avd_eng_cn': 7239992.744486,
             'avg_wbgt_v': 31.91108630952381,
             'avg_ltls_v': 28.73463901689708,  # changed due to using float64 vs float32
             'avg_hvls_v': 75.000000000000000,

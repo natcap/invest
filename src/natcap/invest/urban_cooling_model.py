@@ -9,6 +9,7 @@ import time
 
 import numpy
 import pygeoprocessing
+import pygeoprocessing.kernels
 import rtree
 import shapely.prepared
 import shapely.wkb
@@ -530,8 +531,11 @@ def execute(args):
     area_kernel_path = os.path.join(
         intermediate_dir, f'area_kernel{file_suffix}.tif')
     area_kernel_task = task_graph.add_task(
-        func=flat_disk_kernel,
-        args=(green_area_decay_kernel_distance, area_kernel_path),
+        func=pygeoprocessing.kernels.dichotomous_kernel,
+        kwargs=dict(
+            target_kernel_path=area_kernel_path,
+            max_distance=green_area_decay_kernel_distance,
+            normalize=False),
         target_path_list=[area_kernel_path],
         task_name='area kernel')
 
@@ -1185,7 +1189,7 @@ def calc_t_air_nomix_op(t_ref_val, hm_array, uhi_max):
     result = numpy.empty(hm_array.shape, dtype=numpy.float32)
     result[:] = TARGET_NODATA
     # TARGET_NODATA should never be None
-    valid_mask = ~utils.array_equals_nodata(hm_array, TARGET_NODATA)
+    valid_mask = ~pygeoprocessing.array_equals_nodata(hm_array, TARGET_NODATA)
     result[valid_mask] = t_ref_val + (1-hm_array[valid_mask]) * uhi_max
     return result
 
@@ -1213,9 +1217,9 @@ def calc_cc_op_factors(
     result = numpy.empty(shade_array.shape, dtype=numpy.float32)
     result[:] = TARGET_NODATA
     valid_mask = ~(
-        utils.array_equals_nodata(shade_array, TARGET_NODATA) |
-        utils.array_equals_nodata(albedo_array, TARGET_NODATA) |
-        utils.array_equals_nodata(eti_array, TARGET_NODATA))
+        pygeoprocessing.array_equals_nodata(shade_array, TARGET_NODATA) |
+        pygeoprocessing.array_equals_nodata(albedo_array, TARGET_NODATA) |
+        pygeoprocessing.array_equals_nodata(eti_array, TARGET_NODATA))
     result[valid_mask] = (
         cc_weight_shade*shade_array[valid_mask] +
         cc_weight_albedo*albedo_array[valid_mask] +
@@ -1242,9 +1246,9 @@ def calc_eti_op(
     result = numpy.empty(kc_array.shape, dtype=numpy.float32)
     result[:] = target_nodata
     # kc intermediate output should always have a nodata value defined
-    valid_mask = ~utils.array_equals_nodata(kc_array, kc_nodata)
+    valid_mask = ~pygeoprocessing.array_equals_nodata(kc_array, kc_nodata)
     if et0_nodata is not None:
-        valid_mask &= ~utils.array_equals_nodata(et0_array, et0_nodata)
+        valid_mask &= ~pygeoprocessing.array_equals_nodata(et0_array, et0_nodata)
     result[valid_mask] = (
         kc_array[valid_mask] * et0_array[valid_mask] / et_max)
     return result
@@ -1276,85 +1280,6 @@ def calculate_wbgt(
         target_path=target_vapor_pressure_path)
 
 
-def flat_disk_kernel(max_distance, kernel_filepath):
-    """Create a flat disk  kernel.
-
-    The raster created will be a tiled GeoTiff, with 256x256 memory blocks.
-
-    Args:
-        max_distance (int): The distance (in pixels) of the
-            kernel's radius.
-        kernel_filepath (string): The path to the file on disk where this
-            kernel should be stored.  If this file exists, it will be
-            overwritten.
-
-    Returns:
-        None
-
-    """
-    LOGGER.info(f'Creating a disk kernel of distance {max_distance} at '
-                f'{kernel_filepath}')
-    kernel_size = int(numpy.round(max_distance * 2 + 1))
-
-    driver = gdal.GetDriverByName('GTiff')
-    kernel_dataset = driver.Create(
-        kernel_filepath.encode('utf-8'), kernel_size, kernel_size, 1,
-        gdal.GDT_Byte, options=[
-            'BIGTIFF=IF_SAFER', 'TILED=YES', 'BLOCKXSIZE=256',
-            'BLOCKYSIZE=256'])
-
-    # Make some kind of geotransform and SRS. It doesn't matter what, but
-    # having one will make GIS libraries behave better if it's all defined
-    kernel_dataset.SetGeoTransform([0, 1, 0, 0, 0, -1])
-    srs = osr.SpatialReference()
-    srs.SetWellKnownGeogCS('WGS84')
-    kernel_dataset.SetProjection(srs.ExportToWkt())
-
-    kernel_band = kernel_dataset.GetRasterBand(1)
-    kernel_band.SetNoDataValue(255)
-
-    cols_per_block, rows_per_block = kernel_band.GetBlockSize()
-
-    n_cols = kernel_dataset.RasterXSize
-    n_rows = kernel_dataset.RasterYSize
-
-    n_col_blocks = int(math.ceil(n_cols / float(cols_per_block)))
-    n_row_blocks = int(math.ceil(n_rows / float(rows_per_block)))
-
-    for row_block_index in range(n_row_blocks):
-        row_offset = row_block_index * rows_per_block
-        row_block_width = n_rows - row_offset
-        if row_block_width > rows_per_block:
-            row_block_width = rows_per_block
-
-        for col_block_index in range(n_col_blocks):
-            col_offset = col_block_index * cols_per_block
-            col_block_width = n_cols - col_offset
-            if col_block_width > cols_per_block:
-                col_block_width = cols_per_block
-
-            # Numpy creates index rasters as ints by default, which sometimes
-            # creates problems on 32-bit builds when we try to add Int32
-            # matrices to float64 matrices.
-            row_indices, col_indices = numpy.indices((row_block_width,
-                                                      col_block_width),
-                                                     dtype=float)
-
-            row_indices += float(row_offset - max_distance)
-            col_indices += float(col_offset - max_distance)
-
-            kernel_index_distances = numpy.hypot(
-                row_indices, col_indices)
-            kernel = kernel_index_distances < max_distance
-
-            kernel_band.WriteArray(kernel, xoff=col_offset,
-                                   yoff=row_offset)
-
-    # Need to flush the kernel's cache to disk before opening up a new Dataset
-    # object in interblocks()
-    kernel_dataset.FlushCache()
-
-
 def hm_op(cc_array, green_area_sum, cc_park_array, green_area_threshold):
     """Calculate HM.
 
@@ -1374,8 +1299,8 @@ def hm_op(cc_array, green_area_sum, cc_park_array, green_area_threshold):
     """
     result = numpy.empty(cc_array.shape, dtype=numpy.float32)
     result[:] = TARGET_NODATA
-    valid_mask = ~(utils.array_equals_nodata(cc_array, TARGET_NODATA) &
-                   utils.array_equals_nodata(cc_park_array, TARGET_NODATA))
+    valid_mask = ~(pygeoprocessing.array_equals_nodata(cc_array, TARGET_NODATA) &
+                   pygeoprocessing.array_equals_nodata(cc_park_array, TARGET_NODATA))
     cc_mask = ((cc_array >= cc_park_array) |
                (green_area_sum < green_area_threshold))
     result[cc_mask & valid_mask] = cc_array[cc_mask & valid_mask]
@@ -1469,8 +1394,10 @@ def convolve_2d_by_exponential(
         dir=os.path.dirname(target_convolve_raster_path))
     exponential_kernel_path = os.path.join(
         temporary_working_dir, 'exponential_decay_kernel.tif')
-    utils.exponential_decay_kernel_raster(
-        decay_kernel_distance, exponential_kernel_path)
+    pygeoprocessing.kernels.exponential_decay_kernel(
+        target_kernel_path=exponential_kernel_path,
+        max_distance=decay_kernel_distance * 5,
+        expected_distance=decay_kernel_distance)
     pygeoprocessing.convolve_2d(
         (signal_raster_path, 1), (exponential_kernel_path, 1),
         target_convolve_raster_path, working_dir=temporary_working_dir,

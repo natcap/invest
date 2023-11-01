@@ -169,93 +169,6 @@ class UNATests(unittest.TestCase):
                     population_array.sum(), resampled_population_array.sum(),
                     rtol=1e-3)
 
-    def test_dichotomous_decay_simple(self):
-        """UNA: Test dichotomous decay kernel on a simple case."""
-        from natcap.invest import urban_nature_access
-
-        expected_distance = 5
-        kernel_filepath = os.path.join(self.workspace_dir, 'kernel.tif')
-
-        urban_nature_access._create_kernel_raster(
-            urban_nature_access._kernel_dichotomy, expected_distance,
-            kernel_filepath)
-
-        expected_array = numpy.array([
-            [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
-            [0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0],
-            [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-            [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-            [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-            [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-            [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-            [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-            [0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0],
-            [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0]], dtype=numpy.uint8)
-
-        extracted_kernel_array = pygeoprocessing.raster_to_numpy_array(
-            kernel_filepath)
-        numpy.testing.assert_array_equal(
-            expected_array, extracted_kernel_array)
-
-    def test_dichotomous_decay_normalized(self):
-        """UNA: Test normalized dichotomous kernel."""
-        from natcap.invest import urban_nature_access
-
-        expected_distance = 5
-        kernel_filepath = os.path.join(self.workspace_dir, 'kernel.tif')
-
-        urban_nature_access._create_kernel_raster(
-            urban_nature_access._kernel_dichotomy,
-            expected_distance, kernel_filepath, normalize=True)
-
-        expected_array = numpy.array([
-            [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
-            [0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0],
-            [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-            [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-            [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-            [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-            [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-            [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-            [0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0],
-            [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0]], dtype=numpy.float32)
-        expected_array /= numpy.sum(expected_array)
-
-        extracted_kernel_array = pygeoprocessing.raster_to_numpy_array(
-            kernel_filepath)
-        numpy.testing.assert_allclose(
-            expected_array, extracted_kernel_array)
-
-    def test_dichotomous_decay_large(self):
-        """UNA: Test dichotomous decay on a very large pixel radius."""
-        from natcap.invest import urban_nature_access
-
-        # kernel with > 268 million pixels.  This is big enough to force my
-        # laptop to noticeably hang while swapping memory on an all in-memory
-        # implementation.
-        expected_distance = 2**13
-        kernel_filepath = os.path.join(self.workspace_dir, 'kernel.tif')
-
-        urban_nature_access._create_kernel_raster(
-            urban_nature_access._kernel_dichotomy,
-            expected_distance, kernel_filepath)
-
-        expected_shape = (expected_distance*2+1, expected_distance*2+1)
-        expected_n_1_pixels = math.pi*expected_distance**2
-
-        kernel_info = pygeoprocessing.get_raster_info(kernel_filepath)
-        n_1_pixels = 0
-        for _, block in pygeoprocessing.iterblocks((kernel_filepath, 1)):
-            n_1_pixels += numpy.count_nonzero(block)
-
-        # 210828417 is only a slight overestimate from the area of the circle
-        # at this radius: math.pi*expected_distance**2 = 210828714.13315654
-        numpy.testing.assert_allclose(
-            n_1_pixels, expected_n_1_pixels, rtol=1e-5)
-        self.assertEqual(kernel_info['raster_size'], expected_shape)
-
     def test_density_decay_simple(self):
         """UNA: Test density decay."""
         from natcap.invest import urban_nature_access
@@ -307,20 +220,6 @@ class UNATests(unittest.TestCase):
             distance, max_distance, beta)
         # These regression values are calculated by hand
         expected_array = numpy.array([1, 1, (1/32), (1/243), 0])
-        numpy.testing.assert_allclose(
-            expected_array, kernel)
-
-    def test_exponential_kernel(self):
-        """UNA: Test the exponential decay kernel."""
-        from natcap.invest import urban_nature_access
-
-        max_distance = 3
-        distance = numpy.array([0, 1, 2, 3, 4])
-        kernel = urban_nature_access._kernel_exponential(
-            distance, max_distance)
-        # Regression values are calculated by hand
-        expected_array = numpy.array(
-            [1, 0.71653134, 0.5134171, 0.36787945, 0])
         numpy.testing.assert_allclose(
             expected_array, kernel)
 

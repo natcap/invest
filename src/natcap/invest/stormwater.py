@@ -5,6 +5,7 @@ import os
 
 import numpy
 import pygeoprocessing
+import pygeoprocessing.kernels
 import taskgraph
 from osgeo import gdal
 from osgeo import ogr
@@ -1104,43 +1105,6 @@ def is_near(input_path, radius, distance_path, out_path):
         target_nodata=UINT8_NODATA)
 
 
-def make_search_kernel(raster_path, radius):
-    """Make a search kernel for a raster that marks pixels within a radius.
-
-    Args:
-        raster_path (str): path to a raster to make kernel for. It is assumed
-            that the raster has square pixels.
-        radius (float): distance around each pixel's centerpoint to search
-            in raster coordinate system units
-
-    Returns:
-        2D boolean numpy.ndarray. '1' pixels are within ``radius`` of the
-        center pixel, measured centerpoint-to-centerpoint. '0' pixels are
-        outside the radius. The array dimensions are as small as possible
-        while still including the entire radius.
-    """
-    raster_info = pygeoprocessing.get_raster_info(raster_path)
-    pixel_radius = radius / abs(raster_info['pixel_size'][0])
-    pixel_margin = math.floor(pixel_radius)
-    # the search kernel is just large enough to contain all pixels that
-    # *could* be within the radius of the center pixel
-    search_kernel_shape = tuple([pixel_margin * 2 + 1] * 2)
-    # arrays of the column index and row index of each pixel
-    col_indices, row_indices = numpy.indices(search_kernel_shape)
-    # adjust them so that (0, 0) is the center pixel
-    col_indices -= pixel_margin
-    row_indices -= pixel_margin
-    # hypotenuse_i = sqrt(col_indices_i**2 + row_indices_i**2) for each pixel i
-    hypotenuse = numpy.hypot(col_indices, row_indices)
-    # boolean kernel where 1=pixel centerpoint is within the radius of the
-    # center pixel's centerpoint
-    search_kernel = numpy.array(hypotenuse <= pixel_radius, dtype=numpy.uint8)
-    LOGGER.debug(
-        f'Search kernel for {raster_path} with radius {radius}:'
-        f'\n{search_kernel}')
-    return search_kernel
-
-
 def raster_average(raster_path, radius, kernel_path, out_path):
     """Average pixel values within a radius.
 
@@ -1168,19 +1132,12 @@ def raster_average(raster_path, radius, kernel_path, out_path):
     Returns:
         None
     """
-    search_kernel = make_search_kernel(raster_path, radius)
-
-    srs = osr.SpatialReference()
-    srs.ImportFromEPSG(3857)
-    projection_wkt = srs.ExportToWkt()
-    pygeoprocessing.numpy_array_to_raster(
-        # float32 here to avoid pygeoprocessing bug issue #180
-        search_kernel.astype(numpy.float32),
-        FLOAT_NODATA,
-        (20, -20),
-        (0, 0),
-        projection_wkt,
-        kernel_path)
+    pixel_radius = radius / abs(pygeoprocessing.get_raster_info(
+        raster_path)['pixel_size'][0])
+    pygeoprocessing.kernels.dichotomous_kernel(
+        target_kernel_path=kernel_path,
+        max_distance=pixel_radius,
+        normalize=False)
 
     # convolve the signal (input raster) with the kernel and normalize
     # this is equivalent to taking an average of each pixel's neighborhood

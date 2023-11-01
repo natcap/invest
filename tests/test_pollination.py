@@ -199,7 +199,7 @@ class PollinationTests(unittest.TestCase):
             result_sum += numpy.sum(data_block)
         # the number below is just what the sum rounded to two decimal places
         # when I manually inspected a run that appeared to be correct.
-        self.assertAlmostEqual(result_sum, 58.669518, places=2)
+        self.assertAlmostEqual(result_sum, 58.407155, places=2)
 
     def test_pollination_constant_abundance(self):
         """Pollination: regression testing when abundance is all 1."""
@@ -224,7 +224,7 @@ class PollinationTests(unittest.TestCase):
             result_sum += numpy.sum(data_block)
         # the number below is just what the sum rounded to two decimal places
         # when I manually inspected a run that appeared to be correct.
-        self.assertAlmostEqual(result_sum, 68.44777, places=2)
+        self.assertAlmostEqual(result_sum, 68.14167, places=2)
 
     def test_pollination_bad_guild_headers(self):
         """Pollination: testing that model detects bad guild headers."""

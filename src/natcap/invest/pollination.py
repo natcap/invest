@@ -9,6 +9,7 @@ import re
 
 import numpy
 import pygeoprocessing
+import pygeoprocessing.kernels
 import taskgraph
 from osgeo import gdal
 from osgeo import ogr
@@ -767,8 +768,11 @@ def execute(args):
         except:
             alpha_kernel_raster_task = task_graph.add_task(
                 task_name=f'decay_kernel_raster_{alpha}',
-                func=utils.exponential_decay_kernel_raster,
-                args=(alpha, kernel_path),
+                func=pygeoprocessing.kernels.exponential_decay_kernel,
+                kwargs=dict(
+                    target_kernel_path=kernel_path,
+                    max_distance=alpha * 5,
+                    expected_distance=alpha),
                 target_path_list=[kernel_path])
             alpha_kernel_map[kernel_path] = alpha_kernel_raster_task
 
@@ -1403,7 +1407,7 @@ def _sum_arrays(*array_list):
     result = numpy.empty_like(array_list[0])
     result[:] = 0
     for array in array_list:
-        local_valid_mask = ~utils.array_equals_nodata(array, _INDEX_NODATA)
+        local_valid_mask = ~pygeoprocessing.array_equals_nodata(array, _INDEX_NODATA)
         result[local_valid_mask] += array[local_valid_mask]
         valid_mask |= local_valid_mask
     result[~valid_mask] = _INDEX_NODATA

@@ -11,6 +11,7 @@ import time
 
 import numpy
 import pygeoprocessing
+import pygeoprocessing.kernels
 import scipy
 import taskgraph
 from osgeo import gdal
@@ -445,8 +446,8 @@ def _convert_landscape(
     }
     # a sigma of 1.0 gives nice visual results to smooth pixel level artifacts
     # since a pixel is the 1.0 unit
-    utils.gaussian_decay_kernel_raster(
-        1.0, tmp_file_registry['gaussian_kernel'])
+    pygeoprocessing.kernels.normal_distribution_kernel(
+        tmp_file_registry['gaussian_kernel'], sigma=1)
 
     # create the output raster first as a copy of the base landcover so it can
     # be looped on for each step

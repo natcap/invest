@@ -9,6 +9,7 @@ import tempfile
 import numpy
 import numpy.testing
 import pygeoprocessing
+import pygeoprocessing.kernels
 import pygeoprocessing.symbolic
 import shapely.ops
 import shapely.wkb
@@ -716,8 +717,6 @@ def execute(args):
         os.path.join(args['workspace_dir'], 'taskgraph_cache'), n_workers)
 
     kernel_creation_functions = {
-        KERNEL_LABEL_DICHOTOMY: _kernel_dichotomy,
-        KERNEL_LABEL_EXPONENTIAL: _kernel_exponential,
         KERNEL_LABEL_GAUSSIAN: _kernel_gaussian,
         KERNEL_LABEL_DENSITY: _kernel_density,
         # Use the user-provided beta args parameter if the user has provided
@@ -728,11 +727,7 @@ def execute(args):
     # Taskgraph needs a __name__ attribute, so adding one here.
     # kernel_creation_functions[KERNEL_LABEL_POWER].__name__ = (
     #     'functools_partial_decay_power')
-
-    # Since we have these keys defined in two places, I want to be super sure
-    # that the labels match.
-    assert sorted(kernel_creation_functions.keys()) == (
-        sorted(MODEL_SPEC['args']['decay_function']['options']))
+    #
 
     decay_function = args['decay_function']
     LOGGER.info(f'Using decay function {decay_function}')
@@ -969,17 +964,41 @@ def execute(args):
         kernel_path = os.path.join(
             intermediate_dir, f'kernel_{search_radius_m}{suffix}.tif')
         kernel_paths[search_radius_m] = kernel_path
+
+        if decay_function == KERNEL_LABEL_DICHOTOMY:
+            kernel_func = pygeoprocessing.kernels.dichotomous_kernel
+            kernel_kwargs = dict(
+                target_kernel_path=kernel_path,
+                max_distance=search_radius_in_pixels,
+                normalize=False)
+        elif decay_function == KERNEL_LABEL_EXPONENTIAL:
+            kernel_func = pygeoprocessing.kernels.exponential_decay_kernel
+            kernel_kwargs = dict(
+                target_kernel_path=kernel_path,
+                max_distance=math.ceil(expected_distance) * 2 + 1,
+                expected_distance=search_radius_in_pixels,
+                normalize=False)
+        elif decay_function in [KERNEL_LABEL_GAUSSIAN, KERNEL_LABEL_DENSITY]:
+            kernel_func = pygeoprocessing.kernels.create_distance_decay_kernel
+
+            def decay_func(dist_array):
+                return kernel_creation_functions[decay_function](
+                    dist_array, max_distance=search_radius_in_pixels)
+
+            kernel_kwargs = dict(
+                target_kernel_path=kernel_path,
+                distance_decay_function=decay_func,
+                max_distance=search_radius_in_pixels,
+                normalize=False)
+        else:
+            raise ValueError('Invalid kernel creation option selected')
+
         kernel_tasks[search_radius_m] = graph.add_task(
-            _create_kernel_raster,
-            kwargs={
-                'kernel_function': kernel_creation_functions[decay_function],
-                'expected_distance': search_radius_in_pixels,
-                'kernel_filepath': kernel_path,
-                'normalize': False},  # Model math calls for un-normalized
+            kernel_func,
+            kwargs=kernel_kwargs,
             task_name=(
                 f'Create {decay_function} kernel - {search_radius_m}m'),
-            target_path_list=[kernel_path]
-        )
+            target_path_list=[kernel_path])
 
     # Search radius mode 1: the same search radius applies to everything
     if args['search_radius_mode'] == RADIUS_OPT_UNIFORM:
@@ -2388,44 +2407,6 @@ def _resample_population_raster(
     shutil.rmtree(tmp_working_dir, ignore_errors=True)
 
 
-def _kernel_dichotomy(distance, max_distance):
-    """Create a dichotomous kernel.
-
-    All pixels within ``max_distance`` have a value of 1.
-
-    Args:
-        distance (numpy.array): An array of euclidean distances (in pixels)
-            from the center of the kernel.
-        max_distance (float): The maximum distance of the kernel.  Pixels that
-            are more than this number of pixels will have a value of 0.
-
-    Returns:
-        ``numpy.array`` with dtype of numpy.float32 and same shape as
-        ``distance.
-    """
-    return (distance <= max_distance).astype(numpy.float32)
-
-
-def _kernel_exponential(distance, max_distance):
-    """Create an exponential-decay kernel.
-
-    Args:
-        distance (numpy.array): An array of euclidean distances (in pixels)
-            from the center of the kernel.
-        max_distance (float): The maximum distance of the kernel.  Pixels that
-            are more than this number of pixels will have a value of 0.
-
-    Returns:
-        ``numpy.array`` with dtype of numpy.float32 and same shape as
-        ``distance.
-    """
-    kernel = numpy.zeros(distance.shape, dtype=numpy.float32)
-    pixels_in_radius = (distance <= max_distance)
-    kernel[pixels_in_radius] = numpy.exp(
-        -distance[pixels_in_radius] / max_distance)
-    return kernel
-
-
 def _kernel_power(distance, max_distance, beta):
     """Create a power kernel with user-defined beta.
 
@@ -2489,95 +2470,6 @@ def _kernel_density(distance, max_distance):
     kernel[pixels_in_radius] = (
         0.75 * (1 - (distance[pixels_in_radius] / max_distance) ** 2))
     return kernel
-
-
-def _create_kernel_raster(
-        kernel_function, expected_distance, kernel_filepath, normalize=False):
-    """Create a raster distance-weighted decay kernel from a function.
-
-    Args:
-        kernel_function (callable): The kernel function to use.
-        expected_distance (int or float): The distance (in pixels) after which
-            the kernel becomes 0.
-        kernel_filepath (string): The string path on disk to where this kernel
-            should be stored.
-        normalize=False (bool): Whether to divide the kernel values by the sum
-            of all values in the kernel.
-
-    Returns:
-        ``None``
-    """
-    pixel_radius = math.ceil(expected_distance)
-    kernel_size = pixel_radius * 2 + 1  # allow for a center pixel
-    driver = gdal.GetDriverByName('GTiff')
-    kernel_dataset = driver.Create(
-        kernel_filepath.encode('utf-8'), kernel_size, kernel_size, 1,
-        gdal.GDT_Float32, options=[
-            'BIGTIFF=IF_SAFER', 'TILED=YES', 'BLOCKXSIZE=256',
-            'BLOCKYSIZE=256'])
-
-    # Make some kind of geotransform, it doesn't matter what but
-    # will make GIS libraries behave better if it's all defined
-    kernel_dataset.SetGeoTransform([0, 1, 0, 0, 0, -1])
-    srs = osr.SpatialReference()
-    srs.SetWellKnownGeogCS('WGS84')
-    kernel_dataset.SetProjection(srs.ExportToWkt())
-
-    kernel_band = kernel_dataset.GetRasterBand(1)
-    kernel_nodata = float(numpy.finfo(numpy.float32).min)
-    kernel_band.SetNoDataValue(kernel_nodata)
-
-    kernel_band = None
-    kernel_dataset = None
-
-    kernel_raster = gdal.OpenEx(kernel_filepath, gdal.GA_Update)
-    kernel_band = kernel_raster.GetRasterBand(1)
-    band_x_size = kernel_band.XSize
-    band_y_size = kernel_band.YSize
-    running_sum = 0
-    for block_data in pygeoprocessing.iterblocks(
-            (kernel_filepath, 1), offset_only=True):
-        array_xmin = block_data['xoff'] - pixel_radius
-        array_xmax = min(
-            array_xmin + block_data['win_xsize'],
-            band_x_size - pixel_radius)
-        array_ymin = block_data['yoff'] - pixel_radius
-        array_ymax = min(
-            array_ymin + block_data['win_ysize'],
-            band_y_size - pixel_radius)
-
-        pixel_dist_from_center = numpy.hypot(
-            *numpy.mgrid[
-                array_ymin:array_ymax,
-                array_xmin:array_xmax])
-
-        kernel = kernel_function(distance=pixel_dist_from_center,
-                                 max_distance=expected_distance)
-        if normalize:
-            running_sum += kernel.sum()
-
-        kernel_band.WriteArray(
-            kernel,
-            yoff=block_data['yoff'],
-            xoff=block_data['xoff'])
-
-    kernel_raster.FlushCache()
-    kernel_band = None
-    kernel_raster = None
-
-    if normalize:
-        kernel_raster = gdal.OpenEx(kernel_filepath, gdal.GA_Update)
-        kernel_band = kernel_raster.GetRasterBand(1)
-        for block_data, kernel_block in pygeoprocessing.iterblocks(
-                (kernel_filepath, 1)):
-            # divide by sum to normalize
-            kernel_block /= running_sum
-            kernel_band.WriteArray(
-                kernel_block, xoff=block_data['xoff'], yoff=block_data['yoff'])
-
-        kernel_raster.FlushCache()
-        kernel_band = None
-        kernel_raster = None
 
 
 def _create_valid_pixels_nodata_mask(raster_list, target_mask_path):
