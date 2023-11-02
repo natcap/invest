@@ -756,7 +756,6 @@ def execute(args):
             op=_inverse_op,
             rasters=[f_reg['thresholded_slope_path']],
             target_path=f_reg['s_factor_inverse_path'],
-            target_dtype=numpy.float32,
             target_nodata=_TARGET_NODATA),
         target_path_list=[f_reg['s_factor_inverse_path']],
         dependent_task_list=[threshold_slope_task],
@@ -827,7 +826,6 @@ def execute(args):
                 op=_mult_op,
                 rasters=[load_path, f_reg['runoff_proxy_index_path']],
                 target_path=modified_load_path,
-                target_dtype=numpy.float32,
                 target_nodata=_TARGET_NODATA),
             target_path_list=[modified_load_path],
             dependent_task_list=[load_task, runoff_proxy_index_task],
@@ -893,7 +891,6 @@ def execute(args):
                 op=numpy.multiply,  # export = load * ndr
                 rasters=[surface_load_path, ndr_path],
                 target_path=surface_export_path,
-                target_dtype=numpy.float32,
                 target_nodata=_TARGET_NODATA),
             target_path_list=[surface_export_path],
             dependent_task_list=[
@@ -933,7 +930,6 @@ def execute(args):
                     op=numpy.multiply,  # export = load * ndr
                     rasters=[f_reg['sub_load_n_path'], f_reg['sub_ndr_n_path']],
                     target_path=f_reg['n_subsurface_export_path'],
-                    target_dtype=numpy.float32,
                     target_nodata=_TARGET_NODATA),
                 target_path_list=[f_reg['n_subsurface_export_path']],
                 dependent_task_list=[
@@ -948,7 +944,6 @@ def execute(args):
                     op=_sum_op,
                     rasters=[surface_export_path, f_reg['n_subsurface_export_path']],
                     target_path=f_reg['n_total_export_path'],
-                    target_dtype=numpy.float32,
                     target_nodata=_TARGET_NODATA),
                 target_path_list=[f_reg['n_total_export_path']],
                 dependent_task_list=[
@@ -1417,7 +1412,6 @@ def _calculate_ndr(
                             (1 + numpy.exp((ic_0_param - ic) / k_param))),
         rasters=[effective_retention_path, ic_factor_path],
         target_path=target_ndr_path,
-        target_dtype=numpy.float32,
         target_nodata=_TARGET_NODATA)
 
 
@@ -1430,7 +1424,6 @@ def _calculate_sub_ndr(
             (1 - numpy.exp(-5 * dist_to_channel / crit_len_sub))),
         rasters=[dist_to_channel_path],
         target_path=target_sub_ndr_path,
-        target_dtype=numpy.float32,
         target_nodata=_TARGET_NODATA)
 
 

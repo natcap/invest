@@ -738,7 +738,6 @@ def execute(args):
             op=numpy.multiply,  # PET = ET0 * KC
             rasters=[eto_path, tmp_Kc_raster_path],
             target_path=tmp_pet_path,
-            target_dtype=numpy.float32,
             target_nodata=nodata_dict['out_nodata']),
         target_path_list=[tmp_pet_path],
         dependent_task_list=[create_Kc_raster_task],
@@ -770,8 +769,7 @@ def execute(args):
             op=wyield_op,
             rasters=[fractp_path, precip_path],
             target_path=wyield_path,
-            target_nodata=nodata_dict['out_nodata'],
-            target_dtype=numpy.float32),
+            target_nodata=nodata_dict['out_nodata']),
         target_path_list=[wyield_path],
         dependent_task_list=[calculate_fractp_task, align_raster_stack_task],
         task_name='calculate_wyield')
@@ -784,8 +782,7 @@ def execute(args):
             op=numpy.multiply,  # AET = fractp * precip
             rasters=[fractp_path, precip_path],
             target_path=aet_path,
-            target_nodata=nodata_dict['out_nodata'],
-            target_dtype=numpy.float32),
+            target_nodata=nodata_dict['out_nodata']),
         target_path_list=[aet_path],
         dependent_task_list=[
             calculate_fractp_task, create_veg_raster_task,

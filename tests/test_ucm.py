@@ -412,21 +412,6 @@ class UCMTests(unittest.TestCase):
                 header='column', header_name='green_area'))]
         self.assertEqual(result, expected)
 
-    def test_flat_disk_kernel(self):
-        """UCM: test flat disk kernel."""
-        import natcap.invest.urban_cooling_model
-
-        kernel_filepath = os.path.join(self.workspace_dir, 'kernel.tif')
-        natcap.invest.urban_cooling_model.flat_disk_kernel(
-            1000, kernel_filepath)
-
-        kernel_raster = gdal.OpenEx(kernel_filepath, gdal.OF_RASTER)
-        kernel_band = kernel_raster.GetRasterBand(1)
-        self.assertAlmostEqual(
-            numpy.sum(kernel_band.ReadAsArray())/1000,
-            numpy.ceil(1000**2*numpy.pi/1000),
-            places=0)
-
     def test_do_energy_valuation_option(self):
         """UCM: test separate valuation options."""
         import natcap.invest.urban_cooling_model

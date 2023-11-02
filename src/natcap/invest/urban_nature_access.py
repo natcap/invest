@@ -727,7 +727,6 @@ def execute(args):
     # Taskgraph needs a __name__ attribute, so adding one here.
     # kernel_creation_functions[KERNEL_LABEL_POWER].__name__ = (
     #     'functools_partial_decay_power')
-    #
 
     decay_function = args['decay_function']
     LOGGER.info(f'Using decay function {decay_function}')

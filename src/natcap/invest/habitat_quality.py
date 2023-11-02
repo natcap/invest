@@ -825,8 +825,7 @@ def _calculate_total_degradation(
     pygeoprocessing.raster_map(
         op=total_degradation,
         rasters=deg_raster_list,
-        target_path=deg_sum_raster_path,
-        target_dtype=numpy.float32)
+        target_path=deg_sum_raster_path)
 
 
 def _compute_rarity_operation(
@@ -872,8 +871,7 @@ def _compute_rarity_operation(
     pygeoprocessing.raster_map(
         op=lambda base, cover_x: cover_x,
         rasters=[base_lulc_path_band[0], lulc_path_band[0]],
-        target_path=new_cover_path[0],
-        target_dtype=numpy.float32)
+        target_path=new_cover_path[0])
 
     LOGGER.info('Starting rarity computation on'
                 f' {os.path.basename(lulc_path_band[0])} land cover.')
@@ -1019,8 +1017,7 @@ def _decay_distance(dist_raster_path, max_dist, decay_type, target_path):
     pygeoprocessing.raster_map(
         op=decay_op,
         rasters=[dist_raster_path],
-        target_path=target_path,
-        target_dtype=numpy.float32)
+        target_path=target_path)
 
 
 def _validate_threat_path(threat_path, lulc_key):

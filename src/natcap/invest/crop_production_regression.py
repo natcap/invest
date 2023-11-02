@@ -723,7 +723,6 @@ def execute(args):
                          phosphorus_yield_raster_path,
                          potassium_yield_raster_path],
                 target_path=crop_production_raster_path,
-                target_dtype=numpy.float32,
                 target_nodata=_NODATA_YIELD),
             target_path_list=[crop_production_raster_path],
             dependent_task_list=dependent_task_list,

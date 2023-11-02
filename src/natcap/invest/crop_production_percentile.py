@@ -775,7 +775,6 @@ def calculate_crop_production(lulc_path, yield_path, crop_lucode,
             lulc == crop_lucode, _yield * pixel_area_ha, 0),
         rasters=[lulc_path, yield_path],
         target_path=target_path,
-        target_dtype=numpy.float32,
         target_nodata=_NODATA_YIELD)
 
 

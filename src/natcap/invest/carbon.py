@@ -459,7 +459,6 @@ def execute(args):
                 rasters=[file_registry['tot_c_' + scenario_type],
                          file_registry['tot_c_cur']],
                 target_path=file_registry[output_key],
-                target_dtype=numpy.float32,
                 target_nodata=_CARBON_NODATA),
             target_path_list=[file_registry[output_key]],
             dependent_task_list=[

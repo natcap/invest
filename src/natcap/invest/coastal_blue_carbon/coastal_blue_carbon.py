@@ -1515,12 +1515,12 @@ def _calculate_npv(
                     (1 + discount_rate) ** years_since_baseline))
 
         pygeoprocessing.raster_map(
-            op=lambda *seq_arrays: numpy.sum(seq, axis=0) * valuation_factor,
+            op=lambda *seq_arrays: numpy.sum(
+                seq_arrays, axis=0) * valuation_factor,
             rasters=[
                 path for year, path in net_sequestration_rasters.items() if
                 year <= target_raster_year],
-            target_path=target_raster_path,
-            target_dtype=numpy.float32)
+            target_path=target_raster_path)
 
 
 def _calculate_stocks_after_baseline_period(
@@ -1550,8 +1550,7 @@ def _calculate_stocks_after_baseline_period(
     pygeoprocessing.raster_map(
         op=lambda baseline, accum: baseline + (accum * n_years),
         rasters=[baseline_stock_raster_path, yearly_accumulation_raster_path],
-        target_path=target_raster_path,
-        target_dtype=numpy.float32)
+        target_path=target_raster_path)
 
 
 def _calculate_accumulation_over_time(

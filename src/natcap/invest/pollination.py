@@ -1401,7 +1401,7 @@ def _sum_arrays(*array_list):
 def _calculate_habitat_nesting_index(
         substrate_path_map, species_substrate_index_map,
         target_habitat_nesting_index_path):
-    """Closure for HN(x, s) = max_n(N(x, n) ns(s,n)) calculation."""
+    """Calculate HN(x, s) = max_n(N(x, n) ns(s,n))."""
 
     substrate_path_list = [
         substrate_path_map[substrate_id]
@@ -1436,11 +1436,14 @@ def _multiply_by_scalar(raster_path, scalar, target_path):
 def _calculate_pollinator_supply_index(
         habitat_nesting_suitability_path, floral_resources_path,
         species_abundance, target_path):
-    """Create a closure for species abundance to multiply later.
+    """Calculate pollinator supply index..
 
     Args:
-        species_abundance (float): value to use in `__call__` when
-            calculating pollinator abundance.
+        habitat_nesting_suitability_path (str): path to habitat nesting
+            suitability raster
+        floral_resources_path (str): path to floral resources raster
+        species_abundance (float): species abundance value
+        target_path (str): path to write out result raster
 
     Returns:
         None.

@@ -169,45 +169,16 @@ class UNATests(unittest.TestCase):
                     population_array.sum(), resampled_population_array.sum(),
                     rtol=1e-3)
 
-    def test_density_decay_simple(self):
-        """UNA: Test density decay."""
+    def test_density_kernel(self):
+        """UNA: Test the density kernel."""
         from natcap.invest import urban_nature_access
 
-        expected_distance = 200
-        kernel_filepath = os.path.join(self.workspace_dir, 'kernel.tif')
-
-        urban_nature_access._create_kernel_raster(
-            urban_nature_access._kernel_density,
-            expected_distance, kernel_filepath)
-
-        expected_shape = (expected_distance*2+1,) * 2
-        kernel_info = pygeoprocessing.get_raster_info(kernel_filepath)
-        kernel_array = pygeoprocessing.raster_to_numpy_array(kernel_filepath)
-        self.assertEqual(kernel_info['raster_size'], expected_shape)
-        numpy.testing.assert_allclose(
-            47123.867,  # obtained from manual inspection
-            kernel_array.sum())
-        self.assertEqual(0.75, kernel_array.max())
-        self.assertEqual(0, kernel_array.min())
-
-    def test_density_decay_normalized(self):
-        """UNA: Test normalized density decay."""
-        from natcap.invest import urban_nature_access
-
-        expected_distance = 200
-        kernel_filepath = os.path.join(self.workspace_dir, 'kernel.tif')
-
-        urban_nature_access._create_kernel_raster(
-            urban_nature_access._kernel_density,
-            expected_distance, kernel_filepath, normalize=True)
-
-        expected_shape = (expected_distance*2+1,) * 2
-        kernel_info = pygeoprocessing.get_raster_info(kernel_filepath)
-        kernel_array = pygeoprocessing.raster_to_numpy_array(kernel_filepath)
-        self.assertEqual(kernel_info['raster_size'], expected_shape)
-        numpy.testing.assert_allclose(1, kernel_array.sum())
-        self.assertAlmostEqual(1.5915502e-05, kernel_array.max())
-        self.assertEqual(0, kernel_array.min())
+        max_distance = 3
+        distance = numpy.array([0, 1, 2, 3, 4])
+        kernel = urban_nature_access._kernel_density(distance, max_distance)
+        # These regression values are calculated by hand
+        expected_array = numpy.array([.75, 2/3, 5/12, 0, 0])
+        numpy.testing.assert_allclose(expected_array, kernel)
 
     def test_power_kernel(self):
         """UNA: Test the power kernel."""
