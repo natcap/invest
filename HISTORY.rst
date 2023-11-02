@@ -49,6 +49,10 @@ Unreleased Changes
       (`#1374 <https://github.com/natcap/invest/issues/1374>`_)
     * Datastack archives will now be correctly extracted
       (`#1308 <https://github.com/natcap/invest/issues/1308>`_)
+* Coastal Vulnerability
+    * Fixed a bug where the model would crash when processing a float type
+      bathymetry raster with no nodata value.
+      https://github.com/natcap/invest/issues/992
 * NDR
     * Fixing an issue where minor geometric issues in the watersheds input
       (such as a ring self-intersection) would raise an error in the model.
