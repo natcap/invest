@@ -42,6 +42,22 @@ Unreleased Changes
       have been replaced with ``numpy.prod``.
       https://github.com/natcap/invest/issues/1410
     * Add support for python 3.11 (`#1103 <https://github.com/natcap/invest/issues/1103>`_)
+    * Adding a docker container that is built on each commit where a change to
+      model code, requirements, or the docker configuration has been made.
+      https://github.com/natcap/invest/issues/1115
+    * Vector geometry types will now be validated for all models
+      (`#1374 <https://github.com/natcap/invest/issues/1374>`_)
+    * Datastack archives will now be correctly extracted
+      (`#1308 <https://github.com/natcap/invest/issues/1308>`_)
+    * Updated to ``pygeoprocessing`` 2.4.2. This includes an update to
+      ``pygeoprocessing.zonal_statistics``, which is now more correct on certain
+      edge cases. Aggregated model results may change slightly.
+    * Removed the ``utils`` functions ``array_equals_nodata``,
+      ``exponential_decay_kernel_raster``, and ``gaussian_decay_kernel_raster``,
+      which were obsoleted by new ``pygeoprocessing`` features.
+* Pollination
+    * Replaced custom kernel implementation with ``pygeoprocessing.kernels``.
+      Convolution results may be slightly different (more accurate).
 * NDR
     * Fixing an issue where minor geometric issues in the watersheds input
       (such as a ring self-intersection) would raise an error in the model.
@@ -49,6 +65,9 @@ Unreleased Changes
     * Fixed a task dependency issue where NDR would crash because of a race
       condition when run with ``n_workers > 0``.
       https://github.com/natcap/invest/issues/1426
+    * Fixed an issue in NDR's effective retention where, on rasters with more
+      than 2^31 pixels, the model would crash with an error relating to a
+      negative (overflowed) index. https://github.com/natcap/invest/issues/1431
 * SDR
     * Fixed an issue with SDR's sediment deposition where large regions would
       become nodata in cases where the DEM has valid data but other inputs
@@ -58,6 +77,18 @@ Unreleased Changes
       non-nodata. (`#911 <https://github.com/natcap/invest/issues/911>`_)
     * RKLS, USLE, avoided erosion, and avoided export rasters will now have
       nodata in streams (`#1415 <https://github.com/natcap/invest/issues/1415>`_)
+    * Fixed an issue in SDR's sediment deposition where, on rasters with more
+      than 2^31 pixels, the model would crash with an error relating to a
+      negative (overflowed) index. https://github.com/natcap/invest/issues/1431
+* Seasonal Water Yield
+    * Fixed an issue in Seasonal Water Yield's baseflow routing and local
+      recharge functions where, on rasters with more than 2^31 pixels, the
+      model would crash with an error relating to a negative (overflowed)
+      index. https://github.com/natcap/invest/issues/1431
+* Urban Cooling
+    * Fixed a bug where model would error out if any feature in the buildings
+      vector was missing a geometry; now they will be skipped
+      (`#1401 <https://github.com/natcap/invest/issues/1401>`_)
 * Wind Energy
     * Fixed a bug where model would error when the grid points path was empty
       (`#1417 <https://github.com/natcap/invest/issues/1417>`_)
