@@ -1720,7 +1720,7 @@ def _prep_input_criterion_raster(
             source_rating_array.shape, _TARGET_NODATA_FLOAT32,
             dtype=numpy.float32)
         valid_mask = (
-             (~utils.array_equals_nodata(
+             (~pygeoprocessing.array_equals_nodata(
                  source_rating_array, source_nodata)) &
              (source_rating_array >= 0.0))
         target_rating_array[valid_mask] = source_rating_array[valid_mask]
@@ -2047,7 +2047,7 @@ def _calculate_decayed_distance(stressor_raster_path, decay_type,
         # distance and also valid in the source edt.
         pixels_within_buffer = (
             source_edt_block < buffer_distance_in_pixels)
-        nodata_pixels = utils.array_equals_nodata(
+        nodata_pixels = pygeoprocessing.array_equals_nodata(
             source_edt_block, edt_nodata)
         valid_pixels = ((~nodata_pixels) & pixels_within_buffer)
 
@@ -2154,7 +2154,7 @@ def _calc_criteria(attributes_list, habitat_mask_raster_path,
                     # Any habitat pixels with a nodata rating (no rating
                     # specified by the user) should be
                     # interpreted as having a rating of 0.
-                    rating[utils.array_equals_nodata(
+                    rating[pygeoprocessing.array_equals_nodata(
                         rating, rating_nodata)] = 0
                 finally:
                     rating_band = None
@@ -2339,7 +2339,7 @@ def _sum_rasters(raster_path_list, target_nodata, target_datatype,
         pixels_have_valid_values = numpy.zeros(result.shape, dtype=bool)
         valid_pixel_count = numpy.zeros(result.shape, dtype=numpy.uint16)
         for array, nodata in zip(array_list, nodata_list):
-            non_nodata_pixels = ~utils.array_equals_nodata(array, nodata)
+            non_nodata_pixels = ~pygeoprocessing.array_equals_nodata(array, nodata)
             pixels_have_valid_values |= non_nodata_pixels
             valid_pixel_count += non_nodata_pixels
 

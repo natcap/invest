@@ -1719,7 +1719,7 @@ def _create_percentile_rasters(base_raster_path, target_raster_path,
 
     def _mask_below_start_value(array):
         valid_mask = (
-            ~utils.array_equals_nodata(array, base_nodata) &
+            ~pygeoprocessing.array_equals_nodata(array, base_nodata) &
             (array >= float(start_value)))
         result = numpy.empty_like(array)
         result[:] = base_nodata
@@ -1760,19 +1760,13 @@ def _create_percentile_rasters(base_raster_path, target_raster_path,
     value_ranges.append('Greater than %s' % rounded_percentiles[-1])
     LOGGER.debug('Range_values : %s', value_ranges)
 
-    def raster_percentile(band):
-        """Group the band pixels together based on _PERCENTILES, starting from 1.
-        """
-        valid_data_mask = ~utils.array_equals_nodata(band, base_nodata)
-        band[valid_data_mask] = numpy.searchsorted(
-            percentile_values, band[valid_data_mask]) + 1
-        band[~valid_data_mask] = target_nodata
-        return band
-
     # Classify the pixels of raster_dataset into groups and write to output
-    pygeoprocessing.raster_calculator([(base_raster_path, 1)],
-                                      raster_percentile, target_raster_path,
-                                      gdal.GDT_Byte, target_nodata)
+    pygeoprocessing.raster_map(
+        op=lambda band: numpy.searchsorted(percentile_values, band) + 1,
+        rasters=[base_raster_path],
+        target_path=target_raster_path,
+        target_dtype=numpy.uint8,
+        target_nodata=target_nodata)
 
     # Create percentile groups of how percentile ranges are classified
     percentile_groups = numpy.arange(1, len(percentile_values) + 2)

@@ -293,8 +293,8 @@ def _create_transition_table(landcover_df, lulc_snapshot_list,
             # integer type.  When int matrices, we can compare directly to
             # None.
             valid_pixels = (
-                ~utils.array_equals_nodata(from_array, from_nodata) &
-                ~utils.array_equals_nodata(to_array, to_nodata))
+                ~pygeoprocessing.array_equals_nodata(from_array, from_nodata) &
+                ~pygeoprocessing.array_equals_nodata(to_array, to_nodata))
             transition_pairs = transition_pairs.union(
                 set(zip(from_array[valid_pixels].flatten(),
                         to_array[valid_pixels].flatten())))
