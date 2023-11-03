@@ -179,7 +179,8 @@ class ArgsForm extends React.Component {
 ArgsForm.propTypes = {
   argsValues: PropTypes.objectOf(
     PropTypes.shape({
-      value: PropTypes.oneOfType([PropTypes.string, PropTypes.bool]),
+      value: PropTypes.oneOfType(
+        [PropTypes.string, PropTypes.bool, PropTypes.number]),
       touched: PropTypes.bool,
     })
   ).isRequired,

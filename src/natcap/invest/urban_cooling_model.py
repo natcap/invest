@@ -939,11 +939,12 @@ def calculate_uhi_result_vector(
         energy_consumption_layer = energy_consumption_vector.GetLayer()
 
         LOGGER.info('Parsing building footprint geometry')
-        building_shapely_polygon_lookup = dict(
-            (poly_feat.GetFID(),
-             shapely.wkb.loads(
-                bytes(poly_feat.GetGeometryRef().ExportToWkb())))
-            for poly_feat in energy_consumption_layer)
+        building_shapely_polygon_lookup = dict()
+        for poly_feat in energy_consumption_layer:
+            geom = poly_feat.GetGeometryRef()
+            if geom:
+                building_shapely_polygon_lookup[poly_feat.GetFID()] = (
+                    shapely.wkb.loads(bytes(geom.ExportToWkb())))
 
         LOGGER.info("Constructing building footprint spatial index")
         poly_rtree_index = rtree.index.Index(

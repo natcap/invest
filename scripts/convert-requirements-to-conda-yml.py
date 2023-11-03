@@ -1,8 +1,9 @@
 # encoding=UTF-8
 """convert-requirements-to-conda-yml.py"""
 
-import sys
 import argparse
+import platform
+import sys
 
 YML_TEMPLATE = """channels:
 - conda-forge
@@ -46,8 +47,7 @@ def build_environment_from_requirements(cli_args):
     requirements_files = args.req
 
     pip_requirements = set()
-    # conda likes it when you list pip if you're using pip.
-    conda_requirements = set(['pip'])
+    conda_requirements = set()
     for requirement_file in requirements_files:
         with open(requirement_file) as file:
             for line in file:
@@ -58,7 +58,37 @@ def build_environment_from_requirements(cli_args):
                     continue
 
                 if line.endswith('# pip-only'):
+                    # Conda prefers that we explicitly include pip as a
+                    # requirement if we're using pip.
+                    conda_requirements.add('pip')
+
                     pip_requirements.add(line)
+
+                    # If an scm needs to be installed for pip to clone to a
+                    # revision, add it to the conda package list.
+                    #
+                    # Bazaar (bzr, which pip supports) is not listed;
+                    # deprecated as of 2016 and not available on conda-forge.
+                    install_compiler = False
+                    for prefix, scm_conda_pkg in [("git+", "git"),
+                                                  ("hg+", "mercurial"),
+                                                  ("svn+", "subversion")]:
+                        if line.startswith(prefix):
+                            conda_requirements.add(scm_conda_pkg)
+                            install_compiler = True
+                            break  # The line can only match 1 prefix
+
+                    # It's less common (like for pygeoprocessing) to have linux
+                    # wheels.  Install a compiler if we're on linux, to be
+                    # safe.
+                    if platform.system() == 'Linux' or install_compiler:
+                        # Always make the compiler available
+                        # cxx-compiler works on all OSes.
+                        # NOTE: do not use this as a dependency in a
+                        # conda-forge package recipe!
+                        # https://anaconda.org/conda-forge/cxx-compiler
+                        conda_requirements.add('cxx-compiler')
+
                 else:
                     conda_requirements.add(line)
 
