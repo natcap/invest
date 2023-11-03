@@ -46,10 +46,15 @@ Unreleased Changes
       (`#1374 <https://github.com/natcap/invest/issues/1374>`_)
     * Datastack archives will now be correctly extracted
       (`#1308 <https://github.com/natcap/invest/issues/1308>`_)
-    * Updated to ``pygeoprocessing`` 2.4.2.
+    * Updated to ``pygeoprocessing`` 2.4.2. This includes an update to
+      ``pygeoprocessing.zonal_statistics``, which is now more correct on certain
+      edge cases. Aggregated model results may change slightly.
     * Removed the ``utils`` functions ``array_equals_nodata``,
       ``exponential_decay_kernel_raster``, and ``gaussian_decay_kernel_raster``,
       which were obsoleted by new ``pygeoprocessing`` features.
+* Pollination
+    * Replaced custom kernel implementation with ``pygeoprocessing.kernels``.
+      Convolution results may be slightly different (more accurate).
 * NDR
     * Fixing an issue where minor geometric issues in the watersheds input
       (such as a ring self-intersection) would raise an error in the model.
