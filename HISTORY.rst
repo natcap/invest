@@ -55,6 +55,9 @@ Unreleased Changes
     * Removed the ``utils`` functions ``array_equals_nodata``,
       ``exponential_decay_kernel_raster``, and ``gaussian_decay_kernel_raster``,
       which were obsoleted by new ``pygeoprocessing`` features.
+    * Version metadata at import time is now fetched with
+      ``importlib.metadata`` instead of ``pkg_resources``.
+      (`#1442 <https://github.com/natcap/invest/issues/1442>`_)
 * Pollination
     * Replaced custom kernel implementation with ``pygeoprocessing.kernels``.
       Convolution results may be slightly different (more accurate).
