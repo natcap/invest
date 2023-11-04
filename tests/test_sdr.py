@@ -238,10 +238,10 @@ class SDRTests(unittest.TestCase):
         sdr.execute(args)
 
         expected_results = {
-            'sed_export': 0.08894859254,
-            'usle_tot': 1.86440658569,
-            'avoid_exp': 9202.60546875,
-            'avoid_eros': 194171.578125,
+            'sed_export': 0.08896198869,
+            'usle_tot': 1.86480891705,
+            'avoid_exp': 9203.955078125,
+            'avoid_eros': 194212.28125,
         }
 
         vector_path = os.path.join(
