@@ -641,7 +641,7 @@ def execute(args):
         mask_tasks[f"masked_{key}"] = task_graph.add_task(
             func=pygeoprocessing.raster_map,
             kwargs={
-                'op': lambda array, mask: array,
+                'op': _mask_op,
                 'rasters': [aligned_path, f_reg['mask_path']],
                 'target_path': masked_path,
             },
