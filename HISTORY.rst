@@ -49,6 +49,15 @@ Unreleased Changes
       (`#1374 <https://github.com/natcap/invest/issues/1374>`_)
     * Datastack archives will now be correctly extracted
       (`#1308 <https://github.com/natcap/invest/issues/1308>`_)
+    * Updated to ``pygeoprocessing`` 2.4.2. This includes an update to
+      ``pygeoprocessing.zonal_statistics``, which is now more correct on certain
+      edge cases. Aggregated model results may change slightly.
+    * Removed the ``utils`` functions ``array_equals_nodata``,
+      ``exponential_decay_kernel_raster``, and ``gaussian_decay_kernel_raster``,
+      which were obsoleted by new ``pygeoprocessing`` features.
+    * Version metadata at import time is now fetched with
+      ``importlib.metadata`` instead of ``pkg_resources``.
+      (`#1442 <https://github.com/natcap/invest/issues/1442>`_)
 * Coastal Vulnerability
     * Fixed a bug where the model would crash when processing a float type
       bathymetry raster with no nodata value.
@@ -63,6 +72,9 @@ Unreleased Changes
     * Fixed an issue in NDR's effective retention where, on rasters with more
       than 2^31 pixels, the model would crash with an error relating to a
       negative (overflowed) index. https://github.com/natcap/invest/issues/1431
+* Pollination
+    * Replaced custom kernel implementation with ``pygeoprocessing.kernels``.
+      Convolution results may be slightly different (more accurate).
 * SDR
     * RKLS, USLE, avoided erosion, and avoided export rasters will now have
       nodata in streams (`#1415 <https://github.com/natcap/invest/issues/1415>`_)

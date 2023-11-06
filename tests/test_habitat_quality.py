@@ -1117,7 +1117,7 @@ class HabitatQualityTests(unittest.TestCase):
 
         scenarios = ['_bas_', '_cur_', '_fut_']
         for lulc_val, scenario in enumerate(scenarios, start=1):
-            lulc_array = numpy.ones((100, 100), dtype=numpy.int8)
+            lulc_array = numpy.ones((100, 100), dtype=numpy.uint8)
             lulc_array[50:, :] = lulc_val
             path = os.path.join(
                 args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
