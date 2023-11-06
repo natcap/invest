@@ -1,19 +1,19 @@
 """init module for natcap.invest."""
+import importlib.metadata
 import logging
 import os
 import sys
 from gettext import translation
 
 import babel
-import pkg_resources
 
 LOGGER = logging.getLogger('natcap.invest')
 LOGGER.addHandler(logging.NullHandler())
 __all__ = ['local_dir', ]
 
 try:
-    __version__ = pkg_resources.get_distribution(__name__).version
-except pkg_resources.DistributionNotFound:
+    __version__ = importlib.metadata.version('natcap.invest')
+except importlib.metadata.PackageNotFoundError:
     # package is not installed.  Log the exception for debugging.
     LOGGER.exception('Could not load natcap.invest version information')
 
