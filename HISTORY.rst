@@ -58,9 +58,10 @@ Unreleased Changes
     * Version metadata at import time is now fetched with
       ``importlib.metadata`` instead of ``pkg_resources``.
       (`#1442 <https://github.com/natcap/invest/issues/1442>`_)
-* Pollination
-    * Replaced custom kernel implementation with ``pygeoprocessing.kernels``.
-      Convolution results may be slightly different (more accurate).
+* Coastal Vulnerability
+    * Fixed a bug where the model would crash when processing a float type
+      bathymetry raster with no nodata value.
+      https://github.com/natcap/invest/issues/992
 * NDR
     * Fixing an issue where minor geometric issues in the watersheds input
       (such as a ring self-intersection) would raise an error in the model.
@@ -71,6 +72,9 @@ Unreleased Changes
     * Fixed an issue in NDR's effective retention where, on rasters with more
       than 2^31 pixels, the model would crash with an error relating to a
       negative (overflowed) index. https://github.com/natcap/invest/issues/1431
+* Pollination
+    * Replaced custom kernel implementation with ``pygeoprocessing.kernels``.
+      Convolution results may be slightly different (more accurate).
 * SDR
     * RKLS, USLE, avoided erosion, and avoided export rasters will now have
       nodata in streams (`#1415 <https://github.com/natcap/invest/issues/1415>`_)
