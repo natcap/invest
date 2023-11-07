@@ -640,11 +640,10 @@ def get_validated_dataframe(csv_path, columns=None, rows=None, index_col=None,
                     df[col] = df[col].astype(pandas.Int64Dtype())
                 elif col_spec['type'] == 'boolean':
                     df[col] = df[col].astype('boolean')
-            except ValueError as err:
+            except Exception as err:
                 raise ValueError(
-                    f'Value(s) in the "{col}" column of the table {csv_path} '
-                    f'could not be interpreted as {col_spec["type"]}s. '
-                    f'Original error: {err}')
+                    f'Value(s) in the "{col}" column could not be interpreted '
+                    f'as {col_spec["type"]}s. Original error: {err}')
 
     if any(df.columns.duplicated()):
         duplicated_columns = df.columns[df.columns.duplicated]
