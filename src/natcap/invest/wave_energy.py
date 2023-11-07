@@ -299,6 +299,7 @@ MODEL_SPEC = {
                 },
                 "value": {
                     "type": "number",
+                    "units": u.none,
                     "about": gettext("Value of the machine parameter.")
                 }
             },
@@ -345,6 +346,7 @@ MODEL_SPEC = {
                 },
                 "value": {
                     "type": "number",
+                    "units": u.none,
                     "about": gettext("Value of the machine parameter.")
                 }
             },
